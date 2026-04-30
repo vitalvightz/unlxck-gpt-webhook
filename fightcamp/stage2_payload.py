@@ -58,11 +58,18 @@ from .weight_cut import compute_cut_severity_score, cut_severity_bucket
 # Re-export from sub-modules for backward compatibility
 from .stage2_planning_brief import (  # noqa: F401
     CONDITIONING_ROLE_PURPOSES,
+    PHASE_CONDITIONING_PRIORITY,
+    PHASE_DEPRIORITIZE,
+    PHASE_EMPHASIS,
+    PHASE_OBJECTIVES,
+    PHASE_SELECTION_GUARDRAILS,
     PLANNING_DECISION_HIERARCHY,
     RESTRICTION_PATTERN_HINTS,
     _MECHANICAL_TAG_PREFIXES,
     _MECHANICAL_TAGS,
     _RESTRICTION_CANONICAL_KEYS,
+    _LIMITER_PROFILES,
+    _SPORT_LOAD_PROFILES,
     _UNKNOWN_COMPETITIVE_MATURITY,
     _build_athlete_model,
     _build_limiter_profile,
@@ -97,6 +104,8 @@ from .stage2_planning_brief import (  # noqa: F401
 from .stage2_role_map import (  # noqa: F401
     _active_injury_is_moderate_plus,
     _active_weight_cut_is_meaningful,
+    _append_day_hint,
+    _athlete_sport_key,
     _apply_high_fatigue_week_compression,
     _apply_legacy_high_fatigue_compression,
     _apply_short_camp_role_compression,
@@ -108,17 +117,27 @@ from .stage2_role_map import (  # noqa: F401
     _compression_summary,
     _compute_intentionally_unused_days,
     _compute_readiness_compression,
+    _final_week_sparring_cap_summary,
+    _hard_sparring_coach_note_flags,
+    _hard_sparring_role,
     _high_fatigue_compression_reason_codes,
     _intentional_compression_stub,
     _lock_declared_hard_sparring_roles,
     _make_compression_suppression,
+    _make_hard_sparring_lock_suppression,
+    _next_training_days_after_effective_hard_spar,
     _non_spar_role_priority_rank,
     _phase_progression_slot_count,
+    _placement_rule_for_anchor,
     _preferred_boxer_conditioning_sequence,
+    _replaceable_role_priority,
     _resequence_session_roles,
     _role_anchor,
     _role_governance,
     _role_selection_rule,
+    _short_camp_priority_catalog,
+    _strength_role_key,
+    _conditioning_role_key,
     _split_phase_days,
 )
 
@@ -164,116 +183,6 @@ def _phrase_in_text(text: str, phrase: str) -> bool:
         return False
     pattern = r"\b" + r"[\s-]+".join(parts) + r"\b"
     return re.search(pattern, text) is not None
-
-
-
-PHASE_OBJECTIVES = {
-    "GPP": "build aerobic base and general force capacity",
-    "SPP": "increase fight-specific repeatability and power transfer",
-    "TAPER": "maintain sharpness and freshness",
-}
-
-PHASE_EMPHASIS = {
-    "GPP": ["aerobic repeatability", "general force", "structural strength foundation"],
-    "SPP": ["glycolytic repeatability", "rotational intent", "sport speed"],
-    "TAPER": ["alactic sharpness", "confidence", "low soreness"],
-}
-
-PHASE_DEPRIORITIZE = {
-    "GPP": ["fight-week intensity", "excessive reactive fatigue"],
-    "SPP": ["excessive eccentric damage", "non-specific conditioning volume"],
-    "TAPER": ["new drills", "high lactate exposure", "soreness-heavy loading"],
-}
-
-CONDITIONING_ROLE_PURPOSES = {
-    "aerobic": "low-damage aerobic development",
-    "glycolytic": "fight-pace repeatability",
-    "alactic": "speed and neural sharpness",
-}
-
-PHASE_CONDITIONING_PRIORITY = {
-    "GPP": {"aerobic": "critical", "glycolytic": "medium", "alactic": "medium"},
-    "SPP": {"glycolytic": "critical", "alactic": "high", "aerobic": "medium"},
-    "TAPER": {"alactic": "critical", "aerobic": "medium", "glycolytic": "low"},
-}
-
-PHASE_SELECTION_GUARDRAILS = {
-    "GPP": {
-        "conditioning_minimums": {"aerobic": 1, "glycolytic": 0, "alactic": 0},
-        "must_keep_if_present": ["rehab", "aerobic", "primary_strength"],
-        "conditioning_drop_order_if_thin": ["alactic", "glycolytic"],
-        "notes": [
-            "Preserve at least one low-damage aerobic slot before trimming other conditioning work.",
-            "If strength must be trimmed, keep the first strength slot before accessories.",
-        ],
-    },
-    "SPP": {
-        "conditioning_minimums": {"aerobic": 0, "glycolytic": 1, "alactic": 1},
-        "must_keep_if_present": ["rehab", "glycolytic", "alactic", "primary_strength"],
-        "conditioning_drop_order_if_thin": ["aerobic", "extra_strength_accessory"],
-        "notes": [
-            "Preserve fight-pace repeatability first, then speed/sharpness support.",
-            "Do not let compliance filtering remove both glycolytic and alactic work if compliant options remain.",
-        ],
-    },
-    "TAPER": {
-        "conditioning_minimums": {"aerobic": 0, "glycolytic": 0, "alactic": 1},
-        "must_keep_if_present": ["rehab", "alactic", "primary_strength"],
-        "conditioning_drop_order_if_thin": ["glycolytic", "aerobic", "extra_strength_accessory"],
-        "notes": [
-            "Preserve neural sharpness before optional conditioning density.",
-            "If a slot becomes thin, drop soreness-heavy or lactate-heavy work before sharpness work.",
-        ],
-    },
-}
-
-
-PLANNING_DECISION_HIERARCHY = [
-    {
-        "rank": 1,
-        "driver": "phase_survival_rules",
-        "scope": ["phase guardrails", "must-keep slots", "conditioning minimums", "drop order if thin"],
-        "reason": "Phase survival rules decide what must stay alive when the plan gets thin.",
-    },
-    {
-        "rank": 2,
-        "driver": "safety_and_readiness",
-        "scope": ["restrictions", "injuries", "fatigue", "weight cut", "short notice"],
-        "reason": "Safety and readiness can only tighten or reduce work, never get overruled by style preference.",
-    },
-    {
-        "rank": 3,
-        "driver": "sport_load_collision_rules",
-        "scope": ["highest collision sport load", "live work substitution", "collision pairings"],
-        "reason": "Primary sport load outranks extra S&C when the two collide.",
-    },
-    {
-        "rank": 4,
-        "driver": "main_limiter",
-        "scope": ["limiter profile", "weekly stress emphasis", "protect first", "cut first"],
-        "reason": "The main limiter organizes emphasis once phase survival and safety are protected.",
-    },
-    {
-        "rank": 5,
-        "driver": "goal_emphasis",
-        "scope": ["key goals", "phase objectives", "candidate pool bias"],
-        "reason": "Goals shape what gets pushed only after survival, safety, sport load, and limiter needs are respected.",
-    },
-    {
-        "rank": 6,
-        "driver": "preferences_and_style_bias",
-        "scope": ["training preference", "equipment preference", "flavor choices"],
-        "reason": "Preferences should only break ties after higher-priority planning rules agree.",
-    },
-]
-
-def _priority_bucket(label: str, kind: str) -> dict:
-    return {"label": label, "kind": kind}
-
-
-def _priority_bucket_labels(entries: list[dict]) -> list[str]:
-    return [str(entry.get("label", "")).strip() for entry in entries if str(entry.get("label", "")).strip()]
-
 
 def _compress_short_camp_priorities(athlete_model: dict) -> dict:
     days_until_fight = athlete_model.get("days_until_fight")
@@ -433,33 +342,6 @@ def _build_phase_selection_guardrails(phase: str, training_context: TrainingCont
     return guardrails
 
 
-def _priority_value(priority: str) -> int:
-    return {"critical": 3, "high": 2, "medium": 1, "low": 0}.get(priority, 1)
-
-
-def _downgrade_priority(priority: str) -> str:
-    order = ["critical", "high", "medium", "low"]
-    if priority not in order:
-        return "medium"
-    idx = order.index(priority)
-    return order[min(idx + 1, len(order) - 1)]
-
-
-def _strength_slot_priority(phase: str, role: str, idx: int) -> str:
-    if idx == 1:
-        return "critical"
-    if role in {"neck", "core"}:
-        return "high"
-    if phase == "TAPER" and idx >= 3:
-        return "low"
-    return "high" if idx == 2 else "medium"
-
-
-def _conditioning_slot_priority(phase: str, system: str, idx: int) -> str:
-    base = PHASE_CONDITIONING_PRIORITY.get(phase, {}).get(system, "medium")
-    return base if idx == 1 else _downgrade_priority(base)
-
-
 def _build_phase_briefs(training_context: TrainingContext, phase_weeks: dict) -> dict[str, dict]:
     briefs: dict[str, dict] = {}
     for phase in ("GPP", "SPP", "TAPER"):
@@ -569,128 +451,6 @@ def _derive_main_risks(athlete_model: dict, restrictions: list[dict]) -> list[st
     return risks or ["No exceptional risk flags beyond normal camp management."]
 
 
-_LIMITER_PROFILES = {
-    "coordination": {
-        "label": "coordination",
-        "organising_principle": "timing, rhythm, body control, and transfer under fatigue",
-        "drill_emphasis": [
-            "timing and rhythm before fatigue",
-            "body control and transfer quality",
-            "simple drills repeated under controlled fatigue",
-        ],
-        "protect_first": "timing quality, rhythm, and body control before extra fatigue work",
-        "cut_first": "fatigue-heavy glycolytic work and attractive explosive extras",
-        "boxing_load_rule": "If boxing timing degrades, cut conditioning density before skill-quality work.",
-        "sparring_collision_rule": "Do not pair hard sparring with hard glycolytic conditioning; if sparring is the main collision, reduce same-day or next-day S&C volume by 30% and cut accessories first.",
-        "conditioning_sequence": {
-            "GPP": ["aerobic", "alactic", "glycolytic"],
-            "SPP": ["alactic", "aerobic", "glycolytic"],
-            "TAPER": ["alactic", "aerobic", "glycolytic"],
-        },
-    },
-    "aerobic_repeatability": {
-        "label": "aerobic repeatability",
-        "organising_principle": "repeatability, density control, recovery spacing, and fatigue tolerance",
-        "drill_emphasis": [
-            "repeatability under controlled density",
-            "recovery spacing between hard exposures",
-            "low-damage conditioning progression before extra lifting",
-        ],
-        "protect_first": "repeatability work and recovery spacing before extra strength volume",
-        "cut_first": "accessory strength volume and non-essential power work",
-        "boxing_load_rule": "If there is no sparring this week, add fight-pace rounds before extra lifting.",
-        "sparring_collision_rule": "Never pair hard glycolytic conditioning with hard sparring; let sparring own the fight-pace slot when it is already hard.",
-        "conditioning_sequence": {
-            "GPP": ["aerobic", "glycolytic", "alactic"],
-            "SPP": ["aerobic", "glycolytic", "alactic"],
-            "TAPER": ["aerobic", "alactic", "glycolytic"],
-        },
-    },
-    "tissue_state": {
-        "label": "tissue state",
-        "organising_principle": "conservative loading with meaningful force production, symptom stability, and rebuild sequencing",
-        "drill_emphasis": [
-            "conservative loading with meaningful force production",
-            "symptom-stable strength before ballistic exposure",
-            "low-impact repeatability before unnecessary reactive stress",
-        ],
-        "protect_first": "symptom stability and meaningful loading before ballistic progression or extra volume",
-        "cut_first": "ballistic extras, reaction-heavy accessories, and non-essential reactive contacts before primary strength loading",
-        "boxing_load_rule": "If symptoms spike after boxing, the next day becomes recovery plus rehab only.",
-        "sparring_collision_rule": "When sparring creates a collision with tissue state, protect the athlete first and remove accessory or ballistic S&C before boxing quality work.",
-        "conditioning_sequence": {
-            "GPP": ["aerobic", "alactic", "glycolytic"],
-            "SPP": ["aerobic", "alactic", "glycolytic"],
-            "TAPER": ["aerobic", "alactic", "glycolytic"],
-        },
-    },
-    "sharpness_under_fatigue": {
-        "label": "sharpness under fatigue",
-        "organising_principle": "freshness protection, quality preservation, and clear cut-first hierarchy",
-        "drill_emphasis": [
-            "high-quality speed and sharpness work",
-            "low-soreness neural priming",
-            "fatigue work only when it does not flatten quality",
-        ],
-        "protect_first": "freshness, speed, and technical quality before extra volume",
-        "cut_first": "glycolytic density and accessory strength volume",
-        "boxing_load_rule": "If boxing quality is flat, preserve sharpness and drop fatigue work.",
-        "sparring_collision_rule": "Hard sparring or boxing flatness overrides extra fatigue work; keep sharpness and cut accessory or glycolytic work first.",
-        "conditioning_sequence": {
-            "GPP": ["alactic", "aerobic", "glycolytic"],
-            "SPP": ["alactic", "glycolytic", "aerobic"],
-            "TAPER": ["alactic", "aerobic", "glycolytic"],
-        },
-    },
-    "boxing_quality_under_load": {
-        "label": "boxing quality under load",
-        "organising_principle": "boxing quality under load with S&C staying secondary to sport output",
-        "drill_emphasis": [
-            "boxing transfer and quality under fatigue",
-            "sport-load interaction before accessory work",
-            "fight-pace support only when boxing stays crisp",
-        ],
-        "protect_first": "boxing quality and sparring freshness before extra lifting",
-        "cut_first": "accessory strength and generic conditioning before boxing-support work",
-        "boxing_load_rule": "If there is no sparring this week, add fight-pace rounds before extra lifting.",
-        "sparring_collision_rule": "Hard sparring owns the main combat stress slot; never pair it with hard glycolytic conditioning and cut S&C accessories first.",
-        "conditioning_sequence": {
-            "GPP": ["aerobic", "alactic", "glycolytic"],
-            "SPP": ["alactic", "glycolytic", "aerobic"],
-            "TAPER": ["alactic", "aerobic", "glycolytic"],
-        },
-    },
-    "general_fight_readiness": {
-        "label": "general fight readiness",
-        "organising_principle": "balanced development with clear fatigue control and phase protection",
-        "drill_emphasis": [
-            "phase-priority work first",
-            "low-damage support work before extras",
-            "preserve fight-specific quality under fatigue",
-        ],
-        "protect_first": "phase-critical work before accessories",
-        "cut_first": "non-essential accessories and redundant fatigue work",
-        "boxing_load_rule": "Let boxing quality and sparring output override extra S&C when collisions appear.",
-        "sparring_collision_rule": "If hard sparring is present, reduce same-day or next-day S&C by 30% and cut accessories first.",
-        "conditioning_sequence": {
-            "GPP": ["aerobic", "glycolytic", "alactic"],
-            "SPP": ["glycolytic", "alactic", "aerobic"],
-            "TAPER": ["alactic", "aerobic", "glycolytic"],
-        },
-    },
-}
-
-
-def _normalize_limiter_tokens(values: list[str]) -> set[str]:
-    tokens: set[str] = set()
-    for value in values:
-        token = re.sub(r"[^a-z0-9]+", "_", str(value).strip().lower()).strip("_")
-        if token:
-            tokens.add(token)
-    return tokens
-
-
-
 def _primary_limiter_key(athlete_model: dict, restrictions: list[dict]) -> str:
     compressed = athlete_model.get("compressed_priorities") or {}
     compressed_labels = " ".join(
@@ -789,102 +549,6 @@ def _primary_limiter_key(athlete_model: dict, restrictions: list[dict]) -> str:
 
 
 
-def _build_limiter_profile(athlete_model: dict, restrictions: list[dict]) -> dict:
-    key = _primary_limiter_key(athlete_model, restrictions)
-    template = _LIMITER_PROFILES.get(key, _LIMITER_PROFILES["general_fight_readiness"])
-    return {
-        "key": key,
-        "label": template["label"],
-        "organising_principle": template["organising_principle"],
-        "drill_emphasis": list(template["drill_emphasis"]),
-        "protect_first": template["protect_first"],
-        "cut_first": template["cut_first"],
-        "boxing_load_rule": template["boxing_load_rule"],
-        "sparring_collision_rule": template["sparring_collision_rule"],
-        "conditioning_sequence": {
-            phase: list(sequence)
-            for phase, sequence in template["conditioning_sequence"].items()
-        },
-    }
-
-
-
-_SPORT_LOAD_PROFILES = {
-    "boxing": {
-        "label": "boxing",
-        "highest_collision_load": "hard sparring and high-output pad or bag rounds",
-        "primary_live_loads": ["hard sparring", "technical sparring", "pad rounds", "bag rounds"],
-        "collision_rules": [
-            "Never pair hard sparring with hard glycolytic conditioning.",
-            "If boxing quality is flat, cut accessory strength or conditioning volume before technical work.",
-        ],
-        "cut_first_when_sport_load_spikes": "accessory strength volume and optional conditioning density",
-        "replace_missing_live_load": "If no sparring is available that week, add fight-pace pad or bag rounds before extra lifting.",
-        "quality_override": "If boxing quality is flat, preserve sharpness and drop fatigue work.",
-    },
-    "kickboxing_muay_thai": {
-        "label": "kickboxing / muay thai",
-        "highest_collision_load": "hard sparring, pad rounds, and clinch volume",
-        "primary_live_loads": ["hard sparring", "pad rounds", "clinch rounds", "bag rounds"],
-        "collision_rules": [
-            "Never pair hard sparring or high-output clinch work with hard glycolytic conditioning.",
-            "If pad sharpness or clinch quality falls, cut S&C accessories before adding more fatigue.",
-        ],
-        "cut_first_when_sport_load_spikes": "optional strength accessories and non-essential conditioning density",
-        "replace_missing_live_load": "If no sparring happens that week, add fight-pace pad or clinch rounds before extra lifting.",
-        "quality_override": "If striking sharpness or clinch quality drops, keep technical quality and remove extra fatigue first.",
-    },
-    "mma": {
-        "label": "mma",
-        "highest_collision_load": "hard MMA sparring plus live wrestling or wall-work rounds",
-        "primary_live_loads": ["hard MMA sparring", "live wrestling", "wall work", "grappling rounds"],
-        "collision_rules": [
-            "Never pair hard live wrestling or hard MMA sparring with hard glycolytic conditioning.",
-            "If live MMA output is flat, cut accessory strength or optional conditioning before fight-specific work.",
-        ],
-        "cut_first_when_sport_load_spikes": "accessory strength volume and redundant conditioning density",
-        "replace_missing_live_load": "If live rounds are missing that week, add fight-pace positional or cage-wall rounds before extra lifting.",
-        "quality_override": "Let live MMA quality override extra S&C when collisions appear.",
-    },
-    "wrestling": {
-        "label": "wrestling",
-        "highest_collision_load": "live goes, takedown exchanges, and high-output mat returns",
-        "primary_live_loads": ["live goes", "takedown entries", "mat returns", "hand fighting"],
-        "collision_rules": [
-            "Do not pair hard live goes with hard glycolytic conditioning.",
-            "If hand fighting or takedown speed falls, cut accessory work before adding more fatigue.",
-        ],
-        "cut_first_when_sport_load_spikes": "optional strength accessories and non-essential conditioning density",
-        "replace_missing_live_load": "If live goes are missing that week, add short positional goes or takedown chains before extra lifting.",
-        "quality_override": "Preserve takedown speed and mat quality before extra fatigue work.",
-    },
-    "bjj": {
-        "label": "bjj",
-        "highest_collision_load": "hard rolling, positional rounds, and grip-heavy live work",
-        "primary_live_loads": ["hard rolling", "positional rounds", "grip fighting", "scramble rounds"],
-        "collision_rules": [
-            "Do not pair hard rolling with hard glycolytic conditioning.",
-            "If positional quality or decision-making drops, cut accessory S&C before adding more fatigue.",
-        ],
-        "cut_first_when_sport_load_spikes": "optional strength volume and non-essential conditioning density",
-        "replace_missing_live_load": "If hard rolling is absent that week, add positional rounds or grip-focused circuits before extra lifting.",
-        "quality_override": "Preserve rolling quality and decision-making before extra fatigue work.",
-    },
-    "general_combat": {
-        "label": "general combat sport",
-        "highest_collision_load": "hard live rounds and sparring",
-        "primary_live_loads": ["hard sparring", "live rounds", "fight-pace rounds"],
-        "collision_rules": [
-            "Do not pair the hardest live rounds with hard glycolytic conditioning.",
-            "If sport quality drops, cut accessory work before technical work.",
-        ],
-        "cut_first_when_sport_load_spikes": "optional accessories and redundant conditioning density",
-        "replace_missing_live_load": "If live rounds are absent that week, add fight-pace technical rounds before extra lifting.",
-        "quality_override": "Let sport quality override extra S&C when collisions appear.",
-    },
-}
-
-
 def _join_rule_parts(*parts: str) -> str:
     cleaned = _dedupe_preserve_order([str(part).strip() for part in parts if str(part).strip()])
     return " ".join(cleaned)
@@ -909,22 +573,6 @@ def _primary_sport_load_key(athlete_model: dict) -> str:
     if combined & {"mma", "mixed_martial_arts", "cage_wrestling", "sambo", "judo"}:
         return "mma"
     return "general_combat"
-
-
-
-def _build_sport_load_profile(athlete_model: dict) -> dict:
-    key = _primary_sport_load_key(athlete_model)
-    template = _SPORT_LOAD_PROFILES.get(key, _SPORT_LOAD_PROFILES["general_combat"])
-    return {
-        "key": key,
-        "label": template["label"],
-        "highest_collision_load": template["highest_collision_load"],
-        "primary_live_loads": list(template["primary_live_loads"]),
-        "collision_rules": list(template["collision_rules"]),
-        "cut_first_when_sport_load_spikes": template["cut_first_when_sport_load_spikes"],
-        "replace_missing_live_load": template["replace_missing_live_load"],
-        "quality_override": template["quality_override"],
-    }
 
 
 
@@ -980,56 +628,6 @@ def _resolve_phase_rule_state(
         "sport_load_owns_density": sport_load_owns_density,
     }
 
-
-def _build_weekly_stress_map(
-    athlete_model: dict,
-    phase_briefs: dict[str, dict],
-    limiter_profile: dict,
-    sport_load_profile: dict,
-) -> dict[str, dict]:
-    stress_map: dict[str, dict] = {}
-
-    for phase in phase_briefs:
-        resolved = _resolve_phase_rule_state(
-            phase,
-            athlete_model,
-            phase_briefs.get(phase, {}),
-            limiter_profile,
-            sport_load_profile,
-        )
-        if phase == "GPP":
-            highest_neural_day = "Place the highest-neural primary strength day immediately after the weekly recovery / lowest-load day so force quality stays crisp before volume accumulates."
-            highest_glycolytic_day = "Keep one density-focused day only, and never let it sit beside hard sparring."
-            lowest_load_day = "Use one midweek lowest-load day for recovery, rehab, and easy aerobic support only, then follow it with the primary strength anchor."
-        elif phase == "SPP":
-            highest_neural_day = "Anchor the highest-neural primary strength day immediately after the recovery / lowest-load day, then keep it away from hard sparring collisions."
-            highest_glycolytic_day = "Use one highest glycolytic day as the main fight-pace stressor unless hard sparring already occupies that slot."
-            lowest_load_day = "Keep one lowest-load day for recovery, tissue care, and limiter-preserving support work before the main neural-strength anchor."
-        else:
-            highest_neural_day = "Use one highest neural day as a sharpness primer, not as a fatigue builder."
-            highest_glycolytic_day = "Only keep a light fight-pace touch; drop glycolytic density first if freshness or boxing quality falls."
-            lowest_load_day = "Make one day clearly lowest-load with recovery, rehab, and freshness protection only."
-
-        stress_map[phase] = {
-            "organising_limiter": limiter_profile["label"],
-            "highest_neural_day": highest_neural_day,
-            "highest_glycolytic_day": highest_glycolytic_day,
-            "lowest_load_day": lowest_load_day,
-            "conditioning_sequence": list(resolved.get("conditioning_sequence", [])),
-            "drill_emphasis": list(limiter_profile["drill_emphasis"]),
-            "protect_first": resolved.get("protect_first", ""),
-            "cut_first_when_collisions_rise": resolved.get("cut_first_when_collisions_rise", ""),
-            "sparring_collision_rule": limiter_profile["sparring_collision_rule"],
-            "sport_load_interaction": _join_rule_parts(
-                limiter_profile["boxing_load_rule"],
-                sport_load_profile["quality_override"],
-            ),
-            "highest_collision_sport_load": sport_load_profile["highest_collision_load"],
-            "sport_load_collision_rules": list(sport_load_profile["collision_rules"]),
-            "replace_missing_live_load": sport_load_profile["replace_missing_live_load"],
-            "resolved_rule_state": resolved,
-        }
-    return stress_map
 
 _WEEKLY_STAGE_TEMPLATES = {
     "GPP": {
@@ -1140,23 +738,6 @@ _WEEKLY_STAGE_TEMPLATES = {
 }
 
 
-def _phase_progression_slot_count(brief: dict) -> int:
-    weeks = int(brief.get("weeks") or 0)
-    days = int(brief.get("days") or 0)
-    if weeks > 0:
-        return weeks
-    return 1 if days > 0 else 0
-
-
-def _split_phase_days(days: int, slot_count: int) -> list[int]:
-    if slot_count <= 0:
-        return []
-    if days <= 0:
-        return [0] * slot_count
-    base, remainder = divmod(days, slot_count)
-    return [base + (1 if idx < remainder else 0) for idx in range(slot_count)]
-
-
 def _progression_templates_for_phase(phase: str, slot_count: int, athlete_model: dict, phase_days: int) -> list[dict]:
     templates = _WEEKLY_STAGE_TEMPLATES[phase]
     readiness_flags = set(_clean_list(athlete_model.get("readiness_flags", [])))
@@ -1264,52 +845,6 @@ def _role_anchor(role_key: str) -> str:
     if role_key in {"recovery_reset_day", "tissue_recovery_day", "fight_week_freshness_day"}:
         return "lowest_load_day"
     return "support_day"
-
-
-def _placement_rule_for_anchor(anchor: str, week_entry: dict) -> str:
-    if anchor == "highest_neural_day":
-        return week_entry.get("highest_neural_day", "Use this as the week's highest neural slot.")
-    if anchor == "highest_glycolytic_day":
-        return week_entry.get("highest_glycolytic_day", "Use this as the week's main density slot.")
-    if anchor == "lowest_load_day":
-        return week_entry.get("lowest_load_day", "Keep this as the lowest-load day of the week.")
-    return "Place this away from the highest collision sport load when possible."
-
-
-def _strength_role_key(phase: str, stage_key: str, limiter_key: str, idx: int) -> str:
-    if phase == "GPP":
-        if idx == 0:
-            return "structural_strength_day" if limiter_key == "tissue_state" else "primary_strength_day"
-        return "secondary_strength_day"
-    if phase == "SPP":
-        if idx == 0:
-            return "neural_plus_strength_day"
-        if stage_key in {"peak_specificity", "specific_density_to_peak"}:
-            return "strength_touch_day"
-        return "transfer_strength_day"
-    if idx == 0:
-        return "neural_primer_day"
-    return "small_strength_touch_day"
-
-
-def _conditioning_role_key(phase: str, system: str, limiter_key: str) -> str:
-    if system == "aerobic":
-        if phase == "GPP":
-            return "aerobic_coordination_day" if limiter_key == "coordination" else "aerobic_base_day"
-        if phase == "SPP":
-            return "repeatability_support_day" if limiter_key == "aerobic_repeatability" else "aerobic_support_day"
-        return "aerobic_flush_day"
-    if system == "glycolytic":
-        if phase == "TAPER":
-            return "light_fight_pace_touch_day"
-        if phase == "SPP":
-            return "fight_pace_repeatability_day"
-        return "controlled_repeatability_day"
-    if phase == "TAPER":
-        return "alactic_sharpness_day"
-    if phase == "SPP":
-        return "alactic_speed_day"
-    return "alactic_coordination_day" if limiter_key == "coordination" else "alactic_support_day"
 
 
 def _recovery_role_key(phase: str, stage_key: str, athlete_model: dict) -> str:
@@ -1470,10 +1005,6 @@ _WEEKDAY_ORDER = {
 }
 
 
-def _athlete_sport_key(athlete_model: dict) -> str:
-    return str(athlete_model.get("sport") or "").strip().lower().replace(" ", "_")
-
-
 def _normalized_fatigue_level(athlete_model: dict) -> str:
     fatigue = str(athlete_model.get("fatigue", "")).strip().lower()
     readiness_flags = set(_clean_list(athlete_model.get("readiness_flags", [])))
@@ -1496,20 +1027,6 @@ def _declared_day_sets(athlete_model: dict) -> tuple[list[str], set[str], set[st
     hard_sparring = {day for day in _ordered_weekdays(_clean_list(athlete_model.get("hard_sparring_days", []))) if day in training_days}
     support_work = {day for day in _ordered_weekdays(_clean_list(athlete_model.get("support_work_days", athlete_model.get("technical_skill_days", [])))) if day in training_days}
     return training_days, hard_sparring, support_work
-
-
-def _append_day_hint(role: dict, day: str | None, reason: str | None = None) -> None:
-    if not day:
-        role["scheduled_day_hint"] = ""
-        role["day_assignment_reason"] = ""
-        return
-    role["scheduled_day_hint"] = day
-    role["day_assignment_reason"] = reason or ""
-    placement = str(role.get("placement_rule", "")).strip()
-    extra = f"Prefer {day} for this role."
-    if reason:
-        extra = f"{extra} {reason}"
-    role["placement_rule"] = f"{placement} {extra}".strip() if placement else extra
 
 
 def _dedupe_clean_strings(values: list[Any]) -> list[str]:
@@ -1572,11 +1089,6 @@ def _append_week_coach_note_flag(week_entry: dict, flag: str) -> None:
     week_entry["coach_note_flags"] = current_flags
 
 
-def _hard_sparring_coach_note_flags(plan_entry: dict[str, Any] | None = None) -> list[str]:
-    status = str((plan_entry or {}).get("status") or "hard_as_planned").strip() or "hard_as_planned"
-    return ["deload hard sparring"] if status != "hard_as_planned" else []
-
-
 def _is_final_week_capped_sparring_entry(plan_entry: dict[str, Any] | None = None) -> bool:
     if not isinstance(plan_entry, dict):
         return False
@@ -1611,106 +1123,6 @@ def _make_final_week_sparring_cap_suppression(
         "hard_sparring_reason": reason,
         "coach_note": str((plan_entry or {}).get("coach_note") or ""),
     }
-
-
-def _final_week_sparring_cap_summary(
-    hard_sparring_plan: list[dict] | None,
-    effective_days: list[str],
-) -> dict[str, Any]:
-    capped_days = [
-        str(entry.get("day") or "").strip()
-        for entry in (hard_sparring_plan or [])
-        if _is_final_week_capped_sparring_entry(entry) and str(entry.get("day") or "").strip()
-    ]
-    return {
-        "active": bool(capped_days),
-        "max_effective_hard_sparring_days": 1 if capped_days else None,
-        "effective_hard_sparring_days": list(effective_days),
-        "capped_declared_hard_sparring_days": capped_days,
-        "instruction": (
-            "Final taper week cap overrides declared hard sparring days: render at most one "
-            "effective hard sparring day and do not present capped days as sparring."
-            if capped_days
-            else ""
-        ),
-    }
-
-
-def _hard_sparring_role(week_entry: dict, day: str, plan_entry: dict[str, Any] | None = None) -> dict[str, Any]:
-    status = str((plan_entry or {}).get("status") or "hard_as_planned").strip() or "hard_as_planned"
-    hard_sparring_class = str((plan_entry or {}).get("hard_day_class") or "").strip() or (
-        "managed_hard" if status != "hard_as_planned" else "primary_hard"
-    )
-    reason_codes = list((plan_entry or {}).get("reason_codes") or [])
-    coach_note_flags = _hard_sparring_coach_note_flags(plan_entry)
-    role: dict[str, Any] = {
-        "category": "sparring",
-        "role_key": "hard_sparring_day",
-        "preferred_pool": "declared_hard_sparring_days",
-        "selection_rule": "Keep the declared hard sparring slot fixed. If readiness is compromised, deload the sparring dose instead of replacing the day role.",
-        "anchor": "highest_collision_sport_load",
-        "placement_rule": "Keep this declared hard sparring slot fixed on the athlete's stated day.",
-        "governance": {
-            "authority": "declared_schedule_lock",
-            "execution_only": False,
-            "governed_by": [entry["driver"] for entry in PLANNING_DECISION_HIERARCHY],
-            "cannot_override": [
-                "declared_hard_sparring_days",
-                "weekly_role_map",
-                "session_counts",
-                "resequence",
-                "compression",
-                "repair",
-            ],
-            "resolved_authority": {
-                "protect_first_driver": (week_entry.get("resolved_rule_state") or {}).get("protect_first_driver"),
-                "cut_first_driver": (week_entry.get("resolved_rule_state") or {}).get("cut_first_driver"),
-                "conditioning_sequence_driver": (week_entry.get("resolved_rule_state") or {}).get("conditioning_sequence_driver"),
-            },
-            "suppression_rules": ["Declared hard sparring days are immutable weekly role locks."],
-            "hard_suppression_reasons": [],
-            "locked_day": day,
-        },
-        "scheduled_day_hint": day,
-        "day_assignment_reason": "Declared hard sparring day is fixed in the weekly role map.",
-        "hard_sparring_status": status,
-        "hard_sparring_class": hard_sparring_class,
-        "hard_sparring_reason_codes": reason_codes,
-        "hard_sparring_reason": str((plan_entry or {}).get("reason") or ""),
-        "coach_note_flags": coach_note_flags,
-    }
-    if role["coach_note_flags"]:
-        role["placement_rule"] += " Deload the sparring dose instead of changing the slot."
-    return role
-
-
-def _make_hard_sparring_lock_suppression(role: dict, day: str) -> dict[str, Any]:
-    return {
-        "category": role.get("category"),
-        "role_key": role.get("role_key"),
-        "preferred_system": role.get("preferred_system", ""),
-        "reasons": [f"Declared hard sparring locks {day} as hard_sparring_day in the weekly role map."],
-        "governance": dict(role.get("governance", {})),
-        "locked_day": day,
-        "replacement_role_key": "hard_sparring_day",
-    }
-
-
-def _replaceable_role_priority(role: dict, *, day: str) -> tuple[int, int]:
-    scheduled_day = str(role.get("scheduled_day_hint") or "").strip()
-    if scheduled_day == day:
-        return (-1, 0)
-    category = str(role.get("category") or "").strip()
-    role_key = str(role.get("role_key") or "").strip()
-    if category == "conditioning":
-        return (0 if role.get("preferred_system") == "glycolytic" else 1, 1)
-    if category == "strength" and role_key not in _PRIMARY_STRENGTH_ROLE_KEYS:
-        return (2, 2)
-    if category == "recovery":
-        return (3, 3)
-    if category == "strength":
-        return (4, 4)
-    return (5, 5)
 
 
 def _lock_declared_hard_sparring_roles(
@@ -2411,86 +1823,6 @@ def _preferred_boxer_conditioning_sequence(phase: str, conditioning_sequence: li
     return _dedupe_preserve_order(preferred + list(conditioning_sequence or []))
 
 
-def _resequence_session_roles(
-    week_entry: dict,
-    session_roles: list[dict],
-    athlete_model: dict,
-    *,
-    hard_sparring_plan: list[dict] | None = None,
-) -> list[dict]:
-    if len(session_roles) <= 1:
-        return session_roles
-
-    ordered = list(session_roles)
-    sport_key = _athlete_sport_key(athlete_model)
-    phase = str(week_entry.get("phase", "")).upper()
-
-    def _is_primary_strength(role: dict) -> bool:
-        return role.get("category") == "strength" and role.get("role_key") in _PRIMARY_STRENGTH_ROLE_KEYS
-
-    def _is_support_strength(role: dict) -> bool:
-        return role.get("category") == "strength" and not _is_primary_strength(role)
-
-    def _is_low_damage_conditioning(role: dict) -> bool:
-        if role.get("category") != "conditioning":
-            return False
-        if role.get("preferred_system") == "aerobic":
-            return True
-        return role.get("role_key") in {"repeatability_support_day", "controlled_repeatability_day"}
-
-    def _take_first(predicate, used: set[int], result: list[dict]) -> None:
-        for idx, role in enumerate(ordered):
-            if idx in used:
-                continue
-            if predicate(role):
-                used.add(idx)
-                result.append(role)
-                return
-
-    if sport_key == "boxing" and phase in {"GPP", "SPP"}:
-        used: set[int] = set()
-        result: list[dict] = []
-        _take_first(_is_support_strength, used, result)
-        _take_first(_is_low_damage_conditioning, used, result)
-        _take_first(lambda role: role.get("category") == "recovery", used, result)
-        _take_first(_is_primary_strength, used, result)
-        for idx, role in enumerate(ordered):
-            if idx in used:
-                continue
-            if role.get("category") == "conditioning":
-                used.add(idx)
-                result.append(role)
-        for idx, role in enumerate(ordered):
-            if idx in used:
-                continue
-            result.append(role)
-        ordered = result
-    else:
-        recovery_idx = next((idx for idx, role in enumerate(ordered) if role.get("category") == "recovery"), None)
-        primary_idx = next((idx for idx, role in enumerate(ordered) if _is_primary_strength(role)), None)
-        if recovery_idx is not None and primary_idx is not None and primary_idx != recovery_idx + 1:
-            primary_role = ordered.pop(primary_idx)
-            if primary_idx < recovery_idx:
-                recovery_idx -= 1
-            ordered.insert(recovery_idx + 1, primary_role)
-
-    for idx, role in enumerate(ordered, start=1):
-        role["session_index"] = idx
-    ordered = _assign_declared_day_hints(ordered, athlete_model, hard_sparring_plan=hard_sparring_plan)
-    return ordered
-
-
-def _short_camp_priority_catalog(compressed: dict) -> dict[str, str]:
-    label_by_kind: dict[str, str] = {}
-    for bucket in ("primary_targets", "maintenance_targets", "embedded_support", "deferred"):
-        for entry in compressed.get(bucket, []) or []:
-            kind = str((entry or {}).get("kind", "")).strip()
-            label = str((entry or {}).get("label", "")).strip()
-            if kind and label and kind not in label_by_kind:
-                label_by_kind[kind] = label
-    return label_by_kind
-
-
 def _compressed_priority_for_role(role: dict, athlete_model: dict) -> tuple[str, str]:
     compressed = athlete_model.get("compressed_priorities") or {}
     label_by_kind = _short_camp_priority_catalog(compressed)
@@ -2543,48 +1875,6 @@ def _compressed_priority_for_role(role: dict, athlete_model: dict) -> tuple[str,
     return "", ""
 
 
-def _apply_short_camp_role_compression(
-    week_entry: dict,
-    session_roles: list[dict],
-    suppressed_roles: list[dict],
-    athlete_model: dict,
-) -> tuple[list[dict], list[dict]]:
-    compressed = athlete_model.get("compressed_priorities") or {}
-    if not compressed.get("is_short_camp"):
-        return session_roles, suppressed_roles
-
-    kept_roles: list[dict] = []
-    updated_suppressed = list(suppressed_roles)
-
-    for role in session_roles:
-        label, bucket = _compressed_priority_for_role(role, athlete_model)
-        if label:
-            role["compressed_priority_label"] = label
-            role["compressed_priority_bucket"] = bucket
-            kept_roles.append(role)
-            continue
-        if role.get("category") == "recovery":
-            role["compressed_priority_label"] = "embedded recovery support"
-            role["compressed_priority_bucket"] = "embedded_support"
-            kept_roles.append(role)
-            continue
-        updated_suppressed.append(
-            {
-                "category": role.get("category"),
-                "role_key": role.get("role_key"),
-                "preferred_system": role.get("preferred_system", ""),
-                "reasons": [
-                    "Short-camp compression removed this standalone session purpose because it did not map to a compressed week-level priority."
-                ],
-                "governance": dict(role.get("governance", {})),
-            }
-        )
-
-    for idx, role in enumerate(kept_roles, start=1):
-        role["session_index"] = idx
-    return kept_roles, updated_suppressed
-
-
 def _intentional_compression_stub() -> dict[str, Any]:
     return {
         "active": False,
@@ -2622,52 +1912,6 @@ def _high_fatigue_compression_reason_codes(
     if athlete_model.get("injuries") or "injury_management" in readiness_flags:
         reason_codes.append("injury_management")
     return reason_codes
-
-
-def _compression_summary(reason_codes: list[str]) -> str:
-    if not reason_codes:
-        return ""
-    label = ", ".join(code.replace("_", " ") for code in reason_codes)
-    return f"Keep the smaller week on purpose to protect freshness under {label}."
-
-
-def _next_training_days_after_effective_hard_spar(
-    training_days: list[str],
-    effective_hard_days_list: set[str],
-) -> set[str]:
-    if not training_days or not effective_hard_days_list:
-        return set()
-
-    next_days: set[str] = set()
-    ordered_training_days = _ordered_weekdays(training_days)
-    for hard_day in effective_hard_days_list:
-        hard_day_index = _WEEKDAY_ORDER.get(str(hard_day).strip().lower(), -1)
-        if hard_day_index < 0:
-            continue
-        next_day = next(
-            (
-                day
-                for day in ordered_training_days
-                if _WEEKDAY_ORDER.get(str(day).strip().lower(), -1) > hard_day_index
-            ),
-            None,
-        )
-        if next_day:
-            next_days.add(next_day)
-    return next_days
-
-
-def _make_compression_suppression(role: dict, reason_codes: list[str], summary: str) -> dict[str, Any]:
-    return {
-        "category": role.get("category"),
-        "role_key": role.get("role_key"),
-        "preferred_system": role.get("preferred_system", ""),
-        "reasons": [summary],
-        "governance": dict(role.get("governance", {})),
-        "intentional_compression": True,
-        "compression_reason_codes": list(reason_codes),
-        "compression_summary": summary,
-    }
 
 
 def _active_weight_cut_is_meaningful(athlete_model: dict) -> bool:
@@ -2720,15 +1964,6 @@ def _compute_readiness_compression(athlete_model: dict) -> int:
     if isinstance(days_to_fight, int) and 0 <= days_to_fight <= 17:
         compression += 1
     return compression
-
-
-def _compression_floor_value(compression: int) -> int:
-    """Convert compression score to compression_floor (number of non-spar slots to remove)."""
-    if compression == 0:
-        return 0
-    if compression <= 2:
-        return 1
-    return 2  # compression >= 3
 
 
 def _non_spar_role_priority_rank(
@@ -3193,32 +2428,6 @@ def _apply_high_fatigue_week_compression(
         "summary": summary,
     }
     return kept_roles, updated_suppressed
-
-
-def _compute_intentionally_unused_days(
-    training_days: list[str],
-    kept_roles: list[dict],
-    *,
-    has_recovery_role: bool,
-) -> list[dict[str, str]]:
-    """
-    Return the training days that are not assigned to any kept role.
-    Unused days become recovery_only_day if the week has no recovery bias yet,
-    otherwise off_day.
-    """
-    used_days: set[str] = set()
-    for role in kept_roles:
-        day = str(role.get("scheduled_day_hint") or "").strip()
-        if day:
-            used_days.add(day)
-    result = []
-    for day in training_days:
-        if day not in used_days:
-            result.append({
-                "day": day,
-                "role": "off_day" if has_recovery_role else "recovery_only_day",
-            })
-    return result
 
 
 def _apply_legacy_high_fatigue_compression(
