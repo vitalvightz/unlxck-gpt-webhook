@@ -4,10 +4,148 @@ import json
 from pathlib import Path
 
 from fightcamp import conditioning
-from fightcamp.late_selector_windows import D1, D4_TO_D2, D6_TO_D5, D7
+from fightcamp.late_selector_windows import D1, D4_TO_D2, D6_TO_D5, D7, D13_TO_D8, D21_TO_D14
 from fightcamp.stage2_payload import build_stage2_payload
 from fightcamp.training_context import TrainingContext
 
+
+
+
+def test_late_window_blocks_non_taper_phased_conditioning_even_if_otherwise_valid():
+    result = conditioning._evaluate_conditioning_late_window(
+        {
+            "name": "Band-Resisted Sprint Starts (ATP-PCr)",
+            "phases": ["SPP"],
+            "system": "alactic",
+            "tags": ["acceleration", "low_volume"],
+            "work_sec": 10,
+            "rest_sec": 80,
+            "rounds": 8,
+        },
+        system="alactic",
+        window=D6_TO_D5,
+        bridge_rules={"glycolytic_touch_max": 0},
+    )
+
+    assert result["blocked"] is True
+    assert "late_conditioning_block_not_taper_phased" in result["block_codes"]
+
+
+
+def test_late_window_blocks_non_taper_phased_conditioning_in_d13_to_d8():
+    result = conditioning._evaluate_conditioning_late_window(
+        {
+            "name": "Band-Resisted Sprint Starts (ATP-PCr)",
+            "phases": ["SPP"],
+            "system": "alactic",
+            "tags": ["acceleration", "low_volume"],
+            "work_sec": 10,
+            "rest_sec": 80,
+            "rounds": 8,
+        },
+        system="alactic",
+        window=D13_TO_D8,
+        bridge_rules={"glycolytic_touch_max": 0},
+    )
+
+    assert result["blocked"] is True
+    assert "late_conditioning_block_not_taper_phased" in result["block_codes"]
+
+
+
+
+def test_late_window_blocks_non_taper_phased_conditioning_in_d1():
+    result = conditioning._evaluate_conditioning_late_window(
+        {
+            "name": "Band-Resisted Sprint Starts (ATP-PCr)",
+            "phases": ["SPP"],
+            "system": "alactic",
+            "tags": ["acceleration", "low_volume"],
+            "work_sec": 10,
+            "rest_sec": 80,
+            "rounds": 8,
+        },
+        system="alactic",
+        window=D1,
+        bridge_rules={"glycolytic_touch_max": 0},
+    )
+
+    assert result["blocked"] is True
+    assert "late_conditioning_block_not_taper_phased" in result["block_codes"]
+
+
+def test_bridge_window_d21_to_d14_does_not_auto_block_spp_only_by_phase():
+    result = conditioning._evaluate_conditioning_late_window(
+        {
+            "name": "Band-Resisted Sprint Starts (ATP-PCr)",
+            "phases": ["SPP"],
+            "system": "alactic",
+            "tags": ["acceleration", "low_volume"],
+            "work_sec": 10,
+            "rest_sec": 80,
+            "rounds": 8,
+        },
+        system="alactic",
+        window=D21_TO_D14,
+        bridge_rules={"glycolytic_touch_max": 1},
+    )
+
+    assert "late_conditioning_block_not_taper_phased" not in result["block_codes"]
+
+
+def test_taper_phased_conditioning_remains_eligible_in_all_taper_only_windows():
+    for window in (D13_TO_D8, D7, D6_TO_D5, D4_TO_D2, D1):
+        result = conditioning._evaluate_conditioning_late_window(
+            {
+                "name": "Reactive Shuffle Repeats",
+                "phases": ["TAPER"],
+                "system": "alactic",
+                "tags": ["low_impact", "cns_freshness", "skill_refinement"],
+                "work_sec": 8,
+                "rest_sec": 80,
+                "rounds": 6,
+            },
+            system="alactic",
+            window=window,
+            bridge_rules={"glycolytic_touch_max": 0},
+        )
+
+        assert result["blocked"] is False
+
+def test_late_window_keeps_taper_phased_conditioning_eligible():
+    result = conditioning._evaluate_conditioning_late_window(
+        {
+            "name": "Reactive Shuffle Repeats",
+            "phases": ["TAPER"],
+            "system": "alactic",
+            "tags": ["low_impact", "cns_freshness", "skill_refinement"],
+            "work_sec": 8,
+            "rest_sec": 80,
+            "rounds": 6,
+        },
+        system="alactic",
+        window=D6_TO_D5,
+        bridge_rules={"glycolytic_touch_max": 0},
+    )
+
+    assert result["blocked"] is False
+
+
+def test_athlete_facing_system_label_returns_string_for_spp_only_drill():
+    label = conditioning.athlete_facing_system_label(
+        {
+            "name": "Band-Resisted Sprint Starts (ATP-PCr)",
+            "phases": ["SPP"],
+            "system": "alactic",
+            "tags": ["acceleration", "low_volume"],
+            "work_sec": 10,
+            "rest_sec": 80,
+            "rounds": 8,
+        },
+        late_window=D6_TO_D5,
+    )
+
+    assert isinstance(label, str)
 
 def test_late_taper_blocks_dense_glycolytic_from_structured_metadata():
     result = conditioning._evaluate_conditioning_late_window(
