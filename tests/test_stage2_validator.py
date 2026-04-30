@@ -1304,6 +1304,81 @@ def test_late_fight_d1_simple_bursts_no_round_structure_flag():
     assert "late_fight_conditioning_round_structure_forbidden" not in warning_codes
 
 
+def test_late_fight_countdown_validator_blocks_known_d6_and_d1_leaks():
+    brief = _late_fight_planning_brief("D-6")
+    brief["late_fight_plan_spec"].update(
+        {
+            "payload_mode": "pre_fight_compressed_payload",
+            "days_out_bucket": "D-13",
+            "max_active_roles": 8,
+        }
+    )
+
+    report = validate_stage2_output(
+        planning_brief=brief,
+        final_plan_text="""
+        D-13 — Strength touch
+        - Staggered-Stance Medicine-Ball Punch Throw
+        - Band-Resisted Jab-Cross Primer
+
+        D-6 — Alactic sharpness
+        - Band-Assisted Jump Reset
+        - Fallback: Band-Resisted Sprint Start
+
+        D-1 — Neural primer
+        - Band-Resisted Jab-Cross Primer
+        - Staggered-Stance Medicine-Ball Punch Throw
+        """,
+    )
+
+    blocked = [
+        warning
+        for warning in report["warnings"]
+        if warning["code"] == "late_fight_countdown_blocked_drill"
+    ]
+    assert {warning["days_out_bucket"] for warning in blocked} == {"D-6", "D-1"}
+    assert any(warning["blocked_drill"] == "Band-Assisted Jump Reset" for warning in blocked)
+    assert any(warning["blocked_drill"] == "Band-Resisted Sprint Start" for warning in blocked)
+    assert any(
+        warning["blocked_drill"] == "Staggered-Stance Medicine-Ball Punch Throw"
+        for warning in blocked
+    )
+
+
+def test_late_fight_countdown_clean_sample_has_no_d6_or_d1_blocked_drills():
+    brief = _late_fight_planning_brief("D-6")
+    brief["late_fight_plan_spec"].update(
+        {
+            "payload_mode": "pre_fight_compressed_payload",
+            "days_out_bucket": "D-13",
+            "max_active_roles": 8,
+        }
+    )
+
+    report = validate_stage2_output(
+        planning_brief=brief,
+        final_plan_text="""
+        D-13 — Strength touch
+        - Staggered-Stance Medicine-Ball Punch Throw — 3 x 3
+        - Band-Resisted Jab-Cross Primer — 2 x 3
+        - Breathing + shoulder mobility
+
+        D-6 — Alactic sharpness
+        - Explosive Boxing Burst Intervals — 3 x 6 sec
+        - Reactive Shuffle Repeats — 3 x 6 sec
+        - Breathing + shoulder mobility
+
+        D-1 — Neural primer
+        - Band-Resisted Jab-Cross Primer — 2 x 3
+        - Band Face Pull — 1 x 10
+        - Breathing reset
+        """,
+    )
+
+    warning_codes = {warning["code"] for warning in report["warnings"]}
+    assert "late_fight_countdown_blocked_drill" not in warning_codes
+
+
 def test_late_fight_alactic_overage_d4():
     """D-4 plan with 7 alactic bursts (> 5 cap) must emit alactic_dose_overage."""
     report = validate_stage2_output(
