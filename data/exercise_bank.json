@@ -11145,11 +11145,7 @@
     "subfamily": "band_resisted_jab_cross_primer",
     "late_windows": [
       "d21_to_d14",
-      "d13_to_d8",
-      "d7",
-      "d6_to_d5",
-      "d4_to_d2",
-      "d1"
+      "d13_to_d8"
     ],
     "cut_buckets_allowed": [
       "high",

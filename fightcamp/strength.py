@@ -473,6 +473,7 @@ def _evaluate_strength_late_window(
 
     penalties, blocks, profile = _strength_contextual_risk_patterns(exercise)
     tags = profile["tags"]
+    equipment = set(normalize_equipment_list(exercise.get("equipment", [])))
     late_windows = _exercise_late_windows(exercise)
     cut_buckets_allowed = _exercise_cut_buckets_allowed(exercise)
     phase_role = normalize_tag(str(exercise.get("phase_role") or ""))
@@ -505,6 +506,21 @@ def _evaluate_strength_late_window(
     adjustment = 0.0
     cut_multiplier = LATE_STRENGTH_CUT_BUCKET_MULTIPLIER.get(cut_bucket, 0.0)
     high_cut_window = window in {D13_TO_D8, D7, D6_TO_D5, D4_TO_D2, D1} and cut_bucket in LATE_STRENGTH_HIGH_CUT_BUCKETS
+    late_band_lockout_window = window in {D7, D6_TO_D5, D4_TO_D2, D1}
+    rehab_mobility_band_ok = bool(
+        tags
+        & {
+            "mobility",
+            "recovery",
+            "rehab",
+            "rehab_friendly",
+            "prehab",
+            "injury_prevention",
+        }
+    )
+    if late_band_lockout_window and "bands" in equipment and not rehab_mobility_band_ok:
+        blocks.append("late_strength_block_band_work_lockout")
+        reason_codes.append("late_strength_penalty_band_work_lockout")
 
     if late_windows:
         if window in late_windows:
@@ -2426,5 +2442,4 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
         "late_window_diagnostics": candidate_reservoir.get("__late_window__", {}),
     }
     
-
 

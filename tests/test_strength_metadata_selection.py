@@ -133,6 +133,23 @@ def test_active_weight_cut_blocks_explicitly_incompatible_strength_item():
     assert "late_strength_penalty_cut_pressure_high_cost_metadata" in result["reason_codes"]
 
 
+def test_d7_and_under_blocks_non_rehab_band_strength_work():
+    result = strength._evaluate_strength_late_window(
+        {
+            "name": "Band-Resisted Jab-Cross Primer",
+            "phases": ["TAPER"],
+            "movement": "horizontal_push",
+            "tags": ["speed", "explosive", "neural_primer"],
+            "equipment": "bands",
+        },
+        window=D7,
+        cut_bucket="none",
+    )
+
+    assert result["blocked"] is True
+    assert "late_strength_block_band_work_lockout" in result["block_codes"]
+
+
 def test_high_fatigue_athlete_avoids_high_cns_load(monkeypatch):
     exercise_bank = [
         {

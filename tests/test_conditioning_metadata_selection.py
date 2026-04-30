@@ -31,6 +31,27 @@ def test_late_window_blocks_non_taper_phased_conditioning_even_if_otherwise_vali
     assert "late_conditioning_block_not_taper_phased" in result["block_codes"]
 
 
+def test_d7_and_under_blocks_non_rehab_band_conditioning_work():
+    result = conditioning._evaluate_conditioning_late_window(
+        {
+            "name": "Band-Resisted Sprint Starts (ATP-PCr)",
+            "phases": ["TAPER"],
+            "system": "alactic",
+            "tags": ["acceleration", "speed"],
+            "equipment": "bands",
+            "work_sec": 10,
+            "rest_sec": 80,
+            "rounds": 6,
+        },
+        system="alactic",
+        window=D7,
+        bridge_rules={},
+    )
+
+    assert result["blocked"] is True
+    assert "late_conditioning_block_band_work_lockout" in result["block_codes"]
+
+
 
 def test_late_window_blocks_non_taper_phased_conditioning_in_d13_to_d8():
     result = conditioning._evaluate_conditioning_late_window(
