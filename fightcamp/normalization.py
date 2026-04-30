@@ -80,6 +80,25 @@ def clean_list(values: Any) -> list[str]:
     s = str(values).strip()
     return [s] if s else []
 
+
+def normalize_fatigue_level(athlete_model: dict[str, Any]) -> str:
+    """Return the canonical fatigue level for planning decisions."""
+    fatigue = str(
+        athlete_model.get("fatigue")
+        or athlete_model.get("fatigue_level")
+        or ""
+    ).strip().lower()
+    if fatigue in {"low", "moderate", "high"}:
+        return fatigue
+
+    readiness_flags = {flag.strip().lower() for flag in clean_list(athlete_model.get("readiness_flags", []))}
+    if "high_fatigue" in readiness_flags:
+        return "high"
+    if "moderate_fatigue" in readiness_flags:
+        return "moderate"
+    return "low"
+
+
 def dedupe_preserve_order(values: list[str]) -> list[str]:
     """Remove duplicates while preserving insertion order."""
     return list(dict.fromkeys(values))

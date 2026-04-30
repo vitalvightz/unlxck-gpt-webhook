@@ -1,5 +1,5 @@
 from __future__ import annotations
-from .normalization import clean_list, dedupe_preserve_order, ordered_weekdays as _ordered_weekdays
+from .normalization import clean_list, dedupe_preserve_order, normalize_fatigue_level, ordered_weekdays as _ordered_weekdays
 
 from itertools import combinations, permutations
 from typing import Any
@@ -462,12 +462,7 @@ def _resolve_countdown_weekday_with_availability(
 
 
 def _normalized_fatigue(athlete_model: dict[str, Any]) -> str:
-    fatigue = str(
-        athlete_model.get("fatigue")
-        or athlete_model.get("fatigue_level")
-        or ""
-    ).strip().lower()
-    return fatigue if fatigue in {"low", "moderate", "high"} else "low"
+    return normalize_fatigue_level(athlete_model)
 
 
 def _readiness_flags(athlete_model: dict[str, Any]) -> set[str]:

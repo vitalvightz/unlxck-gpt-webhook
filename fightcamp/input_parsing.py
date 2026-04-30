@@ -193,7 +193,7 @@ def get_date_value(label: str, fields: list[dict]) -> str:
     return _extract_date_value(field) if field else ""
 
 
-def parse_fight_date(value: str) -> datetime | None:
+def _parse_fight_datetime(value: str) -> datetime | None:
     if not value:
         return None
     for fmt in ("%Y-%m-%d", "%Y/%m/%d", "%m/%d/%Y"):
@@ -578,14 +578,6 @@ class PlanInput:
                 parsed_injuries, parsed_restrictions = _parse_guided_injury(guided_injury)
             else:
                 parsed_injuries, parsed_restrictions = parse_injuries_and_restrictions(injuries or "")
-        if guided_injuries:
-            guided_injury = guided_injuries[0]
-            parsed_injuries, parsed_restrictions = _parse_guided_injuries(guided_injuries)
-        elif guided_injury is not None:
-            parsed_injuries, parsed_restrictions = _parse_guided_injury(guided_injury)
-        else:
-            parsed_injuries, parsed_restrictions = parse_injuries_and_restrictions(injuries or "")
-
         training_days = [d.strip() for d in raw_available_days.split(",") if d.strip()]
         hard_sparring_days = [
             d.strip() for d in values["hard_sparring_days_raw"].split(",") if d.strip()
@@ -596,7 +588,7 @@ class PlanInput:
 
         # Validation step (planning-critical contract).
         if next_fight_date:
-            fight_date = parse_fight_date(next_fight_date)
+            fight_date = _parse_fight_datetime(next_fight_date)
             if fight_date is None:
                 raise ValueError(f"invalid fight date format: {next_fight_date}")
         else:

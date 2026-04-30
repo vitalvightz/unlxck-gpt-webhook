@@ -9,11 +9,12 @@ from fightcamp.stage2_payload import (
     _days_out_payload_mode,
     _late_fight_permissions,
     _late_fight_rendering_rules,
+    _normalized_fatigue_level,
     build_planning_brief,
     build_stage2_handoff_text,
     build_stage2_payload,
 )
-from fightcamp.stage2_payload_late_fight import _late_fight_legal_offsets, _late_fight_stage_label
+from fightcamp.stage2_payload_late_fight import _late_fight_legal_offsets, _late_fight_stage_label, _normalized_fatigue
 from fightcamp.training_context import TrainingContext
 
 
@@ -57,6 +58,23 @@ def _athlete(days_until_fight, **overrides):
     athlete.setdefault("readiness_flags", [])
     athlete.update(overrides)
     return athlete
+
+
+@pytest.mark.parametrize(
+    ("athlete_model", "expected"),
+    [
+        ({"readiness_flags": ["high_fatigue"]}, "high"),
+        ({"readiness_flags": ["moderate_fatigue"]}, "moderate"),
+        ({"fatigue_level": "high"}, "high"),
+        (
+            {"fatigue": "moderate", "fatigue_level": "high", "readiness_flags": ["high_fatigue"]},
+            "moderate",
+        ),
+    ],
+)
+def test_fatigue_normalization_matches_regular_and_late_fight_paths(athlete_model, expected):
+    assert _normalized_fatigue_level(athlete_model) == expected
+    assert _normalized_fatigue(athlete_model) == expected
 
 
 def _build_brief_for(days_until_fight, *, phase="SPP", athlete_overrides=None):
@@ -310,6 +328,14 @@ class TestLateFightPermissionsAndRendering:
 
         assert allowed["allow_alactic_sharpness"] is True
         assert suppressed["allow_alactic_sharpness"] is False
+
+    def test_d3_alactic_sharpness_respects_high_fatigue_readiness_flag(self):
+        permissions = _late_fight_permissions(
+            3,
+            _athlete(3, fatigue="", fatigue_level="", readiness_flags=["high_fatigue"]),
+        )
+
+        assert permissions["allow_alactic_sharpness"] is False
 
 
 class TestLateFightRoleMap:

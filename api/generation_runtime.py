@@ -246,7 +246,7 @@ async def run_generation_job(
             stage1_result = await run_stage1_planner(planner_fn, planner_payload)
             if stage1_result.get("status") == "invalid_input":
                 raise HTTPException(
-                    status_code=422,
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                     detail={
                         "message": stage1_result.get("error", "invalid planning input"),
                         "missing_fields": stage1_result.get("missing_fields", []),
