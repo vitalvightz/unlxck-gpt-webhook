@@ -11,6 +11,7 @@ import type {
   PlanRequest,
   PlanSummary,
   ProfileUpdateRequest,
+  Stage1PreviewResponse,
   WeeklySchedule,
 } from "@/lib/types";
 
@@ -396,6 +397,17 @@ export function createGenerationJob(
       body: JSON.stringify(payload),
     }),
   );
+}
+
+export function generateStage1Preview(
+  token: string,
+  payload: PlanRequest,
+): Promise<Stage1PreviewResponse> {
+  return readJson<Stage1PreviewResponse>("/api/plans/stage1-preview", {
+    method: "POST",
+    token,
+    body: JSON.stringify(payload),
+  });
 }
 
 

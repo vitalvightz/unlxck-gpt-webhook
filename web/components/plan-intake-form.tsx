@@ -8,7 +8,8 @@ import { RequireAuth } from "@/components/auth-guard";
 import { useAppSession } from "@/components/auth-provider";
 import { BodyMap, type BodyMapSide } from "@/components/body-map";
 import { CustomSelect } from "@/components/custom-select";
-import { updateMe } from "@/lib/api";
+import { Stage1PreviewPanel } from "@/components/stage1-preview-panel";
+import { generateStage1Preview, updateMe } from "@/lib/api";
 import {
   detectDeviceTimeZone,
   EQUIPMENT_ACCESS_OPTIONS,
@@ -58,7 +59,7 @@ import {
   getFieldHelperText,
   type DaysOutContext,
 } from "@/lib/days-out-policy";
-import type { PlanRequest } from "@/lib/types";
+import type { PlanRequest, Stage1PreviewResponse } from "@/lib/types";
 
 const steps = ["Profile", "Fight Context", "Training", "Restrictions", "Performance", "Review"] as const;
 const PERFORMANCE_STEP_INDEX = 4;
@@ -576,6 +577,8 @@ export function PlanIntakeForm() {
   const [hydrated, setHydrated] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [stage1Preview, setStage1Preview] = useState<Stage1PreviewResponse | null>(null);
+  const [stage1PreviewPending, setStage1PreviewPending] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [originalInjuriesText, setOriginalInjuriesText] = useState<string>("");
   const [injuryOverwriteAcknowledged, setInjuryOverwriteAcknowledged] = useState(false);
@@ -621,6 +624,20 @@ export function PlanIntakeForm() {
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     window.scrollTo({ top: 0, behavior: reducedMotion ? "instant" : "smooth" });
   }, [currentStep]);
+
+  useEffect(() => {
+    if (!stage1Preview || currentStep !== steps.length - 1) {
+      return;
+    }
+
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    window.setTimeout(() => {
+      document.getElementById("stage1-preview")?.scrollIntoView({
+        behavior: reducedMotion ? "instant" : "smooth",
+        block: "start",
+      });
+    }, 0);
+  }, [currentStep, stage1Preview]);
 
   const injuryMismatchContextKey = getInjuryMismatchContextKey(originalInjuriesText, form.injuries || "");
   const performanceFocusValidation = validatePerformanceFocusSelections(
@@ -1117,6 +1134,34 @@ export function PlanIntakeForm() {
     });
   }
 
+  function handleGenerateStage1Preview() {
+    setMessage(null);
+    setError(null);
+    setStage1Preview(null);
+    startTransition(async () => {
+      const nextForm = buildFormSnapshot();
+      if (!validateForGeneration(nextForm)) {
+        return;
+      }
+      if (!session?.access_token) {
+        setError("You must be signed in to generate a Stage 1 preview.");
+        return;
+      }
+
+      setStage1PreviewPending(true);
+      try {
+        await persistDraft(steps.length - 1);
+        const preview = await generateStage1Preview(session.access_token, nextForm);
+        setStage1Preview(preview);
+        setMessage("Stage 1 preview generated. Stage 2 was not run.");
+      } catch (previewError) {
+        setError(previewError instanceof Error ? previewError.message : "Unable to generate Stage 1 preview.");
+      } finally {
+        setStage1PreviewPending(false);
+      }
+    });
+  }
+
   const technicalStyleLabel = getOptionLabel(TECHNICAL_STYLE_OPTIONS, form.athlete.technical_style[0] ?? "") || "Not provided";
   const tacticalStyleLabel = getOptionLabel(TACTICAL_STYLE_OPTIONS, form.athlete.tactical_style[0] ?? "") || "Not provided";
   const statusLabel = getOptionLabel(PROFESSIONAL_STATUS_OPTIONS, form.athlete.professional_status ?? "") || "Not provided";
@@ -1454,6 +1499,7 @@ export function PlanIntakeForm() {
     : currentStep === steps.length - 1
       ? "All required inputs are ready to generate."
       : "This step is ready to continue.";
+  const formActionPending = isPending || stage1PreviewPending;
 
   return (
     <RequireAuth>
@@ -2279,6 +2325,12 @@ export function PlanIntakeForm() {
                   </div>
                 </div>
               </article>
+              {stage1Preview ? (
+                <Stage1PreviewPanel
+                  preview={stage1Preview}
+                  onClear={() => setStage1Preview(null)}
+                />
+              ) : null}
             </div>
 
             <aside className="step-aside athlete-motion-slot athlete-motion-rail onboarding-step-aside">
@@ -2308,7 +2360,7 @@ export function PlanIntakeForm() {
             <p className="muted">{actionBarSummary}</p>
           </div>
           <div className="onboarding-action-buttons">
-            <button type="button" className="ghost-button onboarding-action-secondary" onClick={handleSaveDraft} disabled={isPending}>
+            <button type="button" className="ghost-button onboarding-action-secondary" onClick={handleSaveDraft} disabled={formActionPending}>
               {isPending ? "Saving..." : "Save draft"}
             </button>
             {currentStep > 0 ? (
@@ -2317,13 +2369,23 @@ export function PlanIntakeForm() {
               </button>
             ) : null}
             {currentStep < steps.length - 1 ? (
-              <button type="button" className="cta onboarding-action-primary" onClick={handleNext} disabled={isPending}>
+              <button type="button" className="cta onboarding-action-primary" onClick={handleNext} disabled={formActionPending}>
                 Continue
               </button>
             ) : (
-              <button type="button" className="cta onboarding-action-primary" onClick={handleGenerate} disabled={isPending}>
-                Generate plan
-              </button>
+              <>
+                <button
+                  type="button"
+                  className="ghost-button onboarding-action-secondary"
+                  onClick={handleGenerateStage1Preview}
+                  disabled={formActionPending}
+                >
+                  {stage1PreviewPending ? "Generating Stage 1..." : "Generate Stage 1 only"}
+                </button>
+                <button type="button" className="cta onboarding-action-primary" onClick={handleGenerate} disabled={formActionPending}>
+                  Generate plan
+                </button>
+              </>
             )}
           </div>
         </div>

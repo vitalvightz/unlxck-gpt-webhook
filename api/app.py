@@ -43,6 +43,7 @@ from .models import (
     PlanOutputs,
     PlanSafetyState,
     PlanRequest,
+    PlanStage1PreviewResponse,
     PlanSummary,
     ProfileRecord,
     ProfileUpdateRequest,
@@ -308,6 +309,10 @@ def _decode_structured_text(value: Any) -> dict[str, Any] | None:
             return {"raw": stripped}
         return decoded if isinstance(decoded, dict) else {"raw": decoded}
     return {"raw": value}
+
+
+def _dict_or_none(value: Any) -> dict[str, Any] | None:
+    return value if isinstance(value, dict) else None
 
 
 def _map_profile_row(row: dict[str, Any]) -> ProfileRecord:
@@ -983,6 +988,49 @@ def create_app(
             is_stale_job=_is_stale_job,
         )
         return _job_response(job)
+
+    @app.post("/api/plans/stage1-preview", response_model=PlanStage1PreviewResponse)
+    async def generate_current_user_stage1_preview(
+        request_body: PlanRequest,
+        profile: ProfileRecord = Depends(require_profile),
+        planner_fn: Planner = Depends(get_planner),
+    ) -> PlanStage1PreviewResponse:
+        focus_validation = validate_performance_focus_selections(
+            request_body.fight_date,
+            key_goals=request_body.key_goals,
+            weak_areas=request_body.weak_areas,
+            time_zone=request_body.athlete.athlete_timezone,
+        )
+        if focus_validation.is_over_cap:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=focus_validation.error_message or "Too many focus selections for this camp.",
+            )
+
+        logger.info("[stage1-preview] start athlete_id=%s", profile.athlete_id)
+        stage1_result = await _run_stage1_planner(planner_fn, request_body.to_payload())
+        if stage1_result.get("status") == "invalid_input":
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail={
+                    "message": stage1_result.get("error", "invalid planning input"),
+                    "missing_fields": stage1_result.get("missing_fields", []),
+                },
+            )
+
+        logger.info("[stage1-preview] complete athlete_id=%s status=%s", profile.athlete_id, stage1_result.get("status") or "stage1_ready")
+        return PlanStage1PreviewResponse(
+            generated_at=_utc_now_iso(),
+            status=str(stage1_result.get("status") or "stage1_ready"),
+            stage2_skipped=True,
+            plan_text=str(stage1_result.get("plan_text") or ""),
+            coach_notes=str(stage1_result.get("coach_notes") or ""),
+            why_log=_dict_or_none(stage1_result.get("why_log")) or {},
+            planning_brief=_dict_or_none(stage1_result.get("planning_brief")),
+            stage2_payload=_dict_or_none(stage1_result.get("stage2_payload")),
+            stage2_handoff_text=str(stage1_result.get("stage2_handoff_text") or ""),
+            parsing_metadata=_dict_or_none(stage1_result.get("parsing_metadata")) or {},
+        )
 
     @app.get("/api/generation-jobs/{job_id}", response_model=GenerationJobResponse)
     async def get_generation_job(
