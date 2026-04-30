@@ -19,24 +19,20 @@
       "mech_cns_high",
       "mech_systemic_fatigue",
       "mech_lower_hip_hinge",
-      "mech_ballistic",
-      "mech_landing_impact",
-      "mech_reactive"
+      "mech_ballistic"
     ],
     "notes": "Good for posterior-chain drive without joint pounding (max effort)",
     "equipment_note": "Requires: Assault Bike",
     "work_sec": 10,
     "rpe": 9,
-    "impact_cost": "high",
+    "impact_cost": "low",
     "lactate_load": "low",
     "movement_cost": "low",
     "mechanical_risk_tags": [
-      "mech_ballistic",
       "mech_cns_high",
-      "mech_landing_impact",
+      "mech_systemic_fatigue",
       "mech_lower_hip_hinge",
-      "mech_reactive",
-      "mech_systemic_fatigue"
+      "mech_ballistic"
     ]
   },
   {
@@ -106,12 +102,16 @@
       "mech_systemic_fatigue",
       "mech_trunk_rotation",
       "mech_upper_press"
-    ]
+    ],
+    "late_windows": [
+      "d21_to_d14"
+    ],
+    "block_if_fight_within_days": 10
   },
   {
     "name": "Reaction Ball Drills",
     "equipment": [
-      "medicine_ball"
+      "reaction_ball"
     ],
     "phases": [
       "TAPER"
@@ -145,8 +145,7 @@
     "name": "Nasal Jog",
     "equipment": [],
     "phases": [
-      "GPP",
-      "TAPER"
+      "GPP"
     ],
     "system": "aerobic",
     "modality": "run",
@@ -311,12 +310,11 @@
     "name": "Shadowboxing Intervals",
     "equipment": [],
     "phases": [
-      "TAPER",
       "SPP"
     ],
     "system": "glycolytic",
     "modality": "shadowbox",
-    "duration": "3x3min RPE 6",
+    "duration": "3x3min RPE 7",
     "intensity": "moderate",
     "tags": [
       "reactive",
@@ -332,7 +330,7 @@
     "work_sec": 180,
     "rounds": 3,
     "total_minutes": 9,
-    "rpe": 6,
+    "rpe": 7,
     "impact_cost": "low",
     "lactate_load": "high",
     "movement_cost": "high",
@@ -376,8 +374,7 @@
     "name": "Pool Running (Weight Belt)",
     "equipment": [],
     "phases": [
-      "GPP",
-      "TAPER"
+      "GPP"
     ],
     "system": "aerobic",
     "duration": "30min continuous",
@@ -570,7 +567,7 @@
     "equipment": [],
     "phases": [
       "GPP",
-      "TAPER"
+      "SPP"
     ],
     "system": "aerobic",
     "duration": "15min continuous",
@@ -590,6 +587,13 @@
       "mech_landing_impact",
       "mech_reactive",
       "mech_reactive_rebound"
+    ],
+    "avoid_if": [
+      "achilles",
+      "ankle",
+      "calf",
+      "foot",
+      "shin"
     ]
   },
   {
@@ -887,6 +891,12 @@
     "movement_cost": "low",
     "mechanical_risk_tags": [
       "mech_reactive"
+    ],
+    "intensity": "low",
+    "rpe": 4,
+    "late_windows": [
+      "d13_to_d8",
+      "d7"
     ]
   },
   {
@@ -4840,8 +4850,7 @@
       "pool"
     ],
     "phases": [
-      "SPP",
-      "TAPER"
+      "SPP"
     ],
     "system": "aerobic",
     "modality": "run",
@@ -7944,8 +7953,8 @@
     "name": "Split-Step Ankle Snap Pogo",
     "equipment": [],
     "phases": [
-      "SPP",
-      "TAPER"
+      "GPP",
+      "SPP"
     ],
     "system": "ATP-PCr",
     "modality": "footwork",
@@ -7987,6 +7996,12 @@
       "mech_lower_jump",
       "mech_lower_lunge",
       "mech_reactive_rebound"
+    ],
+    "avoid_if": [
+      "achilles",
+      "ankle",
+      "calf",
+      "foot"
     ]
   },
   {
@@ -8150,5 +8165,35 @@
     "lactate_load": "low",
     "movement_cost": "low",
     "mechanical_risk_tags": []
+  },
+  {
+    "name": "Shadowboxing Technical Rhythm",
+    "equipment": [],
+    "phases": [
+      "TAPER"
+    ],
+    "system": "aerobic",
+    "modality": "shadowbox",
+    "duration": "2x2min RPE 4-5",
+    "intensity": "low",
+    "tags": [
+      "technical",
+      "rhythm",
+      "cns_freshness",
+      "mech_upper_press",
+      "mech_trunk_rotation"
+    ],
+    "notes": "Light technical rhythm only; keep it sharp and easy.",
+    "work_sec": 120,
+    "rounds": 2,
+    "total_minutes": 4,
+    "rpe": 5,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_trunk_rotation",
+      "mech_upper_press"
+    ]
   }
 ]

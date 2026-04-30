@@ -709,6 +709,16 @@ def _load_bank(path: Path, *, source: str, enforce_conditioning_systems: bool = 
 
 _conditioning_bank_cache = None
 _style_conditioning_bank_cache = None
+
+TAPER_CONDITIONING_SAFE_NAMES = {
+    "Shadowboxing Technical Rhythm",
+    "Breath Control Drills",
+    "Easy Assault Bike",
+    "Easy Bike",
+    "Mobility Flow",
+    "Light Footwork Rhythm",
+    "Low-intensity capacity circuits (non-steady)",
+}
 _format_weights_cache = None
 _coordination_bank_cache = None
 coordination_bank = None
@@ -1656,6 +1666,14 @@ def generate_conditioning_block(flags):
             continue
         if late_eval["adjustment"]:
             total_score += late_eval["adjustment"]
+        if (
+            phase.upper() == "TAPER"
+            and isinstance(days_until_fight, int)
+            and days_until_fight <= 7
+            and d.get("name") not in TAPER_CONDITIONING_SAFE_NAMES
+        ):
+            _record_late_block(d, total_score, ["late_taper_safe_whitelist"])
+            continue
 
         reasons = {
             "weakness_hits": num_weak,
@@ -1842,6 +1860,14 @@ def generate_conditioning_block(flags):
             continue
         if late_eval["adjustment"]:
             score += late_eval["adjustment"]
+        if (
+            phase.upper() == "TAPER"
+            and isinstance(days_until_fight, int)
+            and days_until_fight <= 7
+            and d.get("name") not in TAPER_CONDITIONING_SAFE_NAMES
+        ):
+            _record_late_block(d, score, ["late_taper_safe_whitelist"])
+            continue
         reasons = {
             "weakness_hits": weak_matches,
             "goal_hits": goal_matches,
@@ -2663,4 +2689,3 @@ def generate_conditioning_block(flags):
 
     return output_lines, selected_drill_names, why_log, grouped_drills, missing_systems, candidate_reservoir
 # Map for tactical styles
-
