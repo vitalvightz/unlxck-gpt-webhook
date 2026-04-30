@@ -243,6 +243,39 @@ function StepPills({
   );
 }
 
+function AutoSaveIndicator({
+  status,
+  lastSavedAt,
+  onRetry,
+  retryDisabled,
+}: {
+  status: "idle" | "saving" | "saved" | "error";
+  lastSavedAt: number | null;
+  onRetry: () => void;
+  retryDisabled: boolean;
+}) {
+  if (status === "idle" && lastSavedAt === null) {
+    return null;
+  }
+  const label =
+    status === "saving"
+      ? "Saving draft…"
+      : status === "error"
+        ? "Couldn't save draft"
+        : "Draft saved";
+  return (
+    <p className={`onboarding-save-indicator onboarding-save-indicator-${status === "idle" ? "saved" : status}`} aria-live="polite">
+      <span className="onboarding-save-indicator-dot" aria-hidden="true" />
+      <span>{label}</span>
+      {status === "error" ? (
+        <button type="button" className="onboarding-save-indicator-retry" onClick={onRetry} disabled={retryDisabled}>
+          Retry
+        </button>
+      ) : null}
+    </p>
+  );
+}
+
 function getOnboardingProgressState(currentStep: number) {
   const stepNumber = currentStep + 1;
   const totalSteps = steps.length;
@@ -385,11 +418,19 @@ function MobileOnboardingHeader({
   isOpen,
   onToggle,
   onStepSelect,
+  saveStatus,
+  lastSavedAt,
+  onRetrySave,
+  retrySaveDisabled,
 }: {
   currentStep: number;
   isOpen: boolean;
   onToggle: () => void;
   onStepSelect: (step: number) => void;
+  saveStatus: "idle" | "saving" | "saved" | "error";
+  lastSavedAt: number | null;
+  onRetrySave: () => void;
+  retrySaveDisabled: boolean;
 }) {
   return (
     <div className="onboarding-heading-mobile">
@@ -404,6 +445,12 @@ function MobileOnboardingHeader({
         isExpanded={isOpen}
         onToggle={onToggle}
         controlsId="onboarding-mobile-steps"
+      />
+      <AutoSaveIndicator
+        status={saveStatus}
+        lastSavedAt={lastSavedAt}
+        onRetry={onRetrySave}
+        retryDisabled={retrySaveDisabled}
       />
       {isOpen ? (
         <div id="onboarding-mobile-steps" className="onboarding-mobile-progress-panel">
@@ -582,6 +629,9 @@ export function PlanIntakeForm() {
   const [originalInjuriesText, setOriginalInjuriesText] = useState<string>("");
   const [injuryOverwriteAcknowledged, setInjuryOverwriteAcknowledged] = useState(false);
   const [acknowledgedHardSparringWarningKey, setAcknowledgedHardSparringWarningKey] = useState<string | null>(null);
+  const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
+  const lastSavedSnapshotRef = useRef<string>("");
   const injuryMismatchContextKeyRef = useRef("");
   const issueRedirectConsumedRef = useRef(false);
   const recordHasError = !isValidRecordFormat(form.athlete.record ?? "");
@@ -623,6 +673,28 @@ export function PlanIntakeForm() {
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     window.scrollTo({ top: 0, behavior: reducedMotion ? "instant" : "smooth" });
   }, [currentStep]);
+
+  useEffect(() => {
+    if (!hydrated || !session?.access_token) {
+      return;
+    }
+    const snapshot = buildFormSnapshot();
+    const key = JSON.stringify(snapshot);
+    if (lastSavedSnapshotRef.current === "") {
+      lastSavedSnapshotRef.current = key;
+      return;
+    }
+    if (key === lastSavedSnapshotRef.current) {
+      return;
+    }
+    const handle = window.setTimeout(() => {
+      persistDraft(currentStep).catch(() => {
+        // Auto-save failure surfaces via the save indicator; explicit save still available.
+      });
+    }, 1500);
+    return () => window.clearTimeout(handle);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form, guidedInjuries, noRestrictions, hydrated, session?.access_token]);
 
   useEffect(() => {
     if (!stage1Preview || currentStep !== steps.length - 1) {
@@ -1011,19 +1083,28 @@ export function PlanIntakeForm() {
     }
     const nextForm = buildFormSnapshot();
     setForm(nextForm);
-    const updatedMe = await updateMe(session.access_token, {
-      full_name: nextForm.athlete.full_name,
-      technical_style: nextForm.athlete.technical_style,
-      tactical_style: nextForm.athlete.tactical_style,
-      stance: nextForm.athlete.stance,
-      professional_status: nextForm.athlete.professional_status,
-      record: nextForm.athlete.record,
-      athlete_timezone: nextForm.athlete.athlete_timezone,
-      onboarding_draft: {
-        ...mergePlanRequestDraft(me?.profile.onboarding_draft as Record<string, unknown> | null | undefined, nextForm, step),
-      },
-    });
-    replaceMe(updatedMe);
+    setSaveStatus("saving");
+    try {
+      const updatedMe = await updateMe(session.access_token, {
+        full_name: nextForm.athlete.full_name,
+        technical_style: nextForm.athlete.technical_style,
+        tactical_style: nextForm.athlete.tactical_style,
+        stance: nextForm.athlete.stance,
+        professional_status: nextForm.athlete.professional_status,
+        record: nextForm.athlete.record,
+        athlete_timezone: nextForm.athlete.athlete_timezone,
+        onboarding_draft: {
+          ...mergePlanRequestDraft(me?.profile.onboarding_draft as Record<string, unknown> | null | undefined, nextForm, step),
+        },
+      });
+      replaceMe(updatedMe);
+      lastSavedSnapshotRef.current = JSON.stringify(nextForm);
+      setSaveStatus("saved");
+      setLastSavedAt(Date.now());
+    } catch (persistError) {
+      setSaveStatus("error");
+      throw persistError;
+    }
   }
 
   function handleSaveDraft() {
@@ -1516,10 +1597,20 @@ export function PlanIntakeForm() {
           isOpen={isMobileProgressOpen}
           onToggle={() => setIsMobileProgressOpen((current) => !current)}
           onStepSelect={handleStepSelect}
+          saveStatus={saveStatus}
+          lastSavedAt={lastSavedAt}
+          onRetrySave={handleSaveDraft}
+          retrySaveDisabled={formActionPending}
         />
 
         <div className="athlete-motion-slot athlete-motion-status onboarding-progress-desktop">
           <OnboardingProgressStrip currentStep={currentStep} />
+          <AutoSaveIndicator
+            status={saveStatus}
+            lastSavedAt={lastSavedAt}
+            onRetry={handleSaveDraft}
+            retryDisabled={formActionPending}
+          />
           <StepPills currentStep={currentStep} onStepSelect={handleStepSelect} />
         </div>
 

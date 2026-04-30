@@ -1301,6 +1301,91 @@ select:focus-visible {
   gap: 18px;
 }
 
+.onboarding-save-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 6px 10px;
+  border-radius: 8px;
+  font-family: var(--font-mono), monospace;
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border-default);
+  width: fit-content;
+}
+
+.onboarding-save-indicator-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.onboarding-save-indicator-saving .onboarding-save-indicator-dot {
+  background: #d4920e;
+  animation: onboarding-save-pulse 1s ease-in-out infinite;
+}
+
+.onboarding-save-indicator-saved {
+  color: #7ab832;
+  border-color: rgba(99, 153, 34, 0.32);
+  background: rgba(99, 153, 34, 0.08);
+}
+
+.onboarding-save-indicator-saved .onboarding-save-indicator-dot {
+  background: #7ab832;
+}
+
+.onboarding-save-indicator-error {
+  color: #e0344d;
+  border-color: rgba(181, 18, 43, 0.32);
+  background: rgba(181, 18, 43, 0.08);
+}
+
+.onboarding-save-indicator-error .onboarding-save-indicator-dot {
+  background: #e0344d;
+}
+
+.onboarding-save-indicator-retry {
+  margin-left: 4px;
+  min-height: 28px;
+  padding: 0 10px;
+  border: 1px solid currentColor;
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  font-family: inherit;
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.onboarding-save-indicator-retry:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.onboarding-save-indicator-retry:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+@keyframes onboarding-save-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .onboarding-save-indicator-saving .onboarding-save-indicator-dot {
+    animation: none;
+  }
+}
+
 .onboarding-progress-strip {
   display: grid;
   gap: 12px;
@@ -5609,15 +5694,15 @@ html[data-theme="light"] .injury-card-state {
   background: none;
   border: none;
   cursor: pointer;
-  padding: 4px;
-  border-radius: 6px;
+  padding: 0;
+  border-radius: 10px;
   color: var(--text-secondary);
   transition: color 0.1s, background 0.1s;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
+  width: 44px;
+  height: 44px;
   flex-shrink: 0;
 }
 
@@ -5634,7 +5719,8 @@ html[data-theme="light"] .injury-card-state {
 
 .injury-severity-chip,
 .injury-trend-chip {
-  padding: 8px 14px;
+  min-height: 44px;
+  padding: 10px 14px;
   border-radius: 10px;
   border: 1px solid rgba(255, 255, 255, 0.08);
   font-size: 0.85rem;
