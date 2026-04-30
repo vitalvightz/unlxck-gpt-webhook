@@ -1318,6 +1318,32 @@ _LATE_FIGHT_WINDOW_EXERCISE_RULES: dict[str, dict[str, list[str]]] = {
     },
 }
 
+_COUNTDOWN_DAY_LABEL = re.compile(r"\bD-(\d{1,2})\b", re.IGNORECASE)
+
+
+def _countdown_sections(final_plan_text: str) -> list[dict[str, Any]]:
+    sections: list[dict[str, Any]] = []
+    for section in _section_blocks(final_plan_text):
+        title = str(section.get("title") or "")
+        lines = list(section.get("lines") or [])
+        search_text = " ".join([title, *(lines[:1] if lines else [])])
+        match = _COUNTDOWN_DAY_LABEL.search(search_text)
+        if not match:
+            continue
+        day_label = f"D-{int(match.group(1))}"
+        window = _late_fight_window_from_bucket(day_label)
+        if not window:
+            continue
+        sections.append(
+            {
+                "day_label": day_label,
+                "window": window,
+                "title": title,
+                "lines": lines,
+            }
+        )
+    return sections
+
 
 def _late_fight_session_blocks(final_plan_text: str) -> list[list[str]]:
     blocks = _phase_session_blocks(_extract_plan_lines(final_plan_text))
@@ -1661,36 +1687,50 @@ def _late_fight_warnings(planning_brief: dict, final_plan_text: str) -> list[dic
             }
         )
 
-    window_key = _late_fight_window_from_bucket(days_out_bucket)
-    window_rules = _LATE_FIGHT_WINDOW_EXERCISE_RULES.get(window_key or "")
-    if window_rules:
-        plan_text = "\n".join(plan_lines).lower()
-        matched_blocked = [term for term in window_rules.get("blocked", []) if phrase_in_text(plan_text, term.lower())]
-        if matched_blocked:
-            warnings.append(
-                {
-                    "code": "late_fight_window_forbidden_exercise",
-                    "message": f"{days_out_bucket} includes exercises blocked for {window_key}.",
-                    "payload_mode": payload_mode,
-                    "days_out_bucket": days_out_bucket,
-                    "window": window_key,
-                    "matched_terms": matched_blocked[:5],
-                    "blocking": True,
-                }
-            )
-        preferred_terms = window_rules.get("preferred", [])
-        if preferred_terms and not any(phrase_in_text(plan_text, term.lower()) for term in preferred_terms):
-            warnings.append(
-                {
-                    "code": "late_fight_window_preferred_missing",
-                    "message": f"{days_out_bucket} does not show any preferred exercise cues for {window_key}.",
-                    "payload_mode": payload_mode,
-                    "days_out_bucket": days_out_bucket,
-                    "window": window_key,
-                    "preferred_terms": preferred_terms[:5],
-                    "blocking": False,
-                }
-            )
+    countdown_sections = _countdown_sections(final_plan_text)
+    if countdown_sections:
+        for section in countdown_sections:
+            section_lines = [str(line) for line in section.get("lines", [])]
+            section_text = "\n".join(section_lines).lower()
+            window_key = str(section.get("window") or "")
+            day_label = str(section.get("day_label") or days_out_bucket)
+            window_rules = _LATE_FIGHT_WINDOW_EXERCISE_RULES.get(window_key, {})
+            matched_hits: list[dict[str, str]] = []
+            for line in section_lines:
+                lowered = line.lower()
+                for term in window_rules.get("blocked", []):
+                    if phrase_in_text(lowered, term.lower()):
+                        matched_hits.append({"term": term, "line": line})
+                        break
+            if matched_hits:
+                warnings.append(
+                    {
+                        "code": "late_fight_window_forbidden_exercise",
+                        "message": f"{day_label} includes exercises blocked for {window_key}.",
+                        "payload_mode": payload_mode,
+                        "days_out_bucket": day_label,
+                        "window": window_key,
+                        "section_title": section.get("title"),
+                        "line": matched_hits[0]["line"],
+                        "matched_terms": dedupe_preserve_order([hit["term"] for hit in matched_hits])[:5],
+                        "matched_lines": dedupe_preserve_order([hit["line"] for hit in matched_hits])[:3],
+                        "blocking": True,
+                    }
+                )
+            preferred_terms = window_rules.get("preferred", [])
+            if preferred_terms and not any(phrase_in_text(section_text, term.lower()) for term in preferred_terms):
+                warnings.append(
+                    {
+                        "code": "late_fight_window_preferred_missing",
+                        "message": f"{day_label} does not show any preferred exercise cues for {window_key}.",
+                        "payload_mode": payload_mode,
+                        "days_out_bucket": day_label,
+                        "window": window_key,
+                        "section_title": section.get("title"),
+                        "preferred_terms": preferred_terms[:5],
+                        "blocking": False,
+                    }
+                )
 
     warnings.extend(_late_fight_dosage_warnings(spec, blocks))
 

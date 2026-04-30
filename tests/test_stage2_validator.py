@@ -441,26 +441,34 @@ def test_late_fight_window_rules_block_d10_sprint_start():
     report = validate_stage2_output(
         planning_brief=_late_fight_planning_brief("D-10"),
         final_plan_text="""
+        ## D-10
         Monday - Sharpness Session
         - Band-Resisted Sprint Start - 4 x 6 sec
         - Mobility reset - 10 min
         """,
     )
-    warning_codes = {warning["code"] for warning in report["warnings"]}
-    assert "late_fight_window_forbidden_exercise" in warning_codes
+    blocked = [w for w in report["warnings"] if w["code"] == "late_fight_window_forbidden_exercise"]
+    assert blocked
+    assert blocked[0]["days_out_bucket"] == "D-10"
+    assert blocked[0]["window"] == "d13_to_d8"
+    assert "Band-Resisted Sprint Start" in blocked[0]["line"]
 
 
 def test_late_fight_window_rules_block_d3_med_ball_volume():
     report = validate_stage2_output(
         planning_brief=_late_fight_planning_brief("D-3"),
         final_plan_text="""
+        ## D-3
         Wednesday - Freshness Session
         - Med-ball punch throw - 4 x 3
         - Breathing reset - 5 min
         """,
     )
-    warning_codes = {warning["code"] for warning in report["warnings"]}
-    assert "late_fight_window_forbidden_exercise" in warning_codes
+    blocked = [w for w in report["warnings"] if w["code"] == "late_fight_window_forbidden_exercise"]
+    assert blocked
+    assert blocked[0]["days_out_bucket"] == "D-3"
+    assert blocked[0]["window"] == "d4_to_d2"
+    assert "Med-ball punch throw" in blocked[0]["line"]
 
 def test_validate_stage2_output_accepts_same_level_subsections_inside_phase():
     base = _planning_brief_fixture()
