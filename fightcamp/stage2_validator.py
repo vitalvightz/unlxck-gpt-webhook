@@ -125,6 +125,7 @@ _LATE_FIGHT_TOKEN_PHRASES = {
     "layered_rehab_stack": ("rehab stack",),
 }
 _LATE_FIGHT_REHAB_PHRASES = ("rehab", "band external rotation", "scap", "mobility", "tissue", "breathing")
+_LATE_FIGHT_BAND_REHAB_ALLOW_PHRASES = ("mobility", "recovery", "rehab", "rehab friendly", "prehab", "injury prevention")
 _COUNTDOWN_LABEL_LINE = re.compile(r"^(?:#{1,6}\s*)?(?:[-*]\s*)?(?:\*\*)?(D-(\d+))\b", re.IGNORECASE)
 _LATE_FIGHT_COUNTDOWN_BLOCKED_DRILLS = {
     6: (
@@ -145,6 +146,12 @@ _LATE_FIGHT_COUNTDOWN_BLOCKED_DRILLS = {
         "trap bar",
         "slow eccentric",
         "loaded strength",
+        "band-resisted",
+        "resisted punch",
+        "resisted punching",
+        "sprint start",
+        "jump",
+        "plyometric",
     ),
 }
 
@@ -1507,6 +1514,52 @@ def _late_fight_countdown_blocked_drill_warnings(
     return warnings
 
 
+def _late_fight_countdown_banded_lockout_warnings(
+    spec: dict[str, Any],
+    final_plan_text: str,
+    plan_lines: list[str],
+) -> list[dict]:
+    day_blocks = _late_fight_countdown_blocks_by_day(final_plan_text)
+    if not day_blocks:
+        days_out_bucket = str(spec.get("days_out_bucket") or "")
+        match = re.match(r"^D-(\d+)$", days_out_bucket, flags=re.IGNORECASE)
+        if match:
+            day_blocks[int(match.group(1))] = plan_lines
+
+    warnings: list[dict] = []
+    for day, lines in day_blocks.items():
+        if day > 7:
+            continue
+        for line in lines:
+            if _line_is_instruction_only(line):
+                continue
+            has_band_token = any(
+                phrase_in_text(line, token)
+                for token in (
+                    "band resisted",
+                    "banded",
+                    "resistance band",
+                    "mini band",
+                    "band assisted",
+                )
+            )
+            if not has_band_token:
+                continue
+            if any(phrase_in_text(line, phrase) for phrase in _LATE_FIGHT_BAND_REHAB_ALLOW_PHRASES):
+                continue
+            warnings.append(
+                {
+                    "code": "late_fight_countdown_blocked_drill",
+                    "message": f"D-{day} includes non-rehab band work, which is blocked from D-7 and closer.",
+                    "days_out_bucket": f"D-{day}",
+                    "blocked_drill": "non_rehab_band_work",
+                    "line": line,
+                    "blocking": True,
+                }
+            )
+    return warnings
+
+
 # ---------------------------------------------------------------------------
 # Late-fight dosage ceiling helpers (Patch B)
 # ---------------------------------------------------------------------------
@@ -1840,6 +1893,7 @@ def _late_fight_warnings(planning_brief: dict, final_plan_text: str) -> list[dic
                 )
 
     warnings.extend(_late_fight_countdown_blocked_drill_warnings(spec, final_plan_text, plan_lines))
+    warnings.extend(_late_fight_countdown_banded_lockout_warnings(spec, final_plan_text, plan_lines))
     warnings.extend(_late_fight_dosage_warnings(spec, blocks))
 
     return warnings
