@@ -1888,7 +1888,7 @@ def _late_fight_warnings(planning_brief: dict, final_plan_text: str) -> list[dic
                 )
 
     warnings.extend(_late_fight_countdown_blocked_drill_warnings(spec, final_plan_text, plan_lines))
-    warnings.extend(_late_fight_countdown_banded_lockout_warnings(final_plan_text))
+    warnings.extend(_late_fight_countdown_banded_lockout_warnings(spec, final_plan_text, plan_lines))
     warnings.extend(_late_fight_dosage_warnings(spec, blocks))
 
     return warnings
