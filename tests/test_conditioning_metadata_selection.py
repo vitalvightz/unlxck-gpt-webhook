@@ -9,6 +9,27 @@ from fightcamp.stage2_payload import build_stage2_payload
 from fightcamp.training_context import TrainingContext
 
 
+
+
+def test_late_window_blocks_non_taper_phased_conditioning_even_if_otherwise_valid():
+    result = conditioning._evaluate_conditioning_late_window(
+        {
+            "name": "Band-Resisted Sprint Starts (ATP-PCr)",
+            "phases": ["SPP"],
+            "system": "alactic",
+            "tags": ["acceleration", "low_volume"],
+            "work_sec": 10,
+            "rest_sec": 80,
+            "rounds": 8,
+        },
+        system="alactic",
+        window=D6_TO_D5,
+        bridge_rules={"glycolytic_touch_max": 0},
+    )
+
+    assert result["blocked"] is True
+    assert "late_conditioning_block_not_taper_phased" in result["block_codes"]
+
 def test_late_taper_blocks_dense_glycolytic_from_structured_metadata():
     result = conditioning._evaluate_conditioning_late_window(
         {
