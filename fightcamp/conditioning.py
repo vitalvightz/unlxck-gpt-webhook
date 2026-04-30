@@ -713,6 +713,8 @@ _style_conditioning_bank_cache = None
 TAPER_CONDITIONING_SAFE_NAMES = {
     "Shadowboxing Technical Rhythm",
     "Breath Control Drills",
+    "Explosive Boxing Burst Intervals",
+    "Reactive Shuffle Repeats",
     "Easy Assault Bike",
     "Easy Bike",
     "Mobility Flow",

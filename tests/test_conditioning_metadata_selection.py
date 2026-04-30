@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 
 from fightcamp import conditioning
-from fightcamp.late_selector_windows import D1, D4_TO_D2, D7
+from fightcamp.late_selector_windows import D1, D4_TO_D2, D6_TO_D5, D7
 from fightcamp.stage2_payload import build_stage2_payload
 from fightcamp.training_context import TrainingContext
 
@@ -258,3 +258,62 @@ def test_boxing_sprint_starts_are_not_tight_window_taper_defaults():
             window=D1,
             bridge_rules={},
         )["blocked"] is True
+
+
+def test_boxing_jump_reset_is_not_taper_metadata_and_d6_prefers_low_impact_bursts():
+    data = json.loads(Path("data/conditioning_bank.json").read_text(encoding="utf-8"))
+    by_name = {item["name"]: item for item in data}
+
+    jump_reset = by_name["Band-Assisted Jump Reset"]
+    assert "TAPER" not in jump_reset["phases"]
+    assert jump_reset["phases"] == ["SPP"]
+
+    burst = by_name["Explosive Boxing Burst Intervals"]
+    shuffle = by_name["Reactive Shuffle Repeats"]
+    for item in (burst, shuffle):
+        assert item["phases"] == ["TAPER"]
+        assert "d6_to_d5" in item["late_windows"]
+        assert "d1" not in item["late_windows"]
+        assert conditioning._evaluate_conditioning_late_window(
+            item,
+            system=item["system"],
+            window=D6_TO_D5,
+            bridge_rules={},
+        )["blocked"] is False
+        assert conditioning._evaluate_conditioning_late_window(
+            item,
+            system=item["system"],
+            window=D1,
+            bridge_rules={},
+        )["blocked"] is True
+
+
+def test_generated_boxing_d6_taper_uses_low_impact_alactic_not_jump_or_sprint_start():
+    result = conditioning.generate_conditioning_block(
+        {
+            "phase": "TAPER",
+            "fatigue": "moderate",
+            "style_technical": ["boxing"],
+            "style_tactical": ["out-boxer"],
+            "sport": "boxing",
+            "key_goals": ["speed", "power", "conditioning"],
+            "weaknesses": ["footwork", "sharpness"],
+            "injuries": [],
+            "restrictions": [],
+            "equipment": ["bands", "bodyweight", "medicine_ball"],
+            "training_frequency": 5,
+            "days_available": 5,
+            "days_until_fight": 6,
+            "time_to_fight_days": 6,
+            "weight_cut_pct": 5.0,
+        }
+    )
+
+    plan_text, selected_names, *_rest, candidate_reservoir = result
+    assert "Explosive Boxing Burst Intervals" in selected_names
+    assert "Reactive Shuffle Repeats" in [
+        entry["drill"]["name"]
+        for entry in candidate_reservoir["alactic"]
+    ]
+    assert "Band-Assisted Jump Reset" not in plan_text
+    assert "Band-Resisted Sprint Start" not in plan_text

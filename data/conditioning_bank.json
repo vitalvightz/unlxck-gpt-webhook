@@ -5632,7 +5632,7 @@
       "bands"
     ],
     "phases": [
-      "TAPER"
+      "SPP"
     ],
     "system": "ATP-PCr",
     "duration": "4x4 reps, 75s rest",
@@ -5660,6 +5660,82 @@
       "mech_lower_jump",
       "mech_reactive",
       "mech_shoulder_overhead"
+    ]
+  },
+  {
+    "name": "Explosive Boxing Burst Intervals",
+    "equipment": [],
+    "phases": [
+      "TAPER"
+    ],
+    "late_windows": [
+      "d13_to_d8",
+      "d7",
+      "d6_to_d5",
+      "d4_to_d2"
+    ],
+    "system": "ATP-PCr",
+    "duration": "3-4 x 6 sec, 90s rest",
+    "tags": [
+      "boxing",
+      "speed",
+      "sharpness",
+      "skill_refinement",
+      "low_impact",
+      "cns_freshness",
+      "mech_reactive",
+      "mech_trunk_rotation",
+      "mech_upper_press"
+    ],
+    "notes": "Short glove-free boxing bursts: jab-cross, angle out, reset. Stop while it still feels crisp.",
+    "work_sec": 6,
+    "rest_sec": 90,
+    "rounds": 4,
+    "total_minutes": 0.4,
+    "rpe": 6,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_reactive",
+      "mech_trunk_rotation",
+      "mech_upper_press"
+    ]
+  },
+  {
+    "name": "Reactive Shuffle Repeats",
+    "equipment": [],
+    "phases": [
+      "TAPER"
+    ],
+    "late_windows": [
+      "d13_to_d8",
+      "d7",
+      "d6_to_d5",
+      "d4_to_d2"
+    ],
+    "system": "ATP-PCr",
+    "duration": "3 x 6 sec, 90s rest",
+    "tags": [
+      "boxing",
+      "footwork",
+      "coordination",
+      "sharpness",
+      "low_impact",
+      "cns_freshness",
+      "mech_reactive"
+    ],
+    "notes": "Two-step shuffle on cue, then freeze tall. Keep contacts quiet and volume tiny.",
+    "work_sec": 6,
+    "rest_sec": 90,
+    "rounds": 3,
+    "total_minutes": 0.3,
+    "rpe": 6,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_reactive"
     ]
   },
   {
