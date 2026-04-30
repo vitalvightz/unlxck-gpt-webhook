@@ -176,6 +176,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=
 | GET | `/api/me` | Current athlete profile |
 | PUT | `/api/me` | Update profile |
 | POST | `/api/plans/generate` | Start plan generation (returns job ID) |
+| POST | `/api/plans/stage1-preview` | Generate Stage 1 draft and audit artifacts without Stage 2 |
 | GET | `/api/generation-jobs/{id}` | Poll generation status |
 | GET | `/api/plans` | List saved plans |
 | GET | `/api/plans/{id}` | Get plan detail |

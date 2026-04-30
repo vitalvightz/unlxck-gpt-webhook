@@ -234,6 +234,19 @@ export type PlanOutputs = {
   pdf_url?: string | null;
 };
 
+export type Stage1PreviewResponse = {
+  generated_at: string;
+  status: string;
+  stage2_skipped: boolean;
+  plan_text: string;
+  coach_notes: string;
+  why_log: Record<string, unknown>;
+  planning_brief?: Record<string, unknown> | null;
+  stage2_payload?: Record<string, unknown> | null;
+  stage2_handoff_text: string;
+  parsing_metadata: Record<string, unknown>;
+};
+
 export type PlanAdvisory = {
   kind: "sparring_adjustment";
   action: "deload" | "convert";

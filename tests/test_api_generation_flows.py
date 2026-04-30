@@ -58,6 +58,31 @@ def test_generate_plan_persists_validated_final_plan_and_history():
     assert stage2.calls[0]["stage2_handoff_text"] == "handoff"
 
 
+def test_stage1_preview_returns_draft_and_skips_generation_side_effects():
+    client, store, stage2 = _build_client()
+
+    response = client.post(
+        "/api/plans/stage1-preview",
+        headers={"Authorization": "Bearer athlete-token"},
+        json=_build_request().model_dump(mode="json"),
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["status"] == "stage1_ready"
+    assert body["stage2_skipped"] is True
+    assert body["plan_text"] == "# Stage 1 Draft"
+    assert body["coach_notes"] == "### Coach Review"
+    assert body["why_log"] == {"strength": {}}
+    assert body["planning_brief"]["main_limiter"] == "conditioning"
+    assert body["stage2_payload"] == {"ok": True}
+    assert body["stage2_handoff_text"] == "handoff"
+    assert stage2.calls == []
+    assert store.generation_jobs == {}
+    assert store.plans == {}
+    assert store.get_latest_intake("athlete-1") is None
+
+
 def test_generate_plan_persists_retry_pass_result():
     client, store, _ = _build_client(
         FakeStage2Automator(

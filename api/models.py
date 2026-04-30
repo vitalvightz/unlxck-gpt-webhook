@@ -600,6 +600,19 @@ class PlanRequest(BaseModel):
         return payload
 
 
+class PlanStage1PreviewResponse(BaseModel):
+    generated_at: str
+    status: str
+    stage2_skipped: bool = True
+    plan_text: str = ""
+    coach_notes: str = ""
+    why_log: dict[str, Any] = Field(default_factory=dict)
+    planning_brief: dict[str, Any] | None = None
+    stage2_payload: dict[str, Any] | None = None
+    stage2_handoff_text: str = ""
+    parsing_metadata: dict[str, Any] = Field(default_factory=dict)
+
+
 class ProfileUpdateRequest(BaseModel):
     full_name: str | None = None
     technical_style: list[str] | None = None
