@@ -1263,6 +1263,62 @@ def _late_fight_plan_spec(planning_brief: dict) -> dict[str, Any]:
     return spec if isinstance(spec, dict) else {}
 
 
+def _late_fight_window_from_bucket(days_out_bucket: str) -> str | None:
+    if not re.match(r"^D-\d+$", days_out_bucket):
+        return None
+    try:
+        day = int(days_out_bucket[2:])
+    except ValueError:
+        return None
+    if 14 <= day <= 21:
+        return "d21_to_d14"
+    if 8 <= day <= 13:
+        return "d13_to_d8"
+    if day == 7:
+        return "d7"
+    if 5 <= day <= 6:
+        return "d6_to_d5"
+    if 2 <= day <= 4:
+        return "d4_to_d2"
+    if day == 1:
+        return "d1"
+    return None
+
+
+_LATE_FIGHT_WINDOW_EXERCISE_RULES: dict[str, dict[str, list[str]]] = {
+    "d21_to_d14": {
+        "blocked": ["hard shuttle", "bag sprint", "jump", "dense circuit", "eccentric"],
+        "preferred": ["trap bar", "med-ball", "band jab-cross", "mobility"],
+    },
+    "d13_to_d8": {
+        "blocked": ["olympic", "heavy trap", "eccentric", "jump", "sprint start", "dense conditioning"],
+        "preferred": ["med-ball", "band jab-cross", "boxing burst", "reactive shuffle", "mobility", "breathing"],
+    },
+    "d7": {
+        "blocked": ["olympic", "heavy lower", "eccentric", "jump reset", "sprint start", "high-volume bag"],
+        "preferred": ["band jab-cross", "reactive shuffle", "boxing burst", "technical rhythm", "mobility"],
+    },
+    "d6_to_d5": {
+        "blocked": ["band-assisted jump reset", "band-resisted sprint start", "jump", "loaded strength", "dense conditioning"],
+        "preferred": ["explosive boxing burst intervals", "reactive shuffle repeats", "band-resisted jab-cross primer"],
+    },
+    "d4_to_d2": {
+        "blocked": ["loaded strength", "sprint start", "jump reset", "heavy bag", "med-ball", "eccentric"],
+        "preferred": ["technical shadowboxing", "mobility reset", "breathing", "band face pull", "light band punch"],
+    },
+    "d1": {
+        "blocked": ["med-ball", "heavy bag", "pull-up hold", "sprint", "jump", "barbell", "trap bar", "loaded strength", "eccentric"],
+        "preferred": [
+            "band-resisted jab-cross primer",
+            "band face pull",
+            "technical shadowboxing tempo",
+            "mobility reset flow",
+            "breathing reset",
+        ],
+    },
+}
+
+
 def _late_fight_session_blocks(final_plan_text: str) -> list[list[str]]:
     blocks = _phase_session_blocks(_extract_plan_lines(final_plan_text))
     return [block for block in blocks if block]
@@ -1604,6 +1660,37 @@ def _late_fight_warnings(planning_brief: dict, final_plan_text: str) -> list[dic
                 "blocking": True,
             }
         )
+
+    window_key = _late_fight_window_from_bucket(days_out_bucket)
+    window_rules = _LATE_FIGHT_WINDOW_EXERCISE_RULES.get(window_key or "")
+    if window_rules:
+        plan_text = "\n".join(plan_lines).lower()
+        matched_blocked = [term for term in window_rules.get("blocked", []) if phrase_in_text(plan_text, term.lower())]
+        if matched_blocked:
+            warnings.append(
+                {
+                    "code": "late_fight_window_forbidden_exercise",
+                    "message": f"{days_out_bucket} includes exercises blocked for {window_key}.",
+                    "payload_mode": payload_mode,
+                    "days_out_bucket": days_out_bucket,
+                    "window": window_key,
+                    "matched_terms": matched_blocked[:5],
+                    "blocking": True,
+                }
+            )
+        preferred_terms = window_rules.get("preferred", [])
+        if preferred_terms and not any(phrase_in_text(plan_text, term.lower()) for term in preferred_terms):
+            warnings.append(
+                {
+                    "code": "late_fight_window_preferred_missing",
+                    "message": f"{days_out_bucket} does not show any preferred exercise cues for {window_key}.",
+                    "payload_mode": payload_mode,
+                    "days_out_bucket": days_out_bucket,
+                    "window": window_key,
+                    "preferred_terms": preferred_terms[:5],
+                    "blocking": False,
+                }
+            )
 
     warnings.extend(_late_fight_dosage_warnings(spec, blocks))
 

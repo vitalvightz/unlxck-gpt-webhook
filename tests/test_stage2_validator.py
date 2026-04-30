@@ -436,6 +436,32 @@ def test_validate_stage2_output_accepts_new_d3_sharpness_and_freshness_titles():
     assert "late_fight_meaningful_stress_overage" not in warning_codes
     assert "late_fight_forbidden_content" not in warning_codes
 
+
+def test_late_fight_window_rules_block_d10_sprint_start():
+    report = validate_stage2_output(
+        planning_brief=_late_fight_planning_brief("D-10"),
+        final_plan_text="""
+        Monday - Sharpness Session
+        - Band-Resisted Sprint Start - 4 x 6 sec
+        - Mobility reset - 10 min
+        """,
+    )
+    warning_codes = {warning["code"] for warning in report["warnings"]}
+    assert "late_fight_window_forbidden_exercise" in warning_codes
+
+
+def test_late_fight_window_rules_block_d3_med_ball_volume():
+    report = validate_stage2_output(
+        planning_brief=_late_fight_planning_brief("D-3"),
+        final_plan_text="""
+        Wednesday - Freshness Session
+        - Med-ball punch throw - 4 x 3
+        - Breathing reset - 5 min
+        """,
+    )
+    warning_codes = {warning["code"] for warning in report["warnings"]}
+    assert "late_fight_window_forbidden_exercise" in warning_codes
+
 def test_validate_stage2_output_accepts_same_level_subsections_inside_phase():
     base = _planning_brief_fixture()
     planning_brief = {
