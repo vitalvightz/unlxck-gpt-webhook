@@ -1280,10 +1280,6 @@
       "mech_landing_impact",
       "mech_lower_hip_hinge",
       "mech_reactive"
-    ],
-    "late_windows": [
-      "d21_to_d14",
-      "d13_to_d8"
     ]
   },
   {
@@ -3851,10 +3847,6 @@
       "mech_landing_impact",
       "mech_lower_hip_hinge",
       "mech_reactive"
-    ],
-    "late_windows": [
-      "d21_to_d14",
-      "d13_to_d8"
     ]
   },
   {

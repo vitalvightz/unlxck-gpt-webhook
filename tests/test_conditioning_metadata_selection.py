@@ -246,19 +246,9 @@ def test_boxing_sprint_starts_are_not_tight_window_taper_defaults():
     for item in sprint_starts:
         assert item["phases"] == ["SPP"]
         assert "TAPER" not in item["phases"]
-        assert item["late_windows"] == ["d21_to_d14", "d13_to_d8"]
-        assert conditioning._evaluate_conditioning_late_window(
-            item,
-            system=item["system"],
-            window=D7,
-            bridge_rules={},
-        )["blocked"] is True
-        assert conditioning._evaluate_conditioning_late_window(
-            item,
-            system=item["system"],
-            window=D1,
-            bridge_rules={},
-        )["blocked"] is True
+        assert "late_windows" not in item
+        assert "TAPER" not in item["phases"]
+        assert "SPP" in item["phases"]
 
     safe_taper_options = {
         "Explosive Boxing Burst Intervals",
@@ -269,6 +259,21 @@ def test_boxing_sprint_starts_are_not_tight_window_taper_defaults():
         item = by_name[name]
         assert item["phases"] == ["TAPER"]
         assert "d6_to_d5" in item["late_windows"]
+
+    exercise_data = json.loads(Path("data/exercise_bank.json").read_text(encoding="utf-8"))
+    exercise_by_name = {item["name"]: item for item in exercise_data if isinstance(item, dict) and "name" in item}
+    for name in (
+        "Band-Resisted Jab-Cross Primer",
+        "Technical Shadowboxing Tempo",
+        "Mobility Reset Flow",
+    ):
+        assert name in exercise_by_name
+        assert "TAPER" in exercise_by_name[name].get("phases", [])
+    assert any(
+        "breathing" in str(item.get("name", "")).casefold() and "TAPER" in item.get("phases", [])
+        for item in exercise_data
+        if isinstance(item, dict)
+    )
 
 
 def test_band_resisted_sprint_starts_are_spp_only_across_conditioning_banks():
