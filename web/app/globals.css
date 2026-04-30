@@ -2905,6 +2905,54 @@ button.mobile-step-rail-item {
   padding-left: 2px;
 }
 
+.password-field {
+  position: relative;
+  display: block;
+}
+
+.password-field input {
+  padding-right: 70px;
+}
+
+.password-toggle {
+  position: absolute;
+  top: 50%;
+  right: 8px;
+  transform: translateY(-50%);
+  min-height: 32px;
+  padding: 0 12px;
+  border: 1px solid var(--border-default);
+  border-radius: 8px;
+  background: rgba(20, 22, 27, 0.6);
+  color: var(--text-secondary);
+  font-family: var(--font-mono), monospace;
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.password-toggle:hover,
+.password-toggle:focus-visible {
+  color: var(--text-primary);
+  border-color: rgba(181, 18, 43, 0.52);
+  outline: none;
+}
+
+.auth-rail-extras {
+  display: grid;
+  gap: 24px;
+}
+
+.auth-rail-extras > summary {
+  display: none;
+}
+
+.auth-rail-extras-body {
+  display: grid;
+  gap: 24px;
+}
+
 .plan-card {
   display: grid;
   gap: 12px;
@@ -3310,6 +3358,16 @@ button.mobile-step-rail-item {
 }
 
 @media (min-width: 961px) {
+  .auth-layout > .auth-rail {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .auth-layout > .auth-card {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
   .desktop-nav-toggle {
     display: inline-flex;
     position: fixed;
@@ -3454,6 +3512,54 @@ button.mobile-step-rail-item {
   .split-layout,
   .plan-detail-layout {
     grid-template-columns: 1fr;
+  }
+
+  .auth-layout {
+    gap: 20px;
+  }
+
+  .auth-rail {
+    gap: 16px;
+  }
+
+  .auth-rail .hero-panel-copy h1 {
+    font-size: 24px;
+    line-height: 1.2;
+  }
+
+  .auth-rail-extras > summary {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 14px;
+    border: 1px solid var(--border-default);
+    border-radius: 12px;
+    background: rgba(20, 22, 27, 0.6);
+    color: var(--text-secondary);
+    font-family: var(--font-mono), monospace;
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    cursor: pointer;
+    list-style: none;
+  }
+
+  .auth-rail-extras > summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .auth-rail-extras > summary::after {
+    content: "+";
+    margin-left: auto;
+    font-size: 14px;
+  }
+
+  .auth-rail-extras[open] > summary::after {
+    content: "−";
+  }
+
+  .auth-rail-extras:not([open]) .auth-rail-extras-body {
+    display: none;
   }
 
   .overview-command-grid,
