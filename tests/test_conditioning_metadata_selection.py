@@ -145,7 +145,7 @@ def test_athlete_facing_system_label_returns_string_for_spp_only_drill():
         late_window=D6_TO_D5,
     )
 
-    assert isinstance(label, str)
+    assert label == "footwork speed repeatability"
 
 def test_late_taper_blocks_dense_glycolytic_from_structured_metadata():
     result = conditioning._evaluate_conditioning_late_window(
