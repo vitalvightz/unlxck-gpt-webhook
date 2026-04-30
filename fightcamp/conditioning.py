@@ -489,15 +489,16 @@ def _evaluate_conditioning_late_window(
         }
 
     tags = set(normalize_tags(drill.get("tags", [])))
-    phases = {str(value).strip().upper() for value in (drill.get("phases") or []) if str(value).strip()}
-    if window in TAPER_ONLY_CONDITIONING_WINDOWS and phases and "TAPER" not in phases:
-        return {
-            "blocked": True,
-            "block_codes": ["late_conditioning_block_not_taper_phased"],
-            "reason_codes": ["late_conditioning_penalty_not_taper_phased"],
-            "adjustment": -1.0,
-            "ambiguous_gap": None,
-        }
+    if window in TAPER_ONLY_CONDITIONING_WINDOWS:
+        phases = {str(value).strip().upper() for value in (drill.get("phases") or []) if str(value).strip()}
+        if phases and "TAPER" not in phases:
+            return {
+                "blocked": True,
+                "block_codes": ["late_conditioning_block_not_taper_phased"],
+                "reason_codes": ["late_conditioning_penalty_not_taper_phased"],
+                "adjustment": -1.0,
+                "ambiguous_gap": None,
+            }
     text = _conditioning_text_blob(drill)
     severity = _conditioning_window_severity(window)
     late_windows = {str(w).strip().lower() for w in (drill.get("late_windows") or []) if str(w).strip()}
