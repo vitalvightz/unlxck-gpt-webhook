@@ -8,6 +8,7 @@ from .phases import PHASE_HEADER_PATTERN
 from .regex_config import compile_regex, compile_regex_list
 from .restriction_filtering import evaluate_restriction_impact
 from .normalization import clean_list, phrase_in_text, dedupe_preserve_order
+from .late_selector_windows import classify_late_selector_window
 
 _BULLET_PREFIX = compile_regex("stage2_validator", "bullet_prefix")
 _PHASE_HEADER = PHASE_HEADER_PATTERN
@@ -1285,6 +1286,76 @@ def _late_fight_plan_spec(planning_brief: dict) -> dict[str, Any]:
     return spec if isinstance(spec, dict) else {}
 
 
+def _days_from_countdown_bucket(days_out_bucket: str) -> int | None:
+    if not re.match(r"^D-\d+$", days_out_bucket):
+        return None
+    try:
+        return int(days_out_bucket[2:])
+    except ValueError:
+        return None
+
+
+_LATE_FIGHT_WINDOW_EXERCISE_RULES: dict[str, dict[str, list[str]]] = {
+    "d21_to_d14": {
+        "blocked": ["Hard Shuttle Intervals", "Bag Sprint Repeats", "Band-Assisted Jump Reset", "Dense Conditioning Circuit"],
+        "preferred": ["Trap Bar Deadlift", "Staggered-Stance Medicine-Ball Punch Throw", "Band-Resisted Jab-Cross Primer", "Mobility Reset Flow"],
+    },
+    "d13_to_d8": {
+        "blocked": ["Hang Power Clean", "Band-Assisted Jump Reset", "Band-Resisted Sprint Start", "Band-Resisted Sprint Starts (ATP-PCr)", "Dense Conditioning Circuit"],
+        "preferred": ["Staggered-Stance Medicine-Ball Punch Throw", "Band-Resisted Jab-Cross Primer", "Explosive Boxing Burst Intervals", "Reactive Shuffle Repeats", "Mobility Reset Flow", "Breathing Reset"],
+    },
+    "d7": {
+        "blocked": ["Hang Power Clean", "Trap Bar Deadlift", "Trap-Bar Deadlift", "Band-Assisted Jump Reset", "Band-Resisted Sprint Start", "Band-Resisted Sprint Starts (ATP-PCr)", "Heavy Bag Density Rounds", "Slow-Lowered Pull-Up", "Bulgarian Split Squat"],
+        "preferred": ["Band-Resisted Jab-Cross Primer", "Reactive Shuffle Repeats", "Explosive Boxing Burst Intervals", "Technical Shadowboxing Tempo", "Mobility Reset Flow"],
+    },
+    "d6_to_d5": {
+        "blocked": ["Band-Assisted Jump Reset", "Band-Resisted Sprint Start", "Band-Resisted Sprint Starts (ATP-PCr)", "Trap Bar Deadlift", "Trap-Bar Deadlift", "Dense Conditioning Circuit", "Slow-Lowered Pull-Up", "Bulgarian Split Squat"],
+        "preferred": ["Explosive Boxing Burst Intervals", "Reactive Shuffle Repeats", "Band-Resisted Jab-Cross Primer"],
+    },
+    "d4_to_d2": {
+        "blocked": ["Trap Bar Deadlift", "Trap-Bar Deadlift", "Band-Resisted Sprint Start", "Band-Resisted Sprint Starts (ATP-PCr)", "Band-Assisted Jump Reset", "Heavy Bag Density Rounds", "Medicine Ball Power Circuit", "Slow-Lowered Pull-Up", "Bulgarian Split Squat"],
+        "preferred": ["Technical Shadowboxing Tempo", "Mobility Reset Flow", "Breathing Reset", "Band Face Pull", "Light Band Punch Cue", "Mirror Drill"],
+    },
+    "d1": {
+        "blocked": ["Staggered-Stance Medicine-Ball Punch Throw", "Light Heavy-Bag Technical Tempo", "Scapular Pull-Up Hold", "Medicine Ball Power Circuit", "Heavy Bag Density Rounds", "Pull-Up Iso Hold", "Band-Resisted Sprint Start", "Band-Resisted Sprint Starts (ATP-PCr)", "Band-Assisted Jump Reset", "Barbell Push Press", "Trap Bar Deadlift", "Trap-Bar Deadlift", "Hang Power Clean", "Slow-Lowered Pull-Up", "Bulgarian Split Squat"],
+        "preferred": [
+            "Band-Resisted Jab-Cross Primer",
+            "Band Face Pull",
+            "Technical Shadowboxing Tempo",
+            "Mobility Reset Flow",
+            "Breathing Reset",
+        ],
+    },
+}
+
+_COUNTDOWN_DAY_LABEL = re.compile(r"\bD-(\d{1,2})\b", re.IGNORECASE)
+
+
+def _countdown_sections(final_plan_text: str) -> list[dict[str, Any]]:
+    sections: list[dict[str, Any]] = []
+    for section in _section_blocks(final_plan_text):
+        title = str(section.get("title") or "")
+        lines = list(section.get("lines") or [])
+        search_text = " ".join([title, *(lines[:1] if lines else [])])
+        match = _COUNTDOWN_DAY_LABEL.search(search_text)
+        if not match:
+            continue
+        day_label = f"D-{int(match.group(1))}"
+        days_until_fight = _days_from_countdown_bucket(day_label)
+        window = classify_late_selector_window(days_until_fight)
+        if not window:
+            continue
+        sections.append(
+            {
+                "day_label": day_label,
+                "window": window,
+                "title": title,
+                "lines": lines,
+            }
+        )
+    return sections
+
+
 def _late_fight_session_blocks(final_plan_text: str) -> list[list[str]]:
     blocks = _phase_session_blocks(_extract_plan_lines(final_plan_text))
     return [block for block in blocks if block]
@@ -1715,6 +1786,58 @@ def _late_fight_warnings(planning_brief: dict, final_plan_text: str) -> list[dic
                 "blocking": True,
             }
         )
+
+    countdown_sections = _countdown_sections(final_plan_text)
+    if countdown_sections:
+        for section in countdown_sections:
+            section_lines = [str(line) for line in section.get("lines", [])]
+            window_key = str(section.get("window") or "")
+            day_label = str(section.get("day_label") or days_out_bucket)
+            window_rules = _LATE_FIGHT_WINDOW_EXERCISE_RULES.get(window_key, {})
+            matched_hits: list[dict[str, str]] = []
+            for line in section_lines:
+                if _line_is_instruction_only(line):
+                    continue
+                lowered = line.lower()
+                for term in window_rules.get("blocked", []):
+                    if phrase_in_text(lowered, term.lower()):
+                        matched_hits.append({"term": term, "line": line})
+                        break
+            if matched_hits:
+                warnings.append(
+                    {
+                        "code": "late_fight_window_forbidden_exercise",
+                        "message": f"{day_label} includes exercises blocked for {window_key}.",
+                        "payload_mode": payload_mode,
+                        "days_out_bucket": day_label,
+                        "window": window_key,
+                        "section_title": section.get("title"),
+                        "line": matched_hits[0]["line"],
+                        "matched_terms": dedupe_preserve_order([hit["term"] for hit in matched_hits])[:5],
+                        "matched_lines": dedupe_preserve_order([hit["line"] for hit in matched_hits])[:3],
+                        "blocking": True,
+                    }
+                )
+            preferred_terms = window_rules.get("preferred", [])
+            preferred_present = any(
+                phrase_in_text(line.lower(), term.lower())
+                for line in section_lines
+                if not _line_is_instruction_only(line)
+                for term in preferred_terms
+            )
+            if preferred_terms and not preferred_present:
+                warnings.append(
+                    {
+                        "code": "late_fight_window_preferred_missing",
+                        "message": f"{day_label} does not show any preferred exercise cues for {window_key}.",
+                        "payload_mode": payload_mode,
+                        "days_out_bucket": day_label,
+                        "window": window_key,
+                        "section_title": section.get("title"),
+                        "preferred_terms": preferred_terms[:5],
+                        "blocking": False,
+                    }
+                )
 
     warnings.extend(_late_fight_countdown_blocked_drill_warnings(spec, final_plan_text, plan_lines))
     warnings.extend(_late_fight_dosage_warnings(spec, blocks))
