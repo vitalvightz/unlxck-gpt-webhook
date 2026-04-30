@@ -1,4 +1,6 @@
 import asyncio
+import json
+from pathlib import Path
 
 from fightcamp.conditioning import _glycolytic_fallback, format_drill_block, render_conditioning_block
 from fightcamp.diagnostics import _late_fight_lever, _short_notice_lever, format_missing_system_block
@@ -20,6 +22,17 @@ def test_plan_missing_system_messaging():
     ]
     for phrase in forbidden_phrases:
         assert phrase not in plan_text
+
+
+def test_conditioning_bank_taper_restrictions_for_flagged_drills():
+    conditioning_bank = json.loads(Path("data/conditioning_bank.json").read_text())
+    by_name = {entry["name"]: entry for entry in conditioning_bank}
+
+    assert by_name["Split-Step Ankle Snap Pogo"]["phases"] == ["GPP", "SPP"]
+    assert by_name["Nasal Jog"]["phases"] == ["GPP"]
+    assert by_name["Jump Rope (Recovery Pace)"]["phases"] == ["GPP", "SPP"]
+    assert by_name["Pool Running (Weight Belt)"]["phases"] == ["GPP"]
+    assert by_name["Pool Running (No Impact)"]["phases"] == ["SPP"]
 
 
 def test_plan_text_has_no_mojibake_or_duplicate_time_short_prefix():
