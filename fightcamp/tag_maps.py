@@ -1,6 +1,16 @@
 """Shared tag mapping definitions for training plan generation."""
 
 GOAL_NORMALIZER = {
+    "power": "power",
+    "strength": "strength",
+    "conditioning": "conditioning",
+    "explosive": "explosive",
+    "speed": "speed",
+    "reactive": "reactive",
+    "skill_refinement": "skill_refinement",
+    "mobility": "mobility",
+    "recovery": "recovery",
+    "weight_cut": "weight_cut",
     "Power & Explosiveness": "explosive",
     "Conditioning / Endurance": "conditioning",
     "Maximal Strength": "strength",
@@ -32,6 +42,15 @@ GOAL_NORMALIZER = {
 }
 
 WEAKNESS_NORMALIZER = {
+    "gas_tank": ["gas_tank"],
+    "strength": ["strength"],
+    "power": ["power"],
+    "speed": ["speed"],
+    "footwork": ["footwork"],
+    "balance": ["balance"],
+    "mobility": ["mobility"],
+    "coordination": ["coordination"],
+    "trunk_strength": ["trunk_strength"],
     "coordination / proprioception": ["coordination"],
     "coordination/proprioception": ["coordination"],
     "coordination_proprioception": ["coordination"],
@@ -40,7 +59,6 @@ WEAKNESS_NORMALIZER = {
     "core": ["core stability"],
     "core strength": ["core stability"],
     "trunk strength": ["core stability"],
-    "trunk_strength": ["core stability"],
     "grip strength": ["grip"],
     "grip_strength": ["grip"],
     "adductor groin": ["adductors", "lateral movement"],
@@ -178,7 +196,13 @@ GOAL_TAG_MAP = {
         "coordination", "skill", "footwork", "cognitive", "focus", "reactive", "decision_speed", "skill_refinement",
     ],
     "coordination": ["coordination"],
+    "recovery": ["recovery", "cns_freshness", "parasympathetic"],
+    "weight_cut": ["weight_cut", "recovery", "low_impact", "cns_freshness"],
 }
+
+GOAL_TAG_MAP["conditioning"] = GOAL_TAG_MAP["endurance"]
+GOAL_TAG_MAP["explosive"] = GOAL_TAG_MAP["power"]
+GOAL_TAG_MAP["reactive"] = GOAL_TAG_MAP["speed"]
 
 WEAKNESS_TAG_MAP = {
     "core stability": ["core", "anti_rotation"],
@@ -187,8 +211,16 @@ WEAKNESS_TAG_MAP = {
     "speed / reaction": ["speed", "reaction", "reactive", "coordination"],
     "lateral movement": ["lateral_power", "agility", "balance"],
     "conditioning": ["aerobic", "glycolytic", "work_capacity"],
+    "gas_tank": ["aerobic", "glycolytic", "conditioning", "work_capacity"],
+    "strength": ["posterior_chain", "quad_dominant", "upper_body", "core"],
+    "power": ["explosive", "rate_of_force", "plyometric"],
+    "speed": ["speed", "reaction", "reactive", "coordination"],
+    "footwork": ["footwork", "speed", "reactive", "coordination"],
     "rotation": ["rotational", "anti_rotation"],
     "balance": ["balance", "stability", "unilateral"],
+    "mobility": ["mobility", "hip_dominant", "movement_quality", "range"],
+    "coordination": ["coordination", "balance", "reactive"],
+    "trunk_strength": ["core", "anti_rotation", "core stability"],
     "explosiveness": ["explosive", "rate_of_force", "plyometric"],
     "shoulders": ["shoulders", "upper_body"],
     "shoulder": ["shoulders", "upper_body"],

@@ -52,11 +52,14 @@ import {
 import {
   buildDaysOutContext,
   computeDaysUntilFight,
+  filterAvailablePerformanceFocusValues,
+  getPerformanceFocusOptionAvailability,
   shouldHideField,
   shouldDisableField,
   shouldDeEmphasizeField,
   getFieldHelperText,
   type DaysOutContext,
+  type PerformanceFocusGroup,
 } from "@/lib/days-out-policy";
 import type { PlanRequest, Stage1PreviewResponse } from "@/lib/types";
 
@@ -169,6 +172,13 @@ function formatEquipmentLimitations(selectedEquipment: string[]): string | null 
     return "Limited conditioning tool options";
   }
   return "No major equipment limitation flagged";
+}
+
+function getPerformanceFocusGroupForField(key: string): PerformanceFocusGroup | null {
+  if (key === "key_goals" || key === "weak_areas") {
+    return key;
+  }
+  return null;
 }
 
 function formatSparringCollisionRisk({
@@ -468,6 +478,7 @@ function CheckboxGroup({
   onToggle,
   disableAdditionalSelections = false,
   disableAll = false,
+  getOptionDisabledReason,
 }: {
   label: string;
   options: IntakeOption[];
@@ -475,6 +486,7 @@ function CheckboxGroup({
   onToggle: (value: string) => void;
   disableAdditionalSelections?: boolean;
   disableAll?: boolean;
+  getOptionDisabledReason?: (option: IntakeOption, checked: boolean) => string | null;
 }) {
   return (
     <div className="field">
@@ -482,7 +494,10 @@ function CheckboxGroup({
       <div className="checkbox-grid">
         {options.map((option) => {
           const checked = selectedValues.includes(option.value);
-          const disabled = disableAll || (disableAdditionalSelections && !checked);
+          const daysOutDisabledReason = getOptionDisabledReason?.(option, checked) ?? null;
+          const capDisabledReason = disableAdditionalSelections && !checked ? "Focus cap reached." : null;
+          const disabledReason = daysOutDisabledReason ?? capDisabledReason;
+          const disabled = disableAll || Boolean(disabledReason);
           return (
             <label
               key={option.value}
@@ -492,6 +507,7 @@ function CheckboxGroup({
               <input type="checkbox" checked={checked} disabled={disabled} onChange={() => onToggle(option.value)} />
               <span className="checkbox-card-copy">
                 <span className="checkbox-card-title">{option.label}</span>
+                {disabledReason ? <span className="checkbox-card-description">{disabledReason}</span> : null}
               </span>
             </label>
           );
@@ -723,6 +739,27 @@ export function PlanIntakeForm() {
   );
 
   useEffect(() => {
+    if (!hydrated || daysUntilFight === null) {
+      return;
+    }
+
+    const currentDaysOutCtx = buildDaysOutContext(daysUntilFight);
+    const nextKeyGoals = filterAvailablePerformanceFocusValues(currentDaysOutCtx, "key_goals", form.key_goals);
+    const nextWeakAreas = filterAvailablePerformanceFocusValues(currentDaysOutCtx, "weak_areas", form.weak_areas);
+    if (nextKeyGoals.length === form.key_goals.length && nextWeakAreas.length === form.weak_areas.length) {
+      return;
+    }
+
+    setForm((current) => ({
+      ...current,
+      key_goals: filterAvailablePerformanceFocusValues(currentDaysOutCtx, "key_goals", current.key_goals),
+      weak_areas: filterAvailablePerformanceFocusValues(currentDaysOutCtx, "weak_areas", current.weak_areas),
+    }));
+    setMessage("Some picks were removed because they are not available this close to fight day.");
+    setError(null);
+  }, [daysUntilFight, form.key_goals, form.weak_areas, hydrated]);
+
+  useEffect(() => {
     if (!hydrated) {
       injuryMismatchContextKeyRef.current = injuryMismatchContextKey;
       return;
@@ -886,13 +923,22 @@ export function PlanIntakeForm() {
         ? retainKnownOptionValues(current[key], EQUIPMENT_ACCESS_OPTIONS)
         : current[key];
       const alreadySelected = currentValues.includes(value);
-      const isPerformanceFocusField = key === "key_goals" || key === "weak_areas";
-      const performanceFocusCap = isPerformanceFocusField
+      const performanceFocusGroup = getPerformanceFocusGroupForField(key);
+      const performanceFocusCap = performanceFocusGroup
         ? getPerformanceFocusCap(current.fight_date, { timeZone: current.athlete.athlete_timezone })
         : null;
       const totalSelectedPerformanceFocus = current.key_goals.length + current.weak_areas.length;
+      const currentDaysOutCtx = buildDaysOutContext(computeDaysUntilFight(current.fight_date));
 
-      if (isPerformanceFocusField && !alreadySelected && performanceFocusCap && totalSelectedPerformanceFocus >= performanceFocusCap.maxSelections) {
+      if (
+        performanceFocusGroup
+        && !alreadySelected
+        && !getPerformanceFocusOptionAvailability(currentDaysOutCtx, performanceFocusGroup, value).available
+      ) {
+        return current;
+      }
+
+      if (performanceFocusGroup && !alreadySelected && performanceFocusCap && totalSelectedPerformanceFocus >= performanceFocusCap.maxSelections) {
         return current;
       }
 
@@ -1266,6 +1312,14 @@ export function PlanIntakeForm() {
   const performanceFocusCapValue = performanceFocusCap?.maxSelections ?? null;
   const performanceFocusCapReached = performanceFocusCapValue !== null && selectedPerformanceFocusCount >= performanceFocusCapValue;
   const performanceFocusCapExceeded = performanceFocusValidation.isOverCap;
+  const getKeyGoalDisabledReason = (option: IntakeOption) => {
+    const availability = getPerformanceFocusOptionAvailability(daysOutCtx, "key_goals", option.value);
+    return availability.available ? null : availability.reason ?? "Too close to fight day.";
+  };
+  const getWeakAreaDisabledReason = (option: IntakeOption) => {
+    const availability = getPerformanceFocusOptionAvailability(daysOutCtx, "weak_areas", option.value);
+    return availability.available ? null : availability.reason ?? "Too close to fight day.";
+  };
   const remainingPerformanceFocusSelections = performanceFocusCapValue === null
     ? null
     : Math.max(performanceFocusCapValue - selectedPerformanceFocusCount, 0);
@@ -2286,6 +2340,7 @@ export function PlanIntakeForm() {
                   onToggle={(value) => toggleFieldValue("key_goals", value)}
                   disableAdditionalSelections={performanceFocusCapReached}
                   disableAll={shouldDisableField(daysOutCtx, "key_goals")}
+                  getOptionDisabledReason={getKeyGoalDisabledReason}
                 />
                 {getFieldHelperText(daysOutCtx, "key_goals") ? (
                   <p className="muted">{getFieldHelperText(daysOutCtx, "key_goals")}</p>
@@ -2313,6 +2368,7 @@ export function PlanIntakeForm() {
                   onToggle={(value) => toggleFieldValue("weak_areas", value)}
                   disableAdditionalSelections={performanceFocusCapReached}
                   disableAll={shouldDisableField(daysOutCtx, "weak_areas")}
+                  getOptionDisabledReason={getWeakAreaDisabledReason}
                 />
                 {getFieldHelperText(daysOutCtx, "weak_areas") ? (
                   <p className="muted">{getFieldHelperText(daysOutCtx, "weak_areas")}</p>

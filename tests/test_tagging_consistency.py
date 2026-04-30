@@ -50,8 +50,44 @@ def test_weakness_aliases_resolve_to_existing_canonical_weakness_entries():
 
 
 def test_trunk_strength_alias_resolves_to_core_stability_tags():
-    assert WEAKNESS_NORMALIZER["trunk_strength"] == ["core stability"]
+    assert WEAKNESS_NORMALIZER["trunk_strength"] == ["trunk_strength"]
+    assert WEAKNESS_TAG_MAP["trunk_strength"] == ["core", "anti_rotation", "core stability"]
+    assert WEAKNESS_NORMALIZER["trunk strength"] == ["core stability"]
     assert WEAKNESS_TAG_MAP["core stability"] == ["core", "anti_rotation"]
+
+
+def test_current_ui_performance_values_resolve_to_scoring_tags():
+    key_goal_values = [
+        "power",
+        "strength",
+        "conditioning",
+        "speed",
+        "skill_refinement",
+        "mobility",
+        "recovery",
+        "weight_cut",
+    ]
+    weak_area_values = [
+        "gas_tank",
+        "strength",
+        "power",
+        "speed",
+        "footwork",
+        "balance",
+        "mobility",
+        "coordination",
+        "trunk_strength",
+    ]
+
+    for value in key_goal_values:
+        canonical = GOAL_NORMALIZER.get(value, value)
+        assert GOAL_TAG_MAP[canonical]
+
+    for value in weak_area_values:
+        canonical_entries = WEAKNESS_NORMALIZER.get(value, [value])
+        assert canonical_entries
+        for canonical in canonical_entries:
+            assert WEAKNESS_TAG_MAP[canonical]
 
 
 def test_style_and_goal_tags_stay_normalized_for_curated_entries():
