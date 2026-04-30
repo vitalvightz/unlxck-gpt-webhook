@@ -77,8 +77,7 @@
     "name": "Bulgarian Split Squat",
     "category": "lower_body",
     "phases": [
-      "SPP",
-      "TAPER"
+      "SPP"
     ],
     "method": "strength",
     "movement": "squat",
@@ -188,9 +187,7 @@
   {
     "name": "Trap Bar Jump (Light)",
     "category": "lower_body",
-    "phases": [
-      "TAPER"
-    ],
+    "phases": [],
     "method": "power",
     "movement": "squat",
     "type": "bilateral",
@@ -234,9 +231,7 @@
   {
     "name": "Band-Resisted Sprawl to Sprint",
     "category": "wrestler",
-    "phases": [
-      "TAPER"
-    ],
+    "phases": [],
     "method": "power",
     "movement": "compound",
     "type": "bilateral",
@@ -277,11 +272,9 @@
     ]
   },
   {
-    "name": "Depth Drop → 5m Sprint",
+    "name": "Depth Drop \u2192 5m Sprint",
     "category": "locomotion",
-    "phases": [
-      "TAPER"
-    ],
+    "phases": [],
     "method": "plyometric",
     "movement": "compound",
     "type": "bilateral",
@@ -369,9 +362,7 @@
   {
     "name": "Cluster Set Trap Bar Deadlift",
     "category": "deadlift",
-    "phases": [
-      "TAPER"
-    ],
+    "phases": [],
     "method": "strength",
     "movement": "hinge",
     "type": "bilateral",
@@ -410,7 +401,7 @@
     ]
   },
   {
-    "name": "Back Squat → Box Jump",
+    "name": "Back Squat \u2192 Box Jump",
     "category": "lower_body",
     "phases": [
       "SPP"
@@ -455,7 +446,7 @@
     ]
   },
   {
-    "name": "DB Bench Press → Plyo Push-Up",
+    "name": "DB Bench Press \u2192 Plyo Push-Up",
     "category": "upper_body",
     "phases": [
       "SPP"
@@ -498,7 +489,7 @@
     ]
   },
   {
-    "name": "Heavy RDL → Broad Jump",
+    "name": "Heavy RDL \u2192 Broad Jump",
     "category": "lower_body",
     "phases": [
       "SPP"
@@ -541,7 +532,7 @@
     ]
   },
   {
-    "name": "Landmine Press → Med Ball Chest Pass",
+    "name": "Landmine Press \u2192 Med Ball Chest Pass",
     "category": "upper_body",
     "phases": [
       "SPP"
@@ -733,7 +724,7 @@
     ]
   },
   {
-    "name": "Zercher Squat → Sprawl Jump",
+    "name": "Zercher Squat \u2192 Sprawl Jump",
     "category": "wrestler",
     "phases": [
       "SPP"
@@ -987,8 +978,7 @@
     "category": "lower_body",
     "phases": [
       "GPP",
-      "SPP",
-      "TAPER"
+      "SPP"
     ],
     "method": "power",
     "movement": "hinge",
@@ -1589,7 +1579,7 @@
     ]
   },
   {
-    "name": "DB Alternating Incline Press (30-45°)",
+    "name": "DB Alternating Incline Press (30-45\u00b0)",
     "category": "upper_body",
     "phases": [
       "GPP"
@@ -4369,7 +4359,7 @@
     ]
   },
   {
-    "name": "Grappler’s Bridge (Weighted)",
+    "name": "Grappler\u2019s Bridge (Weighted)",
     "category": "combat",
     "phases": [
       "SPP"
@@ -6560,7 +6550,7 @@
       "mech_lower_squat"
     ],
     "equipment": "bosu_ball",
-    "notes": "Keep squats shallow (30° knee bend)",
+    "notes": "Keep squats shallow (30\u00b0 knee bend)",
     "movement_cost": "low",
     "impact_cost": "low",
     "eccentric_cost": "low",
@@ -6653,7 +6643,7 @@
     ]
   },
   {
-    "name": "Single-Leg Wall Sit (60°)",
+    "name": "Single-Leg Wall Sit (60\u00b0)",
     "category": "lower_body",
     "phases": [
       "GPP"
@@ -7164,7 +7154,7 @@
     ]
   },
   {
-    "name": "🔥 Single-Leg Rotational Med Ball Hold",
+    "name": "\ud83d\udd25 Single-Leg Rotational Med Ball Hold",
     "category": "lower_body",
     "phases": [
       "GPP"
@@ -7202,7 +7192,7 @@
     ]
   },
   {
-    "name": "🔥 Single-Leg Combat Stance Hold (Weighted)",
+    "name": "\ud83d\udd25 Single-Leg Combat Stance Hold (Weighted)",
     "category": "lower_body",
     "phases": [
       "GPP"
@@ -7314,7 +7304,7 @@
     ]
   },
   {
-    "name": "Single-Leg 45° Bound",
+    "name": "Single-Leg 45\u00b0 Bound",
     "category": "lower_body",
     "phases": [
       "SPP"
@@ -7583,7 +7573,7 @@
     ]
   },
   {
-    "name": "🔥 Single-Leg Combat Stance Switch Jump",
+    "name": "\ud83d\udd25 Single-Leg Combat Stance Switch Jump",
     "category": "lower_body",
     "phases": [
       "SPP"
@@ -7622,7 +7612,7 @@
     ]
   },
   {
-    "name": "Squat Isometric (110% 1RM @ 90°)",
+    "name": "Squat Isometric (110% 1RM @ 90\u00b0)",
     "category": "lower_body",
     "phases": [
       "SPP"
@@ -7734,7 +7724,7 @@
     ]
   },
   {
-    "name": "Front Squat Isometric (115% 1RM @ 100°)",
+    "name": "Front Squat Isometric (115% 1RM @ 100\u00b0)",
     "category": "lower_body",
     "phases": [
       "SPP"
@@ -7923,7 +7913,7 @@
     ]
   },
   {
-    "name": "Incline Bench Isometric (125% 1RM @ 45°)",
+    "name": "Incline Bench Isometric (125% 1RM @ 45\u00b0)",
     "category": "upper_body",
     "phases": [
       "SPP"
@@ -8073,7 +8063,7 @@
     ]
   },
   {
-    "name": "Safety Bar Squat Isometric (115% 1RM @ 90°)",
+    "name": "Safety Bar Squat Isometric (115% 1RM @ 90\u00b0)",
     "category": "lower_body",
     "phases": [
       "SPP"
@@ -8339,7 +8329,7 @@
     ]
   },
   {
-    "name": "Bench Isometric (110% 1RM @ 90° Elbow)",
+    "name": "Bench Isometric (110% 1RM @ 90\u00b0 Elbow)",
     "category": "upper_body",
     "phases": [
       "GPP"
@@ -8376,7 +8366,7 @@
     ]
   },
   {
-    "name": "Front Squat Isometric (105% 1RM @ 100°)",
+    "name": "Front Squat Isometric (105% 1RM @ 100\u00b0)",
     "category": "lower_body",
     "phases": [
       "GPP"
@@ -10880,7 +10870,7 @@
       "skip when pins or trap bar are unavailable",
       "avoid if aggressive brace work spikes blood pressure during the cut"
     ],
-    "notes": "2–3x4–6s, full setup and full rest. Prioritise D-13; only use on D-7 if dose stays very low. Not for D-3 or D-1.",
+    "notes": "2\u20133x4\u20136s, full setup and full rest. Prioritise D-13; only use on D-7 if dose stays very low. Not for D-3 or D-1.",
     "movement_cost": "moderate",
     "impact_cost": "low",
     "mechanical_risk_tags": [
