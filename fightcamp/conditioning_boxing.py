@@ -97,7 +97,6 @@ PLAIN_CONDITIONING_NAME_MAP = {
     "Tempo Shadowboxing (Aerobic)": "Tempo Shadowboxing",
     "Sled Harness Backward Drag": "Backward Sled Drag",
     "Dynamic Plank-to-Punch": "Plank Punch Reach",
-    "Ankle Snap Bounce": "Ankling",
     "Clinch-Fighter Neck Endurance": "Neck Endurance Circuit",
 }
 BOXING_NAME_MAP = {
