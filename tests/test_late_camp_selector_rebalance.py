@@ -970,6 +970,31 @@ def test_actual_bank_d13_high_cut_prefers_late_safe_strength_touch_over_legacy_t
     assert "Jump Lunge (Alternating)" not in names
 
 
+def test_speed_box_squat_is_blocked_from_d13_to_d1_strength_windows():
+    exercise = {
+        "name": "Speed Box Squat",
+        "phases": ["SPP"],
+        "movement": "squat",
+        "method": "power",
+        "equipment": ["barbell"],
+        "tags": ["explosive", "power", "mech_lower_squat", "mech_ballistic"],
+        "impact_cost": "low",
+        "eccentric_cost": "moderate",
+        "cns_load": "high",
+        "soreness_risk": "high",
+    }
+
+    for window in ("d13_to_d8", "d7", "d6_to_d5", "d4_to_d2", "d1"):
+        result = strength._evaluate_strength_late_window(
+            exercise,
+            window=window,
+            cut_bucket="none",
+        )
+
+        assert result["blocked"] is True
+        assert "late_strength_block_speed_box_squat" in result["block_codes"]
+
+
 def test_actual_bank_d7_keeps_crisp_low_soreness_primers_and_blocks_aggressive_slam():
     result = strength.generate_strength_block(
         flags=_expanded_late_strength_flags(7),

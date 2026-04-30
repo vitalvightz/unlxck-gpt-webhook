@@ -454,6 +454,36 @@ def test_late_fight_window_rules_block_d10_sprint_start():
     assert "Band-Resisted Sprint Start" in blocked[0]["line"]
 
 
+def test_late_fight_window_rules_block_speed_box_squat_from_d13_to_d1():
+    for days_out, expected_window in (
+        ("D-13", "d13_to_d8"),
+        ("D-7", "d7"),
+        ("D-5", "d6_to_d5"),
+        ("D-3", "d4_to_d2"),
+        ("D-1", "d1"),
+    ):
+        report = validate_stage2_output(
+            planning_brief=_late_fight_planning_brief(days_out),
+            final_plan_text=f"""
+            ## {days_out}
+            Strength touch
+            - Speed Box Squat - 3 x 3
+            - Mobility reset - 10 min
+            """,
+        )
+        blocked = [
+            warning
+            for warning in report["warnings"]
+            if warning["code"] == "late_fight_window_forbidden_exercise"
+        ]
+        assert any(
+            warning["days_out_bucket"] == days_out
+            and warning["window"] == expected_window
+            and "Speed Box Squat" in warning["line"]
+            for warning in blocked
+        )
+
+
 def test_late_fight_window_rules_block_d3_med_ball_volume():
     report = validate_stage2_output(
         planning_brief=_late_fight_planning_brief("D-3"),

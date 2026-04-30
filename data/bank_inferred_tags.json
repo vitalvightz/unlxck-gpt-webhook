@@ -2948,18 +2948,6 @@
   {
     "bank": "conditioning_bank",
     "explicit_tags": [
-      "acceleration",
-      "low_volume"
-    ],
-    "inferred_tags": [
-      "max_velocity"
-    ],
-    "item_id": "conditioning_bank:Band-Resisted Sprint Start",
-    "name": "Band-Resisted Sprint Start"
-  },
-  {
-    "bank": "conditioning_bank",
-    "explicit_tags": [
       "eccentric",
       "reactive"
     ],
@@ -3754,18 +3742,6 @@
     "inferred_tags": [],
     "item_id": "conditioning_bank:Wall Ball Shot Intervals (Glycolytic)",
     "name": "Wall Ball Shot Intervals (Glycolytic)"
-  },
-  {
-    "bank": "conditioning_bank",
-    "explicit_tags": [
-      "acceleration",
-      "low_volume"
-    ],
-    "inferred_tags": [
-      "max_velocity"
-    ],
-    "item_id": "conditioning_bank:Band-Resisted Sprint Starts (ATP-PCr)",
-    "name": "Band-Resisted Sprint Starts (ATP-PCr)"
   },
   {
     "bank": "conditioning_bank",

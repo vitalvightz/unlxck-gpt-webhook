@@ -390,24 +390,12 @@ def test_coordination_bank_duplicate_names_are_resolved():
     assert {name: count for name, count in counts.items() if count > 1} == {}
 
 
-def test_boxing_sprint_starts_are_not_tight_window_taper_defaults():
+def test_boxing_band_resisted_sprint_starts_are_removed_from_app_bank():
     data = json.loads(Path("data/conditioning_bank.json").read_text(encoding="utf-8"))
     by_name = {item["name"]: item for item in data}
-    sprint_starts = [
-        by_name[name]
-        for name in ("Band-Resisted Sprint Start", "Band-Resisted Sprint Starts (ATP-PCr)")
-    ]
 
-    assert {item["name"] for item in sprint_starts} == {
-        "Band-Resisted Sprint Start",
-        "Band-Resisted Sprint Starts (ATP-PCr)",
-    }
-    for item in sprint_starts:
-        assert item["phases"] == ["SPP"]
-        assert "TAPER" not in item["phases"]
-        assert "late_windows" not in item
-        assert "TAPER" not in item["phases"]
-        assert "SPP" in item["phases"]
+    assert "Band-Resisted Sprint Start" not in by_name
+    assert "Band-Resisted Sprint Starts (ATP-PCr)" not in by_name
 
     safe_taper_options = {
         "Explosive Boxing Burst Intervals",
@@ -453,10 +441,23 @@ def test_band_resisted_sprint_starts_are_spp_only_across_conditioning_banks():
         return matches
 
     matched = _iter_band_resisted_sprint_starts(conditioning_data) + _iter_band_resisted_sprint_starts(style_data)
-    assert matched
+    assert not _iter_band_resisted_sprint_starts(conditioning_data)
     for item in matched:
         assert item.get("phases") == ["SPP"]
         assert "TAPER" not in item.get("phases", [])
+
+
+def test_removed_band_resisted_sprint_starts_have_no_stale_data_references():
+    removed_ids = {
+        "conditioning_bank:Band-Resisted Sprint Start",
+        "conditioning_bank:Band-Resisted Sprint Starts (ATP-PCr)",
+    }
+    inferred_tags = json.loads(Path("data/bank_inferred_tags.json").read_text(encoding="utf-8"))
+    injury_exclusions = json.loads(Path("data/injury_exclusion_map.json").read_text(encoding="utf-8"))
+
+    assert removed_ids.isdisjoint({item.get("item_id") for item in inferred_tags})
+    for excluded_items in injury_exclusions.values():
+        assert removed_ids.isdisjoint(set(excluded_items))
 
 
 def test_boxing_jump_reset_is_not_taper_metadata_and_d6_prefers_low_impact_bursts():

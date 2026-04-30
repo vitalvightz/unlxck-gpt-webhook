@@ -506,6 +506,9 @@ def _evaluate_strength_late_window(
     adjustment = 0.0
     cut_multiplier = LATE_STRENGTH_CUT_BUCKET_MULTIPLIER.get(cut_bucket, 0.0)
     high_cut_window = window in {D13_TO_D8, D7, D6_TO_D5, D4_TO_D2, D1} and cut_bucket in LATE_STRENGTH_HIGH_CUT_BUCKETS
+    if str(exercise.get("name") or "").strip().casefold() == "speed box squat" and window in {D13_TO_D8, D7, D6_TO_D5, D4_TO_D2, D1}:
+        blocks.append("late_strength_block_speed_box_squat")
+        reason_codes.append("late_strength_penalty_speed_box_squat_countdown")
     late_band_lockout_window = window in {D7, D6_TO_D5, D4_TO_D2, D1}
     rehab_mobility_band_ok = bool(
         tags
@@ -651,7 +654,7 @@ def _evaluate_strength_late_window(
     if window == D1 and "medicine_ball" in set(normalize_equipment_list(exercise.get("equipment", []))) and not explicit_late_metadata:
         blocks.append("late_strength_block_nonexplicit_ballistic_med_ball")
 
-    block_codes = sorted(set(blocks)) if window in LATE_STRENGTH_TIGHT_WINDOWS else []
+    block_codes = sorted(set(blocks)) if window in {D13_TO_D8, *LATE_STRENGTH_TIGHT_WINDOWS} else []
     if window in LATE_STRENGTH_TIGHT_WINDOWS and high_cut_window:
         if profile["loaded_lower"] and (
             profile["heavy_loaded_pattern"]
