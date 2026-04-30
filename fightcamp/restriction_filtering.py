@@ -98,11 +98,12 @@ _HIGH_IMPACT_UPPER_KEYWORDS = {
     "explosive pushup",
     "explosive push-up",
 }
+_HIGH_IMPACT_STOPWORDS = {"high", "pace", "push", "pull", "row", "fly", "low", "to", "and", "with"}
 _RESTRICTION_SPECIFIC_STOPWORDS = {
-    "high_impact": {"high", "pace", "push", "pull", "row", "fly", "low", "to", "and", "with"},
-    "high_impact_lower": {"high", "pace", "push", "pull", "row", "fly", "low", "to", "and", "with"},
-    "high_impact_upper": {"high", "pace", "push", "pull", "row", "fly", "low", "to", "and", "with"},
-    "high_impact_global": {"high", "pace", "push", "pull", "row", "fly", "low", "to", "and", "with"},
+    "high_impact": _HIGH_IMPACT_STOPWORDS,
+    "high_impact_lower": _HIGH_IMPACT_STOPWORDS,
+    "high_impact_upper": _HIGH_IMPACT_STOPWORDS,
+    "high_impact_global": _HIGH_IMPACT_STOPWORDS,
 }
 
 

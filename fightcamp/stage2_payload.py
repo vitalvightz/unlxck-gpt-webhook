@@ -33,7 +33,7 @@ from .stage2_payload_late_fight import (
 from .conditioning import athlete_facing_system_label
 from .fight_day_override import apply_fight_day_override_to_weekly_role_map
 from .late_selector_windows import classify_late_selector_window
-from .normalization import clean_list, normalize_text, phrase_in_text, slugify, dedupe_preserve_order
+from .normalization import clean_list, normalize_fatigue_level, normalize_text, phrase_in_text, slugify, dedupe_preserve_order
 from .restriction_parsing import CANONICAL_RESTRICTIONS
 from .rehab_protocols import _rehab_drills_for_phase, classify_drill_function, _FUNCTION_LABELS
 from .selection_metadata import build_score_evidence, normalize_selection_metadata
@@ -1006,15 +1006,7 @@ _WEEKDAY_ORDER = {
 
 
 def _normalized_fatigue_level(athlete_model: dict) -> str:
-    fatigue = str(athlete_model.get("fatigue", "")).strip().lower()
-    readiness_flags = set(_clean_list(athlete_model.get("readiness_flags", [])))
-    if fatigue in {"low", "moderate", "high"}:
-        return fatigue
-    if "high_fatigue" in readiness_flags:
-        return "high"
-    if "moderate_fatigue" in readiness_flags:
-        return "moderate"
-    return "low"
+    return normalize_fatigue_level(athlete_model)
 
 
 def _ordered_weekdays(values: list[str]) -> list[str]:

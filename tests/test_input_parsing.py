@@ -1,10 +1,11 @@
 import re
-from datetime import datetime
+from datetime import date, datetime
 import logging
 
 import pytest
 
 from fightcamp import input_parsing
+from fightcamp.fight_date_utils import parse_fight_date
 from fightcamp.input_parsing import PlanInput
 from fightcamp.plan_pipeline_runtime import build_runtime_context
 
@@ -294,6 +295,48 @@ def test_guided_injuries_payload_parses_multiple_cards_and_preserves_notes():
     assert parsed.restrictions[0]["region"] == "hip"
 
 
+def test_guided_injuries_are_parsed_once(monkeypatch):
+    payload = _payload(
+        [
+            {"label": "Full name", "value": "Test Athlete"},
+            {"label": "Fighting Style (Technical)", "value": "Boxing"},
+            {"label": "Any injuries or areas you need to work around?", "value": "hip flexor"},
+        ]
+    )
+    payload["guided_injuries"] = [{"area": "hip flexor", "severity": "moderate"}]
+    calls = 0
+    original = input_parsing._parse_guided_injuries
+
+    def counting_parse(guided_injuries):
+        nonlocal calls
+        calls += 1
+        return original(guided_injuries)
+
+    monkeypatch.setattr(input_parsing, "_parse_guided_injuries", counting_parse)
+
+    parsed = PlanInput.from_payload(payload)
+
+    assert calls == 1
+    assert parsed.guided_injury is not None
+    assert parsed.guided_injury.area == "hip flexor"
+
+
+def test_free_text_injury_fallback_still_parses_without_guided_injury():
+    payload = _payload(
+        [
+            {"label": "Full name", "value": "Test Athlete"},
+            {"label": "Fighting Style (Technical)", "value": "Boxing"},
+            {"label": "Any injuries or areas you need to work around?", "value": "right knee soreness. Avoid: deep knee flexion"},
+        ]
+    )
+
+    parsed = PlanInput.from_payload(payload)
+
+    assert parsed.guided_injury is None
+    assert parsed.parsed_injuries
+    assert parsed.restrictions
+
+
 @pytest.mark.parametrize(
     ("body_map_area", "expected_canonical"),
     [
@@ -509,6 +552,34 @@ def test_malformed_fight_date_raises_value_error():
         PlanInput.from_payload(
             _payload([{"label": "When is your next fight?", "value": "03-14-2026"}])
         )
+
+
+def test_fight_date_parsers_keep_distinct_return_types():
+    assert parse_fight_date("2026-03-14") == date(2026, 3, 14)
+    parsed_datetime = input_parsing._parse_fight_datetime("2026-03-14")
+
+    assert isinstance(parsed_datetime, datetime)
+    assert parsed_datetime == datetime(2026, 3, 14)
+
+
+@pytest.mark.parametrize(
+    "fight_date_value",
+    ["2026-03-14", "2026/03/14", "03/14/2026", "2026-03-14T00:00:00Z"],
+)
+def test_plan_input_accepts_supported_fight_date_formats(monkeypatch, fight_date_value):
+    monkeypatch.setattr(input_parsing, "_utc_now", lambda: datetime(2026, 3, 1, 12, 0))
+
+    parsed = PlanInput.from_payload(
+        _payload(
+            [
+                {"label": "When is your next fight?", "value": fight_date_value},
+                {"label": "Athlete Time Zone", "value": "UTC"},
+            ]
+        )
+    )
+
+    assert parsed.days_until_fight == 13
+    assert parsed.weeks_out == 1
 
 
 def test_date_only_fight_date_with_missing_timezone_uses_platform_default_timezone(monkeypatch):

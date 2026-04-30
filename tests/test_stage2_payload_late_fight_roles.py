@@ -72,6 +72,19 @@ def test_pre_fight_compressed_allows_strength_touch_and_light_fight_rhythm_with_
     assert role_keys.count("fight_week_freshness_day") == 1
 
 
+def test_pre_fight_compressed_high_fatigue_flag_suppresses_light_fight_pace():
+    role_keys = [
+        role["role_key"]
+        for role in _late_fight_session_roles(
+            10,
+            _athlete(10, hard_sparring_days=["thursday"], fatigue="", fatigue_level="", readiness_flags=["high_fatigue"]),
+        )
+    ]
+
+    assert role_keys.count("hard_sparring_day") == 1
+    assert "light_fight_pace_touch_day" not in role_keys
+
+
 def test_pre_fight_compressed_does_not_auto_collapse_to_two_visible_sessions_for_moderate_manageable_context():
     athlete = _athlete(
         9,
