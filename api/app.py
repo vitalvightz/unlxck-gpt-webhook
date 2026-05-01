@@ -580,6 +580,16 @@ def _admin_approved_result(plan_row: dict[str, Any]) -> dict[str, Any]:
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="No saved Stage 2 or draft text is available to approve.",
         )
+    planning_brief = _decode_structured_text(plan_row.get("planning_brief")) or {}
+    validator_report = plan_row.get("stage2_validator_report") or {}
+    if planning_brief:
+        review = review_stage2_output(planning_brief=planning_brief, final_plan_text=approved_text)
+        validator_report = review["validator_report"]
+        if review["status"] != "PASS":
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Cannot approve Stage 2 output with blocking validation issues.",
+            )
     return {
         "status": "ready",
         "plan_text": approved_text,
@@ -587,7 +597,7 @@ def _admin_approved_result(plan_row: dict[str, Any]) -> dict[str, Any]:
         "final_plan_text": approved_text,
         "pdf_url": None,
         "stage2_retry_text": str(plan_row.get("stage2_retry_text") or ""),
-        "stage2_validator_report": plan_row.get("stage2_validator_report") or {},
+        "stage2_validator_report": validator_report,
         "stage2_status": "admin_review_approved",
         "stage2_attempt_count": int(plan_row.get("stage2_attempt_count") or 0),
     }

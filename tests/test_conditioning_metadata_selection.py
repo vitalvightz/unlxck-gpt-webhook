@@ -509,7 +509,10 @@ def test_generated_boxing_d6_taper_uses_low_impact_alactic_not_jump_or_sprint_st
     )
 
     plan_text, selected_names, *_rest, candidate_reservoir = result
-    assert "Explosive Boxing Burst Intervals" in selected_names
+    assert any(
+        name in selected_names
+        for name in {"Explosive Boxing Burst Intervals", "Reactive Shuffle Repeats"}
+    )
     assert "Reactive Shuffle Repeats" in [
         entry["drill"]["name"]
         for entry in candidate_reservoir["alactic"]

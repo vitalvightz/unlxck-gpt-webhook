@@ -1305,7 +1305,27 @@ def _late_fight_countdown_exercise_rules(days_until_fight: Any) -> list[dict[str
 
     rules: list[dict[str, Any]] = []
     for day in dedupe_preserve_order(covered_days):
-        if day == 6:
+        if day == 13:
+            rules.append(
+                {
+                    "countdown_label": "D-13",
+                    "blocked_drills": [
+                        "Band-Resisted Sprint Start",
+                        "Band-Resisted Sprint Starts (ATP-PCr)",
+                        "resisted acceleration",
+                        "sprint start",
+                    ],
+                    "preferred_drills": [
+                        "Staggered-Stance Medicine-Ball Punch Throw",
+                        "Explosive Boxing Burst Intervals",
+                        "Reactive Shuffle Repeats",
+                        "Mobility Reset Flow",
+                        "Breathing Reset",
+                    ],
+                    "reason": "D-13 may keep low-damage sharpness but must not render SPP-only sprint-start or resisted acceleration work.",
+                }
+            )
+        elif day == 6:
             rules.append(
                 {
                     "countdown_label": "D-6",
@@ -1317,7 +1337,6 @@ def _late_fight_countdown_exercise_rules(days_until_fight: Any) -> list[dict[str
                     "preferred_drills": [
                         "Explosive Boxing Burst Intervals",
                         "Reactive Shuffle Repeats",
-                        "Band-Resisted Jab-Cross Primer",
                     ],
                     "reason": "D-6 boxing taper should keep sharpness low-impact and should not use jumps or sprint-start fallbacks.",
                 }
@@ -1341,7 +1360,6 @@ def _late_fight_countdown_exercise_rules(days_until_fight: Any) -> list[dict[str
                         "loaded strength",
                     ],
                     "preferred_drills": [
-                        "Band-Resisted Jab-Cross Primer",
                         "Band Face Pull",
                         "Technical Shadowboxing Tempo",
                         "Mobility Reset Flow",

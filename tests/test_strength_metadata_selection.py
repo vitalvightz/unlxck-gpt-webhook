@@ -80,13 +80,13 @@ def test_late_strength_selection_prefers_explicit_low_cost_metadata(monkeypatch)
             "cns_load": "high",
         },
         {
-            "name": "Band Snap-Down Primer",
+            "name": "Shadow Snap-Down Primer",
             "phases": ["TAPER"],
             "method": "power",
             "movement": "core",
             "type": "bilateral",
-            "tags": ["band_snap", "explosive", "speed", "mech_ballistic"],
-            "equipment": "bands",
+            "tags": ["shadow_snap", "explosive", "speed", "mech_ballistic"],
+            "equipment": "bodyweight",
             "late_windows": [D4_TO_D2],
             "impact_cost": "low",
             "eccentric_cost": "low",
@@ -98,11 +98,11 @@ def test_late_strength_selection_prefers_explicit_low_cost_metadata(monkeypatch)
             "cns_freshness": True,
         },
     ]
-    _patch_minimal_strength_runtime(monkeypatch, exercise_bank, {"dense_jump": 10.0, "band_snap": 9.5})
+    _patch_minimal_strength_runtime(monkeypatch, exercise_bank, {"dense_jump": 10.0, "shadow_snap": 9.5})
 
     result = strength.generate_strength_block(flags=_flags())
 
-    assert _selected_names(result) == ["Band Snap-Down Primer"]
+    assert _selected_names(result) == ["Shadow Snap-Down Primer"]
     selected_reasons = result["why_log"][0]["reasons"]["reason_codes"]
     assert "late_strength_boost_low_soreness" in selected_reasons
     assert "late_strength_boost_low_impact" in selected_reasons
@@ -296,7 +296,7 @@ def test_d1_explicit_taper_windows_exclude_loaded_sprint_jump_and_eccentric_dril
 
 def test_good_taper_readiness_options_remain_available():
     expected_windows = {
-        "Band-Resisted Jab-Cross Primer": {"d1", "d4_to_d2"},
+        "Band-Resisted Jab-Cross Primer": {"d21_to_d14", "d13_to_d8"},
         "Technical Shadowboxing Tempo": {"d1", "d4_to_d2"},
         "Band Row Speed Focus": {"d1", "d4_to_d2"},
         "Mobility Reset Flow": {"d1", "d4_to_d2"},

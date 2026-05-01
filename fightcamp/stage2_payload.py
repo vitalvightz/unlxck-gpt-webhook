@@ -2922,6 +2922,67 @@ def _build_phase_strategy(
     return strategy
 
 
+def _slot_exercise_name(slot: dict[str, Any]) -> str:
+    for key in ("selected", "primary", "exercise", "drill"):
+        value = slot.get(key)
+        if isinstance(value, dict):
+            name = str(value.get("name") or value.get("exercise_name") or value.get("drill_name") or "").strip()
+            if name:
+                return name
+    return str(slot.get("name") or slot.get("exercise_name") or slot.get("drill_name") or "").strip()
+
+
+def _selected_exercise_names(candidate_pools: dict[str, dict]) -> list[str]:
+    names: list[str] = []
+    for pool in (candidate_pools or {}).values():
+        if not isinstance(pool, dict):
+            continue
+        for slot_group in ("strength_slots", "conditioning_slots", "rehab_slots"):
+            for slot in pool.get(slot_group, []) or []:
+                if not isinstance(slot, dict):
+                    continue
+                name = _slot_exercise_name(slot)
+                if name:
+                    names.append(name)
+    return dedupe_preserve_order(names)
+
+
+def _late_fight_countdown_days_from_spec(days_until_fight: Any, spec: dict[str, Any]) -> list[int]:
+    days: list[int] = []
+    for segment in spec.get("countdown_mode_sequence", []) or []:
+        if not isinstance(segment, dict):
+            continue
+        start_day = segment.get("start_day")
+        end_day = segment.get("end_day")
+        if isinstance(start_day, int) and isinstance(end_day, int):
+            days.extend(range(start_day, end_day - 1, -1))
+    if days:
+        return dedupe_preserve_order(days)
+    try:
+        day = int(days_until_fight)
+    except (TypeError, ValueError):
+        return []
+    return [day] if day >= 0 else []
+
+
+def _with_late_fight_allowed_exercises(
+    *,
+    spec: dict[str, Any],
+    candidate_pools: dict[str, dict],
+    days_until_fight: Any,
+) -> dict[str, Any]:
+    selected_names = _selected_exercise_names(candidate_pools)
+    allowed_by_day = {
+        f"D-{day}": selected_names
+        for day in _late_fight_countdown_days_from_spec(days_until_fight, spec)
+        if selected_names
+    }
+    return {
+        **spec,
+        "allowed_exercises_by_day": allowed_by_day,
+    }
+
+
 def build_planning_brief(
     *,
     athlete_model: dict,
@@ -2964,13 +3025,18 @@ def build_planning_brief(
         )
         weekly_role_map = apply_fight_day_override_to_weekly_role_map(weekly_role_map, athlete_model)
         session_sequence = _build_late_fight_session_sequence(days_until_fight, athlete_model)
+        late_fight_plan_spec = _with_late_fight_allowed_exercises(
+            spec=_build_late_fight_plan_spec(days_until_fight, athlete_model),
+            candidate_pools=candidate_pools,
+            days_until_fight=days_until_fight,
+        )
         return {
             "schema_version": "planning_brief.v1",
             "generator_mode": "deterministic_late_fight_planner_plus_ai_finalizer",
             "payload_variant": "late_fight_stage2_payload",
             "athlete_snapshot": athlete_model,
             "days_out_payload": days_out_payload,
-            "late_fight_plan_spec": _build_late_fight_plan_spec(days_until_fight, athlete_model),
+            "late_fight_plan_spec": late_fight_plan_spec,
             "late_fight_session_sequence": session_sequence,
             "fight_demands": {
                 "sport": athlete_model.get("sport"),
@@ -3572,6 +3638,11 @@ def build_stage2_payload(
 
     if _uses_late_fight_stage2_payload(days_until_fight):
         days_out_payload = _days_out_payload_block(days_until_fight, athlete_model)
+        late_fight_plan_spec = _with_late_fight_allowed_exercises(
+            spec=_build_late_fight_plan_spec(days_until_fight, athlete_model),
+            candidate_pools=candidate_pools,
+            days_until_fight=days_until_fight,
+        )
         return {
             "schema_version": "stage2_payload.v1",
             "generator_mode": "restriction_aware_candidate_generator_late_fight",
@@ -3579,7 +3650,7 @@ def build_stage2_payload(
             "payload_mode": days_out_payload.get("payload_mode"),
             "effective_stage2_mode": days_out_payload.get("payload_mode"),
             "days_out_payload": days_out_payload,
-            "late_fight_plan_spec": _build_late_fight_plan_spec(days_until_fight, athlete_model),
+            "late_fight_plan_spec": late_fight_plan_spec,
             "late_fight_session_sequence": _build_late_fight_session_sequence(days_until_fight, athlete_model),
             "rendering_rules": days_out_payload.get("rendering_rules", {}),
             "late_fight_permissions": days_out_payload.get("late_fight_permissions", {}),

@@ -138,6 +138,12 @@ def _late_fight_planning_brief(days_out: str = "D-5") -> dict:
     }
 
 
+def _late_fight_brief_with_allowed(days_out: str, allowed: list[str]) -> dict:
+    brief = _late_fight_planning_brief(days_out)
+    brief["late_fight_plan_spec"]["allowed_exercises_by_day"] = {days_out: allowed}
+    return brief
+
+
 def _boxing_crowded_week_planning_brief() -> dict:
     return {
         "athlete_model": {"sport": "boxing", "equipment": ["landmine", "bike", "bands"]},
@@ -1610,6 +1616,148 @@ def test_late_fight_countdown_blocks_non_rehab_band_work_on_d7_and_d1():
     blocked = [w for w in report["warnings"] if w["code"] == "late_fight_countdown_blocked_drill"]
     assert any(w["days_out_bucket"] == "D-7" and w["blocked_drill"] == "non_rehab_band_work" for w in blocked)
     assert any(w["days_out_bucket"] == "D-1" and w["blocked_drill"] == "non_rehab_band_work" for w in blocked)
+
+
+def test_late_fight_allowlist_blocks_d13_band_resisted_sprint_starts():
+    brief = _late_fight_brief_with_allowed(
+        "D-13",
+        ["Staggered-Stance Medicine-Ball Punch Throw", "Reactive Shuffle Repeats", "Breathing Reset"],
+    )
+    brief["late_fight_plan_spec"].update({"payload_mode": "pre_fight_compressed_payload"})
+
+    report = validate_stage2_output(
+        planning_brief=brief,
+        final_plan_text="""
+        D-13 - Sharpness
+        - Band-Resisted Sprint Starts (ATP-PCr) - 3 x 5 m
+        """,
+    )
+
+    blocking_codes = {w["code"] for w in report["warnings"] if w.get("blocking")}
+    assert "late_fight_unapproved_exercise_rendered" in blocking_codes
+
+
+def test_late_fight_countdown_blocks_d13_spp_only_resisted_acceleration_phrase():
+    brief = _late_fight_brief_with_allowed("D-13", ["Reactive Shuffle Repeats", "Breathing Reset"])
+    brief["late_fight_plan_spec"].update({"payload_mode": "pre_fight_compressed_payload"})
+
+    report = validate_stage2_output(
+        planning_brief=brief,
+        final_plan_text="""
+        D-13 - Sharpness
+        - Resisted Acceleration Sprint Start - 3 x 5 m
+        """,
+    )
+
+    blocking_codes = {w["code"] for w in report["warnings"] if w.get("blocking")}
+    assert "late_fight_countdown_blocked_drill" in blocking_codes
+    assert "late_fight_unapproved_exercise_rendered" in blocking_codes
+
+
+def test_late_fight_allowlist_blocks_d7_band_resisted_split_jump():
+    brief = _late_fight_brief_with_allowed("D-7", ["Reactive Shuffle Repeats", "Breathing Reset"])
+
+    report = validate_stage2_output(
+        planning_brief=brief,
+        final_plan_text="""
+        D-7 - Sharpness
+        - Band-Resisted Split Jump - 2 x 3
+        """,
+    )
+
+    blocking_codes = {w["code"] for w in report["warnings"] if w.get("blocking")}
+    assert "late_fight_unapproved_exercise_rendered" in blocking_codes
+
+
+def test_late_fight_allowlist_blocks_d1_band_resisted_jab_cross():
+    brief = _late_fight_brief_with_allowed("D-1", ["Band Face Pull", "Technical Shadowboxing Tempo", "Breathing Reset"])
+
+    report = validate_stage2_output(
+        planning_brief=brief,
+        final_plan_text="""
+        D-1 - Neural primer
+        - Band-Resisted Jab-Cross - 2 x 3
+        """,
+    )
+
+    blocking_codes = {w["code"] for w in report["warnings"] if w.get("blocking")}
+    assert "late_fight_unapproved_exercise_rendered" in blocking_codes
+    assert "late_fight_countdown_blocked_drill" in blocking_codes
+
+
+def test_late_fight_d1_rehab_band_work_passes_with_rehab_context():
+    brief = _late_fight_brief_with_allowed("D-1", ["Technical Shadowboxing Tempo", "Breathing Reset"])
+
+    report = validate_stage2_output(
+        planning_brief=brief,
+        final_plan_text="""
+        D-1 - Reset
+        - Band Face Pull rehab - 1 x 10
+        - Band External Rotation mobility - 1 x 8
+        - band pull-aparts prehab reset - 1 x 10
+        - Breathing reset - 3 min
+        """,
+    )
+
+    blocking_codes = {w["code"] for w in report["warnings"] if w.get("blocking")}
+    assert "late_fight_unapproved_exercise_rendered" not in blocking_codes
+    assert "late_fight_countdown_blocked_drill" not in blocking_codes
+
+
+def test_late_fight_d7_neural_power_stacking_triggers_retry_warning():
+    brief = _late_fight_brief_with_allowed(
+        "D-7",
+        ["Speed Box Squat", "Reactive Shuffle Repeats", "Technical Shadowboxing Tempo"],
+    )
+
+    report = validate_stage2_output(
+        planning_brief=brief,
+        final_plan_text="""
+        D-7 - Sharpness
+        - Speed Box Squat - 2 x 2
+        - Reactive Shuffle Repeats - 3 x 6 sec
+        - Technical Shadowboxing Tempo - 2 rounds
+        """,
+    )
+
+    blocking_codes = {w["code"] for w in report["warnings"] if w.get("blocking")}
+    assert "late_fight_neural_power_stacking" in blocking_codes
+
+
+def test_late_fight_allowlist_blocks_unknown_exercise_name():
+    brief = _late_fight_brief_with_allowed("D-5", ["Reactive Shuffle Repeats", "Breathing Reset"])
+
+    report = validate_stage2_output(
+        planning_brief=brief,
+        final_plan_text="""
+        Friday - Sharpness
+        - Mystery Power Drill - 2 x 3
+        """,
+    )
+
+    blocking_codes = {w["code"] for w in report["warnings"] if w.get("blocking")}
+    assert "late_fight_unapproved_exercise_rendered" in blocking_codes
+
+
+def test_valid_late_fight_allowlisted_sample_passes():
+    brief = _late_fight_brief_with_allowed(
+        "D-5",
+        ["Reactive Shuffle Repeats", "Technical Shadowboxing Tempo", "Breathing Reset"],
+    )
+
+    report = validate_stage2_output(
+        planning_brief=brief,
+        final_plan_text="""
+        Friday - Sharpness
+        - Reactive Shuffle Repeats - 3 x 6 sec
+        - Technical Shadowboxing Tempo - 2 rounds
+        - Breathing reset - 3 min
+        """,
+    )
+
+    blocking_codes = {w["code"] for w in report["warnings"] if w.get("blocking")}
+    assert "late_fight_unapproved_exercise_rendered" not in blocking_codes
+    assert not report["errors"]
 
 
 def test_late_fight_countdown_blocks_resistance_and_mini_band_variants():

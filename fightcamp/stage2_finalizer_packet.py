@@ -273,6 +273,7 @@ def build_stage2_finalizer_packet(
             "D-0 always renders as fight-day protocol only.",
             f"Fight-day protocol text: {FIGHT_DAY_PROTOCOL_TEXT}",
             "Coach-owned days override app S&C unless coach-led work is light or cancelled.",
+            "For late_fight_plan_spec.allowed_exercises_by_day, each countdown day may render only those listed exercise names plus generic breathing, mobility/reset, shadowboxing/technical cues, coach-led session labels, and rehab/prehab band resets.",
         ],
         "forbidden_output": {
             "phase_toolbox_labels": list(_FORBIDDEN_TOOLBOX_LABELS),
