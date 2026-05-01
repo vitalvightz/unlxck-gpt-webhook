@@ -4114,6 +4114,16 @@ button.mobile-step-rail-item {
     align-items: stretch;
   }
 
+  html[data-mobile-tab-bar="active"] .onboarding-action-bar,
+  html[data-mobile-tab-bar="stacked"] .onboarding-action-bar {
+    bottom: calc(14px + var(--mobile-tab-bar-clearance));
+  }
+
+  html[data-mobile-tab-bar="active"] .onboarding-panel,
+  html[data-mobile-tab-bar="stacked"] .onboarding-panel {
+    padding-bottom: calc(174px + var(--mobile-tab-bar-clearance));
+  }
+
   .onboarding-action-bar-copy {
     gap: 6px;
   }
@@ -8223,6 +8233,10 @@ html[data-app-surface="workspace"][data-theme="dark"] .desktop-nav-toggle {
 
   .settings-mobile-save .cta {
     width: 100%;
+  }
+
+  .settings-desktop-save {
+    display: none;
   }
 
   .plan-inline-rename-row,
