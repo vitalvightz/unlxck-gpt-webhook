@@ -24,10 +24,8 @@ from typing import Any
 from .fight_date_utils import resolve_fight_weekday
 
 
-FIGHT_DAY_PROTOCOL_TEXT = (
-    "Fight day protocol — follow coach warm-up and fight protocol; "
-    "no additional app S&C."
-)
+FIGHT_DAY_PROTOCOL_LABEL = "Fight day protocol"
+FIGHT_DAY_PROTOCOL_TEXT = "Follow coach warm-up and fight protocol; no additional app S&C."
 
 
 _FIGHT_DATE_KEYS = ("fight_date", "next_fight_date")
@@ -69,7 +67,8 @@ def _make_fight_day_protocol_role(day: str) -> dict[str, Any]:
         ),
         "anchor": "fight_day_protocol",
         "placement_rule": (
-            f"Fight is on {day.title()}. Render exactly: \"{FIGHT_DAY_PROTOCOL_TEXT}\""
+            f"Fight is on {day.title()}. Use heading \"{FIGHT_DAY_PROTOCOL_LABEL}\" "
+            f"and body \"{FIGHT_DAY_PROTOCOL_TEXT}\". Do not repeat the heading in the body."
         ),
         "scheduled_day_hint": day,
         "day_assignment_reason": (
@@ -78,7 +77,7 @@ def _make_fight_day_protocol_role(day: str) -> dict[str, Any]:
         ),
         "coach_owned": True,
         "display_text": FIGHT_DAY_PROTOCOL_TEXT,
-        "athlete_facing_label": "Fight day protocol",
+        "athlete_facing_label": FIGHT_DAY_PROTOCOL_LABEL,
         "governance": {
             "authority": "fight_day_protocol_lock",
             "execution_only": False,
@@ -181,6 +180,7 @@ def apply_fight_day_override_to_weekly_role_map(
     final_week["fight_day_override"] = {
         "active": True,
         "fight_weekday": fight_weekday,
+        "fight_day_label": FIGHT_DAY_PROTOCOL_LABEL,
         "fight_day_text": FIGHT_DAY_PROTOCOL_TEXT,
         "replaced_role": replaced_existing,
     }
@@ -190,6 +190,7 @@ def apply_fight_day_override_to_weekly_role_map(
     weekly_role_map["fight_day_override"] = {
         "active": True,
         "fight_weekday": fight_weekday,
+        "fight_day_label": FIGHT_DAY_PROTOCOL_LABEL,
         "fight_day_text": FIGHT_DAY_PROTOCOL_TEXT,
         "applied_to_week_index": final_week.get("week_index"),
     }
