@@ -142,6 +142,18 @@ export function AppNav() {
     };
   }, [desktopNavCollapsed]);
 
+  const isMobileNavExpanding = mobileNavState === "opening" || mobileNavState === "open";
+
+  useEffect(() => {
+    if (!isMobileNavExpanding) {
+      return;
+    }
+    document.documentElement.dataset.mobileNavOpen = "true";
+    return () => {
+      delete document.documentElement.dataset.mobileNavOpen;
+    };
+  }, [isMobileNavExpanding]);
+
   useEffect(() => {
     if (!isMobileDrawerVisible) {
       return;
