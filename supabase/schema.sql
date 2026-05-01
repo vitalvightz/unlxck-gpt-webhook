@@ -91,7 +91,7 @@ create table if not exists public.generation_jobs (
   id uuid primary key default gen_random_uuid(),
   athlete_id uuid not null references public.profiles(id) on delete cascade,
   client_request_id text not null,
-  source text not null default 'self_service',
+  source text not null default 'self_serve',
   request_payload jsonb not null default '{}'::jsonb,
   status text not null default 'queued',
   error text,
@@ -116,7 +116,7 @@ alter table public.plans add column if not exists stage2_validator_report jsonb 
 alter table public.plans add column if not exists stage2_status text not null default '';
 alter table public.plans add column if not exists stage2_attempt_count integer not null default 0;
 alter table public.plans add column if not exists parsing_metadata jsonb not null default '{}'::jsonb;
-alter table public.generation_jobs add column if not exists source text not null default 'self_service';
+alter table public.generation_jobs add column if not exists source text not null default 'self_serve';
 alter table public.generation_jobs add column if not exists request_payload jsonb not null default '{}'::jsonb;
 alter table public.generation_jobs add column if not exists status text not null default 'queued';
 alter table public.generation_jobs add column if not exists error text;
