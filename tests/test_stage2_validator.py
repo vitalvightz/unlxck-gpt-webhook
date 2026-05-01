@@ -1669,6 +1669,22 @@ def test_late_fight_allowlist_blocks_d7_band_resisted_split_jump():
     assert "late_fight_unapproved_exercise_rendered" in blocking_codes
 
 
+def test_late_fight_allowlist_blocks_d7_band_resisted_jab_cross_with_unicode_hyphen():
+    brief = _late_fight_brief_with_allowed("D-7", ["Reactive Shuffle Repeats", "Breathing Reset"])
+
+    report = validate_stage2_output(
+        planning_brief=brief,
+        final_plan_text="""
+        D-7 - Sharpness
+        - Band‑Resisted Jab‑Cross Primer - 3 x 3
+        """,
+    )
+
+    blocking_codes = {w["code"] for w in report["warnings"] if w.get("blocking")}
+    assert "late_fight_unapproved_exercise_rendered" in blocking_codes
+    assert "late_fight_countdown_blocked_drill" in blocking_codes
+
+
 def test_late_fight_allowlist_blocks_d1_band_resisted_jab_cross():
     brief = _late_fight_brief_with_allowed("D-1", ["Band Face Pull", "Technical Shadowboxing Tempo", "Breathing Reset"])
 
