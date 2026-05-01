@@ -2554,7 +2554,7 @@ export function PlanIntakeForm() {
               <>
                 <button
                   type="button"
-                  className="ghost-button onboarding-action-secondary"
+                  className="ghost-button onboarding-action-secondary onboarding-action-stage1"
                   onClick={handleGenerateStage1Preview}
                   disabled={formActionPending}
                 >

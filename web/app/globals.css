@@ -4252,7 +4252,10 @@ button.mobile-step-rail-item {
     min-width: 0;
     min-height: 44px;
     padding-inline: 8px;
-    white-space: nowrap;
+  }
+
+  .onboarding-action-stage1 {
+    display: none;
   }
 
   .field textarea {
