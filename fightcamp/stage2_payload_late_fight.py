@@ -1440,13 +1440,14 @@ def _late_fight_taper_micro_support_policy(
             suppressed.update({"core", "neck", "heavy_bag", "grip"})
             policy["suppression_reasons"].append("d1_blocks_core_neck_heavy_bag_grip")
 
-        if sport == "boxing":
-            suppressed.add("grip")
-            policy["suppression_reasons"].append("boxing_taper_blocks_grip")
-        elif grappling_sport and days in {10, 9, 8, 7}:
+        allow_grip = grappling_sport and days in {10, 9, 8, 7} and sport != "boxing"
+
+        if allow_grip:
             policy["allowed_categories"].append("grip")
         else:
             suppressed.add("grip")
+            if sport == "boxing":
+                policy["suppression_reasons"].append("boxing_taper_blocks_grip")
 
     if weight_cut_suppressed:
         suppressed.update({"core", "neck", "heavy_bag", "grip"})
