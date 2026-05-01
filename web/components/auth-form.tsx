@@ -26,6 +26,7 @@ export function AuthForm({ mode }: { mode: "signup" | "login" }) {
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const [isMagicLinkPending, startMagicLinkTransition] = useTransition();
   const passwordStrength = evaluatePasswordStrength(password, { fullName, email });
   const isSignupPasswordBlocked = mode === "signup" && !passwordStrength.isAcceptable;
 
@@ -100,6 +101,42 @@ export function AuthForm({ mode }: { mode: "signup" | "login" }) {
 
       const nextMe = await getMe(accessToken).catch(() => null);
       router.replace(nextMe ? getAuthenticatedLandingHref(nextMe) : "/plans");
+    });
+  }
+
+  function handleMagicLink() {
+    setMessage(null);
+    setError(null);
+    const trimmedEmail = email.trim();
+    if (!trimmedEmail) {
+      setError("Enter your email above, then request a sign-in link.");
+      return;
+    }
+    if (demoMode) {
+      setError("Magic links aren't available in demo mode. Use the demo buttons or password sign-in.");
+      return;
+    }
+    startMagicLinkTransition(async () => {
+      let client;
+      try {
+        client = getSupabaseBrowserClient();
+      } catch (clientError) {
+        setError(clientError instanceof Error ? clientError.message : "Supabase is not configured.");
+        return;
+      }
+      const redirectTo = typeof window !== "undefined" ? `${window.location.origin}/login` : undefined;
+      const { error: otpError } = await client.auth.signInWithOtp({
+        email: trimmedEmail,
+        options: {
+          shouldCreateUser: mode === "signup",
+          emailRedirectTo: redirectTo,
+        },
+      });
+      if (otpError) {
+        setError(otpError.message);
+        return;
+      }
+      setMessage(`Check ${trimmedEmail} for a one-tap sign-in link.`);
     });
   }
 
@@ -180,9 +217,21 @@ export function AuthForm({ mode }: { mode: "signup" | "login" }) {
             {mode === "signup" ? <PasswordStrengthMeter strength={passwordStrength} /> : null}
           </div>
 
-          <div className="form-actions">
+          <div className="form-actions auth-form-actions">
             <button type="submit" className="cta" disabled={isPending || isSignupPasswordBlocked}>
               {isPending ? "Working..." : mode === "signup" ? "Create account" : "Log in"}
+            </button>
+            <button
+              type="button"
+              className="secondary-button auth-magic-link-button"
+              onClick={handleMagicLink}
+              disabled={isPending || isMagicLinkPending}
+            >
+              {isMagicLinkPending
+                ? "Sending link..."
+                : mode === "signup"
+                  ? "Email me a sign-in link instead"
+                  : "Email me a one-tap sign-in link"}
             </button>
             <Link href={mode === "signup" ? "/login" : "/signup"} className="ghost-button">
               {mode === "signup" ? "Already have an account?" : "Need an account?"}

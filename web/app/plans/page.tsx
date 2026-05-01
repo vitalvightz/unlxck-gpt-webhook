@@ -7,6 +7,8 @@ import { type FormEvent, useEffect, useMemo, useRef, useState } from "react";
 
 import { RequireAuth } from "@/components/auth-guard";
 import { useAppSession } from "@/components/auth-provider";
+import { PlanHistoryRowSkeleton, PlansFeaturedSkeleton } from "@/components/skeleton";
+import { useToast } from "@/components/toast-provider";
 import { deletePlan, listPlans, renamePlan } from "@/lib/api";
 import {
   formatPlanFightDate,
@@ -35,6 +37,7 @@ function PlanCard({
   onPlanRenamed: (updatedPlan: PlanSummary) => void;
   variant?: "featured" | "history";
 }) {
+  const { showToast } = useToast();
   const [pendingAction, setPendingAction] = useState<"rename" | "delete" | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -121,7 +124,7 @@ function PlanCard({
     try {
       const updatedPlan = await renamePlan(accessToken, plan.plan_id, normalizedName);
       onPlanRenamed(updatedPlan);
-      setMessage("Plan renamed.");
+      showToast("Plan renamed.", { tone: "success" });
       setIsRenaming(false);
     } catch (renameError) {
       const errorMessage = renameError instanceof Error ? renameError.message : "Unable to rename this plan.";
@@ -162,6 +165,7 @@ function PlanCard({
       await deletePlan(accessToken, plan.plan_id);
       setIsDeleteConfirmOpen(false);
       onPlanDeleted(plan.plan_id);
+      showToast(`Deleted ${getPlanDisplayName(plan)}.`, { tone: "success" });
     } catch (deleteError) {
       const errorMessage = deleteError instanceof Error ? deleteError.message : "Unable to delete this plan.";
       if (errorMessage.includes("Unable to reach the server") || errorMessage.includes("502") || errorMessage.includes("503") || errorMessage.includes("504")) {
@@ -440,24 +444,15 @@ export default function PlansPage() {
             />
           </div>
         ) : isLoading ? (
-          <article className="list-card plan-card plans-featured-card plans-placeholder-card athlete-motion-slot athlete-motion-main">
-            <div className="plans-featured-topline">
-              <div className="plans-featured-kicker">
-                <p className="kicker">Loading</p>
-                <p className="muted">Rebuilding your plan history now.</p>
+          <>
+            <PlansFeaturedSkeleton />
+            <div className="plans-history-block athlete-motion-slot athlete-motion-main" aria-busy="true">
+              <div className="plan-history-list plans-history-list">
+                <PlanHistoryRowSkeleton />
+                <PlanHistoryRowSkeleton />
               </div>
             </div>
-            <div className="plans-featured-main">
-              <div className="plans-featured-copy">
-                <p className="label">Plan history</p>
-                <h2 className="plan-card-title plans-featured-title">Fetching your saved plans</h2>
-                <p className="muted plans-featured-summary">Pulling the latest plan first so the current camp becomes the main focus.</p>
-              </div>
-            </div>
-            <div className="plans-featured-accent" aria-hidden="true">
-              <span />
-            </div>
-          </article>
+          </>
         ) : (
           <article className="list-card plan-card plans-featured-card plans-placeholder-card athlete-motion-slot athlete-motion-main">
             <div className="plans-featured-topline">
