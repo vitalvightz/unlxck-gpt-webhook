@@ -1353,6 +1353,113 @@ def _late_fight_countdown_exercise_rules(days_until_fight: Any) -> list[dict[str
     return rules
 
 
+_TAPER_MICRO_SUPPORT_TAG = "taper_micro_support"
+_TAPER_MICRO_SUPPORT_CORE_OPTIONS = (
+    "Dead Bug Breathing: 1-2 x 4 reps/side",
+    "Bird Dog Hold: 1-2 x 10 sec/side",
+    "Side Plank Breathing Hold: 1 x 10-15 sec/side",
+    "Pallof Iso Hold: 1-2 x 10 sec/side",
+)
+
+
+def _late_fight_taper_micro_support_policy(
+    days_until_fight: Any,
+    athlete_model: dict[str, Any],
+) -> dict[str, Any]:
+    days = _coerce_days(days_until_fight)
+    fatigue = _normalized_fatigue(athlete_model)
+    flags = _readiness_flags(athlete_model)
+    cut_bucket = _resolve_bridge_cut_bucket(athlete_model)
+    sport = str(athlete_model.get("sport") or "").strip().lower()
+    high_fatigue = fatigue == "high" or "high_fatigue" in flags
+    weight_cut_suppressed = cut_bucket in {"moderate", "high", "critical", "extreme"}
+    grappling_sport = sport in {"mma", "grappling", "wrestling", "bjj", "jiu_jitsu"}
+
+    if days in {10, 9, 8}:
+        day_band, max_minutes = "d10_to_d8", 6
+    elif days in {7, 6, 5}:
+        day_band, max_minutes = "d7_to_d5", 5
+    elif days in {4, 3, 2}:
+        day_band, max_minutes = "d4_to_d2", 4
+    elif days == 1:
+        day_band, max_minutes = "d1", 4
+    else:
+        day_band, max_minutes = "inactive", 0
+
+    policy: dict[str, Any] = {
+        "tag": _TAPER_MICRO_SUPPORT_TAG,
+        "active": day_band != "inactive",
+        "optional_add_on_only": True,
+        "never_primary_anchor": True,
+        "standalone_session_allowed": False,
+        "max_items": 1 if day_band != "inactive" else 0,
+        "max_total_minutes": max_minutes,
+        "day_band": day_band,
+        "allowed_categories": ["breathing", "mobility"],
+        "suppressed_categories": [],
+        "suppression_reasons": [],
+        "core_allowed_options": list(_TAPER_MICRO_SUPPORT_CORE_OPTIONS),
+        "core_blocked_options": [
+            "Hanging Leg Raises",
+            "Russian Twists",
+            "Weighted Sit-Ups",
+            "Long Planks",
+            "High-Rep Abs",
+        ],
+        "d1_allowed_list": [
+            "breathing",
+            "mobility",
+            "light technical shadowboxing",
+            "optional light band face pull",
+        ],
+        "d1_blocked_list": [
+            "core",
+            "neck",
+            "heavy_bag",
+            "grip",
+            "conditioning",
+            "hard_bands",
+            "power_work",
+        ],
+    }
+
+    suppressed: set[str] = set()
+    if not policy["active"]:
+        policy["suppression_reasons"].append("outside_taper_micro_support_window")
+    elif high_fatigue:
+        suppressed.update({"core", "neck", "heavy_bag", "grip", "shadowboxing", "band_face_pull"})
+        policy["suppression_reasons"].append("high_fatigue_breathing_mobility_only")
+    else:
+        if day_band in {"d10_to_d8", "d7_to_d5"}:
+            policy["allowed_categories"].extend(["core", "neck", "heavy_bag"])
+        elif day_band == "d4_to_d2":
+            policy["allowed_categories"].append("breathing_based_core_cue")
+            suppressed.update({"neck", "heavy_bag", "grip"})
+        elif day_band == "d1":
+            policy["allowed_categories"].extend(["shadowboxing", "band_face_pull"])
+            suppressed.update({"core", "neck", "heavy_bag", "grip"})
+            policy["suppression_reasons"].append("d1_blocks_core_neck_heavy_bag_grip")
+
+        if sport == "boxing":
+            suppressed.add("grip")
+            policy["suppression_reasons"].append("boxing_taper_blocks_grip")
+        elif grappling_sport and days in {10, 9, 8, 7}:
+            policy["allowed_categories"].append("grip")
+        else:
+            suppressed.add("grip")
+
+    if weight_cut_suppressed:
+        suppressed.update({"core", "neck", "heavy_bag", "grip"})
+        policy["suppression_reasons"].append("moderate_or_high_weight_cut_blocks_nonessential_micro_support")
+
+    policy["allowed_categories"] = [
+        category for category in dedupe_preserve_order(policy["allowed_categories"])
+        if category not in suppressed
+    ]
+    policy["suppressed_categories"] = sorted(suppressed)
+    return policy
+
+
 def _role_anchor(role_key: str) -> str:
     if role_key in {
         "primary_strength_day",
@@ -3498,6 +3605,7 @@ def _build_late_fight_plan_spec(days_until_fight: Any, athlete_model: dict) -> d
         "forbidden_session_types": payload_block["forbidden_session_types"],
         "forbidden_blocks": payload_block["forbidden_blocks"],
         "countdown_exercise_rules": _late_fight_countdown_exercise_rules(days_until_fight),
+        "taper_micro_support_policy": _late_fight_taper_micro_support_policy(days_until_fight, athlete_model),
         "rendering_rules": payload_block["rendering_rules"],
         "max_meaningful_stress_exposures": _late_fight_max_meaningful_stress_exposures(days_until_fight),
         "max_active_roles": _late_fight_max_active_roles(days_until_fight),
@@ -3607,6 +3715,7 @@ def _handoff_mode_instructions(payload_mode: str) -> str:
             "HARD OVERRIDE — PRIMER DAY (D-1)\n"
             "4 blocks max. Output: neural primer · technical touch · activation · mobility/reset · pre-fight notes.\n"
             "Banned: strength, conditioning, anchor, block, glycolytic, development, fight-pace density.\n"
+            "Optional taper_micro_support only: breathing, mobility, light technical shadowboxing, or light band face pull. No core, neck, heavy bag, or grip.\n"
             "No weekly architecture. No hard sparring. No suppressed role restoration.\n\n"
             + _CONTRACT
         )
@@ -3625,6 +3734,7 @@ def _handoff_mode_instructions(payload_mode: str) -> str:
             "5 blocks per session max. Hard sparring: 2 max. Strength/power: 1 touch max.\n"
             "Fight-rhythm touch: 1 max — suppress entirely if sparring already owns the week.\n"
             "One freshness, mobility, or reset session is mandatory.\n"
+            "From D-10 to D-8, taper_micro_support may appear only as one optional add-on line (4-6 min max) - never as a standalone session or anchor.\n"
             "No SPP development framing, no conditioning-build language, no glycolytic stressor between spar days.\n\n"
             + _CONTRACT
         )
@@ -3633,6 +3743,7 @@ def _handoff_mode_instructions(payload_mode: str) -> str:
             "SHARPNESS WEEK (D-7)\n"
             "5 blocks per session max. Stress cap: 2 meaningful exposures total.\n"
             "Neural/power: 1 max. Fight-rhythm: 1 max. Hard sparring: 1 declared day — extras become technical rhythm.\n"
+            "Optional taper_micro_support: one add-on line only, 3-5 min max.\n"
             "No development language, no multi-stressor stacking.\n\n"
             + _CONTRACT
         )
@@ -3642,6 +3753,7 @@ def _handoff_mode_instructions(payload_mode: str) -> str:
             "4 blocks per session max. Stress cap: 1 meaningful exposure.\n"
             "No hard sparring — all declared spar days convert to technical rhythm.\n"
             "Insert cap: 2 sessions (one power touch or technical rhythm + one freshness).\n"
+            "Optional taper_micro_support: one add-on line only, 3-5 min max.\n"
             "Session-by-session only. S&C inserts titled explicitly as countdown inserts.\n\n"
             + _CONTRACT
         )
@@ -3650,6 +3762,7 @@ def _handoff_mode_instructions(payload_mode: str) -> str:
             "SHARPNESS-FIRST SESSIONS (D-4 to D-2)\n"
             "4 blocks per session max. Session-by-session only — no week headers, no program blocks.\n"
             "D-4: sharpness + freshness. D-3: freshness default; power/sharpness touch only if fatigue is not high and no spar-spillover flag. D-2: neural primer or technical touch only.\n"
+            "Optional taper_micro_support: breathing/mobility only, or one tiny rehab-style cue, 2-4 min max.\n"
             "No strength, no conditioning, no glycolytic work, no hard sparring.\n\n"
             + _CONTRACT
         )
