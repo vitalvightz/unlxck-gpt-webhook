@@ -1900,11 +1900,11 @@ select:focus-visible {
 
 .custom-select-menu-sheet {
   position: fixed;
-  left: 0 !important;
+  left: 0;
   right: 0;
   bottom: 0;
-  top: auto !important;
-  width: 100% !important;
+  top: auto;
+  width: 100%;
   max-height: 76vh;
   border-radius: 22px 22px 0 0;
   padding-bottom: var(--safe-area-bottom);
