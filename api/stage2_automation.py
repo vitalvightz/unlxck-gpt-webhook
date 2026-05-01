@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import os
+import asyncio
 from dataclasses import dataclass
 from typing import Any, Protocol
 
@@ -22,6 +23,10 @@ class Stage2AutomationError(RuntimeError):
 
 class Stage2AutomationUnavailableError(Stage2AutomationError):
     """Raised when Stage 2 automation is not configured for runtime use."""
+
+
+class Stage2AutomationTransientError(Stage2AutomationError):
+    """Raised when Stage 2 automation hit a temporary provider/network failure."""
 
 
 class Stage2Automator(Protocol):
@@ -61,6 +66,48 @@ def _extract_response_text(response: Any) -> str:
     if not combined:
         raise Stage2AutomationError("Stage 2 model returned no plan text.")
     return _strip_wrapping_code_fence(combined)
+
+
+def _stage2_request_attempts() -> int:
+    raw_value = os.getenv("UNLXCK_STAGE2_REQUEST_ATTEMPTS", "4").strip()
+    try:
+        return max(1, int(raw_value))
+    except ValueError:
+        logger.warning("[stage2] invalid UNLXCK_STAGE2_REQUEST_ATTEMPTS=%r; falling back to 4", raw_value)
+        return 4
+
+
+def _stage2_retry_backoff_seconds() -> float:
+    raw_value = os.getenv("UNLXCK_STAGE2_RETRY_BACKOFF_SECONDS", "2").strip()
+    try:
+        return max(0.1, float(raw_value))
+    except ValueError:
+        logger.warning("[stage2] invalid UNLXCK_STAGE2_RETRY_BACKOFF_SECONDS=%r; falling back to 2", raw_value)
+        return 2.0
+
+
+def _is_transient_stage2_exception(exc: Exception) -> bool:
+    status_code = getattr(exc, "status_code", None) or getattr(exc, "status", None)
+    if isinstance(status_code, int) and status_code in {408, 409, 429, 500, 502, 503, 504}:
+        return True
+    text = str(exc).lower()
+    return any(
+        snippet in text
+        for snippet in (
+            "timeout",
+            "timed out",
+            "temporarily unavailable",
+            "try again",
+            "rate limit",
+            "connection",
+            "gateway",
+            "502",
+            "503",
+            "504",
+            "overloaded",
+            "server error",
+        )
+    )
 
 
 def _base_result(stage1_result: dict[str, Any], *, draft_plan_text: str) -> dict[str, Any]:
@@ -171,10 +218,34 @@ class OpenAIStage2Automator:
             self.model,
             len(prompt),
         )
-        try:
-            response = await self.client.responses.create(**request)
-        except Exception as exc:  # pragma: no cover - provider failure surfaces via integration
-            raise Stage2AutomationError(f"Stage 2 model request failed: {exc}") from exc
+        max_attempts = _stage2_request_attempts()
+        retry_backoff = _stage2_retry_backoff_seconds()
+        last_error: Exception | None = None
+        for provider_attempt in range(1, max_attempts + 1):
+            try:
+                response = await self.client.responses.create(**request)
+                break
+            except Exception as exc:  # pragma: no cover - provider failure surfaces via integration
+                last_error = exc
+                transient = _is_transient_stage2_exception(exc)
+                logger.warning(
+                    "[stage2] %s request failed attempt=%s/%s transient=%s error_type=%s error=%s",
+                    attempt_label,
+                    provider_attempt,
+                    max_attempts,
+                    transient,
+                    type(exc).__name__,
+                    exc,
+                )
+                if not transient:
+                    raise Stage2AutomationError(f"Stage 2 model request failed: {exc}") from exc
+                if provider_attempt >= max_attempts:
+                    raise Stage2AutomationTransientError(
+                        f"Stage 2 model request temporarily failed after {max_attempts} attempts: {exc}"
+                    ) from exc
+                await asyncio.sleep(retry_backoff * provider_attempt)
+        else:  # pragma: no cover - loop always exits through break or raise
+            raise Stage2AutomationTransientError(f"Stage 2 model request temporarily failed: {last_error}")
         response_id = getattr(response, "id", None) or "unknown"
         text = _extract_response_text(response)
         logger.info(

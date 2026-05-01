@@ -14,7 +14,12 @@ from fastapi import BackgroundTasks, HTTPException, status
 from fightcamp.main import generate_plan_sync
 
 from .models import PlanRequest, ProfileUpdateRequest
-from .stage2_automation import Stage2AutomationError, Stage2AutomationUnavailableError, Stage2Automator
+from .stage2_automation import (
+    Stage2AutomationError,
+    Stage2AutomationTransientError,
+    Stage2AutomationUnavailableError,
+    Stage2Automator,
+)
 from .store import AppStore
 
 Planner = Callable[[dict[str, Any]], dict[str, Any]]
@@ -83,6 +88,24 @@ def _stage2_finalize_timeout_seconds() -> float | None:
 def _use_fastapi_background_tasks() -> bool:
     scheduler = os.getenv("APP_GENERATION_SCHEDULER", "detached").strip().lower()
     return scheduler in {"fastapi", "background_tasks", "backgroundtasks"}
+
+
+def _max_generation_job_attempts() -> int:
+    raw_value = os.getenv("APP_GENERATION_JOB_MAX_ATTEMPTS", "3").strip()
+    try:
+        return max(1, int(raw_value))
+    except ValueError:
+        logger.warning("[jobs] generation:invalid_max_attempts value=%r; falling back to 3", raw_value)
+        return 3
+
+
+def _job_attempt_count(job: dict[str, Any] | None) -> int:
+    if not isinstance(job, dict):
+        return 0
+    try:
+        return int(job.get("attempt_count") or 0)
+    except (TypeError, ValueError):
+        return 0
 
 
 def _cleanup_detached_generation_task(task: asyncio.Task[None]) -> None:
@@ -195,6 +218,7 @@ async def run_generation_job(
     stop_event = asyncio.Event()
     heartbeat_task = asyncio.create_task(heartbeat_generation_job(job_id, store, stop_event))
     athlete_id = "unknown"
+    job: dict[str, Any] | None = None
     try:
         job = await asyncio.to_thread(store.get_generation_job, job_id)
         if not job:
@@ -327,6 +351,19 @@ async def run_generation_job(
         )
     except asyncio.TimeoutError:
         logger.exception("[jobs] generation:stage2_timeout athlete_id=%s job_id=%s", athlete_id, job_id)
+        attempt_count = _job_attempt_count(job)
+        max_attempts = _max_generation_job_attempts()
+        if attempt_count < max_attempts:
+            with suppress(Exception):
+                await asyncio.to_thread(
+                    store.update_generation_job,
+                    job_id,
+                    status="queued",
+                    error="Stage 2 timed out temporarily. Retrying automatically.",
+                    completed_at=None,
+                    heartbeat_at=utc_now_iso(),
+                )
+            return
         with suppress(Exception):
             await asyncio.to_thread(
                 store.update_generation_job,
@@ -345,6 +382,23 @@ async def run_generation_job(
                 status="failed",
                 error=str(exc),
                 completed_at=utc_now_iso(),
+                heartbeat_at=utc_now_iso(),
+            )
+    except Stage2AutomationTransientError as exc:
+        logger.warning("[jobs] generation:stage2_transient athlete_id=%s job_id=%s detail=%s", athlete_id, job_id, exc)
+        attempt_count = _job_attempt_count(job)
+        max_attempts = _max_generation_job_attempts()
+        with suppress(Exception):
+            await asyncio.to_thread(
+                store.update_generation_job,
+                job_id,
+                status="queued" if attempt_count < max_attempts else "failed",
+                error=(
+                    "Temporary Stage 2 service issue. Retrying automatically."
+                    if attempt_count < max_attempts
+                    else "Stage 2 service stayed unavailable after automatic retries."
+                ),
+                completed_at=None if attempt_count < max_attempts else utc_now_iso(),
                 heartbeat_at=utc_now_iso(),
             )
     except Stage2AutomationError as exc:

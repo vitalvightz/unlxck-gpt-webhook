@@ -40,6 +40,9 @@ type StartGenerationOptions = {
 const INITIAL_POLL_MS = 2_000;
 const MEDIUM_POLL_MS = 5_000;
 const LONG_POLL_MS = 15_000;
+const RECONNECT_POLL_MS = 8_000;
+const MAX_RECONNECT_POLL_MS = 30_000;
+const MAX_POLL_RECONNECT_MS = 10 * 60_000;
 const PENDING_GENERATION_PREFIX = "unlxck:pending-generation:";
 
 function sleep(ms: number): Promise<void> {
@@ -114,6 +117,10 @@ function getPollDelay(startedAtMs: number): number {
     return MEDIUM_POLL_MS;
   }
   return LONG_POLL_MS;
+}
+
+function getReconnectDelay(failureCount: number): number {
+  return Math.min(MAX_RECONNECT_POLL_MS, RECONNECT_POLL_MS * Math.max(1, failureCount));
 }
 
 function statusMessageForJob(status: GenerationJobStatus, startedAtMs: number): string {
@@ -226,8 +233,31 @@ export function useGenerationController({
           createdAt: createdJob.created_at || pendingCreatedAt,
         });
 
+        let transientPollFailureCount = 0;
+        let firstTransientPollFailureAt: number | null = null;
         for (;;) {
-          const currentJob = await getGenerationJob(token, createdJob.job_id);
+          let currentJob: GenerationJobResponse;
+          try {
+            currentJob = await getGenerationJob(token, createdJob.job_id);
+            transientPollFailureCount = 0;
+            firstTransientPollFailureAt = null;
+          } catch (pollError) {
+            if (!isRetryableApiFailure(pollError)) {
+              throw pollError;
+            }
+            transientPollFailureCount += 1;
+            firstTransientPollFailureAt ??= Date.now();
+            const reconnectElapsedMs = Date.now() - firstTransientPollFailureAt;
+            if (reconnectElapsedMs >= MAX_POLL_RECONNECT_MS) {
+              throw pollError;
+            }
+            setPhase("reconnecting");
+            setStatusMessage(
+              "Connection dropped while checking progress. Your saved generation request is still running; reconnecting now.",
+            );
+            await sleep(getReconnectDelay(transientPollFailureCount));
+            continue;
+          }
 
           savePendingGeneration(storageKey, {
             clientRequestId,
@@ -264,9 +294,16 @@ export function useGenerationController({
           await sleep(getPollDelay(createdAtMs));
         }
       } catch (generationError) {
-        clearPendingGeneration(storageKey);
+        const retryable = isRetryableApiFailure(generationError);
+        if (!retryable) {
+          clearPendingGeneration(storageKey);
+        }
         setIsGenerating(false);
-        setStatusMessage(null);
+        setStatusMessage(
+          retryable
+            ? "The connection is unstable, but the saved generation request is still recoverable. Reopen this page to reconnect."
+            : null,
+        );
         setPhase("failed");
         setError(
           generationError instanceof Error ? generationError.message : "Unable to generate your plan.",

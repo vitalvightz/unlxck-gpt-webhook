@@ -11,7 +11,7 @@ from api.app import create_app
 from api.auth import AuthenticatedUser
 from api.generation_runtime import run_generation_job, should_skip_stage2
 from api.models import ProfileUpdateRequest
-from api.stage2_automation import Stage2AutomationError, Stage2AutomationUnavailableError
+from api.stage2_automation import Stage2AutomationError, Stage2AutomationTransientError, Stage2AutomationUnavailableError
 from support import (
     SYSTEM_SCENARIOS,
     FakeAuthService,
@@ -333,6 +333,24 @@ def test_stage2_gateway_failure_returns_failed_job_without_persisting_plan():
 
     assert job["status"] == "failed"
     assert "Stage 2 model request failed" in job["error"]
+    assert len(store.plans) == 0
+
+
+def test_transient_stage2_failure_requeues_job_without_persisting_plan():
+    client, store, _ = _build_client(
+        FakeStage2Automator(error=Stage2AutomationTransientError("upstream 503 temporarily unavailable"))
+    )
+
+    response = client.post(
+        "/api/plans/generate",
+        headers={"Authorization": "Bearer athlete-token"},
+        json=_build_request().model_dump(mode="json"),
+    )
+
+    assert response.status_code == 202
+    job = store.get_generation_job(response.json()["job_id"])
+    assert job["status"] == "queued"
+    assert "Retrying automatically" in job["error"]
     assert len(store.plans) == 0
 
 
