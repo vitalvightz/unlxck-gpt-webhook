@@ -747,6 +747,7 @@ class SupabaseAppStore:
         payload = {
             "athlete_id": athlete_id,
             "client_request_id": client_request_id,
+            "source": (source or "").strip() or "self_serve",
             "request_payload": request_payload,
             "status": "queued",
             "attempt_count": 0,

@@ -323,6 +323,38 @@ def test_create_or_get_generation_job_returns_existing_row_after_unique_conflict
     assert result == existing_job
 
 
+def test_create_or_get_generation_job_persists_source_in_insert_payload():
+    store = _make_store()
+    insert_response = MagicMock()
+    insert_response.data = [
+        {
+            "id": "job-1",
+            "athlete_id": "athlete-1",
+            "client_request_id": "client-1",
+            "source": "admin_latest_intake",
+            "status": "queued",
+        }
+    ]
+    insert_query = MagicMock()
+    insert_query.execute.return_value = insert_response
+    table_query = MagicMock()
+    table_query.insert.return_value = insert_query
+    store.client.table.return_value = table_query
+    store._lookup_generation_job_by_client_request_id = MagicMock(return_value=None)
+    store._run_with_transient_retry = MagicMock(side_effect=lambda *, fn, **_kwargs: fn())
+
+    result = store.create_or_get_generation_job(
+        athlete_id="athlete-1",
+        client_request_id="client-1",
+        source="admin_latest_intake",
+        request_payload={"fight_date": "2026-04-18"},
+    )
+
+    insert_payload = table_query.insert.call_args.args[0]
+    assert insert_payload["source"] == "admin_latest_intake"
+    assert result["source"] == "admin_latest_intake"
+
+
 def test_validate_runtime_schema_raises_when_required_plan_columns_missing_by_default():
     store = _make_store()
     schema_error = APIError(
