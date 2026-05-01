@@ -12,6 +12,8 @@ from __future__ import annotations
 import re
 from typing import Any
 
+_HYPHEN_CHARS = r"\-\u2010\u2011\u2012\u2013\u2014\u2015"
+
 
 # ── String normalisation ──────────────────────────────────────────────────────
 
@@ -60,11 +62,10 @@ def phrase_in_text(text: str, phrase: str) -> bool:
     """
     if not text or not phrase:
         return False
-    hyphen_chars = r"\-\u2010\u2011\u2012\u2013\u2014\u2015"
-    parts = [re.escape(p) for p in re.split(rf"[\s{hyphen_chars}]+", phrase.strip().lower()) if p]
+    parts = [re.escape(p) for p in re.split(rf"[\s{_HYPHEN_CHARS}]+", phrase.strip().lower()) if p]
     if not parts:
         return False
-    pattern = r"\b" + rf"[\s{hyphen_chars}]+".join(parts) + r"\b"
+    pattern = r"\b" + rf"[\s{_HYPHEN_CHARS}]+".join(parts) + r"\b"
     return re.search(pattern, text.lower()) is not None
 
 
