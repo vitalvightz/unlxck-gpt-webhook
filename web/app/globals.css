@@ -8473,7 +8473,7 @@ html[data-app-surface="workspace"][data-theme="dark"] .desktop-nav-toggle {
   .toast-region {
     top: auto;
     right: 12px;
-    bottom: calc(var(--safe-area-bottom) + var(--mobile-tab-bar-height, 0px) + 12px);
+    bottom: calc(var(--mobile-tab-bar-clearance) + 12px);
     left: 12px;
     width: auto;
   }
