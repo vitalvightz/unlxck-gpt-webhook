@@ -157,7 +157,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=
 - Run generation in a separate worker process: `python -m api.worker`
 - Keep UNLXCK_ENABLE_IN_PROCESS_GENERATION=0 on the API service so API pods only handle job enqueuing and status requests (do not set it to 1 on API pods)
 - Worker tuning knobs: `UNLXCK_GENERATION_WORKER_INTERVAL_SECONDS` (default `3`) and `UNLXCK_GENERATION_WORKER_STALE_AFTER_SECONDS` (default `90`)
-- The bank JSON files are loaded into memory on first request and cached for each worker process lifetime (if you increase worker count, each worker warms independently).
+- The bank JSON files are loaded into memory on startup and cached for each worker process lifetime (if you increase worker count, each worker warms independently).
 - Keep the instance warm with a cron job hitting `/health` every 14 minutes or use Render Standard tier
 
 **Frontend (Vercel)**
