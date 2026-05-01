@@ -478,6 +478,7 @@ export function NutritionWorkspaceScreen() {
                         type="number"
                         min="1"
                         max="6"
+                        inputMode="numeric"
                         value={form.shared_camp_context.weekly_training_frequency ?? ""}
                         onChange={(event) => setSharedField("weekly_training_frequency", toNumber(event.target.value))}
                       />
@@ -555,6 +556,7 @@ export function NutritionWorkspaceScreen() {
                         type="number"
                         min="1"
                         max="8"
+                        inputMode="numeric"
                         value={form.nutrition_profile.meals_per_day_preference ?? ""}
                         onChange={(event) => setProfileField("meals_per_day_preference", toNumber(event.target.value))}
                       />

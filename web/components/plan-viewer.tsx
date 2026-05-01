@@ -899,6 +899,7 @@ export function PlanViewer({
         phase={generationController.phase}
         error={generationController.error}
         statusMessage={generationController.statusMessage}
+        startedAtMs={generationController.startedAtMs}
       />
     );
   }

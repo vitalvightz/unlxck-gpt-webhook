@@ -1660,21 +1660,21 @@ export function PlanIntakeForm() {
                   </div>
                   <div className="field">
                     <label htmlFor="age">Age</label>
-                    <input id="age" type="number" min="0" value={form.athlete.age ?? ""} onChange={(event) => updateAthlete("age", numberOrNull(event.target.value))} />
+                    <input id="age" type="number" min="0" inputMode="numeric" value={form.athlete.age ?? ""} onChange={(event) => updateAthlete("age", numberOrNull(event.target.value))} />
                   </div>
                   <div className="field">
                     <label htmlFor="weightKg">Weight (kg)</label>
-                    <input id="weightKg" type="number" min="0" step="0.1" value={form.athlete.weight_kg ?? ""} onChange={(event) => updateAthlete("weight_kg", numberOrNull(event.target.value))} />
+                    <input id="weightKg" type="number" min="0" step="0.1" inputMode="decimal" value={form.athlete.weight_kg ?? ""} onChange={(event) => updateAthlete("weight_kg", numberOrNull(event.target.value))} />
                     <p className="muted">Use current walking-around weight.</p>
                   </div>
                   <div className="field">
                     <label htmlFor="targetWeightKg">Target weight (kg)</label>
-                    <input id="targetWeightKg" type="number" min="0" step="0.1" value={form.athlete.target_weight_kg ?? ""} onChange={(event) => updateAthlete("target_weight_kg", numberOrNull(event.target.value))} />
+                    <input id="targetWeightKg" type="number" min="0" step="0.1" inputMode="decimal" value={form.athlete.target_weight_kg ?? ""} onChange={(event) => updateAthlete("target_weight_kg", numberOrNull(event.target.value))} />
                     <p className="muted">Use realistic fight-week target, not an ideal someday number.</p>
                   </div>
                   <div className="field">
                     <label htmlFor="heightCm">Height (cm)</label>
-                    <input id="heightCm" type="number" min="0" step="1" value={form.athlete.height_cm ?? ""} onChange={(event) => updateAthlete("height_cm", integerOrNull(event.target.value))} />
+                    <input id="heightCm" type="number" min="0" step="1" inputMode="numeric" value={form.athlete.height_cm ?? ""} onChange={(event) => updateAthlete("height_cm", integerOrNull(event.target.value))} />
                   </div>
                   <div className="field field-span-full">
                     <label htmlFor="stance">Stance</label>
@@ -1827,6 +1827,7 @@ export function PlanIntakeForm() {
                         type="number"
                         min="1"
                         max="6"
+                        inputMode="numeric"
                         disabled={shouldDisableField(daysOutCtx, "weekly_training_frequency")}
                         value={form.weekly_training_frequency ?? ""}
                         onChange={(event) => {

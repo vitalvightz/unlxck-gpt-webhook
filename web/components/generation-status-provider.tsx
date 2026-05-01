@@ -13,6 +13,7 @@ interface GenerationStatusContextValue {
   planId: string | null;
   isActive: boolean;
   statusMessage: string | null;
+  startedAtMs: number | null;
   refreshStatus: () => void;
 }
 
@@ -123,6 +124,7 @@ export function GenerationStatusProvider({ children, token }: GenerationStatusPr
   const [clientRequestId, setClientRequestId] = useState<string | null>(null);
   const [planId, setPlanId] = useState<string | null>(null);
   const [statusMessageText, setStatusMessageText] = useState<string | null>(null);
+  const [startedAtMs, setStartedAtMs] = useState<number | null>(null);
 
   // Track the clear timeout so we can cancel it on unmount — prevents
   // state updates on an unmounted component
@@ -154,10 +156,13 @@ export function GenerationStatusProvider({ children, token }: GenerationStatusPr
         setClientRequestId(null);
         setPlanId(null);
         setStatusMessageText(null);
+        setStartedAtMs(null);
         return;
       }
 
       setClientRequestId(pending.clientRequestId);
+      const pendingCreatedAt = Date.parse(pending.createdAt || "");
+      setStartedAtMs(Number.isFinite(pendingCreatedAt) ? pendingCreatedAt : null);
 
       if (pending.jobId && token) {
         try {
@@ -186,6 +191,7 @@ export function GenerationStatusProvider({ children, token }: GenerationStatusPr
               setClientRequestId(null);
               setPlanId(null);
               setStatusMessageText(null);
+              setStartedAtMs(null);
             }, delay);
           }
         } catch {
@@ -238,6 +244,7 @@ export function GenerationStatusProvider({ children, token }: GenerationStatusPr
     planId,
     isActive: phase !== null,
     statusMessage: statusMessageText,
+    startedAtMs,
     refreshStatus: checkStatus,
   };
 

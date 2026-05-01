@@ -180,6 +180,14 @@ export function useGenerationController({
   );
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [startedAtMs, setStartedAtMs] = useState<number | null>(() => {
+    const pending = getPendingGeneration(storageKey);
+    if (!pending) {
+      return null;
+    }
+    const parsed = Date.parse(pending.createdAt || "");
+    return Number.isFinite(parsed) ? parsed : null;
+  });
   const recoveryAttemptedRef = useRef<string | null>(null);
 
   const startGeneration = useCallback(
@@ -193,10 +201,12 @@ export function useGenerationController({
       const recovered = options.recovered ?? false;
       const clientRequestId = options.clientRequestId ?? buildClientRequestId();
       const pendingCreatedAt = new Date().toISOString();
+      const pendingCreatedAtMs = Date.parse(pendingCreatedAt) || Date.now();
       savePendingGeneration(storageKey, {
         clientRequestId,
         createdAt: pendingCreatedAt,
       });
+      setStartedAtMs(pendingCreatedAtMs);
 
       try {
         setPhase(recovered ? "reconnecting" : "submitting");
@@ -207,6 +217,7 @@ export function useGenerationController({
         );
         const createdJob = await createJobWithReconnect(createJob, clientRequestId, setStatusMessage, setPhase);
         const createdAtMs = Date.parse(createdJob.created_at || pendingCreatedAt) || Date.now();
+        setStartedAtMs(createdAtMs);
         setPhase(phaseForJobStatus(createdJob.status));
         setStatusMessage(statusMessageForJob(createdJob.status, createdAtMs));
         savePendingGeneration(storageKey, {
@@ -287,6 +298,7 @@ export function useGenerationController({
     isGenerating,
     phase,
     statusMessage,
+    startedAtMs,
     error,
     setError,
     startGeneration,

@@ -316,6 +316,7 @@ export default function AdminAthletePage() {
                       <input
                         id="coachCalorieFloor"
                         type="number"
+                        inputMode="numeric"
                         value={nutrition.nutrition_coach_controls.do_not_reduce_below_calories ?? ""}
                         onChange={(event) =>
                           setNutrition((current) =>
@@ -338,6 +339,7 @@ export default function AdminAthletePage() {
                         id="coachProteinFloor"
                         type="number"
                         step="0.1"
+                        inputMode="decimal"
                         value={nutrition.nutrition_coach_controls.protein_floor_g_per_kg ?? ""}
                         onChange={(event) =>
                           setNutrition((current) =>

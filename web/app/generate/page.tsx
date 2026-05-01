@@ -77,6 +77,7 @@ export default function GeneratePage() {
         phase={controller.phase}
         error={controller.error}
         statusMessage={controller.statusMessage}
+        startedAtMs={controller.startedAtMs}
       />
     </RequireAuth>
   );

@@ -3,6 +3,7 @@
 import { useAppSession } from "./auth-provider";
 import { GenerationStatusProvider } from "./generation-status-provider";
 import { GlobalGenerationStatus } from "./global-generation-status";
+import { MobileTabBar } from "./mobile-tab-bar";
 import type { ReactNode } from "react";
 
 interface GenerationStatusShellProps {
@@ -17,6 +18,7 @@ export function GenerationStatusShell({ children }: GenerationStatusShellProps) 
     <GenerationStatusProvider token={token}>
       {children}
       <GlobalGenerationStatus />
+      <MobileTabBar />
     </GenerationStatusProvider>
   );
 }
