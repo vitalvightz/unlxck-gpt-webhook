@@ -1148,50 +1148,77 @@ def _glycolytic_fallback(phase: str) -> dict:
 
 
 def _late_fight_dosage_caps(days_until_fight: int) -> str:
-    """Return a countdown-aware dosage template string for late-fight TAPER days (days_until_fight <= 5)."""
-    if days_until_fight == 5:
-        return (
-            "D-5 late-fight caps: alactic bursts 4–6 max (6–12 sec @ RPE 8–9, rest 90–120 sec); "
-            "technical rounds 2–4 short rounds max (≤3 min @ RPE 6–7); "
-            "no generic 6–10 round structures. Cap 8–10 min active. "
-            "Template applies unless a drill lists its own structure."
-        )
-    if days_until_fight == 4:
-        return (
-            "D-4 late-fight caps: alactic bursts 3–5 max (6–10 sec @ RPE 8–9, rest 90–120 sec); "
-            "technical rounds 2–3 short rounds max (≤3 min @ RPE 6–7); "
-            "cap 6–8 min active. "
-            "Template applies unless a drill lists its own structure."
-        )
-    if days_until_fight == 3:
-        return (
-            "D-3 late-fight caps: alactic bursts 0–4 conditional (6–10 sec @ RPE 8, rest 120 sec); "
-            "technical touch 1–3 short rounds max (≤2 min @ RPE 6); "
-            "cap 5–7 min active. "
-            "Template applies unless a drill lists its own structure."
-        )
-    if days_until_fight == 2:
-        return (
-            "D-2 late-fight caps: alactic bursts 2–4 max (6–8 sec @ RPE 8, rest 120 sec); "
-            "technical touch 1–2 short rounds max (≤2 min @ RPE 6); "
-            "cap 4–6 min active. "
-            "Template applies unless a drill lists its own structure."
-        )
-    if days_until_fight == 1:
-        return (
-            "D-1 late-fight caps: alactic bursts 2–3 max (6–8 sec @ RPE 7–8, rest 120 sec); "
-            "technical touch 1–2 short rounds max (≤2 min @ RPE 6); "
-            "no conditioning-style round structures; cap 3–5 min active. "
-            "Template applies unless a drill lists its own structure."
-        )
-    if days_until_fight == 0:
-        return (
-            "Fight-day caps: alactic bursts 2–4 very short bursts max (4–6 sec @ RPE 7, rest 120 sec); "
-            "tiny walk-through only; no conditioning rounds; cap 3–4 min active. "
-            "Template applies unless a drill lists its own structure."
-        )
-    return "6–10 rounds of 6–12 sec @ RPE 8–9, rest 60–120 sec (cap 8–12 min). Template applies unless a drill lists its own structure."
+    """
+    Return countdown-aware dosage caps for late-fight TAPER days.
 
+    Caps are hard ceilings. Drill-specific structures may reduce volume,
+    but must never exceed these limits.
+    """
+
+    caps = {
+        5: (
+            "D-5 late-fight caps: alactic bursts 4–6 max "
+            "(6–12 sec @ RPE 8–9, rest 90–120 sec); "
+            "technical touch 2–4 short rounds max "
+            "(≤3 min @ RPE 6–7); "
+            "no generic 6–10 round structures; "
+            "cap 8–10 min active. "
+            "These are hard ceilings. Drill-specific structures may only reduce volume."
+        ),
+        4: (
+            "D-4 late-fight caps: alactic bursts 3–5 max "
+            "(6–10 sec @ RPE 8–9, rest 90–120 sec); "
+            "technical touch 2–3 short rounds max "
+            "(≤3 min @ RPE 6–7); "
+            "no generic conditioning rounds; "
+            "cap 6–8 min active. "
+            "These are hard ceilings. Drill-specific structures may only reduce volume."
+        ),
+        3: (
+            "D-3 late-fight caps: alactic bursts 0–4 optional "
+            "(6–10 sec @ RPE 8, rest 120 sec); "
+            "technical touch 1–3 short rounds max "
+            "(≤2 min @ RPE 6); "
+            "no conditioning intent; "
+            "cap 5–7 min active. "
+            "These are hard ceilings. Drill-specific structures may only reduce volume."
+        ),
+        2: (
+            "D-2 late-fight caps: alactic bursts 0–3 optional "
+            "(6–8 sec @ RPE 7–8, rest 120 sec); "
+            "technical touch 1–2 short rounds max "
+            "(≤2 min @ RPE 6); "
+            "no conditioning rounds; "
+            "cap 4–6 min active. "
+            "These are hard ceilings. Drill-specific structures may only reduce volume."
+        ),
+        1: (
+            "D-1 late-fight caps: alactic bursts 0–2 optional "
+            "(4–6 sec @ RPE 7, rest 120 sec); "
+            "tiny technical walk-through only "
+            "(1–2 rounds max, ≤90 sec @ RPE 5–6); "
+            "no conditioning-style work; "
+            "cap 3–5 min active. "
+            "These are hard ceilings. Drill-specific structures may only reduce volume."
+        ),
+        0: (
+            "Fight-day caps: warm-up primer only; "
+            "alactic bursts 2–4 very short bursts max "
+            "(4–6 sec @ RPE 6–7, rest 120 sec); "
+            "walk-through only; "
+            "no conditioning rounds; "
+            "cap 3–4 min active. "
+            "These are hard ceilings. Drill-specific structures may only reduce volume."
+        ),
+    }
+
+    if days_until_fight not in caps:
+        raise ValueError(
+            f"_late_fight_dosage_caps only supports D-0 to D-5. "
+            f"Received days_until_fight={days_until_fight}."
+        )
+
+    return caps[days_until_fight]
 
 def render_conditioning_block(
     grouped_drills: dict[str, list[dict]],
