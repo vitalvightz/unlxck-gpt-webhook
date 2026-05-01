@@ -143,6 +143,18 @@ export function AppNav() {
   }, [desktopNavCollapsed]);
 
   useEffect(() => {
+    const { documentElement } = document;
+    if (mobileNavState === "opening" || mobileNavState === "open") {
+      documentElement.dataset.mobileNavOpen = "true";
+    } else {
+      delete documentElement.dataset.mobileNavOpen;
+    }
+    return () => {
+      delete documentElement.dataset.mobileNavOpen;
+    };
+  }, [mobileNavState]);
+
+  useEffect(() => {
     if (!isMobileDrawerVisible) {
       return;
     }
