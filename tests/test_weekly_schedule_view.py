@@ -238,3 +238,62 @@ def test_extract_weekly_schedule_taper_missing_plan_does_not_fallback_to_declare
     assert by_day["Mon"]["reason_codes"] == ["missing_effective_sparring_plan"]
     assert by_day["Wed"]["sparring_day_class"] == "none"
     assert by_day["Wed"]["status"] == "missing_effective_sparring_plan"
+
+def test_extract_weekly_schedule_protected_late_week_uses_session_roles_and_d0_override():
+    schedule = extract_weekly_schedule(
+        {
+            "weekly_role_map": {
+                "weeks": [
+                    {
+                        "phase": "TAPER",
+                        "final_week_sparring_cap": {"active": True},
+                        "declared_hard_sparring_days": ["Tuesday", "Thursday"],
+                        "hard_sparring_plan": [
+                            {
+                                "day": "Tuesday",
+                                "hard_day_class": "primary_hard",
+                                "effective_load": "hard",
+                                "status": "hard_as_planned",
+                            }
+                        ],
+                        "session_roles": [
+                            {
+                                "role_key": "hard_sparring_day",
+                                "scheduled_day_hint": "Tuesday",
+                                "scheduled_countdown_label": "D-4",
+                                "countdown_display_label": "D-4 Tue",
+                            },
+                            {
+                                "role_key": "hard_sparring_day",
+                                "scheduled_day_hint": "Thursday",
+                                "scheduled_countdown_label": "D-2",
+                                "countdown_display_label": "D-2 Thu",
+                            },
+                            {
+                                "role_key": "fight_day_protocol_payload",
+                                "scheduled_day_hint": "Saturday",
+                                "scheduled_countdown_label": "D-0",
+                                "countdown_display_label": "D-0 Sat",
+                            },
+                        ],
+                    }
+                ]
+            }
+        }
+    )
+
+    assert schedule is not None
+    by_day = {day["weekday"]: day for day in schedule["days"]}
+
+    assert by_day["Tue"]["countdown_label"] == "D-4"
+    assert by_day["Tue"]["sparring_day_class"] == "primary_hard"
+    assert by_day["Tue"]["effective_load"] == "hard"
+
+    assert by_day["Thu"]["countdown_label"] == "D-2"
+    assert by_day["Thu"]["sparring_day_class"] == "technical"
+    assert by_day["Thu"]["effective_load"] == "technical"
+    assert by_day["Thu"]["status"] == "convert_to_technical_suggested"
+
+    assert by_day["Sat"]["countdown_label"] == "D-0"
+    assert by_day["Sat"]["status"] == "fight_day_protocol"
+    assert by_day["Sat"]["reason_codes"] == ["fight_day_protocol"]
