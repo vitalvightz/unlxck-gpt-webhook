@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useGenerationStatus } from "./generation-status-provider";
 
 function formatElapsed(ms: number): string {
@@ -14,9 +14,13 @@ function formatElapsed(ms: number): string {
   return `${minutes}m ${String(seconds).padStart(2, "0")}s`;
 }
 
+const CELEBRATION_DURATION_MS = 1_600;
+
 export function GlobalGenerationStatus() {
   const { isActive, statusMessage, phase, planId, startedAtMs } = useGenerationStatus();
   const [now, setNow] = useState(() => Date.now());
+  const [isCelebrating, setIsCelebrating] = useState(false);
+  const previousPhaseRef = useRef(phase);
 
   const isFailed = phase === "failed";
   const isCompleted = phase === "completed";
@@ -31,17 +35,41 @@ export function GlobalGenerationStatus() {
     return () => window.clearInterval(interval);
   }, [showElapsed]);
 
+  useEffect(() => {
+    if (previousPhaseRef.current !== "completed" && phase === "completed") {
+      setIsCelebrating(true);
+      const reduceMotion = typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      if (!reduceMotion && typeof navigator !== "undefined" && typeof navigator.vibrate === "function") {
+        try {
+          navigator.vibrate(20);
+        } catch {
+          // Vibration unavailable; silent celebration is fine.
+        }
+      }
+      const timer = window.setTimeout(() => setIsCelebrating(false), CELEBRATION_DURATION_MS);
+      previousPhaseRef.current = phase;
+      return () => window.clearTimeout(timer);
+    }
+    previousPhaseRef.current = phase;
+  }, [phase]);
+
   if (!isActive) {
     return null;
   }
 
   const href = isCompleted && planId ? `/plans/${planId}` : "/generate";
   const elapsedLabel = showElapsed && startedAtMs !== null ? formatElapsed(now - startedAtMs) : null;
+  const className = [
+    "global-generation-status",
+    isFailed ? "global-generation-status-failed" : "",
+    isCompleted ? "global-generation-status-completed" : "",
+    isCelebrating ? "global-generation-status-celebrating" : "",
+  ].filter(Boolean).join(" ");
 
   return (
     <Link
       href={href}
-      className={`global-generation-status${isFailed ? " global-generation-status-failed" : ""}${isCompleted ? " global-generation-status-completed" : ""}`}
+      className={className}
       aria-label={isCompleted ? "Plan ready. Tap to view." : "Generation in progress. Tap to view details."}
     >
       <div className="global-generation-status-content">
@@ -70,6 +98,7 @@ export function GlobalGenerationStatus() {
           <span className="global-generation-status-line" />
         </div>
       )}
+      {isCelebrating ? <span className="global-generation-status-celebrate-glow" aria-hidden="true" /> : null}
     </Link>
   );
 }
