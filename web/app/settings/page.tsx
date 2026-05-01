@@ -510,7 +510,7 @@ export default function SettingsPage() {
           </button>
         </div>
 
-        <div className="form-actions athlete-motion-slot athlete-motion-rail">
+        <div className="form-actions settings-desktop-save athlete-motion-slot athlete-motion-rail">
           <button type="button" className="cta" onClick={handleSave} disabled={isPending}>
             {isPending ? "Saving..." : "Save settings"}
           </button>
