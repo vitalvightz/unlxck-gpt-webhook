@@ -14,7 +14,12 @@ from fightcamp.stage2_payload import (
     build_stage2_handoff_text,
     build_stage2_payload,
 )
-from fightcamp.stage2_payload_late_fight import _late_fight_legal_offsets, _late_fight_stage_label, _normalized_fatigue
+from fightcamp.stage2_payload_late_fight import (
+    _late_fight_legal_offsets,
+    _late_fight_stage_label,
+    _late_fight_taper_micro_support_policy,
+    _normalized_fatigue,
+)
 from fightcamp.training_context import TrainingContext
 
 
@@ -306,6 +311,54 @@ class TestLateFightPermissionsAndRendering:
         assert "sharpness session" in [term.lower() for term in rules["preferred_terms"]]
         assert "freshness session" in [term.lower() for term in rules["preferred_terms"]]
         assert "strength block" in [term.lower() for term in rules["forbidden_terms"]]
+
+    def test_d10_taper_micro_support_policy_stays_optional_and_off_the_role_map(self):
+        spec = _build_late_fight_plan_spec(10, _athlete(10))
+        policy = spec["taper_micro_support_policy"]
+
+        assert policy["tag"] == "taper_micro_support"
+        assert policy["optional_add_on_only"] is True
+        assert policy["never_primary_anchor"] is True
+        assert policy["standalone_session_allowed"] is False
+        assert policy["max_items"] == 1
+        assert policy["max_total_minutes"] == 6
+        assert "taper_micro_support_day" not in spec["session_roles"]
+        assert "taper_micro_support_day" not in spec["visible_session_roles"]
+
+    def test_d1_taper_micro_support_policy_blocks_core_neck_heavy_bag_and_grip(self):
+        policy = _late_fight_taper_micro_support_policy(1, _athlete(1))
+
+        assert set(policy["suppressed_categories"]) >= {"core", "neck", "heavy_bag", "grip"}
+        assert set(policy["d1_blocked_list"]) >= {"core", "neck", "heavy_bag", "grip"}
+
+    def test_boxing_taper_micro_support_policy_blocks_grip_even_when_window_allows_other_add_ons(self):
+        policy = _late_fight_taper_micro_support_policy(8, _athlete(8, sport="boxing"))
+
+        assert "grip" in policy["suppressed_categories"]
+        assert "boxing_taper_blocks_grip" in policy["suppression_reasons"]
+
+    def test_high_fatigue_taper_micro_support_policy_reduces_to_breathing_and_mobility_only(self):
+        policy = _late_fight_taper_micro_support_policy(
+            8,
+            _athlete(8, fatigue="high", fatigue_level="high"),
+        )
+
+        assert policy["allowed_categories"] == ["breathing", "mobility"]
+        assert "high_fatigue_breathing_mobility_only" in policy["suppression_reasons"]
+
+    def test_moderate_weight_cut_suppresses_core_neck_heavy_bag_and_grip_micro_support(self):
+        policy = _late_fight_taper_micro_support_policy(
+            8,
+            _athlete(
+                8,
+                weight_cut_risk=True,
+                weight_cut_pct=3.5,
+                cut_severity_bucket="moderate",
+            ),
+        )
+
+        assert set(policy["suppressed_categories"]) >= {"core", "neck", "heavy_bag", "grip"}
+        assert "moderate_or_high_weight_cut_blocks_nonessential_micro_support" in policy["suppression_reasons"]
 
     def test_transition_permissions_strip_week_logic_and_force_caps(self):
         permissions = _late_fight_permissions(5, _athlete(5))
@@ -845,6 +898,11 @@ class TestHandoffText:
         text = self._build_handoff(days)
         assert "PAYLOAD MODE INSTRUCTIONS" in text
         assert expected_heading in text
+
+    def test_late_fight_handoff_carries_taper_micro_support_rules(self):
+        text = self._build_handoff_with_brief(5)
+        assert "taper_micro_support" in text
+        assert "optional add-on" in text
 
     def test_handoff_injury_context_section_is_visible_and_structured(self):
         payload = _build_stage2(14)

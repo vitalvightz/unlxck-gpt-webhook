@@ -3862,6 +3862,17 @@ Never chase fitness in these windows.
 RULE 9A — FIGHT-DAY (D-0) HARD OVERRIDE
 If selected_plan.weekly_role_map.fight_day_override.active is true, or any week's fight_day_override.active is true, the day matching fight_day_override.fight_weekday is the athlete's fight day. Render that day exactly as: "Fight day protocol — follow coach warm-up and fight protocol; no additional app S&C." No S&C, no hard sparring, no coach-led boxing session, no training session of any kind. This override beats every declared hard sparring lock, every weekday role, and every phase rhythm. Even when the fight weekday is also a declared hard sparring day, it never renders as sparring on that date. Do not restore any suppressed role on that day.
 
+RULE 9B — TAPER MICRO-SUPPORT
+If selected_plan.late_fight_plan_spec.taper_micro_support_policy.active is true, treat that policy as a hard overlay.
+Use the tag `taper_micro_support` only for one optional add-on attached to an already-valid day. Never render it as a session title, primary anchor, visible session role, or standalone training day.
+Obey the policy's allowed_categories, suppressed_categories, max_items, max_total_minutes, and per-category rules exactly.
+If the policy suppresses core, neck, heavy bag, grip, shadowboxing, or band face pull, do not render them as taper micro-support.
+On D-1, taper_micro_support is limited to breathing, mobility, light technical shadowboxing, or optional light band face pull only. Never render core, neck, heavy bag, grip, conditioning, hard bands, or power work on D-1.
+For core micro-support, keep only familiar low-fatigue stability work in tiny doses. Never use hanging leg raises, Russian twists, weighted sit-ups, long planks, high-rep abs, or any trunk/hip-flexor work likely to create soreness, pump, fatigue, or heavy breathing.
+For neck micro-support, keep isometric-only, one set, 10 sec each direction, RPE 2-4, familiar only, and never D-4 or closer unless the policy explicitly allows it.
+For heavy-bag micro-support, keep technical rhythm only, 1-2 x 45-60 sec, light contact only, and never let it become conditioning, power work, or shoulder-pump work.
+For boxing tapers, do not render grip work at all.
+
 RULE 10 — WEIGHT CUT AND INJURY MANAGEMENT
 Active weight cut: state it plainly, keep output safety-first, one summary note + one support note — never buried in nutrition data.
 Active injury: lead with constraints, substitutions, and stop rules — not optional language.
