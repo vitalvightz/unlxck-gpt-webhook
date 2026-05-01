@@ -40,6 +40,8 @@ def _normalize_weekday(value: Any) -> str | None:
 def _empty_day(weekday: str) -> dict[str, Any]:
     return {
         "weekday": weekday,
+        "countdown_label": "",
+        "countdown_display_label": "",
         "sparring_day_class": "none",
         "effective_load": "none",
         "status": "",
@@ -117,6 +119,62 @@ def _is_protected_late_week(week: dict[str, Any]) -> bool:
     return any(token in candidate for candidate in candidates for token in ("bridge", "taper", "fight"))
 
 
+
+
+def _apply_countdown_labels(days_by_weekday: dict[str, dict[str, Any]], week: dict[str, Any]) -> None:
+    for role in week.get("session_roles") or []:
+        if not isinstance(role, dict):
+            continue
+        weekday = _normalize_weekday(role.get("scheduled_day_hint") or role.get("countdown_weekday"))
+        if not weekday or weekday not in days_by_weekday:
+            continue
+        label = str(role.get("scheduled_countdown_label") or role.get("countdown_label") or "").strip()
+        display = str(role.get("countdown_display_label") or label).strip()
+        if label:
+            days_by_weekday[weekday]["countdown_label"] = label
+        if display:
+            days_by_weekday[weekday]["countdown_display_label"] = display
+
+
+def _fill_protected_late_week(days_by_weekday: dict[str, dict[str, Any]], week: dict[str, Any]) -> None:
+    surviving_days: set[str] = set()
+    hard_plan = week.get("hard_sparring_plan")
+    if isinstance(hard_plan, list):
+        for entry in hard_plan:
+            if not isinstance(entry, dict):
+                continue
+            weekday = _normalize_weekday(entry.get("day") or entry.get("scheduled_day_hint"))
+            if weekday and weekday in days_by_weekday:
+                _fill_hard_day(days_by_weekday[weekday], entry)
+                surviving_days.add(weekday)
+
+    for role in week.get("session_roles") or []:
+        if not isinstance(role, dict):
+            continue
+        weekday = _normalize_weekday(role.get("scheduled_day_hint") or role.get("countdown_weekday"))
+        if not weekday or weekday not in days_by_weekday:
+            continue
+        role_key = str(role.get("role_key") or "").strip()
+        countdown_label = str(role.get("scheduled_countdown_label") or role.get("countdown_label") or "").strip().upper()
+        if role_key == "hard_sparring_day" and weekday not in surviving_days:
+            day = days_by_weekday[weekday]
+            day.update({
+                "sparring_day_class": "technical",
+                "effective_load": "technical",
+                "status": "convert_to_technical_suggested",
+                "reason": "Protected late week keeps this declared hard sparring day as technical rhythm only.",
+                "reason_codes": ["downgraded_declared_hard_sparring_day"],
+            })
+        if countdown_label == "D-0":
+            day = days_by_weekday[weekday]
+            day.update({
+                "sparring_day_class": "none",
+                "effective_load": "none",
+                "status": "fight_day_protocol",
+                "reason": "Fight-day protocol only.",
+                "reason_codes": ["fight_day_protocol"],
+            })
+
 def _mark_missing_effective_sparring_plan(day: dict[str, Any]) -> None:
     day.update(
         {
@@ -148,25 +206,37 @@ def extract_weekly_schedule(planning_brief: Any, *, week_index: int = 0) -> dict
     days = [_empty_day(weekday) for weekday in WEEKDAY_SHORT]
     days_by_weekday = {day["weekday"]: day for day in days}
 
+    _apply_countdown_labels(days_by_weekday, week)
+
     hard_sparring_plan = week.get("hard_sparring_plan")
     hard_plan_is_list = isinstance(hard_sparring_plan, list)
-    hard_entries = [entry for entry in hard_sparring_plan if isinstance(entry, dict)] if hard_plan_is_list else []
-    if hard_entries:
-        for entry in hard_entries:
-            weekday = _normalize_weekday(entry.get("day") or entry.get("scheduled_day_hint"))
-            if weekday and weekday in days_by_weekday:
-                _fill_hard_day(days_by_weekday[weekday], entry)
-    elif _is_protected_late_week(week):
-        if not hard_plan_is_list:
-            for day_name in _clean_list(week.get("declared_hard_sparring_days")):
-                weekday = _normalize_weekday(day_name)
-                if weekday and weekday in days_by_weekday:
-                    _mark_missing_effective_sparring_plan(days_by_weekday[weekday])
-    else:
+
+    if _is_protected_late_week(week):
+        if hard_plan_is_list:
+            _fill_protected_late_week(days_by_weekday, week)
+            return {
+                "week_index": week_index,
+                "week_count": len(weeks),
+                "phase": str(week.get("phase") or "").strip(),
+                "days": days,
+            }
+
         for day_name in _clean_list(week.get("declared_hard_sparring_days")):
             weekday = _normalize_weekday(day_name)
             if weekday and weekday in days_by_weekday:
-                _fill_legacy_hard_day(days_by_weekday[weekday])
+                _mark_missing_effective_sparring_plan(days_by_weekday[weekday])
+    else:
+        hard_entries = [entry for entry in hard_sparring_plan if isinstance(entry, dict)] if hard_plan_is_list else []
+        if hard_entries:
+            for entry in hard_entries:
+                weekday = _normalize_weekday(entry.get("day") or entry.get("scheduled_day_hint"))
+                if weekday and weekday in days_by_weekday:
+                    _fill_hard_day(days_by_weekday[weekday], entry)
+        else:
+            for day_name in _clean_list(week.get("declared_hard_sparring_days")):
+                weekday = _normalize_weekday(day_name)
+                if weekday and weekday in days_by_weekday:
+                    _fill_legacy_hard_day(days_by_weekday[weekday])
 
     return {
         "week_index": week_index,
