@@ -124,7 +124,6 @@ function PlanCard({
     try {
       const updatedPlan = await renamePlan(accessToken, plan.plan_id, normalizedName);
       onPlanRenamed(updatedPlan);
-      setMessage(null);
       showToast("Plan renamed.", { tone: "success" });
       setIsRenaming(false);
     } catch (renameError) {
