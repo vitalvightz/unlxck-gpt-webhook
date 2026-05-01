@@ -186,6 +186,27 @@ def test_review_stage2_output_treats_countdown_banded_lockout_as_blocking():
     assert "late_fight_countdown_blocked_drill" in blocking_codes
 
 
+def test_review_stage2_output_treats_late_fight_unapproved_exercise_as_blocking():
+    planning_brief = _stage1_result_fixture()["planning_brief"]
+    planning_brief["late_fight_plan_spec"] = {
+        "days_out_bucket": "D-13",
+        "payload_mode": "pre_fight_compressed_payload",
+        "allowed_exercises_by_day": {"D-13": ["Reactive Shuffle Repeats", "Breathing Reset"]},
+    }
+    review = review_stage2_output(
+        planning_brief=planning_brief,
+        final_plan_text="""
+        D-13 - Sharpness
+        - Band-Resisted Sprint Starts (ATP-PCr) - 3 x 5 m
+        """,
+    )
+
+    assert review["status"] == "WARN"
+    assert review["needs_retry"] is True
+    blocking_codes = [warning["code"] for warning in review["validator_report"]["blocking_warnings"]]
+    assert "late_fight_unapproved_exercise_rendered" in blocking_codes
+
+
 def test_build_stage2_retry_returns_repair_prompt_when_needed():
     retry = build_stage2_retry(
         stage1_result=_stage1_result_fixture(),

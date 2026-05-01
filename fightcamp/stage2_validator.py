@@ -125,9 +125,23 @@ _LATE_FIGHT_TOKEN_PHRASES = {
     "layered_rehab_stack": ("rehab stack",),
 }
 _LATE_FIGHT_REHAB_PHRASES = ("rehab", "band external rotation", "scap", "mobility", "tissue", "breathing")
-_LATE_FIGHT_BAND_REHAB_ALLOW_PHRASES = ("mobility", "recovery", "rehab", "rehab friendly", "prehab", "injury prevention")
+_LATE_FIGHT_BAND_REHAB_ALLOW_PHRASES = (
+    "mobility",
+    "recovery",
+    "rehab",
+    "rehab friendly",
+    "prehab",
+    "injury prevention",
+    "reset",
+)
 _COUNTDOWN_LABEL_LINE = re.compile(r"^(?:#{1,6}\s*)?(?:[-*]\s*)?(?:\*\*)?(D-(\d+))\b", re.IGNORECASE)
 _LATE_FIGHT_COUNTDOWN_BLOCKED_DRILLS = {
+    13: (
+        "Band-Resisted Sprint Start",
+        "Band-Resisted Sprint Starts (ATP-PCr)",
+        "resisted acceleration",
+        "sprint start",
+    ),
     6: (
         "Band-Assisted Jump Reset",
         "Band-Resisted Sprint Start",
@@ -154,6 +168,74 @@ _LATE_FIGHT_COUNTDOWN_BLOCKED_DRILLS = {
         "plyometric",
     ),
 }
+_LATE_FIGHT_ALLOWED_GENERIC_PHRASES = (
+    "breathing",
+    "breath",
+    "mobility",
+    "reset",
+    "shadowboxing",
+    "shadow boxing",
+    "technical cue",
+    "technical touch",
+    "rehab",
+    "prehab",
+    "coach-led",
+    "coach led",
+    "warm-up",
+    "warm up",
+    "readiness",
+    "off",
+    "rest",
+    "walk-through",
+    "walk through",
+    "shoulder mobility",
+    "neck mobility",
+    "hip mobility",
+)
+_LATE_FIGHT_EXERCISE_SIGNALS = (
+    "squat",
+    "jump",
+    "sprint",
+    "acceleration",
+    "jab",
+    "cross",
+    "punch",
+    "throw",
+    "deadlift",
+    "row",
+    "pull",
+    "press",
+    "shuffle",
+    "bike",
+    "run",
+    "carry",
+    "plank",
+    "burpee",
+    "med-ball",
+    "medicine ball",
+    "band",
+    "resisted",
+    "box",
+)
+_LATE_FIGHT_NEURAL_POWER_SIGNALS = (
+    "speed box squat",
+    "box squat",
+    "jump",
+    "sprint",
+    "acceleration",
+    "explosive",
+    "reactive",
+    "shuffle",
+    "medicine-ball",
+    "medicine ball",
+    "med-ball",
+    "punch throw",
+    "jab-cross",
+    "jab cross",
+    "primer",
+    "neural",
+    "power",
+)
 
 
 
@@ -1313,11 +1395,11 @@ _LATE_FIGHT_WINDOW_EXERCISE_RULES: dict[str, dict[str, list[str]]] = {
     },
     "d7": {
         "blocked": ["Hang Power Clean", "Trap Bar Deadlift", "Trap-Bar Deadlift", "Band-Assisted Jump Reset", "Band-Resisted Sprint Start", "Band-Resisted Sprint Starts (ATP-PCr)", "Heavy Bag Density Rounds", "Slow-Lowered Pull-Up", "Bulgarian Split Squat"],
-        "preferred": ["Band-Resisted Jab-Cross Primer", "Reactive Shuffle Repeats", "Explosive Boxing Burst Intervals", "Technical Shadowboxing Tempo", "Mobility Reset Flow"],
+        "preferred": ["Reactive Shuffle Repeats", "Explosive Boxing Burst Intervals", "Technical Shadowboxing Tempo", "Mobility Reset Flow"],
     },
     "d6_to_d5": {
         "blocked": ["Band-Assisted Jump Reset", "Band-Resisted Sprint Start", "Band-Resisted Sprint Starts (ATP-PCr)", "Trap Bar Deadlift", "Trap-Bar Deadlift", "Dense Conditioning Circuit", "Slow-Lowered Pull-Up", "Bulgarian Split Squat"],
-        "preferred": ["Explosive Boxing Burst Intervals", "Reactive Shuffle Repeats", "Band-Resisted Jab-Cross Primer"],
+        "preferred": ["Explosive Boxing Burst Intervals", "Reactive Shuffle Repeats"],
     },
     "d4_to_d2": {
         "blocked": ["Trap Bar Deadlift", "Trap-Bar Deadlift", "Band-Resisted Sprint Start", "Band-Resisted Sprint Starts (ATP-PCr)", "Band-Assisted Jump Reset", "Heavy Bag Density Rounds", "Medicine Ball Power Circuit", "Slow-Lowered Pull-Up", "Bulgarian Split Squat"],
@@ -1326,7 +1408,6 @@ _LATE_FIGHT_WINDOW_EXERCISE_RULES: dict[str, dict[str, list[str]]] = {
     "d1": {
         "blocked": ["Staggered-Stance Medicine-Ball Punch Throw", "Light Heavy-Bag Technical Tempo", "Scapular Pull-Up Hold", "Medicine Ball Power Circuit", "Heavy Bag Density Rounds", "Pull-Up Iso Hold", "Band-Resisted Sprint Start", "Band-Resisted Sprint Starts (ATP-PCr)", "Band-Assisted Jump Reset", "Barbell Push Press", "Trap Bar Deadlift", "Trap-Bar Deadlift", "Hang Power Clean", "Slow-Lowered Pull-Up", "Bulgarian Split Squat"],
         "preferred": [
-            "Band-Resisted Jab-Cross Primer",
             "Band Face Pull",
             "Technical Shadowboxing Tempo",
             "Mobility Reset Flow",
@@ -1541,6 +1622,10 @@ def _late_fight_countdown_banded_lockout_warnings(
                     "resistance band",
                     "mini band",
                     "band assisted",
+                    "resisted jab",
+                    "resisted jab-cross",
+                    "resisted punching",
+                    "resisted punch",
                 )
             )
             if not has_band_token:
@@ -1554,6 +1639,154 @@ def _late_fight_countdown_banded_lockout_warnings(
                     "days_out_bucket": f"D-{day}",
                     "blocked_drill": "non_rehab_band_work",
                     "line": line,
+                    "blocking": True,
+                }
+            )
+    return warnings
+
+
+def _normalize_exercise_key(value: str) -> str:
+    return re.sub(r"\s+", " ", re.sub(r"[^a-z0-9]+", " ", (value or "").lower())).strip()
+
+
+def _allowed_exercises_by_countdown_day(spec: dict[str, Any]) -> dict[int, dict[str, Any]]:
+    raw_allowed = spec.get("allowed_exercises_by_day") or {}
+    if not isinstance(raw_allowed, dict):
+        return {}
+    allowed_by_day: dict[int, dict[str, Any]] = {}
+    for raw_day, raw_names in raw_allowed.items():
+        match = re.search(r"(\d+)", str(raw_day or ""))
+        if not match:
+            continue
+        names = clean_list(raw_names)
+        if raw_names is None:
+            continue
+        allowed_by_day[int(match.group(1))] = {
+            "names": dedupe_preserve_order(names),
+            "keys": {
+                normalized
+                for normalized in (_normalize_exercise_key(name) for name in names)
+                if normalized
+            },
+        }
+    return allowed_by_day
+
+
+def _late_fight_line_has_allowed_exercise(line: str, allowed_keys: set[str]) -> bool:
+    normalized_line = _normalize_exercise_key(line)
+    return any(key and key in normalized_line for key in allowed_keys)
+
+
+def _late_fight_line_is_generic_allowed(line: str) -> bool:
+    lowered = line.lower()
+    if any(phrase_in_text(lowered, phrase) for phrase in _LATE_FIGHT_ALLOWED_GENERIC_PHRASES):
+        if "band" not in lowered and "resisted" not in lowered:
+            return True
+        return any(phrase_in_text(lowered, phrase) for phrase in _LATE_FIGHT_BAND_REHAB_ALLOW_PHRASES)
+    return False
+
+
+def _late_fight_line_is_exercise_like(line: str) -> bool:
+    if _line_is_instruction_only(line):
+        return False
+    if _COUNTDOWN_LABEL_LINE.match(line.strip()):
+        return False
+    lowered = line.lower()
+    if re.search(r"\b\d+\s*(?:x|sets?|reps?|sec|seconds?|min|minutes?|rounds?|bursts?)\b", lowered):
+        return True
+    return any(phrase_in_text(lowered, signal) for signal in _LATE_FIGHT_EXERCISE_SIGNALS)
+
+
+def _rendered_exercise_label(line: str) -> str:
+    cleaned = re.sub(r"^(?:[-*]\s*)?", "", (line or "").strip())
+    cleaned = re.sub(r"^\*\*?|\*\*?$", "", cleaned).strip()
+    cleaned = re.sub(r"^\(?[A-Za-z]{2,9}\)?\s*[-:]\s*", "", cleaned).strip()
+    match = re.split(r"\s+(?:[-–—]|:)\s+|,|\(", cleaned, maxsplit=1)
+    label = match[0].strip(" -*_`")
+    return label or cleaned[:80]
+
+
+def _late_fight_allowed_exercise_warnings(
+    spec: dict[str, Any],
+    final_plan_text: str,
+    plan_lines: list[str],
+) -> list[dict]:
+    allowed_by_day = _allowed_exercises_by_countdown_day(spec)
+    if not allowed_by_day:
+        return []
+
+    day_blocks = _late_fight_countdown_blocks_by_day(final_plan_text)
+    if not day_blocks:
+        days_out_bucket = str(spec.get("days_out_bucket") or "")
+        match = re.match(r"^D-(\d+)$", days_out_bucket, flags=re.IGNORECASE)
+        if match:
+            day_blocks[int(match.group(1))] = plan_lines
+
+    warnings: list[dict] = []
+    seen: set[tuple[int, str]] = set()
+    for day, lines in day_blocks.items():
+        allowed = allowed_by_day.get(day)
+        if not allowed:
+            continue
+        allowed_keys = allowed.get("keys") or set()
+        for line in lines:
+            if not _late_fight_line_is_exercise_like(line):
+                continue
+            if _late_fight_line_has_allowed_exercise(line, allowed_keys):
+                continue
+            if _late_fight_line_is_generic_allowed(line):
+                continue
+            rendered = _rendered_exercise_label(line)
+            key = (day, line)
+            if key in seen:
+                continue
+            seen.add(key)
+            warnings.append(
+                {
+                    "code": "late_fight_unapproved_exercise_rendered",
+                    "message": f"D-{day} renders an exercise that was not selected or allowed for that countdown day.",
+                    "days_out_bucket": f"D-{day}",
+                    "rendered_exercise": rendered,
+                    "line": line,
+                    "allowed_exercises": list(allowed.get("names") or [])[:20],
+                    "blocking": True,
+                }
+            )
+    return warnings
+
+
+def _late_fight_neural_power_stack_warnings(
+    spec: dict[str, Any],
+    final_plan_text: str,
+    plan_lines: list[str],
+) -> list[dict]:
+    day_blocks = _late_fight_countdown_blocks_by_day(final_plan_text)
+    if not day_blocks:
+        days_out_bucket = str(spec.get("days_out_bucket") or "")
+        match = re.match(r"^D-(\d+)$", days_out_bucket, flags=re.IGNORECASE)
+        if match:
+            day_blocks[int(match.group(1))] = plan_lines
+
+    warnings: list[dict] = []
+    for day, lines in day_blocks.items():
+        if day > 7:
+            continue
+        matched_lines: list[str] = []
+        for line in lines:
+            if _line_is_instruction_only(line) or _COUNTDOWN_LABEL_LINE.match(line.strip()):
+                continue
+            if _late_fight_line_is_generic_allowed(line):
+                continue
+            lowered = line.lower()
+            if any(phrase_in_text(lowered, signal) for signal in _LATE_FIGHT_NEURAL_POWER_SIGNALS):
+                matched_lines.append(line)
+        if len(matched_lines) >= 2:
+            warnings.append(
+                {
+                    "code": "late_fight_neural_power_stacking",
+                    "message": f"D-{day} stacks multiple neural or power drills inside the late-fight taper.",
+                    "days_out_bucket": f"D-{day}",
+                    "matched_lines": matched_lines[:5],
                     "blocking": True,
                 }
             )
@@ -1894,6 +2127,8 @@ def _late_fight_warnings(planning_brief: dict, final_plan_text: str) -> list[dic
 
     warnings.extend(_late_fight_countdown_blocked_drill_warnings(spec, final_plan_text, plan_lines))
     warnings.extend(_late_fight_countdown_banded_lockout_warnings(spec, final_plan_text, plan_lines))
+    warnings.extend(_late_fight_allowed_exercise_warnings(spec, final_plan_text, plan_lines))
+    warnings.extend(_late_fight_neural_power_stack_warnings(spec, final_plan_text, plan_lines))
     warnings.extend(_late_fight_dosage_warnings(spec, blocks))
 
     return warnings

@@ -25,6 +25,8 @@ _BLOCKING_WARNING_CODES = {
     "late_fight_alactic_dose_overage",
     "late_fight_technical_round_overage",
     "late_fight_conditioning_round_structure_forbidden",
+    "late_fight_unapproved_exercise_rendered",
+    "late_fight_neural_power_stacking",
 }
 
 
