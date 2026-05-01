@@ -8,6 +8,8 @@ import { RequireAuth } from "@/components/auth-guard";
 import { useAppSession } from "@/components/auth-provider";
 import { NutritionSubnav } from "@/components/nutrition-subnav";
 import { NutritionWorkspaceHeader } from "@/components/nutrition-workspace-header";
+import { NutritionWorkspaceSkeleton } from "@/components/skeleton";
+import { useToast } from "@/components/toast-provider";
 import { getNutritionCurrent, updateNutritionCurrent } from "@/lib/api";
 import {
   formatBodyweightDate,
@@ -169,6 +171,7 @@ function StatusRows({ workspace }: { workspace: NutritionWorkspaceState }) {
 
 export function NutritionWorkspaceScreen() {
   const { session, me, refreshMe } = useAppSession();
+  const { showToast } = useToast();
   const [workspace, setWorkspace] = useState<NutritionWorkspaceState | null>(null);
   const [form, setForm] = useState<NutritionWorkspaceUpdateRequest>(() => emptyUpdateRequest());
   const [error, setError] = useState<string | null>(null);
@@ -247,7 +250,7 @@ export function NutritionWorkspaceScreen() {
         setWorkspace(nextWorkspace);
         setForm(normalizeTrainingSelections(toUpdateRequest(nextWorkspace)));
         await refreshMe();
-        setMessage("Nutrition workspace saved.");
+        showToast("Nutrition workspace saved.", { tone: "success" });
       } catch (saveError) {
         setError(saveError instanceof Error ? saveError.message : "Unable to save nutrition workspace.");
       }
@@ -278,7 +281,7 @@ export function NutritionWorkspaceScreen() {
         <NutritionSubnav />
 
         {!workspace ? (
-          <section className="support-panel loading-card"><p className="muted">Loading nutrition workspace.</p></section>
+          <NutritionWorkspaceSkeleton />
         ) : (
           <div className="nutrition-page-grid">
             <div className="nutrition-main-column">

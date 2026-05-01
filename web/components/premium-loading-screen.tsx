@@ -119,7 +119,18 @@ function formatElapsed(ms: number): string {
   return `${minutes}m ${String(seconds).padStart(2, "0")}s`;
 }
 
-const ESTIMATE_COPY = "Generation usually takes 3-5 minutes. Safe to leave this tab — your saved request keeps running.";
+const ESTIMATE_COPY = "Plan generation takes about 15 minutes on average. Feel free to close this tab — your saved request keeps running and you can rejoin from any device.";
+
+const RUNNING_HINTS = [
+  "Mapping your saved camp profile onto the calendar.",
+  "Sequencing weekly volume around the fight date.",
+  "Selecting style-specific work and recovery blocks.",
+  "Balancing strength, conditioning, and sparring load.",
+  "Pacing intensity into peak and taper weeks.",
+  "Pressure-testing the plan against your restrictions.",
+  "Cross-checking nutrition cues with the training arc.",
+] as const;
+const HINT_ROTATION_MS = 6_000;
 
 interface PremiumLoadingScreenProps {
   phase: GenerationUiPhase;
@@ -138,6 +149,8 @@ export function PremiumLoadingScreen({
   const activeIndex = PHASE_ORDER[phase];
   const showElapsed = phase !== "failed" && phase !== "finalizing" && startedAtMs !== null;
   const [now, setNow] = useState(() => Date.now());
+  const [hintIndex, setHintIndex] = useState(0);
+  const showRotatingHints = phase === "running" || phase === "queued";
 
   useEffect(() => {
     if (!showElapsed) {
@@ -148,23 +161,54 @@ export function PremiumLoadingScreen({
     return () => window.clearInterval(interval);
   }, [showElapsed]);
 
+  useEffect(() => {
+    if (!showRotatingHints) {
+      return;
+    }
+    setHintIndex(0);
+    const reduceMotion = typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (reduceMotion) {
+      return;
+    }
+    const interval = window.setInterval(() => {
+      setHintIndex((current) => (current + 1) % RUNNING_HINTS.length);
+    }, HINT_ROTATION_MS);
+    return () => window.clearInterval(interval);
+  }, [showRotatingHints]);
+
   const elapsedLabel = showElapsed && startedAtMs !== null ? formatElapsed(now - startedAtMs) : null;
+  const currentHint = showRotatingHints ? RUNNING_HINTS[hintIndex] : null;
 
   return (
     <section className={`panel loading-shell loading-phase-${phase}`}>
+      <div className="loading-ambient-glow" aria-hidden="true" />
       <div className="split-layout">
         <div className="step-main athlete-motion-slot athlete-motion-main">
           <article className="status-card loading-primary-panel">
             <div className="loading-stage-header">
               <div className="loading-stage-copy">
                 <p className="loading-eyebrow">{phaseContent.eyebrow}</p>
-                <h1 className="loading-title">{phaseContent.title}</h1>
+                <h1 className="loading-title">
+                  {phaseContent.title}
+                  {phase !== "failed" ? (
+                    <span className="loading-title-dots" aria-hidden="true">
+                      <span />
+                      <span />
+                      <span />
+                    </span>
+                  ) : null}
+                </h1>
               </div>
               <span className={`loading-phase-badge${phase === "failed" ? " loading-phase-badge-error" : ""}`}>
                 {phaseContent.chip}
               </span>
             </div>
             <p className="muted loading-copy">{phaseContent.copy}</p>
+            {currentHint ? (
+              <p className="loading-hint" key={currentHint} aria-live="polite">
+                {currentHint}
+              </p>
+            ) : null}
             <div className="loading-operational-strip" aria-label="Generation status">
               <div className="loading-operational-item">
                 <span className="loading-operational-label">Job state</span>
