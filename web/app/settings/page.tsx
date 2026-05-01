@@ -504,12 +504,6 @@ export default function SettingsPage() {
         {message ? <div className="success-banner athlete-motion-slot athlete-motion-status">{message}</div> : null}
         {error ? <div className="error-banner athlete-motion-slot athlete-motion-status">{error}</div> : null}
 
-        <div className="form-actions settings-mobile-save athlete-motion-slot athlete-motion-rail">
-          <button type="button" className="cta" onClick={handleSave} disabled={isPending}>
-            {isPending ? "Saving..." : "Save settings"}
-          </button>
-        </div>
-
         <div className="form-actions athlete-motion-slot athlete-motion-rail">
           <button type="button" className="cta" onClick={handleSave} disabled={isPending}>
             {isPending ? "Saving..." : "Save settings"}

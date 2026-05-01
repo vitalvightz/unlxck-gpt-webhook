@@ -4101,10 +4101,10 @@ button.mobile-step-rail-item {
   }
 
   .onboarding-action-bar {
-    position: fixed;
-    right: calc(14px + var(--safe-area-right));
+    position: sticky;
+    right: auto;
     bottom: calc(14px + var(--safe-area-bottom));
-    left: calc(14px + var(--safe-area-left));
+    left: auto;
     z-index: 70;
     padding: 12px 14px;
     border: 1px solid rgba(181, 18, 43, 0.18);
@@ -4120,7 +4120,7 @@ button.mobile-step-rail-item {
 
   .onboarding-action-buttons {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 10px;
     width: 100%;
     margin-left: 0;
@@ -4133,7 +4133,7 @@ button.mobile-step-rail-item {
   }
 
   .onboarding-action-primary {
-    grid-column: 1 / -1;
+    grid-column: auto;
   }
 
   .field textarea {
