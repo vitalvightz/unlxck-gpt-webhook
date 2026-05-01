@@ -142,17 +142,17 @@ export function AppNav() {
     };
   }, [desktopNavCollapsed]);
 
+  const isMobileNavExpanding = mobileNavState === "opening" || mobileNavState === "open";
+
   useEffect(() => {
-    const { documentElement } = document;
-    if (mobileNavState === "opening" || mobileNavState === "open") {
-      documentElement.dataset.mobileNavOpen = "true";
-    } else {
-      delete documentElement.dataset.mobileNavOpen;
+    if (!isMobileNavExpanding) {
+      return;
     }
+    document.documentElement.dataset.mobileNavOpen = "true";
     return () => {
-      delete documentElement.dataset.mobileNavOpen;
+      delete document.documentElement.dataset.mobileNavOpen;
     };
-  }, [mobileNavState]);
+  }, [isMobileNavExpanding]);
 
   useEffect(() => {
     if (!isMobileDrawerVisible) {
