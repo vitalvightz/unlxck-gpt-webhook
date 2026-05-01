@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 
 from fightcamp import conditioning
-from fightcamp.late_selector_windows import D1, D4_TO_D2, D6_TO_D5, D7, D13_TO_D8, D21_TO_D14
+from fightcamp.late_selector_windows import D1, D4_TO_D2, D6_TO_D5, D7, D13_TO_D8, D21_TO_D14, classify_late_selector_window
 from fightcamp.stage2_payload import build_stage2_payload
 from fightcamp.training_context import TrainingContext
 
@@ -517,3 +517,9 @@ def test_generated_boxing_d6_taper_uses_low_impact_alactic_not_jump_or_sprint_st
     assert "Band-Assisted Jump Reset" not in plan_text
     assert "Band-Resisted Sprint Start" not in plan_text
     assert "Band-Resisted Sprint Starts (ATP-PCr)" not in plan_text
+
+
+def test_countdown_bucket_day_mapping_to_late_windows():
+    assert classify_late_selector_window(13) == D13_TO_D8
+    assert classify_late_selector_window(7) == D7
+    assert classify_late_selector_window(1) == D1

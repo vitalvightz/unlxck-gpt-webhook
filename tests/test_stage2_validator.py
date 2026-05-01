@@ -1612,6 +1612,20 @@ def test_late_fight_countdown_blocks_non_rehab_band_work_on_d7_and_d1():
     assert any(w["days_out_bucket"] == "D-1" and w["blocked_drill"] == "non_rehab_band_work" for w in blocked)
 
 
+def test_late_fight_countdown_blocks_spp_resisted_acceleration_on_d13():
+    brief = _late_fight_planning_brief("D-13")
+    report = validate_stage2_output(
+        planning_brief=brief,
+        final_plan_text="""
+        D-13 — Strength touch
+        - Band-Resisted Sprint Starts (ATP-PCr)
+        """,
+    )
+    blocked = [w for w in report["warnings"] if w["code"] == "late_fight_countdown_blocked_drill"]
+    assert any(w["days_out_bucket"] == "D-13" for w in blocked)
+    assert any("sprint" in str(w.get("blocked_drill", "")).lower() for w in blocked)
+
+
 def test_late_fight_countdown_blocks_resistance_and_mini_band_variants():
     brief = _late_fight_planning_brief("D-7")
     report = validate_stage2_output(
@@ -1659,6 +1673,36 @@ def test_late_fight_countdown_band_lockout_uses_phrase_boundaries():
 
     blocked = [w for w in report["warnings"] if w["code"] == "late_fight_countdown_blocked_drill"]
     assert not any(w["blocked_drill"] == "non_rehab_band_work" for w in blocked)
+
+
+def test_late_fight_countdown_allows_rehab_band_work_on_d1():
+    brief = _late_fight_planning_brief("D-1")
+    report = validate_stage2_output(
+        planning_brief=brief,
+        final_plan_text="""
+        D-1 — Reset
+        - Band external rotation
+        - Band face pull
+        - Band pull-aparts
+        - Scapular mobility flow
+        """,
+    )
+    blocked = [w for w in report["warnings"] if w["code"] == "late_fight_countdown_blocked_drill"]
+    assert blocked == []
+
+
+def test_late_fight_countdown_blocks_d7_neural_stacking():
+    brief = _late_fight_planning_brief("D-7")
+    report = validate_stage2_output(
+        planning_brief=brief,
+        final_plan_text="""
+        D-7 — Sharpness
+        - Speed Box Squat
+        - Band-Resisted Split Jump
+        - Band-Resisted Jab-Cross
+        """,
+    )
+    assert any(w["code"] == "late_fight_countdown_neural_stack" and w.get("blocking") is True for w in report["warnings"])
 
 
 def test_late_fight_alactic_overage_d4():

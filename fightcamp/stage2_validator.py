@@ -128,6 +128,13 @@ _LATE_FIGHT_REHAB_PHRASES = ("rehab", "band external rotation", "scap", "mobilit
 _LATE_FIGHT_BAND_REHAB_ALLOW_PHRASES = ("mobility", "recovery", "rehab", "rehab friendly", "prehab", "injury prevention")
 _COUNTDOWN_LABEL_LINE = re.compile(r"^(?:#{1,6}\s*)?(?:[-*]\s*)?(?:\*\*)?(D-(\d+))\b", re.IGNORECASE)
 _LATE_FIGHT_COUNTDOWN_BLOCKED_DRILLS = {
+    13: (
+        "Band-Resisted Sprint Start",
+        "Band-Resisted Sprint Starts (ATP-PCr)",
+        "Band-Assisted Jump Reset",
+        "sprint start",
+        "resisted acceleration",
+    ),
     6: (
         "Band-Assisted Jump Reset",
         "Band-Resisted Sprint Start",
@@ -153,6 +160,14 @@ _LATE_FIGHT_COUNTDOWN_BLOCKED_DRILLS = {
         "jump",
         "plyometric",
     ),
+}
+_D7_NEURAL_STACK_SIGNALS: dict[str, tuple[str, ...]] = {
+    "loaded_speed_squat": ("speed box squat", "loaded speed squat"),
+    "resisted_jump": ("band-resisted split jump", "resisted jump"),
+    "resisted_punch": ("band-resisted jab-cross", "resisted punch", "resisted punching"),
+    "sprint_start": ("band-resisted sprint start", "sprint start"),
+    "med_ball_throw": ("med-ball", "medicine-ball", "medicine ball"),
+    "alactic_burst": ("alactic burst", "explosive boxing burst intervals", "burst drill"),
 }
 
 
@@ -1560,6 +1575,46 @@ def _late_fight_countdown_banded_lockout_warnings(
     return warnings
 
 
+def _late_fight_d7_neural_stacking_warnings(
+    final_plan_text: str,
+    plan_lines: list[str],
+    spec: dict[str, Any],
+) -> list[dict]:
+    day_blocks = _late_fight_countdown_blocks_by_day(final_plan_text)
+    if not day_blocks:
+        days_out_bucket = str(spec.get("days_out_bucket") or "")
+        if days_out_bucket.strip().upper() == "D-7":
+            day_blocks[7] = plan_lines
+
+    lines = day_blocks.get(7, [])
+    if not lines:
+        return []
+
+    matched_tokens: list[str] = []
+    for line in lines:
+        if _line_is_instruction_only(line):
+            continue
+        lowered = line.lower()
+        for token, phrases in _D7_NEURAL_STACK_SIGNALS.items():
+            if token in matched_tokens:
+                continue
+            if any(phrase_in_text(lowered, phrase) for phrase in phrases):
+                matched_tokens.append(token)
+
+    if len(matched_tokens) < 2:
+        return []
+
+    return [
+        {
+            "code": "late_fight_countdown_neural_stack",
+            "message": "D-7 stacks multiple neural/power stimuli; keep one neural cue and one rehab/reset block max.",
+            "days_out_bucket": "D-7",
+            "matched_tokens": matched_tokens,
+            "blocking": True,
+        }
+    ]
+
+
 # ---------------------------------------------------------------------------
 # Late-fight dosage ceiling helpers (Patch B)
 # ---------------------------------------------------------------------------
@@ -1894,6 +1949,7 @@ def _late_fight_warnings(planning_brief: dict, final_plan_text: str) -> list[dic
 
     warnings.extend(_late_fight_countdown_blocked_drill_warnings(spec, final_plan_text, plan_lines))
     warnings.extend(_late_fight_countdown_banded_lockout_warnings(spec, final_plan_text, plan_lines))
+    warnings.extend(_late_fight_d7_neural_stacking_warnings(final_plan_text, plan_lines, spec))
     warnings.extend(_late_fight_dosage_warnings(spec, blocks))
 
     return warnings
