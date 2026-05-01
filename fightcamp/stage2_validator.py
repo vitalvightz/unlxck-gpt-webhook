@@ -111,7 +111,7 @@ _NUMBERED_SESSION_HEADING = compile_regex("stage2_validator", "numbered_session_
 _LATE_FIGHT_TOKEN_PHRASES = {
     "hard_sparring": ("hard spar", "hard sparring", "live spar", "full spar", "hard contact"),
     "standalone_glycolytic": ("glycolytic", "fight pace", "fight-pace", "repeatability", "hard shuttle", "bag sprint"),
-    "primary_strength_anchor": ("primary strength", "structural strength", "neural plus strength", "strength anchor", "loaded strength"),
+    "primary_strength_anchor": ("primary strength", "structural strength", "neural plus strength", "strength anchor", "strength touch", "loaded strength"),
     "conditioning": ("conditioning", "fight pace", "fight-pace", "repeatability", "shuttle", "bag sprint", "air bike sprint"),
     "glycolytic": ("glycolytic", "fight pace", "fight-pace", "repeatability", "hard shuttle", "bag sprint"),
     "hinge_transfer": ("hinge transfer", "hip hinge", "deadlift", "rdl", "romanian deadlift"),

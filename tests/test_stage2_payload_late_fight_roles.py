@@ -1,6 +1,7 @@
 from fightcamp.stage2_payload_late_fight import (
     _build_late_fight_plan_spec,
     _build_late_fight_session_sequence,
+    _build_late_fight_weekly_role_map,
     _classify_declared_hard_days_for_late_window,
     _late_fight_session_roles,
     _planned_sessions_per_week,
@@ -58,18 +59,18 @@ def test_pre_fight_compressed_suppresses_standalone_glycolytic_with_two_hard_day
 
 
 def test_pre_fight_compressed_allows_strength_touch_and_light_fight_rhythm_with_one_hard_day():
-    role_keys = [
-        role["role_key"]
-        for role in _late_fight_session_roles(
-            10,
-            _athlete(10, hard_sparring_days=["thursday"], fatigue="low", fatigue_level="low", readiness_flags=[]),
-        )
-    ]
+    roles = _late_fight_session_roles(
+        10,
+        _athlete(10, hard_sparring_days=["thursday"], fatigue="low", fatigue_level="low", readiness_flags=[]),
+    )
+    role_keys = [role["role_key"] for role in roles]
 
     assert role_keys.count("hard_sparring_day") == 1
     assert role_keys.count("strength_touch_day") == 1
     assert role_keys.count("light_fight_pace_touch_day") == 1
     assert role_keys.count("fight_week_freshness_day") == 1
+    strength_touch = next(role for role in roles if role["role_key"] == "strength_touch_day")
+    assert strength_touch["athlete_facing_label"] == "Neural primer"
 
 
 def test_pre_fight_compressed_high_fatigue_flag_suppresses_light_fight_pace():
@@ -150,12 +151,12 @@ def test_planned_sessions_uses_explicit_frequency_when_present():
 
 
 def test_d7_role_list_remains_unchanged():
-    role_keys = [
-        role["role_key"]
-        for role in _late_fight_session_roles(7, _athlete(7, hard_sparring_days=["monday", "thursday"]))
-    ]
+    roles = _late_fight_session_roles(7, _athlete(7, hard_sparring_days=["monday", "thursday"]))
+    role_keys = [role["role_key"] for role in roles]
 
     assert role_keys == ["hard_sparring_day", "neural_primer_day", "fight_week_freshness_day"]
+    neural_primer = next(role for role in roles if role["role_key"] == "neural_primer_day")
+    assert neural_primer["athlete_facing_label"] == "Neural primer"
 
 
 def test_pre_fight_compressed_surfaces_downgraded_hard_day_as_technical_touch_suppression():
@@ -298,6 +299,36 @@ def test_d6_and_below_have_no_true_hard_sparring_roles():
     )
     assert classified
     assert all(entry["status"] == "downgrade" for entry in classified)
+
+
+def test_d6_composite_week_map_keeps_segment_countdown_and_declared_day_metadata():
+    weekly_role_map = _build_late_fight_weekly_role_map(
+        6,
+        _athlete(
+            6,
+            plan_creation_weekday="monday",
+            hard_sparring_days=["tuesday", "thursday", "saturday"],
+        ),
+    )
+
+    weeks = weekly_role_map["weeks"]
+    assert weeks[0]["countdown_span"] == {"start_day": 6, "end_day": 5}
+    assert weeks[0]["countdown_weekday_map"] == {"D-6": "monday", "D-5": "tuesday"}
+    assert weeks[0]["full_countdown_weekday_map"]["D-4"] == "wednesday"
+    assert weeks[0]["declared_hard_sparring_days"] == ["tuesday"]
+    assert weeks[0]["hard_sparring_plan"] == []
+
+    assert weeks[1]["countdown_span"] == {"start_day": 4, "end_day": 2}
+    assert weeks[1]["countdown_weekday_map"] == {
+        "D-4": "wednesday",
+        "D-3": "thursday",
+        "D-2": "friday",
+    }
+    assert weeks[1]["declared_hard_sparring_days"] == ["thursday"]
+
+    assert weeks[2]["countdown_span"] == {"start_day": 1, "end_day": 1}
+    assert weeks[2]["countdown_weekday_map"] == {"D-1": "saturday"}
+    assert weeks[2]["declared_hard_sparring_days"] == ["saturday"]
 
 
 def test_sequence_allocates_non_hard_roles_to_remaining_countdown_days():

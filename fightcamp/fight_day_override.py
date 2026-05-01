@@ -24,10 +24,9 @@ from typing import Any
 from .fight_date_utils import resolve_fight_weekday
 
 
-FIGHT_DAY_PROTOCOL_TEXT = (
-    "Fight day protocol — follow coach warm-up and fight protocol; "
-    "no additional app S&C."
-)
+FIGHT_DAY_PROTOCOL_LABEL = "Fight day protocol"
+FIGHT_DAY_PROTOCOL_BODY = "follow coach warm-up and fight protocol; no additional app S&C."
+FIGHT_DAY_PROTOCOL_TEXT = f"{FIGHT_DAY_PROTOCOL_LABEL} — {FIGHT_DAY_PROTOCOL_BODY}"
 
 
 _FIGHT_DATE_KEYS = ("fight_date", "next_fight_date")
@@ -69,7 +68,8 @@ def _make_fight_day_protocol_role(day: str) -> dict[str, Any]:
         ),
         "anchor": "fight_day_protocol",
         "placement_rule": (
-            f"Fight is on {day.title()}. Render exactly: \"{FIGHT_DAY_PROTOCOL_TEXT}\""
+            f"Fight is on {day.title()}. Render the title once as \"{FIGHT_DAY_PROTOCOL_LABEL}\" "
+            f"and the body once as \"{FIGHT_DAY_PROTOCOL_BODY}\". Do not repeat the title."
         ),
         "scheduled_day_hint": day,
         "day_assignment_reason": (
@@ -77,8 +77,9 @@ def _make_fight_day_protocol_role(day: str) -> dict[str, Any]:
             "may render here."
         ),
         "coach_owned": True,
-        "display_text": FIGHT_DAY_PROTOCOL_TEXT,
-        "athlete_facing_label": FIGHT_DAY_PROTOCOL_TEXT,
+        "display_text": FIGHT_DAY_PROTOCOL_BODY,
+        "athlete_facing_label": FIGHT_DAY_PROTOCOL_LABEL,
+        "full_display_text": FIGHT_DAY_PROTOCOL_TEXT,
         "governance": {
             "authority": "fight_day_protocol_lock",
             "execution_only": False,

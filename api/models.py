@@ -737,12 +737,16 @@ class PlanAdvisory(BaseModel):
 
 class WeeklyDayEntry(BaseModel):
     weekday: Literal["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+    countdown_label: str = ""
+    countdown_display_label: str = ""
     sparring_day_class: SparringDayClass = "none"
     effective_load: EffectiveLoad = "none"
     status: str = ""
     reason: str = ""
     coach_note: str = ""
     reason_codes: list[str] = Field(default_factory=list)
+    role_key: str = ""
+    role_label: str = ""
 
 
 class WeeklySchedule(BaseModel):
@@ -750,6 +754,10 @@ class WeeklySchedule(BaseModel):
     week_index: int
     week_count: int
     phase: str = ""
+    stage_label: str = ""
+    payload_mode: str = ""
+    countdown_span: str = ""
+    countdown_day_count: int | None = None
     days: list[WeeklyDayEntry]
 
 

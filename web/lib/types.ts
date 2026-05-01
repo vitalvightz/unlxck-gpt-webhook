@@ -263,12 +263,16 @@ export type PlanAdvisory = {
 
 export type WeeklyDayEntry = {
   weekday: "Mon" | "Tue" | "Wed" | "Thu" | "Fri" | "Sat" | "Sun";
+  countdown_label: string;
+  countdown_display_label: string;
   sparring_day_class: SparringDayClass;
   effective_load: EffectiveLoad;
   status: string;
   reason: string;
   coach_note: string;
   reason_codes: string[];
+  role_key: string;
+  role_label: string;
 };
 
 export type WeeklySchedule = {
@@ -276,6 +280,10 @@ export type WeeklySchedule = {
   week_index: number;
   week_count: number;
   phase: string;
+  stage_label: string;
+  payload_mode: string;
+  countdown_span: string;
+  countdown_day_count?: number | null;
   days: WeeklyDayEntry[];
 };
 

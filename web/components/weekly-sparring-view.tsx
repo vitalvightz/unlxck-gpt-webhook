@@ -120,6 +120,13 @@ export function WeeklySparringView({ planId }: { planId: string }) {
 
   const canGoPrevious = schedule.week_index > 0;
   const canGoNext = schedule.week_index + 1 < schedule.week_count;
+  const stageLabel = schedule.stage_label || formatToken(schedule.payload_mode) || formatToken(schedule.phase);
+  const weekLabelParts = [
+    stageLabel,
+    schedule.countdown_span,
+    schedule.countdown_day_count ? `${schedule.countdown_day_count} days` : "",
+    `Week ${schedule.week_index + 1} of ${schedule.week_count}`,
+  ].filter(Boolean);
 
   return (
     <section
@@ -131,8 +138,7 @@ export function WeeklySparringView({ planId }: { planId: string }) {
           <p className="kicker">Weekly View</p>
           <h3>Live sparring map</h3>
           <p className="muted weekly-sparring-phase">
-            {schedule.phase ? `${formatToken(schedule.phase)} | ` : ""}Week {schedule.week_index + 1} of{" "}
-            {schedule.week_count}
+            {weekLabelParts.join(" | ")}
           </p>
         </div>
         <div className="weekly-sparring-nav" aria-label="Week navigation">
@@ -173,11 +179,16 @@ export function WeeklySparringView({ planId }: { planId: string }) {
             }`}
             onClick={() => setSelectedWeekday(day.weekday)}
             aria-pressed={selectedDay?.weekday === day.weekday}
-            title={`${day.weekday}: ${CLASS_LABELS[day.sparring_day_class]}`}
+            title={`${day.countdown_display_label || day.weekday}: ${
+              day.role_label || CLASS_LABELS[day.sparring_day_class]
+            }`}
           >
-            <span className="weekly-sparring-weekday">{day.weekday}</span>
+            <span className="weekly-sparring-weekday">
+              {day.weekday}
+              {day.countdown_label ? <span>{day.countdown_label}</span> : null}
+            </span>
             <span className={`weekly-sparring-class-badge weekly-sparring-badge-${day.sparring_day_class}`}>
-              {CLASS_LABELS[day.sparring_day_class]}
+              {day.role_label || CLASS_LABELS[day.sparring_day_class]}
             </span>
           </button>
         ))}
@@ -187,8 +198,8 @@ export function WeeklySparringView({ planId }: { planId: string }) {
         <div className="weekly-sparring-detail">
           <div className="weekly-sparring-detail-header">
             <div>
-              <p className="kicker">{selectedDay.weekday}</p>
-              <h4>{CLASS_LABELS[selectedDay.sparring_day_class]}</h4>
+              <p className="kicker">{selectedDay.countdown_display_label || selectedDay.weekday}</p>
+              <h4>{selectedDay.role_label || CLASS_LABELS[selectedDay.sparring_day_class]}</h4>
             </div>
             <span className={`weekly-sparring-class-badge weekly-sparring-badge-${selectedDay.sparring_day_class}`}>
               {LOAD_LABELS[selectedDay.effective_load]}

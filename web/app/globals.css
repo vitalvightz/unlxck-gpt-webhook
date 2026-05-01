@@ -2875,10 +2875,21 @@ button.mobile-step-rail-item {
 }
 
 .weekly-sparring-weekday {
+  display: grid;
+  gap: 4px;
   color: var(--text-primary);
   font-size: 18px;
   font-weight: 700;
   line-height: 1;
+}
+
+.weekly-sparring-weekday span {
+  color: var(--text-muted);
+  font-family: var(--font-mono), monospace;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: uppercase;
 }
 
 .weekly-sparring-class-badge {

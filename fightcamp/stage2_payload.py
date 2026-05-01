@@ -3647,7 +3647,7 @@ If selected_plan.fight_week_override.active or selected_plan.weekly_role_map.fig
 Never chase fitness in these windows.
 
 RULE 9A — FIGHT-DAY (D-0) HARD OVERRIDE
-If selected_plan.weekly_role_map.fight_day_override.active is true, or any week's fight_day_override.active is true, the day matching fight_day_override.fight_weekday is the athlete's fight day. Render that day exactly as: "Fight day protocol — follow coach warm-up and fight protocol; no additional app S&C." No S&C, no hard sparring, no coach-led boxing session, no training session of any kind. This override beats every declared hard sparring lock, every weekday role, and every phase rhythm. Even when the fight weekday is also a declared hard sparring day, it never renders as sparring on that date. Do not restore any suppressed role on that day.
+If selected_plan.weekly_role_map.fight_day_override.active is true, or any week's fight_day_override.active is true, the day matching fight_day_override.fight_weekday is the athlete's fight day. Render that day as one title/body pair only: title "Fight day protocol"; body "follow coach warm-up and fight protocol; no additional app S&C." If the countdown heading already says "Fight day protocol", do not repeat those words in the body. No S&C, no hard sparring, no coach-led boxing session, no training session of any kind. This override beats every declared hard sparring lock, every weekday role, and every phase rhythm. Even when the fight weekday is also a declared hard sparring day, it never renders as sparring on that date. Do not restore any suppressed role on that day.
 
 RULE 10 — WEIGHT CUT AND INJURY MANAGEMENT
 Active weight cut: state it plainly, keep output safety-first, one summary note + one support note — never buried in nutrition data.
@@ -3711,14 +3711,14 @@ Applies when render_guards.suppress_phase_toolbox_sections == true.
 Output is countdown-led. Lead every active day with countdown_display_label (D-N (Weekday)). Do not emit phase scaffolding: no "Week 1/2/3", no "PHASE N: GPP/SPP/TAPER", no "Phase Weeks", no "Phase Days", no "Phase must-keep", no "TAPER phase guidance", no "SPP insert", no "Mindset Focus" / "Strength & Power" / "Conditioning" sub-headers framed by phase.
 
 Do not expose internal role keys or internal system labels as session titles. Translate role keys into coach-voiced names from the intent, drills selected, and countdown day. Canonical mapping:
-  strength_touch_day         -> "Power Transfer Touch"
+  strength_touch_day         -> "Neural primer"
   alactic_sharpness_day      -> "Fight-Speed Primer"
-  neural_primer_day          -> "Final Neural Cue"
+  neural_primer_day          -> "Neural primer"
   fight_week_freshness_day   -> "Freshness Reset"
   light_fight_pace_touch_day -> "Technical Rhythm Touch"
   technical_touch_day        -> "Technical Touch"
   hard_sparring_day          -> render minimally as "Coach-led boxing session" or sport-equivalent: "Coach-led MMA session", "Coach-led Muay Thai session", "Coach-led kickboxing session". The gym/coach owns the day; the app must not prescribe rounds, intensity, dose, work:rest, RPE, or any sparring template wording. After the label, emit exactly one short app-owned note: "No additional S&C today. Add 5 min breathing + shoulder mobility after." Nothing else.
-Never write "Strength touch", "Alactic sharpness", "Neural primer", "SPP", "Glycolytic", "Alactic", or "Aerobic" as an athlete-facing session title.
+Never write "Strength touch", "Primary strength", "Alactic sharpness", "SPP", "Glycolytic", "Alactic", or "Aerobic" as an athlete-facing session title. For any late-fight strength/power touch, title it "Neural primer".
 
 For conditioning drill system labels, use selected_plan session fields such as athlete_facing_system_label when present. If absent, translate the drill intent into athlete-facing language. Never use the word "Glycolytic" in D-7 or tighter windows. When a drill carries short-work + full-rest prescription, call it "footwork speed repeatability", "coordination conditioning", "reactive footwork", or "technical rhythm" per its tags.
 

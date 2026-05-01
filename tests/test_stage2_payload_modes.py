@@ -297,7 +297,7 @@ class TestLateFightPermissionsAndRendering:
         rules = _late_fight_rendering_rules(7)
 
         assert "sharpness week" in [term.lower() for term in rules["preferred_terms"]]
-        assert "power touch" in [term.lower() for term in rules["preferred_terms"]]
+        assert "neural primer" in [term.lower() for term in rules["preferred_terms"]]
         assert "primary strength" in [term.lower() for term in rules["forbidden_terms"]]
 
     def test_d3_rendering_rules_prefer_low_noise_session_titles(self):

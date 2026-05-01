@@ -24,6 +24,8 @@ from fightcamp.fight_date_utils import (
     resolve_fight_weekday,
 )
 from fightcamp.fight_day_override import (
+    FIGHT_DAY_PROTOCOL_BODY,
+    FIGHT_DAY_PROTOCOL_LABEL,
     FIGHT_DAY_PROTOCOL_TEXT,
     apply_fight_day_override_to_weekly_role_map,
     compute_fight_weekday,
@@ -108,7 +110,9 @@ def test_override_replaces_any_role_on_fight_weekday(role_key):
     assert len(final_week["session_roles"]) == 1
     fight_role = final_week["session_roles"][0]
     assert fight_role["role_key"] == "fight_day_protocol"
-    assert fight_role["display_text"] == FIGHT_DAY_PROTOCOL_TEXT
+    assert fight_role["athlete_facing_label"] == FIGHT_DAY_PROTOCOL_LABEL
+    assert fight_role["display_text"] == FIGHT_DAY_PROTOCOL_BODY
+    assert fight_role["full_display_text"] == FIGHT_DAY_PROTOCOL_TEXT
     assert fight_role["scheduled_day_hint"] == "friday"
 
 
@@ -125,7 +129,9 @@ def test_override_appends_protocol_when_no_role_already_on_fight_day():
     assert "fight_day_protocol" in role_keys
     fight_role = next(r for r in final_week["session_roles"] if r["role_key"] == "fight_day_protocol")
     assert fight_role["scheduled_day_hint"] == "friday"
-    assert fight_role["display_text"] == FIGHT_DAY_PROTOCOL_TEXT
+    assert fight_role["athlete_facing_label"] == FIGHT_DAY_PROTOCOL_LABEL
+    assert fight_role["display_text"] == FIGHT_DAY_PROTOCOL_BODY
+    assert fight_role["full_display_text"] == FIGHT_DAY_PROTOCOL_TEXT
 
 
 def test_override_records_top_level_metadata():
@@ -238,7 +244,9 @@ def test_override_fires_for_multiple_fight_weekdays(
         if role["scheduled_day_hint"] == expected_fight_weekday
     )
     assert role_for_fight_day["role_key"] == "fight_day_protocol"
-    assert role_for_fight_day["display_text"] == FIGHT_DAY_PROTOCOL_TEXT
+    assert role_for_fight_day["athlete_facing_label"] == FIGHT_DAY_PROTOCOL_LABEL
+    assert role_for_fight_day["display_text"] == FIGHT_DAY_PROTOCOL_BODY
+    assert role_for_fight_day["full_display_text"] == FIGHT_DAY_PROTOCOL_TEXT
     # Other days survive
     other_roles = [
         role for role in final_week["session_roles"]
@@ -356,7 +364,9 @@ def test_normal_camp_final_week_clamps_fight_day(
     ]
     assert len(fight_day_roles) == 1
     assert fight_day_roles[0]["role_key"] == "fight_day_protocol"
-    assert fight_day_roles[0]["display_text"] == FIGHT_DAY_PROTOCOL_TEXT
+    assert fight_day_roles[0]["athlete_facing_label"] == FIGHT_DAY_PROTOCOL_LABEL
+    assert fight_day_roles[0]["display_text"] == FIGHT_DAY_PROTOCOL_BODY
+    assert fight_day_roles[0]["full_display_text"] == FIGHT_DAY_PROTOCOL_TEXT
 
     # No hard_sparring_day role on the fight day in the final week
     assert not any(

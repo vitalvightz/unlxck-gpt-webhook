@@ -238,3 +238,118 @@ def test_extract_weekly_schedule_taper_missing_plan_does_not_fallback_to_declare
     assert by_day["Mon"]["reason_codes"] == ["missing_effective_sparring_plan"]
     assert by_day["Wed"]["sparring_day_class"] == "none"
     assert by_day["Wed"]["status"] == "missing_effective_sparring_plan"
+
+
+def test_extract_weekly_schedule_late_fight_empty_plan_uses_countdown_roles_and_downgrades():
+    schedule = extract_weekly_schedule(
+        {
+            "weekly_role_map": {
+                "weeks": [
+                    {
+                        "phase": "TAPER",
+                        "stage_label": "Sharpness & Freshness Window",
+                        "payload_mode": "final_week_transition_payload",
+                        "countdown_span": {"start_day": 6, "end_day": 5},
+                        "countdown_weekday_map": {"D-6": "monday", "D-5": "tuesday"},
+                        "declared_hard_sparring_days": ["Tuesday"],
+                        "hard_sparring_plan": [],
+                        "session_roles": [
+                            {
+                                "role_key": "neural_primer_day",
+                                "scheduled_day_hint": "monday",
+                                "athlete_facing_label": "Neural primer",
+                            }
+                        ],
+                    }
+                ]
+            }
+        }
+    )
+
+    assert schedule is not None
+    assert schedule["stage_label"] == "Sharpness & Freshness Window"
+    assert schedule["payload_mode"] == "final_week_transition_payload"
+    assert schedule["countdown_span"] == "D-6 to D-5"
+    assert schedule["countdown_day_count"] == 2
+
+    by_day = {day["weekday"]: day for day in schedule["days"]}
+    assert by_day["Mon"]["countdown_label"] == "D-6"
+    assert by_day["Mon"]["role_key"] == "neural_primer_day"
+    assert by_day["Mon"]["role_label"] == "Neural primer"
+    assert by_day["Mon"]["sparring_day_class"] == "none"
+    assert by_day["Mon"]["effective_load"] == "none"
+
+    assert by_day["Tue"]["countdown_label"] == "D-5"
+    assert by_day["Tue"]["sparring_day_class"] == "technical"
+    assert by_day["Tue"]["effective_load"] == "technical"
+    assert by_day["Tue"]["status"] == "convert_to_technical_suggested"
+    assert by_day["Tue"]["role_label"] == "Technical rhythm"
+    assert by_day["Tue"]["reason_codes"] == [
+        "final_week_transition_payload",
+        "late_fight_sparring_downgrade",
+    ]
+
+
+def test_extract_weekly_schedule_late_fight_empty_plan_keeps_surviving_hard_role_visible():
+    schedule = extract_weekly_schedule(
+        {
+            "weekly_role_map": {
+                "weeks": [
+                    {
+                        "phase": "TAPER",
+                        "payload_mode": "pre_fight_compressed_payload",
+                        "countdown_span": {"start_day": 8, "end_day": 7},
+                        "countdown_weekday_map": {"D-8": "saturday", "D-7": "sunday"},
+                        "declared_hard_sparring_days": ["Saturday"],
+                        "hard_sparring_plan": [],
+                        "session_roles": [
+                            {
+                                "role_key": "hard_sparring_day",
+                                "scheduled_day_hint": "saturday",
+                                "athlete_facing_label": "Coach-led boxing session",
+                            }
+                        ],
+                    }
+                ]
+            }
+        }
+    )
+
+    assert schedule is not None
+    by_day = {day["weekday"]: day for day in schedule["days"]}
+    assert by_day["Sat"]["countdown_label"] == "D-8"
+    assert by_day["Sat"]["sparring_day_class"] == "primary_hard"
+    assert by_day["Sat"]["effective_load"] == "hard"
+    assert by_day["Sat"]["status"] == "hard_as_planned"
+    assert by_day["Sat"]["role_label"] == "Coach-led boxing session"
+
+
+def test_extract_weekly_schedule_late_fight_empty_plan_marks_d0_as_fight_day_protocol():
+    schedule = extract_weekly_schedule(
+        {
+            "weekly_role_map": {
+                "weeks": [
+                    {
+                        "phase": "TAPER",
+                        "stage_label": "Fight-Day Protocol",
+                        "payload_mode": "fight_day_protocol_payload",
+                        "countdown_span": {"start_day": 0, "end_day": 0},
+                        "countdown_weekday_map": {"D-0": "thursday"},
+                        "declared_hard_sparring_days": ["Thursday"],
+                        "hard_sparring_plan": [],
+                        "session_roles": [],
+                    }
+                ]
+            }
+        }
+    )
+
+    assert schedule is not None
+    assert schedule["countdown_span"] == "D-0"
+    assert schedule["countdown_day_count"] == 1
+    by_day = {day["weekday"]: day for day in schedule["days"]}
+    assert by_day["Thu"]["countdown_label"] == "D-0"
+    assert by_day["Thu"]["role_key"] == "fight_day_protocol"
+    assert by_day["Thu"]["role_label"] == "Fight day protocol"
+    assert by_day["Thu"]["sparring_day_class"] == "none"
+    assert by_day["Thu"]["status"] == "fight_day_protocol"
