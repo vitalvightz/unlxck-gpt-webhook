@@ -55,6 +55,7 @@ export function AppNav() {
   const { isReady, session, me, signOut } = useAppSession();
   const [mobileNavState, setMobileNavState] = useState<MobileNavState>("closed");
   const [desktopNavCollapsed, setDesktopNavCollapsed] = useState(false);
+  const [pendingNavHref, setPendingNavHref] = useState<string | null>(null);
   const closeTimeoutRef = useRef<number | null>(null);
   const desktopNavToggleRef = useRef<HTMLButtonElement | null>(null);
   const shellSurface = getShellSurface(pathname, Boolean(session));
@@ -195,6 +196,24 @@ export function AppNav() {
   }, [pathname, session]);
 
   useEffect(() => {
+    if (pendingNavHref && isActive(pathname, pendingNavHref)) {
+      setPendingNavHref(null);
+    }
+  }, [pathname, pendingNavHref]);
+
+  function handleSidebarLinkSelect(href: string) {
+    setPendingNavHref(href);
+    closeMobileDrawer();
+  }
+
+  function isLinkActive(href: string): boolean {
+    if (pendingNavHref === href) {
+      return true;
+    }
+    return isActive(pathname, href);
+  }
+
+  useEffect(() => {
     document.documentElement.dataset.appSurface = shellSurface;
 
     return () => {
@@ -282,10 +301,12 @@ export function AppNav() {
               <button
                 type="button"
                 className="sidebar-drawer-close"
-                aria-label="Close navigation"
+                aria-label="Close menu"
                 onClick={handleSidebarClose}
               >
-                Close
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                  <path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+                </svg>
               </button>
             </div>
             <Link href="/" className="brand" onClick={closeMobileDrawer}>
@@ -310,8 +331,8 @@ export function AppNav() {
                 <p className="sidebar-section-label">Access</p>
                 <Link
                   href="/signup"
-                  className={isActive(pathname, "/signup") ? "sidebar-link sidebar-link-active" : "sidebar-link"}
-                  onClick={closeMobileDrawer}
+                  className={isLinkActive("/signup") ? "sidebar-link sidebar-link-active" : "sidebar-link"}
+                  onClick={() => handleSidebarLinkSelect("/signup")}
                 >
                   <div className="sidebar-link-copy">
                     <span className="sidebar-link-title">Create account</span>
@@ -320,8 +341,8 @@ export function AppNav() {
                 </Link>
                 <Link
                   href="/login"
-                  className={isActive(pathname, "/login") ? "sidebar-link sidebar-link-active" : "sidebar-link"}
-                  onClick={closeMobileDrawer}
+                  className={isLinkActive("/login") ? "sidebar-link sidebar-link-active" : "sidebar-link"}
+                  onClick={() => handleSidebarLinkSelect("/login")}
                 >
                   <div className="sidebar-link-copy">
                     <span className="sidebar-link-title">Log in</span>
@@ -343,9 +364,9 @@ export function AppNav() {
                 {signedInLinks.map((link) => (
                   <Link
                     key={link.href}
-                    className={isActive(pathname, link.href) ? "sidebar-link sidebar-link-active" : "sidebar-link"}
+                    className={isLinkActive(link.href) ? "sidebar-link sidebar-link-active" : "sidebar-link"}
                     href={link.href}
-                    onClick={closeMobileDrawer}
+                    onClick={() => handleSidebarLinkSelect(link.href)}
                   >
                     <div className="sidebar-link-copy">
                       <span className="sidebar-link-title">{link.label}</span>
@@ -358,9 +379,9 @@ export function AppNav() {
                     <div className="sidebar-admin-divider" aria-hidden="true" />
                     <p className="sidebar-section-label">Control</p>
                     <Link
-                      className={isActive(pathname, "/admin") ? "sidebar-link sidebar-link-active" : "sidebar-link"}
+                      className={isLinkActive("/admin") ? "sidebar-link sidebar-link-active" : "sidebar-link"}
                       href="/admin"
-                      onClick={closeMobileDrawer}
+                      onClick={() => handleSidebarLinkSelect("/admin")}
                     >
                       <div className="sidebar-link-copy">
                         <span className="sidebar-link-title">Admin panel</span>

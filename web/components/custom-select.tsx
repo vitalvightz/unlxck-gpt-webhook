@@ -26,6 +26,7 @@ type MenuPhase = "closed" | "opening" | "open" | "closing";
 
 const MENU_OFFSET = 8;
 const MENU_ANIMATION_MS = 140;
+const SHEET_MEDIA_QUERY = "(max-width: 720px)";
 
 export function CustomSelect({
   id,
@@ -46,6 +47,18 @@ export function CustomSelect({
   const [menuPhase, setMenuPhase] = useState<MenuPhase>("closed");
   const [activeIndex, setActiveIndex] = useState(-1);
   const [menuStyle, setMenuStyle] = useState<CSSProperties>({});
+  const [isSheetMode, setIsSheetMode] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+    const mediaQuery = window.matchMedia(SHEET_MEDIA_QUERY);
+    const sync = () => setIsSheetMode(mediaQuery.matches);
+    sync();
+    mediaQuery.addEventListener("change", sync);
+    return () => mediaQuery.removeEventListener("change", sync);
+  }, []);
 
   const optionList = includeEmptyOption
     ? [{ label: placeholder, value: "" }, ...options]
@@ -63,6 +76,10 @@ export function CustomSelect({
   }
 
   function updateMenuPosition() {
+    if (isSheetMode) {
+      setMenuStyle({});
+      return;
+    }
     if (!triggerRef.current) {
       return;
     }
@@ -251,37 +268,50 @@ export function CustomSelect({
       </button>
       {isMounted
         ? createPortal(
-            <div
-              ref={menuRef}
-              className="custom-select-menu"
-              data-state={menuPhase}
-              style={menuStyle}
-            >
-              <div className="custom-select-menu-scroll" role="listbox" id={menuId} aria-labelledby={id}>
-                {optionList.map((option, index) => {
-                  const isSelected = option.value === value;
-                  const isActive = index === activeIndex;
-                  return (
-                    <button
-                      key={`${option.value || "empty"}-${index}`}
-                      ref={(node) => {
-                        optionRefs.current[index] = node;
-                      }}
-                      id={`${menuId}-option-${index}`}
-                      type="button"
-                      role="option"
-                      aria-selected={isSelected}
-                      className={`custom-select-option ${isSelected ? "custom-select-option-selected" : ""} ${isActive ? "custom-select-option-active" : ""}`.trim()}
-                      onClick={() => selectValue(option.value)}
-                      onKeyDown={(event) => handleOptionKeyDown(event, index, option.value)}
-                      onMouseEnter={() => setActiveIndex(index)}
-                    >
-                      <span className="custom-select-option-label">{option.label}</span>
-                    </button>
-                  );
-                })}
+            <>
+              {isSheetMode ? (
+                <div
+                  className="custom-select-sheet-backdrop"
+                  data-state={menuPhase}
+                  aria-hidden="true"
+                  onClick={() => closeMenu()}
+                />
+              ) : null}
+              <div
+                ref={menuRef}
+                className={`custom-select-menu${isSheetMode ? " custom-select-menu-sheet" : ""}`}
+                data-state={menuPhase}
+                style={menuStyle}
+              >
+                {isSheetMode ? (
+                  <div className="custom-select-sheet-handle" aria-hidden="true" />
+                ) : null}
+                <div className="custom-select-menu-scroll" role="listbox" id={menuId} aria-labelledby={id}>
+                  {optionList.map((option, index) => {
+                    const isSelected = option.value === value;
+                    const isActive = index === activeIndex;
+                    return (
+                      <button
+                        key={`${option.value || "empty"}-${index}`}
+                        ref={(node) => {
+                          optionRefs.current[index] = node;
+                        }}
+                        id={`${menuId}-option-${index}`}
+                        type="button"
+                        role="option"
+                        aria-selected={isSelected}
+                        className={`custom-select-option ${isSelected ? "custom-select-option-selected" : ""} ${isActive ? "custom-select-option-active" : ""}`.trim()}
+                        onClick={() => selectValue(option.value)}
+                        onKeyDown={(event) => handleOptionKeyDown(event, index, option.value)}
+                        onMouseEnter={() => setActiveIndex(index)}
+                      >
+                        <span className="custom-select-option-label">{option.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
-            </div>,
+            </>,
             document.body,
           )
         : null}

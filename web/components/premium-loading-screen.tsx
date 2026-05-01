@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect, useState } from "react";
+
 import type { GenerationUiPhase } from "@/lib/generation-controller";
 
 const WORKFLOW_STEPS = [
@@ -107,19 +109,46 @@ const PHASE_CONTENT: Record<
   },
 };
 
+function formatElapsed(ms: number): string {
+  const totalSeconds = Math.max(0, Math.floor(ms / 1000));
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  if (minutes === 0) {
+    return `${seconds}s`;
+  }
+  return `${minutes}m ${String(seconds).padStart(2, "0")}s`;
+}
+
+const ESTIMATE_COPY = "Generation usually takes 3-5 minutes. Safe to leave this tab — your saved request keeps running.";
+
 interface PremiumLoadingScreenProps {
   phase: GenerationUiPhase;
   error?: string | null;
   statusMessage?: string | null;
+  startedAtMs?: number | null;
 }
 
 export function PremiumLoadingScreen({
   phase,
   error = null,
   statusMessage = null,
+  startedAtMs = null,
 }: PremiumLoadingScreenProps) {
   const phaseContent = PHASE_CONTENT[phase];
   const activeIndex = PHASE_ORDER[phase];
+  const showElapsed = phase !== "failed" && phase !== "finalizing" && startedAtMs !== null;
+  const [now, setNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    if (!showElapsed) {
+      return;
+    }
+    setNow(Date.now());
+    const interval = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(interval);
+  }, [showElapsed]);
+
+  const elapsedLabel = showElapsed && startedAtMs !== null ? formatElapsed(now - startedAtMs) : null;
 
   return (
     <section className={`panel loading-shell loading-phase-${phase}`}>
@@ -146,10 +175,15 @@ export function PremiumLoadingScreen({
                 <span className="loading-operational-value">{phaseContent.runnerState}</span>
               </div>
               <div className="loading-operational-item">
-                <span className="loading-operational-label">Persistence</span>
-                <span className="loading-operational-value">Saved immediately</span>
+                <span className="loading-operational-label">Elapsed</span>
+                <span className="loading-operational-value loading-operational-value-mono" aria-live="polite">
+                  {elapsedLabel ?? "--"}
+                </span>
               </div>
             </div>
+            {phase !== "failed" ? (
+              <p className="loading-estimate muted">{ESTIMATE_COPY}</p>
+            ) : null}
             {phase !== "failed" ? (
               <div className="loading-scan-rail" aria-hidden="true">
                 <span className="loading-scan-line" />

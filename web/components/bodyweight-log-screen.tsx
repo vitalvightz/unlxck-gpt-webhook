@@ -466,6 +466,7 @@ export function BodyweightLogScreen() {
                                 <input
                                   type="number"
                                   step="0.1"
+                                  inputMode="decimal"
                                   value={editingDraft.weight_kg}
                                   onChange={(event) =>
                                     setEditingDraft((current) => current ? { ...current, weight_kg: event.target.value } : current)
