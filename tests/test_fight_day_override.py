@@ -109,6 +109,7 @@ def test_override_replaces_any_role_on_fight_weekday(role_key):
     fight_role = final_week["session_roles"][0]
     assert fight_role["role_key"] == "fight_day_protocol"
     assert fight_role["display_text"] == FIGHT_DAY_PROTOCOL_TEXT
+    assert fight_role["athlete_facing_label"] == "Fight day protocol"
     assert fight_role["scheduled_day_hint"] == "friday"
 
 

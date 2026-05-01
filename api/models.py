@@ -748,6 +748,7 @@ class WeeklyDayEntry(BaseModel):
 class WeeklySchedule(BaseModel):
     plan_id: str
     week_index: int
+    display_week_index: int | None = None
     week_count: int
     phase: str = ""
     days: list[WeeklyDayEntry]

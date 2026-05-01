@@ -118,6 +118,8 @@ export function WeeklySparringView({ planId }: { planId: string }) {
     return null;
   }
 
+  const displayWeekIndex =
+    typeof schedule.display_week_index === "number" ? schedule.display_week_index : schedule.week_index;
   const canGoPrevious = schedule.week_index > 0;
   const canGoNext = schedule.week_index + 1 < schedule.week_count;
 
@@ -131,7 +133,7 @@ export function WeeklySparringView({ planId }: { planId: string }) {
           <p className="kicker">Weekly View</p>
           <h3>Live sparring map</h3>
           <p className="muted weekly-sparring-phase">
-            {schedule.phase ? `${formatToken(schedule.phase)} | ` : ""}Week {schedule.week_index + 1} of{" "}
+            {schedule.phase ? `${formatToken(schedule.phase)} | ` : ""}Week {displayWeekIndex + 1} of{" "}
             {schedule.week_count}
           </p>
         </div>
@@ -147,7 +149,7 @@ export function WeeklySparringView({ planId }: { planId: string }) {
             Prev
           </button>
           <span className="weekly-sparring-week-label">
-            {schedule.week_index + 1}/{schedule.week_count}
+            {displayWeekIndex + 1}/{schedule.week_count}
           </span>
           <button
             type="button"

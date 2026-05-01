@@ -297,3 +297,25 @@ def test_extract_weekly_schedule_protected_late_week_uses_session_roles_and_d0_o
     assert by_day["Sat"]["countdown_label"] == "D-0"
     assert by_day["Sat"]["status"] == "fight_day_protocol"
     assert by_day["Sat"]["reason_codes"] == ["fight_day_protocol"]
+
+
+def test_extract_weekly_schedule_uses_week_structural_index_for_display_position():
+    schedule = extract_weekly_schedule(
+        {
+            "weekly_role_map": {
+                "weeks": [
+                    {"week_index": 6, "phase": "TAPER", "hard_sparring_plan": []},
+                    {"week_index": 5, "phase": "SPP", "hard_sparring_plan": []},
+                    {"week_index": 4, "phase": "SPP", "hard_sparring_plan": []},
+                    {"week_index": 3, "phase": "SPP", "hard_sparring_plan": []},
+                    {"week_index": 2, "phase": "GPP", "hard_sparring_plan": []},
+                    {"week_index": 1, "phase": "GPP", "hard_sparring_plan": []},
+                ]
+            }
+        }
+    )
+
+    assert schedule is not None
+    assert schedule["week_index"] == 0
+    assert schedule["display_week_index"] == 5
+    assert schedule["week_count"] == 6

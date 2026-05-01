@@ -274,6 +274,7 @@ export type WeeklyDayEntry = {
 export type WeeklySchedule = {
   plan_id: string;
   week_index: number;
+  display_week_index?: number | null;
   week_count: number;
   phase: string;
   days: WeeklyDayEntry[];

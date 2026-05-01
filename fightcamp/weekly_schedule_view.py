@@ -214,8 +214,10 @@ def extract_weekly_schedule(planning_brief: Any, *, week_index: int = 0) -> dict
     if _is_protected_late_week(week):
         if hard_plan_is_list:
             _fill_protected_late_week(days_by_weekday, week)
+            display_week_index = int(week.get("week_index") or (week_index + 1)) - 1
             return {
                 "week_index": week_index,
+                "display_week_index": max(0, min(len(weeks) - 1, display_week_index)),
                 "week_count": len(weeks),
                 "phase": str(week.get("phase") or "").strip(),
                 "days": days,
@@ -238,8 +240,11 @@ def extract_weekly_schedule(planning_brief: Any, *, week_index: int = 0) -> dict
                 if weekday and weekday in days_by_weekday:
                     _fill_legacy_hard_day(days_by_weekday[weekday])
 
+    display_week_index = int(week.get("week_index") or (week_index + 1)) - 1
+
     return {
         "week_index": week_index,
+        "display_week_index": max(0, min(len(weeks) - 1, display_week_index)),
         "week_count": len(weeks),
         "phase": str(week.get("phase") or "").strip(),
         "days": days,

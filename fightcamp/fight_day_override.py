@@ -78,7 +78,7 @@ def _make_fight_day_protocol_role(day: str) -> dict[str, Any]:
         ),
         "coach_owned": True,
         "display_text": FIGHT_DAY_PROTOCOL_TEXT,
-        "athlete_facing_label": FIGHT_DAY_PROTOCOL_TEXT,
+        "athlete_facing_label": "Fight day protocol",
         "governance": {
             "authority": "fight_day_protocol_lock",
             "execution_only": False,
