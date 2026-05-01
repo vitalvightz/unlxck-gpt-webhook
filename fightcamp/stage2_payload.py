@@ -2932,19 +2932,160 @@ def _slot_exercise_name(slot: dict[str, Any]) -> str:
     return str(slot.get("name") or slot.get("exercise_name") or slot.get("drill_name") or "").strip()
 
 
-def _selected_exercise_names(candidate_pools: dict[str, dict]) -> list[str]:
-    names: list[str] = []
-    for pool in (candidate_pools or {}).values():
+def _slot_selected_option(slot: dict[str, Any]) -> dict[str, Any]:
+    selected = slot.get("selected")
+    return selected if isinstance(selected, dict) else {}
+
+
+def _slot_text(slot: dict[str, Any]) -> str:
+    selected = _slot_selected_option(slot)
+    parts = [
+        str(slot.get("role") or ""),
+        str(slot.get("purpose") or ""),
+        str(slot.get("quality_class") or ""),
+        str(selected.get("quality_class") or ""),
+        str(selected.get("prescription") or ""),
+        " ".join(clean_list(selected.get("movement_patterns"))),
+        " ".join(clean_list(selected.get("restriction_tags"))),
+        " ".join(clean_list(selected.get("mechanical_risk_tags"))),
+    ]
+    return " ".join(part for part in parts if part).lower()
+
+
+def _slot_countdown_labels(slot: dict[str, Any]) -> list[str]:
+    selected = _slot_selected_option(slot)
+    labels: list[str] = []
+    for source in (slot, selected):
+        for key in ("scheduled_countdown_label", "countdown_label", "days_out_bucket"):
+            value = source.get(key)
+            if value:
+                labels.append(str(value))
+        labels.extend(clean_list(source.get("allowed_countdown_labels")))
+        labels.extend(clean_list(source.get("countdown_labels")))
+    return dedupe_preserve_order(labels)
+
+
+def _slot_support_only(slot: dict[str, Any]) -> bool:
+    selected = _slot_selected_option(slot)
+    return bool(slot.get("support_only") or selected.get("support_only"))
+
+
+def _slot_anchor_capable(slot: dict[str, Any]) -> bool:
+    selected = _slot_selected_option(slot)
+    return bool(slot.get("anchor_capable") or selected.get("anchor_capable"))
+
+
+def _slot_is_low_load_reset(slot: dict[str, Any]) -> bool:
+    text = _slot_text(slot)
+    return _slot_support_only(slot) or any(
+        phrase in text
+        for phrase in ("rehab", "prehab", "mobility", "breathing", "reset", "recovery")
+    )
+
+
+def _slot_matches_late_fight_role(slot: dict[str, Any], slot_group: str, role: dict[str, Any]) -> bool:
+    role_key = str(role.get("role_key") or "").strip()
+    preferred_system = str(role.get("preferred_system") or "").strip().lower()
+    slot_role = str(slot.get("role") or "").strip().lower()
+    text = _slot_text(slot)
+
+    if slot_group == "rehab_slots":
+        return role_key in {"fight_week_freshness_day", "technical_touch_day"}
+    if slot_group == "conditioning_slots":
+        if preferred_system:
+            return slot_role == preferred_system
+        return role_key in {"alactic_sharpness_day", "light_fight_pace_touch_day", "technical_touch_day"}
+    if slot_group != "strength_slots":
+        return False
+
+    if role_key == "strength_touch_day":
+        return _slot_anchor_capable(slot) and not _slot_is_low_load_reset(slot)
+    if role_key == "neural_primer_day":
+        return _slot_anchor_capable(slot) and any(
+            phrase in text
+            for phrase in ("isometric", "neural", "primer", "speed", "rate_of_force", "coordination")
+        )
+    if role_key == "technical_touch_day":
+        return any(
+            phrase in text
+            for phrase in ("shadowboxing", "shadow boxing", "technical", "footwork", "skill_refinement", "coordination")
+        ) and not any(phrase in text for phrase in ("loaded", "heavy", "trap_bar", "deadlift"))
+    if role_key == "fight_week_freshness_day":
+        return _slot_is_low_load_reset(slot)
+    return False
+
+
+def _scheduled_late_fight_roles(spec: dict[str, Any]) -> list[dict[str, Any]]:
+    roles = spec.get("visible_session_sequence") or spec.get("session_sequence") or []
+    return [role for role in roles if isinstance(role, dict) and str(role.get("scheduled_countdown_label") or "")]
+
+
+def _candidate_slots_for_role(candidate_pools: dict[str, dict], role: dict[str, Any]) -> list[tuple[str, str, dict[str, Any]]]:
+    matched: list[tuple[str, str, dict[str, Any]]] = []
+    for phase, pool in (candidate_pools or {}).items():
         if not isinstance(pool, dict):
             continue
         for slot_group in ("strength_slots", "conditioning_slots", "rehab_slots"):
             for slot in pool.get(slot_group, []) or []:
-                if not isinstance(slot, dict):
+                if not isinstance(slot, dict) or not _slot_exercise_name(slot):
                     continue
-                name = _slot_exercise_name(slot)
-                if name:
-                    names.append(name)
-    return dedupe_preserve_order(names)
+                if _slot_matches_late_fight_role(slot, slot_group, role):
+                    matched.append((str(phase), slot_group, slot))
+    return matched
+
+
+def _build_late_fight_allowed_exercises_by_day(
+    *,
+    spec: dict[str, Any],
+    candidate_pools: dict[str, dict],
+) -> tuple[dict[str, list[str]], dict[str, list[dict[str, Any]]]]:
+    allowed_by_day: dict[str, list[str]] = {}
+    assignments_by_day: dict[str, list[dict[str, Any]]] = {}
+    consumed_slot_ids: set[str] = set()
+
+    for role in _scheduled_late_fight_roles(spec):
+        day_label = str(role.get("scheduled_countdown_label") or role.get("countdown_label") or "").strip()
+        if not day_label:
+            continue
+        allowed_by_day.setdefault(day_label, [])
+        assignments_by_day.setdefault(day_label, [])
+
+        explicit_matches: list[tuple[str, str, dict[str, Any]]] = []
+        fallback_matches: list[tuple[str, str, dict[str, Any]]] = []
+        for phase, slot_group, slot in _candidate_slots_for_role(candidate_pools, role):
+            slot_id = str(slot.get("slot_id") or f"{phase}:{slot_group}:{_slot_exercise_name(slot)}")
+            labels = _slot_countdown_labels(slot)
+            if labels:
+                if day_label in labels:
+                    explicit_matches.append((phase, slot_group, slot))
+                continue
+            if slot_id not in consumed_slot_ids:
+                fallback_matches.append((phase, slot_group, slot))
+
+        selected_matches = explicit_matches or fallback_matches[:1]
+        for phase, slot_group, slot in selected_matches:
+            name = _slot_exercise_name(slot)
+            if not name:
+                continue
+            slot_id = str(slot.get("slot_id") or f"{phase}:{slot_group}:{name}")
+            if not _slot_countdown_labels(slot):
+                consumed_slot_ids.add(slot_id)
+            allowed_by_day[day_label].append(name)
+            assignments_by_day[day_label].append(
+                {
+                    "name": name,
+                    "role_key": role.get("role_key"),
+                    "scheduled_countdown_label": day_label,
+                    "slot_id": slot.get("slot_id"),
+                    "slot_group": slot_group,
+                    "phase": phase,
+                }
+            )
+
+    return (
+        {day: dedupe_preserve_order(names) for day, names in allowed_by_day.items()},
+        assignments_by_day,
+    )
 
 
 def _late_fight_countdown_days_from_spec(days_until_fight: Any, spec: dict[str, Any]) -> list[int]:
@@ -2971,15 +3112,16 @@ def _with_late_fight_allowed_exercises(
     candidate_pools: dict[str, dict],
     days_until_fight: Any,
 ) -> dict[str, Any]:
-    selected_names = _selected_exercise_names(candidate_pools)
-    allowed_by_day = {
-        f"D-{day}": selected_names
-        for day in _late_fight_countdown_days_from_spec(days_until_fight, spec)
-        if selected_names
-    }
+    allowed_by_day, assignments_by_day = _build_late_fight_allowed_exercises_by_day(
+        spec=spec,
+        candidate_pools=candidate_pools,
+    )
+    for day in _late_fight_countdown_days_from_spec(days_until_fight, spec):
+        allowed_by_day.setdefault(f"D-{day}", [])
     return {
         **spec,
         "allowed_exercises_by_day": allowed_by_day,
+        "allowed_exercise_assignments_by_day": assignments_by_day,
     }
 
 

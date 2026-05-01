@@ -1659,7 +1659,7 @@ def _allowed_exercises_by_countdown_day(spec: dict[str, Any]) -> dict[int, dict[
         if not match:
             continue
         names = clean_list(raw_names)
-        if not names:
+        if raw_names is None:
             continue
         allowed_by_day[int(match.group(1))] = {
             "names": dedupe_preserve_order(names),
