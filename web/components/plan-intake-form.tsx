@@ -495,19 +495,20 @@ function CheckboxGroup({
         {options.map((option) => {
           const checked = selectedValues.includes(option.value);
           const daysOutDisabledReason = getOptionDisabledReason?.(option, checked) ?? null;
-          const capDisabledReason = disableAdditionalSelections && !checked ? "Focus cap reached." : null;
-          const disabledReason = daysOutDisabledReason ?? capDisabledReason;
-          const disabled = disableAll || Boolean(disabledReason);
+          const capDisabled = disableAdditionalSelections && !checked;
+          const disabled = disableAll || Boolean(daysOutDisabledReason) || capDisabled;
+          const labelTitle = daysOutDisabledReason ?? (capDisabled ? "Focus cap reached." : undefined);
           return (
             <label
               key={option.value}
               className={`checkbox-card ${checked ? "checkbox-card-checked" : ""} ${disabled ? "checkbox-card-disabled" : ""}`.trim()}
               aria-disabled={disabled}
+              title={labelTitle}
             >
               <input type="checkbox" checked={checked} disabled={disabled} onChange={() => onToggle(option.value)} />
               <span className="checkbox-card-copy">
                 <span className="checkbox-card-title">{option.label}</span>
-                {disabledReason ? <span className="checkbox-card-description">{disabledReason}</span> : null}
+                {daysOutDisabledReason ? <span className="checkbox-card-tag">{daysOutDisabledReason}</span> : null}
               </span>
             </label>
           );
@@ -1334,6 +1335,9 @@ export function PlanIntakeForm() {
   const performanceFocusCapTitle = performanceFocusCapValue === null
     ? "Set a fight date to calculate your focus cap"
     : `${selectedPerformanceFocusCount} of ${performanceFocusCapValue} focus picks used`;
+  const performanceFocusCapBadge = performanceFocusCapValue === null
+    ? "—/—"
+    : `${selectedPerformanceFocusCount}/${performanceFocusCapValue}`;
   const performanceFocusCapDetail = performanceFocusCapValue === null
     ? "Goals and weak areas share a cap once the fight date is set so the plan can match the camp window."
     : performanceFocusCapExceeded
@@ -1341,6 +1345,15 @@ export function PlanIntakeForm() {
       : performanceFocusCapReached
         ? `Goals and weak areas share this ${performanceFocusCapValue}-pick cap for ${performanceFocusWindowLabel}. ${performanceFocusReason} Cap reached. Unselect one to change your focus.`
         : `Goals and weak areas share this ${performanceFocusCapValue}-pick cap for ${performanceFocusWindowLabel}. ${performanceFocusReason} You can add ${remainingPerformanceFocusSelections} more.`;
+  const performanceFocusCapHint = performanceFocusCapValue === null
+    ? "Set the fight date to lock in your focus cap."
+    : performanceFocusCapExceeded
+      ? `${selectedPerformanceFocusCount - performanceFocusCapValue} over cap — unselect to fit.`
+      : performanceFocusCapReached
+        ? "Cap reached. Unselect one to swap."
+        : remainingPerformanceFocusSelections === 1
+          ? "1 pick remaining."
+          : `${remainingPerformanceFocusSelections} picks remaining.`;
   const weightCutStatus = formatWeightCutStatus(form.athlete.weight_kg, form.athlete.target_weight_kg);
   const equipmentLimitations = formatEquipmentLimitations(form.equipment_access);
   const sparringConsistency = getSparringConsistency(
@@ -2313,12 +2326,17 @@ export function PlanIntakeForm() {
         {currentStep === 4 ? (
           <div className="step-layout onboarding-step-layout">
             <div className="step-main athlete-motion-slot athlete-motion-main onboarding-step-main">
-              <article className={`support-panel ${performanceFocusCapExceeded ? "support-panel-alert" : ""}`.trim()}>
-                <div className="form-section-header">
-                  <p className="kicker">Focus cap</p>
-                  <h2 className="form-section-title">{performanceFocusCapTitle}</h2>
+              <article
+                className={`focus-cap-card ${performanceFocusCapExceeded ? "focus-cap-card-alert" : performanceFocusCapReached ? "focus-cap-card-full" : ""}`.trim()}
+                aria-label={performanceFocusCapTitle}
+              >
+                <span className="focus-cap-badge" aria-hidden="true">
+                  {performanceFocusCapBadge}
+                </span>
+                <div className="focus-cap-copy">
+                  <p className="focus-cap-label">Focus cap</p>
+                  <p className="focus-cap-hint">{performanceFocusCapHint}</p>
                 </div>
-                <p className="muted">{performanceFocusCapDetail}</p>
               </article>
               {shouldHideField(daysOutCtx, "key_goals") ? (
               <article className="step-card">
