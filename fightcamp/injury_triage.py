@@ -71,10 +71,11 @@ _TRAUMA_CONTEXT_PATTERNS = (
 _NEURO_CONTEXT_PATTERN = r"\bneurolog(?:ic|ical)\b|\bnerve\b"
 _WORSENING_TRENDS = {"worse", "worsening", "regressing", "worsened"}
 
+_FRACTURE_REGIONS = ("bone", "ankle", "leg", "arm", "rib", "wrist", "hand", "foot", "jaw", "nose", "finger", "toe")
 _BROKE_REGION_RE = re.compile(
-    r"\bbroke\s+(?:my\s+)?(?:ankle|leg|arm|rib|wrist|hand|foot|jaw|nose|finger|toe)\b"
+    rf"\b(?:broke|broken)\s+(?:my\s+)?(?:{'|'.join(_FRACTURE_REGIONS)})\b"
 )
-_BROKE_IT_RE = re.compile(r"\bbroke\s+it\b")
+_BROKE_IT_RE = re.compile(r"\b(?:broke|broken)\s+it\b")
 
 
 def _normalize_guided_severity_token(value: str) -> str:
