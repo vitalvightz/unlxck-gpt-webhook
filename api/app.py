@@ -1251,9 +1251,9 @@ def create_app(
         updated_why_log = dict(why_log)
         updated_why_log["triage_resume_approval"] = approval_log
         updated_why_log["triage_regeneration_cleared"] = True
-        await asyncio.to_thread(
+        
         client_request_id = f"triage_resume_{plan_id}"
-
+        
         job = await asyncio.to_thread(
             store.create_or_get_generation_job,
             athlete_id=str(plan_row["athlete_id"]),
