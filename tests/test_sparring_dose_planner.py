@@ -444,18 +444,13 @@ def test_convert_all_countdown_labels_all_as_managed_hard():
     assert all(e["hard_day_class"] == "managed_hard" for e in plan)
 
 
-def test_cap_one_countdown_protected_day_is_primary_hard():
-    # D-7: cap_one — protected day stays hard (primary), rest are managed.
+def test_d7_countdown_converts_all_declared_hard_days_to_technical():
     plan = compute_hard_sparring_plan(
         week=_week(hard_days=["Monday", "Wednesday", "Friday"]),
         athlete_snapshot=_athlete(days_until_fight=7, hard_days=["Monday", "Wednesday", "Friday"]),
     )
-    by_day = {e["day"]: e for e in plan}
-    hard_entries = [e for e in plan if e["hard_day_class"] == "primary_hard"]
-    managed_entries = [e for e in plan if e["hard_day_class"] == "managed_hard"]
-    assert len(hard_entries) == 1
-    assert len(managed_entries) == 2
-    assert hard_entries[0]["status"] == "hard_as_planned"
+    assert all(e["status"] == "convert_to_technical_suggested" for e in plan)
+    assert all(e["effective_load"] == "technical" for e in plan)
 
 
 # ── Three hard days with multiple amber readiness signals ────────────────────
@@ -572,8 +567,7 @@ def test_countdown_convert_all_plan_has_hard_day_class_labels():
     assert all("hard_day_class" in e for e in plan)
 
 
-def test_cap_one_countdown_with_collision_owner_picks_collision_day():
-    # D-7 cap_one + collision owner = Friday should keep Friday hard (not Monday).
+def test_d7_countdown_collision_owner_still_converts_to_technical():
     plan = compute_hard_sparring_plan(
         week=_week(
             hard_days=["Monday", "Wednesday", "Friday"],
@@ -582,9 +576,8 @@ def test_cap_one_countdown_with_collision_owner_picks_collision_day():
         athlete_snapshot=_athlete(days_until_fight=7, hard_days=["Monday", "Wednesday", "Friday"]),
     )
     hard_entries = [e for e in plan if e["status"] == "hard_as_planned"]
-    assert len(hard_entries) == 1
-    assert hard_entries[0]["day"] == "Friday"
-    assert hard_entries[0]["hard_day_class"] == "primary_hard"
+    assert hard_entries == []
+    assert all(e["effective_load"] == "technical" for e in plan)
 
 
 def test_finalize_plan_never_exceeds_cap_on_any_path():
@@ -686,6 +679,7 @@ def test_bridge_d16_downgrades_all_declared_hard_days():
         athlete_snapshot=_athlete(days_until_fight=16, hard_days=["Tuesday", "Thursday"]),
     )
     assert all(entry["status"] != "hard_as_planned" for entry in plan)
+    assert all(entry["effective_load"] == "technical" for entry in plan)
 
 
 def test_bridge_d15_converts_to_technical_only():
