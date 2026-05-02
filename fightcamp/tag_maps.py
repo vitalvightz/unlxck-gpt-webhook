@@ -235,3 +235,40 @@ WEAKNESS_TAG_MAP = {
     "adductor groin": ["adductors", "balance", "lateral_power"],
     "adductor_groin": ["adductors", "balance", "lateral_power"],
 }
+
+
+def _expand(picks, tag_map) -> set[str]:
+    expanded: set[str] = set()
+    for pick in picks or []:
+        key = str(pick).strip().lower()
+        if not key:
+            continue
+        expanded.update(tag_map.get(key, []))
+    return expanded
+
+
+def expand_goal_tags(goals) -> set[str]:
+    """Return the union of normalised tags for the athlete's selected goals."""
+    return _expand(goals, GOAL_TAG_MAP)
+
+
+def expand_weakness_tags(weaknesses) -> set[str]:
+    """Return the union of normalised tags for the athlete's selected weaknesses."""
+    return _expand(weaknesses, WEAKNESS_TAG_MAP)
+
+
+def has_goal_intent(goal_tags, goal_key: str) -> bool:
+    """True when ``goal_tags`` overlaps the tag set for the named form pick.
+
+    Use this instead of ``"<goal_key>" in goals`` so a renamed or mistyped
+    form pick still resolves through GOAL_TAG_MAP rather than silently
+    going false.
+    """
+    target = set(GOAL_TAG_MAP.get(str(goal_key).strip().lower(), []))
+    return bool(target & set(goal_tags or []))
+
+
+def has_weakness_intent(weak_tags, weakness_key: str) -> bool:
+    """True when ``weak_tags`` overlaps the tag set for the named form pick."""
+    target = set(WEAKNESS_TAG_MAP.get(str(weakness_key).strip().lower(), []))
+    return bool(target & set(weak_tags or []))

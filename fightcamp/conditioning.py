@@ -19,7 +19,15 @@ from .injury_guard import Decision, choose_injury_replacement, injury_decision, 
 from .restriction_filtering import evaluate_restriction_impact
 from .diagnostics import format_missing_system_block
 from .tagging import normalize_item_tags, normalize_tags
-from .tag_maps import GOAL_TAG_MAP, STYLE_TAG_MAP, WEAKNESS_TAG_MAP
+from .tag_maps import (
+    GOAL_TAG_MAP,
+    STYLE_TAG_MAP,
+    WEAKNESS_TAG_MAP,
+    expand_goal_tags,
+    expand_weakness_tags,
+    has_goal_intent,
+    has_weakness_intent,
+)
 from .config import (
     PHASE_SYSTEM_RATIOS,
     STYLE_CONDITIONING_RATIO,
@@ -1050,10 +1058,9 @@ def _resolved_conditioning_names(resolved_sessions: list[dict]) -> list[str]:
 
 def select_coordination_drill(flags, existing_names: set[str], injuries: list[str]):
     """Return a coordination drill matching the current phase if needed."""
-    goals = [g.lower() for g in flags.get("key_goals", [])]
-    weaknesses = [w.lower() for w in flags.get("weaknesses", [])]
-    coord_terms = {"coordination", "coordination/proprioception", "coordination / proprioception"}
-    if not any(g in coord_terms for g in goals) and not any(w in coord_terms for w in weaknesses):
+    goal_tags = expand_goal_tags(flags.get("key_goals", []))
+    weak_tags = expand_weakness_tags(flags.get("weaknesses", []))
+    if "coordination" not in goal_tags and "coordination" not in weak_tags:
         return None
 
     phase = flags.get("phase", "GPP").upper()
@@ -1499,11 +1506,8 @@ def generate_conditioning_block(flags):
     style_tags = normalize_tags([t for s in style_tags for t in STYLE_TAG_MAP.get(s, [])])
 
     goal_tags = expand_tags(goals, GOAL_TAG_MAP)
-    goal_list = [g.lower() for g in goals]
     weak_tags = expand_tags(weaknesses, WEAKNESS_TAG_MAP)
-    shoulder_focus = any('shoulder' in g.lower() for g in goals) or any(
-        'shoulder' in w.lower() for w in weaknesses
-    )
+    shoulder_focus = "shoulders" in goal_tags or "shoulders" in weak_tags
 
     style_map = {
         "mma": "mma",
@@ -2171,7 +2175,7 @@ def generate_conditioning_block(flags):
     allow_glycolytic = False
     if phase.upper() == "TAPER":
         lactic_goal_tags = {"glycolytic", "anaerobic_lactic", "lactic"}
-        has_conditioning_goal = any(g in {"conditioning", "endurance"} for g in goal_list)
+        has_conditioning_goal = has_goal_intent(goal_tags, "conditioning")
         has_lactic_goal = bool(set(goal_tags) & lactic_goal_tags)
         if active_late_window:
             allow_glycolytic = (
@@ -2318,8 +2322,10 @@ def generate_conditioning_block(flags):
         return None, None
 
     if phase.upper() == "TAPER":
-        combined_focus = [w.lower() for w in weaknesses] + goal_list
-        allow_aerobic = any(k in combined_focus for k in ["conditioning", "endurance"])
+        allow_aerobic = (
+            has_goal_intent(goal_tags, "conditioning")
+            or has_weakness_intent(weak_tags, "conditioning")
+        )
 
         d, r = blended_pick("alactic")
         if d:
@@ -2571,8 +2577,7 @@ def generate_conditioning_block(flags):
                     break
                     
     # --------- SKILL REFINEMENT DRILL GUARANTEE ---------
-    goal_set = {g.lower() for g in goals}
-    if "skill_refinement" in goal_set and len(selected_drill_names) < total_drills:
+    if "skill_refinement" in goal_tags and len(selected_drill_names) < total_drills:
         existing_names = {d.get("name") for _, drills in final_drills for d in drills}
         skill_drills = [
             d for d in get_style_conditioning_bank()

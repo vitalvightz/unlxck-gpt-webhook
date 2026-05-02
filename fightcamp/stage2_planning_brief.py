@@ -12,6 +12,7 @@ from typing import Any
 from .input_parsing import _athlete_calendar_now, _utc_now
 from .normalization import clean_list, normalize_text, phrase_in_text, slugify, dedupe_preserve_order
 from .restriction_parsing import CANONICAL_RESTRICTIONS
+from .tag_maps import expand_goal_tags, has_goal_intent
 from .training_context import TrainingContext, allocate_sessions
 from .weight_cut import compute_cut_severity_score, cut_severity_bucket
 from .athlete_model import (  # noqa: F401  (re-exported for backwards compatibility)
@@ -400,11 +401,12 @@ def _derive_main_limiter(athlete_model: dict) -> str:
     fatigue = str(athlete_model.get("fatigue", "")).strip().lower()
     readiness_flags = set(clean_list(athlete_model.get("readiness_flags", [])))
 
+    goal_tags = expand_goal_tags(goals)
     if weaknesses:
         return f"Primary limiter is {weaknesses[0].replace('_', ' ')}."
-    if "conditioning" in goals:
+    if has_goal_intent(goal_tags, "conditioning"):
         return "Primary limiter is fight conditioning repeatability."
-    if "power" in goals:
+    if has_goal_intent(goal_tags, "power"):
         return "Primary limiter is power expression under fight fatigue."
     if readiness_flags & {"moderate_fatigue", "high_fatigue"} or fatigue in {"moderate", "high"}:
         return "Primary limiter is accumulated fatigue management."

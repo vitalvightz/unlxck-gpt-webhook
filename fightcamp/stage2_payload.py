@@ -35,6 +35,7 @@ from .fight_day_override import apply_fight_day_override_to_weekly_role_map
 from .late_selector_windows import classify_late_selector_window
 from .normalization import clean_list, normalize_fatigue_level, normalize_text, phrase_in_text, slugify, dedupe_preserve_order
 from .restriction_parsing import CANONICAL_RESTRICTIONS
+from .tag_maps import expand_goal_tags, has_goal_intent
 from .rehab_protocols import _rehab_drills_for_phase, classify_drill_function, _FUNCTION_LABELS
 from .selection_metadata import build_score_evidence, normalize_selection_metadata
 from .stage2_render_guards import (  # noqa: F401  (re-exported for backwards compatibility)
@@ -413,9 +414,10 @@ def _derive_main_limiter(athlete_model: dict) -> str:
 
     if weaknesses:
         return f"Primary limiter is {weaknesses[0].replace('_', ' ')}."
-    if "conditioning" in goals:
+    goal_tags = expand_goal_tags(goals)
+    if has_goal_intent(goal_tags, "conditioning"):
         return "Primary limiter is fight conditioning repeatability."
-    if "power" in goals:
+    if has_goal_intent(goal_tags, "power"):
         return "Primary limiter is power expression under fight fatigue."
     if readiness_flags & {"moderate_fatigue", "high_fatigue"} or fatigue in {"moderate", "high"}:
         return "Primary limiter is accumulated fatigue management."
@@ -2826,9 +2828,10 @@ def _derive_global_priorities(
         if high_pressure_cut:
             preserve.append("Preserve freshness first when cut pressure is high.")
             avoid.append("Do not spend cut margin on optional fatigue that does not directly support the fight.")
-    if "conditioning" in goals:
+    pref_goal_tags = expand_goal_tags(goals)
+    if has_goal_intent(pref_goal_tags, "conditioning"):
         push.append("Prioritize conditioning slots that match the phase objective before extra accessories.")
-    if "power" in goals:
+    if has_goal_intent(pref_goal_tags, "power"):
         push.append("Preserve explosive and alactic work if compliant options remain.")
     if athlete_model.get("weight_cut_risk"):
         push.append("Choose the crispest high-value work and trim optional fatigue before it blunts strength expression or conditioning tolerance.")
@@ -2864,7 +2867,7 @@ def _derive_global_priorities(
         for slot in pool.get("conditioning_slots", [])
         if slot.get("role")
     }
-    if "aerobic" in conditioning_roles and "conditioning" in goals:
+    if "aerobic" in conditioning_roles and has_goal_intent(pref_goal_tags, "conditioning"):
         push.append("Use aerobic work to support recovery and repeatability, not just to add volume.")
     if "alactic" in conditioning_roles:
         push.append("Keep at least one neural-speed option when the phase or taper calls for sharpness.")
