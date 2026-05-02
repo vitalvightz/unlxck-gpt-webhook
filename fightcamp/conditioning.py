@@ -142,6 +142,18 @@ def _metadata_level(drill: dict, field_name: str) -> str:
     return str(drill.get(field_name) or "").strip().lower()
 
 
+def _coerce_optional_int(value) -> int | None:
+    if value is None or value == "":
+        return None
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, int):
+        return value
+    try:
+        return int(str(value).strip())
+    except (TypeError, ValueError):
+        return None
+
 def _low_level(level: str) -> bool:
     return level in {"none", "low"}
 
@@ -1277,7 +1289,7 @@ def render_conditioning_block(
         num_sessions=num_sessions,
     )
 
-    for idx, session in enumerate(sessions, start=1):
+        for idx, session in enumerate(sessions, start=1):
         if not session.get("entries"):
             continue
         systems = session.get("systems", set())
@@ -1300,21 +1312,19 @@ def render_conditioning_block(
             if not entry:
                 continue
             if show_system_labels:
-    label = athlete_facing_system_label(
-        entry.get("primary") or {},
-        late_window=diagnostic_context.get("late_window"),
-    )
-    output_lines.append(f"\n**{label.title()}**")
+                label = athlete_facing_system_label(
+                    entry.get("primary") or {},
+                    late_window=diagnostic_context.get("late_window"),
+                )
+                output_lines.append(f"\n**{label.title()}**")
             session_drills = [entry.get("primary")]
             if entry.get("fallback"):
                 session_drills.append(entry.get("fallback"))
             for d in [drill for drill in session_drills if drill]:
                 name = d.get("name", "Unnamed Drill")
-
                 timing = d.get("timing") or d.get("duration") or "—"
                 load = d.get("load") or d.get("intensity") or "—"
                 equip_note = d.get("equipment_note") or d.get("equipment_notes")
-
                 purpose = (
                     d.get("purpose")
                     or d.get("notes")
