@@ -131,13 +131,7 @@ def _declared_hard_spar_cap(days_until_fight: Any) -> int | None:
         return None
     if 18 <= days <= 21:
         return 1
-    if 14 <= days <= 17:
-        return 0
-    if 8 <= days <= 13:
-        return 2
-    if days == 7:
-        return 1
-    if 0 <= days <= 6:
+    if 0 <= days <= 17:
         return 0
     return None
 
@@ -187,15 +181,9 @@ def _future_declared_weekdays_with_countdown(
 def _hard_spar_status_for_countdown_offset(offset: int) -> str:
     if 18 <= offset <= 21:
         return "hard_allowed"
-    if 14 <= offset <= 17:
-        # D-17 to D-14 cap hard sparring at zero, so declared hard days
+    if 0 <= offset <= 17:
+        # D-17 onward caps hard sparring at zero, so declared hard days
         # downgrade to technical / rhythm instead of staying hard-allowed.
-        return "downgrade"
-    if 8 <= offset <= 13:
-        return "hard_allowed"
-    if offset == 7:
-        return "hard_allowed_but_final_window"
-    if 0 <= offset <= 6:
         return "downgrade"
     return "downgrade"
 
@@ -705,8 +693,8 @@ def _bridge_baseline(state: str, days_until_fight: Any) -> dict[str, Any]:
     if state == TIMING_STATE_BRIDGE:
         sub = bridge_sub_band(days_until_fight)
         # D-21 to D-18 allow one hard sparring exposure for clean/low-risk
-        # athletes; D-17 to D-14 always zero (latest hard spar lives in the
-        # D-21 to D-18 sub-slice per the evidence review).
+        # athletes; D-17 and closer always convert declared hard days to
+        # technical/rhythm only.
         hard_spar_default = 1 if (days is not None and 18 <= days <= 21) else 0
         return {
             "max_active_roles": 3,
@@ -718,7 +706,7 @@ def _bridge_baseline(state: str, days_until_fight: Any) -> dict[str, Any]:
             "double_stress_day_allowed": False,
             "freshness_mandatory": True,
             "bridge_sub_band": sub,
-            "no_hard_sparring_after_d16": sub == "d15_to_d14",
+            "no_hard_sparring_from_d17": days is not None and days <= 17,
         }
     # Late taper baseline reflects the spec's evidence-based caps (D-13 to D-8
     # tighter than the legacy late-fight role budget). Callers that need the
@@ -1162,27 +1150,13 @@ def _late_fight_permission_policy(days_until_fight: Any, athlete_model: dict[str
     hard_allowed_instances = [
         entry
         for entry in classified_hard_days
-        if entry.get("status") in {"hard_allowed", "hard_allowed_but_final_window"}
+        if entry.get("status") == "hard_allowed"
     ]
     preserved_hard_instances = _select_capped_declared_hard_day_instances(
         hard_allowed_instances,
         _declared_hard_spar_cap(days_until_fight),
         protected_day=_protected_collision_owner_day(athlete_model),
     )
-    days = _coerce_days(days_until_fight)
-    if mode == "pre_fight_compressed_payload" and days == 8 and len(preserved_hard_instances) < 2:
-        fallback_instance = next(
-            (
-                entry
-                for entry in classified_hard_days
-                if entry.get("status") == "downgrade"
-                and str(entry.get("weekday") or "").strip()
-                and entry not in preserved_hard_instances
-            ),
-            None,
-        )
-        if fallback_instance is not None:
-            preserved_hard_instances = preserved_hard_instances + [fallback_instance]
     preserved_hard_days = dedupe_preserve_order(
         [
             str(entry.get("weekday") or "").strip().lower()
@@ -1701,7 +1675,7 @@ def _late_fight_permissions(days_until_fight: Any, athlete_model: dict) -> dict:
             "sparring_role": "bridge_collision_owner_capped",
             "forbid": [
                 "more than 1 hard sparring exposure",
-                "hard sparring after D-16",
+                "hard sparring from D-17 onward",
                 "stacked hard days",
                 "double-stress day",
                 "broad development language",
@@ -1914,7 +1888,7 @@ def _late_fight_rendering_rules(days_until_fight: Any) -> dict:
             "rules": [
                 "Bridge compression week: taper-on-ramp framing, not full camp.",
                 "5 blocks per session max. 3 meaningful stress exposures max per rolling 7-day block.",
-                "At most 1 hard sparring exposure. No hard sparring after D-16.",
+                "At most 1 hard sparring exposure in D-21 to D-18. From D-17 onward, all declared hard sparring converts to technical/rhythm only.",
                 "One freshness / mobility session is mandatory. No double-stress days.",
             ],
             "preferred_terms": [
@@ -1952,7 +1926,7 @@ def _late_fight_rendering_rules(days_until_fight: Any) -> dict:
             "framing": "compressed_week",
             "rules": [
                 "Sharpness-week framing. D-N first, weekday second.",
-                "5 blocks per session max. 1 hard sparring day max — extras become technical rhythm.",
+                "5 blocks per session max. No effective hard sparring — all declared hard sparring converts to technical/rhythm only.",
             ],
             "preferred_terms": ["sharpness week", "power touch", "neural touch", "technical rhythm", "freshness session", "mobility / reset"],
             "forbidden_terms": ["primary strength", "secondary strength", "anchor day", "conditioning block", "development block"],
@@ -2144,7 +2118,7 @@ def _hard_sparring_window_context(days_until_fight: Any, athlete_model: dict[str
         )
         hard_allowed = [
             entry for entry in classified
-            if entry.get("status") in {"hard_allowed", "hard_allowed_but_final_window"}
+            if entry.get("status") == "hard_allowed"
         ]
         surviving_instances = _select_capped_declared_hard_day_instances(
             hard_allowed,
@@ -2713,11 +2687,7 @@ def _late_fight_allocation_plan(days_until_fight: Any, athlete_model: dict[str, 
         for label in legal_countdown_labels
         if str(permission_policy.get("countdown_weekday_map", {}).get(label) or "").strip()
     }
-    label_to_display_weekday = {
-        label: str(day).strip()
-        for label in legal_countdown_labels
-        if (day := permission_policy.get("raw_countdown_weekday_map", {}).get(label)) and str(day).strip()
-    }
+    label_to_display_weekday = dict(label_to_weekday)
 
     invalid_locked_roles: list[dict[str, Any]] = []
     eligible_candidates: list[dict[str, Any]] = []
@@ -3061,10 +3031,7 @@ def _space_bridge_countdown_roles(
         max_visible_roles = max_meaningful_stress_exposures + max_support_roles
     hard_spar_cap = _declared_hard_spar_cap(days_until_fight)
     label_to_weekday = _full_countdown_weekday_map(days_until_fight, athlete_model)
-    label_to_display_weekday = _countdown_weekday_map(
-        athlete_model.get("plan_creation_weekday"),
-        days_until_fight,
-    )
+    label_to_display_weekday = dict(label_to_weekday)
     hard_weekdays = _declared_hard_weekdays(athlete_model)
     ordered_roles = sorted(
         roles,
@@ -3221,10 +3188,7 @@ def _bridge_countdown_practical_allocation_plan(days_until_fight: Any, athlete_m
     )
     visible_roles = _visible_insert_session_sequence(public_roles)
     label_to_weekday = _full_countdown_weekday_map(days_until_fight, athlete_model)
-    label_to_display_weekday = _countdown_weekday_map(
-        athlete_model.get("plan_creation_weekday"),
-        days_until_fight,
-    )
+    label_to_display_weekday = dict(label_to_weekday)
     top_level_budget = _late_fight_role_budget(days_until_fight, athlete_model)
     legal_labels = dedupe_preserve_order(
         str(label)
@@ -3256,9 +3220,9 @@ def _bridge_countdown_practical_allocation_plan(days_until_fight: Any, athlete_m
             "locked_days": [role.get("locked_day") for role in public_roles if role.get("locked_day")],
             "blocked_days": [],
             "countdown_weekday_map": {
-                label: label_to_display_weekday.get(label) or label_to_weekday.get(label)
+                label: label_to_weekday.get(label)
                 for label in legal_labels
-                if label_to_display_weekday.get(label) or label_to_weekday.get(label)
+                if label_to_weekday.get(label)
             },
             "availability_adjustments": [],
             "countdown_mode_sequence": _countdown_mode_sequence(days_until_fight),
@@ -3297,15 +3261,15 @@ def _late_fight_summary(days_until_fight: Any) -> str:
     if mode == "bridge_compression_payload":
         return (
             "Use a bridge compression week: taper-on-ramp rather than full camp. "
-            "Keep at most one hard sparring exposure (latest D-16), one meaningful strength touch, "
+            "Keep at most one hard sparring exposure in D-21 to D-18, one meaningful strength touch, "
             "one freshness/mobility reset, and only one short glycolytic touch in D-21 to D-19. "
-            "No stacked hard days. No double-stress days."
+            "From D-17 onward, all declared hard sparring is technical/rhythm only. No stacked hard days. No double-stress days."
         )
     if mode == "pre_fight_compressed_payload":
         return (
-            "Use a compressed pre-fight week. Keep no more than two hard sparring exposures, one meaningful "
-            "strength touch, an optional light fight-rhythm touch only when sparring does not already own the "
-            "week, and one freshness / mobility reset day."
+            "Use a compressed pre-fight week. No effective hard sparring is allowed: all declared hard sparring "
+            "from D-17 onward converts to technical/rhythm only. Keep one meaningful strength touch, an optional "
+            "light fight-rhythm touch, and one freshness / mobility reset day."
         )
     if mode == "late_fight_week_payload":
         return "Use a compressed sharpness week. Keep one main neural or power touch, one fight-rhythm touch at most, and the rest on freshness, mobility, and reset."
@@ -3647,6 +3611,12 @@ def _build_late_fight_plan_spec(days_until_fight: Any, athlete_model: dict) -> d
     hard_sparring_context = _hard_sparring_window_context(days_until_fight, athlete_model)
     if hard_sparring_context:
         spec.update(hard_sparring_context)
+    days = _coerce_days(days_until_fight)
+    if days is not None and 0 <= days <= 17:
+        spec["hard_sparring_ban_summary"] = (
+            "All declared hard sparring from D-17 onward is converted to technical/rhythm only. "
+            "No effective hard sparring allowed."
+        )
     return spec
 
 
@@ -3742,7 +3712,7 @@ def _handoff_mode_instructions(payload_mode: str) -> str:
         return (
             "BRIDGE COMPRESSION WEEK (D-21 to D-14)\n"
             "Taper-on-ramp, not full camp. 5 blocks per session max.\n"
-            "Meaningful stress cap: 3 per rolling 7 days. Hard sparring: 1 max, latest D-16.\n"
+            "Meaningful stress cap: 3 per rolling 7 days. Hard sparring: 1 max in D-21 to D-18 only; from D-17 onward all declared hard sparring converts to technical/rhythm only.\n"
             "Strength/power: 1 touch max. Glycolytic touch: at most 1 in D-21 to D-19, else 0.\n"
             "One freshness/mobility reset is mandatory. No stacked hard days. No double-stress day.\n\n"
             + _CONTRACT
@@ -3750,7 +3720,7 @@ def _handoff_mode_instructions(payload_mode: str) -> str:
     if payload_mode == "pre_fight_compressed_payload":
         return (
             "COMPRESSED PRE-FIGHT WEEK (D-13 to D-8)\n"
-            "5 blocks per session max. Hard sparring: 2 max. Strength/power: 1 touch max.\n"
+            "5 blocks per session max. No effective hard sparring; all declared hard sparring converts to technical/rhythm only. Strength/power: 1 touch max.\n"
             "Fight-rhythm touch: 1 max — suppress entirely if sparring already owns the week.\n"
             "One freshness, mobility, or reset session is mandatory.\n"
             "From D-10 to D-8, taper_micro_support may appear only as one optional add-on line (4-6 min max) - never as a standalone session or anchor.\n"
@@ -3761,7 +3731,7 @@ def _handoff_mode_instructions(payload_mode: str) -> str:
         return (
             "SHARPNESS WEEK (D-7)\n"
             "5 blocks per session max. Stress cap: 2 meaningful exposures total.\n"
-            "Neural/power: 1 max. Fight-rhythm: 1 max. Hard sparring: 1 declared day — extras become technical rhythm.\n"
+            "Neural/power: 1 max. Fight-rhythm: 1 max. No effective hard sparring; all declared hard sparring converts to technical/rhythm only.\n"
             "Optional taper_micro_support: one add-on line only, 3-5 min max.\n"
             "No development language, no multi-stressor stacking.\n\n"
             + _CONTRACT
