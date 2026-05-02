@@ -3,6 +3,7 @@ from __future__ import annotations
 import re
 from typing import Any
 
+from .fight_date_utils import d_day_for_weekday
 from .injury_formatting import parse_injury_entry
 from .normalization import clean_list, ordered_weekdays as _ordered_weekdays
 from .weight_cut import compute_cut_severity_score, cut_severity_bucket
@@ -600,11 +601,121 @@ def _apply_hard_day_cap(
     return [plan_by_day[d] for d in hard_days]
 
 
+def _per_day_d_days(
+    week: dict[str, Any], hard_days: list[str]
+) -> dict[str, int]:
+    """Return per-weekday D-day for declared hard sparring days in this week.
+
+    Skips days when the week's calendar metadata is missing (e.g. legacy
+    callers that have not threaded fight_weekday / projected_days_until_fight_end
+    through). Per-day countdown rules are no-ops when this returns empty.
+    """
+    fight_weekday = week.get("fight_weekday")
+    end_d = week.get("projected_days_until_fight_end")
+    span = week.get("span_days")
+    if not fight_weekday or not isinstance(end_d, int) or not isinstance(span, int):
+        return {}
+    result: dict[str, int] = {}
+    for day in hard_days:
+        d_day = d_day_for_weekday(
+            day,
+            fight_weekday=fight_weekday,
+            projected_days_until_fight_end=end_d,
+            span_days=span,
+        )
+        if d_day is not None:
+            result[day] = d_day
+    return result
+
+
+def _apply_per_day_countdown_overrides(
+    plan: list[dict[str, Any]],
+    *,
+    week: dict[str, Any],
+    hard_days: list[str],
+    protected_day: str,
+) -> list[dict[str, Any]]:
+    """Per-day calendar authority: ban D-15 onward, cap D-21..D-16 at one.
+
+    D-16 is the last allowed hard-spar day if already declared (matches the
+    long-standing ``_COUNTDOWN_COACH_NOTES[16]`` semantics). D-15 and closer
+    convert to technical/rhythm/reduced-contact regardless of declaration.
+
+    Acts on each declared hard sparring day individually using its own D-day
+    inside the week — independent of phase/stage labels. This is the rule that
+    makes normal-camp weeks countdown-aware.
+    """
+    per_day = _per_day_d_days(week, hard_days)
+    if not per_day:
+        return plan
+    plan_by_day = {e["day"]: dict(e) for e in plan}
+
+    # D-15 and closer: convert to technical/rhythm/reduced-contact.
+    for day, d_day in per_day.items():
+        if d_day > 15 or d_day < 0:
+            continue
+        entry = plan_by_day.get(day)
+        if entry is None:
+            continue
+        codes = list(entry.get("reason_codes") or [])
+        if "d15_hard_sparring_ban" not in codes:
+            codes.append("d15_hard_sparring_ban")
+        plan_by_day[day] = {
+            **entry,
+            "status": "convert_to_technical_suggested",
+            "effective_load": "technical",
+            "reason_codes": codes,
+            "reason": entry.get("reason")
+            or "D-15 onward: hard sparring banned; convert to technical/rhythm.",
+            "coach_note": entry.get("coach_note")
+            or _sparring_override_coach_note(d_day, "convert"),
+            "d_day": d_day,
+        }
+
+    # D-21 to D-16: cap at one effective hard exposure across that band.
+    band_days = [d for d, dd in per_day.items() if 16 <= dd <= 21]
+    band_days_sorted = [d for d in hard_days if d in band_days]
+    if len(band_days_sorted) >= 2:
+        keeper = (
+            protected_day
+            if protected_day in band_days_sorted
+            else band_days_sorted[0]
+        )
+        for day in band_days_sorted:
+            if day == keeper:
+                continue
+            entry = plan_by_day.get(day)
+            if entry is None or entry.get("effective_load") != "hard":
+                continue
+            codes = list(entry.get("reason_codes") or [])
+            if "d21_d16_cap_one" not in codes:
+                codes.append("d21_d16_cap_one")
+            plan_by_day[day] = {
+                **entry,
+                "status": "deload_suggested",
+                "effective_load": "reduced",
+                "reason_codes": codes,
+                "reason": entry.get("reason")
+                or "D-21 to D-16: cap to one effective hard sparring exposure.",
+                "d_day": per_day[day],
+            }
+
+    # Stamp d_day on every other entry too so downstream consumers see the
+    # calendar reasoning regardless of whether the override fired.
+    for day, d_day in per_day.items():
+        entry = plan_by_day.get(day)
+        if entry is not None and "d_day" not in entry:
+            plan_by_day[day] = {**entry, "d_day": d_day}
+
+    return [plan_by_day[d] for d in hard_days]
+
+
 def _finalize_plan(
     plan: list[dict[str, Any]],
     *,
     hard_days: list[str],
     protected_day: str,
+    week: dict[str, Any] | None = None,
 ) -> list[dict[str, Any]]:
     """Run the post-processing pipeline: consecutive-pair deload, 4+ day cap, classification.
 
@@ -612,6 +723,10 @@ def _finalize_plan(
     is guaranteed to pass through the same rules regardless of which branch produced
     the plan. Consecutive and cap passes are no-ops when no eligible pairs remain.
     """
+    if week is not None:
+        plan = _apply_per_day_countdown_overrides(
+            plan, week=week, hard_days=hard_days, protected_day=protected_day
+        )
     plan = _apply_consecutive_deloads(plan, hard_days=hard_days, protected_day=protected_day)
     if len(hard_days) >= 4:
         plan = _apply_hard_day_cap(plan, hard_days=hard_days, protected_day=protected_day)
@@ -656,7 +771,7 @@ def compute_hard_sparring_plan(*, week: dict[str, Any], athlete_snapshot: dict[s
             }
             for day in hard_days
         ]
-        return _finalize_plan(plan, hard_days=hard_days, protected_day=protected_day)
+        return _finalize_plan(plan, hard_days=hard_days, protected_day=protected_day, week=week)
 
     reason_codes_list = _reason_codes(
         fatigue=fatigue,
@@ -685,7 +800,7 @@ def compute_hard_sparring_plan(*, week: dict[str, Any], athlete_snapshot: dict[s
             }
             for day in hard_days
         ]
-        return _finalize_plan(plan, hard_days=hard_days, protected_day=protected_day)
+        return _finalize_plan(plan, hard_days=hard_days, protected_day=protected_day, week=week)
 
     # --- Final-week cap: keep only one hard day and downgrade the rest ---
     if countdown_override == "cap_one" or (
@@ -718,7 +833,7 @@ def compute_hard_sparring_plan(*, week: dict[str, Any], athlete_snapshot: dict[s
                     or _final_week_sparring_cap_coach_note(),
                 }
             )
-        return _finalize_plan(plan, hard_days=hard_days, protected_day=protected_day)
+        return _finalize_plan(plan, hard_days=hard_days, protected_day=protected_day, week=week)
 
     # --- Single-target downgrade (readiness-based only) ---
     target_day = _pick_downgrade_target(hard_days, week=week)
@@ -745,7 +860,7 @@ def compute_hard_sparring_plan(*, week: dict[str, Any], athlete_snapshot: dict[s
                 "reason": "",
             }
         )
-    return _finalize_plan(plan, hard_days=hard_days, protected_day=protected_day)
+    return _finalize_plan(plan, hard_days=hard_days, protected_day=protected_day, week=week)
 
 
 _COUNTDOWN_COACH_NOTES: dict[int, str] = {
@@ -778,8 +893,9 @@ _COUNTDOWN_COACH_NOTES: dict[int, str] = {
         "keep rounds technical and rhythm-first to protect freshness into fight week."
     ),
     15: (
-        "Fifteen days out. Bridge window means technical and rhythm only "
-        "— no hard sparring in the final bridge sub-band."
+        "Fifteen days out. D-15 is the start of the hard-sparring ban — "
+        "convert any declared hard day to technical/rhythm work; no hard "
+        "contact from here into fight week."
     ),
     16: (
         "Sixteen days out. Last allowed hard-spar day if already declared; "
@@ -800,6 +916,11 @@ def _sparring_override_coach_note(days_until_fight: Any, action: str) -> str:
         return (
             "Seven days out. With multiple hard sparring sessions this week, one shifts to "
             "reduced intensity to protect the cumulative load going into fight week."
+        )
+    if 7 <= days <= 15 and action == "convert":
+        return (
+            f"D-{days}: inside the D-15 hard-sparring ban. Convert this declared hard "
+            "day to technical/rhythm work — no hard contact this close to fight day."
         )
     return ""
 
