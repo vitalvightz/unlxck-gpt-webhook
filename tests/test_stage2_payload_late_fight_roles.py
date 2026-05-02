@@ -1,768 +1,1047 @@
-from fightcamp.stage2_payload_late_fight import (
+"""Focused tests for the late-fight Stage 2 payload split."""
+
+import pytest
+
+from fightcamp.stage2_payload import (
     _build_late_fight_plan_spec,
-    _build_late_fight_session_sequence,
-    _classify_declared_hard_days_for_late_window,
-    _late_fight_session_roles,
-    _planned_sessions_per_week,
-    _select_spaced_hard_days,
+    _build_late_fight_weekly_role_map,
+    _days_out_payload_block,
+    _days_out_payload_mode,
+    _late_fight_permissions,
+    _late_fight_rendering_rules,
+    _normalized_fatigue_level,
+    build_planning_brief,
+    build_stage2_handoff_text,
+    build_stage2_payload,
 )
+from fightcamp.stage2_payload_late_fight import (
+    _late_fight_legal_offsets,
+    _late_fight_stage_label,
+    _late_fight_taper_micro_support_policy,
+    _normalized_fatigue,
+)
+from fightcamp.training_context import TrainingContext
 
 
 _MINIMAL_ATHLETE = {
     "full_name": "Test Athlete",
-    "sport": "boxing",
-    "status": "amateur",
+    "age": 26,
+    "current_weight": 155,
+    "target_weight": 155,
+    "stance": "orthodox",
+    "technical_style": "boxing",
+    "tactical_style": "pressure",
+    "professional_status": "amateur",
+    "record": "5-0",
+    "athlete_timezone": "America/New_York",
+    "fight_date": "2026-04-10",
     "rounds_format": "3x3",
-    "camp_length_weeks": 6,
-    "training_days": ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday"],
+    "weekly_training_frequency": 5,
+    "fatigue_level": "moderate",
+    "key_goals": ["power", "speed"],
+    "weak_areas": ["cardio"],
+    "training_preference": "short sessions",
+    "equipment_access": ["bodyweight", "dumbbells"],
+    "injuries": [],
+    "training_days": ["monday", "tuesday", "wednesday", "thursday", "friday"],
     "hard_sparring_days": ["tuesday", "thursday"],
         "support_work_days": ["friday"],
-    "fatigue": "moderate",
-    "fatigue_level": "moderate",
-    "weight_cut_risk": False,
-    "weight_cut_pct": 0.0,
-    "readiness_flags": [],
-    "injuries": [],
-    "plan_creation_weekday": "monday",
+    "mindset_challenges": "",
+    "notes": "",
+    "restrictions": [],
+    "sport": "boxing",
+    "status": "amateur",
+    "camp_length_weeks": 6,
+    "short_notice": False,
 }
 
 
 def _athlete(days_until_fight, **overrides):
     athlete = dict(_MINIMAL_ATHLETE)
     athlete["days_until_fight"] = days_until_fight
+    athlete.setdefault("fatigue", "moderate")
+    athlete.setdefault("readiness_flags", [])
     athlete.update(overrides)
     return athlete
 
 
-def test_select_spaced_hard_days_keeps_first_and_last_when_capped_to_two():
-    assert _select_spaced_hard_days(["monday", "thursday", "saturday"], 2) == ["monday", "saturday"]
-
-
-def test_pre_fight_compressed_converts_declared_hard_sparring_to_technical_only():
-    roles = _late_fight_session_roles(
-        8,
-        _athlete(8, hard_sparring_days=["monday", "thursday", "saturday"]),
-    )
-
-    assert [role["role_key"] for role in roles].count("hard_sparring_day") == 0
-
-
-def test_pre_fight_compressed_does_not_treat_declared_hard_days_as_effective_hard():
-    role_keys = [
-        role["role_key"]
-        for role in _late_fight_session_roles(8, _athlete(8, hard_sparring_days=["monday", "thursday"]))
-    ]
-
-    assert role_keys.count("hard_sparring_day") == 0
-    assert "light_fight_pace_touch_day" in role_keys
-
-
-def test_pre_fight_compressed_allows_strength_touch_and_light_fight_rhythm_with_one_hard_day():
-    role_keys = [
-        role["role_key"]
-        for role in _late_fight_session_roles(
-            10,
-            _athlete(10, hard_sparring_days=["thursday"], fatigue="low", fatigue_level="low", readiness_flags=[]),
-        )
-    ]
-
-    assert role_keys.count("hard_sparring_day") == 0
-    assert role_keys.count("strength_touch_day") == 1
-    assert role_keys.count("light_fight_pace_touch_day") == 1
-    assert role_keys.count("fight_week_freshness_day") == 1
-
-
-def test_pre_fight_compressed_high_fatigue_flag_suppresses_light_fight_pace():
-    role_keys = [
-        role["role_key"]
-        for role in _late_fight_session_roles(
-            10,
-            _athlete(10, hard_sparring_days=["thursday"], fatigue="", fatigue_level="", readiness_flags=["high_fatigue"]),
-        )
-    ]
-
-    assert role_keys.count("hard_sparring_day") == 0
-    assert "light_fight_pace_touch_day" not in role_keys
-
-
-def test_pre_fight_compressed_does_not_auto_collapse_to_two_visible_sessions_for_moderate_manageable_context():
-    athlete = _athlete(
-        9,
-        plan_creation_weekday="friday",
-        hard_sparring_days=["tuesday", "thursday", "saturday"],
-        fatigue="moderate",
-        fatigue_level="moderate",
-        readiness_flags=["injury_management", "weight_cut_active"],
-        weekly_training_frequency=5,
-        weight_cut_risk=True,
-        weight_cut_pct=2.2,
-    )
-
-    role_keys = [role["role_key"] for role in _late_fight_session_roles(9, athlete)]
-    assert role_keys.count("hard_sparring_day") == 0
-    assert "light_fight_pace_touch_day" in role_keys
-
-    spec = _build_late_fight_plan_spec(9, athlete)
-    assert spec["visible_session_cap"] == 4
-    assert set(spec["visible_session_roles"]) == {
-        "strength_touch_day",
-        "alactic_sharpness_day",
-        "fight_week_freshness_day",
-        "neural_primer_day",
-    }
-
-
-def test_pre_fight_compressed_suppresses_light_fight_pace_without_lowering_visible_cap():
-    athlete = _athlete(
-        9,
-        hard_sparring_days=["thursday"],
-        fatigue="high",
-        fatigue_level="high",
-        readiness_flags=["injury_management", "aggressive_weight_cut"],
-        weekly_training_frequency=3,
-        weight_cut_risk=True,
-        weight_cut_pct=6.0,
-    )
-
-    role_keys = [role["role_key"] for role in _late_fight_session_roles(9, athlete)]
-    assert "light_fight_pace_touch_day" not in role_keys
-    spec = _build_late_fight_plan_spec(9, athlete)
-    assert spec["visible_session_cap"] == 4
-
-
-def test_planned_sessions_fallback_caps_day_availability_at_five_when_intent_missing():
-    athlete = _athlete(
-        10,
-        training_days=["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"],
-    )
-    athlete.pop("weekly_training_frequency", None)
-    athlete.pop("training_frequency", None)
-    athlete.pop("weekly_sessions", None)
-    athlete.pop("planned_sessions_per_week", None)
-
-    assert _planned_sessions_per_week(athlete) == 5
-
-
-def test_planned_sessions_uses_explicit_frequency_when_present():
-    athlete = _athlete(10, training_days=["monday", "tuesday", "wednesday", "thursday", "friday", "saturday"])
-    athlete["weekly_training_frequency"] = 3
-    assert _planned_sessions_per_week(athlete) == 3
-
-
-def test_d7_role_list_remains_unchanged():
-    role_keys = [
-        role["role_key"]
-        for role in _late_fight_session_roles(7, _athlete(7, hard_sparring_days=["monday", "thursday"]))
-    ]
-
-    assert role_keys == ["neural_primer_day", "alactic_sharpness_day", "fight_week_freshness_day"]
-
-
-def test_pre_fight_compressed_surfaces_downgraded_hard_day_as_technical_touch_suppression():
-    spec = _build_late_fight_plan_spec(
-        8,
-        _athlete(8, hard_sparring_days=["monday", "thursday", "saturday"]),
-    )
-
-    suppressed_technical = [
-        item for item in spec["suppressed_roles"]
-        if item["role_key"] == "technical_touch_day"
-    ]
-
-    assert suppressed_technical
-    assert suppressed_technical[0]["downgraded_from_role_key"] == "hard_sparring_day"
-
-
-def test_d5_permission_policy_marks_declared_hard_day_as_technical_touch_only():
-    spec = _build_late_fight_plan_spec(
-        5,
-        _athlete(5, hard_sparring_days=["thursday"], plan_creation_weekday="monday"),
-    )
-
-    actions = spec["permission_policy"]["declared_hard_day_actions"]
-
-    assert actions == [
-        {
-            "day": "thursday",
-            "outcome": "technical_touch_day",
-            "locked": False,
-            "downgraded_from_role_key": "hard_sparring_day",
-        }
-    ]
-
-
-def test_freshness_lands_latest_when_multiple_legal_countdown_days_exist():
-    sequence = _build_late_fight_session_sequence(
-        5,
-        _athlete(5, plan_creation_weekday="monday"),
-    )
-
-    freshness = next(role for role in sequence if role["role_key"] == "fight_week_freshness_day")
-    primer = next(role for role in sequence if role["role_key"] == "neural_primer_day")
-
-    assert freshness["scheduled_countdown_label"] == "D-3"
-    assert primer["scheduled_countdown_label"] == "D-1"
-
-
-def test_session_sequence_exposes_allocator_metadata_fields():
-    sequence = _build_late_fight_session_sequence(
-        5,
-        _athlete(5, plan_creation_weekday="monday"),
-    )
-
-    first = sequence[0]
-
-    assert "scheduled_countdown_label" in first
-    assert "placement_source" in first
-    assert "day_assignment_reason" in first
-
-def test_d9_midweek_submission_converts_all_declared_hard_days():
-    athlete = _athlete(
-        9,
-        plan_creation_weekday="friday",
-        hard_sparring_days=["tuesday", "thursday", "saturday"],
-    )
-    roles = _late_fight_session_roles(9, athlete)
-    hard_roles = [role for role in roles if role["role_key"] == "hard_sparring_day"]
-
-    assert hard_roles == []
-
-    classified = _classify_declared_hard_days_for_late_window(
-        plan_creation_weekday="friday",
-        days_until_fight=9,
-        declared_weekdays=["tuesday", "thursday", "saturday"],
-    )
-    assert [(entry["weekday"], entry["status"], entry["countdown_label"]) for entry in classified] == [
-        ("saturday", "downgrade", "D-8"),
-        ("tuesday", "downgrade", "D-5"),
-        ("thursday", "downgrade", "D-3"),
-        ("saturday", "downgrade", "D-1"),
-    ]
-
-
-def test_countdown_classification_keeps_repeated_declared_occurrences():
-    classified = _classify_declared_hard_days_for_late_window(
-        plan_creation_weekday="friday",
-        days_until_fight=13,
-        declared_weekdays=["tuesday", "thursday", "saturday"],
-    )
-
-    saturday_occurrences = [entry for entry in classified if entry["weekday"] == "saturday"]
-    assert len(saturday_occurrences) == 2
-    assert saturday_occurrences[0]["status"] == "downgrade"
-    assert saturday_occurrences[1]["status"] == "downgrade"
-
-
-def test_d11_declared_hard_days_do_not_survive_as_effective_hard():
-    athlete = _athlete(
-        11,
-        plan_creation_weekday="monday",
-        hard_sparring_days=["tuesday", "thursday", "saturday"],
-    )
-    hard_roles = [role for role in _late_fight_session_roles(11, athlete) if role["role_key"] == "hard_sparring_day"]
-
-    assert hard_roles == []
-
-
-def test_d7_converts_declared_hard_days_and_keeps_no_declared_lock():
-    athlete = _athlete(
-        7,
-        plan_creation_weekday="monday",
-        hard_sparring_days=["monday", "thursday", "saturday"],
-    )
-    hard_roles = [role for role in _late_fight_session_roles(7, athlete) if role["role_key"] == "hard_sparring_day"]
-
-    assert hard_roles == []
-
-
-def test_d6_and_below_have_no_true_hard_sparring_roles():
-    athlete = _athlete(
-        6,
-        plan_creation_weekday="monday",
-        hard_sparring_days=["tuesday", "thursday", "saturday"],
-    )
-    roles = _late_fight_session_roles(6, athlete)
-
-    assert all(role["role_key"] != "hard_sparring_day" for role in roles)
-    classified = _classify_declared_hard_days_for_late_window(
-        plan_creation_weekday="monday",
-        days_until_fight=6,
-        declared_weekdays=["tuesday", "thursday", "saturday"],
-    )
-    assert classified
-    assert all(entry["status"] == "downgrade" for entry in classified)
-
-
-def test_sequence_allocates_non_hard_roles_to_remaining_countdown_days():
-    athlete = _athlete(
-        9,
-        plan_creation_weekday="friday",
-        hard_sparring_days=["tuesday", "thursday", "saturday"],
-    )
-    sequence = _build_late_fight_session_sequence(9, athlete)
-    countdown_labels = [entry["countdown_label"] for entry in sequence if entry.get("countdown_label")]
-
-    # All labels unique
-    assert len(countdown_labels) == len(set(countdown_labels))
-
-    assert all(entry["role_key"] != "hard_sparring_day" for entry in sequence)
-
-
-# ---------------------------------------------------------------------------
-# Placement layer tests
-# Tests for late_fight_placement.place_roles_in_countdown
-# ---------------------------------------------------------------------------
-
-from fightcamp.late_fight_placement import (
-    place_roles_in_countdown,
-    role_cost,
-    countdown_offset,
+@pytest.mark.parametrize(
+    ("athlete_model", "expected"),
+    [
+        ({"readiness_flags": ["high_fatigue"]}, "high"),
+        ({"readiness_flags": ["moderate_fatigue"]}, "moderate"),
+        ({"fatigue_level": "high"}, "high"),
+        (
+            {"fatigue": "moderate", "fatigue_level": "high", "readiness_flags": ["high_fatigue"]},
+            "moderate",
+        ),
+    ],
 )
+def test_fatigue_normalization_matches_regular_and_late_fight_paths(athlete_model, expected):
+    assert _normalized_fatigue_level(athlete_model) == expected
+    assert _normalized_fatigue(athlete_model) == expected
 
 
-def test_late_window_does_not_emit_locked_hard_sparring_roles():
-    athlete = _athlete(
-        9,
-        plan_creation_weekday="friday",
-        hard_sparring_days=["saturday"],
-    )
-    sequence = _build_late_fight_session_sequence(9, athlete)
-    assert all(entry["role_key"] != "hard_sparring_day" for entry in sequence)
-
-
-def test_placement_preserves_semantic_role_metadata_from_budget_layer():
-    roles = [
-        {
-            "session_index": 1,
-            "category": "conditioning",
-            "role_key": "hard_sparring_day",
-            "preferred_pool": "declared_hard_sparring_days",
-            "selection_rule": "rule",
-            "placement_rule": "rule",
-            "anchor": "highest_glycolytic_day",
-            "countdown_label": "D-8",
-            "declared_day_locked": True,
-            "scheduled_day_hint": "saturday",
-            "locked_day": "saturday",
-            "day_assignment_reason": "Declared hard day survives",
-            "countdown_offset": 8,
-            "downgraded_from_hard_sparring": True,
-            "governance": {"late_fight_payload": True},
-            "coach_notes": ["keep it technical"],
+def _build_brief_for(days_until_fight, *, phase="SPP", athlete_overrides=None):
+    athlete_model = _athlete(days_until_fight, **(athlete_overrides or {}))
+    phase_briefs = {
+        phase: {
+            "objective": "fight readiness",
+            "emphasize": ["sport speed"],
+            "deprioritize": [],
+            "risk_flags": [],
+            "selection_guardrails": {
+                "must_keep_if_present": [],
+                "conditioning_drop_order_if_thin": [],
+            },
         }
-    ]
-    sequence = place_roles_in_countdown(
-        roles=roles,
-        days_until_fight=9,
-        countdown_weekday_map={"D-8": "saturday"},
-    )
-    assert len(sequence) == 1
-    entry = sequence[0]
-    assert entry["declared_day_locked"] is True
-    assert entry["scheduled_day_hint"] == "saturday"
-    assert entry["locked_day"] == "saturday"
-    assert entry["day_assignment_reason"] == "Declared hard day survives"
-    assert entry["countdown_offset"] == 8
-    assert entry["downgraded_from_hard_sparring"] is True
-    assert entry["governance"] == {"late_fight_payload": True}
-    assert entry["coach_notes"] == ["keep it technical"]
-
-
-def test_placement_labels_are_unique():
-    """No two roles in the sequence may share a countdown label."""
-    for days in (13, 10, 8, 7, 5, 4, 3, 2):
-        athlete = _athlete(days, hard_sparring_days=["tuesday", "thursday"])
-        sequence = _build_late_fight_session_sequence(days, athlete)
-        labels = [e["countdown_label"] for e in sequence if e.get("countdown_label")]
-        assert len(labels) == len(set(labels)), f"Duplicate labels at D-{days}: {labels}"
-
-
-def test_placement_d0_never_assigned():
-    """D-0 is fight day and must never receive a role."""
-    for days in (13, 9, 7, 5, 3, 2, 1):
-        athlete = _athlete(days)
-        sequence = _build_late_fight_session_sequence(days, athlete)
-        labels = [e.get("countdown_label") for e in sequence]
-        assert "D-0" not in labels, f"D-0 was assigned at D-{days}"
-
-
-def test_placement_high_cost_before_low_cost():
-    """
-    High-cost roles must be placed in earlier countdown slots (higher D-offset)
-    than low-cost freshness/recovery roles.
-    """
-    athlete = _athlete(
-        10,
-        plan_creation_weekday="monday",
-        hard_sparring_days=["thursday"],
-        fatigue="low",
-        fatigue_level="low",
-        readiness_flags=[],
-    )
-    sequence = _build_late_fight_session_sequence(10, athlete)
-
-    high_offsets = [
-        countdown_offset(e["countdown_label"])
-        for e in sequence
-        if e.get("placement_basis") in {"high", "locked"}
-        and e.get("countdown_label")
-    ]
-    low_offsets = [
-        countdown_offset(e["countdown_label"])
-        for e in sequence
-        if e.get("placement_basis") == "low"
-        and e.get("countdown_label")
-    ]
-
-    if high_offsets and low_offsets:
-        min_high = min(high_offsets)
-        max_low = max(low_offsets)
-        assert min_high > max_low, (
-            f"High-cost role placed at D-{min_high} but low-cost role at D-{max_low} "
-            f"— high-cost should always be earlier (higher D-offset)"
-        )
-
-
-def test_placement_sequence_sorted_earliest_first():
-    """Sequence must be ordered earliest-first (highest D-offset first)."""
-    for days in (13, 9, 7, 5, 3):
-        athlete = _athlete(days, hard_sparring_days=["tuesday", "thursday"])
-        sequence = _build_late_fight_session_sequence(days, athlete)
-        offsets = [
-            countdown_offset(e["countdown_label"])
-            for e in sequence
-            if e.get("countdown_label")
-        ]
-        assert offsets == sorted(offsets, reverse=True), (
-            f"Sequence not sorted earliest-first at D-{days}: {offsets}"
-        )
-
-
-def test_placement_no_consecutive_active_days_when_avoidable():
-    """
-    When the window is wide enough, placement must leave at least 1 day gap
-    between consecutive active sessions.
-    """
-    # D-13: 6 available slots before D-0, plenty of room for spacing
-    athlete = _athlete(
-        13,
-        plan_creation_weekday="monday",
-        hard_sparring_days=["tuesday", "thursday"],
-        fatigue="low",
-        fatigue_level="low",
-        readiness_flags=[],
-    )
-    sequence = _build_late_fight_session_sequence(13, athlete)
-    offsets = sorted(
-        [countdown_offset(e["countdown_label"]) for e in sequence if e.get("countdown_label")],
-        reverse=True,
-    )
-    role_by_offset = {
-        countdown_offset(entry["countdown_label"]): entry["role_key"]
-        for entry in sequence
-        if entry.get("countdown_label")
     }
-    consecutive_pairs = [
-        (offsets[i], offsets[i + 1])
-        for i in range(len(offsets) - 1)
-        if abs(offsets[i] - offsets[i + 1]) < 2
-        and not {
-            role_by_offset.get(offsets[i]),
-            role_by_offset.get(offsets[i + 1]),
-        } == {"strength_touch_day", "hard_sparring_day"}
-    ]
-    assert not consecutive_pairs, (
-        f"Consecutive active days found at D-13 when spacing was possible: {consecutive_pairs}"
+    candidate_pools = {
+        phase: {
+            "strength_slots": [{"role": "primary_strength"}],
+            "conditioning_slots": [{"role": "alactic"}, {"role": "glycolytic"}],
+            "rehab_slots": [],
+        }
+    }
+    return build_planning_brief(
+        athlete_model=athlete_model,
+        restrictions=[],
+        phase_briefs=phase_briefs,
+        candidate_pools=candidate_pools,
+        omission_ledger={},
+        rewrite_guidance={},
     )
 
 
-def test_placement_freshness_role_in_later_half():
-    """Freshness / recovery roles must land in the later half of the window."""
-    athlete = _athlete(
-        10,
-        plan_creation_weekday="monday",
-        hard_sparring_days=["thursday"],
-        fatigue="low",
-        fatigue_level="low",
-        readiness_flags=[],
+def _build_stage2(days):
+    training_context = TrainingContext(
+        fatigue="moderate",
+        training_frequency=5,
+        days_available=5,
+        training_days=["Mon", "Tue", "Wed", "Thu", "Fri"],
+        injuries=[],
+        style_technical=["boxing"],
+        style_tactical=["pressure"],
+        weaknesses=["cardio"],
+        equipment=["bodyweight", "dumbbells"],
+        weight_cut_risk=False,
+        weight_cut_pct=0.0,
+        fight_format="boxing",
+        status="amateur",
+        key_goals=["power"],
+        training_preference="short sessions",
+        mental_block=[],
+        age=26,
+        weight=155.0,
+        prev_exercises=[],
+        recent_exercises=[],
+        phase_weeks={"GPP": 0, "SPP": 0, "TAPER": 1, "days": {"GPP": 0, "SPP": 0, "TAPER": days or 7}},
+        days_until_fight=days,
+        hard_sparring_days=["Tue", "Thu"],
+        support_work_days=["Fri"],
     )
-    sequence = _build_late_fight_session_sequence(10, athlete)
+    return build_stage2_payload(
+        training_context=training_context,
+        mapped_format="boxing",
+        record="5-0",
+        rounds_format="3x3",
+        camp_len=6,
+        short_notice=False,
+        restrictions=[],
+        phase_weeks={"TAPER": 1, "days": {"TAPER": days or 7}},
+        strength_blocks={},
+        conditioning_blocks={},
+        rehab_blocks={},
+    )
 
-    all_offsets = [countdown_offset(e["countdown_label"]) for e in sequence if e.get("countdown_label")]
-    if not all_offsets:
-        return
 
-    midpoint = sum(all_offsets) / len(all_offsets)
-
-    freshness = [
-        e for e in sequence
-        if e.get("role_key") == "fight_week_freshness_day" and e.get("countdown_label")
+def _composite_stage_keys(sequence):
+    return [
+        entry.get("composite_segment_stage_key")
+        for entry in sequence
+        if entry.get("composite_segment_stage_key")
     ]
-    for entry in freshness:
-        off = countdown_offset(entry["countdown_label"]) or 0
-        assert off <= midpoint, (
-            f"Freshness role placed at D-{off} but midpoint is D-{midpoint:.1f} "
-            f"— freshness should be in the later (lower D-offset) half"
+
+
+class TestPayloadModeClassification:
+    @pytest.mark.parametrize(
+        "days, expected",
+        [
+            (None, "camp_payload"),
+            (-2, "camp_payload"),
+            (22, "camp_payload"),
+            (21, "bridge_compression_payload"),
+            (17, "bridge_compression_payload"),
+            (14, "bridge_compression_payload"),
+            (13, "pre_fight_compressed_payload"),
+            (10, "pre_fight_compressed_payload"),
+            (8, "pre_fight_compressed_payload"),
+            (7, "late_fight_week_payload"),
+            (6, "late_fight_transition_payload"),
+            (5, "late_fight_transition_payload"),
+            (4, "late_fight_session_payload"),
+            (2, "late_fight_session_payload"),
+            (1, "pre_fight_day_payload"),
+            (0, "fight_day_protocol_payload"),
+        ],
+    )
+    def test_mode_mapping(self, days, expected):
+        assert _days_out_payload_mode(days) == expected
+
+    def test_string_input_still_works(self):
+        assert _days_out_payload_mode("8") == "pre_fight_compressed_payload"
+        assert _days_out_payload_mode("3") == "late_fight_session_payload"
+        assert _days_out_payload_mode("0") == "fight_day_protocol_payload"
+
+    def test_bridge_legal_offsets_stay_inside_bridge_window(self):
+        assert _late_fight_legal_offsets(16) == [16, 15, 14]
+
+
+class TestDaysOutPayloadBlock:
+    def test_camp_block_uses_camp_bucket(self):
+        block = _days_out_payload_block(28, _athlete(28))
+        assert block["payload_mode"] == "camp_payload"
+        assert block["payload_variant"] == "normal_stage2_payload"
+        assert block["days_out_bucket"] == "CAMP"
+        assert block["fight_week_override"] == {"active": False}
+
+    def test_bridge_block_uses_bridge_mode(self):
+        block = _days_out_payload_block(20, _athlete(20))
+        assert block["payload_mode"] == "bridge_compression_payload"
+        assert block["payload_variant"] == "late_fight_stage2_payload"
+        assert block["days_out_bucket"] == "D-20"
+        assert block["late_fight_window"] == "d21_to_d14"
+
+    def test_pre_fight_compressed_block_has_bridge_window_metadata(self):
+        block = _days_out_payload_block(10, _athlete(10))
+        assert block["payload_mode"] == "pre_fight_compressed_payload"
+        assert block["payload_variant"] == "late_fight_stage2_payload"
+        assert block["days_out_bucket"] == "D-10"
+        assert block["late_fight_window"] == "d13_to_d8"
+        assert "rendering_rules" in block
+        assert "late_fight_permissions" in block
+
+    def test_late_fight_block_has_mode_specific_metadata(self):
+        block = _days_out_payload_block(3, _athlete(3))
+        assert block["payload_mode"] == "late_fight_session_payload"
+        assert block["payload_variant"] == "late_fight_stage2_payload"
+        assert block["days_out_bucket"] == "D-3"
+        assert block["late_fight_window"] == "d4_to_d2"
+        assert "rendering_rules" in block
+        assert "late_fight_permissions" in block
+        assert "permission_policy" in block
+        assert "role_budget" in block
+
+
+class TestLateFightPermissionsAndRendering:
+    def test_camp_permissions_remain_unrestricted(self):
+        permissions = _late_fight_permissions(28, _athlete(28))
+        rules = _late_fight_rendering_rules(28)
+        assert permissions["allow_full_weekly_structure"] is True
+        assert permissions["allow_development_language"] is True
+        assert rules == {"mode": "camp_payload", "rules": []}
+
+    def test_bridge_permissions_apply_evidence_based_caps(self):
+        permissions = _late_fight_permissions(20, _athlete(20, fatigue="low"))
+        rules = _late_fight_rendering_rules(20)
+
+        assert permissions["mode"] == "bridge_compression_payload"
+        assert permissions["allow_full_weekly_structure"] is False
+        assert permissions["allow_development_language"] is False
+        assert permissions["allow_glycolytic_build"] is False
+        assert permissions["max_active_roles"] == 3
+        assert permissions["max_meaningful_stress_exposures"] == 3
+        assert permissions["hard_sparring_cap"] == 1
+        assert permissions["freshness_mandatory"] is True
+        assert permissions["double_stress_day_allowed"] is False
+        assert "bridge week" in [term.lower() for term in rules["preferred_terms"]]
+
+    def test_bridge_permissions_trim_stress_when_fatigued(self):
+        permissions = _late_fight_permissions(20, _athlete(20, fatigue="moderate"))
+        # Moderate fatigue must reduce the meaningful-stress cap by one.
+        assert permissions["max_meaningful_stress_exposures"] == 2
+        assert permissions["freshness_mandatory"] is True
+
+    def test_pre_fight_compressed_permissions_cap_bridge_window_stress(self):
+        permissions = _late_fight_permissions(10, _athlete(10))
+        rules = _late_fight_rendering_rules(10)
+
+        assert permissions["allow_full_weekly_structure"] is False
+        assert permissions["allow_compressed_weekly_structure"] is True
+        assert permissions["allow_normal_session_roles"] is True
+        assert permissions["allow_development_language"] is False
+        assert permissions["allow_glycolytic_build"] is False
+        assert permissions["max_meaningful_strength_anchors"] == 1
+        assert permissions["max_meaningful_conditioning_stressors"] == 1
+        assert permissions["max_meaningful_stress_exposures"] == 3
+        assert permissions["max_active_roles"] == 4
+        assert "compressed week" in [term.lower() for term in rules["preferred_terms"]]
+        assert "conditioning build" in [term.lower() for term in rules["forbidden_terms"]]
+
+    def test_d1_forbids_anchor_and_glycolytic_language(self):
+        permissions = _late_fight_permissions(1, _athlete(1))
+        rules = _late_fight_rendering_rules(1)
+        preferred_terms = [term.lower() for term in rules["preferred_terms"]]
+
+        assert permissions["allow_anchor_wording"] is False
+        assert permissions["allow_glycolytic_build"] is False
+        assert "anchor" in [term.lower() for term in rules["forbidden_terms"]]
+        assert "neural primer" in preferred_terms
+        assert "primer" not in preferred_terms
+
+    def test_d0_restricts_output_to_protocol_language(self):
+        permissions = _late_fight_permissions(0, _athlete(0))
+        rules = _late_fight_rendering_rules(0)
+        assert permissions["allow_fight_day_protocol_only"] is True
+        assert permissions["allow_normal_session_roles"] is False
+        assert "activation" in [term.lower() for term in rules["preferred_terms"]]
+        assert "warm-up" in [term.lower() for term in rules["preferred_terms"]]
+        assert "walk-through" in [term.lower() for term in rules["preferred_terms"]]
+
+    def test_d7_rendering_rules_prefer_sharpness_week_language(self):
+        rules = _late_fight_rendering_rules(7)
+
+        assert "sharpness week" in [term.lower() for term in rules["preferred_terms"]]
+        assert "power touch" in [term.lower() for term in rules["preferred_terms"]]
+        assert "primary strength" in [term.lower() for term in rules["forbidden_terms"]]
+
+    def test_d3_rendering_rules_prefer_low_noise_session_titles(self):
+        rules = _late_fight_rendering_rules(3)
+
+        assert "sharpness session" in [term.lower() for term in rules["preferred_terms"]]
+        assert "freshness session" in [term.lower() for term in rules["preferred_terms"]]
+        assert "strength block" in [term.lower() for term in rules["forbidden_terms"]]
+
+    def test_d10_taper_micro_support_policy_stays_optional_and_off_the_role_map(self):
+        spec = _build_late_fight_plan_spec(10, _athlete(10))
+        policy = spec["taper_micro_support_policy"]
+
+        assert policy["tag"] == "taper_micro_support"
+        assert policy["optional_add_on_only"] is True
+        assert policy["never_primary_anchor"] is True
+        assert policy["standalone_session_allowed"] is False
+        assert policy["max_items"] == 1
+        assert policy["max_total_minutes"] == 6
+        assert "taper_micro_support_day" not in spec["session_roles"]
+        assert "taper_micro_support_day" not in spec["visible_session_roles"]
+
+    def test_d1_taper_micro_support_policy_blocks_core_neck_heavy_bag_and_grip(self):
+        policy = _late_fight_taper_micro_support_policy(1, _athlete(1))
+
+        assert set(policy["suppressed_categories"]) >= {"core", "neck", "heavy_bag", "grip"}
+        assert set(policy["d1_blocked_list"]) >= {"core", "neck", "heavy_bag", "grip"}
+
+    def test_boxing_taper_micro_support_policy_blocks_grip_even_when_window_allows_other_add_ons(self):
+        policy = _late_fight_taper_micro_support_policy(8, _athlete(8, sport="boxing"))
+
+        assert "grip" in policy["suppressed_categories"]
+        assert "boxing_taper_blocks_grip" in policy["suppression_reasons"]
+
+    def test_high_fatigue_taper_micro_support_policy_reduces_to_breathing_and_mobility_only(self):
+        policy = _late_fight_taper_micro_support_policy(
+            8,
+            _athlete(8, fatigue="high", fatigue_level="high"),
         )
 
+        assert policy["allowed_categories"] == ["breathing", "mobility"]
+        assert "high_fatigue_breathing_mobility_only" in policy["suppression_reasons"]
 
-def test_placement_regression_same_day_is_not_default_for_non_high_cost_roles():
-    """
-    Regression proof: allocator must not default to D-N for every first role.
-    A medium-cost only allocation should pick a cleaner taper target than
-    blindly taking the earliest slot.
-    """
-    roles = [
-        {
-            "session_index": 1,
-            "category": "conditioning",
-            "role_key": "technical_touch_day",
-            "preferred_pool": "late_fight_pool",
-            "selection_rule": "rule",
-            "placement_rule": "rule",
-            "anchor": "support_day",
+    def test_moderate_weight_cut_suppresses_core_neck_heavy_bag_and_grip_micro_support(self):
+        policy = _late_fight_taper_micro_support_policy(
+            8,
+            _athlete(
+                8,
+                weight_cut_risk=True,
+                weight_cut_pct=3.5,
+                cut_severity_bucket="moderate",
+            ),
+        )
+
+        assert set(policy["suppressed_categories"]) >= {"core", "neck", "heavy_bag", "grip"}
+        assert "moderate_or_high_weight_cut_blocks_nonessential_micro_support" in policy["suppression_reasons"]
+
+    def test_transition_permissions_strip_week_logic_and_force_caps(self):
+        permissions = _late_fight_permissions(5, _athlete(5))
+
+        assert permissions["allow_normal_session_roles"] is False
+        assert permissions["allow_anchor_wording"] is False
+        assert permissions["allow_weekly_frequency_reasoning"] is False
+        assert permissions["allow_hard_sparring_influence"] is False
+        assert permissions["max_meaningful_strength_anchors"] == 0
+        assert permissions["max_meaningful_conditioning_stressors"] == 0
+        assert permissions["max_meaningful_stress_exposures"] == 1
+        assert permissions["max_active_roles"] == 2
+
+    def test_d3_alactic_sharpness_is_conditional(self):
+        allowed = _late_fight_permissions(3, _athlete(3))
+        suppressed = _late_fight_permissions(
+            3,
+            _athlete(3, fatigue="high", readiness_flags=["recent_hard_spar_collision_spillover"]),
+        )
+
+        assert allowed["allow_alactic_sharpness"] is True
+        assert suppressed["allow_alactic_sharpness"] is False
+
+    def test_d3_alactic_sharpness_respects_high_fatigue_readiness_flag(self):
+        permissions = _late_fight_permissions(
+            3,
+            _athlete(3, fatigue="", fatigue_level="", readiness_flags=["high_fatigue"]),
+        )
+
+        assert permissions["allow_alactic_sharpness"] is False
+
+
+class TestLateFightRoleMap:
+    def test_d5_role_map_uses_transition_overlay(self):
+        role_map = _build_late_fight_weekly_role_map(5, _athlete(5))
+        assert role_map["model"] == "late_fight_role_overlay.v1"
+        assert role_map["payload_mode"] == "late_fight_transition_payload"
+        assert [week["stage_key"] for week in role_map["weeks"]] == ["d6_to_d5", "d4_to_d2", "d1", "d0"]
+
+    def test_d3_role_map_is_session_list(self):
+        role_map = _build_late_fight_weekly_role_map(3, _athlete(3))
+        assert role_map["payload_mode"] == "late_fight_session_payload"
+        assert [week["stage_key"] for week in role_map["weeks"]] == ["d4_to_d2", "d1", "d0"]
+
+    def test_d0_role_map_has_no_weeks(self):
+        role_map = _build_late_fight_weekly_role_map(0, _athlete(0))
+        assert role_map["payload_mode"] == "fight_day_protocol_payload"
+        assert role_map["weeks"] == []
+
+
+class TestPlanningBriefBranching:
+    def test_d10_stage_label_returns_compressed_pre_fight_week(self):
+        assert _late_fight_stage_label(10) == "Compressed Pre-Fight Week"
+
+    def test_d7_stage_label_returns_sharpness_week(self):
+        assert _late_fight_stage_label(7) == "Sharpness Week"
+
+    def test_camp_uses_normal_planning_brief(self):
+        brief = _build_brief_for(28)
+        assert brief["generator_mode"] == "deterministic_planner_plus_ai_finalizer"
+        assert "days_out_payload" not in brief
+        assert "payload_variant" not in brief
+        assert brief["weekly_role_map"]["model"] == "session_role_overlay.v1"
+
+    def test_bridge_window_uses_late_fight_planning_brief(self):
+        brief = _build_brief_for(20)
+        assert brief["generator_mode"] == "deterministic_late_fight_planner_plus_ai_finalizer"
+        assert brief["payload_variant"] == "late_fight_stage2_payload"
+        assert brief["days_out_payload"]["payload_mode"] == "bridge_compression_payload"
+
+    def test_bridge_d16_includes_bridge_and_late_stage_continuation(self):
+        brief = _build_brief_for(16)
+        weeks = brief["week_by_week_progression"]["weeks"]
+        spans = [week.get("countdown_span") for week in weeks]
+        modes = [week.get("payload_mode") for week in weeks]
+
+        assert spans[0] == {"start_day": 16, "end_day": 14}
+        assert spans[1:] == [
+            {"start_day": 13, "end_day": 8},
+            {"start_day": 7, "end_day": 7},
+            {"start_day": 6, "end_day": 5},
+            {"start_day": 4, "end_day": 2},
+            {"start_day": 1, "end_day": 1},
+            {"start_day": 0, "end_day": 0},
+        ]
+        assert modes == [
+            "bridge_compression_payload",
+            "pre_fight_compressed_payload",
+            "late_fight_week_payload",
+            "late_fight_transition_payload",
+            "late_fight_session_payload",
+            "pre_fight_day_payload",
+            "fight_day_protocol_payload",
+        ]
+
+    def test_bridge_d21_includes_bridge_and_late_stage_continuation(self):
+        brief = _build_brief_for(21)
+        weeks = brief["week_by_week_progression"]["weeks"]
+        assert weeks[0]["countdown_span"] == {"start_day": 21, "end_day": 14}
+        assert [week["payload_mode"] for week in weeks[1:]] == [
+            "pre_fight_compressed_payload",
+            "late_fight_week_payload",
+            "late_fight_transition_payload",
+            "late_fight_session_payload",
+            "pre_fight_day_payload",
+            "fight_day_protocol_payload",
+        ]
+
+    def test_bridge_d14_includes_single_bridge_day_then_late_stage_continuation(self):
+        brief = _build_brief_for(14)
+        weeks = brief["week_by_week_progression"]["weeks"]
+        assert weeks[0]["countdown_span"] == {"start_day": 14, "end_day": 14}
+        assert weeks[0]["payload_mode"] == "bridge_compression_payload"
+        assert weeks[1]["countdown_span"] == {"start_day": 13, "end_day": 8}
+        assert weeks[-1]["countdown_span"] == {"start_day": 0, "end_day": 0}
+
+    def test_pre_fight_window_uses_dedicated_planning_brief(self):
+        brief = _build_brief_for(10)
+
+        assert brief["generator_mode"] == "deterministic_late_fight_planner_plus_ai_finalizer"
+        assert brief["payload_variant"] == "late_fight_stage2_payload"
+        assert brief["days_out_payload"]["payload_mode"] == "pre_fight_compressed_payload"
+        assert brief["weekly_role_map"]["payload_mode"] == "pre_fight_compressed_payload"
+        assert brief["rendering_rules"]["mode"] == "pre_fight_compressed_payload"
+        assert brief["week_by_week_progression"]["weeks"][0]["stage_label"] == "Compressed Pre-Fight Week"
+
+    def test_late_fight_uses_dedicated_planning_brief(self):
+        brief = _build_brief_for(3)
+        assert brief["generator_mode"] == "deterministic_late_fight_planner_plus_ai_finalizer"
+        assert brief["payload_variant"] == "late_fight_stage2_payload"
+        assert brief["days_out_payload"]["payload_mode"] == "late_fight_session_payload"
+        assert brief["weekly_role_map"]["payload_mode"] == "late_fight_session_payload"
+        assert brief["rendering_rules"]["mode"] == "late_fight_session_payload"
+        assert [week["stage_key"] for week in brief["week_by_week_progression"]["weeks"]] == [
+            "d4_to_d2",
+            "d1",
+            "d0",
+        ]
+        assert [week["stage_key"] for week in brief["weekly_role_map"]["weeks"]] == [
+            "d4_to_d2",
+            "d1",
+            "d0",
+        ]
+        assert [entry["role_key"] for entry in brief["late_fight_session_sequence"]] == [
+            "fight_week_freshness_day",
+            "neural_primer_day",
+        ]
+
+    def test_d0_planning_brief_has_empty_progression(self):
+        brief = _build_brief_for(0)
+        assert brief["days_out_payload"]["payload_mode"] == "fight_day_protocol_payload"
+        assert brief["week_by_week_progression"]["weeks"] == []
+        assert brief["weekly_role_map"]["weeks"] == []
+
+    def test_d1_planning_brief_has_no_week_structure(self):
+        brief = _build_brief_for(1)
+        assert brief["days_out_payload"]["payload_mode"] == "pre_fight_day_payload"
+        assert brief["week_by_week_progression"]["weeks"] == []
+        assert brief["weekly_role_map"]["weeks"] == []
+        assert [entry["role_key"] for entry in brief["late_fight_session_sequence"]] == ["neural_primer_day"]
+
+    def test_d7_planning_brief_uses_sharpness_week_labels(self):
+        brief = _build_brief_for(7)
+
+        week = brief["week_by_week_progression"]["weeks"][0]
+        assert week["stage_label"] == "Sharpness Week"
+        assert "power touch" in week["stage_objective"].lower()
+        assert "freshness" in week["stage_objective"].lower()
+
+    def test_d13_planning_brief_continues_through_d0(self):
+        brief = _build_brief_for(13)
+        assert [week["stage_key"] for week in brief["week_by_week_progression"]["weeks"]] == [
+            "d13_to_d8",
+            "d7",
+            "d6_to_d5",
+            "d4_to_d2",
+            "d1",
+            "d0",
+        ]
+        assert [week["stage_key"] for week in brief["weekly_role_map"]["weeks"]] == [
+            "d13_to_d8",
+            "d7",
+            "d6_to_d5",
+            "d4_to_d2",
+            "d1",
+            "d0",
+        ]
+
+    def test_guardrail_bridge_mode_does_not_suppress_downstream_late_stage_takeover(self):
+        brief = _build_brief_for(16)
+        stage_keys = [week["stage_key"] for week in brief["week_by_week_progression"]["weeks"]]
+        assert stage_keys == [
+            "d21_to_d14",
+            "d13_to_d8",
+            "d7",
+            "d6_to_d5",
+            "d4_to_d2",
+            "d1",
+            "d0",
+        ]
+
+    def test_bridge_d20_weekly_role_map_phase_matches_progression(self):
+        brief = _build_brief_for(20, phase="SPP")
+
+        assert brief["week_by_week_progression"]["weeks"][0]["phase"] == "SPP"
+        assert brief["week_by_week_progression"]["weeks"][0]["phase"] == brief["weekly_role_map"]["weeks"][0]["phase"]
+
+    def test_bridge_continuation_keeps_d1_d0_as_day_specific_modes_not_development_weeks(self):
+        brief = _build_brief_for(16)
+        weeks_by_key = {
+            week["stage_key"]: week
+            for week in brief["week_by_week_progression"]["weeks"]
         }
-    ]
+        assert weeks_by_key["d1"]["payload_mode"] == "pre_fight_day_payload"
+        assert weeks_by_key["d1"]["stage_label"] == "Primer Day"
+        assert weeks_by_key["d0"]["payload_mode"] == "fight_day_protocol_payload"
+        assert weeks_by_key["d0"]["stage_label"] == "Fight-Day Protocol"
 
-    sequence = place_roles_in_countdown(
-        roles=roles,
-        days_until_fight=6,
-        countdown_weekday_map={},
+    def test_bridge_d16_practical_spec_does_not_collapse_to_bridge_only(self):
+        brief = _build_brief_for(16)
+        spec = brief["late_fight_plan_spec"]
+        visible_offsets = [
+            entry.get("countdown_offset")
+            for entry in spec["visible_session_sequence"]
+        ]
+
+        assert spec["visible_session_cap"] > 2
+        assert spec["max_active_roles"] == spec["visible_session_cap"]
+        assert any(offset is not None and offset <= 13 for offset in visible_offsets)
+        assert {16, 14}.issubset(set(visible_offsets))
+
+    def test_bridge_d16_session_sequence_includes_downstream_practical_roles(self):
+        brief = _build_brief_for(16)
+        sequence = brief["late_fight_session_sequence"]
+        downstream_roles = [
+            entry
+            for entry in sequence
+            if isinstance(entry.get("countdown_offset"), int)
+            and entry["countdown_offset"] <= 13
+        ]
+
+        assert downstream_roles
+        assert any(entry.get("composite_segment_stage_key") == "d7" for entry in downstream_roles)
+        assert any(entry.get("composite_segment_stage_key") == "d1" for entry in downstream_roles)
+
+    def test_bridge_d16_weekly_role_map_uses_practical_continuation_roles(self):
+        brief = _build_brief_for(16)
+        roles = [
+            role
+            for week in brief["weekly_role_map"]["weeks"]
+            for role in week["session_roles"]
+        ]
+        offsets = [
+            role.get("countdown_offset")
+            for role in roles
+            if isinstance(role.get("countdown_offset"), int)
+        ]
+
+        assert max(offsets) <= 16
+        assert min(offsets) == 1
+        assert any(offset <= 13 for offset in offsets)
+        assert brief["weekly_role_map"]["allocator"]["composite_practical_allocation"] is True
+
+    def test_bridge_d16_practical_spacing_avoids_adjacent_app_owned_sessions(self):
+        brief = _build_brief_for(
+            16,
+            athlete_overrides={
+                "plan_creation_weekday": "monday",
+                "hard_sparring_days": [],
+            },
+        )
+        visible_offsets = [
+            entry["countdown_offset"]
+            for entry in brief["late_fight_plan_spec"]["visible_session_sequence"]
+            if isinstance(entry.get("countdown_offset"), int)
+        ]
+
+        assert all(
+            first - second > 1
+            for first, second in zip(visible_offsets, visible_offsets[1:])
+        )
+
+    def test_bridge_d16_avoids_meaningful_app_owned_work_on_declared_hard_days(self):
+        brief = _build_brief_for(
+            16,
+            athlete_overrides={
+                "plan_creation_weekday": "monday",
+                "training_days": ["monday", "tuesday", "wednesday", "thursday", "friday"],
+                "hard_sparring_days": ["thursday"],
+            },
+        )
+        visible_sequence = brief["late_fight_plan_spec"]["visible_session_sequence"]
+        meaningful_app_roles = [
+            entry
+            for entry in visible_sequence
+            if entry.get("stress_class") == "meaningful_stress"
+        ]
+
+        assert meaningful_app_roles
+        assert all(
+            str(entry.get("scheduled_day_hint") or "").lower() != "thursday"
+            for entry in meaningful_app_roles
+        )
+
+    def test_d13_practical_behaviour_uses_countdown_continuation_until_d1(self):
+        spec = _build_late_fight_plan_spec(13, _athlete(13))
+
+        assert spec["payload_mode"] == "pre_fight_compressed_payload"
+        assert spec["allocator"].get("composite_practical_allocation") is True
+        assert [segment["stage_key"] for segment in spec["countdown_mode_sequence"]] == [
+            "d13_to_d8",
+            "d7",
+            "d6_to_d5",
+            "d4_to_d2",
+            "d1",
+            "d0",
+        ]
+        assert [entry.get("role_key") for entry in spec["visible_session_sequence"]] == [
+            "strength_touch_day",
+            "alactic_sharpness_day",
+            "fight_week_freshness_day",
+            "neural_primer_day",
+        ]
+        assert _composite_stage_keys(spec["session_sequence"]) == [
+            "d13_to_d8",
+            "d13_to_d8",
+            "d7",
+            "d6_to_d5",
+            "d4_to_d2",
+            "d1",
+        ]
+
+
+class TestStage2PayloadBranching:
+    def test_camp_payload_stays_on_normal_stage2_schema(self):
+        payload = _build_stage2(28)
+        assert payload["generator_mode"] == "restriction_aware_candidate_generator"
+        assert "payload_mode" not in payload
+        assert "days_out_payload" not in payload
+
+    def test_pre_fight_payload_adds_mode_specific_fields(self):
+        payload = _build_stage2(10)
+        assert payload["generator_mode"] == "restriction_aware_candidate_generator_late_fight"
+        assert payload["payload_variant"] == "late_fight_stage2_payload"
+        assert payload["payload_mode"] == "pre_fight_compressed_payload"
+        assert payload["effective_stage2_mode"] == "pre_fight_compressed_payload"
+        assert "late_fight_permissions" in payload
+        assert "rendering_rules" in payload
+
+    def test_late_fight_payload_adds_mode_specific_fields(self):
+        payload = _build_stage2(5)
+        assert payload["generator_mode"] == "restriction_aware_candidate_generator_late_fight"
+        assert payload["payload_variant"] == "late_fight_stage2_payload"
+        assert payload["payload_mode"] == "late_fight_transition_payload"
+        assert payload["effective_stage2_mode"] == "late_fight_transition_payload"
+        assert "late_fight_permissions" in payload
+        assert "rendering_rules" in payload
+
+    def test_d3_payload_exposes_continued_session_sequence(self):
+        payload = _build_stage2(3)
+        assert payload["payload_mode"] == "late_fight_session_payload"
+        assert [entry["role_key"] for entry in payload["late_fight_session_sequence"]] == [
+            "fight_week_freshness_day",
+            "neural_primer_day",
+        ]
+        assert _composite_stage_keys(payload["late_fight_session_sequence"]) == ["d4_to_d2", "d1"]
+
+    def test_d2_payload_exposes_primer_only_sequence(self):
+        payload = _build_stage2(2)
+
+        assert payload["payload_mode"] == "late_fight_session_payload"
+        assert [entry["role_key"] for entry in payload["late_fight_session_sequence"]] == [
+            "neural_primer_day",
+        ]
+
+    def test_d7_plan_spec_exposes_caps_and_forbidden_blocks(self):
+        spec = _build_late_fight_plan_spec(7, _athlete(7))
+
+        assert spec["max_blocks_per_session"] == 5
+        assert spec["max_meaningful_stress_exposures"] == 2
+        assert spec["max_active_roles"] == 3
+        assert "standalone_glycolytic" in spec["forbidden_blocks"]
+        assert spec["max_support_roles"] == 1
+        assert "role_budget" in spec
+        assert "allocator" in spec
+        assert "permission_policy" in spec
+
+    def test_plan_spec_exposes_allocator_metadata_and_source_of_truth_fields(self):
+        spec = _build_late_fight_plan_spec(5, _athlete(5))
+
+        assert spec["allocator"]["legal_countdown_labels"] == ["D-4", "D-3", "D-2", "D-1"]
+        assert spec["role_budget"]["selected_active_roles"] == len(spec["session_sequence"])
+        assert all("scheduled_countdown_label" in role for role in spec["session_sequence"])
+        assert all("placement_source" in role for role in spec["session_sequence"])
+
+    def test_d5_plan_spec_marks_downgraded_declared_hard_day_as_technical_touch(self):
+        spec = _build_late_fight_plan_spec(
+            5,
+            _athlete(5, hard_sparring_days=["thursday"], plan_creation_weekday="monday"),
+        )
+
+        assert spec["permission_policy"]["declared_hard_day_actions"] == [
+            {
+                "day": "thursday",
+                "outcome": "technical_touch_day",
+                "locked": False,
+                "downgraded_from_role_key": "hard_sparring_day",
+            }
+        ]
+
+    def test_short_notice_window_keeps_allocator_metadata_even_with_fight_week_override(self):
+        brief = _build_brief_for(3)
+
+        assert brief["fight_week_override"]["active"] is True
+        assert "allocator" in brief["late_fight_plan_spec"]
+        assert "role_budget" in brief["late_fight_plan_spec"]
+
+    def test_d7_plan_spec_keeps_boxing_roles_out_of_visible_insert_sessions(self):
+        spec = _build_late_fight_plan_spec(7, _athlete(7))
+
+        assert "hard_sparring_day" in spec["session_roles"]
+        assert "hard_sparring_day" not in spec["visible_session_roles"]
+        assert spec["visible_session_cap"] == len(spec["visible_session_sequence"])
+        assert [entry["role_key"] for entry in spec["visible_session_sequence"]] == spec["visible_session_roles"]
+
+    def test_d5_plan_spec_adds_structured_hard_sparring_context(self):
+        spec = _build_late_fight_plan_spec(
+            5,
+            _athlete(5, plan_creation_weekday="monday", hard_sparring_days=["tuesday", "thursday"]),
+        )
+        assert "hard_sparring_context_line" in spec
+        assert spec["surviving_hard_spar_days"] == []
+        assert spec["downgraded_declared_spar_days"] == ["tuesday", "thursday"]
+        assert spec["hard_sparring_context_line"] == (
+            "Hard sparring this window: none. Tuesday and Thursday are technical rhythm only."
+        )
+
+    @pytest.mark.parametrize(
+        "days,expected_stages",
+        [
+            (13, ["d13_to_d8", "d7", "d6_to_d5", "d4_to_d2", "d1", "d0"]),
+            (10, ["d13_to_d8", "d7", "d6_to_d5", "d4_to_d2", "d1", "d0"]),
+            (7, ["d7", "d6_to_d5", "d4_to_d2", "d1", "d0"]),
+            (5, ["d6_to_d5", "d4_to_d2", "d1", "d0"]),
+            (3, ["d4_to_d2", "d1", "d0"]),
+        ],
     )
-    assert len(sequence) == 1
-    assert sequence[0]["countdown_label"] != "D-6"
-    assert sequence[0]["countdown_label"] == "D-4"
+    def test_late_fight_continuation_builds_stage_windows_through_d1(self, days, expected_stages):
+        brief = _build_brief_for(days)
+        assert [week["stage_key"] for week in brief["week_by_week_progression"]["weeks"]] == expected_stages
+        assert [week["stage_key"] for week in brief["weekly_role_map"]["weeks"]] == expected_stages
+        assert brief["late_fight_plan_spec"]["allocator"]["composite_practical_allocation"] is True
+        assert "d1" in _composite_stage_keys(brief["late_fight_session_sequence"])
+
+    def test_d13_downstream_stage_can_continue_with_zero_visible_app_owned_sessions(self):
+        brief = _build_brief_for(13)
+        weeks_by_key = {week["stage_key"]: week for week in brief["weekly_role_map"]["weeks"]}
+
+        assert any(role["role_key"] == "hard_sparring_day" for role in weeks_by_key["d7"]["session_roles"])
+        assert all(
+            entry.get("composite_segment_stage_key") != "d7"
+            for entry in brief["late_fight_plan_spec"]["visible_session_sequence"]
+        )
+
+    def test_d5_continuation_does_not_invent_filler_for_an_empty_window(self):
+        brief = _build_brief_for(5)
+        weeks_by_key = {week["stage_key"]: week for week in brief["weekly_role_map"]["weeks"]}
+
+        assert weeks_by_key["d6_to_d5"]["session_roles"] == []
+        assert all(
+            entry.get("composite_segment_stage_key") != "d6_to_d5"
+            for entry in brief["late_fight_session_sequence"]
+        )
+
+    def test_raw_athlete_inputs_are_preserved_in_late_fight_payload(self):
+        payload = _build_stage2(1)
+        athlete_model = payload["athlete_model"]
+        assert athlete_model["hard_sparring_days"] == ["Tue", "Thu"]
+        assert athlete_model["training_days"] == ["Mon", "Tue", "Wed", "Thu", "Fri"]
+        assert athlete_model["support_work_days"] == ["Fri"]
+        assert athlete_model["key_goals"] == ["power"]
+
+    def test_d1_payload_still_uses_late_fight_mode_without_week_structure(self):
+        brief = _build_brief_for(1)
+        payload = _build_stage2(1)
+        assert payload["payload_mode"] == "pre_fight_day_payload"
+        assert brief["weekly_role_map"]["weeks"] == []
+        assert brief["week_by_week_progression"]["weeks"] == []
 
 
-def test_placement_regression_same_day_still_allowed_when_high_cost_best():
-    """
-    Regression proof: we did NOT add an anti-today rule.
-    A single high-cost role can still legitimately land on D-N.
-    """
-    roles = [
-        {
-            "session_index": 1,
-            "category": "conditioning",
-            "role_key": "alactic_sharpness_day",
-            "preferred_pool": "late_fight_pool",
-            "selection_rule": "rule",
-            "placement_rule": "rule",
-            "anchor": "highest_neural_day",
+class TestHandoffText:
+    def _build_handoff(self, days):
+        payload = {
+            "athlete_model": _athlete(days),
+            "payload_mode": _days_out_payload_mode(days),
+            "effective_stage2_mode": _days_out_payload_mode(days),
+            "restrictions": [],
+            "phase_briefs": {},
+            "candidate_pools": {},
+            "omission_ledger": {},
+            "rewrite_guidance": {},
         }
-    ]
+        return build_stage2_handoff_text(
+            stage2_payload=payload,
+            plan_text="Draft plan text.",
+            coach_notes="",
+        )
 
-    sequence = place_roles_in_countdown(
-        roles=roles,
-        days_until_fight=5,
-        countdown_weekday_map={},
+    def _build_handoff_with_brief(self, days):
+        payload = _build_stage2(days)
+        brief = _build_brief_for(days)
+        return build_stage2_handoff_text(
+            stage2_payload=payload,
+            plan_text="Draft plan text.",
+            coach_notes="",
+            planning_brief=brief,
+        )
+
+    def test_camp_handoff_has_no_payload_mode_section(self):
+        text = self._build_handoff(28)
+        assert "PAYLOAD MODE INSTRUCTIONS" not in text
+        assert "INJURY CONTEXT" in text
+        assert "PLANNING BRIEF" in text
+
+    @pytest.mark.parametrize(
+        "days, expected_heading",
+        [
+            (10, "COMPRESSED PRE-FIGHT WEEK"),
+            (7, "SHARPNESS WEEK"),
+            (5, "SHARPNESS & FRESHNESS WINDOW"),
+            (3, "SHARPNESS-FIRST SESSIONS"),
+            (1, "PRIMER DAY"),
+            (0, "FIGHT DAY PROTOCOL"),
+        ],
     )
-    assert len(sequence) == 1
-    assert sequence[0]["countdown_label"] == "D-5"
-    assert sequence[0]["placement_basis"] == "high"
+    def test_late_fight_handoff_includes_mode_instructions(self, days, expected_heading):
+        text = self._build_handoff(days)
+        assert "PAYLOAD MODE INSTRUCTIONS" in text
+        assert expected_heading in text
 
+    def test_late_fight_handoff_carries_taper_micro_support_rules(self):
+        text = self._build_handoff_with_brief(5)
+        assert "taper_micro_support" in text
+        assert "optional add-on" in text
 
-def test_placement_regression_tomorrow_or_later_wins_when_spacing_is_cleaner():
-    """
-    Regression proof: even with high-cost work, the allocator should pick a
-    tomorrow-or-later slot when spacing quality is better than a consecutive
-    follow-up day.
-    """
-    roles = [
-        {
-            "session_index": 1,
-            "category": "conditioning",
-            "role_key": "first_stress_day",
-            "preferred_pool": "late_fight_pool",
-            "selection_rule": "rule",
-            "placement_rule": "rule",
-            "anchor": "highest_neural_day",
-        },
-        {
-            "session_index": 2,
-            "category": "conditioning",
-            "role_key": "second_stress_day",
-            "preferred_pool": "late_fight_pool",
-            "selection_rule": "rule",
-            "placement_rule": "rule",
-            "anchor": "highest_neural_day",
-        },
-    ]
-
-    sequence = place_roles_in_countdown(
-        roles=roles,
-        days_until_fight=6,
-        countdown_weekday_map={},
-    )
-
-    labels_by_role = {entry["role_key"]: entry["countdown_label"] for entry in sequence}
-    assert labels_by_role["first_stress_day"] == "D-6"
-    assert labels_by_role["second_stress_day"] == "D-4"
-
-
-def test_placement_context_penalizes_hard_spar_collision_neighbors():
-    roles = [
-        {
-            "session_index": 1,
-            "category": "strength",
-            "role_key": "strength_touch_day",
-            "preferred_pool": "strength_slots",
-            "selection_rule": "rule",
-            "placement_rule": "rule",
-            "anchor": "highest_neural_day",
+    def test_handoff_injury_context_section_is_visible_and_structured(self):
+        payload = _build_stage2(14)
+        payload["injury_context"] = {
+            "raw_injury_text": "sore shoulder after sparring",
+            "injuries_flat": ["shoulder pain"],
+            "parsed_injuries": [{"original_phrase": "shoulder pain", "severity": "mild"}],
+            "guided_injury": {"area": "right shoulder", "severity": "mild"},
+            "restrictions": [{"restriction": "avoid heavy overhead pressing"}],
+            "triage_summary": {"mode": "full_plan", "should_block_stage2": False},
         }
-    ]
-    sequence = place_roles_in_countdown(
-        roles=roles,
-        days_until_fight=6,
-        countdown_weekday_map={},
-        placement_context={
-            "declared_hard_spar_offsets": [5],  # D-5 collision owner day
-            "today_offset": 6,
-            "fatigue": "low",
-            "readiness_flags": [],
-        },
-    )
-    # Avoid D-6 (day before hard spar) and D-4 (day after hard spar) when cleaner D-3 exists.
-    assert sequence[0]["countdown_label"] == "D-3"
+        brief = build_planning_brief(
+            athlete_model=payload["athlete_model"],
+            restrictions=payload["restrictions"],
+            phase_briefs=payload["phase_briefs"],
+            candidate_pools=payload["candidate_pools"],
+            omission_ledger=payload["omission_ledger"],
+            rewrite_guidance=payload["rewrite_guidance"],
+        )
+        text = build_stage2_handoff_text(
+            stage2_payload=payload,
+            plan_text="Week 1 ...",
+            planning_brief=brief,
+        )
+        assert "INJURY CONTEXT" in text
+        assert "sore shoulder after sparring" in text
+        assert "avoid heavy overhead pressing" in text
+        assert "STAGE 1 DRAFT PLAN" in text
+        assert "Week 1 ..." in text
+
+    def test_d10_handoff_blocks_normal_spp_rebuild_language(self):
+        text = self._build_handoff(10)
+
+        assert "No effective hard sparring" in text
+        assert "technical/rhythm only" in text
+
+    def test_d3_handoff_explicitly_forbids_week_structure(self):
+        text = self._build_handoff(3)
+        assert "no week headers" in text or "No week headers" in text
+        assert "Session-by-session only" in text
+
+    def test_d7_handoff_uses_sharpness_week_heading_map(self):
+        text = self._build_handoff(7)
+
+        assert "No effective hard sparring" in text
+        assert "technical/rhythm only" in text
+
+    def test_d3_handoff_replaces_camp_titles_with_late_fight_titles(self):
+        text = self._build_handoff(3)
+
+        assert "sharpness" in text.lower()
+        assert "freshness" in text.lower()
+        # Strength Block is a forbidden term that belongs in rendering_rules
+        assert "no strength" in text.lower() or "No strength" in text
+
+    def test_d1_handoff_forbids_strength_and_block_language(self):
+        text = self._build_handoff(1)
+
+        assert "Banned:" in text
+        assert "strength" in text
+        assert "neural primer" in text
+
+    def test_d0_handoff_uses_fight_day_protocol_terms(self):
+        text = self._build_handoff(0)
+
+        assert "walk-through" in text.lower()
+        assert "Do not restore suppressed roles" in text
+
+    def test_late_fight_handoff_uses_app_owned_insert_contract(self):
+        text = self._build_handoff(10)
+
+        # Placement governs day assignment only — core contract phrase (stable)
+        assert "Placement governs day assignment only" in text
+        # App vs coach ownership distinction is present
+        assert "app-owned" in text.lower() or "gym/coach" in text.lower(), (
+            "Handoff should distinguish app-owned vs coach-owned schedule elements"
+        )
+        # Spar day accounting fields are present in the payload data
+        assert "surviving_hard_spar_days" in text or "hard_spar" in text, (
+            "Handoff should reference hard spar day accounting"
+        )
+
+    def test_d16_handoff_includes_full_bridge_to_d0_mode_continuation(self):
+        text = self._build_handoff_with_brief(16)
+        for stage_key in ["d21_to_d14", "d13_to_d8", "d7", "d6_to_d5", "d4_to_d2", "d1", "d0"]:
+            assert stage_key in text
+
+    def test_d16_handoff_does_not_limit_countdown_to_bridge_only(self):
+        text = self._build_handoff_with_brief(16)
+        assert "Bridge segment is front-only" in text
+        assert "Continue mode takeover from D-13 to D-0" in text
+
+    def test_d14_handoff_includes_bridge_day_plus_downstream_continuation(self):
+        text = self._build_handoff_with_brief(14)
+        assert "- d21_to_d14: bridge_compression_payload (D-14 to D-14)" in text
+        assert "- d13_to_d8: pre_fight_compressed_payload (D-13 to D-8)" in text
+        assert "- d0: fight_day_protocol_payload (D-0 to D-0)" in text
+
+    def test_d21_handoff_includes_full_bridge_and_downstream_continuation(self):
+        text = self._build_handoff_with_brief(21)
+        assert "- d21_to_d14: bridge_compression_payload (D-21 to D-14)" in text
+        assert "- d13_to_d8: pre_fight_compressed_payload (D-13 to D-8)" in text
+        assert "- d0: fight_day_protocol_payload (D-0 to D-0)" in text
+
+    def test_d13_handoff_includes_countdown_continuation_map(self):
+        text = self._build_handoff_with_brief(13)
+        assert "COUNTDOWN CONTINUATION MAP" in text
+        assert "COMPRESSED PRE-FIGHT WEEK" in text
+        assert "- d13_to_d8: pre_fight_compressed_payload (D-13 to D-8)" in text
+        assert "- d0: fight_day_protocol_payload (D-0 to D-0)" in text
 
 
-def test_placement_context_readiness_penalizes_same_day_medium_role():
-    roles = [
-        {
-            "session_index": 1,
-            "category": "conditioning",
-            "role_key": "technical_touch_day",
-            "preferred_pool": "conditioning_slots",
-            "selection_rule": "rule",
-            "placement_rule": "rule",
-            "anchor": "support_day",
+class TestLateFightCountdownWeekdayLabels:
+    def test_d14_d13_countdown_labels_follow_real_calendar_weekdays(self):
+        athlete = _athlete(
+            14,
+            plan_creation_weekday="saturday",
+            fight_date="2026-05-09",
+            training_days=["monday", "tuesday", "wednesday", "thursday", "friday", "saturday"],
+        )
+
+        spec = _build_late_fight_plan_spec(14, athlete)
+        raw_map = spec["permission_policy"]["raw_countdown_weekday_map"]
+
+        assert raw_map["D-14"] == "saturday"
+        assert raw_map["D-13"] == "sunday"
+        assert raw_map["D-7"] == "saturday"
+        assert raw_map["D-5"] == "monday"
+        assert raw_map["D-3"] == "wednesday"
+        assert raw_map["D-1"] == "friday"
+        assert raw_map["D-0"] == "saturday"
+
+        visible_labels = {
+            entry.get("countdown_label"): entry.get("countdown_display_label")
+            for entry in spec.get("visible_session_sequence", [])
+            if entry.get("countdown_label") and entry.get("countdown_display_label")
         }
-    ]
-    sequence = place_roles_in_countdown(
-        roles=roles,
-        days_until_fight=6,
-        countdown_weekday_map={},
-        placement_context={
-            "declared_hard_spar_offsets": [],
-            "today_offset": 6,
-            "fatigue": "high",
-            "readiness_flags": ["injury_watch"],
-        },
-    )
-    assert sequence[0]["countdown_label"] != "D-6"
-
-
-def test_placement_context_freshness_prefers_latest_clean_slot():
-    roles = [
-        {
-            "session_index": 1,
-            "category": "recovery",
-            "role_key": "fight_week_freshness_day",
-            "preferred_pool": "rehab_slots_or_recovery_only",
-            "selection_rule": "rule",
-            "placement_rule": "rule",
-            "anchor": "lowest_load_day",
-        }
-    ]
-    sequence = place_roles_in_countdown(
-        roles=roles,
-        days_until_fight=6,
-        countdown_weekday_map={},
-        placement_context={"today_offset": 6, "fatigue": "moderate", "readiness_flags": []},
-    )
-    assert sequence[0]["countdown_label"] == "D-2"
-
-
-def test_placement_context_downgraded_technical_touch_holds_declared_offset():
-    roles = [
-        {
-            "session_index": 1,
-            "category": "conditioning",
-            "role_key": "light_fight_pace_touch_day",
-            "preferred_pool": "declared_technical_skill_days_or_conditioning_slots",
-            "selection_rule": "rule",
-            "placement_rule": "rule",
-            "anchor": "support_day",
-            "downgraded_from_hard_sparring": True,
-            "countdown_offset": 5,
-        }
-    ]
-    sequence = place_roles_in_countdown(
-        roles=roles,
-        days_until_fight=6,
-        countdown_weekday_map={},
-        placement_context={
-            "declared_hard_spar_offsets": [6],
-            "declared_technical_offsets": [5],
-            "today_offset": 6,
-            "fatigue": "moderate",
-            "readiness_flags": [],
-        },
-    )
-    assert sequence[0]["countdown_label"] == "D-5"
-
-
-def test_non_surviving_declared_hard_days_do_not_repel_neighbor_slots():
-    """
-    Regression: collision penalties should only use capped surviving hard-spar
-    instances. A dropped declared hard day (for example D-11) must not repel
-    adjacent placement like D-10.
-    """
-    roles = [
-        {
-            "session_index": 1,
-            "category": "conditioning",
-            "role_key": "hard_sparring_day",
-            "preferred_pool": "declared_hard_sparring_days",
-            "selection_rule": "rule",
-            "placement_rule": "rule",
-            "anchor": "highest_glycolytic_day",
-            "countdown_label": "D-13",
-            "countdown_offset": 13,
-            "declared_day_locked": True,
-        },
-        {
-            "session_index": 2,
-            "category": "conditioning",
-            "role_key": "hard_sparring_day",
-            "preferred_pool": "declared_hard_sparring_days",
-            "selection_rule": "rule",
-            "placement_rule": "rule",
-            "anchor": "highest_glycolytic_day",
-            "countdown_label": "D-8",
-            "countdown_offset": 8,
-            "declared_day_locked": True,
-        },
-        {
-            "session_index": 3,
-            "category": "strength",
-            "role_key": "strength_touch_day",
-            "preferred_pool": "strength_slots",
-            "selection_rule": "rule",
-            "placement_rule": "rule",
-            "anchor": "highest_neural_day",
-        },
-    ]
-    sequence = place_roles_in_countdown(
-        roles=roles,
-        days_until_fight=13,
-        countdown_weekday_map={},
-        placement_context={
-            "declared_hard_spar_offsets": [13, 8],  # surviving capped hard days only
-            "today_offset": 13,
-            "fatigue": "low",
-            "readiness_flags": [],
-        },
-    )
-    strength = next(entry for entry in sequence if entry["role_key"] == "strength_touch_day")
-    assert strength["countdown_label"] == "D-10"
-
-
-def test_role_cost_classifies_correctly():
-    """role_cost() must return correct bucket for known anchor types."""
-    assert role_cost({"anchor": "highest_neural_day"}) == "high"
-    assert role_cost({"anchor": "highest_glycolytic_day"}) == "high"
-    assert role_cost({"anchor": "support_day"}) == "medium"
-    assert role_cost({"anchor": "lowest_load_day"}) == "low"
-    assert role_cost({"anchor": "unknown_anchor"}) == "medium"   # safe default
-    assert role_cost({}) == "medium"                              # missing anchor
+        if "D-14" in visible_labels and "D-13" in visible_labels:
+            assert not (
+                visible_labels["D-14"].endswith("(Saturday)")
+                and visible_labels["D-13"].endswith("(Saturday)")
+            )
