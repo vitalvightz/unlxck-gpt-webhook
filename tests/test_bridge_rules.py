@@ -170,7 +170,7 @@ class TestSpecUnitCases:
         assert result["glycolytic_touch_max"] == 0
         assert result["strength_touch_max"] == 1
         assert result["freshness_mandatory"] is True
-        # D-15 to D-14 sub-band forbids further hard sparring after D-16.
+        # D-17 onward forbids further hard sparring.
         assert result.get("no_hard_sparring_after_d16") is True
 
     def test_late_taper_boxer(self):
