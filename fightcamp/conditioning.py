@@ -1201,7 +1201,7 @@ def _bridge_glycolytic_touch_fallback() -> dict:
             "cns_freshness",
             "low_impact",
         ],
-        "late_windows": [D21_TO_D14],
+        "late_windows": ["d21_to_d14"],
         "work_sec": 90,
         "rest_sec": 120,
         "rounds": 2,
@@ -1356,7 +1356,7 @@ def render_conditioning_block(
 
         show_system_labels = len(session.get("entries", [])) > 1
 
-                for system in ordered_keys:
+        for system in ordered_keys:
             system_entries = [
                 item for item in session.get("entries", [])
                 if item.get("system") == system
@@ -1382,45 +1382,62 @@ def render_conditioning_block(
 
             for entry in system_entries:
                 session_drills = [entry.get("primary")]
+
                 if entry.get("fallback"):
                     session_drills.append(entry.get("fallback"))
 
                 for d in [drill for drill in session_drills if drill]:
-                name = d.get("name", "Unnamed Drill")
-                timing = d.get("timing") or d.get("duration") or "—"
-                load = d.get("load") or d.get("intensity") or "—"
-                equip_note = d.get("equipment_note") or d.get("equipment_notes")
-                purpose = (
-                    d.get("purpose")
-                    or d.get("notes")
-                    or d.get("description")
-                    or "—"
-                )
-                rest = d.get("rest", "—")
-
-                name = _normalize_conditioning_name(name, fight_format=(sport or "").lower())
-                timing = _sanitize_sport_language(timing, fight_format=(sport or "").lower())
-                load = _sanitize_sport_language(load, fight_format=(sport or "").lower())
-                rest = _sanitize_sport_language(rest, fight_format=(sport or "").lower())
-                purpose = _sanitize_sport_language(purpose, fight_format=(sport or "").lower())
-
-                drill_block = {
-                    "system": system.upper(),
-                    "name": name,
-                    "load": load,
-                    "equipment_note": equip_note,
-                    "rest": rest,
-                    "timing": timing,
-                    "purpose": purpose,
-                    "red_flags": d.get("red_flags", "None"),
-                }
-                output_lines.append(
-                    format_drill_block(
-                        drill_block,
-                        phase_color=phase_color,
-                        fallback=bool(d.get("render_as_fallback")),
+                    name = d.get("name", "Unnamed Drill")
+                    timing = d.get("timing") or d.get("duration") or "—"
+                    load = d.get("load") or d.get("intensity") or "—"
+                    equip_note = d.get("equipment_note") or d.get("equipment_notes")
+                    purpose = (
+                        d.get("purpose")
+                        or d.get("notes")
+                        or d.get("description")
+                        or "—"
                     )
-                )
+                    rest = d.get("rest", "—")
+
+                    name = _normalize_conditioning_name(
+                        name,
+                        fight_format=(sport or "").lower(),
+                    )
+                    timing = _sanitize_sport_language(
+                        timing,
+                        fight_format=(sport or "").lower(),
+                    )
+                    load = _sanitize_sport_language(
+                        load,
+                        fight_format=(sport or "").lower(),
+                    )
+                    rest = _sanitize_sport_language(
+                        rest,
+                        fight_format=(sport or "").lower(),
+                    )
+                    purpose = _sanitize_sport_language(
+                        purpose,
+                        fight_format=(sport or "").lower(),
+                    )
+
+                    drill_block = {
+                        "system": system.upper(),
+                        "name": name,
+                        "load": load,
+                        "equipment_note": equip_note,
+                        "rest": rest,
+                        "timing": timing,
+                        "purpose": purpose,
+                        "red_flags": d.get("red_flags", "None"),
+                    }
+
+                    output_lines.append(
+                        format_drill_block(
+                            drill_block,
+                            phase_color=phase_color,
+                            fallback=bool(d.get("render_as_fallback")),
+                        )
+                    )
 
     return "\n".join(output_lines)
 
@@ -2224,7 +2241,7 @@ def generate_conditioning_block(flags):
             return True
         return allow_glycolytic and selected_counts["glycolytic"] < 1
 
-    def _append_drill(system: str, drill: dict, reasons: dict | None) -> bool:
+        def _append_drill(system: str, drill: dict, reasons: dict | None) -> bool:
         name = drill.get("name")
 
         if not name:
@@ -2246,7 +2263,8 @@ def generate_conditioning_block(flags):
             reason_lookup[name] = reasons
 
         return True
-            def _try_append_conditioning_drill(
+
+    def _try_append_conditioning_drill(
         system: str,
         drill: dict,
         reasons: dict | None,
@@ -2256,11 +2274,7 @@ def generate_conditioning_block(flags):
         enforce_injury: bool = True,
         enforce_late_window: bool = True,
     ) -> bool:
-        """Safely append late/guarantee conditioning drills.
-
-        This prevents guarantee blocks from bypassing duplicate, equipment,
-        restriction, injury, late-window, and TAPER system rules.
-        """
+        """Safely append late/guarantee conditioning drills."""
 
         name = drill.get("name")
         if not isinstance(name, str) or not name.strip():
@@ -2325,7 +2339,8 @@ def generate_conditioning_block(flags):
                     "reason_codes": list(reasons.get("reason_codes", [])) + list(late_eval["reason_codes"]),
                     "late_window_adjustment": late_eval["adjustment"],
                     "final_score": round(
-                        float(reasons.get("final_score", 0) or 0) + float(late_eval["adjustment"] or 0),
+                        float(reasons.get("final_score", 0) or 0)
+                        + float(late_eval["adjustment"] or 0),
                         4,
                     ),
                 }
@@ -2522,17 +2537,22 @@ def generate_conditioning_block(flags):
                     continue
                 system = get_system_or_warn(drill, source="style_taper_conditioning.json")
                 if system is not None:
-                    late_eval = _evaluate_conditioning_late_window(
+                    if _try_append_conditioning_drill(
+                        system,
                         drill,
-                        system=system,
-                        window=late_window,
-                        bridge_rules=bridge_rules,
-                    )
-                    _record_ambiguous_gap(late_eval.get("ambiguous_gap"))
-                    if late_eval["blocked"]:
-                        _record_late_block(drill, 0.0, late_eval["block_codes"])
-                        continue
-                                        if _try_append_conditioning_drill(
+                        {
+                            "goal_hits": 0,
+                            "weakness_hits": 0,
+                            "style_hits": 0,
+                            "phase_hits": 1,
+                            "load_adjustments": 0,
+                            "equipment_boost": 0,
+                            "penalties": 0,
+                            "final_score": 0,
+                        },
+                        source="style_taper",
+                    ):
+                        break
                         system,
                         drill,
                         {
