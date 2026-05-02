@@ -1300,7 +1300,11 @@ def render_conditioning_block(
             if not entry:
                 continue
             if show_system_labels:
-                output_lines.append(f"\n**{system.replace('_', ' ').title()}**")
+    label = athlete_facing_system_label(
+        entry.get("primary") or {},
+        late_window=diagnostic_context.get("late_window"),
+    )
+    output_lines.append(f"\n**{label.title()}**")
             session_drills = [entry.get("primary")]
             if entry.get("fallback"):
                 session_drills.append(entry.get("fallback"))
@@ -1408,21 +1412,23 @@ def _build_conditioning_candidate_reservoir(
 
 
 def generate_conditioning_block(flags):
-    phase = flags.get("phase", "GPP")
-    phase_color = {"GPP": "#4CAF50", "SPP": "#FF9800", "TAPER": "#F44336"}.get(phase.upper(), "#000")
-    fatigue = flags.get("fatigue", "low")
-    style = flags.get("style_tactical", [])
-    technical = flags.get("style_technical", [])
-    goals = flags.get("key_goals", [])
-    weaknesses = flags.get("weaknesses", [])
-    injuries = flags.get("injuries", [])
+    phase = str(flags.get("phase", "GPP") or "GPP").strip().upper()
+    phase_color = {"GPP": "#4CAF50", "SPP": "#FF9800", "TAPER": "#F44336"}.get(phase, "#000")
+
+    fatigue = str(flags.get("fatigue", "low") or "low").strip().lower()
+    style = flags.get("style_tactical") or []
+    technical = flags.get("style_technical") or []
+    goals = flags.get("key_goals") or []
+    weaknesses = flags.get("weaknesses") or []
+    injuries = flags.get("injuries") or []
     restrictions = flags.get("restrictions")
     ignore_restrictions = bool(flags.get("ignore_restrictions", False))
     injury_trace = os.environ.get("INJURY_TRACE", "0") == "1"
     training_frequency = flags.get("training_frequency", flags.get("days_available", 3))
     equipment_access = normalize_athlete_equipment_list(flags.get("equipment", []))
     equipment_access_set = set(equipment_access)
-    days_until_fight = flags.get("days_until_fight")
+
+    days_until_fight = _coerce_optional_int(flags.get("days_until_fight"))
     late_window = classify_late_selector_window(days_until_fight, include_control=True)
     active_late_window = is_active_late_selector_window(late_window)
     # Normalize technical style(s)
@@ -2671,6 +2677,7 @@ def generate_conditioning_block(flags):
         "sport": flags.get("sport"),
         "time_to_fight_days": flags.get("time_to_fight_days"),
         "days_until_fight": days_until_fight,
+        "late_window": late_window,
         "weeks_out": flags.get("weeks_out"),
         "fatigue_level": fatigue,
         "injuries": injuries,
