@@ -266,10 +266,10 @@ def test_normal_camp_12_week_attaches_calendar_to_every_week():
     weeks = role_map["weeks"]
     assert len(weeks) == 12
     all_d_days = [day["d_day"] for week in weeks for day in week["calendar_days"]]
-    # The countdown spine should cover D-1 through at least D-83 — the whole camp.
-    assert min(all_d_days) == 1
-    assert max(all_d_days) >= 83
+    # Spine starts the day after generation (D-83) and ends on fight day (D-0).
+    assert min(all_d_days) == 0
+    assert max(all_d_days) == 83
 
-    # Week 12 ends at D-1 → its declared Tue/Thu both fall inside D-15.
+    # Week 12 ends at D-0 → its declared Tue/Thu both fall inside D-15.
     final_plan = weeks[-1]["hard_sparring_plan"]
     assert all(entry["effective_load"] != "hard" for entry in final_plan)

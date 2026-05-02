@@ -651,8 +651,9 @@ def _apply_per_day_countdown_overrides(
     plan_by_day = {e["day"]: dict(e) for e in plan}
 
     # D-15 and closer: convert to technical/rhythm/reduced-contact.
+    # Skip D-0 (fight day) — fight_day_override owns that day's prescription.
     for day, d_day in per_day.items():
-        if d_day > 15 or d_day < 0:
+        if d_day > 15 or d_day <= 0:
             continue
         entry = plan_by_day.get(day)
         if entry is None:

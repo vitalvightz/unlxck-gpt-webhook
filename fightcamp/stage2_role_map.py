@@ -1420,13 +1420,15 @@ def _build_weekly_role_map(
     projected_days_until_fight_start: list[int] = [0] * len(progression_weeks)
     projected_days_until_fight_end: list[int] = [0] * len(progression_weeks)
     week_span_days: list[int] = [0] * len(progression_weeks)
+    # Spine anchors the final week's last day on D-0 (fight day) so the plan
+    # starts the day after generation and counts down forward to fight day.
     running_days = 0
     for idx in range(len(progression_weeks) - 1, -1, -1):
         span = max(0, int(progression_weeks[idx].get("span_days") or 0))
         week_span_days[idx] = span
         running_days += span
-        projected_days_until_fight_start[idx] = running_days
-        projected_days_until_fight_end[idx] = max(0, running_days - span + 1) if span > 0 else 0
+        projected_days_until_fight_start[idx] = max(0, running_days - 1)
+        projected_days_until_fight_end[idx] = max(0, running_days - span) if span > 0 else 0
     fight_weekday = compute_fight_weekday(athlete_model)
 
     for week_idx, week_entry in enumerate(progression_weeks):
