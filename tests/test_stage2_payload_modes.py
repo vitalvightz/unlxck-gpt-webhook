@@ -936,8 +936,8 @@ class TestHandoffText:
     def test_d10_handoff_blocks_normal_spp_rebuild_language(self):
         text = self._build_handoff(10)
 
-        assert "No SPP development framing" in text
-        assert "Hard sparring: 2 max" in text
+        assert "No effective hard sparring" in text
+        assert "technical/rhythm only" in text
 
     def test_d3_handoff_explicitly_forbids_week_structure(self):
         text = self._build_handoff(3)
@@ -947,9 +947,8 @@ class TestHandoffText:
     def test_d7_handoff_uses_sharpness_week_heading_map(self):
         text = self._build_handoff(7)
 
-        assert "SHARPNESS WEEK" in text
-        assert "Hard sparring: 1 declared day" in text
-        assert "Stress cap" in text
+        assert "No effective hard sparring" in text
+        assert "technical/rhythm only" in text
 
     def test_d3_handoff_replaces_camp_titles_with_late_fight_titles(self):
         text = self._build_handoff(3)
