@@ -591,9 +591,8 @@ def _late_fight_max_active_roles(days_until_fight: Any) -> int | None:
 
 
 def _late_fight_max_support_roles(days_until_fight: Any) -> int | None:
-    try:
-        days = int(days_until_fight)
-    except (TypeError, ValueError):
+    days = _coerce_days(days_until_fight)
+    if days is None:
         return None
     if 14 <= days <= 21:
         return 2
@@ -601,9 +600,7 @@ def _late_fight_max_support_roles(days_until_fight: Any) -> int | None:
         return 2
     if 3 <= days <= 7:
         return 1
-    if 1 <= days <= 2:
-        return 0
-    if days == 0:
+    if 0 <= days <= 2:
         return 0
     return None
 
