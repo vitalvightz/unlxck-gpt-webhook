@@ -1289,7 +1289,7 @@ def render_conditioning_block(
         num_sessions=num_sessions,
     )
 
-        for idx, session in enumerate(sessions, start=1):
+    for idx, session in enumerate(sessions, start=1):
         if not session.get("entries"):
             continue
         systems = session.get("systems", set())
