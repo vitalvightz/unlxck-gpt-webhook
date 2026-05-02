@@ -195,12 +195,8 @@ def _countdown_sparring_override(days_until_fight: Any) -> str | None:
         return None
     if days < 0 or days > 7:
         return None
-    if days <= 5:
+    if days <= 7:
         return "convert_all"
-    if days == 6:
-        return "deload_all"
-    # days == 7
-    return "cap_one"
 
 
 _BRIDGE_CONTACT_SPORTS = {
@@ -247,8 +243,7 @@ def _bridge_window_sparring_override(
       D-21 to D-18 (fatigue high, cut
         high, or moderate cut in a
         contact sport)                  → deload_all
-      D-17 to D-16                      → deload_all
-      D-15 to D-14                      → convert_all
+      D-17 to D-14                      → convert_all
     """
     days = _days_until_fight_int(athlete_snapshot)
     if days is None or not (14 <= days <= 21):
@@ -269,10 +264,8 @@ def _bridge_window_sparring_override(
     if not is_imminent:
         return None
 
-    if 14 <= days <= 15:
+    if 14 <= days <= 17:
         return "convert_all"
-    if 16 <= days <= 17:
-        return "deload_all"
 
     # 18 <= days <= 21: cap_one is the clean-athlete default, but high-fatigue
     # or any meaningful cut pressure on a contact-sport athlete forces zero
@@ -635,10 +628,9 @@ def _apply_per_day_countdown_overrides(
     hard_days: list[str],
     protected_day: str,
 ) -> list[dict[str, Any]]:
-    """Per-day calendar authority: ban D-15 onward, cap D-21..D-16 at one.
+    """Per-day calendar authority: ban D-17 onward, cap D-21..D-18 at one.
 
-    D-16 is the last allowed hard-spar day if already declared (matches the
-    long-standing ``_COUNTDOWN_COACH_NOTES[16]`` semantics). D-15 and closer
+    D-18 is the last allowed hard-spar day if already declared. D-17 and closer
     convert to technical/rhythm/reduced-contact regardless of declaration.
 
     Acts on each declared hard sparring day individually using its own D-day
@@ -650,30 +642,30 @@ def _apply_per_day_countdown_overrides(
         return plan
     plan_by_day = {e["day"]: dict(e) for e in plan}
 
-    # D-15 and closer: convert to technical/rhythm/reduced-contact.
+    # D-17 and closer: convert to technical/rhythm/reduced-contact.
     for day, d_day in per_day.items():
-        if d_day > 15 or d_day < 0:
+        if d_day > 17 or d_day < 0:
             continue
         entry = plan_by_day.get(day)
         if entry is None:
             continue
         codes = list(entry.get("reason_codes") or [])
-        if "d15_hard_sparring_ban" not in codes:
-            codes.append("d15_hard_sparring_ban")
+        if "d17_hard_sparring_ban" not in codes:
+            codes.append("d17_hard_sparring_ban")
         plan_by_day[day] = {
             **entry,
             "status": "convert_to_technical_suggested",
             "effective_load": "technical",
             "reason_codes": codes,
             "reason": entry.get("reason")
-            or "D-15 onward: hard sparring banned; convert to technical/rhythm.",
+            or "D-17 onward: hard sparring banned; convert to technical/rhythm only. No effective hard sparring allowed.",
             "coach_note": entry.get("coach_note")
             or _sparring_override_coach_note(d_day, "convert"),
             "d_day": d_day,
         }
 
-    # D-21 to D-16: cap at one effective hard exposure across that band.
-    band_days = [d for d, dd in per_day.items() if 16 <= dd <= 21]
+    # D-21 to D-18: cap at one effective hard exposure across that band.
+    band_days = [d for d, dd in per_day.items() if 18 <= dd <= 21]
     band_days_sorted = [d for d in hard_days if d in band_days]
     if len(band_days_sorted) >= 2:
         keeper = (
@@ -688,15 +680,15 @@ def _apply_per_day_countdown_overrides(
             if entry is None or entry.get("effective_load") != "hard":
                 continue
             codes = list(entry.get("reason_codes") or [])
-            if "d21_d16_cap_one" not in codes:
-                codes.append("d21_d16_cap_one")
+            if "d21_d18_cap_one" not in codes:
+                codes.append("d21_d18_cap_one")
             plan_by_day[day] = {
                 **entry,
                 "status": "deload_suggested",
                 "effective_load": "reduced",
                 "reason_codes": codes,
                 "reason": entry.get("reason")
-                or "D-21 to D-16: cap to one effective hard sparring exposure.",
+                or "D-21 to D-18: cap to one effective hard sparring exposure.",
                 "d_day": per_day[day],
             }
 
@@ -885,21 +877,24 @@ _COUNTDOWN_COACH_NOTES: dict[int, str] = {
         "— bring the technical intent but leave the damage out."
     ),
     6: (
-        "Six days out. Pull the intensity back on sparring "
-        "— keep rounds lighter and stay focused on timing over damage."
+        "Six days out. No hard sparring — keep only technical/rhythm rounds "
+        "and stay focused on timing over damage."
     ),
     14: (
         "Two weeks out. You're in the bridge window — no hard sparring from here; "
         "keep rounds technical and rhythm-first to protect freshness into fight week."
     ),
     15: (
-        "Fifteen days out. D-15 is the start of the hard-sparring ban — "
-        "convert any declared hard day to technical/rhythm work; no hard "
-        "contact from here into fight week."
+        "Fifteen days out. The D-17 hard-sparring ban is already active — "
+        "convert any declared hard day to technical/rhythm work; no hard contact."
     ),
     16: (
-        "Sixteen days out. Last allowed hard-spar day if already declared; "
-        "otherwise downgrade to technical rhythm and protect freshness."
+        "Sixteen days out. The D-17 hard-sparring ban is active — "
+        "technical rhythm only, with no effective hard sparring."
+    ),
+    17: (
+        "Seventeen days out. Hard sparring is banned from here onward; "
+        "convert declared hard days to technical/rhythm only."
     ),
 }
 
@@ -917,10 +912,10 @@ def _sparring_override_coach_note(days_until_fight: Any, action: str) -> str:
             "Seven days out. With multiple hard sparring sessions this week, one shifts to "
             "reduced intensity to protect the cumulative load going into fight week."
         )
-    if 7 <= days <= 15 and action == "convert":
+    if 7 <= days <= 17 and action == "convert":
         return (
-            f"D-{days}: inside the D-15 hard-sparring ban. Convert this declared hard "
-            "day to technical/rhythm work — no hard contact this close to fight day."
+            f"D-{days}: inside the D-17 hard-sparring ban. Convert this declared hard "
+            "day to technical/rhythm work — no effective hard sparring allowed."
         )
     return ""
 
