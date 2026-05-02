@@ -3051,6 +3051,16 @@ button.mobile-step-rail-item {
   text-align: center;
 }
 
+.weekly-sparring-ban-notice {
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(92, 186, 155, 0.26);
+  background: rgba(38, 118, 95, 0.14);
+  color: #c7f3e5;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
 .weekly-sparring-grid {
   display: grid;
   grid-template-columns: repeat(7, minmax(104px, 1fr));
@@ -3125,6 +3135,13 @@ button.mobile-step-rail-item {
   border-color: rgba(235, 190, 79, 0.34);
   background: rgba(235, 190, 79, 0.14);
   color: #ffe5a3;
+}
+
+.weekly-sparring-tile-technical,
+.weekly-sparring-badge-technical {
+  border-color: rgba(92, 186, 155, 0.34);
+  background: rgba(38, 118, 95, 0.18);
+  color: #c7f3e5;
 }
 
 .weekly-sparring-tile-none,
@@ -7232,6 +7249,14 @@ html[data-theme="light"] .weekly-sparring-badge-managed_hard {
   border-color: rgba(140, 114, 24, 0.34);
   background: rgba(140, 114, 24, 0.16);
   color: #5f4c11;
+}
+
+html[data-theme="light"] .weekly-sparring-ban-notice,
+html[data-theme="light"] .weekly-sparring-tile-technical,
+html[data-theme="light"] .weekly-sparring-badge-technical {
+  border-color: rgba(28, 116, 92, 0.28);
+  background: rgba(28, 116, 92, 0.12);
+  color: #145b48;
 }
 
 html[data-theme="light"] .weekly-sparring-tile-none,
