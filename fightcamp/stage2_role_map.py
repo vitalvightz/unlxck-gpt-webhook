@@ -43,6 +43,23 @@ from .weight_cut import compute_cut_severity_score, cut_severity_bucket
 from .fight_day_override import apply_fight_day_override_to_weekly_role_map, compute_fight_weekday
 from .fight_date_utils import build_calendar_days
 
+
+def _rotate_weekdays_from_plan_start(weekdays: list[str], plan_creation_weekday: Any) -> list[str]:
+    ordered = _ordered_weekdays(clean_list(weekdays))
+    creation_day = str(plan_creation_weekday or "").strip().lower()
+    creation_index = _WEEKDAY_ORDER.get(creation_day)
+    if creation_index is None or not ordered:
+        return ordered
+    start_index = (creation_index + 1) % 7
+
+    def relative_position(day: str) -> int:
+        day_index = _WEEKDAY_ORDER.get(str(day).strip().lower(), 99)
+        if day_index == 99:
+            return 99
+        return (day_index - start_index) % 7
+
+    return sorted(ordered, key=lambda day: (relative_position(day), str(day).strip().lower()))
+
 def _phase_progression_slot_count(brief: dict) -> int:
     weeks = int(brief.get("weeks") or 0)
     days = int(brief.get("days") or 0)
@@ -1673,7 +1690,10 @@ def _build_weekly_role_map(
                 "projected_days_until_fight_end": projected_days_until_fight_end[week_idx],
                 "countdown_range": countdown_range,
                 "calendar_days": calendar_days,
-                "declared_training_days": _ordered_weekdays(clean_list(athlete_model.get("training_days", []))),
+                "declared_training_days": _rotate_weekdays_from_plan_start(
+                    clean_list(athlete_model.get("training_days", [])),
+                    athlete_model.get("plan_creation_weekday"),
+                ),
                 "declared_hard_sparring_days": _ordered_weekdays(clean_list(athlete_model.get("hard_sparring_days", []))),
                 "declared_support_work_days": _ordered_weekdays(clean_list(athlete_model.get("support_work_days", athlete_model.get("technical_skill_days", [])))),
                 "declared_technical_skill_days": _ordered_weekdays(clean_list(athlete_model.get("technical_skill_days", []))),
