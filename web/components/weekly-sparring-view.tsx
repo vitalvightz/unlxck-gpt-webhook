@@ -16,7 +16,7 @@ const CLASS_LABELS: Record<SparringDayClass, string> = {
 
 const LOAD_LABELS: Record<WeeklyDayEntry["effective_load"], string> = {
   hard: "Hard",
-  technical: "Technical",
+  technical: "Technical / rhythm",
   reduced: "Reduced",
   none: "None",
 };
@@ -95,6 +95,7 @@ export function WeeklySparringView({ planId }: { planId: string }) {
     () => schedule?.days.find((day) => day.weekday === selectedWeekday) ?? null,
     [schedule, selectedWeekday],
   );
+  const hasHardSparringBan = schedule?.days.some((day) => day.reason_codes.includes("d17_hard_sparring_ban")) ?? false;
 
   if (isHidden || (!schedule && !error)) {
     return null;
@@ -161,6 +162,12 @@ export function WeeklySparringView({ planId }: { planId: string }) {
           </button>
         </div>
       </div>
+
+      {hasHardSparringBan ? (
+        <div className="weekly-sparring-ban-notice" role="status">
+          All declared hard sparring from D-17 onward is technical/rhythm only. No effective hard sparring allowed.
+        </div>
+      ) : null}
 
       <div className="weekly-sparring-grid" role="list">
         {schedule.days.map((day) => (
