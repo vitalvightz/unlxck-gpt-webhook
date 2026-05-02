@@ -1227,7 +1227,7 @@ def create_app(
         intake_id = str(plan_row.get("intake_id") or "").strip()
         if not intake_id:
             raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="plan is missing intake_id")
-        intake_row = store.get_intake(intake_id)
+        intake_row = await asyncio.to_thread(store.get_intake, intake_id)
         if not intake_row or not isinstance(intake_row.get("intake"), dict):
             raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="stored intake is missing for this plan")
         request_payload = copy.deepcopy(intake_row.get("intake"))
@@ -1251,19 +1251,22 @@ def create_app(
         updated_why_log = dict(why_log)
         updated_why_log["triage_resume_approval"] = approval_log
         updated_why_log["triage_regeneration_cleared"] = True
-        store.update_plan_triage_approval(
-            plan_id,
-            why_log=updated_why_log,
-            stage2_status="triage_resume_approved",
-        )
-
+        
         client_request_id = f"triage_resume_{plan_id}"
+        
         job = await asyncio.to_thread(
             store.create_or_get_generation_job,
             athlete_id=str(plan_row["athlete_id"]),
             client_request_id=client_request_id,
             source="admin_triage_resume",
             request_payload=request_payload,
+        )
+        
+        await asyncio.to_thread(
+            store.update_plan_triage_approval,
+            plan_id,
+            why_log=updated_why_log,
+            stage2_status="triage_resume_approved",
         )
         job = await schedule_generation_job_if_needed(
             job=job,

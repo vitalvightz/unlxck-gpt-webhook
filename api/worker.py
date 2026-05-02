@@ -3,23 +3,90 @@ from __future__ import annotations
 import asyncio
 import logging
 import os
-from typing import Any
+from contextlib import suppress
 
 from fightcamp.logging_utils import configure_logging
 
 from .demo import DemoAuthService, get_demo_store
-from .generation_runtime import default_planner, is_stale_job, run_generation_job
+from .generation_runtime import default_planner, is_stale_job, run_generation_job, utc_now_iso
 from .stage2_automation import build_default_stage2_automator
 from .store import AppStore, SupabaseAppStore
 
 logger = logging.getLogger(__name__)
 
 
-async def _tick(*, store: AppStore, active_tasks: set[str], stale_after_seconds: int) -> None:
+async def _mark_job_failed_before_runtime(
+    *,
+    store: AppStore,
+    job_id: str,
+    error: str,
+) -> None:
+    with suppress(Exception):
+        await asyncio.to_thread(
+            store.update_generation_job,
+            job_id,
+            status="failed",
+            error=error,
+            completed_at=utc_now_iso(),
+            heartbeat_at=utc_now_iso(),
+        )
+
+
+async def _run_claimed_job(
+    *,
+    job_id: str,
+    store: AppStore,
+    active_tasks: set[str],
+) -> None:
+    try:
+        stage2 = build_default_stage2_automator()
+        await run_generation_job(
+            job_id=job_id,
+            store=store,
+            planner_fn=default_planner,
+            stage2=stage2,
+            active_tasks=active_tasks,
+        )
+    except Exception as exc:
+        logger.exception("[worker] job failed before generation runtime job_id=%s", job_id)
+        await _mark_job_failed_before_runtime(
+            store=store,
+            job_id=job_id,
+            error=f"Worker failed before generation runtime: {exc}",
+        )
+        active_tasks.discard(job_id)
+
+
+def _cleanup_worker_task(
+    task: asyncio.Task[None],
+    *,
+    detached_tasks: set[asyncio.Task[None]],
+) -> None:
+    detached_tasks.discard(task)
+
+    if task.cancelled():
+        return
+
+    with suppress(Exception):
+        task.result()
+
+
+async def _tick(
+    *,
+    store: AppStore,
+    active_tasks: set[str],
+    detached_tasks: set[asyncio.Task[None]],
+    stale_after_seconds: int,
+    max_concurrent_jobs: int,
+) -> None:
+    remaining_capacity = max_concurrent_jobs - len(active_tasks)
+    if remaining_capacity <= 0:
+        return
+
     try:
         candidates = await asyncio.to_thread(
             store.list_claimable_generation_jobs,
-            limit=20,
+            limit=remaining_capacity,
             stale_after_seconds=stale_after_seconds,
         )
     except Exception:
@@ -27,33 +94,65 @@ async def _tick(*, store: AppStore, active_tasks: set[str], stale_after_seconds:
         return
 
     for job in candidates:
+        if len(active_tasks) >= max_concurrent_jobs:
+            break
+
         job_id = str(job.get("id") or "")
         if not job_id or job_id in active_tasks:
             continue
+
         status = str(job.get("status") or "")
-        if status == "running" and not is_stale_job(job, stale_after_seconds=stale_after_seconds):
+        if status == "running" and not is_stale_job(
+            job,
+            stale_after_seconds=stale_after_seconds,
+        ):
             continue
+
         try:
-            claimed = await asyncio.to_thread(store.claim_generation_job, job_id)
+            claimed = await asyncio.to_thread(
+                store.claim_generation_job,
+                job_id,
+                stale_after_seconds=stale_after_seconds,
+            )
         except Exception:
             logger.exception("[worker] failed to claim job_id=%s", job_id)
             continue
+
         if not claimed:
             continue
+
         active_tasks.add(job_id)
-        asyncio.create_task(
-            run_generation_job(
-                job_id=job_id,
+
+        try:
+            task = asyncio.create_task(
+                _run_claimed_job(
+                    job_id=job_id,
+                    store=store,
+                    active_tasks=active_tasks,
+                )
+            )
+        except Exception as exc:
+            logger.exception("[worker] failed to create task job_id=%s", job_id)
+            active_tasks.discard(job_id)
+            await _mark_job_failed_before_runtime(
                 store=store,
-                planner_fn=default_planner,
-                stage2=build_default_stage2_automator(),
-                active_tasks=active_tasks,
+                job_id=job_id,
+                error=f"Worker failed to create generation task: {exc}",
+            )
+            continue
+
+        detached_tasks.add(task)
+        task.add_done_callback(
+            lambda completed_task: _cleanup_worker_task(
+                completed_task,
+                detached_tasks=detached_tasks,
             )
         )
 
 
 async def run_worker() -> None:
     configure_logging()
+
     if os.getenv("UNLXCK_DEMO_MODE") == "1":
         store = get_demo_store()
         store.validate_runtime_schema()
@@ -64,18 +163,38 @@ async def run_worker() -> None:
         store.validate_runtime_schema()
         mode = "supabase"
 
-    interval_seconds = max(1.0, float(os.getenv("UNLXCK_GENERATION_WORKER_INTERVAL_SECONDS", "3")))
-    stale_after_seconds = max(30, int(os.getenv("UNLXCK_GENERATION_WORKER_STALE_AFTER_SECONDS", "90")))
+    interval_seconds = max(
+        1.0,
+        float(os.getenv("UNLXCK_GENERATION_WORKER_INTERVAL_SECONDS", "3")),
+    )
+    stale_after_seconds = max(
+        30,
+        int(os.getenv("UNLXCK_GENERATION_WORKER_STALE_AFTER_SECONDS", "90")),
+    )
+    max_concurrent_jobs = max(
+        1,
+        int(os.getenv("UNLXCK_GENERATION_WORKER_MAX_CONCURRENT_JOBS", "3")),
+    )
+
     active_tasks: set[str] = set()
+    detached_tasks: set[asyncio.Task[None]] = set()
+
     logger.info(
-        "[worker] started mode=%s interval_seconds=%s stale_after_seconds=%s",
+        "[worker] started mode=%s interval_seconds=%s stale_after_seconds=%s max_concurrent_jobs=%s",
         mode,
         interval_seconds,
         stale_after_seconds,
+        max_concurrent_jobs,
     )
 
     while True:
-        await _tick(store=store, active_tasks=active_tasks, stale_after_seconds=stale_after_seconds)
+        await _tick(
+            store=store,
+            active_tasks=active_tasks,
+            detached_tasks=detached_tasks,
+            stale_after_seconds=stale_after_seconds,
+            max_concurrent_jobs=max_concurrent_jobs,
+        )
         await asyncio.sleep(interval_seconds)
 
 
