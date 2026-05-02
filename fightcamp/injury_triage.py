@@ -71,6 +71,11 @@ _TRAUMA_CONTEXT_PATTERNS = (
 _NEURO_CONTEXT_PATTERN = r"\bneurolog(?:ic|ical)\b|\bnerve\b"
 _WORSENING_TRENDS = {"worse", "worsening", "regressing", "worsened"}
 
+_BROKE_REGION_RE = re.compile(
+    r"\bbroke\s+(?:my\s+)?(?:ankle|leg|arm|rib|wrist|hand|foot|jaw|nose|finger|toe)\b"
+)
+_BROKE_IT_RE = re.compile(r"\bbroke\s+it\b")
+
 
 def _normalize_guided_severity_token(value: str) -> str:
     normalized = str(value or "").strip().lower()
@@ -182,6 +187,13 @@ def triage_injuries(plan_input: PlanInput) -> InjuryTriageResult:
     if has_guided_worsening:
         red_flags.add("worsening_course")
         routing_reasons.add("guided_injury:worsening")
+
+    if _BROKE_REGION_RE.search(guided_notes) or (
+        _BROKE_IT_RE.search(guided_notes)
+        and any(token in combined_text for token in ("ankle", "leg", "arm", "rib", "wrist", "hand", "foot", "jaw", "nose", "finger", "toe"))
+    ):
+        matched_categories.add("fracture")
+        routing_reasons.add("guided_injury:structural_broke_signal")
 
     if any(token in guided_avoid for token in ("contact", "spar", "impact", "loaded", "weight bearing")):
         routing_reasons.add("guided_injury:avoid_high_load")

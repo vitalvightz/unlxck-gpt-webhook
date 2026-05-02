@@ -52,7 +52,7 @@ _HIGH_RISK_PATTERNS: tuple[tuple[str, str], ...] = (
     (r"\bopen\s+fracture\b", "open_fracture"),
     (r"\bstress\s+fracture\b", "stress_fracture"),
     (r"\brib\s+fracture\b|\bbroken\s+rib\b", "broken_rib"),
-    (r"\bfracture\b", "fracture"),
+    (r"\bfracture\b|\bbroken\s+(?:bone|ankle|leg|arm|rib|wrist|hand|foot|jaw|nose|finger|toe)\b|\bbroke\s+(?:my\s+)?(?:ankle|leg|arm|rib|wrist|hand|foot|jaw|nose|finger|toe)\b", "fracture"),
     (r"\bdislocat(?:ion|e|ed|es|ing)\b|\bsublux(?:ation|ing|ed)?\b|\bpartial\s+dislocation\b", "dislocation"),
     (r"\bsuspected\s+concussion\b", "suspected_concussion"),
     (r"\bconcussion\b", "concussion"),
