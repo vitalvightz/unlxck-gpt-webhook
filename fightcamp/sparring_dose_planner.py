@@ -893,8 +893,13 @@ _COUNTDOWN_COACH_NOTES: dict[int, str] = {
         "— no hard sparring in the final bridge sub-band."
     ),
     16: (
-        "Sixteen days out. Last allowed hard-spar day if already declared; "
-        "otherwise downgrade to technical rhythm and protect freshness."
+        "Sixteen days out. Inside the D-17 hard-sparring ban — convert any "
+        "declared hard day to technical/rhythm work and protect freshness."
+    ),
+    17: (
+        "Seventeen days out. D-17 is the start of the hard-sparring ban — "
+        "convert any declared hard day to technical/rhythm work; no hard "
+        "contact from here in."
     ),
 }
 
@@ -911,6 +916,11 @@ def _sparring_override_coach_note(days_until_fight: Any, action: str) -> str:
         return (
             "Seven days out. With multiple hard sparring sessions this week, one shifts to "
             "reduced intensity to protect the cumulative load going into fight week."
+        )
+    if 7 <= days <= 17 and action == "convert":
+        return (
+            f"D-{days}: inside the D-17 hard-sparring ban. Convert this declared hard "
+            "day to technical/rhythm work — no hard contact this close to fight day."
         )
     return ""
 
