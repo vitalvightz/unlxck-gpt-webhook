@@ -191,7 +191,7 @@ def triage_injuries(plan_input: PlanInput) -> InjuryTriageResult:
 
     if _BROKE_REGION_RE.search(guided_notes) or (
         _BROKE_IT_RE.search(guided_notes)
-        and any(token in combined_text for token in ("ankle", "leg", "arm", "rib", "wrist", "hand", "foot", "jaw", "nose", "finger", "toe"))
+        and any(token in combined_text for token in _FRACTURE_REGIONS)
     ):
         matched_categories.add("fracture")
         routing_reasons.add("guided_injury:structural_broke_signal")
