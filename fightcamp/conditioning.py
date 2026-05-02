@@ -2187,10 +2187,10 @@ def generate_conditioning_block(flags):
                 and days_until_fight > 7
             )
 
-        def _allow_system_insert(system: str) -> bool:
-        if phase.upper() != "TAPER" or system != "glycolytic":
-            return True
-        return allow_glycolytic and selected_counts["glycolytic"] < 1
+    def _allow_system_insert(system: str) -> bool:
+        if phase.upper() == "TAPER" and system == "glycolytic":
+            return allow_glycolytic and selected_counts["glycolytic"] < 1
+        return True
 
     def _append_drill(system: str, drill: dict, reasons: dict | None) -> bool:
         name = drill.get("name")
@@ -2660,7 +2660,7 @@ def generate_conditioning_block(flags):
                         # Log exclusion using new helper
                         _log_exclusion(f"conditioning:{phase.upper()}", drill, decision)
                         continue
-                                        system = get_system_or_warn(drill, source="pro_neck")
+                    system = get_system_or_warn(drill, source="pro_neck")
                     if system is None:
                         continue
 
@@ -2681,23 +2681,6 @@ def generate_conditioning_block(flags):
                         source="pro_neck",
                     ):
                         break
-                         if _try_append_conditioning_drill(
-                            system,
-                            drill,
-                            {
-                                "goal_hits": 0,
-                                "weakness_hits": 0,
-                                "style_hits": 0,
-                                "phase_hits": 1,
-                                "load_adjustments": 0,
-                                "equipment_boost": 0,
-                                "penalties": 0,
-                                "reason_codes": ["pro_neck_guarantee"],
-                                "final_score": 0,
-                            },
-                            source="pro_neck",
-                        ):
-                            break
 
     # Trim any extras beyond the recommended count
     if len(selected_drill_names) > total_drills:
@@ -2827,7 +2810,7 @@ def generate_conditioning_block(flags):
         reason_lookup,
     )
 
-         _is_late_fight_taper = active_late_window
+    _is_late_fight_taper = active_late_window
     bridge_allows_glycolytic_touch = bool(
         active_late_window
         and (bridge_rules or {}).get("glycolytic_touch_max", 0) > 0
