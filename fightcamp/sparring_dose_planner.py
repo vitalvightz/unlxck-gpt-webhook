@@ -176,27 +176,17 @@ def _main_collision_owner_day(week: dict[str, Any], hard_days: list[str]) -> str
 
 
 def _countdown_sparring_override(days_until_fight: Any) -> str | None:
-    """Return a deterministic sparring override based on countdown alone.
+    """Final fight-week override.
 
-    Returns:
-        ``None``  – no countdown override (normal rules apply)
-        ``"convert_all"`` – convert every declared hard day to technical/rhythm
-        ``"deload_all"`` – deload every declared hard day
-        ``"cap_one"`` – keep at most one hard day, deload the rest
-
-    Scope: only fires for the final fight week (days <= 7). The bridge window
-    (D-14 to D-21) is enforced through ``_bridge_window_sparring_override``
-    which is week-aware — otherwise this override would leak into future-
-    planning-week advisories.
+    D-7 to D-0 converts every declared hard sparring day to technical/rhythm.
+    Bridge-window caps are handled separately by _bridge_window_sparring_override().
     """
     try:
         days = int(days_until_fight)
     except (TypeError, ValueError):
         return None
-    if days < 0 or days > 7:
-        return None
-    if days <= 7:
-        return "convert_all"
+
+    return "convert_all" if 0 <= days <= 7 else None
 
 
 _BRIDGE_CONTACT_SPORTS = {
