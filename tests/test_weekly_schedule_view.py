@@ -238,3 +238,33 @@ def test_extract_weekly_schedule_taper_missing_plan_does_not_fallback_to_declare
     assert by_day["Mon"]["reason_codes"] == ["missing_effective_sparring_plan"]
     assert by_day["Wed"]["sparring_day_class"] == "none"
     assert by_day["Wed"]["status"] == "missing_effective_sparring_plan"
+
+
+def test_extract_weekly_schedule_empty_late_plan_marks_declared_hard_days_technical_only():
+    schedule = extract_weekly_schedule(
+        {
+            "weekly_role_map": {
+                "weeks": [
+                    {
+                        "phase": "TAPER",
+                        "payload_mode": "late_fight_session_payload",
+                        "declared_hard_sparring_days": ["Tuesday", "Thursday"],
+                        "hard_sparring_plan": [],
+                        "effective_hard_sparring_days": [],
+                        "intentional_compression": {
+                            "active": True,
+                            "reason_codes": ["late_fight_session_payload"],
+                        },
+                    }
+                ]
+            }
+        }
+    )
+
+    assert schedule is not None
+    by_day = {day["weekday"]: day for day in schedule["days"]}
+    for weekday in ("Tue", "Thu"):
+        assert by_day[weekday]["sparring_day_class"] == "technical"
+        assert by_day[weekday]["effective_load"] == "technical"
+        assert by_day[weekday]["status"] == "convert_to_technical_suggested"
+        assert by_day[weekday]["reason_codes"] == ["d17_hard_sparring_ban"]
