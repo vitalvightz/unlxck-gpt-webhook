@@ -3,8 +3,8 @@
 Covers:
 - per-day D-day mapping inside a week,
 - the calendar_days metadata block,
-- hard-sparring planner converting D-15+ days to technical (D-16 stays the
-  last allowed declared day) and capping D-21..D-16 to a single effective
+- hard-sparring planner converting D-17+ days to technical and capping
+  D-21..D-18 to a single effective
   hard exposure,
 - no pre-fight session rendering after a Friday fight day.
 """
@@ -93,9 +93,9 @@ def test_build_calendar_days_marks_fight_day_when_d0_in_range():
 
 # ── Hard sparring per-day countdown rules ─────────────────────────────────────
 
-def test_d15_hard_sparring_converts_to_technical():
-    # 4-week camp, week 2 covers D-20..D-14. Friday fight → Wednesday is D-16
-    # (last allowed declared day) and Friday is D-14 (banned).
+def test_d17_hard_sparring_ban_converts_to_technical():
+    # 4-week camp, week 2 covers D-20..D-14. Friday fight → Monday is D-18
+    # (last allowed declared band) while Wednesday and Friday are banned.
     week = _week_with_calendar(
         end_d=14, span=7, fight_weekday="friday",
         hard_days=["Monday", "Wednesday", "Friday"],
@@ -106,57 +106,48 @@ def test_d15_hard_sparring_converts_to_technical():
     )
     by_day = {entry["day"]: entry for entry in plan}
 
-    # Friday is D-14: inside the ban → convert to technical.
-    assert by_day["Friday"]["status"] == "convert_to_technical_suggested"
-    assert by_day["Friday"]["effective_load"] == "technical"
-    assert "d15_hard_sparring_ban" in by_day["Friday"]["reason_codes"]
+    for day in ("Wednesday", "Friday"):
+        assert by_day[day]["status"] == "convert_to_technical_suggested"
+        assert by_day[day]["effective_load"] == "technical"
+        assert "d17_hard_sparring_ban" in by_day[day]["reason_codes"]
 
-    # Monday (D-18) and Wednesday (D-16) are both in the D-21..D-16 cap band,
-    # so exactly one stays hard. Wednesday is D-16 specifically — it must NOT
-    # be converted, because the dict still calls it the last allowed day.
     assert by_day["Wednesday"]["d_day"] == 16
-    assert by_day["Wednesday"]["effective_load"] != "technical"
     assert by_day["Monday"]["d_day"] == 18
-    band_hard = sum(
-        1 for day in ("Monday", "Wednesday")
-        if by_day[day]["effective_load"] == "hard"
-    )
-    assert band_hard == 1
+    assert by_day["Monday"]["effective_load"] == "hard"
 
 
-def test_d16_remains_last_allowed_hard_spar_day():
-    # Friday fight, week of D-22..D-16 — Wednesday is D-16. Only one declared
-    # hard day inside the cap band → it stays hard, matching the long-standing
-    # _COUNTDOWN_COACH_NOTES[16] semantics.
+def test_d18_remains_last_allowed_hard_spar_day():
+    # Friday fight, week of D-24..D-18 — Monday is D-18. Only one declared
+    # hard day inside the cap band → it stays hard.
     week = _week_with_calendar(
-        end_d=16, span=7, fight_weekday="friday",
-        hard_days=["Wednesday"],
+        end_d=18, span=7, fight_weekday="friday",
+        hard_days=["Monday"],
     )
     plan = compute_hard_sparring_plan(
         week=week,
-        athlete_snapshot=_athlete(22, hard_days=["Wednesday"]),
+        athlete_snapshot=_athlete(24, hard_days=["Monday"]),
     )
-    assert plan[0]["day"] == "Wednesday"
-    assert plan[0]["d_day"] == 16
+    assert plan[0]["day"] == "Monday"
+    assert plan[0]["d_day"] == 18
     assert plan[0]["effective_load"] == "hard"
 
 
-def test_d21_d16_window_caps_to_one_effective_hard_day():
-    # Week ends at D-16, span 6, days D-16..D-21 — fully inside the cap window.
-    # Friday fight → D-16 = Wednesday, D-21 = Friday.
+def test_d21_d18_window_caps_to_one_effective_hard_day():
+    # Week ends at D-18, span 4, days D-18..D-21 — fully inside the cap window.
+    # Friday fight → D-18 = Monday, D-21 = Friday.
     week = _week_with_calendar(
-        end_d=16, span=6, fight_weekday="friday",
-        hard_days=["Friday", "Wednesday"],
+        end_d=18, span=4, fight_weekday="friday",
+        hard_days=["Friday", "Monday"],
     )
     plan = compute_hard_sparring_plan(
         week=week,
-        athlete_snapshot=_athlete(22, hard_days=["Friday", "Wednesday"]),
+        athlete_snapshot=_athlete(24, hard_days=["Friday", "Monday"]),
     )
     statuses = {entry["day"]: entry["status"] for entry in plan}
 
     hard_count = sum(1 for status in statuses.values() if status == "hard_as_planned")
     assert hard_count == 1, statuses
-    assert any("d21_d16_cap_one" in entry.get("reason_codes", []) for entry in plan)
+    assert any("d21_d18_cap_one" in entry.get("reason_codes", []) for entry in plan)
 
 
 def test_normal_week_outside_d21_keeps_hard_sparring_as_declared():
@@ -221,7 +212,7 @@ def test_normal_camp_4_week_emits_calendar_metadata_and_bans_d15():
         # No pre-fight day appears AFTER the fight day (Friday).
         assert all(day["is_after_fight_day"] is False for day in week["calendar_days"])
 
-    # Week 3 ends at D-7 → all days fall inside the D-15 ban → all converted.
+    # Week 3 ends at D-7 → all days fall inside the D-17 ban → all converted.
     week_3_plan = weeks[2]["hard_sparring_plan"]
     assert all(entry["effective_load"] != "hard" for entry in week_3_plan)
 
@@ -270,6 +261,6 @@ def test_normal_camp_12_week_attaches_calendar_to_every_week():
     assert min(all_d_days) == 1
     assert max(all_d_days) >= 83
 
-    # Week 12 ends at D-1 → its declared Tue/Thu both fall inside D-15.
+    # Week 12 ends at D-1 → its declared Tue/Thu both fall inside D-17.
     final_plan = weeks[-1]["hard_sparring_plan"]
     assert all(entry["effective_load"] != "hard" for entry in final_plan)
