@@ -2420,16 +2420,19 @@ def generate_conditioning_block(flags):
         )[:INJURY_GUARD_SHORTLIST]:
             if injected >= injected_target or len(selected_drill_names) >= total_drills:
                 break
-            decision = _guarded_injury_decision(drill)
-            if decision.action == "exclude":
-                # Log exclusion using new helper
-                _log_exclusion(f"conditioning:{phase.upper()}", drill, decision)
-                continue
+
             drill_tags = set(normalize_tags(drill.get("tags", [])))
-            if drill.get("name") in high_priority_names or drill_tags & (goal_tags_set | weakness_tags_set):
-                final_drills.append((system, [drill]))
-                selected_drill_names.append(drill.get("name"))
-                reason_lookup[drill.get("name")] = {
+
+            if not (
+                drill.get("name") in high_priority_names
+                or drill_tags & (goal_tags_set | weakness_tags_set)
+            ):
+                continue
+
+            if _try_append_conditioning_drill(
+                system,
+                drill,
+                {
                     "goal_hits": 0,
                     "weakness_hits": 0,
                     "style_hits": 0,
@@ -2437,8 +2440,12 @@ def generate_conditioning_block(flags):
                     "load_adjustments": 0,
                     "equipment_boost": 0,
                     "penalties": 0,
+                    "reason_codes": ["universal_gpp_guarantee"],
                     "final_score": 0,
-                }
+                },
+                source="universal_gpp",
+                enforce_late_window=False,
+            ):
                 existing_cond_names.add(drill.get("name"))
                 injected += 1
 
