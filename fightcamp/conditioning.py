@@ -2224,16 +2224,114 @@ def generate_conditioning_block(flags):
             return True
         return allow_glycolytic and selected_counts["glycolytic"] < 1
 
-    def _append_drill(system: str, drill: dict, reasons: dict | None) -> None:
+    def _append_drill(system: str, drill: dict, reasons: dict | None) -> bool:
+        name = drill.get("name")
+
+        if not name:
+            return False
+
         if not _allow_system_insert(system):
-            return
+            return False
+
+        if name in selected_drill_names:
+            return False
+
         final_drills.append((system, [drill]))
-        selected_drill_names.append(drill.get("name"))
+        selected_drill_names.append(name)
+
         if system in selected_counts:
             selected_counts[system] += 1
-        if reasons is not None:
-            reason_lookup[drill.get("name")] = reasons
 
+        if reasons is not None:
+            reason_lookup[name] = reasons
+
+        return True
+            def _try_append_conditioning_drill(
+        system: str,
+        drill: dict,
+        reasons: dict | None,
+        *,
+        source: str,
+        enforce_restrictions: bool = True,
+        enforce_injury: bool = True,
+        enforce_late_window: bool = True,
+    ) -> bool:
+        """Safely append late/guarantee conditioning drills.
+
+        This prevents guarantee blocks from bypassing duplicate, equipment,
+        restriction, injury, late-window, and TAPER system rules.
+        """
+
+        name = drill.get("name")
+        if not isinstance(name, str) or not name.strip():
+            return False
+
+        name = name.strip()
+
+        if name in selected_drill_names:
+            return False
+
+        if not _allow_system_insert(system):
+            return False
+
+        drill_equipment = normalize_equipment_list(drill.get("equipment", []))
+        if drill_equipment and not set(drill_equipment).issubset(equipment_access_set):
+            return False
+
+        tags = normalize_tags(drill.get("tags", []))
+        restriction_text = " ".join(
+            str(value or "")
+            for value in [
+                drill.get("name", ""),
+                drill.get("modality", ""),
+                drill.get("notes", ""),
+                drill.get("equipment_note", ""),
+            ]
+        )
+
+        if enforce_restrictions and not ignore_restrictions:
+            restriction_result = evaluate_restriction_impact(
+                restrictions,
+                text=restriction_text,
+                tags=tags,
+                limit_penalty=-0.75,
+            )
+
+            if not restriction_result.get("allowed", True):
+                return False
+
+        if enforce_injury:
+            decision = _guarded_injury_decision(drill)
+            if decision.action == "exclude":
+                _log_exclusion(f"conditioning:{phase.upper()}:{source}", drill, decision)
+                return False
+
+        if enforce_late_window:
+            late_eval = _evaluate_conditioning_late_window(
+                drill,
+                system=system,
+                window=late_window,
+                bridge_rules=bridge_rules,
+            )
+            _record_ambiguous_gap(late_eval.get("ambiguous_gap"))
+
+            if late_eval["blocked"]:
+                _record_late_block(drill, 0.0, late_eval["block_codes"])
+                return False
+
+            if reasons is not None:
+                reasons = {
+                    **reasons,
+                    "reason_codes": list(reasons.get("reason_codes", [])) + list(late_eval["reason_codes"]),
+                    "late_window_adjustment": late_eval["adjustment"],
+                    "final_score": round(
+                        float(reasons.get("final_score", 0) or 0) + float(late_eval["adjustment"] or 0),
+                        4,
+                    ),
+                }
+
+        return _append_drill(system, drill, reasons)
+        
     def blended_pick(system: str):
         nonlocal style_remaining, general_remaining
         drill = None
@@ -2434,19 +2532,22 @@ def generate_conditioning_block(flags):
                     if late_eval["blocked"]:
                         _record_late_block(drill, 0.0, late_eval["block_codes"])
                         continue
-                    _append_drill(system, drill, {
-                        "goal_hits": 0,
-                        "weakness_hits": 0,
-                        "style_hits": 0,
-                        "phase_hits": 1,
-                        "load_adjustments": 0,
-                        "equipment_boost": 0,
-                        "penalties": 0,
-                        "reason_codes": list(late_eval["reason_codes"]),
-                        "late_window_adjustment": late_eval["adjustment"],
-                        "final_score": round(late_eval["adjustment"], 4),
-                    })
-                    break
+                                        if _try_append_conditioning_drill(
+                        system,
+                        drill,
+                        {
+                            "goal_hits": 0,
+                            "weakness_hits": 0,
+                            "style_hits": 0,
+                            "phase_hits": 1,
+                            "load_adjustments": 0,
+                            "equipment_boost": 0,
+                            "penalties": 0,
+                            "final_score": 0,
+                        },
+                        source="style_taper",
+                    ):
+                        break
 
         # --------- TAPER PLYOMETRIC GUARANTEE ---------
         taper_plyos = [
@@ -2483,19 +2584,22 @@ def generate_conditioning_block(flags):
                     if late_eval["blocked"]:
                         _record_late_block(drill, 0.0, late_eval["block_codes"])
                         continue
-                    _append_drill(system, drill, {
-                        "goal_hits": 0,
-                        "weakness_hits": 0,
-                        "style_hits": 0,
-                        "phase_hits": 1,
-                        "load_adjustments": 0,
-                        "equipment_boost": 0,
-                        "penalties": 0,
-                        "reason_codes": list(late_eval["reason_codes"]),
-                        "late_window_adjustment": late_eval["adjustment"],
-                        "final_score": round(late_eval["adjustment"], 4),
-                    })
-                    break
+                                        if _try_append_conditioning_drill(
+                        system,
+                        drill,
+                        {
+                            "goal_hits": 0,
+                            "weakness_hits": 0,
+                            "style_hits": 0,
+                            "phase_hits": 1,
+                            "load_adjustments": 0,
+                            "equipment_boost": 0,
+                            "penalties": 0,
+                            "final_score": 0,
+                        },
+                        source="taper_plyometric",
+                    ):
+                        break
 
     # --------- SKILL REFINEMENT DRILL GUARANTEE ---------
     goal_set = {g.lower() for g in goals}
@@ -2523,8 +2627,23 @@ def generate_conditioning_block(flags):
             system = get_system_or_warn(drill, source="skill_refinement")
             if system is None:
                 continue
-            _append_drill(system, drill, None)
-            break
+            if _try_append_conditioning_drill(
+                system,
+                drill,
+                {
+                    "goal_hits": 1,
+                    "weakness_hits": 0,
+                    "style_hits": 0,
+                    "phase_hits": 1,
+                    "load_adjustments": 0,
+                    "equipment_boost": 0,
+                    "penalties": 0,
+                    "reason_codes": ["skill_refinement_guarantee"],
+                    "final_score": 0,
+                },
+                source="skill_refinement",
+            ):
+                break
 
     # --------- OPTIONAL COORDINATION DRILL INSERTION ---------
     existing_names = {d.get("name") for _, drills in final_drills for d in drills}
@@ -2534,16 +2653,22 @@ def generate_conditioning_block(flags):
     if coord_drill and len(selected_drill_names) < total_drills:
         system = get_system_or_warn(coord_drill, source="coordination")
         if system is not None:
-            _append_drill(system, coord_drill, {
-                "goal_hits": 0,
-                "weakness_hits": 0,
-                "style_hits": 0,
-                "phase_hits": 1,
-                "load_adjustments": 0,
-                "equipment_boost": 0,
-                "penalties": 0,
-                "final_score": 0,
-            })
+            _try_append_conditioning_drill(
+                system,
+                coord_drill,
+                {
+                    "goal_hits": 0,
+                    "weakness_hits": 1,
+                    "style_hits": 0,
+                    "phase_hits": 1,
+                    "load_adjustments": 0,
+                    "equipment_boost": 0,
+                    "penalties": 0,
+                    "reason_codes": ["coordination_guarantee"],
+                    "final_score": 0,
+                },
+                source="coordination",
+            )
 
     # --------- PRO NECK DRILL GUARANTEE ---------
     status = flags.get("status", "").strip().lower()
@@ -2575,17 +2700,23 @@ def generate_conditioning_block(flags):
                         continue
                     system = get_system_or_warn(drill, source="pro_neck")
                     if system is not None:
-                        _append_drill(system, drill, {
-                            "goal_hits": 0,
-                            "weakness_hits": 0,
-                            "style_hits": 0,
-                            "phase_hits": 1,
-                            "load_adjustments": 0,
-                            "equipment_boost": 0,
-                            "penalties": 0,
-                            "final_score": 0,
-                        })
-                        break
+                         if _try_append_conditioning_drill(
+                            system,
+                            drill,
+                            {
+                                "goal_hits": 0,
+                                "weakness_hits": 0,
+                                "style_hits": 0,
+                                "phase_hits": 1,
+                                "load_adjustments": 0,
+                                "equipment_boost": 0,
+                                "penalties": 0,
+                                "reason_codes": ["pro_neck_guarantee"],
+                                "final_score": 0,
+                            },
+                            source="pro_neck",
+                        ):
+                            break
 
     # Trim any extras beyond the recommended count
     if len(selected_drill_names) > total_drills:
@@ -2715,7 +2846,7 @@ def generate_conditioning_block(flags):
         reason_lookup,
     )
 
-        _is_late_fight_taper = active_late_window
+     _is_late_fight_taper = active_late_window
     bridge_allows_glycolytic_touch = bool(
         active_late_window
         and (bridge_rules or {}).get("glycolytic_touch_max", 0) > 0
@@ -2726,45 +2857,50 @@ def generate_conditioning_block(flags):
         and not grouped_drills.get("glycolytic")
         and not _is_late_fight_taper
     ):
-        # SPP is the fight-specific development phase, so a missing glycolytic
-        # exposure gets the normal fight-pace fallback.
         fallback = _glycolytic_fallback(phase)
-        grouped_drills["glycolytic"] = [fallback]
-        selected_drill_names.append(fallback["name"])
-        reason_lookup[fallback["name"]] = {
-            "goal_hits": 0,
-            "weakness_hits": 0,
-            "style_hits": 0,
-            "phase_hits": 1,
-            "load_adjustments": 0,
-            "equipment_boost": 0,
-            "penalties": 0,
-            "reason_codes": ["spp_glycolytic_fallback"],
-            "final_score": 0,
-        }
+        if _try_append_conditioning_drill(
+            "glycolytic",
+            fallback,
+            {
+                "goal_hits": 0,
+                "weakness_hits": 0,
+                "style_hits": 0,
+                "phase_hits": 1,
+                "load_adjustments": 0,
+                "equipment_boost": 0,
+                "penalties": 0,
+                "reason_codes": ["spp_glycolytic_fallback"],
+                "final_score": 0,
+            },
+            source="spp_glycolytic_fallback",
+            enforce_late_window=False,
+        ):
+            grouped_drills.setdefault("glycolytic", []).append(fallback)
 
     elif (
         phase.upper() == "TAPER"
         and not grouped_drills.get("glycolytic")
         and bridge_allows_glycolytic_touch
     ):
-        # Late bridge allows only a small glycolytic touch, not the full
-        # 6-10 round fight-pace fallback.
         fallback = _bridge_glycolytic_touch_fallback()
-        grouped_drills["glycolytic"] = [fallback]
-        selected_drill_names.append(fallback["name"])
-        reason_lookup[fallback["name"]] = {
-            "goal_hits": 0,
-            "weakness_hits": 0,
-            "style_hits": 0,
-            "phase_hits": 1,
-            "load_adjustments": 0,
-            "equipment_boost": 0,
-            "penalties": 0,
-            "reason_codes": ["bridge_glycolytic_touch_fallback"],
-            "late_window_adjustment": 0,
-            "final_score": 0,
-        }
+        if _try_append_conditioning_drill(
+            "glycolytic",
+            fallback,
+            {
+                "goal_hits": 0,
+                "weakness_hits": 0,
+                "style_hits": 0,
+                "phase_hits": 1,
+                "load_adjustments": 0,
+                "equipment_boost": 0,
+                "penalties": 0,
+                "reason_codes": ["bridge_glycolytic_touch_fallback"],
+                "final_score": 0,
+            },
+            source="bridge_glycolytic_touch_fallback",
+        ):
+            grouped_drills.setdefault("glycolytic", []).append(fallback)
+
     if (
         selection_format in {"boxing", "kickboxing"}
         and phase.upper() in {"SPP", "TAPER"}
@@ -2772,9 +2908,23 @@ def generate_conditioning_block(flags):
         and not _suppress_alactic_maintenance(fatigue=fatigue, injuries=injuries)
     ):
         fallback = _alactic_maintenance_fallback(phase)
-        grouped_drills["alactic"] = [fallback]
-        selected_drill_names.append(fallback["name"])
-
+        if _try_append_conditioning_drill(
+            "alactic",
+            fallback,
+            {
+                "goal_hits": 0,
+                "weakness_hits": 0,
+                "style_hits": 0,
+                "phase_hits": 1,
+                "load_adjustments": 0,
+                "equipment_boost": 0,
+                "penalties": 0,
+                "reason_codes": ["alactic_maintenance_fallback"],
+                "final_score": 0,
+            },
+            source="alactic_maintenance_fallback",
+        ):
+            grouped_drills.setdefault("alactic", []).append(fallback)
     resolved_sessions = _resolve_conditioning_sessions(
         grouped_drills,
         phase=phase,
