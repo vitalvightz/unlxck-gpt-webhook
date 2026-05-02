@@ -2236,16 +2236,18 @@ def generate_conditioning_block(flags):
                 and days_until_fight > 7
             )
 
-    def _allow_system_insert(system: str) -> bool:
+        def _allow_system_insert(system: str) -> bool:
         if phase.upper() != "TAPER" or system != "glycolytic":
             return True
         return allow_glycolytic and selected_counts["glycolytic"] < 1
 
-        def _append_drill(system: str, drill: dict, reasons: dict | None) -> bool:
+    def _append_drill(system: str, drill: dict, reasons: dict | None) -> bool:
         name = drill.get("name")
 
-        if not name:
+        if not isinstance(name, str) or not name.strip():
             return False
+
+        name = name.strip()
 
         if not _allow_system_insert(system):
             return False
@@ -2336,7 +2338,8 @@ def generate_conditioning_block(flags):
             if reasons is not None:
                 reasons = {
                     **reasons,
-                    "reason_codes": list(reasons.get("reason_codes", [])) + list(late_eval["reason_codes"]),
+                    "reason_codes": list(reasons.get("reason_codes", []))
+                    + list(late_eval["reason_codes"]),
                     "late_window_adjustment": late_eval["adjustment"],
                     "final_score": round(
                         float(reasons.get("final_score", 0) or 0)
@@ -2488,7 +2491,7 @@ def generate_conditioning_block(flags):
                 existing_cond_names.add(drill.get("name"))
                 injected += 1
 
-    # --------- STYLE TAPER DRILL INSERTION ---------
+        # --------- STYLE TAPER DRILL INSERTION ---------
     if phase == "TAPER":
         try:
             style_taper_bank = _load_bank(
@@ -2502,6 +2505,7 @@ def generate_conditioning_block(flags):
         existing_cond_names = {d.get("name") for _, drills in final_drills for d in drills}
         style_set = set(style_names)
         taper_candidates = []
+
         for d in style_taper_bank:
             if d.get("placement", "conditioning").lower() != "conditioning":
                 continue
@@ -2511,6 +2515,7 @@ def generate_conditioning_block(flags):
             if eq and not set(eq).issubset(equipment_access_set):
                 continue
             taper_candidates.append(d)
+
         if not taper_candidates:
             taper_candidates = [
                 d
@@ -2526,101 +2531,87 @@ def generate_conditioning_block(flags):
 
         if taper_candidates and len(selected_drill_names) < total_drills:
             for drill in sorted(
-                taper_candidates, key=lambda d: d.get("name") or ""
+                taper_candidates,
+                key=lambda d: d.get("name") or "",
             )[:INJURY_GUARD_SHORTLIST]:
                 if drill.get("name") in existing_cond_names:
                     continue
-                decision = _guarded_injury_decision(drill)
-                if decision.action == "exclude":
-                    # Log exclusion using new helper
-                    _log_exclusion(f"conditioning:{phase.upper()}", drill, decision)
-                    continue
-                system = get_system_or_warn(drill, source="style_taper_conditioning.json")
-                if system is not None:
-                    if _try_append_conditioning_drill(
-                        system,
-                        drill,
-                        {
-                            "goal_hits": 0,
-                            "weakness_hits": 0,
-                            "style_hits": 0,
-                            "phase_hits": 1,
-                            "load_adjustments": 0,
-                            "equipment_boost": 0,
-                            "penalties": 0,
-                            "final_score": 0,
-                        },
-                        source="style_taper",
-                    ):
-                        break
-                        system,
-                        drill,
-                        {
-                            "goal_hits": 0,
-                            "weakness_hits": 0,
-                            "style_hits": 0,
-                            "phase_hits": 1,
-                            "load_adjustments": 0,
-                            "equipment_boost": 0,
-                            "penalties": 0,
-                            "final_score": 0,
-                        },
-                        source="style_taper",
-                    ):
-                        break
 
-        # --------- TAPER PLYOMETRIC GUARANTEE ---------
+                system = get_system_or_warn(
+                    drill,
+                    source="style_taper_conditioning.json",
+                )
+                if system is None:
+                    continue
+
+                if _try_append_conditioning_drill(
+                    system,
+                    drill,
+                    {
+                        "goal_hits": 0,
+                        "weakness_hits": 0,
+                        "style_hits": 1,
+                        "phase_hits": 1,
+                        "load_adjustments": 0,
+                        "equipment_boost": 0,
+                        "penalties": 0,
+                        "reason_codes": ["style_taper_guarantee"],
+                        "final_score": 0,
+                    },
+                    source="style_taper",
+                ):
+                    break
+                    
+                # --------- TAPER PLYOMETRIC GUARANTEE ---------
         taper_plyos = [
-            d for d in get_conditioning_bank()
+            d
+            for d in get_conditioning_bank()
             if "TAPER" in [p.upper() for p in d.get("phases", [])]
             and d.get("placement", "conditioning").lower() == "conditioning"
             and "plyometric" in set(normalize_tags(d.get("tags", [])))
             and (
                 not normalize_equipment_list(d.get("equipment", []))
-                or set(normalize_equipment_list(d.get("equipment", []))).issubset(equipment_access_set)
+                or set(normalize_equipment_list(d.get("equipment", []))).issubset(
+                    equipment_access_set
+                )
             )
         ]
+
         if taper_plyos and len(selected_drill_names) < total_drills:
             existing_cond_names = {d.get("name") for _, drills in final_drills for d in drills}
+
             for drill in sorted(
-                taper_plyos, key=lambda d: d.get("name") or ""
+                taper_plyos,
+                key=lambda d: d.get("name") or "",
             )[:INJURY_GUARD_SHORTLIST]:
                 if drill.get("name") in existing_cond_names:
                     continue
-                decision = _guarded_injury_decision(drill)
-                if decision.action == "exclude":
-                    # Log exclusion using new helper
-                    _log_exclusion(f"conditioning:{phase.upper()}", drill, decision)
-                    continue
-                system = get_system_or_warn(drill, source="conditioning_taper_plyo")
-                if system is not None:
-                    late_eval = _evaluate_conditioning_late_window(
-                        drill,
-                        system=system,
-                        window=late_window,
-                        bridge_rules=bridge_rules,
-                    )
-                    _record_ambiguous_gap(late_eval.get("ambiguous_gap"))
-                    if late_eval["blocked"]:
-                        _record_late_block(drill, 0.0, late_eval["block_codes"])
-                        continue
-                                        if _try_append_conditioning_drill(
-                        system,
-                        drill,
-                        {
-                            "goal_hits": 0,
-                            "weakness_hits": 0,
-                            "style_hits": 0,
-                            "phase_hits": 1,
-                            "load_adjustments": 0,
-                            "equipment_boost": 0,
-                            "penalties": 0,
-                            "final_score": 0,
-                        },
-                        source="taper_plyometric",
-                    ):
-                        break
 
+                system = get_system_or_warn(
+                    drill,
+                    source="conditioning_taper_plyo",
+                )
+                if system is None:
+                    continue
+
+                if _try_append_conditioning_drill(
+                    system,
+                    drill,
+                    {
+                        "goal_hits": 0,
+                        "weakness_hits": 0,
+                        "style_hits": 0,
+                        "phase_hits": 1,
+                        "load_adjustments": 0,
+                        "equipment_boost": 0,
+                        "penalties": 0,
+                        "reason_codes": ["taper_plyometric_guarantee"],
+                        "final_score": 0,
+                    },
+                    source="taper_plyometric",
+                ):
+                    break
+                    
     # --------- SKILL REFINEMENT DRILL GUARANTEE ---------
     goal_set = {g.lower() for g in goals}
     if "skill_refinement" in goal_set and len(selected_drill_names) < total_drills:
@@ -2718,8 +2709,27 @@ def generate_conditioning_block(flags):
                         # Log exclusion using new helper
                         _log_exclusion(f"conditioning:{phase.upper()}", drill, decision)
                         continue
-                    system = get_system_or_warn(drill, source="pro_neck")
-                    if system is not None:
+                                        system = get_system_or_warn(drill, source="pro_neck")
+                    if system is None:
+                        continue
+
+                    if _try_append_conditioning_drill(
+                        system,
+                        drill,
+                        {
+                            "goal_hits": 0,
+                            "weakness_hits": 0,
+                            "style_hits": 0,
+                            "phase_hits": 1,
+                            "load_adjustments": 0,
+                            "equipment_boost": 0,
+                            "penalties": 0,
+                            "reason_codes": ["pro_neck_guarantee"],
+                            "final_score": 0,
+                        },
+                        source="pro_neck",
+                    ):
+                        break
                          if _try_append_conditioning_drill(
                             system,
                             drill,
@@ -2866,7 +2876,7 @@ def generate_conditioning_block(flags):
         reason_lookup,
     )
 
-     _is_late_fight_taper = active_late_window
+         _is_late_fight_taper = active_late_window
     bridge_allows_glycolytic_touch = bool(
         active_late_window
         and (bridge_rules or {}).get("glycolytic_touch_max", 0) > 0
@@ -2878,10 +2888,12 @@ def generate_conditioning_block(flags):
         and not _is_late_fight_taper
     ):
         fallback = _glycolytic_fallback(phase)
-        if _try_append_conditioning_drill(
-            "glycolytic",
-            fallback,
-            {
+        decision = _guarded_injury_decision(fallback)
+
+        if decision.action != "exclude":
+            grouped_drills["glycolytic"] = [fallback]
+            selected_drill_names.append(fallback["name"])
+            reason_lookup[fallback["name"]] = {
                 "goal_hits": 0,
                 "weakness_hits": 0,
                 "style_hits": 0,
@@ -2891,11 +2903,9 @@ def generate_conditioning_block(flags):
                 "penalties": 0,
                 "reason_codes": ["spp_glycolytic_fallback"],
                 "final_score": 0,
-            },
-            source="spp_glycolytic_fallback",
-            enforce_late_window=False,
-        ):
-            grouped_drills.setdefault("glycolytic", []).append(fallback)
+            }
+        else:
+            _log_exclusion(f"conditioning:{phase.upper()}:spp_glycolytic_fallback", fallback, decision)
 
     elif (
         phase.upper() == "TAPER"
@@ -2903,10 +2913,18 @@ def generate_conditioning_block(flags):
         and bridge_allows_glycolytic_touch
     ):
         fallback = _bridge_glycolytic_touch_fallback()
-        if _try_append_conditioning_drill(
-            "glycolytic",
+        late_eval = _evaluate_conditioning_late_window(
             fallback,
-            {
+            system="glycolytic",
+            window=late_window,
+            bridge_rules=bridge_rules,
+        )
+        decision = _guarded_injury_decision(fallback)
+
+        if not late_eval["blocked"] and decision.action != "exclude":
+            grouped_drills["glycolytic"] = [fallback]
+            selected_drill_names.append(fallback["name"])
+            reason_lookup[fallback["name"]] = {
                 "goal_hits": 0,
                 "weakness_hits": 0,
                 "style_hits": 0,
@@ -2914,12 +2932,15 @@ def generate_conditioning_block(flags):
                 "load_adjustments": 0,
                 "equipment_boost": 0,
                 "penalties": 0,
-                "reason_codes": ["bridge_glycolytic_touch_fallback"],
-                "final_score": 0,
-            },
-            source="bridge_glycolytic_touch_fallback",
-        ):
-            grouped_drills.setdefault("glycolytic", []).append(fallback)
+                "reason_codes": ["bridge_glycolytic_touch_fallback"]
+                + list(late_eval["reason_codes"]),
+                "late_window_adjustment": late_eval["adjustment"],
+                "final_score": round(float(late_eval["adjustment"] or 0), 4),
+            }
+        elif late_eval["blocked"]:
+            _record_late_block(fallback, 0.0, late_eval["block_codes"])
+        else:
+            _log_exclusion(f"conditioning:{phase.upper()}:bridge_glycolytic_touch_fallback", fallback, decision)
 
     if (
         selection_format in {"boxing", "kickboxing"}
@@ -2928,10 +2949,18 @@ def generate_conditioning_block(flags):
         and not _suppress_alactic_maintenance(fatigue=fatigue, injuries=injuries)
     ):
         fallback = _alactic_maintenance_fallback(phase)
-        if _try_append_conditioning_drill(
-            "alactic",
+        late_eval = _evaluate_conditioning_late_window(
             fallback,
-            {
+            system="alactic",
+            window=late_window,
+            bridge_rules=bridge_rules,
+        )
+        decision = _guarded_injury_decision(fallback)
+
+        if not late_eval["blocked"] and decision.action != "exclude":
+            grouped_drills["alactic"] = [fallback]
+            selected_drill_names.append(fallback["name"])
+            reason_lookup[fallback["name"]] = {
                 "goal_hits": 0,
                 "weakness_hits": 0,
                 "style_hits": 0,
@@ -2939,12 +2968,15 @@ def generate_conditioning_block(flags):
                 "load_adjustments": 0,
                 "equipment_boost": 0,
                 "penalties": 0,
-                "reason_codes": ["alactic_maintenance_fallback"],
-                "final_score": 0,
-            },
-            source="alactic_maintenance_fallback",
-        ):
-            grouped_drills.setdefault("alactic", []).append(fallback)
+                "reason_codes": ["alactic_maintenance_fallback"]
+                + list(late_eval["reason_codes"]),
+                "late_window_adjustment": late_eval["adjustment"],
+                "final_score": round(float(late_eval["adjustment"] or 0), 4),
+            }
+        elif late_eval["blocked"]:
+            _record_late_block(fallback, 0.0, late_eval["block_codes"])
+        else:
+            _log_exclusion(f"conditioning:{phase.upper()}:alactic_maintenance_fallback", fallback, decision)
     resolved_sessions = _resolve_conditioning_sessions(
         grouped_drills,
         phase=phase,
