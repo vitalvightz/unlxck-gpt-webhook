@@ -129,6 +129,22 @@ def _mark_missing_effective_sparring_plan(day: dict[str, Any]) -> None:
     )
 
 
+def _mark_late_hard_sparring_ban(day: dict[str, Any]) -> None:
+    day.update(
+        {
+            "sparring_day_class": "technical",
+            "effective_load": "technical",
+            "status": "convert_to_technical_suggested",
+            "reason": (
+                "D-17 onward hard sparring ban: declared hard sparring is converted "
+                "to technical/rhythm only. No effective hard sparring allowed."
+            ),
+            "coach_note": "Technical/rhythm only. No hard contact.",
+            "reason_codes": ["d17_hard_sparring_ban"],
+        }
+    )
+
+
 def extract_weekly_schedule(planning_brief: Any, *, week_index: int = 0) -> dict[str, Any] | None:
     if not isinstance(planning_brief, dict) or week_index < 0:
         return None
@@ -162,6 +178,19 @@ def extract_weekly_schedule(planning_brief: Any, *, week_index: int = 0) -> dict
                 weekday = _normalize_weekday(day_name)
                 if weekday and weekday in days_by_weekday:
                     _mark_missing_effective_sparring_plan(days_by_weekday[weekday])
+        else:
+            for day_name in _clean_list(week.get("effective_hard_sparring_days")):
+                weekday = _normalize_weekday(day_name)
+                if weekday and weekday in days_by_weekday:
+                    _fill_legacy_hard_day(days_by_weekday[weekday])
+            for day_name in _clean_list(week.get("declared_hard_sparring_days")):
+                weekday = _normalize_weekday(day_name)
+                if (
+                    weekday
+                    and weekday in days_by_weekday
+                    and days_by_weekday[weekday]["effective_load"] != "hard"
+                ):
+                    _mark_late_hard_sparring_ban(days_by_weekday[weekday])
     else:
         for day_name in _clean_list(week.get("declared_hard_sparring_days")):
             weekday = _normalize_weekday(day_name)
