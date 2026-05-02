@@ -1,314 +1,266 @@
-"""Unit tests for final-week countdown-to-real-weekday mapping.
+"""Countdown-aware calendar spine for normal camps.
 
 Covers:
-- _fight_weekday_from_context  – computes the fight's real weekday from the
-  plan-creation weekday and days_until_fight.
-- _countdown_weekday_map       – anchors the fight date and maps each D-N label
-  to its real weekday.
-- _nearest_available_day       – finds the closest available day for a given
-  target weekday.
-- _resolve_countdown_weekday_with_availability – adjusts the countdown map so
-  every D-N falls on an available training day.
-- Session sequence weekday/label annotation applied in
-  _build_late_fight_session_sequence.
+- per-day D-day mapping inside a week,
+- the calendar_days metadata block,
+- hard-sparring planner converting D-17+ days to technical and capping
+  D-21..D-18 to a single effective
+  hard exposure,
+- no pre-fight session rendering after a Friday fight day.
 """
 
-from __future__ import annotations
-
-import pytest
-
-from fightcamp.stage2_payload_late_fight import (
-    _build_late_fight_session_sequence,
-    _countdown_weekday_map,
-    _fight_weekday_from_context,
-    _nearest_available_day,
-    _resolve_countdown_weekday_with_availability,
-)
+from fightcamp.fight_date_utils import build_calendar_days, d_day_for_weekday
+from fightcamp.sparring_dose_planner import compute_hard_sparring_plan
 
 
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
+def _week_with_calendar(*, end_d, span, fight_weekday="friday", **overrides):
+    week = {
+        "phase": overrides.pop("phase", "SPP"),
+        "stage_key": overrides.pop("stage_key", "specific_density_build"),
+        "week_index": 1,
+        "phase_week_index": overrides.pop("phase_week_index", None),
+        "phase_week_total": overrides.pop("phase_week_total", None),
+        "projected_days_until_fight_start": end_d + span - 1,
+        "projected_days_until_fight_end": end_d,
+        "span_days": span,
+        "fight_weekday": fight_weekday,
+        "declared_hard_sparring_days": overrides.pop("hard_days", []),
+        "session_roles": overrides.pop("session_roles", []),
+    }
+    week.update(overrides)
+    return week
 
-def _athlete(days_until_fight: int, **overrides) -> dict:
-    base = {
+
+def _athlete(days_until_fight, *, hard_days, fight_weekday="friday"):
+    return {
+        "sport": "boxing",
+        "fatigue": "low",
         "days_until_fight": days_until_fight,
-        "fatigue": "moderate",
+        "weight_cut_pct": 0.0,
+        "weight_cut_risk": False,
         "readiness_flags": [],
+        "injuries": [],
+        "hard_sparring_days": hard_days,
+        "fight_date": None,
+        "fight_weekday": fight_weekday,
+    }
+
+
+# ── Calendar spine primitives ─────────────────────────────────────────────────
+
+def test_d_day_for_weekday_friday_fight_resolves_each_weekday():
+    # Final week: ends at D-1 (Thursday before Friday fight), span 7.
+    assert d_day_for_weekday("thursday", fight_weekday="friday",
+                             projected_days_until_fight_end=1, span_days=7) == 1
+    assert d_day_for_weekday("friday", fight_weekday="friday",
+                             projected_days_until_fight_end=1, span_days=7) == 7
+    assert d_day_for_weekday("monday", fight_weekday="friday",
+                             projected_days_until_fight_end=1, span_days=7) == 4
+
+
+def test_d_day_for_weekday_returns_none_when_outside_week_span():
+    # Final week with span 3: only the last 3 days before fight are in scope.
+    assert d_day_for_weekday("monday", fight_weekday="friday",
+                             projected_days_until_fight_end=1, span_days=3) is None
+    assert d_day_for_weekday("wednesday", fight_weekday="friday",
+                             projected_days_until_fight_end=1, span_days=3) == 2
+
+
+def test_build_calendar_days_friday_fight_skips_post_fight_weekend():
+    # 6-day final week ending at D-1. Because the role map clamps end_d to >= 1
+    # for normal-camp weeks, no Saturday/Sunday AFTER fight day can appear here.
+    days = build_calendar_days(fight_weekday="friday",
+                               projected_days_until_fight_end=1, span_days=6)
+    assert all(entry["d_day"] >= 1 for entry in days)
+    assert all(entry["is_after_fight_day"] is False for entry in days)
+    assert all(entry["is_fight_day"] is False for entry in days)
+    # The day immediately before a Friday fight is always Thursday (D-1).
+    assert days[-1] == {
+        "weekday": "thursday",
+        "d_day": 1,
+        "is_fight_day": False,
+        "is_after_fight_day": False,
+    }
+
+
+def test_build_calendar_days_marks_fight_day_when_d0_in_range():
+    days = build_calendar_days(fight_weekday="friday",
+                               projected_days_until_fight_end=0, span_days=1)
+    assert days == [
+        {"weekday": "friday", "d_day": 0, "is_fight_day": True, "is_after_fight_day": False}
+    ]
+
+
+# ── Hard sparring per-day countdown rules ─────────────────────────────────────
+
+def test_d17_hard_sparring_ban_converts_to_technical():
+    # 4-week camp, week 2 covers D-20..D-14. Friday fight → Monday is D-18
+    # (last allowed declared band) while Wednesday and Friday are banned.
+    week = _week_with_calendar(
+        end_d=14, span=7, fight_weekday="friday",
+        hard_days=["Monday", "Wednesday", "Friday"],
+    )
+    plan = compute_hard_sparring_plan(
+        week=week,
+        athlete_snapshot=_athlete(20, hard_days=["Monday", "Wednesday", "Friday"]),
+    )
+    by_day = {entry["day"]: entry for entry in plan}
+
+    for day in ("Wednesday", "Friday"):
+        assert by_day[day]["status"] == "convert_to_technical_suggested"
+        assert by_day[day]["effective_load"] == "technical"
+        assert "d17_hard_sparring_ban" in by_day[day]["reason_codes"]
+
+    assert by_day["Wednesday"]["d_day"] == 16
+    assert by_day["Monday"]["d_day"] == 18
+    assert by_day["Monday"]["effective_load"] == "hard"
+
+
+def test_d18_remains_last_allowed_hard_spar_day():
+    # Friday fight, week of D-24..D-18 — Monday is D-18. Only one declared
+    # hard day inside the cap band → it stays hard.
+    week = _week_with_calendar(
+        end_d=18, span=7, fight_weekday="friday",
+        hard_days=["Monday"],
+    )
+    plan = compute_hard_sparring_plan(
+        week=week,
+        athlete_snapshot=_athlete(24, hard_days=["Monday"]),
+    )
+    assert plan[0]["day"] == "Monday"
+    assert plan[0]["d_day"] == 18
+    assert plan[0]["effective_load"] == "hard"
+
+
+def test_d21_d18_window_caps_to_one_effective_hard_day():
+    # Week ends at D-18, span 4, days D-18..D-21 — fully inside the cap window.
+    # Friday fight → D-18 = Monday, D-21 = Friday.
+    week = _week_with_calendar(
+        end_d=18, span=4, fight_weekday="friday",
+        hard_days=["Friday", "Monday"],
+    )
+    plan = compute_hard_sparring_plan(
+        week=week,
+        athlete_snapshot=_athlete(24, hard_days=["Friday", "Monday"]),
+    )
+    statuses = {entry["day"]: entry["status"] for entry in plan}
+
+    hard_count = sum(1 for status in statuses.values() if status == "hard_as_planned")
+    assert hard_count == 1, statuses
+    assert any("d21_d18_cap_one" in entry.get("reason_codes", []) for entry in plan)
+
+
+def test_normal_week_outside_d21_keeps_hard_sparring_as_declared():
+    # 4-week camp, week 1 covers D-27..D-21. With Friday fight, every weekday is >=22.
+    week = _week_with_calendar(
+        end_d=21, span=7, fight_weekday="friday",
+        hard_days=["Tuesday", "Thursday"],
+    )
+    plan = compute_hard_sparring_plan(
+        week=week,
+        athlete_snapshot=_athlete(27, hard_days=["Tuesday", "Thursday"]),
+    )
+    assert all(entry["status"] == "hard_as_planned" for entry in plan)
+    assert all(entry["d_day"] >= 22 for entry in plan)
+
+
+# ── Normal-camp role-map integration: 4-week and 12-week ──────────────────────
+
+def test_normal_camp_4_week_emits_calendar_metadata_and_bans_d15():
+    from fightcamp.stage2_role_map import _build_weekly_role_map
+
+    athlete_model = {
+        "sport": "boxing",
+        "status": "amateur",
+        "rounds_format": "3x3",
+        "training_days": ["monday", "tuesday", "wednesday", "thursday", "friday"],
+        "hard_sparring_days": ["monday", "wednesday", "friday"],
+        "fatigue": "low",
+        "weight_cut_pct": 0.0,
+        "weight_cut_risk": False,
+        "readiness_flags": [],
+        "injuries": [],
+        "fight_date": "2026-05-29",  # Friday
+        "days_until_fight": 28,
+    }
+    progression = {
+        "weeks": [
+            {"week_index": 1, "phase": "GPP", "stage_key": "general_capacity",
+             "phase_week_index": 1, "phase_week_total": 1, "span_days": 7,
+             "session_counts": {"strength": 2, "conditioning": 2, "recovery": 1}},
+            {"week_index": 2, "phase": "SPP", "stage_key": "specific_density_build",
+             "phase_week_index": 1, "phase_week_total": 2, "span_days": 7,
+             "session_counts": {"strength": 2, "conditioning": 2, "recovery": 1}},
+            {"week_index": 3, "phase": "SPP", "stage_key": "specific_density_build",
+             "phase_week_index": 2, "phase_week_total": 2, "span_days": 7,
+             "session_counts": {"strength": 2, "conditioning": 2, "recovery": 1}},
+            {"week_index": 4, "phase": "TAPER", "stage_key": "taper_sharpen",
+             "phase_week_index": 1, "phase_week_total": 1, "span_days": 7,
+             "session_counts": {"strength": 1, "conditioning": 1, "recovery": 1}},
+        ]
+    }
+    role_map = _build_weekly_role_map(
+        athlete_model, progression, {"key": "general_fight_readiness"}
+    )
+
+    weeks = role_map["weeks"]
+    assert len(weeks) == 4
+    for week in weeks:
+        assert week["calendar_days"], "every week needs a calendar spine"
+        assert week["countdown_range"], "every week needs a countdown range"
+        assert week["projected_days_until_fight_end"] >= 0
+        # No pre-fight day appears AFTER the fight day (Friday).
+        assert all(day["is_after_fight_day"] is False for day in week["calendar_days"])
+
+    # Week 3 ends at D-7 → all days fall inside the D-17 ban → all converted.
+    week_3_plan = weeks[2]["hard_sparring_plan"]
+    assert all(entry["effective_load"] != "hard" for entry in week_3_plan)
+
+
+def test_normal_camp_12_week_attaches_calendar_to_every_week():
+    from fightcamp.stage2_role_map import _build_weekly_role_map
+
+    athlete_model = {
+        "sport": "boxing",
+        "status": "amateur",
+        "rounds_format": "3x3",
         "training_days": ["monday", "tuesday", "wednesday", "thursday", "friday"],
         "hard_sparring_days": ["tuesday", "thursday"],
-        "support_work_days": ["friday"],
-        "plan_creation_weekday": "monday",
+        "fatigue": "low",
+        "weight_cut_pct": 0.0,
+        "weight_cut_risk": False,
+        "readiness_flags": [],
+        "injuries": [],
+        "fight_date": "2026-07-24",  # Friday
+        "days_until_fight": 84,
     }
-    base.update(overrides)
-    return base
+    weeks_input = []
+    for idx in range(1, 13):
+        if idx <= 4:
+            phase, stage = "GPP", "general_capacity"
+            pwi, pwt = idx, 4
+        elif idx <= 10:
+            phase, stage = "SPP", "specific_density_build"
+            pwi, pwt = idx - 4, 6
+        else:
+            phase, stage = "TAPER", "taper_sharpen"
+            pwi, pwt = idx - 10, 2
+        weeks_input.append({
+            "week_index": idx, "phase": phase, "stage_key": stage,
+            "phase_week_index": pwi, "phase_week_total": pwt, "span_days": 7,
+            "session_counts": {"strength": 2, "conditioning": 2, "recovery": 1},
+        })
+    role_map = _build_weekly_role_map(
+        athlete_model, {"weeks": weeks_input}, {"key": "general_fight_readiness"}
+    )
 
+    weeks = role_map["weeks"]
+    assert len(weeks) == 12
+    all_d_days = [day["d_day"] for week in weeks for day in week["calendar_days"]]
+    # The countdown spine should cover D-1 through at least D-83 — the whole camp.
+    assert min(all_d_days) == 1
+    assert max(all_d_days) >= 83
 
-# ---------------------------------------------------------------------------
-# _fight_weekday_from_context
-# ---------------------------------------------------------------------------
-
-class TestFightWeekdayFromContext:
-    def test_basic_monday_plus_5_gives_saturday(self):
-        result = _fight_weekday_from_context("monday", 5)
-        assert result == "saturday"
-
-    def test_friday_plus_2_gives_sunday(self):
-        result = _fight_weekday_from_context("friday", 2)
-        assert result == "sunday"
-
-    def test_wednesday_plus_0_gives_wednesday(self):
-        result = _fight_weekday_from_context("wednesday", 0)
-        assert result == "wednesday"
-
-    def test_saturday_plus_1_gives_sunday(self):
-        result = _fight_weekday_from_context("saturday", 1)
-        assert result == "sunday"
-
-    def test_sunday_plus_7_wraps_to_sunday(self):
-        result = _fight_weekday_from_context("sunday", 7)
-        assert result == "sunday"
-
-    def test_thursday_plus_3_gives_sunday(self):
-        result = _fight_weekday_from_context("thursday", 3)
-        assert result == "sunday"
-
-    def test_case_insensitive_plan_creation_weekday(self):
-        assert _fight_weekday_from_context("Monday", 5) == "saturday"
-        assert _fight_weekday_from_context("FRIDAY", 2) == "sunday"
-
-    def test_short_form_weekday_is_accepted(self):
-        assert _fight_weekday_from_context("mon", 5) == "saturday"
-        assert _fight_weekday_from_context("fri", 2) == "sunday"
-
-    def test_returns_none_for_none_weekday(self):
-        assert _fight_weekday_from_context(None, 5) is None
-
-    def test_returns_none_for_empty_string_weekday(self):
-        assert _fight_weekday_from_context("", 5) is None
-
-    def test_returns_none_for_unknown_weekday(self):
-        assert _fight_weekday_from_context("funday", 5) is None
-
-    def test_returns_none_for_negative_days(self):
-        assert _fight_weekday_from_context("monday", -1) is None
-
-    def test_returns_none_for_non_integer_days(self):
-        assert _fight_weekday_from_context("monday", "not_a_number") is None
-        assert _fight_weekday_from_context("monday", None) is None
-
-
-# ---------------------------------------------------------------------------
-# _countdown_weekday_map
-# ---------------------------------------------------------------------------
-
-class TestCountdownWeekdayMap:
-    def test_monday_creation_saturday_fight_5_days_out(self):
-        # Plan created Monday, fight on Saturday (5 days later)
-        result = _countdown_weekday_map("monday", 5)
-        assert result == {
-            "D-0": "saturday",
-            "D-1": "friday",
-            "D-2": "thursday",
-            "D-3": "wednesday",
-            "D-4": "tuesday",
-            "D-5": "monday",
-        }
-
-    def test_d0_maps_to_fight_day(self):
-        result = _countdown_weekday_map("wednesday", 3)
-        assert result["D-0"] == "saturday"
-
-    def test_only_days_up_to_days_until_fight_are_included(self):
-        result = _countdown_weekday_map("thursday", 2)
-        assert set(result.keys()) == {"D-0", "D-1", "D-2"}
-
-    def test_d7_includes_all_eight_labels(self):
-        result = _countdown_weekday_map("sunday", 7)
-        assert set(result.keys()) == {"D-0", "D-1", "D-2", "D-3", "D-4", "D-5", "D-6", "D-7"}
-
-    def test_d0_returns_single_entry(self):
-        result = _countdown_weekday_map("friday", 0)
-        assert result == {"D-0": "friday"}
-
-    def test_returns_empty_for_none_weekday(self):
-        assert _countdown_weekday_map(None, 5) == {}
-
-    def test_returns_empty_for_invalid_days(self):
-        assert _countdown_weekday_map("monday", "bad") == {}
-
-    def test_weekday_wrap_around_sunday(self):
-        # Friday creation + 3 days = Monday fight
-        result = _countdown_weekday_map("friday", 3)
-        assert result["D-0"] == "monday"
-        assert result["D-1"] == "sunday"
-        assert result["D-2"] == "saturday"
-        assert result["D-3"] == "friday"
-
-    def test_not_capped_at_seven_days(self):
-        # Countdown map must project all the way back to D-N, not stop at D-7.
-        result = _countdown_weekday_map("monday", 10)
-        assert len(result) == 11
-        assert set(result.keys()) == {f"D-{n}" for n in range(0, 11)}
-        assert result["D-10"] == "monday"
-
-    def test_2026_05_09_countdown_anchor_weekdays(self):
-        # Fight date Saturday 2026-05-09; D-14 is Saturday 2026-04-25.
-        result = _countdown_weekday_map("saturday", 14)
-        assert result["D-14"] == "saturday"
-        assert result["D-13"] == "sunday"
-        assert result["D-7"] == "saturday"
-        assert result["D-5"] == "monday"
-        assert result["D-3"] == "wednesday"
-        assert result["D-1"] == "friday"
-        assert result["D-0"] == "saturday"
-
-
-# ---------------------------------------------------------------------------
-# _nearest_available_day
-# ---------------------------------------------------------------------------
-
-class TestNearestAvailableDay:
-    def test_target_is_available_returns_target(self):
-        result = _nearest_available_day("wednesday", ["monday", "wednesday", "friday"])
-        assert result == "wednesday"
-
-    def test_nearest_forward_when_target_unavailable(self):
-        # Target = tuesday (index 1), available = [monday (0), thursday (3)]
-        # delta=1: forward=wednesday(2) not available; backward=monday(0) available → monday returned
-        result = _nearest_available_day("tuesday", ["monday", "thursday"])
-        assert result == "monday"
-
-    def test_nearest_backward_beats_farther_forward(self):
-        # Target = saturday, available = [monday, friday]
-        # Forward: sunday (not), monday (avail, delta=2)
-        # Backward: friday (avail, delta=1) → friday wins
-        result = _nearest_available_day("saturday", ["monday", "friday"])
-        assert result == "friday"
-
-    def test_returns_none_for_empty_available_days(self):
-        result = _nearest_available_day("monday", [])
-        assert result is None
-
-    def test_single_available_day_is_always_returned(self):
-        result = _nearest_available_day("friday", ["wednesday"])
-        assert result == "wednesday"
-
-    def test_case_insensitive(self):
-        # The function normalises inputs to lowercase internally and returns lowercase
-        result = _nearest_available_day("WEDNESDAY", ["Monday", "WEDNESDAY", "Friday"])
-        assert result is not None
-        assert result.lower() == "wednesday"
-
-
-# ---------------------------------------------------------------------------
-# _resolve_countdown_weekday_with_availability
-# ---------------------------------------------------------------------------
-
-class TestResolveCountdownWeekdayWithAvailability:
-    def test_no_adjustment_when_all_days_available(self):
-        countdown_map = {
-            "D-0": "saturday",
-            "D-1": "friday",
-            "D-2": "thursday",
-            "D-3": "wednesday",
-        }
-        available = ["monday", "tuesday", "wednesday", "thursday", "friday"]
-        result = _resolve_countdown_weekday_with_availability(countdown_map, available)
-        # saturday not available but that's D-0 (fight day)
-        assert result["D-1"] == "friday"
-        assert result["D-2"] == "thursday"
-        assert result["D-3"] == "wednesday"
-
-    def test_unavailable_day_is_moved_to_nearest(self):
-        # D-1 falls on saturday (unavailable) and must stay inside the
-        # current countdown window.
-        countdown_map = {"D-0": "sunday", "D-1": "saturday", "D-2": "friday"}
-        available = ["monday", "tuesday", "wednesday", "thursday", "friday"]
-        result = _resolve_countdown_weekday_with_availability(countdown_map, available)
-        # D-1 = saturday -> unavailable -> collapse back to friday.
-        assert result["D-1"] == "friday"
-        assert result["D-2"] == "friday"
-
-    def test_empty_available_days_returns_original_map(self):
-        countdown_map = {"D-0": "sunday", "D-1": "saturday"}
-        result = _resolve_countdown_weekday_with_availability(countdown_map, [])
-        assert result == countdown_map
-
-    def test_empty_countdown_map_returns_empty(self):
-        result = _resolve_countdown_weekday_with_availability({}, ["monday", "friday"])
-        assert result == {}
-
-    def test_all_days_unavailable_keeps_real_countdown_weekdays(self):
-        countdown_map = {"D-0": "saturday", "D-1": "friday"}
-        available = ["wednesday"]
-        result = _resolve_countdown_weekday_with_availability(countdown_map, available)
-        assert result["D-0"] == "saturday"
-        assert result["D-1"] == "friday"
-
-
-# ---------------------------------------------------------------------------
-# Session sequence countdown_label and real_weekday annotations
-# ---------------------------------------------------------------------------
-
-class TestSessionSequenceWeekdayAnnotation:
-    def test_d5_sequence_includes_countdown_label(self):
-        athlete = _athlete(5, plan_creation_weekday="monday")
-        sequence = _build_late_fight_session_sequence(5, athlete)
-        assert len(sequence) >= 1
-        assert sequence[0]["countdown_label"] == "D-3"
-
-    def test_d5_sequence_includes_real_weekday(self):
-        # Monday creation + 5 days = Saturday fight; D-5 = Monday
-        athlete = _athlete(5, plan_creation_weekday="monday")
-        sequence = _build_late_fight_session_sequence(5, athlete)
-        assert sequence[0]["real_weekday"] == "wednesday"
-        assert sequence[0]["countdown_display_label"] == "D-3 (Wednesday)"
-
-    def test_d5_first_role_is_alactic_sharpness(self):
-        athlete = _athlete(5, plan_creation_weekday="monday")
-        sequence = _build_late_fight_session_sequence(5, athlete)
-        assert sequence[0]["role_key"] == "fight_week_freshness_day"
-
-    def test_d3_default_sequence_has_freshness_only_for_short_notice(self):
-        athlete = _athlete(
-            3,
-            plan_creation_weekday="wednesday",
-            fatigue="low",
-            readiness_flags=["fight_week", "short_notice"],
-        )
-        sequence = _build_late_fight_session_sequence(3, athlete)
-        role_keys = [entry["role_key"] for entry in sequence]
-        assert role_keys == ["fight_week_freshness_day", "neural_primer_day"]
-
-    def test_d3_default_sequence_has_alactic_and_freshness_without_short_notice(self):
-        athlete = _athlete(3, plan_creation_weekday="wednesday", fatigue="moderate", readiness_flags=[])
-        sequence = _build_late_fight_session_sequence(3, athlete)
-        role_keys = [entry["role_key"] for entry in sequence]
-        assert role_keys == ["fight_week_freshness_day", "neural_primer_day"]
-
-    def test_sequence_entries_lack_real_weekday_when_plan_creation_weekday_missing(self):
-        athlete = _athlete(5)
-        del athlete["plan_creation_weekday"]
-        sequence = _build_late_fight_session_sequence(5, athlete)
-        assert len(sequence) >= 1
-        for entry in sequence:
-            assert "real_weekday" not in entry
-
-    def test_session_moved_to_available_day_when_countdown_day_unavailable(self):
-        # Plan creation = friday, fight = wednesday (5 days later)
-        # D-5 lands on friday which IS available → stays friday
-        athlete = _athlete(
-            5,
-            plan_creation_weekday="friday",
-            training_days=["monday", "tuesday", "wednesday", "thursday", "friday"],
-        )
-        sequence = _build_late_fight_session_sequence(5, athlete)
-        assert sequence[0]["real_weekday"] in {"monday", "tuesday", "wednesday", "thursday", "friday"}
-
-    def test_countdown_label_absent_when_days_none(self):
-        athlete = _athlete(5, plan_creation_weekday="monday")
-        athlete["days_until_fight"] = None
-        sequence = _build_late_fight_session_sequence(None, athlete)
-        for entry in sequence:
-            assert "countdown_label" not in entry
+    # Week 12 ends at D-1 → its declared Tue/Thu both fall inside D-17.
+    final_plan = weeks[-1]["hard_sparring_plan"]
+    assert all(entry["effective_load"] != "hard" for entry in final_plan)
