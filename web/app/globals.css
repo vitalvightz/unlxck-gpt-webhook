@@ -3873,7 +3873,8 @@ button.mobile-step-rail-item {
   .nav-scrim,
   .app-sidebar,
   .mobile-nav-toggle,
-  .desktop-nav-toggle {
+  .desktop-nav-toggle,
+  .onboarding-action-bar {
     transition: none;
   }
 
@@ -4222,6 +4223,18 @@ button.mobile-step-rail-item {
     background: linear-gradient(180deg, rgba(18, 20, 24, 0.98), rgba(10, 12, 15, 0.98));
     box-shadow: 0 20px 44px rgba(0, 0, 0, 0.34);
     align-items: stretch;
+    transform: translateY(0);
+    opacity: 1;
+    transition:
+      transform 380ms cubic-bezier(0.22, 0.8, 0.28, 1),
+      opacity 280ms ease;
+    will-change: transform, opacity;
+  }
+
+  html[data-mobile-nav-open="true"] .onboarding-action-bar {
+    transform: translateY(calc(100% + 32px));
+    opacity: 0;
+    pointer-events: none;
   }
 
   html[data-mobile-tab-bar="active"] .onboarding-action-bar,
