@@ -1056,12 +1056,46 @@ def _compression_floor_value(compression: int) -> int:
     return 2  # compression >= 3
 
 
+def _conditioning_limiter_signal(athlete_model: dict) -> bool:
+    goals = {str(v).strip().lower().replace(" ", "_") for v in clean_list(athlete_model.get("goals", []))}
+    weaknesses = {str(v).strip().lower().replace(" ", "_") for v in clean_list(athlete_model.get("weaknesses", []))}
+    tokens = {"gas_tank", "conditioning", "conditioning_endurance", "endurance", "aerobic"}
+    return bool((goals | weaknesses) & tokens)
+
+
+def _can_keep_low_noise_conditioning(athlete_model: dict) -> bool:
+    fatigue = str(athlete_model.get("fatigue", "")).strip().lower()
+    if fatigue == "high":
+        return False
+    mode = str(athlete_model.get("injury_mode", "")).strip().lower()
+    if mode in {"medical_hold", "restricted_rehab_only"}:
+        return False
+    readiness = {str(v).strip().lower() for v in clean_list(athlete_model.get("readiness_flags", []))}
+    if {"severe_injury", "red_flag_injury"} & readiness:
+        return False
+    days = athlete_model.get("days_until_fight")
+    if isinstance(days, int) and days <= 0:
+        return False
+    return True
+
+
+def _is_low_noise_conditioning_role(role: dict, athlete_model: dict) -> bool:
+    if str(role.get("category") or "") != "conditioning":
+        return False
+    system = str(role.get("preferred_system") or "").strip().lower()
+    if system in {"aerobic", "alactic"}:
+        return True
+    equipment = {str(v).strip().lower().replace(" ", "_") for v in clean_list(athlete_model.get("equipment", []))}
+    return bool(equipment & {"assault_bike", "air_bike", "rower", "stationary_bike", "bike"})
+
+
 def _non_spar_role_priority_rank(
     role: dict,
     phase: str,
     is_hard_spar_week: bool,
     is_meaningful_cut: bool,
     must_keep: set[str] | None = None,
+    athlete_model: dict | None = None,
 ) -> int:
     """
     Return a priority rank for a non-sparring role.
@@ -1079,7 +1113,9 @@ def _non_spar_role_priority_rank(
     if preferred_system in must_keep or role_key in must_keep:
         return 100
 
-    demote_glycolytic = is_hard_spar_week or is_meaningful_cut
+    athlete_model = athlete_model or {}
+    preserve_low_noise = _conditioning_limiter_signal(athlete_model) and _can_keep_low_noise_conditioning(athlete_model)
+    demote_glycolytic = is_hard_spar_week or is_meaningful_cut or (_active_injury_is_moderate_plus(athlete_model) and preserve_low_noise)
 
     if phase == "GPP":
         # GPP priority (highest → lowest): primary_strength > aerobic > secondary_strength > recovery
@@ -1101,6 +1137,8 @@ def _non_spar_role_priority_rank(
         if role_key == "neural_plus_strength_day":
             return 4
         if role_key == "repeatability_support_day" or (category == "conditioning" and preferred_system == "aerobic"):
+            if category == "conditioning" and preserve_low_noise and _is_low_noise_conditioning_role(role, athlete_model):
+                return 4
             return 3
         if role_key == "fight_pace_repeatability_day" or (category == "conditioning" and preferred_system == "glycolytic"):
             return 1 if demote_glycolytic else 2
@@ -1114,7 +1152,7 @@ def _non_spar_role_priority_rank(
     if category == "conditioning" and preferred_system == "alactic":
         return 4
     if category == "conditioning" and preferred_system == "aerobic":
-        return 3
+        return 4 if preserve_low_noise and _is_low_noise_conditioning_role(role, athlete_model) else 3
     if category == "conditioning" and preferred_system == "glycolytic":
         return 1 if demote_glycolytic else 2
     if category == "recovery":
@@ -1254,7 +1292,7 @@ def _apply_high_fatigue_week_compression(
 
     ranked_roles = sorted(
         non_spar_roles,
-        key=lambda r: _non_spar_role_priority_rank(r, phase, is_hard_spar_week, is_meaningful_cut, must_keep),
+        key=lambda r: _non_spar_role_priority_rank(r, phase, is_hard_spar_week, is_meaningful_cut, must_keep, athlete_model),
         reverse=True,  # highest priority first
     )
 
