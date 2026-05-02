@@ -3737,7 +3737,7 @@ button.mobile-step-rail-item {
     height: 100dvh;
     padding-top: calc(20px + var(--safe-area-top));
     padding-right: calc(20px + var(--safe-area-right));
-    padding-bottom: calc(36px + var(--safe-area-bottom));
+    padding-bottom: calc(20px + var(--safe-area-bottom));
     padding-left: calc(20px + var(--safe-area-left));
     z-index: 60;
     border-right: 1px solid var(--border-default);
@@ -3945,6 +3945,52 @@ button.mobile-step-rail-item {
   .metric-card,
   .plan-meta-item {
     padding: 12px 14px;
+  }
+
+  .app-sidebar .sidebar-user-card {
+    padding: 10px 12px;
+    gap: 8px;
+  }
+
+  .app-sidebar .sidebar-user-identity {
+    gap: 8px;
+  }
+
+  .app-sidebar .sidebar-avatar {
+    width: 32px;
+    height: 32px;
+    box-shadow: 0 0 0 2px rgba(181, 18, 43, 0.08);
+  }
+
+  .app-sidebar .sidebar-avatar-initials {
+    font-size: 12px;
+  }
+
+  .app-sidebar .sidebar-user-info {
+    gap: 2px;
+  }
+
+  .app-sidebar .sidebar-user-info .sidebar-user-name {
+    font-size: 14px;
+  }
+
+  .app-sidebar .sidebar-user-info .sidebar-user-email {
+    font-size: 11px;
+  }
+
+  .app-sidebar .sidebar-role-badge {
+    font-size: 9px;
+    padding: 1px 6px;
+  }
+
+  .app-sidebar .sidebar-user-actions {
+    margin-top: 4px;
+    padding-top: 6px;
+  }
+
+  .app-sidebar .sidebar-user-actions .ghost-button {
+    min-height: 34px;
+    font-size: 12px;
   }
 
   .hero-title,
