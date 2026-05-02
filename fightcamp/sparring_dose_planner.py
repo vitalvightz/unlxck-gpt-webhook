@@ -1,936 +1,798 @@
-from __future__ import annotations
-
-import re
-from typing import Any
-
-from .fight_date_utils import d_day_for_weekday
-from .injury_formatting import parse_injury_entry
-from .normalization import clean_list, ordered_weekdays as _ordered_weekdays
-from .weight_cut import compute_cut_severity_score, cut_severity_bucket
-
-_ORDERED_WEEKDAYS = (
-    "Monday",
-    "Tuesday",
-    "Wednesday",
-    "Thursday",
-    "Friday",
-    "Saturday",
-    "Sunday",
+from fightcamp.sparring_dose_planner import (
+    _consecutive_hard_day_pairs,
+    _decide_action,
+    _pick_downgrade_target,
+    compute_hard_sparring_plan,
+    sandwiched_training_days,
 )
-_WEEKDAY_ORDER = {day: idx for idx, day in enumerate(_ORDERED_WEEKDAYS)}
-_PRIMARY_COLLISION_ROLE_KEYS = {
-    "fight_pace_repeatability_day",
-    "light_fight_pace_touch_day",
-    "controlled_repeatability_day",
-}
-_HIGH_RISK_INJURY_TOKENS = {
-    "tear",
-    "rupture",
-    "fracture",
-    "dislocation",
-    "subluxation",
-}
+
+# ── Hard day classification ───────────────────────────────────────────────────
 
 
-
-
-def _fatigue_level(athlete_snapshot: dict[str, Any]) -> str:
-    fatigue = str(athlete_snapshot.get("fatigue") or "").strip().lower()
-    return fatigue if fatigue in {"low", "moderate", "high"} else "low"
-
-
-def _cut_pressure(athlete_snapshot: dict[str, Any]) -> str:
-    cut_bucket = str(athlete_snapshot.get("cut_severity_bucket") or "").strip().lower()
-    if not cut_bucket:
-        cut_bucket = cut_severity_bucket(
-            compute_cut_severity_score(
-                athlete_snapshot.get("weight_cut_pct"),
-                athlete_snapshot.get("days_until_fight"),
-            )
-        )
-    if cut_bucket in {"high", "critical", "extreme"}:
-        return "high"
-    if cut_bucket == "moderate":
-        return "moderate"
-    return "none"
-
-
-def _days_until_fight_int(athlete_snapshot: dict[str, Any]) -> int | None:
-    try:
-        return int(athlete_snapshot.get("days_until_fight"))
-    except (TypeError, ValueError):
-        return None
-
-
-def _week_pressure(week: dict[str, Any], athlete_snapshot: dict[str, Any]) -> str:
-    day_value = _days_until_fight_int(athlete_snapshot)
-
-    if _is_final_week_sparring_cap_active(week, athlete_snapshot):
-        return "high"
-    if athlete_snapshot.get("short_notice") or (day_value is not None and day_value <= 14):
-        return "moderate"
-    return "none"
-
-
-def _is_final_week_sparring_cap_active(week: dict[str, Any], athlete_snapshot: dict[str, Any]) -> bool:
-    readiness_flags = {flag.lower() for flag in clean_list(athlete_snapshot.get("readiness_flags", []))}
-    phase = str(week.get("phase") or "").strip().upper()
-    stage_key = str(week.get("stage_key") or "").strip().lower()
-    day_value = _days_until_fight_int(athlete_snapshot)
-    return (
-        phase == "TAPER"
-        or "fight_week" in readiness_flags
-        or "fight_week" in stage_key
-        or (day_value is not None and 0 <= day_value <= 7)
-    )
-
-
-def _injury_severity(lowered: str) -> str:
-    if any(token in lowered for token in ("severe", "major", "significant", "grade 3", "grade iii")):
-        return "high"
-    if any(token in lowered for token in ("moderate", "grade 2", "grade ii")):
-        return "moderate"
-    if any(token in lowered for token in ("mild", "minor", "low grade", "low-grade", "grade 1", "grade i")):
-        return "mild"
-    if any(token in lowered for token in _HIGH_RISK_INJURY_TOKENS):
-        return "high"
-    if any(token in lowered for token in ("strain", "sprain", "impingement", "tendinopathy", "tendonitis")):
-        return "mild"
-    if any(token in lowered for token in ("pain", "soreness", "stiffness", "irritation", "ache")):
-        return "mild"
-    return "none"
-
-
-def _severity_rank(severity: str) -> int:
-    return {"none": 0, "mild": 1, "moderate": 2, "high": 3}.get(severity, 0)
-
-
-def _injury_assessment(athlete_snapshot: dict[str, Any]) -> dict[str, Any]:
-    severity = "none"
-    worsening = False
-    instability = False
-    daily_symptoms = False
-    high_risk = False
-
-    for raw_entry in clean_list(athlete_snapshot.get("injuries", [])):
-        lowered = raw_entry.lower()
-        parsed = parse_injury_entry(raw_entry) or {}
-        region = str(parsed.get("canonical_location") or "").strip().lower()
-
-        entry_severity = _injury_severity(lowered)
-        if _severity_rank(entry_severity) > _severity_rank(severity):
-            severity = entry_severity
-
-        worsening = worsening or any(
-            token in lowered
-            for token in ("worsen", "worsening", "worse", "flared", "aggravated", "regressing")
-        )
-        instability = instability or any(
-            token in lowered
-            for token in ("instability", "giving way", "buckled", "locking", "locked")
-        )
-        daily_symptoms = daily_symptoms or any(
-            token in lowered
-            for token in (
-                "daily",
-                "rest pain",
-                "night pain",
-                "sleep",
-                "walking",
-                "stairs",
-                "constant",
-            )
-        )
-        high_risk = high_risk or instability or daily_symptoms or any(token in lowered for token in _HIGH_RISK_INJURY_TOKENS)
-        if worsening and region in {"knee", "ankle", "hip", "shoulder", "neck", "lower_back"}:
-            high_risk = True
-
-    if instability or daily_symptoms:
-        severity = "high"
-    elif high_risk and _severity_rank(severity) < _severity_rank("moderate"):
-        severity = "moderate"
-
+def _week(
+    *,
+    phase: str = "SPP",
+    stage_key: str = "specific_density_build",
+    hard_days: list[str] | None = None,
+    session_roles: list[dict] | None = None,
+    phase_week_index: int | None = None,
+    phase_week_total: int | None = None,
+    projected_days_until_fight_start: int | None = None,
+) -> dict:
     return {
-        "has_injury": severity != "none",
-        "severity": severity,
-        "high_risk": high_risk,
-        "worsening": worsening,
-        "instability": instability,
-        "daily_symptoms": daily_symptoms,
+        "phase": phase,
+        "stage_key": stage_key,
+        "week_index": 1,
+        "phase_week_index": phase_week_index,
+        "phase_week_total": phase_week_total,
+        "projected_days_until_fight_start": projected_days_until_fight_start,
+        "declared_hard_sparring_days": hard_days or ["Tuesday", "Thursday"],
+        "session_roles": session_roles or [],
     }
 
 
-def _main_collision_owner_day(week: dict[str, Any], hard_days: list[str]) -> str:
-    explicit_day = str(week.get("primary_collision_owner_day") or week.get("main_fight_pace_day") or "").strip()
-    if explicit_day in hard_days:
-        return explicit_day
-
-    for role in week.get("session_roles") or []:
-        if role.get("role_key") not in _PRIMARY_COLLISION_ROLE_KEYS:
-            continue
-        for key in ("collision_owner_day", "planned_collision_owner_day"):
-            candidate_day = str(role.get(key) or "").strip()
-            if candidate_day in hard_days:
-                return candidate_day
-    return ""
-
-
-def _countdown_sparring_override(days_until_fight: Any) -> str | None:
-    """Return a deterministic sparring override based on countdown alone.
-
-    Returns:
-        ``None``  – no countdown override (normal rules apply)
-        ``"convert_all"`` – convert every declared hard day to technical/rhythm
-        ``"deload_all"`` – deload every declared hard day
-        ``"cap_one"`` – keep at most one hard day, deload the rest
-
-    Scope: only fires for the final fight week (days <= 7). The bridge window
-    (D-14 to D-21) is enforced through ``_bridge_window_sparring_override``
-    which is week-aware — otherwise this override would leak into future-
-    planning-week advisories.
-    """
-    try:
-        days = int(days_until_fight)
-    except (TypeError, ValueError):
-        return None
-    if days < 0 or days > 7:
-        return None
-    if days <= 7:
-        return "convert_all"
+def _athlete(
+    *,
+    fatigue: str = "low",
+    days_until_fight: int = 24,
+    short_notice: bool = False,
+    weight_cut_pct: float = 0.0,
+    weight_cut_risk: bool = False,
+    readiness_flags: list[str] | None = None,
+    injuries: list[str] | None = None,
+    hard_days: list[str] | None = None,
+) -> dict:
+    return {
+        "sport": "boxing",
+        "fatigue": fatigue,
+        "days_until_fight": days_until_fight,
+        "short_notice": short_notice,
+        "weight_cut_pct": weight_cut_pct,
+        "weight_cut_risk": weight_cut_risk,
+        "readiness_flags": readiness_flags or [],
+        "injuries": injuries or [],
+        "hard_sparring_days": hard_days or ["Tuesday", "Thursday"],
+    }
 
 
-_BRIDGE_CONTACT_SPORTS = {
-    "boxing",
-    "kickboxing",
-    "muay_thai",
-    "muay thai",
-    "mma",
-    "grappler",
-    "wrestling",
-    "bjj",
-    "judo",
-}
-_BRIDGE_GRAPPLER_STYLE_TOKENS = {"grappler", "grappler-heavy", "wrestler", "bjj"}
-
-
-def _bridge_is_contact_sport(athlete_snapshot: dict[str, Any]) -> bool:
-    sport = str(athlete_snapshot.get("sport") or "").strip().lower()
-    if sport in _BRIDGE_CONTACT_SPORTS:
-        return True
-    styles: list[str] = []
-    for key in ("tactical_style", "tactical_styles", "technical_style", "technical_styles", "style"):
-        value = athlete_snapshot.get(key)
-        if isinstance(value, str):
-            styles.extend(item.strip().lower() for item in value.split(",") if item.strip())
-        elif isinstance(value, list):
-            styles.extend(str(item).strip().lower() for item in value if str(item).strip())
-    return any(style in _BRIDGE_GRAPPLER_STYLE_TOKENS for style in styles)
-
-
-def _bridge_window_sparring_override(
-    week: dict[str, Any], athlete_snapshot: dict[str, Any]
-) -> str | None:
-    """Week-aware bridge-window (D-21 to D-14) sparring override.
-
-    Only fires when the week being evaluated is the imminent bridge week —
-    i.e. ``phase == "TAPER"`` or the week's stage_key / readiness_flags mark
-    it as the current bridge compression window. Future-planning weeks at
-    the same days_until_fight value stay untouched so advisories can still
-    use their "if the current picture carries forward" conditional wording.
-
-    Return values reflect the evidence review:
-      D-21 to D-18 (clean / low-risk)   → cap_one
-      D-21 to D-18 (fatigue high, cut
-        high, or moderate cut in a
-        contact sport)                  → deload_all
-      D-17 to D-14                      → convert_all
-    """
-    days = _days_until_fight_int(athlete_snapshot)
-    if days is None or not (14 <= days <= 21):
-        return None
-
-    phase = str(week.get("phase") or "").strip().upper()
-    stage_key = str(week.get("stage_key") or "").strip().lower()
-    readiness_flags = {flag.lower() for flag in clean_list(athlete_snapshot.get("readiness_flags", []))}
-    phase_week_index = week.get("phase_week_index")
-
-    is_imminent = (
-        phase == "TAPER"
-        or "bridge" in stage_key
-        or "taper" in stage_key
-        or "fight_week" in readiness_flags
-        or (isinstance(phase_week_index, int) and phase_week_index <= 1)
+def test_two_hard_spar_days_normal_week_stay_hard_as_planned():
+    plan = compute_hard_sparring_plan(
+        week=_week(),
+        athlete_snapshot=_athlete(),
     )
-    if not is_imminent:
-        return None
 
-    if 14 <= days <= 17:
-        return "convert_all"
-
-    # 18 <= days <= 21: cap_one is the clean-athlete default, but high-fatigue
-    # or any meaningful cut pressure on a contact-sport athlete forces zero
-    # hard sparring via deload_all.
-    fatigue = _fatigue_level(athlete_snapshot)
-    cut = _cut_pressure(athlete_snapshot)
-    if fatigue == "high":
-        return "deload_all"
-    if cut == "high":
-        return "deload_all"
-    if cut == "moderate" and _bridge_is_contact_sport(athlete_snapshot):
-        return "deload_all"
-    return "cap_one"
+    assert [entry["status"] for entry in plan] == ["hard_as_planned", "hard_as_planned"]
 
 
-def _is_d_window_stage(stage_key: Any) -> bool:
-    stage = str(stage_key or "").strip().lower()
-    if not stage:
-        return False
-    if re.fullmatch(r"d\d+", stage):
-        return True
-    return re.fullmatch(r"d\d+_to_d\d+", stage) is not None
-
-
-def _standard_camp_final_two_weeks_override(week: dict[str, Any]) -> str | None:
-    """For regular (non D-window) camps, suppress hard sparring in final taper week(s)."""
-    phase = str(week.get("phase") or "").strip().upper()
-    if phase != "TAPER":
-        return None
-
-    if _is_d_window_stage(week.get("stage_key")):
-        return None
-
-    phase_week_index = week.get("phase_week_index")
-    phase_week_total = week.get("phase_week_total")
-    if isinstance(phase_week_index, int) and isinstance(phase_week_total, int) and phase_week_total >= 1:
-        if phase_week_index >= max(1, phase_week_total - 1):
-            return "deload_all"
-        return None
-
-    # Fallback when week-position metadata is unavailable.
-    projected_days = week.get("projected_days_until_fight_start")
-    if not isinstance(projected_days, int):
-        return None
-    if projected_days < 0:
-        return None
-    if projected_days > 14:
-        return None
-    return "deload_all"
-
-
-def _decide_action(
-    *,
-    hard_day_count: int,
-    fatigue: str,
-    cut: str,
-    week_press: str,
-    injury: dict[str, Any],
-    days_until_fight: Any = None,
-    bridge_override: str | None = None,
-) -> str | None:
-    if hard_day_count <= 0:
-        return None
-
-    # --- Countdown-graduated override (deterministic, fires first) ---
-    countdown_override = _countdown_sparring_override(days_until_fight) or bridge_override
-    if countdown_override == "convert_all":
-        return "convert"
-    if countdown_override == "deload_all":
-        return "deload"
-    if countdown_override == "cap_one" and hard_day_count >= 2:
-        return "deload"
-
-    # --- Injury-based hard overrides ---
-    if injury.get("instability"):
-        return "convert"
-    if injury.get("daily_symptoms"):
-        return "convert"
-    if injury.get("worsening") and injury.get("high_risk"):
-        return "convert"
-    if injury.get("worsening") and week_press == "high":
-        return "convert"
-
-    # High-pressure environment with any active injury overrides readiness ordering.
-    if week_press == "high" and injury.get("severity") == "moderate" and hard_day_count >= 1:
-        return "deload"
-    # Four or more hard days in a single week exceeds safe density regardless of readiness signals.
-    if hard_day_count >= 4:
-        return "deload"
-    # Three hard days with two or more amber readiness signals: the "well-spaced, ready" allowance
-    # does not hold — deload one.
-    if hard_day_count >= 3:
-        amber_signals = sum(
-            1 for signal in (fatigue, cut, week_press) if signal in {"moderate", "high"}
-        )
-        if amber_signals >= 2:
-            return "deload"
-
-    # --- Readiness-based deload ---
-    if fatigue == "high" and hard_day_count >= 2:
-        return "deload"
-    if cut == "high" and hard_day_count >= 2:
-        return "deload"
-    if fatigue == "high" and cut in {"moderate", "high"} and hard_day_count >= 1:
-        return "deload"
-    if week_press == "high" and hard_day_count >= 2:
-        return "deload"
-
-    return None
-
-
-def _pick_downgrade_target(
-    hard_days: list[str],
-    *,
-    week: dict[str, Any],
-) -> str:
-    if not hard_days:
-        return ""
-    if len(hard_days) == 1:
-        return hard_days[0]
-
-    protected_day = _main_collision_owner_day(week, hard_days)
-    if protected_day:
-        for day in reversed(hard_days):
-            if day != protected_day:
-                return day
-        return protected_day
-
-    return hard_days[-1]
-
-
-def _pick_protected_hard_day(
-    hard_days: list[str],
-    *,
-    week: dict[str, Any],
-) -> str:
-    if not hard_days:
-        return ""
-    protected_day = _main_collision_owner_day(week, hard_days)
-    if protected_day:
-        return protected_day
-    return hard_days[0]
-
-
-def _reason_codes(
-    *,
-    fatigue: str,
-    cut: str,
-    week_press: str,
-    injury: dict[str, Any],
-    hard_day_count: int,
-) -> list[str]:
-    codes: list[str] = []
-    if fatigue == "high":
-        codes.append("high_fatigue")
-    elif fatigue == "moderate":
-        codes.append("moderate_fatigue")
-    if cut == "high":
-        codes.append("high_cut")
-    elif cut == "moderate":
-        codes.append("moderate_cut")
-    if week_press == "high":
-        codes.append("high_week_pressure")
-    elif week_press == "moderate":
-        codes.append("moderate_week_pressure")
-    if injury.get("severity") == "moderate":
-        codes.append("moderate_injury")
-    elif injury.get("severity") == "high":
-        codes.append("high_injury")
-    if injury.get("worsening"):
-        codes.append("worsening")
-    if injury.get("instability"):
-        codes.append("instability")
-    if injury.get("daily_symptoms"):
-        codes.append("daily_symptoms")
-    if hard_day_count >= 2:
-        codes.append("two_hard_days")
-    if hard_day_count >= 4:
-        codes.append("four_hard_days")
-    return codes
-
-
-def _with_final_week_cap_reason(codes: list[str]) -> list[str]:
-    updated = list(codes)
-    if "fight_week_taper" not in updated:
-        updated.insert(0, "fight_week_taper")
-    if "final_week_sparring_cap" not in updated:
-        updated.append("final_week_sparring_cap")
-    return updated
-
-
-def _final_week_cap_reason(codes: list[str]) -> str:
-    reason = ", ".join(codes)
-    cap_note = (
-        "Final taper week cap: keep at most one effective hard sparring day, even when the "
-        "declared coach schedule includes more. Extra declared hard days should become managed "
-        "technical or reduced-contact work to protect freshness."
+def test_high_fatigue_with_two_hard_days_downgrades_exactly_one_day():
+    plan = compute_hard_sparring_plan(
+        week=_week(),
+        athlete_snapshot=_athlete(fatigue="high"),
     )
-    return f"{reason}; {cap_note}" if reason else cap_note
+
+    downgraded = [entry for entry in plan if entry["status"] != "hard_as_planned"]
+    assert len(downgraded) == 1
+    assert downgraded[0]["day"] == "Thursday"
+    assert downgraded[0]["status"] == "deload_suggested"
 
 
-def _hard_day_class(
-    entry: dict[str, Any],
-    *,
-    protected_day: str,
-    hard_days: list[str],
-) -> str:
-    if entry.get("effective_load") != "hard":
-        return "managed_hard"
-    day = entry["day"]
-    if protected_day:
-        return "primary_hard" if day == protected_day else "secondary_hard"
-    if hard_days and day == hard_days[0]:
-        return "primary_hard"
-    return "secondary_hard"
+def test_moderate_fatigue_and_moderate_cut_do_not_downgrade():
+    plan = compute_hard_sparring_plan(
+        week=_week(),
+        athlete_snapshot=_athlete(
+            fatigue="moderate",
+            weight_cut_pct=3.8,
+            weight_cut_risk=True,
+            readiness_flags=["active_weight_cut"],
+        ),
+    )
+
+    assert all(entry["status"] == "hard_as_planned" for entry in plan)
 
 
-def _annotate_hard_day_classes(
-    plan: list[dict[str, Any]],
-    *,
-    protected_day: str,
-    hard_days: list[str],
-) -> list[dict[str, Any]]:
-    return [
-        {**e, "hard_day_class": _hard_day_class(e, protected_day=protected_day, hard_days=hard_days)}
-        for e in plan
+def test_high_week_pressure_and_mild_injury_do_not_downgrade():
+    plan = compute_hard_sparring_plan(
+        week=_week(phase="TAPER", stage_key="fight_week_survival_rhythm", hard_days=["Thursday"]),
+        athlete_snapshot=_athlete(
+            days_until_fight=6,
+            readiness_flags=["fight_week"],
+            injuries=["mild stable shoulder soreness"],
+            hard_days=["Thursday"],
+        ),
+    )
+
+    # D-6 countdown override deloads all hard sparring days
+    assert all(entry["status"] != "hard_as_planned" for entry in plan)
+    assert plan[0]["coach_note"]
+
+
+def test_high_week_pressure_and_moderate_injury_deloads():
+    plan = compute_hard_sparring_plan(
+        week=_week(phase="TAPER", stage_key="fight_week_survival_rhythm"),
+        athlete_snapshot=_athlete(
+            days_until_fight=6,
+            readiness_flags=["fight_week"],
+            injuries=["moderate shoulder strain"],
+        ),
+    )
+
+    # D-6 countdown override deloads ALL days, not just one
+    downgraded = [entry for entry in plan if entry["status"] != "hard_as_planned"]
+    assert len(downgraded) == 2
+    assert all(entry["status"] == "deload_suggested" for entry in downgraded)
+
+
+def test_d7_caps_three_declared_hard_days_to_one_actual_hard_day():
+    plan = compute_hard_sparring_plan(
+        week=_week(hard_days=["Monday", "Wednesday", "Friday"]),
+        athlete_snapshot=_athlete(days_until_fight=7, hard_days=["Monday", "Wednesday", "Friday"]),
+    )
+
+    assert [entry["status"] for entry in plan].count("hard_as_planned") == 1
+    assert [entry["status"] for entry in plan].count("deload_suggested") == 2
+    assert all(entry.get("coach_note") for entry in plan if entry["status"] == "deload_suggested")
+    assert all("final_week_sparring_cap" in entry.get("reason_codes", []) for entry in plan if entry["status"] == "deload_suggested")
+
+
+def test_taper_week_caps_multiple_declared_hard_days_to_one_without_countdown():
+    plan = compute_hard_sparring_plan(
+        week=_week(phase="TAPER", stage_key="taper_sharpen", hard_days=["Monday", "Wednesday"]),
+        athlete_snapshot=_athlete(days_until_fight=18, hard_days=["Monday", "Wednesday"]),
+    )
+
+    hard_entries = [entry for entry in plan if entry["status"] == "hard_as_planned"]
+    downgraded = [entry for entry in plan if entry["status"] != "hard_as_planned"]
+    assert [entry["day"] for entry in hard_entries] == ["Monday"]
+    assert [entry["day"] for entry in downgraded] == ["Wednesday"]
+    assert downgraded[0]["status"] == "deload_suggested"
+    assert "final_week_sparring_cap" in downgraded[0]["reason_codes"]
+    assert "Final taper week" in downgraded[0]["coach_note"]
+
+
+def test_taper_week_respects_collision_owner_but_still_caps_extra_coach_days():
+    plan = compute_hard_sparring_plan(
+        week=_week(
+            phase="TAPER",
+            stage_key="taper_sharpen",
+            hard_days=["Monday", "Thursday"],
+            session_roles=[{"role_key": "fight_pace_repeatability_day", "collision_owner_day": "Thursday"}],
+        ),
+        athlete_snapshot=_athlete(days_until_fight=18, hard_days=["Monday", "Thursday"]),
+    )
+
+    by_day = {entry["day"]: entry for entry in plan}
+    assert by_day["Thursday"]["status"] == "hard_as_planned"
+    assert by_day["Thursday"]["hard_day_class"] == "primary_hard"
+    assert by_day["Monday"]["status"] == "deload_suggested"
+    assert by_day["Monday"]["hard_day_class"] == "managed_hard"
+    assert "final_week_sparring_cap" in by_day["Monday"]["reason_codes"]
+
+
+def test_instability_or_daily_symptoms_convert():
+    instability_plan = compute_hard_sparring_plan(
+        week=_week(),
+        athlete_snapshot=_athlete(injuries=["ankle instability"]),
+    )
+    daily_symptom_plan = compute_hard_sparring_plan(
+        week=_week(),
+        athlete_snapshot=_athlete(injuries=["shoulder pain with daily sleep disruption"]),
+    )
+
+    assert any(entry["status"] == "convert_to_technical_suggested" for entry in instability_plan)
+    assert any(entry["status"] == "convert_to_technical_suggested" for entry in daily_symptom_plan)
+
+
+def test_worsening_high_risk_converts():
+    plan = compute_hard_sparring_plan(
+        week=_week(),
+        athlete_snapshot=_athlete(injuries=["worsening knee instability"]),
+    )
+
+    assert any(entry["status"] == "convert_to_technical_suggested" for entry in plan)
+
+
+def test_borderline_cases_return_none_action():
+    assert _decide_action(
+        hard_day_count=2,
+        fatigue="moderate",
+        cut="moderate",
+        week_press="none",
+        injury={"severity": "none", "high_risk": False, "worsening": False, "instability": False, "daily_symptoms": False},
+    ) is None
+    assert _decide_action(
+        hard_day_count=1,
+        fatigue="low",
+        cut="none",
+        week_press="high",
+        injury={"severity": "mild", "high_risk": False, "worsening": False, "instability": False, "daily_symptoms": False},
+    ) is None
+
+
+def test_pick_downgrade_target_defaults_to_latest_declared_day():
+    target = _pick_downgrade_target(["Tuesday", "Thursday"], week=_week())
+
+    assert target == "Thursday"
+
+
+# ── Consecutive hard day detection ───────────────────────────────────────────
+
+def test_consecutive_hard_day_pairs_detects_adjacent_days():
+    assert _consecutive_hard_day_pairs(["Monday", "Tuesday"]) == [("Monday", "Tuesday")]
+    assert _consecutive_hard_day_pairs(["Monday", "Wednesday"]) == []
+    assert _consecutive_hard_day_pairs(["Monday", "Tuesday", "Thursday"]) == [("Monday", "Tuesday")]
+    assert _consecutive_hard_day_pairs(["Monday", "Tuesday", "Wednesday"]) == [
+        ("Monday", "Tuesday"),
+        ("Tuesday", "Wednesday"),
     ]
 
 
-def _consecutive_hard_day_pairs(hard_days: list[str]) -> list[tuple[str, str]]:
-    """Return (earlier, later) pairs of hard days that are calendar-adjacent."""
-    order = {k.lower(): v for k, v in _WEEKDAY_ORDER.items()}
-    pairs = []
-    for i in range(len(hard_days) - 1):
-        idx_a = order.get(hard_days[i].lower(), -1)
-        idx_b = order.get(hard_days[i + 1].lower(), -1)
-        if idx_b - idx_a == 1:
-            pairs.append((hard_days[i], hard_days[i + 1]))
-    return pairs
+def test_consecutive_hard_day_pairs_case_insensitive():
+    assert _consecutive_hard_day_pairs(["monday", "tuesday"]) == [("monday", "tuesday")]
+    assert _consecutive_hard_day_pairs(["MONDAY", "TUESDAY"]) == [("MONDAY", "TUESDAY")]
+    assert _consecutive_hard_day_pairs(["Monday", "wednesday"]) == []
 
 
-def sandwiched_training_days(
-    training_days: list[str],
-    effective_hard_days_set: set[str],
-) -> set[str]:
-    """Non-spar training days that fall between two effective hard spar days in the week."""
-    if len(effective_hard_days_set) < 2:
-        return set()
-    order = {k.lower(): v for k, v in _WEEKDAY_ORDER.items()}
-    hard_indices = sorted([order[d.lower()] for d in effective_hard_days_set if d.lower() in order])
-    if len(hard_indices) < 2:
-        return set()
-
-    min_idx, max_idx = hard_indices[0], hard_indices[-1]
-    result: set[str] = set()
-    for day in training_days:
-        if day in effective_hard_days_set:
-            continue
-        idx = order.get(day.lower(), -1)
-        if min_idx < idx < max_idx:
-            result.add(day)
-    return result
-
-
-def _apply_consecutive_deloads(
-    plan: list[dict[str, Any]],
-    *,
-    hard_days: list[str],
-    protected_day: str,
-) -> list[dict[str, Any]]:
-    """Deload the later day of any still-hard consecutive pair (earlier if later is protected)."""
-    plan_by_day = {e["day"]: dict(e) for e in plan}
-    for earlier, later in _consecutive_hard_day_pairs(hard_days):
-        if (
-            plan_by_day.get(earlier, {}).get("effective_load") != "hard"
-            or plan_by_day.get(later, {}).get("effective_load") != "hard"
-        ):
-            continue
-        target = later if later != protected_day else earlier
-        entry = plan_by_day[target]
-        codes = list(entry.get("reason_codes") or [])
-        if "consecutive_hard_days" not in codes:
-            codes.append("consecutive_hard_days")
-        plan_by_day[target] = {
-            **entry,
-            "status": "deload_suggested",
-            "effective_load": "reduced",
-            "reason_codes": codes,
-            "reason": entry.get("reason") or "consecutive_hard_days",
-        }
-    return [plan_by_day[d] for d in hard_days]
-
-
-def _apply_hard_day_cap(
-    plan: list[dict[str, Any]],
-    *,
-    hard_days: list[str],
-    protected_day: str,
-    cap: int = 2,
-) -> list[dict[str, Any]]:
-    """Reduce effective hard days to at most cap, targeting least-protected days first."""
-    plan_by_day = {e["day"]: dict(e) for e in plan}
-    while True:
-        effective = [d for d in hard_days if plan_by_day[d].get("effective_load") == "hard"]
-        if len(effective) <= cap:
-            break
-        target = next((d for d in reversed(effective) if d != protected_day), effective[-1])
-        entry = plan_by_day[target]
-        codes = list(entry.get("reason_codes") or [])
-        if "hard_day_cap" not in codes:
-            codes.append("hard_day_cap")
-        existing_reason = entry.get("reason") or ""
-        cap_note = (
-            "Four or more hard sparring sessions were declared this week. "
-            "This session is preserved in the schedule as a managed/deloaded exposure "
-            "to protect load quality across the full week — the slot is not removed."
-        )
-        new_reason = f"{existing_reason}; {cap_note}".lstrip("; ") if existing_reason else cap_note
-        plan_by_day[target] = {
-            **entry,
-            "status": "deload_suggested",
-            "effective_load": "reduced",
-            "reason_codes": codes,
-            "reason": new_reason,
-        }
-    return [plan_by_day[d] for d in hard_days]
-
-
-def _per_day_d_days(
-    week: dict[str, Any], hard_days: list[str]
-) -> dict[str, int]:
-    """Return per-weekday D-day for declared hard sparring days in this week.
-
-    Skips days when the week's calendar metadata is missing (e.g. legacy
-    callers that have not threaded fight_weekday / projected_days_until_fight_end
-    through). Per-day countdown rules are no-ops when this returns empty.
-    """
-    fight_weekday = week.get("fight_weekday")
-    end_d = week.get("projected_days_until_fight_end")
-    span = week.get("span_days")
-    if not fight_weekday or not isinstance(end_d, int) or not isinstance(span, int):
-        return {}
-    result: dict[str, int] = {}
-    for day in hard_days:
-        d_day = d_day_for_weekday(
-            day,
-            fight_weekday=fight_weekday,
-            projected_days_until_fight_end=end_d,
-            span_days=span,
-        )
-        if d_day is not None:
-            result[day] = d_day
-    return result
-
-
-def _apply_per_day_countdown_overrides(
-    plan: list[dict[str, Any]],
-    *,
-    week: dict[str, Any],
-    hard_days: list[str],
-    protected_day: str,
-) -> list[dict[str, Any]]:
-    """Per-day calendar authority: ban D-17 onward, cap D-21..D-18 at one.
-
-    D-18 is the last allowed hard-spar day if already declared. D-17 and closer
-    convert to technical/rhythm/reduced-contact regardless of declaration.
-
-    Acts on each declared hard sparring day individually using its own D-day
-    inside the week — independent of phase/stage labels. This is the rule that
-    makes normal-camp weeks countdown-aware.
-    """
-    per_day = _per_day_d_days(week, hard_days)
-    if not per_day:
-        return plan
-    plan_by_day = {e["day"]: dict(e) for e in plan}
-
-    # D-17 and closer: convert to technical/rhythm/reduced-contact.
-    for day, d_day in per_day.items():
-        if d_day > 17 or d_day < 0:
-            continue
-        entry = plan_by_day.get(day)
-        if entry is None:
-            continue
-        codes = list(entry.get("reason_codes") or [])
-        if "d17_hard_sparring_ban" not in codes:
-            codes.append("d17_hard_sparring_ban")
-        plan_by_day[day] = {
-            **entry,
-            "status": "convert_to_technical_suggested",
-            "effective_load": "technical",
-            "reason_codes": codes,
-            "reason": entry.get("reason")
-            or "D-17 onward: hard sparring banned; convert to technical/rhythm only. No effective hard sparring allowed.",
-            "coach_note": entry.get("coach_note")
-            or _sparring_override_coach_note(d_day, "convert"),
-            "d_day": d_day,
-        }
-
-    # D-21 to D-18: cap at one effective hard exposure across that band.
-    band_days = [d for d, dd in per_day.items() if 18 <= dd <= 21]
-    band_days_sorted = [d for d in hard_days if d in band_days]
-    if len(band_days_sorted) >= 2:
-        keeper = (
-            protected_day
-            if protected_day in band_days_sorted
-            else band_days_sorted[0]
-        )
-        for day in band_days_sorted:
-            if day == keeper:
-                continue
-            entry = plan_by_day.get(day)
-            if entry is None or entry.get("effective_load") != "hard":
-                continue
-            codes = list(entry.get("reason_codes") or [])
-            if "d21_d18_cap_one" not in codes:
-                codes.append("d21_d18_cap_one")
-            plan_by_day[day] = {
-                **entry,
-                "status": "deload_suggested",
-                "effective_load": "reduced",
-                "reason_codes": codes,
-                "reason": entry.get("reason")
-                or "D-21 to D-18: cap to one effective hard sparring exposure.",
-                "d_day": per_day[day],
-            }
-
-    # Stamp d_day on every other entry too so downstream consumers see the
-    # calendar reasoning regardless of whether the override fired.
-    for day, d_day in per_day.items():
-        entry = plan_by_day.get(day)
-        if entry is not None and "d_day" not in entry:
-            plan_by_day[day] = {**entry, "d_day": d_day}
-
-    return [plan_by_day[d] for d in hard_days]
-
-
-def _finalize_plan(
-    plan: list[dict[str, Any]],
-    *,
-    hard_days: list[str],
-    protected_day: str,
-    week: dict[str, Any] | None = None,
-) -> list[dict[str, Any]]:
-    """Run the post-processing pipeline: consecutive-pair deload, 4+ day cap, classification.
-
-    Centralizes invariants so every return path in ``compute_hard_sparring_plan``
-    is guaranteed to pass through the same rules regardless of which branch produced
-    the plan. Consecutive and cap passes are no-ops when no eligible pairs remain.
-    """
-    if week is not None:
-        plan = _apply_per_day_countdown_overrides(
-            plan, week=week, hard_days=hard_days, protected_day=protected_day
-        )
-    plan = _apply_consecutive_deloads(plan, hard_days=hard_days, protected_day=protected_day)
-    if len(hard_days) >= 4:
-        plan = _apply_hard_day_cap(plan, hard_days=hard_days, protected_day=protected_day)
-    return _annotate_hard_day_classes(plan, protected_day=protected_day, hard_days=hard_days)
-
-
-def compute_hard_sparring_plan(*, week: dict[str, Any], athlete_snapshot: dict[str, Any]) -> list[dict[str, Any]]:
-    hard_days = _ordered_weekdays(
-        week.get("declared_hard_sparring_days")
-        or athlete_snapshot.get("hard_sparring_days")
-    )
-    if not hard_days:
-        return []
-
-    fatigue = _fatigue_level(athlete_snapshot)
-    cut = _cut_pressure(athlete_snapshot)
-    week_press = _week_pressure(week, athlete_snapshot)
-    injury = _injury_assessment(athlete_snapshot)
-    days_until_fight = athlete_snapshot.get("days_until_fight")
-    protected_day = _pick_protected_hard_day(hard_days, week=week)
-    bridge_override = _bridge_window_sparring_override(week, athlete_snapshot)
-    if bridge_override is None:
-        bridge_override = _standard_camp_final_two_weeks_override(week)
-
-    action = _decide_action(
-        hard_day_count=len(hard_days),
-        fatigue=fatigue,
-        cut=cut,
-        week_press=week_press,
-        injury=injury,
-        days_until_fight=days_until_fight,
-        bridge_override=bridge_override,
-    )
-    if action is None:
-        plan: list[dict[str, Any]] = [
-            {
-                "day": day,
-                "status": "hard_as_planned",
-                "effective_load": "hard",
-                "reason_codes": [],
-                "reason": "",
-            }
-            for day in hard_days
-        ]
-        return _finalize_plan(plan, hard_days=hard_days, protected_day=protected_day, week=week)
-
-    reason_codes_list = _reason_codes(
-        fatigue=fatigue,
-        cut=cut,
-        week_press=week_press,
-        injury=injury,
-        hard_day_count=len(hard_days),
-    )
-    target_status = "convert_to_technical_suggested" if action == "convert" else "deload_suggested"
-    target_load = "technical" if action == "convert" else "reduced"
-    target_reason = ", ".join(reason_codes_list)
-
-    # --- Countdown-graduated: convert_all / deload_all apply to EVERY day ---
-    countdown_override = _countdown_sparring_override(days_until_fight) or bridge_override
-    if countdown_override in {"convert_all", "deload_all"}:
-        countdown_codes = _with_final_week_cap_reason(reason_codes_list)
-        countdown_reason = ", ".join(countdown_codes)
-        plan = [
-            {
-                "day": day,
-                "status": target_status,
-                "effective_load": target_load,
-                "reason_codes": list(countdown_codes),
-                "reason": countdown_reason,
-                "coach_note": _sparring_override_coach_note(days_until_fight, action),
-            }
-            for day in hard_days
-        ]
-        return _finalize_plan(plan, hard_days=hard_days, protected_day=protected_day, week=week)
-
-    # --- Final-week cap: keep only one hard day and downgrade the rest ---
-    if countdown_override == "cap_one" or (
-        len(hard_days) >= 2 and _is_final_week_sparring_cap_active(week, athlete_snapshot)
-    ):
-        countdown_codes = _with_final_week_cap_reason(reason_codes_list)
-        countdown_reason = _final_week_cap_reason(countdown_codes)
-
-        plan: list[dict[str, Any]] = []
-        for day in hard_days:
-            if day == protected_day:
-                plan.append(
-                    {
-                        "day": day,
-                        "status": "hard_as_planned",
-                        "effective_load": "hard",
-                        "reason_codes": [],
-                        "reason": "",
-                    }
-                )
-                continue
-            plan.append(
-                {
-                    "day": day,
-                    "status": target_status,
-                    "effective_load": target_load,
-                    "reason_codes": list(countdown_codes),
-                    "reason": countdown_reason,
-                    "coach_note": _sparring_override_coach_note(days_until_fight, action)
-                    or _final_week_sparring_cap_coach_note(),
-                }
-            )
-        return _finalize_plan(plan, hard_days=hard_days, protected_day=protected_day, week=week)
-
-    # --- Single-target downgrade (readiness-based only) ---
-    target_day = _pick_downgrade_target(hard_days, week=week)
-
-    plan: list[dict[str, Any]] = []
-    for day in hard_days:
-        if day == target_day:
-            plan.append(
-                {
-                    "day": day,
-                    "status": target_status,
-                    "effective_load": target_load,
-                    "reason_codes": list(reason_codes_list),
-                    "reason": target_reason,
-                }
-            )
-            continue
-        plan.append(
-            {
-                "day": day,
-                "status": "hard_as_planned",
-                "effective_load": "hard",
-                "reason_codes": [],
-                "reason": "",
-            }
-        )
-    return _finalize_plan(plan, hard_days=hard_days, protected_day=protected_day, week=week)
-
-
-_COUNTDOWN_COACH_NOTES: dict[int, str] = {
-    1: (
-        "Fight is tomorrow. If sparring happens at all, keep it controlled technical flow "
-        "only — no hard contact. Freshness matters more than any final prep hit."
-    ),
-    2: (
-        "Two days out. Pull everything back to rhythm and reads — no hard contact from "
-        "here. The work is done; protect what you've built."
-    ),
-    3: (
-        "Three days out. No hard sparring. Keep any pad or bag work sharp and technical "
-        "— stay crisp, not flat, and let the body stay ready to perform."
-    ),
-    4: (
-        "Four days out. Move all sparring to controlled, purposeful technical rounds. "
-        "Nothing you can gain from hard collision now is worth the cost."
-    ),
-    5: (
-        "Five days to fight. Move sparring to rhythm-only rounds "
-        "— bring the technical intent but leave the damage out."
-    ),
-    6: (
-        "Six days out. No hard sparring — keep only technical/rhythm rounds "
-        "and stay focused on timing over damage."
-    ),
-    14: (
-        "Two weeks out. You're in the bridge window — no hard sparring from here; "
-        "keep rounds technical and rhythm-first to protect freshness into fight week."
-    ),
-    15: (
-        "Fifteen days out. The D-17 hard-sparring ban is already active — "
-        "convert any declared hard day to technical/rhythm work; no hard contact."
-    ),
-    16: (
-        "Sixteen days out. The D-17 hard-sparring ban is active — "
-        "technical rhythm only, with no effective hard sparring."
-    ),
-    17: (
-        "Seventeen days out. Hard sparring is banned from here onward; "
-        "convert declared hard days to technical/rhythm only."
-    ),
-}
-
-
-def _sparring_override_coach_note(days_until_fight: Any, action: str) -> str:
-    """Generate a taper-driven coach note explaining the sparring change."""
-    try:
-        days = int(days_until_fight)
-    except (TypeError, ValueError):
-        return ""
-    if days in _COUNTDOWN_COACH_NOTES:
-        return _COUNTDOWN_COACH_NOTES[days]
-    if days == 7 and action == "deload":
-        return (
-            "Seven days out. With multiple hard sparring sessions this week, one shifts to "
-            "reduced intensity to protect the cumulative load going into fight week."
-        )
-    if 7 <= days <= 17 and action == "convert":
-        return (
-            f"D-{days}: inside the D-17 hard-sparring ban. Convert this declared hard "
-            "day to technical/rhythm work — no effective hard sparring allowed."
-        )
-    return ""
-
-
-def _final_week_sparring_cap_coach_note() -> str:
-    return (
-        "Final taper week: keep only one effective hard sparring day. If the declared coach "
-        "schedule has more, keep the priority collision day and make the rest reduced-contact "
-        "or technical so freshness wins over extra damage."
+def test_two_consecutive_hard_days_deload_the_later_day():
+    plan = compute_hard_sparring_plan(
+        week=_week(hard_days=["Monday", "Tuesday"]),
+        athlete_snapshot=_athlete(fatigue="low", hard_days=["Monday", "Tuesday"]),
     )
 
+    statuses = {e["day"]: e["status"] for e in plan}
+    assert statuses["Monday"] == "hard_as_planned"
+    assert statuses["Tuesday"] == "deload_suggested"
+    assert "consecutive_hard_days" in next(e["reason_codes"] for e in plan if e["day"] == "Tuesday")
 
-def effective_hard_days(plan: list[dict[str, Any]]) -> list[str]:
-    return [entry["day"] for entry in plan if entry.get("status") == "hard_as_planned"]
+
+def test_well_spaced_two_hard_days_unchanged_without_pressure():
+    plan = compute_hard_sparring_plan(
+        week=_week(hard_days=["Monday", "Wednesday"]),
+        athlete_snapshot=_athlete(fatigue="low", hard_days=["Monday", "Wednesday"]),
+    )
+
+    assert all(e["status"] == "hard_as_planned" for e in plan)
 
 
-def effective_hard_day_count(plan: list[dict[str, Any]]) -> int:
-    return len(effective_hard_days(plan))
+def test_three_hard_days_with_consecutive_pair_deloads_second_of_pair():
+    plan = compute_hard_sparring_plan(
+        week=_week(hard_days=["Monday", "Tuesday", "Friday"]),
+        athlete_snapshot=_athlete(fatigue="low", hard_days=["Monday", "Tuesday", "Friday"]),
+    )
+
+    statuses = {e["day"]: e["status"] for e in plan}
+    assert statuses["Monday"] == "hard_as_planned"
+    assert statuses["Tuesday"] == "deload_suggested"
+    assert statuses["Friday"] == "hard_as_planned"
+
+
+def test_consecutive_deload_respects_protected_day():
+    # Collision owner is Tuesday — the earlier day should be deloaded instead.
+    plan = compute_hard_sparring_plan(
+        week=_week(
+            hard_days=["Monday", "Tuesday"],
+            session_roles=[{"role_key": "fight_pace_repeatability_day", "collision_owner_day": "Tuesday"}],
+        ),
+        athlete_snapshot=_athlete(fatigue="low", hard_days=["Monday", "Tuesday"]),
+    )
+
+    statuses = {e["day"]: e["status"] for e in plan}
+    assert statuses["Monday"] == "deload_suggested"
+    assert statuses["Tuesday"] == "hard_as_planned"
+
+
+# ── Four+ hard days cap ───────────────────────────────────────────────────────
+
+def test_four_hard_days_caps_to_two_effective():
+    plan = compute_hard_sparring_plan(
+        week=_week(hard_days=["Monday", "Wednesday", "Thursday", "Friday"]),
+        athlete_snapshot=_athlete(fatigue="low", hard_days=["Monday", "Wednesday", "Thursday", "Friday"]),
+    )
+
+    effective = [e for e in plan if e["status"] == "hard_as_planned"]
+    assert len(effective) == 2
+
+
+def test_hard_day_cap_reason_explains_managed_exposure():
+    plan = compute_hard_sparring_plan(
+        week=_week(hard_days=["Monday", "Wednesday", "Friday", "Saturday"]),
+        athlete_snapshot=_athlete(fatigue="low", hard_days=["Monday", "Wednesday", "Friday", "Saturday"]),
+    )
+    capped = [e for e in plan if "hard_day_cap" in e.get("reason_codes", [])]
+    assert capped
+    for entry in capped:
+        assert "managed" in entry["reason"].lower() or "preserved" in entry["reason"].lower()
+
+
+def test_four_hard_days_with_consecutive_pair_still_caps_at_two():
+    # Mon-Tue consecutive, plus Thu and Fri. Consecutive pass deloads Tue and Fri
+    # (Thu-Fri consecutive), cap confirms ≤ 2.
+    plan = compute_hard_sparring_plan(
+        week=_week(hard_days=["Monday", "Tuesday", "Thursday", "Friday"]),
+        athlete_snapshot=_athlete(fatigue="low", hard_days=["Monday", "Tuesday", "Thursday", "Friday"]),
+    )
+
+    effective = [e for e in plan if e["status"] == "hard_as_planned"]
+    assert len(effective) == 2
+
+
+def test_four_hard_days_reason_code_present():
+    plan = compute_hard_sparring_plan(
+        week=_week(hard_days=["Monday", "Wednesday", "Thursday", "Friday"]),
+        athlete_snapshot=_athlete(fatigue="low", hard_days=["Monday", "Wednesday", "Thursday", "Friday"]),
+    )
+
+    all_codes = [code for e in plan for code in e.get("reason_codes", [])]
+    assert "four_hard_days" in all_codes
+
+
+def test_five_hard_days_caps_to_two_effective():
+    plan = compute_hard_sparring_plan(
+        week=_week(hard_days=["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]),
+        athlete_snapshot=_athlete(
+            fatigue="low",
+            hard_days=["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
+        ),
+    )
+
+    effective = [e for e in plan if e["status"] == "hard_as_planned"]
+    assert len(effective) == 2
+
+
+# ── Sandwiched training days ──────────────────────────────────────────────────
+
+def test_sandwiched_training_days_identifies_day_between_hard_days():
+    result = sandwiched_training_days(
+        ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
+        {"Monday", "Wednesday"},
+    )
+    assert "Tuesday" in result
+    assert "Monday" not in result
+    assert "Wednesday" not in result
+
+
+def test_sandwiched_training_days_returns_empty_with_fewer_than_two_hard_days():
+    assert sandwiched_training_days(["Monday", "Tuesday", "Wednesday"], {"Monday"}) == set()
+    assert sandwiched_training_days(["Monday", "Tuesday", "Wednesday"], set()) == set()
+
+
+def test_sandwiched_training_days_multiple_sandwiched_days():
+    result = sandwiched_training_days(
+        ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
+        {"Monday", "Friday"},
+    )
+    assert result == {"Tuesday", "Wednesday", "Thursday"}
+
+
+# ── hard_day_class labels ─────────────────────────────────────────────────────
+
+def test_every_plan_entry_has_hard_day_class():
+    plan = compute_hard_sparring_plan(
+        week=_week(hard_days=["Monday", "Wednesday", "Friday"]),
+        athlete_snapshot=_athlete(fatigue="low", hard_days=["Monday", "Wednesday", "Friday"]),
+    )
+    assert all("hard_day_class" in e for e in plan)
+
+
+def test_single_hard_day_is_primary_hard():
+    plan = compute_hard_sparring_plan(
+        week=_week(hard_days=["Wednesday"]),
+        athlete_snapshot=_athlete(fatigue="low", hard_days=["Wednesday"]),
+    )
+    assert plan[0]["hard_day_class"] == "primary_hard"
+
+
+def test_two_well_spaced_hard_days_labels():
+    # Tue + Thu, no pressure — both hard_as_planned; first is primary, second is secondary.
+    plan = compute_hard_sparring_plan(
+        week=_week(),
+        athlete_snapshot=_athlete(),
+    )
+    by_day = {e["day"]: e for e in plan}
+    assert by_day["Tuesday"]["hard_day_class"] == "primary_hard"
+    assert by_day["Thursday"]["hard_day_class"] == "secondary_hard"
+
+
+def test_deloaded_day_is_managed_hard():
+    plan = compute_hard_sparring_plan(
+        week=_week(),
+        athlete_snapshot=_athlete(fatigue="high"),
+    )
+    deloaded = next(e for e in plan if e["status"] == "deload_suggested")
+    assert deloaded["hard_day_class"] == "managed_hard"
+
+
+def test_consecutive_deloaded_day_is_managed_hard():
+    plan = compute_hard_sparring_plan(
+        week=_week(hard_days=["Monday", "Tuesday"]),
+        athlete_snapshot=_athlete(fatigue="low", hard_days=["Monday", "Tuesday"]),
+    )
+    by_day = {e["day"]: e for e in plan}
+    assert by_day["Monday"]["hard_day_class"] == "primary_hard"
+    assert by_day["Tuesday"]["hard_day_class"] == "managed_hard"
+
+
+def test_collision_owner_gets_primary_hard_label():
+    plan = compute_hard_sparring_plan(
+        week=_week(
+            hard_days=["Monday", "Thursday"],
+            session_roles=[{"role_key": "fight_pace_repeatability_day", "collision_owner_day": "Thursday"}],
+        ),
+        athlete_snapshot=_athlete(fatigue="low", hard_days=["Monday", "Thursday"]),
+    )
+    by_day = {e["day"]: e for e in plan}
+    assert by_day["Thursday"]["hard_day_class"] == "primary_hard"
+    assert by_day["Monday"]["hard_day_class"] == "secondary_hard"
+
+
+def test_four_hard_days_classification_has_exactly_one_primary():
+    plan = compute_hard_sparring_plan(
+        week=_week(hard_days=["Monday", "Wednesday", "Thursday", "Friday"]),
+        athlete_snapshot=_athlete(fatigue="low", hard_days=["Monday", "Wednesday", "Thursday", "Friday"]),
+    )
+    classes = [e["hard_day_class"] for e in plan]
+    assert classes.count("primary_hard") == 1
+    assert classes.count("managed_hard") == 2
+    assert classes.count("secondary_hard") == 1
+
+
+def test_convert_all_countdown_labels_all_as_managed_hard():
+    # D-4: convert_all fires, every day becomes managed.
+    plan = compute_hard_sparring_plan(
+        week=_week(hard_days=["Monday", "Wednesday"]),
+        athlete_snapshot=_athlete(days_until_fight=4, hard_days=["Monday", "Wednesday"]),
+    )
+    assert all(e["hard_day_class"] == "managed_hard" for e in plan)
+
+
+def test_d7_countdown_converts_all_declared_hard_days_to_technical():
+    plan = compute_hard_sparring_plan(
+        week=_week(hard_days=["Monday", "Wednesday", "Friday"]),
+        athlete_snapshot=_athlete(days_until_fight=7, hard_days=["Monday", "Wednesday", "Friday"]),
+    )
+    assert all(e["status"] == "convert_to_technical_suggested" for e in plan)
+    assert all(e["effective_load"] == "technical" for e in plan)
+
+
+# ── Three hard days with multiple amber readiness signals ────────────────────
+
+def test_three_hard_days_with_two_amber_signals_deloads_one():
+    # Moderate fatigue + moderate cut with 3 well-spaced hard days:
+    # neither signal alone triggers a deload, but together they do.
+    plan = compute_hard_sparring_plan(
+        week=_week(hard_days=["Monday", "Wednesday", "Friday"]),
+        athlete_snapshot=_athlete(
+            fatigue="moderate",
+            weight_cut_pct=3.5,
+            weight_cut_risk=True,
+            readiness_flags=["active_weight_cut"],
+            hard_days=["Monday", "Wednesday", "Friday"],
+        ),
+    )
+    downgraded = [e for e in plan if e["status"] != "hard_as_planned"]
+    assert len(downgraded) == 1
+
+
+def test_three_hard_days_with_single_amber_signal_stays_hard():
+    plan = compute_hard_sparring_plan(
+        week=_week(hard_days=["Monday", "Wednesday", "Friday"]),
+        athlete_snapshot=_athlete(
+            fatigue="moderate",
+            hard_days=["Monday", "Wednesday", "Friday"],
+        ),
+    )
+    assert all(e["status"] == "hard_as_planned" for e in plan)
+
+
+def test_two_hard_days_with_two_amber_signals_stays_hard():
+    # count == 2 does not trigger the multi-amber rule.
+    plan = compute_hard_sparring_plan(
+        week=_week(hard_days=["Tuesday", "Thursday"]),
+        athlete_snapshot=_athlete(
+            fatigue="moderate",
+            weight_cut_pct=3.5,
+            weight_cut_risk=True,
+            readiness_flags=["active_weight_cut"],
+        ),
+    )
+    assert all(e["status"] == "hard_as_planned" for e in plan)
+
+
+# ── Anchor exclusion after sparring (stage2 scoring) ─────────────────────────
+
+def test_anchor_after_hard_as_planned_spar_day_is_hard_excluded():
+    from fightcamp.stage2_payload import _boxing_day_score
+
+    anchor_role = {
+        "category": "strength",
+        "role_key": "primary_strength_day",
+        "anchor": "max_strength_neural",
+    }
+    spar_role = {
+        "category": "sparring",
+        "role_key": "hard_sparring_day",
+        "hard_sparring_status": "hard_as_planned",
+    }
+    training_days = ["Monday", "Tuesday", "Wednesday"]
+    day_to_roles = {"Tuesday": [spar_role]}
+
+    score = _boxing_day_score(
+        anchor_role,
+        "Wednesday",
+        anchor_day="Wednesday",
+        prefer_midweek_anchor=False,
+        readiness_sensitive=False,
+        training_days=training_days,
+        day_to_roles=day_to_roles,
+    )
+    assert score <= -10_000
+
+
+def test_anchor_after_deloaded_spar_day_gets_heavy_penalty_but_not_excluded():
+    from fightcamp.stage2_payload import _boxing_day_score
+
+    anchor_role = {
+        "category": "strength",
+        "role_key": "primary_strength_day",
+        "anchor": "max_strength_neural",
+    }
+    spar_role = {
+        "category": "sparring",
+        "role_key": "hard_sparring_day",
+        "hard_sparring_status": "deload_suggested",
+    }
+    training_days = ["Monday", "Tuesday", "Wednesday"]
+    day_to_roles = {"Tuesday": [spar_role]}
+
+    score = _boxing_day_score(
+        anchor_role,
+        "Wednesday",
+        anchor_day="Wednesday",
+        prefer_midweek_anchor=False,
+        readiness_sensitive=False,
+        training_days=training_days,
+        day_to_roles=day_to_roles,
+    )
+    # Heavy penalty (-50) but far above the hard-exclusion threshold (-10_000).
+    assert -10_000 < score < 0
+
+
+# ── _finalize_plan uniform post-processing ───────────────────────────────────
+
+def test_countdown_convert_all_plan_has_hard_day_class_labels():
+    # Every return path must pass through _finalize_plan.
+    plan = compute_hard_sparring_plan(
+        week=_week(hard_days=["Tuesday", "Thursday"]),
+        athlete_snapshot=_athlete(days_until_fight=3, hard_days=["Tuesday", "Thursday"]),
+    )
+    assert all("hard_day_class" in e for e in plan)
+
+
+def test_d7_countdown_collision_owner_still_converts_to_technical():
+    plan = compute_hard_sparring_plan(
+        week=_week(
+            hard_days=["Monday", "Wednesday", "Friday"],
+            session_roles=[{"role_key": "fight_pace_repeatability_day", "collision_owner_day": "Friday"}],
+        ),
+        athlete_snapshot=_athlete(days_until_fight=7, hard_days=["Monday", "Wednesday", "Friday"]),
+    )
+    hard_entries = [e for e in plan if e["status"] == "hard_as_planned"]
+    assert hard_entries == []
+    assert all(e["effective_load"] == "technical" for e in plan)
+
+
+def test_finalize_plan_never_exceeds_cap_on_any_path():
+    # Post-condition invariant: at most 3 effective hard days across the full input space.
+    scenarios = [
+        {"hard_days": ["Monday", "Wednesday", "Friday"], "fatigue": "low", "days": 24},
+        {"hard_days": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"], "fatigue": "low", "days": 24},
+        {"hard_days": ["Monday", "Tuesday", "Wednesday", "Thursday"], "fatigue": "high", "days": 24},
+        {"hard_days": ["Monday", "Wednesday", "Friday", "Sunday"], "fatigue": "low", "days": 7},
+    ]
+    for scenario in scenarios:
+        plan = compute_hard_sparring_plan(
+            week=_week(hard_days=scenario["hard_days"]),
+            athlete_snapshot=_athlete(
+                fatigue=scenario["fatigue"],
+                days_until_fight=scenario["days"],
+                hard_days=scenario["hard_days"],
+            ),
+        )
+        effective = [e for e in plan if e["status"] == "hard_as_planned"]
+        assert len(effective) <= 3, f"{scenario} yielded {len(effective)} effective hard days"
+
+
+# ── Bridge window (D-21 to D-14) sparring caps ────────────────────────────────
+
+
+def _bridge_week(*, phase: str = "TAPER", stage_key: str = "d21_to_d14", hard_days: list[str] | None = None) -> dict:
+    return {
+        "phase": phase,
+        "stage_key": stage_key,
+        "week_index": 1,
+        "phase_week_index": 1,
+        "phase_week_total": 1,
+        "declared_hard_sparring_days": hard_days or ["Tuesday", "Thursday"],
+        "session_roles": [],
+    }
+
+
+def test_bridge_d20_caps_hard_sparring_to_one():
+    plan = compute_hard_sparring_plan(
+        week=_bridge_week(hard_days=["Tuesday", "Thursday"]),
+        athlete_snapshot=_athlete(days_until_fight=20, hard_days=["Tuesday", "Thursday"]),
+    )
+    effective = [e for e in plan if e["status"] == "hard_as_planned"]
+    assert len(effective) == 1
+
+
+def test_bridge_d17_with_moderate_cut_zeros_hard_sparring():
+    plan = compute_hard_sparring_plan(
+        week=_bridge_week(hard_days=["Tuesday", "Thursday"]),
+        athlete_snapshot=_athlete(
+            days_until_fight=17,
+            weight_cut_pct=4.0,
+            weight_cut_risk=True,
+            hard_days=["Tuesday", "Thursday"],
+        ),
+    )
+    # D-17 inside the bridge window always zeros hard sparring — the cap is
+    # 0 from D-17 downward regardless of cut/fatigue state.
+    effective = [e for e in plan if e["status"] == "hard_as_planned"]
+    assert len(effective) == 0
+
+
+def test_bridge_d17_clean_boxer_zeros_hard_sparring():
+    # Even a clean, low-risk athlete loses all hard sparring exposures from
+    # D-17 downward. Bridge cap transitions from 1 (D-21..D-18) to 0 (D-17..D-14).
+    plan = compute_hard_sparring_plan(
+        week=_bridge_week(hard_days=["Tuesday", "Thursday"]),
+        athlete_snapshot=_athlete(
+            days_until_fight=17,
+            fatigue="low",
+            hard_days=["Tuesday", "Thursday"],
+        ),
+    )
+    effective = [e for e in plan if e["status"] == "hard_as_planned"]
+    assert len(effective) == 0
+
+
+def test_bridge_d20_moderate_cut_contact_sport_zeros_hard_sparring():
+    # D-20 boxer with a real cut (~5%) falls into moderate bucket within the
+    # bridge window — moderate cut on a contact sport must zero hard sparring.
+    plan = compute_hard_sparring_plan(
+        week=_bridge_week(hard_days=["Tuesday", "Thursday"]),
+        athlete_snapshot=_athlete(
+            days_until_fight=20,
+            fatigue="low",
+            weight_cut_pct=5.0,
+            weight_cut_risk=True,
+            hard_days=["Tuesday", "Thursday"],
+        ),
+    )
+    effective = [e for e in plan if e["status"] == "hard_as_planned"]
+    assert len(effective) == 0
+
+
+def test_bridge_d16_downgrades_all_declared_hard_days():
+    plan = compute_hard_sparring_plan(
+        week=_bridge_week(hard_days=["Tuesday", "Thursday"]),
+        athlete_snapshot=_athlete(days_until_fight=16, hard_days=["Tuesday", "Thursday"]),
+    )
+    assert all(entry["status"] != "hard_as_planned" for entry in plan)
+    assert all(entry["effective_load"] == "technical" for entry in plan)
+
+
+def test_bridge_d15_converts_to_technical_only():
+    plan = compute_hard_sparring_plan(
+        week=_bridge_week(hard_days=["Tuesday", "Thursday"]),
+        athlete_snapshot=_athlete(days_until_fight=15, hard_days=["Tuesday", "Thursday"]),
+    )
+    assert all(entry["effective_load"] == "technical" for entry in plan)
+
+
+def test_bridge_d14_converts_to_technical_only():
+    plan = compute_hard_sparring_plan(
+        week=_bridge_week(hard_days=["Tuesday", "Thursday"]),
+        athlete_snapshot=_athlete(days_until_fight=14, hard_days=["Tuesday", "Thursday"]),
+    )
+    assert all(entry["effective_load"] == "technical" for entry in plan)
+
+
+def test_bridge_override_does_not_fire_for_future_planning_week():
+    # Future SPP week at D-18: advisory engine must not see cap_one wording here;
+    # the bridge override is scoped to the imminent bridge week only.
+    future_week = {
+        "phase": "SPP",
+        "stage_key": "late_spp",
+        "week_index": 1,
+        "phase_week_index": 3,
+        "phase_week_total": 4,
+        "declared_hard_sparring_days": ["Tuesday", "Thursday"],
+        "session_roles": [],
+    }
+    plan = compute_hard_sparring_plan(
+        week=future_week,
+        athlete_snapshot=_athlete(days_until_fight=18, hard_days=["Tuesday", "Thursday"]),
+    )
+    # With no bridge override firing and no late-fight pressure, both hard days
+    # remain at their declared load.
+    effective = [e for e in plan if e["status"] == "hard_as_planned"]
+    assert len(effective) == 2
+
+
+def test_standard_camp_final_two_taper_weeks_have_no_hard_sparring():
+    week = _week(
+        phase="TAPER",
+        stage_key="taper_freshness",
+        hard_days=["Tuesday", "Thursday"],
+        phase_week_index=2,
+        phase_week_total=3,
+    )
+    plan = compute_hard_sparring_plan(
+        week=week,
+        athlete_snapshot=_athlete(days_until_fight=42, hard_days=["Tuesday", "Thursday"]),
+    )
+    assert all(entry["status"] != "hard_as_planned" for entry in plan)
+
+
+def test_standard_camp_final_week_has_no_hard_sparring_when_taper_has_two_slots():
+    week = _week(
+        phase="TAPER",
+        stage_key="fight_week_survival_rhythm",
+        hard_days=["Tuesday", "Thursday"],
+        phase_week_index=3,
+        phase_week_total=3,
+    )
+    plan = compute_hard_sparring_plan(
+        week=week,
+        athlete_snapshot=_athlete(days_until_fight=42, hard_days=["Tuesday", "Thursday"]),
+    )
+    assert all(entry["status"] != "hard_as_planned" for entry in plan)
+
+
+def test_standard_camp_taper_week_outside_two_weeks_keeps_default_logic():
+    week = _week(
+        phase="TAPER",
+        stage_key="taper_freshness",
+        hard_days=["Tuesday", "Thursday"],
+        phase_week_index=1,
+        phase_week_total=3,
+    )
+    plan = compute_hard_sparring_plan(
+        week=week,
+        athlete_snapshot=_athlete(days_until_fight=42, hard_days=["Tuesday", "Thursday"]),
+    )
+    effective = [entry for entry in plan if entry["status"] == "hard_as_planned"]
+    assert len(effective) == 1
+
+
+def test_standard_camp_uses_projected_days_fallback_when_taper_week_position_missing():
+    week = _week(
+        phase="TAPER",
+        stage_key="taper_freshness",
+        hard_days=["Tuesday", "Thursday"],
+        projected_days_until_fight_start=10,
+    )
+    plan = compute_hard_sparring_plan(
+        week=week,
+        athlete_snapshot=_athlete(days_until_fight=42, hard_days=["Tuesday", "Thursday"]),
+    )
+    assert all(entry["status"] != "hard_as_planned" for entry in plan)
+
+
+def test_standard_camp_override_does_not_change_d_window_stage_behavior():
+    for stage_key in ("d13_to_d8", "d7", "d1", "d0"):
+        week = _week(
+            phase="TAPER",
+            stage_key=stage_key,
+            hard_days=["Tuesday", "Thursday"],
+            phase_week_index=3,
+            phase_week_total=3,
+            projected_days_until_fight_start=7,
+        )
+        plan = compute_hard_sparring_plan(
+            week=week,
+            athlete_snapshot=_athlete(days_until_fight=42, hard_days=["Tuesday", "Thursday"]),
+        )
+        effective = [entry for entry in plan if entry["status"] == "hard_as_planned"]
+        assert len(effective) == 1
