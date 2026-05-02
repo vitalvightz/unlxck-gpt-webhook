@@ -3933,6 +3933,7 @@ RULE 13 — LATE-FIGHT LABEL DISCIPLINE
 Applies when render_guards.suppress_phase_toolbox_sections == true.
 
 Output is countdown-led. Lead every active day with countdown_display_label (D-N (Weekday)). Do not emit phase scaffolding: no "Week 1/2/3", no "PHASE N: GPP/SPP/TAPER", no "Phase Weeks", no "Phase Days", no "Phase must-keep", no "TAPER phase guidance", no "SPP insert", no "Mindset Focus" / "Strength & Power" / "Conditioning" sub-headers framed by phase.
+When selected_plan.hard_sparring_ban_summary is present, state it plainly in the athlete-facing output: "All declared hard sparring from D-17 onward is converted to technical/rhythm only. No effective hard sparring allowed." Do not render a coach-led hard sparring session in that window.
 
 Do not expose internal role keys or internal system labels as session titles. Translate role keys into coach-voiced names from the intent, drills selected, and countdown day. Canonical mapping:
   strength_touch_day         -> "Power Transfer Touch"
