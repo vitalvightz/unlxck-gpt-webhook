@@ -1,11 +1,3 @@
-from fightcamp.sparring_dose_planner import (
-    _consecutive_hard_day_pairs,
-    _decide_action,
-    _pick_downgrade_target,
-    compute_hard_sparring_plan,
-    sandwiched_training_days,
-)
-
 # ── Hard day classification ───────────────────────────────────────────────────
 
 
