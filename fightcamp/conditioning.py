@@ -1175,10 +1175,46 @@ def _glycolytic_fallback(phase: str) -> dict:
     }
 
 
+def _bridge_glycolytic_touch_fallback() -> dict:
+    """Low-dose bridge touch for D-21 to D-19 when bridge rules allow glycolytic.
+
+    This is not a full fight-pace conditioning fallback. It is only a small
+    rhythm / tempo exposure for clean late-bridge athletes.
+    """
+
+    return {
+        "system": "GLYCOLYTIC",
+        "name": "Bridge Tempo Touch: 2-3 x 90 sec Technical Tempo",
+        "load": "RPE 5-6 technical tempo",
+        "rest": "2 min between rounds",
+        "timing": "2-3 x 90 sec work / 2 min rest",
+        "purpose": "Maintain fight rhythm and light glycolytic touch without creating heavy fatigue.",
+        "red_flags": "Stop if speed drops, breathing spikes, legs feel heavy, or sharpness fades.",
+        "equipment": [],
+        "required_equipment": [],
+        "generic_fallback": True,
+        "phases": ["TAPER"],
+        "tags": [
+            "glycolytic",
+            "technical_rhythm",
+            "skill_refinement",
+            "cns_freshness",
+            "low_impact",
+        ],
+        "late_windows": [D21_TO_D14],
+        "work_sec": 90,
+        "rest_sec": 120,
+        "rounds": 2,
+        "rpe": 6,
+        "lactate_load": "low",
+        "impact_cost": "low",
+        "movement_cost": "low",
+    }
+
+
 def _late_fight_dosage_caps(days_until_fight: int) -> str:
     """Return countdown-aware dosage caps for late-fight TAPER days."""
     override_note = "These caps override any drill default structure."
-
     caps = {
         6: (
             "D-6 late-fight caps: no conditioning development; optional alactic sharpness only "
