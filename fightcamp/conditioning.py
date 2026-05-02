@@ -2188,9 +2188,9 @@ def generate_conditioning_block(flags):
             )
 
     def _allow_system_insert(system: str) -> bool:
-        if phase.upper() != "TAPER" or system != "glycolytic":
-            return True
-        return allow_glycolytic and selected_counts["glycolytic"] < 1
+        if phase.upper() == "TAPER" and system == "glycolytic":
+            return allow_glycolytic and selected_counts["glycolytic"] < 1
+        return True
 
     def _append_drill(system: str, drill: dict, reasons: dict | None) -> bool:
         name = drill.get("name")
