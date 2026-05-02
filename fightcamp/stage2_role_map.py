@@ -1115,7 +1115,7 @@ def _non_spar_role_priority_rank(
 
     athlete_model = athlete_model or {}
     preserve_low_noise = _conditioning_limiter_signal(athlete_model) and _can_keep_low_noise_conditioning(athlete_model)
-    demote_glycolytic = is_hard_spar_week or is_meaningful_cut or (_active_injury_is_moderate_plus(athlete_model) and preserve_low_noise)
+    demote_glycolytic = is_hard_spar_week or is_meaningful_cut or _active_injury_is_moderate_plus(athlete_model)
 
     if phase == "GPP":
         # GPP priority (highest → lowest): primary_strength > aerobic > secondary_strength > recovery
