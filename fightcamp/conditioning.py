@@ -2679,15 +2679,56 @@ def generate_conditioning_block(flags):
         reason_lookup,
     )
 
-    _is_late_fight_taper = active_late_window
-    if phase.upper() in {"SPP", "TAPER"} and not grouped_drills.get("glycolytic") and not _is_late_fight_taper:
-        # Active late-window TAPER (D-21 to D-1) suppresses the generic
-        # multi-round glycolytic fallback. Outside that countdown-specific
-        # window, keep the legacy helper behavior.
+        _is_late_fight_taper = active_late_window
+    bridge_allows_glycolytic_touch = bool(
+        active_late_window
+        and (bridge_rules or {}).get("glycolytic_touch_max", 0) > 0
+    )
+
+    if (
+        phase.upper() == "SPP"
+        and not grouped_drills.get("glycolytic")
+        and not _is_late_fight_taper
+    ):
+        # SPP is the fight-specific development phase, so a missing glycolytic
+        # exposure gets the normal fight-pace fallback.
         fallback = _glycolytic_fallback(phase)
         grouped_drills["glycolytic"] = [fallback]
         selected_drill_names.append(fallback["name"])
+        reason_lookup[fallback["name"]] = {
+            "goal_hits": 0,
+            "weakness_hits": 0,
+            "style_hits": 0,
+            "phase_hits": 1,
+            "load_adjustments": 0,
+            "equipment_boost": 0,
+            "penalties": 0,
+            "reason_codes": ["spp_glycolytic_fallback"],
+            "final_score": 0,
+        }
 
+    elif (
+        phase.upper() == "TAPER"
+        and not grouped_drills.get("glycolytic")
+        and bridge_allows_glycolytic_touch
+    ):
+        # Late bridge allows only a small glycolytic touch, not the full
+        # 6-10 round fight-pace fallback.
+        fallback = _bridge_glycolytic_touch_fallback()
+        grouped_drills["glycolytic"] = [fallback]
+        selected_drill_names.append(fallback["name"])
+        reason_lookup[fallback["name"]] = {
+            "goal_hits": 0,
+            "weakness_hits": 0,
+            "style_hits": 0,
+            "phase_hits": 1,
+            "load_adjustments": 0,
+            "equipment_boost": 0,
+            "penalties": 0,
+            "reason_codes": ["bridge_glycolytic_touch_fallback"],
+            "late_window_adjustment": 0,
+            "final_score": 0,
+        }
     if (
         selection_format in {"boxing", "kickboxing"}
         and phase.upper() in {"SPP", "TAPER"}
