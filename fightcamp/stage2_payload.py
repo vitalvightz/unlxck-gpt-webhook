@@ -1013,6 +1013,19 @@ def _ordered_weekdays(values: list[str]) -> list[str]:
     cleaned = _dedupe_preserve_order([str(value).strip() for value in values if str(value).strip()])
     return sorted(cleaned, key=lambda day: (_WEEKDAY_ORDER.get(day.strip().lower(), 99), day.strip().lower()))
 
+def _rotate_weekdays_from_plan_start(weekdays: list[str], plan_creation_weekday: Any) -> list[str]:
+    ordered = _ordered_weekdays(_clean_list(weekdays))
+    creation_day = str(plan_creation_weekday or "").strip().lower()
+    creation_index = _WEEKDAY_ORDER.get(creation_day)
+    if creation_index is None or not ordered:
+        return ordered
+    weekday_names = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
+    start_day = weekday_names[(creation_index + 1) % 7]
+    start_idx = next((idx for idx, day in enumerate(ordered) if day.strip().lower() == start_day), None)
+    if start_idx is None:
+        return ordered
+    return ordered[start_idx:] + ordered[:start_idx]
+
 
 def _declared_day_sets(athlete_model: dict) -> tuple[list[str], set[str], set[str]]:
     training_days = _ordered_weekdays(_clean_list(athlete_model.get("training_days", [])))
@@ -2733,7 +2746,10 @@ def _build_weekly_role_map(
                 "stage_key": week_entry.get("stage_key"),
                 "phase_week_index": week_entry.get("phase_week_index"),
                 "phase_week_total": week_entry.get("phase_week_total"),
-                "declared_training_days": _ordered_weekdays(_clean_list(athlete_model.get("training_days", []))),
+                "declared_training_days": _rotate_weekdays_from_plan_start(
+                    _clean_list(athlete_model.get("training_days", [])),
+                    athlete_model.get("plan_creation_weekday"),
+                ),
                 "declared_hard_sparring_days": _ordered_weekdays(_clean_list(athlete_model.get("hard_sparring_days", []))),
                 "declared_support_work_days": _ordered_weekdays(_clean_list(athlete_model.get("support_work_days", athlete_model.get("technical_skill_days", [])))),
                 "hard_sparring_plan": hard_sparring_plan,

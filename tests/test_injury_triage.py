@@ -787,3 +787,16 @@ def test_uncertainty_note_word_count_uses_per_card_words_not_separator_tokens():
 
     assert triage.mode == NEEDS_REVIEW
     assert "combo_gate:moderate_stable_blocked" in triage.routing_reasons
+
+
+def test_guided_injury_note_with_broke_routes_to_restricted_rehab():
+    payload = _payload_with_injury("")
+    payload["guided_injury"] = {
+        "area": "right ankle",
+        "severity": "moderate",
+        "trend": "stable",
+        "notes": "broke it last week",
+    }
+    triage = triage_injuries(PlanInput.from_payload(payload))
+    assert triage.mode == RESTRICTED_REHAB_ONLY
+    assert triage.should_block_stage2 is True

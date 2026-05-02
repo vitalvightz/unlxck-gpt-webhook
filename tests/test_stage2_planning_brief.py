@@ -3052,3 +3052,28 @@ def test_sandwiched_glycolytic_preserved_when_must_keep_glycolytic():
         "sandwiched_hard_days" in (item.get("compression_reason_codes") or [])
         for item in suppressed
     )
+
+
+def test_weekly_role_map_rotates_declared_training_days_to_day_after_generation():
+    athlete_model = _base_athlete(
+        days_until_fight=42,
+        training_days=["monday", "wednesday", "friday", "saturday"],
+    )
+    athlete_model["plan_creation_weekday"] = "friday"
+    week_by_week_progression = {
+        "weeks": [
+            {
+                "week_index": 1,
+                "phase": "SPP",
+                "stage_key": "spp_build",
+                "phase_week_index": 1,
+                "phase_week_total": 1,
+                "span_days": 7,
+                "session_counts": {"strength": 1, "conditioning": 1, "recovery": 1},
+                "conditioning_sequence": ["aerobic"],
+            }
+        ]
+    }
+    role_map = _build_weekly_role_map(athlete_model, week_by_week_progression, {"key": "general_fight_readiness"})
+    first_week = role_map["weeks"][0]
+    assert first_week["declared_training_days"][0] == "saturday"

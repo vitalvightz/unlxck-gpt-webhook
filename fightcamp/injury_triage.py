@@ -183,6 +183,10 @@ def triage_injuries(plan_input: PlanInput) -> InjuryTriageResult:
         red_flags.add("worsening_course")
         routing_reasons.add("guided_injury:worsening")
 
+    if "broke" in guided_notes and any(token in combined_text for token in ("ankle", "leg", "arm", "rib", "wrist", "hand", "foot", "jaw", "nose", "finger", "toe")):
+        matched_categories.add("fracture")
+        routing_reasons.add("guided_injury:structural_broke_signal")
+
     if any(token in guided_avoid for token in ("contact", "spar", "impact", "loaded", "weight bearing")):
         routing_reasons.add("guided_injury:avoid_high_load")
 
