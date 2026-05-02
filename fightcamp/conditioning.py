@@ -1206,7 +1206,7 @@ def _late_fight_dosage_caps(days_until_fight: int) -> str:
             "No additional app S&C. Optional breathing and shoulder mobility only."
         )
 
-    return caps[days_until_fight]
+    return ""
 
 def render_conditioning_block(
     grouped_drills: dict[str, list[dict]],
