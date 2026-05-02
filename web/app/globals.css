@@ -4232,7 +4232,7 @@ button.mobile-step-rail-item {
   }
 
   html[data-mobile-nav-open="true"] .onboarding-action-bar {
-    transform: translateY(calc(100% + 32px));
+    transform: translateY(calc(100% + 14px + var(--safe-area-bottom)));
     opacity: 0;
     pointer-events: none;
   }
