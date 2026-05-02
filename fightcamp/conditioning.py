@@ -994,58 +994,74 @@ def _resolve_conditioning_sessions(
     phase: str,
     num_sessions: int,
 ) -> list[dict]:
+    """Distribute already-selected conditioning drills into sessions.
+
+    Important:
+    - This function must not secretly delete selected drills.
+    - Every selected drill should become a rendered primary drill.
+    - Fallbacks are only used when a drill is already explicitly marked as a fallback.
+    """
+
     ordered_keys = ["aerobic", "glycolytic", "alactic"]
     ordered_keys += [k for k in grouped_drills.keys() if k not in ordered_keys]
 
-    session_count = max(1, num_sessions or 1)
-    total_drills = sum(len(drills or []) for drills in grouped_drills.values())
-    if total_drills:
-        session_count = min(session_count, total_drills)
-    sessions = [{"drills": {}, "systems": set()} for _ in range(session_count)]
-    drill_index = 0
+    selected_entries: list[dict] = []
+
     for system in ordered_keys:
         drills = grouped_drills.get(system, [])
         for drill in drills:
-            target = sessions[drill_index % session_count]
-            target["drills"].setdefault(system, []).append(drill)
-            target["systems"].add(system)
-            drill_index += 1
-
-    resolved_sessions: list[dict] = []
-    for session_index, session in enumerate(sessions, start=1):
-        fallback_used = False
-        entries: list[dict] = []
-        for system in ordered_keys:
-            drills = session["drills"].get(system, [])
-            if not drills:
+            if not drill:
                 continue
-            primary = _decorate_conditioning_drill(
-                drills[0],
+
+            is_fallback = bool(drill.get("render_as_fallback"))
+
+            decorated = _decorate_conditioning_drill(
+                drill,
                 system=system,
                 phase=phase,
-                session_index=session_index,
+                session_index=0,  # corrected after session assignment below
+                is_fallback=is_fallback,
             )
-            fallback = None
-            if len(drills) > 1 and not fallback_used:
-                fallback_candidate = _decorate_conditioning_drill(
-                    drills[1],
-                    system=system,
-                    phase=phase,
-                    session_index=session_index,
-                    is_fallback=True,
-                )
-                if _conditioning_fallback_allowed(primary, fallback_candidate, phase=phase):
-                    fallback = fallback_candidate
-                    fallback_used = True
-            entries.append({"system": system, "primary": primary, "fallback": fallback})
-        resolved_sessions.append(
-            {
-                "session_index": session_index,
-                "systems": set(session["systems"]),
-                "entries": entries,
-            }
-        )
-    return resolved_sessions
+
+            selected_entries.append(
+                {
+                    "system": system,
+                    "primary": None if is_fallback else decorated,
+                    "fallback": decorated if is_fallback else None,
+                }
+            )
+
+    if not selected_entries:
+        return []
+
+    session_count = max(1, num_sessions or 1)
+    session_count = min(session_count, len(selected_entries))
+
+    sessions = [
+        {
+            "session_index": idx + 1,
+            "systems": set(),
+            "entries": [],
+        }
+        for idx in range(session_count)
+    ]
+
+    for idx, entry in enumerate(selected_entries):
+        target_session = sessions[idx % session_count]
+        session_index = target_session["session_index"]
+
+        primary = entry.get("primary")
+        fallback = entry.get("fallback")
+
+        if primary:
+            primary["session_index"] = session_index
+        if fallback:
+            fallback["session_index"] = session_index
+
+        target_session["entries"].append(entry)
+        target_session["systems"].add(entry["system"])
+
+    return sessions
 
 
 def _resolved_grouped_drills(resolved_sessions: list[dict]) -> dict[str, list[dict]]:
@@ -1304,23 +1320,36 @@ def render_conditioning_block(
 
         show_system_labels = len(session.get("entries", [])) > 1
 
-        for system in ordered_keys:
-            entry = next(
-                (item for item in session.get("entries", []) if item.get("system") == system),
-                None,
-            )
-            if not entry:
+                for system in ordered_keys:
+            system_entries = [
+                item for item in session.get("entries", [])
+                if item.get("system") == system
+            ]
+
+            if not system_entries:
                 continue
+
             if show_system_labels:
+                label_source = next(
+                    (
+                        item.get("primary") or item.get("fallback")
+                        for item in system_entries
+                        if item.get("primary") or item.get("fallback")
+                    ),
+                    {},
+                )
                 label = athlete_facing_system_label(
-                    entry.get("primary") or {},
+                    label_source,
                     late_window=diagnostic_context.get("late_window"),
                 )
                 output_lines.append(f"\n**{label.title()}**")
-            session_drills = [entry.get("primary")]
-            if entry.get("fallback"):
-                session_drills.append(entry.get("fallback"))
-            for d in [drill for drill in session_drills if drill]:
+
+            for entry in system_entries:
+                session_drills = [entry.get("primary")]
+                if entry.get("fallback"):
+                    session_drills.append(entry.get("fallback"))
+
+                for d in [drill for drill in session_drills if drill]:
                 name = d.get("name", "Unnamed Drill")
                 timing = d.get("timing") or d.get("duration") or "—"
                 load = d.get("load") or d.get("intensity") or "—"
