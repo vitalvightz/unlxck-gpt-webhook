@@ -2114,7 +2114,7 @@
       "equipment": "Full-Length Mirror",
       "equipment_notes": "Minimum 2m x 1m mirror",
       "description": "Mirror a partner's footwork patterns in real-time, reversing roles every 30sec. Enhances predictive footwork reading.",
-      "work_sec": 20,
+      "work_sec": 30,
       "impact_cost": "low",
       "lactate_load": "low",
       "movement_cost": "low",
