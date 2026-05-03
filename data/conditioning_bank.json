@@ -8526,6 +8526,7 @@
       "conditioning",
       "endurance",
       "work_capacity",
+      "posterior_chain",
       "low_impact",
       "recovery",
       "low_cns",
@@ -8584,6 +8585,7 @@
     "intensity": "zone 2",
     "tags": [
       "aerobic",
+      "parasympathetic",
       "gas_tank",
       "conditioning",
       "endurance",
@@ -8605,6 +8607,7 @@
       "boxer",
       "mma",
       "grappler",
+      "kicker",
       "wrestler",
       "kickboxing",
       "muay_thai",
