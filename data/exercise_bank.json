@@ -10811,9 +10811,8 @@
     "phase_role": "late_strength_touch",
     "subfamily": "punch_specific_max_isometric_hold",
     "late_windows": [
-      "d13_to_d8",
-      "d7",
-      "d4_to_d2"
+      "d21_to_d14",
+      "d13_to_d8"
     ],
     "cut_buckets_allowed": [
       "high",
@@ -10883,7 +10882,6 @@
       "balance",
       "low_impact",
       "low_eccentric",
-      "cns_freshness",
       "scrambler",
       "pressure_fighter",
       "kicker",
@@ -10896,15 +10894,15 @@
     ],
     "equipment": "bodyweight,bands",
     "phase_role": "late_strength_touch",
-    "subfamily": "overcoming_split_squat_isometric",
+    "subfamily": "loaded_lower_isometric",
     "late_windows": [
       "d21_to_d14",
       "d13_to_d8"
     ],
     "cut_buckets_allowed": [
-      "high",
-      "critical",
-      "extreme"
+      "none",
+      "low",
+      "moderate"
     ],
     "goals": [
       "maximal_strength_maintenance",
@@ -10922,14 +10920,14 @@
       "distance_striker",
       "kicker"
     ],
-    "soreness_risk": "low",
+    "soreness_risk": "moderate",
     "eccentric_cost": "low",
     "landing_cost": "none",
-    "cns_load": "low",
+    "cns_load": "moderate",
     "low_impact": true,
     "low_eccentric": true,
     "neural_primer": false,
-    "cns_freshness": true,
+    "cns_freshness": false,
     "ballistic_low_volume": false,
     "sport_specific": false,
     "contraindications": [
@@ -10979,10 +10977,7 @@
     "phase_role": "late_strength_touch",
     "subfamily": "staggered_stance_medicine_ball_punch_throw",
     "late_windows": [
-      "d21_to_d14",
       "d13_to_d8",
-      "d7",
-      "d6_to_d5",
       "d4_to_d2"
     ],
     "cut_buckets_allowed": [
@@ -11373,9 +11368,7 @@
     "phase_role": "late_strength_touch",
     "subfamily": "half_kneeling_medicine_ball_punch_throw",
     "late_windows": [
-      "d13_to_d8",
-      "d7",
-      "d4_to_d2"
+      "d13_to_d8"
     ],
     "cut_buckets_allowed": [
       "high",
@@ -11451,9 +11444,7 @@
     "phase_role": "late_strength_touch",
     "subfamily": "seated_medicine_ball_punch_throw",
     "late_windows": [
-      "d13_to_d8",
-      "d7",
-      "d4_to_d2"
+      "d13_to_d8"
     ],
     "cut_buckets_allowed": [
       "high",

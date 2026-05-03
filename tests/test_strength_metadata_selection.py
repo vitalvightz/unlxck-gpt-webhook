@@ -343,3 +343,30 @@ def test_late_window_blocking_is_respected_for_real_strength_bank_item():
         assert "late_strength_boost_window_fit" in d4_result["reason_codes"]
         assert d1_result["blocked"] is True
         assert "late_strength_block_window_mismatch" in d1_result["block_codes"]
+
+
+def test_split_squat_iso_variants_have_correct_late_window_intent():
+    overcoming = _exercise_named("Overcoming Split-Squat Isometric")
+    assert overcoming["late_windows"] == ["d21_to_d14", "d13_to_d8"]
+    assert overcoming["cns_freshness"] is False
+    assert overcoming["cns_load"] == "moderate"
+    assert overcoming["soreness_risk"] == "moderate"
+    assert overcoming["cut_buckets_allowed"] == ["none", "low", "moderate"]
+    assert overcoming["phase_role"] == "late_strength_touch"
+    assert overcoming["subfamily"] == "loaded_lower_isometric"
+
+
+def test_high_intent_or_ballistic_late_taper_variants_are_not_in_d7_plus():
+    expectations = {
+        "Punch-Specific Max Isometric Hold": {"d21_to_d14", "d13_to_d8"},
+        "Staggered-Stance Medicine-Ball Punch Throw": {"d13_to_d8", "d4_to_d2"},
+        "Half-Kneeling Medicine-Ball Punch Throw": {"d13_to_d8"},
+        "Seated Medicine-Ball Punch Throw": {"d13_to_d8"},
+    }
+
+    for name, windows in expectations.items():
+        item = _exercise_named(name)
+        assert set(item["late_windows"]) == windows
+        assert "d7" not in windows
+        assert "d6_to_d5" not in windows
+        assert "d1" not in windows
