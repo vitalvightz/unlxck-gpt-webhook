@@ -451,8 +451,16 @@ def _future_state_label(
 
 
 def _week_label(week: dict[str, Any]) -> str:
+    projected_end = week.get("projected_days_until_fight_end")
+    projected_start = week.get("projected_days_until_fight_start")
+    for value in (projected_end, projected_start):
+        if isinstance(value, int) and value >= 0:
+            return f"d{value}"
     week_index = week.get("week_index") or week.get("phase_week_index") or 1
-    return f"Week {week_index}"
+    try:
+        return f"d{int(week_index)}"
+    except (TypeError, ValueError):
+        return "dX"
 
 
 def _is_future_week(week: dict[str, Any]) -> bool:

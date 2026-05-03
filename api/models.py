@@ -750,6 +750,9 @@ class WeeklySchedule(BaseModel):
     week_index: int
     week_count: int
     phase: str = ""
+    projected_days_until_fight_start: int | None = None
+    projected_days_until_fight_end: int | None = None
+    day_label: str = ""
     days: list[WeeklyDayEntry]
 
 

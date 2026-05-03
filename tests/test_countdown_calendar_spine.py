@@ -264,3 +264,44 @@ def test_normal_camp_12_week_attaches_calendar_to_every_week():
     # Week 12 ends at D-1 → its declared Tue/Thu both fall inside D-17.
     final_plan = weeks[-1]["hard_sparring_plan"]
     assert all(entry["effective_load"] != "hard" for entry in final_plan)
+
+
+def test_late_fight_preserves_safe_conditioning_and_exposes_real_day_labels():
+    from fightcamp.stage2_role_map import _build_weekly_role_map
+    from fightcamp.weekly_schedule_view import extract_weekly_schedule
+
+    athlete_model = {
+        "sport": "boxing",
+        "status": "amateur",
+        "rounds_format": "3x3",
+        "training_days": ["monday", "tuesday", "wednesday", "thursday", "friday"],
+        "hard_sparring_days": ["tuesday", "thursday"],
+        "key_goals": ["conditioning_endurance"],
+        "weaknesses": ["gas_tank"],
+        "fatigue": "moderate",
+        "weight_cut_pct": 0.0,
+        "weight_cut_risk": False,
+        "readiness_flags": [],
+        "injuries": [],
+        "fight_date": "2026-05-10",
+        "days_until_fight": 6,
+    }
+    progression = {
+        "weeks": [
+            {"week_index": 1, "phase": "TAPER", "stage_key": "taper_sharpen",
+             "phase_week_index": 1, "phase_week_total": 1, "span_days": 6,
+             "session_counts": {"strength": 1, "conditioning": 0, "recovery": 1}},
+        ]
+    }
+    role_map = _build_weekly_role_map(
+        athlete_model, progression, {"key": "general_fight_readiness"}
+    )
+    week = role_map["weeks"][0]
+    conditioning_roles = [r for r in week["session_roles"] if r.get("category") == "conditioning"]
+    assert conditioning_roles, "conditioning/endurance signal should create at least one conditioning role before compression"
+    assert all(r.get("preferred_system") != "glycolytic" for r in conditioning_roles)
+
+    schedule = extract_weekly_schedule({"weekly_role_map": role_map}, week_index=0)
+    assert schedule is not None
+    assert isinstance(schedule.get("projected_days_until_fight_end"), int)
+    assert schedule.get("projected_days_until_fight_end") <= 6

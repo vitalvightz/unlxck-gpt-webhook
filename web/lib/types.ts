@@ -276,6 +276,9 @@ export type WeeklySchedule = {
   week_index: number;
   week_count: number;
   phase: string;
+  projected_days_until_fight_start?: number | null;
+  projected_days_until_fight_end?: number | null;
+  day_label?: string;
   days: WeeklyDayEntry[];
 };
 
