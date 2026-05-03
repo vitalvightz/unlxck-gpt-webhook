@@ -237,6 +237,127 @@ def _role_selection_rule(role_key: str, category: str, system: str | None = None
         return "Prefer compliant alactic slots that preserve speed and sharpness."
     return "Use rehab slots first; if rehab is absent, keep this day recovery-only."
 
+def _has_gas_tank_signal(athlete_model: dict) -> bool:
+    """Return True when the athlete profile clearly needs aerobic gas-tank work."""
+    raw_values: list[Any] = []
+
+    for key in (
+        "key_goals",
+        "goals",
+        "weaknesses",
+        "weak_areas",
+        "performance_goals",
+        "main_limiter",
+        "limiter_key",
+    ):
+        raw_values.extend(clean_list(athlete_model.get(key, [])))
+
+    joined = " ".join(str(value).lower().replace("-", "_") for value in raw_values)
+
+    gas_tank_terms = (
+        "gas_tank",
+        "conditioning",
+        "conditioning_endurance",
+        "endurance",
+        "work_capacity",
+        "aerobic",
+        "repeatability",
+        "late_fight",
+        "late_round",
+    )
+
+    return any(term in joined for term in gas_tank_terms)
+
+
+def _calendar_d_day_for_role(week_entry: dict, role: dict) -> int | None:
+    """Resolve the D-day countdown for a role's scheduled weekday."""
+    scheduled_day = str(role.get("scheduled_day_hint") or "").strip().lower()
+    if not scheduled_day:
+        return None
+
+    for day in week_entry.get("calendar_days") or []:
+        if str(day.get("weekday") or "").strip().lower() == scheduled_day:
+            try:
+                return int(day.get("d_day"))
+            except (TypeError, ValueError):
+                return None
+
+    return None
+
+
+def _upgrade_recovery_days_to_gas_tank(
+    week_entry: dict,
+    session_roles: list[dict],
+    athlete_model: dict,
+) -> list[dict]:
+    """
+    If gas tank is a goal/weakness, turn eligible recovery roles into
+    low-aerobic gas-tank conditioning roles.
+
+    This is not hard conditioning. It only allows RPE 3-4 aerobic work:
+    easy bike, easy row, nasal shadowboxing, walk flow, or similar.
+    """
+    if not _has_gas_tank_signal(athlete_model):
+        return session_roles
+
+    updated: list[dict] = []
+
+    for role in session_roles:
+        if role.get("category") != "recovery":
+            updated.append(role)
+            continue
+
+        d_day = _calendar_d_day_for_role(week_entry, role)
+
+        # No extra app work on fight day or day before fight.
+        if d_day is not None and d_day <= 1:
+            updated.append(role)
+            continue
+
+        converted = dict(role)
+        converted.update(
+            {
+                "category": "conditioning",
+                "role_key": "recovery_aerobic_gas_tank_day",
+                "original_role_key": role.get("role_key", ""),
+                "preferred_system": "aerobic",
+                "preferred_pool": "low_aerobic_gas_tank_pool",
+                "selection_rule": (
+                    "Use only low-aerobic gas-tank work here: RPE <= 4, "
+                    "low impact, low lactate, low CNS. This may sit on a recovery "
+                    "day or adjacent to hard sparring because it is a flush/base touch, "
+                    "not a hard conditioning session."
+                ),
+                "anchor": "lowest_load_day",
+                "recovery_compatible": True,
+                "gas_tank_recovery_touch": True,
+                "allowed_on_recovery_day": True,
+                "blocked_systems": ["glycolytic", "ATP-PCr"],
+                "blocked_intensities": ["high", "max"],
+                "blocked_tags": [
+                    "mech_cns_high",
+                    "high_cns",
+                    "sprint",
+                    "plyometric",
+                    "high_impact_lower",
+                    "mech_landing_impact",
+                ],
+            }
+        )
+
+        placement = str(converted.get("placement_rule") or "").strip()
+        addendum = (
+            "Because gas tank is a profile limiter, this recovery slot may become "
+            "a low-aerobic gas-tank session. Do not select hard conditioning."
+        )
+        converted["placement_rule"] = f"{placement} {addendum}".strip()
+
+        updated.append(converted)
+
+    for idx, role in enumerate(updated, start=1):
+        role["session_index"] = idx
+
+    return updated
 
 def _role_governance(
     week_entry: dict,
