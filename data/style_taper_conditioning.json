@@ -41,7 +41,8 @@
       "mech_systemic_fatigue",
       "mech_trunk_rotation",
       "mech_upper_press"
-    ]
+    ],
+    "rpe": 4
   },
   {
     "name": "Clinch Frame Throws",
@@ -76,7 +77,8 @@
       "mech_grip_support",
       "mech_lower_hip_hinge",
       "mech_trunk_stability"
-    ]
+    ],
+    "rpe": 8
   },
   {
     "name": "Scrambler Lateral Bound",
@@ -114,7 +116,8 @@
       "mech_lower_hip_hinge",
       "mech_reactive",
       "mech_trunk_stability"
-    ]
+    ],
+    "rpe": 8
   },
   {
     "name": "Kicker Step-Bounce",
@@ -197,7 +200,8 @@
       "mech_lower_lunge",
       "mech_trunk_rotation",
       "mech_upper_press"
-    ]
+    ],
+    "rpe": 8
   },
   {
     "name": "Submission Hunter Hip Pop",
@@ -274,7 +278,8 @@
       "mech_change_of_direction",
       "mech_reactive",
       "mech_trunk_stability"
-    ]
+    ],
+    "rpe": 4
   },
   {
     "name": "Brawler Overhand Pop",
@@ -359,7 +364,8 @@
       "mech_trunk_rotation",
       "mech_trunk_stability",
       "mech_upper_press"
-    ]
+    ],
+    "rpe": 6
   },
   {
     "name": "Grappler Takedown Pop",
@@ -439,7 +445,8 @@
       "mech_landing_impact",
       "mech_reactive",
       "mech_trunk_stability"
-    ]
+    ],
+    "rpe": 4
   },
   {
     "name": "Muay Thai Knee Skip",
@@ -521,7 +528,8 @@
       "mech_reactive",
       "mech_trunk_rotation",
       "mech_upper_press"
-    ]
+    ],
+    "rpe": 8
   },
   {
     "name": "Pressure Fighter Stomp",
@@ -553,7 +561,8 @@
       "mech_reactive",
       "mech_trunk_rotation",
       "mech_upper_press"
-    ]
+    ],
+    "rpe": 4
   },
   {
     "name": "Kicker Switch Hop",
@@ -682,7 +691,8 @@
       "mech_lower_jump",
       "mech_lower_lunge",
       "mech_reactive"
-    ]
+    ],
+    "rpe": 8
   },
   {
     "name": "Brawler Body Shot Throw",
@@ -722,7 +732,8 @@
       "mech_reactive",
       "mech_trunk_rotation",
       "mech_upper_press"
-    ]
+    ],
+    "rpe": 8
   },
   {
     "name": "Distance Striker Teep Pop",
@@ -852,7 +863,8 @@
       "mech_lower_lunge",
       "mech_reactive",
       "mech_trunk_stability"
-    ]
+    ],
+    "rpe": 4
   },
   {
     "name": "Muay Thai Clinch Pop",
@@ -933,7 +945,8 @@
       "mech_reactive",
       "mech_trunk_rotation",
       "mech_upper_press"
-    ]
+    ],
+    "rpe": 4
   },
   {
     "name": "Pressure Fighter Cutoff Hop",
@@ -973,7 +986,8 @@
       "mech_reactive",
       "mech_trunk_rotation",
       "mech_upper_press"
-    ]
+    ],
+    "rpe": 6
   },
   {
     "name": "Kicker Switch-Kick Pop",
@@ -1100,7 +1114,8 @@
       "mech_lower_lunge",
       "mech_reactive",
       "mech_trunk_stability"
-    ]
+    ],
+    "rpe": 4
   },
   {
     "name": "Brawler Body Roll",
@@ -1133,7 +1148,8 @@
       "mech_reactive",
       "mech_trunk_rotation",
       "mech_upper_press"
-    ]
+    ],
+    "rpe": 4
   },
   {
     "name": "Distance Striker Skip-In",
@@ -1173,7 +1189,8 @@
       "mech_trunk_rotation",
       "mech_trunk_stability",
       "mech_upper_press"
-    ]
+    ],
+    "rpe": 4
   },
   {
     "name": "Grappler Hip Heist Jump",
@@ -1335,7 +1352,8 @@
       "mech_reactive",
       "mech_trunk_rotation",
       "mech_upper_press"
-    ]
+    ],
+    "rpe": 4
   },
   {
     "name": "Kicker Roundhouse Pop",
@@ -1501,7 +1519,8 @@
       "mech_reactive",
       "mech_trunk_rotation",
       "mech_upper_press"
-    ]
+    ],
+    "rpe": 8
   },
   {
     "name": "Distance Striker Slide-Hop",
@@ -1543,7 +1562,8 @@
       "mech_trunk_rotation",
       "mech_trunk_stability",
       "mech_upper_press"
-    ]
+    ],
+    "rpe": 8
   },
   {
     "name": "Grappler Knee Cut Pop",
@@ -1627,7 +1647,8 @@
       "mech_lower_jump",
       "mech_reactive",
       "mech_trunk_stability"
-    ]
+    ],
+    "rpe": 8
   },
   {
     "name": "Muay Thai Skip-Knee",
@@ -1708,7 +1729,8 @@
       "mech_shoulder_overhead",
       "mech_trunk_rotation",
       "mech_upper_press"
-    ]
+    ],
+    "rpe": 4
   },
   {
     "name": "Pressure Fighter Stomp-Switch",
@@ -1746,7 +1768,8 @@
       "mech_trunk_rotation",
       "mech_trunk_stability",
       "mech_upper_press"
-    ]
+    ],
+    "rpe": 6
   },
   {
     "name": "Kicker Switch-Teep Pop",
@@ -1870,7 +1893,8 @@
       "mech_lower_jump",
       "mech_lower_lunge",
       "mech_reactive"
-    ]
+    ],
+    "rpe": 4
   },
   {
     "name": "Reaction Jab Matrix",
@@ -1883,7 +1907,7 @@
     ],
     "system": "cognitive",
     "modality": "visual processing",
-    "duration": "3min random ball toss \u2192 jab/parry response \u2192 x4 rounds",
+    "duration": "3min random ball toss → jab/parry response → x4 rounds",
     "intensity": "moderate",
     "tags": [
       "boxing",
@@ -1924,7 +1948,7 @@
     ],
     "system": "cognitive",
     "modality": "auditory reaction",
-    "duration": "5min clinch pummeling \u2192 change direction on beep \u2192 x3 rounds",
+    "duration": "5min clinch pummeling → change direction on beep → x3 rounds",
     "intensity": "zone 2",
     "tags": [
       "muay_thai",
@@ -1952,7 +1976,8 @@
       "mech_reactive",
       "mech_systemic_fatigue",
       "mech_trunk_stability"
-    ]
+    ],
+    "rpe": 4
   },
   {
     "name": "Wrestling Chess",
@@ -1965,7 +1990,7 @@
     ],
     "system": "cognitive",
     "modality": "decision fatigue",
-    "duration": "3min live wrestling \u2192 30s chess move \u2192 x5 rounds",
+    "duration": "3min live wrestling → 30s chess move → x5 rounds",
     "intensity": "zone 2",
     "tags": [
       "wrestling",
@@ -1986,7 +2011,8 @@
       "mech_cns_high",
       "mech_reactive",
       "mech_systemic_fatigue"
-    ]
+    ],
+    "rpe": 4
   },
   {
     "name": "Kick Pattern Recall",
@@ -1998,7 +2024,7 @@
     ],
     "system": "cognitive",
     "modality": "memory challenge",
-    "duration": "3min execute kick combos from flashed cards \u2192 x4 rounds",
+    "duration": "3min execute kick combos from flashed cards → x4 rounds",
     "intensity": "low",
     "tags": [
       "kickboxing",
@@ -2037,7 +2063,7 @@
     ],
     "system": "cognitive",
     "modality": "choice reaction",
-    "duration": "3min shot entries \u2192 cone color dictates finish (single/double) \u2192 x4 rounds",
+    "duration": "3min shot entries → cone color dictates finish (single/double) → x4 rounds",
     "intensity": "zone 2",
     "tags": [
       "mma",
@@ -2062,7 +2088,8 @@
       "mech_lower_lunge",
       "mech_reactive",
       "mech_systemic_fatigue"
-    ]
+    ],
+    "rpe": 4
   },
   {
     "name": "Brawler's Puzzle Defense",
@@ -2074,7 +2101,7 @@
     ],
     "system": "cognitive",
     "modality": "pattern recognition",
-    "duration": "3min mitt work \u2192 solve 3 puzzle pieces between rounds \u2192 x5 rounds",
+    "duration": "3min mitt work → solve 3 puzzle pieces between rounds → x5 rounds",
     "intensity": "zone 2",
     "tags": [
       "boxing",
@@ -2099,7 +2126,8 @@
       "mech_systemic_fatigue",
       "mech_trunk_rotation",
       "mech_upper_press"
-    ]
+    ],
+    "rpe": 6
   },
   {
     "name": "Distance Striker's Math Dodge",
@@ -2111,7 +2139,7 @@
     ],
     "system": "cognitive",
     "modality": "dual-task loading",
-    "duration": "3min footwork drills \u2192 solve math problem between combos \u2192 x4 rounds",
+    "duration": "3min footwork drills → solve math problem between combos → x4 rounds",
     "intensity": "zone 2",
     "tags": [
       "muay_thai",
@@ -2123,7 +2151,7 @@
       "mech_systemic_fatigue",
       "mech_trunk_stability"
     ],
-    "notes": "Example: 'Teep \u2192 solve 7x8 \u2192 pivot' (50% effort)",
+    "notes": "Example: 'Teep → solve 7x8 → pivot' (50% effort)",
     "equipment_note": "Whiteboard markers",
     "work_sec": 8,
     "rounds": 7,
@@ -2137,7 +2165,8 @@
       "mech_trunk_rotation",
       "mech_trunk_stability",
       "mech_upper_press"
-    ]
+    ],
+    "rpe": 6
   },
   {
     "name": "Grappler's Blindfold Pummeling",
@@ -2149,7 +2178,7 @@
     ],
     "system": "cognitive",
     "modality": "tactile sensitivity",
-    "duration": "3min pummeling blindfolded \u2192 x4 rounds",
+    "duration": "3min pummeling blindfolded → x4 rounds",
     "intensity": "low",
     "tags": [
       "grappling",
@@ -2188,7 +2217,7 @@
     ],
     "system": "cognitive",
     "modality": "audio distraction",
-    "duration": "3min shadowboxing \u2192 answer riddle mid-round \u2192 x4 rounds",
+    "duration": "3min shadowboxing → answer riddle mid-round → x4 rounds",
     "intensity": "zone 2",
     "tags": [
       "mma",
@@ -2212,7 +2241,8 @@
       "mech_systemic_fatigue",
       "mech_trunk_rotation",
       "mech_upper_press"
-    ]
+    ],
+    "rpe": 4
   },
   {
     "name": "Hybrid's Stance-Switch Reaction",
@@ -2224,7 +2254,7 @@
     ],
     "system": "cognitive",
     "modality": "visual cueing",
-    "duration": "3min light color dictates stance (red=orthodox/blue=southpaw) \u2192 x5 rounds",
+    "duration": "3min light color dictates stance (red=orthodox/blue=southpaw) → x5 rounds",
     "intensity": "zone 2",
     "tags": [
       "mma",
@@ -2250,7 +2280,8 @@
       "mech_reactive",
       "mech_systemic_fatigue",
       "mech_trunk_stability"
-    ]
+    ],
+    "rpe": 4
   },
   {
     "name": "Light Sled Push - Distance Striker Recovery",
@@ -2289,7 +2320,8 @@
       "mech_systemic_fatigue",
       "mech_trunk_stability",
       "mech_upper_press"
-    ]
+    ],
+    "rpe": 6
   },
   {
     "name": "Sled Drag - Backward for Brawler",
@@ -2326,7 +2358,8 @@
       "mech_lower_hip_hinge",
       "mech_systemic_fatigue",
       "mech_trunk_stability"
-    ]
+    ],
+    "rpe": 4
   },
   {
     "name": "Lateral Sled Drag - Clinch Fighter",
@@ -2365,7 +2398,8 @@
       "mech_lower_hip_hinge",
       "mech_systemic_fatigue",
       "mech_trunk_stability"
-    ]
+    ],
+    "rpe": 4
   },
   {
     "name": "Sled Row Pull - Grappler",
@@ -2404,7 +2438,8 @@
       "mech_lower_hip_hinge",
       "mech_systemic_fatigue",
       "mech_upper_pull"
-    ]
+    ],
+    "rpe": 4
   },
   {
     "name": "Assault Bike Steady State - Counter Striker",
@@ -2439,7 +2474,8 @@
       "mech_lower_hip_hinge",
       "mech_systemic_fatigue",
       "mech_upper_press"
-    ]
+    ],
+    "rpe": 6
   },
   {
     "name": "Stationary Bike Intervals - Kicker",
@@ -2474,7 +2510,8 @@
       "mech_lower_hip_hinge",
       "mech_lower_lunge",
       "mech_systemic_fatigue"
-    ]
+    ],
+    "rpe": 4
   },
   {
     "name": "Rower Steady Distance - Wrestler",
@@ -2511,7 +2548,8 @@
       "mech_systemic_fatigue",
       "mech_trunk_stability",
       "mech_upper_pull"
-    ]
+    ],
+    "rpe": 6
   },
   {
     "name": "Ski Erg Intervals - MMA",
@@ -2546,7 +2584,8 @@
     "mechanical_risk_tags": [
       "mech_systemic_fatigue",
       "mech_upper_pull"
-    ]
+    ],
+    "rpe": 6
   },
   {
     "name": "Echo Bike Recovery - Pressure Fighter",
@@ -2580,7 +2619,8 @@
     "mechanical_risk_tags": [
       "mech_lower_hip_hinge",
       "mech_systemic_fatigue"
-    ]
+    ],
+    "rpe": 4
   },
   {
     "name": "TRX-Assisted Squat - Boxing",
@@ -2613,7 +2653,8 @@
     "mechanical_risk_tags": [
       "mech_lower_squat",
       "mech_trunk_stability"
-    ]
+    ],
+    "rpe": 4
   },
   {
     "name": "Goblet Squat Light - Muay Thai",
@@ -2646,7 +2687,8 @@
     "mechanical_risk_tags": [
       "mech_lower_squat",
       "mech_trunk_stability"
-    ]
+    ],
+    "rpe": 4
   },
   {
     "name": "Box Squat Low Height - Grappler",
@@ -2681,7 +2723,8 @@
       "mech_lower_squat",
       "mech_trunk_rotation",
       "mech_trunk_stability"
-    ]
+    ],
+    "rpe": 4
   },
   {
     "name": "Wall Sit - Distance Fighter",
@@ -2714,7 +2757,8 @@
     "movement_cost": "low",
     "mechanical_risk_tags": [
       "mech_trunk_stability"
-    ]
+    ],
+    "rpe": 4
   },
   {
     "name": "Plank Hold - Counter Striker",
@@ -2749,7 +2793,8 @@
     "mechanical_risk_tags": [
       "mech_trunk_stability",
       "mech_upper_press"
-    ]
+    ],
+    "rpe": 4
   },
   {
     "name": "Side Plank Hold - Clinch Fighter",
@@ -2787,7 +2832,8 @@
       "mech_grip_support",
       "mech_trunk_rotation",
       "mech_trunk_stability"
-    ]
+    ],
+    "rpe": 4
   },
   {
     "name": "Dead Bug Hold - BJJ",
@@ -2822,7 +2868,8 @@
     "mechanical_risk_tags": [
       "mech_trunk_rotation",
       "mech_trunk_stability"
-    ]
+    ],
+    "rpe": 4
   },
   {
     "name": "Pallof Press - Wrestler",
@@ -2857,7 +2904,8 @@
     "mechanical_risk_tags": [
       "mech_trunk_rotation",
       "mech_trunk_stability"
-    ]
+    ],
+    "rpe": 4
   },
   {
     "name": "Band Pallof Hold - Scrambler",
@@ -2893,7 +2941,8 @@
     "mechanical_risk_tags": [
       "mech_trunk_rotation",
       "mech_trunk_stability"
-    ]
+    ],
+    "rpe": 4
   },
   {
     "name": "Half-Kneeling Pallof - Pressure Fighter",
@@ -2928,7 +2977,8 @@
     "mechanical_risk_tags": [
       "mech_trunk_rotation",
       "mech_trunk_stability"
-    ]
+    ],
+    "rpe": 4
   },
   {
     "name": "Farmer Carry Light - MMA",
@@ -2966,7 +3016,8 @@
       "mech_loaded_carry",
       "mech_systemic_fatigue",
       "mech_trunk_stability"
-    ]
+    ],
+    "rpe": 4
   },
   {
     "name": "Suitcase Carry - Boxing",
@@ -3005,7 +3056,8 @@
       "mech_loaded_carry",
       "mech_systemic_fatigue",
       "mech_trunk_stability"
-    ]
+    ],
+    "rpe": 4
   },
   {
     "name": "Waiter Walk - Kickboxing",
@@ -3044,7 +3096,8 @@
       "mech_shoulder_overhead",
       "mech_systemic_fatigue",
       "mech_trunk_stability"
-    ]
+    ],
+    "rpe": 6
   },
   {
     "name": "Pool Jogging - Kicker",
@@ -3079,7 +3132,8 @@
       "mech_lower_lunge",
       "mech_systemic_fatigue",
       "mech_trunk_stability"
-    ]
+    ],
+    "rpe": 6
   },
   {
     "name": "Swimming Steady State - Distance Striker",
@@ -3115,7 +3169,8 @@
       "mech_systemic_fatigue",
       "mech_trunk_stability",
       "mech_upper_press"
-    ]
+    ],
+    "rpe": 6
   },
   {
     "name": "Battle Ropes Light - Brawler",
@@ -3151,7 +3206,8 @@
       "mech_landing_impact",
       "mech_reactive",
       "mech_systemic_fatigue"
-    ]
+    ],
+    "rpe": 6
   },
   {
     "name": "Seated Cable Row Steady - Grappler",
@@ -3185,7 +3241,8 @@
     "mechanical_risk_tags": [
       "mech_lower_hip_hinge",
       "mech_upper_pull"
-    ]
+    ],
+    "rpe": 6
   },
   {
     "name": "Incline DB Press Light - Counter Striker",
@@ -3219,7 +3276,8 @@
     "mechanical_risk_tags": [
       "mech_shoulder_overhead",
       "mech_upper_press"
-    ]
+    ],
+    "rpe": 4
   },
   {
     "name": "Yoga Flow Light - MMA",
@@ -3248,7 +3306,8 @@
     "impact_cost": "low",
     "lactate_load": "moderate",
     "movement_cost": "moderate",
-    "mechanical_risk_tags": []
+    "mechanical_risk_tags": [],
+    "rpe": 4
   },
   {
     "name": "Breathwork Session - All Styles",
@@ -3276,7 +3335,8 @@
     "impact_cost": "low",
     "lactate_load": "moderate",
     "movement_cost": "moderate",
-    "mechanical_risk_tags": []
+    "mechanical_risk_tags": [],
+    "rpe": 6
   },
   {
     "name": "Shadow Boxing Technical - Boxing",
@@ -3306,7 +3366,8 @@
     "impact_cost": "low",
     "lactate_load": "moderate",
     "movement_cost": "moderate",
-    "mechanical_risk_tags": []
+    "mechanical_risk_tags": [],
+    "rpe": 6
   },
   {
     "name": "Shadow Kickboxing Flow - Kickboxing",
@@ -3339,7 +3400,8 @@
     "movement_cost": "moderate",
     "mechanical_risk_tags": [
       "mech_lower_lunge"
-    ]
+    ],
+    "rpe": 4
   },
   {
     "name": "Core Circuit - Wrestler",
@@ -3372,7 +3434,8 @@
     "mechanical_risk_tags": [
       "mech_systemic_fatigue",
       "mech_trunk_stability"
-    ]
+    ],
+    "rpe": 4
   },
   {
     "name": "Anti-Rotation Circuit - Scrambler",
@@ -3410,7 +3473,8 @@
       "mech_systemic_fatigue",
       "mech_trunk_rotation",
       "mech_trunk_stability"
-    ]
+    ],
+    "rpe": 4
   },
   {
     "name": "Walking Recovery - All Styles",
@@ -3437,7 +3501,8 @@
     "impact_cost": "low",
     "lactate_load": "low",
     "movement_cost": "low",
-    "mechanical_risk_tags": []
+    "mechanical_risk_tags": [],
+    "rpe": 4
   },
   {
     "name": "Elliptical Steady - Pressure Fighter",
@@ -3467,7 +3532,8 @@
     "movement_cost": "low",
     "mechanical_risk_tags": [
       "mech_systemic_fatigue"
-    ]
+    ],
+    "rpe": 6
   },
   {
     "name": "Single-Leg Balance Holds - Kicker",
@@ -3501,7 +3567,8 @@
     "mechanical_risk_tags": [
       "mech_lower_lunge",
       "mech_trunk_stability"
-    ]
+    ],
+    "rpe": 4
   },
   {
     "name": "TRX Y-T-W Series - Distance Striker",
@@ -3539,7 +3606,8 @@
       "mech_trunk_stability",
       "mech_upper_press",
       "mech_upper_pull"
-    ]
+    ],
+    "rpe": 6
   },
   {
     "name": "Passive Hang - BJJ",
@@ -3571,7 +3639,8 @@
     "movement_cost": "low",
     "mechanical_risk_tags": [
       "mech_grip_support"
-    ]
+    ],
+    "rpe": 4
   },
   {
     "name": "Band Grip Work - Grappler",
@@ -3603,7 +3672,8 @@
     "movement_cost": "low",
     "mechanical_risk_tags": [
       "mech_grip_support"
-    ]
+    ],
+    "rpe": 6
   },
   {
     "name": "Low Box Step-Up - Clinch Fighter",
@@ -3638,7 +3708,8 @@
       "mech_grip_support",
       "mech_lower_lunge",
       "mech_trunk_rotation"
-    ]
+    ],
+    "rpe": 6
   },
   {
     "name": "Sled Push Interval - Kickboxing",
@@ -3677,7 +3748,8 @@
       "mech_lower_lunge",
       "mech_systemic_fatigue",
       "mech_trunk_stability"
-    ]
+    ],
+    "rpe": 4
   },
   {
     "name": "Sled Pull with Arms - Boxing",
@@ -3718,7 +3790,8 @@
       "mech_lower_hip_hinge",
       "mech_reactive",
       "mech_upper_pull"
-    ]
+    ],
+    "rpe": 4
   },
   {
     "name": "Air Bike Pyramid - MMA",
@@ -3751,7 +3824,8 @@
     "mechanical_risk_tags": [
       "mech_lower_hip_hinge",
       "mech_systemic_fatigue"
-    ]
+    ],
+    "rpe": 6
   },
   {
     "name": "Recumbent Bike Recovery - Brawler",
@@ -3785,7 +3859,8 @@
     "mechanical_risk_tags": [
       "mech_ballistic",
       "mech_lower_hip_hinge"
-    ]
+    ],
+    "rpe": 8
   },
   {
     "name": "Hollow Body Hold - Hybrid",
@@ -3818,7 +3893,8 @@
     "movement_cost": "low",
     "mechanical_risk_tags": [
       "mech_trunk_stability"
-    ]
+    ],
+    "rpe": 4
   },
   {
     "name": "Glute Bridge Hold - Submission Hunter",
@@ -3847,7 +3923,8 @@
     "impact_cost": "low",
     "lactate_load": "low",
     "movement_cost": "low",
-    "mechanical_risk_tags": []
+    "mechanical_risk_tags": [],
+    "rpe": 4
   },
   {
     "name": "Dynamic Stretching Flow - All Styles",
@@ -3875,7 +3952,8 @@
     "impact_cost": "low",
     "lactate_load": "moderate",
     "movement_cost": "moderate",
-    "mechanical_risk_tags": []
+    "mechanical_risk_tags": [],
+    "rpe": 4
   },
   {
     "name": "Foam Rolling Session - All Styles",
@@ -3906,7 +3984,8 @@
     "movement_cost": "moderate",
     "mechanical_risk_tags": [
       "mech_trunk_rotation"
-    ]
+    ],
+    "rpe": 4
   },
   {
     "name": "Double KB Front Rack Carry - Wrestler",
@@ -3941,7 +4020,8 @@
       "mech_loaded_carry",
       "mech_systemic_fatigue",
       "mech_trunk_stability"
-    ]
+    ],
+    "rpe": 4
   },
   {
     "name": "Overhead Carry March - Scrambler",
@@ -3980,7 +4060,8 @@
       "mech_shoulder_overhead",
       "mech_systemic_fatigue",
       "mech_trunk_stability"
-    ]
+    ],
+    "rpe": 4
   },
   {
     "name": "Assault Runner Walk - Pressure Fighter",
@@ -4010,7 +4091,8 @@
     "movement_cost": "low",
     "mechanical_risk_tags": [
       "mech_lower_lunge"
-    ]
+    ],
+    "rpe": 4
   },
   {
     "name": "Upper Body Ergometer - Distance Striker",
@@ -4042,7 +4124,8 @@
     "mechanical_risk_tags": [
       "mech_trunk_stability",
       "mech_upper_press"
-    ]
+    ],
+    "rpe": 6
   },
   {
     "name": "Bird Dog Holds - Top Control",
@@ -4077,7 +4160,8 @@
     "mechanical_risk_tags": [
       "mech_trunk_rotation",
       "mech_trunk_stability"
-    ]
+    ],
+    "rpe": 4
   },
   {
     "name": "Copenhagen Plank Short - Grappler",
@@ -4110,6 +4194,7 @@
     "movement_cost": "low",
     "mechanical_risk_tags": [
       "mech_trunk_stability"
-    ]
+    ],
+    "rpe": 4
   }
 ]

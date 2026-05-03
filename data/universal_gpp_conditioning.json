@@ -5,9 +5,9 @@
     ],
     "name": "Steady-State Cardio (Run / Bike / Row)",
     "system": "aerobic",
-    "duration": "30\u201360 minutes",
-    "intensity": "60\u201370% max HR (Zone 2)",
-    "volume": "2\u20133x/week",
+    "duration": "30–60 minutes",
+    "intensity": "60–70% max HR (Zone 2)",
+    "volume": "2–3x/week",
     "equipment": [
       "road",
       "treadmill",
@@ -44,9 +44,9 @@
     ],
     "name": "Jump Rope Endurance (Footwork Conditioning)",
     "system": "aerobic",
-    "duration": "3\u20135 rounds \u00d7 3\u20135 minutes",
+    "duration": "3–5 rounds × 3–5 minutes",
     "intensity": "Moderate steady pace",
-    "volume": "2\u20134x/week",
+    "volume": "2–4x/week",
     "equipment": [
       "jump rope"
     ],
@@ -84,9 +84,9 @@
     ],
     "name": "Alactic Sprint Intervals (Hill / Flat / Sled)",
     "system": "glycolytic",
-    "duration": "6\u20138 \u00d7 20\u201330s max effort",
+    "duration": "6–8 × 20–30s max effort",
     "intensity": "Maximal sprint",
-    "volume": "1\u20132x/week",
+    "volume": "1–2x/week",
     "equipment": [
       "track",
       "field",
@@ -132,9 +132,9 @@
     ],
     "name": "Battle Rope Circuits",
     "system": "glycolytic",
-    "duration": "4\u20136 rounds \u00d7 30s work",
+    "duration": "4–6 rounds × 30s work",
     "intensity": "High effort",
-    "volume": "1\u20132x/week",
+    "volume": "1–2x/week",
     "equipment": [
       "battle rope"
     ],
@@ -172,9 +172,9 @@
     ],
     "name": "Bodyweight MetCon Circuit",
     "system": "glycolytic",
-    "duration": "3\u20134 rounds of 3\u20135 exercises \u00d7 30s each",
+    "duration": "3–4 rounds of 3–5 exercises × 30s each",
     "intensity": "High tempo",
-    "volume": "1\u20132x/week",
+    "volume": "1–2x/week",
     "equipment": [
       "bodyweight"
     ],
@@ -204,9 +204,9 @@
     ],
     "name": "Explosive Medicine Ball Throws",
     "system": "alactic",
-    "duration": "5\u20138 sets \u00d7 3\u20135 throws",
+    "duration": "5–8 sets × 3–5 throws",
     "intensity": "Maximal power",
-    "volume": "1\u20132x/week",
+    "volume": "1–2x/week",
     "equipment": [
       "medicine ball"
     ],
@@ -223,7 +223,7 @@
       "mech_cns_high",
       "mech_lower_hip_hinge"
     ],
-    "notes": "Overhead slams/chest passes with full recovery (90\u2013120s). Develops punching/takedown explosion. Pair with upper-body strength days.",
+    "notes": "Overhead slams/chest passes with full recovery (90–120s). Develops punching/takedown explosion. Pair with upper-body strength days.",
     "rest_sec": 120,
     "rpe": 9,
     "impact_cost": "low",
@@ -244,7 +244,7 @@
     ],
     "name": "Plyometric Depth Jumps",
     "system": "alactic",
-    "duration": "6\u201310 \u00d7 3\u20135 jumps",
+    "duration": "6–10 × 3–5 jumps",
     "intensity": "Maximal rebound",
     "volume": "1x/week",
     "equipment": [
@@ -289,9 +289,9 @@
     ],
     "name": "Band-Resisted Takedown Explosions",
     "system": "alactic",
-    "duration": "8\u201310 \u00d7 3\u20135s bursts",
+    "duration": "8–10 × 3–5s bursts",
     "intensity": "Max acceleration",
-    "volume": "1\u20132x/week",
+    "volume": "1–2x/week",
     "equipment": [
       "resistance band",
       "partner"
@@ -334,7 +334,7 @@
     ],
     "name": "Clap Push-Up Sprints",
     "system": "alactic",
-    "duration": "5\u20138 \u00d7 3\u20135 reps",
+    "duration": "5–8 × 3–5 reps",
     "intensity": "Max velocity",
     "volume": "1x/week",
     "equipment": [
@@ -563,7 +563,7 @@
     ],
     "name": "Stationary Bike Intervals",
     "system": "glycolytic",
-    "duration": "8-12 rounds \u00d7 (45s work / 90s easy)",
+    "duration": "8–12 rounds × (45s work / 90s easy)",
     "intensity": "80-85% max HR on work",
     "volume": "2-3x/week",
     "equipment": [
@@ -637,7 +637,7 @@
     ],
     "name": "Rowing Intervals (2K Pace)",
     "system": "glycolytic",
-    "duration": "6-8 \u00d7 500m @ 2K pace (2min rest)",
+    "duration": "6-8 × 500m @ 2K pace (2min rest)",
     "intensity": "85-90% max HR",
     "volume": "2x/week",
     "equipment": [
@@ -710,7 +710,7 @@
     ],
     "name": "Ski Erg Intervals",
     "system": "glycolytic",
-    "duration": "10 \u00d7 (30s work / 90s rest)",
+    "duration": "10 × (30s work / 90s rest)",
     "intensity": "85-90% max HR",
     "volume": "2x/week",
     "equipment": [
@@ -747,7 +747,7 @@
     ],
     "name": "Echo Bike HIIT",
     "system": "glycolytic",
-    "duration": "8-10 \u00d7 (20s max / 100s easy)",
+    "duration": "8-10 × (20s max / 100s easy)",
     "intensity": "Max effort on work intervals",
     "volume": "2x/week",
     "equipment": [
@@ -883,7 +883,7 @@
     ],
     "name": "Swimming Intervals",
     "system": "glycolytic",
-    "duration": "8-12 \u00d7 50m @ 80% (30s rest)",
+    "duration": "8-12 × 50m @ 80% (30s rest)",
     "intensity": "Hard effort",
     "volume": "2x/week",
     "equipment": [
@@ -905,7 +905,8 @@
     "movement_cost": "high",
     "mechanical_risk_tags": [
       "mech_systemic_fatigue"
-    ]
+    ],
+    "rpe": 8
   },
   {
     "phases": [
@@ -913,7 +914,7 @@
     ],
     "name": "Farmer Carry",
     "system": "aerobic",
-    "duration": "4-6 \u00d7 40m @ moderate load",
+    "duration": "4-6 × 40m @ moderate load",
     "intensity": "70-80% of max carry weight",
     "volume": "2x/week",
     "equipment": [
@@ -951,7 +952,7 @@
     ],
     "name": "Suitcase Carry",
     "system": "aerobic",
-    "duration": "4 \u00d7 30m each side",
+    "duration": "4 × 30m each side",
     "intensity": "Moderate to heavy",
     "volume": "2x/week",
     "equipment": [
@@ -988,7 +989,7 @@
     ],
     "name": "Waiter Walk",
     "system": "aerobic",
-    "duration": "3-4 \u00d7 20m each arm",
+    "duration": "3-4 × 20m each arm",
     "intensity": "Light to moderate",
     "volume": "2x/week",
     "equipment": [
@@ -1021,7 +1022,7 @@
     ],
     "name": "Battle Ropes Intervals",
     "system": "glycolytic",
-    "duration": "8-10 \u00d7 (20s work / 40s rest)",
+    "duration": "8-10 × (20s work / 40s rest)",
     "intensity": "High intensity waves",
     "volume": "2x/week",
     "equipment": [
@@ -1057,7 +1058,7 @@
     ],
     "name": "Battle Ropes Steady",
     "system": "aerobic",
-    "duration": "3-5 rounds \u00d7 2 minutes (1min rest)",
+    "duration": "3-5 rounds × 2 minutes (1min rest)",
     "intensity": "Moderate wave amplitude",
     "volume": "2x/week",
     "equipment": [
@@ -1188,7 +1189,7 @@
     ],
     "name": "UBE Intervals",
     "system": "glycolytic",
-    "duration": "10 \u00d7 (30s hard / 90s easy)",
+    "duration": "10 × (30s hard / 90s easy)",
     "intensity": "85-90% max HR",
     "volume": "2x/week",
     "equipment": [
@@ -1246,7 +1247,8 @@
     "mechanical_risk_tags": [
       "mech_systemic_fatigue",
       "mech_trunk_stability"
-    ]
+    ],
+    "rpe": 6
   },
   {
     "phases": [
@@ -1345,7 +1347,8 @@
     "movement_cost": "low",
     "mechanical_risk_tags": [
       "mech_systemic_fatigue"
-    ]
+    ],
+    "rpe": 6
   },
   {
     "phases": [
@@ -1353,7 +1356,7 @@
     ],
     "name": "Prowler Push Light",
     "system": "aerobic",
-    "duration": "6 \u00d7 30m @ 60-70% effort (90s rest)",
+    "duration": "6 × 30m @ 60-70% effort (90s rest)",
     "intensity": "Moderate",
     "volume": "2x/week",
     "equipment": [
