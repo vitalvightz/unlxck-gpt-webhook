@@ -252,6 +252,17 @@ def extract_weekly_schedule(planning_brief: Any, *, week_index: int = 0) -> dict
             if weekday and weekday in days_by_weekday:
                 _fill_legacy_hard_day(days_by_weekday[weekday])
 
+    countdown_range = week.get("countdown_range")
+    if not (isinstance(countdown_range, list) and len(countdown_range) == 2):
+        d_days = [day.get("d_day") for day in days if isinstance(day.get("d_day"), int)]
+        countdown_range = [d_days[0], d_days[-1]] if d_days else []
+
+    week_countdown_label = ""
+    if isinstance(countdown_range, list) and len(countdown_range) == 2:
+        start_d, end_d = countdown_range
+        if isinstance(start_d, int) and isinstance(end_d, int):
+            week_countdown_label = f"D-{start_d} → D-{end_d}"
+
     return {
         "week_index": week_index,
         "week_count": len(weeks),
@@ -259,5 +270,7 @@ def extract_weekly_schedule(planning_brief: Any, *, week_index: int = 0) -> dict
         "projected_days_until_fight_start": week.get("projected_days_until_fight_start"),
         "projected_days_until_fight_end": week.get("projected_days_until_fight_end"),
         "day_label": str(week.get("day_label") or "").strip(),
+        "countdown_range": countdown_range,
+        "week_countdown_label": week_countdown_label,
         "days": days,
     }

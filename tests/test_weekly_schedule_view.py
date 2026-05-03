@@ -314,3 +314,28 @@ def test_weekly_schedule_view_exposes_d_day_labels_from_calendar_days():
     assert schedule["days"][0]["d_day"] == 18
     assert schedule["days"][0]["day_label"] == "D-18"
     assert schedule["days"][2]["day_label"] == "D-16"
+    assert schedule["countdown_range"] == [18, 16]
+    assert schedule["week_countdown_label"] == "D-18 → D-16"
+
+
+def test_weekly_schedule_view_builds_countdown_range_when_missing_from_week():
+    schedule = extract_weekly_schedule(
+        {
+            "weekly_role_map": {
+                "weeks": [
+                    {
+                        "phase": "GPP",
+                        "calendar_days": [
+                            {"weekday": "monday", "d_day": 37},
+                            {"weekday": "tuesday", "d_day": 36},
+                            {"weekday": "wednesday", "d_day": 35},
+                        ],
+                    }
+                ]
+            }
+        }
+    )
+
+    assert schedule is not None
+    assert schedule["countdown_range"] == [37, 35]
+    assert schedule["week_countdown_label"] == "D-37 → D-35"
