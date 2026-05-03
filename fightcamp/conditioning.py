@@ -2382,7 +2382,7 @@ def generate_conditioning_block(flags):
                 "Rower Gas-Tank Flush",
                 "Assault Bike Rhythm Primer",
             )
-            for idx, (drill, score, reasons) in enumerate(system_drills.get("aerobic", [])):
+            for drill, score, reasons in system_drills.get("aerobic", []):
                 if _is_low_noise_aerobic_maintenance_drill(drill, system="aerobic"):
                     name = str(drill.get("name") or "")
                     priority = 99
