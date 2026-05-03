@@ -3167,7 +3167,7 @@
       "work_capacity",
       "mech_systemic_fatigue"
     ],
-    "notes": "TEMPERATURE: 90-95°F. HYDRATION: +20% fluid intake pre/post",
+    "notes": "TEMPERATURE: 90–95°F. HYDRATION: +20% fluid intake pre/post",
     "work_sec": 300,
     "rounds": 3,
     "total_minutes": 5,
