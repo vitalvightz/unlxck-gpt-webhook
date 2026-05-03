@@ -517,7 +517,7 @@ def _build_week_advisory(
     reason_parts = list(pressure_reasons)
     if final_week_cap:
         reason_parts.append(
-            "final taper week rules allow only one effective hard sparring day even when multiple hard days were declared"
+            "the D-16 taper window allows only one effective hard sparring day even if multiple hard days were declared"
         )
     if hard_day_count >= 2:
         reason_parts.append(f"this week already carries {hard_day_count} declared hard sparring days")
@@ -538,8 +538,8 @@ def _build_week_advisory(
     )
     if final_week_cap:
         reason = (
-            f"{because.capitalize()}. The app should strongly cap hard sparring to one effective collision day; "
-            f"{reported_days_label} should not stay as full hard sparring."
+            f"{because.capitalize()}. Keep hard sparring to one effective collision day this week; "
+            f"{reported_days_label} should not stay full hard sparring."
         )
     elif future_week:
         reason = (
@@ -566,9 +566,9 @@ def _build_week_advisory(
         )
     elif final_week_cap:
         suggestion = (
-            f"If {future_state_label} {future_state_verb} still there by {week_label}, keep only one effective hard sparring day; deload {reported_days_label} by trimming rounds, lowering intensity, or reducing total collision exposure."
+            f"If {future_state_label} {future_state_verb} still there by {week_label}, keep one effective hard sparring day; deload {reported_days_label} by trimming rounds, lowering intensity, or reducing total collision exposure."
             if future_week
-            else f"Keep only one effective hard sparring day in {week_label}; deload {reported_days_label} by trimming rounds, lowering intensity, or reducing total collision exposure."
+            else f"Keep one effective hard sparring day in {week_label}; deload {reported_days_label} by trimming rounds, lowering intensity, or reducing total collision exposure."
         )
     else:
         suggestion = (

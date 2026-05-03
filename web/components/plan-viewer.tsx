@@ -458,8 +458,8 @@ function buildReviewSummary(
 
   const summaryParts = [
     errors.length ? pluralize(errors.length, "blocking error") : null,
-    blocking.length ? pluralize(blocking.length, "blocking issue") : null,
-    reviewFlagsMapped.length ? pluralize(reviewFlagsMapped.length, "review flag") : null,
+    blockingCount ? pluralize(blockingCount, "blocking issue") : null,
+    reviewFlagCount ? pluralize(reviewFlagCount, "review flag") : null,
   ].filter((part): part is string => Boolean(part));
 
   if (isPublishable) {
@@ -479,11 +479,11 @@ function buildReviewSummary(
   return {
     ...summary,
     hasIssues: true,
-    headline: `${summaryParts.join(" and ")} are keeping this Stage 2 plan in review.`,
+    headline: `${summaryParts.join(" and ")} are currently holding this Stage 2 plan.`,
     guidance:
       errors.length > 0
         ? "Fix the blocking issues first. Review flags are secondary until the blockers are gone."
-        : "These blocking issues still need a retry or an explicit admin override before release.",
+        : "These blockers were found on the latest validation pass. You can retry or approve anyway to release.",
   };
 }
 
@@ -1414,7 +1414,7 @@ export function PlanViewer({
                             <div className="review-issue-group-header">
                               <p className="review-issue-group-title">Blocking issues</p>
                               <span className="badge issue-badge-error">
-                                {stage2ReviewSummary.errors.length + stage2ReviewSummary.blocking.length}
+                                {stage2ReviewSummary.errors.length + stage2ReviewSummary.blockingCount}
                               </span>
                             </div>
                             <div className="review-issue-list">
