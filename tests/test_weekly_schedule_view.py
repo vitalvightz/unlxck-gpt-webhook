@@ -268,3 +268,49 @@ def test_extract_weekly_schedule_empty_late_plan_marks_declared_hard_days_techni
         assert by_day[weekday]["effective_load"] == "technical"
         assert by_day[weekday]["status"] == "convert_to_technical_suggested"
         assert by_day[weekday]["reason_codes"] == ["d17_hard_sparring_ban"]
+
+
+def test_weekly_schedule_view_exposes_d_day_labels_from_calendar_days():
+    from fightcamp.weekly_schedule_view import extract_weekly_schedule
+
+    planning_brief = {
+        "weekly_role_map": {
+            "weeks": [
+                {
+                    "phase": "SPP",
+                    "projected_days_until_fight_start": 20,
+                    "projected_days_until_fight_end": 14,
+                    "calendar_days": [
+                        {
+                            "weekday": "monday",
+                            "d_day": 18,
+                            "is_fight_day": False,
+                            "is_after_fight_day": False,
+                        },
+                        {
+                            "weekday": "tuesday",
+                            "d_day": 17,
+                            "is_fight_day": False,
+                            "is_after_fight_day": False,
+                        },
+                        {
+                            "weekday": "wednesday",
+                            "d_day": 16,
+                            "is_fight_day": False,
+                            "is_after_fight_day": False,
+                        },
+                    ],
+                    "hard_sparring_plan": [],
+                    "declared_hard_sparring_days": [],
+                }
+            ]
+        }
+    }
+
+    schedule = extract_weekly_schedule(planning_brief, week_index=0)
+
+    assert schedule is not None
+    assert schedule["days"][0]["weekday"] == "Mon"
+    assert schedule["days"][0]["d_day"] == 18
+    assert schedule["days"][0]["day_label"] == "D-18"
+    assert schedule["days"][2]["day_label"] == "D-16"
