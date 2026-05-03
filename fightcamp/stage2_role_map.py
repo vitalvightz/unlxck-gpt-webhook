@@ -316,7 +316,15 @@ def _priority_touch_target(athlete_model: dict) -> dict[str, Any] | None:
             "preferred_system": "alactic",
             "athlete_facing_label": "Low-load speed touch",
             "preferred_tags": ["alactic", "speed", "low_cns", "coordination", "technical"],
+            "preferred_exercise_names": [
+                "Technical Speed Drills (Low Load)",
+                "Alactic Sharpness Flow",
+                "Reactive Timing Drills",
+                "Crisp Shadowboxing (Speed Focus)",
+            ],
             "selection_rule": "Keep this speed touch crisp and low-fatigue: no max sprints, no lactate work, no grinder sets.",
+            "blocked_systems": ["glycolytic"],
+            "reason": "Speed/explosiveness is a profile goal, so this unused day becomes a low-load speed touch.",
         }
     return None
 
