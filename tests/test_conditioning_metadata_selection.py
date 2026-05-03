@@ -556,3 +556,9 @@ def test_taper_d19_gas_tank_signal_keeps_one_low_noise_aerobic_machine_dose():
     assert len(selected_aerobic) >= 1
     lower_blob = " ".join(selected_aerobic).lower()
     assert any(term in lower_blob for term in ("rower", "bike", "shadowbox"))
+
+
+def test_machine_biased_gas_tank_helper_detects_bike_and_rower():
+    assert conditioning._is_machine_biased_gas_tank_drill({"name": "Assault Bike Zone 2 Steady"})
+    assert conditioning._is_machine_biased_gas_tank_drill({"equipment": ["rower"]})
+    assert not conditioning._is_machine_biased_gas_tank_drill({"name": "Battle Rope Waves", "equipment": ["battle_ropes"]})
