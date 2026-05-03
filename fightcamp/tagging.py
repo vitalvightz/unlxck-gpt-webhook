@@ -24,6 +24,10 @@ TAG_SYNONYMS = {
     "quickness": "speed",
     "reactive decision": "reactive_decision",
     "decision speed": "decision_speed",
+    "boxer": "boxing",
+    "breathing": "recovery",
+    "technical": "skill",
+    "rhythm": "coordination",
 }
 
 _TAG_VOCAB_CACHE: set[str] | None = None

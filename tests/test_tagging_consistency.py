@@ -17,6 +17,13 @@ def test_normalize_tags_canonicalizes_synonyms_and_removes_duplicates():
     assert normalized == ["muay_thai", "pressure_fighter", "decision_speed"]
 
 
+
+
+def test_normalize_tags_maps_legacy_drill_tags_to_scoring_vocab():
+    normalized = normalize_tags(["boxer", "breathing", "technical", "rhythm"])
+
+    assert normalized == ["boxing", "recovery", "skill", "coordination"]
+
 def test_normalize_item_tags_mutates_item_with_canonical_tags():
     item = {"tags": ["skill refinement", "counter striker", "counter_striker"]}
 
