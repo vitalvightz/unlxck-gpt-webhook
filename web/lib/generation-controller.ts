@@ -243,16 +243,7 @@ export function useGenerationController({
         });
 
         for (;;) {
-          let currentJob: GenerationJobResponse;
-          try {
-            currentJob = await pollGenerationJobWithReconnect(token, createdJob.job_id);
-          } catch (error) {
-            if (isRetryableApiFailure(error)) {
-              setPhase("reconnecting");
-              setStatusMessage("Connection dropped while checking status. Reconnecting to your existing request.");
-            }
-            throw error;
-          }
+          const currentJob = await pollGenerationJobWithReconnect(token, createdJob.job_id, setStatusMessage, setPhase);
 
           savePendingGeneration(storageKey, {
             clientRequestId,
