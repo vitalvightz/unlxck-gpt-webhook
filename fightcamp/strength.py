@@ -526,7 +526,7 @@ def _evaluate_strength_late_window(
         blocks.append("late_strength_block_d1_requires_d1_tags")
     if window == D4_TO_D2 and "no_d4_to_d1" in tags:
         blocks.append("late_strength_block_no_d4_to_d1")
-    if window in {D7, D6_TO_D5, D4_TO_D2, D1} and "no_d7_to_d1" in tags:
+    if window in LATE_STRENGTH_TIGHT_WINDOWS and "no_d7_to_d1" in tags:
         blocks.append("late_strength_block_no_d7_to_d1")
     if window in {D13_TO_D8, D7, D6_TO_D5, D4_TO_D2, D1} and "familiarity_required" in tags:
         blocks.append("late_strength_block_familiarity_required_late")
