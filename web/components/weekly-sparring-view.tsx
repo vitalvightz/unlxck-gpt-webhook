@@ -35,7 +35,7 @@ function formatDayLabel(schedule: WeeklySchedule) {
   const end = schedule.projected_days_until_fight_end;
   const start = schedule.projected_days_until_fight_start;
   if (typeof end === "number" && Number.isFinite(end) && end >= 0) {
-    if (typeof start === "number" && Number.isFinite(start) && start >= end) {
+    if (typeof start === "number" && Number.isFinite(start) && start > end) {
       return `d${start}-d${end}`;
     }
     return `d${end}`;
