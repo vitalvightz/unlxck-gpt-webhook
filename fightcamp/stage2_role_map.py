@@ -326,9 +326,16 @@ def _upgrade_recovery_days_to_gas_tank(
                 "category": "conditioning",
                 "role_key": "recovery_aerobic_gas_tank_day",
                 "original_role_key": role.get("role_key", ""),
+                "athlete_facing_label": "Low aerobic gas-tank flush",
                 "preferred_system": "aerobic",
                 "preferred_pool": "conditioning_slots",
                 "preferred_tags": ["gas_tank", "aerobic", "low_impact", "low_cns", "recovery"],
+                "preferred_exercise_names": [
+                    "Assault Bike Easy Gas Tank Ride",
+                    "Rower Nasal Aerobic Base",
+                    "Nasal Shadowboxing Flow (Gas Tank)",
+                    "Nasal Walk with Boxing Posture",
+                ],
                 "selection_rule": (
                     "Use only low-aerobic gas-tank work here: RPE <= 4, "
                     "low impact, low lactate, low CNS. This may sit on a recovery "
@@ -460,6 +467,7 @@ def _upgrade_unused_days_to_gas_tank(
                 "session_index": 0,
                 "category": "conditioning",
                 "role_key": "converted_low_aerobic_gas_tank_day",
+                "athlete_facing_label": "Low aerobic gas-tank support",
                 "preferred_pool": "conditioning_slots",
                 "preferred_system": "aerobic",
                 "preferred_tags": ["gas_tank", "aerobic", "low_impact", "low_cns", "recovery"],
