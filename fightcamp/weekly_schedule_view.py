@@ -125,11 +125,11 @@ def _is_protected_late_week(week: dict[str, Any]) -> bool:
         candidates.append(str(intentional_compression.get("reason") or "").strip().lower())
         candidates.append(str(intentional_compression.get("summary") or "").strip().lower())
 
-    return any(
-    token in candidate
-    for candidate in candidates
-    for token in ("bridge", "taper", "fight_week", "late_fight", "countdown")
-)
+        return any(
+        token in candidate
+        for candidate in candidates
+        for token in ("bridge", "taper", "fight_week", "late_fight", "countdown")
+    )
 
 
 def _mark_missing_effective_sparring_plan(day: dict[str, Any]) -> None:
@@ -189,14 +189,19 @@ def extract_weekly_schedule(planning_brief: Any, *, week_index: int = 0) -> dict
                 continue
 
             day = _empty_day(weekday)
-            d_day = entry.get("d_day")
+
+            raw_d_day = entry.get("d_day")
+            try:
+                d_day = int(raw_d_day)
+            except (TypeError, ValueError):
+                d_day = None
 
             day.update(
                 {
                     "d_day": d_day,
                     "day_label": (
                         f"D-{d_day}"
-                        if isinstance(d_day, int) and d_day > 0
+                        if d_day is not None and d_day > 0
                         else ("D-0" if d_day == 0 else "")
                     ),
                     "is_fight_day": bool(entry.get("is_fight_day")),
