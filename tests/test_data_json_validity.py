@@ -1,12 +1,15 @@
 import json
 from pathlib import Path
+import pytest
+
+DATA_DIR = Path(__file__).resolve().parents[1] / "data"
+JSON_FILES = sorted(DATA_DIR.glob("*.json"))
 
 
-def test_all_data_json_files_are_valid():
-    data_dir = Path(__file__).resolve().parents[1] / "data"
-    json_files = sorted(data_dir.glob("*.json"))
+def test_data_directory_contains_json_files():
+    assert JSON_FILES, f"No JSON files found in {DATA_DIR}"
 
-    assert json_files, "Expected JSON files in data/."
 
-    for json_file in json_files:
-        json.loads(json_file.read_text(encoding="utf-8"))
+@pytest.mark.parametrize("json_file", JSON_FILES, ids=lambda p: p.name)
+def test_json_file_validity(json_file):
+    json.loads(json_file.read_text(encoding="utf-8"))
