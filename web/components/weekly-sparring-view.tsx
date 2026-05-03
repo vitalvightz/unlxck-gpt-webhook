@@ -29,6 +29,10 @@ function formatToken(value: string) {
   return normalized.charAt(0).toUpperCase() + normalized.slice(1);
 }
 
+function formatDayLabel(weekIndex: number, weekCount: number) {
+  return `d${weekIndex + 1}/${weekCount}`;
+}
+
 export function WeeklySparringView({ planId }: { planId: string }) {
   const { session } = useAppSession();
   const token = session?.access_token ?? null;
@@ -129,34 +133,29 @@ export function WeeklySparringView({ planId }: { planId: string }) {
     >
       <div className="weekly-sparring-header">
         <div>
-          <p className="kicker">Weekly View</p>
+          <p className="kicker">Camp View</p>
           <h3>Live sparring map</h3>
-          <p className="muted weekly-sparring-phase">
-            {schedule.phase ? `${formatToken(schedule.phase)} | ` : ""}Week {schedule.week_index + 1} of{" "}
-            {schedule.week_count}
-          </p>
+          <p className="muted weekly-sparring-phase">{schedule.phase ? `${formatToken(schedule.phase)} | ` : ""}{formatDayLabel(schedule.week_index, schedule.week_count)}</p>
         </div>
-        <div className="weekly-sparring-nav" aria-label="Week navigation">
+        <div className="weekly-sparring-nav" aria-label="Camp navigation">
           <button
             type="button"
             className="ghost-button weekly-sparring-nav-button"
             onClick={() => setWeekIndex((current) => Math.max(0, current - 1))}
             disabled={!canGoPrevious || isLoading}
-            aria-label="Previous week"
-            title="Previous week"
+            aria-label="Previous day block"
+            title="Previous day block"
           >
             Prev
           </button>
-          <span className="weekly-sparring-week-label">
-            {schedule.week_index + 1}/{schedule.week_count}
-          </span>
+          <span className="weekly-sparring-week-label">{formatDayLabel(schedule.week_index, schedule.week_count)}</span>
           <button
             type="button"
             className="ghost-button weekly-sparring-nav-button"
             onClick={() => setWeekIndex((current) => Math.min(schedule.week_count - 1, current + 1))}
             disabled={!canGoNext || isLoading}
-            aria-label="Next week"
-            title="Next week"
+            aria-label="Next day block"
+            title="Next day block"
           >
             Next
           </button>
