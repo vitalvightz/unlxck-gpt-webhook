@@ -2196,7 +2196,7 @@ def generate_conditioning_block(flags):
 
     allow_glycolytic = False
     aerobic_maintenance_signal = _has_aerobic_maintenance_signal(goals, weaknesses)
-    allow_aerobic_maintenance = bool(
+    allow_aerobic_maintenance = (
         active_late_window
         and late_window in _AEROBIC_MAINTENANCE_WINDOWS
         and aerobic_maintenance_signal
