@@ -261,7 +261,7 @@ def extract_weekly_schedule(planning_brief: Any, *, week_index: int = 0) -> dict
     if isinstance(countdown_range, list) and len(countdown_range) == 2:
         start_d, end_d = countdown_range
         if isinstance(start_d, int) and isinstance(end_d, int):
-            week_countdown_label = f"D-{start_d} → D-{end_d}"
+            week_countdown_label = f"D-{start_d}" if start_d == end_d else f"D-{start_d} → D-{end_d}"
 
     return {
         "week_index": week_index,
