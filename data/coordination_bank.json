@@ -31,7 +31,16 @@
         "mech_lower_lunge",
         "mech_trunk_stability",
         "mech_upper_press"
-      ]
+      ],
+      "late_windows": [
+        "d13_to_d8",
+        "d7",
+        "d6_to_d5",
+        "d4_to_d2"
+      ],
+      "work_sec": 20,
+      "rounds": 2,
+      "rpe": 4
     },
     {
       "name": "Single-Leg Cross-Body Punch",
@@ -64,7 +73,16 @@
         "mech_trunk_rotation",
         "mech_trunk_stability",
         "mech_upper_press"
-      ]
+      ],
+      "late_windows": [
+        "d13_to_d8",
+        "d7",
+        "d6_to_d5",
+        "d4_to_d2"
+      ],
+      "work_sec": 20,
+      "rounds": 2,
+      "rpe": 4
     },
     {
       "name": "Kick-and-Stick",
@@ -87,7 +105,7 @@
       ],
       "equipment": "None",
       "equipment_notes": "Use a wall for support if needed during initial progression.",
-      "description": "Throw a roundhouse or front kick and freeze the leg fully extended for 2\u20133 seconds. Engages glutes for hip stabilization and trains control in kicking mechanics.",
+      "description": "Throw a roundhouse or front kick and freeze the leg fully extended for 2–3 seconds. Engages glutes for hip stabilization and trains control in kicking mechanics.",
       "work_sec": 3,
       "impact_cost": "low",
       "lactate_load": "low",
@@ -178,7 +196,7 @@
         "mech_trunk_stability",
         "mech_upper_press"
       ],
-      "equipment": "Medicine Ball (4\u20136kg)",
+      "equipment": "Medicine Ball (4–6kg)",
       "equipment_notes": "Throw against a wall or to a partner for rebounding.",
       "description": "Lateral throw from a loaded stance, initiating power from the back foot. Reinforces hip-shoulder sequencing for hooks/clinch strikes.",
       "impact_cost": "low",
@@ -197,8 +215,7 @@
       "name": "Depth Drop to Stabilize",
       "category": "plyometrics",
       "phases": [
-        "SPP",
-        "TAPER"
+        "SPP"
       ],
       "movement": "eccentric_control",
       "type": "bilateral",
@@ -211,7 +228,7 @@
         "mech_reactive",
         "mech_trunk_stability"
       ],
-      "equipment": "12\u201318\" Box",
+      "equipment": "12–18\" Box",
       "equipment_notes": "Start low; progress height only with mastery.",
       "description": "Step off box and stick landing softly, absorbing impact through hips/knees. Trains fight-ready stabilization after level changes.",
       "impact_cost": "low",
@@ -373,7 +390,7 @@
         "mech_lower_hip_hinge",
         "mech_trunk_stability"
       ],
-      "equipment": "Medicine Ball (4\u20136kg), Partner",
+      "equipment": "Medicine Ball (4–6kg), Partner",
       "equipment_notes": "Partner holds ball against abdomen to resist knee drives.",
       "description": "From double-collar tie, drive knees upward while partner resists with med ball. Develops explosive hip extension and balance recovery after each knee, mimicking dirty boxing energy drains.",
       "impact_cost": "low",
@@ -404,7 +421,7 @@
       ],
       "equipment": "Partner (Random Cues)",
       "equipment_notes": "Partner mimics takedown attempts with verbal/striking cues.",
-      "description": "React to partner\u2019s takedown feints by sprawling, then immediately exploding into an overhand right. Sharpens proprioceptive reactions to level changes and scrambles.",
+      "description": "React to partner’s takedown feints by sprawling, then immediately exploding into an overhand right. Sharpens proprioceptive reactions to level changes and scrambles.",
       "impact_cost": "low",
       "lactate_load": "low",
       "movement_cost": "low",
@@ -431,7 +448,7 @@
       ],
       "equipment": "Bosu Ball or Balance Disc",
       "equipment_notes": "Stand on Bosu dome-side down for advanced instability.",
-      "description": "Throw 3\u20135 hook combos while balancing on unstable surface. Forces core engagement and compensational adjustments to maintain power generation\u2014key for off-balance brawling.",
+      "description": "Throw 3–5 hook combos while balancing on unstable surface. Forces core engagement and compensational adjustments to maintain power generation—key for off-balance brawling.",
       "impact_cost": "low",
       "lactate_load": "low",
       "movement_cost": "low",
@@ -455,7 +472,7 @@
         "mech_trunk_stability",
         "mech_upper_press"
       ],
-      "equipment": "Tire (50\u201370% Bodyweight)",
+      "equipment": "Tire (50–70% Bodyweight)",
       "equipment_notes": "Focus on explosive hip drive during flip.",
       "description": "Flip tire, then immediately swarm forward with punches (e.g., 1-2-3-2 combo). Links lower-body power to rapid upper-body coordination under fatigue, replicating fight-ending flurries.",
       "impact_cost": "low",
@@ -486,7 +503,7 @@
       ],
       "equipment": "Agility Ladder or Tape Marks",
       "equipment_notes": "Partner randomly calls direction changes during drill.",
-      "description": "Pivot off front foot at 45/90-degree angles while throwing hooks, reacting to partner's verbal cues. Trains rapid directional changes mid-combo\u2014critical for cutting off the cage or cornering opponents.",
+      "description": "Pivot off front foot at 45/90-degree angles while throwing hooks, reacting to partner's verbal cues. Trains rapid directional changes mid-combo—critical for cutting off the cage or cornering opponents.",
       "impact_cost": "low",
       "lactate_load": "low",
       "movement_cost": "low",
@@ -601,7 +618,7 @@
       ],
       "equipment": "Heavy Resistance Band (Anchored Waist Height)",
       "equipment_notes": "Band tension should allow full rotation but force control.",
-      "description": "Throw hooks against band resistance while maintaining perfect form. Teaches controlled power generation in tight spaces\u2014prevents wild swinging when fatigued.",
+      "description": "Throw hooks against band resistance while maintaining perfect form. Teaches controlled power generation in tight spaces—prevents wild swinging when fatigued.",
       "impact_cost": "low",
       "lactate_load": "low",
       "movement_cost": "low",
@@ -638,7 +655,16 @@
         "mech_ballistic",
         "mech_trunk_stability",
         "mech_upper_press"
-      ]
+      ],
+      "late_windows": [
+        "d13_to_d8",
+        "d7",
+        "d6_to_d5",
+        "d4_to_d2"
+      ],
+      "work_sec": 20,
+      "rounds": 2,
+      "rpe": 4
     }
   ],
   "clinch_coordination_drills": [
@@ -686,7 +712,7 @@
       ],
       "equipment": "Partner, Thai Pads",
       "equipment_notes": "Partner holds pads for knee targets",
-      "description": "From double collar tie: 3 knees \u2192 immediate inside trip. Trains the signature Muay Thai strike-to-takedown sequence while maintaining balance.",
+      "description": "From double collar tie: 3 knees → immediate inside trip. Trains the signature Muay Thai strike-to-takedown sequence while maintaining balance.",
       "impact_cost": "low",
       "lactate_load": "low",
       "movement_cost": "low",
@@ -1024,7 +1050,7 @@
       ],
       "equipment": "Partner",
       "equipment_notes": "Partner shoots at 50% speed initially",
-      "description": "Sprawl \u2192 immediately transition to front headlock position. Trains defensive sequences against shot attempts.",
+      "description": "Sprawl → immediately transition to front headlock position. Trains defensive sequences against shot attempts.",
       "impact_cost": "low",
       "lactate_load": "low",
       "movement_cost": "low",
@@ -1278,7 +1304,7 @@
       ],
       "equipment": "None",
       "equipment_notes": "Mark 4 cardinal directions with tape",
-      "description": "Throw 3-punch combo, pivot 45\u00b0 off centerline, reset stance. Conditions footwork to maintain cutting angles without crossing feet.",
+      "description": "Throw 3-punch combo, pivot 45° off centerline, reset stance. Conditions footwork to maintain cutting angles without crossing feet.",
       "impact_cost": "low",
       "lactate_load": "low",
       "movement_cost": "low",
@@ -1287,7 +1313,16 @@
         "mech_lower_lunge",
         "mech_trunk_stability",
         "mech_upper_press"
-      ]
+      ],
+      "late_windows": [
+        "d13_to_d8",
+        "d7",
+        "d6_to_d5",
+        "d4_to_d2"
+      ],
+      "work_sec": 20,
+      "rounds": 2,
+      "rpe": 4
     },
     {
       "name": "Med Ball Chest Pass Recoil",
@@ -1482,13 +1517,22 @@
       ],
       "equipment": "Blindfold",
       "equipment_notes": "Partner guides initially",
-      "description": "Pivot 90\u00b0 on command without visual cues. Sharpens spatial awareness during exchanges.",
+      "description": "Pivot 90° on command without visual cues. Sharpens spatial awareness during exchanges.",
       "impact_cost": "low",
       "lactate_load": "low",
       "movement_cost": "low",
       "mechanical_risk_tags": [
         "mech_trunk_stability"
-      ]
+      ],
+      "late_windows": [
+        "d13_to_d8",
+        "d7",
+        "d6_to_d5",
+        "d4_to_d2"
+      ],
+      "work_sec": 20,
+      "rounds": 2,
+      "rpe": 4
     },
     {
       "name": "Karaoke Step with Strikes",
@@ -1598,7 +1642,16 @@
       "mechanical_risk_tags": [
         "mech_lower_lunge",
         "mech_trunk_stability"
-      ]
+      ],
+      "late_windows": [
+        "d13_to_d8",
+        "d7",
+        "d6_to_d5",
+        "d4_to_d2"
+      ],
+      "work_sec": 20,
+      "rounds": 2,
+      "rpe": 4
     },
     {
       "name": "Balloon Tracking (Pressure Fighter Visual Motor)",
@@ -1735,7 +1788,7 @@
       ],
       "equipment": "Medicine Ball (2-4kg)",
       "equipment_notes": "Keep hips square during rotations",
-      "description": "Hold ball at chest in staggered stance, rotate shoulders 90\u00b0 without hip movement. Trains upper/lower body separation for cutting punches.",
+      "description": "Hold ball at chest in staggered stance, rotate shoulders 90° without hip movement. Trains upper/lower body separation for cutting punches.",
       "impact_cost": "low",
       "lactate_load": "low",
       "movement_cost": "low",
@@ -1811,7 +1864,14 @@
         "mech_lower_hip_hinge",
         "mech_trunk_rotation",
         "mech_trunk_stability"
-      ]
+      ],
+      "late_windows": [
+        "d4_to_d2",
+        "d1"
+      ],
+      "work_sec": 20,
+      "rounds": 2,
+      "rpe": 4
     },
     {
       "name": "Pivot-Stick Landing",
@@ -1832,7 +1892,7 @@
       ],
       "equipment": "Balance Pad",
       "equipment_notes": "2\" thick foam pad for instability",
-      "description": "Pivot 45\u00b0 off lead leg onto balance pad, freeze for 2 seconds. Develops precise weight transfer for counter-angle creation.",
+      "description": "Pivot 45° off lead leg onto balance pad, freeze for 2 seconds. Develops precise weight transfer for counter-angle creation.",
       "work_sec": 2,
       "impact_cost": "low",
       "lactate_load": "low",
@@ -1862,7 +1922,7 @@
       ],
       "equipment": "Double-End Bag",
       "equipment_notes": "Set bag at jaw height",
-      "description": "Feint jab \u2192 parry imaginary cross \u2192 fire real cross as bag rebounds. Synchronizes upper/lower body timing for interceptive counters.",
+      "description": "Feint jab → parry imaginary cross → fire real cross as bag rebounds. Synchronizes upper/lower body timing for interceptive counters.",
       "impact_cost": "high",
       "lactate_load": "low",
       "movement_cost": "low",
@@ -1917,7 +1977,7 @@
         "mech_lower_lunge",
         "mech_trunk_stability"
       ],
-      "equipment": "Decline Treadmill (10\u00b0 angle)",
+      "equipment": "Decline Treadmill (10° angle)",
       "equipment_notes": "Set to 1.5mph speed",
       "description": "Walk backward on decline, reacting to partner's visual cues to plant and counter. Trains balance during defensive retreats.",
       "impact_cost": "low",
@@ -1987,9 +2047,7 @@
     {
       "name": "Strobe Light Sparring",
       "category": "reaction",
-      "phases": [
-        "TAPER"
-      ],
+      "phases": [],
       "movement": "visual_processing",
       "type": "bilateral",
       "tags": [
@@ -2063,7 +2121,15 @@
       "mechanical_risk_tags": [
         "mech_lower_lunge",
         "mech_trunk_stability"
-      ]
+      ],
+      "late_windows": [
+        "d13_to_d8",
+        "d7",
+        "d6_to_d5",
+        "d4_to_d2"
+      ],
+      "rounds": 2,
+      "rpe": 4
     },
     {
       "name": "Band-Resisted Pull Counters",
@@ -2199,7 +2265,7 @@
         "mech_trunk_stability"
       ],
       "equipment": "Socks (on hardwood) or Slide Board",
-      "equipment_notes": "3-5\u00b0 incline if using slide board",
+      "equipment_notes": "3-5° incline if using slide board",
       "description": "Slip outside while sliding back, then explode forward with 1-2-counter. Mimics Mayweather's shoulder roll counters.",
       "impact_cost": "low",
       "lactate_load": "low",
@@ -2283,7 +2349,7 @@
         "mech_trunk_stability"
       ],
       "equipment": "Wobble Board",
-      "equipment_notes": "Start with 10\u00b0 tilt range",
+      "equipment_notes": "Start with 10° tilt range",
       "description": "Throw straight counters while maintaining balance on wobble board. Conditions stable striking under platform shifts.",
       "impact_cost": "low",
       "lactate_load": "low",
@@ -2429,7 +2495,7 @@
       ],
       "equipment": "Small Ball or Coin",
       "equipment_notes": "Object should fit in palm",
-      "description": "After throwing a kick, pivot 360\u00b0 and catch the ball mid-spin. Enhances spatial orientation during kicking combinations.",
+      "description": "After throwing a kick, pivot 360° and catch the ball mid-spin. Enhances spatial orientation during kicking combinations.",
       "impact_cost": "low",
       "lactate_load": "low",
       "movement_cost": "low",
@@ -2690,7 +2756,7 @@
         "mech_trunk_stability"
       ],
       "equipment": "Partner (w/ Body Protector)",
-      "equipment_notes": "Partner stands at 45\u00b0 angles",
+      "equipment_notes": "Partner stands at 45° angles",
       "description": "With eyes fixed forward, kick toward partners positioned peripherally using only auditory cues. Trains non-visual angle striking.",
       "impact_cost": "low",
       "lactate_load": "low",
@@ -2890,7 +2956,7 @@
         "mech_trunk_stability"
       ],
       "equipment": "Hill or Incline Bench",
-      "equipment_notes": "10-15\u00b0 slope",
+      "equipment_notes": "10-15° slope",
       "description": "Throw roundhouse kicks while standing on a slope (facing up/down/sidehill). Adapts mechanics to uneven ground.",
       "impact_cost": "low",
       "lactate_load": "low",
@@ -2976,7 +3042,7 @@
       ],
       "equipment": "Blindfold",
       "equipment_notes": "Use jiu-jitsu belt as blindfold",
-      "description": "From turtle position, rotate 360\u00b0 while maintaining base, then explode to standing. Trains body awareness without visual reference.",
+      "description": "From turtle position, rotate 360° while maintaining base, then explode to standing. Trains body awareness without visual reference.",
       "impact_cost": "low",
       "lactate_load": "low",
       "movement_cost": "low",
@@ -3058,7 +3124,7 @@
         "mech_reactive",
         "mech_trunk_stability"
       ],
-      "equipment": "Varying Height Mats (6-12\u201d)",
+      "equipment": "Varying Height Mats (6-12”)",
       "equipment_notes": "Arrange mats in random pattern",
       "description": "Step/jump between mats of different heights, immediately defending takedowns from partner. Trains adaptive level changes.",
       "impact_cost": "high",
@@ -3331,7 +3397,7 @@
       ],
       "equipment": "None",
       "equipment_notes": "Use smooth surface",
-      "description": "Fluidly chain: shot \u2192 sprawl \u2192 stand-up \u2192 pivot \u2192 shot. Trains seamless transition proprioception without resistance.",
+      "description": "Fluidly chain: shot → sprawl → stand-up → pivot → shot. Trains seamless transition proprioception without resistance.",
       "impact_cost": "low",
       "lactate_load": "low",
       "movement_cost": "low",
@@ -3361,7 +3427,7 @@
       ],
       "equipment": "Tape X on floor",
       "equipment_notes": "Mark pivot point for consistency",
-      "description": "Throw rear straight, pivot 45\u00b0 on lead foot, and freeze. Checks weight distribution during rotational exits from exchanges.",
+      "description": "Throw rear straight, pivot 45° on lead foot, and freeze. Checks weight distribution during rotational exits from exchanges.",
       "impact_cost": "low",
       "lactate_load": "low",
       "movement_cost": "low",
@@ -3505,7 +3571,7 @@
       ],
       "equipment": "Hip resistance band",
       "equipment_notes": "Anchor band to simulate opponent pressure",
-      "description": "Step offline at 45\u00b0 while throwing check hook against band resistance. Trains angle generation against forward pressure.",
+      "description": "Step offline at 45° while throwing check hook against band resistance. Trains angle generation against forward pressure.",
       "impact_cost": "low",
       "lactate_load": "low",
       "movement_cost": "low",
@@ -3739,7 +3805,7 @@
       ],
       "equipment": "Blindfold",
       "equipment_notes": "Requires prior footwork mastery",
-      "description": "Eyes closed, throw combo then pivot exactly 90\u00b0. Develops internal awareness of ring geography.",
+      "description": "Eyes closed, throw combo then pivot exactly 90°. Develops internal awareness of ring geography.",
       "impact_cost": "low",
       "lactate_load": "low",
       "movement_cost": "low",
@@ -3772,7 +3838,16 @@
       "movement_cost": "low",
       "mechanical_risk_tags": [
         "mech_trunk_stability"
-      ]
+      ],
+      "late_windows": [
+        "d13_to_d8",
+        "d7",
+        "d6_to_d5",
+        "d4_to_d2"
+      ],
+      "work_sec": 20,
+      "rounds": 2,
+      "rpe": 4
     },
     {
       "name": "Medicine Ball Catch-Strike",
@@ -3790,7 +3865,7 @@
         "mech_upper_press"
       ],
       "equipment": "Medicine ball (4-6kg)",
-      "equipment_notes": "Partner throws from 45\u00b0 angle",
+      "equipment_notes": "Partner throws from 45° angle",
       "description": "Catch tossed med ball, immediately transfer momentum into hook. Reinforces kinetic chains from catch to strike.",
       "impact_cost": "low",
       "lactate_load": "low",
@@ -3936,7 +4011,14 @@
       "mechanical_risk_tags": [
         "mech_lower_lunge",
         "mech_trunk_stability"
-      ]
+      ],
+      "late_windows": [
+        "d4_to_d2",
+        "d1"
+      ],
+      "work_sec": 20,
+      "rounds": 2,
+      "rpe": 4
     },
     {
       "name": "Punching Metronome",
@@ -3962,7 +4044,14 @@
       "mechanical_risk_tags": [
         "mech_trunk_stability",
         "mech_upper_press"
-      ]
+      ],
+      "late_windows": [
+        "d4_to_d2",
+        "d1"
+      ],
+      "work_sec": 20,
+      "rounds": 2,
+      "rpe": 4
     },
     {
       "name": "Obstacle Course Combos",
@@ -4444,9 +4533,7 @@
     {
       "name": "Blindfolded Grapevine Entry",
       "category": "footwork",
-      "phases": [
-        "TAPER"
-      ],
+      "phases": [],
       "movement": "tactile_proprioception",
       "type": "cross-lateral",
       "tags": [
@@ -4514,7 +4601,7 @@
       ],
       "equipment": "Elastic band (waist) + strobe light",
       "equipment_notes": "Band provides lateral resistance",
-      "description": "Pivot 45\u00b0 against band tension when strobe flashes, then counter strike. Combines visual disruption with load for reactive pivoting.",
+      "description": "Pivot 45° against band tension when strobe flashes, then counter strike. Combines visual disruption with load for reactive pivoting.",
       "impact_cost": "low",
       "lactate_load": "low",
       "movement_cost": "low",
@@ -4522,7 +4609,16 @@
         "mech_ballistic",
         "mech_trunk_stability",
         "mech_upper_press"
-      ]
+      ],
+      "late_windows": [
+        "d13_to_d8",
+        "d7",
+        "d6_to_d5",
+        "d4_to_d2"
+      ],
+      "work_sec": 20,
+      "rounds": 2,
+      "rpe": 4
     },
     {
       "name": "Tactile Takedown Chain",
@@ -4553,9 +4649,7 @@
     {
       "name": "Inverted Strike Recovery",
       "category": "striking",
-      "phases": [
-        "TAPER"
-      ],
+      "phases": [],
       "movement": "inverted_proprioception",
       "type": "unilateral",
       "tags": [
@@ -4655,7 +4749,16 @@
         "mech_shoulder_overhead",
         "mech_trunk_rotation",
         "mech_trunk_stability"
-      ]
+      ],
+      "late_windows": [
+        "d13_to_d8",
+        "d7",
+        "d6_to_d5",
+        "d4_to_d2"
+      ],
+      "work_sec": 20,
+      "rounds": 2,
+      "rpe": 4
     },
     {
       "name": "Proprioceptive Guard Retention",
@@ -4686,9 +4789,7 @@
     {
       "name": "Dynamic Rope Transition",
       "category": "footwork",
-      "phases": [
-        "TAPER"
-      ],
+      "phases": [],
       "movement": "grip_proprioception",
       "type": "upper_lower_disassociation",
       "tags": [
@@ -4744,9 +4845,7 @@
     {
       "name": "Haptic Cage Cutting",
       "category": "footwork",
-      "phases": [
-        "TAPER"
-      ],
+      "phases": [],
       "movement": "tactile_navigation",
       "type": "angular",
       "tags": [
@@ -4813,7 +4912,16 @@
       "movement_cost": "low",
       "mechanical_risk_tags": [
         "mech_trunk_stability"
-      ]
+      ],
+      "late_windows": [
+        "d13_to_d8",
+        "d7",
+        "d6_to_d5",
+        "d4_to_d2"
+      ],
+      "work_sec": 20,
+      "rounds": 2,
+      "rpe": 4
     },
     {
       "name": "Kinesthetic Kick Check",
@@ -4890,7 +4998,7 @@
         "mech_upper_press"
       ],
       "equipment": "Reactive light system (floor pads)",
-      "description": "Pivot 45\u00b0 when floor pad lights up, then immediately fire switch kick toward target. Combines visual reaction with kicking mechanics.",
+      "description": "Pivot 45° when floor pad lights up, then immediately fire switch kick toward target. Combines visual reaction with kicking mechanics.",
       "impact_cost": "low",
       "lactate_load": "low",
       "movement_cost": "low",
@@ -4961,9 +5069,7 @@
     {
       "name": "Sliding Roundhouse Combo",
       "category": "footwork",
-      "phases": [
-        "TAPER"
-      ],
+      "phases": [],
       "movement": "glide_coordination",
       "type": "lateral",
       "tags": [
@@ -5051,9 +5157,7 @@
     {
       "name": "Wobble Board Switch Kick",
       "category": "striking",
-      "phases": [
-        "TAPER"
-      ],
+      "phases": [],
       "movement": "perturbation_training",
       "type": "rotational",
       "tags": [
@@ -5063,7 +5167,7 @@
         "mech_lower_lunge",
         "mech_trunk_stability"
       ],
-      "equipment": "Wobble board (360\u00b0 tilt)",
+      "equipment": "Wobble board (360° tilt)",
       "description": "Throw switch kicks while maintaining balance on board. Isolates ankle/knee stability during power kicks.",
       "impact_cost": "low",
       "lactate_load": "low",
@@ -5162,9 +5266,7 @@
     {
       "name": "Ball-Catch Roundhouse",
       "category": "reaction",
-      "phases": [
-        "TAPER"
-      ],
+      "phases": [],
       "movement": "object_tracking",
       "type": "rotational",
       "tags": [
@@ -5242,11 +5344,9 @@
       ]
     },
     {
-      "name": "360\u00b0 Spin-Kick Balance",
+      "name": "360° Spin-Kick Balance",
       "category": "striking",
-      "phases": [
-        "TAPER"
-      ],
+      "phases": [],
       "movement": "vestibular_integration",
       "type": "rotational",
       "tags": [
@@ -5269,9 +5369,7 @@
     {
       "name": "Blindfolded Shoulder Roll Entry",
       "category": "defense",
-      "phases": [
-        "TAPER"
-      ],
+      "phases": [],
       "movement": "tactile_proprioception",
       "type": "rotational",
       "tags": [
@@ -5350,7 +5448,16 @@
         "mech_lower_hip_hinge",
         "mech_trunk_stability",
         "mech_upper_press"
-      ]
+      ],
+      "late_windows": [
+        "d13_to_d8",
+        "d7",
+        "d6_to_d5",
+        "d4_to_d2"
+      ],
+      "work_sec": 20,
+      "rounds": 2,
+      "rpe": 4
     },
     {
       "name": "Chaos Slip-Burst",
@@ -5437,9 +5544,7 @@
     {
       "name": "Unstable Philly Shell",
       "category": "defense",
-      "phases": [
-        "TAPER"
-      ],
+      "phases": [],
       "movement": "vestibular_adaptation",
       "type": "isometric",
       "tags": [
@@ -5500,7 +5605,7 @@
         "mech_trunk_stability"
       ],
       "equipment": "Elastic band (hips)",
-      "description": "Jump 45\u00b0 laterally against band resistance, then pivot into hook. Trains explosive angle creation.",
+      "description": "Jump 45° laterally against band resistance, then pivot into hook. Trains explosive angle creation.",
       "impact_cost": "high",
       "lactate_load": "low",
       "movement_cost": "low",
@@ -5536,7 +5641,14 @@
         "mech_ballistic",
         "mech_grip_support",
         "mech_trunk_stability"
-      ]
+      ],
+      "late_windows": [
+        "d4_to_d2",
+        "d1"
+      ],
+      "work_sec": 20,
+      "rounds": 2,
+      "rpe": 4
     },
     {
       "name": "Backstep Check Hook",
@@ -5552,7 +5664,7 @@
         "mech_lower_lunge",
         "mech_trunk_stability"
       ],
-      "equipment": "Decline treadmill (5\u00b0 angle, 1mph)",
+      "equipment": "Decline treadmill (5° angle, 1mph)",
       "description": "Step backward off treadmill belt, then plant for check hook. Trains balance on retreat.",
       "impact_cost": "low",
       "lactate_load": "low",
@@ -5565,9 +5677,7 @@
     {
       "name": "Chaos Corner Drill",
       "category": "pressure",
-      "phases": [
-        "TAPER"
-      ],
+      "phases": [],
       "movement": "peripheral_awareness",
       "type": "multidirectional",
       "tags": [
@@ -5585,6 +5695,589 @@
         "mech_lower_hip_hinge",
         "mech_trunk_stability"
       ]
+    }
+  ],
+  "late_fight_coordination_drills": [
+    {
+      "name": "Integrated Footwork Shadowboxing",
+      "category": "footwork",
+      "phases": [
+        "GPP",
+        "SPP",
+        "TAPER"
+      ],
+      "movement": "dynamic_stance_transitions",
+      "type": "unilateral",
+      "tags": [
+        "coordination",
+        "mma",
+        "boxing",
+        "distance_striker",
+        "counter_striker",
+        "mech_ballistic",
+        "mech_lower_lunge",
+        "mech_trunk_stability",
+        "mech_upper_press"
+      ],
+      "equipment": "None",
+      "equipment_notes": "Ensure adequate space for lateral movement.",
+      "description": "Move through striking combinations with constant angle changes and stance resets. Focuses on smooth weight shifts, avoiding crossed feet, and reactive repositioning for fight-specific balance.",
+      "impact_cost": "low",
+      "lactate_load": "low",
+      "movement_cost": "low",
+      "mechanical_risk_tags": [
+        "mech_ballistic",
+        "mech_lower_lunge",
+        "mech_trunk_stability",
+        "mech_upper_press"
+      ],
+      "late_windows": [
+        "d13_to_d8",
+        "d7",
+        "d6_to_d5",
+        "d4_to_d2"
+      ],
+      "work_sec": 20,
+      "rounds": 2,
+      "rpe": 4
+    },
+    {
+      "name": "Single-Leg Cross-Body Punch",
+      "category": "striking",
+      "phases": [
+        "SPP"
+      ],
+      "movement": "upper_body_isolation",
+      "type": "unilateral",
+      "tags": [
+        "coordination",
+        "boxing",
+        "mma",
+        "counter_striker",
+        "mech_lower_hip_hinge",
+        "mech_lower_lunge",
+        "mech_trunk_rotation",
+        "mech_trunk_stability",
+        "mech_upper_press"
+      ],
+      "equipment": "None or Light Dumbbell",
+      "equipment_notes": "Dumbbell (optional) for added resistance; keep weight light to avoid compromising balance.",
+      "description": "Balance on one leg while throwing slow, controlled crosses. Emphasizes knee stability (avoid hyperextension) and trunk-punch alignment for precision under instability.",
+      "impact_cost": "low",
+      "lactate_load": "low",
+      "movement_cost": "low",
+      "mechanical_risk_tags": [
+        "mech_lower_hip_hinge",
+        "mech_lower_lunge",
+        "mech_trunk_rotation",
+        "mech_trunk_stability",
+        "mech_upper_press"
+      ],
+      "late_windows": [
+        "d13_to_d8",
+        "d7",
+        "d6_to_d5",
+        "d4_to_d2"
+      ],
+      "work_sec": 20,
+      "rounds": 2,
+      "rpe": 4
+    },
+    {
+      "name": "Pivot-Reset Shadowboxing",
+      "category": "footwork",
+      "phases": [
+        "SPP"
+      ],
+      "movement": "circular_pressure",
+      "type": "rotational",
+      "tags": [
+        "coordination",
+        "boxing",
+        "pressure_fighter",
+        "mech_lower_hip_hinge",
+        "mech_lower_lunge",
+        "mech_trunk_stability",
+        "mech_upper_press"
+      ],
+      "equipment": "None",
+      "equipment_notes": "Mark 4 cardinal directions with tape",
+      "description": "Throw 3-punch combo, pivot 45° off centerline, reset stance. Conditions footwork to maintain cutting angles without crossing feet.",
+      "impact_cost": "low",
+      "lactate_load": "low",
+      "movement_cost": "low",
+      "mechanical_risk_tags": [
+        "mech_lower_hip_hinge",
+        "mech_lower_lunge",
+        "mech_trunk_stability",
+        "mech_upper_press"
+      ],
+      "late_windows": [
+        "d13_to_d8",
+        "d7",
+        "d6_to_d5",
+        "d4_to_d2"
+      ],
+      "work_sec": 20,
+      "rounds": 2,
+      "rpe": 4
+    },
+    {
+      "name": "Blindfolded Pivot Drills",
+      "category": "proprioception",
+      "phases": [
+        "SPP"
+      ],
+      "movement": "vestibular_training",
+      "type": "rotational",
+      "tags": [
+        "coordination",
+        "boxing",
+        "pressure_fighter",
+        "mech_trunk_stability"
+      ],
+      "equipment": "Blindfold",
+      "equipment_notes": "Partner guides initially",
+      "description": "Pivot 90° on command without visual cues. Sharpens spatial awareness during exchanges.",
+      "impact_cost": "low",
+      "lactate_load": "low",
+      "movement_cost": "low",
+      "mechanical_risk_tags": [
+        "mech_trunk_stability"
+      ],
+      "late_windows": [
+        "d13_to_d8",
+        "d7",
+        "d6_to_d5",
+        "d4_to_d2"
+      ],
+      "work_sec": 20,
+      "rounds": 2,
+      "rpe": 4
+    },
+    {
+      "name": "Shadow Cut-Offs",
+      "category": "footwork",
+      "phases": [
+        "SPP"
+      ],
+      "movement": "ring_generalship",
+      "type": "multidirectional",
+      "tags": [
+        "coordination",
+        "boxing",
+        "pressure_fighter",
+        "mech_lower_lunge",
+        "mech_trunk_stability"
+      ],
+      "equipment": "Open Space",
+      "equipment_notes": "Imagine opponent circling",
+      "description": "Mirror imaginary opponent's lateral movement while cutting off angles. Develops cage/ring cutting proprioception.",
+      "impact_cost": "low",
+      "lactate_load": "low",
+      "movement_cost": "low",
+      "mechanical_risk_tags": [
+        "mech_lower_lunge",
+        "mech_trunk_stability"
+      ],
+      "late_windows": [
+        "d13_to_d8",
+        "d7",
+        "d6_to_d5",
+        "d4_to_d2"
+      ],
+      "work_sec": 20,
+      "rounds": 2,
+      "rpe": 4
+    },
+    {
+      "name": "Slip-Catch-Return",
+      "category": "defense",
+      "phases": [
+        "GPP",
+        "SPP"
+      ],
+      "movement": "head_movement",
+      "type": "unilateral",
+      "tags": [
+        "coordination",
+        "boxing",
+        "counter_striker",
+        "mech_ballistic",
+        "mech_lower_hip_hinge",
+        "mech_trunk_rotation",
+        "mech_trunk_stability"
+      ],
+      "equipment": "Reaction Ball",
+      "equipment_notes": "Use uneven-surface ball for unpredictable bounces",
+      "description": "Slip randomly bounced ball, catch after first bounce, immediately return throw while resetting stance. Trains reactive head movement + reset coordination.",
+      "impact_cost": "low",
+      "lactate_load": "low",
+      "movement_cost": "low",
+      "mechanical_risk_tags": [
+        "mech_ballistic",
+        "mech_lower_hip_hinge",
+        "mech_trunk_rotation",
+        "mech_trunk_stability"
+      ],
+      "late_windows": [
+        "d4_to_d2",
+        "d1"
+      ],
+      "work_sec": 20,
+      "rounds": 2,
+      "rpe": 4
+    },
+    {
+      "name": "Mirror Footwork Drills",
+      "category": "footwork",
+      "phases": [
+        "GPP"
+      ],
+      "movement": "shadow_matching",
+      "type": "bilateral",
+      "tags": [
+        "coordination",
+        "boxing",
+        "counter_striker",
+        "mech_lower_lunge",
+        "mech_trunk_stability"
+      ],
+      "equipment": "Full-Length Mirror",
+      "equipment_notes": "Minimum 2m x 1m mirror",
+      "description": "Mirror a partner's footwork patterns in real-time, reversing roles every 30sec. Enhances predictive footwork reading.",
+      "work_sec": 20,
+      "impact_cost": "low",
+      "lactate_load": "low",
+      "movement_cost": "low",
+      "mechanical_risk_tags": [
+        "mech_lower_lunge",
+        "mech_trunk_stability"
+      ],
+      "late_windows": [
+        "d13_to_d8",
+        "d7",
+        "d6_to_d5",
+        "d4_to_d2"
+      ],
+      "rounds": 2,
+      "rpe": 4
+    },
+    {
+      "name": "Punching Metronome",
+      "category": "striking",
+      "phases": [
+        "GPP"
+      ],
+      "movement": "temporal_accuracy",
+      "type": "bilateral",
+      "tags": [
+        "coordination",
+        "boxing",
+        "distance_striker",
+        "mech_trunk_stability",
+        "mech_upper_press"
+      ],
+      "equipment": "Metronome app",
+      "equipment_notes": "Start at 60BPM, progress to 120BPM",
+      "description": "Strike in rhythm with tempo changes. Trains punch timing under paced variations.",
+      "impact_cost": "low",
+      "lactate_load": "low",
+      "movement_cost": "low",
+      "mechanical_risk_tags": [
+        "mech_trunk_stability",
+        "mech_upper_press"
+      ],
+      "late_windows": [
+        "d4_to_d2",
+        "d1"
+      ],
+      "work_sec": 20,
+      "rounds": 2,
+      "rpe": 4
+    },
+    {
+      "name": "Sliding Defensive Shell",
+      "category": "defense",
+      "phases": [
+        "GPP",
+        "SPP"
+      ],
+      "movement": "lateral_guard_maintenance",
+      "type": "bilateral",
+      "tags": [
+        "coordination",
+        "boxing",
+        "distance_striker",
+        "mech_trunk_stability"
+      ],
+      "equipment": "Smooth floor",
+      "equipment_notes": "Socks recommended for slide",
+      "description": "Slide laterally while maintaining peek-a-boo guard. Trains defensive posture during lateral movement.",
+      "impact_cost": "low",
+      "lactate_load": "low",
+      "movement_cost": "low",
+      "mechanical_risk_tags": [
+        "mech_trunk_stability"
+      ],
+      "late_windows": [
+        "d13_to_d8",
+        "d7",
+        "d6_to_d5",
+        "d4_to_d2"
+      ],
+      "work_sec": 20,
+      "rounds": 2,
+      "rpe": 4
+    },
+    {
+      "name": "Mirror Footwork",
+      "category": "footwork",
+      "phases": [
+        "GPP"
+      ],
+      "movement": "synchronized_movement",
+      "type": "bilateral",
+      "tags": [
+        "coordination",
+        "boxing",
+        "distance_striker",
+        "mech_lower_lunge",
+        "mech_trunk_stability"
+      ],
+      "equipment": "Partner",
+      "equipment_notes": "Leader changes directions randomly",
+      "description": "Mirror partner's lateral movements exactly. Enhances spatial mirroring for cage/corner management.",
+      "impact_cost": "low",
+      "lactate_load": "low",
+      "movement_cost": "low",
+      "mechanical_risk_tags": [
+        "mech_lower_lunge",
+        "mech_trunk_stability"
+      ],
+      "late_windows": [
+        "d4_to_d2",
+        "d1"
+      ],
+      "work_sec": 20,
+      "rounds": 2,
+      "rpe": 4
+    },
+    {
+      "name": "Eyes-Closed Parry Drill",
+      "category": "defense",
+      "phases": [
+        "TAPER"
+      ],
+      "movement": "tactile_reaction",
+      "type": "upper_body",
+      "tags": [
+        "boxing",
+        "clinch_fighter",
+        "mech_ballistic",
+        "mech_grip_support",
+        "mech_trunk_stability"
+      ],
+      "equipment": "Focus mitts (partner calls punches)",
+      "description": "Eyes closed, parry mitts based on verbal cues. Develops feel-based defense for clinch entries.",
+      "impact_cost": "low",
+      "lactate_load": "low",
+      "movement_cost": "low",
+      "mechanical_risk_tags": [
+        "mech_ballistic",
+        "mech_grip_support",
+        "mech_trunk_stability"
+      ],
+      "late_windows": [
+        "d4_to_d2",
+        "d1"
+      ],
+      "work_sec": 20,
+      "rounds": 2,
+      "rpe": 4
+    },
+    {
+      "name": "3D Head Movement Grid",
+      "category": "defense",
+      "phases": [
+        "TAPER"
+      ],
+      "movement": "cervical_proprioception",
+      "type": "multidirectional",
+      "tags": [
+        "mma",
+        "counter_striker",
+        "brawler",
+        "mech_shoulder_overhead",
+        "mech_trunk_rotation",
+        "mech_trunk_stability"
+      ],
+      "equipment": "Hanging tennis balls (head height)",
+      "equipment_notes": "Balls spaced 15cm apart",
+      "description": "Slip/roll through grid without ball contact, reacting to partner's directional taps on shoulders. Enhances head movement spatial mapping.",
+      "impact_cost": "low",
+      "lactate_load": "low",
+      "movement_cost": "low",
+      "mechanical_risk_tags": [
+        "mech_shoulder_overhead",
+        "mech_trunk_rotation",
+        "mech_trunk_stability"
+      ],
+      "late_windows": [
+        "d13_to_d8",
+        "d7",
+        "d6_to_d5",
+        "d4_to_d2"
+      ],
+      "work_sec": 20,
+      "rounds": 2,
+      "rpe": 4
+    },
+    {
+      "name": "Proprioceptive Arm Trap",
+      "category": "grappling",
+      "phases": [
+        "TAPER"
+      ],
+      "movement": "tactile_sequencing",
+      "type": "upper_body",
+      "tags": [
+        "mma",
+        "submission_hunter",
+        "clinch_fighter",
+        "mech_trunk_stability"
+      ],
+      "equipment": "Variable resistance bands (elbows)",
+      "equipment_notes": "Different tensions per arm",
+      "description": "Eyes closed, trap partner's arm using only resistance feedback to gauge limb positioning. Drills feel-based submissions.",
+      "impact_cost": "low",
+      "lactate_load": "low",
+      "movement_cost": "low",
+      "mechanical_risk_tags": [
+        "mech_trunk_stability"
+      ],
+      "late_windows": [
+        "d13_to_d8",
+        "d7",
+        "d6_to_d5",
+        "d4_to_d2"
+      ],
+      "work_sec": 20,
+      "rounds": 2,
+      "rpe": 4
+    },
+    {
+      "name": "Reactive Wall Drill",
+      "category": "striking",
+      "phases": [
+        "SPP",
+        "TAPER"
+      ],
+      "movement": "upper_body_chain",
+      "type": "bilateral",
+      "tags": [
+        "coordination",
+        "mma",
+        "brawler",
+        "mech_ballistic",
+        "mech_trunk_stability",
+        "mech_upper_press"
+      ],
+      "equipment": "Wall Pad or Heavy Bag",
+      "equipment_notes": "Stand 6-12\" from wall to enforce compact mechanics.",
+      "description": "Partner calls random punch numbers (1-6) while you strike the wall pad without resetting stance. Develops combo fluidity and adaptability in pocket exchanges.",
+      "impact_cost": "low",
+      "lactate_load": "low",
+      "movement_cost": "low",
+      "mechanical_risk_tags": [
+        "mech_ballistic",
+        "mech_trunk_stability",
+        "mech_upper_press"
+      ],
+      "late_windows": [
+        "d13_to_d8",
+        "d7",
+        "d6_to_d5",
+        "d4_to_d2"
+      ],
+      "work_sec": 20,
+      "rounds": 2,
+      "rpe": 4
+    },
+    {
+      "name": "Clinch Frame & Strike",
+      "category": "clinch",
+      "phases": [
+        "TAPER"
+      ],
+      "movement": "isometric_proprioception",
+      "type": "upper_body",
+      "tags": [
+        "boxing",
+        "clinch_fighter",
+        "mech_grip_support",
+        "mech_lower_hip_hinge",
+        "mech_trunk_stability",
+        "mech_upper_press"
+      ],
+      "equipment": "Resistance bands (attached to wall)",
+      "description": "Maintain forearm frame against band resistance while throwing short uppercuts. Mimics striking in phone-booth clinches.",
+      "impact_cost": "low",
+      "lactate_load": "low",
+      "movement_cost": "low",
+      "mechanical_risk_tags": [
+        "mech_grip_support",
+        "mech_lower_hip_hinge",
+        "mech_trunk_stability",
+        "mech_upper_press"
+      ],
+      "late_windows": [
+        "d13_to_d8",
+        "d7",
+        "d6_to_d5",
+        "d4_to_d2"
+      ],
+      "work_sec": 20,
+      "rounds": 2,
+      "rpe": 4
+    },
+    {
+      "name": "Reactive Banded Pivot",
+      "category": "striking",
+      "phases": [
+        "TAPER"
+      ],
+      "movement": "eccentric_proprioception",
+      "type": "rotational",
+      "tags": [
+        "mma",
+        "boxing",
+        "counter_striker",
+        "distance_striker",
+        "mech_ballistic",
+        "mech_trunk_stability",
+        "mech_upper_press"
+      ],
+      "equipment": "Elastic band (waist) + strobe light",
+      "equipment_notes": "Band provides lateral resistance",
+      "description": "Pivot 45° against band tension when strobe flashes, then counter strike. Combines visual disruption with load for reactive pivoting.",
+      "impact_cost": "low",
+      "lactate_load": "low",
+      "movement_cost": "low",
+      "mechanical_risk_tags": [
+        "mech_ballistic",
+        "mech_trunk_stability",
+        "mech_upper_press"
+      ],
+      "late_windows": [
+        "d13_to_d8",
+        "d7",
+        "d6_to_d5",
+        "d4_to_d2"
+      ],
+      "work_sec": 20,
+      "rounds": 2,
+      "rpe": 4
     }
   ]
 }
