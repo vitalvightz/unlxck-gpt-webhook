@@ -141,6 +141,7 @@ def _compact_role(role: dict[str, Any]) -> dict[str, Any]:
     )
     return {key: role.get(key) for key in keep if role.get(key) not in (None, "", [])}
 
+
 def _compact_weekly_role_map(weekly_role_map: Any) -> dict[str, Any]:
     if not isinstance(weekly_role_map, dict):
         return {}
