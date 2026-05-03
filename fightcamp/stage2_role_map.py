@@ -286,29 +286,136 @@ def _calendar_d_day_for_role(week_entry: dict, role: dict) -> int | None:
     return None
 
 
-def _priority_touch_target(athlete_model: dict) -> dict[str, Any] | None:
-    """Return one conservative non-gas-tank priority touch, if profile signals it."""
-    raw_values: list[Any] = []
-    for key in ("key_goals", "goals", "weaknesses", "weak_areas", "performance_goals", "main_limiter", "limiter_key"):
-        raw_values.extend(clean_list(athlete_model.get(key, [])))
-    text = " ".join(str(value).lower().replace("-", "_") for value in raw_values)
+def _low_load_support_profile_for_unused_day(athlete_model: dict) -> dict[str, Any] | None:
+    """
+    Decide whether an unused recovery/off day should become a low-load support day.
 
-    if any(token in text for token in ("speed", "explosive", "fast_twitch", "first_step", "acceleration")):
+    Priority:
+    1. Gas tank / conditioning
+    2. Mobility
+    3. Coordination
+    4. Injury prevention / rehab-friendly support
+
+    Only gas tank gets preferred_exercise_names because we specifically want to bias
+    Assault Bike / Rower / Nasal Shadowboxing / Nasal Walk.
+    """
+    raw_values: list[Any] = []
+
+    for key in (
+        "key_goals",
+        "goals",
+        "weaknesses",
+        "weak_areas",
+        "performance_goals",
+        "main_limiter",
+        "limiter_key",
+    ):
+        raw_values.extend(clean_list(athlete_model.get(key, [])))
+
+    tokens = {
+        str(value).strip().lower().replace("-", "_").replace(" ", "_")
+        for value in raw_values
+        if str(value).strip()
+    }
+
+    gas_tank_terms = {
+        "gas_tank",
+        "conditioning",
+        "conditioning_endurance",
+        "endurance",
+        "work_capacity",
+        "aerobic",
+        "repeatability",
+        "late_fight",
+        "late_round",
+    }
+
+    mobility_terms = {
+        "mobility",
+        "hip_mobility",
+        "shoulder_mobility",
+        "range_of_motion",
+        "flexibility",
+        "movement_quality",
+    }
+
+    coordination_terms = {
+        "coordination",
+        "proprioception",
+        "coordination_proprioception",
+        "balance",
+        "footwork",
+        "rhythm",
+        "skill_refinement",
+    }
+
+    injury_terms = {
+        "injury_prevention",
+        "rehab",
+        "rehab_friendly",
+        "prehab",
+        "tissue_quality",
+        "ankle",
+        "knee",
+        "shoulder",
+        "hip",
+        "back",
+    }
+
+    if tokens & gas_tank_terms:
         return {
-            "role_key": "converted_priority_speed_touch_day",
-            "category": "conditioning",
-            "preferred_system": "alactic",
-            "athlete_facing_label": "Low-load speed touch",
-            "preferred_tags": ["alactic", "speed", "low_cns", "coordination", "technical"],
+            "role_key": "converted_low_aerobic_gas_tank_day",
+            "athlete_facing_label": "Low aerobic gas-tank support",
+            "preferred_system": "aerobic",
+            "preferred_tags": ["gas_tank", "aerobic", "low_impact", "low_cns", "recovery"],
             "preferred_exercise_names": [
-                "Band-Resisted Snap-Step + Reset",
-                "Mirror Footwork Reaction Burst",
-                "Split-Step Ankle Snap Pogo",
+                "Assault Bike Easy Gas Tank Ride",
+                "Rower Nasal Aerobic Base",
+                "Nasal Shadowboxing Flow (Gas Tank)",
+                "Nasal Walk with Boxing Posture",
             ],
-            "selection_rule": "Keep this speed touch crisp and low-fatigue: no max sprints, no lactate work, no grinder sets.",
-            "blocked_systems": ["glycolytic"],
-            "blocked_intensities": ["max"],
+            "reason": (
+                "Gas tank/conditioning is a profile goal or weakness, so this unused "
+                "day becomes a low-aerobic support touch."
+            ),
         }
+
+    if tokens & mobility_terms:
+        return {
+            "role_key": "converted_mobility_support_day",
+            "athlete_facing_label": "Low-load mobility support",
+            "preferred_system": "aerobic",
+            "preferred_tags": ["mobility", "recovery", "low_impact", "low_cns", "cns_freshness"],
+            "reason": (
+                "Mobility is a profile goal or weakness, so this unused day becomes "
+                "a low-load mobility support touch."
+            ),
+        }
+
+    if tokens & coordination_terms:
+        return {
+            "role_key": "converted_coordination_support_day",
+            "athlete_facing_label": "Low-load coordination support",
+            "preferred_system": "aerobic",
+            "preferred_tags": ["coordination", "footwork", "skill", "low_impact", "low_cns"],
+            "reason": (
+                "Coordination/proprioception is a profile goal or weakness, so this "
+                "unused day becomes a low-impact coordination support touch."
+            ),
+        }
+
+    if (tokens & injury_terms) or athlete_model.get("injuries"):
+        return {
+            "role_key": "converted_rehab_friendly_support_day",
+            "athlete_facing_label": "Rehab-friendly low-load support",
+            "preferred_system": "aerobic",
+            "preferred_tags": ["rehab_friendly", "recovery", "low_impact", "low_cns", "mobility"],
+            "reason": (
+                "Injury prevention or restriction is present, so this unused day becomes "
+                "a rehab-friendly low-load support touch."
+            ),
+        }
+
     return None
 
 
@@ -321,11 +428,10 @@ def _upgrade_recovery_days_to_gas_tank(
     If gas tank is a goal/weakness, turn eligible recovery roles into
     low-aerobic gas-tank conditioning roles.
 
-    This is not hard conditioning. It only allows RPE 3-4 aerobic work:
-    easy bike, easy row, nasal shadowboxing, walk flow, or similar.
+    This only applies to gas tank. Other goals/weaknesses are handled by
+    _upgrade_unused_days_to_gas_tank().
     """
-    support_profile = _low_load_support_profile_for_unused_day(athlete_model)
-    if not support_profile:
+    if not _has_gas_tank_signal(athlete_model):
         return session_roles
 
     updated: list[dict] = []
@@ -401,156 +507,28 @@ def _upgrade_recovery_days_to_gas_tank(
     return updated
 
 
-def _low_load_support_profile_for_unused_day(athlete_model: dict) -> dict[str, Any] | None:
-    """
-    Decide whether an unused recovery/off day should become a low-load support day.
-
-    Priority:
-    1. Gas tank / conditioning
-    2. Mobility
-    3. Coordination
-    4. Injury prevention / rehab-friendly support
-
-    Only gas tank gets preferred_exercise_names because we specifically want to bias
-    Assault Bike / Rower / Nasal Shadowboxing / Nasal Walk.
-    """
-    raw_values: list[Any] = []
-
-    for key in (
-        "key_goals",
-        "goals",
-        "weaknesses",
-        "weak_areas",
-        "performance_goals",
-        "main_limiter",
-        "limiter_key",
-    ):
-        raw_values.extend(clean_list(athlete_model.get(key, [])))
-
-    joined = " ".join(str(value).lower().replace("-", "_").replace(" ", "_") for value in raw_values)
-
-    gas_tank_terms = {
-        "gas_tank",
-        "conditioning",
-        "conditioning_endurance",
-        "endurance",
-        "work_capacity",
-        "aerobic",
-        "repeatability",
-        "late_fight",
-        "late_round",
-    }
-
-    mobility_terms = {
-        "mobility",
-        "hip_mobility",
-        "shoulder_mobility",
-        "range_of_motion",
-        "flexibility",
-        "movement_quality",
-    }
-
-    coordination_terms = {
-        "coordination",
-        "proprioception",
-        "coordination_proprioception",
-        "balance",
-        "footwork",
-        "rhythm",
-        "skill_refinement",
-    }
-
-    injury_terms = {
-        "injury_prevention",
-        "rehab",
-        "rehab_friendly",
-        "prehab",
-        "tissue_quality",
-        "ankle",
-        "knee",
-        "shoulder",
-        "hip",
-        "back",
-    }
-
-    tokens = set(joined.split())
-
-    if tokens & gas_tank_terms:
-        return {
-            "role_key": "converted_low_aerobic_gas_tank_day",
-            "preferred_system": "aerobic",
-            "preferred_tags": ["gas_tank", "aerobic", "low_impact", "low_cns", "recovery"],
-            "preferred_exercise_names": [
-                "Assault Bike Easy Gas Tank Ride",
-                "Rower Nasal Aerobic Base",
-                "Nasal Shadowboxing Flow (Gas Tank)",
-                "Nasal Walk with Boxing Posture",
-            ],
-            "reason": (
-                "Gas tank/conditioning is a profile goal or weakness, so this unused "
-                "day becomes a low-aerobic support touch."
-            ),
-        }
-
-    if tokens & mobility_terms:
-        return {
-            "role_key": "converted_mobility_support_day",
-            "preferred_system": "aerobic",
-            "preferred_tags": ["mobility", "recovery", "low_impact", "low_cns", "cns_freshness"],
-            "reason": (
-                "Mobility is a profile goal or weakness, so this unused day becomes "
-                "a low-load mobility support touch."
-            ),
-        }
-
-    if tokens & coordination_terms:
-        return {
-            "role_key": "converted_coordination_support_day",
-            "preferred_system": "aerobic",
-            "preferred_tags": ["coordination", "footwork", "skill", "low_impact", "low_cns"],
-            "reason": (
-                "Coordination/proprioception is a profile goal or weakness, so this "
-                "unused day becomes a low-impact coordination support touch."
-            ),
-        }
-
-    if (tokens & injury_terms) or athlete_model.get("injuries"):
-        return {
-            "role_key": "converted_rehab_friendly_support_day",
-            "preferred_system": "aerobic",
-            "preferred_tags": ["rehab_friendly", "recovery", "low_impact", "low_cns", "mobility"],
-            "reason": (
-                "Injury prevention or restriction is present, so this unused day becomes "
-                "a rehab-friendly low-load support touch."
-            ),
-        }
-
-    return None
-
-
 def _upgrade_unused_days_to_gas_tank(
     week_entry: dict,
     session_roles: list[dict],
     athlete_model: dict,
 ) -> list[dict]:
     """
-    If gas tank is a goal/weakness, turn eligible intentionally unused
-    recovery/off days into real low-aerobic gas-tank session roles.
+    Turn eligible intentionally unused recovery/off days into low-load support work
+    when the athlete profile has a matching goal, weakness, limiter, or restriction.
 
-    These are not hard sessions. They are RPE 3-4 aerobic flush/base touches.
+    Gas tank gets preferred exercise names.
+    Other qualities rely on tags and normal selector scoring.
     """
-    has_gas_tank_signal = _has_gas_tank_signal(athlete_model)
-    priority_target = _priority_touch_target(athlete_model)
-    if not has_gas_tank_signal and not priority_target:
+    support_profile = _low_load_support_profile_for_unused_day(athlete_model)
+    if not support_profile:
         return session_roles
 
     updated_unused_days: list[dict] = []
     added_roles: list[dict] = []
-    priority_touch_used = False
 
     phase = str(week_entry.get("phase", "")).strip().upper()
     max_upgrades = 2 if phase in {"GPP", "SPP"} else 1
-    
+
     existing_days = {
         str(role.get("scheduled_day_hint") or "").strip().lower()
         for role in session_roles
@@ -579,7 +557,7 @@ def _upgrade_unused_days_to_gas_tank(
                     d_day = None
                 break
 
-        # Do not add app gas-tank work on D-1 or D-0.
+        # Do not add app support work on D-1 or D-0.
         if d_day is not None and d_day <= 1:
             updated_unused_days.append(day_entry)
             continue
@@ -592,110 +570,97 @@ def _upgrade_unused_days_to_gas_tank(
             updated_unused_days.append(day_entry)
             continue
 
+        role_key = support_profile["role_key"]
+        preferred_system = support_profile["preferred_system"]
+        preferred_tags = list(support_profile["preferred_tags"])
+        preferred_exercise_names = list(support_profile.get("preferred_exercise_names") or [])
+
         converted_day = dict(day_entry)
-        target = None
-        if priority_target and not priority_touch_used:
-            target = priority_target
-            priority_touch_used = True
-        elif not has_gas_tank_signal:
-            updated_unused_days.append(day_entry)
-            continue
-        role_key = str((target or {}).get("role_key") or "converted_low_aerobic_gas_tank_day")
-        category = str((target or {}).get("category") or "conditioning")
-        preferred_system = str((target or {}).get("preferred_system") or "aerobic")
-        preferred_tags = list((target or {}).get("preferred_tags") or ["gas_tank", "aerobic", "low_impact", "low_cns", "recovery"])
-        preferred_exercise_names = list((target or {}).get("preferred_exercise_names") or [
-            "Assault Bike Easy Gas Tank Ride",
-            "Rower Nasal Aerobic Base",
-            "Nasal Shadowboxing Flow (Gas Tank)",
-            "Nasal Walk with Boxing Posture",
-        ])
-        athlete_facing_label = str((target or {}).get("athlete_facing_label") or "Low aerobic gas-tank support")
-        selection_rule = str((target or {}).get("selection_rule") or (
-            "Use only low-aerobic gas-tank work here: RPE <= 4, low impact, "
-            "low lactate, low CNS. Suitable options include easy assault bike, "
-            "easy rower, nasal shadowboxing flow, or nasal walk flow."
-        ))
-        blocked_systems = list((target or {}).get("blocked_systems") or ["glycolytic", "ATP-PCr"])
-        blocked_intensities = list((target or {}).get("blocked_intensities") or ["high", "max"])
         converted_day.update(
             {
                 "role": role_key,
-                "category": category,
+                "category": "conditioning",
                 "preferred_system": preferred_system,
                 "preferred_pool": "conditioning_slots",
                 "preferred_tags": preferred_tags,
-                "preferred_exercise_names": preferred_exercise_names,
                 "gas_tank_recovery_touch": role_key == "converted_low_aerobic_gas_tank_day",
                 "priority_recovery_touch": role_key != "converted_low_aerobic_gas_tank_day",
                 "allowed_on_recovery_day": True,
                 "recovery_compatible": True,
                 "converted_from_unused_day": True,
                 "original_unused_day_role": role,
-                "reason": (
-                    "Gas tank is a profile goal/weakness, so this unused recovery/off "
-                    "day becomes a low-aerobic gas-tank touch without becoming hard conditioning."
-                ),
+                "reason": support_profile["reason"],
             }
         )
+
+        if preferred_exercise_names:
+            converted_day["preferred_exercise_names"] = preferred_exercise_names
+
         updated_unused_days.append(converted_day)
 
-        added_roles.append(
-            {
-                "session_index": 0,
-                "category": category,
-                "role_key": role_key,
-                "athlete_facing_label": athlete_facing_label,
-                "preferred_pool": "conditioning_slots",
-                "preferred_system": preferred_system,
-                "preferred_tags": preferred_tags,
-                "preferred_exercise_names": preferred_exercise_names,
-                "selection_rule": selection_rule,
-                "anchor": "lowest_load_day",
-                "placement_rule": (
-                    "This was an unused recovery/off day upgraded into low-aerobic "
-                    "gas-tank work because conditioning/endurance is a profile limiter. "
-                    "Allowed adjacent to hard sparring because it is not hard conditioning."
-                ),
-                "governance": {
-                    "authority": "gas_tank_recovery_upgrade",
-                    "execution_only": True,
-                    "suppression_rules": [
-                        "Must remain RPE <= 4.",
-                        "Must be low impact, low lactate, and low CNS.",
-                        "Must not become glycolytic, sprint, plyometric, or max-intensity work.",
-                    ],
-                    "hard_suppression_reasons": [],
-                },
-                "scheduled_day_hint": day,
-                "day_assignment_reason": (
-                    "Unused recovery/off training day upgraded to low-aerobic gas-tank work."
-                ),
-                "recovery_compatible": True,
-                "gas_tank_recovery_touch": role_key == "converted_low_aerobic_gas_tank_day",
-                "priority_recovery_touch": role_key != "converted_low_aerobic_gas_tank_day",
-                "allowed_on_recovery_day": True,
-                "blocked_systems": blocked_systems,
-                "blocked_intensities": blocked_intensities,
-                                "blocked_tags": [
-                    "mech_cns_high",
-                    "high_cns",
-                    "sprint",
-                    "plyometric",
-                    "high_impact_lower",
-                    "mech_landing_impact",
+        added_role = {
+            "session_index": 0,
+            "category": "conditioning",
+            "role_key": role_key,
+            "athlete_facing_label": support_profile.get("athlete_facing_label", "Low-load support"),
+            "preferred_pool": "conditioning_slots",
+            "preferred_system": preferred_system,
+            "preferred_tags": preferred_tags,
+            "selection_rule": (
+                "Use only low-load support work here: RPE <= 4, low impact, "
+                "low lactate, low CNS. Do not turn this into hard conditioning."
+            ),
+            "anchor": "lowest_load_day",
+            "placement_rule": (
+                "This was an unused recovery/off day upgraded into low-load support "
+                "work because the athlete profile has a matching goal, weakness, "
+                "limiter, or restriction. Allowed adjacent to hard sparring only if "
+                "it stays low intensity."
+            ),
+            "governance": {
+                "authority": "unused_day_low_load_support_upgrade",
+                "execution_only": True,
+                "suppression_rules": [
+                    "Must remain RPE <= 4.",
+                    "Must be low impact, low lactate, and low CNS.",
+                    "Must not become glycolytic, sprint, plyometric, or max-intensity work.",
                 ],
-            }
-        )
+                "hard_suppression_reasons": [],
+            },
+            "scheduled_day_hint": day,
+            "day_assignment_reason": (
+                "Unused recovery/off training day upgraded to low-load support work."
+            ),
+            "recovery_compatible": True,
+            "gas_tank_recovery_touch": role_key == "converted_low_aerobic_gas_tank_day",
+            "priority_recovery_touch": role_key != "converted_low_aerobic_gas_tank_day",
+            "allowed_on_recovery_day": True,
+            "blocked_systems": ["glycolytic", "ATP-PCr"],
+            "blocked_intensities": ["high", "max"],
+            "blocked_tags": [
+                "mech_cns_high",
+                "high_cns",
+                "sprint",
+                "plyometric",
+                "high_impact_lower",
+                "mech_landing_impact",
+            ],
+        }
+
+        if preferred_exercise_names:
+            added_role["preferred_exercise_names"] = preferred_exercise_names
+
+        added_roles.append(added_role)
 
     week_entry["intentionally_unused_days"] = updated_unused_days
-    
+
     result = list(session_roles) + added_roles
     for idx, role in enumerate(result, start=1):
         role["session_index"] = idx
 
     return result
-
+    
+    
 def _role_governance(
     week_entry: dict,
     *,
