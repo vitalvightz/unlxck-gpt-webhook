@@ -119,13 +119,17 @@ def _is_protected_late_week(week: dict[str, Any]) -> bool:
         str(week.get("stage_key") or "").strip().lower(),
         str(week.get("payload_mode") or "").strip().lower(),
     ]
+
     intentional_compression = week.get("intentional_compression")
     if isinstance(intentional_compression, dict):
-        candidates.extend(str(code).strip().lower() for code in _clean_list(intentional_compression.get("reason_codes")))
+        candidates.extend(
+            str(code).strip().lower()
+            for code in _clean_list(intentional_compression.get("reason_codes"))
+        )
         candidates.append(str(intentional_compression.get("reason") or "").strip().lower())
         candidates.append(str(intentional_compression.get("summary") or "").strip().lower())
 
-        return any(
+    return any(
         token in candidate
         for candidate in candidates
         for token in ("bridge", "taper", "fight_week", "late_fight", "countdown")
