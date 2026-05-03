@@ -466,7 +466,7 @@ def _conditioning_resolve_bridge_rules(
 
 
 def _has_aerobic_maintenance_signal(goals: list[str], weaknesses: list[str]) -> bool:
-    values = {str(v or "").strip().lower() for v in [*(goals or []), *(weaknesses or [])] if str(v or "").strip()}
+    values = {str(v).strip().lower() for v in (goals or []) + (weaknesses or []) if v and str(v).strip()}
     return bool(values & _AEROBIC_MAINTENANCE_SIGNAL_TERMS)
 
 
