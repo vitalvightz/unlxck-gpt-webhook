@@ -906,9 +906,17 @@ def _assign_declared_day_hints(
     day_assignments: dict[int, str] = {}
     used_days: set[str] = set()
 
+    # Preserve explicit scheduled days for generated low-aerobic gas-tank recovery touches.
+    # These are created after compression from recovery/off days and should not be wiped
+    # by the generic day-hint assignment pass.
     for idx, role in enumerate(ordered):
-        if role.get("role_key") != "hard_sparring_day":
+        if not (
+            role.get("gas_tank_recovery_touch")
+            or role.get("converted_from_unused_day")
+            or role.get("allowed_on_recovery_day")
+        ):
             continue
+
         locked_day = str(role.get("scheduled_day_hint") or "").strip()
         if locked_day and locked_day in training_days and locked_day not in used_days:
             day_assignments[idx] = locked_day
