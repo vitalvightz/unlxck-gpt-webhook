@@ -237,6 +237,7 @@ def _role_selection_rule(role_key: str, category: str, system: str | None = None
         return "Prefer compliant alactic slots that preserve speed and sharpness."
     return "Use rehab slots first; if rehab is absent, keep this day recovery-only."
 
+
 def _has_gas_tank_signal(athlete_model: dict) -> bool:
     """Return True when the athlete profile clearly needs aerobic gas-tank work."""
     raw_values: list[Any] = []
@@ -358,6 +359,7 @@ def _upgrade_recovery_days_to_gas_tank(
         role["session_index"] = idx
 
     return updated
+
 
 def _role_governance(
     week_entry: dict,
@@ -1780,6 +1782,13 @@ def _build_weekly_role_map(
             athlete_model,
             hard_sparring_plan=hard_sparring_plan,
         )
+
+        session_roles = _upgrade_recovery_days_to_gas_tank(
+            week_entry,
+            session_roles,
+            athlete_model,
+        )
+
         session_roles, suppressed_roles = _lock_declared_hard_sparring_roles(
             week_entry,
             session_roles,
@@ -1787,6 +1796,7 @@ def _build_weekly_role_map(
             athlete_model,
             hard_sparring_plan=hard_sparring_plan,
         )
+
         session_roles, suppressed_roles = _apply_high_fatigue_week_compression(
             week_entry,
             session_roles,
@@ -1806,12 +1816,6 @@ def _build_weekly_role_map(
             session_roles,
             athlete_model,
             hard_sparring_plan=hard_sparring_plan,
-        )
-
-        session_roles = _upgrade_recovery_days_to_gas_tank(
-            week_entry,
-            session_roles,
-            athlete_model,
         )
 
         calendar_days = list(week_entry.get("calendar_days") or [])
