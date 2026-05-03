@@ -10347,11 +10347,15 @@
     "movement": "isometric",
     "type": "bilateral",
     "tags": [
-      "core",
-      "mech_trunk_stability",
       "balance",
+      "core",
+      "cross_pattern",
+      "low_soreness",
+      "mech_trunk_stability",
+      "no_d1",
+      "rehab_friendly",
       "stability",
-      "rehab_friendly"
+      "taper_micro_support"
     ],
     "equipment": "bodyweight",
     "movement_cost": "low",
@@ -10372,7 +10376,18 @@
       "moderate",
       "high",
       "critical"
-    ]
+    ],
+    "late_windows": [
+      "d21_to_d14",
+      "d13_to_d11",
+      "d10_to_d8",
+      "d7_to_d5",
+      "d4_to_d2"
+    ],
+    "priority_score": 7.7,
+    "late_fight_score": 7.7,
+    "body_region": "core_trunk",
+    "notes": "From quadruped, reach opposite arm and leg with trunk square. Stop on quality drop."
   },
   {
     "name": "Stir the Pot",
@@ -12052,5 +12067,1286 @@
       "recovery"
     ],
     "notes": "Easy mobility and breathing reset; keep it restorative, not a workout."
+  },
+  {
+    "name": "Knee-to-wall dorsiflexion pulse",
+    "category": "mobility",
+    "phases": [
+      "SPP",
+      "TAPER"
+    ],
+    "method": "rehab",
+    "movement": "mobility",
+    "type": "bilateral",
+    "tags": [
+      "ankle_mobility",
+      "boxer_footwork",
+      "supported",
+      "low_soreness",
+      "taper_micro_support",
+      "no_d1",
+      "rehab_friendly"
+    ],
+    "equipment": [
+      "bodyweight"
+    ],
+    "phase_role": "late_strength_touch",
+    "subfamily": "mobility_balance",
+    "late_windows": [
+      "d21_to_d14",
+      "d13_to_d11",
+      "d10_to_d8",
+      "d7_to_d5",
+      "d4_to_d2"
+    ],
+    "cut_buckets_allowed": [
+      "none",
+      "low",
+      "moderate",
+      "high"
+    ],
+    "movement_cost": "low",
+    "impact_cost": "low",
+    "eccentric_cost": "low",
+    "landing_cost": "none",
+    "cns_load": "low",
+    "soreness_risk": "low",
+    "low_impact": true,
+    "low_eccentric": true,
+    "cns_freshness": true,
+    "sport_specific": false,
+    "neural_primer": false,
+    "ballistic_low_volume": false,
+    "tactical_styles": [
+      "boxing"
+    ],
+    "goals": [
+      "readiness",
+      "mobility",
+      "balance"
+    ],
+    "weaknesses": [
+      "stiffness",
+      "stability"
+    ],
+    "body_region": "ankle",
+    "priority_score": 9.0,
+    "late_fight_score": 9.0,
+    "notes": "Micro-support drill. Stop on quality drop."
+  },
+  {
+    "name": "Toe-yoga tripod reset",
+    "category": "balance",
+    "phases": [
+      "SPP",
+      "TAPER"
+    ],
+    "method": "rehab",
+    "movement": "mobility",
+    "type": "bilateral",
+    "tags": [
+      "foot_control",
+      "bodyweight",
+      "d1_ok",
+      "low_soreness",
+      "taper_micro_support",
+      "rehab_friendly"
+    ],
+    "equipment": [
+      "bodyweight"
+    ],
+    "phase_role": "late_strength_touch",
+    "subfamily": "mobility_balance",
+    "late_windows": [
+      "d21_to_d14",
+      "d13_to_d11",
+      "d10_to_d8",
+      "d7_to_d5",
+      "d4_to_d2",
+      "d1"
+    ],
+    "cut_buckets_allowed": [
+      "none",
+      "low",
+      "moderate",
+      "high"
+    ],
+    "movement_cost": "low",
+    "impact_cost": "low",
+    "eccentric_cost": "low",
+    "landing_cost": "none",
+    "cns_load": "low",
+    "soreness_risk": "low",
+    "low_impact": true,
+    "low_eccentric": true,
+    "cns_freshness": true,
+    "sport_specific": false,
+    "neural_primer": false,
+    "ballistic_low_volume": false,
+    "tactical_styles": [
+      "boxing"
+    ],
+    "goals": [
+      "readiness",
+      "mobility",
+      "balance"
+    ],
+    "weaknesses": [
+      "stiffness",
+      "stability"
+    ],
+    "body_region": "foot",
+    "priority_score": 9.2,
+    "late_fight_score": 9.2,
+    "notes": "Micro-support drill. Stop on quality drop."
+  },
+  {
+    "name": "Lead-foot pivot prep",
+    "category": "integrated_movement_control",
+    "phases": [
+      "SPP",
+      "TAPER"
+    ],
+    "method": "rehab",
+    "movement": "mobility",
+    "type": "bilateral",
+    "tags": [
+      "pivot_readiness",
+      "boxer_footwork",
+      "boxer_stance",
+      "d1_if_familiar",
+      "low_soreness",
+      "rehab_friendly"
+    ],
+    "equipment": [
+      "bodyweight"
+    ],
+    "phase_role": "late_strength_touch",
+    "subfamily": "mobility_balance",
+    "late_windows": [
+      "d21_to_d14",
+      "d13_to_d11",
+      "d10_to_d8",
+      "d7_to_d5",
+      "d4_to_d2",
+      "d1"
+    ],
+    "cut_buckets_allowed": [
+      "none",
+      "low",
+      "moderate",
+      "high"
+    ],
+    "movement_cost": "low",
+    "impact_cost": "low",
+    "eccentric_cost": "low",
+    "landing_cost": "none",
+    "cns_load": "low",
+    "soreness_risk": "low",
+    "low_impact": true,
+    "low_eccentric": true,
+    "cns_freshness": true,
+    "sport_specific": false,
+    "neural_primer": false,
+    "ballistic_low_volume": false,
+    "tactical_styles": [
+      "boxing"
+    ],
+    "goals": [
+      "readiness",
+      "mobility",
+      "balance"
+    ],
+    "weaknesses": [
+      "stiffness",
+      "stability"
+    ],
+    "body_region": "foot_ankle_hip",
+    "priority_score": 9.1,
+    "late_fight_score": 9.1,
+    "notes": "Micro-support drill. Stop on quality drop."
+  },
+  {
+    "name": "Boxer stance weight-shift hold",
+    "category": "balance",
+    "phases": [
+      "SPP",
+      "TAPER"
+    ],
+    "method": "rehab",
+    "movement": "mobility",
+    "type": "bilateral",
+    "tags": [
+      "boxer_stance",
+      "d1_ok",
+      "balance_static",
+      "low_soreness",
+      "rehab_friendly"
+    ],
+    "equipment": [
+      "bodyweight"
+    ],
+    "phase_role": "late_strength_touch",
+    "subfamily": "mobility_balance",
+    "late_windows": [
+      "d21_to_d14",
+      "d13_to_d11",
+      "d10_to_d8",
+      "d7_to_d5",
+      "d4_to_d2",
+      "d1"
+    ],
+    "cut_buckets_allowed": [
+      "none",
+      "low",
+      "moderate",
+      "high"
+    ],
+    "movement_cost": "low",
+    "impact_cost": "low",
+    "eccentric_cost": "low",
+    "landing_cost": "none",
+    "cns_load": "low",
+    "soreness_risk": "low",
+    "low_impact": true,
+    "low_eccentric": true,
+    "cns_freshness": true,
+    "sport_specific": false,
+    "neural_primer": false,
+    "ballistic_low_volume": false,
+    "tactical_styles": [
+      "boxing"
+    ],
+    "goals": [
+      "readiness",
+      "mobility",
+      "balance"
+    ],
+    "weaknesses": [
+      "stiffness",
+      "stability"
+    ],
+    "body_region": "full_body_stance",
+    "priority_score": 9.4,
+    "late_fight_score": 9.4,
+    "notes": "Micro-support drill. Stop on quality drop."
+  },
+  {
+    "name": "Short-foot hold with nasal breathing",
+    "category": "balance",
+    "phases": [
+      "SPP",
+      "TAPER"
+    ],
+    "method": "rehab",
+    "movement": "mobility",
+    "type": "bilateral",
+    "tags": [
+      "foot_control",
+      "breathing_integrated",
+      "d1_ok",
+      "low_soreness",
+      "taper_micro_support",
+      "rehab_friendly"
+    ],
+    "equipment": [
+      "bodyweight"
+    ],
+    "phase_role": "late_strength_touch",
+    "subfamily": "mobility_balance",
+    "late_windows": [
+      "d21_to_d14",
+      "d13_to_d11",
+      "d10_to_d8",
+      "d7_to_d5",
+      "d4_to_d2",
+      "d1"
+    ],
+    "cut_buckets_allowed": [
+      "none",
+      "low",
+      "moderate",
+      "high"
+    ],
+    "movement_cost": "low",
+    "impact_cost": "low",
+    "eccentric_cost": "low",
+    "landing_cost": "none",
+    "cns_load": "low",
+    "soreness_risk": "low",
+    "low_impact": true,
+    "low_eccentric": true,
+    "cns_freshness": true,
+    "sport_specific": false,
+    "neural_primer": false,
+    "ballistic_low_volume": false,
+    "tactical_styles": [
+      "boxing"
+    ],
+    "goals": [
+      "readiness",
+      "mobility",
+      "balance"
+    ],
+    "weaknesses": [
+      "stiffness",
+      "stability"
+    ],
+    "body_region": "foot",
+    "priority_score": 8.7,
+    "late_fight_score": 8.7,
+    "notes": "Micro-support drill. Stop on quality drop."
+  },
+  {
+    "name": "Split-stance hip lock hold",
+    "category": "balance",
+    "phases": [
+      "SPP",
+      "TAPER"
+    ],
+    "method": "rehab",
+    "movement": "mobility",
+    "type": "bilateral",
+    "tags": [
+      "hip_lock",
+      "boxer_stance",
+      "d1_if_familiar",
+      "low_soreness",
+      "rehab_friendly"
+    ],
+    "equipment": [
+      "bodyweight"
+    ],
+    "phase_role": "late_strength_touch",
+    "subfamily": "mobility_balance",
+    "late_windows": [
+      "d21_to_d14",
+      "d13_to_d11",
+      "d10_to_d8",
+      "d7_to_d5",
+      "d4_to_d2"
+    ],
+    "cut_buckets_allowed": [
+      "none",
+      "low",
+      "moderate",
+      "high"
+    ],
+    "movement_cost": "low",
+    "impact_cost": "low",
+    "eccentric_cost": "low",
+    "landing_cost": "none",
+    "cns_load": "low",
+    "soreness_risk": "low",
+    "low_impact": true,
+    "low_eccentric": true,
+    "cns_freshness": true,
+    "sport_specific": false,
+    "neural_primer": false,
+    "ballistic_low_volume": false,
+    "tactical_styles": [
+      "boxing"
+    ],
+    "goals": [
+      "readiness",
+      "mobility",
+      "balance"
+    ],
+    "weaknesses": [
+      "stiffness",
+      "stability"
+    ],
+    "body_region": "hip",
+    "priority_score": 8.7,
+    "late_fight_score": 8.7,
+    "notes": "Micro-support drill. Stop on quality drop."
+  },
+  {
+    "name": "Wall thoracic rotation sweep",
+    "category": "mobility",
+    "phases": [
+      "SPP",
+      "TAPER"
+    ],
+    "method": "rehab",
+    "movement": "mobility",
+    "type": "bilateral",
+    "tags": [
+      "t_spine_rotation",
+      "wall_supported",
+      "d1_ok",
+      "low_soreness",
+      "rehab_friendly"
+    ],
+    "equipment": [
+      "bodyweight"
+    ],
+    "phase_role": "late_strength_touch",
+    "subfamily": "mobility_balance",
+    "late_windows": [
+      "d21_to_d14",
+      "d13_to_d11",
+      "d10_to_d8",
+      "d7_to_d5",
+      "d4_to_d2",
+      "d1"
+    ],
+    "cut_buckets_allowed": [
+      "none",
+      "low",
+      "moderate",
+      "high"
+    ],
+    "movement_cost": "low",
+    "impact_cost": "low",
+    "eccentric_cost": "low",
+    "landing_cost": "none",
+    "cns_load": "low",
+    "soreness_risk": "low",
+    "low_impact": true,
+    "low_eccentric": true,
+    "cns_freshness": true,
+    "sport_specific": false,
+    "neural_primer": false,
+    "ballistic_low_volume": false,
+    "tactical_styles": [
+      "boxing"
+    ],
+    "goals": [
+      "readiness",
+      "mobility",
+      "balance"
+    ],
+    "weaknesses": [
+      "stiffness",
+      "stability"
+    ],
+    "body_region": "thoracic_spine",
+    "priority_score": 8.9,
+    "late_fight_score": 8.9,
+    "notes": "Micro-support drill. Stop on quality drop."
+  },
+  {
+    "name": "Standing scapular CARs",
+    "category": "mobility",
+    "phases": [
+      "SPP",
+      "TAPER"
+    ],
+    "method": "rehab",
+    "movement": "mobility",
+    "type": "bilateral",
+    "tags": [
+      "scap_control",
+      "d1_ok",
+      "low_soreness",
+      "rehab_friendly"
+    ],
+    "equipment": [
+      "bodyweight"
+    ],
+    "phase_role": "late_strength_touch",
+    "subfamily": "mobility_balance",
+    "late_windows": [
+      "d21_to_d14",
+      "d13_to_d11",
+      "d10_to_d8",
+      "d7_to_d5",
+      "d4_to_d2",
+      "d1"
+    ],
+    "cut_buckets_allowed": [
+      "none",
+      "low",
+      "moderate",
+      "high"
+    ],
+    "movement_cost": "low",
+    "impact_cost": "low",
+    "eccentric_cost": "low",
+    "landing_cost": "none",
+    "cns_load": "low",
+    "soreness_risk": "low",
+    "low_impact": true,
+    "low_eccentric": true,
+    "cns_freshness": true,
+    "sport_specific": false,
+    "neural_primer": false,
+    "ballistic_low_volume": false,
+    "tactical_styles": [
+      "boxing"
+    ],
+    "goals": [
+      "readiness",
+      "mobility",
+      "balance"
+    ],
+    "weaknesses": [
+      "stiffness",
+      "stability"
+    ],
+    "body_region": "shoulder_scapula",
+    "priority_score": 8.4,
+    "late_fight_score": 8.4,
+    "notes": "Micro-support drill. Stop on quality drop."
+  },
+  {
+    "name": "Serratus wall slide",
+    "category": "mobility",
+    "phases": [
+      "SPP",
+      "TAPER"
+    ],
+    "method": "rehab",
+    "movement": "mobility",
+    "type": "bilateral",
+    "tags": [
+      "serratus",
+      "wall_supported",
+      "d1_ok",
+      "shoulder_readiness",
+      "rehab_friendly"
+    ],
+    "equipment": [
+      "bodyweight"
+    ],
+    "phase_role": "late_strength_touch",
+    "subfamily": "mobility_balance",
+    "late_windows": [
+      "d21_to_d14",
+      "d13_to_d11",
+      "d10_to_d8",
+      "d7_to_d5",
+      "d4_to_d2",
+      "d1"
+    ],
+    "cut_buckets_allowed": [
+      "none",
+      "low",
+      "moderate",
+      "high"
+    ],
+    "movement_cost": "low",
+    "impact_cost": "low",
+    "eccentric_cost": "low",
+    "landing_cost": "none",
+    "cns_load": "low",
+    "soreness_risk": "low",
+    "low_impact": true,
+    "low_eccentric": true,
+    "cns_freshness": true,
+    "sport_specific": false,
+    "neural_primer": false,
+    "ballistic_low_volume": false,
+    "tactical_styles": [
+      "boxing"
+    ],
+    "goals": [
+      "readiness",
+      "mobility",
+      "balance"
+    ],
+    "weaknesses": [
+      "stiffness",
+      "stability"
+    ],
+    "body_region": "shoulder_scapula",
+    "priority_score": 8.6,
+    "late_fight_score": 8.6,
+    "notes": "Micro-support drill. Stop on quality drop."
+  },
+  {
+    "name": "Band face pull light",
+    "category": "mobility_balance_support",
+    "phases": [
+      "SPP",
+      "TAPER"
+    ],
+    "method": "rehab",
+    "movement": "mobility",
+    "type": "bilateral",
+    "tags": [
+      "scap_retraction",
+      "light_band",
+      "d1_ok",
+      "shoulder_readiness",
+      "low_soreness",
+      "rehab_friendly"
+    ],
+    "equipment": [
+      "bodyweight"
+    ],
+    "phase_role": "late_strength_touch",
+    "subfamily": "mobility_balance",
+    "late_windows": [
+      "d21_to_d14",
+      "d13_to_d11",
+      "d10_to_d8",
+      "d7_to_d5",
+      "d4_to_d2",
+      "d1"
+    ],
+    "cut_buckets_allowed": [
+      "none",
+      "low",
+      "moderate",
+      "high"
+    ],
+    "movement_cost": "low",
+    "impact_cost": "low",
+    "eccentric_cost": "low",
+    "landing_cost": "none",
+    "cns_load": "low",
+    "soreness_risk": "low",
+    "low_impact": true,
+    "low_eccentric": true,
+    "cns_freshness": true,
+    "sport_specific": false,
+    "neural_primer": false,
+    "ballistic_low_volume": false,
+    "tactical_styles": [
+      "boxing"
+    ],
+    "goals": [
+      "readiness",
+      "mobility",
+      "balance"
+    ],
+    "weaknesses": [
+      "stiffness",
+      "stability"
+    ],
+    "body_region": "shoulder_scapula",
+    "priority_score": 8.8,
+    "late_fight_score": 8.8,
+    "notes": "Micro-support drill. Stop on quality drop."
+  },
+  {
+    "name": "Split-stance ankle rocker",
+    "category": "mobility",
+    "phases": [
+      "SPP",
+      "TAPER"
+    ],
+    "method": "rehab",
+    "movement": "mobility",
+    "type": "bilateral",
+    "tags": [
+      "ankle_mobility",
+      "boxer_stance",
+      "low_soreness",
+      "taper_micro_support",
+      "no_d1",
+      "rehab_friendly"
+    ],
+    "equipment": [
+      "bodyweight"
+    ],
+    "phase_role": "late_strength_touch",
+    "subfamily": "mobility_balance",
+    "late_windows": [
+      "d21_to_d14",
+      "d13_to_d11",
+      "d10_to_d8",
+      "d7_to_d5",
+      "d4_to_d2"
+    ],
+    "cut_buckets_allowed": [
+      "none",
+      "low",
+      "moderate",
+      "high"
+    ],
+    "movement_cost": "low",
+    "impact_cost": "low",
+    "eccentric_cost": "low",
+    "landing_cost": "none",
+    "cns_load": "low",
+    "soreness_risk": "low",
+    "low_impact": true,
+    "low_eccentric": true,
+    "cns_freshness": true,
+    "sport_specific": false,
+    "neural_primer": false,
+    "ballistic_low_volume": false,
+    "tactical_styles": [
+      "boxing"
+    ],
+    "goals": [
+      "readiness",
+      "mobility",
+      "balance"
+    ],
+    "weaknesses": [
+      "stiffness",
+      "stability"
+    ],
+    "body_region": "ankle",
+    "priority_score": 8.8,
+    "late_fight_score": 8.8,
+    "notes": "Micro-support drill. Stop on quality drop."
+  },
+  {
+    "name": "Bent-knee soleus pulse at wall",
+    "category": "mobility",
+    "phases": [
+      "SPP",
+      "TAPER"
+    ],
+    "method": "rehab",
+    "movement": "mobility",
+    "type": "bilateral",
+    "tags": [
+      "soleus",
+      "ankle_mobility",
+      "familiarity_preferred",
+      "no_high_cut",
+      "no_d4_to_d1",
+      "low_soreness",
+      "rehab_friendly"
+    ],
+    "equipment": [
+      "bodyweight"
+    ],
+    "phase_role": "late_strength_touch",
+    "subfamily": "mobility_balance",
+    "late_windows": [
+      "d21_to_d14",
+      "d13_to_d11",
+      "d10_to_d8"
+    ],
+    "cut_buckets_allowed": [
+      "none",
+      "low",
+      "moderate",
+      "high"
+    ],
+    "movement_cost": "low",
+    "impact_cost": "low",
+    "eccentric_cost": "low",
+    "landing_cost": "none",
+    "cns_load": "low",
+    "soreness_risk": "low",
+    "low_impact": true,
+    "low_eccentric": true,
+    "cns_freshness": true,
+    "sport_specific": false,
+    "neural_primer": false,
+    "ballistic_low_volume": false,
+    "tactical_styles": [
+      "boxing"
+    ],
+    "goals": [
+      "readiness",
+      "mobility",
+      "balance"
+    ],
+    "weaknesses": [
+      "stiffness",
+      "stability"
+    ],
+    "body_region": "calf_ankle",
+    "priority_score": 8.4,
+    "late_fight_score": 8.4,
+    "notes": "Micro-support drill. Stop on quality drop."
+  },
+  {
+    "name": "90/90 hip switches",
+    "category": "mobility",
+    "phases": [
+      "SPP",
+      "TAPER"
+    ],
+    "method": "rehab",
+    "movement": "mobility",
+    "type": "bilateral",
+    "tags": [
+      "hip_rotation",
+      "no_d1",
+      "low_soreness",
+      "taper_micro_support",
+      "rehab_friendly"
+    ],
+    "equipment": [
+      "bodyweight"
+    ],
+    "phase_role": "late_strength_touch",
+    "subfamily": "mobility_balance",
+    "late_windows": [
+      "d21_to_d14",
+      "d13_to_d11",
+      "d10_to_d8",
+      "d7_to_d5"
+    ],
+    "cut_buckets_allowed": [
+      "none",
+      "low",
+      "moderate",
+      "high"
+    ],
+    "movement_cost": "low",
+    "impact_cost": "low",
+    "eccentric_cost": "low",
+    "landing_cost": "none",
+    "cns_load": "low",
+    "soreness_risk": "low",
+    "low_impact": true,
+    "low_eccentric": true,
+    "cns_freshness": true,
+    "sport_specific": false,
+    "neural_primer": false,
+    "ballistic_low_volume": false,
+    "tactical_styles": [
+      "boxing"
+    ],
+    "goals": [
+      "readiness",
+      "mobility",
+      "balance"
+    ],
+    "weaknesses": [
+      "stiffness",
+      "stability"
+    ],
+    "body_region": "hip",
+    "priority_score": 8.8,
+    "late_fight_score": 8.8,
+    "notes": "Micro-support drill. Stop on quality drop."
+  },
+  {
+    "name": "Half-kneeling hip flexor with glute set",
+    "category": "mobility",
+    "phases": [
+      "SPP",
+      "TAPER"
+    ],
+    "method": "rehab",
+    "movement": "mobility",
+    "type": "bilateral",
+    "tags": [
+      "hip_flexor",
+      "glute_set",
+      "no_d1",
+      "low_soreness",
+      "taper_micro_support",
+      "rehab_friendly"
+    ],
+    "equipment": [
+      "bodyweight"
+    ],
+    "phase_role": "late_strength_touch",
+    "subfamily": "mobility_balance",
+    "late_windows": [
+      "d21_to_d14",
+      "d13_to_d11",
+      "d10_to_d8",
+      "d7_to_d5",
+      "d4_to_d2"
+    ],
+    "cut_buckets_allowed": [
+      "none",
+      "low",
+      "moderate",
+      "high"
+    ],
+    "movement_cost": "low",
+    "impact_cost": "low",
+    "eccentric_cost": "low",
+    "landing_cost": "none",
+    "cns_load": "low",
+    "soreness_risk": "low",
+    "low_impact": true,
+    "low_eccentric": true,
+    "cns_freshness": true,
+    "sport_specific": false,
+    "neural_primer": false,
+    "ballistic_low_volume": false,
+    "tactical_styles": [
+      "boxing"
+    ],
+    "goals": [
+      "readiness",
+      "mobility",
+      "balance"
+    ],
+    "weaknesses": [
+      "stiffness",
+      "stability"
+    ],
+    "body_region": "hip",
+    "priority_score": 9.0,
+    "late_fight_score": 9.0,
+    "notes": "Micro-support drill. Stop on quality drop."
+  },
+  {
+    "name": "Adductor rock-back",
+    "category": "mobility",
+    "phases": [
+      "SPP",
+      "TAPER"
+    ],
+    "method": "rehab",
+    "movement": "mobility",
+    "type": "bilateral",
+    "tags": [
+      "adductor",
+      "familiarity_preferred",
+      "no_d4_to_d1",
+      "low_soreness",
+      "rehab_friendly"
+    ],
+    "equipment": [
+      "bodyweight"
+    ],
+    "phase_role": "late_strength_touch",
+    "subfamily": "mobility_balance",
+    "late_windows": [
+      "d21_to_d14",
+      "d13_to_d11",
+      "d10_to_d8"
+    ],
+    "cut_buckets_allowed": [
+      "none",
+      "low",
+      "moderate",
+      "high"
+    ],
+    "movement_cost": "low",
+    "impact_cost": "low",
+    "eccentric_cost": "low",
+    "landing_cost": "none",
+    "cns_load": "low",
+    "soreness_risk": "low",
+    "low_impact": true,
+    "low_eccentric": true,
+    "cns_freshness": true,
+    "sport_specific": false,
+    "neural_primer": false,
+    "ballistic_low_volume": false,
+    "tactical_styles": [
+      "boxing"
+    ],
+    "goals": [
+      "readiness",
+      "mobility",
+      "balance"
+    ],
+    "weaknesses": [
+      "stiffness",
+      "stability"
+    ],
+    "body_region": "groin_adductor",
+    "priority_score": 8.3,
+    "late_fight_score": 8.3,
+    "notes": "Micro-support drill. Stop on quality drop."
+  },
+  {
+    "name": "Standing hip CAR lite",
+    "category": "mobility",
+    "phases": [
+      "SPP",
+      "TAPER"
+    ],
+    "method": "rehab",
+    "movement": "mobility",
+    "type": "bilateral",
+    "tags": [
+      "hip_control",
+      "familiarity_required",
+      "no_d4_to_d1",
+      "rehab_friendly"
+    ],
+    "equipment": [
+      "bodyweight"
+    ],
+    "phase_role": "late_strength_touch",
+    "subfamily": "mobility_balance",
+    "late_windows": [
+      "d21_to_d14",
+      "d13_to_d11",
+      "d10_to_d8",
+      "d7_to_d5"
+    ],
+    "cut_buckets_allowed": [
+      "none",
+      "low",
+      "moderate",
+      "high"
+    ],
+    "movement_cost": "low",
+    "impact_cost": "low",
+    "eccentric_cost": "low",
+    "landing_cost": "none",
+    "cns_load": "low",
+    "soreness_risk": "low",
+    "low_impact": true,
+    "low_eccentric": true,
+    "cns_freshness": true,
+    "sport_specific": false,
+    "neural_primer": false,
+    "ballistic_low_volume": false,
+    "tactical_styles": [
+      "boxing"
+    ],
+    "goals": [
+      "readiness",
+      "mobility",
+      "balance"
+    ],
+    "weaknesses": [
+      "stiffness",
+      "stability"
+    ],
+    "body_region": "hip",
+    "priority_score": 7.8,
+    "late_fight_score": 7.8,
+    "notes": "Micro-support drill. Stop on quality drop."
+  },
+  {
+    "name": "Supported hip airplane micro-range",
+    "category": "balance",
+    "phases": [
+      "SPP",
+      "TAPER"
+    ],
+    "method": "rehab",
+    "movement": "mobility",
+    "type": "bilateral",
+    "tags": [
+      "balance_challenge",
+      "familiarity_required",
+      "no_d7_to_d1",
+      "rehab_friendly"
+    ],
+    "equipment": [
+      "bodyweight"
+    ],
+    "phase_role": "late_strength_touch",
+    "subfamily": "mobility_balance",
+    "late_windows": [
+      "d21_to_d14",
+      "d13_to_d11",
+      "d10_to_d8"
+    ],
+    "cut_buckets_allowed": [
+      "none",
+      "low",
+      "moderate",
+      "high"
+    ],
+    "movement_cost": "low",
+    "impact_cost": "low",
+    "eccentric_cost": "low",
+    "landing_cost": "none",
+    "cns_load": "low",
+    "soreness_risk": "low",
+    "low_impact": true,
+    "low_eccentric": true,
+    "cns_freshness": true,
+    "sport_specific": false,
+    "neural_primer": false,
+    "ballistic_low_volume": false,
+    "tactical_styles": [
+      "boxing"
+    ],
+    "goals": [
+      "readiness",
+      "mobility",
+      "balance"
+    ],
+    "weaknesses": [
+      "stiffness",
+      "stability"
+    ],
+    "body_region": "hip",
+    "priority_score": 7.2,
+    "late_fight_score": 7.2,
+    "notes": "Micro-support drill. Stop on quality drop."
+  },
+  {
+    "name": "Open-book reset",
+    "category": "mobility",
+    "phases": [
+      "SPP",
+      "TAPER"
+    ],
+    "method": "rehab",
+    "movement": "mobility",
+    "type": "bilateral",
+    "tags": [
+      "t_spine_rotation",
+      "no_d1",
+      "low_soreness",
+      "rehab_friendly"
+    ],
+    "equipment": [
+      "bodyweight"
+    ],
+    "phase_role": "late_strength_touch",
+    "subfamily": "mobility_balance",
+    "late_windows": [
+      "d21_to_d14",
+      "d13_to_d11",
+      "d10_to_d8",
+      "d7_to_d5",
+      "d4_to_d2"
+    ],
+    "cut_buckets_allowed": [
+      "none",
+      "low",
+      "moderate",
+      "high"
+    ],
+    "movement_cost": "low",
+    "impact_cost": "low",
+    "eccentric_cost": "low",
+    "landing_cost": "none",
+    "cns_load": "low",
+    "soreness_risk": "low",
+    "low_impact": true,
+    "low_eccentric": true,
+    "cns_freshness": true,
+    "sport_specific": false,
+    "neural_primer": false,
+    "ballistic_low_volume": false,
+    "tactical_styles": [
+      "boxing"
+    ],
+    "goals": [
+      "readiness",
+      "mobility",
+      "balance"
+    ],
+    "weaknesses": [
+      "stiffness",
+      "stability"
+    ],
+    "body_region": "thoracic_spine",
+    "priority_score": 8.6,
+    "late_fight_score": 8.6,
+    "notes": "Micro-support drill. Stop on quality drop."
+  },
+  {
+    "name": "Quadruped thread-the-needle",
+    "category": "mobility",
+    "phases": [
+      "SPP",
+      "TAPER"
+    ],
+    "method": "rehab",
+    "movement": "mobility",
+    "type": "bilateral",
+    "tags": [
+      "t_spine_rotation",
+      "no_d4_to_d1",
+      "rehab_friendly"
+    ],
+    "equipment": [
+      "bodyweight"
+    ],
+    "phase_role": "late_strength_touch",
+    "subfamily": "mobility_balance",
+    "late_windows": [
+      "d21_to_d14",
+      "d13_to_d11",
+      "d10_to_d8",
+      "d7_to_d5"
+    ],
+    "cut_buckets_allowed": [
+      "none",
+      "low",
+      "moderate",
+      "high"
+    ],
+    "movement_cost": "low",
+    "impact_cost": "low",
+    "eccentric_cost": "low",
+    "landing_cost": "none",
+    "cns_load": "low",
+    "soreness_risk": "low",
+    "low_impact": true,
+    "low_eccentric": true,
+    "cns_freshness": true,
+    "sport_specific": false,
+    "neural_primer": false,
+    "ballistic_low_volume": false,
+    "tactical_styles": [
+      "boxing"
+    ],
+    "goals": [
+      "readiness",
+      "mobility",
+      "balance"
+    ],
+    "weaknesses": [
+      "stiffness",
+      "stability"
+    ],
+    "body_region": "thoracic_spine",
+    "priority_score": 8.3,
+    "late_fight_score": 8.3,
+    "notes": "Micro-support drill. Stop on quality drop."
+  },
+  {
+    "name": "Tall-kneeling thoracic rotation reach",
+    "category": "mobility",
+    "phases": [
+      "SPP",
+      "TAPER"
+    ],
+    "method": "rehab",
+    "movement": "mobility",
+    "type": "bilateral",
+    "tags": [
+      "t_spine_rotation",
+      "no_d1",
+      "rehab_friendly"
+    ],
+    "equipment": [
+      "bodyweight"
+    ],
+    "phase_role": "late_strength_touch",
+    "subfamily": "mobility_balance",
+    "late_windows": [
+      "d21_to_d14",
+      "d13_to_d11",
+      "d10_to_d8",
+      "d7_to_d5",
+      "d4_to_d2"
+    ],
+    "cut_buckets_allowed": [
+      "none",
+      "low",
+      "moderate",
+      "high"
+    ],
+    "movement_cost": "low",
+    "impact_cost": "low",
+    "eccentric_cost": "low",
+    "landing_cost": "none",
+    "cns_load": "low",
+    "soreness_risk": "low",
+    "low_impact": true,
+    "low_eccentric": true,
+    "cns_freshness": true,
+    "sport_specific": false,
+    "neural_primer": false,
+    "ballistic_low_volume": false,
+    "tactical_styles": [
+      "boxing"
+    ],
+    "goals": [
+      "readiness",
+      "mobility",
+      "balance"
+    ],
+    "weaknesses": [
+      "stiffness",
+      "stability"
+    ],
+    "body_region": "thoracic_spine",
+    "priority_score": 8.4,
+    "late_fight_score": 8.4,
+    "notes": "Micro-support drill. Stop on quality drop."
   }
 ]
