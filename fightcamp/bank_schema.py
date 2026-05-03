@@ -106,10 +106,10 @@ def validate_training_item(
     if source_key.endswith("exercise_bank.json"):
         for key, default in _EXERCISE_SCHEMA_DEFAULTS.items():
             if key not in item:
-                item[key] = default
+                item[key] = default.copy() if isinstance(default, list) else default
     elif source_key.endswith("conditioning_bank.json"):
         for key, default in _CONDITIONING_SCHEMA_DEFAULTS.items():
             if key not in item:
-                item[key] = default
+                item[key] = default.copy() if isinstance(default, list) else default
 
     return item
