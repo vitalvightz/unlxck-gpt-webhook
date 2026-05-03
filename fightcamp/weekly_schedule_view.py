@@ -66,12 +66,23 @@ def _coerce_effective_load(entry: dict[str, Any]) -> str:
     effective_load = str(entry.get("effective_load") or "").strip()
     if effective_load in _EFFECTIVE_LOADS:
         return effective_load
+
     status = str(entry.get("status") or "").strip()
+
+    if status == "hard_as_planned":
+        return "hard"
     if status == "convert_to_technical_suggested":
         return "technical"
     if status == "deload_suggested":
         return "reduced"
-    return "hard"
+    if status in {"blocked", "suppressed", "none", "no_hard_sparring_day"}:
+        return "none"
+
+    reason_codes = {str(code).strip() for code in _clean_list(entry.get("reason_codes"))}
+    if "d17_hard_sparring_ban" in reason_codes or "final_week_sparring_cap" in reason_codes:
+        return "technical"
+
+    return "none"
 
 
 def _fill_hard_day(day: dict[str, Any], entry: dict[str, Any]) -> None:
