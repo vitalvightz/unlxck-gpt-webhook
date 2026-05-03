@@ -2055,7 +2055,7 @@ def generate_conditioning_block(flags):
             "reason_codes": list(late_eval["reason_codes"])
             + (
                 ["preferred_exercise_name_match"]
-                if preferred_exercise_names and drill_name in preferred_exercise_names
+                if preferred_exercise_names and d.get("name") in preferred_exercise_names
                 else []
             ),
             "late_window_adjustment": late_eval["adjustment"],
