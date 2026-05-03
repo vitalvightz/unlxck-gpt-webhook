@@ -201,5 +201,8 @@ def extract_weekly_schedule(planning_brief: Any, *, week_index: int = 0) -> dict
         "week_index": week_index,
         "week_count": len(weeks),
         "phase": str(week.get("phase") or "").strip(),
+        "projected_days_until_fight_start": week.get("projected_days_until_fight_start"),
+        "projected_days_until_fight_end": week.get("projected_days_until_fight_end"),
+        "day_label": str(week.get("day_label") or "").strip(),
         "days": days,
     }

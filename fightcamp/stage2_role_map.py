@@ -1291,6 +1291,12 @@ def _apply_high_fatigue_week_compression(
     # Separate sparring and non-sparring roles
     spar_roles = [r for r in session_roles if r.get("role_key") == "hard_sparring_day"]
     non_spar_roles = [r for r in session_roles if r.get("role_key") != "hard_sparring_day"]
+    conditioning_roles = [r for r in non_spar_roles if r.get("category") == "conditioning"]
+
+    # Guardrail: if conditioning is a goal/weakness, keep space for it inside non-spar allocation.
+    if conditioning_roles and _conditioning_limiter_signal(athlete_model):
+        protected_conditioning_slots = 2 if sessions_per_week >= 5 else 1
+        non_spar_target = max(non_spar_target, min(non_spar_cap, protected_conditioning_slots))
 
     current_non_spar_count = len(non_spar_roles)
     if current_non_spar_count <= non_spar_target:
@@ -1537,6 +1543,9 @@ def _build_weekly_role_map(
             session_index += 1
 
         conditioning_count = max(0, int(session_counts.get("conditioning", 0)))
+        if conditioning_count == 0 and _conditioning_limiter_signal(athlete_model) and _can_keep_low_noise_conditioning(athlete_model):
+            conditioning_count = 1
+            conditioning_sequence = ["aerobic"] + [s for s in conditioning_sequence if s != "aerobic"]
         for idx in range(conditioning_count):
             system = conditioning_sequence[idx] if idx < len(conditioning_sequence) else conditioning_sequence[-1]
             role_key = _conditioning_role_key(week_entry.get("phase", ""), system, limiter_key)
