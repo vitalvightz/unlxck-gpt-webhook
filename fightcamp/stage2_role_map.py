@@ -2079,7 +2079,7 @@ def _build_weekly_role_map(
         d_day_by_weekday = {
             str(day.get("weekday") or "").strip().lower(): int(day.get("d_day"))
             for day in calendar_days
-            if str(day.get("weekday") or "").strip() and str(day.get("d_day") or "").strip().isdigit()
+            if str(day.get("weekday") or "").strip() and isinstance(day.get("d_day"), int)
         }
         for role in session_roles:
             weekday = str(role.get("scheduled_day_hint") or "").strip().lower()
