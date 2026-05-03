@@ -533,6 +533,8 @@ def _evaluate_strength_late_window(
     if cut_bucket in LATE_STRENGTH_HIGH_CUT_BUCKETS and tags & {
         "single_leg", "no_high_cut", "neck_optional", "vestibular_sensitive", "balance_challenge"
     }:
+        adjustment -= 0.45 * (1.0 + cut_multiplier)
+        reason_codes.append("late_strength_penalty_high_cut_sensitive_tags")
 
     if late_windows:
         if window in late_windows:
