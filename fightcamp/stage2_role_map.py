@@ -1609,9 +1609,16 @@ def _build_weekly_role_map(
         running_days += span
         projected_days_until_fight_start[idx] = running_days
         projected_days_until_fight_end[idx] = max(0, running_days - span + 1) if span > 0 else 0
-    fight_weekday = compute_fight_weekday(athlete_model)
+        fight_weekday = compute_fight_weekday(athlete_model)
 
     for week_idx, week_entry in enumerate(progression_weeks):
+        calendar_days = build_calendar_days(
+            fight_weekday=fight_weekday,
+            projected_days_until_fight_end=projected_days_until_fight_end[week_idx],
+            span_days=week_span_days[week_idx],
+        )
+        week_entry["calendar_days"] = calendar_days
+
         session_counts = dict(week_entry.get("session_counts") or {})
         conditioning_sequence = list(week_entry.get("conditioning_sequence", [])) or ["aerobic", "glycolytic", "alactic"]
         sport_key = _athlete_sport_key(athlete_model)
@@ -1801,11 +1808,13 @@ def _build_weekly_role_map(
             hard_sparring_plan=hard_sparring_plan,
         )
 
-        calendar_days = build_calendar_days(
-            fight_weekday=fight_weekday,
-            projected_days_until_fight_end=projected_days_until_fight_end[week_idx],
-            span_days=week_span_days[week_idx],
+        session_roles = _upgrade_recovery_days_to_gas_tank(
+            week_entry,
+            session_roles,
+            athlete_model,
         )
+
+        calendar_days = list(week_entry.get("calendar_days") or [])
         countdown_range = (
             [calendar_days[0]["d_day"], calendar_days[-1]["d_day"]] if calendar_days else []
         )
