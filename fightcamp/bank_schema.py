@@ -17,6 +17,30 @@ KNOWN_SYSTEMS = {"aerobic", "glycolytic", "alactic"}
 DEFAULT_PHASES = list(PHASE_VALUES)
 _SCHEMA_WARNINGS_LOGGED: set[tuple[str, str, str]] = set()
 
+_EXERCISE_SCHEMA_DEFAULTS = {
+    "late_windows": [],
+    "impact_cost": "",
+    "movement_cost": "",
+    "cns_load": "",
+    "eccentric_cost": "",
+    "landing_cost": "",
+    "soreness_risk": "",
+    "phase_role": "",
+    "sport_specific": False,
+}
+
+_CONDITIONING_SCHEMA_DEFAULTS = {
+    "late_windows": [],
+    "work_sec": None,
+    "rest_sec": None,
+    "rounds": None,
+    "total_minutes": None,
+    "rpe": None,
+    "impact_cost": "",
+    "lactate_load": "",
+    "movement_cost": "",
+}
+
 logger = logging.getLogger(__name__)
 
 
@@ -77,5 +101,15 @@ def validate_training_item(
                 f"[bank schema] Missing required 'system' for '{name}' in {source}.",
             )
             raise ValueError(f"Missing required 'system' for '{name}' in {source}.")
+
+    source_key = str(source).lower()
+    if source_key.endswith("exercise_bank.json"):
+        for key, default in _EXERCISE_SCHEMA_DEFAULTS.items():
+            if key not in item:
+                item[key] = default
+    elif source_key.endswith("conditioning_bank.json"):
+        for key, default in _CONDITIONING_SCHEMA_DEFAULTS.items():
+            if key not in item:
+                item[key] = default
 
     return item
