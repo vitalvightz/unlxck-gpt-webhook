@@ -818,9 +818,11 @@
       "mech_systemic_fatigue"
     ],
     "late_windows": [
+      "d21_to_d14",
       "d13_to_d8",
       "d7",
-      "d6_to_d5"
+      "d6_to_d5",
+      "d4_to_d2"
     ]
   },
   {
@@ -4437,7 +4439,8 @@
     "name": "Tempo Shadowboxing (Aerobic)",
     "equipment": [],
     "phases": [
-      "SPP"
+      "SPP",
+      "TAPER"
     ],
     "system": "aerobic",
     "modality": "shadowbox",
@@ -4463,6 +4466,13 @@
       "mech_systemic_fatigue",
       "mech_trunk_rotation",
       "mech_upper_press"
+    ],
+    "late_windows": [
+      "d21_to_d14",
+      "d13_to_d8",
+      "d7",
+      "d6_to_d5",
+      "d4_to_d2"
     ]
   },
   {
@@ -4543,7 +4553,8 @@
       "treadmill"
     ],
     "phases": [
-      "SPP"
+      "SPP",
+      "TAPER"
     ],
     "system": "aerobic",
     "modality": "walk",
@@ -4566,6 +4577,13 @@
     "mechanical_risk_tags": [
       "mech_systemic_fatigue",
       "mech_trunk_stability"
+    ],
+    "late_windows": [
+      "d21_to_d14",
+      "d13_to_d8",
+      "d7",
+      "d6_to_d5",
+      "d4_to_d2"
     ]
   },
   {
@@ -4908,7 +4926,8 @@
       "pool"
     ],
     "phases": [
-      "SPP"
+      "SPP",
+      "TAPER"
     ],
     "system": "aerobic",
     "modality": "run",
@@ -4929,6 +4948,13 @@
     "mechanical_risk_tags": [
       "mech_lower_lunge",
       "mech_systemic_fatigue"
+    ],
+    "late_windows": [
+      "d21_to_d14",
+      "d13_to_d8",
+      "d7",
+      "d6_to_d5",
+      "d4_to_d2"
     ]
   },
   {
@@ -6263,7 +6289,8 @@
       "assault_bike"
     ],
     "phases": [
-      "GPP"
+      "GPP",
+      "TAPER"
     ],
     "system": "aerobic",
     "modality": "bike",
@@ -6285,6 +6312,13 @@
     "mechanical_risk_tags": [
       "mech_lower_hip_hinge",
       "mech_systemic_fatigue"
+    ],
+    "late_windows": [
+      "d21_to_d14",
+      "d13_to_d8",
+      "d7",
+      "d6_to_d5",
+      "d4_to_d2"
     ]
   },
   {
@@ -6615,9 +6649,11 @@
       "mech_lower_hip_hinge"
     ],
     "late_windows": [
+      "d21_to_d14",
       "d13_to_d8",
       "d7",
-      "d6_to_d5"
+      "d6_to_d5",
+      "d4_to_d2"
     ]
   },
   {
@@ -7075,7 +7111,8 @@
     "name": "Easy Continuous Swimming",
     "equipment": [],
     "phases": [
-      "GPP"
+      "GPP",
+      "TAPER"
     ],
     "system": "aerobic",
     "modality": "swim",
@@ -7095,6 +7132,13 @@
     "movement_cost": "low",
     "mechanical_risk_tags": [
       "mech_systemic_fatigue"
+    ],
+    "late_windows": [
+      "d21_to_d14",
+      "d13_to_d8",
+      "d7",
+      "d6_to_d5",
+      "d4_to_d2"
     ]
   },
   {
@@ -8260,6 +8304,7 @@
     ],
     "notes": "Breathing-led reset with thoracic and ankle flow for late-fight freshness.",
     "late_windows": [
+      "d21_to_d14",
       "d13_to_d8",
       "d7",
       "d6_to_d5",
@@ -8386,6 +8431,7 @@
       "mech_upper_press"
     ],
     "late_windows": [
+      "d21_to_d14",
       "d13_to_d8",
       "d7",
       "d6_to_d5",
@@ -8451,6 +8497,431 @@
     "late_windows": [
       "d21_to_d14",
       "d13_to_d8"
+    ]
+  },
+  {
+    "name": "Assault Bike Easy Gas Tank Ride",
+    "equipment": [
+      "assault_bike"
+    ],
+    "phases": [
+      "GPP",
+      "SPP",
+      "TAPER"
+    ],
+    "late_windows": [
+      "d21_to_d14",
+      "d13_to_d8",
+      "d7",
+      "d6_to_d5",
+      "d4_to_d2"
+    ],
+    "system": "aerobic",
+    "modality": "bike",
+    "duration": "10-25min easy",
+    "intensity": "zone 1-2",
+    "tags": [
+      "aerobic",
+      "gas_tank",
+      "conditioning",
+      "endurance",
+      "work_capacity",
+      "low_impact",
+      "recovery",
+      "low_cns",
+      "cns_freshness",
+      "parasympathetic",
+      "brawler",
+      "pressure_fighter",
+      "clinch_fighter",
+      "distance_striker",
+      "counter_striker",
+      "scrambler",
+      "kicker",
+      "submission_hunter",
+      "boxing",
+      "boxer",
+      "mma",
+      "kickboxing",
+      "muay_thai",
+      "grappler",
+      "wrestler",
+      "mech_lower_hip_hinge",
+      "mech_systemic_fatigue"
+    ],
+    "notes": "Easy arm-leg rhythm. No sprinting, no EMOM, no hard calories. Best low-impact gas-tank option when the athlete needs conditioning but must protect joints and freshness. Can be used before or after hard sparring as a recovery flush.",
+    "equipment_note": "Requires: Assault Bike",
+    "total_minutes": 20,
+    "rpe": 4,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_lower_hip_hinge",
+      "mech_systemic_fatigue"
+    ]
+  },
+  {
+    "name": "Rower Nasal Aerobic Base",
+    "equipment": [
+      "rower"
+    ],
+    "phases": [
+      "GPP",
+      "SPP",
+      "TAPER"
+    ],
+    "late_windows": [
+      "d21_to_d14",
+      "d13_to_d8",
+      "d7",
+      "d6_to_d5",
+      "d4_to_d2"
+    ],
+    "system": "aerobic",
+    "modality": "row",
+    "duration": "12-25min continuous",
+    "intensity": "zone 2",
+    "tags": [
+      "aerobic",
+      "gas_tank",
+      "conditioning",
+      "endurance",
+      "work_capacity",
+      "low_impact",
+      "recovery",
+      "posterior_chain",
+      "upper_body",
+      "low_cns",
+      "cns_freshness",
+      "brawler",
+      "pressure_fighter",
+      "clinch_fighter",
+      "counter_striker",
+      "distance_striker",
+      "scrambler",
+      "submission_hunter",
+      "boxing",
+      "boxer",
+      "mma",
+      "grappler",
+      "wrestler",
+      "kickboxing",
+      "muay_thai",
+      "mech_upper_pull",
+      "mech_lower_hip_hinge",
+      "mech_trunk_stability"
+    ],
+    "notes": "Smooth nasal rowing with controlled stroke rate. No sprint pulls. Strong aerobic-base option when running impact is not suitable. Can sit before or after hard sparring if kept easy.",
+    "equipment_note": "Requires: Rower",
+    "total_minutes": 20,
+    "rpe": 4,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_upper_pull",
+      "mech_lower_hip_hinge",
+      "mech_trunk_stability"
+    ]
+  },
+  {
+    "name": "Nasal Shadowboxing Flow (Gas Tank)",
+    "equipment": [],
+    "phases": [
+      "GPP",
+      "SPP",
+      "TAPER"
+    ],
+    "late_windows": [
+      "d21_to_d14",
+      "d13_to_d8",
+      "d7",
+      "d6_to_d5",
+      "d4_to_d2"
+    ],
+    "system": "aerobic",
+    "modality": "shadowbox",
+    "duration": "12-20min continuous",
+    "intensity": "low",
+    "tags": [
+      "aerobic",
+      "gas_tank",
+      "conditioning",
+      "endurance",
+      "work_capacity",
+      "recovery",
+      "skill",
+      "low_impact",
+      "low_cns",
+      "parasympathetic",
+      "cns_freshness",
+      "brawler",
+      "pressure_fighter",
+      "distance_striker",
+      "counter_striker",
+      "kicker",
+      "scrambler",
+      "boxing",
+      "boxer",
+      "mma",
+      "kickboxing",
+      "muay_thai",
+      "karate",
+      "striking",
+      "footwork",
+      "rhythm",
+      "skill_refinement",
+      "mech_upper_press",
+      "mech_trunk_rotation"
+    ],
+    "notes": "Nasal breathing only. Light rhythm, footwork, relaxed punches, and easy movement. No power shots, no hard pivots, no fatigue chase. Best no-equipment gas-tank fallback.",
+    "total_minutes": 20,
+    "rpe": 4,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_upper_press",
+      "mech_trunk_rotation"
+    ]
+  },
+  {
+    "name": "Pressure Step Flow",
+    "equipment": [],
+    "phases": [
+      "GPP",
+      "SPP",
+      "TAPER"
+    ],
+    "late_windows": [
+      "d21_to_d14",
+      "d13_to_d8",
+      "d7",
+      "d6_to_d5",
+      "d4_to_d2"
+    ],
+    "system": "aerobic",
+    "modality": "footwork",
+    "duration": "10-12min continuous easy pressure-step flow",
+    "intensity": "low",
+    "tags": [
+      "aerobic",
+      "gas_tank",
+      "conditioning",
+      "footwork",
+      "skill",
+      "low_impact",
+      "low_cns",
+      "pressure_fighter",
+      "brawler",
+      "boxing",
+      "boxer",
+      "kickboxing",
+      "striking",
+      "mech_lower_lunge",
+      "mech_trunk_rotation"
+    ],
+    "notes": "Walk opponent down at 30-40% effort. Step, feint, angle, reset. No bouncing, no hard pivots, no fatigue chase.",
+    "total_minutes": 12,
+    "rpe": 4,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_lower_lunge",
+      "mech_trunk_rotation"
+    ]
+  },
+  {
+    "name": "Defensive Rhythm Flow",
+    "equipment": [],
+    "phases": [
+      "GPP",
+      "SPP",
+      "TAPER"
+    ],
+    "late_windows": [
+      "d21_to_d14",
+      "d13_to_d8",
+      "d7",
+      "d6_to_d5",
+      "d4_to_d2"
+    ],
+    "system": "aerobic",
+    "modality": "defense",
+    "duration": "10-15min continuous",
+    "intensity": "low",
+    "tags": [
+      "aerobic",
+      "gas_tank",
+      "conditioning",
+      "defense",
+      "footwork",
+      "skill",
+      "low_impact",
+      "low_cns",
+      "boxing",
+      "boxer",
+      "counter_striker",
+      "distance_striker",
+      "striking",
+      "mech_reactive",
+      "mech_trunk_rotation"
+    ],
+    "notes": "Light slips, rolls, parries, steps, and exits. Conversational pace only. No sharp cutting or high-output defensive bursts.",
+    "total_minutes": 15,
+    "rpe": 4,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_reactive",
+      "mech_trunk_rotation"
+    ]
+  },
+  {
+    "name": "Stance Switch Walk Flow",
+    "equipment": [],
+    "phases": [
+      "GPP",
+      "SPP",
+      "TAPER"
+    ],
+    "late_windows": [
+      "d21_to_d14",
+      "d13_to_d8",
+      "d7",
+      "d6_to_d5",
+      "d4_to_d2"
+    ],
+    "system": "aerobic",
+    "modality": "footwork",
+    "duration": "10-15min continuous",
+    "intensity": "low",
+    "tags": [
+      "aerobic",
+      "gas_tank",
+      "conditioning",
+      "coordination",
+      "footwork",
+      "skill",
+      "low_impact",
+      "low_cns",
+      "boxing",
+      "boxer",
+      "mma",
+      "kickboxing",
+      "hybrid",
+      "distance_striker",
+      "counter_striker",
+      "mech_lower_lunge",
+      "mech_trunk_stability"
+    ],
+    "notes": "Slow stance switches, step-throughs, and angle exits. No explosive push-offs, no bouncing, no hard pivots.",
+    "total_minutes": 15,
+    "rpe": 4,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_lower_lunge",
+      "mech_trunk_stability"
+    ]
+  },
+  {
+    "name": "Nasal Walk with Boxing Posture",
+    "equipment": [],
+    "phases": [
+      "GPP",
+      "SPP",
+      "TAPER"
+    ],
+    "late_windows": [
+      "d21_to_d14",
+      "d13_to_d8",
+      "d7",
+      "d6_to_d5",
+      "d4_to_d2"
+    ],
+    "system": "aerobic",
+    "modality": "walk",
+    "duration": "20-35min continuous",
+    "intensity": "zone 1-2",
+    "tags": [
+      "aerobic",
+      "gas_tank",
+      "conditioning",
+      "endurance",
+      "recovery",
+      "parasympathetic",
+      "low_impact",
+      "low_cns",
+      "cns_freshness",
+      "boxing",
+      "boxer",
+      "mech_systemic_fatigue"
+    ],
+    "notes": "Nasal-only walk. Keep shoulders relaxed and posture tall. Best after hard sparring or on recovery days when the athlete needs aerobic work without training noise.",
+    "total_minutes": 30,
+    "rpe": 3,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_systemic_fatigue"
+    ]
+  },
+  {
+    "name": "Partner Mirror Footwork Flow",
+    "equipment": [
+      "partner"
+    ],
+    "phases": [
+      "GPP",
+      "SPP",
+      "TAPER"
+    ],
+    "late_windows": [
+      "d21_to_d14",
+      "d13_to_d8",
+      "d7",
+      "d6_to_d5",
+      "d4_to_d2"
+    ],
+    "system": "aerobic",
+    "modality": "partner",
+    "duration": "8-10min continuous low-speed mirror flow",
+    "intensity": "low",
+    "tags": [
+      "aerobic",
+      "gas_tank",
+      "conditioning",
+      "partner",
+      "coordination",
+      "footwork",
+      "reaction",
+      "skill",
+      "low_impact",
+      "low_cns",
+      "boxing",
+      "boxer",
+      "mma",
+      "counter_striker",
+      "distance_striker",
+      "scrambler",
+      "mech_reactive",
+      "mech_lower_lunge"
+    ],
+    "notes": "Mirror partner movement at 30-40% speed. No chasing, no hard cuts, no wrestling, no competitive intensity.",
+    "total_minutes": 10,
+    "rpe": 4,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_reactive",
+      "mech_lower_lunge"
     ]
   }
 ]
