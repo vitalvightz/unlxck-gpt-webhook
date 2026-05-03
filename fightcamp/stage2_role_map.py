@@ -366,6 +366,74 @@ def _upgrade_recovery_days_to_gas_tank(
     return updated
 
 
+def _upgrade_unused_days_to_gas_tank(
+    week_entry: dict,
+    athlete_model: dict,
+) -> None:
+    """
+    If gas tank is a goal/weakness, turn eligible intentionally unused
+    recovery/off days into low-aerobic gas-tank day suggestions.
+
+    These are not hard sessions. They are RPE 3-4 aerobic flush/base touches.
+    """
+    if not _has_gas_tank_signal(athlete_model):
+        return
+
+    updated_days: list[dict] = []
+
+    for day_entry in week_entry.get("intentionally_unused_days") or []:
+        day = str(day_entry.get("day") or "").strip()
+        role = str(day_entry.get("role") or "").strip()
+
+        if not day:
+            updated_days.append(day_entry)
+            continue
+
+        d_day = None
+        for calendar_day in week_entry.get("calendar_days") or []:
+            if str(calendar_day.get("weekday") or "").strip().lower() == day:
+                try:
+                    d_day = int(calendar_day.get("d_day"))
+                except (TypeError, ValueError):
+                    d_day = None
+                break
+
+        # Do not add app gas-tank work on D-1 or D-0.
+        if d_day is not None and d_day <= 1:
+            updated_days.append(day_entry)
+            continue
+
+        if role not in {"recovery_only_day", "off_day"}:
+            updated_days.append(day_entry)
+            continue
+
+        converted = dict(day_entry)
+        converted.update(
+            {
+                "role": "low_aerobic_gas_tank_day",
+                "category": "conditioning",
+                "preferred_system": "aerobic",
+                "preferred_pool": "low_aerobic_gas_tank_pool",
+                "gas_tank_recovery_touch": True,
+                "allowed_on_recovery_day": True,
+                "recovery_compatible": True,
+                "selection_rule": (
+                    "Use only low-aerobic gas-tank work here: RPE <= 4, "
+                    "low impact, low lactate, low CNS. Suitable options include "
+                    "easy assault bike, easy rower, nasal shadowboxing flow, "
+                    "or nasal walk flow."
+                ),
+                "reason": (
+                    "Gas tank is a profile goal/weakness, so this unused recovery/off "
+                    "day can become a low-aerobic gas-tank touch without becoming hard conditioning."
+                ),
+            }
+        )
+        updated_days.append(converted)
+
+    week_entry["intentionally_unused_days"] = updated_days
+
+
 def _role_governance(
     week_entry: dict,
     *,
@@ -1850,7 +1918,12 @@ def _build_weekly_role_map(
             session_roles,
             athlete_model,
         )
-
+        
+        _upgrade_unused_days_to_gas_tank(
+            week_entry,
+            athlete_model,
+        )
+        
         calendar_days = list(week_entry.get("calendar_days") or [])
         countdown_range = (
             [calendar_days[0]["d_day"], calendar_days[-1]["d_day"]] if calendar_days else []
