@@ -692,28 +692,6 @@ export function PlanIntakeForm() {
   }, [currentStep]);
 
   useEffect(() => {
-    if (!hydrated || !session?.access_token) {
-      return;
-    }
-    const snapshot = buildFormSnapshot();
-    const key = JSON.stringify(snapshot);
-    if (lastSavedSnapshotRef.current === "") {
-      lastSavedSnapshotRef.current = key;
-      return;
-    }
-    if (key === lastSavedSnapshotRef.current) {
-      return;
-    }
-    const handle = window.setTimeout(() => {
-      persistDraft(currentStep).catch(() => {
-        // Auto-save failure surfaces via the save indicator; explicit save still available.
-      });
-    }, 1500);
-    return () => window.clearTimeout(handle);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [form, guidedInjuries, noRestrictions, hydrated, session?.access_token, currentStep]);
-
-  useEffect(() => {
     if (!stage1Preview || currentStep !== steps.length - 1) {
       return;
     }
