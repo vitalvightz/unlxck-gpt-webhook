@@ -114,7 +114,7 @@ from .conditioning_boxing import (
     _suppress_alactic_maintenance,
     _violates_sport_language_blacklist,
 )
-from .normalization import normalize_fight_format as _normalize_fight_format
+from .normalization import clean_list, normalize_fight_format as _normalize_fight_format
 
 _TIME_TOKEN = re.compile(
     r"(\d+(?:\.\d+)?)\s*(?:-|-)?\s*(\d+(?:\.\d+)?)?\s*"
@@ -1542,6 +1542,17 @@ def generate_conditioning_block(flags):
     training_frequency = flags.get("training_frequency", flags.get("days_available", 3))
     equipment_access = normalize_athlete_equipment_list(flags.get("equipment", []))
     equipment_access_set = set(equipment_access)
+    role = flags.get("role")
+
+    preferred_raw: list[str] = []
+    preferred_raw.extend(clean_list(flags.get("preferred_exercise_names", [])))
+    if isinstance(role, dict):
+        preferred_raw.extend(clean_list(role.get("preferred_exercise_names", [])))
+    preferred_exercise_names = {
+        _normalize_conditioning_name(name)
+        for name in preferred_raw
+        if str(name).strip()
+    }
 
     days_until_fight = _coerce_optional_int(flags.get("days_until_fight"))
     late_window = classify_late_selector_window(days_until_fight, include_control=True)
@@ -1987,6 +1998,9 @@ def generate_conditioning_block(flags):
         score += equip_bonus
         score += 0.6 * min(weak_matches, 1)
         score += 0.5 * min(goal_matches, 1)
+        drill_name = _normalize_conditioning_name(d.get("name", ""))
+        if preferred_exercise_names and drill_name in preferred_exercise_names:
+            score += 3.0
         penalty = 0.0
         if "high_cns" in tags:
             if fatigue == "high":
@@ -2039,7 +2053,12 @@ def generate_conditioning_block(flags):
             "penalties": penalty,
             "restriction_hits": len(matched_restrictions),
             "boxing_aerobic_preference": round(boxer_aerobic_adjustment, 4),
-            "reason_codes": list(late_eval["reason_codes"]),
+            "reason_codes": list(late_eval["reason_codes"])
+            + (
+                ["preferred_exercise_name_match"]
+                if preferred_exercise_names and drill_name in preferred_exercise_names
+                else []
+            ),
             "late_window_adjustment": late_eval["adjustment"],
             "final_score": round(score, 4),
         }

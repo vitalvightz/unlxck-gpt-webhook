@@ -10,6 +10,40 @@ from fightcamp.stage2_payload import build_stage2_payload
 from fightcamp.training_context import TrainingContext
 
 
+def test_preferred_exercise_name_adds_reason_code_from_role_preferences(monkeypatch):
+    drill = {
+        "name": "Preferred Aerobic Drill",
+        "system": "aerobic",
+        "phases": ["GPP", "SPP", "TAPER"],
+        "tags": ["conditioning", "aerobic"],
+        "equipment": [],
+    }
+
+    monkeypatch.setattr(conditioning, "get_conditioning_bank", lambda: [drill])
+    monkeypatch.setattr(conditioning, "get_style_conditioning_bank", lambda: [])
+    monkeypatch.setattr(conditioning, "get_style_taper_conditioning_bank", lambda: [])
+    monkeypatch.setattr(conditioning, "get_universal_gpp_conditioning_bank", lambda: [])
+
+    _, _, why_log, _, _, _ = conditioning.generate_conditioning_block(
+        {
+            "phase": "GPP",
+            "fatigue": "low",
+            "style_tactical": [],
+            "style_technical": [],
+            "key_goals": ["conditioning"],
+            "weaknesses": [],
+            "injuries": [],
+            "equipment": [],
+            "days_available": 1,
+            "preferred_exercise_names": [],
+            "role": {"preferred_exercise_names": ["Preferred Aerobic Drill"]},
+        }
+    )
+
+    selected = next(entry for entry in why_log if entry.get("name") == "Preferred Aerobic Drill")
+    assert "preferred_exercise_name_match" in selected["reasons"].get("reason_codes", [])
+
+
 
 
 def test_late_window_blocks_non_taper_phased_conditioning_even_if_otherwise_valid():
