@@ -499,7 +499,7 @@ def _upgrade_unused_days_to_gas_tank(
                 "allowed_on_recovery_day": True,
                 "blocked_systems": ["glycolytic", "ATP-PCr"],
                 "blocked_intensities": ["high", "max"],
-                "blocked_tags": [
+                                "blocked_tags": [
                     "mech_cns_high",
                     "high_cns",
                     "sprint",
@@ -508,9 +508,10 @@ def _upgrade_unused_days_to_gas_tank(
                     "mech_landing_impact",
                 ],
             }
+        )
 
     week_entry["intentionally_unused_days"] = updated_unused_days
-
+    
     result = list(session_roles) + added_roles
     for idx, role in enumerate(result, start=1):
         role["session_index"] = idx
