@@ -8271,5 +8271,64 @@
       "mech_trunk_rotation",
       "mech_upper_press"
     ]
+  },
+  {
+    "name": "Assault Bike Rhythm Primer",
+    "equipment": [
+      "assault_bike"
+    ],
+    "phases": [
+      "SPP",
+      "TAPER"
+    ],
+    "system": "aerobic",
+    "modality": "bike",
+    "duration": "6-8 x 10s moderate-fast / 60s easy",
+    "intensity": "moderate",
+    "tags": [
+      "low_impact",
+      "aerobic",
+      "cns_freshness",
+      "recovery"
+    ],
+    "work_sec": 10,
+    "rest_sec": 60,
+    "rounds": 8,
+    "rpe": 6,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "late_windows": [
+      "d21_to_d14",
+      "d13_to_d8"
+    ]
+  },
+  {
+    "name": "Rower Gas-Tank Flush",
+    "equipment": [
+      "rower"
+    ],
+    "phases": [
+      "SPP",
+      "TAPER"
+    ],
+    "system": "aerobic",
+    "modality": "rower",
+    "duration": "10-12min easy rhythm",
+    "intensity": "low",
+    "tags": [
+      "low_impact",
+      "aerobic",
+      "recovery"
+    ],
+    "total_minutes": 12,
+    "rpe": 5,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "late_windows": [
+      "d21_to_d14",
+      "d13_to_d8"
+    ]
   }
 ]
