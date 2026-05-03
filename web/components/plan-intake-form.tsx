@@ -121,6 +121,11 @@ function formatRestrictionSummary(value: string | null | undefined): string {
   return value?.trim() ? value.trim() : "No injuries or restrictions reported.";
 }
 
+function getTodayIsoDate(): string {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+}
+
 function formatJoinedLabels(values: string[], emptyLabel: string): string {
   return values.length ? values.join(", ") : emptyLabel;
 }
@@ -918,6 +923,9 @@ export function PlanIntakeForm() {
       }
 
       if (performanceFocusGroup && !alreadySelected && performanceFocusCap && totalSelectedPerformanceFocus >= performanceFocusCap.maxSelections) {
+        return current;
+      }
+      if (key === "weak_areas" && !alreadySelected && current.weak_areas.length >= 2) {
         return current;
       }
 
@@ -1822,7 +1830,7 @@ export function PlanIntakeForm() {
                 <div className="form-grid onboarding-fight-grid">
                   <div className="field">
                     <label htmlFor="fightDate">Fight date</label>
-                    <input id="fightDate" type="date" value={form.fight_date} onChange={(event) => updateField("fight_date", event.target.value)} />
+                    <input id="fightDate" type="date" min={getTodayIsoDate()} value={form.fight_date} onChange={(event) => updateField("fight_date", event.target.value)} />
                   </div>
                   <div className="field">
                     <label htmlFor="roundCount">Round count</label>
@@ -2370,6 +2378,7 @@ export function PlanIntakeForm() {
                 {getFieldHelperText(daysOutCtx, "weak_areas") ? (
                   <p className="muted">{getFieldHelperText(daysOutCtx, "weak_areas")}</p>
                 ) : null}
+                <p className="muted">Pick up to 2 weak areas.</p>
               </article>
               )}
               <article className="step-card">
