@@ -169,6 +169,18 @@ def _compact_weekly_role_map(weekly_role_map: Any) -> dict[str, Any]:
                         if isinstance(role, dict)
                     ],
                     "fight_day_override": week.get("fight_day_override"),
+                    "projected_days_until_fight_start": week.get("projected_days_until_fight_start"),
+                    "projected_days_until_fight_end": week.get("projected_days_until_fight_end"),
+                    "countdown_range": week.get("countdown_range"),
+                    "calendar_days": week.get("calendar_days"),
+                    "intentionally_unused_days": week.get("intentionally_unused_days"),
+                    "declared_training_days": week.get("declared_training_days"),
+                    "declared_hard_sparring_days": week.get("declared_hard_sparring_days"),
+                    "declared_support_work_days": week.get("declared_support_work_days"),
+                    "effective_hard_sparring_days": week.get("effective_hard_sparring_days"),
+                    "final_week_sparring_cap": week.get("final_week_sparring_cap"),
+                    "coach_note_flags": week.get("coach_note_flags"),
+                    "intentional_compression": week.get("intentional_compression"),
                 }.items()
                 if value not in (None, "", [])
             }

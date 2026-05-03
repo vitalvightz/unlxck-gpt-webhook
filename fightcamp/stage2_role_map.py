@@ -792,9 +792,9 @@ def _replaceable_role_priority(role: dict, *, day: str) -> tuple[int, int]:
     category = str(role.get("category") or "").strip()
     role_key = str(role.get("role_key") or "").strip()
     if category == "conditioning":
-    if role.get("gas_tank_recovery_touch") or role.get("allowed_on_recovery_day"):
-        return (3, 3)
-    return (0 if role.get("preferred_system") == "glycolytic" else 1, 1)
+        if role.get("gas_tank_recovery_touch") or role.get("allowed_on_recovery_day"):
+            return (3, 3)
+        return (0 if role.get("preferred_system") == "glycolytic" else 1, 1)
     if category == "strength" and role_key not in _PRIMARY_STRENGTH_ROLE_KEYS:
         return (2, 2)
     if category == "recovery":

@@ -192,3 +192,37 @@ def test_build_stage2_handoff_text_carries_surgical_voice_rules():
     assert "injury" in handoff.lower() and ("constraints" in handoff.lower() or "stop rules" in handoff.lower()), (
         "Handoff should address injury → lead with constraints"
     )
+
+def test_build_stage2_handoff_text_preserves_countdown_calendar_fields_in_weekly_role_map():
+    handoff = build_stage2_handoff_text(
+        stage2_payload={"athlete_model": {"sport": "boxing"}},
+        plan_text="Week 1",
+        planning_brief={
+            "athlete_snapshot": {"sport": "boxing"},
+            "weekly_role_map": {
+                "weeks": [
+                    {
+                        "week_index": 1,
+                        "phase": "SPP",
+                        "projected_days_until_fight_start": 36,
+                        "projected_days_until_fight_end": 30,
+                        "countdown_range": [36, 30],
+                        "calendar_days": [{"weekday": "Tue", "d_day": 36}],
+                        "declared_training_days": ["Tue"],
+                        "declared_hard_sparring_days": ["Wed"],
+                        "declared_support_work_days": ["Thu"],
+                        "effective_hard_sparring_days": ["Wed"],
+                        "final_week_sparring_cap": {"active": False},
+                        "coach_note_flags": ["keep_easy"],
+                        "intentional_compression": {"active": False},
+                        "intentionally_unused_days": ["Sun"],
+                        "session_roles": [],
+                    }
+                ]
+            },
+        },
+    )
+
+    assert '"countdown_range":[36,30]' in handoff
+    assert '"calendar_days":[{"weekday":"Tue","d_day":36}]' in handoff
+    assert '"projected_days_until_fight_start":36' in handoff

@@ -114,7 +114,7 @@ from .conditioning_boxing import (
     _suppress_alactic_maintenance,
     _violates_sport_language_blacklist,
 )
-from .normalization import normalize_fight_format as _normalize_fight_format
+from .normalization import clean_list, normalize_fight_format as _normalize_fight_format
 
 _TIME_TOKEN = re.compile(
     r"(\d+(?:\.\d+)?)\s*(?:-|-)?\s*(\d+(?:\.\d+)?)?\s*"
@@ -1574,6 +1574,11 @@ def generate_conditioning_block(flags):
     goal_list = [g.lower() for g in goals]
     weak_list = [w.lower() for w in weaknesses]
     weak_tags = expand_tags(weaknesses, WEAKNESS_TAG_MAP)
+    preferred_exercise_names = {
+        str(name).strip().lower()
+        for name in clean_list(flags.get("preferred_exercise_names", []))
+        if str(name).strip()
+    }
     shoulder_focus = any('shoulder' in g.lower() for g in goals) or any(
         'shoulder' in w.lower() for w in weaknesses
     )
@@ -1794,6 +1799,10 @@ def generate_conditioning_block(flags):
         system_score = round(energy_multiplier * 1.0, 2)
         total_score = base_score + system_score
 
+        preferred_name_match = str(d.get("name", "")).strip().lower() in preferred_exercise_names
+        if preferred_name_match:
+            total_score += 6.0
+
         penalty = 0.0
         if fatigue == "high" and "high_cns" in tags:
             total_score -= 2.0
@@ -1843,6 +1852,7 @@ def generate_conditioning_block(flags):
             "phase_hits": 1,
             "load_adjustments": system_score,
             "equipment_boost": 0.0,
+            "preferred_exercise_name_match": 6.0 if preferred_name_match else 0.0,
             "penalties": penalty,
             "restriction_hits": len(matched_restrictions),
             "boxing_aerobic_preference": round(boxer_aerobic_adjustment, 4),
@@ -1850,6 +1860,8 @@ def generate_conditioning_block(flags):
             "late_window_adjustment": late_eval["adjustment"],
             "final_score": round(total_score, 4),
         }
+        if preferred_name_match:
+            reasons["reason_codes"].append("preferred_exercise_name_match:+6.0")
 
         system_drills[system].append((d, total_score, reasons))
 
@@ -1987,6 +1999,9 @@ def generate_conditioning_block(flags):
         score += equip_bonus
         score += 0.6 * min(weak_matches, 1)
         score += 0.5 * min(goal_matches, 1)
+        preferred_name_match = str(d.get("name", "")).strip().lower() in preferred_exercise_names
+        if preferred_name_match:
+            score += 6.0
         penalty = 0.0
         if "high_cns" in tags:
             if fatigue == "high":
@@ -2036,6 +2051,7 @@ def generate_conditioning_block(flags):
             "phase_hits": 1,
             "load_adjustments": 0.75 if system == top_system else 0.0,
             "equipment_boost": equip_bonus,
+            "preferred_exercise_name_match": 6.0 if preferred_name_match else 0.0,
             "penalties": penalty,
             "restriction_hits": len(matched_restrictions),
             "boxing_aerobic_preference": round(boxer_aerobic_adjustment, 4),
@@ -2043,6 +2059,8 @@ def generate_conditioning_block(flags):
             "late_window_adjustment": late_eval["adjustment"],
             "final_score": round(score, 4),
         }
+        if preferred_name_match:
+            reasons["reason_codes"].append("preferred_exercise_name_match:+6.0")
 
         style_system_drills[system].append((d, score, reasons))
         for st in style_names:
