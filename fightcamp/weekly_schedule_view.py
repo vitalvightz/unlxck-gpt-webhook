@@ -125,7 +125,11 @@ def _is_protected_late_week(week: dict[str, Any]) -> bool:
         candidates.append(str(intentional_compression.get("reason") or "").strip().lower())
         candidates.append(str(intentional_compression.get("summary") or "").strip().lower())
 
-    return any(token in candidate for candidate in candidates for token in ("bridge", "taper", "fight"))
+    return any(
+    token in candidate
+    for candidate in candidates
+    for token in ("bridge", "taper", "fight_week", "late_fight", "countdown")
+)
 
 
 def _mark_missing_effective_sparring_plan(day: dict[str, Any]) -> None:
