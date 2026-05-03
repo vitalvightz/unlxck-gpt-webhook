@@ -116,6 +116,8 @@ def _compact_role(role: dict[str, Any]) -> dict[str, Any]:
         "scheduled_day_hint",
         "preferred_pool",
         "preferred_system",
+        "preferred_tags",
+        "preferred_exercise_names",
         "anchor",
         "selection_rule",
         "placement_rule",
@@ -123,9 +125,21 @@ def _compact_role(role: dict[str, Any]) -> dict[str, Any]:
         "coach_owned",
         "display_text",
         "athlete_facing_label",
+
+        # Gas-tank / recovery-day upgrade flags
+        "gas_tank_recovery_touch",
+        "allowed_on_recovery_day",
+        "recovery_compatible",
+        "converted_from_unused_day",
+        "original_role_key",
+        "original_unused_day_role",
+
+        # Safety filters for low-aerobic recovery work
+        "blocked_systems",
+        "blocked_intensities",
+        "blocked_tags",
     )
     return {key: role.get(key) for key in keep if role.get(key) not in (None, "", [])}
-
 
 def _compact_weekly_role_map(weekly_role_map: Any) -> dict[str, Any]:
     if not isinstance(weekly_role_map, dict):
