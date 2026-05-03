@@ -5703,7 +5703,8 @@
       "category": "footwork",
       "phases": [
         "GPP",
-        "SPP"
+        "SPP",
+        "TAPER"
       ],
       "movement": "dynamic_stance_transitions",
       "type": "unilateral",
