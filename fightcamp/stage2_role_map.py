@@ -286,6 +286,32 @@ def _calendar_d_day_for_role(week_entry: dict, role: dict) -> int | None:
     return None
 
 
+def _priority_touch_target(athlete_model: dict) -> dict[str, Any] | None:
+    """Return one conservative non-gas-tank priority touch, if profile signals it."""
+    raw_values: list[Any] = []
+    for key in ("key_goals", "goals", "weaknesses", "weak_areas", "performance_goals", "main_limiter", "limiter_key"):
+        raw_values.extend(clean_list(athlete_model.get(key, [])))
+    text = " ".join(str(value).lower().replace("-", "_") for value in raw_values)
+
+    if any(token in text for token in ("speed", "explosive", "fast_twitch", "first_step", "acceleration")):
+        return {
+            "role_key": "converted_priority_speed_touch_day",
+            "category": "conditioning",
+            "preferred_system": "alactic",
+            "athlete_facing_label": "Low-load speed touch",
+            "preferred_tags": ["alactic", "speed", "low_cns", "coordination", "technical"],
+            "preferred_exercise_names": [
+                "Band-Resisted Snap-Step + Reset",
+                "Mirror Footwork Reaction Burst",
+                "Split-Step Ankle Snap Pogo",
+            ],
+            "selection_rule": "Keep this speed touch crisp and low-fatigue: no max sprints, no lactate work, no grinder sets.",
+            "blocked_systems": ["glycolytic"],
+            "blocked_intensities": ["max"],
+        }
+    return None
+
+
 def _upgrade_recovery_days_to_gas_tank(
     week_entry: dict,
     session_roles: list[dict],
@@ -326,9 +352,16 @@ def _upgrade_recovery_days_to_gas_tank(
                 "category": "conditioning",
                 "role_key": "recovery_aerobic_gas_tank_day",
                 "original_role_key": role.get("role_key", ""),
+                "athlete_facing_label": "Low aerobic gas-tank flush",
                 "preferred_system": "aerobic",
                 "preferred_pool": "conditioning_slots",
                 "preferred_tags": ["gas_tank", "aerobic", "low_impact", "low_cns", "recovery"],
+                "preferred_exercise_names": [
+                    "Assault Bike Easy Gas Tank Ride",
+                    "Rower Nasal Aerobic Base",
+                    "Nasal Shadowboxing Flow (Gas Tank)",
+                    "Nasal Walk with Boxing Posture",
+                ],
                 "selection_rule": (
                     "Use only low-aerobic gas-tank work here: RPE <= 4, "
                     "low impact, low lactate, low CNS. This may sit on a recovery "
@@ -378,11 +411,14 @@ def _upgrade_unused_days_to_gas_tank(
 
     These are not hard sessions. They are RPE 3-4 aerobic flush/base touches.
     """
-    if not _has_gas_tank_signal(athlete_model):
+    has_gas_tank_signal = _has_gas_tank_signal(athlete_model)
+    priority_target = _priority_touch_target(athlete_model)
+    if not has_gas_tank_signal and not priority_target:
         return session_roles
 
     updated_unused_days: list[dict] = []
     added_roles: list[dict] = []
+    priority_touch_used = False
 
     phase = str(week_entry.get("phase", "")).strip().upper()
     max_upgrades = 2 if phase in {"GPP", "SPP"} else 1
@@ -429,20 +465,41 @@ def _upgrade_unused_days_to_gas_tank(
             continue
 
         converted_day = dict(day_entry)
+        target = None
+        if priority_target and not priority_touch_used:
+            target = priority_target
+            priority_touch_used = True
+        elif not has_gas_tank_signal:
+            updated_unused_days.append(day_entry)
+            continue
+        role_key = str((target or {}).get("role_key") or "converted_low_aerobic_gas_tank_day")
+        category = str((target or {}).get("category") or "conditioning")
+        preferred_system = str((target or {}).get("preferred_system") or "aerobic")
+        preferred_tags = list((target or {}).get("preferred_tags") or ["gas_tank", "aerobic", "low_impact", "low_cns", "recovery"])
+        preferred_exercise_names = list((target or {}).get("preferred_exercise_names") or [
+            "Assault Bike Easy Gas Tank Ride",
+            "Rower Nasal Aerobic Base",
+            "Nasal Shadowboxing Flow (Gas Tank)",
+            "Nasal Walk with Boxing Posture",
+        ])
+        athlete_facing_label = str((target or {}).get("athlete_facing_label") or "Low aerobic gas-tank support")
+        selection_rule = str((target or {}).get("selection_rule") or (
+            "Use only low-aerobic gas-tank work here: RPE <= 4, low impact, "
+            "low lactate, low CNS. Suitable options include easy assault bike, "
+            "easy rower, nasal shadowboxing flow, or nasal walk flow."
+        ))
+        blocked_systems = list((target or {}).get("blocked_systems") or ["glycolytic", "ATP-PCr"])
+        blocked_intensities = list((target or {}).get("blocked_intensities") or ["high", "max"])
         converted_day.update(
             {
-                "role": "converted_low_aerobic_gas_tank_day",
-                "category": "conditioning",
-                "preferred_system": "aerobic",
+                "role": role_key,
+                "category": category,
+                "preferred_system": preferred_system,
                 "preferred_pool": "conditioning_slots",
-                "preferred_tags": ["gas_tank", "aerobic", "low_impact", "low_cns", "recovery"],
-                "preferred_exercise_names": [
-                    "Assault Bike Easy Gas Tank Ride",
-                    "Rower Nasal Aerobic Base",
-                    "Nasal Shadowboxing Flow (Gas Tank)",
-                    "Nasal Walk with Boxing Posture",
-                ],
-                "gas_tank_recovery_touch": True,
+                "preferred_tags": preferred_tags,
+                "preferred_exercise_names": preferred_exercise_names,
+                "gas_tank_recovery_touch": role_key == "converted_low_aerobic_gas_tank_day",
+                "priority_recovery_touch": role_key != "converted_low_aerobic_gas_tank_day",
                 "allowed_on_recovery_day": True,
                 "recovery_compatible": True,
                 "converted_from_unused_day": True,
@@ -458,22 +515,14 @@ def _upgrade_unused_days_to_gas_tank(
         added_roles.append(
             {
                 "session_index": 0,
-                "category": "conditioning",
-                "role_key": "converted_low_aerobic_gas_tank_day",
+                "category": category,
+                "role_key": role_key,
+                "athlete_facing_label": athlete_facing_label,
                 "preferred_pool": "conditioning_slots",
-                "preferred_system": "aerobic",
-                "preferred_tags": ["gas_tank", "aerobic", "low_impact", "low_cns", "recovery"],
-                "preferred_exercise_names": [
-                    "Assault Bike Easy Gas Tank Ride",
-                    "Rower Nasal Aerobic Base",
-                    "Nasal Shadowboxing Flow (Gas Tank)",
-                    "Nasal Walk with Boxing Posture",
-                ],
-                "selection_rule": (
-                    "Use only low-aerobic gas-tank work here: RPE <= 4, low impact, "
-                    "low lactate, low CNS. Suitable options include easy assault bike, "
-                    "easy rower, nasal shadowboxing flow, or nasal walk flow."
-                ),
+                "preferred_system": preferred_system,
+                "preferred_tags": preferred_tags,
+                "preferred_exercise_names": preferred_exercise_names,
+                "selection_rule": selection_rule,
                 "anchor": "lowest_load_day",
                 "placement_rule": (
                     "This was an unused recovery/off day upgraded into low-aerobic "
@@ -495,10 +544,11 @@ def _upgrade_unused_days_to_gas_tank(
                     "Unused recovery/off training day upgraded to low-aerobic gas-tank work."
                 ),
                 "recovery_compatible": True,
-                "gas_tank_recovery_touch": True,
+                "gas_tank_recovery_touch": role_key == "converted_low_aerobic_gas_tank_day",
+                "priority_recovery_touch": role_key != "converted_low_aerobic_gas_tank_day",
                 "allowed_on_recovery_day": True,
-                "blocked_systems": ["glycolytic", "ATP-PCr"],
-                "blocked_intensities": ["high", "max"],
+                "blocked_systems": blocked_systems,
+                "blocked_intensities": blocked_intensities,
                                 "blocked_tags": [
                     "mech_cns_high",
                     "high_cns",
@@ -2026,6 +2076,18 @@ def _build_weekly_role_map(
         )
         
         calendar_days = list(week_entry.get("calendar_days") or [])
+        d_day_by_weekday = {
+            str(day.get("weekday") or "").strip().lower(): int(day.get("d_day"))
+            for day in calendar_days
+            if str(day.get("weekday") or "").strip() and isinstance(day.get("d_day"), int)
+        }
+        for role in session_roles:
+            weekday = str(role.get("scheduled_day_hint") or "").strip().lower()
+            if not weekday or weekday not in d_day_by_weekday:
+                continue
+            d_day = d_day_by_weekday[weekday]
+            role["scheduled_countdown_label"] = f"D-{d_day}"
+            role["countdown_label"] = f"D-{d_day}"
         countdown_range = (
             [calendar_days[0]["d_day"], calendar_days[-1]["d_day"]] if calendar_days else []
         )
