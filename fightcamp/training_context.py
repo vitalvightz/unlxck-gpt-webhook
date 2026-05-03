@@ -23,6 +23,19 @@ EQUIP_ALIASES = {
     "sandbags": "sandbag",
     "battle rope": "battle_ropes",
     "battle ropes": "battle_ropes",
+    "air bike": "assault_bike",
+    "air_bike": "assault_bike",
+    "echo bike": "assault_bike",
+    "echo_bike": "assault_bike",
+    "assault bike": "assault_bike",
+    "bike erg": "assault_bike",
+    "bike_erg": "assault_bike",
+    "ski erg": "ski_erg",
+    "ski_erg": "ski_erg",
+    "skierg": "ski_erg",
+    "rowing machine": "rower",
+    "rowing_machine": "rower",
+    "concept2 rower": "rower",
 }
 
 

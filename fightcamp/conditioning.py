@@ -80,6 +80,8 @@ LATE_CONDITIONING_SAFE_TAGS = {
 }
 LATE_CONDITIONING_TIGHT_WINDOWS = {D7, D6_TO_D5, D4_TO_D2, D1}
 TAPER_ONLY_CONDITIONING_WINDOWS = {D13_TO_D8, D7, D6_TO_D5, D4_TO_D2, D1}
+_AEROBIC_MAINTENANCE_WINDOWS = {"d21_to_d14", D13_TO_D8}
+_AEROBIC_MAINTENANCE_SIGNAL_TERMS = {"conditioning", "gas_tank", "gas tank", "endurance", "aerobic"}
 
 from .conditioning_boxing import (
     BOXING_NAME_MAP,
@@ -461,6 +463,30 @@ def _conditioning_resolve_bridge_rules(
         athlete_pct_above_class=flags.get("weight_cut_pct"),
         hours_to_recovery_after_weigh_in=flags.get("hours_to_recovery_after_weigh_in"),
     )
+
+
+def _has_aerobic_maintenance_signal(goals: list[str], weaknesses: list[str]) -> bool:
+    values = {str(v or "").strip().lower() for v in [*(goals or []), *(weaknesses or [])] if str(v or "").strip()}
+    return bool(values & _AEROBIC_MAINTENANCE_SIGNAL_TERMS)
+
+
+def _is_low_noise_aerobic_maintenance_drill(drill: dict, *, system: str) -> bool:
+    if system != "aerobic":
+        return False
+    tags = set(normalize_tags(drill.get("tags", [])))
+    text = _conditioning_text_blob(drill)
+    structured = _conditioning_structured_profile(drill, system=system)
+    if not structured["freshness"]:
+        return False
+    rpe = structured["rpe"]
+    if rpe is not None and not (4 <= rpe <= 6):
+        return False
+    if "high_cns" in tags or "plyometric" in tags:
+        return False
+    banned_terms = ("tabata", "burpee", "sprint start", "sprint-start", "fight-pace")
+    if any(term in text for term in banned_terms):
+        return False
+    return bool(tags & {"aerobic", "recovery", "low_impact", "cns_freshness", "skill_refinement"})
 
 def _evaluate_conditioning_late_window(
     drill: dict,
@@ -2169,6 +2195,12 @@ def generate_conditioning_block(flags):
     general_remaining = total_drills - style_remaining
 
     allow_glycolytic = False
+    aerobic_maintenance_signal = _has_aerobic_maintenance_signal(goals, weaknesses)
+    allow_aerobic_maintenance = bool(
+        active_late_window
+        and late_window in _AEROBIC_MAINTENANCE_WINDOWS
+        and aerobic_maintenance_signal
+    )
     if phase.upper() == "TAPER":
         lactic_goal_tags = {"glycolytic", "anaerobic_lactic", "lactic"}
         has_conditioning_goal = any(g in {"conditioning", "endurance"} for g in goal_list)
@@ -2343,6 +2375,30 @@ def generate_conditioning_block(flags):
                 reason_lookup[d.get("name")] = r
                 selected_counts["glycolytic"] += 1
                 taper_selected += 1
+
+        if allow_aerobic_maintenance and selected_counts["aerobic"] < 1:
+            aerobic_candidates: list[tuple[dict, float, dict, int]] = []
+            preferred_names = (
+                "Rower Gas-Tank Flush",
+                "Assault Bike Rhythm Primer",
+            )
+            for idx, (drill, score, reasons) in enumerate(system_drills.get("aerobic", [])):
+                if _is_low_noise_aerobic_maintenance_drill(drill, system="aerobic"):
+                    name = str(drill.get("name") or "")
+                    priority = 99
+                    if name == preferred_names[0]:
+                        priority = 0
+                    elif name == preferred_names[1]:
+                        priority = 1
+                    elif "bike" in name.lower():
+                        priority = 2
+                    elif "shadowbox" in name.lower() or "shadow boxing" in name.lower():
+                        priority = 3
+                    aerobic_candidates.append((drill, score, reasons, priority))
+            aerobic_candidates.sort(key=lambda item: (item[3], -item[1]))
+            for drill, _score, reasons, _prio in aerobic_candidates:
+                if _try_append_conditioning_drill("aerobic", drill, reasons, source="aerobic_maintenance_insert"):
+                    break
     else:
         for system in preferred_order:
             quota = system_quota.get(system, 0)

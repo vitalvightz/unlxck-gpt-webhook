@@ -5,6 +5,7 @@ from pathlib import Path
 
 from fightcamp import conditioning
 from fightcamp.late_selector_windows import D1, D4_TO_D2, D6_TO_D5, D7, D13_TO_D8, D21_TO_D14
+from fightcamp.training_context import normalize_equipment_list
 from fightcamp.stage2_payload import build_stage2_payload
 from fightcamp.training_context import TrainingContext
 
@@ -520,3 +521,40 @@ def test_generated_boxing_d6_taper_uses_low_impact_alactic_not_jump_or_sprint_st
     assert "Band-Assisted Jump Reset" not in plan_text
     assert "Band-Resisted Sprint Start" not in plan_text
     assert "Band-Resisted Sprint Starts (ATP-PCr)" not in plan_text
+
+
+def test_equipment_aliases_normalize_machine_variants():
+    normalized = normalize_equipment_list(
+        ["Air Bike", "Echo Bike", "Rowing Machine", "SkiErg", "concept2 rower"]
+    )
+    assert "assault_bike" in normalized
+    assert "rower" in normalized
+    assert "ski_erg" in normalized
+
+
+def test_taper_d19_gas_tank_signal_keeps_one_low_noise_aerobic_machine_dose():
+    result = conditioning.generate_conditioning_block(
+        {
+            "phase": "TAPER",
+            "fatigue": "low",
+            "style_technical": ["boxing"],
+            "style_tactical": ["out-boxer"],
+            "sport": "boxing",
+            "key_goals": ["conditioning"],
+            "weaknesses": ["gas_tank"],
+            "injuries": ["ankle"],
+            "restrictions": [],
+            "equipment": ["Air Bike", "Rowing Machine", "bodyweight"],
+            "training_frequency": 5,
+            "days_available": 5,
+            "days_until_fight": 19,
+            "time_to_fight_days": 19,
+            "weight_cut_pct": 3.0,
+        }
+    )
+    _text, selected_names, _why_log, grouped_drills, _missing, _reservoir = result
+    selected_aerobic = [d.get("name", "") for d in grouped_drills.get("aerobic", [])]
+    assert selected_aerobic
+    assert len(selected_aerobic) >= 1
+    lower_blob = " ".join(selected_aerobic).lower()
+    assert any(term in lower_blob for term in ("rower", "bike", "shadowbox"))
