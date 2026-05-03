@@ -161,7 +161,37 @@ def extract_weekly_schedule(planning_brief: Any, *, week_index: int = 0) -> dict
     if not isinstance(week, dict):
         return None
 
-    days = [_empty_day(weekday) for weekday in WEEKDAY_SHORT]
+    calendar_days = week.get("calendar_days")
+    calendar_entries = [
+        entry for entry in calendar_days if isinstance(entry, dict)
+    ] if isinstance(calendar_days, list) else []
+
+    if calendar_entries:
+        days = []
+        for entry in calendar_entries:
+            weekday = _normalize_weekday(entry.get("weekday"))
+            if not weekday:
+                continue
+
+            day = _empty_day(weekday)
+            d_day = entry.get("d_day")
+
+            day.update(
+                {
+                    "d_day": d_day,
+                    "day_label": (
+                        f"D-{d_day}"
+                        if isinstance(d_day, int) and d_day > 0
+                        else ("D-0" if d_day == 0 else "")
+                    ),
+                    "is_fight_day": bool(entry.get("is_fight_day")),
+                    "is_after_fight_day": bool(entry.get("is_after_fight_day")),
+                }
+            )
+            days.append(day)
+    else:
+        days = [_empty_day(weekday) for weekday in WEEKDAY_SHORT]
+
     days_by_weekday = {day["weekday"]: day for day in days}
 
     hard_sparring_plan = week.get("hard_sparring_plan")
