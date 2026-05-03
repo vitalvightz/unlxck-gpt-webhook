@@ -530,8 +530,9 @@ def _evaluate_strength_late_window(
         blocks.append("late_strength_block_no_d7_to_d1")
     if window in {D13_TO_D8, D7, D6_TO_D5, D4_TO_D2, D1} and "familiarity_required" in tags:
         blocks.append("late_strength_block_familiarity_required_late")
-    if cut_bucket in LATE_STRENGTH_HIGH_CUT_BUCKETS and tags & {"single_leg","no_high_cut","neck_optional","vestibular_sensitive","balance_challenge"}:
-        blocks.append("late_strength_block_high_cut_balance_risk")
+    if cut_bucket in LATE_STRENGTH_HIGH_CUT_BUCKETS and tags & {
+        "single_leg", "no_high_cut", "neck_optional", "vestibular_sensitive", "balance_challenge"
+    }:
 
     if late_windows:
         if window in late_windows:
