@@ -383,6 +383,9 @@ def _upgrade_unused_days_to_gas_tank(
     updated_unused_days: list[dict] = []
     added_roles: list[dict] = []
 
+    phase = str(week_entry.get("phase", "")).strip().upper()
+    max_upgrades = 2 if phase in {"GPP", "SPP"} else 1
+    
     existing_days = {
         str(role.get("scheduled_day_hint") or "").strip()
         for role in session_roles
@@ -420,16 +423,22 @@ def _upgrade_unused_days_to_gas_tank(
             updated_unused_days.append(day_entry)
             continue
 
+        if len(added_roles) >= max_upgrades:
+            updated_unused_days.append(day_entry)
+            continue
+
         converted_day = dict(day_entry)
         converted_day.update(
             {
-                "role": "low_aerobic_gas_tank_day",
+                "role": "converted_low_aerobic_gas_tank_day",
                 "category": "conditioning",
                 "preferred_system": "aerobic",
                 "preferred_pool": "low_aerobic_gas_tank_pool",
                 "gas_tank_recovery_touch": True,
                 "allowed_on_recovery_day": True,
                 "recovery_compatible": True,
+                "converted_from_unused_day": True,
+                "original_unused_day_role": role,
                 "reason": (
                     "Gas tank is a profile goal/weakness, so this unused recovery/off "
                     "day becomes a low-aerobic gas-tank touch without becoming hard conditioning."
@@ -442,7 +451,7 @@ def _upgrade_unused_days_to_gas_tank(
             {
                 "session_index": 0,
                 "category": "conditioning",
-                "role_key": "low_aerobic_gas_tank_day",
+                "role_key": "converted_low_aerobic_gas_tank_day",
                 "preferred_pool": "low_aerobic_gas_tank_pool",
                 "preferred_system": "aerobic",
                 "selection_rule": (
