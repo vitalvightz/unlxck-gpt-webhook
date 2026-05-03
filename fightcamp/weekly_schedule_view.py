@@ -208,6 +208,7 @@ def extract_weekly_schedule(planning_brief: Any, *, week_index: int = 0) -> dict
                         if d_day is not None and d_day > 0
                         else ("D-0" if d_day == 0 else "")
                     ),
+                    "calendar_date": entry.get("calendar_date") or entry.get("date"),
                     "is_fight_day": bool(entry.get("is_fight_day")),
                     "is_after_fight_day": bool(entry.get("is_after_fight_day")),
                 }
