@@ -527,9 +527,7 @@ def test_equipment_aliases_normalize_machine_variants():
     normalized = normalize_equipment_list(
         ["Air Bike", "Echo Bike", "Rowing Machine", "SkiErg", "concept2 rower"]
     )
-    assert "assault_bike" in normalized
-    assert "rower" in normalized
-    assert "ski_erg" in normalized
+    assert set(normalized) == {"assault_bike", "rower", "ski_erg"}
 
 
 def test_taper_d19_gas_tank_signal_keeps_one_low_noise_aerobic_machine_dose():
