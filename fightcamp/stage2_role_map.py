@@ -1983,20 +1983,11 @@ def _build_weekly_role_map(
             athlete_model,
             hard_sparring_plan=hard_sparring_plan,
         )
-        session_roles, suppressed_roles = _lock_declared_hard_sparring_roles(
-            week_entry,
-            session_roles,
-            suppressed_roles,
-            athlete_model,
-            hard_sparring_plan=hard_sparring_plan,
-        )
-        session_roles = _resequence_session_roles(
-            week_entry,
-            session_roles,
-            athlete_model,
-            hard_sparring_plan=hard_sparring_plan,
-        )
-
+        
+        # Gas-tank recovery/off-day upgrade must happen after compression,
+        # because compression creates intentionally_unused_days.
+        # It must happen before final locking/resequencing,
+        # so the new aerobic roles are assigned and indexed properly.
         session_roles = _upgrade_recovery_days_to_gas_tank(
             week_entry,
             session_roles,
@@ -2007,6 +1998,21 @@ def _build_weekly_role_map(
             week_entry,
             session_roles,
             athlete_model,
+        )
+        
+        session_roles, suppressed_roles = _lock_declared_hard_sparring_roles(
+            week_entry,
+            session_roles,
+            suppressed_roles,
+            athlete_model,
+            hard_sparring_plan=hard_sparring_plan,
+        )
+        
+        session_roles = _resequence_session_roles(
+            week_entry,
+            session_roles,
+            athlete_model,
+            hard_sparring_plan=hard_sparring_plan,
         )
         
         calendar_days = list(week_entry.get("calendar_days") or [])
