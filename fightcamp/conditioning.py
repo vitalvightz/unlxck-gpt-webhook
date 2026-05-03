@@ -33,6 +33,7 @@ from .late_selector_windows import (
     D6_TO_D5,
     D7,
     D13_TO_D8,
+    D21_TO_D14,
     classify_late_selector_window,
     is_active_late_selector_window,
 )
@@ -82,6 +83,9 @@ LATE_CONDITIONING_TIGHT_WINDOWS = {D7, D6_TO_D5, D4_TO_D2, D1}
 TAPER_ONLY_CONDITIONING_WINDOWS = {D13_TO_D8, D7, D6_TO_D5, D4_TO_D2, D1}
 _AEROBIC_MAINTENANCE_WINDOWS = {D21_TO_D14, D13_TO_D8}
 _AEROBIC_MAINTENANCE_SIGNAL_TERMS = {"conditioning", "gas_tank", "gas tank", "endurance", "aerobic"}
+_GAS_TANK_SIGNAL_TERMS = {"conditioning", "gas_tank", "gas tank", "endurance", "work_capacity"}
+_GAS_TANK_MACHINE_TOKENS = ("assault bike", "air bike", "echo bike", "rower", "concept2", "bike erg", "stationary bike")
+_GAS_TANK_SAFE_TAGS = {"aerobic", "low_impact", "recovery", "cns_freshness"}
 
 from .conditioning_boxing import (
     BOXING_NAME_MAP,
@@ -326,6 +330,35 @@ def _conditioning_text_blob(drill: dict) -> str:
         drill.get("equipment_note", ""),
     )
     return " ".join(str(field or "") for field in fields).strip().lower()
+
+
+def _is_machine_biased_gas_tank_drill(drill: dict) -> bool:
+    text = _conditioning_text_blob(drill)
+    system = str(drill.get("system") or "").strip().lower()
+    equipment = set(normalize_equipment_list(drill.get("equipment", [])))
+    tags = set(normalize_tags(drill.get("tags", [])))
+    machine_match = bool({"assault_bike", "rower"} & equipment) or any(token in text for token in _GAS_TANK_MACHINE_TOKENS)
+    if not machine_match:
+        return False
+    structured = _conditioning_structured_profile(drill, system=system)
+    safe_by_structure = (
+        structured["lactate_load"] in {"", "none", "low"}
+        and (structured["rpe"] is None or structured["rpe"] <= 6)
+        and not structured["glycolytic_density"]
+    )
+    safe_by_tags = bool(tags & _GAS_TANK_SAFE_TAGS)
+    return system == "aerobic" or safe_by_tags or safe_by_structure
+
+
+def _normalize_focus_tokens(values: Iterable[str]) -> set[str]:
+    normalized: set[str] = set()
+    for value in values:
+        token = str(value or "").strip().lower().replace("_", " ")
+        if not token:
+            continue
+        normalized.add(token)
+        normalized.add(token.replace(" ", "_"))
+    return normalized
 
 def _conditioning_dense_pattern(text: str) -> bool:
     return any(keyword in text for keyword in ("emom", "tabata", "amrap", "for time"))
@@ -1526,6 +1559,7 @@ def generate_conditioning_block(flags):
 
     goal_tags = expand_tags(goals, GOAL_TAG_MAP)
     goal_list = [g.lower() for g in goals]
+    weak_list = [w.lower() for w in weaknesses]
     weak_tags = expand_tags(weaknesses, WEAKNESS_TAG_MAP)
     shoulder_focus = any('shoulder' in g.lower() for g in goals) or any(
         'shoulder' in w.lower() for w in weaknesses
@@ -2431,6 +2465,71 @@ def generate_conditioning_block(flags):
             selected_counts[system] += 1
             deficits[system] = max(0, deficits[system] - 1)
             remaining_slots -= 1
+
+    normalized_focus = _normalize_focus_tokens([*goal_list, *weak_list])
+    needs_gas_tank_focus = bool(normalized_focus & _normalize_focus_tokens(_GAS_TANK_SIGNAL_TERMS))
+    has_machine_equipment = bool({"assault_bike", "rower"} & equipment_access_set)
+    inside_hard_countdown = isinstance(days_until_fight, int) and 0 <= days_until_fight <= 17
+    if (
+        phase.upper() in {"GPP", "SPP"}
+        and needs_gas_tank_focus
+        and has_machine_equipment
+        and not inside_hard_countdown
+    ):
+        has_machine_gas_tank = any(
+            _is_machine_biased_gas_tank_drill(drill)
+            for _system, drills in final_drills
+            for drill in drills
+        )
+        if not has_machine_gas_tank:
+            machine_candidates: list[tuple[int, float, dict, dict]] = []
+            for system in ("aerobic", "alactic"):
+                for drill, score, reasons in system_drills.get(system, []):
+                    if not _is_machine_biased_gas_tank_drill(drill):
+                        continue
+                    priority = 0 if system == "aerobic" else 1
+                    if "rower" in _conditioning_text_blob(drill):
+                        priority -= 1
+                    machine_candidates.append((priority, score, drill, reasons))
+            if not machine_candidates:
+                for drill in get_conditioning_bank():
+                    if drill.get("placement", "conditioning").lower() != "conditioning":
+                        continue
+                    if phase.upper() not in [str(p).upper() for p in drill.get("phases", [])]:
+                        continue
+                    if not _is_machine_biased_gas_tank_drill(drill):
+                        continue
+                    drill_system = str(get_system_or_warn(drill, source="gas_tank_machine_bias_fallback") or "").strip().lower()
+                    drill_text = _conditioning_text_blob(drill)
+                    drill_structured = _conditioning_structured_profile(drill, system=drill_system)
+                    if drill_system == "glycolytic":
+                        continue
+                    if drill_structured["high_lactate"] or drill_structured["glycolytic_density"]:
+                        continue
+                    if _conditioning_dense_pattern(drill_text) or _conditioning_multi_round_pattern(drill_text):
+                        continue
+                    if (drill_structured["rpe"] or 0) > 6:
+                        continue
+                    drill_eq = normalize_equipment_list(drill.get("equipment", []))
+                    if drill_eq and not set(drill_eq).issubset(equipment_access_set):
+                        continue
+                    machine_candidates.append((0, 0.0, drill, {"reason_codes": ["gas_tank_machine_bias"], "final_score": 0}))
+            machine_candidates.sort(key=lambda item: (item[0], -item[1]))
+            for _priority, _score, drill, reasons in machine_candidates:
+                if _try_append_conditioning_drill("aerobic", drill, reasons, source="gas_tank_machine_bias"):
+                    break
+            else:
+                if machine_candidates and final_drills:
+                    _p, _s, drill, reasons = machine_candidates[0]
+                    old_name = str(final_drills[0][1][0].get("name") or "").strip()
+                    if old_name in selected_drill_names:
+                        selected_drill_names.remove(old_name)
+                    final_drills[0] = ("aerobic", [drill])
+                    new_name = str(drill.get("name") or "").strip()
+                    if new_name:
+                        selected_drill_names.append(new_name)
+                        if reasons is not None:
+                            reason_lookup[new_name] = reasons
 
     # --------- UNIVERSAL CONDITIONING INSERTION ---------
     if phase == "GPP":
