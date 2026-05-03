@@ -267,7 +267,23 @@ def _has_gas_tank_signal(athlete_model: dict) -> bool:
         "late_round",
     )
 
-    return any(term in joined for term in gas_tank_terms)
+    explicit_signal = any(term in joined for term in gas_tank_terms)
+    if explicit_signal:
+        return True
+
+    # Default to a low-aerobic gas-tank touch unless recovery margin is clearly tight.
+    fatigue = str(athlete_model.get("fatigue") or "").strip().lower()
+    readiness_flags = {
+        str(flag).strip().lower().replace("-", "_")
+        for flag in clean_list(athlete_model.get("readiness_flags", []))
+    }
+    cut_bucket = str(athlete_model.get("cut_severity_bucket") or "").strip().lower()
+    high_cut = cut_bucket in {"high", "critical", "extreme"}
+    high_fatigue = fatigue == "high" or "high_fatigue" in readiness_flags
+    if high_cut and high_fatigue:
+        return False
+
+    return True
 
 
 def _calendar_d_day_for_role(week_entry: dict, role: dict) -> int | None:
@@ -283,6 +299,32 @@ def _calendar_d_day_for_role(week_entry: dict, role: dict) -> int | None:
             except (TypeError, ValueError):
                 return None
 
+    return None
+
+
+def _priority_touch_target(athlete_model: dict) -> dict[str, Any] | None:
+    """Return one conservative non-gas-tank priority touch, if profile signals it."""
+    raw_values: list[Any] = []
+    for key in ("key_goals", "goals", "weaknesses", "weak_areas", "performance_goals", "main_limiter", "limiter_key"):
+        raw_values.extend(clean_list(athlete_model.get(key, [])))
+    text = " ".join(str(value).lower().replace("-", "_") for value in raw_values)
+
+    if any(token in text for token in ("speed", "explosive", "fast_twitch", "first_step", "acceleration")):
+        return {
+            "role_key": "converted_priority_speed_touch_day",
+            "category": "conditioning",
+            "preferred_system": "alactic",
+            "athlete_facing_label": "Low-load speed touch",
+            "preferred_tags": ["alactic", "speed", "low_cns", "coordination", "technical"],
+            "preferred_exercise_names": [
+                "Band-Resisted Snap-Step + Reset",
+                "Mirror Footwork Reaction Burst",
+                "Split-Step Ankle Snap Pogo",
+            ],
+            "selection_rule": "Keep this speed touch crisp and low-fatigue: no max sprints, no lactate work, no grinder sets.",
+            "blocked_systems": ["glycolytic"],
+            "blocked_intensities": ["max"],
+        }
     return None
 
 
@@ -326,9 +368,16 @@ def _upgrade_recovery_days_to_gas_tank(
                 "category": "conditioning",
                 "role_key": "recovery_aerobic_gas_tank_day",
                 "original_role_key": role.get("role_key", ""),
+                "athlete_facing_label": "Low aerobic gas-tank flush",
                 "preferred_system": "aerobic",
                 "preferred_pool": "conditioning_slots",
                 "preferred_tags": ["gas_tank", "aerobic", "low_impact", "low_cns", "recovery"],
+                "preferred_exercise_names": [
+                    "Assault Bike Easy Gas Tank Ride",
+                    "Rower Nasal Aerobic Base",
+                    "Nasal Shadowboxing Flow (Gas Tank)",
+                    "Nasal Walk with Boxing Posture",
+                ],
                 "selection_rule": (
                     "Use only low-aerobic gas-tank work here: RPE <= 4, "
                     "low impact, low lactate, low CNS. This may sit on a recovery "
@@ -378,7 +427,9 @@ def _upgrade_unused_days_to_gas_tank(
 
     These are not hard sessions. They are RPE 3-4 aerobic flush/base touches.
     """
-    if not _has_gas_tank_signal(athlete_model):
+    has_gas_tank_signal = _has_gas_tank_signal(athlete_model)
+    priority_target = _priority_touch_target(athlete_model)
+    if not has_gas_tank_signal and not priority_target:
         return session_roles
 
     updated_unused_days: list[dict] = []
@@ -429,19 +480,33 @@ def _upgrade_unused_days_to_gas_tank(
             continue
 
         converted_day = dict(day_entry)
+        target = priority_target if priority_target and not has_gas_tank_signal else None
+        role_key = str((target or {}).get("role_key") or "converted_low_aerobic_gas_tank_day")
+        category = str((target or {}).get("category") or "conditioning")
+        preferred_system = str((target or {}).get("preferred_system") or "aerobic")
+        preferred_tags = list((target or {}).get("preferred_tags") or ["gas_tank", "aerobic", "low_impact", "low_cns", "recovery"])
+        preferred_exercise_names = list((target or {}).get("preferred_exercise_names") or [
+            "Assault Bike Easy Gas Tank Ride",
+            "Rower Nasal Aerobic Base",
+            "Nasal Shadowboxing Flow (Gas Tank)",
+            "Nasal Walk with Boxing Posture",
+        ])
+        athlete_facing_label = str((target or {}).get("athlete_facing_label") or "Low aerobic gas-tank support")
+        selection_rule = str((target or {}).get("selection_rule") or (
+            "Use only low-aerobic gas-tank work here: RPE <= 4, low impact, "
+            "low lactate, low CNS. Suitable options include easy assault bike, "
+            "easy rower, nasal shadowboxing flow, or nasal walk flow."
+        ))
+        blocked_systems = list((target or {}).get("blocked_systems") or ["glycolytic", "ATP-PCr"])
+        blocked_intensities = list((target or {}).get("blocked_intensities") or ["high", "max"])
         converted_day.update(
             {
-                "role": "converted_low_aerobic_gas_tank_day",
-                "category": "conditioning",
-                "preferred_system": "aerobic",
+                "role": role_key,
+                "category": category,
+                "preferred_system": preferred_system,
                 "preferred_pool": "conditioning_slots",
-                "preferred_tags": ["gas_tank", "aerobic", "low_impact", "low_cns", "recovery"],
-                "preferred_exercise_names": [
-                    "Assault Bike Easy Gas Tank Ride",
-                    "Rower Nasal Aerobic Base",
-                    "Nasal Shadowboxing Flow (Gas Tank)",
-                    "Nasal Walk with Boxing Posture",
-                ],
+                "preferred_tags": preferred_tags,
+                "preferred_exercise_names": preferred_exercise_names,
                 "gas_tank_recovery_touch": True,
                 "allowed_on_recovery_day": True,
                 "recovery_compatible": True,
@@ -458,22 +523,14 @@ def _upgrade_unused_days_to_gas_tank(
         added_roles.append(
             {
                 "session_index": 0,
-                "category": "conditioning",
-                "role_key": "converted_low_aerobic_gas_tank_day",
+                "category": category,
+                "role_key": role_key,
+                "athlete_facing_label": athlete_facing_label,
                 "preferred_pool": "conditioning_slots",
-                "preferred_system": "aerobic",
-                "preferred_tags": ["gas_tank", "aerobic", "low_impact", "low_cns", "recovery"],
-                "preferred_exercise_names": [
-                    "Assault Bike Easy Gas Tank Ride",
-                    "Rower Nasal Aerobic Base",
-                    "Nasal Shadowboxing Flow (Gas Tank)",
-                    "Nasal Walk with Boxing Posture",
-                ],
-                "selection_rule": (
-                    "Use only low-aerobic gas-tank work here: RPE <= 4, low impact, "
-                    "low lactate, low CNS. Suitable options include easy assault bike, "
-                    "easy rower, nasal shadowboxing flow, or nasal walk flow."
-                ),
+                "preferred_system": preferred_system,
+                "preferred_tags": preferred_tags,
+                "preferred_exercise_names": preferred_exercise_names,
+                "selection_rule": selection_rule,
                 "anchor": "lowest_load_day",
                 "placement_rule": (
                     "This was an unused recovery/off day upgraded into low-aerobic "
@@ -497,8 +554,8 @@ def _upgrade_unused_days_to_gas_tank(
                 "recovery_compatible": True,
                 "gas_tank_recovery_touch": True,
                 "allowed_on_recovery_day": True,
-                "blocked_systems": ["glycolytic", "ATP-PCr"],
-                "blocked_intensities": ["high", "max"],
+                "blocked_systems": blocked_systems,
+                "blocked_intensities": blocked_intensities,
                                 "blocked_tags": [
                     "mech_cns_high",
                     "high_cns",
