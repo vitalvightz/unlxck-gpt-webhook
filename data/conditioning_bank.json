@@ -143,7 +143,7 @@
     "late_windows": [
       "d13_to_d8",
       "d7",
-      "d6_to_d5",
+      "d6_to_d5"
     ]
   },
   {
@@ -427,7 +427,7 @@
     "late_windows": [
       "d13_to_d8",
       "d7",
-      "d6_to_d5",
+      "d6_to_d5"
     ]
   },
   {
@@ -518,7 +518,7 @@
     "late_windows": [
       "d13_to_d8",
       "d7",
-      "d6_to_d5",
+      "d6_to_d5"
     ]
   },
   {
@@ -675,7 +675,7 @@
     "late_windows": [
       "d13_to_d8",
       "d7",
-      "d6_to_d5",
+      "d6_to_d5"
     ]
   },
   {
@@ -732,7 +732,7 @@
     "late_windows": [
       "d13_to_d8",
       "d7",
-      "d6_to_d5",
+      "d6_to_d5"
     ]
   },
   {
@@ -820,7 +820,7 @@
     "late_windows": [
       "d13_to_d8",
       "d7",
-      "d6_to_d5",
+      "d6_to_d5"
     ]
   },
   {
@@ -3211,7 +3211,7 @@
     "late_windows": [
       "d13_to_d8",
       "d7",
-      "d6_to_d5",
+      "d6_to_d5"
     ]
   },
   {
@@ -4500,7 +4500,7 @@
     "late_windows": [
       "d13_to_d8",
       "d7",
-      "d6_to_d5",
+      "d6_to_d5"
     ]
   },
   {
@@ -5773,7 +5773,7 @@
     "late_windows": [
       "d13_to_d8",
       "d7",
-      "d6_to_d5",
+      "d6_to_d5"
     ],
     "system": "ATP-PCr",
     "duration": "3 x 6 sec, 90s rest",
@@ -6033,7 +6033,7 @@
     "late_windows": [
       "d13_to_d8",
       "d7",
-      "d6_to_d5",
+      "d6_to_d5"
     ]
   },
   {
@@ -6072,7 +6072,7 @@
     "late_windows": [
       "d13_to_d8",
       "d7",
-      "d6_to_d5",
+      "d6_to_d5"
     ]
   },
   {
@@ -6149,7 +6149,7 @@
     "late_windows": [
       "d13_to_d8",
       "d7",
-      "d6_to_d5",
+      "d6_to_d5"
     ]
   },
   {
@@ -6188,7 +6188,7 @@
     "late_windows": [
       "d13_to_d8",
       "d7",
-      "d6_to_d5",
+      "d6_to_d5"
     ]
   },
   {
@@ -6223,7 +6223,7 @@
     "late_windows": [
       "d13_to_d8",
       "d7",
-      "d6_to_d5",
+      "d6_to_d5"
     ]
   },
   {
@@ -6389,7 +6389,7 @@
     "late_windows": [
       "d13_to_d8",
       "d7",
-      "d6_to_d5",
+      "d6_to_d5"
     ]
   },
   {
@@ -6617,7 +6617,7 @@
     "late_windows": [
       "d13_to_d8",
       "d7",
-      "d6_to_d5",
+      "d6_to_d5"
     ]
   },
   {
@@ -7666,7 +7666,7 @@
     "late_windows": [
       "d13_to_d8",
       "d7",
-      "d6_to_d5",
+      "d6_to_d5"
     ]
   },
   {
@@ -7869,7 +7869,7 @@
     "late_windows": [
       "d13_to_d8",
       "d7",
-      "d6_to_d5",
+      "d6_to_d5"
     ]
   },
   {
@@ -8419,11 +8419,10 @@
     "lactate_load": "low",
     "movement_cost": "low",
     "late_windows": [
-      ""late_windows": [
       "d21_to_d14",
       "d13_to_d8",
       "d7",
-      "d6_to_d5",
+      "d6_to_d5"
     ]
   },
   {
