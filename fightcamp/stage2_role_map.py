@@ -308,6 +308,11 @@ def _upgrade_recovery_days_to_gas_tank(
             updated.append(role)
             continue
 
+        scheduled_day = str(role.get("scheduled_day_hint") or "").strip()
+        if not scheduled_day:
+            updated.append(role)
+            continue
+
         d_day = _calendar_d_day_for_role(week_entry, role)
 
         # No extra app work on fight day or day before fight.
@@ -837,7 +842,35 @@ def _assign_declared_day_hints(
         elif idx == aerobic_idx and day in support_work_days:
             reason = "Use declared Support Work Days (non-hard training days / S&C-compatible slots) for lower-noise support work when possible."
         _append_day_hint(role, day, reason)
+    
+    for idx, role in enumerate(ordered):
+        if idx in day_assignments:
+            continue
+        if role.get("category") != "recovery":
+            continue
 
+        fallback_recovery_day = next(
+            (
+                day for day in training_days
+                if day not in used_days and day not in hard_sparring_days
+            ),
+            None,
+        )
+
+        if fallback_recovery_day is None:
+            fallback_recovery_day = next(
+                (day for day in training_days if day not in used_days),
+                None,
+            )
+
+        if fallback_recovery_day:
+            day_assignments[idx] = fallback_recovery_day
+            used_days.add(fallback_recovery_day)
+            _append_day_hint(
+                role,
+                fallback_recovery_day,
+                "Assign leftover recovery/support slot to an unused non-hard training day when possible.",
+            )
     for idx, role in enumerate(ordered):
         if idx not in day_assignments:
             _append_day_hint(role, "")
@@ -1783,12 +1816,6 @@ def _build_weekly_role_map(
             hard_sparring_plan=hard_sparring_plan,
         )
 
-        session_roles = _upgrade_recovery_days_to_gas_tank(
-            week_entry,
-            session_roles,
-            athlete_model,
-        )
-
         session_roles, suppressed_roles = _lock_declared_hard_sparring_roles(
             week_entry,
             session_roles,
@@ -1816,6 +1843,12 @@ def _build_weekly_role_map(
             session_roles,
             athlete_model,
             hard_sparring_plan=hard_sparring_plan,
+        )
+
+        session_roles = _upgrade_recovery_days_to_gas_tank(
+            week_entry,
+            session_roles,
+            athlete_model,
         )
 
         calendar_days = list(week_entry.get("calendar_days") or [])
