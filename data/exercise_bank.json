@@ -10379,9 +10379,9 @@
     ],
     "late_windows": [
       "d21_to_d14",
-      "d13_to_d11",
-      "d10_to_d8",
-      "d7_to_d5",
+      "d13_to_d8",
+      "d7",
+      "d6_to_d5",
       "d4_to_d2"
     ],
     "priority_score": 7.7,
@@ -12094,9 +12094,9 @@
     "subfamily": "mobility_balance",
     "late_windows": [
       "d21_to_d14",
-      "d13_to_d11",
-      "d10_to_d8",
-      "d7_to_d5",
+      "d13_to_d8",
+      "d7",
+      "d6_to_d5",
       "d4_to_d2"
     ],
     "cut_buckets_allowed": [
@@ -12159,9 +12159,9 @@
     "subfamily": "mobility_balance",
     "late_windows": [
       "d21_to_d14",
-      "d13_to_d11",
-      "d10_to_d8",
-      "d7_to_d5",
+      "d13_to_d8",
+      "d7",
+      "d6_to_d5",
       "d4_to_d2",
       "d1"
     ],
@@ -12225,9 +12225,9 @@
     "subfamily": "mobility_balance",
     "late_windows": [
       "d21_to_d14",
-      "d13_to_d11",
-      "d10_to_d8",
-      "d7_to_d5",
+      "d13_to_d8",
+      "d7",
+      "d6_to_d5",
       "d4_to_d2",
       "d1"
     ],
@@ -12290,9 +12290,9 @@
     "subfamily": "mobility_balance",
     "late_windows": [
       "d21_to_d14",
-      "d13_to_d11",
-      "d10_to_d8",
-      "d7_to_d5",
+      "d13_to_d8",
+      "d7",
+      "d6_to_d5",
       "d4_to_d2",
       "d1"
     ],
@@ -12356,9 +12356,9 @@
     "subfamily": "mobility_balance",
     "late_windows": [
       "d21_to_d14",
-      "d13_to_d11",
-      "d10_to_d8",
-      "d7_to_d5",
+      "d13_to_d8",
+      "d7",
+      "d6_to_d5",
       "d4_to_d2",
       "d1"
     ],
@@ -12421,9 +12421,9 @@
     "subfamily": "mobility_balance",
     "late_windows": [
       "d21_to_d14",
-      "d13_to_d11",
-      "d10_to_d8",
-      "d7_to_d5",
+      "d13_to_d8",
+      "d7",
+      "d6_to_d5",
       "d4_to_d2"
     ],
     "cut_buckets_allowed": [
@@ -12485,9 +12485,9 @@
     "subfamily": "mobility_balance",
     "late_windows": [
       "d21_to_d14",
-      "d13_to_d11",
-      "d10_to_d8",
-      "d7_to_d5",
+      "d13_to_d8",
+      "d7",
+      "d6_to_d5",
       "d4_to_d2",
       "d1"
     ],
@@ -12549,9 +12549,9 @@
     "subfamily": "mobility_balance",
     "late_windows": [
       "d21_to_d14",
-      "d13_to_d11",
-      "d10_to_d8",
-      "d7_to_d5",
+      "d13_to_d8",
+      "d7",
+      "d6_to_d5",
       "d4_to_d2",
       "d1"
     ],
@@ -12614,9 +12614,9 @@
     "subfamily": "mobility_balance",
     "late_windows": [
       "d21_to_d14",
-      "d13_to_d11",
-      "d10_to_d8",
-      "d7_to_d5",
+      "d13_to_d8",
+      "d7",
+      "d6_to_d5",
       "d4_to_d2",
       "d1"
     ],
@@ -12680,9 +12680,9 @@
     "subfamily": "mobility_balance",
     "late_windows": [
       "d21_to_d14",
-      "d13_to_d11",
-      "d10_to_d8",
-      "d7_to_d5",
+      "d13_to_d8",
+      "d7",
+      "d6_to_d5",
       "d4_to_d2",
       "d1"
     ],
@@ -12746,9 +12746,9 @@
     "subfamily": "mobility_balance",
     "late_windows": [
       "d21_to_d14",
-      "d13_to_d11",
-      "d10_to_d8",
-      "d7_to_d5",
+      "d13_to_d8",
+      "d7",
+      "d6_to_d5",
       "d4_to_d2"
     ],
     "cut_buckets_allowed": [
@@ -12812,8 +12812,7 @@
     "subfamily": "mobility_balance",
     "late_windows": [
       "d21_to_d14",
-      "d13_to_d11",
-      "d10_to_d8"
+      "d13_to_d8"
     ],
     "cut_buckets_allowed": [
       "none",
@@ -12874,9 +12873,9 @@
     "subfamily": "mobility_balance",
     "late_windows": [
       "d21_to_d14",
-      "d13_to_d11",
-      "d10_to_d8",
-      "d7_to_d5"
+      "d13_to_d8",
+      "d7",
+      "d6_to_d5"
     ],
     "cut_buckets_allowed": [
       "none",
@@ -12938,9 +12937,9 @@
     "subfamily": "mobility_balance",
     "late_windows": [
       "d21_to_d14",
-      "d13_to_d11",
-      "d10_to_d8",
-      "d7_to_d5",
+      "d13_to_d8",
+      "d7",
+      "d6_to_d5",
       "d4_to_d2"
     ],
     "cut_buckets_allowed": [
@@ -13002,8 +13001,7 @@
     "subfamily": "mobility_balance",
     "late_windows": [
       "d21_to_d14",
-      "d13_to_d11",
-      "d10_to_d8"
+      "d13_to_d8"
     ],
     "cut_buckets_allowed": [
       "none",
@@ -13063,9 +13061,9 @@
     "subfamily": "mobility_balance",
     "late_windows": [
       "d21_to_d14",
-      "d13_to_d11",
-      "d10_to_d8",
-      "d7_to_d5"
+      "d13_to_d8",
+      "d7",
+      "d6_to_d5"
     ],
     "cut_buckets_allowed": [
       "none",
@@ -13125,8 +13123,7 @@
     "subfamily": "mobility_balance",
     "late_windows": [
       "d21_to_d14",
-      "d13_to_d11",
-      "d10_to_d8"
+      "d13_to_d8"
     ],
     "cut_buckets_allowed": [
       "none",
@@ -13186,9 +13183,9 @@
     "subfamily": "mobility_balance",
     "late_windows": [
       "d21_to_d14",
-      "d13_to_d11",
-      "d10_to_d8",
-      "d7_to_d5",
+      "d13_to_d8",
+      "d7",
+      "d6_to_d5",
       "d4_to_d2"
     ],
     "cut_buckets_allowed": [
@@ -13248,9 +13245,9 @@
     "subfamily": "mobility_balance",
     "late_windows": [
       "d21_to_d14",
-      "d13_to_d11",
-      "d10_to_d8",
-      "d7_to_d5"
+      "d13_to_d8",
+      "d7",
+      "d6_to_d5"
     ],
     "cut_buckets_allowed": [
       "none",
@@ -13309,9 +13306,9 @@
     "subfamily": "mobility_balance",
     "late_windows": [
       "d21_to_d14",
-      "d13_to_d11",
-      "d10_to_d8",
-      "d7_to_d5",
+      "d13_to_d8",
+      "d7",
+      "d6_to_d5",
       "d4_to_d2"
     ],
     "cut_buckets_allowed": [
