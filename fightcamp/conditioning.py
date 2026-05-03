@@ -1998,8 +1998,7 @@ def generate_conditioning_block(flags):
         score += equip_bonus
         score += 0.6 * min(weak_matches, 1)
         score += 0.5 * min(goal_matches, 1)
-        drill_name = _normalize_conditioning_name(d.get("name", ""))
-        if preferred_exercise_names and drill_name in preferred_exercise_names:
+        if preferred_exercise_names and d.get("name") in preferred_exercise_names:
             score += 3.0
         penalty = 0.0
         if "high_cns" in tags:
