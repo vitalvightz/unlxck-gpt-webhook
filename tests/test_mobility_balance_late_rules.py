@@ -2,7 +2,7 @@ from fightcamp.strength import _evaluate_strength_late_window
 
 
 def _ex(tags):
-    return {"name":"x","tags":tags,"equipment":["bodyweight"],"late_windows":["d21_to_d14","d13_to_d11","d10_to_d8","d6_to_d5","d4_to_d2","d1"],"cut_buckets_allowed":["none","low","moderate","high"]}
+    return {"name":"x","tags":tags,"equipment":["bodyweight"],"late_windows":["d21_to_d14","d13_to_d8","d7","d6_to_d5","d4_to_d2","d1"],"cut_buckets_allowed":["none","low","moderate","high"]}
 
 
 def test_d1_requires_d1_tags():
