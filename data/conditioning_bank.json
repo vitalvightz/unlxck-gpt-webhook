@@ -144,7 +144,6 @@
       "d13_to_d8",
       "d7",
       "d6_to_d5",
-      "d4_to_d2"
     ]
   },
   {
@@ -429,7 +428,6 @@
       "d13_to_d8",
       "d7",
       "d6_to_d5",
-      "d4_to_d2"
     ]
   },
   {
@@ -521,7 +519,6 @@
       "d13_to_d8",
       "d7",
       "d6_to_d5",
-      "d4_to_d2"
     ]
   },
   {
@@ -679,7 +676,6 @@
       "d13_to_d8",
       "d7",
       "d6_to_d5",
-      "d4_to_d2"
     ]
   },
   {
@@ -737,7 +733,6 @@
       "d13_to_d8",
       "d7",
       "d6_to_d5",
-      "d4_to_d2"
     ]
   },
   {
@@ -826,7 +821,6 @@
       "d13_to_d8",
       "d7",
       "d6_to_d5",
-      "d4_to_d2"
     ]
   },
   {
@@ -3218,7 +3212,6 @@
       "d13_to_d8",
       "d7",
       "d6_to_d5",
-      "d4_to_d2"
     ]
   },
   {
@@ -4508,7 +4501,6 @@
       "d13_to_d8",
       "d7",
       "d6_to_d5",
-      "d4_to_d2"
     ]
   },
   {
@@ -5491,12 +5483,6 @@
       "mech_landing_impact",
       "mech_lower_jump",
       "mech_reactive"
-    ],
-    "late_windows": [
-      "d13_to_d8",
-      "d7",
-      "d6_to_d5",
-      "d4_to_d2"
     ]
   },
   {
@@ -5534,12 +5520,6 @@
       "mech_reactive_rebound",
       "mech_systemic_fatigue",
       "mech_trunk_stability"
-    ],
-    "late_windows": [
-      "d13_to_d8",
-      "d7",
-      "d6_to_d5",
-      "d4_to_d2"
     ]
   },
   {
@@ -5574,12 +5554,6 @@
       "mech_lower_jump",
       "mech_reactive",
       "mech_trunk_stability"
-    ],
-    "late_windows": [
-      "d13_to_d8",
-      "d7",
-      "d6_to_d5",
-      "d4_to_d2"
     ]
   },
   {
@@ -5614,12 +5588,6 @@
       "mech_lower_hip_hinge",
       "mech_lower_jump",
       "mech_reactive"
-    ],
-    "late_windows": [
-      "d13_to_d8",
-      "d7",
-      "d6_to_d5",
-      "d4_to_d2"
     ]
   },
   {
@@ -5652,12 +5620,6 @@
       "mech_lower_jump",
       "mech_lower_lunge",
       "mech_reactive"
-    ],
-    "late_windows": [
-      "d13_to_d8",
-      "d7",
-      "d6_to_d5",
-      "d4_to_d2"
     ]
   },
   {
@@ -5692,12 +5654,6 @@
       "mech_landing_impact",
       "mech_lower_jump",
       "mech_reactive"
-    ],
-    "late_windows": [
-      "d13_to_d8",
-      "d7",
-      "d6_to_d5",
-      "d4_to_d2"
     ]
   },
   {
@@ -5730,12 +5686,6 @@
       "mech_lower_jump",
       "mech_reactive",
       "mech_reactive_rebound"
-    ],
-    "late_windows": [
-      "d13_to_d8",
-      "d7",
-      "d6_to_d5",
-      "d4_to_d2"
     ]
   },
   {
@@ -5824,7 +5774,6 @@
       "d13_to_d8",
       "d7",
       "d6_to_d5",
-      "d4_to_d2"
     ],
     "system": "ATP-PCr",
     "duration": "3 x 6 sec, 90s rest",
@@ -5880,12 +5829,6 @@
       "mech_landing_impact",
       "mech_lower_jump",
       "mech_reactive"
-    ],
-    "late_windows": [
-      "d13_to_d8",
-      "d7",
-      "d6_to_d5",
-      "d4_to_d2"
     ]
   },
   {
@@ -5920,12 +5863,6 @@
       "mech_lower_lateral",
       "mech_reactive",
       "mech_trunk_stability"
-    ],
-    "late_windows": [
-      "d13_to_d8",
-      "d7",
-      "d6_to_d5",
-      "d4_to_d2"
     ]
   },
   {
@@ -5958,12 +5895,6 @@
       "mech_landing_impact",
       "mech_lower_jump",
       "mech_reactive"
-    ],
-    "late_windows": [
-      "d13_to_d8",
-      "d7",
-      "d6_to_d5",
-      "d4_to_d2"
     ]
   },
   {
@@ -5998,12 +5929,6 @@
       "mech_lower_jump",
       "mech_lower_lunge",
       "mech_reactive"
-    ],
-    "late_windows": [
-      "d13_to_d8",
-      "d7",
-      "d6_to_d5",
-      "d4_to_d2"
     ]
   },
   {
@@ -6038,12 +5963,6 @@
       "mech_landing_impact",
       "mech_lower_jump",
       "mech_reactive"
-    ],
-    "late_windows": [
-      "d13_to_d8",
-      "d7",
-      "d6_to_d5",
-      "d4_to_d2"
     ]
   },
   {
@@ -6078,12 +5997,6 @@
       "mech_lower_lunge",
       "mech_reactive",
       "mech_trunk_stability"
-    ],
-    "late_windows": [
-      "d13_to_d8",
-      "d7",
-      "d6_to_d5",
-      "d4_to_d2"
     ]
   },
   {
@@ -6121,7 +6034,6 @@
       "d13_to_d8",
       "d7",
       "d6_to_d5",
-      "d4_to_d2"
     ]
   },
   {
@@ -6161,7 +6073,6 @@
       "d13_to_d8",
       "d7",
       "d6_to_d5",
-      "d4_to_d2"
     ]
   },
   {
@@ -6239,7 +6150,6 @@
       "d13_to_d8",
       "d7",
       "d6_to_d5",
-      "d4_to_d2"
     ]
   },
   {
@@ -6279,7 +6189,6 @@
       "d13_to_d8",
       "d7",
       "d6_to_d5",
-      "d4_to_d2"
     ]
   },
   {
@@ -6315,7 +6224,6 @@
       "d13_to_d8",
       "d7",
       "d6_to_d5",
-      "d4_to_d2"
     ]
   },
   {
@@ -6482,7 +6390,6 @@
       "d13_to_d8",
       "d7",
       "d6_to_d5",
-      "d4_to_d2"
     ]
   },
   {
@@ -6711,7 +6618,6 @@
       "d13_to_d8",
       "d7",
       "d6_to_d5",
-      "d4_to_d2"
     ]
   },
   {
@@ -7761,7 +7667,6 @@
       "d13_to_d8",
       "d7",
       "d6_to_d5",
-      "d4_to_d2"
     ]
   },
   {
@@ -7965,7 +7870,6 @@
       "d13_to_d8",
       "d7",
       "d6_to_d5",
-      "d4_to_d2"
     ]
   },
   {
