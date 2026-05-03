@@ -362,7 +362,7 @@ def _low_load_support_profile_for_unused_day(athlete_model: dict) -> dict[str, A
         "back",
     }
 
-    if tokens & gas_tank_terms:
+    if tokens & gas_tank_terms or _has_gas_tank_signal(athlete_model):
         return {
             "role_key": "converted_low_aerobic_gas_tank_day",
             "athlete_facing_label": "Low aerobic gas-tank support",
@@ -507,7 +507,7 @@ def _upgrade_recovery_days_to_gas_tank(
     return updated
 
 
-def _upgrade_unused_days_to_gas_tank(
+def _upgrade_unused_days_to_low_load_support(
     week_entry: dict,
     session_roles: list[dict],
     athlete_model: dict,
@@ -2147,7 +2147,7 @@ def _build_weekly_role_map(
             athlete_model,
         )
         
-        session_roles = _upgrade_unused_days_to_gas_tank(
+        session_roles = _upgrade_unused_days_to_low_load_support(
             week_entry,
             session_roles,
             athlete_model,
