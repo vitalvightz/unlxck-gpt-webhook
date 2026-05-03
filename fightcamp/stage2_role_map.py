@@ -368,25 +368,38 @@ def _upgrade_recovery_days_to_gas_tank(
 
 def _upgrade_unused_days_to_gas_tank(
     week_entry: dict,
+    session_roles: list[dict],
     athlete_model: dict,
-) -> None:
+) -> list[dict]:
     """
     If gas tank is a goal/weakness, turn eligible intentionally unused
-    recovery/off days into low-aerobic gas-tank day suggestions.
+    recovery/off days into real low-aerobic gas-tank session roles.
 
     These are not hard sessions. They are RPE 3-4 aerobic flush/base touches.
     """
     if not _has_gas_tank_signal(athlete_model):
-        return
+        return session_roles
 
-    updated_days: list[dict] = []
+    updated_unused_days: list[dict] = []
+    added_roles: list[dict] = []
+
+    existing_days = {
+        str(role.get("scheduled_day_hint") or "").strip()
+        for role in session_roles
+        if str(role.get("scheduled_day_hint") or "").strip()
+    }
 
     for day_entry in week_entry.get("intentionally_unused_days") or []:
         day = str(day_entry.get("day") or "").strip()
         role = str(day_entry.get("role") or "").strip()
 
         if not day:
-            updated_days.append(day_entry)
+            updated_unused_days.append(day_entry)
+            continue
+
+        # Do not double-book a day that already has a session role.
+        if day in existing_days:
+            updated_unused_days.append(day_entry)
             continue
 
         d_day = None
@@ -400,15 +413,15 @@ def _upgrade_unused_days_to_gas_tank(
 
         # Do not add app gas-tank work on D-1 or D-0.
         if d_day is not None and d_day <= 1:
-            updated_days.append(day_entry)
+            updated_unused_days.append(day_entry)
             continue
 
         if role not in {"recovery_only_day", "off_day"}:
-            updated_days.append(day_entry)
+            updated_unused_days.append(day_entry)
             continue
 
-        converted = dict(day_entry)
-        converted.update(
+        converted_day = dict(day_entry)
+        converted_day.update(
             {
                 "role": "low_aerobic_gas_tank_day",
                 "category": "conditioning",
@@ -417,22 +430,69 @@ def _upgrade_unused_days_to_gas_tank(
                 "gas_tank_recovery_touch": True,
                 "allowed_on_recovery_day": True,
                 "recovery_compatible": True,
-                "selection_rule": (
-                    "Use only low-aerobic gas-tank work here: RPE <= 4, "
-                    "low impact, low lactate, low CNS. Suitable options include "
-                    "easy assault bike, easy rower, nasal shadowboxing flow, "
-                    "or nasal walk flow."
-                ),
                 "reason": (
                     "Gas tank is a profile goal/weakness, so this unused recovery/off "
-                    "day can become a low-aerobic gas-tank touch without becoming hard conditioning."
+                    "day becomes a low-aerobic gas-tank touch without becoming hard conditioning."
                 ),
             }
         )
-        updated_days.append(converted)
+        updated_unused_days.append(converted_day)
 
-    week_entry["intentionally_unused_days"] = updated_days
+        added_roles.append(
+            {
+                "session_index": 0,
+                "category": "conditioning",
+                "role_key": "low_aerobic_gas_tank_day",
+                "preferred_pool": "low_aerobic_gas_tank_pool",
+                "preferred_system": "aerobic",
+                "selection_rule": (
+                    "Use only low-aerobic gas-tank work here: RPE <= 4, low impact, "
+                    "low lactate, low CNS. Suitable options include easy assault bike, "
+                    "easy rower, nasal shadowboxing flow, or nasal walk flow."
+                ),
+                "anchor": "lowest_load_day",
+                "placement_rule": (
+                    "This was an unused recovery/off day upgraded into low-aerobic "
+                    "gas-tank work because conditioning/endurance is a profile limiter. "
+                    "Allowed adjacent to hard sparring because it is not hard conditioning."
+                ),
+                "governance": {
+                    "authority": "gas_tank_recovery_upgrade",
+                    "execution_only": True,
+                    "suppression_rules": [
+                        "Must remain RPE <= 4.",
+                        "Must be low impact, low lactate, and low CNS.",
+                        "Must not become glycolytic, sprint, plyometric, or max-intensity work.",
+                    ],
+                    "hard_suppression_reasons": [],
+                },
+                "scheduled_day_hint": day,
+                "day_assignment_reason": (
+                    "Unused recovery/off training day upgraded to low-aerobic gas-tank work."
+                ),
+                "recovery_compatible": True,
+                "gas_tank_recovery_touch": True,
+                "allowed_on_recovery_day": True,
+                "blocked_systems": ["glycolytic", "ATP-PCr"],
+                "blocked_intensities": ["high", "max"],
+                "blocked_tags": [
+                    "mech_cns_high",
+                    "high_cns",
+                    "sprint",
+                    "plyometric",
+                    "high_impact_lower",
+                    "mech_landing_impact",
+                ],
+            }
+        )
 
+    week_entry["intentionally_unused_days"] = updated_unused_days
+
+    result = list(session_roles) + added_roles
+    for idx, role in enumerate(result, start=1):
+        role["session_index"] = idx
+
+    return result
 
 def _role_governance(
     week_entry: dict,
@@ -1919,8 +1979,9 @@ def _build_weekly_role_map(
             athlete_model,
         )
         
-        _upgrade_unused_days_to_gas_tank(
+        session_roles = _upgrade_unused_days_to_gas_tank(
             week_entry,
+            session_roles,
             athlete_model,
         )
         
