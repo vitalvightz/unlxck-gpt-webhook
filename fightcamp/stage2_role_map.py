@@ -520,12 +520,12 @@ def _upgrade_unused_days_to_gas_tank(
                 "preferred_pool": "conditioning_slots",
                 "preferred_system": preferred_system,
                 "preferred_tags": preferred_tags,
-                "preferred_exercise_names": [
+                "preferred_exercise_names": list((target or {}).get("preferred_exercise_names") or [
                     "Assault Bike Easy Gas Tank Ride",
                     "Rower Nasal Aerobic Base",
                     "Nasal Shadowboxing Flow (Gas Tank)",
                     "Nasal Walk with Boxing Posture",
-                ],
+                ]),
                 "selection_rule": selection_rule,
                 "anchor": "lowest_load_day",
                 "placement_rule": (
