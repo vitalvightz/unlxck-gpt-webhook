@@ -119,7 +119,7 @@ def test_high_week_pressure_and_moderate_injury_deloads():
     # D-6 countdown override deloads ALL days, not just one
     downgraded = [entry for entry in plan if entry["status"] != "hard_as_planned"]
     assert len(downgraded) == 2
-    assert all(entry["status"] == "deload_suggested" for entry in downgraded)
+    assert all(entry["status"] == "convert_to_technical_suggested" for entry in downgraded)
 
 
 def test_d7_caps_three_declared_hard_days_to_one_actual_hard_day():
@@ -128,10 +128,10 @@ def test_d7_caps_three_declared_hard_days_to_one_actual_hard_day():
         athlete_snapshot=_athlete(days_until_fight=7, hard_days=["Monday", "Wednesday", "Friday"]),
     )
 
-    assert [entry["status"] for entry in plan].count("hard_as_planned") == 1
-    assert [entry["status"] for entry in plan].count("deload_suggested") == 2
-    assert all(entry.get("coach_note") for entry in plan if entry["status"] == "deload_suggested")
-    assert all("final_week_sparring_cap" in entry.get("reason_codes", []) for entry in plan if entry["status"] == "deload_suggested")
+    assert [entry["status"] for entry in plan].count("hard_as_planned") == 0
+    assert [entry["status"] for entry in plan].count("convert_to_technical_suggested") == 3
+    assert all(entry.get("coach_note") for entry in plan if entry["status"] == "convert_to_technical_suggested")
+    assert all("final_week_sparring_cap" in entry.get("reason_codes", []) for entry in plan if entry["status"] == "convert_to_technical_suggested")
 
 
 def test_taper_week_caps_multiple_declared_hard_days_to_one_without_countdown():
@@ -166,6 +166,32 @@ def test_taper_week_respects_collision_owner_but_still_caps_extra_coach_days():
     assert by_day["Monday"]["status"] == "deload_suggested"
     assert by_day["Monday"]["hard_day_class"] == "managed_hard"
     assert "final_week_sparring_cap" in by_day["Monday"]["reason_codes"]
+
+
+def test_d16_declared_hard_day_is_forced_to_technical():
+    plan = compute_hard_sparring_plan(
+        week=_week(hard_days=["Monday"]),
+        athlete_snapshot=_athlete(days_until_fight=16, hard_days=["Monday"]),
+    )
+    assert plan[0]["status"] == "convert_to_technical_suggested"
+    assert plan[0]["effective_load"] == "technical"
+
+
+def test_bridge_window_cap_allows_only_one_between_d21_and_d18():
+    plan = compute_hard_sparring_plan(
+        week=_week(
+            phase="TAPER",
+            stage_key="taper_bridge_window",
+            hard_days=["Monday", "Wednesday"],
+            phase_week_index=1,
+            projected_days_until_fight_start=21,
+            session_roles=[{"role_key": "fight_pace_repeatability_day", "collision_owner_day": "Monday"}],
+        ),
+        athlete_snapshot=_athlete(days_until_fight=19, hard_days=["Monday", "Wednesday"]),
+    )
+    by_day = {entry["day"]: entry for entry in plan}
+    assert by_day["Monday"]["effective_load"] == "hard"
+    assert by_day["Wednesday"]["effective_load"] != "hard"
 
 
 def test_instability_or_daily_symptoms_convert():

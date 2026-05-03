@@ -556,3 +556,138 @@ def test_taper_d19_gas_tank_signal_keeps_one_low_noise_aerobic_machine_dose():
     assert len(selected_aerobic) >= 1
     lower_blob = " ".join(selected_aerobic).lower()
     assert any(term in lower_blob for term in ("rower", "bike", "shadowbox"))
+
+
+def test_machine_biased_gas_tank_helper_detects_bike_and_rower():
+    assert conditioning._is_machine_biased_gas_tank_drill(
+        {"name": "Assault Bike Zone 2 Steady", "system": "aerobic", "lactate_load": "low", "rpe": 5}
+    )
+    assert conditioning._is_machine_biased_gas_tank_drill(
+        {"equipment": ["rower"], "tags": ["recovery"], "lactate_load": "low", "rpe": 5}
+    )
+    assert not conditioning._is_machine_biased_gas_tank_drill({"name": "Battle Rope Waves", "equipment": ["battle_ropes"]})
+
+
+def test_machine_biased_gas_tank_helper_rejects_glycolytic_machine_intervals():
+    drill = {
+        "name": "Assault Bike Tabata",
+        "system": "glycolytic",
+        "equipment": ["assault_bike"],
+        "tags": ["conditioning"],
+        "notes": "8 x 20s hard / 10s easy",
+        "rpe": 9,
+        "lactate_load": "high",
+    }
+    assert not conditioning._is_machine_biased_gas_tank_drill(drill)
+
+
+def test_focus_token_normalization_matches_ui_labels():
+    values = conditioning._normalize_focus_tokens(["Gas Tank", "Conditioning", "work_capacity"])
+    assert "gas tank" in values
+    assert "gas_tank" in values
+    assert "conditioning" in values
+    assert "work capacity" in values
+
+
+def test_d16_profile_keeps_low_aerobic_machine_and_rejects_dense_machine_work(monkeypatch):
+    safe_machine = {
+        "name": "Assault Bike Easy Gas Tank Ride",
+        "placement": "conditioning",
+        "system": "aerobic",
+        "phases": ["SPP"],
+        "equipment": ["assault_bike"],
+        "tags": ["conditioning", "aerobic", "low_impact", "recovery"],
+        "rpe": 5,
+        "lactate_load": "low",
+        "notes": "12-18 min easy nasal breathing",
+    }
+    unsafe_machine = {
+        "name": "Assault Bike Tabata",
+        "placement": "conditioning",
+        "system": "glycolytic",
+        "phases": ["SPP"],
+        "equipment": ["assault_bike"],
+        "tags": ["conditioning", "work_capacity"],
+        "rpe": 9,
+        "lactate_load": "high",
+        "notes": "8 x 20s hard / 10s easy",
+    }
+    monkeypatch.setattr(conditioning, "get_conditioning_bank", lambda: [unsafe_machine, safe_machine])
+    monkeypatch.setattr(conditioning, "get_style_conditioning_bank", lambda: [])
+    monkeypatch.setattr(conditioning, "get_coordination_bank", lambda: [])
+    monkeypatch.setattr(conditioning, "allocate_sessions", lambda *_args, **_kwargs: {"conditioning": 1})
+    monkeypatch.setattr(conditioning, "calculate_exercise_numbers", lambda *_args, **_kwargs: {"conditioning": 1})
+    monkeypatch.setattr(conditioning, "_load_bank", lambda *_args, **_kwargs: [])
+
+    _text, selected_names, _why, grouped_drills, _missing, _reservoir = conditioning.generate_conditioning_block(
+        {
+            "phase": "SPP",
+            "sport": "boxing",
+            "style_tactical": ["Pressure Fighter"],
+            "key_goals": ["Power", "Conditioning"],
+            "weaknesses": ["Gas Tank"],
+            "fatigue": "moderate",
+            "equipment": ["Assault Bike", "Rower", "Battle Ropes"],
+            "training_frequency": 5,
+            "days_available": 5,
+            "days_until_fight": 16,
+            "weight_cut_pct": 3.0,
+            "injuries": [],
+            "restrictions": [],
+        }
+    )
+    blob = " ".join(selected_names + [d.get("name", "") for d in grouped_drills.get("aerobic", [])]).lower()
+    assert "assault bike" in blob or "rower" in blob
+    assert "tabata" not in blob
+
+
+def test_taper_d16_profile_allows_only_low_noise_machine_gas_tank(monkeypatch):
+    safe_machine = {
+        "name": "Concept2 Rower Recovery Rows",
+        "placement": "conditioning",
+        "system": "aerobic",
+        "phases": ["TAPER"],
+        "equipment": ["rower"],
+        "tags": ["conditioning", "aerobic", "low_impact", "recovery"],
+        "rpe": 5,
+        "lactate_load": "low",
+        "notes": "10-15 min smooth nasal breathing",
+    }
+    unsafe_machine = {
+        "name": "Assault Bike Capacity Builder 20min EMOM",
+        "placement": "conditioning",
+        "system": "glycolytic",
+        "phases": ["TAPER"],
+        "equipment": ["assault_bike"],
+        "tags": ["conditioning", "work_capacity"],
+        "rpe": 8,
+        "lactate_load": "high",
+        "notes": "EMOM intervals",
+    }
+    monkeypatch.setattr(conditioning, "get_conditioning_bank", lambda: [unsafe_machine, safe_machine])
+    monkeypatch.setattr(conditioning, "get_style_conditioning_bank", lambda: [])
+    monkeypatch.setattr(conditioning, "get_coordination_bank", lambda: [])
+    monkeypatch.setattr(conditioning, "allocate_sessions", lambda *_args, **_kwargs: {"conditioning": 1})
+    monkeypatch.setattr(conditioning, "calculate_exercise_numbers", lambda *_args, **_kwargs: {"conditioning": 1})
+    monkeypatch.setattr(conditioning, "_load_bank", lambda *_args, **_kwargs: [])
+
+    _text, selected_names, _why, grouped_drills, _missing, _reservoir = conditioning.generate_conditioning_block(
+        {
+            "phase": "TAPER",
+            "sport": "boxing",
+            "key_goals": ["Power", "Conditioning"],
+            "weaknesses": ["Gas Tank"],
+            "fatigue": "moderate",
+            "equipment": ["Assault Bike", "Rower"],
+            "training_frequency": 5,
+            "days_available": 5,
+            "days_until_fight": 16,
+            "weight_cut_pct": 3.0,
+            "injuries": [],
+            "restrictions": [],
+        }
+    )
+    blob = " ".join(selected_names + [d.get("name", "") for d in grouped_drills.get("aerobic", [])]).lower()
+    assert "rower" in blob or "bike" in blob
+    assert "tabata" not in blob
+    assert "emom" not in blob

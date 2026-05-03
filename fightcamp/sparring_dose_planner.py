@@ -178,7 +178,7 @@ def _main_collision_owner_day(week: dict[str, Any], hard_days: list[str]) -> str
 def _countdown_sparring_override(days_until_fight: Any) -> str | None:
     """Final fight-week override.
 
-    D-7 to D-0 converts every declared hard sparring day to technical/rhythm.
+    D-17 to D-0 converts every declared hard sparring day to technical/rhythm.
     Bridge-window caps are handled separately by _bridge_window_sparring_override().
     """
     try:
@@ -186,7 +186,7 @@ def _countdown_sparring_override(days_until_fight: Any) -> str | None:
     except (TypeError, ValueError):
         return None
 
-    return "convert_all" if 0 <= days <= 7 else None
+    return "convert_all" if 0 <= days <= 17 else None
 
 
 _BRIDGE_CONTACT_SPORTS = {
@@ -871,8 +871,8 @@ _COUNTDOWN_COACH_NOTES: dict[int, str] = {
         "and stay focused on timing over damage."
     ),
     14: (
-        "Two weeks out. You're in the bridge window — no hard sparring from here; "
-        "keep rounds technical and rhythm-first to protect freshness into fight week."
+        "Fourteen days out. Hard sparring is still banned in this countdown window. "
+        "Keep rounds technical, brief, and low-contact."
     ),
     15: (
         "Fifteen days out. The D-17 hard-sparring ban is already active — "
