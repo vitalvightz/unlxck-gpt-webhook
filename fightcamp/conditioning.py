@@ -2503,7 +2503,7 @@ def generate_conditioning_block(flags):
                 for drill in get_conditioning_bank():
                     if drill.get("placement", "conditioning").lower() != "conditioning":
                         continue
-                    if phase.upper() not in [str(p).upper() for p in drill.get("phases", [])]:
+                    if phase not in {str(p).upper() for p in drill.get("phases", [])}:
                         continue
                     if not _is_machine_biased_gas_tank_drill(drill):
                         continue
