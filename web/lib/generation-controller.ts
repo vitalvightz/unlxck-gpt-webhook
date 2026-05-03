@@ -168,6 +168,22 @@ async function createJobWithReconnect(
   throw lastError instanceof Error ? lastError : new Error("Unable to start plan generation.");
 }
 
+async function pollGenerationJobWithReconnect(token: string, jobId: string): Promise<GenerationJobResponse> {
+  let lastError: unknown;
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    try {
+      return await getGenerationJob(token, jobId);
+    } catch (error) {
+      lastError = error;
+      if (!isRetryableApiFailure(error) || attempt === 3) {
+        throw error;
+      }
+      await sleep(1_500 * attempt);
+    }
+  }
+  throw lastError instanceof Error ? lastError : new Error("Unable to reconnect to plan generation.");
+}
+
 export function useGenerationController({
   token,
   storageKey,
@@ -227,7 +243,16 @@ export function useGenerationController({
         });
 
         for (;;) {
-          const currentJob = await getGenerationJob(token, createdJob.job_id);
+          let currentJob: GenerationJobResponse;
+          try {
+            currentJob = await pollGenerationJobWithReconnect(token, createdJob.job_id);
+          } catch (error) {
+            if (isRetryableApiFailure(error)) {
+              setPhase("reconnecting");
+              setStatusMessage("Connection dropped while checking status. Reconnecting to your existing request.");
+            }
+            throw error;
+          }
 
           savePendingGeneration(storageKey, {
             clientRequestId,
