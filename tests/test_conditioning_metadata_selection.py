@@ -691,3 +691,44 @@ def test_taper_d16_profile_allows_only_low_noise_machine_gas_tank(monkeypatch):
     assert "rower" in blob or "bike" in blob
     assert "tabata" not in blob
     assert "emom" not in blob
+
+def test_preferred_exercise_names_get_strong_score_boost(monkeypatch):
+    monkeypatch.setattr(conditioning, "get_conditioning_bank", lambda: [
+        {
+            "name": "Assault Bike Easy Gas Tank Ride",
+            "placement": "conditioning",
+            "phases": ["GPP"],
+            "system": "aerobic",
+            "tags": ["aerobic", "recovery", "low_impact"],
+            "equipment": ["assault_bike"],
+        },
+        {
+            "name": "Generic Aerobic Builder",
+            "placement": "conditioning",
+            "phases": ["GPP"],
+            "system": "aerobic",
+            "tags": ["aerobic", "recovery", "low_impact"],
+            "equipment": ["assault_bike"],
+        },
+    ])
+    monkeypatch.setattr(conditioning, "get_style_conditioning_bank", lambda: [])
+
+    _block, names, reasons, _grouped, _missing, _reservoir = conditioning.generate_conditioning_block(
+        {
+            "phase": "GPP",
+            "fatigue": "low",
+            "style_technical": ["boxing"],
+            "style_tactical": ["boxing"],
+            "key_goals": ["gas_tank"],
+            "weaknesses": ["gas_tank"],
+            "equipment": ["assault_bike"],
+            "training_frequency": 2,
+            "preferred_exercise_names": ["Assault Bike Easy Gas Tank Ride"],
+        }
+    )
+
+    assert names
+    assert names[0] == "Assault Bike Easy Gas Tank Ride"
+    by_name = {entry.get("name"): entry for entry in reasons}
+    assert "preferred_exercise_name_match:+3.0" in by_name["Assault Bike Easy Gas Tank Ride"].get("reasons", {}).get("reason_codes", [])
+    assert "preferred exercise match" in (by_name["Assault Bike Easy Gas Tank Ride"].get("explanation", "")).lower()
