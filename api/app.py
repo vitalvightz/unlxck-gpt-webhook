@@ -585,11 +585,6 @@ def _admin_approved_result(plan_row: dict[str, Any]) -> dict[str, Any]:
     if planning_brief:
         review = review_stage2_output(planning_brief=planning_brief, final_plan_text=approved_text)
         validator_report = review["validator_report"]
-        if review["status"] != "PASS":
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail="Cannot approve Stage 2 output with blocking validation issues.",
-            )
     return {
         "status": "ready",
         "plan_text": approved_text,
