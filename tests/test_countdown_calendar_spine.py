@@ -305,3 +305,58 @@ def test_late_fight_preserves_safe_conditioning_and_exposes_real_day_labels():
     assert schedule is not None
     assert isinstance(schedule.get("projected_days_until_fight_end"), int)
     assert schedule.get("projected_days_until_fight_end") <= 6
+
+
+def test_recovery_day_can_become_low_aerobic_gas_tank_when_gas_tank_is_limiter():
+    from fightcamp.stage2_role_map import _build_weekly_role_map
+
+    athlete_model = {
+        "sport": "boxing",
+        "status": "amateur",
+        "rounds_format": "3x3",
+        "training_days": ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday"],
+        "hard_sparring_days": ["monday", "wednesday", "friday"],
+        "key_goals": ["conditioning_endurance"],
+        "weaknesses": ["gas_tank"],
+        "fatigue": "moderate",
+        "weight_cut_pct": 3.0,
+        "weight_cut_risk": True,
+        "readiness_flags": [],
+        "injuries": [],
+        "fight_date": "2026-05-29",
+        "days_until_fight": 28,
+    }
+
+    progression = {
+        "weeks": [
+            {
+                "week_index": 1,
+                "phase": "GPP",
+                "stage_key": "general_capacity",
+                "phase_week_index": 1,
+                "phase_week_total": 1,
+                "span_days": 7,
+                "session_counts": {
+                    "strength": 1,
+                    "conditioning": 0,
+                    "recovery": 2,
+                },
+            }
+        ]
+    }
+
+    role_map = _build_weekly_role_map(
+        athlete_model,
+        progression,
+        {"key": "general_fight_readiness"},
+    )
+
+    week = role_map["weeks"][0]
+    gas_tank_roles = [
+        role for role in week["session_roles"]
+        if role.get("role_key") == "recovery_aerobic_gas_tank_day"
+    ]
+
+    assert gas_tank_roles
+    assert all(role.get("preferred_system") == "aerobic" for role in gas_tank_roles)
+    assert all(role.get("gas_tank_recovery_touch") is True for role in gas_tank_roles)
