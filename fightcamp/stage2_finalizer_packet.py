@@ -173,7 +173,11 @@ def _compact_weekly_role_map(weekly_role_map: Any) -> dict[str, Any]:
                     "projected_days_until_fight_end": week.get("projected_days_until_fight_end"),
                     "countdown_range": week.get("countdown_range"),
                     "calendar_days": week.get("calendar_days"),
-                    "intentionally_unused_days": week.get("intentionally_unused_days"),
+                    "intentionally_unused_days": [
+                        {"day": d.get("day"), "role": d.get("role")}
+                        for d in (week.get("intentionally_unused_days") or [])
+                        if isinstance(d, dict)
+                    ],
                     "declared_training_days": week.get("declared_training_days"),
                     "declared_hard_sparring_days": week.get("declared_hard_sparring_days"),
                     "declared_support_work_days": week.get("declared_support_work_days"),
