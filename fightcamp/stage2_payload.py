@@ -3931,6 +3931,15 @@ If the cut is high-pressure, include one short summary-level note plus one suppo
 In short camps, every rendered session must map to one compressed week-level priority from the finalizer packet. Do not create a standalone session purpose for embedded-support or deferred items.
 Placement governs day assignment only; it does not change insert voice, ownership, or visible session count.
 
+Do not render generic week/day labels when selected_plan.weekly_role_map provides countdown fields.
+If a week has countdown_range or calendar_days, render the week header with D-range (for example: "Week 1 — GPP (D-37 → D-31)").
+For each scheduled session day, append the day countdown label from role.scheduled_countdown_label, role.countdown_label, or the matching calendar_days entry (for example: "Tuesday (D-36)").
+Never emit plain "Week 1" or plain "Monday/Tuesday" when countdown labels are available.
+
+When a role has gas_tank_recovery_touch=true or converted_from_unused_day=true, render it as a real low-aerobic session line, not as "Recovery only" or a hidden note.
+On these converted days, keep the work strictly low-aerobic (RPE 3-4, low impact, low lactate, low CNS) and do not promote it to glycolytic/sprint/plyometric/max work.
+In GPP/SPP with gas tank goals or weaknesses, prefer these low-aerobic touches on clean recovery/off days unless a hard safety blocker exists.
+
 RULE 12 — SURGICAL REHAB INTEGRATION
 Rehab must be intentional, not copy-pasted. Full authority to add, adjust, or remove any rehab item.
 Use the function_class tags when present as scoring guidance — not hard constraints.

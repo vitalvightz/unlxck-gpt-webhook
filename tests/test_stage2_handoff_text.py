@@ -226,3 +226,41 @@ def test_build_stage2_handoff_text_preserves_countdown_calendar_fields_in_weekly
     assert '"countdown_range":[36,30]' in handoff
     assert '"calendar_days":[{"weekday":"Tue","d_day":36}]' in handoff
     assert '"projected_days_until_fight_start":36' in handoff
+
+
+def test_build_stage2_handoff_text_preserves_role_countdown_fields_for_renderer_labels():
+    handoff = build_stage2_handoff_text(
+        stage2_payload={"athlete_model": {"sport": "boxing"}},
+        plan_text="Week 1",
+        planning_brief={
+            "athlete_snapshot": {"sport": "boxing"},
+            "weekly_role_map": {
+                "weeks": [
+                    {
+                        "week_index": 1,
+                        "phase": "GPP",
+                        "session_roles": [
+                            {
+                                "role_key": "aerobic_base_day",
+                                "category": "conditioning",
+                                "scheduled_day_hint": "tuesday",
+                                "scheduled_countdown_label": "D-36",
+                                "countdown_label": "D-36",
+                                "day_label": "D-36",
+                                "d_day": 36,
+                                "converted_from_unused_day": True,
+                                "gas_tank_recovery_touch": True,
+                            }
+                        ],
+                    }
+                ]
+            },
+        },
+    )
+
+    assert '"scheduled_countdown_label":"D-36"' in handoff
+    assert '"countdown_label":"D-36"' in handoff
+    assert '"day_label":"D-36"' in handoff
+    assert '"d_day":36' in handoff
+    assert '"converted_from_unused_day":true' in handoff
+    assert '"gas_tank_recovery_touch":true' in handoff

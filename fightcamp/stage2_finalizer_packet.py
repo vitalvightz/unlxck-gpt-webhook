@@ -125,6 +125,10 @@ def _compact_role(role: dict[str, Any]) -> dict[str, Any]:
         "coach_owned",
         "display_text",
         "athlete_facing_label",
+        "scheduled_countdown_label",
+        "countdown_label",
+        "day_label",
+        "d_day",
 
         # Gas-tank / recovery-day upgrade flags
         "gas_tank_recovery_touch",

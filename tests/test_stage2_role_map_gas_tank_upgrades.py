@@ -133,3 +133,20 @@ def test_weekly_role_map_roles_carry_countdown_labels_for_renderers():
     role_map = _build_weekly_role_map(athlete_model, week_by_week_progression, limiter_profile)
     roles = role_map["weeks"][0]["session_roles"]
     assert any(str(role.get("scheduled_countdown_label") or "").startswith("D-") for role in roles)
+
+
+def test_unused_day_upgrade_skips_d1_and_d0():
+    week = {
+        "phase": "SPP",
+        "calendar_days": [{"weekday": "friday", "d_day": 1}, {"weekday": "saturday", "d_day": 0}],
+        "intentionally_unused_days": [
+            {"day": "friday", "role": "recovery_only_day"},
+            {"day": "saturday", "role": "off_day"},
+        ],
+    }
+    athlete_model = {"key_goals": ["conditioning"], "weaknesses": ["gas_tank"]}
+
+    upgraded = _upgrade_unused_days_to_gas_tank(week, [], athlete_model)
+    assert upgraded == []
+    assert week["intentionally_unused_days"][0]["role"] == "recovery_only_day"
+    assert week["intentionally_unused_days"][1]["role"] == "off_day"
