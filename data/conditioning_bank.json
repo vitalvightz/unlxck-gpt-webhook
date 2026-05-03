@@ -5902,9 +5902,7 @@
     "equipment": [
       "bands"
     ],
-    "phases": [
-      "TAPER"
-    ],
+    "phases": [],
     "system": "ATP-PCr",
     "duration": "4x3/side, 1min rest",
     "tags": [
@@ -5929,7 +5927,8 @@
       "mech_lower_jump",
       "mech_lower_lunge",
       "mech_reactive"
-    ]
+    ],
+    "late_windows": []
   },
   {
     "name": "Single-Leg Med Ball Toss Jump",
@@ -6099,7 +6098,8 @@
       "d21_to_d14",
       "d13_to_d8",
       "d7",
-      "d6_to_d5"
+      "d6_to_d5",
+      "d4_to_d2"
     ],
     "notes": "Band attached to rear hand. Punch fast and release. Cue: handspeed.",
     "work_sec": 5,
