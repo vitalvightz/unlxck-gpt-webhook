@@ -470,46 +470,6 @@
     ]
   },
   {
-    "name": "Hang Power Clean",
-    "category": "full_body",
-    "phases": [
-      "SPP"
-    ],
-    "method": "power",
-    "movement": "olympic",
-    "type": "bilateral",
-    "tags": [
-      "explosive",
-      "triple_extension",
-      "mech_cns_high",
-      "mech_grip_support",
-      "mech_ballistic",
-      "mech_lower_hip_hinge",
-      "mech_upper_pull"
-    ],
-    "equipment": "barbell",
-    "movement_cost": "high",
-    "impact_cost": "low",
-    "eccentric_cost": "moderate",
-    "landing_cost": "none",
-    "cns_load": "high",
-    "soreness_risk": "high",
-    "mechanical_risk_tags": [
-      "mech_ballistic",
-      "mech_cns_high",
-      "mech_grip_support",
-      "mech_lower_hip_hinge",
-      "mech_upper_pull"
-    ],
-    "low_impact": true,
-    "low_eccentric": false,
-    "cns_freshness": false,
-    "cut_buckets_allowed": [
-      "none",
-      "low"
-    ]
-  },
-  {
     "name": "Landmine Rotational Press",
     "category": "upper_body",
     "phases": [
