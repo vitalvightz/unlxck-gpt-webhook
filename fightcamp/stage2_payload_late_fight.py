@@ -5,7 +5,8 @@ from itertools import combinations, permutations
 from typing import Any
 
 
-CANONICAL_HARD_SPARRING_LABEL = "Coach-led boxing — no hard sparring / technical only"
+CANONICAL_HARD_SPARRING_LABEL = "Coach-led boxing session"
+CANONICAL_HARD_SPARRING_BAN_LABEL = "Coach-led boxing — no hard sparring / technical only"
 CANONICAL_HARD_SPARRING_NOTE = "No app S&C today. Keep freshness priority."
 
 
@@ -3687,7 +3688,7 @@ def _handoff_mode_instructions(payload_mode: str) -> str:
         "If late_fight_plan_spec.surviving_hard_spar_days / late_fight_plan_spec.downgraded_declared_spar_days are present, use those fields as source of truth and add one short deterministic sentence (hard days first, downgraded days second).\n"
         "Add one short rationale only when placement/compression would otherwise make day choice look arbitrary.\n"
         "One hard-spar doctrine per output. No split schedule realities.\n"
-"Hard sparring days are gym/coach-owned. The app must not prescribe the sparring. Render the day as a minimal label only — \"" + CANONICAL_HARD_SPARRING_LABEL + "\" (or sport-equivalent). No round counts, no time-x-rounds, no intensity targets, no dose, no RPE, no work:rest, no sparring template wording. After the label, emit exactly one app-owned note: \"" + CANONICAL_HARD_SPARRING_NOTE + "\" Nothing else."
+"Hard sparring days are gym/coach-owned. The app must not prescribe the sparring. Default render is the minimal label \"" + CANONICAL_HARD_SPARRING_LABEL + "\" (or sport-equivalent like \"Coach-led MMA session\", \"Coach-led Muay Thai session\", \"Coach-led kickboxing session\"). Hard sparring is not deloaded by default — only deload when fatigue, weight cut, or another readiness flag explicitly demands it. When the day is D-17 or closer to the fight (or its reason_codes include \"d17_hard_sparring_ban\"), override the label to \"" + CANONICAL_HARD_SPARRING_BAN_LABEL + "\" because hard sparring is banned in that window. No round counts, no time-x-rounds, no intensity targets, no dose, no RPE, no work:rest, no sparring template wording. After the label, emit exactly one app-owned note: \"" + CANONICAL_HARD_SPARRING_NOTE + "\" Nothing else."
     )
     if payload_mode == "fight_day_protocol_payload":
         return (
