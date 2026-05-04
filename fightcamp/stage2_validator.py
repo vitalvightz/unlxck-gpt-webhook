@@ -2073,6 +2073,25 @@ def _late_fight_warnings(planning_brief: dict, final_plan_text: str) -> list[dic
             }
         )
 
+    if days_out_bucket != "D-0":
+        mislabel_lines = [
+            line
+            for line in plan_lines
+            if phrase_in_text(line, "D-7") and phrase_in_text(line, "fight day")
+        ]
+        if mislabel_lines:
+            warnings.append(
+                {
+                    "code": "late_fight_countdown_fight_day_mislabel",
+                    "message": "D-7 is not fight day. Fight day must render only as D-0.",
+                    "payload_mode": payload_mode,
+                    "days_out_bucket": days_out_bucket,
+                    "line": mislabel_lines[0],
+                    "matched_lines": mislabel_lines[:3],
+                    "blocking": True,
+                }
+            )
+
     countdown_sections = _countdown_sections(final_plan_text)
     if countdown_sections:
         for section in countdown_sections:
