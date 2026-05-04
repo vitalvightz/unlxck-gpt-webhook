@@ -46,10 +46,8 @@ function formatDayLabel(schedule: WeeklySchedule) {
 }
 
 function formatWeekdayLabel(day: WeeklyDayEntry) {
-  const labelled = (day.weekday_with_label ?? "").trim();
-  if (labelled) return labelled;
-  const dLabel = (day.day_label ?? "").trim();
-  return dLabel ? `${day.weekday} (${dLabel})` : day.weekday;
+  const weekday = (day.weekday ?? "").trim();
+  return weekday || "Day";
 }
 
 export function WeeklySparringView({ planId }: { planId: string }) {

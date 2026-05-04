@@ -106,12 +106,12 @@ def test_deload_advisory_requires_real_hard_sparring_collision_in_taper_week():
 
     assert len(advisories) == 1
     advisory = advisories[0]
-    assert advisory["action"] == "deload"
+    assert advisory["action"] == "convert"
     assert advisory["phase"] == "TAPER"
     assert advisory["days"] == ["Tuesday", "Thursday"]
     assert "fight-week pressure is active" in advisory["reason"]
-    assert "only one effective hard sparring day" in advisory["reason"]
-    assert advisory["suggestion"].startswith("Keep only one effective hard sparring day")
+    assert "no effective hard sparring should stay in" in advisory["reason"]
+    assert advisory["suggestion"].startswith("Run all declared hard sparring")
     assert advisory["title"] == "Coach note"
     assert advisory["disclaimer"] == "Treat this as a flag, not an automatic change to your saved plan."
 
@@ -207,8 +207,8 @@ def test_returns_only_one_best_advisory_when_multiple_weeks_qualify():
 
     assert len(advisories) == 1
     assert advisories[0]["phase"] == "TAPER"
-    assert advisories[0]["week_label"] == "Week 2"
-    assert advisories[0]["suggestion"].startswith("If high fatigue, an aggressive cut, and worsening ankle instability are still there by Week 2")
+    assert advisories[0]["week_label"] == "d2"
+    assert advisories[0]["suggestion"].startswith("If high fatigue, an aggressive cut, and worsening ankle instability are still there by d2, keep one hard sparring day and run")
 
 
 def test_future_week_advisory_uses_conditional_static_app_wording():
@@ -239,10 +239,67 @@ def test_future_week_advisory_uses_conditional_static_app_wording():
 
     assert len(advisories) == 1
     advisory = advisories[0]
-    assert advisory["week_label"] == "Week 2"
-    assert advisory["reason"].startswith("If the current readiness picture carries into Week 2")
+    assert advisory["week_label"] == "d2"
+    assert advisory["reason"].startswith("If the current readiness picture carries into d2")
     assert "worsening ankle instability" in advisory["reason"]
-    assert advisory["suggestion"].startswith("If high fatigue, an active cut, and worsening ankle instability are still there by Week 2")
+    assert advisory["suggestion"].startswith("If high fatigue, an active cut, and worsening ankle instability are still there by d2, switch")
+
+
+def test_convert_all_state_does_not_tell_athlete_to_keep_one_hard_day():
+    advisories = build_plan_advisories(
+        planning_brief=_planning_brief(
+            weeks=[
+                {
+                    "phase": "TAPER",
+                    "week_index": 1,
+                    "stage_key": "fight_week_survival_rhythm",
+                    "declared_hard_sparring_days": ["Monday", "Friday"],
+                    "declared_training_days": ["Monday", "Wednesday", "Friday"],
+                    "hard_sparring_plan": [
+                        {"day": "Monday", "status": "convert_to_technical_suggested", "reason_codes": ["d17_hard_sparring_ban"]},
+                        {"day": "Friday", "status": "convert_to_technical_suggested", "reason_codes": ["d17_hard_sparring_ban"]},
+                    ],
+                    "session_roles": [],
+                    "suppressed_roles": [],
+                }
+            ],
+            days_until_fight=12,
+            fatigue="moderate",
+        )
+    )
+    assert len(advisories) == 1
+    suggestion = advisories[0]["suggestion"].lower()
+    reason = advisories[0]["reason"].lower()
+    assert "keep one hard sparring day" not in suggestion
+    assert "run all declared hard sparring" in suggestion
+    assert "no effective hard sparring should stay in" in reason
+
+
+def test_cap_one_state_keeps_one_hard_day_wording():
+    advisories = build_plan_advisories(
+        planning_brief=_planning_brief(
+            weeks=[
+                {
+                    "phase": "TAPER",
+                    "week_index": 1,
+                    "stage_key": "fight_week_survival_rhythm",
+                    "declared_hard_sparring_days": ["Tuesday", "Thursday"],
+                    "declared_training_days": ["Tuesday", "Thursday"],
+                    "hard_sparring_plan": [
+                        {"day": "Tuesday", "status": "hard_as_planned", "reason_codes": ["final_week_sparring_cap"]},
+                        {"day": "Thursday", "status": "convert_to_technical_suggested", "reason_codes": ["final_week_sparring_cap"]},
+                    ],
+                    "session_roles": [],
+                    "suppressed_roles": [],
+                }
+            ],
+            days_until_fight=6,
+            fatigue="low",
+            readiness_flags=["fight_week"],
+        )
+    )
+    assert len(advisories) == 1
+    assert "Keep one hard sparring day" in advisories[0]["suggestion"]
 
 
 # ---------------------------------------------------------------------------

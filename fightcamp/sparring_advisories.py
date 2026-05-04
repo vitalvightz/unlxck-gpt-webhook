@@ -514,10 +514,14 @@ def _build_week_advisory(
         "final_week_sparring_cap" in (entry.get("reason_codes") or [])
         for entry in downgraded
     )
+    remaining_effective_hard_count = effective_hard_day_count(plan)
+    all_affected_days_converted = action == "convert" and remaining_effective_hard_count == 0
+    cap_to_one_hard_day = final_week_cap and remaining_effective_hard_count == 1
+    final_week_deload_only = final_week_cap and action == "deload" and remaining_effective_hard_count >= 1
     reason_parts = list(pressure_reasons)
     if final_week_cap:
         reason_parts.append(
-            "the D-16 taper window allows only one effective hard sparring day even if multiple hard days were declared"
+            "taper allows only one effective hard sparring day this week"
         )
     if hard_day_count >= 2:
         reason_parts.append(f"this week already carries {hard_day_count} declared hard sparring days")
@@ -536,10 +540,20 @@ def _build_week_advisory(
         highest_injury=highest_injury,
         cut_pct=cut_pct,
     )
-    if final_week_cap:
+    if cap_to_one_hard_day:
         reason = (
             f"{because.capitalize()}. Keep hard sparring to one effective collision day this week; "
             f"{reported_days_label} should not stay full hard sparring."
+        )
+    elif all_affected_days_converted:
+        reason = (
+            f"{because.capitalize()}. Hard sparring should be fully technical this week; "
+            "no effective hard sparring should stay in."
+        )
+    elif final_week_deload_only:
+        reason = (
+            f"{because.capitalize()}. Keep hard sparring in the week, but trim load on "
+            f"{reported_days_label}."
         )
     elif future_week:
         reason = (
@@ -552,29 +566,35 @@ def _build_week_advisory(
             "so the collision cost is running ahead of what you are likely to absorb well this week."
         )
 
-    if action == "convert" and final_week_cap:
+    if all_affected_days_converted:
         suggestion = (
-            f"If {future_state_label} {future_state_verb} still there by {week_label}, keep only one effective hard sparring day; convert {reported_days_label} to technical rounds or controlled drilling."
+            f"If {future_state_label} {future_state_verb} still there by {week_label}, run all declared hard sparring as technical rounds only."
             if future_week
-            else f"Keep only one effective hard sparring day in {week_label}; convert {reported_days_label} to technical rounds or controlled drilling."
+            else f"Run all declared hard sparring in {week_label} as technical rounds only."
+        )
+    elif action == "convert" and cap_to_one_hard_day:
+        suggestion = (
+            f"If {future_state_label} {future_state_verb} still there by {week_label}, keep one hard sparring day and run {reported_days_label} as technical rounds only."
+            if future_week
+            else f"Keep one hard sparring day in {week_label}; run {reported_days_label} as technical rounds only."
         )
     elif action == "convert":
         suggestion = (
-            f"If {future_state_label} {future_state_verb} still there by {week_label}, convert hard sparring on {days_label} to technical rounds or controlled drilling."
+            f"If {future_state_label} {future_state_verb} still there by {week_label}, switch {days_label} from hard sparring to technical rounds."
             if future_week
-            else f"Convert hard sparring on {days_label} in {week_label} to technical rounds or controlled drilling."
+            else f"Switch {days_label} in {week_label} from hard sparring to technical rounds."
         )
-    elif final_week_cap:
+    elif final_week_deload_only:
         suggestion = (
-            f"If {future_state_label} {future_state_verb} still there by {week_label}, keep one effective hard sparring day; deload {reported_days_label} by trimming rounds, lowering intensity, or reducing total collision exposure."
+            f"If {future_state_label} {future_state_verb} still there by {week_label}, keep one hard sparring day and trim load on {reported_days_label}."
             if future_week
-            else f"Keep one effective hard sparring day in {week_label}; deload {reported_days_label} by trimming rounds, lowering intensity, or reducing total collision exposure."
+            else f"Keep one hard sparring day in {week_label}; trim load on {reported_days_label}."
         )
     else:
         suggestion = (
-            f"If {future_state_label} {future_state_verb} still there by {week_label}, deload hard sparring on {days_label} by trimming rounds, lowering intensity, or reducing total collision exposure."
+            f"If {future_state_label} {future_state_verb} still there by {week_label}, trim hard sparring load on {days_label}."
             if future_week
-            else f"Deload hard sparring on {days_label} in {week_label} by trimming rounds, lowering intensity, or reducing total collision exposure."
+            else f"Trim hard sparring load on {days_label} in {week_label}."
         )
 
     advisory: dict[str, Any] = {
