@@ -87,7 +87,7 @@ def test_fatigue_normalization_matches_regular_and_late_fight_paths(athlete_mode
 
 def test_hard_sparring_render_contract_is_canonical_in_late_fight_handoff():
     instructions = _handoff_mode_instructions("bridge_compression_payload")
-    assert "Coach-led boxing — no hard sparring / technical only" in instructions
+    assert CANONICAL_HARD_SPARRING_LABEL in instructions
     assert "No app S&C today. Keep freshness priority." in instructions
 
 
