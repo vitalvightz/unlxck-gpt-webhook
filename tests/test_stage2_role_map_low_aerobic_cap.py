@@ -511,3 +511,31 @@ def test_unused_upgrade_keeps_low_load_blocked_systems_and_intensities():
     assert "high" in converted["blocked_intensities"]
     assert "sprint" in converted["blocked_tags"]
     assert "plyometric" in converted["blocked_tags"]
+
+
+def test_assign_declared_day_hints_keeps_hard_sparring_day_locked():
+    from fightcamp.stage2_role_map import _assign_declared_day_hints
+
+    ordered = [
+        {
+            "session_index": 1,
+            "category": "strength",
+            "role_key": "primary_strength_day",
+            "scheduled_day_hint": "",
+        },
+        {
+            "session_index": 2,
+            "category": "conditioning",
+            "role_key": "hard_sparring_day",
+            "scheduled_day_hint": "Wednesday",
+        },
+    ]
+    athlete = {
+        "training_days": ["Monday", "Tuesday", "Wednesday", "Thursday"],
+        "hard_sparring_days": ["Wednesday"],
+    }
+
+    assigned = _assign_declared_day_hints(ordered, athlete, hard_sparring_plan=[{"day": "Wednesday", "status": "hard_as_planned"}])
+    hard_role = next(role for role in assigned if role.get("role_key") == "hard_sparring_day")
+
+    assert hard_role.get("scheduled_day_hint") == "Wednesday"
