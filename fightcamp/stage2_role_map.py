@@ -496,6 +496,56 @@ def _low_aerobic_support_cap_for_week(
     return 1
 
 
+def _can_preserve_one_non_gas_low_load_support(
+    week_entry: dict,
+    athlete_model: dict,
+    support_profile: dict[str, Any],
+    cap: int,
+) -> bool:
+    """Allow one non-gas low-load support slot only when no hard safety blockers exist."""
+    if support_profile.get("role_key") == "converted_low_aerobic_gas_tank_day":
+        return False
+
+    fatigue = str(athlete_model.get("fatigue") or "").strip().lower()
+    if fatigue == "high":
+        return False
+
+    injury_mode = str(athlete_model.get("injury_mode") or "").strip().lower()
+    if injury_mode in {"medical_hold", "restricted_rehab_only"}:
+        return False
+
+    readiness_flags = {
+        str(flag).strip().lower()
+        for flag in clean_list(athlete_model.get("readiness_flags", []))
+    }
+    if readiness_flags & {
+        "red_flag_injury",
+        "severe_injury",
+        "medical_hold",
+        "restricted_rehab_only",
+    }:
+        return False
+
+    min_d_day: int | None = None
+    for day in week_entry.get("calendar_days") or []:
+        try:
+            d = int(day.get("d_day"))
+        except (TypeError, ValueError):
+            continue
+        if min_d_day is None or d < min_d_day:
+            min_d_day = d
+
+    is_fight_week = (
+        (min_d_day is not None and 0 <= min_d_day <= 7)
+        or "fight_week" in readiness_flags
+        or "fight_day_protocol" in readiness_flags
+    )
+    if is_fight_week and cap == 0:
+        return False
+
+    return True
+
+
 def _upgrade_recovery_days_to_gas_tank(
     week_entry: dict,
     session_roles: list[dict],
@@ -626,6 +676,16 @@ def _upgrade_unused_days_to_low_load_support(
         session_roles,
         hard_sparring_plan=hard_sparring_plan,
     )
+    # Preserve one low-load conversion slot for non-gas-tank support profiles.
+    # Mobility/rehab-friendly unused-day support should not be fully blocked by
+    # gas-tank-oriented cut-pressure logic.
+    if _can_preserve_one_non_gas_low_load_support(
+        week_entry,
+        athlete_model,
+        support_profile,
+        cap,
+    ):
+        cap = max(cap, 1)
     current_count = _count_low_aerobic_support_roles(session_roles)
 
     existing_days = {
