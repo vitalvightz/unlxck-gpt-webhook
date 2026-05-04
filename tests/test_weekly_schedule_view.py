@@ -341,3 +341,32 @@ def test_weekly_schedule_view_builds_countdown_range_when_missing_from_week():
     assert schedule is not None
     assert schedule["countdown_range"] == [37, 35]
     assert schedule["week_countdown_label"] == "D-37 → D-35"
+
+
+def test_protected_week_does_not_apply_d17_ban_to_d37_declared_hard_day():
+    schedule = extract_weekly_schedule(
+        {
+            "weekly_role_map": {
+                "weeks": [
+                    {
+                        "phase": "countdown",
+                        "calendar_days": [
+                            {"weekday": "monday", "d_day": 37},
+                            {"weekday": "tuesday", "d_day": 36},
+                        ],
+                        "hard_sparring_plan": [],
+                        "declared_hard_sparring_days": ["monday"],
+                        "effective_hard_sparring_days": [],
+                    }
+                ]
+            }
+        }
+    )
+
+    assert schedule is not None
+    monday = schedule["days"][0]
+    assert monday["weekday"] == "Mon"
+    assert monday["d_day"] == 37
+    assert monday["effective_load"] == "none"
+    assert monday["status"] == ""
+    assert monday["reason_codes"] == []

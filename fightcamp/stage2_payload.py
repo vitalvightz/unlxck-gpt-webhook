@@ -3912,7 +3912,7 @@ If selected_plan.fight_week_override.active or selected_plan.weekly_role_map.fig
 Never chase fitness in these windows.
 
 RULE 9A — FIGHT-DAY (D-0) HARD OVERRIDE
-If selected_plan.weekly_role_map.fight_day_override.active is true, or any week's fight_day_override.active is true, the day matching fight_day_override.fight_weekday is the athlete's fight day. Render that day exactly as: "Fight day protocol — follow coach warm-up and fight protocol; no additional app S&C." No S&C, no hard sparring, no coach-led boxing session, no training session of any kind. This override beats every declared hard sparring lock, every weekday role, and every phase rhythm. Even when the fight weekday is also a declared hard sparring day, it never renders as sparring on that date. Do not restore any suppressed role on that day.
+If selected_plan.weekly_role_map.fight_day_override.active is true, or any week's fight_day_override.active is true, only D-0 is the athlete's fight day. Never treat D-7 (or any other shared weekday) as fight day. Render D-0 exactly as: "Fight day protocol — follow coach warm-up and fight protocol; no additional app S&C." No S&C, no hard sparring, no coach-led boxing session, no training session of any kind. This override beats every declared hard sparring lock, every weekday role, and every phase rhythm. Even when the fight weekday is also a declared hard sparring day, it never renders as sparring on D-0. Do not restore any suppressed role on that day.
 
 RULE 9B — TAPER MICRO-SUPPORT
 If selected_plan.late_fight_plan_spec.taper_micro_support_policy.active is true, treat that policy as a hard overlay.
