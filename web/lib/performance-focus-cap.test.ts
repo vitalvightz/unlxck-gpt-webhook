@@ -18,7 +18,7 @@ test("uses the fight-week cap for events within seven days", () => {
     {
       daysUntilFight: 5,
       weeksOut: 1,
-      maxSelections: 3,
+      maxSelections: 2,
       windowLabel: "Fight week",
       reason: "Fight-week plans stay extremely selective so sharpness and readiness do not get buried under too many priorities.",
     },
@@ -31,7 +31,7 @@ test("steps through cap windows as the fight gets closer", () => {
       now: new Date("2026-04-02T08:00:00Z"),
       timeZone: "UTC",
     })?.maxSelections,
-    4,
+    3,
   );
 
   assert.equal(
@@ -39,7 +39,7 @@ test("steps through cap windows as the fight gets closer", () => {
       now: new Date("2026-04-02T08:00:00Z"),
       timeZone: "UTC",
     })?.maxSelections,
-    5,
+    4,
   );
 
   assert.equal(
@@ -47,7 +47,7 @@ test("steps through cap windows as the fight gets closer", () => {
       now: new Date("2026-04-02T08:00:00Z"),
       timeZone: "UTC",
     })?.maxSelections,
-    6,
+    5,
   );
 
   assert.equal(
@@ -55,7 +55,7 @@ test("steps through cap windows as the fight gets closer", () => {
       now: new Date("2026-04-02T08:00:00Z"),
       timeZone: "UTC",
     })?.maxSelections,
-    7,
+    6,
   );
 });
 
@@ -68,7 +68,7 @@ test("uses the provided athlete time zone when calculating the calendar day", ()
     {
       daysUntilFight: 1,
       weeksOut: 1,
-      maxSelections: 3,
+      maxSelections: 2,
       windowLabel: "Fight week",
       reason: "Fight-week plans stay extremely selective so sharpness and readiness do not get buried under too many priorities.",
     },
@@ -81,7 +81,7 @@ test("falls back to the local calendar when the saved time zone is invalid", () 
       now: new Date("2026-04-02T08:00:00Z"),
       timeZone: "Mars/OlympusMons",
     })?.maxSelections,
-    3,
+    2,
   );
 });
 
@@ -99,10 +99,10 @@ test("flags over-cap performance selections with a generation-safe message", () 
   );
 
   assert.equal(result.isOverCap, true);
-  assert.equal(result.excessSelections, 1);
+  assert.equal(result.excessSelections, 2);
   assert.equal(
     result.errorMessage,
-    "This camp allows 3 total focus picks. Remove 1 goal or weak-area selection before generating.",
+    "This camp allows 2 total focus picks. Remove 2 goal or weak-area selections before generating.",
   );
 });
 
