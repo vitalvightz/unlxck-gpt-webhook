@@ -164,6 +164,13 @@ def _mark_late_hard_sparring_ban(day: dict[str, Any]) -> None:
     )
 
 
+def _is_d17_or_closer(day: dict[str, Any]) -> bool:
+    d_day = day.get("d_day")
+    if d_day is None:
+        return True
+    return isinstance(d_day, int) and 0 <= d_day <= 17
+
+
 def extract_weekly_schedule(planning_brief: Any, *, week_index: int = 0) -> dict[str, Any] | None:
     if not isinstance(planning_brief, dict) or week_index < 0:
         return None
@@ -247,6 +254,7 @@ def extract_weekly_schedule(planning_brief: Any, *, week_index: int = 0) -> dict
                     weekday
                     and weekday in days_by_weekday
                     and days_by_weekday[weekday]["effective_load"] != "hard"
+                    and _is_d17_or_closer(days_by_weekday[weekday])
                 ):
                     _mark_late_hard_sparring_ban(days_by_weekday[weekday])
     else:
