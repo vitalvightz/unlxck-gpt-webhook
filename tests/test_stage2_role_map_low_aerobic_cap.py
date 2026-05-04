@@ -24,6 +24,15 @@ def _gas_tank_athlete(**overrides):
     return base
 
 
+def _mobility_athlete(**overrides):
+    base = {
+        "key_goals": ["mobility"],
+        "weaknesses": ["mobility"],
+    }
+    base.update(overrides)
+    return base
+
+
 # ---------------------------------------------------------------------------
 # Cap helper
 # ---------------------------------------------------------------------------
@@ -313,6 +322,21 @@ def test_unused_upgrade_high_fatigue_high_cut_blocks_all_conversions():
     upgraded = _upgrade_unused_days_to_low_load_support(week, [], athlete)
     assert upgraded == []
     assert week["intentionally_unused_days"][0].get("low_aerobic_cap_skipped") is True
+
+
+
+
+def test_unused_upgrade_mobility_keeps_one_support_slot_even_when_cut_cap_is_zero():
+    week = {
+        "phase": "SPP",
+        "calendar_days": [{"weekday": "thursday", "d_day": 27}],
+        "intentionally_unused_days": [{"day": "thursday", "role": "off_day"}],
+    }
+    athlete = _mobility_athlete(cut_severity_bucket="extreme", fatigue="high")
+    upgraded = _upgrade_unused_days_to_low_load_support(week, [], athlete)
+    assert len(upgraded) == 1
+    assert upgraded[0]["role_key"] == "converted_mobility_support_day"
+    assert week["intentionally_unused_days"] == []
 
 
 def test_unused_upgrade_d_minus_one_still_blocks_after_cap_logic():

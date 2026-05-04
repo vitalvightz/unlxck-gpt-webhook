@@ -626,6 +626,11 @@ def _upgrade_unused_days_to_low_load_support(
         session_roles,
         hard_sparring_plan=hard_sparring_plan,
     )
+    # Preserve one low-load conversion slot for non-gas-tank support profiles.
+    # Mobility/rehab-friendly unused-day support should not be fully blocked by
+    # gas-tank-oriented cut-pressure logic.
+    if support_profile.get("role_key") != "converted_low_aerobic_gas_tank_day":
+        cap = max(cap, 1)
     current_count = _count_low_aerobic_support_roles(session_roles)
 
     existing_days = {
