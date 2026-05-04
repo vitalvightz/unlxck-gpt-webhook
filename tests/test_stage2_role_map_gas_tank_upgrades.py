@@ -1,8 +1,9 @@
 from fightcamp.stage2_role_map import (
     _build_weekly_role_map,
     _upgrade_recovery_days_to_gas_tank,
-    _upgrade_unused_days_to_gas_tank,
+    _upgrade_unused_days_to_low_load_support,
 )
+from fightcamp.stage2_finalizer_packet import build_stage2_finalizer_packet
 
 
 def test_recovery_upgrade_adds_gas_tank_preferences_and_label():
@@ -61,7 +62,7 @@ def test_recovery_upgrade_stays_recovery_on_high_cut_plus_high_fatigue_without_e
     assert upgraded[0]["role_key"] == "recovery_reset_day"
 
 
-def test_unused_day_priority_touch_precedes_gas_tank_when_both_signals_exist():
+def test_unused_day_gas_tank_conversion_removes_day_from_intentionally_unused():
     week = {
         "phase": "SPP",
         "calendar_days": [{"weekday": "thursday", "d_day": 27}, {"weekday": "saturday", "d_day": 25}],
@@ -70,44 +71,38 @@ def test_unused_day_priority_touch_precedes_gas_tank_when_both_signals_exist():
             {"day": "saturday", "role": "off_day"},
         ],
     }
-    athlete_model = {"key_goals": ["speed", "conditioning"]}
+    athlete_model = {"key_goals": ["conditioning"]}
 
-    upgraded = _upgrade_unused_days_to_gas_tank(week, [], athlete_model)
-    assert upgraded[0]["role_key"] == "converted_priority_speed_touch_day"
-    assert upgraded[1]["role_key"] == "converted_low_aerobic_gas_tank_day"
+    upgraded = _upgrade_unused_days_to_low_load_support(week, [], athlete_model)
+    assert len(upgraded) == 2
+    assert all(role["role_key"] == "converted_low_aerobic_gas_tank_day" for role in upgraded)
+    assert week["intentionally_unused_days"] == []
 
 
-def test_unused_day_upgrade_can_force_one_low_load_speed_touch():
+def test_unused_day_upgrade_protects_d_minus_1_and_d_minus_0():
+    week = {"phase": "SPP", "calendar_days": [{"weekday": "thursday", "d_day": 1}], "intentionally_unused_days": [{"day": "thursday", "role": "off_day"}]}
+    athlete_model = {
+        "key_goals": ["conditioning"],
+    }
+
+    upgraded = _upgrade_unused_days_to_low_load_support(week, [], athlete_model)
+    assert upgraded == []
+    assert week["intentionally_unused_days"][0]["role"] == "off_day"
+
+
+def test_unused_day_upgrade_skips_days_with_existing_session_role():
     week = {
         "phase": "SPP",
         "calendar_days": [{"weekday": "thursday", "d_day": 27}],
         "intentionally_unused_days": [{"day": "thursday", "role": "off_day"}],
     }
-    athlete_model = {
-        "fatigue": "high",
-        "cut_severity_bucket": "high",
-        "readiness_flags": ["high_fatigue", "active_weight_cut"],
-        "key_goals": ["speed"],
-    }
+    session_roles = [{"session_index": 1, "category": "sparring", "role_key": "hard_sparring_day", "scheduled_day_hint": "thursday"}]
+    athlete_model = {"key_goals": ["conditioning"]}
 
-    upgraded = _upgrade_unused_days_to_gas_tank(week, [], athlete_model)
-    assert upgraded[0]["role_key"] == "converted_priority_speed_touch_day"
-    assert upgraded[0]["preferred_system"] == "alactic"
-    assert upgraded[0]["athlete_facing_label"] == "Low-load speed touch"
-    assert upgraded[0]["preferred_exercise_names"][0] == "Band-Resisted Snap-Step + Reset"
-
-
-def test_speed_only_profile_gets_one_priority_touch_not_fake_second_gas_tank_touch():
-    week = {
-        "phase": "SPP",
-        "calendar_days": [{"weekday": "thursday", "d_day": 27}, {"weekday": "saturday", "d_day": 25}],
-        "intentionally_unused_days": [{"day": "thursday", "role": "off_day"}, {"day": "saturday", "role": "off_day"}],
-    }
-    athlete_model = {"key_goals": ["speed"]}
-
-    upgraded = _upgrade_unused_days_to_gas_tank(week, [], athlete_model)
+    upgraded = _upgrade_unused_days_to_low_load_support(week, session_roles, athlete_model)
     assert len(upgraded) == 1
-    assert upgraded[0]["role_key"] == "converted_priority_speed_touch_day"
+    assert upgraded[0]["role_key"] == "hard_sparring_day"
+    assert week["intentionally_unused_days"][0]["role"] == "off_day"
 
 
 def test_weekly_role_map_roles_carry_countdown_labels_for_renderers():
@@ -133,3 +128,30 @@ def test_weekly_role_map_roles_carry_countdown_labels_for_renderers():
     role_map = _build_weekly_role_map(athlete_model, week_by_week_progression, limiter_profile)
     roles = role_map["weeks"][0]["session_roles"]
     assert any(str(role.get("scheduled_countdown_label") or "").startswith("D-") for role in roles)
+
+
+def test_finalizer_packet_keeps_converted_support_session_and_no_unused_placeholder():
+    weekly_role_map = {
+        "weeks": [
+            {
+                "week_index": 1,
+                "phase": "SPP",
+                "session_roles": [
+                    {
+                        "session_index": 1,
+                        "category": "conditioning",
+                        "role_key": "converted_low_aerobic_gas_tank_day",
+                        "scheduled_day_hint": "tuesday",
+                        "athlete_facing_label": "Low aerobic gas-tank support",
+                        "allowed_on_recovery_day": True,
+                        "recovery_compatible": True,
+                    }
+                ],
+                "intentionally_unused_days": [],
+            }
+        ]
+    }
+    packet = build_stage2_finalizer_packet(stage2_payload={"weekly_role_map": weekly_role_map, "athlete_model": {}}, planning_brief={})
+    weeks = packet["selected_plan"]["weekly_role_map"]["weeks"]
+    assert weeks[0]["session_roles"][0]["role_key"] == "converted_low_aerobic_gas_tank_day"
+    assert "intentionally_unused_days" not in weeks[0] or weeks[0]["intentionally_unused_days"] == []
