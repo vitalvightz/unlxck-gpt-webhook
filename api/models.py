@@ -743,6 +743,12 @@ class WeeklyDayEntry(BaseModel):
     reason: str = ""
     coach_note: str = ""
     reason_codes: list[str] = Field(default_factory=list)
+    d_day: int | None = None
+    day_label: str = ""
+    weekday_with_label: str = ""
+    calendar_date: str | None = None
+    is_fight_day: bool = False
+    is_after_fight_day: bool = False
 
 
 class WeeklySchedule(BaseModel):
@@ -753,6 +759,9 @@ class WeeklySchedule(BaseModel):
     projected_days_until_fight_start: int | None = None
     projected_days_until_fight_end: int | None = None
     day_label: str = ""
+    countdown_range: list[int] = Field(default_factory=list)
+    week_countdown_label: str = ""
+    week_label_with_countdown: str = ""
     days: list[WeeklyDayEntry]
 
 
