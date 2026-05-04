@@ -237,3 +237,34 @@ def test_sandwiched_days_prefer_low_load_support_and_keep_primary_strength_on_cl
 
     assert primary.get("scheduled_day_hint") == "saturday"
     assert aerobic.get("scheduled_day_hint") in {"tuesday", "thursday"}
+
+
+def test_strength_plus_mobility_uses_mobility_policy_metadata():
+    week = {
+        "phase": "GPP",
+        "calendar_days": [{"weekday": "monday", "d_day": 40}],
+        "intentionally_unused_days": [{"day": "monday", "role": "off_day"}],
+    }
+    upgraded = _upgrade_unused_days_to_low_load_support(week, [], {"key_goals": ["strength", "mobility"]})
+    assert upgraded[0]["role_key"] == "converted_mobility_support_day"
+    assert upgraded[0]["support_policy_goal"] == "mobility"
+
+
+def test_core_trunk_strength_does_not_become_strength_anchor_on_conversion():
+    week = {
+        "phase": "SPP",
+        "calendar_days": [{"weekday": "monday", "d_day": 22}],
+        "intentionally_unused_days": [{"day": "monday", "role": "off_day"}],
+    }
+    upgraded = _upgrade_unused_days_to_low_load_support(week, [], {"key_goals": ["core_trunk_strength", "strength"]})
+    assert upgraded[0]["category"] == "conditioning"
+    assert upgraded[0]["support_policy_goal"] == "core_trunk_strength"
+
+
+def test_finalizer_packet_keeps_support_policy_metadata():
+    weekly_role_map = {
+        "weeks": [{"week_index": 1, "phase": "SPP", "active_goal_support_policies": [{"goal": "gas_tank", "policy": {"priority_rank": 10}}], "session_roles": [{"session_index": 1, "category": "conditioning", "role_key": "converted_low_aerobic_gas_tank_day", "support_policy_goal": "gas_tank", "support_policy": {"priority_rank": 10}}]}]
+    }
+    packet = build_stage2_finalizer_packet(stage2_payload={"weekly_role_map": weekly_role_map, "athlete_model": {}}, planning_brief={})
+    role = packet["selected_plan"]["weekly_role_map"]["weeks"][0]["session_roles"][0]
+    assert role["support_policy_goal"] == "gas_tank"

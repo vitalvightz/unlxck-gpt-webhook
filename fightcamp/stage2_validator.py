@@ -9,6 +9,7 @@ from .regex_config import compile_regex, compile_regex_list
 from .restriction_filtering import evaluate_restriction_impact
 from .normalization import clean_list, phrase_in_text, dedupe_preserve_order
 from .late_selector_windows import classify_late_selector_window
+from .goal_support_policy import GOAL_SUPPORT_POLICY
 
 _BULLET_PREFIX = compile_regex("stage2_validator", "bullet_prefix")
 _PHASE_HEADER = PHASE_HEADER_PATTERN
@@ -2153,6 +2154,30 @@ def _late_fight_warnings(planning_brief: dict, final_plan_text: str) -> list[dic
     return warnings
 
 
+
+
+def _goal_support_policy_warnings(planning_brief: dict) -> list[dict]:
+    weekly_role_map = planning_brief.get("weekly_role_map") or {}
+    weeks = list(weekly_role_map.get("weeks") or [])
+    warnings: list[dict] = []
+    for week in weeks:
+        phase = str(week.get("phase") or "").upper()
+        role_counts: dict[str, int] = {}
+        for role in week.get("session_roles") or []:
+            goal = role.get("support_policy_goal")
+            policy = role.get("support_policy") or (GOAL_SUPPORT_POLICY.get(str(goal)) if goal else None) or {}
+            if not goal:
+                continue
+            role_counts[goal] = role_counts.get(goal, 0) + 1
+            if policy.get("role_class") == "support_only" and role.get("category") == "strength":
+                warnings.append({"code":"support_only_goal_promoted_to_anchor","message":f"Week {week.get('week_index')} promotes support-only goal {goal} into strength anchor category.","week_index":week.get("week_index"),"goal":goal})
+            if role.get("gas_tank_recovery_touch") and "glycolytic" not in clean_list(role.get("blocked_systems", [])):
+                warnings.append({"code":"adjacent_support_not_low_load","message":f"Week {week.get('week_index')} has support role {role.get('role_key')} without low-load glycolytic block.","week_index":week.get("week_index")})
+        for goal,count in role_counts.items():
+            cap = int(((GOAL_SUPPORT_POLICY.get(goal) or {}).get("weekly_caps_by_phase") or {}).get(phase, 99))
+            if count > cap:
+                warnings.append({"code":"support_goal_weekly_cap_exceeded","message":f"Week {week.get('week_index')} exceeds {goal} support cap {cap} with {count} roles.","week_index":week.get("week_index"),"goal":goal})
+    return warnings
 def validate_stage2_output(*, planning_brief: dict, final_plan_text: str) -> dict:
     plan_lines = _extract_plan_lines(final_plan_text)
     phase_sections = _phase_sections(final_plan_text)
@@ -2195,6 +2220,7 @@ def validate_stage2_output(*, planning_brief: dict, final_plan_text: str) -> dic
     coach_voice_warnings = _coach_voice_warnings(planning_brief, plan_lines)
     sport_language_warnings = _sport_language_warnings(planning_brief, plan_lines)
     late_fight_warnings = _late_fight_warnings(planning_brief, final_plan_text)
+    goal_support_policy_warnings = _goal_support_policy_warnings(planning_brief)
 
     errors = [
         {
@@ -2236,6 +2262,7 @@ def validate_stage2_output(*, planning_brief: dict, final_plan_text: str) -> dic
     warnings.extend(overstyled_name_warnings)
     warnings.extend(coach_voice_warnings)
     warnings.extend(sport_language_warnings)
+    warnings.extend(goal_support_policy_warnings)
     warnings.extend(late_fight_warnings)
 
     return {
