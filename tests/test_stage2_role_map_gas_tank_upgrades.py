@@ -73,7 +73,7 @@ def test_unused_day_gas_tank_conversion_removes_day_from_intentionally_unused():
             {"day": "saturday", "role": "off_day"},
         ],
     }
-    athlete_model = {"key_goals": ["conditioning"]}
+    athlete_model = {"weaknesses": ["conditioning"]}
 
     upgraded = _upgrade_unused_days_to_low_load_support(week, [], athlete_model)
     assert len(upgraded) == 2
@@ -84,13 +84,27 @@ def test_unused_day_gas_tank_conversion_removes_day_from_intentionally_unused():
 def test_unused_day_upgrade_protects_d_minus_1_and_d_minus_0():
     week = {"phase": "SPP", "calendar_days": [{"weekday": "thursday", "d_day": 1}], "intentionally_unused_days": [{"day": "thursday", "role": "off_day"}]}
     athlete_model = {
-        "key_goals": ["conditioning"],
+        "weaknesses": ["conditioning"],
     }
 
     upgraded = _upgrade_unused_days_to_low_load_support(week, [], athlete_model)
     assert upgraded == []
     assert week["intentionally_unused_days"][0]["role"] == "off_day"
 
+
+
+
+def test_unused_day_upgrade_does_not_trigger_from_goal_only_signal():
+    week = {
+        "phase": "SPP",
+        "calendar_days": [{"weekday": "thursday", "d_day": 27}],
+        "intentionally_unused_days": [{"day": "thursday", "role": "off_day"}],
+    }
+    athlete_model = {"key_goals": ["conditioning"]}
+
+    upgraded = _upgrade_unused_days_to_low_load_support(week, [], athlete_model)
+    assert upgraded == []
+    assert week["intentionally_unused_days"][0]["role"] == "off_day"
 
 def test_unused_day_upgrade_skips_days_with_existing_session_role():
     week = {
@@ -99,7 +113,7 @@ def test_unused_day_upgrade_skips_days_with_existing_session_role():
         "intentionally_unused_days": [{"day": "thursday", "role": "off_day"}],
     }
     session_roles = [{"session_index": 1, "category": "sparring", "role_key": "hard_sparring_day", "scheduled_day_hint": "thursday"}]
-    athlete_model = {"key_goals": ["conditioning"]}
+    athlete_model = {"weaknesses": ["conditioning"]}
 
     upgraded = _upgrade_unused_days_to_low_load_support(week, session_roles, athlete_model)
     assert len(upgraded) == 1

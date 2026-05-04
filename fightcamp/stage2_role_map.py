@@ -225,17 +225,12 @@ def _role_selection_rule(role_key: str, category: str, system: str | None = None
 
 
 def _has_gas_tank_signal(athlete_model: dict) -> bool:
-    """Return True when the athlete profile clearly needs aerobic gas-tank work."""
+    """Return True when gas tank/conditioning is an explicit weakness."""
     raw_values: list[Any] = []
 
     for key in (
-        "key_goals",
-        "goals",
         "weaknesses",
         "weak_areas",
-        "performance_goals",
-        "main_limiter",
-        "limiter_key",
     ):
         raw_values.extend(clean_list(athlete_model.get(key, [])))
 
@@ -348,7 +343,14 @@ def _low_load_support_profile_for_unused_day(athlete_model: dict) -> dict[str, A
         "back",
     }
 
-    if tokens & gas_tank_terms or _has_gas_tank_signal(athlete_model):
+    weakness_tokens = {
+        str(value).strip().lower().replace("-", "_").replace(" ", "_")
+        for key in ("weaknesses", "weak_areas")
+        for value in clean_list(athlete_model.get(key, []))
+        if str(value).strip()
+    }
+
+    if weakness_tokens & gas_tank_terms or _has_gas_tank_signal(athlete_model):
         return {
             "role_key": "converted_low_aerobic_gas_tank_day",
             "athlete_facing_label": "Low aerobic gas-tank support",
