@@ -3054,6 +3054,43 @@ def test_sandwiched_glycolytic_preserved_when_must_keep_glycolytic():
     )
 
 
+def test_sandwiched_day_rejects_primary_strength_but_keeps_low_aerobic_support():
+    session_roles = [
+        {"category": "sparring", "role_key": "hard_sparring_day", "scheduled_day_hint": "Monday", "governance": {}},
+        {"category": "sparring", "role_key": "hard_sparring_day", "scheduled_day_hint": "Wednesday", "governance": {}},
+        {"category": "strength", "role_key": "primary_strength_day", "scheduled_day_hint": "Tuesday", "governance": {}},
+        {
+            "category": "conditioning",
+            "role_key": "recovery_aerobic_gas_tank_day",
+            "preferred_system": "aerobic",
+            "scheduled_day_hint": "Tuesday",
+            "allowed_on_recovery_day": True,
+            "governance": {},
+        },
+    ]
+    kept_roles, suppressed = _apply_high_fatigue_week_compression(
+        {"phase": "SPP", "week_index": 1, "declared_hard_sparring_days": ["Monday", "Wednesday"]},
+        session_roles,
+        [],
+        {
+            "sport": "boxing",
+            "fatigue": "low",
+            "hard_sparring_days": ["Monday", "Wednesday"],
+            "training_days": ["Monday", "Tuesday", "Wednesday", "Friday"],
+        },
+        hard_sparring_plan=[
+            {"day": "Monday", "status": "hard_as_planned"},
+            {"day": "Wednesday", "status": "hard_as_planned"},
+        ],
+    )
+
+    kept_keys = [role["role_key"] for role in kept_roles]
+    suppressed_keys = [item["role_key"] for item in suppressed]
+    assert "primary_strength_day" not in kept_keys
+    assert "primary_strength_day" in suppressed_keys
+    assert "recovery_aerobic_gas_tank_day" in kept_keys
+
+
 def test_weekly_role_map_rotates_declared_training_days_to_day_after_generation():
     athlete_model = _base_athlete(
         days_until_fight=42,

@@ -1272,6 +1272,7 @@ def _assign_declared_day_hints(
         None,
     )
     if recovery_idx is not None and primary_idx is not None and len(training_days) >= 2:
+        sandwiched_days = sandwiched_training_days(training_days, hard_sparring_days)
         middle = max(0, len(training_days) // 2)
         best_pair: tuple[int, int] | None = None
         best_score = -10_000
@@ -1285,6 +1286,10 @@ def _assign_declared_day_hints(
                 score += 10
             if recovery_day in support_work_days:
                 score += 4
+            if primary_day in support_work_days:
+                score += 2
+            if primary_day in sandwiched_days:
+                score -= 30
             score -= abs((idx + 1) - middle)
             if score > best_score:
                 best_score = score
@@ -2261,6 +2266,45 @@ def _apply_boxing_crowded_week_compression(
     return kept_roles, updated_suppressed
 
 
+def _is_sandwiched_low_load_support_role(role: dict[str, Any]) -> bool:
+    """Allow-list for roles that are safe between two effective hard sparring days."""
+    category = str(role.get("category") or "").strip().lower()
+    preferred_system = str(role.get("preferred_system") or "").strip().lower()
+    role_key = str(role.get("role_key") or "").strip().lower()
+
+    if category in {"mobility", "rehab"}:
+        return True
+    if category == "conditioning" and preferred_system == "aerobic":
+        return True
+
+    tokens = {
+        str(token).strip().lower()
+        for token in (
+            list(role.get("stress_flags") or [])
+            + list(role.get("load_flags") or [])
+            + list(role.get("tags") or [])
+            + list((role.get("governance") or {}).get("load_flags") or [])
+        )
+        if str(token).strip()
+    }
+    if role.get("recovery_compatible") or role.get("allowed_on_recovery_day"):
+        return True
+    if role.get("gas_tank_recovery_touch") or role.get("priority_recovery_touch"):
+        return True
+    if any(token in tokens for token in {"mobility", "coordination", "rehab", "prehab", "low_aerobic"}):
+        return True
+    if any(token in tokens for token in {"low_cns", "low_lactate", "low_impact", "recovery_compatible"}):
+        return True
+    if role_key in {"recovery_reset_day", "recovery_aerobic_gas_tank_day", "converted_low_aerobic_gas_tank_day"}:
+        return True
+
+    rpe = role.get("target_rpe")
+    try:
+        return float(rpe) <= 4
+    except (TypeError, ValueError):
+        return False
+
+
 def _suppress_sandwiched_glycolytic(
     week_entry: dict,
     session_roles: list[dict],
@@ -2288,17 +2332,19 @@ def _suppress_sandwiched_glycolytic(
     kept: list[dict] = []
     updated_suppressed = list(suppressed_roles)
     for role in session_roles:
-        if (
-            role.get("category") == "conditioning"
-            and role.get("preferred_system") == "glycolytic"
-            and role.get("preferred_system") not in must_keep
-            and str(role.get("scheduled_day_hint") or "").strip() in sandwiched
-        ):
+        on_sandwiched_day = str(role.get("scheduled_day_hint") or "").strip() in sandwiched
+        is_glycolytic = role.get("category") == "conditioning" and role.get("preferred_system") == "glycolytic"
+        if on_sandwiched_day and role.get("preferred_system") in must_keep:
+            kept.append(role)
+            continue
+
+        should_suppress = on_sandwiched_day and (is_glycolytic or not _is_sandwiched_low_load_support_role(role))
+        if should_suppress:
             updated_suppressed.append(
                 _make_compression_suppression(
                     role,
                     ["sandwiched_hard_days"],
-                    "Glycolytic session falls between two hard sparring days — suppressed to protect recovery between hard contacts.",
+                    "Session falls between two hard sparring days and is not low-load support — suppressed to protect recovery between hard contacts.",
                 )
             )
         else:
