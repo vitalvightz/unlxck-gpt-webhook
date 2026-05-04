@@ -24,31 +24,31 @@ export type PerformanceFocusValidation = {
 const PERFORMANCE_FOCUS_CAP_WINDOWS: PerformanceFocusCapWindow[] = [
   {
     maxDaysUntilFight: 7,
-    maxSelections: 3,
+    maxSelections: 2,
     windowLabel: "Fight week",
     reason: "Fight-week plans stay extremely selective so sharpness and readiness do not get buried under too many priorities.",
   },
   {
     maxDaysUntilFight: 21,
-    maxSelections: 4,
+    maxSelections: 3,
     windowLabel: "Ultra-short camp",
     reason: "Ultra-short camps need a tight focus so the plan does not spread work across too many targets at once.",
   },
   {
     maxDaysUntilFight: 42,
-    maxSelections: 5,
+    maxSelections: 4,
     windowLabel: "Short camp",
     reason: "Short camps can cover a few parallel priorities, but they still need selectivity to keep sessions coherent.",
   },
   {
     maxDaysUntilFight: 70,
-    maxSelections: 6,
+    maxSelections: 5,
     windowLabel: "Mid-length camp",
     reason: "Mid-length camps have room for a broader focus without losing the main thread of the plan.",
   },
   {
     maxDaysUntilFight: Number.POSITIVE_INFINITY,
-    maxSelections: 7,
+    maxSelections: 6,
     windowLabel: "Long camp",
     reason: "Longer camps have enough runway to support more development themes without diluting the plan.",
   },
