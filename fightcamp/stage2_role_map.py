@@ -575,28 +575,10 @@ def _upgrade_unused_days_to_low_load_support(
         preferred_tags = list(support_profile["preferred_tags"])
         preferred_exercise_names = list(support_profile.get("preferred_exercise_names") or [])
 
-        converted_day = dict(day_entry)
-        converted_day.update(
-            {
-                "role": role_key,
-                "category": "conditioning",
-                "preferred_system": preferred_system,
-                "preferred_pool": "conditioning_slots",
-                "preferred_tags": preferred_tags,
-                "gas_tank_recovery_touch": role_key == "converted_low_aerobic_gas_tank_day",
-                "priority_recovery_touch": role_key != "converted_low_aerobic_gas_tank_day",
-                "allowed_on_recovery_day": True,
-                "recovery_compatible": True,
-                "converted_from_unused_day": True,
-                "original_unused_day_role": role,
-                "reason": support_profile["reason"],
-            }
-        )
-
-        if preferred_exercise_names:
-            converted_day["preferred_exercise_names"] = preferred_exercise_names
-
-        updated_unused_days.append(converted_day)
+        # This day is no longer intentionally unused once we convert it into
+        # a concrete low-load support session role. Keep the converted metadata
+        # on the added role, and remove the day from intentionally_unused_days
+        # to avoid downstream recovery/off flattening.
 
         added_role = {
             "session_index": 0,
