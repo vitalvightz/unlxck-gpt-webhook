@@ -30,17 +30,26 @@ function formatToken(value: string) {
 }
 
 function formatDayLabel(schedule: WeeklySchedule) {
+  const countdown = (schedule.week_countdown_label ?? "").trim();
+  if (countdown) return countdown;
   const explicit = (schedule.day_label ?? "").trim();
   if (explicit) return explicit;
   const end = schedule.projected_days_until_fight_end;
   const start = schedule.projected_days_until_fight_start;
   if (typeof end === "number" && Number.isFinite(end) && end >= 0) {
     if (typeof start === "number" && Number.isFinite(start) && start > end) {
-      return `d${start}-d${end}`;
+      return `D-${start} → D-${end}`;
     }
-    return `d${end}`;
+    return `D-${end}`;
   }
   return `block ${schedule.week_index + 1}/${schedule.week_count}`;
+}
+
+function formatWeekdayLabel(day: WeeklyDayEntry) {
+  const labelled = (day.weekday_with_label ?? "").trim();
+  if (labelled) return labelled;
+  const dLabel = (day.day_label ?? "").trim();
+  return dLabel ? `${day.weekday} (${dLabel})` : day.weekday;
 }
 
 export function WeeklySparringView({ planId }: { planId: string }) {
@@ -189,9 +198,9 @@ export function WeeklySparringView({ planId }: { planId: string }) {
             }`}
             onClick={() => setSelectedWeekday(day.weekday)}
             aria-pressed={selectedDay?.weekday === day.weekday}
-            title={`${day.weekday}: ${CLASS_LABELS[day.sparring_day_class]}`}
+            title={`${formatWeekdayLabel(day)}: ${CLASS_LABELS[day.sparring_day_class]}`}
           >
-            <span className="weekly-sparring-weekday">{day.weekday}</span>
+            <span className="weekly-sparring-weekday">{formatWeekdayLabel(day)}</span>
             <span className={`weekly-sparring-class-badge weekly-sparring-badge-${day.sparring_day_class}`}>
               {CLASS_LABELS[day.sparring_day_class]}
             </span>
@@ -203,7 +212,7 @@ export function WeeklySparringView({ planId }: { planId: string }) {
         <div className="weekly-sparring-detail">
           <div className="weekly-sparring-detail-header">
             <div>
-              <p className="kicker">{selectedDay.weekday}</p>
+              <p className="kicker">{formatWeekdayLabel(selectedDay)}</p>
               <h4>{CLASS_LABELS[selectedDay.sparring_day_class]}</h4>
             </div>
             <span className={`weekly-sparring-class-badge weekly-sparring-badge-${selectedDay.sparring_day_class}`}>

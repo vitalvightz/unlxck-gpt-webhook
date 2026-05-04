@@ -269,6 +269,12 @@ export type WeeklyDayEntry = {
   reason: string;
   coach_note: string;
   reason_codes: string[];
+  d_day?: number | null;
+  day_label?: string;
+  weekday_with_label?: string;
+  calendar_date?: string | null;
+  is_fight_day?: boolean;
+  is_after_fight_day?: boolean;
 };
 
 export type WeeklySchedule = {
@@ -279,6 +285,9 @@ export type WeeklySchedule = {
   projected_days_until_fight_start?: number | null;
   projected_days_until_fight_end?: number | null;
   day_label?: string;
+  countdown_range?: number[];
+  week_countdown_label?: string;
+  week_label_with_countdown?: string;
   days: WeeklyDayEntry[];
 };
 
