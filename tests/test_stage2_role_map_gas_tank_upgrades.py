@@ -3,6 +3,7 @@ from fightcamp.stage2_role_map import (
     _upgrade_recovery_days_to_gas_tank,
     _upgrade_unused_days_to_low_load_support,
 )
+from fightcamp import stage2_payload
 from fightcamp.stage2_finalizer_packet import build_stage2_finalizer_packet
 
 
@@ -155,3 +156,57 @@ def test_finalizer_packet_keeps_converted_support_session_and_no_unused_placehol
     weeks = packet["selected_plan"]["weekly_role_map"]["weeks"]
     assert weeks[0]["session_roles"][0]["role_key"] == "converted_low_aerobic_gas_tank_day"
     assert "intentionally_unused_days" not in weeks[0] or weeks[0]["intentionally_unused_days"] == []
+
+
+def test_build_planning_brief_uses_stage2_role_map_builder(monkeypatch):
+    called = {"builder": False}
+
+    def _mark_builder(athlete_model, week_by_week_progression, limiter_profile, fight_week_override=None):
+        called["builder"] = True
+        return {"model": "session_role_overlay.v1", "weeks": [], "fight_week_override": {"active": False}}
+
+    monkeypatch.setattr(stage2_payload.stage2_role_map_module, "_build_weekly_role_map", _mark_builder)
+
+    athlete_model = {
+        "full_name": "Test Athlete",
+        "age": 27,
+        "current_weight": 72,
+        "target_weight": 72,
+        "sport": "boxing",
+        "status": "amateur",
+        "rounds_format": "3x3",
+        "camp_length_weeks": 6,
+        "days_until_fight": 28,
+        "fight_date": "2026-07-18",
+        "short_notice": False,
+        "fatigue": "high",
+        "fatigue_level": "high",
+        "readiness_flags": ["high_fatigue"],
+        "training_days": ["monday", "tuesday", "wednesday", "thursday", "friday"],
+        "hard_sparring_days": ["tuesday", "thursday"],
+        "support_work_days": ["friday"],
+        "key_goals": ["gas tank"],
+        "weak_areas": ["conditioning"],
+        "injuries": [],
+    }
+    phase_briefs = {
+        "SPP": {
+            "objective": "fight readiness",
+            "emphasize": ["sport speed"],
+            "deprioritize": [],
+            "risk_flags": [],
+            "selection_guardrails": {
+                "must_keep_if_present": [],
+                "conditioning_drop_order_if_thin": [],
+            },
+        }
+    }
+    _ = stage2_payload.build_planning_brief(
+        athlete_model=athlete_model,
+        restrictions=[],
+        phase_briefs=phase_briefs,
+        candidate_pools={"SPP": {"strength_slots": [], "conditioning_slots": [], "rehab_slots": []}},
+        omission_ledger={},
+        rewrite_guidance={},
+    )
+    assert called["builder"] is True

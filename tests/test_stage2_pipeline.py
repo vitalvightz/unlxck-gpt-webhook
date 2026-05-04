@@ -222,6 +222,7 @@ def test_build_stage2_retry_returns_repair_prompt_when_needed():
     assert retry["repair_prompt"] is not None
     assert "REVISION PRIORITIES" in retry["repair_prompt"]
     assert "PLANNING BRIEF" in retry["repair_prompt"]
+    assert "explicit converted low-load support role" in retry["repair_prompt"]
 
 
 def test_build_stage2_retry_skips_prompt_when_plan_passes():
