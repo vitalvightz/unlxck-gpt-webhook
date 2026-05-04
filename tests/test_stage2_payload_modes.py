@@ -15,6 +15,8 @@ from fightcamp.stage2_payload import (
     build_stage2_payload,
 )
 from fightcamp.stage2_payload_late_fight import (
+    CANONICAL_HARD_SPARRING_LABEL,
+    CANONICAL_HARD_SPARRING_NOTE,
     _handoff_mode_instructions,
     _late_fight_legal_offsets,
     _late_fight_stage_label,
