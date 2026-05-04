@@ -1,4 +1,5 @@
 from fightcamp.stage2_role_map import (
+    _assign_declared_day_hints,
     _build_weekly_role_map,
     _upgrade_recovery_days_to_gas_tank,
     _upgrade_unused_days_to_low_load_support,
@@ -110,7 +111,7 @@ def test_weekly_role_map_roles_carry_countdown_labels_for_renderers():
     athlete_model = {
         "sport_style": "boxing",
         "training_days": ["monday", "wednesday", "friday"],
-        "fight_date": "2026-07-18",
+        "fight_date": "2027-07-18",
     }
     week_by_week_progression = {
         "weeks": [
@@ -177,7 +178,7 @@ def test_build_planning_brief_uses_stage2_role_map_builder(monkeypatch):
         "rounds_format": "3x3",
         "camp_length_weeks": 6,
         "days_until_fight": 28,
-        "fight_date": "2026-07-18",
+        "fight_date": "2027-07-18",
         "short_notice": False,
         "fatigue": "high",
         "fatigue_level": "high",
@@ -210,3 +211,29 @@ def test_build_planning_brief_uses_stage2_role_map_builder(monkeypatch):
         rewrite_guidance={},
     )
     assert called["builder"] is True
+
+def test_sandwiched_days_prefer_low_load_support_and_keep_primary_strength_on_clean_day():
+    athlete_model = {
+        "training_days": ["tuesday", "thursday", "saturday"],
+        "support_work_days": ["tuesday", "thursday", "saturday"],
+        "hard_sparring_days": ["monday", "wednesday", "friday"],
+    }
+    roles = _assign_declared_day_hints(
+        [
+            {"session_index": 1, "category": "strength", "role_key": "primary_strength_day"},
+            {"session_index": 2, "category": "conditioning", "role_key": "aerobic_support_day", "preferred_system": "aerobic", "allowed_on_recovery_day": True},
+            {"session_index": 3, "category": "recovery", "role_key": "recovery_reset_day"},
+        ],
+        athlete_model,
+        hard_sparring_plan=[
+            {"day": "monday", "status": "hard_as_planned"},
+            {"day": "wednesday", "status": "hard_as_planned"},
+            {"day": "friday", "status": "hard_as_planned"},
+        ],
+    )
+
+    primary = next(role for role in roles if role.get("category") == "strength")
+    aerobic = next(role for role in roles if role.get("category") == "conditioning" and role.get("preferred_system") == "aerobic")
+
+    assert primary.get("scheduled_day_hint") == "saturday"
+    assert aerobic.get("scheduled_day_hint") in {"tuesday", "thursday"}
