@@ -2077,7 +2077,7 @@ def _late_fight_warnings(planning_brief: dict, final_plan_text: str) -> list[dic
         mislabel_lines = [
             line
             for line in plan_lines
-            if re.search(r"\bD-7\b", line, flags=re.IGNORECASE) and re.search(r"\bfight day\b", line, flags=re.IGNORECASE)
+            if phrase_in_text(line, "D-7") and phrase_in_text(line, "fight day")
         ]
         if mislabel_lines:
             warnings.append(
