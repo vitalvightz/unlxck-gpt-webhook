@@ -17,6 +17,8 @@ from . import stage2_planning_brief as stage2_planning_brief_module
 from .stage2_finalizer_packet import build_stage2_finalizer_packet
 from . import stage2_role_map as stage2_role_map_module
 from .stage2_payload_late_fight import (
+    CANONICAL_HARD_SPARRING_LABEL,
+    CANONICAL_HARD_SPARRING_NOTE,
     _build_late_fight_plan_spec,
     _build_late_fight_session_sequence,
     _build_late_fight_week_by_week_progression,
