@@ -2710,6 +2710,19 @@ def _build_weekly_role_map(
             athlete_model,
             hard_sparring_plan=hard_sparring_plan,
         )
+        # Keep normal-camp weekly role-map behaviour aligned with stage2_role_map:
+        # compression can create recovery/off placeholders, then targeted low-load
+        # upgrades may convert those to explicit aerobic support roles.
+        session_roles = stage2_role_map_module._upgrade_recovery_days_to_gas_tank(
+            week_entry,
+            session_roles,
+            athlete_model,
+        )
+        session_roles = stage2_role_map_module._upgrade_unused_days_to_low_load_support(
+            week_entry,
+            session_roles,
+            athlete_model,
+        )
         session_roles, suppressed_roles = _lock_declared_hard_sparring_roles(
             week_entry,
             session_roles,

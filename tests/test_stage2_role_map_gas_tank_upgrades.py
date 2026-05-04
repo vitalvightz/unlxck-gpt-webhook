@@ -3,6 +3,7 @@ from fightcamp.stage2_role_map import (
     _upgrade_recovery_days_to_gas_tank,
     _upgrade_unused_days_to_low_load_support,
 )
+from fightcamp import stage2_payload
 from fightcamp.stage2_finalizer_packet import build_stage2_finalizer_packet
 
 
@@ -155,3 +156,59 @@ def test_finalizer_packet_keeps_converted_support_session_and_no_unused_placehol
     weeks = packet["selected_plan"]["weekly_role_map"]["weeks"]
     assert weeks[0]["session_roles"][0]["role_key"] == "converted_low_aerobic_gas_tank_day"
     assert "intentionally_unused_days" not in weeks[0] or weeks[0]["intentionally_unused_days"] == []
+
+
+def test_stage2_payload_weekly_role_map_calls_low_load_upgrade_hooks(monkeypatch):
+    called = {"recovery": False, "unused": False}
+
+    def _mark_recovery(week_entry, session_roles, athlete_model):
+        called["recovery"] = True
+        return session_roles
+
+    def _mark_unused(week_entry, session_roles, athlete_model):
+        called["unused"] = True
+        return session_roles
+
+    monkeypatch.setattr(stage2_payload.stage2_role_map_module, "_upgrade_recovery_days_to_gas_tank", _mark_recovery)
+    monkeypatch.setattr(stage2_payload.stage2_role_map_module, "_upgrade_unused_days_to_low_load_support", _mark_unused)
+
+    athlete_model = {
+        "full_name": "Test Athlete",
+        "age": 27,
+        "current_weight": 72,
+        "target_weight": 72,
+        "sport": "boxing",
+        "status": "amateur",
+        "rounds_format": "3x3",
+        "camp_length_weeks": 6,
+        "days_until_fight": 28,
+        "short_notice": False,
+        "fatigue": "high",
+        "fatigue_level": "high",
+        "readiness_flags": ["high_fatigue"],
+        "training_days": ["monday", "tuesday", "wednesday", "thursday", "friday"],
+        "hard_sparring_days": ["tuesday", "thursday"],
+        "support_work_days": ["friday"],
+        "key_goals": ["gas tank"],
+        "weak_areas": ["conditioning"],
+        "injuries": [],
+    }
+    week_by_week_progression = {
+        "weeks": [
+            {
+                "week_index": 1,
+                "phase": "SPP",
+                "stage_key": "specific_density_to_peak",
+                "span_days": 7,
+                "session_counts": {"strength": 1, "conditioning": 1, "recovery": 1},
+                "conditioning_sequence": ["aerobic"],
+            }
+        ]
+    }
+    _ = stage2_payload._build_weekly_role_map(
+        athlete_model=athlete_model,
+        week_by_week_progression=week_by_week_progression,
+        limiter_profile={"key": "conditioning_endurance"},
+    )
+    assert called["recovery"] is True
+    assert called["unused"] is True
