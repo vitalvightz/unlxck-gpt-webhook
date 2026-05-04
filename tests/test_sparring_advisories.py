@@ -106,12 +106,12 @@ def test_deload_advisory_requires_real_hard_sparring_collision_in_taper_week():
 
     assert len(advisories) == 1
     advisory = advisories[0]
-    assert advisory["action"] == "deload"
+    assert advisory["action"] == "convert"
     assert advisory["phase"] == "TAPER"
     assert advisory["days"] == ["Tuesday", "Thursday"]
     assert "fight-week pressure is active" in advisory["reason"]
     assert "only one effective hard sparring day" in advisory["reason"]
-    assert advisory["suggestion"].startswith("Keep only one effective hard sparring day")
+    assert advisory["suggestion"].startswith("Keep one hard sparring day")
     assert advisory["title"] == "Coach note"
     assert advisory["disclaimer"] == "Treat this as a flag, not an automatic change to your saved plan."
 
@@ -207,8 +207,8 @@ def test_returns_only_one_best_advisory_when_multiple_weeks_qualify():
 
     assert len(advisories) == 1
     assert advisories[0]["phase"] == "TAPER"
-    assert advisories[0]["week_label"] == "Week 2"
-    assert advisories[0]["suggestion"].startswith("If high fatigue, an aggressive cut, and worsening ankle instability are still there by Week 2")
+    assert advisories[0]["week_label"] == "d2"
+    assert advisories[0]["suggestion"].startswith("If high fatigue, an aggressive cut, and worsening ankle instability are still there by d2, keep one hard sparring day and run")
 
 
 def test_future_week_advisory_uses_conditional_static_app_wording():
@@ -239,10 +239,10 @@ def test_future_week_advisory_uses_conditional_static_app_wording():
 
     assert len(advisories) == 1
     advisory = advisories[0]
-    assert advisory["week_label"] == "Week 2"
-    assert advisory["reason"].startswith("If the current readiness picture carries into Week 2")
+    assert advisory["week_label"] == "d2"
+    assert advisory["reason"].startswith("If the current readiness picture carries into d2")
     assert "worsening ankle instability" in advisory["reason"]
-    assert advisory["suggestion"].startswith("If high fatigue, an active cut, and worsening ankle instability are still there by Week 2")
+    assert advisory["suggestion"].startswith("If high fatigue, an active cut, and worsening ankle instability are still there by d2, switch")
 
 
 # ---------------------------------------------------------------------------
