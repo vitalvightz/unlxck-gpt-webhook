@@ -3185,7 +3185,6 @@ def _bridge_countdown_practical_allocation_plan(days_until_fight: Any, athlete_m
     )
     visible_roles = _visible_insert_session_sequence(public_roles)
     label_to_weekday = _full_countdown_weekday_map(days_until_fight, athlete_model)
-    label_to_display_weekday = dict(label_to_weekday)
     top_level_budget = _late_fight_role_budget(days_until_fight, athlete_model)
     legal_labels = dedupe_preserve_order(
         str(label)
@@ -3282,7 +3281,6 @@ def _late_fight_summary(days_until_fight: Any) -> str:
 
 
 def _build_late_fight_week_by_week_progression(days_until_fight: Any, athlete_model: dict, phase_briefs: dict[str, dict]) -> dict[str, Any]:
-    days = _coerce_days(days_until_fight)
     if _is_countdown_continuation_start(days_until_fight):
         return {"weeks": _build_bridge_then_late_countdown_weeks(days_until_fight, athlete_model, phase_briefs)}
     if _days_out_payload_mode(days_until_fight) in {

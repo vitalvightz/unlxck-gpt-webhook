@@ -17,25 +17,11 @@ from .sparring_dose_planner import (
     sandwiched_training_days,
 )
 from .stage2_payload_late_fight import (
-    _build_late_fight_week_by_week_progression,
-    _build_late_fight_weekly_role_map,
-    _days_out_payload_mode,
-    _uses_late_fight_stage2_payload,
     _role_anchor,
 )
 from .stage2_planning_brief import (
-    _build_phase_briefs,
-    _build_phase_selection_guardrails,
-    _build_weekly_stress_map,
-    _compress_short_camp_priorities,
     dedupe_preserve_order,
-    _derive_athlete_archetype,
-    _derive_competitive_maturity,
-    _derive_main_limiter,
-    _derive_main_risks,
-    _derive_readiness_flags,
     _is_high_pressure_weight_cut,
-    _priority_bucket_labels,
     _WEEKLY_STAGE_TEMPLATES,
     PLANNING_DECISION_HIERARCHY,
 )
