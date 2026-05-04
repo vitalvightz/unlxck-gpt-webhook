@@ -1018,6 +1018,8 @@ def _assign_declared_day_hints(
 
     day_assignments: dict[int, str] = {}
     used_days: set[str] = set()
+    effective_hard_days_set = set(effective_hard_days(hard_sparring_plan or [])) or set(hard_sparring_days)
+    sandwiched_days = set(sandwiched_training_days(training_days, effective_hard_days_set))
 
     # Preserve explicit scheduled days for generated low-aerobic gas-tank recovery touches.
     # These are created after compression from recovery/off days and should not be wiped
@@ -1066,10 +1068,14 @@ def _assign_declared_day_hints(
             if primary_day in hard_sparring_days:
                 continue
             score = 100
+            if primary_day in sandwiched_days:
+                score -= 50
             if recovery_day not in hard_sparring_days:
                 score += 10
             if recovery_day in support_work_days:
                 score += 4
+            if recovery_day in sandwiched_days:
+                score += 5
             score -= abs((idx + 1) - middle)
             if score > best_score:
                 best_score = score
@@ -1119,30 +1125,51 @@ def _assign_declared_day_hints(
     for idx, role in enumerate(ordered):
         if idx in day_assignments:
             continue
-        if role.get("category") != "recovery":
+
+        is_recovery_compatible = bool(
+            role.get("recovery_compatible")
+            or role.get("allowed_on_recovery_day")
+            or role.get("gas_tank_recovery_touch")
+            or role.get("priority_recovery_touch")
+            or role.get("category") == "recovery"
+            or (role.get("category") == "conditioning" and role.get("preferred_system") == "aerobic")
+        )
+
+        if is_recovery_compatible:
+            fallback_day = next((day for day in training_days if day in sandwiched_days and day not in used_days), None)
+            if fallback_day is None:
+                fallback_day = next((day for day in training_days if day not in used_days and day not in hard_sparring_days), None)
+            if fallback_day is None:
+                fallback_day = next((day for day in training_days if day not in used_days), None)
+            if fallback_day:
+                day_assignments[idx] = fallback_day
+                used_days.add(fallback_day)
+                _append_day_hint(
+                    role,
+                    fallback_day,
+                    "Use sandwiched days for low-load recovery-compatible support first, then fill unused non-hard days.",
+                )
             continue
 
-        fallback_recovery_day = next(
+        fallback_day = next(
             (
-                day for day in training_days
-                if day not in used_days and day not in hard_sparring_days
+                day
+                for day in training_days
+                if day not in used_days and day not in hard_sparring_days and day not in sandwiched_days
             ),
             None,
         )
-
-        if fallback_recovery_day is None:
-            fallback_recovery_day = next(
-                (day for day in training_days if day not in used_days),
-                None,
-            )
-
-        if fallback_recovery_day:
-            day_assignments[idx] = fallback_recovery_day
-            used_days.add(fallback_recovery_day)
+        if fallback_day is None:
+            fallback_day = next((day for day in training_days if day not in used_days and day not in hard_sparring_days), None)
+        if fallback_day is None:
+            fallback_day = next((day for day in training_days if day not in used_days), None)
+        if fallback_day:
+            day_assignments[idx] = fallback_day
+            used_days.add(fallback_day)
             _append_day_hint(
                 role,
-                fallback_recovery_day,
-                "Assign leftover recovery/support slot to an unused non-hard training day when possible.",
+                fallback_day,
+                "Keep non-recovery-compatible stress away from sandwiched hard-sparring days when a cleaner slot exists.",
             )
     for idx, role in enumerate(ordered):
         if idx not in day_assignments:
