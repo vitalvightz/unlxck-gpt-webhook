@@ -30,6 +30,8 @@ from .stage2_payload_late_fight import (
     _resolve_late_fight_phase,
     _uses_late_fight_stage2_payload,
 )
+from .fight_day_override import compute_fight_weekday
+from .fight_date_utils import build_calendar_days
 from .conditioning import athlete_facing_system_label
 from .fight_day_override import apply_fight_day_override_to_weekly_role_map
 from .late_selector_windows import classify_late_selector_window
@@ -2542,8 +2544,24 @@ def _build_weekly_role_map(
 ) -> dict:
     weeks: list[dict] = []
     limiter_key = limiter_profile.get("key", "general_fight_readiness")
+    progression_weeks = list(week_by_week_progression.get("weeks", []))
+    projected_days_until_fight_end: list[int] = [0] * len(progression_weeks)
+    week_span_days: list[int] = [0] * len(progression_weeks)
+    running_days = 0
+    for idx in range(len(progression_weeks) - 1, -1, -1):
+        span = max(0, int(progression_weeks[idx].get("span_days") or 0))
+        week_span_days[idx] = span
+        running_days += span
+        projected_days_until_fight_end[idx] = max(0, running_days - span + 1) if span > 0 else 0
 
-    for week_entry in week_by_week_progression.get("weeks", []):
+    fight_weekday = compute_fight_weekday(athlete_model)
+
+    for week_idx, week_entry in enumerate(progression_weeks):
+        week_entry["calendar_days"] = build_calendar_days(
+            fight_weekday=fight_weekday,
+            projected_days_until_fight_end=projected_days_until_fight_end[week_idx],
+            span_days=week_span_days[week_idx],
+        )
         session_counts = dict(week_entry.get("session_counts") or {})
         conditioning_sequence = list(week_entry.get("conditioning_sequence", [])) or ["aerobic", "glycolytic", "alactic"]
         sport_key = _athlete_sport_key(athlete_model)
@@ -2709,6 +2727,19 @@ def _build_weekly_role_map(
             suppressed_roles,
             athlete_model,
             hard_sparring_plan=hard_sparring_plan,
+        )
+        # Keep normal-camp weekly role-map behaviour aligned with stage2_role_map:
+        # compression can create recovery/off placeholders, then targeted low-load
+        # upgrades may convert those to explicit aerobic support roles.
+        session_roles = stage2_role_map_module._upgrade_recovery_days_to_gas_tank(
+            week_entry,
+            session_roles,
+            athlete_model,
+        )
+        session_roles = stage2_role_map_module._upgrade_unused_days_to_low_load_support(
+            week_entry,
+            session_roles,
+            athlete_model,
         )
         session_roles, suppressed_roles = _lock_declared_hard_sparring_roles(
             week_entry,
