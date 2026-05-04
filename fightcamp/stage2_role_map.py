@@ -387,10 +387,120 @@ def _low_load_support_profile_for_unused_day(athlete_model: dict) -> dict[str, A
     return None
 
 
+_LOW_AEROBIC_SUPPORT_ROLE_KEYS = {
+    "recovery_aerobic_gas_tank_day",
+    "converted_low_aerobic_gas_tank_day",
+    "aerobic_support_day",
+    "aerobic_base_day",
+    "aerobic_coordination_day",
+    "aerobic_flush_day",
+}
+
+
+def _is_low_aerobic_support_role(role: dict) -> bool:
+    """Return True when the role qualifies as a low-aerobic support touch."""
+    if not isinstance(role, dict):
+        return False
+    category = str(role.get("category") or "").strip().lower()
+    if category != "conditioning":
+        return False
+    preferred_system = str(role.get("preferred_system") or "").strip().lower()
+    if preferred_system in {"glycolytic", "alactic", "atp-pcr", "atp_pcr"}:
+        return False
+    role_key = str(role.get("role_key") or "").strip()
+    if role_key in _LOW_AEROBIC_SUPPORT_ROLE_KEYS:
+        return True
+    if role_key == "repeatability_support_day" and preferred_system == "aerobic":
+        return True
+    if preferred_system == "aerobic" and (
+        role.get("recovery_compatible")
+        or role.get("allowed_on_recovery_day")
+        or role.get("gas_tank_recovery_touch")
+        or role.get("converted_from_unused_day")
+    ):
+        return True
+    return False
+
+
+def _count_low_aerobic_support_roles(roles: list[dict]) -> int:
+    return sum(1 for role in roles if _is_low_aerobic_support_role(role))
+
+
+def _low_aerobic_support_cap_for_week(
+    week_entry: dict,
+    athlete_model: dict,
+    session_roles: list[dict],
+    hard_sparring_plan: list[dict] | None = None,
+) -> int:
+    """Severity-aware cap on low-aerobic support touches for a week.
+
+    Reads cut severity from the deterministic source of truth in
+    weight_cut.py (via _resolved_cut_severity_bucket). The cap reflects
+    phase, fight-week proximity, hard-sparring load, fatigue, and
+    readiness flags. Easy bike, easy row, nasal shadowboxing, short
+    Z1/Z2 flushes, and mobility/breathing are not auto-suppressed by a
+    cut, but their frequency is reduced when the cut is severe.
+    """
+    phase = str(week_entry.get("phase") or "").strip().upper()
+
+    min_d_day: int | None = None
+    for day in week_entry.get("calendar_days") or []:
+        try:
+            d = int(day.get("d_day"))
+        except (TypeError, ValueError):
+            continue
+        if min_d_day is None or d < min_d_day:
+            min_d_day = d
+
+    readiness_flags = {
+        str(flag).strip().lower()
+        for flag in clean_list(athlete_model.get("readiness_flags", []))
+    }
+    is_fight_week = (
+        (min_d_day is not None and min_d_day <= 7)
+        or "fight_week" in readiness_flags
+        or "fight_day_protocol" in readiness_flags
+    )
+
+    bucket = _resolved_cut_severity_bucket(athlete_model) or "none"
+
+    fatigue = str(athlete_model.get("fatigue") or "").strip().lower()
+    high_fatigue = fatigue == "high"
+    red_flag = bool(
+        readiness_flags
+        & {"severe_injury", "red_flag_injury", "medical_hold"}
+    )
+
+    hard_count = effective_hard_day_count(hard_sparring_plan or [])
+
+    if bucket in {"none", "low"}:
+        if is_fight_week:
+            return 0 if (high_fatigue or red_flag) else 1
+        if phase == "TAPER":
+            return 1
+        return 2
+
+    if bucket == "moderate":
+        if is_fight_week:
+            return 0 if (high_fatigue or red_flag) else 1
+        if phase == "TAPER":
+            return 1
+        # GPP / SPP — drop to 1 if high fatigue or large hard-sparring load.
+        if high_fatigue or hard_count >= 3:
+            return 1
+        return 2
+
+    # high / critical / extreme: never reopen volume on high fatigue or red flag.
+    if high_fatigue or red_flag:
+        return 0
+    return 1
+
+
 def _upgrade_recovery_days_to_gas_tank(
     week_entry: dict,
     session_roles: list[dict],
     athlete_model: dict,
+    hard_sparring_plan: list[dict] | None = None,
 ) -> list[dict]:
     """
     If gas tank is a goal/weakness, turn eligible recovery roles into
@@ -401,6 +511,14 @@ def _upgrade_recovery_days_to_gas_tank(
     """
     if not _has_gas_tank_signal(athlete_model):
         return session_roles
+
+    cap = _low_aerobic_support_cap_for_week(
+        week_entry,
+        athlete_model,
+        session_roles,
+        hard_sparring_plan=hard_sparring_plan,
+    )
+    current_count = _count_low_aerobic_support_roles(session_roles)
 
     updated: list[dict] = []
 
@@ -418,6 +536,10 @@ def _upgrade_recovery_days_to_gas_tank(
 
         # No extra app work on fight day or day before fight.
         if d_day is not None and d_day <= 1:
+            updated.append(role)
+            continue
+
+        if current_count >= cap:
             updated.append(role)
             continue
 
@@ -468,6 +590,7 @@ def _upgrade_recovery_days_to_gas_tank(
         converted["placement_rule"] = f"{placement} {addendum}".strip()
 
         updated.append(converted)
+        current_count += 1
 
     for idx, role in enumerate(updated, start=1):
         role["session_index"] = idx
@@ -479,6 +602,7 @@ def _upgrade_unused_days_to_low_load_support(
     week_entry: dict,
     session_roles: list[dict],
     athlete_model: dict,
+    hard_sparring_plan: list[dict] | None = None,
 ) -> list[dict]:
     """
     Turn eligible intentionally unused recovery/off days into low-load support work
@@ -495,7 +619,14 @@ def _upgrade_unused_days_to_low_load_support(
     added_roles: list[dict] = []
 
     phase = str(week_entry.get("phase", "")).strip().upper()
-    max_upgrades = 2 if phase in {"GPP", "SPP"} else 1
+    legacy_phase_ceiling = 2 if phase in {"GPP", "SPP"} else 1
+    cap = _low_aerobic_support_cap_for_week(
+        week_entry,
+        athlete_model,
+        session_roles,
+        hard_sparring_plan=hard_sparring_plan,
+    )
+    current_count = _count_low_aerobic_support_roles(session_roles)
 
     existing_days = {
         str(role.get("scheduled_day_hint") or "").strip().lower()
@@ -534,8 +665,18 @@ def _upgrade_unused_days_to_low_load_support(
             updated_unused_days.append(day_entry)
             continue
 
-        if len(added_roles) >= max_upgrades:
+        if len(added_roles) >= legacy_phase_ceiling:
             updated_unused_days.append(day_entry)
+            continue
+
+        if current_count >= cap:
+            annotated = dict(day_entry)
+            annotated["low_aerobic_cap_skipped"] = True
+            annotated["low_aerobic_cap_reason"] = (
+                f"Low-aerobic support cap reached ({cap}); cut severity, "
+                f"phase, fatigue, or readiness blocked the upgrade for {day}."
+            )
+            updated_unused_days.append(annotated)
             continue
 
         role_key = support_profile["role_key"]
@@ -601,6 +742,8 @@ def _upgrade_unused_days_to_low_load_support(
             added_role["preferred_exercise_names"] = preferred_exercise_names
 
         added_roles.append(added_role)
+        if _is_low_aerobic_support_role(added_role):
+            current_count += 1
 
     week_entry["intentionally_unused_days"] = updated_unused_days
 
@@ -2122,12 +2265,14 @@ def _build_weekly_role_map(
             week_entry,
             session_roles,
             athlete_model,
+            hard_sparring_plan=hard_sparring_plan,
         )
-        
+
         session_roles = _upgrade_unused_days_to_low_load_support(
             week_entry,
             session_roles,
             athlete_model,
+            hard_sparring_plan=hard_sparring_plan,
         )
         
         session_roles, suppressed_roles = _lock_declared_hard_sparring_roles(
