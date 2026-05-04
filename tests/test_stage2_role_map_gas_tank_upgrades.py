@@ -1,6 +1,7 @@
 from fightcamp.stage2_role_map import (
     _assign_declared_day_hints,
     _build_weekly_role_map,
+    _low_aerobic_support_cap_for_week,
     _upgrade_recovery_days_to_gas_tank,
     _upgrade_unused_days_to_low_load_support,
 )
@@ -147,6 +148,71 @@ def test_unused_day_upgrade_skips_days_with_existing_session_role():
     assert len(upgraded) == 1
     assert upgraded[0]["role_key"] == "hard_sparring_day"
     assert week["intentionally_unused_days"][0]["role"] == "off_day"
+
+
+def test_low_aerobic_cap_none_low_cut_allows_two_in_gpp():
+    week = {"phase": "GPP", "effective_hard_sparring_days": []}
+    athlete_model = {"cut_severity_bucket": "low", "days_until_fight": 35, "fatigue": "low"}
+    assert _low_aerobic_support_cap_for_week(week, athlete_model, []) == 2
+
+
+def test_moderate_cut_caps_fight_week_to_zero_or_one_with_hard_sparring():
+    week = {"phase": "TAPER", "effective_hard_sparring_days": ["wednesday"]}
+    athlete_model = {"cut_severity_bucket": "moderate", "days_until_fight": 6, "fatigue": "moderate"}
+    assert _low_aerobic_support_cap_for_week(week, athlete_model, []) == 0
+
+
+def test_high_cut_caps_gpp_to_max_one():
+    week = {"phase": "GPP"}
+    athlete_model = {"cut_severity_bucket": "high", "days_until_fight": 30, "fatigue": "low"}
+    assert _low_aerobic_support_cap_for_week(week, athlete_model, []) == 1
+
+
+def test_high_fatigue_does_not_reopen_low_aerobic_support():
+    week = {"phase": "SPP"}
+    athlete_model = {"cut_severity_bucket": "low", "days_until_fight": 30, "fatigue": "high"}
+    assert _low_aerobic_support_cap_for_week(week, athlete_model, []) == 0
+
+
+def test_recovery_upgrade_respects_shared_low_aerobic_cap():
+    week = {"phase": "SPP", "calendar_days": [{"weekday": "thursday", "d_day": 30}]}
+    session_roles = [
+        {
+            "session_index": 1,
+            "category": "conditioning",
+            "role_key": "aerobic_support_day",
+            "preferred_system": "aerobic",
+            "recovery_compatible": True,
+            "scheduled_day_hint": "monday",
+        },
+        {"session_index": 2, "category": "recovery", "role_key": "recovery_reset_day", "scheduled_day_hint": "thursday"},
+    ]
+    athlete_model = {"key_goals": ["conditioning"], "cut_severity_bucket": "high", "days_until_fight": 28}
+    upgraded = _upgrade_recovery_days_to_gas_tank(week, session_roles, athlete_model)
+    assert upgraded[1]["role_key"] == "recovery_reset_day"
+
+
+def test_unused_day_upgrade_respects_shared_low_aerobic_cap():
+    week = {
+        "phase": "SPP",
+        "calendar_days": [{"weekday": "thursday", "d_day": 27}],
+        "intentionally_unused_days": [{"day": "thursday", "role": "off_day"}],
+    }
+    session_roles = [
+        {
+            "session_index": 1,
+            "category": "conditioning",
+            "role_key": "aerobic_support_day",
+            "preferred_system": "aerobic",
+            "recovery_compatible": True,
+            "scheduled_day_hint": "tuesday",
+        }
+    ]
+    athlete_model = {"key_goals": ["conditioning"], "cut_severity_bucket": "high", "days_until_fight": 28}
+    upgraded = _upgrade_unused_days_to_low_load_support(week, session_roles, athlete_model)
+    assert len(upgraded) == 1
+    assert upgraded[0]["role_key"] == "aerobic_support_day"
+    assert week["intentionally_unused_days"][0]["skip_reason"] == "low_aerobic_support_cap_reached"
 
 
 def test_weekly_role_map_roles_carry_countdown_labels_for_renderers():
