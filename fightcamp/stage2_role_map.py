@@ -225,17 +225,15 @@ def _role_selection_rule(role_key: str, category: str, system: str | None = None
 
 
 def _has_gas_tank_signal(athlete_model: dict) -> bool:
-    """Return True when the athlete profile clearly needs aerobic gas-tank work."""
+    """Return True when gas tank/conditioning is an explicit goal or weakness."""
     raw_values: list[Any] = []
 
     for key in (
         "key_goals",
         "goals",
+        "performance_goals",
         "weaknesses",
         "weak_areas",
-        "performance_goals",
-        "main_limiter",
-        "limiter_key",
     ):
         raw_values.extend(clean_list(athlete_model.get(key, [])))
 
@@ -279,8 +277,7 @@ def _low_load_support_profile_for_unused_day(athlete_model: dict) -> dict[str, A
     Priority:
     1. Gas tank / conditioning
     2. Mobility
-    3. Coordination
-    4. Injury prevention / rehab-friendly support
+    3. Injury prevention / rehab-friendly support
 
     Only gas tank gets preferred_exercise_names because we specifically want to bias
     Assault Bike / Rower / Nasal Shadowboxing / Nasal Walk.
@@ -325,16 +322,6 @@ def _low_load_support_profile_for_unused_day(athlete_model: dict) -> dict[str, A
         "movement_quality",
     }
 
-    coordination_terms = {
-        "coordination",
-        "proprioception",
-        "coordination_proprioception",
-        "balance",
-        "footwork",
-        "rhythm",
-        "skill_refinement",
-    }
-
     injury_terms = {
         "injury_prevention",
         "rehab",
@@ -348,7 +335,14 @@ def _low_load_support_profile_for_unused_day(athlete_model: dict) -> dict[str, A
         "back",
     }
 
-    if tokens & gas_tank_terms or _has_gas_tank_signal(athlete_model):
+    gas_tank_profile_tokens = {
+        str(value).strip().lower().replace("-", "_").replace(" ", "_")
+        for key in ("key_goals", "goals", "performance_goals", "weaknesses", "weak_areas")
+        for value in clean_list(athlete_model.get(key, []))
+        if str(value).strip()
+    }
+
+    if gas_tank_profile_tokens & gas_tank_terms or _has_gas_tank_signal(athlete_model):
         return {
             "role_key": "converted_low_aerobic_gas_tank_day",
             "athlete_facing_label": "Low aerobic gas-tank support",
@@ -375,18 +369,6 @@ def _low_load_support_profile_for_unused_day(athlete_model: dict) -> dict[str, A
             "reason": (
                 "Mobility is a profile goal or weakness, so this unused day becomes "
                 "a low-load mobility support touch."
-            ),
-        }
-
-    if tokens & coordination_terms:
-        return {
-            "role_key": "converted_coordination_support_day",
-            "athlete_facing_label": "Low-load coordination support",
-            "preferred_system": "aerobic",
-            "preferred_tags": ["coordination", "footwork", "skill", "low_impact", "low_cns"],
-            "reason": (
-                "Coordination/proprioception is a profile goal or weakness, so this "
-                "unused day becomes a low-impact coordination support touch."
             ),
         }
 
