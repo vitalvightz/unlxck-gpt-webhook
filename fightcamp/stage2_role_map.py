@@ -1212,9 +1212,11 @@ def _assign_declared_day_hints(
     # day hints after compression and should survive this assignment pass.
     for idx, role in enumerate(ordered):
         locked_day = str(role.get("scheduled_day_hint") or "").strip()
-        if not locked_day or locked_day not in training_days or locked_day in used_days:
+        if not locked_day or locked_day not in training_days:
             continue
         if role.get("role_key") == "hard_sparring_day":
+            if locked_day in used_days:
+                continue
             day_assignments[idx] = locked_day
             used_days.add(locked_day)
             continue
@@ -1225,6 +1227,9 @@ def _assign_declared_day_hints(
         ):
             day_assignments[idx] = locked_day
             used_days.add(locked_day)
+            continue
+        if locked_day in used_days:
+            continue
 
     recovery_idx = next((idx for idx, role in enumerate(ordered) if role.get("category") == "recovery"), None)
     primary_idx = next(
