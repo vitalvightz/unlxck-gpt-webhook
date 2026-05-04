@@ -1618,6 +1618,19 @@ def test_late_fight_countdown_blocks_non_rehab_band_work_on_d7_and_d1():
     assert any(w["days_out_bucket"] == "D-1" and w["blocked_drill"] == "non_rehab_band_work" for w in blocked)
 
 
+def test_late_fight_flags_d7_fight_day_mislabel():
+    brief = _late_fight_planning_brief("D-7")
+    report = validate_stage2_output(
+        planning_brief=brief,
+        final_plan_text="""
+        D-7 (Wednesday — Fight day)
+        - Fight day protocol — follow coach warm-up and fight protocol.
+        """,
+    )
+    blocking_codes = {warning["code"] for warning in report["warnings"] if warning.get("blocking")}
+    assert "late_fight_countdown_fight_day_mislabel" in blocking_codes
+
+
 def test_late_fight_allowlist_blocks_d13_band_resisted_sprint_starts():
     brief = _late_fight_brief_with_allowed(
         "D-13",
