@@ -3685,7 +3685,7 @@ def _handoff_mode_instructions(payload_mode: str) -> str:
         "If late_fight_plan_spec.surviving_hard_spar_days / late_fight_plan_spec.downgraded_declared_spar_days are present, use those fields as source of truth and add one short deterministic sentence (hard days first, downgraded days second).\n"
         "Add one short rationale only when placement/compression would otherwise make day choice look arbitrary.\n"
         "One hard-spar doctrine per output. No split schedule realities.\n"
-        "Hard sparring days are gym/coach-owned. The app must not prescribe the sparring. Render the day as a minimal label only — \"Coach-led boxing session\" (or sport-equivalent). No round counts, no time-x-rounds, no intensity targets, no dose, no RPE, no work:rest, no sparring template wording. After the label, emit exactly one app-owned note: \"No additional S&C today. Add 5 min breathing + shoulder mobility after.\" Nothing else."
+"Hard sparring days are gym/coach-owned. The app must not prescribe the sparring. Render the day as a minimal label only — \"" + CANONICAL_HARD_SPARRING_LABEL + "\" (or sport-equivalent). No round counts, no time-x-rounds, no intensity targets, no dose, no RPE, no work:rest, no sparring template wording. After the label, emit exactly one app-owned note: \"" + CANONICAL_HARD_SPARRING_NOTE + "\" Nothing else."
     )
     if payload_mode == "fight_day_protocol_payload":
         return (

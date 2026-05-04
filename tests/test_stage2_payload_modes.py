@@ -15,6 +15,9 @@ from fightcamp.stage2_payload import (
     build_stage2_payload,
 )
 from fightcamp.stage2_payload_late_fight import (
+    CANONICAL_HARD_SPARRING_LABEL,
+    CANONICAL_HARD_SPARRING_NOTE,
+    _handoff_mode_instructions,
     _late_fight_legal_offsets,
     _late_fight_stage_label,
     _late_fight_taper_micro_support_policy,
@@ -80,6 +83,12 @@ def _athlete(days_until_fight, **overrides):
 def test_fatigue_normalization_matches_regular_and_late_fight_paths(athlete_model, expected):
     assert _normalized_fatigue_level(athlete_model) == expected
     assert _normalized_fatigue(athlete_model) == expected
+
+
+def test_hard_sparring_render_contract_is_canonical_in_late_fight_handoff():
+    instructions = _handoff_mode_instructions("bridge_compression_payload")
+    assert CANONICAL_HARD_SPARRING_LABEL in instructions
+    assert CANONICAL_HARD_SPARRING_NOTE in instructions
 
 
 def _build_brief_for(days_until_fight, *, phase="SPP", athlete_overrides=None):
