@@ -3961,7 +3961,7 @@ Do not expose internal role keys or internal system labels as session titles. Tr
   fight_week_freshness_day   -> "Freshness Reset"
   light_fight_pace_touch_day -> "Technical Rhythm Touch"
   technical_touch_day        -> "Technical Touch"
-  hard_sparring_day          -> render minimally as "Coach-led boxing — no hard sparring / technical only" or sport-equivalent: "Coach-led MMA session", "Coach-led Muay Thai session", "Coach-led kickboxing session". The gym/coach owns the day; the app must not prescribe rounds, intensity, dose, work:rest, RPE, or any sparring template wording. After the label, emit exactly one short app-owned note: "No app S&C today. Keep freshness priority." Nothing else.
+hard_sparring_day          -> render minimally as "
 Never write "Strength touch", "Alactic sharpness", "Neural primer", "SPP", "Glycolytic", "Alactic", or "Aerobic" as an athlete-facing session title.
 
 For conditioning drill system labels, use selected_plan session fields such as athlete_facing_system_label when present. If absent, translate the drill intent into athlete-facing language. Never use the word "Glycolytic" in D-7 or tighter windows. When a drill carries short-work + full-rest prescription, call it "footwork speed repeatability", "coordination conditioning", "reactive footwork", or "technical rhythm" per its tags.
