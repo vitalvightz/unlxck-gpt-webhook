@@ -1206,19 +1206,23 @@ def _assign_declared_day_hints(
     effective_hard_days_set = set(effective_hard_days(hard_sparring_plan or [])) or set(hard_sparring_days)
     sandwiched_days = set(sandwiched_training_days(training_days, effective_hard_days_set))
 
-    # Preserve explicit scheduled days for generated low-aerobic gas-tank recovery touches.
-    # These are created after compression from recovery/off days and should not be wiped
-    # by the generic day-hint assignment pass.
+    # Preserve explicit scheduled days for locked roles.
+    # Hard sparring days are coach-owned anchors and must never move.
+    # Generated low-aerobic recovery touches are also emitted with explicit
+    # day hints after compression and should survive this assignment pass.
     for idx, role in enumerate(ordered):
-        if not (
+        locked_day = str(role.get("scheduled_day_hint") or "").strip()
+        if not locked_day or locked_day not in training_days or locked_day in used_days:
+            continue
+        if role.get("role_key") == "hard_sparring_day":
+            day_assignments[idx] = locked_day
+            used_days.add(locked_day)
+            continue
+        if (
             role.get("gas_tank_recovery_touch")
             or role.get("converted_from_unused_day")
             or role.get("allowed_on_recovery_day")
         ):
-            continue
-
-        locked_day = str(role.get("scheduled_day_hint") or "").strip()
-        if locked_day and locked_day in training_days and locked_day not in used_days:
             day_assignments[idx] = locked_day
             used_days.add(locked_day)
 
