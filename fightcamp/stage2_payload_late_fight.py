@@ -5,6 +5,10 @@ from itertools import combinations, permutations
 from typing import Any
 
 
+CANONICAL_HARD_SPARRING_LABEL = "Coach-led boxing — no hard sparring / technical only"
+CANONICAL_HARD_SPARRING_NOTE = "No app S&C today. Keep freshness priority."
+
+
 _PAYLOAD_MODE_MAP = {
     0: "fight_day_protocol_payload",
     1: "pre_fight_day_payload",

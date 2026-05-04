@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import traceback
 import os
 import time
 from contextlib import suppress
@@ -370,8 +371,19 @@ async def run_generation_job(
                 completed_at=utc_now_iso(),
                 heartbeat_at=utc_now_iso(),
             )
-    except Exception:
-        logger.exception("[jobs] generation:unhandled_exception athlete_id=%s job_id=%s", athlete_id, job_id)
+    except Exception as exc:
+        tb = traceback.extract_tb(exc.__traceback__)
+        frame = tb[-1] if tb else None
+        logger.exception(
+            "[jobs] generation:unhandled_exception athlete_id=%s job_id=%s exception_type=%s exception_msg=%s file=%s line=%s function=%s",
+            athlete_id,
+            job_id,
+            type(exc).__name__,
+            str(exc),
+            frame.filename if frame else "",
+            frame.lineno if frame else "",
+            frame.name if frame else "",
+        )
         with suppress(Exception):
             await asyncio.to_thread(
                 store.update_generation_job,
