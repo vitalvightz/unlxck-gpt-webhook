@@ -60,6 +60,7 @@ def test_free_text_broke_it_last_week_is_not_treated_as_normal_moderate_stable()
     assert "fracture" in triage.matched_high_risk_categories
     assert "raw_injury:structural_broke_signal" in triage.routing_reasons
 
+
 def test_not_broken_it_does_not_route_fracture():
     parsed = PlanInput.from_payload(
         _payload_with_injury("Right ankle not broken, mild sprain only")
@@ -78,6 +79,7 @@ def test_ruled_out_fracture_after_thought_i_broke_it_does_not_route_fracture():
 
     assert triage.mode == FULL_PLAN
     assert "fracture" not in triage.matched_high_risk_categories
+
 
 def test_concussion_routes_to_medical_hold():
     parsed = PlanInput.from_payload(
@@ -192,7 +194,12 @@ def _stub_normal_pipeline(monkeypatch):
 
 def test_needs_review_override_allows_stage2_continuation(monkeypatch):
     payload = _payload_with_injury("")
-    payload["guided_injury"] = {"area": "knee", "severity": "high", "trend": "stable", "notes": "pain"}
+    payload["guided_injury"] = {
+        "area": "knee",
+        "severity": "high",
+        "trend": "stable",
+        "notes": "pain",
+    }
     payload["_triage_resume_override"] = {
         "approved": True,
         "allowed_modes": ["needs_review", "restricted_rehab_only"],
@@ -227,7 +234,12 @@ def test_restricted_rehab_only_override_allows_stage2_continuation(monkeypatch):
 
 def test_resume_override_neutralizes_runtime_triage_context(monkeypatch):
     payload = _payload_with_injury("")
-    payload["guided_injury"] = {"area": "knee", "severity": "high", "trend": "stable", "notes": "pain"}
+    payload["guided_injury"] = {
+        "area": "knee",
+        "severity": "high",
+        "trend": "stable",
+        "notes": "pain",
+    }
     payload["_triage_resume_override"] = {
         "approved": True,
         "allowed_modes": ["needs_review", "restricted_rehab_only"],
@@ -301,7 +313,12 @@ def test_medical_hold_cannot_be_overridden(monkeypatch):
 
 def test_needs_review_without_override_still_blocks():
     payload = _payload_with_injury("")
-    payload["guided_injury"] = {"area": "knee", "severity": "high", "trend": "stable", "notes": "pain"}
+    payload["guided_injury"] = {
+        "area": "knee",
+        "severity": "high",
+        "trend": "stable",
+        "notes": "pain",
+    }
 
     result = generate_plan_sync(payload)
 
@@ -344,7 +361,8 @@ def test_user_input_sentence_with_torn_variant_routes_restricted():
     ],
 )
 def test_structural_dislocation_phrases_route_restricted_before_rehab_typing(
-    injury_text: str, expected_category: str
+    injury_text: str,
+    expected_category: str,
 ):
     parsed = PlanInput.from_payload(_payload_with_injury(injury_text))
     triage = triage_injuries(parsed)
@@ -524,7 +542,12 @@ def test_negated_new_severe_phrases_do_not_trigger_blocking():
 
 def test_high_worsening_vague_guided_injury_routes_to_needs_review():
     payload = _payload_with_injury("")
-    payload["guided_injury"] = {"area": "knee", "severity": "high", "trend": "worsening", "notes": "pain"}
+    payload["guided_injury"] = {
+        "area": "knee",
+        "severity": "high",
+        "trend": "worsening",
+        "notes": "pain",
+    }
 
     triage = triage_injuries(PlanInput.from_payload(payload))
 
@@ -534,7 +557,12 @@ def test_high_worsening_vague_guided_injury_routes_to_needs_review():
 
 def test_high_stable_vague_guided_injury_routes_to_needs_review():
     payload = _payload_with_injury("")
-    payload["guided_injury"] = {"area": "shoulder", "severity": "high", "trend": "stable", "notes": "pain"}
+    payload["guided_injury"] = {
+        "area": "shoulder",
+        "severity": "high",
+        "trend": "stable",
+        "notes": "pain",
+    }
 
     triage = triage_injuries(PlanInput.from_payload(payload))
 
@@ -544,7 +572,12 @@ def test_high_stable_vague_guided_injury_routes_to_needs_review():
 
 def test_moderate_worsening_vague_guided_injury_routes_to_needs_review():
     payload = _payload_with_injury("")
-    payload["guided_injury"] = {"area": "ankle", "severity": "moderate", "trend": "worsening", "notes": "pain"}
+    payload["guided_injury"] = {
+        "area": "ankle",
+        "severity": "moderate",
+        "trend": "worsening",
+        "notes": "pain",
+    }
 
     triage = triage_injuries(PlanInput.from_payload(payload))
 
@@ -554,7 +587,12 @@ def test_moderate_worsening_vague_guided_injury_routes_to_needs_review():
 
 def test_low_worsening_vague_guided_injury_routes_to_needs_review():
     payload = _payload_with_injury("")
-    payload["guided_injury"] = {"area": "elbow", "severity": "low", "trend": "worsening", "notes": "sore"}
+    payload["guided_injury"] = {
+        "area": "elbow",
+        "severity": "low",
+        "trend": "worsening",
+        "notes": "sore",
+    }
 
     triage = triage_injuries(PlanInput.from_payload(payload))
 
@@ -791,8 +829,16 @@ def test_collect_guided_card_evidence_uses_parsed_entries_without_duplicating_fi
     cards = _collect_guided_card_evidence(parsed)
 
     assert len(cards) == 2
-    assert cards[0] == {"severity": "low", "trend": "stable", "avoid": "", "notes": "first"}
-    assert cards[1] == {"severity": "moderate", "trend": "stable", "avoid": "contact", "notes": "second"}
+
+    assert cards[0].severity == "low"
+    assert cards[0].trend == "stable"
+    assert cards[0].avoid == ""
+    assert cards[0].notes == "first"
+
+    assert cards[1].severity == "moderate"
+    assert cards[1].trend == "stable"
+    assert cards[1].avoid == "contact"
+    assert cards[1].notes == "second"
 
 
 def test_low_stable_recent_structural_history_routes_to_needs_review():
@@ -809,6 +855,23 @@ def test_low_stable_recent_structural_history_routes_to_needs_review():
     assert triage.mode == NEEDS_REVIEW
     assert triage.should_block_stage2 is True
     assert "guided_injury:recent_structural_history_signal" in triage.routing_reasons
+
+
+def test_guided_recent_negated_fracture_history_does_not_trigger_needs_review():
+    payload = _payload_with_injury("")
+    payload["guided_injury"] = {
+        "area": "right shin",
+        "severity": "low",
+        "trend": "stable",
+        "notes": "no fracture in the last month, mild soreness only",
+    }
+
+    triage = triage_injuries(PlanInput.from_payload(payload))
+
+    assert triage.mode == FULL_PLAN
+    assert triage.should_block_stage2 is False
+    assert "fracture" not in triage.matched_high_risk_categories
+    assert "guided_injury:recent_structural_history_signal" not in triage.routing_reasons
 
 
 def test_uncertainty_note_word_count_uses_per_card_words_not_separator_tokens():
@@ -836,8 +899,6 @@ def test_uncertainty_note_word_count_uses_per_card_words_not_separator_tokens():
     assert "combo_gate:moderate_stable_blocked" in triage.routing_reasons
 
 
-
-
 def test_second_guided_card_structural_notes_are_used_for_triage_even_if_not_primary_card():
     payload = _payload_with_injury("")
     payload["guided_injuries"] = [
@@ -862,6 +923,34 @@ def test_second_guided_card_structural_notes_are_used_for_triage_even_if_not_pri
     assert triage.should_block_stage2 is True
     assert "fracture" in triage.matched_high_risk_categories
 
+
+def test_guided_card_broke_it_uses_its_own_location_context_not_zip_alignment():
+    payload = _payload_with_injury("")
+    payload["guided_injuries"] = [
+        {
+            "area": "Right wrist",
+            "severity": "low",
+            "trend": "stable",
+            "avoid": "",
+            "notes": "tight only",
+        },
+        {
+            "area": "Left ankle",
+            "severity": "moderate",
+            "trend": "stable",
+            "avoid": "",
+            "notes": "broke it last week",
+        },
+    ]
+
+    triage = triage_injuries(PlanInput.from_payload(payload))
+
+    assert triage.mode == RESTRICTED_REHAB_ONLY
+    assert triage.should_block_stage2 is True
+    assert "fracture" in triage.matched_high_risk_categories
+    assert "guided_injury:card_area_context_broke_signal" in triage.routing_reasons
+
+
 def test_guided_injury_note_with_broke_routes_to_restricted_rehab():
     payload = _payload_with_injury("")
     payload["guided_injury"] = {
@@ -870,6 +959,8 @@ def test_guided_injury_note_with_broke_routes_to_restricted_rehab():
         "trend": "stable",
         "notes": "broke it last week",
     }
+
     triage = triage_injuries(PlanInput.from_payload(payload))
+
     assert triage.mode == RESTRICTED_REHAB_ONLY
     assert triage.should_block_stage2 is True
