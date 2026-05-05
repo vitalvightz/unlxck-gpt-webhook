@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 from time import perf_counter
+from typing import Any, Callable
 
 from .coach_review import run_coach_review
 from .conditioning import generate_conditioning_block
@@ -24,6 +25,23 @@ from .rehab_protocols import (
 )
 from .strength import generate_strength_block
 from .training_context import TrainingContext, allocate_sessions
+
+ProgressCallback = Callable[[str, str, str, dict[str, Any]], None]
+
+
+def _emit_progress(
+    callback: ProgressCallback | None,
+    code: str,
+    label: str,
+    detail: str = "",
+    **meta: Any,
+) -> None:
+    if callback is None:
+        return
+    try:
+        callback(code, label, detail, dict(meta))
+    except Exception:
+        logging.getLogger(__name__).exception("[progress] callback_failed code=%s", code)
 
 def _build_phase_mindsets(training_context: TrainingContext) -> tuple[dict[str, str], dict[str, str]]:
     phase_mindset_cues = get_phase_mindset_cues(training_context.mental_block)
@@ -264,6 +282,7 @@ def generate_plan_blocks(
     context: PlanRuntimeContext,
     record_timing: TimingRecorder,
     logger: logging.Logger,
+    progress_callback: ProgressCallback | None = None,
 ) -> PlanBlocksBundle:
     timer_start = perf_counter()
     phase_mindset_cues, phase_mindsets = _build_phase_mindsets(context.training_context)
@@ -279,10 +298,30 @@ def generate_plan_blocks(
     timer_start = perf_counter()
     strength_blocks, strength_reason_log = _generate_strength_blocks(context, phase_mindset_cues)
     record_timing("strength", timer_start)
+    strength_count = sum(
+        len(strength_reason_log.get(phase, []) or []) for phase in PHASES
+    )
+    _emit_progress(
+        progress_callback,
+        "strength_scored",
+        "Strength candidates scored",
+        f"Selected {strength_count} strength exercise(s) across active phases.",
+        count=strength_count,
+    )
 
     timer_start = perf_counter()
     conditioning_blocks, conditioning_reason_log = _generate_conditioning_blocks(context)
     record_timing("conditioning", timer_start)
+    conditioning_count = sum(
+        len(conditioning_reason_log.get(phase, []) or []) for phase in PHASES
+    )
+    _emit_progress(
+        progress_callback,
+        "conditioning_scored",
+        "Conditioning drills scored",
+        f"Selected {conditioning_count} conditioning drill(s) across active phases.",
+        count=conditioning_count,
+    )
 
     timer_start = perf_counter()
     (
@@ -295,6 +334,17 @@ def generate_plan_blocks(
         nutrition_block,
     ) = _generate_rehab_support_bundle(context)
     record_timing("rehab_support_bundle", timer_start)
+    if has_injuries:
+        rehab_detail = "Rehab protocols and injury guardrails added to every active phase."
+    else:
+        rehab_detail = "No injury guardrails needed. Recovery and nutrition cues added."
+    _emit_progress(
+        progress_callback,
+        "rehab_support_built",
+        "Rehab & support drafted",
+        rehab_detail,
+        has_injuries=has_injuries,
+    )
 
     timer_start = perf_counter()
     coach_review_notes, strength_blocks, conditioning_blocks, substitutions = run_coach_review(
@@ -308,6 +358,18 @@ def generate_plan_blocks(
         conditioning_blocks=conditioning_blocks,
     )
     record_timing("coach_review", timer_start)
+    swap_count = len(substitutions or [])
+    if swap_count:
+        coach_detail = f"Coach review applied {swap_count} safety substitution(s)."
+    else:
+        coach_detail = "Coach review found no exercises to swap."
+    _emit_progress(
+        progress_callback,
+        "coach_review_done",
+        "Coach review pass complete",
+        coach_detail,
+        swap_count=swap_count,
+    )
 
     _apply_substitution_log(strength_reason_log, substitutions, "Strength")
     _apply_substitution_log(conditioning_reason_log, substitutions, "Conditioning")

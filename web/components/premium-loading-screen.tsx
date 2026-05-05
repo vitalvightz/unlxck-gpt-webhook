@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 
 import type { GenerationUiPhase } from "@/lib/generation-controller";
+import type { ProgressMilestone } from "@/lib/types";
 
 const WORKFLOW_STEPS = [
   {
@@ -137,6 +138,24 @@ interface PremiumLoadingScreenProps {
   error?: string | null;
   statusMessage?: string | null;
   startedAtMs?: number | null;
+  milestones?: ProgressMilestone[];
+}
+
+function formatRelativeTimestamp(at: string, baseMs: number | null): string {
+  const eventMs = Date.parse(at || "");
+  if (!Number.isFinite(eventMs)) {
+    return "";
+  }
+  if (baseMs === null) {
+    return "";
+  }
+  const diffSeconds = Math.max(0, Math.floor((eventMs - baseMs) / 1000));
+  if (diffSeconds < 60) {
+    return `+${diffSeconds}s`;
+  }
+  const minutes = Math.floor(diffSeconds / 60);
+  const seconds = diffSeconds % 60;
+  return `+${minutes}m ${String(seconds).padStart(2, "0")}s`;
 }
 
 export function PremiumLoadingScreen({
@@ -144,6 +163,7 @@ export function PremiumLoadingScreen({
   error = null,
   statusMessage = null,
   startedAtMs = null,
+  milestones = [],
 }: PremiumLoadingScreenProps) {
   const phaseContent = PHASE_CONTENT[phase];
   const activeIndex = PHASE_ORDER[phase];
@@ -178,6 +198,9 @@ export function PremiumLoadingScreen({
 
   const elapsedLabel = showElapsed && startedAtMs !== null ? formatElapsed(now - startedAtMs) : null;
   const currentHint = showRotatingHints ? RUNNING_HINTS[hintIndex] : null;
+  const showMilestones = phase !== "submitting" && milestones.length > 0;
+  const visibleMilestones = milestones.slice(-6);
+  const latestMilestone = milestones.length ? milestones[milestones.length - 1] : null;
 
   return (
     <section className={`panel loading-shell loading-phase-${phase}`}>
@@ -227,6 +250,34 @@ export function PremiumLoadingScreen({
             </div>
             {phase !== "failed" ? (
               <p className="loading-estimate muted">{ESTIMATE_COPY}</p>
+            ) : null}
+            {showMilestones ? (
+              <div className="loading-milestone-feed" aria-label="Generation milestones" aria-live="polite">
+                <p className="loading-eyebrow loading-milestone-eyebrow">Pipeline activity</p>
+                <ol className="loading-milestone-list">
+                  {visibleMilestones.map((milestone, index) => {
+                    const isLatest = milestone === latestMilestone;
+                    const relativeLabel = formatRelativeTimestamp(milestone.at, startedAtMs);
+                    return (
+                      <li
+                        key={`${milestone.code}-${milestone.at || index}`}
+                        className={`loading-milestone-row${isLatest ? " loading-milestone-row-latest" : ""}`}
+                      >
+                        <span className="loading-milestone-marker" aria-hidden="true" />
+                        <div className="loading-milestone-copy">
+                          <span className="loading-milestone-label">{milestone.label || milestone.code}</span>
+                          {milestone.detail ? (
+                            <span className="loading-milestone-detail">{milestone.detail}</span>
+                          ) : null}
+                        </div>
+                        {relativeLabel ? (
+                          <span className="loading-milestone-time">{relativeLabel}</span>
+                        ) : null}
+                      </li>
+                    );
+                  })}
+                </ol>
+              </div>
             ) : null}
             {phase !== "failed" ? (
               <div className="loading-scan-rail" aria-hidden="true">

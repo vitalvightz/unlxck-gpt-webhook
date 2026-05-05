@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { getGenerationJob, isRetryableApiFailure } from "@/lib/api";
-import type { GenerationJobResponse, GenerationJobStatus } from "@/lib/types";
+import type { GenerationJobResponse, GenerationJobStatus, ProgressMilestone } from "@/lib/types";
 
 export type GenerationUiPhase =
   | "submitting"
@@ -179,6 +179,7 @@ export function useGenerationController({
     getPendingGeneration(storageKey) ? "reconnecting" : "submitting",
   );
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  const [milestones, setMilestones] = useState<ProgressMilestone[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [startedAtMs, setStartedAtMs] = useState<number | null>(() => {
     const pending = getPendingGeneration(storageKey);
@@ -215,11 +216,15 @@ export function useGenerationController({
             ? "Reconnecting to your existing plan generation request."
             : "Submitting your plan generation request.",
         );
+        setMilestones([]);
         const createdJob = await createJobWithReconnect(createJob, clientRequestId, setStatusMessage, setPhase);
         const createdAtMs = Date.parse(createdJob.created_at || pendingCreatedAt) || Date.now();
         setStartedAtMs(createdAtMs);
         setPhase(phaseForJobStatus(createdJob.status));
         setStatusMessage(statusMessageForJob(createdJob.status, createdAtMs));
+        if (Array.isArray(createdJob.progress_milestones)) {
+          setMilestones(createdJob.progress_milestones);
+        }
         savePendingGeneration(storageKey, {
           clientRequestId,
           jobId: createdJob.job_id,
@@ -228,6 +233,10 @@ export function useGenerationController({
 
         for (;;) {
           const currentJob = await getGenerationJob(token, createdJob.job_id);
+
+          if (Array.isArray(currentJob.progress_milestones)) {
+            setMilestones(currentJob.progress_milestones);
+          }
 
           savePendingGeneration(storageKey, {
             clientRequestId,
@@ -299,6 +308,7 @@ export function useGenerationController({
     phase,
     statusMessage,
     startedAtMs,
+    milestones,
     error,
     setError,
     startGeneration,

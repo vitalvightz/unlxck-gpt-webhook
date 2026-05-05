@@ -78,6 +78,7 @@ export default function GeneratePage() {
         error={controller.error}
         statusMessage={controller.statusMessage}
         startedAtMs={controller.startedAtMs}
+        milestones={controller.milestones}
       />
     </RequireAuth>
   );
