@@ -196,6 +196,13 @@ def triage_injuries(plan_input: PlanInput) -> InjuryTriageResult:
         matched_categories.add("fracture")
         routing_reasons.add("guided_injury:structural_broke_signal")
 
+    if _BROKE_REGION_RE.search(combined_text) or (
+        _BROKE_IT_RE.search(combined_text)
+        and any(token in combined_text for token in _FRACTURE_REGIONS)
+    ):
+        matched_categories.add("fracture")
+        routing_reasons.add("raw_injury:structural_broke_signal")
+
     if any(token in guided_avoid for token in ("contact", "spar", "impact", "loaded", "weight bearing")):
         routing_reasons.add("guided_injury:avoid_high_load")
 
