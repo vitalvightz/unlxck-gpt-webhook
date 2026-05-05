@@ -16,6 +16,13 @@ from typing import Any
 from . import stage2_planning_brief as stage2_planning_brief_module
 from .stage2_finalizer_packet import build_stage2_finalizer_packet
 from . import stage2_role_map as stage2_role_map_module
+from .mental_training import (
+    MENTAL_TRAINING_FINALIZER_GUIDE,
+    MENTAL_TRAINING_WRITING_RULES,
+    attach_mental_to_weekly_role_map,
+    build_mental_candidate_pools,
+    derive_phase_mental_briefs,
+)
 from .stage2_payload_late_fight import (
     CANONICAL_HARD_SPARRING_BAN_LABEL,
     CANONICAL_HARD_SPARRING_LABEL,
@@ -3003,6 +3010,7 @@ def _build_phase_strategy(
     for phase, brief in phase_briefs.items():
         pool = candidate_pools.get(phase, {})
         visible_framing = _resolve_visible_phase_framing(phase, brief, week_by_week_progression)
+        mental_brief = brief.get("mental_training") if isinstance(brief, dict) else None
         strategy[phase] = {
             "objective": brief.get("objective", ""),
             "visible_label": visible_framing["label"],
@@ -3016,9 +3024,26 @@ def _build_phase_strategy(
                 "strength": len(pool.get("strength_slots", [])),
                 "conditioning": len(pool.get("conditioning_slots", [])),
                 "rehab": len(pool.get("rehab_slots", [])),
+                "mental": len(pool.get("mental_slots", [])),
             },
+            "mental_training": _summarize_mental_training_for_strategy(mental_brief),
         }
     return strategy
+
+
+def _summarize_mental_training_for_strategy(mental_brief: dict | None) -> dict:
+    if not isinstance(mental_brief, dict) or not mental_brief:
+        return {}
+    return {
+        "objective": mental_brief.get("objective", ""),
+        "primary_blocks": list(mental_brief.get("primary_blocks", [])),
+        "load_bias": mental_brief.get("load_bias", ""),
+        "weekly_pattern": mental_brief.get("weekly_pattern", ""),
+        "per_session_minutes": mental_brief.get("per_session_minutes", ""),
+        "preferred_session_roles": list(mental_brief.get("preferred_session_roles", [])),
+        "coach_voice": mental_brief.get("coach_voice", ""),
+        "do_not": list(mental_brief.get("do_not", [])),
+    }
 
 
 def _slot_exercise_name(slot: dict[str, Any]) -> str:
@@ -3251,6 +3276,24 @@ def build_planning_brief(
         phase_briefs,
         weekly_stress_map,
     )
+
+    # Build (or re-use) the per-phase mental brief. build_stage2_payload normally
+    # adds mental_training onto each phase brief before reaching this point; if a
+    # caller hands us bare phase_briefs we still want the integration to work.
+    phase_mental_briefs: dict[str, dict] = {}
+    for phase, brief in phase_briefs.items():
+        existing = brief.get("mental_training") if isinstance(brief, dict) else None
+        if isinstance(existing, dict) and existing:
+            phase_mental_briefs[phase] = existing
+    if not phase_mental_briefs:
+        phase_mental_briefs = derive_phase_mental_briefs(
+            athlete_model=athlete_model,
+            phase_briefs=phase_briefs,
+        )
+        for phase, brief in phase_briefs.items():
+            if isinstance(brief, dict) and phase in phase_mental_briefs:
+                brief["mental_training"] = phase_mental_briefs[phase]
+
     days_until_fight = athlete_model.get("days_until_fight")
 
     if _uses_late_fight_stage2_payload(days_until_fight):
@@ -3265,6 +3308,10 @@ def build_planning_brief(
             phase=late_fight_phase,
         )
         weekly_role_map = apply_fight_day_override_to_weekly_role_map(weekly_role_map, athlete_model)
+        weekly_role_map = attach_mental_to_weekly_role_map(
+            weekly_role_map=weekly_role_map,
+            phase_mental_briefs=phase_mental_briefs,
+        )
         session_sequence = _build_late_fight_session_sequence(days_until_fight, athlete_model)
         late_fight_plan_spec = _with_late_fight_allowed_exercises(
             spec=_build_late_fight_plan_spec(days_until_fight, athlete_model),
@@ -3313,6 +3360,10 @@ def build_planning_brief(
         week_by_week_progression,
         limiter_profile,
         fight_week_override=fight_week_override,
+    )
+    weekly_role_map = attach_mental_to_weekly_role_map(
+        weekly_role_map=weekly_role_map,
+        phase_mental_briefs=phase_mental_briefs,
     )
     return {
         "schema_version": "planning_brief.v1",
@@ -3809,6 +3860,26 @@ def build_stage2_payload(
     injury_context = _build_injury_context(athlete_model=athlete_model)
     serialized_restrictions = _serialize_restrictions(restrictions)
     phase_briefs = _build_phase_briefs(training_context, phase_weeks)
+
+    # Stage 2 reasons over Stage 1's mental profile and integrates mental training
+    # phase-by-phase. Briefs sit on phase_briefs; slot-style options sit on
+    # candidate_pools; rewrite_guidance carries the writing rules.
+    phase_mental_briefs = derive_phase_mental_briefs(
+        athlete_model=athlete_model,
+        phase_briefs=phase_briefs,
+        training_context_blocks=training_context.mental_block,
+    )
+    mental_candidate_pools = build_mental_candidate_pools(
+        athlete_model=athlete_model,
+        phase_briefs=phase_briefs,
+        training_context_blocks=training_context.mental_block,
+    )
+    for phase, brief in phase_briefs.items():
+        if phase in phase_mental_briefs:
+            brief["mental_training"] = phase_mental_briefs[phase]
+    for phase, pool in candidate_pools.items():
+        pool["mental_slots"] = mental_candidate_pools.get(phase, [])
+
     omission_ledger = _build_omission_ledger(
         strength_blocks=strength_blocks,
         conditioning_blocks=conditioning_blocks,
@@ -3866,7 +3937,9 @@ def build_stage2_payload(
             "If injury management is active, lead with constraints, substitutions, or stop rules instead of optional language.",
             "If active weight cut is present, keep the language shorter, safety-first, and non-negotiable about recovery margin.",
             "Vary sentence openings and cut repeated filler reminders so the final plan reads like a coach's final prescription, not a template.",
+            *MENTAL_TRAINING_WRITING_RULES,
         ],
+        "mental_training_guide": MENTAL_TRAINING_FINALIZER_GUIDE,
     }
     rewrite_guidance = _append_render_guard_writing_rules(
         rewrite_guidance,
@@ -4049,6 +4122,19 @@ Never write "Strength touch", "Alactic sharpness", "Neural primer", "SPP", "Glyc
 For conditioning drill system labels, use selected_plan session fields such as athlete_facing_system_label when present. If absent, translate the drill intent into athlete-facing language. Never use the word "Glycolytic" in D-7 or tighter windows. When a drill carries short-work + full-rest prescription, call it "footwork speed repeatability", "coordination conditioning", "reactive footwork", or "technical rhythm" per its tags.
 
 Cut fluff: one sentence of "why today" per session maximum, no repeated explanations, no "phase preserved" menus. Coach calls only.
+
+RULE 14 — MENTAL TRAINING INTEGRATION
+Stage 1 produced the athlete's mental profile (mental_blocks). Stage 2 has already paired each phase with a mental brief (phase_briefs[phase].mental_training) and attached cues to specific session roles in selected_plan.weekly_role_map.weeks[].session_roles[].mental_attachment.
+
+Render mental work as a small layer inside an existing session — warm-up, between-set, between-round, post-session log, or pre-session reset — never as a standalone session and never as a free-floating "Mindset Focus" header.
+
+Match the cue to the day's actual stress: pressure / rushing / composure / breath cues belong on sparring or fight-pace days; attention cues belong on strength or alactic-sharpness days; confidence and visualization belong on recovery, freshness, or freshness-reset days; injury-fear graded exposure belongs on rehab or strength days. If a session role has no mental_attachment in the weekly_role_map, do not invent one — leave that session purely physical.
+
+Honor the phase dose: GPP builds the habit through small daily cues, SPP rehearses the cue under sport stress (tied to sparring or fight-pace), TAPER only rehearses calm reset rituals — never introduce new mental drills in taper.
+
+Voice: plain coach language with a clear purpose. No generic motivation ("stay consistent", "trust the process", "you've got this", "push yourself"). State what the athlete does, when, and why — short. Keep dose small (1-5 minutes per session). On hard sparring or peak conditioning days when fatigue is already high, reduce or remove the mental layer rather than stacking it on. If active weight cut is present, keep mental cues shorter, calmer, and protective.
+
+If the athlete has no real mental block (mental_blocks resolves to "generic" only), default to one short pre-session intention and one win logged after — nothing more. Do not invent mental challenges the athlete did not declare.
 """
 
 

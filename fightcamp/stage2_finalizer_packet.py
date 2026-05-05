@@ -138,6 +138,9 @@ def _compact_role(role: dict[str, Any]) -> dict[str, Any]:
         "blocked_systems",
         "blocked_intensities",
         "blocked_tags",
+
+        # Stage 2 mental-training attachment for this session
+        "mental_attachment",
     )
     return {key: role.get(key) for key in keep if role.get(key) not in (None, "", [])}
 
@@ -181,6 +184,7 @@ def _compact_weekly_role_map(weekly_role_map: Any) -> dict[str, Any]:
                     "final_week_sparring_cap": week.get("final_week_sparring_cap"),
                     "coach_note_flags": week.get("coach_note_flags"),
                     "intentional_compression": week.get("intentional_compression"),
+                    "mental_attachments_summary": week.get("mental_attachments_summary"),
                 }.items()
                 if value not in (None, "", [])
             }
