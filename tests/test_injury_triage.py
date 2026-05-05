@@ -48,6 +48,20 @@ def test_fracture_routes_to_restricted_rehab_only_and_matches_existing_signals()
     assert triage.sparring_risk_band in {"red", "black"}
 
 
+
+
+def test_free_text_broke_it_last_week_is_not_treated_as_normal_moderate_stable():
+    parsed = PlanInput.from_payload(
+        _payload_with_injury("Right ankle — moderate, stable. Notes: broke it last week")
+    )
+    triage = triage_injuries(parsed)
+
+    assert triage.mode == RESTRICTED_REHAB_ONLY
+    assert triage.should_block_stage2 is True
+    assert triage.clinician_clearance_required is True
+    assert "fracture" in triage.matched_high_risk_categories
+    assert "raw_injury:structural_broke_signal" in triage.routing_reasons
+
 def test_concussion_routes_to_medical_hold():
     parsed = PlanInput.from_payload(
         _payload_with_injury("suspected concussion with headache after sparring")
