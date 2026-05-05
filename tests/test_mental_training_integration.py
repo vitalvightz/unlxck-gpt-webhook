@@ -13,6 +13,7 @@ from fightcamp.mental_training import (
     build_mental_candidate_pools,
     derive_phase_mental_briefs,
 )
+from fightcamp.stage2_finalizer_packet import build_stage2_finalizer_packet
 from fightcamp.stage2_payload import build_planning_brief, build_stage2_payload
 from fightcamp.training_context import TrainingContext
 
@@ -131,6 +132,35 @@ def test_grappler_keeps_takedown_block():
     assert "fear of takedowns" in briefs["SPP"]["primary_blocks"]
 
 
+def test_mma_sport_keeps_takedown_block_even_with_blank_styles():
+    """Sport=MMA should keep fear_of_takedowns even if style fields are empty."""
+    briefs = derive_phase_mental_briefs(
+        athlete_model=_athlete_model(
+            sport="mma",
+            mental_blocks=["fear of takedowns"],
+            technical_styles=[],
+            tactical_styles=[],
+        ),
+        phase_briefs=_phase_briefs_for_test(),
+    )
+    assert "fear of takedowns" in briefs["SPP"]["primary_blocks"]
+
+
+def test_fight_format_grappling_keeps_takedown_block():
+    briefs = derive_phase_mental_briefs(
+        athlete_model={
+            **_athlete_model(),
+            "fight_format": "bjj",
+            "technical_styles": [],
+            "tactical_styles": [],
+            "mental_blocks": ["fear of takedowns"],
+            "sport": "",
+        },
+        phase_briefs=_phase_briefs_for_test(),
+    )
+    assert "fear of takedowns" in briefs["SPP"]["primary_blocks"]
+
+
 def test_mental_candidate_pools_emit_slots_with_alternates():
     pools = build_mental_candidate_pools(
         athlete_model=_athlete_model(),
@@ -187,6 +217,71 @@ def test_attach_mental_pairs_pressure_with_sparring_day_when_present():
     assert summary["primary_blocks"] == ["pressure", "rushing"]
     assert summary["covered_blocks"], "at least one block should land on a real session"
     assert summary["coach_voice"]
+
+
+def test_attach_caps_each_block_to_one_session_per_week():
+    """A single block must not attach to more than one session in the same week."""
+    briefs = derive_phase_mental_briefs(
+        athlete_model=_athlete_model(mental_blocks=["pressure"]),
+        phase_briefs=_phase_briefs_for_test(),
+    )
+    weekly_role_map = {
+        "weeks": [
+            {
+                "phase": "SPP",
+                # Every role here has affinity for "pressure". With the cap,
+                # exactly one should carry mental_attachment.
+                "session_roles": [
+                    {"role_key": "hard_sparring_day", "category": "sparring"},
+                    {"role_key": "primary_strength_day", "category": "strength"},
+                    {"role_key": "alactic_sharpness_day", "category": "conditioning",
+                     "preferred_system": "alactic"},
+                    {"role_key": "glycolytic_repeatability_day", "category": "conditioning",
+                     "preferred_system": "glycolytic"},
+                ],
+            }
+        ]
+    }
+    attached = attach_mental_to_weekly_role_map(
+        weekly_role_map=weekly_role_map,
+        phase_mental_briefs=briefs,
+    )
+    week = attached["weeks"][0]
+    attachments = [role for role in week["session_roles"] if role.get("mental_attachment")]
+    assert len(attachments) == 1, "pressure should attach to exactly one session"
+    # Best fit is hard_sparring_day (top of pressure's affinity list)
+    assert attachments[0]["role_key"] == "hard_sparring_day"
+
+
+def test_attach_caps_two_blocks_to_two_distinct_sessions():
+    """Two blocks should attach to two distinct sessions, never both to the same one."""
+    briefs = derive_phase_mental_briefs(
+        athlete_model=_athlete_model(mental_blocks=["pressure", "attention"]),
+        phase_briefs=_phase_briefs_for_test(),
+    )
+    weekly_role_map = {
+        "weeks": [
+            {
+                "phase": "SPP",
+                "session_roles": [
+                    {"role_key": "hard_sparring_day", "category": "sparring"},
+                    {"role_key": "primary_strength_day", "category": "strength"},
+                    {"role_key": "recovery_reset_day", "category": "recovery"},
+                ],
+            }
+        ]
+    }
+    attached = attach_mental_to_weekly_role_map(
+        weekly_role_map=weekly_role_map,
+        phase_mental_briefs=briefs,
+    )
+    week = attached["weeks"][0]
+    attached_roles = [role for role in week["session_roles"] if role.get("mental_attachment")]
+    assert len(attached_roles) == 2, "two blocks should produce two attachments"
+    blocks_seen = {role["mental_attachment"]["block"] for role in attached_roles}
+    role_keys_seen = {role["role_key"] for role in attached_roles}
+    assert blocks_seen == {"pressure", "attention"}
+    assert len(role_keys_seen) == 2, "no two blocks may share the same session"
 
 
 def test_attach_does_not_mutate_input_role_map():
@@ -386,3 +481,86 @@ def test_active_weight_cut_softens_mental_load():
     assert "cut" in rules_lower
     do_not_lower = " ".join(briefs["SPP"]["do_not"]).lower()
     assert "cut" in do_not_lower or "visualization" in do_not_lower
+
+
+def test_finalizer_packet_preserves_mental_attachment_and_summary():
+    """The compact LLM-facing packet must surface mental_attachment and
+    mental_attachments_summary so the finalizer can render mental cues on the
+    right sessions."""
+    training_context = _training_context_with_blocks(["pressure", "attention"])
+
+    payload = build_stage2_payload(
+        training_context=training_context,
+        mapped_format="boxing",
+        record="3-0",
+        rounds_format="3x3",
+        camp_len=5,
+        short_notice=False,
+        restrictions=[],
+        phase_weeks={"GPP": 2, "SPP": 2, "TAPER": 1, "days": {"GPP": 0, "SPP": 0, "TAPER": 0}},
+        strength_blocks={"GPP": None, "SPP": None, "TAPER": None},
+        conditioning_blocks={
+            "GPP": {"grouped_drills": {}, "why_log": [], "missing_systems": [], "candidate_reservoir": {}},
+            "SPP": {"grouped_drills": {}, "why_log": [], "missing_systems": [], "candidate_reservoir": {}},
+            "TAPER": {"grouped_drills": {}, "why_log": [], "missing_systems": [], "candidate_reservoir": {}},
+        },
+        rehab_blocks={"GPP": "", "SPP": "", "TAPER": ""},
+    )
+    brief = build_planning_brief(
+        athlete_model=payload["athlete_model"],
+        restrictions=payload["restrictions"],
+        phase_briefs=payload["phase_briefs"],
+        candidate_pools=payload["candidate_pools"],
+        omission_ledger=payload["omission_ledger"],
+        rewrite_guidance=payload["rewrite_guidance"],
+    )
+
+    packet = build_stage2_finalizer_packet(
+        stage2_payload=payload,
+        planning_brief=brief,
+    )
+
+    weeks = packet["selected_plan"]["weekly_role_map"].get("weeks") or []
+    assert weeks, "packet should carry weekly_role_map weeks"
+
+    summary_count = sum(1 for week in weeks if week.get("mental_attachments_summary"))
+    assert summary_count >= 1, "packet should preserve mental_attachments_summary on at least one week"
+
+    # At least one role on at least one week should carry mental_attachment.
+    attachment_count = sum(
+        1
+        for week in weeks
+        for role in (week.get("session_roles") or [])
+        if role.get("mental_attachment")
+    )
+    assert attachment_count >= 1, "packet should preserve mental_attachment on at least one role"
+
+
+def test_attachment_is_skipped_when_no_role_has_block_affinity():
+    """If no session role has any affinity for the phase's blocks, the attacher
+    leaves all roles clean and reports the block as uncovered."""
+    weekly_role_map = {
+        "weeks": [
+            {
+                "phase": "GPP",
+                # Synthetic role with no role_key and an unknown category — no
+                # affinity should be discovered for any block.
+                "session_roles": [
+                    {"role_key": "", "category": "unknown_category"},
+                ],
+            }
+        ]
+    }
+    briefs = derive_phase_mental_briefs(
+        athlete_model=_athlete_model(mental_blocks=["pressure"]),
+        phase_briefs=_phase_briefs_for_test(),
+    )
+    attached = attach_mental_to_weekly_role_map(
+        weekly_role_map=weekly_role_map,
+        phase_mental_briefs=briefs,
+    )
+    role = attached["weeks"][0]["session_roles"][0]
+    assert "mental_attachment" not in role
+    summary = attached["weeks"][0]["mental_attachments_summary"]
+    assert summary["covered_blocks"] == []
+    assert "pressure" in summary["uncovered_blocks"]

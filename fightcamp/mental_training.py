@@ -20,7 +20,7 @@ of Stage 2 already produced.
 """
 from __future__ import annotations
 
-from typing import Any, Iterable
+from typing import Iterable
 
 from .normalization import clean_list, dedupe_preserve_order
 
@@ -134,7 +134,7 @@ _FALLBACK_AFFINITY_BY_CATEGORY = {
 _PHASE_DOSE = {
     "GPP": {
         "load_bias": "build the habit",
-        "weekly_pattern": "Daily breath/cue habit + one short standalone block (5-10 min) inside an easier session.",
+        "weekly_pattern": "Daily breath/cue habit + one short add-on block (5-10 min) layered inside an easier session — never a separate session.",
         "per_session_minutes": "3-5 min layered into warm-up or cooldown.",
         "objective_template": "Build the mental skill base before fight stress climbs.",
     },
@@ -517,12 +517,20 @@ def _block_purpose_for_athlete(block: str, athlete_model: dict) -> str:
 
 def _is_pure_striker(athlete_model: dict) -> bool:
     grappling = {"mma", "bjj", "wrestler", "wrestling", "grappler", "grappling", "judo", "sambo"}
-    styles = {
+    style_tokens = {
         str(value).strip().lower()
         for value in clean_list(athlete_model.get("technical_styles", []))
         + clean_list(athlete_model.get("tactical_styles", []))
     }
-    return not bool(styles & grappling)
+    # Sport / fight_format / mapped_format may be set even when style fields are
+    # incomplete; if any of them resolve to a grappling sport we must keep the
+    # takedown block. (Treats MMA as non-pure-striker by sport alone.)
+    sport_tokens = {
+        str(athlete_model.get(key) or "").strip().lower().replace(" ", "_")
+        for key in ("sport", "fight_format", "mapped_format")
+    }
+    sport_tokens.discard("")
+    return not bool((style_tokens | sport_tokens) & grappling)
 
 
 def _filter_blocks_for_style(blocks: list[str], athlete_model: dict) -> list[str]:
@@ -648,7 +656,14 @@ def _resolve_session_attachment(
     *,
     blocks: list[str],
     weekly_attachment_rules: dict[str, str],
+    available_blocks: list[str] | None = None,
 ) -> dict | None:
+    """Return the best mental attachment for this role, or None.
+
+    `available_blocks` lets callers narrow the pick to blocks that have not yet
+    been attached this week — this is how we cap one attachment per block per
+    week. When omitted, every block in `blocks` is considered.
+    """
     role_key = str(role.get("role_key") or "").strip().lower()
     category = str(role.get("category") or "").strip().lower()
     preferred_system = str(role.get("preferred_system") or "").strip().lower()
@@ -670,9 +685,11 @@ def _resolve_session_attachment(
     if "spar" in role_key:
         candidate_keys.extend(_FALLBACK_AFFINITY_BY_CATEGORY["sparring"])
 
+    pool = available_blocks if available_blocks is not None else blocks
+
     chosen_block: str | None = None
     chosen_key: str | None = None
-    for block in blocks:
+    for block in pool:
         affinity = _BLOCK_SESSION_AFFINITY.get(block, ())
         for key in candidate_keys:
             if key in affinity:
@@ -693,6 +710,41 @@ def _resolve_session_attachment(
         "attachment_kind": _attachment_kind_for_category(category),
         "purpose": _BLOCK_AFFINITY_PURPOSE.get(chosen_block, "Layer mental cue onto this session."),
     }
+
+
+def _attachment_score(role: dict, block: str) -> int:
+    """Score how well a role carries a given block.
+
+    Higher is better. -1 means no affinity for the block.
+    Score = high when role_key is in the block's primary affinity list, with a
+    bonus for direct role_key match and the position in the affinity tuple.
+    """
+    role_key = str(role.get("role_key") or "").strip().lower()
+    category = str(role.get("category") or "").strip().lower()
+    preferred_system = str(role.get("preferred_system") or "").strip().lower()
+    affinity = _BLOCK_SESSION_AFFINITY.get(block, ())
+    if not affinity:
+        return -1
+
+    if role_key in affinity:
+        # Earlier in the affinity tuple = better fit. Cap weight so 7 entries fit.
+        position_bonus = max(0, 10 - affinity.index(role_key))
+        return 100 + position_bonus
+
+    if preferred_system and category == "conditioning":
+        for variant in (f"{preferred_system}_repeatability_day", f"{preferred_system}_day"):
+            if variant in affinity:
+                position_bonus = max(0, 8 - affinity.index(variant))
+                return 80 + position_bonus
+
+    fallback = _FALLBACK_AFFINITY_BY_CATEGORY.get(category, ()) or ()
+    if "spar" in role_key:
+        fallback = fallback + _FALLBACK_AFFINITY_BY_CATEGORY["sparring"]
+    for key in fallback:
+        if key in affinity:
+            return 50
+
+    return -1
 
 
 _DEFAULT_CUE_BY_BLOCK = {
@@ -826,11 +878,12 @@ def attach_mental_to_weekly_role_map(
 ) -> dict:
     """Return a new weekly_role_map with mental_attachments added per session.
 
-    The original map is not mutated. Each week's session_roles get an extra
-    `mental_attachment` field when a mental block has good affinity for the
-    role; weeks gain a `mental_attachments_summary` listing the matched
-    attachments. Weeks with no active mental brief or no matched roles are
-    left untouched apart from a defensive copy.
+    The original map is not mutated. Each block in the phase brief is attached to
+    at most ONE session per week — the highest-affinity role available — so a
+    single block (e.g. "pressure") cannot bloat into every sparring + strength +
+    conditioning day. Roles that don't carry the chosen attachment stay clean.
+    Weeks with no active mental brief or no matched roles are left untouched
+    apart from a defensive copy.
     """
     if not isinstance(weekly_role_map, dict):
         return {}
@@ -857,21 +910,49 @@ def attach_mental_to_weekly_role_map(
             block: _DEFAULT_CUE_BY_BLOCK.get(block, "") for block in blocks
         }
 
+        session_roles_in = list(week.get("session_roles") or [])
+
+        # Pick the single best role per block (one attachment per block per
+        # week). Tracks role index so we can write the attachment back into the
+        # right slot below.
+        chosen_role_for_block: dict[str, int] = {}
+        used_role_indices: set[int] = set()
+        for block in blocks:
+            best_idx: int | None = None
+            best_score: int = -1
+            for idx, role in enumerate(session_roles_in):
+                if not isinstance(role, dict):
+                    continue
+                if idx in used_role_indices:
+                    continue
+                score = _attachment_score(role, block)
+                if score > best_score:
+                    best_score = score
+                    best_idx = idx
+            if best_idx is not None and best_score > -1:
+                chosen_role_for_block[block] = best_idx
+                used_role_indices.add(best_idx)
+
+        block_for_role_index = {idx: block for block, idx in chosen_role_for_block.items()}
+
         new_session_roles: list[dict] = []
         used_blocks: list[str] = []
-        for role in week.get("session_roles") or []:
+        for idx, role in enumerate(session_roles_in):
             if not isinstance(role, dict):
                 new_session_roles.append(role)
                 continue
             new_role = dict(role)
-            attachment = _resolve_session_attachment(
-                new_role,
-                blocks=blocks,
-                weekly_attachment_rules=weekly_attachment_rules,
-            )
-            if attachment:
-                new_role["mental_attachment"] = attachment
-                used_blocks.append(attachment["block"])
+            block = block_for_role_index.get(idx)
+            if block:
+                attachment = _resolve_session_attachment(
+                    new_role,
+                    blocks=[block],
+                    weekly_attachment_rules=weekly_attachment_rules,
+                    available_blocks=[block],
+                )
+                if attachment:
+                    new_role["mental_attachment"] = attachment
+                    used_blocks.append(attachment["block"])
             new_session_roles.append(new_role)
 
         unused_blocks = [block for block in blocks if block not in used_blocks]

@@ -280,7 +280,10 @@ def test_plan_detail_returns_public_sparring_advisory_without_changing_saved_pla
     body = response.json()
     assert body["outputs"]["plan_text"] == original_text
     assert len(body["advisories"]) == 1
-    assert body["advisories"][0]["action"] == "deload"
+    # D-6 falls inside the D-17 hard-sparring ban window, so the planner converts
+    # the declared hard days to technical/rhythm only — action is "convert", not
+    # "deload" (which is the milder D-21..D-18 cap behaviour).
+    assert body["advisories"][0]["action"] == "convert"
     assert body["advisories"][0]["days"] == ["Tuesday", "Thursday"]
     assert body["advisories"][0]["title"] == "Coach note"
     assert body["advisories"][0]["disclaimer"] == "Treat this as a flag, not an automatic change to your saved plan."
