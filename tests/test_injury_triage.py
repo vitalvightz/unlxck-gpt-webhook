@@ -795,6 +795,22 @@ def test_collect_guided_card_evidence_uses_parsed_entries_without_duplicating_fi
     assert cards[1] == {"severity": "moderate", "trend": "stable", "avoid": "contact", "notes": "second"}
 
 
+def test_low_stable_recent_structural_history_routes_to_needs_review():
+    payload = _payload_with_injury("")
+    payload["guided_injury"] = {
+        "area": "right shin",
+        "severity": "low",
+        "trend": "stable",
+        "notes": "broke it last month",
+    }
+
+    triage = triage_injuries(PlanInput.from_payload(payload))
+
+    assert triage.mode == NEEDS_REVIEW
+    assert triage.should_block_stage2 is True
+    assert "guided_injury:recent_structural_history_signal" in triage.routing_reasons
+
+
 def test_uncertainty_note_word_count_uses_per_card_words_not_separator_tokens():
     payload = _payload_with_injury("")
     payload["guided_injuries"] = [
