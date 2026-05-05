@@ -123,6 +123,14 @@ export function WeeklySparringView({ planId }: { planId: string }) {
     [schedule, selectedWeekday],
   );
   const hasHardSparringBan = schedule?.days.some((day) => day.reason_codes.includes("d17_hard_sparring_ban")) ?? false;
+  const weekReasonCodes = useMemo(() => {
+    if (!schedule) return [];
+    return Array.from(
+      new Set(
+        schedule.days.flatMap((day) => day.reason_codes.filter((code) => code && code.trim())),
+      ),
+    );
+  }, [schedule]);
 
   if (isHidden || (!schedule && !error)) {
     return null;
@@ -188,6 +196,20 @@ export function WeeklySparringView({ planId }: { planId: string }) {
       {hasHardSparringBan ? (
         <div className="weekly-sparring-ban-notice" role="status">
           All declared hard sparring from D-17 onward is technical/rhythm only. No effective hard sparring allowed.
+        </div>
+      ) : null}
+
+      {weekReasonCodes.length ? (
+        <div className="weekly-sparring-reason-codes" aria-label="Week reason codes">
+          {weekReasonCodes.map((code) => {
+            const explanation = explainReasonCode(code);
+            return (
+              <span key={`week-${code}`} className="badge status-badge-neutral">
+                {formatToken(code)}
+                <WhyTooltip title={explanation.title} body={explanation.body} />
+              </span>
+            );
+          })}
         </div>
       ) : null}
 

@@ -480,7 +480,7 @@ def _map_plan_safety_state(row: dict[str, Any]) -> PlanSafetyState:
     )
 
 
-def _map_plan_detail(row: dict[str, Any], *, include_admin: bool) -> PlanDetail:
+def _map_plan_detail(row: dict[str, Any], *, include_admin: bool, progress_milestones: list[dict[str, Any]] | None = None) -> PlanDetail:
     summary = _map_plan_summary(row)
     planning_brief = _decode_structured_text(row.get("planning_brief"))
     raw_stage2_payload = row.get("stage2_payload")
@@ -498,6 +498,7 @@ def _map_plan_detail(row: dict[str, Any], *, include_admin: bool) -> PlanDetail:
         ),
         safety_state=_map_plan_safety_state(row),
         advisories=build_plan_advisories(planning_brief=planning_brief),
+        progress_milestones=progress_milestones or [],
         admin_outputs=(
             AdminPlanOutputs(
                 coach_notes=str(row.get("coach_notes") or ""),
@@ -1101,7 +1102,12 @@ def create_app(
         )
         if not plan_row:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
-        return _map_plan_detail(plan_row, include_admin=profile.role == "admin")
+        latest_job = store.get_latest_generation_job_for_plan(athlete_id=profile.athlete_id, plan_id=str(plan_row["id"]))
+        return _map_plan_detail(
+            plan_row,
+            include_admin=profile.role == "admin",
+            progress_milestones=_normalize_progress_milestones((latest_job or {}).get("progress_milestones")),
+        )
 
     @app.get("/api/plans/latest/weekly-schedule", response_model=WeeklySchedule)
     def get_latest_weekly_schedule(
@@ -1132,7 +1138,12 @@ def create_app(
         plan_row: dict[str, Any] = Depends(require_plan_row),
         profile: ProfileRecord = Depends(require_profile),
     ) -> PlanDetail:
-        return _map_plan_detail(plan_row, include_admin=profile.role == "admin")
+        latest_job = store.get_latest_generation_job_for_plan(athlete_id=profile.athlete_id, plan_id=str(plan_row["id"]))
+        return _map_plan_detail(
+            plan_row,
+            include_admin=profile.role == "admin",
+            progress_milestones=_normalize_progress_milestones((latest_job or {}).get("progress_milestones")),
+        )
 
     @app.get("/api/plans/{plan_id}/weekly-schedule", response_model=WeeklySchedule)
     def get_plan_weekly_schedule(
@@ -1155,7 +1166,8 @@ def create_app(
         if profile.role != "admin" and str(plan_row["athlete_id"]) != profile.athlete_id:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="not allowed")
         updated = store.rename_plan(plan_id, update.plan_name)
-        return _map_plan_detail(updated, include_admin=profile.role == "admin")
+        latest_job = store.get_latest_generation_job_for_plan(athlete_id=profile.athlete_id, plan_id=str(updated["id"]))
+        return _map_plan_detail(updated, include_admin=profile.role == "admin", progress_milestones=_normalize_progress_milestones((latest_job or {}).get("progress_milestones")))
 
     @app.delete("/api/plans/{plan_id}", status_code=status.HTTP_204_NO_CONTENT)
     def delete_plan(

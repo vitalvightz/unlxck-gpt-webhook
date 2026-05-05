@@ -227,6 +227,18 @@ class DemoStore:
             job = self.generation_jobs.get(job_id)
             return dict(job) if job else None
 
+    def get_latest_generation_job_for_plan(self, *, athlete_id: str, plan_id: str) -> dict[str, Any] | None:
+        with self._lock:
+            matches = [
+                dict(job)
+                for job in self.generation_jobs.values()
+                if job.get("athlete_id") == athlete_id and job.get("plan_id") == plan_id
+            ]
+        if not matches:
+            return None
+        matches.sort(key=lambda row: str(row.get("completed_at") or row.get("updated_at") or ""), reverse=True)
+        return matches[0]
+
     def list_claimable_generation_jobs(self, *, limit: int = 20, stale_after_seconds: int = 90) -> list[dict[str, Any]]:
         with self._lock:
             now = datetime.now(timezone.utc)

@@ -784,6 +784,7 @@ class PlanDetail(PlanSummary):
     outputs: PlanOutputs
     safety_state: PlanSafetyState
     advisories: list[PlanAdvisory] = Field(default_factory=list)
+    progress_milestones: list[ProgressMilestone] = Field(default_factory=list)
     admin_outputs: AdminPlanOutputs | None = None
 
 

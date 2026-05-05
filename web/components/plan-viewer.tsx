@@ -141,6 +141,35 @@ function formatRiskBandLabel(riskBand: NonNullable<PlanAdvisory["risk_band"]>) {
   return normalized.charAt(0).toUpperCase() + normalized.slice(1);
 }
 
+function PlanMilestoneFeed({ milestones }: { milestones: PlanDetail["progress_milestones"] }) {
+  const list = Array.isArray(milestones) ? milestones.filter((item) => item?.code).slice(-8) : [];
+  if (!list.length) {
+    return null;
+  }
+  const latest = list[list.length - 1];
+  return (
+    <section className="support-panel loading-milestone-feed" aria-label="Generation milestones">
+      <p className="kicker">Generation timeline</p>
+      <ol className="loading-milestone-list">
+        {list.map((milestone, index) => (
+          <li
+            key={`${milestone.code}-${milestone.at || index}`}
+            className={`loading-milestone-row${milestone === latest ? " loading-milestone-row-latest" : ""}`}
+          >
+            <span className="loading-milestone-marker" aria-hidden="true" />
+            <div className="loading-milestone-copy">
+              <span className="loading-milestone-label">{milestone.label || milestone.code}</span>
+              {milestone.detail ? (
+                <span className="loading-milestone-detail">{milestone.detail}</span>
+              ) : null}
+            </div>
+          </li>
+        ))}
+      </ol>
+    </section>
+  );
+}
+
 function readInjuryTriage(plan: PlanDetail): InjuryTriageView | null {
   const source =
     plan.admin_outputs?.why_log && typeof plan.admin_outputs.why_log === "object"
@@ -1325,6 +1354,7 @@ export function PlanViewer({
                   </button>
                 ) : null}
               </div>
+              <PlanMilestoneFeed milestones={plan.progress_milestones} />
               <WeeklySparringView planId={plan.plan_id} />
               <pre className="plan-text-block">{athletePlanText}</pre>
               {rejectMessage ? <div className="success-banner">{rejectMessage}</div> : null}

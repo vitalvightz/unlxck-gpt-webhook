@@ -355,6 +355,55 @@ def test_latest_plan_endpoint_returns_latest_saved_plan():
     assert latest.json()["plan_id"] == next(iter(store.plans.values()))["id"]
 
 
+def test_plan_detail_includes_latest_generation_progress_milestones():
+    client, store, _ = _build_client()
+    store.ensure_profile(
+        AuthenticatedUser(
+            user_id="athlete-1",
+            email="ari@example.com",
+            full_name="Ari Mensah",
+            metadata={},
+        )
+    )
+    request = _build_request()
+    plan = store.create_plan(
+        athlete_id="athlete-1",
+        intake_id="intake_x",
+        request=request,
+        result=finalized_result(),
+    )
+    job = store.create_or_get_generation_job(
+        athlete_id="athlete-1",
+        client_request_id="progress-check-1",
+        source="api",
+        request_payload=request.model_dump(mode="json"),
+    )
+    store.update_generation_job(
+        job["id"],
+        plan_id=plan["id"],
+        progress_milestones=[
+            {
+                "code": "intake_received",
+                "label": "Intake received",
+                "detail": "Saved request captured.",
+                "at": "2026-05-05T00:00:00Z",
+                "meta": {"source": "test"},
+            }
+        ],
+        completed_at="2026-05-05T00:00:01Z",
+    )
+
+    response = client.get(
+        f"/api/plans/{plan['id']}",
+        headers={"Authorization": "Bearer athlete-token"},
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["progress_milestones"]
+    assert body["progress_milestones"][0]["code"] == "intake_received"
+
+
 def test_athlete_can_rename_their_saved_plan():
     client, store, _ = _build_client()
     athlete = AuthenticatedUser(
