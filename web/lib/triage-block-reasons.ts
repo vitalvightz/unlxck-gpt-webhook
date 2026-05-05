@@ -26,7 +26,7 @@ const TRIAGE_SIGNAL_EXPLANATIONS: Record<string, string> = {
   acl_tear: "A major knee-ligament signal is active. Hard sparring is paused to protect the joint.",
 };
 
-function titleizeToken(value: string) {
+export function titleizeToken(value: string) {
   const cleaned = value.replace(/_/g, " ").trim();
   return cleaned ? cleaned.charAt(0).toUpperCase() + cleaned.slice(1) : "";
 }
