@@ -196,7 +196,7 @@ def triage_injuries(plan_input: PlanInput) -> InjuryTriageResult:
         routing_reasons.add("guided_injury:worsening")
 
     cleaned_guided_notes = remove_negated_phrases(guided_notes).strip().lower()
-    cleaned_combined_text = remove_negated_phrases(combined_text).strip().lower()
+    cleaned_combined_text = " | ".join(features.raw_evidence.get("cleaned_input") or [])
 
     if _BROKE_REGION_RE.search(cleaned_guided_notes) or (
         _BROKE_IT_RE.search(cleaned_guided_notes)
