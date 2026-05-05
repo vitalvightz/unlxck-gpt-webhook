@@ -77,6 +77,9 @@ _BROKE_REGION_RE = re.compile(
     rf"\b(?:broke|broken)\s+(?:my\s+)?(?:{'|'.join(_FRACTURE_REGIONS)})\b"
 )
 _BROKE_IT_RE = re.compile(r"\b(?:broke|broken)\s+it\b")
+_RECENT_INJURY_TIMELINE_RE = re.compile(
+    r"\b(?:last\s+(?:day|week|month)|this\s+(?:week|month)|recent(?:ly)?|in\s+the\s+last\s+\d+\s*(?:day|days|week|weeks|month|months))\b"
+)
 
 
 _FRACTURE_REGION_RE = re.compile(rf"\b(?:{'|'.join(re.escape(t) for t in _FRACTURE_REGIONS)})\b")
@@ -116,10 +119,10 @@ def _collect_guided_card_evidence(plan_input: PlanInput) -> list[dict[str, str]]
     if guided is not None:
         cards.append(
             {
-            "severity": _normalize_guided_severity_token(guided.severity or ""),
-            "trend": str(guided.trend or "").strip().lower(),
-            "avoid": str(guided.avoid or "").strip().lower(),
-            "notes": str(guided.notes or "").strip().lower(),
+                "severity": _normalize_guided_severity_token(guided.severity or ""),
+                "trend": str(guided.trend or "").strip().lower(),
+                "avoid": str(guided.avoid or "").strip().lower(),
+                "notes": str(guided.notes or "").strip().lower(),
             }
         )
     return cards
@@ -206,6 +209,35 @@ def triage_injuries(plan_input: PlanInput) -> InjuryTriageResult:
     ):
         matched_categories.add("fracture")
         routing_reasons.add("guided_injury:structural_broke_signal")
+
+    parsed_guided_entries = [entry for entry in (plan_input.parsed_injuries or []) if isinstance(entry, dict)]
+    for card, parsed_entry in zip(guided_cards, parsed_guided_entries):
+        note_text = remove_negated_phrases(str(card.get("notes") or "")).strip().lower()
+        area_text = str(
+            parsed_entry.get("area")
+            or parsed_entry.get("region")
+            or parsed_entry.get("location")
+            or ""
+        ).strip().lower()
+        if not note_text:
+            continue
+        contextual_card_text = " ".join(part for part in (area_text, note_text) if part)
+        if _BROKE_IT_RE.search(note_text) and _contains_fracture_region(contextual_card_text):
+            matched_categories.add("fracture")
+            routing_reasons.add("guided_injury:card_area_context_broke_signal")
+
+    has_recent_structural_history_signal = any(
+        _RECENT_INJURY_TIMELINE_RE.search(str(card.get("notes") or ""))
+        and (
+            _BROKE_REGION_RE.search(str(card.get("notes") or ""))
+            or _BROKE_IT_RE.search(str(card.get("notes") or ""))
+            or "fracture" in str(card.get("notes") or "")
+            or "dislocat" in str(card.get("notes") or "")
+            or "rupture" in str(card.get("notes") or "")
+            or "tear" in str(card.get("notes") or "")
+        )
+        for card in guided_cards
+    )
 
     if _BROKE_REGION_RE.search(cleaned_combined_text) or (
         _BROKE_IT_RE.search(cleaned_combined_text)
@@ -350,6 +382,23 @@ def triage_injuries(plan_input: PlanInput) -> InjuryTriageResult:
             red_flags=sorted(red_flags),
             matched_high_risk_categories=matched_categories_sorted,
             routing_reasons=routing_reasons_sorted,
+            should_block_stage2=True,
+            urgent_flags=sorted(urgent_flags),
+            sparring_risk_band=highest_band,
+        )
+
+    if has_recent_structural_history_signal:
+        routing_reasons.add("guided_injury:recent_structural_history_signal")
+        return InjuryTriageResult(
+            mode=NEEDS_REVIEW,
+            reasons=[
+                "Recent structural injury history was detected in guided injury notes.",
+                "Coach/admin review is required before normal plan generation.",
+            ],
+            clinician_clearance_required=False,
+            red_flags=sorted(red_flags),
+            matched_high_risk_categories=matched_categories_sorted,
+            routing_reasons=sorted(routing_reasons),
             should_block_stage2=True,
             urgent_flags=sorted(urgent_flags),
             sparring_risk_band=highest_band,
