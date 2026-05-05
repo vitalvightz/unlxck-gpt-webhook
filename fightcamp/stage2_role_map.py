@@ -2141,7 +2141,7 @@ def _build_weekly_role_map(
         span = max(0, int(progression_weeks[idx].get("span_days") or 0))
         week_span_days[idx] = span
         end_d = running_days
-        start_d = end_d + max(0, span - 1) if span > 0 else 0
+        start_d = end_d + max(0, span - 1)
         projected_days_until_fight_start[idx] = start_d
         projected_days_until_fight_end[idx] = end_d
         running_days += span
