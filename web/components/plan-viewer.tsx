@@ -20,7 +20,7 @@ import { PremiumLoadingScreen } from "@/components/premium-loading-screen";
 import { WhyTooltip } from "@/components/why-tooltip";
 import { useGenerationController } from "@/lib/generation-controller";
 import { explainRiskBand } from "@/lib/sparring-reason-codes";
-import { buildBlockedWhy } from "@/lib/triage-block-reasons";
+import { buildBlockedWhy, summarizeBlockedInjuryContext } from "@/lib/triage-block-reasons";
 import type { PlanAdvisory, PlanDetail, UserRole } from "@/lib/types";
 
 type ValidatorIssue = Record<string, unknown>;
@@ -181,8 +181,10 @@ function readInjuryTriage(plan: PlanDetail): InjuryTriageView | null {
 
 function BlockedPlanDecisionCard({
   triage,
+  injuryContextLine,
 }: {
   triage: InjuryTriageView;
+  injuryContextLine?: string | null;
 }) {
   const isMedicalHold = triage.mode === "medical_hold";
   const isRestricted = triage.mode === "restricted_rehab_only";
@@ -262,6 +264,7 @@ function BlockedPlanDecisionCard({
       </div>
 
       <p>{intro}</p>
+      {injuryContextLine ? <p className="muted">{injuryContextLine}</p> : null}
 
       {signalTokens.length ? (
         <div className="plan-card-meta">
@@ -722,6 +725,15 @@ export function PlanViewer({
     isTriageBlocked &&
     (injuryTriage?.mode === "needs_review" || injuryTriage?.mode === "restricted_rehab_only");
   const canRejectApproval = isAdmin;
+  const blockedInjuryContext = injuryTriage
+    ? summarizeBlockedInjuryContext({
+        triage: injuryTriage,
+        injuriesText: plan.latest_intake?.injuries,
+        guidedInjuries: [plan.latest_intake?.guided_injury, ...(plan.latest_intake?.guided_injuries ?? [])].filter(
+          (injury): injury is { area?: string; notes?: string } => Boolean(injury),
+        ),
+      })
+    : null;
   const approveButtonLabel = stage2ReviewSummary.isPublishable
     ? "Approve for athlete view"
     : "Approve anyway";
@@ -1304,7 +1316,7 @@ export function PlanViewer({
           {primaryAdvisory ? <SparringAdvisoryCard advisory={primaryAdvisory} /> : null}
 
           {isTriageBlocked && injuryTriage ? (
-            <BlockedPlanDecisionCard triage={injuryTriage} />
+            <BlockedPlanDecisionCard triage={injuryTriage} injuryContextLine={blockedInjuryContext} />
           ) : hasPublishedPlan ? (
             <>
               <div className="plan-summary-actions">

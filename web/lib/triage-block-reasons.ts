@@ -2,6 +2,10 @@ export type InjuryTriageSignals = {
   red_flags: string[];
   matched_high_risk_categories: string[];
 };
+export type GuidedInjurySummary = {
+  area?: string;
+  notes?: string;
+};
 
 const TRIAGE_SIGNAL_EXPLANATIONS: Record<string, string> = {
   loss_of_consciousness: "You reported a blackout or loss of consciousness. That needs medical review before normal camp work.",
@@ -52,4 +56,37 @@ export function buildBlockedWhy(triage: InjuryTriageSignals): { title: string; b
     title: "Why this was blocked",
     body: `Coach call: ${reasons.join(" ")}`,
   };
+}
+
+export function summarizeBlockedInjuryContext({
+  triage,
+  injuriesText,
+  guidedInjuries,
+}: {
+  triage: InjuryTriageSignals;
+  injuriesText?: string | null;
+  guidedInjuries?: GuidedInjurySummary[] | null;
+}) {
+  const signalLabels = [...new Set([...triage.red_flags, ...triage.matched_high_risk_categories]
+    .map(titleizeToken)
+    .filter(Boolean))]
+    .slice(0, 2);
+  const areas = [...new Set((guidedInjuries ?? [])
+    .map((injury) => (typeof injury.area === "string" ? injury.area.trim() : ""))
+    .filter(Boolean))]
+    .slice(0, 2);
+  const injuryLine = typeof injuriesText === "string" ? injuriesText.trim() : "";
+
+  if (!signalLabels.length && !areas.length && !injuryLine) {
+    return null;
+  }
+
+  const detailBits: string[] = [];
+  if (areas.length) detailBits.push(`Area${areas.length > 1 ? "s" : ""}: ${areas.join(", ")}`);
+  if (signalLabels.length) {
+    detailBits.push(`Trigger${signalLabels.length > 1 ? "s" : ""}: ${signalLabels.join(", ")}`);
+  }
+  if (!areas.length && injuryLine) detailBits.push(`Reported injury: ${injuryLine}`);
+
+  return detailBits.join(" • ");
 }
