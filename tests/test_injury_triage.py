@@ -48,6 +48,37 @@ def test_fracture_routes_to_restricted_rehab_only_and_matches_existing_signals()
     assert triage.sparring_risk_band in {"red", "black"}
 
 
+def test_free_text_broke_it_last_week_is_not_treated_as_normal_moderate_stable():
+    parsed = PlanInput.from_payload(
+        _payload_with_injury("Right ankle — moderate, stable. Notes: broke it last week")
+    )
+    triage = triage_injuries(parsed)
+
+    assert triage.mode == RESTRICTED_REHAB_ONLY
+    assert triage.should_block_stage2 is True
+    assert triage.clinician_clearance_required is True
+    assert "fracture" in triage.matched_high_risk_categories
+    assert "raw_injury:structural_broke_signal" in triage.routing_reasons
+
+def test_not_broken_it_does_not_route_fracture():
+    parsed = PlanInput.from_payload(
+        _payload_with_injury("Right ankle not broken, mild sprain only")
+    )
+    triage = triage_injuries(parsed)
+
+    assert triage.mode == FULL_PLAN
+    assert "fracture" not in triage.matched_high_risk_categories
+
+
+def test_ruled_out_fracture_after_thought_i_broke_it_does_not_route_fracture():
+    parsed = PlanInput.from_payload(
+        _payload_with_injury("Scan ruled out fracture after I thought I broke it")
+    )
+    triage = triage_injuries(parsed)
+
+    assert triage.mode == FULL_PLAN
+    assert "fracture" not in triage.matched_high_risk_categories
+
 def test_concussion_routes_to_medical_hold():
     parsed = PlanInput.from_payload(
         _payload_with_injury("suspected concussion with headache after sparring")
@@ -788,6 +819,32 @@ def test_uncertainty_note_word_count_uses_per_card_words_not_separator_tokens():
     assert triage.mode == NEEDS_REVIEW
     assert "combo_gate:moderate_stable_blocked" in triage.routing_reasons
 
+
+
+
+def test_second_guided_card_structural_notes_are_used_for_triage_even_if_not_primary_card():
+    payload = _payload_with_injury("")
+    payload["guided_injuries"] = [
+        {
+            "area": "left shoulder",
+            "severity": "low",
+            "trend": "stable",
+            "notes": "tight after pads",
+        },
+        {
+            "area": "right ankle",
+            "severity": "moderate",
+            "trend": "stable",
+            "notes": "broke it last week",
+        },
+    ]
+
+    parsed = PlanInput.from_payload(payload)
+    triage = triage_injuries(parsed)
+
+    assert triage.mode == RESTRICTED_REHAB_ONLY
+    assert triage.should_block_stage2 is True
+    assert "fracture" in triage.matched_high_risk_categories
 
 def test_guided_injury_note_with_broke_routes_to_restricted_rehab():
     payload = _payload_with_injury("")

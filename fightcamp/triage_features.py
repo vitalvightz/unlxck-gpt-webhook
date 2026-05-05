@@ -312,11 +312,24 @@ def _parsed_injury_chunks(parsed_injuries: list[dict[str, Any]] | None) -> list[
         original_phrase = str(item.get("original_phrase") or "").strip()
         if original_phrase:
             chunks.append(original_phrase)
-        injury_type = str(item.get("injury_type") or "").strip()
+
         canonical_location = str(item.get("canonical_location") or item.get("region") or "").strip()
+        display_location = str(item.get("display_location") or "").strip()
+        injury_type = str(item.get("injury_type") or "").strip()
+        severity = str(item.get("severity") or "").strip()
+        trend = str(item.get("trend") or "").strip()
+        avoid = str(item.get("avoid") or "").strip()
+        notes = str(item.get("notes") or "").strip()
+
         normalized = " ".join(part for part in (canonical_location, injury_type) if part)
         if normalized:
             chunks.append(normalized)
+
+        contextual = " ".join(
+            part for part in (display_location, severity, trend, avoid, notes) if part
+        ).strip()
+        if contextual:
+            chunks.append(contextual)
     return chunks
 
 
