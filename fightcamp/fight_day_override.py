@@ -72,6 +72,9 @@ def _make_fight_day_protocol_role(day: str) -> dict[str, Any]:
             f"Fight is on {day.title()}. Render exactly: \"{FIGHT_DAY_PROTOCOL_TEXT}\""
         ),
         "scheduled_day_hint": day,
+        "d_day": 0,
+        "countdown_label": "D-0",
+        "scheduled_countdown_label": "D-0",
         "day_assignment_reason": (
             "Day matches the athlete's fight date; only the fight-day protocol "
             "may render here."
@@ -175,6 +178,34 @@ def apply_fight_day_override_to_weekly_role_map(
                 and str(entry.get("day") or "").strip().lower() == fight_weekday
             )
         ]
+
+    # Make sure the final week's calendar_days marks the fight weekday as D-0
+    # so any code that looks up the fight weekday's countdown gets D-0, not a
+    # stale day label like D-7 carried over from the start of the week.
+    calendar_days = list(final_week.get("calendar_days") or [])
+    fight_day_entry = next(
+        (
+            entry
+            for entry in calendar_days
+            if isinstance(entry, dict)
+            and str(entry.get("weekday") or "").strip().lower() == fight_weekday
+        ),
+        None,
+    )
+    if fight_day_entry is None:
+        calendar_days.append(
+            {
+                "weekday": fight_weekday,
+                "d_day": 0,
+                "is_fight_day": True,
+                "is_after_fight_day": False,
+            }
+        )
+    else:
+        fight_day_entry["d_day"] = 0
+        fight_day_entry["is_fight_day"] = True
+        fight_day_entry["is_after_fight_day"] = False
+    final_week["calendar_days"] = calendar_days
 
     final_week["session_roles"] = new_roles
     final_week["suppressed_roles"] = suppressed_roles

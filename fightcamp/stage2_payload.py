@@ -2596,12 +2596,14 @@ def _build_weekly_role_map(
     progression_weeks = list(week_by_week_progression.get("weeks", []))
     projected_days_until_fight_end: list[int] = [0] * len(progression_weeks)
     week_span_days: list[int] = [0] * len(progression_weeks)
+    # The final week ends ON the fight day (D-0). running_days tracks the
+    # D-day of the LAST day of each week walking backwards from the fight day.
     running_days = 0
     for idx in range(len(progression_weeks) - 1, -1, -1):
         span = max(0, int(progression_weeks[idx].get("span_days") or 0))
         week_span_days[idx] = span
+        projected_days_until_fight_end[idx] = running_days
         running_days += span
-        projected_days_until_fight_end[idx] = max(0, running_days - span + 1) if span > 0 else 0
 
     fight_weekday = compute_fight_weekday(athlete_model)
 
