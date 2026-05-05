@@ -78,7 +78,7 @@ def build_progress_recorder(
         milestones.append(entry)
         # Cap list size so a runaway emitter cannot bloat the row.
         if len(milestones) > _MAX_PERSISTED_MILESTONES:
-            del milestones[0 : len(milestones) - _MAX_PERSISTED_MILESTONES]
+            del milestones[:-_MAX_PERSISTED_MILESTONES]
         snapshot = list(milestones)
         try:
             store.update_generation_job(
