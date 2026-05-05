@@ -313,6 +313,14 @@ export type PlanDetail = PlanSummary & {
   admin_outputs?: AdminPlanOutputs | null;
 };
 
+export type ProgressMilestone = {
+  code: string;
+  label: string;
+  detail: string;
+  at: string;
+  meta?: Record<string, unknown>;
+};
+
 export type GenerationJobResponse = {
   job_id: string;
   athlete_id: string;
@@ -325,6 +333,7 @@ export type GenerationJobResponse = {
   error?: string | null;
   plan_id?: string | null;
   latest_plan_id?: string | null;
+  progress_milestones?: ProgressMilestone[];
 };
 
 export type MeResponse = {

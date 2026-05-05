@@ -8800,3 +8800,202 @@ html[data-app-surface="workspace"][data-theme="dark"] .desktop-nav-toggle {
     animation: none;
   }
 }
+
+.loading-milestone-feed {
+  margin-top: 4px;
+  padding: 14px 16px 12px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: linear-gradient(180deg, rgba(40, 15, 21, 0.55), rgba(18, 12, 14, 0.7));
+  display: grid;
+  gap: 10px;
+}
+
+.loading-milestone-eyebrow {
+  margin: 0;
+}
+
+.loading-milestone-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.loading-milestone-row {
+  display: grid;
+  grid-template-columns: 14px 1fr auto;
+  align-items: start;
+  column-gap: 10px;
+  padding: 6px 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.04);
+  animation: milestone-row-in 320ms ease-out;
+}
+
+.loading-milestone-row:first-child {
+  border-top: none;
+}
+
+.loading-milestone-marker {
+  width: 8px;
+  height: 8px;
+  margin-top: 6px;
+  border-radius: 50%;
+  background: rgba(255, 216, 222, 0.45);
+  box-shadow: 0 0 0 3px rgba(181, 18, 43, 0.08);
+}
+
+.loading-milestone-row-latest .loading-milestone-marker {
+  background: #ffd8de;
+  box-shadow: 0 0 0 4px rgba(181, 18, 43, 0.22);
+}
+
+.loading-milestone-copy {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.loading-milestone-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  line-height: 1.45;
+}
+
+.loading-milestone-detail {
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.loading-milestone-time {
+  font-family: var(--font-mono), monospace;
+  font-size: 11px;
+  color: var(--text-muted);
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+@keyframes milestone-row-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .loading-milestone-row {
+    animation: none;
+  }
+}
+
+.why-tooltip {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  margin-inline-start: 6px;
+  font-family: inherit;
+}
+
+.why-tooltip-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 6px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-secondary);
+  font-family: var(--font-mono), monospace;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+  cursor: help;
+  transition: background 180ms ease, border-color 180ms ease, color 180ms ease;
+}
+
+.why-tooltip-trigger:hover,
+.why-tooltip-trigger:focus-visible {
+  background: rgba(181, 18, 43, 0.14);
+  border-color: rgba(181, 18, 43, 0.36);
+  color: var(--text-primary);
+  outline: none;
+}
+
+.why-tooltip-trigger[aria-expanded="true"] {
+  background: rgba(181, 18, 43, 0.18);
+  border-color: rgba(181, 18, 43, 0.42);
+  color: var(--text-primary);
+}
+
+.why-tooltip-bubble {
+  position: absolute;
+  z-index: 30;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  min-width: 220px;
+  max-width: 320px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(18, 12, 14, 0.96);
+  box-shadow: 0 18px 38px rgba(0, 0, 0, 0.45);
+  color: var(--text-secondary);
+  text-align: left;
+  font-size: 12px;
+  line-height: 1.55;
+  pointer-events: auto;
+}
+
+.why-tooltip-bubble[role="tooltip"] {
+  white-space: normal;
+}
+
+.why-tooltip-title {
+  display: block;
+  margin-bottom: 4px;
+  font-family: var(--font-display, inherit);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-primary);
+}
+
+.why-tooltip-body {
+  margin: 0;
+  color: var(--text-secondary);
+}
+
+.why-tooltip-bubble::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 6px solid transparent;
+  border-top-color: rgba(18, 12, 14, 0.96);
+}
+
+@media (max-width: 540px) {
+  .why-tooltip-bubble {
+    left: 0;
+    transform: none;
+    min-width: 200px;
+    max-width: min(320px, calc(100vw - 32px));
+  }
+
+  .why-tooltip-bubble::after {
+    left: 18px;
+    transform: none;
+  }
+}

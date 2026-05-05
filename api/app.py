@@ -105,6 +105,30 @@ def _utc_now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
+def _normalize_progress_milestones(raw: Any) -> list[dict[str, Any]]:
+    if not isinstance(raw, list):
+        return []
+    normalized: list[dict[str, Any]] = []
+    for entry in raw:
+        if not isinstance(entry, dict):
+            continue
+        code = str(entry.get("code") or "").strip()
+        if not code:
+            continue
+        meta_raw = entry.get("meta")
+        meta = meta_raw if isinstance(meta_raw, dict) else {}
+        normalized.append(
+            {
+                "code": code,
+                "label": str(entry.get("label") or "").strip(),
+                "detail": str(entry.get("detail") or ""),
+                "at": str(entry.get("at") or ""),
+                "meta": meta,
+            }
+        )
+    return normalized
+
+
 def _job_response(job: dict[str, Any], *, latest_plan_id: str | None = None) -> GenerationJobResponse:
     plan_id = str(job.get("plan_id")) if job.get("plan_id") else None
     updated_at = job.get("updated_at") or job.get("created_at") or _utc_now_iso()
@@ -120,6 +144,7 @@ def _job_response(job: dict[str, Any], *, latest_plan_id: str | None = None) -> 
         error=str(job["error"]) if job.get("error") else None,
         plan_id=plan_id,
         latest_plan_id=latest_plan_id or plan_id,
+        progress_milestones=_normalize_progress_milestones(job.get("progress_milestones")),
     )
 
 

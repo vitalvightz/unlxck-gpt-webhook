@@ -787,6 +787,14 @@ class PlanDetail(PlanSummary):
     admin_outputs: AdminPlanOutputs | None = None
 
 
+class ProgressMilestone(BaseModel):
+    code: str
+    label: str
+    detail: str = ""
+    at: str = ""
+    meta: dict[str, Any] = Field(default_factory=dict)
+
+
 class GenerationJobResponse(BaseModel):
     job_id: str
     athlete_id: str
@@ -799,6 +807,7 @@ class GenerationJobResponse(BaseModel):
     error: str | None = None
     plan_id: str | None = None
     latest_plan_id: str | None = None
+    progress_milestones: list[ProgressMilestone] = Field(default_factory=list)
 
 
 class MeResponse(BaseModel):

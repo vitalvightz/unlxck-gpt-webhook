@@ -129,6 +129,7 @@ alter table public.generation_jobs add column if not exists heartbeat_at timesta
 alter table public.generation_jobs add column if not exists started_at timestamptz;
 alter table public.generation_jobs add column if not exists completed_at timestamptz;
 alter table public.generation_jobs add column if not exists updated_at timestamptz not null default timezone('utc', now());
+alter table public.generation_jobs add column if not exists progress_milestones jsonb not null default '[]'::jsonb;
 alter table public.profiles add column if not exists appearance_mode text not null default 'dark';
 alter table public.profiles add column if not exists avatar_url text;
 alter table public.profiles add column if not exists nutrition_profile jsonb not null default '{}'::jsonb;

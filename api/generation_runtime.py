@@ -18,18 +18,82 @@ from .models import PlanRequest, ProfileUpdateRequest
 from .stage2_automation import Stage2AutomationError, Stage2AutomationUnavailableError, Stage2Automator
 from .store import AppStore
 
-Planner = Callable[[dict[str, Any]], dict[str, Any]]
+Planner = Callable[..., dict[str, Any]]
+ProgressCallback = Callable[[str, str, str, dict[str, Any]], None]
 logger = logging.getLogger(__name__)
 _TRIAGE_RESUME_OVERRIDE_KEY = "_triage_resume_override"
 _DETACHED_GENERATION_TASKS: set[asyncio.Task[None]] = set()
+_MAX_PERSISTED_MILESTONES = 40
 
 
 def utc_now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
-def default_planner(payload: dict[str, Any]) -> dict[str, Any]:
-    return generate_plan_sync(payload)
+def default_planner(
+    payload: dict[str, Any],
+    *,
+    progress_callback: ProgressCallback | None = None,
+) -> dict[str, Any]:
+    return generate_plan_sync(payload, progress_callback=progress_callback)
+
+
+def _invoke_planner(
+    planner_fn: Planner,
+    payload: dict[str, Any],
+    progress_callback: ProgressCallback | None,
+) -> dict[str, Any]:
+    """Call a planner that may or may not accept a ``progress_callback`` kwarg."""
+    if progress_callback is None:
+        return planner_fn(payload)
+    try:
+        return planner_fn(payload, progress_callback=progress_callback)
+    except TypeError:
+        # Planners written before milestones existed (or test stubs) won't
+        # accept the kwarg. Fall back transparently.
+        return planner_fn(payload)
+
+
+def build_progress_recorder(
+    *,
+    job_id: str,
+    store: AppStore,
+) -> tuple[list[dict[str, Any]], ProgressCallback]:
+    """Return a milestone list + callback that persists each emit to the job row.
+
+    Emits are low-volume (~10 over several minutes), so writing on every event
+    is fine. Persistence failures are logged and ignored — they must never
+    surface into the planner pipeline.
+    """
+    milestones: list[dict[str, Any]] = []
+
+    def _callback(code: str, label: str, detail: str, meta: dict[str, Any]) -> None:
+        entry = {
+            "code": code,
+            "label": label,
+            "detail": detail or "",
+            "meta": dict(meta or {}),
+            "at": utc_now_iso(),
+        }
+        milestones.append(entry)
+        # Cap list size so a runaway emitter cannot bloat the row.
+        if len(milestones) > _MAX_PERSISTED_MILESTONES:
+            del milestones[0 : len(milestones) - _MAX_PERSISTED_MILESTONES]
+        snapshot = list(milestones)
+        try:
+            store.update_generation_job(
+                job_id,
+                progress_milestones=snapshot,
+                heartbeat_at=utc_now_iso(),
+            )
+        except Exception:
+            logger.exception(
+                "[jobs] generation:milestone_persist_failed job_id=%s code=%s",
+                job_id,
+                code,
+            )
+
+    return milestones, _callback
 
 
 def parse_datetime(value: Any) -> datetime | None:
@@ -115,8 +179,13 @@ def _schedule_detached_generation_task(
     task.add_done_callback(_cleanup_detached_generation_task)
 
 
-async def run_stage1_planner(planner_fn: Planner, payload: dict[str, Any]) -> dict[str, Any]:
-    return await asyncio.to_thread(planner_fn, payload)
+async def run_stage1_planner(
+    planner_fn: Planner,
+    payload: dict[str, Any],
+    *,
+    progress_callback: ProgressCallback | None = None,
+) -> dict[str, Any]:
+    return await asyncio.to_thread(_invoke_planner, planner_fn, payload, progress_callback)
 
 
 async def finalize_stage2_with_timeout(
@@ -196,6 +265,14 @@ async def run_generation_job(
     stop_event = asyncio.Event()
     heartbeat_task = asyncio.create_task(heartbeat_generation_job(job_id, store, stop_event))
     athlete_id = "unknown"
+    _, progress_callback = build_progress_recorder(job_id=job_id, store=store)
+
+    def _emit_milestone(code: str, label: str, detail: str = "", **meta: Any) -> None:
+        try:
+            progress_callback(code, label, detail, meta)
+        except Exception:
+            logger.exception("[jobs] generation:milestone_emit_failed job_id=%s code=%s", job_id, code)
+
     try:
         job = await asyncio.to_thread(store.get_generation_job, job_id)
         if not job:
@@ -244,7 +321,11 @@ async def run_generation_job(
                 triage_override = raw_request_payload.get(_TRIAGE_RESUME_OVERRIDE_KEY)
                 if isinstance(triage_override, dict):
                     planner_payload[_TRIAGE_RESUME_OVERRIDE_KEY] = triage_override
-            stage1_result = await run_stage1_planner(planner_fn, planner_payload)
+            stage1_result = await run_stage1_planner(
+                planner_fn,
+                planner_payload,
+                progress_callback=progress_callback,
+            )
             if stage1_result.get("status") == "invalid_input":
                 raise HTTPException(
                     status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
@@ -263,13 +344,28 @@ async def run_generation_job(
         final_result = job.get("final_result")
         if not isinstance(final_result, dict):
             if should_skip_stage2(stage1_result):
+                _emit_milestone(
+                    "stage2_skipped",
+                    "Stage 2 skipped",
+                    "Triage routing held the plan at Stage 1 — no AI finalization needed.",
+                )
                 final_result = {**stage1_result, "full_name": request_body.athlete.full_name}
             else:
+                _emit_milestone(
+                    "stage2_drafting",
+                    "Stage 2 finalizer drafting",
+                    "Sending the planning brief to the AI finalizer.",
+                )
                 finalized_result = await finalize_stage2_with_timeout(
                     stage2=stage2,
                     stage1_result=stage1_result,
                 )
                 final_result = {**finalized_result, "full_name": request_body.athlete.full_name}
+                _emit_milestone(
+                    "stage2_validated",
+                    "Stage 2 finalizer complete",
+                    "Validator passed. Final coach-voice plan ready for handoff.",
+                )
             job = await asyncio.to_thread(
                 store.update_generation_job,
                 job_id,
@@ -309,6 +405,12 @@ async def run_generation_job(
 
         plan_status = str(plan_row.get("status") or "failed")
         final_status = "completed" if plan_status in {"ready", "triage_blocked"} else plan_status
+        if final_status == "completed":
+            _emit_milestone(
+                "plan_saved",
+                "Plan saved to your workspace",
+                "Opening the saved plan for review.",
+            )
         await asyncio.to_thread(
             store.update_generation_job,
             job_id,

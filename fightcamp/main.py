@@ -2,6 +2,7 @@ import json
 import logging
 import os
 from time import perf_counter
+from typing import Any, Callable
 
 from .input_parsing import PlanInput
 from .injury_triage import FULL_PLAN, blocked_mode_output, triage_injuries
@@ -32,6 +33,20 @@ __all__ = [
     "_sanitize_phase_text",
     "_sanitize_stage_output",
 ]
+
+ProgressCallback = Callable[[str, str, str, dict[str, Any]], None]
+
+
+def _safe_emit(callback: ProgressCallback | None, code: str, label: str, detail: str = "", **meta: Any) -> None:
+    """Best-effort milestone emit. Never raises into the planner pipeline."""
+    if callback is None:
+        return
+    try:
+        callback(code, label, detail, dict(meta))
+    except Exception:
+        # Progress reporting must not break generation.
+        logging.getLogger(__name__).exception("[progress] callback_failed code=%s", code)
+
 
 _INPUT_ERROR_LABELS = {
     "missing_fighting_style_technical": "technical fighting style",
@@ -100,7 +115,12 @@ class _LazyListProxy:
 exercise_bank = _LazyListProxy(get_strength_exercise_bank)
 
 
-def generate_plan_sync(data: dict, *, generate_pdf: bool | None = None):
+def generate_plan_sync(
+    data: dict,
+    *,
+    generate_pdf: bool | None = None,
+    progress_callback: ProgressCallback | None = None,
+):
     """Generate a fight-camp plan.
 
     Parameters
@@ -112,6 +132,11 @@ def generate_plan_sync(data: dict, *, generate_pdf: bool | None = None):
         value of the ``UNLXCK_ENABLE_PLAN_PDF`` environment variable is used
         (defaults to ``False``).  Pass ``True`` explicitly to force PDF
         generation regardless of the environment flag.
+    progress_callback:
+        Optional ``(code, label, detail, meta)`` callable invoked at each
+        semantic milestone (intake parsed, banks primed, strength scored,
+        injury substitutions applied, etc.). Failures are swallowed so they
+        never break generation.
     """
     configure_logging()
     logger = logging.getLogger(__name__)
@@ -124,6 +149,13 @@ def generate_plan_sync(data: dict, *, generate_pdf: bool | None = None):
         elapsed = perf_counter() - start
         timings[label] = elapsed
         logger.info("[timing] %s=%.2fs", label, elapsed)
+
+    _safe_emit(
+        progress_callback,
+        "intake_received",
+        "Intake received",
+        "Locking in your intake and preparing the planner.",
+    )
 
     timer_start = perf_counter()
     try:
@@ -146,9 +178,34 @@ def generate_plan_sync(data: dict, *, generate_pdf: bool | None = None):
             missing_fields=generation_issues,
         )
 
+    _safe_emit(
+        progress_callback,
+        "intake_parsed",
+        "Intake parsed",
+        "Athlete profile, fight date, and restrictions loaded.",
+        weeks_out=plan_input.weeks_out,
+        days_until_fight=plan_input.days_until_fight,
+    )
+
     timer_start = perf_counter()
     triage_result = triage_injuries(plan_input)
     _record_timing("injury_triage", timer_start)
+    triage_mode_value = str(triage_result.mode or "").strip().lower() or "full_plan"
+    parsed_injury_count = len(plan_input.parsed_injuries or [])
+    if parsed_injury_count:
+        triage_detail = (
+            f"{parsed_injury_count} injury note(s) classified — mode: {triage_mode_value}."
+        )
+    else:
+        triage_detail = "No injuries reported. Routing as full plan."
+    _safe_emit(
+        progress_callback,
+        "injury_triage_done",
+        "Injury triage complete",
+        triage_detail,
+        triage_mode=triage_mode_value,
+        parsed_injury_count=parsed_injury_count,
+    )
     triage_mode = str(triage_result.mode or "").strip().lower()
     triage_resume_override_applied = _triage_resume_override_allows_continuation(
         data,
@@ -162,6 +219,12 @@ def generate_plan_sync(data: dict, *, generate_pdf: bool | None = None):
     timer_start = perf_counter()
     prime_plan_banks(logger=logger)
     _record_timing("prime_banks", timer_start)
+    _safe_emit(
+        progress_callback,
+        "banks_primed",
+        "Exercise banks loaded",
+        "Strength, conditioning, and rehab libraries are warm.",
+    )
 
     timer_start = perf_counter()
     context = build_runtime_context(
@@ -172,12 +235,43 @@ def generate_plan_sync(data: dict, *, generate_pdf: bool | None = None):
         is_approved_triage_resume=triage_resume_override_applied,
     )
     _record_timing("runtime_context", timer_start)
+    phase_weeks_value = getattr(context, "phase_weeks", None)
+    if not isinstance(phase_weeks_value, dict):
+        phase_weeks_value = {}
+    camp_len_value = getattr(context, "camp_len", 0)
+    if not isinstance(camp_len_value, int):
+        camp_len_value = 0
+    camp_phase_summary = ", ".join(
+        f"{phase}:{phase_weeks_value.get(phase, 0)}w"
+        for phase in ("GPP", "SPP", "TAPER")
+    )
+    _safe_emit(
+        progress_callback,
+        "camp_brief_built",
+        "Camp brief built",
+        f"Camp shaped to {camp_len_value} weeks ({camp_phase_summary})."
+        if camp_len_value
+        else "Camp brief assembled.",
+        camp_len=camp_len_value,
+        phase_weeks=dict(phase_weeks_value),
+    )
 
-    blocks = generate_plan_blocks(context=context, record_timing=_record_timing, logger=logger)
+    blocks = generate_plan_blocks(
+        context=context,
+        record_timing=_record_timing,
+        logger=logger,
+        progress_callback=progress_callback,
+    )
 
     timer_start = perf_counter()
     rendered = render_plan_bundle(context=context, blocks=blocks, logger=logger)
     _record_timing("render_bundle", timer_start)
+    _safe_emit(
+        progress_callback,
+        "plan_drafted",
+        "Plan drafted",
+        "Stage 1 plan rendered with weekly structure and coach notes.",
+    )
 
     # Build Stage 2 outputs before any optional PDF work so they are never
     # gated behind the (potentially slow) export step.
@@ -193,6 +287,12 @@ def generate_plan_sync(data: dict, *, generate_pdf: bool | None = None):
             "input_parsing_metadata": plan_input.parsing_metadata,
         }
     _record_timing("stage2_outputs", timer_start)
+    _safe_emit(
+        progress_callback,
+        "stage2_handoff_ready",
+        "Stage 2 handoff ready",
+        "Planning brief and candidate pools packaged for the AI finalizer.",
+    )
 
     # PDF generation is optional and off by default.
     if generate_pdf:
@@ -233,9 +333,19 @@ def generate_plan_sync(data: dict, *, generate_pdf: bool | None = None):
     return result
 
 
-async def generate_plan(data: dict, *, generate_pdf: bool | None = None):
+async def generate_plan(
+    data: dict,
+    *,
+    generate_pdf: bool | None = None,
+    progress_callback: ProgressCallback | None = None,
+):
     import asyncio
-    return await asyncio.to_thread(generate_plan_sync, data, generate_pdf=generate_pdf)
+    return await asyncio.to_thread(
+        generate_plan_sync,
+        data,
+        generate_pdf=generate_pdf,
+        progress_callback=progress_callback,
+    )
 
 
 def main():

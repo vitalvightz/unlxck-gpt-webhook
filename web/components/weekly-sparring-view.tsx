@@ -3,7 +3,13 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { useAppSession } from "@/components/auth-provider";
+import { WhyTooltip } from "@/components/why-tooltip";
 import { fetchWeeklySchedule } from "@/lib/api";
+import {
+  explainEffectiveLoad,
+  explainReasonCode,
+  explainSparringClass,
+} from "@/lib/sparring-reason-codes";
 import type { SparringDayClass, WeeklyDayEntry, WeeklySchedule } from "@/lib/types";
 
 const CLASS_LABELS: Record<SparringDayClass, string> = {
@@ -211,7 +217,13 @@ export function WeeklySparringView({ planId }: { planId: string }) {
           <div className="weekly-sparring-detail-header">
             <div>
               <p className="kicker">{formatWeekdayLabel(selectedDay)}</p>
-              <h4>{CLASS_LABELS[selectedDay.sparring_day_class]}</h4>
+              <h4>
+                {CLASS_LABELS[selectedDay.sparring_day_class]}
+                <WhyTooltip
+                  title={explainSparringClass(selectedDay.sparring_day_class).title}
+                  body={explainSparringClass(selectedDay.sparring_day_class).body}
+                />
+              </h4>
             </div>
             <span className={`weekly-sparring-class-badge weekly-sparring-badge-${selectedDay.sparring_day_class}`}>
               {LOAD_LABELS[selectedDay.effective_load]}
@@ -223,7 +235,13 @@ export function WeeklySparringView({ planId }: { planId: string }) {
               <p>{formatToken(selectedDay.status) || "No assigned sparring"}</p>
             </div>
             <div>
-              <p className="weekly-sparring-detail-label">Effective load</p>
+              <p className="weekly-sparring-detail-label">
+                Effective load
+                <WhyTooltip
+                  title={explainEffectiveLoad(selectedDay.effective_load).title}
+                  body={explainEffectiveLoad(selectedDay.effective_load).body}
+                />
+              </p>
               <p>{LOAD_LABELS[selectedDay.effective_load]}</p>
             </div>
           </div>
@@ -233,11 +251,15 @@ export function WeeklySparringView({ planId }: { planId: string }) {
           ) : null}
           {selectedDay.reason_codes.length ? (
             <div className="weekly-sparring-reason-codes" aria-label="Reason codes">
-              {selectedDay.reason_codes.map((code) => (
-                <span key={code} className="badge status-badge-neutral">
-                  {formatToken(code)}
-                </span>
-              ))}
+              {selectedDay.reason_codes.map((code) => {
+                const explanation = explainReasonCode(code);
+                return (
+                  <span key={code} className="badge status-badge-neutral">
+                    {formatToken(code)}
+                    <WhyTooltip title={explanation.title} body={explanation.body} />
+                  </span>
+                );
+              })}
             </div>
           ) : null}
         </div>

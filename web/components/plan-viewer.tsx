@@ -17,7 +17,9 @@ import {
   submitManualStage2,
 } from "@/lib/api";
 import { PremiumLoadingScreen } from "@/components/premium-loading-screen";
+import { WhyTooltip } from "@/components/why-tooltip";
 import { useGenerationController } from "@/lib/generation-controller";
+import { explainRiskBand } from "@/lib/sparring-reason-codes";
 import type { PlanAdvisory, PlanDetail, UserRole } from "@/lib/types";
 
 type ValidatorIssue = Record<string, unknown>;
@@ -243,6 +245,12 @@ function BlockedPlanDecisionCard({
             >
               <span className="sparring-risk-dot" aria-hidden="true" />
               <span>Sparring risk: {riskBandLabel}</span>
+              {(() => {
+                const explanation = explainRiskBand(displayedRiskBand);
+                return explanation ? (
+                  <WhyTooltip title={explanation.title} body={explanation.body} />
+                ) : null;
+              })()}
             </span>
           ) : null}
         </div>
@@ -299,6 +307,12 @@ function SparringAdvisoryCard({ advisory }: { advisory: PlanAdvisory }) {
             >
               <span className="sparring-risk-dot" aria-hidden="true" />
               <span>Injury risk: {riskBandLabel}</span>
+              {(() => {
+                const explanation = explainRiskBand(advisory.risk_band);
+                return explanation ? (
+                  <WhyTooltip title={explanation.title} body={explanation.body} />
+                ) : null;
+              })()}
             </span>
           ) : null}
         </div>
