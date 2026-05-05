@@ -67,13 +67,13 @@ export function summarizeBlockedInjuryContext({
   injuriesText?: string | null;
   guidedInjuries?: GuidedInjurySummary[] | null;
 }) {
-  const signalLabels = [...triage.red_flags, ...triage.matched_high_risk_categories]
+  const signalLabels = [...new Set([...triage.red_flags, ...triage.matched_high_risk_categories]
     .map(titleizeToken)
-    .filter(Boolean)
+    .filter(Boolean))]
     .slice(0, 2);
-  const areas = (guidedInjuries ?? [])
+  const areas = [...new Set((guidedInjuries ?? [])
     .map((injury) => (typeof injury.area === "string" ? injury.area.trim() : ""))
-    .filter(Boolean)
+    .filter(Boolean))]
     .slice(0, 2);
   const injuryLine = typeof injuriesText === "string" ? injuriesText.trim() : "";
 
