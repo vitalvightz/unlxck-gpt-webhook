@@ -20,6 +20,7 @@ import { PremiumLoadingScreen } from "@/components/premium-loading-screen";
 import { WhyTooltip } from "@/components/why-tooltip";
 import { useGenerationController } from "@/lib/generation-controller";
 import { explainRiskBand } from "@/lib/sparring-reason-codes";
+import { buildBlockedWhy } from "@/lib/triage-block-reasons";
 import type { PlanAdvisory, PlanDetail, UserRole } from "@/lib/types";
 
 type ValidatorIssue = Record<string, unknown>;
@@ -246,10 +247,14 @@ function BlockedPlanDecisionCard({
               <span className="sparring-risk-dot" aria-hidden="true" />
               <span>Sparring risk: {riskBandLabel}</span>
               {(() => {
-                const explanation = explainRiskBand(displayedRiskBand);
-                return explanation ? (
-                  <WhyTooltip title={explanation.title} body={explanation.body} />
-                ) : null;
+                const riskExplanation = explainRiskBand(displayedRiskBand);
+                const blockedExplanation = buildBlockedWhy(triage);
+                return (
+                  <WhyTooltip
+                    title={blockedExplanation.title}
+                    body={`${blockedExplanation.body}${riskExplanation ? ` ${riskExplanation.body}` : ""}`}
+                  />
+                );
               })()}
             </span>
           ) : null}

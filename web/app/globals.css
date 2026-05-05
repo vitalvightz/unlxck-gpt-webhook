@@ -8988,14 +8988,16 @@ html[data-app-surface="workspace"][data-theme="dark"] .desktop-nav-toggle {
 
 @media (max-width: 540px) {
   .why-tooltip-bubble {
-    left: 0;
+    left: auto;
+    right: 0;
     transform: none;
     min-width: 200px;
-    max-width: min(320px, calc(100vw - 32px));
+    max-width: min(320px, calc(100vw - 24px));
   }
 
   .why-tooltip-bubble::after {
-    left: 18px;
+    left: auto;
+    right: 18px;
     transform: none;
   }
 }
