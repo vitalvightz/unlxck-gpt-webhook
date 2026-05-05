@@ -79,9 +79,11 @@ _BROKE_REGION_RE = re.compile(
 _BROKE_IT_RE = re.compile(r"\b(?:broke|broken)\s+it\b")
 
 
+_FRACTURE_REGION_RE = re.compile(rf"\b(?:{'|'.join(re.escape(t) for t in _FRACTURE_REGIONS)})\b")
+
+
 def _contains_fracture_region(text: str) -> bool:
-    lowered = str(text or "").lower()
-    return any(re.search(rf"\b{re.escape(token)}\b", lowered) for token in _FRACTURE_REGIONS)
+    return bool(text and _FRACTURE_REGION_RE.search(text))
 
 
 def _normalize_guided_severity_token(value: str) -> str:
