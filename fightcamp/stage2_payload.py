@@ -3285,12 +3285,14 @@ def build_planning_brief(
         existing = brief.get("mental_training") if isinstance(brief, dict) else None
         if isinstance(existing, dict) and existing:
             phase_mental_briefs[phase] = existing
-    if not phase_mental_briefs:
-        phase_mental_briefs = derive_phase_mental_briefs(
+    if any(isinstance(b, dict) and "mental_training" not in b for b in phase_briefs.values()):
+        derived = derive_phase_mental_briefs(
             athlete_model=athlete_model,
             phase_briefs=phase_briefs,
         )
         for phase, brief in phase_briefs.items():
+            if phase not in phase_mental_briefs and phase in derived:
+                phase_mental_briefs[phase] = derived[phase]
             if isinstance(brief, dict) and phase in phase_mental_briefs:
                 brief["mental_training"] = phase_mental_briefs[phase]
 
