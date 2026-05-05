@@ -9,10 +9,12 @@ from .injury_synonyms import remove_negated_phrases
 from .sparring_advisories import summarize_sparring_injury_risk
 from .triage_features import build_triage_features
 
+
 FULL_PLAN = "full_plan"
 RESTRICTED_REHAB_ONLY = "restricted_rehab_only"
 MEDICAL_HOLD = "medical_hold"
 NEEDS_REVIEW = "needs_review"
+
 
 _HIGH_RISK_CATEGORY_ROUTE: dict[str, str] = {
     "fracture": RESTRICTED_REHAB_ONLY,
@@ -60,6 +62,31 @@ _HIGH_RISK_CATEGORY_ROUTE: dict[str, str] = {
     "septic_joint_or_bone_infection": MEDICAL_HOLD,
 }
 
+_CRITICAL_MEDICAL_HOLD_RED_FLAGS = {
+    "loss_of_consciousness",
+    "coughing_blood",
+    "deformity",
+    "vomiting_after_head_impact",
+    "severe_headache_after_head_impact",
+    "seizure_or_convulsion",
+    "amnesia_or_memory_loss",
+    "blurred_or_double_vision",
+    "unequal_pupils",
+    "worsening_drowsiness_or_cannot_wake",
+    "slurred_speech",
+    "neck_pain_after_trauma",
+    "bowel_or_bladder_changes_after_back_injury",
+}
+
+_DANGEROUS_RED_FLAGS = {
+    *_CRITICAL_MEDICAL_HOLD_RED_FLAGS,
+    "shortness_of_breath",
+    "chest_pain",
+    "breathing_pain",
+}
+
+_WORSENING_TRENDS = {"worse", "worsening", "regressing", "worsened"}
+
 _TRAUMA_CONTEXT_PATTERNS = (
     r"\bhit\b",
     r"\bimpact\b",
@@ -70,62 +97,40 @@ _TRAUMA_CONTEXT_PATTERNS = (
 )
 
 _NEURO_CONTEXT_PATTERN = r"\bneurolog(?:ic|ical)\b|\bnerve\b"
-_WORSENING_TRENDS = {"worse", "worsening", "regressing", "worsened"}
 
-_FRACTURE_REGIONS = ("bone", "ankle", "leg", "arm", "rib", "wrist", "hand", "foot", "jaw", "nose", "finger", "toe")
+_FRACTURE_REGIONS = (
+    "bone",
+    "ankle",
+    "leg",
+    "arm",
+    "rib",
+    "wrist",
+    "hand",
+    "foot",
+    "jaw",
+    "nose",
+    "finger",
+    "toe",
+)
+
 _BROKE_REGION_RE = re.compile(
     rf"\b(?:broke|broken)\s+(?:my\s+)?(?:{'|'.join(_FRACTURE_REGIONS)})\b"
 )
 _BROKE_IT_RE = re.compile(r"\b(?:broke|broken)\s+it\b")
-_RECENT_INJURY_TIMELINE_RE = re.compile(
-    r"\b(?:last\s+(?:day|week|month)|this\s+(?:week|month)|recent(?:ly)?|in\s+the\s+last\s+\d+\s*(?:day|days|week|weeks|month|months))\b"
+_FRACTURE_REGION_RE = re.compile(
+    rf"\b(?:{'|'.join(re.escape(region) for region in _FRACTURE_REGIONS)})\b"
 )
 
+_RECENT_INJURY_TIMELINE_RE = re.compile(
+    r"\b(?:"
+    r"last\s+(?:day|week|month)|"
+    r"this\s+(?:week|month)|"
+    r"recent(?:ly)?|"
+    r"in\s+the\s+last\s+\d+\s*(?:day|days|week|weeks|month|months)"
+    r")\b"
+)
 
-_FRACTURE_REGION_RE = re.compile(rf"\b(?:{'|'.join(re.escape(t) for t in _FRACTURE_REGIONS)})\b")
-
-
-def _contains_fracture_region(text: str) -> bool:
-    return bool(text and _FRACTURE_REGION_RE.search(text))
-
-
-def _normalize_guided_severity_token(value: str) -> str:
-    normalized = str(value or "").strip().lower()
-    if normalized == "mild":
-        return "low"
-    if normalized == "severe":
-        return "high"
-    return normalized
-
-
-def _collect_guided_card_evidence(plan_input: PlanInput) -> list[dict[str, str]]:
-    cards: list[dict[str, str]] = []
-    for item in plan_input.parsed_injuries or []:
-        if not isinstance(item, dict):
-            continue
-        card = {
-            "severity": _normalize_guided_severity_token(item.get("severity") or ""),
-            "trend": str(item.get("trend") or "").strip().lower(),
-            "avoid": str(item.get("avoid") or "").strip().lower(),
-            "notes": str(item.get("notes") or "").strip().lower(),
-        }
-        if any(card.values()):
-            cards.append(card)
-
-    if cards:
-        return cards
-
-    guided = plan_input.guided_injury
-    if guided is not None:
-        cards.append(
-            {
-                "severity": _normalize_guided_severity_token(guided.severity or ""),
-                "trend": str(guided.trend or "").strip().lower(),
-                "avoid": str(guided.avoid or "").strip().lower(),
-                "notes": str(guided.notes or "").strip().lower(),
-            }
-        )
-    return cards
+_STRUCTURAL_HISTORY_KEYWORDS = ("fracture", "dislocat", "rupture", "tear")
 
 
 @dataclass(frozen=True)
@@ -144,174 +149,320 @@ class InjuryTriageResult:
         return asdict(self)
 
 
-def triage_injuries(plan_input: PlanInput) -> InjuryTriageResult:
-    features = build_triage_features(
-        injuries=plan_input.injuries,
-        parsed_injuries=plan_input.parsed_injuries,
-        guided_injury=plan_input.guided_injury,
-        restrictions=plan_input.restrictions,
+@dataclass(frozen=True)
+class _GuidedCard:
+    severity: str = ""
+    trend: str = ""
+    avoid: str = ""
+    notes: str = ""
+    location: str = ""
+
+
+def _normalize_guided_severity_token(value: str) -> str:
+    normalized = str(value or "").strip().lower()
+    if normalized == "mild":
+        return "low"
+    if normalized == "severe":
+        return "high"
+    return normalized
+
+
+def _normalized_text(value: Any) -> str:
+    return str(value or "").strip().lower()
+
+
+def _contains_fracture_region(text: str) -> bool:
+    return bool(text and _FRACTURE_REGION_RE.search(text))
+
+
+def _has_mapped_route(categories: set[str], route: str) -> bool:
+    return any(_HIGH_RISK_CATEGORY_ROUTE.get(category) == route for category in categories)
+
+
+def _has_any_pattern(text: str, patterns: tuple[str, ...]) -> bool:
+    return any(re.search(pattern, text) for pattern in patterns)
+
+
+def _build_result(
+    *,
+    mode: str,
+    reasons: list[str],
+    clinician_clearance_required: bool,
+    should_block_stage2: bool,
+    red_flags: set[str],
+    matched_categories: set[str],
+    routing_reasons: set[str],
+    urgent_flags: set[str],
+    sparring_risk_band: str,
+) -> InjuryTriageResult:
+    return InjuryTriageResult(
+        mode=mode,
+        reasons=reasons,
+        clinician_clearance_required=clinician_clearance_required,
+        red_flags=sorted(red_flags),
+        matched_high_risk_categories=sorted(matched_categories),
+        routing_reasons=sorted(routing_reasons),
+        should_block_stage2=should_block_stage2,
+        urgent_flags=sorted(urgent_flags),
+        sparring_risk_band=sparring_risk_band,
     )
 
-    injury_texts = list(features.raw_evidence.get("all_input") or [])
-    combined_text = " | ".join(injury_texts).lower()
 
-    matched_categories = set(features.high_risk_diagnoses)
-    red_flags = set(features.red_flags)
-    urgent_flags = set(features.urgent_flags)
-    routing_reasons: set[str] = set()
+def _parsed_entry_location(entry: dict[str, Any]) -> str:
+    return _normalized_text(
+        entry.get("display_location")
+        or entry.get("canonical_location")
+        or entry.get("area")
+        or entry.get("region")
+        or entry.get("location")
+    )
 
-    for category in matched_categories:
-        route = _HIGH_RISK_CATEGORY_ROUTE.get(category)
-        if route:
-            routing_reasons.add(f"mapped:{category}:{route}")
-    if "urgent_fracture" in urgent_flags:
-        matched_categories.add("fracture")
-        routing_reasons.add("urgent_flag:urgent_fracture")
-    if "urgent_dislocation" in urgent_flags:
-        matched_categories.add("dislocation")
-        routing_reasons.add("urgent_flag:urgent_dislocation")
-    if "urgent_nerve" in urgent_flags:
-        red_flags.add("neurological_symptoms")
-        routing_reasons.add("urgent_flag:urgent_nerve")
 
-    guided_cards = _collect_guided_card_evidence(plan_input)
-    guided_combos = {
-        (card["severity"], card["trend"])
-        for card in guided_cards
-        if card["severity"] or card["trend"]
+def _guided_card_from_parsed_entry(entry: dict[str, Any]) -> _GuidedCard | None:
+    card = _GuidedCard(
+        severity=_normalize_guided_severity_token(entry.get("severity") or ""),
+        trend=_normalized_text(entry.get("trend")),
+        avoid=_normalized_text(entry.get("avoid")),
+        notes=_normalized_text(entry.get("notes")),
+        location=_parsed_entry_location(entry),
+    )
+    if any((card.severity, card.trend, card.avoid, card.notes, card.location)):
+        return card
+    return None
+
+
+def _collect_guided_card_evidence(plan_input: PlanInput) -> list[_GuidedCard]:
+    cards: list[_GuidedCard] = []
+
+    for entry in plan_input.parsed_injuries or []:
+        if not isinstance(entry, dict):
+            continue
+        card = _guided_card_from_parsed_entry(entry)
+        if card is not None and any((card.severity, card.trend, card.avoid, card.notes)):
+            cards.append(card)
+
+    if cards:
+        return cards
+
+    guided = plan_input.guided_injury
+    if guided is None:
+        return []
+
+    fallback_card = _GuidedCard(
+        severity=_normalize_guided_severity_token(guided.severity or ""),
+        trend=_normalized_text(guided.trend),
+        avoid=_normalized_text(guided.avoid),
+        notes=_normalized_text(guided.notes),
+        location=_normalized_text(guided.area),
+    )
+    return [fallback_card] if any(asdict(fallback_card).values()) else []
+
+
+def _guided_combos(cards: list[_GuidedCard]) -> set[tuple[str, str]]:
+    return {
+        (card.severity, card.trend)
+        for card in cards
+        if card.severity or card.trend
     }
-    guided_notes = " | ".join(card["notes"] for card in guided_cards if card["notes"])
-    guided_avoid = " | ".join(card["avoid"] for card in guided_cards if card["avoid"])
 
-    has_guided_high_severity = any(
-        card["severity"] == "high" for card in guided_cards
+
+def _joined_card_field(cards: list[_GuidedCard], field_name: str) -> str:
+    return " | ".join(
+        value
+        for card in cards
+        if (value := getattr(card, field_name, ""))
     )
-    has_guided_worsening = any(card["trend"] in _WORSENING_TRENDS for card in guided_cards)
 
-    if has_guided_high_severity:
-        routing_reasons.add("guided_injury:high_severity")
-        if any(
-            token in combined_text
-            for token in ("rib", "fracture", "dislocation", "instability", "cannot bear weight")
-        ):
-            matched_categories.add("structural_high_severity")
 
-    if has_guided_worsening:
-        red_flags.add("worsening_course")
-        routing_reasons.add("guided_injury:worsening")
+def _has_guided_structural_broke_signal(
+    *,
+    guided_notes: str,
+    cleaned_combined_text: str,
+) -> bool:
+    cleaned_notes = remove_negated_phrases(guided_notes).strip().lower()
+    return bool(
+        _BROKE_REGION_RE.search(cleaned_notes)
+        or (
+            _BROKE_IT_RE.search(cleaned_notes)
+            and _contains_fracture_region(cleaned_combined_text)
+        )
+    )
 
-    cleaned_guided_notes = remove_negated_phrases(guided_notes).strip().lower()
-    cleaned_combined_text = " | ".join(features.raw_evidence.get("cleaned_input") or [])
 
-    if _BROKE_REGION_RE.search(cleaned_guided_notes) or (
-        _BROKE_IT_RE.search(cleaned_guided_notes)
-        and _contains_fracture_region(cleaned_combined_text)
-    ):
-        matched_categories.add("fracture")
-        routing_reasons.add("guided_injury:structural_broke_signal")
-
-    parsed_guided_entries = [entry for entry in (plan_input.parsed_injuries or []) if isinstance(entry, dict)]
-    for card, parsed_entry in zip(guided_cards, parsed_guided_entries):
-        note_text = remove_negated_phrases(str(card.get("notes") or "")).strip().lower()
-        area_text = str(
-            parsed_entry.get("area")
-            or parsed_entry.get("region")
-            or parsed_entry.get("location")
-            or ""
-        ).strip().lower()
+def _apply_card_area_broke_signals(
+    *,
+    cards: list[_GuidedCard],
+    matched_categories: set[str],
+    routing_reasons: set[str],
+) -> None:
+    for card in cards:
+        note_text = remove_negated_phrases(card.notes).strip().lower()
         if not note_text:
             continue
-        contextual_card_text = " ".join(part for part in (area_text, note_text) if part)
+
+        contextual_card_text = " ".join(
+            part for part in (card.location, note_text) if part
+        )
+
         if _BROKE_IT_RE.search(note_text) and _contains_fracture_region(contextual_card_text):
             matched_categories.add("fracture")
             routing_reasons.add("guided_injury:card_area_context_broke_signal")
 
-    has_recent_structural_history_signal = any(
-        _RECENT_INJURY_TIMELINE_RE.search(str(card.get("notes") or ""))
-        and (
-            _BROKE_REGION_RE.search(str(card.get("notes") or ""))
-            or _BROKE_IT_RE.search(str(card.get("notes") or ""))
-            or "fracture" in str(card.get("notes") or "")
-            or "dislocat" in str(card.get("notes") or "")
-            or "rupture" in str(card.get("notes") or "")
-            or "tear" in str(card.get("notes") or "")
+
+def _has_recent_structural_history_signal(cards: list[_GuidedCard]) -> bool:
+    for card in cards:
+        notes = remove_negated_phrases(card.notes).strip().lower()
+        if not notes:
+            continue
+
+        has_recent_timeline = bool(_RECENT_INJURY_TIMELINE_RE.search(notes))
+        has_structural_signal = bool(
+            _BROKE_REGION_RE.search(notes)
+            or _BROKE_IT_RE.search(notes)
+            or any(keyword in notes for keyword in _STRUCTURAL_HISTORY_KEYWORDS)
         )
-        for card in guided_cards
+
+        if has_recent_timeline and has_structural_signal:
+            return True
+
+    return False
+
+
+def _apply_urgent_flags(
+    *,
+    urgent_flags: set[str],
+    red_flags: set[str],
+    matched_categories: set[str],
+    routing_reasons: set[str],
+) -> None:
+    if "urgent_fracture" in urgent_flags:
+        matched_categories.add("fracture")
+        routing_reasons.add("urgent_flag:urgent_fracture")
+
+    if "urgent_dislocation" in urgent_flags:
+        matched_categories.add("dislocation")
+        routing_reasons.add("urgent_flag:urgent_dislocation")
+
+    if "urgent_nerve" in urgent_flags:
+        red_flags.add("neurological_symptoms")
+        routing_reasons.add("urgent_flag:urgent_nerve")
+
+
+def _apply_high_risk_mapping_reasons(
+    *,
+    matched_categories: set[str],
+    routing_reasons: set[str],
+) -> None:
+    for category in matched_categories:
+        route = _HIGH_RISK_CATEGORY_ROUTE.get(category)
+        if route:
+            routing_reasons.add(f"mapped:{category}:{route}")
+
+
+def _chest_with_systemic_red_flags(*, red_flags: set[str], combined_text: str) -> bool:
+    return "chest_pain" in red_flags and (
+        "shortness_of_breath" in red_flags
+        or "coughing_blood" in red_flags
+        or _has_any_pattern(combined_text, _TRAUMA_CONTEXT_PATTERNS)
+        or "worsening_course" in red_flags
     )
 
-    if _BROKE_REGION_RE.search(cleaned_combined_text) or (
-        _BROKE_IT_RE.search(cleaned_combined_text)
-        and _contains_fracture_region(cleaned_combined_text)
-    ):
-        matched_categories.add("fracture")
-        routing_reasons.add("raw_injury:structural_broke_signal")
 
-    if any(token in guided_avoid for token in ("contact", "spar", "impact", "loaded", "weight bearing")):
-        routing_reasons.add("guided_injury:avoid_high_load")
+def _rib_breathing_unsafe(
+    *,
+    red_flags: set[str],
+    matched_categories: set[str],
+    combined_text: str,
+) -> bool:
+    rib_or_chest_context = any(
+        token in combined_text for token in ("rib", "intercostal", "chest")
+    )
 
-    if "breath" in guided_notes and any(token in combined_text for token in ("rib", "chest", "pain")):
-        red_flags.add("breathing_pain")
-        routing_reasons.add("guided_injury:breathing_symptoms")
-    rib_or_chest_context = any(token in combined_text for token in ("rib", "intercostal", "chest"))
+    if not rib_or_chest_context or "breathing_pain" not in red_flags:
+        return False
 
-    medical_hold = False
-    if any(
-        flag in red_flags
-        for flag in (
-            "loss_of_consciousness",
-            "coughing_blood",
-            "deformity",
-            "vomiting_after_head_impact",
-            "severe_headache_after_head_impact",
-            "seizure_or_convulsion",
-            "amnesia_or_memory_loss",
-            "blurred_or_double_vision",
-            "unequal_pupils",
-            "worsening_drowsiness_or_cannot_wake",
-            "slurred_speech",
-            "neck_pain_after_trauma",
-            "bowel_or_bladder_changes_after_back_injury",
+    return (
+        any(
+            category in matched_categories
+            for category in ("broken_rib", "fracture", "open_fracture")
         )
-    ):
+        or _has_any_pattern(combined_text, _TRAUMA_CONTEXT_PATTERNS)
+        or "shortness_of_breath" in red_flags
+    )
+
+
+def _neurological_combo(*, red_flags: set[str], combined_text: str) -> bool:
+    explicit_neuro_context = bool(re.search(_NEURO_CONTEXT_PATTERN, combined_text)) and any(
+        flag in red_flags
+        for flag in ("loss_of_consciousness", "numbness", "weakness", "confusion")
+    )
+
+    loss_of_consciousness_with_neuro_symptoms = (
+        "loss_of_consciousness" in red_flags
+        and any(flag in red_flags for flag in ("numbness", "weakness", "tingling", "confusion"))
+    )
+
+    return explicit_neuro_context or loss_of_consciousness_with_neuro_symptoms
+
+
+def _initial_medical_hold_gate(
+    *,
+    red_flags: set[str],
+    matched_categories: set[str],
+    combined_text: str,
+    routing_reasons: set[str],
+) -> tuple[bool, bool, bool]:
+    medical_hold = False
+
+    if red_flags & _CRITICAL_MEDICAL_HOLD_RED_FLAGS:
         medical_hold = True
         routing_reasons.add("critical_red_flag")
 
-    if any(_HIGH_RISK_CATEGORY_ROUTE.get(c) == MEDICAL_HOLD for c in matched_categories):
+    if _has_mapped_route(matched_categories, MEDICAL_HOLD):
         medical_hold = True
         routing_reasons.add("mapped_medical_hold_category")
 
-    chest_with_systemic = "chest_pain" in red_flags and (
-        "shortness_of_breath" in red_flags
-        or "coughing_blood" in red_flags
-        or any(re.search(pattern, combined_text) for pattern in _TRAUMA_CONTEXT_PATTERNS)
-        or "worsening_course" in red_flags
+    chest_with_systemic = _chest_with_systemic_red_flags(
+        red_flags=red_flags,
+        combined_text=combined_text,
     )
     if chest_with_systemic:
         medical_hold = True
         routing_reasons.add("chest_red_flag_combination")
 
-    rib_breathing_unsafe = rib_or_chest_context and ("breathing_pain" in red_flags) and (
-        any(category in matched_categories for category in ("broken_rib", "fracture", "open_fracture"))
-        or any(re.search(pattern, combined_text) for pattern in _TRAUMA_CONTEXT_PATTERNS)
-        or "shortness_of_breath" in red_flags
+    rib_breathing_unsafe = _rib_breathing_unsafe(
+        red_flags=red_flags,
+        matched_categories=matched_categories,
+        combined_text=combined_text,
     )
     if rib_breathing_unsafe:
         medical_hold = True
         routing_reasons.add("rib_breathing_red_flag_combination")
 
-    neuro_combo = (
-        bool(re.search(_NEURO_CONTEXT_PATTERN, combined_text))
-        and any(flag in red_flags for flag in ("loss_of_consciousness", "numbness", "weakness", "confusion"))
-    ) or (
-        "loss_of_consciousness" in red_flags
-        and any(flag in red_flags for flag in ("numbness", "weakness", "tingling", "confusion"))
+    neuro_combo = _neurological_combo(
+        red_flags=red_flags,
+        combined_text=combined_text,
     )
     if neuro_combo:
         medical_hold = True
         routing_reasons.add("neurological_red_flag_combination")
 
+    return medical_hold, chest_with_systemic or rib_breathing_unsafe, neuro_combo
+
+
+def _initial_restricted_rehab_gate(
+    *,
+    red_flags: set[str],
+    matched_categories: set[str],
+    features: Any,
+    routing_reasons: set[str],
+) -> bool:
     restricted_rehab = False
-    if any(_HIGH_RISK_CATEGORY_ROUTE.get(c) == RESTRICTED_REHAB_ONLY for c in matched_categories) or "structural_high_severity" in matched_categories:
+
+    if (
+        _has_mapped_route(matched_categories, RESTRICTED_REHAB_ONLY)
+        or "structural_high_severity" in matched_categories
+    ):
         restricted_rehab = True
         routing_reasons.add("mapped_restricted_category")
 
@@ -327,111 +478,50 @@ def triage_injuries(plan_input: PlanInput) -> InjuryTriageResult:
         restricted_rehab = True
         routing_reasons.add("clinician_restriction_signal")
 
+    return restricted_rehab
+
+
+def _apply_sparring_risk_gate(
+    *,
+    injury_texts: list[str],
+    has_guided_high_severity: bool,
+    red_flags: set[str],
+    restricted_rehab: bool,
+    medical_hold: bool,
+    routing_reasons: set[str],
+) -> tuple[str, bool, bool]:
     sparring_risk = summarize_sparring_injury_risk(injury_texts=injury_texts)
     highest_band = str(sparring_risk.get("risk_band") or "green")
+
     if highest_band in {"red", "black"} and has_guided_high_severity:
         restricted_rehab = True
         routing_reasons.add("guided_high_severity_with_elevated_sparring_risk")
+
     if highest_band == "black":
         routing_reasons.add("sparring_black_risk")
         if any(flag in red_flags for flag in ("loss_of_consciousness", "coughing_blood", "deformity")):
             medical_hold = True
         else:
             restricted_rehab = True
+
     elif highest_band == "red" and restricted_rehab:
         routing_reasons.add("sparring_red_risk")
 
-    if any(("high", trend) in guided_combos for trend in _WORSENING_TRENDS):
-        routing_reasons.add("combo_gate:high_worsening")
-    if ("high", "") in guided_combos:
-        routing_reasons.add("combo_gate:high_trend_missing")
-    if ("high", "stable") in guided_combos:
-        routing_reasons.add("combo_gate:high_stable")
-    if any(("moderate", trend) in guided_combos for trend in _WORSENING_TRENDS):
-        routing_reasons.add("combo_gate:moderate_worsening")
-    if any(("low", trend) in guided_combos for trend in _WORSENING_TRENDS):
-        routing_reasons.add("combo_gate:low_worsening")
+    return highest_band, restricted_rehab, medical_hold
 
-    matched_categories_sorted = sorted(matched_categories)
-    routing_reasons_sorted = sorted(routing_reasons)
 
-    if medical_hold:
-        return InjuryTriageResult(
-            mode=MEDICAL_HOLD,
-            reasons=[
-                "Urgent or medically disqualifying injury signals were detected before planning.",
-                "Training guidance is blocked pending immediate medical review.",
-            ],
-            clinician_clearance_required=True,
-            red_flags=sorted(red_flags),
-            matched_high_risk_categories=matched_categories_sorted,
-            routing_reasons=routing_reasons_sorted,
-            should_block_stage2=True,
-            urgent_flags=sorted(urgent_flags),
-            sparring_risk_band=highest_band,
-        )
+def _has_uncertainty_trigger(
+    *,
+    cards: list[_GuidedCard],
+    matched_categories: set[str],
+    red_flags: set[str],
+    features: Any,
+    urgent_flags: set[str],
+) -> bool:
+    if not cards:
+        return False
 
-    if restricted_rehab:
-        return InjuryTriageResult(
-            mode=RESTRICTED_REHAB_ONLY,
-            reasons=[
-                "Serious structural injury signals were detected before planning.",
-                "Normal fight-camp loading/sparring generation is suspended until clinician clearance.",
-            ],
-            clinician_clearance_required=True,
-            red_flags=sorted(red_flags),
-            matched_high_risk_categories=matched_categories_sorted,
-            routing_reasons=routing_reasons_sorted,
-            should_block_stage2=True,
-            urgent_flags=sorted(urgent_flags),
-            sparring_risk_band=highest_band,
-        )
-
-    if has_recent_structural_history_signal:
-        routing_reasons.add("guided_injury:recent_structural_history_signal")
-        return InjuryTriageResult(
-            mode=NEEDS_REVIEW,
-            reasons=[
-                "Recent structural injury history was detected in guided injury notes.",
-                "Coach/admin review is required before normal plan generation.",
-            ],
-            clinician_clearance_required=False,
-            red_flags=sorted(red_flags),
-            matched_high_risk_categories=matched_categories_sorted,
-            routing_reasons=sorted(routing_reasons),
-            should_block_stage2=True,
-            urgent_flags=sorted(urgent_flags),
-            sparring_risk_band=highest_band,
-        )
-
-    has_dangerous_red_flags = any(
-        flag in red_flags
-        for flag in (
-            "loss_of_consciousness",
-            "coughing_blood",
-            "deformity",
-            "vomiting_after_head_impact",
-            "severe_headache_after_head_impact",
-            "seizure_or_convulsion",
-            "amnesia_or_memory_loss",
-            "blurred_or_double_vision",
-            "unequal_pupils",
-            "worsening_drowsiness_or_cannot_wake",
-            "slurred_speech",
-            "neck_pain_after_trauma",
-            "bowel_or_bladder_changes_after_back_injury",
-            "shortness_of_breath",
-            "chest_pain",
-            "breathing_pain",
-        )
-    )
-    has_chest_or_neuro_combo = chest_with_systemic or rib_breathing_unsafe or neuro_combo
-    has_mapped_medical_hold = any(_HIGH_RISK_CATEGORY_ROUTE.get(category) == MEDICAL_HOLD for category in matched_categories)
-    has_mapped_restricted = any(_HIGH_RISK_CATEGORY_ROUTE.get(category) == RESTRICTED_REHAB_ONLY for category in matched_categories)
-    has_structural_severe_signal = bool(features.structural_severe_signals)
-    has_clinician_restriction_signal = bool(features.clinician_restriction_signals)
-    has_function_loss_signal = bool(features.function_loss_signals)
-    has_uncertainty_trigger = bool(guided_cards) and not any(
+    has_any_safety_signal = any(
         (
             matched_categories,
             red_flags,
@@ -440,204 +530,438 @@ def triage_injuries(plan_input: PlanInput) -> InjuryTriageResult:
             features.function_loss_signals,
             urgent_flags,
         )
-    ) and sum(len(card["notes"].split()) for card in guided_cards) < 3
+    )
+    if has_any_safety_signal:
+        return False
 
-    if any(("high", trend) in guided_combos for trend in _WORSENING_TRENDS):
+    return sum(len(card.notes.split()) for card in cards) < 3
+
+
+def _combo_gate_result(
+    *,
+    combos: set[tuple[str, str]],
+    red_flags: set[str],
+    matched_categories: set[str],
+    routing_reasons: set[str],
+    urgent_flags: set[str],
+    highest_band: str,
+    features: Any,
+    has_chest_or_neuro_combo: bool,
+    has_mapped_medical_hold: bool,
+    has_mapped_restricted: bool,
+    has_dangerous_red_flags: bool,
+    has_structural_severe_signal: bool,
+    has_clinician_restriction_signal: bool,
+    has_function_loss_signal: bool,
+    has_uncertainty_trigger: bool,
+) -> InjuryTriageResult | None:
+    if any(("high", trend) in combos for trend in _WORSENING_TRENDS):
         routing_reasons.add("combo_gate:high_worsening")
-        routing_reasons_sorted = sorted(routing_reasons)
+
         if has_dangerous_red_flags or has_chest_or_neuro_combo or has_mapped_medical_hold:
-            return InjuryTriageResult(
+            return _build_result(
                 mode=MEDICAL_HOLD,
                 reasons=[
                     "High-severity worsening injury with dangerous escalation signals was detected.",
                     "Training guidance is blocked pending immediate medical review.",
                 ],
                 clinician_clearance_required=True,
-                red_flags=sorted(red_flags),
-                matched_high_risk_categories=matched_categories_sorted,
-                routing_reasons=routing_reasons_sorted,
                 should_block_stage2=True,
-                urgent_flags=sorted(urgent_flags),
+                red_flags=red_flags,
+                matched_categories=matched_categories,
+                routing_reasons=routing_reasons,
+                urgent_flags=urgent_flags,
                 sparring_risk_band=highest_band,
             )
-        return InjuryTriageResult(
+
+        return _build_result(
             mode=NEEDS_REVIEW,
             reasons=[
                 "High-severity worsening injury requires coach/admin review before any normal plan.",
                 "Automatic full-plan generation is blocked by triage combo gate.",
             ],
             clinician_clearance_required=False,
-            red_flags=sorted(red_flags),
-            matched_high_risk_categories=matched_categories_sorted,
-            routing_reasons=routing_reasons_sorted,
             should_block_stage2=True,
-            urgent_flags=sorted(urgent_flags),
+            red_flags=red_flags,
+            matched_categories=matched_categories,
+            routing_reasons=routing_reasons,
+            urgent_flags=urgent_flags,
             sparring_risk_band=highest_band,
         )
 
-    if ("high", "") in guided_combos:
+    if ("high", "") in combos:
         routing_reasons.add("combo_gate:high_trend_missing")
-        routing_reasons_sorted = sorted(routing_reasons)
+
         if (
             has_structural_severe_signal
             or has_mapped_restricted
             or has_clinician_restriction_signal
             or has_function_loss_signal
         ):
-            return InjuryTriageResult(
+            return _build_result(
                 mode=RESTRICTED_REHAB_ONLY,
                 reasons=[
                     "High-severity injury with missing trend still shows structural/restriction risk signals.",
                     "Normal fight-camp loading/sparring generation remains suspended.",
                 ],
                 clinician_clearance_required=True,
-                red_flags=sorted(red_flags),
-                matched_high_risk_categories=matched_categories_sorted,
-                routing_reasons=routing_reasons_sorted,
                 should_block_stage2=True,
-                urgent_flags=sorted(urgent_flags),
+                red_flags=red_flags,
+                matched_categories=matched_categories,
+                routing_reasons=routing_reasons,
+                urgent_flags=urgent_flags,
                 sparring_risk_band=highest_band,
             )
-        return InjuryTriageResult(
+
+        return _build_result(
             mode=NEEDS_REVIEW,
             reasons=[
                 "High-severity injury is missing trend status and requires coach/admin review.",
                 "Automatic full-plan generation is blocked by triage combo gate.",
             ],
             clinician_clearance_required=False,
-            red_flags=sorted(red_flags),
-            matched_high_risk_categories=matched_categories_sorted,
-            routing_reasons=routing_reasons_sorted,
             should_block_stage2=True,
-            urgent_flags=sorted(urgent_flags),
+            red_flags=red_flags,
+            matched_categories=matched_categories,
+            routing_reasons=routing_reasons,
+            urgent_flags=urgent_flags,
             sparring_risk_band=highest_band,
         )
 
-    if ("high", "stable") in guided_combos:
+    if ("high", "stable") in combos:
         routing_reasons.add("combo_gate:high_stable")
-        routing_reasons_sorted = sorted(routing_reasons)
+
         if (
             has_structural_severe_signal
             or has_mapped_restricted
             or has_clinician_restriction_signal
             or has_function_loss_signal
         ):
-            return InjuryTriageResult(
+            return _build_result(
                 mode=RESTRICTED_REHAB_ONLY,
                 reasons=[
                     "High-severity stable injury still shows structural/restriction risk signals.",
                     "Normal fight-camp loading/sparring generation remains suspended.",
                 ],
                 clinician_clearance_required=True,
-                red_flags=sorted(red_flags),
-                matched_high_risk_categories=matched_categories_sorted,
-                routing_reasons=routing_reasons_sorted,
                 should_block_stage2=True,
-                urgent_flags=sorted(urgent_flags),
+                red_flags=red_flags,
+                matched_categories=matched_categories,
+                routing_reasons=routing_reasons,
+                urgent_flags=urgent_flags,
                 sparring_risk_band=highest_band,
             )
-        return InjuryTriageResult(
+
+        return _build_result(
             mode=NEEDS_REVIEW,
             reasons=[
                 "High-severity stable injury requires coach/admin review before any normal plan.",
                 "Automatic full-plan generation is blocked by triage combo gate.",
             ],
             clinician_clearance_required=False,
-            red_flags=sorted(red_flags),
-            matched_high_risk_categories=matched_categories_sorted,
-            routing_reasons=routing_reasons_sorted,
             should_block_stage2=True,
-            urgent_flags=sorted(urgent_flags),
+            red_flags=red_flags,
+            matched_categories=matched_categories,
+            routing_reasons=routing_reasons,
+            urgent_flags=urgent_flags,
             sparring_risk_band=highest_band,
         )
 
-    if any(("moderate", trend) in guided_combos for trend in _WORSENING_TRENDS):
+    if any(("moderate", trend) in combos for trend in _WORSENING_TRENDS):
         routing_reasons.add("combo_gate:moderate_worsening")
-        routing_reasons_sorted = sorted(routing_reasons)
+
         if has_dangerous_red_flags or has_mapped_medical_hold:
-            return InjuryTriageResult(
+            return _build_result(
                 mode=MEDICAL_HOLD,
                 reasons=[
                     "Moderate worsening injury includes dangerous escalation signals.",
                     "Training guidance is blocked pending immediate medical review.",
                 ],
                 clinician_clearance_required=True,
-                red_flags=sorted(red_flags),
-                matched_high_risk_categories=matched_categories_sorted,
-                routing_reasons=routing_reasons_sorted,
                 should_block_stage2=True,
-                urgent_flags=sorted(urgent_flags),
+                red_flags=red_flags,
+                matched_categories=matched_categories,
+                routing_reasons=routing_reasons,
+                urgent_flags=urgent_flags,
                 sparring_risk_band=highest_band,
             )
-        return InjuryTriageResult(
+
+        return _build_result(
             mode=NEEDS_REVIEW,
             reasons=[
                 "Moderate worsening injury requires coach/admin review before any normal plan.",
                 "Automatic full-plan generation is blocked by triage combo gate.",
             ],
             clinician_clearance_required=False,
-            red_flags=sorted(red_flags),
-            matched_high_risk_categories=matched_categories_sorted,
-            routing_reasons=routing_reasons_sorted,
             should_block_stage2=True,
-            urgent_flags=sorted(urgent_flags),
+            red_flags=red_flags,
+            matched_categories=matched_categories,
+            routing_reasons=routing_reasons,
+            urgent_flags=urgent_flags,
             sparring_risk_band=highest_band,
         )
 
-    if any(("low", trend) in guided_combos for trend in _WORSENING_TRENDS):
+    if any(("low", trend) in combos for trend in _WORSENING_TRENDS):
         routing_reasons.add("combo_gate:low_worsening")
-        routing_reasons_sorted = sorted(routing_reasons)
-        return InjuryTriageResult(
+
+        return _build_result(
             mode=NEEDS_REVIEW,
             reasons=[
                 "Low-severity worsening injury still requires review before normal planning.",
                 "Automatic full-plan generation is blocked by triage combo gate.",
             ],
             clinician_clearance_required=False,
-            red_flags=sorted(red_flags),
-            matched_high_risk_categories=matched_categories_sorted,
-            routing_reasons=routing_reasons_sorted,
             should_block_stage2=True,
-            urgent_flags=sorted(urgent_flags),
+            red_flags=red_flags,
+            matched_categories=matched_categories,
+            routing_reasons=routing_reasons,
+            urgent_flags=urgent_flags,
             sparring_risk_band=highest_band,
         )
 
-    if ("moderate", "stable") in guided_combos:
+    if ("moderate", "stable") in combos:
         routing_reasons.add("combo_gate:moderate_stable_allowlist_check")
+
         has_mapped_serious_category = has_mapped_medical_hold or has_mapped_restricted
-        if (
+        should_block = (
             has_dangerous_red_flags
             or has_structural_severe_signal
             or has_clinician_restriction_signal
             or has_mapped_serious_category
             or has_uncertainty_trigger
-        ):
+        )
+
+        if should_block:
             routing_reasons.add("combo_gate:moderate_stable_blocked")
-            routing_reasons_sorted = sorted(routing_reasons)
-            return InjuryTriageResult(
+
+            return _build_result(
                 mode=NEEDS_REVIEW,
                 reasons=[
                     "Moderate stable injury did not meet the strict allowlist for automatic full planning.",
                     "Coach/admin review is required before normal plan generation.",
                 ],
                 clinician_clearance_required=False,
-                red_flags=sorted(red_flags),
-                matched_high_risk_categories=matched_categories_sorted,
-                routing_reasons=routing_reasons_sorted,
                 should_block_stage2=True,
-                urgent_flags=sorted(urgent_flags),
+                red_flags=red_flags,
+                matched_categories=matched_categories,
+                routing_reasons=routing_reasons,
+                urgent_flags=urgent_flags,
                 sparring_risk_band=highest_band,
             )
 
-    return InjuryTriageResult(
+    return None
+
+
+def triage_injuries(plan_input: PlanInput) -> InjuryTriageResult:
+    features = build_triage_features(
+        injuries=plan_input.injuries,
+        parsed_injuries=plan_input.parsed_injuries,
+        guided_injury=plan_input.guided_injury,
+        restrictions=plan_input.restrictions,
+    )
+
+    injury_texts = list(features.raw_evidence.get("all_input") or [])
+    combined_text = " | ".join(injury_texts).lower()
+    cleaned_combined_text = " | ".join(features.raw_evidence.get("cleaned_input") or [])
+
+    matched_categories = set(features.high_risk_diagnoses)
+    red_flags = set(features.red_flags)
+    urgent_flags = set(features.urgent_flags)
+    routing_reasons: set[str] = set()
+
+    _apply_high_risk_mapping_reasons(
+        matched_categories=matched_categories,
+        routing_reasons=routing_reasons,
+    )
+    _apply_urgent_flags(
+        urgent_flags=urgent_flags,
+        red_flags=red_flags,
+        matched_categories=matched_categories,
+        routing_reasons=routing_reasons,
+    )
+
+    guided_cards = _collect_guided_card_evidence(plan_input)
+    combos = _guided_combos(guided_cards)
+
+    guided_notes = _joined_card_field(guided_cards, "notes")
+    guided_avoid = _joined_card_field(guided_cards, "avoid")
+
+    has_guided_high_severity = any(card.severity == "high" for card in guided_cards)
+    has_guided_worsening = any(card.trend in _WORSENING_TRENDS for card in guided_cards)
+
+    if has_guided_high_severity:
+        routing_reasons.add("guided_injury:high_severity")
+        if any(
+            token in combined_text
+            for token in ("rib", "fracture", "dislocation", "instability", "cannot bear weight")
+        ):
+            matched_categories.add("structural_high_severity")
+
+    if has_guided_worsening:
+        red_flags.add("worsening_course")
+        routing_reasons.add("guided_injury:worsening")
+
+    if _has_guided_structural_broke_signal(
+        guided_notes=guided_notes,
+        cleaned_combined_text=cleaned_combined_text,
+    ):
+        matched_categories.add("fracture")
+        routing_reasons.add("guided_injury:structural_broke_signal")
+
+    _apply_card_area_broke_signals(
+        cards=guided_cards,
+        matched_categories=matched_categories,
+        routing_reasons=routing_reasons,
+    )
+
+    has_recent_structural_history_signal = _has_recent_structural_history_signal(guided_cards)
+
+    if _BROKE_REGION_RE.search(cleaned_combined_text) or (
+        _BROKE_IT_RE.search(cleaned_combined_text)
+        and _contains_fracture_region(cleaned_combined_text)
+    ):
+        matched_categories.add("fracture")
+        routing_reasons.add("raw_injury:structural_broke_signal")
+
+    if any(
+        token in guided_avoid
+        for token in ("contact", "spar", "impact", "loaded", "weight bearing")
+    ):
+        routing_reasons.add("guided_injury:avoid_high_load")
+
+    if "breath" in guided_notes and any(token in combined_text for token in ("rib", "chest", "pain")):
+        red_flags.add("breathing_pain")
+        routing_reasons.add("guided_injury:breathing_symptoms")
+
+    medical_hold, has_chest_or_rib_combo, has_neuro_combo = _initial_medical_hold_gate(
+        red_flags=red_flags,
+        matched_categories=matched_categories,
+        combined_text=combined_text,
+        routing_reasons=routing_reasons,
+    )
+
+    restricted_rehab = _initial_restricted_rehab_gate(
+        red_flags=red_flags,
+        matched_categories=matched_categories,
+        features=features,
+        routing_reasons=routing_reasons,
+    )
+
+    highest_band, restricted_rehab, medical_hold = _apply_sparring_risk_gate(
+        injury_texts=injury_texts,
+        has_guided_high_severity=has_guided_high_severity,
+        red_flags=red_flags,
+        restricted_rehab=restricted_rehab,
+        medical_hold=medical_hold,
+        routing_reasons=routing_reasons,
+    )
+
+    for severity, trend in combos:
+        if severity == "high" and trend in _WORSENING_TRENDS:
+            routing_reasons.add("combo_gate:high_worsening")
+        elif severity == "high" and trend == "":
+            routing_reasons.add("combo_gate:high_trend_missing")
+        elif severity == "high" and trend == "stable":
+            routing_reasons.add("combo_gate:high_stable")
+        elif severity == "moderate" and trend in _WORSENING_TRENDS:
+            routing_reasons.add("combo_gate:moderate_worsening")
+        elif severity == "low" and trend in _WORSENING_TRENDS:
+            routing_reasons.add("combo_gate:low_worsening")
+
+    if medical_hold:
+        return _build_result(
+            mode=MEDICAL_HOLD,
+            reasons=[
+                "Urgent or medically disqualifying injury signals were detected before planning.",
+                "Training guidance is blocked pending immediate medical review.",
+            ],
+            clinician_clearance_required=True,
+            should_block_stage2=True,
+            red_flags=red_flags,
+            matched_categories=matched_categories,
+            routing_reasons=routing_reasons,
+            urgent_flags=urgent_flags,
+            sparring_risk_band=highest_band,
+        )
+
+    if restricted_rehab:
+        return _build_result(
+            mode=RESTRICTED_REHAB_ONLY,
+            reasons=[
+                "Serious structural injury signals were detected before planning.",
+                "Normal fight-camp loading/sparring generation is suspended until clinician clearance.",
+            ],
+            clinician_clearance_required=True,
+            should_block_stage2=True,
+            red_flags=red_flags,
+            matched_categories=matched_categories,
+            routing_reasons=routing_reasons,
+            urgent_flags=urgent_flags,
+            sparring_risk_band=highest_band,
+        )
+
+    if has_recent_structural_history_signal:
+        routing_reasons.add("guided_injury:recent_structural_history_signal")
+
+        return _build_result(
+            mode=NEEDS_REVIEW,
+            reasons=[
+                "Recent structural injury history was detected in guided injury notes.",
+                "Coach/admin review is required before normal plan generation.",
+            ],
+            clinician_clearance_required=False,
+            should_block_stage2=True,
+            red_flags=red_flags,
+            matched_categories=matched_categories,
+            routing_reasons=routing_reasons,
+            urgent_flags=urgent_flags,
+            sparring_risk_band=highest_band,
+        )
+
+    has_mapped_medical_hold = _has_mapped_route(matched_categories, MEDICAL_HOLD)
+    has_mapped_restricted = _has_mapped_route(matched_categories, RESTRICTED_REHAB_ONLY)
+    has_dangerous_red_flags = bool(red_flags & _DANGEROUS_RED_FLAGS)
+    has_chest_or_neuro_combo = has_chest_or_rib_combo or has_neuro_combo
+    has_structural_severe_signal = bool(features.structural_severe_signals)
+    has_clinician_restriction_signal = bool(features.clinician_restriction_signals)
+    has_function_loss_signal = bool(features.function_loss_signals)
+    has_uncertainty_trigger = _has_uncertainty_trigger(
+        cards=guided_cards,
+        matched_categories=matched_categories,
+        red_flags=red_flags,
+        features=features,
+        urgent_flags=urgent_flags,
+    )
+
+    combo_result = _combo_gate_result(
+        combos=combos,
+        red_flags=red_flags,
+        matched_categories=matched_categories,
+        routing_reasons=routing_reasons,
+        urgent_flags=urgent_flags,
+        highest_band=highest_band,
+        features=features,
+        has_chest_or_neuro_combo=has_chest_or_neuro_combo,
+        has_mapped_medical_hold=has_mapped_medical_hold,
+        has_mapped_restricted=has_mapped_restricted,
+        has_dangerous_red_flags=has_dangerous_red_flags,
+        has_structural_severe_signal=has_structural_severe_signal,
+        has_clinician_restriction_signal=has_clinician_restriction_signal,
+        has_function_loss_signal=has_function_loss_signal,
+        has_uncertainty_trigger=has_uncertainty_trigger,
+    )
+    if combo_result is not None:
+        return combo_result
+
+    return _build_result(
         mode=FULL_PLAN,
         reasons=["No pre-planning medical hold signals detected."],
         clinician_clearance_required=False,
-        red_flags=sorted(red_flags),
-        matched_high_risk_categories=matched_categories_sorted,
-        routing_reasons=routing_reasons_sorted,
         should_block_stage2=False,
-        urgent_flags=sorted(urgent_flags),
+        red_flags=red_flags,
+        matched_categories=matched_categories,
+        routing_reasons=routing_reasons,
+        urgent_flags=urgent_flags,
         sparring_risk_band=highest_band,
     )
 
@@ -654,6 +978,7 @@ def blocked_mode_output(*, triage: InjuryTriageResult) -> dict[str, Any]:
             "needs_review: severity/trend combo safety gate triggered; "
             "stage2 and normal generation blocked pending coach/admin approval."
         )
+
     elif triage.mode == RESTRICTED_REHAB_ONLY:
         plan_text = (
             "## Injury Triage: Restricted Rehab Only\n"
@@ -666,6 +991,7 @@ def blocked_mode_output(*, triage: InjuryTriageResult) -> dict[str, Any]:
             "restricted_rehab_only: serious structural injury gate triggered; "
             "normal camp generation blocked by design."
         )
+
     else:
         plan_text = (
             "## Injury Triage: Medical Hold\n"
