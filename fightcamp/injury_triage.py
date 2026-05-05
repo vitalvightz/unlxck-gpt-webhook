@@ -5,6 +5,7 @@ import re
 from typing import Any
 
 from .input_parsing import PlanInput
+from .injury_synonyms import remove_negated_phrases
 from .sparring_advisories import summarize_sparring_injury_risk
 from .triage_features import build_triage_features
 
@@ -76,6 +77,11 @@ _BROKE_REGION_RE = re.compile(
     rf"\b(?:broke|broken)\s+(?:my\s+)?(?:{'|'.join(_FRACTURE_REGIONS)})\b"
 )
 _BROKE_IT_RE = re.compile(r"\b(?:broke|broken)\s+it\b")
+
+
+def _contains_fracture_region(text: str) -> bool:
+    lowered = str(text or "").lower()
+    return any(re.search(rf"\b{re.escape(token)}\b", lowered) for token in _FRACTURE_REGIONS)
 
 
 def _normalize_guided_severity_token(value: str) -> str:
@@ -189,12 +195,22 @@ def triage_injuries(plan_input: PlanInput) -> InjuryTriageResult:
         red_flags.add("worsening_course")
         routing_reasons.add("guided_injury:worsening")
 
-    if _BROKE_REGION_RE.search(guided_notes) or (
-        _BROKE_IT_RE.search(guided_notes)
-        and any(token in combined_text for token in _FRACTURE_REGIONS)
+    cleaned_guided_notes = remove_negated_phrases(guided_notes).strip().lower()
+    cleaned_combined_text = remove_negated_phrases(combined_text).strip().lower()
+
+    if _BROKE_REGION_RE.search(cleaned_guided_notes) or (
+        _BROKE_IT_RE.search(cleaned_guided_notes)
+        and _contains_fracture_region(cleaned_combined_text)
     ):
         matched_categories.add("fracture")
         routing_reasons.add("guided_injury:structural_broke_signal")
+
+    if _BROKE_REGION_RE.search(cleaned_combined_text) or (
+        _BROKE_IT_RE.search(cleaned_combined_text)
+        and _contains_fracture_region(cleaned_combined_text)
+    ):
+        matched_categories.add("fracture")
+        routing_reasons.add("raw_injury:structural_broke_signal")
 
     if any(token in guided_avoid for token in ("contact", "spar", "impact", "loaded", "weight bearing")):
         routing_reasons.add("guided_injury:avoid_high_load")
