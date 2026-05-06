@@ -56,15 +56,23 @@ _WORSENING_TOKENS = {"worsen", "worsening", "worse", "flared", "aggravated", "re
 _IMPROVING_TOKENS = {"improving", "better", "settling", "resolved", "resolving"}
 _STABLE_TOKENS = {"stable", "managed", "manageable", "maintenance"}
 _CANNOT_PATTERN = re.compile(r"\b(?:cannot|can['\u2019]t)\b")
+_FUNCTIONAL_CANNOT_PATTERN = re.compile(
+    r"\b(?:cannot|can['\u2019]t)\s+"
+    r"(?:load|weight[- ]?bear|bear weight|push off|pivot|plant|rotate|turn|brace|jump|land|strike|punch|kick)\b"
+)
 
 
 def _contains_cannot_phrase(lowered: str) -> bool:
     return bool(_CANNOT_PATTERN.search(lowered))
 
 
+def _contains_functional_cannot_phrase(lowered: str) -> bool:
+    return bool(_FUNCTIONAL_CANNOT_PATTERN.search(lowered))
+
+
 def _severity_tier(lowered: str, instability: bool, daily_symptoms: bool) -> str:
     """Classify structural severity: high / moderate / low."""
-    if any(token in lowered for token in _HIGH_SEVERITY_TOKENS) or _contains_cannot_phrase(lowered):
+    if any(token in lowered for token in _HIGH_SEVERITY_TOKENS) or _contains_functional_cannot_phrase(lowered):
         return "high"
     if any(token in lowered for token in _MODERATE_SEVERITY_TOKENS):
         return "moderate"
