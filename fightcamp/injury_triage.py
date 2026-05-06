@@ -103,6 +103,21 @@ _STRUCTURAL_BREAK_RE = re.compile(
 )
 _BROKE_IT_RE = re.compile(r"\b(?:broke|broken)\s+it\b")
 
+_BENIGN_JOINT_SOUND_RE = re.compile(r"\b(?:crack(?:ed)?|snap(?:ped)?)\b")
+_BENIGN_NO_SYMPTOM_RE = re.compile(
+    r"\b(?:no|without|not)\s+(?:any\s+)?(?:pain|swelling|symptoms?)\b"
+)
+
+
+def _looks_like_benign_joint_sound(chunk: str, *, text_context: str = "") -> bool:
+    normalized = (chunk or "").strip().lower()
+    context = (text_context or "").strip().lower()
+    if not normalized or not _BENIGN_JOINT_SOUND_RE.search(normalized):
+        return False
+    if "broke" in normalized or "broken" in normalized:
+        return False
+    return bool(_BENIGN_NO_SYMPTOM_RE.search(normalized) or _BENIGN_NO_SYMPTOM_RE.search(context))
+
 _RECENT_INJURY_TIMELINE_RE = re.compile(
     r"\b(?:"
     r"last\s+(?:day|week|month)|"
@@ -181,6 +196,8 @@ def _has_structural_break_signal(*, text: str, context_text: str) -> bool:
         return False
     for chunk in split_injury_text(text):
         if not chunk or not _STRUCTURAL_BREAK_RE.search(chunk):
+            continue
+        if _looks_like_benign_joint_sound(chunk, text_context=text):
             continue
         if _has_injury_location_context(chunk):
             return True
@@ -832,7 +849,7 @@ def triage_injuries(plan_input: PlanInput) -> InjuryTriageResult:
 
     has_recent_structural_history_signal = _has_recent_structural_history_signal(guided_cards)
 
-    if _has_structural_break_signal(text=cleaned_combined_text, context_text=cleaned_combined_text):
+    if _has_structural_break_signal(text=combined_text, context_text=combined_text):
         matched_categories.add("fracture")
         routing_reasons.add("raw_injury:structural_broke_signal")
 
