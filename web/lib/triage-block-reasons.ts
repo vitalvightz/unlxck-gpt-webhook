@@ -82,8 +82,16 @@ export function summarizeBlockedInjuryContext({
     .filter(Boolean))]
     .slice(0, 2);
   const injuryLine = typeof injuriesText === "string" ? injuriesText.trim() : "";
-  const primary = highRiskLabels[0] ?? redFlagLabels[0] ?? urgentFlagLabels[0] ?? reasonLabels[0] ?? (injuryLine || null);
-  const secondary = highRiskLabels[1] ?? redFlagLabels[1] ?? urgentFlagLabels[1] ?? reasonLabels[1] ?? (areas[0] || null);
+  const allOrdered = [
+    ...highRiskLabels,
+    ...redFlagLabels,
+    ...urgentFlagLabels,
+    ...reasonLabels,
+    ...(injuryLine ? [injuryLine] : []),
+    ...areas,
+  ];
+  const primary = allOrdered[0] ?? null;
+  const secondary = allOrdered[1] ?? null;
 
   if (primary && secondary) {
     return `Blocked trigger: ${primary} + ${secondary}`;
