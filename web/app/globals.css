@@ -2069,6 +2069,56 @@ select:focus-visible {
   box-shadow: inset 0 0 0 1px rgba(181, 18, 43, 0.08);
 }
 
+.inline-warning-banner {
+  display: grid;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(181, 18, 43, 0.26);
+  background: linear-gradient(180deg, rgba(181, 18, 43, 0.14), rgba(181, 18, 43, 0.05));
+}
+
+.inline-warning-banner-alert {
+  border-color: rgba(255, 84, 112, 0.48);
+}
+
+.inline-warning-banner-label {
+  margin: 0;
+  font-family: var(--font-mono), monospace;
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--danger-ink);
+}
+
+.inline-warning-ack {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 10px;
+  border: 1px solid var(--border-default);
+  background: rgba(12, 14, 18, 0.5);
+  cursor: pointer;
+}
+
+.inline-warning-ack input {
+  accent-color: var(--brand-red);
+  inline-size: 14px;
+  block-size: 14px;
+  margin: 0;
+}
+
+.inline-warning-ack-copy {
+  font-size: 0.93rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.inline-warning-ack-checked {
+  border-color: rgba(181, 18, 43, 0.38);
+}
+
 .error-text {
   margin: 0;
   color: var(--danger-ink);
@@ -5960,21 +6010,6 @@ html[data-theme="light"] .global-generation-status-rail {
   }
 }
 
-.injury-overwrite-diff {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
-  margin: 12px 0;
-}
-
-.injury-overwrite-diff-block {
-  display: grid;
-  gap: 6px;
-  padding: 14px 16px;
-  border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.07);
-  background: rgba(255, 255, 255, 0.025);
-}
 
 .injury-card-stack {
   display: grid;
@@ -6072,10 +6107,6 @@ html[data-theme="light"] .injury-card-state {
 }
 
 @media (max-width: 640px) {
-  .injury-overwrite-diff {
-    grid-template-columns: 1fr;
-  }
-
   .injury-card-header {
     flex-direction: column;
   }
