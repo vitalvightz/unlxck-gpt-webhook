@@ -179,14 +179,12 @@ def _has_structural_break_with_location(text: str) -> bool:
 def _has_structural_break_signal(*, text: str, context_text: str) -> bool:
     if not text:
         return False
-    cleaned_context = remove_negated_phrases(context_text).strip().lower()
     for chunk in split_injury_text(text):
-        cleaned_chunk = remove_negated_phrases(chunk).strip().lower()
-        if not cleaned_chunk or not _STRUCTURAL_BREAK_RE.search(cleaned_chunk):
+        if not chunk or not _STRUCTURAL_BREAK_RE.search(chunk):
             continue
-        if _has_injury_location_context(cleaned_chunk):
+        if _has_injury_location_context(chunk):
             return True
-        if _BROKE_IT_RE.search(cleaned_chunk) and _has_injury_location_context(cleaned_context):
+        if _BROKE_IT_RE.search(chunk) and _has_injury_location_context(context_text):
             return True
     return False
 
