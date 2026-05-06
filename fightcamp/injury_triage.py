@@ -6,7 +6,6 @@ from typing import Any
 
 from .input_parsing import PlanInput
 from .injury_synonyms import remove_negated_phrases
-from .sparring_advisories import summarize_sparring_injury_risk
 from .triage_features import build_triage_features
 
 
@@ -143,7 +142,6 @@ class InjuryTriageResult:
     routing_reasons: list[str] = field(default_factory=list)
     should_block_stage2: bool = False
     urgent_flags: list[str] = field(default_factory=list)
-    sparring_risk_band: str = "green"
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -193,7 +191,6 @@ def _build_result(
     matched_categories: set[str],
     routing_reasons: set[str],
     urgent_flags: set[str],
-    sparring_risk_band: str,
 ) -> InjuryTriageResult:
     return InjuryTriageResult(
         mode=mode,
@@ -204,7 +201,6 @@ def _build_result(
         routing_reasons=sorted(routing_reasons),
         should_block_stage2=should_block_stage2,
         urgent_flags=sorted(urgent_flags),
-        sparring_risk_band=sparring_risk_band,
     )
 
 
@@ -481,35 +477,6 @@ def _initial_restricted_rehab_gate(
     return restricted_rehab
 
 
-def _apply_sparring_risk_gate(
-    *,
-    injury_texts: list[str],
-    has_guided_high_severity: bool,
-    red_flags: set[str],
-    restricted_rehab: bool,
-    medical_hold: bool,
-    routing_reasons: set[str],
-) -> tuple[str, bool, bool]:
-    sparring_risk = summarize_sparring_injury_risk(injury_texts=injury_texts)
-    highest_band = str(sparring_risk.get("risk_band") or "green")
-
-    if highest_band in {"red", "black"} and has_guided_high_severity:
-        restricted_rehab = True
-        routing_reasons.add("guided_high_severity_with_elevated_sparring_risk")
-
-    if highest_band == "black":
-        routing_reasons.add("sparring_black_risk")
-        if any(flag in red_flags for flag in ("loss_of_consciousness", "coughing_blood", "deformity")):
-            medical_hold = True
-        else:
-            restricted_rehab = True
-
-    elif highest_band == "red" and restricted_rehab:
-        routing_reasons.add("sparring_red_risk")
-
-    return highest_band, restricted_rehab, medical_hold
-
-
 def _has_uncertainty_trigger(
     *,
     cards: list[_GuidedCard],
@@ -544,7 +511,6 @@ def _combo_gate_result(
     matched_categories: set[str],
     routing_reasons: set[str],
     urgent_flags: set[str],
-    highest_band: str,
     features: Any,
     has_chest_or_neuro_combo: bool,
     has_mapped_medical_hold: bool,
@@ -571,7 +537,6 @@ def _combo_gate_result(
                 matched_categories=matched_categories,
                 routing_reasons=routing_reasons,
                 urgent_flags=urgent_flags,
-                sparring_risk_band=highest_band,
             )
 
         return _build_result(
@@ -586,7 +551,6 @@ def _combo_gate_result(
             matched_categories=matched_categories,
             routing_reasons=routing_reasons,
             urgent_flags=urgent_flags,
-            sparring_risk_band=highest_band,
         )
 
     if ("high", "") in combos:
@@ -610,7 +574,6 @@ def _combo_gate_result(
                 matched_categories=matched_categories,
                 routing_reasons=routing_reasons,
                 urgent_flags=urgent_flags,
-                sparring_risk_band=highest_band,
             )
 
         return _build_result(
@@ -625,7 +588,6 @@ def _combo_gate_result(
             matched_categories=matched_categories,
             routing_reasons=routing_reasons,
             urgent_flags=urgent_flags,
-            sparring_risk_band=highest_band,
         )
 
     if ("high", "stable") in combos:
@@ -649,7 +611,6 @@ def _combo_gate_result(
                 matched_categories=matched_categories,
                 routing_reasons=routing_reasons,
                 urgent_flags=urgent_flags,
-                sparring_risk_band=highest_band,
             )
 
         return _build_result(
@@ -664,7 +625,6 @@ def _combo_gate_result(
             matched_categories=matched_categories,
             routing_reasons=routing_reasons,
             urgent_flags=urgent_flags,
-            sparring_risk_band=highest_band,
         )
 
     if any(("moderate", trend) in combos for trend in _WORSENING_TRENDS):
@@ -683,7 +643,6 @@ def _combo_gate_result(
                 matched_categories=matched_categories,
                 routing_reasons=routing_reasons,
                 urgent_flags=urgent_flags,
-                sparring_risk_band=highest_band,
             )
 
         return _build_result(
@@ -698,7 +657,6 @@ def _combo_gate_result(
             matched_categories=matched_categories,
             routing_reasons=routing_reasons,
             urgent_flags=urgent_flags,
-            sparring_risk_band=highest_band,
         )
 
     if any(("low", trend) in combos for trend in _WORSENING_TRENDS):
@@ -716,7 +674,6 @@ def _combo_gate_result(
             matched_categories=matched_categories,
             routing_reasons=routing_reasons,
             urgent_flags=urgent_flags,
-            sparring_risk_band=highest_band,
         )
 
     if ("moderate", "stable") in combos:
@@ -746,7 +703,6 @@ def _combo_gate_result(
                 matched_categories=matched_categories,
                 routing_reasons=routing_reasons,
                 urgent_flags=urgent_flags,
-                sparring_risk_band=highest_band,
             )
 
     return None
@@ -847,15 +803,6 @@ def triage_injuries(plan_input: PlanInput) -> InjuryTriageResult:
         routing_reasons=routing_reasons,
     )
 
-    highest_band, restricted_rehab, medical_hold = _apply_sparring_risk_gate(
-        injury_texts=injury_texts,
-        has_guided_high_severity=has_guided_high_severity,
-        red_flags=red_flags,
-        restricted_rehab=restricted_rehab,
-        medical_hold=medical_hold,
-        routing_reasons=routing_reasons,
-    )
-
     for severity, trend in combos:
         if severity == "high" and trend in _WORSENING_TRENDS:
             routing_reasons.add("combo_gate:high_worsening")
@@ -881,7 +828,6 @@ def triage_injuries(plan_input: PlanInput) -> InjuryTriageResult:
             matched_categories=matched_categories,
             routing_reasons=routing_reasons,
             urgent_flags=urgent_flags,
-            sparring_risk_band=highest_band,
         )
 
     if restricted_rehab:
@@ -897,7 +843,6 @@ def triage_injuries(plan_input: PlanInput) -> InjuryTriageResult:
             matched_categories=matched_categories,
             routing_reasons=routing_reasons,
             urgent_flags=urgent_flags,
-            sparring_risk_band=highest_band,
         )
 
     if has_recent_structural_history_signal:
@@ -915,7 +860,6 @@ def triage_injuries(plan_input: PlanInput) -> InjuryTriageResult:
             matched_categories=matched_categories,
             routing_reasons=routing_reasons,
             urgent_flags=urgent_flags,
-            sparring_risk_band=highest_band,
         )
 
     has_mapped_medical_hold = _has_mapped_route(matched_categories, MEDICAL_HOLD)
@@ -939,7 +883,6 @@ def triage_injuries(plan_input: PlanInput) -> InjuryTriageResult:
         matched_categories=matched_categories,
         routing_reasons=routing_reasons,
         urgent_flags=urgent_flags,
-        highest_band=highest_band,
         features=features,
         has_chest_or_neuro_combo=has_chest_or_neuro_combo,
         has_mapped_medical_hold=has_mapped_medical_hold,
@@ -962,7 +905,6 @@ def triage_injuries(plan_input: PlanInput) -> InjuryTriageResult:
         matched_categories=matched_categories,
         routing_reasons=routing_reasons,
         urgent_flags=urgent_flags,
-        sparring_risk_band=highest_band,
     )
 
 

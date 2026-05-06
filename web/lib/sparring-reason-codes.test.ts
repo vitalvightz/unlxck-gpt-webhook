@@ -4,7 +4,6 @@ import test from "node:test";
 import {
   explainEffectiveLoad,
   explainReasonCode,
-  explainRiskBand,
   explainSparringClass,
   knownReasonCodes,
 } from "./sparring-reason-codes.ts";
@@ -78,13 +77,3 @@ test("sparring class explanations exist for every class value", () => {
   }
 });
 
-test("risk band explanations cover all bands", () => {
-  for (const band of ["green", "amber", "red", "black"]) {
-    const explanation = explainRiskBand(band);
-    assert.ok(explanation, `missing risk band explanation for ${band}`);
-    assert.ok(explanation!.title.trim());
-    assert.ok(explanation!.body.trim());
-  }
-  assert.equal(explainRiskBand(null), null);
-  assert.equal(explainRiskBand(undefined), null);
-});

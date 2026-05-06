@@ -17,10 +17,8 @@ import {
   submitManualStage2,
 } from "@/lib/api";
 import { PremiumLoadingScreen } from "@/components/premium-loading-screen";
-import { WhyTooltip } from "@/components/why-tooltip";
 import { useGenerationController } from "@/lib/generation-controller";
-import { explainRiskBand } from "@/lib/sparring-reason-codes";
-import { buildBlockedWhy, summarizeBlockedInjuryContext } from "@/lib/triage-block-reasons";
+import { summarizeBlockedInjuryContext } from "@/lib/triage-block-reasons";
 import type { PlanAdvisory, PlanDetail, UserRole } from "@/lib/types";
 
 type ValidatorIssue = Record<string, unknown>;
@@ -40,19 +38,8 @@ type InjuryTriageView = {
   matched_high_risk_categories: string[];
   routing_reasons: string[];
   urgent_flags: string[];
-  sparring_risk_band?: string;
   clinician_clearance_required?: boolean;
 };
-
-const FRACTURE_CATEGORY_SET = new Set([
-  "fracture",
-  "stress_fracture",
-  "hairline_fracture",
-  "rib_fracture",
-  "broken_rib",
-]);
-
-type RiskBandTone = "green" | "amber" | "red" | "black";
 
 const BLOCKING_WARNING_CODES = new Set([
   "missing_required_element",
@@ -137,14 +124,6 @@ function formatPhaseLabel(phase: string) {
   return normalized.charAt(0).toUpperCase() + normalized.slice(1);
 }
 
-function formatRiskBandLabel(riskBand: NonNullable<PlanAdvisory["risk_band"]>) {
-  const normalized = humanizeStatus(riskBand || "").trim();
-  if (!normalized) {
-    return "Unknown";
-  }
-  return normalized.charAt(0).toUpperCase() + normalized.slice(1);
-}
-
 function readInjuryTriage(plan: PlanDetail): InjuryTriageView | null {
   const whyLogTriage =
     plan.admin_outputs?.why_log && typeof plan.admin_outputs.why_log === "object"
@@ -166,8 +145,6 @@ function readInjuryTriage(plan: PlanDetail): InjuryTriageView | null {
         : [],
       routing_reasons: Array.isArray(triage.routing_reasons) ? triage.routing_reasons.map(String) : [],
       urgent_flags: Array.isArray(triage.urgent_flags) ? triage.urgent_flags.map(String) : [],
-      sparring_risk_band:
-        typeof triage.sparring_risk_band === "string" ? triage.sparring_risk_band : undefined,
       clinician_clearance_required:
         typeof triage.clinician_clearance_required === "boolean"
           ? triage.clinician_clearance_required
@@ -183,7 +160,6 @@ function readInjuryTriage(plan: PlanDetail): InjuryTriageView | null {
       matched_high_risk_categories: [],
       routing_reasons: [],
       urgent_flags: [],
-      sparring_risk_band: undefined,
       clinician_clearance_required: undefined,
     };
   }
@@ -201,12 +177,6 @@ function BlockedPlanDecisionCard({
   const isMedicalHold = triage.mode === "medical_hold";
   const isRestricted = triage.mode === "restricted_rehab_only";
 
-  const title = isMedicalHold
-    ? "Medical hold"
-    : isRestricted
-      ? "Clearance required"
-      : "Planning paused";
-
   const intro = isMedicalHold
     ? "No training plan was released. This intake contains urgent or medically disqualifying signals that require review before planning can continue."
     : isRestricted
@@ -218,27 +188,6 @@ function BlockedPlanDecisionCard({
     .filter(Boolean)
     .slice(0, 6);
 
-  const triageRiskBand =
-    triage.sparring_risk_band &&
-    ["green", "amber", "red", "black"].includes(triage.sparring_risk_band)
-      ? (triage.sparring_risk_band as RiskBandTone)
-      : null;
-  const hasFractureSignal = triage.matched_high_risk_categories.some((category) =>
-    FRACTURE_CATEGORY_SET.has(category),
-  );
-  const displayedRiskBand = isMedicalHold
-    ? triageRiskBand === "black"
-      ? "black"
-      : null
-    : triageRiskBand === "green" || triageRiskBand === "amber"
-      ? hasFractureSignal
-        ? "red"
-        : triageRiskBand
-      : triageRiskBand;
-  const riskBandLabel = displayedRiskBand
-    ? formatRiskBandLabel(displayedRiskBand as NonNullable<PlanAdvisory["risk_band"]>)
-    : null;
-
   return (
     <section
       className={`support-panel sparring-advisory-card ${
@@ -246,32 +195,10 @@ function BlockedPlanDecisionCard({
       }`}
     >
       <div className="plan-header-row">
-        <div>
-          <p className="kicker">Planner decision</p>
-          <h3>{title}</h3>
-        </div>
+        <p className="kicker">Planner decision</p>
         <div className="sparring-advisory-badges">
           <span className="badge">PROTECTED</span>
           <span className="badge">STAGE 2 SKIPPED</span>
-          {riskBandLabel && displayedRiskBand ? (
-            <span
-              className={`sparring-risk-chip sparring-risk-${displayedRiskBand}`}
-              aria-label={`Injury risk ${riskBandLabel}`}
-            >
-              <span className="sparring-risk-dot" aria-hidden="true" />
-              <span>Sparring risk: {riskBandLabel}</span>
-              {(() => {
-                const riskExplanation = explainRiskBand(displayedRiskBand);
-                const blockedExplanation = buildBlockedWhy(triage);
-                return (
-                  <WhyTooltip
-                    title={blockedExplanation.title}
-                    body={`${blockedExplanation.body}${riskExplanation ? ` ${riskExplanation.body}` : ""}`}
-                  />
-                );
-              })()}
-            </span>
-          ) : null}
         </div>
       </div>
 
@@ -307,7 +234,6 @@ function SparringAdvisoryCard({ advisory }: { advisory: PlanAdvisory }) {
   const actionLabel =
     advisory.action === "convert" ? "Convert hard sparring" : "Deload hard sparring";
   const daysLabel = advisory.days.join(", ") || "Declared hard sparring";
-  const riskBandLabel = advisory.risk_band ? formatRiskBandLabel(advisory.risk_band) : null;
 
   return (
     <section
@@ -320,21 +246,6 @@ function SparringAdvisoryCard({ advisory }: { advisory: PlanAdvisory }) {
         </div>
         <div className="sparring-advisory-badges">
           <span className="badge">{advisory.action}</span>
-          {riskBandLabel ? (
-            <span
-              className={`sparring-risk-chip sparring-risk-${advisory.risk_band}`}
-              aria-label={`Injury risk ${riskBandLabel}`}
-            >
-              <span className="sparring-risk-dot" aria-hidden="true" />
-              <span>Injury risk: {riskBandLabel}</span>
-              {(() => {
-                const explanation = explainRiskBand(advisory.risk_band);
-                return explanation ? (
-                  <WhyTooltip title={explanation.title} body={explanation.body} />
-                ) : null;
-              })()}
-            </span>
-          ) : null}
         </div>
       </div>
       <p className="muted sparring-advisory-meta">

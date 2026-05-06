@@ -55,7 +55,7 @@ fightcamp/              Plan generation engine
   injury_formatting.py  Injury laterality and summary formatting
   injury_exclusion_rules.py  Region-to-pattern exclusion definitions
   rehab_protocols.py    Rehab drill selection and guardrail generation
-  sparring_advisories.py  Sparring load advisory and injury risk bands
+  sparring_advisories.py  Sparring load advisory
   sparring_dose_planner.py  Hard sparring day allocation
   late_fight_placement.py   Countdown session placement engine
   camp_phases.py        Phase week calculation with style adjustments
@@ -219,7 +219,7 @@ Free-text injury notes (e.g. `"worsening left knee strain"`) flow through:
 3. **Guard** (`injury_guard.py`) — scores each exercise against active injuries using region multipliers and tag-based risk; returns EXCLUDE / MODIFY / ALLOW
 4. **Replacement** — picks a safer alternative from fallback tag hierarchies
 5. **Rehab** (`rehab_protocols.py`) — matches injuries to `rehab_bank.json` and generates phase-specific rehab prescriptions with `Purpose` and `Why today` framing
-6. **Advisory** (`sparring_advisories.py`) — classifies injury risk bands (green/amber/red/black) for the sparring advisory output
+6. **Advisory** (`sparring_advisories.py`) — generates the sparring load advisory (convert/deload of declared hard sparring days)
 
 Enable detailed exclusion logging:
 

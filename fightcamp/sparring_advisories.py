@@ -34,16 +34,6 @@ _UPPER_BODY_COLLISION_REGIONS = {"shoulder", "neck"}
 _DISCLAIMER = "Treat this as a flag, not an automatic change to your saved plan."
 _SPARRING_INJURY_STATE_SCORE_CAP = 10
 
-# Risk band thresholds (risk_band_score → band)
-# green: 0–2, amber: 3–5, red: 6–8, black: 9–10
-_RISK_BAND_THRESHOLDS = [
-    (9, "black"),
-    (6, "red"),
-    (3, "amber"),
-    (0, "green"),
-]
-_RISK_BAND_RANK = {"black": 3, "red": 2, "amber": 1, "green": 0}
-
 # Severity tier token sets — soreness/stiffness are LOW, not moderate
 _HIGH_SEVERITY_TOKENS = {"tear", "rupture", "severe", "sharp"}
 _MODERATE_SEVERITY_TOKENS = {
@@ -104,13 +94,6 @@ def _override_flags(lowered: str, instability: bool, daily_symptoms: bool) -> li
         flags.append("giving_way")
     return flags
 
-
-
-def _band_from_score(score: int) -> str:
-    for threshold, band in _RISK_BAND_THRESHOLDS:
-        if score >= threshold:
-            return band
-    return "green"
 
 
 def _humanize_token(value: str) -> str:
@@ -297,25 +280,20 @@ def _sparring_injury_entries(athlete_snapshot: dict[str, Any]) -> list[dict[str,
         tier = _severity_tier(lowered_for_signals, instability, daily_symptoms)
         ctx = _collision_context(region)
 
-        # -- risk_band_score (new system, used for band classification) --
         base = _SEVERITY_BASE_SCORE[tier]
         if tier == "low" and region in _HIGH_COLLISION_REGIONS:
-            base += 2  # lifts mild high-collision injuries to amber territory
+            base += 2
         if traj == "worsening":
             base += 2
         elif traj == "improving":
             base -= 1
-        # Override floor: instability/daily_symptoms force minimum red (6).
-        # When worsening is ALSO present, the floor is 7 (active deterioration
-        # on top of an already-flagged injury).
         if instability or daily_symptoms:
             if worsening:
                 base = max(base, 7)
             else:
                 base = max(base, 6)
 
-        rbs = min(_SPARRING_INJURY_STATE_SCORE_CAP, max(0, base))
-        band = _band_from_score(rbs)
+        injury_score = min(_SPARRING_INJURY_STATE_SCORE_CAP, max(0, base))
 
         entries.append(
             {
@@ -335,8 +313,7 @@ def _sparring_injury_entries(athlete_snapshot: dict[str, Any]) -> list[dict[str,
                 "lower_limb": region in _LOWER_LIMB_REGIONS,
                 "collision_context": ctx,
                 "override_flags": oflags,
-                "risk_band_score": rbs,
-                "risk_band": band,
+                "injury_score": injury_score,
             }
         )
     return entries
@@ -347,7 +324,7 @@ def _injury_risk(entries: list[dict[str, Any]]) -> int:
     best = _highest_risk_entry(entries)
     if best is None:
         return 0
-    base = int(best.get("risk_band_score", best.get("state_score", 0)))
+    base = int(best.get("injury_score", best.get("state_score", 0)))
     bonus = 1 if len(entries) > 1 else 0
     return min(10, base + bonus)
 
@@ -357,10 +334,7 @@ def _highest_risk_entry(entries: list[dict[str, Any]]) -> dict[str, Any] | None:
         return None
     return max(
         entries,
-        key=lambda e: (
-            _RISK_BAND_RANK.get(str(e.get("risk_band", "green")), 0),
-            int(e.get("risk_band_score", e.get("state_score", 0))),
-        ),
+        key=lambda e: int(e.get("injury_score", e.get("state_score", 0))),
     )
 
 
@@ -615,8 +589,6 @@ def _build_week_advisory(
         "suggestion": suggestion,
         "disclaimer": _DISCLAIMER,
     }
-    if highest_injury:
-        advisory["risk_band"] = str(highest_injury.get("risk_band", "green"))
     if action == "convert":
         advisory["replacement"] = _replacement_focus(
             athlete_snapshot=athlete_snapshot,
@@ -632,24 +604,6 @@ def _build_week_advisory(
         fatigue_score + cut_score,
     )
     return rank, advisory
-
-
-def summarize_sparring_injury_risk(*, injury_texts: list[str]) -> dict[str, Any]:
-    entries = _sparring_injury_entries({"injuries": injury_texts})
-    highest = _highest_risk_entry(entries)
-    if highest is None:
-        return {
-            "risk_band": "green",
-            "risk_band_score": 0,
-            "entry": None,
-            "entry_count": 0,
-        }
-    return {
-        "risk_band": str(highest.get("risk_band") or "green"),
-        "risk_band_score": int(highest.get("risk_band_score", highest.get("state_score", 0))),
-        "entry": highest,
-        "entry_count": len(entries),
-    }
 
 
 def build_plan_advisories(*, planning_brief: dict[str, Any] | None) -> list[dict[str, Any]]:

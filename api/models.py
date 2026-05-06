@@ -717,14 +717,12 @@ class PlanSafetyState(BaseModel):
     clinician_clearance_required: bool = False
     matched_high_risk_categories: list[str] = Field(default_factory=list)
     red_flags: list[str] = Field(default_factory=list)
-    sparring_risk_band: Literal["green", "amber", "red", "black"] | None = None
     next_steps: list[str] = Field(default_factory=list)
 
 
 class PlanAdvisory(BaseModel):
     kind: Literal["sparring_adjustment"]
     action: Literal["deload", "convert"]
-    risk_band: Literal["green", "amber", "red", "black"] | None = None
     phase: str
     week_label: str
     days: list[str] = Field(default_factory=list)

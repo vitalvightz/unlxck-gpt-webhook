@@ -418,7 +418,6 @@ def _map_plan_safety_state(row: dict[str, Any]) -> PlanSafetyState:
             clinician_clearance_required=bool(triage.get("clinician_clearance_required", True)),
             matched_high_risk_categories=list(triage.get("matched_high_risk_categories") or []),
             red_flags=list(triage.get("red_flags") or []),
-            sparring_risk_band=triage.get("sparring_risk_band"),
             next_steps=[
                 "Seek appropriate medical review before training guidance.",
                 "Update the intake after clearance.",
@@ -438,7 +437,6 @@ def _map_plan_safety_state(row: dict[str, Any]) -> PlanSafetyState:
             clinician_clearance_required=bool(triage.get("clinician_clearance_required", True)),
             matched_high_risk_categories=list(triage.get("matched_high_risk_categories") or []),
             red_flags=list(triage.get("red_flags") or []),
-            sparring_risk_band=triage.get("sparring_risk_band"),
             next_steps=[
                 "Review injury details and current restrictions.",
                 "Update the intake after clinician clearance.",
@@ -458,7 +456,6 @@ def _map_plan_safety_state(row: dict[str, Any]) -> PlanSafetyState:
             clinician_clearance_required=bool(triage.get("clinician_clearance_required", False)),
             matched_high_risk_categories=list(triage.get("matched_high_risk_categories") or []),
             red_flags=list(triage.get("red_flags") or []),
-            sparring_risk_band=triage.get("sparring_risk_band"),
             next_steps=[
                 "Review guided injury severity/trend details.",
                 "Clarify diagnosis progression and restrictions.",
@@ -475,7 +472,6 @@ def _map_plan_safety_state(row: dict[str, Any]) -> PlanSafetyState:
         clinician_clearance_required=False,
         matched_high_risk_categories=[],
         red_flags=[],
-        sparring_risk_band=None,
         next_steps=[],
     )
 

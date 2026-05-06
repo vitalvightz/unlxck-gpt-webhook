@@ -135,12 +135,11 @@ def test_convert_advisory_for_worsening_instability_during_high_pressure_week():
     assert len(advisories) == 1
     advisory = advisories[0]
     assert advisory["action"] == "convert"
-    assert advisory["risk_band"] == "red"
     assert advisory["replacement"] == "Technical rounds with stance-stable pad or bag work."
     assert "worsening ankle instability" in advisory["reason"]
 
 
-def test_readiness_only_advisory_omits_risk_band_without_injuries():
+def test_readiness_only_advisory_without_injuries():
     advisories = build_plan_advisories(
         planning_brief=_planning_brief(
             phase="SPP",
@@ -156,7 +155,6 @@ def test_readiness_only_advisory_omits_risk_band_without_injuries():
 
     assert len(advisories) == 1
     assert advisories[0]["action"] == "deload"
-    assert "risk_band" not in advisories[0]
 
 
 def test_sparring_injury_state_scores_are_capped():
@@ -503,79 +501,26 @@ class TestCollisionContextClassification:
         assert _entry("mild soreness in elbow")["collision_context"] == "low_collision"
 
 
-class TestRiskBandKeyRules:
-    def test_severe_worsening_is_black(self):
-        assert _entry("severe worsening ankle tear")["risk_band"] == "black"
-
-    def test_severe_improving_is_red(self):
-        assert _entry("severe improving shoulder tear")["risk_band"] == "red"
-
-    def test_severe_stable_is_red(self):
-        assert _entry("severe stable knee rupture")["risk_band"] == "red"
-
-    def test_instability_forces_minimum_red(self):
-        assert _entry("ankle instability")["risk_band"] == "red"
-
-    def test_daily_symptoms_forces_minimum_red(self):
-        assert _entry("daily knee pain")["risk_band"] == "red"
-
-    def test_moderate_worsening_is_red(self):
-        assert _entry("worsening knee strain")["risk_band"] == "red"
-
-    def test_moderate_improving_is_amber(self):
-        assert _entry("improving ankle sprain")["risk_band"] == "amber"
-
-    def test_moderate_stable_is_amber(self):
-        assert _entry("stable ankle sprain")["risk_band"] == "amber"
-
-    def test_mild_stable_high_collision_is_amber(self):
-        assert _entry("mild stable shoulder soreness")["risk_band"] == "amber"
-
-    def test_mild_stable_low_collision_is_green(self):
-        assert _entry("mild soreness in elbow")["risk_band"] == "green"
-
-    def test_mild_worsening_is_amber(self):
-        assert _entry("worsening elbow stiffness")["risk_band"] == "amber"
-
-    def test_mild_improving_is_green(self):
-        assert _entry("improving wrist stiffness")["risk_band"] == "green"
-
-    def test_structured_injury_payload_uses_severity_and_status_signals(self):
-        entries = _sparring_injury_entries(
-            {
-                "injuries": [
-                    {
-                        "canonical_location": "knee",
-                        "injury_type": "sprain",
-                        "severity": "moderate",
-                        "status": "worsening",
-                    }
-                ]
-            }
-        )
-        assert entries[0]["risk_band"] == "red"
-
-
-class TestRiskBandScoreDerives:
-    def test_green_score_range(self):
-        score = _entry("mild soreness in elbow")["risk_band_score"]
+class TestInjuryScoreRanges:
+    def test_low_severity_score(self):
+        score = _entry("mild soreness in elbow")["injury_score"]
         assert 0 <= score <= 2
 
-    def test_amber_score_range(self):
-        score = _entry("stable ankle sprain")["risk_band_score"]
+    def test_moderate_severity_score(self):
+        score = _entry("stable ankle sprain")["injury_score"]
         assert 3 <= score <= 5
 
-    def test_red_score_range(self):
-        score = _entry("severe improving shoulder tear")["risk_band_score"]
+    def test_high_severity_improving_score(self):
+        score = _entry("severe improving shoulder tear")["injury_score"]
         assert 6 <= score <= 8
 
-    def test_black_score_range(self):
-        score = _entry("severe worsening ankle tear")["risk_band_score"]
+    def test_high_severity_worsening_score(self):
+        score = _entry("severe worsening ankle tear")["injury_score"]
         assert 9 <= score <= 10
 
 
-class TestWithinBandOrdering:
-    def test_highest_risk_entry_uses_secondary_order_inside_same_band(self):
+class TestHighestRiskOrdering:
+    def test_highest_risk_entry_picks_higher_score(self):
         entries = _sparring_injury_entries(
             {"injuries": ["ankle instability", "severe improving shoulder tear"]}
         )
@@ -583,10 +528,9 @@ class TestWithinBandOrdering:
         best = _highest_risk_entry(entries)
 
         assert best is not None
-        assert best["risk_band"] == "red"
         assert best["raw"] == "severe improving shoulder tear"
 
-    def test_injury_risk_uses_best_secondary_score_inside_same_band(self):
+    def test_injury_risk_uses_best_score(self):
         entries = _sparring_injury_entries(
             {"injuries": ["ankle instability", "severe improving shoulder tear"]}
         )

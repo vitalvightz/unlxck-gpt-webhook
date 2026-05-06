@@ -5,7 +5,6 @@ export type InjuryTriageSignals = {
   matched_high_risk_categories: string[];
   routing_reasons?: string[];
   urgent_flags?: string[];
-  sparring_risk_band?: string;
   clinician_clearance_required?: boolean;
 };
 export type GuidedInjurySummary = {

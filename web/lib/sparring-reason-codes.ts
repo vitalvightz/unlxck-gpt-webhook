@@ -152,29 +152,6 @@ const CLASS_EXPLANATIONS: Record<SparringDayClass, SparringReasonExplanation> = 
   },
 };
 
-const RISK_BAND_EXPLANATIONS: Record<string, SparringReasonExplanation> = {
-  green: {
-    title: "Green band — proceed",
-    body:
-      "Risk signals are clear. The planner is comfortable with hard sparring as declared, assuming the rest of the camp checks stay clean.",
-  },
-  amber: {
-    title: "Amber band — caution",
-    body:
-      "One or more caution signals are active (fatigue, weight cut, mild injury, weekly pressure). The planner suggests softening hard sparring until the signal clears.",
-  },
-  red: {
-    title: "Red band — pull back",
-    body:
-      "Multiple meaningful risk signals are active. Hard sparring as declared is likely to cost more than it earns. The planner recommends technical work or deload.",
-  },
-  black: {
-    title: "Black band — stop & reassess",
-    body:
-      "Severe injury or stacked high-severity signals are present. The planner blocks hard sparring outright and routes the camp through review.",
-  },
-};
-
 function humanizeUnknownCode(code: string): SparringReasonExplanation {
   const cleaned = code.replace(/_/g, " ").trim();
   const title = cleaned ? cleaned.charAt(0).toUpperCase() + cleaned.slice(1) : code;
@@ -199,13 +176,6 @@ export function explainEffectiveLoad(load: EffectiveLoad): SparringReasonExplana
 
 export function explainSparringClass(value: SparringDayClass): SparringReasonExplanation {
   return CLASS_EXPLANATIONS[value] ?? CLASS_EXPLANATIONS.none;
-}
-
-export function explainRiskBand(band: string | null | undefined): SparringReasonExplanation | null {
-  if (!band) {
-    return null;
-  }
-  return RISK_BAND_EXPLANATIONS[band] ?? null;
 }
 
 export function knownReasonCodes(): string[] {
