@@ -624,7 +624,7 @@ def _surface_injury_assessment(injuries: Iterable[str | dict]) -> tuple[int, int
                     parsed_type_found = True
             lowered = phrase.lower()
             for term in SURFACE_RED_FLAG_TERMS:
-                if term in lowered:
+                if re.search(rf"\b{re.escape(term)}\b", lowered):
                     red_flags.add(term)
         if fallback_type and not parsed_type_found:
             if fallback_type in SURFACE_TISSUE_TYPES:
