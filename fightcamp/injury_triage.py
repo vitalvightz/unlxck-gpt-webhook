@@ -5,7 +5,7 @@ import re
 from typing import Any
 
 from .input_parsing import PlanInput
-from .injury_synonyms import remove_negated_phrases
+from .injury_synonyms import parse_injury_phrase, remove_negated_phrases, split_injury_text
 from .sparring_advisories import summarize_sparring_injury_risk
 from .triage_features import build_triage_features
 
@@ -98,28 +98,10 @@ _TRAUMA_CONTEXT_PATTERNS = (
 
 _NEURO_CONTEXT_PATTERN = r"\bneurolog(?:ic|ical)\b|\bnerve\b"
 
-_FRACTURE_REGIONS = (
-    "bone",
-    "ankle",
-    "leg",
-    "arm",
-    "rib",
-    "wrist",
-    "hand",
-    "foot",
-    "jaw",
-    "nose",
-    "finger",
-    "toe",
-)
-
-_BROKE_REGION_RE = re.compile(
-    rf"\b(?:broke|broken)\s+(?:my\s+)?(?:{'|'.join(_FRACTURE_REGIONS)})\b"
+_STRUCTURAL_BREAK_RE = re.compile(
+    r"\b(?:broke|broken|crack(?:ed)?|snap(?:ped)?)\b"
 )
 _BROKE_IT_RE = re.compile(r"\b(?:broke|broken)\s+it\b")
-_FRACTURE_REGION_RE = re.compile(
-    rf"\b(?:{'|'.join(re.escape(region) for region in _FRACTURE_REGIONS)})\b"
-)
 
 _RECENT_INJURY_TIMELINE_RE = re.compile(
     r"\b(?:"
@@ -171,8 +153,23 @@ def _normalized_text(value: Any) -> str:
     return str(value or "").strip().lower()
 
 
-def _contains_fracture_region(text: str) -> bool:
-    return bool(text and _FRACTURE_REGION_RE.search(text))
+def _has_injury_location_context(text: str) -> bool:
+    if not text:
+        return False
+    _, parsed_location = parse_injury_phrase(text)
+    return bool(parsed_location)
+
+
+def _has_structural_break_with_location(text: str) -> bool:
+    if not text:
+        return False
+    for chunk in split_injury_text(text):
+        cleaned_chunk = remove_negated_phrases(chunk).strip().lower()
+        if not cleaned_chunk or not _STRUCTURAL_BREAK_RE.search(cleaned_chunk):
+            continue
+        if _has_injury_location_context(cleaned_chunk):
+            return True
+    return False
 
 
 def _has_mapped_route(categories: set[str], route: str) -> bool:
@@ -280,13 +277,7 @@ def _has_guided_structural_broke_signal(
     cleaned_combined_text: str,
 ) -> bool:
     cleaned_notes = remove_negated_phrases(guided_notes).strip().lower()
-    return bool(
-        _BROKE_REGION_RE.search(cleaned_notes)
-        or (
-            _BROKE_IT_RE.search(cleaned_notes)
-            and _contains_fracture_region(cleaned_combined_text)
-        )
-    )
+    return bool(_has_structural_break_with_location(cleaned_notes) and _has_injury_location_context(cleaned_combined_text))
 
 
 def _apply_card_area_broke_signals(
@@ -304,7 +295,9 @@ def _apply_card_area_broke_signals(
             part for part in (card.location, note_text) if part
         )
 
-        if _BROKE_IT_RE.search(note_text) and _contains_fracture_region(contextual_card_text):
+        if _has_structural_break_with_location(note_text) and _has_injury_location_context(
+            contextual_card_text
+        ):
             matched_categories.add("fracture")
             routing_reasons.add("guided_injury:card_area_context_broke_signal")
 
@@ -317,8 +310,7 @@ def _has_recent_structural_history_signal(cards: list[_GuidedCard]) -> bool:
 
         has_recent_timeline = bool(_RECENT_INJURY_TIMELINE_RE.search(notes))
         has_structural_signal = bool(
-            _BROKE_REGION_RE.search(notes)
-            or _BROKE_IT_RE.search(notes)
+            _STRUCTURAL_BREAK_RE.search(notes)
             or any(keyword in notes for keyword in _STRUCTURAL_HISTORY_KEYWORDS)
         )
 
@@ -816,9 +808,8 @@ def triage_injuries(plan_input: PlanInput) -> InjuryTriageResult:
 
     has_recent_structural_history_signal = _has_recent_structural_history_signal(guided_cards)
 
-    if _BROKE_REGION_RE.search(cleaned_combined_text) or (
-        _BROKE_IT_RE.search(cleaned_combined_text)
-        and _contains_fracture_region(cleaned_combined_text)
+    if _has_structural_break_with_location(cleaned_combined_text) and _has_injury_location_context(
+        cleaned_combined_text
     ):
         matched_categories.add("fracture")
         routing_reasons.add("raw_injury:structural_broke_signal")
