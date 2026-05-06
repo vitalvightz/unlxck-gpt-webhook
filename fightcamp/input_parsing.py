@@ -334,9 +334,35 @@ class GuidedInjury:
     trend: str = ""
     avoid: str = ""
     notes: str = ""
+    injury_type: str = ""
+    surface_type: str = ""
+    timeframe: str = ""
+    cleared: str = ""
+    open_wound: str = ""
+    bleeding_status: str = ""
+    infection_signs: str = ""
+    impact_related: str = ""
+    sensitive_area: str = ""
 
     def has_content(self) -> bool:
-        return any([self.area, self.severity, self.trend, self.avoid, self.notes])
+        return any(
+            [
+                self.area,
+                self.severity,
+                self.trend,
+                self.avoid,
+                self.notes,
+                self.injury_type,
+                self.surface_type,
+                self.timeframe,
+                self.cleared,
+                self.open_wound,
+                self.bleeding_status,
+                self.infection_signs,
+                self.impact_related,
+                self.sensitive_area,
+            ]
+        )
 
 
 _GUIDED_TRIGGER_PREFIX = re.compile(
@@ -369,13 +395,7 @@ def _extract_guided_injury(data: dict) -> GuidedInjury | None:
     if not isinstance(raw_value, dict):
         return None
 
-    guided = GuidedInjury(
-        area=str(raw_value.get("area") or "").strip(),
-        severity=str(raw_value.get("severity") or "").strip(),
-        trend=str(raw_value.get("trend") or "").strip(),
-        avoid=str(raw_value.get("avoid") or "").strip(),
-        notes=str(raw_value.get("notes") or "").strip(),
-    )
+    guided = _guided_from_dict(raw_value)
     return guided if guided.has_content() else None
 
 
@@ -395,16 +415,37 @@ def _extract_guided_injuries(data: dict) -> list[GuidedInjury]:
     for entry in raw_value:
         if not isinstance(entry, dict):
             continue
-        guided = GuidedInjury(
-            area=str(entry.get("area") or "").strip(),
-            severity=str(entry.get("severity") or "").strip(),
-            trend=str(entry.get("trend") or "").strip(),
-            avoid=str(entry.get("avoid") or "").strip(),
-            notes=str(entry.get("notes") or "").strip(),
-        )
+        guided = _guided_from_dict(entry)
         if guided.has_content():
             injuries.append(guided)
     return injuries
+
+
+def _guided_scalar(value: object) -> str:
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    if isinstance(value, list):
+        return ", ".join(str(item).strip() for item in value if str(item).strip())
+    return str(value or "").strip()
+
+
+def _guided_from_dict(raw_value: dict) -> GuidedInjury:
+    return GuidedInjury(
+        area=_guided_scalar(raw_value.get("area")),
+        severity=_guided_scalar(raw_value.get("severity")),
+        trend=_guided_scalar(raw_value.get("trend")),
+        avoid=_guided_scalar(raw_value.get("avoid")),
+        notes=_guided_scalar(raw_value.get("notes")),
+        injury_type=_guided_scalar(raw_value.get("injury_type")),
+        surface_type=_guided_scalar(raw_value.get("surface_type")),
+        timeframe=_guided_scalar(raw_value.get("timeframe")),
+        cleared=_guided_scalar(raw_value.get("cleared")),
+        open_wound=_guided_scalar(raw_value.get("open_wound")),
+        bleeding_status=_guided_scalar(raw_value.get("bleeding_status")),
+        infection_signs=_guided_scalar(raw_value.get("infection_signs")),
+        impact_related=_guided_scalar(raw_value.get("impact_related")),
+        sensitive_area=_guided_scalar(raw_value.get("sensitive_area")),
+    )
 
 
 def _strip_guided_laterality(area: str, laterality: str | None) -> str:
@@ -419,7 +460,12 @@ def _parse_guided_injury(guided_injury: GuidedInjury) -> tuple[list[dict[str, st
     restrictions: list[ParsedRestriction] = []
 
     if guided_injury.area:
-        injury_entry = parse_injury_entry(guided_injury.area)
+        structured_descriptor = guided_injury.surface_type or guided_injury.injury_type
+        parse_phrase_parts = [guided_injury.area]
+        if structured_descriptor:
+            parse_phrase_parts.append(structured_descriptor.replace("_", " "))
+        parse_phrase = " ".join(part for part in parse_phrase_parts if part)
+        injury_entry = parse_injury_entry(parse_phrase)
         if injury_entry is None:
             injury_entry = {
                 "injury_type": "unspecified",
@@ -442,10 +488,44 @@ def _parse_guided_injury(guided_injury: GuidedInjury) -> tuple[list[dict[str, st
         if guided_injury.avoid:
             injury_entry["avoid"] = guided_injury.avoid.strip().lower()
 
+        if guided_injury.injury_type:
+            if guided_injury.injury_type == "surface_injury" and guided_injury.surface_type:
+                injury_entry["injury_type"] = guided_injury.surface_type
+            elif guided_injury.injury_type != "surface_injury":
+                injury_entry["injury_type"] = guided_injury.injury_type
+        for field in (
+            "surface_type",
+            "timeframe",
+            "cleared",
+            "open_wound",
+            "bleeding_status",
+            "infection_signs",
+            "impact_related",
+            "sensitive_area",
+        ):
+            value = getattr(guided_injury, field, "")
+            if value:
+                injury_entry[field] = value
+
         if guided_injury.notes:
             injury_entry["notes"] = guided_injury.notes
-            if _GUIDED_STRUCTURAL_NOTE_PATTERN.search(guided_injury.notes):
-                injury_entry["original_phrase"] = f"{guided_injury.area}. Notes: {guided_injury.notes}"
+
+        contextual_phrase = ". ".join(
+            part
+            for part in (
+                guided_injury.area,
+                guided_injury.injury_type,
+                guided_injury.surface_type,
+                guided_injury.timeframe,
+                guided_injury.notes,
+            )
+            if part
+        )
+        if contextual_phrase and (
+            _GUIDED_STRUCTURAL_NOTE_PATTERN.search(contextual_phrase)
+            or guided_injury.injury_type
+        ):
+            injury_entry["original_phrase"] = contextual_phrase
         injuries.append(injury_entry)
 
     if guided_injury.avoid:

@@ -295,6 +295,30 @@ def test_guided_injuries_payload_parses_multiple_cards_and_preserves_notes():
     assert parsed.restrictions[0]["region"] == "hip"
 
 
+def test_guided_surface_structured_fields_map_into_parsed_injury():
+    payload = _payload(
+        [
+            {"label": "Full name", "value": "Test Athlete"},
+            {"label": "Fighting Style (Technical)", "value": "Boxing"},
+            {"label": "Any injuries or areas you need to work around?", "value": ""},
+        ]
+    )
+    payload["guided_injury"] = {
+        "area": "Right eyebrow",
+        "injury_type": "surface_injury",
+        "surface_type": "cut",
+        "open_wound": True,
+        "bleeding_status": "a_little",
+        "sensitive_area": "face",
+        "severity": "moderate",
+        "trend": "stable",
+    }
+    parsed = PlanInput.from_payload(payload)
+    assert parsed.parsed_injuries[0]["injury_type"] == "cut"
+    assert parsed.parsed_injuries[0]["open_wound"] == "true"
+    assert parsed.parsed_injuries[0]["sensitive_area"] == "face"
+
+
 def test_guided_injuries_are_parsed_once(monkeypatch):
     payload = _payload(
         [

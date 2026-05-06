@@ -46,13 +46,20 @@ _RED_FLAG_PATTERNS: tuple[tuple[str, str], ...] = (
     (r"\bslurred\s+speech\b", "slurred_speech"),
     (r"\bneck\s+pain\b[\w\s-]{0,40}\b(?:after|from)\s+(?:trauma|fall|impact|collision|hit)\b|\b(?:trauma|fall|impact|collision|hit)\b[\w\s-]{0,40}\bneck\s+pain\b", "neck_pain_after_trauma"),
     (r"\b(?:bowel|bladder)\s+(?:changes?|issues?|dysfunction|incontinence)\b[\w\s-]{0,40}\b(?:back|spine|spinal)\b|\b(?:back|spine|spinal)\b[\w\s-]{0,40}\b(?:bowel|bladder)\s+(?:changes?|issues?|dysfunction|incontinence)\b", "bowel_or_bladder_changes_after_back_injury"),
+    (r"\b(?:bleeding|blood)\b[\w\s-]{0,20}\b(?:won[’']?t\s+stop|cannot\s+stop|uncontrolled)\b|\buncontrolled\s+bleeding\b", "uncontrolled_bleeding"),
+    (r"\bopen\s+wound\b|\bwound\s+open\b", "open_wound"),
+    (r"\bwound\s+(?:reopened|re-opened)\b|\breopened\s+wound\b", "wound_reopened"),
+    (r"\bneed(?:s)?\s+stitches\b|\brequire(?:s)?\s+stitches\b", "needs_stitches"),
+    (r"\b(?:pus|ooz(?:e|ing)|spreading\s+red(?:ness)?|hot\s+skin|red[-\s]?hot)\b", "infection_signs"),
+    (r"\b(?:eye|eyebrow|eyelid)\b[\w\s-]{0,20}\b(?:cut|wound|laceration|graze|abrasion)\b|\b(?:cut|wound|laceration|graze|abrasion)\b[\w\s-]{0,20}\b(?:eye|eyebrow|eyelid)\b", "eye_area_wound"),
+    (r"\b(?:face|mouth|lip|genital)\b[\w\s-]{0,20}\b(?:cut|wound|laceration|graze|abrasion)\b|\b(?:cut|wound|laceration|graze|abrasion)\b[\w\s-]{0,20}\b(?:face|mouth|lip|genital)\b", "sensitive_area_wound"),
 )
 
 _HIGH_RISK_PATTERNS: tuple[tuple[str, str], ...] = (
     (r"\bopen\s+fracture\b", "open_fracture"),
     (r"\bstress\s+fracture\b", "stress_fracture"),
     (r"\brib\s+fracture\b|\bbroken\s+rib\b", "broken_rib"),
-    (r"\bfracture\b|\b(?:broke|broken)\s+(?:my\s+)?(?:bone|ankle|leg|arm|rib|wrist|hand|foot|jaw|nose|finger|toe)\b", "fracture"),
+    (r"\bfracture(?:d)?\b|\b(?:broke|broken)\s+(?:my\s+)?(?:bone|ankle|leg|arm|rib|wrist|hand|foot|jaw|nose|finger|toe|shin|tibia|fibula|collarbone|clavicle|forearm|knee|shoulder|elbow)\b", "fracture"),
     (r"\bdislocat(?:ion|e|ed|es|ing)\b|\bsublux(?:ation|ing|ed)?\b|\bpartial\s+dislocation\b", "dislocation"),
     (r"\bsuspected\s+concussion\b", "suspected_concussion"),
     (r"\bconcussion\b", "concussion"),

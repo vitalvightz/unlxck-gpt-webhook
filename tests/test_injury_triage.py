@@ -964,3 +964,36 @@ def test_guided_injury_note_with_broke_routes_to_restricted_rehab():
 
     assert triage.mode == RESTRICTED_REHAB_ONLY
     assert triage.should_block_stage2 is True
+
+
+def test_raw_injury_fractured_tibia_routes_to_restricted_rehab():
+    triage = triage_injuries(PlanInput.from_payload(_payload_with_injury("fractured tibia last month")))
+    assert triage.mode == RESTRICTED_REHAB_ONLY
+    assert "fracture" in triage.matched_high_risk_categories
+
+
+def test_surface_open_wound_routes_to_needs_review():
+    payload = _payload_with_injury("")
+    payload["guided_injury"] = {
+        "area": "right eyebrow",
+        "injury_type": "surface_injury",
+        "surface_type": "cut",
+        "open_wound": True,
+        "severity": "moderate",
+        "trend": "stable",
+    }
+    triage = triage_injuries(PlanInput.from_payload(payload))
+    assert triage.mode == NEEDS_REVIEW
+
+
+def test_surface_uncontrolled_bleeding_routes_to_medical_hold():
+    payload = _payload_with_injury("")
+    payload["guided_injury"] = {
+        "area": "right eyebrow",
+        "injury_type": "surface_injury",
+        "surface_type": "cut",
+        "bleeding_status": "won't_stop",
+        "notes": "bleeding won't stop",
+    }
+    triage = triage_injuries(PlanInput.from_payload(payload))
+    assert triage.mode == MEDICAL_HOLD

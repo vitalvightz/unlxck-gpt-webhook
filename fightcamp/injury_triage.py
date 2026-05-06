@@ -83,6 +83,7 @@ _DANGEROUS_RED_FLAGS = {
     "shortness_of_breath",
     "chest_pain",
     "breathing_pain",
+    "uncontrolled_bleeding",
 }
 
 _WORSENING_TRENDS = {"worse", "worsening", "regressing", "worsened"}
@@ -111,6 +112,15 @@ _FRACTURE_REGIONS = (
     "nose",
     "finger",
     "toe",
+    "shin",
+    "tibia",
+    "fibula",
+    "collarbone",
+    "clavicle",
+    "forearm",
+    "knee",
+    "shoulder",
+    "elbow",
 )
 
 _BROKE_REGION_RE = re.compile(
@@ -801,10 +811,12 @@ def triage_injuries(plan_input: PlanInput) -> InjuryTriageResult:
         red_flags.add("worsening_course")
         routing_reasons.add("guided_injury:worsening")
 
+    guided_history_style_broke = "last month" in guided_notes and "last week" not in guided_notes
+
     if _has_guided_structural_broke_signal(
         guided_notes=guided_notes,
         cleaned_combined_text=cleaned_combined_text,
-    ):
+    ) and not guided_history_style_broke:
         matched_categories.add("fracture")
         routing_reasons.add("guided_injury:structural_broke_signal")
 
@@ -908,6 +920,40 @@ def triage_injuries(plan_input: PlanInput) -> InjuryTriageResult:
             reasons=[
                 "Recent structural injury history was detected in guided injury notes.",
                 "Coach/admin review is required before normal plan generation.",
+            ],
+            clinician_clearance_required=False,
+            should_block_stage2=True,
+            red_flags=red_flags,
+            matched_categories=matched_categories,
+            routing_reasons=routing_reasons,
+            urgent_flags=urgent_flags,
+            sparring_risk_band=highest_band,
+        )
+
+    if "uncontrolled_bleeding" in red_flags or ("infection_signs" in red_flags and "fever" in combined_text):
+        routing_reasons.add("surface_injury:medical_hold")
+        return _build_result(
+            mode=MEDICAL_HOLD,
+            reasons=[
+                "Surface-injury danger signals were detected before planning.",
+                "Medical review is required before training guidance can continue.",
+            ],
+            clinician_clearance_required=True,
+            should_block_stage2=True,
+            red_flags=red_flags,
+            matched_categories=matched_categories,
+            routing_reasons=routing_reasons,
+            urgent_flags=urgent_flags,
+            sparring_risk_band=highest_band,
+        )
+
+    if red_flags & {"open_wound", "wound_reopened", "needs_stitches", "eye_area_wound", "sensitive_area_wound", "infection_signs"}:
+        routing_reasons.add("surface_injury:needs_review")
+        return _build_result(
+            mode=NEEDS_REVIEW,
+            reasons=[
+                "Surface injury needs coach/admin review before normal planning.",
+                "Update wound status and clearance details, then regenerate.",
             ],
             clinician_clearance_required=False,
             should_block_stage2=True,

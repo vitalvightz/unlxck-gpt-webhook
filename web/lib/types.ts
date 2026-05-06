@@ -38,8 +38,17 @@ export type AthleteProfileInput = {
 
 export type GuidedInjuryInput = {
   area?: string;
+  injury_type?: string;
+  surface_type?: string;
   severity?: string;
   trend?: string;
+  timeframe?: string;
+  cleared?: string;
+  open_wound?: boolean | string;
+  bleeding_status?: string;
+  infection_signs?: string[] | string;
+  impact_related?: boolean | string;
+  sensitive_area?: string;
   avoid?: string;
   notes?: string;
 };
