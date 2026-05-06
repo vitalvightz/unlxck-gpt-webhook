@@ -175,6 +175,76 @@ def test_injury_guard_region_false_positives():
     )
 
 
+def test_surface_tissue_neck_cut_does_not_trigger_location_suppression():
+    decision = injury_decision({"name": "Push Press", "tags": ["upper_push", "neck_loaded"]}, ["neck cut"], "GPP", "low")
+    assert decision.action == "allow"
+    assert decision.reason.get("disposition") == "allow_with_skin_precautions"
+
+
+def test_surface_tissue_neck_abrasion_does_not_block_jump_landing():
+    decision = injury_decision(
+        {"name": "Depth Jump", "tags": ["landing_stress_high", "high_impact_plyo"]},
+        ["neck abrasion"],
+        "GPP",
+        "low",
+    )
+    assert decision.action == "allow"
+    assert decision.reason.get("disposition") == "allow_with_skin_precautions"
+
+
+def test_surface_tissue_neck_graze_does_not_behave_like_strain():
+    graze_decision = injury_decision({"name": "Neck Bridge Iso", "tags": ["neck_loaded"]}, ["neck graze"], "GPP", "low")
+    strain_decision = injury_decision(
+        {"name": "Neck Bridge Iso", "tags": ["neck_loaded"]},
+        ["neck strain"],
+        "GPP",
+        "low",
+    )
+    assert graze_decision.action == "allow"
+    assert graze_decision.reason.get("disposition") == "allow_with_skin_precautions"
+    assert strain_decision.action in {"modify", "exclude"}
+
+
+def test_surface_red_flag_infected_cut_on_neck_gets_review_path():
+    decision = injury_decision({"name": "Push Press", "tags": ["upper_push"]}, ["infected cut on neck"], "GPP", "low")
+    assert decision.action == "modify"
+    assert "contact_restrict" in decision.mods
+    assert "manual_review" in decision.mods
+
+
+def test_surface_red_flag_stitches_laceration_near_eye_gets_review_path():
+    decision = injury_decision(
+        {"name": "Resisted Punching", "tags": ["upper_push", "explosive_upper_push"]},
+        ["laceration requiring stitches near eye"],
+        "GPP",
+        "low",
+    )
+    assert decision.action == "modify"
+    assert "contact_restrict" in decision.mods
+    assert "manual_review" in decision.mods
+
+
+def test_surface_plus_structural_injury_does_not_bypass_structural_guard():
+    decision = injury_decision(
+        {"name": "Depth Jump", "tags": ["landing_stress_high", "high_impact_plyo"]},
+        ["neck cut", "knee instability"],
+        "GPP",
+        "low",
+    )
+    assert decision.action in {"modify", "exclude"}
+    assert decision.reason.get("bucket") != "surface_tissue"
+
+
+def test_surface_plus_neck_strain_does_not_allow_neck_loaded_exercise():
+    decision = injury_decision(
+        {"name": "Neck Bridge Iso", "tags": ["neck_loaded"]},
+        ["neck graze", "neck strain"],
+        "GPP",
+        "low",
+    )
+    assert decision.action in {"modify", "exclude"}
+
+
 def test_injury_guard_field_restrictions():
     name_only = {"name": "Pressure Fighter Stomp", "purpose": "bench press power", "tags": []}
     name_only_reasons = _drill_text_injury_reasons(name_only, ["shoulder injury"])

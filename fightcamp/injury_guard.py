@@ -44,6 +44,23 @@ INJURY_TYPE_SEVERITY = {
     "unspecified": "moderate",
 }
 
+SURFACE_TISSUE_TYPES = {"abrasion", "cut", "graze", "blister", "laceration"}
+SURFACE_RED_FLAG_TERMS = {
+    "infected",
+    "infection",
+    "pus",
+    "weeping",
+    "red streak",
+    "hot skin",
+    "fever",
+    "bleeding heavily",
+    "won't stop bleeding",
+    "wound reopened",
+    "requires stitches",
+    "needs stitches",
+    "stitches",
+}
+
 SEVERITY_SYNONYMS = {
     "high": [
         "pop",
@@ -575,6 +592,41 @@ def _injury_context(injuries: Iterable[str | dict], debug_entries: list[dict] | 
     return region_severity
 
 
+def _surface_injury_assessment(injuries: Iterable[str | dict]) -> tuple[int, int, list[str]]:
+    surface_count = 0
+    non_surface_count = 0
+    red_flags: set[str] = set()
+    for injury in injuries:
+        if not injury:
+            continue
+        raw_text = ""
+        if isinstance(injury, dict):
+            itype = str(injury.get("injury_type") or "").strip().lower()
+            if itype:
+                if itype in SURFACE_TISSUE_TYPES:
+                    surface_count += 1
+                else:
+                    non_surface_count += 1
+            raw_text = str(injury.get("original_phrase") or injury.get("raw") or "")
+        else:
+            raw_text = str(injury)
+        for phrase in split_injury_text(raw_text):
+            if is_restriction_phrase(phrase):
+                continue
+            parsed = parse_injury_entry(phrase)
+            if parsed:
+                parsed_type = str(parsed.get("injury_type") or "").lower()
+                if parsed_type in SURFACE_TISSUE_TYPES:
+                    surface_count += 1
+                elif parsed_type:
+                    non_surface_count += 1
+            lowered = phrase.lower()
+            for term in SURFACE_RED_FLAG_TERMS:
+                if term in lowered:
+                    red_flags.add(term)
+    return surface_count, non_surface_count, sorted(red_flags)
+
+
 def _thresholds(phase: str | None, fatigue: str | None) -> tuple[float, float]:
     modify_band = 0.85
     threshold = 1.2
@@ -751,6 +803,38 @@ def injury_decision(exercise: dict, injuries: Iterable[str | dict] | str | dict,
         _INJURY_SEVERITY_DEBUGGED = True
     modify_band, threshold = _thresholds(phase, fatigue)
     threshold_version = f"{modify_band:.2f}:{threshold:.2f}"
+
+    surface_count, non_surface_count, surface_red_flags = _surface_injury_assessment(injuries_list)
+    if surface_count > 0 and non_surface_count == 0:
+        if surface_red_flags:
+            return Decision(
+                action="modify",
+                risk_score=0.0,
+                threshold=threshold,
+                matched_tags=[],
+                mods=["contact_restrict", "manual_review"],
+                reason={
+                    "region": None,
+                    "severity": "moderate",
+                    "bucket": "surface_red_flag",
+                    "matches": [],
+                    "surface_red_flags": surface_red_flags,
+                },
+            )
+        return Decision(
+            action="allow",
+            risk_score=0.0,
+            threshold=threshold,
+            matched_tags=[],
+            mods=["skin_precautions"],
+            reason={
+                "region": None,
+                "severity": "mild",
+                "bucket": "surface_tissue",
+                "matches": [],
+                "disposition": "allow_with_skin_precautions",
+            },
+        )
 
     if name.strip().lower() == "medicine-ball chest toss":
         for region, severity in region_severity.items():
