@@ -271,6 +271,8 @@ INJURY_SYNONYM_MAP = {
 
     "abrasion": [
         "abrasion",
+        "abraded",
+        "abrade",
         "abrased",
         "abrase",
         "scrape",
