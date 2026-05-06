@@ -334,9 +334,71 @@ class GuidedInjury:
     trend: str = ""
     avoid: str = ""
     notes: str = ""
+    injury_type: str = ""
+    surface_type: str = ""
+    timeframe: str = ""
+    cleared: str = ""
+    open_wound: str = ""
+    bleeding_status: str = ""
+    infection_signs: list[str] = field(default_factory=list)
+    impact_related: str = ""
+    sensitive_area: str = ""
 
     def has_content(self) -> bool:
-        return any([self.area, self.severity, self.trend, self.avoid, self.notes])
+        return any(
+            [
+                self.area,
+                self.severity,
+                self.trend,
+                self.avoid,
+                self.notes,
+                self.injury_type,
+                self.surface_type,
+                self.timeframe,
+                self.cleared,
+                self.open_wound,
+                self.bleeding_status,
+                self.infection_signs,
+                self.impact_related,
+                self.sensitive_area,
+            ]
+        )
+
+
+def _coerce_guided_text(value: object) -> str:
+    if isinstance(value, bool):
+        return "yes" if value else "no"
+    if value is None:
+        return ""
+    return str(value).strip()
+
+
+def _coerce_guided_list(value: object) -> list[str]:
+    if value is None:
+        return []
+    if isinstance(value, list):
+        return [str(item).strip() for item in value if str(item).strip()]
+    coerced = _coerce_guided_text(value)
+    return [coerced] if coerced else []
+
+
+def _build_guided_injury(raw_value: dict[str, object]) -> GuidedInjury:
+    return GuidedInjury(
+        area=_coerce_guided_text(raw_value.get("area")),
+        severity=_coerce_guided_text(raw_value.get("severity")),
+        trend=_coerce_guided_text(raw_value.get("trend")),
+        avoid=_coerce_guided_text(raw_value.get("avoid")),
+        notes=_coerce_guided_text(raw_value.get("notes")),
+        injury_type=_coerce_guided_text(raw_value.get("injury_type")),
+        surface_type=_coerce_guided_text(raw_value.get("surface_type")),
+        timeframe=_coerce_guided_text(raw_value.get("timeframe")),
+        cleared=_coerce_guided_text(raw_value.get("cleared")),
+        open_wound=_coerce_guided_text(raw_value.get("open_wound")),
+        bleeding_status=_coerce_guided_text(raw_value.get("bleeding_status")),
+        infection_signs=_coerce_guided_list(raw_value.get("infection_signs")),
+        impact_related=_coerce_guided_text(raw_value.get("impact_related")),
+        sensitive_area=_coerce_guided_text(raw_value.get("sensitive_area")),
+    )
 
 
 _GUIDED_TRIGGER_PREFIX = re.compile(
@@ -369,13 +431,7 @@ def _extract_guided_injury(data: dict) -> GuidedInjury | None:
     if not isinstance(raw_value, dict):
         return None
 
-    guided = GuidedInjury(
-        area=str(raw_value.get("area") or "").strip(),
-        severity=str(raw_value.get("severity") or "").strip(),
-        trend=str(raw_value.get("trend") or "").strip(),
-        avoid=str(raw_value.get("avoid") or "").strip(),
-        notes=str(raw_value.get("notes") or "").strip(),
-    )
+    guided = _build_guided_injury(raw_value)
     return guided if guided.has_content() else None
 
 
@@ -395,13 +451,7 @@ def _extract_guided_injuries(data: dict) -> list[GuidedInjury]:
     for entry in raw_value:
         if not isinstance(entry, dict):
             continue
-        guided = GuidedInjury(
-            area=str(entry.get("area") or "").strip(),
-            severity=str(entry.get("severity") or "").strip(),
-            trend=str(entry.get("trend") or "").strip(),
-            avoid=str(entry.get("avoid") or "").strip(),
-            notes=str(entry.get("notes") or "").strip(),
-        )
+        guided = _build_guided_injury(entry)
         if guided.has_content():
             injuries.append(guided)
     return injuries

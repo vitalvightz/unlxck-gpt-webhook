@@ -116,6 +116,49 @@ class GuidedInjuryInput(BaseModel):
     trend: str = ""
     avoid: str = ""
     notes: str = ""
+    injury_type: str = ""
+    surface_type: str = ""
+    timeframe: str = ""
+    cleared: str = ""
+    open_wound: str = ""
+    bleeding_status: str = ""
+    infection_signs: list[str] = Field(default_factory=list)
+    impact_related: str = ""
+    sensitive_area: str = ""
+
+    @field_validator(
+        "area",
+        "trend",
+        "avoid",
+        "notes",
+        "injury_type",
+        "surface_type",
+        "timeframe",
+        "cleared",
+        "open_wound",
+        "bleeding_status",
+        "impact_related",
+        "sensitive_area",
+        mode="before",
+    )
+    @classmethod
+    def coerce_guided_text(cls, value: Any) -> str:
+        if isinstance(value, bool):
+            return "yes" if value else "no"
+        if value is None:
+            return ""
+        return str(value).strip()
+
+    @field_validator("infection_signs", mode="before")
+    @classmethod
+    def clean_infection_signs(cls, value: Any) -> list[str]:
+        if value is None:
+            return []
+        if isinstance(value, list):
+            return _clean_list(value)
+        if isinstance(value, str):
+            return _clean_list([part.strip() for part in value.split(",")])
+        return _clean_list([value])
 
     @field_validator("severity", mode="before")
     @classmethod
