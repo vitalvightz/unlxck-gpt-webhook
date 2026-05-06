@@ -1,8 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type KeyboardEvent } from "react";
 
 export type BodyMapSide = "front" | "back";
+export type BodyMapSeverity = "low" | "moderate" | "high";
+
+export type BodyMapSelection = {
+  label: string;
+  severity?: BodyMapSeverity | "";
+};
 
 type Zone = {
   label: string;
@@ -63,64 +69,180 @@ const SILHOUETTE_PATH = [
   "M70 148 Q90 156,110 148",
 ].join(" ");
 
-export function BodyMap({
+const SEVERITY_LABELS: Record<BodyMapSeverity, string> = {
+  low: "low severity",
+  moderate: "moderate severity",
+  high: "high severity",
+};
+
+function findSelectionForZone(
+  selections: BodyMapSelection[],
+  zoneLabel: string,
+): BodyMapSelection | undefined {
+  const target = zoneLabel.toLowerCase();
+  return selections.find((entry) => entry.label.trim().toLowerCase() === target);
+}
+
+function severityClass(severity: BodyMapSeverity | "" | undefined): string {
+  if (!severity) {
+    return "";
+  }
+  return `body-map-zone-severity-${severity}`;
+}
+
+function buildZoneAriaLabel(
+  zoneLabel: string,
+  selection: BodyMapSelection | undefined,
+): string {
+  if (!selection) {
+    return `${zoneLabel}, not marked. Press Enter to add as an injury.`;
+  }
+  const severity = selection.severity ? SEVERITY_LABELS[selection.severity as BodyMapSeverity] : null;
+  if (severity) {
+    return `${zoneLabel}, marked at ${severity}. Press Enter to focus this injury card.`;
+  }
+  return `${zoneLabel}, marked. Press Enter to focus this injury card.`;
+}
+
+function BodySvg({
   side,
-  usedAreas,
+  selections,
   onZoneSelect,
-  onSideChange,
+  hoverKey,
+  setHoverKey,
 }: {
   side: BodyMapSide;
-  usedAreas: string[];
+  selections: BodyMapSelection[];
   onZoneSelect: (label: string) => void;
-  onSideChange: (side: BodyMapSide) => void;
+  hoverKey: string | null;
+  setHoverKey: (key: string | null) => void;
 }) {
-  const [hoverKey, setHoverKey] = useState<string | null>(null);
   const zones = side === "front" ? FRONT_ZONES : BACK_ZONES;
-  const normalizedUsed = usedAreas.map((area) => area.toLowerCase());
-  const hoverLabel = hoverKey ? zones[hoverKey]?.label ?? "" : "";
+  const sideLabel = side === "front" ? "Front" : "Back";
+  const gradientId = `body-map-silhouette-gradient-${side}`;
+  const filterId = `body-map-soft-glow-${side}`;
 
   return (
-    <div className="body-map-panel">
-      <p className="body-map-title">Tap a zone to add</p>
-      <div className="body-map-svg-wrap">
-        <svg viewBox="0 0 180 300" aria-label={`${side === "front" ? "Front" : "Back"} body map for injury selection`}>
-          <defs>
-            <linearGradient id="body-map-silhouette-gradient" x1="0%" y1="0%" x2="0%" y2="100%">
-              <stop offset="0%" stopColor="currentColor" stopOpacity="0.2" />
-              <stop offset="100%" stopColor="currentColor" stopOpacity="0.05" />
-            </linearGradient>
-            <filter id="body-map-soft-glow" x="-20%" y="-20%" width="140%" height="140%">
-              <feDropShadow dx="0" dy="0" stdDeviation="1.6" floodColor="currentColor" floodOpacity="0.2" />
-            </filter>
-          </defs>
-          <g className="body-map-silhouette">
-            <ellipse cx={90} cy={24} rx={14} ry={17} />
-            <path d={SILHOUETTE_PATH} />
-          </g>
-          {Object.entries(zones).map(([key, zone]) => {
-            const isUsed = normalizedUsed.includes(zone.label.toLowerCase());
-            const isHover = hoverKey === key;
+    <div className={`body-map-svg-wrap body-map-svg-wrap-${side}`} data-side={side}>
+      <p className="body-map-side-label" aria-hidden="true">
+        {sideLabel}
+      </p>
+      <svg
+        viewBox="0 0 180 300"
+        role="group"
+        aria-label={`${sideLabel} body map for injury selection`}
+      >
+        <defs>
+          <linearGradient id={gradientId} x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stopColor="currentColor" stopOpacity="0.2" />
+            <stop offset="100%" stopColor="currentColor" stopOpacity="0.05" />
+          </linearGradient>
+          <filter id={filterId} x="-20%" y="-20%" width="140%" height="140%">
+            <feDropShadow dx="0" dy="0" stdDeviation="1.6" floodColor="currentColor" floodOpacity="0.2" />
+          </filter>
+        </defs>
+        <g className="body-map-silhouette" style={{ fill: `url(#${gradientId})`, filter: `url(#${filterId})` }}>
+          <ellipse cx={90} cy={24} rx={14} ry={17} />
+          <path d={SILHOUETTE_PATH} />
+        </g>
+        {Object.entries(zones).map(([key, zone]) => {
+          const selection = findSelectionForZone(selections, zone.label);
+          const isUsed = Boolean(selection);
+          const isHover = hoverKey === key;
+          const ariaLabel = buildZoneAriaLabel(zone.label, selection);
 
-            return (
-              <g key={key}>
+          const handleKey = (event: KeyboardEvent<SVGGElement>) => {
+            if (event.key === "Enter" || event.key === " ") {
+              event.preventDefault();
+              onZoneSelect(zone.label);
+            }
+          };
+
+          return (
+            <g
+              key={key}
+              role="button"
+              tabIndex={0}
+              aria-label={ariaLabel}
+              aria-pressed={isUsed}
+              className={[
+                "body-map-zone-group",
+                isUsed ? "body-map-zone-group-used" : "",
+                severityClass(selection?.severity),
+              ]
+                .filter(Boolean)
+                .join(" ")}
+              onMouseEnter={() => setHoverKey(key)}
+              onMouseLeave={() => setHoverKey(null)}
+              onFocus={() => setHoverKey(key)}
+              onBlur={() => setHoverKey(null)}
+              onClick={() => onZoneSelect(zone.label)}
+              onKeyDown={handleKey}
+            >
+              <circle
+                cx={zone.cx}
+                cy={zone.cy}
+                r={zone.r}
+                className={`body-map-zone ${isUsed ? "body-map-zone-used" : ""} ${isHover ? "body-map-zone-hover" : ""}`}
+              />
+              {isUsed ? (
                 <circle
                   cx={zone.cx}
                   cy={zone.cy}
-                  r={zone.r}
-                  className={`body-map-zone ${isUsed ? "body-map-zone-used" : ""} ${isHover ? "body-map-zone-hover" : ""}`}
-                  onMouseEnter={() => setHoverKey(key)}
-                  onMouseLeave={() => setHoverKey(null)}
-                  onClick={() => onZoneSelect(zone.label)}
+                  r={3}
+                  className="body-map-zone-dot"
                 />
-                {isUsed ? <circle cx={zone.cx} cy={zone.cy} r={3} className="body-map-zone-dot" /> : null}
-              </g>
-            );
-          })}
-        </svg>
+              ) : null}
+            </g>
+          );
+        })}
+      </svg>
+    </div>
+  );
+}
+
+interface BodyMapProps {
+  side: BodyMapSide;
+  selections: BodyMapSelection[];
+  onZoneSelect: (label: string) => void;
+  onSideChange: (side: BodyMapSide) => void;
+}
+
+export function BodyMap({
+  side,
+  selections,
+  onZoneSelect,
+  onSideChange,
+}: BodyMapProps) {
+  const [hoverKey, setHoverKey] = useState<string | null>(null);
+  const activeZones = side === "front" ? FRONT_ZONES : BACK_ZONES;
+  const hoverLabel = hoverKey ? activeZones[hoverKey]?.label ?? "" : "";
+  const hasAnyMarked = selections.some((entry) => entry.label.trim());
+
+  return (
+    <div className="body-map-panel" data-active-side={side}>
+      <p className="body-map-title">Tap a zone to add</p>
+      <div className="body-map-svg-stack">
+        <BodySvg
+          side="front"
+          selections={selections}
+          onZoneSelect={onZoneSelect}
+          hoverKey={hoverKey}
+          setHoverKey={setHoverKey}
+        />
+        <BodySvg
+          side="back"
+          selections={selections}
+          onZoneSelect={onZoneSelect}
+          hoverKey={hoverKey}
+          setHoverKey={setHoverKey}
+        />
       </div>
-      <div className="body-map-side-toggle">
+      <div className="body-map-side-toggle" role="tablist" aria-label="Body map side">
         <button
           type="button"
+          role="tab"
+          aria-selected={side === "front"}
           className={`body-map-side-btn ${side === "front" ? "body-map-side-btn-active" : ""}`}
           onClick={() => onSideChange("front")}
         >
@@ -128,13 +250,33 @@ export function BodyMap({
         </button>
         <button
           type="button"
+          role="tab"
+          aria-selected={side === "back"}
           className={`body-map-side-btn ${side === "back" ? "body-map-side-btn-active" : ""}`}
           onClick={() => onSideChange("back")}
         >
           Back
         </button>
       </div>
-      <p className="body-map-hint">{hoverLabel || "Tap a zone, or type the area manually in a card."}</p>
+      <p className="body-map-hint" aria-live="polite">
+        {hoverLabel || "Tap a zone, or type the area manually in a card."}
+      </p>
+      {hasAnyMarked ? (
+        <ul className="body-map-legend" aria-label="Severity colour key">
+          <li className="body-map-legend-item">
+            <span className="body-map-legend-swatch body-map-legend-swatch-low" aria-hidden="true" />
+            <span>Low</span>
+          </li>
+          <li className="body-map-legend-item">
+            <span className="body-map-legend-swatch body-map-legend-swatch-moderate" aria-hidden="true" />
+            <span>Moderate</span>
+          </li>
+          <li className="body-map-legend-item">
+            <span className="body-map-legend-swatch body-map-legend-swatch-high" aria-hidden="true" />
+            <span>High</span>
+          </li>
+        </ul>
+      ) : null}
     </div>
   );
 }

@@ -6120,10 +6120,29 @@ html[data-theme="light"] .injury-card-state {
   color: var(--text-secondary);
 }
 
+.body-map-svg-stack {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  align-items: start;
+  justify-items: center;
+  margin: 0 auto;
+}
+
 .body-map-svg-wrap {
   position: relative;
-  width: 184px;
-  margin: 0 auto;
+  width: 100%;
+  max-width: 184px;
+}
+
+.body-map-side-label {
+  margin: 0 0 4px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  text-align: center;
 }
 
 .body-map-svg-wrap svg {
@@ -6139,19 +6158,27 @@ html[data-theme="light"] .injury-card-state {
 .body-map-silhouette ellipse,
 .body-map-silhouette path {
   opacity: 0.28;
-  fill: url(#body-map-silhouette-gradient);
   stroke: color-mix(in srgb, var(--text-secondary) 82%, transparent);
   stroke-width: 1.5;
   stroke-linecap: round;
   stroke-linejoin: round;
-  filter: url(#body-map-soft-glow);
+}
+
+.body-map-zone-group {
+  cursor: pointer;
+  outline: none;
+}
+
+.body-map-zone-group:focus-visible .body-map-zone {
+  stroke: var(--brand-red);
+  stroke-width: 2;
+  filter: drop-shadow(0 0 6px rgba(181, 18, 43, 0.45));
 }
 
 .body-map-zone {
   fill: color-mix(in srgb, var(--surface) 86%, transparent);
   stroke: rgba(186, 190, 200, 0.32);
   stroke-width: 1;
-  cursor: pointer;
   transition: fill 0.15s, stroke 0.15s, transform 0.15s;
 }
 
@@ -6168,9 +6195,40 @@ html[data-theme="light"] .injury-card-state {
   stroke-width: 1.5;
 }
 
+.body-map-zone-group-used.body-map-zone-severity-low .body-map-zone {
+  fill: rgba(245, 197, 24, 0.28);
+  stroke: rgba(245, 197, 24, 0.65);
+  stroke-width: 1.5;
+}
+
+.body-map-zone-group-used.body-map-zone-severity-moderate .body-map-zone {
+  fill: rgba(231, 96, 38, 0.32);
+  stroke: rgba(231, 96, 38, 0.7);
+  stroke-width: 1.5;
+}
+
+.body-map-zone-group-used.body-map-zone-severity-high .body-map-zone {
+  fill: rgba(181, 18, 43, 0.45);
+  stroke: rgba(181, 18, 43, 0.85);
+  stroke-width: 2;
+  filter: drop-shadow(0 0 5px rgba(181, 18, 43, 0.35));
+}
+
+.body-map-zone-group-used.body-map-zone-severity-low .body-map-zone-dot {
+  fill: #f5c518;
+}
+
+.body-map-zone-group-used.body-map-zone-severity-moderate .body-map-zone-dot {
+  fill: #e76026;
+}
+
+.body-map-zone-group-used.body-map-zone-severity-high .body-map-zone-dot {
+  fill: var(--brand-red);
+}
+
 .body-map-zone-dot {
   fill: var(--brand-red);
-  opacity: 0.7;
+  opacity: 0.85;
   pointer-events: none;
 }
 
@@ -6209,6 +6267,66 @@ html[data-theme="light"] .injury-card-state {
   color: var(--text-muted);
   line-height: 1.4;
   min-height: 1.4em;
+}
+
+.body-map-legend {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+.body-map-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.body-map-legend-swatch {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.body-map-legend-swatch-low {
+  background: #f5c518;
+}
+
+.body-map-legend-swatch-moderate {
+  background: #e76026;
+}
+
+.body-map-legend-swatch-high {
+  background: var(--brand-red);
+}
+
+@media (max-width: 720px) {
+  .body-map-panel[data-active-side="front"] .body-map-svg-wrap-back,
+  .body-map-panel[data-active-side="back"] .body-map-svg-wrap-front {
+    display: none;
+  }
+
+  .body-map-svg-stack {
+    grid-template-columns: 1fr;
+    max-width: 184px;
+  }
+
+  .body-map-side-label {
+    display: none;
+  }
+}
+
+@media (min-width: 721px) {
+  .body-map-side-toggle {
+    display: none;
+  }
 }
 
 .injury-card-header-interactive {
