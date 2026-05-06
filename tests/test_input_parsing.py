@@ -522,6 +522,81 @@ def test_guided_injury_payload_converts_frontend_to_backend_severity_vocab(guide
     assert parsed.parsed_injuries[0]["severity"] == expected_severity
 
 
+def test_guided_injury_legacy_payload_remains_compatible():
+    payload = _payload(
+        [
+            {"label": "Full name", "value": "Test Athlete"},
+            {"label": "Fighting Style (Technical)", "value": "Boxing"},
+            {"label": "Any injuries or areas you need to work around?", "value": "hip flexor"},
+        ]
+    )
+    payload["guided_injury"] = {
+        "area": "hip flexor",
+        "severity": "moderate",
+        "trend": "improving",
+        "avoid": "deep hip flexion",
+        "notes": "pain at end-range",
+    }
+
+    parsed = PlanInput.from_payload(payload)
+
+    assert parsed.guided_injury is not None
+    assert parsed.guided_injury.area == "hip flexor"
+    assert parsed.guided_injury.severity == "moderate"
+    assert parsed.guided_injury.avoid == "deep hip flexion"
+
+
+def test_guided_injury_structured_payload_preserves_new_fields():
+    payload = _payload(
+        [
+            {"label": "Full name", "value": "Test Athlete"},
+            {"label": "Fighting Style (Technical)", "value": "Boxing"},
+        ]
+    )
+    payload["guided_injury"] = {
+        "area": "left forearm",
+        "injury_type": "abrasion",
+        "surface_type": "mat burn",
+        "timeframe": "48h",
+        "cleared": True,
+        "open_wound": False,
+        "bleeding_status": "none",
+        "infection_signs": ["redness", "warmth"],
+        "impact_related": "yes",
+        "sensitive_area": "no",
+    }
+
+    parsed = PlanInput.from_payload(payload)
+
+    assert parsed.guided_injury is not None
+    assert parsed.guided_injury.injury_type == "abrasion"
+    assert parsed.guided_injury.surface_type == "mat burn"
+    assert parsed.guided_injury.timeframe == "48h"
+    assert parsed.guided_injury.cleared == "yes"
+    assert parsed.guided_injury.open_wound == "no"
+    assert parsed.guided_injury.bleeding_status == "none"
+    assert parsed.guided_injury.infection_signs == ["redness", "warmth"]
+    assert parsed.guided_injury.impact_related == "yes"
+    assert parsed.guided_injury.sensitive_area == "no"
+
+
+def test_guided_injury_infection_signs_defaults_to_empty_list():
+    guided = input_parsing._extract_guided_injury({"guided_injury": {"area": "left forearm"}})
+
+    assert guided is not None
+    assert guided.infection_signs == []
+
+
+def test_guided_injury_missing_structured_fields_do_not_crash():
+    guided = input_parsing._extract_guided_injury(
+        {"guided_injury": {"area": "left forearm", "unknown_field": "ignored"}}
+    )
+
+    assert guided is not None
+    assert guided.injury_type == ""
+    assert guided.open_wound == ""
+
+
 def test_missing_frequency_is_intentionally_inferred_and_marked_system_inferred():
     parsed = PlanInput.from_payload(
         _payload(
