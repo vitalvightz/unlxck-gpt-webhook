@@ -856,7 +856,7 @@ export function GuidedInjuryCard({
                   handleTypeSelect(null);
                   return;
                 }
-                handleTypeSelect({ label: "", value, surface_type: surfaceType || undefined });
+                handleTypeSelect({ label: "", value, surface_type: surfaceType });
               }}
             >
               <option value="::">Select injury type</option>
