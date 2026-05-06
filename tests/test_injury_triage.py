@@ -81,6 +81,29 @@ def test_ruled_out_fracture_after_thought_i_broke_it_does_not_route_fracture():
     assert "fracture" not in triage.matched_high_risk_categories
 
 
+@pytest.mark.xfail(
+    reason=(
+        "Known false-positive structural-break routing for benign crack/snap wording; "
+        "kept as protection for follow-up triage fix."
+    ),
+    strict=True,
+)
+@pytest.mark.parametrize(
+    "injury_text",
+    [
+        "neck cracked but no pain",
+        "knee snapped while stretching but no pain",
+        "ankle crack sound only, no pain or swelling",
+    ],
+)
+def test_benign_structural_break_words_without_symptoms_do_not_route_fracture(injury_text: str):
+    parsed = PlanInput.from_payload(_payload_with_injury(injury_text))
+    triage = triage_injuries(parsed)
+
+    assert triage.mode == FULL_PLAN
+    assert "fracture" not in triage.matched_high_risk_categories
+
+
 def test_concussion_routes_to_medical_hold():
     parsed = PlanInput.from_payload(
         _payload_with_injury("suspected concussion with headache after sparring")
