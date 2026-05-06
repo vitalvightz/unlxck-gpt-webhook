@@ -114,12 +114,12 @@ export function getHardSparringWarning(
   }
 
   const sessionLabel = sessionsPerWeek
-    ? `${sessionsPerWeek} planned weekly session${sessionsPerWeek === 1 ? "" : "s"}`
+    ? `${sessionsPerWeek} weekly session${sessionsPerWeek === 1 ? "" : "s"}`
     : "the current weekly session plan";
 
   return {
     acknowledgementContextKey,
-    message: `You selected ${normalizedHardSparringDays.length} hard sparring days inside ${sessionLabel}. That's a high contact load, so confirm the athlete can recover from it before continuing.`,
+    message: `You selected ${normalizedHardSparringDays.length} hard sparring days inside ${sessionLabel}. Confirm recovery planning before continuing.`,
     requiresAcknowledgement: true,
   };
 }
