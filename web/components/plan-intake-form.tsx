@@ -17,6 +17,7 @@ import {
   getOptionLabels,
   isValidRecordFormat,
   KEY_GOAL_OPTIONS,
+  normalizeGuidedInjurySeverity,
   PROFESSIONAL_STATUS_OPTIONS,
   retainKnownOptionValues,
   sanitizeRecordInput,
@@ -2142,7 +2143,12 @@ export function PlanIntakeForm() {
                       <div className="injury-body-map-col">
                         <BodyMap
                           side={bodyMapSide}
-                          usedAreas={guidedInjuries.map((injury) => injury.area)}
+                          selections={guidedInjuries
+                            .filter((injury) => injury.area.trim())
+                            .map((injury) => ({
+                              label: injury.area,
+                              severity: normalizeGuidedInjurySeverity(injury.severity) || undefined,
+                            }))}
                           onZoneSelect={handleBodyMapZoneSelect}
                           onSideChange={setBodyMapSide}
                         />
