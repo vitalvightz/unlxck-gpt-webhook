@@ -9001,3 +9001,14 @@ html[data-app-surface="workspace"][data-theme="dark"] .desktop-nav-toggle {
     transform: none;
   }
 }
+
+.blocked-context-line {
+  margin: 14px 0 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(202, 24, 52, 0.45);
+  background: rgba(202, 24, 52, 0.14);
+  color: #ffd5dc;
+  font-size: 0.95rem;
+  line-height: 1.4;
+}

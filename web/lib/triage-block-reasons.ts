@@ -1,6 +1,12 @@
 export type InjuryTriageSignals = {
+  mode?: string;
+  reasons?: string[];
   red_flags: string[];
   matched_high_risk_categories: string[];
+  routing_reasons?: string[];
+  urgent_flags?: string[];
+  sparring_risk_band?: string;
+  clinician_clearance_required?: boolean;
 };
 export type GuidedInjurySummary = {
   area?: string;
@@ -67,26 +73,31 @@ export function summarizeBlockedInjuryContext({
   injuriesText?: string | null;
   guidedInjuries?: GuidedInjurySummary[] | null;
 }) {
-  const signalLabels = [...new Set([...triage.red_flags, ...triage.matched_high_risk_categories]
-    .map(titleizeToken)
-    .filter(Boolean))]
-    .slice(0, 2);
+  const highRiskLabels = [...new Set((triage.matched_high_risk_categories ?? []).map(titleizeToken).filter(Boolean))].slice(0, 2);
+  const redFlagLabels = [...new Set((triage.red_flags ?? []).map(titleizeToken).filter(Boolean))].slice(0, 2);
+  const urgentFlagLabels = [...new Set((triage.urgent_flags ?? []).map(titleizeToken).filter(Boolean))].slice(0, 2);
+  const reasonLabels = [...new Set((triage.reasons ?? []).map((reason) => reason.trim()).filter(Boolean))].slice(0, 2);
   const areas = [...new Set((guidedInjuries ?? [])
     .map((injury) => (typeof injury.area === "string" ? injury.area.trim() : ""))
     .filter(Boolean))]
     .slice(0, 2);
   const injuryLine = typeof injuriesText === "string" ? injuriesText.trim() : "";
+  const allOrdered = [
+    ...highRiskLabels,
+    ...redFlagLabels,
+    ...urgentFlagLabels,
+    ...reasonLabels,
+    ...(injuryLine ? [injuryLine] : []),
+    ...areas,
+  ];
+  const primary = allOrdered[0] ?? null;
+  const secondary = allOrdered[1] ?? null;
 
-  if (!signalLabels.length && !areas.length && !injuryLine) {
-    return null;
+  if (primary && secondary) {
+    return `Blocked trigger: ${primary} + ${secondary}`;
   }
-
-  const detailBits: string[] = [];
-  if (areas.length) detailBits.push(`Area${areas.length > 1 ? "s" : ""}: ${areas.join(", ")}`);
-  if (signalLabels.length) {
-    detailBits.push(`Trigger${signalLabels.length > 1 ? "s" : ""}: ${signalLabels.join(", ")}`);
+  if (primary) {
+    return `Blocked trigger: ${primary}`;
   }
-  if (!areas.length && injuryLine) detailBits.push(`Reported injury: ${injuryLine}`);
-
-  return detailBits.join(" • ");
+  return "Blocked trigger: Protected planner state";
 }
