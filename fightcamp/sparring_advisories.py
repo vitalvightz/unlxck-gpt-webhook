@@ -45,7 +45,7 @@ _RISK_BAND_THRESHOLDS = [
 _RISK_BAND_RANK = {"black": 3, "red": 2, "amber": 1, "green": 0}
 
 # Severity tier token sets — soreness/stiffness are LOW, not moderate
-_HIGH_SEVERITY_TOKENS = {"tear", "rupture", "severe", "sharp"}
+_HIGH_SEVERITY_TOKENS = {"tear", "rupture", "fracture", "dislocation", "severe", "sharp"}
 _MODERATE_SEVERITY_TOKENS = {
     "strain", "sprain", "pain", "tendon", "tendonitis", "tendinopathy", "impingement",
 }
@@ -56,15 +56,23 @@ _WORSENING_TOKENS = {"worsen", "worsening", "worse", "flared", "aggravated", "re
 _IMPROVING_TOKENS = {"improving", "better", "settling", "resolved", "resolving"}
 _STABLE_TOKENS = {"stable", "managed", "manageable", "maintenance"}
 _CANNOT_PATTERN = re.compile(r"\b(?:cannot|can['\u2019]t)\b")
+_FUNCTIONAL_CANNOT_PATTERN = re.compile(
+    r"\b(?:cannot|can['\u2019]t)\s+"
+    r"(?:load|weight[- ]?bear|bear weight|push off|pivot|plant|rotate|turn|brace|jump|land|strike|punch|kick|move|walk|run|grip|flex|extend)\b"
+)
 
 
 def _contains_cannot_phrase(lowered: str) -> bool:
     return bool(_CANNOT_PATTERN.search(lowered))
 
 
+def _contains_functional_cannot_phrase(lowered: str) -> bool:
+    return bool(_FUNCTIONAL_CANNOT_PATTERN.search(lowered))
+
+
 def _severity_tier(lowered: str, instability: bool, daily_symptoms: bool) -> str:
     """Classify structural severity: high / moderate / low."""
-    if any(token in lowered for token in _HIGH_SEVERITY_TOKENS) or _contains_cannot_phrase(lowered):
+    if any(token in lowered for token in _HIGH_SEVERITY_TOKENS) or _contains_functional_cannot_phrase(lowered):
         return "high"
     if any(token in lowered for token in _MODERATE_SEVERITY_TOKENS):
         return "moderate"
@@ -98,7 +106,7 @@ def _override_flags(lowered: str, instability: bool, daily_symptoms: bool) -> li
         flags.append("daily_symptoms")
     if any(token in lowered for token in ("rest pain",)):
         flags.append("rest_pain")
-    if _contains_cannot_phrase(lowered):
+    if _contains_functional_cannot_phrase(lowered):
         flags.append("cannot_load")
     if any(token in lowered for token in ("giving way", "buckled", "locking", "locked")):
         flags.append("giving_way")
@@ -266,7 +274,7 @@ def _sparring_injury_entries(athlete_snapshot: dict[str, Any]) -> list[dict[str,
         # -- Legacy state_score (old algorithm, kept for backward compat) --
         severe = instability or daily_symptoms or any(
             token in lowered_for_signals for token in ("sharp", "severe", "tear", "rupture")
-        ) or _contains_cannot_phrase(lowered_for_signals)
+        ) or _contains_functional_cannot_phrase(lowered_for_signals)
         moderate = severe or any(
             token in lowered_for_signals
             for token in (
