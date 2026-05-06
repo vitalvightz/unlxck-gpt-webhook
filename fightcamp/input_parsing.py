@@ -510,17 +510,23 @@ def _parse_guided_injury(guided_injury: GuidedInjury) -> tuple[list[dict[str, st
         if guided_injury.notes:
             injury_entry["notes"] = guided_injury.notes
 
-        contextual_phrase = ". ".join(
-            part
-            for part in (
-                guided_injury.area,
-                guided_injury.injury_type,
-                guided_injury.surface_type,
-                guided_injury.timeframe,
-                guided_injury.notes,
-            )
-            if part
-        )
+        contextual_parts = [
+            guided_injury.area,
+            guided_injury.injury_type,
+            guided_injury.surface_type,
+            guided_injury.timeframe,
+        ]
+        if guided_injury.open_wound == "true":
+            contextual_parts.append("open wound")
+        if guided_injury.bleeding_status:
+            contextual_parts.append(f"bleeding {guided_injury.bleeding_status.replace('_', ' ')}")
+        if guided_injury.infection_signs:
+            contextual_parts.append(f"infection signs: {guided_injury.infection_signs}")
+        if guided_injury.sensitive_area:
+            contextual_parts.append(f"sensitive area: {guided_injury.sensitive_area}")
+        contextual_parts.append(guided_injury.notes)
+
+        contextual_phrase = ". ".join(part for part in contextual_parts if part)
         if contextual_phrase and (
             _GUIDED_STRUCTURAL_NOTE_PATTERN.search(contextual_phrase)
             or guided_injury.injury_type
