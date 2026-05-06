@@ -4,7 +4,7 @@ from dataclasses import asdict, dataclass, field
 import re
 from typing import Any
 
-from .input_parsing import PlanInput
+from .input_parsing import GuidedInjury, PlanInput
 from .injury_synonyms import parse_injury_phrase, remove_negated_phrases, split_injury_text
 from .sparring_advisories import summarize_sparring_injury_risk
 from .triage_features import build_triage_features
@@ -76,6 +76,7 @@ _CRITICAL_MEDICAL_HOLD_RED_FLAGS = {
     "slurred_speech",
     "neck_pain_after_trauma",
     "bowel_or_bladder_changes_after_back_injury",
+    "uncontrolled_bleeding",
 }
 
 _DANGEROUS_RED_FLAGS = {
@@ -768,6 +769,226 @@ def _combo_gate_result(
     return None
 
 
+_STRUCTURED_TEAR_KEYWORDS = re.compile(
+    r"\b(?:tear|torn|rupture|ruptured|pop|snap|instability|giving\s+way)\b",
+    re.IGNORECASE,
+)
+
+_STRUCTURED_STITCHES_KEYWORDS = re.compile(
+    r"\b(?:stitches|needs?\s+stitches|deep\s+gash|sutures?)\b",
+    re.IGNORECASE,
+)
+
+_RIB_CHEST_HEAD_EYE_PATTERN = re.compile(
+    r"\b(?:rib|chest|head|eye|temple|orbital|skull)\b",
+    re.IGNORECASE,
+)
+
+_OLD_CLEARED_TIMEFRAMES = {"old_cleared", "three_plus_months"}
+
+_HEAD_IMPACT_RED_FLAG_TOKENS = {
+    "loss_of_consciousness",
+    "vomiting",
+    "severe_headache",
+    "memory_loss",
+    "blurred_or_double_vision",
+    "confusion",
+    "slurred_speech",
+    "seizure",
+}
+
+_INFECTION_SYSTEMIC_SIGNS = {"fever", "spreading"}
+_INFECTION_LOCAL_SIGNS = {"pus", "redness_heat"}
+
+
+def _apply_structured_injury_signals(
+    *,
+    guided: GuidedInjury,
+    matched_categories: set[str],
+    red_flags: set[str],
+    clinician_restriction_signals: set[str],
+    routing_reasons: set[str],
+) -> None:
+    injury_type = (guided.injury_type or "").strip().lower()
+    if not injury_type:
+        return
+
+    surface_type = (guided.surface_type or "").strip().lower()
+    timeframe = (guided.timeframe or "").strip().lower()
+    cleared = (guided.cleared or "").strip().lower()
+    severity = (guided.severity or "").strip().lower()
+    trend = (guided.trend or "").strip().lower()
+    open_wound = (guided.open_wound or "").strip().lower()
+    bleeding_status = (guided.bleeding_status or "").strip().lower()
+    infection_signs = {s.strip().lower() for s in (guided.infection_signs or []) if s.strip()}
+    impact_related = (guided.impact_related or "").strip().lower()
+    sensitive_area = (guided.sensitive_area or "").strip().lower()
+    notes = (guided.notes or "").strip().lower()
+    area = (guided.area or "").strip().lower()
+
+    old_and_cleared = timeframe in _OLD_CLEARED_TIMEFRAMES and cleared == "yes"
+    has_current_concern = (
+        severity == "high"
+        or trend in _WORSENING_TRENDS
+        or cleared in ("no", "not_sure")
+    )
+
+    # ── Fracture ──────────────────────────────────────────────────────
+    if injury_type == "fracture":
+        if old_and_cleared and not has_current_concern:
+            routing_reasons.add("structured:fracture_old_cleared_no_concern")
+        else:
+            matched_categories.add("fracture")
+            routing_reasons.add("structured:fracture")
+
+    # ── Dislocation ───────────────────────────────────────────────────
+    elif injury_type == "dislocation":
+        if old_and_cleared and not has_current_concern:
+            routing_reasons.add("structured:dislocation_old_cleared_no_concern")
+        else:
+            matched_categories.add("dislocation")
+            routing_reasons.add("structured:dislocation")
+
+    # ── Tendon / ligament ─────────────────────────────────────────────
+    elif injury_type == "tendon_ligament":
+        should_flag = (
+            severity == "high"
+            or trend in _WORSENING_TRENDS
+            or cleared in ("no", "not_sure")
+            or bool(_STRUCTURED_TEAR_KEYWORDS.search(notes))
+        )
+        if should_flag:
+            matched_categories.add("tendon_rupture_or_avulsion")
+            routing_reasons.add("structured:tendon_ligament_risk")
+        else:
+            routing_reasons.add("structured:tendon_ligament_mild")
+
+    # ── Post-surgery ──────────────────────────────────────────────────
+    elif injury_type == "post_surgery":
+        clinician_restriction_signals.add("post_op_or_reconstruction")
+        routing_reasons.add("structured:post_surgery")
+        if cleared in ("no", "not_sure"):
+            routing_reasons.add("structured:post_surgery_not_cleared")
+        elif old_and_cleared:
+            routing_reasons.add("structured:post_surgery_old_cleared")
+
+    # ── Head impact ───────────────────────────────────────────────────
+    elif injury_type == "head_impact":
+        matched_categories.add("concussion")
+        routing_reasons.add("structured:head_impact")
+        red_flag_match = re.findall(r"\[red_flags:([^\]]+)\]", notes)
+        if red_flag_match:
+            for flag_str in red_flag_match:
+                for token in flag_str.split(","):
+                    token = token.strip().lower()
+                    if token in _HEAD_IMPACT_RED_FLAG_TOKENS:
+                        if token == "loss_of_consciousness":
+                            red_flags.add("loss_of_consciousness")
+                        elif token == "vomiting":
+                            red_flags.add("vomiting_after_head_impact")
+                        elif token == "severe_headache":
+                            red_flags.add("severe_headache_after_head_impact")
+                        elif token == "memory_loss":
+                            red_flags.add("amnesia_or_memory_loss")
+                        elif token == "blurred_or_double_vision":
+                            red_flags.add("blurred_or_double_vision")
+                        elif token == "confusion":
+                            red_flags.add("confusion")
+                        elif token == "slurred_speech":
+                            red_flags.add("slurred_speech")
+                        elif token == "seizure":
+                            red_flags.add("seizure_or_convulsion")
+
+    # ── Nerve symptoms ────────────────────────────────────────────────
+    elif injury_type == "nerve_symptoms":
+        red_flags.add("numbness")
+        routing_reasons.add("structured:nerve_symptoms")
+        if trend in _WORSENING_TRENDS or impact_related == "yes":
+            routing_reasons.add("structured:nerve_symptoms_escalated")
+
+    # ── Chest / breathing ─────────────────────────────────────────────
+    elif injury_type == "chest_breathing":
+        red_flags.add("breathing_pain")
+        red_flags.add("chest_pain")
+        routing_reasons.add("structured:chest_breathing")
+
+    # ── Surface injury ────────────────────────────────────────────────
+    elif injury_type == "surface_injury":
+        _apply_surface_injury_signals(
+            surface_type=surface_type,
+            bleeding_status=bleeding_status,
+            open_wound=open_wound,
+            sensitive_area=sensitive_area,
+            infection_signs=infection_signs,
+            impact_related=impact_related,
+            trend=trend,
+            severity=severity,
+            notes=notes,
+            area=area,
+            red_flags=red_flags,
+            matched_categories=matched_categories,
+            routing_reasons=routing_reasons,
+        )
+
+
+def _apply_surface_injury_signals(
+    *,
+    surface_type: str,
+    bleeding_status: str,
+    open_wound: str,
+    sensitive_area: str,
+    infection_signs: set[str],
+    impact_related: str,
+    trend: str,
+    severity: str,
+    notes: str,
+    area: str,
+    red_flags: set[str],
+    matched_categories: set[str],
+    routing_reasons: set[str],
+) -> None:
+    routing_reasons.add(f"structured:surface_{surface_type or 'unspecified'}")
+
+    # ── Bleeding ──────────────────────────────────────────────────────
+    if bleeding_status == "wont_stop":
+         red_flags.add("uncontrolled_bleeding")
+        routing_reasons.add("structured:uncontrolled_bleeding")
+
+    # ── Open wound ────────────────────────────────────────────────────
+    if open_wound == "yes":
+        red_flags.add("open_wound")
+        routing_reasons.add("structured:open_wound")
+
+    # ── Sensitive area ────────────────────────────────────────────────
+    if sensitive_area == "eye":
+        red_flags.add("eye_area_wound")
+        routing_reasons.add("structured:eye_area_wound")
+    elif sensitive_area in ("mouth", "face"):
+        red_flags.add("sensitive_area_wound")
+        routing_reasons.add("structured:sensitive_area_wound")
+
+    # ── Infection ─────────────────────────────────────────────────────
+    active_infection = infection_signs - {"none", ""}
+    if active_infection:
+        red_flags.add("infection_signs")
+        routing_reasons.add("structured:infection_signs")
+        if active_infection & _INFECTION_SYSTEMIC_SIGNS:
+            routing_reasons.add("structured:systemic_infection")
+
+    # ── Cut / laceration specifics ────────────────────────────────────
+    if surface_type in ("cut", "laceration"):
+        if _STRUCTURED_STITCHES_KEYWORDS.search(notes):
+            red_flags.add("needs_stitches")
+            routing_reasons.add("structured:needs_stitches")
+
+    # ── Bruise specifics ──────────────────────────────────────────────
+    if surface_type == "bruise":
+        if impact_related == "yes" and _RIB_CHEST_HEAD_EYE_PATTERN.search(area):
+            routing_reasons.add("structured:bruise_danger_area")
+        if trend in _WORSENING_TRENDS:
+            routing_reasons.add("structured:bruise_worsening")
+
+
 def triage_injuries(plan_input: PlanInput) -> InjuryTriageResult:
     features = build_triage_features(
         injuries=plan_input.injuries,
@@ -795,6 +1016,21 @@ def triage_injuries(plan_input: PlanInput) -> InjuryTriageResult:
         matched_categories=matched_categories,
         routing_reasons=routing_reasons,
     )
+
+    if plan_input.guided_injury is not None:
+        _apply_structured_injury_signals(
+            guided=plan_input.guided_injury,
+            matched_categories=matched_categories,
+            red_flags=red_flags,
+            clinician_restriction_signals=set(features.clinician_restriction_signals),
+            routing_reasons=routing_reasons,
+        )
+        if "structured:fracture_old_cleared_no_concern" in routing_reasons:
+            matched_categories.discard("fracture")
+            routing_reasons.discard("mapped:fracture:restricted_rehab_only")
+        if "structured:dislocation_old_cleared_no_concern" in routing_reasons:
+            matched_categories.discard("dislocation")
+            routing_reasons.discard("mapped:dislocation:restricted_rehab_only")
 
     guided_cards = _collect_guided_card_evidence(plan_input)
     combos = _guided_combos(guided_cards)
@@ -881,6 +1117,10 @@ def triage_injuries(plan_input: PlanInput) -> InjuryTriageResult:
         elif severity == "low" and trend in _WORSENING_TRENDS:
             routing_reasons.add("combo_gate:low_worsening")
 
+    if not medical_hold and "structured:systemic_infection" in routing_reasons:
+        medical_hold = True
+        routing_reasons.add("structured:infection_medical_hold")
+
     if medical_hold:
         return _build_result(
             mode=MEDICAL_HOLD,
@@ -921,6 +1161,31 @@ def triage_injuries(plan_input: PlanInput) -> InjuryTriageResult:
             reasons=[
                 "Recent structural injury history was detected in guided injury notes.",
                 "Coach/admin review is required before normal plan generation.",
+            ],
+            clinician_clearance_required=False,
+            should_block_stage2=True,
+            red_flags=red_flags,
+            matched_categories=matched_categories,
+            routing_reasons=routing_reasons,
+            urgent_flags=urgent_flags,
+            sparring_risk_band=highest_band,
+        )
+
+    _SURFACE_NEEDS_REVIEW_SIGNALS = {
+        "structured:open_wound",
+        "structured:needs_stitches",
+        "structured:eye_area_wound",
+        "structured:sensitive_area_wound",
+        "structured:bruise_danger_area",
+        "structured:bruise_worsening",
+    }
+    _SURFACE_INFECTION_REVIEW = "structured:infection_signs"
+    if routing_reasons & _SURFACE_NEEDS_REVIEW_SIGNALS or _SURFACE_INFECTION_REVIEW in routing_reasons:
+        return _build_result(
+            mode=NEEDS_REVIEW,
+            reasons=[
+                "Surface injury signals require coach/admin review before contact planning.",
+                "Automatic full-plan generation is paused by structured injury triage.",
             ],
             clinician_clearance_required=False,
             should_block_stage2=True,
