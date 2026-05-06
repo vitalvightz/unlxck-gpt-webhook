@@ -122,6 +122,11 @@ INJURY_TYPES = [
     "pain",
     "soreness",
     "hyperextension",
+    "abrasion",
+    "cut",
+    "laceration",
+    "graze",
+    "blister",
     "unspecified",
 ]
 
@@ -338,6 +343,31 @@ INJURY_SUPPORT_NOTES = {
         "Avoid fully locked joint positions",
         "Use straps or wraps to limit end-range",
         "Introduce tempo and joint control drills",
+    ],
+    "abrasion": [
+        "Keep covered and clean during training",
+        "Avoid friction or direct contact over the affected skin",
+        "Monitor for redness, heat, pus, or worsening bleeding",
+    ],
+    "cut": [
+        "Keep covered and clean during training",
+        "Avoid contact if the wound can reopen",
+        "Stop if bleeding restarts during the session",
+    ],
+    "laceration": [
+        "Do not resume contact unless medically cleared",
+        "Keep wound protected and avoid reopening the area",
+        "Watch for infection signs or wound separation",
+    ],
+    "graze": [
+        "Keep clean and covered if training",
+        "Avoid rubbing/friction over the area",
+        "Stop if bleeding or irritation worsens",
+    ],
+    "blister": [
+        "Protect with padding or tape before training",
+        "Avoid repeated friction over the area",
+        "Stop if blister opens, bleeds, or changes gait/grip mechanics",
     ],
     "unspecified": [
         "Use general joint mobility and soft-tissue tools",
