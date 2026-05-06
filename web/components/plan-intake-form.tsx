@@ -629,6 +629,7 @@ export function PlanIntakeForm() {
   const [guidedInjuries, setGuidedInjuries] = useState<GuidedInjuryState[]>([]);
   const [activeGuidedInjuryIndex, setActiveGuidedInjuryIndex] = useState<number | null>(null);
   const [noRestrictions, setNoRestrictions] = useState(true);
+  const [plannerPreviewOpen, setPlannerPreviewOpen] = useState(false);
   const [bodyMapSide, setBodyMapSide] = useState<BodyMapSide>("front");
   const [hydrated, setHydrated] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -813,6 +814,10 @@ export function PlanIntakeForm() {
   }
 
   function handleNoRestrictionsChange(checked: boolean) {
+    if (checked && guidedInjuries.length) {
+      const confirmed = window.confirm("This will clear current injury cards. Continue?");
+      if (!confirmed) return;
+    }
     if (!checked) {
       const nextGuidedInjuries = guidedInjuries.length ? guidedInjuries : [{ ...EMPTY_GUIDED_INJURY }];
       syncGuidedInjuryFields(nextGuidedInjuries, false);
@@ -2096,16 +2101,15 @@ export function PlanIntakeForm() {
                   </>
                 ) : (
                   <div className="support-panel support-panel-preview support-panel-success compact-gap">
-                    <p className="kicker">Restrictions step complete</p>
-                    <p className="muted">No restrictions are being sent to the planner. You can continue now or uncheck this later if something needs to be worked around.</p>
+                    <p className="kicker">No current injuries selected</p>
+                    <p className="muted">The planner will not add injury restrictions unless you add one.</p>
+                    <button type="button" className="injury-card-add-btn" onClick={() => handleNoRestrictionsChange(false)}>Add injury or restriction</button>
                   </div>
                 )}
-                <div className="support-panel support-panel-preview compact-gap">
-                  <p className="kicker">Planner note preview</p>
-                  <p className="muted">
-                    {plannerRestrictionPreview}
-                  </p>
-                </div>
+                <details className="support-panel support-panel-preview compact-gap" open={plannerPreviewOpen}>
+                  <summary className="kicker" onClick={(event) => { event.preventDefault(); setPlannerPreviewOpen((current) => !current); }}>Planner preview</summary>
+                  {plannerPreviewOpen ? <p className="muted">{plannerRestrictionPreview}</p> : null}
+                </details>
               </article>
             </div>
 

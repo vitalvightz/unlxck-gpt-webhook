@@ -221,7 +221,7 @@ export function BodyMap({
 
   return (
     <div className="body-map-panel" data-active-side={side}>
-      <p className="body-map-title">Tap a zone to add</p>
+      <p className="body-map-title">Tap a body zone to start. Details open on the right.</p>
       <div className="body-map-svg-stack">
         <BodySvg
           side="front"

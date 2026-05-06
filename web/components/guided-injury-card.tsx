@@ -19,6 +19,7 @@ type InjuryTypeGroup = {
   heading: string;
   options: InjuryTypeOption[];
 };
+type InjuryFamily = "pain_movement" | "structural" | "head_nerve_breathing" | "surface" | "not_sure";
 
 const INJURY_TYPE_GROUPS: InjuryTypeGroup[] = [
   {
@@ -61,6 +62,14 @@ const INJURY_TYPE_GROUPS: InjuryTypeGroup[] = [
       { label: "Burn / skin irritation", value: "surface_injury", surface_type: "skin_irritation" },
     ],
   },
+];
+
+const FAMILY_OPTIONS: Array<{ key: InjuryFamily; title: string; helper: string }> = [
+  { key: "pain_movement", title: "Pain / movement issue", helper: "soreness, tightness, strain, swelling" },
+  { key: "structural", title: "Bone / joint / structural", helper: "fracture, dislocation, tendon, ligament, post-surgery" },
+  { key: "head_nerve_breathing", title: "Head / nerve / breathing", helper: "concussion, numbness, chest/breathing pain" },
+  { key: "surface", title: "Skin / surface injury", helper: "cut, graze, blister, bruise, burn" },
+  { key: "not_sure", title: "Not sure", helper: "I do not know the exact type" },
 ];
 
 // ── Timeframe options ────────────────────────────────────────────────
@@ -280,6 +289,20 @@ export function buildCompactSummary(injury: GuidedInjuryState): string {
     parts.push("Open wound");
   }
   return parts.join(" · ");
+}
+export function getInjuryCompletionState(injury: GuidedInjuryState): "Needs type" | "Needs safety check" | "Complete" | "Review risk" {
+  if (!injury.injury_type) return "Needs type";
+  if (shouldShowReviewWarning(injury)) return "Review risk";
+  if (["fracture", "dislocation", "tendon_ligament", "post_surgery"].includes(injury.injury_type) && !injury.timeframe) return "Needs safety check";
+  return "Complete";
+}
+function familyForInjury(injury: GuidedInjuryState): InjuryFamily | "" {
+  if (["pain", "tightness", "sprain", "strain", "swelling", "instability"].includes(injury.injury_type)) return "pain_movement";
+  if (["fracture", "dislocation", "tendon_ligament", "post_surgery"].includes(injury.injury_type)) return "structural";
+  if (["head_impact", "nerve_symptoms", "chest_breathing"].includes(injury.injury_type)) return "head_nerve_breathing";
+  if (injury.injury_type === "surface_injury") return "surface";
+  if (injury.injury_type === "unspecified") return "not_sure";
+  return "";
 }
 
 // ── Chip button component ────────────────────────────────────────────
@@ -734,6 +757,8 @@ export function GuidedInjuryCard({
   const compactSummary = buildCompactSummary(injury);
   const showWarning = shouldShowReviewWarning(injury);
   const hasFollowUp = injury.injury_type !== "";
+  const activeFamily = familyForInjury(injury);
+  const completionState = getInjuryCompletionState(injury);
 
   function handleTypeSelect(opt: InjuryTypeOption | null) {
     if (!opt) {
@@ -769,6 +794,7 @@ export function GuidedInjuryCard({
           {!isActive && compactSummary ? (
             <p className="injury-card-summary">{compactSummary}</p>
           ) : null}
+          {!isActive ? <p className="injury-card-summary">{completionState}</p> : null}
         </div>
         <div className="injury-card-badges">
           {injury.severity ? (
@@ -844,32 +870,46 @@ export function GuidedInjuryCard({
             </div>
           </div>
 
-          {/* Injury type grouped selector */}
           <div className="gi-field">
-            <label htmlFor={`gi-injury-type-${index}`} className="gi-label">Injury type</label>
-            <select
-              id={`gi-injury-type-${index}`}
-              value={`${injury.injury_type}::${injury.surface_type ?? ""}`}
-              onChange={(e) => {
-                const [value, surfaceType = ""] = e.target.value.split("::");
-                if (!value) {
-                  handleTypeSelect(null);
-                  return;
-                }
-                handleTypeSelect({ label: "", value, surface_type: surfaceType });
-              }}
-            >
-              <option value="::">Select injury type</option>
-              {INJURY_TYPE_GROUPS.map((group) => (
-                <optgroup key={group.heading} label={group.heading}>
-                  {group.options.map((opt) => (
-                    <option key={`${opt.value}-${opt.surface_type ?? ""}`} value={`${opt.value}::${opt.surface_type ?? ""}`}>
-                      {opt.label}
-                    </option>
-                  ))}
-                </optgroup>
+            <label className="gi-label">Injury family</label>
+            <div className="gi-family-grid">
+              {FAMILY_OPTIONS.map((family) => (
+                <button
+                  key={family.key}
+                  type="button"
+                  className={`gi-family-card ${activeFamily === family.key ? "gi-family-card-selected" : ""}`}
+                  aria-pressed={activeFamily === family.key}
+                  onClick={() => {
+                    clearTypeSpecificFields(onUpdate);
+                    if (family.key === "not_sure") {
+                      onUpdate("injury_type", "unspecified");
+                      onUpdate("surface_type", "");
+                    } else {
+                      onUpdate("injury_type", "");
+                      onUpdate("surface_type", "");
+                    }
+                  }}
+                >
+                  <strong>{family.title}</strong>
+                  <span>{family.helper}</span>
+                </button>
               ))}
-            </select>
+            </div>
+          </div>
+
+          {/* Injury subtype selector */}
+          <div className="gi-field">
+            <label className="gi-label">Subtype</label>
+            <div className="gi-chip-row">
+              {INJURY_TYPE_GROUPS.filter((group) => (
+                (activeFamily === "pain_movement" && group.heading === "Common")
+                || (activeFamily === "structural" && group.heading === "Structural / serious")
+                || (activeFamily === "head_nerve_breathing" && group.heading === "Head / nerve / breathing")
+                || (activeFamily === "surface" && group.heading === "Surface")
+              )).flatMap((group) => group.options).map((opt) => (
+                <ChipButton key={`${opt.value}-${opt.surface_type ?? ""}`} label={opt.label} selected={opt.value === injury.injury_type && (opt.surface_type ?? "") === (injury.surface_type ?? "")} onClick={() => handleTypeSelect(opt)} />
+              ))}
+            </div>
           </div>
 
           {/* Progressive follow-up questions */}
