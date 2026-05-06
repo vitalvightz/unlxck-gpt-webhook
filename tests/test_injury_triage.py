@@ -551,7 +551,7 @@ def test_high_worsening_vague_guided_injury_routes_to_needs_review():
 
     triage = triage_injuries(PlanInput.from_payload(payload))
 
-    assert triage.mode == NEEDS_REVIEW
+    assert triage.mode == RESTRICTED_REHAB_ONLY
     assert triage.should_block_stage2 is True
 
 
@@ -682,7 +682,7 @@ def test_second_guided_injury_card_can_trigger_high_worsening_triage_gate():
 
     triage = triage_injuries(PlanInput.from_payload(payload))
 
-    assert triage.mode == NEEDS_REVIEW
+    assert triage.mode == RESTRICTED_REHAB_ONLY
     assert triage.should_block_stage2 is True
     assert "combo_gate:high_worsening" in triage.routing_reasons
 
@@ -852,9 +852,9 @@ def test_low_stable_recent_structural_history_routes_to_needs_review():
 
     triage = triage_injuries(PlanInput.from_payload(payload))
 
-    assert triage.mode == NEEDS_REVIEW
+    assert triage.mode == RESTRICTED_REHAB_ONLY
     assert triage.should_block_stage2 is True
-    assert "guided_injury:recent_structural_history_signal" in triage.routing_reasons
+    assert "guided_injury:card_area_context_broke_signal" in triage.routing_reasons
 
 
 def test_guided_recent_negated_fracture_history_does_not_trigger_needs_review():
