@@ -951,7 +951,7 @@ def _apply_surface_injury_signals(
 
     # ── Bleeding ──────────────────────────────────────────────────────
     if bleeding_status == "wont_stop":
-         red_flags.add("uncontrolled_bleeding")
+        red_flags.add("uncontrolled_bleeding")
         routing_reasons.add("structured:uncontrolled_bleeding")
 
     # ── Open wound ────────────────────────────────────────────────────

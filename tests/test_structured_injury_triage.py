@@ -198,7 +198,7 @@ class TestSurfaceCut:
             "severity": "moderate",
             "trend": "stable",
             "injury_type": "surface_injury",
-          "surface_type": "cut",
+            "surface_type": "cut",
             "open_wound": "yes",
             "bleeding_status": "a_little",
         }))
