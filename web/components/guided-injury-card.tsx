@@ -846,30 +846,40 @@ export function GuidedInjuryCard({
 
           {/* Injury type grouped selector */}
           <div className="gi-field">
-            <label htmlFor={`gi-injury-type-${index}`} className="gi-label">Injury type</label>
-            <select
-              id={`gi-injury-type-${index}`}
-              value={`${injury.injury_type}::${injury.surface_type ?? ""}`}
-              onChange={(e) => {
-                const [value, surfaceType = ""] = e.target.value.split("::");
-                if (!value) {
-                  handleTypeSelect(null);
-                  return;
-                }
-                handleTypeSelect({ label: "", value, surface_type: surfaceType });
-              }}
-            >
-              <option value="::">Select injury type</option>
+            <label className="gi-label">Injury type</label>
+          
+            <div className="gi-type-selector">
               {INJURY_TYPE_GROUPS.map((group) => (
-                <optgroup key={group.heading} label={group.heading}>
-                  {group.options.map((opt) => (
-                    <option key={`${opt.value}-${opt.surface_type ?? ""}`} value={`${opt.value}::${opt.surface_type ?? ""}`}>
-                      {opt.label}
-                    </option>
-                  ))}
-                </optgroup>
+                <div key={group.heading} className="gi-type-group">
+                  <p className="gi-type-group-heading">{group.heading}</p>
+          
+                  <div className="gi-chip-row" role="radiogroup" aria-label={group.heading}>
+                    {group.options.map((opt) => {
+                      const isSelected =
+                        injury.injury_type === opt.value &&
+                        (opt.value !== "surface_injury" ||
+                          injury.surface_type === (opt.surface_type ?? ""));
+          
+                      return (
+                        <button
+                          key={`${opt.value}-${opt.surface_type ?? ""}`}
+                          type="button"
+                          role="radio"
+                          aria-checked={isSelected}
+                          className={`gi-chip ${isSelected ? "gi-chip-selected" : ""}`}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            handleTypeSelect(opt);
+                          }}
+                        >
+                          {opt.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
               ))}
-            </select>
+            </div>
           </div>
 
           {/* Progressive follow-up questions */}
