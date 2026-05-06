@@ -35,8 +35,11 @@ type ReviewIssue = {
 
 type InjuryTriageView = {
   mode?: string;
+  reasons: string[];
   red_flags: string[];
   matched_high_risk_categories: string[];
+  routing_reasons: string[];
+  urgent_flags: string[];
   sparring_risk_band?: string;
   clinician_clearance_required?: boolean;
 };
@@ -143,20 +146,26 @@ function formatRiskBandLabel(riskBand: NonNullable<PlanAdvisory["risk_band"]>) {
 }
 
 function readInjuryTriage(plan: PlanDetail): InjuryTriageView | null {
-  const source =
+  const whyLogTriage =
     plan.admin_outputs?.why_log && typeof plan.admin_outputs.why_log === "object"
       ? (plan.admin_outputs.why_log as Record<string, unknown>).injury_triage
       : null;
+  const adminOutputsRecord = plan.admin_outputs as Record<string, unknown> | undefined;
+  const planRecord = plan as Record<string, unknown>;
+  const source = whyLogTriage ?? adminOutputsRecord?.injury_triage ?? planRecord.injury_triage;
 
   if (source && typeof source === "object") {
     const triage = source as Record<string, unknown>;
 
     return {
       mode: typeof triage.mode === "string" ? triage.mode : undefined,
+      reasons: Array.isArray(triage.reasons) ? triage.reasons.map(String) : [],
       red_flags: Array.isArray(triage.red_flags) ? triage.red_flags.map(String) : [],
       matched_high_risk_categories: Array.isArray(triage.matched_high_risk_categories)
         ? triage.matched_high_risk_categories.map(String)
         : [],
+      routing_reasons: Array.isArray(triage.routing_reasons) ? triage.routing_reasons.map(String) : [],
+      urgent_flags: Array.isArray(triage.urgent_flags) ? triage.urgent_flags.map(String) : [],
       sparring_risk_band:
         typeof triage.sparring_risk_band === "string" ? triage.sparring_risk_band : undefined,
       clinician_clearance_required:
@@ -168,9 +177,12 @@ function readInjuryTriage(plan: PlanDetail): InjuryTriageView | null {
 
   if (plan.status === "triage_blocked" || plan.admin_outputs?.stage2_status === "triage_blocked") {
     return {
-      mode: undefined,
+      mode: "needs_review",
+      reasons: ["Protected planner state was triggered before finalization."],
       red_flags: [],
       matched_high_risk_categories: [],
+      routing_reasons: [],
+      urgent_flags: [],
       sparring_risk_band: undefined,
       clinician_clearance_required: undefined,
     };
@@ -264,7 +276,7 @@ function BlockedPlanDecisionCard({
       </div>
 
       <p>{intro}</p>
-      {injuryContextLine ? <p className="muted">{injuryContextLine}</p> : null}
+      {injuryContextLine ? <div className="blocked-context-line">{injuryContextLine}</div> : null}
 
       {signalTokens.length ? (
         <div className="plan-card-meta">
