@@ -736,17 +736,27 @@ export function GuidedInjuryCard({
   const hasFollowUp = injury.injury_type !== "";
 
   function handleTypeSelect(opt: InjuryTypeOption | null) {
-    if (!opt) {
-      onUpdate("injury_type", "");
-      onUpdate("surface_type", "");
-      clearTypeSpecificFields(onUpdate);
-      return;
-    }
-
+  if (!opt) {
+    onUpdate("injury_type", "");
     clearTypeSpecificFields(onUpdate);
-    onUpdate("injury_type", opt.value);
-    onUpdate("surface_type", opt.surface_type ?? "");
+    return;
   }
+
+  const isSame =
+    injury.injury_type === opt.value &&
+    (opt.value !== "surface_injury" ||
+      injury.surface_type === (opt.surface_type ?? ""));
+
+  if (isSame) {
+    onUpdate("injury_type", "");
+    clearTypeSpecificFields(onUpdate);
+    return;
+  }
+
+  clearTypeSpecificFields(onUpdate);
+  onUpdate("injury_type", opt.value);
+  onUpdate("surface_type", opt.surface_type ?? "");
+}
 
   return (
     <section className={`injury-card ${isActive ? "injury-card-active" : ""}`.trim()}>
