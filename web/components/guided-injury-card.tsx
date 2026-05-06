@@ -250,6 +250,19 @@ function toggleNotesFlag(notes: string, prefix: string, flag: string): string {
   return setNotesFlags(notes, prefix, next);
 }
 
+
+function clearTypeSpecificFields(onUpdate: <K extends keyof GuidedInjuryState>(key: K, value: GuidedInjuryState[K]) => void) {
+  onUpdate("surface_type", "");
+  onUpdate("timeframe", "");
+  onUpdate("cleared", "");
+  onUpdate("open_wound", "");
+  onUpdate("bleeding_status", "");
+  onUpdate("infection_signs", []);
+  onUpdate("impact_related", "");
+  onUpdate("sensitive_area", "");
+  onUpdate("avoid", "");
+}
+
 // ── Build compact summary line ───────────────────────────────────────
 
 export function buildCompactSummary(injury: GuidedInjuryState): string {
@@ -728,10 +741,11 @@ export function GuidedInjuryCard({
 
     if (isSame) {
       onUpdate("injury_type", "");
-      onUpdate("surface_type", "");
+      clearTypeSpecificFields(onUpdate);
       return;
     }
 
+    clearTypeSpecificFields(onUpdate);
     onUpdate("injury_type", opt.value);
     onUpdate("surface_type", opt.surface_type ?? "");
   }
