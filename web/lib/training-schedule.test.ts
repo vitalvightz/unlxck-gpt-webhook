@@ -68,7 +68,7 @@ test("warns when hard sparring reaches three or more days", () => {
     {
       acknowledgementContextKey: "hard-sparring:5:Friday|Monday|Wednesday",
       message:
-        "You selected 3 hard sparring days inside 5 planned weekly sessions. That's a high contact load, so confirm the athlete can recover from it before continuing.",
+        "You selected 3 hard sparring days inside 5 weekly sessions. Confirm recovery planning before continuing.",
       requiresAcknowledgement: true,
     },
   );

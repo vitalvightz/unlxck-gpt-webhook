@@ -32,10 +32,8 @@ import {
   buildGuidedInjuryFields,
   coerceGuidedInjuryEditState,
   EMPTY_GUIDED_INJURY,
-  getInjuryMismatchContextKey,
   hasGuidedInjuryContent,
   hasGuidedInjuryDescriptorWithoutArea,
-  hasMeaningfulInjuryMismatch,
   hydrateGuidedInjuryStates,
   type GuidedInjuryState,
 } from "@/lib/guided-injury";
@@ -576,8 +574,6 @@ function StepValidationPanel({
 function getReviewStepBlockingIssue(
   nextForm: PlanRequest,
   options: {
-    injuryMismatchExists: boolean;
-    injuryOverwriteAcknowledged: boolean;
     hardSparringWarningLocked: boolean;
   },
 ): { message: string; step: number } | null {
@@ -589,9 +585,6 @@ function getReviewStepBlockingIssue(
   if (nextForm.weekly_training_frequency > 6) return { message: "Planned sessions per week cannot exceed 6.", step: 1 };
   const parsedRounds = parseRoundsFormat(nextForm.rounds_format);
   if (!parsedRounds.roundCount || !parsedRounds.roundDuration) return { message: "Choose both round count and round duration before continuing to review.", step: 1 };
-  if (options.injuryMismatchExists && !options.injuryOverwriteAcknowledged) {
-    return { message: "Acknowledge the injury note overwrite warning before continuing to review.", step: 3 };
-  }
   if (options.hardSparringWarningLocked) {
     return { message: "Acknowledge the hard sparring warning in the Training step before continuing to review.", step: 2 };
   }
@@ -643,13 +636,10 @@ export function PlanIntakeForm() {
   const [stage1Preview, setStage1Preview] = useState<Stage1PreviewResponse | null>(null);
   const [stage1PreviewPending, setStage1PreviewPending] = useState(false);
   const [isPending, startTransition] = useTransition();
-  const [originalInjuriesText, setOriginalInjuriesText] = useState<string>("");
-  const [injuryOverwriteAcknowledged, setInjuryOverwriteAcknowledged] = useState(false);
   const [acknowledgedHardSparringWarningKey, setAcknowledgedHardSparringWarningKey] = useState<string | null>(null);
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
   const lastSavedSnapshotRef = useRef<string>("");
-  const injuryMismatchContextKeyRef = useRef("");
   const issueRedirectConsumedRef = useRef(false);
   const recordHasError = !isValidRecordFormat(form.athlete.record ?? "");
 
@@ -673,7 +663,6 @@ export function PlanIntakeForm() {
       nextGuidedInjuryFields.injuries || nextForm.injuries?.trim() || nextGuidedInjuries.some((injury) => hasGuidedInjuryContent(injury)),
     );
 
-    setOriginalInjuriesText(nextForm.injuries || "");
     setForm({
       ...nextForm,
       ...nextGuidedInjuryFields,
@@ -705,7 +694,6 @@ export function PlanIntakeForm() {
     }, 0);
   }, [currentStep, stage1Preview]);
 
-  const injuryMismatchContextKey = getInjuryMismatchContextKey(originalInjuriesText, form.injuries || "");
   const performanceFocusValidation = validatePerformanceFocusSelections(
     form.fight_date,
     {
@@ -738,18 +726,6 @@ export function PlanIntakeForm() {
     setError(null);
   }, [daysUntilFight, form.key_goals, form.weak_areas, hydrated]);
 
-  useEffect(() => {
-    if (!hydrated) {
-      injuryMismatchContextKeyRef.current = injuryMismatchContextKey;
-      return;
-    }
-
-    if (injuryMismatchContextKeyRef.current !== injuryMismatchContextKey) {
-      setInjuryOverwriteAcknowledged(false);
-    }
-
-    injuryMismatchContextKeyRef.current = injuryMismatchContextKey;
-  }, [hydrated, injuryMismatchContextKey]);
 
   useEffect(() => {
     if (!hydrated || issueRedirectConsumedRef.current) {
@@ -1035,10 +1011,6 @@ export function PlanIntakeForm() {
       setError("Add a pain area or body part before choosing severity or trend.");
       return false;
     }
-    if (currentStep === 3 && hasMeaningfulInjuryMismatch(originalInjuriesText, nextForm.injuries || "") && !injuryOverwriteAcknowledged) {
-      setError("Acknowledge the injury note overwrite warning before continuing.");
-      return false;
-    }
     if (currentStep === PERFORMANCE_STEP_INDEX) {
       const focusValidation = validatePerformanceFocusSelections(
         nextForm.fight_date,
@@ -1054,10 +1026,6 @@ export function PlanIntakeForm() {
   }
 
   function validateForGeneration(nextForm: PlanRequest): boolean {
-    if (hasMeaningfulInjuryMismatch(originalInjuriesText, nextForm.injuries || "") && !injuryOverwriteAcknowledged) {
-      setError("Acknowledge the injury note overwrite warning in the Restrictions step before generating.");
-      return false;
-    }
     if (!validateCurrentStep(nextForm, "generate")) {
       return false;
     }
@@ -1190,8 +1158,6 @@ export function PlanIntakeForm() {
     }
     if (targetStep === steps.length - 1 && targetStep > currentStep) {
       const reviewIssue = getReviewStepBlockingIssue(getNextForm(), {
-        injuryMismatchExists,
-        injuryOverwriteAcknowledged,
         hardSparringWarningLocked,
       });
       if (reviewIssue) {
@@ -1275,8 +1241,6 @@ export function PlanIntakeForm() {
   const statusLabel = getOptionLabel(PROFESSIONAL_STATUS_OPTIONS, form.athlete.professional_status ?? "") || "Not provided";
   const stanceLabel = getOptionLabel(STANCE_OPTIONS, form.athlete.stance ?? "") || "Not provided";
   const parsedRounds = parseRoundsFormat(form.rounds_format);
-  const injuryMismatchExists = Boolean(injuryMismatchContextKey);
-  const injuryGateLocked = injuryMismatchExists && !injuryOverwriteAcknowledged;
   const availabilityConsistency = getAvailabilityConsistency(
     form.training_availability,
     form.weekly_training_frequency,
@@ -1473,14 +1437,6 @@ export function PlanIntakeForm() {
           status: hardSparringWarningAcknowledged ? "done" : "warning",
         } as const]
       : []),
-    ...(injuryMismatchExists
-      ? [{
-          label: injuryOverwriteAcknowledged
-            ? "Restriction overwrite warning acknowledged."
-            : "Acknowledge the injury note overwrite warning before generation.",
-          status: injuryOverwriteAcknowledged ? "done" : "warning",
-        } as const]
-      : []),
   ];
   const currentStepValidation = (() => {
     switch (currentStep) {
@@ -1557,8 +1513,8 @@ export function PlanIntakeForm() {
             ...(hardSparringWarning.message
               ? [{
                   label: hardSparringWarningAcknowledged
-                    ? `${hardSparringWarning.message} Acknowledged.`
-                    : `${hardSparringWarning.message} Acknowledge it before continuing.`,
+                    ? "Hard sparring recovery warning acknowledged."
+                    : "Hard sparring recovery warning needs acknowledgement.",
                   status: hardSparringWarningAcknowledged ? "done" : "warning",
                 } as const]
               : []),
@@ -1575,14 +1531,6 @@ export function PlanIntakeForm() {
                 ? "Restriction entries are specific enough to save."
                 : "Add a pain area or body part before choosing severity or trend.",
               status: noRestrictions || !guidedAreaMismatch ? "done" : "pending",
-            },
-            {
-              label: injuryMismatchExists
-                ? injuryOverwriteAcknowledged
-                  ? "Injury note overwrite warning acknowledged."
-                  : "Acknowledge the injury note overwrite warning."
-                : "Restriction notes are aligned with the saved draft.",
-              status: injuryMismatchExists ? (injuryOverwriteAcknowledged ? "done" : "warning") : "done",
             },
           ] satisfies StepValidationCheck[],
         };
@@ -1937,10 +1885,10 @@ export function PlanIntakeForm() {
                 </div>
               ) : null}
               {hardSparringWarning.message ? (
-                <div className={`support-panel ${hardSparringWarningLocked ? "support-panel-alert" : ""}`.trim()}>
-                  <p className="kicker">High-contact warning</p>
+                <div className={`inline-warning-banner ${hardSparringWarningLocked ? "inline-warning-banner-alert" : ""}`.trim()}>
+                  <p className="inline-warning-banner-label">High-contact warning</p>
                   <p className={hardSparringWarningLocked ? "error-text" : "muted"}>{hardSparringWarning.message}</p>
-                  <label className={`checkbox-card ${hardSparringWarningAcknowledged ? "checkbox-card-checked" : ""}`.trim()}>
+                  <label className={`inline-warning-ack ${hardSparringWarningAcknowledged ? "inline-warning-ack-checked" : ""}`.trim()}>
                     <input
                       type="checkbox"
                       checked={hardSparringWarningAcknowledged}
@@ -1950,9 +1898,7 @@ export function PlanIntakeForm() {
                         );
                       }}
                     />
-                    <span className="checkbox-card-copy">
-                      <span className="checkbox-card-title">I understand this hard sparring load needs deliberate recovery planning.</span>
-                    </span>
+                    <span className="inline-warning-ack-copy">I understand this requires deliberate recovery planning.</span>
                   </label>
                 </div>
               ) : null}
@@ -2092,34 +2038,6 @@ export function PlanIntakeForm() {
                   <p className="kicker">Restrictions</p>
                   <h2 className="form-section-title">Injuries or restrictions</h2>
                 </div>
-                {injuryMismatchExists ? (
-                  <div className={`support-panel ${injuryGateLocked ? "support-panel-alert" : ""}`.trim()}>
-                    <p className="kicker">Warning: existing injury note will be overwritten</p>
-                    <p className={injuryGateLocked ? "error-text" : "muted"}>
-                      The structured fields produce a summary that differs from the existing injury note. Saving or generating will replace the original wording with the structured summary. Review the difference below before continuing.
-                    </p>
-                    <div className="injury-overwrite-diff">
-                      <div className="injury-overwrite-diff-block">
-                        <p className="kicker">Original note</p>
-                        <p className="muted">{originalInjuriesText}</p>
-                      </div>
-                      <div className="injury-overwrite-diff-block">
-                        <p className="kicker">Generated summary</p>
-                        <p className="muted">{form.injuries?.trim() || "No structured summary generated."}</p>
-                      </div>
-                    </div>
-                    <label className={`checkbox-card ${injuryOverwriteAcknowledged ? "checkbox-card-checked" : ""}`.trim()}>
-                      <input
-                        type="checkbox"
-                        checked={injuryOverwriteAcknowledged}
-                        onChange={(event) => setInjuryOverwriteAcknowledged(event.target.checked)}
-                      />
-                      <span className="checkbox-card-copy">
-                        <span className="checkbox-card-title">I understand the original note may be simplified or replaced. Continue with the structured summary.</span>
-                      </span>
-                    </label>
-                  </div>
-                ) : null}
                 <label className={`checkbox-card ${noRestrictions ? "checkbox-card-checked" : ""}`.trim()}>
                   <input
                     type="checkbox"
