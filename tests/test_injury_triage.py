@@ -86,7 +86,7 @@ def test_ruled_out_fracture_after_thought_i_broke_it_does_not_route_fracture():
         "Known false-positive structural-break routing for benign crack/snap wording; "
         "kept as protection for follow-up triage fix."
     ),
-    strict=False,
+    strict=True,
 )
 @pytest.mark.parametrize(
     "injury_text",
