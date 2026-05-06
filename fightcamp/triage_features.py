@@ -278,6 +278,24 @@ def _guided_injury_text_chunks(guided: GuidedInjury | None) -> list[str]:
         str(guided.avoid or "").strip(),
         str(guided.notes or "").strip(),
     ]
+    if guided.injury_type:
+        chunks.append(f"injury_type:{guided.injury_type}")
+    if guided.surface_type:
+        chunks.append(f"surface_type:{guided.surface_type}")
+    if guided.timeframe:
+        chunks.append(f"timeframe:{guided.timeframe}")
+    if guided.cleared:
+        chunks.append(f"cleared:{guided.cleared}")
+    if guided.open_wound:
+        chunks.append(f"open_wound:{guided.open_wound}")
+    if guided.bleeding_status:
+        chunks.append(f"bleeding_status:{guided.bleeding_status}")
+    if guided.infection_signs:
+        chunks.append(f"infection_signs:{','.join(guided.infection_signs)}")
+    if guided.impact_related:
+        chunks.append(f"impact_related:{guided.impact_related}")
+    if guided.sensitive_area:
+        chunks.append(f"sensitive_area:{guided.sensitive_area}")
     return [chunk for chunk in chunks if chunk]
 
 
