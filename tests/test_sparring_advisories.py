@@ -555,6 +555,18 @@ class TestRiskBandKeyRules:
         )
         assert entries[0]["risk_band"] == "red"
 
+    def test_non_functional_cannot_phrase_does_not_force_high_severity(self):
+        assert _entry("cannot train Tuesday due to travel")["risk_band"] == "green"
+
+    def test_functional_cannot_phrase_still_forces_high_severity(self):
+        assert _entry("cannot load ankle")["risk_band"] == "red"
+
+    def test_fracture_is_high_severity(self):
+        assert _entry("stable wrist fracture")["risk_band"] == "red"
+
+    def test_non_functional_cannot_does_not_set_cannot_load_flag(self):
+        assert "cannot_load" not in _entry("cannot train Tuesday due to travel")["override_flags"]
+
 
 class TestRiskBandScoreDerives:
     def test_green_score_range(self):

@@ -223,18 +223,11 @@ function BlockedPlanDecisionCard({
     ["green", "amber", "red", "black"].includes(triage.sparring_risk_band)
       ? (triage.sparring_risk_band as RiskBandTone)
       : null;
-  const hasFractureSignal = triage.matched_high_risk_categories.some((category) =>
-    FRACTURE_CATEGORY_SET.has(category),
-  );
   const displayedRiskBand = isMedicalHold
     ? triageRiskBand === "black"
       ? "black"
       : null
-    : triageRiskBand === "green" || triageRiskBand === "amber"
-      ? hasFractureSignal
-        ? "red"
-        : triageRiskBand
-      : triageRiskBand;
+    : triageRiskBand;
   const riskBandLabel = displayedRiskBand
     ? formatRiskBandLabel(displayedRiskBand as NonNullable<PlanAdvisory["risk_band"]>)
     : null;
