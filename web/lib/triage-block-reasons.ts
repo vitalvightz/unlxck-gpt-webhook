@@ -34,6 +34,12 @@ const TRIAGE_SIGNAL_EXPLANATIONS: Record<string, string> = {
   full_thickness_rotator_cuff_tear: "A full-thickness shoulder tear signal is active. Contact work is paused until cleared.",
   tendon_rupture_or_avulsion: "A tendon rupture or avulsion signal is active. Full-contact work is blocked for safety.",
   acl_tear: "A major knee-ligament signal is active. Hard sparring is paused to protect the joint.",
+  uncontrolled_bleeding: "Uncontrolled bleeding was reported. Planning is paused until this is managed.",
+  open_wound: "An open wound was reported. Contact planning is paused until reviewed.",
+  infection_signs: "Infection signs were reported. Planning is paused until reviewed.",
+  needs_stitches: "A wound that may need stitches was reported. Planning is paused until reviewed.",
+  eye_area_wound: "An eye-area wound was reported. Contact planning is paused for safety.",
+  sensitive_area_wound: "A wound near a sensitive area was reported. Contact planning is paused until reviewed.",
 };
 
 export function titleizeToken(value: string) {
