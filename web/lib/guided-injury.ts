@@ -23,10 +23,23 @@ export const EMPTY_GUIDED_INJURY: GuidedInjuryState = {
   trend: "",
   avoid: "",
   notes: "",
+  injury_type: "",
+  surface_type: "",
+  timeframe: "",
+  cleared: "",
+  open_wound: "",
+  bleeding_status: "",
+  infection_signs: [],
+  impact_related: "",
+  sensitive_area: "",
 };
 
 function toGuidedTextValue(value: string | null | undefined): string {
   return typeof value === "string" ? value : "";
+}
+
+function toGuidedStringArray(value: string[] | null | undefined): string[] {
+  return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : [];
 }
 
 export function coerceGuidedInjuryEditState(
@@ -38,6 +51,15 @@ export function coerceGuidedInjuryEditState(
     trend: toGuidedTextValue(value?.trend),
     avoid: toGuidedTextValue(value?.avoid),
     notes: toGuidedTextValue(value?.notes),
+    injury_type: toGuidedTextValue(value?.injury_type),
+    surface_type: toGuidedTextValue(value?.surface_type),
+    timeframe: toGuidedTextValue(value?.timeframe),
+    cleared: toGuidedTextValue(value?.cleared),
+    open_wound: toGuidedTextValue(value?.open_wound),
+    bleeding_status: toGuidedTextValue(value?.bleeding_status),
+    infection_signs: toGuidedStringArray(value?.infection_signs),
+    impact_related: toGuidedTextValue(value?.impact_related),
+    sensitive_area: toGuidedTextValue(value?.sensitive_area),
   };
 }
 
@@ -51,6 +73,15 @@ export function normalizeGuidedInjuryState(
     trend: draft.trend.trim(),
     avoid: draft.avoid.trim(),
     notes: draft.notes.trim(),
+    injury_type: draft.injury_type.trim(),
+    surface_type: draft.surface_type.trim(),
+    timeframe: draft.timeframe.trim(),
+    cleared: draft.cleared.trim(),
+    open_wound: draft.open_wound.trim(),
+    bleeding_status: draft.bleeding_status.trim(),
+    infection_signs: draft.infection_signs.map((value) => value.trim()).filter(Boolean),
+    impact_related: draft.impact_related.trim(),
+    sensitive_area: draft.sensitive_area.trim(),
   };
 }
 
@@ -62,7 +93,22 @@ export function normalizeGuidedInjuryStates(
 
 export function hasGuidedInjuryContent(value: Partial<GuidedInjuryState> | null | undefined): boolean {
   const details = normalizeGuidedInjuryState(value);
-  return Boolean(details.area || details.severity || details.trend || details.avoid || details.notes);
+  return Boolean(
+    details.area ||
+      details.severity ||
+      details.trend ||
+      details.avoid ||
+      details.notes ||
+      details.injury_type ||
+      details.surface_type ||
+      details.timeframe ||
+      details.cleared ||
+      details.open_wound ||
+      details.bleeding_status ||
+      details.infection_signs.length ||
+      details.impact_related ||
+      details.sensitive_area,
+  );
 }
 
 export function hasGuidedInjuryDescriptorWithoutArea(
@@ -244,6 +290,33 @@ export function buildGuidedInjurySummary(value: GuidedInjuryState): string {
   if (details.area) {
     const descriptors = [details.severity, details.trend].filter(Boolean).join(", ");
     parts.push(descriptors ? `${details.area} (${descriptors})` : details.area);
+  }
+  if (details.injury_type) {
+    parts.push(`Type: ${details.injury_type}`);
+  }
+  if (details.surface_type) {
+    parts.push(`Surface: ${details.surface_type}`);
+  }
+  if (details.timeframe) {
+    parts.push(`Timeframe: ${details.timeframe}`);
+  }
+  if (details.cleared) {
+    parts.push(`Cleared: ${details.cleared}`);
+  }
+  if (details.open_wound) {
+    parts.push(`Open wound: ${details.open_wound}`);
+  }
+  if (details.bleeding_status) {
+    parts.push(`Bleeding: ${details.bleeding_status}`);
+  }
+  if (details.infection_signs.length) {
+    parts.push(`Infection: ${details.infection_signs.join(", ")}`);
+  }
+  if (details.impact_related) {
+    parts.push(`Impact related: ${details.impact_related}`);
+  }
+  if (details.sensitive_area) {
+    parts.push(`Sensitive area: ${details.sensitive_area}`);
   }
   if (details.avoid) {
     parts.push(`Avoid: ${details.avoid}`);

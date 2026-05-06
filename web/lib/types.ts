@@ -42,6 +42,15 @@ export type GuidedInjuryInput = {
   trend?: string;
   avoid?: string;
   notes?: string;
+  injury_type?: string;
+  surface_type?: string;
+  timeframe?: string;
+  cleared?: string;
+  open_wound?: string;
+  bleeding_status?: string;
+  infection_signs?: string[];
+  impact_related?: string;
+  sensitive_area?: string;
 };
 
 export type NutritionProfileInput = {

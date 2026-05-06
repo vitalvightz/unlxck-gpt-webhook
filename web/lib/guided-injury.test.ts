@@ -344,3 +344,87 @@ test("getInjuryMismatchContextKey: generated summary edits change the mismatch c
     ),
   );
 });
+
+test("normalizeGuidedInjuryState keeps legacy fields unchanged", () => {
+  const normalized = normalizeGuidedInjuryState({
+    area: "Left shoulder ",
+    severity: "moderate",
+    trend: "improving",
+    avoid: "heavy pressing ",
+    notes: "monitor soreness ",
+  });
+
+  assert.equal(normalized.area, "Left shoulder");
+  assert.equal(normalized.severity, "moderate");
+  assert.equal(normalized.trend, "improving");
+  assert.equal(normalized.avoid, "heavy pressing");
+  assert.equal(normalized.notes, "monitor soreness");
+});
+
+test("hydrate/normalize preserves structured guided injury fields", () => {
+  const hydrated = hydrateGuidedInjuryStates({
+    guided_injuries: [
+      {
+        area: "Right shin",
+        injury_type: "fracture",
+        surface_type: "cut",
+        timeframe: "last_month",
+        cleared: "no",
+        open_wound: "yes",
+        bleeding_status: "wont_stop",
+        infection_signs: ["pus", " fever "],
+        impact_related: "yes",
+        sensitive_area: "eye",
+      },
+    ],
+  });
+
+  assert.equal(hydrated[0]?.injury_type, "fracture");
+  assert.equal(hydrated[0]?.surface_type, "cut");
+  assert.equal(hydrated[0]?.timeframe, "last_month");
+  assert.equal(hydrated[0]?.cleared, "no");
+  assert.deepStrictEqual(hydrated[0]?.infection_signs, ["pus", "fever"]);
+  assert.equal(hydrated[0]?.sensitive_area, "eye");
+});
+
+test("infection_signs defaults to empty array", () => {
+  const normalized = normalizeGuidedInjuryState({ area: "Left knee" });
+  assert.deepStrictEqual(normalized.infection_signs, []);
+});
+
+test("buildGuidedInjuryFields includes structured fields in guided payloads", () => {
+  const result = buildGuidedInjuryFields([
+    {
+      area: "Right shin",
+      injury_type: "fracture",
+      bleeding_status: "wont_stop",
+      infection_signs: ["pus", "fever"],
+    },
+  ]);
+
+  assert.equal(result.guided_injury?.injury_type, "fracture");
+  assert.equal(result.guided_injuries[0]?.bleeding_status, "wont_stop");
+  assert.deepStrictEqual(result.guided_injuries[0]?.infection_signs, ["pus", "fever"]);
+});
+
+test("buildGuidedInjurySummary keeps legacy output and appends structured values", () => {
+  const summary = buildGuidedInjurySummaries([
+    {
+      area: "Left shoulder",
+      severity: "moderate",
+      trend: "improving",
+      injury_type: "fracture",
+      surface_type: "cut",
+      timeframe: "last_month",
+      cleared: "no",
+      bleeding_status: "wont_stop",
+      infection_signs: ["pus", "fever"],
+      sensitive_area: "eye",
+    },
+  ]);
+
+  assert.equal(
+    summary,
+    "Left shoulder (moderate, improving). Type: fracture. Surface: cut. Timeframe: last_month. Cleared: no. Bleeding: wont_stop. Infection: pus, fever. Sensitive area: eye",
+  );
+});
