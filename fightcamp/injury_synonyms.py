@@ -326,6 +326,7 @@ INJURY_SYNONYM_MAP = {
         "laceration",
         "lacerated",
         "deep cut",
+        "deep wound",
         "bad cut",
         "gash",
         "gashed",
