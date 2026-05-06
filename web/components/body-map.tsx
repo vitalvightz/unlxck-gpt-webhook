@@ -97,7 +97,7 @@ function buildZoneAriaLabel(
   if (!selection) {
     return `${zoneLabel}, not marked. Press Enter to add as an injury.`;
   }
-  const severity = selection.severity ? SEVERITY_LABELS[selection.severity as BodyMapSeverity] : null;
+  const severity = selection.severity ? SEVERITY_LABELS[selection.severity] : null;
   if (severity) {
     return `${zoneLabel}, marked at ${severity}. Press Enter to focus this injury card.`;
   }
