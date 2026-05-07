@@ -1647,7 +1647,7 @@ export function PlanIntakeForm() {
         />
 
         {currentStep === 0 ? (
-          <div className="step-layout onboarding-step-layout onboarding-step-layout-restrictions">
+          <div className="step-layout onboarding-step-layout">
             <div className="step-main athlete-motion-slot athlete-motion-main onboarding-step-main">
               <article className="step-card">
                 <div className="form-section-header">
