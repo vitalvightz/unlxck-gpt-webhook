@@ -364,7 +364,7 @@ def parse_guided_note_tags(text: str) -> dict[str, set[str]]:
     parsed: dict[str, set[str]] = {}
     if not text:
         return parsed
-    for match in re.finditer(r"\[\s*([a-z0-9_]+)\s*:\s*([^\]]*)\]", str(text or "").lower()):
+    for match in re.finditer(r"\[\s*([a-z0-9_]+)\s*:\s*([^\]]*)\]", text.lower()):
         category = (match.group(1) or "").strip()
         if not category:
             continue
