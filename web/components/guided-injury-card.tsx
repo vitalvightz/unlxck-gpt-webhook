@@ -547,7 +547,7 @@ function FollowUpQuestions({
                 key={flag.value}
                 label={flag.label}
                 selected={flags.includes(flag.value)}
-                onClick={() => onUpdate("notes", setNotesFlags(injury.notes, "red_flags", flags.filter((f) => f !== "none").includes(flag.value) ? flags.filter((f) => f !== flag.value && f !== "none") : [...flags.filter((f) => f !== "none"), flag.value]))}
+                onClick={() => onUpdate("notes", toggleNotesFlag(setNotesFlags(injury.notes, "red_flags", flags.filter((f) => f !== "none")), "red_flags", flag.value))}
                 variant="danger"
               />
             ))}
