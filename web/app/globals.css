@@ -6040,7 +6040,7 @@ html[data-theme="light"] .global-generation-status-rail {
 
 .injury-card-copy {
   display: grid;
-  gap: 8px;
+  gap: 6px;
   min-width: 0;
 }
 
@@ -6056,6 +6056,10 @@ html[data-theme="light"] .global-generation-status-rail {
   color: var(--text-secondary);
   line-height: 1.55;
 }
+.injury-card-live-summary{margin:0;font-size:.85rem;color:var(--text-secondary)}
+.injury-card-status-pill{display:inline-flex;align-items:center;width:fit-content;min-height:28px;padding:0 10px;border-radius:999px;border:1px solid rgba(255,255,255,.12);font-size:.74rem;font-weight:600;color:var(--text-secondary)}
+.injury-card-controls{display:flex;align-items:center;gap:8px}
+.injury-card-edit-btn{min-height:36px;padding:0 12px;border-radius:10px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.02);color:var(--text-secondary);font-size:.8rem;font-weight:600}
 
 .injury-card-actions {
   display: flex;
@@ -6729,7 +6733,7 @@ html[data-theme="light"] .injury-card-remove-btn:hover {
   align-items: center;
   min-height: 44px;
   padding: 7px 14px;
-  border-radius: 10px;
+  border-radius: 999px;
   border: 1px solid rgba(255, 255, 255, 0.08);
   background: transparent;
   color: var(--text-secondary);
@@ -6759,10 +6763,8 @@ html[data-theme="light"] .injury-card-remove-btn:hover {
 }
 
 .gi-step-header {
-  display: flex;
-  justify-content: space-between;
+  display: grid;
   gap: 10px;
-  flex-wrap: wrap;
 }
 
 .gi-step-track {
@@ -6780,13 +6782,14 @@ html[data-theme="light"] .injury-card-remove-btn:hover {
 .gi-family-card {
   min-height: 44px;
   padding: 12px;
-  border-radius: 12px;
+  border-radius: 16px;
   border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(255, 255, 255, 0.01);
+  background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.015));
   color: var(--text-primary);
   text-align: left;
   display: grid;
   gap: 4px;
+  transition: transform .2s ease, border-color .2s ease, box-shadow .2s ease;
 }
 
 .gi-family-card small {
@@ -6799,9 +6802,15 @@ html[data-theme="light"] .injury-card-remove-btn:hover {
 
 .gi-family-card-selected {
   border-color: rgba(181, 18, 43, 0.45);
-  background: rgba(181, 18, 43, 0.1);
-  box-shadow: 0 0 0 1px rgba(181, 18, 43, 0.1) inset;
+  background: linear-gradient(180deg, rgba(181, 18, 43, .12), rgba(181, 18, 43, .06));
+  box-shadow: 0 0 0 1px rgba(181, 18, 43, 0.1) inset, 0 12px 20px rgba(0,0,0,.2);
+  transform: translateY(-2px);
 }
+.gi-stepper{display:flex;gap:8px;flex-wrap:wrap}
+.gi-stepper-item{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:999px;border:1px solid rgba(255,255,255,.08);font-size:.74rem;color:var(--text-muted)}
+.gi-stepper-item-active{border-color:rgba(255,255,255,.2);color:var(--text-primary)}
+.gi-stepper-item-done{border-color:rgba(181,18,43,.3);background:rgba(181,18,43,.08);color:var(--text-primary)}
+.gi-stepper-dot{font-size:.68rem}
 
 .gi-subtype-panel,
 .gi-safety-panel {
@@ -6839,9 +6848,10 @@ html[data-theme="light"] .injury-card-remove-btn:hover {
   gap: 16px;
   padding: 16px;
   border-radius: 14px;
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   background: rgba(255, 255, 255, 0.015);
 }
+.gi-followup .gi-field{padding:10px 12px;border-radius:12px;border:1px solid rgba(255,255,255,.07);background:rgba(255,255,255,.015)}
 
 .gi-warning {
   margin: 0;
@@ -6863,7 +6873,7 @@ html[data-theme="light"] .injury-card-remove-btn:hover {
   align-items: flex-start;
   gap: 10px;
   padding: 12px 16px;
-  border-radius: 12px;
+  border-radius: 999px;
   border: 1px solid rgba(255, 184, 77, 0.22);
   background: rgba(255, 184, 77, 0.06);
   font-size: 0.82rem;
@@ -6871,6 +6881,11 @@ html[data-theme="light"] .injury-card-remove-btn:hover {
   line-height: 1.5;
   color: #ffcb6b;
 }
+.support-panel-preview-quiet{opacity:.72}
+.gi-empty-state{border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.02)}
+.gi-clear-confirm-panel{margin:0 0 14px;padding:12px;border-radius:12px;border:1px solid rgba(255,184,77,.28);background:rgba(255,184,77,.06);display:grid;gap:8px}
+.gi-clear-confirm-title{margin:0;font-weight:700}
+.gi-clear-confirm-actions{display:flex;gap:8px;flex-wrap:wrap}
 
 .gi-review-warning-icon {
   flex-shrink: 0;
@@ -6979,7 +6994,10 @@ html[data-theme="light"] .gi-notes-toggle:hover {
     padding: 10px 12px;
     font-size: 0.78rem;
   }
+  .gi-stepper{overflow-x:auto;flex-wrap:nowrap;padding-bottom:4px}
+  .injury-body-map-col{max-width:260px}
 }
+@media (prefers-reduced-motion: reduce){.gi-family-card,.gi-chip,.injury-card{transition:none!important;transform:none!important}}
 
 .appearance-mode-grid {
   display: grid;

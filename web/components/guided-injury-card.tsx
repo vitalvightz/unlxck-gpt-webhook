@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import type { GuidedInjuryState } from "@/lib/guided-injury";
 import {
   GUIDED_INJURY_SEVERITY_OPTIONS,
@@ -66,11 +66,11 @@ const INJURY_TYPE_GROUPS: InjuryTypeGroup[] = [
 ];
 
 const INJURY_FAMILIES: InjuryFamilyOption[] = [
-  { family: "pain_movement", label: "Pain / movement issue", helper: "soreness, tightness, strain, swelling" },
-  { family: "structural", label: "Bone / joint / structural", helper: "fracture, dislocation, tendon, ligament, post-surgery" },
-  { family: "head_nerve_breathing", label: "Head / nerve / breathing", helper: "concussion, numbness, chest/breathing pain" },
-  { family: "surface", label: "Skin / surface injury", helper: "cut, graze, blister, bruise, burn" },
-  { family: "not_sure", label: "Not sure", helper: "I do not know the exact type" },
+  { family: "pain_movement", label: "Pain / movement", helper: "Soreness, tightness, strains" },
+  { family: "structural", label: "Bone / structural", helper: "Fracture, dislocation, ligament" },
+  { family: "head_nerve_breathing", label: "Head / nerve / breathing", helper: "Concussion, nerve, breathing" },
+  { family: "surface", label: "Skin / surface", helper: "Cuts, blisters, bruises" },
+  { family: "not_sure", label: "Not sure", helper: "I do not know yet" },
 ];
 
 const FAMILY_TO_HEADING: Record<Exclude<InjuryFamily, "not_sure">, string> = {
@@ -804,6 +804,27 @@ export function GuidedInjuryCard({
   const hasFollowUp = injury.injury_type !== "";
   const derivedFamily = getFamilyForInjury(injury);
   const activeFamily = derivedFamily || draftFamily;
+  const basicsComplete = Boolean(injury.area.trim() && injury.severity && injury.trend);
+  const typeComplete = Boolean(injury.injury_type);
+  const reviewReady = Boolean(basicsComplete && typeComplete);
+  const liveSummary = useMemo(() => {
+    const summaryArea = injury.area.trim() || `Injury ${index + 1}`;
+    if (!injury.injury_type) return `${summaryArea} · Needs type`;
+    if (showWarning) return `${summaryArea} · ${getInjuryTypeLabel(injury)} · Review risk`;
+    return [
+      summaryArea,
+      getInjuryTypeLabel(injury),
+      injury.severity ? injury.severity.charAt(0).toUpperCase() + injury.severity.slice(1) : "",
+      injury.trend ? injury.trend.charAt(0).toUpperCase() + injury.trend.slice(1) : "",
+    ].filter(Boolean).join(" · ");
+  }, [index, injury, showWarning]);
+  const stepStatus = [
+    { key: "basics", label: "Basics", done: basicsComplete, active: !basicsComplete },
+    { key: "type", label: "Type", done: typeComplete, active: basicsComplete && !typeComplete },
+    { key: "safety", label: "Safety", done: typeComplete, active: typeComplete && !reviewReady },
+    { key: "review", label: "Review", done: reviewReady, active: reviewReady },
+  ];
+  const collapsedStatus = showWarning ? "Review risk" : !injury.injury_type ? "Needs type" : "Complete";
   const stepLabel = !activeFamily
     ? "Step 1 of 3 · Choose injury family"
     : !hasFollowUp
@@ -875,9 +896,12 @@ function handleTypeSelect(opt: InjuryTypeOption | null) {
         <div className="injury-card-num">{String(index + 1).padStart(2, "0")}</div>
         <div className="injury-card-copy">
           <h3 className="injury-card-title">{injuryLabel}</h3>
-          {!isActive && compactSummary ? (
-            <p className="injury-card-summary">{compactSummary}</p>
-          ) : null}
+          {!isActive ? (
+            <p className="injury-card-summary">{compactSummary || liveSummary}</p>
+          ) : (
+            <p className="injury-card-live-summary">{liveSummary}</p>
+          )}
+          {!isActive ? <span className="injury-card-status-pill">{collapsedStatus}</span> : null}
         </div>
         <div className="injury-card-badges">
           {injury.severity ? (
@@ -892,16 +916,19 @@ function handleTypeSelect(opt: InjuryTypeOption | null) {
             </span>
           ) : null}
         </div>
-        <button
-          type="button"
-          className="injury-card-remove-btn"
-          onClick={(e) => { e.stopPropagation(); onRemove(); }}
-          aria-label={`Remove ${injuryLabel}`}
-        >
+        <div className="injury-card-controls">
+          {!isActive ? <button type="button" className="injury-card-edit-btn" onClick={(e) => { e.stopPropagation(); onToggleActive(); }}>Edit</button> : null}
+          <button
+            type="button"
+            className="injury-card-remove-btn"
+            onClick={(e) => { e.stopPropagation(); onRemove(); }}
+            aria-label={`Remove ${injuryLabel}`}
+          >
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
             <path d="M3 3l8 8M11 3l-8 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
           </svg>
-        </button>
+          </button>
+        </div>
       </div>
 
       {isActive ? (
@@ -955,7 +982,14 @@ function handleTypeSelect(opt: InjuryTypeOption | null) {
 
           <div className="gi-step-header">
             <p className="gi-step-track">{stepLabel}</p>
-            <p className="gi-step-track">Basics → Type → Safety</p>
+            <div className="gi-stepper" aria-label="Injury intake progress">
+              {stepStatus.map((step) => (
+                <div key={step.key} className={`gi-stepper-item ${step.active ? "gi-stepper-item-active" : ""} ${step.done ? "gi-stepper-item-done" : ""}`.trim()}>
+                  <span className="gi-stepper-dot" aria-hidden="true">{step.done ? "✓" : "•"}</span>
+                  <span>{step.label}</span>
+                </div>
+              ))}
+            </div>
           </div>
 
           {/* Injury family + stepped selector */}
@@ -1020,7 +1054,7 @@ function handleTypeSelect(opt: InjuryTypeOption | null) {
                 <path d="M8 1.5L1 14h14L8 1.5z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round" />
                 <path d="M8 6v3.5M8 11.5v.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
               </svg>
-              <span>This may pause normal fight-camp planning until coach/admin review or medical clearance.</span>
+              <span>This may pause normal planning until coach/admin review or medical clearance.</span>
             </div>
           ) : null}
 
