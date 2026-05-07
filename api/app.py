@@ -1655,8 +1655,10 @@ class _TtlCache:
             return copy.deepcopy(value)
 
     def set(self, key: str, value: Any, ttl_seconds: int) -> None:
+        safe_value = copy.deepcopy(value)
+        expiry = time.monotonic() + max(1, ttl_seconds)
         with self._lock:
-            self._entries[key] = (time.monotonic() + max(1, ttl_seconds), copy.deepcopy(value))
+            self._entries[key] = (expiry, safe_value)
 
     def clear(self) -> None:
         with self._lock:
