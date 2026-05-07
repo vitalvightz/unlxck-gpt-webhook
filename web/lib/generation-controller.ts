@@ -37,10 +37,16 @@ type StartGenerationOptions = {
   recovered?: boolean;
 };
 
-const INITIAL_POLL_MS = 2_000;
-const MEDIUM_POLL_MS = 5_000;
+const INITIAL_POLL_MS = 10_000;
+const MEDIUM_POLL_MS = 12_000;
 const LONG_POLL_MS = 15_000;
+const MAX_POLL_WINDOW_MS = 20 * 60_000;
 const PENDING_GENERATION_PREFIX = "unlxck:pending-generation:";
+const CLOCK_EPOCH_OFFSET_MS = Date.now() - performance.now();
+
+function nowMs(): number {
+  return CLOCK_EPOCH_OFFSET_MS + performance.now();
+}
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => window.setTimeout(resolve, ms));
@@ -106,7 +112,7 @@ function clearPendingGeneration(storageKey: string | null): void {
 }
 
 function getPollDelay(startedAtMs: number): number {
-  const elapsedMs = Date.now() - startedAtMs;
+  const elapsedMs = nowMs() - startedAtMs;
   if (elapsedMs < 60_000) {
     return INITIAL_POLL_MS;
   }
@@ -116,8 +122,12 @@ function getPollDelay(startedAtMs: number): number {
   return LONG_POLL_MS;
 }
 
+function hasPollingTimedOut(startedAtMs: number): boolean {
+  return nowMs() - startedAtMs > MAX_POLL_WINDOW_MS;
+}
+
 function statusMessageForJob(status: GenerationJobStatus, startedAtMs: number): string {
-  const elapsedMinutes = Math.floor((Date.now() - startedAtMs) / 60_000);
+  const elapsedMinutes = Math.floor((nowMs() - startedAtMs) / 60_000);
   const suffix =
     elapsedMinutes >= 5
       ? " This is safe to leave and return to; we will reconnect when you come back."
@@ -202,7 +212,7 @@ export function useGenerationController({
       const recovered = options.recovered ?? false;
       const clientRequestId = options.clientRequestId ?? buildClientRequestId();
       const pendingCreatedAt = new Date().toISOString();
-      const pendingCreatedAtMs = Date.parse(pendingCreatedAt) || Date.now();
+      const pendingCreatedAtMs = Date.parse(pendingCreatedAt) || nowMs();
       savePendingGeneration(storageKey, {
         clientRequestId,
         createdAt: pendingCreatedAt,
@@ -218,7 +228,7 @@ export function useGenerationController({
         );
         setMilestones([]);
         const createdJob = await createJobWithReconnect(createJob, clientRequestId, setStatusMessage, setPhase);
-        const createdAtMs = Date.parse(createdJob.created_at || pendingCreatedAt) || Date.now();
+        const createdAtMs = Date.parse(createdJob.created_at || pendingCreatedAt) || nowMs();
         setStartedAtMs(createdAtMs);
         setPhase(phaseForJobStatus(createdJob.status));
         setStatusMessage(statusMessageForJob(createdJob.status, createdAtMs));
@@ -232,6 +242,11 @@ export function useGenerationController({
         });
 
         for (;;) {
+          if (hasPollingTimedOut(createdAtMs)) {
+            throw new Error(
+              "Plan generation is taking longer than expected. We stopped auto-refresh to reduce network usage. Please reopen this page to check again.",
+            );
+          }
           const currentJob = await getGenerationJob(token, createdJob.job_id);
 
           if (Array.isArray(currentJob.progress_milestones)) {
