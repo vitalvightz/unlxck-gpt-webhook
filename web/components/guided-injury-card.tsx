@@ -20,6 +20,10 @@ type InjuryTypeGroup = {
   options: InjuryTypeOption[];
 };
 
+type InjuryTypeOptionWithGroup = InjuryTypeOption & {
+  group: string;
+};
+
 const INJURY_TYPE_GROUPS: InjuryTypeGroup[] = [
   {
     heading: "Common",
@@ -62,6 +66,10 @@ const INJURY_TYPE_GROUPS: InjuryTypeGroup[] = [
     ],
   },
 ];
+
+const INJURY_TYPE_OPTIONS: InjuryTypeOptionWithGroup[] = INJURY_TYPE_GROUPS.flatMap((group) =>
+  group.options.map((option) => ({ ...option, group: group.heading })),
+);
 
 // ── Timeframe options ────────────────────────────────────────────────
 
@@ -180,17 +188,11 @@ const TREND_ARROWS: Record<string, string> = {
 
 // ── Helpers ──────────────────────────────────────────────────────────
 
-function getSelectedTypeOption(injury: GuidedInjuryState): InjuryTypeOption | null {
-  for (const group of INJURY_TYPE_GROUPS) {
-    for (const opt of group.options) {
-      if (opt.value === injury.injury_type) {
-        if (opt.value === "surface_injury") {
-          if (opt.surface_type === injury.surface_type) return opt;
-        } else {
-          return opt;
-        }
-      }
-    }
+function getSelectedTypeOption(injury: GuidedInjuryState): InjuryTypeOptionWithGroup | null {
+  for (const option of INJURY_TYPE_OPTIONS) {
+    if (option.value !== injury.injury_type) continue;
+    if (option.value === "surface_injury" && option.surface_type !== injury.surface_type) continue;
+    return option;
   }
   return null;
 }
@@ -735,6 +737,12 @@ export function GuidedInjuryCard({
   const showWarning = shouldShowReviewWarning(injury);
   const hasFollowUp = injury.injury_type !== "";
 
+  const selectedTypeOption = getSelectedTypeOption(injury);
+  const selectedTypeGroup = selectedTypeOption?.group ?? "";
+  const availableTypeOptions = selectedTypeGroup
+    ? INJURY_TYPE_OPTIONS.filter((option) => option.group === selectedTypeGroup)
+    : [];
+
   function handleTypeSelect(opt: InjuryTypeOption | null) {
   if (!opt) {
     onUpdate("injury_type", "");
@@ -856,39 +864,53 @@ export function GuidedInjuryCard({
 
           {/* Injury type grouped selector */}
           <div className="gi-field">
-            <label className="gi-label">Injury type</label>
-          
-            <div className="gi-type-selector">
-              {INJURY_TYPE_GROUPS.map((group) => (
-                <div key={group.heading} className="gi-type-group">
-                  <p className="gi-type-group-heading">{group.heading}</p>
-          
-                  <div className="gi-chip-row" role="radiogroup" aria-label={group.heading}>
-                    {group.options.map((opt) => {
-                      const isSelected =
-                        injury.injury_type === opt.value &&
-                        (opt.value !== "surface_injury" ||
-                          injury.surface_type === (opt.surface_type ?? ""));
-          
-                      return (
-                        <button
-                          key={`${opt.value}-${opt.surface_type ?? ""}`}
-                          type="button"
-                          role="radio"
-                          aria-checked={isSelected}
-                          className={`gi-chip ${isSelected ? "gi-chip-selected" : ""}`}
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            handleTypeSelect(opt);
-                          }}
-                        >
-                          {opt.label}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              ))}
+            <label htmlFor={`gi-type-group-${index}`} className="gi-label">Injury type</label>
+            <div className="gi-type-selector-compact">
+              <select
+                id={`gi-type-group-${index}`}
+                value={selectedTypeGroup}
+                onChange={(event) => {
+                  const nextGroup = event.target.value;
+                  if (!nextGroup) {
+                    handleTypeSelect(null);
+                    return;
+                  }
+                  const firstOption = INJURY_TYPE_OPTIONS.find((option) => option.group === nextGroup);
+                  handleTypeSelect(firstOption ?? null);
+                }}
+              >
+                <option value="">Select group</option>
+                {INJURY_TYPE_GROUPS.map((group) => (
+                  <option key={group.heading} value={group.heading}>{group.heading}</option>
+                ))}
+              </select>
+              <select
+                id={`gi-type-${index}`}
+                value={selectedTypeOption ? `${selectedTypeOption.value}::${selectedTypeOption.surface_type ?? ""}` : ""}
+                onChange={(event) => {
+                  const nextValue = event.target.value;
+                  if (!nextValue) {
+                    handleTypeSelect(null);
+                    return;
+                  }
+                  const [value, surfaceType = ""] = nextValue.split("::");
+                  const nextOption = availableTypeOptions.find(
+                    (option) => option.value === value && (option.surface_type ?? "") === surfaceType,
+                  );
+                  handleTypeSelect(nextOption ?? null);
+                }}
+                disabled={!selectedTypeGroup}
+              >
+                <option value="">Select type</option>
+                {availableTypeOptions.map((option) => (
+                  <option
+                    key={`${option.value}-${option.surface_type ?? ""}`}
+                    value={`${option.value}::${option.surface_type ?? ""}`}
+                  >
+                    {option.label}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
 

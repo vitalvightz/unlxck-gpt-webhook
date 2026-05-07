@@ -6763,6 +6763,11 @@ html[data-theme="light"] .injury-card-remove-btn:hover {
   gap: 16px;
 }
 
+.gi-type-selector-compact {
+  display: grid;
+  gap: 10px;
+}
+
 .gi-type-group {
   display: grid;
   gap: 8px;
