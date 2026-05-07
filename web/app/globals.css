@@ -2115,6 +2115,16 @@ select:focus-visible {
   color: var(--text-primary);
 }
 
+.inline-warning-ack-compact {
+  padding: 10px 12px;
+  border-radius: 12px;
+}
+
+.inline-warning-ack-stack {
+  display: grid;
+  gap: 2px;
+}
+
 .inline-warning-ack-checked {
   border-color: rgba(181, 18, 43, 0.38);
 }
