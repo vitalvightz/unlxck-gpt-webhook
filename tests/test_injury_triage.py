@@ -12,6 +12,7 @@ from fightcamp.injury_triage import (
 )
 from fightcamp.input_parsing import PlanInput
 from fightcamp.main import generate_plan_sync
+from fightcamp.triage_features import parse_guided_note_tags
 from support import _build_request
 
 
@@ -827,6 +828,69 @@ def test_second_guided_card_avoid_high_load_signal_is_seen():
     triage = triage_injuries(PlanInput.from_payload(payload))
 
     assert "guided_injury:avoid_high_load" in triage.routing_reasons
+
+
+def test_parse_guided_note_tags_handles_multiple_tags_and_spacing():
+    tags = parse_guided_note_tags(
+        " [red_flags: vomiting , severe_headache ] [chest_symptoms: shortness_of_breath,coughing_blood] "
+    )
+    assert tags["red_flags"] == {"vomiting", "severe_headache"}
+    assert tags["chest_symptoms"] == {"shortness_of_breath", "coughing_blood"}
+
+
+def test_parse_guided_note_tags_ignores_malformed_or_unknown_shapes():
+    assert parse_guided_note_tags("[chest_symptoms] [random:abc]") == {"random": {"abc"}}
+
+
+def test_head_impact_tagged_red_flags_route_like_natural_language():
+    payload = _payload_with_injury("")
+    payload["guided_injury"] = {"injury_type": "head_impact", "notes": "[red_flags:vomiting,confusion]"}
+    triage = triage_injuries(PlanInput.from_payload(payload))
+    assert triage.mode == MEDICAL_HOLD
+    assert "vomiting_after_head_impact" in triage.red_flags
+    assert "confusion" in triage.red_flags
+    assert "tagged_note:red_flags:vomiting" in triage.routing_reasons
+
+
+def test_chest_breathing_tagged_notes_activate_red_flags_and_hold():
+    payload = _payload_with_injury("")
+    payload["guided_injury"] = {"injury_type": "chest_breathing", "notes": "[chest_symptoms:shortness_of_breath,coughing_blood]"}
+    triage = triage_injuries(PlanInput.from_payload(payload))
+    assert "shortness_of_breath" in triage.red_flags
+    assert triage.mode == MEDICAL_HOLD
+    assert "tagged_note:chest_symptoms:shortness_of_breath" in triage.routing_reasons
+
+
+def test_nerve_tagged_mixed_and_worsening_does_not_silently_full_plan():
+    payload = _payload_with_injury("")
+    payload["guided_injury"] = {
+        "injury_type": "nerve_symptoms",
+        "trend": "worsening",
+        "notes": "[nerve_symptoms:type_mixed]",
+    }
+    triage = triage_injuries(PlanInput.from_payload(payload))
+    assert {"numbness", "tingling", "weakness"}.issubset(set(triage.red_flags))
+    assert triage.mode != FULL_PLAN
+
+
+def test_dislocation_recurrent_or_unresolved_tags_do_not_silently_full_plan():
+    payload = _payload_with_injury("")
+    payload["guided_injury"] = {"injury_type": "dislocation", "notes": "[dislocation:recurrent_yes,relocated_no]"}
+    triage = triage_injuries(PlanInput.from_payload(payload))
+    assert triage.mode != FULL_PLAN
+    assert "tagged_note:dislocation:recurrent_yes" in triage.routing_reasons
+
+
+def test_dislocation_relocated_yes_recurrent_no_can_be_full_plan_when_cleared():
+    payload = _payload_with_injury("")
+    payload["guided_injury"] = {
+        "injury_type": "dislocation",
+        "timeframe": "old_cleared",
+        "cleared": "yes",
+        "notes": "[dislocation:relocated_yes,recurrent_no]",
+    }
+    triage = triage_injuries(PlanInput.from_payload(payload))
+    assert triage.mode == FULL_PLAN
 
 
 def test_collect_guided_card_evidence_uses_parsed_entries_without_duplicating_first_card():

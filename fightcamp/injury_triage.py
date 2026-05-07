@@ -7,7 +7,7 @@ from typing import Any
 from .input_parsing import GuidedInjury, PlanInput
 from .injury_synonyms import parse_injury_phrase, remove_negated_phrases, split_injury_text
 from .sparring_advisories import summarize_sparring_injury_risk
-from .triage_features import build_triage_features
+from .triage_features import build_triage_features, parse_guided_note_tags
 
 
 FULL_PLAN = "full_plan"
@@ -796,6 +796,28 @@ _HEAD_IMPACT_RED_FLAG_TOKENS = {
     "slurred_speech",
     "seizure",
 }
+_HEAD_IMPACT_TAG_TO_RED_FLAG = {
+    "loss_of_consciousness": "loss_of_consciousness",
+    "vomiting": "vomiting_after_head_impact",
+    "severe_headache": "severe_headache_after_head_impact",
+    "memory_loss": "amnesia_or_memory_loss",
+    "blurred_or_double_vision": "blurred_or_double_vision",
+    "confusion": "confusion",
+    "slurred_speech": "slurred_speech",
+    "seizure": "seizure_or_convulsion",
+}
+_CHEST_TAG_TO_RED_FLAG = {
+    "breathing_pain": "breathing_pain",
+    "shortness_of_breath": "shortness_of_breath",
+    "chest_pain": "chest_pain",
+    "coughing_blood": "coughing_blood",
+}
+_NERVE_TAG_TO_RED_FLAGS = {
+    "type_numbness": {"numbness"},
+    "type_tingling": {"tingling"},
+    "type_weakness": {"weakness"},
+    "type_mixed": {"numbness", "tingling", "weakness"},
+}
 
 _INFECTION_SYSTEMIC_SIGNS = {"fever", "spreading"}
 _INFECTION_LOCAL_SIGNS = {"pus", "redness_heat"}
@@ -825,6 +847,7 @@ def _apply_structured_injury_signals(
     sensitive_area = (guided.sensitive_area or "").strip().lower()
     notes = (guided.notes or "").strip().lower()
     area = (guided.area or "").strip().lower()
+    note_tags = parse_guided_note_tags(notes)
 
     old_and_cleared = timeframe in _OLD_CLEARED_TIMEFRAMES and cleared == "yes"
     has_current_concern = (
@@ -843,6 +866,13 @@ def _apply_structured_injury_signals(
 
     # ── Dislocation ───────────────────────────────────────────────────
     elif injury_type == "dislocation":
+        dislocation_tags = note_tags.get("dislocation", set())
+        if "recurrent_yes" in dislocation_tags:
+            routing_reasons.add("tagged_note:dislocation:recurrent_yes")
+            matched_categories.add("dislocation")
+        if {"relocated_no", "relocated_not_sure"} & dislocation_tags:
+            routing_reasons.add("tagged_note:dislocation:relocation_uncertain_or_no")
+            matched_categories.add("dislocation")
         if old_and_cleared and not has_current_concern:
             routing_reasons.add("structured:dislocation_old_cleared_no_concern")
         else:
@@ -876,40 +906,37 @@ def _apply_structured_injury_signals(
     elif injury_type == "head_impact":
         matched_categories.add("concussion")
         routing_reasons.add("structured:head_impact")
-        red_flag_match = re.findall(r"\[red_flags:([^\]]+)\]", notes)
-        if red_flag_match:
-            for flag_str in red_flag_match:
-                for token in flag_str.split(","):
-                    token = token.strip().lower()
-                    if token in _HEAD_IMPACT_RED_FLAG_TOKENS:
-                        if token == "loss_of_consciousness":
-                            red_flags.add("loss_of_consciousness")
-                        elif token == "vomiting":
-                            red_flags.add("vomiting_after_head_impact")
-                        elif token == "severe_headache":
-                            red_flags.add("severe_headache_after_head_impact")
-                        elif token == "memory_loss":
-                            red_flags.add("amnesia_or_memory_loss")
-                        elif token == "blurred_or_double_vision":
-                            red_flags.add("blurred_or_double_vision")
-                        elif token == "confusion":
-                            red_flags.add("confusion")
-                        elif token == "slurred_speech":
-                            red_flags.add("slurred_speech")
-                        elif token == "seizure":
-                            red_flags.add("seizure_or_convulsion")
+        for token in note_tags.get("red_flags", set()):
+            mapped = _HEAD_IMPACT_TAG_TO_RED_FLAG.get(token)
+            if mapped:
+                red_flags.add(mapped)
+                routing_reasons.add(f"tagged_note:red_flags:{token}")
 
     # ── Nerve symptoms ────────────────────────────────────────────────
     elif injury_type == "nerve_symptoms":
-        red_flags.add("numbness")
+        nerve_tags = note_tags.get("nerve_symptoms", set())
+        if not nerve_tags:
+            red_flags.add("numbness")
+        for token in nerve_tags:
+            mapped = _NERVE_TAG_TO_RED_FLAGS.get(token)
+            if mapped:
+                red_flags.update(mapped)
+                routing_reasons.add(f"tagged_note:nerve_symptoms:{token}")
         routing_reasons.add("structured:nerve_symptoms")
         if trend in _WORSENING_TRENDS or impact_related == "yes":
             routing_reasons.add("structured:nerve_symptoms_escalated")
 
     # ── Chest / breathing ─────────────────────────────────────────────
     elif injury_type == "chest_breathing":
-        red_flags.add("breathing_pain")
-        red_flags.add("chest_pain")
+        chest_tags = note_tags.get("chest_symptoms", set())
+        if not chest_tags:
+            red_flags.add("breathing_pain")
+            red_flags.add("chest_pain")
+        for token in chest_tags:
+            mapped = _CHEST_TAG_TO_RED_FLAG.get(token)
+            if mapped:
+                red_flags.add(mapped)
+                routing_reasons.add(f"tagged_note:chest_symptoms:{token}")
         routing_reasons.add("structured:chest_breathing")
 
     # ── Surface injury ────────────────────────────────────────────────
