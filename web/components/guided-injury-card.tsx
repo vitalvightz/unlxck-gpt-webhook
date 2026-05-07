@@ -220,12 +220,23 @@ function getFamilyForInjury(injury: GuidedInjuryState): InjuryFamily | "" {
 }
 
 function getOptionsForFamily(family: InjuryFamily): InjuryTypeOption[] {
-  if (family === "pain_movement") return INJURY_TYPE_GROUPS[0].options.filter((opt) => opt.value !== "unspecified");
-  if (family === "structural") return INJURY_TYPE_GROUPS[1].options;
-  if (family === "head_nerve_breathing") return INJURY_TYPE_GROUPS[2].options;
-  if (family === "surface") return INJURY_TYPE_GROUPS[3].options;
-  if (family === "not_sure") return [{ label: "Not sure", value: "unspecified" }];
-  return [];
+  if (family === "not_sure") {
+    return [{ label: "Not sure", value: "unspecified" }];
+  }
+
+  const heading = FAMILY_TO_HEADING[family];
+  const groupOptions = INJURY_TYPE_GROUPS.find((g) => g.heading === heading)?.options;
+
+  if (!groupOptions) {
+    return [];
+  }
+
+  // The 'Common' group includes an 'unspecified' option that shouldn't be shown here.
+  if (family === "pain_movement") {
+    return groupOptions.filter((opt) => opt.value !== "unspecified");
+  }
+
+  return groupOptions;
 }
 
 function shouldShowReviewWarning(injury: GuidedInjuryState): boolean {
