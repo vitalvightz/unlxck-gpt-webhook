@@ -248,10 +248,6 @@ def test_runtime_app_fails_loudly_when_plan_schema_is_invalid_and_fallback_disab
         "app": "unlxck-fight-camp-api",
         "detail": store_module.PLAN_RUNTIME_SCHEMA_ERROR_DETAIL,
     }
-
-
-
-
 def test_runtime_app_returns_startup_failure_when_store_is_restricted(
     monkeypatch: pytest.MonkeyPatch,
 ):
