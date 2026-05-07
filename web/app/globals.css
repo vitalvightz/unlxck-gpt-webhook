@@ -2118,11 +2118,21 @@ select:focus-visible {
 .inline-warning-ack-compact {
   padding: 10px 12px;
   border-radius: 12px;
+  align-items: flex-start;
+}
+
+.inline-warning-ack-compact input {
+  margin-top: 3px;
 }
 
 .inline-warning-ack-stack {
   display: grid;
   gap: 2px;
+}
+
+.inline-warning-ack-stack .muted {
+  font-size: 13px;
+  line-height: 1.4;
 }
 
 .inline-warning-ack-checked {
