@@ -914,7 +914,7 @@ function handleTypeSelect(opt: InjuryTypeOption | null) {
           {/* Injury family + stepped selector */}
           <div className="gi-field">
             <label className="gi-label">Injury family</label>
-            <div className="gi-family-grid">
+            <div className="gi-family-grid" role="radiogroup" aria-label="Injury family">
               {INJURY_FAMILIES.map((family) => {
                 const selected = activeFamily === family.family;
                 return (
