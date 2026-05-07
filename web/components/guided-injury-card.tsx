@@ -66,7 +66,7 @@ const INJURY_TYPE_GROUPS: InjuryTypeGroup[] = [
 ];
 
 const INJURY_FAMILIES: InjuryFamilyOption[] = [
-  { family: "pain_movement", label: "Muscle or joint pain", helper: "Soreness, tightness, strains" },
+  { family: "pain_movement", label: "Muscle pain", helper: "Soreness, tightness, strains" },
   { family: "structural", label: "Bone or joint injury", helper: "Fracture, dislocation, ligament" },
   { family: "head_nerve_breathing", label: "Head, nerve or breathing issue", helper: "Concussion, nerve, breathing" },
   { family: "surface", label: "Skin injury", helper: "Cuts, blisters, bruises" },
