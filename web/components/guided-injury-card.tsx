@@ -142,6 +142,8 @@ const AVOID_CHIPS: Record<string, string[]> = {
   surface_abrasion: ["contact_sparring", "friction", "grappling"],
   surface_blister: ["running", "gripping", "contact_sparring", "footwear_friction"],
   surface_bruise: ["contact_sparring", "heavy_loading", "impact", "running"],
+  surface_cut: ["contact_sparring", "grappling", "friction"],
+  surface_laceration: ["contact_sparring", "grappling", "friction"],
   surface_skin_irritation: ["friction", "contact_sparring", "sweating_under_kit"],
 };
 
@@ -285,6 +287,23 @@ function toggleNotesFlag(notes: string, prefix: string, flag: string): string {
   return setNotesFlags(notes, prefix, next);
 }
 
+
+function setSingleNotesFlag(notes: string, prefix: string, group: string, value: string): string {
+  const current = parseNotesFlags(notes, prefix).filter((flag) => !flag.startsWith(`${group}_`));
+  if (!value) return setNotesFlags(notes, prefix, current);
+  return setNotesFlags(notes, prefix, [...current, `${group}_${value}`]);
+}
+
+function getSingleNotesFlag(notes: string, prefix: string, group: string): string {
+  const found = parseNotesFlags(notes, prefix).find((flag) => flag.startsWith(`${group}_`));
+  return found ? found.slice(group.length + 1) : "";
+}
+
+function stripTaggedNotes(notes: string, prefixes: string[]): string {
+  return prefixes
+    .reduce((next, prefix) => next.replace(new RegExp(`\\s*\\[${prefix}:[^\\]]*\\]`, "g"), ""), notes)
+    .trim();
+}
 
 function clearTypeSpecificFields(onUpdate: <K extends keyof GuidedInjuryState>(key: K, value: GuidedInjuryState[K]) => void) {
   onUpdate("surface_type", "");
@@ -446,11 +465,15 @@ function FollowUpQuestions({
       <div className="gi-followup">
         <div className="gi-field">
           <label className="gi-label">Did it go back into place?</label>
-          <SingleChipRow label="Relocated" options={YES_NO_UNSURE} value={injury.cleared} onChange={(v) => onUpdate("cleared", v)} />
+          <SingleChipRow label="Relocated" options={YES_NO_UNSURE} value={getSingleNotesFlag(injury.notes, "dislocation", "relocated")} onChange={(v) => onUpdate("notes", setSingleNotesFlag(injury.notes, "dislocation", "relocated", v))} />
         </div>
         <div className="gi-field">
-          <label className="gi-label">Is it recurrent?</label>
-          <SingleChipRow label="Recurrent" options={YES_NO_UNSURE} value={injury.impact_related} onChange={(v) => onUpdate("impact_related", v)} />
+          <label className="gi-label">Has this happened before?</label>
+          <SingleChipRow label="Recurrent" options={YES_NO_UNSURE} value={getSingleNotesFlag(injury.notes, "dislocation", "recurrent")} onChange={(v) => onUpdate("notes", setSingleNotesFlag(injury.notes, "dislocation", "recurrent", v))} />
+        </div>
+        <div className="gi-field">
+          <label className="gi-label">Have you been medically cleared?</label>
+          <SingleChipRow label="Cleared" options={CLEARED_OPTIONS} value={injury.cleared} onChange={(v) => onUpdate("cleared", v)} />
         </div>
         <AvoidChips injury={injury} onUpdate={onUpdate} />
       </div>
@@ -522,7 +545,7 @@ function FollowUpQuestions({
     return (
       <div className="gi-followup">
         <div className="gi-field">
-          <label className="gi-label">Is it numbness, tingling, weakness, or mixed?</label>
+          <label className="gi-label">What are you feeling?</label>
           <SingleChipRow
             label="Symptom type"
             options={[
@@ -531,8 +554,8 @@ function FollowUpQuestions({
               { label: "Weakness", value: "weakness" },
               { label: "Mixed", value: "mixed" },
             ]}
-            value={injury.cleared}
-            onChange={(v) => onUpdate("cleared", v)}
+            value={getSingleNotesFlag(injury.notes, "nerve_symptoms", "type")}
+            onChange={(v) => onUpdate("notes", setSingleNotesFlag(injury.notes, "nerve_symptoms", "type", v))}
           />
         </div>
         <div className="gi-field">
@@ -544,7 +567,7 @@ function FollowUpQuestions({
           ]} value={injury.trend} onChange={(v) => onUpdate("trend", v)} />
         </div>
         <div className="gi-field">
-          <label className="gi-label">Did it happen after impact / contact?</label>
+          <label className="gi-label">Did it happen after impact/contact?</label>
           <SingleChipRow label="Impact related" options={YES_NO_UNSURE} value={injury.impact_related} onChange={(v) => onUpdate("impact_related", v)} />
         </div>
       </div>
@@ -555,22 +578,30 @@ function FollowUpQuestions({
     return (
       <div className="gi-followup">
         <div className="gi-field">
-          <label className="gi-label">Pain when breathing?</label>
-          <SingleChipRow label="Pain breathing" options={YES_NO_UNSURE} value={injury.cleared} onChange={(v) => onUpdate("cleared", v)} />
+          <label className="gi-label">Which symptoms are present?</label>
+          <div className="gi-chip-row" role="group" aria-label="Chest or breathing symptoms">
+            {[
+              { label: "Pain when breathing", value: "breathing_pain" },
+              { label: "Shortness of breath", value: "shortness_of_breath" },
+              { label: "Chest pain", value: "chest_pain" },
+              { label: "Coughing blood", value: "coughing_blood" },
+            ].map((flag) => (
+              <ChipButton
+                key={flag.value}
+                label={flag.label}
+                selected={parseNotesFlags(injury.notes, "chest_symptoms").includes(flag.value)}
+                onClick={() => onUpdate("notes", toggleNotesFlag(injury.notes, "chest_symptoms", flag.value))}
+                variant="danger"
+              />
+            ))}
+          </div>
         </div>
         <div className="gi-field">
-          <label className="gi-label">Shortness of breath?</label>
-          <SingleChipRow label="SOB" options={YES_NO_UNSURE} value={injury.impact_related} onChange={(v) => onUpdate("impact_related", v)} />
-        </div>
-        <div className="gi-field">
-          <label className="gi-label">Did it follow impact / contact?</label>
-          <SingleChipRow label="Impact" options={[
-            { label: "Yes", value: "yes" },
-            { label: "No", value: "no" },
-          ]} value={injury.sensitive_area === "yes" || injury.sensitive_area === "no" ? injury.sensitive_area : ""} onChange={(v) => onUpdate("sensitive_area", v)} />
+          <label className="gi-label">Did it follow impact/contact?</label>
+          <SingleChipRow label="Impact" options={YES_NO_UNSURE} value={injury.impact_related} onChange={(v) => onUpdate("impact_related", v)} />
         </div>
         <p className="gi-warning gi-warning-red" role="alert">
-          Breathing or chest symptoms may pause normal planning until review.
+          Chest or breathing symptoms may pause normal planning until review.
         </p>
       </div>
     );
@@ -613,6 +644,7 @@ function SurfaceFollowUp({
           <label className="gi-label">Signs of infection?</label>
           <InfectionSignsChips injury={injury} onUpdate={onUpdate} />
         </div>
+        <AvoidChips injury={injury} onUpdate={onUpdate} />
       </div>
     );
   }
@@ -782,6 +814,7 @@ function handleTypeSelect(opt: InjuryTypeOption | null) {
   if (!opt) {
     onUpdate("injury_type", "");
     clearTypeSpecificFields(onUpdate);
+    onUpdate("notes", stripTaggedNotes(injury.notes, ["red_flags", "dislocation", "nerve_symptoms", "chest_symptoms"]));
     return;
   }
 
@@ -793,20 +826,34 @@ function handleTypeSelect(opt: InjuryTypeOption | null) {
   if (isSame) {
     onUpdate("injury_type", "");
     clearTypeSpecificFields(onUpdate);
+    onUpdate("notes", stripTaggedNotes(injury.notes, ["red_flags", "dislocation", "nerve_symptoms", "chest_symptoms"]));
     return;
   }
 
+  const currentType = injury.injury_type;
   clearTypeSpecificFields(onUpdate);
   onUpdate("injury_type", opt.value);
   onUpdate("surface_type", opt.surface_type ?? "");
+  const stripPrefixes: string[] = [];
+  if (currentType === "head_impact" && opt.value !== "head_impact") stripPrefixes.push("red_flags");
+  if (currentType === "dislocation" && opt.value !== "dislocation") stripPrefixes.push("dislocation");
+  if (currentType === "nerve_symptoms" && opt.value !== "nerve_symptoms") stripPrefixes.push("nerve_symptoms");
+  if (currentType === "chest_breathing" && opt.value !== "chest_breathing") stripPrefixes.push("chest_symptoms");
+  if (stripPrefixes.length) onUpdate("notes", stripTaggedNotes(injury.notes, stripPrefixes));
 }
 
   function handleFamilySelect(family: InjuryFamily) {
     setDraftFamily(family);
     const currentFamily = getFamilyForInjury(injury);
     if (currentFamily && currentFamily !== family) {
+      const stripPrefixes: string[] = [];
+      if (injury.injury_type === "head_impact") stripPrefixes.push("red_flags");
+      if (injury.injury_type === "dislocation") stripPrefixes.push("dislocation");
+      if (injury.injury_type === "nerve_symptoms") stripPrefixes.push("nerve_symptoms");
+      if (injury.injury_type === "chest_breathing") stripPrefixes.push("chest_symptoms");
       onUpdate("injury_type", "");
       clearTypeSpecificFields(onUpdate);
+      if (stripPrefixes.length) onUpdate("notes", stripTaggedNotes(injury.notes, stripPrefixes));
     }
   }
 
