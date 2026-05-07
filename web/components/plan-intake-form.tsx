@@ -800,12 +800,25 @@ export function PlanIntakeForm() {
   }
 
   function updateGuidedInjury<K extends keyof GuidedInjuryState>(index: number, key: K, value: GuidedInjuryState[K]) {
-    const nextGuidedInjuries = [...guidedInjuries];
-    nextGuidedInjuries[index] = coerceGuidedInjuryEditState({
-      ...(nextGuidedInjuries[index] ?? EMPTY_GUIDED_INJURY),
-      [key]: value,
+    setGuidedInjuries((currentGuidedInjuries) => {
+      const nextGuidedInjuries = [...currentGuidedInjuries];
+      nextGuidedInjuries[index] = coerceGuidedInjuryEditState({
+        ...(nextGuidedInjuries[index] ?? EMPTY_GUIDED_INJURY),
+        [key]: value,
+      });
+
+      const nextGuidedInjuryFields = buildGuidedInjuryFields(nextGuidedInjuries, {
+        noRestrictions: false,
+      });
+
+      setNoRestrictions(false);
+      setForm((currentForm) => ({
+        ...currentForm,
+        ...nextGuidedInjuryFields,
+      }));
+
+      return nextGuidedInjuries;
     });
-    syncGuidedInjuryFields(nextGuidedInjuries, false);
   }
 
   function handleEditGuidedInjury(index: number) {
