@@ -360,6 +360,25 @@ def _collect_matches(text: str, patterns: tuple[tuple[str, str], ...]) -> set[st
     return matches
 
 
+def parse_guided_note_tags(text: str) -> dict[str, set[str]]:
+    parsed: dict[str, set[str]] = {}
+    if not text:
+        return parsed
+    for match in re.finditer(r"\[\s*([a-z0-9_]+)\s*:\s*([^\]]*)\]", text.lower()):
+        category = (match.group(1) or "").strip()
+        if not category:
+            continue
+        category_tokens = parsed.setdefault(category, set())
+        tokens_text = (match.group(2) or "").strip()
+        if not tokens_text:
+            continue
+        for token in tokens_text.split(","):
+            normalized = token.strip()
+            if normalized:
+                category_tokens.add(normalized)
+    return parsed
+
+
 def _contains_any_term(text: str, terms: tuple[str, ...]) -> bool:
     if not terms:
         return False
