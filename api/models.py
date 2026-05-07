@@ -743,7 +743,6 @@ class PlanSummary(BaseModel):
     technical_style: list[str] = Field(default_factory=list)
     created_at: str
     status: str = "generated"
-    pdf_url: str | None = None
 
 
 class PlanOutputs(BaseModel):

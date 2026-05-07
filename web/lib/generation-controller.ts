@@ -37,9 +37,10 @@ type StartGenerationOptions = {
   recovered?: boolean;
 };
 
-const INITIAL_POLL_MS = 2_000;
-const MEDIUM_POLL_MS = 5_000;
+const INITIAL_POLL_MS = 10_000;
+const MEDIUM_POLL_MS = 12_000;
 const LONG_POLL_MS = 15_000;
+const MAX_POLL_WINDOW_MS = 20 * 60_000;
 const PENDING_GENERATION_PREFIX = "unlxck:pending-generation:";
 
 function sleep(ms: number): Promise<void> {
@@ -114,6 +115,10 @@ function getPollDelay(startedAtMs: number): number {
     return MEDIUM_POLL_MS;
   }
   return LONG_POLL_MS;
+}
+
+function hasPollingTimedOut(startedAtMs: number): boolean {
+  return Date.now() - startedAtMs > MAX_POLL_WINDOW_MS;
 }
 
 function statusMessageForJob(status: GenerationJobStatus, startedAtMs: number): string {
@@ -232,6 +237,11 @@ export function useGenerationController({
         });
 
         for (;;) {
+          if (hasPollingTimedOut(createdAtMs)) {
+            throw new Error(
+              "Plan generation is taking longer than expected. We stopped auto-refresh to reduce network usage. Please reopen this page to check again.",
+            );
+          }
           const currentJob = await getGenerationJob(token, createdJob.job_id);
 
           if (Array.isArray(currentJob.progress_milestones)) {
