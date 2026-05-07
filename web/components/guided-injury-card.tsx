@@ -921,8 +921,9 @@ function handleTypeSelect(opt: InjuryTypeOption | null) {
                   <button
                     key={family.family}
                     type="button"
+                    role="radio"
+                    aria-checked={selected}
                     className={`gi-family-card ${selected ? "gi-family-card-selected" : ""}`.trim()}
-                    aria-pressed={selected}
                     onClick={() => handleFamilySelect(family.family)}
                   >
                     <span>{family.label}</span>
