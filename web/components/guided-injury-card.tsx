@@ -252,7 +252,6 @@ function isSafetyComplete(injury: GuidedInjuryState): boolean {
     if (injury.surface_type === "bruise") return Boolean(injury.impact_related);
     return false;
   }
-  if (injury.injury_type === "unspecified") return true;
   return true;
 }
 
