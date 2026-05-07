@@ -2061,15 +2061,15 @@ export function PlanIntakeForm() {
                   <p className="kicker">Restrictions</p>
                   <h2 className="form-section-title">Injuries or restrictions</h2>
                 </div>
-                <label className={`checkbox-card ${noRestrictions ? "checkbox-card-checked" : ""}`.trim()}>
+                <label className={`inline-warning-ack inline-warning-ack-compact ${noRestrictions ? "inline-warning-ack-checked" : ""}`.trim()}>
                   <input
                     type="checkbox"
                     checked={noRestrictions}
                     onChange={(event) => handleNoRestrictionsChange(event.target.checked)}
                   />
-                  <span className="checkbox-card-copy">
-                    <span className="checkbox-card-title">No current injuries or restrictions</span>
-                    <span className="checkbox-card-description">Leave this checked when the athlete has nothing the planner needs to work around.</span>
+                  <span className="inline-warning-ack-stack">
+                    <span className="inline-warning-ack-copy">No current injuries or restrictions</span>
+                    <span className="muted">Leave this checked when the athlete has nothing the planner needs to work around.</span>
                   </span>
                 </label>
                 {!noRestrictions ? (
