@@ -6051,8 +6051,8 @@ html[data-theme="light"] .global-generation-status-rail {
 }
 
 .injury-card-active {
-  border-color: rgba(181, 18, 43, 0.26);
-  box-shadow: 0 0 0 1px rgba(181, 18, 43, 0.08), 0 16px 34px rgba(7, 9, 12, 0.24);
+  border-color: rgba(255, 255, 255, 0.16);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.06), 0 16px 34px rgba(7, 9, 12, 0.24);
 }
 
 .injury-card-header {
@@ -6155,8 +6155,8 @@ html[data-theme="light"] .injury-card {
 }
 
 html[data-theme="light"] .injury-card-active {
-  border-color: rgba(146, 43, 45, 0.18);
-  box-shadow: 0 14px 30px rgba(146, 43, 45, 0.08), 0 0 0 1px rgba(146, 43, 45, 0.06);
+  border-color: rgba(98, 77, 69, 0.16);
+  box-shadow: 0 14px 30px rgba(70, 56, 48, 0.08), 0 0 0 1px rgba(98, 77, 69, 0.07);
 }
 
 html[data-theme="light"] .injury-card-state {
@@ -6187,6 +6187,7 @@ html[data-theme="light"] .injury-card-state {
 .injury-body-map-col {
   position: sticky;
   top: 1rem;
+  opacity: 0.86;
 }
 
 .injury-cards-col {
@@ -6898,6 +6899,12 @@ html[data-theme="light"] .injury-card-remove-btn:hover {
   display: grid;
   gap: 10px;
 }
+.gi-area-input { min-height: 44px; border-radius: 12px; border: 1px solid rgba(255,255,255,.12); background: linear-gradient(180deg, rgba(255,255,255,.045), rgba(255,255,255,.015)); padding: 10px 12px; color: var(--text-primary); }
+.gi-area-input:focus-visible { outline: none; border-color: rgba(181,18,43,.36); box-shadow: 0 0 0 3px rgba(181,18,43,.12); }
+.gi-selection-summary { display:flex; justify-content:space-between; align-items:center; gap:10px; border:1px solid rgba(255,255,255,.08); background: rgba(255,255,255,.02); border-radius: 12px; padding: 10px 12px; }
+.gi-selection-title { margin:0; font-weight:600; font-size:.86rem; }
+.gi-selection-helper { margin:2px 0 0; font-size:.76rem; color: var(--text-muted); }
+.gi-change-btn { min-height:44px; padding: 0 12px; border-radius:10px; border:1px solid rgba(255,255,255,.14); background:transparent; color:var(--text-secondary); }
 
 .gi-subtype-grid {
   display: flex;
@@ -6929,14 +6936,14 @@ html[data-theme="light"] .injury-card-remove-btn:hover {
   gap: 16px;
   padding: 16px;
   border-radius: 14px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(255, 255, 255, 0.015);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.03);
 }
 .gi-followup .gi-field {
   padding: 10px 12px;
   border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.07);
-  background: rgba(255, 255, 255, 0.015);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.02);
 }
 
 .gi-warning {
@@ -7056,8 +7063,9 @@ html[data-theme="light"] .gi-chip-danger {
 
 html[data-theme="light"] .gi-followup {
   border-color: rgba(98, 77, 69, 0.06);
-  background: rgba(248, 242, 235, 0.5);
+  background: rgba(248, 242, 235, 0.58);
 }
+html[data-theme="light"] .gi-area-input { border-color: rgba(98,77,69,0.15); background: rgba(255,255,255,0.82); }
 
 html[data-theme="light"] .gi-warning-red {
   border-color: rgba(163, 45, 45, 0.18);

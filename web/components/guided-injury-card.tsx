@@ -237,6 +237,24 @@ function getOptionsForFamily(family: InjuryFamily): InjuryTypeOption[] {
   return group.options;
 }
 
+function isSafetyComplete(injury: GuidedInjuryState): boolean {
+  if (!injury.injury_type) return false;
+  if (injury.injury_type === "surface_injury" && !injury.surface_type) return false;
+  if (injury.injury_type === "fracture") return Boolean(injury.timeframe && injury.cleared);
+  if (injury.injury_type === "dislocation") return Boolean(getSingleNotesFlag(injury.notes, "dislocation", "relocated") && getSingleNotesFlag(injury.notes, "dislocation", "recurrent") && injury.cleared);
+  if (["tendon_ligament", "post_surgery"].includes(injury.injury_type)) return Boolean(injury.timeframe && injury.cleared);
+  if (injury.injury_type === "head_impact") return parseNotesFlags(injury.notes, "red_flags").length > 0;
+  if (injury.injury_type === "nerve_symptoms") return Boolean(getSingleNotesFlag(injury.notes, "nerve_symptoms", "type") && injury.impact_related);
+  if (injury.injury_type === "chest_breathing") return Boolean(parseNotesFlags(injury.notes, "chest_symptoms").length > 0 && injury.impact_related);
+  if (injury.injury_type === "surface_injury") {
+    if (["cut", "laceration"].includes(injury.surface_type)) return Boolean(injury.bleeding_status && injury.open_wound && injury.sensitive_area);
+    if (["abrasion", "blister", "skin_irritation"].includes(injury.surface_type)) return Boolean(injury.open_wound);
+    if (injury.surface_type === "bruise") return Boolean(injury.impact_related);
+    return false;
+  }
+  return true;
+}
+
 function shouldShowReviewWarning(injury: GuidedInjuryState): boolean {
   if (SERIOUS_TYPES.has(injury.injury_type)) return true;
   if (injury.injury_type === "surface_injury") {
@@ -518,6 +536,7 @@ function FollowUpQuestions({
 
   if (injury_type === "head_impact") {
     const flags = parseNotesFlags(injury.notes, "red_flags");
+    const hasNone = flags.includes("none");
     return (
       <div className="gi-followup">
         <div className="gi-field">
@@ -528,10 +547,15 @@ function FollowUpQuestions({
                 key={flag.value}
                 label={flag.label}
                 selected={flags.includes(flag.value)}
-                onClick={() => onUpdate("notes", toggleNotesFlag(injury.notes, "red_flags", flag.value))}
+                onClick={() => onUpdate("notes", toggleNotesFlag(setNotesFlags(injury.notes, "red_flags", flags.filter((f) => f !== "none")), "red_flags", flag.value))}
                 variant="danger"
               />
             ))}
+            <ChipButton
+              label="None of these"
+              selected={hasNone}
+              onClick={() => onUpdate("notes", setNotesFlags(injury.notes, "red_flags", hasNone ? [] : ["none"]))}
+            />
           </div>
         </div>
         <p className="gi-warning gi-warning-red" role="alert">
@@ -575,6 +599,8 @@ function FollowUpQuestions({
   }
 
   if (injury_type === "chest_breathing") {
+    const chestFlags = parseNotesFlags(injury.notes, "chest_symptoms");
+    const hasNone = chestFlags.includes("none");
     return (
       <div className="gi-followup">
         <div className="gi-field">
@@ -589,11 +615,16 @@ function FollowUpQuestions({
               <ChipButton
                 key={flag.value}
                 label={flag.label}
-                selected={parseNotesFlags(injury.notes, "chest_symptoms").includes(flag.value)}
-                onClick={() => onUpdate("notes", toggleNotesFlag(injury.notes, "chest_symptoms", flag.value))}
+                selected={chestFlags.includes(flag.value)}
+                onClick={() => onUpdate("notes", toggleNotesFlag(setNotesFlags(injury.notes, "chest_symptoms", chestFlags.filter((f) => f !== "none")), "chest_symptoms", flag.value))}
                 variant="danger"
               />
             ))}
+            <ChipButton
+              label="None of these"
+              selected={hasNone}
+              onClick={() => onUpdate("notes", setNotesFlags(injury.notes, "chest_symptoms", hasNone ? [] : ["none"]))}
+            />
           </div>
         </div>
         <div className="gi-field">
@@ -798,6 +829,8 @@ export function GuidedInjuryCard({
 }: GuidedInjuryCardProps) {
   const [notesOpen, setNotesOpen] = useState(Boolean(injury.notes.trim()));
   const [draftFamily, setDraftFamily] = useState<InjuryFamily | "">("");
+  const [familyExpanded, setFamilyExpanded] = useState(true);
+  const [subtypeExpanded, setSubtypeExpanded] = useState(true);
   const injuryLabel = injury.area.trim() || `Injury ${index + 1}`;
   const compactSummary = buildCompactSummary(injury);
   const showWarning = shouldShowReviewWarning(injury);
@@ -805,9 +838,12 @@ export function GuidedInjuryCard({
   const derivedFamily = getFamilyForInjury(injury);
   const activeFamily = derivedFamily || draftFamily;
   const basicsComplete = Boolean(injury.area.trim() && injury.severity && injury.trend);
-  const typeComplete = Boolean(injury.injury_type);
-  const safetyActive = Boolean(typeComplete);
-  const reviewReady = Boolean(basicsComplete && typeComplete);
+  const typeComplete = Boolean(injury.injury_type && (injury.injury_type !== "surface_injury" || injury.surface_type));
+  const safetyComplete = isSafetyComplete(injury);
+  const safetyActive = Boolean(basicsComplete && typeComplete && !safetyComplete);
+  const reviewReady = Boolean(basicsComplete && typeComplete && safetyComplete);
+  const selectedFamilyOption = activeFamily ? INJURY_FAMILIES.find((f) => f.family === activeFamily) : null;
+  const selectedTypeLabel = getInjuryTypeLabel(injury);
   const liveSummary = useMemo(() => {
     const summaryArea = injury.area.trim() || `Injury ${index + 1}`;
     if (!injury.injury_type) return `${summaryArea} · Needs type`;
@@ -822,8 +858,8 @@ export function GuidedInjuryCard({
   const stepStatus = [
     { key: "basics", label: "Basics", done: basicsComplete, active: !basicsComplete },
     { key: "type", label: "Type", done: typeComplete, active: basicsComplete && !typeComplete },
-    { key: "safety", label: "Safety", done: typeComplete, active: safetyActive },
-    { key: "review", label: "Review", done: reviewReady, active: false },
+    { key: "safety", label: "Safety", done: safetyComplete, active: safetyActive },
+    { key: "review", label: "Review", done: reviewReady, active: reviewReady },
   ];
   const collapsedStatus = showWarning ? "Review risk" : !injury.injury_type ? "Needs type" : "Complete";
   const stepLabel = !activeFamily
@@ -866,6 +902,8 @@ function handleTypeSelect(opt: InjuryTypeOption | null) {
 
   function handleFamilySelect(family: InjuryFamily) {
     setDraftFamily(family);
+    setFamilyExpanded(false);
+    setSubtypeExpanded(true);
     const currentFamily = getFamilyForInjury(injury);
     if (currentFamily && currentFamily !== family) {
       const stripPrefixes: string[] = [];
@@ -942,6 +980,7 @@ function handleTypeSelect(opt: InjuryTypeOption | null) {
               value={injury.area}
               onChange={(e) => onUpdate("area", e.target.value)}
               placeholder="Left shoulder"
+              className="gi-area-input"
             />
           </div>
 
@@ -996,7 +1035,17 @@ function handleTypeSelect(opt: InjuryTypeOption | null) {
           {/* Injury family + stepped selector */}
           <div className="gi-field">
             <label className="gi-label">Injury family</label>
-            <div className="gi-family-grid" role="radiogroup" aria-label="Injury family">
+            {activeFamily && !familyExpanded ? (
+              <div className="gi-selection-summary">
+                <div>
+                  <p className="gi-selection-title">{selectedFamilyOption?.label}</p>
+                  <p className="gi-selection-helper">{selectedFamilyOption?.helper}</p>
+                </div>
+                <button type="button" className="gi-change-btn" onClick={() => setFamilyExpanded(true)} aria-expanded={familyExpanded}>Change</button>
+              </div>
+            ) : null}
+            {familyExpanded || !activeFamily ? (
+              <div className="gi-family-grid" role="radiogroup" aria-label="Injury family">
               {INJURY_FAMILIES.map((family) => {
                 const selected = activeFamily === family.family;
                 return (
@@ -1013,13 +1062,21 @@ function handleTypeSelect(opt: InjuryTypeOption | null) {
                   </button>
                 );
               })}
-            </div>
+              </div>
+            ) : null}
           </div>
 
           {activeFamily ? (
             <div className="gi-subtype-panel gi-field">
               <label className="gi-label">Injury type</label>
-              <div className="gi-subtype-grid" role="radiogroup" aria-label="Injury subtype">
+              {injury.injury_type && !subtypeExpanded ? (
+                <div className="gi-selection-summary">
+                  <p className="gi-selection-title">{selectedTypeLabel}</p>
+                  <button type="button" className="gi-change-btn" onClick={() => setSubtypeExpanded(true)} aria-expanded={subtypeExpanded}>Change</button>
+                </div>
+              ) : null}
+              {subtypeExpanded || !injury.injury_type ? (
+                <div className="gi-subtype-grid" role="radiogroup" aria-label="Injury subtype">
                 {getOptionsForFamily(activeFamily).map((opt) => {
                   const isSelected =
                     injury.injury_type === opt.value &&
@@ -1031,13 +1088,17 @@ function handleTypeSelect(opt: InjuryTypeOption | null) {
                       role="radio"
                       aria-checked={isSelected}
                       className={`gi-chip ${isSelected ? "gi-chip-selected" : ""}`}
-                      onClick={() => handleTypeSelect(opt)}
+                      onClick={() => {
+                        handleTypeSelect(opt);
+                        setSubtypeExpanded(false);
+                      }}
                     >
                       {opt.label}
                     </button>
                   );
                 })}
-              </div>
+                </div>
+              ) : null}
             </div>
           ) : null}
 
