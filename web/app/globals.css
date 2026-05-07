@@ -6727,7 +6727,7 @@ html[data-theme="light"] .injury-card-remove-btn:hover {
 .gi-chip {
   display: inline-flex;
   align-items: center;
-  min-height: 38px;
+  min-height: 44px;
   padding: 7px 14px;
   border-radius: 10px;
   border: 1px solid rgba(255, 255, 255, 0.08);
@@ -6756,6 +6756,63 @@ html[data-theme="light"] .injury-card-remove-btn:hover {
   border-color: rgba(224, 52, 77, 0.5);
   background: rgba(224, 52, 77, 0.12);
   color: #e0344d;
+}
+
+.gi-step-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.gi-step-track {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.gi-family-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.gi-family-card {
+  min-height: 44px;
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.01);
+  color: var(--text-primary);
+  text-align: left;
+  display: grid;
+  gap: 4px;
+}
+
+.gi-family-card small {
+  color: var(--text-muted);
+}
+
+.gi-family-card:hover {
+  border-color: rgba(255, 255, 255, 0.18);
+}
+
+.gi-family-card-selected {
+  border-color: rgba(181, 18, 43, 0.45);
+  background: rgba(181, 18, 43, 0.1);
+  box-shadow: 0 0 0 1px rgba(181, 18, 43, 0.1) inset;
+}
+
+.gi-subtype-panel,
+.gi-safety-panel {
+  display: grid;
+  gap: 10px;
+}
+
+.gi-subtype-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 .gi-type-selector {
@@ -6857,6 +6914,15 @@ html[data-theme="light"] .gi-chip-selected {
   color: var(--text-primary);
 }
 
+html[data-theme="light"] .gi-family-card {
+  border-color: rgba(98, 77, 69, 0.1);
+}
+
+html[data-theme="light"] .gi-family-card-selected {
+  border-color: rgba(146, 43, 45, 0.3);
+  background: rgba(146, 43, 45, 0.08);
+}
+
 html[data-theme="light"] .gi-chip-danger {
   border-color: rgba(163, 45, 45, 0.3);
   background: rgba(163, 45, 45, 0.08);
@@ -6895,6 +6961,10 @@ html[data-theme="light"] .gi-notes-toggle:hover {
 /* ── Responsive: guided injury chips ───────────────────────────────── */
 
 @media (max-width: 640px) {
+  .gi-family-grid {
+    grid-template-columns: 1fr;
+  }
+
   .gi-chip {
     min-height: 34px;
     padding: 6px 11px;
