@@ -1047,8 +1047,8 @@ select:focus-visible {
 }
 
 .overview-disclosure-chevron {
-  width: 10px;
-  height: 10px;
+  width: 11px;
+  height: 11px;
   border-right: 1.5px solid currentColor;
   border-bottom: 1.5px solid currentColor;
   color: var(--text-secondary);
@@ -1258,8 +1258,8 @@ select:focus-visible {
   position: absolute;
   top: 0.4em;
   left: 0;
-  width: 10px;
-  height: 10px;
+  width: 11px;
+  height: 11px;
   border-radius: 999px;
   border: 1px solid rgba(255, 255, 255, 0.16);
   background: rgba(255, 255, 255, 0.04);
@@ -1486,8 +1486,8 @@ select:focus-visible {
 }
 
 .onboarding-progress-chevron {
-  width: 10px;
-  height: 10px;
+  width: 11px;
+  height: 11px;
   border-right: 1.5px solid currentColor;
   border-bottom: 1.5px solid currentColor;
   transform: rotate(45deg);
@@ -1777,8 +1777,8 @@ select:focus-visible {
 
 .custom-select-chevron {
   flex-shrink: 0;
-  width: 10px;
-  height: 10px;
+  width: 11px;
+  height: 11px;
   margin-top: -3px;
   border-right: 1.5px solid var(--text-secondary);
   border-bottom: 1.5px solid var(--text-secondary);
@@ -3123,6 +3123,7 @@ button.mobile-step-rail-item {
   font-family: var(--font-mono), monospace;
   font-size: 12px;
   text-align: center;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.22);
 }
 
 .weekly-sparring-ban-notice {
@@ -3187,6 +3188,7 @@ button.mobile-step-rail-item {
   line-height: 1.25;
   letter-spacing: 0;
   text-align: center;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.22);
   text-transform: uppercase;
 }
 
@@ -5085,8 +5087,8 @@ button.mobile-step-rail-item {
 
 .global-generation-status-indicator {
   position: relative;
-  width: 10px;
-  height: 10px;
+  width: 11px;
+  height: 11px;
   flex-shrink: 0;
 }
 
@@ -6178,7 +6180,7 @@ html[data-theme="light"] .injury-card-state {
 
 .injury-body-map-layout {
   display: grid;
-  grid-template-columns: 220px 1fr;
+  grid-template-columns: minmax(320px, 440px) 1fr;
   gap: 24px;
   margin-top: 16px;
   align-items: start;
@@ -6187,7 +6189,7 @@ html[data-theme="light"] .injury-card-state {
 .injury-body-map-col {
   position: sticky;
   top: 1rem;
-  opacity: 0.86;
+  opacity: 1;
 }
 
 .injury-cards-col {
@@ -6197,11 +6199,12 @@ html[data-theme="light"] .injury-card-state {
 }
 
 .body-map-panel {
-  padding: 16px 12px;
+  padding: 20px 16px;
   border-radius: 16px;
   border: 1px solid rgba(255, 255, 255, 0.07);
   background: rgba(255, 255, 255, 0.02);
   text-align: center;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.22);
 }
 
 .body-map-title {
@@ -6213,7 +6216,7 @@ html[data-theme="light"] .injury-card-state {
 
 .body-map-svg-stack {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr;
   gap: 12px;
   align-items: start;
   justify-items: center;
@@ -6223,7 +6226,15 @@ html[data-theme="light"] .injury-card-state {
 .body-map-svg-wrap {
   position: relative;
   width: 100%;
-  max-width: 184px;
+  max-width: 360px;
+}
+
+.body-map-zone-label {
+  font-size: 0.58rem;
+  font-weight: 700;
+  fill: rgba(255, 255, 255, 0.9);
+  letter-spacing: 0.02em;
+  pointer-events: none;
 }
 
 .body-map-side-label {
@@ -6234,6 +6245,7 @@ html[data-theme="light"] .injury-card-state {
   text-transform: uppercase;
   color: var(--text-muted);
   text-align: center;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.22);
 }
 
 .body-map-svg-wrap svg {
@@ -6269,7 +6281,7 @@ html[data-theme="light"] .injury-card-state {
 .body-map-zone {
   fill: color-mix(in srgb, var(--surface) 86%, transparent);
   stroke: rgba(186, 190, 200, 0.32);
-  stroke-width: 1;
+  stroke-width: 1.2;
   transition: fill 0.15s, stroke 0.15s, transform 0.15s;
 }
 
@@ -6277,7 +6289,14 @@ html[data-theme="light"] .injury-card-state {
 .body-map-zone-hover {
   fill: rgba(181, 18, 43, 0.16);
   stroke: rgba(181, 18, 43, 0.42);
-  transform: scale(1.02);
+  transform: scale(1.04);
+}
+
+.body-map-zone-group-active .body-map-zone {
+  fill: rgba(181, 18, 43, 0.34);
+  stroke: rgba(255, 88, 109, 0.95);
+  stroke-width: 2.4;
+  filter: drop-shadow(0 0 9px rgba(181, 18, 43, 0.55));
 }
 
 .body-map-zone-used {
@@ -6305,16 +6324,48 @@ html[data-theme="light"] .injury-card-state {
   filter: drop-shadow(0 0 5px rgba(181, 18, 43, 0.35));
 }
 
-.body-map-zone-group-used.body-map-zone-severity-low .body-map-zone-dot {
+.body-map-zone-group-used.body-map-zone-severity-low .body-map-zone-count {
+  fill: #fff;
+  font-size: 0.45rem;
+  font-weight: 800;
+  dominant-baseline: middle;
+  pointer-events: none;
+}
+
+.body-map-zone-dot {
   fill: #f5c518;
 }
 
-.body-map-zone-group-used.body-map-zone-severity-moderate .body-map-zone-dot {
+.body-map-zone-group-used.body-map-zone-severity-moderate .body-map-zone-count {
+  fill: #fff;
+  font-size: 0.45rem;
+  font-weight: 800;
+  dominant-baseline: middle;
+  pointer-events: none;
+}
+
+.body-map-zone-dot {
   fill: #e76026;
 }
 
-.body-map-zone-group-used.body-map-zone-severity-high .body-map-zone-dot {
+.body-map-zone-group-used.body-map-zone-severity-high .body-map-zone-count {
+  fill: #fff;
+  font-size: 0.45rem;
+  font-weight: 800;
+  dominant-baseline: middle;
+  pointer-events: none;
+}
+
+.body-map-zone-dot {
   fill: var(--brand-red);
+}
+
+.body-map-zone-count {
+  fill: #fff;
+  font-size: 0.45rem;
+  font-weight: 800;
+  dominant-baseline: middle;
+  pointer-events: none;
 }
 
 .body-map-zone-dot {
@@ -6380,8 +6431,8 @@ html[data-theme="light"] .injury-card-state {
 
 .body-map-legend-swatch {
   display: inline-block;
-  width: 10px;
-  height: 10px;
+  width: 11px;
+  height: 11px;
   border-radius: 50%;
   border: 1px solid rgba(255, 255, 255, 0.2);
 }
@@ -6406,19 +6457,23 @@ html[data-theme="light"] .injury-card-state {
 
   .body-map-svg-stack {
     grid-template-columns: 1fr;
-    max-width: 184px;
+    max-width: 360px;
   }
 
-  .body-map-side-label {
+  .body-map-zone-label {
+  font-size: 0.58rem;
+  font-weight: 700;
+  fill: rgba(255, 255, 255, 0.9);
+  letter-spacing: 0.02em;
+  pointer-events: none;
+}
+
+.body-map-side-label {
     display: none;
   }
 }
 
-@media (min-width: 721px) {
-  .body-map-side-toggle {
-    display: none;
-  }
-}
+
 
 .injury-card-header-interactive {
   cursor: pointer;
@@ -6540,6 +6595,7 @@ html[data-theme="light"] .injury-card-state {
   color: var(--text-secondary);
   flex: 1;
   text-align: center;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.22);
 }
 
 .injury-severity-chip:hover,
@@ -6621,12 +6677,27 @@ html[data-theme="light"] .body-map-zone-hover {
   stroke: rgba(146, 43, 45, 0.3);
 }
 
-html[data-theme="light"] .body-map-zone-used {
+html[data-theme="light"] .body-map-zone-group-active .body-map-zone {
+  fill: rgba(181, 18, 43, 0.34);
+  stroke: rgba(255, 88, 109, 0.95);
+  stroke-width: 2.4;
+  filter: drop-shadow(0 0 9px rgba(181, 18, 43, 0.55));
+}
+
+.body-map-zone-used {
   fill: rgba(146, 43, 45, 0.18);
   stroke: rgba(146, 43, 45, 0.5);
 }
 
-html[data-theme="light"] .body-map-zone-dot {
+html[data-theme="light"] .body-map-zone-count {
+  fill: #fff;
+  font-size: 0.45rem;
+  font-weight: 800;
+  dominant-baseline: middle;
+  pointer-events: none;
+}
+
+.body-map-zone-dot {
   fill: var(--brand-red);
 }
 
@@ -6745,7 +6816,8 @@ html[data-theme="light"] .injury-card-remove-btn:hover {
   }
 
   .body-map-svg-wrap {
-    width: 161px;
+    width: 100%;
+    max-width: 300px;
   }
 
   .injury-severity-chips,
