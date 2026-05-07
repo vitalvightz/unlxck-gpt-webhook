@@ -18,7 +18,7 @@ from .models import PlanRequest, ProfileUpdateRequest
 
 logger = logging.getLogger(__name__)
 
-PLAN_SUMMARY_SELECT = "id, athlete_id, full_name, fight_date, technical_style, plan_name, status, pdf_url, created_at"
+PLAN_SUMMARY_SELECT = "id, athlete_id, full_name, fight_date, technical_style, plan_name, status, created_at"
 GENERATION_JOB_SELECT = "*"
 
 _TRANSIENT_SUPABASE_ERRORS = (
@@ -1150,7 +1150,7 @@ class SupabaseAppStore:
             self.client.table("plans")
             .select(
                 "id, athlete_id, full_name, fight_date, technical_style, plan_name, status, "
-                "pdf_url, created_at, profiles!plans_athlete_id_fkey(email, full_name)"
+                "created_at, profiles!plans_athlete_id_fkey(email, full_name)"
             )
             .order("created_at", desc=True)
             .range(offset, offset + limit - 1)

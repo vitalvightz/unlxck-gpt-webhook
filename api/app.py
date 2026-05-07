@@ -149,6 +149,17 @@ def _job_response(job: dict[str, Any], *, latest_plan_id: str | None = None) -> 
     )
 
 
+def _cache_control_for_plan_status(status_value: str, *, latest: bool = False) -> str:
+    normalized = (status_value or "").strip().lower()
+    if normalized in {"completed", "generated", "ready", "review_required"}:
+        return "private, max-age=60, stale-while-revalidate=120" if latest else "private, max-age=300, stale-while-revalidate=600"
+    return "private, max-age=5, stale-while-revalidate=10"
+
+
+def is_terminal_status(job: dict[str, Any]) -> bool:
+    return str(job.get("status") or "").strip().lower() in {"completed", "review_required", "failed"}
+
+
 def _is_stale_job(job: dict[str, Any], *, stale_after_seconds: int = 90) -> bool:
     return runtime_is_stale_job(job, stale_after_seconds=stale_after_seconds)
 
@@ -373,7 +384,6 @@ def _map_plan_summary(row: dict[str, Any]) -> PlanSummary:
         technical_style=list(row.get("technical_style") or []),
         created_at=str(row.get("created_at") or ""),
         status=str(row.get("status") or "generated"),
-        pdf_url=row.get("pdf_url"),
     )
 
 
@@ -902,6 +912,7 @@ def create_app(
         store: AppStore = Depends(get_store),
     ) -> MeResponse:
         updated = _map_profile_row(store.update_profile(profile.athlete_id, update))
+        _invalidate_plan_related_cache(profile.athlete_id)
         return _build_me_response(updated, store)
 
     @app.get("/api/nutrition/current", response_model=NutritionWorkspaceState)
@@ -1066,6 +1077,7 @@ def create_app(
     @app.get("/api/generation-jobs/{job_id}", response_model=GenerationJobResponse)
     async def get_generation_job(
         job_id: str,
+        response: Response,
         background_tasks: BackgroundTasks,
         profile: ProfileRecord = Depends(require_profile),
         store: AppStore = Depends(get_store),
@@ -1074,6 +1086,11 @@ def create_app(
         active_tasks: set[str] = Depends(get_active_generation_tasks),
         enable_in_process_generation: bool = Depends(get_enable_in_process_generation),
     ) -> GenerationJobResponse:
+        cache_key = f"job:{profile.athlete_id}:{job_id}:{profile.role}"
+        cached = READ_CACHE.get(cache_key)
+        if cached is not None:
+            response.headers["Cache-Control"] = "private, max-age=8, stale-while-revalidate=10"
+            return cached
         job = await asyncio.to_thread(store.get_generation_job, job_id)
         if not job:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="generation job not found")
@@ -1089,20 +1106,37 @@ def create_app(
             enable_in_process_generation=enable_in_process_generation,
             is_stale_job=_is_stale_job,
         )
-        return _job_response(job)
+        payload = _job_response(job)
+        if is_terminal_status(job):
+            _invalidate_plan_related_cache(str(job.get("athlete_id") or "") or None)
+            response.headers["Cache-Control"] = "private, max-age=30, stale-while-revalidate=60"
+            return payload
+        READ_CACHE.set(cache_key, payload, ttl_seconds=8)
+        response.headers["Cache-Control"] = "private, max-age=8, stale-while-revalidate=10"
+        return payload
 
     @app.get("/api/plans/latest", response_model=PlanDetail)
     def get_latest_plan(
+        response: Response,
         profile: ProfileRecord = Depends(require_profile),
         store: AppStore = Depends(get_store),
     ) -> PlanDetail:
+        cache_key = f"plan_latest:{profile.athlete_id}:{profile.role}"
+        cached = READ_CACHE.get(cache_key)
+        if cached is not None:
+            response.headers["Cache-Control"] = "private, max-age=60, stale-while-revalidate=120"
+            return cached
         plan_row = next(
             iter(_visible_plans_for_athlete(store.list_user_plans(profile.athlete_id))),
             None,
         )
         if not plan_row:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
-        return _map_plan_detail(plan_row, include_admin=profile.role == "admin")
+        payload = _map_plan_detail(plan_row, include_admin=profile.role == "admin")
+        response.headers["Cache-Control"] = _cache_control_for_plan_status(str(plan_row.get("status") or ""), latest=True)
+        if str(plan_row.get("status") or "").strip().lower() in {"completed", "generated", "ready", "review_required"}:
+            READ_CACHE.set(cache_key, payload, ttl_seconds=60)
+        return payload
 
     @app.get("/api/plans/latest/weekly-schedule", response_model=WeeklySchedule)
     def get_latest_weekly_schedule(
@@ -1120,20 +1154,39 @@ def create_app(
 
     @app.get("/api/plans", response_model=list[PlanSummary])
     def list_plans(
+        response: Response,
         profile: ProfileRecord = Depends(require_profile),
         store: AppStore = Depends(get_store),
     ) -> list[PlanSummary]:
+        cache_key = f"plans:{profile.athlete_id}:{profile.role}"
+        cached = READ_CACHE.get(cache_key)
+        if cached is not None:
+            response.headers["Cache-Control"] = "private, max-age=45, stale-while-revalidate=60"
+            return cached
         rows = store.list_user_plans(profile.athlete_id)
         if profile.role != "admin":
             rows = _visible_plans_for_athlete(rows)
-        return [_map_plan_summary(row) for row in rows]
+        payload = [_map_plan_summary(row) for row in rows]
+        READ_CACHE.set(cache_key, payload, ttl_seconds=45)
+        response.headers["Cache-Control"] = "private, max-age=45, stale-while-revalidate=60"
+        return payload
 
     @app.get("/api/plans/{plan_id}", response_model=PlanDetail)
     def get_plan(
+        response: Response,
         plan_row: dict[str, Any] = Depends(require_plan_row),
         profile: ProfileRecord = Depends(require_profile),
     ) -> PlanDetail:
-        return _map_plan_detail(plan_row, include_admin=profile.role == "admin")
+        cache_key = f"plan:{profile.athlete_id}:{profile.role}:{plan_row['id']}"
+        cached = READ_CACHE.get(cache_key)
+        if cached is not None:
+            response.headers["Cache-Control"] = "private, max-age=300, stale-while-revalidate=600"
+            return cached
+        payload = _map_plan_detail(plan_row, include_admin=profile.role == "admin")
+        response.headers["Cache-Control"] = _cache_control_for_plan_status(str(plan_row.get("status") or ""))
+        if str(plan_row.get("status") or "").strip().lower() in {"completed", "generated", "ready", "review_required"}:
+            READ_CACHE.set(cache_key, payload, ttl_seconds=300)
+        return payload
 
     @app.get("/api/plans/{plan_id}/weekly-schedule", response_model=WeeklySchedule)
     def get_plan_weekly_schedule(
@@ -1156,6 +1209,7 @@ def create_app(
         if profile.role != "admin" and str(plan_row["athlete_id"]) != profile.athlete_id:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="not allowed")
         updated = store.rename_plan(plan_id, update.plan_name)
+        _invalidate_plan_related_cache(str(plan_row.get("athlete_id") or "") or None)
         return _map_plan_detail(updated, include_admin=profile.role == "admin")
 
     @app.delete("/api/plans/{plan_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -1170,16 +1224,26 @@ def create_app(
         if profile.role != "admin" and str(plan_row["athlete_id"]) != profile.athlete_id:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="not allowed")
         store.delete_plan(plan_id)
+        _invalidate_plan_related_cache(str(plan_row.get("athlete_id") or "") or None)
         return Response(status_code=status.HTTP_204_NO_CONTENT)
 
     @app.get("/api/admin/plans", response_model=list[AdminPlanSummary])
     def list_admin_plans(
+        response: Response,
         _: ProfileRecord = Depends(require_admin),
         limit: int = Query(50, ge=1, le=200),
         offset: int = Query(0, ge=0),
         store: AppStore = Depends(get_store),
     ) -> list[AdminPlanSummary]:
-        return [_map_admin_plan_summary(row) for row in store.list_admin_plans(limit=limit, offset=offset)]
+        cache_key = f"admin_plans:{limit}:{offset}"
+        cached = READ_CACHE.get(cache_key)
+        if cached is not None:
+            response.headers["Cache-Control"] = "private, max-age=30, stale-while-revalidate=60"
+            return cached
+        payload = [_map_admin_plan_summary(row) for row in store.list_admin_plans(limit=limit, offset=offset)]
+        READ_CACHE.set(cache_key, payload, ttl_seconds=30)
+        response.headers["Cache-Control"] = "private, max-age=30, stale-while-revalidate=60"
+        return payload
 
     @app.post("/api/admin/plans/{plan_id}/manual-stage2", response_model=PlanDetail)
     def submit_manual_stage2(
@@ -1196,6 +1260,7 @@ def create_app(
             plan_id,
             _manual_stage2_result(plan_row, submission.final_plan_text),
         )
+        _invalidate_plan_related_cache(str(plan_row.get("athlete_id") or "") or None)
         return _map_plan_detail(updated, include_admin=True)
 
     @app.post("/api/admin/plans/{plan_id}/approve", response_model=PlanDetail)
@@ -1212,6 +1277,7 @@ def create_app(
             plan_id,
             _admin_approved_result(plan_row),
         )
+        _invalidate_plan_related_cache(str(plan_row.get("athlete_id") or "") or None)
         return _map_plan_detail(updated, include_admin=True)
 
     @app.post("/api/admin/plans/{plan_id}/approve-and-resume-generation", response_model=GenerationJobResponse, status_code=202)
@@ -1289,6 +1355,7 @@ def create_app(
             why_log=updated_why_log,
             stage2_status="triage_resume_approved",
         )
+        _invalidate_plan_related_cache(str(plan_row.get("athlete_id") or "") or None)
         job = await schedule_generation_job_if_needed(
             job=job,
             background_tasks=background_tasks,
@@ -1315,6 +1382,7 @@ def create_app(
             plan_id,
             _admin_rejected_result(plan_row),
         )
+        _invalidate_plan_related_cache(str(plan_row.get("athlete_id") or "") or None)
         return _map_plan_detail(updated, include_admin=True)
 
     @app.post("/api/admin/plans/{plan_id}/archive", response_model=PlanDetail)
@@ -1331,6 +1399,7 @@ def create_app(
             plan_id,
             _admin_archived_result(plan_row),
         )
+        _invalidate_plan_related_cache(str(plan_row.get("athlete_id") or "") or None)
         return _map_plan_detail(updated, include_admin=True)
 
     @app.get("/api/admin/athletes", response_model=list[AdminAthleteRecord])
@@ -1568,3 +1637,46 @@ except PostgrestAPIError as exc:
 except ValueError:
     logger.exception("[app] runtime_app_build_failed")
     app = _build_startup_failure_app("application startup failed")
+class _TtlCache:
+    def __init__(self) -> None:
+        self._entries: dict[str, tuple[float, Any]] = {}
+        self._lock = Lock()
+
+    def get(self, key: str) -> Any | None:
+        now = time.monotonic()
+        with self._lock:
+            entry = self._entries.get(key)
+            if not entry:
+                return None
+            expires_at, value = entry
+            if expires_at <= now:
+                self._entries.pop(key, None)
+                return None
+        return copy.deepcopy(value)
+
+    def set(self, key: str, value: Any, ttl_seconds: int) -> None:
+        copied_value = copy.deepcopy(value)
+        with self._lock:
+            self._entries[key] = (time.monotonic() + max(1, ttl_seconds), copied_value)
+
+    def clear_prefixes(self, prefixes: tuple[str, ...]) -> None:
+        with self._lock:
+            keys_to_drop = [key for key in self._entries if key.startswith(prefixes)]
+            for key in keys_to_drop:
+                self._entries.pop(key, None)
+
+    def clear(self) -> None:
+        with self._lock:
+            self._entries.clear()
+
+
+READ_CACHE = _TtlCache()
+
+
+def _invalidate_plan_related_cache(athlete_id: str | None = None) -> None:
+    prefixes = ["admin_plans:", "plan_latest:", "job:"]
+    if athlete_id:
+        prefixes.extend((f"plans:{athlete_id}:", f"plan:{athlete_id}:"))
+    else:
+        prefixes.extend(("plans:", "plan:"))
+    READ_CACHE.clear_prefixes(tuple(prefixes))

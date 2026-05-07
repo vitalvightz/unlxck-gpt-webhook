@@ -235,7 +235,6 @@ export type PlanSummary = {
   technical_style: string[];
   created_at: string;
   status: string;
-  pdf_url?: string | null;
 };
 
 export type PlanOutputs = {
