@@ -870,9 +870,11 @@ def _apply_structured_injury_signals(
         if "recurrent_yes" in dislocation_tags:
             routing_reasons.add("tagged_note:dislocation:recurrent_yes")
             matched_categories.add("dislocation")
+            has_current_concern = True
         if {"relocated_no", "relocated_not_sure"} & dislocation_tags:
             routing_reasons.add("tagged_note:dislocation:relocation_uncertain_or_no")
             matched_categories.add("dislocation")
+            has_current_concern = True
         if old_and_cleared and not has_current_concern:
             routing_reasons.add("structured:dislocation_old_cleared_no_concern")
         else:
