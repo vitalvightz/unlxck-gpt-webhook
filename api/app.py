@@ -18,6 +18,7 @@ from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException, Query, Req
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, Response
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from postgrest.exceptions import APIError as PostgrestAPIError
 from pydantic import ValidationError
 
 from fightcamp.logging_utils import bind_log_context, clear_log_context, configure_logging
@@ -1559,6 +1560,10 @@ except RuntimeError as exc:
         detail = "missing supabase configuration"
     elif not detail:
         detail = "application startup failed"
+    app = _build_startup_failure_app(detail)
+except PostgrestAPIError as exc:
+    logger.exception("[app] runtime_app_build_failed")
+    detail = str(exc) or "store service unavailable"
     app = _build_startup_failure_app(detail)
 except ValueError:
     logger.exception("[app] runtime_app_build_failed")
