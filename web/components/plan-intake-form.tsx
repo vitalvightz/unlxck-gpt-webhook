@@ -1351,7 +1351,6 @@ export function PlanIntakeForm() {
   const highFatigueFlag = (form.fatigue_level || "moderate") === "high" ? "High fatigue already reported" : null;
   const hasExtraPerformanceNotes = Boolean(mindsetChallengesText || notesText);
   const hasTrainingPreference = Boolean(trainingPreferenceText);
-  const plannerRestrictionPreview = formatRestrictionSummary(form.injuries);
   const restrictionSummary = formatRestrictionSummary(form.injuries);
   const sexLabel = form.athlete.sex
     ? SEX_OPTIONS.find((option) => option.value === form.athlete.sex)?.label ?? formatValue(form.athlete.sex)
@@ -2135,12 +2134,6 @@ export function PlanIntakeForm() {
                     <button type="button" className="injury-card-add-btn" onClick={() => handleNoRestrictionsChange(false)}>Add injury or restriction</button>
                   </div>
                 )}
-                <div className="support-panel support-panel-preview support-panel-preview-quiet compact-gap">
-                  <p className="kicker">Planner preview</p>
-                  <p className="muted">
-                    {plannerRestrictionPreview}
-                  </p>
-                </div>
               </article>
             </div>
 
