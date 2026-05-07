@@ -6540,6 +6540,7 @@ html[data-theme="light"] .injury-card-state {
   color: var(--text-secondary);
   flex: 1;
   text-align: center;
+  white-space: nowrap;
 }
 
 .injury-severity-chip:hover,
