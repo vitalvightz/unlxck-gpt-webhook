@@ -5,6 +5,7 @@ import importlib
 import threading
 
 import pytest
+from postgrest.exceptions import APIError as PostgrestAPIError
 from fastapi.testclient import TestClient
 
 import api.app as app_module
@@ -247,8 +248,33 @@ def test_runtime_app_fails_loudly_when_plan_schema_is_invalid_and_fallback_disab
         "app": "unlxck-fight-camp-api",
         "detail": store_module.PLAN_RUNTIME_SCHEMA_ERROR_DETAIL,
     }
+def test_runtime_app_returns_startup_failure_when_store_is_restricted(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    class RestrictedStore(FakeStore):
+        def validate_runtime_schema(self) -> None:
+            raise PostgrestAPIError(
+                {
+                    "message": "JSON could not be generated",
+                    "code": "402",
+                    "details": "project restricted due to exceed_egress_quota",
+                }
+            )
 
+    monkeypatch.delenv("UNLXCK_DEMO_MODE", raising=False)
+    monkeypatch.setenv("SUPABASE_URL", "https://example.supabase.co")
+    monkeypatch.setenv("SUPABASE_SERVICE_ROLE_KEY", "test-service-role-key")
+    monkeypatch.setattr(store_module.SupabaseAppStore, "from_env", classmethod(lambda cls: RestrictedStore()))
+    monkeypatch.setattr(auth_module.SupabaseAuthService, "from_env", classmethod(lambda cls: FakeAuthService({})))
 
+    reloaded = importlib.reload(app_module)
+    client = TestClient(reloaded.app)
+    response = client.get("/health")
+
+    assert response.status_code == 200
+    assert response.json()["ok"] is False
+    assert response.json()["app"] == "unlxck-fight-camp-api"
+    assert "JSON could not be generated" in response.json()["detail"]
 def test_runtime_app_does_not_fail_schema_check_when_legacy_fallback_enabled(
     monkeypatch: pytest.MonkeyPatch,
 ):
