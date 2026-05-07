@@ -373,7 +373,6 @@ def _map_plan_summary(row: dict[str, Any]) -> PlanSummary:
         technical_style=list(row.get("technical_style") or []),
         created_at=str(row.get("created_at") or ""),
         status=str(row.get("status") or "generated"),
-        pdf_url=row.get("pdf_url"),
     )
 
 

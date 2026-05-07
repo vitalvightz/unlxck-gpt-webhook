@@ -189,11 +189,6 @@ function PlanCard({
       <button type="button" className="ghost-button danger-button" onClick={handleDeleteRequest} disabled={isActionPending || isRenaming}>
         {pendingAction === "delete" ? "Deleting..." : "Delete"}
       </button>
-      {plan.pdf_url ? (
-        <Link href={plan.pdf_url} target="_blank" rel="noreferrer" className="secondary-button">
-          Open PDF
-        </Link>
-      ) : null}
     </>
   );
 
@@ -300,8 +295,8 @@ function PlanCard({
                 <span className="plans-featured-meta-value">{statusLabel}</span>
               </div>
               <div className="plans-featured-meta-chip">
-                <span className="label">PDF</span>
-                <span className="plans-featured-meta-value">{plan.pdf_url ? "Ready to open" : "Not available yet"}</span>
+                <span className="label">Access</span>
+                <span className="plans-featured-meta-value">Open plan for full export options</span>
               </div>
             </div>
           </div>
