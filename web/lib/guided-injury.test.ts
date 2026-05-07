@@ -428,3 +428,17 @@ test("buildGuidedInjurySummary keeps legacy output and appends structured values
     "Left shoulder (moderate, improving). Type: fracture. Surface: cut. Timeframe: last_month. Cleared: no. Bleeding: wont_stop. Infection: pus, fever. Sensitive area: eye",
   );
 });
+
+test("normalize/build/hydrate retain injury_type sprain", () => {
+  const normalized = normalizeGuidedInjuryState({ injury_type: "sprain" });
+  assert.equal(normalized.injury_type, "sprain");
+
+  const built = buildGuidedInjuryFields([{ area: "ankle", injury_type: "sprain" }]);
+  assert.equal(built.guided_injury?.injury_type, "sprain");
+  assert.equal(built.guided_injuries[0]?.injury_type, "sprain");
+
+  const hydrated = hydrateGuidedInjuryStates({
+    guided_injuries: [{ area: "ankle", injury_type: "sprain" }],
+  });
+  assert.equal(hydrated[0]?.injury_type, "sprain");
+});
