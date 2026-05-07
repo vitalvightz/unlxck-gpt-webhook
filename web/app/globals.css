@@ -2477,6 +2477,10 @@ button.mobile-step-rail-item {
   grid-template-columns: minmax(0, 1.5fr) minmax(260px, 0.82fr);
 }
 
+.onboarding-step-layout-restrictions {
+  grid-template-columns: minmax(0, 1fr);
+}
+
 .plan-detail-layout {
   grid-template-columns: minmax(260px, 320px) minmax(0, 1fr);
 }

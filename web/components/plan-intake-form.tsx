@@ -1647,7 +1647,7 @@ export function PlanIntakeForm() {
         />
 
         {currentStep === 0 ? (
-          <div className="step-layout onboarding-step-layout">
+          <div className="step-layout onboarding-step-layout onboarding-step-layout-restrictions">
             <div className="step-main athlete-motion-slot athlete-motion-main onboarding-step-main">
               <article className="step-card">
                 <div className="form-section-header">
@@ -1786,7 +1786,7 @@ export function PlanIntakeForm() {
         ) : null}
 
         {currentStep === 1 ? (
-          <div className="step-layout onboarding-step-layout">
+          <div className="step-layout onboarding-step-layout onboarding-step-layout-restrictions">
             <div className="step-main athlete-motion-slot athlete-motion-main onboarding-step-main">
               <article className="step-card">
                 <div className="form-section-header">
@@ -2054,7 +2054,7 @@ export function PlanIntakeForm() {
         ) : null}
 
         {currentStep === 3 ? (
-          <div className="step-layout onboarding-step-layout">
+          <div className="step-layout onboarding-step-layout onboarding-step-layout-restrictions">
             <div className="step-main athlete-motion-slot athlete-motion-main onboarding-step-main">
               <article className="step-card">
                 <div className="form-section-header">
@@ -2136,13 +2136,6 @@ export function PlanIntakeForm() {
                 )}
               </article>
             </div>
-
-            <aside className="step-aside athlete-motion-slot athlete-motion-rail onboarding-step-aside">
-              <div className="support-panel">
-                <p className="kicker">Safety</p>
-                <p className="muted">Give each issue its own card so the planner can see every restriction clearly. Use Add injury for second or third issues, and leave the toggle on when there is nothing to protect around.</p>
-              </div>
-            </aside>
           </div>
         ) : null}
 
