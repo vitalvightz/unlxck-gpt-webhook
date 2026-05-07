@@ -1055,7 +1055,7 @@ function handleTypeSelect(opt: InjuryTypeOption | null) {
                 <path d="M8 1.5L1 14h14L8 1.5z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round" />
                 <path d="M8 6v3.5M8 11.5v.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
               </svg>
-              <span>This may pause normal planning until coach/admin review or medical clearance.</span>
+              <span>Flags here help the coach and admin review risk before release.</span>
             </div>
           ) : null}
 
