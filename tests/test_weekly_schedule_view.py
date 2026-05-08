@@ -409,3 +409,55 @@ def test_extract_weekly_schedule_calendar_days_are_normalized_to_monday_to_sunda
     assert by_day["Tue"]["day_label"] == "D-18"
     assert by_day["Sun"]["weekday_with_label"] == "Sun (D-13)"
     assert by_day["Sat"]["sparring_day_class"] == "none"
+
+
+def test_extract_weekly_schedule_builds_calendar_days_from_countdown_range_and_fight_date():
+    schedule = extract_weekly_schedule(
+        {
+            "fight_date": "2026-05-17",
+            "weekly_role_map": {
+                "weeks": [
+                    {
+                        "phase": "TAPER",
+                        "countdown_range": [6, 0],
+                        "hard_sparring_plan": [],
+                    }
+                ]
+            },
+        }
+    )
+
+    assert schedule is not None
+    assert schedule["week_countdown_label"] == "D-6 → D-0"
+    by_day = {day["weekday"]: day for day in schedule["days"]}
+    assert by_day["Mon"]["calendar_date"] == "2026-05-11"
+    assert by_day["Sun"]["calendar_date"] == "2026-05-17"
+    assert by_day["Sun"]["is_fight_day"] is True
+    assert by_day["Sun"]["d_day"] == 0
+
+
+def test_extract_weekly_schedule_preserves_d17_hard_sparring_ban_with_countdown_fallback_calendar():
+    schedule = extract_weekly_schedule(
+        {
+            "fight_date": "2026-05-17",
+            "weekly_role_map": {
+                "weeks": [
+                    {
+                        "phase": "TAPER",
+                        "countdown_range": [17, 11],
+                        "declared_hard_sparring_days": ["Monday"],
+                        "hard_sparring_plan": [],
+                        "effective_hard_sparring_days": [],
+                        "payload_mode": "late_fight_session_payload",
+                        "intentional_compression": {"active": True, "reason_codes": ["late_fight_session_payload"]},
+                    }
+                ]
+            },
+        }
+    )
+
+    assert schedule is not None
+    monday = next(day for day in schedule["days"] if day["weekday"] == "Mon")
+    assert monday["d_day"] == 13
+    assert monday["status"] == "convert_to_technical_suggested"
+    assert monday["reason_codes"] == ["d17_hard_sparring_ban"]

@@ -178,7 +178,46 @@ def _is_d17_or_closer(day: dict[str, Any]) -> bool:
     return isinstance(d_day, int) and 0 <= d_day <= 17
 
 
-def extract_weekly_schedule(planning_brief: Any, *, week_index: int = 0) -> dict[str, Any] | None:
+def _build_calendar_days_from_countdown_range(
+    countdown_range: Any,
+    fight_date: Any,
+) -> list[dict[str, Any]]:
+    if not (isinstance(countdown_range, list) and len(countdown_range) == 2):
+        return []
+    try:
+        start_d = int(countdown_range[0])
+        end_d = int(countdown_range[1])
+    except (TypeError, ValueError):
+        return []
+    if start_d < end_d:
+        return []
+    try:
+        parsed_fight_date = date.fromisoformat(str(fight_date))
+    except (TypeError, ValueError):
+        return []
+
+    days: list[dict[str, Any]] = []
+    for d_day in range(start_d, end_d - 1, -1):
+        current_date = parsed_fight_date - timedelta(days=d_day)
+        weekday = WEEKDAY_SHORT[current_date.weekday()]
+        day_label = f"D-{d_day}" if d_day > 0 else ("D-0" if d_day == 0 else "")
+        days.append(
+            {
+                "weekday": weekday,
+                "calendar_date": current_date.isoformat(),
+                "d_day": d_day,
+                "day_label": day_label,
+                "weekday_with_label": f"{weekday} ({day_label})" if day_label else weekday,
+                "is_fight_day": d_day == 0,
+                "is_after_fight_day": d_day < 0,
+            }
+        )
+    return days
+
+
+def extract_weekly_schedule(
+    planning_brief: Any, *, week_index: int = 0, fight_date: Any = None
+) -> dict[str, Any] | None:
     if not isinstance(planning_brief, dict) or week_index < 0:
         return None
 
@@ -194,10 +233,21 @@ def extract_weekly_schedule(planning_brief: Any, *, week_index: int = 0) -> dict
     if not isinstance(week, dict):
         return None
 
+    resolved_fight_date = (
+        fight_date
+        or planning_brief.get("fight_date")
+        or (planning_brief.get("athlete_model") or {}).get("fight_date")
+    )
+
     calendar_days = week.get("calendar_days")
     calendar_entries = [
         entry for entry in calendar_days if isinstance(entry, dict)
     ] if isinstance(calendar_days, list) else []
+    if not calendar_entries:
+        calendar_entries = _build_calendar_days_from_countdown_range(
+            week.get("countdown_range"),
+            resolved_fight_date,
+        )
 
     if calendar_entries:
         days_by_weekday: dict[str, dict[str, Any]] = {weekday: _empty_day(weekday) for weekday in WEEKDAY_SHORT}
