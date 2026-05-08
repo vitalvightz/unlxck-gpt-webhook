@@ -10,8 +10,53 @@ export type InjuryTriageSignals = {
 };
 export type GuidedInjurySummary = {
   area?: string;
+  injury_type?: string;
   notes?: string;
 };
+
+const INJURY_TYPE_LABELS: Record<string, string> = {
+  sprain: "Sprain",
+  strain: "Strain",
+  instability: "Instability",
+  fracture: "Fracture",
+  dislocation: "Dislocation",
+  tendon_ligament: "Tendon or ligament injury",
+  post_surgery: "Post-surgery injury",
+  head_impact: "Head impact",
+  nerve_symptoms: "Nerve symptoms",
+  chest_breathing: "Chest or breathing pain",
+  pain: "Pain",
+  soreness: "Soreness",
+  tightness: "Tightness",
+  swelling: "Swelling",
+  contusion: "Contusion",
+  bruise: "Bruise",
+  surface_injury: "Surface injury",
+};
+
+const INJURY_REASON_SYNONYMS: Array<{ label: string; patterns: RegExp[] }> = [
+  { label: "Fracture", patterns: [/\bfracture\b/i, /\bbroken\s+bone\b/i, /\bstress\s+fracture\b/i] },
+  { label: "Dislocation", patterns: [/\bdislocation\b/i, /\bdislocated\b/i, /\bsublux(?:ation)?\b/i] },
+  { label: "Sprain", patterns: [/\bsprain\b/i, /\brolled\s+ankle\b/i, /\btwisted\s+ankle\b/i] },
+  { label: "Strain", patterns: [/\bstrain\b/i, /\bpulled\s+muscle\b/i] },
+  { label: "Instability", patterns: [/\binstability\b/i, /\bgiving\s+way\b/i, /\bunstable\b/i] },
+  { label: "Head impact", patterns: [/\bconcussion\b/i, /\bhead\s+impact\b/i, /\bknocked\s+out\b/i] },
+  { label: "Nerve symptoms", patterns: [/\bnumb(?:ness)?\b/i, /\btingl(?:e|ing)\b/i, /\bnerve\b/i] },
+  { label: "Chest or breathing pain", patterns: [/\bchest\s+pain\b/i, /\bshort(ness)?\s+of\s+breath\b/i, /\bbreathing\s+pain\b/i] },
+  { label: "Surface injury", patterns: [/\bcut\b/i, /\blaceration\b/i, /\babrasion\b/i, /\bblister\b/i, /\bwound\b/i] },
+  { label: "Swelling", patterns: [/\bswell(?:ing)?\b/i, /\binflammation\b/i] },
+];
+
+function inferInjuryReasonFromText(value: string): string | null {
+  const text = value.trim();
+  if (!text) return null;
+  for (const candidate of INJURY_REASON_SYNONYMS) {
+    if (candidate.patterns.some((pattern) => pattern.test(text))) {
+      return candidate.label;
+    }
+  }
+  return null;
+}
 
 const TRIAGE_SIGNAL_EXPLANATIONS: Record<string, string> = {
   loss_of_consciousness: "You reported a blackout or loss of consciousness. That needs medical review before normal camp work.",
@@ -87,12 +132,27 @@ export function summarizeBlockedInjuryContext({
     .map((injury) => (typeof injury.area === "string" ? injury.area.trim() : ""))
     .filter(Boolean))]
     .slice(0, 2);
+  const guidedTypes = [...new Set((guidedInjuries ?? [])
+    .map((injury) => {
+      const key = typeof injury.injury_type === "string" ? injury.injury_type.trim().toLowerCase() : "";
+      return key ? (INJURY_TYPE_LABELS[key] ?? "") : "";
+    })
+    .filter(Boolean))]
+    .slice(0, 2);
   const injuryLine = typeof injuriesText === "string" ? injuriesText.trim() : "";
+  const inferredFromText = inferInjuryReasonFromText(injuryLine);
+  const inferredFromGuidedNotes = [...new Set((guidedInjuries ?? [])
+    .map((injury) => (typeof injury.notes === "string" ? inferInjuryReasonFromText(injury.notes) : null))
+    .filter((value): value is string => Boolean(value)))]
+    .slice(0, 2);
   const allOrdered = [
     ...highRiskLabels,
     ...redFlagLabels,
     ...urgentFlagLabels,
     ...reasonLabels,
+    ...guidedTypes,
+    ...(inferredFromText ? [inferredFromText] : []),
+    ...inferredFromGuidedNotes,
     ...(injuryLine ? [injuryLine] : []),
     ...areas,
   ];
