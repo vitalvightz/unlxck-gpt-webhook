@@ -641,11 +641,6 @@ class PlanRequest(BaseModel):
             ),
         ]
         payload: dict[str, Any] = {"data": {"fields": fields}}
-        if self.guided_injuries:
-            payload["guided_injuries"] = [
-                _legacy_guided_injury_payload(injury)
-                for injury in self.guided_injuries
-            ]
         if self.guided_injury is not None:
             payload["guided_injury"] = _legacy_guided_injury_payload(self.guided_injury)
         elif self.guided_injuries:

@@ -172,7 +172,7 @@ def test_plan_request_to_payload_includes_guided_injury_when_present():
     assert payload["guided_injury"]["avoid"] == "deep hip flexion"
 
 
-def test_plan_request_to_payload_includes_guided_injuries_and_mirrors_first_card():
+def test_plan_request_to_payload_uses_first_guided_injury_card_for_legacy_payload():
     payload = PlanRequest(
         athlete={
             "full_name": "Ari Mensah",
@@ -195,8 +195,7 @@ def test_plan_request_to_payload_includes_guided_injuries_and_mirrors_first_card
     ).to_payload()
 
     assert payload["guided_injury"]["area"] == "hip flexor"
-    assert payload["guided_injuries"][0]["area"] == "hip flexor"
-    assert payload["guided_injuries"][1]["area"] == "right heel"
+    assert "guided_injuries" not in payload
 
 
 def test_plan_request_to_payload_guided_injury_uses_legacy_contract_only():
@@ -234,7 +233,7 @@ def test_plan_request_to_payload_guided_injury_uses_legacy_contract_only():
     ).to_payload()
 
     assert set(payload["guided_injury"].keys()) == {"area", "severity", "trend", "avoid", "notes"}
-    assert set(payload["guided_injuries"][0].keys()) == {"area", "severity", "trend", "avoid", "notes"}
+    assert "guided_injuries" not in payload
 
 
 def test_plan_request_payload_round_trip_into_plan_input():
