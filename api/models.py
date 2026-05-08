@@ -596,6 +596,15 @@ class PlanRequest(BaseModel):
         return self
 
     def to_payload(self) -> dict[str, Any]:
+        def _legacy_guided_injury_payload(guided: GuidedInjuryInput) -> dict[str, Any]:
+            return {
+                "area": guided.area,
+                "severity": guided.severity,
+                "trend": guided.trend,
+                "avoid": guided.avoid,
+                "notes": guided.notes,
+            }
+
         athlete = self.athlete
         fields = [
             _field("Full name", athlete.full_name),
@@ -633,11 +642,14 @@ class PlanRequest(BaseModel):
         ]
         payload: dict[str, Any] = {"data": {"fields": fields}}
         if self.guided_injuries:
-            payload["guided_injuries"] = [injury.model_dump(mode="json") for injury in self.guided_injuries]
+            payload["guided_injuries"] = [
+                _legacy_guided_injury_payload(injury)
+                for injury in self.guided_injuries
+            ]
         if self.guided_injury is not None:
-            payload["guided_injury"] = self.guided_injury.model_dump(mode="json")
+            payload["guided_injury"] = _legacy_guided_injury_payload(self.guided_injury)
         elif self.guided_injuries:
-            payload["guided_injury"] = self.guided_injuries[0].model_dump(mode="json")
+            payload["guided_injury"] = _legacy_guided_injury_payload(self.guided_injuries[0])
         if self.random_seed is not None:
             payload["random_seed"] = self.random_seed
         return payload

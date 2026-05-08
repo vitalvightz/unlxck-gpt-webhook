@@ -199,6 +199,44 @@ def test_plan_request_to_payload_includes_guided_injuries_and_mirrors_first_card
     assert payload["guided_injuries"][1]["area"] == "right heel"
 
 
+def test_plan_request_to_payload_guided_injury_uses_legacy_contract_only():
+    payload = PlanRequest(
+        athlete={
+            "full_name": "Ari Mensah",
+            "technical_style": ["boxing"],
+        },
+        fight_date="2026-04-18",
+        guided_injury={
+            "area": "right knee",
+            "severity": "moderate",
+            "trend": "worsening",
+            "avoid": "deep flexion and hard pivots",
+            "notes": "hyperextension in sparring last week",
+            "injury_type": "sprain",
+            "timeframe": "last_week",
+            "cleared": "no",
+            "open_wound": "no",
+            "bleeding_status": "none",
+            "infection_signs": ["none"],
+            "impact_related": "yes",
+            "sensitive_area": "no",
+        },
+        guided_injuries=[
+            {
+                "area": "right knee",
+                "severity": "moderate",
+                "trend": "worsening",
+                "avoid": "deep flexion and hard pivots",
+                "notes": "hyperextension in sparring last week",
+                "injury_type": "sprain",
+            }
+        ],
+    ).to_payload()
+
+    assert set(payload["guided_injury"].keys()) == {"area", "severity", "trend", "avoid", "notes"}
+    assert set(payload["guided_injuries"][0].keys()) == {"area", "severity", "trend", "avoid", "notes"}
+
+
 def test_plan_request_payload_round_trip_into_plan_input():
     request = PlanRequest(
         athlete={
