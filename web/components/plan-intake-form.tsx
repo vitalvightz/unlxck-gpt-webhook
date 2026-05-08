@@ -2096,6 +2096,7 @@ export function PlanIntakeForm() {
                             }))}
                           onZoneSelect={handleBodyMapZoneSelect}
                           onSideChange={setBodyMapSide}
+                          activeArea={(activeGuidedInjuryIndex !== null ? guidedInjuries[activeGuidedInjuryIndex]?.area : "")?.toLowerCase() ?? ""}
                         />
                       </div>
                       <div className="injury-cards-col">
@@ -2121,7 +2122,7 @@ export function PlanIntakeForm() {
 
                         <div className="injury-card-add-row">
                           <button type="button" className="injury-card-add-btn" onClick={handleAddGuidedInjury}>
-                            <span aria-hidden="true">+</span> Add another injury
+                            <span aria-hidden="true">+</span> Add manually
                           </button>
                         </div>
                       </div>
