@@ -655,6 +655,11 @@ class PlanInput:
                 raise ValueError(
                     f"invalid Weekly Training Frequency: expected integer >= 1, got {training_frequency}"
                 )
+            if training_days and training_frequency > len(training_days):
+                raise ValueError(
+                    "invalid Weekly Training Frequency: cannot exceed selected Training Availability days "
+                    f"({len(training_days)}), got {training_frequency}"
+                )
             training_frequency_metadata = _metadata("user_supplied")
         else:
             # Explicit inference step.

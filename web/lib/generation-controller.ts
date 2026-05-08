@@ -41,6 +41,20 @@ const INITIAL_POLL_MS = 2_000;
 const MEDIUM_POLL_MS = 5_000;
 const LONG_POLL_MS = 15_000;
 const PENDING_GENERATION_PREFIX = "unlxck:pending-generation:";
+const TRAINING_AVAILABILITY_MISMATCH_ERROR =
+  "invalid Weekly Training Frequency: cannot exceed selected Training Availability days";
+const TRAINING_AVAILABILITY_MISMATCH_UI_MESSAGE =
+  "You selected fewer available training days than your weekly training frequency. Either reduce Weekly Training Frequency or select more Training Availability days.";
+
+function mapGenerationErrorMessage(error: unknown): string {
+  if (!(error instanceof Error)) {
+    return "Unable to generate your plan.";
+  }
+  if (error.message.includes(TRAINING_AVAILABILITY_MISMATCH_ERROR)) {
+    return TRAINING_AVAILABILITY_MISMATCH_UI_MESSAGE;
+  }
+  return error.message;
+}
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => window.setTimeout(resolve, ms));
@@ -277,9 +291,7 @@ export function useGenerationController({
         setIsGenerating(false);
         setStatusMessage(null);
         setPhase("failed");
-        setError(
-          generationError instanceof Error ? generationError.message : "Unable to generate your plan.",
-        );
+        setError(mapGenerationErrorMessage(generationError));
       }
     },
     [createJob, isGenerating, onComplete, storageKey, token],

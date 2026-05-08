@@ -184,7 +184,7 @@ def test_sparring_day_fields_round_trip_from_payload():
     assert parsed.support_work_days == ["Monday"]
 
 
-def test_contradictory_frequency_and_availability_stay_explicit_for_downstream_review():
+def test_contradictory_frequency_and_availability_raise_value_error():
     data = _payload(
         [
             {"label": "Weekly Training Frequency", "value": "6"},
@@ -193,11 +193,11 @@ def test_contradictory_frequency_and_availability_stay_explicit_for_downstream_r
         ]
     )
 
-    parsed = PlanInput.from_payload(data)
-
-    assert parsed.training_frequency == 6
-    assert parsed.training_days == ["Mon", "Wed"]
-    assert parsed.frequency_raw == "6"
+    with pytest.raises(
+        ValueError,
+        match="invalid Weekly Training Frequency: cannot exceed selected Training Availability days",
+    ):
+        PlanInput.from_payload(data)
 
 
 def test_messy_injury_input_keeps_real_issue_and_discards_empty_markers():
