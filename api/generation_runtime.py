@@ -211,28 +211,28 @@ def _is_truthy_flag(value: Any) -> bool:
     return False
 
 
-def should_skip_stage2(stage1_result: dict[str, Any]) -> bool:
+def should_skip_stage2(stage1_result: dict[str, Any], *, allow_triage_resume_override: bool = False) -> bool:
     status_value = str(stage1_result.get("status") or "").strip().lower()
     if status_value == "triage_blocked":
-        return True
+        return not allow_triage_resume_override
 
     injury_triage = stage1_result.get("injury_triage")
     if isinstance(injury_triage, dict):
         if _is_truthy_flag(injury_triage.get("should_block_stage2")):
-            return True
+            return False if allow_triage_resume_override else True
         triage_mode = str(injury_triage.get("mode") or "").strip().lower()
         if triage_mode in {"medical_hold", "restricted_rehab_only", "needs_review"}:
-            return True
+            return False if allow_triage_resume_override else True
 
     why_log = stage1_result.get("why_log")
     if isinstance(why_log, dict):
         why_log_triage = why_log.get("injury_triage")
         if isinstance(why_log_triage, dict):
             if _is_truthy_flag(why_log_triage.get("should_block_stage2")):
-                return True
+                return False if allow_triage_resume_override else True
             triage_mode = str(why_log_triage.get("mode") or "").strip().lower()
             if triage_mode in {"medical_hold", "restricted_rehab_only", "needs_review"}:
-                return True
+                return False if allow_triage_resume_override else True
 
     return False
 
@@ -281,6 +281,10 @@ async def run_generation_job(
 
         athlete_id = str(job["athlete_id"])
         raw_request_payload = job.get("request_payload") or {}
+        triage_resume_override_approved = False
+        if isinstance(raw_request_payload, dict):
+            triage_override = raw_request_payload.get(_TRIAGE_RESUME_OVERRIDE_KEY)
+            triage_resume_override_approved = isinstance(triage_override, dict) and triage_override.get("approved") is True
         request_body = parse_plan_request(raw_request_payload)
         logger.info("[jobs] generation:start athlete_id=%s job_id=%s", athlete_id, job_id)
 
@@ -343,7 +347,7 @@ async def run_generation_job(
 
         final_result = job.get("final_result")
         if not isinstance(final_result, dict):
-            if should_skip_stage2(stage1_result):
+            if should_skip_stage2(stage1_result, allow_triage_resume_override=triage_resume_override_approved):
                 _emit_milestone(
                     "stage2_skipped",
                     "Stage 2 skipped",
