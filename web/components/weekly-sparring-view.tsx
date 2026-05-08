@@ -26,6 +26,16 @@ const LOAD_LABELS: Record<WeeklyDayEntry["effective_load"], string> = {
   reduced: "Reduced",
   none: "None",
 };
+const WEEKDAY_ORDER: WeeklyDayEntry["weekday"][] = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+const WEEKDAY_FULL: Record<WeeklyDayEntry["weekday"], string> = {
+  Mon: "Monday",
+  Tue: "Tuesday",
+  Wed: "Wednesday",
+  Thu: "Thursday",
+  Fri: "Friday",
+  Sat: "Saturday",
+  Sun: "Sunday",
+};
 
 function formatToken(value: string) {
   const normalized = value.replace(/_/g, " ").trim();
@@ -52,8 +62,23 @@ function formatDayLabel(schedule: WeeklySchedule) {
 }
 
 function formatWeekdayLabel(day: WeeklyDayEntry) {
-  const weekday = (day.weekday ?? "").trim();
-  return weekday || "Day";
+  const weekday = day.weekday;
+  const fullWeekday = WEEKDAY_FULL[weekday] ?? "Day";
+  const rawCalendarDate = (day.calendar_date ?? "").trim();
+  if (!rawCalendarDate) {
+    return (day.weekday_with_label ?? day.day_label ?? fullWeekday).trim() || fullWeekday;
+  }
+
+  const parsed = new Date(rawCalendarDate);
+  if (Number.isNaN(parsed.getTime())) {
+    return `${fullWeekday} ${rawCalendarDate}`.trim();
+  }
+
+  const dayOfMonth = parsed.getUTCDate();
+  const monthName = parsed.toLocaleString("en-GB", { month: "long", timeZone: "UTC" });
+  const lastDigit = dayOfMonth % 10;
+  const suffix = dayOfMonth >= 11 && dayOfMonth <= 13 ? "th" : lastDigit === 1 ? "st" : lastDigit === 2 ? "nd" : lastDigit === 3 ? "rd" : "th";
+  return `${fullWeekday} ${dayOfMonth}${suffix} ${monthName}`;
 }
 
 export function WeeklySparringView({ planId }: { planId: string }) {
@@ -122,6 +147,11 @@ export function WeeklySparringView({ planId }: { planId: string }) {
     () => schedule?.days.find((day) => day.weekday === selectedWeekday) ?? null,
     [schedule, selectedWeekday],
   );
+  const orderedDays = useMemo(() => {
+    if (!schedule) return [];
+    const byWeekday = new Map(schedule.days.map((day) => [day.weekday, day]));
+    return WEEKDAY_ORDER.map((weekday) => byWeekday.get(weekday)).filter((day): day is WeeklyDayEntry => Boolean(day));
+  }, [schedule]);
   const hasHardSparringBan = schedule?.days.some((day) => day.reason_codes.includes("d17_hard_sparring_ban")) ?? false;
 
   if (isHidden || (!schedule && !error)) {
@@ -160,14 +190,14 @@ export function WeeklySparringView({ planId }: { planId: string }) {
           <h3>Live sparring map</h3>
           <p className="muted weekly-sparring-phase">{schedule.phase ? `${formatToken(schedule.phase)} | ` : ""}{formatDayLabel(schedule)}</p>
         </div>
-        <div className="weekly-sparring-nav" aria-label="Camp navigation">
+        <div className="weekly-sparring-nav" aria-label="Week navigation">
           <button
             type="button"
             className="ghost-button weekly-sparring-nav-button"
             onClick={() => setWeekIndex((current) => Math.max(0, current - 1))}
             disabled={!canGoPrevious || isLoading}
-            aria-label="Previous day block"
-            title="Previous day block"
+            aria-label="Previous week"
+            title="Previous week"
           >
             Prev
           </button>
@@ -177,8 +207,8 @@ export function WeeklySparringView({ planId }: { planId: string }) {
             className="ghost-button weekly-sparring-nav-button"
             onClick={() => setWeekIndex((current) => Math.min(schedule.week_count - 1, current + 1))}
             disabled={!canGoNext || isLoading}
-            aria-label="Next day block"
-            title="Next day block"
+            aria-label="Next week"
+            title="Next week"
           >
             Next
           </button>
@@ -192,12 +222,14 @@ export function WeeklySparringView({ planId }: { planId: string }) {
       ) : null}
 
       <div className="weekly-sparring-grid" role="list">
-        {schedule.days.map((day) => (
+        {orderedDays.map((day) => (
           <button
             key={day.weekday}
             type="button"
             role="listitem"
             className={`weekly-sparring-tile weekly-sparring-tile-${day.sparring_day_class} ${
+              day.is_fight_day ? "weekly-sparring-tile-fight-day" : ""
+            } ${
               selectedDay?.weekday === day.weekday ? "weekly-sparring-tile-selected" : ""
             }`}
             onClick={() => setSelectedWeekday(day.weekday)}
@@ -205,6 +237,7 @@ export function WeeklySparringView({ planId }: { planId: string }) {
             title={`${formatWeekdayLabel(day)}: ${CLASS_LABELS[day.sparring_day_class]}`}
           >
             <span className="weekly-sparring-weekday">{formatWeekdayLabel(day)}</span>
+            {day.is_fight_day ? <span className="weekly-sparring-fight-pill">FIGHT DATE</span> : null}
             <span className={`weekly-sparring-class-badge weekly-sparring-badge-${day.sparring_day_class}`}>
               {CLASS_LABELS[day.sparring_day_class]}
             </span>

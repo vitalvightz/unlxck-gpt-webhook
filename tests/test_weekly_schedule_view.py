@@ -370,3 +370,42 @@ def test_protected_week_does_not_apply_d17_ban_to_d37_declared_hard_day():
     assert monday["effective_load"] == "none"
     assert monday["status"] == ""
     assert monday["reason_codes"] == []
+
+
+def test_extract_weekly_schedule_calendar_days_are_normalized_to_monday_to_sunday_with_placeholders():
+    schedule = extract_weekly_schedule(
+        {
+            "weekly_role_map": {
+                "weeks": [
+                    {
+                        "phase": "SPP",
+                        "calendar_days": [
+                            {"weekday": "Friday", "d_day": 15, "calendar_date": "2026-05-15"},
+                            {"weekday": "Monday", "d_day": 19, "calendar_date": "2026-05-11"},
+                            {"weekday": "Wednesday", "d_day": 17, "calendar_date": "2026-05-13"},
+                        ],
+                        "hard_sparring_plan": [{"day": "Wednesday", "status": "convert_to_technical_suggested"}],
+                    }
+                ]
+            }
+        }
+    )
+
+    assert schedule is not None
+    assert [day["weekday"] for day in schedule["days"]] == ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+
+    by_day = {day["weekday"]: day for day in schedule["days"]}
+    assert by_day["Mon"]["calendar_date"] == "2026-05-11"
+    assert by_day["Wed"]["calendar_date"] == "2026-05-13"
+    assert by_day["Fri"]["calendar_date"] == "2026-05-15"
+    assert by_day["Tue"]["calendar_date"] == "2026-05-12"
+    assert by_day["Thu"]["calendar_date"] == "2026-05-14"
+    assert by_day["Sat"]["calendar_date"] == "2026-05-16"
+    assert by_day["Sun"]["calendar_date"] == "2026-05-17"
+    assert by_day["Tue"]["d_day"] == 18
+    assert by_day["Thu"]["d_day"] == 16
+    assert by_day["Sat"]["d_day"] == 14
+    assert by_day["Sun"]["d_day"] == 13
+    assert by_day["Tue"]["day_label"] == "D-18"
+    assert by_day["Sun"]["weekday_with_label"] == "Sun (D-13)"
+    assert by_day["Sat"]["sparring_day_class"] == "none"
