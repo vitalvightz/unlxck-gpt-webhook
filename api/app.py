@@ -522,7 +522,11 @@ def _map_plan_detail(row: dict[str, Any], *, include_admin: bool) -> PlanDetail:
 
 def _map_weekly_schedule(row: dict[str, Any], *, week_index: int) -> WeeklySchedule:
     planning_brief = _decode_structured_text(row.get("planning_brief"))
-    schedule = extract_weekly_schedule(planning_brief, week_index=week_index)
+    schedule = extract_weekly_schedule(
+        planning_brief,
+        week_index=week_index,
+        fight_date=row.get("fight_date"),
+    )
     if schedule is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="weekly schedule not found")
     return WeeklySchedule(plan_id=str(row["id"]), **schedule)

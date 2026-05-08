@@ -48,6 +48,20 @@ function formatToken(value: string) {
 function formatDayLabel(schedule: WeeklySchedule) {
   const countdown = (schedule.week_countdown_label ?? "").trim();
   if (countdown) return countdown;
+  const datedDays = schedule.days.filter((day) => (day.calendar_date ?? "").trim().length > 0);
+  if (datedDays.length > 0) {
+    const first = datedDays[0]?.calendar_date?.trim();
+    const last = datedDays[datedDays.length - 1]?.calendar_date?.trim();
+    if (first && last) {
+      const firstDate = new Date(first);
+      const lastDate = new Date(last);
+      if (!Number.isNaN(firstDate.getTime()) && !Number.isNaN(lastDate.getTime())) {
+        const firstLabel = `${firstDate.getUTCDate()} ${firstDate.toLocaleString("en-GB", { month: "short", timeZone: "UTC" })}`;
+        const lastLabel = `${lastDate.getUTCDate()} ${lastDate.toLocaleString("en-GB", { month: "short", timeZone: "UTC" })}`;
+        return `${firstLabel} → ${lastLabel}`;
+      }
+    }
+  }
   const explicit = (schedule.day_label ?? "").trim();
   if (explicit) return explicit;
   const end = schedule.projected_days_until_fight_end;
@@ -65,8 +79,10 @@ function formatWeekdayLabel(day: WeeklyDayEntry) {
   const weekday = day.weekday;
   const fullWeekday = WEEKDAY_FULL[weekday] ?? "Day";
   const rawCalendarDate = (day.calendar_date ?? "").trim();
+  const rawDayLabel = (day.day_label ?? "").trim();
   if (!rawCalendarDate) {
-    return (day.weekday_with_label ?? day.day_label ?? fullWeekday).trim() || fullWeekday;
+    if (rawDayLabel) return `${fullWeekday} ${rawDayLabel}`;
+    return (day.weekday_with_label ?? fullWeekday).trim() || fullWeekday;
   }
 
   const parsed = new Date(rawCalendarDate);

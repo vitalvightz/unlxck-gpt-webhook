@@ -409,3 +409,86 @@ def test_extract_weekly_schedule_calendar_days_are_normalized_to_monday_to_sunda
     assert by_day["Tue"]["day_label"] == "D-18"
     assert by_day["Sun"]["weekday_with_label"] == "Sun (D-13)"
     assert by_day["Sat"]["sparring_day_class"] == "none"
+
+
+def test_extract_weekly_schedule_builds_monday_to_sunday_calendar_week_from_fight_date():
+    schedule = extract_weekly_schedule(
+        {
+            "fight_date": "2026-05-17",
+            "weekly_role_map": {
+                "weeks": [
+                    {
+                        "phase": "TAPER",
+                        "countdown_range": [6, 0],
+                        "hard_sparring_plan": [],
+                    }
+                ]
+            },
+        }
+    )
+
+    assert schedule is not None
+    by_day = {day["weekday"]: day for day in schedule["days"]}
+    assert by_day["Mon"]["calendar_date"] == "2026-05-11"
+    assert by_day["Sun"]["calendar_date"] == "2026-05-17"
+    assert by_day["Sun"]["is_fight_day"] is True
+    assert by_day["Sun"]["d_day"] == 0
+
+
+def test_extract_weekly_schedule_countdown_fallback_does_not_create_cross_week_order():
+    schedule = extract_weekly_schedule(
+        {
+            "fight_date": "2026-05-17",
+            "weekly_role_map": {
+                "weeks": [
+                    {
+                        "phase": "TAPER",
+                        "countdown_range": [17, 11],
+                        "hard_sparring_plan": [],
+                    }
+                ]
+            },
+        }
+    )
+
+    assert schedule is not None
+    assert [day["calendar_date"] for day in schedule["days"]] == [
+        "2026-05-04",
+        "2026-05-05",
+        "2026-05-06",
+        "2026-05-07",
+        "2026-05-08",
+        "2026-05-09",
+        "2026-05-10",
+    ]
+    assert [day["d_day"] for day in schedule["days"]] == [13, 12, 11, 10, 9, 8, 7]
+    assert schedule["countdown_range"] == [13, 7]
+    assert schedule["week_countdown_label"] == "D-13 → D-7"
+    assert schedule["original_countdown_range"] == [17, 11]
+
+
+def test_extract_weekly_schedule_preserves_d17_hard_sparring_ban_with_calendar_week_fallback():
+    schedule = extract_weekly_schedule(
+        {
+            "fight_date": "2026-05-17",
+            "weekly_role_map": {
+                "weeks": [
+                    {
+                        "phase": "TAPER",
+                        "countdown_range": [17, 11],
+                        "declared_hard_sparring_days": ["Monday"],
+                        "hard_sparring_plan": [],
+                        "effective_hard_sparring_days": [],
+                        "payload_mode": "late_fight_session_payload",
+                        "intentional_compression": {"active": True, "reason_codes": ["late_fight_session_payload"]},
+                    }
+                ]
+            },
+        }
+    )
+
+    assert schedule is not None
+    monday = next(day for day in schedule["days"] if day["weekday"] == "Mon")
+    assert monday["d_day"] == 13
+    assert monday["status"] == "convert_to_technical_suggested"
+    assert monday["reason_codes"] == ["d17_hard_sparring_ban"]
