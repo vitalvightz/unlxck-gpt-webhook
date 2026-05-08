@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import date, timedelta
 from typing import Any
 
 from .normalization import clean_list as _clean_list
@@ -40,6 +41,12 @@ def _normalize_weekday(value: Any) -> str | None:
 def _empty_day(weekday: str) -> dict[str, Any]:
     return {
         "weekday": weekday,
+        "d_day": None,
+        "day_label": "",
+        "weekday_with_label": weekday,
+        "calendar_date": None,
+        "is_fight_day": False,
+        "is_after_fight_day": False,
         "sparring_day_class": "none",
         "effective_load": "none",
         "status": "",
@@ -193,13 +200,16 @@ def extract_weekly_schedule(planning_brief: Any, *, week_index: int = 0) -> dict
     ] if isinstance(calendar_days, list) else []
 
     if calendar_entries:
-        days = []
+        days_by_weekday: dict[str, dict[str, Any]] = {weekday: _empty_day(weekday) for weekday in WEEKDAY_SHORT}
+        anchor_weekday: str | None = None
+        anchor_date: date | None = None
+        anchor_d_day: int | None = None
         for entry in calendar_entries:
             weekday = _normalize_weekday(entry.get("weekday"))
             if not weekday:
                 continue
 
-            day = _empty_day(weekday)
+            day = days_by_weekday[weekday]
 
             raw_d_day = entry.get("d_day")
             try:
@@ -223,7 +233,31 @@ def extract_weekly_schedule(planning_brief: Any, *, week_index: int = 0) -> dict
             day["weekday_with_label"] = (
                 f"{weekday} ({day['day_label']})" if day["day_label"] else weekday
             )
-            days.append(day)
+            if isinstance(d_day, int) and day["calendar_date"]:
+                try:
+                    parsed_date = date.fromisoformat(str(day["calendar_date"]))
+                except (TypeError, ValueError):
+                    parsed_date = None
+                if parsed_date is not None and anchor_weekday is None:
+                    anchor_weekday = weekday
+                    anchor_date = parsed_date
+                    anchor_d_day = d_day
+
+        if anchor_weekday is not None and anchor_date is not None and isinstance(anchor_d_day, int):
+            anchor_index = WEEKDAY_SHORT.index(anchor_weekday)
+            for weekday, day in days_by_weekday.items():
+                weekday_index = WEEKDAY_SHORT.index(weekday)
+                day_offset = weekday_index - anchor_index
+                if not day.get("calendar_date"):
+                    day["calendar_date"] = (anchor_date + timedelta(days=day_offset)).isoformat()
+                if day.get("d_day") is None:
+                    inferred_d_day = anchor_d_day - day_offset
+                    day["d_day"] = inferred_d_day
+                    day["day_label"] = f"D-{inferred_d_day}" if inferred_d_day > 0 else ("D-0" if inferred_d_day == 0 else "")
+                    day["weekday_with_label"] = f"{weekday} ({day['day_label']})" if day["day_label"] else weekday
+                if not day.get("is_fight_day"):
+                    day["is_fight_day"] = day.get("d_day") == 0
+        days = [days_by_weekday[weekday] for weekday in WEEKDAY_SHORT]
     else:
         days = [_empty_day(weekday) for weekday in WEEKDAY_SHORT]
 
