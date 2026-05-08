@@ -145,7 +145,7 @@ export function summarizeBlockedInjuryContext({
     .map((injury) => (typeof injury.notes === "string" ? inferInjuryReasonFromText(injury.notes) : null))
     .filter((value): value is string => Boolean(value)))]
     .slice(0, 2);
-  const allOrdered = [
+  const allOrdered = [...new Set([
     ...highRiskLabels,
     ...redFlagLabels,
     ...urgentFlagLabels,
@@ -155,7 +155,7 @@ export function summarizeBlockedInjuryContext({
     ...inferredFromGuidedNotes,
     ...(injuryLine ? [injuryLine] : []),
     ...areas,
-  ];
+  ])];
   const primary = allOrdered[0] ?? null;
   const secondary = allOrdered[1] ?? null;
 
