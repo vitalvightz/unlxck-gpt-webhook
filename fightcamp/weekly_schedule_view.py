@@ -40,6 +40,12 @@ def _normalize_weekday(value: Any) -> str | None:
 def _empty_day(weekday: str) -> dict[str, Any]:
     return {
         "weekday": weekday,
+        "d_day": None,
+        "day_label": "",
+        "weekday_with_label": weekday,
+        "calendar_date": None,
+        "is_fight_day": False,
+        "is_after_fight_day": False,
         "sparring_day_class": "none",
         "effective_load": "none",
         "status": "",
@@ -193,13 +199,13 @@ def extract_weekly_schedule(planning_brief: Any, *, week_index: int = 0) -> dict
     ] if isinstance(calendar_days, list) else []
 
     if calendar_entries:
-        days = []
+        days_by_weekday: dict[str, dict[str, Any]] = {weekday: _empty_day(weekday) for weekday in WEEKDAY_SHORT}
         for entry in calendar_entries:
             weekday = _normalize_weekday(entry.get("weekday"))
             if not weekday:
                 continue
 
-            day = _empty_day(weekday)
+            day = days_by_weekday[weekday]
 
             raw_d_day = entry.get("d_day")
             try:
@@ -223,7 +229,7 @@ def extract_weekly_schedule(planning_brief: Any, *, week_index: int = 0) -> dict
             day["weekday_with_label"] = (
                 f"{weekday} ({day['day_label']})" if day["day_label"] else weekday
             )
-            days.append(day)
+        days = [days_by_weekday[weekday] for weekday in WEEKDAY_SHORT]
     else:
         days = [_empty_day(weekday) for weekday in WEEKDAY_SHORT]
 
