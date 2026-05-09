@@ -7,7 +7,7 @@ This document defines the current injury data flow and ownership across the plan
 The injury pipeline is ordered and deterministic. Structured injury data is the source of truth when available.
 
 **Priority rule:**
-1. Structured/guided injury data (including parsed structured entries) must outrank raw injury text.
+1. Structured/guided injury data (including the `parsed_injuries` artifact) must outrank raw injury text.
 2. Raw injury reparsing is fallback-only behavior.
 
 ---
