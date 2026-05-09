@@ -221,130 +221,134 @@ def _structured_injury_entries(athlete_snapshot: dict[str, Any]) -> list[dict[st
         structured = []
     entries: list[dict[str, Any]] = []
     for item in structured:
-        if not isinstance(item, dict):
-            continue
-        raw_text = str(
-            item.get("original_phrase")
-            or item.get("raw")
-            or item.get("text")
-            or guided.get("notes")
-            or ""
-        ).strip()
-        canonical_location = str(
-            item.get("canonical_location")
-            or item.get("region")
-            or item.get("location")
-            or ""
-        ).strip().lower()
-        display_location = str(
-            item.get("display_location")
-            or canonical_location
-            or ""
-        ).strip().lower()
-        laterality = str(
-            item.get("laterality")
-            or item.get("side")
-            or ""
-        ).strip().lower()
-        injury_type = str(
-            item.get("injury_type")
-            or guided.get("injury_type")
-            or "unspecified"
-        ).strip().lower()
-        severity = str(
-            item.get("severity")
-            or guided.get("severity")
-            or ""
-        ).strip().lower()
-        trend = str(
-            item.get("trend")
-            or guided.get("trend")
-            or ""
-        ).strip().lower()
-        notes = str(
-            item.get("notes")
-            or guided.get("notes")
-            or raw_text
-        ).strip().lower()
-        selected_type = str(guided.get("injury_type") or "").strip().lower()
-        combined = f"{raw_text} {injury_type} {selected_type} {severity} {trend} {notes}".lower()
-        instability = (
-            injury_type == "instability"
-            or selected_type in {"instability", "instability / giving way", "instability_giving_way"}
-            or "instability" in combined
-            or "giving way" in combined
-            or "gave way" in combined
-            or "buckled" in combined
-        )
-        hyperextension = (
-            injury_type == "hyperextension"
-            or "hyperextend" in combined
-            or "overextend" in combined
-            or "went back" in combined
-            or "bent back" in combined
-            or "locked back" in combined
-        )
-        if canonical_location in {"lower back", "lower_back"} and "knee" in combined and (
-            "went back" in combined or "bent back" in combined or "overextend" in combined
-        ):
-            canonical_location = "knee"
-            display_location = "knee"
-        if canonical_location == "lower back":
-            canonical_location = "lower_back"
-        if canonical_location == "knee" and hyperextension and injury_type in {"sprain", "unspecified", ""}:
-            injury_type = "hyperextension"
-        if canonical_location == "knee" and instability:
-            injury_type = "instability"
-        if severity in {"mild", "low"}:
-            tier = "low"
-        elif severity in {"moderate"}:
-            tier = "moderate"
-        elif severity in {"high", "severe"}:
-            tier = "high"
-        else:
-            tier = _severity_tier(combined, instability, False)
-        worsening = trend in _WORSENING_TOKENS or any(token in combined for token in _WORSENING_TOKENS)
-        improving = trend in _IMPROVING_TOKENS or any(token in combined for token in _IMPROVING_TOKENS)
-        stable = trend in _STABLE_TOKENS or any(token in combined for token in _STABLE_TOKENS)
-        traj = _trajectory(combined, worsening, improving, stable)
-        daily_symptoms = any(token in combined for token in ("rest pain", "daily", "walking", "stairs", "sleep", "constant"))
-        oflags = _override_flags(combined, instability, daily_symptoms)
-        ctx = _collision_context(canonical_location)
-        base = _SEVERITY_BASE_SCORE[tier]
-        if tier == "low" and canonical_location in _HIGH_COLLISION_REGIONS:
-            base += 2
-        if traj == "worsening":
-            base += 2
-        elif traj == "improving":
-            base -= 1
-        if instability or daily_symptoms:
-            base = max(base, 6 if not worsening else 7)
-        rbs = min(_SPARRING_INJURY_STATE_SCORE_CAP, max(0, base))
-        band = _band_from_score(rbs)
-        entries.append(
-            {
-                "raw": raw_text,
-                "region": canonical_location or "unspecified",
-                "display_location": display_location or canonical_location or "unspecified",
-                "injury_type": injury_type or "unspecified",
-                "laterality": laterality,
-                "state_score": rbs,
-                "severity_tier": tier,
-                "trajectory": traj,
-                "worsening": worsening,
-                "improving": improving,
-                "stable": stable,
-                "instability": instability,
-                "daily_symptoms": daily_symptoms,
-                "high_collision_region": canonical_location in _HIGH_COLLISION_REGIONS,
-                "lower_limb": canonical_location in _LOWER_LIMB_REGIONS,
-                "collision_context": ctx,
-                "override_flags": oflags,
-                "risk_band_score": rbs,
-                "risk_band": band,
-            }
-        )
+        processed = _process_structured_injury_item(item, guided)
+        if processed is not None:
+            entries.append(processed)
     return entries
+
+
+def _process_structured_injury_item(item: Any, guided: dict[str, Any]) -> dict[str, Any] | None:
+    if not isinstance(item, dict):
+        return None
+    raw_text = str(
+        item.get("original_phrase")
+        or item.get("raw")
+        or item.get("text")
+        or guided.get("notes")
+        or ""
+    ).strip()
+    canonical_location = str(
+        item.get("canonical_location")
+        or item.get("region")
+        or item.get("location")
+        or ""
+    ).strip().lower()
+    display_location = str(
+        item.get("display_location")
+        or canonical_location
+        or ""
+    ).strip().lower()
+    laterality = str(
+        item.get("laterality")
+        or item.get("side")
+        or ""
+    ).strip().lower()
+    injury_type = str(
+        item.get("injury_type")
+        or guided.get("injury_type")
+        or "unspecified"
+    ).strip().lower()
+    severity = str(
+        item.get("severity")
+        or guided.get("severity")
+        or ""
+    ).strip().lower()
+    trend = str(
+        item.get("trend")
+        or guided.get("trend")
+        or ""
+    ).strip().lower()
+    notes = str(
+        item.get("notes")
+        or guided.get("notes")
+        or raw_text
+    ).strip().lower()
+    selected_type = str(guided.get("injury_type") or "").strip().lower()
+    combined = f"{raw_text} {injury_type} {selected_type} {severity} {trend} {notes}".lower()
+    instability = (
+        injury_type == "instability"
+        or selected_type in {"instability", "instability / giving way", "instability_giving_way"}
+        or "instability" in combined
+        or "giving way" in combined
+        or "gave way" in combined
+        or "buckled" in combined
+    )
+    hyperextension = (
+        injury_type == "hyperextension"
+        or "hyperextend" in combined
+        or "overextend" in combined
+        or "went back" in combined
+        or "bent back" in combined
+        or "locked back" in combined
+    )
+    if canonical_location in {"lower back", "lower_back"} and "knee" in combined and (
+        "went back" in combined or "bent back" in combined or "overextend" in combined
+    ):
+        canonical_location = "knee"
+        display_location = "knee"
+    if canonical_location == "lower back":
+        canonical_location = "lower_back"
+    if canonical_location == "knee" and hyperextension and injury_type in {"sprain", "unspecified", ""}:
+        injury_type = "hyperextension"
+    if canonical_location == "knee" and instability:
+        injury_type = "instability"
+    if severity in {"mild", "low"}:
+        tier = "low"
+    elif severity in {"moderate"}:
+        tier = "moderate"
+    elif severity in {"high", "severe"}:
+        tier = "high"
+    else:
+        tier = _severity_tier(combined, instability, False)
+    worsening = trend in _WORSENING_TOKENS or any(token in combined for token in _WORSENING_TOKENS)
+    improving = trend in _IMPROVING_TOKENS or any(token in combined for token in _IMPROVING_TOKENS)
+    stable = trend in _STABLE_TOKENS or any(token in combined for token in _STABLE_TOKENS)
+    traj = _trajectory(combined, worsening, improving, stable)
+    daily_symptoms = any(token in combined for token in ("rest pain", "daily", "walking", "stairs", "sleep", "constant"))
+    oflags = _override_flags(combined, instability, daily_symptoms)
+    ctx = _collision_context(canonical_location)
+    base = _SEVERITY_BASE_SCORE[tier]
+    if tier == "low" and canonical_location in _HIGH_COLLISION_REGIONS:
+        base += 2
+    if traj == "worsening":
+        base += 2
+    elif traj == "improving":
+        base -= 1
+    if instability or daily_symptoms:
+        base = max(base, 6 if not worsening else 7)
+    rbs = min(_SPARRING_INJURY_STATE_SCORE_CAP, max(0, base))
+    band = _band_from_score(rbs)
+    return {
+        "raw": raw_text,
+        "region": canonical_location or "unspecified",
+        "display_location": display_location or canonical_location or "unspecified",
+        "injury_type": injury_type or "unspecified",
+        "laterality": laterality,
+        "state_score": rbs,
+        "severity_tier": tier,
+        "trajectory": traj,
+        "worsening": worsening,
+        "improving": improving,
+        "stable": stable,
+        "instability": instability,
+        "daily_symptoms": daily_symptoms,
+        "high_collision_region": canonical_location in _HIGH_COLLISION_REGIONS,
+        "lower_limb": canonical_location in _LOWER_LIMB_REGIONS,
+        "collision_context": ctx,
+        "override_flags": oflags,
+        "risk_band_score": rbs,
+        "risk_band": band,
+    }
 
 def _sparring_injury_entries(athlete_snapshot: dict[str, Any]) -> list[dict[str, Any]]:
     structured_entries = _structured_injury_entries(athlete_snapshot)
