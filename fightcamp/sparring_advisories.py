@@ -302,6 +302,11 @@ def _process_structured_injury_item(item: Any, guided: dict[str, Any]) -> dict[s
         injury_type = "hyperextension"
     if canonical_location == "knee" and instability:
         injury_type = "instability"
+    worsening = trend in _WORSENING_TOKENS or any(token in combined for token in _WORSENING_TOKENS)
+    improving = trend in _IMPROVING_TOKENS or any(token in combined for token in _IMPROVING_TOKENS)
+    stable = trend in _STABLE_TOKENS or any(token in combined for token in _STABLE_TOKENS)
+    traj = _trajectory(combined, worsening, improving, stable)
+    daily_symptoms = any(token in combined for token in ("rest pain", "daily", "walking", "stairs", "sleep", "constant"))
     if severity in {"mild", "low"}:
         tier = "low"
     elif severity in {"moderate"}:
@@ -310,11 +315,6 @@ def _process_structured_injury_item(item: Any, guided: dict[str, Any]) -> dict[s
         tier = "high"
     else:
         tier = _severity_tier(combined, instability, daily_symptoms)
-    worsening = trend in _WORSENING_TOKENS or any(token in combined for token in _WORSENING_TOKENS)
-    improving = trend in _IMPROVING_TOKENS or any(token in combined for token in _IMPROVING_TOKENS)
-    stable = trend in _STABLE_TOKENS or any(token in combined for token in _STABLE_TOKENS)
-    traj = _trajectory(combined, worsening, improving, stable)
-    daily_symptoms = any(token in combined for token in ("rest pain", "daily", "walking", "stairs", "sleep", "constant"))
     oflags = _override_flags(combined, instability, daily_symptoms)
     ctx = _collision_context(canonical_location)
     base = _SEVERITY_BASE_SCORE[tier]
