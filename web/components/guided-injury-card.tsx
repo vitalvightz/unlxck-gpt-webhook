@@ -66,11 +66,11 @@ const INJURY_TYPE_GROUPS: InjuryTypeGroup[] = [
 ];
 
 const INJURY_FAMILIES: InjuryFamilyOption[] = [
-  { family: "pain_movement", label: "Muscle pain", helper: "Soreness, tightness, strains" },
-  { family: "structural", label: "Bone or joint injury", helper: "Fracture, dislocation, ligament" },
-  { family: "head_nerve_breathing", label: "Head, nerve or breathing issue", helper: "Concussion, nerve, breathing" },
-  { family: "surface", label: "Skin injury", helper: "Cuts, blisters, bruises" },
-  { family: "not_sure", label: "Not sure", helper: "I do not know yet" },
+  { family: "pain_movement", label: "Muscle / tendon / joint pain", helper: "Used as fallback if your description is unclear." },
+  { family: "structural", label: "Bone or dislocation", helper: "Used as fallback if your description is unclear." },
+  { family: "head_nerve_breathing", label: "Head, nerve or breathing issue", helper: "Used as fallback if your description is unclear." },
+  { family: "surface", label: "Skin injury", helper: "Used as fallback if your description is unclear." },
+  { family: "not_sure", label: "Not sure", helper: "Used as fallback if your description is unclear." },
 ];
 
 const FAMILY_TO_HEADING: Record<Exclude<InjuryFamily, "not_sure">, string> = {
@@ -237,9 +237,14 @@ function getOptionsForFamily(family: InjuryFamily): InjuryTypeOption[] {
   return group.options;
 }
 
-function isSafetyComplete(injury: GuidedInjuryState): boolean {
+function isSafetyComplete(injury: GuidedInjuryState, family: InjuryFamily | ""): boolean {
   if (!injury.injury_type) return false;
-  if (injury.injury_type === "surface_injury" && !injury.surface_type) return false;
+  if (injury.injury_type === "unspecified") {
+    if (family === "structural") return Boolean(injury.timeframe && injury.cleared && injury.impact_related);
+    if (family === "head_nerve_breathing") return Boolean(parseNotesFlags(injury.notes, "red_flags").length > 0 || parseNotesFlags(injury.notes, "nerve_symptoms").length > 0 || parseNotesFlags(injury.notes, "chest_symptoms").length > 0);
+    if (family === "surface") return Boolean(injury.open_wound && injury.bleeding_status && injury.sensitive_area && injury.infection_signs.length > 0);
+    return true;
+  }
   if (injury.injury_type === "fracture") return Boolean(injury.timeframe && injury.cleared);
   if (injury.injury_type === "dislocation") return Boolean(getSingleNotesFlag(injury.notes, "dislocation", "relocated") && getSingleNotesFlag(injury.notes, "dislocation", "recurrent") && injury.cleared);
   if (["tendon_ligament", "post_surgery"].includes(injury.injury_type)) return Boolean(injury.timeframe && injury.cleared);
@@ -354,6 +359,12 @@ export function buildCompactSummary(injury: GuidedInjuryState): string {
   return parts.join(" · ");
 }
 
+function truncateForHeader(value: string, max = 72): string {
+  const text = value.trim().replace(/\s+/g, " ");
+  if (text.length <= max) return text;
+  return `${text.slice(0, max - 1)}…`;
+}
+
 // ── Chip button component ────────────────────────────────────────────
 
 function ChipButton({
@@ -455,12 +466,32 @@ function SingleChipRow({
 
 function FollowUpQuestions({
   injury,
+  family,
   onUpdate,
 }: {
   injury: GuidedInjuryState;
+  family: InjuryFamily | "";
   onUpdate: <K extends keyof GuidedInjuryState>(key: K, value: GuidedInjuryState[K]) => void;
 }) {
   const { injury_type, surface_type } = injury;
+  if (injury_type === "unspecified" && family === "structural") {
+    return <div className="gi-followup">
+      <div className="gi-field"><label className="gi-label">When did it happen?</label><SingleChipRow label="Timeframe" options={TIMEFRAME_OPTIONS} value={injury.timeframe} onChange={(v) => onUpdate("timeframe", v)} /></div>
+      <div className="gi-field"><label className="gi-label">Have you been medically cleared?</label><SingleChipRow label="Cleared" options={CLEARED_OPTIONS} value={injury.cleared} onChange={(v) => onUpdate("cleared", v)} /></div>
+      <div className="gi-field"><label className="gi-label">Can you bear weight?</label><SingleChipRow label="Bear weight" options={YES_NO_UNSURE} value={getSingleNotesFlag(injury.notes, "structural", "bear_weight")} onChange={(v) => onUpdate("notes", setSingleNotesFlag(injury.notes, "structural", "bear_weight", v))} /></div>
+      <div className="gi-field"><label className="gi-label">Is there rapid swelling?</label><SingleChipRow label="Swelling" options={YES_NO_UNSURE} value={getSingleNotesFlag(injury.notes, "structural", "swelling")} onChange={(v) => onUpdate("notes", setSingleNotesFlag(injury.notes, "structural", "swelling", v))} /></div>
+      <div className="gi-field"><label className="gi-label">Is there deformity?</label><SingleChipRow label="Deformity" options={YES_NO_UNSURE} value={getSingleNotesFlag(injury.notes, "structural", "deformity")} onChange={(v) => onUpdate("notes", setSingleNotesFlag(injury.notes, "structural", "deformity", v))} /></div>
+      <div className="gi-field"><label className="gi-label">Does it feel unstable or giving way?</label><SingleChipRow label="Unstable" options={YES_NO_UNSURE} value={injury.impact_related} onChange={(v) => onUpdate("impact_related", v)} /></div>
+    </div>;
+  }
+  if (injury_type === "unspecified" && family === "head_nerve_breathing") {
+    return <div className="gi-followup">
+      <div className="gi-field"><label className="gi-label">Head-impact red flags</label><SingleChipRow label="Head red flags" options={YES_NO_UNSURE} value={getSingleNotesFlag(injury.notes, "red_flags", "present")} onChange={(v) => onUpdate("notes", setSingleNotesFlag(injury.notes, "red_flags", "present", v))} /></div>
+      <div className="gi-field"><label className="gi-label">Any numbness, tingling, or weakness?</label><SingleChipRow label="Nerve symptoms" options={YES_NO_UNSURE} value={getSingleNotesFlag(injury.notes, "nerve_symptoms", "present")} onChange={(v) => onUpdate("notes", setSingleNotesFlag(injury.notes, "nerve_symptoms", "present", v))} /></div>
+      <div className="gi-field"><label className="gi-label">Any breathing pain, chest pain, or shortness of breath?</label><SingleChipRow label="Chest symptoms" options={YES_NO_UNSURE} value={getSingleNotesFlag(injury.notes, "chest_symptoms", "present")} onChange={(v) => onUpdate("notes", setSingleNotesFlag(injury.notes, "chest_symptoms", "present", v))} /></div>
+    </div>;
+  }
+  if (injury_type === "unspecified" && family === "surface") return <SurfaceFollowUp injury={injury} onUpdate={onUpdate} />;
 
   if (injury_type === "fracture") {
     return (
@@ -655,6 +686,28 @@ function SurfaceFollowUp({
   onUpdate: <K extends keyof GuidedInjuryState>(key: K, value: GuidedInjuryState[K]) => void;
 }) {
   const st = injury.surface_type;
+  if (!st) {
+    return (
+      <div className="gi-followup">
+        <div className="gi-field">
+          <label className="gi-label">Is the wound open?</label>
+          <SingleChipRow label="Open wound" options={OPEN_WOUND_OPTIONS} value={injury.open_wound} onChange={(v) => onUpdate("open_wound", v)} />
+        </div>
+        <div className="gi-field">
+          <label className="gi-label">Is it still bleeding?</label>
+          <SingleChipRow label="Bleeding status" options={BLEEDING_STATUS_OPTIONS} value={injury.bleeding_status} onChange={(v) => onUpdate("bleeding_status", v)} />
+        </div>
+        <div className="gi-field">
+          <label className="gi-label">Signs of infection?</label>
+          <InfectionSignsChips injury={injury} onUpdate={onUpdate} />
+        </div>
+        <div className="gi-field">
+          <label className="gi-label">Is it near the eye, mouth, or face?</label>
+          <SingleChipRow label="Sensitive area" options={SENSITIVE_AREA_OPTIONS} value={injury.sensitive_area} onChange={(v) => onUpdate("sensitive_area", v)} />
+        </div>
+      </div>
+    );
+  }
 
   if (st === "cut" || st === "laceration") {
     return (
@@ -830,16 +883,15 @@ export function GuidedInjuryCard({
   const [notesOpen, setNotesOpen] = useState(Boolean(injury.notes.trim()));
   const [draftFamily, setDraftFamily] = useState<InjuryFamily | "">("");
   const [familyExpanded, setFamilyExpanded] = useState(true);
-  const [subtypeExpanded, setSubtypeExpanded] = useState(true);
-  const injuryLabel = injury.area.trim() || `Injury ${index + 1}`;
-  const compactSummary = buildCompactSummary(injury);
+  const injuryLabel = truncateForHeader(injury.area) || `Injury ${index + 1}`;
+  const compactSummary = truncateForHeader(buildCompactSummary(injury), 80);
   const showWarning = shouldShowReviewWarning(injury);
   const hasFollowUp = injury.injury_type !== "";
   const derivedFamily = getFamilyForInjury(injury);
   const activeFamily = derivedFamily || draftFamily;
   const basicsComplete = Boolean(injury.area.trim() && injury.severity && injury.trend);
   const typeComplete = Boolean(injury.injury_type && (injury.injury_type !== "surface_injury" || injury.surface_type));
-  const safetyComplete = isSafetyComplete(injury);
+  const safetyComplete = isSafetyComplete(injury, activeFamily);
   const safetyActive = Boolean(basicsComplete && typeComplete && !safetyComplete);
   const reviewReady = Boolean(basicsComplete && typeComplete && safetyComplete);
   const selectedFamilyOption = activeFamily ? INJURY_FAMILIES.find((f) => f.family === activeFamily) : null;
@@ -903,17 +955,20 @@ function handleTypeSelect(opt: InjuryTypeOption | null) {
   function handleFamilySelect(family: InjuryFamily) {
     setDraftFamily(family);
     setFamilyExpanded(false);
-    setSubtypeExpanded(true);
     const currentFamily = getFamilyForInjury(injury);
+    const fallbackType: InjuryTypeOption = { label: "Not sure", value: "unspecified" };
     if (currentFamily && currentFamily !== family) {
       const stripPrefixes: string[] = [];
       if (injury.injury_type === "head_impact") stripPrefixes.push("red_flags");
       if (injury.injury_type === "dislocation") stripPrefixes.push("dislocation");
       if (injury.injury_type === "nerve_symptoms") stripPrefixes.push("nerve_symptoms");
       if (injury.injury_type === "chest_breathing") stripPrefixes.push("chest_symptoms");
-      onUpdate("injury_type", "");
-      clearTypeSpecificFields(onUpdate);
+      handleTypeSelect(fallbackType);
       if (stripPrefixes.length) onUpdate("notes", stripTaggedNotes(injury.notes, stripPrefixes));
+      return;
+    }
+    if (!currentFamily) {
+      handleTypeSelect(fallbackType);
     }
   }
 
@@ -972,16 +1027,65 @@ function handleTypeSelect(opt: InjuryTypeOption | null) {
 
       {isActive ? (
         <div className="injury-card-form">
-          {/* Area */}
+          {/* Step 1 — Describe it */}
           <div className="gi-field">
-            <label htmlFor={`gi-area-${index}`} className="gi-label">Injury or pain area</label>
-            <input
+            <label htmlFor={`gi-area-${index}`} className="gi-label">What happened or what feels wrong?</label>
+            <textarea
               id={`gi-area-${index}`}
               value={injury.area}
               onChange={(e) => onUpdate("area", e.target.value)}
-              placeholder="Left shoulder"
+              placeholder="e.g. hyperextended right knee, rolled ankle, tight hamstring"
               className="gi-area-input"
+              rows={3}
             />
+            <p className="gi-selection-helper">This is used to identify the injury. Include the body part and what happened.</p>
+          </div>
+
+          <div className="gi-step-header">
+            <p className="gi-step-track">{stepLabel}</p>
+            <div className="gi-stepper" aria-label="Injury intake progress">
+              {stepStatus.map((step) => (
+                <div key={step.key} className={`gi-stepper-item ${step.active ? "gi-stepper-item-active" : ""} ${step.done ? "gi-stepper-item-done" : ""}`.trim()}>
+                  <span className="gi-stepper-dot" aria-hidden="true">{step.done ? "✓" : "•"}</span>
+                  <span>{step.label}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Injury family + stepped selector */}
+          <div className="gi-field">
+            <label className="gi-label">Closest category, if known</label>
+            <p className="gi-selection-helper">Used as a fallback if the description is unclear.</p>
+            {activeFamily && !familyExpanded ? (
+              <div className="gi-selection-summary">
+                <div>
+                  <p className="gi-selection-title">{selectedFamilyOption?.label}</p>
+                  <p className="gi-selection-helper">{selectedFamilyOption?.helper}</p>
+                </div>
+                <button type="button" className="gi-change-btn" onClick={() => setFamilyExpanded(true)} aria-expanded={familyExpanded}>Change</button>
+              </div>
+            ) : null}
+            {familyExpanded || !activeFamily ? (
+              <div className="gi-family-grid" role="radiogroup" aria-label="Injury family">
+              {INJURY_FAMILIES.map((family) => {
+                const selected = activeFamily === family.family;
+                return (
+                  <button
+                    key={family.family}
+                    type="button"
+                    role="radio"
+                    aria-checked={selected}
+                    className={`gi-family-card ${selected ? "gi-family-card-selected" : ""}`.trim()}
+                    onClick={() => handleFamilySelect(family.family)}
+                  >
+                    <span>{family.label}</span>
+                    <small>{family.helper}</small>
+                  </button>
+                );
+              })}
+              </div>
+            ) : null}
           </div>
 
           {/* Default visible: Severity + Trend */}
@@ -1020,92 +1124,11 @@ function handleTypeSelect(opt: InjuryTypeOption | null) {
             </div>
           </div>
 
-          <div className="gi-step-header">
-            <p className="gi-step-track">{stepLabel}</p>
-            <div className="gi-stepper" aria-label="Injury intake progress">
-              {stepStatus.map((step) => (
-                <div key={step.key} className={`gi-stepper-item ${step.active ? "gi-stepper-item-active" : ""} ${step.done ? "gi-stepper-item-done" : ""}`.trim()}>
-                  <span className="gi-stepper-dot" aria-hidden="true">{step.done ? "✓" : "•"}</span>
-                  <span>{step.label}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Injury family + stepped selector */}
-          <div className="gi-field">
-            <label className="gi-label">Injury family</label>
-            {activeFamily && !familyExpanded ? (
-              <div className="gi-selection-summary">
-                <div>
-                  <p className="gi-selection-title">{selectedFamilyOption?.label}</p>
-                  <p className="gi-selection-helper">{selectedFamilyOption?.helper}</p>
-                </div>
-                <button type="button" className="gi-change-btn" onClick={() => setFamilyExpanded(true)} aria-expanded={familyExpanded}>Change</button>
-              </div>
-            ) : null}
-            {familyExpanded || !activeFamily ? (
-              <div className="gi-family-grid" role="radiogroup" aria-label="Injury family">
-              {INJURY_FAMILIES.map((family) => {
-                const selected = activeFamily === family.family;
-                return (
-                  <button
-                    key={family.family}
-                    type="button"
-                    role="radio"
-                    aria-checked={selected}
-                    className={`gi-family-card ${selected ? "gi-family-card-selected" : ""}`.trim()}
-                    onClick={() => handleFamilySelect(family.family)}
-                  >
-                    <span>{family.label}</span>
-                    <small>{family.helper}</small>
-                  </button>
-                );
-              })}
-              </div>
-            ) : null}
-          </div>
-
-          {activeFamily ? (
-            <div className="gi-subtype-panel gi-field">
-              <label className="gi-label">Injury type</label>
-              {injury.injury_type && !subtypeExpanded ? (
-                <div className="gi-selection-summary">
-                  <p className="gi-selection-title">{selectedTypeLabel}</p>
-                  <button type="button" className="gi-change-btn" onClick={() => setSubtypeExpanded(true)} aria-expanded={subtypeExpanded}>Change</button>
-                </div>
-              ) : null}
-              {subtypeExpanded || !injury.injury_type ? (
-                <div className="gi-subtype-grid" role="radiogroup" aria-label="Injury subtype">
-                {getOptionsForFamily(activeFamily).map((opt) => {
-                  const isSelected =
-                    injury.injury_type === opt.value &&
-                    (opt.value !== "surface_injury" || injury.surface_type === (opt.surface_type ?? ""));
-                  return (
-                    <button
-                      key={`${opt.value}-${opt.surface_type ?? ""}`}
-                      type="button"
-                      role="radio"
-                      aria-checked={isSelected}
-                      className={`gi-chip ${isSelected ? "gi-chip-selected" : ""}`}
-                      onClick={() => {
-                        handleTypeSelect(opt);
-                        setSubtypeExpanded(false);
-                      }}
-                    >
-                      {opt.label}
-                    </button>
-                  );
-                })}
-                </div>
-              ) : null}
-            </div>
-          ) : null}
 
           {/* Progressive follow-up questions */}
           {hasFollowUp ? (
             <div className="gi-safety-panel">
-              <FollowUpQuestions injury={injury} onUpdate={onUpdate} />
+              <FollowUpQuestions injury={injury} family={activeFamily} onUpdate={onUpdate} />
             </div>
           ) : null}
 
