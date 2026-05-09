@@ -48,7 +48,7 @@ def normalize_injury_text(raw: str | None) -> str:
 
     parts = [
         part.strip()
-        for part in re.split(r"\s*(?:,|;|/|\+|\n)\s*", cleaned, flags=re.IGNORECASE)
+        for part in re.split(r"\s*(?:,|;|/|\+|\n| and )\s*", cleaned, flags=re.IGNORECASE)
         if part.strip()
     ]
     remaining: list[str] = []
