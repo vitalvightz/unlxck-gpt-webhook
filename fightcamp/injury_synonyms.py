@@ -1035,6 +1035,48 @@ _LEGACY_MOJIBAKE_DASH_SEPARATORS = [
     f" {chr(0x00e2)}{chr(0x20ac)}{chr(0x201d)} ",
 ]
 
+_AND_PROTECT_TOKEN = "__inj_and_keep__"
+_BODY_PART_HINTS = {
+    "ankle", "wrist", "shoulder", "knee", "hip", "back", "elbow", "hand", "foot",
+    "calf", "hamstring", "quad", "groin", "neck", "shin", "thigh",
+}
+_MECHANISM_CONTINUATION_HINTS = {
+    "gave way", "twisted", "locked", "felt unstable", "overextended", "buckled", "planted",
+    "gave", "way", "unstable", "plant", "locked up",
+}
+
+
+def _contains_hint(text: str, hints: set[str]) -> bool:
+    lowered = f" {text.lower()} "
+    return any(f" {hint} " in lowered for hint in hints)
+
+
+def _protect_mechanism_and_connectors(text: str) -> str:
+    if " and " not in text.lower():
+        return text
+    boundary_pattern = re.compile(r"[.;,\n/|+]")
+    and_pattern = re.compile(r"\band\b", re.IGNORECASE)
+    result = text
+    offset = 0
+    for match in and_pattern.finditer(text):
+        start, end = match.span()
+        left_boundary = max([m.end() for m in boundary_pattern.finditer(text, 0, start)] or [0])
+        right_match = boundary_pattern.search(text, end)
+        right_boundary = right_match.start() if right_match else len(text)
+        left = text[left_boundary:start].strip()
+        right = text[end:right_boundary].strip()
+        if not left or not right:
+            continue
+        left_has_body = _contains_hint(left, _BODY_PART_HINTS)
+        right_has_body = _contains_hint(right, _BODY_PART_HINTS)
+        right_mechanism_only = _contains_hint(right, _MECHANISM_CONTINUATION_HINTS) and not right_has_body
+        if left_has_body and right_mechanism_only:
+            patched_start = start + offset
+            patched_end = end + offset
+            result = result[:patched_start] + _AND_PROTECT_TOKEN + result[patched_end:]
+            offset += len(_AND_PROTECT_TOKEN) - (end - start)
+    return result
+
 
 def _normalize_injury_text_separators(text: str) -> str:
     normalized = text
@@ -1049,23 +1091,23 @@ def split_injury_text(raw_text: str) -> list[str]:
     if not nlp:
         if not raw_text:
             return []
-        text = raw_text.lower()
+        text = _protect_mechanism_and_connectors(raw_text.lower())
         text = re.sub(r"[()]", " ", text)
         text = re.sub(r"\b(and|but|also)\b,?", ". ", text)
         text = _normalize_injury_text_separators(text)
         return [
-            cleaned
+            cleaned.replace(_AND_PROTECT_TOKEN, " and ")
             for chunk in text.split(".")
             if (cleaned := _strip_surrounding_punct(chunk))
         ]
-    text = raw_text.lower()
+    text = _protect_mechanism_and_connectors(raw_text.lower())
     text = re.sub(r"[()]", " ", text)
     # Replace common connectors with punctuation so spaCy can split sentences
     text = re.sub(r"\b(and|but|also)\b,?", ". ", text)
     text = _normalize_injury_text_separators(text)
     doc = nlp(text)
     return [
-        cleaned
+        cleaned.replace(_AND_PROTECT_TOKEN, " and ")
         for sent in doc.sents
         if (cleaned := _strip_surrounding_punct(sent.text))
     ]
