@@ -309,7 +309,15 @@ def _process_structured_injury_item(item: Any, guided: dict[str, Any]) -> dict[s
     elif severity in {"high", "severe"}:
         tier = "high"
     else:
-        tier = _severity_tier(combined, instability, False)
+    daily_symptoms = any(token in combined for token in ("rest pain", "daily", "walking", "stairs", "sleep", "constant"))
+    if severity in {"mild", "low"}:
+        tier = "low"
+    elif severity in {"moderate"}:
+        tier = "moderate"
+    elif severity in {"high", "severe"}:
+        tier = "high"
+    else:
+        tier = _severity_tier(combined, instability, daily_symptoms)
     worsening = trend in _WORSENING_TOKENS or any(token in combined for token in _WORSENING_TOKENS)
     improving = trend in _IMPROVING_TOKENS or any(token in combined for token in _IMPROVING_TOKENS)
     stable = trend in _STABLE_TOKENS or any(token in combined for token in _STABLE_TOKENS)
