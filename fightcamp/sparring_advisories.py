@@ -302,9 +302,9 @@ def _process_structured_injury_item(item: Any, guided: dict[str, Any]) -> dict[s
         injury_type = "hyperextension"
     if canonical_location == "knee" and instability:
         injury_type = "instability"
-    worsening = trend in _WORSENING_TOKENS or any(token in combined for token in _WORSENING_TOKENS)
-    improving = trend in _IMPROVING_TOKENS or any(token in combined for token in _IMPROVING_TOKENS)
-    stable = trend in _STABLE_TOKENS or any(token in combined for token in _STABLE_TOKENS)
+    worsening = any(token in combined for token in _WORSENING_TOKENS)
+    improving = any(token in combined for token in _IMPROVING_TOKENS)
+    stable = any(token in combined for token in _STABLE_TOKENS)
     traj = _trajectory(combined, worsening, improving, stable)
     daily_symptoms = any(token in combined for token in ("daily", "rest pain", "night pain", "sleep", "walking", "stairs", "constant"))
     if severity in {"mild", "low"}:
