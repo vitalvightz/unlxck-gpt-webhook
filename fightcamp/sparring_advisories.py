@@ -306,7 +306,7 @@ def _process_structured_injury_item(item: Any, guided: dict[str, Any]) -> dict[s
     improving = trend in _IMPROVING_TOKENS or any(token in combined for token in _IMPROVING_TOKENS)
     stable = trend in _STABLE_TOKENS or any(token in combined for token in _STABLE_TOKENS)
     traj = _trajectory(combined, worsening, improving, stable)
-    daily_symptoms = any(token in combined for token in ("rest pain", "daily", "walking", "stairs", "sleep", "constant"))
+    daily_symptoms = any(token in combined for token in ("daily", "rest pain", "night pain", "sleep", "walking", "stairs", "constant"))
     if severity in {"mild", "low"}:
         tier = "low"
     elif severity in {"moderate"}:
