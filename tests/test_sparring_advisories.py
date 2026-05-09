@@ -555,6 +555,52 @@ class TestRiskBandKeyRules:
         )
         assert entries[0]["risk_band"] == "red"
 
+    def test_structured_parsed_injury_takes_precedence_over_guided_raw_phrase(self):
+        raw_phrase = "Right knee went back as I planted it I think I overextended it"
+        entries = _sparring_injury_entries(
+            {
+                "parsed_injuries": [
+                    {
+                        "original_phrase": raw_phrase,
+                        "canonical_location": "knee",
+                        "display_location": "right knee",
+                        "laterality": "right",
+                        "injury_type": "sprain",
+                        "severity": "mild",
+                        "trend": "stable",
+                    }
+                ],
+                "guided_injury": {
+                    "injury_type": "instability / giving way",
+                    "severity": "low",
+                    "trend": "stable",
+                    "notes": raw_phrase,
+                },
+            }
+        )
+
+        assert entries
+        assert entries[0]["region"] == "knee"
+        assert entries[0]["display_location"] == "right knee"
+        assert entries[0]["injury_type"] == "instability"
+        assert entries[0]["risk_band"] in {"amber", "red"}
+        assert entries[0]["region"] != "lower_back"
+
+    def test_structured_parser_falls_back_to_raw_injuries_when_parsed_missing(self):
+        entries = _sparring_injury_entries(
+            {
+                "guided_injury": {
+                    "injury_type": "instability / giving way",
+                    "severity": "low",
+                    "trend": "stable",
+                    "notes": "right knee gives way when I plant",
+                },
+                "injuries": ["right knee gives way when I plant"],
+            }
+        )
+
+        assert entries
+
     def test_non_functional_cannot_phrase_does_not_force_high_severity(self):
         assert _entry("cannot train Tuesday due to travel")["risk_band"] == "green"
 
