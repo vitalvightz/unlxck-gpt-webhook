@@ -505,7 +505,7 @@ def _resolve_guided_injury_type(guided_injury: GuidedInjury) -> tuple[str | None
         final_type = guided_type
     elif guided_type == "tendon_ligament":
         final_type = "tendon_rupture_or_avulsion" if rupture_evidence else "soft_tissue_joint_issue"
-    elif guided_type in _GUIDED_EVIDENCE_ONLY_TYPES or guided_type == "surface_injury":
+    elif guided_type == "surface_injury":
         final_type = "unspecified"
     else:
         final_type = guided_type or "unspecified"
