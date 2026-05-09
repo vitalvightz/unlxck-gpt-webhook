@@ -1036,6 +1036,9 @@ _LEGACY_MOJIBAKE_DASH_SEPARATORS = [
 ]
 
 _AND_PROTECT_TOKEN = "__inj_and_keep__"
+_BOUNDARY_PATTERN = re.compile(r"[.;,\n/|+]")
+_AND_PATTERN = re.compile(r"\band\b", re.IGNORECASE)
+
 _BODY_PART_HINTS = {
     "ankle", "wrist", "shoulder", "knee", "hip", "back", "elbow", "hand", "foot",
     "calf", "hamstring", "quad", "groin", "neck", "shin", "thigh",
@@ -1054,14 +1057,12 @@ def _contains_hint(text: str, hints: set[str]) -> bool:
 def _protect_mechanism_and_connectors(text: str) -> str:
     if " and " not in text.lower():
         return text
-    boundary_pattern = re.compile(r"[.;,\n/|+]")
-    and_pattern = re.compile(r"\band\b", re.IGNORECASE)
     result = text
     offset = 0
-    for match in and_pattern.finditer(text):
+    for match in _AND_PATTERN.finditer(text):
         start, end = match.span()
-        left_boundary = max([m.end() for m in boundary_pattern.finditer(text, 0, start)] or [0])
-        right_match = boundary_pattern.search(text, end)
+        left_boundary = max([m.end() for m in _BOUNDARY_PATTERN.finditer(text, 0, start)] or [0])
+        right_match = _BOUNDARY_PATTERN.search(text, end)
         right_boundary = right_match.start() if right_match else len(text)
         left = text[left_boundary:start].strip()
         right = text[end:right_boundary].strip()
