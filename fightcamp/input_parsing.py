@@ -2,12 +2,14 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
+import os
 import re
 from typing import Literal
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 from dateutil.tz import gettz
 
 from .injury_formatting import parse_injuries_and_restrictions, parse_injury_entry
+from .injury_synonyms import parse_injury_phrase
 from .normalization import normalize_injury_marker as _normalize_injury_marker
 from .normalization import normalize_label as _normalize_label
 from .restriction_parsing import ParsedRestriction, parse_restriction_entry
@@ -417,6 +419,22 @@ _GUIDED_STRUCTURAL_NOTE_PATTERN = re.compile(
     r"\b(?:acl|tear|rupture|reconstruction|dislocation|fracture|concussion)\b",
     re.IGNORECASE,
 )
+_GUIDED_BROAD_TYPES = {
+    "tendon_ligament",
+    "post_surgery",
+    "fracture",
+    "dislocation",
+    "surface_injury",
+    "unspecified",
+}
+_GUIDED_SURFACE_TYPE_TO_INJURY_TYPE = {
+    "bruise": "contusion",
+    "cut": "cut",
+    "laceration": "laceration",
+    "abrasion": "abrasion",
+    "graze": "graze",
+    "blister": "blister",
+}
 
 
 def _extract_guided_injury(data: dict) -> GuidedInjury | None:
@@ -464,6 +482,37 @@ def _strip_guided_laterality(area: str, laterality: str | None) -> str:
     return _GUIDED_LATERALITY_PREFIX.sub("", cleaned, count=1).strip() or cleaned
 
 
+def _resolve_guided_injury_type(guided_injury: GuidedInjury) -> tuple[str | None, str | None]:
+    area_text = (guided_injury.area or "").strip()
+    notes_text = (guided_injury.notes or "").strip()
+    avoid_text = (guided_injury.avoid or "").strip()
+    combined_text = " ".join(part for part in (area_text, notes_text, avoid_text) if part).strip()
+
+    parser_type, parser_location = parse_injury_phrase(combined_text) if combined_text else (None, None)
+    guided_type = (guided_injury.injury_type or "").strip().lower()
+    if guided_type == "surface_injury":
+        guided_type = _GUIDED_SURFACE_TYPE_TO_INJURY_TYPE.get(
+            (guided_injury.surface_type or "").strip().lower(),
+            guided_type,
+        )
+    if guided_type in _GUIDED_BROAD_TYPES:
+        guided_type = ""
+
+    final_type = parser_type or guided_type or "unspecified"
+
+    if os.getenv("INJURY_DEBUG") == "1":
+        print(
+            "[injury-resolve] "
+            f"area={area_text!r} "
+            f"parser_type={parser_type!r} "
+            f"parser_loc={parser_location!r} "
+            f"guided_type={guided_type!r} "
+            f"final_type={final_type!r}"
+        )
+
+    return final_type, parser_location
+
+
 def _parse_guided_injury(guided_injury: GuidedInjury) -> tuple[list[dict[str, str | None]], list[ParsedRestriction]]:
     injuries: list[dict[str, str | None]] = []
     restrictions: list[ParsedRestriction] = []
@@ -478,6 +527,11 @@ def _parse_guided_injury(guided_injury: GuidedInjury) -> tuple[list[dict[str, st
                 "laterality": None,
                 "original_phrase": guided_injury.area,
             }
+        resolved_type, resolved_location = _resolve_guided_injury_type(guided_injury)
+        if resolved_type:
+            injury_entry["injury_type"] = resolved_type
+        if resolved_location and not injury_entry.get("canonical_location"):
+            injury_entry["canonical_location"] = resolved_location
 
         laterality = injury_entry.get("laterality") or injury_entry.get("side")
         display_location = _strip_guided_laterality(guided_injury.area, laterality)

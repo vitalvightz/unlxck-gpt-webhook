@@ -7,6 +7,7 @@ import pytest
 from fightcamp import input_parsing
 from fightcamp.fight_date_utils import parse_fight_date
 from fightcamp.input_parsing import PlanInput
+from fightcamp.injury_formatting import format_injury_summary
 from fightcamp.plan_pipeline_runtime import build_runtime_context
 
 
@@ -253,6 +254,83 @@ def test_guided_injury_payload_treats_area_as_source_of_truth():
     assert parsed.parsed_injuries[0]["severity"] == "moderate"
     assert len(parsed.restrictions) == 1
     assert parsed.restrictions[0]["region"] == "hip"
+
+
+def test_guided_hyperextended_right_knee_resolves_and_formats_top_line_note():
+    payload = _payload(
+        [
+            {"label": "Full name", "value": "Test Athlete"},
+            {"label": "Fighting Style (Technical)", "value": "Boxing"},
+            {"label": "Any injuries or areas you need to work around?", "value": ""},
+        ]
+    )
+    payload["guided_injury"] = {
+        "area": "Hyperextended right knee",
+        "severity": "moderate",
+        "trend": "improving",
+        "injury_type": "",
+        "surface_type": "",
+        "timeframe": "last_week",
+        "cleared": "no",
+        "impact_related": "yes",
+        "notes": "",
+        "avoid": "",
+    }
+
+    parsed = PlanInput.from_payload(payload)
+    entry = parsed.parsed_injuries[0]
+    summary = format_injury_summary(entry)
+
+    assert entry["injury_type"] == "hyperextension"
+    assert entry["canonical_location"] == "knee"
+    assert entry["side"] == "right"
+    assert "Right knee — Hyperextension" in summary
+    assert "contusion" not in summary.lower()
+
+
+def test_guided_broad_type_does_not_override_specific_hyperextension():
+    payload = _payload(
+        [
+            {"label": "Full name", "value": "Test Athlete"},
+            {"label": "Fighting Style (Technical)", "value": "Boxing"},
+            {"label": "Any injuries or areas you need to work around?", "value": ""},
+        ]
+    )
+    payload["guided_injury"] = {
+        "area": "Hyperextended right knee",
+        "severity": "moderate",
+        "trend": "improving",
+        "injury_type": "tendon_ligament",
+        "surface_type": "",
+        "notes": "",
+        "avoid": "",
+    }
+
+    parsed = PlanInput.from_payload(payload)
+    entry = parsed.parsed_injuries[0]
+
+    assert entry["injury_type"] == "hyperextension"
+    assert entry["canonical_location"] == "knee"
+
+
+def test_guided_examples_keep_expected_parser_types():
+    payload = _payload(
+        [
+            {"label": "Full name", "value": "Test Athlete"},
+            {"label": "Fighting Style (Technical)", "value": "Boxing"},
+            {"label": "Any injuries or areas you need to work around?", "value": ""},
+        ]
+    )
+
+    payload["guided_injury"] = {"area": "Right knee bruise"}
+    parsed = PlanInput.from_payload(payload)
+    assert parsed.parsed_injuries[0]["injury_type"] == "contusion"
+    assert parsed.parsed_injuries[0]["canonical_location"] == "knee"
+
+    payload["guided_injury"] = {"area": "Rolled right ankle"}
+    parsed = PlanInput.from_payload(payload)
+    assert parsed.parsed_injuries[0]["injury_type"] == "sprain"
+    assert parsed.parsed_injuries[0]["canonical_location"] == "ankle"
 
 
 def test_guided_injuries_payload_parses_multiple_cards_and_preserves_notes():

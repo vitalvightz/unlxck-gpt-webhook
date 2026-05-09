@@ -180,6 +180,15 @@ def test_guided_injury_structural_tear_not_limited_to_acl():
     assert "scored_structural_severe_signal" in triage.routing_reasons
 
 
+def test_patellar_tendon_rupture_routes_to_restricted_rehab():
+    parsed = PlanInput.from_payload(_payload_with_injury("Patellar tendon rupture"))
+    triage = triage_injuries(parsed)
+
+    assert triage.mode == RESTRICTED_REHAB_ONLY
+    assert triage.should_block_stage2 is True
+    assert "patellar_tendon_rupture" in triage.matched_high_risk_categories
+
+
 def test_blocked_modes_do_not_reach_stage2_or_normal_pipeline(monkeypatch):
     payload = _payload_with_injury("open fracture with deformity")
 
