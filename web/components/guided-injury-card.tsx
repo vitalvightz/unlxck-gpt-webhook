@@ -521,7 +521,7 @@ function FollowUpQuestions({
       <div className="gi-field"><label className="gi-label">Did it follow impact/contact?</label><SingleChipRow label="Impact related" options={YES_NO_UNSURE} value={injury.impact_related} onChange={(v) => onUpdate("impact_related", v)} /></div>
     </div>;
   }
-  }
+
   if (injury_type === "unspecified" && family === "surface") return <SurfaceFollowUp injury={injury} onUpdate={onUpdate} />;
 
   if (injury_type === "fracture") {
