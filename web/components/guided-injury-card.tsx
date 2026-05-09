@@ -66,11 +66,11 @@ const INJURY_TYPE_GROUPS: InjuryTypeGroup[] = [
 ];
 
 const INJURY_FAMILIES: InjuryFamilyOption[] = [
-  { family: "pain_movement", label: "Muscle / tendon / joint pain", helper: "Used as fallback if your description is unclear." },
-  { family: "structural", label: "Bone or dislocation", helper: "Used as fallback if your description is unclear." },
-  { family: "head_nerve_breathing", label: "Head, nerve or breathing issue", helper: "Used as fallback if your description is unclear." },
-  { family: "surface", label: "Skin injury", helper: "Used as fallback if your description is unclear." },
-  { family: "not_sure", label: "Not sure", helper: "Used as fallback if your description is unclear." },
+  { family: "pain_movement", label: "Muscle / tendon / joint pain", helper: "Soreness, tightness, strains. Used as fallback if description is unclear." },
+  { family: "structural", label: "Bone or dislocation", helper: "Fracture, dislocation, ligament. Used as fallback if description is unclear." },
+  { family: "head_nerve_breathing", label: "Head, nerve or breathing issue", helper: "Concussion, nerve, breathing. Used as fallback if description is unclear." },
+  { family: "surface", label: "Skin injury", helper: "Cuts, blisters, bruises. Used as fallback if description is unclear." },
+  { family: "not_sure", label: "Not sure", helper: "I do not know yet. Used as fallback if description is unclear." },
 ];
 
 const FAMILY_TO_HEADING: Record<Exclude<InjuryFamily, "not_sure">, string> = {
