@@ -484,6 +484,10 @@ def _parse_guided_injury(guided_injury: GuidedInjury) -> tuple[list[dict[str, st
         if display_location:
             injury_entry["display_location"] = display_location
 
+        guided_injury_type = guided_injury.injury_type.strip().lower()
+        if guided_injury_type:
+            injury_entry["injury_type"] = guided_injury_type
+
         mapped_severity = _GUIDED_SEVERITY_MAP.get(guided_injury.severity.lower())
         if mapped_severity:
             injury_entry["severity"] = mapped_severity

@@ -255,6 +255,46 @@ def test_guided_injury_payload_treats_area_as_source_of_truth():
     assert parsed.restrictions[0]["region"] == "hip"
 
 
+def test_guided_injury_payload_carries_explicit_injury_type():
+    payload = _payload(
+        [
+            {"label": "Full name", "value": "Test Athlete"},
+            {"label": "Fighting Style (Technical)", "value": "Boxing"},
+            {"label": "Any injuries or areas you need to work around?", "value": "right knee"},
+        ]
+    )
+    payload["guided_injury"] = {
+        "area": "right knee",
+        "injury_type": "sprain",
+        "severity": "low",
+        "trend": "stable",
+    }
+
+    parsed = PlanInput.from_payload(payload)
+
+    assert parsed.parsed_injuries[0]["injury_type"] == "sprain"
+    assert parsed.parsed_injuries[0]["severity"] == "mild"
+    assert parsed.parsed_injuries[0]["trend"] == "stable"
+
+
+def test_guided_injury_payload_blank_injury_type_keeps_area_inference():
+    payload = _payload(
+        [
+            {"label": "Full name", "value": "Test Athlete"},
+            {"label": "Fighting Style (Technical)", "value": "Boxing"},
+            {"label": "Any injuries or areas you need to work around?", "value": "right knee"},
+        ]
+    )
+    payload["guided_injury"] = {
+        "area": "right knee",
+        "injury_type": "   ",
+    }
+
+    parsed = PlanInput.from_payload(payload)
+
+    assert parsed.parsed_injuries[0]["injury_type"] == "unspecified"
+
+
 def test_guided_injuries_payload_parses_multiple_cards_and_preserves_notes():
     payload = _payload(
         [
