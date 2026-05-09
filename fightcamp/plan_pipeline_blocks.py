@@ -180,12 +180,89 @@ def _build_phase_support_block(context: PlanRuntimeContext, builder) -> str:
     return "\n\n".join(section for section in sections if section)
 
 
+def _normalize_guided_injury_type(value: str | None) -> str:
+    normalized = " ".join(str(value or "").strip().lower().replace("_", " ").replace("/", " ").split())
+    if not normalized:
+        return ""
+    if "instability" in normalized or "giving way" in normalized:
+        return "instability"
+    return normalized
+
+
+def _build_rehab_injury_string(context: PlanRuntimeContext) -> str:
+    parsed_entries = context.plan_input.parsed_injuries or []
+    if not parsed_entries:
+        return context.injuries_only_text
+
+    guided = context.plan_input.guided_injury
+    guided_injury_type = _normalize_guided_injury_type(getattr(guided, "injury_type", None) if guided else None)
+    guided_notes = " ".join(
+        str(part or "")
+        for part in (
+            getattr(guided, "notes", None) if guided else None,
+            getattr(guided, "area", None) if guided else None,
+        )
+    ).lower()
+
+    phrases: list[str] = []
+    for entry in parsed_entries:
+        canonical_location = str(entry.get("canonical_location") or "").strip().lower()
+        display_location = str(entry.get("display_location") or "").strip().lower()
+        laterality = str(entry.get("laterality") or entry.get("side") or "").strip().lower()
+
+        location = display_location or canonical_location
+        if laterality and location and not location.startswith(f"{laterality} "):
+            location = f"{laterality} {location}"
+        elif not location:
+            location = laterality
+
+        raw_context = " ".join(
+            str(part or "")
+            for part in (
+                entry.get("original_phrase"),
+                entry.get("notes"),
+                guided_notes,
+            )
+        ).lower()
+        knee_movement_language = any(
+            token in raw_context
+            for token in (
+                "went back",
+                "bent back",
+                "locked back",
+                "overextend",
+                "overextended",
+                "hyperextend",
+                "hyperextended",
+            )
+        )
+        is_knee = canonical_location == "knee" or "knee" in display_location
+
+        injury_type = str(entry.get("injury_type") or "").strip().lower()
+        if guided_injury_type == "instability":
+            injury_type = "instability"
+        if is_knee and knee_movement_language and injury_type in {"", "sprain", "unspecified", "pain", "soreness", "tightness", "stiffness"}:
+            injury_type = "hyperextension"
+        if guided_injury_type == "instability" and is_knee:
+            injury_type = "instability"
+
+        severity = str(entry.get("severity") or "").strip().lower()
+        trend = str(entry.get("trend") or "").strip().lower()
+
+        components = [part for part in (location, injury_type, severity, trend) if part]
+        if components:
+            phrases.append(" ".join(components))
+
+    return "; ".join(phrases) if phrases else context.injuries_only_text
+
+
 def _generate_rehab_support_bundle(context: PlanRuntimeContext) -> tuple[dict[str, str], dict[str, str], str, bool, str, str, str]:
     rehab_blocks = {phase: "" for phase in PHASES}
+    rehab_injury_string = _build_rehab_injury_string(context)
 
     if context.phase_active("GPP"):
         rehab_blocks["GPP"], _ = generate_rehab_protocols(
-            injury_string=context.injuries_only_text,
+            injury_string=rehab_injury_string,
             exercise_data=context.exercise_bank,
             current_phase="GPP",
         )
@@ -197,7 +274,7 @@ def _generate_rehab_support_bundle(context: PlanRuntimeContext) -> tuple[dict[st
         for phase in ("SPP", "TAPER"):
             if context.phase_active(phase):
                 rehab_blocks[phase], _ = generate_rehab_protocols(
-                    injury_string=context.injuries_only_text,
+                    injury_string=rehab_injury_string,
                     exercise_data=context.exercise_bank,
                     current_phase=phase,
                 )
@@ -224,7 +301,7 @@ def _generate_rehab_support_bundle(context: PlanRuntimeContext) -> tuple[dict[st
         context,
         lambda phase, bf=base_flags: generate_nutrition_block(flags={**bf, "phase": phase}),
     )
-    support_notes = generate_support_notes(context.injuries_only_text) if has_injuries else ""
+    support_notes = generate_support_notes(rehab_injury_string) if has_injuries else ""
 
     if context.apply_muay_thai_filters:
         rehab_blocks = {
@@ -348,7 +425,7 @@ def generate_plan_blocks(
 
     timer_start = perf_counter()
     coach_review_notes, strength_blocks, conditioning_blocks, substitutions = run_coach_review(
-        injury_string=context.injuries_only_text,
+        injury_string=rehab_injury_string,
         phase=current_phase,
         training_context=context.training_context.to_flags(),
         parsed_injury_entries=context.plan_input.parsed_injuries,

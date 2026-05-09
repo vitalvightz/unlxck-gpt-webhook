@@ -134,3 +134,47 @@ def test_surface_terms_do_not_fall_back_to_old_pain_or_contusion_buckets():
     parsed_type, _ = parse_injury_phrase("surface scrape on knee")
     assert parsed_type == "abrasion"
     assert parsed_type != "pain"
+
+
+def test_build_rehab_injury_string_prefers_structured_knee_instability():
+    from types import SimpleNamespace
+
+    from fightcamp.plan_pipeline_blocks import _build_rehab_injury_string
+
+    context = SimpleNamespace(
+        plan_input=SimpleNamespace(
+            parsed_injuries=[
+                {
+                    "original_phrase": "Right knee went back as I planted it I think I overextended it",
+                    "canonical_location": "knee",
+                    "display_location": "right knee",
+                    "laterality": "right",
+                    "injury_type": "sprain",
+                    "severity": "mild",
+                    "trend": "stable",
+                }
+            ],
+            guided_injury=SimpleNamespace(
+                injury_type="instability / giving way",
+                notes="knee gave way on plant",
+                area="right knee",
+            ),
+        ),
+        injuries_only_text="Right knee went back as I planted it I think I overextended it",
+    )
+
+    assert _build_rehab_injury_string(context) == "right knee instability mild stable"
+
+
+def test_build_rehab_injury_string_falls_back_to_raw_when_no_parsed_entries():
+    from types import SimpleNamespace
+
+    from fightcamp.plan_pipeline_blocks import _build_rehab_injury_string
+
+    raw_text = "Right knee went back as I planted it I think I overextended it"
+    context = SimpleNamespace(
+        plan_input=SimpleNamespace(parsed_injuries=[], guided_injury=None),
+        injuries_only_text=raw_text,
+    )
+
+    assert _build_rehab_injury_string(context) == raw_text
