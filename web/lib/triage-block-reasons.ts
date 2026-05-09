@@ -39,6 +39,7 @@ const INJURY_REASON_SYNONYMS: Array<{ label: string; patterns: RegExp[] }> = [
   { label: "Dislocation", patterns: [/\bdislocation\b/i, /\bdislocated\b/i, /\bsublux(?:ation)?\b/i] },
   { label: "Sprain", patterns: [/\bsprain\b/i, /\brolled\s+ankle\b/i, /\btwisted\s+ankle\b/i] },
   { label: "Strain", patterns: [/\bstrain\b/i, /\bpulled\s+muscle\b/i] },
+  { label: "Overextension", patterns: [/\boverextension\b/i, /\boverextend(?:ed|ing)?\b/i, /\boverstretch(?:ed|ing)?\b/i] },
   { label: "Instability", patterns: [/\binstability\b/i, /\bgiving\s+way\b/i, /\bunstable\b/i] },
   { label: "Head impact", patterns: [/\bconcussion\b/i, /\bhead\s+impact\b/i, /\bknocked\s+out\b/i] },
   { label: "Nerve symptoms", patterns: [/\bnumb(?:ness)?\b/i, /\btingl(?:e|ing)\b/i, /\bnerve\b/i] },
@@ -46,6 +47,19 @@ const INJURY_REASON_SYNONYMS: Array<{ label: string; patterns: RegExp[] }> = [
   { label: "Surface injury", patterns: [/\bcut\b/i, /\blaceration\b/i, /\babrasion\b/i, /\bblister\b/i, /\bwound\b/i] },
   { label: "Swelling", patterns: [/\bswell(?:ing)?\b/i, /\binflammation\b/i] },
 ];
+
+function buildNaturalInjurySignal({
+  area,
+  injuryType,
+}: {
+  area: string | null;
+  injuryType: string | null;
+}): string | null {
+  if (injuryType && area) return `${injuryType} around the ${area}`;
+  if (injuryType) return injuryType;
+  if (area) return area;
+  return null;
+}
 
 function inferInjuryReasonFromText(value: string): string | null {
   const text = value.trim();
@@ -145,12 +159,32 @@ export function summarizeBlockedInjuryContext({
     .map((injury) => (typeof injury.notes === "string" ? inferInjuryReasonFromText(injury.notes) : null))
     .filter((value): value is string => Boolean(value)))]
     .slice(0, 2);
+  const naturalGuidedSignals = (guidedInjuries ?? [])
+    .map((injury) => {
+      const area = typeof injury.area === "string" ? injury.area.trim() : "";
+      const typeKey = typeof injury.injury_type === "string" ? injury.injury_type.trim().toLowerCase() : "";
+      const mappedType = typeKey ? (INJURY_TYPE_LABELS[typeKey] ?? "") : "";
+      const inferredType = typeof injury.notes === "string" ? inferInjuryReasonFromText(injury.notes) : null;
+      return buildNaturalInjurySignal({
+        area: area || null,
+        injuryType: mappedType || inferredType || null,
+      });
+    })
+    .filter((value): value is string => Boolean(value))
+    .slice(0, 2);
+  const inferredTextSignal = buildNaturalInjurySignal({
+    area: areas[0] ?? null,
+    injuryType: inferredFromText,
+  });
+
   const allOrdered = [...new Set([
     ...highRiskLabels,
     ...redFlagLabels,
     ...urgentFlagLabels,
     ...reasonLabels,
+    ...naturalGuidedSignals,
     ...guidedTypes,
+    ...(inferredTextSignal ? [inferredTextSignal] : []),
     ...(inferredFromText ? [inferredFromText] : []),
     ...inferredFromGuidedNotes,
     ...(injuryLine ? [injuryLine] : []),
