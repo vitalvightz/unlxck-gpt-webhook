@@ -256,7 +256,7 @@ function isSafetyComplete(injury: GuidedInjuryState, family: InjuryFamily | ""):
         hasStructuralDeformity
       );
     }
-    if (family === "head_nerve_breathing") return Boolean(parseNotesFlags(injury.notes, "red_flags").length > 0 && parseNotesFlags(injury.notes, "nerve_symptoms").length > 0 && parseNotesFlags(injury.notes, "chest_symptoms").length > 0);
+    if (family === "head_nerve_breathing") return Boolean(parseNotesFlags(injury.notes, "red_flags").length > 0 && parseNotesFlags(injury.notes, "nerve_symptoms").length > 0 && parseNotesFlags(injury.notes, "chest_symptoms").length > 0 && injury.impact_related);
     if (family === "surface") return Boolean(injury.open_wound && injury.bleeding_status && injury.sensitive_area && injury.infection_signs.length > 0);
     return true;
   }
