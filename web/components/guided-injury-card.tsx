@@ -830,7 +830,6 @@ export function GuidedInjuryCard({
   const [notesOpen, setNotesOpen] = useState(Boolean(injury.notes.trim()));
   const [draftFamily, setDraftFamily] = useState<InjuryFamily | "">("");
   const [familyExpanded, setFamilyExpanded] = useState(true);
-  const [subtypeExpanded, setSubtypeExpanded] = useState(true);
   const injuryLabel = injury.area.trim() || `Injury ${index + 1}`;
   const compactSummary = buildCompactSummary(injury);
   const showWarning = shouldShowReviewWarning(injury);
@@ -903,7 +902,6 @@ function handleTypeSelect(opt: InjuryTypeOption | null) {
   function handleFamilySelect(family: InjuryFamily) {
     setDraftFamily(family);
     setFamilyExpanded(false);
-    setSubtypeExpanded(false);
     const currentFamily = getFamilyForInjury(injury);
     const fallbackType: InjuryTypeOption =
       family === "surface"
@@ -1039,8 +1037,6 @@ function handleTypeSelect(opt: InjuryTypeOption | null) {
               </div>
             ) : null}
           </div>
-
-          {null}
 
           {/* Default visible: Severity + Trend */}
           <div className="form-grid">
