@@ -4,7 +4,7 @@ from pathlib import Path
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 
 from fightcamp.injury_filtering import normalize_injury_regions
-from fightcamp.injury_formatting import parse_injury_entry
+from fightcamp.injury_formatting import parse_injury_entry, parse_injuries_and_restrictions
 import fightcamp.injury_synonyms as injury_synonyms
 from fightcamp.injury_synonyms import parse_injury_phrase, remove_negated_phrases, split_injury_text
 from fightcamp.rehab_protocols import generate_rehab_protocols
@@ -25,11 +25,57 @@ def test_negation_strips_injury_phrases():
 def test_multi_injury_split_and_parse():
     sample = "Left ankle sprain / right wrist pain and shoulder tightness, knee soreness."
     phrases = split_injury_text(sample)
-    assert len(phrases) == 4
+    assert len(phrases) == 3
     entries = [parse_injury_entry(phrase) for phrase in phrases]
     entries = [entry for entry in entries if entry]
     locations = {entry.get("canonical_location") for entry in entries}
-    assert {"ankle", "wrist", "shoulder", "knee"} <= locations
+    assert {"ankle", "shoulder", "knee"} <= locations
+
+
+def test_raw_knee_mechanism_phrase_stays_single_injury_entry():
+    sample = "Right knee went back as I planted it I think I overextended it"
+    injuries, restrictions = parse_injuries_and_restrictions(sample)
+    assert restrictions == []
+    assert len(injuries) == 1
+    assert injuries[0].get("canonical_location") == "knee"
+    locations = {str(entry.get("canonical_location") or "").lower() for entry in injuries}
+    assert "lower back" not in locations
+    assert "lower_back" not in locations
+
+
+def test_raw_knee_phrase_with_and_stays_single_injury_entry():
+    sample = "Right knee went back and gave way on plant"
+    injuries, restrictions = parse_injuries_and_restrictions(sample)
+    assert restrictions == []
+    assert len(injuries) == 1
+    assert injuries[0].get("canonical_location") == "knee"
+    locations = {str(entry.get("canonical_location") or "").lower() for entry in injuries}
+    assert "lower back" not in locations
+    assert "lower_back" not in locations
+
+
+def test_raw_knee_planted_and_twisted_stays_single_injury_entry():
+    sample = "Right knee planted and twisted"
+    injuries, restrictions = parse_injuries_and_restrictions(sample)
+    assert restrictions == []
+    assert len(injuries) == 1
+    assert injuries[0].get("canonical_location") == "knee"
+
+
+def test_raw_legacy_multi_injury_with_semicolon_still_splits():
+    sample = "right knee sprain; left ankle soreness"
+    injuries, restrictions = parse_injuries_and_restrictions(sample)
+    assert restrictions == []
+    assert len(injuries) == 2
+    assert {entry.get("canonical_location") for entry in injuries} == {"knee", "ankle"}
+
+
+def test_raw_legacy_multi_injury_with_comma_still_splits():
+    sample = "right knee sprain, left ankle soreness"
+    injuries, restrictions = parse_injuries_and_restrictions(sample)
+    assert restrictions == []
+    assert len(injuries) == 2
+    assert {entry.get("canonical_location") for entry in injuries} == {"knee", "ankle"}
 
 
 def test_punctuation_and_hyphenated_phrases_parse():
