@@ -1109,7 +1109,7 @@ def triage_injuries(plan_input: PlanInput) -> InjuryTriageResult:
     ):
         routing_reasons.add("guided_injury:avoid_high_load")
 
-    cleaned_guided_notes = remove_negated_phrases(guided_notes).strip().lower()
+    cleaned_guided_notes = remove_negated_phrases(guided_notes).strip()
     if "breath" in cleaned_guided_notes and any(token in safety_context_text for token in ("rib", "chest", "pain")):
         red_flags.add("breathing_pain")
         routing_reasons.add("guided_injury:breathing_symptoms")
