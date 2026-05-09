@@ -66,11 +66,11 @@ const INJURY_TYPE_GROUPS: InjuryTypeGroup[] = [
 ];
 
 const INJURY_FAMILIES: InjuryFamilyOption[] = [
-  { family: "pain_movement", label: "Muscle pain", helper: "Soreness, tightness, strains" },
-  { family: "structural", label: "Bone or joint injury", helper: "Fracture, dislocation, ligament" },
-  { family: "head_nerve_breathing", label: "Head, nerve or breathing issue", helper: "Concussion, nerve, breathing" },
-  { family: "surface", label: "Skin injury", helper: "Cuts, blisters, bruises" },
-  { family: "not_sure", label: "Not sure", helper: "I do not know yet" },
+  { family: "pain_movement", label: "Muscle / tendon / joint pain", helper: "Used as fallback if your description is unclear." },
+  { family: "structural", label: "Bone or dislocation", helper: "Used as fallback if your description is unclear." },
+  { family: "head_nerve_breathing", label: "Head, nerve or breathing issue", helper: "Used as fallback if your description is unclear." },
+  { family: "surface", label: "Skin injury", helper: "Used as fallback if your description is unclear." },
+  { family: "not_sure", label: "Not sure", helper: "Used as fallback if your description is unclear." },
 ];
 
 const FAMILY_TO_HEADING: Record<Exclude<InjuryFamily, "not_sure">, string> = {
@@ -903,17 +903,24 @@ function handleTypeSelect(opt: InjuryTypeOption | null) {
   function handleFamilySelect(family: InjuryFamily) {
     setDraftFamily(family);
     setFamilyExpanded(false);
-    setSubtypeExpanded(true);
+    setSubtypeExpanded(false);
     const currentFamily = getFamilyForInjury(injury);
+    const fallbackType: InjuryTypeOption =
+      family === "surface"
+        ? { label: "Surface injury", value: "surface_injury" }
+        : { label: "Not sure", value: "unspecified" };
     if (currentFamily && currentFamily !== family) {
       const stripPrefixes: string[] = [];
       if (injury.injury_type === "head_impact") stripPrefixes.push("red_flags");
       if (injury.injury_type === "dislocation") stripPrefixes.push("dislocation");
       if (injury.injury_type === "nerve_symptoms") stripPrefixes.push("nerve_symptoms");
       if (injury.injury_type === "chest_breathing") stripPrefixes.push("chest_symptoms");
-      onUpdate("injury_type", "");
-      clearTypeSpecificFields(onUpdate);
+      handleTypeSelect(fallbackType);
       if (stripPrefixes.length) onUpdate("notes", stripTaggedNotes(injury.notes, stripPrefixes));
+      return;
+    }
+    if (!currentFamily || currentFamily !== family) {
+      handleTypeSelect(fallbackType);
     }
   }
 
@@ -972,17 +979,68 @@ function handleTypeSelect(opt: InjuryTypeOption | null) {
 
       {isActive ? (
         <div className="injury-card-form">
-          {/* Area */}
+          {/* Step 1 — Describe it */}
           <div className="gi-field">
-            <label htmlFor={`gi-area-${index}`} className="gi-label">Injury or pain area</label>
-            <input
+            <label htmlFor={`gi-area-${index}`} className="gi-label">What happened or what feels wrong?</label>
+            <textarea
               id={`gi-area-${index}`}
               value={injury.area}
               onChange={(e) => onUpdate("area", e.target.value)}
-              placeholder="Left shoulder"
+              placeholder="e.g. hyperextended right knee, rolled ankle, tight hamstring"
               className="gi-area-input"
+              rows={3}
             />
+            <p className="gi-selection-helper">This is used to identify the injury. Include the body part and what happened.</p>
           </div>
+
+          <div className="gi-step-header">
+            <p className="gi-step-track">{stepLabel}</p>
+            <div className="gi-stepper" aria-label="Injury intake progress">
+              {stepStatus.map((step) => (
+                <div key={step.key} className={`gi-stepper-item ${step.active ? "gi-stepper-item-active" : ""} ${step.done ? "gi-stepper-item-done" : ""}`.trim()}>
+                  <span className="gi-stepper-dot" aria-hidden="true">{step.done ? "✓" : "•"}</span>
+                  <span>{step.label}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Injury family + stepped selector */}
+          <div className="gi-field">
+            <label className="gi-label">Closest category, if known</label>
+            <p className="gi-selection-helper">Used as a fallback if the description is unclear.</p>
+            {activeFamily && !familyExpanded ? (
+              <div className="gi-selection-summary">
+                <div>
+                  <p className="gi-selection-title">{selectedFamilyOption?.label}</p>
+                  <p className="gi-selection-helper">{selectedFamilyOption?.helper}</p>
+                </div>
+                <button type="button" className="gi-change-btn" onClick={() => setFamilyExpanded(true)} aria-expanded={familyExpanded}>Change</button>
+              </div>
+            ) : null}
+            {familyExpanded || !activeFamily ? (
+              <div className="gi-family-grid" role="radiogroup" aria-label="Injury family">
+              {INJURY_FAMILIES.map((family) => {
+                const selected = activeFamily === family.family;
+                return (
+                  <button
+                    key={family.family}
+                    type="button"
+                    role="radio"
+                    aria-checked={selected}
+                    className={`gi-family-card ${selected ? "gi-family-card-selected" : ""}`.trim()}
+                    onClick={() => handleFamilySelect(family.family)}
+                  >
+                    <span>{family.label}</span>
+                    <small>{family.helper}</small>
+                  </button>
+                );
+              })}
+              </div>
+            ) : null}
+          </div>
+
+          {null}
 
           {/* Default visible: Severity + Trend */}
           <div className="form-grid">
@@ -1020,87 +1078,6 @@ function handleTypeSelect(opt: InjuryTypeOption | null) {
             </div>
           </div>
 
-          <div className="gi-step-header">
-            <p className="gi-step-track">{stepLabel}</p>
-            <div className="gi-stepper" aria-label="Injury intake progress">
-              {stepStatus.map((step) => (
-                <div key={step.key} className={`gi-stepper-item ${step.active ? "gi-stepper-item-active" : ""} ${step.done ? "gi-stepper-item-done" : ""}`.trim()}>
-                  <span className="gi-stepper-dot" aria-hidden="true">{step.done ? "✓" : "•"}</span>
-                  <span>{step.label}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Injury family + stepped selector */}
-          <div className="gi-field">
-            <label className="gi-label">Injury family</label>
-            {activeFamily && !familyExpanded ? (
-              <div className="gi-selection-summary">
-                <div>
-                  <p className="gi-selection-title">{selectedFamilyOption?.label}</p>
-                  <p className="gi-selection-helper">{selectedFamilyOption?.helper}</p>
-                </div>
-                <button type="button" className="gi-change-btn" onClick={() => setFamilyExpanded(true)} aria-expanded={familyExpanded}>Change</button>
-              </div>
-            ) : null}
-            {familyExpanded || !activeFamily ? (
-              <div className="gi-family-grid" role="radiogroup" aria-label="Injury family">
-              {INJURY_FAMILIES.map((family) => {
-                const selected = activeFamily === family.family;
-                return (
-                  <button
-                    key={family.family}
-                    type="button"
-                    role="radio"
-                    aria-checked={selected}
-                    className={`gi-family-card ${selected ? "gi-family-card-selected" : ""}`.trim()}
-                    onClick={() => handleFamilySelect(family.family)}
-                  >
-                    <span>{family.label}</span>
-                    <small>{family.helper}</small>
-                  </button>
-                );
-              })}
-              </div>
-            ) : null}
-          </div>
-
-          {activeFamily ? (
-            <div className="gi-subtype-panel gi-field">
-              <label className="gi-label">Injury type</label>
-              {injury.injury_type && !subtypeExpanded ? (
-                <div className="gi-selection-summary">
-                  <p className="gi-selection-title">{selectedTypeLabel}</p>
-                  <button type="button" className="gi-change-btn" onClick={() => setSubtypeExpanded(true)} aria-expanded={subtypeExpanded}>Change</button>
-                </div>
-              ) : null}
-              {subtypeExpanded || !injury.injury_type ? (
-                <div className="gi-subtype-grid" role="radiogroup" aria-label="Injury subtype">
-                {getOptionsForFamily(activeFamily).map((opt) => {
-                  const isSelected =
-                    injury.injury_type === opt.value &&
-                    (opt.value !== "surface_injury" || injury.surface_type === (opt.surface_type ?? ""));
-                  return (
-                    <button
-                      key={`${opt.value}-${opt.surface_type ?? ""}`}
-                      type="button"
-                      role="radio"
-                      aria-checked={isSelected}
-                      className={`gi-chip ${isSelected ? "gi-chip-selected" : ""}`}
-                      onClick={() => {
-                        handleTypeSelect(opt);
-                        setSubtypeExpanded(false);
-                      }}
-                    >
-                      {opt.label}
-                    </button>
-                  );
-                })}
-                </div>
-              ) : null}
-            </div>
-          ) : null}
 
           {/* Progressive follow-up questions */}
           {hasFollowUp ? (
