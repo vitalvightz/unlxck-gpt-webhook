@@ -1036,8 +1036,8 @@ _LEGACY_MOJIBAKE_DASH_SEPARATORS = [
 ]
 
 _AND_PROTECT_TOKEN = "__inj_and_keep__"
-_BOUNDARY_PATTERN = re.compile(r"[.;,\n/|+]")
-_AND_PATTERN = re.compile(r"\band\b", re.IGNORECASE)
+_BOUNDARY_PATTERN = compile_regex("injury_synonyms", "boundary_pattern")
+_AND_PATTERN = compile_regex("injury_synonyms", "and_pattern", flags=re.IGNORECASE)
 
 _BODY_PART_HINTS = {
     "ankle", "wrist", "shoulder", "knee", "hip", "back", "elbow", "hand", "foot",
