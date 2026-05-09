@@ -583,8 +583,7 @@ class TestRiskBandKeyRules:
         assert entries[0]["region"] == "knee"
         assert entries[0]["display_location"] == "right knee"
         assert entries[0]["injury_type"] == "instability"
-        assert entries[0]["risk_band"] in {"amber", "red"}
-        assert entries[0]["region"] != "lower_back"
+        assert entries[0]["risk_band"] == "red"
 
     def test_structured_parser_falls_back_to_raw_injuries_when_parsed_missing(self):
         entries = _sparring_injury_entries(
