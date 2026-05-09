@@ -600,6 +600,9 @@ class TestRiskBandKeyRules:
         )
 
         assert entries
+        assert entries[0]["region"] == "knee"
+        assert entries[0]["region"] != "lower_back"
+        assert entries[0]["risk_band"] in {"amber", "red"}
 
     def test_non_functional_cannot_phrase_does_not_force_high_severity(self):
         assert _entry("cannot train Tuesday due to travel")["risk_band"] == "green"
