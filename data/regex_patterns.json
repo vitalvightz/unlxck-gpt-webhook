@@ -76,6 +76,8 @@
     "numbered_session_heading": "^(?:session|day)\\s+\\d+(?:\\s*[:\\-|]|\\s*$)"
   },
   "injury_synonyms": {
-    "negation_cue_pattern": "\\b(?:no|not|never|without|deny|denies|denied|neither)\\b"
+    "negation_cue_pattern": "\\b(?:no|not|never|without|deny|denies|denied|neither)\\b",
+    "boundary_pattern": "[.,;\\n]|\\b(?:then|but|also)\\b|(?:\\s[-–—]\\s)|[+/|]",
+    "and_pattern": "\\band\\b"
   }
 }
