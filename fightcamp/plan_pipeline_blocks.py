@@ -241,10 +241,8 @@ def _build_rehab_injury_string(context: PlanRuntimeContext) -> str:
         injury_type = str(entry.get("injury_type") or "").strip().lower()
         if guided_injury_type == "instability":
             injury_type = "instability"
-        if is_knee and knee_movement_language and injury_type in {"", "sprain", "unspecified", "pain", "soreness", "tightness", "stiffness"}:
+        elif is_knee and knee_movement_language and injury_type in {"", "sprain", "unspecified", "pain", "soreness", "tightness", "stiffness"}:
             injury_type = "hyperextension"
-        if guided_injury_type == "instability" and is_knee:
-            injury_type = "instability"
 
         severity = str(entry.get("severity") or "").strip().lower()
         trend = str(entry.get("trend") or "").strip().lower()
