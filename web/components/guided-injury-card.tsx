@@ -230,10 +230,13 @@ function getFamilyForInjury(injury: GuidedInjuryState): InjuryFamily | "" {
 
 function getOptionsForFamily(family: InjuryFamily): InjuryTypeOption[] {
   if (family === "not_sure") return [{ label: "Not sure", value: "unspecified" }];
+  if (family === "pain_movement") {
+    const common = INJURY_TYPE_GROUPS.find((item) => item.heading === "Common")?.options.filter((opt) => opt.value !== "unspecified") ?? [];
+    return [...common, { label: "Tendon / ligament issue", value: "tendon_ligament" }, { label: "Not sure", value: "unspecified" }];
+  }
   const heading = FAMILY_TO_HEADING[family];
   const group = INJURY_TYPE_GROUPS.find((item) => item.heading === heading);
   if (!group) return [];
-  if (family === "pain_movement") return group.options.filter((opt) => opt.value !== "unspecified");
   return group.options;
 }
 
@@ -883,6 +886,7 @@ export function GuidedInjuryCard({
   const [notesOpen, setNotesOpen] = useState(Boolean(injury.notes.trim()));
   const [draftFamily, setDraftFamily] = useState<InjuryFamily | "">("");
   const [familyExpanded, setFamilyExpanded] = useState(true);
+  const [subtypeExpanded, setSubtypeExpanded] = useState(true);
   const injuryLabel = truncateForHeader(injury.area) || `Injury ${index + 1}`;
   const compactSummary = truncateForHeader(buildCompactSummary(injury), 80);
   const showWarning = shouldShowReviewWarning(injury);
@@ -955,16 +959,11 @@ function handleTypeSelect(opt: InjuryTypeOption | null) {
   function handleFamilySelect(family: InjuryFamily) {
     setDraftFamily(family);
     setFamilyExpanded(false);
+    setSubtypeExpanded(true);
     const currentFamily = getFamilyForInjury(injury);
     const fallbackType: InjuryTypeOption = { label: "Not sure", value: "unspecified" };
     if (currentFamily && currentFamily !== family) {
-      const stripPrefixes: string[] = [];
-      if (injury.injury_type === "head_impact") stripPrefixes.push("red_flags");
-      if (injury.injury_type === "dislocation") stripPrefixes.push("dislocation");
-      if (injury.injury_type === "nerve_symptoms") stripPrefixes.push("nerve_symptoms");
-      if (injury.injury_type === "chest_breathing") stripPrefixes.push("chest_symptoms");
       handleTypeSelect(fallbackType);
-      if (stripPrefixes.length) onUpdate("notes", stripTaggedNotes(injury.notes, stripPrefixes));
       return;
     }
     if (!currentFamily) {
@@ -1040,6 +1039,30 @@ function handleTypeSelect(opt: InjuryTypeOption | null) {
             />
             <p className="gi-selection-helper">This is used to identify the injury. Include the body part and what happened.</p>
           </div>
+
+          {activeFamily ? (
+            <div className="gi-field">
+              <label className="gi-label">Optional subtype, if known</label>
+              {injury.injury_type && !subtypeExpanded ? (
+                <div className="gi-selection-summary">
+                  <p className="gi-selection-title">{selectedTypeLabel}</p>
+                  <button type="button" className="gi-change-btn" onClick={() => setSubtypeExpanded(true)} aria-expanded={subtypeExpanded}>Change</button>
+                </div>
+              ) : null}
+              {subtypeExpanded || !injury.injury_type ? (
+                <div className="gi-subtype-grid" role="radiogroup" aria-label="Injury subtype">
+                  {getOptionsForFamily(activeFamily).map((opt) => {
+                    const isSelected = injury.injury_type === opt.value && (opt.value !== "surface_injury" || injury.surface_type === (opt.surface_type ?? ""));
+                    return (
+                      <button key={`${opt.value}-${opt.surface_type ?? ""}`} type="button" role="radio" aria-checked={isSelected} className={`gi-chip ${isSelected ? "gi-chip-selected" : ""}`} onClick={() => { handleTypeSelect(opt); setSubtypeExpanded(false); }}>
+                        {opt.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : null}
+            </div>
+          ) : null}
 
           <div className="gi-step-header">
             <p className="gi-step-track">{stepLabel}</p>
