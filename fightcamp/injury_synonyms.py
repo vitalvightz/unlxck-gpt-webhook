@@ -1051,7 +1051,7 @@ def split_injury_text(raw_text: str) -> list[str]:
             return []
         text = raw_text.lower()
         text = re.sub(r"[()]", " ", text)
-        text = re.sub(r"\b(and|but|also)\b,?", ". ", text)
+        text = re.sub(r"\b(but|also)\b,?", ". ", text)
         text = _normalize_injury_text_separators(text)
         return [
             cleaned
@@ -1061,7 +1061,7 @@ def split_injury_text(raw_text: str) -> list[str]:
     text = raw_text.lower()
     text = re.sub(r"[()]", " ", text)
     # Replace common connectors with punctuation so spaCy can split sentences
-    text = re.sub(r"\b(and|but|also)\b,?", ". ", text)
+    text = re.sub(r"\b(but|also)\b,?", ". ", text)
     text = _normalize_injury_text_separators(text)
     doc = nlp(text)
     return [
