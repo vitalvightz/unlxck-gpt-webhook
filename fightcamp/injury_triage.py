@@ -1030,6 +1030,8 @@ def triage_injuries(plan_input: PlanInput) -> InjuryTriageResult:
     combined_text = " | ".join(injury_texts).lower()
     cleaned_combined_text = " | ".join(features.raw_evidence.get("cleaned_input") or [])
 
+    safety_context_text = cleaned_combined_text or combined_text
+
     matched_categories = set(features.high_risk_diagnoses)
     red_flags = set(features.red_flags)
     urgent_flags = set(features.urgent_flags)
@@ -1073,7 +1075,7 @@ def triage_injuries(plan_input: PlanInput) -> InjuryTriageResult:
     if has_guided_high_severity:
         routing_reasons.add("guided_injury:high_severity")
         if any(
-            token in combined_text
+            token in safety_context_text
             for token in ("rib", "fracture", "dislocation", "instability", "cannot bear weight")
         ):
             matched_categories.add("structural_high_severity")
@@ -1107,14 +1109,15 @@ def triage_injuries(plan_input: PlanInput) -> InjuryTriageResult:
     ):
         routing_reasons.add("guided_injury:avoid_high_load")
 
-    if "breath" in guided_notes and any(token in combined_text for token in ("rib", "chest", "pain")):
+    cleaned_guided_notes = remove_negated_phrases(guided_notes).strip().lower()
+    if "breath" in cleaned_guided_notes and any(token in safety_context_text for token in ("rib", "chest", "pain")):
         red_flags.add("breathing_pain")
         routing_reasons.add("guided_injury:breathing_symptoms")
 
     medical_hold, has_chest_or_rib_combo, has_neuro_combo = _initial_medical_hold_gate(
         red_flags=red_flags,
         matched_categories=matched_categories,
-        combined_text=combined_text,
+        combined_text=safety_context_text,
         routing_reasons=routing_reasons,
     )
 
