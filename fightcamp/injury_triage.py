@@ -1030,7 +1030,7 @@ def triage_injuries(plan_input: PlanInput) -> InjuryTriageResult:
     combined_text = " | ".join(injury_texts).lower()
     cleaned_combined_text = " | ".join(features.raw_evidence.get("cleaned_input") or [])
 
-    safety_context_text = cleaned_combined_text or combined_text
+    safety_context_text = cleaned_combined_text
 
     matched_categories = set(features.high_risk_diagnoses)
     red_flags = set(features.red_flags)
