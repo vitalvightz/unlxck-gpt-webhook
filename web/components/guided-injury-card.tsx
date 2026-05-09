@@ -243,8 +243,20 @@ function getOptionsForFamily(family: InjuryFamily): InjuryTypeOption[] {
 function isSafetyComplete(injury: GuidedInjuryState, family: InjuryFamily | ""): boolean {
   if (!injury.injury_type) return false;
   if (injury.injury_type === "unspecified") {
-    if (family === "structural") return Boolean(injury.timeframe && injury.cleared && injury.impact_related);
-    if (family === "head_nerve_breathing") return Boolean(parseNotesFlags(injury.notes, "red_flags").length > 0 || parseNotesFlags(injury.notes, "nerve_symptoms").length > 0 || parseNotesFlags(injury.notes, "chest_symptoms").length > 0);
+    if (family === "structural") {
+      const hasStructuralBearWeight = Boolean(getSingleNotesFlag(injury.notes, "structural", "bear_weight"));
+      const hasStructuralSwelling = Boolean(getSingleNotesFlag(injury.notes, "structural", "swelling"));
+      const hasStructuralDeformity = Boolean(getSingleNotesFlag(injury.notes, "structural", "deformity"));
+      return Boolean(
+        injury.timeframe &&
+        injury.cleared &&
+        injury.impact_related &&
+        hasStructuralBearWeight &&
+        hasStructuralSwelling &&
+        hasStructuralDeformity
+      );
+    }
+    if (family === "head_nerve_breathing") return Boolean(parseNotesFlags(injury.notes, "red_flags").length > 0 && parseNotesFlags(injury.notes, "nerve_symptoms").length > 0 && parseNotesFlags(injury.notes, "chest_symptoms").length > 0);
     if (family === "surface") return Boolean(injury.open_wound && injury.bleeding_status && injury.sensitive_area && injury.infection_signs.length > 0);
     return true;
   }
@@ -488,10 +500,13 @@ function FollowUpQuestions({
     </div>;
   }
   if (injury_type === "unspecified" && family === "head_nerve_breathing") {
+    const headFlags = parseNotesFlags(injury.notes, "red_flags");
+    const nerveFlags = parseNotesFlags(injury.notes, "nerve_symptoms");
+    const chestFlags = parseNotesFlags(injury.notes, "chest_symptoms");
     return <div className="gi-followup">
-      <div className="gi-field"><label className="gi-label">Head-impact red flags</label><SingleChipRow label="Head red flags" options={YES_NO_UNSURE} value={getSingleNotesFlag(injury.notes, "red_flags", "present")} onChange={(v) => onUpdate("notes", setSingleNotesFlag(injury.notes, "red_flags", "present", v))} /></div>
-      <div className="gi-field"><label className="gi-label">Any numbness, tingling, or weakness?</label><SingleChipRow label="Nerve symptoms" options={YES_NO_UNSURE} value={getSingleNotesFlag(injury.notes, "nerve_symptoms", "present")} onChange={(v) => onUpdate("notes", setSingleNotesFlag(injury.notes, "nerve_symptoms", "present", v))} /></div>
-      <div className="gi-field"><label className="gi-label">Any breathing pain, chest pain, or shortness of breath?</label><SingleChipRow label="Chest symptoms" options={YES_NO_UNSURE} value={getSingleNotesFlag(injury.notes, "chest_symptoms", "present")} onChange={(v) => onUpdate("notes", setSingleNotesFlag(injury.notes, "chest_symptoms", "present", v))} /></div>
+      <div className="gi-field"><label className="gi-label">Any head-impact red flags?</label><div className="gi-chip-row" role="group">{[...HEAD_RED_FLAGS, { label: "None", value: "none" }].map((flag) => <ChipButton key={flag.value} label={flag.label} selected={headFlags.includes(flag.value)} onClick={() => onUpdate("notes", toggleNotesFlag(setNotesFlags(injury.notes, "red_flags", headFlags.filter((f) => f !== "none")), "red_flags", flag.value))} variant="danger" />)}</div></div>
+      <div className="gi-field"><label className="gi-label">Any numbness, tingling, or weakness?</label><div className="gi-chip-row" role="group">{[{ label: "Numbness", value: "type_numbness" }, { label: "Tingling", value: "type_tingling" }, { label: "Weakness", value: "type_weakness" }, { label: "Mixed", value: "type_mixed" }, { label: "None", value: "none" }].map((flag) => <ChipButton key={flag.value} label={flag.label} selected={nerveFlags.includes(flag.value)} onClick={() => onUpdate("notes", toggleNotesFlag(setNotesFlags(injury.notes, "nerve_symptoms", nerveFlags.filter((f) => f !== "none")), "nerve_symptoms", flag.value))} />)}</div></div>
+      <div className="gi-field"><label className="gi-label">Any chest or breathing symptoms?</label><div className="gi-chip-row" role="group">{[{ label: "Pain when breathing", value: "breathing_pain" }, { label: "Shortness of breath", value: "shortness_of_breath" }, { label: "Chest pain", value: "chest_pain" }, { label: "Coughing blood", value: "coughing_blood" }, { label: "None", value: "none" }].map((flag) => <ChipButton key={flag.value} label={flag.label} selected={chestFlags.includes(flag.value)} onClick={() => onUpdate("notes", toggleNotesFlag(setNotesFlags(injury.notes, "chest_symptoms", chestFlags.filter((f) => f !== "none")), "chest_symptoms", flag.value))} variant="danger" />)}</div></div>
     </div>;
   }
   if (injury_type === "unspecified" && family === "surface") return <SurfaceFollowUp injury={injury} onUpdate={onUpdate} />;
@@ -1040,6 +1055,18 @@ function handleTypeSelect(opt: InjuryTypeOption | null) {
             <p className="gi-selection-helper">This is used to identify the injury. Include the body part and what happened.</p>
           </div>
 
+          <div className="gi-step-header">
+            <p className="gi-step-track">{stepLabel}</p>
+            <div className="gi-stepper" aria-label="Injury intake progress">
+              {stepStatus.map((step) => (
+                <div key={step.key} className={`gi-stepper-item ${step.active ? "gi-stepper-item-active" : ""} ${step.done ? "gi-stepper-item-done" : ""}`.trim()}>
+                  <span className="gi-stepper-dot" aria-hidden="true">{step.done ? "✓" : "•"}</span>
+                  <span>{step.label}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
           {activeFamily ? (
             <div className="gi-field">
               <label className="gi-label">Optional subtype, if known</label>
@@ -1063,18 +1090,6 @@ function handleTypeSelect(opt: InjuryTypeOption | null) {
               ) : null}
             </div>
           ) : null}
-
-          <div className="gi-step-header">
-            <p className="gi-step-track">{stepLabel}</p>
-            <div className="gi-stepper" aria-label="Injury intake progress">
-              {stepStatus.map((step) => (
-                <div key={step.key} className={`gi-stepper-item ${step.active ? "gi-stepper-item-active" : ""} ${step.done ? "gi-stepper-item-done" : ""}`.trim()}>
-                  <span className="gi-stepper-dot" aria-hidden="true">{step.done ? "✓" : "•"}</span>
-                  <span>{step.label}</span>
-                </div>
-              ))}
-            </div>
-          </div>
 
           {/* Injury family + stepped selector */}
           <div className="gi-field">
