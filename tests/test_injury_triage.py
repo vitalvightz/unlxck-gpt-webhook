@@ -1051,3 +1051,31 @@ def test_guided_injury_note_with_broke_routes_to_restricted_rehab():
 
     assert triage.mode == RESTRICTED_REHAB_ONLY
     assert triage.should_block_stage2 is True
+
+def test_negated_concussion_red_flags_do_not_trigger_medical_hold():
+    parsed = PlanInput.from_payload(
+        _payload_with_injury(
+            "head impact in sparring, no memory loss, no blurred vision, no loss of consciousness, denies vomiting"
+        )
+    )
+    triage = triage_injuries(parsed)
+
+    assert "amnesia_or_memory_loss" not in triage.red_flags
+    assert "blurred_or_double_vision" not in triage.red_flags
+    assert "loss_of_consciousness" not in triage.red_flags
+    assert "vomiting_after_head_impact" not in triage.red_flags
+    assert triage.mode != MEDICAL_HOLD
+
+
+def test_absent_neurologic_concussion_phrases_do_not_trigger_red_flags():
+    parsed = PlanInput.from_payload(
+        _payload_with_injury(
+            "after a clean spar stayed awake the whole time, vision is normal, recall is normal, without severe headache"
+        )
+    )
+    triage = triage_injuries(parsed)
+
+    assert "loss_of_consciousness" not in triage.red_flags
+    assert "blurred_or_double_vision" not in triage.red_flags
+    assert "amnesia_or_memory_loss" not in triage.red_flags
+    assert "severe_headache_after_head_impact" not in triage.red_flags
