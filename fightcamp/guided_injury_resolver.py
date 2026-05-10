@@ -79,13 +79,7 @@ def resolve_guided_injury_entry(guided_injury: Any, parsed_entry: dict[str, Any]
         parser_entry = combined_entry or area_entry
 
         combined_type = _specific_parser_type(combined_entry)
-        if area_entry and combined_entry and combined_type and combined_type != "unspecified":
-            parser_entry = dict(combined_entry)
-            parser_entry["canonical_location"] = area_entry.get("canonical_location")
-            parser_entry["side"] = area_entry.get("side")
-            parser_entry["laterality"] = area_entry.get("laterality")
-            parser_entry["original_phrase"] = combined_text
-        elif area_entry and combined_entry and combined_type and not combined_entry.get("canonical_location"):
+        if area_entry and combined_entry and combined_type and (combined_type != "unspecified" or not combined_entry.get("canonical_location")):
             parser_entry = dict(combined_entry)
             parser_entry["canonical_location"] = area_entry.get("canonical_location")
             parser_entry["side"] = area_entry.get("side")
