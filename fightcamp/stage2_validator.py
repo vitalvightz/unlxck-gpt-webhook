@@ -9,6 +9,7 @@ from .regex_config import compile_regex, compile_regex_list
 from .restriction_filtering import evaluate_restriction_impact
 from .normalization import clean_list, phrase_in_text, dedupe_preserve_order
 from .late_selector_windows import classify_late_selector_window
+from .fight_day_override import FIGHT_DAY_PROTOCOL_TEXT
 
 _BULLET_PREFIX = compile_regex("stage2_validator", "bullet_prefix")
 _PHASE_HEADER = PHASE_HEADER_PATTERN
@@ -1370,6 +1371,99 @@ def _sport_language_warnings(planning_brief: dict, plan_lines: list[str]) -> lis
     return warnings
 
 
+def _calendar_spine_warnings(planning_brief: dict, final_plan_text: str) -> list[dict]:
+    weekly_role_map = planning_brief.get("weekly_role_map") or {}
+    weeks = [week for week in (weekly_role_map.get("weeks") or []) if isinstance(week, dict)]
+    if not weeks:
+        return []
+
+    warnings: list[dict] = []
+    normalized_text = _normalize_render_line(final_plan_text)
+    if "d-2 to d-1 window depends" in normalized_text:
+        warnings.append(
+            {
+                "code": "calendar_spine_ambiguous_countdown_window",
+                "message": "Rendered text uses ambiguous D-2 to D-1 window language even though calendar_days already defines exact D-days.",
+                "blocking": True,
+            }
+        )
+
+    week_sections = _week_sections(final_plan_text)
+    for week in weeks:
+        week_index = int(week.get("week_index", 0) or 0)
+        if week_index <= 0:
+            continue
+        section = week_sections.get(week_index)
+        if not section:
+            continue
+
+        allowed_days = {}
+        for day in week.get("calendar_days") or []:
+            if not isinstance(day, dict):
+                continue
+            weekday = str(day.get("weekday") or "").strip().lower()
+            if weekday:
+                allowed_days[weekday] = day
+        if not allowed_days:
+            continue
+
+        for block in _phase_session_blocks(section.get("lines", [])):
+            heading_line = _normalize_render_line(block[0]) if block else ""
+            heading_day = next((day for day in allowed_days if day in heading_line), "")
+            if not heading_day:
+                warnings.append(
+                    {
+                        "code": "calendar_spine_unmapped_weekday_rendered",
+                        "message": f"Week {week_index} renders a weekday heading not present in calendar_days.",
+                        "week_index": week_index,
+                        "line": block[0],
+                        "blocking": True,
+                    }
+                )
+                continue
+            calendar_day = allowed_days.get(heading_day) if heading_day else None
+            if not calendar_day:
+                continue
+            expected_d = calendar_day.get("d_day")
+            block_text = _normalize_render_line(" ".join(block))
+            if isinstance(expected_d, int) and f"d-{expected_d}" not in block_text:
+                if re.search(r"\bd-\d+\b", block_text):
+                    warnings.append(
+                        {
+                            "code": "calendar_spine_d_day_mismatch",
+                            "message": f"Week {week_index} {heading_day.title()} rendered with a D-day that does not match calendar_days.",
+                            "week_index": week_index,
+                            "line": block[0],
+                            "expected_d_day": expected_d,
+                            "blocking": True,
+                        }
+                    )
+            if bool(calendar_day.get("is_after_fight_day")) and any(_normalize_render_line(line) for line in block[1:]):
+                warnings.append(
+                    {
+                        "code": "calendar_spine_post_fight_training_rendered",
+                        "message": f"Week {week_index} renders app-led training on {heading_day.title()} after D-0.",
+                        "week_index": week_index,
+                        "line": block[0],
+                        "blocking": True,
+                    }
+                )
+            if bool(calendar_day.get("is_fight_day")):
+                body_lines = [line.strip() for line in block[1:] if _normalize_render_line(line)]
+                protocol_text = _normalize_render_line(FIGHT_DAY_PROTOCOL_TEXT)
+                if len(body_lines) != 1 or _normalize_render_line(body_lines[0]) != protocol_text:
+                    warnings.append(
+                        {
+                            "code": "calendar_spine_fight_day_protocol_violation",
+                            "message": f"Week {week_index} fight day must render exact fight-day protocol text only.",
+                            "week_index": week_index,
+                            "line": block[0],
+                            "blocking": True,
+                        }
+                    )
+    return warnings
+
+
 def _late_fight_plan_spec(planning_brief: dict) -> dict[str, Any]:
     spec = planning_brief.get("late_fight_plan_spec") or {}
     return spec if isinstance(spec, dict) else {}
@@ -2194,6 +2288,7 @@ def validate_stage2_output(*, planning_brief: dict, final_plan_text: str) -> dic
     overstyled_name_warnings = _overstyled_name_warnings(plan_lines)
     coach_voice_warnings = _coach_voice_warnings(planning_brief, plan_lines)
     sport_language_warnings = _sport_language_warnings(planning_brief, plan_lines)
+    calendar_spine_warnings = _calendar_spine_warnings(planning_brief, final_plan_text)
     late_fight_warnings = _late_fight_warnings(planning_brief, final_plan_text)
 
     errors = [
@@ -2236,6 +2331,7 @@ def validate_stage2_output(*, planning_brief: dict, final_plan_text: str) -> dic
     warnings.extend(overstyled_name_warnings)
     warnings.extend(coach_voice_warnings)
     warnings.extend(sport_language_warnings)
+    warnings.extend(calendar_spine_warnings)
     warnings.extend(late_fight_warnings)
 
     return {
@@ -2257,6 +2353,7 @@ def validate_stage2_output(*, planning_brief: dict, final_plan_text: str) -> dic
         "overstyled_name_warnings": overstyled_name_warnings,
         "gimmick_name_warnings": overstyled_name_warnings,
         "coach_voice_warnings": coach_voice_warnings,
+        "calendar_spine_warnings": calendar_spine_warnings,
         "late_fight_warnings": late_fight_warnings,
         "sport_language_warnings": sport_language_warnings,
     }

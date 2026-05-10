@@ -196,6 +196,41 @@ def _compact_weekly_role_map(weekly_role_map: Any) -> dict[str, Any]:
     }
 
 
+def _compact_calendar_authority(weekly_role_map: Any) -> dict[str, Any]:
+    if not isinstance(weekly_role_map, dict):
+        return {"weeks": []}
+
+    compact_weeks: list[dict[str, Any]] = []
+    for week in weekly_role_map.get("weeks", []) or []:
+        if not isinstance(week, dict):
+            continue
+        calendar_days = [
+            day
+            for day in (week.get("calendar_days") or [])
+            if isinstance(day, dict)
+        ]
+        compact_weeks.append(
+            {
+                "week_index": week.get("week_index"),
+                "phase": week.get("phase"),
+                "calendar_days": calendar_days,
+                "countdown_range": week.get("countdown_range"),
+                "session_day_hints": [
+                    {
+                        "session_index": role.get("session_index"),
+                        "role_key": role.get("role_key"),
+                        "scheduled_day_hint": role.get("scheduled_day_hint"),
+                    }
+                    for role in (week.get("session_roles") or [])
+                    if isinstance(role, dict)
+                ],
+                "fight_day_override": week.get("fight_day_override"),
+            }
+        )
+
+    return {"weeks": compact_weeks}
+
+
 def _compact_session_sequence(stage2_payload: dict[str, Any]) -> list[dict[str, Any]]:
     for key in (
         "late_fight_session_sequence",
@@ -297,6 +332,14 @@ def build_stage2_finalizer_packet(
         "hard_rules": [
             "Render only athlete-facing plan content.",
             "Do not expose candidate pools, scoring logic, internal menus, or unused options.",
+            "weekly_role_map.weeks[*].calendar_days is the only authority for weekday and D-day labels.",
+            "Do not infer D-days from weekday order.",
+            "Do not invent D-days from the fight date manually.",
+            "Only render session_roles whose scheduled_day_hint exists in that week's calendar_days.",
+            "If a calendar day has is_fight_day=true, render fight_day_protocol only.",
+            "If a calendar day has is_after_fight_day=true, render no app-led training.",
+            "If a weekday is not present in calendar_days, do not render it.",
+            "Do not render any session after D-0 unless a post-fight recovery mode is explicitly active.",
             "D-0 always renders as fight-day protocol only.",
             f"Fight-day protocol text: {FIGHT_DAY_PROTOCOL_TEXT}",
             "Coach-owned days override app S&C unless coach-led work is light or cancelled.",
@@ -317,6 +360,7 @@ def build_stage2_finalizer_packet(
             "session_sequence": _compact_session_sequence(source)
             or _compact_session_sequence(stage2_payload),
             "weekly_role_map": _compact_weekly_role_map(weekly_role_map),
+            "calendar_authority": _compact_calendar_authority(weekly_role_map),
             "late_fight_plan_spec": late_fight_plan_spec,
             "days_out_payload": days_out_payload,
             "fight_week_override": (
