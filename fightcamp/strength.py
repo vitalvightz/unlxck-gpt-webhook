@@ -13,6 +13,11 @@ from .training_context import (
 from .bank_schema import validate_training_item
 from .tagging import normalize_item_tags, normalize_tag, normalize_tags
 from .tag_maps import GOAL_TAG_MAP, STYLE_TAG_MAP
+from .priority_profile import (
+    build_priority_profile,
+    total_goal_priority_bonus,
+    total_weakness_priority_bonus,
+)
 # Refactored: Import centralized constants from config
 from .config import PHASE_EQUIPMENT_BOOST, PHASE_TAG_BOOST, DATA_DIR, INJURY_GUARD_SHORTLIST
 from .injury_filtering import (
@@ -784,6 +789,9 @@ def score_exercise(
     available_equipment,
     required_equipment,
     is_rehab,
+    priority_profile=None,
+    matched_goal_labels=None,
+    matched_weakness_labels=None,
     must_have_bonus_multiplier: float = 1.0,
     rng: random.Random | None = None,
 ):
@@ -807,13 +815,34 @@ def score_exercise(
         "penalties": 0.0,
     }
 
-    weakness_matches = len(set(exercise_tags) & set(weakness_tags))
-    score += weakness_matches * 0.6
+    matched_weakness_tags = set(exercise_tags) & set(weakness_tags)
+    weakness_matches = len(matched_weakness_tags)
+    weakness_bonus_tags = list(matched_weakness_labels or matched_weakness_tags)
+    weakness_priority_bonus = total_weakness_priority_bonus(weakness_bonus_tags, priority_profile) if priority_profile else 0.0
+    score += weakness_priority_bonus
     reasons["weakness_hits"] = weakness_matches
+    reasons["weakness_priority_bonus"] = round(weakness_priority_bonus, 4)
 
-    goal_matches = len(set(exercise_tags) & set(goal_tags))
-    score += goal_matches * 0.5
+    matched_goal_tags = set(exercise_tags) & set(goal_tags)
+    goal_matches = len(matched_goal_tags)
+    goal_bonus_tags = list(matched_goal_labels or matched_goal_tags)
+    goal_priority_bonus = total_goal_priority_bonus(goal_bonus_tags, priority_profile) if priority_profile else 0.0
+    score += goal_priority_bonus
     reasons["goal_hits"] = goal_matches
+    reasons["goal_priority_bonus"] = round(goal_priority_bonus, 4)
+    reason_codes = []
+    if priority_profile:
+        if priority_profile.primary_goal and priority_profile.primary_goal in goal_bonus_tags:
+            reason_codes.append(f"priority_primary_goal_match:{priority_profile.primary_goal}")
+        for goal in getattr(priority_profile, "secondary_goals", []):
+            if goal in goal_bonus_tags:
+                reason_codes.append(f"priority_secondary_goal_match:{goal}")
+        if priority_profile.primary_weak_area and priority_profile.primary_weak_area in weakness_bonus_tags:
+            reason_codes.append(f"priority_primary_weakness_match:{priority_profile.primary_weak_area}")
+        for weak in getattr(priority_profile, "secondary_weak_areas", []):
+            if weak in weakness_bonus_tags:
+                reason_codes.append(f"priority_secondary_weakness_match:{weak}")
+    reasons["reason_codes"] = reason_codes
 
     matched_style_tags = list(set(exercise_tags) & set(style_tags))
     style_score = len(matched_style_tags) * 0.3
@@ -1211,6 +1240,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
         if (canonical := normalize_tag(str(style or "")))
     ]
     goals = flags.get("key_goals", [])
+    priority_profile = build_priority_profile(flags)
     training_days = flags.get("training_days", [])
     training_frequency = flags.get(
         "training_frequency", flags.get("days_available", len(training_days))
@@ -1489,6 +1519,13 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
             available_equipment=equipment_access,
             required_equipment=ex_equipment,
             is_rehab=method == "rehab",
+            priority_profile=priority_profile,
+            matched_goal_labels=[
+                goal
+                for goal in goals
+                if set(normalize_tags(tags)) & set(normalize_tags(GOAL_TAG_MAP.get(goal, [])))
+            ],
+            matched_weakness_labels=[weak for weak in (weaknesses or []) if weak in set(normalize_tags(tags))],
             must_have_bonus_multiplier=must_have_bonus_multiplier,
             rng=rng,
         )
@@ -2072,6 +2109,13 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
             available_equipment=equipment_access,
             required_equipment=normalize_equipment_list(ex.get("equipment", [])),
             is_rehab=ex.get("method", "").lower() == "rehab",
+            priority_profile=priority_profile,
+            matched_goal_labels=[
+                goal
+                for goal in goals
+                if set(normalize_tags(ex.get("tags", []))) & set(normalize_tags(GOAL_TAG_MAP.get(goal, [])))
+            ],
+            matched_weakness_labels=[weak for weak in (weaknesses or []) if weak in set(normalize_tags(ex.get("tags", [])))],
             must_have_bonus_multiplier=must_have_bonus_multiplier,
             rng=rng,
         )
@@ -2081,7 +2125,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
         style_score += quality_adjustment
         style_reasons["quality_class"] = quality_profile["quality_class"]
         style_reasons["quality_adjustment"] = round(quality_adjustment, 2)
-        style_reasons["reason_codes"] = []
+        style_reasons["reason_codes"] = list(style_reasons.get("reason_codes", []))
         metadata_adjustment, metadata_reason_codes = _strength_metadata_score_adjustment(
             ex,
             fatigue=fatigue,
@@ -2456,4 +2500,3 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
         "late_window_diagnostics": candidate_reservoir.get("__late_window__", {}),
     }
     
-
