@@ -197,6 +197,50 @@ def test_valid_primary_fields_are_preserved():
     assert parsed.primary_weak_area == "hip_mobility"
 
 
+def test_collision_clarification_fields_parse_when_present():
+    data = _payload(
+        [
+            {"label": "What are your key performance goals?", "value": "power, conditioning"},
+            {"label": "Primary goal", "value": "power"},
+            {"label": "Where do you feel weakest right now?", "value": "power, gas_tank"},
+            {"label": "Primary weak area", "value": "power"},
+            {"label": "Goal/weak-area collision tags", "value": ["power"]},
+            {"label": "Goal/weak-area collision detail", "value": "Power drops when tired"},
+        ]
+    )
+
+    parsed = PlanInput.from_payload(data)
+
+    assert parsed.goal_weakness_collision_tags == ["power"]
+    assert parsed.goal_weakness_collision_detail == "Power drops when tired"
+    assert parsed.primary_goal == "power"
+    assert parsed.primary_weak_area == "power"
+
+
+def test_collision_clarification_fields_default_when_missing_or_empty():
+    missing = PlanInput.from_payload(
+        _payload(
+            [
+                {"label": "What are your key performance goals?", "value": "power"},
+                {"label": "Where do you feel weakest right now?", "value": "power"},
+            ]
+        )
+    )
+    empty = PlanInput.from_payload(
+        _payload(
+            [
+                {"label": "Goal/weak-area collision tags", "value": ""},
+                {"label": "Goal/weak-area collision detail", "value": ""},
+            ]
+        )
+    )
+
+    assert missing.goal_weakness_collision_tags == []
+    assert missing.goal_weakness_collision_detail == ""
+    assert empty.goal_weakness_collision_tags == []
+    assert empty.goal_weakness_collision_detail == ""
+
+
 def test_invalid_primary_fields_fall_back_to_first_selected_values():
     data = _payload(
         [

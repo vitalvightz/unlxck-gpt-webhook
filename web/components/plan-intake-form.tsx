@@ -73,6 +73,141 @@ const FATIGUE_LEVEL_OPTIONS = [
   { label: "High", value: "high" },
 ];
 
+type PriorityOverlap = {
+  label: string;
+  normalizedTag: string;
+  tag: string;
+};
+
+const POWER_CLARIFICATION_OPTIONS = [
+  "Overall power",
+  "Power drops when tired",
+  "First-step explosiveness",
+  "Punching or striking power",
+  "Kicking power",
+  "Lower-body power",
+  "Rotational power through hips and trunk",
+  "Not sure",
+];
+const CONDITIONING_CLARIFICATION_OPTIONS = [
+  "Overall gas tank",
+  "Late-round fatigue",
+  "Recovery between bursts",
+  "Baseline cardio",
+  "Repeated hard efforts",
+  "Not sure",
+];
+const MOBILITY_CLARIFICATION_OPTIONS = [
+  "General mobility",
+  "Hip mobility",
+  "Shoulder mobility",
+  "Ankle mobility",
+  "Stiff movement when tired",
+  "Not sure",
+];
+const GENERIC_CLARIFICATION_OPTIONS = [
+  "I want to improve it overall",
+  "It drops off when tired",
+  "It affects my technique",
+  "It affects my power",
+  "It affects my conditioning",
+  "Not sure",
+];
+const PRIORITY_OVERLAP_ALIASES: Record<string, string> = {
+  gas_tank: "conditioning",
+};
+
+function normalizePriorityOverlapValue(value: string): string {
+  const normalized = value
+    .trim()
+    .toLowerCase()
+    .replace(/&/g, " ")
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "");
+  return PRIORITY_OVERLAP_ALIASES[normalized] ?? normalized;
+}
+
+function getPriorityOptionLabel(value: string): string {
+  return (
+    KEY_GOAL_OPTIONS.find((option) => option.value === value)?.label
+    ?? WEAK_AREA_OPTIONS.find((option) => option.value === value)?.label
+    ?? value
+  );
+}
+
+function getGoalWeakAreaOverlaps(keyGoals: string[], weakAreas: string[]): PriorityOverlap[] {
+  const weakAreaSet = new Set(weakAreas.map(normalizePriorityOverlapValue).filter(Boolean));
+  const overlaps: PriorityOverlap[] = [];
+  const seen = new Set<string>();
+
+  for (const goal of keyGoals) {
+    const normalizedTag = normalizePriorityOverlapValue(goal);
+    if (!normalizedTag || !weakAreaSet.has(normalizedTag) || seen.has(normalizedTag)) {
+      continue;
+    }
+    seen.add(normalizedTag);
+    overlaps.push({
+      label: getPriorityOptionLabel(goal),
+      normalizedTag,
+      tag: goal,
+    });
+  }
+
+  return overlaps;
+}
+
+function getClarificationOptions(
+  normalizedTag: string,
+  technicalStyles: string[],
+  tacticalStyles: string[],
+): string[] {
+  const styleSet = new Set([...technicalStyles, ...tacticalStyles].map(normalizePriorityOverlapValue));
+
+  if (normalizedTag === "power" || normalizedTag === "power_explosiveness") {
+    return POWER_CLARIFICATION_OPTIONS.filter((option) => {
+      if (option === "Kicking power") {
+        return styleSet.has("kickboxing") || styleSet.has("muay_thai") || styleSet.has("mma");
+      }
+      if (option === "Punching or striking power") {
+        return styleSet.has("boxing") || styleSet.has("kickboxing") || styleSet.has("muay_thai") || styleSet.has("mma");
+      }
+      return true;
+    });
+  }
+
+  if (normalizedTag === "conditioning" || normalizedTag === "gas_tank") {
+    return CONDITIONING_CLARIFICATION_OPTIONS;
+  }
+
+  if (normalizedTag === "mobility") {
+    return MOBILITY_CLARIFICATION_OPTIONS;
+  }
+
+  return GENERIC_CLARIFICATION_OPTIONS;
+}
+
+function sanitizeCollisionMetadata(form: PlanRequest): Pick<PlanRequest, "goal_weakness_collision_detail" | "goal_weakness_collision_tags"> {
+  const overlaps = getGoalWeakAreaOverlaps(form.key_goals, form.weak_areas);
+  if (!overlaps.length) {
+    return {
+      goal_weakness_collision_detail: "",
+      goal_weakness_collision_tags: [],
+    };
+  }
+
+  const clarificationOptions = getClarificationOptions(
+    overlaps[0].normalizedTag,
+    form.athlete.technical_style,
+    form.athlete.tactical_style,
+  );
+  const currentDetail = form.goal_weakness_collision_detail?.trim() ?? "";
+
+  return {
+    goal_weakness_collision_detail: clarificationOptions.includes(currentDetail) ? currentDetail : "",
+    goal_weakness_collision_tags: overlaps.map((overlap) => overlap.tag),
+  };
+}
+
 type DraftMetadata = {
   current_step?: number;
   guided_injury?: Partial<GuidedInjuryState> | null;
@@ -761,6 +896,35 @@ export function PlanIntakeForm() {
     });
   }, [form.key_goals, form.primary_goal, form.primary_weak_area, form.weak_areas, hydrated]);
 
+  useEffect(() => {
+    if (!hydrated) return;
+    setForm((current) => {
+      const collisionMetadata = sanitizeCollisionMetadata(current);
+      const currentTags = current.goal_weakness_collision_tags ?? [];
+      const nextTags = collisionMetadata.goal_weakness_collision_tags ?? [];
+      const tagsChanged = currentTags.join("|") !== nextTags.join("|");
+      const detailChanged =
+        (current.goal_weakness_collision_detail ?? "") !== collisionMetadata.goal_weakness_collision_detail;
+
+      if (!tagsChanged && !detailChanged) {
+        return current;
+      }
+
+      return {
+        ...current,
+        ...collisionMetadata,
+      };
+    });
+  }, [
+    form.athlete.tactical_style,
+    form.athlete.technical_style,
+    form.goal_weakness_collision_detail,
+    form.goal_weakness_collision_tags,
+    form.key_goals,
+    form.weak_areas,
+    hydrated,
+  ]);
+
 
   useEffect(() => {
     if (!hydrated || issueRedirectConsumedRef.current) {
@@ -794,6 +958,10 @@ export function PlanIntakeForm() {
     return syncDeviceFields({
       ...currentForm,
       ...nextGuidedInjuryFields,
+      ...sanitizeCollisionMetadata({
+        ...currentForm,
+        ...nextGuidedInjuryFields,
+      }),
     });
   }
 
@@ -1309,6 +1477,23 @@ export function PlanIntakeForm() {
   const selectedSupportWorkLabels = getOptionLabels(TRAINING_AVAILABILITY_OPTIONS, form.support_work_days);
   const selectedGoalLabels = getOptionLabels(KEY_GOAL_OPTIONS, form.key_goals);
   const selectedWeakAreaLabels = getOptionLabels(WEAK_AREA_OPTIONS, form.weak_areas);
+  const goalWeakAreaOverlaps = getGoalWeakAreaOverlaps(form.key_goals, form.weak_areas);
+  const primaryOverlap = goalWeakAreaOverlaps[0] ?? null;
+  const overlapClarificationOptions = primaryOverlap
+    ? getClarificationOptions(
+        primaryOverlap.normalizedTag,
+        form.athlete.technical_style,
+        form.athlete.tactical_style,
+      )
+    : [];
+  const overlapClarificationPrompt = goalWeakAreaOverlaps.length > 1
+    ? "You selected multiple qualities as both goals and weak areas. What is the main issue you want clarified?"
+    : primaryOverlap
+      ? `You selected ${primaryOverlap.label} as both a goal and a weak area. What does that mean?`
+      : "";
+  const overlapReviewLabel = goalWeakAreaOverlaps.length > 1
+    ? "Multiple qualities"
+    : primaryOverlap?.label ?? "";
   const primaryGoalLabel = getOptionLabel(KEY_GOAL_OPTIONS, form.primary_goal ?? "") || "Not selected";
   const primaryWeakAreaLabel = getOptionLabel(WEAK_AREA_OPTIONS, form.primary_weak_area ?? "") || "Not selected";
   const secondaryGoalLabels = getOptionLabels(KEY_GOAL_OPTIONS, form.key_goals.filter((goal) => goal !== form.primary_goal));
@@ -1450,6 +1635,12 @@ export function PlanIntakeForm() {
     { label: "Goals - Secondary", value: formatJoinedLabels(secondaryGoalLabels, "None") },
     { label: "Weak areas - Primary", value: primaryWeakAreaLabel },
     { label: "Weak areas - Secondary", value: formatJoinedLabels(secondaryWeakAreaLabels, "None") },
+    ...(form.goal_weakness_collision_detail?.trim()
+      ? [{
+          label: "Priority clarification",
+          value: `${overlapReviewLabel} - ${form.goal_weakness_collision_detail.trim()}`,
+        }]
+      : []),
     ...(mindsetChallengesText ? [{ label: "Mental / confidence issue", value: mindsetChallengesText }] : []),
     ...(notesText ? [{ label: "Anything else we should know?", value: notesText }] : []),
     ...(!hasExtraPerformanceNotes ? [{ label: "Extra context", value: "No extra context provided." }] : []),
@@ -2279,6 +2470,38 @@ export function PlanIntakeForm() {
                 <p className="muted">Pick up to 2 weak areas.</p>
               </article>
               )}
+              {primaryOverlap ? (
+                <article className="step-card priority-clarification-card">
+                  <div className="form-section-header">
+                    <p className="kicker">Clarification</p>
+                    <h2 className="form-section-title">Priority detail</h2>
+                  </div>
+                  <div className="priority-clarification-copy">
+                    <p>{overlapClarificationPrompt}</p>
+                    <p className="muted">Optional. This helps capture intent without changing your selected goal or weak area.</p>
+                  </div>
+                  <div className="priority-clarification-options" role="radiogroup" aria-label="Goal and weak area clarification">
+                    {overlapClarificationOptions.map((option) => {
+                      const checked = form.goal_weakness_collision_detail === option;
+                      return (
+                        <label
+                          key={option}
+                          className={`priority-clarification-option${checked ? " priority-clarification-option-selected" : ""}`}
+                        >
+                          <input
+                            type="radio"
+                            name="goalWeaknessCollisionDetail"
+                            value={option}
+                            checked={checked}
+                            onChange={() => updateField("goal_weakness_collision_detail", option)}
+                          />
+                          <span>{option}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </article>
+              ) : null}
               <article className="step-card">
                 <div className="form-section-header">
                   <p className="kicker">Extra context</p>
