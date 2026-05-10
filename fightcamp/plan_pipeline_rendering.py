@@ -446,6 +446,7 @@ def build_stage2_outputs(
         candidate_pools=stage2_payload["candidate_pools"],
         omission_ledger=stage2_payload["omission_ledger"],
         rewrite_guidance=stage2_payload["rewrite_guidance"],
+        plan_input=context.plan_input,
     )
     stage2_handoff_text = build_stage2_handoff_text(
         stage2_payload=stage2_payload,
@@ -454,4 +455,3 @@ def build_stage2_outputs(
         planning_brief=planning_brief,
     )
     return stage2_payload, planning_brief, stage2_handoff_text
-

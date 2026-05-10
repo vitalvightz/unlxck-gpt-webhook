@@ -344,6 +344,8 @@ def build_stage2_finalizer_packet(
             f"Fight-day protocol text: {FIGHT_DAY_PROTOCOL_TEXT}",
             "Coach-owned days override app S&C unless coach-led work is light or cancelled.",
             "For late_fight_plan_spec.allowed_exercises_by_day, each countdown day may render only those listed exercise names plus generic breathing, mobility/reset, shadowboxing/technical cues, coach-led session labels, and rehab/prehab band resets.",
+            "Preserve the priority hierarchy from priority_focus. Do not treat all goals and weak areas equally. Primary goal and primary weak area shape emphasis; secondary selections support without taking over.",
+            "If priority_focus.goal_weakness_collisions is non-empty, treat overlap as valid athlete intent. Do not remove it or overcorrect it. Use priority_focus.collision_detail when present to clarify the limiter.",
         ],
         "forbidden_output": {
             "phase_toolbox_labels": list(_FORBIDDEN_TOOLBOX_LABELS),
@@ -371,6 +373,11 @@ def build_stage2_finalizer_packet(
             "week_by_week_progression": (
                 source.get("week_by_week_progression")
                 or stage2_payload.get("week_by_week_progression")
+                or {}
+            ),
+            "priority_focus": (
+                source.get("priority_focus")
+                or stage2_payload.get("priority_focus")
                 or {}
             ),
         },

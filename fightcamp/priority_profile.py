@@ -182,15 +182,57 @@ def total_weakness_priority_bonus(tags: Iterable[str], profile: PriorityProfile)
     return min(total, MAX_WEAKNESS_PRIORITY_BONUS)
 
 
-def describe_priority_focus(profile: PriorityProfile) -> dict[str, str | list[str]]:
-    if profile.primary_goal and profile.primary_weak_area:
+def describe_priority_focus(
+    profile: PriorityProfile,
+    *,
+    collision_detail: str = "",
+    collision_tags: list[str] | None = None,
+) -> dict[str, str | list[str]]:
+    resolved_collisions = list(profile.goal_weakness_collisions)
+    if collision_tags:
+        normalized_profile_collisions = {
+            _normalized_priority_tag(tag)
+            for tag in profile.goal_weakness_collisions
+            if _normalized_priority_tag(tag)
+        }
+        for tag in collision_tags:
+            clean_tag = str(tag or "").strip()
+            if not clean_tag:
+                continue
+            normalized = _normalized_priority_tag(clean_tag)
+            if normalized and normalized in normalized_profile_collisions and clean_tag not in resolved_collisions:
+                resolved_collisions.append(clean_tag)
+
+    collision_detail = str(collision_detail or "").strip()
+    has_primary_collision = bool(
+        profile.primary_goal
+        and profile.primary_weak_area
+        and _normalized_priority_tag(profile.primary_goal) == _normalized_priority_tag(profile.primary_weak_area)
+    )
+
+    if has_primary_collision:
+        main_focus = f"Build {profile.primary_goal} while clarifying the {profile.primary_weak_area} limiter."
+        focus_instruction = (
+            f"{profile.primary_goal} is both the goal and weak-area signal. Treat this as a priority collision: "
+            "build it without double-loading it blindly."
+        )
+        if collision_detail:
+            focus_instruction += " Use the clarification detail to bias toward repeatable/usable output."
+    elif profile.primary_goal and profile.primary_weak_area:
         main_focus = f"Build {profile.primary_goal} while managing {profile.primary_weak_area}."
+        focus_instruction = (
+            f"Prioritise {profile.primary_goal} as the main adaptation while using "
+            f"{profile.primary_weak_area} as the main limiter. Keep secondary goals supportive, not dominant."
+        )
     elif profile.primary_goal:
         main_focus = f"Build {profile.primary_goal}."
+        focus_instruction = f"Prioritise {profile.primary_goal} as the main adaptation."
     elif profile.primary_weak_area:
         main_focus = f"Manage {profile.primary_weak_area}."
+        focus_instruction = f"Prioritise {profile.primary_weak_area} as the main limiter."
     else:
         main_focus = ""
+        focus_instruction = ""
 
     return {
         "main_focus": main_focus,
@@ -198,4 +240,7 @@ def describe_priority_focus(profile: PriorityProfile) -> dict[str, str | list[st
         "primary_weak_area": profile.primary_weak_area,
         "secondary_goals": profile.secondary_goals,
         "secondary_weak_areas": profile.secondary_weak_areas,
+        "goal_weakness_collisions": resolved_collisions,
+        "collision_detail": collision_detail,
+        "focus_instruction": focus_instruction,
     }
