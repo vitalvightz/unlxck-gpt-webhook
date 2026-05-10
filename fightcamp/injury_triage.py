@@ -976,7 +976,7 @@ def _apply_structured_injury_signals(
             notes=notes,
             area=area,
             red_flags=red_flags,
-            matched_categories=set(),
+            matched_categories=matched_categories if use_guided_diagnosis_fields else set(),
             routing_reasons=routing_reasons,
         )
 
