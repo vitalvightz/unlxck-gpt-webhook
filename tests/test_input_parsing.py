@@ -761,3 +761,87 @@ def test_countdown_stable_across_timezone_edge_cases(monkeypatch):
     )
 
     assert parsed.days_until_fight == 1
+
+
+def _guided_payload(area: str, injury_type: str = "", surface_type: str = "", notes: str = "", avoid: str = "") -> dict:
+    payload = _payload([
+        {"label": "Full name", "value": "Test Athlete"},
+        {"label": "Fighting Style (Technical)", "value": "Boxing"},
+    ])
+    payload["guided_injury"] = {
+        "area": area,
+        "injury_type": injury_type,
+        "surface_type": surface_type,
+        "notes": notes,
+        "avoid": avoid,
+    }
+    return payload
+
+
+def test_guided_resolver_parser_specific_type_beats_tendon_ligament_dropdown():
+    parsed = PlanInput.from_payload(_guided_payload("Hyperextended right knee", injury_type="tendon_ligament"))
+
+    entry = parsed.parsed_injuries[0]
+    assert entry["injury_type"] == "hyperextension"
+    assert entry["canonical_location"] == "knee"
+    assert entry["side"] == "right"
+    assert entry["injury_type_source"] == "parser"
+
+
+def test_guided_resolver_fracture_dropdown_fills_unspecified_parse():
+    parsed = PlanInput.from_payload(_guided_payload("right hand", injury_type="fracture"))
+
+    entry = parsed.parsed_injuries[0]
+    assert entry["injury_type"] == "fracture"
+    assert entry["canonical_location"] == "hand"
+    assert entry["injury_type_source"] == "guided_serious_type"
+
+
+def test_guided_resolver_dislocation_dropdown_fills_unspecified_parse():
+    parsed = PlanInput.from_payload(_guided_payload("right shoulder", injury_type="dislocation"))
+
+    entry = parsed.parsed_injuries[0]
+    assert entry["injury_type"] == "dislocation"
+    assert entry["canonical_location"] == "shoulder"
+
+
+def test_guided_resolver_surface_type_maps_to_surface_injury_type():
+    parsed = PlanInput.from_payload(_guided_payload("right knee", injury_type="surface_injury", surface_type="bruise"))
+
+    entry = parsed.parsed_injuries[0]
+    assert entry["injury_type"] == "contusion"
+    assert entry["canonical_location"] == "knee"
+    assert entry["injury_type_source"] == "surface_type"
+
+
+def test_guided_resolver_tendon_ligament_defaults_to_soft_tissue_without_rupture_evidence():
+    parsed = PlanInput.from_payload(_guided_payload("right knee", injury_type="tendon_ligament"))
+
+    entry = parsed.parsed_injuries[0]
+    assert entry["injury_type"] == "soft_tissue_joint_issue"
+    assert entry["injury_type"] != "tendon_rupture_or_avulsion"
+
+
+def test_guided_resolver_tendon_ligament_uses_rupture_type_when_evidence_present():
+    parsed = PlanInput.from_payload(_guided_payload("patellar tendon rupture", injury_type="tendon_ligament"))
+
+    entry = parsed.parsed_injuries[0]
+    assert entry["injury_type"] != "soft_tissue_joint_issue"
+    assert entry["injury_type"] in {"tendon_rupture_or_avulsion", "rupture"}
+
+
+def test_guided_resolver_unspecified_dropdown_keeps_parser_specific_parse():
+    parsed = PlanInput.from_payload(_guided_payload("Rolled right ankle", injury_type="unspecified"))
+
+    entry = parsed.parsed_injuries[0]
+    assert entry["injury_type"] == "sprain"
+    assert entry["canonical_location"] == "ankle"
+    assert entry["side"] == "right"
+
+
+def test_guided_resolver_empty_dropdown_falls_back_to_unspecified():
+    parsed = PlanInput.from_payload(_guided_payload("right knee", injury_type=""))
+
+    entry = parsed.parsed_injuries[0]
+    assert entry["injury_type"] == "unspecified"
+    assert entry["canonical_location"] == "knee"

@@ -7,6 +7,7 @@ from typing import Literal
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 from dateutil.tz import gettz
 
+from .guided_injury_resolver import resolve_guided_injury_entry
 from .injury_formatting import parse_injuries_and_restrictions, parse_injury_entry
 from .normalization import normalize_injury_marker as _normalize_injury_marker
 from .normalization import normalize_label as _normalize_label
@@ -478,6 +479,8 @@ def _parse_guided_injury(guided_injury: GuidedInjury) -> tuple[list[dict[str, st
                 "laterality": None,
                 "original_phrase": guided_injury.area,
             }
+
+        injury_entry = resolve_guided_injury_entry(guided_injury, injury_entry)
 
         laterality = injury_entry.get("laterality") or injury_entry.get("side")
         display_location = _strip_guided_laterality(guided_injury.area, laterality)
