@@ -1,7 +1,7 @@
 from types import SimpleNamespace
 
 from fightcamp.coach_review import run_coach_review
-from fightcamp.plan_pipeline_blocks import _build_phase_support_block
+from fightcamp.plan_pipeline_blocks import _build_phase_support_block, _build_rehab_injury_string
 from fightcamp.plan_pipeline_rendering import _build_coach_notes, _sparring_adjustment_lines, _sparring_nutrition_lines
 
 
@@ -136,3 +136,35 @@ def test_sparring_adjustment_lines_fall_back_to_generic_text_when_days_unknown()
     joined = "\n".join(lines)
     assert "If hard sparring lands today" in joined
     assert "If no sparring is fixed this week" in joined
+
+
+def test_rehab_injury_string_does_not_apply_first_card_instability_to_other_entries():
+    context = SimpleNamespace(
+        plan_input=SimpleNamespace(
+            parsed_injuries=[
+                {
+                    "display_location": "knee",
+                    "canonical_location": "knee",
+                    "laterality": "left",
+                    "injury_type": "instability",
+                    "severity": "moderate",
+                    "trend": "stable",
+                },
+                {
+                    "display_location": "ankle",
+                    "canonical_location": "ankle",
+                    "laterality": "right",
+                    "injury_type": "sprain",
+                    "severity": "mild",
+                    "trend": "improving",
+                },
+            ],
+            guided_injury=SimpleNamespace(injury_type="instability"),
+        ),
+        injuries_only_text="left knee; right ankle",
+    )
+
+    injury_string = _build_rehab_injury_string(context)
+
+    assert "right ankle sprain mild improving" in injury_string
+    assert "right ankle instability" not in injury_string

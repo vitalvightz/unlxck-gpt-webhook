@@ -123,6 +123,7 @@ class TrainingContext:
     injuries_raw_text: str = ""
     parsed_injuries: list[dict[str, Any]] = field(default_factory=list)
     guided_injury: dict[str, Any] | None = None
+    guided_injuries: list[dict[str, Any]] = field(default_factory=list)
     injury_restrictions: list[dict[str, Any]] = field(default_factory=list)
     triage_summary: dict[str, Any] = field(default_factory=dict)
 

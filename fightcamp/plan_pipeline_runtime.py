@@ -216,6 +216,24 @@ def build_runtime_context(
     triage_summary: dict[str, Any] | None = None,
     is_approved_triage_resume: bool = False,
 ) -> PlanRuntimeContext:
+    def _serialize_guided_injury(guided_entry: Any) -> dict[str, Any]:
+        return {
+            "area": guided_entry.area,
+            "severity": guided_entry.severity,
+            "trend": guided_entry.trend,
+            "avoid": guided_entry.avoid,
+            "notes": guided_entry.notes,
+            "injury_type": guided_entry.injury_type,
+            "surface_type": guided_entry.surface_type,
+            "timeframe": guided_entry.timeframe,
+            "cleared": guided_entry.cleared,
+            "open_wound": guided_entry.open_wound,
+            "bleeding_status": guided_entry.bleeding_status,
+            "infection_signs": list(guided_entry.infection_signs or []),
+            "impact_related": guided_entry.impact_related,
+            "sensitive_area": guided_entry.sensitive_area,
+        }
+
     parsed_injury_phrases = [
         entry.get("original_phrase")
         for entry in plan_input.parsed_injuries
@@ -272,15 +290,14 @@ def build_runtime_context(
     raw_injury_list = [phrase.strip().lower() for phrase in parsed_injury_phrases if phrase.strip()]
     guided_injury = None if is_approved_triage_resume else plan_input.guided_injury
     guided_injury_dict = (
-        {
-            "area": guided_injury.area,
-            "severity": guided_injury.severity,
-            "trend": guided_injury.trend,
-            "avoid": guided_injury.avoid,
-            "notes": guided_injury.notes,
-        }
+        _serialize_guided_injury(guided_injury)
         if guided_injury is not None
         else None
+    )
+    guided_injuries_list = (
+        []
+        if is_approved_triage_resume
+        else [_serialize_guided_injury(item) for item in (plan_input.guided_injuries or [])]
     )
 
     training_context = TrainingContext(
@@ -322,6 +339,7 @@ def build_runtime_context(
         injuries_raw_text=plan_input.injuries,
         parsed_injuries=[dict(entry) for entry in plan_input.parsed_injuries],
         guided_injury=guided_injury_dict,
+        guided_injuries=guided_injuries_list,
         injury_restrictions=[] if is_approved_triage_resume else [dict(entry) for entry in plan_input.restrictions],
         triage_summary={} if is_approved_triage_resume else dict(triage_summary or {}),
     )

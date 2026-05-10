@@ -501,6 +501,31 @@ def test_guided_injury_runtime_context_does_not_leak_note_body_parts():
     assert all("knee" not in injury for injury in context.training_context.injuries)
 
 
+def test_runtime_context_transports_all_guided_injuries_and_keeps_legacy_first_card():
+    payload = _payload(
+        [
+            {"label": "Full name", "value": "Test Athlete"},
+            {"label": "Fighting Style (Technical)", "value": "Boxing"},
+            {"label": "Any injuries or areas you need to work around?", "value": "left knee, right ankle"},
+        ]
+    )
+    payload["guided_injuries"] = [
+        {"area": "left knee", "injury_type": "instability", "severity": "moderate"},
+        {"area": "right ankle", "injury_type": "sprain", "severity": "mild"},
+    ]
+
+    parsed = PlanInput.from_payload(payload)
+    context = build_runtime_context(
+        plan_input=parsed,
+        random_seed=None,
+        logger=logging.getLogger(__name__),
+    )
+
+    assert len(context.training_context.guided_injuries) == 2
+    assert context.training_context.guided_injury == context.training_context.guided_injuries[0]
+    assert len(context.training_context.parsed_injuries) == 2
+
+
 def test_approved_resume_runtime_context_keeps_parsed_injuries_but_strips_triage_shaping():
     payload = _payload(
         [
@@ -529,6 +554,7 @@ def test_approved_resume_runtime_context_keeps_parsed_injuries_but_strips_triage
     assert context.training_context.injuries_raw_text == parsed.injuries
     assert context.training_context.parsed_injuries == [dict(entry) for entry in parsed.parsed_injuries]
     assert context.training_context.guided_injury is None
+    assert context.training_context.guided_injuries == []
     assert context.training_context.injury_restrictions == []
     assert context.training_context.triage_summary == {}
 
