@@ -294,6 +294,58 @@ def test_guided_injuries_payload_parses_multiple_cards_and_preserves_notes():
     assert parsed.parsed_injuries[1]["notes"] == "roadwork flare-up"
     assert len(parsed.restrictions) == 1
     assert parsed.restrictions[0]["region"] == "hip"
+    assert len(parsed.guided_injuries) == 2
+
+
+def test_plan_input_preserves_multiple_guided_injuries_and_backwards_alias():
+    payload = _payload(
+        [
+            {"label": "Full name", "value": "Test Athlete"},
+            {"label": "Any injuries or areas you need to work around?", "value": ""},
+        ]
+    )
+    payload["guided_injuries"] = [
+        {
+            "area": "rolled left ankle",
+            "injury_type": "tendon_ligament",
+            "severity": "moderate",
+            "trend": "stable",
+            "notes": "Can bear weight. No deformity.",
+        },
+        {
+            "area": "head impact",
+            "injury_type": "impact",
+            "severity": "moderate",
+            "trend": "stable",
+            "notes": "Vomited after head impact.",
+        },
+    ]
+
+    parsed = PlanInput.from_payload(payload)
+
+    assert len(parsed.guided_injuries) == 2
+    assert parsed.guided_injury == parsed.guided_injuries[0]
+    assert len(parsed.parsed_injuries) == 2
+
+
+def test_legacy_guided_injury_populates_guided_injuries_list():
+    payload = _payload(
+        [
+            {"label": "Full name", "value": "Test Athlete"},
+            {"label": "Any injuries or areas you need to work around?", "value": ""},
+        ]
+    )
+    payload["guided_injury"] = {
+        "area": "left wrist tightness",
+        "severity": "mild",
+        "trend": "stable",
+    }
+
+    parsed = PlanInput.from_payload(payload)
+
+    assert parsed.guided_injury is not None
+    assert len(parsed.guided_injuries) == 1
+    assert parsed.guided_injuries[0] == parsed.guided_injury
 
 
 def test_guided_injuries_are_parsed_once(monkeypatch):

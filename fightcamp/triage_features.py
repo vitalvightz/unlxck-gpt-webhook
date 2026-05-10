@@ -546,6 +546,22 @@ def _guided_injury_text_chunks(
     return [chunk for chunk in chunks if chunk]
 
 
+def _guided_injuries_text_chunks(
+    guided_injuries: list[GuidedInjury] | None,
+    *,
+    include_diagnosis_fields: bool = True,
+) -> list[str]:
+    chunks: list[str] = []
+    for guided in guided_injuries or []:
+        chunks.extend(
+            _guided_injury_text_chunks(
+                guided,
+                include_diagnosis_fields=include_diagnosis_fields,
+            )
+        )
+    return chunks
+
+
 def _restriction_text_chunks(restrictions: list[dict[str, Any]]) -> list[str]:
     chunks: list[str] = []
     for item in restrictions or []:
@@ -738,7 +754,8 @@ def build_triage_features(
     *,
     injuries: str,
     parsed_injuries: list[dict[str, Any]] | None,
-    guided_injury: GuidedInjury | None,
+    guided_injury: GuidedInjury | None = None,
+    guided_injuries: list[GuidedInjury] | None = None,
     restrictions: list[dict[str, Any]] | None,
 ) -> TriageFeatures:
     raw_chunks: list[str] = []
@@ -746,9 +763,14 @@ def build_triage_features(
     raw_chunks.extend(_parsed_injury_chunks(parsed_injuries))
 
     has_resolved_parsed_injuries = _has_resolved_parsed_injuries(parsed_injuries)
+    effective_guided_injuries = (
+        guided_injuries
+        if guided_injuries is not None
+        else ([guided_injury] if guided_injury is not None else [])
+    )
     raw_chunks.extend(
-        _guided_injury_text_chunks(
-            guided_injury,
+        _guided_injuries_text_chunks(
+            effective_guided_injuries,
             include_diagnosis_fields=not has_resolved_parsed_injuries,
         )
     )
