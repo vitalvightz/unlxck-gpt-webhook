@@ -41,6 +41,7 @@ from .late_selector_windows import classify_late_selector_window
 from .normalization import clean_list, normalize_fatigue_level, normalize_text, phrase_in_text, slugify, dedupe_preserve_order
 from .restriction_parsing import CANONICAL_RESTRICTIONS
 from .rehab_protocols import _rehab_drills_for_phase, classify_drill_function, _FUNCTION_LABELS
+from .priority_profile import build_priority_profile, describe_priority_focus
 from .selection_metadata import build_score_evidence, normalize_selection_metadata
 from .stage2_render_guards import (  # noqa: F401  (re-exported for backwards compatibility)
     _NO_ACTIVE_INJURY_MARKERS,
@@ -3232,6 +3233,7 @@ def build_planning_brief(
     candidate_pools: dict[str, dict],
     omission_ledger: dict[str, dict],
     rewrite_guidance: dict,
+    plan_input: Any | None = None,
 ) -> dict:
     athlete_model = dict(athlete_model)
     rewrite_guidance = _append_render_guard_writing_rules(rewrite_guidance, athlete_model=athlete_model, days_until_fight=athlete_model.get("days_until_fight"))
@@ -3252,6 +3254,13 @@ def build_planning_brief(
         weekly_stress_map,
     )
     days_until_fight = athlete_model.get("days_until_fight")
+    priority_source = plan_input if plan_input is not None else athlete_model
+    priority_profile = build_priority_profile(priority_source)
+    priority_focus = describe_priority_focus(
+        priority_profile,
+        collision_detail=getattr(plan_input, "goal_weakness_collision_detail", "") if plan_input is not None else "",
+        collision_tags=getattr(plan_input, "goal_weakness_collision_tags", None) if plan_input is not None else None,
+    )
 
     if _uses_late_fight_stage2_payload(days_until_fight):
         fight_week_override = _fight_week_override_payload(days_until_fight)
@@ -3290,6 +3299,7 @@ def build_planning_brief(
             "archetype_summary": _derive_athlete_archetype(athlete_model),
             "main_limiter": _derive_main_limiter(athlete_model),
             "compressed_priorities": athlete_model.get("compressed_priorities", {}),
+            "priority_focus": priority_focus,
             "limiter_profile": limiter_profile,
             "sport_load_profile": sport_load_profile,
             "decision_hierarchy": PLANNING_DECISION_HIERARCHY,
@@ -3329,6 +3339,7 @@ def build_planning_brief(
         "archetype_summary": _derive_athlete_archetype(athlete_model),
         "main_limiter": _derive_main_limiter(athlete_model),
         "compressed_priorities": athlete_model.get("compressed_priorities", {}),
+        "priority_focus": priority_focus,
         "limiter_profile": limiter_profile,
         "sport_load_profile": sport_load_profile,
         "decision_hierarchy": PLANNING_DECISION_HIERARCHY,
@@ -4170,6 +4181,22 @@ def build_stage2_handoff_text(
         payload_mode=payload_mode,
         continuation_map=continuation_map,
     )
+    selected_plan = finalizer_packet.get("selected_plan", {})
+    priority_focus = selected_plan.get("priority_focus", {}) if isinstance(selected_plan, dict) else {}
+    priority_lines = []
+    if isinstance(priority_focus, dict):
+        priority_lines = [
+            "Preserve priority hierarchy from priority_focus:",
+            "- primary goal drives the main adaptation emphasis.",
+            "- primary weak area is the main limiter to manage.",
+            "- secondary goals support the main focus without taking over.",
+            "- secondary weak areas matter but should not hijack session intent.",
+        ]
+        if priority_focus.get("goal_weakness_collisions"):
+            priority_lines.append("- if collision tags exist, keep the overlap and do not overcorrect it.")
+        collision_detail = str(priority_focus.get("collision_detail") or "").strip()
+        if collision_detail:
+            priority_lines.append(f"- collision detail: {collision_detail}")
 
     sections = [
         STAGE2_FINALIZER_PROMPT.strip(),
@@ -4177,6 +4204,8 @@ def build_stage2_handoff_text(
 
     if mode_instructions:
         sections.append("PAYLOAD MODE INSTRUCTIONS\n" + mode_instructions)
+    if priority_lines:
+        sections.append("PRIORITY FOCUS GUIDANCE\n" + "\n".join(priority_lines))
 
     sections.append("FINALIZER PACKET\n" + _json_block(finalizer_packet))
     sections.append("ATHLETE PROFILE\n" + _json_block(athlete_profile))

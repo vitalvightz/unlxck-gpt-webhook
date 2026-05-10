@@ -226,3 +226,29 @@ def test_build_stage2_handoff_text_preserves_countdown_calendar_fields_in_weekly
     assert '"countdown_range":[36,30]' in handoff
     assert '"calendar_days":[{"weekday":"Tue","d_day":36}]' in handoff
     assert '"projected_days_until_fight_start":36' in handoff
+
+
+def test_build_stage2_handoff_text_includes_priority_focus_guidance_without_raw_reason_codes():
+    handoff = build_stage2_handoff_text(
+        stage2_payload={"athlete_model": {"sport": "boxing"}},
+        plan_text="Week 1",
+        planning_brief={
+            "athlete_snapshot": {"sport": "boxing"},
+            "priority_focus": {
+                "primary_goal": "power",
+                "primary_weak_area": "power",
+                "secondary_goals": ["conditioning"],
+                "secondary_weak_areas": ["gas_tank"],
+                "goal_weakness_collisions": ["power"],
+                "collision_detail": "Power drops when tired",
+            },
+        },
+    )
+
+    assert "primary goal" in handoff.lower()
+    assert "primary weak area" in handoff.lower()
+    assert "secondary goals" in handoff.lower()
+    assert "secondary weak areas" in handoff.lower()
+    assert "Power drops when tired" in handoff
+    assert "priority_primary_goal_match" not in handoff
+    assert "priority_collision_goal_weakness" not in handoff

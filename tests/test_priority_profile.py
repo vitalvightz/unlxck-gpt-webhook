@@ -287,3 +287,33 @@ def test_summary_helper_works():
     summary = describe_priority_focus(profile)
 
     assert summary["main_focus"] == "Build power while managing cns_fatigue."
+    assert summary["primary_goal"] == "power"
+    assert summary["primary_weak_area"] == "cns_fatigue"
+    assert summary["secondary_goals"] == ["conditioning", "mobility"]
+    assert summary["secondary_weak_areas"] == ["hip_mobility"]
+    assert summary["goal_weakness_collisions"] == []
+    assert summary["collision_detail"] == ""
+
+
+def test_summary_helper_collision_case_uses_detail():
+    profile = PriorityProfile(
+        primary_goal="power",
+        secondary_goals=["conditioning"],
+        primary_weak_area="power",
+        secondary_weak_areas=["gas_tank"],
+        all_goals=["power", "conditioning"],
+        all_weak_areas=["power", "gas_tank"],
+        goal_weakness_collisions=["power"],
+        primary_goal_weakness_collision=True,
+        primary_collision_tag="power",
+    )
+
+    summary = describe_priority_focus(
+        profile,
+        collision_detail="Power drops when tired",
+        collision_tags=["power"],
+    )
+
+    assert summary["goal_weakness_collisions"] == ["power"]
+    assert summary["collision_detail"] == "Power drops when tired"
+    assert "priority collision" in str(summary["focus_instruction"]).lower()
