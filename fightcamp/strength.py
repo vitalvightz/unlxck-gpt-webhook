@@ -1559,7 +1559,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
             breakdown["metadata_adjustment"] = metadata_adjustment
         if metadata_reason_codes:
             breakdown["reason_codes"] = list(
-                dict.fromkeys(list(breakdown.get("reason_codes", [])) + list(metadata_reason_codes))
+                dict.fromkeys(breakdown.get("reason_codes", []) + metadata_reason_codes)
             )
         if not ignore_restrictions and restriction_penalty:
             score += restriction_penalty
