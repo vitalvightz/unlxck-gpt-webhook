@@ -832,6 +832,10 @@ def _apply_structured_injury_signals(
     routing_reasons: set[str],
     use_guided_diagnosis_fields: bool,
 ) -> None:
+    injury_type = (guided.injury_type or "").strip().lower()
+    if not injury_type:
+        return
+
     surface_type = (guided.surface_type or "").strip().lower()
     timeframe = (guided.timeframe or "").strip().lower()
     cleared = (guided.cleared or "").strip().lower()
@@ -854,10 +858,6 @@ def _apply_structured_injury_signals(
     )
 
     if use_guided_diagnosis_fields:
-        injury_type = (guided.injury_type or "").strip().lower()
-        if not injury_type:
-            return
-
         # ── Fracture ──────────────────────────────────────────────────────
         if injury_type == "fracture":
             if old_and_cleared and not has_current_concern:
@@ -910,37 +910,15 @@ def _apply_structured_injury_signals(
         elif injury_type == "head_impact":
             matched_categories.add("concussion")
             routing_reasons.add("structured:head_impact")
-            for token in note_tags.get("red_flags", set()):
-                mapped = _HEAD_IMPACT_TAG_TO_RED_FLAG.get(token)
-                if mapped:
-                    red_flags.add(mapped)
-                    routing_reasons.add(f"tagged_note:red_flags:{token}")
 
         # ── Nerve symptoms ────────────────────────────────────────────────
         elif injury_type == "nerve_symptoms":
-            nerve_tags = note_tags.get("nerve_symptoms", set())
-            if not nerve_tags:
-                red_flags.add("numbness")
-            for token in nerve_tags:
-                mapped = _NERVE_TAG_TO_RED_FLAGS.get(token)
-                if mapped:
-                    red_flags.update(mapped)
-                    routing_reasons.add(f"tagged_note:nerve_symptoms:{token}")
             routing_reasons.add("structured:nerve_symptoms")
             if trend in _WORSENING_TRENDS or impact_related == "yes":
                 routing_reasons.add("structured:nerve_symptoms_escalated")
 
         # ── Chest / breathing ─────────────────────────────────────────────
         elif injury_type == "chest_breathing":
-            chest_tags = note_tags.get("chest_symptoms", set())
-            if not chest_tags:
-                red_flags.add("breathing_pain")
-                red_flags.add("chest_pain")
-            for token in chest_tags:
-                mapped = _CHEST_TAG_TO_RED_FLAG.get(token)
-                if mapped:
-                    red_flags.add(mapped)
-                    routing_reasons.add(f"tagged_note:chest_symptoms:{token}")
             routing_reasons.add("structured:chest_breathing")
 
         # ── Surface injury ────────────────────────────────────────────────
@@ -960,6 +938,49 @@ def _apply_structured_injury_signals(
                 matched_categories=matched_categories,
                 routing_reasons=routing_reasons,
             )
+
+    # Always-on safety signals from guided fields/tags.
+    for token in note_tags.get("red_flags", set()):
+        mapped = _HEAD_IMPACT_TAG_TO_RED_FLAG.get(token)
+        if mapped:
+            red_flags.add(mapped)
+            routing_reasons.add(f"tagged_note:red_flags:{token}")
+
+    nerve_tags = note_tags.get("nerve_symptoms", set())
+    if injury_type == "nerve_symptoms" and not nerve_tags:
+        red_flags.add("numbness")
+    for token in nerve_tags:
+        mapped = _NERVE_TAG_TO_RED_FLAGS.get(token)
+        if mapped:
+            red_flags.update(mapped)
+            routing_reasons.add(f"tagged_note:nerve_symptoms:{token}")
+
+    chest_tags = note_tags.get("chest_symptoms", set())
+    if injury_type == "chest_breathing" and not chest_tags:
+        red_flags.add("breathing_pain")
+        red_flags.add("chest_pain")
+    for token in chest_tags:
+        mapped = _CHEST_TAG_TO_RED_FLAG.get(token)
+        if mapped:
+            red_flags.add(mapped)
+            routing_reasons.add(f"tagged_note:chest_symptoms:{token}")
+
+    if injury_type == "surface_injury":
+        _apply_surface_injury_signals(
+            surface_type=surface_type,
+            bleeding_status=bleeding_status,
+            open_wound=open_wound,
+            sensitive_area=sensitive_area,
+            infection_signs=infection_signs,
+            impact_related=impact_related,
+            trend=trend,
+            severity=severity,
+            notes=notes,
+            area=area,
+            red_flags=red_flags,
+            matched_categories=set(),
+            routing_reasons=routing_reasons,
+        )
 
 
 def _apply_surface_injury_signals(
@@ -981,7 +1002,7 @@ def _apply_surface_injury_signals(
     routing_reasons.add(f"structured:surface_{surface_type or 'unspecified'}")
 
     # ── Bleeding ──────────────────────────────────────────────────────
-    if bleeding_status == "wont_stop":
+    if bleeding_status in {"wont_stop", "uncontrolled"}:
         red_flags.add("uncontrolled_bleeding")
         routing_reasons.add("structured:uncontrolled_bleeding")
 
@@ -994,7 +1015,7 @@ def _apply_surface_injury_signals(
     if sensitive_area == "eye":
         red_flags.add("eye_area_wound")
         routing_reasons.add("structured:eye_area_wound")
-    elif sensitive_area in ("mouth", "face"):
+    elif sensitive_area in ("mouth", "face", "yes"):
         red_flags.add("sensitive_area_wound")
         routing_reasons.add("structured:sensitive_area_wound")
 

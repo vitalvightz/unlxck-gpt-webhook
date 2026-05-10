@@ -474,6 +474,70 @@ def test_triage_guided_safety_signals_still_apply_with_resolved_parsed_injury():
     assert "structural_function_red_flag" in triage.routing_reasons
 
 
+def test_triage_surface_safety_red_flags_still_apply_when_parsed_injury_exists():
+    payload = _payload_with_injury("")
+    payload["guided_injury"] = {
+        "area": "right cheek cut",
+        "injury_type": "surface_injury",
+        "surface_type": "cut",
+        "open_wound": "yes",
+        "bleeding_status": "uncontrolled",
+        "sensitive_area": "yes",
+        "severity": "moderate",
+        "trend": "stable",
+    }
+    parsed = replace(
+        PlanInput.from_payload(payload),
+        parsed_injuries=[{"injury_type": "cut", "canonical_location": "face"}],
+    )
+
+    triage = triage_injuries(parsed)
+
+    assert "fracture" not in triage.matched_high_risk_categories
+    assert "uncontrolled_bleeding" in triage.red_flags
+    assert triage.mode == MEDICAL_HOLD
+
+
+def test_triage_head_impact_tags_apply_without_head_impact_diagnosis_override():
+    payload = _payload_with_injury("")
+    payload["guided_injury"] = {
+        "area": "head pain",
+        "injury_type": "head_impact",
+        "notes": "[red_flags:vomiting]",
+        "severity": "moderate",
+        "trend": "stable",
+    }
+    parsed = replace(
+        PlanInput.from_payload(payload),
+        parsed_injuries=[{"injury_type": "pain", "canonical_location": "head"}],
+    )
+
+    triage = triage_injuries(parsed)
+
+    assert "concussion" not in triage.matched_high_risk_categories
+    assert "vomiting_after_head_impact" in triage.red_flags
+
+
+def test_triage_nerve_tags_apply_without_nerve_diagnosis_override():
+    payload = _payload_with_injury("")
+    payload["guided_injury"] = {
+        "area": "arm pain",
+        "injury_type": "nerve_symptoms",
+        "notes": "[nerve_symptoms:type_weakness]",
+        "severity": "moderate",
+        "trend": "stable",
+    }
+    parsed = replace(
+        PlanInput.from_payload(payload),
+        parsed_injuries=[{"injury_type": "pain", "canonical_location": "arm"}],
+    )
+
+    triage = triage_injuries(parsed)
+
+    assert "weakness" in triage.red_flags
+    assert "structured:nerve_symptoms" not in triage.routing_reasons
+
+
 def test_blocked_modes_do_not_reach_stage2_or_normal_pipeline(monkeypatch):
     payload = _payload_with_injury("open fracture with deformity")
 
