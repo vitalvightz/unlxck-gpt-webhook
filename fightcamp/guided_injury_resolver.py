@@ -95,7 +95,7 @@ def resolve_guided_injury_entry(guided_injury: Any, parsed_entry: dict[str, Any]
 
     rupture_evidence_text = ". ".join(part for part in [area, notes, avoid] if part)
 
-    if parser_type and parser_type != "unspecified":
+    if parser_type in SPECIFIC_PARSER_TYPES:
         final_type = parser_type
         source = "parser"
     elif mapped_surface_type:
