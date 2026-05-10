@@ -111,7 +111,7 @@ def resolve_guided_injury_entry(guided_injury: Any, parsed_entry: dict[str, Any]
         final_type = guided_type
         source = "guided_type"
     else:
-        final_type = str(parsed_entry.get("injury_type") or "unspecified").strip().lower() or "unspecified"
+        final_type = _specific_parser_type(parsed_entry) or "unspecified"
         source = "fallback"
 
     resolved = dict(parsed_entry)
