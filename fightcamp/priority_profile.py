@@ -48,15 +48,24 @@ def normalize_priority_values(value: str | list[str] | None) -> list[str]:
     return normalized
 
 
-def build_priority_profile(plan_input: Any) -> PriorityProfile:
-    all_goals = normalize_priority_values(getattr(plan_input, "key_goals", None))
-    all_weak_areas = normalize_priority_values(getattr(plan_input, "weak_areas", None))
+def _read_priority_field(source, key: str, default=None):
+    if isinstance(source, dict):
+        return source.get(key, default)
+    return getattr(source, key, default)
 
-    primary_goal = str(getattr(plan_input, "primary_goal", "") or "").strip()
+
+def build_priority_profile(plan_input: Any) -> PriorityProfile:
+    all_goals = normalize_priority_values(_read_priority_field(plan_input, "key_goals", None))
+    weak_source = _read_priority_field(plan_input, "weak_areas", None)
+    if weak_source is None:
+        weak_source = _read_priority_field(plan_input, "weaknesses", None)
+    all_weak_areas = normalize_priority_values(weak_source)
+
+    primary_goal = str(_read_priority_field(plan_input, "primary_goal", "") or "").strip()
     if not primary_goal or primary_goal not in all_goals:
         primary_goal = all_goals[0] if all_goals else ""
 
-    primary_weak_area = str(getattr(plan_input, "primary_weak_area", "") or "").strip()
+    primary_weak_area = str(_read_priority_field(plan_input, "primary_weak_area", "") or "").strip()
     if not primary_weak_area or primary_weak_area not in all_weak_areas:
         primary_weak_area = all_weak_areas[0] if all_weak_areas else ""
 

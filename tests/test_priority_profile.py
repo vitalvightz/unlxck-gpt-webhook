@@ -154,3 +154,30 @@ def test_summary_helper_works():
     summary = describe_priority_focus(profile)
 
     assert summary["main_focus"] == "Build power while managing cns_fatigue."
+
+
+def test_build_priority_profile_supports_dict_input():
+    profile = build_priority_profile(
+        {
+            "key_goals": ["power", "mobility"],
+            "primary_goal": "power",
+            "weak_areas": ["cns_fatigue", "hip_mobility"],
+            "primary_weak_area": "cns_fatigue",
+        }
+    )
+
+    assert profile.primary_goal == "power"
+    assert profile.primary_weak_area == "cns_fatigue"
+
+
+def test_build_priority_profile_supports_weaknesses_alias():
+    profile = build_priority_profile(
+        {
+            "key_goals": ["power"],
+            "weaknesses": ["core", "balance"],
+            "primary_weak_area": "core",
+        }
+    )
+
+    assert profile.primary_weak_area == "core"
+    assert profile.secondary_weak_areas == ["balance"]
