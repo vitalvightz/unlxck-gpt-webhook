@@ -28,8 +28,8 @@ _RED_FLAG_PATTERNS: tuple[tuple[str, str], ...] = (
     (r"\btingl(?:e|ing)\b", "tingling"),
     (r"\bweak(?:ness)?\b", "weakness"),
     (
-        r"\bcannot\s+bear\s+weight\b|\bcan'?t\s+bear\s+weight\b|\bunable\s+to\s+bear\s+weight\b"
-        r"|\bnot\s+able\s+to\s+bear\s+weight\b|\bunable\s+to\s+walk\b|\bcannot\s+walk\b|\bcan'?t\s+walk\b",
+        r"\b(?:cannot|can'?t|unable\s+to|not\s+able\s+to)\s+bear\s+weight\b"
+        r"|\b(?:unable\s+to|cannot|can'?t)\s+walk\b",
         "cannot_bear_weight",
     ),
     (r"\brapid(?:ly)?\s+worsening\s+swelling\b", "rapid_swelling"),
