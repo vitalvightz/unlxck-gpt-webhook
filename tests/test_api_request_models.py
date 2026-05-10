@@ -45,7 +45,30 @@ def test_plan_request_to_payload_keeps_list_backed_fields_as_lists_when_empty():
     assert fields["Hard Sparring Days"] == []
     assert fields["Support Work Days"] == []
     assert fields["What are your key performance goals?"] == []
+    assert fields["Primary goal"] == ""
     assert fields["Where do you feel weakest right now?"] == []
+    assert fields["Primary weak area"] == ""
+
+
+def test_plan_request_to_payload_includes_primary_goal_and_weak_area():
+    payload = PlanRequest(
+        athlete={
+            "full_name": "Ari Mensah",
+            "technical_style": ["boxing"],
+            "tactical_style": [],
+        },
+        fight_date="2026-04-18",
+        key_goals=["power", "mobility"],
+        primary_goal="power",
+        weak_areas=["cns_fatigue", "hip_mobility"],
+        primary_weak_area="hip_mobility",
+    ).to_payload()
+
+    fields = {field["label"]: field["value"] for field in payload["data"]["fields"]}
+    assert fields["What are your key performance goals?"] == ["power", "mobility"]
+    assert fields["Primary goal"] == "power"
+    assert fields["Where do you feel weakest right now?"] == ["cns_fatigue", "hip_mobility"]
+    assert fields["Primary weak area"] == "hip_mobility"
 
 
 def test_plan_request_rejects_more_than_four_hard_sparring_days():

@@ -308,7 +308,9 @@ class NutritionCoachControlsInput(BaseModel):
 class NutritionSandCPreferences(BaseModel):
     equipment_access: list[str] = Field(default_factory=list)
     key_goals: list[str] = Field(default_factory=list)
+    primary_goal: str | None = None
     weak_areas: list[str] = Field(default_factory=list)
+    primary_weak_area: str | None = None
     training_preference: str = ""
     mindset_challenges: str = ""
     notes: str = ""
@@ -515,7 +517,9 @@ class PlanRequest(BaseModel):
     guided_injury: GuidedInjuryInput | None = None
     guided_injuries: list[GuidedInjuryInput] | None = None
     key_goals: list[str] = Field(default_factory=list)
+    primary_goal: str | None = None
     weak_areas: list[str] = Field(default_factory=list)
+    primary_weak_area: str | None = None
     training_preference: str = ""
     mindset_challenges: str = ""
     notes: str = ""
@@ -629,7 +633,9 @@ class PlanRequest(BaseModel):
             _field("Support Work Days", self.support_work_days),
             _field("Any injuries or areas you need to work around?", self.injuries),
             _field("What are your key performance goals?", self.key_goals),
+            _field("Primary goal", self.primary_goal),
             _field("Where do you feel weakest right now?", self.weak_areas),
+            _field("Primary weak area", self.primary_weak_area),
             _field("Do you prefer certain training styles?", self.training_preference),
             _field(
                 "Do you struggle with any mental blockers or mindset challenges?",

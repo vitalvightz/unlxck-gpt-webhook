@@ -314,7 +314,9 @@ _PLAN_FIELD_LABELS = {
     "hard_sparring_days_raw": "Hard Sparring Days",
     "support_work_days_raw": "Support Work Days",
     "key_goals": "What are your key performance goals?",
+    "primary_goal": "Primary goal",
     "weak_areas": "Where do you feel weakest right now?",
+    "primary_weak_area": "Primary weak area",
     "training_preference": "Do you prefer certain training styles?",
     "mental_block": "Do you struggle with any mental blockers or mindset challenges?",
     "notes": "Are there any parts of your previous plan you hated or loved?",
@@ -583,7 +585,9 @@ class PlanInput:
     parsed_injuries: list[dict[str, str | None]]
     restrictions: list[ParsedRestriction]
     key_goals: str
+    primary_goal: str
     weak_areas: str
+    primary_weak_area: str
     training_preference: str
     mental_block: str
     notes: str
@@ -635,6 +639,14 @@ class PlanInput:
         support_work_days = [
             d.strip() for d in values["support_work_days_raw"].split(",") if d.strip()
         ]
+        key_goals_list = [goal.strip() for goal in values["key_goals"].split(",") if goal.strip()]
+        weak_areas_list = [area.strip() for area in values["weak_areas"].split(",") if area.strip()]
+        primary_goal = values["primary_goal"].strip()
+        primary_weak_area = values["primary_weak_area"].strip()
+        if not primary_goal or primary_goal not in key_goals_list:
+            primary_goal = key_goals_list[0] if key_goals_list else ""
+        if not primary_weak_area or primary_weak_area not in weak_areas_list:
+            primary_weak_area = weak_areas_list[0] if weak_areas_list else ""
 
         # Validation step (planning-critical contract).
         if next_fight_date:
@@ -699,7 +711,12 @@ class PlanInput:
             )
             weeks_out = max(1, days_until_fight // 7) if days_until_fight is not None else "N/A"
 
-        normalized_values = {**values, "athlete_timezone": effective_athlete_timezone}
+        normalized_values = {
+            **values,
+            "athlete_timezone": effective_athlete_timezone,
+            "primary_goal": primary_goal,
+            "primary_weak_area": primary_weak_area,
+        }
 
         return cls(
             **normalized_values,
