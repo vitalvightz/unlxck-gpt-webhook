@@ -96,7 +96,9 @@ export type NutritionCoachControlsInput = {
 export type NutritionSandCPreferences = {
   equipment_access: string[];
   key_goals: string[];
+  primary_goal?: string | null;
   weak_areas: string[];
+  primary_weak_area?: string | null;
   training_preference?: string;
   mindset_challenges?: string;
   notes?: string;
@@ -170,7 +172,9 @@ export type PlanRequest = {
   guided_injury?: GuidedInjuryInput | null;
   guided_injuries?: GuidedInjuryInput[] | null;
   key_goals: string[];
+  primary_goal?: string | null;
   weak_areas: string[];
+  primary_weak_area?: string | null;
   training_preference?: string;
   mindset_challenges?: string;
   notes?: string;

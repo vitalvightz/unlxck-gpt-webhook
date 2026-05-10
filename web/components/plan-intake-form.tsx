@@ -727,6 +727,39 @@ export function PlanIntakeForm() {
     setError(null);
   }, [daysUntilFight, form.key_goals, form.weak_areas, hydrated]);
 
+  useEffect(() => {
+    setForm((current) => {
+      const next: PlanRequest = { ...current };
+      let changed = false;
+      const selectedGoals = current.key_goals;
+      const selectedWeakAreas = current.weak_areas;
+
+      if (selectedGoals.length === 1) {
+        const onlyGoal = selectedGoals[0];
+        if (current.primary_goal !== onlyGoal) {
+          next.primary_goal = onlyGoal;
+          changed = true;
+        }
+      } else if (!selectedGoals.includes(current.primary_goal ?? "")) {
+        next.primary_goal = "";
+        changed = true;
+      }
+
+      if (selectedWeakAreas.length === 1) {
+        const onlyWeakArea = selectedWeakAreas[0];
+        if (current.primary_weak_area !== onlyWeakArea) {
+          next.primary_weak_area = onlyWeakArea;
+          changed = true;
+        }
+      } else if (!selectedWeakAreas.includes(current.primary_weak_area ?? "")) {
+        next.primary_weak_area = "";
+        changed = true;
+      }
+
+      return changed ? next : current;
+    });
+  }, [form.key_goals, form.primary_goal, form.primary_weak_area, form.weak_areas]);
+
 
   useEffect(() => {
     if (!hydrated || issueRedirectConsumedRef.current) {
@@ -1275,6 +1308,10 @@ export function PlanIntakeForm() {
   const selectedSupportWorkLabels = getOptionLabels(TRAINING_AVAILABILITY_OPTIONS, form.support_work_days);
   const selectedGoalLabels = getOptionLabels(KEY_GOAL_OPTIONS, form.key_goals);
   const selectedWeakAreaLabels = getOptionLabels(WEAK_AREA_OPTIONS, form.weak_areas);
+  const primaryGoalLabel = getOptionLabel(KEY_GOAL_OPTIONS, form.primary_goal ?? "") || "Not selected";
+  const primaryWeakAreaLabel = getOptionLabel(WEAK_AREA_OPTIONS, form.primary_weak_area ?? "") || "Not selected";
+  const secondaryGoalLabels = getOptionLabels(KEY_GOAL_OPTIONS, form.key_goals.filter((goal) => goal !== form.primary_goal));
+  const secondaryWeakAreaLabels = getOptionLabels(WEAK_AREA_OPTIONS, form.weak_areas.filter((area) => area !== form.primary_weak_area));
   const performanceFocusCap = getPerformanceFocusCap(form.fight_date, {
     timeZone: form.athlete.athlete_timezone,
   });
@@ -1408,8 +1445,10 @@ export function PlanIntakeForm() {
     ...(sparringCollisionRisk ? [{ label: "Sparring collision risk", value: sparringCollisionRisk }] : []),
   ];
   const performanceReviewItems = [
-    { label: "Key goals", value: selectedGoals },
-    { label: "Weak areas", value: selectedWeakAreas },
+    { label: "Goals - Primary", value: primaryGoalLabel },
+    { label: "Goals - Secondary", value: formatJoinedLabels(secondaryGoalLabels, "None") },
+    { label: "Weak areas - Primary", value: primaryWeakAreaLabel },
+    { label: "Weak areas - Secondary", value: formatJoinedLabels(secondaryWeakAreaLabels, "None") },
     ...(mindsetChallengesText ? [{ label: "Mental / confidence issue", value: mindsetChallengesText }] : []),
     ...(notesText ? [{ label: "Anything else we should know?", value: notesText }] : []),
     ...(!hasExtraPerformanceNotes ? [{ label: "Extra context", value: "No extra context provided." }] : []),
@@ -2180,6 +2219,20 @@ export function PlanIntakeForm() {
                 {getFieldHelperText(daysOutCtx, "key_goals") ? (
                   <p className="muted">{getFieldHelperText(daysOutCtx, "key_goals")}</p>
                 ) : null}
+                {form.key_goals.length ? (
+                  <div className="field">
+                    <label htmlFor="primaryGoal">Primary goal</label>
+                    <CustomSelect
+                      id="primaryGoal"
+                      value={form.primary_goal ?? ""}
+                      options={KEY_GOAL_OPTIONS.filter((option) => form.key_goals.includes(option.value))}
+                      placeholder="Select primary goal"
+                      includeEmptyOption={form.key_goals.length > 1}
+                      onChange={(value) => updateField("primary_goal", value)}
+                    />
+                    <p className="muted">This is what the plan should be built around.</p>
+                  </div>
+                ) : null}
               </article>
               )}
               {shouldHideField(daysOutCtx, "weak_areas") ? (
@@ -2207,6 +2260,20 @@ export function PlanIntakeForm() {
                 />
                 {getFieldHelperText(daysOutCtx, "weak_areas") ? (
                   <p className="muted">{getFieldHelperText(daysOutCtx, "weak_areas")}</p>
+                ) : null}
+                {form.weak_areas.length ? (
+                  <div className="field">
+                    <label htmlFor="primaryWeakArea">Primary weak area</label>
+                    <CustomSelect
+                      id="primaryWeakArea"
+                      value={form.primary_weak_area ?? ""}
+                      options={WEAK_AREA_OPTIONS.filter((option) => form.weak_areas.includes(option.value))}
+                      placeholder="Select primary weak area"
+                      includeEmptyOption={form.weak_areas.length > 1}
+                      onChange={(value) => updateField("primary_weak_area", value)}
+                    />
+                    <p className="muted">This is the main limiter the plan must manage.</p>
+                  </div>
                 ) : null}
                 <p className="muted">Pick up to 2 weak areas.</p>
               </article>
