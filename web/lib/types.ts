@@ -99,6 +99,8 @@ export type NutritionSandCPreferences = {
   primary_goal?: string | null;
   weak_areas: string[];
   primary_weak_area?: string | null;
+  goal_weakness_collision_detail?: string;
+  goal_weakness_collision_tags?: string[];
   training_preference?: string;
   mindset_challenges?: string;
   notes?: string;
@@ -175,6 +177,8 @@ export type PlanRequest = {
   primary_goal?: string | null;
   weak_areas: string[];
   primary_weak_area?: string | null;
+  goal_weakness_collision_detail?: string;
+  goal_weakness_collision_tags?: string[];
   training_preference?: string;
   mindset_challenges?: string;
   notes?: string;

@@ -311,12 +311,14 @@ class NutritionSandCPreferences(BaseModel):
     primary_goal: str | None = None
     weak_areas: list[str] = Field(default_factory=list)
     primary_weak_area: str | None = None
+    goal_weakness_collision_detail: str = ""
+    goal_weakness_collision_tags: list[str] = Field(default_factory=list)
     training_preference: str = ""
     mindset_challenges: str = ""
     notes: str = ""
     random_seed: int | None = None
 
-    @field_validator("equipment_access", "key_goals", "weak_areas", mode="before")
+    @field_validator("equipment_access", "key_goals", "weak_areas", "goal_weakness_collision_tags", mode="before")
     @classmethod
     def clean_array_fields(cls, value: Any) -> list[str]:
         if value is None:
@@ -520,6 +522,8 @@ class PlanRequest(BaseModel):
     primary_goal: str | None = None
     weak_areas: list[str] = Field(default_factory=list)
     primary_weak_area: str | None = None
+    goal_weakness_collision_detail: str = ""
+    goal_weakness_collision_tags: list[str] = Field(default_factory=list)
     training_preference: str = ""
     mindset_challenges: str = ""
     notes: str = ""
@@ -550,6 +554,17 @@ class PlanRequest(BaseModel):
         if isinstance(value, (int, float)):
             return max(1, min(int(round(float(value))), 6))
         return value
+
+    @field_validator("equipment_access", "key_goals", "weak_areas", "goal_weakness_collision_tags", mode="before")
+    @classmethod
+    def clean_array_fields(cls, value: Any) -> list[str]:
+        if value is None:
+            return []
+        if isinstance(value, str):
+            return _clean_list([part.strip() for part in value.split(",")])
+        if isinstance(value, list):
+            return _clean_list(value)
+        return _clean_list([value])
 
     @field_validator("rounds_format")
     @classmethod
@@ -636,6 +651,8 @@ class PlanRequest(BaseModel):
             _field("Primary goal", self.primary_goal),
             _field("Where do you feel weakest right now?", self.weak_areas),
             _field("Primary weak area", self.primary_weak_area),
+            _field("Goal/weak-area collision detail", self.goal_weakness_collision_detail),
+            _field("Goal/weak-area collision tags", self.goal_weakness_collision_tags),
             _field("Do you prefer certain training styles?", self.training_preference),
             _field(
                 "Do you struggle with any mental blockers or mindset challenges?",

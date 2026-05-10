@@ -2069,6 +2069,56 @@ select:focus-visible {
   box-shadow: inset 0 0 0 1px rgba(181, 18, 43, 0.08);
 }
 
+.priority-clarification-card {
+  gap: 14px;
+}
+
+.priority-clarification-copy {
+  display: grid;
+  gap: 6px;
+}
+
+.priority-clarification-copy p {
+  margin: 0;
+}
+
+.priority-clarification-options {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 10px;
+}
+
+.priority-clarification-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 1px solid var(--border-default);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.025);
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+.priority-clarification-option:hover {
+  border-color: var(--border-strong);
+}
+
+.priority-clarification-option input {
+  flex-shrink: 0;
+  inline-size: 16px;
+  block-size: 16px;
+  margin: 0;
+  accent-color: var(--brand-red);
+}
+
+.priority-clarification-option-selected {
+  border-color: rgba(181, 18, 43, 0.42);
+  background: linear-gradient(180deg, rgba(181, 18, 43, 0.14), rgba(181, 18, 43, 0.06));
+  box-shadow: inset 0 0 0 1px rgba(181, 18, 43, 0.08);
+}
+
 .inline-warning-banner {
   display: grid;
   gap: 8px;

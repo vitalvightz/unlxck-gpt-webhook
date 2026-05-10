@@ -34,6 +34,8 @@ export function emptyPlanRequest(fullName = ""): PlanRequest {
     primary_goal: "",
     weak_areas: [],
     primary_weak_area: "",
+    goal_weakness_collision_detail: "",
+    goal_weakness_collision_tags: [],
     training_preference: "",
     mindset_challenges: "",
     notes: "",

@@ -71,6 +71,41 @@ def test_plan_request_to_payload_includes_primary_goal_and_weak_area():
     assert fields["Primary weak area"] == "hip_mobility"
 
 
+def test_plan_request_to_payload_includes_optional_collision_clarification():
+    payload = PlanRequest(
+        athlete={
+            "full_name": "Ari Mensah",
+            "technical_style": ["boxing"],
+            "tactical_style": [],
+        },
+        fight_date="2026-04-18",
+        key_goals=["power"],
+        primary_goal="power",
+        weak_areas=["power"],
+        primary_weak_area="power",
+        goal_weakness_collision_tags=["power"],
+        goal_weakness_collision_detail="Power drops when tired",
+    ).to_payload()
+
+    fields = {field["label"]: field["value"] for field in payload["data"]["fields"]}
+    assert fields["Goal/weak-area collision tags"] == ["power"]
+    assert fields["Goal/weak-area collision detail"] == "Power drops when tired"
+
+
+def test_plan_request_collision_clarification_defaults_are_optional():
+    request = PlanRequest(
+        athlete={
+            "full_name": "Ari Mensah",
+            "technical_style": ["boxing"],
+            "tactical_style": [],
+        },
+        fight_date="2026-04-18",
+    )
+
+    assert request.goal_weakness_collision_tags == []
+    assert request.goal_weakness_collision_detail == ""
+
+
 def test_plan_request_rejects_more_than_four_hard_sparring_days():
     with pytest.raises(ValidationError, match="hard sparring days cap is 4"):
         PlanRequest(

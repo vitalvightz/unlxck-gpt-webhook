@@ -317,6 +317,8 @@ _PLAN_FIELD_LABELS = {
     "primary_goal": "Primary goal",
     "weak_areas": "Where do you feel weakest right now?",
     "primary_weak_area": "Primary weak area",
+    "goal_weakness_collision_detail": "Goal/weak-area collision detail",
+    "goal_weakness_collision_tags": "Goal/weak-area collision tags",
     "training_preference": "Do you prefer certain training styles?",
     "mental_block": "Do you struggle with any mental blockers or mindset challenges?",
     "notes": "Are there any parts of your previous plan you hated or loved?",
@@ -597,6 +599,8 @@ class PlanInput:
     training_frequency: int
     weeks_out: int | str
     days_until_fight: int | None
+    goal_weakness_collision_detail: str | None = None
+    goal_weakness_collision_tags: list[str] = field(default_factory=list)
     guided_injuries: list[GuidedInjury] = field(default_factory=list)
     parsing_metadata: dict[str, dict[str, str]] = field(default_factory=dict)
 
@@ -643,6 +647,12 @@ class PlanInput:
         weak_areas_list = [area.strip() for area in values["weak_areas"].split(",") if area.strip()]
         primary_goal = values["primary_goal"].strip()
         primary_weak_area = values["primary_weak_area"].strip()
+        goal_weakness_collision_detail = values["goal_weakness_collision_detail"].strip()
+        goal_weakness_collision_tags = [
+            tag.strip()
+            for tag in values["goal_weakness_collision_tags"].split(",")
+            if tag.strip()
+        ]
         if not primary_goal or primary_goal not in key_goals_list:
             primary_goal = key_goals_list[0] if key_goals_list else ""
         if not primary_weak_area or primary_weak_area not in weak_areas_list:
@@ -716,6 +726,8 @@ class PlanInput:
             "athlete_timezone": effective_athlete_timezone,
             "primary_goal": primary_goal,
             "primary_weak_area": primary_weak_area,
+            "goal_weakness_collision_detail": goal_weakness_collision_detail,
+            "goal_weakness_collision_tags": goal_weakness_collision_tags,
         }
 
         return cls(
@@ -736,6 +748,16 @@ class PlanInput:
                 "training_frequency": training_frequency_metadata,
                 "available_days": available_days_metadata,
                 "athlete_timezone": athlete_timezone_metadata,
+                "goal_weakness_collision_detail": (
+                    _metadata("user_supplied")
+                    if goal_weakness_collision_detail
+                    else _metadata("defaulted_missing", "goal_weakness_collision_detail_missing")
+                ),
+                "goal_weakness_collision_tags": (
+                    _metadata("user_supplied")
+                    if goal_weakness_collision_tags
+                    else _metadata("defaulted_missing", "goal_weakness_collision_tags_missing")
+                ),
             },
         )
 
