@@ -103,16 +103,21 @@ _STRUCTURAL_BREAK_RE = re.compile(
     r"\b(?:broke|broken|crack(?:ed)?|snap(?:ped)?)\b"
 )
 _BROKE_IT_RE = re.compile(r"\b(?:broke|broken)\s+it\b")
+
 _BENIGN_JOINT_NOISE_RE = re.compile(
     r"\b(?:crack(?:ed)?|click(?:ed|ing)?|pop(?:ped)?|snap(?:ped)?)\b"
 )
+
 _BENIGN_JOINT_NOISE_SUPPRESSOR_PATTERNS = (
     r"\bno\s+pain\b",
     r"\bpainless\b",
     r"\bno\s+swelling\b",
     r"\bno\s+deformity\b",
     r"\bcan\s+bear\s+weight\b",
+    r"\bable\s+to\s+bear\s+weight\b",
     r"\bcan\s+walk\b",
+    r"\bcan\s+still\s+walk\b",
+    r"\bstill\s+walking\b",
     r"\bfull\s+range\s+of\s+motion\b",
     r"\bmoving\s+fine\b",
     r"\bno\s+bruising\b",
@@ -121,9 +126,13 @@ _BENIGN_JOINT_NOISE_SUPPRESSOR_PATTERNS = (
     r"\bclick(?:ed)?\s+only\b",
     r"\bcrack(?:ed)?\s+only\b",
 )
+
 _JOINT_NOISE_ESCALATION_PATTERNS = (
     r"\bcannot\s+bear\s+weight\b",
+    r"\bcan'?t\s+bear\s+weight\b",
+    r"\bunable\s+to\s+bear\s+weight\b",
     r"\bunable\s+to\s+walk\b",
+    r"\bcan'?t\s+walk\b",
     r"\b(?:visible|obvious)\s+deformity\b",
     r"\b(?:rapid\s+)?swelling\b",
     r"\b(?:severe|sharp)\s+pain\b",
@@ -135,7 +144,9 @@ _JOINT_NOISE_ESCALATION_PATTERNS = (
     r"\b(?:confirmed|suspected)\s+fracture\b",
     r"\bdislocation\b",
     r"\brupture\b",
+    r"\bruptured\b",
     r"\btear\b",
+    r"\btorn\b",
     r"\bavulsion\b",
 )
 
@@ -200,6 +211,27 @@ def _has_injury_location_context(text: str) -> bool:
     return bool(parsed_location)
 
 
+def _has_any_pattern(text: str, patterns: tuple[str, ...]) -> bool:
+    return any(re.search(pattern, text) for pattern in patterns)
+
+
+def _is_benign_joint_noise_chunk(text: str) -> bool:
+    if not text:
+        return False
+
+    chunk = text.strip().lower()
+    if not _BENIGN_JOINT_NOISE_RE.search(chunk):
+        return False
+
+    if not _has_any_pattern(chunk, _BENIGN_JOINT_NOISE_SUPPRESSOR_PATTERNS):
+        return False
+
+    if _has_any_pattern(chunk, _JOINT_NOISE_ESCALATION_PATTERNS):
+        return False
+
+    return True
+
+
 def _has_structural_break_with_location(text: str) -> bool:
     if not text:
         return False
@@ -209,8 +241,8 @@ def _has_structural_break_with_location(text: str) -> bool:
         if not raw_chunk or not _STRUCTURAL_BREAK_RE.search(raw_chunk):
             continue
 
-        # Check benign-noise suppressors before removing negated phrases.
-        # Example: "neck cracked but no pain" needs the "no pain" text intact.
+        # Must happen before negation stripping.
+        # Example: "neck cracked but no pain" needs "no pain" intact.
         if _is_benign_joint_noise_chunk(raw_chunk):
             continue
 
@@ -233,7 +265,8 @@ def _has_structural_break_signal(*, text: str, context_text: str) -> bool:
         if not raw_chunk or not _STRUCTURAL_BREAK_RE.search(raw_chunk):
             continue
 
-        # Must run before negation stripping so benign suppressors survive.
+        # Must happen before negation stripping.
+        # Example: "ankle cracked but no pain" needs "no pain" intact.
         if _is_benign_joint_noise_chunk(raw_chunk):
             continue
 
@@ -250,25 +283,8 @@ def _has_structural_break_signal(*, text: str, context_text: str) -> bool:
     return False
 
 
-def _is_benign_joint_noise_chunk(text: str) -> bool:
-    if not text:
-        return False
-    chunk = text.strip().lower()
-    if not _BENIGN_JOINT_NOISE_RE.search(chunk):
-        return False
-    if not _has_any_pattern(chunk, _BENIGN_JOINT_NOISE_SUPPRESSOR_PATTERNS):
-        return False
-    if _has_any_pattern(chunk, _JOINT_NOISE_ESCALATION_PATTERNS):
-        return False
-    return True
-
-
 def _has_mapped_route(categories: set[str], route: str) -> bool:
     return any(_HIGH_RISK_CATEGORY_ROUTE.get(category) == route for category in categories)
-
-
-def _has_any_pattern(text: str, patterns: tuple[str, ...]) -> bool:
-    return any(re.search(pattern, text) for pattern in patterns)
 
 
 def _build_result(
@@ -350,6 +366,7 @@ def _effective_guided_injuries(plan_input: PlanInput) -> list[GuidedInjury]:
     guided_injuries = getattr(plan_input, "guided_injuries", None)
     if guided_injuries:
         return list(guided_injuries)
+
     guided = getattr(plan_input, "guided_injury", None)
     return [guided] if guided is not None else []
 
@@ -379,6 +396,7 @@ def _has_guided_structural_broke_signal(
         text=guided_notes,
         context_text=cleaned_combined_text,
     )
+
 
 def _apply_card_area_broke_signals(
     *,
@@ -412,7 +430,7 @@ def _has_recent_structural_history_signal(cards: list[_GuidedCard]) -> bool:
 
         has_recent_timeline = bool(_RECENT_INJURY_TIMELINE_RE.search(notes))
         has_negated_structural_history = bool(_NEGATED_STRUCTURAL_HISTORY_RE.search(raw_notes))
-                has_structural_signal = bool(
+        has_structural_signal = bool(
             _has_structural_break_signal(
                 text=raw_notes,
                 context_text=f"{card.location} {raw_notes}",
@@ -886,6 +904,7 @@ _HEAD_IMPACT_RED_FLAG_TOKENS = {
     "slurred_speech",
     "seizure",
 }
+
 _HEAD_IMPACT_TAG_TO_RED_FLAG = {
     "loss_of_consciousness": "loss_of_consciousness",
     "vomiting": "vomiting_after_head_impact",
@@ -896,12 +915,14 @@ _HEAD_IMPACT_TAG_TO_RED_FLAG = {
     "slurred_speech": "slurred_speech",
     "seizure": "seizure_or_convulsion",
 }
+
 _CHEST_TAG_TO_RED_FLAG = {
     "breathing_pain": "breathing_pain",
     "shortness_of_breath": "shortness_of_breath",
     "chest_pain": "chest_pain",
     "coughing_blood": "coughing_blood",
 }
+
 _NERVE_TAG_TO_RED_FLAGS = {
     "type_numbness": {"numbness"},
     "type_tingling": {"tingling"},
@@ -923,7 +944,6 @@ def _apply_structured_injury_signals(
     use_guided_diagnosis_fields: bool,
 ) -> None:
     injury_type = (guided.injury_type or "").strip().lower()
-
     surface_type = (guided.surface_type or "").strip().lower()
     timeframe = (guided.timeframe or "").strip().lower()
     cleared = (guided.cleared or "").strip().lower()
@@ -946,7 +966,6 @@ def _apply_structured_injury_signals(
     )
 
     if use_guided_diagnosis_fields:
-        # ── Fracture ──────────────────────────────────────────────────────
         if injury_type == "fracture":
             if old_and_cleared and not has_current_concern:
                 routing_reasons.add("structured:fracture_old_cleared_no_concern")
@@ -954,24 +973,24 @@ def _apply_structured_injury_signals(
                 matched_categories.add("fracture")
                 routing_reasons.add("structured:fracture")
 
-        # ── Dislocation ───────────────────────────────────────────────────
         elif injury_type == "dislocation":
             dislocation_tags = note_tags.get("dislocation", set())
             if "recurrent_yes" in dislocation_tags:
                 routing_reasons.add("tagged_note:dislocation:recurrent_yes")
                 matched_categories.add("dislocation")
                 has_current_concern = True
+
             if {"relocated_no", "relocated_not_sure"} & dislocation_tags:
                 routing_reasons.add("tagged_note:dislocation:relocation_uncertain_or_no")
                 matched_categories.add("dislocation")
                 has_current_concern = True
+
             if old_and_cleared and not has_current_concern:
                 routing_reasons.add("structured:dislocation_old_cleared_no_concern")
             else:
                 matched_categories.add("dislocation")
                 routing_reasons.add("structured:dislocation")
 
-        # ── Tendon / ligament ─────────────────────────────────────────────
         elif injury_type == "tendon_ligament":
             should_flag = (
                 severity == "high"
@@ -985,7 +1004,6 @@ def _apply_structured_injury_signals(
             else:
                 routing_reasons.add("structured:tendon_ligament_mild")
 
-        # ── Post-surgery ──────────────────────────────────────────────────
         elif injury_type == "post_surgery":
             clinician_restriction_signals.add("post_op_or_reconstruction")
             routing_reasons.add("structured:post_surgery")
@@ -994,22 +1012,18 @@ def _apply_structured_injury_signals(
             elif old_and_cleared:
                 routing_reasons.add("structured:post_surgery_old_cleared")
 
-        # ── Head impact ───────────────────────────────────────────────────
         elif injury_type == "head_impact":
             matched_categories.add("concussion")
             routing_reasons.add("structured:head_impact")
 
-        # ── Nerve symptoms ────────────────────────────────────────────────
         elif injury_type == "nerve_symptoms":
             routing_reasons.add("structured:nerve_symptoms")
             if trend in _WORSENING_TRENDS or impact_related == "yes":
                 routing_reasons.add("structured:nerve_symptoms_escalated")
 
-        # ── Chest / breathing ─────────────────────────────────────────────
         elif injury_type == "chest_breathing":
             routing_reasons.add("structured:chest_breathing")
 
-        # ── Surface injury ────────────────────────────────────────────────
         elif injury_type == "surface_injury":
             _apply_surface_injury_signals(
                 surface_type=surface_type,
@@ -1027,7 +1041,6 @@ def _apply_structured_injury_signals(
                 routing_reasons=routing_reasons,
             )
 
-    # Always-on safety signals from guided fields/tags.
     for token in note_tags.get("red_flags", set()):
         mapped = _HEAD_IMPACT_TAG_TO_RED_FLAG.get(token)
         if mapped:
@@ -1037,6 +1050,7 @@ def _apply_structured_injury_signals(
     nerve_tags = note_tags.get("nerve_symptoms", set())
     if use_guided_diagnosis_fields and injury_type == "nerve_symptoms" and not nerve_tags:
         red_flags.add("numbness")
+
     for token in nerve_tags:
         mapped = _NERVE_TAG_TO_RED_FLAGS.get(token)
         if mapped:
@@ -1047,6 +1061,7 @@ def _apply_structured_injury_signals(
     if use_guided_diagnosis_fields and injury_type == "chest_breathing" and not chest_tags:
         red_flags.add("breathing_pain")
         red_flags.add("chest_pain")
+
     for token in chest_tags:
         mapped = _CHEST_TAG_TO_RED_FLAG.get(token)
         if mapped:
@@ -1089,17 +1104,14 @@ def _apply_surface_injury_signals(
 ) -> None:
     routing_reasons.add(f"structured:surface_{surface_type or 'unspecified'}")
 
-    # ── Bleeding ──────────────────────────────────────────────────────
     if bleeding_status in {"wont_stop", "uncontrolled"}:
         red_flags.add("uncontrolled_bleeding")
         routing_reasons.add("structured:uncontrolled_bleeding")
 
-    # ── Open wound ────────────────────────────────────────────────────
     if open_wound == "yes":
         red_flags.add("open_wound")
         routing_reasons.add("structured:open_wound")
 
-    # ── Sensitive area ────────────────────────────────────────────────
     if sensitive_area == "eye":
         red_flags.add("eye_area_wound")
         routing_reasons.add("structured:eye_area_wound")
@@ -1107,7 +1119,6 @@ def _apply_surface_injury_signals(
         red_flags.add("sensitive_area_wound")
         routing_reasons.add("structured:sensitive_area_wound")
 
-    # ── Infection ─────────────────────────────────────────────────────
     active_infection = infection_signs - {"none", ""}
     if active_infection:
         red_flags.add("infection_signs")
@@ -1115,13 +1126,11 @@ def _apply_surface_injury_signals(
         if active_infection & _INFECTION_SYSTEMIC_SIGNS:
             routing_reasons.add("structured:systemic_infection")
 
-    # ── Cut / laceration specifics ────────────────────────────────────
     if surface_type in ("cut", "laceration"):
         if _STRUCTURED_STITCHES_KEYWORDS.search(notes):
             red_flags.add("needs_stitches")
             routing_reasons.add("structured:needs_stitches")
 
-    # ── Bruise specifics ──────────────────────────────────────────────
     if surface_type == "bruise":
         if impact_related == "yes" and _RIB_CHEST_HEAD_EYE_PATTERN.search(area):
             routing_reasons.add("structured:bruise_danger_area")
@@ -1165,6 +1174,7 @@ def triage_injuries(plan_input: PlanInput) -> InjuryTriageResult:
         isinstance(item, dict) and str(item.get("injury_type") or "").strip()
         for item in plan_input.parsed_injuries or []
     )
+
     for guided in _effective_guided_injuries(plan_input):
         _apply_structured_injury_signals(
             guided=guided,
@@ -1174,6 +1184,7 @@ def triage_injuries(plan_input: PlanInput) -> InjuryTriageResult:
             routing_reasons=routing_reasons,
             use_guided_diagnosis_fields=use_guided_diagnosis_fields,
         )
+
     guided_cards = _collect_guided_card_evidence(plan_input)
     combos = _guided_combos(guided_cards)
 
@@ -1210,7 +1221,7 @@ def triage_injuries(plan_input: PlanInput) -> InjuryTriageResult:
 
     has_recent_structural_history_signal = _has_recent_structural_history_signal(guided_cards)
 
-    if _has_structural_break_signal(text=cleaned_combined_text, context_text=cleaned_combined_text):
+    if _has_structural_break_signal(text=combined_text, context_text=combined_text):
         matched_categories.add("fracture")
         routing_reasons.add("raw_injury:structural_broke_signal")
 
@@ -1324,6 +1335,7 @@ def triage_injuries(plan_input: PlanInput) -> InjuryTriageResult:
         "structured:bruise_worsening",
     }
     _SURFACE_INFECTION_REVIEW = "structured:infection_signs"
+
     if routing_reasons & _SURFACE_NEEDS_REVIEW_SIGNALS or _SURFACE_INFECTION_REVIEW in routing_reasons:
         return _build_result(
             mode=NEEDS_REVIEW,
