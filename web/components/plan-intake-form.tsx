@@ -728,6 +728,8 @@ export function PlanIntakeForm() {
   }, [daysUntilFight, form.key_goals, form.weak_areas, hydrated]);
 
   useEffect(() => {
+    if (!hydrated) return;
+    setForm((current) => {
     setForm((current) => {
       const next: PlanRequest = { ...current };
       let changed = false;
