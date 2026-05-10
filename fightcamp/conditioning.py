@@ -2096,13 +2096,13 @@ def generate_conditioning_block(flags):
         }
         for tag in matched_goal_tags:
             goal_weight = goal_priority_weight(tag, priority_profile)
-            if goal_weight == 0.8:
+            if goal_weight == PRIMARY_GOAL_WEIGHT:
                 reasons["reason_codes"].append(f"priority_primary_goal_match:{tag}")
             elif goal_weight > 0:
                 reasons["reason_codes"].append(f"priority_secondary_goal_match:{tag}")
         for tag in matched_weak_tags:
             weakness_weight = weakness_priority_weight(tag, priority_profile)
-            if weakness_weight == 0.9:
+            if weakness_weight == PRIMARY_WEAKNESS_WEIGHT:
                 reasons["reason_codes"].append(f"priority_primary_weakness_match:{tag}")
             elif weakness_weight > 0:
                 reasons["reason_codes"].append(f"priority_secondary_weakness_match:{tag}")
