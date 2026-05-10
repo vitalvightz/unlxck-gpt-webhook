@@ -830,11 +830,8 @@ def _apply_structured_injury_signals(
     red_flags: set[str],
     clinician_restriction_signals: set[str],
     routing_reasons: set[str],
+    use_guided_diagnosis_fields: bool,
 ) -> None:
-    injury_type = (guided.injury_type or "").strip().lower()
-    if not injury_type:
-        return
-
     surface_type = (guided.surface_type or "").strip().lower()
     timeframe = (guided.timeframe or "").strip().lower()
     cleared = (guided.cleared or "").strip().lower()
@@ -856,108 +853,113 @@ def _apply_structured_injury_signals(
         or cleared in ("no", "not_sure")
     )
 
-    # ── Fracture ──────────────────────────────────────────────────────
-    if injury_type == "fracture":
-        if old_and_cleared and not has_current_concern:
-            routing_reasons.add("structured:fracture_old_cleared_no_concern")
-        else:
-            matched_categories.add("fracture")
-            routing_reasons.add("structured:fracture")
+    if use_guided_diagnosis_fields:
+        injury_type = (guided.injury_type or "").strip().lower()
+        if not injury_type:
+            return
 
-    # ── Dislocation ───────────────────────────────────────────────────
-    elif injury_type == "dislocation":
-        dislocation_tags = note_tags.get("dislocation", set())
-        if "recurrent_yes" in dislocation_tags:
-            routing_reasons.add("tagged_note:dislocation:recurrent_yes")
-            matched_categories.add("dislocation")
-            has_current_concern = True
-        if {"relocated_no", "relocated_not_sure"} & dislocation_tags:
-            routing_reasons.add("tagged_note:dislocation:relocation_uncertain_or_no")
-            matched_categories.add("dislocation")
-            has_current_concern = True
-        if old_and_cleared and not has_current_concern:
-            routing_reasons.add("structured:dislocation_old_cleared_no_concern")
-        else:
-            matched_categories.add("dislocation")
-            routing_reasons.add("structured:dislocation")
+        # ── Fracture ──────────────────────────────────────────────────────
+        if injury_type == "fracture":
+            if old_and_cleared and not has_current_concern:
+                routing_reasons.add("structured:fracture_old_cleared_no_concern")
+            else:
+                matched_categories.add("fracture")
+                routing_reasons.add("structured:fracture")
 
-    # ── Tendon / ligament ─────────────────────────────────────────────
-    elif injury_type == "tendon_ligament":
-        should_flag = (
-            severity == "high"
-            or trend in _WORSENING_TRENDS
-            or cleared in ("no", "not_sure")
-            or bool(_STRUCTURED_TEAR_KEYWORDS.search(notes))
-        )
-        if should_flag:
-            matched_categories.add("tendon_rupture_or_avulsion")
-            routing_reasons.add("structured:tendon_ligament_risk")
-        else:
-            routing_reasons.add("structured:tendon_ligament_mild")
+        # ── Dislocation ───────────────────────────────────────────────────
+        elif injury_type == "dislocation":
+            dislocation_tags = note_tags.get("dislocation", set())
+            if "recurrent_yes" in dislocation_tags:
+                routing_reasons.add("tagged_note:dislocation:recurrent_yes")
+                matched_categories.add("dislocation")
+                has_current_concern = True
+            if {"relocated_no", "relocated_not_sure"} & dislocation_tags:
+                routing_reasons.add("tagged_note:dislocation:relocation_uncertain_or_no")
+                matched_categories.add("dislocation")
+                has_current_concern = True
+            if old_and_cleared and not has_current_concern:
+                routing_reasons.add("structured:dislocation_old_cleared_no_concern")
+            else:
+                matched_categories.add("dislocation")
+                routing_reasons.add("structured:dislocation")
 
-    # ── Post-surgery ──────────────────────────────────────────────────
-    elif injury_type == "post_surgery":
-        clinician_restriction_signals.add("post_op_or_reconstruction")
-        routing_reasons.add("structured:post_surgery")
-        if cleared in ("no", "not_sure"):
-            routing_reasons.add("structured:post_surgery_not_cleared")
-        elif old_and_cleared:
-            routing_reasons.add("structured:post_surgery_old_cleared")
+        # ── Tendon / ligament ─────────────────────────────────────────────
+        elif injury_type == "tendon_ligament":
+            should_flag = (
+                severity == "high"
+                or trend in _WORSENING_TRENDS
+                or cleared in ("no", "not_sure")
+                or bool(_STRUCTURED_TEAR_KEYWORDS.search(notes))
+            )
+            if should_flag:
+                matched_categories.add("tendon_rupture_or_avulsion")
+                routing_reasons.add("structured:tendon_ligament_risk")
+            else:
+                routing_reasons.add("structured:tendon_ligament_mild")
 
-    # ── Head impact ───────────────────────────────────────────────────
-    elif injury_type == "head_impact":
-        matched_categories.add("concussion")
-        routing_reasons.add("structured:head_impact")
-        for token in note_tags.get("red_flags", set()):
-            mapped = _HEAD_IMPACT_TAG_TO_RED_FLAG.get(token)
-            if mapped:
-                red_flags.add(mapped)
-                routing_reasons.add(f"tagged_note:red_flags:{token}")
+        # ── Post-surgery ──────────────────────────────────────────────────
+        elif injury_type == "post_surgery":
+            clinician_restriction_signals.add("post_op_or_reconstruction")
+            routing_reasons.add("structured:post_surgery")
+            if cleared in ("no", "not_sure"):
+                routing_reasons.add("structured:post_surgery_not_cleared")
+            elif old_and_cleared:
+                routing_reasons.add("structured:post_surgery_old_cleared")
 
-    # ── Nerve symptoms ────────────────────────────────────────────────
-    elif injury_type == "nerve_symptoms":
-        nerve_tags = note_tags.get("nerve_symptoms", set())
-        if not nerve_tags:
-            red_flags.add("numbness")
-        for token in nerve_tags:
-            mapped = _NERVE_TAG_TO_RED_FLAGS.get(token)
-            if mapped:
-                red_flags.update(mapped)
-                routing_reasons.add(f"tagged_note:nerve_symptoms:{token}")
-        routing_reasons.add("structured:nerve_symptoms")
-        if trend in _WORSENING_TRENDS or impact_related == "yes":
-            routing_reasons.add("structured:nerve_symptoms_escalated")
+        # ── Head impact ───────────────────────────────────────────────────
+        elif injury_type == "head_impact":
+            matched_categories.add("concussion")
+            routing_reasons.add("structured:head_impact")
+            for token in note_tags.get("red_flags", set()):
+                mapped = _HEAD_IMPACT_TAG_TO_RED_FLAG.get(token)
+                if mapped:
+                    red_flags.add(mapped)
+                    routing_reasons.add(f"tagged_note:red_flags:{token}")
 
-    # ── Chest / breathing ─────────────────────────────────────────────
-    elif injury_type == "chest_breathing":
-        chest_tags = note_tags.get("chest_symptoms", set())
-        if not chest_tags:
-            red_flags.add("breathing_pain")
-            red_flags.add("chest_pain")
-        for token in chest_tags:
-            mapped = _CHEST_TAG_TO_RED_FLAG.get(token)
-            if mapped:
-                red_flags.add(mapped)
-                routing_reasons.add(f"tagged_note:chest_symptoms:{token}")
-        routing_reasons.add("structured:chest_breathing")
+        # ── Nerve symptoms ────────────────────────────────────────────────
+        elif injury_type == "nerve_symptoms":
+            nerve_tags = note_tags.get("nerve_symptoms", set())
+            if not nerve_tags:
+                red_flags.add("numbness")
+            for token in nerve_tags:
+                mapped = _NERVE_TAG_TO_RED_FLAGS.get(token)
+                if mapped:
+                    red_flags.update(mapped)
+                    routing_reasons.add(f"tagged_note:nerve_symptoms:{token}")
+            routing_reasons.add("structured:nerve_symptoms")
+            if trend in _WORSENING_TRENDS or impact_related == "yes":
+                routing_reasons.add("structured:nerve_symptoms_escalated")
 
-    # ── Surface injury ────────────────────────────────────────────────
-    elif injury_type == "surface_injury":
-        _apply_surface_injury_signals(
-            surface_type=surface_type,
-            bleeding_status=bleeding_status,
-            open_wound=open_wound,
-            sensitive_area=sensitive_area,
-            infection_signs=infection_signs,
-            impact_related=impact_related,
-            trend=trend,
-            severity=severity,
-            notes=notes,
-            area=area,
-            red_flags=red_flags,
-            matched_categories=matched_categories,
-            routing_reasons=routing_reasons,
-        )
+        # ── Chest / breathing ─────────────────────────────────────────────
+        elif injury_type == "chest_breathing":
+            chest_tags = note_tags.get("chest_symptoms", set())
+            if not chest_tags:
+                red_flags.add("breathing_pain")
+                red_flags.add("chest_pain")
+            for token in chest_tags:
+                mapped = _CHEST_TAG_TO_RED_FLAG.get(token)
+                if mapped:
+                    red_flags.add(mapped)
+                    routing_reasons.add(f"tagged_note:chest_symptoms:{token}")
+            routing_reasons.add("structured:chest_breathing")
+
+        # ── Surface injury ────────────────────────────────────────────────
+        elif injury_type == "surface_injury":
+            _apply_surface_injury_signals(
+                surface_type=surface_type,
+                bleeding_status=bleeding_status,
+                open_wound=open_wound,
+                sensitive_area=sensitive_area,
+                infection_signs=infection_signs,
+                impact_related=impact_related,
+                trend=trend,
+                severity=severity,
+                notes=notes,
+                area=area,
+                red_flags=red_flags,
+                matched_categories=matched_categories,
+                routing_reasons=routing_reasons,
+            )
 
 
 def _apply_surface_injury_signals(
@@ -1019,6 +1021,11 @@ def _apply_surface_injury_signals(
 
 
 def triage_injuries(plan_input: PlanInput) -> InjuryTriageResult:
+    has_resolved_parsed_injuries = any(
+        isinstance(entry, dict) and str(entry.get("injury_type") or "").strip()
+        for entry in (plan_input.parsed_injuries or [])
+    )
+
     features = build_triage_features(
         injuries=plan_input.injuries,
         parsed_injuries=plan_input.parsed_injuries,
@@ -1055,6 +1062,7 @@ def triage_injuries(plan_input: PlanInput) -> InjuryTriageResult:
             red_flags=red_flags,
             clinician_restriction_signals=set(features.clinician_restriction_signals),
             routing_reasons=routing_reasons,
+            use_guided_diagnosis_fields=not has_resolved_parsed_injuries,
         )
         if "structured:fracture_old_cleared_no_concern" in routing_reasons:
             matched_categories.discard("fracture")

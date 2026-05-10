@@ -1,3 +1,4 @@
+from dataclasses import replace
 from types import SimpleNamespace
 
 import pytest
@@ -10,7 +11,7 @@ from fightcamp.injury_triage import (
     _collect_guided_card_evidence,
     triage_injuries,
 )
-from fightcamp.input_parsing import PlanInput
+from fightcamp.input_parsing import GuidedInjury, PlanInput
 from fightcamp.main import generate_plan_sync
 from fightcamp.triage_features import build_triage_features, parse_guided_note_tags
 from support import _build_request
@@ -366,6 +367,111 @@ def test_guided_injury_type_fracture_can_still_be_used_when_no_parsed_injuries_e
         restrictions=None,
     )
     assert "fracture" in features.high_risk_diagnoses
+
+
+def test_triage_resolved_parsed_hyperextension_blocks_guided_dislocation_override():
+    payload = _payload_with_injury("")
+    payload["guided_injury"] = {
+        "area": "hyperextended right shoulder",
+        "injury_type": "dislocation",
+        "severity": "moderate",
+        "trend": "stable",
+    }
+    parsed = PlanInput.from_payload(payload)
+    parsed = replace(
+        parsed,
+        parsed_injuries=[
+            {
+                "injury_type": "hyperextension",
+                "injury_type_source": "parser",
+                "guided_injury_type": "dislocation",
+                "canonical_location": "shoulder",
+            }
+        ],
+    )
+
+    triage = triage_injuries(parsed)
+
+    assert "dislocation" not in triage.matched_high_risk_categories
+    assert triage.mode != RESTRICTED_REHAB_ONLY
+    assert "structured:dislocation" not in triage.routing_reasons
+
+
+def test_triage_resolved_parsed_hyperextension_blocks_guided_fracture_override():
+    payload = _payload_with_injury("")
+    payload["guided_injury"] = {
+        "area": "hyperextended right knee",
+        "injury_type": "fracture",
+        "severity": "moderate",
+        "trend": "stable",
+    }
+    parsed = PlanInput.from_payload(payload)
+    parsed = replace(
+        parsed,
+        parsed_injuries=[
+            {
+                "injury_type": "hyperextension",
+                "injury_type_source": "parser",
+                "guided_injury_type": "fracture",
+                "canonical_location": "knee",
+            }
+        ],
+    )
+
+    triage = triage_injuries(parsed)
+
+    assert "fracture" not in triage.matched_high_risk_categories
+
+
+def test_triage_guided_fracture_fallback_still_applies_when_parsed_injuries_absent():
+    payload = _payload_with_injury("")
+    payload["guided_injury"] = {
+        "area": "right hand",
+        "injury_type": "fracture",
+        "severity": "moderate",
+        "trend": "stable",
+    }
+    parsed = PlanInput.from_payload(payload)
+    parsed = replace(parsed, parsed_injuries=[])
+
+    triage = triage_injuries(parsed)
+
+    assert "fracture" in triage.matched_high_risk_categories
+    assert triage.mode == RESTRICTED_REHAB_ONLY
+
+
+def test_triage_guided_safety_signals_still_apply_with_resolved_parsed_injury():
+    payload = _payload_with_injury("")
+    payload["guided_injury"] = {
+        "area": "hyperextended right knee",
+        "injury_type": "fracture",
+        "severity": "moderate",
+        "trend": "stable",
+        "impact_related": "yes",
+        "notes": "[structural:bear_weight_no]",
+    }
+    parsed = PlanInput.from_payload(payload)
+    parsed = replace(
+        parsed,
+        guided_injury=GuidedInjury(
+            **{
+                **parsed.guided_injury.__dict__,
+                "notes": "pain during movement [structural:bear_weight_no]",
+            }
+        ),
+        parsed_injuries=[
+            {
+                "injury_type": "hyperextension",
+                "canonical_location": "knee",
+            }
+        ],
+    )
+
+    triage = triage_injuries(parsed)
+
+    assert "fracture" not in triage.matched_high_risk_categories
+    assert "cannot_bear_weight" in triage.red_flags
+    assert "structural_function_red_flag" in triage.routing_reasons
 
 
 def test_blocked_modes_do_not_reach_stage2_or_normal_pipeline(monkeypatch):
