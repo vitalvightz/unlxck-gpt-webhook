@@ -20,6 +20,7 @@ from fightcamp.priority_profile import (
     total_weakness_priority_bonus,
     weakness_priority_weight,
 )
+from fightcamp.tagging import normalize_tag
 
 
 def test_normalizes_comma_separated_values():
@@ -72,6 +73,54 @@ def test_profile_detects_secondary_goal_weakness_overlap():
     assert profile.goal_weakness_collisions == ["mobility"]
     assert profile.primary_goal_weakness_collision is False
     assert profile.primary_collision_tag == ""
+
+
+def test_profile_detects_normalized_case_overlap_and_preserves_goal_value():
+    plan_input = SimpleNamespace(
+        key_goals="Power, Conditioning",
+        primary_goal="Power",
+        weak_areas="power, Gas Tank",
+        primary_weak_area="power",
+    )
+
+    profile = build_priority_profile(plan_input)
+
+    assert profile.goal_weakness_collisions == ["Power"]
+    assert profile.primary_goal_weakness_collision is True
+    assert profile.primary_collision_tag == "Power"
+
+
+def test_profile_detects_space_vs_underscore_overlap():
+    plan_input = SimpleNamespace(
+        key_goals="Gas Tank, mobility",
+        primary_goal="mobility",
+        weak_areas="gas_tank, balance",
+        primary_weak_area="balance",
+    )
+
+    profile = build_priority_profile(plan_input)
+
+    assert profile.goal_weakness_collisions == ["Gas Tank"]
+    assert profile.primary_goal_weakness_collision is False
+    assert profile.primary_collision_tag == ""
+
+
+def test_profile_detects_power_explosiveness_overlap_when_normalizer_supports_it():
+    plan_input = SimpleNamespace(
+        key_goals="Power & Explosiveness, mobility",
+        primary_goal="mobility",
+        weak_areas="power_explosiveness, balance",
+        primary_weak_area="balance",
+    )
+
+    profile = build_priority_profile(plan_input)
+    expected = (
+        ["Power & Explosiveness"]
+        if normalize_tag("Power & Explosiveness") == normalize_tag("power_explosiveness")
+        else []
+    )
+
+    assert profile.goal_weakness_collisions == expected
 
 
 def test_profile_without_overlap_has_clean_collision_metadata():

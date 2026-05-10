@@ -66,8 +66,16 @@ def build_priority_profile(plan_input: Any) -> PriorityProfile:
     if not primary_weak_area or primary_weak_area not in all_weak_areas:
         primary_weak_area = all_weak_areas[0] if all_weak_areas else ""
 
-    weak_area_set = set(all_weak_areas)
-    goal_weakness_collisions = [goal for goal in all_goals if goal in weak_area_set]
+    normalized_weak_area_set = {
+        normalized
+        for weak_area in all_weak_areas
+        if (normalized := _normalized_priority_tag(weak_area))
+    }
+    goal_weakness_collisions = [
+        goal
+        for goal in all_goals
+        if _normalized_priority_tag(goal) in normalized_weak_area_set
+    ]
     primary_goal_weakness_collision = bool(
         primary_goal
         and primary_weak_area
