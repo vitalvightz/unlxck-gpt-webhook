@@ -1862,3 +1862,114 @@ def test_late_fight_dosage_ceiling_not_applied_outside_countdown():
     )
     warning_codes = {w["code"] for w in report["warnings"]}
     assert "late_fight_alactic_dose_overage" not in warning_codes
+
+
+def test_calendar_spine_thursday_fight_rejects_saturday_pretend_prefight():
+    brief = {
+        "athlete_model": {"sport": "boxing"},
+        "restrictions": [],
+        "phase_strategy": {},
+        "candidate_pools": {},
+        "weekly_role_map": {
+            "weeks": [
+                {
+                    "week_index": 1,
+                    "phase": "TAPER",
+                    "calendar_days": [
+                        {"weekday": "thursday", "d_day": 0, "is_fight_day": True, "is_after_fight_day": False},
+                        {"weekday": "saturday", "d_day": -2, "is_fight_day": False, "is_after_fight_day": True},
+                    ],
+                    "session_roles": [{"role_key": "fight_day_protocol", "scheduled_day_hint": "thursday"}],
+                }
+            ]
+        },
+    }
+    report = validate_stage2_output(
+        planning_brief=brief,
+        final_plan_text="""
+        ## Week 1
+        Thursday - D-0
+        - Fight-day protocol only.
+        Saturday - D-2
+        - Coach-led boxing session
+        """,
+    )
+    codes = {w["code"] for w in report["warnings"]}
+    assert "calendar_spine_post_fight_training_rendered" in codes
+
+
+def test_calendar_spine_friday_fight_weekend_not_prefight():
+    from fightcamp.fight_date_utils import build_calendar_days
+
+    days = build_calendar_days(fight_weekday="friday", projected_days_until_fight_end=0, span_days=3)
+    brief = {
+        "athlete_model": {"sport": "boxing"},
+        "restrictions": [],
+        "phase_strategy": {},
+        "candidate_pools": {},
+        "weekly_role_map": {"weeks": [{"week_index": 1, "phase": "TAPER", "calendar_days": days, "session_roles": []}]},
+    }
+    report = validate_stage2_output(
+        planning_brief=brief,
+        final_plan_text="""
+        ## Week 1
+        Saturday - D-1
+        - Technical touch
+        """,
+    )
+    assert any(w["code"] == "calendar_spine_unmapped_weekday_rendered" for w in report["warnings"])
+
+
+def test_calendar_spine_no_duplicate_weekday_math_uses_calendar_days_directly():
+    brief = {
+        "athlete_model": {"sport": "boxing"},
+        "restrictions": [],
+        "phase_strategy": {},
+        "candidate_pools": {},
+        "weekly_role_map": {
+            "weeks": [
+                {
+                    "week_index": 2,
+                    "phase": "SPP",
+                    "calendar_days": [{"weekday": "wednesday", "d_day": 3, "is_fight_day": False, "is_after_fight_day": False}],
+                    "session_roles": [{"role_key": "technical_touch_day", "scheduled_day_hint": "wednesday"}],
+                }
+            ]
+        },
+    }
+    report = validate_stage2_output(
+        planning_brief=brief,
+        final_plan_text="## Week 2\nWednesday - D-3\n- Technical touch",
+    )
+    assert not any(w["code"] == "calendar_spine_d_day_mismatch" for w in report["warnings"])
+
+
+def test_calendar_spine_fight_day_protocol_text_rule():
+    from fightcamp.fight_day_override import FIGHT_DAY_PROTOCOL_TEXT
+
+    brief = {
+        "athlete_model": {"sport": "boxing"},
+        "restrictions": [],
+        "phase_strategy": {},
+        "candidate_pools": {},
+        "weekly_role_map": {
+            "weeks": [
+                {
+                    "week_index": 1,
+                    "phase": "TAPER",
+                    "calendar_days": [{"weekday": "friday", "d_day": 0, "is_fight_day": True, "is_after_fight_day": False}],
+                    "session_roles": [],
+                }
+            ]
+        },
+    }
+    bad = validate_stage2_output(
+        planning_brief=brief,
+        final_plan_text="## Week 1\nFriday - D-0\n- Coach-led boxing session",
+    )
+    assert any(w["code"] == "calendar_spine_fight_day_protocol_violation" for w in bad["warnings"])
+    good = validate_stage2_output(
+        planning_brief=brief,
+        final_plan_text=f"## Week 1\nFriday - D-0\n- {FIGHT_DAY_PROTOCOL_TEXT}",
+    )
+    assert not any(w["code"] == "calendar_spine_fight_day_protocol_violation" for w in good["warnings"])
