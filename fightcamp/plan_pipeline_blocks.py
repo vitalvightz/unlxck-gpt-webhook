@@ -194,16 +194,6 @@ def _build_rehab_injury_string(context: PlanRuntimeContext) -> str:
     if not parsed_entries:
         return context.injuries_only_text
 
-    guided = context.plan_input.guided_injury
-    guided_injury_type = _normalize_guided_injury_type(getattr(guided, "injury_type", None) if guided else None)
-    guided_notes = " ".join(
-        str(part or "")
-        for part in (
-            getattr(guided, "notes", None) if guided else None,
-            getattr(guided, "area", None) if guided else None,
-        )
-    ).lower()
-
     phrases: list[str] = []
     for entry in parsed_entries:
         canonical_location = str(entry.get("canonical_location") or "").strip().lower()
@@ -216,6 +206,13 @@ def _build_rehab_injury_string(context: PlanRuntimeContext) -> str:
         elif not location:
             location = laterality
 
+        guided_notes = " ".join(
+            str(part or "")
+            for part in (
+                entry.get("guided_notes"),
+                entry.get("guided_area"),
+            )
+        ).lower()
         raw_context = " ".join(
             str(part or "")
             for part in (
@@ -238,10 +235,10 @@ def _build_rehab_injury_string(context: PlanRuntimeContext) -> str:
         )
         is_knee = canonical_location == "knee" or "knee" in display_location
 
-        injury_type = str(entry.get("injury_type") or "").strip().lower()
-        if guided_injury_type == "instability":
-            injury_type = "instability"
-        elif is_knee and knee_movement_language and injury_type in {"", "sprain", "unspecified", "pain", "soreness", "tightness", "stiffness"}:
+        injury_type = _normalize_guided_injury_type(entry.get("injury_type"))
+        if not injury_type:
+            injury_type = _normalize_guided_injury_type(entry.get("guided_injury_type"))
+        if is_knee and knee_movement_language and injury_type in {"", "sprain", "unspecified", "pain", "soreness", "tightness", "stiffness"}:
             injury_type = "hyperextension"
 
         severity = str(entry.get("severity") or "").strip().lower()
