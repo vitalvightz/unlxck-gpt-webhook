@@ -760,7 +760,7 @@ export function PlanIntakeForm() {
 
       return changed ? next : current;
     });
-  }, [form.key_goals, form.primary_goal, form.primary_weak_area, form.weak_areas]);
+  }, [form.key_goals, form.primary_goal, form.primary_weak_area, form.weak_areas, hydrated]);
 
 
   useEffect(() => {
