@@ -46,6 +46,7 @@ from .priority_profile import (
     PRIMARY_WEAKNESS_WEIGHT,
     build_priority_profile,
     goal_priority_weight,
+    is_priority_collision_tag,
     weakness_priority_weight,
 )
 
@@ -65,6 +66,9 @@ CONDITIONING_PRIMARY_GOAL_BONUS = 2.0
 CONDITIONING_SECONDARY_GOAL_BONUS = 1.0
 CONDITIONING_PRIMARY_WEAKNESS_BONUS = 2.5
 CONDITIONING_SECONDARY_WEAKNESS_BONUS = 1.25
+CONDITIONING_MAX_COLLISION_SAFE_PRIORITY_BONUS = 5.0
+CONDITIONING_PRIMARY_COLLISION_BONUS = 3.0
+CONDITIONING_SECONDARY_COLLISION_BONUS = 1.5
 
 
 def _conditioning_goal_priority_bonus(tags: list[str], priority_profile) -> float:
@@ -89,6 +93,68 @@ def _conditioning_weakness_priority_bonus(tags: list[str], priority_profile) -> 
         elif weight > 0:
             total += CONDITIONING_SECONDARY_WEAKNESS_BONUS
     return min(total, CONDITIONING_MAX_WEAKNESS_PRIORITY_BONUS)
+
+
+def _conditioning_priority_value_for_tag(tag: str, priority_profile) -> float:
+    goal_weight = goal_priority_weight(tag, priority_profile)
+    weakness_weight = weakness_priority_weight(tag, priority_profile)
+
+    if is_priority_collision_tag(tag, priority_profile):
+        if goal_weight == PRIMARY_GOAL_WEIGHT and weakness_weight == PRIMARY_WEAKNESS_WEIGHT:
+            return CONDITIONING_PRIMARY_COLLISION_BONUS
+        return CONDITIONING_SECONDARY_COLLISION_BONUS
+
+    total = 0.0
+    if goal_weight == PRIMARY_GOAL_WEIGHT:
+        total += CONDITIONING_PRIMARY_GOAL_BONUS
+    elif goal_weight > 0:
+        total += CONDITIONING_SECONDARY_GOAL_BONUS
+
+    if weakness_weight == PRIMARY_WEAKNESS_WEIGHT:
+        total += CONDITIONING_PRIMARY_WEAKNESS_BONUS
+    elif weakness_weight > 0:
+        total += CONDITIONING_SECONDARY_WEAKNESS_BONUS
+
+    return total
+
+
+def _conditioning_collision_safe_priority_bonus(
+    goal_tags: list[str],
+    weakness_tags: list[str],
+    priority_profile,
+) -> float:
+    unique_tags = list(dict.fromkeys([*goal_tags, *weakness_tags]))
+    if not any(is_priority_collision_tag(tag, priority_profile) for tag in unique_tags):
+        return _conditioning_goal_priority_bonus(goal_tags, priority_profile) + _conditioning_weakness_priority_bonus(
+            weakness_tags,
+            priority_profile,
+        )
+
+    total = sum(_conditioning_priority_value_for_tag(tag, priority_profile) for tag in unique_tags)
+    return min(total, CONDITIONING_MAX_COLLISION_SAFE_PRIORITY_BONUS)
+
+
+def _add_conditioning_priority_reason_codes(
+    reasons: dict,
+    matched_goal_tags: list[str],
+    matched_weak_tags: list[str],
+    priority_profile,
+) -> None:
+    for tag in matched_goal_tags:
+        goal_weight = goal_priority_weight(tag, priority_profile)
+        if goal_weight == PRIMARY_GOAL_WEIGHT:
+            reasons["reason_codes"].append(f"priority_primary_goal_match:{tag}")
+        elif goal_weight > 0:
+            reasons["reason_codes"].append(f"priority_secondary_goal_match:{tag}")
+    for tag in matched_weak_tags:
+        weakness_weight = weakness_priority_weight(tag, priority_profile)
+        if weakness_weight == PRIMARY_WEAKNESS_WEIGHT:
+            reasons["reason_codes"].append(f"priority_primary_weakness_match:{tag}")
+        elif weakness_weight > 0:
+            reasons["reason_codes"].append(f"priority_secondary_weakness_match:{tag}")
+    for tag in list(dict.fromkeys(matched_goal_tags + matched_weak_tags)):
+        if is_priority_collision_tag(tag, priority_profile):
+            reasons["reason_codes"].append(f"priority_collision_goal_weakness:{tag}")
 
 _MIXED_SYSTEM_LOGGED: set[tuple[str, str]] = set()
 _UNKNOWN_SYSTEM_LOGGED: set[tuple[str, str]] = set()
@@ -1842,8 +1908,11 @@ def generate_conditioning_block(flags):
         num_style = sum(1 for t in tags if t in style_tags)
         num_format = sum(1 for t in tags if t in fight_format_tags)
 
-        base_score = _conditioning_weakness_priority_bonus(matched_weak_tags, priority_profile)
-        base_score += _conditioning_goal_priority_bonus(matched_goal_tags, priority_profile)
+        base_score = _conditioning_collision_safe_priority_bonus(
+            matched_goal_tags,
+            matched_weak_tags,
+            priority_profile,
+        )
         base_score += 0.75 * min(num_style, 2)
         base_score += 1.0 * min(num_format, 1)
 
@@ -1912,18 +1981,7 @@ def generate_conditioning_block(flags):
             "late_window_adjustment": late_eval["adjustment"],
             "final_score": round(total_score, 4),
         }
-        for tag in matched_goal_tags:
-            goal_weight = goal_priority_weight(tag, priority_profile)
-            if goal_weight == PRIMARY_GOAL_WEIGHT:
-                reasons["reason_codes"].append(f"priority_primary_goal_match:{tag}")
-            elif goal_weight > 0:
-                reasons["reason_codes"].append(f"priority_secondary_goal_match:{tag}")
-        for tag in matched_weak_tags:
-            weakness_weight = weakness_priority_weight(tag, priority_profile)
-            if weakness_weight == PRIMARY_WEAKNESS_WEIGHT:
-                reasons["reason_codes"].append(f"priority_primary_weakness_match:{tag}")
-            elif weakness_weight > 0:
-                reasons["reason_codes"].append(f"priority_secondary_weakness_match:{tag}")
+        _add_conditioning_priority_reason_codes(reasons, matched_goal_tags, matched_weak_tags, priority_profile)
         if preferred_name_match:
             reasons["reason_codes"].append(f"preferred_exercise_name_match:+{PREFERRED_EXERCISE_NAME_BOOST:.1f}")
 
@@ -2063,8 +2121,11 @@ def generate_conditioning_block(flags):
         if system == top_system:
             score += 0.75
         score += equip_bonus
-        score += _conditioning_weakness_priority_bonus(matched_weak_tags, priority_profile)
-        score += _conditioning_goal_priority_bonus(matched_goal_tags, priority_profile)
+        score += _conditioning_collision_safe_priority_bonus(
+            matched_goal_tags,
+            matched_weak_tags,
+            priority_profile,
+        )
         preferred_name_match = str(d.get("name", "")).strip().lower() in preferred_exercise_names
         if preferred_name_match:
             score += PREFERRED_EXERCISE_NAME_BOOST
@@ -2125,18 +2186,7 @@ def generate_conditioning_block(flags):
             "late_window_adjustment": late_eval["adjustment"],
             "final_score": round(score, 4),
         }
-        for tag in matched_goal_tags:
-            goal_weight = goal_priority_weight(tag, priority_profile)
-            if goal_weight == PRIMARY_GOAL_WEIGHT:
-                reasons["reason_codes"].append(f"priority_primary_goal_match:{tag}")
-            elif goal_weight > 0:
-                reasons["reason_codes"].append(f"priority_secondary_goal_match:{tag}")
-        for tag in matched_weak_tags:
-            weakness_weight = weakness_priority_weight(tag, priority_profile)
-            if weakness_weight == PRIMARY_WEAKNESS_WEIGHT:
-                reasons["reason_codes"].append(f"priority_primary_weakness_match:{tag}")
-            elif weakness_weight > 0:
-                reasons["reason_codes"].append(f"priority_secondary_weakness_match:{tag}")
+        _add_conditioning_priority_reason_codes(reasons, matched_goal_tags, matched_weak_tags, priority_profile)
         if preferred_name_match:
             reasons["reason_codes"].append(f"preferred_exercise_name_match:+{PREFERRED_EXERCISE_NAME_BOOST:.1f}")
 

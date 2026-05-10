@@ -1,6 +1,7 @@
 from types import SimpleNamespace
 
 from fightcamp.priority_profile import (
+    COLLISION_INTENT_BONUS,
     MAX_GOAL_PRIORITY_BONUS,
     MAX_WEAKNESS_PRIORITY_BONUS,
     PRIMARY_GOAL_WEIGHT,
@@ -9,9 +10,12 @@ from fightcamp.priority_profile import (
     SECONDARY_WEAKNESS_WEIGHT,
     PriorityProfile,
     build_priority_profile,
+    collision_safe_priority_bonus_for_tag,
     describe_priority_focus,
     goal_priority_weight,
+    is_priority_collision_tag,
     normalize_priority_values,
+    total_collision_safe_priority_bonus,
     total_goal_priority_bonus,
     total_weakness_priority_bonus,
     weakness_priority_weight,
@@ -36,6 +40,53 @@ def test_builds_explicit_profile():
     assert profile.secondary_goals == ["power", "mobility"]
     assert profile.primary_weak_area == "hip_mobility"
     assert profile.secondary_weak_areas == ["cns_fatigue"]
+
+
+def test_profile_detects_primary_goal_weakness_collision():
+    plan_input = SimpleNamespace(
+        key_goals="power, conditioning",
+        primary_goal="power",
+        weak_areas="power, gas_tank",
+        primary_weak_area="power",
+    )
+
+    profile = build_priority_profile(plan_input)
+
+    assert profile.goal_weakness_collisions == ["power"]
+    assert profile.primary_goal_weakness_collision is True
+    assert profile.primary_collision_tag == "power"
+    assert profile.all_goals == ["power", "conditioning"]
+    assert profile.all_weak_areas == ["power", "gas_tank"]
+
+
+def test_profile_detects_secondary_goal_weakness_overlap():
+    plan_input = SimpleNamespace(
+        key_goals="power, mobility",
+        primary_goal="power",
+        weak_areas="gas_tank, mobility",
+        primary_weak_area="gas_tank",
+    )
+
+    profile = build_priority_profile(plan_input)
+
+    assert profile.goal_weakness_collisions == ["mobility"]
+    assert profile.primary_goal_weakness_collision is False
+    assert profile.primary_collision_tag == ""
+
+
+def test_profile_without_overlap_has_clean_collision_metadata():
+    plan_input = SimpleNamespace(
+        key_goals="power, mobility",
+        primary_goal="power",
+        weak_areas="gas_tank, balance",
+        primary_weak_area="gas_tank",
+    )
+
+    profile = build_priority_profile(plan_input)
+
+    assert profile.goal_weakness_collisions == []
+    assert profile.primary_goal_weakness_collision is False
+    assert profile.primary_collision_tag == ""
 
 
 def test_falls_back_when_primary_missing():
@@ -139,6 +190,39 @@ def test_duplicate_tags_do_not_double_count():
     assert total_goal_priority_bonus(["power", "power", "mobility"], profile) == total_goal_priority_bonus(
         ["power", "mobility"], profile
     )
+
+
+def test_collision_safe_priority_bonus_uses_intent_bonus_not_full_sum():
+    profile = build_priority_profile(
+        SimpleNamespace(
+            key_goals=["power"],
+            primary_goal="power",
+            weak_areas=["power"],
+            primary_weak_area="power",
+        )
+    )
+
+    assert is_priority_collision_tag("power", profile) is True
+    assert collision_safe_priority_bonus_for_tag("power", profile) == PRIMARY_WEAKNESS_WEIGHT + COLLISION_INTENT_BONUS
+
+
+def test_total_collision_safe_priority_bonus_dedupes_and_caps():
+    profile = build_priority_profile(
+        SimpleNamespace(
+            key_goals=["power", "mobility"],
+            primary_goal="power",
+            weak_areas=["power", "mobility"],
+            primary_weak_area="power",
+        )
+    )
+
+    assert total_collision_safe_priority_bonus(["power"], ["power"], profile) == 1.1
+    assert total_collision_safe_priority_bonus(
+        ["power", "mobility"],
+        ["power", "mobility"],
+        profile,
+        max_bonus=1.0,
+    ) == 1.0
 
 
 def test_summary_helper_works():

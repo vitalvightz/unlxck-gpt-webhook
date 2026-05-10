@@ -55,9 +55,9 @@ from .priority_profile import (
     PRIMARY_WEAKNESS_WEIGHT,
     build_priority_profile,
     goal_priority_weight,
+    is_priority_collision_tag,
+    total_strength_collision_safe_priority_bonus,
     weakness_priority_weight,
-    total_goal_priority_bonus,
-    total_weakness_priority_bonus,
 )
 
 logger = logging.getLogger(__name__)
@@ -821,22 +821,19 @@ def score_exercise(
 
     matched_weakness_tags = sorted(set(exercise_tags) & set(weakness_tags))
     weakness_matches = len(matched_weakness_tags)
-    weakness_bonus = (
-        total_weakness_priority_bonus(matched_weakness_tags, priority_profile)
-        if priority_profile is not None
-        else weakness_matches * 0.6
-    )
-    score += weakness_bonus
-    reasons["weakness_hits"] = weakness_matches
-
     matched_goal_tags = sorted(set(exercise_tags) & set(goal_tags))
     goal_matches = len(matched_goal_tags)
-    goal_bonus = (
-        total_goal_priority_bonus(matched_goal_tags, priority_profile)
+    priority_bonus = (
+        total_strength_collision_safe_priority_bonus(
+            matched_goal_tags,
+            matched_weakness_tags,
+            priority_profile,
+        )
         if priority_profile is not None
-        else goal_matches * 0.5
+        else weakness_matches * 0.6 + goal_matches * 0.5
     )
-    score += goal_bonus
+    score += priority_bonus
+    reasons["weakness_hits"] = weakness_matches
     reasons["goal_hits"] = goal_matches
     if priority_profile is not None:
         for tag in matched_goal_tags:
@@ -851,6 +848,9 @@ def score_exercise(
                 reasons["reason_codes"].append(f"priority_primary_weakness_match:{tag}")
             elif weakness_weight > 0:
                 reasons["reason_codes"].append(f"priority_secondary_weakness_match:{tag}")
+        for tag in list(dict.fromkeys(matched_goal_tags + matched_weakness_tags)):
+            if is_priority_collision_tag(tag, priority_profile):
+                reasons["reason_codes"].append(f"priority_collision_goal_weakness:{tag}")
 
     matched_style_tags = list(set(exercise_tags) & set(style_tags))
     style_score = len(matched_style_tags) * 0.3
