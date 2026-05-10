@@ -1026,3 +1026,17 @@ def test_guided_resolver_tendon_ligament_negated_rupture_does_not_escalate():
     entry = parsed.parsed_injuries[0]
     assert entry["injury_type"] == "soft_tissue_joint_issue"
     assert entry["injury_type"] != "tendon_rupture_or_avulsion"
+
+
+def test_guided_resolver_tendon_ligament_red_flags_do_not_count_as_rupture_evidence():
+    parsed = PlanInput.from_payload(
+        _guided_payload(
+            "right ankle",
+            injury_type="tendon_ligament",
+            notes="Cannot bear weight and unable to walk with obvious deformity.",
+        )
+    )
+
+    entry = parsed.parsed_injuries[0]
+    assert entry["injury_type"] == "soft_tissue_joint_issue"
+    assert entry["injury_type"] != "tendon_rupture_or_avulsion"

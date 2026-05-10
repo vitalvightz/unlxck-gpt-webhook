@@ -41,7 +41,7 @@ SURFACE_TYPE_TO_INJURY_TYPE = {
 }
 
 RUPTURE_EVIDENCE_PATTERN = re.compile(
-    r"\b(?:rupture|ruptured|avulsion|detached|complete tear|full tear|confirmed tear|confirmed rupture|visible deformity|obvious deformity|deformity present|deformed|looks deformed|bone looks out of place|cannot bear weight|can't bear weight|cant bear weight|unable to bear weight|not able to bear weight|unable to walk|cannot walk|can't walk|cant walk)\b",
+    r"\b(?:rupture|ruptured|avulsion|detached|complete tear|full tear|confirmed tear|confirmed rupture)\b",
     re.IGNORECASE,
 )
 RUPTURE_NEGATION_PATTERN = re.compile(r"\b(?:no|not|without|denies)\s+(?:\w+\s+){0,3}?(?:rupture|tear|avulsion)\b", re.IGNORECASE)
