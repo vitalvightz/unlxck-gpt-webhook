@@ -31,7 +31,10 @@ def normalize_priority_values(value: str | list[str] | None) -> list[str]:
     if isinstance(value, str):
         raw_values = value.split(",")
     else:
-        raw_values = [str(item) for item in value]
+        raw_values = []
+        for item in value:
+            if item is not None:
+                raw_values.extend(str(item).split(","))
 
     normalized: list[str] = []
     seen: set[str] = set()
