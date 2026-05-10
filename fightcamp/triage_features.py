@@ -287,8 +287,8 @@ _STRUCTURED_HIGH_RISK_INJURY_TYPES = {
 
 _FUNCTION_LOSS_PATTERNS: tuple[tuple[str, str], ...] = (
     (
-        r"\bcannot\s+bear\s+weight\b|\bcan'?t\s+bear\s+weight\b|\bunable\s+to\s+bear\s+weight\b"
-        r"|\bnot\s+able\s+to\s+bear\s+weight\b|\bunable\s+to\s+walk\b|\bcannot\s+walk\b|\bcan'?t\s+walk\b",
+        r"\b(?:cannot|can'?t|unable\s+to|not\s+able\s+to)\s+bear\s+weight\b"
+        r"|\b(?:unable\s+to|cannot|can'?t)\s+walk\b",
         "cannot_bear_weight",
     ),
     (r"\bcannot\s+lift\s+arm\b|\bunable\s+to\s+lift\s+arm\b", "cannot_lift_arm"),
