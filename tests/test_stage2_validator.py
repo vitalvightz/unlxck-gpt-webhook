@@ -1,4 +1,4 @@
-﻿from fightcamp.stage2_validator import validate_stage2_output
+from fightcamp.stage2_validator import validate_stage2_output
 
 
 
@@ -1973,3 +1973,97 @@ def test_calendar_spine_fight_day_protocol_text_rule():
         final_plan_text=f"## Week 1\nFriday - D-0\n- {FIGHT_DAY_PROTOCOL_TEXT}",
     )
     assert not any(w["code"] == "calendar_spine_fight_day_protocol_violation" for w in good["warnings"])
+    
+    
+    def test_calendar_spine_rejects_calendar_day_without_session_role():
+    brief = {
+        "athlete_model": {"sport": "boxing"},
+        "restrictions": [],
+        "phase_strategy": {},
+        "candidate_pools": {},
+        "weekly_role_map": {
+            "weeks": [
+                {
+                    "week_index": 1,
+                    "phase": "TAPER",
+                    "calendar_days": [
+                        {
+                            "weekday": "monday",
+                            "d_day": 7,
+                            "is_fight_day": False,
+                            "is_after_fight_day": False,
+                        },
+                        {
+                            "weekday": "wednesday",
+                            "d_day": 5,
+                            "is_fight_day": False,
+                            "is_after_fight_day": False,
+                        },
+                    ],
+                    "session_roles": [
+                        {
+                            "role_key": "technical_touch_day",
+                            "scheduled_day_hint": "wednesday",
+                        }
+                    ],
+                }
+            ]
+        },
+    }
+
+    report = validate_stage2_output(
+        planning_brief=brief,
+        final_plan_text="""
+        ## Week 1
+        Monday - D-7
+        - Strength: Trap-bar deadlift — 3 x 3.
+
+        Wednesday - D-5
+        - Technical touch
+        """,
+    )
+
+    assert any(
+        warning["code"] == "calendar_spine_session_role_not_authorized"
+        for warning in report["warnings"]
+    )
+
+
+def test_calendar_spine_allows_unassigned_off_recovery_only_day():
+    brief = {
+        "athlete_model": {"sport": "boxing"},
+        "restrictions": [],
+        "phase_strategy": {},
+        "candidate_pools": {},
+        "weekly_role_map": {
+            "weeks": [
+                {
+                    "week_index": 1,
+                    "phase": "TAPER",
+                    "calendar_days": [
+                        {
+                            "weekday": "monday",
+                            "d_day": 7,
+                            "is_fight_day": False,
+                            "is_after_fight_day": False,
+                        },
+                    ],
+                    "session_roles": [],
+                }
+            ]
+        },
+    }
+
+    report = validate_stage2_output(
+        planning_brief=brief,
+        final_plan_text="""
+        ## Week 1
+        Monday - D-7
+        - Off / recovery only day. No app S&C.
+        """,
+    )
+
+    assert not any(
+        warning["code"] == "calendar_spine_session_role_not_authorized"
+        for warning in report["warnings"]
+    )
