@@ -482,7 +482,7 @@ def _is_clean_guided_display_location(area: str, injury_entry: dict) -> bool:
         return False
 
     resolved_injury_type = str(injury_entry.get("injury_type") or "").strip().lower().replace("_", " ")
-    if resolved_injury_type and re.search(rf"\b{re.escape(resolved_injury_type)}\b", normalized_area):
+    if resolved_injury_type and resolved_injury_type != "unspecified" and re.search(rf"\b{re.escape(resolved_injury_type)}\b", normalized_area):
         return False
 
     if _GUIDED_DISPLAY_MECHANISM_PATTERN.search(normalized_area):
