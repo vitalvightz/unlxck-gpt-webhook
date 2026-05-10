@@ -7,6 +7,10 @@ from typing import Literal
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 from dateutil.tz import gettz
 
+from .guided_injury_display import (
+    is_clean_guided_display_location,
+    strip_guided_laterality,
+)
 from .guided_injury_resolver import resolve_guided_injury_entry
 from .injury_formatting import parse_injuries_and_restrictions, parse_injury_entry
 from .normalization import normalize_injury_marker as _normalize_injury_marker
@@ -406,7 +410,6 @@ _GUIDED_TRIGGER_PREFIX = re.compile(
     r"^(?:avoid|limit|reduce|no|dont|don't|do not|cannot|can't|cant|restricted|restriction)\b",
     re.IGNORECASE,
 )
-_GUIDED_LATERALITY_PREFIX = re.compile(r"^\s*(left|right)\s+", re.IGNORECASE)
 _GUIDED_SEVERITY_MAP = {
     "low": "mild",
     "mild": "mild",
@@ -418,19 +421,6 @@ _GUIDED_STRUCTURAL_NOTE_PATTERN = re.compile(
     r"\b(?:acl|tear|rupture|reconstruction|dislocation|fracture|concussion)\b",
     re.IGNORECASE,
 )
-_GUIDED_DISPLAY_MECHANISM_PATTERN = re.compile(
-    r"""\b(
-        hyperextend(?:ed|s|ing)?|hyperextension|rolled|twisted|sprain(?:ed)?|strain(?:ed)?|pulled|
-        pain|sore|soreness|tight|tightness|swollen|swelling|inflamed|inflammation|stiff|stiffness|
-        achy|aching|tendonitis|tendinitis|tendinopathy|impingement|instability|unstable|
-        rupture|tear|torn|bruise(?:d)?|cut|laceration|graze|abrasion|blister|
-        dislocated|fracture|broken|popped|snapped|give\s+way|giving\s+way|gave\s+way|
-        locked\s+out|locked\s+back|overextend(?:ed|s|ing)?|overextension|overstretch(?:ed|ing)?
-    )\b""",
-    re.IGNORECASE | re.VERBOSE,
-)
-
-
 def _extract_guided_injury(data: dict) -> GuidedInjury | None:
     if not isinstance(data, dict):
         return None
@@ -469,28 +459,6 @@ def _extract_guided_injuries(data: dict) -> list[GuidedInjury]:
     return injuries
 
 
-def _strip_guided_laterality(area: str, laterality: str | None) -> str:
-    cleaned = str(area or "").strip()
-    if not cleaned or not laterality:
-        return cleaned
-    return _GUIDED_LATERALITY_PREFIX.sub("", cleaned, count=1).strip() or cleaned
-
-
-def _is_clean_guided_display_location(area: str, injury_entry: dict) -> bool:
-    normalized_area = str(area or "").strip().lower()
-    if not normalized_area:
-        return False
-
-    resolved_injury_type = str(injury_entry.get("injury_type") or "").strip().lower().replace("_", " ")
-    if resolved_injury_type and resolved_injury_type != "unspecified" and re.search(rf"\b{re.escape(resolved_injury_type)}\b", normalized_area):
-        return False
-
-    if _GUIDED_DISPLAY_MECHANISM_PATTERN.search(normalized_area):
-        return False
-
-    return True
-
-
 def _parse_guided_injury(guided_injury: GuidedInjury) -> tuple[list[dict[str, str | None]], list[ParsedRestriction]]:
     injuries: list[dict[str, str | None]] = []
     restrictions: list[ParsedRestriction] = []
@@ -509,8 +477,8 @@ def _parse_guided_injury(guided_injury: GuidedInjury) -> tuple[list[dict[str, st
         injury_entry = resolve_guided_injury_entry(guided_injury, injury_entry)
 
         laterality = injury_entry.get("laterality") or injury_entry.get("side")
-        display_location = _strip_guided_laterality(guided_injury.area, laterality)
-        if display_location and _is_clean_guided_display_location(guided_injury.area, injury_entry):
+        display_location = strip_guided_laterality(guided_injury.area, laterality)
+        if display_location and is_clean_guided_display_location(guided_injury.area, injury_entry):
             injury_entry["display_location"] = display_location
 
         mapped_severity = _GUIDED_SEVERITY_MAP.get(guided_injury.severity.lower())
