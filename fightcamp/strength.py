@@ -2141,7 +2141,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
             style_reasons["metadata_adjustment"] = metadata_adjustment
         if metadata_reason_codes:
             style_reasons["reason_codes"] = list(
-                dict.fromkeys(list(style_reasons.get("reason_codes", [])) + list(metadata_reason_codes))
+                dict.fromkeys(style_reasons.get("reason_codes", []) + metadata_reason_codes)
             )
         late_eval = _evaluate_strength_late_window(ex, window=late_window, cut_bucket=cut_bucket)
         _record_ambiguous_gap(late_eval.get("ambiguous_gap"))
