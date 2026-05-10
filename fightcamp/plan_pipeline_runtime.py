@@ -216,6 +216,28 @@ def build_runtime_context(
     triage_summary: dict[str, Any] | None = None,
     is_approved_triage_resume: bool = False,
 ) -> PlanRuntimeContext:
+    def _normalized_goals(raw_goals: str) -> list[str]:
+        return [
+            GOAL_NORMALIZER.get(goal.strip(), goal.strip()).lower()
+            for goal in (raw_goals or "").split(",")
+            if goal.strip()
+        ]
+
+    def _normalized_weaknesses(raw_weak_areas: str) -> list[str]:
+        return [
+            tag
+            for item in [value.strip().lower() for value in (raw_weak_areas or "").split(",") if value.strip()]
+            for tag in WEAKNESS_NORMALIZER.get(item.lower(), [item.lower()])
+        ]
+
+    def _resolve_primary(normalized_values: list[str], raw_primary: str, normalizer: dict[str, str]) -> str:
+        primary = str(raw_primary or "").strip().lower()
+        if primary:
+            primary = normalizer.get(primary, primary).lower()
+        if primary and primary in normalized_values:
+            return primary
+        return normalized_values[0] if normalized_values else ""
+
     def _serialize_guided_injury(guided_entry: Any) -> dict[str, Any]:
         return {
             "area": guided_entry.area,
@@ -300,6 +322,11 @@ def build_runtime_context(
         else [_serialize_guided_injury(item) for item in (plan_input.guided_injuries or [])]
     )
 
+    normalized_weaknesses = _normalized_weaknesses(plan_input.weak_areas)
+    normalized_goals = _normalized_goals(plan_input.key_goals)
+    primary_goal = _resolve_primary(normalized_goals, plan_input.primary_goal, GOAL_NORMALIZER)
+    primary_weak_area = _resolve_primary(normalized_weaknesses, plan_input.primary_weak_area, WEAKNESS_NORMALIZER)
+
     training_context = TrainingContext(
         fatigue=plan_input.fatigue.lower(),
         training_frequency=plan_input.training_frequency,
@@ -308,21 +335,13 @@ def build_runtime_context(
         injuries=raw_injury_list,
         style_technical=tech_styles,
         style_tactical=tactical_styles,
-        weaknesses=[
-            tag
-            for item in [value.strip().lower() for value in plan_input.weak_areas.split(",") if value.strip()]
-            for tag in WEAKNESS_NORMALIZER.get(item.lower(), [item.lower()])
-        ],
+        weaknesses=normalized_weaknesses,
         equipment=normalize_equipment_list(plan_input.equipment_access),
         weight_cut_risk=weight_cut_risk_flag,
         weight_cut_pct=weight_cut_pct_val,
         fight_format=selection_format,
         status=plan_input.status.strip().lower(),
-        key_goals=[
-            GOAL_NORMALIZER.get(goal.strip(), goal.strip()).lower()
-            for goal in plan_input.key_goals.split(",")
-            if goal.strip()
-        ],
+        key_goals=normalized_goals,
         training_preference=plan_input.training_preference.strip().lower() if plan_input.training_preference else "",
         mental_block=mental_block_class,
         age=int(plan_input.age) if plan_input.age.isdigit() else 0,
@@ -331,6 +350,8 @@ def build_runtime_context(
         recent_exercises=[],
         phase_weeks=phase_weeks,
         days_until_fight=plan_input.days_until_fight,
+        primary_goal=primary_goal,
+        primary_weak_area=primary_weak_area,
         hard_sparring_days=plan_input.hard_sparring_days,
         support_work_days=getattr(plan_input, "support_work_days", []) or getattr(plan_input, "technical_skill_days", []),
         technical_skill_days=getattr(plan_input, "technical_skill_days", []),
