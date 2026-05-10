@@ -593,6 +593,7 @@ class PlanInput:
     training_frequency: int
     weeks_out: int | str
     days_until_fight: int | None
+    guided_injuries: list[GuidedInjury] = field(default_factory=list)
     parsing_metadata: dict[str, dict[str, str]] = field(default_factory=dict)
 
     @classmethod
@@ -622,8 +623,10 @@ class PlanInput:
         else:
             guided_injury = _extract_guided_injury(data)
             if guided_injury is not None:
+                guided_injuries = [guided_injury]
                 parsed_injuries, parsed_restrictions = _parse_guided_injury(guided_injury)
             else:
+                guided_injuries = []
                 parsed_injuries, parsed_restrictions = parse_injuries_and_restrictions(injuries or "")
         training_days = [d.strip() for d in raw_available_days.split(",") if d.strip()]
         hard_sparring_days = [
@@ -703,6 +706,7 @@ class PlanInput:
             next_fight_date=next_fight_date,
             injuries=injuries,
             guided_injury=guided_injury,
+            guided_injuries=guided_injuries,
             parsed_injuries=parsed_injuries,
             restrictions=parsed_restrictions,
             training_days=training_days,
