@@ -34,8 +34,8 @@ _RED_FLAG_PATTERNS: tuple[tuple[str, str], ...] = (
     ),
     (r"\brapid(?:ly)?\s+worsening\s+swelling\b", "rapid_swelling"),
     (
-        r"\bvisible\s+deformit(?:y|ies)\b|\bobvious\s+deformit(?:y|ies)\b|\bdeformit(?:y|ies)\s+present\b"
-        r"|\bdeformed\b|\blooks\s+deformed\b|\bbone\s+looks\s+out\s+of\s+place\b",
+        r"\b(?:visible|obvious)\s+deformit(?:y|ies)\b|\bdeformit(?:y|ies)\s+present\b"
+        r"|\b(?:looks\s+)?deformed\b|\bbone\s+looks\s+out\s+of\s+place\b",
         "deformity",
     ),
     (r"\bshort(?:ness)?\s+of\s+breath\b", "shortness_of_breath"),
