@@ -40,6 +40,7 @@ from .late_selector_windows import (
 from .stage2_payload_late_fight import compute_bridge_rules
 from .selection_metadata import build_score_evidence, normalize_selection_metadata
 from .weight_cut import compute_cut_severity_score, cut_severity_bucket
+from .priority_profile import build_priority_profile, total_goal_priority_bonus, total_weakness_priority_bonus
 
 TAPER_AVOID_TAGS = {
     "contrast_pairing",
@@ -66,6 +67,8 @@ GLYCOLYTIC_SUSTAINED_MIN_TOTAL_MINUTES = 12
 GLYCOLYTIC_SUSTAINED_MIN_RPE = 7
 GLYCOLYTIC_LABEL_BASE_MAX_REST_SEC = 60
 PREFERRED_EXERCISE_NAME_BOOST = 3.0
+CONDITIONING_GOAL_PRIORITY_SCALE = 3.33
+CONDITIONING_WEAKNESS_PRIORITY_SCALE = 3.7
 SPEED_REPEATABILITY_MAX_WORK_SEC = 30
 SPEED_REPEATABILITY_MIN_REST_SEC = 60
 FRESHNESS_LACTATE_LEVELS = {"none", "low"}
@@ -1538,6 +1541,7 @@ def generate_conditioning_block(flags):
     technical = flags.get("style_technical") or []
     goals = flags.get("key_goals") or []
     weaknesses = flags.get("weaknesses") or []
+    priority_profile = build_priority_profile(flags)
     injuries = flags.get("injuries") or []
     restrictions = flags.get("restrictions")
     ignore_restrictions = bool(flags.get("ignore_restrictions", False))
@@ -1793,8 +1797,21 @@ def generate_conditioning_block(flags):
         num_style = sum(1 for t in tags if t in style_tags)
         num_format = sum(1 for t in tags if t in fight_format_tags)
 
-        base_score = 2.5 * min(num_weak, 2)
-        base_score += 2.0 * min(num_goals, 2)
+        matched_goal_labels = [
+            goal for goal in goals
+            if set(normalize_tags(GOAL_TAG_MAP.get(goal, []))) & set(tags)
+        ]
+        matched_weakness_labels = [
+            weakness for weakness in weaknesses
+            if set(normalize_tags(WEAKNESS_TAG_MAP.get(weakness, []))) & set(tags)
+        ]
+        raw_goal_priority_bonus = total_goal_priority_bonus(matched_goal_labels, priority_profile)
+        raw_weakness_priority_bonus = total_weakness_priority_bonus(matched_weakness_labels, priority_profile)
+        goal_priority_bonus = raw_goal_priority_bonus * CONDITIONING_GOAL_PRIORITY_SCALE
+        weakness_priority_bonus = raw_weakness_priority_bonus * CONDITIONING_WEAKNESS_PRIORITY_SCALE
+
+        base_score = weakness_priority_bonus
+        base_score += goal_priority_bonus
         base_score += 0.75 * min(num_style, 2)
         base_score += 1.0 * min(num_format, 1)
 
@@ -1859,12 +1876,26 @@ def generate_conditioning_block(flags):
             "penalties": penalty,
             "restriction_hits": len(matched_restrictions),
             "boxing_aerobic_preference": round(boxer_aerobic_adjustment, 4),
+            "raw_goal_priority_bonus": round(raw_goal_priority_bonus, 4),
+            "raw_weakness_priority_bonus": round(raw_weakness_priority_bonus, 4),
+            "goal_priority_bonus": round(goal_priority_bonus, 4),
+            "weakness_priority_bonus": round(weakness_priority_bonus, 4),
             "reason_codes": list(late_eval["reason_codes"]),
             "late_window_adjustment": late_eval["adjustment"],
             "final_score": round(total_score, 4),
         }
         if preferred_name_match:
             reasons["reason_codes"].append(f"preferred_exercise_name_match:+{PREFERRED_EXERCISE_NAME_BOOST:.1f}")
+        if priority_profile.primary_goal and priority_profile.primary_goal in matched_goal_labels:
+            reasons["reason_codes"].append(f"priority_primary_goal_match:{priority_profile.primary_goal}")
+        for goal in priority_profile.secondary_goals:
+            if goal in matched_goal_labels:
+                reasons["reason_codes"].append(f"priority_secondary_goal_match:{goal}")
+        if priority_profile.primary_weak_area and priority_profile.primary_weak_area in matched_weakness_labels:
+            reasons["reason_codes"].append(f"priority_primary_weakness_match:{priority_profile.primary_weak_area}")
+        for weakness in priority_profile.secondary_weak_areas:
+            if weakness in matched_weakness_labels:
+                reasons["reason_codes"].append(f"priority_secondary_weakness_match:{weakness}")
 
         system_drills[system].append((d, total_score, reasons))
 
@@ -2000,8 +2031,20 @@ def generate_conditioning_block(flags):
         if system == top_system:
             score += 0.75
         score += equip_bonus
-        score += 0.6 * min(weak_matches, 1)
-        score += 0.5 * min(goal_matches, 1)
+        matched_goal_labels = [
+            goal for goal in goals
+            if set(normalize_tags(GOAL_TAG_MAP.get(goal, []))) & set(tags)
+        ]
+        matched_weakness_labels = [
+            weakness for weakness in weaknesses
+            if set(normalize_tags(WEAKNESS_TAG_MAP.get(weakness, []))) & set(tags)
+        ]
+        raw_goal_priority_bonus = total_goal_priority_bonus(matched_goal_labels, priority_profile)
+        raw_weakness_priority_bonus = total_weakness_priority_bonus(matched_weakness_labels, priority_profile)
+        goal_priority_bonus = raw_goal_priority_bonus * CONDITIONING_GOAL_PRIORITY_SCALE
+        weakness_priority_bonus = raw_weakness_priority_bonus * CONDITIONING_WEAKNESS_PRIORITY_SCALE
+        score += weakness_priority_bonus
+        score += goal_priority_bonus
         preferred_name_match = str(d.get("name", "")).strip().lower() in preferred_exercise_names
         if preferred_name_match:
             score += PREFERRED_EXERCISE_NAME_BOOST
@@ -2058,12 +2101,26 @@ def generate_conditioning_block(flags):
             "penalties": penalty,
             "restriction_hits": len(matched_restrictions),
             "boxing_aerobic_preference": round(boxer_aerobic_adjustment, 4),
+            "raw_goal_priority_bonus": round(raw_goal_priority_bonus, 4),
+            "raw_weakness_priority_bonus": round(raw_weakness_priority_bonus, 4),
+            "goal_priority_bonus": round(goal_priority_bonus, 4),
+            "weakness_priority_bonus": round(weakness_priority_bonus, 4),
             "reason_codes": list(late_eval["reason_codes"]),
             "late_window_adjustment": late_eval["adjustment"],
             "final_score": round(score, 4),
         }
         if preferred_name_match:
             reasons["reason_codes"].append(f"preferred_exercise_name_match:+{PREFERRED_EXERCISE_NAME_BOOST:.1f}")
+        if priority_profile.primary_goal and priority_profile.primary_goal in matched_goal_labels:
+            reasons["reason_codes"].append(f"priority_primary_goal_match:{priority_profile.primary_goal}")
+        for goal in priority_profile.secondary_goals:
+            if goal in matched_goal_labels:
+                reasons["reason_codes"].append(f"priority_secondary_goal_match:{goal}")
+        if priority_profile.primary_weak_area and priority_profile.primary_weak_area in matched_weakness_labels:
+            reasons["reason_codes"].append(f"priority_primary_weakness_match:{priority_profile.primary_weak_area}")
+        for weakness in priority_profile.secondary_weak_areas:
+            if weakness in matched_weakness_labels:
+                reasons["reason_codes"].append(f"priority_secondary_weakness_match:{weakness}")
 
         style_system_drills[system].append((d, score, reasons))
         for st in style_names:
