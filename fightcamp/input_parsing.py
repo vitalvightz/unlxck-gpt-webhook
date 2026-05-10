@@ -418,6 +418,12 @@ _GUIDED_STRUCTURAL_NOTE_PATTERN = re.compile(
     r"\b(?:acl|tear|rupture|reconstruction|dislocation|fracture|concussion)\b",
     re.IGNORECASE,
 )
+_GUIDED_DISPLAY_MECHANISM_PATTERN = re.compile(
+    r"\b(?:hyperextend(?:ed|s|ing)?|hyperextension|rolled|twisted|sprain(?:ed)?|strain(?:ed)?|pulled|"
+    r"pain|sore|tight|rupture|tear|torn|bruise(?:d)?|cut|laceration|graze|abrasion|blister|"
+    r"dislocated|fracture|broken|popped|snapped|gave\s+way)\b",
+    re.IGNORECASE,
+)
 
 
 def _extract_guided_injury(data: dict) -> GuidedInjury | None:
@@ -465,6 +471,21 @@ def _strip_guided_laterality(area: str, laterality: str | None) -> str:
     return _GUIDED_LATERALITY_PREFIX.sub("", cleaned, count=1).strip() or cleaned
 
 
+def _is_clean_guided_display_location(area: str, injury_entry: dict) -> bool:
+    normalized_area = str(area or "").strip().lower()
+    if not normalized_area:
+        return False
+
+    resolved_injury_type = str(injury_entry.get("injury_type") or "").strip().lower().replace("_", " ")
+    if resolved_injury_type and re.search(rf"\b{re.escape(resolved_injury_type)}\b", normalized_area):
+        return False
+
+    if _GUIDED_DISPLAY_MECHANISM_PATTERN.search(normalized_area):
+        return False
+
+    return True
+
+
 def _parse_guided_injury(guided_injury: GuidedInjury) -> tuple[list[dict[str, str | None]], list[ParsedRestriction]]:
     injuries: list[dict[str, str | None]] = []
     restrictions: list[ParsedRestriction] = []
@@ -484,7 +505,7 @@ def _parse_guided_injury(guided_injury: GuidedInjury) -> tuple[list[dict[str, st
 
         laterality = injury_entry.get("laterality") or injury_entry.get("side")
         display_location = _strip_guided_laterality(guided_injury.area, laterality)
-        if display_location:
+        if display_location and _is_clean_guided_display_location(guided_injury.area, injury_entry):
             injury_entry["display_location"] = display_location
 
         mapped_severity = _GUIDED_SEVERITY_MAP.get(guided_injury.severity.lower())
