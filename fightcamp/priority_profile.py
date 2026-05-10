@@ -1,7 +1,9 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any, Iterable
+
+from .tagging import normalize_tag
 
 PRIMARY_GOAL_WEIGHT = 0.8
 SECONDARY_GOAL_WEIGHT = 0.4
@@ -11,6 +13,7 @@ SECONDARY_WEAKNESS_WEIGHT = 0.45
 
 MAX_GOAL_PRIORITY_BONUS = 1.2
 MAX_WEAKNESS_PRIORITY_BONUS = 1.35
+COLLISION_INTENT_BONUS = 0.2
 
 
 @dataclass(frozen=True)
@@ -21,6 +24,9 @@ class PriorityProfile:
     secondary_weak_areas: list[str]
     all_goals: list[str]
     all_weak_areas: list[str]
+    goal_weakness_collisions: list[str] = field(default_factory=list)
+    primary_goal_weakness_collision: bool = False
+    primary_collision_tag: str = ""
 
 
 def normalize_priority_values(value: str | list[str] | None) -> list[str]:
@@ -60,6 +66,14 @@ def build_priority_profile(plan_input: Any) -> PriorityProfile:
     if not primary_weak_area or primary_weak_area not in all_weak_areas:
         primary_weak_area = all_weak_areas[0] if all_weak_areas else ""
 
+    weak_area_set = set(all_weak_areas)
+    goal_weakness_collisions = [goal for goal in all_goals if goal in weak_area_set]
+    primary_goal_weakness_collision = bool(
+        primary_goal
+        and primary_weak_area
+        and _normalized_priority_tag(primary_goal) == _normalized_priority_tag(primary_weak_area)
+    )
+
     return PriorityProfile(
         primary_goal=primary_goal,
         secondary_goals=[goal for goal in all_goals if goal != primary_goal],
@@ -67,7 +81,14 @@ def build_priority_profile(plan_input: Any) -> PriorityProfile:
         secondary_weak_areas=[weakness for weakness in all_weak_areas if weakness != primary_weak_area],
         all_goals=all_goals,
         all_weak_areas=all_weak_areas,
+        goal_weakness_collisions=goal_weakness_collisions,
+        primary_goal_weakness_collision=primary_goal_weakness_collision,
+        primary_collision_tag=primary_goal if primary_goal_weakness_collision else "",
     )
+
+
+def _normalized_priority_tag(tag: str) -> str:
+    return normalize_tag(str(tag or "")) or ""
 
 
 def goal_priority_weight(goal: str, profile: PriorityProfile) -> float:
@@ -84,6 +105,61 @@ def weakness_priority_weight(weakness: str, profile: PriorityProfile) -> float:
     if weakness in profile.secondary_weak_areas:
         return SECONDARY_WEAKNESS_WEIGHT
     return 0.0
+
+
+def is_priority_collision_tag(tag: str, profile: PriorityProfile) -> bool:
+    normalized = _normalized_priority_tag(tag)
+    return bool(
+        normalized
+        and normalized
+        in {
+            _normalized_priority_tag(collision)
+            for collision in profile.goal_weakness_collisions
+        }
+    )
+
+
+def collision_safe_priority_bonus_for_tag(tag: str, profile: PriorityProfile) -> float:
+    goal_weight = goal_priority_weight(tag, profile)
+    weakness_weight = weakness_priority_weight(tag, profile)
+    if not is_priority_collision_tag(tag, profile):
+        return goal_weight + weakness_weight
+
+    return max(goal_weight, weakness_weight) + COLLISION_INTENT_BONUS
+
+
+def total_collision_safe_priority_bonus(
+    goal_tags: Iterable[str],
+    weakness_tags: Iterable[str],
+    profile: PriorityProfile,
+    *,
+    max_bonus: float | None = None,
+) -> float:
+    unique_tags = list(dict.fromkeys([*goal_tags, *weakness_tags]))
+    total = sum(collision_safe_priority_bonus_for_tag(tag, profile) for tag in unique_tags)
+    if max_bonus is not None:
+        return min(total, max_bonus)
+    return total
+
+
+def total_strength_collision_safe_priority_bonus(
+    goal_tags: Iterable[str],
+    weakness_tags: Iterable[str],
+    profile: PriorityProfile,
+) -> float:
+    unique_tags = list(dict.fromkeys([*goal_tags, *weakness_tags]))
+    if not any(is_priority_collision_tag(tag, profile) for tag in unique_tags):
+        return total_goal_priority_bonus(goal_tags, profile) + total_weakness_priority_bonus(
+            weakness_tags,
+            profile,
+        )
+
+    return total_collision_safe_priority_bonus(
+        goal_tags,
+        weakness_tags,
+        profile,
+        max_bonus=MAX_GOAL_PRIORITY_BONUS + MAX_WEAKNESS_PRIORITY_BONUS,
+    )
 
 
 def total_goal_priority_bonus(tags: Iterable[str], profile: PriorityProfile) -> float:
