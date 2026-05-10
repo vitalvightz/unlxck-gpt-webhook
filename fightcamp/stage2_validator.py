@@ -1371,6 +1371,40 @@ def _sport_language_warnings(planning_brief: dict, plan_lines: list[str]) -> lis
     return warnings
 
 
+
+_WEEKDAY_ALIASES = {
+    "mon": "monday",
+    "monday": "monday",
+    "tue": "tuesday",
+    "tues": "tuesday",
+    "tuesday": "tuesday",
+    "wed": "wednesday",
+    "weds": "wednesday",
+    "wednesday": "wednesday",
+    "thu": "thursday",
+    "thur": "thursday",
+    "thurs": "thursday",
+    "thursday": "thursday",
+    "fri": "friday",
+    "friday": "friday",
+    "sat": "saturday",
+    "saturday": "saturday",
+    "sun": "sunday",
+    "sunday": "sunday",
+}
+
+def _calendar_weekday_key(value: Any) -> str:
+    normalized = _normalize_render_line(str(value or ""))
+    for token in re.findall(r"[a-z]+", normalized):
+        weekday = _WEEKDAY_ALIASES.get(token)
+        if weekday:
+            return weekday
+    return ""
+
+def _calendar_heading_weekday(heading_line: str, allowed_days: dict[str, dict]) -> str:
+    weekday = _calendar_weekday_key(heading_line)
+    return weekday if weekday in allowed_days else ""
+
 def _calendar_block_is_off_or_recovery_only(block: list[str]) -> bool:
     block_text = _normalize_render_line(" ".join(block))
 
@@ -1448,7 +1482,7 @@ def _calendar_spine_warnings(planning_brief: dict, final_plan_text: str) -> list
         for day in week.get("calendar_days") or []:
             if not isinstance(day, dict):
                 continue
-            weekday = str(day.get("weekday") or "").strip().lower()
+            weekday = _calendar_weekday_key(day.get("weekday"))
             if weekday:
                 allowed_days[weekday] = day
 
@@ -1456,14 +1490,15 @@ def _calendar_spine_warnings(planning_brief: dict, final_plan_text: str) -> list
             continue
 
         authorized_session_days = {
-            str(role.get("scheduled_day_hint") or "").strip().lower()
+            weekday
             for role in (week.get("session_roles") or [])
-            if isinstance(role, dict) and str(role.get("scheduled_day_hint") or "").strip()
+            if isinstance(role, dict)
+            if (weekday := _calendar_weekday_key(role.get("scheduled_day_hint")))
         }
 
         for block in _phase_session_blocks(section.get("lines", [])):
             heading_line = _normalize_render_line(block[0]) if block else ""
-            heading_day = next((day for day in allowed_days if day in heading_line), "")
+            heading_day = _calendar_heading_weekday(heading_line, allowed_days)
 
             if not heading_day:
                 warnings.append(
