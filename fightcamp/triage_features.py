@@ -27,9 +27,17 @@ _RED_FLAG_PATTERNS: tuple[tuple[str, str], ...] = (
     (r"\bnumb(?:ness)?\b", "numbness"),
     (r"\btingl(?:e|ing)\b", "tingling"),
     (r"\bweak(?:ness)?\b", "weakness"),
-    (r"\bcan(?:not|'t)?\s+bear\s+weight\b|\bunable\s+to\s+bear\s+weight\b", "cannot_bear_weight"),
+    (
+        r"\bcannot\s+bear\s+weight\b|\bcan'?t\s+bear\s+weight\b|\bunable\s+to\s+bear\s+weight\b"
+        r"|\bnot\s+able\s+to\s+bear\s+weight\b|\bunable\s+to\s+walk\b|\bcannot\s+walk\b|\bcan'?t\s+walk\b",
+        "cannot_bear_weight",
+    ),
     (r"\brapid(?:ly)?\s+worsening\s+swelling\b", "rapid_swelling"),
-    (r"\bdeformit(?:y|ies)\b", "deformity"),
+    (
+        r"\bvisible\s+deformit(?:y|ies)\b|\bobvious\s+deformit(?:y|ies)\b|\bdeformit(?:y|ies)\s+present\b"
+        r"|\bdeformed\b|\blooks\s+deformed\b|\bbone\s+looks\s+out\s+of\s+place\b",
+        "deformity",
+    ),
     (r"\bshort(?:ness)?\s+of\s+breath\b", "shortness_of_breath"),
     (r"\bcough(?:ing)?\s+blood\b|\bhemoptysis\b", "coughing_blood"),
     (r"\bloss\s+of\s+consciousness\b|\bpassed\s+out\b|\bknocked\s+out\b", "loss_of_consciousness"),
@@ -278,7 +286,11 @@ _STRUCTURED_HIGH_RISK_INJURY_TYPES = {
 }
 
 _FUNCTION_LOSS_PATTERNS: tuple[tuple[str, str], ...] = (
-    (r"\bcan(?:not|'t)?\s+bear\s+weight\b|\bunable\s+to\s+bear\s+weight\b", "cannot_bear_weight"),
+    (
+        r"\bcannot\s+bear\s+weight\b|\bcan'?t\s+bear\s+weight\b|\bunable\s+to\s+bear\s+weight\b"
+        r"|\bnot\s+able\s+to\s+bear\s+weight\b|\bunable\s+to\s+walk\b|\bcannot\s+walk\b|\bcan'?t\s+walk\b",
+        "cannot_bear_weight",
+    ),
     (r"\bcannot\s+lift\s+arm\b|\bunable\s+to\s+lift\s+arm\b", "cannot_lift_arm"),
     (r"\bgiving\s+way\b|\bbuckled\b", "instability_event"),
     (r"\bcan(?:not|'t)\s+(?:fully\s+)?straighten\s+(?:my\s+)?knee\b|\bunable\s+to\s+straighten\s+knee\b", "cannot_straighten_knee"),
