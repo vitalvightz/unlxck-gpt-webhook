@@ -419,13 +419,15 @@ _GUIDED_STRUCTURAL_NOTE_PATTERN = re.compile(
     re.IGNORECASE,
 )
 _GUIDED_DISPLAY_MECHANISM_PATTERN = re.compile(
-    r"\b(?:hyperextend(?:ed|s|ing)?|hyperextension|rolled|twisted|sprain(?:ed)?|strain(?:ed)?|pulled|"
-    r"pain|sore|soreness|tight|tightness|swollen|swelling|inflamed|inflammation|stiff|stiffness|"
-    r"achy|aching|tendonitis|tendinitis|tendinopathy|impingement|instability|unstable|"
-    r"rupture|tear|torn|bruise(?:d)?|cut|laceration|graze|abrasion|blister|"
-    r"dislocated|fracture|broken|popped|snapped|give\s+way|giving\s+way|gave\s+way|"
-    r"locked\s+out|locked\s+back|overextend(?:ed|s|ing)?|overextension|overstretch(?:ed|ing)?)\b",
-    re.IGNORECASE,
+    r"""\b(
+        hyperextend(?:ed|s|ing)?|hyperextension|rolled|twisted|sprain(?:ed)?|strain(?:ed)?|pulled|
+        pain|sore|soreness|tight|tightness|swollen|swelling|inflamed|inflammation|stiff|stiffness|
+        achy|aching|tendonitis|tendinitis|tendinopathy|impingement|instability|unstable|
+        rupture|tear|torn|bruise(?:d)?|cut|laceration|graze|abrasion|blister|
+        dislocated|fracture|broken|popped|snapped|give\s+way|giving\s+way|gave\s+way|
+        locked\s+out|locked\s+back|overextend(?:ed|s|ing)?|overextension|overstretch(?:ed|ing)?
+    )\b""",
+    re.IGNORECASE | re.VERBOSE,
 )
 
 
