@@ -169,6 +169,49 @@ def test_equipment_multiselect_value_maps_from_option_ids():
     assert parsed.equipment_access == "Bands, Heavy Bag"
 
 
+def test_legacy_payload_without_primary_fields_defaults_to_first_selected_values():
+    data = _payload(
+        [
+            {"label": "What are your key performance goals?", "value": "power, mobility"},
+            {"label": "Where do you feel weakest right now?", "value": "cns_fatigue, hip_mobility"},
+        ]
+    )
+
+    parsed = PlanInput.from_payload(data)
+    assert parsed.primary_goal == "power"
+    assert parsed.primary_weak_area == "cns_fatigue"
+
+
+def test_valid_primary_fields_are_preserved():
+    data = _payload(
+        [
+            {"label": "What are your key performance goals?", "value": "power, conditioning, mobility"},
+            {"label": "Primary goal", "value": "conditioning"},
+            {"label": "Where do you feel weakest right now?", "value": "cns_fatigue, hip_mobility"},
+            {"label": "Primary weak area", "value": "hip_mobility"},
+        ]
+    )
+
+    parsed = PlanInput.from_payload(data)
+    assert parsed.primary_goal == "conditioning"
+    assert parsed.primary_weak_area == "hip_mobility"
+
+
+def test_invalid_primary_fields_fall_back_to_first_selected_values():
+    data = _payload(
+        [
+            {"label": "What are your key performance goals?", "value": "power, mobility"},
+            {"label": "Primary goal", "value": "conditioning"},
+            {"label": "Where do you feel weakest right now?", "value": "cns_fatigue"},
+            {"label": "Primary weak area", "value": "grip_strength"},
+        ]
+    )
+
+    parsed = PlanInput.from_payload(data)
+    assert parsed.primary_goal == "power"
+    assert parsed.primary_weak_area == "cns_fatigue"
+
+
 def test_sparring_day_fields_round_trip_from_payload():
     data = _payload(
         [
