@@ -1920,6 +1920,52 @@ def test_calendar_spine_friday_fight_weekend_not_prefight():
     assert any(w["code"] == "calendar_spine_unmapped_weekday_rendered" for w in report["warnings"])
 
 
+def test_calendar_spine_accepts_abbreviated_rendered_weekday():
+    brief = {
+        "athlete_model": {"sport": "boxing"},
+        "restrictions": [],
+        "phase_strategy": {},
+        "candidate_pools": {},
+        "weekly_role_map": {
+            "weeks": [
+                {
+                    "week_index": 1,
+                    "phase": "GPP",
+                    "calendar_days": [
+                        {
+                            "weekday": "monday",
+                            "d_day": 7,
+                            "is_fight_day": False,
+                            "is_after_fight_day": False,
+                        }
+                    ],
+                    "session_roles": [
+                        {
+                            "role_key": "primary_strength",
+                            "scheduled_day_hint": "mon",
+                        }
+                    ],
+                }
+            ]
+        },
+    }
+    report = validate_stage2_output(
+        planning_brief=brief,
+        final_plan_text="""
+        ## Week 1
+        Mon (D-7) — Strength
+        - Strength: Trap-bar deadlift — 3 x 3.
+        """,
+    )
+    assert not any(
+        warning["code"] in {
+            "calendar_spine_unmapped_weekday_rendered",
+            "calendar_spine_session_role_not_authorized",
+        }
+        for warning in report["warnings"]
+    )
+
+
 def test_calendar_spine_no_duplicate_weekday_math_uses_calendar_days_directly():
     brief = {
         "athlete_model": {"sport": "boxing"},
