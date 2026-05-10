@@ -103,6 +103,41 @@ _STRUCTURAL_BREAK_RE = re.compile(
     r"\b(?:broke|broken|crack(?:ed)?|snap(?:ped)?)\b"
 )
 _BROKE_IT_RE = re.compile(r"\b(?:broke|broken)\s+it\b")
+_BENIGN_JOINT_NOISE_RE = re.compile(
+    r"\b(?:crack(?:ed)?|click(?:ed|ing)?|pop(?:ped)?|snap(?:ped)?)\b"
+)
+_BENIGN_JOINT_NOISE_SUPPRESSOR_PATTERNS = (
+    r"\bno\s+pain\b",
+    r"\bpainless\b",
+    r"\bno\s+swelling\b",
+    r"\bno\s+deformity\b",
+    r"\bcan\s+bear\s+weight\b",
+    r"\bcan\s+walk\b",
+    r"\bfull\s+range\s+of\s+motion\b",
+    r"\bmoving\s+fine\b",
+    r"\bno\s+bruising\b",
+    r"\bsound\s+only\b",
+    r"\bnoise\s+only\b",
+    r"\bclick(?:ed)?\s+only\b",
+    r"\bcrack(?:ed)?\s+only\b",
+)
+_JOINT_NOISE_ESCALATION_PATTERNS = (
+    r"\bcannot\s+bear\s+weight\b",
+    r"\bunable\s+to\s+walk\b",
+    r"\b(?:visible|obvious)\s+deformity\b",
+    r"\b(?:rapid\s+)?swelling\b",
+    r"\b(?:severe|sharp)\s+pain\b",
+    r"\binstability\b",
+    r"\bgiv(?:ing|e|en)\s+way\b",
+    r"\bbuckled\b",
+    r"\blocked\s+joint\b",
+    r"\b(?:fall|collision|impact|tackle|twist)\b",
+    r"\b(?:confirmed|suspected)\s+fracture\b",
+    r"\bdislocation\b",
+    r"\brupture\b",
+    r"\btear\b",
+    r"\bavulsion\b",
+)
 
 _RECENT_INJURY_TIMELINE_RE = re.compile(
     r"\b(?:"
@@ -172,6 +207,8 @@ def _has_structural_break_with_location(text: str) -> bool:
         cleaned_chunk = remove_negated_phrases(chunk).strip().lower()
         if not cleaned_chunk or not _STRUCTURAL_BREAK_RE.search(cleaned_chunk):
             continue
+        if _is_benign_joint_noise_chunk(cleaned_chunk):
+            continue
         if _has_injury_location_context(cleaned_chunk):
             return True
     return False
@@ -183,11 +220,26 @@ def _has_structural_break_signal(*, text: str, context_text: str) -> bool:
     for chunk in split_injury_text(text):
         if not chunk or not _STRUCTURAL_BREAK_RE.search(chunk):
             continue
+        if _is_benign_joint_noise_chunk(chunk):
+            continue
         if _has_injury_location_context(chunk):
             return True
         if _BROKE_IT_RE.search(chunk) and _has_injury_location_context(context_text):
             return True
     return False
+
+
+def _is_benign_joint_noise_chunk(text: str) -> bool:
+    if not text:
+        return False
+    chunk = text.strip().lower()
+    if not _BENIGN_JOINT_NOISE_RE.search(chunk):
+        return False
+    if not _has_any_pattern(chunk, _BENIGN_JOINT_NOISE_SUPPRESSOR_PATTERNS):
+        return False
+    if _has_any_pattern(chunk, _JOINT_NOISE_ESCALATION_PATTERNS):
+        return False
+    return True
 
 
 def _has_mapped_route(categories: set[str], route: str) -> bool:
