@@ -5,6 +5,7 @@ import logging
 import os
 from pathlib import Path
 import re
+from types import SimpleNamespace
 from typing import Callable, Iterable
 from collections import defaultdict
 from .training_context import (
@@ -40,6 +41,13 @@ from .late_selector_windows import (
 from .stage2_payload_late_fight import compute_bridge_rules
 from .selection_metadata import build_score_evidence, normalize_selection_metadata
 from .weight_cut import compute_cut_severity_score, cut_severity_bucket
+from .priority_profile import (
+    build_priority_profile,
+    goal_priority_weight,
+    weakness_priority_weight,
+    total_goal_priority_bonus,
+    total_weakness_priority_bonus,
+)
 
 TAPER_AVOID_TAGS = {
     "contrast_pairing",
@@ -1538,6 +1546,14 @@ def generate_conditioning_block(flags):
     technical = flags.get("style_technical") or []
     goals = flags.get("key_goals") or []
     weaknesses = flags.get("weaknesses") or []
+    priority_profile = build_priority_profile(
+        SimpleNamespace(
+            key_goals=goals,
+            primary_goal=flags.get("primary_goal", ""),
+            weak_areas=weaknesses,
+            primary_weak_area=flags.get("primary_weak_area", ""),
+        )
+    )
     injuries = flags.get("injuries") or []
     restrictions = flags.get("restrictions")
     ignore_restrictions = bool(flags.get("ignore_restrictions", False))
@@ -1788,13 +1804,15 @@ def generate_conditioning_block(flags):
             for hint in restriction_result.get("no_match_hints", []):
                 restriction_warning_counts[hint] += 1
 
-        num_weak = sum(1 for t in tags if t in weak_tags)
-        num_goals = sum(1 for t in tags if t in goal_tags)
+        matched_weak_tags = sorted({t for t in tags if t in weak_tags})
+        matched_goal_tags = sorted({t for t in tags if t in goal_tags})
+        num_weak = len(matched_weak_tags)
+        num_goals = len(matched_goal_tags)
         num_style = sum(1 for t in tags if t in style_tags)
         num_format = sum(1 for t in tags if t in fight_format_tags)
 
-        base_score = 2.5 * min(num_weak, 2)
-        base_score += 2.0 * min(num_goals, 2)
+        base_score = total_weakness_priority_bonus(matched_weak_tags, priority_profile)
+        base_score += total_goal_priority_bonus(matched_goal_tags, priority_profile)
         base_score += 0.75 * min(num_style, 2)
         base_score += 1.0 * min(num_format, 1)
 
@@ -1863,6 +1881,18 @@ def generate_conditioning_block(flags):
             "late_window_adjustment": late_eval["adjustment"],
             "final_score": round(total_score, 4),
         }
+        for tag in matched_goal_tags:
+            goal_weight = goal_priority_weight(tag, priority_profile)
+            if goal_weight == 0.8:
+                reasons["reason_codes"].append(f"priority_primary_goal_match:{tag}")
+            elif goal_weight > 0:
+                reasons["reason_codes"].append(f"priority_secondary_goal_match:{tag}")
+        for tag in matched_weak_tags:
+            weakness_weight = weakness_priority_weight(tag, priority_profile)
+            if weakness_weight == 0.9:
+                reasons["reason_codes"].append(f"priority_primary_weakness_match:{tag}")
+            elif weakness_weight > 0:
+                reasons["reason_codes"].append(f"priority_secondary_weakness_match:{tag}")
         if preferred_name_match:
             reasons["reason_codes"].append(f"preferred_exercise_name_match:+{PREFERRED_EXERCISE_NAME_BOOST:.1f}")
 
@@ -1988,8 +2018,10 @@ def generate_conditioning_block(flags):
             for hint in restriction_result.get("no_match_hints", []):
                 restriction_warning_counts[hint] += 1
 
-        weak_matches = sum(1 for t in tags if t in weak_tags)
-        goal_matches = sum(1 for t in tags if t in goal_tags)
+        matched_weak_tags = sorted({t for t in tags if t in weak_tags})
+        matched_goal_tags = sorted({t for t in tags if t in goal_tags})
+        weak_matches = len(matched_weak_tags)
+        goal_matches = len(matched_goal_tags)
         top_system = preferred_order[0]
         if system != top_system and not weak_matches and not goal_matches:
             continue
@@ -2000,8 +2032,8 @@ def generate_conditioning_block(flags):
         if system == top_system:
             score += 0.75
         score += equip_bonus
-        score += 0.6 * min(weak_matches, 1)
-        score += 0.5 * min(goal_matches, 1)
+        score += total_weakness_priority_bonus(matched_weak_tags, priority_profile)
+        score += total_goal_priority_bonus(matched_goal_tags, priority_profile)
         preferred_name_match = str(d.get("name", "")).strip().lower() in preferred_exercise_names
         if preferred_name_match:
             score += PREFERRED_EXERCISE_NAME_BOOST
@@ -2062,6 +2094,18 @@ def generate_conditioning_block(flags):
             "late_window_adjustment": late_eval["adjustment"],
             "final_score": round(score, 4),
         }
+        for tag in matched_goal_tags:
+            goal_weight = goal_priority_weight(tag, priority_profile)
+            if goal_weight == 0.8:
+                reasons["reason_codes"].append(f"priority_primary_goal_match:{tag}")
+            elif goal_weight > 0:
+                reasons["reason_codes"].append(f"priority_secondary_goal_match:{tag}")
+        for tag in matched_weak_tags:
+            weakness_weight = weakness_priority_weight(tag, priority_profile)
+            if weakness_weight == 0.9:
+                reasons["reason_codes"].append(f"priority_primary_weakness_match:{tag}")
+            elif weakness_weight > 0:
+                reasons["reason_codes"].append(f"priority_secondary_weakness_match:{tag}")
         if preferred_name_match:
             reasons["reason_codes"].append(f"preferred_exercise_name_match:+{PREFERRED_EXERCISE_NAME_BOOST:.1f}")
 

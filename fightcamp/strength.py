@@ -3,6 +3,7 @@ import os
 import json
 import random
 import re
+from types import SimpleNamespace
 from collections import defaultdict
 from .training_context import (
     normalize_athlete_equipment_list,
@@ -49,6 +50,13 @@ from .late_selector_windows import (
 from .normalization import normalize_fight_format as _normalize_fight_format
 from .selection_metadata import build_score_evidence, normalize_selection_metadata
 from .weight_cut import compute_cut_severity_score, cut_severity_bucket
+from .priority_profile import (
+    build_priority_profile,
+    goal_priority_weight,
+    weakness_priority_weight,
+    total_goal_priority_bonus,
+    total_weakness_priority_bonus,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -784,6 +792,7 @@ def score_exercise(
     available_equipment,
     required_equipment,
     is_rehab,
+    priority_profile=None,
     must_have_bonus_multiplier: float = 1.0,
     rng: random.Random | None = None,
 ):
@@ -805,15 +814,41 @@ def score_exercise(
         "load_adjustments": 0.0,
         "equipment_boost": 0.0,
         "penalties": 0.0,
+        "reason_codes": [],
     }
 
-    weakness_matches = len(set(exercise_tags) & set(weakness_tags))
-    score += weakness_matches * 0.6
+    matched_weakness_tags = sorted(set(exercise_tags) & set(weakness_tags))
+    weakness_matches = len(matched_weakness_tags)
+    weakness_bonus = (
+        total_weakness_priority_bonus(matched_weakness_tags, priority_profile)
+        if priority_profile is not None
+        else weakness_matches * 0.6
+    )
+    score += weakness_bonus
     reasons["weakness_hits"] = weakness_matches
 
-    goal_matches = len(set(exercise_tags) & set(goal_tags))
-    score += goal_matches * 0.5
+    matched_goal_tags = sorted(set(exercise_tags) & set(goal_tags))
+    goal_matches = len(matched_goal_tags)
+    goal_bonus = (
+        total_goal_priority_bonus(matched_goal_tags, priority_profile)
+        if priority_profile is not None
+        else goal_matches * 0.5
+    )
+    score += goal_bonus
     reasons["goal_hits"] = goal_matches
+    if priority_profile is not None:
+        for tag in matched_goal_tags:
+            goal_weight = goal_priority_weight(tag, priority_profile)
+            if goal_weight == 0.8:
+                reasons["reason_codes"].append(f"priority_primary_goal_match:{tag}")
+            elif goal_weight > 0:
+                reasons["reason_codes"].append(f"priority_secondary_goal_match:{tag}")
+        for tag in matched_weakness_tags:
+            weakness_weight = weakness_priority_weight(tag, priority_profile)
+            if weakness_weight == 0.9:
+                reasons["reason_codes"].append(f"priority_primary_weakness_match:{tag}")
+            elif weakness_weight > 0:
+                reasons["reason_codes"].append(f"priority_secondary_weakness_match:{tag}")
 
     matched_style_tags = list(set(exercise_tags) & set(style_tags))
     style_score = len(matched_style_tags) * 0.3
@@ -1211,6 +1246,14 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
         if (canonical := normalize_tag(str(style or "")))
     ]
     goals = flags.get("key_goals", [])
+    priority_profile = build_priority_profile(
+        SimpleNamespace(
+            key_goals=goals,
+            primary_goal=flags.get("primary_goal", ""),
+            weak_areas=weaknesses or [],
+            primary_weak_area=flags.get("primary_weak_area", ""),
+        )
+    )
     training_days = flags.get("training_days", [])
     training_frequency = flags.get(
         "training_frequency", flags.get("days_available", len(training_days))
@@ -1489,6 +1532,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
             available_equipment=equipment_access,
             required_equipment=ex_equipment,
             is_rehab=method == "rehab",
+            priority_profile=priority_profile,
             must_have_bonus_multiplier=must_have_bonus_multiplier,
             rng=rng,
         )
@@ -1502,7 +1546,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
         breakdown["support_only"] = quality_profile["support_only"]
         breakdown["base_categories"] = quality_profile["base_categories"]
         breakdown["fatigue_cost"] = _exercise_fatigue_cost(ex, quality_profile)
-        breakdown["reason_codes"] = []
+        breakdown["reason_codes"] = list(breakdown.get("reason_codes", []))
         metadata_adjustment, metadata_reason_codes = _strength_metadata_score_adjustment(
             ex,
             fatigue=fatigue,
@@ -1512,7 +1556,9 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
             score += metadata_adjustment
             breakdown["metadata_adjustment"] = metadata_adjustment
         if metadata_reason_codes:
-            breakdown["reason_codes"] = list(metadata_reason_codes)
+            breakdown["reason_codes"] = list(
+                dict.fromkeys(list(breakdown.get("reason_codes", [])) + list(metadata_reason_codes))
+            )
         if not ignore_restrictions and restriction_penalty:
             score += restriction_penalty
             breakdown["penalties"] = round(breakdown.get("penalties", 0.0) + restriction_penalty, 2)
@@ -2072,6 +2118,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
             available_equipment=equipment_access,
             required_equipment=normalize_equipment_list(ex.get("equipment", [])),
             is_rehab=ex.get("method", "").lower() == "rehab",
+            priority_profile=priority_profile,
             must_have_bonus_multiplier=must_have_bonus_multiplier,
             rng=rng,
         )
@@ -2081,7 +2128,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
         style_score += quality_adjustment
         style_reasons["quality_class"] = quality_profile["quality_class"]
         style_reasons["quality_adjustment"] = round(quality_adjustment, 2)
-        style_reasons["reason_codes"] = []
+        style_reasons["reason_codes"] = list(style_reasons.get("reason_codes", []))
         metadata_adjustment, metadata_reason_codes = _strength_metadata_score_adjustment(
             ex,
             fatigue=fatigue,
@@ -2091,7 +2138,9 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
             style_score += metadata_adjustment
             style_reasons["metadata_adjustment"] = metadata_adjustment
         if metadata_reason_codes:
-            style_reasons["reason_codes"] = list(metadata_reason_codes)
+            style_reasons["reason_codes"] = list(
+                dict.fromkeys(list(style_reasons.get("reason_codes", [])) + list(metadata_reason_codes))
+            )
         late_eval = _evaluate_strength_late_window(ex, window=late_window, cut_bucket=cut_bucket)
         _record_ambiguous_gap(late_eval.get("ambiguous_gap"))
         if late_eval["blocked"]:
@@ -2456,4 +2505,3 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
         "late_window_diagnostics": candidate_reservoir.get("__late_window__", {}),
     }
     
-
