@@ -203,29 +203,50 @@ def _has_injury_location_context(text: str) -> bool:
 def _has_structural_break_with_location(text: str) -> bool:
     if not text:
         return False
+
     for chunk in split_injury_text(text):
-        cleaned_chunk = remove_negated_phrases(chunk).strip().lower()
+        raw_chunk = str(chunk or "").strip().lower()
+        if not raw_chunk or not _STRUCTURAL_BREAK_RE.search(raw_chunk):
+            continue
+
+        # Check benign-noise suppressors before removing negated phrases.
+        # Example: "neck cracked but no pain" needs the "no pain" text intact.
+        if _is_benign_joint_noise_chunk(raw_chunk):
+            continue
+
+        cleaned_chunk = remove_negated_phrases(raw_chunk).strip().lower()
         if not cleaned_chunk or not _STRUCTURAL_BREAK_RE.search(cleaned_chunk):
             continue
-        if _is_benign_joint_noise_chunk(cleaned_chunk):
-            continue
+
         if _has_injury_location_context(cleaned_chunk):
             return True
+
     return False
 
 
 def _has_structural_break_signal(*, text: str, context_text: str) -> bool:
     if not text:
         return False
+
     for chunk in split_injury_text(text):
-        if not chunk or not _STRUCTURAL_BREAK_RE.search(chunk):
+        raw_chunk = str(chunk or "").strip().lower()
+        if not raw_chunk or not _STRUCTURAL_BREAK_RE.search(raw_chunk):
             continue
-        if _is_benign_joint_noise_chunk(chunk):
+
+        # Must run before negation stripping so benign suppressors survive.
+        if _is_benign_joint_noise_chunk(raw_chunk):
             continue
-        if _has_injury_location_context(chunk):
+
+        cleaned_chunk = remove_negated_phrases(raw_chunk).strip().lower()
+        if not cleaned_chunk or not _STRUCTURAL_BREAK_RE.search(cleaned_chunk):
+            continue
+
+        if _has_injury_location_context(cleaned_chunk):
             return True
-        if _BROKE_IT_RE.search(chunk) and _has_injury_location_context(context_text):
+
+        if _BROKE_IT_RE.search(cleaned_chunk) and _has_injury_location_context(context_text):
             return True
+
     return False
 
 
@@ -354,9 +375,10 @@ def _has_guided_structural_broke_signal(
     guided_notes: str,
     cleaned_combined_text: str,
 ) -> bool:
-    cleaned_notes = remove_negated_phrases(guided_notes).strip().lower()
-    return _has_structural_break_signal(text=cleaned_notes, context_text=cleaned_combined_text)
-
+    return _has_structural_break_signal(
+        text=guided_notes,
+        context_text=cleaned_combined_text,
+    )
 
 def _apply_card_area_broke_signals(
     *,
@@ -365,15 +387,18 @@ def _apply_card_area_broke_signals(
     routing_reasons: set[str],
 ) -> None:
     for card in cards:
-        note_text = remove_negated_phrases(card.notes).strip().lower()
-        if not note_text:
+        raw_notes = str(card.notes or "").strip().lower()
+        if not raw_notes:
             continue
 
         contextual_card_text = " ".join(
-            part for part in (card.location, note_text) if part
+            part for part in (card.location, raw_notes) if part
         )
 
-        if _has_structural_break_signal(text=contextual_card_text, context_text=contextual_card_text):
+        if _has_structural_break_signal(
+            text=contextual_card_text,
+            context_text=contextual_card_text,
+        ):
             matched_categories.add("fracture")
             routing_reasons.add("guided_injury:card_area_context_broke_signal")
 
@@ -387,8 +412,11 @@ def _has_recent_structural_history_signal(cards: list[_GuidedCard]) -> bool:
 
         has_recent_timeline = bool(_RECENT_INJURY_TIMELINE_RE.search(notes))
         has_negated_structural_history = bool(_NEGATED_STRUCTURAL_HISTORY_RE.search(raw_notes))
-        has_structural_signal = bool(
-            _has_structural_break_signal(text=notes, context_text=f"{card.location} {notes}")
+                has_structural_signal = bool(
+            _has_structural_break_signal(
+                text=raw_notes,
+                context_text=f"{card.location} {raw_notes}",
+            )
             or (
                 not has_negated_structural_history
                 and any(keyword in notes for keyword in _STRUCTURAL_HISTORY_KEYWORDS)
