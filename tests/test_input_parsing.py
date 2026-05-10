@@ -6,6 +6,7 @@ import pytest
 
 from fightcamp import input_parsing
 from fightcamp.fight_date_utils import parse_fight_date
+from fightcamp.injury_formatting import format_injury_summary
 from fightcamp.input_parsing import PlanInput
 from fightcamp.plan_pipeline_runtime import build_runtime_context
 
@@ -857,6 +858,78 @@ def test_guided_resolver_notes_can_supply_specific_type_without_losing_area_loca
     entry = parsed.parsed_injuries[0]
     assert entry["injury_type"] == "hyperextension"
     assert entry["canonical_location"] == "knee"
+
+
+def test_guided_display_location_skips_mechanism_phrases_for_hyperextension():
+    parsed = PlanInput.from_payload(_guided_payload("Hyperextended right knee", injury_type="tendon_ligament"))
+    entry = parsed.parsed_injuries[0]
+
+    assert entry["injury_type"] == "hyperextension"
+    assert entry["canonical_location"] == "knee"
+    assert entry.get("display_location") in (None, "knee")
+    assert format_injury_summary(entry) == "Right Knee — Hyperextension (Severity: Unspecified)"
+
+
+def test_guided_display_location_skips_mechanism_phrases_for_sprain():
+    parsed = PlanInput.from_payload(_guided_payload("Rolled left ankle", injury_type="unspecified"))
+    entry = parsed.parsed_injuries[0]
+
+    assert entry["injury_type"] == "sprain"
+    assert entry["canonical_location"] == "ankle"
+    summary = format_injury_summary(entry)
+    assert summary.startswith("Left Ankle — Sprain")
+    assert "Rolled" not in summary
+
+
+def test_guided_display_location_keeps_clean_location_text():
+    parsed = PlanInput.from_payload(_guided_payload("right hand", injury_type="fracture"))
+    entry = parsed.parsed_injuries[0]
+
+    assert entry["injury_type"] == "fracture"
+    assert entry.get("display_location") == "hand"
+    assert format_injury_summary(entry).startswith("Right Hand — Fracture")
+
+
+def test_guided_display_location_skips_surface_injury_mechanism_phrase():
+    parsed = PlanInput.from_payload(_guided_payload("right cheek cut", injury_type="surface_injury", surface_type="cut"))
+    entry = parsed.parsed_injuries[0]
+    summary = format_injury_summary(entry)
+
+    assert "Right Right Cheek Cut" not in summary
+    assert summary.startswith("Right ")
+    assert " — Cut" in summary
+
+
+def test_guided_display_location_skips_swollen_descriptor():
+    parsed = PlanInput.from_payload(_guided_payload("Swollen left ankle", injury_type="unspecified"))
+    summary = format_injury_summary(parsed.parsed_injuries[0])
+
+    assert summary.startswith("Left Ankle")
+    assert "Swollen Left Ankle" not in summary
+
+
+def test_guided_display_location_skips_stiff_descriptor():
+    parsed = PlanInput.from_payload(_guided_payload("Stiff right shoulder", injury_type="unspecified"))
+    summary = format_injury_summary(parsed.parsed_injuries[0])
+
+    assert summary.startswith("Right Shoulder")
+    assert "Stiff Right Shoulder" not in summary
+
+
+def test_guided_display_location_skips_tightness_descriptor():
+    parsed = PlanInput.from_payload(_guided_payload("Tightness left hamstring", injury_type="unspecified"))
+    summary = format_injury_summary(parsed.parsed_injuries[0])
+
+    assert summary.startswith("Left Hamstring")
+    assert "Tightness Left Hamstring" not in summary
+
+
+def test_guided_display_location_skips_unstable_descriptor():
+    parsed = PlanInput.from_payload(_guided_payload("Unstable right knee", injury_type="unspecified"))
+    summary = format_injury_summary(parsed.parsed_injuries[0])
+
+    assert summary.startswith("Right Knee")
+    assert "Unstable Right Knee" not in summary
 
 
 def test_guided_resolver_notes_instability_keeps_area_location_context():
