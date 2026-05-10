@@ -147,6 +147,94 @@ def test_guided_injury_and_restrictions_are_used_for_triage():
     assert "rib_breathing_red_flag_combination" in triage.routing_reasons
 
 
+def test_second_guided_card_can_trigger_medical_hold():
+    payload = _payload_with_injury("")
+    payload["guided_injuries"] = [
+        {
+            "area": "rolled left ankle",
+            "injury_type": "tendon_ligament",
+            "severity": "moderate",
+            "trend": "stable",
+            "notes": "Can bear weight. No deformity.",
+        },
+        {
+            "area": "head impact",
+            "injury_type": "impact",
+            "severity": "moderate",
+            "trend": "stable",
+            "notes": "Vomited after head impact.",
+        },
+    ]
+    parsed = PlanInput.from_payload(payload)
+
+    triage = triage_injuries(parsed)
+
+    assert triage.mode == MEDICAL_HOLD
+    assert "vomiting_after_head_impact" in triage.red_flags
+    assert any("medical_hold" in reason or "red_flag" in reason for reason in triage.routing_reasons)
+
+
+def test_second_guided_card_negated_safety_fields_do_not_false_trigger():
+    payload = _payload_with_injury("")
+    payload["guided_injuries"] = [
+        {"area": "rolled left ankle", "injury_type": "tendon_ligament", "notes": "Can bear weight."},
+        {
+            "area": "head impact",
+            "injury_type": "impact",
+            "notes": "Head impact. No vomiting. No severe headache. No confusion.",
+        },
+    ]
+    parsed = PlanInput.from_payload(payload)
+
+    triage = triage_injuries(parsed)
+
+    assert "vomiting_after_head_impact" not in triage.red_flags
+    assert "severe_headache_after_head_impact" not in triage.red_flags
+    assert "confusion" not in triage.red_flags
+
+
+def test_second_guided_card_restriction_is_preserved():
+    payload = _payload_with_injury("")
+    payload["guided_injuries"] = [
+        {"area": "left wrist", "severity": "mild", "trend": "stable", "notes": "mild wrist tightness"},
+        {
+            "area": "left knee",
+            "severity": "moderate",
+            "trend": "stable",
+            "avoid": "hard cutting and jumping",
+            "notes": "knee pain with changes of direction",
+        },
+    ]
+    parsed = PlanInput.from_payload(payload)
+    triage = triage_injuries(parsed)
+
+    assert any("knee" in (entry.get("region") or "") for entry in parsed.restrictions)
+    assert "avoid_high_load" in triage.routing_reasons or "guided_injury:avoid_high_load" in triage.routing_reasons
+
+
+def test_structured_clinician_restriction_signals_accumulate_across_guided_cards():
+    payload = _payload_with_injury("")
+    payload["guided_injuries"] = [
+        {
+            "area": "right forearm",
+            "injury_type": "surface_injury",
+            "surface_type": "bruise",
+            "notes": "minor bruise",
+        },
+        {
+            "area": "left knee",
+            "injury_type": "post_surgery",
+            "cleared": "no",
+            "notes": "post-op reconstruction phase",
+        },
+    ]
+
+    triage = triage_injuries(PlanInput.from_payload(payload))
+
+    assert triage.mode == RESTRICTED_REHAB_ONLY
+    assert "clinician_restriction_signal" in triage.routing_reasons
+
+
 def test_guided_injury_acl_rupture_routes_to_restricted_rehab_only():
     payload = _payload_with_injury("")
     payload["guided_injury"] = {
@@ -1406,6 +1494,47 @@ def test_dislocation_relocated_yes_recurrent_no_can_be_full_plan_when_cleared():
     }
     triage = triage_injuries(PlanInput.from_payload(payload))
     assert triage.mode == FULL_PLAN
+
+
+def test_old_cleared_fracture_card_does_not_suppress_current_fracture_from_other_card():
+    payload = _payload_with_injury("")
+    payload["guided_injuries"] = [
+        {
+            "area": "old cleared ankle fracture",
+            "injury_type": "fracture",
+            "timeframe": "old_cleared",
+            "cleared": "yes",
+            "notes": "Old fracture, fully cleared.",
+        },
+        {
+            "area": "broken right wrist",
+            "injury_type": "fracture",
+            "severity": "high",
+            "trend": "stable",
+            "notes": "Current injury.",
+        },
+    ]
+
+    triage = triage_injuries(PlanInput.from_payload(payload))
+
+    assert triage.mode != FULL_PLAN
+    assert "fracture" in triage.matched_high_risk_categories
+
+
+def test_single_old_cleared_fracture_only_does_not_force_restricted_rehab():
+    payload = _payload_with_injury("")
+    payload["guided_injury"] = {
+        "area": "old cleared ankle fracture",
+        "injury_type": "fracture",
+        "timeframe": "old_cleared",
+        "cleared": "yes",
+        "notes": "Old fracture, fully cleared.",
+    }
+
+    triage = triage_injuries(PlanInput.from_payload(payload))
+
+    assert triage.mode == FULL_PLAN
+    assert "fracture" not in triage.matched_high_risk_categories
 
 
 def test_collect_guided_card_evidence_uses_parsed_entries_without_duplicating_first_card():
