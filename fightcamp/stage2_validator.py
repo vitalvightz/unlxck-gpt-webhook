@@ -1371,6 +1371,50 @@ def _sport_language_warnings(planning_brief: dict, plan_lines: list[str]) -> lis
     return warnings
 
 
+def _calendar_block_is_off_or_recovery_only(block: list[str]) -> bool:
+    block_text = _normalize_render_line(" ".join(block))
+
+    if not block_text:
+        return False
+
+    off_markers = (
+        "off",
+        "rest",
+        "recovery only",
+        "off / recovery",
+        "off/recovery",
+        "no app s&c",
+        "no app-led",
+        "passive recovery",
+    )
+
+    training_signals = (
+        "strength",
+        "conditioning",
+        "fight-pace",
+        "fight pace",
+        "sparring",
+        "coach-led boxing",
+        "coach led boxing",
+        "deadlift",
+        "squat",
+        "shuttle",
+        "interval",
+        "rounds",
+        "med-ball",
+        "medicine ball",
+        "throw",
+        "slams",
+        "sprint",
+        "bike intervals",
+        "loaded",
+    )
+
+    return any(marker in block_text for marker in off_markers) and not any(
+        signal in block_text for signal in training_signals
+    )
+
+
 def _calendar_spine_warnings(planning_brief: dict, final_plan_text: str) -> list[dict]:
     weekly_role_map = planning_brief.get("weekly_role_map") or {}
     weeks = [week for week in (weekly_role_map.get("weeks") or []) if isinstance(week, dict)]
@@ -1379,6 +1423,7 @@ def _calendar_spine_warnings(planning_brief: dict, final_plan_text: str) -> list
 
     warnings: list[dict] = []
     normalized_text = _normalize_render_line(final_plan_text)
+
     if "d-2 to d-1 window depends" in normalized_text:
         warnings.append(
             {
@@ -1389,27 +1434,37 @@ def _calendar_spine_warnings(planning_brief: dict, final_plan_text: str) -> list
         )
 
     week_sections = _week_sections(final_plan_text)
+
     for week in weeks:
         week_index = int(week.get("week_index", 0) or 0)
         if week_index <= 0:
             continue
+
         section = week_sections.get(week_index)
         if not section:
             continue
 
-        allowed_days = {}
+        allowed_days: dict[str, dict] = {}
         for day in week.get("calendar_days") or []:
             if not isinstance(day, dict):
                 continue
             weekday = str(day.get("weekday") or "").strip().lower()
             if weekday:
                 allowed_days[weekday] = day
+
         if not allowed_days:
             continue
+
+        authorized_session_days = {
+            str(role.get("scheduled_day_hint") or "").strip().lower()
+            for role in (week.get("session_roles") or [])
+            if isinstance(role, dict) and str(role.get("scheduled_day_hint") or "").strip()
+        }
 
         for block in _phase_session_blocks(section.get("lines", [])):
             heading_line = _normalize_render_line(block[0]) if block else ""
             heading_day = next((day for day in allowed_days if day in heading_line), "")
+
             if not heading_day:
                 warnings.append(
                     {
@@ -1421,12 +1476,15 @@ def _calendar_spine_warnings(planning_brief: dict, final_plan_text: str) -> list
                     }
                 )
                 continue
-            calendar_day = allowed_days.get(heading_day) if heading_day else None
+
+            calendar_day = allowed_days.get(heading_day)
             if not calendar_day:
                 continue
+
             expected_d = calendar_day.get("d_day")
             block_text = _normalize_render_line(" ".join(block))
-            if isinstance(expected_d, int) and f"d-{expected_d}" not in block_text:
+
+            if isinstance(expected_d, int) and expected_d >= 0 and f"d-{expected_d}" not in block_text:
                 if re.search(r"\bd-\d+\b", block_text):
                     warnings.append(
                         {
@@ -1438,7 +1496,10 @@ def _calendar_spine_warnings(planning_brief: dict, final_plan_text: str) -> list
                             "blocking": True,
                         }
                     )
-            if bool(calendar_day.get("is_after_fight_day")) and any(_normalize_render_line(line) for line in block[1:]):
+
+            if bool(calendar_day.get("is_after_fight_day")) and any(
+                _normalize_render_line(line) for line in block[1:]
+            ):
                 warnings.append(
                     {
                         "code": "calendar_spine_post_fight_training_rendered",
@@ -1448,9 +1509,11 @@ def _calendar_spine_warnings(planning_brief: dict, final_plan_text: str) -> list
                         "blocking": True,
                     }
                 )
+
             if bool(calendar_day.get("is_fight_day")):
                 body_lines = [line.strip() for line in block[1:] if _normalize_render_line(line)]
                 protocol_text = _normalize_render_line(FIGHT_DAY_PROTOCOL_TEXT)
+
                 if len(body_lines) != 1 or _normalize_render_line(body_lines[0]) != protocol_text:
                     warnings.append(
                         {
@@ -1461,6 +1524,23 @@ def _calendar_spine_warnings(planning_brief: dict, final_plan_text: str) -> list
                             "blocking": True,
                         }
                     )
+
+                continue
+
+            if (
+                heading_day not in authorized_session_days
+                and not _calendar_block_is_off_or_recovery_only(block)
+            ):
+                warnings.append(
+                    {
+                        "code": "calendar_spine_session_role_not_authorized",
+                        "message": f"Week {week_index} renders {heading_day.title()}, but no session_role authorizes that weekday.",
+                        "week_index": week_index,
+                        "line": block[0],
+                        "blocking": True,
+                    }
+                )
+
     return warnings
 
 
