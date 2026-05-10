@@ -259,18 +259,26 @@ def _collect_guided_card_evidence(plan_input: PlanInput) -> list[_GuidedCard]:
     if cards:
         return cards
 
-    guided = plan_input.guided_injury
-    if guided is None:
-        return []
+    for guided in _effective_guided_injuries(plan_input):
+        fallback_card = _GuidedCard(
+            severity=_normalize_guided_severity_token(guided.severity or ""),
+            trend=_normalized_text(guided.trend),
+            avoid=_normalized_text(guided.avoid),
+            notes=_normalized_text(guided.notes),
+            location=_normalized_text(guided.area),
+        )
+        if any(asdict(fallback_card).values()):
+            cards.append(fallback_card)
 
-    fallback_card = _GuidedCard(
-        severity=_normalize_guided_severity_token(guided.severity or ""),
-        trend=_normalized_text(guided.trend),
-        avoid=_normalized_text(guided.avoid),
-        notes=_normalized_text(guided.notes),
-        location=_normalized_text(guided.area),
-    )
-    return [fallback_card] if any(asdict(fallback_card).values()) else []
+    return cards
+
+
+def _effective_guided_injuries(plan_input: PlanInput) -> list[GuidedInjury]:
+    guided_injuries = getattr(plan_input, "guided_injuries", None)
+    if guided_injuries:
+        return list(guided_injuries)
+    guided = getattr(plan_input, "guided_injury", None)
+    return [guided] if guided is not None else []
 
 
 def _guided_combos(cards: list[_GuidedCard]) -> set[tuple[str, str]]:
@@ -1040,15 +1048,11 @@ def _apply_surface_injury_signals(
 
 
 def triage_injuries(plan_input: PlanInput) -> InjuryTriageResult:
-    has_resolved_parsed_injuries = any(
-        isinstance(entry, dict) and str(entry.get("injury_type") or "").strip()
-        for entry in (plan_input.parsed_injuries or [])
-    )
-
     features = build_triage_features(
         injuries=plan_input.injuries,
         parsed_injuries=plan_input.parsed_injuries,
         guided_injury=plan_input.guided_injury,
+        guided_injuries=_effective_guided_injuries(plan_input),
         restrictions=plan_input.restrictions,
     )
 
@@ -1074,21 +1078,25 @@ def triage_injuries(plan_input: PlanInput) -> InjuryTriageResult:
         routing_reasons=routing_reasons,
     )
 
-    if plan_input.guided_injury is not None:
+    use_guided_diagnosis_fields = not any(
+        isinstance(item, dict) and str(item.get("injury_type") or "").strip()
+        for item in plan_input.parsed_injuries or []
+    )
+    for guided in _effective_guided_injuries(plan_input):
         _apply_structured_injury_signals(
-            guided=plan_input.guided_injury,
+            guided=guided,
             matched_categories=matched_categories,
             red_flags=red_flags,
             clinician_restriction_signals=set(features.clinician_restriction_signals),
             routing_reasons=routing_reasons,
-            use_guided_diagnosis_fields=not has_resolved_parsed_injuries,
+            use_guided_diagnosis_fields=use_guided_diagnosis_fields,
         )
-        if "structured:fracture_old_cleared_no_concern" in routing_reasons:
-            matched_categories.discard("fracture")
-            routing_reasons.discard("mapped:fracture:restricted_rehab_only")
-        if "structured:dislocation_old_cleared_no_concern" in routing_reasons:
-            matched_categories.discard("dislocation")
-            routing_reasons.discard("mapped:dislocation:restricted_rehab_only")
+    if "structured:fracture_old_cleared_no_concern" in routing_reasons:
+        matched_categories.discard("fracture")
+        routing_reasons.discard("mapped:fracture:restricted_rehab_only")
+    if "structured:dislocation_old_cleared_no_concern" in routing_reasons:
+        matched_categories.discard("dislocation")
+        routing_reasons.discard("mapped:dislocation:restricted_rehab_only")
 
     guided_cards = _collect_guided_card_evidence(plan_input)
     combos = _guided_combos(guided_cards)

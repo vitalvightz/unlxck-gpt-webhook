@@ -147,6 +147,71 @@ def test_guided_injury_and_restrictions_are_used_for_triage():
     assert "rib_breathing_red_flag_combination" in triage.routing_reasons
 
 
+def test_second_guided_card_can_trigger_medical_hold():
+    payload = _payload_with_injury("")
+    payload["guided_injuries"] = [
+        {
+            "area": "rolled left ankle",
+            "injury_type": "tendon_ligament",
+            "severity": "moderate",
+            "trend": "stable",
+            "notes": "Can bear weight. No deformity.",
+        },
+        {
+            "area": "head impact",
+            "injury_type": "impact",
+            "severity": "moderate",
+            "trend": "stable",
+            "notes": "Vomited after head impact.",
+        },
+    ]
+    parsed = PlanInput.from_payload(payload)
+
+    triage = triage_injuries(parsed)
+
+    assert triage.mode == MEDICAL_HOLD
+    assert "vomiting_after_head_impact" in triage.red_flags
+    assert any("medical_hold" in reason or "red_flag" in reason for reason in triage.routing_reasons)
+
+
+def test_second_guided_card_negated_safety_fields_do_not_false_trigger():
+    payload = _payload_with_injury("")
+    payload["guided_injuries"] = [
+        {"area": "rolled left ankle", "injury_type": "tendon_ligament", "notes": "Can bear weight."},
+        {
+            "area": "head impact",
+            "injury_type": "impact",
+            "notes": "Head impact. No vomiting. No severe headache. No confusion.",
+        },
+    ]
+    parsed = PlanInput.from_payload(payload)
+
+    triage = triage_injuries(parsed)
+
+    assert "vomiting_after_head_impact" not in triage.red_flags
+    assert "severe_headache_after_head_impact" not in triage.red_flags
+    assert "confusion" not in triage.red_flags
+
+
+def test_second_guided_card_restriction_is_preserved():
+    payload = _payload_with_injury("")
+    payload["guided_injuries"] = [
+        {"area": "left wrist", "severity": "mild", "trend": "stable", "notes": "mild wrist tightness"},
+        {
+            "area": "left knee",
+            "severity": "moderate",
+            "trend": "stable",
+            "avoid": "hard cutting and jumping",
+            "notes": "knee pain with changes of direction",
+        },
+    ]
+    parsed = PlanInput.from_payload(payload)
+    triage = triage_injuries(parsed)
+
+    assert any("knee" in (entry.get("region") or "") for entry in parsed.restrictions)
+    assert "avoid_high_load" in triage.routing_reasons or "guided_injury:avoid_high_load" in triage.routing_reasons
+
+
 def test_guided_injury_acl_rupture_routes_to_restricted_rehab_only():
     payload = _payload_with_injury("")
     payload["guided_injury"] = {
