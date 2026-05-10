@@ -1051,8 +1051,7 @@ def triage_injuries(plan_input: PlanInput) -> InjuryTriageResult:
     features = build_triage_features(
         injuries=plan_input.injuries,
         parsed_injuries=plan_input.parsed_injuries,
-        guided_injury=plan_input.guided_injury,
-        guided_injuries=_effective_guided_injuries(plan_input),
+        guided_injuries=plan_input.guided_injuries,
         restrictions=plan_input.restrictions,
     )
 
