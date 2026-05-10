@@ -730,7 +730,6 @@ export function PlanIntakeForm() {
   useEffect(() => {
     if (!hydrated) return;
     setForm((current) => {
-    setForm((current) => {
       const next: PlanRequest = { ...current };
       let changed = false;
       const selectedGoals = current.key_goals;
