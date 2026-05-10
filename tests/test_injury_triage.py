@@ -474,6 +474,72 @@ def test_triage_guided_safety_signals_still_apply_with_resolved_parsed_injury():
     assert "structural_function_red_flag" in triage.routing_reasons
 
 
+def test_negated_bear_weight_and_deformity_do_not_trigger_red_flags():
+    text = "Rolled left ankle. Can bear weight. No deformity."
+    features = build_triage_features(
+        injuries=text,
+        parsed_injuries=None,
+        guided_injury=None,
+        restrictions=None,
+    )
+
+    assert "cannot_bear_weight" not in features.red_flags
+    assert "deformity" not in features.red_flags
+    assert "cannot_bear_weight" not in features.function_loss_signals
+
+
+def test_cannot_bear_weight_and_visible_deformity_still_trigger_red_flags():
+    text = "Rolled left ankle. Cannot bear weight. Visible deformity."
+    features = build_triage_features(
+        injuries=text,
+        parsed_injuries=None,
+        guided_injury=None,
+        restrictions=None,
+    )
+
+    assert "cannot_bear_weight" in features.red_flags
+    assert "deformity" in features.red_flags
+    assert "cannot_bear_weight" in features.function_loss_signals
+
+
+def test_can_still_walk_and_no_visible_deformity_do_not_trigger_medical_hold():
+    payload = _payload_with_injury("Rolled left ankle. I can still walk. No visible deformity.")
+    triage = triage_injuries(PlanInput.from_payload(payload))
+
+    assert triage.mode != MEDICAL_HOLD
+    assert "cannot_bear_weight" not in triage.red_flags
+    assert "deformity" not in triage.red_flags
+
+
+def test_guided_notes_negated_deformity_and_can_bear_weight_do_not_trigger_red_flags():
+    payload = _payload_with_injury("")
+    payload["guided_injury"] = {
+        "area": "left ankle sprain",
+        "severity": "moderate",
+        "trend": "stable",
+        "notes": "No fracture confirmed. No deformity. Can bear weight.",
+    }
+    triage = triage_injuries(PlanInput.from_payload(payload))
+
+    assert "cannot_bear_weight" not in triage.red_flags
+    assert "deformity" not in triage.red_flags
+
+
+def test_guided_notes_unable_to_bear_weight_and_obvious_deformity_trigger_medical_hold():
+    payload = _payload_with_injury("")
+    payload["guided_injury"] = {
+        "area": "left ankle injury",
+        "severity": "moderate",
+        "trend": "stable",
+        "notes": "Unable to bear weight. Obvious deformity.",
+    }
+    triage = triage_injuries(PlanInput.from_payload(payload))
+
+    assert triage.mode == MEDICAL_HOLD
+    assert "cannot_bear_weight" in triage.red_flags
+    assert "deformity" in triage.red_flags
+
+
 def test_triage_surface_safety_red_flags_still_apply_when_parsed_injury_exists():
     payload = _payload_with_injury("")
     payload["guided_injury"] = {
