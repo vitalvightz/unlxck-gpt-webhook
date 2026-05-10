@@ -51,6 +51,8 @@ from .normalization import normalize_fight_format as _normalize_fight_format
 from .selection_metadata import build_score_evidence, normalize_selection_metadata
 from .weight_cut import compute_cut_severity_score, cut_severity_bucket
 from .priority_profile import (
+    PRIMARY_GOAL_WEIGHT,
+    PRIMARY_WEAKNESS_WEIGHT,
     build_priority_profile,
     goal_priority_weight,
     weakness_priority_weight,
