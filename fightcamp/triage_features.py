@@ -245,6 +245,38 @@ _HISTORY_SUPPRESSIBLE_LABELS = {
     "dislocation",
 }
 
+_STRUCTURED_HIGH_RISK_INJURY_TYPES = {
+    "fracture",
+    "dislocation",
+    "post_surgery",
+    "tendon_rupture_or_avulsion",
+    "complete_ligament_tear",
+    "patellar_tendon_rupture",
+    "achilles_rupture",
+    "quadriceps_tendon_rupture",
+    "distal_biceps_tendon_rupture",
+    "triceps_tendon_rupture",
+    "pec_major_tear",
+    "acl_tear",
+    "pcl_tear",
+    "mcl_grade3_tear",
+    "lcl_grade3_tear",
+    "meniscus_bucket_handle_tear",
+    "labral_tear_with_instability",
+    "concussion",
+    "suspected_concussion",
+    "open_fracture",
+    "spinal_fracture",
+    "orbital_fracture",
+    "facial_fracture",
+    "retinal_detachment_or_eye_trauma",
+    "pneumothorax",
+    "hemothorax",
+    "spleen_or_liver_injury",
+    "cervical_spine_injury",
+    "septic_joint_or_bone_infection",
+}
+
 _FUNCTION_LOSS_PATTERNS: tuple[tuple[str, str], ...] = (
     (r"\bcan(?:not|'t)?\s+bear\s+weight\b|\bunable\s+to\s+bear\s+weight\b", "cannot_bear_weight"),
     (r"\bcannot\s+lift\s+arm\b|\bunable\s+to\s+lift\s+arm\b", "cannot_lift_arm"),
@@ -447,6 +479,52 @@ def build_triage_features(
     clinician_evidence: set[str] = set()
     urgent_evidence: set[str] = set()
 
+    for item in parsed_injuries or []:
+        if not isinstance(item, dict):
+            continue
+        resolved_injury_type = str(item.get("injury_type") or "").strip().lower()
+        if not resolved_injury_type:
+            continue
+        if resolved_injury_type in _STRUCTURED_HIGH_RISK_INJURY_TYPES:
+            high_risk_diagnoses.add(resolved_injury_type)
+            high_risk_evidence.add(str(item))
+            urgent_labels = {
+                "concussion",
+                "suspected_concussion",
+                "open_fracture",
+                "spinal_fracture",
+                "orbital_fracture",
+                "facial_fracture",
+                "retinal_detachment_or_eye_trauma",
+                "pneumothorax",
+                "hemothorax",
+                "spleen_or_liver_injury",
+                "cervical_spine_injury",
+                "septic_joint_or_bone_infection",
+            }
+            if resolved_injury_type in urgent_labels:
+                urgent_flags.add(f"structured_{resolved_injury_type}")
+                urgent_evidence.add(str(item))
+            if resolved_injury_type in {
+                "tendon_rupture_or_avulsion",
+                "complete_ligament_tear",
+                "patellar_tendon_rupture",
+                "achilles_rupture",
+                "quadriceps_tendon_rupture",
+                "distal_biceps_tendon_rupture",
+                "triceps_tendon_rupture",
+                "pec_major_tear",
+                "acl_tear",
+                "pcl_tear",
+                "mcl_grade3_tear",
+                "lcl_grade3_tear",
+                "meniscus_bucket_handle_tear",
+                "labral_tear_with_instability",
+                "post_surgery",
+            }:
+                structural_severe_signals.add("structured_high_risk_injury_type")
+                structural_evidence.add(str(item))
+
     for raw_chunk in raw_chunks:
         cleaned_chunk = remove_negated_phrases(raw_chunk).strip().lower()
         if not cleaned_chunk:
@@ -518,5 +596,6 @@ def build_triage_features(
             "function_loss_signals": sorted(function_loss_evidence),
             "clinician_restriction_signals": sorted(clinician_evidence),
             "urgent_flags": sorted(urgent_evidence),
+            "structured_parsed_injury": sorted({str(item) for item in parsed_injuries or [] if isinstance(item, dict)}),
         },
     )

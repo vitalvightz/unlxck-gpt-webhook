@@ -12,7 +12,7 @@ from fightcamp.injury_triage import (
 )
 from fightcamp.input_parsing import PlanInput
 from fightcamp.main import generate_plan_sync
-from fightcamp.triage_features import parse_guided_note_tags
+from fightcamp.triage_features import build_triage_features, parse_guided_note_tags
 from support import _build_request
 
 
@@ -178,6 +178,105 @@ def test_guided_injury_structural_tear_not_limited_to_acl():
     assert triage.mode == RESTRICTED_REHAB_ONLY
     assert triage.should_block_stage2 is True
     assert "scored_structural_severe_signal" in triage.routing_reasons
+
+
+def test_structured_parsed_hyperextension_does_not_escalate_from_guided_metadata():
+    features = build_triage_features(
+        injuries="",
+        parsed_injuries=[
+            {
+                "injury_type": "hyperextension",
+                "guided_injury_type": "tendon_ligament",
+                "canonical_location": "knee",
+            }
+        ],
+        guided_injury=None,
+        restrictions=None,
+    )
+    assert "tendon_rupture_or_avulsion" not in features.high_risk_diagnoses
+    assert "complete_ligament_tear" not in features.high_risk_diagnoses
+
+
+def test_structured_parsed_fracture_maps_directly_to_high_risk():
+    features = build_triage_features(
+        injuries="",
+        parsed_injuries=[
+            {
+                "injury_type": "fracture",
+                "injury_type_source": "guided_serious_type",
+                "canonical_location": "hand",
+            }
+        ],
+        guided_injury=None,
+        restrictions=None,
+    )
+    assert "fracture" in features.high_risk_diagnoses
+
+
+def test_structured_parsed_dislocation_maps_directly_to_high_risk():
+    features = build_triage_features(
+        injuries="",
+        parsed_injuries=[
+            {
+                "injury_type": "dislocation",
+                "injury_type_source": "guided_serious_type",
+                "canonical_location": "shoulder",
+            }
+        ],
+        guided_injury=None,
+        restrictions=None,
+    )
+    assert "dislocation" in features.high_risk_diagnoses
+
+
+def test_structured_surface_contusion_does_not_auto_escalate_to_high_risk():
+    features = build_triage_features(
+        injuries="",
+        parsed_injuries=[
+            {
+                "injury_type": "contusion",
+                "guided_surface_type": "bruise",
+                "canonical_location": "knee",
+            }
+        ],
+        guided_injury=None,
+        restrictions=None,
+    )
+    assert "fracture" not in features.high_risk_diagnoses
+    assert "dislocation" not in features.high_risk_diagnoses
+    assert "tendon_rupture_or_avulsion" not in features.high_risk_diagnoses
+
+
+def test_structured_parsed_tendon_rupture_maps_directly_to_high_risk():
+    features = build_triage_features(
+        injuries="",
+        parsed_injuries=[
+            {
+                "injury_type": "tendon_rupture_or_avulsion",
+                "injury_type_source": "guided_tendon_ligament",
+                "canonical_location": "knee",
+            }
+        ],
+        guided_injury=None,
+        restrictions=None,
+    )
+    assert "tendon_rupture_or_avulsion" in features.high_risk_diagnoses
+
+
+def test_structured_soft_tissue_joint_issue_does_not_override_resolved_injury_type():
+    features = build_triage_features(
+        injuries="",
+        parsed_injuries=[
+            {
+                "injury_type": "soft_tissue_joint_issue",
+                "guided_injury_type": "tendon_ligament",
+                "canonical_location": "knee",
+            }
+        ],
+        guided_injury=None,
+        restrictions=None,
+    )
+    assert "tendon_rupture_or_avulsion" not in features.high_risk_diagnoses
 
 
 def test_blocked_modes_do_not_reach_stage2_or_normal_pipeline(monkeypatch):
