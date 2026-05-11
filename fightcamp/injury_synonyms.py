@@ -427,15 +427,15 @@ INJURY_SYNONYM_MAP = {
     # misclassifying tendon injuries like "patellar tendon" as contusions.
     # "kneed" (verb) and "from knee" (impact) remain as they correctly indicate impact injuries.
     "contusion": [
-    "bruise", "bruised", "black and blue",
-    "discoloration", "discolored",
-    "kicked", "kneed", "elbowed",
-    "dead leg", "corked", "cork",
-    "dent", "dented", "indent", "indentation",
-    "hit", "struck", "banged", "banged up",
-    "trauma", "traumatic", "blunt", "blunt force",
-    "from strike", "from kick", "from knee", "from elbow", "from hit"
-],
+        "bruise", "bruised", "black and blue",
+        "discoloration", "discolored",
+        "kicked", "kneed", "elbowed",
+        "dead leg", "corked", "cork",
+        "dent", "dented", "indent", "indentation",
+        "hit", "struck", "banged", "banged up",
+        "trauma", "traumatic", "blunt", "blunt force",
+        "from strike", "from kick", "from knee", "from elbow", "from hit"
+    ],
 
     # Swelling - every fluid retention phrase
     "swelling": [
