@@ -3256,9 +3256,15 @@ def build_planning_brief(
     days_until_fight = athlete_model.get("days_until_fight")
     priority_source = plan_input if plan_input is not None else athlete_model
     priority_profile = build_priority_profile(priority_source)
+    collision_details = getattr(plan_input, "goal_weakness_collision_details", None) if plan_input is not None else None
+    primary_collision_detail = ""
+    if isinstance(collision_details, list) and collision_details:
+        first = collision_details[0]
+        if isinstance(first, dict):
+            primary_collision_detail = str(first.get("detail", "") or "")
     priority_focus = describe_priority_focus(
         priority_profile,
-        collision_detail=getattr(plan_input, "goal_weakness_collision_detail", "") if plan_input is not None else "",
+        collision_detail=primary_collision_detail or (getattr(plan_input, "goal_weakness_collision_detail", "") if plan_input is not None else ""),
         collision_tags=getattr(plan_input, "goal_weakness_collision_tags", None) if plan_input is not None else None,
     )
 

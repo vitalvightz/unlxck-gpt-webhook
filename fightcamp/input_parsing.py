@@ -319,6 +319,7 @@ _PLAN_FIELD_LABELS = {
     "primary_weak_area": "Primary weak area",
     "goal_weakness_collision_detail": "Goal/weak-area collision detail",
     "goal_weakness_collision_tags": "Goal/weak-area collision tags",
+    "goal_weakness_collision_details": "Goal/weak-area collision details",
     "training_preference": "Do you prefer certain training styles?",
     "mental_block": "Do you struggle with any mental blockers or mindset challenges?",
     "notes": "Are there any parts of your previous plan you hated or loved?",
@@ -601,6 +602,7 @@ class PlanInput:
     days_until_fight: int | None
     goal_weakness_collision_detail: str | None = None
     goal_weakness_collision_tags: list[str] = field(default_factory=list)
+    goal_weakness_collision_details: list[dict[str, str]] = field(default_factory=list)
     guided_injuries: list[GuidedInjury] = field(default_factory=list)
     parsing_metadata: dict[str, dict[str, str]] = field(default_factory=dict)
 
@@ -657,6 +659,8 @@ class PlanInput:
             primary_goal = key_goals_list[0] if key_goals_list else ""
         if not primary_weak_area or primary_weak_area not in weak_areas_list:
             primary_weak_area = weak_areas_list[0] if weak_areas_list else ""
+        goal_weakness_collision_details_raw = values["goal_weakness_collision_details"]
+        goal_weakness_collision_details = goal_weakness_collision_details_raw if isinstance(goal_weakness_collision_details_raw, list) else []
 
         # Validation step (planning-critical contract).
         if next_fight_date:
@@ -728,6 +732,7 @@ class PlanInput:
             "primary_weak_area": primary_weak_area,
             "goal_weakness_collision_detail": goal_weakness_collision_detail,
             "goal_weakness_collision_tags": goal_weakness_collision_tags,
+            "goal_weakness_collision_details": goal_weakness_collision_details,
         }
 
         return cls(

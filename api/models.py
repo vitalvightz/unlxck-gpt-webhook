@@ -313,6 +313,7 @@ class NutritionSandCPreferences(BaseModel):
     primary_weak_area: str | None = None
     goal_weakness_collision_detail: str = ""
     goal_weakness_collision_tags: list[str] = Field(default_factory=list)
+    goal_weakness_collision_details: list[dict[str, str]] = Field(default_factory=list)
     training_preference: str = ""
     mindset_challenges: str = ""
     notes: str = ""
@@ -524,6 +525,7 @@ class PlanRequest(BaseModel):
     primary_weak_area: str | None = None
     goal_weakness_collision_detail: str = ""
     goal_weakness_collision_tags: list[str] = Field(default_factory=list)
+    goal_weakness_collision_details: list[dict[str, str]] = Field(default_factory=list)
     training_preference: str = ""
     mindset_challenges: str = ""
     notes: str = ""

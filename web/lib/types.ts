@@ -93,6 +93,12 @@ export type NutritionCoachControlsInput = {
   water_cut_locked_to_manual: boolean;
 };
 
+export type GoalWeaknessCollisionDetail = {
+  tag: string;
+  label: string;
+  detail: string;
+};
+
 export type NutritionSandCPreferences = {
   equipment_access: string[];
   key_goals: string[];
@@ -101,6 +107,7 @@ export type NutritionSandCPreferences = {
   primary_weak_area?: string | null;
   goal_weakness_collision_detail?: string;
   goal_weakness_collision_tags?: string[];
+  goal_weakness_collision_details?: GoalWeaknessCollisionDetail[];
   training_preference?: string;
   mindset_challenges?: string;
   notes?: string;
@@ -179,6 +186,7 @@ export type PlanRequest = {
   primary_weak_area?: string | null;
   goal_weakness_collision_detail?: string;
   goal_weakness_collision_tags?: string[];
+  goal_weakness_collision_details?: GoalWeaknessCollisionDetail[];
   training_preference?: string;
   mindset_challenges?: string;
   notes?: string;
