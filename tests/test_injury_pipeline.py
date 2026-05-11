@@ -372,4 +372,6 @@ def test_ankle_pop_still_resolves_as_sprain(monkeypatch):
     injury_type, location = parse_injury_phrase("ankle pop")
 
     assert injury_type == "sprain"
-    assert location == "ankle
+    assert location == "ankle"
+
+
