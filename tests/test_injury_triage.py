@@ -9,6 +9,7 @@ from fightcamp.injury_triage import (
     NEEDS_REVIEW,
     RESTRICTED_REHAB_ONLY,
     _collect_guided_card_evidence,
+    normalize_triage_category,
     triage_injuries,
 )
 from fightcamp.input_parsing import GuidedInjury, PlanInput
@@ -138,6 +139,57 @@ def test_urgent_neurological_symptoms_route_to_medical_hold():
     assert "loss_of_consciousness" in triage.red_flags
     assert "neurological_red_flag_combination" in triage.routing_reasons
 
+
+@pytest.mark.parametrize(
+    ("category", "expected"),
+    [
+        ("tendon_rupture", "tendon_rupture_or_avulsion"),
+        ("ligament_tear", "complete_ligament_tear"),
+        ("mcl_tear", "complete_ligament_tear"),
+        ("lcl_tear", "complete_ligament_tear"),
+        ("pcl_tear", "pcl_tear"),
+        ("acl_tear", "acl_tear"),
+        ("nerve_involvement", "neurological_symptoms"),
+        ("infection", "septic_joint_or_bone_infection"),
+    ],
+)
+def test_normalize_triage_category_aliases(category: str, expected: str):
+    assert normalize_triage_category(category) == expected
+
+
+def test_tendon_rupture_alias_in_parsed_injury_routes_restricted():
+    parsed = PlanInput.from_payload(_payload_with_injury("felt tendon pop in achilles"))
+    parsed = replace(
+        parsed,
+        parsed_injuries=[{"location": "achilles", "injury_type": "tendon_rupture", "severity": "moderate"}],
+    )
+
+    triage = triage_injuries(parsed)
+
+    assert triage.mode != FULL_PLAN
+    assert "tendon_rupture_or_avulsion" in triage.matched_high_risk_categories
+    assert triage.clinician_clearance_required is True
+
+
+def test_ligament_tear_alias_in_parsed_injury_routes_restricted():
+    parsed = PlanInput.from_payload(_payload_with_injury("knee ligament tear"))
+    parsed = replace(
+        parsed,
+        parsed_injuries=[{"location": "knee", "injury_type": "ligament_tear", "severity": "moderate"}],
+    )
+
+    triage = triage_injuries(parsed)
+
+    assert triage.mode != FULL_PLAN
+    assert "complete_ligament_tear" in triage.matched_high_risk_categories
+
+
+def test_neurological_signals_still_require_review():
+    parsed = PlanInput.from_payload(_payload_with_injury("neck pain with numbness and tingling"))
+    triage = triage_injuries(parsed)
+
+    assert {"numbness", "tingling"}.intersection(set(triage.red_flags))
+    assert triage.mode != FULL_PLAN
 
 def test_guided_injury_and_restrictions_are_used_for_triage():
     payload = _payload_with_injury("")
