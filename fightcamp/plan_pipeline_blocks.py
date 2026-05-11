@@ -230,8 +230,7 @@ def _build_rehab_injury_string(context: PlanRuntimeContext) -> str:
         is_knee = canonical_location == "knee" or "knee" in display_location
 
         injury_type = _normalize_guided_injury_type(entry.get("injury_type"))
-        guided_injury = getattr(context.plan_input, "guided_injury", None)
-        guided_type = _normalize_guided_injury_type(getattr(guided_injury, "injury_type", None))
+        guided_type = _normalize_guided_injury_type(entry.get("guided_source_injury_type"))
         if guided_type and injury_type in {"", "sprain", "unspecified", "pain", "soreness", "tightness", "stiffness"}:
             injury_type = guided_type
         if is_knee and knee_movement_language and injury_type in {"", "sprain", "unspecified", "pain", "soreness", "tightness", "stiffness"}:
@@ -279,7 +278,11 @@ def _generate_rehab_support_bundle(context: PlanRuntimeContext) -> tuple[dict[st
         )
         for phase in PHASES
     }
-    has_injuries = bool(context.injuries_only_text or context.plan_input.restrictions)
+    has_injuries = bool(
+        context.injuries_only_text
+        or context.plan_input.parsed_injuries
+        or context.plan_input.restrictions
+    )
     current_phase = _first_active_phase(context.phase_weeks)
     # Compute once; captured as a default argument by each builder lambda so
     # the dict is not re-created for every active phase.

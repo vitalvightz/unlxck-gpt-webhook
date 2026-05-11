@@ -424,6 +424,10 @@ def test_guided_injuries_payload_parses_multiple_cards_and_preserves_notes():
     assert parsed.parsed_injuries[0]["notes"] == "pain when driving knee up past pelvis"
     assert parsed.parsed_injuries[1]["display_location"] == "heel"
     assert parsed.parsed_injuries[1]["notes"] == "roadwork flare-up"
+    assert parsed.parsed_injuries[0]["guided_source_injury_type"] == ""
+    assert parsed.parsed_injuries[0]["guided_source_area"] == "hip flexor"
+    assert parsed.parsed_injuries[1]["guided_source_injury_type"] == ""
+    assert parsed.parsed_injuries[1]["guided_source_area"] == "right heel"
     assert len(parsed.restrictions) == 1
     assert parsed.restrictions[0]["region"] == "hip"
     assert len(parsed.guided_injuries) == 2
