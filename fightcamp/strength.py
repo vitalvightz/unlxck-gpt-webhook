@@ -50,6 +50,7 @@ from .late_selector_windows import (
 from .normalization import normalize_fight_format as _normalize_fight_format
 from .selection_metadata import build_score_evidence, normalize_selection_metadata
 from .weight_cut import compute_cut_severity_score, cut_severity_bucket
+from .priority_clarification_tags import derive_clarification_tags
 from .priority_profile import (
     PRIMARY_GOAL_WEIGHT,
     PRIMARY_WEAKNESS_WEIGHT,
@@ -145,6 +146,8 @@ LATE_SAFE_STRENGTH_FIELDS = {
 }
 LATE_MUST_HAVE_BONUS_MULTIPLIER = 0.6
 VALID_CUT_BUCKETS = {"none", "low", "moderate", "high", "critical", "extreme"}
+STRENGTH_CLARIFICATION_TAG_BONUS = 0.25
+STRENGTH_MAX_CLARIFICATION_TAG_BONUS = 0.75
 LATE_STRENGTH_HIGH_CUT_BUCKETS = {"high", "critical", "extreme"}
 LATE_STRENGTH_CUT_BUCKET_MULTIPLIER = {
     "none": 0.0,
@@ -796,6 +799,7 @@ def score_exercise(
     is_rehab,
     priority_profile=None,
     must_have_bonus_multiplier: float = 1.0,
+    derived_clarification_tags=None,
     rng: random.Random | None = None,
 ):
     """Return a weighted score and breakdown for a candidate exercise."""
@@ -805,6 +809,7 @@ def score_exercise(
     style_tags = normalize_tags(style_tags or [])
     must_have_tags = normalize_tags(must_have_tags or [])
     phase_tags = normalize_tags(phase_tags or [])
+    derived_clarification_tags = normalize_tags(derived_clarification_tags or [])
     score = 0.0
     reasons = {
         "goal_hits": 0,
@@ -812,6 +817,8 @@ def score_exercise(
         "style_hits": 0,
         "must_have_hits": 0,
         "must_have_bonus": 0.0,
+        "clarification_tag_hits": 0,
+        "clarification_bonus": 0.0,
         "phase_hits": 0,
         "load_adjustments": 0.0,
         "equipment_boost": 0.0,
@@ -835,6 +842,19 @@ def score_exercise(
     score += priority_bonus
     reasons["weakness_hits"] = weakness_matches
     reasons["goal_hits"] = goal_matches
+    if derived_clarification_tags:
+        matched_clarification_tags = sorted(set(exercise_tags) & set(derived_clarification_tags))
+        clarification_bonus = min(
+            len(matched_clarification_tags) * STRENGTH_CLARIFICATION_TAG_BONUS,
+            STRENGTH_MAX_CLARIFICATION_TAG_BONUS,
+        )
+        if clarification_bonus > 0:
+            score += clarification_bonus
+            reasons["clarification_tag_hits"] = len(matched_clarification_tags)
+            reasons["clarification_bonus"] = round(clarification_bonus, 2)
+            for tag in matched_clarification_tags:
+                reasons["reason_codes"].append(f"priority_clarification_tag_match:{tag}")
+
     if priority_profile is not None:
         for tag in matched_goal_tags:
             goal_weight = goal_priority_weight(tag, priority_profile)
@@ -1282,6 +1302,10 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
     phase_dict = PHASE_TAG_BOOST.get(phase, {})
     phase_tags = list(phase_dict.keys()) if isinstance(phase_dict, dict) else []
 
+    priority_focus = flags.get("priority_focus") if isinstance(flags.get("priority_focus"), dict) else {}
+    derived_clarification_tags = normalize_tags(priority_focus.get("derived_clarification_tags", []))
+    if not derived_clarification_tags:
+        derived_clarification_tags = derive_clarification_tags(flags.get("goal_weakness_collision_details"))
 
     weighted_exercises = []
     late_window = classify_late_selector_window(days_until_fight, include_control=True)
@@ -1536,6 +1560,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
             is_rehab=method == "rehab",
             priority_profile=priority_profile,
             must_have_bonus_multiplier=must_have_bonus_multiplier,
+            derived_clarification_tags=derived_clarification_tags,
             rng=rng,
         )
         if score == -999:
@@ -2122,6 +2147,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
             is_rehab=ex.get("method", "").lower() == "rehab",
             priority_profile=priority_profile,
             must_have_bonus_multiplier=must_have_bonus_multiplier,
+            derived_clarification_tags=derived_clarification_tags,
             rng=rng,
         )
         if style_score == -999:
