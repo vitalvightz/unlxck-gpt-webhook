@@ -734,6 +734,9 @@ def injury_guard(
     phase: str | None = None,
     fatigue: str | None = None,
 ) -> Decision:
+    # Restrictions are enforced in the selection/filtering pipeline via
+    # evaluate_restriction_impact(); injury_guard currently only applies
+    # injury-region risk logic. Keep this argument for backwards compatibility.
     if ignore_restrictions:
         restrictions = None
     if INJURY_DEBUG:
