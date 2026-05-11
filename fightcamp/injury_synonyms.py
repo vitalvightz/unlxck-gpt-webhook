@@ -626,8 +626,8 @@ LOCATION_MAP = {
     "gastrocnemius": "calf",
     "soleus": "calf",
     "back of leg": "calf",
-    "fibula": "calf",
-    "outer calf bone": "calf",
+    "fibula": "shin",
+    "outer calf bone": "shin",
     "chest": "chest",
     "pec": "chest",
     "pecs": "chest",
@@ -658,6 +658,8 @@ LOCATION_MAP = {
     "socket": "eye",
     "face": "face",
     "cheek": "face",
+    "facial cheek": "face",
+    "face cheek": "face",
     "cheekbone": "face",
     "jawbone": "jaw",
     "brow": "face",
@@ -684,7 +686,11 @@ LOCATION_MAP = {
     "butt": "glutes",
     "buttocks": "glutes",
     "ass": "glutes",
-    "cheeks": "face",
+    "cheeks": "unspecified",
+    "butt cheek": "glutes",
+    "butt cheeks": "glutes",
+    "glute cheek": "glutes",
+    "glute cheeks": "glutes",
     "backside": "glutes",
     "coccyx": "glutes",
     "pelvis": "glutes",
@@ -751,6 +757,7 @@ LOCATION_MAP = {
     "lower_back": "lower back",
     "spine": "unspecified",
     "lumbar": "lower back",
+    "l-spine": "lower back",
     "sacrum": "lower back",
     "tailbone": "lower back",
     "lumbar vertebrae": "lower back",
@@ -758,6 +765,7 @@ LOCATION_MAP = {
     "base of spine": "lower back",
     "neck": "neck",
     "cervical": "neck",
+    "c-spine": "neck",
     "trapezius": "neck",
     "throat": "neck",
     "sternocleidomastoid": "neck",
@@ -805,6 +813,7 @@ LOCATION_MAP = {
     "horseshoe": "triceps",
     "upper back": "upper back",
     "thoracic": "upper back",
+    "t-spine": "upper back",
     "rhomboids": "upper back",
     "traps": "upper back",
     "middle back": "upper back",
@@ -1132,6 +1141,21 @@ def _protect_mechanism_and_connectors(text: str) -> str:
     return result
 
 
+def _merge_mechanism_continuation_phrases(phrases: list[str]) -> list[str]:
+    merged: list[str] = []
+    for phrase in phrases:
+        if (
+            merged
+            and _contains_hint(merged[-1], _BODY_PART_HINTS)
+            and _contains_hint(phrase, _MECHANISM_CONTINUATION_HINTS)
+            and not _contains_hint(phrase, _BODY_PART_HINTS)
+        ):
+            merged[-1] = f"{merged[-1]} {phrase}".strip()
+            continue
+        merged.append(phrase)
+    return merged
+
+
 def _normalize_injury_text_separators(text: str) -> str:
     normalized = text
     for sep in [*_INJURY_TEXT_SEPARATORS, *_LEGACY_MOJIBAKE_DASH_SEPARATORS]:
@@ -1149,22 +1173,24 @@ def split_injury_text(raw_text: str) -> list[str]:
         text = re.sub(r"[()]", " ", text)
         text = re.sub(r"\b(and|but|also)\b,?", ". ", text)
         text = _normalize_injury_text_separators(text)
-        return [
+        phrases = [
             cleaned.replace(_AND_PROTECT_TOKEN, " and ")
             for chunk in text.split(".")
             if (cleaned := _strip_surrounding_punct(chunk))
         ]
+        return _merge_mechanism_continuation_phrases(phrases)
     text = _protect_mechanism_and_connectors(raw_text.lower())
     text = re.sub(r"[()]", " ", text)
     # Replace common connectors with punctuation so spaCy can split sentences
     text = re.sub(r"\b(and|but|also)\b,?", ". ", text)
     text = _normalize_injury_text_separators(text)
     doc = nlp(text)
-    return [
+    phrases = [
         cleaned.replace(_AND_PROTECT_TOKEN, " and ")
         for sent in doc.sents
         if (cleaned := _strip_surrounding_punct(sent.text))
     ]
+    return _merge_mechanism_continuation_phrases(phrases)
 
 
 def _strip_negated_chunks_fallback(text: str) -> str:

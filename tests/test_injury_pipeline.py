@@ -225,6 +225,41 @@ def test_overbroad_injury_synonyms_do_not_create_one_word_false_positives(monkey
     assert parse_injury_phrase("grade 2 calf strain") == ("strain", "calf")
 
 
+def test_location_map_uses_safe_broad_regions_for_ambiguous_anatomy(monkeypatch):
+    monkeypatch.setattr(injury_synonyms, "get_nlp", lambda: None)
+
+    cases = [
+        ("arm pain", "unspecified"),
+        ("upper arm pain", "unspecified"),
+        ("lower arm pain", "forearm"),
+        ("fibula pain", "shin"),
+        ("outer calf bone pain", "shin"),
+        ("collarbone pain", "chest"),
+        ("clavicle pain", "chest"),
+        ("spine pain", "unspecified"),
+        ("lower spine pain", "lower back"),
+        ("lumbar pain", "lower back"),
+        ("l-spine pain", "lower back"),
+        ("cervical spine pain", "neck"),
+        ("c-spine pain", "neck"),
+        ("thoracic spine pain", "upper back"),
+        ("t-spine pain", "upper back"),
+        ("femur pain", "unspecified"),
+        ("cheek cut", "face"),
+        ("facial cheek cut", "face"),
+        ("face cheek cut", "face"),
+        ("butt cheeks pain", "glutes"),
+        ("glute cheek pain", "glutes"),
+        ("glute cheeks pain", "glutes"),
+        ("cheeks pain", "unspecified"),
+        ("jawbone pain", "jaw"),
+    ]
+
+    for phrase, expected_location in cases:
+        _, location = parse_injury_phrase(phrase)
+        assert location == expected_location
+
+
 def test_severe_structural_terms_do_not_parse_as_soft_rehab_buckets(monkeypatch):
     monkeypatch.setattr(injury_synonyms, "get_nlp", lambda: None)
 

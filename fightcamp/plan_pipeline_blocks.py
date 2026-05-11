@@ -230,6 +230,10 @@ def _build_rehab_injury_string(context: PlanRuntimeContext) -> str:
         is_knee = canonical_location == "knee" or "knee" in display_location
 
         injury_type = _normalize_guided_injury_type(entry.get("injury_type"))
+        guided_injury = getattr(context.plan_input, "guided_injury", None)
+        guided_type = _normalize_guided_injury_type(getattr(guided_injury, "injury_type", None))
+        if guided_type and injury_type in {"", "sprain", "unspecified", "pain", "soreness", "tightness", "stiffness"}:
+            injury_type = guided_type
         if is_knee and knee_movement_language and injury_type in {"", "sprain", "unspecified", "pain", "soreness", "tightness", "stiffness"}:
             injury_type = "hyperextension"
 
