@@ -67,8 +67,8 @@ TRIAGE_CATEGORY_ALIASES: dict[str, str] = {
     "ligament_tear": "complete_ligament_tear",
     "mcl_tear": "complete_ligament_tear",
     "lcl_tear": "complete_ligament_tear",
-    "pcl_tear": "pcl_tear",
-    "acl_tear": "acl_tear",
+    "nerve_involvement": "neurological_symptoms",
+    "infection": "septic_joint_or_bone_infection",
     "nerve_involvement": "neurological_symptoms",
     "infection": "septic_joint_or_bone_infection",
 }
