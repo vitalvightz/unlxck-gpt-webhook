@@ -129,7 +129,7 @@ def parse_injury_entry(phrase: str) -> dict[str, str | None | list[str]] | None:
     if location == "unspecified":
         location = None
     structural_flags = list(scored.get("flags") or [])
-    rehab_type = str(scored.get("rehab_type") or injury_type or "unspecified")
+    rehab_type = str(scored.get("rehab_type"))
     triage_category = str(scored.get("triage_category") or "")
     laterality = extract_laterality(original_phrase)
     if not injury_type and not location and not structural_flags:
