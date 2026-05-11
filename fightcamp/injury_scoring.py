@@ -3,7 +3,12 @@ from __future__ import annotations
 import re
 from typing import Dict, List
 
-from .injury_synonyms import INJURY_SYNONYM_MAP, LOCATION_MAP, remove_negated_phrases
+from .injury_synonyms import (
+    INJURY_SYNONYM_MAP,
+    LOCATION_MAP,
+    detect_structural_red_flags,
+    remove_negated_phrases,
+)
 
 # -----------------------------
 # 1) CANONICAL ALIGNMENT
@@ -121,6 +126,12 @@ def score_injury_phrase(t_clean: str, synonym_map: Dict[str, List[str]] | None =
     location = "unspecified"
     flags: List[str] = []
     medical_hit = False
+    structural_hit = False
+
+    structural_flags = detect_structural_red_flags(t_clean)
+    if structural_flags:
+        structural_hit = True
+        flags.extend(structural_flags)
 
     # B) Medical terms first (can set canonical type + flags)
     for term, (canon, flag) in MEDICAL_MAP.items():
@@ -152,7 +163,7 @@ def score_injury_phrase(t_clean: str, synonym_map: Dict[str, List[str]] | None =
                 break
 
     # If we have no medical type set (or it's still unspecified), use best score
-    if injury_type == "unspecified" and any(type_scores.values()) and not medical_hit:
+    if injury_type == "unspecified" and any(type_scores.values()) and not medical_hit and not structural_hit:
         injury_type = max(type_scores.items(), key=lambda x: x[1])[0]
 
     # E) Location detection (deterministic)

@@ -35,6 +35,28 @@ def test_score_injury_phrase_records_red_flags():
     assert "nerve_involvement" in result["flags"]
 
 
+def test_score_injury_phrase_preserves_structural_severity_flags():
+    acl = score_injury_phrase("acl tear")
+    assert acl["injury_type"] == "unspecified"
+    assert acl["location"] == "knee"
+    assert "structural_red_flag" in acl["flags"]
+    assert "suspected_ligament_tear" in acl["flags"]
+    assert "urgent" in acl["flags"]
+
+    tendon = score_injury_phrase("tendon rupture")
+    assert tendon["injury_type"] == "unspecified"
+    assert "structural_red_flag" in tendon["flags"]
+    assert "suspected_tendon_rupture" in tendon["flags"]
+    assert "urgent" in tendon["flags"]
+
+    dislocation = score_injury_phrase("shoulder dislocation")
+    assert dislocation["injury_type"] == "unspecified"
+    assert dislocation["location"] == "shoulder"
+    assert "structural_red_flag" in dislocation["flags"]
+    assert "suspected_dislocation" in dislocation["flags"]
+    assert "urgent" in dislocation["flags"]
+
+
 def test_patellar_tendon_classified_as_tendonitis():
     """Test that patellar tendon is classified as tendonitis, not contusion."""
     result = score_injury_phrase("left knee pain (patellar tendon)")

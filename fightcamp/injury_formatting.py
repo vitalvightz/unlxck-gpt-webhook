@@ -95,7 +95,7 @@ def _expand_triggered_restriction_clause(clause: str) -> list[str]:
     return [f"{trigger} {item}" for item in items]
 
 
-def parse_injury_entry(phrase: str) -> dict[str, str | None] | None:
+def parse_injury_entry(phrase: str) -> dict[str, str | None | list[str]] | None:
     """Parse a single injury phrase.
     
     This function filters out constraint phrases and only returns injury data.
@@ -123,10 +123,11 @@ def parse_injury_entry(phrase: str) -> dict[str, str | None] | None:
         return None
 
     injury_type, location = parse_injury_phrase(phrase_to_parse)
+    structural_flags = injury_synonyms.detect_structural_red_flags(phrase_to_parse)
     laterality = extract_laterality(original_phrase)
-    if not injury_type and not location:
+    if not injury_type and not location and not structural_flags:
         return None
-    if not injury_type and location:
+    if not injury_type:
         injury_type = "unspecified"
     return {
         "injury_type": injury_type,
@@ -134,6 +135,7 @@ def parse_injury_entry(phrase: str) -> dict[str, str | None] | None:
         "side": laterality,
         "laterality": laterality,
         "original_phrase": original_phrase,
+        "flags": structural_flags,
     }
 
 
