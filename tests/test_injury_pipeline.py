@@ -606,3 +606,18 @@ def test_tendonitis_requires_tendon_overuse_context_to_beat_pain():
     assert score_injury_phrase("achilles tendinopathy")["injury_type"] == "tendonitis"
     assert score_injury_phrase("knee pain")["injury_type"] == "pain"
     assert score_injury_phrase("shoulder pain")["injury_type"] == "pain"
+
+
+def test_joint_instability_does_not_default_to_ankle_region():
+    injuries, restrictions = parse_injuries_and_restrictions("joint instability")
+
+    assert restrictions == []
+    assert len(injuries) == 1
+    assert injuries[0].get("injury_type") == "instability"
+    assert injuries[0].get("canonical_location") in {None, "", "unspecified"}
+
+
+def test_ankle_instability_and_sprain_still_map_to_ankle():
+    injuries, _ = parse_injuries_and_restrictions("ankle instability and ankle sprain")
+    locations = {entry.get("canonical_location") for entry in injuries}
+    assert "ankle" in locations

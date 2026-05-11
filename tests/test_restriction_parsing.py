@@ -363,3 +363,47 @@ def test_restriction_parsing_no_logging_for_injuries(caplog):
     total_logs = [record for record in caplog.records if "total restrictions parsed:" in record.message]
     assert len(total_logs) == 1
     assert "0" in total_logs[0].message
+
+
+def test_mixed_restriction_and_injury_phrase_preserves_both_for_knee_pain():
+    injuries, restrictions = parse_injuries_and_restrictions("avoid running because knee pain flares")
+
+    assert restrictions
+    assert any(injury.get("canonical_location") == "knee" for injury in injuries)
+    assert any(injury.get("injury_type") == "pain" for injury in injuries)
+
+
+def test_mixed_restriction_and_injury_phrase_preserves_achilles_context():
+    injuries, restrictions = parse_injuries_and_restrictions("no jumping due to achilles tendon pain")
+
+    assert restrictions
+    assert any(injury.get("canonical_location") == "achilles" for injury in injuries)
+
+
+def test_mixed_restriction_and_injury_phrase_preserves_shoulder_impingement_context():
+    injuries, restrictions = parse_injuries_and_restrictions(
+        "limit overhead pressing because shoulder impingement flares"
+    )
+
+    assert restrictions
+    assert any(injury.get("canonical_location") == "shoulder" for injury in injuries)
+    assert any(injury.get("injury_type") == "impingement" for injury in injuries)
+
+
+def test_pure_restrictions_do_not_create_fake_injuries():
+    injury_cases = ["avoid jumps", "no heavy overhead pressing"]
+
+    for phrase in injury_cases:
+        injuries, restrictions = parse_injuries_and_restrictions(phrase)
+        assert restrictions
+        assert injuries == []
+
+
+def test_mixed_restriction_uses_first_connector_for_injury_context_extraction():
+    phrase = "avoid running with knee pain because it hurts"
+    injuries, restrictions = parse_injuries_and_restrictions(phrase)
+
+    assert restrictions
+    assert any(injury.get("canonical_location") == "knee" for injury in injuries)
+    assert any(injury.get("injury_type") == "pain" for injury in injuries)
+    assert all(str(injury.get("original_phrase") or "").lower() != "it hurts" for injury in injuries)
