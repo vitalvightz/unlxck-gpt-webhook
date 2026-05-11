@@ -895,7 +895,13 @@ def _normalize_existing_injury_entries(
     for parsed_entry in parsed_entries:
         entry = dict(parsed_entry)
         phrase = str(entry.get("original_phrase") or "")
-        base_severity = INJURY_TYPE_SEVERITY.get(entry.get("injury_type") or "", "moderate")
+        rehab_type = (
+            str(entry.get("rehab_type") or "").strip()
+            or str(entry.get("injury_type") or "").strip()
+            or "unspecified"
+        )
+        entry["rehab_type"] = rehab_type
+        base_severity = INJURY_TYPE_SEVERITY.get(rehab_type, "moderate")
         phrase_severity, phrase_hits = normalize_severity(phrase)
         severity_map = {"low": "mild", "moderate": "moderate", "high": "severe"}
         mapped_severity = severity_map.get(phrase_severity, "moderate")
@@ -910,7 +916,7 @@ def _normalize_existing_injury_entries(
     seen_locations = set()
     unique_entries = []
     for entry in normalized_entries:
-        itype = entry.get("injury_type")
+        itype = entry.get("rehab_type") or entry.get("injury_type")
         loc = entry.get("canonical_location")
         laterality = entry.get("laterality")
         if (itype, loc, laterality) in seen_pairs:
@@ -940,7 +946,7 @@ def build_coach_review_entries(
     severity_rank = {"moderate": 1, "severe": 2}
     region_entries: dict[str, dict] = {}
     for entry in entries:
-        itype = entry.get("injury_type")
+        itype = entry.get("rehab_type") or entry.get("injury_type")
         loc = entry.get("canonical_location")
         laterality = entry.get("laterality")
         severity = entry.get("severity") or INJURY_TYPE_SEVERITY.get(itype or "", "moderate")
