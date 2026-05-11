@@ -241,6 +241,10 @@ def test_build_stage2_handoff_text_includes_priority_focus_guidance_without_raw_
                 "secondary_weak_areas": ["gas_tank"],
                 "goal_weakness_collisions": ["power"],
                 "collision_detail": "Power drops when tired",
+                "collision_details": [
+                    {"tag": "power", "label": "Power", "detail": "Power drops when tired"},
+                    {"tag": "conditioning", "label": "Conditioning", "detail": "Late-round fatigue"},
+                ],
             },
         },
     )
@@ -250,5 +254,28 @@ def test_build_stage2_handoff_text_includes_priority_focus_guidance_without_raw_
     assert "secondary goals" in handoff.lower()
     assert "secondary weak areas" in handoff.lower()
     assert "Power drops when tired" in handoff
+    assert "preserve each clarification" in handoff.lower()
     assert "priority_primary_goal_match" not in handoff
     assert "priority_collision_goal_weakness" not in handoff
+
+
+def test_build_stage2_handoff_text_keeps_structured_collision_details_in_packet():
+    handoff = build_stage2_handoff_text(
+        stage2_payload={"athlete_model": {"sport": "boxing"}},
+        plan_text="Week 1",
+        planning_brief={
+            "athlete_snapshot": {"sport": "boxing"},
+            "priority_focus": {
+                "primary_goal": "power",
+                "primary_weak_area": "power",
+                "goal_weakness_collisions": ["power", "conditioning"],
+                "collision_detail": "Power drops when tired",
+                "collision_details": [
+                    {"tag": "power", "label": "Power", "detail": "Power drops when tired"},
+                    {"tag": "conditioning", "label": "Conditioning", "detail": "Late-round fatigue"},
+                ],
+            },
+        },
+    )
+
+    assert '"collision_details":[{"tag":"power","label":"Power","detail":"Power drops when tired"},{"tag":"conditioning","label":"Conditioning","detail":"Late-round fatigue"}]' in handoff

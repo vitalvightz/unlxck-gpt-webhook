@@ -186,25 +186,36 @@ function getClarificationOptions(
   return GENERIC_CLARIFICATION_OPTIONS;
 }
 
-function sanitizeCollisionMetadata(form: PlanRequest): Pick<PlanRequest, "goal_weakness_collision_detail" | "goal_weakness_collision_tags"> {
+function sanitizeCollisionMetadata(form: PlanRequest): Pick<PlanRequest, "goal_weakness_collision_detail" | "goal_weakness_collision_tags" | "goal_weakness_collision_details"> {
   const overlaps = getGoalWeakAreaOverlaps(form.key_goals, form.weak_areas);
   if (!overlaps.length) {
     return {
       goal_weakness_collision_detail: "",
       goal_weakness_collision_tags: [],
+      goal_weakness_collision_details: [],
     };
   }
 
-  const clarificationOptions = getClarificationOptions(
-    overlaps[0].normalizedTag,
-    form.athlete.technical_style,
-    form.athlete.tactical_style,
-  );
-  const currentDetail = form.goal_weakness_collision_detail?.trim() ?? "";
+  const currentDetailMap = new Map((form.goal_weakness_collision_details ?? [])
+    .map((entry) => [normalizePriorityOverlapValue(entry.tag), entry.detail?.trim() ?? ""]));
+  const nextDetails = overlaps.map((overlap) => {
+    const options = getClarificationOptions(overlap.normalizedTag, form.athlete.technical_style, form.athlete.tactical_style);
+    const detail = currentDetailMap.get(overlap.normalizedTag) ?? "";
+    return {
+      tag: overlap.tag,
+      label: overlap.label,
+      detail: options.includes(detail) ? detail : "",
+    };
+  });
+
+  const primaryOptions = getClarificationOptions(overlaps[0].normalizedTag, form.athlete.technical_style, form.athlete.tactical_style);
+  const primaryDetail = nextDetails[0]?.detail ?? "";
+  const currentSingularDetail = form.goal_weakness_collision_detail?.trim() ?? "";
 
   return {
-    goal_weakness_collision_detail: clarificationOptions.includes(currentDetail) ? currentDetail : "",
+    goal_weakness_collision_detail: primaryOptions.includes(currentSingularDetail) ? currentSingularDetail : primaryDetail,
     goal_weakness_collision_tags: overlaps.map((overlap) => overlap.tag),
+    goal_weakness_collision_details: nextDetails,
   };
 }
 
@@ -903,10 +914,10 @@ export function PlanIntakeForm() {
       const currentTags = current.goal_weakness_collision_tags ?? [];
       const nextTags = collisionMetadata.goal_weakness_collision_tags ?? [];
       const tagsChanged = currentTags.join("|") !== nextTags.join("|");
-      const detailChanged =
-        (current.goal_weakness_collision_detail ?? "") !== collisionMetadata.goal_weakness_collision_detail;
+      const detailChanged = (current.goal_weakness_collision_detail ?? "") !== collisionMetadata.goal_weakness_collision_detail;
+      const detailsChanged = JSON.stringify(current.goal_weakness_collision_details ?? []) !== JSON.stringify(collisionMetadata.goal_weakness_collision_details ?? []);
 
-      if (!tagsChanged && !detailChanged) {
+      if (!tagsChanged && !detailChanged && !detailsChanged) {
         return current;
       }
 
@@ -920,6 +931,7 @@ export function PlanIntakeForm() {
     form.athlete.technical_style,
     form.goal_weakness_collision_detail,
     form.goal_weakness_collision_tags,
+    form.goal_weakness_collision_details,
     form.key_goals,
     form.weak_areas,
     hydrated,
@@ -1479,21 +1491,12 @@ export function PlanIntakeForm() {
   const selectedWeakAreaLabels = getOptionLabels(WEAK_AREA_OPTIONS, form.weak_areas);
   const goalWeakAreaOverlaps = getGoalWeakAreaOverlaps(form.key_goals, form.weak_areas);
   const primaryOverlap = goalWeakAreaOverlaps[0] ?? null;
-  const overlapClarificationOptions = primaryOverlap
-    ? getClarificationOptions(
-        primaryOverlap.normalizedTag,
-        form.athlete.technical_style,
-        form.athlete.tactical_style,
-      )
-    : [];
   const overlapClarificationPrompt = goalWeakAreaOverlaps.length > 1
-    ? "You selected multiple qualities as both goals and weak areas. What is the main issue you want clarified?"
+    ? "You selected multiple qualities as both goals and weak areas. Clarify each one if useful."
     : primaryOverlap
       ? `You selected ${primaryOverlap.label} as both a goal and a weak area. What does that mean?`
       : "";
-  const overlapReviewLabel = goalWeakAreaOverlaps.length > 1
-    ? "Multiple qualities"
-    : primaryOverlap?.label ?? "";
+  const overlapReviewLabel = goalWeakAreaOverlaps.length > 1 ? "Multiple qualities" : goalWeakAreaOverlaps[0]?.label ?? "";
   const primaryGoalLabel = getOptionLabel(KEY_GOAL_OPTIONS, form.primary_goal ?? "") || "Not selected";
   const primaryWeakAreaLabel = getOptionLabel(WEAK_AREA_OPTIONS, form.primary_weak_area ?? "") || "Not selected";
   const secondaryGoalLabels = getOptionLabels(KEY_GOAL_OPTIONS, form.key_goals.filter((goal) => goal !== form.primary_goal));
@@ -2470,7 +2473,7 @@ export function PlanIntakeForm() {
                 <p className="muted">Pick up to 2 weak areas.</p>
               </article>
               )}
-              {primaryOverlap ? (
+              {goalWeakAreaOverlaps.length ? (
                 <article className="step-card priority-clarification-card">
                   <div className="form-section-header">
                     <p className="kicker">Clarification</p>
@@ -2481,22 +2484,37 @@ export function PlanIntakeForm() {
                     <p className="muted">Optional. This helps capture intent without changing your selected goal or weak area.</p>
                   </div>
                   <div className="priority-clarification-options" role="radiogroup" aria-label="Goal and weak area clarification">
-                    {overlapClarificationOptions.map((option) => {
-                      const checked = form.goal_weakness_collision_detail === option;
+                    {goalWeakAreaOverlaps.map((overlap, overlapIndex) => {
+                      const overlapClarificationOptions = getClarificationOptions(overlap.normalizedTag, form.athlete.technical_style, form.athlete.tactical_style);
+                      const selectedDetail = form.goal_weakness_collision_details?.[overlapIndex]?.detail ?? "";
                       return (
-                        <label
-                          key={option}
-                          className={`priority-clarification-option${checked ? " priority-clarification-option-selected" : ""}`}
-                        >
-                          <input
-                            type="radio"
-                            name="goalWeaknessCollisionDetail"
-                            value={option}
-                            checked={checked}
-                            onChange={() => updateField("goal_weakness_collision_detail", option)}
-                          />
-                          <span>{option}</span>
-                        </label>
+                        <div key={overlap.tag} className="field">
+                          <p><strong>{overlap.label}</strong></p>
+                          {overlapClarificationOptions.map((option) => {
+                            const checked = selectedDetail === option;
+                            return (
+                              <label
+                                key={`${overlap.tag}-${option}`}
+                                className={`priority-clarification-option${checked ? " priority-clarification-option-selected" : ""}`}
+                              >
+                                <input
+                                  type="radio"
+                                  name={`goalWeaknessCollisionDetail-${overlap.tag}`}
+                                  value={option}
+                                  checked={checked}
+                                  onChange={() => {
+                                    const next = [...(form.goal_weakness_collision_details ?? [])];
+                                    const existing = next[overlapIndex] ?? { tag: overlap.tag, label: overlap.label, detail: "" };
+                                    next[overlapIndex] = { ...existing, tag: overlap.tag, label: overlap.label, detail: option };
+                                    updateField("goal_weakness_collision_details", next);
+                                    if (overlapIndex === 0) updateField("goal_weakness_collision_detail", option);
+                                  }}
+                                />
+                                <span>{option}</span>
+                              </label>
+                            );
+                          })}
+                        </div>
                       );
                     })}
                   </div>

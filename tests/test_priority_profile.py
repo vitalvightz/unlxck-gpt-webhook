@@ -317,3 +317,47 @@ def test_summary_helper_collision_case_uses_detail():
     assert summary["goal_weakness_collisions"] == ["power"]
     assert summary["collision_detail"] == "Power drops when tired"
     assert "priority collision" in str(summary["focus_instruction"]).lower()
+
+
+def test_summary_helper_includes_all_structured_collision_details():
+    profile = PriorityProfile(
+        primary_goal="power",
+        secondary_goals=["conditioning"],
+        primary_weak_area="power",
+        secondary_weak_areas=["gas_tank"],
+        all_goals=["power", "conditioning"],
+        all_weak_areas=["power", "gas_tank"],
+        goal_weakness_collisions=["power", "conditioning"],
+        primary_goal_weakness_collision=True,
+        primary_collision_tag="power",
+    )
+
+    summary = describe_priority_focus(
+        profile,
+        collision_details=[
+            {"tag": "power", "label": "Power", "detail": "Power drops when tired"},
+            {"tag": "conditioning", "label": "Conditioning", "detail": "Late-round fatigue"},
+        ],
+    )
+
+    assert summary["collision_detail"] == "Power drops when tired"
+    assert summary["collision_details"] == [
+        {"tag": "power", "label": "Power", "detail": "Power drops when tired"},
+        {"tag": "conditioning", "label": "Conditioning", "detail": "Late-round fatigue"},
+    ]
+
+
+def test_summary_helper_sanitizes_malformed_collision_details():
+    profile = PriorityProfile(primary_goal="power", primary_weak_area="power")
+
+    summary = describe_priority_focus(
+        profile,
+        collision_details=[
+            "bad",  # type: ignore[list-item]
+            {"tag": "", "detail": ""},
+            {"tag": " power ", "detail": " Valid "},
+        ],
+    )
+
+    assert summary["collision_details"] == [{"tag": "power", "label": "", "detail": "Valid"}]
+    assert summary["collision_detail"] == "Valid"
