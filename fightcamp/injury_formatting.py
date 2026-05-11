@@ -148,6 +148,71 @@ def parse_injury_entry(phrase: str) -> dict[str, str | None | list[str]] | None:
     }
 
 
+def _extract_injury_from_restriction_context(phrase: str) -> dict[str, str | None | list[str]] | None:
+    """Extract a real injury from a mixed restriction phrase when explicit injury context exists."""
+    original_phrase = str(phrase or "").strip()
+    if not original_phrase:
+        return None
+
+    normalized = normalize_lower_text(original_phrase)
+    has_connector = any(token in normalized for token in (" because ", " due to ", " since ", " when ", " with "))
+    has_injury_cue = any(
+        cue in normalized
+        for cue in (
+            " pain",
+            " soreness",
+            " sore",
+            " stiffness",
+            " stiff",
+            " tightness",
+            " tight",
+            " swelling",
+            " sprain",
+            " strain",
+            " impingement",
+            " tendon",
+            " tendinitis",
+            " tendonitis",
+            " instability",
+        )
+    )
+    if not (has_connector and has_injury_cue):
+        return None
+
+    context_phrase = original_phrase
+    for splitter in (" because ", " due to ", " since ", " when ", " with "):
+        if splitter in normalized:
+            idx = normalized.index(splitter)
+            context_phrase = original_phrase[idx + len(splitter):].strip()
+            break
+
+    parsed = parse_injury_entry(context_phrase)
+    if parsed is None:
+        scored = score_injury_phrase(context_phrase)
+        location = scored.get("location")
+        if location == "unspecified":
+            location = None
+        injury_type = str(scored.get("injury_type") or "").strip() or "unspecified"
+        if location:
+            laterality = extract_laterality(original_phrase)
+            parsed = {
+                "injury_type": injury_type,
+                "rehab_type": str(scored.get("rehab_type")),
+                "triage_category": str(scored.get("triage_category") or ""),
+                "canonical_location": location,
+                "side": laterality,
+                "laterality": laterality,
+                "original_phrase": original_phrase,
+                "flags": list(scored.get("flags") or []),
+            }
+    if parsed is None:
+        parsed = parse_injury_entry(original_phrase)
+    if parsed is None or not parsed.get("canonical_location"):
+        return None
+
+    return parsed
+
+
 def parse_injuries_and_restrictions(
     text: str,
 ) -> tuple[list[dict[str, str | None | list[str]]], list[ParsedRestriction]]:
@@ -178,6 +243,9 @@ def parse_injuries_and_restrictions(
                 if restriction is not None:
                     logger.info(f"[restriction-parse] parsed={restriction!r}")
                     restrictions.append(restriction)
+                    injury = _extract_injury_from_restriction_context(phrase)
+                    if injury is not None:
+                        injuries.append(injury)
             continue
 
         for phrase in split_injury_text(sentence):
@@ -186,6 +254,9 @@ def parse_injuries_and_restrictions(
             if restriction is not None:
                 logger.info(f"[restriction-parse] parsed={restriction!r}")
                 restrictions.append(restriction)
+                injury = _extract_injury_from_restriction_context(phrase)
+                if injury is not None:
+                    injuries.append(injury)
                 continue
 
             # Otherwise, parse as injury (legacy behavior)

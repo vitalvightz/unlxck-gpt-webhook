@@ -801,7 +801,7 @@ INJURY_REGION_KEYWORDS = {
     "shin": ["shin splints", "tibial", "shin", "lower leg"],
     "calf": ["calf", "soleus"],
     "achilles": ["achilles"],
-    "ankle": ["ankle", "ankle sprain", "instability"],
+    "ankle": ["ankle", "ankle sprain"],
     "foot": ["foot", "plantar", "metatarsal"],
     "toe": ["toe"],
 }
