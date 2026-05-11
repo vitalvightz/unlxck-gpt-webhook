@@ -235,11 +235,14 @@ def _phrase_in_text(phrase: str, text: str) -> bool:
 
 
 STRUCTURAL_RED_FLAG_MAP: dict[str, tuple[str, ...]] = {
+    # Dislocation / subluxation
     "partial dislocation": ("structural_red_flag", "suspected_dislocation", "urgent"),
     "dislocation": ("structural_red_flag", "suspected_dislocation", "urgent"),
     "dislocated": ("structural_red_flag", "suspected_dislocation", "urgent"),
     "subluxation": ("structural_red_flag", "suspected_dislocation", "urgent"),
     "sublux": ("structural_red_flag", "suspected_dislocation", "urgent"),
+
+    # Ligament tear / rupture
     "acl tear": ("structural_red_flag", "suspected_ligament_tear", "urgent"),
     "mcl tear": ("structural_red_flag", "suspected_ligament_tear", "urgent"),
     "lcl tear": ("structural_red_flag", "suspected_ligament_tear", "urgent"),
@@ -248,11 +251,23 @@ STRUCTURAL_RED_FLAG_MAP: dict[str, tuple[str, ...]] = {
     "torn ligament": ("structural_red_flag", "suspected_ligament_tear", "urgent"),
     "ruptured ligament": ("structural_red_flag", "suspected_ligament_tear", "urgent"),
     "blown ligament": ("structural_red_flag", "suspected_ligament_tear", "urgent"),
+
+    # Tendon tear / rupture
     "tendon tear": ("structural_red_flag", "suspected_tendon_rupture", "urgent"),
     "torn tendon": ("structural_red_flag", "suspected_tendon_rupture", "urgent"),
     "tendon rupture": ("structural_red_flag", "suspected_tendon_rupture", "urgent"),
     "ruptured tendon": ("structural_red_flag", "suspected_tendon_rupture", "urgent"),
-    "muscle rupture": ("structural_red_flag", "suspected_tendon_rupture", "urgent"),
+    "tendon snap": ("structural_red_flag", "suspected_tendon_rupture", "urgent"),
+    "tendon snapped": ("structural_red_flag", "suspected_tendon_rupture", "urgent"),
+    "felt tendon snap": ("structural_red_flag", "suspected_tendon_rupture", "urgent"),
+    "felt tendon pop": ("structural_red_flag", "suspected_tendon_rupture", "urgent"),
+    "tendon popped": ("structural_red_flag", "suspected_tendon_rupture", "urgent"),
+
+    # Muscle rupture
+    "muscle rupture": ("structural_red_flag", "suspected_muscle_rupture", "urgent"),
+    "muscle ruptured": ("structural_red_flag", "suspected_muscle_rupture", "urgent"),
+
+    # Bone
     "fracture": ("structural_red_flag", "suspected_fracture", "urgent"),
     "broken bone": ("structural_red_flag", "suspected_fracture", "urgent"),
 }
@@ -291,16 +306,14 @@ INJURY_SYNONYM_MAP = {
 
     # Muscle/Tendon - every possible pull/tear description
     "strain": [
-        "pull", "pulled", "tug", "tugged", "rip", "ripped",
-        "cramp", "cramping", "charley horse", "seize", "seized",
-        "lock", "locked", "knot", "knotted", "ball", "balled", "grab", "grabbed",
-        "pinged", "twinge", "twinging", "sharp pain", "acute pain",
-        "muscle pop", "muscle snap", "muscle went",
-        "tendon pop", "tendon snap",
-        "strain", "strained", "muscle failure",
-        "overworked", "worked too hard"
-    ],
-
+    "pull", "pulled", "tug", "tugged", "rip", "ripped",
+    "cramp", "cramping", "charley horse", "seize", "seized",
+    "lock", "locked", "knot", "knotted", "ball", "balled", "grab", "grabbed",
+    "pinged", "twinge", "twinging", "sharp pain", "acute pain",
+    "muscle pop", "muscle snap", "muscle went",
+    "strain", "strained", "muscle failure",
+    "overworked", "worked too hard"
+],
     # Tightness - every stiffness phrase
     "tightness": [
         "tight", "tightness", "glued",
