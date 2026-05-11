@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
+import json
 import re
 from typing import Literal
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
@@ -319,6 +320,7 @@ _PLAN_FIELD_LABELS = {
     "primary_weak_area": "Primary weak area",
     "goal_weakness_collision_detail": "Goal/weak-area collision detail",
     "goal_weakness_collision_tags": "Goal/weak-area collision tags",
+    "goal_weakness_collision_details": "Goal/weak-area collision details",
     "training_preference": "Do you prefer certain training styles?",
     "mental_block": "Do you struggle with any mental blockers or mindset challenges?",
     "notes": "Are there any parts of your previous plan you hated or loved?",
@@ -334,6 +336,37 @@ def _extract_fields(data: dict) -> list[dict]:
 
 def _get_plan_field_values(fields: list[dict]) -> dict[str, str]:
     return {name: get_value(label, fields) for name, label in _PLAN_FIELD_LABELS.items()}
+
+
+def _extract_goal_weakness_collision_details(fields: list[dict]) -> list[dict[str, str]]:
+    field = _find_field("Goal/weak-area collision details", fields)
+    if not isinstance(field, dict):
+        return []
+
+    raw_value = field.get("value")
+    parsed_value: object = raw_value
+    if isinstance(raw_value, str):
+        normalized = raw_value.strip()
+        if not normalized:
+            return []
+        try:
+            parsed_value = json.loads(normalized)
+        except (TypeError, ValueError, json.JSONDecodeError):
+            return []
+
+    if not isinstance(parsed_value, list):
+        return []
+
+    sanitized: list[dict[str, str]] = []
+    for entry in parsed_value:
+        if not isinstance(entry, dict):
+            continue
+        tag = str(entry.get("tag", "")).strip()
+        label = str(entry.get("label", "")).strip()
+        detail = str(entry.get("detail", "")).strip()
+        if tag or detail:
+            sanitized.append({"tag": tag, "label": label, "detail": detail})
+    return sanitized
 
 
 @dataclass(frozen=True)
@@ -601,6 +634,7 @@ class PlanInput:
     days_until_fight: int | None
     goal_weakness_collision_detail: str | None = None
     goal_weakness_collision_tags: list[str] = field(default_factory=list)
+    goal_weakness_collision_details: list[dict[str, str]] = field(default_factory=list)
     guided_injuries: list[GuidedInjury] = field(default_factory=list)
     parsing_metadata: dict[str, dict[str, str]] = field(default_factory=dict)
 
@@ -657,6 +691,7 @@ class PlanInput:
             primary_goal = key_goals_list[0] if key_goals_list else ""
         if not primary_weak_area or primary_weak_area not in weak_areas_list:
             primary_weak_area = weak_areas_list[0] if weak_areas_list else ""
+        goal_weakness_collision_details = _extract_goal_weakness_collision_details(fields)
 
         # Validation step (planning-critical contract).
         if next_fight_date:
@@ -728,6 +763,7 @@ class PlanInput:
             "primary_weak_area": primary_weak_area,
             "goal_weakness_collision_detail": goal_weakness_collision_detail,
             "goal_weakness_collision_tags": goal_weakness_collision_tags,
+            "goal_weakness_collision_details": goal_weakness_collision_details,
         }
 
         return cls(

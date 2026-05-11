@@ -187,7 +187,8 @@ def describe_priority_focus(
     *,
     collision_detail: str = "",
     collision_tags: list[str] | None = None,
-) -> dict[str, str | list[str]]:
+    collision_details: list[dict[str, str]] | None = None,
+) -> dict[str, str | list[str] | list[dict[str, str]]]:
     resolved_collisions = list(profile.goal_weakness_collisions)
     if collision_tags:
         normalized_profile_collisions = {
@@ -203,7 +204,24 @@ def describe_priority_focus(
             if normalized and normalized in normalized_profile_collisions and clean_tag not in resolved_collisions:
                 resolved_collisions.append(clean_tag)
 
+    sanitized_collision_details: list[dict[str, str]] = []
+    if isinstance(collision_details, list):
+        for entry in collision_details:
+            if not isinstance(entry, dict):
+                continue
+            tag = str(entry.get("tag", "")).strip()
+            label = str(entry.get("label", "")).strip()
+            detail = str(entry.get("detail", "")).strip()
+            if tag or detail:
+                sanitized_collision_details.append({"tag": tag, "label": label, "detail": detail})
+
     collision_detail = str(collision_detail or "").strip()
+    if not collision_detail:
+        for entry in sanitized_collision_details:
+            candidate_detail = str(entry.get("detail", "")).strip()
+            if candidate_detail:
+                collision_detail = candidate_detail
+                break
     has_primary_collision = bool(
         profile.primary_goal
         and profile.primary_weak_area
@@ -242,5 +260,6 @@ def describe_priority_focus(
         "secondary_weak_areas": profile.secondary_weak_areas,
         "goal_weakness_collisions": resolved_collisions,
         "collision_detail": collision_detail,
+        "collision_details": sanitized_collision_details,
         "focus_instruction": focus_instruction,
     }

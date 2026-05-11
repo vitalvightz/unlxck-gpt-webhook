@@ -1,4 +1,5 @@
 ﻿from datetime import datetime
+from types import SimpleNamespace
 
 import fightcamp.stage2_planning_brief as stage2_planning_brief_module
 from fightcamp.stage2_payload import (
@@ -48,6 +49,48 @@ def _build_brief(athlete_model: dict, *, restrictions: list[dict] | None = None,
         omission_ledger={},
         rewrite_guidance={},
     )
+
+
+def test_build_planning_brief_includes_full_collision_details_in_priority_focus():
+    athlete_model = {
+        "sport": "boxing",
+        "status": "amateur",
+        "rounds_format": "3x3",
+        "camp_length_weeks": 6,
+        "days_until_fight": 30,
+        "key_goals": ["power", "conditioning"],
+        "weak_areas": ["power", "conditioning"],
+        "primary_goal": "power",
+        "primary_weak_area": "power",
+    }
+    plan_input = SimpleNamespace(
+        key_goals="power, conditioning",
+        weak_areas="power, conditioning",
+        primary_goal="power",
+        primary_weak_area="power",
+        goal_weakness_collision_tags=["power", "conditioning"],
+        goal_weakness_collision_detail="Power drops when tired",
+        goal_weakness_collision_details=[
+            {"tag": "power", "label": "Power", "detail": "Power drops when tired"},
+            {"tag": "conditioning", "label": "Conditioning", "detail": "Late-round fatigue"},
+        ],
+    )
+
+    brief = build_planning_brief(
+        athlete_model=athlete_model,
+        restrictions=[],
+        phase_briefs={"SPP": {"objective": "obj", "emphasize": [], "deprioritize": [], "risk_flags": [], "selection_guardrails": {}}},
+        candidate_pools={"SPP": {"strength_slots": [], "conditioning_slots": [], "rehab_slots": []}},
+        omission_ledger={},
+        rewrite_guidance={},
+        plan_input=plan_input,
+    )
+
+    assert brief["priority_focus"]["collision_detail"] == "Power drops when tired"
+    assert brief["priority_focus"]["collision_details"] == [
+        {"tag": "power", "label": "Power", "detail": "Power drops when tired"},
+        {"tag": "conditioning", "label": "Conditioning", "detail": "Late-round fatigue"},
+    ]
 
 
 
