@@ -49,6 +49,7 @@ from .priority_profile import (
     is_priority_collision_tag,
     weakness_priority_weight,
 )
+from .priority_clarification_tags import derive_clarification_tags
 
 TAPER_AVOID_TAGS = {
     "contrast_pairing",
@@ -69,6 +70,8 @@ CONDITIONING_SECONDARY_WEAKNESS_BONUS = 1.25
 CONDITIONING_MAX_COLLISION_SAFE_PRIORITY_BONUS = 5.0
 CONDITIONING_PRIMARY_COLLISION_BONUS = 3.0
 CONDITIONING_SECONDARY_COLLISION_BONUS = 1.5
+CONDITIONING_CLARIFICATION_TAG_BONUS = 0.75
+CONDITIONING_MAX_CLARIFICATION_TAG_BONUS = 2.0
 
 
 def _conditioning_goal_priority_bonus(tags: list[str], priority_profile) -> float:
@@ -155,6 +158,27 @@ def _add_conditioning_priority_reason_codes(
     for tag in list(dict.fromkeys(matched_goal_tags + matched_weak_tags)):
         if is_priority_collision_tag(tag, priority_profile):
             reasons["reason_codes"].append(f"priority_collision_goal_weakness:{tag}")
+
+
+def _conditioning_resolve_derived_clarification_tags(flags: dict) -> list[str]:
+    priority_focus = flags.get("priority_focus") or {}
+    focus_tags = normalize_tags(priority_focus.get("derived_clarification_tags") or [])
+    if focus_tags:
+        return list(dict.fromkeys(focus_tags))
+
+    collision_details = flags.get("goal_weakness_collision_details") or []
+    derived_tags = normalize_tags(derive_clarification_tags(collision_details))
+    return list(dict.fromkeys(derived_tags))
+
+
+def _conditioning_clarification_bonus(tags: list[str], derived_clarification_tags: list[str]) -> tuple[float, list[str]]:
+    if not derived_clarification_tags:
+        return 0.0, []
+    hits = sorted(set(tags).intersection(derived_clarification_tags))
+    if not hits:
+        return 0.0, []
+    bonus = min(len(hits) * CONDITIONING_CLARIFICATION_TAG_BONUS, CONDITIONING_MAX_CLARIFICATION_TAG_BONUS)
+    return bonus, hits
 
 _MIXED_SYSTEM_LOGGED: set[tuple[str, str]] = set()
 _UNKNOWN_SYSTEM_LOGGED: set[tuple[str, str]] = set()
@@ -1690,6 +1714,7 @@ def generate_conditioning_block(flags):
     goal_list = [g.lower() for g in goals]
     weak_list = [w.lower() for w in weaknesses]
     weak_tags = expand_tags(weaknesses, WEAKNESS_TAG_MAP)
+    derived_clarification_tags = _conditioning_resolve_derived_clarification_tags(flags)
     preferred_exercise_names = {
         str(name).strip().lower()
         for name in clean_list(flags.get("preferred_exercise_names", []))
@@ -1913,6 +1938,8 @@ def generate_conditioning_block(flags):
             matched_weak_tags,
             priority_profile,
         )
+        clarification_bonus, clarification_hits = _conditioning_clarification_bonus(tags, derived_clarification_tags)
+        base_score += clarification_bonus
         base_score += 0.75 * min(num_style, 2)
         base_score += 1.0 * min(num_format, 1)
 
@@ -1977,11 +2004,15 @@ def generate_conditioning_block(flags):
             "penalties": penalty,
             "restriction_hits": len(matched_restrictions),
             "boxing_aerobic_preference": round(boxer_aerobic_adjustment, 4),
+            "clarification_tag_hits": clarification_hits,
+            "clarification_bonus": round(clarification_bonus, 4),
             "reason_codes": list(late_eval["reason_codes"]),
             "late_window_adjustment": late_eval["adjustment"],
             "final_score": round(total_score, 4),
         }
         _add_conditioning_priority_reason_codes(reasons, matched_goal_tags, matched_weak_tags, priority_profile)
+        for tag in clarification_hits:
+            reasons["reason_codes"].append(f"priority_clarification_tag_match:{tag}")
         if preferred_name_match:
             reasons["reason_codes"].append(f"preferred_exercise_name_match:+{PREFERRED_EXERCISE_NAME_BOOST:.1f}")
 
@@ -2126,6 +2157,8 @@ def generate_conditioning_block(flags):
             matched_weak_tags,
             priority_profile,
         )
+        clarification_bonus, clarification_hits = _conditioning_clarification_bonus(tags, derived_clarification_tags)
+        score += clarification_bonus
         preferred_name_match = str(d.get("name", "")).strip().lower() in preferred_exercise_names
         if preferred_name_match:
             score += PREFERRED_EXERCISE_NAME_BOOST
@@ -2182,11 +2215,15 @@ def generate_conditioning_block(flags):
             "penalties": penalty,
             "restriction_hits": len(matched_restrictions),
             "boxing_aerobic_preference": round(boxer_aerobic_adjustment, 4),
+            "clarification_tag_hits": clarification_hits,
+            "clarification_bonus": round(clarification_bonus, 4),
             "reason_codes": list(late_eval["reason_codes"]),
             "late_window_adjustment": late_eval["adjustment"],
             "final_score": round(score, 4),
         }
         _add_conditioning_priority_reason_codes(reasons, matched_goal_tags, matched_weak_tags, priority_profile)
+        for tag in clarification_hits:
+            reasons["reason_codes"].append(f"priority_clarification_tag_match:{tag}")
         if preferred_name_match:
             reasons["reason_codes"].append(f"preferred_exercise_name_match:+{PREFERRED_EXERCISE_NAME_BOOST:.1f}")
 
