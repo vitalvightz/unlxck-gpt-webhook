@@ -9,9 +9,7 @@ def _normalize_detail(value: str) -> str:
 
 
 def _normalize_entry_tag(value: str) -> str:
-    normalized = str(value or "").strip().lower()
-    normalized = re.sub(r"[-\s]+", "_", normalized)
-    return normalized
+    return normalize_tag(value) or ""
 
 
 CLARIFICATION_DETAIL_TAG_MAP: dict[str, list[str]] = {
