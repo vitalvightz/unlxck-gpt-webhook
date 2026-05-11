@@ -62,6 +62,17 @@ _HIGH_RISK_CATEGORY_ROUTE: dict[str, str] = {
     "septic_joint_or_bone_infection": MEDICAL_HOLD,
 }
 
+TRIAGE_CATEGORY_ALIASES: dict[str, str] = {
+    "tendon_rupture": "tendon_rupture_or_avulsion",
+    "ligament_tear": "complete_ligament_tear",
+    "mcl_tear": "complete_ligament_tear",
+    "lcl_tear": "complete_ligament_tear",
+    "pcl_tear": "pcl_tear",
+    "acl_tear": "acl_tear",
+    "nerve_involvement": "neurological_symptoms",
+    "infection": "septic_joint_or_bone_infection",
+}
+
 _CRITICAL_MEDICAL_HOLD_RED_FLAGS = {
     "loss_of_consciousness",
     "coughing_blood",
@@ -202,6 +213,22 @@ def _normalize_guided_severity_token(value: str) -> str:
 
 def _normalized_text(value: Any) -> str:
     return str(value or "").strip().lower()
+
+
+def normalize_triage_category(category: str | None) -> str:
+    normalized = str(category or "").strip().lower()
+    return TRIAGE_CATEGORY_ALIASES.get(normalized, normalized)
+
+
+def _normalize_triage_categories(categories: set[str]) -> tuple[set[str], set[str]]:
+    normalized_categories: set[str] = set()
+    raw_aliases: set[str] = set()
+    for category in categories:
+        normalized_category = normalize_triage_category(category)
+        normalized_categories.add(normalized_category)
+        if normalized_category != category:
+            raw_aliases.add(category)
+    return normalized_categories, raw_aliases
 
 
 def _has_injury_location_context(text: str) -> bool:
@@ -1153,11 +1180,14 @@ def triage_injuries(plan_input: PlanInput) -> InjuryTriageResult:
 
     safety_context_text = cleaned_combined_text
 
-    matched_categories = set(features.high_risk_diagnoses)
+    routing_reasons: set[str] = set()
+    matched_categories, raw_alias_categories = _normalize_triage_categories(set(features.high_risk_diagnoses))
+    for raw_category in sorted(raw_alias_categories):
+        matched_categories.add(raw_category)
+        routing_reasons.add(f"triage_category_alias:{raw_category}->{normalize_triage_category(raw_category)}")
     red_flags = set(features.red_flags)
     urgent_flags = set(features.urgent_flags)
     clinician_restriction_signals = set(features.clinician_restriction_signals)
-    routing_reasons: set[str] = set()
 
     _apply_high_risk_mapping_reasons(
         matched_categories=matched_categories,
