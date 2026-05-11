@@ -322,7 +322,7 @@ def detect_structural_red_flags(text: str) -> list[str]:
 
 def detect_triage_category(text: str) -> str:
     """Return deterministic triage category for structural/urgent injury phrases."""
-    cleaned = " ".join(str(text or "").lower().strip().split())
+    cleaned = text
     if not cleaned:
         return ""
 
