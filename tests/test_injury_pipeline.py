@@ -571,3 +571,38 @@ def test_generate_rehab_support_bundle_counts_guided_only_parsed_injury_as_injur
 
     assert has_injuries is True
     assert support_notes.startswith("support for")
+
+
+def test_instability_beats_sprain_with_giving_way_language():
+    result = score_injury_phrase("ankle sprain with giving way")
+    assert result["injury_type"] == "instability"
+    assert result["location"] == "ankle"
+    assert result["triage_category"] == ""
+
+
+def test_impingement_clicking_alone_is_not_confident():
+    shoulder_clicking = score_injury_phrase("shoulder clicking no pain")
+    hip_clicking = score_injury_phrase("hip clicking no pain")
+    assert shoulder_clicking["injury_type"] != "impingement"
+    assert hip_clicking["injury_type"] != "impingement"
+
+
+def test_impingement_gate_hints_allow_classification():
+    shoulder_pinching = score_injury_phrase("shoulder pinching when raising arm")
+    hip_catching = score_injury_phrase("hip catching with painful range")
+    assert shoulder_pinching["injury_type"] == "impingement"
+    assert hip_catching["injury_type"] == "impingement"
+
+
+def test_soreness_stiffness_tightness_beat_generic_pain_when_context_is_clear():
+    assert score_injury_phrase("quad soreness after training")["injury_type"] == "soreness"
+    assert score_injury_phrase("knee stiff in the morning")["injury_type"] == "stiffness"
+    assert score_injury_phrase("hamstring tight and loosens after warmup")["injury_type"] == "tightness"
+    assert score_injury_phrase("shoulder pain")["injury_type"] == "pain"
+
+
+def test_tendonitis_requires_tendon_overuse_context_to_beat_pain():
+    assert score_injury_phrase("patellar tendon pain recurring after jumping")["injury_type"] == "tendonitis"
+    assert score_injury_phrase("achilles tendinopathy")["injury_type"] == "tendonitis"
+    assert score_injury_phrase("knee pain")["injury_type"] == "pain"
+    assert score_injury_phrase("shoulder pain")["injury_type"] == "pain"

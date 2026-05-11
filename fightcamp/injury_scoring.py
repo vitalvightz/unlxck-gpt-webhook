@@ -4,8 +4,16 @@ import re
 from typing import Dict, List, TypedDict
 
 from .injury_synonyms import (
+    EXCLUSIVE_HINTS,
+    IMPINGEMENT_GATE_HINTS,
+    IMPINGEMENT_LOW_SPECIFICITY,
     INJURY_SYNONYM_MAP,
     LOCATION_MAP,
+    SORENESS_HINTS,
+    STIFFNESS_HINTS,
+    TENDONITIS_REQUIRED_HINTS,
+    TIGHTNESS_HINTS,
+    TYPE_PRIORITY,
     detect_triage_category,
     detect_structural_red_flags,
     remove_negated_phrases,
@@ -178,12 +186,53 @@ def score_injury_phrase(t_clean: str, synonym_map: Dict[str, List[str]] | None =
                 type_scores[cat] = 1.5
                 break
 
+    def _has_any_hint(hints: set[str]) -> bool:
+        return any(safe_phrase_search(hint, t_clean) for hint in hints)
+
+    # Deterministic hint boosts/gates for ambiguous overlaps.
+    if _has_any_hint(EXCLUSIVE_HINTS.get("instability", set())):
+        type_scores["instability"] = max(type_scores.get("instability", 0.0), 1.6)
+    if _has_any_hint(EXCLUSIVE_HINTS.get("sprain", set())):
+        type_scores["sprain"] = max(type_scores.get("sprain", 0.0), 1.55)
+
+    if _has_any_hint(SORENESS_HINTS):
+        type_scores["soreness"] = max(type_scores.get("soreness", 0.0), 1.6)
+    if _has_any_hint(STIFFNESS_HINTS):
+        type_scores["stiffness"] = max(type_scores.get("stiffness", 0.0), 1.6)
+    if _has_any_hint(TIGHTNESS_HINTS):
+        type_scores["tightness"] = max(type_scores.get("tightness", 0.0), 1.6)
+
+    # Tendonitis should only beat generic pain when tendon/overuse context exists.
+    if type_scores.get("tendonitis", 0.0) > 0 and not _has_any_hint(TENDONITIS_REQUIRED_HINTS):
+        type_scores["tendonitis"] = 0.0
+
+    # Clicking/catching alone is low-specificity for impingement.
+    low_specificity_impingement = _has_any_hint(IMPINGEMENT_LOW_SPECIFICITY)
+    has_gate_impingement = _has_any_hint(IMPINGEMENT_GATE_HINTS)
+    if type_scores.get("impingement", 0.0) > 0 and low_specificity_impingement and not has_gate_impingement:
+        type_scores["impingement"] = 0.0
+    elif has_gate_impingement:
+        type_scores["impingement"] = max(type_scores.get("impingement", 0.0), 1.6)
+
     # If we have no medical type set (or it's still unspecified), use best score
     if triage_category:
         injury_type = "unspecified"
         rehab_type = "unspecified"
     elif injury_type == "unspecified" and any(type_scores.values()) and not medical_hit and not structural_hit:
-        injury_type = max(type_scores.items(), key=lambda x: x[1])[0]
+        scored_candidates = [
+            (cat, score)
+            for cat, score in type_scores.items()
+            if score > 0 and cat in CANONICAL_TYPES
+        ]
+        scored_candidates.sort(
+            key=lambda item: (
+                item[1],
+                TYPE_PRIORITY.get(item[0], 0.0),
+                -CANONICAL_TYPES.index(item[0]),
+            ),
+            reverse=True,
+        )
+        injury_type = scored_candidates[0][0]
         rehab_type = injury_type
     else:
         rehab_type = injury_type
