@@ -198,6 +198,37 @@ def test_surface_terms_do_not_fall_back_to_old_pain_or_contusion_buckets():
     assert parsed_type != "pain"
 
 
+def test_injury_synonym_map_has_no_duplicate_synonyms():
+    seen = {}
+    for category, synonyms in injury_synonyms.INJURY_SYNONYM_MAP.items():
+        for synonym in synonyms:
+            seen.setdefault(synonym, []).append(category)
+
+    duplicates = {synonym: categories for synonym, categories in seen.items() if len(categories) > 1}
+
+    assert duplicates == {}
+
+
+def test_overbroad_injury_synonyms_do_not_create_one_word_false_positives(monkeypatch):
+    monkeypatch.setattr(injury_synonyms, "get_nlp", lambda: None)
+
+    assert parse_injury_phrase("blood flow only") == (None, None)
+    assert parse_injury_phrase("hot day") == (None, None)
+    assert parse_injury_phrase("elbow soreness") == ("soreness", "elbow")
+    assert parse_injury_phrase("left arm pain") == ("pain", "unspecified")
+    assert parse_injury_phrase("spine pain") == ("pain", "unspecified")
+    assert parse_injury_phrase("grade 2 calf strain") == ("strain", "calf")
+
+
+def test_severe_structural_terms_do_not_parse_as_soft_rehab_buckets(monkeypatch):
+    monkeypatch.setattr(injury_synonyms, "get_nlp", lambda: None)
+
+    assert parse_injury_phrase("acl tear") == (None, "knee")
+    assert parse_injury_phrase("tendon rupture") == (None, None)
+    assert parse_injury_phrase("shoulder dislocation") == (None, "shoulder")
+    assert parse_injury_phrase("ankle instability") == ("instability", "ankle")
+
+
 def test_build_rehab_injury_string_prefers_structured_knee_instability():
     from types import SimpleNamespace
 

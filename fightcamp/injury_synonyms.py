@@ -224,45 +224,48 @@ NEGATION_CUES = {
 _NEGATION_CUE_PATTERN = compile_regex("injury_synonyms", "negation_cue_pattern")
 
 
+def _phrase_in_text(phrase: str, text: str) -> bool:
+    """Boundary-aware phrase check for degraded mode and hint scoring."""
+    cleaned_phrase = " ".join(str(phrase or "").lower().strip().split())
+    cleaned_text = " ".join(str(text or "").lower().strip().split())
+    if not cleaned_phrase or not cleaned_text:
+        return False
+    pattern = rf"(?<!\w){re.escape(cleaned_phrase)}(?!\w)"
+    return re.search(pattern, cleaned_text) is not None
+
+
 INJURY_SYNONYM_MAP = {
-    # NOTE: Some severe structural/dislocation phrases intentionally remain in
-    # broad rehab synonym buckets for parsing coverage (e.g., ACL tear,
-    # ruptured ligament, tendon rupture, subluxation). Triage pattern matching
-    # must take precedence and route these severe signals before ordinary rehab
-    # typing is used.
+    # NOTE: Severe structural/dislocation phrases are intentionally kept out of
+    # broad rehab synonym buckets. Triage pattern matching routes those signals
+    # before ordinary rehab typing is used.
     # Ligament - now with every joint instability phrase imaginable
     "sprain": [
         "pop", "popped", "pop sound", "rolling", "rolled", "twist", "twisted",
         "folded", "buckled", "collapse",
-        "tore ligament", "ligament pop", "ligament tear", "ligament gone",
+        "ligament pop", "ligament strain", "ligament sprain", "ligament gone",
         "joint separation", "joint shift", "knee went", "ankle went", "wrist went",
         "out of socket", "popped out", "click out", "shift out", "unhinged",
-        "grade 1", "grade 2", "grade 3",
-        "stretched ligament", "torn ligament", "ruptured ligament", "blown ligament",
-        "sprain", "sprained", "inversion", "eversion", "rolled over", "turned over",
-        "acl", "acl tear", "acl injury", "acl surgery", "acl reconstruction",
-        "acl rehab"
+        "stretched ligament",
+        "sprain", "sprained", "inversion", "eversion", "rolled over", "turned over"
     ],
 
     # Muscle/Tendon - every possible pull/tear description
     "strain": [
         "pull", "pulled", "tug", "tugged", "rip", "ripped",
-        "cramp", "cramping", "charley horse", "dead leg", "seize", "seized",
+        "cramp", "cramping", "charley horse", "seize", "seized",
         "lock", "locked", "knot", "knotted", "ball", "balled", "grab", "grabbed",
         "pinged", "twinge", "twinging", "sharp pain", "acute pain",
-        "muscle tear", "muscle rupture", "muscle pop", "muscle snap", "muscle went",
-        "tendon tear", "tendon pop", "tendon snap", "tendon rupture",
-        "hamstring", "calf", "quad", "groin", "pec", "bicep", "tricep",
-        "strain", "strained", "grade 1", "grade 2", "grade 3", "muscle failure",
-        "tendon failure", "overstretched", "overworked", "worked too hard"
+        "muscle pop", "muscle snap", "muscle went",
+        "tendon pop", "tendon snap",
+        "strain", "strained", "muscle failure",
+        "overworked", "worked too hard"
     ],
 
     # Tightness - every stiffness phrase
     "tightness": [
-        "tight", "tightness", "restricted", "glued",
+        "tight", "tightness", "glued",
         "needs release", "needs stretching",
-        "hard to move", "limited motion", "reduced range", "can't extend",
-        "can't flex", "can't rotate", "can't reach", "can't stretch",
+        "hard to move", "limited motion", "reduced range", "can't reach", "can't stretch",
         "warming up", "slow to loosen", "loosen", "loosen up", "looser",
         "like a rock", "like concrete", "like a board", "like a log",
         "needs massage", "needs foam roll", "needs lacrosse ball"
@@ -316,9 +319,6 @@ INJURY_SYNONYM_MAP = {
         "open wound",
         "surface cut",
         "bleeding cut",
-        "blood",
-        "bloody",
-        "bleeding",
     ],
     "laceration": [
         "laceration",
@@ -375,8 +375,8 @@ INJURY_SYNONYM_MAP = {
     # "kneed" (verb) and "from knee" (impact) remain as they correctly indicate impact injuries.
     "contusion": [
         "bruise", "bruised", "black", "blue", "black and blue", "purple",
-        "discoloration", "discolored", "kicked", "kneed", "elbow",
-        "elbowed", "dead leg", "corked", "cork", "swollen",
+        "discoloration", "discolored", "kicked", "kneed",
+        "elbowed", "dead leg", "corked", "cork",
         "dent", "dented", "indent", "indentation", "mark", "marked",
         "hit", "struck", "banged", "banged up",
         "trauma", "traumatic", "blunt", "blunt force", "from strike",
@@ -388,7 +388,7 @@ INJURY_SYNONYM_MAP = {
         "swell", "swollen", "swelling", "puffy", "puffiness", "inflamed",
         "inflammation", "balloon", "ballooned", "blown up", "bloated",
         "pumped", "pumped up", "full", "fullness", "round", "rounded",
-        "hot", "heat", "warm", "warmth", "fluid", "fluid retention",
+        "heat", "warmth", "fluid", "fluid retention",
         "edema", "oedema", "can't see bone", "can't see definition",
         "looks fat", "looks bigger", "looks swollen", "looks puffy",
         "like a balloon", "like a melon", "like a sausage"
@@ -398,15 +398,15 @@ INJURY_SYNONYM_MAP = {
     # Includes patellar-specific terms added to fix misclassification of jumper's knee
     # and patellar tendinopathy as contusions instead of tendonitis.
     "tendonitis": [
-        "tendon", "tendon pain", "tendon ache", "tendon sore", "tendon hurt",
-        "tendonitis", "tendinosis", "tendinopathy", "grinding", "grind",
-        "gritty", "grittiness", "achy", "aching", "flare", "flare up",
-        "burn", "burning", "overuse", "repetitive", "chronic", "constant",
+        "tendon pain", "tendon ache", "tendon sore", "tendon hurt",
+        "tendonitis", "tendinosis", "tendinopathy", "grind",
+        "gritty", "grittiness", "flare", "flare up",
+        "overuse", "repetitive",
         "angry", "irritated", "irritation",
         "acting up", "playing up", "misbehaving", "problem area",
-        "always sore", "always hurts", "never goes away", "persistent",
+        "always sore", "always hurts", "never goes away",
         "recurring", "comes and goes", "use pain", "activity pain",
-        "patellar", "patellar tendon", "patellar tendinopathy",
+        "patellar tendon", "patellar tendinopathy",
         "jumper's knee", "jumpers knee", "jumper knee"
     ],
 
@@ -414,8 +414,7 @@ INJURY_SYNONYM_MAP = {
     "impingement": [
         "pinch", "pinching", "click", "clicking", "clunk", "clunking",
         "catch", "catching", "jam", "jamming", "block", "blocking",
-        "stuck", "sticking", "won't lift", "won't raise", "won't rotate",
-        "won't turn", "won't reach", "won't extend", "won't move",
+        "won't lift", "won't raise", "won't reach",
         "painful arc", "painful range", "limited by pain", "stopped by pain",
         "shoulder catch", "hip catch", "elbow catch", "wrist catch",
         "ankle catch", "knee catch", "joint catch", "bone on bone",
@@ -425,8 +424,7 @@ INJURY_SYNONYM_MAP = {
     # Joint Instability - every giving way phrase
     "instability": [
         "loose", "looseness", "slip", "slipping", "slide", "sliding",
-        "dislocate", "dislocating", "sublux", "subluxation", "partial",
-        "partial dislocation", "give way", "giving way", "gave way",
+        "give way", "giving way", "gave way",
         "unreliable", "unstable", "instability", "scary", "fear",
         "apprehension", "nervous", "nervousness", "hesitant", "hesitation",
         "trust issues", "don't trust", "afraid to move", "scared to move",
@@ -555,10 +553,10 @@ LOCATION_MAP = {
     "heel cord": "achilles",
     "calf tendon": "achilles",
     "heel attachment": "achilles",
-    "arm": "shoulder",
-    "arms": "shoulder",
-    "upper arm": "shoulder",
-    "upper arms": "shoulder",
+    "arm": "unspecified",
+    "arms": "unspecified",
+    "upper arm": "unspecified",
+    "upper arms": "unspecified",
     "lower arm": "forearm",
     "lower arms": "forearm",
     "bicep": "biceps",
@@ -697,7 +695,7 @@ LOCATION_MAP = {
     "anterior ligament": "knee",
     "lower back": "lower back",
     "lower_back": "lower back",
-    "spine": "lower back",
+    "spine": "unspecified",
     "lumbar": "lower back",
     "sacrum": "lower back",
     "tailbone": "lower back",
@@ -717,8 +715,8 @@ LOCATION_MAP = {
     "waist": "obliques",
     "external obliques": "obliques",
     "side ribs": "obliques",
-    "leg": "knee",
-    "legs": "knee",
+    "leg": "unspecified",
+    "legs": "unspecified",
     "lower leg": "shin",
     "lower legs": "shin",
     "quad": "quads",
@@ -835,7 +833,7 @@ def canonicalize_injury_type(text: str, threshold: int = 85) -> str | None:
         lowered = text.lower()
         for canonical, syns in INJURY_SYNONYM_MAP.items():
             for phrase in [canonical] + syns:
-                if phrase in lowered:
+                if _phrase_in_text(phrase, lowered):
                     return canonical
         return None
     doc = nlp(text.lower())
@@ -862,27 +860,27 @@ def canonicalize_injury_type(text: str, threshold: int = 85) -> str | None:
     # 2) Exclusive-hints to disambiguate overlaps
     text_no_neg = " ".join(tok.text for tok in doc if not tok._.negex)
     for cat, hints in EXCLUSIVE_HINTS.items():
-        if any(h in text_no_neg for h in hints):
+        if any(_phrase_in_text(h, text_no_neg) for h in hints):
             candidates[cat] = candidates.get(cat, 0.0) + 1.0
 
     # Conservative gating for low-specificity tokens
     if "impingement" in candidates:
-        has_gate = any(h in text_no_neg for h in IMPINGEMENT_GATE_HINTS)
-        has_low = any(h in text_no_neg for h in IMPINGEMENT_LOW_SPECIFICITY)
+        has_gate = any(_phrase_in_text(h, text_no_neg) for h in IMPINGEMENT_GATE_HINTS)
+        has_low = any(_phrase_in_text(h, text_no_neg) for h in IMPINGEMENT_LOW_SPECIFICITY)
         if has_low and not has_gate:
             candidates.pop("impingement", None)
 
     if "tendonitis" in candidates:
-        if not any(h in text_no_neg for h in TENDONITIS_REQUIRED_HINTS):
+        if not any(_phrase_in_text(h, text_no_neg) for h in TENDONITIS_REQUIRED_HINTS):
             candidates.pop("tendonitis", None)
 
     # Deterministic precedence among soreness/stiffness/tightness/pain
     if not (set(candidates.keys()) - {"soreness", "stiffness", "tightness", "pain"}):
-        if any(h in text_no_neg for h in SORENESS_HINTS):
+        if any(_phrase_in_text(h, text_no_neg) for h in SORENESS_HINTS):
             return "soreness"
-        if any(h in text_no_neg for h in STIFFNESS_HINTS):
+        if any(_phrase_in_text(h, text_no_neg) for h in STIFFNESS_HINTS):
             return "stiffness"
-        if any(h in text_no_neg for h in TIGHTNESS_HINTS):
+        if any(_phrase_in_text(h, text_no_neg) for h in TIGHTNESS_HINTS):
             return "tightness"
         if "pain" in candidates:
             return "pain"
@@ -909,8 +907,8 @@ def canonicalize_injury_type(text: str, threshold: int = 85) -> str | None:
 
     # Special rule: if both "sprain" and "instability" are present, force decision by hints.
     if {"sprain", "instability"}.issubset(set(candidates.keys())):
-        sprain_hint = any(h in text_no_neg for h in EXCLUSIVE_HINTS["sprain"])
-        instab_hint = any(h in text_no_neg for h in EXCLUSIVE_HINTS["instability"])
+        sprain_hint = any(_phrase_in_text(h, text_no_neg) for h in EXCLUSIVE_HINTS["sprain"])
+        instab_hint = any(_phrase_in_text(h, text_no_neg) for h in EXCLUSIVE_HINTS["instability"])
         if sprain_hint and not instab_hint:
             return "sprain"
         if instab_hint and not sprain_hint:
@@ -930,7 +928,7 @@ def canonicalize_location(text: str, threshold: int = 85) -> str | None:
     if not nlp:
         lowered = text.lower()
         for key in sorted(LOCATION_MAP.keys(), key=len, reverse=True):
-            if key in lowered:
+            if _phrase_in_text(key, lowered):
                 return LOCATION_MAP[key]
         return None
     doc = nlp(text.lower())
@@ -948,18 +946,17 @@ def canonicalize_location(text: str, threshold: int = 85) -> str | None:
 
         # 2) Context routing if spine/back-ish
         txt = text.lower()
-        if ("spine" in txt) or ("back" in txt):
+        if _phrase_in_text("spine", txt) or _phrase_in_text("back", txt):
             # Explicit posterior-thigh phrases must beat generic back routing.
             if matched_text in POSTERIOR_THIGH_HINTS:
                 return loc
-            if any(h in txt for h in SPINE_HINTS["neck"]):
+            if any(_phrase_in_text(h, txt) for h in SPINE_HINTS["neck"]):
                 return "neck"
-            if any(h in txt for h in SPINE_HINTS["upper_back"]):
+            if any(_phrase_in_text(h, txt) for h in SPINE_HINTS["upper_back"]):
                 return "upper back"
-            if any(h in txt for h in SPINE_HINTS["lower_back"]):
+            if any(_phrase_in_text(h, txt) for h in SPINE_HINTS["lower_back"]):
                 return "lower back"
-            # Default if unspecified: lower back (as before)
-            return "lower back"
+            return None if loc == "unspecified" else loc
 
         return loc
 
@@ -980,14 +977,14 @@ def canonicalize_location(text: str, threshold: int = 85) -> str | None:
     # Context routing for spine/back if we only reached fuzzy stage
     if best in {None, "lower back"}:
         txt = cleaned
-        if ("spine" in txt) or ("back" in txt):
-            if any(h in txt for h in SPINE_HINTS["neck"]):
+        if _phrase_in_text("spine", txt) or _phrase_in_text("back", txt):
+            if any(_phrase_in_text(h, txt) for h in SPINE_HINTS["neck"]):
                 return "neck"
-            if any(h in txt for h in SPINE_HINTS["upper_back"]):
+            if any(_phrase_in_text(h, txt) for h in SPINE_HINTS["upper_back"]):
                 return "upper back"
-            if any(h in txt for h in SPINE_HINTS["lower_back"]):
+            if any(_phrase_in_text(h, txt) for h in SPINE_HINTS["lower_back"]):
                 return "lower back"
-            return "lower back"
+            return None
 
     return best
 
@@ -998,6 +995,28 @@ def parse_injury_phrase(phrase: str) -> tuple[str | None, str | None]:
     cleaned = _strip_surrounding_punct(cleaned)
     if not cleaned:
         return None, None
+    structural_severity_terms = {
+        "acl tear",
+        "pcl tear",
+        "mcl tear",
+        "lcl tear",
+        "ligament tear",
+        "torn ligament",
+        "ruptured ligament",
+        "blown ligament",
+        "tendon tear",
+        "torn tendon",
+        "tendon rupture",
+        "ruptured tendon",
+        "muscle rupture",
+        "partial dislocation",
+        "dislocation",
+        "dislocated",
+        "sublux",
+        "subluxation",
+    }
+    if any(_phrase_in_text(term, cleaned) for term in structural_severity_terms):
+        return None, canonicalize_location(cleaned)
     tendonitis_hard_map_terms = {
         "tendonitis",
         "tendinitis",
