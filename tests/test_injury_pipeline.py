@@ -6,7 +6,12 @@ sys.path.append(str(Path(__file__).resolve().parents[1]))
 from fightcamp.injury_filtering import normalize_injury_regions
 from fightcamp.injury_formatting import parse_injury_entry, parse_injuries_and_restrictions
 import fightcamp.injury_synonyms as injury_synonyms
-from fightcamp.injury_synonyms import parse_injury_phrase, remove_negated_phrases, split_injury_text
+from fightcamp.injury_synonyms import (
+    detect_structural_red_flags,
+    parse_injury_phrase,
+    remove_negated_phrases,
+    split_injury_text,
+)
 from fightcamp.rehab_protocols import generate_rehab_protocols
 
 
@@ -223,10 +228,54 @@ def test_overbroad_injury_synonyms_do_not_create_one_word_false_positives(monkey
 def test_severe_structural_terms_do_not_parse_as_soft_rehab_buckets(monkeypatch):
     monkeypatch.setattr(injury_synonyms, "get_nlp", lambda: None)
 
-    assert parse_injury_phrase("acl tear") == (None, "knee")
-    assert parse_injury_phrase("tendon rupture") == (None, None)
-    assert parse_injury_phrase("shoulder dislocation") == (None, "shoulder")
+    assert parse_injury_phrase("acl tear") == ("unspecified", "knee")
+    assert parse_injury_phrase("tendon rupture") == ("unspecified", None)
+    assert parse_injury_phrase("shoulder dislocation") == ("unspecified", "shoulder")
     assert parse_injury_phrase("ankle instability") == ("instability", "ankle")
+
+
+def test_structural_red_flags_are_exposed_deterministically():
+    assert detect_structural_red_flags("acl tear") == [
+        "structural_red_flag",
+        "suspected_ligament_tear",
+        "urgent",
+    ]
+    assert detect_structural_red_flags("tendon rupture") == [
+        "structural_red_flag",
+        "suspected_tendon_rupture",
+        "urgent",
+    ]
+    assert detect_structural_red_flags("shoulder dislocation") == [
+        "structural_red_flag",
+        "suspected_dislocation",
+        "urgent",
+    ]
+
+
+def test_parse_injury_entry_keeps_structural_severity_flags(monkeypatch):
+    monkeypatch.setattr(injury_synonyms, "get_nlp", lambda: None)
+
+    acl_entry = parse_injury_entry("acl tear")
+    assert acl_entry is not None
+    assert acl_entry["injury_type"] == "unspecified"
+    assert acl_entry["canonical_location"] == "knee"
+    assert "structural_red_flag" in acl_entry["flags"]
+    assert "suspected_ligament_tear" in acl_entry["flags"]
+    assert "urgent" in acl_entry["flags"]
+
+    tendon_entry = parse_injury_entry("tendon rupture")
+    assert tendon_entry is not None
+    assert tendon_entry["injury_type"] == "unspecified"
+    assert tendon_entry["canonical_location"] is None
+    assert "suspected_tendon_rupture" in tendon_entry["flags"]
+    assert "urgent" in tendon_entry["flags"]
+
+    dislocation_entry = parse_injury_entry("shoulder dislocation")
+    assert dislocation_entry is not None
+    assert dislocation_entry["injury_type"] == "unspecified"
+    assert dislocation_entry["canonical_location"] == "shoulder"
+    assert "suspected_dislocation" in dislocation_entry["flags"]
+    assert "urgent" in dislocation_entry["flags"]
 
 
 def test_build_rehab_injury_string_prefers_structured_knee_instability():

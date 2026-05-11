@@ -234,6 +234,46 @@ def _phrase_in_text(phrase: str, text: str) -> bool:
     return re.search(pattern, cleaned_text) is not None
 
 
+STRUCTURAL_RED_FLAG_MAP: dict[str, tuple[str, ...]] = {
+    "partial dislocation": ("structural_red_flag", "suspected_dislocation", "urgent"),
+    "dislocation": ("structural_red_flag", "suspected_dislocation", "urgent"),
+    "dislocated": ("structural_red_flag", "suspected_dislocation", "urgent"),
+    "subluxation": ("structural_red_flag", "suspected_dislocation", "urgent"),
+    "sublux": ("structural_red_flag", "suspected_dislocation", "urgent"),
+    "acl tear": ("structural_red_flag", "suspected_ligament_tear", "urgent"),
+    "mcl tear": ("structural_red_flag", "suspected_ligament_tear", "urgent"),
+    "lcl tear": ("structural_red_flag", "suspected_ligament_tear", "urgent"),
+    "pcl tear": ("structural_red_flag", "suspected_ligament_tear", "urgent"),
+    "ligament tear": ("structural_red_flag", "suspected_ligament_tear", "urgent"),
+    "torn ligament": ("structural_red_flag", "suspected_ligament_tear", "urgent"),
+    "ruptured ligament": ("structural_red_flag", "suspected_ligament_tear", "urgent"),
+    "blown ligament": ("structural_red_flag", "suspected_ligament_tear", "urgent"),
+    "tendon tear": ("structural_red_flag", "suspected_tendon_rupture", "urgent"),
+    "torn tendon": ("structural_red_flag", "suspected_tendon_rupture", "urgent"),
+    "tendon rupture": ("structural_red_flag", "suspected_tendon_rupture", "urgent"),
+    "ruptured tendon": ("structural_red_flag", "suspected_tendon_rupture", "urgent"),
+    "muscle rupture": ("structural_red_flag", "suspected_tendon_rupture", "urgent"),
+    "fracture": ("structural_red_flag", "suspected_fracture", "urgent"),
+    "broken bone": ("structural_red_flag", "suspected_fracture", "urgent"),
+}
+
+
+def detect_structural_red_flags(text: str) -> list[str]:
+    """Return deterministic structural red-flag tags for severe injury phrases."""
+    cleaned = " ".join(str(text or "").lower().strip().split())
+    if not cleaned:
+        return []
+
+    flags: list[str] = []
+    for phrase, structural_flags in STRUCTURAL_RED_FLAG_MAP.items():
+        if not _phrase_in_text(phrase, cleaned):
+            continue
+        for flag in structural_flags:
+            if flag not in flags:
+                flags.append(flag)
+    return flags
+
+
 INJURY_SYNONYM_MAP = {
     # NOTE: Severe structural/dislocation phrases are intentionally kept out of
     # broad rehab synonym buckets. Triage pattern matching routes those signals
@@ -995,28 +1035,8 @@ def parse_injury_phrase(phrase: str) -> tuple[str | None, str | None]:
     cleaned = _strip_surrounding_punct(cleaned)
     if not cleaned:
         return None, None
-    structural_severity_terms = {
-        "acl tear",
-        "pcl tear",
-        "mcl tear",
-        "lcl tear",
-        "ligament tear",
-        "torn ligament",
-        "ruptured ligament",
-        "blown ligament",
-        "tendon tear",
-        "torn tendon",
-        "tendon rupture",
-        "ruptured tendon",
-        "muscle rupture",
-        "partial dislocation",
-        "dislocation",
-        "dislocated",
-        "sublux",
-        "subluxation",
-    }
-    if any(_phrase_in_text(term, cleaned) for term in structural_severity_terms):
-        return None, canonicalize_location(cleaned)
+    if detect_structural_red_flags(cleaned):
+        return "unspecified", canonicalize_location(cleaned)
     tendonitis_hard_map_terms = {
         "tendonitis",
         "tendinitis",
