@@ -916,7 +916,7 @@ def _normalize_existing_injury_entries(
     seen_locations = set()
     unique_entries = []
     for entry in normalized_entries:
-        itype = entry.get("rehab_type") or entry.get("injury_type")
+        itype = entry.get("rehab_type")
         loc = entry.get("canonical_location")
         laterality = entry.get("laterality")
         if (itype, loc, laterality) in seen_pairs:
