@@ -5,7 +5,8 @@ import re
 from typing import Mapping
 
 from . import injury_synonyms
-from .injury_synonyms import parse_injury_phrase, split_injury_text
+from .injury_synonyms import split_injury_text
+from .injury_scoring import score_injury_phrase
 from .normalization import normalize_lower_text, strip_surrounding_punctuation as _strip_surrounding_punct
 from .restriction_parsing import ParsedRestriction, parse_restriction_entry, is_restriction_phrase
 
@@ -122,8 +123,14 @@ def parse_injury_entry(phrase: str) -> dict[str, str | None | list[str]] | None:
     if is_restriction_phrase(phrase_to_parse):
         return None
 
-    injury_type, location = parse_injury_phrase(phrase_to_parse)
-    structural_flags = injury_synonyms.detect_structural_red_flags(phrase_to_parse)
+    scored = score_injury_phrase(phrase_to_parse)
+    injury_type = str(scored.get("injury_type") or "")
+    location = scored.get("location")
+    if location == "unspecified":
+        location = None
+    structural_flags = list(scored.get("flags") or [])
+    rehab_type = str(scored.get("rehab_type") or injury_type or "unspecified")
+    triage_category = str(scored.get("triage_category") or "")
     laterality = extract_laterality(original_phrase)
     if not injury_type and not location and not structural_flags:
         return None
@@ -131,6 +138,8 @@ def parse_injury_entry(phrase: str) -> dict[str, str | None | list[str]] | None:
         injury_type = "unspecified"
     return {
         "injury_type": injury_type,
+        "rehab_type": rehab_type,
+        "triage_category": triage_category,
         "canonical_location": location,
         "side": laterality,
         "laterality": laterality,
@@ -139,7 +148,9 @@ def parse_injury_entry(phrase: str) -> dict[str, str | None | list[str]] | None:
     }
 
 
-def parse_injuries_and_restrictions(text: str) -> tuple[list[dict[str, str | None]], list[ParsedRestriction]]:
+def parse_injuries_and_restrictions(
+    text: str,
+) -> tuple[list[dict[str, str | None | list[str]]], list[ParsedRestriction]]:
     """Parse injury text into separate lists of injuries and restrictions.
     
     This is the main entry point that properly separates constraint phrases
