@@ -241,6 +241,51 @@ def test_collision_clarification_fields_default_when_missing_or_empty():
     assert empty.goal_weakness_collision_detail == ""
 
 
+def test_collision_clarification_details_parse_from_raw_list_and_json_string():
+    list_payload = _payload(
+        [
+            {
+                "label": "Goal/weak-area collision details",
+                "value": [
+                    {"tag": " power ", "label": " Power ", "detail": " Drops when tired "},
+                    {"tag": "", "label": "Conditioning", "detail": "Late-round fatigue"},
+                    {"tag": "", "label": "", "detail": ""},
+                ],
+            }
+        ]
+    )
+    json_payload = _payload(
+        [
+            {
+                "label": "Goal/weak-area collision details",
+                "value": '[{"tag":"conditioning","label":"Conditioning","detail":" Recovery between bursts "}]',
+            }
+        ]
+    )
+
+    parsed_list = PlanInput.from_payload(list_payload)
+    parsed_json = PlanInput.from_payload(json_payload)
+
+    assert parsed_list.goal_weakness_collision_details == [
+        {"tag": "power", "label": "Power", "detail": "Drops when tired"},
+        {"tag": "", "label": "Conditioning", "detail": "Late-round fatigue"},
+    ]
+    assert parsed_json.goal_weakness_collision_details == [
+        {"tag": "conditioning", "label": "Conditioning", "detail": "Recovery between bursts"}
+    ]
+
+
+def test_collision_clarification_details_default_empty_on_malformed_values():
+    malformed = _payload(
+        [
+            {"label": "Goal/weak-area collision details", "value": "not-json"},
+        ]
+    )
+
+    parsed = PlanInput.from_payload(malformed)
+    assert parsed.goal_weakness_collision_details == []
+
+
 def test_invalid_primary_fields_fall_back_to_first_selected_values():
     data = _payload(
         [
