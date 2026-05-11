@@ -320,3 +320,56 @@ def test_build_rehab_injury_string_falls_back_to_raw_when_no_parsed_entries():
     )
 
     assert _build_rehab_injury_string(context) == raw_text
+
+def test_muscle_rupture_gets_specific_structural_flag():
+    flags = detect_structural_red_flags("muscle rupture in quad")
+
+    assert "structural_red_flag" in flags
+    assert "suspected_muscle_rupture" in flags
+    assert "urgent" in flags
+    assert "suspected_tendon_rupture" not in flags
+
+
+def test_tendon_snap_does_not_parse_as_ordinary_strain(monkeypatch):
+    monkeypatch.setattr(injury_synonyms, "get_nlp", lambda: None)
+
+    injury_type, location = parse_injury_phrase("achilles tendon snap")
+
+    assert injury_type == "unspecified"
+    assert location == "achilles"
+
+    flags = detect_structural_red_flags("achilles tendon snap")
+    assert "structural_red_flag" in flags
+    assert "suspected_tendon_rupture" in flags
+    assert "urgent" in flags
+
+
+def test_tendon_pop_phrase_is_structural_when_tendon_context_is_clear(monkeypatch):
+    monkeypatch.setattr(injury_synonyms, "get_nlp", lambda: None)
+
+    injury_type, location = parse_injury_phrase("felt tendon pop in achilles")
+
+    assert injury_type == "unspecified"
+    assert location == "achilles"
+
+    flags = detect_structural_red_flags("felt tendon pop in achilles")
+    assert "suspected_tendon_rupture" in flags
+    assert "urgent" in flags
+
+
+def test_black_toenail_does_not_become_generic_contusion(monkeypatch):
+    monkeypatch.setattr(injury_synonyms, "get_nlp", lambda: None)
+
+    injury_type, location = parse_injury_phrase("black toenail")
+
+    assert location == "toe"
+    assert injury_type != "contusion"
+
+
+def test_ankle_pop_still_resolves_as_sprain(monkeypatch):
+    monkeypatch.setattr(injury_synonyms, "get_nlp", lambda: None)
+
+    injury_type, location = parse_injury_phrase("ankle pop")
+
+    assert injury_type == "sprain"
+    assert location == "ankle
