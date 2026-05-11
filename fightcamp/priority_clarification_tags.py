@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-import re
+from .normalization import dedupe_preserve_order, normalize_text_for_matching
+from .tagging import normalize_tag
 
 
 def _normalize_detail(value: str) -> str:
