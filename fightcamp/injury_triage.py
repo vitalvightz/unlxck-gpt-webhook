@@ -1181,10 +1181,12 @@ def triage_injuries(plan_input: PlanInput) -> InjuryTriageResult:
     safety_context_text = cleaned_combined_text
 
     routing_reasons: set[str] = set()
-    matched_categories, raw_alias_categories = _normalize_triage_categories(set(features.high_risk_diagnoses))
-    for raw_category in sorted(raw_alias_categories):
-        matched_categories.add(raw_category)
-        routing_reasons.add(f"triage_category_alias:{raw_category}->{normalize_triage_category(raw_category)}")
+    matched_categories = set(features.high_risk_diagnoses)
+    for category in list(matched_categories):
+        normalized = normalize_triage_category(category)
+        if normalized != category:
+            matched_categories.add(normalized)
+            routing_reasons.add(f"triage_category_alias:{category}->{normalized}")
     red_flags = set(features.red_flags)
     urgent_flags = set(features.urgent_flags)
     clinician_restriction_signals = set(features.clinician_restriction_signals)
