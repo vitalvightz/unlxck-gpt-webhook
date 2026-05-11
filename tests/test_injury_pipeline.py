@@ -12,6 +12,7 @@ from fightcamp.injury_synonyms import (
     remove_negated_phrases,
     split_injury_text,
 )
+from fightcamp.injury_scoring import score_injury_phrase
 from fightcamp.rehab_protocols import generate_rehab_protocols
 
 
@@ -410,3 +411,75 @@ def test_ankle_pop_still_resolves_as_sprain(monkeypatch):
     assert location == "ankle"
 
 
+def test_structural_triage_separates_rehab_and_safety_categories():
+    acl = score_injury_phrase("right knee acl tear")
+    assert acl["location"] == "knee"
+    assert acl["side"] == "right"
+    assert acl["triage_category"] == "acl_tear"
+    assert "structural_red_flag" in acl["flags"]
+    assert "urgent" in acl["flags"]
+    assert acl["rehab_type"] == "unspecified"
+    assert acl["injury_type"] == "unspecified"
+
+    tendon = score_injury_phrase("achilles tendon rupture")
+    assert tendon["location"] == "achilles"
+    assert tendon["triage_category"] == "tendon_rupture"
+    assert tendon["rehab_type"] == "unspecified"
+    assert tendon["injury_type"] == "unspecified"
+    assert "urgent" in tendon["flags"]
+
+    dislocation = score_injury_phrase("shoulder dislocation")
+    assert dislocation["location"] == "shoulder"
+    assert dislocation["triage_category"] == "dislocation"
+    assert dislocation["rehab_type"] == "unspecified"
+    assert dislocation["injury_type"] == "unspecified"
+    assert "structural_red_flag" in dislocation["flags"]
+
+    muscle = score_injury_phrase("muscle rupture in quad")
+    assert muscle["location"] == "quads"
+    assert muscle["triage_category"] == "muscle_rupture"
+    assert "structural_red_flag" in muscle["flags"]
+    assert "urgent" in muscle["flags"]
+
+    fracture = score_injury_phrase("fracture in wrist")
+    assert fracture["location"] == "wrist"
+    assert fracture["triage_category"] == "fracture"
+    assert "urgent" in fracture["flags"]
+
+
+def test_ordinary_rehab_parsing_keeps_injury_and_rehab_types_aligned():
+    strain = score_injury_phrase("left calf strain")
+    assert strain["injury_type"] == "strain"
+    assert strain["rehab_type"] == "strain"
+    assert strain["triage_category"] == ""
+    assert strain["location"] == "calf"
+    assert strain["side"] == "left"
+
+    sprain = score_injury_phrase("rolled ankle")
+    assert sprain["injury_type"] == "sprain"
+    assert sprain["rehab_type"] == "sprain"
+    assert sprain["triage_category"] == ""
+    assert sprain["location"] == "ankle"
+
+    tendinopathy = score_injury_phrase("right knee patellar tendinopathy")
+    assert tendinopathy["injury_type"] == "tendonitis"
+    assert tendinopathy["rehab_type"] == "tendonitis"
+    assert tendinopathy["triage_category"] == ""
+    assert tendinopathy["location"] == "knee"
+
+
+def test_rehab_lookup_handles_old_entries_without_rehab_type():
+    from fightcamp.rehab_protocols import _normalize_existing_injury_entries
+
+    entries = _normalize_existing_injury_entries(
+        [
+            {
+                "injury_type": "sprain",
+                "canonical_location": "ankle",
+                "laterality": "left",
+                "severity": "mild",
+                "original_phrase": "rolled ankle",
+            }
+        ]
+    )
+    assert entries[0]["rehab_type"] == "sprain"
