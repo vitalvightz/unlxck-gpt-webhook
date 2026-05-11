@@ -245,6 +245,7 @@ def test_build_stage2_handoff_text_includes_priority_focus_guidance_without_raw_
                     {"tag": "power", "label": "Power", "detail": "Power drops when tired"},
                     {"tag": "conditioning", "label": "Conditioning", "detail": "Late-round fatigue"},
                 ],
+                "derived_clarification_tags": ["explosive", "rate_of_force"],
             },
         },
     )
@@ -255,8 +256,10 @@ def test_build_stage2_handoff_text_includes_priority_focus_guidance_without_raw_
     assert "secondary weak areas" in handoff.lower()
     assert "Power drops when tired" in handoff
     assert "preserve each clarification" in handoff.lower()
+    assert "derived_clarification_tags" in handoff
     assert "priority_primary_goal_match" not in handoff
     assert "priority_collision_goal_weakness" not in handoff
+    assert "priority_clarification_tag_match" not in handoff
 
 
 def test_build_stage2_handoff_text_keeps_structured_collision_details_in_packet():
@@ -274,8 +277,10 @@ def test_build_stage2_handoff_text_keeps_structured_collision_details_in_packet(
                     {"tag": "power", "label": "Power", "detail": "Power drops when tired"},
                     {"tag": "conditioning", "label": "Conditioning", "detail": "Late-round fatigue"},
                 ],
+                "derived_clarification_tags": ["explosive", "rate_of_force"],
             },
         },
     )
 
     assert '"collision_details":[{"tag":"power","label":"Power","detail":"Power drops when tired"},{"tag":"conditioning","label":"Conditioning","detail":"Late-round fatigue"}]' in handoff
+    assert '"derived_clarification_tags":["explosive","rate_of_force"]' in handoff

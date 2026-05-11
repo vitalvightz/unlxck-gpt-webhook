@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Iterable
 
+from .priority_clarification_tags import derive_clarification_tags
 from .tagging import normalize_tag
 
 PRIMARY_GOAL_WEIGHT = 0.8
@@ -252,6 +253,8 @@ def describe_priority_focus(
         main_focus = ""
         focus_instruction = ""
 
+    derived_clarification_tags = derive_clarification_tags(sanitized_collision_details)
+
     return {
         "main_focus": main_focus,
         "primary_goal": profile.primary_goal,
@@ -261,5 +264,6 @@ def describe_priority_focus(
         "goal_weakness_collisions": resolved_collisions,
         "collision_detail": collision_detail,
         "collision_details": sanitized_collision_details,
+        "derived_clarification_tags": derived_clarification_tags,
         "focus_instruction": focus_instruction,
     }
