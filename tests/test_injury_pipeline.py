@@ -483,3 +483,91 @@ def test_rehab_lookup_handles_old_entries_without_rehab_type():
         ]
     )
     assert entries[0]["rehab_type"] == "sprain"
+
+
+def test_build_rehab_injury_string_uses_entry_level_guided_types_without_leakage():
+    from types import SimpleNamespace
+
+    from fightcamp.plan_pipeline_blocks import _build_rehab_injury_string
+
+    context = SimpleNamespace(
+        plan_input=SimpleNamespace(
+            parsed_injuries=[
+                {
+                    "canonical_location": "knee",
+                    "display_location": "right knee",
+                    "laterality": "right",
+                    "injury_type": "sprain",
+                    "guided_source_injury_type": "instability / giving way",
+                },
+                {
+                    "canonical_location": "shoulder",
+                    "display_location": "left shoulder",
+                    "laterality": "left",
+                    "injury_type": "sprain",
+                    "guided_source_injury_type": "pain",
+                },
+            ],
+            guided_injury=SimpleNamespace(injury_type="instability / giving way"),
+        ),
+        injuries_only_text="",
+    )
+
+    injury_string = _build_rehab_injury_string(context)
+
+    assert "right knee instability" in injury_string
+    assert "left shoulder pain" in injury_string
+    assert "left shoulder instability" not in injury_string
+
+
+def test_generate_rehab_support_bundle_counts_guided_only_parsed_injury_as_injury(monkeypatch):
+    from types import SimpleNamespace
+
+    from fightcamp.plan_pipeline_blocks import _generate_rehab_support_bundle
+
+    monkeypatch.setattr(
+        "fightcamp.plan_pipeline_blocks.generate_rehab_protocols",
+        lambda **kwargs: ("rehab block", []),
+    )
+    monkeypatch.setattr(
+        "fightcamp.plan_pipeline_blocks.format_injury_guardrails",
+        lambda *args, **kwargs: "guardrail",
+    )
+    monkeypatch.setattr(
+        "fightcamp.plan_pipeline_blocks.generate_recovery_block",
+        lambda flags: "recovery",
+    )
+    monkeypatch.setattr(
+        "fightcamp.plan_pipeline_blocks.generate_nutrition_block",
+        lambda flags: "nutrition",
+    )
+    monkeypatch.setattr(
+        "fightcamp.plan_pipeline_blocks.generate_support_notes",
+        lambda injury_string: f"support for {injury_string}",
+    )
+
+    context = SimpleNamespace(
+        plan_input=SimpleNamespace(
+            parsed_injuries=[
+                {
+                    "canonical_location": "knee",
+                    "display_location": "right knee",
+                    "injury_type": "instability",
+                }
+            ],
+            injuries="",
+            restrictions=[],
+        ),
+        injuries_only_text="",
+        phase_active=lambda phase: phase == "GPP",
+        phase_weeks={"GPP": 1, "SPP": 0, "TAPER": 0, "days": {"GPP": 7, "SPP": 0, "TAPER": 0}},
+        training_context=SimpleNamespace(to_flags=lambda: {}),
+        exercise_bank=[],
+        apply_muay_thai_filters=False,
+        sanitize_labels=False,
+    )
+
+    _, _, support_notes, has_injuries, *_ = _generate_rehab_support_bundle(context)
+
+    assert has_injuries is True
+    assert support_notes.startswith("support for")
