@@ -348,7 +348,7 @@ def test_summary_helper_includes_all_structured_collision_details():
 
 
 def test_summary_helper_sanitizes_malformed_collision_details():
-    profile = PriorityProfile(primary_goal="power", primary_weak_area="power")
+    profile = PriorityProfile(primary_goal="power", secondary_goals=[], primary_weak_area="power", secondary_weak_areas=[], all_goals=["power"], all_weak_areas=["power"])
 
     summary = describe_priority_focus(
         profile,
@@ -361,3 +361,52 @@ def test_summary_helper_sanitizes_malformed_collision_details():
 
     assert summary["collision_details"] == [{"tag": "power", "label": "", "detail": "Valid"}]
     assert summary["collision_detail"] == "Valid"
+
+
+def test_summary_helper_includes_derived_clarification_tags():
+    profile = PriorityProfile(primary_goal="conditioning", secondary_goals=[], primary_weak_area="conditioning", secondary_weak_areas=[], all_goals=["conditioning"], all_weak_areas=["conditioning"])
+
+    summary = describe_priority_focus(
+        profile,
+        collision_details=[
+            {"tag": "conditioning", "label": "Conditioning", "detail": "Late-round fatigue"},
+        ],
+    )
+
+    assert summary["derived_clarification_tags"] == [
+        "glycolytic",
+        "conditioning",
+        "work_capacity",
+        "mental_toughness",
+    ]
+
+
+def test_summary_helper_derived_tags_dedupe_and_preserve_order():
+    profile = PriorityProfile(primary_goal="conditioning", secondary_goals=[], primary_weak_area="conditioning", secondary_weak_areas=[], all_goals=["conditioning"], all_weak_areas=["conditioning"])
+
+    summary = describe_priority_focus(
+        profile,
+        collision_details=[
+            {"tag": "conditioning", "detail": "Late-round fatigue"},
+            {"tag": "strength", "detail": "Posterior-chain strength"},
+        ],
+    )
+
+    assert summary["derived_clarification_tags"] == [
+        "glycolytic",
+        "conditioning",
+        "work_capacity",
+        "mental_toughness",
+        "posterior_chain",
+        "hip_dominant",
+        "hamstring",
+        "deadlift",
+    ]
+
+
+def test_summary_helper_empty_collision_details_has_no_derived_tags():
+    profile = PriorityProfile(primary_goal="conditioning", secondary_goals=[], primary_weak_area="conditioning", secondary_weak_areas=[], all_goals=["conditioning"], all_weak_areas=["conditioning"])
+
+    summary = describe_priority_focus(profile, collision_details=[])
+
+    assert summary["derived_clarification_tags"] == []

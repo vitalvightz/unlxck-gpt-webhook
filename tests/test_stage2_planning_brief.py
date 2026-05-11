@@ -96,6 +96,46 @@ def test_build_planning_brief_includes_full_collision_details_in_priority_focus(
 
 
 
+    assert brief["priority_focus"]["derived_clarification_tags"] == [
+        "explosive",
+        "rate_of_force",
+        "work_capacity",
+        "conditioning",
+        "anaerobic_alactic",
+    ]
+
+
+def test_build_planning_brief_without_collision_details_keeps_derived_tags_empty():
+    athlete_model = {
+        "sport": "boxing",
+        "status": "amateur",
+        "rounds_format": "3x3",
+        "camp_length_weeks": 6,
+        "days_until_fight": 30,
+        "key_goals": ["power"],
+        "weak_areas": ["power"],
+        "primary_goal": "power",
+        "primary_weak_area": "power",
+    }
+    plan_input = SimpleNamespace(
+        key_goals="power",
+        weak_areas="power",
+        primary_goal="power",
+        primary_weak_area="power",
+    )
+
+    brief = build_planning_brief(
+        athlete_model=athlete_model,
+        restrictions=[],
+        phase_briefs={"SPP": {"objective": "obj", "emphasize": [], "deprioritize": [], "risk_flags": [], "selection_guardrails": {}}},
+        candidate_pools={"SPP": {"strength_slots": [], "conditioning_slots": [], "rehab_slots": []}},
+        omission_ledger={},
+        rewrite_guidance={},
+        plan_input=plan_input,
+    )
+
+    assert brief["priority_focus"]["derived_clarification_tags"] == []
+
 def test_parse_record_accepts_x_x_format():
     parsed = _parse_record("19-2")
 

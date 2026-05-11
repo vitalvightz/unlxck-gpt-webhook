@@ -4209,6 +4209,14 @@ def build_stage2_handoff_text(
             priority_lines.append(
                 "- if collision_details has multiple entries, preserve each clarification and use each one to sharpen the relevant training emphasis."
             )
+        derived_tags = priority_focus.get("derived_clarification_tags")
+        if isinstance(derived_tags, list):
+            priority_lines.append(
+                "- use priority_focus.derived_clarification_tags as internal emphasis signals when preserving the plan's intent; they do not override hard safety, schedule, injury, phase, or recovery constraints."
+            )
+            priority_lines.append(
+                "- do not expose derived_clarification_tags or raw scoring/reason-code labels directly in athlete-facing text."
+            )
 
     sections = [
         STAGE2_FINALIZER_PROMPT.strip(),
