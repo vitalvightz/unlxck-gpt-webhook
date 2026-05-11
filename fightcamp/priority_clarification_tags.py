@@ -5,13 +5,7 @@ from .tagging import normalize_tag
 
 
 def _normalize_detail(value: str) -> str:
-    normalized = str(value or "").strip().lower()
-    if not normalized:
-        return ""
-    normalized = normalized.replace("/", " ")
-    normalized = re.sub(r"[-_]", " ", normalized)
-    normalized = re.sub(r"\s+", " ", normalized)
-    return normalized.strip()
+    return normalize_text_for_matching(value)
 
 
 def _normalize_entry_tag(value: str) -> str:
