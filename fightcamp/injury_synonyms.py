@@ -272,6 +272,37 @@ STRUCTURAL_RED_FLAG_MAP: dict[str, tuple[str, ...]] = {
     "broken bone": ("structural_red_flag", "suspected_fracture", "urgent"),
 }
 
+TRIAGE_CATEGORY_MAP: dict[str, str] = {
+    "acl tear": "acl_tear",
+    "mcl tear": "mcl_tear",
+    "lcl tear": "lcl_tear",
+    "pcl tear": "pcl_tear",
+    "ligament tear": "ligament_tear",
+    "torn ligament": "ligament_tear",
+    "ruptured ligament": "ligament_tear",
+    "blown ligament": "ligament_tear",
+    "tendon tear": "tendon_rupture",
+    "torn tendon": "tendon_rupture",
+    "tendon rupture": "tendon_rupture",
+    "ruptured tendon": "tendon_rupture",
+    "tendon snap": "tendon_rupture",
+    "tendon snapped": "tendon_rupture",
+    "felt tendon snap": "tendon_rupture",
+    "felt tendon pop": "tendon_rupture",
+    "tendon popped": "tendon_rupture",
+    "muscle rupture": "muscle_rupture",
+    "muscle ruptured": "muscle_rupture",
+    "partial dislocation": "dislocation",
+    "dislocation": "dislocation",
+    "dislocated": "dislocation",
+    "subluxation": "dislocation",
+    "sublux": "dislocation",
+    "fracture": "fracture",
+    "broken bone": "fracture",
+    "infection": "infection",
+    "hernia": "hernia",
+}
+
 
 def detect_structural_red_flags(text: str) -> list[str]:
     """Return deterministic structural red-flag tags for severe injury phrases."""
@@ -287,6 +318,22 @@ def detect_structural_red_flags(text: str) -> list[str]:
             if flag not in flags:
                 flags.append(flag)
     return flags
+
+
+def detect_triage_category(text: str) -> str:
+    """Return deterministic triage category for structural/urgent injury phrases."""
+    cleaned = " ".join(str(text or "").lower().strip().split())
+    if not cleaned:
+        return ""
+
+    for phrase, category in TRIAGE_CATEGORY_MAP.items():
+        if _phrase_in_text(phrase, cleaned):
+            return category
+
+    if any(_phrase_in_text(term, cleaned) for term in ("numb", "tingling", "nerve")):
+        return "nerve_involvement"
+
+    return ""
 
 
 INJURY_SYNONYM_MAP = {

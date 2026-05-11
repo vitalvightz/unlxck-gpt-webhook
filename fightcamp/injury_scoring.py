@@ -1,11 +1,12 @@
 from __future__ import annotations
 
 import re
-from typing import Dict, List
+from typing import Dict, List, TypedDict
 
 from .injury_synonyms import (
     INJURY_SYNONYM_MAP,
     LOCATION_MAP,
+    detect_triage_category,
     detect_structural_red_flags,
     remove_negated_phrases,
 )
@@ -38,6 +39,16 @@ RED_FLAG_TERMS: Dict[str, str] = {
     "numb": "nerve_involvement",
     "tingling": "nerve_involvement",
 }
+
+
+class ScoredInjuryPhrase(TypedDict):
+    injury_type: str
+    rehab_type: str
+    triage_category: str
+    location: str
+    side: str
+    flags: list[str]
+    raw_text: str
 
 
 def _normalize(text: str) -> str:
@@ -100,7 +111,7 @@ def _detect_side(t_clean: str) -> str:
     return "unspecified"
 
 
-def score_injury_phrase(t_clean: str, synonym_map: Dict[str, List[str]] | None = None) -> Dict[str, str | List[str]]:
+def score_injury_phrase(t_clean: str, synonym_map: Dict[str, List[str]] | None = None) -> ScoredInjuryPhrase:
     """
     Processes ALREADY CLEANED text (post-negation, post-split).
     - Does NOT do NegEx here (assume upstream handles negation).
@@ -114,6 +125,8 @@ def score_injury_phrase(t_clean: str, synonym_map: Dict[str, List[str]] | None =
     if not t_clean:
         return {
             "injury_type": "unspecified",
+            "rehab_type": "unspecified",
+            "triage_category": "",
             "location": "unspecified",
             "side": "unspecified",
             "flags": [],
@@ -123,11 +136,14 @@ def score_injury_phrase(t_clean: str, synonym_map: Dict[str, List[str]] | None =
     # A) Defaults (schema-stable)
     side = _detect_side(t_clean)
     injury_type = "unspecified"
+    rehab_type = "unspecified"
+    triage_category = ""
     location = "unspecified"
     flags: List[str] = []
     medical_hit = False
     structural_hit = False
 
+    triage_category = detect_triage_category(t_clean)
     structural_flags = detect_structural_red_flags(t_clean)
     if structural_flags:
         structural_hit = True
@@ -163,8 +179,14 @@ def score_injury_phrase(t_clean: str, synonym_map: Dict[str, List[str]] | None =
                 break
 
     # If we have no medical type set (or it's still unspecified), use best score
-    if injury_type == "unspecified" and any(type_scores.values()) and not medical_hit and not structural_hit:
+    if triage_category:
+        injury_type = "unspecified"
+        rehab_type = "unspecified"
+    elif injury_type == "unspecified" and any(type_scores.values()) and not medical_hit and not structural_hit:
         injury_type = max(type_scores.items(), key=lambda x: x[1])[0]
+        rehab_type = injury_type
+    else:
+        rehab_type = injury_type
 
     # E) Location detection (deterministic)
     location = _first_location_hit(t_clean)
@@ -175,6 +197,8 @@ def score_injury_phrase(t_clean: str, synonym_map: Dict[str, List[str]] | None =
 
     return {
         "injury_type": injury_type,
+        "rehab_type": rehab_type,
+        "triage_category": triage_category,
         "location": location,
         "side": side,
         "flags": sorted(set(flags)),
