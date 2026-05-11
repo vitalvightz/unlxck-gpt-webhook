@@ -306,14 +306,14 @@ INJURY_SYNONYM_MAP = {
 
     # Muscle/Tendon - every possible pull/tear description
     "strain": [
-    "pull", "pulled", "tug", "tugged", "rip", "ripped",
-    "cramp", "cramping", "charley horse", "seize", "seized",
-    "lock", "locked", "knot", "knotted", "ball", "balled", "grab", "grabbed",
-    "pinged", "twinge", "twinging", "sharp pain", "acute pain",
-    "muscle pop", "muscle snap", "muscle went",
-    "strain", "strained", "muscle failure",
-    "overworked", "worked too hard"
-],
+        "pull", "pulled", "tug", "tugged", "rip", "ripped",
+        "cramp", "cramping", "charley horse", "seize", "seized",
+        "lock", "locked", "knot", "knotted", "ball", "balled", "grab", "grabbed",
+        "pinged", "twinge", "twinging", "sharp pain", "acute pain",
+        "muscle pop", "muscle snap", "muscle went",
+        "strain", "strained", "muscle failure",
+        "overworked", "worked too hard"
+    ],
     # Tightness - every stiffness phrase
     "tightness": [
         "tight", "tightness", "glued",
