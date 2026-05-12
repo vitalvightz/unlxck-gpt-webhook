@@ -88,6 +88,16 @@ test("summarizeBlockedInjuryContext maps skin_irritation surface type with sever
   assert.equal(summary, "Captured injury: Forearm — Burn / skin irritation · Low · Stable");
 });
 
+test("summarizeBlockedInjuryContext prioritises red flags in fallback when no captured injury exists", () => {
+  const summary = summarizeBlockedInjuryContext({
+    triage: {
+      red_flags: ["loss_of_consciousness"],
+      matched_high_risk_categories: ["moderate_stable_injury"],
+    },
+  });
+  assert.equal(summary, "Blocked trigger: Loss of consciousness + Moderate stable injury");
+});
+
 test("summarizeBlockedInjuryContext keeps fallback when guided injury is absent", () => {
   const summary = summarizeBlockedInjuryContext({
     triage: { red_flags: [], matched_high_risk_categories: ["moderate_stable_injury"], reasons: ["did not meet strict allowlist"] },

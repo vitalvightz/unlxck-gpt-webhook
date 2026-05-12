@@ -205,9 +205,9 @@ export function buildBlockedInjuryContextSummary({
   }
 
   const allOrdered = [...new Set([
-    ...highRiskLabels,
     ...redFlagLabels,
     ...urgentFlagLabels,
+    ...highRiskLabels,
     ...reasonLabels,
     ...guidedTypes,
     ...(inferredFromText ? [inferredFromText] : []),
