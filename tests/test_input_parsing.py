@@ -149,6 +149,90 @@ def test_multiselect_value_maps_when_option_ids_are_strings():
     assert parsed.training_days == ["Mon", "Fri"]
 
 
+def test_guided_severity_wins_when_text_is_not_more_severe():
+    payload = _payload(
+        [
+            {"label": "Any injuries or areas you need to work around?", "value": ""},
+        ]
+    )
+    payload["guided_injury"] = {
+        "area": "left knee swelling",
+        "severity": "high",
+        "trend": "stable",
+        "notes": "swelling but walking fine",
+    }
+
+    parsed = PlanInput.from_payload(payload)
+    injury = parsed.parsed_injuries[0]
+
+    assert injury["severity"] == "high"
+    assert injury["severity_source"] == "guided_card"
+
+
+def test_text_detected_wins_when_no_guided_severity():
+    payload = _payload(
+        [
+            {"label": "Any injuries or areas you need to work around?", "value": ""},
+        ]
+    )
+    payload["guided_injury"] = {
+        "area": "left knee swelling",
+        "trend": "stable",
+        "notes": "sharp pain and cannot bear weight",
+    }
+
+    parsed = PlanInput.from_payload(payload)
+    injury = parsed.parsed_injuries[0]
+
+    assert injury["severity"] == "high"
+    assert injury["severity_source"] == "text_detected"
+
+
+def test_swelling_stays_injury_type_default_without_escalation_context():
+    parsed = PlanInput.from_payload(
+        _payload([{"label": "Any injuries or areas you need to work around?", "value": "left knee swelling"}])
+    )
+    injury = parsed.parsed_injuries[0]
+    assert injury["severity"] == "moderate"
+    assert injury["severity_source"] == "injury_type_default"
+    assert injury["severity_evidence"] == ["injury type default: swelling"]
+
+
+def test_instability_stays_injury_type_default_when_no_instability_event():
+    parsed = PlanInput.from_payload(
+        _payload(
+            [
+                {
+                    "label": "Any injuries or areas you need to work around?",
+                    "value": "slight ankle instability, stable, no giving way",
+                }
+            ]
+        )
+    )
+    injury = parsed.parsed_injuries[0]
+    assert injury["severity"] == "moderate"
+    assert injury["severity_source"] == "injury_type_default"
+
+
+@pytest.mark.parametrize(
+    "notes",
+    [
+        "ankle swollen after tackle",
+        "knee puffy after impact",
+        "inflamed after collision",
+    ],
+)
+def test_swelling_family_terms_with_trauma_context_escalate_to_high(notes: str):
+    payload = _payload([{"label": "Any injuries or areas you need to work around?", "value": ""}])
+    payload["guided_injury"] = {"area": "left knee swelling", "trend": "stable", "notes": notes}
+
+    parsed = PlanInput.from_payload(payload)
+    injury = parsed.parsed_injuries[0]
+
+    assert injury["severity"] == "high"
+    assert injury["severity_source"] == "text_detected"
+
+
 def test_equipment_multiselect_value_maps_from_option_ids():
     data = _payload(
         [

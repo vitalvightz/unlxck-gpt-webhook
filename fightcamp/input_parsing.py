@@ -586,6 +586,7 @@ def _attach_severity_provenance(
 
         text_severity, text_hits = normalize_severity(_joined_text(injury))
         text_has_signal = bool(text_hits)
+        injury_type = str(injury.get("injury_type") or "").strip().lower()
 
         if guided_severity and text_has_signal and _severity_rank(text_severity) > _severity_rank(guided_severity):
             injury["severity"] = text_severity
@@ -609,7 +610,6 @@ def _attach_severity_provenance(
             injury["severity_evidence"] = [f"text severity: {text_severity}", *text_hits]
             continue
 
-        injury_type = str(injury.get("injury_type") or "").strip().lower()
         default_type_severity = _GUIDED_SEVERITY_MAP.get(INJURY_TYPE_SEVERITY.get(injury_type, ""))
         if default_type_severity:
             injury["severity"] = default_type_severity
