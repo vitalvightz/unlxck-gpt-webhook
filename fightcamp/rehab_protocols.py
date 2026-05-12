@@ -916,12 +916,9 @@ def _build_red_flag_block(entry: dict) -> str:
         lines.append(f"• Triage category: {triage}")
     if flags:
         lines.append(f"• Flags: {flags}")
-    triage_cats = entry.get("triage_categories") or []
-    messages = sorted({get_red_flag_message(cat) for cat in triage_cats if get_red_flag_message(cat)})
-    if not messages:
-        messages = ["Do not train this injury normally until cleared by a clinician."]
-    for msg in messages:
-        lines.append(f"• {msg}")
+    lines.append("• Do not train this injury normally until cleared by a clinician.")
+    if "concussion" in triage or "suspected_concussion" in flags:
+        lines.append("• No contact, sparring, high-CNS conditioning, or return-to-play progression until medically cleared.")
     lines.append("• All strength/conditioning recommendations must be manually adjusted.")
     return "\n".join(lines)
 
