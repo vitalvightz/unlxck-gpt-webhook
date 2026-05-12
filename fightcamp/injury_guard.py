@@ -881,6 +881,7 @@ def injury_decision(exercise: dict, injuries: Iterable[str | dict] | str | dict,
             reason={"region": None, "severity": None, "bucket": "default", "matches": []},
         )
 
+    modify_band, threshold = _thresholds(phase, fatigue)
     name = str(exercise.get("name", "") or "") or "Unnamed"
     exercise_tags = {str(tag).strip().lower() for tag in exercise.get("tags", []) if tag}
     exercise_text = " ".join(
