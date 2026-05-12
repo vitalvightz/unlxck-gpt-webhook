@@ -2021,7 +2021,7 @@ def test_calendar_spine_fight_day_protocol_text_rule():
     assert not any(w["code"] == "calendar_spine_fight_day_protocol_violation" for w in good["warnings"])
     
     
-    def test_calendar_spine_rejects_calendar_day_without_session_role():
+def test_calendar_spine_rejects_calendar_day_without_session_role():
     brief = {
         "athlete_model": {"sport": "boxing"},
         "restrictions": [],
