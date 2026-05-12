@@ -252,6 +252,41 @@ test("buildBlockedInjuryContextSummary returns pauseReasons verbatim and deduped
   ]);
 });
 
+test("buildBlockedInjuryContextSummary keeps capturedInjury alongside capturedInjuries so the visible line is never dropped", () => {
+  const summary = buildBlockedInjuryContextSummary({
+    triage: {
+      red_flags: [],
+      matched_high_risk_categories: ["moderate_stable_injury"],
+      reasons: ["Moderate stable injury did not meet the strict allowlist for automatic full planning."],
+    },
+    guidedInjuries: [
+      {
+        area: "Left ankle",
+        surface_type: "bruise",
+        severity: "moderate",
+        trend: "stable",
+        impact_related: "yes",
+        notes: "Swells after sparring",
+      },
+    ],
+  });
+
+  assert.equal(
+    summary.capturedInjury,
+    "Left ankle — Bruise / contusion · Moderate · Stable · Impact-related",
+    "single-line capturedInjury must remain populated so the always-visible line renders",
+  );
+  assert.equal(summary.capturedInjuries?.length, 1);
+  assert.equal(typeof summary.blockedTrigger, "string");
+  assert.ok(
+    (summary.blockedTrigger ?? "").length > 0,
+    "blockedTrigger must remain populated so the always-visible line renders",
+  );
+  assert.deepEqual(summary.pauseReasons, [
+    "Moderate stable injury did not meet the strict allowlist for automatic full planning.",
+  ]);
+});
+
 test("buildBlockedInjuryContextSummary sets legacyInjuryText only when guided list is empty", () => {
   const withGuided = buildBlockedInjuryContextSummary({
     triage: { red_flags: [], matched_high_risk_categories: [] },

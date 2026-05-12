@@ -281,16 +281,15 @@ function BlockedPlanDecisionCard({
 
       <p>{intro}</p>
 
-      {isAdmin && pauseReasons.length ? (
+      {injuryContext?.capturedInjury ? (
         <div className="blocked-context-line">
-          <strong>Why this was paused</strong>
-          <ul className="summary-list">
-            {pauseReasons.map((reason) => (
-              <li key={reason}>{reason}</li>
-            ))}
-          </ul>
+          <div>
+            <strong>Captured injury:</strong> {injuryContext.capturedInjury}
+          </div>
         </div>
-      ) : isAdmin && injuryContext?.blockedTrigger ? (
+      ) : null}
+
+      {injuryContext?.blockedTrigger ? (
         <div className="blocked-context-line">
           <div>
             <strong>Blocked trigger:</strong> {injuryContext.blockedTrigger}
@@ -354,11 +353,16 @@ function BlockedPlanDecisionCard({
             )
           ) : null}
         </div>
-      ) : injuryContext?.capturedInjury ? (
+      ) : null}
+
+      {isAdmin && pauseReasons.length ? (
         <div className="blocked-context-line">
-          <div>
-            <strong>Captured injury:</strong> {injuryContext.capturedInjury}
-          </div>
+          <strong>Why this was paused</strong>
+          <ul className="summary-list">
+            {pauseReasons.map((reason) => (
+              <li key={reason}>{reason}</li>
+            ))}
+          </ul>
         </div>
       ) : null}
 
