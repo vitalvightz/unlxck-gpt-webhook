@@ -532,6 +532,22 @@ _DAY_TYPE_DRILL_LIMIT: dict[str, int] = {
     "recovery": 2,
 }
 _DEFAULT_DRILL_LIMIT = 2
+_HIGH_SEVERITY_BLOCK_TERMS = (
+    "pogo", "jump", "hop", "hops", "bound", "sprint", "depth", "drop landing",
+    "reactive", "explosive", "ballistic", "max velocity", "hard cutting", "decel",
+    "loaded", "heavy", "bfr",
+)
+_MODERATE_SEVERITY_BLOCK_TERMS = (
+    "sprint", "max velocity", "depth jump", "drop jump", "hard cutting", "ballistic", "heavy", "bfr",
+)
+_HIGH_SEVERITY_SAFE_FALLBACKS = (
+    ("Isometric hold", "Low-load position hold to calm symptoms."),
+    ("Controlled ROM", "Gentle, pain-free range-of-motion only."),
+    ("Gentle mobility", "Slow mobility with no sharp pain."),
+    ("Breathing/downregulation", "Nasal breathing to reduce tone and guarding."),
+    ("Balance/proprioception", "Light control work with strict symptom limits."),
+    ("Low-load activation", "Easy activation without impact or speed."),
+)
 
 
 def classify_drill_function(name: str, notes: str = "") -> str:
@@ -561,6 +577,33 @@ def classify_drill_function(name: str, notes: str = "") -> str:
         if any(kw in text for kw in keywords):
             return bucket
     return "control"
+
+
+def _normalize_rehab_severity(value: str | None) -> str:
+    normalized = str(value or "").strip().lower()
+    mapping = {"mild": "low", "low": "low", "moderate": "moderate", "high": "high", "severe": "high"}
+    return mapping.get(normalized, "moderate")
+
+
+def _drill_is_too_aggressive_for_severity(name: str, notes: str, severity: str) -> bool:
+    if severity == "low":
+        return False
+    text = f"{name} {notes}".lower()
+    terms = _HIGH_SEVERITY_BLOCK_TERMS if severity == "high" else _MODERATE_SEVERITY_BLOCK_TERMS
+    return any(term in text for term in terms)
+
+
+def _filter_drills_by_severity(drills: list[tuple[str, str]], severity: str) -> list[tuple[str, str]]:
+    allowed = [drill for drill in drills if not _drill_is_too_aggressive_for_severity(drill[0], drill[1], severity)]
+    if allowed:
+        return allowed
+    if not drills:
+        return []
+    if severity == "high":
+        return [fallback for fallback in _HIGH_SEVERITY_SAFE_FALLBACKS if not _drill_is_too_aggressive_for_severity(fallback[0], fallback[1], severity)][:1]
+    if severity == "moderate":
+        return [("Controlled ROM", "Pain-free tempo mobility and control only.")]
+    return drills[:1]
 
 
 def _format_rehab_drill(
@@ -757,11 +800,19 @@ def generate_rehab_protocols(
                     else:
                         drills.append((name, notes))
 
+            severity = _normalize_rehab_severity((merged_by_key.get(group_key) or {}).get("severity") if group_key else None)
+            filtered_drills = _filter_drills_by_severity(drills, severity)
+            if severity == "high" and not filtered_drills:
+                lines.append(
+                    "- High severity injury: use clinician-guided low-load mobility/isometrics only until symptoms settle."
+                )
+                continue
+
             # Apply volume ceiling.  Function classification is recorded as
             # a tag but does NOT hard-block same-function drills — the model
             # retains authority to include multiple drills of the same class
             # when justified by the athlete's needs.
-            selected = drills[:drill_limit]
+            selected = filtered_drills[:drill_limit]
 
             if selected:
                 merged = merged_by_key.get(group_key) if group_key else None
