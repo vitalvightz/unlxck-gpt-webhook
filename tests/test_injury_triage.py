@@ -882,6 +882,15 @@ def test_blocked_modes_do_not_reach_stage2_or_normal_pipeline(monkeypatch):
     assert result["stage2_payload"] is None
     assert result["stage2_status"] == "triage_blocked"
     assert result["injury_triage"]["mode"] == MEDICAL_HOLD
+    blocked = result["blocked_output"]
+    assert blocked["title"] == "Injury triage blocked normal plan generation"
+    assert blocked["mode"] == MEDICAL_HOLD
+    assert blocked["stage2_blocked"] is True
+    assert blocked["clinician_clearance_required"] is True
+    assert blocked["severity_summary"]
+    assert any(item["severity_source"] for item in blocked["severity_summary"])
+    assert blocked["red_flags"]
+    assert blocked["routing_reasons"]
 
 
 def _stub_normal_pipeline(monkeypatch):

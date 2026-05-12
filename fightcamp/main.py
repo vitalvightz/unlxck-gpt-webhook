@@ -212,7 +212,7 @@ def generate_plan_sync(
         triage_mode=triage_mode,
     )
     if triage_result.mode != FULL_PLAN and not triage_resume_override_applied:
-        blocked = blocked_mode_output(triage=triage_result)
+        blocked = blocked_mode_output(triage=triage_result, parsed_injuries=plan_input.parsed_injuries)
         blocked["parsing_metadata"] = plan_input.parsing_metadata
         return blocked
 
