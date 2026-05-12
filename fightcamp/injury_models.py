@@ -10,6 +10,9 @@ injury_filtering without creating a circular dependency.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Literal
+
+InjuryDecisionAction = Literal["allow", "modify", "flag", "exclude"]
 
 
 @dataclass(frozen=True)
@@ -19,8 +22,11 @@ class Decision:
 
     Attributes
     ----------
-    action : str
-        ``"allow"`` or ``"exclude"``.
+    action : InjuryDecisionAction
+        ``"allow"``: item is safe as written.
+        ``"modify"``: item may be used with modifications.
+        ``"flag"``: item is not automatically excluded but needs attention/review.
+        ``"exclude"``: item should be removed due to injury risk.
     risk_score : float
         Computed injury risk score (0.0–1.0+).
     threshold : float
@@ -33,7 +39,7 @@ class Decision:
         Structured breakdown of the decision — region, severity, matches, etc.
     """
 
-    action: str
+    action: InjuryDecisionAction
     risk_score: float
     threshold: float
     matched_tags: list[str]
