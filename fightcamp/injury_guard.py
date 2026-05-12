@@ -12,6 +12,7 @@ from .injury_models import Decision
 from .injury_exclusion_rules import INJURY_REGION_KEYWORDS
 from .injury_filtering import injury_match_details, match_forbidden, normalize_injury_regions
 from .injury_formatting import parse_injury_entry
+from .injury_location import get_injury_location
 from .restriction_parsing import is_restriction_phrase
 from .injury_synonyms import parse_injury_phrase, remove_negated_phrases, split_injury_text
 from .tagging import normalize_tags
@@ -541,7 +542,7 @@ def _build_parsed_injury_dump(injuries: Iterable[str | dict]) -> list[dict]:
             severity, _ = _normalize_dict_severity(injury)
             parsed.append(
                 {
-                    "region": injury.get("region") or injury.get("canonical_location"),
+                    "region": get_injury_location(injury),
                     "side": injury.get("side") or injury.get("laterality"),
                     "injury_type": injury.get("injury_type"),
                     "severity": severity,
@@ -603,7 +604,7 @@ def _injury_context(injuries: Iterable[str | dict], debug_entries: list[dict] | 
         if not injury:
             continue
         if isinstance(injury, dict):
-            region = injury.get("region")
+            region = get_injury_location(injury)
             severity_raw = injury.get("severity")
             if severity_raw:
                 severity_text = str(severity_raw).lower()
