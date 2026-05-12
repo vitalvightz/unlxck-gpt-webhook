@@ -55,8 +55,8 @@ function formatGuidedInjuryContext(injury: GuidedInjurySummary) {
   const typeKey = injury.injury_type?.trim().toLowerCase() || "";
   const typeLabel =
     SURFACE_TYPE_LABELS[surfaceKey] ||
-    titleizeToken(surfaceKey) ||
     INJURY_TYPE_LABELS[typeKey] ||
+    titleizeToken(surfaceKey) ||
     titleizeToken(typeKey);
   const meta = [
     injury.severity ? titleizeToken(injury.severity) : null,
