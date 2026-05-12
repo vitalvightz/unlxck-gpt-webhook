@@ -39,8 +39,8 @@ INJURY_TYPE_SEVERITY = {
     "graze": "low",
     "blister": "low",
     "laceration": "moderate",
-    "swelling": "high",
-    "instability": "high",
+    "swelling": "moderate",
+    "instability": "moderate",
     "unspecified": "moderate",
 }
 
@@ -363,6 +363,19 @@ _INJURY_DECISION_CACHE: OrderedDict[tuple[str, ...], dict[str, object]] = Ordere
 _INJURY_SEVERITY_DEBUGGED = False
 _INJURY_PARSED_DEBUGGED = False
 _SEVERITY_SYNONYM_PATTERN_CACHE: dict[str, re.Pattern[str]] = {}
+_SWELLING_CONTEXT_ESCALATION_RE = re.compile(
+    r"\b(?:rapid|rapidly|worsening|worse|severe)\s+(?:swelling|swollen|puffy|inflammation|inflamed)\b"
+    r"|\b(?:swelling|swollen|puffy|inflammation|inflamed)\b[\w\s,-]{0,40}\b(?:cannot|can'?t|unable\s+to)\s+bear\s+weight\b"
+    r"|\b(?:swelling|swollen|puffy|inflammation|inflamed)\b[\w\s,-]{0,40}\b(?:deformity|deformed)\b"
+    r"|\b(?:swelling|swollen|puffy|inflammation|inflamed)\b[\w\s,-]{0,40}\b(?:after|from)\s+(?:tackle|impact|collision|hit|fall)\b"
+    r"|\b(?:ballooned)\b[\w\s,-]{0,40}\b(?:after|from)\s+(?:tackle|impact|collision|hit|fall)\b"
+)
+_INSTABILITY_EVENT_ESCALATION_RE = re.compile(r"\b(?:giving\s+way|gave\s+way|buckl(?:e|ed|ing)|collapsed)\b")
+_INSTABILITY_NEGATION_RE = re.compile(
+    r"\b(?:no|not|without|denies?|denied)\s+(?:\w+\s+){0,3}(?:giving\s+way|gave\s+way|buckl(?:e|ed|ing)|collapsed)\b"
+)
+_CONTEXTUAL_HIGH_TERMS = {"swelling", "swollen", "puffy", "inflammation", "inflamed", "instability", "ballooned"}
+_INSTABILITY_EVENT_TERMS = {"giving way", "gave way", "buckled", "collapsed"}
 
 
 def _severity_synonym_pattern(synonym: str) -> re.Pattern[str]:
@@ -453,11 +466,27 @@ def normalize_severity(text: str) -> tuple[str, list[str]]:
         return "moderate", []
     lowered = text.lower()
     hits = _find_severity_hits(lowered)
+    contextual_high_allowed = bool(_SWELLING_CONTEXT_ESCALATION_RE.search(lowered))
+    instability_event_allowed = bool(
+        _INSTABILITY_EVENT_ESCALATION_RE.search(lowered) and not _INSTABILITY_NEGATION_RE.search(lowered)
+    )
+
+    filtered_hits: list[tuple[str, str]] = []
+    for level, synonym in hits:
+        if level == "high" and synonym in _CONTEXTUAL_HIGH_TERMS:
+            if synonym == "instability" and not instability_event_allowed:
+                continue
+            if synonym != "instability" and not contextual_high_allowed:
+                continue
+        if level == "high" and synonym in _INSTABILITY_EVENT_TERMS and _INSTABILITY_NEGATION_RE.search(lowered):
+            continue
+        filtered_hits.append((level, synonym))
+
     severity = None
-    for level, _ in hits:
+    for level, _ in filtered_hits:
         if severity is None or SEVERITY_RANK[level] > SEVERITY_RANK[severity]:
             severity = level
-    return severity or "moderate", [synonym for _, synonym in hits]
+    return severity or "moderate", [synonym for _, synonym in filtered_hits]
 
 
 def _normalize_phrase_severity(text: str) -> tuple[str, list[str]]:

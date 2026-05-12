@@ -138,6 +138,17 @@ _UTC_OFFSET_PATTERN = re.compile(
 )
 _EXPLICIT_TZ_SUFFIX_PATTERN = re.compile(r"(?:Z|[+-]\d{2}(?::?\d{2})?)$")
 _PLATFORM_DEFAULT_TIMEZONE = timezone.utc
+_SWELLING_ESCALATION_CONTEXT_RE = re.compile(
+    r"\b(?:rapid|rapidly|worsening|worse|severe)\s+(?:swelling|swollen|puffy|inflammation|inflamed)\b"
+    r"|\b(?:swelling|swollen|puffy|inflammation|inflamed)\b[\w\s,-]{0,40}\b(?:cannot|can'?t|unable\s+to)\s+bear\s+weight\b"
+    r"|\b(?:swelling|swollen|puffy|inflammation|inflamed)\b[\w\s,-]{0,40}\b(?:deformity|deformed)\b"
+    r"|\b(?:swelling|swollen|puffy|inflammation|inflamed)\b[\w\s,-]{0,40}\b(?:after|from)\s+(?:tackle|impact|collision|hit|fall)\b"
+    r"|\bballooned\b[\w\s,-]{0,40}\b(?:after|from)\s+(?:tackle|impact|collision|hit|fall)\b"
+)
+_INSTABILITY_ESCALATION_CONTEXT_RE = re.compile(r"\b(?:giving\s+way|gave\s+way|buckl(?:e|ed|ing)|collapsed)\b")
+_INSTABILITY_NEGATED_EVENT_RE = re.compile(
+    r"\b(?:no|not|without|denies?|denied)\s+(?:\w+\s+){0,3}(?:giving\s+way|gave\s+way|buckl(?:e|ed|ing)|collapsed)\b"
+)
 
 ProvenanceSource = Literal["user_supplied", "system_inferred", "defaulted_missing"]
 
@@ -586,6 +597,15 @@ def _attach_severity_provenance(
 
         text_severity, text_hits = normalize_severity(_joined_text(injury))
         text_has_signal = bool(text_hits)
+        injury_type = str(injury.get("injury_type") or "").strip().lower()
+        joined_text = _joined_text(injury).lower()
+        if injury_type == "swelling" and not _SWELLING_ESCALATION_CONTEXT_RE.search(joined_text):
+            text_severity, text_hits, text_has_signal = "moderate", [], False
+        if injury_type == "instability":
+            instability_event = bool(_INSTABILITY_ESCALATION_CONTEXT_RE.search(joined_text))
+            instability_negated = bool(_INSTABILITY_NEGATED_EVENT_RE.search(joined_text))
+            if not instability_event or instability_negated:
+                text_severity, text_hits, text_has_signal = "moderate", [], False
 
         if guided_severity and text_has_signal and _severity_rank(text_severity) > _severity_rank(guided_severity):
             injury["severity"] = text_severity
@@ -609,7 +629,6 @@ def _attach_severity_provenance(
             injury["severity_evidence"] = [f"text severity: {text_severity}", *text_hits]
             continue
 
-        injury_type = str(injury.get("injury_type") or "").strip().lower()
         default_type_severity = _GUIDED_SEVERITY_MAP.get(INJURY_TYPE_SEVERITY.get(injury_type, ""))
         if default_type_severity:
             injury["severity"] = default_type_severity
