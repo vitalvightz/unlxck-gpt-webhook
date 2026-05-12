@@ -153,7 +153,7 @@ TYPE_PRIORITY = {
 EXCLUSIVE_HINTS = {
     "sprain": {
         "rolled", "rolling", "inversion", "eversion",
-        "ligament", "ligament tear", "ligament pop", "grade 1", "grade 2", "grade 3",
+        "ligament", "ligament tear", "ligament pop",
         "acl", "mcl", "lcl", "pcl",
         "twist", "twisted"
     },
@@ -938,6 +938,13 @@ def canonicalize_injury_type(text: str, threshold: int = 85) -> str | None:
     3) Fuzzy fallback with per-category thresholds,
     4) Priority tie-breaks via TYPE_PRIORITY.
     """
+    from .injury_scoring import score_injury_phrase
+
+    scored = score_injury_phrase(text or "")
+    scored_type = scored.get("injury_type")
+    if scored_type and scored_type != "unspecified":
+        return scored_type
+
     nlp = get_nlp()
     if not nlp:
         lowered = text.lower()
