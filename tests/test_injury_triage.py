@@ -39,6 +39,41 @@ def test_mild_soreness_allows_full_planning():
     assert triage.should_block_stage2 is False
 
 
+@pytest.mark.parametrize("injury_text", ["left knee swelling", "left knee instability"])
+def test_swelling_or_instability_alone_do_not_force_triage_block(injury_text: str):
+    parsed = PlanInput.from_payload(_payload_with_injury(injury_text))
+    triage = triage_injuries(parsed)
+
+    assert triage.mode == FULL_PLAN
+    assert triage.should_block_stage2 is False
+
+
+def test_ankle_swelling_alone_does_not_block_triage():
+    parsed = PlanInput.from_payload(_payload_with_injury("ankle swelling"))
+    triage = triage_injuries(parsed)
+
+    assert triage.mode == FULL_PLAN
+    assert triage.should_block_stage2 is False
+
+
+def test_rapid_swelling_after_tackle_and_cannot_bear_weight_blocks_triage():
+    parsed = PlanInput.from_payload(
+        _payload_with_injury("rapid ankle swelling after tackle and cannot bear weight")
+    )
+    triage = triage_injuries(parsed)
+
+    assert triage.mode != FULL_PLAN
+    assert triage.should_block_stage2 is True
+
+
+def test_instability_with_giving_way_and_buckling_blocks_triage():
+    parsed = PlanInput.from_payload(_payload_with_injury("knee instability with giving way and buckled twice"))
+    triage = triage_injuries(parsed)
+
+    assert triage.mode != FULL_PLAN
+    assert triage.should_block_stage2 is True
+
+
 def test_fracture_routes_to_restricted_rehab_only_and_matches_existing_signals():
     parsed = PlanInput.from_payload(
         _payload_with_injury("right ankle fracture with worsening swelling and cannot bear weight")

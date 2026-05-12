@@ -1,5 +1,6 @@
 import sys
 from pathlib import Path
+import pytest
 
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 
@@ -350,6 +351,47 @@ def test_normalize_severity_does_not_match_overlapping_substrings():
 
     assert severity == "moderate"
     assert "stable" not in hits
+
+
+def test_swelling_without_dangerous_context_stays_moderate():
+    severity, hits = normalize_severity("left knee swelling")
+    assert severity == "moderate"
+    assert "swelling" not in hits
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "rapid swelling",
+        "worsening swelling",
+        "severe swelling",
+        "swelling and cannot bear weight",
+        "swelling with deformity",
+        "swelling after tackle",
+        "ballooned after collision",
+    ],
+)
+def test_swelling_escalates_to_high_with_dangerous_context(text: str):
+    severity, _ = normalize_severity(text)
+    assert severity == "high"
+
+
+def test_instability_without_instability_events_stays_moderate():
+    severity, hits = normalize_severity("slight ankle instability, stable, no giving way")
+    assert severity != "high"
+    assert "instability" not in hits
+
+
+def test_instability_with_giving_way_event_escalates_high():
+    severity, hits = normalize_severity("knee keeps giving way and buckled twice")
+    assert severity == "high"
+    assert "buckled" in hits or "giving way" in hits
+
+
+def test_negated_giving_way_does_not_suppress_positive_buckled_event():
+    severity, hits = normalize_severity("no giving way, but buckled twice")
+    assert severity == "high"
+    assert "buckled" in hits
 
 
 def test_severity_synonym_pattern_multi_word_separators():
