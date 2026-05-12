@@ -892,8 +892,8 @@ def _render_location_heading(location: str | None, merged_entry: dict | None) ->
     laterality = str(merged_entry.get("laterality") or "").strip()
     canonical_location = str(merged_entry.get("canonical_location") or location or "unspecified")
     if display_location:
-        if laterality and display_location.lower() == canonical_location.lower():
-            return f"{laterality.title()} {canonical_location.title()}"
+        if laterality and not display_location.lower().startswith(laterality.lower()):
+            return f"{laterality.title()} {display_location.title()}"
         return display_location.title()
     if laterality:
         return f"{laterality.title()} {canonical_location.title()}"
