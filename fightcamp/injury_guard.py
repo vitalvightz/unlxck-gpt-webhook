@@ -17,32 +17,14 @@ from .injury_synonyms import parse_injury_phrase, remove_negated_phrases, split_
 from .tagging import normalize_tags
 # Import injury rules version for cache invalidation
 from .config import INJURY_RULES_VERSION
+from .injury_taxonomy import derive_injury_type_severity_map
 
 logger = logging.getLogger(__name__)
 
 INJURY_DEBUG = os.environ.get("INJURY_DEBUG", "0") == "1"
 
 
-INJURY_TYPE_SEVERITY = {
-    "tightness": "low",
-    "soreness": "low",
-    "stiffness": "low",
-    "pain": "low",
-    "contusion": "low",
-    "sprain": "moderate",
-    "strain": "moderate",
-    "tendonitis": "moderate",
-    "impingement": "moderate",
-    "hyperextension": "moderate",
-    "abrasion": "low",
-    "cut": "low",
-    "graze": "low",
-    "blister": "low",
-    "laceration": "moderate",
-    "swelling": "moderate",
-    "instability": "moderate",
-    "unspecified": "moderate",
-}
+INJURY_TYPE_SEVERITY = derive_injury_type_severity_map()
 
 SURFACE_TISSUE_TYPES = {"abrasion", "cut", "graze", "blister", "laceration"}
 SURFACE_RED_FLAG_TERMS = {

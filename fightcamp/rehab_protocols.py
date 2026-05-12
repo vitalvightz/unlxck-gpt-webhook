@@ -4,6 +4,7 @@ from typing import Iterable
 
 from .injury_formatting import format_injury_summary, parse_injury_entry
 from .injury_guard import INJURY_TYPE_SEVERITY, normalize_severity
+from .injury_taxonomy import derive_red_flag_types, derive_urgent_injury_tokens, get_red_flag_message
 from .injury_synonyms import parse_injury_phrase, split_injury_text
 from .restriction_parsing import ParsedRestriction
 # Refactored: Import centralized DATA_DIR from config
@@ -129,17 +130,7 @@ INJURY_TYPES = [
     "blister",
     "unspecified",
 ]
-_URGENT_INJURY_TOKENS = {
-    "fracture",
-    "rupture",
-    "dislocation",
-    "concussion",
-    "post-surgery",
-    "post_surgery",
-    "infection",
-    "acute nerve issue",
-    "acute_nerve_issue",
-}
+_URGENT_INJURY_TOKENS = derive_urgent_injury_tokens()
 _INJURY_RISK_ORDER = [
     "instability",
     "swelling",
@@ -406,15 +397,7 @@ INJURY_SUPPORT_NOTES = {
         "Consult clinician if symptoms persist >5 days",
     ],
 }
-RED_FLAG_TYPES = [
-    "fracture",
-    "rupture",
-    "dislocation",
-    "post-surgery",
-    "severe swelling",
-    "acute nerve issue",
-    "infection/inflammatory",
-]
+RED_FLAG_TYPES = derive_red_flag_types()
 
 BFR_SAFETY_GATE = (
     "Use only if already experienced with BFR and medically appropriate; "
