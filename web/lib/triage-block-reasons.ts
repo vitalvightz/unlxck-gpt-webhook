@@ -92,6 +92,74 @@ function formatGuidedInjuryContext(injury: GuidedInjurySummary) {
   return `${main}${meta.length ? ` · ${meta.join(" · ")}` : ""}`;
 }
 
+function _tokenizeSignal(value: string): string[] {
+  return value
+    .toLowerCase()
+    .replace(/[_-]/g, " ")
+    .split(/[^a-z0-9]+/)
+    .map((token) => token.trim())
+    .filter((token) => token.length >= 3);
+}
+
+function selectGuidedInjuryContext(
+  guidedInjuries: GuidedInjurySummary[],
+  triage: InjuryTriageSignals,
+): string | null {
+  const signals = [
+    ...(triage.red_flags ?? []),
+    ...(triage.matched_high_risk_categories ?? []),
+    ...(triage.urgent_flags ?? []),
+    ...(triage.reasons ?? []),
+    ...(triage.routing_reasons ?? []),
+  ]
+    .filter((value): value is string => typeof value === "string" && Boolean(value.trim()))
+    .map((value) => value.trim().toLowerCase());
+
+  const signalTokens = new Set(signals.flatMap(_tokenizeSignal));
+
+  const scored = guidedInjuries
+    .map((injury, index) => {
+      const context = formatGuidedInjuryContext(injury);
+      if (!context) return null;
+      const fields = [
+        injury.notes,
+        injury.injury_type,
+        injury.surface_type,
+        injury.area,
+      ]
+        .filter((value): value is string => typeof value === "string" && Boolean(value.trim()))
+        .map((value) => value.trim().toLowerCase());
+
+      let score = 0;
+      for (const field of fields) {
+        if (signals.some((signal) => signal.includes(field) || field.includes(signal))) score += 5;
+        for (const token of _tokenizeSignal(field)) {
+          if (signalTokens.has(token)) {
+            score += field === injury.notes?.trim().toLowerCase() ? 2 : 3;
+          }
+        }
+      }
+
+      return { context, index, score };
+    })
+    .filter((entry): entry is { context: string; index: number; score: number } => Boolean(entry));
+
+  if (!scored.length) return null;
+
+  const best = scored.reduce((top, current) => {
+    if (!top) return current;
+    if (current.score > top.score) return current;
+    if (current.score === top.score && current.index < top.index) return current;
+    return top;
+  }, null as { context: string; index: number; score: number } | null);
+
+  if (!best) return null;
+  if (best.score <= 0) {
+    return scored[0]?.context ?? null;
+  }
+  return best.context;
+}
+
 export function buildCapturedInjuryDetail(
   injury: GuidedInjurySummary,
 ): CapturedInjuryDetail | null {
@@ -234,7 +302,7 @@ export function buildBlockedInjuryContextSummary({
   injuriesText?: string | null;
   guidedInjuries?: GuidedInjurySummary[] | null;
 }): BlockedInjuryContextSummary {
-  const guidedContext = (guidedInjuries ?? []).map(formatGuidedInjuryContext).find(Boolean);
+  const guidedContext = selectGuidedInjuryContext(guidedInjuries ?? [], triage);
   const highRiskLabels = [...new Set((triage.matched_high_risk_categories ?? []).map(titleizeToken).filter(Boolean))].slice(0, 2);
   const redFlagLabels = [...new Set((triage.red_flags ?? []).map(titleizeToken).filter(Boolean))].slice(0, 2);
   const urgentFlagLabels = [...new Set((triage.urgent_flags ?? []).map(titleizeToken).filter(Boolean))].slice(0, 2);
