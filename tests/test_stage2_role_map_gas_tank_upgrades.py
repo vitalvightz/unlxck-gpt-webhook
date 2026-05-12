@@ -279,3 +279,20 @@ def test_sandwiched_days_prefer_low_load_support_and_keep_primary_strength_on_cl
 
     assert primary.get("scheduled_day_hint") == "saturday"
     assert aerobic.get("scheduled_day_hint") in {"tuesday", "thursday"}
+
+
+def test_assign_declared_day_hints_normalizes_locked_hard_sparring_day_case():
+    athlete_model = {
+        "training_days": ["tuesday", "thursday", "saturday"],
+        "hard_sparring_days": ["thursday"],
+    }
+    roles = _assign_declared_day_hints(
+        [
+            {"session_index": 1, "category": "sparring", "role_key": "hard_sparring_day", "scheduled_day_hint": "Thursday"},
+            {"session_index": 2, "category": "strength", "role_key": "primary_strength_day"},
+        ],
+        athlete_model,
+        hard_sparring_plan=[{"day": "thursday", "status": "hard_as_planned"}],
+    )
+    hard = next(role for role in roles if role.get("role_key") == "hard_sparring_day")
+    assert hard.get("scheduled_day_hint") == "thursday"

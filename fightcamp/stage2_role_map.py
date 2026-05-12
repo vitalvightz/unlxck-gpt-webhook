@@ -1211,7 +1211,7 @@ def _assign_declared_day_hints(
     # Generated low-aerobic recovery touches are also emitted with explicit
     # day hints after compression and should survive this assignment pass.
     for idx, role in enumerate(ordered):
-        locked_day = str(role.get("scheduled_day_hint") or "").strip()
+        locked_day = str(role.get("scheduled_day_hint") or "").strip().lower()
         if not locked_day or locked_day not in training_days:
             continue
         if role.get("role_key") == "hard_sparring_day":
