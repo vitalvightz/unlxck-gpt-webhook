@@ -132,7 +132,8 @@ function selectGuidedInjuryContext(
 
       let score = 0;
       for (const field of fields) {
-        for (const token of _tokenizeSignal(field.value)) {
+        const fieldTokens = new Set(_tokenizeSignal(field.value));
+        for (const token of fieldTokens) {
           if (signalTokens.has(token)) {
             score += field.weight;
           }
