@@ -3,6 +3,7 @@ import test from "node:test";
 
 import {
   buildBlockedInjuryContextSummary,
+  buildCapturedInjuryDetail,
   summarizeBlockedInjuryContext,
 } from "./triage-block-reasons.ts";
 
@@ -116,6 +117,9 @@ test("buildBlockedInjuryContextSummary returns structured fields with captured i
   assert.deepEqual(summary, {
     capturedInjury: "Head — Concussion · High",
     blockedTrigger: "Loss of consciousness",
+    capturedInjuries: [
+      { headline: "Head — Concussion", meta: ["High severity"], flags: [] },
+    ],
   });
 });
 
@@ -137,5 +141,128 @@ test("buildBlockedInjuryContextSummary returns only capturedInjury when no safet
 
   assert.deepEqual(summary, {
     capturedInjury: "Left ankle — Bruise / contusion · Moderate · Stable · Impact-related",
+    capturedInjuries: [
+      {
+        headline: "Left ankle — Bruise / contusion",
+        meta: ["Moderate severity", "Trend: Stable", "Impact-related"],
+        flags: [],
+      },
+    ],
   });
+});
+
+test("buildCapturedInjuryDetail returns headline and full meta for a populated injury", () => {
+  const detail = buildCapturedInjuryDetail({
+    area: "Left ankle",
+    surface_type: "bruise",
+    severity: "moderate",
+    trend: "stable",
+    impact_related: "yes",
+    timeframe: "within_2_weeks",
+    notes: "Swells after sparring rounds.",
+    avoid: "Heavy kicks and lateral cuts.",
+  });
+
+  assert.deepEqual(detail, {
+    headline: "Left ankle — Bruise / contusion",
+    meta: ["Moderate severity", "Trend: Stable", "Impact-related", "Onset: Within 2 weeks"],
+    flags: [],
+    notes: "Swells after sparring rounds.",
+    avoid: "Heavy kicks and lateral cuts.",
+  });
+});
+
+test("buildCapturedInjuryDetail keeps headline when only area is set", () => {
+  const detail = buildCapturedInjuryDetail({ area: "Right shoulder" });
+  assert.deepEqual(detail, {
+    headline: "Right shoulder",
+    meta: [],
+    flags: [],
+  });
+});
+
+test("buildCapturedInjuryDetail surfaces wound and clearance flags", () => {
+  const detail = buildCapturedInjuryDetail({
+    area: "Eyebrow",
+    surface_type: "laceration",
+    open_wound: "yes",
+    bleeding_status: "active",
+    infection_signs: ["redness", "warmth"],
+    sensitive_area: "yes",
+    cleared: "no",
+  });
+
+  assert.deepEqual(detail, {
+    headline: "Eyebrow — Laceration / deep cut",
+    meta: [],
+    flags: [
+      "Open wound",
+      "Bleeding: Active",
+      "Infection signs: Redness, Warmth",
+      "Sensitive area",
+      "Not yet medically cleared",
+    ],
+  });
+});
+
+test("buildCapturedInjuryDetail returns null when neither area nor type is provided", () => {
+  const detail = buildCapturedInjuryDetail({});
+  assert.equal(detail, null);
+});
+
+test("buildBlockedInjuryContextSummary populates capturedInjuries for every guided injury in order", () => {
+  const summary = buildBlockedInjuryContextSummary({
+    triage: { red_flags: [], matched_high_risk_categories: [] },
+    guidedInjuries: [
+      { area: "Left ankle", surface_type: "bruise", severity: "moderate" },
+      { area: "Right shoulder", injury_type: "strain", trend: "worsening" },
+    ],
+  });
+
+  assert.deepEqual(summary.capturedInjuries, [
+    {
+      headline: "Left ankle — Bruise / contusion",
+      meta: ["Moderate severity"],
+      flags: [],
+    },
+    {
+      headline: "Right shoulder — Strain",
+      meta: ["Trend: Worsening"],
+      flags: [],
+    },
+  ]);
+});
+
+test("buildBlockedInjuryContextSummary returns pauseReasons verbatim and deduped", () => {
+  const summary = buildBlockedInjuryContextSummary({
+    triage: {
+      red_flags: [],
+      matched_high_risk_categories: [],
+      reasons: [
+        "Moderate stable injury did not meet the strict allowlist for automatic full planning.",
+        "  Moderate stable injury did not meet the strict allowlist for automatic full planning.  ",
+        "Coach/admin review is required before normal plan generation.",
+      ],
+    },
+  });
+
+  assert.deepEqual(summary.pauseReasons, [
+    "Moderate stable injury did not meet the strict allowlist for automatic full planning.",
+    "Coach/admin review is required before normal plan generation.",
+  ]);
+});
+
+test("buildBlockedInjuryContextSummary sets legacyInjuryText only when guided list is empty", () => {
+  const withGuided = buildBlockedInjuryContextSummary({
+    triage: { red_flags: [], matched_high_risk_categories: [] },
+    injuriesText: "left ankle rolled in sparring",
+    guidedInjuries: [{ area: "Left ankle", surface_type: "bruise" }],
+  });
+  assert.equal(withGuided.legacyInjuryText, undefined);
+
+  const withoutGuided = buildBlockedInjuryContextSummary({
+    triage: { red_flags: [], matched_high_risk_categories: [] },
+    injuriesText: "left ankle rolled in sparring",
+  });
+  assert.equal(withoutGuided.legacyInjuryText, "left ankle rolled in sparring");
 });

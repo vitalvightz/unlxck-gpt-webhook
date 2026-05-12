@@ -16,11 +16,29 @@ export type GuidedInjurySummary = {
   trend?: string;
   impact_related?: string;
   notes?: string;
+  avoid?: string;
+  timeframe?: string;
+  cleared?: string;
+  open_wound?: string;
+  bleeding_status?: string;
+  infection_signs?: string[];
+  sensitive_area?: string;
+};
+
+export type CapturedInjuryDetail = {
+  headline: string;
+  meta: string[];
+  notes?: string;
+  avoid?: string;
+  flags: string[];
 };
 
 export type BlockedInjuryContextSummary = {
   capturedInjury?: string;
   blockedTrigger?: string;
+  capturedInjuries?: CapturedInjuryDetail[];
+  pauseReasons?: string[];
+  legacyInjuryText?: string;
 };
 
 const INJURY_TYPE_LABELS: Record<string, string> = {
@@ -72,6 +90,58 @@ function formatGuidedInjuryContext(injury: GuidedInjurySummary) {
   const main = [area, typeLabel].filter(Boolean).join(" — ");
   if (!main) return null;
   return `${main}${meta.length ? ` · ${meta.join(" · ")}` : ""}`;
+}
+
+export function buildCapturedInjuryDetail(
+  injury: GuidedInjurySummary,
+): CapturedInjuryDetail | null {
+  const area = titleizeToken(injury.area || "");
+  const surfaceKey = injury.surface_type?.trim().toLowerCase() || "";
+  const typeKey = injury.injury_type?.trim().toLowerCase() || "";
+  const typeLabel =
+    SURFACE_TYPE_LABELS[surfaceKey] ||
+    (surfaceKey ? titleizeToken(surfaceKey) : "") ||
+    INJURY_TYPE_LABELS[typeKey] ||
+    titleizeToken(typeKey);
+  const headline = [area, typeLabel].filter(Boolean).join(" — ");
+  if (!headline) return null;
+
+  const meta = [
+    injury.severity ? `${titleizeToken(injury.severity)} severity` : null,
+    injury.trend ? `Trend: ${titleizeToken(injury.trend)}` : null,
+    injury.impact_related === "yes" ? "Impact-related" : null,
+    injury.timeframe ? `Onset: ${titleizeToken(injury.timeframe)}` : null,
+  ].filter((value): value is string => Boolean(value));
+
+  const bleedingKey = injury.bleeding_status?.trim().toLowerCase() || "";
+  const infectionSigns = (injury.infection_signs ?? [])
+    .map((sign) => (typeof sign === "string" ? sign.trim() : ""))
+    .filter(Boolean);
+  const clearedKey = injury.cleared?.trim().toLowerCase() || "";
+
+  const flags = [
+    injury.open_wound === "yes" ? "Open wound" : null,
+    bleedingKey && bleedingKey !== "none"
+      ? `Bleeding: ${titleizeToken(bleedingKey)}`
+      : null,
+    infectionSigns.length
+      ? `Infection signs: ${infectionSigns.map(titleizeToken).join(", ")}`
+      : null,
+    injury.sensitive_area === "yes" ? "Sensitive area" : null,
+    clearedKey === "no"
+      ? "Not yet medically cleared"
+      : clearedKey === "yes"
+        ? "Medically cleared"
+        : null,
+  ].filter((value): value is string => Boolean(value));
+
+  const notes = injury.notes?.trim();
+  const avoid = injury.avoid?.trim();
+
+  const detail: CapturedInjuryDetail = { headline, meta, flags };
+  if (notes) detail.notes = notes;
+  if (avoid) detail.avoid = avoid;
+  return detail;
 }
 
 const INJURY_REASON_SYNONYMS: Array<{ label: string; patterns: RegExp[] }> = [
@@ -196,12 +266,37 @@ export function buildBlockedInjuryContextSummary({
   ];
   const uniqueSafetySignals = [...new Set(safetySignals)].filter(Boolean);
 
+  const capturedInjuries = (guidedInjuries ?? [])
+    .map(buildCapturedInjuryDetail)
+    .filter((detail): detail is CapturedInjuryDetail => Boolean(detail));
+  const pauseReasons = [
+    ...new Set(
+      (triage.reasons ?? [])
+        .map((reason) => (typeof reason === "string" ? reason.trim() : ""))
+        .filter(Boolean),
+    ),
+  ];
+
+  const attachExtras = (
+    base: BlockedInjuryContextSummary,
+  ): BlockedInjuryContextSummary => {
+    if (capturedInjuries.length) {
+      base.capturedInjuries = capturedInjuries;
+    } else if (injuryLine) {
+      base.legacyInjuryText = injuryLine;
+    }
+    if (pauseReasons.length) {
+      base.pauseReasons = pauseReasons;
+    }
+    return base;
+  };
+
   if (guidedContext) {
     const result: BlockedInjuryContextSummary = { capturedInjury: guidedContext };
     if (uniqueSafetySignals.length) {
       result.blockedTrigger = uniqueSafetySignals.slice(0, 2).join(" + ");
     }
-    return result;
+    return attachExtras(result);
   }
 
   const allOrdered = [...new Set([
@@ -219,12 +314,12 @@ export function buildBlockedInjuryContextSummary({
   const secondary = allOrdered[1] ?? null;
 
   if (primary && secondary) {
-    return { blockedTrigger: `${primary} + ${secondary}` };
+    return attachExtras({ blockedTrigger: `${primary} + ${secondary}` });
   }
   if (primary) {
-    return { blockedTrigger: primary };
+    return attachExtras({ blockedTrigger: primary });
   }
-  return { blockedTrigger: "Protected planner state" };
+  return attachExtras({ blockedTrigger: "Protected planner state" });
 }
 
 export function summarizeBlockedInjuryContext(input: {

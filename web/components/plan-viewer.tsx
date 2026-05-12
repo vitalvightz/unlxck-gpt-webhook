@@ -198,12 +198,19 @@ function readInjuryTriage(plan: PlanDetail): InjuryTriageView | null {
 function BlockedPlanDecisionCard({
   triage,
   injuryContext,
+  isAdmin,
 }: {
   triage: InjuryTriageView;
   injuryContext?: BlockedInjuryContextSummary | null;
+  isAdmin: boolean;
 }) {
   const isMedicalHold = triage.mode === "medical_hold";
   const isRestricted = triage.mode === "restricted_rehab_only";
+  const [injuryDetailsOpen, setInjuryDetailsOpen] = useState(false);
+  const capturedInjuries = injuryContext?.capturedInjuries ?? [];
+  const legacyInjuryText = injuryContext?.legacyInjuryText?.trim() || "";
+  const pauseReasons = injuryContext?.pauseReasons ?? [];
+  const hasCapturedDetail = capturedInjuries.length > 0 || Boolean(legacyInjuryText);
 
   const title = isMedicalHold
     ? "Medical hold"
@@ -273,22 +280,89 @@ function BlockedPlanDecisionCard({
       </div>
 
       <p>{intro}</p>
-      {injuryContext && (injuryContext.capturedInjury || injuryContext.blockedTrigger) ? (
+
+      {isAdmin && pauseReasons.length ? (
         <div className="blocked-context-line">
-          {injuryContext.capturedInjury ? (
-            <div>
-              <strong>Captured injury:</strong> {injuryContext.capturedInjury}
-            </div>
-          ) : null}
-          {injuryContext.blockedTrigger ? (
-            <div>
-              <strong>Blocked trigger:</strong> {injuryContext.blockedTrigger}
-            </div>
-          ) : null}
+          <strong>Why this was paused</strong>
+          <ul className="summary-list">
+            {pauseReasons.map((reason) => (
+              <li key={reason}>{reason}</li>
+            ))}
+          </ul>
+        </div>
+      ) : isAdmin && injuryContext?.blockedTrigger ? (
+        <div className="blocked-context-line">
+          <div>
+            <strong>Blocked trigger:</strong> {injuryContext.blockedTrigger}
+          </div>
         </div>
       ) : null}
 
-      {signalTokens.length ? (
+      {hasCapturedDetail ? (
+        <div className="blocked-context-line">
+          <button
+            type="button"
+            className="ghost-button"
+            onClick={() => setInjuryDetailsOpen((open) => !open)}
+            aria-expanded={injuryDetailsOpen}
+          >
+            {injuryDetailsOpen ? "Hide injury details" : "Show injury details"}
+          </button>
+          {injuryDetailsOpen ? (
+            capturedInjuries.length ? (
+              <ul className="summary-list">
+                {capturedInjuries.map((injury, index) => (
+                  <li key={`${injury.headline}-${index}`}>
+                    <div>
+                      <strong>{injury.headline}</strong>
+                    </div>
+                    {injury.meta.length ? (
+                      <div className="plan-card-meta">
+                        {injury.meta.map((entry) => (
+                          <span key={entry} className="badge status-badge-neutral">
+                            {entry}
+                          </span>
+                        ))}
+                      </div>
+                    ) : null}
+                    {injury.flags.length ? (
+                      <div className="plan-card-meta">
+                        {injury.flags.map((flag) => (
+                          <span key={flag} className="badge">
+                            {flag}
+                          </span>
+                        ))}
+                      </div>
+                    ) : null}
+                    {injury.notes ? (
+                      <div>
+                        <em>Athlete notes:</em> {injury.notes}
+                      </div>
+                    ) : null}
+                    {injury.avoid ? (
+                      <div>
+                        <em>Avoid:</em> {injury.avoid}
+                      </div>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <div>
+                <strong>Captured injury:</strong> {legacyInjuryText}
+              </div>
+            )
+          ) : null}
+        </div>
+      ) : injuryContext?.capturedInjury ? (
+        <div className="blocked-context-line">
+          <div>
+            <strong>Captured injury:</strong> {injuryContext.capturedInjury}
+          </div>
+        </div>
+      ) : null}
+
+      {isAdmin && signalTokens.length ? (
         <div className="plan-card-meta">
           {signalTokens.map((token) => (
             <span key={token} className="badge status-badge-neutral">
@@ -1338,7 +1412,11 @@ export function PlanViewer({
           {primaryAdvisory ? <SparringAdvisoryCard advisory={primaryAdvisory} /> : null}
 
           {isTriageBlocked && injuryTriage ? (
-            <BlockedPlanDecisionCard triage={injuryTriage} injuryContext={blockedInjuryContext} />
+            <BlockedPlanDecisionCard
+              triage={injuryTriage}
+              injuryContext={blockedInjuryContext}
+              isAdmin={isAdmin}
+            />
           ) : hasPublishedPlan ? (
             <>
               <div className="plan-summary-actions">
