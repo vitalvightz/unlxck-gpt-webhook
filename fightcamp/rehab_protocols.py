@@ -916,8 +916,12 @@ def _build_red_flag_block(entry: dict) -> str:
         lines.append(f"• Triage category: {triage}")
     if flags:
         lines.append(f"• Flags: {flags}")
-    taxonomy_message = get_red_flag_message((entry.get("triage_categories") or [""])[0])
-    lines.append(f"• {taxonomy_message or 'Do not train this injury normally until cleared by a clinician.'}")
+    triage_cats = entry.get("triage_categories") or []
+    messages = sorted({get_red_flag_message(cat) for cat in triage_cats if get_red_flag_message(cat)})
+    if not messages:
+        messages = ["Do not train this injury normally until cleared by a clinician."]
+    for msg in messages:
+        lines.append(f"• {msg}")
     lines.append("• All strength/conditioning recommendations must be manually adjusted.")
     return "\n".join(lines)
 
