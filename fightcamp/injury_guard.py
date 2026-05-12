@@ -93,7 +93,7 @@ def _has_concussion_signal(injuries: Iterable[str | dict]) -> bool:
             triage = str(injury.get("triage_category") or "").strip().lower()
             if triage == "concussion":
                 return True
-            flags = {str(flag).strip().lower() for flag in injury.get("flags", []) if flag}
+            flags = {str(flag).strip().lower() for flag in (injury.get("flags") or []) if flag}
             if "suspected_concussion" in flags:
                 return True
             raw_text = str(injury.get("original_phrase") or injury.get("raw") or "").lower()
