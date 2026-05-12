@@ -3,6 +3,7 @@ import test from "node:test";
 
 import {
   buildBlockedInjuryContextSummary,
+  buildBlockedWhy,
   buildCapturedInjuryDetail,
   summarizeBlockedInjuryContext,
 } from "./triage-block-reasons.ts";
@@ -300,4 +301,97 @@ test("buildBlockedInjuryContextSummary sets legacyInjuryText only when guided li
     injuriesText: "left ankle rolled in sparring",
   });
   assert.equal(withoutGuided.legacyInjuryText, "left ankle rolled in sparring");
+});
+
+test("buildBlockedInjuryContextSummary picks guided card matching head-impact medical hold signals", () => {
+  const summary = buildBlockedInjuryContextSummary({
+    triage: {
+      red_flags: ["vomiting_after_head_impact"],
+      matched_high_risk_categories: ["concussion"],
+      urgent_flags: ["vomiting_after_head_impact"],
+      reasons: ["Head impact with vomiting reported"],
+      routing_reasons: ["medical_hold from head impact"],
+    },
+    guidedInjuries: [
+      { area: "Left ankle", injury_type: "sprain", severity: "mild", notes: "rolled ankle" },
+      { area: "Head", injury_type: "head_impact", notes: "Vomiting after head impact", severity: "high" },
+    ],
+  });
+
+  assert.equal(summary.capturedInjury, "Head — Head impact · High");
+});
+
+test("buildBlockedInjuryContextSummary picks post-surgery knee card for restricted routing", () => {
+  const summary = buildBlockedInjuryContextSummary({
+    triage: {
+      red_flags: [],
+      matched_high_risk_categories: ["post_op_reconstruction_active"],
+      reasons: ["Post-surgery knee still not cleared"],
+      routing_reasons: ["restricted_rehab_only"],
+    },
+    guidedInjuries: [
+      { area: "Left wrist", injury_type: "tightness", severity: "mild", notes: "mild wrist discomfort" },
+      { area: "Left knee", injury_type: "post_surgery", notes: "post-surgery rehab ongoing", severity: "moderate" },
+    ],
+  });
+
+  assert.equal(summary.capturedInjury, "Left knee — Post-surgery injury · Moderate");
+});
+
+test("buildBlockedInjuryContextSummary keeps first-valid fallback when no guided card matches signals", () => {
+  const summary = buildBlockedInjuryContextSummary({
+    triage: {
+      red_flags: ["loss_of_consciousness"],
+      matched_high_risk_categories: [],
+      reasons: ["Coach review required"],
+      routing_reasons: ["manual_review"],
+    },
+    guidedInjuries: [
+      { area: "Left ankle", injury_type: "sprain", severity: "mild" },
+      { area: "Right wrist", injury_type: "tightness", severity: "mild" },
+    ],
+  });
+
+  assert.equal(summary.capturedInjury, "Left ankle — Sprain · Mild");
+});
+
+test("buildBlockedWhy medical_hold wording does not rely on coach call", () => {
+  const result = buildBlockedWhy({
+    mode: "medical_hold",
+    red_flags: ["vomiting_after_head_impact"],
+    matched_high_risk_categories: [],
+  });
+
+  assert.ok(result.body.startsWith("Medical hold:"));
+  assert.equal(result.body.includes("Coach call"), false);
+});
+
+test("buildBlockedWhy medical_hold mentions medical or clinical review", () => {
+  const result = buildBlockedWhy({
+    mode: "medical_hold",
+    red_flags: ["loss_of_consciousness"],
+    matched_high_risk_categories: [],
+  });
+
+  assert.ok(/medical|clinical/i.test(result.body));
+});
+
+test("buildBlockedWhy needs_review can mention coach/admin review", () => {
+  const result = buildBlockedWhy({
+    mode: "needs_review",
+    red_flags: [],
+    matched_high_risk_categories: [],
+  });
+
+  assert.ok(/coach\/admin review/i.test(result.body));
+});
+
+test("buildBlockedWhy restricted_rehab_only mentions restricted rehab support guidance", () => {
+  const result = buildBlockedWhy({
+    mode: "restricted_rehab_only",
+    red_flags: [],
+    matched_high_risk_categories: [],
+  });
+
+  assert.ok(/restricted rehab\/support guidance/i.test(result.body));
 });
