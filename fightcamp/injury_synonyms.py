@@ -270,6 +270,22 @@ STRUCTURAL_RED_FLAG_MAP: dict[str, tuple[str, ...]] = {
     # Bone
     "fracture": ("structural_red_flag", "suspected_fracture", "urgent"),
     "broken bone": ("structural_red_flag", "suspected_fracture", "urgent"),
+
+    # Concussion / head injury
+    "concussion": ("structural_red_flag", "suspected_concussion", "urgent"),
+    "concussed": ("structural_red_flag", "suspected_concussion", "urgent"),
+    "head injury": ("structural_red_flag", "suspected_concussion", "urgent"),
+    "head knock": ("structural_red_flag", "suspected_concussion", "urgent"),
+    "head impact": ("structural_red_flag", "suspected_concussion", "urgent"),
+    "got rocked": ("structural_red_flag", "suspected_concussion", "urgent"),
+    "knocked out": ("structural_red_flag", "suspected_concussion", "urgent"),
+    "ko'd": ("structural_red_flag", "suspected_concussion", "urgent"),
+    "k.o.'d": ("structural_red_flag", "suspected_concussion", "urgent"),
+    "blacked out": ("structural_red_flag", "suspected_concussion", "urgent"),
+    "dizzy after head impact": ("structural_red_flag", "suspected_concussion", "urgent"),
+    "headache after sparring": ("structural_red_flag", "suspected_concussion", "urgent"),
+    "blurred vision after hit": ("structural_red_flag", "suspected_concussion", "urgent"),
+    "nausea after head impact": ("structural_red_flag", "suspected_concussion", "urgent"),
 }
 
 TRIAGE_CATEGORY_MAP: dict[str, str] = {
@@ -299,6 +315,20 @@ TRIAGE_CATEGORY_MAP: dict[str, str] = {
     "sublux": "dislocation",
     "fracture": "fracture",
     "broken bone": "fracture",
+    "concussion": "concussion",
+    "concussed": "concussion",
+    "head injury": "concussion",
+    "head knock": "concussion",
+    "head impact": "concussion",
+    "got rocked": "concussion",
+    "knocked out": "concussion",
+    "ko'd": "concussion",
+    "k.o.'d": "concussion",
+    "blacked out": "concussion",
+    "dizzy after head impact": "concussion",
+    "headache after sparring": "concussion",
+    "blurred vision after hit": "concussion",
+    "nausea after head impact": "concussion",
     "infection": "infection",
     "hernia": "hernia",
 }

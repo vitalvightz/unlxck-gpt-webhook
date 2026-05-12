@@ -934,6 +934,8 @@ def _build_red_flag_block(entry: dict) -> str:
     if flags:
         lines.append(f"• Flags: {flags}")
     lines.append("• Do not train this injury normally until cleared by a clinician.")
+    if "concussion" in triage or "suspected_concussion" in flags:
+        lines.append("• No contact, sparring, high-CNS conditioning, or return-to-play progression until medically cleared.")
     lines.append("• All strength/conditioning recommendations must be manually adjusted.")
     return "\n".join(lines)
 

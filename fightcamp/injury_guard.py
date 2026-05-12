@@ -61,6 +61,50 @@ SURFACE_RED_FLAG_TERMS = {
     "stitches",
 }
 
+CONCUSSION_SIGNAL_TERMS = {
+    "concussion",
+    "concussed",
+    "head injury",
+    "head knock",
+    "head impact",
+    "got rocked",
+    "knocked out",
+    "ko'd",
+    "k.o.'d",
+    "blacked out",
+}
+
+CONCUSSION_BLOCK_TAGS = {
+    "head_impact",
+    "contact",
+    "live_rounds",
+    "high_cns",
+    "max_velocity",
+    "sprint_intervals",
+    "explosive_conditioning",
+}
+
+
+def _has_concussion_signal(injuries: Iterable[str | dict]) -> bool:
+    for injury in injuries:
+        if not injury:
+            continue
+        if isinstance(injury, dict):
+            triage = str(injury.get("triage_category") or "").strip().lower()
+            if triage == "concussion":
+                return True
+            flags = {str(flag).strip().lower() for flag in injury.get("flags", []) if flag}
+            if "suspected_concussion" in flags:
+                return True
+            raw_text = str(injury.get("original_phrase") or injury.get("raw") or "").lower()
+            if any(term in raw_text for term in CONCUSSION_SIGNAL_TERMS):
+                return True
+            continue
+        lowered = str(injury).lower()
+        if any(term in lowered for term in CONCUSSION_SIGNAL_TERMS):
+            return True
+    return False
+
 SEVERITY_SYNONYMS = {
     "high": [
         "pop",
@@ -838,6 +882,27 @@ def injury_decision(exercise: dict, injuries: Iterable[str | dict] | str | dict,
         )
 
     name = str(exercise.get("name", "") or "") or "Unnamed"
+    exercise_tags = {str(tag).strip().lower() for tag in exercise.get("tags", []) if tag}
+    exercise_text = " ".join(
+        str(exercise.get(field, "") or "")
+        for field in ("name", "notes", "method", "movement", "purpose", "description", "modality")
+    ).lower()
+    if _has_concussion_signal(injuries_list):
+        has_concussion_risk_tag = bool(exercise_tags & CONCUSSION_BLOCK_TAGS)
+        has_concussion_risk_text = any(
+            token in exercise_text
+            for token in ("sparring", "contact", "live rounds", "hard rounds", "high-cns", "high cns", "max velocity", "sprint intervals", "explosive conditioning", "plyo", "battle rope")
+        )
+        if has_concussion_risk_tag or has_concussion_risk_text:
+            return Decision(
+                action="exclude",
+                risk_score=round(threshold + 0.5, 3),
+                threshold=threshold,
+                matched_tags=sorted(exercise_tags & CONCUSSION_BLOCK_TAGS),
+                mods=[],
+                reason={"region": "head", "severity": "high", "bucket": "concussion", "matches": ["suspected_concussion"]},
+            )
+
     item_id = str(exercise.get("id") or name or id(exercise))
     region_severity = _injury_context(injuries_list, debug_entries=debug_entries)
     if debug_entries is not None:
