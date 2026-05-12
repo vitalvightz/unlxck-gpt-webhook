@@ -965,9 +965,6 @@ def test_structural_injury_end_to_end_blocks_unsafe_output(injury, forbidden_ter
     assert not any(term in text for term in forbidden_terms)
 
 
-@pytest.mark.xfail(
-    reason="TODO: wire concussion into structural triage/e2e safety flow if not already guaranteed by parser outputs."
-)
 def test_concussion_end_to_end_blocks_contact_and_high_cns_output():
     from tests.support import _build_request
     generate_plan_sync = pytest.importorskip("fightcamp.main").generate_plan_sync
@@ -977,3 +974,44 @@ def test_concussion_end_to_end_blocks_contact_and_high_cns_output():
     text = (result.get("plan_text") or "").lower()
     assert "red flag detected" in text
     assert "sparring" not in text
+    for forbidden in (
+        "contact",
+        "live rounds",
+        "hard rounds",
+        "max velocity",
+        "sprint intervals",
+        "high-cns",
+        "explosive conditioning",
+    ):
+        assert forbidden not in text
+
+
+def test_score_injury_phrase_concussion_is_triaged_urgent_structural():
+    scored = score_injury_phrase("concussion last week")
+    assert scored["triage_category"] == "concussion"
+    assert "urgent" in scored["flags"]
+    assert "structural_red_flag" in scored["flags"]
+    assert "suspected_concussion" in scored["flags"]
+
+
+def test_parse_injury_entry_head_injury_sets_concussion_flags():
+    entry = parse_injury_entry("head injury from sparring")
+    assert entry is not None
+    assert entry["triage_category"] == "concussion"
+    assert "urgent" in entry["flags"]
+    assert "structural_red_flag" in entry["flags"]
+    assert "suspected_concussion" in entry["flags"]
+
+
+def test_generate_rehab_protocols_concussion_returns_red_flag_no_drills():
+    text, seen = generate_rehab_protocols(
+        injury_string="concussion",
+        current_phase="GPP",
+        parsed_entries=[parse_injury_entry("concussion")],
+        exercise_data=[],
+        day_type="strength",
+    )
+    normalized = text.lower()
+    assert "red flag detected" in normalized
+    assert "  • " not in text
+    assert seen == set()
