@@ -9690,4 +9690,16 @@ html[data-app-surface="workspace"][data-theme="dark"] .desktop-nav-toggle {
   color: #ffd5dc;
   font-size: 0.95rem;
   line-height: 1.4;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.blocked-context-line > div + div {
+  margin-top: 2px;
+}
+
+.blocked-context-line strong {
+  color: #ffe6ea;
+  font-weight: 600;
 }
