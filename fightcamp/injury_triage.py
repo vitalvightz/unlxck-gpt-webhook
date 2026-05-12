@@ -15,6 +15,18 @@ RESTRICTED_REHAB_ONLY = "restricted_rehab_only"
 MEDICAL_HOLD = "medical_hold"
 NEEDS_REVIEW = "needs_review"
 
+MODE_EXPLANATIONS: dict[str, str] = {
+    MEDICAL_HOLD: "Training guidance is blocked because urgent medical-risk signals were detected.",
+    RESTRICTED_REHAB_ONLY: "Normal fight-camp loading is blocked. Only restricted rehab/support guidance is allowed.",
+    NEEDS_REVIEW: "Automatic planning is blocked until a coach/admin reviews the injury context.",
+}
+
+NEXT_STEPS: dict[str, str] = {
+    MEDICAL_HOLD: "Stop automatic training guidance and seek appropriate medical/clinical review.",
+    RESTRICTED_REHAB_ONLY: "Generate only restricted rehab/support guidance until cleared.",
+    NEEDS_REVIEW: "Hold normal plan generation until coach/admin review.",
+}
+
 
 _HIGH_RISK_CATEGORY_ROUTE: dict[str, str] = {
     "fracture": RESTRICTED_REHAB_ONLY,
@@ -1433,7 +1445,39 @@ def triage_injuries(plan_input: PlanInput) -> InjuryTriageResult:
     )
 
 
-def blocked_mode_output(*, triage: InjuryTriageResult) -> dict[str, Any]:
+def _blocked_severity_summary(parsed_injuries: list[dict[str, Any]] | None) -> list[dict[str, Any]]:
+    summary: list[dict[str, Any]] = []
+    for item in parsed_injuries or []:
+        if not isinstance(item, dict):
+            continue
+        severity = str(item.get("severity") or "").strip().lower()
+        severity_source = str(item.get("severity_source") or "").strip().lower()
+        severity_evidence = item.get("severity_evidence") or []
+        if not severity and not severity_source and not severity_evidence:
+            continue
+        area = ""
+        for key in ("display_location", "canonical_location", "location", "area", "original_phrase"):
+            value = str(item.get(key) or "").strip()
+            if value:
+                area = value
+                break
+        entry: dict[str, Any] = {
+            "area": area,
+            "injury_type": str(item.get("injury_type") or "").strip(),
+            "severity": severity or "unknown",
+            "severity_source": severity_source or "unknown",
+            "severity_evidence": [
+                str(piece).strip() for piece in severity_evidence if str(piece or "").strip()
+            ],
+            "original_phrase": str(item.get("original_phrase") or "").strip(),
+        }
+        summary.append(entry)
+    return summary
+
+
+def blocked_mode_output(
+    *, triage: InjuryTriageResult, parsed_injuries: list[dict[str, Any]] | None = None
+) -> dict[str, Any]:
     if triage.mode == NEEDS_REVIEW:
         plan_text = (
             "## Injury Triage: Needs Review\n"
@@ -1471,6 +1515,32 @@ def blocked_mode_output(*, triage: InjuryTriageResult) -> dict[str, Any]:
             "all training generation blocked by design."
         )
 
+    blocked_output = {
+        "title": "Injury triage blocked normal plan generation",
+        "mode": str(triage.mode or "").strip().lower(),
+        "what_was_detected": list(triage.reasons),
+        "why_plan_blocked": MODE_EXPLANATIONS.get(
+            str(triage.mode or "").strip().lower(),
+            "Automatic planning is blocked until injury triage is reviewed.",
+        ),
+        "severity_summary": _blocked_severity_summary(parsed_injuries),
+        "detected_risks": sorted(
+            {
+                *[str(item).strip() for item in triage.urgent_flags if str(item or "").strip()],
+                *[str(item).strip() for item in triage.red_flags if str(item or "").strip()],
+            }
+        ),
+        "red_flags": list(triage.red_flags),
+        "high_risk_categories": list(triage.matched_high_risk_categories),
+        "routing_reasons": list(triage.routing_reasons),
+        "stage2_blocked": bool(triage.should_block_stage2),
+        "clinician_clearance_required": bool(triage.clinician_clearance_required),
+        "next_step": NEXT_STEPS.get(
+            str(triage.mode or "").strip().lower(),
+            "Do not generate a normal fight-camp plan until reviewed and cleared.",
+        ),
+    }
+
     return {
         "status": "triage_blocked",
         "ok": False,
@@ -1484,4 +1554,5 @@ def blocked_mode_output(*, triage: InjuryTriageResult) -> dict[str, Any]:
         "parsing_metadata": {},
         "stage2_status": "triage_blocked",
         "injury_triage": triage.to_dict(),
+        "blocked_output": blocked_output,
     }
