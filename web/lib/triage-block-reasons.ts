@@ -98,7 +98,7 @@ function _tokenizeSignal(value: string): string[] {
     .replace(/[_-]/g, " ")
     .split(/[^a-z0-9]+/)
     .map((token) => token.trim())
-    .filter((token) => token.length >= 3);
+    .filter((token) => token.length >= 2);
 }
 
 function selectGuidedInjuryContext(
