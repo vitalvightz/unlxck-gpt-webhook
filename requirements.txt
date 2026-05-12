@@ -17,3 +17,4 @@ gotrue==2.12.4
 markdown2==2.5.5
 openai==2.32.0
 structlog==25.5.0
+python-dateutil==2.9.0.post0

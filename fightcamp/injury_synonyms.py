@@ -939,6 +939,13 @@ def canonicalize_injury_type(text: str, threshold: int = 85) -> str | None:
     4) Priority tie-breaks via TYPE_PRIORITY.
     """
     nlp = get_nlp()
+    if nlp:
+        from .injury_scoring import score_injury_phrase
+
+        scored = score_injury_phrase(text or "")
+        scored_type = scored.get("injury_type")
+        if scored_type and scored_type != "unspecified":
+            return scored_type
     if not nlp:
         lowered = text.lower()
         for canonical, syns in INJURY_SYNONYM_MAP.items():

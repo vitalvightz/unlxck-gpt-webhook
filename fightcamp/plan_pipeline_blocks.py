@@ -255,6 +255,7 @@ def _generate_rehab_support_bundle(context: PlanRuntimeContext) -> tuple[dict[st
             injury_string=rehab_injury_string,
             exercise_data=context.exercise_bank,
             current_phase="GPP",
+            parsed_entries=context.plan_input.parsed_injuries,
         )
         if rehab_blocks["GPP"].strip().startswith("**Red Flag Detected**"):
             rehab_blocks["SPP"] = rehab_blocks["GPP"]
@@ -267,6 +268,7 @@ def _generate_rehab_support_bundle(context: PlanRuntimeContext) -> tuple[dict[st
                     injury_string=rehab_injury_string,
                     exercise_data=context.exercise_bank,
                     current_phase=phase,
+                    parsed_entries=context.plan_input.parsed_injuries,
                 )
 
     guardrails = {

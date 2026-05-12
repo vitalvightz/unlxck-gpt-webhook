@@ -1,5 +1,6 @@
 import sys
 from pathlib import Path
+import pytest
 
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 
@@ -7,7 +8,9 @@ from fightcamp.injury_filtering import normalize_injury_regions
 from fightcamp.injury_formatting import parse_injury_entry, parse_injuries_and_restrictions
 import fightcamp.injury_synonyms as injury_synonyms
 from fightcamp.injury_synonyms import (
+    canonicalize_injury_type,
     detect_structural_red_flags,
+    negation_detection_available,
     parse_injury_phrase,
     remove_negated_phrases,
     split_injury_text,
@@ -621,3 +624,75 @@ def test_ankle_instability_and_sprain_still_map_to_ankle():
     injuries, _ = parse_injuries_and_restrictions("ankle instability and ankle sprain")
     locations = {entry.get("canonical_location") for entry in injuries}
     assert "ankle" in locations
+
+
+def test_score_and_canonicalize_injury_type_agree_on_ambiguous_phrases():
+    if not negation_detection_available():
+        pytest.skip("spaCy/NegEx not available; canonical fallback path remains legacy")
+    phrases = [
+        "ankle sprain with giving way",
+        "shoulder clicking no pain",
+        "shoulder pinching when raising arm",
+        "quad soreness after training",
+        "knee stiff in the morning",
+        "hamstring tight and loosens after warmup",
+        "patellar tendon pain recurring after jumping",
+        "knee pain",
+        "shoulder pain",
+    ]
+    for phrase in phrases:
+        assert canonicalize_injury_type(phrase) == score_injury_phrase(phrase)["injury_type"]
+
+
+def test_generate_rehab_protocols_prefers_structured_entries():
+    result, _ = generate_rehab_protocols(
+        injury_string="knee pain",
+        parsed_entries=[{"canonical_location": "knee", "injury_type": "instability"}],
+        exercise_data=[],
+        current_phase="GPP",
+    )
+    assert "Knee (Instability)" in result
+
+
+def test_generate_rehab_protocols_structured_entries_do_not_bleed_across_regions():
+    result, _ = generate_rehab_protocols(
+        injury_string="knee instability",
+        parsed_entries=[{"canonical_location": "shoulder", "injury_type": "pain"}],
+        exercise_data=[],
+        current_phase="GPP",
+    )
+    assert "Shoulder (Pain)" in result
+    assert "Knee (Instability)" not in result
+
+
+def test_generate_rehab_protocols_string_fallback_still_works():
+    result, _ = generate_rehab_protocols(
+        injury_string="knee instability",
+        exercise_data=[],
+        current_phase="GPP",
+    )
+    assert "Knee (Instability)" in result
+
+
+def test_generate_rehab_protocols_structured_entry_uses_legacy_injury_type_field():
+    result, _ = generate_rehab_protocols(
+        injury_string="",
+        parsed_entries=[{"location": "knee", "injury_type": "pain"}],
+        exercise_data=[],
+        current_phase="GPP",
+    )
+    assert "Knee (Pain)" in result
+
+
+def test_generate_rehab_protocols_structured_multiple_injuries_render_separately():
+    result, _ = generate_rehab_protocols(
+        injury_string="",
+        parsed_entries=[
+            {"canonical_location": "knee", "injury_type": "instability"},
+            {"canonical_location": "shoulder", "injury_type": "pain"},
+        ],
+        exercise_data=[],
+        current_phase="GPP",
+    )
+    assert "Knee (Instability)" in result
+    assert "Shoulder (Pain)" in result
