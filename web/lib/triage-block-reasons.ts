@@ -265,13 +265,44 @@ const TRIAGE_SIGNAL_EXPLANATIONS: Record<string, string> = {
   sensitive_area_wound: "A wound near a sensitive area was reported. Contact planning is paused until reviewed.",
 };
 
+const TRIAGE_SIGNAL_LABELS: Record<string, string> = {
+  tendon_rupture_or_avulsion: "Tendon rupture / avulsion",
+  complete_ligament_tear: "Complete ligament tear",
+  acl_tear: "ACL tear",
+  achilles_rupture: "Achilles rupture",
+  suspected_concussion: "Suspected concussion",
+  soft_tissue_joint_issue: "Soft-tissue / joint issue",
+  hyperextension: "Hyperextension",
+  post_op_reconstruction_active: "Active post-op reconstruction",
+  rib_fracture: "Rib fracture",
+  pneumothorax: "Chest/lung injury risk",
+  hemothorax: "Chest bleed risk",
+  full_thickness_rotator_cuff_tear: "Full-thickness rotator cuff tear",
+  septic_joint_or_bone_infection: "Joint/bone infection risk",
+  uncontrolled_bleeding: "Uncontrolled bleeding",
+  open_wound: "Open wound",
+  infection_signs: "Infection signs",
+  needs_stitches: "May need stitches",
+  eye_area_wound: "Eye-area wound",
+  sensitive_area_wound: "Sensitive-area wound",
+};
+
+export function formatTriageSignalLabel(signal: string): string {
+  const key = signal.trim().toLowerCase();
+  return TRIAGE_SIGNAL_LABELS[key] ?? titleizeToken(key);
+}
+
 export function titleizeToken(value: string) {
   const cleaned = value.replace(/_/g, " ").trim();
   return cleaned ? cleaned.charAt(0).toUpperCase() + cleaned.slice(1) : "";
 }
 
 export function buildBlockedWhy(triage: InjuryTriageSignals): { title: string; body: string } {
-  const signals = [...(triage.red_flags ?? []), ...(triage.matched_high_risk_categories ?? [])].filter(Boolean);
+  const signals = [
+    ...(triage.red_flags ?? []),
+    ...(triage.urgent_flags ?? []),
+    ...(triage.matched_high_risk_categories ?? []),
+  ].filter(Boolean);
   const topSignals = signals.slice(0, 2);
   const mode = (triage.mode || "").trim().toLowerCase();
 
@@ -294,7 +325,7 @@ export function buildBlockedWhy(triage: InjuryTriageSignals): { title: string; b
   const reasons = topSignals.map(
     (signal) =>
       TRIAGE_SIGNAL_EXPLANATIONS[signal] ??
-      `${titleizeToken(signal)} was flagged and needs review before hard loading resumes.`,
+      `${formatTriageSignalLabel(signal)} was flagged and needs review before hard loading resumes.`,
   );
 
   return {
@@ -313,9 +344,9 @@ export function buildBlockedInjuryContextSummary({
   guidedInjuries?: GuidedInjurySummary[] | null;
 }): BlockedInjuryContextSummary {
   const guidedContext = selectGuidedInjuryContext(guidedInjuries ?? [], triage);
-  const highRiskLabels = [...new Set((triage.matched_high_risk_categories ?? []).map(titleizeToken).filter(Boolean))].slice(0, 2);
-  const redFlagLabels = [...new Set((triage.red_flags ?? []).map(titleizeToken).filter(Boolean))].slice(0, 2);
-  const urgentFlagLabels = [...new Set((triage.urgent_flags ?? []).map(titleizeToken).filter(Boolean))].slice(0, 2);
+  const highRiskLabels = [...new Set((triage.matched_high_risk_categories ?? []).map(formatTriageSignalLabel).filter(Boolean))].slice(0, 2);
+  const redFlagLabels = [...new Set((triage.red_flags ?? []).map(formatTriageSignalLabel).filter(Boolean))].slice(0, 2);
+  const urgentFlagLabels = [...new Set((triage.urgent_flags ?? []).map(formatTriageSignalLabel).filter(Boolean))].slice(0, 2);
   const reasonLabels = [...new Set((triage.reasons ?? []).map((reason) => reason.trim()).filter(Boolean))].slice(0, 2);
   const areas = [...new Set((guidedInjuries ?? [])
     .map((injury) => (typeof injury.area === "string" ? injury.area.trim() : ""))
