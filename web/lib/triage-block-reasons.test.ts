@@ -5,6 +5,7 @@ import {
   buildBlockedInjuryContextSummary,
   buildBlockedWhy,
   buildCapturedInjuryDetail,
+  formatTriageSignalLabel,
   summarizeBlockedInjuryContext,
 } from "./triage-block-reasons.ts";
 
@@ -445,4 +446,54 @@ test("buildBlockedInjuryContextSummary applies field-weighted token scoring when
   });
 
   assert.equal(summary.capturedInjury, "Left knee — Sprain · Moderate");
+});
+
+test("formatTriageSignalLabel maps critical backend tokens to clean labels", () => {
+  const criticalLabels = new Map<string, string>([
+    ["tendon_rupture_or_avulsion", "Tendon rupture / avulsion"],
+    ["complete_ligament_tear", "Complete ligament tear"],
+    ["acl_tear", "ACL tear"],
+    ["achilles_rupture", "Achilles rupture"],
+    ["suspected_concussion", "Suspected concussion"],
+    ["soft_tissue_joint_issue", "Soft-tissue / joint issue"],
+    ["post_op_reconstruction_active", "Active post-op reconstruction"],
+    ["pneumothorax", "Chest/lung injury risk"],
+    ["hemothorax", "Chest bleed risk"],
+    ["septic_joint_or_bone_infection", "Joint/bone infection risk"],
+    ["uncontrolled_bleeding", "Uncontrolled bleeding"],
+    ["eye_area_wound", "Eye-area wound"],
+  ]);
+
+  for (const [token, expectedLabel] of criticalLabels) {
+    assert.equal(formatTriageSignalLabel(token), expectedLabel);
+    assert.notEqual(formatTriageSignalLabel(token), token);
+  }
+});
+
+test("buildBlockedInjuryContextSummary still limits blocked trigger to two visible labels", () => {
+  const summary = buildBlockedInjuryContextSummary({
+    triage: {
+      red_flags: ["open_wound"],
+      urgent_flags: ["uncontrolled_bleeding"],
+      matched_high_risk_categories: ["tendon_rupture_or_avulsion"],
+    },
+  });
+
+  const trigger = summary.blockedTrigger ?? "";
+  assert.match(trigger, /Open wound \+ Uncontrolled bleeding/);
+  assert.doesNotMatch(trigger, /Tendon rupture \/ avulsion/);
+  assert.doesNotMatch(trigger, /tendon_rupture_or_avulsion/);
+});
+
+test("buildBlockedWhy includes urgent flags after red flags and before high-risk categories", () => {
+  const why = buildBlockedWhy({
+    mode: "medical_hold",
+    red_flags: [],
+    urgent_flags: ["uncontrolled_bleeding"],
+    matched_high_risk_categories: [],
+  });
+
+  assert.equal(why.title, "Why this was blocked");
+  assert.match(why.body, /^Medical hold:/);
+  assert.match(why.body, /Uncontrolled bleeding/);
 });
