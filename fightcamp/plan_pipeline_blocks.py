@@ -246,6 +246,16 @@ def _build_rehab_injury_string(context: PlanRuntimeContext) -> str:
     return "; ".join(phrases) if phrases else context.injuries_only_text
 
 
+def _infer_rehab_day_type(*, phase: str) -> str | None:
+    """Infer rehab day type only when reliable session context exists.
+
+    Current phase-level rehab generation has no per-session allocation context,
+    so return None to avoid pretending day-specific intent in output.
+    """
+    _ = phase
+    return None
+
+
 def _generate_rehab_support_bundle(context: PlanRuntimeContext) -> tuple[dict[str, str], dict[str, str], str, bool, str, str, str]:
     rehab_blocks = {phase: "" for phase in PHASES}
     rehab_injury_string = _build_rehab_injury_string(context)
@@ -256,6 +266,7 @@ def _generate_rehab_support_bundle(context: PlanRuntimeContext) -> tuple[dict[st
             exercise_data=context.exercise_bank,
             current_phase="GPP",
             parsed_entries=context.plan_input.parsed_injuries,
+            day_type=_infer_rehab_day_type(phase="GPP"),
         )
         if rehab_blocks["GPP"].strip().startswith("**Red Flag Detected**"):
             rehab_blocks["SPP"] = rehab_blocks["GPP"]
@@ -269,6 +280,7 @@ def _generate_rehab_support_bundle(context: PlanRuntimeContext) -> tuple[dict[st
                     exercise_data=context.exercise_bank,
                     current_phase=phase,
                     parsed_entries=context.plan_input.parsed_injuries,
+                    day_type=_infer_rehab_day_type(phase=phase),
                 )
 
     guardrails = {

@@ -883,3 +883,97 @@ def test_generate_rehab_protocols_structured_multiple_injuries_render_separately
     )
     assert "Knee (Instability)" in result
     assert "Shoulder (Pain)" in result
+
+
+def test_rehab_severity_filter_high_achilles_blocks_aggressive_terms():
+    result, _ = generate_rehab_protocols(
+        injury_string="",
+        parsed_entries=[{"canonical_location": "achilles", "injury_type": "tendonitis", "severity": "severe"}],
+        exercise_data=[],
+        current_phase="SPP",
+    )
+    forbidden = ("pogo", "hop", "jump", "sprint", "bfr", "depth", "drop")
+    assert not any(token in result.lower() for token in forbidden)
+
+
+def test_rehab_severity_filter_high_knee_instability_blocks_aggressive_terms():
+    result, _ = generate_rehab_protocols(
+        injury_string="",
+        parsed_entries=[{"canonical_location": "knee", "injury_type": "instability", "severity": "high"}],
+        exercise_data=[],
+        current_phase="SPP",
+    )
+    forbidden = ("pogo", "reactive", "jump", "hard cutting", "bfr")
+    assert not any(token in result.lower() for token in forbidden)
+
+
+def test_rehab_severity_filter_moderate_blocks_heavy_and_sprint():
+    result, _ = generate_rehab_protocols(
+        injury_string="",
+        parsed_entries=[{"canonical_location": "knee", "injury_type": "instability", "severity": "moderate"}],
+        exercise_data=[],
+        current_phase="SPP",
+    )
+    assert "sprint" not in result.lower()
+    assert "heavy" not in result.lower()
+
+
+def test_rehab_day_type_specific_why_and_volume_limits():
+    sparring_text, _ = generate_rehab_protocols(
+        injury_string="knee pain",
+        exercise_data=[],
+        current_phase="GPP",
+        day_type="sparring",
+    )
+    strength_text, _ = generate_rehab_protocols(
+        injury_string="knee pain",
+        exercise_data=[],
+        current_phase="GPP",
+        day_type="strength",
+    )
+    assert "pre-sparring inclusion" in sparring_text
+    assert "main lift" in strength_text
+    assert sparring_text.count("  • ") <= 1
+
+
+def test_phase_level_plan_does_not_use_day_specific_rehab_why():
+    from tests.support import _build_request
+    generate_plan_sync = pytest.importorskip("fightcamp.main").generate_plan_sync
+    request = _build_request({"injuries": "right knee pain"}).to_payload()
+    request["random_seed"] = 3
+    result = generate_plan_sync(request)
+    plan_text = result.get("plan_text", "")
+    assert "pre-sparring inclusion" not in plan_text
+
+
+@pytest.mark.parametrize(
+    "injury,forbidden_terms",
+    [
+        ("right knee ACL tear", ("terminal knee extensions", "tke", "spanish squat", "pogo", "sprint", "depth jump", "hard cutting", "heavy squat", "max velocity", "repeated plyos")),
+        ("left achilles tendon rupture", ("eccentric calf drops", "tip-toe holds", "pogo", "hops", "sprint", "jump")),
+        ("right shoulder dislocation", ("overhead press", "push press", "snatch", "jerk", "dips", "heavy pressing", "explosive upper push")),
+    ],
+)
+def test_structural_injury_end_to_end_blocks_unsafe_output(injury, forbidden_terms):
+    from tests.support import _build_request
+    generate_plan_sync = pytest.importorskip("fightcamp.main").generate_plan_sync
+    request = _build_request({"injuries": injury}).to_payload()
+    request["random_seed"] = 17
+    result = generate_plan_sync(request)
+    text = (result.get("plan_text") or "").lower()
+    assert "red flag detected" in text
+    assert not any(term in text for term in forbidden_terms)
+
+
+@pytest.mark.xfail(
+    reason="TODO: wire concussion into structural triage/e2e safety flow if not already guaranteed by parser outputs."
+)
+def test_concussion_end_to_end_blocks_contact_and_high_cns_output():
+    from tests.support import _build_request
+    generate_plan_sync = pytest.importorskip("fightcamp.main").generate_plan_sync
+    request = _build_request({"injuries": "concussion last week"}).to_payload()
+    request["random_seed"] = 17
+    result = generate_plan_sync(request)
+    text = (result.get("plan_text") or "").lower()
+    assert "red flag detected" in text
+    assert "sparring" not in text
