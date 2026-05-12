@@ -5,10 +5,12 @@ import pytest
 
 from fightcamp.injury_triage import (
     FULL_PLAN,
+    InjuryTriageResult,
     MEDICAL_HOLD,
     NEEDS_REVIEW,
     RESTRICTED_REHAB_ONLY,
     _collect_guided_card_evidence,
+    blocked_mode_output,
     normalize_triage_category,
     triage_injuries,
 )
@@ -882,6 +884,73 @@ def test_blocked_modes_do_not_reach_stage2_or_normal_pipeline(monkeypatch):
     assert result["stage2_payload"] is None
     assert result["stage2_status"] == "triage_blocked"
     assert result["injury_triage"]["mode"] == MEDICAL_HOLD
+    blocked = result["blocked_output"]
+    assert blocked["title"] == "Injury triage blocked normal plan generation"
+    assert blocked["mode"] == MEDICAL_HOLD
+    assert blocked["stage2_blocked"] is True
+    assert blocked["clinician_clearance_required"] is True
+    assert blocked["severity_summary"]
+    assert any(item["severity_source"] for item in blocked["severity_summary"])
+    assert blocked["red_flags"]
+    assert blocked["routing_reasons"]
+
+
+@pytest.mark.parametrize(
+    ("mode", "expected_reason", "expected_next_step"),
+    [
+        (
+            MEDICAL_HOLD,
+            "Training guidance is blocked because urgent medical-risk signals were detected.",
+            "Stop automatic training guidance and seek appropriate medical/clinical review.",
+        ),
+        (
+            RESTRICTED_REHAB_ONLY,
+            "Normal fight-camp loading is blocked. Only restricted rehab/support guidance is allowed.",
+            "Generate only restricted rehab/support guidance until cleared.",
+        ),
+        (
+            NEEDS_REVIEW,
+            "Automatic planning is blocked until a coach/admin reviews the injury context.",
+            "Hold normal plan generation until coach/admin review.",
+        ),
+    ],
+)
+def test_blocked_output_uses_mode_specific_explanation_and_next_step(mode, expected_reason, expected_next_step):
+    result = blocked_mode_output(triage=InjuryTriageResult(mode=mode, should_block_stage2=True))
+    blocked = result["blocked_output"]
+
+    assert blocked["why_plan_blocked"] == expected_reason
+    assert blocked["next_step"] == expected_next_step
+
+
+def test_blocked_output_severity_summary_prefers_canonical_location_and_keeps_original_phrase():
+    triage = InjuryTriageResult(mode=MEDICAL_HOLD, should_block_stage2=True)
+    parsed_injuries = [
+        {
+            "canonical_location": "ankle",
+            "injury_type": "swelling",
+            "severity": "high",
+            "severity_source": "text_escalation",
+            "severity_evidence": ["cannot bear weight"],
+            "original_phrase": "rapid ankle swelling after tackle and cannot bear weight",
+        }
+    ]
+
+    result = blocked_mode_output(triage=triage, parsed_injuries=parsed_injuries)
+    summary_item = result["blocked_output"]["severity_summary"][0]
+
+    assert summary_item["area"] == "ankle"
+    assert summary_item["original_phrase"] == "rapid ankle swelling after tackle and cannot bear weight"
+
+
+def test_full_plan_response_does_not_include_blocked_output(monkeypatch):
+    payload = _payload_with_injury("mild calf soreness after sprints")
+    _stub_normal_pipeline(monkeypatch)
+
+    result = generate_plan_sync(payload)
+
+    assert result["status"] != "triage_blocked"
+    assert "blocked_output" not in result
 
 
 def _stub_normal_pipeline(monkeypatch):
