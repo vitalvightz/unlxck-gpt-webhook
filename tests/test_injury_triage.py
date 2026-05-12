@@ -1911,3 +1911,45 @@ def test_absent_neurologic_concussion_phrases_do_not_trigger_red_flags():
     assert "blurred_or_double_vision" not in triage.red_flags
     assert "amnesia_or_memory_loss" not in triage.red_flags
     assert "severe_headache_after_head_impact" not in triage.red_flags
+
+
+def test_negation_is_local_for_mixed_body_parts_numbness():
+    parsed = PlanInput.from_payload(_payload_with_injury("No numbness in my left arm, but numbness in my right hand."))
+    triage = triage_injuries(parsed)
+    assert "numbness" in triage.red_flags
+
+
+def test_negation_is_local_for_time_contrast_chest_pain():
+    parsed = PlanInput.from_payload(_payload_with_injury("No chest pain yesterday, but chest pain today."))
+    triage = triage_injuries(parsed)
+    assert "chest_pain" in triage.red_flags
+
+
+def test_negation_is_local_for_mixed_bear_weight_by_side():
+    parsed = PlanInput.from_payload(
+        _payload_with_injury("Can bear weight on the left ankle, cannot bear weight on the right ankle.")
+    )
+    triage = triage_injuries(parsed)
+    assert "cannot_bear_weight" in triage.red_flags
+
+
+def test_negation_is_local_for_time_contrast_weakness():
+    parsed = PlanInput.from_payload(_payload_with_injury("No weakness before training, weakness after sparring."))
+    triage = triage_injuries(parsed)
+    assert "weakness" in triage.red_flags
+
+
+def test_negated_head_impact_flags_remain_suppressed_without_positive_contrast():
+    parsed = PlanInput.from_payload(
+        _payload_with_injury("No vomiting, no confusion, no severe headache after head impact.")
+    )
+    triage = triage_injuries(parsed)
+    assert "vomiting_after_head_impact" not in triage.red_flags
+    assert "confusion" not in triage.red_flags
+    assert "severe_headache_after_head_impact" not in triage.red_flags
+
+
+def test_head_impact_vomiting_detected_after_contrast_clause():
+    parsed = PlanInput.from_payload(_payload_with_injury("No vomiting at first, but vomited later after head impact."))
+    triage = triage_injuries(parsed)
+    assert "vomiting_after_head_impact" in triage.red_flags

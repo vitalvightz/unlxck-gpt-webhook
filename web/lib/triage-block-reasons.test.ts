@@ -446,3 +446,33 @@ test("buildBlockedInjuryContextSummary applies field-weighted token scoring when
 
   assert.equal(summary.capturedInjury, "Left knee — Sprain · Moderate");
 });
+
+test("buildBlockedInjuryContextSummary uses clean labels for critical backend triage categories", () => {
+  const summary = buildBlockedInjuryContextSummary({
+    triage: {
+      red_flags: ["open_wound", "infection_signs", "needs_stitches"],
+      urgent_flags: ["uncontrolled_bleeding", "eye_area_wound", "sensitive_area_wound"],
+      matched_high_risk_categories: [
+        "tendon_rupture_or_avulsion",
+        "complete_ligament_tear",
+        "acl_tear",
+        "achilles_rupture",
+        "suspected_concussion",
+        "soft_tissue_joint_issue",
+        "hyperextension",
+        "post_op_reconstruction_active",
+        "rib_fracture",
+        "pneumothorax",
+        "hemothorax",
+        "full_thickness_rotator_cuff_tear",
+        "septic_joint_or_bone_infection",
+      ],
+    },
+  });
+
+  const trigger = summary.blockedTrigger ?? "";
+  assert.match(trigger, /Open wound/);
+  assert.match(trigger, /Uncontrolled bleeding/);
+  assert.match(trigger, /Tendon rupture \/ avulsion/);
+  assert.doesNotMatch(trigger, /tendon_rupture_or_avulsion/);
+});
