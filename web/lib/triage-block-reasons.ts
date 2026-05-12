@@ -92,6 +92,18 @@ function formatGuidedInjuryContext(injury: GuidedInjurySummary) {
   return `${main}${meta.length ? ` · ${meta.join(" · ")}` : ""}`;
 }
 
+
+function _normalizeSignalList(value: unknown): string[] {
+  if (Array.isArray(value)) {
+    return value.filter((item): item is string => typeof item === "string");
+  }
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    return trimmed ? [trimmed] : [];
+  }
+  return [];
+}
+
 function _tokenizeSignal(value: string): string[] {
   return value
     .toLowerCase()
@@ -106,11 +118,11 @@ function selectGuidedInjuryContext(
   triage: InjuryTriageSignals,
 ): string | null {
   const signals = [
-    ...(triage.red_flags ?? []),
-    ...(triage.matched_high_risk_categories ?? []),
-    ...(triage.urgent_flags ?? []),
-    ...(triage.reasons ?? []),
-    ...(triage.routing_reasons ?? []),
+    ..._normalizeSignalList(triage.red_flags),
+    ..._normalizeSignalList(triage.matched_high_risk_categories),
+    ..._normalizeSignalList(triage.urgent_flags),
+    ..._normalizeSignalList(triage.reasons),
+    ..._normalizeSignalList(triage.routing_reasons),
   ]
     .filter((value): value is string => typeof value === "string" && Boolean(value.trim()))
     .map((value) => value.trim().toLowerCase());

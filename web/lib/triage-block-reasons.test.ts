@@ -62,6 +62,21 @@ test("summarizeBlockedInjuryContext prioritises red flags over high-risk labels 
   );
 });
 
+
+
+test("summarizeBlockedInjuryContext handles malformed string triage lists without token explosion", () => {
+  const summary = summarizeBlockedInjuryContext({
+    triage: {
+      red_flags: [] as string[],
+      matched_high_risk_categories: [] as string[],
+      urgent_flags: "loss_of_consciousness" as unknown as string[],
+      reasons: "Coach/admin review is required before normal plan generation." as unknown as string[],
+    },
+    guidedInjuries: [{ area: "Head", injury_type: "head_impact", severity: "high" }],
+  });
+
+  assert.equal(summary, "Captured injury: Head — Head impact · High · Blocked trigger: Loss of consciousness + Coach/admin review is required before normal plan generation.");
+});
 test("summarizeBlockedInjuryContext does not treat area-only guided injury as captured when notes infer a symptom", () => {
   const summary = summarizeBlockedInjuryContext({
     triage: { red_flags: [], matched_high_risk_categories: [] },
