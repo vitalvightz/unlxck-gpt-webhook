@@ -270,7 +270,7 @@ export function titleizeToken(value: string) {
 }
 
 export function buildBlockedWhy(triage: InjuryTriageSignals): { title: string; body: string } {
-  const signals = [...triage.red_flags, ...triage.matched_high_risk_categories].filter(Boolean);
+  const signals = [...(triage.red_flags ?? []), ...(triage.matched_high_risk_categories ?? [])].filter(Boolean);
   const topSignals = signals.slice(0, 2);
   const mode = (triage.mode || "").trim().toLowerCase();
 
