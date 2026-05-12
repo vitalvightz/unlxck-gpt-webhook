@@ -18,6 +18,11 @@ export type GuidedInjurySummary = {
   notes?: string;
 };
 
+export type BlockedInjuryContextSummary = {
+  capturedInjury?: string;
+  blockedTrigger?: string;
+};
+
 const INJURY_TYPE_LABELS: Record<string, string> = {
   sprain: "Sprain",
   strain: "Strain",
@@ -55,9 +60,10 @@ function formatGuidedInjuryContext(injury: GuidedInjurySummary) {
   const typeKey = injury.injury_type?.trim().toLowerCase() || "";
   const typeLabel =
     SURFACE_TYPE_LABELS[surfaceKey] ||
+    (surfaceKey ? titleizeToken(surfaceKey) : "") ||
     INJURY_TYPE_LABELS[typeKey] ||
-    titleizeToken(surfaceKey) ||
     titleizeToken(typeKey);
+  if (!typeLabel) return null;
   const meta = [
     injury.severity ? titleizeToken(injury.severity) : null,
     injury.trend ? titleizeToken(injury.trend) : null,
@@ -117,7 +123,7 @@ const TRIAGE_SIGNAL_EXPLANATIONS: Record<string, string> = {
   open_wound: "An open wound was reported. Contact planning is paused until reviewed.",
   infection_signs: "Infection signs were reported. Planning is paused until reviewed.",
   needs_stitches: "A wound that may need stitches was reported. Planning is paused until reviewed.",
-  eye_area_wound: "An eye-area wound was reported. Contact planning is paused for safety.",
+  eye_area_wound: "An eye-area wound was reported. Contact planning is paused until reviewed.",
   sensitive_area_wound: "A wound near a sensitive area was reported. Contact planning is paused until reviewed.",
 };
 
@@ -149,7 +155,7 @@ export function buildBlockedWhy(triage: InjuryTriageSignals): { title: string; b
   };
 }
 
-export function summarizeBlockedInjuryContext({
+export function buildBlockedInjuryContextSummary({
   triage,
   injuriesText,
   guidedInjuries,
@@ -157,7 +163,7 @@ export function summarizeBlockedInjuryContext({
   triage: InjuryTriageSignals;
   injuriesText?: string | null;
   guidedInjuries?: GuidedInjurySummary[] | null;
-}) {
+}): BlockedInjuryContextSummary {
   const guidedContext = (guidedInjuries ?? []).map(formatGuidedInjuryContext).find(Boolean);
   const highRiskLabels = [...new Set((triage.matched_high_risk_categories ?? []).map(titleizeToken).filter(Boolean))].slice(0, 2);
   const redFlagLabels = [...new Set((triage.red_flags ?? []).map(titleizeToken).filter(Boolean))].slice(0, 2);
@@ -189,11 +195,13 @@ export function summarizeBlockedInjuryContext({
     ...inferredFromGuidedNotes,
   ];
   const uniqueSafetySignals = [...new Set(safetySignals)].filter(Boolean);
-  if (guidedContext && uniqueSafetySignals.length) {
-    return `Blocked trigger: ${uniqueSafetySignals.slice(0, 2).join(" + ")} · Captured injury: ${guidedContext}`;
-  }
+
   if (guidedContext) {
-    return `Captured injury: ${guidedContext}`;
+    const result: BlockedInjuryContextSummary = { capturedInjury: guidedContext };
+    if (uniqueSafetySignals.length) {
+      result.blockedTrigger = uniqueSafetySignals.slice(0, 2).join(" + ");
+    }
+    return result;
   }
 
   const allOrdered = [...new Set([
@@ -211,10 +219,26 @@ export function summarizeBlockedInjuryContext({
   const secondary = allOrdered[1] ?? null;
 
   if (primary && secondary) {
-    return `Blocked trigger: ${primary} + ${secondary}`;
+    return { blockedTrigger: `${primary} + ${secondary}` };
   }
   if (primary) {
-    return `Blocked trigger: ${primary}`;
+    return { blockedTrigger: primary };
   }
-  return "Blocked trigger: Protected planner state";
+  return { blockedTrigger: "Protected planner state" };
+}
+
+export function summarizeBlockedInjuryContext(input: {
+  triage: InjuryTriageSignals;
+  injuriesText?: string | null;
+  guidedInjuries?: GuidedInjurySummary[] | null;
+}) {
+  const summary = buildBlockedInjuryContextSummary(input);
+  const parts: string[] = [];
+  if (summary.capturedInjury) {
+    parts.push(`Captured injury: ${summary.capturedInjury}`);
+  }
+  if (summary.blockedTrigger) {
+    parts.push(`Blocked trigger: ${summary.blockedTrigger}`);
+  }
+  return parts.join(" · ");
 }
