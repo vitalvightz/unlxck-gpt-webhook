@@ -803,8 +803,10 @@ def generate_rehab_protocols(
             severity = _normalize_rehab_severity((merged_by_key.get(group_key) or {}).get("severity") if group_key else None)
             filtered_drills = _filter_drills_by_severity(drills, severity)
             if severity == "high" and not filtered_drills:
+                merged = merged_by_key.get(group_key) if group_key else None
+                loc_title = _render_location_heading(loc, merged)
                 lines.append(
-                    "- High severity injury: use clinician-guided low-load mobility/isometrics only until symptoms settle."
+                    f"- {loc_title}: High severity injury — use clinician-guided low-load mobility/isometrics only until symptoms settle."
                 )
                 continue
 
