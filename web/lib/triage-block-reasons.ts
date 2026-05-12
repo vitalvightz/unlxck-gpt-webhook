@@ -11,6 +11,10 @@ export type InjuryTriageSignals = {
 export type GuidedInjurySummary = {
   area?: string;
   injury_type?: string;
+  surface_type?: string;
+  severity?: string;
+  trend?: string;
+  impact_related?: string;
   notes?: string;
 };
 
@@ -33,6 +37,36 @@ const INJURY_TYPE_LABELS: Record<string, string> = {
   bruise: "Bruise",
   surface_injury: "Surface injury",
 };
+
+const SURFACE_TYPE_LABELS: Record<string, string> = {
+  cut: "Cut / wound",
+  laceration: "Laceration / deep cut",
+  abrasion: "Graze / abrasion / mat burn",
+  blister: "Blister",
+  bruise: "Bruise / contusion",
+  contusion: "Bruise / contusion",
+  burn: "Burn / skin irritation",
+  skin_irritation: "Burn / skin irritation",
+};
+
+function formatGuidedInjuryContext(injury: GuidedInjurySummary) {
+  const area = titleizeToken(injury.area || "");
+  const surfaceKey = injury.surface_type?.trim().toLowerCase() || "";
+  const typeKey = injury.injury_type?.trim().toLowerCase() || "";
+  const typeLabel =
+    SURFACE_TYPE_LABELS[surfaceKey] ||
+    titleizeToken(surfaceKey) ||
+    INJURY_TYPE_LABELS[typeKey] ||
+    titleizeToken(typeKey);
+  const meta = [
+    injury.severity ? titleizeToken(injury.severity) : null,
+    injury.trend ? titleizeToken(injury.trend) : null,
+    injury.impact_related === "yes" ? "Impact-related" : null,
+  ].filter(Boolean);
+  const main = [area, typeLabel].filter(Boolean).join(" — ");
+  if (!main) return null;
+  return `${main}${meta.length ? ` · ${meta.join(" · ")}` : ""}`;
+}
 
 const INJURY_REASON_SYNONYMS: Array<{ label: string; patterns: RegExp[] }> = [
   { label: "Fracture", patterns: [/\bfracture\b/i, /\bbroken\s+bone\b/i, /\bstress\s+fracture\b/i] },
@@ -124,6 +158,7 @@ export function summarizeBlockedInjuryContext({
   injuriesText?: string | null;
   guidedInjuries?: GuidedInjurySummary[] | null;
 }) {
+  const guidedContext = (guidedInjuries ?? []).map(formatGuidedInjuryContext).find(Boolean);
   const highRiskLabels = [...new Set((triage.matched_high_risk_categories ?? []).map(titleizeToken).filter(Boolean))].slice(0, 2);
   const redFlagLabels = [...new Set((triage.red_flags ?? []).map(titleizeToken).filter(Boolean))].slice(0, 2);
   const urgentFlagLabels = [...new Set((triage.urgent_flags ?? []).map(titleizeToken).filter(Boolean))].slice(0, 2);
@@ -145,6 +180,22 @@ export function summarizeBlockedInjuryContext({
     .map((injury) => (typeof injury.notes === "string" ? inferInjuryReasonFromText(injury.notes) : null))
     .filter((value): value is string => Boolean(value)))]
     .slice(0, 2);
+  const safetySignals = [
+    ...highRiskLabels,
+    ...redFlagLabels,
+    ...urgentFlagLabels,
+    ...reasonLabels,
+    ...(inferredFromText ? [inferredFromText] : []),
+    ...inferredFromGuidedNotes,
+  ];
+  const uniqueSafetySignals = [...new Set(safetySignals)].filter(Boolean);
+  if (guidedContext && uniqueSafetySignals.length) {
+    return `Blocked trigger: ${uniqueSafetySignals.slice(0, 2).join(" + ")} · Captured injury: ${guidedContext}`;
+  }
+  if (guidedContext) {
+    return `Captured injury: ${guidedContext}`;
+  }
+
   const allOrdered = [...new Set([
     ...highRiskLabels,
     ...redFlagLabels,
