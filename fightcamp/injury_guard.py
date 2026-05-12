@@ -901,7 +901,7 @@ def injury_decision(exercise: dict, injuries: Iterable[str | dict] | str | dict,
                 threshold=threshold,
                 matched_tags=sorted(exercise_tags & CONCUSSION_BLOCK_TAGS),
                 mods=[],
-                reason={"region": "head", "severity": "high", "bucket": "concussion", "matches": ["suspected_concussion"]},
+                reason={"region": "head", "severity": "high", "bucket": "concussion", "matches": [{"reason": "suspected_concussion"}]},
             )
 
     item_id = str(exercise.get("id") or name or id(exercise))
