@@ -6,6 +6,7 @@ from .injury_formatting import format_injury_summary, parse_injury_entry
 from .injury_guard import INJURY_TYPE_SEVERITY, normalize_severity
 from .injury_taxonomy import derive_red_flag_types, derive_urgent_injury_tokens, get_red_flag_message
 from .injury_synonyms import parse_injury_phrase, split_injury_text
+from .injury_location import get_injury_location
 from .restriction_parsing import ParsedRestriction
 # Refactored: Import centralized DATA_DIR from config
 from .config import DATA_DIR
@@ -696,12 +697,7 @@ def generate_rehab_protocols(
     normalized_entries: list[tuple[str | None, str | None, str | None]] = []
     if structured_entries:
         for entry in merged_entries:
-            location = (
-                entry.get("canonical_location")
-                or entry.get("location")
-                or entry.get("region")
-                or entry.get("display_location")
-            )
+            location = get_injury_location(entry)
             injury_type = _select_highest_risk_type(
                 (entry.get("rehab_types") or []) + ([entry.get("rehab_type")] if entry.get("rehab_type") else [])
             )

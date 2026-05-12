@@ -92,6 +92,74 @@ function formatGuidedInjuryContext(injury: GuidedInjurySummary) {
   return `${main}${meta.length ? ` · ${meta.join(" · ")}` : ""}`;
 }
 
+function _tokenizeSignal(value: string): string[] {
+  return value
+    .toLowerCase()
+    .replace(/[_-]/g, " ")
+    .split(/[^a-z0-9]+/)
+    .map((token) => token.trim())
+    .filter((token) => token.length >= 3);
+}
+
+function selectGuidedInjuryContext(
+  guidedInjuries: GuidedInjurySummary[],
+  triage: InjuryTriageSignals,
+): string | null {
+  const signals = [
+    ...(triage.red_flags ?? []),
+    ...(triage.matched_high_risk_categories ?? []),
+    ...(triage.urgent_flags ?? []),
+    ...(triage.reasons ?? []),
+    ...(triage.routing_reasons ?? []),
+  ]
+    .filter((value): value is string => typeof value === "string" && Boolean(value.trim()))
+    .map((value) => value.trim().toLowerCase());
+
+  const signalTokens = new Set(signals.flatMap(_tokenizeSignal));
+
+  const scored = guidedInjuries
+    .map((injury, index) => {
+      const context = formatGuidedInjuryContext(injury);
+      if (!context) return null;
+      const fields = [
+        { value: injury.notes, weight: 2 },
+        { value: injury.injury_type, weight: 3 },
+        { value: injury.surface_type, weight: 3 },
+        { value: injury.area, weight: 3 },
+      ]
+        .filter((field): field is { value: string; weight: number } => typeof field.value === "string" && Boolean(field.value.trim()))
+        .map((field) => ({ value: field.value.trim().toLowerCase(), weight: field.weight }));
+
+      let score = 0;
+      for (const field of fields) {
+        const fieldTokens = new Set(_tokenizeSignal(field.value));
+        for (const token of fieldTokens) {
+          if (signalTokens.has(token)) {
+            score += field.weight;
+          }
+        }
+      }
+
+      return { context, index, score };
+    })
+    .filter((entry): entry is { context: string; index: number; score: number } => Boolean(entry));
+
+  if (!scored.length) return null;
+
+  const best = scored.reduce((top, current) => {
+    if (!top) return current;
+    if (current.score > top.score) return current;
+    if (current.score === top.score && current.index < top.index) return current;
+    return top;
+  }, null as { context: string; index: number; score: number } | null);
+
+  if (!best) return null;
+  if (best.score <= 0) {
+    return scored[0]?.context ?? null;
+  }
+  return best.context;
+}
+
 export function buildCapturedInjuryDetail(
   injury: GuidedInjurySummary,
 ): CapturedInjuryDetail | null {
@@ -203,13 +271,23 @@ export function titleizeToken(value: string) {
 }
 
 export function buildBlockedWhy(triage: InjuryTriageSignals): { title: string; body: string } {
-  const signals = [...triage.red_flags, ...triage.matched_high_risk_categories].filter(Boolean);
+  const signals = [...(triage.red_flags ?? []), ...(triage.matched_high_risk_categories ?? [])].filter(Boolean);
   const topSignals = signals.slice(0, 2);
+  const mode = (triage.mode || "").trim().toLowerCase();
+
+  const prefixByMode =
+    mode === "medical_hold"
+      ? "Medical hold: this requires medical/clinical review before training guidance continues."
+      : mode === "restricted_rehab_only"
+        ? "Normal fight-camp loading is blocked. Only restricted rehab/support guidance is allowed until cleared."
+        : mode === "needs_review"
+          ? "Coach/admin review is required before normal plan generation continues."
+          : "Coach call: your intake triggered a safety hold, so we paused normal planning until review is complete.";
 
   if (!topSignals.length) {
     return {
       title: "Why this was paused",
-      body: "Coach call: your intake triggered a safety hold, so we paused normal planning until review is complete.",
+      body: prefixByMode,
     };
   }
 
@@ -221,7 +299,7 @@ export function buildBlockedWhy(triage: InjuryTriageSignals): { title: string; b
 
   return {
     title: "Why this was blocked",
-    body: `Coach call: ${reasons.join(" ")}`,
+    body: `${prefixByMode} ${reasons.join(" ")}`,
   };
 }
 
@@ -234,7 +312,7 @@ export function buildBlockedInjuryContextSummary({
   injuriesText?: string | null;
   guidedInjuries?: GuidedInjurySummary[] | null;
 }): BlockedInjuryContextSummary {
-  const guidedContext = (guidedInjuries ?? []).map(formatGuidedInjuryContext).find(Boolean);
+  const guidedContext = selectGuidedInjuryContext(guidedInjuries ?? [], triage);
   const highRiskLabels = [...new Set((triage.matched_high_risk_categories ?? []).map(titleizeToken).filter(Boolean))].slice(0, 2);
   const redFlagLabels = [...new Set((triage.red_flags ?? []).map(titleizeToken).filter(Boolean))].slice(0, 2);
   const urgentFlagLabels = [...new Set((triage.urgent_flags ?? []).map(titleizeToken).filter(Boolean))].slice(0, 2);
