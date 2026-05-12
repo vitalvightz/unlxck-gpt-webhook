@@ -129,6 +129,37 @@ INJURY_TYPES = [
     "blister",
     "unspecified",
 ]
+_URGENT_INJURY_TOKENS = {
+    "fracture",
+    "rupture",
+    "dislocation",
+    "concussion",
+    "post-surgery",
+    "post_surgery",
+    "infection",
+    "acute nerve issue",
+    "acute_nerve_issue",
+}
+_INJURY_RISK_ORDER = [
+    "instability",
+    "swelling",
+    "sprain",
+    "strain",
+    "tendonitis",
+    "impingement",
+    "hyperextension",
+    "pain",
+    "stiffness",
+    "tightness",
+    "soreness",
+    "contusion",
+    "abrasion",
+    "cut",
+    "laceration",
+    "graze",
+    "blister",
+    "unspecified",
+]
 
 REGION_GUARDRAILS = {
     "upper_limb": {
@@ -629,18 +660,24 @@ def generate_rehab_protocols(
         return "\n✅ No rehab work required.", seen_drills
 
     injury_phrases = split_injury_text(injury_string)
+    structured_entries = [entry for entry in (parsed_entries or []) if isinstance(entry, dict)]
+    merged_entries = _merge_injuries_by_location(structured_entries)
+    urgent_merged_entry = next((entry for entry in merged_entries if entry.get("is_urgent")), None)
+    if urgent_merged_entry:
+        return _build_red_flag_block(urgent_merged_entry), seen_drills
 
     normalized_entries: list[tuple[str | None, str | None]] = []
-    if parsed_entries:
-        for entry in parsed_entries:
-            if not isinstance(entry, dict):
-                continue
+    if structured_entries:
+        for entry in merged_entries:
             location = (
                 entry.get("canonical_location")
                 or entry.get("location")
                 or entry.get("region")
+                or entry.get("display_location")
             )
-            injury_type = entry.get("rehab_type") or entry.get("injury_type")
+            injury_type = _select_highest_risk_type(
+                (entry.get("rehab_types") or []) + ([entry.get("rehab_type")] if entry.get("rehab_type") else [])
+            )
             if not injury_type and location:
                 injury_type = "unspecified"
             if injury_type or location:
@@ -664,16 +701,12 @@ def generate_rehab_protocols(
         normalized_entries = [p for p in normalized_entries if p[1] is not None]
 
     seen_pairs = set()
-    seen_locations = set()
     unique_entries = []
     for pair in normalized_entries:
-        itype, loc = pair
+        itype, _ = pair
         if pair in seen_pairs:
             continue
-        if loc in seen_locations:
-            continue
         seen_pairs.add(pair)
-        seen_locations.add(loc)
         unique_entries.append(pair)
 
     flagged = []
@@ -739,7 +772,11 @@ def generate_rehab_protocols(
 
             if selected:
                 loc_title = loc.title() if loc else "Unspecified"
-                type_title = itype.title() if itype else "Unspecified"
+                merged = next((m for m in merged_entries if m.get("canonical_location") == loc), None)
+                extra_types = merged.get("rehab_types", []) if merged else []
+                type_title = " + ".join(t.title() for t in extra_types) if extra_types else (
+                    itype.title() if itype else "Unspecified"
+                )
                 lines.append(f"- {loc_title} ({type_title}):")
                 for name, notes in selected:
                     fn = classify_drill_function(name, notes)
@@ -756,6 +793,98 @@ def generate_rehab_protocols(
         lines.append(f"- {BFR_SAFETY_GATE}")
 
     return "\n".join(lines), seen_drills
+
+
+def _entry_is_urgent(entry: dict) -> bool:
+    flags = {str(flag).strip().lower() for flag in entry.get("flags", []) if flag}
+    triage_category = str(entry.get("triage_category") or "").strip()
+    injury_type = str(entry.get("injury_type") or "").strip().lower()
+    rehab_type = str(entry.get("rehab_type") or "").strip().lower()
+    return (
+        bool(triage_category)
+        or "urgent" in flags
+        or "structural_red_flag" in flags
+        or any(flag.startswith("suspected_") for flag in flags)
+        or injury_type in _URGENT_INJURY_TOKENS
+        or rehab_type in _URGENT_INJURY_TOKENS
+    )
+
+
+def _select_highest_risk_type(types: list[str]) -> str:
+    cleaned = [str(item).strip().lower() for item in types if str(item or "").strip()]
+    if not cleaned:
+        return "unspecified"
+    for injury_type in _INJURY_RISK_ORDER:
+        if injury_type in cleaned:
+            return injury_type
+    return cleaned[0]
+
+
+def _merge_injuries_by_location(parsed_entries: list[dict]) -> list[dict]:
+    severity_rank = {"low": 0, "mild": 0, "moderate": 1, "high": 2, "severe": 2}
+    merged: dict[str, dict] = {}
+    for raw_entry in parsed_entries:
+        entry = dict(raw_entry)
+        location = (
+            entry.get("canonical_location")
+            or entry.get("display_location")
+            or entry.get("location")
+            or entry.get("region")
+            or "unspecified"
+        )
+        group = merged.setdefault(
+            location,
+            {
+                "canonical_location": location,
+                "display_location": entry.get("display_location"),
+                "rehab_types": [],
+                "injury_types": [],
+                "flags": [],
+                "triage_categories": [],
+                "severity": None,
+                "laterality": None,
+                "is_urgent": False,
+            },
+        )
+        for key, out_key in (("rehab_type", "rehab_types"), ("injury_type", "injury_types")):
+            value = str(entry.get(key) or "").strip().lower()
+            if value and value not in group[out_key]:
+                group[out_key].append(value)
+        for injury_type in group["injury_types"]:
+            if injury_type not in group["rehab_types"]:
+                group["rehab_types"].append(injury_type)
+        for flag in entry.get("flags", []) or []:
+            flag_text = str(flag).strip().lower()
+            if flag_text and flag_text not in group["flags"]:
+                group["flags"].append(flag_text)
+        triage = str(entry.get("triage_category") or "").strip().lower()
+        if triage and triage not in group["triage_categories"]:
+            group["triage_categories"].append(triage)
+        severity = str(entry.get("severity") or "").strip().lower()
+        if severity and (
+            group["severity"] is None
+            or severity_rank.get(severity, -1) > severity_rank.get(str(group["severity"]).lower(), -1)
+        ):
+            group["severity"] = severity
+        laterality = entry.get("laterality") or entry.get("side")
+        if laterality and (group["laterality"] is None or group["laterality"] == laterality):
+            group["laterality"] = laterality
+        group["is_urgent"] = bool(group["is_urgent"] or _entry_is_urgent(entry))
+    return list(merged.values())
+
+
+def _build_red_flag_block(entry: dict) -> str:
+    location = entry.get("display_location") or entry.get("canonical_location") or "unspecified location"
+    triage = ", ".join(entry.get("triage_categories", []))
+    flags = ", ".join(entry.get("flags", []))
+    lines = ["\n**Red Flag Detected**", f"• Location: {str(location).title()}"]
+    if triage:
+        lines.append(f"• Triage category: {triage}")
+    if flags:
+        lines.append(f"• Flags: {flags}")
+    lines.append("• Do not train this injury normally until cleared by a clinician.")
+    lines.append("• All strength/conditioning recommendations must be manually adjusted.")
+    return "\n".join(lines)
 
 
 def combine_three_phase_drills(location: str, injury_type: str) -> list[dict]:
