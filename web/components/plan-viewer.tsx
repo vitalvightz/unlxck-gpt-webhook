@@ -26,6 +26,7 @@ import {
   type BlockedInjuryContextSummary,
 } from "@/lib/triage-block-reasons";
 import type { PlanAdvisory, PlanDetail, UserRole } from "@/lib/types";
+import { hasTriageResumeApproval } from "@/lib/triage-view";
 
 type ValidatorIssue = Record<string, unknown>;
 type ReviewIssue = {
@@ -150,6 +151,10 @@ function formatRiskBandLabel(riskBand: NonNullable<PlanAdvisory["risk_band"]>) {
 }
 
 function readInjuryTriage(plan: PlanDetail): InjuryTriageView | null {
+  if (hasTriageResumeApproval(plan)) {
+    return null;
+  }
+
   const whyLogTriage =
     plan.admin_outputs?.why_log && typeof plan.admin_outputs.why_log === "object"
       ? (plan.admin_outputs.why_log as Record<string, unknown>).injury_triage
@@ -160,16 +165,29 @@ function readInjuryTriage(plan: PlanDetail): InjuryTriageView | null {
 
   if (source && typeof source === "object") {
     const triage = source as Record<string, unknown>;
+    const mode = typeof triage.mode === "string" ? triage.mode : undefined;
+    const reasons = Array.isArray(triage.reasons) ? triage.reasons.map(String) : [];
+    const redFlags = Array.isArray(triage.red_flags) ? triage.red_flags.map(String) : [];
+    const matchedCategories = Array.isArray(triage.matched_high_risk_categories)
+      ? triage.matched_high_risk_categories.map(String)
+      : [];
+    const routingReasons = Array.isArray(triage.routing_reasons) ? triage.routing_reasons.map(String) : [];
+    const urgentFlags = Array.isArray(triage.urgent_flags) ? triage.urgent_flags.map(String) : [];
+
+    const hasStructuredSignal = Boolean(
+      mode || reasons.length || redFlags.length || matchedCategories.length || routingReasons.length || urgentFlags.length,
+    );
+    if (!hasStructuredSignal) {
+      return null;
+    }
 
     return {
-      mode: typeof triage.mode === "string" ? triage.mode : undefined,
-      reasons: Array.isArray(triage.reasons) ? triage.reasons.map(String) : [],
-      red_flags: Array.isArray(triage.red_flags) ? triage.red_flags.map(String) : [],
-      matched_high_risk_categories: Array.isArray(triage.matched_high_risk_categories)
-        ? triage.matched_high_risk_categories.map(String)
-        : [],
-      routing_reasons: Array.isArray(triage.routing_reasons) ? triage.routing_reasons.map(String) : [],
-      urgent_flags: Array.isArray(triage.urgent_flags) ? triage.urgent_flags.map(String) : [],
+      mode,
+      reasons,
+      red_flags: redFlags,
+      matched_high_risk_categories: matchedCategories,
+      routing_reasons: routingReasons,
+      urgent_flags: urgentFlags,
       sparring_risk_band:
         typeof triage.sparring_risk_band === "string" ? triage.sparring_risk_band : undefined,
       clinician_clearance_required:
@@ -738,9 +756,7 @@ export function PlanViewer({
     athletePlanText ||
     "";
   const canApproveForRelease = isAdmin && !hasPublishedPlan && Boolean(approvableText);
-  const hasResumeApproval =
-    plan.admin_outputs?.stage2_status === "triage_resume_approved" ||
-    Boolean((plan.admin_outputs?.why_log as Record<string, unknown> | undefined)?.triage_regeneration_cleared);
+  const hasResumeApproval = hasTriageResumeApproval(plan);
   const canApproveAndResumeGeneration =
     isAdmin &&
     !hasResumeApproval &&
