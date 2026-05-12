@@ -317,6 +317,42 @@ def test_parse_injury_entry_keeps_structural_severity_flags(monkeypatch):
     assert "urgent" in dislocation_entry["flags"]
 
 
+def test_plan_input_parsed_injury_includes_severity_provenance_defaults():
+    from fightcamp.input_parsing import PlanInput
+    from tests.support import _build_request
+
+    payload = _build_request().to_payload()
+    for field in payload["data"]["fields"]:
+        if field.get("label") == "Any injuries or areas you need to work around?":
+            field["value"] = "left shoulder pain"
+            break
+
+    parsed = PlanInput.from_payload(payload)
+    injury = parsed.parsed_injuries[0]
+
+    assert injury["severity"] == "low"
+    assert injury["severity_source"] == "injury_type_default"
+    assert injury["severity_evidence"] == ["injury type default: pain"]
+
+
+def test_fallback_default_used_when_no_guided_text_or_injury_type_signal():
+    from fightcamp.input_parsing import PlanInput
+    from tests.support import _build_request
+
+    payload = _build_request().to_payload()
+    for field in payload["data"]["fields"]:
+        if field.get("label") == "Any injuries or areas you need to work around?":
+            field["value"] = "left shoulder issue"
+            break
+
+    parsed = PlanInput.from_payload(payload)
+    injury = parsed.parsed_injuries[0]
+
+    assert injury["severity"] == "moderate"
+    assert injury["severity_source"] == "fallback_default"
+    assert injury["severity_evidence"] == ["fallback default: moderate"]
+
+
 def test_build_rehab_injury_string_prefers_structured_knee_instability():
     from types import SimpleNamespace
 

@@ -717,7 +717,7 @@ def test_guided_injury_structural_notes_are_retained_in_original_phrase():
 
 @pytest.mark.parametrize(
     ("guided_severity", "expected_severity"),
-    [("low", "mild"), ("high", "severe")],
+    [("low", "low"), ("high", "high")],
 )
 def test_guided_injury_payload_converts_frontend_to_backend_severity_vocab(guided_severity, expected_severity):
     payload = _payload(
@@ -735,6 +735,22 @@ def test_guided_injury_payload_converts_frontend_to_backend_severity_vocab(guide
     parsed = PlanInput.from_payload(payload)
 
     assert parsed.parsed_injuries[0]["severity"] == expected_severity
+    assert parsed.parsed_injuries[0]["severity_source"] == "guided_card"
+    assert parsed.parsed_injuries[0]["severity_evidence"] == [f"guided severity: {expected_severity}"]
+
+
+def test_parsed_injuries_never_store_mild_or_severe_internally():
+    payload = _payload(
+        [
+            {"label": "Full name", "value": "Test Athlete"},
+            {"label": "Fighting Style (Technical)", "value": "Boxing"},
+            {"label": "Any injuries or areas you need to work around?", "value": "mild left shoulder soreness"},
+        ]
+    )
+    parsed = PlanInput.from_payload(payload)
+
+    assert all(entry["severity"] in {"low", "moderate", "high"} for entry in parsed.parsed_injuries)
+    assert all(entry["severity"] not in {"mild", "severe"} for entry in parsed.parsed_injuries)
 
 
 def test_guided_injury_legacy_payload_remains_compatible():
