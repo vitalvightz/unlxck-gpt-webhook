@@ -475,9 +475,8 @@ def normalize_severity(text: str) -> tuple[str, list[str]]:
     lowered = text.lower()
     hits = _find_severity_hits(lowered)
     contextual_high_allowed = bool(_SWELLING_CONTEXT_ESCALATION_RE.search(lowered))
-    instability_event_allowed = bool(
-        _INSTABILITY_EVENT_ESCALATION_RE.search(lowered) and not _INSTABILITY_NEGATION_RE.search(lowered)
-    )
+    event_synonyms = {synonym for _, synonym in hits if synonym in _INSTABILITY_EVENT_TERMS}
+    instability_event_allowed = any(not _instability_event_is_negated(lowered, synonym) for synonym in event_synonyms)
 
     filtered_hits: list[tuple[str, str]] = []
     for level, synonym in hits:

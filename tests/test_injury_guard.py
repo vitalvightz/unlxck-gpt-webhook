@@ -394,6 +394,12 @@ def test_negated_giving_way_does_not_suppress_positive_buckled_event():
     assert "buckled" in hits
 
 
+def test_negated_giving_way_does_not_suppress_positive_buckled_event_with_pronoun():
+    severity, hits = normalize_severity("no giving way, but it buckled")
+    assert severity == "high"
+    assert "buckled" in hits
+
+
 def test_severity_synonym_pattern_multi_word_separators():
     # Regression: _severity_synonym_pattern must not raise SyntaxError when
     # building a pattern for multi-word synonyms (backslash in f-string fix).
