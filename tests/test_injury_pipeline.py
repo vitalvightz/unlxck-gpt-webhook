@@ -258,10 +258,93 @@ def test_location_map_uses_safe_broad_regions_for_ambiguous_anatomy(monkeypatch)
         ("cheeks pain", "unspecified"),
         ("jawbone pain", "jaw"),
     ]
-
     for phrase, expected_location in cases:
         _, location = parse_injury_phrase(phrase)
         assert location == expected_location
+
+
+def test_generate_rehab_protocols_structured_urgent_entry_blocks_normal_rehab():
+    text, _ = generate_rehab_protocols(
+        injury_string="right knee acl tear",
+        exercise_data=[],
+        current_phase="GPP",
+        parsed_entries=[
+            {
+                "canonical_location": "knee",
+                "injury_type": "unspecified",
+                "rehab_type": "unspecified",
+                "triage_category": "acl_tear",
+                "flags": ["urgent", "structural_red_flag", "suspected_ligament_tear"],
+            }
+        ],
+    )
+    assert "Red Flag Detected" in text
+    assert "Do not train" in text
+    forbidden = ("Terminal Knee Extensions", "TKE", "Spanish Squat", "Pogo")
+    assert not any(drill in text for drill in forbidden)
+
+
+def test_generate_rehab_protocols_same_location_entries_merge_injury_types():
+    text, _ = generate_rehab_protocols(
+        injury_string="",
+        exercise_data=[],
+        current_phase="GPP",
+        parsed_entries=[
+            {"canonical_location": "knee", "injury_type": "instability", "rehab_type": "instability", "severity": "moderate"},
+            {"canonical_location": "knee", "injury_type": "swelling", "rehab_type": "swelling", "severity": "moderate"},
+        ],
+    )
+    assert "Knee" in text
+    assert "Instability" in text
+    assert "Swelling" in text
+
+
+def test_generate_rehab_protocols_same_location_urgent_entry_overrides_nonurgent():
+    text, _ = generate_rehab_protocols(
+        injury_string="knee pain",
+        exercise_data=[],
+        current_phase="GPP",
+        parsed_entries=[
+            {"canonical_location": "knee", "injury_type": "pain", "rehab_type": "pain", "severity": "low"},
+            {
+                "canonical_location": "knee",
+                "injury_type": "unspecified",
+                "rehab_type": "unspecified",
+                "triage_category": "acl_tear",
+                "flags": ["urgent"],
+            },
+        ],
+    )
+    assert "Red Flag Detected" in text
+    assert "Do not train" in text
+    forbidden = ("Terminal Knee Extensions", "TKE", "Spanish Squat", "Pogo")
+    assert not any(drill in text for drill in forbidden)
+
+
+def test_generate_rehab_protocols_keeps_canonical_lookup_when_display_location_is_noncanonical():
+    text, _ = generate_rehab_protocols(
+        injury_string="",
+        exercise_data=[],
+        current_phase="GPP",
+        parsed_entries=[
+            {
+                "canonical_location": "knee",
+                "display_location": "right knee",
+                "injury_type": "instability",
+                "rehab_type": "instability",
+            },
+            {
+                "canonical_location": "knee",
+                "display_location": "right knee",
+                "injury_type": "swelling",
+                "rehab_type": "swelling",
+            },
+        ],
+    )
+    assert "Knee" in text
+    assert "Instability" in text
+    assert "Swelling" in text
+    assert "Unspecified + " not in text
 
 
 def test_severe_structural_terms_do_not_parse_as_soft_rehab_buckets(monkeypatch):
