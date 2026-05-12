@@ -280,15 +280,16 @@ export function buildBlockedInjuryContextSummary({
   const attachExtras = (
     base: BlockedInjuryContextSummary,
   ): BlockedInjuryContextSummary => {
+    const extras: Partial<BlockedInjuryContextSummary> = {};
     if (capturedInjuries.length) {
-      base.capturedInjuries = capturedInjuries;
+      extras.capturedInjuries = capturedInjuries;
     } else if (injuryLine) {
-      base.legacyInjuryText = injuryLine;
+      extras.legacyInjuryText = injuryLine;
     }
     if (pauseReasons.length) {
-      base.pauseReasons = pauseReasons;
+      extras.pauseReasons = pauseReasons;
     }
-    return base;
+    return { ...base, ...extras };
   };
 
   if (guidedContext) {
