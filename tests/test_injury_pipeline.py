@@ -353,6 +353,24 @@ def test_fallback_default_used_when_no_guided_text_or_injury_type_signal():
     assert injury["severity_evidence"] == ["fallback default: moderate"]
 
 
+@pytest.mark.parametrize("injury_text", ["left knee swelling", "left knee instability"])
+def test_swelling_and_instability_defaults_are_moderate_without_other_context(injury_text: str):
+    from fightcamp.input_parsing import PlanInput
+    from tests.support import _build_request
+
+    payload = _build_request().to_payload()
+    for field in payload["data"]["fields"]:
+        if field.get("label") == "Any injuries or areas you need to work around?":
+            field["value"] = injury_text
+            break
+
+    parsed = PlanInput.from_payload(payload)
+    injury = parsed.parsed_injuries[0]
+
+    assert injury["severity"] == "moderate"
+    assert injury["severity_source"] == "injury_type_default"
+
+
 def test_build_rehab_injury_string_prefers_structured_knee_instability():
     from types import SimpleNamespace
 

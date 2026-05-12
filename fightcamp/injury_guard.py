@@ -39,8 +39,8 @@ INJURY_TYPE_SEVERITY = {
     "graze": "low",
     "blister": "low",
     "laceration": "moderate",
-    "swelling": "high",
-    "instability": "high",
+    "swelling": "moderate",
+    "instability": "moderate",
     "unspecified": "moderate",
 }
 
