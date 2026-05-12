@@ -6,7 +6,7 @@ from .injury_formatting import format_injury_summary, parse_injury_entry
 from .injury_guard import INJURY_TYPE_SEVERITY, normalize_severity
 from .injury_taxonomy import derive_red_flag_types, derive_urgent_injury_tokens, get_red_flag_message
 from .injury_synonyms import parse_injury_phrase, split_injury_text
-from .injury_location import get_injury_location
+from .injury_location import canonicalize_location, get_injury_location
 from .restriction_parsing import ParsedRestriction
 # Refactored: Import centralized DATA_DIR from config
 from .config import DATA_DIR
@@ -57,18 +57,19 @@ def get_exercise_bank() -> list[dict]:
     return _EXERCISE_BANK_CACHE
 REHAB_LOCATION_ALIASES = {
     "biceps": ["bicep"],
-    "bicep": ["biceps"],
     "hamstring": ["hamstrings"],
-    "hamstrings": ["hamstring"],
     "lower back": ["lower_back"],
-    "lower_back": ["lower back"],
     "upper back": ["upper_back"],
-    "upper_back": ["upper back"],
+    "hip flexor": ["hip_flexor"],
+    "si joint": ["si_joint"],
+    "quad": ["quads"],
+    "glute": ["glutes"],
 }
 
 
 def normalize_rehab_location(location: str | None) -> list[str]:
-    if not location:
+    normalized_location = canonicalize_location(location)
+    if not normalized_location:
         return ["unspecified"]
     candidates: list[str] = []
 
@@ -76,13 +77,11 @@ def normalize_rehab_location(location: str | None) -> list[str]:
         if value and value not in candidates:
             candidates.append(value)
 
-    _add(location)
-    for alias in REHAB_LOCATION_ALIASES.get(location, []):
+    _add(normalized_location)
+    for alias in REHAB_LOCATION_ALIASES.get(normalized_location, []):
         _add(alias)
-    if "_" in location:
-        _add(location.replace("_", " "))
-    if " " in location:
-        _add(location.replace(" ", "_"))
+    _add(normalized_location.replace(" ", "_"))
+    _add(normalized_location.replace("_", " "))
 
     filtered = [candidate for candidate in candidates if candidate in get_rehab_locations()]
     return filtered or candidates
