@@ -13,6 +13,7 @@ from .guided_injury_display import (
     strip_guided_laterality,
 )
 from .guided_injury_resolver import resolve_guided_injury_entry
+from .injury_guard import INJURY_TYPE_SEVERITY, SEVERITY_RANK, normalize_severity
 from .injury_formatting import parse_injuries_and_restrictions, parse_injury_entry
 from .normalization import normalize_injury_marker as _normalize_injury_marker
 from .normalization import normalize_label as _normalize_label
@@ -448,11 +449,11 @@ _GUIDED_TRIGGER_PREFIX = re.compile(
     re.IGNORECASE,
 )
 _GUIDED_SEVERITY_MAP = {
-    "low": "mild",
-    "mild": "mild",
+    "low": "low",
+    "mild": "low",
     "moderate": "moderate",
-    "high": "severe",
-    "severe": "severe",
+    "high": "high",
+    "severe": "high",
 }
 _GUIDED_STRUCTURAL_NOTE_PATTERN = re.compile(
     r"\b(?:acl|tear|rupture|reconstruction|dislocation|fracture|concussion)\b",
@@ -521,9 +522,12 @@ def _parse_guided_injury(guided_injury: GuidedInjury) -> tuple[list[dict[str, st
         injury_entry["guided_source_injury_type"] = guided_injury.injury_type
         injury_entry["guided_source_area"] = guided_injury.area
 
-        mapped_severity = _GUIDED_SEVERITY_MAP.get(guided_injury.severity.lower())
+        raw_guided_severity = guided_injury.severity.strip().lower()
+        mapped_severity = _GUIDED_SEVERITY_MAP.get(raw_guided_severity)
         if mapped_severity:
             injury_entry["severity"] = mapped_severity
+            injury_entry["severity_source"] = "guided_card"
+            injury_entry["severity_evidence"] = [f"guided severity: {mapped_severity}"]
         if guided_injury.trend:
             injury_entry["trend"] = guided_injury.trend.strip().lower()
         if guided_injury.avoid:
@@ -558,6 +562,65 @@ def _parse_guided_injuries(
         parsed_injuries.extend(injuries)
         parsed_restrictions.extend(restrictions)
     return parsed_injuries, parsed_restrictions
+
+
+def _attach_severity_provenance(
+    parsed_injuries: list[dict[str, str | None | list[str]]],
+) -> list[dict[str, str | None | list[str]]]:
+    def _joined_text(injury: dict[str, str | None | list[str]]) -> str:
+        parts = [
+            str(injury.get("original_phrase") or ""),
+            str(injury.get("notes") or ""),
+            str(injury.get("avoid") or ""),
+        ]
+        return " ".join(part.strip() for part in parts if str(part).strip())
+
+    def _severity_rank(value: str) -> int:
+        return SEVERITY_RANK.get(value, SEVERITY_RANK["moderate"])
+
+    for injury in parsed_injuries:
+        if not isinstance(injury, dict):
+            continue
+        guided_raw = str(injury.get("severity") or "").strip().lower()
+        guided_severity = _GUIDED_SEVERITY_MAP.get(guided_raw)
+
+        text_severity, text_hits = normalize_severity(_joined_text(injury))
+        text_has_signal = bool(text_hits)
+
+        if guided_severity and text_has_signal and _severity_rank(text_severity) > _severity_rank(guided_severity):
+            injury["severity"] = text_severity
+            injury["severity_source"] = "text_escalation"
+            injury["severity_evidence"] = [
+                f"guided severity: {guided_severity}",
+                f"text severity: {text_severity}",
+                *text_hits,
+            ]
+            continue
+
+        if guided_severity:
+            injury["severity"] = guided_severity
+            injury["severity_source"] = "guided_card"
+            injury["severity_evidence"] = [f"guided severity: {guided_severity}"]
+            continue
+
+        if text_has_signal:
+            injury["severity"] = text_severity
+            injury["severity_source"] = "text_detected"
+            injury["severity_evidence"] = [f"text severity: {text_severity}", *text_hits]
+            continue
+
+        injury_type = str(injury.get("injury_type") or "").strip().lower()
+        default_type_severity = _GUIDED_SEVERITY_MAP.get(INJURY_TYPE_SEVERITY.get(injury_type, ""))
+        if default_type_severity:
+            injury["severity"] = default_type_severity
+            injury["severity_source"] = "injury_type_default"
+            injury["severity_evidence"] = [f"injury type default: {injury_type}"]
+            continue
+
+        injury["severity"] = "moderate"
+        injury["severity_source"] = "fallback_default"
+        injury["severity_evidence"] = ["fallback default: moderate"]
+    return parsed_injuries
 
 
 def _compute_days_until_fight(
@@ -673,6 +736,7 @@ class PlanInput:
             else:
                 guided_injuries = []
                 parsed_injuries, parsed_restrictions = parse_injuries_and_restrictions(injuries or "")
+        parsed_injuries = _attach_severity_provenance(parsed_injuries)
         training_days = [d.strip() for d in raw_available_days.split(",") if d.strip()]
         hard_sparring_days = [
             d.strip() for d in values["hard_sparring_days_raw"].split(",") if d.strip()

@@ -210,6 +210,27 @@ def test_guided_injury_and_restrictions_are_used_for_triage():
     assert "rib_breathing_red_flag_combination" in triage.routing_reasons
 
 
+def test_text_escalation_overrides_guided_low_and_still_blocks_stage2():
+    payload = _payload_with_injury("")
+    payload["guided_injury"] = {
+        "area": "left knee",
+        "severity": "low",
+        "trend": "stable",
+        "notes": "sharp pain, swelling, and cannot bear weight",
+    }
+
+    parsed = PlanInput.from_payload(payload)
+    escalated = parsed.parsed_injuries[0]
+    triage = triage_injuries(parsed)
+
+    assert escalated["severity"] == "high"
+    assert escalated["severity_source"] == "text_escalation"
+    assert "sharp" in escalated["severity_evidence"]
+    assert "swelling" in escalated["severity_evidence"]
+    assert triage.should_block_stage2 is True
+    assert triage.mode != FULL_PLAN
+
+
 def test_second_guided_card_can_trigger_medical_hold():
     payload = _payload_with_injury("")
     payload["guided_injuries"] = [
