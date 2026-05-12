@@ -8,6 +8,7 @@ from .input_parsing import GuidedInjury, PlanInput
 from .injury_synonyms import parse_injury_phrase, remove_negated_phrases, split_injury_text
 from .sparring_advisories import summarize_sparring_injury_risk
 from .triage_features import build_triage_features, parse_guided_note_tags
+from .injury_location import get_injury_location
 
 
 FULL_PLAN = "full_plan"
@@ -352,13 +353,7 @@ def _build_result(
 
 
 def _parsed_entry_location(entry: dict[str, Any]) -> str:
-    return _normalized_text(
-        entry.get("display_location")
-        or entry.get("canonical_location")
-        or entry.get("area")
-        or entry.get("region")
-        or entry.get("location")
-    )
+    return _normalized_text(get_injury_location(entry))
 
 
 def _guided_card_from_parsed_entry(entry: dict[str, Any]) -> _GuidedCard | None:
