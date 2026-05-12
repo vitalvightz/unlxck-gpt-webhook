@@ -717,7 +717,7 @@ def test_guided_injury_structural_notes_are_retained_in_original_phrase():
 
 @pytest.mark.parametrize(
     ("guided_severity", "expected_severity"),
-    [("low", "mild"), ("high", "severe")],
+    [("low", "low"), ("high", "high")],
 )
 def test_guided_injury_payload_converts_frontend_to_backend_severity_vocab(guided_severity, expected_severity):
     payload = _payload(
@@ -735,6 +735,7 @@ def test_guided_injury_payload_converts_frontend_to_backend_severity_vocab(guide
     parsed = PlanInput.from_payload(payload)
 
     assert parsed.parsed_injuries[0]["severity"] == expected_severity
+    assert parsed.parsed_injuries[0]["severity_source"] == "guided_injury"
 
 
 def test_guided_injury_legacy_payload_remains_compatible():
