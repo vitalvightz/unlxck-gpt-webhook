@@ -5,6 +5,7 @@ from difflib import SequenceMatcher
 
 from .normalization import strip_surrounding_punctuation as _strip_surrounding_punct
 from .regex_config import compile_regex
+from .injury_taxonomy import get_required_flags
 
 _SPACY_AVAILABLE = importlib.util.find_spec("spacy") is not None
 _RAPIDFUZZ_AVAILABLE = importlib.util.find_spec("rapidfuzz") is not None
@@ -234,43 +235,48 @@ def _phrase_in_text(phrase: str, text: str) -> bool:
     return re.search(pattern, cleaned_text) is not None
 
 
+def _taxonomy_flags_for(category: str) -> tuple[str, ...]:
+    return tuple(get_required_flags(category))
+
+
 STRUCTURAL_RED_FLAG_MAP: dict[str, tuple[str, ...]] = {
     # Dislocation / subluxation
-    "partial dislocation": ("structural_red_flag", "suspected_dislocation", "urgent"),
-    "dislocation": ("structural_red_flag", "suspected_dislocation", "urgent"),
-    "dislocated": ("structural_red_flag", "suspected_dislocation", "urgent"),
-    "subluxation": ("structural_red_flag", "suspected_dislocation", "urgent"),
-    "sublux": ("structural_red_flag", "suspected_dislocation", "urgent"),
+    "partial dislocation": _taxonomy_flags_for("dislocation"),
+    "dislocation": _taxonomy_flags_for("dislocation"),
+    "dislocated": _taxonomy_flags_for("dislocation"),
+    "subluxation": _taxonomy_flags_for("dislocation"),
+    "sublux": _taxonomy_flags_for("dislocation"),
 
     # Ligament tear / rupture
-    "acl tear": ("structural_red_flag", "suspected_ligament_tear", "urgent"),
-    "mcl tear": ("structural_red_flag", "suspected_ligament_tear", "urgent"),
-    "lcl tear": ("structural_red_flag", "suspected_ligament_tear", "urgent"),
-    "pcl tear": ("structural_red_flag", "suspected_ligament_tear", "urgent"),
-    "ligament tear": ("structural_red_flag", "suspected_ligament_tear", "urgent"),
-    "torn ligament": ("structural_red_flag", "suspected_ligament_tear", "urgent"),
-    "ruptured ligament": ("structural_red_flag", "suspected_ligament_tear", "urgent"),
-    "blown ligament": ("structural_red_flag", "suspected_ligament_tear", "urgent"),
+    "acl tear": _taxonomy_flags_for("acl_tear"),
+    "mcl tear": _taxonomy_flags_for("ligament_tear"),
+    "lcl tear": _taxonomy_flags_for("ligament_tear"),
+    "pcl tear": _taxonomy_flags_for("ligament_tear"),
+    "ligament tear": _taxonomy_flags_for("ligament_tear"),
+    "torn ligament": _taxonomy_flags_for("ligament_tear"),
+    "ruptured ligament": _taxonomy_flags_for("ligament_tear"),
+    "blown ligament": _taxonomy_flags_for("ligament_tear"),
 
     # Tendon tear / rupture
-    "tendon tear": ("structural_red_flag", "suspected_tendon_rupture", "urgent"),
-    "torn tendon": ("structural_red_flag", "suspected_tendon_rupture", "urgent"),
-    "tendon rupture": ("structural_red_flag", "suspected_tendon_rupture", "urgent"),
-    "ruptured tendon": ("structural_red_flag", "suspected_tendon_rupture", "urgent"),
-    "tendon snap": ("structural_red_flag", "suspected_tendon_rupture", "urgent"),
-    "tendon snapped": ("structural_red_flag", "suspected_tendon_rupture", "urgent"),
-    "felt tendon snap": ("structural_red_flag", "suspected_tendon_rupture", "urgent"),
-    "felt tendon pop": ("structural_red_flag", "suspected_tendon_rupture", "urgent"),
-    "tendon popped": ("structural_red_flag", "suspected_tendon_rupture", "urgent"),
+    "tendon tear": _taxonomy_flags_for("tendon_rupture"),
+    "torn tendon": _taxonomy_flags_for("tendon_rupture"),
+    "tendon rupture": _taxonomy_flags_for("tendon_rupture"),
+    "ruptured tendon": _taxonomy_flags_for("tendon_rupture"),
+    "tendon snap": _taxonomy_flags_for("tendon_rupture"),
+    "tendon snapped": _taxonomy_flags_for("tendon_rupture"),
+    "felt tendon snap": _taxonomy_flags_for("tendon_rupture"),
+    "felt tendon pop": _taxonomy_flags_for("tendon_rupture"),
+    "tendon popped": _taxonomy_flags_for("tendon_rupture"),
 
     # Muscle rupture
-    "muscle rupture": ("structural_red_flag", "suspected_muscle_rupture", "urgent"),
-    "muscle ruptured": ("structural_red_flag", "suspected_muscle_rupture", "urgent"),
+    "muscle rupture": _taxonomy_flags_for("muscle_rupture"),
+    "muscle ruptured": _taxonomy_flags_for("muscle_rupture"),
 
     # Bone
-    "fracture": ("structural_red_flag", "suspected_fracture", "urgent"),
-    "broken bone": ("structural_red_flag", "suspected_fracture", "urgent"),
+    "fracture": _taxonomy_flags_for("fracture"),
+    "broken bone": _taxonomy_flags_for("fracture"),
 }
+
 
 TRIAGE_CATEGORY_MAP: dict[str, str] = {
     "acl tear": "acl_tear",
