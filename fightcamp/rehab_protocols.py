@@ -593,6 +593,7 @@ def generate_rehab_protocols(
     injury_string: str,
     exercise_data: list,
     current_phase: str,
+    parsed_entries: list[dict] | None = None,
     seen_drills: set | None = None,
     day_type: str | None = None,
 ) -> tuple[str, set]:
@@ -624,33 +625,48 @@ def generate_rehab_protocols(
     """
     if seen_drills is None:
         seen_drills = set()
-    if not injury_string:
+    if not injury_string and not parsed_entries:
         return "\n✅ No rehab work required.", seen_drills
 
     injury_phrases = split_injury_text(injury_string)
 
-    parsed_entries = []
-    for phrase in injury_phrases:
-        itype, loc = parse_injury_phrase(phrase)
-        if not itype:
-            if loc:
-                # default to unspecified type when a location is provided
-                itype = "unspecified"
-            else:
+    normalized_entries: list[tuple[str | None, str | None]] = []
+    if parsed_entries:
+        for entry in parsed_entries:
+            if not isinstance(entry, dict):
                 continue
-        parsed_entries.append((itype, loc))
+            location = (
+                entry.get("canonical_location")
+                or entry.get("location")
+                or entry.get("region")
+            )
+            injury_type = entry.get("rehab_type") or entry.get("injury_type")
+            if not injury_type and location:
+                injury_type = "unspecified"
+            if injury_type or location:
+                normalized_entries.append((injury_type, location))
+    else:
+        for phrase in injury_phrases:
+            itype, loc = parse_injury_phrase(phrase)
+            if not itype:
+                if loc:
+                    # default to unspecified type when a location is provided
+                    itype = "unspecified"
+                else:
+                    continue
+            normalized_entries.append((itype, loc))
 
     # Prioritize specific injuries over unspecified duplicates
-    parsed_entries.sort(key=lambda x: (x[0] is None or x[0] == "unspecified"))
+    normalized_entries.sort(key=lambda x: (x[0] is None or x[0] == "unspecified"))
 
     # Drop injuries without a body part when at least one body part was found
-    if any(loc for _, loc in parsed_entries):
-        parsed_entries = [p for p in parsed_entries if p[1] is not None]
+    if any(loc for _, loc in normalized_entries):
+        normalized_entries = [p for p in normalized_entries if p[1] is not None]
 
     seen_pairs = set()
     seen_locations = set()
     unique_entries = []
-    for pair in parsed_entries:
+    for pair in normalized_entries:
         itype, loc = pair
         if pair in seen_pairs:
             continue

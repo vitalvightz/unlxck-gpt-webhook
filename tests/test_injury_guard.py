@@ -286,6 +286,16 @@ def test_normalize_injury_regions_parses_phrases():
     assert normalize_injury_regions(["upper leg pain"]) == {"quad"}
 
 
+def test_joint_instability_does_not_normalize_to_ankle_region():
+    regions = normalize_injury_regions(["joint instability"])
+    assert "ankle" not in regions
+
+
+def test_ankle_instability_still_normalizes_to_ankle_region():
+    regions = normalize_injury_regions(["ankle instability"])
+    assert "ankle" in regions
+
+
 def test_drill_text_filter_matches_notes_and_tags():
     keyword_drill = {"name": "Landing Primer", "notes": "Avoid hard landing", "tags": []}
     keyword_reasons = _drill_text_injury_reasons(keyword_drill, ["knee pain"])
