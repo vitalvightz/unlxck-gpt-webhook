@@ -249,9 +249,9 @@ STRUCTURAL_RED_FLAG_MAP: dict[str, tuple[str, ...]] = {
 
     # Ligament tear / rupture
     "acl tear": _taxonomy_flags_for("acl_tear"),
-    "mcl tear": _taxonomy_flags_for("ligament_tear"),
-    "lcl tear": _taxonomy_flags_for("ligament_tear"),
-    "pcl tear": _taxonomy_flags_for("ligament_tear"),
+    "mcl tear": _taxonomy_flags_for("mcl_tear"),
+    "lcl tear": _taxonomy_flags_for("lcl_tear"),
+    "pcl tear": _taxonomy_flags_for("pcl_tear"),
     "ligament tear": _taxonomy_flags_for("ligament_tear"),
     "torn ligament": _taxonomy_flags_for("ligament_tear"),
     "ruptured ligament": _taxonomy_flags_for("ligament_tear"),
