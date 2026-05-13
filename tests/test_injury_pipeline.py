@@ -1038,3 +1038,13 @@ def test_generate_rehab_protocols_concussion_returns_red_flag_no_drills():
     assert "red flag detected" in normalized
     assert "  • " not in text
     assert seen == set()
+
+
+def test_danger_phrase_does_not_parse_as_normal_sprain():
+    parsed_type, _ = parse_injury_phrase("shoulder popped out")
+    assert parsed_type != "sprain"
+
+
+def test_out_of_socket_not_treated_as_ordinary_instability_or_sprain():
+    parsed_type, _ = parse_injury_phrase("out of socket")
+    assert parsed_type not in {"sprain", "instability"}

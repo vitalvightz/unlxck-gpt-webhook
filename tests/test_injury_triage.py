@@ -155,6 +155,37 @@ def test_joint_noise_with_escalation_still_routes_fracture(injury_text: str):
     assert "fracture" in triage.matched_high_risk_categories
 
 
+
+
+@pytest.mark.parametrize(
+    "injury_text",
+    [
+        "shoulder popped out during sparring",
+        "knee buckled and gave way twice",
+        "ankle popped and cannot bear weight",
+    ],
+)
+def test_danger_terms_do_not_route_to_full_plan(injury_text: str):
+    parsed = PlanInput.from_payload(_payload_with_injury(injury_text))
+    triage = triage_injuries(parsed)
+
+    assert triage.mode != FULL_PLAN
+    assert triage.should_block_stage2 is True
+
+
+def test_shoulder_popped_out_routes_dislocation_restriction():
+    parsed = PlanInput.from_payload(_payload_with_injury("shoulder popped out during sparring"))
+    triage = triage_injuries(parsed)
+
+    assert triage.mode == RESTRICTED_REHAB_ONLY
+    assert "dislocation" in triage.matched_high_risk_categories
+
+
+def test_benign_ankle_pop_with_no_symptoms_stays_full_plan():
+    parsed = PlanInput.from_payload(_payload_with_injury("ankle popped but no pain, no swelling, can walk"))
+    triage = triage_injuries(parsed)
+
+    assert triage.mode == FULL_PLAN
 def test_concussion_routes_to_medical_hold():
     parsed = PlanInput.from_payload(
         _payload_with_injury("suspected concussion with headache after sparring")
