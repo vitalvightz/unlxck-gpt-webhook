@@ -67,16 +67,140 @@ def get_red_flag_message(key: str | None) -> str:
 def derive_injury_type_severity_map() -> dict[str, str]:
     return {k: str(v.get("default_severity") or "moderate") for k, v in INJURY_TAXONOMY.items()}
 
+URGENT_EXACT_TOKENS = {
+    "fracture",
+    "fractured",
+    "broken",
+    "dislocation",
+    "dislocated",
+    "concussion",
+    "concussed",
+    "rupture",
+    "ruptured",
+    "hernia",
+    "infection",
+    "infected",
+    "seizure",
+}
+
+URGENT_PHRASE_TOKENS = {
+    "acl tear",
+    "mcl tear",
+    "lcl tear",
+    "pcl tear",
+    "ligament tear",
+    "torn ligament",
+    "complete ligament tear",
+    "grade 3 sprain",
+
+    "tendon rupture",
+    "tendon tear",
+    "torn tendon",
+    "achilles rupture",
+    "achilles tear",
+    "patellar tendon rupture",
+    "quadriceps tendon rupture",
+    "distal biceps tendon rupture",
+    "triceps tendon rupture",
+
+    "muscle rupture",
+    "complete muscle tear",
+
+    "shoulder dislocation",
+    "patellar dislocation",
+    "recurrent dislocation",
+    "out of socket",
+    "subluxation",
+
+    "stress fracture",
+    "open fracture",
+    "rib fracture",
+    "broken rib",
+    "scaphoid fracture",
+    "jaw fracture",
+    "facial fracture",
+    "orbital fracture",
+
+    "head injury",
+    "head impact",
+    "head knock",
+    "knocked out",
+    "blacked out",
+    "loss of consciousness",
+    "blurred vision",
+    "double vision",
+    "vomiting after head impact",
+    "severe headache after head impact",
+    "memory loss",
+    "amnesia",
+
+    "nerve symptoms",
+    "numbness",
+    "tingling",
+    "loss of sensation",
+    "weakness after injury",
+    "bowel changes",
+    "bladder changes",
+    "neck pain after trauma",
+
+    "septic joint",
+    "bone infection",
+    "wound infection",
+    "pus",
+    "fever with injury",
+    "uncontrolled bleeding",
+    "shortness of breath",
+    "chest pain after trauma",
+}
+
+BANNED_DERIVED_URGENT_TOKENS = {
+    "issue",
+    "issues",
+    "problem",
+    "problems",
+    "involvement",
+    "condition",
+    "symptom",
+    "symptoms",
+    "pain",
+    "injury",
+    "injuries",
+    "strain",
+    "sprain",
+    "tightness",
+    "stiffness",
+    "soreness",
+    "swelling",
+    "instability",
+    "weakness",
+    "niggle",
+    "tweak",
+}
+
+
 def derive_urgent_injury_tokens() -> set[str]:
     out: set[str] = set()
+
     for key, rule in INJURY_TAXONOMY.items():
         if not rule.get("urgent"):
             continue
-        out.add(key)
-        out.add(key.replace("_", "-"))
-        out.add(key.replace("_", " "))
-        out.add(key.split("_")[-1])
-    return out
+
+        normalized_key = str(key or "").strip().lower()
+        if not normalized_key:
+            continue
+
+        out.add(normalized_key)
+        out.add(normalized_key.replace("_", "-"))
+        out.add(normalized_key.replace("_", " "))
+
+    out.update(t.strip().lower() for t in URGENT_EXACT_TOKENS if t)
+    out.update(t.strip().lower() for t in URGENT_PHRASE_TOKENS if t)
+
+    return {
+        token
+        for token in out
+        if token and token not in BANNED_DERIVED_URGENT_TOKENS
+    }
 
 def derive_red_flag_types() -> list[str]:
     # Keep raw-string compatibility with legacy `if flag in injury` scanning.
