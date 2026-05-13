@@ -65,6 +65,7 @@ def test_build_stage2_handoff_text_uses_finalizer_packet_as_single_structured_co
     assert "ATHLETE PROFILE" in handoff
     assert '"packet_type":"stage2_finalizer_packet"' in handoff
     assert '"render_mode":"camp_plan"' in handoff
+    assert "Late-camp priority" not in handoff
     assert '"restrictions":[{"restriction":"heavy_overhead_pressing"}]' in handoff
 
     assert "COACH NOTES\nKeep this coach-facing note short." in handoff
@@ -155,6 +156,7 @@ def test_build_stage2_handoff_text_late_fight_excludes_candidate_pools_and_phase
     assert "FINALIZER PACKET" in handoff
     assert '"render_mode":"late_fight_countdown_only"' in handoff
     assert '"packet_type":"stage2_finalizer_packet"' in handoff
+    assert "Late-camp priority" in handoff
 
     # The finalizer must not see internal menus.
     assert '"candidate_pools"' not in handoff
@@ -165,6 +167,27 @@ def test_build_stage2_handoff_text_late_fight_excludes_candidate_pools_and_phase
 
     # No old full planning brief section.
     assert "PLANNING BRIEF" not in handoff
+
+
+def test_build_stage2_handoff_text_late_fight_includes_context_overlay():
+    handoff = build_stage2_handoff_text(
+        stage2_payload={
+            "payload_mode": "pre_fight_compressed_payload",
+            "athlete_model": {"sport": "boxing", "days_until_fight": 10, "has_active_injury": False},
+            "rewrite_guidance": {"render_guards": {"render_mode": "late_fight_countdown_only"}},
+        },
+        plan_text="D-10",
+        planning_brief={
+            "athlete_snapshot": {"sport": "boxing", "days_until_fight": 10, "has_active_injury": False},
+            "decision_rules": {"render_guards": {"render_mode": "late_fight_countdown_only"}},
+            "late_fight_context_overlay": {
+                "late_stage_arc": {"d13_to_d8": "Compressed pre-fight week."},
+                "session_purpose_by_day": {"D-10": "Maintain sharpness without extra fatigue."},
+            },
+        },
+    )
+    assert '"late_fight_context_overlay"' in handoff
+    assert "Maintain sharpness without extra fatigue." in handoff
 
 
 def test_build_stage2_handoff_text_carries_surgical_voice_rules():

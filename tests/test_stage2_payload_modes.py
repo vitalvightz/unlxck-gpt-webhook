@@ -17,6 +17,7 @@ from fightcamp.stage2_payload import (
 from fightcamp.stage2_payload_late_fight import (
     CANONICAL_HARD_SPARRING_LABEL,
     CANONICAL_HARD_SPARRING_NOTE,
+    _build_late_fight_context_overlay,
     _handoff_mode_instructions,
     _late_fight_legal_offsets,
     _late_fight_stage_label,
@@ -856,6 +857,86 @@ class TestStage2PayloadBranching:
         assert payload["payload_mode"] == "pre_fight_day_payload"
         assert brief["weekly_role_map"]["weeks"] == []
         assert brief["week_by_week_progression"]["weeks"] == []
+
+    def test_late_fight_payload_includes_context_overlay(self):
+        payload = _build_stage2(10)
+        overlay = payload.get("late_fight_context_overlay", {})
+        assert overlay.get("original_phase_context", {}).get("phase") in {"SPP", "TAPER", "GPP"}
+        assert "late_stage_arc" in overlay
+        assert "session_purpose_by_day" in overlay
+        assert overlay.get("coach_day_policy", {}).get("coach_led_days") == "no app S&C"
+
+    def test_late_fight_brief_includes_context_overlay(self):
+        brief = _build_brief_for(10)
+        overlay = brief.get("late_fight_context_overlay", {})
+        assert overlay.get("writing_upgrade")
+        assert "avoid_terms" in overlay.get("writing_upgrade", {})
+
+    def test_late_fight_overlay_injury_policy_only_when_active_injury(self):
+        clean_overlay = _build_stage2(10).get("late_fight_context_overlay", {})
+        assert "injury_support_policy" not in clean_overlay
+
+        injured = _athlete(10)
+        injured["has_active_injury"] = True
+        injured_payload = build_stage2_payload(injured)
+        injured_overlay = injured_payload.get("late_fight_context_overlay", {})
+        assert injured_overlay.get("injury_support_policy", {}).get("active_injury") is True
+
+    def test_late_fight_overlay_injury_policy_detects_injury_signals_without_boolean_flag(self):
+        injured = _athlete(10, has_active_injury=False, injuries=["elbow pain"])
+        injured_overlay = build_stage2_payload(injured).get("late_fight_context_overlay", {})
+        assert injured_overlay.get("injury_support_policy", {}).get("active_injury") is True
+
+        restricted = _athlete(10, has_active_injury=False, restrictions=["avoid heavy elbow flexion"])
+        restricted_overlay = build_stage2_payload(restricted).get("late_fight_context_overlay", {})
+        assert restricted_overlay.get("injury_support_policy", {}).get("active_injury") is True
+
+        flagged = _athlete(10, has_active_injury=False, readiness_flags=["injury_management"])
+        flagged_overlay = build_stage2_payload(flagged).get("late_fight_context_overlay", {})
+        assert flagged_overlay.get("injury_support_policy", {}).get("active_injury") is True
+
+    def test_late_fight_overlay_weight_cut_policy_accepts_string_pct(self):
+        athlete = _athlete(10, weight_cut_pct="3.8", cut_severity_bucket="", weight_cut_risk=False)
+        overlay = build_stage2_payload(athlete).get("late_fight_context_overlay", {})
+        assert overlay.get("weight_cut_policy", {}).get("cut_pct") == 3.8
+
+    def test_late_fight_overlay_weight_cut_policy_uses_risk_and_extended_buckets(self):
+        risk_overlay = build_stage2_payload(
+            _athlete(10, weight_cut_pct="0.0", cut_severity_bucket="", weight_cut_risk=True)
+        ).get("late_fight_context_overlay", {})
+        assert "weight_cut_policy" in risk_overlay
+
+        critical_overlay = build_stage2_payload(
+            _athlete(10, weight_cut_pct="0.0", cut_severity_bucket="critical", weight_cut_risk=False)
+        ).get("late_fight_context_overlay", {})
+        assert critical_overlay.get("weight_cut_policy", {}).get("severity") == "critical"
+
+    def test_late_fight_overlay_protect_falls_back_to_risk_flags(self):
+        overlay = _build_late_fight_context_overlay(
+            days_until_fight=10,
+            athlete_model=_athlete(10),
+            phase_briefs={"SPP": {"objective": "x", "risk_flags": ["manage cut stress"]}},
+            days_out_payload={"late_fight_window": "d13_to_d8"},
+            late_fight_plan_spec={"countdown_mode_sequence": []},
+            late_fight_session_sequence=[],
+        )
+        assert "manage cut stress" in overlay["original_phase_context"]["protect"]
+
+    def test_late_fight_overlay_purpose_uses_visible_session_sequence_when_present(self):
+        athlete = _athlete(10)
+        overlay = _build_late_fight_context_overlay(
+            days_until_fight=10,
+            athlete_model=athlete,
+            phase_briefs={"SPP": {"objective": "x"}},
+            days_out_payload={"late_fight_window": "d13_to_d8"},
+            late_fight_plan_spec={
+                "visible_session_sequence": [{"countdown_offset": 10, "role_key": "technical_touch_day"}],
+                "session_sequence": [{"countdown_offset": 10, "role_key": "strength_touch_day"}],
+                "countdown_mode_sequence": [],
+            },
+            late_fight_session_sequence=[{"countdown_offset": 10, "role_key": "technical_touch_day"}],
+        )
+        assert overlay["session_purpose_by_day"]["D-10"] == "Keep technical rhythm and neural coordination without density."
 
 
 class TestHandoffText:
