@@ -3910,7 +3910,7 @@ def build_stage2_payload(
             "effective_stage2_mode": days_out_payload.get("payload_mode"),
             "days_out_payload": days_out_payload,
             "late_fight_plan_spec": late_fight_plan_spec,
-            "late_fight_session_sequence": _build_late_fight_session_sequence(days_until_fight, athlete_model),
+            "late_fight_session_sequence": late_fight_plan_spec.get("session_sequence") or [],
             "rendering_rules": days_out_payload.get("rendering_rules", {}),
             "late_fight_permissions": days_out_payload.get("late_fight_permissions", {}),
             "athlete_model": athlete_model,
