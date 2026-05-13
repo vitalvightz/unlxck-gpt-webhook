@@ -5,7 +5,8 @@ import re
 from typing import Any
 
 from .input_parsing import GuidedInjury, PlanInput
-from .injury_synonyms import parse_injury_phrase, remove_negated_phrases, split_injury_text
+from .injury_negation import remove_negated_phrases
+from .injury_synonyms import parse_injury_phrase, split_injury_text
 from .sparring_advisories import summarize_sparring_injury_risk
 from .triage_features import build_triage_features, parse_guided_note_tags
 from .injury_location import get_injury_location
