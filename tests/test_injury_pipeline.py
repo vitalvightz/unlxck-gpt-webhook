@@ -7,12 +7,14 @@ sys.path.append(str(Path(__file__).resolve().parents[1]))
 from fightcamp.injury_filtering import normalize_injury_regions
 from fightcamp.injury_formatting import parse_injury_entry, parse_injuries_and_restrictions
 import fightcamp.injury_synonyms as injury_synonyms
+from fightcamp.injury_negation import (
+    negation_detection_available,
+    remove_negated_phrases,
+)
 from fightcamp.injury_synonyms import (
     canonicalize_injury_type,
     detect_structural_red_flags,
-    negation_detection_available,
     parse_injury_phrase,
-    remove_negated_phrases,
     split_injury_text,
 )
 from fightcamp.injury_scoring import score_injury_phrase
@@ -123,10 +125,31 @@ def test_negated_phrase_fallback_normalizes_dash_variants(monkeypatch):
     )
 
 
+def test_negation_regressions_preserve_behaviour():
+    assert remove_negated_phrases("no shoulder pain - knee soreness") == "knee soreness"
+    assert remove_negated_phrases("no shoulder pain — knee soreness") == "knee soreness"
+    assert remove_negated_phrases("no shoulder pain â€” knee soreness") == "knee soreness"
+    assert "fracture" not in remove_negated_phrases("doctor ruled out fracture but ankle hurts")
+
+    assert parse_injury_entry("no shin splints") is None
+
+    ruled_out_fracture = score_injury_phrase(remove_negated_phrases("doctor ruled out fracture but ankle hurts"))
+    assert "urgent_fracture" not in ruled_out_fracture["flags"]
+
+    no_nerve = score_injury_phrase(remove_negated_phrases("no numbness or tingling"))
+    assert "urgent_nerve" not in no_nerve["flags"]
+    assert "nerve_involvement" not in no_nerve["flags"]
+
+    no_concussion = score_injury_phrase(remove_negated_phrases("no concussion symptoms, just tired"))
+    assert "suspected_concussion" not in no_concussion["flags"]
+    assert "urgent" not in no_concussion["flags"]
+
+
+
 def test_parse_injury_entry_checks_negation_availability_at_parse_time(monkeypatch):
     monkeypatch.setattr(injury_synonyms, "get_nlp", lambda: None)
 
-    assert not injury_synonyms.negation_detection_available()
+    assert not negation_detection_available()
 
     entry = parse_injury_entry("no shoulder pain - knee soreness")
 
