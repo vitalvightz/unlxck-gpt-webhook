@@ -27,11 +27,11 @@ CANONICAL_TYPES: List[str] = list(INJURY_SYNONYM_MAP.keys())
 
 # Map medical terms to (canonical_type, flag)
 MEDICAL_MAP: Dict[str, tuple[str, str]] = {
-    "fracture": ("unspecified", "urgent_fracture"),
-    "dislocation": ("unspecified", "urgent_dislocation"),
-    "infection": ("unspecified", "urgent_infection"),
-    "nerve": ("unspecified", "urgent_nerve"),
-    "hernia": ("unspecified", "urgent_hernia"),
+    "fracture": ("fracture", "urgent_fracture"),
+    "dislocation": ("dislocation", "urgent_dislocation"),
+    "infection": ("infection", "urgent_infection"),
+    "nerve": ("acute_nerve_issue", "urgent_nerve"),
+    "hernia": ("hernia", "urgent_hernia"),
     "bursitis": ("tendonitis", "bursitis_variant"),
     "shin splints": ("pain", "shin_splints_variant"),
 }
@@ -216,7 +216,6 @@ def score_injury_phrase(t_clean: str, synonym_map: Dict[str, List[str]] | None =
 
     # If we have no medical type set (or it's still unspecified), use best score
     if triage_category:
-        injury_type = "unspecified"
         rehab_type = "unspecified"
     elif injury_type == "unspecified" and any(type_scores.values()) and not medical_hit and not structural_hit:
         scored_candidates = [

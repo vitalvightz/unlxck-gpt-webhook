@@ -15,7 +15,7 @@ def test_score_injury_phrase_detects_side_location_and_type():
 
 def test_score_injury_phrase_detects_urgent_flags_without_overriding():
     result = score_injury_phrase("Right ankle fracture with swelling.")
-    assert result["injury_type"] == "unspecified"
+    assert result["injury_type"] == "fracture"
     assert result["location"] == "ankle"
     assert "urgent" in result["flags"]
     assert "urgent_fracture" in result["flags"]
@@ -50,7 +50,7 @@ def test_score_injury_phrase_preserves_structural_severity_flags():
     assert "urgent" in tendon["flags"]
 
     dislocation = score_injury_phrase("shoulder dislocation")
-    assert dislocation["injury_type"] == "unspecified"
+    assert dislocation["injury_type"] == "dislocation"
     assert dislocation["location"] == "shoulder"
     assert "structural_red_flag" in dislocation["flags"]
     assert "suspected_dislocation" in dislocation["flags"]
