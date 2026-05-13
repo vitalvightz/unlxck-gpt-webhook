@@ -309,23 +309,11 @@ def build_stage2_finalizer_packet(
         }
     )
     render_mode = guards.get("render_mode") or "camp_plan"
-    source_payload_mode = (
-        source.get("payload_mode")
-        or source.get("effective_stage2_mode")
-        or stage2_payload.get("payload_mode")
-        or stage2_payload.get("effective_stage2_mode")
-        or ""
-    )
 
     weekly_role_map = source.get("weekly_role_map") or stage2_payload.get("weekly_role_map")
     late_fight_plan_spec = (
         source.get("late_fight_plan_spec")
         or stage2_payload.get("late_fight_plan_spec")
-        or {}
-    )
-    late_fight_context_overlay = (
-        source.get("late_fight_context_overlay")
-        or stage2_payload.get("late_fight_context_overlay")
         or {}
     )
 
@@ -335,50 +323,33 @@ def build_stage2_finalizer_packet(
         or {}
     )
 
-    hard_rules = [
-        "Render only athlete-facing plan content.",
-        "Do not expose candidate pools, scoring logic, internal menus, or unused options.",
-        "weekly_role_map.weeks[*].calendar_days is the only authority for weekday and D-day labels.",
-        "Do not infer D-days from weekday order.",
-        "Do not invent D-days from the fight date manually.",
-        "Only render session_roles whose scheduled_day_hint exists in that week's calendar_days.",
-        "If a calendar day has is_fight_day=true, render fight_day_protocol only.",
-        "If a calendar day has is_after_fight_day=true, render no app-led training.",
-        "If a weekday is not present in calendar_days, do not render it.",
-        "Do not render any session after D-0 unless a post-fight recovery mode is explicitly active.",
-        "D-0 always renders as fight-day protocol only.",
-        f"Fight-day protocol text: {FIGHT_DAY_PROTOCOL_TEXT}",
-        "Coach-owned days override app S&C unless coach-led work is light or cancelled.",
-        "For late_fight_plan_spec.allowed_exercises_by_day, each countdown day may render only those listed exercise names plus generic breathing, mobility/reset, shadowboxing/technical cues, coach-led session labels, and rehab/prehab band resets.",
-        "Preserve the priority hierarchy from priority_focus. Do not treat all goals and weak areas equally. Primary goal and primary weak area shape emphasis; secondary selections support without taking over.",
-        "If priority_focus.goal_weakness_collisions is non-empty, treat overlap as valid athlete intent. Do not remove it or overcorrect it. Use priority_focus.collision_detail when present to clarify the limiter.",
-        "If priority_focus.collision_details contains multiple entries, preserve each clarification. Do not collapse all overlaps into the first detail. Use each detail to sharpen the relevant training emphasis.",
-        "Use priority_focus.derived_clarification_tags as internal emphasis signals when preserving the plan's intent. These tags clarify the kind of adaptation the athlete meant, but they do not override hard safety, schedule, injury, phase, or recovery constraints.",
-        "Do not expose derived_clarification_tags or raw scoring/reason-code labels directly in athlete-facing text.",
-    ]
-    is_late_fight_packet = (
-        render_mode == "late_fight_countdown_only"
-        or (bool(late_fight_context_overlay) and str(source_payload_mode) != "camp_payload")
-    )
-    if is_late_fight_packet:
-        hard_rules.extend(
-            [
-                "In late-fight mode, use selected_plan.late_fight_context_overlay to improve clarity while preserving hard countdown safety.",
-                "Use the heading 'Late-camp priority' instead of debug-like section titles such as 'Phase-critical drills preserved' or 'Active notes'.",
-                "Use 'fight-week freshness priority' or 'final readiness' wording instead of 'survival'.",
-                "For each rendered D-day in late-fight mode, include one short 'Purpose:' line grounded in selected_plan.late_fight_context_overlay.session_purpose_by_day when present.",
-                "Do not frame technical tempo or heavy-bag technical tempo as primary strength; classify it as technical rhythm / neural coordination support.",
-                "On coach-owned days, keep no app S&C as default. If any recovery-only support is shown, label it clearly as optional and non-S&C.",
-            ]
-        )
-
     packet = {
         "packet_type": "stage2_finalizer_packet",
         "packet_version": 1,
         "render_mode": render_mode,
         "athlete_model": _compact_athlete_model(athlete_model),
         "render_guards": guards,
-        "hard_rules": hard_rules,
+        "hard_rules": [
+            "Render only athlete-facing plan content.",
+            "Do not expose candidate pools, scoring logic, internal menus, or unused options.",
+            "weekly_role_map.weeks[*].calendar_days is the only authority for weekday and D-day labels.",
+            "Do not infer D-days from weekday order.",
+            "Do not invent D-days from the fight date manually.",
+            "Only render session_roles whose scheduled_day_hint exists in that week's calendar_days.",
+            "If a calendar day has is_fight_day=true, render fight_day_protocol only.",
+            "If a calendar day has is_after_fight_day=true, render no app-led training.",
+            "If a weekday is not present in calendar_days, do not render it.",
+            "Do not render any session after D-0 unless a post-fight recovery mode is explicitly active.",
+            "D-0 always renders as fight-day protocol only.",
+            f"Fight-day protocol text: {FIGHT_DAY_PROTOCOL_TEXT}",
+            "Coach-owned days override app S&C unless coach-led work is light or cancelled.",
+            "For late_fight_plan_spec.allowed_exercises_by_day, each countdown day may render only those listed exercise names plus generic breathing, mobility/reset, shadowboxing/technical cues, coach-led session labels, and rehab/prehab band resets.",
+            "Preserve the priority hierarchy from priority_focus. Do not treat all goals and weak areas equally. Primary goal and primary weak area shape emphasis; secondary selections support without taking over.",
+            "If priority_focus.goal_weakness_collisions is non-empty, treat overlap as valid athlete intent. Do not remove it or overcorrect it. Use priority_focus.collision_detail when present to clarify the limiter.",
+            "If priority_focus.collision_details contains multiple entries, preserve each clarification. Do not collapse all overlaps into the first detail. Use each detail to sharpen the relevant training emphasis.",
+            "Use priority_focus.derived_clarification_tags as internal emphasis signals when preserving the plan's intent. These tags clarify the kind of adaptation the athlete meant, but they do not override hard safety, schedule, injury, phase, or recovery constraints.",
+            "Do not expose derived_clarification_tags or raw scoring/reason-code labels directly in athlete-facing text.",
+        ],
         "forbidden_output": {
             "phase_toolbox_labels": list(_FORBIDDEN_TOOLBOX_LABELS),
             "rehab_labels_when_no_active_injury": (
@@ -396,7 +367,6 @@ def build_stage2_finalizer_packet(
             "weekly_role_map": _compact_weekly_role_map(weekly_role_map),
             "calendar_authority": _compact_calendar_authority(weekly_role_map),
             "late_fight_plan_spec": late_fight_plan_spec,
-            "late_fight_context_overlay": late_fight_context_overlay,
             "days_out_payload": days_out_payload,
             "fight_week_override": (
                 source.get("fight_week_override")
