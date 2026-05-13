@@ -619,7 +619,7 @@ INJURY_SYNONYM_MAP = {
     "unspecified": []
 }
 
-LOCATION_MAP = {
+LEGACY_LOCATION_MAP = {
     # Toes and foot
     "toe": "toe",
     "toes": "toe",
@@ -1015,6 +1015,9 @@ def canonicalize_injury_type(text: str, threshold: int = 85) -> str | None:
             return "instability"
         # If both/neither hints: keep priority-based winner already chosen.
     return best_cat
+
+
+LOCATION_MAP = {**LEGACY_LOCATION_MAP, **build_location_synonym_map()}
 
 
 def canonicalize_location(text: str, threshold: int = 85) -> str | None:

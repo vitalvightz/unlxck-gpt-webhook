@@ -805,3 +805,14 @@ INJURY_REGION_KEYWORDS = {
     "foot": ["foot", "plantar", "metatarsal"],
     "toe": ["toe"],
 }
+
+from .injury_location_registry import LOCATION_REGISTRY
+
+
+def get_exclusion_regions(location: str) -> list[str]:
+    entry = LOCATION_REGISTRY.get(location)
+    if not entry:
+        return ["unspecified"]
+    regions = [entry.get("exclusion_region")]
+    regions.extend(entry.get("secondary_exclusion_regions", []))
+    return [region for region in regions if region in INJURY_RULES]
