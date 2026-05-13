@@ -12,6 +12,7 @@ from .injury_negation import (
 )
 from .regex_config import compile_regex
 from .injury_taxonomy import get_required_flags
+from .injury_location_registry import build_location_synonym_map
 
 _SPACY_AVAILABLE = importlib.util.find_spec("spacy") is not None
 _RAPIDFUZZ_AVAILABLE = importlib.util.find_spec("rapidfuzz") is not None
@@ -619,7 +620,7 @@ INJURY_SYNONYM_MAP = {
     "unspecified": []
 }
 
-LOCATION_MAP = {
+LEGACY_LOCATION_MAP = {
     # Toes and foot
     "toe": "toe",
     "toes": "toe",
@@ -1017,6 +1018,9 @@ def canonicalize_injury_type(text: str, threshold: int = 85) -> str | None:
     return best_cat
 
 
+LOCATION_MAP = {**LEGACY_LOCATION_MAP, **build_location_synonym_map()}
+
+
 def canonicalize_location(text: str, threshold: int = 85) -> str | None:
     """
     Return canonical location with:
@@ -1228,4 +1232,3 @@ def split_injury_text(raw_text: str) -> list[str]:
         if (cleaned := _strip_surrounding_punct(sent.text))
     ]
     return _merge_mechanism_continuation_phrases(phrases)
-
