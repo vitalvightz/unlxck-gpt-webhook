@@ -373,11 +373,11 @@ INJURY_SYNONYM_MAP = {
     # before ordinary rehab typing is used.
     # Ligament - now with every joint instability phrase imaginable
     "sprain": [
-        "pop", "popped", "pop sound", "rolling", "rolled", "twist", "twisted",
-        "folded", "buckled", "collapse",
-        "ligament pop", "ligament strain", "ligament sprain", "ligament gone",
-        "joint separation", "joint shift", "knee went", "ankle went", "wrist went",
-        "out of socket", "popped out", "click out", "shift out", "unhinged",
+        "rolling", "rolled", "twist", "twisted",
+        "folded",
+        "ligament strain", "ligament sprain", "ligament gone",
+        "joint shift", "knee went", "ankle went", "wrist went",
+        "click out", "shift out", "unhinged",
         "stretched ligament",
         "sprain", "sprained", "inversion", "eversion", "rolled over", "turned over"
     ],
@@ -388,7 +388,7 @@ INJURY_SYNONYM_MAP = {
         "cramp", "cramping", "charley horse", "seize", "seized",
         "lock", "locked", "knot", "knotted", "ball", "balled", "grab", "grabbed",
         "pinged", "twinge", "twinging", "sharp pain", "acute pain",
-        "muscle pop", "muscle snap", "muscle went",
+        "muscle went",
         "strain", "strained", "muscle failure",
         "overworked", "worked too hard"
     ],
@@ -556,7 +556,6 @@ INJURY_SYNONYM_MAP = {
     # Joint Instability - every giving way phrase
     "instability": [
         "loose", "looseness", "slip", "slipping", "slide", "sliding",
-        "give way", "giving way", "gave way",
         "unreliable", "unstable", "instability", "scary", "fear",
         "apprehension", "nervous", "nervousness", "hesitant", "hesitation",
         "trust issues", "don't trust", "afraid to move", "scared to move",

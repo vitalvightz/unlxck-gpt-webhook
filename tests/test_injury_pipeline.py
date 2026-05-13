@@ -18,6 +18,7 @@ from fightcamp.injury_synonyms import (
     split_injury_text,
 )
 from fightcamp.injury_scoring import score_injury_phrase
+from fightcamp.injury_danger_terms import detect_danger_term_routes
 from fightcamp.rehab_protocols import generate_rehab_protocols
 
 
@@ -1038,3 +1039,21 @@ def test_generate_rehab_protocols_concussion_returns_red_flag_no_drills():
     assert "red flag detected" in normalized
     assert "  • " not in text
     assert seen == set()
+
+
+def test_danger_phrase_does_not_parse_as_normal_sprain():
+    parsed_type, _ = parse_injury_phrase("shoulder popped out")
+    assert parsed_type != "sprain"
+
+
+def test_out_of_socket_not_treated_as_ordinary_instability_or_sprain():
+    parsed_type, _ = parse_injury_phrase("out of socket")
+    assert parsed_type not in {"sprain", "instability"}
+
+
+def test_danger_term_boundary_does_not_match_popliteus_word_fragment():
+    assert detect_danger_term_routes("popliteus soreness after run") == []
+
+
+def test_non_injury_snapping_phrase_does_not_trigger_danger_routing():
+    assert detect_danger_term_routes("snapping turtle at the pond") == []

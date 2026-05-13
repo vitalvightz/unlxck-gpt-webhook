@@ -8,6 +8,7 @@ from .injury_scoring import score_injury_phrase
 from .injury_negation import remove_negated_phrases
 from .injury_synonyms import parse_injury_phrase, split_injury_text
 from .input_parsing import GuidedInjury
+from .injury_danger_terms import detect_danger_term_routes
 
 
 @dataclass(frozen=True)
@@ -822,6 +823,24 @@ def build_triage_features(
 
         cleaned_chunks.append(cleaned_chunk)
         history_only_chunk = _is_history_only_chunk(cleaned_chunk)
+
+        danger_routes = detect_danger_term_routes(cleaned_chunk)
+        for route in danger_routes:
+            category = str(route.get("category") or "").strip()
+            route_mode = str(route.get("route") or "").strip()
+            term = str(route.get("term") or "").strip()
+            if category == "dislocation":
+                high_risk_diagnoses.add("dislocation")
+                high_risk_evidence.add(raw_chunk)
+            elif category == "functional_red_flag":
+                function_loss_signals.add("danger_term_function_loss")
+                function_loss_evidence.add(raw_chunk)
+            elif category in {"instability_event", "structural_event"} and route_mode == "restricted_rehab_only":
+                clinician_restriction_signals.add(f"danger_term:{category}")
+                clinician_evidence.add(raw_chunk)
+            if term:
+                structural_severe_signals.add(f"danger_term:{term}")
+                structural_evidence.add(raw_chunk)
 
         chunk_red_flags = _collect_matches(
             enriched_chunk,
