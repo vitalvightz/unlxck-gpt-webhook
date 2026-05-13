@@ -147,6 +147,10 @@ def _build_coach_notes(context: PlanRuntimeContext, blocks: PlanBlocksBundle) ->
     if blocks.coach_review_notes:
         sections.append(blocks.coach_review_notes)
 
+    blocked_modules = set((blocks.injury_safety_decision or {}).get("blocked_modules") or [])
+    if blocked_modules.intersection({"sparring", "contact", "grappling"}):
+        return "Sparring/contact blocked by injury safety decision until appropriately cleared."
+
     coach_notes = "\n\n".join(section for section in sections if section).strip()
     if not coach_notes:
         return ""

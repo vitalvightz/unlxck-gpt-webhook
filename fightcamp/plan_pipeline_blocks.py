@@ -7,6 +7,7 @@ from typing import Any, Callable
 from .coach_review import run_coach_review
 from .conditioning import generate_conditioning_block
 from .mindset_module import get_mindset_by_phase, get_phase_mindset_cues
+from .injury_safety_decision import evaluate_injury_safety
 from .nutrition import generate_nutrition_block
 from .plan_pipeline_runtime import (
     PHASES,
@@ -159,6 +160,24 @@ def _generate_conditioning_blocks(context: PlanRuntimeContext) -> tuple[dict[str
 
     return conditioning_blocks, conditioning_reason_log
 
+
+
+def _format_signal(value: str) -> str:
+    cleaned = str(value or "").strip().replace("_", " ")
+    return cleaned
+
+
+def _safety_block_message(decision) -> str:
+    return (
+        "**Training Safety Flag Detected**\n"
+        f"- Status: {decision.training_status}\n"
+        f"- Clearance Required: {'Yes' if decision.clearance_required else 'No'}\n"
+        "- Reason(s):\n"
+        + "\n".join(f"  - {reason}" for reason in (decision.reasons or ["Training safety flag active."]))
+        + "\n- Blocked:\n"
+        + ("\n".join(f"  - {module}" for module in decision.blocked_modules) if decision.blocked_modules else "  - none")
+        + "\n- Action: Do not progress the flagged area until appropriately cleared."
+    )
 
 def _first_active_phase(phase_weeks: dict) -> str:
     return next((phase for phase in PHASES if phase_weeks.get(phase, 0) > 0 or phase_weeks.get("days", {}).get(phase, 0) >= 1), "GPP")
@@ -380,8 +399,18 @@ def generate_plan_blocks(
         len(context.plan_input.restrictions or []),
     )
 
+    injury_safety_decision = evaluate_injury_safety(
+        injury_text=context.injuries_only_text,
+        parsed_entries=context.plan_input.parsed_injuries,
+    )
+
     timer_start = perf_counter()
-    strength_blocks, strength_reason_log = _generate_strength_blocks(context, phase_mindset_cues)
+    if "strength" in injury_safety_decision.blocked_modules:
+        safety_message = _safety_block_message(injury_safety_decision)
+        strength_blocks = {phase: ({"block": safety_message, "exercises": [], "why_log": [{"name": "blocked", "explanation": safety_message}]}) if context.phase_active(phase) else None for phase in PHASES}
+        strength_reason_log = {phase: [{"name": "blocked", "explanation": safety_message}] for phase in PHASES if context.phase_active(phase)}
+    else:
+        strength_blocks, strength_reason_log = _generate_strength_blocks(context, phase_mindset_cues)
     record_timing("strength", timer_start)
     strength_count = sum(
         len(strength_reason_log.get(phase, []) or []) for phase in PHASES
@@ -395,7 +424,12 @@ def generate_plan_blocks(
     )
 
     timer_start = perf_counter()
-    conditioning_blocks, conditioning_reason_log = _generate_conditioning_blocks(context)
+    if "conditioning" in injury_safety_decision.blocked_modules:
+        safety_message = _safety_block_message(injury_safety_decision)
+        conditioning_blocks = {phase: ({"block": safety_message, "names": [], "why_log": [{"name": "blocked", "explanation": safety_message}], "grouped_drills": {}, "missing_systems": [], "candidate_reservoir": [], "phase_color": PHASE_COLORS[phase], "num_sessions": allocate_sessions(context.training_context.training_frequency, phase).get("conditioning", 1), "diagnostic_context": {}, "sport": context.mapped_format}) if context.phase_active(phase) else {} for phase in PHASES}
+        conditioning_reason_log = {phase: [{"name": "blocked", "explanation": safety_message}] for phase in PHASES if context.phase_active(phase)}
+    else:
+        conditioning_blocks, conditioning_reason_log = _generate_conditioning_blocks(context)
     record_timing("conditioning", timer_start)
     conditioning_count = sum(
         len(conditioning_reason_log.get(phase, []) or []) for phase in PHASES
@@ -418,6 +452,14 @@ def generate_plan_blocks(
         recovery_block,
         nutrition_block,
     ) = _generate_rehab_support_bundle(context)
+    if "rehab" in injury_safety_decision.blocked_modules:
+        safety_message = _safety_block_message(injury_safety_decision)
+        rehab_blocks = {phase: safety_message if context.phase_active(phase) else "" for phase in PHASES}
+    if injury_safety_decision.red_flag_level != "none":
+        safety_message = _safety_block_message(injury_safety_decision)
+        support_notes = f"{safety_message}\n\n{support_notes}".strip()
+    if any(module in injury_safety_decision.blocked_modules for module in ("sparring", "contact", "grappling")):
+        support_notes = ("Sparring/contact blocked by injury safety decision until appropriately cleared.\n\n" + support_notes).strip()
     record_timing("rehab_support_bundle", timer_start)
     if has_injuries:
         rehab_detail = "Rehab protocols and injury guardrails added to every active phase."
@@ -460,6 +502,20 @@ def generate_plan_blocks(
     _apply_substitution_log(strength_reason_log, substitutions, "Strength")
     _apply_substitution_log(conditioning_reason_log, substitutions, "Conditioning")
 
+
+    if "strength" in injury_safety_decision.blocked_modules:
+        safety_message = _safety_block_message(injury_safety_decision)
+        for phase in PHASES:
+            if context.phase_active(phase):
+                strength_blocks[phase] = {"block": safety_message, "exercises": [], "why_log": [{"name": "blocked", "explanation": safety_message}]}
+                strength_reason_log[phase] = [{"name": "blocked", "explanation": safety_message}]
+    if "conditioning" in injury_safety_decision.blocked_modules:
+        safety_message = _safety_block_message(injury_safety_decision)
+        for phase in PHASES:
+            if context.phase_active(phase):
+                conditioning_blocks[phase] = {"block": safety_message, "names": [], "why_log": [{"name": "blocked", "explanation": safety_message}], "grouped_drills": {}, "missing_systems": [], "candidate_reservoir": [], "phase_color": PHASE_COLORS[phase], "num_sessions": allocate_sessions(context.training_context.training_frequency, phase).get("conditioning", 1), "diagnostic_context": {}, "sport": context.mapped_format}
+                conditioning_reason_log[phase] = [{"name": "blocked", "explanation": safety_message}]
+
     for phase in PHASES:
         if strength_blocks.get(phase):
             strength_blocks[phase]["why_log"] = strength_reason_log.get(phase, [])
@@ -495,4 +551,5 @@ def generate_plan_blocks(
         conditioning_names=conditioning_names,
         coach_review_notes=coach_review_notes,
         current_phase=current_phase,
+        injury_safety_decision={"red_flag_level": injury_safety_decision.red_flag_level, "training_status": injury_safety_decision.training_status, "blocked_modules": list(injury_safety_decision.blocked_modules)},
     )
