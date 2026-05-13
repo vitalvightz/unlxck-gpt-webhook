@@ -40,7 +40,7 @@ MEDICAL_MAP: Dict[str, tuple[str, str]] = {
 }
 
 # Urgent terms should trigger a clear escalation flag without breaking rehab lookup.
-URGENT_TERMS = {"fracture", "fractured", "dislocation", "infection", "nerve"}
+URGENT_TERMS = {"fracture", "fractured", "dislocation", "dislocated", "infection", "infected", "nerve", "hernia"}
 
 # Optional: lightweight mechanical red-flags (no NegEx here; assume pre-cleaned text)
 RED_FLAG_TERMS: Dict[str, str] = {
