@@ -10,7 +10,8 @@ from typing import Iterable
 
 from .injury_models import Decision
 from .injury_exclusion_rules import INJURY_REGION_KEYWORDS, INJURY_RULES
-from .injury_synonyms import parse_injury_phrase, remove_negated_phrases, split_injury_text
+from .injury_negation import remove_negated_phrases
+from .injury_synonyms import parse_injury_phrase, split_injury_text
 from .bank_schema import validate_training_item
 from .tagging import normalize_item_tags, normalize_tags
 # Refactored: Import centralized DATA_DIR from config

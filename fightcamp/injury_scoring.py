@@ -3,6 +3,7 @@ from __future__ import annotations
 import re
 from typing import Dict, List, TypedDict
 
+from .injury_negation import remove_negated_phrases
 from .injury_synonyms import (
     EXCLUSIVE_HINTS,
     IMPINGEMENT_GATE_HINTS,
@@ -16,7 +17,6 @@ from .injury_synonyms import (
     TYPE_PRIORITY,
     detect_triage_category,
     detect_structural_red_flags,
-    remove_negated_phrases,
 )
 
 # -----------------------------
