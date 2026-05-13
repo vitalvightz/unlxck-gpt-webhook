@@ -8,6 +8,7 @@ from .injury_taxonomy import derive_red_flag_types, derive_urgent_injury_tokens,
 from .injury_synonyms import parse_injury_phrase, split_injury_text
 from .injury_location import canonicalize_location, get_injury_location
 from .restriction_parsing import ParsedRestriction
+from .clinical_gate import evaluate_clinical_gate, ClinicalGate
 # Refactored: Import centralized DATA_DIR from config
 from .config import DATA_DIR
 logger = logging.getLogger(__name__)
@@ -686,6 +687,9 @@ def generate_rehab_protocols(
         return "\n✅ No rehab work required.", seen_drills
 
     injury_phrases = split_injury_text(injury_string)
+    clinical_gate = evaluate_clinical_gate(injury_text=injury_string, parsed_entries=parsed_entries)
+    if clinical_gate.training_status in {"no_training", "emergency_care"}:
+        return _build_training_safety_flag_block(clinical_gate), seen_drills
     structured_entries = [entry for entry in (parsed_entries or []) if isinstance(entry, dict)]
     merged_entries = _merge_injuries_by_location(structured_entries)
     urgent_merged_entry = next((entry for entry in merged_entries if entry.get("is_urgent")), None)
@@ -811,6 +815,9 @@ def generate_rehab_protocols(
                     lines.append(f"  • {headline}")
                     lines.extend([f"    {ann}" for ann in annotations])
 
+    if clinical_gate.training_status == "no_contact":
+        lines.insert(0, _build_training_safety_flag_block(clinical_gate))
+
     if not lines:
         return "\n⚠️ Consult with a healthcare professional for personalized rehab guidance.", seen_drills
 
@@ -818,6 +825,20 @@ def generate_rehab_protocols(
         lines.append(f"- {BFR_SAFETY_GATE}")
 
     return "\n".join(lines), seen_drills
+
+
+def _build_training_safety_flag_block(gate: ClinicalGate) -> str:
+    reasons = ", ".join(gate.reasons) if gate.reasons else "No specific reason provided."
+    blocked = ", ".join(gate.blocked_modules) if gate.blocked_modules else "None"
+    clearance = "Yes" if gate.clearance_required else "No"
+    return (
+        "\n**Training Safety Flag Detected** (Red Flag Detected)\n"
+        f"- Status: {gate.training_status}\n"
+        f"- Clearance Required: {clearance}\n"
+        f"- Reason(s): {reasons}\n"
+        f"- Blocked: {blocked}\n"
+        "- Action: Do not progress this area until appropriately cleared."
+    )
 
 
 def _entry_is_urgent(entry: dict) -> bool:

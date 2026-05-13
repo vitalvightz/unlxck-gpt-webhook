@@ -23,6 +23,7 @@ from .rehab_protocols import (
     generate_rehab_protocols,
     generate_support_notes,
 )
+from .clinical_gate import evaluate_clinical_gate
 from .strength import generate_strength_block
 from .training_context import TrainingContext, allocate_sessions
 
@@ -310,6 +311,22 @@ def _generate_rehab_support_bundle(context: PlanRuntimeContext) -> tuple[dict[st
         lambda phase, bf=base_flags: generate_nutrition_block(flags={**bf, "phase": phase}),
     )
     support_notes = generate_support_notes(rehab_injury_string) if has_injuries else ""
+    if has_injuries:
+        clinical_gate = evaluate_clinical_gate(
+            injury_text=rehab_injury_string,
+            parsed_entries=context.plan_input.parsed_injuries,
+        )
+        clearance_text = "Yes" if clinical_gate.clearance_required else "No"
+        reasons = ", ".join(clinical_gate.reasons) if clinical_gate.reasons else "None"
+        blocked = ", ".join(clinical_gate.blocked_modules) if clinical_gate.blocked_modules else "None"
+        clinical_status_block = (
+            "**Clinical Gate Status**\n"
+            f"- Training Status: {clinical_gate.training_status}\n"
+            f"- Clearance Required: {clearance_text}\n"
+            f"- Reasons: {reasons}\n"
+            f"- Blocked Modules: {blocked}"
+        )
+        support_notes = f"{clinical_status_block}\n\n{support_notes}".strip()
 
     if context.apply_muay_thai_filters:
         rehab_blocks = {
