@@ -230,6 +230,57 @@ def test_injury_decision_missing_severity_defaults_to_moderate():
     assert decision.reason["severity"] == "moderate"
 
 
+def test_phrase_severity_overrides_raw_label_when_phrase_signal_exists():
+    injury_dict = {
+        "region": "shoulder",
+        "severity": "low",
+        "original_phrase": "shoulder tear",
+    }
+    decision = injury_decision(
+        {"name": "Bench Press", "tags": []},
+        [injury_dict],
+        "GPP",
+        "low",
+    )
+    assert decision.action == "exclude"
+    assert decision.reason["severity"] == "high"
+
+
+def test_phrase_severity_falls_back_to_raw_label_without_phrase_signal():
+    injury_dict = {
+        "region": "shoulder",
+        "severity": "low",
+        "original_phrase": "shoulder discomfort",
+    }
+    decision = injury_decision(
+        {"name": "Bench Press", "tags": []},
+        [injury_dict],
+        "GPP",
+        "low",
+    )
+    assert decision.action in {"allow", "exclude", "modify"}
+    assert decision.reason["severity"] == "low"
+
+
+def test_same_injury_family_thresholds_track_parsed_severity_truth():
+    exercise = {"name": "Bench Press", "tags": []}
+    low_decision = injury_decision(
+        exercise,
+        [{"region": "shoulder", "severity": "low", "original_phrase": "mild shoulder soreness"}],
+        "GPP",
+        "low",
+    )
+    high_decision = injury_decision(
+        exercise,
+        [{"region": "shoulder", "severity": "low", "original_phrase": "shoulder tear"}],
+        "GPP",
+        "low",
+    )
+    assert low_decision.reason["severity"] == "low"
+    assert high_decision.reason["severity"] == "high"
+    assert low_decision.risk_score < high_decision.risk_score
+
+
 def test_injury_decision_cache_is_bounded(monkeypatch):
     monkeypatch.setattr(injury_guard_module, "_INJURY_DECISION_CACHE_MAX_SIZE", 2)
     injury_guard_module.clear_injury_decision_cache()
