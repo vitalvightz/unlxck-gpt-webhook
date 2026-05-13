@@ -21,7 +21,6 @@ from .stage2_payload_late_fight import (
     CANONICAL_HARD_SPARRING_LABEL,
     CANONICAL_HARD_SPARRING_NOTE,
     _build_late_fight_plan_spec,
-    _build_late_fight_context_overlay,
     _build_late_fight_session_sequence,
     _build_late_fight_week_by_week_progression,
     _build_late_fight_weekly_role_map,
@@ -3282,23 +3281,11 @@ def build_planning_brief(
             phase=late_fight_phase,
         )
         weekly_role_map = apply_fight_day_override_to_weekly_role_map(weekly_role_map, athlete_model)
+        session_sequence = _build_late_fight_session_sequence(days_until_fight, athlete_model)
         late_fight_plan_spec = _with_late_fight_allowed_exercises(
             spec=_build_late_fight_plan_spec(days_until_fight, athlete_model),
             candidate_pools=candidate_pools,
             days_until_fight=days_until_fight,
-        )
-        session_sequence = (
-            late_fight_plan_spec.get("visible_session_sequence")
-            or late_fight_plan_spec.get("session_sequence")
-            or _build_late_fight_session_sequence(days_until_fight, athlete_model)
-        )
-        late_fight_context_overlay = _build_late_fight_context_overlay(
-            days_until_fight=days_until_fight,
-            athlete_model=athlete_model,
-            phase_briefs=phase_briefs,
-            days_out_payload=days_out_payload,
-            late_fight_plan_spec=late_fight_plan_spec,
-            late_fight_session_sequence=session_sequence,
         )
         return {
             "schema_version": "planning_brief.v1",
@@ -3308,7 +3295,6 @@ def build_planning_brief(
             "days_out_payload": days_out_payload,
             "late_fight_plan_spec": late_fight_plan_spec,
             "late_fight_session_sequence": session_sequence,
-            "late_fight_context_overlay": late_fight_context_overlay,
             "fight_demands": {
                 "sport": athlete_model.get("sport"),
                 "status": athlete_model.get("status"),
@@ -3916,19 +3902,6 @@ def build_stage2_payload(
             candidate_pools=candidate_pools,
             days_until_fight=days_until_fight,
         )
-        late_fight_session_sequence = (
-            late_fight_plan_spec.get("visible_session_sequence")
-            or late_fight_plan_spec.get("session_sequence")
-            or _build_late_fight_session_sequence(days_until_fight, athlete_model)
-        )
-        late_fight_context_overlay = _build_late_fight_context_overlay(
-            days_until_fight=days_until_fight,
-            athlete_model=athlete_model,
-            phase_briefs=phase_briefs,
-            days_out_payload=days_out_payload,
-            late_fight_plan_spec=late_fight_plan_spec,
-            late_fight_session_sequence=late_fight_session_sequence,
-        )
         return {
             "schema_version": "stage2_payload.v1",
             "generator_mode": "restriction_aware_candidate_generator_late_fight",
@@ -3937,8 +3910,7 @@ def build_stage2_payload(
             "effective_stage2_mode": days_out_payload.get("payload_mode"),
             "days_out_payload": days_out_payload,
             "late_fight_plan_spec": late_fight_plan_spec,
-            "late_fight_session_sequence": late_fight_session_sequence,
-            "late_fight_context_overlay": late_fight_context_overlay,
+            "late_fight_session_sequence": _build_late_fight_session_sequence(days_until_fight, athlete_model),
             "rendering_rules": days_out_payload.get("rendering_rules", {}),
             "late_fight_permissions": days_out_payload.get("late_fight_permissions", {}),
             "athlete_model": athlete_model,
