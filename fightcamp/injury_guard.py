@@ -589,6 +589,17 @@ def _normalize_dict_severity(injury: dict) -> tuple[str, list[str]]:
     return "moderate", []
 
 
+def _read_severity_truth(injury: dict) -> str | None:
+    for field_name in ("severity_truth", "severity"):
+        raw_value = injury.get(field_name)
+        if not raw_value:
+            continue
+        severity_text = str(raw_value).strip().lower()
+        if severity_text in SEVERITY_RANK:
+            return severity_text
+    return None
+
+
 def _map_text_to_region(text: str) -> str | None:
     for region, keywords in INJURY_REGION_KEYWORDS.items():
         if match_forbidden(text, keywords):
@@ -603,11 +614,8 @@ def _injury_context(injuries: Iterable[str | dict], debug_entries: list[dict] | 
             continue
         if isinstance(injury, dict):
             region = get_injury_location(injury)
-            severity_raw = injury.get("severity")
-            if severity_raw:
-                severity_text = str(severity_raw).lower()
-                severity = severity_text if severity_text in SEVERITY_RANK else "moderate"
-            else:
+            severity = _read_severity_truth(injury)
+            if severity is None:
                 severity, _ = _normalize_dict_severity(injury)
             if region:
                 region_severity[region] = _strictest_severity(region_severity.get(region), severity)

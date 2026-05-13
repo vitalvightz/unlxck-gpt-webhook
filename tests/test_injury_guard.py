@@ -162,6 +162,20 @@ def test_injury_guard_required_pass_fail_cases():
     )
 
 
+def test_injury_context_prefers_severity_truth_over_legacy_severity():
+    region_severity = _injury_context(
+        [
+            {
+                "location": "knee",
+                "severity": "low",
+                "severity_truth": "high",
+                "original_phrase": "sharp knee pain and cannot bear weight",
+            }
+        ]
+    )
+    assert region_severity["knee"] == "high"
+
+
 def test_injury_guard_region_false_positives():
     assert (
         injury_decision(

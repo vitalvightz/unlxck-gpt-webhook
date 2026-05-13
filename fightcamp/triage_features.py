@@ -8,6 +8,7 @@ from .injury_scoring import score_injury_phrase
 from .injury_negation import remove_negated_phrases
 from .injury_synonyms import parse_injury_phrase, split_injury_text
 from .input_parsing import GuidedInjury
+from .injury_danger_terms import detect_danger_terms
 
 
 @dataclass(frozen=True)
@@ -31,6 +32,7 @@ _CANNOT_BEAR_WEIGHT = (
     rf"\b{_CANNOT_OR_UNABLE}\s+bear\s+weight\b"
     rf"|\b{_CANNOT_OR_UNABLE}\s+bare\s+weight\b"
     rf"|\b(?:unable\s+to|cannot|can'?t)\s+walk\b"
+    rf"|\bnot\s+able\s+to\s+walk\b"
 )
 _AFFIRMATIVE_DEFORMITY = (
     r"\b(?:visible|obvious)\s+deformit(?:y|ies)\b"
@@ -882,6 +884,19 @@ def build_triage_features(
         if _is_structural_severe_signal(text=cleaned_chunk, scored_injury_type=scored_type):
             structural_severe_signals.add("structural_severe_signal")
             structural_evidence.add(raw_chunk)
+
+        for term in detect_danger_terms(cleaned_chunk):
+            signal = term.get("signal", "")
+            route = term.get("route", "")
+            if signal == "cannot_bear_weight":
+                function_loss_signals.add(signal)
+                function_loss_evidence.add(raw_chunk)
+            if signal in {"instability_event", "structural_severe_signal"} and route == "restricted_rehab_only":
+                structural_severe_signals.add(signal)
+                structural_evidence.add(raw_chunk)
+            if signal == "cannot_bear_weight" and route == "restricted_rehab_only":
+                clinician_restriction_signals.add("non_weight_bearing")
+                clinician_evidence.add(raw_chunk)
 
         for flag in scored.get("flags", []):
             if str(flag).startswith("urgent"):
