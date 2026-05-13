@@ -590,6 +590,7 @@ def _attach_severity_provenance(
 
         if guided_severity and text_has_signal and _severity_rank(text_severity) > _severity_rank(guided_severity):
             injury["severity"] = text_severity
+            injury["severity_truth"] = text_severity
             injury["severity_source"] = "text_escalation"
             injury["severity_evidence"] = [
                 f"guided severity: {guided_severity}",
@@ -600,12 +601,14 @@ def _attach_severity_provenance(
 
         if guided_severity:
             injury["severity"] = guided_severity
+            injury["severity_truth"] = guided_severity
             injury["severity_source"] = "guided_card"
             injury["severity_evidence"] = [f"guided severity: {guided_severity}"]
             continue
 
         if text_has_signal:
             injury["severity"] = text_severity
+            injury["severity_truth"] = text_severity
             injury["severity_source"] = "text_detected"
             injury["severity_evidence"] = [f"text severity: {text_severity}", *text_hits]
             continue
@@ -613,11 +616,13 @@ def _attach_severity_provenance(
         default_type_severity = _GUIDED_SEVERITY_MAP.get(INJURY_TYPE_SEVERITY.get(injury_type, ""))
         if default_type_severity:
             injury["severity"] = default_type_severity
+            injury["severity_truth"] = default_type_severity
             injury["severity_source"] = "injury_type_default"
             injury["severity_evidence"] = [f"injury type default: {injury_type}"]
             continue
 
         injury["severity"] = "moderate"
+        injury["severity_truth"] = "moderate"
         injury["severity_source"] = "fallback_default"
         injury["severity_evidence"] = ["fallback default: moderate"]
     return parsed_injuries

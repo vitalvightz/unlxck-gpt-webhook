@@ -83,8 +83,6 @@ TRIAGE_CATEGORY_ALIASES: dict[str, str] = {
     "lcl_tear": "complete_ligament_tear",
     "nerve_involvement": "neurological_symptoms",
     "infection": "septic_joint_or_bone_infection",
-    "nerve_involvement": "neurological_symptoms",
-    "infection": "septic_joint_or_bone_infection",
 }
 
 _CRITICAL_MEDICAL_HOLD_RED_FLAGS = {

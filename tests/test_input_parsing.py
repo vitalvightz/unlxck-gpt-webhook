@@ -186,6 +186,7 @@ def test_text_detected_wins_when_no_guided_severity():
 
     assert injury["severity"] == "high"
     assert injury["severity_source"] == "text_detected"
+    assert injury["severity_truth"] == "high"
 
 
 def test_swelling_stays_injury_type_default_without_escalation_context():
@@ -194,6 +195,7 @@ def test_swelling_stays_injury_type_default_without_escalation_context():
     )
     injury = parsed.parsed_injuries[0]
     assert injury["severity"] == "moderate"
+    assert injury["severity_truth"] == "moderate"
     assert injury["severity_source"] == "injury_type_default"
     assert injury["severity_evidence"] == ["injury type default: swelling"]
 
