@@ -193,8 +193,8 @@ def derive_urgent_injury_tokens() -> set[str]:
         out.add(normalized_key.replace("_", "-"))
         out.add(normalized_key.replace("_", " "))
 
-    out.update(URGENT_EXACT_TOKENS)
-    out.update(URGENT_PHRASE_TOKENS)
+    out.update(t.strip().lower() for t in URGENT_EXACT_TOKENS if t)
+    out.update(t.strip().lower() for t in URGENT_PHRASE_TOKENS if t)
 
     return {
         token
