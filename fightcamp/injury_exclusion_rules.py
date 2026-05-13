@@ -818,7 +818,7 @@ def get_exclusion_regions(location: str) -> list[str]:
             return [direct_key]
         if normalized_location in INJURY_RULES:
             return [normalized_location]
-        return ["unspecified"]
+        return []
     regions = [entry.get("exclusion_region")]
     regions.extend(entry.get("secondary_exclusion_regions", []))
     return [region for region in regions if region in INJURY_RULES]
