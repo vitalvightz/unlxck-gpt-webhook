@@ -316,6 +316,11 @@ def build_stage2_finalizer_packet(
         or stage2_payload.get("late_fight_plan_spec")
         or {}
     )
+    late_fight_context_overlay = (
+        source.get("late_fight_context_overlay")
+        or stage2_payload.get("late_fight_context_overlay")
+        or {}
+    )
 
     days_out_payload = (
         source.get("days_out_payload")
@@ -349,6 +354,12 @@ def build_stage2_finalizer_packet(
             "If priority_focus.collision_details contains multiple entries, preserve each clarification. Do not collapse all overlaps into the first detail. Use each detail to sharpen the relevant training emphasis.",
             "Use priority_focus.derived_clarification_tags as internal emphasis signals when preserving the plan's intent. These tags clarify the kind of adaptation the athlete meant, but they do not override hard safety, schedule, injury, phase, or recovery constraints.",
             "Do not expose derived_clarification_tags or raw scoring/reason-code labels directly in athlete-facing text.",
+            "In late-fight mode, use selected_plan.late_fight_context_overlay to improve clarity while preserving hard countdown safety.",
+            "Use the heading 'Late-camp priority' instead of debug-like section titles such as 'Phase-critical drills preserved' or 'Active notes'.",
+            "Use 'fight-week freshness priority' or 'final readiness' wording instead of 'survival'.",
+            "For each rendered D-day in late-fight mode, include one short 'Purpose:' line grounded in selected_plan.late_fight_context_overlay.session_purpose_by_day when present.",
+            "Do not frame technical tempo or heavy-bag technical tempo as primary strength; classify it as technical rhythm / neural coordination support.",
+            "On coach-owned days, keep no app S&C as default. If any recovery-only support is shown, label it clearly as optional and non-S&C.",
         ],
         "forbidden_output": {
             "phase_toolbox_labels": list(_FORBIDDEN_TOOLBOX_LABELS),
@@ -367,6 +378,7 @@ def build_stage2_finalizer_packet(
             "weekly_role_map": _compact_weekly_role_map(weekly_role_map),
             "calendar_authority": _compact_calendar_authority(weekly_role_map),
             "late_fight_plan_spec": late_fight_plan_spec,
+            "late_fight_context_overlay": late_fight_context_overlay,
             "days_out_payload": days_out_payload,
             "fight_week_override": (
                 source.get("fight_week_override")
