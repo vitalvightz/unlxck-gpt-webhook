@@ -62,6 +62,21 @@ test("summarizeBlockedInjuryContext prioritises red flags over high-risk labels 
   );
 });
 
+
+
+test("summarizeBlockedInjuryContext handles malformed string triage lists without token explosion", () => {
+  const summary = summarizeBlockedInjuryContext({
+    triage: {
+      red_flags: [] as string[],
+      matched_high_risk_categories: [] as string[],
+      urgent_flags: "loss_of_consciousness" as unknown as string[],
+      reasons: "Coach/admin review is required before normal plan generation." as unknown as string[],
+    },
+    guidedInjuries: [{ area: "Head", injury_type: "head_impact", severity: "high" }],
+  });
+
+  assert.equal(summary, "Captured injury: Head — Head impact · High · Blocked trigger: Loss of consciousness + Coach/admin review is required before normal plan generation.");
+});
 test("summarizeBlockedInjuryContext does not treat area-only guided injury as captured when notes infer a symptom", () => {
   const summary = summarizeBlockedInjuryContext({
     triage: { red_flags: [], matched_high_risk_categories: [] },
@@ -110,6 +125,34 @@ test("summarizeBlockedInjuryContext keeps fallback when guided injury is absent"
   assert.equal(summary, "Blocked trigger: Moderate stable injury + did not meet strict allowlist");
 });
 
+
+
+test("buildBlockedInjuryContextSummary handles malformed string triage fields", () => {
+  const summary = buildBlockedInjuryContextSummary({
+    triage: {
+      red_flags: "loss_of_consciousness" as unknown as string[],
+      urgent_flags: "vomiting_after_head_impact" as unknown as string[],
+      matched_high_risk_categories: "suspected_concussion" as unknown as string[],
+      reasons: "Coach/admin review required" as unknown as string[],
+    },
+    guidedInjuries: [{ area: "Head", injury_type: "head_impact", severity: "high" }],
+  });
+
+  assert.equal(summary.capturedInjury, "Head — Head impact · High");
+  assert.ok(summary.blockedTrigger);
+});
+
+test("buildBlockedWhy handles malformed string triage fields without character spreading", () => {
+  const why = buildBlockedWhy({
+    mode: "medical_hold",
+    red_flags: "loss_of_consciousness" as unknown as string[],
+    urgent_flags: "vomiting_after_head_impact" as unknown as string[],
+    matched_high_risk_categories: "suspected_concussion" as unknown as string[],
+  });
+
+  assert.match(why.body, /Loss of consciousness|blackout|medical/i);
+  assert.doesNotMatch(why.body, /l was flagged/);
+});
 test("buildBlockedInjuryContextSummary returns structured fields with captured injury and trigger", () => {
   const summary = buildBlockedInjuryContextSummary({
     triage: { red_flags: ["loss_of_consciousness"], matched_high_risk_categories: [] },

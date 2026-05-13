@@ -92,6 +92,18 @@ function formatGuidedInjuryContext(injury: GuidedInjurySummary) {
   return `${main}${meta.length ? ` · ${meta.join(" · ")}` : ""}`;
 }
 
+
+function _normalizeSignalList(value: unknown): string[] {
+  if (Array.isArray(value)) {
+    return value.filter((item): item is string => typeof item === "string");
+  }
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    return trimmed ? [trimmed] : [];
+  }
+  return [];
+}
+
 function _tokenizeSignal(value: string): string[] {
   return value
     .toLowerCase()
@@ -106,11 +118,11 @@ function selectGuidedInjuryContext(
   triage: InjuryTriageSignals,
 ): string | null {
   const signals = [
-    ...(triage.red_flags ?? []),
-    ...(triage.matched_high_risk_categories ?? []),
-    ...(triage.urgent_flags ?? []),
-    ...(triage.reasons ?? []),
-    ...(triage.routing_reasons ?? []),
+    ..._normalizeSignalList(triage.red_flags),
+    ..._normalizeSignalList(triage.matched_high_risk_categories),
+    ..._normalizeSignalList(triage.urgent_flags),
+    ..._normalizeSignalList(triage.reasons),
+    ..._normalizeSignalList(triage.routing_reasons),
   ]
     .filter((value): value is string => typeof value === "string" && Boolean(value.trim()))
     .map((value) => value.trim().toLowerCase());
@@ -298,10 +310,14 @@ export function titleizeToken(value: string) {
 }
 
 export function buildBlockedWhy(triage: InjuryTriageSignals): { title: string; body: string } {
+  const redFlags = _normalizeSignalList(triage.red_flags);
+  const urgentFlags = _normalizeSignalList(triage.urgent_flags);
+  const highRiskCategories = _normalizeSignalList(triage.matched_high_risk_categories);
+
   const signals = [
-    ...(triage.red_flags ?? []),
-    ...(triage.urgent_flags ?? []),
-    ...(triage.matched_high_risk_categories ?? []),
+    ...redFlags,
+    ...urgentFlags,
+    ...highRiskCategories,
   ].filter(Boolean);
   const topSignals = signals.slice(0, 2);
   const mode = (triage.mode || "").trim().toLowerCase();
@@ -344,10 +360,16 @@ export function buildBlockedInjuryContextSummary({
   guidedInjuries?: GuidedInjurySummary[] | null;
 }): BlockedInjuryContextSummary {
   const guidedContext = selectGuidedInjuryContext(guidedInjuries ?? [], triage);
-  const highRiskLabels = [...new Set((triage.matched_high_risk_categories ?? []).map(formatTriageSignalLabel).filter(Boolean))].slice(0, 2);
-  const redFlagLabels = [...new Set((triage.red_flags ?? []).map(formatTriageSignalLabel).filter(Boolean))].slice(0, 2);
-  const urgentFlagLabels = [...new Set((triage.urgent_flags ?? []).map(formatTriageSignalLabel).filter(Boolean))].slice(0, 2);
-  const reasonLabels = [...new Set((triage.reasons ?? []).map((reason) => reason.trim()).filter(Boolean))].slice(0, 2);
+  const redFlags = _normalizeSignalList(triage.red_flags);
+  const urgentFlags = _normalizeSignalList(triage.urgent_flags);
+  const highRiskCategories = _normalizeSignalList(triage.matched_high_risk_categories);
+  const reasons = _normalizeSignalList(triage.reasons);
+  const routingReasons = _normalizeSignalList(triage.routing_reasons);
+
+  const highRiskLabels = [...new Set(highRiskCategories.map(formatTriageSignalLabel).filter(Boolean))].slice(0, 2);
+  const redFlagLabels = [...new Set(redFlags.map(formatTriageSignalLabel).filter(Boolean))].slice(0, 2);
+  const urgentFlagLabels = [...new Set(urgentFlags.map(formatTriageSignalLabel).filter(Boolean))].slice(0, 2);
+  const reasonLabels = [...new Set([...reasons, ...routingReasons].map((reason) => reason.trim()).filter(Boolean))].slice(0, 2);
   const areas = [...new Set((guidedInjuries ?? [])
     .map((injury) => (typeof injury.area === "string" ? injury.area.trim() : ""))
     .filter(Boolean))]
@@ -380,8 +402,8 @@ export function buildBlockedInjuryContextSummary({
     .filter((detail): detail is CapturedInjuryDetail => Boolean(detail));
   const pauseReasons = [
     ...new Set(
-      (triage.reasons ?? [])
-        .map((reason) => (typeof reason === "string" ? reason.trim() : ""))
+      reasons
+        .map((reason) => reason.trim())
         .filter(Boolean),
     ),
   ];
