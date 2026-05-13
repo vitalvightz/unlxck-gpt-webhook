@@ -907,6 +907,9 @@ LEGACY_LOCATION_MAP = {
     "forearm ends": "wrist",
 }
 
+LOCATION_MAP = dict(LEGACY_LOCATION_MAP)
+LOCATION_MAP.update(build_location_synonym_map())
+
 register_negation_targets(
     list(INJURY_SYNONYM_MAP.keys())
     + [syn for syns in INJURY_SYNONYM_MAP.values() for syn in syns]
