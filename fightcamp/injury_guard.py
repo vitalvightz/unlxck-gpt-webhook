@@ -603,12 +603,7 @@ def _injury_context(injuries: Iterable[str | dict], debug_entries: list[dict] | 
             continue
         if isinstance(injury, dict):
             region = get_injury_location(injury)
-            severity_raw = injury.get("severity")
-            if severity_raw:
-                severity_text = str(severity_raw).lower()
-                severity = severity_text if severity_text in SEVERITY_RANK else "moderate"
-            else:
-                severity, _ = _normalize_dict_severity(injury)
+            severity, _ = _normalize_dict_severity(injury)
             if region:
                 region_severity[region] = _strictest_severity(region_severity.get(region), severity)
             continue
