@@ -857,6 +857,43 @@ class TestStage2PayloadBranching:
         assert brief["weekly_role_map"]["weeks"] == []
         assert brief["week_by_week_progression"]["weeks"] == []
 
+    def test_late_fight_payload_includes_context_overlay(self):
+        payload = _build_stage2(10)
+        overlay = payload.get("late_fight_context_overlay", {})
+        assert overlay.get("original_phase_context", {}).get("phase") in {"SPP", "TAPER", "GPP"}
+        assert "late_stage_arc" in overlay
+        assert "session_purpose_by_day" in overlay
+        assert overlay.get("coach_day_policy", {}).get("coach_led_days") == "no app S&C"
+
+    def test_late_fight_brief_includes_context_overlay(self):
+        brief = _build_brief_for(10)
+        overlay = brief.get("late_fight_context_overlay", {})
+        assert overlay.get("writing_upgrade")
+        assert "avoid_terms" in overlay.get("writing_upgrade", {})
+
+    def test_late_fight_overlay_injury_policy_only_when_active_injury(self):
+        clean_overlay = _build_stage2(10).get("late_fight_context_overlay", {})
+        assert "injury_support_policy" not in clean_overlay
+
+        injured = _athlete(10)
+        injured["has_active_injury"] = True
+        injured_payload = build_stage2_payload(injured)
+        injured_overlay = injured_payload.get("late_fight_context_overlay", {})
+        assert injured_overlay.get("injury_support_policy", {}).get("active_injury") is True
+
+    def test_late_fight_overlay_injury_policy_detects_injury_signals_without_boolean_flag(self):
+        injured = _athlete(10, has_active_injury=False, injuries=["elbow pain"])
+        injured_overlay = build_stage2_payload(injured).get("late_fight_context_overlay", {})
+        assert injured_overlay.get("injury_support_policy", {}).get("active_injury") is True
+
+        restricted = _athlete(10, has_active_injury=False, restrictions=["avoid heavy elbow flexion"])
+        restricted_overlay = build_stage2_payload(restricted).get("late_fight_context_overlay", {})
+        assert restricted_overlay.get("injury_support_policy", {}).get("active_injury") is True
+
+        flagged = _athlete(10, has_active_injury=False, readiness_flags=["injury_management"])
+        flagged_overlay = build_stage2_payload(flagged).get("late_fight_context_overlay", {})
+        assert flagged_overlay.get("injury_support_policy", {}).get("active_injury") is True
+
 
 class TestHandoffText:
     def _build_handoff(self, days):
