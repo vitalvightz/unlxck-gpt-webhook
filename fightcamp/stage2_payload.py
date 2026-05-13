@@ -3810,7 +3810,7 @@ def build_stage2_payload(
         camp_length_weeks=camp_len,
         short_notice=short_notice,
     )
-    has_active_injury = athlete_model.get("has_active_injury")
+    has_active_injury = _has_active_injury_from_athlete_model(athlete_model)
     candidate_pools: dict[str, dict] = {}
     for phase in ("GPP", "SPP", "TAPER"):
         if phase_weeks.get(phase, 0) <= 0 and phase_weeks.get("days", {}).get(phase, 0) < 1:

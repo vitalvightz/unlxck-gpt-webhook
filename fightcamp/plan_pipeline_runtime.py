@@ -300,6 +300,10 @@ def build_runtime_context(
         else [_serialize_guided_injury(item) for item in (plan_input.guided_injuries or [])]
     )
 
+    runtime_triage_summary = dict(triage_summary or {})
+    if is_approved_triage_resume:
+        runtime_triage_summary["triage_resume_approved"] = True
+
     training_context = TrainingContext(
         fatigue=plan_input.fatigue.lower(),
         training_frequency=plan_input.training_frequency,
@@ -340,8 +344,8 @@ def build_runtime_context(
         parsed_injuries=[dict(entry) for entry in plan_input.parsed_injuries],
         guided_injury=guided_injury_dict,
         guided_injuries=guided_injuries_list,
-        injury_restrictions=[] if is_approved_triage_resume else [dict(entry) for entry in plan_input.restrictions],
-        triage_summary={} if is_approved_triage_resume else dict(triage_summary or {}),
+        injury_restrictions=[dict(entry) for entry in plan_input.restrictions],
+        triage_summary=runtime_triage_summary,
     )
 
     return PlanRuntimeContext(

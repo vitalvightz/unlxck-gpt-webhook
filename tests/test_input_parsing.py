@@ -746,7 +746,7 @@ def test_runtime_context_transports_all_guided_injuries_and_keeps_legacy_first_c
     assert len(context.training_context.parsed_injuries) == 2
 
 
-def test_approved_resume_runtime_context_keeps_parsed_injuries_but_strips_triage_shaping():
+def test_approved_resume_runtime_context_keeps_structured_injury_truth():
     payload = _payload(
         [
             {"label": "Full name", "value": "Test Athlete"},
@@ -775,8 +775,10 @@ def test_approved_resume_runtime_context_keeps_parsed_injuries_but_strips_triage
     assert context.training_context.parsed_injuries == [dict(entry) for entry in parsed.parsed_injuries]
     assert context.training_context.guided_injury is None
     assert context.training_context.guided_injuries == []
-    assert context.training_context.injury_restrictions == []
-    assert context.training_context.triage_summary == {}
+    assert context.training_context.injury_restrictions == [dict(entry) for entry in parsed.restrictions]
+    assert context.training_context.triage_summary["mode"] == "needs_review"
+    assert context.training_context.triage_summary["should_block_stage2"] is True
+    assert context.training_context.triage_summary["triage_resume_approved"] is True
 
 
 def test_guided_injury_structural_notes_are_retained_in_original_phrase():
