@@ -6,6 +6,11 @@ from difflib import SequenceMatcher
 from .normalization import strip_surrounding_punctuation as _strip_surrounding_punct
 from .regex_config import compile_regex
 from .injury_taxonomy import get_required_flags
+from .injury_negation import (
+    contains_negated_injury,
+    negation_detection_available,
+    remove_negated_phrases,
+)
 
 _SPACY_AVAILABLE = importlib.util.find_spec("spacy") is not None
 _RAPIDFUZZ_AVAILABLE = importlib.util.find_spec("rapidfuzz") is not None
@@ -211,18 +216,8 @@ SPINE_HINTS = {
 }
 POSTERIOR_THIGH_HINTS = {"back of thigh", "back thigh", "rear thigh", "posterior thigh"}
 
-NEGATION_CUES = {
-    "no",
-    "not",
-    "never",
-    "without",
-    "deny",
-    "denies",
-    "denied",
-    "neither",
-}
-
-_NEGATION_CUE_PATTERN = compile_regex("injury_synonyms", "negation_cue_pattern")
+# Negation helpers are re-exported for backward compatibility.
+# New code should import from fightcamp.injury_negation.
 
 
 def _phrase_in_text(phrase: str, text: str) -> bool:
@@ -914,57 +909,6 @@ LOCATION_MAP = {
 
 
 
-_NEGATION_TARGETS = sorted(
-    {
-        term.strip()
-        for term in (
-            list(INJURY_SYNONYM_MAP.keys())
-            + [syn for syns in INJURY_SYNONYM_MAP.values() for syn in syns]
-            + list(LOCATION_MAP.keys())
-            + ["injury", "injured", "issue", "issues", "problem", "problems"]
-        )
-        if term and term.strip()
-    },
-    key=len,
-    reverse=True,
-)
-
-
-def _has_negated_injury(text: str) -> bool:
-    lowered = text.lower()
-    if not _NEGATION_CUE_PATTERN.search(lowered):
-        return False
-    for term in _NEGATION_TARGETS:
-        if len(term) < 3:
-            continue
-        pattern = rf"(?:^|\b){re.escape(term)}(?:\b|$)"
-        if re.search(pattern, lowered):
-            return True
-    return False
-
-
-def negation_detection_available() -> bool:
-    return bool(get_nlp() and _NEGSPACY_AVAILABLE)
-
-
-def contains_negated_injury(text: str) -> bool:
-    if not text:
-        return False
-    return _has_negated_injury(text)
-
-
-def remove_negated_phrases(text: str) -> str:
-    """Strip words marked as negated by Negex from the text."""
-    if not text:
-        return ""
-    nlp = get_nlp()
-    if nlp and _NEGSPACY_AVAILABLE:
-        doc = nlp(text)
-        if any(tok._.negex for tok in doc):
-            tokens = [tok.text for tok in doc if not tok._.negex]
-            return " ".join(tokens).strip()
-        return _strip_negated_chunks_fallback(text)
-    return _strip_negated_chunks_fallback(text)
 
 def canonicalize_injury_type(text: str, threshold: int = 85) -> str | None:
     """
@@ -1282,18 +1226,3 @@ def split_injury_text(raw_text: str) -> list[str]:
     ]
     return _merge_mechanism_continuation_phrases(phrases)
 
-
-def _strip_negated_chunks_fallback(text: str) -> str:
-    normalized = text.lower()
-    normalized = re.sub(r"[()]", " ", normalized)
-    normalized = re.sub(r"\b(and|but|also|however|except)\b,?", ". ", normalized)
-    normalized = _normalize_injury_text_separators(normalized)
-    phrases = [
-        cleaned
-        for chunk in re.split(r"\.\s*", normalized)
-        if (cleaned := _strip_surrounding_punct(chunk))
-    ]
-    if not phrases:
-        return ""
-    kept = [phrase for phrase in phrases if not _has_negated_injury(phrase)]
-    return ". ".join(kept).strip()

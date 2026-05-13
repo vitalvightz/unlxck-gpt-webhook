@@ -5,7 +5,8 @@ import re
 from typing import Any
 
 from .injury_scoring import score_injury_phrase
-from .injury_synonyms import parse_injury_phrase, remove_negated_phrases, split_injury_text
+from .injury_synonyms import parse_injury_phrase, split_injury_text
+from .injury_negation import remove_negated_phrases
 from .input_parsing import GuidedInjury
 
 

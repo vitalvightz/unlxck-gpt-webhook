@@ -16,8 +16,8 @@ from .injury_synonyms import (
     TYPE_PRIORITY,
     detect_triage_category,
     detect_structural_red_flags,
-    remove_negated_phrases,
 )
+from .injury_negation import remove_negated_phrases
 
 # -----------------------------
 # 1) CANONICAL ALIGNMENT
