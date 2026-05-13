@@ -14,7 +14,8 @@ from .injury_filtering import injury_match_details, match_forbidden, normalize_i
 from .injury_formatting import parse_injury_entry
 from .injury_location import get_injury_location
 from .restriction_parsing import is_restriction_phrase
-from .injury_synonyms import parse_injury_phrase, remove_negated_phrases, split_injury_text
+from .injury_synonyms import parse_injury_phrase, split_injury_text
+from .injury_negation import remove_negated_phrases
 from .tagging import normalize_tags
 # Import injury rules version for cache invalidation
 from .config import INJURY_RULES_VERSION

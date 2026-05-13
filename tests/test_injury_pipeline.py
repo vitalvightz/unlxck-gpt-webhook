@@ -10,11 +10,10 @@ import fightcamp.injury_synonyms as injury_synonyms
 from fightcamp.injury_synonyms import (
     canonicalize_injury_type,
     detect_structural_red_flags,
-    negation_detection_available,
     parse_injury_phrase,
-    remove_negated_phrases,
     split_injury_text,
 )
+from fightcamp.injury_negation import negation_detection_available, remove_negated_phrases
 from fightcamp.injury_scoring import score_injury_phrase
 from fightcamp.rehab_protocols import generate_rehab_protocols
 
