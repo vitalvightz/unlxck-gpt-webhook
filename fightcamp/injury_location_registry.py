@@ -89,12 +89,20 @@ LOCATION_REGISTRY: dict[str, dict[str, Any]] = {
 }
 
 
+_LOCATION_SYNONYM_MAP: dict[str, str] | None = None
+
+
 def build_location_synonym_map() -> dict[str, str]:
+    global _LOCATION_SYNONYM_MAP
+    if _LOCATION_SYNONYM_MAP is not None:
+        return _LOCATION_SYNONYM_MAP
+
     synonym_map: dict[str, str] = {}
     for canonical, data in LOCATION_REGISTRY.items():
         synonym_map[canonical] = canonical
         for synonym in data.get("synonyms", []):
             synonym_map[synonym] = canonical
+    _LOCATION_SYNONYM_MAP = synonym_map
     return synonym_map
 
 
