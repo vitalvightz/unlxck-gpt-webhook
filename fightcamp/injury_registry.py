@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from types import MappingProxyType
 
-from .injury_taxonomy import INJURY_TAXONOMY, derive_injury_type_severity_map, get_default_severity, get_injury_rule
+from .injury_taxonomy import INJURY_TAXONOMY, derive_injury_type_severity_map
 
 
 def _normalize_injury_type(injury_type: str | None) -> str:
@@ -11,7 +11,7 @@ def _normalize_injury_type(injury_type: str | None) -> str:
 
 ALL_INJURY_TYPES = frozenset(INJURY_TAXONOMY.keys())
 REHAB_SAFE_TYPES = frozenset(k for k, rule in INJURY_TAXONOMY.items() if bool(rule.get("rehab_allowed", True)))
-REHAB_BLOCKED_TYPES = frozenset(k for k, rule in INJURY_TAXONOMY.items() if not bool(rule.get("rehab_allowed", True)))
+REHAB_BLOCKED_TYPES = frozenset(ALL_INJURY_TYPES - REHAB_SAFE_TYPES)
 URGENT_INJURY_TYPES = frozenset(k for k, rule in INJURY_TAXONOMY.items() if bool(rule.get("urgent")))
 CLINICAL_CLEARANCE_TYPES = frozenset(
     k for k, rule in INJURY_TAXONOMY.items() if bool(rule.get("requires_clinical_clearance"))
@@ -19,7 +19,9 @@ CLINICAL_CLEARANCE_TYPES = frozenset(
 STRUCTURAL_TYPES = frozenset(k for k, rule in INJURY_TAXONOMY.items() if str(rule.get("category") or "") == "structural")
 SYMPTOM_TYPES = frozenset(k for k, rule in INJURY_TAXONOMY.items() if str(rule.get("category") or "") == "symptom")
 UNKNOWN_TYPES = frozenset(k for k, rule in INJURY_TAXONOMY.items() if str(rule.get("category") or "") == "unknown")
-SURFACE_TISSUE_TYPES = frozenset({"abrasion", "cut", "graze", "blister", "laceration"})
+SURFACE_TISSUE_TYPES = frozenset(
+    k for k, rule in INJURY_TAXONOMY.items() if str(rule.get("category") or "") == "surface"
+)
 INJURY_TYPE_SEVERITY = MappingProxyType(derive_injury_type_severity_map())
 
 
@@ -48,8 +50,10 @@ def requires_clinical_clearance_type(injury_type: str | None) -> bool:
 
 
 def get_registry_category(injury_type: str | None) -> str:
-    return str(get_injury_rule(injury_type).get("category") or "unknown")
+    normalized = _normalize_injury_type(injury_type)
+    return str(INJURY_TAXONOMY.get(normalized, INJURY_TAXONOMY["unspecified"]).get("category") or "unknown")
 
 
 def get_registry_default_severity(injury_type: str | None) -> str:
-    return get_default_severity(injury_type)
+    normalized = _normalize_injury_type(injury_type)
+    return str(INJURY_TAXONOMY.get(normalized, INJURY_TAXONOMY["unspecified"]).get("default_severity") or "moderate")

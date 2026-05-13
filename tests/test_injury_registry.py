@@ -24,15 +24,21 @@ def test_injury_type_severity_matches_taxonomy_derived_map() -> None:
 def test_rehab_safe_types_include_existing_safe_types() -> None:
     for injury_type in {"sprain", "strain", "tightness", "pain", "soreness"}:
         assert injury_type in REHAB_SAFE_TYPES
+    expected_rehab_safe = {k for k, rule in INJURY_TAXONOMY.items() if bool(rule.get("rehab_allowed", True))}
+    assert REHAB_SAFE_TYPES == expected_rehab_safe
 
 
 def test_rehab_blocked_types_include_existing_blocked_types() -> None:
     for injury_type in {"fracture", "dislocation", "concussion", "tendon_rupture"}:
         assert injury_type in REHAB_BLOCKED_TYPES
+    expected_rehab_blocked = {k for k, rule in INJURY_TAXONOMY.items() if not bool(rule.get("rehab_allowed", True))}
+    assert REHAB_BLOCKED_TYPES == expected_rehab_blocked
 
 
 def test_surface_tissue_types_match_expected_set() -> None:
     assert SURFACE_TISSUE_TYPES == {"abrasion", "cut", "graze", "blister", "laceration"}
+    expected_surface_types = {k for k, rule in INJURY_TAXONOMY.items() if str(rule.get("category") or "") == "surface"}
+    assert SURFACE_TISSUE_TYPES == expected_surface_types
 
 
 def test_unknown_input_does_not_create_new_type() -> None:
