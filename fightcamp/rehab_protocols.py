@@ -7,6 +7,7 @@ from .injury_guard import INJURY_TYPE_SEVERITY, normalize_severity
 from .injury_taxonomy import derive_red_flag_types, derive_urgent_injury_tokens, get_red_flag_message
 from .injury_synonyms import parse_injury_phrase, split_injury_text
 from .injury_location import canonicalize_location, get_injury_location
+from .injury_location_registry import build_location_region_map, get_rehab_location_candidates
 from .restriction_parsing import ParsedRestriction
 # Refactored: Import centralized DATA_DIR from config
 from .config import DATA_DIR
@@ -55,18 +56,6 @@ def get_exercise_bank() -> list[dict]:
     if _EXERCISE_BANK_CACHE is None:
         _EXERCISE_BANK_CACHE = json.loads((DATA_DIR / "exercise_bank.json").read_text(encoding="utf-8"))
     return _EXERCISE_BANK_CACHE
-REHAB_LOCATION_ALIASES = {
-    "biceps": ["bicep"],
-    "hamstring": ["hamstrings"],
-    "lower back": ["lower_back"],
-    "upper back": ["upper_back"],
-    "hip flexor": ["hip_flexor"],
-    "si joint": ["si_joint"],
-    "quad": ["quads"],
-    "glute": ["glutes"],
-}
-
-
 def normalize_rehab_location(location: str | None) -> list[str]:
     normalized_location = canonicalize_location(location)
     if not normalized_location:
@@ -78,7 +67,7 @@ def normalize_rehab_location(location: str | None) -> list[str]:
             candidates.append(value)
 
     _add(normalized_location)
-    for alias in REHAB_LOCATION_ALIASES.get(normalized_location, []):
+    for alias in get_rehab_location_candidates(normalized_location):
         _add(alias)
     _add(normalized_location.replace(" ", "_"))
     _add(normalized_location.replace("_", " "))
@@ -264,7 +253,7 @@ REGION_GUARDRAILS = {
     },
 }
 
-LOCATION_REGION_MAP = {
+LEGACY_LOCATION_REGION_MAP = {
     "shoulder": "upper_limb",
     "chest": "upper_limb",
     "elbow": "upper_limb",
@@ -292,6 +281,11 @@ LOCATION_REGION_MAP = {
     "shin": "lower_leg_foot",
     "heel": "lower_leg_foot",
 }
+LOCATION_REGION_MAP = {
+    **LEGACY_LOCATION_REGION_MAP,
+    **build_location_region_map(),
+}
+
 
 REGION_LABELS = {
     "upper_limb": "Upper limb",

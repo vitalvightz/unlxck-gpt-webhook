@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Iterable
 
 from .injury_models import Decision
-from .injury_exclusion_rules import INJURY_REGION_KEYWORDS, INJURY_RULES
+from .injury_exclusion_rules import INJURY_REGION_KEYWORDS, INJURY_RULES, get_exclusion_regions
 from .injury_negation import remove_negated_phrases
 from .injury_synonyms import parse_injury_phrase, split_injury_text
 from .bank_schema import validate_training_item
@@ -801,6 +801,12 @@ def normalize_injury_regions(injuries: Iterable[str]) -> set[str]:
                 continue
             non_negated_phrases.append(phrase)
             injury_type, location = parse_injury_phrase(phrase)
+            if location:
+                routed_regions = get_exclusion_regions(location)
+                if routed_regions:
+                    regions.update(routed_regions)
+                    matched = True
+                    break
             for candidate in (location, injury_type, phrase):
                 if not candidate:
                     continue
@@ -1110,7 +1116,6 @@ def write_injury_exclusion_files(output_dir: Path | None = None) -> None:
 
     inferred_path.write_text(json.dumps(inferred, indent=2, sort_keys=True))
     exclusion_path.write_text(json.dumps(exclusion_map, indent=2, sort_keys=True))
-
 
 
 
