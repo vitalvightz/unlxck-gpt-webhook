@@ -102,7 +102,7 @@ def remove_negated_phrases(text: str) -> str:
         if any(tok._.negex for tok in doc):
             tokens = [tok.text for tok in doc if not tok._.negex]
             return " ".join(tokens).strip()
-        return _strip_negated_chunks_fallback(text)
+        return text
     return _strip_negated_chunks_fallback(text)
 
 
