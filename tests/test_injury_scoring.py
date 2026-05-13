@@ -15,10 +15,36 @@ def test_score_injury_phrase_detects_side_location_and_type():
 
 def test_score_injury_phrase_detects_urgent_flags_without_overriding():
     result = score_injury_phrase("Right ankle fracture with swelling.")
-    assert result["injury_type"] == "unspecified"
+    assert result["injury_type"] == "fracture"
     assert result["location"] == "ankle"
     assert "urgent" in result["flags"]
     assert "urgent_fracture" in result["flags"]
+
+
+def test_score_injury_phrase_preserves_medical_map_identities():
+    infection = score_injury_phrase("infection in knee")
+    assert infection["injury_type"] == "infection"
+    assert "urgent_infection" in infection["flags"]
+    assert "urgent" in infection["flags"]
+
+    nerve = score_injury_phrase("nerve issue in neck")
+    assert nerve["injury_type"] == "nerve_involvement"
+    assert "urgent_nerve" in nerve["flags"]
+
+    hernia = score_injury_phrase("hernia pain")
+    assert hernia["injury_type"] == "hernia"
+    assert "urgent_hernia" in hernia["flags"]
+
+    bursitis = score_injury_phrase("shoulder bursitis")
+    assert bursitis["injury_type"] == "tendonitis"
+    assert "bursitis_variant" in bursitis["flags"]
+
+    fracture_with_overlap = score_injury_phrase("fractured wrist strain")
+    assert fracture_with_overlap["injury_type"] == "fracture"
+    assert "urgent_fracture" in fracture_with_overlap["flags"]
+
+    unknown = score_injury_phrase("random weird feeling")
+    assert unknown["injury_type"] == "unspecified"
 
 
 def test_score_injury_phrase_handles_shin_splints():
@@ -50,7 +76,7 @@ def test_score_injury_phrase_preserves_structural_severity_flags():
     assert "urgent" in tendon["flags"]
 
     dislocation = score_injury_phrase("shoulder dislocation")
-    assert dislocation["injury_type"] == "unspecified"
+    assert dislocation["injury_type"] == "dislocation"
     assert dislocation["location"] == "shoulder"
     assert "structural_red_flag" in dislocation["flags"]
     assert "suspected_dislocation" in dislocation["flags"]
