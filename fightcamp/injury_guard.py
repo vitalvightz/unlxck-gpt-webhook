@@ -19,16 +19,13 @@ from .injury_synonyms import parse_injury_phrase, split_injury_text
 from .tagging import normalize_tags
 # Import injury rules version for cache invalidation
 from .config import INJURY_RULES_VERSION
-from .injury_taxonomy import derive_injury_type_severity_map
+from .injury_registry import INJURY_TYPE_SEVERITY, SURFACE_TISSUE_TYPES
 
 logger = logging.getLogger(__name__)
 
 INJURY_DEBUG = os.environ.get("INJURY_DEBUG", "0") == "1"
 
 
-INJURY_TYPE_SEVERITY = derive_injury_type_severity_map()
-
-SURFACE_TISSUE_TYPES = {"abrasion", "cut", "graze", "blister", "laceration"}
 SURFACE_RED_FLAG_TERMS = {
     "infected",
     "infection",
