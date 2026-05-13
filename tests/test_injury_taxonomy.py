@@ -65,3 +65,64 @@ def test_raw_rehab_red_flag_scan_parity_for_urgent_phrases():
             parsed_entries=None,
         )
         assert "Red Flag Detected" in text
+
+
+def test_urgent_token_derivation_does_not_include_generic_last_words():
+    tokens = derive_urgent_injury_tokens()
+
+    forbidden = {
+        "issue",
+        "issues",
+        "problem",
+        "problems",
+        "involvement",
+        "condition",
+        "symptom",
+        "symptoms",
+        "pain",
+        "injury",
+        "injuries",
+        "swelling",
+        "instability",
+        "weakness",
+    }
+
+    assert tokens.isdisjoint(forbidden)
+
+
+def test_urgent_token_derivation_keeps_structural_variants():
+    tokens = derive_urgent_injury_tokens()
+
+    expected = {
+        "acl_tear",
+        "acl-tear",
+        "acl tear",
+        "tendon_rupture",
+        "tendon-rupture",
+        "tendon rupture",
+        "dislocation",
+        "fracture",
+        "concussion",
+        "infection",
+        "hernia",
+    }
+
+    assert expected <= tokens
+
+
+def test_generic_issue_language_does_not_create_urgent_flags():
+    scored = score_injury_phrase("old shoulder issue")
+
+    assert scored["location"] == "shoulder"
+    assert "urgent" not in scored["flags"]
+    assert "structural_red_flag" not in scored["flags"]
+
+
+def test_specific_urgent_phrases_still_trigger_flags():
+    acl = score_injury_phrase("right knee acl tear")
+    assert acl["triage_category"] == "acl_tear"
+    assert "urgent" in acl["flags"]
+
+    concussion = score_injury_phrase("concussion after sparring")
+    assert concussion["triage_category"] == "concussion"
+    assert "urgent" in concussion["flags"]
