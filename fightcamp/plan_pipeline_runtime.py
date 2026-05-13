@@ -166,6 +166,7 @@ class PlanBlocksBundle:
     conditioning_names: dict[str, list[str]]
     coach_review_notes: str
     current_phase: str
+    injury_safety_decision: dict[str, Any] | None = None
 
 
 @dataclass

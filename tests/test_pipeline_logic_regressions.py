@@ -168,3 +168,4 @@ def test_rehab_injury_string_does_not_apply_first_card_instability_to_other_entr
 
     assert "right ankle sprain mild improving" in injury_string
     assert "right ankle instability" not in injury_string
+

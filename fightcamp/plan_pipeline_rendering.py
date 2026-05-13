@@ -46,9 +46,24 @@ def _resolve_fight_weekday(context: PlanRuntimeContext) -> str | None:
     return None
 
 
-def _sparring_adjustment_lines(context: PlanRuntimeContext) -> list[str]:
+def _contact_blocked(blocked_modules: list[str] | set[str] | None) -> bool:
+    blocked = {str(m).strip().lower() for m in (blocked_modules or []) if str(m).strip()}
+    return bool(blocked.intersection({"sparring", "contact", "grappling"}))
+
+
+def _sparring_adjustment_lines(context: PlanRuntimeContext, *, blocked_modules: list[str] | None = None) -> list[str]:
+    if _contact_blocked(blocked_modules):
+        return ["- **Sparring/Contact Nutrition:** Sparring/contact is blocked by injury safety decision until appropriately cleared.", ""]
+
     hard_days = [str(day).strip() for day in (context.plan_input.hard_sparring_days or []) if str(day).strip()]
     support_days = [str(day).strip() for day in (context.plan_input.support_work_days or []) if str(day).strip()]
+
+    if _contact_blocked(blocked_modules):
+        return [
+            "### Sparring & Conditioning Adjustments",
+            "- Sparring/contact blocked by injury safety decision until appropriately cleared.",
+            "",
+        ]
 
     lines = ["### Sparring & Conditioning Adjustments", ""]
     if hard_days:
@@ -75,7 +90,10 @@ def _sparring_adjustment_lines(context: PlanRuntimeContext) -> list[str]:
     return lines
 
 
-def _sparring_nutrition_lines(context: PlanRuntimeContext) -> list[str]:
+def _sparring_nutrition_lines(context: PlanRuntimeContext, *, blocked_modules: list[str] | None = None) -> list[str]:
+    if _contact_blocked(blocked_modules):
+        return ["- **Sparring/Contact Nutrition:** Sparring/contact is blocked by injury safety decision until appropriately cleared.", ""]
+
     hard_days = [str(day).strip() for day in (context.plan_input.hard_sparring_days or []) if str(day).strip()]
     header = "- **On Expected Hard Sparring Days:**"
     if hard_days:
@@ -146,6 +164,10 @@ def _build_coach_notes(context: PlanRuntimeContext, blocks: PlanBlocksBundle) ->
         )
     if blocks.coach_review_notes:
         sections.append(blocks.coach_review_notes)
+
+    blocked_modules = set((blocks.injury_safety_decision or {}).get("blocked_modules") or [])
+    if blocked_modules.intersection({"sparring", "contact", "grappling"}):
+        return "Sparring/contact blocked by injury safety decision until appropriately cleared."
 
     coach_notes = "\n\n".join(section for section in sections if section).strip()
     if not coach_notes:
@@ -268,10 +290,10 @@ def render_plan_bundle(*, context: PlanRuntimeContext, blocks: PlanBlocksBundle,
         "## Mindset Overview",
         f"Primary Block(s): {', '.join(context.training_context.mental_block).title()}",
         "",
-        *_sparring_adjustment_lines(context),
+        *_sparring_adjustment_lines(context, blocked_modules=(blocks.injury_safety_decision or {}).get("blocked_modules")),
         "---",
         "",
-        *_sparring_nutrition_lines(context),
+        *_sparring_nutrition_lines(context, blocked_modules=(blocks.injury_safety_decision or {}).get("blocked_modules")),
         "## Athlete Profile",
         f"- **Name:** {context.plan_input.full_name}",
         f"- Age: {context.plan_input.age}",
