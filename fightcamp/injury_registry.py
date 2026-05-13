@@ -50,8 +50,8 @@ def requires_clinical_clearance_type(injury_type: str | None) -> bool:
 
 
 def get_registry_category(injury_type: str | None) -> str:
-    normalized = _normalize_injury_type(injury_type)
-    return str(INJURY_TAXONOMY.get(normalized, INJURY_TAXONOMY["unspecified"]).get("category") or "unknown")
+    rule = INJURY_TAXONOMY.get(_normalize_injury_type(injury_type)) or INJURY_TAXONOMY["unspecified"]
+    return str(rule.get("category") or "unknown")
 
 
 def get_registry_default_severity(injury_type: str | None) -> str:
