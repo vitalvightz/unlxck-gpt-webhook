@@ -1252,7 +1252,7 @@ def test_weekly_role_map_fight_week_override_only_modifies_relevant_week():
         fight_week_override={
             "active": True,
             "band": "mini_taper_protocol",
-            "allowed_session_roles": ["fight_week_freshness_day"],
+            "allowed_session_roles": ["fight_week_freshness_day", "hard_sparring_day"],
             "max_sessions": 1,
             "coach_note": "fight-week override active",
         },
@@ -1265,7 +1265,17 @@ def test_weekly_role_map_fight_week_override_only_modifies_relevant_week():
     assert overridden["weeks"][2]["phase"] == "TAPER"
     assert len(overridden["weeks"][2]["session_roles"]) <= 1
     assert overridden["weeks"][2]["intentional_compression"]["reason"] == "fight_week_override"
-
+    active_spar_days = {
+        str(role.get("scheduled_day_hint") or "").strip().lower()
+        for role in overridden["weeks"][2]["session_roles"]
+        if role.get("role_key") == "hard_sparring_day"
+    }
+    assert {
+        str(entry.get("day") or "").strip().lower() for entry in overridden["weeks"][2]["hard_sparring_plan"]
+    } <= active_spar_days
+    assert {
+        str(day or "").strip().lower() for day in overridden["weeks"][2]["effective_hard_sparring_days"]
+    } <= active_spar_days
 
 
 def test_weekly_role_map_compresses_to_sharpness_and_freshness_for_short_notice():
