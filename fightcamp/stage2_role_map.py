@@ -2420,6 +2420,21 @@ def _build_weekly_role_map(
             if max_sessions > 0:
                 filtered_roles = filtered_roles[:max_sessions]
         week["session_roles"] = filtered_roles
+        active_spar_days = {
+            str(role.get("scheduled_day_hint") or "").strip().lower()
+            for role in filtered_roles
+            if role.get("role_key") == "hard_sparring_day" and str(role.get("scheduled_day_hint") or "").strip()
+        }
+        week["hard_sparring_plan"] = [
+            entry
+            for entry in list(week.get("hard_sparring_plan") or [])
+            if str(entry.get("day") or "").strip().lower() in active_spar_days
+        ]
+        week["effective_hard_sparring_days"] = [
+            day
+            for day in list(week.get("effective_hard_sparring_days") or [])
+            if str(day or "").strip().lower() in active_spar_days
+        ]
         suppressed_roles = list(week.get("suppressed_roles") or [])
         suppressed_roles.append(
             {
