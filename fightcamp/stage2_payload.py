@@ -38,8 +38,16 @@ from .fight_date_utils import build_calendar_days
 from .conditioning import athlete_facing_system_label
 from .fight_day_override import apply_fight_day_override_to_weekly_role_map
 from .late_selector_windows import classify_late_selector_window
-from .normalization import clean_list, normalize_fatigue_level, normalize_text, slugify, dedupe_preserve_order
+from .normalization import (  # noqa: F401  (phrase_in_text re-exported for back-compat)
+    clean_list,
+    dedupe_preserve_order,
+    normalize_fatigue_level,
+    normalize_text,
+    phrase_in_text,
+    slugify,
+)
 from .rehab_protocols import _rehab_drills_for_phase, classify_drill_function, _FUNCTION_LABELS
+from .restriction_parsing import CANONICAL_RESTRICTIONS  # noqa: F401  (re-exported for back-compat)
 from .priority_profile import build_priority_profile, describe_priority_focus
 from .selection_metadata import build_score_evidence, normalize_selection_metadata
 from .stage2_render_guards import (  # noqa: F401  (re-exported for backwards compatibility)
@@ -58,6 +66,10 @@ from .sparring_dose_planner import (
 )
 from .strength_session_quality import classify_strength_item, infer_strength_sessions
 from .training_context import TrainingContext, allocate_sessions
+from .weight_cut import (  # noqa: F401  (re-exported for back-compat)
+    compute_cut_severity_score,
+    cut_severity_bucket,
+)
 
 # Re-export from sub-modules for backward compatibility. Names that are also
 # defined locally further down this file are intentionally omitted here because
