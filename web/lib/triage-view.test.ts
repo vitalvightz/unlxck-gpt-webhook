@@ -26,7 +26,7 @@ test("hasTriageResumeApproval returns true for explicit triage resume override m
           },
         },
       },
-    } as never),
+    } as any),
     true,
   );
 });
