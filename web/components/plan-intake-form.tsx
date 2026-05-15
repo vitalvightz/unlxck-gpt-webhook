@@ -1565,6 +1565,12 @@ export function PlanIntakeForm() {
   const selectedEquipmentAccess = formatJoinedLabels(selectedEquipmentAccessLabels, "No equipment selected");
   const selectedHardSparring = formatJoinedLabels(selectedHardSparringLabels, "No fixed hard sparring days");
   const selectedSupportWorkDays = formatJoinedLabels(selectedSupportWorkLabels, "No non-hard training days selected");
+  const remainingHardSparringDays = TRAINING_AVAILABILITY_OPTIONS
+    .filter((option) => form.training_availability.includes(option.value) && !form.support_work_days.includes(option.value) && !form.hard_sparring_days.includes(option.value))
+    .map((option) => option.value);
+  const remainingSupportWorkDays = TRAINING_AVAILABILITY_OPTIONS
+    .map((option) => option.value)
+    .filter((day) => form.training_availability.includes(day) && !form.hard_sparring_days.includes(day));
   const selectedGoals = formatJoinedLabels(selectedGoalLabels, "No goals selected");
   const selectedWeakAreas = formatJoinedLabels(selectedWeakAreaLabels, "No weak areas selected");
   const performanceFocusCapTitle = performanceFocusCapValue === null
@@ -2082,7 +2088,7 @@ export function PlanIntakeForm() {
                       disabled={noScheduledFight}
                       onChange={(event) => updateField("fight_date", event.target.value)}
                     />
-                    <label className={`inline-warning-ack inline-warning-ack-compact ${noScheduledFight ? "inline-warning-ack-checked" : ""}`.trim()}>
+                    <label className={`inline-warning-ack ${noScheduledFight ? "inline-warning-ack-checked" : ""}`.trim()}>
                       <input
                         type="checkbox"
                         checked={noScheduledFight}
@@ -2265,9 +2271,13 @@ export function PlanIntakeForm() {
                   onToggle={(value) => toggleFieldValue("hard_sparring_days", value)}
                   disableAll={shouldDisableField(daysOutCtx, "hard_sparring_days")}
                   getOptionDisabledReason={(option, checked) =>
-                    checked || form.training_availability.includes(option.value)
+                    checked
                       ? null
-                      : "Add to availability first"
+                      : !form.training_availability.includes(option.value)
+                        ? "Add to availability first"
+                        : form.support_work_days.includes(option.value)
+                          ? "Already tagged as non-hard training"
+                          : null
                   }
                 />
                 <div className="field">
@@ -2275,6 +2285,7 @@ export function PlanIntakeForm() {
                     {getFieldHelperText(daysOutCtx, "hard_sparring_days") ||
                       "Pick the days that usually carry the hardest live rounds or highest collision load. These are part of the weekly session total above."}
                   </p>
+                  <p className="muted">Available hard sparring tags: {formatJoinedLabels(remainingHardSparringDays, "No days left")}</p>
                 </div>
                 </>
                 )}
@@ -2291,9 +2302,13 @@ export function PlanIntakeForm() {
                   onToggle={(value) => toggleFieldValue("support_work_days", value)}
                   disableAll={shouldDisableField(daysOutCtx, "support_work_days")}
                   getOptionDisabledReason={(option, checked) =>
-                    checked || form.training_availability.includes(option.value)
+                    checked
                       ? null
-                      : "Add to availability first"
+                      : !form.training_availability.includes(option.value)
+                        ? "Add to availability first"
+                        : form.hard_sparring_days.includes(option.value)
+                          ? "Already tagged as hard sparring"
+                          : null
                   }
                 />
                 <div className="field">
@@ -2301,6 +2316,7 @@ export function PlanIntakeForm() {
                     {getFieldHelperText(daysOutCtx, "support_work_days") ||
                       "Select days available for lighter work, recovery, technical practice, or S&C. Do not include hard sparring days here."}
                   </p>
+                  <p className="muted">Available non-hard tags: {formatJoinedLabels(remainingSupportWorkDays, "No days left")}</p>
                 </div>
                 </>
                 )}
