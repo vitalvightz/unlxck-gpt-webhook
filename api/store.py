@@ -511,7 +511,7 @@ class SupabaseAppStore:
     def create_intake(self, athlete_id: str, request: PlanRequest) -> dict[str, Any]:
         payload = {
             "athlete_id": athlete_id,
-            "fight_date": request.fight_date or None,
+            "fight_date": request.fight_date.strip() or None,
             "technical_style": request.athlete.technical_style,
             "intake": request.model_dump(mode="json"),
         }
