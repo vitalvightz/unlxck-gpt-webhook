@@ -506,9 +506,15 @@ class NutritionWorkspaceUpdateRequest(BaseModel):
         return value
 
 
+CampTimelineType = Literal["scheduled_fight", "open_camp"]
+_DEFAULT_OPEN_CAMP_WEEKS = 8
+
+
 class PlanRequest(BaseModel):
     athlete: AthleteProfileInput
     fight_date: str = ""
+    no_scheduled_fight: bool = False
+    open_camp_weeks: int = _DEFAULT_OPEN_CAMP_WEEKS
     rounds_format: str = ""
     weekly_training_frequency: int | None = None
     fatigue_level: str = ""
@@ -540,6 +546,26 @@ class PlanRequest(BaseModel):
             return updated
         return value
 
+    @model_validator(mode="before")
+    @classmethod
+    def infer_no_scheduled_fight_for_legacy_payloads(cls, value: Any) -> Any:
+        # Backward compat for payloads that pre-date the ``no_scheduled_fight``
+        # flag (PR #1263 shipped open camps via an empty ``fight_date`` alone).
+        # When the flag is absent and the date is empty we treat the camp as
+        # open. Callers that explicitly send ``no_scheduled_fight: false`` with
+        # an empty date are left alone so ``generation_issues()`` can flag the
+        # missing date.
+        if not isinstance(value, dict):
+            return value
+        if "no_scheduled_fight" in value:
+            return value
+        fight_date_val = str(value.get("fight_date") or "").strip()
+        if fight_date_val:
+            return value
+        updated = dict(value)
+        updated["no_scheduled_fight"] = True
+        return updated
+
     @field_validator("weekly_training_frequency", mode="before")
     @classmethod
     def validate_weekly_training_frequency(cls, value: Any) -> Any:
@@ -556,6 +582,40 @@ class PlanRequest(BaseModel):
         if isinstance(value, (int, float)):
             return max(1, min(int(round(float(value))), 6))
         return value
+
+    @field_validator("no_scheduled_fight", mode="before")
+    @classmethod
+    def coerce_no_scheduled_fight(cls, value: Any) -> bool:
+        if value is None:
+            return False
+        if isinstance(value, bool):
+            return value
+        if isinstance(value, (int, float)):
+            return bool(value)
+        if isinstance(value, str):
+            normalized = value.strip().lower()
+            if normalized in {"true", "1", "yes", "y", "on"}:
+                return True
+            if normalized in {"", "false", "0", "no", "n", "off"}:
+                return False
+        return bool(value)
+
+    @field_validator("open_camp_weeks", mode="before")
+    @classmethod
+    def coerce_open_camp_weeks(cls, value: Any) -> int:
+        if value is None:
+            return _DEFAULT_OPEN_CAMP_WEEKS
+        if isinstance(value, str):
+            normalized = value.strip()
+            if not normalized:
+                return _DEFAULT_OPEN_CAMP_WEEKS
+            try:
+                value = int(round(float(normalized)))
+            except ValueError:
+                raise ValueError("open_camp_weeks must be numeric") from None
+        if isinstance(value, (int, float)):
+            return max(1, int(round(float(value))))
+        return _DEFAULT_OPEN_CAMP_WEEKS
 
     @field_validator("equipment_access", "key_goals", "weak_areas", "goal_weakness_collision_tags", mode="before")
     @classmethod
@@ -665,7 +725,15 @@ class PlanRequest(BaseModel):
                 self.notes,
             ),
         ]
-        payload: dict[str, Any] = {"data": {"fields": fields}}
+        camp_timeline_type: CampTimelineType = (
+            "open_camp" if self.no_scheduled_fight else "scheduled_fight"
+        )
+        payload: dict[str, Any] = {
+            "data": {"fields": fields},
+            "no_scheduled_fight": self.no_scheduled_fight,
+            "open_camp_weeks": self.open_camp_weeks,
+            "camp_timeline_type": camp_timeline_type,
+        }
         if self.guided_injury is not None:
             payload["guided_injury"] = _legacy_guided_injury_payload(self.guided_injury)
         elif self.guided_injuries:

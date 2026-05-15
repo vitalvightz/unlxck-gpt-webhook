@@ -170,6 +170,8 @@ export type NutritionWorkspaceUpdateRequest = Omit<NutritionWorkspaceState, "ath
 export type PlanRequest = {
   athlete: AthleteProfileInput;
   fight_date: string;
+  no_scheduled_fight?: boolean;
+  open_camp_weeks?: number;
   rounds_format?: string;
   weekly_training_frequency?: number | null;
   fatigue_level?: string;

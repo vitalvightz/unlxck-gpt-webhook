@@ -659,6 +659,49 @@ def _fight_local_date(
     return fight_date.date()
 
 
+CampTimelineType = Literal["scheduled_fight", "open_camp"]
+DEFAULT_OPEN_CAMP_WEEKS = 8
+
+# Keep these tables in sync with ``api.models.PlanRequest.coerce_no_scheduled_fight``
+# so a payload coerced once by PlanRequest still coerces the same way when it
+# reaches ``PlanInput.from_payload`` (and so the legacy/no-PlanRequest path
+# behaves identically to the API path).
+_NO_SCHEDULED_FIGHT_TRUE_TOKENS = {"true", "1", "yes", "y", "on"}
+_NO_SCHEDULED_FIGHT_FALSE_TOKENS = {"", "false", "0", "no", "n", "off"}
+
+
+def _coerce_no_scheduled_fight(value: object) -> bool:
+    if value is None:
+        return False
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, (int, float)):
+        return bool(value)
+    if isinstance(value, str):
+        normalized = value.strip().lower()
+        if normalized in _NO_SCHEDULED_FIGHT_TRUE_TOKENS:
+            return True
+        if normalized in _NO_SCHEDULED_FIGHT_FALSE_TOKENS:
+            return False
+    return bool(value)
+
+
+def _coerce_open_camp_weeks(value: object) -> int:
+    if value is None:
+        return DEFAULT_OPEN_CAMP_WEEKS
+    if isinstance(value, str):
+        normalized = value.strip()
+        if not normalized:
+            return DEFAULT_OPEN_CAMP_WEEKS
+        try:
+            value = int(round(float(normalized)))
+        except ValueError:
+            raise ValueError("open_camp_weeks must be numeric") from None
+    if isinstance(value, (int, float)):
+        return max(1, int(round(float(value))))
+    return DEFAULT_OPEN_CAMP_WEEKS
+
+
 @dataclass(frozen=True)
 class PlanInput:
     full_name: str
@@ -703,6 +746,13 @@ class PlanInput:
     goal_weakness_collision_details: list[dict[str, str]] = field(default_factory=list)
     guided_injuries: list[GuidedInjury] = field(default_factory=list)
     parsing_metadata: dict[str, dict[str, str]] = field(default_factory=dict)
+    # Explicit camp-timeline plumbing. ``no_scheduled_fight`` is the external API
+    # flag (mirrors the frontend ``noScheduledFight`` checkbox); the internal
+    # ``camp_timeline_type`` token is derived in ``from_payload`` so downstream
+    # planning code never has to re-infer from empty strings.
+    no_scheduled_fight: bool = False
+    camp_timeline_type: CampTimelineType = "scheduled_fight"
+    open_camp_weeks: int = DEFAULT_OPEN_CAMP_WEEKS
 
     @classmethod
     def from_payload(cls, data: dict) -> "PlanInput":
@@ -823,6 +873,23 @@ class PlanInput:
             )
             weeks_out = max(1, days_until_fight // 7) if days_until_fight is not None else "N/A"
 
+        # Resolve explicit camp-timeline plumbing. ``no_scheduled_fight`` is the
+        # external API flag; ``camp_timeline_type`` is the derived internal
+        # token. Coercion must match ``api.models.PlanRequest`` so that a
+        # payload round-tripping through PlanRequest -> PlanInput keeps the
+        # same parse semantics as a payload built directly here.
+        if isinstance(data, dict) and "no_scheduled_fight" in data:
+            no_scheduled_fight = _coerce_no_scheduled_fight(data.get("no_scheduled_fight"))
+        else:
+            # Backward compat for payloads predating the flag (PR #1263): an
+            # absent flag plus an empty next_fight_date implies open camp.
+            no_scheduled_fight = not bool(next_fight_date)
+
+        open_camp_weeks_raw = data.get("open_camp_weeks") if isinstance(data, dict) else None
+        open_camp_weeks = _coerce_open_camp_weeks(open_camp_weeks_raw)
+
+        camp_timeline_type: CampTimelineType = "open_camp" if no_scheduled_fight else "scheduled_fight"
+
         normalized_values = {
             **values,
             "athlete_timezone": effective_athlete_timezone,
@@ -847,6 +914,9 @@ class PlanInput:
             training_frequency=training_frequency,
             weeks_out=weeks_out,
             days_until_fight=days_until_fight,
+            no_scheduled_fight=no_scheduled_fight,
+            camp_timeline_type=camp_timeline_type,
+            open_camp_weeks=open_camp_weeks,
             parsing_metadata={
                 "training_frequency": training_frequency_metadata,
                 "available_days": available_days_metadata,
@@ -873,12 +943,16 @@ class PlanInput:
         return _normalize_list(self.fighting_style_tactical)
 
     def generation_issues(self) -> list[str]:
-        # next_fight_date is intentionally optional: athletes between fights
-        # plan open-ended camps. Downstream phase/days-out logic falls back to
-        # a default GPP camp length when the date is empty.
+        # ``camp_timeline_type == "open_camp"`` is the explicit no-fight branch
+        # (driven by ``no_scheduled_fight``). For that branch the empty
+        # ``next_fight_date`` is expected; downstream phase/days-out logic falls
+        # back to ``open_camp_weeks`` (default 8). Scheduled fights still
+        # require a date.
         issues: list[str] = []
         if not self.fighting_style_technical.strip():
             issues.append("missing_fighting_style_technical")
+        if self.camp_timeline_type == "scheduled_fight" and not self.next_fight_date.strip():
+            issues.append("missing_next_fight_date")
         if not self.training_days:
             issues.append("missing_training_availability")
         if self.training_frequency < 1:

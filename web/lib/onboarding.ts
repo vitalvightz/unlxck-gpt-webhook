@@ -20,6 +20,7 @@ export function emptyPlanRequest(fullName = ""): PlanRequest {
       athlete_locale: "",
     },
     fight_date: "",
+    no_scheduled_fight: false,
     rounds_format: "3 x 3",
     weekly_training_frequency: 4,
     fatigue_level: "moderate",

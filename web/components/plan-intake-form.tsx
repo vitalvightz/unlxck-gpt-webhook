@@ -979,6 +979,7 @@ export function PlanIntakeForm() {
         ...currentForm,
         ...nextGuidedInjuryFields,
       }),
+      no_scheduled_fight: noScheduledFight,
     });
   }
 
