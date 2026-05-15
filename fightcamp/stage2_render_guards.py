@@ -14,6 +14,7 @@ from typing import Any
 
 from .normalization import clean_list, dedupe_preserve_order, normalize_text
 from .stage2_payload_late_fight import _uses_late_fight_stage2_payload
+from .stage2_payload_open_ongoing import _uses_open_ongoing_payload
 from .training_context import TrainingContext
 
 
@@ -77,12 +78,14 @@ def _render_guard_flags(
         }
         or _uses_late_fight_stage2_payload(days_until_fight)
     )
+    open_ongoing_mode = _uses_open_ongoing_payload(athlete_model)
     has_active_injury = _has_active_injury_from_athlete_model(athlete_model)
+    render_mode = "open_ongoing_system" if open_ongoing_mode else ("late_fight_countdown_only" if late_fight_countdown else "camp_plan")
     return {
         "has_active_injury": has_active_injury,
         "suppress_rehab_headings": not has_active_injury,
         "suppress_phase_toolbox_sections": late_fight_countdown,
-        "render_mode": "late_fight_countdown_only" if late_fight_countdown else "camp_plan",
+        "render_mode": render_mode,
     }
 
 
