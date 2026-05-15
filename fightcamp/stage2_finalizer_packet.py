@@ -316,6 +316,11 @@ def build_stage2_finalizer_packet(
         or stage2_payload.get("late_fight_plan_spec")
         or {}
     )
+    open_plan_spec = (
+        source.get("open_plan_spec")
+        or stage2_payload.get("open_plan_spec")
+        or {}
+    )
 
     days_out_payload = (
         source.get("days_out_payload")
@@ -367,6 +372,7 @@ def build_stage2_finalizer_packet(
             "weekly_role_map": _compact_weekly_role_map(weekly_role_map),
             "calendar_authority": _compact_calendar_authority(weekly_role_map),
             "late_fight_plan_spec": late_fight_plan_spec,
+            "open_plan_spec": open_plan_spec,
             "days_out_payload": days_out_payload,
             "fight_week_override": (
                 source.get("fight_week_override")
@@ -387,8 +393,8 @@ def build_stage2_finalizer_packet(
         "writing_rules": list((rewrite_guidance or {}).get("writing_rules") or []),
     }
 
-    # Normal camp may still need compact phase context. Late-fight should not.
-    if render_mode != "late_fight_countdown_only":
+    # Only dated camp mode needs compact phase context.
+    if render_mode == "camp_plan":
         packet["phase_briefs"] = (
             source.get("phase_briefs")
             or stage2_payload.get("phase_briefs")
