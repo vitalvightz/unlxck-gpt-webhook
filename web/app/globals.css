@@ -2150,6 +2150,9 @@ select:focus-visible {
   border: 1px solid var(--border-default);
   background: rgba(12, 14, 18, 0.5);
   cursor: pointer;
+  font-family: var(--font-display), sans-serif;
+  text-transform: none;
+  letter-spacing: normal;
 }
 
 .inline-warning-ack input {
