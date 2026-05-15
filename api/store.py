@@ -560,7 +560,7 @@ class SupabaseAppStore:
         payload = {
             "athlete_id": athlete_id,
             "intake_id": intake_id,
-            "fight_date": request.fight_date or None,
+            "fight_date": request.fight_date.strip() or None,
             "technical_style": request.athlete.technical_style,
             "full_name": request.athlete.full_name,
             "plan_name": "",
