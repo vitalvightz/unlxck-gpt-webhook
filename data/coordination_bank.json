@@ -5735,7 +5735,6 @@
       "phases": [
         "GPP",
         "SPP",
-        "TAPER"
       ],
       "movement": "peripheral_awareness",
       "type": "multidirectional",
