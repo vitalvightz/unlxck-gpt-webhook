@@ -17,7 +17,7 @@ export function hasTriageResumeApproval(plan: Pick<PlanDetail, "admin_outputs">)
     return false;
   }
 
-  if (Boolean(whyLog.triage_regeneration_cleared)) {
+  if (whyLog.triage_regeneration_cleared === true) {
     return true;
   }
 
