@@ -659,6 +659,10 @@ def _fight_local_date(
     return fight_date.date()
 
 
+CampTimelineType = Literal["scheduled_fight", "open_camp"]
+DEFAULT_OPEN_CAMP_WEEKS = 8
+
+
 @dataclass(frozen=True)
 class PlanInput:
     full_name: str
@@ -703,6 +707,13 @@ class PlanInput:
     goal_weakness_collision_details: list[dict[str, str]] = field(default_factory=list)
     guided_injuries: list[GuidedInjury] = field(default_factory=list)
     parsing_metadata: dict[str, dict[str, str]] = field(default_factory=dict)
+    # Explicit camp-timeline plumbing. ``no_scheduled_fight`` is the external API
+    # flag (mirrors the frontend ``noScheduledFight`` checkbox); the internal
+    # ``camp_timeline_type`` token is derived in ``from_payload`` so downstream
+    # planning code never has to re-infer from empty strings.
+    no_scheduled_fight: bool = False
+    camp_timeline_type: CampTimelineType = "scheduled_fight"
+    open_camp_weeks: int = DEFAULT_OPEN_CAMP_WEEKS
 
     @classmethod
     def from_payload(cls, data: dict) -> "PlanInput":
@@ -823,6 +834,26 @@ class PlanInput:
             )
             weeks_out = max(1, days_until_fight // 7) if days_until_fight is not None else "N/A"
 
+        # Resolve explicit camp-timeline plumbing. ``no_scheduled_fight`` is the
+        # external API flag; ``camp_timeline_type`` is the derived internal token.
+        no_scheduled_fight_raw = data.get("no_scheduled_fight") if isinstance(data, dict) else None
+        if no_scheduled_fight_raw is None:
+            # Backward compat for payloads predating the flag: if the date is
+            # empty we assume an open camp so PR #1263 behaviour holds.
+            no_scheduled_fight = not bool(next_fight_date)
+        else:
+            no_scheduled_fight = bool(no_scheduled_fight_raw)
+
+        open_camp_weeks_raw = data.get("open_camp_weeks") if isinstance(data, dict) else None
+        try:
+            open_camp_weeks = int(open_camp_weeks_raw) if open_camp_weeks_raw is not None else DEFAULT_OPEN_CAMP_WEEKS
+        except (TypeError, ValueError):
+            open_camp_weeks = DEFAULT_OPEN_CAMP_WEEKS
+        if open_camp_weeks < 1:
+            open_camp_weeks = DEFAULT_OPEN_CAMP_WEEKS
+
+        camp_timeline_type: CampTimelineType = "open_camp" if no_scheduled_fight else "scheduled_fight"
+
         normalized_values = {
             **values,
             "athlete_timezone": effective_athlete_timezone,
@@ -847,6 +878,9 @@ class PlanInput:
             training_frequency=training_frequency,
             weeks_out=weeks_out,
             days_until_fight=days_until_fight,
+            no_scheduled_fight=no_scheduled_fight,
+            camp_timeline_type=camp_timeline_type,
+            open_camp_weeks=open_camp_weeks,
             parsing_metadata={
                 "training_frequency": training_frequency_metadata,
                 "available_days": available_days_metadata,
@@ -873,12 +907,16 @@ class PlanInput:
         return _normalize_list(self.fighting_style_tactical)
 
     def generation_issues(self) -> list[str]:
-        # next_fight_date is intentionally optional: athletes between fights
-        # plan open-ended camps. Downstream phase/days-out logic falls back to
-        # a default GPP camp length when the date is empty.
+        # ``camp_timeline_type == "open_camp"`` is the explicit no-fight branch
+        # (driven by ``no_scheduled_fight``). For that branch the empty
+        # ``next_fight_date`` is expected; downstream phase/days-out logic falls
+        # back to ``open_camp_weeks`` (default 8). Scheduled fights still
+        # require a date.
         issues: list[str] = []
         if not self.fighting_style_technical.strip():
             issues.append("missing_fighting_style_technical")
+        if self.camp_timeline_type == "scheduled_fight" and not self.next_fight_date.strip():
+            issues.append("missing_next_fight_date")
         if not self.training_days:
             issues.append("missing_training_availability")
         if self.training_frequency < 1:

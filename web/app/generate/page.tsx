@@ -58,7 +58,7 @@ export default function GeneratePage() {
       return;
     }
 
-    if (!payload.fight_date || !payload.athlete.technical_style.length) {
+    if ((!payload.fight_date && !payload.no_scheduled_fight) || !payload.athlete.technical_style.length) {
       router.replace("/onboarding");
       return;
     }

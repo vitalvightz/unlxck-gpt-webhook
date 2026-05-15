@@ -495,3 +495,155 @@ def test_calculate_phase_weeks_falls_back_to_camp_length_when_fight_date_unknown
     phase_total = weeks[GPP] + weeks[SPP] + weeks[TAPER]
     assert phase_total == 8
     assert all(weeks[phase] >= 0 for phase in (GPP, SPP, TAPER))
+
+
+# --- Explicit open-camp timeline coverage ----------------------------------
+
+
+def test_plan_request_open_camp_flag_marks_plan_input_as_open_camp():
+    request = PlanRequest(
+        athlete={
+            "full_name": "Ari Mensah",
+            "technical_style": ["boxing"],
+            "tactical_style": ["pressure_fighter"],
+        },
+        no_scheduled_fight=True,
+        training_availability=["Monday", "Wednesday", "Friday"],
+        weekly_training_frequency=3,
+    )
+
+    assert request.no_scheduled_fight is True
+    assert request.fight_date == ""
+    assert request.open_camp_weeks == 8
+
+    payload = request.to_payload()
+    assert payload["no_scheduled_fight"] is True
+    assert payload["camp_timeline_type"] == "open_camp"
+    assert payload["open_camp_weeks"] == 8
+
+    parsed = PlanInput.from_payload(payload)
+    assert parsed.no_scheduled_fight is True
+    assert parsed.camp_timeline_type == "open_camp"
+    assert parsed.next_fight_date == ""
+    assert parsed.days_until_fight is None
+    assert parsed.open_camp_weeks == 8
+    assert "missing_next_fight_date" not in parsed.generation_issues()
+
+
+def test_plan_request_open_camp_runtime_context_uses_camp_len_eight():
+    request = PlanRequest(
+        athlete={
+            "full_name": "Ari Mensah",
+            "technical_style": ["boxing"],
+            "tactical_style": ["pressure_fighter"],
+        },
+        no_scheduled_fight=True,
+        training_availability=["Monday", "Wednesday", "Friday"],
+        weekly_training_frequency=3,
+        equipment_access=["bodyweight"],
+    )
+
+    parsed = PlanInput.from_payload(request.to_payload())
+    context = build_runtime_context(
+        plan_input=parsed,
+        random_seed=1,
+        logger=logging.getLogger(__name__),
+    )
+
+    assert context.camp_len == 8
+    phase_total = sum(int(context.phase_weeks.get(p, 0)) for p in ("GPP", "SPP", "TAPER"))
+    assert phase_total == 8
+
+
+def test_plan_request_open_camp_honours_custom_open_camp_weeks():
+    request = PlanRequest(
+        athlete={
+            "full_name": "Ari Mensah",
+            "technical_style": ["boxing"],
+            "tactical_style": ["pressure_fighter"],
+        },
+        no_scheduled_fight=True,
+        open_camp_weeks=12,
+        training_availability=["Monday", "Wednesday", "Friday"],
+        weekly_training_frequency=3,
+        equipment_access=["bodyweight"],
+    )
+
+    parsed = PlanInput.from_payload(request.to_payload())
+    context = build_runtime_context(
+        plan_input=parsed,
+        random_seed=1,
+        logger=logging.getLogger(__name__),
+    )
+
+    assert parsed.open_camp_weeks == 12
+    assert context.camp_len == 12
+
+
+def test_plan_input_blocks_scheduled_fight_without_date():
+    # Explicit ``no_scheduled_fight=false`` plus empty ``fight_date`` is the
+    # contract a future frontend would send when the user picked "scheduled
+    # fight" but forgot to fill the date — block via generation_issues.
+    request = PlanRequest(
+        athlete={
+            "full_name": "Ari Mensah",
+            "technical_style": ["boxing"],
+            "tactical_style": ["pressure_fighter"],
+        },
+        fight_date="",
+        no_scheduled_fight=False,
+        training_availability=["Monday", "Wednesday", "Friday"],
+        weekly_training_frequency=3,
+    )
+
+    assert request.no_scheduled_fight is False
+
+    parsed = PlanInput.from_payload(request.to_payload())
+    assert parsed.camp_timeline_type == "scheduled_fight"
+    assert "missing_next_fight_date" in parsed.generation_issues()
+
+
+def test_plan_request_scheduled_fight_with_date_computes_countdown():
+    request = PlanRequest(
+        athlete={
+            "full_name": "Ari Mensah",
+            "technical_style": ["boxing"],
+            "tactical_style": ["pressure_fighter"],
+        },
+        fight_date="2099-04-18",
+        training_availability=["Monday", "Wednesday", "Friday"],
+        weekly_training_frequency=3,
+    )
+
+    assert request.no_scheduled_fight is False
+
+    parsed = PlanInput.from_payload(request.to_payload())
+    assert parsed.camp_timeline_type == "scheduled_fight"
+    assert parsed.next_fight_date == "2099-04-18"
+    assert isinstance(parsed.days_until_fight, int) and parsed.days_until_fight > 0
+    assert isinstance(parsed.weeks_out, int) and parsed.weeks_out >= 1
+    assert "missing_next_fight_date" not in parsed.generation_issues()
+
+
+def test_plan_input_back_compat_payload_without_no_scheduled_fight_flag():
+    # Legacy payloads (PR #1263 shape) lack ``no_scheduled_fight`` entirely and
+    # ship an empty ``fight_date``. They must continue to generate an open
+    # camp without tripping ``missing_next_fight_date``.
+    legacy_payload = {
+        "data": {
+            "fields": [
+                {"label": "Full name", "value": "Ari Mensah"},
+                {"label": "Fighting Style (Technical)", "value": ["boxing"]},
+                {"label": "Training Availability", "value": ["Monday", "Wednesday", "Friday"]},
+                {"label": "Sessions per Week", "value": 3},
+                {"label": "When is your next fight?", "value": ""},
+            ]
+        },
+    }
+
+    parsed = PlanInput.from_payload(legacy_payload)
+    assert parsed.no_scheduled_fight is True
+    assert parsed.camp_timeline_type == "open_camp"
+    assert parsed.next_fight_date == ""
+    assert parsed.days_until_fight is None
+    assert "missing_next_fight_date" not in parsed.generation_issues()
