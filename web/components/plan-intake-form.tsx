@@ -1566,8 +1566,8 @@ export function PlanIntakeForm() {
   const selectedHardSparring = formatJoinedLabels(selectedHardSparringLabels, "No fixed hard sparring days");
   const selectedSupportWorkDays = formatJoinedLabels(selectedSupportWorkLabels, "No non-hard training days selected");
   const remainingHardSparringDays = TRAINING_AVAILABILITY_OPTIONS
-    .map((option) => option.value)
-    .filter((day) => form.training_availability.includes(day) && !form.support_work_days.includes(day));
+    .filter((option) => form.training_availability.includes(option.value) && !form.support_work_days.includes(option.value) && !form.hard_sparring_days.includes(option.value))
+    .map((option) => option.value);
   const remainingSupportWorkDays = TRAINING_AVAILABILITY_OPTIONS
     .map((option) => option.value)
     .filter((day) => form.training_availability.includes(day) && !form.hard_sparring_days.includes(day));
