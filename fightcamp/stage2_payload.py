@@ -15,6 +15,10 @@ from typing import Any
 
 from . import stage2_planning_brief as stage2_planning_brief_module
 from .stage2_finalizer_packet import build_stage2_finalizer_packet
+from .stage2_payload_open_ongoing import (
+    _uses_open_ongoing_payload,
+    build_open_ongoing_payload,
+)
 from . import stage2_role_map as stage2_role_map_module
 from .stage2_payload_late_fight import (  # noqa: F401  (re-exported for tests/back-compat)
     CANONICAL_HARD_SPARRING_BAN_LABEL,
@@ -3222,22 +3226,7 @@ def build_planning_brief(
 ) -> dict:
     athlete_model = dict(athlete_model)
     rewrite_guidance = _append_render_guard_writing_rules(rewrite_guidance, athlete_model=athlete_model, days_until_fight=athlete_model.get("days_until_fight"))
-    athlete_model["compressed_priorities"] = athlete_model.get("compressed_priorities") or _compress_short_camp_priorities(
-        athlete_model
-    )
-    limiter_profile = _build_limiter_profile(athlete_model, restrictions)
-    sport_load_profile = _build_sport_load_profile(athlete_model)
-    weekly_stress_map = _build_weekly_stress_map(
-        athlete_model,
-        phase_briefs,
-        limiter_profile,
-        sport_load_profile,
-    )
-    week_by_week_progression = _build_week_by_week_progression(
-        athlete_model,
-        phase_briefs,
-        weekly_stress_map,
-    )
+    days_until_fight = athlete_model.get(
     days_until_fight = athlete_model.get("days_until_fight")
     priority_source = plan_input if plan_input is not None else athlete_model
     priority_profile = build_priority_profile(priority_source)
@@ -3252,6 +3241,37 @@ def build_planning_brief(
         collision_detail=primary_collision_detail or (getattr(plan_input, "goal_weakness_collision_detail", "") if plan_input is not None else ""),
         collision_tags=getattr(plan_input, "goal_weakness_collision_tags", None) if plan_input is not None else None,
         collision_details=collision_details if isinstance(collision_details, list) else None,
+    )
+
+    if _uses_open_ongoing_payload(athlete_model):
+        open_payload = build_open_ongoing_payload(athlete_model=athlete_model)
+        return {
+            "schema_version": "planning_brief.v1",
+            "generator_mode": "deterministic_open_ongoing_planner_plus_ai_finalizer",
+            "payload_variant": "open_ongoing_stage2_payload",
+            "payload_mode": open_payload.get("payload_mode"),
+            "render_mode": open_payload.get("render_mode"),
+            "athlete_snapshot": athlete_model,
+            "open_plan_spec": open_payload.get("open_plan_spec") or {},
+            "priority_focus": priority_focus,
+            "restrictions": restrictions,
+            "candidate_pools": candidate_pools,
+            "omission_ledger": omission_ledger,
+            "decision_rules": rewrite_guidance,
+        }
+
+    limiter_profile = _build_limiter_profile(athlete_model, restrictions)
+    sport_load_profile = _build_sport_load_profile(athlete_model)
+    weekly_stress_map = _build_weekly_stress_map(
+        athlete_model,
+        phase_briefs,
+        limiter_profile,
+        sport_load_profile,
+    )
+    week_by_week_progression = _build_week_by_week_progression(
+        athlete_model,
+        phase_briefs,
+        weekly_stress_map,
     )
 
     if _uses_late_fight_stage2_payload(days_until_fight):
@@ -3880,6 +3900,25 @@ def build_stage2_payload(
 
     days_until_fight = athlete_model.get("days_until_fight")
 
+    if _uses_open_ongoing_payload(athlete_model):
+        open_payload = build_open_ongoing_payload(athlete_model=athlete_model)
+        return {
+            "schema_version": "stage2_payload.v1",
+            "generator_mode": "restriction_aware_candidate_generator_open_ongoing",
+            "payload_variant": "open_ongoing_stage2_payload",
+            "payload_mode": open_payload.get("payload_mode"),
+            "effective_stage2_mode": open_payload.get("payload_mode"),
+            "render_mode": open_payload.get("render_mode"),
+            "open_plan_spec": open_payload.get("open_plan_spec") or {},
+            "athlete_model": athlete_model,
+            "injury_context": injury_context,
+            "restrictions": serialized_restrictions,
+            "phase_briefs": phase_briefs,
+            "candidate_pools": candidate_pools,
+            "omission_ledger": omission_ledger,
+            "rewrite_guidance": rewrite_guidance,
+        }
+
     if _uses_late_fight_stage2_payload(days_until_fight):
         days_out_payload = _days_out_payload_block(days_until_fight, athlete_model)
         late_fight_plan_spec = _with_late_fight_allowed_exercises(
@@ -4055,6 +4094,40 @@ Cut fluff: one sentence of "why today" per session maximum, no repeated explanat
 """
 
 
+
+
+_OPEN_ONGOING_RENDER_MODE_INSTRUCTIONS = """OPEN ONGOING RENDER MODE
+
+You are rendering an athlete-facing open ongoing training system.
+
+This athlete has no scheduled fight date. Therefore, do not write a fight camp, countdown, taper, or D-day plan.
+
+Render the plan in this exact order:
+
+1. Immediate Coach Summary
+2. Current Training Rules
+3. Weekly Rhythm
+4. Session Cards
+5. 4-Week Development Block
+6. Progression Rules
+7. Priority Hierarchy
+8. Adjustment Rules
+9. Rehab / Red Flags
+10. 4-Week Reassessment Gate
+
+Rules:
+- Use concise coach-facing language.
+- Keep the structure easy to scan.
+- Use one consistent session-card format.
+- Keep coach-owned boxing sessions separate from app S&C.
+- Use a renewable 4-week block: Week 1 baseline, Week 2 small progression, Week 3 highest controlled week, Week 4 deload/reassess.
+- Do not mention GPP, SPP, TAPER, D-day, countdown, fight week, fight-day protocol, or final-week sparring cap.
+- Do not invent exercises outside the selected/session-approved data.
+- Do not expose internal candidate pools, scoring logic, tags, or unused options.
+- If restrictions/red flags exist, render them once in the safety section and reference them briefly in session cards only when needed.
+- If symptoms, fatigue, or weight-cut pressure rise, remove optional conditioning before trimming key anchors.
+"""
+
 def _json_block(value: dict | list) -> str:
     return "```json\n" + json.dumps(value, separators=(",", ":"), ensure_ascii=False) + "\n```"
 
@@ -4209,6 +4282,8 @@ def build_stage2_handoff_text(
 
     if mode_instructions:
         sections.append("PAYLOAD MODE INSTRUCTIONS\n" + mode_instructions)
+    if render_mode == "open_ongoing_system":
+        sections.append(_OPEN_ONGOING_RENDER_MODE_INSTRUCTIONS.strip())
     if priority_lines:
         sections.append("PRIORITY FOCUS GUIDANCE\n" + "\n".join(priority_lines))
 
