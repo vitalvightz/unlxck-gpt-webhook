@@ -2047,7 +2047,11 @@
     {
       "name": "Strobe Light Sparring",
       "category": "reaction",
-      "phases": [],
+      "phases": [
+        "GPP",
+        "SPP",
+        "TAPER"
+      ],
       "movement": "visual_processing",
       "type": "bilateral",
       "tags": [
@@ -2066,7 +2070,13 @@
       "mechanical_risk_tags": [
         "mech_ballistic",
         "mech_trunk_stability"
-      ]
+      ],
+      "late_windows": [
+        "d13_to_d8"
+      ],
+      "work_sec": 20,
+      "rounds": 2,
+      "rpe": 4
     },
     {
       "name": "Uneven Surface Check-Hooks",
@@ -4533,7 +4543,10 @@
     {
       "name": "Blindfolded Grapevine Entry",
       "category": "footwork",
-      "phases": [],
+      "phases": [
+        "GPP",
+        "SPP"
+      ],
       "movement": "tactile_proprioception",
       "type": "cross-lateral",
       "tags": [
@@ -4649,7 +4662,10 @@
     {
       "name": "Inverted Strike Recovery",
       "category": "striking",
-      "phases": [],
+      "phases": [
+        "GPP",
+        "SPP"
+      ],
       "movement": "inverted_proprioception",
       "type": "unilateral",
       "tags": [
@@ -4789,7 +4805,10 @@
     {
       "name": "Dynamic Rope Transition",
       "category": "footwork",
-      "phases": [],
+      "phases": [
+        "GPP",
+        "SPP"
+      ],
       "movement": "grip_proprioception",
       "type": "upper_lower_disassociation",
       "tags": [
@@ -4845,7 +4864,11 @@
     {
       "name": "Haptic Cage Cutting",
       "category": "footwork",
-      "phases": [],
+      "phases": [
+        "GPP",
+        "SPP",
+        "TAPER"
+      ],
       "movement": "tactile_navigation",
       "type": "angular",
       "tags": [
@@ -4864,7 +4887,13 @@
       "mechanical_risk_tags": [
         "mech_lower_lunge",
         "mech_trunk_stability"
-      ]
+      ],
+      "late_windows": [
+        "d13_to_d8"
+      ],
+      "work_sec": 15,
+      "rounds": 2,
+      "rpe": 4
     },
     {
       "name": "Vestibular Shot Reset",
@@ -5069,7 +5098,10 @@
     {
       "name": "Sliding Roundhouse Combo",
       "category": "footwork",
-      "phases": [],
+      "phases": [
+        "GPP",
+        "SPP"
+      ],
       "movement": "glide_coordination",
       "type": "lateral",
       "tags": [
@@ -5157,7 +5189,10 @@
     {
       "name": "Wobble Board Switch Kick",
       "category": "striking",
-      "phases": [],
+      "phases": [
+        "GPP",
+        "SPP"
+      ],
       "movement": "perturbation_training",
       "type": "rotational",
       "tags": [
@@ -5266,7 +5301,10 @@
     {
       "name": "Ball-Catch Roundhouse",
       "category": "reaction",
-      "phases": [],
+      "phases": [
+        "GPP",
+        "SPP"
+      ],
       "movement": "object_tracking",
       "type": "rotational",
       "tags": [
@@ -5346,7 +5384,10 @@
     {
       "name": "360° Spin-Kick Balance",
       "category": "striking",
-      "phases": [],
+      "phases": [
+        "GPP",
+        "SPP"
+      ],
       "movement": "vestibular_integration",
       "type": "rotational",
       "tags": [
@@ -5369,7 +5410,10 @@
     {
       "name": "Blindfolded Shoulder Roll Entry",
       "category": "defense",
-      "phases": [],
+      "phases": [
+        "GPP",
+        "SPP"
+      ],
       "movement": "tactile_proprioception",
       "type": "rotational",
       "tags": [
@@ -5544,7 +5588,11 @@
     {
       "name": "Unstable Philly Shell",
       "category": "defense",
-      "phases": [],
+      "phases": [
+        "GPP",
+        "SPP",
+        "TAPER"
+      ],
       "movement": "vestibular_adaptation",
       "type": "isometric",
       "tags": [
@@ -5561,7 +5609,14 @@
       "mechanical_risk_tags": [
         "mech_lower_hip_hinge",
         "mech_trunk_stability"
-      ]
+      ],
+      "late_windows": [
+        "d13_to_d8",
+        "d7"
+      ],
+      "work_sec": 15,
+      "rounds": 2,
+      "rpe": 4
     },
     {
       "name": "Pendulum Cross-Counter",
@@ -5677,7 +5732,11 @@
     {
       "name": "Chaos Corner Drill",
       "category": "pressure",
-      "phases": [],
+      "phases": [
+        "GPP",
+        "SPP",
+        "TAPER"
+      ],
       "movement": "peripheral_awareness",
       "type": "multidirectional",
       "tags": [
