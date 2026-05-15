@@ -182,7 +182,7 @@ def generate_plan_sync(
         progress_callback,
         "intake_parsed",
         "Intake parsed",
-        "Athlete profile, fight date, and restrictions loaded.",
+        "Athlete profile, camp timeline, and restrictions loaded.",
         weeks_out=plan_input.weeks_out,
         days_until_fight=plan_input.days_until_fight,
     )
