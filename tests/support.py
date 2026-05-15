@@ -94,7 +94,7 @@ class FakeStore:
         intake = {
             "id": f"intake_{uuid4().hex[:10]}",
             "athlete_id": athlete_id,
-            "fight_date": request.fight_date,
+            "fight_date": request.fight_date or None,
             "technical_style": request.athlete.technical_style,
             "intake": request.model_dump(mode="json"),
             "created_at": _now(),
@@ -128,7 +128,7 @@ class FakeStore:
             "id": plan_id,
             "athlete_id": athlete_id,
             "intake_id": intake_id,
-            "fight_date": request.fight_date,
+            "fight_date": request.fight_date or None,
             "technical_style": request.athlete.technical_style,
             "plan_name": "",
             "status": result.get("status", "generated"),
