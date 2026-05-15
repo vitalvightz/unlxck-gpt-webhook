@@ -12,7 +12,7 @@ from .conditioning import (
     get_style_conditioning_bank,
     prime_conditioning_banks,
 )
-from .input_parsing import PlanInput, is_short_notice_days
+from .input_parsing import DEFAULT_OPEN_CAMP_WEEKS, PlanInput, is_short_notice_days
 from .mindset_module import classify_mental_block
 from .rehab_protocols import prime_rehab_bank
 from .strength import (
@@ -94,7 +94,7 @@ def prime_plan_banks(*, logger: logging.Logger | None = None) -> None:
     """Prime all plan banks, loading JSON data into memory the first time.
 
     On the first call (cold path) all three bank modules are primed and a
-    module-level flag is set.  Subsequent calls (warm path) short-circuit
+    module-level flag is set. Subsequent calls (warm path) short-circuit
     immediately, logging a lightweight debug message rather than re-entering
     each bank's load function.
 
@@ -272,11 +272,12 @@ def build_runtime_context(
     mental_block_class = _filter_mindset_blocks(mental_block_class, tech_styles, tactical_styles)
 
     if plan_input.camp_timeline_type == "open_camp":
-        camp_len = plan_input.open_camp_weeks or 12
+        camp_len = plan_input.open_camp_weeks
     elif isinstance(plan_input.weeks_out, int):
         camp_len = plan_input.weeks_out
     else:
-        camp_len = 12
+        camp_len = DEFAULT_OPEN_CAMP_WEEKS
+
     phase_weeks = calculate_phase_weeks(
         camp_len,
         mapped_format,
