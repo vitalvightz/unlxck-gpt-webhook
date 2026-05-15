@@ -15,7 +15,6 @@ Covers:
 
 from __future__ import annotations
 
-import pytest
 
 from fightcamp.stage2_payload_late_fight import (
     _build_late_fight_session_sequence,

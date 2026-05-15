@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import copy
 import os
-import threading
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from uuid import uuid4
@@ -10,7 +9,6 @@ from uuid import uuid4
 from fastapi import HTTPException, status
 from fastapi.testclient import TestClient
 
-import api.app as app_module
 from api.app import create_app
 from api.auth import AuthenticatedUser
 from api.models import PlanRequest, ProfileUpdateRequest

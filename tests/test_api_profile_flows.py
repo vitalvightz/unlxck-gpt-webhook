@@ -2,9 +2,8 @@ from __future__ import annotations
 
 from datetime import date, timedelta
 
-from api.auth import AuthenticatedUser
 from api.models import ProfileUpdateRequest
-from support import FakeStore, _build_client, _build_request
+from support import _build_client, _build_request
 
 
 def test_admin_athlete_profile_includes_latest_intake_details():

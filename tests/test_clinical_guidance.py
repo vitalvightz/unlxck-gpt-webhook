@@ -11,7 +11,7 @@ from fightcamp.rehab_protocols import (
     generate_rehab_protocols,
     REHAB_FUNCTION_BUCKETS,
 )
-from fightcamp.stage2_payload import _build_rehab_slots, STAGE2_FINALIZER_PROMPT
+from fightcamp.stage2_payload import STAGE2_FINALIZER_PROMPT
 from fightcamp.main import exercise_bank
 
 

@@ -154,12 +154,12 @@ def _field_matches_label(field_label: str, target_label: str) -> bool:
 
 def _find_field(label: str, fields: list[dict]) -> dict | None:
     exact_target = label.strip()
-    for field in fields:
-        if str(field.get("label", "")).strip() == exact_target:
-            return field
-    for field in fields:
-        if _field_matches_label(field.get("label", ""), label):
-            return field
+    for entry in fields:
+        if str(entry.get("label", "")).strip() == exact_target:
+            return entry
+    for entry in fields:
+        if _field_matches_label(entry.get("label", ""), label):
+            return entry
     return None
 
 

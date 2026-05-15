@@ -227,24 +227,18 @@ _GAS_TANK_MACHINE_EQUIPMENT = {
     "concept2",
 }
 
-from .conditioning_boxing import (
+from .conditioning_boxing import (  # noqa: E402
     BOXING_NAME_MAP,
-    PLAIN_CONDITIONING_NAME_MAP,
-    SPORT_LANGUAGE_BLACKLIST,
     _alactic_maintenance_fallback,
-    _boxing_aerobic_context_flags,
     _boxing_aerobic_preference_rank,
     _boxing_aerobic_priority_adjustment,
-    _is_continuous_swim_drill,
     _is_pool_treading_drill,
-    _is_shadowbox_aerobic_drill,
-    _is_sled_drag_aerobic_drill,
     _normalize_conditioning_name,
     _sanitize_sport_language,
     _suppress_alactic_maintenance,
     _violates_sport_language_blacklist,
 )
-from .normalization import clean_list, normalize_fight_format as _normalize_fight_format
+from .normalization import clean_list, normalize_fight_format as _normalize_fight_format  # noqa: E402
 
 _TIME_TOKEN = re.compile(
     r"(\d+(?:\.\d+)?)\s*(?:-|-)?\s*(\d+(?:\.\d+)?)?\s*"

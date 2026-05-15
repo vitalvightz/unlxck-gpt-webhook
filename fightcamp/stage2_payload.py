@@ -16,7 +16,7 @@ from typing import Any
 from . import stage2_planning_brief as stage2_planning_brief_module
 from .stage2_finalizer_packet import build_stage2_finalizer_packet
 from . import stage2_role_map as stage2_role_map_module
-from .stage2_payload_late_fight import (
+from .stage2_payload_late_fight import (  # noqa: F401  (re-exported for tests/back-compat)
     CANONICAL_HARD_SPARRING_BAN_LABEL,
     CANONICAL_HARD_SPARRING_LABEL,
     CANONICAL_HARD_SPARRING_NOTE,
@@ -38,8 +38,7 @@ from .fight_date_utils import build_calendar_days
 from .conditioning import athlete_facing_system_label
 from .fight_day_override import apply_fight_day_override_to_weekly_role_map
 from .late_selector_windows import classify_late_selector_window
-from .normalization import clean_list, normalize_fatigue_level, normalize_text, phrase_in_text, slugify, dedupe_preserve_order
-from .restriction_parsing import CANONICAL_RESTRICTIONS
+from .normalization import clean_list, normalize_fatigue_level, normalize_text, slugify, dedupe_preserve_order
 from .rehab_protocols import _rehab_drills_for_phase, classify_drill_function, _FUNCTION_LABELS
 from .priority_profile import build_priority_profile, describe_priority_focus
 from .selection_metadata import build_score_evidence, normalize_selection_metadata
@@ -59,9 +58,11 @@ from .sparring_dose_planner import (
 )
 from .strength_session_quality import classify_strength_item, infer_strength_sessions
 from .training_context import TrainingContext, allocate_sessions
-from .weight_cut import compute_cut_severity_score, cut_severity_bucket
 
-# Re-export from sub-modules for backward compatibility
+# Re-export from sub-modules for backward compatibility. Names that are also
+# defined locally further down this file are intentionally omitted here because
+# the local definitions are the canonical ones — they shadow the imports at
+# execution time, so listing them under "re-export" only triggers F811 noise.
 from .stage2_planning_brief import (  # noqa: F401
     CONDITIONING_ROLE_PURPOSES,
     PHASE_CONDITIONING_PRIORITY,
@@ -79,68 +80,40 @@ from .stage2_planning_brief import (  # noqa: F401
     _UNKNOWN_COMPETITIVE_MATURITY,
     _build_athlete_model,
     _build_limiter_profile,
-    _build_phase_briefs,
-    _build_phase_selection_guardrails,
     _build_sport_load_profile,
     _build_weekly_stress_map,
-    _compress_short_camp_priorities,
     _conditioning_slot_priority,
-    dedupe_preserve_order,
-    _derive_athlete_archetype,
     _derive_competitive_maturity,
-    _derive_main_limiter,
-    _derive_main_risks,
     _derive_readiness_flags,
     _downgrade_priority,
     _extract_mechanical_risk_tags,
     _extract_restriction_tags,
     _is_high_pressure_weight_cut,
-    _join_rule_parts,
     _normalize_limiter_tokens,
     _parse_record,
-    _primary_limiter_key,
-    _primary_sport_load_key,
     _priority_bucket,
     _priority_bucket_labels,
     _priority_value,
-    _resolve_phase_rule_state,
     _serialize_restrictions,
     _strength_slot_priority,
 )
 from .stage2_role_map import (  # noqa: F401
-    _active_injury_is_moderate_plus,
-    _active_weight_cut_is_meaningful,
     _append_day_hint,
     _athlete_sport_key,
-    _apply_high_fatigue_week_compression,
-    _apply_legacy_high_fatigue_compression,
     _apply_short_camp_role_compression,
-    _assign_declared_day_hints,
-    _build_spar_allocation_reason_codes,
-    _build_week_by_week_progression,
-    _build_weekly_role_map,
     _compression_floor_value,
     _compression_summary,
     _compute_intentionally_unused_days,
-    _compute_readiness_compression,
     _final_week_sparring_cap_summary,
     _hard_sparring_coach_note_flags,
     _hard_sparring_role,
-    _high_fatigue_compression_reason_codes,
-    _intentional_compression_stub,
-    _lock_declared_hard_sparring_roles,
     _make_compression_suppression,
     _make_hard_sparring_lock_suppression,
     _next_training_days_after_effective_hard_spar,
-    _non_spar_role_priority_rank,
     _phase_progression_slot_count,
     _placement_rule_for_anchor,
-    _preferred_boxer_conditioning_sequence,
     _replaceable_role_priority,
     _resequence_session_roles,
-    _role_anchor,
-    _role_governance,
-    _role_selection_rule,
     _short_camp_priority_catalog,
     _strength_role_key,
     _conditioning_role_key,

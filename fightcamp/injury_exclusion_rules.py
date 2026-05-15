@@ -806,7 +806,7 @@ INJURY_REGION_KEYWORDS = {
     "toe": ["toe"],
 }
 
-from .injury_location_registry import LOCATION_REGISTRY
+from .injury_location_registry import LOCATION_REGISTRY  # noqa: E402
 
 
 def get_exclusion_regions(location: str) -> list[str]:

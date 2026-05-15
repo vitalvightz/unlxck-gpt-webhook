@@ -9,9 +9,9 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from fightcamp.conditioning import generate_conditioning_block
-from fightcamp.late_selector_windows import LATE_SELECTOR_AUDIT_WINDOWS
-from fightcamp.strength import generate_strength_block
+from fightcamp.conditioning import generate_conditioning_block  # noqa: E402
+from fightcamp.late_selector_windows import LATE_SELECTOR_AUDIT_WINDOWS  # noqa: E402
+from fightcamp.strength import generate_strength_block  # noqa: E402
 
 
 WINDOW_DAY_MAP = {

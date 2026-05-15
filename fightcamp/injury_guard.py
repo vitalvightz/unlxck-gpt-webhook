@@ -19,7 +19,10 @@ from .injury_synonyms import parse_injury_phrase, split_injury_text
 from .tagging import normalize_tags
 # Import injury rules version for cache invalidation
 from .config import INJURY_RULES_VERSION
-from .injury_registry import INJURY_TYPE_SEVERITY, SURFACE_TISSUE_TYPES
+from .injury_registry import (  # noqa: F401  (INJURY_TYPE_SEVERITY re-exported for back-compat)
+    INJURY_TYPE_SEVERITY,
+    SURFACE_TISSUE_TYPES,
+)
 
 logger = logging.getLogger(__name__)
 

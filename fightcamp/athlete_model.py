@@ -13,7 +13,6 @@ silently flip the athlete into an injured state.
 from __future__ import annotations
 
 import re
-from typing import Any
 
 from .normalization import clean_list
 from .stage2_render_guards import _has_active_injury_from_training_context
