@@ -3226,9 +3226,7 @@ def build_planning_brief(
 ) -> dict:
     athlete_model = dict(athlete_model)
     rewrite_guidance = _append_render_guard_writing_rules(rewrite_guidance, athlete_model=athlete_model, days_until_fight=athlete_model.get("days_until_fight"))
-    athlete_model["compressed_priorities"] = athlete_model.get("compressed_priorities") or _compress_short_camp_priorities(
-        athlete_model
-    )
+    days_until_fight = athlete_model.get(
     days_until_fight = athlete_model.get("days_until_fight")
     priority_source = plan_input if plan_input is not None else athlete_model
     priority_profile = build_priority_profile(priority_source)
