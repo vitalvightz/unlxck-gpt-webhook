@@ -989,13 +989,12 @@ function handleTypeSelect(opt: InjuryTypeOption | null) {
     setFamilyExpanded(false);
     setSubtypeExpanded(true);
     const currentFamily = getFamilyForInjury(injury);
-    const fallbackType: InjuryTypeOption = { label: "Not sure", value: "unspecified" };
-    if (currentFamily && currentFamily !== family) {
-      handleTypeSelect(fallbackType);
+    if (family === "not_sure") {
+      handleTypeSelect({ label: "Not sure", value: "unspecified" });
       return;
     }
-    if (!currentFamily) {
-      handleTypeSelect(fallbackType);
+    if (currentFamily && currentFamily !== family) {
+      handleTypeSelect(null);
     }
   }
 
