@@ -2088,7 +2088,7 @@ export function PlanIntakeForm() {
                       disabled={noScheduledFight}
                       onChange={(event) => updateField("fight_date", event.target.value)}
                     />
-                    <label className={`inline-warning-ack ${noScheduledFight ? "inline-warning-ack-checked" : ""}`.trim()}>
+                    <label className={`inline-warning-ack inline-warning-ack-subtle ${noScheduledFight ? "inline-warning-ack-checked" : ""}`.trim()}>
                       <input
                         type="checkbox"
                         checked={noScheduledFight}
