@@ -514,23 +514,23 @@ def test_plan_request_open_camp_flag_marks_plan_input_as_open_camp():
 
     assert request.no_scheduled_fight is True
     assert request.fight_date == ""
-    assert request.open_camp_weeks == 8
+    assert request.open_camp_weeks == 12
 
     payload = request.to_payload()
     assert payload["no_scheduled_fight"] is True
     assert payload["camp_timeline_type"] == "open_camp"
-    assert payload["open_camp_weeks"] == 8
+    assert payload["open_camp_weeks"] == 12
 
     parsed = PlanInput.from_payload(payload)
     assert parsed.no_scheduled_fight is True
     assert parsed.camp_timeline_type == "open_camp"
     assert parsed.next_fight_date == ""
     assert parsed.days_until_fight is None
-    assert parsed.open_camp_weeks == 8
+    assert parsed.open_camp_weeks == 12
     assert "missing_next_fight_date" not in parsed.generation_issues()
 
 
-def test_plan_request_open_camp_runtime_context_uses_camp_len_eight():
+def test_plan_request_open_camp_runtime_context_uses_camp_len_twelve():
     request = PlanRequest(
         athlete={
             "full_name": "Ari Mensah",
@@ -550,9 +550,9 @@ def test_plan_request_open_camp_runtime_context_uses_camp_len_eight():
         logger=logging.getLogger(__name__),
     )
 
-    assert context.camp_len == 8
+    assert context.camp_len == 12
     phase_total = sum(int(context.phase_weeks.get(p, 0)) for p in ("GPP", "SPP", "TAPER"))
-    assert phase_total == 8
+    assert phase_total == 12
 
 
 def test_plan_request_open_camp_honours_custom_open_camp_weeks():
@@ -741,7 +741,7 @@ def test_plan_input_open_camp_weeks_empty_string_falls_back_to_default():
     }
 
     parsed = PlanInput.from_payload(payload)
-    assert parsed.open_camp_weeks == 8
+    assert parsed.open_camp_weeks == 12
 
 
 def test_plan_input_open_camp_weeks_invalid_string_raises_like_plan_request():

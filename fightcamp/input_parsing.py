@@ -660,7 +660,7 @@ def _fight_local_date(
 
 
 CampTimelineType = Literal["scheduled_fight", "open_camp"]
-DEFAULT_OPEN_CAMP_WEEKS = 8
+DEFAULT_OPEN_CAMP_WEEKS = 12
 
 # Keep these tables in sync with ``api.models.PlanRequest.coerce_no_scheduled_fight``
 # so a payload coerced once by PlanRequest still coerces the same way when it

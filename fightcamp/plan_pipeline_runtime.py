@@ -272,11 +272,11 @@ def build_runtime_context(
     mental_block_class = _filter_mindset_blocks(mental_block_class, tech_styles, tactical_styles)
 
     if plan_input.camp_timeline_type == "open_camp":
-        camp_len = plan_input.open_camp_weeks or 8
+        camp_len = plan_input.open_camp_weeks or 12
     elif isinstance(plan_input.weeks_out, int):
         camp_len = plan_input.weeks_out
     else:
-        camp_len = 8
+        camp_len = 12
     phase_weeks = calculate_phase_weeks(
         camp_len,
         mapped_format,
