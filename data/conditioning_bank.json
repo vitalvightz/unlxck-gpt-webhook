@@ -6038,7 +6038,11 @@
     "equipment": [
       "bands"
     ],
-    "phases": [],
+    "phases": [
+      "GPP",
+      "SPP",
+      "TAPER"
+    ],
     "system": "ATP-PCr",
     "duration": "4x3/side, 1min rest",
     "tags": [
