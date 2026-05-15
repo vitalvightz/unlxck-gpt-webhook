@@ -289,7 +289,6 @@ def test_generate_plan_rejects_missing_generation_requirements():
     assert result["ok"] is False
     assert set(result["missing_fields"]) == {
         "missing_fighting_style_technical",
-        "missing_next_fight_date",
         "missing_training_availability",
         "invalid_training_frequency",
     }

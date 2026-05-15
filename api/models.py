@@ -508,7 +508,7 @@ class NutritionWorkspaceUpdateRequest(BaseModel):
 
 class PlanRequest(BaseModel):
     athlete: AthleteProfileInput
-    fight_date: str
+    fight_date: str = ""
     rounds_format: str = ""
     weekly_training_frequency: int | None = None
     fatigue_level: str = ""

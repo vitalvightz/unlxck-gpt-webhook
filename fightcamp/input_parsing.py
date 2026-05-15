@@ -873,11 +873,12 @@ class PlanInput:
         return _normalize_list(self.fighting_style_tactical)
 
     def generation_issues(self) -> list[str]:
+        # next_fight_date is intentionally optional: athletes between fights
+        # plan open-ended camps. Downstream phase/days-out logic falls back to
+        # a default GPP camp length when the date is empty.
         issues: list[str] = []
         if not self.fighting_style_technical.strip():
             issues.append("missing_fighting_style_technical")
-        if not self.next_fight_date.strip():
-            issues.append("missing_next_fight_date")
         if not self.training_days:
             issues.append("missing_training_availability")
         if self.training_frequency < 1:
