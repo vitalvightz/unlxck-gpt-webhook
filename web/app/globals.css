@@ -2168,6 +2168,12 @@ select:focus-visible {
   color: var(--text-primary);
 }
 
+.inline-warning-ack-subtle .inline-warning-ack-copy {
+  font-size: 0.8rem;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+}
+
 .inline-warning-ack-compact {
   padding: 10px 12px;
   border-radius: 12px;
