@@ -154,12 +154,12 @@ def _field_matches_label(field_label: str, target_label: str) -> bool:
 
 def _find_field(label: str, fields: list[dict]) -> dict | None:
     exact_target = label.strip()
-    for field in fields:
-        if str(field.get("label", "")).strip() == exact_target:
-            return field
-    for field in fields:
-        if _field_matches_label(field.get("label", ""), label):
-            return field
+    for entry in fields:
+        if str(entry.get("label", "")).strip() == exact_target:
+            return entry
+    for entry in fields:
+        if _field_matches_label(entry.get("label", ""), label):
+            return entry
     return None
 
 
@@ -873,11 +873,12 @@ class PlanInput:
         return _normalize_list(self.fighting_style_tactical)
 
     def generation_issues(self) -> list[str]:
+        # next_fight_date is intentionally optional: athletes between fights
+        # plan open-ended camps. Downstream phase/days-out logic falls back to
+        # a default GPP camp length when the date is empty.
         issues: list[str] = []
         if not self.fighting_style_technical.strip():
             issues.append("missing_fighting_style_technical")
-        if not self.next_fight_date.strip():
-            issues.append("missing_next_fight_date")
         if not self.training_days:
             issues.append("missing_training_availability")
         if self.training_frequency < 1:

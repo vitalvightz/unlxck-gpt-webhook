@@ -455,3 +455,43 @@ def test_record_format_validation_rejects_partial_format():
             assert "x-x or x-x-x" in str(exc)
         else:
             raise AssertionError(f"record '{bad}' should be rejected")
+
+
+def test_plan_request_accepts_empty_fight_date_for_open_camp():
+    request = PlanRequest(
+        athlete={
+            "full_name": "Ari Mensah",
+            "technical_style": ["boxing"],
+            "tactical_style": ["pressure_fighter"],
+        },
+        training_availability=["Monday", "Wednesday", "Friday"],
+        weekly_training_frequency=3,
+    )
+
+    assert request.fight_date == ""
+
+    parsed = PlanInput.from_payload(request.to_payload())
+
+    # PlanInput must accept the empty date and downgrade camp-timeline fields.
+    assert parsed.next_fight_date == ""
+    assert parsed.days_until_fight is None
+    assert parsed.weeks_out == "N/A"
+
+    # The empty next_fight_date is no longer a generation blocker for open camps.
+    assert "missing_next_fight_date" not in parsed.generation_issues()
+
+
+def test_calculate_phase_weeks_falls_back_to_camp_length_when_fight_date_unknown():
+    from fightcamp.camp_phases import GPP, SPP, TAPER, calculate_phase_weeks
+
+    weeks = calculate_phase_weeks(
+        camp_length=8,
+        sport="boxing",
+        days_until_fight=None,
+    )
+
+    # With no fight date, the function must fall back to camp_length * 7 days
+    # and still produce a non-empty phase distribution summing to camp_length.
+    phase_total = weeks[GPP] + weeks[SPP] + weeks[TAPER]
+    assert phase_total == 8
+    assert all(weeks[phase] >= 0 for phase in (GPP, SPP, TAPER))

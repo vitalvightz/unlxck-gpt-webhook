@@ -7,13 +7,10 @@ backward compatibility.
 from __future__ import annotations
 
 import re
-from typing import Any
 
-from .input_parsing import _athlete_calendar_now, _utc_now
-from .normalization import clean_list, normalize_text, phrase_in_text, slugify, dedupe_preserve_order
-from .restriction_parsing import CANONICAL_RESTRICTIONS
+from .input_parsing import _athlete_calendar_now, _utc_now  # noqa: F401  (re-exported so callers can monkeypatch via this module)
+from .normalization import clean_list, dedupe_preserve_order
 from .training_context import TrainingContext, allocate_sessions
-from .weight_cut import compute_cut_severity_score, cut_severity_bucket
 from .athlete_model import (  # noqa: F401  (re-exported for backwards compatibility)
     _RECORD_PATTERN,
     _UNKNOWN_COMPETITIVE_MATURITY,

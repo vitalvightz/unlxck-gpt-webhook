@@ -223,6 +223,7 @@ type DraftMetadata = {
   current_step?: number;
   guided_injury?: Partial<GuidedInjuryState> | null;
   guided_injuries?: Array<Partial<GuidedInjuryState> | null> | null;
+  no_scheduled_fight?: boolean | null;
 };
 
 type StepValidationStatus = "done" | "pending" | "warning";
@@ -721,11 +722,12 @@ function getReviewStepBlockingIssue(
   nextForm: PlanRequest,
   options: {
     hardSparringWarningLocked: boolean;
+    noScheduledFight: boolean;
   },
 ): { message: string; step: number } | null {
   if (!isValidRecordFormat(nextForm.athlete.record ?? "")) return { message: "Record must use x-x or x-x-x format, like 5-1 or 12-2-1.", step: 0 };
   if (!nextForm.athlete.technical_style.length) return { message: "Select a technical style before continuing to review.", step: 0 };
-  if (!nextForm.fight_date) return { message: "Choose your fight date before continuing to review.", step: 1 };
+  if (!nextForm.fight_date && !options.noScheduledFight) return { message: "Choose your fight date or mark \"No scheduled fight\" before continuing to review.", step: 1 };
   if (!nextForm.training_availability.length) return { message: "Pick at least one training availability option before continuing to review.", step: 2 };
   if (!nextForm.weekly_training_frequency || nextForm.weekly_training_frequency < 1) return { message: "Planned sessions per week must be at least 1.", step: 1 };
   if (nextForm.weekly_training_frequency > 6) return { message: "Planned sessions per week cannot exceed 6.", step: 1 };
@@ -777,6 +779,8 @@ export function PlanIntakeForm() {
   const [noRestrictions, setNoRestrictions] = useState(true);
   const [showClearInjuriesConfirm, setShowClearInjuriesConfirm] = useState(false);
   const [bodyMapSide, setBodyMapSide] = useState<BodyMapSide>("front");
+  const [noScheduledFight, setNoScheduledFight] = useState(false);
+  const [pendingInjuryRemovalIndex, setPendingInjuryRemovalIndex] = useState<number | null>(null);
   const [hydrated, setHydrated] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -817,6 +821,7 @@ export function PlanIntakeForm() {
     setGuidedInjuries(nextGuidedInjuries);
     setActiveGuidedInjuryIndex(nextGuidedInjuries.length ? 0 : null);
     setNoRestrictions(!hasStoredRestrictions);
+    setNoScheduledFight(Boolean(draft?.no_scheduled_fight));
     const savedStep = Number(draft?.current_step ?? 0);
     setCurrentStep(Number.isFinite(savedStep) ? Math.min(Math.max(savedStep, 0), steps.length - 1) : 0);
     setHydrated(true);
@@ -1071,7 +1076,13 @@ export function PlanIntakeForm() {
   function handleBodyMapZoneSelect(label: string) {
     const existingIndex = guidedInjuries.findIndex((injury) => injury.area.toLowerCase() === label.toLowerCase());
     if (existingIndex >= 0) {
-      setActiveGuidedInjuryIndex(existingIndex);
+      const existing = guidedInjuries[existingIndex];
+      if (hasGuidedInjuryContent({ ...existing, area: "" })) {
+        // Has filled-in detail beyond just the area — confirm before removing.
+        setPendingInjuryRemovalIndex(existingIndex);
+        return;
+      }
+      handleRemoveGuidedInjury(existingIndex);
       return;
     }
 
@@ -1085,6 +1096,18 @@ export function PlanIntakeForm() {
     const nextGuidedInjuries = [...guidedInjuries, { ...EMPTY_GUIDED_INJURY, area: label }];
     syncGuidedInjuryFields(nextGuidedInjuries, false);
     setActiveGuidedInjuryIndex(nextGuidedInjuries.length - 1);
+  }
+
+  function handleConfirmRemovePendingInjury() {
+    if (pendingInjuryRemovalIndex === null) {
+      return;
+    }
+    handleRemoveGuidedInjury(pendingInjuryRemovalIndex);
+    setPendingInjuryRemovalIndex(null);
+  }
+
+  function handleCancelRemovePendingInjury() {
+    setPendingInjuryRemovalIndex(null);
   }
 
   function handleRemoveGuidedInjury(index: number) {
@@ -1138,9 +1161,23 @@ export function PlanIntakeForm() {
         return current;
       }
 
+      const nextValues = toggleListValue(currentValues, value);
+
+      // When a training-availability day is unchecked, also strip it from the
+      // hard sparring / non-hard pickers so stale picks don't trigger the
+      // sparring-consistency hard error.
+      if (key === "training_availability" && alreadySelected) {
+        return {
+          ...current,
+          training_availability: nextValues,
+          hard_sparring_days: current.hard_sparring_days.filter((day) => day !== value),
+          support_work_days: current.support_work_days.filter((day) => day !== value),
+        };
+      }
+
       return {
         ...current,
-        [key]: toggleListValue(currentValues, value),
+        [key]: nextValues,
       };
     });
   }
@@ -1271,8 +1308,8 @@ export function PlanIntakeForm() {
       setError("Select a technical style before generating your plan.");
       return false;
     }
-    if (!nextForm.fight_date) {
-      setError("Choose your fight date before generating your plan.");
+    if (!nextForm.fight_date && !noScheduledFight) {
+      setError("Choose your fight date or mark \"No scheduled fight\" before generating your plan.");
       return false;
     }
     if (!nextForm.training_availability.length) {
@@ -1329,6 +1366,7 @@ export function PlanIntakeForm() {
         athlete_timezone: nextForm.athlete.athlete_timezone,
         onboarding_draft: {
           ...mergePlanRequestDraft(me?.profile.onboarding_draft as Record<string, unknown> | null | undefined, nextForm, step),
+          no_scheduled_fight: noScheduledFight,
         },
       });
       replaceMe(updatedMe);
@@ -1397,6 +1435,7 @@ export function PlanIntakeForm() {
     if (targetStep === steps.length - 1 && targetStep > currentStep) {
       const reviewIssue = getReviewStepBlockingIssue(getNextForm(), {
         hardSparringWarningLocked,
+        noScheduledFight,
       });
       if (reviewIssue) {
         setError(reviewIssue.message);
@@ -1654,8 +1693,12 @@ export function PlanIntakeForm() {
       status: form.athlete.technical_style.length ? "done" : "pending",
     },
     {
-      label: form.fight_date ? "Fight date is set." : "Fight date must be set before generation.",
-      status: form.fight_date ? "done" : "pending",
+      label: form.fight_date
+        ? "Fight date is set."
+        : noScheduledFight
+          ? "No scheduled fight (open camp)."
+          : "Fight date must be set before generation.",
+      status: form.fight_date || noScheduledFight ? "done" : "pending",
     },
     {
       label: form.training_availability.length
@@ -2030,7 +2073,28 @@ export function PlanIntakeForm() {
                 <div className="form-grid onboarding-fight-grid">
                   <div className="field">
                     <label htmlFor="fightDate">Fight date</label>
-                    <input id="fightDate" type="date" min={getTodayIsoDate()} value={form.fight_date} onChange={(event) => updateField("fight_date", event.target.value)} />
+                    <input
+                      id="fightDate"
+                      type="date"
+                      min={getTodayIsoDate()}
+                      value={form.fight_date}
+                      disabled={noScheduledFight}
+                      onChange={(event) => updateField("fight_date", event.target.value)}
+                    />
+                    <label className={`inline-warning-ack inline-warning-ack-compact ${noScheduledFight ? "inline-warning-ack-checked" : ""}`.trim()}>
+                      <input
+                        type="checkbox"
+                        checked={noScheduledFight}
+                        onChange={(event) => {
+                          const checked = event.target.checked;
+                          setNoScheduledFight(checked);
+                          if (checked) {
+                            updateField("fight_date", "");
+                          }
+                        }}
+                      />
+                      <span className="inline-warning-ack-copy">No scheduled fight yet</span>
+                    </label>
                   </div>
                   <div className="field">
                     <label htmlFor="roundCount">Round count</label>
@@ -2199,6 +2263,11 @@ export function PlanIntakeForm() {
                   selectedValues={form.hard_sparring_days}
                   onToggle={(value) => toggleFieldValue("hard_sparring_days", value)}
                   disableAll={shouldDisableField(daysOutCtx, "hard_sparring_days")}
+                  getOptionDisabledReason={(option, checked) =>
+                    checked || form.training_availability.includes(option.value)
+                      ? null
+                      : "Add to availability first"
+                  }
                 />
                 <div className="field">
                   <p className="muted">
@@ -2220,6 +2289,11 @@ export function PlanIntakeForm() {
                   selectedValues={form.support_work_days}
                   onToggle={(value) => toggleFieldValue("support_work_days", value)}
                   disableAll={shouldDisableField(daysOutCtx, "support_work_days")}
+                  getOptionDisabledReason={(option, checked) =>
+                    checked || form.training_availability.includes(option.value)
+                      ? null
+                      : "Add to availability first"
+                  }
                 />
                 <div className="field">
                   <p className="muted">
@@ -2315,6 +2389,18 @@ export function PlanIntakeForm() {
                         <div className="gi-clear-confirm-actions">
                           <button type="button" className="secondary-button" onClick={() => setShowClearInjuriesConfirm(false)}>Keep injuries</button>
                           <button type="button" className="danger-button" onClick={handleConfirmClearInjuries}>Clear injuries</button>
+                        </div>
+                      </div>
+                    ) : null}
+                    {pendingInjuryRemovalIndex !== null ? (
+                      <div className="gi-clear-confirm-panel" role="alertdialog" aria-live="polite">
+                        <p className="gi-clear-confirm-title">
+                          Remove {guidedInjuries[pendingInjuryRemovalIndex]?.area || "this injury"}?
+                        </p>
+                        <p className="muted">This injury has details filled in. Removing will delete them.</p>
+                        <div className="gi-clear-confirm-actions">
+                          <button type="button" className="secondary-button" onClick={handleCancelRemovePendingInjury}>Keep injury</button>
+                          <button type="button" className="danger-button" onClick={handleConfirmRemovePendingInjury}>Remove anyway</button>
                         </div>
                       </div>
                     ) : null}

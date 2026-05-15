@@ -34,7 +34,6 @@ from fightcamp.conditioning_boxing import (
     _violates_sport_language_blacklist,
     _alactic_maintenance_fallback,
     _suppress_alactic_maintenance,
-    SPORT_LANGUAGE_BLACKLIST,
     PLAIN_CONDITIONING_NAME_MAP,
     BOXING_NAME_MAP,
 )

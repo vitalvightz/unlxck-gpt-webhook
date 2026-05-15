@@ -313,7 +313,7 @@ def test_sequence_allocates_non_hard_roles_to_remaining_countdown_days():
 # Tests for late_fight_placement.place_roles_in_countdown
 # ---------------------------------------------------------------------------
 
-from fightcamp.late_fight_placement import (
+from fightcamp.late_fight_placement import (  # noqa: E402
     place_roles_in_countdown,
     role_cost,
     countdown_offset,

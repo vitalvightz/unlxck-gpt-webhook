@@ -5,8 +5,6 @@ from difflib import SequenceMatcher
 
 from .normalization import strip_surrounding_punctuation as _strip_surrounding_punct
 from .injury_negation import (
-    contains_negated_injury,
-    negation_detection_available,
     register_negation_targets,
     remove_negated_phrases,
 )

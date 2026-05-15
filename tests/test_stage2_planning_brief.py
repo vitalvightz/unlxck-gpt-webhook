@@ -7,7 +7,6 @@ from fightcamp.stage2_payload import (
     _build_weekly_role_map,
     _boxing_day_identity_and_spacing_pass,
     _compute_readiness_compression,
-    _compression_floor_value,
     _derive_competitive_maturity,
     _high_fatigue_compression_reason_codes,
     _is_meaningful_stressor,
@@ -1959,7 +1958,7 @@ def test_boxing_crowded_week_triggers_on_two_risk_signals():
         hard_sparring_days=["Tuesday", "Thursday", "Saturday"],
         readiness_flags=["moderate_fatigue"],
     )
-    week = _spp_week_role_map(athlete)
+    _spp_week_role_map(athlete)
 
 def test_high_fatigue_compression_uses_declared_spar_count_for_cap_and_priority():
     brief = _build_progression_brief(
@@ -2121,13 +2120,6 @@ def test_high_fatigue_compression_keeps_one_real_conditioning_signal_after_downg
     )
 
     week = brief["weekly_role_map"]["weeks"][0]
-    role_keys = [role["role_key"] for role in week["session_roles"]]
-    suppressed_keys = {item["role_key"] for item in week["suppressed_roles"]}
-    hard_spar_days = [
-        role["scheduled_day_hint"]
-        for role in week["session_roles"]
-        if role["role_key"] == "hard_sparring_day"
-    ]
 
     assert week["intentional_compression"]["active"] is False
 

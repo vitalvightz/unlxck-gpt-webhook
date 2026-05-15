@@ -2,7 +2,6 @@ from __future__ import annotations
 from .normalization import clean_list
 
 import json
-from typing import Any
 
 
 REPAIR_PROMPT_TEMPLATE = """You are revising a Stage 2 final plan after validation.

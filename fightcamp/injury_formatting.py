@@ -4,7 +4,6 @@ import logging
 import re
 from typing import Mapping
 
-from . import injury_synonyms
 from .injury_negation import contains_negated_injury, negation_detection_available, remove_negated_phrases
 from .injury_synonyms import split_injury_text
 from .injury_scoring import score_injury_phrase

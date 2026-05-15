@@ -1,4 +1,3 @@
-import pytest
 from fightcamp.stage2_render_guards import (
     _meaningful_injury_values,
     _has_active_injury_from_athlete_model,

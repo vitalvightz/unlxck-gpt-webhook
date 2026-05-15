@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from api.auth import AuthenticatedUser
 from api.models import PlanRenameRequest
-from support import advisory_planning_brief, _build_client, _build_request, _start_generation, finalized_result, stage1_result
+from support import advisory_planning_brief, _build_client, _build_request, finalized_result, stage1_result
 
 
 def _weekly_schedule_planning_brief() -> dict:
@@ -280,7 +280,10 @@ def test_plan_detail_returns_public_sparring_advisory_without_changing_saved_pla
     body = response.json()
     assert body["outputs"]["plan_text"] == original_text
     assert len(body["advisories"]) == 1
-    assert body["advisories"][0]["action"] == "deload"
+    # days_until_fight=6 falls inside the D-17 → D-0 countdown override, so the
+    # planner converts each declared hard sparring day to technical rather than
+    # merely deloading it.
+    assert body["advisories"][0]["action"] == "convert"
     assert body["advisories"][0]["days"] == ["Tuesday", "Thursday"]
     assert body["advisories"][0]["title"] == "Coach note"
     assert body["advisories"][0]["disclaimer"] == "Treat this as a flag, not an automatic change to your saved plan."

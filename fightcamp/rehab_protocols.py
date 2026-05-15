@@ -4,7 +4,7 @@ from typing import Iterable
 
 from .injury_formatting import format_injury_summary, parse_injury_entry
 from .injury_guard import INJURY_TYPE_SEVERITY, normalize_severity
-from .injury_taxonomy import derive_red_flag_types, derive_urgent_injury_tokens, get_red_flag_message
+from .injury_taxonomy import derive_red_flag_types, derive_urgent_injury_tokens
 from .injury_synonyms import parse_injury_phrase, split_injury_text
 from .injury_location import canonicalize_location, get_injury_location
 from .injury_location_registry import build_location_region_map, get_rehab_location_candidates
