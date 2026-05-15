@@ -507,7 +507,7 @@ class NutritionWorkspaceUpdateRequest(BaseModel):
 
 
 CampTimelineType = Literal["scheduled_fight", "open_camp"]
-_DEFAULT_OPEN_CAMP_WEEKS = 8
+_DEFAULT_OPEN_CAMP_WEEKS = 12
 
 
 class PlanRequest(BaseModel):
