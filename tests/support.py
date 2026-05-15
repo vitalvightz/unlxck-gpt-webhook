@@ -128,7 +128,7 @@ class FakeStore:
             "id": plan_id,
             "athlete_id": athlete_id,
             "intake_id": intake_id,
-            "fight_date": request.fight_date or None,
+            "fight_date": request.fight_date.strip() or None,
             "technical_style": request.athlete.technical_style,
             "plan_name": "",
             "status": result.get("status", "generated"),
