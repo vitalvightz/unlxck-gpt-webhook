@@ -14,6 +14,40 @@ test("hasTriageResumeApproval returns true for why_log clear flag", () => {
   );
 });
 
+test("hasTriageResumeApproval returns true for explicit triage resume override marker", () => {
+  assert.equal(
+    hasTriageResumeApproval({
+      admin_outputs: {
+        stage2_status: "generated",
+        why_log: {
+          injury_triage_resume_override: {
+            bypassed_blocking: true,
+            triage_mode: "needs_review",
+          },
+        },
+      },
+    } as never),
+    true,
+  );
+});
+
+test("hasTriageResumeApproval returns true when original triage summary carries triage_resume_approved", () => {
+  assert.equal(
+    hasTriageResumeApproval({
+      admin_outputs: {
+        stage2_status: "generated",
+        why_log: {
+          injury_triage_original: {
+            mode: "needs_review",
+            triage_resume_approved: true,
+          },
+        },
+      },
+    } as never),
+    true,
+  );
+});
+
 test("hasTriageResumeApproval returns false when approval markers are absent", () => {
   assert.equal(hasTriageResumeApproval({ admin_outputs: { stage2_status: "triage_blocked" } } as never), false);
 });
