@@ -2984,6 +2984,33 @@ def _score_composite_practical_assignment(
     return score
 
 
+def _assignment_labels_for_role(
+    role: dict[str, Any],
+    *,
+    label_to_weekday: dict[str, str],
+    training_days: list[str],
+) -> list[str]:
+    role_key = str(role.get("role_key") or "").strip().lower()
+    labels = [
+        str(label)
+        for label in role.get("legal_countdown_labels", [])
+        if str(label).strip() and _countdown_offset(str(label)) is not None
+    ]
+    if role_key == "hard_sparring_day":
+        return labels
+    if _is_app_owned_visible_role(role_key):
+        return [
+            label
+            for label in labels
+            if can_render_late_taper_day(
+                countdown_offset=int(_countdown_offset(label) or 0),
+                weekday=str(label_to_weekday.get(label) or ""),
+                training_days=training_days,
+            )
+        ]
+    return labels
+
+
 def _space_bridge_countdown_roles(
     roles: list[dict[str, Any]],
     *,
@@ -3002,6 +3029,7 @@ def _space_bridge_countdown_roles(
     label_to_weekday = _full_countdown_weekday_map(days_until_fight, athlete_model)
     label_to_display_weekday = dict(label_to_weekday)
     hard_weekdays = _declared_hard_weekdays(athlete_model)
+    training_days = clean_list(athlete_model.get("training_days", []))
     ordered_roles = sorted(
         roles,
         key=lambda role: (
@@ -3060,12 +3088,14 @@ def _space_bridge_countdown_roles(
             role_key_counts,
         )
 
-        labels = [
-            str(label)
-            for label in role.get("legal_countdown_labels", [])
-            if str(label).strip() and _countdown_offset(str(label)) is not None
-        ]
+        labels = _assignment_labels_for_role(
+            role,
+            label_to_weekday=label_to_weekday,
+            training_days=training_days,
+        )
         if not labels:
+            if role_is_visible:
+                return
             existing = str(role.get("scheduled_countdown_label") or role.get("countdown_label") or "").strip()
             labels = [existing] if existing else []
         locked_label = _late_fight_locked_label(role, label_to_weekday)
