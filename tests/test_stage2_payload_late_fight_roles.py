@@ -1,6 +1,7 @@
 from fightcamp.stage2_payload_late_fight import (
     _build_late_fight_plan_spec,
     _build_late_fight_session_sequence,
+    _countdown_weekday_map,
     _classify_declared_hard_days_for_late_window,
     _late_fight_session_roles,
     _planned_sessions_per_week,
@@ -766,3 +767,37 @@ def test_role_cost_classifies_correctly():
     assert role_cost({"anchor": "lowest_load_day"}) == "low"
     assert role_cost({"anchor": "unknown_anchor"}) == "medium"   # safe default
     assert role_cost({}) == "medium"                              # missing anchor
+
+
+def test_late_fight_calendar_truth_and_availability_filter_regression():
+    athlete = _athlete(
+        15,
+        plan_creation_weekday="saturday",
+        fight_date="2026-05-31",
+        training_days=["tuesday", "wednesday", "thursday"],
+        hard_sparring_days=["tuesday", "thursday"],
+    )
+    countdown_map = _countdown_weekday_map("saturday", 15)
+    assert countdown_map["D-15"] == "saturday"
+    assert countdown_map["D-7"] == "sunday"
+    assert countdown_map["D-1"] == "saturday"
+    assert countdown_map["D-0"] == "sunday"
+
+    sequence = _build_late_fight_session_sequence(15, athlete)
+    role_by_label = {role.get("scheduled_countdown_label"): role for role in sequence}
+    assert "D-15" not in role_by_label
+    assert "D-14" not in role_by_label
+    assert "D-7" not in role_by_label
+    assert "D-12" in role_by_label
+    assert role_by_label["D-12"]["real_weekday"] == "tuesday"
+    assert "D-11" in role_by_label
+    assert "D-10" in role_by_label
+    assert "D-6" in role_by_label
+    assert "D-2" in role_by_label
+    assert "D-1" in role_by_label
+    assert "D-0" not in role_by_label
+    for role in sequence:
+        label = role.get("scheduled_countdown_label")
+        if not label:
+            continue
+        assert role.get("real_weekday") == countdown_map[label]
