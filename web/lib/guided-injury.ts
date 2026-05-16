@@ -24,6 +24,7 @@ export const EMPTY_GUIDED_INJURY: GuidedInjuryState = {
   avoid: "",
   notes: "",
   injury_type: "",
+  injury_subtypes: [],
   surface_type: "",
   timeframe: "",
   cleared: "",
@@ -52,6 +53,7 @@ export function coerceGuidedInjuryEditState(
     avoid: toGuidedTextValue(value?.avoid),
     notes: toGuidedTextValue(value?.notes),
     injury_type: toGuidedTextValue(value?.injury_type),
+    injury_subtypes: toGuidedStringArray(value?.injury_subtypes),
     surface_type: toGuidedTextValue(value?.surface_type),
     timeframe: toGuidedTextValue(value?.timeframe),
     cleared: toGuidedTextValue(value?.cleared),
@@ -67,14 +69,23 @@ export function normalizeGuidedInjuryState(
   value: Partial<GuidedInjuryState> | null | undefined,
 ): GuidedInjuryState {
   const draft = coerceGuidedInjuryEditState(value);
+  const normalizedInjuryType = draft.injury_type.trim();
+  const normalizedSurfaceType = draft.surface_type.trim();
+  const normalizedSubtypes = draft.injury_subtypes.map((value) => value.trim()).filter(Boolean);
+  const inferredPrimarySubtype = normalizedInjuryType
+    ? normalizedInjuryType === "surface_injury" && normalizedSurfaceType
+      ? `surface_injury:${normalizedSurfaceType}`
+      : normalizedInjuryType
+    : "";
   return {
     area: draft.area.trim(),
     severity: draft.severity,
     trend: draft.trend.trim(),
     avoid: draft.avoid.trim(),
     notes: draft.notes.trim(),
-    injury_type: draft.injury_type.trim(),
-    surface_type: draft.surface_type.trim(),
+    injury_type: normalizedInjuryType,
+    injury_subtypes: normalizedSubtypes.length ? normalizedSubtypes : inferredPrimarySubtype ? [inferredPrimarySubtype] : [],
+    surface_type: normalizedSurfaceType,
     timeframe: draft.timeframe.trim(),
     cleared: draft.cleared.trim(),
     open_wound: draft.open_wound.trim(),
@@ -100,6 +111,7 @@ export function hasGuidedInjuryContent(value: Partial<GuidedInjuryState> | null 
       details.avoid ||
       details.notes ||
       details.injury_type ||
+      details.injury_subtypes.length ||
       details.surface_type ||
       details.timeframe ||
       details.cleared ||
