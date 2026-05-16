@@ -38,7 +38,7 @@ import {
   type GuidedInjuryState,
 } from "@/lib/guided-injury";
 import { GuidedInjuryCard } from "@/components/guided-injury-card";
-import { emptyPlanRequest, hydratePlanRequest, mergePlanRequestDraft } from "@/lib/onboarding";
+import { applyNoScheduledFightSnapshot, emptyPlanRequest, hydratePlanRequest, mergePlanRequestDraft } from "@/lib/onboarding";
 import { buildRoundsFormat, parseRoundsFormat, ROUND_COUNT_OPTIONS, ROUND_DURATION_OPTIONS } from "@/lib/rounds-format";
 import { getPerformanceFocusCap, validatePerformanceFocusSelections } from "@/lib/performance-focus-cap";
 import { canSelectWizardStep } from "@/lib/step-navigation";
@@ -789,7 +789,7 @@ type TrainingGateDecision =
 
 export function PlanIntakeForm() {
   const router = useRouter();
-  const { me, session } = useAppSession();
+  const { me, session, replaceMe } = useAppSession();
   const [currentStep, setCurrentStep] = useState(0);
   const [isMobileProgressOpen, setIsMobileProgressOpen] = useState(false);
   const [form, setForm] = useState<PlanRequest>(emptyPlanRequest());
@@ -991,15 +991,15 @@ export function PlanIntakeForm() {
     const nextGuidedInjuryFields = buildGuidedInjuryFields(currentGuidedInjuries, {
       noRestrictions: currentNoRestrictions,
     });
-    return syncDeviceFields({
+    const withGuidedAndCollision = {
       ...currentForm,
       ...nextGuidedInjuryFields,
       ...sanitizeCollisionMetadata({
         ...currentForm,
         ...nextGuidedInjuryFields,
       }),
-      no_scheduled_fight: noScheduledFight,
-    });
+    };
+    return syncDeviceFields(applyNoScheduledFightSnapshot(withGuidedAndCollision, noScheduledFight));
   }
 
   function syncGuidedInjuryFields(nextGuidedInjuries: GuidedInjuryState[], nextNoRestrictions: boolean) {
@@ -1390,6 +1390,12 @@ export function PlanIntakeForm() {
     setForm(nextForm);
     setSaveStatus("saving");
     try {
+      const nextDraft = {
+        ...mergePlanRequestDraft(me?.profile.onboarding_draft as Record<string, unknown> | null | undefined, nextForm, step),
+        ...nextForm,
+        current_step: step,
+        no_scheduled_fight: noScheduledFight,
+      };
       await saveOnboardingDraft(session.access_token, {
         full_name: nextForm.athlete.full_name,
         technical_style: nextForm.athlete.technical_style,
@@ -1398,11 +1404,17 @@ export function PlanIntakeForm() {
         professional_status: nextForm.athlete.professional_status,
         record: nextForm.athlete.record,
         athlete_timezone: nextForm.athlete.athlete_timezone,
-        onboarding_draft: {
-          ...mergePlanRequestDraft(me?.profile.onboarding_draft as Record<string, unknown> | null | undefined, nextForm, step),
-          no_scheduled_fight: noScheduledFight,
-        },
+        onboarding_draft: nextDraft,
       });
+      if (me) {
+        replaceMe({
+          ...me,
+          profile: {
+            ...me.profile,
+            onboarding_draft: nextDraft,
+          },
+        });
+      }
       lastSavedSnapshotRef.current = JSON.stringify(nextForm);
       setSaveStatus("saved");
       setLastSavedAt(Date.now());
@@ -1804,8 +1816,12 @@ export function PlanIntakeForm() {
           description: "Lock in the timing and round structure so the plan can scale to the fight window.",
           checks: [
             {
-              label: form.fight_date ? "Fight date is set." : "Choose the fight date.",
-              status: form.fight_date ? "done" : "pending",
+              label: form.fight_date
+                ? "Fight date is set."
+                : noScheduledFight
+                  ? "No scheduled fight selected. Open camp."
+                  : "Choose the fight date or select No scheduled fight.",
+              status: form.fight_date || noScheduledFight ? "done" : "pending",
             },
             {
               label:
@@ -2135,9 +2151,7 @@ export function PlanIntakeForm() {
                         onChange={(event) => {
                           const checked = event.target.checked;
                           setNoScheduledFight(checked);
-                          if (checked) {
-                            updateField("fight_date", "");
-                          }
+                          setForm((current) => applyNoScheduledFightSnapshot(current, checked));
                         }}
                       />
                       <span className="inline-warning-ack-copy">No scheduled fight yet</span>
