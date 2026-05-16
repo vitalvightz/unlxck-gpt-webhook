@@ -8,7 +8,7 @@ import { RequireAuth } from "@/components/auth-guard";
 import { useAppSession } from "@/components/auth-provider";
 import { BodyMap, type BodyMapSide } from "@/components/body-map";
 import { CustomSelect } from "@/components/custom-select";
-import { generateStage1Preview, updateMe } from "@/lib/api";
+import { generateStage1Preview, saveOnboardingDraft } from "@/lib/api";
 import {
   detectDeviceTimeZone,
   EQUIPMENT_ACCESS_OPTIONS,
@@ -789,7 +789,7 @@ type TrainingGateDecision =
 
 export function PlanIntakeForm() {
   const router = useRouter();
-  const { me, replaceMe, session } = useAppSession();
+  const { me, session } = useAppSession();
   const [currentStep, setCurrentStep] = useState(0);
   const [isMobileProgressOpen, setIsMobileProgressOpen] = useState(false);
   const [form, setForm] = useState<PlanRequest>(emptyPlanRequest());
@@ -1390,7 +1390,7 @@ export function PlanIntakeForm() {
     setForm(nextForm);
     setSaveStatus("saving");
     try {
-      const updatedMe = await updateMe(session.access_token, {
+      await saveOnboardingDraft(session.access_token, {
         full_name: nextForm.athlete.full_name,
         technical_style: nextForm.athlete.technical_style,
         tactical_style: nextForm.athlete.tactical_style,
@@ -1403,7 +1403,6 @@ export function PlanIntakeForm() {
           no_scheduled_fight: noScheduledFight,
         },
       });
-      replaceMe(updatedMe);
       lastSavedSnapshotRef.current = JSON.stringify(nextForm);
       setSaveStatus("saved");
       setLastSavedAt(Date.now());

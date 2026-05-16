@@ -27,7 +27,7 @@ from fightcamp.sparring_advisories import build_plan_advisories
 from fightcamp.stage2_pipeline import build_stage2_retry, review_stage2_output
 from fightcamp.weekly_schedule_view import extract_weekly_schedule
 
-from .auth import AuthService, AuthenticatedUser, SupabaseAuthService
+from .auth import AuthService, AuthenticatedUser, SupabaseAuthService, is_auth_api_error
 from .demo import DemoAuthService, get_demo_store
 from .models import (
     ApproveAndResumeGenerationRequest,
@@ -39,6 +39,8 @@ from .models import (
     MeResponse,
     NutritionWorkspaceState,
     NutritionWorkspaceUpdateRequest,
+    OnboardingDraftSaveRequest,
+    OnboardingDraftSaveResponse,
     PlanDetail,
     PlanRenameRequest,
     PlanOutputs,
@@ -920,6 +922,21 @@ def create_app(
     ) -> MeResponse:
         updated = _map_profile_row(store.update_profile(profile.athlete_id, update))
         return _build_me_response(updated, store)
+
+    @app.patch("/api/onboarding/draft", response_model=OnboardingDraftSaveResponse)
+    def save_onboarding_draft(
+        update: OnboardingDraftSaveRequest,
+        profile: ProfileRecord = Depends(require_profile),
+        store: AppStore = Depends(get_store),
+    ) -> OnboardingDraftSaveResponse:
+        update_data = update.model_dump(exclude_unset=True)
+        updated = _map_profile_row(
+            store.update_profile(
+                profile.athlete_id,
+                ProfileUpdateRequest(**update_data),
+            )
+        )
+        return OnboardingDraftSaveResponse(updated_at=updated.updated_at)
 
     @app.get("/api/nutrition/current", response_model=NutritionWorkspaceState)
     def get_nutrition_current(
