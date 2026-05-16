@@ -13,27 +13,44 @@ function getPlanDisplayName(plan: { plan_name?: string | null; full_name?: strin
 }
 
 export default function AdminPage() {
-  const { session } = useAppSession();
+  const { isReady, isMeHydrated, session, me } = useAppSession();
   const [athletes, setAthletes] = useState<AdminAthleteRecord[]>([]);
   const [plans, setPlans] = useState<AdminPlanSummary[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const isAdminReady =
+    isReady && isMeHydrated && Boolean(session?.access_token) && me?.profile.role === "admin";
+
   useEffect(() => {
-    if (!session?.access_token) {
+    if (!isAdminReady || !session?.access_token) {
+      if (isReady && isMeHydrated) {
+        setIsLoading(false);
+      }
       return;
     }
+
+    let active = true;
     setIsLoading(true);
+    setError(null);
     Promise.all([listAdminAthletes(session.access_token), listAdminPlans(session.access_token)])
       .then(([nextAthletes, nextPlans]) => {
+        if (!active) return;
         setAthletes(nextAthletes);
         setPlans(nextPlans);
       })
       .catch((adminError) => {
+        if (!active) return;
         setError(adminError instanceof Error ? adminError.message : "Unable to load admin data.");
       })
-      .finally(() => setIsLoading(false));
-  }, [session?.access_token]);
+      .finally(() => {
+        if (active) setIsLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [isAdminReady, isReady, isMeHydrated, me?.profile.role, session?.access_token]);
 
   return (
     <RequireAuth adminOnly>

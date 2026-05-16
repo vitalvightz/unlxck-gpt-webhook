@@ -18,6 +18,7 @@ from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException, Query, Req
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, Response
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from gotrue.errors import AuthApiError
 from postgrest.exceptions import APIError as PostgrestAPIError
 from pydantic import ValidationError
 
@@ -835,6 +836,15 @@ def create_app(
             user = auth.get_user_from_token(credentials.credentials)
             logger.info("[auth] token_resolved user_id=%s email=%s", user.user_id, user.email)
             return user
+        except HTTPException:
+            logger.warning("[auth] token_resolution_unauthorized")
+            raise
+        except AuthApiError as exc:
+            logger.warning("[auth] token_resolution_invalid_token error=%s", exc)
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="invalid authentication token",
+            ) from exc
         except Exception:
             logger.exception("[auth] token_resolution_failed")
             raise

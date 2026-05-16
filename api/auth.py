@@ -77,7 +77,7 @@ class SupabaseAuthService:
             status_code = getattr(exc, "status", None) or getattr(exc, "status_code", None)
 
             if status_code in {400, 401, 403}:
-                raise self._unauthorized() from exc
+                raise self._invalid_token() from exc
 
             logger.exception("[auth] upstream token verification failed")
             raise self._auth_unavailable() from exc
@@ -89,12 +89,12 @@ class SupabaseAuthService:
         user = getattr(response, "user", None)
 
         if user is None:
-            raise self._unauthorized()
+            raise self._invalid_token()
 
         user_id = getattr(user, "id", None)
         if not user_id:
             logger.warning("[auth] verified user response missing user id")
-            raise self._unauthorized()
+            raise self._invalid_token()
 
         raw_metadata = getattr(user, "user_metadata", {}) or {}
         metadata = raw_metadata if isinstance(raw_metadata, dict) else {}
@@ -119,6 +119,13 @@ class SupabaseAuthService:
         return HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="authentication required",
+        )
+
+    @staticmethod
+    def _invalid_token() -> HTTPException:
+        return HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="invalid authentication token",
         )
 
     @staticmethod

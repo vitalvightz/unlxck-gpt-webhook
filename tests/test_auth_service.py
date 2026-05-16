@@ -27,7 +27,7 @@ def test_get_user_from_token_maps_auth_api_unauthorized_to_http_401(monkeypatch)
         service.get_user_from_token("bad-token")
 
     assert exc_info.value.status_code == status.HTTP_401_UNAUTHORIZED
-    assert exc_info.value.detail == "authentication required"
+    assert exc_info.value.detail == "invalid authentication token"
 
 
 def test_get_user_from_token_maps_httpx_failures_to_http_503():
@@ -41,3 +41,15 @@ def test_get_user_from_token_maps_httpx_failures_to_http_503():
 
     assert exc_info.value.status_code == status.HTTP_503_SERVICE_UNAVAILABLE
     assert exc_info.value.detail == "authentication service temporarily unavailable"
+
+def test_get_user_from_token_maps_missing_user_to_http_401_invalid_token():
+    client = MagicMock()
+    client.auth.get_user.return_value = type("Response", (), {"user": None})()
+
+    service = SupabaseAuthService(client)
+
+    with pytest.raises(HTTPException) as exc_info:
+        service.get_user_from_token("bad-token")
+
+    assert exc_info.value.status_code == status.HTTP_401_UNAUTHORIZED
+    assert exc_info.value.detail == "invalid authentication token"
