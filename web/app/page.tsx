@@ -15,9 +15,6 @@ import {
 import { formatPlanFightDate, formatPlanTimestamp, getPlanDisplayName } from "@/lib/plan-format";
 import type { PlanSummary } from "@/lib/types";
 
-const demoMode =
-  process.env.NEXT_PUBLIC_DEMO_MODE === "1" ||
-  (process.env.NODE_ENV !== "production" && process.env.NEXT_PUBLIC_DEV_AUTH_BYPASS === "1");
 const landingPreviewStages = [
   {
     label: "Onboarding",
@@ -175,6 +172,37 @@ function OverviewDisclosure({
 export default function HomePage() {
   const { isReady, session, me } = useAppSession();
   const [recentPlans, setRecentPlans] = useState<PlanSummary[]>([]);
+  const [activePreviewIndex, setActivePreviewIndex] = useState(0);
+  const [previewPausedUntil, setPreviewPausedUntil] = useState(0);
+
+  function setPreviewIndex(nextIndex: number) {
+    const totalStages = landingPreviewStages.length;
+    setActivePreviewIndex((nextIndex + totalStages) % totalStages);
+    setPreviewPausedUntil(Date.now() + 9000);
+  }
+
+  function showPreviousPreview() {
+    setPreviewIndex(activePreviewIndex - 1);
+  }
+
+  function showNextPreview() {
+    setPreviewIndex(activePreviewIndex + 1);
+  }
+
+  useEffect(() => {
+    if (session) {
+      return;
+    }
+
+    const intervalId = window.setInterval(() => {
+      if (document.hidden || Date.now() < previewPausedUntil) {
+        return;
+      }
+      setActivePreviewIndex((currentIndex) => (currentIndex + 1) % landingPreviewStages.length);
+    }, 4500);
+
+    return () => window.clearInterval(intervalId);
+  }, [previewPausedUntil, session]);
 
   useEffect(() => {
     let active = true;
@@ -381,6 +409,8 @@ export default function HomePage() {
     );
   }
 
+  const activePreviewStage = landingPreviewStages[activePreviewIndex];
+
   return (
     <>
       <section className="hero-panel public-hero-panel">
@@ -396,11 +426,6 @@ export default function HomePage() {
               <Link href="/login" className="ghost-button">
                 Log in
               </Link>
-              {demoMode ? (
-                <Link href="/login" className="ghost-button">
-                  Try demo workspace
-                </Link>
-              ) : null}
             </div>
             <div className="public-proof-strip" aria-label="Product highlights">
               <div className="public-proof-pill">
@@ -428,30 +453,59 @@ export default function HomePage() {
             </div>
             <div className="public-preview-window">
               <div className="public-preview-toolbar">
-                <span className="public-preview-dot" aria-hidden="true" />
-                <span className="public-preview-dot" aria-hidden="true" />
-                <span className="public-preview-dot" aria-hidden="true" />
+                {landingPreviewStages.map((stage, index) => (
+                  <button
+                    key={stage.label}
+                    type="button"
+                    className={index === activePreviewIndex ? "public-preview-dot public-preview-dot-active" : "public-preview-dot"}
+                    aria-label={`Show ${stage.label}`}
+                    aria-pressed={index === activePreviewIndex}
+                    onClick={() => setPreviewIndex(index)}
+                  />
+                ))}
                 <span className="public-preview-toolbar-label">Athlete workspace</span>
               </div>
-              <div className="public-preview-stack">
-                {landingPreviewStages.map((stage) => (
-                  <article key={stage.label} className="public-preview-card">
-                    <div className="public-preview-card-header">
-                      <div>
-                        <p className="label">{stage.label}</p>
-                        <h3 className="public-preview-card-title">{stage.title}</h3>
-                      </div>
+              <div className="public-preview-carousel" aria-live="polite">
+                <article key={activePreviewStage.label} className="public-preview-card">
+                  <div className="public-preview-card-header">
+                    <div>
+                      <p className="label">{activePreviewStage.label}</p>
+                      <h3 className="public-preview-card-title">{activePreviewStage.title}</h3>
                     </div>
-                    <p className="muted">{stage.summary}</p>
-                    <div className="public-preview-chip-row">
-                      {stage.highlights.map((highlight) => (
-                        <span key={highlight} className="public-preview-chip">
-                          {highlight}
-                        </span>
-                      ))}
-                    </div>
-                  </article>
-                ))}
+                  </div>
+                  <p className="muted">{activePreviewStage.summary}</p>
+                  <div className="public-preview-chip-row">
+                    {activePreviewStage.highlights.map((highlight) => (
+                      <span key={highlight} className="public-preview-chip">
+                        {highlight}
+                      </span>
+                    ))}
+                  </div>
+                </article>
+              </div>
+              <div className="public-preview-controls" aria-label="Product preview controls">
+                <button type="button" className="public-preview-control" aria-label="Previous preview" onClick={showPreviousPreview}>
+                  <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false">
+                    <path d="M12.5 4.5 7 10l5.5 5.5" />
+                  </svg>
+                </button>
+                <div className="public-preview-progress" aria-hidden="true">
+                  {landingPreviewStages.map((stage, index) => (
+                    <span
+                      key={`${stage.label}-progress`}
+                      className={
+                        index === activePreviewIndex
+                          ? "public-preview-progress-segment public-preview-progress-segment-active"
+                          : "public-preview-progress-segment"
+                      }
+                    />
+                  ))}
+                </div>
+                <button type="button" className="public-preview-control" aria-label="Next preview" onClick={showNextPreview}>
+                  <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false">
+                    <path d="m7.5 4.5 5.5 5.5-5.5 5.5" />
+                  </svg>
+                </button>
               </div>
             </div>
           </article>
@@ -466,6 +520,15 @@ export default function HomePage() {
             <p className="muted">{point.body}</p>
           </article>
         ))}
+      </section>
+
+      <section className="public-section-break" aria-labelledby="public-journey-heading">
+        <div className="public-section-break-line" aria-hidden="true" />
+        <div className="public-section-break-copy">
+          <p className="kicker">How it starts</p>
+          <h2 id="public-journey-heading">From setup to saved camp.</h2>
+        </div>
+        <div className="public-section-break-count" aria-hidden="true">03</div>
       </section>
 
       <section className="metric-grid public-journey-grid">

@@ -11,14 +11,9 @@ import { getAuthenticatedLandingHref } from "@/lib/auth-routing";
 import { evaluatePasswordStrength } from "@/lib/password-strength";
 import { getSupabaseBrowserClient } from "@/lib/supabase";
 
-function inferDemoRole(email: string): "athlete" | "admin" {
-  const normalized = email.trim().toLowerCase();
-  return normalized.endsWith("@unlxck.test") || normalized.includes("admin") ? "admin" : "athlete";
-}
-
 export function AuthForm({ mode }: { mode: "signup" | "login" }) {
   const router = useRouter();
-  const { isReady, session, me, demoMode, signInDemo } = useAppSession();
+  const { isReady, session, me } = useAppSession();
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -50,13 +45,6 @@ export function AuthForm({ mode }: { mode: "signup" | "login" }) {
     }
 
     startTransition(async () => {
-      if (demoMode) {
-        const role = inferDemoRole(email);
-        await signInDemo(role);
-        router.push(mode === "signup" ? "/onboarding" : role === "admin" ? "/admin" : "/plans");
-        return;
-      }
-
       let client;
       try {
         client = getSupabaseBrowserClient();
@@ -112,10 +100,6 @@ export function AuthForm({ mode }: { mode: "signup" | "login" }) {
       setError("Enter your email above, then request a sign-in link.");
       return;
     }
-    if (demoMode) {
-      setError("Magic links aren't available in demo mode. Use the demo buttons or password sign-in.");
-      return;
-    }
     startMagicLinkTransition(async () => {
       let client;
       try {
@@ -137,15 +121,6 @@ export function AuthForm({ mode }: { mode: "signup" | "login" }) {
         return;
       }
       setMessage(`Check ${trimmedEmail} for a one-tap sign-in link.`);
-    });
-  }
-
-  function handleQuickDemo(role: "athlete" | "admin") {
-    setMessage(null);
-    setError(null);
-    startTransition(async () => {
-      await signInDemo(role);
-      router.push(role === "admin" ? "/admin" : mode === "signup" ? "/onboarding" : "/plans");
     });
   }
 
@@ -230,30 +205,21 @@ export function AuthForm({ mode }: { mode: "signup" | "login" }) {
               {isMagicLinkPending
                 ? "Sending link..."
                 : mode === "signup"
-                  ? "Email me a sign-in link instead"
-                  : "Email me a one-tap sign-in link"}
+                  ? "Email sign-in link"
+                  : "Email sign-in link"}
             </button>
-            <Link href={mode === "signup" ? "/login" : "/signup"} className="ghost-button">
-              {mode === "signup" ? "Already have an account?" : "Need an account?"}
-            </Link>
-            {mode === "login" ? (
-              <Link href="/forgot-password" className="ghost-button">
-                Forgot password?
+            <div className="auth-secondary-links" aria-label="Account help">
+              <Link href={mode === "signup" ? "/login" : "/signup"} className="auth-text-link">
+                {mode === "signup" ? "Already have an account?" : "Need an account?"}
               </Link>
-            ) : null}
+              {mode === "login" ? (
+                <Link href="/forgot-password" className="auth-text-link">
+                  Forgot password?
+                </Link>
+              ) : null}
+            </div>
           </div>
         </form>
-
-        {demoMode ? (
-          <div className="auth-quick-actions">
-            <button type="button" className="secondary-button" onClick={() => handleQuickDemo("athlete")}>
-              Use demo athlete
-            </button>
-            <button type="button" className="ghost-button" onClick={() => handleQuickDemo("admin")}>
-              Use demo admin
-            </button>
-          </div>
-        ) : null}
       </div>
 
       <div className="auth-rail">
@@ -305,12 +271,6 @@ export function AuthForm({ mode }: { mode: "signup" | "login" }) {
                 <li>Mobile-friendly access makes it easier to reopen camps between sessions.</li>
               </ul>
             </div>
-            {demoMode ? (
-              <div className="support-panel">
-                <p className="kicker">Demo mode</p>
-                <p className="muted">Use any email for demo access, or <code>@unlxck.test</code> for admin. Signup still follows the password-strength rule.</p>
-              </div>
-            ) : null}
           </div>
         </details>
       </div>
