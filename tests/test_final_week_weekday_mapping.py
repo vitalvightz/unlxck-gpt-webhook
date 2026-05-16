@@ -220,6 +220,29 @@ class TestCanRenderLateTaperDay:
 # ---------------------------------------------------------------------------
 
 class TestSessionSequenceWeekdayAnnotation:
+    def test_composite_late_fight_d14_blocks_unavailable_app_owned_days(self):
+        athlete = _athlete(
+            14,
+            plan_creation_weekday="saturday",
+            training_days=["tuesday", "wednesday", "thursday"],
+            hard_sparring_days=[],
+        )
+        sequence = _build_late_fight_session_sequence(14, athlete)
+        labels = {role.get("scheduled_countdown_label") for role in sequence}
+        # Outside D-6, unavailable days must not render app-owned sessions.
+        assert "D-14" not in labels  # Saturday
+        assert "D-13" not in labels  # Sunday
+        assert "D-12" not in labels  # Monday
+        assert "D-7" not in labels  # Saturday
+        countdown_map = _countdown_weekday_map("saturday", 14)
+        for role in sequence:
+            label = role.get("scheduled_countdown_label")
+            if label:
+                assert role.get("real_weekday") == countdown_map[label]
+                offset = int(label.removeprefix("D-"))
+                if offset > 6 and role.get("role_key") != "hard_sparring_day":
+                    assert role.get("real_weekday") in {"tuesday", "wednesday", "thursday"}
+
     def test_d5_sequence_includes_countdown_label(self):
         athlete = _athlete(5, plan_creation_weekday="monday")
         sequence = _build_late_fight_session_sequence(5, athlete)
