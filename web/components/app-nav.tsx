@@ -52,13 +52,15 @@ function isSafeImageUrl(url: string): boolean {
 export function AppNav() {
   const pathname = usePathname();
   const router = useRouter();
-  const { isReady, session, me, signOut } = useAppSession();
+  const { isReady, isMeHydrated, session, me, signOut } = useAppSession();
   const [mobileNavState, setMobileNavState] = useState<MobileNavState>("closed");
   const [desktopNavCollapsed, setDesktopNavCollapsed] = useState(false);
   const [pendingNavHref, setPendingNavHref] = useState<string | null>(null);
   const closeTimeoutRef = useRef<number | null>(null);
   const desktopNavToggleRef = useRef<HTMLButtonElement | null>(null);
-  const shellSurface = getShellSurface(pathname, Boolean(session));
+  const hasHydratedSession = Boolean(session && me);
+  const isSessionResolving = Boolean(session && !isMeHydrated);
+  const shellSurface = getShellSurface(pathname, hasHydratedSession);
 
   const isMobileDrawerVisible = mobileNavState !== "closed";
 
@@ -327,7 +329,7 @@ export function AppNav() {
             <p className="sidebar-tagline">Athlete control room.</p>
           </div>
 
-          {!isReady ? (
+          {(!isReady || isSessionResolving) ? (
             <div className="sidebar-nav">
               <p className="sidebar-section-label">Session</p>
               <div className="sidebar-user-card">
@@ -337,7 +339,7 @@ export function AppNav() {
             </div>
           ) : null}
 
-          {isReady && !session ? (
+          {isReady && !isSessionResolving && !hasHydratedSession ? (
             <>
               <div className="sidebar-auth">
                 <p className="sidebar-section-label">Access</p>
@@ -369,7 +371,7 @@ export function AppNav() {
             </>
           ) : null}
 
-          {isReady && session ? (
+          {isReady && hasHydratedSession ? (
             <>
               <nav className="sidebar-nav">
                 <p className="sidebar-section-label">Workspace</p>

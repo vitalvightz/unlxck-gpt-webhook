@@ -9,6 +9,7 @@ import pytest
 import api.app as app_module
 from api.app import create_app
 from api.auth import AuthenticatedUser
+from api.demo import DemoStore
 from api.generation_runtime import run_generation_job, should_skip_stage2
 from api.models import ProfileUpdateRequest
 from api.stage2_automation import Stage2AutomationError, Stage2AutomationUnavailableError
@@ -285,6 +286,44 @@ def test_run_generation_job_updates_existing_plan_for_same_intake_after_resume()
     assert updated_plan["coach_notes"] == "### Coach Review"
     assert store.get_latest_plan(athlete.user_id)["id"] == blocked_plan["id"]
     assert len(store.list_user_plans(athlete.user_id)) == 1
+
+
+def test_demo_store_runtime_generation_saves_completed_plan():
+    store = DemoStore()
+    athlete = AuthenticatedUser(
+        user_id="demo-athlete",
+        email="athlete@example.com",
+        full_name="Demo Athlete",
+        metadata={},
+    )
+    store.ensure_profile(athlete)
+    request = _build_request({"fight_date": "2026-08-15"})
+    job = store.create_or_get_generation_job(
+        athlete_id=athlete.user_id,
+        client_request_id="demo-runtime-job",
+        source="self_serve",
+        request_payload=request.model_dump(mode="json"),
+    )
+    store.claim_generation_job(job["id"])
+
+    asyncio.run(
+        run_generation_job(
+            job_id=job["id"],
+            store=store,
+            planner_fn=_planner,
+            stage2=FakeStage2Automator(result=finalized_result()),
+            active_tasks=set(),
+        )
+    )
+
+    completed_job = store.get_generation_job(job["id"])
+    plans = store.list_user_plans(athlete.user_id)
+
+    assert completed_job["status"] == "completed"
+    assert completed_job["plan_id"]
+    assert len(plans) == 1
+    assert plans[0]["status"] == "ready"
+    assert plans[0]["parsing_metadata"] == {}
 
 
 def test_should_skip_stage2_when_triage_blocked_status_has_no_nested_flag():
