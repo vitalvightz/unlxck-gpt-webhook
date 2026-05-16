@@ -25,7 +25,9 @@ type AppSessionValue = {
   signInDemo: (role?: DemoRole) => Promise<void>;
 };
 
-const DEMO_MODE = process.env.NEXT_PUBLIC_DEMO_MODE === "1";
+const DEMO_MODE =
+  process.env.NEXT_PUBLIC_DEMO_MODE === "1" ||
+  (process.env.NODE_ENV !== "production" && process.env.NEXT_PUBLIC_DEV_AUTH_BYPASS === "1");
 const DEMO_TOKEN_KEY = "unlxck-demo-token";
 const AppSessionContext = createContext<AppSessionValue | undefined>(undefined);
 

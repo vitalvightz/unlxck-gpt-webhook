@@ -15,7 +15,9 @@ import {
 import { formatPlanFightDate, formatPlanTimestamp, getPlanDisplayName } from "@/lib/plan-format";
 import type { PlanSummary } from "@/lib/types";
 
-const demoMode = process.env.NEXT_PUBLIC_DEMO_MODE === "1";
+const demoMode =
+  process.env.NEXT_PUBLIC_DEMO_MODE === "1" ||
+  (process.env.NODE_ENV !== "production" && process.env.NEXT_PUBLIC_DEV_AUTH_BYPASS === "1");
 const landingPreviewStages = [
   {
     label: "Onboarding",

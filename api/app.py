@@ -1501,21 +1501,24 @@ def create_app(
 
 def _build_runtime_app() -> FastAPI:
     enable_in_process_generation = os.getenv("UNLXCK_ENABLE_IN_PROCESS_GENERATION", "0").strip() == "1"
+    dev_auth_bypass_enabled = _dev_auth_bypass_enabled()
     logger.info(
-        "[app] build_runtime_app:start demo_mode=%s has_supabase_url=%s has_service_role_key=%s in_process_generation=%s",
+        "[app] build_runtime_app:start demo_mode=%s dev_auth_bypass=%s has_supabase_url=%s has_service_role_key=%s in_process_generation=%s",
         os.getenv("UNLXCK_DEMO_MODE"),
+        dev_auth_bypass_enabled,
         bool(os.getenv("SUPABASE_URL")),
         bool(os.getenv("SUPABASE_SERVICE_ROLE_KEY")),
         enable_in_process_generation,
     )
-    if os.getenv("UNLXCK_DEMO_MODE") == "1":
-        logger.info("[app] build_runtime_app:using_demo_mode")
+    if os.getenv("UNLXCK_DEMO_MODE") == "1" or dev_auth_bypass_enabled:
+        mode_label = "dev-auth-bypass" if dev_auth_bypass_enabled else "demo"
+        logger.info("[app] build_runtime_app:using_%s", mode_label)
         store = get_demo_store()
         store.validate_runtime_schema()
         return create_app(
             store=store,
             auth_service=DemoAuthService(),
-            mode_label="demo",
+            mode_label=mode_label,
             enable_in_process_generation=enable_in_process_generation,
         )
     logger.info("[app] build_runtime_app:using_supabase_mode")
@@ -1527,6 +1530,20 @@ def _build_runtime_app() -> FastAPI:
         mode_label="supabase-authenticated",
         enable_in_process_generation=enable_in_process_generation,
     )
+
+
+def _dev_auth_bypass_enabled() -> bool:
+    if os.getenv("UNLXCK_DEV_AUTH_BYPASS", "").strip() != "1":
+        return False
+
+    environment = os.getenv("UNLXCK_ENV", "").strip().lower()
+    if environment != "development":
+        logger.warning(
+            "[app] UNLXCK_DEV_AUTH_BYPASS ignored because UNLXCK_ENV is not development"
+        )
+        return False
+
+    return True
 
 
 def _build_startup_failure_app(detail: str) -> FastAPI:
