@@ -27,7 +27,7 @@ from fightcamp.sparring_advisories import build_plan_advisories
 from fightcamp.stage2_pipeline import build_stage2_retry, review_stage2_output
 from fightcamp.weekly_schedule_view import extract_weekly_schedule
 
-from .auth import AuthService, AuthenticatedUser, SupabaseAuthService, is_auth_api_error
+from .auth import AuthService, AuthenticatedUser, SupabaseAuthService
 from .demo import DemoAuthService, get_demo_store
 from .models import (
     ApproveAndResumeGenerationRequest,
