@@ -46,6 +46,7 @@ import {
   getAvailabilityConsistency,
   getHardSparringWarning,
   getSparringConsistency,
+  HARD_SPARRING_DAY_CAP,
 } from "@/lib/training-schedule";
 import {
   buildDaysOutContext,
@@ -2323,8 +2324,8 @@ export function PlanIntakeForm() {
                         ? "Add to availability first"
                         : form.support_work_days.includes(option.value)
                           ? "Already tagged as non-hard training"
-                          : form.hard_sparring_days.length >= 4
-                            ? "Hard sparring cap (4) reached"
+                          : form.hard_sparring_days.length >= HARD_SPARRING_DAY_CAP
+                            ? `Hard sparring cap (${HARD_SPARRING_DAY_CAP}) reached`
                             : null
                   }
                 />
