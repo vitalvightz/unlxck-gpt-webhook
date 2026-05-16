@@ -1649,11 +1649,13 @@ export function PlanIntakeForm() {
       ? "Focus cap reached by your current goals and weak areas. Unselect a weak area to add this goal."
       : "Focus cap reached. Unselect a goal to add another."
     : undefined;
-  const weakAreaCapDisabledReason = performanceFocusCapReached
-    ? form.key_goals.length > 0
-      ? "Focus cap reached by your current goals and weak areas. Unselect a goal to add this weak area."
-      : "Focus cap reached. Unselect a weak area to add another."
-    : undefined;
+  const weakAreaCapDisabledReason = form.weak_areas.length >= 2
+    ? "Maximum of 2 weak areas reached. Unselect one to add another."
+    : performanceFocusCapReached
+      ? form.key_goals.length > 0
+        ? "Focus cap reached by your current goals and weak areas. Unselect a goal to add this weak area."
+        : "Focus cap reached. Unselect a weak area to add another."
+      : undefined;
   const weightCutStatus = formatWeightCutStatus(form.athlete.weight_kg, form.athlete.target_weight_kg);
   const equipmentLimitations = formatEquipmentLimitations(form.equipment_access);
   const sparringConsistency = getSparringConsistency(
