@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { type ReactNode, useEffect, useState } from "react";
 
 import { useAppSession } from "@/components/auth-provider";
@@ -171,6 +172,7 @@ function OverviewDisclosure({
 
 export default function HomePage() {
   const { isReady, isMeHydrated, session, me } = useAppSession();
+  const router = useRouter();
   const [recentPlans, setRecentPlans] = useState<PlanSummary[]>([]);
   const [activePreviewIndex, setActivePreviewIndex] = useState(0);
   const [previewPausedUntil, setPreviewPausedUntil] = useState(0);
@@ -203,6 +205,12 @@ export default function HomePage() {
 
     return () => window.clearInterval(intervalId);
   }, [previewPausedUntil, session]);
+
+  useEffect(() => {
+    if (isReady && session && isMeHydrated && !me) {
+      router.replace("/login");
+    }
+  }, [isReady, isMeHydrated, me, router, session]);
 
   useEffect(() => {
     let active = true;
@@ -250,6 +258,16 @@ export default function HomePage() {
         <p className="kicker">Overview</p>
         <h1>Loading your athlete workspace</h1>
         <p className="muted">Checking saved onboarding and plan history.</p>
+      </section>
+    );
+  }
+
+  if (session && isMeHydrated && !me) {
+    return (
+      <section className="panel loading-card">
+        <p className="kicker">Overview</p>
+        <h1>Redirecting to login</h1>
+        <p className="muted">We could not load your athlete profile. Please sign in again.</p>
       </section>
     );
   }
