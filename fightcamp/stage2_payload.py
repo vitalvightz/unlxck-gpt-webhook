@@ -333,7 +333,7 @@ def _build_phase_selection_guardrails(phase: str, training_context: TrainingCont
         guardrails["conditioning_drop_order_if_thin"] = _dedupe_preserve_order(
             ["glycolytic"] + guardrails.get("conditioning_drop_order_if_thin", [])
         )
-        guardrails["notes"].append("During active weight cut, treat glycolytic work as optional unless it is the only compliant fight-specific slot left.")
+        guardrails["notes"].append("During target-weight constraint, treat glycolytic work as optional unless it is the only compliant fight-specific slot left.")
     return guardrails
 
 
@@ -3880,13 +3880,13 @@ def build_stage2_payload(
             "In boxing crowded weeks, do not turn anchor days or recovery/support days into multi-stressor sessions by adding glycolytic, transfer, or extra sharpness work.",
             "In camps with 7 days or less to fight, only the compressed week-level priorities may drive standalone session purposes; keep all other selections as support, maintenance, or deferred notes only.",
             "When fight_week_override.active is true, treat it as mandatory. For 0-1 days, output readiness protocol notes only with no training week. For 2-3 days, output micro-taper only (one short primer max + one light recovery session). For 4-6 days, output mini taper only (freshness-first, minimal volume).",
-            "If active weight cut is present, explicitly acknowledge that cut stress changes recovery and training tolerance in the athlete-facing plan.",
+            "If target-weight constraint is present, explicitly acknowledge that cut stress changes recovery and training tolerance in the athlete-facing plan.",
             "Never state 'weight cut none active' or 'recovery tolerance is standard' when readiness flags or weight_cut_pct indicate an active cut.",
             "If the cut is high-pressure, include one short summary-level note plus one support-level note; do not bury it only in the athlete profile or nutrition numbers.",
             "Use athlete_model.competitive_maturity only to calibrate wording specificity; it must not change workload, session count, recovery assumptions, or injury/cut conservatism.",
             "If fatigue is high or fight-week pressure is active, reduce optionality and make the directive plain.",
             "If injury management is active, lead with constraints, substitutions, or stop rules instead of optional language.",
-            "If active weight cut is present, keep the language shorter, safety-first, and non-negotiable about recovery margin.",
+            "If target-weight constraint is present, keep the language shorter, safety-first, and non-negotiable about recovery margin.",
             "Vary sentence openings and cut repeated filler reminders so the final plan reads like a coach's final prescription, not a template.",
         ],
     }
@@ -4047,9 +4047,9 @@ For boxer weeks, keep the default rhythm of support strength, low-damage conditi
 Use simple session titles and coach-readable drill labels, but do not spend this pass flattening non-standard names if the drill description is already mechanically clear.
 If fatigue is high or fight-week pressure is active, reduce optionality and make the safest performance-preserving call plainly.
 If injury management is active, lead with constraints, substitutions, or stop rules rather than optional language.
-If active weight cut is present, say so plainly in the final plan and explain that it tightens recovery and training tolerance.
+If target-weight constraint is present, say so plainly in the final plan and explain that it tightens recovery and training tolerance.
 Never write 'weight cut none active' or 'recovery tolerance is standard' when active weight-cut flags are present.
-If active weight cut is present, keep the wording shorter and safety-first rather than optimization-heavy.
+If target-weight constraint is present, keep the wording shorter and safety-first rather than optimization-heavy.
 If the cut is high-pressure, include one short summary-level note plus one support-level note; do not bury it only in the athlete profile or raw nutrition numbers.
 In short camps, every rendered session must map to one compressed week-level priority from the finalizer packet. Do not create a standalone session purpose for embedded-support or deferred items.
 Placement governs day assignment only; it does not change insert voice, ownership, or visible session count.

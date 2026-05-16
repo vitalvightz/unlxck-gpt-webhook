@@ -1637,7 +1637,7 @@ def _make_compression_suppression(role: dict, reason_codes: list[str], summary: 
 
 
 def _active_weight_cut_is_meaningful(athlete_model: dict) -> bool:
-    """True when the athlete has a non-trivial active weight cut."""
+    """True when the athlete has a non-trivial target-weight constraint."""
     cut_bucket = _resolved_cut_severity_bucket(athlete_model)
     if cut_bucket is not None:
         return cut_bucket in {"moderate", "high", "critical", "extreme"}
