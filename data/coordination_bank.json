@@ -5,8 +5,7 @@
       "category": "footwork",
       "phases": [
         "GPP",
-        "SPP"
-      ],
+        "SPP"],
       "movement": "dynamic_stance_transitions",
       "type": "unilateral",
       "tags": [
@@ -5734,8 +5733,7 @@
       "category": "pressure",
       "phases": [
         "GPP",
-        "SPP",
-      ],
+        "SPP"],
       "movement": "peripheral_awareness",
       "type": "multidirectional",
       "tags": [

@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 
-import { useAppSession } from "@/components/auth-provider";
+import { isDemoAutoSignInSuppressed, useAppSession } from "@/components/auth-provider";
 
 function LoadingCard({ label }: { label: string }) {
   return (
@@ -29,6 +29,10 @@ export function RequireAuth({
     }
     if (!session) {
       if (adminOnly && demoMode) {
+        if (isDemoAutoSignInSuppressed()) {
+          router.replace("/login");
+          return;
+        }
         void signInDemo("admin");
         return;
       }
@@ -38,10 +42,14 @@ export function RequireAuth({
     if (adminOnly && !isMeHydrated) {
       return;
     }
+    if (isMeHydrated && !me) {
+      router.replace("/login");
+      return;
+    }
     if (adminOnly && role && role !== "admin") {
       router.replace("/plans");
     }
-  }, [adminOnly, demoMode, isMeHydrated, isReady, role, router, session, signInDemo]);
+  }, [adminOnly, demoMode, isMeHydrated, isReady, me, role, router, session, signInDemo]);
 
   if (!isReady) {
     return <LoadingCard label="Checking your access" />;
@@ -52,8 +60,8 @@ export function RequireAuth({
   if (!isMeHydrated) {
     return <LoadingCard label={adminOnly ? "Restoring admin access" : "Restoring your workspace"} />;
   }
-  if (adminOnly && !me) {
-    return <LoadingCard label="Reconnecting your admin workspace" />;
+  if (!me) {
+    return <LoadingCard label="Redirecting to login" />;
   }
   if (adminOnly && role !== "admin") {
     return <LoadingCard label="Redirecting to your athlete view" />;

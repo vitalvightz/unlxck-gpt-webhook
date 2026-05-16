@@ -29,6 +29,7 @@ const DEMO_MODE =
   process.env.NEXT_PUBLIC_DEMO_MODE === "1" ||
   (process.env.NODE_ENV !== "production" && process.env.NEXT_PUBLIC_DEV_AUTH_BYPASS === "1");
 const DEMO_TOKEN_KEY = "unlxck-demo-token";
+const DEMO_SIGNED_OUT_KEY = "unlxck-demo-signed-out";
 const AppSessionContext = createContext<AppSessionValue | undefined>(undefined);
 
 function tokenForRole(role: DemoRole): string {
@@ -41,6 +42,13 @@ function applyAppearanceMode(mode: AppearanceMode) {
   }
   document.documentElement.dataset.theme = mode;
   document.documentElement.style.colorScheme = mode;
+}
+
+export function isDemoAutoSignInSuppressed(): boolean {
+  if (typeof window === "undefined") {
+    return false;
+  }
+  return window.sessionStorage.getItem(DEMO_SIGNED_OUT_KEY) === "1";
 }
 
 export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
@@ -194,6 +202,7 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
 
   async function signInDemo(role: DemoRole = "athlete") {
     const nextSession = { access_token: tokenForRole(role) };
+    window.sessionStorage.removeItem(DEMO_SIGNED_OUT_KEY);
     window.localStorage.setItem(DEMO_TOKEN_KEY, nextSession.access_token);
     handledAccessTokenRef.current = nextSession.access_token;
     setAppearancePreview(null);
@@ -205,6 +214,7 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
 
   async function signOut() {
     if (DEMO_MODE) {
+      window.sessionStorage.setItem(DEMO_SIGNED_OUT_KEY, "1");
       window.localStorage.removeItem(DEMO_TOKEN_KEY);
       handledAccessTokenRef.current = null;
       setAppearancePreview(null);

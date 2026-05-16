@@ -125,6 +125,14 @@ class DemoStore:
                     return dict(row)
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="intake not found")
 
+    def get_intake(self, intake_id: str) -> dict[str, Any] | None:
+        with self._lock:
+            for athlete_intakes in self.intakes.values():
+                for row in athlete_intakes:
+                    if row["id"] == intake_id:
+                        return dict(row)
+        return None
+
     def create_plan(
         self,
         *,
@@ -152,6 +160,7 @@ class DemoStore:
                 "why_log": result.get("why_log", {}),
                 "planning_brief": result.get("planning_brief"),
                 "stage2_payload": result.get("stage2_payload"),
+                "parsing_metadata": result.get("parsing_metadata", {}),
                 "stage2_handoff_text": result.get("stage2_handoff_text", ""),
                 "stage2_retry_text": result.get("stage2_retry_text", ""),
                 "stage2_validator_report": result.get("stage2_validator_report", {}),
@@ -167,6 +176,10 @@ class DemoStore:
         with self._lock:
             rows = [dict(plan) for plan in self.plans.values() if plan["athlete_id"] == athlete_id]
         return sorted(rows, key=lambda row: row["created_at"], reverse=True)
+
+    def get_latest_plan(self, athlete_id: str) -> dict[str, Any] | None:
+        plans = self.list_user_plans(athlete_id)
+        return plans[0] if plans else None
 
     def get_plan(self, plan_id: str) -> dict[str, Any] | None:
         with self._lock:

@@ -170,7 +170,7 @@ function OverviewDisclosure({
 }
 
 export default function HomePage() {
-  const { isReady, session, me } = useAppSession();
+  const { isReady, isMeHydrated, session, me } = useAppSession();
   const [recentPlans, setRecentPlans] = useState<PlanSummary[]>([]);
   const [activePreviewIndex, setActivePreviewIndex] = useState(0);
   const [previewPausedUntil, setPreviewPausedUntil] = useState(0);
@@ -244,7 +244,7 @@ export default function HomePage() {
     };
   }, [me?.latest_plan?.plan_id, me?.plan_count, session?.access_token]);
 
-  if (!isReady) {
+  if (!isReady || (session && !isMeHydrated)) {
     return (
       <section className="panel loading-card">
         <p className="kicker">Overview</p>
