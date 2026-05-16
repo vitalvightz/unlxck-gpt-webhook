@@ -836,8 +836,8 @@ def create_app(
             user = auth.get_user_from_token(credentials.credentials)
             logger.info("[auth] token_resolved user_id=%s email=%s", user.user_id, user.email)
             return user
-        except HTTPException:
-            logger.warning("[auth] token_resolution_unauthorized")
+        except HTTPException as exc:
+            logger.warning("[auth] token_resolution_http_error status=%s", exc.status_code)
             raise
         except AuthApiError as exc:
             logger.warning("[auth] token_resolution_invalid_token error=%s", exc)
