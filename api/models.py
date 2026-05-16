@@ -117,6 +117,7 @@ class GuidedInjuryInput(BaseModel):
     avoid: str = ""
     notes: str = ""
     injury_type: str = ""
+    injury_subtypes: list[str] = Field(default_factory=list)
     surface_type: str = ""
     timeframe: str = ""
     cleared: str = ""
@@ -152,6 +153,17 @@ class GuidedInjuryInput(BaseModel):
     @field_validator("infection_signs", mode="before")
     @classmethod
     def clean_infection_signs(cls, value: Any) -> list[str]:
+        if value is None:
+            return []
+        if isinstance(value, list):
+            return _clean_list(value)
+        if isinstance(value, str):
+            return _clean_list([part.strip() for part in value.split(",")])
+        return _clean_list([value])
+
+    @field_validator("injury_subtypes", mode="before")
+    @classmethod
+    def clean_injury_subtypes(cls, value: Any) -> list[str]:
         if value is None:
             return []
         if isinstance(value, list):

@@ -38,7 +38,12 @@ SURFACE_TYPE_TO_INJURY_TYPE = {
     "abrasion": "abrasion",
     "graze": "graze",
     "blister": "blister",
+    "skin_irritation": "abrasion",
 }
+
+ALLOWED_GUIDED_SUBTYPE_TOKENS = SPECIFIC_PARSER_TYPES | {"surface_injury"}
+ALLOWED_GUIDED_SURFACE_SUBTYPE_TOKENS = set(SURFACE_TYPE_TO_INJURY_TYPE.keys())
+VAGUE_GUIDED_TYPES = {"", "unspecified", "pain", "soreness", "tightness", "stiffness", "surface_injury"}
 
 RUPTURE_EVIDENCE_PATTERN = re.compile(
     r"\b(?:rupture|ruptured|avulsion|detached|complete tear|full tear|confirmed tear|confirmed rupture)\b",
@@ -55,12 +60,40 @@ def _specific_parser_type(entry: dict[str, Any] | None) -> str:
     return str((entry or {}).get("injury_type") or "").strip().lower()
 
 
+def _guided_primary_subtype(guided_injury: Any) -> tuple[str, str]:
+    raw_subtypes = getattr(guided_injury, "injury_subtypes", None)
+    if not isinstance(raw_subtypes, list):
+        return "", ""
+
+    normalized = [str(value).strip().lower() for value in raw_subtypes if str(value).strip()]
+    if len(normalized) != 1:
+        return "", ""
+
+    token = normalized[0]
+    if ":" in token:
+        primary, secondary = token.split(":", 1)
+        normalized_primary = primary.strip()
+        normalized_secondary = secondary.strip()
+        if (
+            normalized_primary in ALLOWED_GUIDED_SUBTYPE_TOKENS
+            and normalized_primary == "surface_injury"
+            and normalized_secondary in ALLOWED_GUIDED_SURFACE_SUBTYPE_TOKENS
+        ):
+            return normalized_primary, normalized_secondary
+        return "", ""
+    return (token, "") if token in ALLOWED_GUIDED_SUBTYPE_TOKENS else ("", "")
+
+
 def _has_rupture_evidence(text: str) -> bool:
     if not text:
         return False
     if RUPTURE_NEGATION_PATTERN.search(text):
         return False
     return bool(RUPTURE_EVIDENCE_PATTERN.search(text))
+
+
+def _is_vague_guided_type(guided_type: str) -> bool:
+    return guided_type in VAGUE_GUIDED_TYPES
 
 
 def resolve_guided_injury_entry(guided_injury: Any, parsed_entry: dict[str, Any]) -> dict[str, Any]:
@@ -91,6 +124,7 @@ def resolve_guided_injury_entry(guided_injury: Any, parsed_entry: dict[str, Any]
 
     guided_type = _normalize_guided_value(getattr(guided_injury, "injury_type", ""))
     surface_type = _normalize_guided_value(getattr(guided_injury, "surface_type", ""))
+    subtype_type, subtype_surface = _guided_primary_subtype(guided_injury)
     mapped_surface_type = SURFACE_TYPE_TO_INJURY_TYPE.get(surface_type)
 
     rupture_evidence_text = ". ".join(part for part in [area, notes, avoid] if part)
@@ -107,6 +141,25 @@ def resolve_guided_injury_entry(guided_injury: Any, parsed_entry: dict[str, Any]
     elif guided_type == "tendon_ligament":
         final_type = "tendon_rupture_or_avulsion" if _has_rupture_evidence(rupture_evidence_text) else "soft_tissue_joint_issue"
         source = "guided_tendon_ligament"
+    elif (
+        _is_vague_guided_type(guided_type)
+        and subtype_type == "surface_injury"
+        and subtype_surface
+    ):
+        mapped_subtype_surface = SURFACE_TYPE_TO_INJURY_TYPE.get(subtype_surface)
+        if mapped_subtype_surface:
+            final_type = mapped_subtype_surface
+            source = "guided_subtype"
+        else:
+            final_type = _specific_parser_type(parsed_entry) or "unspecified"
+            source = "fallback"
+    elif (
+        _is_vague_guided_type(guided_type)
+        and subtype_type
+        and subtype_type not in {"surface_injury", "unspecified"}
+    ):
+        final_type = subtype_type
+        source = "guided_subtype"
     elif guided_type and guided_type not in {"unspecified", "surface_injury"}:
         final_type = guided_type
         source = "guided_type"

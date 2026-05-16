@@ -77,15 +77,29 @@ export function normalizeGuidedInjuryState(
       ? `surface_injury:${normalizedSurfaceType}`
       : normalizedInjuryType
     : "";
+  const effectiveSubtypes = normalizedSubtypes.length
+    ? normalizedSubtypes
+    : inferredPrimarySubtype
+      ? [inferredPrimarySubtype]
+      : [];
+  let effectiveInjuryType = normalizedInjuryType;
+  let effectiveSurfaceType = normalizedSurfaceType;
+  if (effectiveSubtypes.length === 1) {
+    const [primary, secondary = ""] = effectiveSubtypes[0].split(":");
+    effectiveInjuryType = primary || effectiveInjuryType;
+    if (primary === "surface_injury") {
+      effectiveSurfaceType = secondary || effectiveSurfaceType;
+    }
+  }
   return {
     area: draft.area.trim(),
     severity: draft.severity,
     trend: draft.trend.trim(),
     avoid: draft.avoid.trim(),
     notes: draft.notes.trim(),
-    injury_type: normalizedInjuryType,
-    injury_subtypes: normalizedSubtypes.length ? normalizedSubtypes : inferredPrimarySubtype ? [inferredPrimarySubtype] : [],
-    surface_type: normalizedSurfaceType,
+    injury_type: effectiveInjuryType,
+    injury_subtypes: effectiveSubtypes,
+    surface_type: effectiveSurfaceType,
     timeframe: draft.timeframe.trim(),
     cleared: draft.cleared.trim(),
     open_wound: draft.open_wound.trim(),

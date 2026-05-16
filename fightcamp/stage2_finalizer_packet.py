@@ -49,6 +49,10 @@ _ATHLETE_KEYS = (
     "plan_creation_weekday",
     "readiness_flags",
     "has_active_injury",
+    "injuries_raw_text",
+    "parsed_injuries",
+    "guided_injury",
+    "injury_restrictions",
 )
 
 
@@ -361,6 +365,7 @@ def build_stage2_finalizer_packet(
             "If priority_focus.collision_details contains multiple entries, preserve each clarification. Do not collapse all overlaps into the first detail. Use each detail to sharpen the relevant training emphasis.",
             "Use priority_focus.derived_clarification_tags as internal emphasis signals when preserving the plan's intent. These tags clarify the kind of adaptation the athlete meant, but they do not override hard safety, schedule, injury, phase, or recovery constraints.",
             "Do not expose derived_clarification_tags or raw scoring/reason-code labels directly in athlete-facing text.",
+            "Use parsed_injuries and guided_source_injury_subtypes as injury context only. Do not override parsed injury_type or invent diagnoses from subtype tags.",
         ],
         "forbidden_output": {
             "phase_toolbox_labels": list(_FORBIDDEN_TOOLBOX_LABELS),

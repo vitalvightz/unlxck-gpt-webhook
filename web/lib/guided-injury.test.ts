@@ -453,3 +453,41 @@ test("normalizeGuidedInjuryState infers surface primary subtype key when subtype
   });
   assert.deepStrictEqual(normalized.injury_subtypes, ["surface_injury:blister"]);
 });
+
+test("normalizeGuidedInjuryState promotes a single selected subtype to primary type", () => {
+  const normalized = normalizeGuidedInjuryState({
+    injury_type: "pain",
+    injury_subtypes: ["sprain"],
+  });
+  assert.equal(normalized.injury_type, "sprain");
+  assert.deepStrictEqual(normalized.injury_subtypes, ["sprain"]);
+});
+
+test("normalizeGuidedInjuryState promotes a single selected surface subtype", () => {
+  const normalized = normalizeGuidedInjuryState({
+    injury_type: "pain",
+    surface_type: "cut",
+    injury_subtypes: ["surface_injury:blister"],
+  });
+  assert.equal(normalized.injury_type, "surface_injury");
+  assert.equal(normalized.surface_type, "blister");
+});
+
+test("normalizeGuidedInjuryState keeps explicit primary type when multiple subtypes are selected", () => {
+  const normalized = normalizeGuidedInjuryState({
+    injury_type: "pain",
+    injury_subtypes: ["pain", "instability", "tightness"],
+  });
+  assert.equal(normalized.injury_type, "pain");
+  assert.deepStrictEqual(normalized.injury_subtypes, ["pain", "instability", "tightness"]);
+});
+
+test("normalizeGuidedInjuryState keeps skin_irritation subtype key for backend mapping", () => {
+  const normalized = normalizeGuidedInjuryState({
+    injury_type: "surface_injury",
+    surface_type: "skin_irritation",
+    injury_subtypes: ["surface_injury:skin_irritation"],
+  });
+  assert.equal(normalized.injury_type, "surface_injury");
+  assert.equal(normalized.surface_type, "skin_irritation");
+});
