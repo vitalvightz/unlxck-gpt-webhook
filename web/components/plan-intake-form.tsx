@@ -657,8 +657,8 @@ function CheckboxGroup({
               <span className="checkbox-card-copy">
                 <span className="checkbox-card-title">{option.label}</span>
                 {daysOutDisabledReason ? <span className="checkbox-card-tag">{daysOutDisabledReason}</span> : null}
-                {!daysOutDisabledReason && capDisabled && capDisabledReason ? (
-                  <span className="checkbox-card-tag">{capDisabledReason}</span>
+                {!daysOutDisabledReason && capDisabled ? (
+                  <span className="checkbox-card-tag">{capDisabledReason || "Focus cap reached."}</span>
                 ) : null}
               </span>
             </label>
