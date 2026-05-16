@@ -219,6 +219,16 @@ function getInjuryTypeLabel(injury: GuidedInjuryState): string {
   return opt?.label ?? injury.injury_type ?? "";
 }
 
+function getInjurySubtypeLabels(injury: GuidedInjuryState): string[] {
+  return (injury.injury_subtypes ?? [])
+    .map((subtype) => INJURY_TYPE_GROUPS.flatMap((group) => group.options).find((option) => getSubtypeKey(option) === subtype)?.label ?? subtype)
+    .filter(Boolean);
+}
+
+function getSubtypeKey(option: InjuryTypeOption): string {
+  return option.surface_type ? `${option.value}:${option.surface_type}` : option.value;
+}
+
 function getFamilyForInjury(injury: GuidedInjuryState): InjuryFamily | "" {
   if (injury.injury_type === "surface_injury") return "surface";
   if (["pain", "tightness", "sprain", "strain", "swelling", "instability"].includes(injury.injury_type)) return "pain_movement";
@@ -927,7 +937,7 @@ export function GuidedInjuryCard({
   const safetyActive = Boolean(basicsComplete && typeComplete && !safetyComplete);
   const reviewReady = Boolean(basicsComplete && typeComplete && safetyComplete);
   const selectedFamilyOption = activeFamily ? INJURY_FAMILIES.find((f) => f.family === activeFamily) : null;
-  const selectedTypeLabel = getInjuryTypeLabel(injury);
+  const selectedSubtypeLabels = getInjurySubtypeLabels(injury);
   const liveSummary = useMemo(() => {
     const summaryArea = injury.area.trim() || `Injury ${index + 1}`;
     if (!injury.injury_type) return `${summaryArea} · Needs type`;
@@ -955,6 +965,7 @@ export function GuidedInjuryCard({
 function handleTypeSelect(opt: InjuryTypeOption | null) {
   if (!opt) {
     onUpdate("injury_type", "");
+    onUpdate("injury_subtypes", []);
     clearTypeSpecificFields(onUpdate);
     onUpdate("notes", stripTaggedNotes(injury.notes, ["red_flags", "dislocation", "nerve_symptoms", "chest_symptoms"]));
     return;
@@ -1116,19 +1127,42 @@ function handleTypeSelect(opt: InjuryTypeOption | null) {
 
           {activeFamily ? (
             <div className="gi-field">
-              <label className="gi-label">Optional subtype, if known</label>
-              {injury.injury_type && !subtypeExpanded ? (
+              <label className="gi-label">Injury type and extra subtypes</label>
+              <p className="gi-selection-helper">Pick the closest type first. Add more if several apply.</p>
+              {selectedSubtypeLabels.length > 0 && !subtypeExpanded ? (
                 <div className="gi-selection-summary">
-                  <p className="gi-selection-title">{selectedTypeLabel}</p>
+                  <p className="gi-selection-title">{selectedSubtypeLabels.join(", ")}</p>
                   <button type="button" className="gi-change-btn" onClick={() => setSubtypeExpanded(true)} aria-expanded={subtypeExpanded}>Change</button>
                 </div>
               ) : null}
-              {subtypeExpanded || !injury.injury_type ? (
-                <div className="gi-subtype-grid" role="radiogroup" aria-label="Injury subtype">
+              {subtypeExpanded || selectedSubtypeLabels.length === 0 ? (
+                <div className="gi-subtype-grid" role="group" aria-label="Injury subtype">
                   {getOptionsForFamily(activeFamily).map((opt) => {
-                    const isSelected = injury.injury_type === opt.value && (opt.value !== "surface_injury" || injury.surface_type === (opt.surface_type ?? ""));
+                    if (opt.value === "unspecified") return null;
+                    const subtypeKey = getSubtypeKey(opt);
+                    const isSelected = (injury.injury_subtypes ?? []).includes(subtypeKey);
                     return (
-                      <button key={`${opt.value}-${opt.surface_type ?? ""}`} type="button" role="radio" aria-checked={isSelected} className={`gi-chip ${isSelected ? "gi-chip-selected" : ""}`} onClick={() => { handleTypeSelect(opt); setSubtypeExpanded(false); }}>
+                      <button key={`${opt.value}-${opt.surface_type ?? ""}`} type="button" aria-pressed={isSelected} className={`gi-chip ${isSelected ? "gi-chip-selected" : ""}`} onClick={() => {
+                        const current = injury.injury_subtypes ?? [];
+                        const next = isSelected ? current.filter((value) => value !== subtypeKey) : [...current, subtypeKey];
+                        onUpdate("injury_subtypes", next);
+                        const isPrimary =
+                          opt.value === injury.injury_type &&
+                          (opt.value !== "surface_injury" || (opt.surface_type ?? "") === injury.surface_type);
+                        if (!injury.injury_type) {
+                          handleTypeSelect(opt);
+                          return;
+                        }
+                        if (isSelected && isPrimary) {
+                          const nextPrimary = next[0];
+                          if (!nextPrimary) {
+                            handleTypeSelect(null);
+                            return;
+                          }
+                          const nextOpt = getOptionsForFamily(activeFamily).find((candidate) => getSubtypeKey(candidate) === nextPrimary);
+                          if (nextOpt) handleTypeSelect(nextOpt);
+                        }
+                      }}>
                         {opt.label}
                       </button>
                     );

@@ -432,6 +432,7 @@ test("buildGuidedInjurySummary keeps legacy output and appends structured values
 test("normalize/build/hydrate retain injury_type sprain", () => {
   const normalized = normalizeGuidedInjuryState({ injury_type: "sprain" });
   assert.equal(normalized.injury_type, "sprain");
+  assert.deepStrictEqual(normalized.injury_subtypes, ["sprain"]);
 
   const built = buildGuidedInjuryFields([{ area: "ankle", injury_type: "sprain" }]);
   assert.equal(built.guided_injury?.injury_type, "sprain");
@@ -441,4 +442,14 @@ test("normalize/build/hydrate retain injury_type sprain", () => {
     guided_injuries: [{ area: "ankle", injury_type: "sprain" }],
   });
   assert.equal(hydrated[0]?.injury_type, "sprain");
+  assert.deepStrictEqual(hydrated[0]?.injury_subtypes, ["sprain"]);
+});
+
+test("normalizeGuidedInjuryState infers surface primary subtype key when subtype list is empty", () => {
+  const normalized = normalizeGuidedInjuryState({
+    injury_type: "surface_injury",
+    surface_type: "blister",
+    injury_subtypes: [],
+  });
+  assert.deepStrictEqual(normalized.injury_subtypes, ["surface_injury:blister"]);
 });
