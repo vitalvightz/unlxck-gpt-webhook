@@ -20,7 +20,7 @@ export default function AdminPage() {
   const [error, setError] = useState<string | null>(null);
 
   const isAdminReady =
-    isReady && isMeHydrated && Boolean(session?.access_token) && me?.profile.role === "admin";
+    isReady && isMeHydrated && Boolean(session?.access_token) && me?.profile?.role === "admin";
 
   useEffect(() => {
     if (!isAdminReady || !session?.access_token) {
