@@ -818,3 +818,28 @@ def test_permission_policy_exposes_eligible_countdown_labels():
     assert "D-12" in policy["eligible_countdown_labels"]
     assert "D-7" not in policy["eligible_countdown_labels"]
     assert "D-6" in policy["eligible_countdown_labels"]
+
+
+def test_composite_late_fight_d14_blocks_unavailable_app_owned_days():
+    athlete = _athlete(
+        14,
+        plan_creation_weekday="saturday",
+        training_days=["tuesday", "wednesday", "thursday"],
+        hard_sparring_days=[],
+    )
+    sequence = _build_late_fight_session_sequence(14, athlete)
+    labels = {role.get("scheduled_countdown_label") for role in sequence}
+    assert "D-14" not in labels
+    assert "D-13" not in labels
+    assert "D-12" not in labels
+    assert "D-7" not in labels
+    assert "D-11" in labels
+    assert "D-10" in labels
+    assert "D-9" in labels
+    assert "D-6" in labels
+
+    countdown_map = _countdown_weekday_map("saturday", 14)
+    for role in sequence:
+        label = role.get("scheduled_countdown_label")
+        if label:
+            assert role.get("real_weekday") == countdown_map[label]
