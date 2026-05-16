@@ -141,8 +141,6 @@ def test_planned_sessions_fallback_caps_day_availability_at_five_when_intent_mis
     athlete.pop("weekly_training_frequency", None)
     athlete.pop("training_frequency", None)
     athlete.pop("weekly_sessions", None)
-    athlete.pop("planned_sessions_per_week", None)
-
     assert _planned_sessions_per_week(athlete) == 5
 
 

@@ -32,7 +32,7 @@ REPAIR RULES:
 20. In boxing crowded weeks, anchor days and recovery/support days cannot pick up a second meaningful stressor. Strip the extra stressor instead of redistributing it across the week.
 21. In taper weeks, keep the work short, direct, and low-noise with minimal branching.
 22. Keep the final output athlete-facing. Do not mention the validator, the repair process, or rejected items.
-23. If active weight cut shaped the plan, acknowledge it plainly in the athlete-facing output.
+23. If a target-weight constraint shaped the plan, acknowledge it plainly in the athlete-facing output.
 24. For high-pressure cuts, include one short summary-level note and one short support-level note without turning the plan into a long weight-cut essay.
 25. For any corrective or adjustment line, make one clear coaching call with a short why tied to performance, safety, readiness, or the week's main objective.
 26. Prefer command then reason on corrective lines; do not lead with explanation and then soften it into a suggestion.
@@ -44,7 +44,7 @@ REPAIR RULES:
 32. If fatigue is high or fight-week pressure is active, reduce optionality and make the safest performance-preserving call plainly.
 33. If injury management is active, lead with constraints, substitutions, or stop rules rather than optional language.
 34. Do not prescribe exercises the plan already marks as avoid/contraindicated for the athlete's injury status.
-35. If active weight cut is present, keep the language shorter, safety-first, and non-negotiable about recovery margin.
+35. If a target-weight constraint is present, keep the language shorter, safety-first, and non-negotiable about recovery margin.
 36. Aim critique at the plan, load, or execution issue, never at the athlete's character.
 37. Reduce repeated openers, labels, and filler reminders so the repaired plan reads like a final coach prescription, not a template.
 38. If late_fight_plan_spec is present, treat its session cap, meaningful-stress cap, max_blocks_per_session, and forbidden_blocks as hard constraints.

@@ -297,7 +297,7 @@ def _build_phase_selection_guardrails(phase: str, training_context: TrainingCont
         guardrails["conditioning_drop_order_if_thin"] = dedupe_preserve_order(
             ["glycolytic"] + guardrails.get("conditioning_drop_order_if_thin", [])
         )
-        guardrails["notes"].append("During active weight cut, treat glycolytic work as optional unless it is the only compliant fight-specific slot left.")
+        guardrails["notes"].append("During a target-weight constraint, treat glycolytic work as optional unless it is the only compliant fight-specific slot left.")
     return guardrails
 
 
