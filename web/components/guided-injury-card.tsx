@@ -220,8 +220,9 @@ function getInjuryTypeLabel(injury: GuidedInjuryState): string {
 }
 
 function getInjurySubtypeLabels(injury: GuidedInjuryState): string[] {
+  const allOptions = INJURY_TYPE_GROUPS.flatMap((group) => group.options);
   return (injury.injury_subtypes ?? [])
-    .map((subtype) => INJURY_TYPE_GROUPS.flatMap((group) => group.options).find((option) => getSubtypeKey(option) === subtype)?.label ?? subtype)
+    .map((subtype) => allOptions.find((option) => getSubtypeKey(option) === subtype)?.label ?? subtype)
     .filter(Boolean);
 }
 
