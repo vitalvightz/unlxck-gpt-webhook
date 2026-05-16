@@ -730,8 +730,13 @@ def test_runtime_context_transports_all_guided_injuries_and_keeps_legacy_first_c
         ]
     )
     payload["guided_injuries"] = [
-        {"area": "left knee", "injury_type": "instability", "severity": "moderate"},
-        {"area": "right ankle", "injury_type": "sprain", "severity": "mild"},
+        {
+            "area": "left knee",
+            "injury_type": "instability",
+            "injury_subtypes": ["pain", "instability", "tightness"],
+            "severity": "moderate",
+        },
+        {"area": "right ankle", "injury_type": "sprain", "injury_subtypes": ["sprain"], "severity": "mild"},
     ]
 
     parsed = PlanInput.from_payload(payload)
@@ -743,7 +748,11 @@ def test_runtime_context_transports_all_guided_injuries_and_keeps_legacy_first_c
 
     assert len(context.training_context.guided_injuries) == 2
     assert context.training_context.guided_injury == context.training_context.guided_injuries[0]
+    assert context.training_context.guided_injury["injury_subtypes"] == ["pain", "instability", "tightness"]
+    assert context.training_context.guided_injuries[0]["injury_subtypes"] == ["pain", "instability", "tightness"]
+    assert context.training_context.guided_injuries[1]["injury_subtypes"] == ["sprain"]
     assert len(context.training_context.parsed_injuries) == 2
+    assert context.training_context.parsed_injuries[0]["guided_source_injury_subtypes"] == ["pain", "instability", "tightness"]
 
 
 def test_approved_resume_runtime_context_keeps_structured_injury_truth():
@@ -914,6 +923,34 @@ def test_guided_injury_missing_structured_fields_do_not_crash():
     assert guided.open_wound == ""
 
 
+def test_guided_injury_injury_subtypes_are_preserved():
+    guided = input_parsing._extract_guided_injury(
+        {"guided_injury": {"area": "left forearm", "injury_subtypes": ["sprain", "surface_injury:blister"]}}
+    )
+
+    assert guided is not None
+    assert guided.injury_subtypes == ["sprain", "surface_injury:blister"]
+
+
+def test_guided_injury_single_surface_subtype_promotes_resolution_type():
+    payload = _payload(
+        [
+            {"label": "Full name", "value": "Test Athlete"},
+            {"label": "Fighting Style (Technical)", "value": "Boxing"},
+        ]
+    )
+    payload["guided_injury"] = {
+        "area": "right heel",
+        "injury_type": "pain",
+        "injury_subtypes": ["surface_injury:blister"],
+    }
+
+    parsed = PlanInput.from_payload(payload)
+
+    assert parsed.parsed_injuries
+    assert parsed.parsed_injuries[0]["injury_type"] == "blister"
+
+
 def test_missing_frequency_is_intentionally_inferred_and_marked_system_inferred():
     parsed = PlanInput.from_payload(
         _payload(
@@ -1080,7 +1117,14 @@ def test_countdown_stable_across_timezone_edge_cases(monkeypatch):
     assert parsed.days_until_fight == 1
 
 
-def _guided_payload(area: str, injury_type: str = "", surface_type: str = "", notes: str = "", avoid: str = "") -> dict:
+def _guided_payload(
+    area: str,
+    injury_type: str = "",
+    surface_type: str = "",
+    notes: str = "",
+    avoid: str = "",
+    injury_subtypes: list[str] | None = None,
+) -> dict:
     payload = _payload([
         {"label": "Full name", "value": "Test Athlete"},
         {"label": "Fighting Style (Technical)", "value": "Boxing"},
@@ -1089,6 +1133,7 @@ def _guided_payload(area: str, injury_type: str = "", surface_type: str = "", no
         "area": area,
         "injury_type": injury_type,
         "surface_type": surface_type,
+        "injury_subtypes": injury_subtypes or [],
         "notes": notes,
         "avoid": avoid,
     }
@@ -1129,6 +1174,76 @@ def test_guided_resolver_surface_type_maps_to_surface_injury_type():
     assert entry["injury_type"] == "contusion"
     assert entry["canonical_location"] == "knee"
     assert entry["injury_type_source"] == "surface_type"
+
+
+def test_guided_resolver_free_text_beats_subtype_and_preserves_subtypes():
+    parsed = PlanInput.from_payload(
+        _guided_payload("rolled right ankle with swelling", injury_type="pain", injury_subtypes=["pain"])
+    )
+
+    entry = parsed.parsed_injuries[0]
+    assert entry["injury_type"] == "swelling"
+    assert entry["injury_type_source"] == "parser"
+    assert entry["guided_source_injury_subtypes"] == ["pain"]
+
+
+def test_guided_resolver_vague_text_allows_single_subtype_fallback():
+    parsed = PlanInput.from_payload(_guided_payload("right ankle", injury_type="pain", injury_subtypes=["sprain"]))
+
+    entry = parsed.parsed_injuries[0]
+    assert entry["injury_type"] == "sprain"
+    assert entry["injury_type_source"] == "guided_subtype"
+    assert entry["guided_source_injury_subtypes"] == ["sprain"]
+
+
+def test_guided_resolver_specific_guided_type_beats_vague_subtype():
+    parsed = PlanInput.from_payload(_guided_payload("right ankle", injury_type="sprain", injury_subtypes=["pain"]))
+
+    entry = parsed.parsed_injuries[0]
+    assert entry["injury_type"] == "sprain"
+    assert entry["injury_type_source"] == "guided_type"
+    assert entry["guided_source_injury_subtypes"] == ["pain"]
+
+
+def test_guided_resolver_multiple_subtypes_stay_metadata_only():
+    parsed = PlanInput.from_payload(
+        _guided_payload(
+            "shoulder pain",
+            injury_type="pain",
+            injury_subtypes=["pain", "instability", "tightness"],
+        )
+    )
+
+    entry = parsed.parsed_injuries[0]
+    assert entry["injury_type"] == "pain"
+    assert entry["guided_source_injury_subtypes"] == ["pain", "instability", "tightness"]
+
+
+def test_guided_resolver_unknown_subtype_never_becomes_final_type():
+    parsed = PlanInput.from_payload(_guided_payload("right knee", injury_subtypes=["random_bad_token"]))
+
+    entry = parsed.parsed_injuries[0]
+    assert entry["injury_type"] != "random_bad_token"
+    assert entry["guided_source_injury_subtypes"] == ["random_bad_token"]
+
+
+def test_guided_resolver_surface_subtype_key_maps_to_supported_type():
+    parsed = PlanInput.from_payload(
+        _guided_payload("right heel", injury_type="pain", injury_subtypes=["surface_injury:blister"])
+    )
+
+    entry = parsed.parsed_injuries[0]
+    assert entry["injury_type"] == "blister"
+    assert entry["injury_type_source"] == "guided_subtype"
+
+
+def test_guided_resolver_skin_irritation_surface_type_maps_safely_to_abrasion():
+    parsed = PlanInput.from_payload(
+        _guided_payload("right forearm", injury_type="surface_injury", surface_type="skin_irritation")
+    )
+
+    entry = parsed.parsed_injuries[0]
+    assert entry["injury_type"] == "abrasion"
 
 
 def test_guided_resolver_tendon_ligament_defaults_to_soft_tissue_without_rupture_evidence():

@@ -224,6 +224,7 @@ def build_runtime_context(
             "avoid": guided_entry.avoid,
             "notes": guided_entry.notes,
             "injury_type": guided_entry.injury_type,
+            "injury_subtypes": list(guided_entry.injury_subtypes or []),
             "surface_type": guided_entry.surface_type,
             "timeframe": guided_entry.timeframe,
             "cleared": guided_entry.cleared,
