@@ -195,7 +195,7 @@ export default function HomePage() {
     }
 
     const intervalId = window.setInterval(() => {
-      if (Date.now() < previewPausedUntil) {
+      if (document.hidden || Date.now() < previewPausedUntil) {
         return;
       }
       setActivePreviewIndex((currentIndex) => (currentIndex + 1) % landingPreviewStages.length);
