@@ -21,6 +21,19 @@ function mergeIntakeLayers(base: PlanRequest, top: PlanRequest): PlanRequest {
   return merged as PlanRequest;
 }
 
+function mergeAthleteLayers(
+  base: PlanRequest["athlete"],
+  top?: Partial<PlanRequest["athlete"]> | null,
+): PlanRequest["athlete"] {
+  if (!top) return base;
+  const merged: Record<string, unknown> = { ...base };
+  for (const key of Object.keys(top) as (keyof PlanRequest["athlete"])[]) {
+    const topValue = top[key];
+    merged[key] = isEmptyValue(topValue) ? base[key] : topValue;
+  }
+  return merged as PlanRequest["athlete"];
+}
+
 export function emptyPlanRequest(fullName = ""): PlanRequest {
   return {
     athlete: {
@@ -82,29 +95,30 @@ export function hydratePlanRequest(me: MeResponse | null): PlanRequest {
   // A partially-completed draft still pulls untouched fields from the last completed intake.
   const layered = normalizedDraft ? mergeIntakeLayers(base, normalizedDraft) : base;
 
-  const draftAthlete = normalizedDraft?.athlete;
-  const intakeAthlete = base.athlete;
+  // Layer order for athlete fields: defaults < profile-derived < latest_intake.athlete < draft.athlete.
+  // Each layer only overrides when its value is non-empty, so a partial draft (e.g. record: "",
+  // technical_style: []) never clobbers prior values pulled from the previous intake or the profile.
+  const profileAthlete: Partial<PlanRequest["athlete"]> = {
+    full_name: me.profile.full_name,
+    sex: me.profile.nutrition_profile?.sex ?? null,
+    age: me.profile.nutrition_profile?.age ?? null,
+    height_cm: me.profile.nutrition_profile?.height_cm ?? null,
+    technical_style: me.profile.technical_style,
+    tactical_style: me.profile.tactical_style,
+    stance: me.profile.stance,
+    professional_status: me.profile.professional_status,
+    record: me.profile.record,
+    athlete_timezone: me.profile.athlete_timezone,
+  };
+
+  const withProfile = mergeAthleteLayers(fallback.athlete, profileAthlete);
+  const withIntake = mergeAthleteLayers(withProfile, base.athlete);
+  const finalAthlete = mergeAthleteLayers(withIntake, normalizedDraft?.athlete);
 
   return {
     ...fallback,
     ...layered,
-    athlete: {
-      ...fallback.athlete,
-      ...intakeAthlete,
-      ...(draftAthlete ?? {}),
-      full_name: draftAthlete?.full_name || intakeAthlete?.full_name || me.profile.full_name,
-      sex: draftAthlete?.sex ?? intakeAthlete?.sex ?? me.profile.nutrition_profile?.sex ?? fallback.athlete.sex,
-      age: draftAthlete?.age ?? intakeAthlete?.age ?? me.profile.nutrition_profile?.age ?? fallback.athlete.age,
-      height_cm: draftAthlete?.height_cm ?? intakeAthlete?.height_cm ?? me.profile.nutrition_profile?.height_cm ?? fallback.athlete.height_cm,
-      technical_style: draftAthlete?.technical_style ?? intakeAthlete?.technical_style ?? me.profile.technical_style ?? [],
-      tactical_style: draftAthlete?.tactical_style ?? intakeAthlete?.tactical_style ?? me.profile.tactical_style ?? [],
-      stance: draftAthlete?.stance ?? intakeAthlete?.stance ?? me.profile.stance ?? "",
-      professional_status:
-        draftAthlete?.professional_status ?? intakeAthlete?.professional_status ?? me.profile.professional_status ?? "",
-      record: draftAthlete?.record ?? intakeAthlete?.record ?? me.profile.record ?? "",
-      athlete_timezone:
-        draftAthlete?.athlete_timezone ?? intakeAthlete?.athlete_timezone ?? me.profile.athlete_timezone ?? fallback.athlete.athlete_timezone,
-    },
+    athlete: finalAthlete,
   };
 }
 

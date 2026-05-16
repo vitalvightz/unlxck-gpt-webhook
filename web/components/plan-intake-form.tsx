@@ -839,7 +839,7 @@ export function PlanIntakeForm() {
     setGuidedInjuries(nextGuidedInjuries);
     setActiveGuidedInjuryIndex(nextGuidedInjuries.length ? 0 : null);
     setNoRestrictions(!hasStoredRestrictions);
-    setNoScheduledFight(Boolean(draft?.no_scheduled_fight));
+    setNoScheduledFight(Boolean(draft?.no_scheduled_fight ?? nextForm.no_scheduled_fight));
     const savedStep = Number(draft?.current_step ?? 0);
     setCurrentStep(Number.isFinite(savedStep) ? Math.min(Math.max(savedStep, 0), steps.length - 1) : 0);
     setHydrated(true);
