@@ -1290,16 +1290,30 @@ export function PlanIntakeForm() {
     action: TrainingGateAction = "next",
     targetStep?: number,
   ): boolean {
-    if (currentStep === 0 && !isValidRecordFormat(nextForm.athlete.record ?? "")) {
-      setError("Record must use x-x or x-x-x format, like 5-1 or 12-2-1.");
-      return false;
+    if (currentStep === 0) {
+      if (!isValidRecordFormat(nextForm.athlete.record ?? "")) {
+        setError("Record must use x-x or x-x-x format, like 5-1 or 12-2-1.");
+        return false;
+      }
+      if (!nextForm.athlete.technical_style.length) {
+        setError("Select a technical style before continuing.");
+        return false;
+      }
     }
     if (currentStep === 1) {
+      if (!nextForm.fight_date && !noScheduledFight) {
+        setError("Choose your fight date or mark \"No scheduled fight\" before continuing.");
+        return false;
+      }
       const parsedRounds = parseRoundsFormat(nextForm.rounds_format);
       if (!parsedRounds.roundCount || !parsedRounds.roundDuration) {
         setError("Choose both round count and round duration before continuing.");
         return false;
       }
+    }
+    if (currentStep === 2 && !nextForm.training_availability.length) {
+      setError("Pick at least one training availability day before continuing.");
+      return false;
     }
     if (currentStep === 3 && (nextForm.guided_injuries ?? []).some((injury) => hasGuidedInjuryDescriptorWithoutArea(injury))) {
       setError("Add a pain area or body part before choosing severity or trend.");
@@ -2309,7 +2323,9 @@ export function PlanIntakeForm() {
                         ? "Add to availability first"
                         : form.support_work_days.includes(option.value)
                           ? "Already tagged as non-hard training"
-                          : null
+                          : form.hard_sparring_days.length >= 4
+                            ? "Hard sparring cap (4) reached"
+                            : null
                   }
                 />
                 <div className="field">
