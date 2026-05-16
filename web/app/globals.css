@@ -5812,6 +5812,64 @@ html[data-theme="light"] .global-generation-status-rail {
 }
 
 
+/* Desktop onboarding cleanup: tighter, more uniform spacing for profile, fight context, and injuries */
+@media (min-width: 1024px) {
+  .onboarding-step-main {
+    gap: 18px;
+  }
+
+  .onboarding-step-main .step-card {
+    gap: 14px;
+    padding: 20px;
+  }
+
+  .onboarding-step-main .form-section-header {
+    margin-bottom: 12px;
+  }
+
+  .onboarding-profile-grid,
+  .onboarding-fight-grid {
+    gap: 14px 16px;
+  }
+
+  .onboarding-profile-grid .field,
+  .onboarding-fight-grid .field {
+    gap: 8px;
+  }
+
+  .onboarding-profile-grid .field input,
+  .onboarding-fight-grid .field input,
+  .onboarding-profile-grid .select-trigger,
+  .onboarding-fight-grid .select-trigger {
+    min-height: 48px;
+  }
+
+  .onboarding-step-layout-restrictions .step-main {
+    max-width: 1120px;
+  }
+
+  .injury-body-map-layout {
+    grid-template-columns: 240px minmax(0, 1fr);
+    gap: 20px;
+  }
+
+  .injury-card {
+    padding: 16px;
+    border-radius: 18px;
+    gap: 14px;
+  }
+
+  .injury-card-summary,
+  .injury-card-live-summary {
+    line-height: 1.45;
+  }
+
+  .injury-card-stack {
+    gap: 12px;
+  }
+}
+
+
 .athlete-profile-panel {
   position: relative;
   overflow: hidden;
