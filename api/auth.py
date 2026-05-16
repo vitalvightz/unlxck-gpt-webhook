@@ -17,7 +17,7 @@ def _collect_auth_api_error_types() -> tuple[type[BaseException], ...]:
     classes: list[type[BaseException]] = []
     try:
         from supabase_auth.errors import AuthApiError as _SupabaseAuthApiError
-    except Exception:  # pragma: no cover - dependency may be absent
+    except ImportError:  # pragma: no cover - dependency may be absent
         pass
     else:
         classes.append(_SupabaseAuthApiError)
@@ -25,7 +25,7 @@ def _collect_auth_api_error_types() -> tuple[type[BaseException], ...]:
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", DeprecationWarning)
             from gotrue.errors import AuthApiError as _GotrueAuthApiError
-    except Exception:  # pragma: no cover - dependency may be absent
+    except ImportError:  # pragma: no cover - dependency may be absent
         pass
     else:
         if _GotrueAuthApiError not in classes:
