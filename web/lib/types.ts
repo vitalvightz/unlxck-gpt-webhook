@@ -43,6 +43,7 @@ export type GuidedInjuryInput = {
   avoid?: string;
   notes?: string;
   injury_type?: string;
+  injury_subtypes?: string[];
   surface_type?: string;
   timeframe?: string;
   cleared?: string;

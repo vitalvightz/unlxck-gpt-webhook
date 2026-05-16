@@ -24,6 +24,7 @@ export const EMPTY_GUIDED_INJURY: GuidedInjuryState = {
   avoid: "",
   notes: "",
   injury_type: "",
+  injury_subtypes: [],
   surface_type: "",
   timeframe: "",
   cleared: "",
@@ -52,6 +53,7 @@ export function coerceGuidedInjuryEditState(
     avoid: toGuidedTextValue(value?.avoid),
     notes: toGuidedTextValue(value?.notes),
     injury_type: toGuidedTextValue(value?.injury_type),
+    injury_subtypes: toGuidedStringArray(value?.injury_subtypes),
     surface_type: toGuidedTextValue(value?.surface_type),
     timeframe: toGuidedTextValue(value?.timeframe),
     cleared: toGuidedTextValue(value?.cleared),
@@ -74,6 +76,7 @@ export function normalizeGuidedInjuryState(
     avoid: draft.avoid.trim(),
     notes: draft.notes.trim(),
     injury_type: draft.injury_type.trim(),
+    injury_subtypes: draft.injury_subtypes.map((value) => value.trim()).filter(Boolean),
     surface_type: draft.surface_type.trim(),
     timeframe: draft.timeframe.trim(),
     cleared: draft.cleared.trim(),
@@ -100,6 +103,7 @@ export function hasGuidedInjuryContent(value: Partial<GuidedInjuryState> | null 
       details.avoid ||
       details.notes ||
       details.injury_type ||
+      details.injury_subtypes.length ||
       details.surface_type ||
       details.timeframe ||
       details.cleared ||
