@@ -369,6 +369,20 @@ export function updateMe(token: string, payload: ProfileUpdateRequest): Promise<
   return request;
 }
 
+export function saveOnboardingDraft(
+  token: string,
+  payload: Pick<
+    ProfileUpdateRequest,
+    "onboarding_draft" | "full_name" | "technical_style" | "tactical_style" | "stance" | "professional_status" | "record" | "athlete_timezone"
+  >,
+): Promise<{ ok: boolean; updated_at: string }> {
+  return readJson<{ ok: boolean; updated_at: string }>("/api/onboarding/draft", {
+    method: "PATCH",
+    token,
+    body: JSON.stringify(payload),
+  });
+}
+
 export function getNutritionCurrent(token: string): Promise<NutritionWorkspaceState> {
   return readJson<NutritionWorkspaceState>("/api/nutrition/current", { token });
 }
