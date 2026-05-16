@@ -38,7 +38,7 @@ import {
   type GuidedInjuryState,
 } from "@/lib/guided-injury";
 import { GuidedInjuryCard } from "@/components/guided-injury-card";
-import { emptyPlanRequest, hydratePlanRequest, mergePlanRequestDraft } from "@/lib/onboarding";
+import { applyNoScheduledFightSnapshot, emptyPlanRequest, hydratePlanRequest, mergePlanRequestDraft } from "@/lib/onboarding";
 import { buildRoundsFormat, parseRoundsFormat, ROUND_COUNT_OPTIONS, ROUND_DURATION_OPTIONS } from "@/lib/rounds-format";
 import { getPerformanceFocusCap, validatePerformanceFocusSelections } from "@/lib/performance-focus-cap";
 import { canSelectWizardStep } from "@/lib/step-navigation";
@@ -1804,8 +1804,12 @@ export function PlanIntakeForm() {
           description: "Lock in the timing and round structure so the plan can scale to the fight window.",
           checks: [
             {
-              label: form.fight_date ? "Fight date is set." : "Choose the fight date.",
-              status: form.fight_date ? "done" : "pending",
+              label: form.fight_date
+                ? "Fight date is set."
+                : noScheduledFight
+                  ? "No scheduled fight selected. Open camp."
+                  : "Choose the fight date or select No scheduled fight.",
+              status: form.fight_date || noScheduledFight ? "done" : "pending",
             },
             {
               label:
@@ -2135,9 +2139,7 @@ export function PlanIntakeForm() {
                         onChange={(event) => {
                           const checked = event.target.checked;
                           setNoScheduledFight(checked);
-                          if (checked) {
-                            updateField("fight_date", "");
-                          }
+                          setForm((current) => applyNoScheduledFightSnapshot(current, checked));
                         }}
                       />
                       <span className="inline-warning-ack-copy">No scheduled fight yet</span>

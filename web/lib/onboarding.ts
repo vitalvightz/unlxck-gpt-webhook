@@ -18,7 +18,22 @@ function mergeIntakeLayers(base: PlanRequest, top: PlanRequest): PlanRequest {
     const topValue = top[key];
     merged[key] = isEmptyValue(topValue) ? base[key] : topValue;
   }
+  if (top.no_scheduled_fight === true) {
+    merged.fight_date = "";
+    merged.no_scheduled_fight = true;
+  }
   return merged as PlanRequest;
+}
+
+export function applyNoScheduledFightSnapshot(form: PlanRequest, noScheduledFight: boolean): PlanRequest {
+  if (!noScheduledFight) {
+    return form;
+  }
+  return {
+    ...form,
+    no_scheduled_fight: true,
+    fight_date: "",
+  };
 }
 
 function mergeAthleteLayers(
