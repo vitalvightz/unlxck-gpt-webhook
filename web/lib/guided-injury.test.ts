@@ -453,3 +453,22 @@ test("normalizeGuidedInjuryState infers surface primary subtype key when subtype
   });
   assert.deepStrictEqual(normalized.injury_subtypes, ["surface_injury:blister"]);
 });
+
+test("normalizeGuidedInjuryState promotes a single selected subtype to primary type", () => {
+  const normalized = normalizeGuidedInjuryState({
+    injury_type: "pain",
+    injury_subtypes: ["sprain"],
+  });
+  assert.equal(normalized.injury_type, "sprain");
+  assert.deepStrictEqual(normalized.injury_subtypes, ["sprain"]);
+});
+
+test("normalizeGuidedInjuryState promotes a single selected surface subtype", () => {
+  const normalized = normalizeGuidedInjuryState({
+    injury_type: "pain",
+    surface_type: "cut",
+    injury_subtypes: ["surface_injury:blister"],
+  });
+  assert.equal(normalized.injury_type, "surface_injury");
+  assert.equal(normalized.surface_type, "blister");
+});

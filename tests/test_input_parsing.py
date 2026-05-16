@@ -914,6 +914,34 @@ def test_guided_injury_missing_structured_fields_do_not_crash():
     assert guided.open_wound == ""
 
 
+def test_guided_injury_injury_subtypes_are_preserved():
+    guided = input_parsing._extract_guided_injury(
+        {"guided_injury": {"area": "left forearm", "injury_subtypes": ["sprain", "surface_injury:blister"]}}
+    )
+
+    assert guided is not None
+    assert guided.injury_subtypes == ["sprain", "surface_injury:blister"]
+
+
+def test_guided_injury_single_surface_subtype_promotes_resolution_type():
+    payload = _payload(
+        [
+            {"label": "Full name", "value": "Test Athlete"},
+            {"label": "Fighting Style (Technical)", "value": "Boxing"},
+        ]
+    )
+    payload["guided_injury"] = {
+        "area": "right heel",
+        "injury_type": "pain",
+        "injury_subtypes": ["surface_injury:blister"],
+    }
+
+    parsed = PlanInput.from_payload(payload)
+
+    assert parsed.parsed_injuries
+    assert parsed.parsed_injuries[0]["injury_type"] == "blister"
+
+
 def test_missing_frequency_is_intentionally_inferred_and_marked_system_inferred():
     parsed = PlanInput.from_payload(
         _payload(

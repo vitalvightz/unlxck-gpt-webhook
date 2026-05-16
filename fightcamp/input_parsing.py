@@ -378,6 +378,7 @@ class GuidedInjury:
     avoid: str = ""
     notes: str = ""
     injury_type: str = ""
+    injury_subtypes: list[str] = field(default_factory=list)
     surface_type: str = ""
     timeframe: str = ""
     cleared: str = ""
@@ -396,6 +397,7 @@ class GuidedInjury:
                 self.avoid,
                 self.notes,
                 self.injury_type,
+                self.injury_subtypes,
                 self.surface_type,
                 self.timeframe,
                 self.cleared,
@@ -433,6 +435,7 @@ def _build_guided_injury(raw_value: dict[str, object]) -> GuidedInjury:
         avoid=_coerce_guided_text(raw_value.get("avoid")),
         notes=_coerce_guided_text(raw_value.get("notes")),
         injury_type=_coerce_guided_text(raw_value.get("injury_type")),
+        injury_subtypes=_coerce_guided_list(raw_value.get("injury_subtypes")),
         surface_type=_coerce_guided_text(raw_value.get("surface_type")),
         timeframe=_coerce_guided_text(raw_value.get("timeframe")),
         cleared=_coerce_guided_text(raw_value.get("cleared")),

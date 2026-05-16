@@ -55,6 +55,22 @@ def _specific_parser_type(entry: dict[str, Any] | None) -> str:
     return str((entry or {}).get("injury_type") or "").strip().lower()
 
 
+def _guided_primary_subtype(guided_injury: Any) -> tuple[str, str]:
+    raw_subtypes = getattr(guided_injury, "injury_subtypes", None)
+    if not isinstance(raw_subtypes, list):
+        return "", ""
+
+    normalized = [str(value).strip().lower() for value in raw_subtypes if str(value).strip()]
+    if len(normalized) != 1:
+        return "", ""
+
+    token = normalized[0]
+    if ":" in token:
+        primary, secondary = token.split(":", 1)
+        return primary.strip(), secondary.strip()
+    return token, ""
+
+
 def _has_rupture_evidence(text: str) -> bool:
     if not text:
         return False
@@ -91,6 +107,11 @@ def resolve_guided_injury_entry(guided_injury: Any, parsed_entry: dict[str, Any]
 
     guided_type = _normalize_guided_value(getattr(guided_injury, "injury_type", ""))
     surface_type = _normalize_guided_value(getattr(guided_injury, "surface_type", ""))
+    subtype_type, subtype_surface = _guided_primary_subtype(guided_injury)
+    if subtype_type:
+        guided_type = subtype_type
+    if subtype_surface:
+        surface_type = subtype_surface
     mapped_surface_type = SURFACE_TYPE_TO_INJURY_TYPE.get(surface_type)
 
     rupture_evidence_text = ". ".join(part for part in [area, notes, avoid] if part)
