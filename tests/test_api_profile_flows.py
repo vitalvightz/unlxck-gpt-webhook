@@ -284,6 +284,43 @@ def test_saved_onboarding_draft_round_trips_through_me_and_clears_after_generati
     assert refreshed_me.json()["latest_intake"]["fight_date"] == "2026-04-18"
 
 
+def test_onboarding_draft_endpoint_requires_auth():
+    client, _, _ = _build_client()
+
+    response = client.patch(
+        "/api/onboarding/draft",
+        json={"onboarding_draft": {"current_step": 3}},
+    )
+
+    assert response.status_code == 401
+
+
+def test_onboarding_draft_endpoint_persists_draft_and_profile_fields():
+    client, store, _ = _build_client()
+
+    response = client.patch(
+        "/api/onboarding/draft",
+        headers={"Authorization": "Bearer athlete-token"},
+        json={
+            "full_name": "Ari Mensah",
+            "technical_style": ["boxing"],
+            "tactical_style": ["pressure_fighter"],
+            "stance": "orthodox",
+            "professional_status": "amateur",
+            "record": "5-1",
+            "athlete_timezone": "Europe/London",
+            "onboarding_draft": {"current_step": 3, "injuries": "ankle soreness"},
+        },
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["ok"] is True
+    assert isinstance(payload["updated_at"], str)
+    assert set(payload.keys()) == {"ok", "updated_at"}
+    assert store.profiles["athlete-1"]["onboarding_draft"]["current_step"] == 3
+    assert store.profiles["athlete-1"]["record"] == "5-1"
+
 def test_me_route_defaults_profile_appearance_mode_to_dark():
     client, _, _ = _build_client()
 

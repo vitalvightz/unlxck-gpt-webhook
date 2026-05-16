@@ -778,6 +778,29 @@ class ProfileUpdateRequest(BaseModel):
         return _validate_record(value)
 
 
+class OnboardingDraftSaveRequest(BaseModel):
+    onboarding_draft: dict[str, Any] | None = None
+    full_name: str | None = None
+    technical_style: list[str] | None = None
+    tactical_style: list[str] | None = None
+    stance: str | None = None
+    professional_status: str | None = None
+    record: str | None = None
+    athlete_timezone: str | None = None
+
+    @field_validator("record")
+    @classmethod
+    def validate_record(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        return _validate_record(value)
+
+
+class OnboardingDraftSaveResponse(BaseModel):
+    ok: bool = True
+    updated_at: str
+
+
 class ManualStage2SubmissionRequest(BaseModel):
     final_plan_text: str
 

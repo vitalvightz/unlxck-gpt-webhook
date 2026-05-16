@@ -39,6 +39,8 @@ from .models import (
     MeResponse,
     NutritionWorkspaceState,
     NutritionWorkspaceUpdateRequest,
+    OnboardingDraftSaveRequest,
+    OnboardingDraftSaveResponse,
     PlanDetail,
     PlanRenameRequest,
     PlanOutputs,
@@ -920,6 +922,29 @@ def create_app(
     ) -> MeResponse:
         updated = _map_profile_row(store.update_profile(profile.athlete_id, update))
         return _build_me_response(updated, store)
+
+    @app.patch("/api/onboarding/draft", response_model=OnboardingDraftSaveResponse)
+    def save_onboarding_draft(
+        update: OnboardingDraftSaveRequest,
+        profile: ProfileRecord = Depends(require_profile),
+        store: AppStore = Depends(get_store),
+    ) -> OnboardingDraftSaveResponse:
+        updated = _map_profile_row(
+            store.update_profile(
+                profile.athlete_id,
+                ProfileUpdateRequest(
+                    onboarding_draft=update.onboarding_draft,
+                    full_name=update.full_name,
+                    technical_style=update.technical_style,
+                    tactical_style=update.tactical_style,
+                    stance=update.stance,
+                    professional_status=update.professional_status,
+                    record=update.record,
+                    athlete_timezone=update.athlete_timezone,
+                ),
+            )
+        )
+        return OnboardingDraftSaveResponse(updated_at=updated.updated_at)
 
     @app.get("/api/nutrition/current", response_model=NutritionWorkspaceState)
     def get_nutrition_current(
