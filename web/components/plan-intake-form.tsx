@@ -787,9 +787,23 @@ type TrainingGateDecision =
   | { kind: "hard_error"; message: string }
   | { kind: "warning_ack_required"; message: string; shouldRedirectToTraining: boolean };
 
+export function applyNoScheduledFightSnapshot(nextForm: PlanRequest, nextNoScheduledFight: boolean): PlanRequest {
+  if (nextNoScheduledFight) {
+    return {
+      ...nextForm,
+      fight_date: "",
+      no_scheduled_fight: true,
+    };
+  }
+  return {
+    ...nextForm,
+    no_scheduled_fight: false,
+  };
+}
+
 export function PlanIntakeForm() {
   const router = useRouter();
-  const { me, session } = useAppSession();
+  const { me, session, replaceMe } = useAppSession();
   const [currentStep, setCurrentStep] = useState(0);
   const [isMobileProgressOpen, setIsMobileProgressOpen] = useState(false);
   const [form, setForm] = useState<PlanRequest>(emptyPlanRequest());
@@ -991,15 +1005,14 @@ export function PlanIntakeForm() {
     const nextGuidedInjuryFields = buildGuidedInjuryFields(currentGuidedInjuries, {
       noRestrictions: currentNoRestrictions,
     });
-    return syncDeviceFields({
+    return syncDeviceFields(applyNoScheduledFightSnapshot({
       ...currentForm,
       ...nextGuidedInjuryFields,
       ...sanitizeCollisionMetadata({
         ...currentForm,
         ...nextGuidedInjuryFields,
       }),
-      no_scheduled_fight: noScheduledFight,
-    });
+    }, noScheduledFight));
   }
 
   function syncGuidedInjuryFields(nextGuidedInjuries: GuidedInjuryState[], nextNoRestrictions: boolean) {
@@ -1403,6 +1416,18 @@ export function PlanIntakeForm() {
           no_scheduled_fight: noScheduledFight,
         },
       });
+      if (me) {
+        replaceMe({
+          ...me,
+          profile: {
+            ...me.profile,
+            onboarding_draft: {
+              ...mergePlanRequestDraft(me.profile.onboarding_draft as Record<string, unknown> | null | undefined, nextForm, step),
+              no_scheduled_fight: noScheduledFight,
+            },
+          },
+        });
+      }
       lastSavedSnapshotRef.current = JSON.stringify(nextForm);
       setSaveStatus("saved");
       setLastSavedAt(Date.now());
@@ -2135,9 +2160,7 @@ export function PlanIntakeForm() {
                         onChange={(event) => {
                           const checked = event.target.checked;
                           setNoScheduledFight(checked);
-                          if (checked) {
-                            updateField("fight_date", "");
-                          }
+                          setForm((current) => applyNoScheduledFightSnapshot(current, checked));
                         }}
                       />
                       <span className="inline-warning-ack-copy">No scheduled fight yet</span>

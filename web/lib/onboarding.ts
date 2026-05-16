@@ -15,6 +15,10 @@ function mergeIntakeLayers(base: PlanRequest, top: PlanRequest): PlanRequest {
   const merged: Record<string, unknown> = { ...base };
   for (const key of Object.keys(top) as (keyof PlanRequest)[]) {
     if (key === "athlete") continue;
+    if (key === "fight_date" && top.no_scheduled_fight === true) {
+      merged[key] = "";
+      continue;
+    }
     const topValue = top[key];
     merged[key] = isEmptyValue(topValue) ? base[key] : topValue;
   }

@@ -687,6 +687,7 @@ class PlanRequest(BaseModel):
             }
 
         athlete = self.athlete
+        normalized_fight_date = "" if self.no_scheduled_fight else self.fight_date
         fields = [
             _field("Full name", athlete.full_name),
             _field("Sex", athlete.sex),
@@ -699,7 +700,7 @@ class PlanRequest(BaseModel):
             _field("Stance", athlete.stance),
             _field("Professional Status", athlete.professional_status),
             _field("Current Record", athlete.record),
-            _field("When is your next fight?", self.fight_date),
+            _field("When is your next fight?", normalized_fight_date),
             _field("Athlete Time Zone", athlete.athlete_timezone),
             _field("Rounds x Minutes", self.rounds_format),
             _field("Sessions per Week", self.weekly_training_frequency),
