@@ -46,6 +46,7 @@ import {
   getAvailabilityConsistency,
   getHardSparringWarning,
   getSparringConsistency,
+  HARD_SPARRING_DAY_CAP,
 } from "@/lib/training-schedule";
 import {
   buildDaysOutContext,
@@ -663,6 +664,24 @@ function CheckboxGroup({
   );
 }
 
+function OptionalDetails({ title, hint, children }: { title: string; hint?: string; children: React.ReactNode }) {
+  return (
+    <details className="overview-disclosure onboarding-optional-disclosure">
+      <summary className="overview-disclosure-summary">
+        <div className="overview-disclosure-copy">
+          <p className="kicker">Optional</p>
+          <p className="overview-disclosure-title">{title}</p>
+          {hint ? <p className="muted">{hint}</p> : null}
+        </div>
+        <span className="overview-disclosure-meta">
+          <span className="overview-disclosure-chevron" aria-hidden="true" />
+        </span>
+      </summary>
+      <div className="overview-disclosure-body">{children}</div>
+    </details>
+  );
+}
+
 function ReviewDetailList({ items }: { items: Array<{ label: string; value: string }> }) {
   return (
     <div className="review-detail-list">
@@ -821,7 +840,7 @@ export function PlanIntakeForm() {
     setGuidedInjuries(nextGuidedInjuries);
     setActiveGuidedInjuryIndex(nextGuidedInjuries.length ? 0 : null);
     setNoRestrictions(!hasStoredRestrictions);
-    setNoScheduledFight(Boolean(draft?.no_scheduled_fight));
+    setNoScheduledFight(Boolean(draft?.no_scheduled_fight ?? nextForm.no_scheduled_fight));
     const savedStep = Number(draft?.current_step ?? 0);
     setCurrentStep(Number.isFinite(savedStep) ? Math.min(Math.max(savedStep, 0), steps.length - 1) : 0);
     setHydrated(true);
@@ -1272,16 +1291,30 @@ export function PlanIntakeForm() {
     action: TrainingGateAction = "next",
     targetStep?: number,
   ): boolean {
-    if (currentStep === 0 && !isValidRecordFormat(nextForm.athlete.record ?? "")) {
-      setError("Record must use x-x or x-x-x format, like 5-1 or 12-2-1.");
-      return false;
+    if (currentStep === 0) {
+      if (!isValidRecordFormat(nextForm.athlete.record ?? "")) {
+        setError("Record must use x-x or x-x-x format, like 5-1 or 12-2-1.");
+        return false;
+      }
+      if (!nextForm.athlete.technical_style.length) {
+        setError("Select a technical style before continuing.");
+        return false;
+      }
     }
     if (currentStep === 1) {
+      if (!nextForm.fight_date && !noScheduledFight) {
+        setError("Choose your fight date or mark \"No scheduled fight\" before continuing.");
+        return false;
+      }
       const parsedRounds = parseRoundsFormat(nextForm.rounds_format);
       if (!parsedRounds.roundCount || !parsedRounds.roundDuration) {
         setError("Choose both round count and round duration before continuing.");
         return false;
       }
+    }
+    if (currentStep === 2 && !nextForm.training_availability.length) {
+      setError("Pick at least one training availability day before continuing.");
+      return false;
     }
     if (currentStep === 3 && (nextForm.guided_injuries ?? []).some((injury) => hasGuidedInjuryDescriptorWithoutArea(injury))) {
       setError("Add a pain area or body part before choosing severity or trend.");
@@ -1971,11 +2004,6 @@ export function PlanIntakeForm() {
                     <p className="muted">Use current walking-around weight.</p>
                   </div>
                   <div className="field">
-                    <label htmlFor="targetWeightKg">Target weight (kg)</label>
-                    <input id="targetWeightKg" type="number" min="0" step="0.1" inputMode="decimal" value={form.athlete.target_weight_kg ?? ""} onChange={(event) => updateAthlete("target_weight_kg", numberOrNull(event.target.value))} />
-                    <p className="muted">Use realistic fight-week target, not an ideal someday number.</p>
-                  </div>
-                  <div className="field">
                     <label htmlFor="heightCm">Height (cm)</label>
                     <input id="heightCm" type="number" min="0" step="1" inputMode="numeric" value={form.athlete.height_cm ?? ""} onChange={(event) => updateAthlete("height_cm", integerOrNull(event.target.value))} />
                   </div>
@@ -1996,10 +2024,10 @@ export function PlanIntakeForm() {
               <article className="step-card">
                 <div className="form-section-header">
                   <p className="kicker">Competitive profile</p>
-                  <h2 className="form-section-title">Style and status</h2>
+                  <h2 className="form-section-title">Style</h2>
                 </div>
                 <div className="form-grid onboarding-profile-grid">
-                  <div className="field">
+                  <div className="field field-span-full">
                     <label htmlFor="technicalStyle">Technical Style</label>
                     <CustomSelect
                       id="technicalStyle"
@@ -2010,6 +2038,19 @@ export function PlanIntakeForm() {
                       onChange={(value) => updateAthlete("technical_style", value ? [value] : [])}
                     />
                     <p className="muted">Technical style = your sport or rule set.</p>
+                  </div>
+                </div>
+              </article>
+
+              <OptionalDetails
+                title="Add more detail"
+                hint="Target weight, tactical style, status, and record. Not required to generate a plan."
+              >
+                <div className="form-grid onboarding-profile-grid">
+                  <div className="field">
+                    <label htmlFor="targetWeightKg">Target weight (kg)</label>
+                    <input id="targetWeightKg" type="number" min="0" step="0.1" inputMode="decimal" value={form.athlete.target_weight_kg ?? ""} onChange={(event) => updateAthlete("target_weight_kg", numberOrNull(event.target.value))} />
+                    <p className="muted">Use realistic fight-week target, not an ideal someday number.</p>
                   </div>
                   <div className="field">
                     <label htmlFor="tacticalStyle">Tactical Style</label>
@@ -2047,7 +2088,7 @@ export function PlanIntakeForm() {
                     {recordHasError ? <p className="error-text">Enter record as x-x or x-x-x.</p> : null}
                   </div>
                 </div>
-              </article>
+              </OptionalDetails>
             </div>
 
             <aside className="step-aside athlete-motion-slot athlete-motion-rail onboarding-step-aside">
@@ -2125,17 +2166,6 @@ export function PlanIntakeForm() {
                       onChange={(value) => updateRoundsField("roundDuration", value)}
                     />
                   </div>
-                  <div className="field">
-                    <label htmlFor="fatigueLevel">Fatigue level</label>
-                    <CustomSelect
-                      id="fatigueLevel"
-                      value={form.fatigue_level ?? "moderate"}
-                      options={FATIGUE_LEVEL_OPTIONS}
-                      placeholder="Select fatigue level"
-                      onChange={(value) => updateField("fatigue_level", value)}
-                    />
-                    <p className="muted">Low = fresh, Moderate = carrying normal fatigue, High = noticeably run down.</p>
-                  </div>
                   {shouldHideField(daysOutCtx, "weekly_training_frequency") ? (
                     <div className="field field-span-full">
                       <p className="muted" style={{ opacity: 0.5 }}>Weekly session count is not used for planning at this stage.</p>
@@ -2170,6 +2200,23 @@ export function PlanIntakeForm() {
                   )}
                 </div>
               </article>
+
+              <OptionalDetails
+                title="Adjust fatigue level"
+                hint="Defaults to Moderate. Open if you're noticeably fresh or run down right now."
+              >
+                <div className="field">
+                  <label htmlFor="fatigueLevel">Fatigue level</label>
+                  <CustomSelect
+                    id="fatigueLevel"
+                    value={form.fatigue_level ?? "moderate"}
+                    options={FATIGUE_LEVEL_OPTIONS}
+                    placeholder="Select fatigue level"
+                    onChange={(value) => updateField("fatigue_level", value)}
+                  />
+                  <p className="muted">Low = fresh, Moderate = carrying normal fatigue, High = noticeably run down.</p>
+                </div>
+              </OptionalDetails>
             </div>
 
             <aside className="step-aside athlete-motion-slot athlete-motion-rail onboarding-step-aside">
@@ -2277,7 +2324,9 @@ export function PlanIntakeForm() {
                         ? "Add to availability first"
                         : form.support_work_days.includes(option.value)
                           ? "Already tagged as non-hard training"
-                          : null
+                          : form.hard_sparring_days.length >= HARD_SPARRING_DAY_CAP
+                            ? `Hard sparring cap (${HARD_SPARRING_DAY_CAP}) reached`
+                            : null
                   }
                 />
                 <div className="field">
@@ -2334,26 +2383,25 @@ export function PlanIntakeForm() {
                 />
               </article>
               {shouldHideField(daysOutCtx, "training_preference") ? null : (
-              <article className="step-card" style={shouldDeEmphasizeField(daysOutCtx, "training_preference") ? { opacity: 0.55 } : undefined}>
-                <div className="form-section-header">
-                  <p className="kicker">Training style</p>
-                  <h2 className="form-section-title">Training Preference</h2>
+              <OptionalDetails
+                title="Training preference"
+                hint="Tell the planner if you have a specific feel, pace, or format preference for sessions."
+              >
+                <div className="field" style={shouldDeEmphasizeField(daysOutCtx, "training_preference") ? { opacity: 0.55 } : undefined}>
+                  <label htmlFor="trainingPreference">Session preference</label>
+                  <textarea
+                    id="trainingPreference"
+                    disabled={shouldDisableField(daysOutCtx, "training_preference")}
+                    value={form.training_preference ?? ""}
+                    onChange={(event) => updateField("training_preference", event.target.value)}
+                    placeholder="Example: shorter hard sessions, less circuit work, more technical warm-ups, avoid long grinders"
+                  />
+                  <p className="muted">
+                    {getFieldHelperText(daysOutCtx, "training_preference") ||
+                      "Use this only for session feel, pacing, or format preferences."}
+                  </p>
                 </div>
-                  <div className="field">
-                    <label htmlFor="trainingPreference">Session preference</label>
-                    <textarea
-                      id="trainingPreference"
-                      disabled={shouldDisableField(daysOutCtx, "training_preference")}
-                      value={form.training_preference ?? ""}
-                      onChange={(event) => updateField("training_preference", event.target.value)}
-                      placeholder="Example: shorter hard sessions, less circuit work, more technical warm-ups, avoid long grinders"
-                    />
-                    <p className="muted">
-                      {getFieldHelperText(daysOutCtx, "training_preference") ||
-                        "Use this only for session feel, pacing, or format preferences."}
-                    </p>
-                  </div>
-              </article>
+              </OptionalDetails>
               )}
             </div>
 
@@ -2517,7 +2565,7 @@ export function PlanIntakeForm() {
                 {getFieldHelperText(daysOutCtx, "key_goals") ? (
                   <p className="muted">{getFieldHelperText(daysOutCtx, "key_goals")}</p>
                 ) : null}
-                {form.key_goals.length ? (
+                {form.key_goals.length > 1 ? (
                   <div className="field">
                     <label htmlFor="primaryGoal">Primary goal</label>
                     <CustomSelect
@@ -2525,10 +2573,10 @@ export function PlanIntakeForm() {
                       value={form.primary_goal ?? ""}
                       options={KEY_GOAL_OPTIONS.filter((option) => form.key_goals.includes(option.value))}
                       placeholder="Select primary goal"
-                      includeEmptyOption={form.key_goals.length > 1}
+                      includeEmptyOption
                       onChange={(value) => updateField("primary_goal", value)}
                     />
-                    <p className="muted">This is what the plan should be built around.</p>
+                    <p className="muted">Pick which one the plan should be built around.</p>
                   </div>
                 ) : null}
               </article>
@@ -2559,7 +2607,7 @@ export function PlanIntakeForm() {
                 {getFieldHelperText(daysOutCtx, "weak_areas") ? (
                   <p className="muted">{getFieldHelperText(daysOutCtx, "weak_areas")}</p>
                 ) : null}
-                {form.weak_areas.length ? (
+                {form.weak_areas.length > 1 ? (
                   <div className="field">
                     <label htmlFor="primaryWeakArea">Primary weak area</label>
                     <CustomSelect
@@ -2567,10 +2615,10 @@ export function PlanIntakeForm() {
                       value={form.primary_weak_area ?? ""}
                       options={WEAK_AREA_OPTIONS.filter((option) => form.weak_areas.includes(option.value))}
                       placeholder="Select primary weak area"
-                      includeEmptyOption={form.weak_areas.length > 1}
+                      includeEmptyOption
                       onChange={(value) => updateField("primary_weak_area", value)}
                     />
-                    <p className="muted">This is the main limiter the plan must manage.</p>
+                    <p className="muted">Pick which one the plan must manage first.</p>
                   </div>
                 ) : null}
                 <p className="muted">Pick up to 2 weak areas.</p>
@@ -2623,11 +2671,10 @@ export function PlanIntakeForm() {
                   </div>
                 </article>
               ) : null}
-              <article className="step-card">
-                <div className="form-section-header">
-                  <p className="kicker">Extra context</p>
-                  <h2 className="form-section-title">Optional coach notes</h2>
-                </div>
+              <OptionalDetails
+                title="Add coach notes"
+                hint="Mental / confidence issues, or anything else the planner should know."
+              >
                 <div className="form-grid">
                   <div className="field">
                     <label htmlFor="mindsetChallenges">Mental / confidence issue</label>
@@ -2650,7 +2697,7 @@ export function PlanIntakeForm() {
                     <p className="muted">Use this for extra coach context that does not fit the other fields.</p>
                   </div>
                 </div>
-              </article>
+              </OptionalDetails>
             </div>
 
             <aside className="step-aside athlete-motion-slot athlete-motion-rail onboarding-step-aside">

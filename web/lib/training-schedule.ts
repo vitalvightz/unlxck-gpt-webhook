@@ -14,7 +14,7 @@ export type HardSparringWarning = {
   requiresAcknowledgement: boolean;
 };
 
-const HARD_SPARRING_DAY_CAP = 4;
+export const HARD_SPARRING_DAY_CAP = 4;
 
 function getSortedUniqueDays(days: string[]): string[] {
   return [...new Set(days)].sort((left, right) => left.localeCompare(right));
