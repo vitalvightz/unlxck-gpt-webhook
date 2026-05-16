@@ -411,10 +411,10 @@ def _late_fight_legal_countdown_labels(days_until_fight: Any) -> list[str]:
 
 
 def can_render_late_taper_day(*, countdown_offset: int, weekday: str, training_days: list[str]) -> bool:
-    weekday_norm = str(weekday or "").strip().lower()
-    training_set = {str(day).strip().lower() for day in training_days if str(day).strip()}
     if 0 <= countdown_offset <= 6:
         return True
+    weekday_norm = str(weekday or "").strip().lower()
+    training_set = {str(day).strip().lower() for day in training_days if str(day).strip()}
     return weekday_norm in training_set
 
 
