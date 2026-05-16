@@ -623,6 +623,7 @@ function CheckboxGroup({
   selectedValues,
   onToggle,
   disableAdditionalSelections = false,
+  capDisabledReason,
   disableAll = false,
   getOptionDisabledReason,
 }: {
@@ -631,6 +632,7 @@ function CheckboxGroup({
   selectedValues: string[];
   onToggle: (value: string) => void;
   disableAdditionalSelections?: boolean;
+  capDisabledReason?: string;
   disableAll?: boolean;
   getOptionDisabledReason?: (option: IntakeOption, checked: boolean) => string | null;
 }) {
@@ -643,7 +645,7 @@ function CheckboxGroup({
           const daysOutDisabledReason = getOptionDisabledReason?.(option, checked) ?? null;
           const capDisabled = disableAdditionalSelections && !checked;
           const disabled = disableAll || Boolean(daysOutDisabledReason) || capDisabled;
-          const labelTitle = daysOutDisabledReason ?? (capDisabled ? "Focus cap reached." : undefined);
+          const labelTitle = daysOutDisabledReason ?? (capDisabled ? capDisabledReason ?? "Focus cap reached." : undefined);
           return (
             <label
               key={option.value}
@@ -655,6 +657,9 @@ function CheckboxGroup({
               <span className="checkbox-card-copy">
                 <span className="checkbox-card-title">{option.label}</span>
                 {daysOutDisabledReason ? <span className="checkbox-card-tag">{daysOutDisabledReason}</span> : null}
+                {!daysOutDisabledReason && capDisabled && capDisabledReason ? (
+                  <span className="checkbox-card-tag">{capDisabledReason}</span>
+                ) : null}
               </span>
             </label>
           );
@@ -1639,6 +1644,16 @@ export function PlanIntakeForm() {
         : remainingPerformanceFocusSelections === 1
           ? "1 pick remaining."
           : `${remainingPerformanceFocusSelections} picks remaining.`;
+  const keyGoalCapDisabledReason = performanceFocusCapReached
+    ? form.weak_areas.length > 0
+      ? "Focus cap reached by your current goals and weak areas. Unselect a weak area to add this goal."
+      : "Focus cap reached. Unselect a goal to add another."
+    : undefined;
+  const weakAreaCapDisabledReason = performanceFocusCapReached
+    ? form.key_goals.length > 0
+      ? "Focus cap reached by your current goals and weak areas. Unselect a goal to add this weak area."
+      : "Focus cap reached. Unselect a weak area to add another."
+    : undefined;
   const weightCutStatus = formatWeightCutStatus(form.athlete.weight_kg, form.athlete.target_weight_kg);
   const equipmentLimitations = formatEquipmentLimitations(form.equipment_access);
   const sparringConsistency = getSparringConsistency(
@@ -2572,6 +2587,7 @@ export function PlanIntakeForm() {
                   selectedValues={form.key_goals}
                   onToggle={(value) => toggleFieldValue("key_goals", value)}
                   disableAdditionalSelections={performanceFocusCapReached}
+                  capDisabledReason={keyGoalCapDisabledReason}
                   disableAll={shouldDisableField(daysOutCtx, "key_goals")}
                   getOptionDisabledReason={getKeyGoalDisabledReason}
                 />
@@ -2614,6 +2630,7 @@ export function PlanIntakeForm() {
                   selectedValues={form.weak_areas}
                   onToggle={(value) => toggleFieldValue("weak_areas", value)}
                   disableAdditionalSelections={performanceFocusCapReached}
+                  capDisabledReason={weakAreaCapDisabledReason}
                   disableAll={shouldDisableField(daysOutCtx, "weak_areas")}
                   getOptionDisabledReason={getWeakAreaDisabledReason}
                 />
