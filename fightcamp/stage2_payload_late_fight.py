@@ -1076,9 +1076,9 @@ def _late_fight_countdown_context(days_until_fight: Any, athlete_model: dict[str
     resolved_map = dict(countdown_map)
     legal_countdown_labels = _late_fight_legal_countdown_labels(days_until_fight)
     legal_weekdays = [
-        str(resolved_map.get(label) or countdown_map.get(label) or "").strip().lower()
+        str(countdown_map.get(label) or "").strip().lower()
         for label in legal_countdown_labels
-        if str(resolved_map.get(label) or countdown_map.get(label) or "").strip()
+        if str(countdown_map.get(label) or "").strip()
     ]
     availability_adjustments: list[dict[str, Any]] = []
     eligible_countdown_labels = [
