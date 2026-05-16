@@ -2,6 +2,25 @@ import type { MeResponse, PlanRequest } from "@/lib/types";
 
 import { detectDeviceTimeZone } from "@/lib/intake-options";
 
+function isEmptyValue(value: unknown): boolean {
+  if (value === null || value === undefined) return true;
+  if (typeof value === "string") return value.trim() === "";
+  if (Array.isArray(value)) return value.length === 0;
+  return false;
+}
+
+// Layer `top` on `base` field-by-field, preferring `top` only when it carries a non-empty value.
+// Lets a partial onboarding_draft pull untouched fields from latest_intake instead of clobbering them.
+function mergeIntakeLayers(base: PlanRequest, top: PlanRequest): PlanRequest {
+  const merged: Record<string, unknown> = { ...base };
+  for (const key of Object.keys(top) as (keyof PlanRequest)[]) {
+    if (key === "athlete") continue;
+    const topValue = top[key];
+    merged[key] = isEmptyValue(topValue) ? base[key] : topValue;
+  }
+  return merged as PlanRequest;
+}
+
 export function emptyPlanRequest(fullName = ""): PlanRequest {
   return {
     athlete: {
@@ -51,32 +70,40 @@ export function hydratePlanRequest(me: MeResponse | null): PlanRequest {
   }
 
   const base = me.latest_intake ?? fallback;
-  const draft = (me.profile.onboarding_draft as PlanRequest | null | undefined) ?? base;
-  const normalizedDraft = draft
+  const draftSource = (me.profile.onboarding_draft as PlanRequest | null | undefined) ?? null;
+  const normalizedDraft = draftSource
     ? {
-        ...draft,
-        support_work_days: draft.support_work_days ?? (draft as PlanRequest & { technical_skill_days?: string[] }).technical_skill_days ?? [],
+        ...draftSource,
+        support_work_days: draftSource.support_work_days ?? (draftSource as PlanRequest & { technical_skill_days?: string[] }).technical_skill_days ?? [],
       }
-    : fallback;
+    : null;
+
+  // Layer order: defaults < latest_intake < onboarding_draft (non-empty wins).
+  // A partially-completed draft still pulls untouched fields from the last completed intake.
+  const layered = normalizedDraft ? mergeIntakeLayers(base, normalizedDraft) : base;
+
+  const draftAthlete = normalizedDraft?.athlete;
+  const intakeAthlete = base.athlete;
 
   return {
     ...fallback,
-    ...normalizedDraft,
+    ...layered,
     athlete: {
       ...fallback.athlete,
-      ...normalizedDraft.athlete,
-      full_name: normalizedDraft.athlete?.full_name || me.profile.full_name,
-      sex: normalizedDraft.athlete?.sex ?? me.profile.nutrition_profile?.sex ?? fallback.athlete.sex,
-      age: normalizedDraft.athlete?.age ?? me.profile.nutrition_profile?.age ?? fallback.athlete.age,
-      height_cm: normalizedDraft.athlete?.height_cm ?? me.profile.nutrition_profile?.height_cm ?? fallback.athlete.height_cm,
-      technical_style: normalizedDraft.athlete?.technical_style ?? me.profile.technical_style ?? [],
-      tactical_style: normalizedDraft.athlete?.tactical_style ?? me.profile.tactical_style ?? [],
-      stance: normalizedDraft.athlete?.stance ?? me.profile.stance ?? "",
+      ...intakeAthlete,
+      ...(draftAthlete ?? {}),
+      full_name: draftAthlete?.full_name || intakeAthlete?.full_name || me.profile.full_name,
+      sex: draftAthlete?.sex ?? intakeAthlete?.sex ?? me.profile.nutrition_profile?.sex ?? fallback.athlete.sex,
+      age: draftAthlete?.age ?? intakeAthlete?.age ?? me.profile.nutrition_profile?.age ?? fallback.athlete.age,
+      height_cm: draftAthlete?.height_cm ?? intakeAthlete?.height_cm ?? me.profile.nutrition_profile?.height_cm ?? fallback.athlete.height_cm,
+      technical_style: draftAthlete?.technical_style ?? intakeAthlete?.technical_style ?? me.profile.technical_style ?? [],
+      tactical_style: draftAthlete?.tactical_style ?? intakeAthlete?.tactical_style ?? me.profile.tactical_style ?? [],
+      stance: draftAthlete?.stance ?? intakeAthlete?.stance ?? me.profile.stance ?? "",
       professional_status:
-        normalizedDraft.athlete?.professional_status ?? me.profile.professional_status ?? "",
-      record: normalizedDraft.athlete?.record ?? me.profile.record ?? "",
+        draftAthlete?.professional_status ?? intakeAthlete?.professional_status ?? me.profile.professional_status ?? "",
+      record: draftAthlete?.record ?? intakeAthlete?.record ?? me.profile.record ?? "",
       athlete_timezone:
-        normalizedDraft.athlete?.athlete_timezone ?? me.profile.athlete_timezone ?? fallback.athlete.athlete_timezone,
+        draftAthlete?.athlete_timezone ?? intakeAthlete?.athlete_timezone ?? me.profile.athlete_timezone ?? fallback.athlete.athlete_timezone,
     },
   };
 }
