@@ -18,7 +18,6 @@ from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException, Query, Req
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, Response
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from gotrue.errors import AuthApiError
 from postgrest.exceptions import APIError as PostgrestAPIError
 from pydantic import ValidationError
 
@@ -28,7 +27,7 @@ from fightcamp.sparring_advisories import build_plan_advisories
 from fightcamp.stage2_pipeline import build_stage2_retry, review_stage2_output
 from fightcamp.weekly_schedule_view import extract_weekly_schedule
 
-from .auth import AuthService, AuthenticatedUser, SupabaseAuthService
+from .auth import AuthService, AuthenticatedUser, SupabaseAuthService, is_auth_api_error
 from .demo import DemoAuthService, get_demo_store
 from .models import (
     ApproveAndResumeGenerationRequest,
@@ -839,13 +838,17 @@ def create_app(
         except HTTPException as exc:
             logger.warning("[auth] token_resolution_http_error status=%s", exc.status_code)
             raise
-        except AuthApiError as exc:
-            logger.warning("[auth] token_resolution_invalid_token error=%s", exc)
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="invalid authentication token",
-            ) from exc
-        except Exception:
+        except Exception as exc:
+            if is_auth_api_error(exc):
+                logger.warning(
+                    "[auth] token_resolution_invalid_token error_class=%s error=%s",
+                    exc.__class__.__module__ + "." + exc.__class__.__name__,
+                    exc,
+                )
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="invalid authentication token",
+                ) from exc
             logger.exception("[auth] token_resolution_failed")
             raise
 

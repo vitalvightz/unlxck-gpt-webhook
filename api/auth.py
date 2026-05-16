@@ -2,15 +2,48 @@ from __future__ import annotations
 
 import logging
 import os
+import warnings
 from dataclasses import dataclass
 from typing import Any, Protocol
 
 import httpx
 from fastapi import HTTPException, status
-from gotrue.errors import AuthApiError
 from supabase import Client, create_client
 
 logger = logging.getLogger(__name__)
+
+
+def _collect_auth_api_error_types() -> tuple[type[BaseException], ...]:
+    classes: list[type[BaseException]] = []
+    try:
+        from supabase_auth.errors import AuthApiError as _SupabaseAuthApiError
+    except Exception:  # pragma: no cover - dependency may be absent
+        pass
+    else:
+        classes.append(_SupabaseAuthApiError)
+    try:
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", DeprecationWarning)
+            from gotrue.errors import AuthApiError as _GotrueAuthApiError
+    except Exception:  # pragma: no cover - dependency may be absent
+        pass
+    else:
+        if _GotrueAuthApiError not in classes:
+            classes.append(_GotrueAuthApiError)
+    return tuple(classes)
+
+
+AUTH_API_ERROR_TYPES: tuple[type[BaseException], ...] = _collect_auth_api_error_types()
+
+
+def is_auth_api_error(exc: BaseException) -> bool:
+    if AUTH_API_ERROR_TYPES and isinstance(exc, AUTH_API_ERROR_TYPES):
+        return True
+    # Duck-typing fallback covers vendored or renamed Supabase auth modules.
+    return exc.__class__.__name__ == "AuthApiError" and (
+        exc.__class__.__module__.startswith("gotrue")
+        or exc.__class__.__module__.startswith("supabase_auth")
+    )
 
 
 @dataclass(frozen=True)
@@ -73,16 +106,23 @@ class SupabaseAuthService:
 
         try:
             response = self.client.auth.get_user(token)
-        except AuthApiError as exc:  # pragma: no cover - upstream auth integration
+        except httpx.HTTPError as exc:  # pragma: no cover - network/runtime integration
+            logger.exception("[auth] upstream token verification failed")
+            raise self._auth_unavailable() from exc
+        except Exception as exc:
+            if not is_auth_api_error(exc):
+                raise
+
             status_code = getattr(exc, "status", None) or getattr(exc, "status_code", None)
 
             if status_code in {400, 401, 403}:
+                logger.warning(
+                    "[auth] invalid_token status=%s error_class=%s",
+                    status_code,
+                    exc.__class__.__module__ + "." + exc.__class__.__name__,
+                )
                 raise self._invalid_token() from exc
 
-            logger.exception("[auth] upstream token verification failed")
-            raise self._auth_unavailable() from exc
-
-        except httpx.HTTPError as exc:  # pragma: no cover - network/runtime integration
             logger.exception("[auth] upstream token verification failed")
             raise self._auth_unavailable() from exc
 
