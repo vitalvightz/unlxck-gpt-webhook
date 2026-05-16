@@ -7,8 +7,8 @@ Covers:
   to its real weekday.
 - _nearest_available_day       – finds the closest available day for a given
   target weekday.
-- _resolve_countdown_weekday_with_availability – adjusts the countdown map so
-  every D-N falls on an available training day.
+- can_render_late_taper_day – filters which countdown labels are eligible for
+  app-owned rendering without remapping calendar weekdays.
 - Session sequence weekday/label annotation applied in
   _build_late_fight_session_sequence.
 """
@@ -21,7 +21,7 @@ from fightcamp.stage2_payload_late_fight import (
     _countdown_weekday_map,
     _fight_weekday_from_context,
     _nearest_available_day,
-    _resolve_countdown_weekday_with_availability,
+    can_render_late_taper_day,
 )
 
 
@@ -201,49 +201,18 @@ class TestNearestAvailableDay:
 
 
 # ---------------------------------------------------------------------------
-# _resolve_countdown_weekday_with_availability
+# can_render_late_taper_day
 # ---------------------------------------------------------------------------
 
-class TestResolveCountdownWeekdayWithAvailability:
-    def test_no_adjustment_when_all_days_available(self):
-        countdown_map = {
-            "D-0": "saturday",
-            "D-1": "friday",
-            "D-2": "thursday",
-            "D-3": "wednesday",
-        }
-        available = ["monday", "tuesday", "wednesday", "thursday", "friday"]
-        result = _resolve_countdown_weekday_with_availability(countdown_map, available)
-        # saturday not available but that's D-0 (fight day)
-        assert result["D-1"] == "friday"
-        assert result["D-2"] == "thursday"
-        assert result["D-3"] == "wednesday"
+class TestCanRenderLateTaperDay:
+    def test_d6_to_d0_ignore_declared_availability(self):
+        assert can_render_late_taper_day(countdown_offset=6, weekday="monday", training_days=["tuesday"])
+        assert can_render_late_taper_day(countdown_offset=1, weekday="saturday", training_days=["tuesday"])
+        assert can_render_late_taper_day(countdown_offset=0, weekday="sunday", training_days=[])
 
-    def test_unavailable_day_is_moved_to_nearest(self):
-        # D-1 falls on saturday (unavailable) and must stay inside the
-        # current countdown window.
-        countdown_map = {"D-0": "sunday", "D-1": "saturday", "D-2": "friday"}
-        available = ["monday", "tuesday", "wednesday", "thursday", "friday"]
-        result = _resolve_countdown_weekday_with_availability(countdown_map, available)
-        # D-1 = saturday -> unavailable -> collapse back to friday.
-        assert result["D-1"] == "friday"
-        assert result["D-2"] == "friday"
-
-    def test_empty_available_days_returns_original_map(self):
-        countdown_map = {"D-0": "sunday", "D-1": "saturday"}
-        result = _resolve_countdown_weekday_with_availability(countdown_map, [])
-        assert result == countdown_map
-
-    def test_empty_countdown_map_returns_empty(self):
-        result = _resolve_countdown_weekday_with_availability({}, ["monday", "friday"])
-        assert result == {}
-
-    def test_all_days_unavailable_keeps_real_countdown_weekdays(self):
-        countdown_map = {"D-0": "saturday", "D-1": "friday"}
-        available = ["wednesday"]
-        result = _resolve_countdown_weekday_with_availability(countdown_map, available)
-        assert result["D-0"] == "saturday"
-        assert result["D-1"] == "friday"
+    def test_d7_and_earlier_requires_training_day_match(self):
+        assert can_render_late_taper_day(countdown_offset=7, weekday="sunday", training_days=["tuesday"]) is False
+        assert can_render_late_taper_day(countdown_offset=12, weekday="tuesday", training_days=["tuesday"]) is True
 
 
 # ---------------------------------------------------------------------------

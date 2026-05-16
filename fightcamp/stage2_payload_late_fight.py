@@ -410,48 +410,12 @@ def _late_fight_legal_countdown_labels(days_until_fight: Any) -> list[str]:
     return [f"D-{offset}" for offset in _late_fight_legal_offsets(days_until_fight)]
 
 
-def _resolve_countdown_weekday_with_availability(
-    countdown_map: dict[str, str],
-    available_days: list[str],
-) -> dict[str, str]:
-    """Adjust countdown-day weekdays so each falls on an available training day.
-
-    When a countdown day maps to a weekday that is not in ``available_days``,
-    it is moved to the nearest available weekday with minimal disruption.
-    Days are only adjusted; the countdown label (D-N) itself is preserved.
-    Returns the original map unchanged when ``available_days`` is empty.
-    """
-    if not available_days or not countdown_map:
-        return countdown_map
-    normalised_available = [d.strip().lower() for d in available_days if d.strip()]
-    countdown_offsets = {
-        label: _countdown_offset(label)
-        for label in countdown_map
-    }
-    resolved: dict[str, str] = {}
-    for label, weekday in countdown_map.items():
-        normalized_weekday = weekday.strip().lower()
-        if normalized_weekday in normalised_available:
-            resolved[label] = weekday
-        else:
-            current_offset = countdown_offsets.get(label)
-            if current_offset is None:
-                allowed_available = list(normalised_available)
-            else:
-                allowed_weekdays = {
-                    str(mapped_weekday or "").strip().lower()
-                    for mapped_label, mapped_weekday in countdown_map.items()
-                    if (countdown_offsets.get(mapped_label) or 0) >= current_offset
-                }
-                allowed_available = [
-                    day for day in normalised_available
-                    if day in allowed_weekdays
-                ]
-            # Keep remaps inside the active late-fight window and avoid moving
-            # a countdown day to a later weekday outside its slice.
-            nearest = _nearest_available_day(weekday, allowed_available)
-            resolved[label] = nearest if nearest is not None else weekday
-    return resolved
+def can_render_late_taper_day(*, countdown_offset: int, weekday: str, training_days: list[str]) -> bool:
+    if 0 <= countdown_offset <= 6:
+        return True
+    weekday_norm = str(weekday or "").strip().lower()
+    training_set = {str(day).strip().lower() for day in training_days if str(day).strip()}
+    return weekday_norm in training_set
 
 
 def _normalized_fatigue(athlete_model: dict[str, Any]) -> str:
@@ -1109,26 +1073,29 @@ def _late_fight_countdown_context(days_until_fight: Any, athlete_model: dict[str
     plan_creation_weekday = athlete_model.get("plan_creation_weekday")
     available_days = clean_list(athlete_model.get("training_days", []))
     countdown_map = _countdown_weekday_map(plan_creation_weekday, days_until_fight)
-    resolved_map = _resolve_countdown_weekday_with_availability(countdown_map, available_days)
+    resolved_map = dict(countdown_map)
     legal_countdown_labels = _late_fight_legal_countdown_labels(days_until_fight)
     legal_weekdays = [
-        str(resolved_map.get(label) or countdown_map.get(label) or "").strip().lower()
+        str(countdown_map.get(label) or "").strip().lower()
         for label in legal_countdown_labels
-        if str(resolved_map.get(label) or countdown_map.get(label) or "").strip()
+        if str(countdown_map.get(label) or "").strip()
     ]
-    availability_adjustments = [
-        {
-            "countdown_label": label,
-            "raw_weekday": countdown_map.get(label),
-            "resolved_weekday": resolved_map.get(label),
-        }
+    availability_adjustments: list[dict[str, Any]] = []
+    eligible_countdown_labels = [
+        label
         for label in legal_countdown_labels
-        if countdown_map.get(label) and resolved_map.get(label) and countdown_map.get(label) != resolved_map.get(label)
+        if (offset := _countdown_offset(label)) is not None
+        and can_render_late_taper_day(
+            countdown_offset=offset,
+            weekday=str(countdown_map.get(label) or ""),
+            training_days=available_days,
+        )
     ]
     return {
         "countdown_weekday_map": resolved_map,
         "raw_countdown_weekday_map": countdown_map,
         "legal_countdown_labels": legal_countdown_labels,
+        "eligible_countdown_labels": eligible_countdown_labels,
         "legal_weekdays": legal_weekdays,
         "availability_adjustments": availability_adjustments,
         "available_days": available_days,
@@ -1209,6 +1176,7 @@ def _late_fight_permission_policy(days_until_fight: Any, athlete_model: dict[str
     return {
         "mode": mode,
         "legal_countdown_labels": list(countdown_context.get("legal_countdown_labels", [])),
+        "eligible_countdown_labels": list(countdown_context.get("eligible_countdown_labels", [])),
         "countdown_weekday_map": dict(countdown_context.get("countdown_weekday_map", {})),
         "raw_countdown_weekday_map": dict(countdown_context.get("raw_countdown_weekday_map", {})),
         "legal_weekdays": list(countdown_context.get("legal_weekdays", [])),
@@ -2669,7 +2637,8 @@ def _late_fight_allocation_plan(days_until_fight: Any, athlete_model: dict[str, 
             "session_roles": [],
             "suppressed_roles": [],
             "allocator": {
-                "legal_countdown_labels": _late_fight_legal_countdown_labels(days_until_fight),
+                "legal_countdown_labels": (labels := _late_fight_legal_countdown_labels(days_until_fight)),
+                "eligible_countdown_labels": labels,
                 "locked_days": [],
                 "blocked_days": [],
                 "countdown_weekday_map": {},
@@ -2684,6 +2653,7 @@ def _late_fight_allocation_plan(days_until_fight: Any, athlete_model: dict[str, 
         role["_candidate_id"] = index
 
     legal_countdown_labels = list(permission_policy.get("legal_countdown_labels", []))
+    eligible_countdown_labels = list(permission_policy.get("eligible_countdown_labels", legal_countdown_labels))
     label_to_weekday = {
         label: str(permission_policy.get("countdown_weekday_map", {}).get(label) or "").strip().lower()
         for label in legal_countdown_labels
@@ -2724,7 +2694,7 @@ def _late_fight_allocation_plan(days_until_fight: Any, athlete_model: dict[str, 
                 continue
             assignment = _late_fight_best_assignment(
                 selected_roles,
-                legal_countdown_labels,
+                eligible_countdown_labels,
                 label_to_weekday,
                 label_to_display_weekday,
             )
@@ -2772,6 +2742,7 @@ def _late_fight_allocation_plan(days_until_fight: Any, athlete_model: dict[str, 
         "suppressed_roles": suppressed_roles,
         "allocator": {
             "legal_countdown_labels": legal_countdown_labels,
+            "eligible_countdown_labels": eligible_countdown_labels,
             "locked_days": [role.get("locked_day") for role in public_roles if role.get("locked_day")],
             "blocked_days": [],
             "countdown_weekday_map": {
@@ -2850,11 +2821,7 @@ def _copy_composite_segment_role(
 
 
 def _full_countdown_weekday_map(days_until_fight: Any, athlete_model: dict[str, Any]) -> dict[str, str]:
-    countdown_map = _countdown_weekday_map(athlete_model.get("plan_creation_weekday"), days_until_fight)
-    return _resolve_countdown_weekday_with_availability(
-        countdown_map,
-        clean_list(athlete_model.get("training_days", [])),
-    )
+    return _countdown_weekday_map(athlete_model.get("plan_creation_weekday"), days_until_fight)
 
 
 def _declared_hard_weekdays(athlete_model: dict[str, Any]) -> set[str]:
