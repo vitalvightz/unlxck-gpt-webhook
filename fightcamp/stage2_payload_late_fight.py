@@ -427,7 +427,7 @@ def _readiness_flags(athlete_model: dict[str, Any]) -> set[str]:
 
 
 def _planned_sessions_per_week(athlete_model: dict[str, Any]) -> int:
-    for key in ("weekly_training_frequency", "training_frequency", "weekly_sessions", "planned_sessions_per_week"):
+    for key in ("weekly_training_frequency", "training_frequency", "weekly_sessions"):
         value = athlete_model.get(key)
         if value is None:
             continue
