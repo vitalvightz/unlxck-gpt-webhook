@@ -38,7 +38,7 @@ function formatFocus(focus: StageOnePreview["focus"]): string {
 
 function formatSchedule(schedule: StageOnePreview["schedule"]): string {
   const parts: string[] = [];
-  if (schedule.weeklyTrainingFrequency && schedule.weeklyTrainingFrequency > 0) {
+  if (schedule.weeklyTrainingFrequency) {
     parts.push(`${schedule.weeklyTrainingFrequency}/wk`);
   }
   if (schedule.availableDays > 0) {
