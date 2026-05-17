@@ -1103,7 +1103,7 @@ export function PlanViewer({
 
   async function handleRenamePlan() {
     if (!accessToken) {
-      setPlanActionError("Session missing. Please sign in again.");
+      setPlanActionError("Session expired. Sign in again.");
       return;
     }
 
@@ -1135,9 +1135,7 @@ export function PlanViewer({
         errorMessage.includes("503") ||
         errorMessage.includes("504")
       ) {
-        setPlanActionError(
-          "Connection issue - the operation will retry automatically. If it continues to fail, please check your internet connection and try again.",
-        );
+        setPlanActionError("Connection issue. Try again in a minute.");
       } else {
         setPlanActionError(errorMessage);
       }
@@ -1148,7 +1146,7 @@ export function PlanViewer({
 
   async function handleDeletePlan() {
     if (!accessToken) {
-      setPlanActionError("Session missing. Please sign in again.");
+      setPlanActionError("Session expired. Sign in again.");
       return;
     }
 
@@ -1174,9 +1172,7 @@ export function PlanViewer({
         errorMessage.includes("503") ||
         errorMessage.includes("504")
       ) {
-        setPlanActionError(
-          "Connection issue - the operation will retry automatically. If it continues to fail, please check your internet connection and try again.",
-        );
+        setPlanActionError("Connection issue. Try again in a minute.");
       } else {
         setPlanActionError(errorMessage);
       }

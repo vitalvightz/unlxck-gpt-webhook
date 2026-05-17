@@ -324,6 +324,9 @@ def test_onboarding_draft_endpoint_persists_draft_and_profile_fields():
 
 def test_onboarding_draft_endpoint_omitted_fields_are_not_cleared():
     client, store, _ = _build_client()
+
+    me_response = client.get("/api/me", headers={"Authorization": "Bearer athlete-token"})
+    assert me_response.status_code == 200
     original_profile = store.profiles["athlete-1"].copy()
 
     response = client.patch(

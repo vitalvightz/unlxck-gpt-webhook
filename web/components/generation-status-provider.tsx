@@ -107,7 +107,7 @@ function statusMessage(phase: GlobalGenerationPhase): string {
     case "completed":
       return "Plan ready!";
     case "failed":
-      return "Generation failed";
+      return "Plan failed. Try again.";
     default:
       return "";
   }
