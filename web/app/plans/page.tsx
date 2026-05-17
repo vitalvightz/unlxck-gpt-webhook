@@ -552,12 +552,9 @@ function LatestPlanCard({
       setIsRenaming(false);
     } catch (renameError) {
       const errorMessage = renameError instanceof Error ? renameError.message : "Unable to rename this plan.";
-      const errorMessage = renameError instanceof Error ? renameError.message : "Unable to rename this plan.";
       if (errorMessage.includes("Unable to reach the server") || errorMessage.includes("502") || errorMessage.includes("503") || errorMessage.includes("504")) {
         setError("Connection issue. Please check your internet connection and try again.");
       } else {
-        setError(errorMessage);
-      }
         setError(errorMessage);
       }
     } finally {
@@ -595,12 +592,9 @@ function LatestPlanCard({
       showToast(`Deleted ${getPlanDisplayName(plan)}.`, { tone: "success" });
     } catch (deleteError) {
       const errorMessage = deleteError instanceof Error ? deleteError.message : "Unable to delete this plan.";
-      const errorMessage = deleteError instanceof Error ? deleteError.message : "Unable to delete this plan.";
       if (errorMessage.includes("Unable to reach the server") || errorMessage.includes("502") || errorMessage.includes("503") || errorMessage.includes("504")) {
         setError("Connection issue. Please check your internet connection and try again.");
       } else {
-        setError(errorMessage);
-      }
         setError(errorMessage);
       }
     } finally {
