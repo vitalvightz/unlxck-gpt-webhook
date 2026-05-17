@@ -34,6 +34,15 @@ import {
   type QuickBuildInput,
   type QuickBuildValidationErrors,
 } from "@/lib/quick-build";
+import {
+  EQUIPMENT_PRESETS,
+  TRAINING_PRESETS,
+  deriveSetupSource,
+  matchesEquipmentPreset,
+  matchesTrainingPreset,
+  type EquipmentPreset,
+  type TrainingPreset,
+} from "@/lib/recommended-setup";
 
 const WEEKLY_FREQUENCY_OPTIONS: IntakeOption[] = Array.from({ length: 6 }, (_, index) => ({
   label: String(index + 1),
@@ -100,6 +109,49 @@ function FieldError({ message }: { message?: string }) {
   );
 }
 
+type PresetOption = {
+  key: string;
+  label: string;
+  description: string;
+};
+
+function PresetRow({
+  label,
+  presets,
+  activeKey,
+  onSelect,
+}: {
+  label: string;
+  presets: PresetOption[];
+  activeKey: string | null;
+  onSelect: (key: string) => void;
+}) {
+  return (
+    <div className="field">
+      <span className="checkbox-group-label">{label}</span>
+      <div className="checkbox-grid">
+        {presets.map((preset) => {
+          const active = activeKey === preset.key;
+          return (
+            <button
+              key={preset.key}
+              type="button"
+              className={`checkbox-card ${active ? "checkbox-card-checked" : ""}`.trim()}
+              aria-pressed={active}
+              onClick={() => onSelect(preset.key)}
+            >
+              <span className="checkbox-card-copy">
+                <span className="checkbox-card-title">{preset.label}</span>
+                <span className="checkbox-card-tag">{preset.description}</span>
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function QuickBuildFormInner() {
   const router = useRouter();
   const { me, session, replaceMe } = useAppSession();
@@ -120,6 +172,15 @@ function QuickBuildFormInner() {
   const sharedFocusCount = input.key_goals.length + input.weak_areas.length;
   const sharedFocusCapReached = sharedFocusCap !== null && sharedFocusCount >= sharedFocusCap;
 
+  const activeEquipmentPreset = useMemo(
+    () => matchesEquipmentPreset(input.equipment_access),
+    [input.equipment_access],
+  );
+  const activeTrainingPreset = useMemo(
+    () => matchesTrainingPreset(input.training_availability, input.weekly_training_frequency),
+    [input.training_availability, input.weekly_training_frequency],
+  );
+
   function patch<K extends keyof QuickBuildInput>(key: K, value: QuickBuildInput[K]) {
     setInput((current) => ({ ...current, [key]: value }));
   }
@@ -128,6 +189,36 @@ function QuickBuildFormInner() {
     setInput((current) => ({
       ...current,
       [key]: toggleListValue(current[key], value),
+    }));
+  }
+
+  function confirmReplace(currentHasValues: boolean, message: string): boolean {
+    if (!currentHasValues) return true;
+    if (typeof window === "undefined") return true;
+    return window.confirm(message);
+  }
+
+  function applyEquipmentPreset(preset: EquipmentPreset) {
+    const current = input.equipment_access;
+    const differs = matchesEquipmentPreset(current) !== preset.key && current.length > 0;
+    if (!confirmReplace(differs, "Replace your current equipment selection with this preset?")) {
+      return;
+    }
+    patch("equipment_access", [...preset.equipment_access]);
+  }
+
+  function applyTrainingPreset(preset: TrainingPreset) {
+    const currentMatch = matchesTrainingPreset(input.training_availability, input.weekly_training_frequency);
+    const hasExistingChoice = input.training_availability.length > 0;
+    if (currentMatch !== preset.key && hasExistingChoice) {
+      if (!confirmReplace(true, "Replace your current training days and sessions per week with this preset?")) {
+        return;
+      }
+    }
+    setInput((currentInput) => ({
+      ...currentInput,
+      training_availability: [...preset.training_availability],
+      weekly_training_frequency: preset.weekly_training_frequency,
     }));
   }
 
@@ -147,10 +238,18 @@ function QuickBuildFormInner() {
     startTransition(async () => {
       try {
         const planRequest = quickBuildToPlanRequest(input);
+        const equipmentPresetMatch = matchesEquipmentPreset(planRequest.equipment_access);
+        const trainingPresetMatch = matchesTrainingPreset(
+          planRequest.training_availability,
+          planRequest.weekly_training_frequency ?? 0,
+        );
         const draft = {
           ...planRequest,
           current_step: 0,
           plan_source: "quick_build" as const,
+          setup_source: deriveSetupSource([equipmentPresetMatch, trainingPresetMatch]),
+          equipment_preset: equipmentPresetMatch,
+          training_preset: trainingPresetMatch,
         };
         await saveOnboardingDraft(session.access_token, {
           full_name: planRequest.athlete.full_name,
@@ -310,6 +409,15 @@ function QuickBuildFormInner() {
           <p className="kicker">Training</p>
           <h2 className="form-section-title">Weekly schedule</h2>
         </div>
+        <PresetRow
+          label="Recommended setup"
+          presets={TRAINING_PRESETS}
+          activeKey={activeTrainingPreset}
+          onSelect={(key) => {
+            const preset = TRAINING_PRESETS.find((entry) => entry.key === key);
+            if (preset) applyTrainingPreset(preset);
+          }}
+        />
         <ChipMultiSelect
           label="Days you can train"
           options={TRAINING_AVAILABILITY_OPTIONS}
@@ -328,6 +436,15 @@ function QuickBuildFormInner() {
           <FieldError message={visibleError("weekly_training_frequency")} />
           <FieldError message={visibleError("training_availability")} />
         </div>
+        <PresetRow
+          label="Recommended setup"
+          presets={EQUIPMENT_PRESETS}
+          activeKey={activeEquipmentPreset}
+          onSelect={(key) => {
+            const preset = EQUIPMENT_PRESETS.find((entry) => entry.key === key);
+            if (preset) applyEquipmentPreset(preset);
+          }}
+        />
         <ChipMultiSelect
           label="Equipment access"
           options={EQUIPMENT_ACCESS_OPTIONS}
