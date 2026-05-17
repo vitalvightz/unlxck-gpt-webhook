@@ -248,10 +248,9 @@ function QuickBuildFormInner() {
   function applyFocusPreset(preset: FocusPreset) {
     const currentMatch = matchesFocusPreset(input.key_goals, input.weak_areas);
     const hasExistingChoice = input.key_goals.length > 0 || input.weak_areas.length > 0;
-    if (currentMatch !== preset.key && hasExistingChoice) {
-      if (!confirmReplace(true, "Replace your current goals and weak areas with this preset?")) {
-        return;
-      }
+    const differs = currentMatch !== preset.key && hasExistingChoice;
+    if (!confirmReplace(differs, "Replace your current goals and weak areas with this preset?")) {
+      return;
     }
     setInput((currentInput) => ({
       ...currentInput,
