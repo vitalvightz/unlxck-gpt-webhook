@@ -24,7 +24,7 @@ export function GenerationProgressMilestones({ phase, startedAtMs, nowMs }: Gene
       <p className="loading-eyebrow loading-milestone-eyebrow">Generation milestones</p>
       <h3 className="loading-milestone-current-title">{view.current.title}</h3>
       <p className="loading-milestone-current-detail">{view.current.detail}</p>
-      <div className="loading-milestone-progress" role="progressbar" aria-valuemin={0} aria-valuemax={20} aria-valuenow={view.currentIndex + 1}>
+      <div className="loading-milestone-progress" role="progressbar" aria-valuemin={0} aria-valuemax={GENERATION_MILESTONES.length} aria-valuenow={view.currentIndex + 1}>
         <span className="loading-milestone-progress-fill" style={{ width: `${progressPct}%` }} />
       </div>
       {recentCompleted.length > 0 ? (
