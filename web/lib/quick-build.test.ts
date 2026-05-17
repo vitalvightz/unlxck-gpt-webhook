@@ -48,8 +48,8 @@ test("validateQuickBuildInput rejects hard sparring days outside training availa
 
 test("validateQuickBuildInput rejects more than four hard sparring days", () => {
   const input = buildValidInput();
-  input.training_availability = ["monday", "tuesday", "wednesday", "thursday", "friday"];
-  input.hard_sparring_days = ["monday", "tuesday", "wednesday", "thursday", "friday"];
+  input.training_availability = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
+  input.hard_sparring_days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
   const errors = validateQuickBuildInput(input);
   assert.equal(errors.hard_sparring_days, "Pick at most 4 hard sparring days.");
 });
