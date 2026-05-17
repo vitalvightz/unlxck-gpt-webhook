@@ -132,22 +132,22 @@ def apply_fight_day_override_to_weekly_role_map(
     if not isinstance(final_week, dict):
         return weekly_role_map
 
-    calendar_days = [
-        day for day in (final_week.get("calendar_days") or [])
-        if isinstance(day, dict)
-    ]
     fight_calendar_day = next(
         (
-            day for day in calendar_days
-            if day.get("is_fight_day") is True or day.get("d_day") == 0
+            day for day in (final_week.get("calendar_days") or [])
+            if isinstance(day, dict) and (day.get("is_fight_day") is True or day.get("d_day") == 0)
         ),
         None,
     )
     if not fight_calendar_day:
         return weekly_role_map
+
     fight_day_weekday = str(fight_calendar_day.get("weekday") or "").strip().lower()
     if not fight_day_weekday:
         return weekly_role_map
+
+    # Ensure metadata uses the actual weekday found in the calendar
+    fight_weekday = fight_day_weekday
 
     session_roles = list(final_week.get("session_roles") or [])
     suppressed_roles = list(final_week.get("suppressed_roles") or [])
