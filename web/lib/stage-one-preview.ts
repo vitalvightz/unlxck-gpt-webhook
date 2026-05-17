@@ -164,14 +164,8 @@ export function buildStageOnePreview(
   milestones: ProgressMilestone[] | undefined,
 ): StageOnePreview | null {
   if (!intake) return null;
-  let camp: { campWeeks: number; phaseWeeks: StageOnePhaseSplit } | null = null;
-  let triage: StageOneTriage | null = null;
-  try {
-    camp = selectCampBrief(milestones);
-    triage = selectTriage(milestones);
-  } catch {
-    return null;
-  }
+  const camp = selectCampBrief(milestones);
+  const triage = selectTriage(milestones);
   if (!camp) return null;
 
   const isOpenCamp = intake.no_scheduled_fight === true;
