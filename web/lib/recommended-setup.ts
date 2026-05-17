@@ -46,7 +46,7 @@ export type FocusPreset = {
 export const EQUIPMENT_PRESETS: EquipmentPreset[] = [
   {
     key: "home",
-    label: "Home · Bodyweight",
+    label: "Home / bodyweight",
     description: "Bands, bag, partner",
     equipment_access: ["bands", "heavy_bag", "partner", "medicine_ball"],
   },
@@ -80,7 +80,7 @@ export const FOCUS_PRESETS: FocusPreset[] = [
   {
     key: "strength_base",
     label: "Strength base",
-    description: "Strength · Strength weakness",
+    description: "Strength, strength weakness",
     key_goals: ["strength"],
     weak_areas: ["strength"],
     allowNoScheduledFight: true,
@@ -90,7 +90,7 @@ export const FOCUS_PRESETS: FocusPreset[] = [
   {
     key: "explosive_power",
     label: "Explosive power",
-    description: "Power · Power weakness",
+    description: "Power, power weakness",
     key_goals: ["power"],
     weak_areas: ["power"],
     allowNoScheduledFight: true,
@@ -100,7 +100,7 @@ export const FOCUS_PRESETS: FocusPreset[] = [
   {
     key: "gas_tank",
     label: "Gas tank",
-    description: "Conditioning · Gas tank weakness",
+    description: "Conditioning, gas tank weakness",
     key_goals: ["conditioning"],
     weak_areas: ["gas_tank"],
     allowNoScheduledFight: true,
@@ -110,7 +110,7 @@ export const FOCUS_PRESETS: FocusPreset[] = [
   {
     key: "fight_sharpness",
     label: "Fight sharpness",
-    description: "Speed · Speed weakness",
+    description: "Speed, speed weakness",
     key_goals: ["speed"],
     weak_areas: ["speed"],
     allowNoScheduledFight: false,
@@ -120,7 +120,7 @@ export const FOCUS_PRESETS: FocusPreset[] = [
   {
     key: "mobility_recovery",
     label: "Mobility & recovery",
-    description: "Recovery · Mobility focus",
+    description: "Recovery, mobility focus",
     // For injury accommodation, the planner reads the Injuries field — this preset
     // only nudges goal emphasis. Naming intentionally avoids any "injury-safe" claim.
     key_goals: ["recovery", "mobility"],

@@ -141,7 +141,7 @@ function PresetRow({
             <button
               key={preset.key}
               type="button"
-              className={`checkbox-card ${active ? "checkbox-card-checked" : ""} ${disabled ? "checkbox-card-disabled" : ""}`.trim()}
+              className={`checkbox-card preset-card ${active ? "checkbox-card-checked" : ""} ${disabled ? "checkbox-card-disabled" : ""}`.trim()}
               aria-pressed={active}
               aria-disabled={disabled}
               disabled={disabled}
