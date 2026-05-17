@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 
+import { GenerationProgressMilestones } from "@/components/generation-progress-milestones";
 import type { GenerationUiPhase } from "@/lib/generation-controller";
 import type { ProgressMilestone } from "@/lib/types";
 
@@ -122,17 +123,6 @@ function formatElapsed(ms: number): string {
 
 const ESTIMATE_COPY = "Plan generation takes about 15 minutes on average. Feel free to close this tab — your saved request keeps running and you can rejoin from any device.";
 
-const RUNNING_HINTS = [
-  "Mapping your saved camp profile onto the calendar.",
-  "Sequencing weekly volume around the fight date.",
-  "Selecting style-specific work and recovery blocks.",
-  "Balancing strength, conditioning, and sparring load.",
-  "Pacing intensity into peak and taper weeks.",
-  "Pressure-testing the plan against your restrictions.",
-  "Cross-checking nutrition cues with the training arc.",
-] as const;
-const HINT_ROTATION_MS = 6_000;
-
 interface PremiumLoadingScreenProps {
   phase: GenerationUiPhase;
   error?: string | null;
@@ -169,8 +159,6 @@ export function PremiumLoadingScreen({
   const activeIndex = PHASE_ORDER[phase];
   const showElapsed = phase !== "failed" && phase !== "finalizing" && startedAtMs !== null;
   const [now, setNow] = useState(() => Date.now());
-  const [hintIndex, setHintIndex] = useState(0);
-  const showRotatingHints = phase === "running" || phase === "queued";
 
   useEffect(() => {
     if (!showElapsed) {
@@ -181,23 +169,7 @@ export function PremiumLoadingScreen({
     return () => window.clearInterval(interval);
   }, [showElapsed]);
 
-  useEffect(() => {
-    if (!showRotatingHints) {
-      return;
-    }
-    setHintIndex(0);
-    const reduceMotion = typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (reduceMotion) {
-      return;
-    }
-    const interval = window.setInterval(() => {
-      setHintIndex((current) => (current + 1) % RUNNING_HINTS.length);
-    }, HINT_ROTATION_MS);
-    return () => window.clearInterval(interval);
-  }, [showRotatingHints]);
-
   const elapsedLabel = showElapsed && startedAtMs !== null ? formatElapsed(now - startedAtMs) : null;
-  const currentHint = showRotatingHints ? RUNNING_HINTS[hintIndex] : null;
   const showMilestones = phase !== "submitting" && milestones.length > 0;
   const visibleMilestones = milestones.slice(-6);
   const latestMilestone = milestones.length ? milestones[milestones.length - 1] : null;
@@ -227,11 +199,7 @@ export function PremiumLoadingScreen({
               </span>
             </div>
             <p className="muted loading-copy">{phaseContent.copy}</p>
-            {currentHint ? (
-              <p className="loading-hint" key={currentHint} aria-live="polite">
-                {currentHint}
-              </p>
-            ) : null}
+            <GenerationProgressMilestones phase={phase} startedAtMs={startedAtMs} nowMs={now} />
             <div className="loading-operational-strip" aria-label="Generation status">
               <div className="loading-operational-item">
                 <span className="loading-operational-label">Job state</span>
