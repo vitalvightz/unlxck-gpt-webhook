@@ -214,6 +214,13 @@ class FakeStore:
         job = self.generation_jobs.get(job_id)
         return dict(job) if job else None
 
+    def get_generation_job_by_plan_id(self, plan_id: str) -> dict | None:
+        matches = [job for job in self.generation_jobs.values() if str(job.get("plan_id") or "") == plan_id]
+        if not matches:
+            return None
+        matches.sort(key=lambda job: job.get("completed_at") or job.get("updated_at") or "", reverse=True)
+        return dict(matches[0])
+
     def list_claimable_generation_jobs(self, *, limit: int = 20, stale_after_seconds: int = 90) -> list[dict]:
         now = datetime.now(timezone.utc)
         rows = []

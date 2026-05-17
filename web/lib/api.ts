@@ -40,6 +40,7 @@ function getApiBaseUrl(): string {
 type ApiRequestInit = RequestInit & {
   token?: string | null;
   clientRequestId?: string | null;
+  planSource?: string | null;
 };
 
 /** Error thrown for non-2xx HTTP responses. Includes the HTTP `status` code. */
@@ -170,6 +171,9 @@ async function readJson<T>(path: string, init?: ApiRequestInit): Promise<T> {
   }
   if (init?.clientRequestId) {
     headers.set("X-Client-Request-Id", init.clientRequestId);
+  }
+  if (init?.planSource) {
+    headers.set("X-Plan-Source", init.planSource);
   }
 
   const method = init?.method ?? "GET";
@@ -402,12 +406,14 @@ export function createGenerationJob(
   token: string,
   payload: PlanRequest,
   clientRequestId?: string,
+  planSource?: string | null,
 ): Promise<GenerationJobResponse> {
   return withTransientRetries(() =>
     readJson<GenerationJobResponse>("/api/plans/generate", {
       method: "POST",
       token,
       clientRequestId,
+      planSource,
       body: JSON.stringify(payload),
     }),
   );

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
 
 import { RequireAuth } from "@/components/auth-guard";
@@ -797,6 +797,8 @@ type TrainingGateDecision =
 
 export function PlanIntakeForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const refiningFromQuickBuild = searchParams.get("from") === "quick_build";
   const { me, session, replaceMe } = useAppSession();
   const [currentStep, setCurrentStep] = useState(0);
   const [isMobileProgressOpen, setIsMobileProgressOpen] = useState(false);
@@ -2004,6 +2006,11 @@ export function PlanIntakeForm() {
         {currentStep === 0 ? (
           <div className="step-layout onboarding-step-layout">
             <div className="step-main athlete-motion-slot athlete-motion-main onboarding-step-main">
+              {refiningFromQuickBuild ? (
+                <p className="quick-build-refine-notice" role="status">
+                  Refining your Quick Build plan. Your existing plan stays until you generate again.
+                </p>
+              ) : null}
               <article className="step-card">
                 <div className="form-section-header">
                   <p className="kicker">Identity</p>

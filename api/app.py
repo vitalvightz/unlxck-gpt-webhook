@@ -483,7 +483,26 @@ def _map_plan_safety_state(row: dict[str, Any]) -> PlanSafetyState:
     )
 
 
-def _map_plan_detail(row: dict[str, Any], *, include_admin: bool) -> PlanDetail:
+_ALLOWED_PLAN_SOURCES: frozenset[str] = frozenset({"quick_build", "self_serve"})
+
+
+def _lookup_plan_source(store: AppStore, plan_id: str) -> str | None:
+    job = store.get_generation_job_by_plan_id(plan_id)
+    if not isinstance(job, dict):
+        return None
+    raw = job.get("source")
+    if not isinstance(raw, str):
+        return None
+    value = raw.strip()
+    return value if value in _ALLOWED_PLAN_SOURCES else None
+
+
+def _map_plan_detail(
+    row: dict[str, Any],
+    *,
+    include_admin: bool,
+    plan_source: str | None = None,
+) -> PlanDetail:
     summary = _map_plan_summary(row)
     planning_brief = _decode_structured_text(row.get("planning_brief"))
     raw_stage2_payload = row.get("stage2_payload")
@@ -501,6 +520,7 @@ def _map_plan_detail(row: dict[str, Any], *, include_admin: bool) -> PlanDetail:
         ),
         safety_state=_map_plan_safety_state(row),
         advisories=build_plan_advisories(planning_brief=planning_brief),
+        plan_source=plan_source,
         admin_outputs=(
             AdminPlanOutputs(
                 coach_notes=str(row.get("coach_notes") or ""),
@@ -1035,11 +1055,13 @@ def create_app(
                     },
                 )
         client_request_id = (request.headers.get("X-Client-Request-Id") or "").strip() or f"cli_{uuid.uuid4().hex}"
+        plan_source_header = (request.headers.get("X-Plan-Source") or "").strip()
+        resolved_source = plan_source_header if plan_source_header in _ALLOWED_PLAN_SOURCES else "self_serve"
         job = await asyncio.to_thread(
             store.create_or_get_generation_job,
             athlete_id=profile.athlete_id,
             client_request_id=client_request_id,
-            source="self_serve",
+            source=resolved_source,
             request_payload=request_body.model_dump(mode="json"),
         )
         job = await schedule_generation_job_if_needed(
@@ -1136,7 +1158,11 @@ def create_app(
         )
         if not plan_row:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
-        return _map_plan_detail(plan_row, include_admin=profile.role == "admin")
+        return _map_plan_detail(
+            plan_row,
+            include_admin=profile.role == "admin",
+            plan_source=_lookup_plan_source(store, str(plan_row.get("id") or "")),
+        )
 
     @app.get("/api/plans/latest/weekly-schedule", response_model=WeeklySchedule)
     def get_latest_weekly_schedule(
@@ -1166,8 +1192,13 @@ def create_app(
     def get_plan(
         plan_row: dict[str, Any] = Depends(require_plan_row),
         profile: ProfileRecord = Depends(require_profile),
+        store: AppStore = Depends(get_store),
     ) -> PlanDetail:
-        return _map_plan_detail(plan_row, include_admin=profile.role == "admin")
+        return _map_plan_detail(
+            plan_row,
+            include_admin=profile.role == "admin",
+            plan_source=_lookup_plan_source(store, str(plan_row.get("id") or "")),
+        )
 
     @app.get("/api/plans/{plan_id}/weekly-schedule", response_model=WeeklySchedule)
     def get_plan_weekly_schedule(
@@ -1190,7 +1221,11 @@ def create_app(
         if profile.role != "admin" and str(plan_row["athlete_id"]) != profile.athlete_id:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="not allowed")
         updated = store.rename_plan(plan_id, update.plan_name)
-        return _map_plan_detail(updated, include_admin=profile.role == "admin")
+        return _map_plan_detail(
+            updated,
+            include_admin=profile.role == "admin",
+            plan_source=_lookup_plan_source(store, plan_id),
+        )
 
     @app.delete("/api/plans/{plan_id}", status_code=status.HTTP_204_NO_CONTENT)
     def delete_plan(
@@ -1230,7 +1265,11 @@ def create_app(
             plan_id,
             _manual_stage2_result(plan_row, submission.final_plan_text),
         )
-        return _map_plan_detail(updated, include_admin=True)
+        return _map_plan_detail(
+            updated,
+            include_admin=True,
+            plan_source=_lookup_plan_source(store, plan_id),
+        )
 
     @app.post("/api/admin/plans/{plan_id}/approve", response_model=PlanDetail)
     def approve_review_required_plan(
@@ -1246,7 +1285,11 @@ def create_app(
             plan_id,
             _admin_approved_result(plan_row),
         )
-        return _map_plan_detail(updated, include_admin=True)
+        return _map_plan_detail(
+            updated,
+            include_admin=True,
+            plan_source=_lookup_plan_source(store, plan_id),
+        )
 
     @app.post("/api/admin/plans/{plan_id}/approve-and-resume-generation", response_model=GenerationJobResponse, status_code=202)
     async def approve_and_resume_generation(
@@ -1349,7 +1392,11 @@ def create_app(
             plan_id,
             _admin_rejected_result(plan_row),
         )
-        return _map_plan_detail(updated, include_admin=True)
+        return _map_plan_detail(
+            updated,
+            include_admin=True,
+            plan_source=_lookup_plan_source(store, plan_id),
+        )
 
     @app.post("/api/admin/plans/{plan_id}/archive", response_model=PlanDetail)
     def archive_plan(
@@ -1365,7 +1412,11 @@ def create_app(
             plan_id,
             _admin_archived_result(plan_row),
         )
-        return _map_plan_detail(updated, include_admin=True)
+        return _map_plan_detail(
+            updated,
+            include_admin=True,
+            plan_source=_lookup_plan_source(store, plan_id),
+        )
 
     @app.get("/api/admin/athletes", response_model=list[AdminAthleteRecord])
     def list_admin_athletes(

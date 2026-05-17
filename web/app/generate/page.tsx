@@ -12,6 +12,13 @@ import { validatePerformanceFocusSelections } from "@/lib/performance-focus-cap"
 import { PremiumLoadingScreen } from "@/components/premium-loading-screen";
 
 const STORAGE_KEY = "unlxck:pending-generation:self";
+const ALLOWED_PLAN_SOURCES = new Set(["quick_build", "self_serve"]);
+
+function resolvePlanSource(me: ReturnType<typeof useAppSession>["me"]): string {
+  const draft = me?.profile.onboarding_draft as { plan_source?: unknown } | null | undefined;
+  const candidate = typeof draft?.plan_source === "string" ? draft.plan_source.trim() : "";
+  return ALLOWED_PLAN_SOURCES.has(candidate) ? candidate : "self_serve";
+}
 
 export default function GeneratePage() {
   const router = useRouter();
@@ -38,7 +45,7 @@ export default function GeneratePage() {
       if (!session?.access_token || !payload) {
         throw new Error("Session or intake payload is missing.");
       }
-      return createGenerationJob(session.access_token, payload, clientRequestId);
+      return createGenerationJob(session.access_token, payload, clientRequestId, resolvePlanSource(me));
     },
     onComplete: ({ planId, status, recovered }) => {
       const search = new URLSearchParams();

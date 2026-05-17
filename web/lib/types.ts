@@ -339,6 +339,7 @@ export type PlanDetail = PlanSummary & {
   advisories: PlanAdvisory[];
   latest_intake?: PlanRequest | null;
   admin_outputs?: AdminPlanOutputs | null;
+  plan_source?: string | null;
 };
 
 export type ProgressMilestone = {
