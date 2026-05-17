@@ -58,7 +58,7 @@ test("quickBuildToPlanRequest forwards hard sparring days to the plan request", 
   const input = buildValidInput();
   input.hard_sparring_days = ["monday", "wednesday"];
   const plan = quickBuildToPlanRequest(input);
-  assert.deepEqual(plan.hard_sparring_days, ["monday", "wednesday"]);
+  assert.deepEqual(plan.hard_sparring_days, ["Monday", "Wednesday"]);
 });
 
 test("quickBuildToPlanRequest drops hard sparring days that are not training days", () => {
