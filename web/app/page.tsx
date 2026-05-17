@@ -267,7 +267,7 @@ export default function HomePage() {
       <section className="panel loading-card">
         <p className="kicker">Overview</p>
         <h1>Redirecting to login</h1>
-        <p className="muted">We could not load your athlete profile. Please sign in again.</p>
+        <p className="muted">Session expired. Sign in again.</p>
       </section>
     );
   }

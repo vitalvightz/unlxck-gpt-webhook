@@ -527,7 +527,7 @@ function LatestPlanCard({
       return;
     }
     if (!accessToken) {
-      setError("Session missing. Please sign in again.");
+      setError("Session expired. Sign in again.");
       return;
     }
 
@@ -553,7 +553,7 @@ function LatestPlanCard({
     } catch (renameError) {
       const errorMessage = renameError instanceof Error ? renameError.message : "Unable to rename this plan.";
       if (errorMessage.includes("Unable to reach the server") || errorMessage.includes("502") || errorMessage.includes("503") || errorMessage.includes("504")) {
-        setError("Connection issue. Please check your internet connection and try again.");
+        setError("Connection issue. Try again in a minute.");
       } else {
         setError(errorMessage);
       }
@@ -579,7 +579,7 @@ function LatestPlanCard({
       return;
     }
     if (!accessToken) {
-      setError("Session missing. Please sign in again.");
+      setError("Session expired. Sign in again.");
       return;
     }
 
@@ -593,7 +593,7 @@ function LatestPlanCard({
     } catch (deleteError) {
       const errorMessage = deleteError instanceof Error ? deleteError.message : "Unable to delete this plan.";
       if (errorMessage.includes("Unable to reach the server") || errorMessage.includes("502") || errorMessage.includes("503") || errorMessage.includes("504")) {
-        setError("Connection issue. Please check your internet connection and try again.");
+        setError("Connection issue. Try again in a minute.");
       } else {
         setError(errorMessage);
       }
