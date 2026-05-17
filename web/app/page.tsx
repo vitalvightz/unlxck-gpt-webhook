@@ -276,6 +276,40 @@ export default function HomePage() {
     const latestPlan = me.latest_plan ?? null;
     const draft = (me.profile.onboarding_draft as { current_step?: number } | null) ?? null;
     const latestIntake = me.latest_intake;
+    const hasMeaningfulDraft = Boolean(
+      draft && typeof draft === "object" && Object.keys(draft as Record<string, unknown>).length > 0,
+    );
+    const isFirstTimeUser =
+      me.plan_count === 0 && !latestPlan && !latestIntake && !hasMeaningfulDraft;
+
+    if (isFirstTimeUser) {
+      return (
+        <section className="hero-panel welcome-panel athlete-motion-slot athlete-motion-header">
+          <div className="hero-panel-copy welcome-copy">
+            <p className="eyebrow">Welcome to UNLXCK</p>
+            <h1 className="hero-title">Build your fight camp in minutes.</h1>
+            <p className="overview-command-summary">
+              Create your athlete profile, generate a structured camp plan, and manage your setup from one dashboard.
+            </p>
+            <p className="muted welcome-context">
+              Designed for fighters and combat athletes. Quick Build takes about 2 minutes. Full Setup gives more control.
+            </p>
+            <div className="hero-actions welcome-actions">
+              <Link href="/onboarding" className="cta">
+                Start Full Setup
+              </Link>
+              <Link href="/quick-build" className="secondary-button">
+                Use Quick Build
+              </Link>
+              <Link href="/demo-plan" className="ghost-button">
+                View Demo Plan
+              </Link>
+            </div>
+          </div>
+        </section>
+      );
+    }
+
     const nextStepNumber = Number.isFinite(Number(draft?.current_step ?? 0)) ? Number(draft?.current_step ?? 0) + 1 : 1;
     const totalOnboardingSteps = 6;
     const remainingSteps = draft ? Math.max(totalOnboardingSteps - nextStepNumber, 0) : totalOnboardingSteps;

@@ -10424,3 +10424,45 @@ html[data-app-surface="workspace"][data-theme="dark"] .desktop-nav-toggle {
   color: #ffe6ea;
   font-weight: 600;
 }
+
+.welcome-panel {
+  max-width: 760px;
+}
+
+.welcome-copy {
+  display: grid;
+  gap: 12px;
+}
+
+.welcome-context {
+  margin-top: 4px;
+}
+
+.welcome-actions {
+  margin-top: 8px;
+}
+
+.demo-week-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+}
+
+.demo-week-card {
+  display: grid;
+  gap: 8px;
+}
+
+.demo-week-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.demo-coach-notes {
+  margin: 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 8px;
+}

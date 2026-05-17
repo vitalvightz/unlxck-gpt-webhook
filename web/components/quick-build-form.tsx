@@ -223,10 +223,14 @@ function QuickBuildFormInner() {
       // When a training day is unchecked, drop it from hard sparring days too —
       // mirrors plan-intake-form.tsx so stale picks can't fail validation later.
       if (key === "training_availability" && current.training_availability.includes(value) && !nextValues.includes(value)) {
+        const clampedFrequency = nextValues.length > 0 && current.weekly_training_frequency > nextValues.length
+          ? nextValues.length
+          : current.weekly_training_frequency;
         return {
           ...current,
           training_availability: nextValues,
           hard_sparring_days: current.hard_sparring_days.filter((day) => day !== value),
+          weekly_training_frequency: clampedFrequency,
         };
       }
       return { ...current, [key]: nextValues };
