@@ -410,7 +410,7 @@ function QuickBuildFormInner() {
           <h2 className="form-section-title">Weekly schedule</h2>
         </div>
         <PresetRow
-          label="Recommended setup"
+          label="Recommended training"
           presets={TRAINING_PRESETS}
           activeKey={activeTrainingPreset}
           onSelect={(key) => {
