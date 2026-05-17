@@ -469,7 +469,57 @@ def test_create_plan_raises_when_non_schema_insert_error_occurs():
         )
 
     assert exc_info.value.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
-    assert exc_info.value.detail == "create_plan failed"
+    assert exc_info.value.detail == "plan persistence failed"
+
+
+def test_create_plan_raises_specific_error_for_missing_plans_column():
+    store = _make_store()
+    request = _build_request()
+    insert_execute = store.client.table.return_value.insert.return_value.execute
+    insert_execute.side_effect = APIError(
+        {
+            "message": "Could not find the 'stage2_payload' column of 'plans' in the schema cache",
+            "code": "PGRST204",
+            "hint": None,
+            "details": None,
+        }
+    )
+
+    with pytest.raises(HTTPException) as exc_info:
+        store.create_plan(
+            athlete_id="athlete-1",
+            intake_id="intake-1",
+            request=request,
+            result={"plan_text": "# Plan"},
+        )
+
+    assert exc_info.value.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
+    assert exc_info.value.detail == "missing plans column; apply latest Supabase schema and redeploy"
+
+
+def test_create_plan_raises_specific_error_for_invalid_payload():
+    store = _make_store()
+    request = _build_request()
+    insert_execute = store.client.table.return_value.insert.return_value.execute
+    insert_execute.side_effect = APIError(
+        {
+            "message": "invalid input syntax for type json",
+            "code": "22P02",
+            "hint": None,
+            "details": "Token \"bad\" is invalid.",
+        }
+    )
+
+    with pytest.raises(HTTPException) as exc_info:
+        store.create_plan(
+            athlete_id="athlete-1",
+            intake_id="intake-1",
+            request=request,
+            result={"plan_text": "# Plan"},
+        )
+
+    assert exc_info.value.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
+    assert exc_info.value.detail == store_module._PLAN_INVALID_PAYLOAD_DETAIL
 
 
 def test_claim_generation_job_returns_none_when_compare_and_swap_loses(monkeypatch):

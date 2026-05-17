@@ -78,6 +78,8 @@ _PLAN_RUNTIME_SCHEMA_ERROR_SNIPPETS = (
     "does not exist",
     "could not find",
 )
+_PLAN_SCHEMA_MISMATCH_DETAIL = "plans table schema mismatch; apply latest Supabase schema and redeploy"
+_PLAN_INVALID_PAYLOAD_DETAIL = "invalid plans payload for table insert"
 GENERATION_JOB_UNAVAILABLE_DETAIL = "generation job service temporarily unavailable"
 GENERATION_JOB_SCHEMA_DETAIL = "generation job store is not ready; apply the latest Supabase schema and redeploy"
 
@@ -261,6 +263,40 @@ class SupabaseAppStore:
 
     def _legacy_plan_schema_fallback_enabled(self) -> bool:
         return os.getenv("UNLXCK_ALLOW_LEGACY_PLAN_SCHEMA_FALLBACK", "").strip() == "1"
+
+    def _log_create_plan_postgrest_error(
+        self,
+        *,
+        athlete_id: str,
+        intake_id: str,
+        payload: dict[str, Any],
+        exc: PostgrestAPIError,
+    ) -> None:
+        logger.error(
+            "[store] create_plan:postgrest_error athlete_id=%s intake_id=%s error_type=%s code=%s message=%s details=%s hint=%s payload_keys=%s",
+            athlete_id,
+            intake_id,
+            type(exc).__name__,
+            getattr(exc, "code", None),
+            getattr(exc, "message", None),
+            getattr(exc, "details", None),
+            getattr(exc, "hint", None),
+            sorted(payload.keys()),
+        )
+
+    def _create_plan_error_detail(self, exc: PostgrestAPIError) -> str:
+        message = str(getattr(exc, "message", "") or "").lower()
+        details = str(getattr(exc, "details", "") or "").lower()
+        hint = str(getattr(exc, "hint", "") or "").lower()
+        code = str(getattr(exc, "code", "") or "").lower()
+        text = " ".join(part for part in (message, details, hint, code) if part)
+        if "could not find the" in text and "column" in text and "plans" in text:
+            return "missing plans column; apply latest Supabase schema and redeploy"
+        if "invalid input" in text or "invalid json" in text or code in {"22p02", "22023"}:
+            return _PLAN_INVALID_PAYLOAD_DETAIL
+        if "plans" in text and any(snippet in text for snippet in _PLAN_RUNTIME_SCHEMA_ERROR_SNIPPETS):
+            return _PLAN_SCHEMA_MISMATCH_DETAIL
+        return "plan persistence failed"
 
     def validate_runtime_schema(self) -> None:
         legacy_fallback_enabled = self._legacy_plan_schema_fallback_enabled()
@@ -643,10 +679,21 @@ class SupabaseAppStore:
         except HTTPException:
             raise
         except _STORE_CLIENT_ERRORS as exc:
+            if isinstance(exc, PostgrestAPIError):
+                self._log_create_plan_postgrest_error(
+                    athlete_id=athlete_id,
+                    intake_id=intake_id,
+                    payload=payload,
+                    exc=exc,
+                )
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail=self._create_plan_error_detail(exc),
+                ) from exc
             logger.exception("[store] create_plan:exception athlete_id=%s intake_id=%s", athlete_id, intake_id)
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="create_plan failed",
+                detail="plan persistence failed",
             ) from exc
 
     def list_user_plans(self, athlete_id: str) -> list[dict[str, Any]]:
