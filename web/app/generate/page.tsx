@@ -86,6 +86,7 @@ export default function GeneratePage() {
         statusMessage={controller.statusMessage}
         startedAtMs={controller.startedAtMs}
         milestones={controller.milestones}
+        intake={payload}
       />
     </RequireAuth>
   );
