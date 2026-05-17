@@ -112,7 +112,7 @@ function QuickBuildFormInner() {
   const parsedRounds = parseRoundsFormat(input.rounds_format);
   const focusValidation = useMemo(
     () => (!input.no_scheduled_fight && input.fight_date
-      ? validatePerformanceFocusSelections(input.fight_date, { keyGoals: input.key_goals, weakAreas: input.weak_areas })
+      ? validatePerformanceFocusSelections(input.fight_date, { keyGoals: input.key_goals, weakAreas: input.weak_areas }, { timeZone: typeof Intl !== "undefined" ? Intl.DateTimeFormat().resolvedOptions().timeZone : null })
       : null),
     [input.no_scheduled_fight, input.fight_date, input.key_goals, input.weak_areas],
   );
