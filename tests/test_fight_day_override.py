@@ -77,6 +77,15 @@ def _weekly_role_map_with(week_session_roles: list[list[dict]]) -> dict:
                 "week_index": idx,
                 "phase": "TAPER" if idx == len(week_session_roles) else "SPP",
                 "session_roles": [dict(role) for role in roles],
+                "calendar_days": [
+                    {"weekday": "monday", "d_day": 4, "is_fight_day": False, "is_after_fight_day": False},
+                    {"weekday": "wednesday", "d_day": 2, "is_fight_day": False, "is_after_fight_day": False},
+                    {"weekday": "friday", "d_day": 0, "is_fight_day": True, "is_after_fight_day": False},
+                ] if idx == len(week_session_roles) else [
+                    {"weekday": "monday", "d_day": 11, "is_fight_day": False, "is_after_fight_day": False},
+                    {"weekday": "wednesday", "d_day": 9, "is_fight_day": False, "is_after_fight_day": False},
+                    {"weekday": "friday", "d_day": 7, "is_fight_day": False, "is_after_fight_day": False},
+                ],
                 "suppressed_roles": [],
                 "declared_hard_sparring_days": ["monday", "wednesday", "friday"],
                 "effective_hard_sparring_days": ["monday", "wednesday", "friday"],
@@ -230,6 +239,11 @@ def test_override_fires_for_multiple_fight_weekdays(
         "plan_creation_weekday": creation_weekday,
         "days_until_fight": days_out,
     }
+    final_week = weekly_role_map["weeks"][-1]
+    final_week["calendar_days"] = [
+        {"weekday": "monday", "d_day": 4, "is_fight_day": False, "is_after_fight_day": False},
+        {"weekday": expected_fight_weekday, "d_day": 0, "is_fight_day": True, "is_after_fight_day": False},
+    ]
 
     result = apply_fight_day_override_to_weekly_role_map(weekly_role_map, athlete_model)
     final_week = result["weeks"][-1]
@@ -270,6 +284,55 @@ def test_override_records_displaced_role_in_suppressed():
         item.get("downgraded_from_role_key") == "hard_sparring_day"
         and item.get("replacement_role_key") == "fight_day_protocol"
         for item in suppressed
+    )
+
+
+def test_override_no_op_when_final_week_has_no_d0_calendar_day():
+    weekly_role_map = _weekly_role_map_with(
+        [[{"role_key": "hard_sparring_day", "scheduled_day_hint": "friday"}]]
+    )
+    final_week = weekly_role_map["weeks"][-1]
+    final_week["calendar_days"] = [
+        {"weekday": "monday", "d_day": 8, "is_fight_day": False, "is_after_fight_day": False},
+        {"weekday": "wednesday", "d_day": 7, "is_fight_day": False, "is_after_fight_day": False},
+        {"weekday": "friday", "d_day": 5, "is_fight_day": False, "is_after_fight_day": False},
+    ]
+    athlete_model = {"plan_creation_weekday": "sunday", "days_until_fight": 26}
+
+    result = apply_fight_day_override_to_weekly_role_map(weekly_role_map, athlete_model)
+    assert "fight_day_override" not in result
+    assert result["weeks"][-1]["session_roles"][0]["role_key"] == "hard_sparring_day"
+
+
+def test_normal_camp_taper_ending_d1_does_not_render_fight_day_protocol_inside_taper():
+    """When taper week ends at D-1, do not inject fight_day_protocol into same weekday D-7."""
+    weekly_role_map = _weekly_role_map_with(
+        [
+            [{"role_key": "hard_sparring_day", "scheduled_day_hint": "wednesday"}],
+            [{"role_key": "hard_sparring_day", "scheduled_day_hint": "wednesday"}],
+        ]
+    )
+    final_week = weekly_role_map["weeks"][-1]
+    final_week["calendar_days"] = [
+        {"weekday": "monday", "d_day": 8, "is_fight_day": False, "is_after_fight_day": False},
+        {"weekday": "wednesday", "d_day": 7, "is_fight_day": False, "is_after_fight_day": False},
+        {"weekday": "friday", "d_day": 5, "is_fight_day": False, "is_after_fight_day": False},
+        {"weekday": "sunday", "d_day": 1, "is_fight_day": False, "is_after_fight_day": False},
+    ]
+    athlete_model = {"fight_date": "2026-06-10"}  # Wednesday
+
+    result = apply_fight_day_override_to_weekly_role_map(weekly_role_map, athlete_model)
+    result_final_week = result["weeks"][-1]
+
+    assert "fight_day_override" not in result
+    assert not any(
+        role.get("role_key") == "fight_day_protocol"
+        for role in result_final_week["session_roles"]
+    )
+    assert any(
+        role.get("role_key") == "hard_sparring_day"
+        and role.get("scheduled_day_hint") == "wednesday"
+        for role in result_final_week["session_roles"]
     )
 
 
