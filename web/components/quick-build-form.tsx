@@ -18,7 +18,8 @@ import {
   toggleListValue,
   type IntakeOption,
 } from "@/lib/intake-options";
-import { validatePerformanceFocusSelections } from "@/lib/performance-focus-cap";
+import { FOCUS_CAP_DISABLED_REASON, validatePerformanceFocusSelections } from "@/lib/performance-focus-cap";
+import { HARD_SPARRING_DAY_CAP } from "@/lib/training-schedule";
 import {
   buildRoundsFormat,
   parseRoundsFormat,
@@ -59,6 +60,8 @@ type ChipMultiSelectProps = {
   onToggle: (value: string) => void;
   capDisabledReason?: string;
   disableAdditionalSelections?: boolean;
+  disabledValues?: string[];
+  disabledValueReason?: string;
 };
 
 function ChipMultiSelect({
@@ -68,31 +71,37 @@ function ChipMultiSelect({
   onToggle,
   capDisabledReason,
   disableAdditionalSelections = false,
+  disabledValues,
+  disabledValueReason,
 }: ChipMultiSelectProps) {
+  const disabledValueSet = disabledValues && disabledValues.length > 0 ? new Set(disabledValues) : null;
   return (
     <div className="field">
       <span className="checkbox-group-label">{label}</span>
       <div className="checkbox-grid">
         {options.map((option) => {
           const checked = selectedValues.includes(option.value);
-          const capDisabled = disableAdditionalSelections && !checked;
+          const valueDisabled = !checked && disabledValueSet?.has(option.value) === true;
+          const capDisabled = !valueDisabled && disableAdditionalSelections && !checked;
+          const disabled = valueDisabled || capDisabled;
+          const reason = valueDisabled ? disabledValueReason : capDisabled ? capDisabledReason : undefined;
           return (
             <label
               key={option.value}
-              className={`checkbox-card ${checked ? "checkbox-card-checked" : ""} ${capDisabled ? "checkbox-card-disabled" : ""}`.trim()}
-              aria-disabled={capDisabled}
-              title={capDisabled ? capDisabledReason : undefined}
+              className={`checkbox-card ${checked ? "checkbox-card-checked" : ""} ${disabled ? "checkbox-card-disabled" : ""}`.trim()}
+              aria-disabled={disabled}
+              title={disabled ? reason : undefined}
             >
               <input
                 type="checkbox"
                 checked={checked}
-                disabled={capDisabled}
+                disabled={disabled}
                 onChange={() => onToggle(option.value)}
               />
               <span className="checkbox-card-copy">
                 <span className="checkbox-card-title">{option.label}</span>
-                {capDisabled && capDisabledReason ? (
-                  <span className="checkbox-card-tag">{capDisabledReason}</span>
+                {disabled && reason ? (
+                  <span className="checkbox-card-tag">{reason}</span>
                 ) : null}
               </span>
             </label>
@@ -208,11 +217,20 @@ function QuickBuildFormInner() {
     setInput((current) => ({ ...current, [key]: value }));
   }
 
-  function toggleField(key: keyof Pick<QuickBuildInput, "technical_style" | "tactical_style" | "training_availability" | "equipment_access" | "key_goals" | "weak_areas">, value: string) {
-    setInput((current) => ({
-      ...current,
-      [key]: toggleListValue(current[key], value),
-    }));
+  function toggleField(key: keyof Pick<QuickBuildInput, "technical_style" | "tactical_style" | "training_availability" | "hard_sparring_days" | "equipment_access" | "key_goals" | "weak_areas">, value: string) {
+    setInput((current) => {
+      const nextValues = toggleListValue(current[key], value);
+      // When a training day is unchecked, drop it from hard sparring days too —
+      // mirrors plan-intake-form.tsx so stale picks can't fail validation later.
+      if (key === "training_availability" && current.training_availability.includes(value) && !nextValues.includes(value)) {
+        return {
+          ...current,
+          training_availability: nextValues,
+          hard_sparring_days: current.hard_sparring_days.filter((day) => day !== value),
+        };
+      }
+      return { ...current, [key]: nextValues };
+    });
   }
 
   function confirmReplace(currentHasValues: boolean, message: string): boolean {
@@ -241,6 +259,7 @@ function QuickBuildFormInner() {
       setInput((currentInput) => ({
         ...currentInput,
         training_availability: [],
+        hard_sparring_days: [],
       }));
       return;
     }
@@ -254,6 +273,7 @@ function QuickBuildFormInner() {
       ...currentInput,
       training_availability: [...preset.training_availability],
       weekly_training_frequency: preset.weekly_training_frequency,
+      hard_sparring_days: currentInput.hard_sparring_days.filter((day) => preset.training_availability.includes(day)),
     }));
   }
 
@@ -493,6 +513,20 @@ function QuickBuildFormInner() {
           selectedValues={input.training_availability}
           onToggle={(value) => toggleField("training_availability", value)}
         />
+        <ChipMultiSelect
+          label="Hard sparring days"
+          options={TRAINING_AVAILABILITY_OPTIONS}
+          selectedValues={input.hard_sparring_days}
+          onToggle={(value) => toggleField("hard_sparring_days", value)}
+          disabledValues={TRAINING_AVAILABILITY_OPTIONS
+            .filter((option) => !input.training_availability.includes(option.value))
+            .map((option) => option.value)}
+          disabledValueReason="Add as a training day first"
+          disableAdditionalSelections={input.hard_sparring_days.length >= HARD_SPARRING_DAY_CAP}
+          capDisabledReason={`Hard sparring cap (${HARD_SPARRING_DAY_CAP}) reached`}
+        />
+        <p className="muted">Leave empty if you don&apos;t hard spar. Used to place S&amp;C around sparring.</p>
+        <FieldError message={visibleError("hard_sparring_days")} />
         <div className="field">
           <label htmlFor="qb-weekly-frequency">Sessions per week</label>
           <CustomSelect
@@ -548,7 +582,7 @@ function QuickBuildFormInner() {
           selectedValues={input.key_goals}
           onToggle={(value) => toggleField("key_goals", value)}
           disableAdditionalSelections={input.key_goals.length >= QUICK_BUILD_KEY_GOAL_CAP || sharedFocusCapReached}
-          capDisabledReason={sharedFocusCapReached ? "Shared fight-camp cap reached" : `Limit ${QUICK_BUILD_KEY_GOAL_CAP}`}
+          capDisabledReason={sharedFocusCapReached ? FOCUS_CAP_DISABLED_REASON : `Limit ${QUICK_BUILD_KEY_GOAL_CAP}`}
         />
         <FieldError message={visibleError("key_goals")} />
         <ChipMultiSelect
@@ -557,7 +591,7 @@ function QuickBuildFormInner() {
           selectedValues={input.weak_areas}
           onToggle={(value) => toggleField("weak_areas", value)}
           disableAdditionalSelections={input.weak_areas.length >= QUICK_BUILD_WEAK_AREA_CAP || sharedFocusCapReached}
-          capDisabledReason={sharedFocusCapReached ? "Shared fight-camp cap reached" : `Limit ${QUICK_BUILD_WEAK_AREA_CAP}`}
+          capDisabledReason={sharedFocusCapReached ? FOCUS_CAP_DISABLED_REASON : `Limit ${QUICK_BUILD_WEAK_AREA_CAP}`}
         />
         <FieldError message={visibleError("weak_areas")} />
         <FieldError message={visibleError("focus_cap")} />

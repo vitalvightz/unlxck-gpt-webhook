@@ -10,6 +10,7 @@ import {
 } from "@/lib/intake-options";
 import { applyNoScheduledFightSnapshot, emptyPlanRequest } from "@/lib/onboarding";
 import { validatePerformanceFocusSelections } from "@/lib/performance-focus-cap";
+import { HARD_SPARRING_DAY_CAP } from "@/lib/training-schedule";
 import type { PlanRequest } from "@/lib/types";
 
 export const QUICK_BUILD_KEY_GOAL_CAP = 3;
@@ -26,6 +27,7 @@ export type QuickBuildInput = {
   rounds_format: string;
   weekly_training_frequency: number;
   training_availability: string[];
+  hard_sparring_days: string[];
   equipment_access: string[];
   key_goals: string[];
   weak_areas: string[];
@@ -42,6 +44,7 @@ export function emptyQuickBuildInput(fullName = ""): QuickBuildInput {
     rounds_format: "3 x 3",
     weekly_training_frequency: 4,
     training_availability: [],
+    hard_sparring_days: [],
     equipment_access: [],
     key_goals: [],
     weak_areas: [],
@@ -101,6 +104,14 @@ export function validateQuickBuildInput(
   } else if (input.weekly_training_frequency > input.training_availability.length) {
     errors.training_availability = "Sessions per week cannot exceed selected training days.";
   }
+  if (input.hard_sparring_days.length > 0) {
+    const availabilitySet = new Set(input.training_availability);
+    if (input.hard_sparring_days.some((day) => !availabilitySet.has(day))) {
+      errors.hard_sparring_days = "Hard sparring days must be inside your training days.";
+    } else if (input.hard_sparring_days.length > HARD_SPARRING_DAY_CAP) {
+      errors.hard_sparring_days = `Pick at most ${HARD_SPARRING_DAY_CAP} hard sparring days.`;
+    }
+  }
   if (input.equipment_access.length === 0) {
     errors.equipment_access = "Choose your equipment.";
   }
@@ -145,7 +156,9 @@ export function quickBuildToPlanRequest(input: QuickBuildInput): PlanRequest {
     weekly_training_frequency: input.weekly_training_frequency,
     fatigue_level: "moderate",
     training_availability: retainKnownOptionValues(input.training_availability, TRAINING_AVAILABILITY_OPTIONS),
-    hard_sparring_days: [],
+    hard_sparring_days: retainKnownOptionValues(input.hard_sparring_days, TRAINING_AVAILABILITY_OPTIONS)
+      .filter((day) => input.training_availability.includes(day))
+      .slice(0, HARD_SPARRING_DAY_CAP),
     support_work_days: [],
     equipment_access: retainKnownOptionValues(input.equipment_access, EQUIPMENT_ACCESS_OPTIONS),
     injuries: input.injuries.trim(),

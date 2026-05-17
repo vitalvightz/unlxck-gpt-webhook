@@ -133,6 +133,10 @@ export function getPerformanceFocusCap(
   };
 }
 
+// Short copy for tight surfaces (disabled chips, hover hints) where space is limited.
+export const FOCUS_CAP_DISABLED_REASON = "Free one focus slot to add this.";
+
+// Detailed copy for submit-blocking errors where the user needs the cap and the exact excess.
 function buildPerformanceFocusCapErrorMessage(maxSelections: number, excessSelections: number): string {
   const selectionLabel = excessSelections === 1 ? "selection" : "selections";
   return `This camp allows ${maxSelections} total focus picks. Remove ${excessSelections} goal or weak-area ${selectionLabel} before generating.`;
