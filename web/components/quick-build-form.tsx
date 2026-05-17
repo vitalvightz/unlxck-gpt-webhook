@@ -401,7 +401,7 @@ function QuickBuildFormInner() {
             />
             <span className="checkbox-card-copy">
               <span className="checkbox-card-title">No scheduled fight</span>
-              <span className="checkbox-card-tag">Open camp / general prep</span>
+              <span className="checkbox-card-tag">Open camp · General prep</span>
             </span>
           </label>
         </div>

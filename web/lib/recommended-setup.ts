@@ -46,7 +46,7 @@ export type FocusPreset = {
 export const EQUIPMENT_PRESETS: EquipmentPreset[] = [
   {
     key: "home",
-    label: "Home / bodyweight",
+    label: "Home · Bodyweight",
     description: "Bands, bag, partner",
     equipment_access: ["bands", "heavy_bag", "partner", "medicine_ball"],
   },
@@ -120,7 +120,7 @@ export const FOCUS_PRESETS: FocusPreset[] = [
   {
     key: "mobility_recovery",
     label: "Mobility & recovery",
-    description: "Recovery + mobility focus",
+    description: "Recovery · Mobility focus",
     // For injury accommodation, the planner reads the Injuries field — this preset
     // only nudges goal emphasis. Naming intentionally avoids any "injury-safe" claim.
     key_goals: ["recovery", "mobility"],
