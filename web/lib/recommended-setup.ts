@@ -46,7 +46,7 @@ export type FocusPreset = {
 export const EQUIPMENT_PRESETS: EquipmentPreset[] = [
   {
     key: "home",
-    label: "Home / bodyweight",
+    label: "Home & bodyweight",
     description: "Bands, bag, partner",
     equipment_access: ["bands", "heavy_bag", "partner", "medicine_ball"],
   },
