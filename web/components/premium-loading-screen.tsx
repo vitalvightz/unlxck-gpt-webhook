@@ -3,8 +3,10 @@
 import { useEffect, useState } from "react";
 
 import { GenerationProgressMilestones } from "@/components/generation-progress-milestones";
+import { StageOnePreviewCard } from "@/components/stage-one-preview-card";
 import type { GenerationUiPhase } from "@/lib/generation-controller";
-import type { ProgressMilestone } from "@/lib/types";
+import { buildStageOnePreview } from "@/lib/stage-one-preview";
+import type { PlanRequest, ProgressMilestone } from "@/lib/types";
 
 const WORKFLOW_STEPS = [
   {
@@ -129,6 +131,7 @@ interface PremiumLoadingScreenProps {
   statusMessage?: string | null;
   startedAtMs?: number | null;
   milestones?: ProgressMilestone[];
+  intake?: PlanRequest | null;
 }
 
 function formatRelativeTimestamp(at: string, baseMs: number | null): string {
@@ -154,11 +157,13 @@ export function PremiumLoadingScreen({
   statusMessage = null,
   startedAtMs = null,
   milestones = [],
+  intake = null,
 }: PremiumLoadingScreenProps) {
   const phaseContent = PHASE_CONTENT[phase];
   const activeIndex = PHASE_ORDER[phase];
   const showElapsed = phase !== "failed" && phase !== "finalizing" && startedAtMs !== null;
   const [now, setNow] = useState(() => Date.now());
+  const stageOnePreview = phase === "failed" ? null : buildStageOnePreview(intake, milestones);
 
   useEffect(() => {
     if (!showElapsed) {
@@ -200,6 +205,7 @@ export function PremiumLoadingScreen({
             </div>
             <p className="muted loading-copy">{phaseContent.copy}</p>
             <GenerationProgressMilestones phase={phase} startedAtMs={startedAtMs} nowMs={now} />
+            {stageOnePreview ? <StageOnePreviewCard preview={stageOnePreview} /> : null}
             <div className="loading-operational-strip" aria-label="Generation status">
               <div className="loading-operational-item">
                 <span className="loading-operational-label">Job state</span>
