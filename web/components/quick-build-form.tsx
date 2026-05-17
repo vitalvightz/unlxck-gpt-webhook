@@ -437,7 +437,7 @@ function QuickBuildFormInner() {
           <FieldError message={visibleError("training_availability")} />
         </div>
         <PresetRow
-          label="Recommended setup"
+          label="Recommended equipment"
           presets={EQUIPMENT_PRESETS}
           activeKey={activeEquipmentPreset}
           onSelect={(key) => {
