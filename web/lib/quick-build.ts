@@ -1,0 +1,159 @@
+import {
+  detectDeviceTimeZone,
+  EQUIPMENT_ACCESS_OPTIONS,
+  KEY_GOAL_OPTIONS,
+  TACTICAL_STYLE_OPTIONS,
+  TECHNICAL_STYLE_OPTIONS,
+  TRAINING_AVAILABILITY_OPTIONS,
+  WEAK_AREA_OPTIONS,
+  retainKnownOptionValues,
+} from "@/lib/intake-options";
+import { applyNoScheduledFightSnapshot, emptyPlanRequest } from "@/lib/onboarding";
+import { validatePerformanceFocusSelections } from "@/lib/performance-focus-cap";
+import type { PlanRequest } from "@/lib/types";
+
+export const QUICK_BUILD_KEY_GOAL_CAP = 3;
+export const QUICK_BUILD_WEAK_AREA_CAP = 2;
+const ROUNDS_FORMAT_PATTERN = /^\d+\s*[xX]\s*\d+$/;
+const FIGHT_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+
+export type QuickBuildInput = {
+  full_name: string;
+  technical_style: string[];
+  tactical_style: string[];
+  fight_date: string;
+  no_scheduled_fight: boolean;
+  rounds_format: string;
+  weekly_training_frequency: number;
+  training_availability: string[];
+  equipment_access: string[];
+  key_goals: string[];
+  weak_areas: string[];
+  injuries: string;
+};
+
+export function emptyQuickBuildInput(fullName = ""): QuickBuildInput {
+  return {
+    full_name: fullName,
+    technical_style: [],
+    tactical_style: [],
+    fight_date: "",
+    no_scheduled_fight: false,
+    rounds_format: "3 x 3",
+    weekly_training_frequency: 4,
+    training_availability: [],
+    equipment_access: [],
+    key_goals: [],
+    weak_areas: [],
+    injuries: "",
+  };
+}
+
+function isFutureOrToday(value: string, now: Date = new Date()): boolean {
+  const match = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) return false;
+  const [, y, m, d] = match;
+  const fightUtc = Date.UTC(Number(y), Number(m) - 1, Number(d));
+  const todayUtc = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
+  return Number.isFinite(fightUtc) && fightUtc >= todayUtc;
+}
+
+export type QuickBuildValidationErrors = Partial<Record<keyof QuickBuildInput | "focus_cap", string>>;
+
+export function validateQuickBuildInput(
+  input: QuickBuildInput,
+  options?: { now?: Date; timeZone?: string | null },
+): QuickBuildValidationErrors {
+  const errors: QuickBuildValidationErrors = {};
+
+  if (!input.full_name.trim()) {
+    errors.full_name = "Add your full name.";
+  }
+  if (input.technical_style.length === 0) {
+    errors.technical_style = "Pick at least one technical style.";
+  }
+  if (input.no_scheduled_fight) {
+    if (input.fight_date) {
+      errors.fight_date = "Clear the fight date or turn off \"no scheduled fight\".";
+    }
+  } else {
+    if (!input.fight_date) {
+      errors.fight_date = "Pick a fight date or mark no scheduled fight.";
+    } else if (!FIGHT_DATE_PATTERN.test(input.fight_date)) {
+      errors.fight_date = "Fight date must be in YYYY-MM-DD format.";
+    } else if (!isFutureOrToday(input.fight_date, options?.now)) {
+      errors.fight_date = "Fight date cannot be in the past.";
+    }
+  }
+  if (!ROUNDS_FORMAT_PATTERN.test(input.rounds_format)) {
+    errors.rounds_format = "Pick a rounds format.";
+  }
+  if (!Number.isInteger(input.weekly_training_frequency) || input.weekly_training_frequency < 1 || input.weekly_training_frequency > 6) {
+    errors.weekly_training_frequency = "Sessions per week must be between 1 and 6.";
+  }
+  if (input.training_availability.length === 0) {
+    errors.training_availability = "Select at least one training day.";
+  } else if (input.weekly_training_frequency > input.training_availability.length) {
+    errors.training_availability = "Sessions per week cannot exceed selected training days.";
+  }
+  if (input.equipment_access.length === 0) {
+    errors.equipment_access = "Select at least one piece of equipment.";
+  }
+  if (input.key_goals.length === 0) {
+    errors.key_goals = "Pick at least one goal.";
+  } else if (input.key_goals.length > QUICK_BUILD_KEY_GOAL_CAP) {
+    errors.key_goals = `Pick at most ${QUICK_BUILD_KEY_GOAL_CAP} goals.`;
+  }
+  if (input.weak_areas.length > QUICK_BUILD_WEAK_AREA_CAP) {
+    errors.weak_areas = `Pick at most ${QUICK_BUILD_WEAK_AREA_CAP} weak areas.`;
+  }
+
+  if (!input.no_scheduled_fight && input.fight_date && !errors.fight_date) {
+    const focus = validatePerformanceFocusSelections(
+      input.fight_date,
+      { keyGoals: input.key_goals, weakAreas: input.weak_areas },
+      { now: options?.now, timeZone: options?.timeZone },
+    );
+    if (focus.isOverCap && focus.errorMessage) {
+      errors.focus_cap = focus.errorMessage;
+    }
+  }
+
+  return errors;
+}
+
+export function quickBuildToPlanRequest(input: QuickBuildInput): PlanRequest {
+  const trimmedName = input.full_name.trim();
+  const base = emptyPlanRequest(trimmedName);
+  const plan: PlanRequest = {
+    ...base,
+    athlete: {
+      ...base.athlete,
+      full_name: trimmedName,
+      technical_style: retainKnownOptionValues(input.technical_style, TECHNICAL_STYLE_OPTIONS),
+      tactical_style: retainKnownOptionValues(input.tactical_style, TACTICAL_STYLE_OPTIONS),
+      athlete_timezone: base.athlete.athlete_timezone || detectDeviceTimeZone(),
+    },
+    fight_date: input.no_scheduled_fight ? "" : input.fight_date,
+    no_scheduled_fight: input.no_scheduled_fight,
+    rounds_format: input.rounds_format || "3 x 3",
+    weekly_training_frequency: input.weekly_training_frequency,
+    fatigue_level: "moderate",
+    training_availability: retainKnownOptionValues(input.training_availability, TRAINING_AVAILABILITY_OPTIONS),
+    hard_sparring_days: [],
+    support_work_days: [],
+    equipment_access: retainKnownOptionValues(input.equipment_access, EQUIPMENT_ACCESS_OPTIONS),
+    injuries: input.injuries.trim(),
+    key_goals: retainKnownOptionValues(input.key_goals, KEY_GOAL_OPTIONS),
+    primary_goal: "",
+    weak_areas: retainKnownOptionValues(input.weak_areas, WEAK_AREA_OPTIONS),
+    primary_weak_area: "",
+    goal_weakness_collision_detail: "",
+    goal_weakness_collision_tags: [],
+    goal_weakness_collision_details: [],
+    training_preference: "",
+    mindset_challenges: "",
+    notes: "",
+  };
+  return applyNoScheduledFightSnapshot(plan, input.no_scheduled_fight);
+}

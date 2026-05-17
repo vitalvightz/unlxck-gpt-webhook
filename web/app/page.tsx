@@ -365,6 +365,9 @@ export default function HomePage() {
                 <Link href={primaryActionHref} className="cta overview-primary-action">
                   {primaryActionLabel}
                 </Link>
+                <Link href="/quick-build" className="ghost-button">
+                  Quick Build · 2 min
+                </Link>
               </div>
             </div>
           </div>
@@ -379,6 +382,9 @@ export default function HomePage() {
               <div className="plan-card-actions overview-card-actions">
                 <Link href="/onboarding" className="secondary-button">
                   {draft ? "Resume onboarding" : "Start onboarding"}
+                </Link>
+                <Link href="/quick-build" className="ghost-button">
+                  Quick Build · 2 min
                 </Link>
                 <Link href="/settings" className="ghost-button">
                   Update settings
