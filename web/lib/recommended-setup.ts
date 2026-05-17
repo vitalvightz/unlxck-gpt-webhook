@@ -120,7 +120,7 @@ export const FOCUS_PRESETS: FocusPreset[] = [
   {
     key: "mobility_recovery",
     label: "Mobility & recovery",
-    description: "Recovery + mobility focus",
+    description: "Recovery · Mobility focus",
     // For injury accommodation, the planner reads the Injuries field — this preset
     // only nudges goal emphasis. Naming intentionally avoids any "injury-safe" claim.
     key_goals: ["recovery", "mobility"],
