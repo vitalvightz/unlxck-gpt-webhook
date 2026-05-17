@@ -60,7 +60,7 @@ const RETRYABLE_INTERNAL_ERROR_SNIPPETS = [
   "profile service temporarily unavailable",
   "store service temporarily unavailable",
 ];
-const RETRYABLE_NETWORK_MESSAGE = "Connection issue. Try again in a minute.";
+export const RETRYABLE_NETWORK_MESSAGE = "Connection issue. Try again in a minute.";
 const meRequestsByToken = new Map<string, Promise<MeResponse>>();
 const meUpdatesByToken = new Map<string, Promise<MeResponse>>();
 
