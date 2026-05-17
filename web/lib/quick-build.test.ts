@@ -56,7 +56,7 @@ test("validateQuickBuildInput rejects more than four hard sparring days", () => 
 
 test("quickBuildToPlanRequest forwards hard sparring days to the plan request", () => {
   const input = buildValidInput();
-  input.hard_sparring_days = ["monday", "wednesday"];
+  input.hard_sparring_days = ["Monday", "Wednesday"];
   const plan = quickBuildToPlanRequest(input);
   assert.deepEqual(plan.hard_sparring_days, ["Monday", "Wednesday"]);
 });
