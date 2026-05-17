@@ -9,6 +9,13 @@ function isEmptyValue(value: unknown): boolean {
   return false;
 }
 
+type DraftWithSource = PlanRequest & { plan_source?: string };
+
+function isQuickBuildDraft(draft: PlanRequest | null): boolean {
+  return Boolean((draft as DraftWithSource | null)?.plan_source === "quick_build");
+}
+
+
 // Layer `top` on `base` field-by-field, preferring `top` only when it carries a non-empty value.
 // Lets a partial onboarding_draft pull untouched fields from latest_intake instead of clobbering them.
 function mergeIntakeLayers(base: PlanRequest, top: PlanRequest): PlanRequest {
@@ -111,7 +118,9 @@ export function hydratePlanRequest(me: MeResponse | null): PlanRequest {
 
   // Layer order: defaults < latest_intake < onboarding_draft (non-empty wins).
   // A partially-completed draft still pulls untouched fields from the last completed intake.
-  const layered = normalizedDraft ? mergeIntakeLayers(base, normalizedDraft) : base;
+  const layered = normalizedDraft
+    ? (isQuickBuildDraft(normalizedDraft) ? normalizedDraft : mergeIntakeLayers(base, normalizedDraft))
+    : base;
 
   // Layer order for athlete fields: defaults < profile-derived < latest_intake.athlete < draft.athlete.
   // Each layer only overrides when its value is non-empty, so a partial draft (e.g. record: "",
