@@ -223,7 +223,12 @@ function QuickBuildFormInner() {
 
   function applyEquipmentPreset(preset: EquipmentPreset) {
     const current = input.equipment_access;
-    const differs = matchesEquipmentPreset(current) !== preset.key && current.length > 0;
+    const currentMatch = matchesEquipmentPreset(current);
+    if (currentMatch === preset.key) {
+      patch("equipment_access", []);
+      return;
+    }
+    const differs = currentMatch === null && current.length > 0;
     if (!confirmReplace(differs, "Replace your current equipment selection with this preset?")) {
       return;
     }
@@ -232,8 +237,15 @@ function QuickBuildFormInner() {
 
   function applyTrainingPreset(preset: TrainingPreset) {
     const currentMatch = matchesTrainingPreset(input.training_availability, input.weekly_training_frequency);
-    const hasExistingChoice = input.training_availability.length > 0;
-    if (currentMatch !== preset.key && hasExistingChoice) {
+    if (currentMatch === preset.key) {
+      setInput((currentInput) => ({
+        ...currentInput,
+        training_availability: [],
+      }));
+      return;
+    }
+    const hasManualChoice = currentMatch === null && input.training_availability.length > 0;
+    if (hasManualChoice) {
       if (!confirmReplace(true, "Replace your current training days and sessions per week with this preset?")) {
         return;
       }
@@ -247,9 +259,16 @@ function QuickBuildFormInner() {
 
   function applyFocusPreset(preset: FocusPreset) {
     const currentMatch = matchesFocusPreset(input.key_goals, input.weak_areas);
-    const hasExistingChoice = input.key_goals.length > 0 || input.weak_areas.length > 0;
-    const differs = currentMatch !== preset.key && hasExistingChoice;
-    if (!confirmReplace(differs, "Replace your current goals and weak areas with this preset?")) {
+    if (currentMatch === preset.key) {
+      setInput((currentInput) => ({
+        ...currentInput,
+        key_goals: [],
+        weak_areas: [],
+      }));
+      return;
+    }
+    const hasManualChoice = currentMatch === null && (input.key_goals.length > 0 || input.weak_areas.length > 0);
+    if (!confirmReplace(hasManualChoice, "Replace your current goals and weak areas with this preset?")) {
       return;
     }
     setInput((currentInput) => ({
