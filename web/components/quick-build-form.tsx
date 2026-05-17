@@ -222,14 +222,15 @@ function QuickBuildFormInner() {
       const nextValues = toggleListValue(current[key], value);
       // When a training day is unchecked, drop it from hard sparring days too —
       // mirrors plan-intake-form.tsx so stale picks can't fail validation later.
-      if (key === "training_availability" && current.training_availability.includes(value) && !nextValues.includes(value)) {
-        const clampedFrequency = nextValues.length > 0 && current.weekly_training_frequency > nextValues.length
-          ? nextValues.length
-          : current.weekly_training_frequency;
+      if (key === "training_availability") {
+        const isRemoving = current.training_availability.includes(value) && !nextValues.includes(value);
+        const clampedFrequency = Math.min(current.weekly_training_frequency, Math.max(1, nextValues.length));
         return {
           ...current,
           training_availability: nextValues,
-          hard_sparring_days: current.hard_sparring_days.filter((day) => day !== value),
+          hard_sparring_days: isRemoving
+            ? current.hard_sparring_days.filter((day) => day !== value)
+            : current.hard_sparring_days,
           weekly_training_frequency: clampedFrequency,
         };
       }
