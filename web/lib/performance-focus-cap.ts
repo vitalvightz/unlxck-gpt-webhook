@@ -133,10 +133,7 @@ export function getPerformanceFocusCap(
   };
 }
 
-function buildPerformanceFocusCapErrorMessage(maxSelections: number, excessSelections: number): string {
-  const selectionLabel = excessSelections === 1 ? "selection" : "selections";
-  return `This camp allows ${maxSelections} total focus picks. Remove ${excessSelections} goal or weak-area ${selectionLabel} before generating.`;
-}
+export const FOCUS_CAP_DISABLED_REASON = "Free one focus slot to add this.";
 
 export function validatePerformanceFocusSelections(
   fightDate: string | null | undefined,
@@ -155,8 +152,6 @@ export function validatePerformanceFocusSelections(
     totalSelections,
     excessSelections,
     isOverCap: excessSelections > 0,
-    errorMessage: cap && excessSelections > 0
-      ? buildPerformanceFocusCapErrorMessage(cap.maxSelections, excessSelections)
-      : null,
+    errorMessage: cap && excessSelections > 0 ? FOCUS_CAP_DISABLED_REASON : null,
   };
 }
