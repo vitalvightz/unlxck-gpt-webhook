@@ -519,8 +519,8 @@ function QuickBuildFormInner() {
           selectedValues={input.hard_sparring_days}
           onToggle={(value) => toggleField("hard_sparring_days", value)}
           disabledValues={TRAINING_AVAILABILITY_OPTIONS
-            .map((option) => option.value)
-            .filter((day) => !input.training_availability.includes(day))}
+            .filter((option) => !input.training_availability.includes(option.value))
+            .map((option) => option.value)}
           disabledValueReason="Add as a training day first"
           disableAdditionalSelections={input.hard_sparring_days.length >= HARD_SPARRING_DAY_CAP}
           capDisabledReason={`Hard sparring cap (${HARD_SPARRING_DAY_CAP}) reached`}
