@@ -3,23 +3,28 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
-import { dismissBanner, isBannerDismissed, isQuickBuildPlan } from "@/lib/quick-build-source";
+import { dismissBanner, isBannerDismissed } from "@/lib/quick-build-source";
 
-export function QuickBuildRefinementBanner({ planId }: { planId: string }) {
-  const [visible, setVisible] = useState(false);
+export function QuickBuildRefinementBanner({
+  planId,
+  planSource,
+}: {
+  planId: string;
+  planSource?: string | null;
+}) {
+  const isQuickBuild = planSource === "quick_build";
+  const [hidden, setHidden] = useState(false);
 
   useEffect(() => {
-    if (!planId) return;
-    if (!isQuickBuildPlan(planId)) return;
-    if (isBannerDismissed(planId)) return;
-    setVisible(true);
-  }, [planId]);
+    if (!isQuickBuild || !planId) return;
+    setHidden(isBannerDismissed(planId));
+  }, [isQuickBuild, planId]);
 
-  if (!visible) return null;
+  if (!isQuickBuild || hidden) return null;
 
   function handleDismiss() {
     dismissBanner(planId);
-    setVisible(false);
+    setHidden(true);
   }
 
   return (

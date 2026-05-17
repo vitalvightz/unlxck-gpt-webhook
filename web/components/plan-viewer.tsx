@@ -1252,7 +1252,7 @@ export function PlanViewer({
   return (
     <div className="page">
       <section className="panel">
-        <QuickBuildRefinementBanner planId={plan.plan_id} />
+        <QuickBuildRefinementBanner planId={plan.plan_id} planSource={plan.plan_source ?? null} />
         <div className="section-heading">
           <div>
             <p className="kicker">Plan Detail</p>

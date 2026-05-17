@@ -8,7 +8,6 @@ import { RequireAuth } from "@/components/auth-guard";
 import { useAppSession } from "@/components/auth-provider";
 import { CustomSelect } from "@/components/custom-select";
 import { saveOnboardingDraft } from "@/lib/api";
-import { markPendingQuickBuild } from "@/lib/quick-build-source";
 import {
   EQUIPMENT_ACCESS_OPTIONS,
   KEY_GOAL_OPTIONS,
@@ -318,7 +317,6 @@ function QuickBuildFormInner() {
             },
           });
         }
-        markPendingQuickBuild();
         router.push("/generate");
       } catch (err) {
         setSubmitError(err instanceof Error ? err.message : "Could not save Quick Build draft.");

@@ -124,6 +124,8 @@ class AppStore(Protocol):
 
     def get_generation_job(self, job_id: str) -> dict[str, Any] | None: ...
 
+    def get_generation_job_by_plan_id(self, plan_id: str) -> dict[str, Any] | None: ...
+
     def list_claimable_generation_jobs(self, *, limit: int = 20, stale_after_seconds: int = 90) -> list[dict[str, Any]]: ...
 
     def claim_generation_job(self, job_id: str, *, stale_after_seconds: int = 90) -> dict[str, Any] | None: ...
@@ -854,6 +856,20 @@ class SupabaseAppStore:
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="failed to load generation job",
             ) from exc
+
+    def get_generation_job_by_plan_id(self, plan_id: str) -> dict[str, Any] | None:
+        # Soft-fails to None so plan detail loads even if generation_jobs is unavailable —
+        # the plan_source field is non-critical (banner-only).
+        try:
+            return self._select_first(
+                self.client.table("generation_jobs")
+                .select(GENERATION_JOB_SELECT)
+                .eq("plan_id", plan_id)
+                .order("completed_at", desc=True)
+            )
+        except _STORE_CLIENT_ERRORS:
+            logger.exception("[store] get_generation_job_by_plan_id:exception plan_id=%s", plan_id)
+            return None
 
     def list_claimable_generation_jobs(self, *, limit: int = 20, stale_after_seconds: int = 90) -> list[dict[str, Any]]:
         try:

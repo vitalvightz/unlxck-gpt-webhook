@@ -1,13 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import {
-  consumePendingQuickBuildForPlan,
-  dismissBanner,
-  isBannerDismissed,
-  isQuickBuildPlan,
-  markPendingQuickBuild,
-} from "@/lib/quick-build-source";
+import { dismissBanner, isBannerDismissed } from "@/lib/quick-build-source";
 
 class MemoryStorage {
   private store = new Map<string, string>();
@@ -19,10 +13,10 @@ class MemoryStorage {
   clear(): void { this.store.clear(); }
 }
 
-type WindowLike = { sessionStorage: MemoryStorage; localStorage: MemoryStorage };
+type WindowLike = { localStorage: MemoryStorage };
 
 function installWindow(): WindowLike {
-  const win: WindowLike = { sessionStorage: new MemoryStorage(), localStorage: new MemoryStorage() };
+  const win: WindowLike = { localStorage: new MemoryStorage() };
   (globalThis as unknown as { window: WindowLike }).window = win;
   return win;
 }
@@ -30,59 +24,6 @@ function installWindow(): WindowLike {
 function clearWindow(): void {
   delete (globalThis as unknown as { window?: WindowLike }).window;
 }
-
-test("markPendingQuickBuild + consumePendingQuickBuildForPlan adds the plan id", () => {
-  const win = installWindow();
-  try {
-    markPendingQuickBuild();
-    assert.equal(win.sessionStorage.getItem("unlxck:pending-plan-source"), "quick_build");
-    consumePendingQuickBuildForPlan("plan-1");
-    assert.equal(isQuickBuildPlan("plan-1"), true);
-    assert.equal(win.sessionStorage.getItem("unlxck:pending-plan-source"), null);
-  } finally {
-    clearWindow();
-  }
-});
-
-test("consumePendingQuickBuildForPlan is a no-op without the pending mark", () => {
-  installWindow();
-  try {
-    consumePendingQuickBuildForPlan("plan-1");
-    assert.equal(isQuickBuildPlan("plan-1"), false);
-  } finally {
-    clearWindow();
-  }
-});
-
-test("isQuickBuildPlan only returns true for marked ids", () => {
-  installWindow();
-  try {
-    markPendingQuickBuild();
-    consumePendingQuickBuildForPlan("plan-a");
-    assert.equal(isQuickBuildPlan("plan-a"), true);
-    assert.equal(isQuickBuildPlan("plan-b"), false);
-  } finally {
-    clearWindow();
-  }
-});
-
-test("plan id list evicts FIFO once the cap is reached", () => {
-  const win = installWindow();
-  try {
-    for (let i = 0; i < 30; i += 1) {
-      markPendingQuickBuild();
-      consumePendingQuickBuildForPlan(`plan-${i}`);
-    }
-    const stored = JSON.parse(win.localStorage.getItem("unlxck:quick-build-plan-ids") ?? "[]") as string[];
-    assert.equal(stored.length, 25);
-    assert.equal(stored[0], "plan-5");
-    assert.equal(stored[stored.length - 1], "plan-29");
-    assert.equal(isQuickBuildPlan("plan-0"), false);
-    assert.equal(isQuickBuildPlan("plan-29"), true);
-  } finally {
-    clearWindow();
-  }
-});
 
 test("dismissBanner / isBannerDismissed round-trip", () => {
   installWindow();
@@ -96,25 +37,37 @@ test("dismissBanner / isBannerDismissed round-trip", () => {
   }
 });
 
-test("all functions are safe when window is undefined", () => {
-  clearWindow();
-  assert.doesNotThrow(() => markPendingQuickBuild());
-  assert.doesNotThrow(() => consumePendingQuickBuildForPlan("plan-1"));
-  assert.equal(isQuickBuildPlan("plan-1"), false);
-  assert.equal(isBannerDismissed("plan-1"), false);
-  assert.doesNotThrow(() => dismissBanner("plan-1"));
-});
-
-test("consumePendingQuickBuildForPlan does not double-add the same plan id", () => {
+test("dismissBanner does not duplicate the same id", () => {
   const win = installWindow();
   try {
-    markPendingQuickBuild();
-    consumePendingQuickBuildForPlan("plan-1");
-    markPendingQuickBuild();
-    consumePendingQuickBuildForPlan("plan-1");
-    const stored = JSON.parse(win.localStorage.getItem("unlxck:quick-build-plan-ids") ?? "[]") as string[];
+    dismissBanner("plan-1");
+    dismissBanner("plan-1");
+    const stored = JSON.parse(win.localStorage.getItem("unlxck:quick-build-banner-dismissed") ?? "[]") as string[];
     assert.equal(stored.length, 1);
   } finally {
     clearWindow();
   }
+});
+
+test("dismissBanner FIFO-trims past the cap of 50", () => {
+  const win = installWindow();
+  try {
+    for (let i = 0; i < 60; i += 1) {
+      dismissBanner(`plan-${i}`);
+    }
+    const stored = JSON.parse(win.localStorage.getItem("unlxck:quick-build-banner-dismissed") ?? "[]") as string[];
+    assert.equal(stored.length, 50);
+    assert.equal(stored[0], "plan-10");
+    assert.equal(stored[stored.length - 1], "plan-59");
+    assert.equal(isBannerDismissed("plan-0"), false);
+    assert.equal(isBannerDismissed("plan-59"), true);
+  } finally {
+    clearWindow();
+  }
+});
+
+test("functions are safe when window is undefined", () => {
+  clearWindow();
+  assert.equal(isBannerDismissed("plan-1"), false);
+  assert.doesNotThrow(() => dismissBanner("plan-1"));
 });
