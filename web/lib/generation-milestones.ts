@@ -48,7 +48,7 @@ export type MilestoneView = {
 };
 
 const QUEUED_MAX_INDEX = 2;
-const RUNNING_MAX_INDEX = 17;
+const RUNNING_MAX_INDEX = 18;
 const ROTATION_MS = 3_500;
 
 function withVariant(milestone: GenerationMilestone, tick: number): GenerationMilestone {
