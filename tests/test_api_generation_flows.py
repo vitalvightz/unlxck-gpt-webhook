@@ -111,6 +111,34 @@ def test_generate_plan_persists_retry_pass_result():
     assert saved["stage2_attempt_count"] == 2
 
 
+def test_generate_plan_request_payload_strips_quick_build_only_metadata():
+    client, store, _ = _build_client()
+    payload = _build_request().model_dump(mode="json")
+    payload.update(
+        {
+            "plan_source": "quick_build",
+            "setup_source": "wizard",
+            "equipment_preset": "minimal",
+            "training_preset": "balanced",
+            "focus_preset": "conditioning",
+        }
+    )
+
+    response = client.post(
+        "/api/plans/generate",
+        headers={"Authorization": "Bearer athlete-token"},
+        json=payload,
+    )
+
+    assert response.status_code == 202
+    job = next(iter(store.generation_jobs.values()))
+    assert "plan_source" not in job["request_payload"]
+    assert "setup_source" not in job["request_payload"]
+    assert "equipment_preset" not in job["request_payload"]
+    assert "training_preset" not in job["request_payload"]
+    assert "focus_preset" not in job["request_payload"]
+
+
 def test_generate_plan_returns_review_required_when_stage2_needs_manual_review():
     client, store, _ = _build_client(
         FakeStage2Automator(
