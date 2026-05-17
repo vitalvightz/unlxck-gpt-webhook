@@ -38,9 +38,12 @@ import {
   EQUIPMENT_PRESETS,
   TRAINING_PRESETS,
   deriveSetupSource,
+  getAvailableFocusPresets,
   matchesEquipmentPreset,
+  matchesFocusPreset,
   matchesTrainingPreset,
   type EquipmentPreset,
+  type FocusPreset,
   type TrainingPreset,
 } from "@/lib/recommended-setup";
 
@@ -113,6 +116,7 @@ type PresetOption = {
   key: string;
   label: string;
   description: string;
+  disabledReason?: string | null;
 };
 
 function PresetRow({
@@ -132,17 +136,24 @@ function PresetRow({
       <div className="checkbox-grid">
         {presets.map((preset) => {
           const active = activeKey === preset.key;
+          const disabled = Boolean(preset.disabledReason);
           return (
             <button
               key={preset.key}
               type="button"
-              className={`checkbox-card ${active ? "checkbox-card-checked" : ""}`.trim()}
+              className={`checkbox-card ${active ? "checkbox-card-checked" : ""} ${disabled ? "checkbox-card-disabled" : ""}`.trim()}
               aria-pressed={active}
-              onClick={() => onSelect(preset.key)}
+              aria-disabled={disabled}
+              disabled={disabled}
+              title={preset.disabledReason ?? undefined}
+              onClick={() => {
+                if (disabled) return;
+                onSelect(preset.key);
+              }}
             >
               <span className="checkbox-card-copy">
                 <span className="checkbox-card-title">{preset.label}</span>
-                <span className="checkbox-card-tag">{preset.description}</span>
+                <span className="checkbox-card-tag">{preset.disabledReason ?? preset.description}</span>
               </span>
             </button>
           );
@@ -179,6 +190,18 @@ function QuickBuildFormInner() {
   const activeTrainingPreset = useMemo(
     () => matchesTrainingPreset(input.training_availability, input.weekly_training_frequency),
     [input.training_availability, input.weekly_training_frequency],
+  );
+  const activeFocusPreset = useMemo(
+    () => matchesFocusPreset(input.key_goals, input.weak_areas),
+    [input.key_goals, input.weak_areas],
+  );
+  const availableFocusPresets = useMemo(
+    () => getAvailableFocusPresets({
+      fightDate: input.fight_date,
+      noScheduledFight: input.no_scheduled_fight,
+      timeZone: typeof Intl !== "undefined" ? Intl.DateTimeFormat().resolvedOptions().timeZone : null,
+    }),
+    [input.fight_date, input.no_scheduled_fight],
   );
 
   function patch<K extends keyof QuickBuildInput>(key: K, value: QuickBuildInput[K]) {
@@ -222,6 +245,21 @@ function QuickBuildFormInner() {
     }));
   }
 
+  function applyFocusPreset(preset: FocusPreset) {
+    const currentMatch = matchesFocusPreset(input.key_goals, input.weak_areas);
+    const hasExistingChoice = input.key_goals.length > 0 || input.weak_areas.length > 0;
+    if (currentMatch !== preset.key && hasExistingChoice) {
+      if (!confirmReplace(true, "Replace your current goals and weak areas with this preset?")) {
+        return;
+      }
+    }
+    setInput((currentInput) => ({
+      ...currentInput,
+      key_goals: [...preset.key_goals],
+      weak_areas: [...preset.weak_areas],
+    }));
+  }
+
   function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
     setSubmitError(null);
@@ -243,13 +281,19 @@ function QuickBuildFormInner() {
           planRequest.training_availability,
           planRequest.weekly_training_frequency ?? 0,
         );
+        const focusPresetMatch = matchesFocusPreset(planRequest.key_goals, planRequest.weak_areas);
         const draft = {
           ...planRequest,
           current_step: 0,
           plan_source: "quick_build" as const,
-          setup_source: deriveSetupSource([equipmentPresetMatch, trainingPresetMatch]),
+          setup_source: deriveSetupSource([
+            equipmentPresetMatch,
+            trainingPresetMatch,
+            focusPresetMatch,
+          ]),
           equipment_preset: equipmentPresetMatch,
           training_preset: trainingPresetMatch,
+          focus_preset: focusPresetMatch,
         };
         await saveOnboardingDraft(session.access_token, {
           full_name: planRequest.athlete.full_name,
@@ -459,6 +503,20 @@ function QuickBuildFormInner() {
           <p className="kicker">Performance</p>
           <h2 className="form-section-title">Goals and weak areas</h2>
         </div>
+        <PresetRow
+          label="Recommended focus"
+          presets={availableFocusPresets.map((entry) => ({
+            key: entry.preset.key,
+            label: entry.preset.label,
+            description: entry.preset.description,
+            disabledReason: entry.disabledReason,
+          }))}
+          activeKey={activeFocusPreset}
+          onSelect={(key) => {
+            const entry = availableFocusPresets.find((candidate) => candidate.preset.key === key);
+            if (entry && !entry.disabledReason) applyFocusPreset(entry.preset);
+          }}
+        />
         <ChipMultiSelect
           label={`Key goals (pick up to ${QUICK_BUILD_KEY_GOAL_CAP})`}
           options={KEY_GOAL_OPTIONS}
