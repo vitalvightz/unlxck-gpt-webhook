@@ -17,6 +17,7 @@ import {
   submitManualStage2,
 } from "@/lib/api";
 import { PremiumLoadingScreen } from "@/components/premium-loading-screen";
+import { QuickBuildRefinementBanner } from "@/components/quick-build-refinement-banner";
 import { WhyTooltip } from "@/components/why-tooltip";
 import { useGenerationController } from "@/lib/generation-controller";
 import { explainRiskBand } from "@/lib/sparring-reason-codes";
@@ -1251,6 +1252,7 @@ export function PlanViewer({
   return (
     <div className="page">
       <section className="panel">
+        <QuickBuildRefinementBanner planId={plan.plan_id} />
         <div className="section-heading">
           <div>
             <p className="kicker">Plan Detail</p>

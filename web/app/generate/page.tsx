@@ -9,6 +9,7 @@ import { createGenerationJob } from "@/lib/api";
 import { useGenerationController } from "@/lib/generation-controller";
 import { hydratePlanRequest } from "@/lib/onboarding";
 import { validatePerformanceFocusSelections } from "@/lib/performance-focus-cap";
+import { consumePendingQuickBuildForPlan } from "@/lib/quick-build-source";
 import { PremiumLoadingScreen } from "@/components/premium-loading-screen";
 
 const STORAGE_KEY = "unlxck:pending-generation:self";
@@ -41,6 +42,7 @@ export default function GeneratePage() {
       return createGenerationJob(session.access_token, payload, clientRequestId);
     },
     onComplete: ({ planId, status, recovered }) => {
+      consumePendingQuickBuildForPlan(planId);
       const search = new URLSearchParams();
       if (status === "review_required") {
         search.set("review_required", "1");
