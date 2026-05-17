@@ -594,6 +594,9 @@ function MobileOnboardingHeader({
         <p className="kicker">Athlete Onboarding</p>
         <p className="onboarding-mobile-title">Build your camp profile.</p>
         <p className="muted">Saved, resumable athlete intake.</p>
+        <Link href="/quick-build" className="ghost-button" style={{ marginTop: "0.5rem", width: "fit-content" }}>
+          Use Quick Build instead
+        </Link>
       </div>
       <OnboardingProgressStrip
         currentStep={currentStep}
@@ -1957,6 +1960,9 @@ export function PlanIntakeForm() {
             <p className="kicker">Athlete Onboarding</p>
             <h1>Build your camp profile.</h1>
             <p className="muted">Saved, resumable athlete intake.</p>
+            <Link href="/quick-build" className="ghost-button" style={{ width: "fit-content" }}>
+              Use Quick Build instead
+            </Link>
           </div>
         </div>
 

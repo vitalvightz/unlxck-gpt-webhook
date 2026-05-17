@@ -70,7 +70,12 @@ export function validateQuickBuildInput(
     errors.full_name = "Add your full name.";
   }
   if (input.technical_style.length === 0) {
-    errors.technical_style = "Pick at least one technical style.";
+    errors.technical_style = "Pick a technical style.";
+  } else if (input.technical_style.length > 1) {
+    errors.technical_style = "Pick only one technical style.";
+  }
+  if (input.tactical_style.length > 1) {
+    errors.tactical_style = "Pick only one tactical style.";
   }
   if (input.no_scheduled_fight) {
     if (input.fight_date) {
