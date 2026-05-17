@@ -3534,6 +3534,125 @@ button.mobile-step-rail-item {
   gap: 20px;
 }
 
+.plans-dashboard-stack {
+  display: grid;
+  gap: 18px;
+}
+
+.plans-dashboard-card {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  gap: 18px;
+}
+
+.plans-dashboard-primary-card {
+  border-color: rgba(181, 18, 43, 0.2);
+  background: linear-gradient(180deg, rgba(24, 17, 21, 0.98), rgba(15, 17, 21, 0.98));
+}
+
+.plans-dashboard-primary-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at top left, rgba(181, 18, 43, 0.16), transparent 30%),
+    linear-gradient(135deg, rgba(181, 18, 43, 0.07), transparent 44%);
+  pointer-events: none;
+}
+
+.plans-dashboard-card > * {
+  position: relative;
+  z-index: 1;
+}
+
+.plans-dashboard-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.plans-dashboard-card-copy {
+  display: grid;
+  gap: 8px;
+  max-width: 720px;
+}
+
+.plans-dashboard-card-copy h2 {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: clamp(24px, 2.6vw, 32px);
+  line-height: 1.02;
+  letter-spacing: -0.03em;
+}
+
+.plans-dashboard-meta-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.plans-dashboard-summary {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.plans-dashboard-summary-grid {
+  display: grid;
+  gap: 8px;
+}
+
+.plans-dashboard-summary-row {
+  display: grid;
+  grid-template-columns: minmax(110px, 0.36fr) minmax(0, 1fr);
+  gap: 12px;
+  align-items: baseline;
+  min-width: 0;
+}
+
+.plans-dashboard-summary-term {
+  color: var(--text-muted);
+  font-family: var(--font-mono), monospace;
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.plans-dashboard-summary-value {
+  min-width: 0;
+  color: var(--text-primary);
+  font-size: 14px;
+  line-height: 1.4;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.plans-dashboard-actions {
+  gap: 10px;
+}
+
+.plans-dashboard-actions .cta,
+.plans-dashboard-actions .ghost-button {
+  min-width: 156px;
+}
+
+.plans-dashboard-management-actions {
+  gap: 8px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.plans-dashboard-management-actions .ghost-button,
+.plans-dashboard-management-actions .secondary-button {
+  min-height: 38px;
+  padding-inline: 13px;
+}
+
 .plans-featured-card {
   position: relative;
   overflow: hidden;
@@ -4361,6 +4480,25 @@ button.mobile-step-rail-item {
 
   .plans-featured-meta-chip {
     min-height: 0;
+  }
+
+  .plans-dashboard-meta-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .plans-dashboard-summary-row {
+    grid-template-columns: 1fr;
+    gap: 3px;
+  }
+
+  .plans-dashboard-actions,
+  .plans-dashboard-actions .cta,
+  .plans-dashboard-actions .ghost-button {
+    width: 100%;
+  }
+
+  .plans-dashboard-management-actions .secondary-button {
+    width: 100%;
   }
 
   .plans-featured-accent span {
@@ -8346,6 +8484,22 @@ html[data-theme="light"] .plans-featured-card::before {
     linear-gradient(135deg, rgba(146, 43, 45, 0.04), transparent 40%);
 }
 
+html[data-theme="light"] .plans-dashboard-primary-card {
+  border-color: rgba(98, 77, 69, 0.1);
+  background: linear-gradient(180deg, rgba(255, 253, 249, 0.995), rgba(249, 244, 237, 0.985));
+}
+
+html[data-theme="light"] .plans-dashboard-primary-card::before {
+  background:
+    radial-gradient(circle at top left, rgba(146, 43, 45, 0.09), transparent 30%),
+    linear-gradient(135deg, rgba(146, 43, 45, 0.035), transparent 42%);
+}
+
+html[data-theme="light"] .plans-dashboard-summary {
+  border-color: rgba(98, 77, 69, 0.1);
+  background: rgba(255, 255, 255, 0.68);
+}
+
 html[data-theme="light"] .plans-featured-meta-chip {
   border-color: rgba(98, 77, 69, 0.1);
   background: rgba(255, 255, 255, 0.74);
@@ -9352,6 +9506,7 @@ html[data-app-surface="workspace"][data-theme="dark"] .plans-history-toggle {
 html[data-app-surface="workspace"][data-theme="dark"] .metric-card,
 html[data-app-surface="workspace"][data-theme="dark"] .plan-meta-item,
 html[data-app-surface="workspace"][data-theme="dark"] .plans-featured-meta-chip,
+html[data-app-surface="workspace"][data-theme="dark"] .plans-dashboard-summary,
 html[data-app-surface="workspace"][data-theme="dark"] .overview-decision-item {
   background: linear-gradient(180deg, rgba(24, 27, 31, 0.96), rgba(18, 21, 24, 0.96));
   box-shadow: none;
@@ -9364,6 +9519,7 @@ html[data-app-surface="workspace"][data-theme="dark"] .sidebar-link-active {
 }
 
 html[data-app-surface="workspace"][data-theme="dark"] .overview-command-shell::before,
+html[data-app-surface="workspace"][data-theme="dark"] .plans-dashboard-primary-card::before,
 html[data-app-surface="workspace"][data-theme="dark"] .plans-featured-card::before {
   background:
     radial-gradient(circle at top left, rgba(181, 18, 43, 0.08), transparent 26%),
@@ -9371,6 +9527,7 @@ html[data-app-surface="workspace"][data-theme="dark"] .plans-featured-card::befo
 }
 
 html[data-app-surface="workspace"][data-theme="dark"] .overview-next-action,
+html[data-app-surface="workspace"][data-theme="dark"] .plans-dashboard-primary-card,
 html[data-app-surface="workspace"][data-theme="dark"] .plans-featured-card,
 html[data-app-surface="workspace"][data-theme="dark"] .plans-history-toggle-open {
   border-color: rgba(255, 255, 255, 0.09);
