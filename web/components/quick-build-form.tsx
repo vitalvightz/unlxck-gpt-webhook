@@ -18,6 +18,7 @@ import {
   toggleListValue,
   type IntakeOption,
 } from "@/lib/intake-options";
+import { validatePerformanceFocusSelections } from "@/lib/performance-focus-cap";
 import {
   buildRoundsFormat,
   parseRoundsFormat,
@@ -109,6 +110,15 @@ function QuickBuildFormInner() {
 
   const errors: QuickBuildValidationErrors = useMemo(() => validateQuickBuildInput(input), [input]);
   const parsedRounds = parseRoundsFormat(input.rounds_format);
+  const focusValidation = useMemo(
+    () => (!input.no_scheduled_fight && input.fight_date
+      ? validatePerformanceFocusSelections(input.fight_date, { keyGoals: input.key_goals, weakAreas: input.weak_areas }, { timeZone: typeof Intl !== "undefined" ? Intl.DateTimeFormat().resolvedOptions().timeZone : null })
+      : null),
+    [input.no_scheduled_fight, input.fight_date, input.key_goals, input.weak_areas],
+  );
+  const sharedFocusCap = focusValidation?.cap?.maxSelections ?? null;
+  const sharedFocusCount = input.key_goals.length + input.weak_areas.length;
+  const sharedFocusCapReached = sharedFocusCap !== null && sharedFocusCount >= sharedFocusCap;
 
   function patch<K extends keyof QuickBuildInput>(key: K, value: QuickBuildInput[K]) {
     setInput((current) => ({ ...current, [key]: value }));
@@ -203,19 +213,30 @@ function QuickBuildFormInner() {
           />
           <FieldError message={visibleError("full_name")} />
         </div>
-        <ChipMultiSelect
-          label="Technical style"
-          options={TECHNICAL_STYLE_OPTIONS}
-          selectedValues={input.technical_style}
-          onToggle={(value) => toggleField("technical_style", value)}
-        />
+        <div className="field">
+          <label htmlFor="qb-technical-style">Technical style</label>
+          <CustomSelect
+            id="qb-technical-style"
+            value={input.technical_style[0] ?? ""}
+            options={TECHNICAL_STYLE_OPTIONS}
+            placeholder="Select technical style"
+            includeEmptyOption
+            onChange={(value) => patch("technical_style", value ? [value] : [])}
+          />
+        </div>
         <FieldError message={visibleError("technical_style")} />
-        <ChipMultiSelect
-          label="Tactical style (optional)"
-          options={TACTICAL_STYLE_OPTIONS}
-          selectedValues={input.tactical_style}
-          onToggle={(value) => toggleField("tactical_style", value)}
-        />
+        <div className="field">
+          <label htmlFor="qb-tactical-style">Tactical style (optional)</label>
+          <CustomSelect
+            id="qb-tactical-style"
+            value={input.tactical_style[0] ?? ""}
+            options={TACTICAL_STYLE_OPTIONS}
+            placeholder="Select tactical style"
+            includeEmptyOption
+            onChange={(value) => patch("tactical_style", value ? [value] : [])}
+          />
+        </div>
+        <FieldError message={visibleError("tactical_style")} />
       </article>
 
       <article className="step-card">
@@ -326,8 +347,8 @@ function QuickBuildFormInner() {
           options={KEY_GOAL_OPTIONS}
           selectedValues={input.key_goals}
           onToggle={(value) => toggleField("key_goals", value)}
-          disableAdditionalSelections={input.key_goals.length >= QUICK_BUILD_KEY_GOAL_CAP}
-          capDisabledReason={`Limit ${QUICK_BUILD_KEY_GOAL_CAP}`}
+          disableAdditionalSelections={input.key_goals.length >= QUICK_BUILD_KEY_GOAL_CAP || sharedFocusCapReached}
+          capDisabledReason={sharedFocusCapReached ? "Shared fight-camp cap reached" : `Limit ${QUICK_BUILD_KEY_GOAL_CAP}`}
         />
         <FieldError message={visibleError("key_goals")} />
         <ChipMultiSelect
@@ -335,8 +356,8 @@ function QuickBuildFormInner() {
           options={WEAK_AREA_OPTIONS}
           selectedValues={input.weak_areas}
           onToggle={(value) => toggleField("weak_areas", value)}
-          disableAdditionalSelections={input.weak_areas.length >= QUICK_BUILD_WEAK_AREA_CAP}
-          capDisabledReason={`Limit ${QUICK_BUILD_WEAK_AREA_CAP}`}
+          disableAdditionalSelections={input.weak_areas.length >= QUICK_BUILD_WEAK_AREA_CAP || sharedFocusCapReached}
+          capDisabledReason={sharedFocusCapReached ? "Shared fight-camp cap reached" : `Limit ${QUICK_BUILD_WEAK_AREA_CAP}`}
         />
         <FieldError message={visibleError("weak_areas")} />
         <FieldError message={visibleError("focus_cap")} />
@@ -348,13 +369,14 @@ function QuickBuildFormInner() {
           <h2 className="form-section-title">Injuries or limitations</h2>
         </div>
         <div className="field">
-          <label htmlFor="qb-injuries">Anything the planner should avoid</label>
+          <label htmlFor="qb-injuries">Anything the planner should avoid (injuries, pain, or limitations)</label>
           <textarea
             id="qb-injuries"
             value={input.injuries}
             onChange={(event) => patch("injuries", event.target.value)}
-            placeholder="Example: right shoulder tweak — avoid heavy overhead pressing for the first two weeks."
+            placeholder="Example: Left knee sprain. Avoid jumping and hard pivots for 2 weeks."
           />
+          <p className="muted">Be specific. Include body area, injury type, and what to avoid.</p>
         </div>
       </article>
 
