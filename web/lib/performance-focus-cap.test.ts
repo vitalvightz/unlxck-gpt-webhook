@@ -100,7 +100,10 @@ test("flags over-cap performance selections with a generation-safe message", () 
 
   assert.equal(result.isOverCap, true);
   assert.equal(result.excessSelections, 2);
-  assert.equal(result.errorMessage, "Free one focus slot to add this.");
+  assert.equal(
+    result.errorMessage,
+    "This camp allows 2 total focus picks. Remove 2 goal or weak-area selections before generating.",
+  );
 });
 
 test("does not flag selections when the total stays within the current cap", () => {
