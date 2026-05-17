@@ -41,7 +41,7 @@ test("validateQuickBuildInput accepts an empty hard_sparring_days list", () => {
 
 test("validateQuickBuildInput rejects hard sparring days outside training availability", () => {
   const input = buildValidInput();
-  input.hard_sparring_days = ["wednesday", "saturday"];
+  input.hard_sparring_days = ["Wednesday", "Saturday"];
   const errors = validateQuickBuildInput(input);
   assert.equal(errors.hard_sparring_days, "Hard sparring days must be inside your training days.");
 });
