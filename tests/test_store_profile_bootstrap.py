@@ -478,7 +478,7 @@ def test_create_plan_raises_specific_error_for_missing_plans_column():
     insert_execute = store.client.table.return_value.insert.return_value.execute
     insert_execute.side_effect = APIError(
         {
-            "message": "Could not find the 'stage2_payload' column of 'plans' in the schema cache",
+            "message": "Could not find the 'athlete_id' column of 'plans' in the schema cache",
             "code": "PGRST204",
             "hint": None,
             "details": None,
