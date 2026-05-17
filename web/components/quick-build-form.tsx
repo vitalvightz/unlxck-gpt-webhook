@@ -344,7 +344,7 @@ function QuickBuildFormInner() {
         } else if (message.includes("Unable to reach the server") || message.includes("502") || message.includes("503") || message.includes("504")) {
           setSubmitError("Connection issue. Try again in a minute.");
         } else {
-          setSubmitError("Draft missing. Complete intake first.");
+          setSubmitError(message || "Unable to save plan. Please try again.");
         }
       }
     });
