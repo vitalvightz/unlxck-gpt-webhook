@@ -220,7 +220,7 @@ function PlanCard({
     event.preventDefault();
 
     if (!accessToken) {
-      setError("Session missing. Please sign in again.");
+      setError("Session expired. Sign in again.");
       return;
     }
 
@@ -247,7 +247,7 @@ function PlanCard({
     } catch (renameError) {
       const errorMessage = renameError instanceof Error ? renameError.message : "Unable to rename this plan.";
       if (errorMessage.includes("Unable to reach the server") || errorMessage.includes("502") || errorMessage.includes("503") || errorMessage.includes("504")) {
-        setError("Connection issue - the operation will retry automatically. If it continues to fail, please check your internet connection and try again.");
+        setError("Connection issue. Try again in a minute.");
       } else {
         setError(errorMessage);
       }
@@ -272,7 +272,7 @@ function PlanCard({
 
   async function handleDeleteConfirm() {
     if (!accessToken) {
-      setError("Session missing. Please sign in again.");
+      setError("Session expired. Sign in again.");
       return;
     }
 
@@ -287,7 +287,7 @@ function PlanCard({
     } catch (deleteError) {
       const errorMessage = deleteError instanceof Error ? deleteError.message : "Unable to delete this plan.";
       if (errorMessage.includes("Unable to reach the server") || errorMessage.includes("502") || errorMessage.includes("503") || errorMessage.includes("504")) {
-        setError("Connection issue - the operation will retry automatically. If it continues to fail, please check your internet connection and try again.");
+        setError("Connection issue. Try again in a minute.");
       } else {
         setError(errorMessage);
       }
@@ -674,7 +674,7 @@ function LatestPlanCard({
             <p className="muted">
               {plan
                 ? "Open the current camp, tighten the intake, or route straight into a fresh generation."
-                : "Once the first plan is generated, this card becomes the fastest way back into the current camp."}
+                : "Start fast with Quick Build, or use Advanced Intake when you want every detail set first."}
             </p>
           </div>
           {plan?.status ? <span className="badge">{formatPlanStatus(plan.status)}</span> : null}
@@ -694,16 +694,18 @@ function LatestPlanCard({
               Open plan
             </Link>
           ) : (
-            <Link href="/onboarding" className="cta">
-              Start Advanced Intake
+            <Link href="/quick-build" className="cta">
+              Quick Build New Plan
             </Link>
           )}
           <Link href="/onboarding" className="ghost-button">
             {plan ? "Refine intake" : "Edit Advanced Intake"}
           </Link>
-          <Link href={intake ? "/generate" : "/onboarding"} className="ghost-button">
-            {plan ? "Generate updated plan" : "Start Advanced Intake"}
-          </Link>
+          {plan ? (
+            <Link href={intake ? "/generate" : "/onboarding"} className="ghost-button">
+              Generate updated plan
+            </Link>
+          ) : null}
         </div>
 
         {plan ? (
@@ -767,6 +769,9 @@ function IntakeCard({
       </div>
 
       <div className="plan-card-actions plans-dashboard-actions">
+        <Link href="/quick-build" className="cta">
+          Quick Build New Plan
+        </Link>
         <Link href="/onboarding" className="ghost-button">
           Edit Advanced Intake
         </Link>
@@ -804,7 +809,10 @@ export default function PlansPage() {
         setPlans(nextPlans);
       })
       .catch((plansError) => {
-        setError(plansError instanceof Error ? plansError.message : "Unable to load plan history.");
+        const message = plansError instanceof Error ? plansError.message : "";
+        setError(message.includes("401") || message.toLowerCase().includes("session")
+          ? "Session expired. Sign in again."
+          : "Connection issue. Try again in a minute.");
       })
       .finally(() => {
         setIsLoading(false);

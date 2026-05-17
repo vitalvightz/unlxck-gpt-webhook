@@ -70,7 +70,7 @@ export function validateQuickBuildInput(
     errors.full_name = "Add your full name.";
   }
   if (input.technical_style.length === 0) {
-    errors.technical_style = "Pick a technical style.";
+    errors.technical_style = "Choose a style.";
   } else if (input.technical_style.length > 1) {
     errors.technical_style = "Pick only one technical style.";
   }
@@ -83,7 +83,7 @@ export function validateQuickBuildInput(
     }
   } else {
     if (!input.fight_date) {
-      errors.fight_date = "Pick a fight date or mark no scheduled fight.";
+      errors.fight_date = "Add a fight date or choose open camp.";
     } else if (!FIGHT_DATE_PATTERN.test(input.fight_date)) {
       errors.fight_date = "Fight date must be in YYYY-MM-DD format.";
     } else if (!isFutureOrToday(input.fight_date, options?.now)) {
@@ -97,15 +97,15 @@ export function validateQuickBuildInput(
     errors.weekly_training_frequency = "Sessions per week must be between 1 and 6.";
   }
   if (input.training_availability.length === 0) {
-    errors.training_availability = "Select at least one training day.";
+    errors.training_availability = "Choose at least one training day.";
   } else if (input.weekly_training_frequency > input.training_availability.length) {
     errors.training_availability = "Sessions per week cannot exceed selected training days.";
   }
   if (input.equipment_access.length === 0) {
-    errors.equipment_access = "Select at least one piece of equipment.";
+    errors.equipment_access = "Choose your equipment.";
   }
   if (input.key_goals.length === 0) {
-    errors.key_goals = "Pick at least one goal.";
+    errors.key_goals = "Choose at least one focus.";
   } else if (input.key_goals.length > QUICK_BUILD_KEY_GOAL_CAP) {
     errors.key_goals = `Pick at most ${QUICK_BUILD_KEY_GOAL_CAP} goals.`;
   }
