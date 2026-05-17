@@ -132,6 +132,23 @@ def apply_fight_day_override_to_weekly_role_map(
     if not isinstance(final_week, dict):
         return weekly_role_map
 
+    calendar_days = [
+        day for day in (final_week.get("calendar_days") or [])
+        if isinstance(day, dict)
+    ]
+    fight_calendar_day = next(
+        (
+            day for day in calendar_days
+            if day.get("is_fight_day") is True or day.get("d_day") == 0
+        ),
+        None,
+    )
+    if not fight_calendar_day:
+        return weekly_role_map
+    fight_day_weekday = str(fight_calendar_day.get("weekday") or "").strip().lower()
+    if not fight_day_weekday:
+        return weekly_role_map
+
     session_roles = list(final_week.get("session_roles") or [])
     suppressed_roles = list(final_week.get("suppressed_roles") or [])
     replaced_existing = False
@@ -141,18 +158,18 @@ def apply_fight_day_override_to_weekly_role_map(
             new_roles.append(role)
             continue
         scheduled_day = str(role.get("scheduled_day_hint") or "").strip().lower()
-        if scheduled_day == fight_weekday and not replaced_existing:
-            suppressed_roles.append(_make_fight_day_suppression(role, fight_weekday))
-            new_roles.append(_make_fight_day_protocol_role(fight_weekday))
+        if scheduled_day == fight_day_weekday and not replaced_existing:
+            suppressed_roles.append(_make_fight_day_suppression(role, fight_day_weekday))
+            new_roles.append(_make_fight_day_protocol_role(fight_day_weekday))
             replaced_existing = True
             continue
-        if scheduled_day == fight_weekday:
-            suppressed_roles.append(_make_fight_day_suppression(role, fight_weekday))
+        if scheduled_day == fight_day_weekday:
+            suppressed_roles.append(_make_fight_day_suppression(role, fight_day_weekday))
             continue
         new_roles.append(role)
 
     if not replaced_existing:
-        new_roles.append(_make_fight_day_protocol_role(fight_weekday))
+        new_roles.append(_make_fight_day_protocol_role(fight_day_weekday))
 
     for idx, role in enumerate(new_roles, start=1):
         if isinstance(role, dict):
@@ -164,7 +181,7 @@ def apply_fight_day_override_to_weekly_role_map(
     final_week["effective_hard_sparring_days"] = [
         day
         for day in (final_week.get("effective_hard_sparring_days") or [])
-        if isinstance(day, str) and day.strip().lower() != fight_weekday
+        if isinstance(day, str) and day.strip().lower() != fight_day_weekday
     ]
     if "hard_sparring_plan" in final_week:
         final_week["hard_sparring_plan"] = [
@@ -172,7 +189,7 @@ def apply_fight_day_override_to_weekly_role_map(
             for entry in (final_week.get("hard_sparring_plan") or [])
             if not (
                 isinstance(entry, dict)
-                and str(entry.get("day") or "").strip().lower() == fight_weekday
+                and str(entry.get("day") or "").strip().lower() == fight_day_weekday
             )
         ]
 
