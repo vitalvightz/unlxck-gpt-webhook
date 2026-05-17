@@ -11,8 +11,8 @@ function isEmptyValue(value: unknown): boolean {
 
 type DraftWithSource = PlanRequest & { plan_source?: string };
 
-function isQuickBuildDraft(draft: PlanRequest | null): boolean {
-  return Boolean((draft as DraftWithSource | null)?.plan_source === "quick_build");
+function isQuickBuildDraft(draft: PlanRequest | null): draft is DraftWithSource {
+  return (draft as DraftWithSource | null)?.plan_source === "quick_build";
 }
 
 
