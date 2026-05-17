@@ -366,7 +366,7 @@ export default function HomePage() {
                   {primaryActionLabel}
                 </Link>
                 <Link href="/quick-build" className="ghost-button">
-                  Quick Build · 2 min
+                  Quick Build - 2 min
                 </Link>
               </div>
             </div>
@@ -384,7 +384,7 @@ export default function HomePage() {
                   {draft ? "Resume onboarding" : "Start onboarding"}
                 </Link>
                 <Link href="/quick-build" className="ghost-button">
-                  Quick Build · 2 min
+                  Quick Build - 2 min
                 </Link>
                 <Link href="/settings" className="ghost-button">
                   Update settings
@@ -394,7 +394,7 @@ export default function HomePage() {
 
             <OverviewDisclosure
               title="Recent plans"
-              summary={displayedPlans.length ? `${displayedPlans.length === 1 ? "1 saved plan is ready to reopen." : `${displayedPlans.length} recent plans are ready to reopen.`}` : "No plans yet. Finish onboarding to create the first one."}
+              summary={displayedPlans.length ? `${displayedPlans.length === 1 ? "1 saved plan is ready to reopen." : `${displayedPlans.length} recent plans are ready to reopen.`}` : "No plans yet. Start with Quick Build or complete Advanced Intake."}
               badge={formatPlanCount(me.plan_count)}
             >
               {displayedPlans.length ? (

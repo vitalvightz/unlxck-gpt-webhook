@@ -836,6 +836,40 @@ select:focus-visible {
   text-underline-offset: 4px;
 }
 
+.quick-build-form {
+  gap: 18px;
+}
+
+.quick-build-field-error {
+  margin: 0;
+  color: var(--color-error, #ff8fa0);
+  font-size: 13px;
+  line-height: 1.45;
+  font-weight: 600;
+}
+
+.quick-build-action-bar {
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px;
+  border: 1px solid rgba(181, 18, 43, 0.16);
+  border-radius: 18px;
+  background: linear-gradient(180deg, rgba(18, 20, 24, 0.96), rgba(12, 14, 17, 0.96));
+}
+
+.quick-build-action-copy {
+  max-width: 58ch;
+}
+
+.quick-build-action-buttons {
+  justify-content: flex-end;
+}
+
+.onboarding-quick-build-link {
+  width: fit-content;
+  margin-top: 8px;
+}
+
 .auth-success-state {
   display: grid;
   gap: 16px;
@@ -2075,10 +2109,12 @@ select:focus-visible {
 .checkbox-card-copy {
   display: grid;
   gap: 2px;
+  min-width: 0;
 }
 
 .checkbox-card-title {
   font-weight: 600;
+  overflow-wrap: anywhere;
 }
 
 .checkbox-card-tag {
@@ -2089,6 +2125,7 @@ select:focus-visible {
   text-transform: uppercase;
   color: var(--text-muted);
   opacity: 0.85;
+  overflow-wrap: anywhere;
 }
 
 .checkbox-card-checked {
@@ -4491,6 +4528,34 @@ button.mobile-step-rail-item {
     grid-template-columns: 1fr;
   }
 
+  .quick-build-form .hero-panel,
+  .quick-build-form .step-card {
+    border-radius: 22px;
+  }
+
+  .quick-build-action-bar {
+    gap: 12px;
+    align-items: stretch;
+    padding: 14px;
+  }
+
+  .quick-build-action-copy {
+    max-width: none;
+  }
+
+  .quick-build-action-buttons {
+    width: 100%;
+  }
+
+  .quick-build-action-buttons .cta,
+  .quick-build-action-buttons .ghost-button {
+    width: 100%;
+  }
+
+  .quick-build-field-error {
+    font-size: 12px;
+  }
+
   .review-column {
     gap: 16px;
   }
@@ -4589,6 +4654,11 @@ button.mobile-step-rail-item {
   .onboarding-heading-mobile {
     display: grid;
     gap: 14px;
+  }
+
+  .onboarding-quick-build-link {
+    width: 100%;
+    margin-top: 10px;
   }
 
   .onboarding-mobile-title {

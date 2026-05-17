@@ -106,7 +106,7 @@ function ChipMultiSelect({
 function FieldError({ message }: { message?: string }) {
   if (!message) return null;
   return (
-    <p className="muted" role="alert" style={{ color: "var(--color-error, #c0392b)" }}>
+    <p className="quick-build-field-error" role="alert">
       {message}
     </p>
   );
@@ -287,7 +287,7 @@ function QuickBuildFormInner() {
       return;
     }
     if (!session?.access_token) {
-      setSubmitError("Sign in again to generate a plan.");
+      setSubmitError("Session expired. Sign in again.");
       return;
     }
 
@@ -338,7 +338,14 @@ function QuickBuildFormInner() {
         }
         router.push("/generate");
       } catch (err) {
-        setSubmitError(err instanceof Error ? err.message : "Could not save Quick Build draft.");
+        const message = err instanceof Error ? err.message : "";
+        if (message.toLowerCase().includes("session") || message.includes("401")) {
+          setSubmitError("Session expired. Sign in again.");
+        } else if (message.includes("Unable to reach the server") || message.includes("502") || message.includes("503") || message.includes("504")) {
+          setSubmitError("Connection issue. Try again in a minute.");
+        } else {
+          setSubmitError("Draft missing. Complete intake first.");
+        }
       }
     });
   }
@@ -347,13 +354,13 @@ function QuickBuildFormInner() {
     showErrors ? errors[key] : undefined;
 
   return (
-    <form onSubmit={handleSubmit} className="onboarding-form">
+    <form onSubmit={handleSubmit} className="onboarding-form quick-build-form">
       <section className="hero-panel">
         <p className="eyebrow">Quick Build</p>
         <h1 className="hero-title">Generate a plan in about two minutes.</h1>
         <p className="muted">
           Quick Build uses safe defaults for fatigue, sparring intensity, and goal prioritization. Use Detailed Intake for full
-          control — you can also refine this plan afterwards.
+          control - you can also refine this plan afterwards.
         </p>
       </section>
 
@@ -420,7 +427,7 @@ function QuickBuildFormInner() {
             />
             <span className="checkbox-card-copy">
               <span className="checkbox-card-title">No scheduled fight</span>
-              <span className="checkbox-card-tag">Open camp · General prep</span>
+              <span className="checkbox-card-tag">Open camp - General prep</span>
             </span>
           </label>
         </div>
@@ -573,12 +580,12 @@ function QuickBuildFormInner() {
         </div>
       </article>
 
-      <div className="form-actions">
-        <p className="muted">Refine fatigue, sparring days, and detailed weaknesses later from the plan page.</p>
+      <div className="form-actions quick-build-action-bar">
+        <p className="muted quick-build-action-copy">Refine fatigue, sparring days, and detailed weaknesses later from the plan page.</p>
         {submitError ? <FieldError message={submitError} /> : null}
-        <div className="plan-summary-actions">
+        <div className="plan-summary-actions quick-build-action-buttons">
           <button type="submit" className="cta" disabled={isPending}>
-            {isPending ? "Saving…" : "Generate Plan"}
+            {isPending ? "Saving..." : "Generate Plan"}
           </button>
           <Link href="/onboarding" className="ghost-button">
             Use Detailed Intake instead

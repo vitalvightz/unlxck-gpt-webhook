@@ -103,12 +103,12 @@ const PHASE_CONTENT: Record<
     runnerState: "Handoff",
   },
   failed: {
-    eyebrow: "Generation halted",
-    title: "The request stopped before handoff.",
-    copy: "The saved request did not reach an openable plan state. Review the error, then retry from the athlete workspace when you are ready.",
+    eyebrow: "Generation stopped",
+    title: "Plan failed. Try again.",
+    copy: "The saved request did not reach an openable plan state. You can retry from the athlete workspace.",
     chip: "Needs retry",
-    statusFallback: "Generation stopped before the saved plan could open.",
-    reassurance: "The saved request needs a retry from the workspace. Review the error first so you do not repeat the same failure.",
+    statusFallback: "Plan failed. Try again.",
+    reassurance: "Your intake is still saved. Return to the workspace when you are ready to retry.",
     runnerState: "Stopped",
   },
 };
@@ -123,7 +123,7 @@ function formatElapsed(ms: number): string {
   return `${minutes}m ${String(seconds).padStart(2, "0")}s`;
 }
 
-const ESTIMATE_COPY = "Plan generation takes about 15 minutes on average. Feel free to close this tab — your saved request keeps running and you can rejoin from any device.";
+const ESTIMATE_COPY = "Generation has started. You can leave and return later; the saved request keeps running.";
 
 interface PremiumLoadingScreenProps {
   phase: GenerationUiPhase;
