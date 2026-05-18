@@ -450,8 +450,6 @@ export function retryGenerationJob(
     }),
   );
 }
-  );
-}
 
 export function listPlans(token: string): Promise<PlanSummary[]> {
   return withTransientRetries(() => readJson<PlanSummary[]>("/api/plans", { token }));
