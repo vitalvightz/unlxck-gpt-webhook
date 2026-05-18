@@ -305,6 +305,18 @@ def _plan_generate_rate_limit_window_seconds() -> float:
         return 60.0
 
 
+def _plan_generate_daily_limit_per_user() -> int:
+    raw_value = os.getenv("APP_PLAN_GENERATE_DAILY_LIMIT_PER_USER", "5").strip()
+    try:
+        return max(0, int(raw_value))
+    except ValueError:
+        logger.warning(
+            "[rate-limit] invalid APP_PLAN_GENERATE_DAILY_LIMIT_PER_USER=%r; falling back to 5",
+            raw_value,
+        )
+        return 5
+
+
 def _default_planner(payload: dict[str, Any]) -> dict[str, Any]:
     return runtime_default_planner(payload)
 
@@ -1054,6 +1066,37 @@ def create_app(
                     },
                 )
         client_request_id = (request.headers.get("X-Client-Request-Id") or "").strip() or f"cli_{uuid.uuid4().hex}"
+        existing_job = await asyncio.to_thread(
+            store.get_generation_job_by_client_request_id,
+            athlete_id=profile.athlete_id,
+            client_request_id=client_request_id,
+        )
+        if existing_job:
+            job = await schedule_generation_job_if_needed(
+                job=existing_job,
+                background_tasks=background_tasks,
+                store=store,
+                planner_fn=planner_fn,
+                stage2=stage2,
+                active_tasks=active_tasks,
+                enable_in_process_generation=enable_in_process_generation,
+                is_stale_job=_is_stale_job,
+            )
+            return _job_response(job)
+        daily_limit = _plan_generate_daily_limit_per_user()
+        if daily_limit > 0:
+            utc_midnight = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0).isoformat()
+            jobs_today = await asyncio.to_thread(
+                store.count_generation_jobs_for_athlete_since,
+                profile.athlete_id,
+                utc_midnight,
+                sources=_ALLOWED_PLAN_SOURCES,
+            )
+            if jobs_today >= daily_limit:
+                raise HTTPException(
+                    status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                    detail="Daily generation limit reached. Try again tomorrow.",
+                )
         plan_source_header = (request.headers.get("X-Plan-Source") or "").strip()
         resolved_source = plan_source_header if plan_source_header in _ALLOWED_PLAN_SOURCES else "self_serve"
         job = await asyncio.to_thread(

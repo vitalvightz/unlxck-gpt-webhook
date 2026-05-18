@@ -121,6 +121,7 @@ SUPABASE_ANON_KEY=
 UNLXCK_ADMIN_EMAILS=you@example.com
 APP_CORS_ORIGINS=http://localhost:3000
 OPENAI_API_KEY=
+APP_PLAN_GENERATE_DAILY_LIMIT_PER_USER=5
 ```
 
 `UNLXCK_ADMIN_EMAILS` is the only admin role source of truth. Use a comma-separated list:
