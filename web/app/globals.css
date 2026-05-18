@@ -3557,8 +3557,7 @@ button.mobile-step-rail-item {
 }
 
 .settings-nav a:hover,
-.settings-nav a:focus-visible,
-.settings-nav a.is-active {
+.settings-nav a:focus-visible {
   color: var(--text-primary);
   border-color: rgba(181, 18, 43, 0.42);
   background: rgba(181, 18, 43, 0.12);
@@ -3590,6 +3589,7 @@ button.mobile-step-rail-item {
   gap: 16px;
 }
 
+.settings-card-xs   { grid-column: span 3; }
 .settings-card-sm   { grid-column: span 4; }
 .settings-card-md   { grid-column: span 6; }
 .settings-card-lg   { grid-column: span 8; }
@@ -3608,10 +3608,11 @@ button.mobile-step-rail-item {
   line-height: 1.6;
   padding: 12px 16px;
   border-left: 2px solid rgba(181, 18, 43, 0.42);
+  overflow-wrap: anywhere;
 }
 
 .settings-utility-card {
-  max-width: 520px;
+  max-width: 460px;
   margin-left: auto;
   padding: 20px;
 }
@@ -3701,6 +3702,7 @@ button.mobile-step-rail-item {
     grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   }
 
+  .settings-card-xs,
   .settings-card-sm,
   .settings-card-md,
   .settings-card-lg,
@@ -8530,8 +8532,7 @@ html[data-theme="light"] .settings-nav a {
 }
 
 html[data-theme="light"] .settings-nav a:hover,
-html[data-theme="light"] .settings-nav a:focus-visible,
-html[data-theme="light"] .settings-nav a.is-active {
+html[data-theme="light"] .settings-nav a:focus-visible {
   border-color: rgba(163, 21, 45, 0.18);
   background: rgba(163, 21, 45, 0.07);
   color: var(--brand-red);

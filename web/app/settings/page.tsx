@@ -387,7 +387,7 @@ export default function SettingsPage() {
         <div className="settings-layout athlete-motion-slot athlete-motion-main">
           <nav className="settings-nav" aria-label="Settings sections">
             {SETTINGS_SECTIONS.map((section) => (
-              <a key={section.id} href={`#${section.id}`} data-section-link={section.id}>
+              <a key={section.id} href={`#${section.id}`}>
                 {section.label}
               </a>
             ))}
@@ -498,11 +498,11 @@ export default function SettingsPage() {
                 <div className="readonly-field">{me?.profile.email || "Unavailable"}</div>
                 <p className="muted">Contact support to change the email on file.</p>
               </div>
-              <div className="field settings-card-sm">
+              <div className="field settings-card-xs">
                 <label>Role</label>
                 <div className="readonly-field">{isAdmin ? "Admin" : "Athlete"}</div>
               </div>
-              <div className="field settings-card-sm">
+              <div className="field settings-card-xs">
                 <label>{isAdmin ? "Admin status" : "Profile sync"}</label>
                 <div className="readonly-field">{isAdmin ? detectedTimeZone : "Saved to account"}</div>
                 <p className="muted">
@@ -695,7 +695,7 @@ export default function SettingsPage() {
               <p className="muted">Keep this clean so onboarding and plan generation start with the right context.</p>
             </div>
             <div className="settings-card-grid">
-              <div className="field settings-card-sm">
+              <div className="field settings-card-xs">
                 <label htmlFor="settingsTechnicalStyle">Technical style</label>
                 <CustomSelect
                   id="settingsTechnicalStyle"
@@ -706,7 +706,7 @@ export default function SettingsPage() {
                   onChange={(value) => setTechnicalStyle(value)}
                 />
               </div>
-              <div className="field settings-card-sm">
+              <div className="field settings-card-xs">
                 <label htmlFor="settingsTacticalStyle">Tactical style</label>
                 <CustomSelect
                   id="settingsTacticalStyle"
@@ -717,7 +717,7 @@ export default function SettingsPage() {
                   onChange={(value) => setTacticalStyle(value)}
                 />
               </div>
-              <div className="field settings-card-sm">
+              <div className="field settings-card-xs">
                 <label htmlFor="settingsStance">Stance</label>
                 <CustomSelect
                   id="settingsStance"
@@ -728,7 +728,7 @@ export default function SettingsPage() {
                   onChange={(value) => setStance(value)}
                 />
               </div>
-              <div className="field settings-card-sm">
+              <div className="field settings-card-xs">
                 <label htmlFor="settingsProfessionalStatus">Professional status</label>
                 <CustomSelect
                   id="settingsProfessionalStatus"
@@ -739,7 +739,7 @@ export default function SettingsPage() {
                   onChange={(value) => setProfessionalStatus(value)}
                 />
               </div>
-              <div className="field settings-card-sm">
+              <div className="field settings-card-xs">
                 <label htmlFor="settingsRecord">Record</label>
                 <input
                   id="settingsRecord"
@@ -751,7 +751,7 @@ export default function SettingsPage() {
                 {recordHasError ? <p className="error-text">Enter record as x-x or x-x-x.</p> : null}
               </div>
               {isAdmin ? (
-                <div className="field settings-card-sm">
+                <div className="field settings-card-xs">
                   <label>Detected time zone</label>
                   <div className="readonly-field">{detectedTimeZone}</div>
                   <p className="muted">Captured from the device for admin context only.</p>
