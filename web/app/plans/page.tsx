@@ -92,8 +92,18 @@ function getProfileSource(me: MeResponse | null): ProfileRecord | null {
   return me?.profile ?? null;
 }
 
+type DraftWithSource = PlanRequest & { plan_source?: string };
+
+function getSavedDetailedDraft(me: MeResponse | null): PlanRequest | null {
+  const draft = me?.profile?.onboarding_draft as DraftWithSource | null | undefined;
+  if (!draft) {
+    return null;
+  }
+  return draft.plan_source === "quick_build" ? null : draft;
+}
+
 function getIntakeSource(me: MeResponse | null): PlanRequest | null {
-  return me?.latest_intake ?? null;
+  return me?.latest_intake ?? getSavedDetailedDraft(me) ?? null;
 }
 
 function summarizeProfile(me: MeResponse | null): SummaryLine[] {
@@ -453,6 +463,7 @@ function LatestPlanCard({
   const renameInputRef = useRef<HTMLInputElement | null>(null);
   const primaryFocus = getPrimaryFocus(intake);
   const fightDate = plan?.fight_date || intake?.fight_date || "";
+  const hasSavedIntake = Boolean(intake);
   const latestPlanLines: SummaryLine[] = [];
   const renameInputId = plan ? `rename-latest-plan-${plan.plan_id}` : "rename-latest-plan";
   const isActionPending = pendingAction !== null;
@@ -674,7 +685,9 @@ function LatestPlanCard({
             <p className="muted">
               {plan
                 ? "Open the current camp, tighten the intake, or route straight into a fresh generation."
-                : "Start fast with Quick Build, or use Advanced Intake when you want every detail set first."}
+                : hasSavedIntake
+                  ? "Your detailed intake is already saved. Reopen it before starting a new plan so those constraints stay in place."
+                  : "Start fast with Quick Build, or use Advanced Intake when you want every detail set first."}
             </p>
             {!plan ? (
               <div className="empty-state-example plans-dashboard-empty-example">
@@ -702,8 +715,8 @@ function LatestPlanCard({
               Open plan
             </Link>
           ) : (
-            <Link href="/quick-build" className="cta">
-              Quick Build New Plan
+            <Link href={hasSavedIntake ? "/onboarding" : "/quick-build"} className="cta">
+              {hasSavedIntake ? "Resume Advanced Intake" : "Quick Build New Plan"}
             </Link>
           )}
           <Link href="/onboarding" className="ghost-button">
@@ -745,8 +758,9 @@ function IntakeCard({
   me: MeResponse | null;
 }) {
   const profileLines = summarizeProfile(me);
+  const intake = getIntakeSource(me);
   const intakeLines = summarizeIntake(me);
-  const hasIntake = intakeLines.length > 0;
+  const hasIntake = Boolean(intake);
 
   return (
     <article className="list-card plans-dashboard-card">
@@ -777,8 +791,8 @@ function IntakeCard({
       </div>
 
       <div className="plan-card-actions plans-dashboard-actions">
-        <Link href="/quick-build" className="cta">
-          Quick Build New Plan
+        <Link href={hasIntake ? "/onboarding" : "/quick-build"} className="cta">
+          {hasIntake ? "Resume Advanced Intake" : "Quick Build New Plan"}
         </Link>
         <Link href="/onboarding" className="ghost-button">
           Edit Advanced Intake
@@ -802,6 +816,7 @@ export default function PlansPage() {
     return [...sourcePlans].sort((left, right) => new Date(right.created_at).getTime() - new Date(left.created_at).getTime());
   }, [localPlans, plans]);
   const latestPlan = getLatestPlan(visiblePlans);
+  const intakeSource = getIntakeSource(me);
   const archivedPlans = getArchivedPlans(visiblePlans);
   const archiveCountLabel = archivedPlans.length === 1 ? "1 plan" : `${archivedPlans.length} plans`;
   const hasPlans = visiblePlans.length > 0;
@@ -873,7 +888,7 @@ export default function PlansPage() {
           <div className="plans-dashboard-stack athlete-motion-slot athlete-motion-main">
             <LatestPlanCard
               plan={latestPlan}
-              intake={me?.latest_intake ?? null}
+              intake={intakeSource}
               accessToken={session?.access_token ?? null}
               onPlanDeleted={handlePlanDeleted}
               onPlanRenamed={handlePlanRenamed}
