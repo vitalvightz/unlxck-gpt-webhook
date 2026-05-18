@@ -137,6 +137,26 @@ def test_ensure_profile_existing_user_returns_without_upsert():
 
 
 
+def test_ensure_profile_existing_athlete_is_promoted_to_admin_when_email_is_configured():
+    store = _make_store(admin_emails={"promoted@example.com"})
+    user = _user("promoted@example.com")
+    existing = {
+        "id": user.user_id,
+        "email": user.email,
+        "role": "athlete",
+        "full_name": user.full_name,
+    }
+    promoted = {**existing, "role": "admin"}
+    _configure_profile_reads(store, existing, promoted)
+    store.client.table.return_value.update.return_value.eq.return_value.execute.return_value = MagicMock()
+
+    result = store.ensure_profile(user)
+
+    store.client.table.return_value.update.assert_called_once_with({"role": "admin"})
+    assert result["role"] == "admin"
+    store.client.table.return_value.upsert.assert_not_called()
+
+
 def test_ensure_profile_retries_transient_upsert_errors_then_succeeds():
     store = _make_store(admin_emails=set())
     user = _user("retry@example.com")
