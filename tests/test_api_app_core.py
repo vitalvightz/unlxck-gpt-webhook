@@ -172,9 +172,29 @@ def test_generation_job_stale_after_seconds_defaults_when_env_invalid(monkeypatc
     assert app_module._generation_job_stale_after_seconds() == 1400
 
 
+def test_generation_job_stale_after_seconds_defaults_when_unset(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.delenv("APP_GENERATION_JOB_STALE_AFTER_SECONDS", raising=False)
+    assert app_module._generation_job_stale_after_seconds() == 1400
+
+
 def test_generation_job_stale_after_seconds_enforces_minimum(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setenv("APP_GENERATION_JOB_STALE_AFTER_SECONDS", "30")
     assert app_module._generation_job_stale_after_seconds() == 60
+
+
+def test_plan_generate_daily_limit_defaults_when_unset(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.delenv("APP_PLAN_GENERATE_DAILY_LIMIT_PER_USER", raising=False)
+    assert app_module._plan_generate_daily_limit_per_user() == 5
+
+
+def test_plan_generate_daily_limit_defaults_when_invalid(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setenv("APP_PLAN_GENERATE_DAILY_LIMIT_PER_USER", "not-a-number")
+    assert app_module._plan_generate_daily_limit_per_user() == 5
+
+
+def test_plan_generate_daily_limit_zero_disables_cap(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setenv("APP_PLAN_GENERATE_DAILY_LIMIT_PER_USER", "0")
+    assert app_module._plan_generate_daily_limit_per_user() == 0
 
 
 def test_runtime_app_falls_back_to_health_endpoint_when_supabase_config_missing(monkeypatch: pytest.MonkeyPatch):
@@ -194,6 +214,39 @@ def test_runtime_app_falls_back_to_health_endpoint_when_supabase_config_missing(
         "app": "unlxck-fight-camp-api",
         "detail": "missing supabase configuration",
     }
+
+
+def test_runtime_app_uses_supabase_store_and_auth(monkeypatch: pytest.MonkeyPatch):
+    calls: list[str] = []
+
+    class RuntimeStore(FakeStore):
+        def validate_runtime_schema(self) -> None:
+            calls.append("validate_runtime_schema")
+
+    def fake_store_from_env(cls):
+        calls.append("store_from_env")
+        return RuntimeStore()
+
+    def fake_auth_from_env(cls):
+        calls.append("auth_from_env")
+        return FakeAuthService({})
+
+    monkeypatch.setenv("SUPABASE_URL", "https://example.supabase.co")
+    monkeypatch.setenv("SUPABASE_SERVICE_ROLE_KEY", "test-service-role-key")
+    monkeypatch.setattr(store_module.SupabaseAppStore, "from_env", classmethod(fake_store_from_env))
+    monkeypatch.setattr(auth_module.SupabaseAuthService, "from_env", classmethod(fake_auth_from_env))
+
+    reloaded = importlib.reload(app_module)
+    client = TestClient(reloaded.app)
+    response = client.get("/health")
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "ok": True,
+        "app": "unlxck-fight-camp-api",
+        "mode": "supabase-authenticated",
+    }
+    assert calls == ["store_from_env", "validate_runtime_schema", "auth_from_env"]
 
 
 @pytest.mark.parametrize(

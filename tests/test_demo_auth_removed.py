@@ -9,10 +9,11 @@ BANNED_MARKERS = {
     "demo" + "-athlete",
     "NEXT_PUBLIC_" + "DEMO_MODE",
     "UNLXCK_" + "DEMO_MODE",
+    "UNLXCK_" + "DEV_AUTH_BYPASS",
     "signIn" + "Demo",
 }
 
-EXCLUDED_PARTS = {"node_modules", ".git", "__pycache__"}
+EXCLUDED_PARTS = {"node_modules", ".git", "__pycache__", ".next"}
 
 
 def test_demo_auth_markers_removed_from_repo():
