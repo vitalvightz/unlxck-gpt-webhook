@@ -778,3 +778,178 @@ def test_generation_job_status_reports_review_required_result():
 
     assert job_response.status_code == 200
     assert job_response.json()["status"] == "review_required"
+
+
+def _seed_failed_job(store: FakeStore, *, athlete_id: str = "athlete-1", source: str = "self_serve") -> dict:
+    request_payload = _build_request().model_dump(mode="json")
+    job = store.create_or_get_generation_job(
+        athlete_id=athlete_id,
+        client_request_id=f"orig-{athlete_id}",
+        source=source,
+        request_payload=request_payload,
+    )
+    store.update_generation_job(
+        job["id"],
+        status="failed",
+        error="Stage 2 model request failed",
+        completed_at=_now(),
+    )
+    return store.get_generation_job(job["id"])
+
+
+def test_retry_generation_job_allows_owner_to_retry_failed_job():
+    client, store, _ = _build_client()
+    store.ensure_profile(
+        AuthenticatedUser(user_id="athlete-1", email="ari@example.com", full_name="Ari Mensah", metadata={})
+    )
+    original = _seed_failed_job(store)
+
+    response = client.post(
+        f"/api/generation-jobs/{original['id']}/retry",
+        headers={"Authorization": "Bearer athlete-token"},
+    )
+
+    assert response.status_code == 202
+    body = response.json()
+    assert body["job_id"] != original["id"]
+    assert body["athlete_id"] == "athlete-1"
+    assert body["client_request_id"].startswith(f"retry_{original['id']}_")
+    # Original failed job is preserved as history.
+    assert store.get_generation_job(original["id"])["status"] == "failed"
+
+
+def test_retry_generation_job_allows_admin_to_retry_any_job():
+    client, store, _ = _build_client()
+    store.ensure_profile(
+        AuthenticatedUser(user_id="athlete-1", email="ari@example.com", full_name="Ari Mensah", metadata={})
+    )
+    store.ensure_profile(
+        AuthenticatedUser(user_id="admin-1", email="ops@unlxck.test", full_name="Ops Admin", metadata={})
+    )
+    original = _seed_failed_job(store)
+
+    response = client.post(
+        f"/api/generation-jobs/{original['id']}/retry",
+        headers={"Authorization": "Bearer admin-token"},
+    )
+
+    assert response.status_code == 202
+    body = response.json()
+    assert body["athlete_id"] == "athlete-1"
+    assert body["job_id"] != original["id"]
+
+
+def test_retry_generation_job_rejects_non_owner_non_admin():
+    client, store, _ = _build_client()
+    store.ensure_profile(
+        AuthenticatedUser(user_id="athlete-1", email="ari@example.com", full_name="Ari Mensah", metadata={})
+    )
+    other_athlete = AuthenticatedUser(
+        user_id="athlete-2",
+        email="bo@example.com",
+        full_name="Bo Tran",
+        metadata={},
+    )
+    store.ensure_profile(other_athlete)
+    original = _seed_failed_job(store)
+
+    client.app.state.auth_service.users_by_token["other-token"] = other_athlete
+
+    response = client.post(
+        f"/api/generation-jobs/{original['id']}/retry",
+        headers={"Authorization": "Bearer other-token"},
+    )
+
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+
+
+def test_retry_generation_job_rejects_non_failed_status():
+    client, store, _ = _build_client()
+    store.ensure_profile(
+        AuthenticatedUser(user_id="athlete-1", email="ari@example.com", full_name="Ari Mensah", metadata={})
+    )
+    job = store.create_or_get_generation_job(
+        athlete_id="athlete-1",
+        client_request_id="running-job",
+        source="self_serve",
+        request_payload=_build_request().model_dump(mode="json"),
+    )
+    store.update_generation_job(job["id"], status="running", started_at=_now(), heartbeat_at=_now())
+
+    running_response = client.post(
+        f"/api/generation-jobs/{job['id']}/retry",
+        headers={"Authorization": "Bearer athlete-token"},
+    )
+    assert running_response.status_code == status.HTTP_409_CONFLICT
+
+    store.update_generation_job(job["id"], status="completed", completed_at=_now())
+    completed_response = client.post(
+        f"/api/generation-jobs/{job['id']}/retry",
+        headers={"Authorization": "Bearer athlete-token"},
+    )
+    assert completed_response.status_code == status.HTTP_409_CONFLICT
+
+
+def test_retry_generation_job_returns_404_for_unknown_id():
+    client, _, _ = _build_client()
+    response = client.post(
+        "/api/generation-jobs/job_does_not_exist/retry",
+        headers={"Authorization": "Bearer athlete-token"},
+    )
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+
+
+def test_retry_generation_job_creates_new_job_with_original_request_payload():
+    client, store, _ = _build_client()
+    store.ensure_profile(
+        AuthenticatedUser(user_id="athlete-1", email="ari@example.com", full_name="Ari Mensah", metadata={})
+    )
+    original = _seed_failed_job(store)
+
+    response = client.post(
+        f"/api/generation-jobs/{original['id']}/retry",
+        headers={"Authorization": "Bearer athlete-token"},
+    )
+
+    assert response.status_code == 202
+    new_job = store.get_generation_job(response.json()["job_id"])
+    assert new_job is not None
+    assert new_job["request_payload"] == original["request_payload"]
+    assert new_job["source"] == original["source"]
+    assert new_job["status"] in {"queued", "running", "completed", "review_required", "failed"}
+
+
+def test_retry_generation_job_respects_daily_limit_for_self_serve(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setenv("APP_PLAN_GENERATE_DAILY_LIMIT_PER_USER", "1")
+    client, store, _ = _build_client()
+    store.ensure_profile(
+        AuthenticatedUser(user_id="athlete-1", email="ari@example.com", full_name="Ari Mensah", metadata={})
+    )
+    original = _seed_failed_job(store)
+
+    response = client.post(
+        f"/api/generation-jobs/{original['id']}/retry",
+        headers={"Authorization": "Bearer athlete-token"},
+    )
+
+    assert response.status_code == status.HTTP_429_TOO_MANY_REQUESTS
+    assert response.json()["detail"] == "Daily generation limit reached. Try again tomorrow."
+
+
+def test_retry_generation_job_bypasses_daily_limit_for_admin(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setenv("APP_PLAN_GENERATE_DAILY_LIMIT_PER_USER", "1")
+    client, store, _ = _build_client()
+    store.ensure_profile(
+        AuthenticatedUser(user_id="athlete-1", email="ari@example.com", full_name="Ari Mensah", metadata={})
+    )
+    store.ensure_profile(
+        AuthenticatedUser(user_id="admin-1", email="ops@unlxck.test", full_name="Ops Admin", metadata={})
+    )
+    original = _seed_failed_job(store)
+
+    response = client.post(
+        f"/api/generation-jobs/{original['id']}/retry",
+        headers={"Authorization": "Bearer admin-token"},
+    )
+
+    assert response.status_code == 202

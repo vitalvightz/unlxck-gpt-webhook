@@ -132,6 +132,8 @@ interface PremiumLoadingScreenProps {
   startedAtMs?: number | null;
   milestones?: ProgressMilestone[];
   intake?: PlanRequest | null;
+  onRetry?: (() => void) | null;
+  canRetry?: boolean;
 }
 
 function formatRelativeTimestamp(at: string, baseMs: number | null): string {
@@ -158,6 +160,8 @@ export function PremiumLoadingScreen({
   startedAtMs = null,
   milestones = [],
   intake = null,
+  onRetry = null,
+  canRetry = false,
 }: PremiumLoadingScreenProps) {
   const phaseContent = PHASE_CONTENT[phase];
   const activeIndex = PHASE_ORDER[phase];
@@ -263,6 +267,21 @@ export function PremiumLoadingScreen({
             ) : (
               <div className="loading-status-strip">{statusMessage ?? phaseContent.statusFallback}</div>
             )}
+            {phase === "failed" ? (
+              <div className="loading-failure-actions">
+                <p className="loading-failure-headline">Generation failed.</p>
+                {onRetry ? (
+                  <button
+                    type="button"
+                    className="cta"
+                    onClick={onRetry}
+                    disabled={!canRetry}
+                  >
+                    Try again
+                  </button>
+                ) : null}
+              </div>
+            ) : null}
             <p className="loading-reassurance">{phaseContent.reassurance}</p>
           </article>
         </div>

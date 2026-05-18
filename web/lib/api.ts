@@ -437,6 +437,22 @@ export function getGenerationJob(token: string, jobId: string): Promise<Generati
   );
 }
 
+export function retryGenerationJob(
+  token: string,
+  jobId: string,
+  clientRequestId?: string,
+): Promise<GenerationJobResponse> {
+  return withTransientRetries(() =>
+    readJson<GenerationJobResponse>(`/api/generation-jobs/${jobId}/retry`, {
+      method: "POST",
+      token,
+      clientRequestId,
+    }),
+  );
+}
+  );
+}
+
 export function listPlans(token: string): Promise<PlanSummary[]> {
   return withTransientRetries(() => readJson<PlanSummary[]>("/api/plans", { token }));
 }
