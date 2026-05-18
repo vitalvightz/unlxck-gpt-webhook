@@ -168,8 +168,6 @@ def test_is_stale_job_uses_started_at_when_heartbeat_is_missing_for_old_running_
 
 
 def test_runtime_app_falls_back_to_health_endpoint_when_supabase_config_missing(monkeypatch: pytest.MonkeyPatch):
-    monkeypatch.delenv("UNLXCK_DEMO_MODE", raising=False)
-    monkeypatch.delenv("UNLXCK_DEV_AUTH_BYPASS", raising=False)
     monkeypatch.delenv("UNLXCK_ENV", raising=False)
     monkeypatch.delenv("SUPABASE_URL", raising=False)
     monkeypatch.delenv("SUPABASE_SERVICE_ROLE_KEY", raising=False)
@@ -188,71 +186,18 @@ def test_runtime_app_falls_back_to_health_endpoint_when_supabase_config_missing(
     }
 
 
-def test_runtime_app_uses_dev_auth_bypass_only_in_development(monkeypatch: pytest.MonkeyPatch):
-    monkeypatch.delenv("UNLXCK_DEMO_MODE", raising=False)
-    monkeypatch.setenv("UNLXCK_ENV", "development")
-    monkeypatch.setenv("UNLXCK_DEV_AUTH_BYPASS", "1")
-    monkeypatch.delenv("SUPABASE_URL", raising=False)
-    monkeypatch.delenv("SUPABASE_SERVICE_ROLE_KEY", raising=False)
-    monkeypatch.delenv("SUPABASE_ANON_KEY", raising=False)
-
-    reloaded = importlib.reload(app_module)
-
-    client = TestClient(reloaded.app)
-    health_response = client.get("/health")
-    me_response = client.get("/api/me", headers={"Authorization": "Bearer demo-admin"})
-
-    assert health_response.status_code == 200
-    assert health_response.json() == {
-        "ok": True,
-        "app": "unlxck-fight-camp-api",
-        "mode": "dev-auth-bypass",
-    }
-    assert me_response.status_code == 200
-    assert me_response.json()["profile"]["role"] == "admin"
-
-
-def test_runtime_app_ignores_dev_auth_bypass_without_development_env(monkeypatch: pytest.MonkeyPatch):
-    monkeypatch.delenv("UNLXCK_DEMO_MODE", raising=False)
-    monkeypatch.setenv("UNLXCK_ENV", "production")
-    monkeypatch.setenv("UNLXCK_DEV_AUTH_BYPASS", "1")
-    monkeypatch.delenv("SUPABASE_URL", raising=False)
-    monkeypatch.delenv("SUPABASE_SERVICE_ROLE_KEY", raising=False)
-    monkeypatch.delenv("SUPABASE_ANON_KEY", raising=False)
-
-    reloaded = importlib.reload(app_module)
-
-    client = TestClient(reloaded.app)
-    response = client.get("/health")
-
-    assert response.status_code == 200
-    assert response.json() == {
-        "ok": False,
-        "app": "unlxck-fight-camp-api",
-        "detail": "missing supabase configuration",
-    }
-
-
 @pytest.mark.parametrize(
-    ("use_demo_mode", "env_value"),
-    [
-        (True, "://bad-origin"),
-        (False, "http:///missing-host"),
-    ],
+    ("env_value",),
+    [("://bad-origin",), ("http:///missing-host",)],
 )
 def test_runtime_app_falls_back_to_health_endpoint_when_runtime_config_is_invalid(
     monkeypatch: pytest.MonkeyPatch,
-    use_demo_mode: bool,
     env_value: str,
 ):
-    if use_demo_mode:
-        monkeypatch.setenv("UNLXCK_DEMO_MODE", "1")
-    else:
-        monkeypatch.delenv("UNLXCK_DEMO_MODE", raising=False)
-        monkeypatch.setenv("SUPABASE_URL", "https://example.supabase.co")
-        monkeypatch.setenv("SUPABASE_SERVICE_ROLE_KEY", "test-service-role-key")
-        monkeypatch.setattr(store_module.SupabaseAppStore, "from_env", classmethod(lambda cls: FakeStore()))
-        monkeypatch.setattr(auth_module.SupabaseAuthService, "from_env", classmethod(lambda cls: FakeAuthService({})))
+    monkeypatch.setenv("SUPABASE_URL", "https://example.supabase.co")
+    monkeypatch.setenv("SUPABASE_SERVICE_ROLE_KEY", "test-service-role-key")
+    monkeypatch.setattr(store_module.SupabaseAppStore, "from_env", classmethod(lambda cls: FakeStore()))
+    monkeypatch.setattr(auth_module.SupabaseAuthService, "from_env", classmethod(lambda cls: FakeAuthService({})))
 
     monkeypatch.setenv("APP_CORS_ORIGINS", env_value)
 
@@ -278,8 +223,7 @@ def test_runtime_app_fails_loudly_when_plan_schema_is_invalid_and_fallback_disab
                 return
             raise RuntimeError(store_module.PLAN_RUNTIME_SCHEMA_ERROR_DETAIL)
 
-    monkeypatch.delenv("UNLXCK_DEMO_MODE", raising=False)
-    monkeypatch.delenv("UNLXCK_ALLOW_LEGACY_PLAN_SCHEMA_FALLBACK", raising=False)
+        monkeypatch.delenv("UNLXCK_ALLOW_LEGACY_PLAN_SCHEMA_FALLBACK", raising=False)
     monkeypatch.setenv("SUPABASE_URL", "https://example.supabase.co")
     monkeypatch.setenv("SUPABASE_SERVICE_ROLE_KEY", "test-service-role-key")
     monkeypatch.setattr(store_module.SupabaseAppStore, "from_env", classmethod(lambda cls: SchemaCheckingStore()))
@@ -308,8 +252,7 @@ def test_runtime_app_returns_startup_failure_when_store_is_restricted(
                 }
             )
 
-    monkeypatch.delenv("UNLXCK_DEMO_MODE", raising=False)
-    monkeypatch.setenv("SUPABASE_URL", "https://example.supabase.co")
+        monkeypatch.setenv("SUPABASE_URL", "https://example.supabase.co")
     monkeypatch.setenv("SUPABASE_SERVICE_ROLE_KEY", "test-service-role-key")
     monkeypatch.setattr(store_module.SupabaseAppStore, "from_env", classmethod(lambda cls: RestrictedStore()))
     monkeypatch.setattr(auth_module.SupabaseAuthService, "from_env", classmethod(lambda cls: FakeAuthService({})))
@@ -331,8 +274,7 @@ def test_runtime_app_does_not_fail_schema_check_when_legacy_fallback_enabled(
                 return
             raise RuntimeError(store_module.PLAN_RUNTIME_SCHEMA_ERROR_DETAIL)
 
-    monkeypatch.delenv("UNLXCK_DEMO_MODE", raising=False)
-    monkeypatch.setenv("UNLXCK_ALLOW_LEGACY_PLAN_SCHEMA_FALLBACK", "1")
+        monkeypatch.setenv("UNLXCK_ALLOW_LEGACY_PLAN_SCHEMA_FALLBACK", "1")
     monkeypatch.setenv("SUPABASE_URL", "https://example.supabase.co")
     monkeypatch.setenv("SUPABASE_SERVICE_ROLE_KEY", "test-service-role-key")
     monkeypatch.setattr(store_module.SupabaseAppStore, "from_env", classmethod(lambda cls: SchemaCheckingStore()))

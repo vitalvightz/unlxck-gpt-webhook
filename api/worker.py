@@ -7,7 +7,6 @@ from contextlib import suppress
 
 from fightcamp.logging_utils import configure_logging
 
-from .demo import DemoAuthService, get_demo_store
 from .generation_runtime import default_planner, is_stale_job, run_generation_job, utc_now_iso
 from .stage2_automation import build_default_stage2_automator
 from .store import AppStore, SupabaseAppStore
@@ -153,15 +152,9 @@ async def _tick(
 async def run_worker() -> None:
     configure_logging()
 
-    if os.getenv("UNLXCK_DEMO_MODE") == "1":
-        store = get_demo_store()
-        store.validate_runtime_schema()
-        _ = DemoAuthService()
-        mode = "demo"
-    else:
-        store = SupabaseAppStore.from_env()
-        store.validate_runtime_schema()
-        mode = "supabase"
+    store = SupabaseAppStore.from_env()
+    store.validate_runtime_schema()
+    mode = "supabase"
 
     interval_seconds = max(
         1.0,

@@ -10,31 +10,19 @@ type AppSession = {
   access_token: string;
 };
 
-type DemoRole = "athlete" | "admin";
 
 type AppSessionValue = {
   isReady: boolean;
   isMeHydrated: boolean;
   session: AppSession | null;
   me: MeResponse | null;
-  demoMode: boolean;
   previewAppearanceMode: Dispatch<SetStateAction<AppearanceMode | null>>;
   refreshMe: () => Promise<void>;
   replaceMe: (nextMe: MeResponse | null) => void;
   signOut: () => Promise<void>;
-  signInDemo: (role?: DemoRole) => Promise<void>;
 };
 
-const DEMO_MODE =
-  process.env.NEXT_PUBLIC_DEMO_MODE === "1" ||
-  (process.env.NODE_ENV !== "production" && process.env.NEXT_PUBLIC_DEV_AUTH_BYPASS === "1");
-const DEMO_TOKEN_KEY = "unlxck-demo-token";
-const DEMO_SIGNED_OUT_KEY = "unlxck-demo-signed-out";
 const AppSessionContext = createContext<AppSessionValue | undefined>(undefined);
-
-function tokenForRole(role: DemoRole): string {
-  return role === "admin" ? "demo-admin" : "demo-athlete";
-}
 
 function applyAppearanceMode(mode: AppearanceMode) {
   if (typeof document === "undefined") {
@@ -42,13 +30,6 @@ function applyAppearanceMode(mode: AppearanceMode) {
   }
   document.documentElement.dataset.theme = mode;
   document.documentElement.style.colorScheme = mode;
-}
-
-export function isDemoAutoSignInSuppressed(): boolean {
-  if (typeof window === "undefined") {
-    return false;
-  }
-  return window.sessionStorage.getItem(DEMO_SIGNED_OUT_KEY) === "1";
 }
 
 export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
@@ -89,7 +70,7 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
         return;
       }
 
-      if (!DEMO_MODE && err instanceof ApiError && err.status === 401 && allowRefresh) {
+      if (err instanceof ApiError && err.status === 401 && allowRefresh) {
         try {
           const client = getSupabaseBrowserClient();
           const refreshResult = await client.auth.refreshSession();
@@ -121,24 +102,6 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
   useEffect(() => {
     let active = true;
     let subscription: { unsubscribe: () => void } | null = null;
-
-    if (DEMO_MODE) {
-      const token = window.localStorage.getItem(DEMO_TOKEN_KEY);
-      if (!token) {
-        setIsReady(true);
-        setIsMeHydrated(true);
-        return () => {
-          active = false;
-        };
-      }
-      const nextSession = { access_token: token };
-      handledAccessTokenRef.current = token;
-      setSession(nextSession);
-      void loadMe(nextSession);
-      return () => {
-        active = false;
-      };
-    }
 
     let client;
     try {
@@ -200,32 +163,7 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
     setIsMeHydrated(true);
   }
 
-  async function signInDemo(role: DemoRole = "athlete") {
-    const nextSession = { access_token: tokenForRole(role) };
-    window.sessionStorage.removeItem(DEMO_SIGNED_OUT_KEY);
-    window.localStorage.setItem(DEMO_TOKEN_KEY, nextSession.access_token);
-    handledAccessTokenRef.current = nextSession.access_token;
-    setAppearancePreview(null);
-    setSession(nextSession);
-    setIsReady(false);
-    setIsMeHydrated(false);
-    await loadMe(nextSession);
-  }
-
   async function signOut() {
-    if (DEMO_MODE) {
-      window.sessionStorage.setItem(DEMO_SIGNED_OUT_KEY, "1");
-      window.localStorage.removeItem(DEMO_TOKEN_KEY);
-      handledAccessTokenRef.current = null;
-      setAppearancePreview(null);
-      setSession(null);
-      setMe(null);
-      setIsReady(true);
-      setIsMeHydrated(true);
-      applyAppearanceMode("dark");
-      return;
-    }
-
     try {
       await getSupabaseBrowserClient().auth.signOut();
     } catch {
@@ -247,12 +185,10 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
         isMeHydrated,
         session,
         me,
-        demoMode: DEMO_MODE,
         previewAppearanceMode: setAppearancePreview,
         refreshMe,
         replaceMe,
         signOut,
-        signInDemo,
       }}
     >
       {children}
