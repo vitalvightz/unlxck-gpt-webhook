@@ -9,7 +9,6 @@ import pytest
 import api.app as app_module
 from api.app import create_app
 from api.auth import AuthenticatedUser
-from api.demo import DemoStore
 from api.generation_runtime import run_generation_job, should_skip_stage2
 from api.models import ProfileUpdateRequest
 from api.stage2_automation import Stage2AutomationError, Stage2AutomationUnavailableError
@@ -316,19 +315,19 @@ def test_run_generation_job_updates_existing_plan_for_same_intake_after_resume()
     assert len(store.list_user_plans(athlete.user_id)) == 1
 
 
-def test_demo_store_runtime_generation_saves_completed_plan():
-    store = DemoStore()
+def test_runtime_generation_saves_completed_plan():
+    store = FakeStore()
     athlete = AuthenticatedUser(
-        user_id="demo-athlete",
+        user_id="athlete-1",
         email="athlete@example.com",
-        full_name="Demo Athlete",
+        full_name="Athlete One",
         metadata={},
     )
     store.ensure_profile(athlete)
     request = _build_request({"fight_date": "2026-08-15"})
     job = store.create_or_get_generation_job(
         athlete_id=athlete.user_id,
-        client_request_id="demo-runtime-job",
+        client_request_id="runtime-job",
         source="self_serve",
         request_payload=request.model_dump(mode="json"),
     )

@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 
-import { isDemoAutoSignInSuppressed, useAppSession } from "@/components/auth-provider";
+import { useAppSession } from "@/components/auth-provider";
 
 function LoadingCard({ label }: { label: string }) {
   return (
@@ -20,7 +20,7 @@ export function RequireAuth({
   adminOnly = false,
 }: Readonly<{ children: React.ReactNode; adminOnly?: boolean }>) {
   const router = useRouter();
-  const { isReady, isMeHydrated, session, me, demoMode, signInDemo } = useAppSession();
+  const { isReady, isMeHydrated, session, me } = useAppSession();
   const role = me?.profile.role;
 
   useEffect(() => {
@@ -28,14 +28,6 @@ export function RequireAuth({
       return;
     }
     if (!session) {
-      if (adminOnly && demoMode) {
-        if (isDemoAutoSignInSuppressed()) {
-          router.replace("/login");
-          return;
-        }
-        void signInDemo("admin");
-        return;
-      }
       router.replace("/login");
       return;
     }
@@ -49,13 +41,13 @@ export function RequireAuth({
     if (adminOnly && role && role !== "admin") {
       router.replace("/plans");
     }
-  }, [adminOnly, demoMode, isMeHydrated, isReady, me, role, router, session, signInDemo]);
+  }, [adminOnly, isMeHydrated, isReady, me, role, router, session]);
 
   if (!isReady) {
     return <LoadingCard label="Checking your access" />;
   }
   if (!session) {
-    return <LoadingCard label={adminOnly && demoMode ? "Restoring demo admin access" : "Redirecting to login"} />;
+    return <LoadingCard label="Redirecting to login" />;
   }
   if (!isMeHydrated) {
     return <LoadingCard label={adminOnly ? "Restoring admin access" : "Restoring your workspace"} />;

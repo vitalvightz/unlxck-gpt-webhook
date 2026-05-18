@@ -123,13 +123,6 @@ APP_CORS_ORIGINS=http://localhost:3000
 OPENAI_API_KEY=
 ```
 
-For local visual QA without real credentials, enable the dev-only auth bypass on the API:
-
-```
-UNLXCK_ENV=development
-UNLXCK_DEV_AUTH_BYPASS=1
-```
-
 ### Frontend
 
 ```bash
@@ -145,7 +138,6 @@ NEXT_PUBLIC_API_BASE_URL=http://127.0.0.1:8000
 NEXT_PUBLIC_SITE_URL=http://localhost:3000
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
-NEXT_PUBLIC_DEV_AUTH_BYPASS=1
 ```
 
 ---
