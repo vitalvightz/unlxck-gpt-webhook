@@ -558,7 +558,7 @@ class SupabaseAppStore:
         try:
             profile = self._require_profile(athlete_id)
             current_username = (profile.get("username") or "").strip().lower() or None
-            normalized = username.strip().lower()
+            normalized = validate_username(username)
 
             if normalized == current_username:
                 logger.info(
