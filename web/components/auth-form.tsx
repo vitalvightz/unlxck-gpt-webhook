@@ -60,7 +60,7 @@ export function AuthForm({ mode }: { mode: "signup" | "login" }) {
           email,
           password,
           options: {
-            ...(siteOrigin ? { emailRedirectTo: `${siteOrigin}/login` } : {}),
+            emailRedirectTo: siteOrigin ? `${siteOrigin}/login` : undefined,
             data: {
               full_name: fullName,
             },
