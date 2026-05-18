@@ -100,7 +100,7 @@ export default function AdminAthletePage() {
     }
 
     let active = true;
-    setError(null);
+    setLoadError(null);
     setIsReloading(true);
     Promise.all([
       getAdminAthlete(session.access_token, athleteId),
@@ -113,7 +113,7 @@ export default function AdminAthletePage() {
       })
       .catch((athleteError) => {
         if (!active) return;
-        setError(athleteError instanceof Error ? athleteError.message : "Unable to load athlete profile.");
+        setLoadError(athleteError instanceof Error ? athleteError.message : "Unable to load athlete profile.");
       })
       .finally(() => {
         if (active) setIsReloading(false);
