@@ -1,3 +1,4 @@
+import re
 from pathlib import Path
 
 
@@ -29,3 +30,25 @@ def test_schema_does_not_hardcode_admin_email_promotions():
     assert "michaelokaforjr@gmail.com" not in schema
     assert "unlxckedmind@gmail.com" not in schema
     assert "frankribery@mailfence.com" not in schema
+
+
+def test_schema_guards_against_self_role_escalation():
+    schema = _read_schema()
+
+    function_match = re.search(
+        r"create or replace function public\.prevent_self_role_escalation\(\).*?\$\$;",
+        schema,
+        re.IGNORECASE | re.DOTALL,
+    )
+    assert function_match is not None
+
+    function_section = function_match.group(0)
+
+    assert "security definer" in function_section
+    assert "set search_path = public" in function_section
+    assert "tg_op = 'INSERT'" in function_section
+    assert "new.role <> 'athlete'" in function_section
+    assert "tg_op = 'UPDATE'" in function_section
+    assert "new.role is distinct from old.role" in function_section
+    assert "before insert or update on public.profiles" in schema
+    assert "Only admins can change profile roles." in schema
