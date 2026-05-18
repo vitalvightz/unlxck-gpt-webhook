@@ -214,6 +214,35 @@ class FakeStore:
         job = self.generation_jobs.get(job_id)
         return dict(job) if job else None
 
+    def get_generation_job_by_client_request_id(self, *, athlete_id: str, client_request_id: str) -> dict | None:
+        for job in self.generation_jobs.values():
+            if job["athlete_id"] == athlete_id and job["client_request_id"] == client_request_id:
+                return dict(job)
+        return None
+
+    def count_generation_jobs_for_athlete_since(
+        self,
+        athlete_id: str,
+        since_timestamp: str,
+        *,
+        sources: set[str] | None = None,
+    ) -> int:
+        since = datetime.fromisoformat(since_timestamp.replace("Z", "+00:00"))
+        count = 0
+        for job in self.generation_jobs.values():
+            if job["athlete_id"] != athlete_id:
+                continue
+            created_at_raw = str(job.get("created_at") or "")
+            if not created_at_raw:
+                continue
+            created_at = datetime.fromisoformat(created_at_raw.replace("Z", "+00:00"))
+            if created_at < since:
+                continue
+            if sources and str(job.get("source") or "") not in sources:
+                continue
+            count += 1
+        return count
+
     def get_generation_job_by_plan_id(self, plan_id: str) -> dict | None:
         matches = [job for job in self.generation_jobs.values() if str(job.get("plan_id") or "") == plan_id]
         if not matches:

@@ -123,8 +123,16 @@ class AppStore(Protocol):
         source: str,
         request_payload: dict[str, Any],
     ) -> dict[str, Any]: ...
+    def count_generation_jobs_for_athlete_since(
+        self,
+        athlete_id: str,
+        since_timestamp: str,
+        *,
+        sources: set[str] | None = None,
+    ) -> int: ...
 
     def get_generation_job(self, job_id: str) -> dict[str, Any] | None: ...
+    def get_generation_job_by_client_request_id(self, *, athlete_id: str, client_request_id: str) -> dict[str, Any] | None: ...
 
     def get_generation_job_by_plan_id(self, plan_id: str) -> dict[str, Any] | None: ...
 
@@ -885,6 +893,40 @@ class SupabaseAppStore:
             detail="failed to persist generation job",
         )
 
+    def count_generation_jobs_for_athlete_since(
+        self,
+        athlete_id: str,
+        since_timestamp: str,
+        *,
+        sources: set[str] | None = None,
+    ) -> int:
+        try:
+            query = self.client.table("generation_jobs").select("id", count="exact").eq("athlete_id", athlete_id).gte("created_at", since_timestamp)
+            if sources:
+                query = query.in_("source", sorted(sources))
+            response = self._run_with_transient_retry(
+                operation=f"count_generation_jobs_for_athlete_since athlete_id={athlete_id}",
+                fn=lambda: query.execute(),
+            )
+            count = getattr(response, "count", None)
+            return int(count or 0)
+        except _STORE_CLIENT_ERRORS as exc:
+            if self._is_generation_job_schema_error(exc):
+                logger.exception(
+                    "[store] count_generation_jobs_for_athlete_since:schema_mismatch athlete_id=%s",
+                    athlete_id,
+                )
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail=GENERATION_JOB_SCHEMA_DETAIL,
+                ) from exc
+            self._raise_operation_http_error(
+                operation=f"count_generation_jobs_for_athlete_since athlete_id={athlete_id}",
+                detail="failed to count generation jobs",
+                exc=exc,
+            )
+        return 0
+
     def get_generation_job(self, job_id: str) -> dict[str, Any] | None:
         try:
             return self._run_with_transient_retry(
@@ -909,6 +951,31 @@ class SupabaseAppStore:
                     detail=GENERATION_JOB_SCHEMA_DETAIL,
                 ) from exc
             logger.exception("[store] get_generation_job:exception job_id=%s", job_id)
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="failed to load generation job",
+            ) from exc
+
+    def get_generation_job_by_client_request_id(self, *, athlete_id: str, client_request_id: str) -> dict[str, Any] | None:
+        try:
+            return self._run_with_transient_retry(
+                operation=f"get_generation_job_by_client_request_id athlete_id={athlete_id}",
+                fn=lambda: self._lookup_generation_job_by_client_request_id(
+                    athlete_id=athlete_id,
+                    client_request_id=client_request_id,
+                ),
+            )
+        except _STORE_CLIENT_ERRORS as exc:
+            if self._is_transient_store_error(exc):
+                raise HTTPException(
+                    status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                    detail=GENERATION_JOB_UNAVAILABLE_DETAIL,
+                ) from exc
+            if self._is_generation_job_schema_error(exc):
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail=GENERATION_JOB_SCHEMA_DETAIL,
+                ) from exc
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="failed to load generation job",

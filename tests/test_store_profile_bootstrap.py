@@ -375,6 +375,30 @@ def test_create_or_get_generation_job_persists_source_in_insert_payload():
     assert result["source"] == "admin_latest_intake"
 
 
+def test_create_or_get_generation_job_raises_500_when_insert_returns_no_rows_and_lookup_is_none():
+    store = _make_store()
+    insert_response = MagicMock()
+    insert_response.data = []
+    insert_query = MagicMock()
+    insert_query.execute.return_value = insert_response
+    table_query = MagicMock()
+    table_query.insert.return_value = insert_query
+    store.client.table.return_value = table_query
+    store._lookup_generation_job_by_client_request_id = MagicMock(return_value=None)
+    store._run_with_transient_retry = MagicMock(side_effect=lambda *, fn, **_kwargs: fn())
+
+    with pytest.raises(HTTPException) as exc_info:
+        store.create_or_get_generation_job(
+            athlete_id="athlete-1",
+            client_request_id="client-1",
+            source="self_serve",
+            request_payload={"fight_date": "2026-04-18"},
+        )
+
+    assert exc_info.value.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
+    assert exc_info.value.detail == "failed to persist generation job"
+
+
 def test_validate_runtime_schema_raises_when_required_plan_columns_missing_by_default():
     store = _make_store()
     schema_error = APIError(
