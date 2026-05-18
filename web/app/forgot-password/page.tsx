@@ -28,7 +28,7 @@ export default function ForgotPasswordPage() {
 
       const siteOrigin = getSiteOrigin();
       const { error: resetError } = await client.auth.resetPasswordForEmail(email, {
-        ...(siteOrigin ? { redirectTo: `${siteOrigin}/reset-password` } : {}),
+        redirectTo: siteOrigin ? `${siteOrigin}/reset-password` : undefined,
       });
 
       if (resetError) {
