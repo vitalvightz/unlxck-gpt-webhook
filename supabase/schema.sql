@@ -35,7 +35,13 @@ $$;
 create table if not exists public.profiles (
   id uuid primary key references auth.users(id) on delete cascade,
   email text not null unique,
-  username text unique,
+  username text unique
+    constraint profiles_username_length
+      check (username is null or char_length(username) between 3 and 24)
+    constraint profiles_username_lowercase
+      check (username is null or username = lower(username))
+    constraint profiles_username_format
+      check (username is null or username ~ '^[a-z0-9]([a-z0-9._-]*[a-z0-9])?$'),
   username_change_history jsonb not null default '[]'::jsonb,
   role public.app_role not null default 'athlete',
   full_name text not null default '',
@@ -66,6 +72,24 @@ begin
     if (tg_op = 'INSERT' and new.role <> 'athlete')
       or (tg_op = 'UPDATE' and new.role is distinct from old.role) then
       raise exception 'Only admins can change profile roles.';
+    end if;
+  end if;
+
+  return new;
+end;
+$$;
+
+create or replace function public.prevent_username_policy_bypass()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if auth.role() <> 'service_role' and not public.is_admin() then
+    if new.username is distinct from old.username
+      or new.username_change_history is distinct from old.username_change_history then
+      raise exception 'Use the username change endpoint.';
     end if;
   end if;
 
@@ -167,6 +191,39 @@ begin
   ) then
     alter table public.profiles add constraint profiles_username_key unique (username);
   end if;
+
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'profiles_username_length'
+      and conrelid = 'public.profiles'::regclass
+  ) then
+    alter table public.profiles
+      add constraint profiles_username_length
+      check (username is null or char_length(username) between 3 and 24);
+  end if;
+
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'profiles_username_lowercase'
+      and conrelid = 'public.profiles'::regclass
+  ) then
+    alter table public.profiles
+      add constraint profiles_username_lowercase
+      check (username is null or username = lower(username));
+  end if;
+
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'profiles_username_format'
+      and conrelid = 'public.profiles'::regclass
+  ) then
+    alter table public.profiles
+      add constraint profiles_username_format
+      check (username is null or username ~ '^[a-z0-9]([a-z0-9._-]*[a-z0-9])?$');
+  end if;
 end
 $$;
 alter table public.athlete_intakes add column if not exists updated_at timestamptz not null default timezone('utc', now());
@@ -191,6 +248,12 @@ create trigger profiles_prevent_self_role_escalation
 before insert or update on public.profiles
 for each row
 execute function public.prevent_self_role_escalation();
+
+drop trigger if exists profiles_prevent_username_policy_bypass on public.profiles;
+create trigger profiles_prevent_username_policy_bypass
+before update on public.profiles
+for each row
+execute function public.prevent_username_policy_bypass();
 
 drop trigger if exists generation_jobs_set_updated_at on public.generation_jobs;
 create trigger generation_jobs_set_updated_at
