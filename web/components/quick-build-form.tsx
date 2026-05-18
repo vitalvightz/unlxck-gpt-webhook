@@ -212,6 +212,12 @@ function QuickBuildFormInner() {
     }),
     [input.fight_date, input.no_scheduled_fight],
   );
+  const maxWeeklySessions = input.training_availability.length;
+  const sessionsSelectDisabled = maxWeeklySessions === 0;
+  const weeklyFrequencyOptions = useMemo(
+    () => (maxWeeklySessions > 0 ? WEEKLY_FREQUENCY_OPTIONS.slice(0, maxWeeklySessions) : []),
+    [maxWeeklySessions],
+  );
 
   function patch<K extends keyof QuickBuildInput>(key: K, value: QuickBuildInput[K]) {
     setInput((current) => ({ ...current, [key]: value }));
@@ -220,11 +226,11 @@ function QuickBuildFormInner() {
   function toggleField(key: keyof Pick<QuickBuildInput, "technical_style" | "tactical_style" | "training_availability" | "hard_sparring_days" | "equipment_access" | "key_goals" | "weak_areas">, value: string) {
     setInput((current) => {
       const nextValues = toggleListValue(current[key], value);
-      // When a training day is unchecked, drop it from hard sparring days too —
-      // mirrors plan-intake-form.tsx so stale picks can't fail validation later.
       if (key === "training_availability") {
         const isRemoving = current.training_availability.includes(value) && !nextValues.includes(value);
-        const clampedFrequency = Math.min(current.weekly_training_frequency, Math.max(1, nextValues.length));
+        const cappedFrequency = nextValues.length > 0
+          ? (current.weekly_training_frequency > nextValues.length ? nextValues.length : current.weekly_training_frequency)
+          : 1;
         return {
           ...current,
           training_availability: nextValues,
@@ -537,8 +543,9 @@ function QuickBuildFormInner() {
           <CustomSelect
             id="qb-weekly-frequency"
             value={String(input.weekly_training_frequency)}
-            options={WEEKLY_FREQUENCY_OPTIONS}
-            placeholder="Sessions"
+            options={weeklyFrequencyOptions}
+            placeholder={sessionsSelectDisabled ? "Choose training days first" : "Sessions"}
+            disabled={sessionsSelectDisabled}
             onChange={(value) => patch("weekly_training_frequency", Number(value) || 1)}
           />
           <FieldError message={visibleError("weekly_training_frequency")} />
