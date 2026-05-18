@@ -19,3 +19,10 @@ def test_profiles_migration_backfills_avatar_url_column():
     schema = _read_schema()
 
     assert "alter table public.profiles add column if not exists avatar_url text;" in schema
+
+
+def test_schema_does_not_hardcode_admin_email_promotions():
+    schema = _read_schema()
+
+    assert "Grant admin role to designated admin accounts." not in schema
+    assert "set role = 'admin'" not in schema

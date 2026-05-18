@@ -247,15 +247,3 @@ drop policy if exists "generation_jobs_self_or_admin_update" on public.generatio
 create policy "generation_jobs_self_or_admin_update" on public.generation_jobs
 for update using (athlete_id = auth.uid() or public.is_admin())
 with check (athlete_id = auth.uid() or public.is_admin());
-
--- Grant admin role to designated admin accounts.
--- Runs on every apply; safe to re-run (idempotent).
-update public.profiles
-set role = 'admin'
-where email in (
-  'vitalvightz@gmail.com',
-  'michaelokaforjr@gmail.com',
-  'unlxckedmind@gmail.com',
-  'frankribery@mailfence.com'
-)
-  and role != 'admin';
