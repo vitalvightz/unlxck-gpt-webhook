@@ -760,7 +760,7 @@ export default function SettingsPage() {
             </div>
 
             <p className="settings-summary-line" aria-label="Profile snapshot">
-              {fullName || "—"} · {currentUsername ? `@${currentUsername}` : "no handle"} · {technicalStyleLabel} / {tacticalStyleLabel} · {stanceLabel} · {professionalStatusLabel} · {record || "—"} · {appearanceModeLabel}
+              {fullName || "—"} · {currentUsername ? `@${currentUsername}` : "Not set yet"} · {technicalStyleLabel} / {tacticalStyleLabel} · {stanceLabel} · {professionalStatusLabel} · {record || "—"} · {appearanceModeLabel}
             </p>
           </article>
 
