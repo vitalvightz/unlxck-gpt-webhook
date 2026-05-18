@@ -469,8 +469,14 @@ class SupabaseAppStore:
             if existing:
                 expected_role = self._default_role_for(user)
                 if expected_role == "admin" and existing.get("role") != "admin":
-                    self.client.table("profiles").update({"role": "admin"}).eq("id", user.user_id).execute()
-                    existing = self._require_profile(user.user_id)
+                    self._run_with_transient_retry(
+                        operation="ensure_profile:promote_admin",
+                        fn=lambda: self.client.table("profiles").update({"role": "admin"}).eq("id", user.user_id).execute(),
+                    )
+                    existing = self._run_with_transient_retry(
+                        operation="ensure_profile:refresh_after_promotion",
+                        fn=lambda: self._require_profile(user.user_id),
+                    )
                 self._log_profile_event(
                     operation="ensure_existing",
                     user=user,
