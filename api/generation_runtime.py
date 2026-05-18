@@ -534,7 +534,7 @@ async def schedule_generation_job_if_needed(
     active_tasks: set[str],
     enable_in_process_generation: bool,
     stale_job_checker: Callable[..., bool],
-    stale_after_seconds: int = 90,
+    stale_after_seconds: int,
 ) -> dict[str, Any]:
     current_status = str(job.get("status") or "queued")
     if current_status not in {"queued", "running"}:
