@@ -1205,7 +1205,7 @@ def create_app(
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="generation job not found")
         is_admin = profile.role == "admin"
         if not is_admin and str(original["athlete_id"]) != profile.athlete_id:
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="not allowed")
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="generation job not found")
         if str(original.get("status") or "") != "failed":
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,

@@ -860,7 +860,7 @@ def test_retry_generation_job_rejects_non_owner_non_admin():
         headers={"Authorization": "Bearer other-token"},
     )
 
-    assert response.status_code == status.HTTP_403_FORBIDDEN
+    assert response.status_code == status.HTTP_404_NOT_FOUND
 
 
 def test_retry_generation_job_rejects_non_failed_status():
