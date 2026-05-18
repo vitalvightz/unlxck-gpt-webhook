@@ -1191,6 +1191,7 @@ def create_app(
 
     @app.post("/api/generation-jobs/{job_id}/retry", response_model=GenerationJobResponse, status_code=202)
     async def retry_generation_job(
+        request: Request,
         job_id: str,
         background_tasks: BackgroundTasks,
         profile: ProfileRecord = Depends(require_profile),
