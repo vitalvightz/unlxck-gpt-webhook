@@ -160,7 +160,7 @@ def _is_stale_job(job: dict[str, Any], *, stale_after_seconds: int = 90) -> bool
 
 def _generation_job_stale_after_seconds() -> int:
     fallback_seconds = 1400
-    raw_value = (os.getenv("APP_GENERATION_JOB_STALE_AFTER_SECONDS", str(fallback_seconds)) or "").strip()
+    raw_value = os.getenv("APP_GENERATION_JOB_STALE_AFTER_SECONDS", str(fallback_seconds)).strip()
     try:
         parsed = int(raw_value)
     except ValueError:
