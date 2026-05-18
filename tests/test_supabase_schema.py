@@ -57,9 +57,7 @@ def test_schema_guards_against_self_role_escalation():
 def test_schema_has_update_delete_rls_policies():
     schema = _read_schema()
 
-    assert "plans_self_or_admin_update" in schema
-    assert "plans_self_or_admin_delete" in schema
-    assert "intakes_self_or_admin_delete" in schema
-    assert "generation_jobs_self_or_admin_delete" in schema
-    assert "for update using (athlete_id = auth.uid() or public.is_admin())" in schema
-    assert "for delete using (athlete_id = auth.uid() or public.is_admin())" in schema
+    assert re.search(r'create policy "plans_self_or_admin_update" on public\.plans\s+for update\s+using\s+\(athlete_id = auth\.uid\(\) or public\.is_admin\(\)\)\s+with check\s+\(athlete_id = auth\.uid\(\) or public\.is_admin\(\)\);', schema, re.IGNORECASE)
+    assert re.search(r'create policy "plans_self_or_admin_delete" on public\.plans\s+for delete\s+using\s+\(athlete_id = auth\.uid\(\) or public\.is_admin\(\)\);', schema, re.IGNORECASE)
+    assert re.search(r'create policy "intakes_self_or_admin_delete" on public\.athlete_intakes\s+for delete\s+using\s+\(athlete_id = auth\.uid\(\) or public\.is_admin\(\)\);', schema, re.IGNORECASE)
+    assert re.search(r'create policy "generation_jobs_self_or_admin_delete" on public\.generation_jobs\s+for delete\s+using\s+\(athlete_id = auth\.uid\(\) or public\.is_admin\(\)\);', schema, re.IGNORECASE)
