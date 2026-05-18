@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition, type FormEvent } from "react";
 
@@ -22,6 +23,14 @@ export default function ResetPasswordPage() {
     // Supabase detects the recovery token from the URL hash and fires an
     // AUTH_STATE_CHANGE with event "PASSWORD_RECOVERY". We just need to confirm
     // the client has parsed the session before allowing the form to submit.
+    const hashParams = new URLSearchParams(window.location.hash.slice(1));
+    const hashError = hashParams.get("error_description") || hashParams.get("error");
+
+    if (hashError) {
+      setError("This reset link is expired or invalid. Please request a new one.");
+      return;
+    }
+
     let client;
     try {
       client = getSupabaseBrowserClient();
@@ -30,8 +39,14 @@ export default function ResetPasswordPage() {
       return;
     }
 
+    const timeoutId = window.setTimeout(() => {
+      setError("This reset link is expired or invalid. Please request a new one.");
+    }, 8000);
+
     const { data: { subscription } } = client.auth.onAuthStateChange((event) => {
       if (event === "PASSWORD_RECOVERY") {
+        window.clearTimeout(timeoutId);
+        setError(null);
         setIsReady(true);
       }
     });
@@ -40,11 +55,16 @@ export default function ResetPasswordPage() {
     // URL hash before this component mounts.
     client.auth.getSession().then(({ data: { session } }) => {
       if (session) {
+        window.clearTimeout(timeoutId);
+        setError(null);
         setIsReady(true);
       }
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      window.clearTimeout(timeoutId);
+      subscription.unsubscribe();
+    };
   }, []);
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -117,7 +137,14 @@ export default function ResetPasswordPage() {
           </div>
         ) : (
           <>
-            {error ? <div className="error-banner">{error}</div> : null}
+            {error ? (
+              <div className="auth-form-grid">
+                <div className="error-banner">{error}</div>
+                <Link href="/forgot-password" className="cta cta-secondary">
+                  Request a new reset link
+                </Link>
+              </div>
+            ) : null}
 
             {!isReady && !error ? (
               <p className="muted">Verifying your reset link...</p>
