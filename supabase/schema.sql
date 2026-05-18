@@ -52,6 +52,22 @@ create table if not exists public.profiles (
   updated_at timestamptz not null default timezone('utc', now())
 );
 
+
+create or replace function public.prevent_self_role_escalation()
+returns trigger
+language plpgsql
+as $$
+begin
+  if new.role is distinct from old.role
+    and auth.role() <> 'service_role'
+    and not public.is_admin() then
+    raise exception 'Only admins can change profile roles.';
+  end if;
+
+  return new;
+end;
+$$;
+
 create table if not exists public.athlete_intakes (
   id uuid primary key default gen_random_uuid(),
   athlete_id uuid not null references public.profiles(id) on delete cascade,
@@ -147,6 +163,13 @@ create trigger profiles_set_updated_at
 before update on public.profiles
 for each row
 execute function public.set_updated_at();
+
+
+drop trigger if exists profiles_prevent_self_role_escalation on public.profiles;
+create trigger profiles_prevent_self_role_escalation
+before update on public.profiles
+for each row
+execute function public.prevent_self_role_escalation();
 
 drop trigger if exists generation_jobs_set_updated_at on public.generation_jobs;
 create trigger generation_jobs_set_updated_at
