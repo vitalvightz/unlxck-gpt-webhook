@@ -585,6 +585,53 @@ def test_generate_plan_rate_limits_repeat_requests():
     assert second.json()["detail"]["retry_after_seconds"] == 60
 
 
+def test_generate_plan_daily_limit_allows_request_below_limit(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setenv("APP_PLAN_GENERATE_DAILY_LIMIT_PER_USER", "2")
+    client, _, _ = _build_client()
+    response = client.post(
+        "/api/plans/generate",
+        headers={"Authorization": "Bearer athlete-token", "X-Client-Request-Id": "daily-1"},
+        json=_build_request().model_dump(mode="json"),
+    )
+    assert response.status_code == 202
+
+
+def test_generate_plan_daily_limit_blocks_request_at_limit(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setenv("APP_PLAN_GENERATE_DAILY_LIMIT_PER_USER", "1")
+    client, _, _ = _build_client()
+    first = client.post(
+        "/api/plans/generate",
+        headers={"Authorization": "Bearer athlete-token", "X-Client-Request-Id": "daily-first"},
+        json=_build_request().model_dump(mode="json"),
+    )
+    second = client.post(
+        "/api/plans/generate",
+        headers={"Authorization": "Bearer athlete-token", "X-Client-Request-Id": "daily-second"},
+        json=_build_request().model_dump(mode="json"),
+    )
+    assert first.status_code == 202
+    assert second.status_code == status.HTTP_429_TOO_MANY_REQUESTS
+    assert second.json()["detail"] == "Daily generation limit reached. Try again tomorrow."
+
+
+def test_generate_plan_daily_limit_idempotent_retry_same_client_request_id(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setenv("APP_PLAN_GENERATE_DAILY_LIMIT_PER_USER", "1")
+    client, _, _ = _build_client()
+    first = client.post(
+        "/api/plans/generate",
+        headers={"Authorization": "Bearer athlete-token", "X-Client-Request-Id": "idem-1"},
+        json=_build_request().model_dump(mode="json"),
+    )
+    second = client.post(
+        "/api/plans/generate",
+        headers={"Authorization": "Bearer athlete-token", "X-Client-Request-Id": "idem-1"},
+        json=_build_request().model_dump(mode="json"),
+    )
+    assert first.status_code == 202
+    assert second.status_code == 202
+    assert second.json()["job_id"] == first.json()["job_id"]
+
+
 def test_generate_plan_essential_writes_happen_synchronously():
     client, store, _ = _build_client()
 

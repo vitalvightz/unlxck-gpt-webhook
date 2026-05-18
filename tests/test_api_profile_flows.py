@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import date, timedelta
+import pytest
 
 from api.models import ProfileUpdateRequest
 from support import _build_client, _build_request
@@ -96,6 +97,38 @@ def test_admin_can_generate_new_plan_from_latest_intake():
 
     assert response.status_code == 202
     assert response.json()["athlete_id"] == "athlete-1"
+
+
+def test_admin_generation_does_not_consume_self_serve_daily_limit(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setenv("APP_PLAN_GENERATE_DAILY_LIMIT_PER_USER", "1")
+    client, _, _ = _build_client()
+
+    first = client.post(
+        "/api/plans/generate",
+        headers={"Authorization": "Bearer athlete-token", "X-Client-Request-Id": "self-serve-1"},
+        json=_build_request().model_dump(mode="json"),
+    )
+    assert first.status_code == 202
+
+    admin = client.post(
+        "/api/admin/athletes/athlete-1/plans/generate-from-latest-intake",
+        headers={"Authorization": "Bearer admin-token", "X-Client-Request-Id": "admin-1"},
+    )
+    assert admin.status_code == 202
+
+    retry_same = client.post(
+        "/api/plans/generate",
+        headers={"Authorization": "Bearer athlete-token", "X-Client-Request-Id": "self-serve-1"},
+        json=_build_request().model_dump(mode="json"),
+    )
+    assert retry_same.status_code == 202
+
+    second_new = client.post(
+        "/api/plans/generate",
+        headers={"Authorization": "Bearer athlete-token", "X-Client-Request-Id": "self-serve-2"},
+        json=_build_request().model_dump(mode="json"),
+    )
+    assert second_new.status_code == 429
 
 
 def test_admin_generate_from_latest_intake_requires_existing_intake():
