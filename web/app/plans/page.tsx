@@ -750,8 +750,9 @@ function IntakeCard({
   me: MeResponse | null;
 }) {
   const profileLines = summarizeProfile(me);
+  const intake = getIntakeSource(me);
   const intakeLines = summarizeIntake(me);
-  const hasIntake = intakeLines.length > 0;
+  const hasIntake = Boolean(intake);
 
   return (
     <article className="list-card plans-dashboard-card">
@@ -807,6 +808,7 @@ export default function PlansPage() {
     return [...sourcePlans].sort((left, right) => new Date(right.created_at).getTime() - new Date(left.created_at).getTime());
   }, [localPlans, plans]);
   const latestPlan = getLatestPlan(visiblePlans);
+  const intakeSource = getIntakeSource(me);
   const archivedPlans = getArchivedPlans(visiblePlans);
   const archiveCountLabel = archivedPlans.length === 1 ? "1 plan" : `${archivedPlans.length} plans`;
   const hasPlans = visiblePlans.length > 0;
@@ -878,7 +880,7 @@ export default function PlansPage() {
           <div className="plans-dashboard-stack athlete-motion-slot athlete-motion-main">
             <LatestPlanCard
               plan={latestPlan}
-              intake={me?.latest_intake ?? null}
+              intake={intakeSource}
               accessToken={session?.access_token ?? null}
               onPlanDeleted={handlePlanDeleted}
               onPlanRenamed={handlePlanRenamed}
