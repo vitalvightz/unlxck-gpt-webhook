@@ -214,7 +214,7 @@ select:focus-visible {
 }
 
 .sidebar-drawer-close {
-  display: none;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
   width: 44px;
