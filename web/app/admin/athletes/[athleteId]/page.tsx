@@ -55,6 +55,7 @@ export default function AdminAthletePage() {
   const [isReloading, setIsReloading] = useState(false);
 
   const handleRetry = useCallback(() => {
+    setLoadError(null);
     setReloadKey((value) => value + 1);
   }, []);
   const latestIntakeFocusValidation = athlete?.latest_intake
@@ -166,10 +167,10 @@ export default function AdminAthletePage() {
 
   return (
     <RequireAuth adminOnly>
-      {error && !athlete ? (
+      {loadError && !athlete ? (
         <section className="panel loading-card">
           <p className="kicker">Athlete Profile</p>
-          <div className="error-banner" role="alert">{error}</div>
+          <div className="error-banner" role="alert">{loadError}</div>
           <div className="plan-summary-actions">
             <Link href="/admin" className="ghost-button">
               Back to admin
@@ -208,21 +209,21 @@ export default function AdminAthletePage() {
             </button>
           </div>
           {controller.statusMessage ? <p className="muted">{controller.statusMessage}</p> : null}
-          {error ? (
+          {loadError ? (
             <div className="error-banner" role="alert">
-              <span>{error}</span>
+              <span>{loadError}</span>
               <button
                 type="button"
                 className="ghost-button"
-                onClick={() => {
-                  setError(null);
-                  handleRetry();
-                }}
+                onClick={handleRetry}
                 disabled={isReloading}
               >
                 {isReloading ? "Retrying..." : "Try again"}
               </button>
             </div>
+          ) : null}
+          {error ? (
+            <div className="error-banner" role="alert">{error}</div>
           ) : null}
           {latestIntakeFocusError ? <p className="error-text">{latestIntakeFocusError}</p> : null}
           {!athlete.latest_intake ? (
