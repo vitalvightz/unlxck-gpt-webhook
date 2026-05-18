@@ -3830,6 +3830,17 @@ button.mobile-step-rail-item {
   gap: 12px;
 }
 
+.settings-coming-soon {
+  margin: 0;
+  max-width: 760px;
+  padding: 12px 14px;
+  border-left: 2px solid rgba(181, 18, 43, 0.42);
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 1.5;
+  background: rgba(255, 255, 255, 0.02);
+}
+
 .settings-segmented-control {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

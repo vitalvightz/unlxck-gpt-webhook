@@ -64,11 +64,11 @@ const ATHLETE_SETTINGS_SECTIONS: SettingsSection[] = [
 ];
 
 const ADMIN_SETTINGS_SECTIONS: SettingsSection[] = [
+  { id: "admin-account", label: "Admin Account" },
   { id: "organisation", label: "Organisation" },
   { id: "coaches-roles", label: "Coaches & Roles" },
   { id: "programme-controls", label: "Programme Controls" },
-  { id: "templates", label: "Templates" },
-  { id: "billing", label: "Billing" },
+  { id: "templates-billing", label: "Templates & Billing" },
 ];
 
 const APPEARANCE_OPTIONS: Array<{
@@ -332,7 +332,7 @@ export default function SettingsPage() {
   const trainingProfileSummary = useMemo(
     () => [
       { label: "Current sport/style", value: summarizeStyle(hydratedProfile) },
-      { label: "Current goal", value: summarizeGoal(hydratedProfile) },
+      { label: "Current focus", value: summarizeGoal(hydratedProfile) },
       {
         label: "Equipment access",
         value: formatList(getOptionLabels(EQUIPMENT_ACCESS_OPTIONS, hydratedProfile.equipment_access), "Not set", 4),
@@ -857,8 +857,8 @@ export default function SettingsPage() {
               <p className="kicker">Training Profile</p>
               <h2 className="form-section-title">Current athlete context</h2>
             </div>
-            <Link href="/onboarding" className="cta">
-              Edit Training Profile
+            <Link href="/onboarding?mode=edit" className="cta">
+              Update Training Profile
             </Link>
           </div>
           <div className="settings-profile-summary-grid">
@@ -900,14 +900,7 @@ export default function SettingsPage() {
             <SettingsSummaryItem label="Payment method" value="Not connected" />
             <SettingsSummaryItem label="Invoices" value="No invoices yet" />
           </div>
-          <div className="plan-summary-actions settings-action-row">
-            <button type="button" className="ghost-button" disabled>
-              Upgrade
-            </button>
-            <button type="button" className="ghost-button danger-button" disabled>
-              Cancel plan
-            </button>
-          </div>
+          <p className="settings-coming-soon">Billing controls will be available after subscriptions launch.</p>
         </article>
 
         <article id="privacy" className="step-card settings-card">
@@ -921,16 +914,11 @@ export default function SettingsPage() {
             <SettingsSummaryItem label="Detected time zone" value={detectedTimeZone} />
           </div>
           <div className="plan-summary-actions settings-action-row">
-            <button type="button" className="ghost-button" disabled>
-              Download data
-            </button>
-            <button type="button" className="ghost-button danger-button" disabled>
-              Delete account
-            </button>
             <button type="button" className="ghost-button" onClick={() => void signOut()}>
               Sign out
             </button>
           </div>
+          <p className="settings-coming-soon">Data export and account deletion controls will be available from Privacy after launch.</p>
         </article>
       </div>
     );
@@ -939,31 +927,27 @@ export default function SettingsPage() {
   function renderAdminSettings() {
     return (
       <div className="settings-stack athlete-motion-slot athlete-motion-main">
+        <article id="admin-account" className="step-card settings-card">
+          <div className="form-section-header">
+            <p className="kicker">Admin Account</p>
+            <h2 className="form-section-title">Profile and sign-in</h2>
+          </div>
+          {renderAvatarEditor()}
+          {renderAccountControls()}
+        </article>
+
         <article id="organisation" className="step-card settings-card">
           <div className="form-section-header">
             <p className="kicker">Organisation</p>
-            <h2 className="form-section-title">Branding and contact</h2>
+            <h2 className="form-section-title">Branding and contact defaults</h2>
           </div>
-          {renderAvatarEditor()}
-          <div className="form-grid settings-identity-grid">
-            <div className="field">
-              <label htmlFor="settingsOrgName">Brand name</label>
-              <input
-                id="settingsOrgName"
-                value={fullName}
-                onChange={(event) => setFullName(event.target.value)}
-                placeholder="Organisation name"
-              />
-            </div>
-            <div className="field">
-              <label>Contact email</label>
-              <div className="readonly-field">{me?.profile.email || "Unavailable"}</div>
-            </div>
-            <div className="field">
-              <label>PDF branding</label>
-              <div className="readonly-field">Logo and brand name</div>
-            </div>
+          <div className="settings-profile-summary-grid">
+            <SettingsSummaryItem label="Brand name" value="Not connected" />
+            <SettingsSummaryItem label="Logo" value="Not connected" />
+            <SettingsSummaryItem label="Contact email" value="Not connected" />
+            <SettingsSummaryItem label="PDF branding" value="Not connected" />
           </div>
+          <p className="settings-coming-soon">Organisation settings will appear here once backend organisation records are connected.</p>
         </article>
 
         <article id="coaches-roles" className="step-card settings-card">
@@ -976,21 +960,15 @@ export default function SettingsPage() {
             <SettingsSummaryItem label="Role" value="Admin" />
             <SettingsSummaryItem label="Coach seats" value="Not configured" />
           </div>
-          <div className="plan-summary-actions settings-action-row">
-            <button type="button" className="ghost-button" disabled>
-              Add coach
-            </button>
-            <button type="button" className="ghost-button danger-button" disabled>
-              Remove coach
-            </button>
-          </div>
+          <p className="settings-coming-soon">Coach invites and role permissions will be available after team management is connected.</p>
         </article>
 
         <article id="programme-controls" className="step-card settings-card">
           <div className="form-section-header">
-            <p className="kicker">Programme Controls</p>
-            <h2 className="form-section-title">Plan generation defaults</h2>
+            <p className="kicker">Programme Defaults</p>
+            <h2 className="form-section-title">Coming soon</h2>
           </div>
+          <p className="settings-coming-soon">These controls are saved as local preview preferences only. They do not yet change backend plan generation.</p>
           <div className="settings-control-grid">
             <div className="settings-subsection">
               <div className="settings-subsection-header">
@@ -1057,10 +1035,10 @@ export default function SettingsPage() {
           </div>
         </article>
 
-        <article id="templates" className="step-card settings-card">
+        <article id="templates-billing" className="step-card settings-card">
           <div className="form-section-header">
-            <p className="kicker">Templates</p>
-            <h2 className="form-section-title">Reusable copy and layouts</h2>
+            <p className="kicker">Templates & Billing</p>
+            <h2 className="form-section-title">Reusable copy, layouts, and payments</h2>
           </div>
           <div className="form-grid settings-template-grid">
             <div className="field">
@@ -1099,29 +1077,18 @@ export default function SettingsPage() {
               />
             </div>
           </div>
-        </article>
-
-        <article id="billing" className="step-card settings-card">
-          <div className="form-section-header">
-            <p className="kicker">Billing</p>
-            <h2 className="form-section-title">Plans and payments</h2>
-          </div>
+          <p className="settings-coming-soon">Template changes are local drafts until template storage is connected.</p>
           <div className="settings-profile-summary-grid">
             <SettingsSummaryItem label="Plan" value="Admin beta access" />
             <SettingsSummaryItem label="Active users" value="Not connected" />
             <SettingsSummaryItem label="Failed payments" value="None" />
           </div>
           <div className="plan-summary-actions settings-action-row">
-            <button type="button" className="ghost-button" disabled>
-              Manage plans
-            </button>
-            <button type="button" className="ghost-button" disabled>
-              View invoices
-            </button>
             <button type="button" className="ghost-button" onClick={() => void signOut()}>
               Sign out
             </button>
           </div>
+          <p className="settings-coming-soon">Billing controls will be available after subscriptions launch.</p>
         </article>
       </div>
     );
@@ -1135,7 +1102,7 @@ export default function SettingsPage() {
             <p className="kicker">Settings</p>
             <h1>{isAdmin ? "Admin settings" : "Athlete settings"}</h1>
             <p className="muted">
-              {isAdmin ? "Organisation controls, coach access, templates, and billing." : "Account, access, profile updates, notifications, subscription, and privacy."}
+              {isAdmin ? "Account access, organisation setup, coach access, programme defaults, templates, and billing." : "Account, access, profile updates, notifications, subscription, and privacy."}
             </p>
           </div>
           <div className="status-card athlete-motion-slot athlete-motion-status">
@@ -1154,13 +1121,13 @@ export default function SettingsPage() {
 
         <div className="form-actions settings-mobile-save athlete-motion-slot athlete-motion-rail">
           <button type="button" className="cta" onClick={handleSaveAccount} disabled={isPending}>
-            {isPending ? "Saving..." : isAdmin ? "Save organisation" : "Save account"}
+            {isPending ? "Saving..." : "Save account"}
           </button>
         </div>
 
         <div className="form-actions settings-desktop-save athlete-motion-slot athlete-motion-rail">
           <button type="button" className="cta" onClick={handleSaveAccount} disabled={isPending}>
-            {isPending ? "Saving..." : isAdmin ? "Save organisation" : "Save account"}
+            {isPending ? "Saving..." : "Save account"}
           </button>
         </div>
       </section>
