@@ -52,3 +52,12 @@ def test_schema_guards_against_self_role_escalation():
     assert "new.role is distinct from old.role" in function_section
     assert "before insert or update on public.profiles" in schema
     assert "Only admins can change profile roles." in schema
+
+
+def test_schema_has_update_delete_rls_policies():
+    schema = _read_schema()
+
+    assert re.search(r'create policy "plans_self_or_admin_update" on public\.plans\s+for update\s+using\s+\(athlete_id = auth\.uid\(\) or public\.is_admin\(\)\)\s+with check\s+\(athlete_id = auth\.uid\(\) or public\.is_admin\(\)\);', schema, re.IGNORECASE)
+    assert re.search(r'create policy "plans_self_or_admin_delete" on public\.plans\s+for delete\s+using\s+\(athlete_id = auth\.uid\(\) or public\.is_admin\(\)\);', schema, re.IGNORECASE)
+    assert re.search(r'create policy "intakes_self_or_admin_delete" on public\.athlete_intakes\s+for delete\s+using\s+\(athlete_id = auth\.uid\(\) or public\.is_admin\(\)\);', schema, re.IGNORECASE)
+    assert re.search(r'create policy "generation_jobs_self_or_admin_delete" on public\.generation_jobs\s+for delete\s+using\s+\(athlete_id = auth\.uid\(\) or public\.is_admin\(\)\);', schema, re.IGNORECASE)

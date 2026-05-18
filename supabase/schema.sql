@@ -253,6 +253,10 @@ create policy "intakes_self_or_admin_update" on public.athlete_intakes
 for update using (athlete_id = auth.uid() or public.is_admin())
 with check (athlete_id = auth.uid() or public.is_admin());
 
+drop policy if exists "intakes_self_or_admin_delete" on public.athlete_intakes;
+create policy "intakes_self_or_admin_delete" on public.athlete_intakes
+for delete using (athlete_id = auth.uid() or public.is_admin());
+
 drop policy if exists "plans_self_or_admin_select" on public.plans;
 create policy "plans_self_or_admin_select" on public.plans
 for select using (athlete_id = auth.uid() or public.is_admin());
@@ -260,6 +264,15 @@ for select using (athlete_id = auth.uid() or public.is_admin());
 drop policy if exists "plans_self_or_admin_insert" on public.plans;
 create policy "plans_self_or_admin_insert" on public.plans
 for insert with check (athlete_id = auth.uid() or public.is_admin());
+
+drop policy if exists "plans_self_or_admin_update" on public.plans;
+create policy "plans_self_or_admin_update" on public.plans
+for update using (athlete_id = auth.uid() or public.is_admin())
+with check (athlete_id = auth.uid() or public.is_admin());
+
+drop policy if exists "plans_self_or_admin_delete" on public.plans;
+create policy "plans_self_or_admin_delete" on public.plans
+for delete using (athlete_id = auth.uid() or public.is_admin());
 
 drop policy if exists "generation_jobs_self_or_admin_select" on public.generation_jobs;
 create policy "generation_jobs_self_or_admin_select" on public.generation_jobs
@@ -273,3 +286,8 @@ drop policy if exists "generation_jobs_self_or_admin_update" on public.generatio
 create policy "generation_jobs_self_or_admin_update" on public.generation_jobs
 for update using (athlete_id = auth.uid() or public.is_admin())
 with check (athlete_id = auth.uid() or public.is_admin());
+
+
+drop policy if exists "generation_jobs_self_or_admin_delete" on public.generation_jobs;
+create policy "generation_jobs_self_or_admin_delete" on public.generation_jobs
+for delete using (athlete_id = auth.uid() or public.is_admin());
