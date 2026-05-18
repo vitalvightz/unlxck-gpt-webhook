@@ -56,6 +56,7 @@ export default function ResetPasswordPage() {
     client.auth.getSession().then(({ data: { session } }) => {
       if (session) {
         window.clearTimeout(timeoutId);
+        setError(null);
         setIsReady(true);
       }
     });
