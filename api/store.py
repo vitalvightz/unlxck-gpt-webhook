@@ -901,7 +901,7 @@ class SupabaseAppStore:
         sources: set[str] | None = None,
     ) -> int:
         try:
-            query = self.client.table("generation_jobs").select("id", count="exact").eq("athlete_id", athlete_id).gte("created_at", since_timestamp)
+            query = self.client.table("generation_jobs").select("id", count="exact").eq("athlete_id", athlete_id).gte("created_at", since_timestamp).limit(0)
             if sources:
                 query = query.in_("source", sorted(sources))
             response = self._run_with_transient_retry(
