@@ -19,6 +19,7 @@ from .models import (
     ProfileUpdateRequest,
     USERNAME_CHANGE_WINDOW_DAYS,
     USERNAME_MAX_CHANGES_PER_WINDOW,
+    validate_username,
 )
 
 logger = logging.getLogger(__name__)
