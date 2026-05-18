@@ -3679,36 +3679,58 @@ button.mobile-step-rail-item {
   z-index: 2;
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
-  padding: 10px 12px;
-  border-radius: 999px;
-  border: 1px solid var(--border-default);
-  background: rgba(17, 19, 23, 0.78);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+  border-radius: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02)),
+    rgba(14, 16, 20, 0.84);
+  box-shadow: 0 18px 38px rgba(0, 0, 0, 0.22);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+
+.settings-section-nav::before {
+  content: "Sections";
+  flex: 0 0 auto;
+  padding: 0 8px 0 2px;
+  font-family: var(--font-mono), monospace;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  line-height: 1;
+  text-transform: uppercase;
+  color: var(--text-muted);
 }
 
 .settings-section-nav-link {
   display: inline-flex;
   align-items: center;
-  padding: 6px 14px;
-  border-radius: 999px;
-  border: 1px solid transparent;
+  justify-content: center;
+  min-height: 36px;
+  padding: 8px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  background: rgba(255, 255, 255, 0.03);
   font-family: var(--font-mono), monospace;
   font-size: 11px;
-  letter-spacing: 0.12em;
+  font-weight: 700;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--text-secondary);
   text-decoration: none;
-  transition: color 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+  transition: color 0.15s ease, border-color 0.15s ease, background 0.15s ease, transform 0.15s ease;
 }
 
 .settings-section-nav-link:hover,
 .settings-section-nav-link:focus-visible {
   color: var(--text-primary);
   border-color: rgba(181, 18, 43, 0.42);
-  background: rgba(181, 18, 43, 0.08);
+  background: rgba(181, 18, 43, 0.14);
   outline: none;
+  transform: translateY(-1px);
 }
 
 .settings-stack {
@@ -3928,14 +3950,33 @@ button.mobile-step-rail-item {
 
 @media (max-width: 720px) {
   .settings-section-nav {
-    top: 8px;
-    padding: 8px 10px;
+    position: static;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    padding: 12px;
+    border-radius: 20px;
+    box-shadow: none;
+  }
+
+  .settings-section-nav::before {
+    grid-column: 1 / -1;
+    padding: 0 0 2px;
   }
 
   .settings-section-nav-link {
-    padding: 6px 10px;
-    font-size: 10px;
-    letter-spacing: 0.1em;
+    width: 100%;
+    min-height: 42px;
+    padding: 9px 10px;
+    font-size: 10.5px;
+    letter-spacing: 0.08em;
+    white-space: normal;
+    text-align: center;
+  }
+
+  .settings-section-nav-link:hover,
+  .settings-section-nav-link:focus-visible {
+    transform: none;
   }
 
   .settings-subsection {
@@ -8761,6 +8802,31 @@ html[data-theme="light"] .settings-nav a:hover,
 html[data-theme="light"] .settings-nav a:focus-visible {
   border-color: rgba(163, 21, 45, 0.18);
   background: rgba(163, 21, 45, 0.07);
+  color: var(--brand-red);
+}
+
+html[data-theme="light"] .settings-section-nav {
+  border-color: rgba(88, 62, 58, 0.14);
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(255, 247, 241, 0.74)),
+    rgba(255, 251, 247, 0.92);
+  box-shadow: 0 18px 36px rgba(88, 56, 48, 0.12);
+}
+
+html[data-theme="light"] .settings-section-nav::before {
+  color: #7a655f;
+}
+
+html[data-theme="light"] .settings-section-nav-link {
+  border-color: rgba(88, 62, 58, 0.12);
+  background: rgba(255, 255, 255, 0.58);
+  color: #574640;
+}
+
+html[data-theme="light"] .settings-section-nav-link:hover,
+html[data-theme="light"] .settings-section-nav-link:focus-visible {
+  border-color: rgba(163, 21, 45, 0.2);
+  background: rgba(163, 21, 45, 0.08);
   color: var(--brand-red);
 }
 
