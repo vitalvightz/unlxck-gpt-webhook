@@ -136,6 +136,24 @@ def test_ensure_profile_existing_user_returns_without_upsert():
     store.client.table.return_value.upsert.assert_not_called()
 
 
+def test_ensure_profile_existing_admin_is_not_auto_demoted_when_email_removed_from_env():
+    store = _make_store(admin_emails=set())
+    user = _user("former-admin@example.com")
+    existing = {
+        "id": user.user_id,
+        "email": user.email,
+        "role": "admin",
+        "full_name": user.full_name,
+    }
+    _configure_profile_reads(store, existing)
+
+    result = store.ensure_profile(user)
+
+    assert result["role"] == "admin"
+    store.client.table.return_value.update.assert_not_called()
+    store.client.table.return_value.upsert.assert_not_called()
+
+
 
 def test_ensure_profile_existing_athlete_is_promoted_to_admin_when_email_is_configured():
     store = _make_store(admin_emails={"promoted@example.com"})

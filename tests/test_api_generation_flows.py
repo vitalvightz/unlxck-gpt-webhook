@@ -58,8 +58,10 @@ def test_generate_plan_persists_validated_final_plan_and_history():
     assert stage2.calls[0]["stage2_handoff_text"] == "handoff"
 
 
-@pytest.mark.parametrize("status_value", ["queued", "completed", "review_required", "failed"])
-def test_get_generation_job_does_not_mutate_non_running_statuses(status_value: str):
+@pytest.mark.parametrize("status_value", ["completed", "review_required", "failed"])
+def test_get_generation_job_does_not_mutate_terminal_non_running_statuses(status_value: str):
+    # Queued jobs are intentionally schedulable when polled; stale recovery should
+    # leave terminal non-running statuses alone.
     client, store, _ = _build_client()
     created = store.create_or_get_generation_job(
         athlete_id="athlete-1",

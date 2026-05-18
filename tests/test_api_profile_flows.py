@@ -1,8 +1,9 @@
 from __future__ import annotations
 
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta, timezone
 import pytest
 
+from api.auth import AuthenticatedUser
 from api.models import ProfileUpdateRequest
 from support import _build_client, _build_request
 
@@ -400,3 +401,96 @@ def test_update_me_persists_profile_appearance_mode():
     assert response.status_code == 200
     assert response.json()["profile"]["appearance_mode"] == "light"
     assert store.profiles["athlete-1"]["appearance_mode"] == "light"
+
+
+def test_change_username_normalizes_to_lowercase_and_returns_rate_limit():
+    client, store, _ = _build_client()
+    client.get("/api/me", headers={"Authorization": "Bearer athlete-token"})
+
+    response = client.post(
+        "/api/me/username",
+        headers={"Authorization": "Bearer athlete-token"},
+        json={"username": "Ari.Fight"},
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["profile"]["username"] == "ari.fight"
+    assert store.profiles["athlete-1"]["username"] == "ari.fight"
+    assert body["username_rate_limit"]["max_changes_per_window"] == 4
+    assert body["username_rate_limit"]["window_days"] == 30
+    assert body["username_rate_limit"]["remaining"] == 3
+
+
+def test_change_username_rejects_invalid_username():
+    client, _, _ = _build_client()
+
+    response = client.post(
+        "/api/me/username",
+        headers={"Authorization": "Bearer athlete-token"},
+        json={"username": "bad username!"},
+    )
+
+    assert response.status_code == 422
+
+
+def test_change_username_rejects_duplicate_username():
+    client, store, _ = _build_client()
+    client.get("/api/me", headers={"Authorization": "Bearer athlete-token"})
+    other_profile = store.ensure_profile(
+        AuthenticatedUser(
+            user_id="athlete-2",
+            email="bo@example.com",
+            full_name="Bo Tran",
+            metadata={},
+        )
+    )
+    other_profile["username"] = "taken_name"
+
+    response = client.post(
+        "/api/me/username",
+        headers={"Authorization": "Bearer athlete-token"},
+        json={"username": "Taken_Name"},
+    )
+
+    assert response.status_code == 409
+    assert response.json()["detail"] == "That username is already taken. Pick another."
+
+
+def test_change_username_same_username_is_noop():
+    client, store, _ = _build_client()
+    client.post(
+        "/api/me/username",
+        headers={"Authorization": "Bearer athlete-token"},
+        json={"username": "same_name"},
+    )
+    original_history = list(store.profiles["athlete-1"]["username_change_history"])
+
+    response = client.post(
+        "/api/me/username",
+        headers={"Authorization": "Bearer athlete-token"},
+        json={"username": "Same_Name"},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["profile"]["username"] == "same_name"
+    assert store.profiles["athlete-1"]["username_change_history"] == original_history
+
+
+def test_change_username_rate_limits_after_four_changes_in_window():
+    client, store, _ = _build_client()
+    client.get("/api/me", headers={"Authorization": "Bearer athlete-token"})
+    now = datetime.now(timezone.utc)
+    store.profiles["athlete-1"]["username_change_history"] = [
+        (now - timedelta(days=offset)).isoformat()
+        for offset in (1, 2, 3, 4)
+    ]
+
+    response = client.post(
+        "/api/me/username",
+        headers={"Authorization": "Bearer athlete-token"},
+        json={"username": "fifth_name"},
+    )
+
+    assert response.status_code == 429
+    assert "You can change your username up to 4 times every 30 days." in response.json()["detail"]
