@@ -123,6 +123,9 @@ APP_CORS_ORIGINS=http://localhost:3000
 OPENAI_API_KEY=
 ```
 
+`UNLXCK_ADMIN_EMAILS` is the only admin role source of truth. Use a comma-separated list:
+`UNLXCK_ADMIN_EMAILS=email1@example.com,email2@example.com`.
+
 ### Frontend
 
 ```bash
