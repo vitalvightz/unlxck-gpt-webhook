@@ -3504,17 +3504,39 @@ button.mobile-step-rail-item {
 .settings-page {
   display: grid;
   gap: 24px;
+  width: min(100%, 1120px);
+  margin-inline: auto;
+  --settings-card-radius: 24px;
+  --settings-inner-radius: 18px;
+}
+
+.settings-page > .section-heading {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 360px);
+  align-items: stretch;
+  gap: 24px;
+}
+
+.settings-page > .section-heading > div:first-child {
+  max-width: none;
+  align-content: center;
+}
+
+.settings-page > .section-heading .status-card {
+  height: 100%;
+  padding: 20px;
+  border-radius: var(--settings-inner-radius);
 }
 
 .settings-section-nav {
   position: sticky;
   top: 12px;
   z-index: 2;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  padding: 10px 12px;
-  border-radius: 999px;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+  padding: 6px;
+  border-radius: var(--settings-inner-radius);
   border: 1px solid var(--border-default);
   background: rgba(17, 19, 23, 0.78);
   backdrop-filter: blur(12px);
@@ -3524,8 +3546,10 @@ button.mobile-step-rail-item {
 .settings-section-nav-link {
   display: inline-flex;
   align-items: center;
-  padding: 6px 14px;
-  border-radius: 999px;
+  justify-content: center;
+  min-height: 38px;
+  padding: 7px 12px;
+  border-radius: 13px;
   border: 1px solid transparent;
   font-family: var(--font-mono), monospace;
   font-size: 11px;
@@ -3552,7 +3576,14 @@ button.mobile-step-rail-item {
 .settings-card {
   scroll-margin-top: 96px;
   display: grid;
-  gap: 20px;
+  gap: 24px;
+  padding: 24px;
+  border-radius: var(--settings-card-radius);
+}
+
+.settings-card > .form-section-header {
+  max-width: 760px;
+  margin-bottom: 0;
 }
 
 .settings-identity-grid,
@@ -3562,9 +3593,9 @@ button.mobile-step-rail-item {
 
 .settings-subsection {
   display: grid;
-  gap: 14px;
-  padding: 18px 18px 20px;
-  border-radius: 18px;
+  gap: 16px;
+  padding: 20px;
+  border-radius: var(--settings-inner-radius);
   border: 1px solid var(--border-default);
   background: rgba(255, 255, 255, 0.02);
 }
@@ -3630,20 +3661,45 @@ button.mobile-step-rail-item {
   gap: 12px;
 }
 
-@media (max-width: 720px) {
+@media (max-width: 960px) {
+  .settings-page > .section-heading {
+    grid-template-columns: 1fr;
+  }
+
   .settings-section-nav {
-    top: 8px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 720px) {
+  .settings-page > .section-heading {
+    padding-top: 44px;
+  }
+
+  .settings-section-nav {
+    top: calc(var(--safe-area-top) + 8px);
+    border-radius: 18px;
     padding: 8px 10px;
+    box-shadow: 0 14px 28px rgba(0, 0, 0, 0.16);
   }
 
   .settings-section-nav-link {
-    padding: 6px 10px;
+    flex: 1 1 calc(50% - 8px);
+    justify-content: center;
+    min-height: 34px;
+    padding: 7px 10px;
     font-size: 10px;
     letter-spacing: 0.1em;
   }
 
   .settings-subsection {
     padding: 16px;
+  }
+
+  .settings-card {
+    gap: 20px;
+    padding: 18px;
+    border-radius: 22px;
   }
 }
 
@@ -5036,44 +5092,27 @@ button.mobile-step-rail-item {
 
 /* Horizontal row: circle on left, actions on right */
 .avatar-editor-row {
-  display: flex;
-  align-items: flex-start;
-  gap: 20px;
+  display: grid;
+  grid-template-columns: 112px minmax(0, 1fr);
+  align-items: center;
+  gap: 24px;
+  padding: 18px;
+  border-radius: var(--settings-inner-radius, 18px);
+  border: 1px solid var(--border-default);
+  background: rgba(255, 255, 255, 0.02);
 }
 
 /* Action stack to the right of the circle */
 .avatar-editor-actions {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
   min-width: 0;
-  padding-top: 6px;
+  padding-top: 0;
 }
 
 .avatar-upload-btn {
-  align-self: flex-start;
-}
-
-/* Horizontal row: circle on left, actions on right */
-.avatar-editor-row {
-  display: flex;
-  align-items: flex-start;
-  gap: 20px;
-}
-
-/* Action stack to the right of the circle */
-.avatar-editor-actions {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  flex: 1;
-  min-width: 0;
-  padding-top: 6px;
-}
-
-.avatar-upload-btn {
-  align-self: flex-start;
+  width: 100%;
 }
 
 /* Clickable trigger button — resets browser button styling */
@@ -5198,10 +5237,30 @@ button.mobile-step-rail-item {
 
 /* URL input field */
 .avatar-url-field {
-  max-width: 420px;
+  grid-column: 1 / -1;
+  max-width: none;
+}
+
+.avatar-editor-actions > .ghost-button,
+.avatar-editor-actions > .secondary-button {
+  width: 100%;
 }
 
 /* Keep legacy preview-img and preview-initials classes — used by avatar-upload-circle */
+@media (max-width: 720px) {
+  .avatar-editor-row {
+    grid-template-columns: 1fr;
+    justify-items: center;
+    gap: 18px;
+    padding: 16px;
+  }
+
+  .avatar-editor-actions {
+    width: 100%;
+    grid-template-columns: 1fr;
+  }
+}
+
 .avatar-preview-img {
   width: 100%;
   height: 100%;
@@ -8433,6 +8492,23 @@ html[data-theme="light"] .empty-state-card {
   background: rgba(255, 255, 255, 0.38);
 }
 
+html[data-theme="light"] .settings-section-nav {
+  border-color: rgba(88, 62, 58, 0.12);
+  background: rgba(255, 251, 247, 0.86);
+  box-shadow: 0 16px 30px rgba(88, 56, 48, 0.12);
+}
+
+html[data-theme="light"] .settings-section-nav-link {
+  color: #6a554f;
+}
+
+html[data-theme="light"] .settings-section-nav-link:hover,
+html[data-theme="light"] .settings-section-nav-link:focus-visible {
+  border-color: rgba(163, 21, 45, 0.18);
+  background: rgba(163, 21, 45, 0.07);
+  color: var(--brand-red);
+}
+
 html[data-theme="light"] .mobile-nav-toggle,
 html[data-theme="light"] .desktop-nav-toggle {
   background: rgba(255, 251, 247, 0.94);
@@ -9923,15 +9999,17 @@ html[data-app-surface="workspace"][data-theme="dark"] .desktop-nav-toggle {
 
   .settings-mobile-save {
     position: sticky;
-    top: calc(var(--safe-area-top) + 10px);
+    bottom: calc(var(--mobile-tab-bar-clearance) + 12px);
     z-index: 30;
     display: flex;
-    margin-bottom: 12px;
+    margin-top: 4px;
+    margin-bottom: 0;
     padding: 8px;
     border-radius: 14px;
     border: 1px solid var(--border-default);
     background: var(--bg-panel);
-    backdrop-filter: blur(10px);
+    box-shadow: 0 18px 36px rgba(0, 0, 0, 0.26);
+    backdrop-filter: blur(14px);
   }
 
   .settings-mobile-save .cta {

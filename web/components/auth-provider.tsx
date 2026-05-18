@@ -114,15 +114,33 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
       };
     }
 
-    client.auth.getSession().then(({ data }) => {
-      if (!active) {
-        return;
-      }
-      const nextSession = data.session ? { access_token: data.session.access_token } : null;
-      handledAccessTokenRef.current = nextSession?.access_token ?? null;
-      setSession(nextSession);
-      void loadMe(nextSession);
-    });
+    client.auth
+      .getSession()
+      .then(({ data }) => {
+        if (!active) {
+          return;
+        }
+        const nextSession = data.session ? { access_token: data.session.access_token } : null;
+        handledAccessTokenRef.current = nextSession?.access_token ?? null;
+        setSession(nextSession);
+        void loadMe(nextSession);
+      })
+      .catch(async () => {
+        if (!active) {
+          return;
+        }
+        try {
+          await client.auth.signOut();
+        } catch {
+          // Ignore cleanup failures after a stale browser auth session.
+        }
+        handledAccessTokenRef.current = null;
+        setAppearancePreview(null);
+        setSession(null);
+        setMe(null);
+        setIsMeHydrated(true);
+        setIsReady(true);
+      });
 
     const authState = client.auth.onAuthStateChange((_event, nextSession) => {
       if (!active) {
