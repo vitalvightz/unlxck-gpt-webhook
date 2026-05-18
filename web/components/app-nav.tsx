@@ -263,6 +263,7 @@ export function AppNav() {
   const initials = getInitials(displayName);
   const avatarUrl = (profile?.avatar_url && isSafeImageUrl(profile.avatar_url)) ? profile.avatar_url : null;
   const role = profile?.role ?? null;
+  const isAdminWorkspace = role === "admin" || isActive(pathname, "/admin");
 
   return (
     <>
@@ -388,7 +389,7 @@ export function AppNav() {
                     </div>
                   </Link>
                 ))}
-                {profile?.role === "admin" ? (
+                {isAdminWorkspace ? (
                   <>
                     <div className="sidebar-admin-divider" aria-hidden="true" />
                     <p className="sidebar-section-label">Control</p>
