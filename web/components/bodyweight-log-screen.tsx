@@ -6,6 +6,7 @@ import { NutritionBodyweightChart } from "@/components/nutrition-bodyweight-char
 import styles from "@/components/nutrition-pages.module.css";
 import { RequireAuth } from "@/components/auth-guard";
 import { useAppSession } from "@/components/auth-provider";
+import { EmptyState } from "@/components/empty-state";
 import { NutritionSubnav } from "@/components/nutrition-subnav";
 import { NutritionWorkspaceHeader } from "@/components/nutrition-workspace-header";
 import { getNutritionCurrent, updateNutritionCurrent } from "@/lib/api";
@@ -316,7 +317,7 @@ export function BodyweightLogScreen() {
               onRangeChange={setSelectedRange}
             />
 
-            <section className={styles.quickAddShell}>
+            <section className={styles.quickAddShell} id="bodyweight-quick-add">
               <div className={styles.moduleHeader}>
                 <div className={styles.moduleHeaderCopy}>
                   <p className="kicker">Quick add</p>
@@ -529,10 +530,13 @@ export function BodyweightLogScreen() {
                   })}
                 </div>
               ) : (
-                <div className={styles.historyEmpty}>
-                  <p className={styles.historyEmptyTitle}>No logged history yet</p>
-                  <p className={styles.softMeta}>The full structure is ready. Add the first weigh-in above and this list will switch into reverse-chronological history with inline edits and deletes.</p>
-                </div>
+                <EmptyState
+                  eyebrow="Weigh-in history"
+                  title="No weigh-ins logged yet."
+                  description="Use the Quick add form above to record your first weigh-in."
+                  example="Once you log an entry, this list switches into reverse-chronological history with weight delta, fasted state, and inline edits."
+                  primaryAction={{ label: "Log first weigh-in", href: "#bodyweight-quick-add" }}
+                />
               )}
             </section>
           </>

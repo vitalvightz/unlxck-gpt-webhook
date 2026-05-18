@@ -10466,3 +10466,45 @@ html[data-app-surface="workspace"][data-theme="dark"] .desktop-nav-toggle {
   display: grid;
   gap: 8px;
 }
+
+.empty-state-card {
+  display: grid;
+  gap: 14px;
+  border-style: dashed;
+}
+
+.empty-state-copy {
+  display: grid;
+  gap: 4px;
+}
+
+.empty-state-title {
+  margin: 0;
+  font-size: 18px;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+}
+
+.empty-state-description {
+  margin: 0;
+}
+
+.empty-state-example {
+  display: grid;
+  gap: 4px;
+  padding: 12px 14px;
+  border-radius: var(--radius-stat);
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.empty-state-example-body {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.empty-state-actions {
+  margin-top: 2px;
+}

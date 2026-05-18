@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { type ReactNode, useEffect, useState } from "react";
 
 import { useAppSession } from "@/components/auth-provider";
+import { EmptyState } from "@/components/empty-state";
 import { listPlans } from "@/lib/api";
 import {
   getOptionLabel,
@@ -455,10 +456,14 @@ export default function HomePage() {
                   </div>
                 </div>
               ) : (
-                <div className="support-panel">
-                  <p className="kicker">No plans yet</p>
-                  <p className="muted">Finish onboarding to create your first saved fight camp.</p>
-                </div>
+                <EmptyState
+                  eyebrow="Plan history"
+                  title="No camp plans yet."
+                  description="Complete onboarding to generate your first training plan."
+                  example="Your generated camps will list here with fight date, status, and a one-tap reopen."
+                  primaryAction={{ label: "Start Onboarding", href: "/onboarding" }}
+                  secondaryAction={{ label: "Use Quick Build", href: "/quick-build" }}
+                />
               )}
             </OverviewDisclosure>
           </div>
