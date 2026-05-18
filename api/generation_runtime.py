@@ -118,6 +118,23 @@ def is_stale_job(job: dict[str, Any], *, stale_after_seconds: int = 90) -> bool:
     return (datetime.now(timezone.utc) - last_progress_at).total_seconds() >= stale_after_seconds
 
 
+def recover_stale_running_job(
+    *,
+    job: dict[str, Any],
+    store: AppStore,
+    stale_after_seconds: int,
+    error_message: str = "Generation job stalled. Please try again.",
+) -> dict[str, Any]:
+    if not is_stale_job(job, stale_after_seconds=stale_after_seconds):
+        return job
+    return store.update_generation_job(
+        str(job["id"]),
+        status="failed",
+        error=error_message,
+        completed_at=utc_now_iso(),
+    )
+
+
 def parse_plan_request(value: Any) -> PlanRequest:
     if isinstance(value, PlanRequest):
         return value
@@ -516,19 +533,27 @@ async def schedule_generation_job_if_needed(
     stage2: Stage2Automator,
     active_tasks: set[str],
     enable_in_process_generation: bool,
-    is_stale_job: Callable[[dict[str, Any]], bool],
+    stale_job_checker: Callable[..., bool],
+    stale_after_seconds: int = 90,
 ) -> dict[str, Any]:
+    current_status = str(job.get("status") or "queued")
+    if current_status not in {"queued", "running"}:
+        return job
+    if current_status == "running":
+        if stale_job_checker(job, stale_after_seconds=stale_after_seconds):
+            job = await asyncio.to_thread(
+                recover_stale_running_job,
+                job=job,
+                store=store,
+                stale_after_seconds=stale_after_seconds,
+            )
+            return job
+        return job
     if not enable_in_process_generation:
         return job
 
     job_id = str(job["id"])
     if job_id in active_tasks:
-        return job
-
-    current_status = str(job.get("status") or "queued")
-    if current_status not in {"queued", "running"}:
-        return job
-    if current_status == "running" and not is_stale_job(job):
         return job
 
     try:
