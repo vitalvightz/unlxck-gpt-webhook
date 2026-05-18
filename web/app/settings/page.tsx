@@ -382,28 +382,22 @@ export default function SettingsPage() {
             <h1>Your account</h1>
             <p className="muted">Update identity, security, appearance, and athlete profile in one place.</p>
           </div>
-          <div className="status-card athlete-motion-slot athlete-motion-status">
-            <p className="status-label">{isAdmin ? "Admin profile view" : "Profile sync"}</p>
-            <h2 className="plan-summary-title">{isAdmin ? detectedTimeZone : "Saved to account"}</h2>
-            <p className="muted">
-              {isAdmin ? "Time zone stays visible here for support and debugging only." : `Last updated ${lastUpdatedLabel}`}
-            </p>
-          </div>
         </div>
 
-        <nav className="settings-section-nav" aria-label="Settings sections">
-          {SETTINGS_SECTIONS.map((section) => (
-            <a key={section.id} href={`#${section.id}`} className="settings-section-nav-link">
-              {section.label}
-            </a>
-          ))}
-        </nav>
+        <div className="settings-layout athlete-motion-slot athlete-motion-main">
+          <nav className="settings-nav" aria-label="Settings sections">
+            {SETTINGS_SECTIONS.map((section) => (
+              <a key={section.id} href={`#${section.id}`}>
+                {section.label}
+              </a>
+            ))}
+          </nav>
 
-        {message ? <div className="success-banner athlete-motion-slot athlete-motion-status">{message}</div> : null}
-        {error ? <div className="error-banner athlete-motion-slot athlete-motion-status">{error}</div> : null}
+          <div className="settings-main">
+            {message ? <div className="success-banner athlete-motion-slot athlete-motion-status">{message}</div> : null}
+            {error ? <div className="error-banner athlete-motion-slot athlete-motion-status">{error}</div> : null}
 
-        <div className="settings-stack athlete-motion-slot athlete-motion-main">
-          <article id="identity" className="step-card settings-card">
+            <article id="identity" className="step-card settings-card">
             <div className="form-section-header">
               <p className="kicker">Identity</p>
               <h2 className="form-section-title">Profile photo & display name</h2>
@@ -472,8 +466,8 @@ export default function SettingsPage() {
               </div>
             </div>
 
-            <div className="form-grid settings-identity-grid">
-              <div className="field">
+            <div className="settings-card-grid">
+              <div className="field settings-card-sm">
                 <label htmlFor="settingsFullName">Full name</label>
                 <input
                   id="settingsFullName"
@@ -483,7 +477,7 @@ export default function SettingsPage() {
                   onChange={(event) => setFullName(event.target.value)}
                 />
               </div>
-              <div className="field">
+              <div className="field settings-card-sm">
                 <label>Username</label>
                 <div className="readonly-field">{currentUsername ? `@${currentUsername}` : "Not set yet"}</div>
                 <p className="muted">Manage your username in the Account & Security section below.</p>
@@ -498,15 +492,22 @@ export default function SettingsPage() {
               <p className="muted">Your email is locked to the account. Username is rate-limited, password is changed securely.</p>
             </div>
 
-            <div className="form-grid settings-security-grid">
-              <div className="field">
+            <div className="settings-card-grid">
+              <div className="field settings-card-md">
                 <label>Account email</label>
                 <div className="readonly-field">{me?.profile.email || "Unavailable"}</div>
                 <p className="muted">Contact support to change the email on file.</p>
               </div>
-              <div className="field">
+              <div className="field settings-card-xs">
                 <label>Role</label>
                 <div className="readonly-field">{isAdmin ? "Admin" : "Athlete"}</div>
+              </div>
+              <div className="field settings-card-xs">
+                <label>{isAdmin ? "Admin status" : "Profile sync"}</label>
+                <div className="readonly-field">{isAdmin ? detectedTimeZone : "Saved to account"}</div>
+                <p className="muted">
+                  {isAdmin ? "Time zone captured for support context." : `Last updated ${lastUpdatedLabel}`}
+                </p>
               </div>
             </div>
 
@@ -585,8 +586,8 @@ export default function SettingsPage() {
                 </button>
               </div>
 
-              <div className="form-grid settings-password-grid">
-                <div className="field">
+              <div className="settings-card-grid">
+                <div className="field settings-card-sm">
                   <label htmlFor="settingsCurrentPassword">Current password</label>
                   <input
                     id="settingsCurrentPassword"
@@ -596,7 +597,7 @@ export default function SettingsPage() {
                     onChange={(event) => setCurrentPassword(event.target.value)}
                   />
                 </div>
-                <div className="field">
+                <div className="field settings-card-sm">
                   <label htmlFor="settingsNewPassword">New password</label>
                   <input
                     id="settingsNewPassword"
@@ -608,7 +609,7 @@ export default function SettingsPage() {
                   />
                   {newPassword ? <PasswordStrengthMeter strength={passwordStrength} /> : null}
                 </div>
-                <div className="field">
+                <div className="field settings-card-sm">
                   <label htmlFor="settingsConfirmPassword">Confirm new password</label>
                   <input
                     id="settingsConfirmPassword"
@@ -693,8 +694,8 @@ export default function SettingsPage() {
               <h2 className="form-section-title">Editable athlete details</h2>
               <p className="muted">Keep this clean so onboarding and plan generation start with the right context.</p>
             </div>
-            <div className="form-grid">
-              <div className="field">
+            <div className="settings-card-grid">
+              <div className="field settings-card-xs">
                 <label htmlFor="settingsTechnicalStyle">Technical style</label>
                 <CustomSelect
                   id="settingsTechnicalStyle"
@@ -705,7 +706,7 @@ export default function SettingsPage() {
                   onChange={(value) => setTechnicalStyle(value)}
                 />
               </div>
-              <div className="field">
+              <div className="field settings-card-xs">
                 <label htmlFor="settingsTacticalStyle">Tactical style</label>
                 <CustomSelect
                   id="settingsTacticalStyle"
@@ -716,7 +717,7 @@ export default function SettingsPage() {
                   onChange={(value) => setTacticalStyle(value)}
                 />
               </div>
-              <div className="field">
+              <div className="field settings-card-xs">
                 <label htmlFor="settingsStance">Stance</label>
                 <CustomSelect
                   id="settingsStance"
@@ -727,7 +728,7 @@ export default function SettingsPage() {
                   onChange={(value) => setStance(value)}
                 />
               </div>
-              <div className="field">
+              <div className="field settings-card-xs">
                 <label htmlFor="settingsProfessionalStatus">Professional status</label>
                 <CustomSelect
                   id="settingsProfessionalStatus"
@@ -738,7 +739,7 @@ export default function SettingsPage() {
                   onChange={(value) => setProfessionalStatus(value)}
                 />
               </div>
-              <div className="field">
+              <div className="field settings-card-xs">
                 <label htmlFor="settingsRecord">Record</label>
                 <input
                   id="settingsRecord"
@@ -750,7 +751,7 @@ export default function SettingsPage() {
                 {recordHasError ? <p className="error-text">Enter record as x-x or x-x-x.</p> : null}
               </div>
               {isAdmin ? (
-                <div className="field">
+                <div className="field settings-card-xs">
                   <label>Detected time zone</label>
                   <div className="readonly-field">{detectedTimeZone}</div>
                   <p className="muted">Captured from the device for admin context only.</p>
@@ -758,49 +759,12 @@ export default function SettingsPage() {
               ) : null}
             </div>
 
-            <aside className="support-panel settings-summary">
-              <div className="form-section-header">
-                <p className="kicker">Profile snapshot</p>
-                <h2 className="form-section-title">What the planner will use</h2>
-              </div>
-              <div className="plan-meta-grid">
-                <article className="plan-meta-item">
-                  <p className="plan-meta-label">Full name</p>
-                  <p className="plan-meta-value">{fullName || "Unspecified"}</p>
-                </article>
-                <article className="plan-meta-item">
-                  <p className="plan-meta-label">Username</p>
-                  <p className="plan-meta-value">{currentUsername ? `@${currentUsername}` : "Unspecified"}</p>
-                </article>
-                <article className="plan-meta-item">
-                  <p className="plan-meta-label">Technical style</p>
-                  <p className="plan-meta-value">{technicalStyleLabel}</p>
-                </article>
-                <article className="plan-meta-item">
-                  <p className="plan-meta-label">Tactical style</p>
-                  <p className="plan-meta-value">{tacticalStyleLabel}</p>
-                </article>
-                <article className="plan-meta-item">
-                  <p className="plan-meta-label">Stance</p>
-                  <p className="plan-meta-value">{stanceLabel}</p>
-                </article>
-                <article className="plan-meta-item">
-                  <p className="plan-meta-label">Status</p>
-                  <p className="plan-meta-value">{professionalStatusLabel}</p>
-                </article>
-                <article className="plan-meta-item">
-                  <p className="plan-meta-label">Record</p>
-                  <p className="plan-meta-value">{record || "Unspecified"}</p>
-                </article>
-                <article className="plan-meta-item">
-                  <p className="plan-meta-label">Appearance</p>
-                  <p className="plan-meta-value">{appearanceModeLabel}</p>
-                </article>
-              </div>
-            </aside>
+            <p className="settings-summary-line" aria-label="Profile snapshot">
+              {fullName || "—"} · {currentUsername ? `@${currentUsername}` : "Not set yet"} · {technicalStyleLabel} / {tacticalStyleLabel} · {stanceLabel} · {professionalStatusLabel} · {record || "—"} · {appearanceModeLabel}
+            </p>
           </article>
 
-          <article className="support-panel settings-footer-card">
+          <aside className="support-panel settings-utility-card">
             <div className="form-section-header">
               <p className="kicker">Nutrition</p>
               <h2 className="form-section-title">Weight and readiness</h2>
@@ -814,16 +778,17 @@ export default function SettingsPage() {
                 Sign out
               </button>
             </div>
-          </article>
+          </aside>
+
+            <div className="form-actions settings-desktop-save athlete-motion-slot athlete-motion-rail">
+              <button type="button" className="cta" onClick={handleSave} disabled={isPending}>
+                {isPending ? "Saving..." : "Save settings"}
+              </button>
+            </div>
+          </div>
         </div>
 
         <div className="form-actions settings-mobile-save athlete-motion-slot athlete-motion-rail">
-          <button type="button" className="cta" onClick={handleSave} disabled={isPending}>
-            {isPending ? "Saving..." : "Save settings"}
-          </button>
-        </div>
-
-        <div className="form-actions settings-desktop-save athlete-motion-slot athlete-motion-rail">
           <button type="button" className="cta" onClick={handleSave} disabled={isPending}>
             {isPending ? "Saving..." : "Save settings"}
           </button>
