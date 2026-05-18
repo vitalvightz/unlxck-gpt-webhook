@@ -1238,7 +1238,7 @@ def create_app(
                         detail="Daily generation limit reached. Try again tomorrow.",
                     )
 
-        retry_client_request_id = f"retry_{job_id}_{uuid.uuid4().hex}"
+        retry_client_request_id = (request.headers.get("X-Client-Request-Id") or "").strip() or f"retry_{job_id}_{uuid.uuid4().hex}"
         job = await asyncio.to_thread(
             store.create_or_get_generation_job,
             athlete_id=target_athlete_id,
