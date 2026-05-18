@@ -95,7 +95,7 @@ function getProfileSource(me: MeResponse | null): ProfileRecord | null {
 type DraftWithSource = PlanRequest & { plan_source?: string };
 
 function getSavedDetailedDraft(me: MeResponse | null): PlanRequest | null {
-  const draft = me?.profile.onboarding_draft as DraftWithSource | null | undefined;
+  const draft = me?.profile?.onboarding_draft as DraftWithSource | null | undefined;
   if (!draft) {
     return null;
   }
