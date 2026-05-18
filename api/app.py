@@ -9,7 +9,7 @@ import time
 import uuid
 from collections import deque
 from contextlib import asynccontextmanager
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from threading import Lock
 from typing import Any, Callable
 from urllib.parse import urlsplit
@@ -49,6 +49,10 @@ from .models import (
     PlanSummary,
     ProfileRecord,
     ProfileUpdateRequest,
+    USERNAME_CHANGE_WINDOW_DAYS,
+    USERNAME_MAX_CHANGES_PER_WINDOW,
+    UsernameChangeRequest,
+    UsernameRateLimitInfo,
     WeeklySchedule,
 )
 from .nutrition_workspace import (
@@ -163,6 +167,7 @@ def _build_me_response(profile: ProfileRecord, store: AppStore) -> MeResponse:
         latest_intake=latest_intake.get("intake") if latest_intake else None,
         latest_plan=latest_plan,
         plan_count=len(plans),
+        username_rate_limit=_username_rate_limit_info(profile.username_change_history),
     )
 
 
@@ -355,9 +360,14 @@ def _dict_or_none(value: Any) -> dict[str, Any] | None:
 
 
 def _map_profile_row(row: dict[str, Any]) -> ProfileRecord:
+    raw_username = row.get("username")
+    history_raw = row.get("username_change_history") or []
+    username_history: list[str] = [str(entry) for entry in history_raw if entry]
     return ProfileRecord(
         athlete_id=str(row["id"]),
         email=str(row.get("email") or ""),
+        username=str(raw_username) if raw_username else None,
+        username_change_history=username_history,
         role=str(row.get("role") or "athlete"),
         full_name=str(row.get("full_name") or ""),
         technical_style=list(row.get("technical_style") or []),
@@ -373,6 +383,29 @@ def _map_profile_row(row: dict[str, Any]) -> ProfileRecord:
         nutrition_profile=row.get("nutrition_profile") or {},
         created_at=str(row.get("created_at") or ""),
         updated_at=str(row.get("updated_at") or ""),
+    )
+
+
+def _username_rate_limit_info(history: list[str]) -> UsernameRateLimitInfo:
+    now = datetime.now(timezone.utc)
+    cutoff = now - timedelta(days=USERNAME_CHANGE_WINDOW_DAYS)
+    recent: list[datetime] = []
+    for entry in history:
+        try:
+            parsed = datetime.fromisoformat(str(entry).replace("Z", "+00:00"))
+        except ValueError:
+            continue
+        if parsed.tzinfo is None:
+            parsed = parsed.replace(tzinfo=timezone.utc)
+        if parsed >= cutoff:
+            recent.append(parsed)
+    remaining = max(0, USERNAME_MAX_CHANGES_PER_WINDOW - len(recent))
+    next_available_at: str | None = None
+    if remaining == 0 and recent:
+        next_available_at = (min(recent) + timedelta(days=USERNAME_CHANGE_WINDOW_DAYS)).isoformat()
+    return UsernameRateLimitInfo(
+        remaining=remaining,
+        next_available_at=next_available_at,
     )
 
 
@@ -952,6 +985,15 @@ def create_app(
         store: AppStore = Depends(get_store),
     ) -> MeResponse:
         updated = _map_profile_row(store.update_profile(profile.athlete_id, update))
+        return _build_me_response(updated, store)
+
+    @app.post("/api/me/username", response_model=MeResponse)
+    def change_username_endpoint(
+        update: UsernameChangeRequest,
+        profile: ProfileRecord = Depends(require_profile),
+        store: AppStore = Depends(get_store),
+    ) -> MeResponse:
+        updated = _map_profile_row(store.change_username(profile.athlete_id, update.username))
         return _build_me_response(updated, store)
 
     @app.patch("/api/onboarding/draft", response_model=OnboardingDraftSaveResponse)

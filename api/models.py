@@ -850,9 +850,49 @@ class PlanRenameRequest(BaseModel):
         return normalized
 
 
+USERNAME_MAX_CHANGES_PER_WINDOW = 4
+USERNAME_CHANGE_WINDOW_DAYS = 30
+USERNAME_MIN_LENGTH = 3
+USERNAME_MAX_LENGTH = 24
+_USERNAME_PATTERN = re.compile(r"^[a-z0-9](?:[a-z0-9._-]*[a-z0-9])?$")
+
+
+def validate_username(value: str) -> str:
+    normalized = str(value or "").strip().lower()
+    if not normalized:
+        raise ValueError("username is required")
+    if len(normalized) < USERNAME_MIN_LENGTH or len(normalized) > USERNAME_MAX_LENGTH:
+        raise ValueError(
+            f"username must be {USERNAME_MIN_LENGTH}-{USERNAME_MAX_LENGTH} characters long"
+        )
+    if not _USERNAME_PATTERN.fullmatch(normalized):
+        raise ValueError(
+            "username may only contain lowercase letters, digits, dots, dashes, and underscores"
+        )
+    return normalized
+
+
+class UsernameChangeRequest(BaseModel):
+    username: str
+
+    @field_validator("username")
+    @classmethod
+    def _validate(cls, value: str) -> str:
+        return validate_username(value)
+
+
+class UsernameRateLimitInfo(BaseModel):
+    max_changes_per_window: int = USERNAME_MAX_CHANGES_PER_WINDOW
+    window_days: int = USERNAME_CHANGE_WINDOW_DAYS
+    remaining: int
+    next_available_at: str | None = None
+
+
 class ProfileRecord(BaseModel):
     athlete_id: str
     email: str
+    username: str | None = None
+    username_change_history: list[str] = Field(default_factory=list)
     role: UserRole
     full_name: str
     technical_style: list[str] = Field(default_factory=list)
@@ -995,6 +1035,7 @@ class MeResponse(BaseModel):
     latest_intake: dict[str, Any] | None = None
     latest_plan: PlanSummary | None = None
     plan_count: int = 0
+    username_rate_limit: UsernameRateLimitInfo
 
 
 class AdminAthleteRecord(BaseModel):
