@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition, type FormEvent } from "react";
 
@@ -79,8 +78,9 @@ export default function ResetPasswordPage() {
         return;
       }
 
-      setMessage("Password updated successfully. Redirecting to your account...");
-      setTimeout(() => router.push("/plans"), 2000);
+      await client.auth.signOut();
+      setMessage("Password updated successfully. Redirecting to log in...");
+      setTimeout(() => router.replace("/login"), 1500);
     });
   }
 
@@ -114,14 +114,6 @@ export default function ResetPasswordPage() {
         {message ? (
           <div className="auth-success-state">
             <div className="success-banner">{message}</div>
-            <div className="form-actions">
-              <Link href="/plans" className="cta">
-                Go to my plans
-              </Link>
-              <Link href="/login" className="ghost-button">
-                Back to log in
-              </Link>
-            </div>
           </div>
         ) : (
           <>

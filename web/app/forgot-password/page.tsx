@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState, useTransition, type FormEvent } from "react";
 
+import { getSiteOrigin } from "@/lib/site-url";
 import { getSupabaseBrowserClient } from "@/lib/supabase";
 
 export default function ForgotPasswordPage() {
@@ -25,8 +26,9 @@ export default function ForgotPasswordPage() {
         return;
       }
 
+      const siteOrigin = getSiteOrigin();
       const { error: resetError } = await client.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/reset-password`,
+        redirectTo: siteOrigin ? `${siteOrigin}/reset-password` : undefined,
       });
 
       if (resetError) {

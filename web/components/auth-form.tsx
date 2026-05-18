@@ -9,6 +9,7 @@ import { PasswordStrengthMeter } from "@/components/password-strength-meter";
 import { getMe } from "@/lib/api";
 import { getAuthenticatedLandingHref } from "@/lib/auth-routing";
 import { evaluatePasswordStrength } from "@/lib/password-strength";
+import { getSiteOrigin } from "@/lib/site-url";
 import { getSupabaseBrowserClient } from "@/lib/supabase";
 
 export function AuthForm({ mode }: { mode: "signup" | "login" }) {
@@ -54,10 +55,12 @@ export function AuthForm({ mode }: { mode: "signup" | "login" }) {
       }
 
       if (mode === "signup") {
+        const siteOrigin = getSiteOrigin();
         const { data, error: signUpError } = await client.auth.signUp({
           email,
           password,
           options: {
+            emailRedirectTo: siteOrigin ? `${siteOrigin}/login` : undefined,
             data: {
               full_name: fullName,
             },
@@ -108,7 +111,8 @@ export function AuthForm({ mode }: { mode: "signup" | "login" }) {
         setError(clientError instanceof Error ? clientError.message : "Supabase is not configured.");
         return;
       }
-      const redirectTo = typeof window !== "undefined" ? `${window.location.origin}/login` : undefined;
+      const siteOrigin = getSiteOrigin();
+      const redirectTo = siteOrigin ? `${siteOrigin}/login` : undefined;
       const { error: otpError } = await client.auth.signInWithOtp({
         email: trimmedEmail,
         options: {
