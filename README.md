@@ -142,6 +142,7 @@ Copy `web/.env.local.example` to `web/.env.local`:
 
 ```
 NEXT_PUBLIC_API_BASE_URL=http://127.0.0.1:8000
+NEXT_PUBLIC_SITE_URL=http://localhost:3000
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
 NEXT_PUBLIC_DEV_AUTH_BYPASS=1
@@ -173,6 +174,17 @@ NEXT_PUBLIC_DEV_AUTH_BYPASS=1
 - All browser API calls use same-origin `/api/...` URLs
 - `next.config.ts` rewrites `/api/*` to the Render backend server-to-server
 - Set `NEXT_PUBLIC_API_BASE_URL` to your Render URL in Vercel environment variables
+- Set `NEXT_PUBLIC_SITE_URL=https://your-production-frontend-domain` in Vercel environment variables
+
+**Supabase Auth URL configuration**
+
+- In Supabase, go to **Authentication → URL Configuration**
+- Set **Site URL** to your production frontend domain
+- Add these **Redirect URLs**:
+  - `https://your-production-domain/login`
+  - `https://your-production-domain/reset-password`
+  - `https://your-production-domain/**`
+  - `http://localhost:3000/**`
 
 ---
 
