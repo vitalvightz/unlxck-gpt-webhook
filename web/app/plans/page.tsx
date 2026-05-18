@@ -670,12 +670,20 @@ function LatestPlanCard({
         <div className="plans-dashboard-card-header">
           <div className="plans-dashboard-card-copy">
             <p className="kicker">Latest Plan</p>
-            <h2>{plan ? getPlanDisplayName(plan) : "No saved plan yet"}</h2>
+            <h2>{plan ? getPlanDisplayName(plan) : "No camp plans yet."}</h2>
             <p className="muted">
               {plan
                 ? "Open the current camp, tighten the intake, or route straight into a fresh generation."
                 : "Start fast with Quick Build, or use Advanced Intake when you want every detail set first."}
             </p>
+            {!plan ? (
+              <div className="empty-state-example plans-dashboard-empty-example">
+                <p className="label">What appears here next</p>
+                <p className="empty-state-example-body">
+                  Once generated, your latest camp opens here with fight date, status, PDF export, and rename or delete actions.
+                </p>
+              </div>
+            ) : null}
           </div>
           {plan?.status ? <span className="badge">{formatPlanStatus(plan.status)}</span> : null}
         </div>

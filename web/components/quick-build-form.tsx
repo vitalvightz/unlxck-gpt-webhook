@@ -227,19 +227,17 @@ function QuickBuildFormInner() {
     setInput((current) => {
       const nextValues = toggleListValue(current[key], value);
       if (key === "training_availability") {
-        const removing = current.training_availability.includes(value) && !nextValues.includes(value);
-        const cappedFrequency = nextValues.length > 0 && current.weekly_training_frequency > nextValues.length
-          ? nextValues.length
-          : current.weekly_training_frequency;
+        const isRemoving = current.training_availability.includes(value) && !nextValues.includes(value);
+        const clampedFrequency = Math.min(current.weekly_training_frequency, Math.max(1, nextValues.length));
         // When a training day is unchecked, drop it from hard sparring days too —
         // mirrors plan-intake-form.tsx so stale picks can't fail validation later.
         return {
           ...current,
           training_availability: nextValues,
-          hard_sparring_days: removing
+          hard_sparring_days: isRemoving
             ? current.hard_sparring_days.filter((day) => day !== value)
             : current.hard_sparring_days,
-          weekly_training_frequency: cappedFrequency,
+          weekly_training_frequency: clampedFrequency,
         };
       }
       return { ...current, [key]: nextValues };

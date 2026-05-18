@@ -5,6 +5,7 @@ import Link from "next/link";
 
 import { RequireAuth } from "@/components/auth-guard";
 import { useAppSession } from "@/components/auth-provider";
+import { EmptyState } from "@/components/empty-state";
 import { listAdminAthletes, listAdminPlans } from "@/lib/api";
 import type { AdminAthleteRecord, AdminPlanSummary } from "@/lib/types";
 
@@ -84,10 +85,13 @@ export default function AdminPage() {
                 <p className="muted">Loading athlete accounts…</p>
               </div>
             ) : athletes.length === 0 ? (
-              <div className="support-panel">
-                <p className="kicker">No athletes yet</p>
-                <p className="muted">Athlete accounts will appear here once someone signs up.</p>
-              </div>
+              <EmptyState
+                eyebrow="Athlete accounts"
+                title="No athletes yet."
+                description="Athlete accounts appear here once someone signs up to the beta."
+                example="Each row will show the athlete's name, email, saved plan count, and a link into their profile for support."
+                primaryAction={{ label: "Open signup page", href: "/signup" }}
+              />
             ) : (
               <div className="plans-grid">
                 {athletes.map((athlete) => (
@@ -124,10 +128,13 @@ export default function AdminPage() {
                 <p className="muted">Loading plan history…</p>
               </div>
             ) : plans.length === 0 ? (
-              <div className="support-panel">
-                <p className="kicker">No plans yet</p>
-                <p className="muted">Generated fight camp plans will appear here once athletes start creating them.</p>
-              </div>
+              <EmptyState
+                eyebrow="Plan history"
+                title="No plans generated yet."
+                description="Generated fight camps appear here once athletes start creating them."
+                example="Each row will show plan name, athlete email, status, creation time, and a quick open link."
+                primaryAction={{ label: "Open Demo Plan", href: "/demo-plan" }}
+              />
             ) : (
               <div className="plans-grid">
                 {plans.map((plan) => (
