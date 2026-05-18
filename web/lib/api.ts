@@ -437,12 +437,19 @@ export function getGenerationJob(token: string, jobId: string): Promise<Generati
   );
 }
 
-export function retryGenerationJob(token: string, jobId: string): Promise<GenerationJobResponse> {
+export function retryGenerationJob(
+  token: string,
+  jobId: string,
+  clientRequestId?: string,
+): Promise<GenerationJobResponse> {
   return withTransientRetries(() =>
     readJson<GenerationJobResponse>(`/api/generation-jobs/${jobId}/retry`, {
       method: "POST",
       token,
+      clientRequestId,
     }),
+  );
+}
   );
 }
 
