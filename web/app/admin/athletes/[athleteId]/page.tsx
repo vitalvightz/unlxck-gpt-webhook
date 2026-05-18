@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 
@@ -50,6 +50,12 @@ export default function AdminAthletePage() {
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [isSavingControls, setIsSavingControls] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
+  const [isReloading, setIsReloading] = useState(false);
+
+  const handleRetry = useCallback(() => {
+    setReloadKey((value) => value + 1);
+  }, []);
   const latestIntakeFocusValidation = athlete?.latest_intake
     ? validatePerformanceFocusSelections(
       athlete.latest_intake.fight_date,
@@ -92,18 +98,30 @@ export default function AdminAthletePage() {
       return;
     }
 
+    let active = true;
+    setError(null);
+    setIsReloading(true);
     Promise.all([
       getAdminAthlete(session.access_token, athleteId),
       getAdminAthleteNutritionCurrent(session.access_token, athleteId),
     ])
       .then(([nextAthlete, nextNutrition]) => {
+        if (!active) return;
         setAthlete(nextAthlete);
         setNutrition(nextNutrition);
       })
       .catch((athleteError) => {
+        if (!active) return;
         setError(athleteError instanceof Error ? athleteError.message : "Unable to load athlete profile.");
+      })
+      .finally(() => {
+        if (active) setIsReloading(false);
       });
-  }, [athleteId, session?.access_token]);
+
+    return () => {
+      active = false;
+    };
+  }, [athleteId, session?.access_token, reloadKey]);
 
   useEffect(() => {
     if (controller.error) {
@@ -147,14 +165,22 @@ export default function AdminAthletePage() {
 
   return (
     <RequireAuth adminOnly>
-      {error ? (
+      {error && !athlete ? (
         <section className="panel loading-card">
           <p className="kicker">Athlete Profile</p>
-          <div className="error-banner">{error}</div>
+          <div className="error-banner" role="alert">{error}</div>
           <div className="plan-summary-actions">
             <Link href="/admin" className="ghost-button">
               Back to admin
             </Link>
+            <button
+              type="button"
+              className="cta"
+              onClick={handleRetry}
+              disabled={isReloading}
+            >
+              {isReloading ? "Retrying..." : "Try again"}
+            </button>
           </div>
         </section>
       ) : !athlete ? (
@@ -181,6 +207,22 @@ export default function AdminAthletePage() {
             </button>
           </div>
           {controller.statusMessage ? <p className="muted">{controller.statusMessage}</p> : null}
+          {error ? (
+            <div className="error-banner" role="alert">
+              <span>{error}</span>
+              <button
+                type="button"
+                className="ghost-button"
+                onClick={() => {
+                  setError(null);
+                  handleRetry();
+                }}
+                disabled={isReloading}
+              >
+                {isReloading ? "Retrying..." : "Try again"}
+              </button>
+            </div>
+          ) : null}
           {latestIntakeFocusError ? <p className="error-text">{latestIntakeFocusError}</p> : null}
           {!athlete.latest_intake ? (
             <p className="muted">Generate is available after this athlete has at least one saved intake.</p>

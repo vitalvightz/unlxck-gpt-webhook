@@ -523,18 +523,24 @@ export async function deletePlan(token: string, planId: string): Promise<void> {
 }
 
 export function listAdminAthletes(token: string): Promise<AdminAthleteRecord[]> {
-  return readJson<AdminAthleteRecord[]>("/api/admin/athletes", { token });
+  return withTransientRetries(() =>
+    readJson<AdminAthleteRecord[]>("/api/admin/athletes", { token }),
+  );
 }
 
 export function getAdminAthlete(token: string, athleteId: string): Promise<AdminAthleteRecord> {
-  return readJson<AdminAthleteRecord>(`/api/admin/athletes/${athleteId}`, { token });
+  return withTransientRetries(() =>
+    readJson<AdminAthleteRecord>(`/api/admin/athletes/${athleteId}`, { token }),
+  );
 }
 
 export function getAdminAthleteNutritionCurrent(
   token: string,
   athleteId: string,
 ): Promise<NutritionWorkspaceState> {
-  return readJson<NutritionWorkspaceState>(`/api/admin/athletes/${athleteId}/nutrition/current`, { token });
+  return withTransientRetries(() =>
+    readJson<NutritionWorkspaceState>(`/api/admin/athletes/${athleteId}/nutrition/current`, { token }),
+  );
 }
 
 export function updateAdminAthleteNutritionCurrent(
@@ -542,11 +548,13 @@ export function updateAdminAthleteNutritionCurrent(
   athleteId: string,
   payload: NutritionWorkspaceUpdateRequest,
 ): Promise<NutritionWorkspaceState> {
-  return readJson<NutritionWorkspaceState>(`/api/admin/athletes/${athleteId}/nutrition/current`, {
-    method: "PUT",
-    token,
-    body: JSON.stringify(payload),
-  });
+  return withTransientRetries(() =>
+    readJson<NutritionWorkspaceState>(`/api/admin/athletes/${athleteId}/nutrition/current`, {
+      method: "PUT",
+      token,
+      body: JSON.stringify(payload),
+    }),
+  );
 }
 
 export function generateAdminAthletePlanFromLatestIntake(
@@ -564,7 +572,9 @@ export function generateAdminAthletePlanFromLatestIntake(
 }
 
 export function listAdminPlans(token: string): Promise<AdminPlanSummary[]> {
-  return readJson<AdminPlanSummary[]>("/api/admin/plans", { token });
+  return withTransientRetries(() =>
+    readJson<AdminPlanSummary[]>("/api/admin/plans", { token }),
+  );
 }
 
 export function submitManualStage2(
