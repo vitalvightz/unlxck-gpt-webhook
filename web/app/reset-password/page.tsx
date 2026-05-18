@@ -151,6 +151,14 @@ export default function ResetPasswordPage() {
             ) : null}
 
             <form onSubmit={handleSubmit} className="auth-form-grid">
+              <input
+                type="text"
+                name="username"
+                autoComplete="username"
+                className="sr-only"
+                tabIndex={-1}
+                aria-hidden="true"
+              />
               <div className="field">
                 <label htmlFor="password">New password</label>
                 <input
