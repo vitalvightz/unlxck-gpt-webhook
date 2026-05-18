@@ -29,3 +29,14 @@ def test_schema_does_not_hardcode_admin_email_promotions():
     assert "michaelokaforjr@gmail.com" not in schema
     assert "unlxckedmind@gmail.com" not in schema
     assert "frankribery@mailfence.com" not in schema
+
+
+def test_schema_guards_against_self_role_escalation():
+    schema = _read_schema()
+
+    function_section = schema.split("create or replace function public.prevent_self_role_escalation()", 1)[1].split("$$;", 1)[0]
+
+    assert "security definer" in function_section
+    assert "set search_path = public" in function_section
+    assert "create trigger profiles_prevent_self_role_escalation" in schema
+    assert "Only admins can change profile roles." in schema
