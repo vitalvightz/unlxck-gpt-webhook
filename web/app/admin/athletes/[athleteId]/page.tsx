@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 
@@ -47,9 +47,17 @@ export default function AdminAthletePage() {
   const athleteId = typeof params?.athleteId === "string" ? params.athleteId : null;
   const [athlete, setAthlete] = useState<AdminAthleteRecord | null>(null);
   const [nutrition, setNutrition] = useState<NutritionWorkspaceState | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [isSavingControls, setIsSavingControls] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
+  const [isReloading, setIsReloading] = useState(false);
+
+  const handleRetry = useCallback(() => {
+    setLoadError(null);
+    setReloadKey((value) => value + 1);
+  }, []);
   const latestIntakeFocusValidation = athlete?.latest_intake
     ? validatePerformanceFocusSelections(
       athlete.latest_intake.fight_date,
@@ -92,18 +100,30 @@ export default function AdminAthletePage() {
       return;
     }
 
+    let active = true;
+    setLoadError(null);
+    setIsReloading(true);
     Promise.all([
       getAdminAthlete(session.access_token, athleteId),
       getAdminAthleteNutritionCurrent(session.access_token, athleteId),
     ])
       .then(([nextAthlete, nextNutrition]) => {
+        if (!active) return;
         setAthlete(nextAthlete);
         setNutrition(nextNutrition);
       })
       .catch((athleteError) => {
-        setError(athleteError instanceof Error ? athleteError.message : "Unable to load athlete profile.");
+        if (!active) return;
+        setLoadError(athleteError instanceof Error ? athleteError.message : "Unable to load athlete profile.");
+      })
+      .finally(() => {
+        if (active) setIsReloading(false);
       });
-  }, [athleteId, session?.access_token]);
+
+    return () => {
+      active = false;
+    };
+  }, [athleteId, session?.access_token, reloadKey]);
 
   useEffect(() => {
     if (controller.error) {
@@ -147,14 +167,22 @@ export default function AdminAthletePage() {
 
   return (
     <RequireAuth adminOnly>
-      {error ? (
+      {loadError && !athlete ? (
         <section className="panel loading-card">
           <p className="kicker">Athlete Profile</p>
-          <div className="error-banner">{error}</div>
+          <div className="error-banner" role="alert">{loadError}</div>
           <div className="plan-summary-actions">
             <Link href="/admin" className="ghost-button">
               Back to admin
             </Link>
+            <button
+              type="button"
+              className="cta"
+              onClick={handleRetry}
+              disabled={isReloading}
+            >
+              {isReloading ? "Retrying..." : "Try again"}
+            </button>
           </div>
         </section>
       ) : !athlete ? (
@@ -181,6 +209,22 @@ export default function AdminAthletePage() {
             </button>
           </div>
           {controller.statusMessage ? <p className="muted">{controller.statusMessage}</p> : null}
+          {loadError ? (
+            <div className="error-banner" role="alert">
+              <span>{loadError}</span>
+              <button
+                type="button"
+                className="ghost-button"
+                onClick={handleRetry}
+                disabled={isReloading}
+              >
+                {isReloading ? "Retrying..." : "Try again"}
+              </button>
+            </div>
+          ) : null}
+          {error ? (
+            <div className="error-banner" role="alert">{error}</div>
+          ) : null}
           {latestIntakeFocusError ? <p className="error-text">{latestIntakeFocusError}</p> : null}
           {!athlete.latest_intake ? (
             <p className="muted">Generate is available after this athlete has at least one saved intake.</p>

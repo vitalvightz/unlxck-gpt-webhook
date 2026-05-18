@@ -57,6 +57,16 @@ Use this checklist for beta-readiness verification against the production fronte
 - [ ] Normal athlete cannot access admin views.
 - [ ] Removing an email from `UNLXCK_ADMIN_EMAILS` does not unexpectedly mutate existing production data without an explicit admin process.
 
+### Admin Reliability
+
+- [ ] Admin dashboard (`/admin`) loads athlete and plan lists without raw error output.
+- [ ] Admin athlete detail (`/admin/athletes/<id>`) loads the profile and nutrition workspace.
+- [ ] During a temporary backend blip (502/503/504 or network error) the admin pages show a clean error banner instead of a stack trace.
+- [ ] The error banner exposes a `Try again` button that re-runs the failed load when clicked.
+- [ ] After the backend recovers, `Try again` restores the dashboard / athlete profile contents.
+- [ ] Admin-triggered generation from latest intake still completes successfully after a load retry.
+- [ ] An unauthorized athlete attempting to hit `/admin` or `/admin/athletes/<id>` is rejected with a 401/403 and is **not** silently retried.
+
 ### Settings / Account
 
 - [ ] Settings page loads.

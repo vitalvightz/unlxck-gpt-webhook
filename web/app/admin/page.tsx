@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 
 import { RequireAuth } from "@/components/auth-guard";
@@ -19,9 +19,14 @@ export default function AdminPage() {
   const [plans, setPlans] = useState<AdminPlanSummary[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
 
   const isAdminReady =
     isReady && isMeHydrated && Boolean(session?.access_token) && me?.profile?.role === "admin";
+
+  const handleRetry = useCallback(() => {
+    setReloadKey((value) => value + 1);
+  }, []);
 
   useEffect(() => {
     if (!isAdminReady || !session?.access_token) {
@@ -51,7 +56,7 @@ export default function AdminPage() {
     return () => {
       active = false;
     };
-  }, [isAdminReady, isReady, isMeHydrated, me?.profile.role, session?.access_token]);
+  }, [isAdminReady, isReady, isMeHydrated, me?.profile.role, session?.access_token, reloadKey]);
 
   return (
     <RequireAuth adminOnly>
@@ -71,7 +76,19 @@ export default function AdminPage() {
           </div>
         </div>
 
-        {error ? <div className="error-banner">{error}</div> : null}
+        {error ? (
+          <div className="error-banner" role="alert">
+            <span>{error}</span>
+            <button
+              type="button"
+              className="ghost-button"
+              onClick={handleRetry}
+              disabled={isLoading}
+            >
+              {isLoading ? "Retrying..." : "Try again"}
+            </button>
+          </div>
+        ) : null}
 
         <div className="admin-grid">
           <article className="list-card">
