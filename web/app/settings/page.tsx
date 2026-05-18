@@ -385,13 +385,13 @@ export default function SettingsPage() {
         </div>
 
         <div className="settings-layout athlete-motion-slot athlete-motion-main">
-          <aside className="settings-nav" aria-label="Settings sections">
+          <nav className="settings-nav" aria-label="Settings sections">
             {SETTINGS_SECTIONS.map((section) => (
               <a key={section.id} href={`#${section.id}`} data-section-link={section.id}>
                 {section.label}
               </a>
             ))}
-          </aside>
+          </nav>
 
           <div className="settings-main">
             {message ? <div className="success-banner athlete-motion-slot athlete-motion-status">{message}</div> : null}
