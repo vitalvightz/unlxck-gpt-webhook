@@ -47,6 +47,7 @@ export default function AdminAthletePage() {
   const athleteId = typeof params?.athleteId === "string" ? params.athleteId : null;
   const [athlete, setAthlete] = useState<AdminAthleteRecord | null>(null);
   const [nutrition, setNutrition] = useState<NutritionWorkspaceState | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [isSavingControls, setIsSavingControls] = useState(false);
