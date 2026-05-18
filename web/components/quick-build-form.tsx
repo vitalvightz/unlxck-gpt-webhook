@@ -237,7 +237,7 @@ function QuickBuildFormInner() {
           hard_sparring_days: isRemoving
             ? current.hard_sparring_days.filter((day) => day !== value)
             : current.hard_sparring_days,
-          weekly_training_frequency: clampedFrequency,
+          weekly_training_frequency: cappedFrequency,
         };
       }
       return { ...current, [key]: nextValues };
