@@ -1189,6 +1189,74 @@ def create_app(
         )
         return _job_response(job)
 
+    @app.post("/api/generation-jobs/{job_id}/retry", response_model=GenerationJobResponse, status_code=202)
+    async def retry_generation_job(
+        job_id: str,
+        background_tasks: BackgroundTasks,
+        profile: ProfileRecord = Depends(require_profile),
+        store: AppStore = Depends(get_store),
+        planner_fn: Planner = Depends(get_planner),
+        stage2: Stage2Automator = Depends(get_stage2_automator),
+        active_tasks: set[str] = Depends(get_active_generation_tasks),
+        enable_in_process_generation: bool = Depends(get_enable_in_process_generation),
+    ) -> GenerationJobResponse:
+        original = await asyncio.to_thread(store.get_generation_job, job_id)
+        if not original:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="generation job not found")
+        is_admin = profile.role == "admin"
+        if not is_admin and str(original["athlete_id"]) != profile.athlete_id:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="not allowed")
+        if str(original.get("status") or "") != "failed":
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="only failed generation jobs can be retried",
+            )
+        request_payload = original.get("request_payload")
+        if not isinstance(request_payload, dict):
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="original job request payload is missing",
+            )
+
+        target_athlete_id = str(original["athlete_id"])
+        source = str(original.get("source") or "").strip() or "self_serve"
+
+        if not is_admin:
+            daily_limit = _plan_generate_daily_limit_per_user()
+            if daily_limit > 0:
+                utc_midnight = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0).isoformat()
+                jobs_today = await asyncio.to_thread(
+                    store.count_generation_jobs_for_athlete_since,
+                    target_athlete_id,
+                    utc_midnight,
+                    sources=_ALLOWED_PLAN_SOURCES,
+                )
+                if jobs_today >= daily_limit:
+                    raise HTTPException(
+                        status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                        detail="Daily generation limit reached. Try again tomorrow.",
+                    )
+
+        retry_client_request_id = f"retry_{job_id}_{uuid.uuid4().hex}"
+        job = await asyncio.to_thread(
+            store.create_or_get_generation_job,
+            athlete_id=target_athlete_id,
+            client_request_id=retry_client_request_id,
+            source=source,
+            request_payload=copy.deepcopy(request_payload),
+        )
+        job = await schedule_generation_job_if_needed(
+            job=job,
+            background_tasks=background_tasks,
+            store=store,
+            planner_fn=planner_fn,
+            stage2=stage2,
+            active_tasks=active_tasks,
+            enable_in_process_generation=enable_in_process_generation,
+            is_stale_job=_is_stale_job,
+        )
+        return _job_response(job)
+
     @app.get("/api/plans/latest", response_model=PlanDetail)
     def get_latest_plan(
         profile: ProfileRecord = Depends(require_profile),

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { getGenerationJob, isRetryableApiFailure } from "@/lib/api";
+import { getGenerationJob, isRetryableApiFailure, retryGenerationJob } from "@/lib/api";
 import type { GenerationJobResponse, GenerationJobStatus, ProgressMilestone } from "@/lib/types";
 
 export type GenerationUiPhase =
@@ -195,6 +195,7 @@ export function useGenerationController({
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [milestones, setMilestones] = useState<ProgressMilestone[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [failedJobId, setFailedJobId] = useState<string | null>(null);
   const [startedAtMs, setStartedAtMs] = useState<number | null>(() => {
     const pending = getPendingGeneration(storageKey);
     if (!pending) {
@@ -205,6 +206,73 @@ export function useGenerationController({
   });
   const recoveryAttemptedRef = useRef<string | null>(null);
 
+  const watchJobUntilTerminal = useCallback(
+    async (
+      activeToken: string,
+      activeStorageKey: string,
+      job: GenerationJobResponse,
+      clientRequestId: string,
+      pendingCreatedAtFallback: string,
+      createdAtMs: number,
+      recovered: boolean,
+    ) => {
+      setPhase(phaseForJobStatus(job.status));
+      setStatusMessage(statusMessageForJob(job.status, createdAtMs));
+      if (Array.isArray(job.progress_milestones)) {
+        setMilestones(job.progress_milestones);
+      }
+      savePendingGeneration(activeStorageKey, {
+        clientRequestId,
+        jobId: job.job_id,
+        createdAt: job.created_at || pendingCreatedAtFallback,
+      });
+
+      for (;;) {
+        const currentJob = await getGenerationJob(activeToken, job.job_id);
+
+        if (Array.isArray(currentJob.progress_milestones)) {
+          setMilestones(currentJob.progress_milestones);
+        }
+
+        savePendingGeneration(activeStorageKey, {
+          clientRequestId,
+          jobId: currentJob.job_id,
+          createdAt: currentJob.created_at || pendingCreatedAtFallback,
+        });
+
+        if (currentJob.status === "completed" || currentJob.status === "review_required") {
+          const planId = currentJob.plan_id || currentJob.latest_plan_id;
+          if (!planId) {
+            clearAllPendingGenerations();
+            throw new Error("Generation finished, but no saved plan was returned.");
+          }
+          clearAllPendingGenerations();
+          setPhase("finalizing");
+          setStatusMessage("Final checks passed. Opening your saved plan.");
+          setIsGenerating(false);
+          await sleep(220);
+          onComplete({
+            planId,
+            status: currentJob.status,
+            recovered,
+          });
+          return;
+        }
+
+        if (currentJob.status === "failed") {
+          clearAllPendingGenerations();
+          setFailedJobId(currentJob.job_id);
+          throw new Error(currentJob.error || "Plan generation failed.");
+        }
+
+        setPhase(phaseForJobStatus(currentJob.status));
+        setStatusMessage(statusMessageForJob(currentJob.status, createdAtMs));
+        await sleep(getPollDelay(createdAtMs));
+      }
+    },
+    [onComplete],
+  );
+
   const startGeneration = useCallback(
     async (options: StartGenerationOptions = {}) => {
       if (!token || !storageKey || isGenerating) {
@@ -212,6 +280,7 @@ export function useGenerationController({
       }
 
       setError(null);
+      setFailedJobId(null);
       setIsGenerating(true);
       const recovered = options.recovered ?? false;
       const clientRequestId = options.clientRequestId ?? buildClientRequestId();
@@ -234,58 +303,15 @@ export function useGenerationController({
         const createdJob = await createJobWithReconnect(createJob, clientRequestId, setStatusMessage, setPhase);
         const createdAtMs = Date.parse(createdJob.created_at || pendingCreatedAt) || Date.now();
         setStartedAtMs(createdAtMs);
-        setPhase(phaseForJobStatus(createdJob.status));
-        setStatusMessage(statusMessageForJob(createdJob.status, createdAtMs));
-        if (Array.isArray(createdJob.progress_milestones)) {
-          setMilestones(createdJob.progress_milestones);
-        }
-        savePendingGeneration(storageKey, {
+        await watchJobUntilTerminal(
+          token,
+          storageKey,
+          createdJob,
           clientRequestId,
-          jobId: createdJob.job_id,
-          createdAt: createdJob.created_at || pendingCreatedAt,
-        });
-
-        for (;;) {
-          const currentJob = await getGenerationJob(token, createdJob.job_id);
-
-          if (Array.isArray(currentJob.progress_milestones)) {
-            setMilestones(currentJob.progress_milestones);
-          }
-
-          savePendingGeneration(storageKey, {
-            clientRequestId,
-            jobId: currentJob.job_id,
-            createdAt: currentJob.created_at || pendingCreatedAt,
-          });
-
-          if (currentJob.status === "completed" || currentJob.status === "review_required") {
-            const planId = currentJob.plan_id || currentJob.latest_plan_id;
-            if (!planId) {
-              clearAllPendingGenerations();
-              throw new Error("Generation finished, but no saved plan was returned.");
-            }
-            clearAllPendingGenerations();
-            setPhase("finalizing");
-            setStatusMessage("Final checks passed. Opening your saved plan.");
-            setIsGenerating(false);
-            await sleep(220);
-            onComplete({
-              planId,
-              status: currentJob.status,
-              recovered,
-            });
-            return;
-          }
-
-          if (currentJob.status === "failed") {
-            clearAllPendingGenerations();
-            throw new Error(currentJob.error || "Plan generation failed.");
-          }
-
-          setPhase(phaseForJobStatus(currentJob.status));
-          setStatusMessage(statusMessageForJob(currentJob.status, createdAtMs));
-          await sleep(getPollDelay(createdAtMs));
-        }
+          pendingCreatedAt,
+          createdAtMs,
+          recovered,
+        );
       } catch (generationError) {
         clearPendingGeneration(storageKey);
         setIsGenerating(false);
@@ -294,8 +320,47 @@ export function useGenerationController({
         setError(mapGenerationErrorMessage(generationError));
       }
     },
-    [createJob, isGenerating, onComplete, storageKey, token],
+    [createJob, isGenerating, storageKey, token, watchJobUntilTerminal],
   );
+
+  const retryGeneration = useCallback(async () => {
+    if (!token || !storageKey || isGenerating || !failedJobId) {
+      return;
+    }
+
+    setError(null);
+    setIsGenerating(true);
+    setMilestones([]);
+    setPhase("submitting");
+    setStatusMessage("Retrying your plan generation request.");
+
+    const retryStartedAt = new Date().toISOString();
+    const retryStartedAtMs = Date.parse(retryStartedAt) || Date.now();
+    setStartedAtMs(retryStartedAtMs);
+
+    try {
+      const newJob = await retryGenerationJob(token, failedJobId);
+      const clientRequestId = newJob.client_request_id || buildClientRequestId();
+      const createdAtMs = Date.parse(newJob.created_at || retryStartedAt) || retryStartedAtMs;
+      setStartedAtMs(createdAtMs);
+      setFailedJobId(null);
+      await watchJobUntilTerminal(
+        token,
+        storageKey,
+        newJob,
+        clientRequestId,
+        retryStartedAt,
+        createdAtMs,
+        false,
+      );
+    } catch (retryError) {
+      clearPendingGeneration(storageKey);
+      setIsGenerating(false);
+      setStatusMessage(null);
+      setPhase("failed");
+      setError(mapGenerationErrorMessage(retryError));
+    }
+  }, [failedJobId, isGenerating, storageKey, token, watchJobUntilTerminal]);
 
   useEffect(() => {
     if (!token || !storageKey || isGenerating) {
@@ -324,6 +389,8 @@ export function useGenerationController({
     error,
     setError,
     startGeneration,
+    retryGeneration,
+    canRetry: Boolean(failedJobId) && !isGenerating,
     hasPendingGeneration: Boolean(getPendingGeneration(storageKey)),
   };
 }

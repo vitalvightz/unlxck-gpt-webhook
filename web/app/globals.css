@@ -5405,6 +5405,20 @@ button.mobile-step-rail-item {
   line-height: 1.55;
 }
 
+.loading-failure-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.loading-failure-headline {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 14px;
+  font-weight: 600;
+}
+
 .loading-steps {
   list-style: none;
   margin: 0;

@@ -87,6 +87,10 @@ export default function GeneratePage() {
         startedAtMs={controller.startedAtMs}
         milestones={controller.milestones}
         intake={payload}
+        onRetry={() => {
+          void controller.retryGeneration();
+        }}
+        canRetry={controller.canRetry}
       />
     </RequireAuth>
   );
