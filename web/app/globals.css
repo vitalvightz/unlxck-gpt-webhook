@@ -145,6 +145,18 @@ select:focus-visible {
   box-shadow: 0 0 0 2px var(--border-active), 0 0 0 5px rgba(181, 18, 43, 0.32);
 }
 
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 .app-shell {
   display: flex;
   min-height: 100vh;
@@ -202,7 +214,7 @@ select:focus-visible {
 }
 
 .sidebar-drawer-close {
-  display: inline-flex;
+  display: none;
   align-items: center;
   justify-content: center;
   width: 44px;
@@ -4339,6 +4351,10 @@ button.mobile-step-rail-item {
 }
 
 @media (max-width: 960px) {
+  .sidebar-drawer-close {
+    display: inline-flex;
+  }
+
   .mobile-nav-toggle {
     display: inline-flex;
     position: fixed;
