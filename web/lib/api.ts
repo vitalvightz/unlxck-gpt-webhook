@@ -12,6 +12,7 @@ import type {
   PlanSummary,
   ProfileUpdateRequest,
   Stage1PreviewResponse,
+  UsernameChangeRequest,
   WeeklySchedule,
 } from "@/lib/types";
 
@@ -361,6 +362,22 @@ export function updateMe(token: string, payload: ProfileUpdateRequest): Promise<
   meRequestsByToken.delete(token);
   const request = readJson<MeResponse>("/api/me", {
     method: "PUT",
+    token,
+    body: JSON.stringify(payload),
+  }).finally(() => {
+    if (meUpdatesByToken.get(token) === request) {
+      meUpdatesByToken.delete(token);
+    }
+    meRequestsByToken.delete(token);
+  });
+  meUpdatesByToken.set(token, request);
+  return request;
+}
+
+export function changeUsername(token: string, payload: UsernameChangeRequest): Promise<MeResponse> {
+  meRequestsByToken.delete(token);
+  const request = readJson<MeResponse>("/api/me/username", {
+    method: "POST",
     token,
     body: JSON.stringify(payload),
   }).finally(() => {

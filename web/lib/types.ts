@@ -228,6 +228,8 @@ export type ProfileUpdateRequest = {
 export type ProfileRecord = {
   athlete_id: string;
   email: string;
+  username?: string | null;
+  username_change_history?: string[];
   role: UserRole;
   full_name: string;
   technical_style: string[];
@@ -243,6 +245,17 @@ export type ProfileRecord = {
   nutrition_profile: NutritionProfileInput;
   created_at: string;
   updated_at: string;
+};
+
+export type UsernameRateLimitInfo = {
+  max_changes_per_window: number;
+  window_days: number;
+  remaining: number;
+  next_available_at?: string | null;
+};
+
+export type UsernameChangeRequest = {
+  username: string;
 };
 
 export type PlanSummary = {
@@ -370,6 +383,7 @@ export type MeResponse = {
   latest_intake?: PlanRequest | null;
   latest_plan?: PlanSummary | null;
   plan_count: number;
+  username_rate_limit: UsernameRateLimitInfo;
 };
 
 export type AdminAthleteRecord = {

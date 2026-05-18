@@ -35,6 +35,8 @@ $$;
 create table if not exists public.profiles (
   id uuid primary key references auth.users(id) on delete cascade,
   email text not null unique,
+  username text unique,
+  username_change_history jsonb not null default '[]'::jsonb,
   role public.app_role not null default 'athlete',
   full_name text not null default '',
   technical_style text[] not null default '{}',
@@ -152,9 +154,25 @@ alter table public.generation_jobs add column if not exists progress_milestones 
 alter table public.profiles add column if not exists appearance_mode text not null default 'dark';
 alter table public.profiles add column if not exists avatar_url text;
 alter table public.profiles add column if not exists nutrition_profile jsonb not null default '{}'::jsonb;
+alter table public.profiles add column if not exists username text;
+alter table public.profiles add column if not exists username_change_history jsonb not null default '[]'::jsonb;
+
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'profiles_username_key'
+      and conrelid = 'public.profiles'::regclass
+  ) then
+    alter table public.profiles add constraint profiles_username_key unique (username);
+  end if;
+end
+$$;
 alter table public.athlete_intakes add column if not exists updated_at timestamptz not null default timezone('utc', now());
 
 create index if not exists profiles_email_idx on public.profiles (email);
+create index if not exists profiles_username_idx on public.profiles (username);
 create index if not exists athlete_intakes_athlete_id_created_at_idx on public.athlete_intakes (athlete_id, created_at desc);
 create index if not exists plans_athlete_id_created_at_idx on public.plans (athlete_id, created_at desc);
 create index if not exists generation_jobs_athlete_id_created_at_idx on public.generation_jobs (athlete_id, created_at desc);
@@ -190,6 +208,7 @@ create or replace view public.admin_athlete_rollups as
 select
   p.id,
   p.email,
+  p.username,
   p.role,
   p.full_name,
   p.technical_style,
@@ -211,6 +230,7 @@ left join public.plans pl on pl.athlete_id = p.id
 group by
   p.id,
   p.email,
+  p.username,
   p.role,
   p.full_name,
   p.technical_style,

@@ -14,7 +14,12 @@ from postgrest.exceptions import APIError as PostgrestAPIError
 from supabase import Client, create_client
 
 from .auth import AuthenticatedUser
-from .models import PlanRequest, ProfileUpdateRequest
+from .models import (
+    PlanRequest,
+    ProfileUpdateRequest,
+    USERNAME_CHANGE_WINDOW_DAYS,
+    USERNAME_MAX_CHANGES_PER_WINDOW,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -90,6 +95,8 @@ class AppStore(Protocol):
     def ensure_profile(self, user: AuthenticatedUser) -> dict[str, Any]: ...
 
     def update_profile(self, athlete_id: str, update: ProfileUpdateRequest) -> dict[str, Any]: ...
+
+    def change_username(self, athlete_id: str, username: str) -> dict[str, Any]: ...
 
     def get_latest_intake(self, athlete_id: str) -> dict[str, Any] | None: ...
     def get_intake(self, intake_id: str) -> dict[str, Any] | None: ...
@@ -407,6 +414,8 @@ class SupabaseAppStore:
         return {
             "id": user.user_id,
             "email": user.email,
+            "username": existing.get("username"),
+            "username_change_history": existing.get("username_change_history") or [],
             "full_name": existing.get("full_name") or user.full_name,
             "role": existing.get("role") or self._default_role_for(user),
             "technical_style": existing.get("technical_style") or [],
@@ -542,6 +551,92 @@ class SupabaseAppStore:
             self._raise_operation_http_error(
                 operation=f"update_profile athlete_id={athlete_id}",
                 detail="failed to update profile",
+                exc=exc,
+            )
+
+    def change_username(self, athlete_id: str, username: str) -> dict[str, Any]:
+        try:
+            profile = self._require_profile(athlete_id)
+            current_username = (profile.get("username") or "").strip().lower() or None
+            normalized = username.strip().lower()
+
+            if normalized == current_username:
+                logger.info(
+                    "[store] change_username:noop athlete_id=%s username unchanged",
+                    athlete_id,
+                )
+                return profile
+
+            history_raw = profile.get("username_change_history") or []
+            history: list[str] = [str(entry) for entry in history_raw if entry]
+
+            now = datetime.now(timezone.utc)
+            cutoff = now - timedelta(days=USERNAME_CHANGE_WINDOW_DAYS)
+            recent: list[datetime] = []
+            for entry in history:
+                try:
+                    parsed = datetime.fromisoformat(entry.replace("Z", "+00:00"))
+                except ValueError:
+                    continue
+                if parsed.tzinfo is None:
+                    parsed = parsed.replace(tzinfo=timezone.utc)
+                if parsed >= cutoff:
+                    recent.append(parsed)
+
+            if len(recent) >= USERNAME_MAX_CHANGES_PER_WINDOW:
+                earliest = min(recent)
+                next_available = earliest + timedelta(days=USERNAME_CHANGE_WINDOW_DAYS)
+                logger.info(
+                    "[store] change_username:rate_limited athlete_id=%s recent=%s next=%s",
+                    athlete_id,
+                    len(recent),
+                    next_available.isoformat(),
+                )
+                raise HTTPException(
+                    status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                    detail=(
+                        f"You can change your username up to {USERNAME_MAX_CHANGES_PER_WINDOW} times "
+                        f"every {USERNAME_CHANGE_WINDOW_DAYS} days. "
+                        f"Next change available {next_available.isoformat()}."
+                    ),
+                )
+
+            new_history = [entry.isoformat() for entry in recent] + [now.isoformat()]
+            try:
+                logger.info(
+                    "[store] change_username:start athlete_id=%s recent=%s",
+                    athlete_id,
+                    len(recent),
+                )
+                self.client.table("profiles").update(
+                    {
+                        "username": normalized,
+                        "username_change_history": new_history,
+                    }
+                ).eq("id", athlete_id).execute()
+            except _STORE_CLIENT_ERRORS as exc:
+                message = str(exc).lower()
+                if "duplicate" in message or "23505" in message or "unique" in message:
+                    logger.info(
+                        "[store] change_username:duplicate athlete_id=%s username=%s",
+                        athlete_id,
+                        normalized,
+                    )
+                    raise HTTPException(
+                        status_code=status.HTTP_409_CONFLICT,
+                        detail="That username is already taken. Pick another.",
+                    ) from exc
+                raise
+
+            profile = self._require_profile(athlete_id)
+            logger.info("[store] change_username:success athlete_id=%s", athlete_id)
+            return profile
+        except HTTPException:
+            raise
+        except _STORE_CLIENT_ERRORS as exc:
+            self._raise_operation_http_error(
+                operation=f"change_username athlete_id={athlete_id}",
+                detail="failed to change username",
                 exc=exc,
             )
 

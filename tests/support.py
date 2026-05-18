@@ -11,7 +11,14 @@ from fastapi.testclient import TestClient
 
 from api.app import create_app
 from api.auth import AuthenticatedUser
-from api.models import PlanRequest, ProfileUpdateRequest
+from api.models import (
+    PlanRequest,
+    ProfileUpdateRequest,
+    USERNAME_CHANGE_WINDOW_DAYS,
+    USERNAME_MAX_CHANGES_PER_WINDOW,
+    validate_username,
+)
+from datetime import timedelta
 
 os.environ.setdefault("APP_GENERATION_SCHEDULER", "fastapi")
 
@@ -52,6 +59,8 @@ class FakeStore:
         profile = {
             "id": user.user_id,
             "email": user.email,
+            "username": None,
+            "username_change_history": [],
             "role": role,
             "full_name": user.full_name,
             "technical_style": [],
@@ -76,6 +85,50 @@ class FakeStore:
         if "record" in data:
             data["record_summary"] = data.pop("record")
         profile.update(data)
+        profile["updated_at"] = _now()
+        return profile
+
+    def change_username(self, athlete_id: str, username: str) -> dict:
+        profile = self.profiles[athlete_id]
+        normalized = validate_username(username)
+        current = (profile.get("username") or "").lower() or None
+        if normalized == current:
+            return profile
+        for other_id, other_profile in self.profiles.items():
+            if other_id == athlete_id:
+                continue
+            if (other_profile.get("username") or "").lower() == normalized:
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail="That username is already taken. Pick another.",
+                )
+        history_raw = profile.get("username_change_history") or []
+        history: list[str] = [str(entry) for entry in history_raw if entry]
+        now = datetime.now(timezone.utc)
+        cutoff = now - timedelta(days=USERNAME_CHANGE_WINDOW_DAYS)
+        recent: list[datetime] = []
+        for entry in history:
+            try:
+                parsed = datetime.fromisoformat(entry.replace("Z", "+00:00"))
+            except ValueError:
+                continue
+            if parsed.tzinfo is None:
+                parsed = parsed.replace(tzinfo=timezone.utc)
+            if parsed >= cutoff:
+                recent.append(parsed)
+        if len(recent) >= USERNAME_MAX_CHANGES_PER_WINDOW:
+            earliest = min(recent)
+            next_available = earliest + timedelta(days=USERNAME_CHANGE_WINDOW_DAYS)
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail=(
+                    f"You can change your username up to {USERNAME_MAX_CHANGES_PER_WINDOW} times "
+                    f"every {USERNAME_CHANGE_WINDOW_DAYS} days. "
+                    f"Next change available {next_available.isoformat()}."
+                ),
+            )
+        profile["username"] = normalized
+        profile["username_change_history"] = [entry.isoformat() for entry in recent] + [now.isoformat()]
         profile["updated_at"] = _now()
         return profile
 
