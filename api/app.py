@@ -158,6 +158,16 @@ def _is_stale_job(job: dict[str, Any], *, stale_after_seconds: int = 90) -> bool
     return runtime_is_stale_job(job, stale_after_seconds=stale_after_seconds)
 
 
+def _generation_job_stale_after_seconds() -> int:
+    fallback_seconds = 1400
+    raw_value = (os.getenv("APP_GENERATION_JOB_STALE_AFTER_SECONDS", str(fallback_seconds)) or "").strip()
+    try:
+        parsed = int(raw_value)
+    except ValueError:
+        return fallback_seconds
+    return max(60, parsed)
+
+
 def _build_me_response(profile: ProfileRecord, store: AppStore) -> MeResponse:
     latest_intake = store.get_latest_intake(profile.athlete_id)
     plans = _visible_plans_for_athlete(store.list_user_plans(profile.athlete_id))
@@ -1123,6 +1133,7 @@ def create_app(
                 active_tasks=active_tasks,
                 enable_in_process_generation=enable_in_process_generation,
                 is_stale_job=_is_stale_job,
+                stale_after_seconds=_generation_job_stale_after_seconds(),
             )
             return _job_response(job)
         daily_limit = _plan_generate_daily_limit_per_user()
@@ -1157,6 +1168,7 @@ def create_app(
             active_tasks=active_tasks,
             enable_in_process_generation=enable_in_process_generation,
             is_stale_job=_is_stale_job,
+            stale_after_seconds=_generation_job_stale_after_seconds(),
         )
         return _job_response(job)
 
@@ -1228,6 +1240,7 @@ def create_app(
             active_tasks=active_tasks,
             enable_in_process_generation=enable_in_process_generation,
             is_stale_job=_is_stale_job,
+            stale_after_seconds=_generation_job_stale_after_seconds(),
         )
         return _job_response(job)
 
@@ -1297,6 +1310,7 @@ def create_app(
             active_tasks=active_tasks,
             enable_in_process_generation=enable_in_process_generation,
             is_stale_job=_is_stale_job,
+            stale_after_seconds=_generation_job_stale_after_seconds(),
         )
         return _job_response(job)
 
@@ -1528,6 +1542,7 @@ def create_app(
             active_tasks=active_tasks,
             enable_in_process_generation=enable_in_process_generation,
             is_stale_job=_is_stale_job,
+            stale_after_seconds=_generation_job_stale_after_seconds(),
         )
         return _job_response(job)
 
@@ -1727,6 +1742,7 @@ def create_app(
             active_tasks=active_tasks,
             enable_in_process_generation=enable_in_process_generation,
             is_stale_job=_is_stale_job,
+            stale_after_seconds=_generation_job_stale_after_seconds(),
         )
         return _job_response(job)
 
