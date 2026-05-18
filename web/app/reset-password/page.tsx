@@ -46,6 +46,7 @@ export default function ResetPasswordPage() {
     const { data: { subscription } } = client.auth.onAuthStateChange((event) => {
       if (event === "PASSWORD_RECOVERY") {
         window.clearTimeout(timeoutId);
+        setError(null);
         setIsReady(true);
       }
     });
