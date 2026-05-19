@@ -24,6 +24,8 @@ logger = logging.getLogger(__name__)
 _TRIAGE_RESUME_OVERRIDE_KEY = "_triage_resume_override"
 _DETACHED_GENERATION_TASKS: set[asyncio.Task[None]] = set()
 _MAX_PERSISTED_MILESTONES = 40
+_OPENAI_QUOTA_ADMIN_ERROR = "OpenAI quota exceeded. Check API billing, credits, project budget, or organization limits."
+_OPENAI_QUOTA_ATHLETE_ERROR = "Generation is temporarily unavailable. Please try again later."
 
 
 def utc_now_iso() -> str:
@@ -226,6 +228,13 @@ def _is_truthy_flag(value: Any) -> bool:
         normalized = value.strip().lower()
         return normalized in {"1", "true", "yes", "y", "on"}
     return False
+
+
+def is_openai_quota_error(error: Exception) -> bool:
+    message = str(error or "").lower()
+    if "insufficient_quota" in message or "exceeded your current quota" in message:
+        return True
+    return "429" in message and "quota" in message
 
 
 def should_skip_stage2(stage1_result: dict[str, Any], *, allow_triage_resume_override: bool = False) -> bool:
@@ -473,12 +482,13 @@ async def run_generation_job(
             )
     except Stage2AutomationError as exc:
         logger.exception("[jobs] generation:stage2_failed athlete_id=%s job_id=%s", athlete_id, job_id)
+        resolved_error = _OPENAI_QUOTA_ADMIN_ERROR if is_openai_quota_error(exc) else str(exc)
         with suppress(Exception):
             await asyncio.to_thread(
                 store.update_generation_job,
                 job_id,
                 status="failed",
-                error=str(exc),
+                error=resolved_error,
                 completed_at=utc_now_iso(),
                 heartbeat_at=utc_now_iso(),
             )

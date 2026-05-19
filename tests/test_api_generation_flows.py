@@ -548,6 +548,36 @@ def test_stage2_gateway_failure_returns_failed_job_without_persisting_plan():
     assert len(store.plans) == 0
 
 
+def test_stage2_insufficient_quota_masks_athlete_error_and_preserves_admin_detail():
+    client, store, _ = _build_client(
+        FakeStage2Automator(
+            error=Stage2AutomationError(
+                'Error code: 429 - {"error":{"message":"You exceeded your current quota","code":"insufficient_quota"}}'
+            )
+        )
+    )
+
+    _, job = _start_generation(client)
+    assert job["status"] == "failed"
+    assert job["error"] == "Generation is temporarily unavailable. Please try again later."
+    assert len(store.plans) == 0
+
+    saved = store.get_generation_job(job["job_id"])
+    assert saved is not None
+    assert saved["status"] == "failed"
+    assert saved["error"] == "OpenAI quota exceeded. Check API billing, credits, project budget, or organization limits."
+
+    admin_job = client.get(
+        f"/api/generation-jobs/{job['job_id']}",
+        headers={"Authorization": "Bearer admin-token"},
+    )
+    assert admin_job.status_code == 200
+    assert (
+        admin_job.json()["error"]
+        == "OpenAI quota exceeded. Check API billing, credits, project budget, or organization limits."
+    )
+
+
 def test_generate_plan_returns_existing_active_job_for_same_athlete():
     client, store, _ = _build_client()
 
