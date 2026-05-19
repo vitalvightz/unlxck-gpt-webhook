@@ -62,6 +62,8 @@ from .nutrition_workspace import (
 )
 from .performance_focus import validate_performance_focus_selections
 from .generation_runtime import (
+    _OPENAI_QUOTA_ADMIN_ERROR,
+    _OPENAI_QUOTA_ATHLETE_ERROR,
     default_planner as runtime_default_planner,
     is_stale_job as runtime_is_stale_job,
     run_stage1_planner,
@@ -135,9 +137,17 @@ def _normalize_progress_milestones(raw: Any) -> list[dict[str, Any]]:
     return normalized
 
 
-def _job_response(job: dict[str, Any], *, latest_plan_id: str | None = None) -> GenerationJobResponse:
+def _job_response(
+    job: dict[str, Any],
+    *,
+    latest_plan_id: str | None = None,
+    viewer_role: str = "athlete",
+) -> GenerationJobResponse:
     plan_id = str(job.get("plan_id")) if job.get("plan_id") else None
     updated_at = job.get("updated_at") or job.get("created_at") or _utc_now_iso()
+    error = str(job["error"]) if job.get("error") else None
+    if viewer_role != "admin" and error == _OPENAI_QUOTA_ADMIN_ERROR:
+        error = _OPENAI_QUOTA_ATHLETE_ERROR
     return GenerationJobResponse(
         job_id=str(job["id"]),
         athlete_id=str(job["athlete_id"]),
@@ -147,7 +157,7 @@ def _job_response(job: dict[str, Any], *, latest_plan_id: str | None = None) -> 
         updated_at=str(updated_at),
         started_at=str(job["started_at"]) if job.get("started_at") else None,
         completed_at=str(job["completed_at"]) if job.get("completed_at") else None,
-        error=str(job["error"]) if job.get("error") else None,
+        error=error,
         plan_id=plan_id,
         latest_plan_id=latest_plan_id or plan_id,
         progress_milestones=_normalize_progress_milestones(job.get("progress_milestones")),
@@ -1135,7 +1145,7 @@ def create_app(
                 stale_job_checker=_is_stale_job,
                 stale_after_seconds=_generation_job_stale_after_seconds(),
             )
-            return _job_response(job)
+            return _job_response(job, viewer_role=profile.role)
         daily_limit = _plan_generate_daily_limit_per_user()
         if daily_limit > 0:
             utc_midnight = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0).isoformat()
@@ -1170,7 +1180,7 @@ def create_app(
             stale_job_checker=_is_stale_job,
             stale_after_seconds=_generation_job_stale_after_seconds(),
         )
-        return _job_response(job)
+        return _job_response(job, viewer_role=profile.role)
 
     @app.post("/api/plans/stage1-preview", response_model=PlanStage1PreviewResponse)
     async def generate_current_user_stage1_preview(
@@ -1242,7 +1252,7 @@ def create_app(
             stale_job_checker=_is_stale_job,
             stale_after_seconds=_generation_job_stale_after_seconds(),
         )
-        return _job_response(job)
+        return _job_response(job, viewer_role=profile.role)
 
     @app.post("/api/generation-jobs/{job_id}/retry", response_model=GenerationJobResponse, status_code=202)
     async def retry_generation_job(
@@ -1312,7 +1322,7 @@ def create_app(
             stale_job_checker=_is_stale_job,
             stale_after_seconds=_generation_job_stale_after_seconds(),
         )
-        return _job_response(job)
+        return _job_response(job, viewer_role="admin")
 
     @app.get("/api/plans/latest", response_model=PlanDetail)
     def get_latest_plan(
@@ -1544,7 +1554,7 @@ def create_app(
             stale_job_checker=_is_stale_job,
             stale_after_seconds=_generation_job_stale_after_seconds(),
         )
-        return _job_response(job)
+        return _job_response(job, viewer_role=profile.role)
 
     @app.post("/api/admin/plans/{plan_id}/reject", response_model=PlanDetail)
     def reject_approved_plan(
@@ -1744,7 +1754,7 @@ def create_app(
             stale_job_checker=_is_stale_job,
             stale_after_seconds=_generation_job_stale_after_seconds(),
         )
-        return _job_response(job)
+        return _job_response(job, viewer_role=profile.role)
 
     return app
 
