@@ -1131,12 +1131,12 @@ def _decorate_conditioning_drill(
     decorated["universally_available"] = _conditioning_is_universally_available(decorated)
     decorated["generic_fallback"] = bool(decorated.get("generic_fallback"))
     decorated["session_index"] = session_index
-    decorated["phase"] = phase.upper()
+    decorated["phase"] = str(phase or "").upper()
     decorated["render_as_fallback"] = bool(is_fallback)
     return decorated
 
 def _conditioning_fallback_allowed(primary: dict, fallback: dict, *, phase: str) -> bool:
-    if phase.upper() == "TAPER":
+    if str(phase or "").upper() == "TAPER":
         return False
     contingency_reason = (
         primary.get("availability_contingency_reason")
@@ -1155,46 +1155,80 @@ def _resolve_conditioning_sessions(
 ) -> list[dict]:
     """Distribute already-selected conditioning drills into sessions.
 
-    Important:
-    - This function must not secretly delete selected drills.
-    - Every selected drill should become a rendered primary drill.
-    - Fallbacks are only used when a drill is already explicitly marked as a fallback.
+    Per system: the first non-fallback drill becomes the primary, and at most one
+    additional drill can render as a fallback — only when ``_conditioning_fallback_allowed``
+    permits it (i.e. availability contingency reason is present and the phase is
+    not TAPER). Extra drills beyond that are dropped silently. Across all systems
+    inside a single session, at most one fallback is surfaced.
     """
 
     ordered_keys = ["aerobic", "glycolytic", "alactic"]
     ordered_keys += [k for k in grouped_drills.keys() if k not in ordered_keys]
 
-    selected_entries: list[dict] = []
+    system_entries: list[dict] = []
 
     for system in ordered_keys:
-        drills = grouped_drills.get(system, [])
-        for drill in drills:
-            if not drill:
-                continue
+        drills = [d for d in grouped_drills.get(system, []) if d]
+        if not drills:
+            continue
 
-            is_fallback = bool(drill.get("render_as_fallback"))
+        explicit_primaries = [d for d in drills if not d.get("render_as_fallback")]
 
-            decorated = _decorate_conditioning_drill(
-                drill,
-                system=system,
-                phase=phase,
-                session_index=0,  # corrected after session assignment below
-                is_fallback=is_fallback,
+        primary_raw = explicit_primaries[0] if explicit_primaries else drills[0]
+        primary_decorated = _decorate_conditioning_drill(
+            primary_raw,
+            system=system,
+            phase=phase,
+            session_index=0,
+            is_fallback=False,
+        )
+
+        # Fallback candidates must exclude the primary itself, otherwise an
+        # all-fallback-marked drill list (or any list where the only candidate
+        # is also the primary) would render the same drill twice — once as
+        # primary, once as fallback. The fallback pool is therefore drawn from
+        # the remaining drills only, with explicitly fallback-marked entries
+        # preferred over implicit ones.
+        remaining_drills = [d for d in drills if d is not primary_raw]
+        candidate_fallback_raw = None
+        candidate_is_explicit = False
+        if remaining_drills:
+            explicit_remaining_fallbacks = [
+                d for d in remaining_drills if d.get("render_as_fallback")
+            ]
+            if explicit_remaining_fallbacks:
+                candidate_fallback_raw = explicit_remaining_fallbacks[0]
+                candidate_is_explicit = True
+            else:
+                candidate_fallback_raw = remaining_drills[0]
+
+        fallback_decorated = None
+        if candidate_fallback_raw is not None:
+            allowed = candidate_is_explicit or _conditioning_fallback_allowed(
+                primary_raw, candidate_fallback_raw, phase=phase
             )
+            if allowed and str(phase or "").upper() != "TAPER":
+                fallback_decorated = _decorate_conditioning_drill(
+                    candidate_fallback_raw,
+                    system=system,
+                    phase=phase,
+                    session_index=0,
+                    is_fallback=True,
+                )
 
-            selected_entries.append(
-                {
-                    "system": system,
-                    "primary": None if is_fallback else decorated,
-                    "fallback": decorated if is_fallback else None,
-                }
-            )
+        system_entries.append(
+            {
+                "system": system,
+                "primary": primary_decorated,
+                "fallback": fallback_decorated,
+            }
+        )
 
-    if not selected_entries:
+    if not system_entries:
         return []
 
     session_count = max(1, num_sessions or 1)
-    session_count = min(session_count, len(selected_entries))
+    session_count = min(session_count, len(system_entries))
 
     sessions = [
         {
@@ -1205,20 +1239,27 @@ def _resolve_conditioning_sessions(
         for idx in range(session_count)
     ]
 
-    for idx, entry in enumerate(selected_entries):
+    for idx, entry in enumerate(system_entries):
         target_session = sessions[idx % session_count]
         session_index = target_session["session_index"]
 
-        primary = entry.get("primary")
-        fallback = entry.get("fallback")
-
-        if primary:
-            primary["session_index"] = session_index
-        if fallback:
-            fallback["session_index"] = session_index
+        if entry.get("primary"):
+            entry["primary"]["session_index"] = session_index
+        if entry.get("fallback"):
+            entry["fallback"]["session_index"] = session_index
 
         target_session["entries"].append(entry)
         target_session["systems"].add(entry["system"])
+
+    # Cap: at most one fallback per session, regardless of how many systems share it.
+    for session in sessions:
+        seen_fallback = False
+        for entry in session["entries"]:
+            if entry.get("fallback"):
+                if seen_fallback:
+                    entry["fallback"] = None
+                else:
+                    seen_fallback = True
 
     return sessions
 
@@ -1551,6 +1592,7 @@ def render_conditioning_block(
                     name = _normalize_conditioning_name(
                         name,
                         fight_format=(sport or "").lower(),
+                        phase=phase,
                     )
                     timing = _sanitize_sport_language(
                         timing,

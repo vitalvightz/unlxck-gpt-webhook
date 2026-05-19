@@ -1159,26 +1159,33 @@ def _lock_declared_hard_sparring_roles(
             used_indices.add(existing_idx)
             continue
 
-        candidate_indices = [
-            idx
-            for idx, role in enumerate(updated_roles)
-            if idx not in used_indices and role.get("role_key") != "hard_sparring_day"
-        ]
-        candidate_idx = None
-        if candidate_indices:
-            candidate_idx = min(
-                candidate_indices,
-                key=lambda idx: _replaceable_role_priority(updated_roles[idx], day=day),
-            )
-
-        if candidate_idx is None:
-            updated_roles.append(replacement)
-            used_indices.add(len(updated_roles) - 1)
+        # Prefer displacing a role already scheduled on this hard-sparring day
+        # — that role would clash with the spar regardless. Only fall back to
+        # cross-day poaching when the spar-day slot is otherwise empty AND
+        # there are no spare training days; otherwise add the hard-sparring
+        # role on its declared day without evicting non-conflicting roles.
+        same_day_idx = next(
+            (
+                idx
+                for idx, role in enumerate(updated_roles)
+                if idx not in used_indices
+                and role.get("role_key") != "hard_sparring_day"
+                and str(role.get("scheduled_day_hint") or "").strip().lower() == day.lower()
+            ),
+            None,
+        )
+        if same_day_idx is not None:
+            updated_suppressed.append(_make_hard_sparring_lock_suppression(updated_roles[same_day_idx], day))
+            updated_roles[same_day_idx] = replacement
+            used_indices.add(same_day_idx)
             continue
 
-        updated_suppressed.append(_make_hard_sparring_lock_suppression(updated_roles[candidate_idx], day))
-        updated_roles[candidate_idx] = replacement
-        used_indices.add(candidate_idx)
+        # No role currently occupies this hard-sparring day — just append the
+        # hard-sparring role. ``_apply_high_fatigue_week_compression`` runs
+        # downstream and trims any genuine over-allocation through readiness /
+        # compression signals instead of silent cross-day poaching here.
+        updated_roles.append(replacement)
+        used_indices.add(len(updated_roles) - 1)
 
     if any(role.get("coach_note_flags") for role in updated_roles if role.get("role_key") == "hard_sparring_day"):
         _append_week_coach_note_flag(week_entry, "deload hard sparring")
@@ -1256,16 +1263,21 @@ def _assign_declared_day_hints(
         middle = max(0, len(training_days) // 2)
         best_pair: tuple[int, int] | None = None
         best_score = -10_000
+        # Reject any pair that lands the recovery slot on a declared hard
+        # sparring day. _lock_declared_hard_sparring_roles will otherwise
+        # displace the recovery role, silently consuming the gas-tank recovery
+        # touch that gas-tank-limiter athletes rely on (see
+        # _upgrade_recovery_days_to_gas_tank).
         for idx in range(len(training_days) - 1):
             recovery_day = training_days[idx]
             primary_day = training_days[idx + 1]
             if primary_day in hard_sparring_days:
                 continue
+            if recovery_day in hard_sparring_days:
+                continue
             score = 100
             if primary_day in sandwiched_days:
                 score -= 50
-            if recovery_day not in hard_sparring_days:
-                score += 10
             if recovery_day in support_work_days:
                 score += 4
             if recovery_day in sandwiched_days:
@@ -1274,15 +1286,16 @@ def _assign_declared_day_hints(
             if score > best_score:
                 best_score = score
                 best_pair = (idx, idx + 1)
-        if best_pair is None:
-            fallback_idx = next((idx for idx, day in enumerate(training_days[1:], start=1) if day not in hard_sparring_days), 1)
-            best_pair = (max(0, fallback_idx - 1), fallback_idx)
 
-        recovery_day = training_days[best_pair[0]]
-        primary_day = training_days[best_pair[1]]
-        day_assignments[recovery_idx] = recovery_day
-        day_assignments[primary_idx] = primary_day
-        used_days.update({recovery_day, primary_day})
+        if best_pair is not None:
+            recovery_day = training_days[best_pair[0]]
+            primary_day = training_days[best_pair[1]]
+            day_assignments[recovery_idx] = recovery_day
+            day_assignments[primary_idx] = primary_day
+            used_days.update({recovery_day, primary_day})
+        # If no clean adjacent pair exists, defer to the per-role fallback
+        # below — it already prefers sandwiched non-spar days for recovery and
+        # non-sandwiched non-spar days for primary strength.
 
     if glycolytic_idx is not None:
         preferred_glycolytic_day = next(
@@ -2200,7 +2213,20 @@ def _build_weekly_role_map(
             session_index += 1
 
         conditioning_count = max(0, int(session_counts.get("conditioning", 0)))
-        if conditioning_count == 0 and _conditioning_limiter_signal(athlete_model) and _can_keep_low_noise_conditioning(athlete_model):
+        # When conditioning is a profile limiter but the brief has zero
+        # conditioning sessions, add a single low-noise aerobic touch — unless
+        # there is already a recovery slot that ``_upgrade_recovery_days_to_gas_tank``
+        # can convert into the same gas-tank touch. Auto-adding on top of the
+        # existing recovery slot would consume the weekly low-aerobic cap and
+        # silently block the recovery-day upgrade the brief was actually
+        # designed around.
+        recovery_count = max(0, int(session_counts.get("recovery", 0)))
+        if (
+            conditioning_count == 0
+            and recovery_count == 0
+            and _conditioning_limiter_signal(athlete_model)
+            and _can_keep_low_noise_conditioning(athlete_model)
+        ):
             conditioning_count = 1
             conditioning_sequence = ["aerobic"] + [s for s in conditioning_sequence if s != "aerobic"]
         for idx in range(conditioning_count):

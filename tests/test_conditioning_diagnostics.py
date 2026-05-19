@@ -2,7 +2,12 @@ import asyncio
 import json
 from pathlib import Path
 
-from fightcamp.conditioning import _glycolytic_fallback, format_drill_block, render_conditioning_block
+from fightcamp.conditioning import (
+    _glycolytic_fallback,
+    _resolve_conditioning_sessions,
+    format_drill_block,
+    render_conditioning_block,
+)
 from fightcamp.diagnostics import _late_fight_lever, _short_notice_lever, format_missing_system_block
 from fightcamp.main import generate_plan
 from fightcamp.stage2_payload import build_planning_brief, build_stage2_payload
@@ -258,6 +263,97 @@ def test_conditioning_helper_fallbacks_are_equipment_valid():
     assert fallback["generic_fallback"] is True
 
 
+def test_render_conditioning_block_does_not_render_primary_as_its_own_fallback():
+    """An all-fallback-marked drill list must not surface the same drill as both
+    primary and fallback (regression guard for #1361 review feedback)."""
+    output = render_conditioning_block(
+        {
+            "glycolytic": [
+                {
+                    "name": "Trap Bar Death March",
+                    "render_as_fallback": True,
+                    "timing": "30s work / 30s rest x 5",
+                    "rest": "30s",
+                    "load": "heavy",
+                    "purpose": "Only drill in the system.",
+                    "red_flags": "None",
+                },
+            ]
+        },
+        phase="SPP",
+        phase_color="#000",
+        sport="boxing",
+        num_sessions=1,
+    )
+
+    # The drill must appear exactly once in the rendered block — never as both
+    # primary and fallback.
+    assert output.count("Trap Bar Carry Intervals") == 1
+    assert "**Fallback:" not in output
+
+
+def test_render_conditioning_block_single_drill_emits_no_fallback():
+    """A single-drill system has no candidate fallback and must not invent one."""
+    output = render_conditioning_block(
+        {
+            "alactic": [
+                {
+                    "name": "Ankle Snap Bounce",
+                    "timing": "4 x 10s",
+                    "rest": "30s",
+                    "load": "fast",
+                    "purpose": "Sharpness.",
+                    "red_flags": "None",
+                },
+            ]
+        },
+        phase="SPP",
+        phase_color="#000",
+        sport="boxing",
+        num_sessions=1,
+    )
+
+    assert "**Fallback:" not in output
+    assert output.count("Ankle Snap Bounce") == 1
+
+
+def test_resolve_conditioning_sessions_handles_none_phase_without_crashing():
+    """``_resolve_conditioning_sessions`` is called with the brief's raw phase
+    value, which may be missing in degraded plan paths; a None phase must not
+    crash fallback resolution."""
+    sessions = _resolve_conditioning_sessions(
+        {
+            "glycolytic": [
+                {
+                    "name": "Trap Bar Death March",
+                    "timing": "30s work / 30s rest x 5",
+                    "rest": "30s",
+                    "load": "heavy",
+                    "purpose": "Primary glycolytic choice.",
+                    "red_flags": "None",
+                },
+                {
+                    "name": "Barbell Smash & Dash",
+                    "timing": "4 rounds",
+                    "rest": "75s",
+                    "load": "hard",
+                    "purpose": "Fallback option.",
+                    "red_flags": "None",
+                    "availability_contingency_reason": "only if barbell access replaces the trap bar session",
+                },
+            ]
+        },
+        phase=None,
+        num_sessions=1,
+    )
+
+    # One session with one entry exposing the primary; no exception raised.
+    assert len(sessions) == 1
+    entries = sessions[0]["entries"]
+    assert len(entries) == 1
+    assert entries[0]["primary"]["name"] == "Trap Bar Death March"
+
+
 def test_generate_plan_returns_controlled_error_for_invalid_payload():
     result = asyncio.run(generate_plan({"data": {}}))
 
@@ -326,7 +422,7 @@ def test_generate_plan_returns_stage2_payload():
 
     handoff_text = result.get("stage2_handoff_text", "")
     assert "You are Stage 2 (planner/finalizer)." in handoff_text
-    assert "PLANNING BRIEF" in handoff_text
+    assert "FINALIZER PACKET" in handoff_text
     assert "AUTHORITY ORDER" in handoff_text
     assert "ATHLETE PROFILE" in handoff_text
     assert "STAGE 1 DRAFT PLAN" in handoff_text
