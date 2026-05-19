@@ -1,6 +1,7 @@
 import type {
   ApproveAndResumeGenerationRequest,
   AdminAthleteRecord,
+  AdminGenerationJobDiagnostic,
   AdminPlanSummary,
   ManualStage2SubmissionRequest,
   GenerationJobResponse,
@@ -568,6 +569,19 @@ export function generateAdminAthletePlanFromLatestIntake(
       token,
       clientRequestId,
     }),
+  );
+}
+
+export function getAdminAthleteGenerationJobs(
+  token: string,
+  athleteId: string,
+  limit = 10,
+): Promise<AdminGenerationJobDiagnostic[]> {
+  return withTransientRetries(() =>
+    readJson<AdminGenerationJobDiagnostic[]>(
+      `/api/admin/athletes/${encodeURIComponent(athleteId)}/generation-jobs?limit=${limit}`,
+      { token },
+    ),
   );
 }
 

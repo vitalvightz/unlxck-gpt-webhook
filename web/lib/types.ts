@@ -411,3 +411,33 @@ export type AdminAthleteRecord = {
 export type AdminPlanSummary = PlanSummary & {
   athlete_email: string;
 };
+
+export type GenerationRequestPayloadSummary = {
+  athlete_name: string;
+  fight_date: string;
+  phase: string;
+  fight_format: string;
+  fatigue_level: string;
+  goals: string[];
+  weaknesses: string[];
+  injuries: string[];
+  training_availability: string;
+};
+
+export type AdminGenerationJobDiagnostic = {
+  job_id: string;
+  status: GenerationJobStatus;
+  source: string;
+  created_at: string;
+  started_at?: string | null;
+  heartbeat_at?: string | null;
+  completed_at?: string | null;
+  client_request_id: string;
+  retry_of?: string | null;
+  error?: string | null;
+  stale_reason?: string | null;
+  plan_id?: string | null;
+  can_retry: boolean;
+  is_stale: boolean;
+  request_payload_summary: GenerationRequestPayloadSummary;
+};
