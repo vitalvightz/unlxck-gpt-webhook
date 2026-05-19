@@ -41,7 +41,7 @@ def test_reset_password_expired_link_fallback_is_statically_present():
 def test_plan_intake_form_admin_gates_stage1_preview_affordance():
     form = _read("web/components/plan-intake-form.tsx")
 
-    assert 'const isAdminUser = me?.profile.role === "admin";' in form
+    assert 'const isAdminUser = me?.profile?.role === "admin";' in form
 
     stage1_button_block = re.search(
         r"\{isAdminUser \? \(\s*<button[^>]*onboarding-action-stage1[^>]*>.*?Generate Stage 1 only.*?</button>\s*\) : null\}",
