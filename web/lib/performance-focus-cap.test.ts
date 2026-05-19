@@ -3,10 +3,16 @@ import test from "node:test";
 
 import { getPerformanceFocusCap, validatePerformanceFocusSelections } from "./performance-focus-cap.ts";
 
-test("returns null when fight date is missing or invalid", () => {
-  assert.equal(getPerformanceFocusCap(""), null);
-  assert.equal(getPerformanceFocusCap("not-a-date"), null);
-  assert.equal(getPerformanceFocusCap("2026-02-31"), null);
+test("uses the open-plan cap when fight date is missing or invalid", () => {
+  assert.deepStrictEqual(getPerformanceFocusCap(""), {
+    daysUntilFight: Number.POSITIVE_INFINITY,
+    weeksOut: 0,
+    maxSelections: 5,
+    windowLabel: "Open plan",
+    reason: "Open plans use a 5-pick focus cap to keep goals and weak areas clear without a fight-date countdown.",
+  });
+  assert.equal(getPerformanceFocusCap("not-a-date")?.maxSelections, 5);
+  assert.equal(getPerformanceFocusCap("2026-02-31")?.maxSelections, 5);
 });
 
 test("uses the fight-week cap for events within seven days", () => {

@@ -21,6 +21,14 @@ export type PerformanceFocusValidation = {
   errorMessage: string | null;
 };
 
+const OPEN_PLAN_FOCUS_CAP: PerformanceFocusCap = {
+  daysUntilFight: Number.POSITIVE_INFINITY,
+  weeksOut: 0,
+  maxSelections: 5,
+  windowLabel: "Open plan",
+  reason: "Open plans use a 5-pick focus cap to keep goals and weak areas clear without a fight-date countdown.",
+};
+
 const PERFORMANCE_FOCUS_CAP_WINDOWS: PerformanceFocusCapWindow[] = [
   {
     maxDaysUntilFight: 7,
@@ -109,7 +117,7 @@ export function getPerformanceFocusCap(
 ): PerformanceFocusCap | null {
   const parsedFightDate = parseDateOnly(fightDate);
   if (!parsedFightDate) {
-    return null;
+    return OPEN_PLAN_FOCUS_CAP;
   }
 
   const referenceDate = options?.now ?? new Date();
