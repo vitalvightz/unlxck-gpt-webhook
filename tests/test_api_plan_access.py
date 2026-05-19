@@ -557,6 +557,7 @@ def test_generation_job_endpoint_requires_same_athlete_or_admin():
 
 def test_admin_can_list_athlete_generation_jobs_with_sanitized_summary_and_retry_flags():
     client, store, _ = _build_client()
+    store.ensure_profile(client.app.state.auth_service.users_by_token["athlete-token"])
     request_payload = _build_request().model_dump(mode="json")
     request_payload["api_key"] = "should-not-return"
     failed = store.create_or_get_generation_job(
@@ -602,6 +603,7 @@ def test_admin_can_list_athlete_generation_jobs_with_sanitized_summary_and_retry
 
 def test_non_admin_cannot_list_admin_generation_jobs_and_stale_job_is_flagged():
     client, store, _ = _build_client()
+    store.ensure_profile(client.app.state.auth_service.users_by_token["athlete-token"])
     job = store.create_or_get_generation_job(
         athlete_id="athlete-1",
         client_request_id="retry_old_job_123",
