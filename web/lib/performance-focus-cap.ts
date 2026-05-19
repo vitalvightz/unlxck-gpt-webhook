@@ -23,10 +23,10 @@ export type PerformanceFocusValidation = {
 
 const OPEN_PLAN_FOCUS_CAP: PerformanceFocusCap = {
   daysUntilFight: Number.POSITIVE_INFINITY,
-  weeksOut: 0,
+  weeksOut: Number.POSITIVE_INFINITY,
   maxSelections: 5,
   windowLabel: "Open plan",
-  reason: "Open plans use a 5-pick focus cap to keep goals and weak areas clear without a fight-date countdown.",
+  reason: "Open plans use a focused cap to keep goals and weak areas clear without a fight-date countdown.",
 };
 
 const PERFORMANCE_FOCUS_CAP_WINDOWS: PerformanceFocusCapWindow[] = [
