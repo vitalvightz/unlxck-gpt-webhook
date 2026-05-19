@@ -5021,8 +5021,7 @@
       "pool"
     ],
     "phases": [
-      "SPP",
-      "TAPER"
+      "SPP"
     ],
     "system": "aerobic",
     "modality": "run",

@@ -1032,9 +1032,19 @@ def get_universal_strength_names() -> set[str]:
 
 
 def prime_strength_banks() -> None:
+    """Load and normalize strength banks once so later runs see consistent state.
+
+    `_detect_movement_pattern` includes the exercise's existing `movement` value
+    in its keyword haystack and writes the result back in-place, so the first
+    plan-generation call would otherwise produce different per-item movement
+    classifications than later calls. Normalizing at prime time pins the
+    canonical movement up front and removes that source of seeded-output drift.
+    """
     get_style_exercises()
-    get_exercise_bank()
-    get_universal_strength()
+    for item in get_exercise_bank():
+        normalize_exercise_movement(item)
+    for item in get_universal_strength():
+        normalize_exercise_movement(item)
 
 
 MOVEMENT_PATTERN_TAGS = {
@@ -1289,6 +1299,17 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
     exercise_bank = get_exercise_bank()
     style_exercises = get_style_exercises()
     universal_strength_names = get_universal_strength_names()
+
+    # When a seed is provided, vary the iteration order of the source banks so
+    # that score-tied candidates fall on different sides of the order-index
+    # tiebreaker (see ``_late_safe_candidate_priority``). Use the seeded ``rng``
+    # — never the global ``random`` module — so determinism is per-call and no
+    # state leaks across plan generations.
+    if rng is not None:
+        exercise_bank = list(exercise_bank)
+        rng.shuffle(exercise_bank)
+        style_exercises = list(style_exercises)
+        rng.shuffle(style_exercises)
 
     style_tags = [t for s in style_list for t in STYLE_TAG_MAP.get(s, [])]
     goal_tags = [tag for g in goals for tag in GOAL_TAG_MAP.get(g, [])]

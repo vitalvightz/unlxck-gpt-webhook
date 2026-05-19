@@ -105,6 +105,13 @@ BOXING_NAME_MAP = {
     "Rope-A-Dope Clinch": "Hand-Fight Conditioning",
 }
 
+# TAPER simplifications: shorter, low-cognitive-load names used only in the
+# final-camp output where complex drill labels distract from execution focus.
+TAPER_NAME_SIMPLIFICATION_MAP = {
+    "Ankle Snap Bounce": "Ankling",
+    "Split-Step Ankle Snap Pogo": "Ankling",
+}
+
 
 # ── Shared helpers (inline copies — conditioning.py also has these) ───────────
 
@@ -160,10 +167,14 @@ def _sanitize_sport_language(text: str, *, fight_format: str) -> str:
     return sanitized
 
 
-def _normalize_conditioning_name(name: str, *, fight_format: str) -> str:
+def _normalize_conditioning_name(
+    name: str, *, fight_format: str, phase: str | None = None
+) -> str:
     cleaned = PLAIN_CONDITIONING_NAME_MAP.get(name, name)
     if fight_format == "boxing":
         cleaned = BOXING_NAME_MAP.get(cleaned, cleaned)
+    if str(phase or "").upper() == "TAPER":
+        cleaned = TAPER_NAME_SIMPLIFICATION_MAP.get(cleaned, cleaned)
     return _sanitize_sport_language(cleaned, fight_format=fight_format)
 
 

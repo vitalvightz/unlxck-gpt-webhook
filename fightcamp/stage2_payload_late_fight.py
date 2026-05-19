@@ -672,7 +672,7 @@ def _bridge_baseline(state: str, days_until_fight: Any) -> dict[str, Any]:
             "double_stress_day_allowed": False,
             "freshness_mandatory": True,
             "bridge_sub_band": sub,
-            "no_hard_sparring_from_d17": days is not None and days <= 17,
+            "no_hard_sparring_after_d16": days is not None and days <= 17,
         }
     # Late taper baseline reflects the spec's evidence-based caps (D-13 to D-8
     # tighter than the legacy late-fight role budget). Callers that need the
