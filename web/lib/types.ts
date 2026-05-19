@@ -434,10 +434,9 @@ export type AdminGenerationJobDiagnostic = {
   completed_at?: string | null;
   client_request_id: string;
   retry_of?: string | null;
-  original_job_id?: string | null;
+  retry_of?: string | null;
   error?: string | null;
   stale_reason?: string | null;
-  failure_reason?: string | null;
   plan_id?: string | null;
   can_retry: boolean;
   is_stale: boolean;
