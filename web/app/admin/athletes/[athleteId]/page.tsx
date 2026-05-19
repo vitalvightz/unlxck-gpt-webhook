@@ -33,10 +33,10 @@ function humanizeEnumValue(value: string | null | undefined, fallback: string): 
 }
 
 function joinOrDash(values: string[] | null | undefined): string {
-  if (!Array.isArray(values) || values.length === 0) {
-    return "—";
-  }
-  return values.join(", ");
+  const joined = Array.isArray(values)
+    ? values.filter((v) => v?.trim()).join(", ")
+    : "";
+  return joined || "—";
 }
 
 function toNutritionUpdateRequest(workspace: NutritionWorkspaceState): NutritionWorkspaceUpdateRequest {
