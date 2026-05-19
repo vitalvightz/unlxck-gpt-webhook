@@ -258,10 +258,9 @@ export default function AdminAthletePage() {
                 <p className="muted">source {job.source} · created {job.created_at}</p>
                 <p className="muted">started {job.started_at || "—"} · heartbeat {job.heartbeat_at || "—"} · completed {job.completed_at || "—"}</p>
                 <p className="muted">client request {job.client_request_id}</p>
-                {job.retry_of || job.original_job_id ? <p className="muted">retry of {job.retry_of || job.original_job_id}</p> : null}
+                {job.retry_of ? <p className="muted">retry of {job.retry_of}</p> : null}
                 {job.plan_id ? <p><Link href={`/plans/${job.plan_id}`}>Open plan</Link></p> : null}
                 {job.error ? <p className="error-text">Error: {job.error}</p> : null}
-                {job.failure_reason && !job.error ? <p className="error-text">Failure reason: {job.failure_reason}</p> : null}
                 {job.is_stale ? <p className="error-text">Stale warning: {job.stale_reason || "Job appears stale."}</p> : null}
                 <p className="muted">
                   Payload: {job.request_payload_summary.athlete_name || "—"} · {job.request_payload_summary.fight_date || "—"} · {job.request_payload_summary.phase || "—"} · {job.request_payload_summary.fight_format || "—"} · fatigue {job.request_payload_summary.fatigue_level || "—"}
