@@ -32,6 +32,7 @@ from .stage2_payload_late_fight import (  # noqa: F401  (re-exported for tests/b
     _days_out_payload_mode,
     _fight_week_override_payload,
     _handoff_mode_instructions,
+    _is_app_owned_visible_role,
     _late_fight_permissions,
     _late_fight_rendering_rules,
     _resolve_late_fight_phase,
@@ -2852,6 +2853,25 @@ def _build_weekly_role_map(
             if max_sessions > 0:
                 filtered_roles = filtered_roles[:max_sessions]
         week["session_roles"] = filtered_roles
+        # Filter the hard-sparring plan and effective list so the surviving
+        # hard_sparring_day roles are the source of truth for which spar
+        # days the week actually runs (override may keep <= 1 hard_sparring
+        # role; any other declared spar days are no longer applicable).
+        active_spar_days = {
+            str(role.get("scheduled_day_hint") or "").strip().lower()
+            for role in filtered_roles
+            if role.get("role_key") == "hard_sparring_day" and str(role.get("scheduled_day_hint") or "").strip()
+        }
+        week["hard_sparring_plan"] = [
+            entry
+            for entry in list(week.get("hard_sparring_plan") or [])
+            if str(entry.get("day") or "").strip().lower() in active_spar_days
+        ]
+        week["effective_hard_sparring_days"] = [
+            day
+            for day in list(week.get("effective_hard_sparring_days") or [])
+            if str(day or "").strip().lower() in active_spar_days
+        ]
         suppressed_roles = list(week.get("suppressed_roles") or [])
         suppressed_roles.append(
             {
@@ -3214,6 +3234,50 @@ def _with_late_fight_allowed_exercises(
     }
 
 
+def _apply_boxing_crowded_week_post_processing(
+    weekly_role_map: dict[str, Any],
+    *,
+    athlete_model: dict[str, Any],
+) -> None:
+    """Apply the boxing crowded-week policy and day-identity governance.
+
+    ``stage2_role_map._build_weekly_role_map`` (the live builder) handles
+    base scheduling but does not run the boxing crowded-week policy or
+    annotate each role with the ``main_job`` / ``support_cap`` /
+    ``forbidden_secondary_stressors`` fields the planning-brief tests
+    depend on. Apply the policy in-place per week here so the returned
+    role map exposes the full contract.
+
+    Compression only fires when ``_boxing_crowded_week_policy_state``
+    reports an active week (≥2 risk signals or a hard override reason).
+    The governance pass is unconditional so every role exposes its
+    ``main_job`` classification.
+    """
+    weeks = weekly_role_map.get("weeks")
+    if not isinstance(weeks, list):
+        return
+    for week_entry in weeks:
+        if not isinstance(week_entry, dict):
+            continue
+        session_roles = list(week_entry.get("session_roles") or [])
+        suppressed_roles = list(week_entry.get("suppressed_roles") or [])
+
+        policy_state = _boxing_crowded_week_policy_state(week_entry, athlete_model)
+        crowded_week_active = bool(policy_state["active"])
+        if crowded_week_active:
+            session_roles, suppressed_roles = _apply_boxing_crowded_week_compression(
+                week_entry,
+                session_roles,
+                suppressed_roles,
+                athlete_model,
+            )
+            week_entry["session_roles"] = session_roles
+            week_entry["suppressed_roles"] = suppressed_roles
+
+        for role in session_roles:
+            _apply_day_identity_governance(role, crowded_week_active=crowded_week_active)
+
+
 def build_planning_brief(
     *,
     athlete_model: dict,
@@ -3341,6 +3405,16 @@ def build_planning_brief(
         week_by_week_progression,
         limiter_profile,
         fight_week_override=fight_week_override,
+    )
+    # Stage 2 role map ships with stage2_role_map._build_weekly_role_map's
+    # base scheduling, but tests/contracts expect the boxing crowded-week
+    # policy and the day-identity governance fields (``main_job``,
+    # ``support_cap``, ``forbidden_secondary_stressors``) on every session
+    # role. Apply that post-processing here so callers get a fully-decorated
+    # role map regardless of which inner builder produced it.
+    _apply_boxing_crowded_week_post_processing(
+        weekly_role_map,
+        athlete_model=athlete_model,
     )
     return {
         "schema_version": "planning_brief.v1",
@@ -3940,7 +4014,14 @@ def build_stage2_payload(
             "effective_stage2_mode": days_out_payload.get("payload_mode"),
             "days_out_payload": days_out_payload,
             "late_fight_plan_spec": late_fight_plan_spec,
-            "late_fight_session_sequence": late_fight_plan_spec.get("session_sequence") or [],
+            # ``late_fight_session_sequence`` is what the athlete actually
+            # does, so drop coach-owned hard_sparring placeholders/context
+            # entries kept in the full ``session_sequence`` for tracking.
+            "late_fight_session_sequence": [
+                role
+                for role in (late_fight_plan_spec.get("session_sequence") or [])
+                if _is_app_owned_visible_role(role.get("role_key"))
+            ],
             "rendering_rules": days_out_payload.get("rendering_rules", {}),
             "late_fight_permissions": days_out_payload.get("late_fight_permissions", {}),
             "athlete_model": athlete_model,
