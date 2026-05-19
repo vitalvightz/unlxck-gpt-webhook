@@ -2788,7 +2788,20 @@ def _late_fight_session_roles(days_until_fight: Any, athlete_model: dict) -> lis
 
 
 def _build_late_fight_session_sequence(days_until_fight: Any, athlete_model: dict) -> list[dict[str, Any]]:
-    return list(_late_fight_practical_allocation_plan(days_until_fight, athlete_model).get("session_roles", []))
+    """Return the visible/app-owned late-fight session sequence.
+
+    Coach-owned ``hard_sparring_day`` placeholders (including downgraded
+    context entries appended for D-17 downgrade tracking) are filtered out
+    so the brief surfaces only the sessions the athlete actually does. The
+    full list — including the coach-owned context — remains available on
+    ``late_fight_plan_spec.session_sequence``.
+    """
+    session_roles = list(_late_fight_practical_allocation_plan(days_until_fight, athlete_model).get("session_roles", []))
+    return [
+        role
+        for role in session_roles
+        if _is_app_owned_visible_role(role.get("role_key"))
+    ]
 
 
 def _is_bridge_countdown(days_until_fight: Any) -> bool:
@@ -3268,10 +3281,153 @@ def _bridge_countdown_practical_allocation_plan(days_until_fight: Any, athlete_m
     }
 
 
+def _composite_segment_lookup_for_offset(days_until_fight: Any) -> dict[int, dict[str, Any]]:
+    """Map each countdown offset to its composite-window segment metadata."""
+    lookup: dict[int, dict[str, Any]] = {}
+    for segment_index, segment in enumerate(_countdown_mode_sequence(days_until_fight), start=1):
+        start_day = segment.get("start_day")
+        end_day = segment.get("end_day")
+        if not isinstance(start_day, int) or not isinstance(end_day, int):
+            continue
+        for offset in range(end_day, start_day + 1):
+            if offset not in lookup:
+                lookup[offset] = {
+                    "segment_index": segment_index,
+                    "stage_key": segment.get("stage_key"),
+                    "payload_mode": segment.get("payload_mode"),
+                    "start_day": start_day,
+                    "end_day": end_day,
+                }
+    return lookup
+
+
+def _append_declared_hard_spar_context(
+    allocation: dict[str, Any],
+    days_until_fight: Any,
+    athlete_model: dict[str, Any],
+) -> dict[str, Any]:
+    """Append coach-owned ``hard_sparring_day`` context entries to the plan.
+
+    Declared boxing days that the D-17 ban downgraded to technical/rhythm
+    still belong to the gym/coach. ``_late_fight_allocation_plan`` builds
+    them as ``technical_touch_day`` candidates that compete (and usually
+    lose) for app-side insert slots. The session_roles list, however, must
+    still surface the day as ``hard_sparring_day`` so callers can see
+    which days the coach owns; the visibility filter in
+    ``_is_app_owned_visible_role`` already keeps ``hard_sparring_day`` out
+    of athlete-facing insert sessions.
+
+    The context entries are appended once per declared spar instance, at
+    the actual countdown offset for that weekday, with the matching
+    composite segment metadata so downstream weekly-role-map builders
+    place them in the right window.
+    """
+    permission_policy = allocation.get("permission_policy", {}) or {}
+    actions = [
+        action
+        for action in permission_policy.get("declared_hard_day_actions", [])
+        if str(action.get("outcome") or "") == "technical_touch_day"
+    ]
+    if not actions:
+        return allocation
+
+    countdown_map = _full_countdown_weekday_map(days_until_fight, athlete_model)
+    if not countdown_map:
+        return allocation
+
+    composite_lookup = _composite_segment_lookup_for_offset(days_until_fight)
+    composite_allocation = bool(
+        (allocation.get("allocator", {}) or {}).get("composite_practical_allocation")
+    )
+
+    session_roles = list(allocation.get("session_roles", []))
+    existing_locked: set[tuple[str, int | None]] = set()
+    for role in session_roles:
+        if str(role.get("role_key") or "") != "hard_sparring_day":
+            continue
+        day = str(role.get("locked_day") or role.get("scheduled_day_hint") or "").strip().lower()
+        offset = role.get("countdown_offset")
+        existing_locked.add((day, int(offset) if isinstance(offset, int) else None))
+
+    new_entries: list[dict[str, Any]] = []
+    for action in actions:
+        declared_day = str(action.get("day") or "").strip().lower()
+        if not declared_day:
+            continue
+        for label, weekday in countdown_map.items():
+            if str(weekday or "").strip().lower() != declared_day:
+                continue
+            offset = _countdown_offset(label)
+            if offset is None or offset <= 0:
+                continue
+            key = (declared_day, offset)
+            if key in existing_locked:
+                continue
+            existing_locked.add(key)
+            segment_meta = composite_lookup.get(offset, {})
+            context_role: dict[str, Any] = {
+                "session_index": len(session_roles) + len(new_entries) + 1,
+                "category": "sparring",
+                "role_key": "hard_sparring_day",
+                "preferred_pool": "declared_hard_sparring_days",
+                "selection_rule": (
+                    "Coach-owned boxing day downgraded to technical/rhythm only "
+                    "under the D-17 hard-sparring ban; never render as an app session."
+                ),
+                "anchor": _role_anchor("hard_sparring_day"),
+                "placement_rule": (
+                    "Keep this declared boxing day fixed on the athlete's stated weekday. "
+                    "Render with the coach-owned label and never as an app insert."
+                ),
+                "cost_class": _late_fight_cost_class("hard_sparring_day"),
+                "stress_class": _late_fight_stress_class("hard_sparring_day"),
+                "placement_source": "declared_hard_day_downgrade_context",
+                "legal_countdown_labels": [label],
+                "governance": {"late_fight_payload": True, "coach_owned": True},
+                "locked_day": declared_day,
+                "scheduled_day_hint": declared_day,
+                "real_weekday": declared_day,
+                "scheduled_countdown_label": label,
+                "countdown_label": label,
+                "countdown_display_label": _countdown_display_label(label, declared_day),
+                "countdown_weekday": declared_day,
+                "countdown_offset": offset,
+                "declared_day_locked": True,
+                "coach_owned": True,
+                "downgraded": True,
+                "downgraded_to_role_key": "technical_touch_day",
+                "downgrade_reason_code": "d17_hard_sparring_ban",
+                "day_assignment_reason": (
+                    "Coach-owned boxing day fixed by declaration; downgraded to "
+                    "technical/rhythm under the D-17 hard-sparring ban."
+                ),
+                "placement_basis": "locked",
+            }
+            if composite_allocation and segment_meta:
+                context_role["composite_source"] = "bridge_countdown_practical_allocation"
+                context_role["composite_segment_index"] = segment_meta.get("segment_index")
+                context_role["composite_segment_stage_key"] = segment_meta.get("stage_key")
+                context_role["composite_segment_payload_mode"] = segment_meta.get("payload_mode")
+                context_role["countdown_span"] = {
+                    "start_day": segment_meta.get("start_day"),
+                    "end_day": segment_meta.get("end_day"),
+                }
+            new_entries.append(context_role)
+
+    if not new_entries:
+        return allocation
+
+    augmented = dict(allocation)
+    augmented["session_roles"] = session_roles + new_entries
+    return augmented
+
+
 def _late_fight_practical_allocation_plan(days_until_fight: Any, athlete_model: dict[str, Any]) -> dict[str, Any]:
     if _is_countdown_continuation_start(days_until_fight):
-        return _bridge_countdown_practical_allocation_plan(days_until_fight, athlete_model)
-    return _late_fight_allocation_plan(days_until_fight, athlete_model)
+        allocation = _bridge_countdown_practical_allocation_plan(days_until_fight, athlete_model)
+    else:
+        allocation = _late_fight_allocation_plan(days_until_fight, athlete_model)
+    return _append_declared_hard_spar_context(allocation, days_until_fight, athlete_model)
 
 
 def _late_fight_stage_label(days_until_fight: Any) -> str:

@@ -281,7 +281,19 @@ def _is_d_window_stage(stage_key: Any) -> bool:
 
 
 def _standard_camp_final_two_weeks_override(week: dict[str, Any]) -> str | None:
-    """For regular (non D-window) camps, suppress hard sparring in final taper week(s)."""
+    """For regular (non D-window) camps, suppress hard sparring in final taper week(s).
+
+    Behaviour by TAPER layout:
+
+    * Single-week TAPER (``phase_week_total == 1``): use ``cap_one`` so a
+      compressed taper can still keep one effective hard sparring day. The
+      ``final_week_sparring_cap`` mechanism in ``_lock_declared_hard_sparring_roles``
+      then enforces the 1-day ceiling and surfaces the surviving day as
+      ``effective_hard_sparring_days``.
+    * Multi-week TAPER (``phase_week_total >= 2``): keep the existing
+      ``deload_all`` policy for the last 2 weeks so longer tapers fully
+      remove hard sparring in their final week.
+    """
     phase = str(week.get("phase") or "").strip().upper()
     if phase != "TAPER":
         return None
@@ -292,6 +304,8 @@ def _standard_camp_final_two_weeks_override(week: dict[str, Any]) -> str | None:
     phase_week_index = week.get("phase_week_index")
     phase_week_total = week.get("phase_week_total")
     if isinstance(phase_week_index, int) and isinstance(phase_week_total, int) and phase_week_total >= 1:
+        if phase_week_total == 1:
+            return "cap_one"
         if phase_week_index >= max(1, phase_week_total - 1):
             return "deload_all"
         return None

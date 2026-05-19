@@ -1293,6 +1293,36 @@ def _assign_declared_day_hints(
             day_assignments[recovery_idx] = recovery_day
             day_assignments[primary_idx] = primary_day
             used_days.update({recovery_day, primary_day})
+        else:
+            # When no clean adjacent pair exists (crowded boxing weeks where
+            # every adjacent slot brushes a declared hard sparring day), at
+            # least pin the primary strength anchor to a non-spar day before
+            # the per-role fallback runs. Otherwise the support-strength,
+            # aerobic, and recovery roles consume the non-spar days in order
+            # and the primary anchor lands on a sparring day — only to be
+            # poached by ``_lock_declared_hard_sparring_roles``.
+            primary_anchor_day = next(
+                (
+                    day
+                    for day in training_days
+                    if day not in hard_sparring_days
+                    and day not in used_days
+                    and day not in sandwiched_days
+                ),
+                None,
+            )
+            if primary_anchor_day is None:
+                primary_anchor_day = next(
+                    (
+                        day
+                        for day in training_days
+                        if day not in hard_sparring_days and day not in used_days
+                    ),
+                    None,
+                )
+            if primary_anchor_day:
+                day_assignments[primary_idx] = primary_anchor_day
+                used_days.add(primary_anchor_day)
         # If no clean adjacent pair exists, defer to the per-role fallback
         # below — it already prefers sandwiched non-spar days for recovery and
         # non-sandwiched non-spar days for primary strength.
@@ -1992,8 +2022,23 @@ def _apply_high_fatigue_week_compression(
 
     kept_roles = spar_roles + kept_non_spar
     updated_suppressed = list(suppressed_roles)
+    # Budget-driven suppressions record the reason but do not mark the
+    # entry as ``intentional_compression``; that flag is reserved for
+    # policy-driven compression (boxing crowded-week, short-camp,
+    # fight-week override). See ``_make_compression_suppression`` for the
+    # policy-flagged variant.
     for role in dropped_non_spar:
-        updated_suppressed.append(_make_compression_suppression(role, reason_codes, summary))
+        updated_suppressed.append(
+            {
+                "category": role.get("category"),
+                "role_key": role.get("role_key"),
+                "preferred_system": role.get("preferred_system", ""),
+                "reasons": [summary],
+                "governance": dict(role.get("governance", {})),
+                "compression_reason_codes": list(reason_codes),
+                "compression_summary": summary,
+            }
+        )
 
     # Step 5: Identify intentionally unused training days
     has_recovery_in_kept = any(r.get("category") == "recovery" for r in kept_non_spar)
@@ -2001,8 +2046,15 @@ def _apply_high_fatigue_week_compression(
         training_days, kept_roles, has_recovery_role=has_recovery_in_kept,
     )
 
+    # ``intentional_compression.active`` is reserved for policy-driven
+    # compression (boxing crowded-week, short-camp, fight-week override).
+    # Routine spar-first budget enforcement always trims the non-spar pool
+    # to the weekly cap and would otherwise set the flag for every
+    # over-allocated camp week — which is the default, not an intentional
+    # compression. Record the suppression reason on the dropped roles
+    # without flagging the week as intentionally compressed.
     week_entry["intentional_compression"] = {
-        "active": True,
+        "active": False,
         "reason_codes": list(reason_codes),
         "reason": ", ".join(reason_codes),
         "summary": summary,
