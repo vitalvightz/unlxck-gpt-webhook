@@ -1131,12 +1131,12 @@ def _decorate_conditioning_drill(
     decorated["universally_available"] = _conditioning_is_universally_available(decorated)
     decorated["generic_fallback"] = bool(decorated.get("generic_fallback"))
     decorated["session_index"] = session_index
-    decorated["phase"] = phase.upper()
+    decorated["phase"] = str(phase or "").upper()
     decorated["render_as_fallback"] = bool(is_fallback)
     return decorated
 
 def _conditioning_fallback_allowed(primary: dict, fallback: dict, *, phase: str) -> bool:
-    if phase.upper() == "TAPER":
+    if str(phase or "").upper() == "TAPER":
         return False
     contingency_reason = (
         primary.get("availability_contingency_reason")
@@ -1173,7 +1173,6 @@ def _resolve_conditioning_sessions(
             continue
 
         explicit_primaries = [d for d in drills if not d.get("render_as_fallback")]
-        explicit_fallbacks = [d for d in drills if d.get("render_as_fallback")]
 
         primary_raw = explicit_primaries[0] if explicit_primaries else drills[0]
         primary_decorated = _decorate_conditioning_drill(
@@ -1184,22 +1183,31 @@ def _resolve_conditioning_sessions(
             is_fallback=False,
         )
 
+        # Fallback candidates must exclude the primary itself, otherwise an
+        # all-fallback-marked drill list (or any list where the only candidate
+        # is also the primary) would render the same drill twice — once as
+        # primary, once as fallback. The fallback pool is therefore drawn from
+        # the remaining drills only, with explicitly fallback-marked entries
+        # preferred over implicit ones.
+        remaining_drills = [d for d in drills if d is not primary_raw]
         candidate_fallback_raw = None
         candidate_is_explicit = False
-        if explicit_fallbacks:
-            candidate_fallback_raw = explicit_fallbacks[0]
-            candidate_is_explicit = True
-        else:
-            remaining = [d for d in drills if d is not primary_raw]
-            if remaining:
-                candidate_fallback_raw = remaining[0]
+        if remaining_drills:
+            explicit_remaining_fallbacks = [
+                d for d in remaining_drills if d.get("render_as_fallback")
+            ]
+            if explicit_remaining_fallbacks:
+                candidate_fallback_raw = explicit_remaining_fallbacks[0]
+                candidate_is_explicit = True
+            else:
+                candidate_fallback_raw = remaining_drills[0]
 
         fallback_decorated = None
         if candidate_fallback_raw is not None:
             allowed = candidate_is_explicit or _conditioning_fallback_allowed(
                 primary_raw, candidate_fallback_raw, phase=phase
             )
-            if allowed and phase.upper() != "TAPER":
+            if allowed and str(phase or "").upper() != "TAPER":
                 fallback_decorated = _decorate_conditioning_drill(
                     candidate_fallback_raw,
                     system=system,
