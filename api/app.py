@@ -30,10 +30,12 @@ from fightcamp.weekly_schedule_view import extract_weekly_schedule
 from .auth import AuthService, AuthenticatedUser, SupabaseAuthService, is_auth_api_error
 from .models import (
     ApproveAndResumeGenerationRequest,
+    AdminGenerationJobDiagnostic,
     AdminAthleteRecord,
     AdminPlanOutputs,
     AdminPlanSummary,
     GenerationJobResponse,
+    GenerationRequestPayloadSummary,
     ManualStage2SubmissionRequest,
     MeResponse,
     NutritionWorkspaceState,
@@ -176,6 +178,55 @@ def _generation_job_stale_after_seconds() -> int:
     except ValueError:
         return fallback_seconds
     return max(60, parsed)
+
+
+def _request_payload_summary(payload: Any) -> GenerationRequestPayloadSummary:
+    if not isinstance(payload, dict):
+        return GenerationRequestPayloadSummary()
+    athlete = payload.get("athlete") if isinstance(payload.get("athlete"), dict) else {}
+    availability = payload.get("availability") if isinstance(payload.get("availability"), dict) else {}
+    return GenerationRequestPayloadSummary(
+        athlete_name=str(athlete.get("full_name") or ""),
+        fight_date=str(payload.get("fight_date") or ""),
+        phase=str(payload.get("phase") or ""),
+        fight_format=str(payload.get("fight_format") or ""),
+        fatigue_level=str(payload.get("fatigue_level") or ""),
+        goals=[str(item) for item in (payload.get("key_goals") or []) if isinstance(item, str)],
+        weaknesses=[str(item) for item in (payload.get("weak_areas") or []) if isinstance(item, str)],
+        injuries=[str(item) for item in (payload.get("injury_history") or []) if isinstance(item, str)],
+        training_availability=str(availability.get("notes") or ""),
+    )
+
+
+def _admin_generation_job_diagnostic(job: dict[str, Any], *, stale_after_seconds: int) -> AdminGenerationJobDiagnostic:
+    is_stale = str(job.get("status") or "") == "running" and _is_stale_job(job, stale_after_seconds=stale_after_seconds)
+    stale_reason = "Heartbeat timed out while job is still running." if is_stale else None
+    error_message = str(job.get("error") or "") or None
+    client_request_id = str(job.get("client_request_id") or "")
+    retry_of = None
+    if client_request_id.startswith("retry_"):
+        parts = client_request_id.split("_", 2)
+        if len(parts) >= 3 and parts[1]:
+            retry_of = parts[1]
+    return AdminGenerationJobDiagnostic(
+        job_id=str(job.get("id") or ""),
+        status=str(job.get("status") or "queued"),
+        source=str(job.get("source") or ""),
+        created_at=str(job.get("created_at") or ""),
+        started_at=job.get("started_at"),
+        heartbeat_at=job.get("heartbeat_at"),
+        completed_at=job.get("completed_at"),
+        client_request_id=client_request_id,
+        retry_of=retry_of,
+        original_job_id=retry_of,
+        error=error_message,
+        stale_reason=stale_reason,
+        failure_reason=error_message,
+        plan_id=job.get("plan_id"),
+        can_retry=str(job.get("status") or "") == "failed",
+        is_stale=is_stale,
+        request_payload_summary=_request_payload_summary(job.get("request_payload")),
+    )
 
 
 def _build_me_response(profile: ProfileRecord, store: AppStore) -> MeResponse:
@@ -1616,6 +1667,20 @@ def create_app(
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="athlete not found")
         latest_intake = store.get_latest_intake(athlete_id)
         return _map_admin_athlete(row, latest_intake=latest_intake)
+
+    @app.get("/api/admin/athletes/{athlete_id}/generation-jobs", response_model=list[AdminGenerationJobDiagnostic])
+    def list_admin_athlete_generation_jobs(
+        athlete_id: str,
+        _: ProfileRecord = Depends(require_admin),
+        limit: int = Query(10, ge=1, le=50),
+        store: AppStore = Depends(get_store),
+    ) -> list[AdminGenerationJobDiagnostic]:
+        row = store.get_admin_athlete(athlete_id)
+        if not row:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="athlete not found")
+        jobs = store.list_generation_jobs_for_athlete(athlete_id, limit=limit)
+        stale_after_seconds = _generation_job_stale_after_seconds()
+        return [_admin_generation_job_diagnostic(job, stale_after_seconds=stale_after_seconds) for job in jobs]
 
     @app.get("/api/admin/athletes/{athlete_id}/nutrition/current", response_model=NutritionWorkspaceState)
     def get_admin_athlete_nutrition_current(
