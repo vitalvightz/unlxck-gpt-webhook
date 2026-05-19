@@ -553,3 +553,78 @@ def test_generation_job_endpoint_requires_same_athlete_or_admin():
 
     assert forbidden.status_code == 403
     assert allowed.status_code == 200
+
+
+def test_admin_can_list_athlete_generation_jobs_with_sanitized_summary_and_retry_flags():
+    client, store, _ = _build_client()
+    request_payload = _build_request().model_dump(mode="json")
+    request_payload["api_key"] = "should-not-return"
+    failed = store.create_or_get_generation_job(
+        athlete_id="athlete-1",
+        client_request_id="cli_failed",
+        source="admin_latest_intake",
+        request_payload=request_payload,
+    )
+    store.update_generation_job(
+        failed["id"],
+        status="failed",
+        error="Stage 2 timeout",
+        completed_at="2026-05-01T12:00:00+00:00",
+    )
+    response = client.get(
+        "/api/admin/athletes/athlete-1/generation-jobs",
+        headers={"Authorization": "Bearer admin-token"},
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert len(body) >= 1
+    first = body[0]
+    assert first["status"] in {"failed", "queued", "running", "completed"}
+    assert "created_at" in first
+    assert "source" in first
+    assert first["error"] == "Stage 2 timeout"
+    assert first["client_request_id"] == "cli_failed"
+    assert first["can_retry"] is True
+    summary = first["request_payload_summary"]
+    assert summary["athlete_name"] == request_payload["athlete"]["full_name"]
+    assert summary["fight_date"] == request_payload["fight_date"]
+    assert summary["fight_format"] == request_payload["rounds_format"]
+    assert summary["fatigue_level"] == request_payload["fatigue_level"]
+    assert summary["goals"] == request_payload["key_goals"]
+    assert summary["weaknesses"] == request_payload["weak_areas"]
+    assert summary["injuries"]
+    assert summary["training_availability"] == ", ".join(request_payload["training_availability"])
+    assert "api_key" not in summary
+    assert "token" not in summary
+    assert "authorization" not in summary
+    assert "supabase_key" not in summary
+
+
+def test_non_admin_cannot_list_admin_generation_jobs_and_stale_job_is_flagged():
+    client, store, _ = _build_client()
+    job = store.create_or_get_generation_job(
+        athlete_id="athlete-1",
+        client_request_id="retry_old_job_123",
+        source="self_serve",
+        request_payload=_build_request().model_dump(mode="json"),
+    )
+    store.update_generation_job(
+        job["id"],
+        status="running",
+        started_at="2026-01-01T00:00:00+00:00",
+        heartbeat_at="2026-01-01T00:00:00+00:00",
+    )
+    forbidden = client.get(
+        "/api/admin/athletes/athlete-1/generation-jobs",
+        headers={"Authorization": "Bearer athlete-token"},
+    )
+    assert forbidden.status_code == 403
+    allowed = client.get(
+        "/api/admin/athletes/athlete-1/generation-jobs",
+        headers={"Authorization": "Bearer admin-token"},
+    )
+    assert allowed.status_code == 200
+    stale = allowed.json()[0]
+    assert stale["is_stale"] is True
+    assert stale["stale_reason"]
+    assert stale["retry_of"] == "old_job"

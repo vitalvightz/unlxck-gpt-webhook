@@ -303,6 +303,15 @@ class FakeStore:
         matches.sort(key=lambda job: job.get("completed_at") or job.get("updated_at") or "", reverse=True)
         return dict(matches[0])
 
+    def list_generation_jobs_for_athlete(self, athlete_id: str, *, limit: int = 10) -> list[dict]:
+        rows = [
+            dict(job)
+            for job in self.generation_jobs.values()
+            if str(job.get("athlete_id") or "") == athlete_id
+        ]
+        rows.sort(key=lambda row: str(row.get("created_at") or ""), reverse=True)
+        return rows[:limit]
+
     def list_claimable_generation_jobs(self, *, limit: int = 20, stale_after_seconds: int = 90) -> list[dict]:
         now = datetime.now(timezone.utc)
         rows = []

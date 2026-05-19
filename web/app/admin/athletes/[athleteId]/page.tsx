@@ -11,14 +11,16 @@ import {
 import { RequireAuth } from "@/components/auth-guard";
 import { useAppSession } from "@/components/auth-provider";
 import {
+  getAdminAthleteGenerationJobs,
   generateAdminAthletePlanFromLatestIntake,
   getAdminAthlete,
   getAdminAthleteNutritionCurrent,
+  retryGenerationJob,
   updateAdminAthleteNutritionCurrent,
 } from "@/lib/api";
 import { useGenerationController } from "@/lib/generation-controller";
 import { validatePerformanceFocusSelections } from "@/lib/performance-focus-cap";
-import type { AdminAthleteRecord, NutritionWorkspaceState, NutritionWorkspaceUpdateRequest } from "@/lib/types";
+import type { AdminAthleteRecord, AdminGenerationJobDiagnostic, NutritionWorkspaceState, NutritionWorkspaceUpdateRequest } from "@/lib/types";
 
 function humanizeEnumValue(value: string | null | undefined, fallback: string): string {
   if (!value?.trim()) {
@@ -53,6 +55,8 @@ export default function AdminAthletePage() {
   const [isSavingControls, setIsSavingControls] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
   const [isReloading, setIsReloading] = useState(false);
+  const [jobs, setJobs] = useState<AdminGenerationJobDiagnostic[]>([]);
+  const [retryingJobId, setRetryingJobId] = useState<string | null>(null);
 
   const handleRetry = useCallback(() => {
     setLoadError(null);
@@ -106,11 +110,13 @@ export default function AdminAthletePage() {
     Promise.all([
       getAdminAthlete(session.access_token, athleteId),
       getAdminAthleteNutritionCurrent(session.access_token, athleteId),
+      getAdminAthleteGenerationJobs(session.access_token, athleteId),
     ])
-      .then(([nextAthlete, nextNutrition]) => {
+      .then(([nextAthlete, nextNutrition, nextJobs]) => {
         if (!active) return;
         setAthlete(nextAthlete);
         setNutrition(nextNutrition);
+        setJobs(nextJobs);
       })
       .catch((athleteError) => {
         if (!active) return;
@@ -141,6 +147,16 @@ export default function AdminAthletePage() {
     }
     setError(null);
     await controller.startGeneration();
+  }
+  async function handleRetryJob(jobId: string) {
+    if (!session?.access_token || retryingJobId) return;
+    setRetryingJobId(jobId);
+    try {
+      await retryGenerationJob(session.access_token, jobId);
+      handleRetry();
+    } finally {
+      setRetryingJobId(null);
+    }
   }
 
   async function handleSaveCoachControls() {
@@ -231,6 +247,37 @@ export default function AdminAthletePage() {
           ) : null}
 
           <AthleteProfileOverviewCard athlete={athlete} />
+          <article className="step-card">
+            <div className="form-section-header">
+              <p className="kicker">Admin debugging</p>
+              <h2 className="form-section-title">Generation diagnostics</h2>
+            </div>
+            {!jobs.length ? <p className="muted">No generation jobs found.</p> : jobs.map((job) => (
+              <div key={job.job_id} className="review-detail-row" style={{ display: "block", marginBottom: "1rem" }}>
+                <p><strong>{job.status.toUpperCase()}</strong> · {job.job_id}</p>
+                <p className="muted">source {job.source} · created {job.created_at}</p>
+                <p className="muted">started {job.started_at || "—"} · heartbeat {job.heartbeat_at || "—"} · completed {job.completed_at || "—"}</p>
+                <p className="muted">client request {job.client_request_id}</p>
+                {job.retry_of || job.original_job_id ? <p className="muted">retry of {job.retry_of || job.original_job_id}</p> : null}
+                {job.plan_id ? <p><Link href={`/plans/${job.plan_id}`}>Open plan</Link></p> : null}
+                {job.error ? <p className="error-text">Error: {job.error}</p> : null}
+                {job.failure_reason && !job.error ? <p className="error-text">Failure reason: {job.failure_reason}</p> : null}
+                {job.is_stale ? <p className="error-text">Stale warning: {job.stale_reason || "Job appears stale."}</p> : null}
+                <p className="muted">
+                  Payload: {job.request_payload_summary.athlete_name || "—"} · {job.request_payload_summary.fight_date || "—"} · {job.request_payload_summary.phase || "—"} · {job.request_payload_summary.fight_format || "—"} · fatigue {job.request_payload_summary.fatigue_level || "—"}
+                </p>
+                <p className="muted">Goals: {job.request_payload_summary.goals.join(", ") || "—"}</p>
+                <p className="muted">Weaknesses: {job.request_payload_summary.weaknesses.join(", ") || "—"}</p>
+                <p className="muted">Injuries: {job.request_payload_summary.injuries.join(", ") || "—"}</p>
+                <p className="muted">Training availability: {job.request_payload_summary.training_availability || "—"}</p>
+                {job.status === "failed" ? (
+                  <button type="button" className="ghost-button" onClick={() => void handleRetryJob(job.job_id)} disabled={retryingJobId === job.job_id}>
+                    {retryingJobId === job.job_id ? "Retrying..." : "Retry"}
+                  </button>
+                ) : null}
+              </div>
+            ))}
+          </article>
 
           {nutrition ? (
             <div className="split-layout nutrition-admin-split">
