@@ -3225,6 +3225,13 @@ def build_planning_brief(
     plan_input: Any | None = None,
 ) -> dict:
     athlete_model = dict(athlete_model)
+    # Compute short-camp compression up front so downstream consumers (role
+    # map, weekly stress map, planning brief output) see a real
+    # ``compressed_priorities`` dict. The helper is otherwise dead code, which
+    # leaves the field empty whenever a caller skips ``build_stage2_payload``
+    # and goes straight to ``build_planning_brief``.
+    if not athlete_model.get("compressed_priorities"):
+        athlete_model["compressed_priorities"] = _compress_short_camp_priorities(athlete_model)
     rewrite_guidance = _append_render_guard_writing_rules(rewrite_guidance, athlete_model=athlete_model, days_until_fight=athlete_model.get("days_until_fight"))
     days_until_fight = athlete_model.get("days_until_fight")
     priority_source = plan_input if plan_input is not None else athlete_model
@@ -4226,10 +4233,16 @@ def build_stage2_handoff_text(
 
     athlete_profile = _athlete_profile_block(planning_brief, stage2_payload)
     render_mode = str(finalizer_packet.get("render_mode") or "").strip()
+    # ``render_mode`` is the abstract bucket ("camp_plan",
+    # "late_fight_countdown_only", "open_ongoing_system") used for dispatching
+    # rendering rules. ``_handoff_mode_instructions`` keys on the specific
+    # payload mode (e.g. ``pre_fight_compressed_payload``), so we must look
+    # that up directly — using ``render_mode`` here drops mode instructions
+    # entirely for every late-fight day.
     payload_mode = (
-        render_mode
-        or stage2_payload.get("payload_mode")
+        stage2_payload.get("payload_mode")
         or stage2_payload.get("effective_stage2_mode")
+        or render_mode
         or "camp_payload"
     )
 

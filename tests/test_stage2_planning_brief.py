@@ -95,12 +95,16 @@ def test_build_planning_brief_includes_full_collision_details_in_priority_focus(
 
 
 
+    # Both collision details contribute clarification tags (deduped, ordered);
+    # see CLARIFICATION_DETAIL_TAG_MAP entries for the two normalized details.
     assert brief["priority_focus"]["derived_clarification_tags"] == [
         "explosive",
         "rate_of_force",
         "work_capacity",
         "conditioning",
         "anaerobic_alactic",
+        "glycolytic",
+        "mental_toughness",
     ]
 
 

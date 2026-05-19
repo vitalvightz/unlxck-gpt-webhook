@@ -890,7 +890,10 @@ class TestHandoffText:
         text = self._build_handoff(28)
         assert "PAYLOAD MODE INSTRUCTIONS" not in text
         assert "INJURY CONTEXT" in text
-        assert "PLANNING BRIEF" in text
+        # PLANNING BRIEF section was replaced by the consolidated FINALIZER
+        # PACKET — see test_stage2_handoff_text which explicitly asserts the
+        # old section is gone.
+        assert "FINALIZER PACKET" in text
 
     @pytest.mark.parametrize(
         "days, expected_heading",
