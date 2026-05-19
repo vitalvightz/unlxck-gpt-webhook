@@ -32,6 +32,13 @@ function humanizeEnumValue(value: string | null | undefined, fallback: string): 
     .replace(/\b\w/g, (character) => character.toUpperCase());
 }
 
+function joinOrDash(values: string[] | null | undefined): string {
+  const joined = Array.isArray(values)
+    ? values.filter((v) => v?.trim()).join(", ")
+    : "";
+  return joined || "—";
+}
+
 function toNutritionUpdateRequest(workspace: NutritionWorkspaceState): NutritionWorkspaceUpdateRequest {
   return {
     nutrition_profile: workspace.nutrition_profile,
@@ -257,7 +264,7 @@ export default function AdminAthletePage() {
                 <p><strong>{job.status.toUpperCase()}</strong> · {job.job_id}</p>
                 <p className="muted">source {job.source} · created {job.created_at}</p>
                 <p className="muted">started {job.started_at || "—"} · heartbeat {job.heartbeat_at || "—"} · completed {job.completed_at || "—"}</p>
-                <p className="muted">client request {job.client_request_id}</p>
+                <p className="muted">client request {job.client_request_id || "—"}</p>
                 {job.retry_of ? <p className="muted">retry of {job.retry_of}</p> : null}
                 {job.plan_id ? <p><Link href={`/plans/${job.plan_id}`}>Open plan</Link></p> : null}
                 {job.error ? <p className="error-text">Error: {job.error}</p> : null}
@@ -265,9 +272,9 @@ export default function AdminAthletePage() {
                 <p className="muted">
                   Payload: {job.request_payload_summary.athlete_name || "—"} · {job.request_payload_summary.fight_date || "—"} · {job.request_payload_summary.phase || "—"} · {job.request_payload_summary.fight_format || "—"} · fatigue {job.request_payload_summary.fatigue_level || "—"}
                 </p>
-                <p className="muted">Goals: {job.request_payload_summary.goals.join(", ") || "—"}</p>
-                <p className="muted">Weaknesses: {job.request_payload_summary.weaknesses.join(", ") || "—"}</p>
-                <p className="muted">Injuries: {job.request_payload_summary.injuries.join(", ") || "—"}</p>
+                <p className="muted">Goals: {joinOrDash(job.request_payload_summary.goals)}</p>
+                <p className="muted">Weaknesses: {joinOrDash(job.request_payload_summary.weaknesses)}</p>
+                <p className="muted">Injuries: {joinOrDash(job.request_payload_summary.injuries)}</p>
                 <p className="muted">Training availability: {job.request_payload_summary.training_availability || "—"}</p>
                 {job.status === "failed" ? (
                   <button type="button" className="ghost-button" onClick={() => void handleRetryJob(job.job_id)} disabled={retryingJobId === job.job_id}>
