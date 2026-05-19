@@ -1754,7 +1754,7 @@ def create_app(
             stale_job_checker=_is_stale_job,
             stale_after_seconds=_generation_job_stale_after_seconds(),
         )
-        return _job_response(job, viewer_role=profile.role)
+        return _job_response(job, viewer_role="admin")
 
     return app
 
