@@ -1,5 +1,6 @@
 from __future__ import annotations
 from .normalization import clean_list, dedupe_preserve_order, normalize_fatigue_level, ordered_weekdays as _ordered_weekdays
+from .fight_date_utils import resolve_fight_weekday
 
 from itertools import combinations, permutations
 from typing import Any
@@ -1069,8 +1070,35 @@ def _late_fight_stress_class(role_key: str) -> str:
     return _LATE_FIGHT_ROLE_STRESS_CLASS.get(role_key, "support")
 
 
-def _late_fight_countdown_context(days_until_fight: Any, athlete_model: dict[str, Any]) -> dict[str, Any]:
+def _resolve_plan_creation_weekday(days_until_fight: Any, athlete_model: dict[str, Any]) -> str | None:
+    """Return the plan-creation weekday, deriving it from fight_date when missing.
+
+    Without this fallback ``_countdown_weekday_map`` returns an empty mapping
+    when an athlete model omits ``plan_creation_weekday`` but has a real
+    ``fight_date``. Empty maps suppress every late-fight candidate (no
+    eligible weekday) and collapse composite-bridge segments to downstream
+    roles only.
+    """
     plan_creation_weekday = athlete_model.get("plan_creation_weekday")
+    if plan_creation_weekday:
+        return str(plan_creation_weekday).strip().lower() or None
+    fight_weekday = resolve_fight_weekday(
+        fight_date=athlete_model.get("fight_date") or athlete_model.get("next_fight_date"),
+        plan_creation_weekday=None,
+        days_until_fight=days_until_fight,
+    )
+    days_val = _coerce_days(days_until_fight)
+    if not fight_weekday or not isinstance(days_val, int) or days_val < 0:
+        return None
+    fight_idx = _WEEKDAY_ORDER.get(fight_weekday)
+    if fight_idx is None:
+        return None
+    creation_idx = (fight_idx - days_val) % 7
+    return _WEEKDAY_NAMES[creation_idx]
+
+
+def _late_fight_countdown_context(days_until_fight: Any, athlete_model: dict[str, Any]) -> dict[str, Any]:
+    plan_creation_weekday = _resolve_plan_creation_weekday(days_until_fight, athlete_model)
     available_days = clean_list(athlete_model.get("training_days", []))
     countdown_map = _countdown_weekday_map(plan_creation_weekday, days_until_fight)
     resolved_map = dict(countdown_map)
@@ -2821,7 +2849,10 @@ def _copy_composite_segment_role(
 
 
 def _full_countdown_weekday_map(days_until_fight: Any, athlete_model: dict[str, Any]) -> dict[str, str]:
-    return _countdown_weekday_map(athlete_model.get("plan_creation_weekday"), days_until_fight)
+    return _countdown_weekday_map(
+        _resolve_plan_creation_weekday(days_until_fight, athlete_model),
+        days_until_fight,
+    )
 
 
 def _declared_hard_weekdays(athlete_model: dict[str, Any]) -> set[str]:
@@ -2914,7 +2945,15 @@ def _composite_role_selection_score(selected_roles: list[dict[str, Any]], days_u
     if "d1" in stage_keys:
         score += 1500
     if _is_bridge_countdown(days_until_fight) and "d21_to_d14" in stage_keys:
-        score += 2500
+        # Require visible bridge representation when the composite plan runs
+        # from a bridge-window day; without this bonus the per-role visible
+        # bonus on downstream stages drowns out the bridge segment and the
+        # plan collapses to D-7→D-1 only.
+        score += 12000
+    elif _is_bridge_countdown(days_until_fight):
+        # Strong penalty so any other selection that keeps the bridge segment
+        # outranks an otherwise-better downstream-only selection.
+        score -= 18000
     score += len(stage_keys) * 250
     return score
 
