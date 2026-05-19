@@ -1052,10 +1052,9 @@ class AdminGenerationJobDiagnostic(BaseModel):
     completed_at: str | None = None
     client_request_id: str = ""
     retry_of: str | None = None
-    original_job_id: str | None = None
+    retry_of: str | None = None
     error: str | None = None
     stale_reason: str | None = None
-    failure_reason: str | None = None
     plan_id: str | None = None
     can_retry: bool = False
     is_stale: bool = False
