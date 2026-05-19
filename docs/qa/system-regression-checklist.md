@@ -81,6 +81,8 @@ Use this checklist for beta-readiness verification against the production fronte
 
 - [ ] Quick Build can save intake and start generation.
 - [ ] Advanced Intake can save intake and start generation.
+- [ ] Advanced Intake Review step does not show the "Generate Stage 1 only" button for an athlete account.
+- [ ] Advanced Intake Review step still shows the "Generate Stage 1 only" button for an admin account.
 - [ ] Generate plan succeeds and opens a completed plan.
 - [ ] Daily generation limit blocks after the configured cap.
 - [ ] Same request retry/idempotency does not create duplicate jobs.

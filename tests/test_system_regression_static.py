@@ -38,6 +38,26 @@ def test_reset_password_expired_link_fallback_is_statically_present():
     assert "Request a new reset link" in reset_password
 
 
+def test_plan_intake_form_admin_gates_stage1_preview_affordance():
+    form = _read("web/components/plan-intake-form.tsx")
+
+    assert 'const isAdminUser = me?.profile.role === "admin";' in form
+
+    stage1_button_block = re.search(
+        r"\{isAdminUser \? \(\s*<button[^>]*onboarding-action-stage1[^>]*>.*?Generate Stage 1 only.*?</button>\s*\) : null\}",
+        form,
+        re.DOTALL,
+    )
+    assert stage1_button_block is not None, (
+        "Stage 1 preview button must remain wrapped in an isAdminUser guard so cold beta athletes "
+        "do not see planner-internal terminology."
+    )
+
+    assert "{isAdminUser && stage1Preview ? (" in form, (
+        "Stage 1 preview panel must remain wrapped in an isAdminUser guard."
+    )
+
+
 def test_settings_page_keeps_username_and_password_sections():
     settings = _read("web/app/settings/page.tsx")
 

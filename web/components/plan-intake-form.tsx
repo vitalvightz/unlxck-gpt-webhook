@@ -1947,6 +1947,7 @@ export function PlanIntakeForm() {
       ? "All required inputs are ready to generate."
       : "This step is ready to continue.";
   const formActionPending = isPending || stage1PreviewPending;
+  const isAdminUser = me?.profile.role === "admin";
 
   return (
     <RequireAuth>
@@ -2805,7 +2806,7 @@ export function PlanIntakeForm() {
                   </div>
                 </div>
               </article>
-              {stage1Preview ? (
+              {isAdminUser && stage1Preview ? (
                 <article id="stage1-preview" className="step-card">
                   <div className="form-section-header">
                     <p className="kicker">Stage 1 only</p>
@@ -2867,14 +2868,16 @@ export function PlanIntakeForm() {
               </button>
             ) : (
               <>
-                <button
-                  type="button"
-                  className="ghost-button onboarding-action-secondary onboarding-action-stage1"
-                  onClick={handleGenerateStage1Preview}
-                  disabled={formActionPending}
-                >
-                  {stage1PreviewPending ? "Generating Stage 1..." : "Generate Stage 1 only"}
-                </button>
+                {isAdminUser ? (
+                  <button
+                    type="button"
+                    className="ghost-button onboarding-action-secondary onboarding-action-stage1"
+                    onClick={handleGenerateStage1Preview}
+                    disabled={formActionPending}
+                  >
+                    {stage1PreviewPending ? "Generating Stage 1..." : "Generate Stage 1 only"}
+                  </button>
+                ) : null}
                 <button type="button" className="cta onboarding-action-primary" onClick={handleGenerate} disabled={formActionPending}>
                   Generate plan
                 </button>
