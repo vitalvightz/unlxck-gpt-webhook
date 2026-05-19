@@ -1947,7 +1947,7 @@ export function PlanIntakeForm() {
       ? "All required inputs are ready to generate."
       : "This step is ready to continue.";
   const formActionPending = isPending || stage1PreviewPending;
-  const isAdminUser = me?.profile.role === "admin";
+  const isAdminUser = me?.profile?.role === "admin";
 
   return (
     <RequireAuth>
