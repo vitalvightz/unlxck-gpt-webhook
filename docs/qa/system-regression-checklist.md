@@ -95,6 +95,11 @@ Use this checklist for beta-readiness verification against the production fronte
 - [ ] Force or identify a stale running job and verify polling marks it failed.
 - [ ] Retry stale-failed job and confirm a new job starts.
 - [ ] Non-owner cannot view or retry another athlete's failed/stale job.
+- [ ] Admin can view athlete generation jobs in the Generation diagnostics section.
+- [ ] Failed job shows error details and Retry action in Generation diagnostics.
+- [ ] Stale running job shows a stale warning in Generation diagnostics.
+- [ ] Completed job includes a plan link/open action in Generation diagnostics.
+- [ ] Payload summary is useful and does not expose sensitive secrets.
 
 ### Plans / Refinement
 

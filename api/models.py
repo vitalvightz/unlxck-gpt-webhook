@@ -1030,6 +1030,36 @@ class GenerationJobResponse(BaseModel):
     progress_milestones: list[ProgressMilestone] = Field(default_factory=list)
 
 
+class GenerationRequestPayloadSummary(BaseModel):
+    athlete_name: str = ""
+    fight_date: str = ""
+    phase: str = ""
+    fight_format: str = ""
+    fatigue_level: str = ""
+    goals: list[str] = Field(default_factory=list)
+    weaknesses: list[str] = Field(default_factory=list)
+    injuries: list[str] = Field(default_factory=list)
+    training_availability: str = ""
+
+
+class AdminGenerationJobDiagnostic(BaseModel):
+    job_id: str
+    status: GenerationJobStatus
+    source: str = ""
+    created_at: str
+    started_at: str | None = None
+    heartbeat_at: str | None = None
+    completed_at: str | None = None
+    client_request_id: str = ""
+    retry_of: str | None = None
+    error: str | None = None
+    stale_reason: str | None = None
+    plan_id: str | None = None
+    can_retry: bool = False
+    is_stale: bool = False
+    request_payload_summary: GenerationRequestPayloadSummary = Field(default_factory=GenerationRequestPayloadSummary)
+
+
 class MeResponse(BaseModel):
     profile: ProfileRecord
     latest_intake: dict[str, Any] | None = None
