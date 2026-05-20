@@ -621,6 +621,7 @@ function MobileOnboardingHeader({
 }
 
 function CheckboxGroup({
+  id,
   label,
   options,
   selectedValues,
@@ -629,7 +630,10 @@ function CheckboxGroup({
   capDisabledReason,
   disableAll = false,
   getOptionDisabledReason,
+  invalid = false,
+  describedBy,
 }: {
+  id?: string;
   label: string;
   options: IntakeOption[];
   selectedValues: string[];
@@ -638,9 +642,19 @@ function CheckboxGroup({
   capDisabledReason?: string;
   disableAll?: boolean;
   getOptionDisabledReason?: (option: IntakeOption, checked: boolean) => string | null;
+  invalid?: boolean;
+  describedBy?: string;
 }) {
   return (
-    <div className="field">
+    <div
+      id={id}
+      className={`field${invalid ? " field-invalid" : ""}`}
+      role="group"
+      aria-label={label}
+      aria-invalid={invalid ? true : undefined}
+      aria-describedby={describedBy}
+      tabIndex={invalid ? -1 : undefined}
+    >
       <span className="checkbox-group-label">{label}</span>
       <div className="checkbox-grid">
         {options.map((option) => {
@@ -751,17 +765,18 @@ function getReviewStepBlockingIssue(
     hardSparringWarningLocked: boolean;
     noScheduledFight: boolean;
   },
-): { message: string; step: number } | null {
-  if (!isValidRecordFormat(nextForm.athlete.record ?? "")) return { message: "Record must use x-x or x-x-x format, like 5-1 or 12-2-1.", step: 0 };
-  if (!nextForm.athlete.technical_style.length) return { message: "Select a technical style before continuing to review.", step: 0 };
-  if (!nextForm.fight_date && !options.noScheduledFight) return { message: "Choose your fight date or mark \"No scheduled fight\" before continuing to review.", step: 1 };
-  if (!nextForm.training_availability.length) return { message: "Pick at least one training availability option before continuing to review.", step: 2 };
-  if (!nextForm.weekly_training_frequency || nextForm.weekly_training_frequency < 1) return { message: "Planned sessions per week must be at least 1.", step: 1 };
-  if (nextForm.weekly_training_frequency > 6) return { message: "Planned sessions per week cannot exceed 6.", step: 1 };
+): { message: string; step: number; fieldId: string } | null {
+  if (!isValidRecordFormat(nextForm.athlete.record ?? "")) return { message: "Record must use x-x or x-x-x format, like 5-1 or 12-2-1.", step: 0, fieldId: "record" };
+  if (!nextForm.athlete.technical_style.length) return { message: "Select a technical style before continuing to review.", step: 0, fieldId: "technicalStyle" };
+  if (!nextForm.fight_date && !options.noScheduledFight) return { message: "Choose your fight date or mark \"No scheduled fight\" before continuing to review.", step: 1, fieldId: "fightDate" };
+  if (!nextForm.training_availability.length) return { message: "Pick at least one training availability option before continuing to review.", step: 2, fieldId: "trainingAvailabilityGroup" };
+  if (!nextForm.weekly_training_frequency || nextForm.weekly_training_frequency < 1) return { message: "Planned sessions per week must be at least 1.", step: 1, fieldId: "sessionsPerWeek" };
+  if (nextForm.weekly_training_frequency > 6) return { message: "Planned sessions per week cannot exceed 6.", step: 1, fieldId: "sessionsPerWeek" };
   const parsedRounds = parseRoundsFormat(nextForm.rounds_format);
-  if (!parsedRounds.roundCount || !parsedRounds.roundDuration) return { message: "Choose both round count and round duration before continuing to review.", step: 1 };
+  if (!parsedRounds.roundCount) return { message: "Choose both round count and round duration before continuing to review.", step: 1, fieldId: "roundCount" };
+  if (!parsedRounds.roundDuration) return { message: "Choose both round count and round duration before continuing to review.", step: 1, fieldId: "roundDuration" };
   if (options.hardSparringWarningLocked) {
-    return { message: "Acknowledge the hard sparring warning in the Training step before continuing to review.", step: 2 };
+    return { message: "Acknowledge the hard sparring warning in the Training step before continuing to review.", step: 2, fieldId: "hardSparringAck" };
   }
   const focusValidation = validatePerformanceFocusSelections(
     nextForm.fight_date,
@@ -772,6 +787,7 @@ function getReviewStepBlockingIssue(
     return {
       message: focusValidation.errorMessage ?? "Goals and weak areas exceed the current cap. Update your selections before continuing.",
       step: PERFORMANCE_STEP_INDEX,
+      fieldId: "keyGoalsGroup",
     };
   }
   return null;
@@ -819,8 +835,11 @@ export function PlanIntakeForm() {
   const [acknowledgedHardSparringWarningKey, setAcknowledgedHardSparringWarningKey] = useState<string | null>(null);
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
+  const [invalidFieldId, setInvalidFieldId] = useState<string | null>(null);
+  const [validationFocusTick, setValidationFocusTick] = useState(0);
   const lastSavedSnapshotRef = useRef<string>("");
   const issueRedirectConsumedRef = useRef(false);
+  const pendingValidationFocusRef = useRef<string | null>(null);
   const recordHasError = !isValidRecordFormat(form.athlete.record ?? "");
 
   // ── Days-out policy: compute field visibility/disablement ───────────
@@ -857,9 +876,108 @@ export function PlanIntakeForm() {
   }, [hydrated, me]);
 
   useEffect(() => {
+    // Skip top-scroll when a validation focus is pending — the focus effect
+    // will scroll the user directly to the invalid field instead.
+    if (pendingValidationFocusRef.current) {
+      return;
+    }
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     window.scrollTo({ top: 0, behavior: reducedMotion ? "instant" : "smooth" });
   }, [currentStep]);
+
+  useEffect(() => {
+    if (!invalidFieldId) {
+      return;
+    }
+    const parsed = parseRoundsFormat(form.rounds_format);
+    const isFieldNowValid = (() => {
+      switch (invalidFieldId) {
+        case "record":
+          return isValidRecordFormat(form.athlete.record ?? "");
+        case "technicalStyle":
+          return form.athlete.technical_style.length > 0;
+        case "fightDate":
+          return Boolean(form.fight_date) || noScheduledFight;
+        case "roundCount":
+          return Boolean(parsed.roundCount);
+        case "roundDuration":
+          return Boolean(parsed.roundDuration);
+        case "sessionsPerWeek":
+          return Boolean(form.weekly_training_frequency)
+            && (form.weekly_training_frequency ?? 0) >= 1
+            && (form.weekly_training_frequency ?? 0) <= 6;
+        case "trainingAvailabilityGroup":
+          return form.training_availability.length > 0;
+        case "keyGoalsGroup":
+          return !validatePerformanceFocusSelections(
+            form.fight_date,
+            { keyGoals: form.key_goals, weakAreas: form.weak_areas },
+            { timeZone: form.athlete.athlete_timezone },
+          ).isOverCap;
+        case "hardSparringAck": {
+          const warning = getHardSparringWarning(form.hard_sparring_days, form.weekly_training_frequency);
+          const ack = acknowledgedHardSparringWarningKey === warning.acknowledgementContextKey;
+          return !warning.requiresAcknowledgement || ack;
+        }
+        default:
+          if (invalidFieldId.startsWith("guidedInjuryCard-")) {
+            return !guidedInjuries.some((injury) => hasGuidedInjuryDescriptorWithoutArea(injury));
+          }
+          return false;
+      }
+    })();
+    if (isFieldNowValid) {
+      setInvalidFieldId(null);
+      setError((current) => (current ? null : current));
+    }
+  }, [
+    invalidFieldId,
+    form,
+    noScheduledFight,
+    acknowledgedHardSparringWarningKey,
+    guidedInjuries,
+  ]);
+
+  useEffect(() => {
+    if (!pendingValidationFocusRef.current) {
+      return;
+    }
+    const fieldId = pendingValidationFocusRef.current;
+    // Defer one tick so any step change has rendered the target before we look it up.
+    const handle = window.setTimeout(() => {
+      pendingValidationFocusRef.current = null;
+      const el = document.getElementById(fieldId);
+      if (!el) return;
+
+      // Expand any ancestor <details> blocks (e.g. "Add more detail") so the field is visible.
+      let cursor: HTMLElement | null = el.parentElement;
+      while (cursor) {
+        if (cursor instanceof HTMLDetailsElement && !cursor.open) {
+          cursor.open = true;
+        }
+        cursor = cursor.parentElement;
+      }
+
+      const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      el.scrollIntoView({ behavior: reducedMotion ? "instant" : "smooth", block: "center" });
+
+      const isMobile = window.matchMedia("(max-width: 720px)").matches;
+      const isTextInput = el instanceof HTMLInputElement && /^(text|email|number|tel|search|url)$/i.test(el.type);
+      const isTextarea = el instanceof HTMLTextAreaElement;
+      // Skip auto-focus on mobile for text inputs to avoid the keyboard popping up
+      // unexpectedly; visual highlight + scroll still leads the user to the field.
+      const skipFocus = isMobile && (isTextInput || isTextarea);
+      const focusable = el instanceof HTMLInputElement
+        || el instanceof HTMLTextAreaElement
+        || el instanceof HTMLSelectElement
+        || el instanceof HTMLButtonElement
+        || el.hasAttribute("tabindex");
+      if (!skipFocus && focusable) {
+        el.focus({ preventScroll: true });
+      }
+    }, 60);
+    return () => window.clearTimeout(handle);
+  }, [validationFocusTick]);
 
   useEffect(() => {
     if (!stage1Preview || currentStep !== steps.length - 1) {
@@ -988,6 +1106,9 @@ export function PlanIntakeForm() {
       performanceFocusValidation.errorMessage
         ?? "This saved intake is over the current focus cap. Remove some goal or weak-area selections before generating.",
     );
+    setInvalidFieldId("keyGoalsGroup");
+    pendingValidationFocusRef.current = "keyGoalsGroup";
+    setValidationFocusTick((tick) => tick + 1);
     setCurrentStep(PERFORMANCE_STEP_INDEX);
     setIsMobileProgressOpen(true);
     router.replace("/onboarding", { scroll: false });
@@ -1287,12 +1408,32 @@ export function PlanIntakeForm() {
       return true;
     }
 
-    if (decision.kind === "warning_ack_required" && decision.shouldRedirectToTraining) {
-      setCurrentStep(2);
-      setIsMobileProgressOpen(true);
+    if (decision.kind === "warning_ack_required") {
+      return reportInvalidField({
+        message: decision.message,
+        fieldId: "hardSparringAck",
+        step: decision.shouldRedirectToTraining ? 2 : undefined,
+      });
     }
 
-    setError(decision.message);
+    // hard_error from training gate covers availability/sparring consistency on the Training step.
+    return reportInvalidField({
+      message: decision.message,
+      fieldId: "trainingAvailabilityGroup",
+      step: currentStep !== 2 ? 2 : undefined,
+    });
+  }
+
+  function reportInvalidField(args: { message: string; fieldId: string; step?: number }): false {
+    const { message, fieldId, step } = args;
+    setError(message);
+    setInvalidFieldId(fieldId);
+    pendingValidationFocusRef.current = fieldId;
+    setValidationFocusTick((tick) => tick + 1);
+    if (step !== undefined && step !== currentStep) {
+      setCurrentStep(step);
+      setIsMobileProgressOpen(true);
+    }
     return false;
   }
 
@@ -1303,32 +1444,51 @@ export function PlanIntakeForm() {
   ): boolean {
     if (currentStep === 0) {
       if (!isValidRecordFormat(nextForm.athlete.record ?? "")) {
-        setError("Record must use x-x or x-x-x format, like 5-1 or 12-2-1.");
-        return false;
+        return reportInvalidField({
+          message: "Record must use x-x or x-x-x format, like 5-1 or 12-2-1.",
+          fieldId: "record",
+        });
       }
       if (!nextForm.athlete.technical_style.length) {
-        setError("Select a technical style before continuing.");
-        return false;
+        return reportInvalidField({
+          message: "Select a technical style before continuing.",
+          fieldId: "technicalStyle",
+        });
       }
     }
     if (currentStep === 1) {
       if (!nextForm.fight_date && !noScheduledFight) {
-        setError("Choose your fight date or mark \"No scheduled fight\" before continuing.");
-        return false;
+        return reportInvalidField({
+          message: "Choose your fight date or mark \"No scheduled fight\" before continuing.",
+          fieldId: "fightDate",
+        });
       }
       const parsedRounds = parseRoundsFormat(nextForm.rounds_format);
-      if (!parsedRounds.roundCount || !parsedRounds.roundDuration) {
-        setError("Choose both round count and round duration before continuing.");
-        return false;
+      if (!parsedRounds.roundCount) {
+        return reportInvalidField({
+          message: "Choose both round count and round duration before continuing.",
+          fieldId: "roundCount",
+        });
+      }
+      if (!parsedRounds.roundDuration) {
+        return reportInvalidField({
+          message: "Choose both round count and round duration before continuing.",
+          fieldId: "roundDuration",
+        });
       }
     }
     if (currentStep === 2 && !nextForm.training_availability.length) {
-      setError("Pick at least one training availability day before continuing.");
-      return false;
+      return reportInvalidField({
+        message: "Pick at least one training availability day before continuing.",
+        fieldId: "trainingAvailabilityGroup",
+      });
     }
     if (currentStep === 3 && (nextForm.guided_injuries ?? []).some((injury) => hasGuidedInjuryDescriptorWithoutArea(injury))) {
-      setError("Add a pain area or body part before choosing severity or trend.");
-      return false;
+      const invalidIndex = (nextForm.guided_injuries ?? []).findIndex((injury) => hasGuidedInjuryDescriptorWithoutArea(injury));
+      return reportInvalidField({
+        message: "Add a pain area or body part before choosing severity or trend.",
+        fieldId: invalidIndex >= 0 ? `guidedInjuryCard-${invalidIndex}` : "guidedInjuriesSection",
+      });
     }
     if (currentStep === PERFORMANCE_STEP_INDEX) {
       const focusValidation = validatePerformanceFocusSelections(
@@ -1337,8 +1497,10 @@ export function PlanIntakeForm() {
         { timeZone: nextForm.athlete.athlete_timezone },
       );
       if (focusValidation.isOverCap) {
-        setError(focusValidation.errorMessage);
-        return false;
+        return reportInvalidField({
+          message: focusValidation.errorMessage ?? "Goals and weak areas exceed the current cap. Update your selections before continuing.",
+          fieldId: "keyGoalsGroup",
+        });
       }
     }
     return applyTrainingGate(nextForm, action, targetStep);
@@ -1349,29 +1511,54 @@ export function PlanIntakeForm() {
       return false;
     }
     if (!nextForm.athlete.technical_style.length) {
-      setError("Select a technical style before generating your plan.");
-      return false;
+      return reportInvalidField({
+        message: "Select a technical style before generating your plan.",
+        fieldId: "technicalStyle",
+        step: 0,
+      });
     }
     if (!nextForm.fight_date && !noScheduledFight) {
-      setError("Choose your fight date or mark \"No scheduled fight\" before generating your plan.");
-      return false;
+      return reportInvalidField({
+        message: "Choose your fight date or mark \"No scheduled fight\" before generating your plan.",
+        fieldId: "fightDate",
+        step: 1,
+      });
     }
     if (!nextForm.training_availability.length) {
-      setError("Pick at least one training availability option before generating your plan.");
-      return false;
+      return reportInvalidField({
+        message: "Pick at least one training availability option before generating your plan.",
+        fieldId: "trainingAvailabilityGroup",
+        step: 2,
+      });
     }
     if (!nextForm.weekly_training_frequency || nextForm.weekly_training_frequency < 1) {
-    setError("Planned sessions per week must be at least 1.");
-      return false;
+      return reportInvalidField({
+        message: "Planned sessions per week must be at least 1.",
+        fieldId: "sessionsPerWeek",
+        step: 1,
+      });
     }
     if (nextForm.weekly_training_frequency > 6) {
-    setError("Planned sessions per week cannot exceed 6.");
-      return false;
+      return reportInvalidField({
+        message: "Planned sessions per week cannot exceed 6.",
+        fieldId: "sessionsPerWeek",
+        step: 1,
+      });
     }
     const parsedRounds = parseRoundsFormat(nextForm.rounds_format);
-    if (!parsedRounds.roundCount || !parsedRounds.roundDuration) {
-      setError("Choose both round count and round duration before generating your plan.");
-      return false;
+    if (!parsedRounds.roundCount) {
+      return reportInvalidField({
+        message: "Choose both round count and round duration before generating your plan.",
+        fieldId: "roundCount",
+        step: 1,
+      });
+    }
+    if (!parsedRounds.roundDuration) {
+      return reportInvalidField({
+        message: "Choose both round count and round duration before generating your plan.",
+        fieldId: "roundDuration",
+        step: 1,
+      });
     }
     const focusValidation = validatePerformanceFocusSelections(
       nextForm.fight_date,
@@ -1384,10 +1571,11 @@ export function PlanIntakeForm() {
       },
     );
     if (focusValidation.isOverCap) {
-      setCurrentStep(PERFORMANCE_STEP_INDEX);
-      setIsMobileProgressOpen(true);
-      setError(focusValidation.errorMessage);
-      return false;
+      return reportInvalidField({
+        message: focusValidation.errorMessage ?? "Goals and weak areas exceed the current cap. Update your selections before continuing.",
+        fieldId: "keyGoalsGroup",
+        step: PERFORMANCE_STEP_INDEX,
+      });
     }
     return true;
   }
@@ -1437,6 +1625,7 @@ export function PlanIntakeForm() {
   function handleSaveDraft() {
     setMessage(null);
     setError(null);
+    setInvalidFieldId(null);
     startTransition(async () => {
       const nextForm = buildFormSnapshot();
       if (!validateCurrentStep(nextForm, "save_draft")) {
@@ -1459,6 +1648,7 @@ export function PlanIntakeForm() {
     const nextStep = Math.min(currentStep + 1, steps.length - 1);
     setMessage(null);
     setError(null);
+    setInvalidFieldId(null);
     startTransition(async () => {
       const nextForm = buildFormSnapshot();
       if (!validateCurrentStep(nextForm, "next", nextStep)) {
@@ -1475,6 +1665,8 @@ export function PlanIntakeForm() {
   }
 
   function handleBack() {
+    setError(null);
+    setInvalidFieldId(null);
     setCurrentStep((step) => Math.max(step - 1, 0));
     setIsMobileProgressOpen(false);
   }
@@ -1482,6 +1674,7 @@ export function PlanIntakeForm() {
   function handleStepSelect(targetStep: number) {
     setMessage(null);
     setError(null);
+    setInvalidFieldId(null);
     let nextForm: PlanRequest | null = null;
     function getNextForm() {
       nextForm ??= buildFormSnapshot();
@@ -1493,9 +1686,11 @@ export function PlanIntakeForm() {
         noScheduledFight,
       });
       if (reviewIssue) {
-        setError(reviewIssue.message);
-        setCurrentStep(reviewIssue.step);
-        setIsMobileProgressOpen(true);
+        reportInvalidField({
+          message: reviewIssue.message,
+          fieldId: reviewIssue.fieldId,
+          step: reviewIssue.step,
+        });
         return;
       }
     }
@@ -1526,6 +1721,7 @@ export function PlanIntakeForm() {
   function handleGenerate() {
     setMessage(null);
     setError(null);
+    setInvalidFieldId(null);
     startTransition(async () => {
       const nextForm = buildFormSnapshot();
       if (!validateForGeneration(nextForm)) {
@@ -1543,6 +1739,7 @@ export function PlanIntakeForm() {
   function handleGenerateStage1Preview() {
     setMessage(null);
     setError(null);
+    setInvalidFieldId(null);
     setStage1Preview(null);
     startTransition(async () => {
       const nextForm = buildFormSnapshot();
@@ -2067,7 +2264,7 @@ export function PlanIntakeForm() {
                   <h2 className="form-section-title">Style</h2>
                 </div>
                 <div className="form-grid onboarding-profile-grid">
-                  <div className="field field-span-full">
+                  <div className={`field field-span-full${invalidFieldId === "technicalStyle" ? " field-invalid" : ""}`}>
                     <label htmlFor="technicalStyle">Technical Style</label>
                     <CustomSelect
                       id="technicalStyle"
@@ -2075,9 +2272,14 @@ export function PlanIntakeForm() {
                       options={TECHNICAL_STYLE_OPTIONS}
                       placeholder="Select technical style"
                       includeEmptyOption
+                      invalid={invalidFieldId === "technicalStyle"}
+                      describedBy={invalidFieldId === "technicalStyle" ? "technicalStyle-error" : undefined}
                       onChange={(value) => updateAthlete("technical_style", value ? [value] : [])}
                     />
                     <p className="muted">Technical style = your sport or rule set.</p>
+                    {invalidFieldId === "technicalStyle" && error ? (
+                      <p id="technicalStyle-error" className="error-text" role="alert">{error}</p>
+                    ) : null}
                   </div>
                 </div>
               </article>
@@ -2115,7 +2317,7 @@ export function PlanIntakeForm() {
                       onChange={(value) => updateAthlete("professional_status", value)}
                     />
                   </div>
-                  <div className="field">
+                  <div className={`field${invalidFieldId === "record" || recordHasError ? " field-invalid" : ""}`}>
                     <label htmlFor="record">Record</label>
                     <input
                       id="record"
@@ -2123,9 +2325,15 @@ export function PlanIntakeForm() {
                       onChange={(event) => updateAthlete("record", sanitizeRecordInput(event.target.value))}
                       placeholder="5-1 or 12-2-1"
                       inputMode="text"
+                      aria-invalid={invalidFieldId === "record" || recordHasError ? true : undefined}
+                      aria-describedby={invalidFieldId === "record" ? "record-error" : undefined}
                     />
                     <p className="muted">Use only <code>x-x</code> or <code>x-x-x</code>.</p>
-                    {recordHasError ? <p className="error-text">Enter record as x-x or x-x-x.</p> : null}
+                    {invalidFieldId === "record" && error ? (
+                      <p id="record-error" className="error-text" role="alert">{error}</p>
+                    ) : recordHasError ? (
+                      <p className="error-text">Enter record as x-x or x-x-x.</p>
+                    ) : null}
                   </div>
                 </div>
               </OptionalDetails>
@@ -2159,7 +2367,7 @@ export function PlanIntakeForm() {
                   <h2 className="form-section-title">Camp timing and load</h2>
                 </div>
                 <div className="form-grid onboarding-fight-grid">
-                  <div className="field">
+                  <div className={`field${invalidFieldId === "fightDate" ? " field-invalid" : ""}`}>
                     <label htmlFor="fightDate">Fight date</label>
                     <input
                       id="fightDate"
@@ -2168,6 +2376,8 @@ export function PlanIntakeForm() {
                       value={form.fight_date}
                       disabled={noScheduledFight}
                       onChange={(event) => updateField("fight_date", event.target.value)}
+                      aria-invalid={invalidFieldId === "fightDate" ? true : undefined}
+                      aria-describedby={invalidFieldId === "fightDate" ? "fightDate-error" : undefined}
                     />
                     <label className={`inline-warning-ack inline-warning-ack-subtle ${noScheduledFight ? "inline-warning-ack-checked" : ""}`.trim()}>
                       <input
@@ -2181,8 +2391,11 @@ export function PlanIntakeForm() {
                       />
                       <span className="inline-warning-ack-copy">No scheduled fight yet</span>
                     </label>
+                    {invalidFieldId === "fightDate" && error ? (
+                      <p id="fightDate-error" className="error-text" role="alert">{error}</p>
+                    ) : null}
                   </div>
-                  <div className="field">
+                  <div className={`field${invalidFieldId === "roundCount" ? " field-invalid" : ""}`}>
                     <label htmlFor="roundCount">Round count</label>
                     <CustomSelect
                       id="roundCount"
@@ -2190,10 +2403,15 @@ export function PlanIntakeForm() {
                       options={ROUND_COUNT_OPTIONS}
                       placeholder="Select rounds"
                       includeEmptyOption
+                      invalid={invalidFieldId === "roundCount"}
+                      describedBy={invalidFieldId === "roundCount" ? "roundCount-error" : undefined}
                       onChange={(value) => updateRoundsField("roundCount", value)}
                     />
+                    {invalidFieldId === "roundCount" && error ? (
+                      <p id="roundCount-error" className="error-text" role="alert">{error}</p>
+                    ) : null}
                   </div>
-                  <div className="field">
+                  <div className={`field${invalidFieldId === "roundDuration" ? " field-invalid" : ""}`}>
                     <label htmlFor="roundDuration">Minutes per round</label>
                     <CustomSelect
                       id="roundDuration"
@@ -2201,8 +2419,13 @@ export function PlanIntakeForm() {
                       options={ROUND_DURATION_OPTIONS}
                       placeholder="Select minutes"
                       includeEmptyOption
+                      invalid={invalidFieldId === "roundDuration"}
+                      describedBy={invalidFieldId === "roundDuration" ? "roundDuration-error" : undefined}
                       onChange={(value) => updateRoundsField("roundDuration", value)}
                     />
+                    {invalidFieldId === "roundDuration" && error ? (
+                      <p id="roundDuration-error" className="error-text" role="alert">{error}</p>
+                    ) : null}
                   </div>
                   {shouldHideField(daysOutCtx, "weekly_training_frequency") ? (
                     <div className="field field-span-full">
@@ -2210,7 +2433,7 @@ export function PlanIntakeForm() {
                     </div>
                   ) : (
                     <div
-                      className="field field-span-full"
+                      className={`field field-span-full${invalidFieldId === "sessionsPerWeek" ? " field-invalid" : ""}`}
                       style={shouldDeEmphasizeField(daysOutCtx, "weekly_training_frequency") ? { opacity: 0.55 } : undefined}
                     >
                       <label htmlFor="sessionsPerWeek">Planned sessions per week</label>
@@ -2229,11 +2452,16 @@ export function PlanIntakeForm() {
                             nextValue === null ? null : Math.min(Math.max(nextValue, 1), 6),
                           );
                         }}
+                        aria-invalid={invalidFieldId === "sessionsPerWeek" ? true : undefined}
+                        aria-describedby={invalidFieldId === "sessionsPerWeek" ? "sessionsPerWeek-error" : undefined}
                       />
                       <p className="muted">
                         {getFieldHelperText(daysOutCtx, "weekly_training_frequency") ||
                           "Count the total training sessions the week should carry. Hard sparring days and non-hard training days are labels inside that weekly total, not extra sessions on top."}
                       </p>
+                      {invalidFieldId === "sessionsPerWeek" && error ? (
+                        <p id="sessionsPerWeek-error" className="error-text" role="alert">{error}</p>
+                      ) : null}
                     </div>
                   )}
                 </div>
@@ -2298,7 +2526,13 @@ export function PlanIntakeForm() {
                 </div>
               ) : null}
               {hardSparringWarning.message ? (
-                <div className={`inline-warning-banner ${hardSparringWarningLocked ? "inline-warning-banner-alert" : ""}`.trim()}>
+                <div
+                  id="hardSparringAck"
+                  className={`inline-warning-banner ${hardSparringWarningLocked ? "inline-warning-banner-alert" : ""}${invalidFieldId === "hardSparringAck" ? " field-invalid" : ""}`.trim()}
+                  tabIndex={invalidFieldId === "hardSparringAck" ? -1 : undefined}
+                  aria-invalid={invalidFieldId === "hardSparringAck" ? true : undefined}
+                  aria-describedby={invalidFieldId === "hardSparringAck" ? "hardSparringAck-error" : undefined}
+                >
                   <p className="inline-warning-banner-label">High-contact warning</p>
                   <p className={hardSparringWarningLocked ? "error-text" : "muted"}>{hardSparringWarning.message}</p>
                   <label className={`inline-warning-ack ${hardSparringWarningAcknowledged ? "inline-warning-ack-checked" : ""}`.trim()}>
@@ -2313,6 +2547,9 @@ export function PlanIntakeForm() {
                     />
                     <span className="inline-warning-ack-copy">I understand this requires deliberate recovery planning.</span>
                   </label>
+                  {invalidFieldId === "hardSparringAck" && error ? (
+                    <p id="hardSparringAck-error" className="error-text" role="alert">{error}</p>
+                  ) : null}
                 </div>
               ) : null}
               <article className="step-card">
@@ -2325,13 +2562,21 @@ export function PlanIntakeForm() {
                     <p className="muted" style={{ opacity: 0.5 }}>Training availability is not used for planning at this stage.</p>
                   </div>
                 ) : (
-                <CheckboxGroup
-                  label="Training Availability"
-                  options={TRAINING_AVAILABILITY_OPTIONS}
-                  selectedValues={form.training_availability}
-                  onToggle={(value) => toggleFieldValue("training_availability", value)}
-                  disableAll={shouldDisableField(daysOutCtx, "training_availability")}
-                />
+                <>
+                  <CheckboxGroup
+                    id="trainingAvailabilityGroup"
+                    label="Training Availability"
+                    options={TRAINING_AVAILABILITY_OPTIONS}
+                    selectedValues={form.training_availability}
+                    onToggle={(value) => toggleFieldValue("training_availability", value)}
+                    disableAll={shouldDisableField(daysOutCtx, "training_availability")}
+                    invalid={invalidFieldId === "trainingAvailabilityGroup"}
+                    describedBy={invalidFieldId === "trainingAvailabilityGroup" ? "trainingAvailabilityGroup-error" : undefined}
+                  />
+                  {invalidFieldId === "trainingAvailabilityGroup" && error ? (
+                    <p id="trainingAvailabilityGroup-error" className="error-text" role="alert">{error}</p>
+                  ) : null}
+                </>
                 )}
               </article>
               <article className="step-card">
@@ -2523,23 +2768,38 @@ export function PlanIntakeForm() {
                       </div>
                       <div className="injury-cards-col">
                         <div className="injury-card-stack">
-                          {guidedInjuries.map((injury, index) => (
-                            <GuidedInjuryCard
-                              key={`guided-injury-${index}`}
-                              injury={injury}
-                              index={index}
-                              isActive={activeGuidedInjuryIndex === index}
-                              onToggleActive={() => {
-                                if (activeGuidedInjuryIndex === index) {
-                                  setActiveGuidedInjuryIndex(null);
-                                } else {
-                                  handleEditGuidedInjury(index);
-                                }
-                              }}
-                              onUpdate={(key, value) => updateGuidedInjury(index, key, value)}
-                              onRemove={() => handleRemoveGuidedInjury(index)}
-                            />
-                          ))}
+                          {guidedInjuries.map((injury, index) => {
+                            const cardId = `guidedInjuryCard-${index}`;
+                            const isInvalidCard = invalidFieldId === cardId;
+                            return (
+                              <div
+                                key={`guided-injury-${index}`}
+                                id={cardId}
+                                className={isInvalidCard ? "field-invalid" : undefined}
+                                tabIndex={isInvalidCard ? -1 : undefined}
+                                aria-invalid={isInvalidCard ? true : undefined}
+                                aria-describedby={isInvalidCard ? `${cardId}-error` : undefined}
+                              >
+                                <GuidedInjuryCard
+                                  injury={injury}
+                                  index={index}
+                                  isActive={activeGuidedInjuryIndex === index}
+                                  onToggleActive={() => {
+                                    if (activeGuidedInjuryIndex === index) {
+                                      setActiveGuidedInjuryIndex(null);
+                                    } else {
+                                      handleEditGuidedInjury(index);
+                                    }
+                                  }}
+                                  onUpdate={(key, value) => updateGuidedInjury(index, key, value)}
+                                  onRemove={() => handleRemoveGuidedInjury(index)}
+                                />
+                                {isInvalidCard && error ? (
+                                  <p id={`${cardId}-error`} className="error-text" role="alert">{error}</p>
+                                ) : null}
+                              </div>
+                            );
+                          })}
                         </div>
 
                         <div className="injury-card-add-row">
@@ -2592,6 +2852,7 @@ export function PlanIntakeForm() {
                   <h2 className="form-section-title">Key goals</h2>
                 </div>
                 <CheckboxGroup
+                  id="keyGoalsGroup"
                   label="Key Goals"
                   options={KEY_GOAL_OPTIONS}
                   selectedValues={form.key_goals}
@@ -2600,7 +2861,12 @@ export function PlanIntakeForm() {
                   capDisabledReason={keyGoalCapDisabledReason}
                   disableAll={shouldDisableField(daysOutCtx, "key_goals")}
                   getOptionDisabledReason={getKeyGoalDisabledReason}
+                  invalid={invalidFieldId === "keyGoalsGroup"}
+                  describedBy={invalidFieldId === "keyGoalsGroup" ? "keyGoalsGroup-error" : undefined}
                 />
+                {invalidFieldId === "keyGoalsGroup" && error ? (
+                  <p id="keyGoalsGroup-error" className="error-text" role="alert">{error}</p>
+                ) : null}
                 {getFieldHelperText(daysOutCtx, "key_goals") ? (
                   <p className="muted">{getFieldHelperText(daysOutCtx, "key_goals")}</p>
                 ) : null}
@@ -2846,7 +3112,16 @@ export function PlanIntakeForm() {
         ) : null}
 
         {message ? <div className="success-banner athlete-motion-slot athlete-motion-status">{message}</div> : null}
-        {error ? <div className="error-banner athlete-motion-slot athlete-motion-status">{error}</div> : null}
+        {error ? (
+          <div
+            id="onboarding-error-banner"
+            className="error-banner athlete-motion-slot athlete-motion-status"
+            role="alert"
+            aria-live="assertive"
+          >
+            {error}
+          </div>
+        ) : null}
 
         <div className="form-actions onboarding-action-bar athlete-motion-slot athlete-motion-rail">
           <div className="onboarding-action-bar-copy">
