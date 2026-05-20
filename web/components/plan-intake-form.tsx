@@ -948,7 +948,7 @@ export function PlanIntakeForm() {
     })();
     if (isFieldNowValid) {
       setInvalidFieldId(null);
-      setError((current) => (current ? null : current));
+      setError(null);
     }
   }, [
     invalidFieldId,
