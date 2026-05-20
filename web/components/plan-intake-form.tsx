@@ -64,6 +64,26 @@ import type { PlanRequest, Stage1PreviewResponse } from "@/lib/types";
 
 const steps = ["Profile", "Fight Context", "Training", "Restrictions", "Performance", "Review"] as const;
 const PERFORMANCE_STEP_INDEX = 4;
+
+// Each validation field lives on one step. Used as a safety net so any
+// reportInvalidField caller still routes the user to the right step even
+// if the call site forgets to pass `step`.
+const FIELD_STEP_MAP: Record<string, number> = {
+  record: 0,
+  technicalStyle: 0,
+  fightDate: 1,
+  roundCount: 1,
+  roundDuration: 1,
+  sessionsPerWeek: 1,
+  trainingAvailabilityGroup: 2,
+  hardSparringAck: 2,
+  keyGoalsGroup: PERFORMANCE_STEP_INDEX,
+};
+
+function resolveFieldStep(fieldId: string): number | undefined {
+  if (fieldId.startsWith("guidedInjuryCard-")) return 3;
+  return FIELD_STEP_MAP[fieldId];
+}
 const SEX_OPTIONS: IntakeOption[] = [
   { label: "Male", value: "male" },
   { label: "Female", value: "female" },
@@ -1412,7 +1432,7 @@ export function PlanIntakeForm() {
       return reportInvalidField({
         message: decision.message,
         fieldId: "hardSparringAck",
-        step: decision.shouldRedirectToTraining ? 2 : undefined,
+        step: currentStep !== 2 ? 2 : undefined,
       });
     }
 
@@ -1425,13 +1445,16 @@ export function PlanIntakeForm() {
   }
 
   function reportInvalidField(args: { message: string; fieldId: string; step?: number }): false {
-    const { message, fieldId, step } = args;
+    const { message, fieldId } = args;
+    // Fall back to the field's home step so an invalid target on a different
+    // step is never silently dropped when the caller omits `step`.
+    const targetStep = args.step ?? resolveFieldStep(fieldId);
     setError(message);
     setInvalidFieldId(fieldId);
     pendingValidationFocusRef.current = fieldId;
     setValidationFocusTick((tick) => tick + 1);
-    if (step !== undefined && step !== currentStep) {
-      setCurrentStep(step);
+    if (targetStep !== undefined && targetStep !== currentStep) {
+      setCurrentStep(targetStep);
       setIsMobileProgressOpen(true);
     }
     return false;
