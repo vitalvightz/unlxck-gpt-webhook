@@ -20,6 +20,8 @@ type CustomSelectProps = {
   onChange: (value: string) => void;
   includeEmptyOption?: boolean;
   disabled?: boolean;
+  invalid?: boolean;
+  describedBy?: string;
 };
 
 type MenuPhase = "closed" | "opening" | "open" | "closing";
@@ -36,6 +38,8 @@ export function CustomSelect({
   onChange,
   includeEmptyOption = false,
   disabled = false,
+  invalid = false,
+  describedBy,
 }: CustomSelectProps) {
   const menuId = `${useId().replace(/:/g, "")}-listbox`;
   const triggerRef = useRef<HTMLButtonElement | null>(null);
@@ -259,6 +263,8 @@ export function CustomSelect({
         aria-haspopup="listbox"
         aria-expanded={isOpen}
         aria-controls={menuId}
+        aria-invalid={invalid ? true : undefined}
+        aria-describedby={describedBy}
         disabled={disabled}
         onClick={() => (isOpen ? closeMenu() : openMenu())}
         onKeyDown={handleTriggerKeyDown}

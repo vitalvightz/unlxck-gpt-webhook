@@ -2287,6 +2287,30 @@ select:focus-visible {
   font-size: 13px;
 }
 
+.field input[aria-invalid="true"],
+.field textarea[aria-invalid="true"],
+.field select[aria-invalid="true"],
+.field .custom-select-trigger[aria-invalid="true"] {
+  border-color: var(--danger-ink);
+  box-shadow: 0 0 0 3px rgba(255, 141, 161, 0.18);
+}
+
+.field-invalid {
+  position: relative;
+  border-radius: 12px;
+  box-shadow: 0 0 0 1px var(--danger-ink), 0 0 0 4px rgba(255, 141, 161, 0.16);
+  scroll-margin-top: 96px;
+}
+
+.field.field-invalid {
+  padding: 8px;
+  margin: -8px;
+}
+
+.field-invalid:focus {
+  outline: none;
+}
+
 .success-text {
   margin: 0;
   color: var(--success-ink);
