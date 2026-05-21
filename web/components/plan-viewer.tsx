@@ -936,7 +936,11 @@ export function PlanViewer({
           break;
         }
         await sleep(TRIAGE_RESUME_FETCH_DELAY_MS * attempt);
-        refreshedPlan = await getPlan(accessToken, resolvedPlanId);
+        try {
+          refreshedPlan = await getPlan(accessToken, resolvedPlanId);
+        } catch {
+          // Ignore transient fetch failures during the polling window
+        }
       }
 
       onPlanUpdated?.(refreshedPlan);
