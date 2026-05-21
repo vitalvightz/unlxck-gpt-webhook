@@ -480,9 +480,11 @@ def _plan_generate_daily_limit_per_user() -> int:
         return 5
 
 
-_DAILY_GENERATION_CAP_EXEMPT_EMAILS: frozenset[str] = frozenset({
-    "michaelokaforjr@gmail.com",
-})
+_DAILY_GENERATION_CAP_EXEMPT_EMAILS: frozenset[str] = frozenset(
+    email.strip().lower()
+    for email in os.getenv("APP_DAILY_GENERATION_CAP_EXEMPT_EMAILS", "michaelokaforjr@gmail.com").split(",")
+    if email.strip()
+)
 
 
 def _is_exempt_from_daily_generation_cap(email: str) -> bool:
