@@ -2300,6 +2300,8 @@ select:focus-visible {
   border-radius: 12px;
   box-shadow: 0 0 0 1px var(--danger-ink), 0 0 0 4px rgba(255, 141, 161, 0.16);
   scroll-margin-top: 96px;
+  scroll-margin-bottom: 96px;
+  animation: field-invalid-flash 720ms ease-out 1;
 }
 
 .field.field-invalid {
@@ -2309,6 +2311,24 @@ select:focus-visible {
 
 .field-invalid:focus {
   outline: none;
+}
+
+@keyframes field-invalid-flash {
+  0% {
+    box-shadow: 0 0 0 1px var(--danger-ink), 0 0 0 0 rgba(255, 141, 161, 0.42);
+  }
+  60% {
+    box-shadow: 0 0 0 1px var(--danger-ink), 0 0 0 12px rgba(255, 141, 161, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 1px var(--danger-ink), 0 0 0 4px rgba(255, 141, 161, 0.16);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .field-invalid {
+    animation: none;
+  }
 }
 
 .success-text {
