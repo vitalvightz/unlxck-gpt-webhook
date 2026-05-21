@@ -80,7 +80,7 @@ export const FOCUS_PRESETS: FocusPreset[] = [
   {
     key: "strength_base",
     label: "Strength base",
-    description: "Strength, strength weakness",
+    description: "Strength",
     key_goals: ["strength"],
     weak_areas: ["strength"],
     allowNoScheduledFight: true,
@@ -90,7 +90,7 @@ export const FOCUS_PRESETS: FocusPreset[] = [
   {
     key: "explosive_power",
     label: "Explosive power",
-    description: "Power, power weakness",
+    description: "Power",
     key_goals: ["power"],
     weak_areas: ["power"],
     allowNoScheduledFight: true,
@@ -100,7 +100,7 @@ export const FOCUS_PRESETS: FocusPreset[] = [
   {
     key: "gas_tank",
     label: "Gas tank",
-    description: "Conditioning, gas tank weakness",
+    description: "Conditioning",
     key_goals: ["conditioning"],
     weak_areas: ["gas_tank"],
     allowNoScheduledFight: true,
@@ -110,7 +110,7 @@ export const FOCUS_PRESETS: FocusPreset[] = [
   {
     key: "fight_sharpness",
     label: "Fight sharpness",
-    description: "Speed, speed weakness",
+    description: "Speed",
     key_goals: ["speed"],
     weak_areas: ["speed"],
     allowNoScheduledFight: false,
