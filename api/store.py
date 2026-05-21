@@ -14,6 +14,7 @@ from postgrest.exceptions import APIError as PostgrestAPIError
 from supabase import Client, create_client
 
 from .auth import AuthenticatedUser
+from .environment import is_production_environment
 from .models import (
     PlanRequest,
     ProfileUpdateRequest,
@@ -89,20 +90,13 @@ _PLAN_INVALID_PAYLOAD_DETAIL = "invalid plans payload for table insert"
 GENERATION_JOB_UNAVAILABLE_DETAIL = "generation job service temporarily unavailable"
 GENERATION_JOB_SCHEMA_DETAIL = "generation job store is not ready; apply the latest Supabase schema and redeploy"
 
-_PRODUCTION_ENV_VALUES = frozenset({"production", "prod", "live"})
-_PRODUCTION_ENV_VARS = ("APP_ENV", "ENVIRONMENT", "UNLXCK_ENV", "NODE_ENV")
-
-
-def _is_production_environment() -> bool:
-    for var in _PRODUCTION_ENV_VARS:
-        value = os.getenv(var, "").strip().lower()
-        if value in _PRODUCTION_ENV_VALUES:
-            return True
-    return False
+_is_production_environment = is_production_environment
 
 
 class AppStore(Protocol):
     def validate_runtime_schema(self) -> None: ...
+
+    def is_admin_email(self, email: str) -> bool: ...
 
     def ensure_profile(self, user: AuthenticatedUser) -> dict[str, Any]: ...
 
@@ -223,6 +217,11 @@ class SupabaseAppStore:
             len(admin_emails),
         )
         return cls(create_client(url, key), admin_emails)
+
+    def is_admin_email(self, email: str) -> bool:
+        if not email:
+            return False
+        return email.strip().lower() in self.admin_emails
 
     def _select_first(self, query) -> dict[str, Any] | None:
         response = query.limit(1).execute()

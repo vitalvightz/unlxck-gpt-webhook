@@ -446,3 +446,86 @@ def test_cors_does_not_allow_render_origin_when_only_vercel_origin_is_configured
 
     assert response.status_code == 400
     assert "access-control-allow-origin" not in response.headers
+
+
+def _clear_env_detection_vars(monkeypatch: pytest.MonkeyPatch) -> None:
+    for var in ("APP_ENV", "ENVIRONMENT", "UNLXCK_ENV", "NODE_ENV"):
+        monkeypatch.delenv(var, raising=False)
+
+
+def test_production_cors_allows_safe_https_origin(monkeypatch: pytest.MonkeyPatch):
+    _clear_env_detection_vars(monkeypatch)
+    monkeypatch.setenv("APP_ENV", "production")
+    monkeypatch.setenv("APP_CORS_ORIGINS", "https://app.example.com")
+    # Should not raise
+    create_app(
+        store=FakeStore(),
+        auth_service=FakeAuthService({}),
+        stage2_automator=FakeStage2Automator(),
+    )
+
+
+def test_production_cors_rejects_wildcard_origin(monkeypatch: pytest.MonkeyPatch):
+    _clear_env_detection_vars(monkeypatch)
+    monkeypatch.setenv("APP_ENV", "production")
+    monkeypatch.setenv("APP_CORS_ORIGINS", "*")
+
+    with pytest.raises(ValueError, match=r"\*"):
+        create_app(
+            store=FakeStore(),
+            auth_service=FakeAuthService({}),
+            stage2_automator=FakeStage2Automator(),
+        )
+
+
+def test_production_cors_rejects_empty_origins(monkeypatch: pytest.MonkeyPatch):
+    _clear_env_detection_vars(monkeypatch)
+    monkeypatch.setenv("APP_ENV", "production")
+    monkeypatch.setenv("APP_CORS_ORIGINS", "")
+    monkeypatch.delenv("APP_CORS_ORIGIN_REGEX", raising=False)
+
+    with pytest.raises(ValueError, match="at least one origin"):
+        create_app(
+            store=FakeStore(),
+            auth_service=FakeAuthService({}),
+            stage2_automator=FakeStage2Automator(),
+        )
+
+
+def test_production_cors_rejects_localhost_origins(monkeypatch: pytest.MonkeyPatch):
+    _clear_env_detection_vars(monkeypatch)
+    monkeypatch.setenv("APP_ENV", "production")
+    monkeypatch.setenv("APP_CORS_ORIGINS", "http://localhost:3000")
+
+    with pytest.raises(ValueError, match="localhost"):
+        create_app(
+            store=FakeStore(),
+            auth_service=FakeAuthService({}),
+            stage2_automator=FakeStage2Automator(),
+        )
+
+
+@pytest.mark.parametrize("regex", [".*", "^.*$", ".+", "^.+$"])
+def test_production_cors_rejects_broad_regex(monkeypatch: pytest.MonkeyPatch, regex: str):
+    _clear_env_detection_vars(monkeypatch)
+    monkeypatch.setenv("APP_ENV", "production")
+    monkeypatch.setenv("APP_CORS_ORIGINS", "https://app.example.com")
+    monkeypatch.setenv("APP_CORS_ORIGIN_REGEX", regex)
+
+    with pytest.raises(ValueError, match="too broad"):
+        create_app(
+            store=FakeStore(),
+            auth_service=FakeAuthService({}),
+            stage2_automator=FakeStage2Automator(),
+        )
+
+
+def test_non_production_cors_allows_localhost(monkeypatch: pytest.MonkeyPatch):
+    _clear_env_detection_vars(monkeypatch)
+    monkeypatch.setenv("APP_CORS_ORIGINS", "http://localhost:3000")
+    # Should not raise
+    create_app(
+        store=FakeStore(),
+        auth_service=FakeAuthService({}),
+        stage2_automator=FakeStage2Automator(),
+    )

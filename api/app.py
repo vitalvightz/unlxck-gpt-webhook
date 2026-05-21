@@ -28,6 +28,7 @@ from fightcamp.stage2_pipeline import build_stage2_retry, review_stage2_output
 from fightcamp.weekly_schedule_view import extract_weekly_schedule
 
 from .auth import AuthService, AuthenticatedUser, SupabaseAuthService, is_auth_api_error
+from .environment import is_production_environment
 from .models import (
     ApproveAndResumeGenerationRequest,
     AdminGenerationJobDiagnostic,
@@ -372,6 +373,39 @@ def _normalize_origin(origin: str) -> str:
 def _cors_origin_regex() -> str | None:
     value = os.getenv("APP_CORS_ORIGIN_REGEX", "").strip()
     return value or None
+
+
+_UNSAFE_CORS_REGEX_PATTERNS = frozenset({".*", "^.*$", ".+", "^.+$", "^.*", ".*$", "^.+", ".+$"})
+
+
+def _validate_production_cors_config(origins: list[str], regex: str | None) -> None:
+    if not is_production_environment():
+        return
+
+    if not origins and not regex:
+        raise ValueError(
+            "APP_CORS_ORIGINS must list at least one origin (or APP_CORS_ORIGIN_REGEX must be set) in production"
+        )
+
+    for origin in origins:
+        if origin == "*":
+            raise ValueError("APP_CORS_ORIGINS cannot contain '*' in production")
+        parsed = urlsplit(origin)
+        host = (parsed.hostname or "").lower()
+        netloc = (parsed.netloc or "").lower()
+        if not host or "*" in netloc:
+            raise ValueError(
+                f"APP_CORS_ORIGINS cannot contain '*' wildcards in production: {origin!r}"
+            )
+        if host in LOCAL_HOST_NAMES:
+            raise ValueError(
+                f"APP_CORS_ORIGINS cannot contain localhost origins in production: {origin!r}"
+            )
+
+    if regex is not None and regex.strip() in _UNSAFE_CORS_REGEX_PATTERNS:
+        raise ValueError(
+            f"APP_CORS_ORIGIN_REGEX is too broad for production: {regex!r}"
+        )
 
 
 def _plan_generate_rate_limit_requests() -> int:
@@ -857,10 +891,13 @@ def create_app(
         if rate_limit_requests > 0
         else None
     )
+    cors_origins = _cors_origins()
+    cors_regex = _cors_origin_regex()
+    _validate_production_cors_config(cors_origins, cors_regex)
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=_cors_origins(),
-        allow_origin_regex=_cors_origin_regex(),
+        allow_origins=cors_origins,
+        allow_origin_regex=cors_regex,
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
@@ -1001,6 +1038,15 @@ def create_app(
     ) -> ProfileRecord:
         try:
             profile = _map_profile_row(store.ensure_profile(user))
+            # UNLXCK_ADMIN_EMAILS is the authoritative source for admin access.
+            # Sync the request-scoped role to the current allowlist so downstream
+            # checks (`profile.role == "admin"`) cannot drift if the DB role is
+            # stale after an env allowlist change.
+            env_is_admin = store.is_admin_email(profile.email)
+            if env_is_admin and profile.role != "admin":
+                profile = profile.model_copy(update={"role": "admin"})
+            elif not env_is_admin and profile.role == "admin":
+                profile = profile.model_copy(update={"role": "athlete"})
             logger.info("[auth] profile_resolved athlete_id=%s role=%s", profile.athlete_id, profile.role)
             return profile
         except HTTPException as exc:
@@ -1016,9 +1062,19 @@ def create_app(
             logger.exception("[auth] profile_resolution_failed user_id=%s email=%s", user.user_id, user.email)
             raise
 
-    def require_admin(profile: ProfileRecord = Depends(require_profile)) -> ProfileRecord:
-        if profile.role != "admin":
-            logger.warning("[auth] admin_access_denied athlete_id=%s role=%s", profile.athlete_id, profile.role)
+    def require_admin(
+        profile: ProfileRecord = Depends(require_profile),
+        store: AppStore = Depends(get_store),
+    ) -> ProfileRecord:
+        # Defense in depth: re-check the env allowlist directly so admin routes
+        # never depend on the stored DB role even if the require_profile sync
+        # is bypassed.
+        if not store.is_admin_email(profile.email):
+            logger.warning(
+                "[auth] admin_access_denied athlete_id=%s role=%s email_in_allowlist=False",
+                profile.athlete_id,
+                profile.role,
+            )
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="admin access required")
         return profile
 

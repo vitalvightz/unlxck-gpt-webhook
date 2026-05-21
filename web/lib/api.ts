@@ -162,7 +162,17 @@ function truncateForLog(value: string, max = 1200): string {
   return value.length > max ? `${value.slice(0, max)}…[truncated]` : value;
 }
 
-async function readJson<T>(path: string, init?: ApiRequestInit): Promise<T> {
+type ExecutedRequest = {
+  response: Response;
+  path: string;
+  method: string;
+  url: string;
+  durationMs: number;
+  contentType: string;
+  requestId: string | null;
+};
+
+async function executeRequest(path: string, init?: ApiRequestInit): Promise<ExecutedRequest> {
   const headers = new Headers(init?.headers ?? {});
   if (init?.body) {
     headers.set("Content-Type", "application/json");
@@ -309,6 +319,15 @@ async function readJson<T>(path: string, init?: ApiRequestInit): Promise<T> {
     );
   }
 
+  return { response, path, method, url, durationMs, contentType, requestId };
+}
+
+async function readJson<T>(path: string, init?: ApiRequestInit): Promise<T> {
+  const { response, method, url, durationMs, contentType, requestId } = await executeRequest(
+    path,
+    init,
+  );
+
   try {
     const data = (await response.json()) as T;
     console.info("[api] request:success", {
@@ -336,6 +355,30 @@ async function readJson<T>(path: string, init?: ApiRequestInit): Promise<T> {
     });
     throw new Error("Server returned an unreadable response.");
   }
+}
+
+async function requestVoid(path: string, init?: ApiRequestInit): Promise<void> {
+  const { response, method, url, durationMs, requestId } = await executeRequest(path, init);
+
+  // Drain the body so the connection can be released even when the server
+  // returned content alongside a 200/204. We do not parse or throw on body
+  // content here — success status is the contract for void requests.
+  if (response.status !== 204) {
+    try {
+      await response.text();
+    } catch {
+      // Ignore — the server may have already closed the stream.
+    }
+  }
+
+  console.info("[api] request:success", {
+    path,
+    method,
+    url,
+    requestId,
+    status: response.status,
+    durationMs,
+  });
 }
 
 export function getMe(token: string): Promise<MeResponse> {
@@ -493,21 +536,12 @@ export function renamePlan(token: string, planId: string, planName: string): Pro
 }
 
 export async function deletePlan(token: string, planId: string): Promise<void> {
-  return withTransientRetries(async () => {
-    const headers = new Headers();
-    headers.set("Authorization", `Bearer ${token}`);
-
-    const response = await fetch(`${getApiBaseUrl()}/api/plans/${planId}`, {
+  return withTransientRetries(() =>
+    requestVoid(`/api/plans/${planId}`, {
       method: "DELETE",
-      cache: "no-store",
-      headers,
-    });
-
-    if (!response.ok) {
-      const message = (await response.text()).trim() || `Request failed: ${response.status}`;
-      throw new ApiError(message, response.status);
-    }
-  });
+      token,
+    }),
+  );
 }
 
 export function listAdminAthletes(token: string): Promise<AdminAthleteRecord[]> {

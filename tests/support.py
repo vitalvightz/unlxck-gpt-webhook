@@ -42,14 +42,27 @@ class FakeAuthService:
 
 
 class FakeStore:
-    def __init__(self):
+    def __init__(self, admin_emails: set[str] | None = None):
         self.profiles: dict[str, dict] = {}
         self.intakes: dict[str, list[dict]] = {}
         self.plans: dict[str, dict] = {}
         self.generation_jobs: dict[str, dict] = {}
+        self.admin_emails: set[str] = {
+            email.strip().lower() for email in (admin_emails or set()) if email
+        }
 
     def validate_runtime_schema(self) -> None:
         return None
+
+    def is_admin_email(self, email: str) -> bool:
+        if not email:
+            return False
+        normalized = email.strip().lower()
+        if normalized in self.admin_emails:
+            return True
+        # Mirror ensure_profile's @unlxck.test test pattern so existing fixtures
+        # do not need to register every admin email explicitly.
+        return normalized.endswith("@unlxck.test")
 
     def ensure_profile(self, user: AuthenticatedUser) -> dict:
         existing = self.profiles.get(user.user_id)

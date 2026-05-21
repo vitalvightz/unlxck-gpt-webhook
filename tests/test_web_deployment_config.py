@@ -41,3 +41,33 @@ def test_server_side_api_client_requires_backend_url_in_production():
     assert "NEXT_PUBLIC_API_BASE_URL must be set for server-side API calls in production." in api_client_source
     assert 'process.env.NODE_ENV !== "production"' in api_client_source
     assert 'http://127.0.0.1:8000' in api_client_source
+
+
+def test_next_config_sets_baseline_security_headers():
+    assert "async headers()" in NEXT_CONFIG_SOURCE
+    for header_name in (
+        "X-Frame-Options",
+        "X-Content-Type-Options",
+        "Referrer-Policy",
+        "Permissions-Policy",
+    ):
+        assert header_name in NEXT_CONFIG_SOURCE, f"missing security header: {header_name}"
+    # Header values
+    assert "DENY" in NEXT_CONFIG_SOURCE
+    assert "nosniff" in NEXT_CONFIG_SOURCE
+    assert "strict-origin-when-cross-origin" in NEXT_CONFIG_SOURCE
+    assert "camera=(), microphone=(), geolocation=()" in NEXT_CONFIG_SOURCE
+
+
+def test_delete_plan_uses_shared_request_pipeline():
+    api_client_source = (WEB_ROOT / "lib" / "api.ts").read_text()
+    # deletePlan must route through requestVoid (which wraps the shared
+    # executeRequest pipeline) rather than calling fetch directly.
+    assert "requestVoid" in api_client_source
+    # Ensure the old direct-fetch path is gone.
+    delete_section_start = api_client_source.find("export async function deletePlan")
+    assert delete_section_start != -1
+    next_export = api_client_source.find("\nexport ", delete_section_start + 1)
+    delete_section = api_client_source[delete_section_start:next_export]
+    assert "fetch(" not in delete_section, "deletePlan should not call fetch directly"
+    assert "requestVoid" in delete_section
