@@ -1310,7 +1310,7 @@ def create_app(
             )
             return _job_response(job, viewer_role=profile.role)
         daily_limit = _plan_generate_daily_limit_per_user()
-        if daily_limit > 0 and not _is_exempt_from_daily_generation_cap(profile.email):
+        if daily_limit > 0 and profile.role != "admin" and not _is_exempt_from_daily_generation_cap(profile.email):
             utc_midnight = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0).isoformat()
             jobs_today = await asyncio.to_thread(
                 store.count_generation_jobs_for_athlete_since,
