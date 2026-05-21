@@ -390,7 +390,7 @@ function QuickBuildFormInner() {
         <p className="eyebrow">Quick Build</p>
         <h1 className="hero-title">Generate a plan in about two minutes.</h1>
         <p className="muted">
-          Quick Build uses safe defaults for fatigue, sparring intensity, and goal prioritization. Use Detailed Intake for full
+          Quick Build uses safe defaults for fatigue, sparring intensity, and goal prioritization. Use Advanced Intake for full
           control - you can also refine this plan afterwards.
         </p>
       </section>
@@ -634,7 +634,7 @@ function QuickBuildFormInner() {
             {isPending ? "Saving..." : "Generate Plan"}
           </button>
           <Link href="/onboarding" className="ghost-button">
-            Use Detailed Intake instead
+            Use Advanced Intake instead
           </Link>
         </div>
       </div>

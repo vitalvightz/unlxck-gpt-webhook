@@ -232,8 +232,8 @@ export function AuthForm({ mode }: { mode: "signup" | "login" }) {
           <h1>{mode === "signup" ? "Build your camp inside UNLXCK." : "Return to your athlete workspace."}</h1>
           <p>
             {mode === "signup"
-              ? "Create your account, complete onboarding, and generate a saved fight camp."
-              : "Resume onboarding and reopen saved plans from one athlete workspace."}
+              ? "Create your account, complete Advanced Intake, and generate a saved fight camp."
+              : "Resume intake and reopen saved plans from one athlete workspace."}
           </p>
         </div>
         <details className="auth-rail-extras">
@@ -243,7 +243,7 @@ export function AuthForm({ mode }: { mode: "signup" | "login" }) {
               <p className="kicker">Flow</p>
               <ol className="auth-flow">
                 <li>Sign in once and keep your intake on your athlete profile.</li>
-                <li>Resume the onboarding draft whenever you return.</li>
+                <li>Resume the intake draft whenever you return.</li>
                 <li>Generate and reopen saved plans from the same workspace.</li>
               </ol>
             </div>
@@ -254,7 +254,7 @@ export function AuthForm({ mode }: { mode: "signup" | "login" }) {
               </div>
               <div className="auth-preview-stack">
                 <div className="auth-preview-item">
-                  <span className="label">Onboarding</span>
+                  <span className="label">Intake</span>
                   <p className="muted">Draft steps stay attached to your athlete profile, so you can resume instead of restarting.</p>
                 </div>
                 <div className="auth-preview-item">
@@ -271,7 +271,7 @@ export function AuthForm({ mode }: { mode: "signup" | "login" }) {
               <p className="kicker">Why athletes keep using it</p>
               <ul className="summary-list">
                 <li>Every generated camp stays saved to the athlete account.</li>
-                <li>The same workspace holds onboarding, nutrition, and plan history.</li>
+                <li>The same workspace holds intake, nutrition, and plan history.</li>
                 <li>Mobile-friendly access makes it easier to reopen camps between sessions.</li>
               </ul>
             </div>

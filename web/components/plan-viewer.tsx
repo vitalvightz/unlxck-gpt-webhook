@@ -11,6 +11,7 @@ import {
   approvePlanForRelease,
   archivePlan,
   deletePlan,
+  fetchWeeklySchedule,
   getPlan,
   rejectApprovedPlan,
   renamePlan,
@@ -27,6 +28,7 @@ import {
   type BlockedInjuryContextSummary,
 } from "@/lib/triage-block-reasons";
 import type { PlanAdvisory, PlanDetail, UserRole } from "@/lib/types";
+import type { WeeklyDayEntry, WeeklySchedule } from "@/lib/types";
 import { hasTriageResumeApproval } from "@/lib/triage-view";
 
 type ValidatorIssue = Record<string, unknown>;
@@ -59,6 +61,7 @@ const FRACTURE_CATEGORY_SET = new Set([
 ]);
 
 type RiskBandTone = "green" | "amber" | "red" | "black";
+type PlanViewMode = "today" | "week" | "full";
 
 const BLOCKING_WARNING_CODES = new Set([
   "missing_required_element",
@@ -455,6 +458,199 @@ function SparringAdvisoryCard({ advisory }: { advisory: PlanAdvisory }) {
         </p>
       ) : null}
       <p className="muted">{advisory.disclaimer}</p>
+    </section>
+  );
+}
+
+const PLAN_VIEW_OPTIONS: Array<{ value: PlanViewMode; label: string; summary: string }> = [
+  { value: "today", label: "Today", summary: "One clear training decision" },
+  { value: "week", label: "This week", summary: "Sparring and load map" },
+  { value: "full", label: "Full plan", summary: "Complete generated plan" },
+];
+
+const TODAY_LOAD_LABELS: Record<WeeklyDayEntry["effective_load"], string> = {
+  hard: "Hard",
+  technical: "Technical",
+  reduced: "Reduced",
+  none: "No sparring load",
+};
+
+const TODAY_CLASS_LABELS: Record<WeeklyDayEntry["sparring_day_class"], string> = {
+  primary_hard: "Primary hard sparring",
+  secondary_hard: "Secondary hard sparring",
+  managed_hard: "Managed hard sparring",
+  technical: "Technical sparring",
+  none: "No sparring",
+};
+
+function formatTodayDateLabel(value: string | null | undefined): string {
+  if (!value) {
+    return "";
+  }
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return value;
+  }
+  return parsed.toLocaleDateString("en-GB", {
+    weekday: "long",
+    day: "numeric",
+    month: "short",
+    timeZone: "UTC",
+  });
+}
+
+function formatTodayDayLabel(day: WeeklyDayEntry): string {
+  const dateLabel = formatTodayDateLabel(day.calendar_date);
+  if (dateLabel) {
+    return dateLabel;
+  }
+  return day.weekday_with_label || day.day_label || day.weekday;
+}
+
+function pickTodayScheduleDay(schedule: WeeklySchedule): WeeklyDayEntry | null {
+  const todayIso = new Date().toISOString().slice(0, 10);
+  const calendarMatch = schedule.days.find((day) => day.calendar_date === todayIso);
+  if (calendarMatch) {
+    return calendarMatch;
+  }
+  const fightDay = schedule.days.find((day) => day.is_fight_day);
+  if (fightDay) {
+    return fightDay;
+  }
+  const activeDay = schedule.days.find(
+    (day) => day.sparring_day_class !== "none" || Boolean(day.reason.trim()) || Boolean(day.coach_note.trim()),
+  );
+  return activeDay ?? schedule.days[0] ?? null;
+}
+
+function formatScheduleWeekLabel(schedule: WeeklySchedule): string {
+  return (
+    schedule.week_countdown_label ||
+    schedule.week_label_with_countdown ||
+    schedule.day_label ||
+    `Week ${schedule.week_index + 1} of ${schedule.week_count}`
+  );
+}
+
+function TodayPlanSnapshot({
+  planId,
+  token,
+  planText,
+}: {
+  planId: string;
+  token: string | null;
+  planText: string;
+}) {
+  const [schedule, setSchedule] = useState<WeeklySchedule | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!token) {
+      return;
+    }
+    let cancelled = false;
+    setIsLoading(true);
+    setError(null);
+    fetchWeeklySchedule(planId, 0, token)
+      .then((nextSchedule) => {
+        if (cancelled) {
+          return;
+        }
+        setSchedule(nextSchedule);
+      })
+      .catch((scheduleError) => {
+        if (cancelled) {
+          return;
+        }
+        setSchedule(null);
+        setError(scheduleError instanceof Error ? scheduleError.message : "Unable to load today's schedule.");
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setIsLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [planId, token]);
+
+  const selectedDay = schedule ? pickTodayScheduleDay(schedule) : null;
+  const fallbackSnippet = planText
+    .split(/\n{2,}/)
+    .map((part) => part.trim())
+    .find(Boolean);
+
+  if (isLoading) {
+    return (
+      <section className="today-plan-card" aria-busy="true">
+        <p className="kicker">Today</p>
+        <h3>Loading today's training snapshot</h3>
+        <p className="muted">Checking the saved weekly structure.</p>
+      </section>
+    );
+  }
+
+  if (error) {
+    return (
+      <section className="today-plan-card today-plan-card-muted">
+        <p className="kicker">Today</p>
+        <h3>Open the full plan for today's work.</h3>
+        <p className="muted">{error}</p>
+      </section>
+    );
+  }
+
+  if (!selectedDay || !schedule) {
+    return (
+      <section className="today-plan-card today-plan-card-muted">
+        <p className="kicker">Today</p>
+        <h3>Full plan is ready.</h3>
+        <p className="muted">
+          A day-by-day schedule is not available for this plan yet. Use the full plan view for the session detail.
+        </p>
+        {fallbackSnippet ? <p className="today-plan-fallback">{fallbackSnippet}</p> : null}
+      </section>
+    );
+  }
+
+  return (
+    <section className="today-plan-card">
+      <div className="today-plan-header">
+        <div>
+          <p className="kicker">Today</p>
+          <h3>{formatTodayDayLabel(selectedDay)}</h3>
+          <p className="muted">{formatScheduleWeekLabel(schedule)}</p>
+        </div>
+        <span className={`weekly-sparring-class-badge weekly-sparring-badge-${selectedDay.sparring_day_class}`}>
+          {TODAY_CLASS_LABELS[selectedDay.sparring_day_class]}
+        </span>
+      </div>
+
+      <div className="today-plan-grid">
+        <article className="today-plan-stat">
+          <span className="today-plan-stat-label">Load</span>
+          <strong>{TODAY_LOAD_LABELS[selectedDay.effective_load]}</strong>
+        </article>
+        <article className="today-plan-stat">
+          <span className="today-plan-stat-label">Status</span>
+          <strong>{titleizeToken(selectedDay.status || "planned")}</strong>
+        </article>
+      </div>
+
+      {selectedDay.is_fight_day ? (
+        <div className="weekly-sparring-ban-notice" role="status">
+          Fight date. Keep the plan view focused on the final day protocol.
+        </div>
+      ) : null}
+
+      {selectedDay.reason ? <p className="today-plan-copy">{selectedDay.reason}</p> : null}
+      {selectedDay.coach_note ? <p className="today-plan-coach-note">{selectedDay.coach_note}</p> : null}
+      {!selectedDay.reason && !selectedDay.coach_note ? (
+        <p className="muted">No special sparring adjustment is listed for this day.</p>
+      ) : null}
     </section>
   );
 }
@@ -883,6 +1079,7 @@ export function PlanViewer({
   const [planActionPending, setPlanActionPending] = useState<"rename" | "delete" | null>(null);
   const [planActionMessage, setPlanActionMessage] = useState<string | null>(null);
   const [planActionError, setPlanActionError] = useState<string | null>(null);
+  const [planViewMode, setPlanViewMode] = useState<PlanViewMode>("today");
   const [stage2RetryInProgress, setStage2RetryInProgress] = useState(false);
   const [stage2RetryJustCompleted, setStage2RetryJustCompleted] = useState<"passed" | "failed" | null>(
     null,
@@ -1437,6 +1634,21 @@ export function PlanViewer({
             />
           ) : hasPublishedPlan ? (
             <>
+              <div className="plan-view-switcher" role="tablist" aria-label="Plan view">
+                {PLAN_VIEW_OPTIONS.map((option) => (
+                  <button
+                    key={option.value}
+                    type="button"
+                    role="tab"
+                    aria-selected={planViewMode === option.value}
+                    className={`plan-view-option ${planViewMode === option.value ? "plan-view-option-active" : ""}`.trim()}
+                    onClick={() => setPlanViewMode(option.value)}
+                  >
+                    <span>{option.label}</span>
+                    <small>{option.summary}</small>
+                  </button>
+                ))}
+              </div>
               <div className="plan-summary-actions">
                 <QuickCopyButton text={athletePlanText} artifactKey="athlete-plan" />
                 {canRejectApproval ? (
@@ -1460,8 +1672,15 @@ export function PlanViewer({
                   </button>
                 ) : null}
               </div>
-              <WeeklySparringView planId={plan.plan_id} />
-              <pre className="plan-text-block">{athletePlanText}</pre>
+              {planViewMode === "today" ? (
+                <TodayPlanSnapshot
+                  planId={plan.plan_id}
+                  token={accessToken}
+                  planText={athletePlanText}
+                />
+              ) : null}
+              {planViewMode === "week" ? <WeeklySparringView planId={plan.plan_id} /> : null}
+              {planViewMode === "full" ? <pre className="plan-text-block">{athletePlanText}</pre> : null}
               {rejectMessage ? <div className="success-banner">{rejectMessage}</div> : null}
               {rejectError ? <div className="error-banner">{rejectError}</div> : null}
               {archiveMessage ? <div className="success-banner">{archiveMessage}</div> : null}

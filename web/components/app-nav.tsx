@@ -252,7 +252,7 @@ export function AppNav() {
 
   const signedInLinks = [
     { href: "/", label: "Overview", meta: "Camp status" },
-    { href: "/onboarding", label: "Onboarding", meta: "Profile and intake" },
+    { href: "/onboarding", label: "Advanced Intake", meta: "Profile and camp setup" },
     { href: "/nutrition", label: "Nutrition", meta: "Weight and readiness" },
     { href: "/plans", label: "Plans", meta: "Saved history" },
     { href: "/settings", label: "Settings", meta: "Athlete profile" },
@@ -327,7 +327,7 @@ export function AppNav() {
             <Link href="/" className="brand" onClick={closeMobileDrawer}>
               Fight Camp
             </Link>
-            <p className="sidebar-tagline">Athlete control room.</p>
+            <p className="sidebar-tagline">Fight-camp workspace.</p>
           </div>
 
           {(!isReady || isSessionResolving) ? (
