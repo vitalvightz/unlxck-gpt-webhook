@@ -842,3 +842,70 @@ def test_mobility_red_flag_injury_still_suppresses_mobility_creation():
     upgraded = _upgrade_unused_days_to_low_load_support(week, [], athlete)
     assert upgraded == []
     assert week["intentionally_unused_days"][0].get("low_aerobic_cap_skipped") is True
+
+
+def test_mobility_support_added_when_conditioning_cap_already_full():
+    """If a gas-tank role already fills the conditioning cap, a mobility
+    support conversion should still be added when the profile justifies it
+    and safety gates are clear — the mobility role does not consume the cap."""
+    week = {
+        "phase": "GPP",
+        "calendar_days": [
+            {"weekday": "tuesday", "d_day": 36},
+            {"weekday": "thursday", "d_day": 34},
+        ],
+        "intentionally_unused_days": [{"day": "thursday", "role": "off_day"}],
+    }
+    # Pre-existing gas-tank role that counts toward the conditioning cap.
+    gas_tank_role = {
+        "session_index": 1,
+        "category": "conditioning",
+        "role_key": "recovery_aerobic_gas_tank_day",
+        "preferred_system": "aerobic",
+        "scheduled_day_hint": "tuesday",
+        "recovery_compatible": True,
+        "gas_tank_recovery_touch": True,
+        "counts_toward_conditioning_cap": True,
+    }
+    # High-cut mobility-profile athlete → cap is 1, already filled by the
+    # gas-tank role. Mobility support must still be allowed through.
+    athlete = _mobility_athlete(cut_severity_bucket="high")
+    upgraded = _upgrade_unused_days_to_low_load_support(
+        week, [gas_tank_role], athlete
+    )
+    role_keys = [r["role_key"] for r in upgraded]
+    assert "recovery_aerobic_gas_tank_day" in role_keys
+    assert "converted_mobility_support_day" in role_keys
+    mobility = next(
+        r for r in upgraded if r["role_key"] == "converted_mobility_support_day"
+    )
+    assert mobility["counts_toward_conditioning_cap"] is False
+    assert mobility["is_dedicated_recovery_mobility_day"] is True
+    # Not annotated as cap-skipped — the day was converted, not skipped.
+    assert week["intentionally_unused_days"] == []
+
+
+def test_mobility_support_does_not_increment_cap_count_for_later_iterations():
+    """Two-day mobility week: both unused days should convert, because mobility
+    roles do not consume cap budget. (legacy_phase_ceiling still bounds them at 2.)"""
+    week = {
+        "phase": "GPP",
+        "calendar_days": [
+            {"weekday": "tuesday", "d_day": 36},
+            {"weekday": "thursday", "d_day": 34},
+        ],
+        "intentionally_unused_days": [
+            {"day": "tuesday", "role": "off_day"},
+            {"day": "thursday", "role": "off_day"},
+        ],
+    }
+    # cut_severity_bucket="high" → underlying cap is 1, but mobility bypasses it.
+    athlete = _mobility_athlete(cut_severity_bucket="high")
+    upgraded = _upgrade_unused_days_to_low_load_support(week, [], athlete)
+    mobility_roles = [
+        r for r in upgraded if r["role_key"] == "converted_mobility_support_day"
+    ]
+    # Both days converted — cap of 1 did not block the second mobility role.
+    assert len(mobility_roles) == 2
+    assert all(r["counts_toward_conditioning_cap"] is False for r in mobility_roles)
+    assert week["intentionally_unused_days"] == []

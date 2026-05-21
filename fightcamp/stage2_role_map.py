@@ -677,27 +677,35 @@ def _upgrade_unused_days_to_low_load_support(
     if not support_profile:
         return session_roles
 
+    # Dedicated mobility/rehab support is a protective recovery touch and is
+    # explicitly excluded from the conditioning cap budget. Gas-tank low-aerobic
+    # support still consumes the cap.
+    support_counts_toward_conditioning_cap = (
+        support_profile["role_key"] == "converted_low_aerobic_gas_tank_day"
+    )
+
     updated_unused_days: list[dict] = []
     added_roles: list[dict] = []
 
     phase = str(week_entry.get("phase", "")).strip().upper()
     legacy_phase_ceiling = 2 if phase in {"GPP", "SPP"} else 1
-    cap = _low_aerobic_support_cap_for_week(
+    base_cap = _low_aerobic_support_cap_for_week(
         week_entry,
         athlete_model,
         session_roles,
         hard_sparring_plan=hard_sparring_plan,
     )
-    # Preserve one low-load conversion slot for non-gas-tank support profiles.
-    # Mobility/rehab-friendly unused-day support should not be fully blocked by
-    # gas-tank-oriented cut-pressure logic.
-    if _can_preserve_one_non_gas_low_load_support(
+    # For non-gas mobility/rehab profiles, _can_preserve_one_non_gas_low_load_support
+    # is the hard safety gate (high fatigue, medical_hold, restricted_rehab_only,
+    # red_flag_injury, severe_injury, fight-week cap=0). It is computed against
+    # the unboosted base cap so the fight-week cap=0 check stays accurate.
+    can_preserve_non_gas = _can_preserve_one_non_gas_low_load_support(
         week_entry,
         athlete_model,
         support_profile,
-        cap,
-    ):
-        cap = max(cap, 1)
+        base_cap,
+    )
+    cap = max(base_cap, 1) if can_preserve_non_gas else base_cap
     current_count = _count_low_aerobic_support_roles(session_roles)
 
     existing_days = {
@@ -741,15 +749,30 @@ def _upgrade_unused_days_to_low_load_support(
             updated_unused_days.append(day_entry)
             continue
 
-        if current_count >= cap:
-            annotated = dict(day_entry)
-            annotated["low_aerobic_cap_skipped"] = True
-            annotated["low_aerobic_cap_reason"] = (
-                f"Low-aerobic support cap reached ({cap}); cut severity, "
-                f"phase, fatigue, or readiness blocked the upgrade for {day}."
-            )
-            updated_unused_days.append(annotated)
-            continue
+        if support_counts_toward_conditioning_cap:
+            if current_count >= cap:
+                annotated = dict(day_entry)
+                annotated["low_aerobic_cap_skipped"] = True
+                annotated["low_aerobic_cap_reason"] = (
+                    f"Low-aerobic support cap reached ({cap}); cut severity, "
+                    f"phase, fatigue, or readiness blocked the upgrade for {day}."
+                )
+                updated_unused_days.append(annotated)
+                continue
+        else:
+            # Non-gas mobility/rehab support does not consume the conditioning
+            # cap, but is still blocked when the safety gate trips (high fatigue,
+            # medical_hold, restricted_rehab_only, red_flag_injury, severe_injury,
+            # fight-week cap=0).
+            if not can_preserve_non_gas:
+                annotated = dict(day_entry)
+                annotated["low_aerobic_cap_skipped"] = True
+                annotated["low_aerobic_cap_reason"] = (
+                    "Mobility/rehab support blocked by safety gate "
+                    "(fatigue, medical hold, red-flag, or fight-week cap=0)."
+                )
+                updated_unused_days.append(annotated)
+                continue
 
         role_key = support_profile["role_key"]
         preferred_system = support_profile["preferred_system"]
@@ -828,7 +851,10 @@ def _upgrade_unused_days_to_low_load_support(
             added_role["preferred_exercise_names"] = preferred_exercise_names
 
         added_roles.append(added_role)
-        if _is_low_aerobic_support_role(added_role):
+        if (
+            _is_low_aerobic_support_role(added_role)
+            and added_role.get("counts_toward_conditioning_cap") is not False
+        ):
             current_count += 1
 
     week_entry["intentionally_unused_days"] = updated_unused_days
