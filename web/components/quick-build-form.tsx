@@ -44,14 +44,53 @@ import {
   matchesFocusPreset,
   matchesTrainingPreset,
   type EquipmentPreset,
+  type EquipmentPresetKey,
   type FocusPreset,
+  type FocusPresetKey,
   type TrainingPreset,
+  type TrainingPresetKey,
 } from "@/lib/recommended-setup";
 
 const WEEKLY_FREQUENCY_OPTIONS: IntakeOption[] = Array.from({ length: 6 }, (_, index) => ({
   label: String(index + 1),
   value: String(index + 1),
 }));
+
+type QuickBuildStarter = {
+  key: string;
+  label: string;
+  description: string;
+  trainingPreset: TrainingPresetKey;
+  equipmentPreset: EquipmentPresetKey;
+  focusPreset: FocusPresetKey;
+};
+
+const QUICK_BUILD_STARTERS: QuickBuildStarter[] = [
+  {
+    key: "balanced",
+    label: "Balanced camp",
+    description: "4 days, basic gym, gas tank",
+    trainingPreset: "four_days",
+    equipmentPreset: "basic_gym",
+    focusPreset: "gas_tank",
+  },
+  {
+    key: "power",
+    label: "Power build",
+    description: "5 days, full gym, explosive power",
+    trainingPreset: "five_days",
+    equipmentPreset: "full_gym",
+    focusPreset: "explosive_power",
+  },
+  {
+    key: "home",
+    label: "Home camp",
+    description: "3 days, home kit, recovery",
+    trainingPreset: "three_days",
+    equipmentPreset: "home",
+    focusPreset: "mobility_recovery",
+  },
+];
 
 type QuickBuildGuideStep = {
   key: string;
@@ -266,6 +305,29 @@ function QuickBuildFormInner() {
     () => (maxWeeklySessions > 0 ? WEEKLY_FREQUENCY_OPTIONS.slice(0, maxWeeklySessions) : []),
     [maxWeeklySessions],
   );
+  const activeStarterPreset = useMemo(
+    () =>
+      QUICK_BUILD_STARTERS.find(
+        (starter) =>
+          activeTrainingPreset === starter.trainingPreset &&
+          activeEquipmentPreset === starter.equipmentPreset &&
+          activeFocusPreset === starter.focusPreset,
+      )?.key ?? null,
+    [activeEquipmentPreset, activeFocusPreset, activeTrainingPreset],
+  );
+  const starterPresetOptions: PresetOption[] = useMemo(() => {
+    const availableFocusPresetMap = new Map(
+      availableFocusPresets.map((entry) => [entry.preset.key, entry.disabledReason]),
+    );
+    return QUICK_BUILD_STARTERS.map((starter) => ({
+      key: starter.key,
+      label: starter.label,
+      description: starter.description,
+      disabledReason: availableFocusPresetMap.has(starter.focusPreset)
+        ? (availableFocusPresetMap.get(starter.focusPreset) ?? null)
+        : "Focus does not fit this fight window.",
+    }));
+  }, [availableFocusPresets]);
   const hasValidationErrors = Object.keys(errors).length > 0;
   const quickBuildGuideSteps: QuickBuildGuideStep[] = useMemo(() => {
     const profileComplete = Boolean(input.full_name.trim()) && input.technical_style.length > 0 && !errors.full_name && !errors.technical_style;
@@ -291,10 +353,16 @@ function QuickBuildFormInner() {
   const readyToGenerate = !hasValidationErrors;
 
   function patch<K extends keyof QuickBuildInput>(key: K, value: QuickBuildInput[K]) {
+    if (submitError) {
+      setSubmitError(null);
+    }
     setInput((current) => ({ ...current, [key]: value }));
   }
 
   function toggleField(key: keyof Pick<QuickBuildInput, "technical_style" | "tactical_style" | "training_availability" | "hard_sparring_days" | "equipment_access" | "key_goals" | "weak_areas">, value: string) {
+    if (submitError) {
+      setSubmitError(null);
+    }
     setInput((current) => {
       const nextValues = toggleListValue(current[key], value);
       if (key === "training_availability") {
@@ -321,6 +389,38 @@ function QuickBuildFormInner() {
     return window.confirm(message);
   }
 
+  function applyStarterPreset(starter: QuickBuildStarter) {
+    const trainingPreset = TRAINING_PRESETS.find((entry) => entry.key === starter.trainingPreset);
+    const equipmentPreset = EQUIPMENT_PRESETS.find((entry) => entry.key === starter.equipmentPreset);
+    const focusEntry = availableFocusPresets.find(
+      (entry) => entry.preset.key === starter.focusPreset && !entry.disabledReason,
+    );
+    if (!trainingPreset || !equipmentPreset || !focusEntry) {
+      return;
+    }
+    const hasManualChoice =
+      input.training_availability.length > 0 ||
+      input.hard_sparring_days.length > 0 ||
+      input.equipment_access.length > 0 ||
+      input.key_goals.length > 0 ||
+      input.weak_areas.length > 0;
+    if (!confirmReplace(hasManualChoice, "Replace your current starter setup selections?")) {
+      return;
+    }
+    setSubmitError(null);
+    setInput((currentInput) => ({
+      ...currentInput,
+      training_availability: [...trainingPreset.training_availability],
+      weekly_training_frequency: trainingPreset.weekly_training_frequency,
+      hard_sparring_days: currentInput.hard_sparring_days.filter((day) =>
+        trainingPreset.training_availability.includes(day),
+      ),
+      equipment_access: [...equipmentPreset.equipment_access],
+      key_goals: [...focusEntry.preset.key_goals],
+      weak_areas: [...focusEntry.preset.weak_areas],
+    }));
+  }
+
   function applyEquipmentPreset(preset: EquipmentPreset) {
     const current = input.equipment_access;
     const currentMatch = matchesEquipmentPreset(current);
@@ -332,12 +432,14 @@ function QuickBuildFormInner() {
     if (!confirmReplace(differs, "Replace your current equipment selection with this preset?")) {
       return;
     }
+    setSubmitError(null);
     patch("equipment_access", [...preset.equipment_access]);
   }
 
   function applyTrainingPreset(preset: TrainingPreset) {
     const currentMatch = matchesTrainingPreset(input.training_availability, input.weekly_training_frequency);
     if (currentMatch === preset.key) {
+      setSubmitError(null);
       setInput((currentInput) => ({
         ...currentInput,
         training_availability: [],
@@ -351,6 +453,7 @@ function QuickBuildFormInner() {
         return;
       }
     }
+    setSubmitError(null);
     setInput((currentInput) => ({
       ...currentInput,
       training_availability: [...preset.training_availability],
@@ -362,6 +465,7 @@ function QuickBuildFormInner() {
   function applyFocusPreset(preset: FocusPreset) {
     const currentMatch = matchesFocusPreset(input.key_goals, input.weak_areas);
     if (currentMatch === preset.key) {
+      setSubmitError(null);
       setInput((currentInput) => ({
         ...currentInput,
         key_goals: [],
@@ -373,6 +477,7 @@ function QuickBuildFormInner() {
     if (!confirmReplace(hasManualChoice, "Replace your current goals and weak areas with this preset?")) {
       return;
     }
+    setSubmitError(null);
     setInput((currentInput) => ({
       ...currentInput,
       key_goals: [...preset.key_goals],
@@ -386,6 +491,8 @@ function QuickBuildFormInner() {
     const currentErrors = validateQuickBuildInput(input);
     if (Object.keys(currentErrors).length > 0) {
       setShowErrors(true);
+      const errorCount = Object.keys(currentErrors).length;
+      setSubmitError(`Fix ${errorCount} highlighted ${errorCount === 1 ? "field" : "fields"} before generating.`);
       return;
     }
     if (!session?.access_token) {
@@ -454,6 +561,7 @@ function QuickBuildFormInner() {
 
   const visibleError = (key: keyof QuickBuildValidationErrors): string | undefined =>
     showErrors ? errors[key] : undefined;
+  const submitErrorId = "quick-build-submit-feedback";
 
   return (
     <form onSubmit={handleSubmit} className="onboarding-form quick-build-form">
@@ -467,6 +575,18 @@ function QuickBuildFormInner() {
       </section>
 
       <QuickBuildGuide steps={quickBuildGuideSteps} />
+
+      <section className="quick-build-starters" aria-label="Starter setups">
+        <PresetRow
+          label="Starter setups"
+          presets={starterPresetOptions}
+          activeKey={activeStarterPreset}
+          onSelect={(key) => {
+            const starter = QUICK_BUILD_STARTERS.find((entry) => entry.key === key);
+            if (starter) applyStarterPreset(starter);
+          }}
+        />
+      </section>
 
       <article className="step-card">
         <div className="form-section-header">
@@ -521,13 +641,14 @@ function QuickBuildFormInner() {
             <input
               type="checkbox"
               checked={input.no_scheduled_fight}
-              onChange={(event) =>
+              onChange={(event) => {
+                setSubmitError(null);
                 setInput((current) => ({
                   ...current,
                   no_scheduled_fight: event.target.checked,
                   fight_date: event.target.checked ? "" : current.fight_date,
-                }))
-              }
+                }));
+              }}
             />
             <span className="checkbox-card-copy">
               <span className="checkbox-card-title">No scheduled fight</span>
@@ -706,9 +827,14 @@ function QuickBuildFormInner() {
           </p>
           <p className="muted">Refine fatigue, sparring days, and detailed weaknesses later from the plan page.</p>
         </div>
-        {submitError ? <FieldError message={submitError} /> : null}
+        {submitError ? (
+          <div id={submitErrorId} className="quick-build-action-feedback" role="alert" aria-live="assertive">
+            <span className="quick-build-action-feedback-label">Check</span>
+            <span>{submitError}</span>
+          </div>
+        ) : null}
         <div className="plan-summary-actions quick-build-action-buttons">
-          <button type="submit" className="cta" disabled={isPending}>
+          <button type="submit" className="cta" disabled={isPending} aria-describedby={submitError ? submitErrorId : undefined}>
             {isPending ? "Saving..." : "Generate Plan"}
           </button>
           <Link href="/onboarding" className="ghost-button">
