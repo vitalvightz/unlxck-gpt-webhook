@@ -8,6 +8,7 @@ import { RequireAuth } from "@/components/auth-guard";
 import { useAppSession } from "@/components/auth-provider";
 import { CustomSelect } from "@/components/custom-select";
 import { saveOnboardingDraft } from "@/lib/api";
+import { hydratePlanRequest } from "@/lib/onboarding";
 import {
   EQUIPMENT_ACCESS_OPTIONS,
   KEY_GOAL_OPTIONS,
@@ -30,6 +31,7 @@ import {
   QUICK_BUILD_KEY_GOAL_CAP,
   QUICK_BUILD_WEAK_AREA_CAP,
   emptyQuickBuildInput,
+  planRequestToQuickBuildInput,
   quickBuildToPlanRequest,
   validateQuickBuildInput,
   type QuickBuildInput,
@@ -254,7 +256,11 @@ function PresetSelect({
 function QuickBuildFormInner() {
   const router = useRouter();
   const { me, session, replaceMe } = useAppSession();
-  const [input, setInput] = useState<QuickBuildInput>(() => emptyQuickBuildInput(me?.profile.full_name ?? ""));
+  const [input, setInput] = useState<QuickBuildInput>(() =>
+    me
+      ? planRequestToQuickBuildInput(hydratePlanRequest(me))
+      : emptyQuickBuildInput(""),
+  );
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [showErrors, setShowErrors] = useState(false);
   const [isPending, startTransition] = useTransition();
@@ -447,12 +453,6 @@ function QuickBuildFormInner() {
   }
 
   function applyEquipmentPreset(preset: EquipmentPreset) {
-    const current = input.equipment_access;
-    const currentMatch = matchesEquipmentPreset(current);
-    const differs = currentMatch === null && current.length > 0;
-    if (!confirmReplace(differs, "Replace your current equipment selection with this preset?")) {
-      return;
-    }
     setSubmitError(null);
     patch("equipment_access", [...preset.equipment_access]);
   }
@@ -463,13 +463,6 @@ function QuickBuildFormInner() {
   }
 
   function applyTrainingPreset(preset: TrainingPreset) {
-    const currentMatch = matchesTrainingPreset(input.training_availability, input.weekly_training_frequency);
-    const hasManualChoice = currentMatch === null && input.training_availability.length > 0;
-    if (hasManualChoice) {
-      if (!confirmReplace(true, "Replace your current training days and sessions per week with this preset?")) {
-        return;
-      }
-    }
     setSubmitError(null);
     setInput((currentInput) => ({
       ...currentInput,
@@ -489,11 +482,6 @@ function QuickBuildFormInner() {
   }
 
   function applyFocusPreset(preset: FocusPreset) {
-    const currentMatch = matchesFocusPreset(input.key_goals, input.weak_areas);
-    const hasManualChoice = currentMatch === null && (input.key_goals.length > 0 || input.weak_areas.length > 0);
-    if (!confirmReplace(hasManualChoice, "Replace your current goals and weak areas with this preset?")) {
-      return;
-    }
     setSubmitError(null);
     setInput((currentInput) => ({
       ...currentInput,
