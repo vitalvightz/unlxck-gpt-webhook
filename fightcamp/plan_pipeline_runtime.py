@@ -309,11 +309,11 @@ def build_runtime_context(
 
     runtime_triage_summary = dict(triage_summary or {})
     if is_approved_triage_resume:
-        runtime_triage_summary = {
+        runtime_triage_summary.update({
             "mode": "full_plan",
             "should_block_stage2": False,
             "triage_resume_approved": True,
-        }
+        })
 
     training_context = TrainingContext(
         fatigue=plan_input.fatigue.lower(),
