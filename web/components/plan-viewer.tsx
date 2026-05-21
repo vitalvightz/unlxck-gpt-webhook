@@ -29,6 +29,13 @@ import {
 import type { PlanAdvisory, PlanDetail, UserRole } from "@/lib/types";
 import { hasTriageResumeApproval } from "@/lib/triage-view";
 
+const TRIAGE_RESUME_FETCH_ATTEMPTS = 5;
+const TRIAGE_RESUME_FETCH_DELAY_MS = 800;
+
+async function sleep(ms: number): Promise<void> {
+  await new Promise((resolve) => globalThis.setTimeout(resolve, ms));
+}
+
 type ValidatorIssue = Record<string, unknown>;
 type ReviewIssue = {
   code: string;
@@ -917,7 +924,21 @@ export function PlanViewer({
       if (!accessToken) {
         return;
       }
-      const refreshedPlan = await getPlan(accessToken, planId || plan.plan_id);
+
+      const resolvedPlanId = planId || plan.plan_id;
+      let refreshedPlan = await getPlan(accessToken, resolvedPlanId);
+
+      for (let attempt = 1; attempt < TRIAGE_RESUME_FETCH_ATTEMPTS; attempt += 1) {
+        const stillBlocked =
+          refreshedPlan.status === "triage_blocked" ||
+          refreshedPlan.admin_outputs?.stage2_status === "triage_blocked";
+        if (!stillBlocked) {
+          break;
+        }
+        await sleep(TRIAGE_RESUME_FETCH_DELAY_MS * attempt);
+        refreshedPlan = await getPlan(accessToken, resolvedPlanId);
+      }
+
       onPlanUpdated?.(refreshedPlan);
       setResumeMessage("Approved and resumed successfully.");
       router.refresh();

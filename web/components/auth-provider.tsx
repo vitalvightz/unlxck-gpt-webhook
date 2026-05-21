@@ -6,6 +6,13 @@ import { ApiError, getMe } from "@/lib/api";
 import { getSupabaseBrowserClient } from "@/lib/supabase";
 import type { AppearanceMode, MeResponse } from "@/lib/types";
 
+const ME_RETRY_ATTEMPTS = 3;
+const ME_RETRY_DELAY_MS = 1_200;
+
+async function sleep(ms: number): Promise<void> {
+  await new Promise((resolve) => globalThis.setTimeout(resolve, ms));
+}
+
 type AppSession = {
   access_token: string;
 };
@@ -59,7 +66,27 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
     setIsMeHydrated(false);
 
     try {
-      const nextMe = await getMe(nextSession.access_token);
+      let nextMe: MeResponse | null = null;
+      let lastError: unknown = null;
+
+      for (let attempt = 1; attempt <= ME_RETRY_ATTEMPTS; attempt += 1) {
+        try {
+          nextMe = await getMe(nextSession.access_token);
+          break;
+        } catch (err) {
+          lastError = err;
+          if (err instanceof ApiError && err.status === 401) {
+            throw err;
+          }
+          if (attempt < ME_RETRY_ATTEMPTS) {
+            await sleep(ME_RETRY_DELAY_MS * attempt);
+          }
+        }
+      }
+
+      if (nextMe === null && lastError) {
+        throw lastError;
+      }
       if (loadGenerationRef.current !== currentLoadId) {
         return;
       }
