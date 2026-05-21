@@ -149,6 +149,8 @@ class AppStore(Protocol):
 
     def claim_generation_job(self, job_id: str, *, stale_after_seconds: int = 90) -> dict[str, Any] | None: ...
 
+    def count_active_generation_jobs(self, *, stale_after_seconds: int = 90) -> int: ...
+
     def update_generation_job(self, job_id: str, **changes: Any) -> dict[str, Any]: ...
 
     def update_plan_stage2(self, plan_id: str, result: dict[str, Any]) -> dict[str, Any]: ...
@@ -1257,6 +1259,45 @@ class SupabaseAppStore:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="failed to claim generation job",
+            ) from exc
+
+    def count_active_generation_jobs(self, *, stale_after_seconds: int = 90) -> int:
+        try:
+            cutoff_iso = (
+                datetime.now(timezone.utc) - timedelta(seconds=max(1, stale_after_seconds))
+            ).isoformat()
+            response = self._run_with_transient_retry(
+                operation="count_active_generation_jobs:select_running",
+                fn=lambda: self.client.table("generation_jobs")
+                .select("id", count="exact")
+                .eq("status", "running")
+                .or_(f"heartbeat_at.gt.{cutoff_iso},and(heartbeat_at.is.null,started_at.gt.{cutoff_iso})")
+                .execute(),
+            )
+            count_value = getattr(response, "count", None)
+            return int(count_value or 0)
+        except HTTPException:
+            raise
+        except _STORE_CLIENT_ERRORS as exc:
+            if self._is_transient_store_error(exc):
+                logger.warning(
+                    "[store] count_active_generation_jobs:transient_failure error_type=%s",
+                    type(exc).__name__,
+                )
+                raise HTTPException(
+                    status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                    detail=GENERATION_JOB_UNAVAILABLE_DETAIL,
+                ) from exc
+            if self._is_generation_job_schema_error(exc):
+                logger.exception("[store] count_active_generation_jobs:schema_mismatch")
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail=GENERATION_JOB_SCHEMA_DETAIL,
+                ) from exc
+            logger.exception("[store] count_active_generation_jobs:exception")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="failed to count active generation jobs",
             ) from exc
 
     def update_generation_job(self, job_id: str, **changes: Any) -> dict[str, Any]:
