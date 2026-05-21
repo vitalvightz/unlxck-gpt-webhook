@@ -444,7 +444,7 @@ def _validate_production_cors_config(origins: list[str], regex: str | None) -> N
     for violation in violations:
         logger.error("[cors] production_cors_unsafe: %s", violation)
     if strict:
-        raise ValueError("; ".join(violations))
+        raise RuntimeError("; ".join(violations))
 
 
 def _plan_generate_rate_limit_requests() -> int:
