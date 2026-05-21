@@ -389,7 +389,7 @@ function StepPills({
   onStepSelect: (step: number) => void;
 }) {
   return (
-    <div className="step-progress" aria-label="Onboarding progress">
+    <div className="step-progress" aria-label="Intake progress">
       {steps.map((label, index) => {
         const statusClass = index < currentStep ? "step-pill-complete" : index === currentStep ? "step-pill-active" : "";
         const statusText = index < currentStep ? "Complete" : index === currentStep ? "Current" : "Upcoming";
@@ -464,7 +464,7 @@ function getOnboardingProgressState(currentStep: number) {
     badgeText: remainingSteps === 0 ? "Ready" : "In progress",
     helperText:
       remainingSteps === 0
-        ? "All onboarding steps are complete. Review your answers, then generate the plan."
+        ? "All intake steps are complete. Review your answers, then generate the plan."
         : `${remainingSteps} step${remainingSteps === 1 ? "" : "s"} remaining before plan generation.`,
   };
 }
@@ -486,7 +486,7 @@ function OnboardingProgressStrip({
   const content = (
     <>
       <div className="onboarding-progress-strip-topline">
-        <p className="kicker">Onboarding progress</p>
+        <p className="kicker">Intake progress</p>
         <span
           className={`onboarding-progress-badge ${progress.badgeText === "Ready" ? "onboarding-progress-badge-ready" : ""}`.trim()}
         >
@@ -558,7 +558,7 @@ function MobileStepRail({
 
   return (
     <div className="mobile-step-rail" data-state="open">
-      <div ref={railRef} className="mobile-step-rail-scroll" aria-label="Onboarding steps">
+      <div ref={railRef} className="mobile-step-rail-scroll" aria-label="Intake steps">
         {steps.map((label, index) => {
           const statusClass = index < currentStep ? "mobile-step-rail-item-complete" : index === currentStep ? "mobile-step-rail-item-active" : "";
           const pillContent = (
@@ -611,7 +611,7 @@ function MobileOnboardingHeader({
   return (
     <div className="onboarding-heading-mobile">
       <div className="onboarding-mobile-header-copy">
-        <p className="kicker">Athlete Onboarding</p>
+        <p className="kicker">Advanced Intake</p>
         <p className="onboarding-mobile-title">Build your camp profile.</p>
         <p className="muted">Saved, resumable athlete intake.</p>
         <Link href="/quick-build" className="ghost-button onboarding-quick-build-link">
@@ -2174,7 +2174,7 @@ export function PlanIntakeForm() {
       <section className="panel onboarding-panel">
         <div className="section-heading onboarding-heading-desktop">
           <div className="athlete-motion-slot athlete-motion-header">
-            <p className="kicker">Athlete Onboarding</p>
+            <p className="kicker">Advanced Intake</p>
             <h1>Build your camp profile.</h1>
             <p className="muted">Saved, resumable athlete intake.</p>
             <Link href="/quick-build" className="ghost-button onboarding-quick-build-link">

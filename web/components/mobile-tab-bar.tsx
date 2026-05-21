@@ -27,7 +27,7 @@ const TABS: Tab[] = [
   },
   {
     href: "/onboarding",
-    label: "Onboarding",
+    label: "Intake",
     icon: (
       <svg viewBox="0 0 20 20" width="20" height="20" fill="none" aria-hidden="true">
         <rect x="3" y="4" width="14" height="13" rx="2" stroke="currentColor" strokeWidth="1.5" />

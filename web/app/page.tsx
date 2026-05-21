@@ -19,7 +19,7 @@ import type { PlanSummary } from "@/lib/types";
 
 const landingPreviewStages = [
   {
-    label: "Onboarding",
+    label: "Advanced Intake",
     title: "Guided athlete intake",
     summary: "Capture profile, fight context, availability, and restrictions in one structured flow.",
     highlights: ["Profile + camp setup", "Training + restrictions"],
@@ -258,7 +258,7 @@ export default function HomePage() {
       <section className="panel loading-card">
         <p className="kicker">Overview</p>
         <h1>Loading your athlete workspace</h1>
-        <p className="muted">Checking saved onboarding and plan history.</p>
+        <p className="muted">Checking saved intake and plan history.</p>
       </section>
     );
   }
@@ -293,11 +293,11 @@ export default function HomePage() {
               Create your athlete profile, generate a structured camp plan, and manage your setup from one dashboard.
             </p>
             <p className="muted welcome-context">
-              Designed for fighters and combat athletes. Quick Build takes about 2 minutes. Full Setup gives more control.
+              Designed for fighters and combat athletes. Quick Build takes about 2 minutes. Advanced Intake gives more control.
             </p>
             <div className="hero-actions welcome-actions">
               <Link href="/onboarding" className="cta">
-                Start Full Setup
+                Start Advanced Intake
               </Link>
               <Link href="/quick-build" className="secondary-button">
                 Use Quick Build
@@ -328,8 +328,8 @@ export default function HomePage() {
         ? `Draft is parked on step ${nextStepNumber} of 6.`
         : "Profile is ready for the first intake.";
     const primaryActionHref = latestPlan ? `/plans/${latestPlan.plan_id}` : "/onboarding";
-    const primaryActionLabel = latestPlan ? "Open latest plan" : draft ? "Resume onboarding" : "Start onboarding";
-    const primaryActionTitle = latestPlan ? "Open current plan" : draft ? "Finish onboarding" : "Start onboarding";
+    const primaryActionLabel = latestPlan ? "Open latest plan" : draft ? "Resume intake" : "Start intake";
+    const primaryActionTitle = latestPlan ? "Open current plan" : draft ? "Finish intake" : "Start intake";
     const operationalItems = [
       { label: "Latest update", value: latestPlan ? formatPlanTimestamp(latestPlan.created_at) : formatPlanTimestamp(me.profile.updated_at) },
       { label: "Fight date", value: formatPlanFightDate(fightDate) },
@@ -337,7 +337,7 @@ export default function HomePage() {
     ];
     const decisionItems = [
       {
-        label: "Onboarding",
+        label: "Advanced Intake",
         value: draft ? `Step ${nextStepNumber} of ${totalOnboardingSteps}` : "Not started",
       },
       { label: "Saved plans", value: formatPlanCount(me.plan_count) },
@@ -351,15 +351,15 @@ export default function HomePage() {
       { label: "Status", value: status },
       { label: "Record", value: me.profile.record || "Not provided" },
       {
-        label: "Onboarding progress",
+        label: "Intake progress",
         value: draft ? `Step ${nextStepNumber} of ${totalOnboardingSteps}` : "Not started",
         highlight: true,
         badgeText: readinessBadge,
         helperText: draft
           ? remainingSteps === 0
-            ? "All onboarding steps are complete."
+            ? "All intake steps are complete."
             : `${remainingSteps} step${remainingSteps === 1 ? "" : "s"} remaining before plan generation.`
-          : "Start onboarding to unlock guided plan generation.",
+          : "Start Advanced Intake to unlock guided plan generation.",
         progressValue,
       },
     ];
@@ -385,7 +385,7 @@ export default function HomePage() {
               <p className="status-label">Next action</p>
               <h2 className="plan-summary-title">{primaryActionTitle}</h2>
               <div className="overview-next-action-state">
-                <span className={latestPlan ? "badge" : "badge status-badge-neutral"}>{latestPlan ? latestPlan.status : "Onboarding"}</span>
+                <span className={latestPlan ? "badge" : "badge status-badge-neutral"}>{latestPlan ? latestPlan.status : "Intake"}</span>
                 <p className="muted">{nextActionSummary}</p>
               </div>
               <div className="overview-decision-strip" aria-label="Next step details">
@@ -410,13 +410,13 @@ export default function HomePage() {
           <div className="overview-disclosure-stack athlete-motion-slot athlete-motion-status">
             <OverviewDisclosure
               title="Profile snapshot"
-              summary={draft ? `Onboarding is ${remainingSteps === 0 ? "ready for review" : `still ${remainingSteps} step${remainingSteps === 1 ? "" : "s"} away`}.` : "Profile fields currently saved for the next plan."}
+              summary={draft ? `Advanced Intake is ${remainingSteps === 0 ? "ready for review" : `still ${remainingSteps} step${remainingSteps === 1 ? "" : "s"} away`}.` : "Profile fields currently saved for the next plan."}
               badge={readinessBadge}
             >
               <OverviewDetailGrid items={profileStateItems} />
               <div className="plan-card-actions overview-card-actions">
                 <Link href="/onboarding" className="secondary-button">
-                  {draft ? "Resume onboarding" : "Start onboarding"}
+                  {draft ? "Resume intake" : "Start Advanced Intake"}
                 </Link>
                 <Link href="/quick-build" className="ghost-button">
                   Quick Build - 2 min
@@ -459,9 +459,9 @@ export default function HomePage() {
                 <EmptyState
                   eyebrow="Plan history"
                   title="No camp plans yet."
-                  description="Complete onboarding to generate your first training plan."
+                  description="Complete Advanced Intake to generate your first training plan."
                   example="Your generated camps will list here with fight date, status, and a one-tap reopen."
-                  primaryAction={{ label: "Start Onboarding", href: "/onboarding" }}
+                  primaryAction={{ label: "Start Advanced Intake", href: "/onboarding" }}
                   secondaryAction={{ label: "Use Quick Build", href: "/quick-build" }}
                 />
               )}
@@ -481,7 +481,7 @@ export default function HomePage() {
           <div className="hero-panel-copy public-hero-copy">
             <p className="eyebrow">Athlete-first beta</p>
             <h1 className="hero-title">See the camp workflow before you sign up.</h1>
-            <p className="public-hero-summary">UNLXCK brings onboarding, readiness, generation, saved history, and exports into one athlete workspace instead of scattering them across notes, forms, and PDFs.</p>
+            <p className="public-hero-summary">UNLXCK brings intake, readiness, generation, saved history, and exports into one athlete workspace instead of scattering them across notes, forms, and PDFs.</p>
             <div className="hero-actions">
               <Link href="/signup" className="cta">
                 Start free beta
@@ -492,7 +492,7 @@ export default function HomePage() {
             </div>
             <div className="public-proof-strip" aria-label="Product highlights">
               <div className="public-proof-pill">
-                <span className="label">Structured onboarding</span>
+                <span className="label">Structured intake</span>
                 <span className="public-proof-value">Profile, camp context, and restrictions in one flow</span>
               </div>
               <div className="public-proof-pill">

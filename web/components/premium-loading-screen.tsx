@@ -11,28 +11,28 @@ import type { PlanRequest, ProgressMilestone } from "@/lib/types";
 const WORKFLOW_STEPS = [
   {
     key: "submitting",
-    title: "Request lock",
-    detail: "Save the intake and open a durable background job.",
+    title: "Save intake",
+    detail: "Store your answers before the plan build starts.",
   },
   {
     key: "queued",
-    title: "Queue and runner",
-    detail: "Hold your place while the generation runner picks up the job.",
+    title: "Prepare build",
+    detail: "Hold your place while the planner gets ready.",
   },
   {
     key: "running",
-    title: "Background build",
-    detail: "Stage 1 and Stage 2 process the saved request in the background.",
+    title: "Build camp",
+    detail: "Turn the saved intake into a structured fight-camp plan.",
   },
   {
     key: "reconnecting",
-    title: "Link recovery",
-    detail: "Reconnect to the same saved job if the browser or network drops.",
+    title: "Reconnect",
+    detail: "Restore the same saved build if the browser or network drops.",
   },
   {
     key: "finalizing",
-    title: "Workspace handoff",
-    detail: "Open the saved plan after the final checks close out.",
+    title: "Open plan",
+    detail: "Run final checks and open the saved plan.",
   },
 ] as const;
 
@@ -54,62 +54,62 @@ const PHASE_CONTENT: Record<
     chip: string;
     statusFallback: string;
     reassurance: string;
-    runnerState: string;
+    buildState: string;
   }
 > = {
   submitting: {
-    eyebrow: "Generation request",
-    title: "Locking in your plan request.",
-    copy: "We are saving this intake first, then creating the background job that will carry the full generation safely.",
+    eyebrow: "Plan build",
+    title: "Saving your intake.",
+    copy: "We are storing your answers first so the plan can be built from the exact setup you just entered.",
     chip: "Submitting",
-    statusFallback: "Saving your intake and creating the background job now.",
-    reassurance: "Safe to leave and return. This workspace reconnects to the same saved job instead of starting over.",
-    runnerState: "Dispatching",
+    statusFallback: "Saving your intake now.",
+    reassurance: "Safe to leave and return. This workspace reconnects to the same saved plan build instead of starting over.",
+    buildState: "Saving",
   },
   queued: {
-    eyebrow: "Mission control",
-    title: "Request saved. Runner is queued.",
-    copy: "Your plan request is already parked safely in the workspace. The next step is runner pickup, not another submission.",
+    eyebrow: "Plan build",
+    title: "Intake saved. Planner is next.",
+    copy: "Your setup is safely saved. The next step is building the camp plan from that saved intake.",
     chip: "Queued",
-    statusFallback: "Your saved job is queued and waiting for the runner.",
-    reassurance: "Safe to leave and return. This workspace reconnects to the same saved job instead of starting over.",
-    runnerState: "Queued",
+    statusFallback: "Your saved intake is queued for planning.",
+    reassurance: "Safe to leave and return. This workspace reconnects to the same saved plan build instead of starting over.",
+    buildState: "Queued",
   },
   running: {
-    eyebrow: "Mission control",
-    title: "Generation is live in the background.",
-    copy: "Stage 1 and Stage 2 are processing the saved athlete request now while this page watches for the finished handoff.",
+    eyebrow: "Plan build",
+    title: "Building your fight camp.",
+    copy: "The planner is shaping the camp structure, checking safety constraints, and preparing the athlete-facing plan.",
     chip: "Running",
-    statusFallback: "Your saved job is processing in the background.",
-    reassurance: "Safe to leave and return. This workspace reconnects to the same saved job instead of starting over.",
-    runnerState: "Active",
+    statusFallback: "Your saved plan build is in progress.",
+    reassurance: "Safe to leave and return. This workspace reconnects to the same saved plan build instead of starting over.",
+    buildState: "Building",
   },
   reconnecting: {
     eyebrow: "Connection watch",
-    title: "Reconnecting to the same saved job.",
-    copy: "The job itself stays intact. We are only restoring the browser link so this page can resume watching the existing request.",
+    title: "Reconnecting to the same plan build.",
+    copy: "The saved build is still intact. We are only restoring the browser link so this page can keep watching it.",
     chip: "Reconnecting",
-    statusFallback: "Reconnecting to the saved generation request now.",
-    reassurance: "Safe to leave and return. This workspace reconnects to the same saved job instead of starting over.",
-    runnerState: "Recovery watch",
+    statusFallback: "Reconnecting to the saved plan build now.",
+    reassurance: "Safe to leave and return. This workspace reconnects to the same saved plan build instead of starting over.",
+    buildState: "Reconnecting",
   },
   finalizing: {
-    eyebrow: "Closing handoff",
-    title: "Final checks passed. Opening workspace.",
-    copy: "The generation is complete. We are closing the last handoff step before the saved plan opens inside your workspace.",
+    eyebrow: "Final checks",
+    title: "Plan ready. Opening workspace.",
+    copy: "The plan is complete. We are closing the final checks before it opens inside your workspace.",
     chip: "Finalizing",
     statusFallback: "Final checks passed. Opening your saved plan.",
     reassurance: "The saved plan is ready. This page is only closing the final handoff before your workspace opens.",
-    runnerState: "Handoff",
+    buildState: "Opening",
   },
   failed: {
     eyebrow: "Generation stopped",
     title: "Plan failed. Try again.",
-    copy: "The saved request did not reach an openable plan state. You can retry from the athlete workspace.",
+    copy: "The saved intake did not reach an openable plan state. You can retry from the athlete workspace.",
     chip: "Needs retry",
     statusFallback: "Plan failed. Try again.",
     reassurance: "Your intake is still saved. Return to the workspace when you are ready to retry.",
-    runnerState: "Stopped",
+    buildState: "Stopped",
   },
 };
 
@@ -123,7 +123,7 @@ function formatElapsed(ms: number): string {
   return `${minutes}m ${String(seconds).padStart(2, "0")}s`;
 }
 
-const ESTIMATE_COPY = "Generation has started. You can leave and return later; the saved request keeps running.";
+const ESTIMATE_COPY = "Plan build has started. You can leave and return later; the saved build keeps running.";
 
 interface PremiumLoadingScreenProps {
   phase: GenerationUiPhase;
@@ -216,8 +216,8 @@ export function PremiumLoadingScreen({
                 <span className="loading-operational-value">{phaseContent.chip}</span>
               </div>
               <div className="loading-operational-item">
-                <span className="loading-operational-label">Runner</span>
-                <span className="loading-operational-value">{phaseContent.runnerState}</span>
+                <span className="loading-operational-label">Build</span>
+                <span className="loading-operational-value">{phaseContent.buildState}</span>
               </div>
               <div className="loading-operational-item">
                 <span className="loading-operational-label">Elapsed</span>
@@ -231,7 +231,7 @@ export function PremiumLoadingScreen({
             ) : null}
             {showMilestones ? (
               <div className="loading-milestone-feed" aria-label="Generation milestones" aria-live="polite">
-                <p className="loading-eyebrow loading-milestone-eyebrow">Pipeline activity</p>
+                <p className="loading-eyebrow loading-milestone-eyebrow">Plan activity</p>
                 <ol className="loading-milestone-list">
                   {visibleMilestones.map((milestone, index) => {
                     const isLatest = milestone === latestMilestone;
@@ -289,9 +289,9 @@ export function PremiumLoadingScreen({
         <aside className="step-aside athlete-motion-slot athlete-motion-rail">
           <div className="support-panel loading-secondary-panel">
             <div className="form-section-header">
-              <p className="loading-eyebrow">Workflow rail</p>
-              <h2 className="form-section-title">Mission control</h2>
-              <p className="muted">The highlighted stage follows the real saved job state, not a fake timer.</p>
+              <p className="loading-eyebrow">Build steps</p>
+              <h2 className="form-section-title">Plan progress</h2>
+              <p className="muted">The highlighted stage follows the real saved plan state, not a fake timer.</p>
             </div>
             <ol className="loading-steps" aria-label="Generation workflow">
               {WORKFLOW_STEPS.map((step, index) => {
@@ -324,7 +324,7 @@ export function PremiumLoadingScreen({
             <div className="loading-support-note">
               <p className="kicker">Return flow</p>
               <p className="muted">
-                If the browser closes or the network drops, the next visit reconnects to the same saved request.
+                If the browser closes or the network drops, the next visit reconnects to the same saved plan build.
               </p>
             </div>
           </div>

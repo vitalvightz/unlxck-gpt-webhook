@@ -75,7 +75,7 @@ export default function DemoPlanPage() {
           </p>
           <div className="hero-actions welcome-actions">
             <Link href="/onboarding" className="cta">
-              Start Full Setup
+              Start Advanced Intake
             </Link>
             <Link href="/quick-build" className="secondary-button">
               Use Quick Build
@@ -141,7 +141,7 @@ export default function DemoPlanPage() {
         </ul>
         <div className="hero-actions welcome-actions">
           <Link href="/onboarding" className="cta">
-            Start Full Setup
+            Start Advanced Intake
           </Link>
           <Link href="/quick-build" className="secondary-button">
             Use Quick Build
