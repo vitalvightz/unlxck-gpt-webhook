@@ -390,6 +390,22 @@ function QuickBuildFormInner() {
   }
 
   function applyStarterPreset(starter: QuickBuildStarter) {
+    const isCurrentlyActive = activeStarterPreset === starter.key;
+
+    if (isCurrentlyActive) {
+      setSubmitError(null);
+      setInput((current) => ({
+        ...current,
+        training_availability: [],
+        weekly_training_frequency: 4,
+        hard_sparring_days: [],
+        equipment_access: [],
+        key_goals: [],
+        weak_areas: [],
+      }));
+      return;
+    }
+
     const trainingPreset = TRAINING_PRESETS.find((entry) => entry.key === starter.trainingPreset);
     const equipmentPreset = EQUIPMENT_PRESETS.find((entry) => entry.key === starter.equipmentPreset);
     const focusEntry = availableFocusPresets.find(
@@ -398,12 +414,17 @@ function QuickBuildFormInner() {
     if (!trainingPreset || !equipmentPreset || !focusEntry) {
       return;
     }
+    // Only prompt when the user has manual selections AND no starter is currently
+    // active. Switching from one active starter to another applies immediately.
     const hasManualChoice =
-      input.training_availability.length > 0 ||
-      input.hard_sparring_days.length > 0 ||
-      input.equipment_access.length > 0 ||
-      input.key_goals.length > 0 ||
-      input.weak_areas.length > 0;
+      activeStarterPreset === null &&
+      (
+        input.training_availability.length > 0 ||
+        input.hard_sparring_days.length > 0 ||
+        input.equipment_access.length > 0 ||
+        input.key_goals.length > 0 ||
+        input.weak_areas.length > 0
+      );
     if (!confirmReplace(hasManualChoice, "Replace your current starter setup selections?")) {
       return;
     }
