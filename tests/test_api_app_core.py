@@ -324,11 +324,15 @@ def test_runtime_app_does_not_fail_schema_check_when_legacy_fallback_enabled(
 ):
     class SchemaCheckingStore(FakeStore):
         def validate_runtime_schema(self) -> None:
+            if store_module._is_production_environment():
+                raise RuntimeError(store_module.PLAN_RUNTIME_SCHEMA_ERROR_DETAIL)
             if app_module.os.getenv("UNLXCK_ALLOW_LEGACY_PLAN_SCHEMA_FALLBACK") == "1":
                 return
             raise RuntimeError(store_module.PLAN_RUNTIME_SCHEMA_ERROR_DETAIL)
 
-        monkeypatch.setenv("UNLXCK_ALLOW_LEGACY_PLAN_SCHEMA_FALLBACK", "1")
+    for var in ("APP_ENV", "ENVIRONMENT", "UNLXCK_ENV", "NODE_ENV"):
+        monkeypatch.delenv(var, raising=False)
+    monkeypatch.setenv("UNLXCK_ALLOW_LEGACY_PLAN_SCHEMA_FALLBACK", "1")
     monkeypatch.setenv("SUPABASE_URL", "https://example.supabase.co")
     monkeypatch.setenv("SUPABASE_SERVICE_ROLE_KEY", "test-service-role-key")
     monkeypatch.setattr(store_module.SupabaseAppStore, "from_env", classmethod(lambda cls: SchemaCheckingStore()))
@@ -343,6 +347,37 @@ def test_runtime_app_does_not_fail_schema_check_when_legacy_fallback_enabled(
         "ok": True,
         "app": "unlxck-fight-camp-api",
         "mode": "supabase-authenticated",
+    }
+
+
+def test_runtime_app_fails_in_production_even_when_legacy_fallback_flag_set(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    class SchemaCheckingStore(FakeStore):
+        def validate_runtime_schema(self) -> None:
+            # Mirror real SupabaseAppStore: production blocks fallback.
+            if store_module._is_production_environment():
+                raise RuntimeError(store_module.PLAN_RUNTIME_SCHEMA_ERROR_DETAIL)
+            if app_module.os.getenv("UNLXCK_ALLOW_LEGACY_PLAN_SCHEMA_FALLBACK") == "1":
+                return
+            raise RuntimeError(store_module.PLAN_RUNTIME_SCHEMA_ERROR_DETAIL)
+
+    monkeypatch.setenv("APP_ENV", "production")
+    monkeypatch.setenv("UNLXCK_ALLOW_LEGACY_PLAN_SCHEMA_FALLBACK", "1")
+    monkeypatch.setenv("SUPABASE_URL", "https://example.supabase.co")
+    monkeypatch.setenv("SUPABASE_SERVICE_ROLE_KEY", "test-service-role-key")
+    monkeypatch.setattr(store_module.SupabaseAppStore, "from_env", classmethod(lambda cls: SchemaCheckingStore()))
+    monkeypatch.setattr(auth_module.SupabaseAuthService, "from_env", classmethod(lambda cls: FakeAuthService({})))
+
+    reloaded = importlib.reload(app_module)
+    client = TestClient(reloaded.app)
+    response = client.get("/health")
+
+    assert response.status_code == 503
+    assert response.json() == {
+        "ok": False,
+        "app": "unlxck-fight-camp-api",
+        "detail": store_module.PLAN_RUNTIME_SCHEMA_ERROR_DETAIL,
     }
 
 

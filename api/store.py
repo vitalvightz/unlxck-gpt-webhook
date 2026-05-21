@@ -89,6 +89,17 @@ _PLAN_INVALID_PAYLOAD_DETAIL = "invalid plans payload for table insert"
 GENERATION_JOB_UNAVAILABLE_DETAIL = "generation job service temporarily unavailable"
 GENERATION_JOB_SCHEMA_DETAIL = "generation job store is not ready; apply the latest Supabase schema and redeploy"
 
+_PRODUCTION_ENV_VALUES = frozenset({"production", "prod", "live"})
+_PRODUCTION_ENV_VARS = ("APP_ENV", "ENVIRONMENT", "UNLXCK_ENV", "NODE_ENV")
+
+
+def _is_production_environment() -> bool:
+    for var in _PRODUCTION_ENV_VARS:
+        value = os.getenv(var, "").strip().lower()
+        if value in _PRODUCTION_ENV_VALUES:
+            return True
+    return False
+
 
 class AppStore(Protocol):
     def validate_runtime_schema(self) -> None: ...
@@ -283,7 +294,21 @@ class SupabaseAppStore:
         return any(column in text for column in _PLAN_RUNTIME_REQUIRED_COLUMNS_SET)
 
     def _legacy_plan_schema_fallback_enabled(self) -> bool:
-        return os.getenv("UNLXCK_ALLOW_LEGACY_PLAN_SCHEMA_FALLBACK", "").strip() == "1"
+        flag_set = os.getenv("UNLXCK_ALLOW_LEGACY_PLAN_SCHEMA_FALLBACK", "").strip() == "1"
+        if not flag_set:
+            return False
+        if _is_production_environment():
+            logger.error(
+                "[store] legacy_plan_schema_fallback:blocked_in_production "
+                "UNLXCK_ALLOW_LEGACY_PLAN_SCHEMA_FALLBACK is ignored in production; "
+                "apply the latest Supabase schema and redeploy"
+            )
+            return False
+        logger.warning(
+            "[store] Legacy plan schema fallback is enabled. Runtime columns may be "
+            "dropped. Do not use in production."
+        )
+        return True
 
     def _log_create_plan_postgrest_error(
         self,
