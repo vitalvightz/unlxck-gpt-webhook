@@ -208,53 +208,45 @@ function QuickBuildGuide({ steps }: { steps: QuickBuildGuideStep[] }) {
   );
 }
 
-type PresetOption = {
+type LabelledPreset = {
   key: string;
   label: string;
   description: string;
-  disabledReason?: string | null;
 };
 
-function PresetRow({
+function presetToOption(preset: LabelledPreset): IntakeOption {
+  return {
+    label: `${preset.label} — ${preset.description}`,
+    value: preset.key,
+  };
+}
+
+function PresetSelect({
+  id,
   label,
-  presets,
+  placeholder,
+  options,
   activeKey,
   onSelect,
 }: {
+  id: string;
   label: string;
-  presets: PresetOption[];
+  placeholder: string;
+  options: IntakeOption[];
   activeKey: string | null;
   onSelect: (key: string) => void;
 }) {
   return (
     <div className="field">
-      <span className="checkbox-group-label">{label}</span>
-      <div className="checkbox-grid">
-        {presets.map((preset) => {
-          const active = activeKey === preset.key;
-          const disabled = Boolean(preset.disabledReason);
-          return (
-            <button
-              key={preset.key}
-              type="button"
-              className={`checkbox-card preset-card ${active ? "checkbox-card-checked" : ""} ${disabled ? "checkbox-card-disabled" : ""}`.trim()}
-              aria-pressed={active}
-              aria-disabled={disabled}
-              disabled={disabled}
-              title={preset.disabledReason ?? undefined}
-              onClick={() => {
-                if (disabled) return;
-                onSelect(preset.key);
-              }}
-            >
-              <span className="checkbox-card-copy">
-                <span className="checkbox-card-title">{preset.label}</span>
-                <span className="checkbox-card-tag">{preset.disabledReason ?? preset.description}</span>
-              </span>
-            </button>
-          );
-        })}
-      </div>
+      <label htmlFor={id}>{label}</label>
+      <CustomSelect
+        id={id}
+        value={activeKey ?? ""}
+        options={options}
+        placeholder={placeholder}
+        includeEmptyOption
+        onChange={onSelect}
+      />
     </div>
   );
 }
@@ -315,19 +307,34 @@ function QuickBuildFormInner() {
       )?.key ?? null,
     [activeEquipmentPreset, activeFocusPreset, activeTrainingPreset],
   );
-  const starterPresetOptions: PresetOption[] = useMemo(() => {
-    const availableFocusPresetMap = new Map(
-      availableFocusPresets.map((entry) => [entry.preset.key, entry.disabledReason]),
+  const starterPresetOptions: IntakeOption[] = useMemo(() => {
+    const availableFocusKeys = new Set(
+      availableFocusPresets
+        .filter((entry) => !entry.disabledReason)
+        .map((entry) => entry.preset.key),
     );
-    return QUICK_BUILD_STARTERS.map((starter) => ({
-      key: starter.key,
-      label: starter.label,
-      description: starter.description,
-      disabledReason: availableFocusPresetMap.has(starter.focusPreset)
-        ? (availableFocusPresetMap.get(starter.focusPreset) ?? null)
-        : "Focus does not fit this fight window.",
-    }));
+    return QUICK_BUILD_STARTERS
+      .filter((starter) => availableFocusKeys.has(starter.focusPreset))
+      .map((starter) => presetToOption(starter));
   }, [availableFocusPresets]);
+
+  const trainingPresetOptions: IntakeOption[] = useMemo(
+    () => TRAINING_PRESETS.map((preset) => presetToOption(preset)),
+    [],
+  );
+
+  const equipmentPresetOptions: IntakeOption[] = useMemo(
+    () => EQUIPMENT_PRESETS.map((preset) => presetToOption(preset)),
+    [],
+  );
+
+  const focusPresetOptions: IntakeOption[] = useMemo(
+    () =>
+      availableFocusPresets
+        .filter((entry) => !entry.disabledReason)
+        .map((entry) => presetToOption(entry.preset)),
+    [availableFocusPresets],
+  );
   const hasValidationErrors = Object.keys(errors).length > 0;
   const quickBuildGuideSteps: QuickBuildGuideStep[] = useMemo(() => {
     const profileComplete = Boolean(input.full_name.trim()) && input.technical_style.length > 0 && !errors.full_name && !errors.technical_style;
@@ -390,22 +397,6 @@ function QuickBuildFormInner() {
   }
 
   function applyStarterPreset(starter: QuickBuildStarter) {
-    const isCurrentlyActive = activeStarterPreset === starter.key;
-
-    if (isCurrentlyActive) {
-      setSubmitError(null);
-      setInput((current) => ({
-        ...current,
-        training_availability: [],
-        weekly_training_frequency: 4,
-        hard_sparring_days: [],
-        equipment_access: [],
-        key_goals: [],
-        weak_areas: [],
-      }));
-      return;
-    }
-
     const trainingPreset = TRAINING_PRESETS.find((entry) => entry.key === starter.trainingPreset);
     const equipmentPreset = EQUIPMENT_PRESETS.find((entry) => entry.key === starter.equipmentPreset);
     const focusEntry = availableFocusPresets.find(
@@ -442,13 +433,22 @@ function QuickBuildFormInner() {
     }));
   }
 
+  function clearStarterPreset() {
+    setSubmitError(null);
+    setInput((current) => ({
+      ...current,
+      training_availability: [],
+      weekly_training_frequency: 4,
+      hard_sparring_days: [],
+      equipment_access: [],
+      key_goals: [],
+      weak_areas: [],
+    }));
+  }
+
   function applyEquipmentPreset(preset: EquipmentPreset) {
     const current = input.equipment_access;
     const currentMatch = matchesEquipmentPreset(current);
-    if (currentMatch === preset.key) {
-      patch("equipment_access", []);
-      return;
-    }
     const differs = currentMatch === null && current.length > 0;
     if (!confirmReplace(differs, "Replace your current equipment selection with this preset?")) {
       return;
@@ -457,17 +457,13 @@ function QuickBuildFormInner() {
     patch("equipment_access", [...preset.equipment_access]);
   }
 
+  function clearEquipmentPreset() {
+    setSubmitError(null);
+    patch("equipment_access", []);
+  }
+
   function applyTrainingPreset(preset: TrainingPreset) {
     const currentMatch = matchesTrainingPreset(input.training_availability, input.weekly_training_frequency);
-    if (currentMatch === preset.key) {
-      setSubmitError(null);
-      setInput((currentInput) => ({
-        ...currentInput,
-        training_availability: [],
-        hard_sparring_days: [],
-      }));
-      return;
-    }
     const hasManualChoice = currentMatch === null && input.training_availability.length > 0;
     if (hasManualChoice) {
       if (!confirmReplace(true, "Replace your current training days and sessions per week with this preset?")) {
@@ -483,17 +479,17 @@ function QuickBuildFormInner() {
     }));
   }
 
+  function clearTrainingPreset() {
+    setSubmitError(null);
+    setInput((currentInput) => ({
+      ...currentInput,
+      training_availability: [],
+      hard_sparring_days: [],
+    }));
+  }
+
   function applyFocusPreset(preset: FocusPreset) {
     const currentMatch = matchesFocusPreset(input.key_goals, input.weak_areas);
-    if (currentMatch === preset.key) {
-      setSubmitError(null);
-      setInput((currentInput) => ({
-        ...currentInput,
-        key_goals: [],
-        weak_areas: [],
-      }));
-      return;
-    }
     const hasManualChoice = currentMatch === null && (input.key_goals.length > 0 || input.weak_areas.length > 0);
     if (!confirmReplace(hasManualChoice, "Replace your current goals and weak areas with this preset?")) {
       return;
@@ -504,6 +500,51 @@ function QuickBuildFormInner() {
       key_goals: [...preset.key_goals],
       weak_areas: [...preset.weak_areas],
     }));
+  }
+
+  function clearFocusPreset() {
+    setSubmitError(null);
+    setInput((currentInput) => ({
+      ...currentInput,
+      key_goals: [],
+      weak_areas: [],
+    }));
+  }
+
+  function handleStarterSelect(key: string) {
+    if (!key) {
+      clearStarterPreset();
+      return;
+    }
+    const starter = QUICK_BUILD_STARTERS.find((entry) => entry.key === key);
+    if (starter) applyStarterPreset(starter);
+  }
+
+  function handleTrainingPresetSelect(key: string) {
+    if (!key) {
+      clearTrainingPreset();
+      return;
+    }
+    const preset = TRAINING_PRESETS.find((entry) => entry.key === key);
+    if (preset) applyTrainingPreset(preset);
+  }
+
+  function handleEquipmentPresetSelect(key: string) {
+    if (!key) {
+      clearEquipmentPreset();
+      return;
+    }
+    const preset = EQUIPMENT_PRESETS.find((entry) => entry.key === key);
+    if (preset) applyEquipmentPreset(preset);
+  }
+
+  function handleFocusPresetSelect(key: string) {
+    if (!key) {
+      clearFocusPreset();
+      return;
+    }
+    const entry = availableFocusPresets.find((candidate) => candidate.preset.key === key);
+    if (entry && !entry.disabledReason) applyFocusPreset(entry.preset);
   }
 
   function handleSubmit(event: React.FormEvent) {
@@ -598,14 +639,13 @@ function QuickBuildFormInner() {
       <QuickBuildGuide steps={quickBuildGuideSteps} />
 
       <section className="quick-build-starters" aria-label="Starter setups">
-        <PresetRow
+        <PresetSelect
+          id="qb-starter-setup"
           label="Starter setups"
-          presets={starterPresetOptions}
+          placeholder="Select starter setup"
+          options={starterPresetOptions}
           activeKey={activeStarterPreset}
-          onSelect={(key) => {
-            const starter = QUICK_BUILD_STARTERS.find((entry) => entry.key === key);
-            if (starter) applyStarterPreset(starter);
-          }}
+          onSelect={handleStarterSelect}
         />
       </section>
 
@@ -724,14 +764,13 @@ function QuickBuildFormInner() {
           <p className="kicker">Training</p>
           <h2 className="form-section-title">Weekly schedule</h2>
         </div>
-        <PresetRow
+        <PresetSelect
+          id="qb-training-preset"
           label="Recommended training"
-          presets={TRAINING_PRESETS}
+          placeholder="Select training preset"
+          options={trainingPresetOptions}
           activeKey={activeTrainingPreset}
-          onSelect={(key) => {
-            const preset = TRAINING_PRESETS.find((entry) => entry.key === key);
-            if (preset) applyTrainingPreset(preset);
-          }}
+          onSelect={handleTrainingPresetSelect}
         />
         <ChipMultiSelect
           label="Days you can train"
@@ -766,14 +805,13 @@ function QuickBuildFormInner() {
           <FieldError message={visibleError("weekly_training_frequency")} />
           <FieldError message={visibleError("training_availability")} />
         </div>
-        <PresetRow
+        <PresetSelect
+          id="qb-equipment-preset"
           label="Recommended equipment"
-          presets={EQUIPMENT_PRESETS}
+          placeholder="Select equipment preset"
+          options={equipmentPresetOptions}
           activeKey={activeEquipmentPreset}
-          onSelect={(key) => {
-            const preset = EQUIPMENT_PRESETS.find((entry) => entry.key === key);
-            if (preset) applyEquipmentPreset(preset);
-          }}
+          onSelect={handleEquipmentPresetSelect}
         />
         <ChipMultiSelect
           label="Equipment access"
@@ -789,19 +827,13 @@ function QuickBuildFormInner() {
           <p className="kicker">Performance</p>
           <h2 className="form-section-title">Goals and weak areas</h2>
         </div>
-        <PresetRow
+        <PresetSelect
+          id="qb-focus-preset"
           label="Recommended focus"
-          presets={availableFocusPresets.map((entry) => ({
-            key: entry.preset.key,
-            label: entry.preset.label,
-            description: entry.preset.description,
-            disabledReason: entry.disabledReason,
-          }))}
+          placeholder="Select focus preset"
+          options={focusPresetOptions}
           activeKey={activeFocusPreset}
-          onSelect={(key) => {
-            const entry = availableFocusPresets.find((candidate) => candidate.preset.key === key);
-            if (entry && !entry.disabledReason) applyFocusPreset(entry.preset);
-          }}
+          onSelect={handleFocusPresetSelect}
         />
         <ChipMultiSelect
           label={`Key goals (pick up to ${QUICK_BUILD_KEY_GOAL_CAP})`}
