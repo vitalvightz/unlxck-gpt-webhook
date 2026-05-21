@@ -77,6 +77,8 @@ const FIELD_STEP_MAP: Record<string, number> = {
   sessionsPerWeek: 1,
   trainingAvailabilityGroup: 2,
   hardSparringAck: 2,
+  availabilityConsistencyAlert: 2,
+  sparringConsistencyAlert: 2,
   keyGoalsGroup: PERFORMANCE_STEP_INDEX,
 };
 
@@ -828,7 +830,7 @@ type TrainingGateAction = "save_draft" | "next" | "step_select" | "generate";
 
 type TrainingGateDecision =
   | { kind: "allow" }
-  | { kind: "hard_error"; message: string }
+  | { kind: "hard_error"; message: string; source: "availability" | "sparring" }
   | { kind: "warning_ack_required"; message: string; shouldRedirectToTraining: boolean };
 
 export function PlanIntakeForm() {
@@ -856,10 +858,9 @@ export function PlanIntakeForm() {
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
   const [invalidFieldId, setInvalidFieldId] = useState<string | null>(null);
-  const [validationFocusTick, setValidationFocusTick] = useState(0);
+  const [validationFocusRequest, setValidationFocusRequest] = useState<{ fieldId: string; nonce: number } | null>(null);
   const lastSavedSnapshotRef = useRef<string>("");
   const issueRedirectConsumedRef = useRef(false);
-  const pendingValidationFocusRef = useRef<string | null>(null);
   const recordHasError = !isValidRecordFormat(form.athlete.record ?? "");
 
   // ── Days-out policy: compute field visibility/disablement ───────────
@@ -898,11 +899,15 @@ export function PlanIntakeForm() {
   useEffect(() => {
     // Skip top-scroll when a validation focus is pending — the focus effect
     // will scroll the user directly to the invalid field instead.
-    if (pendingValidationFocusRef.current) {
+    if (validationFocusRequest) {
       return;
     }
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     window.scrollTo({ top: 0, behavior: reducedMotion ? "instant" : "smooth" });
+    // We intentionally do not depend on validationFocusRequest here — its
+    // presence is checked at fire time, and adding it would re-trigger
+    // scroll-to-top whenever a validation focus completes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentStep]);
 
   useEffect(() => {
@@ -939,6 +944,10 @@ export function PlanIntakeForm() {
           const ack = acknowledgedHardSparringWarningKey === warning.acknowledgementContextKey;
           return !warning.requiresAcknowledgement || ack;
         }
+        case "availabilityConsistencyAlert":
+          return !getAvailabilityConsistency(form.training_availability, form.weekly_training_frequency).hardError;
+        case "sparringConsistencyAlert":
+          return !getSparringConsistency(form.training_availability, form.hard_sparring_days, form.support_work_days).hardError;
         default:
           if (invalidFieldId.startsWith("guidedInjuryCard-")) {
             return !guidedInjuries.some((injury) => hasGuidedInjuryDescriptorWithoutArea(injury));
@@ -959,15 +968,25 @@ export function PlanIntakeForm() {
   ]);
 
   useEffect(() => {
-    if (!pendingValidationFocusRef.current) {
+    if (!validationFocusRequest) {
       return;
     }
-    const fieldId = pendingValidationFocusRef.current;
-    // Defer one tick so any step change has rendered the target before we look it up.
-    const handle = window.setTimeout(() => {
-      pendingValidationFocusRef.current = null;
+    const { fieldId } = validationFocusRequest;
+    let cancelled = false;
+    let rafHandle: number | null = null;
+    let timeoutHandle: number | null = null;
+
+    function tryFocus(attemptsLeft: number) {
+      if (cancelled) return;
       const el = document.getElementById(fieldId);
-      if (!el) return;
+      if (!el) {
+        // The target step may still be mounting (e.g. on cross-step navigation).
+        // Retry a few frames before giving up so we never silently no-op.
+        if (attemptsLeft > 0) {
+          timeoutHandle = window.setTimeout(() => tryFocus(attemptsLeft - 1), 40);
+        }
+        return;
+      }
 
       // Expand any ancestor <details> blocks (e.g. "Add more detail") so the field is visible.
       let cursor: HTMLElement | null = el.parentElement;
@@ -979,7 +998,7 @@ export function PlanIntakeForm() {
       }
 
       const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-      el.scrollIntoView({ behavior: reducedMotion ? "instant" : "smooth", block: "center" });
+      el.scrollIntoView({ behavior: reducedMotion ? "instant" : "smooth", block: "start" });
 
       const isMobile = window.matchMedia("(max-width: 720px)").matches;
       const isTextInput = el instanceof HTMLInputElement && /^(text|email|number|tel|search|url)$/i.test(el.type);
@@ -995,9 +1014,19 @@ export function PlanIntakeForm() {
       if (!skipFocus && focusable) {
         el.focus({ preventScroll: true });
       }
-    }, 60);
-    return () => window.clearTimeout(handle);
-  }, [validationFocusTick]);
+    }
+
+    // Wait one frame so React has committed the latest render (step change,
+    // conditional rendering of the warning panel) before we look for the
+    // element. Up to 5 retries handle slower mounts on cross-step nav.
+    rafHandle = window.requestAnimationFrame(() => tryFocus(5));
+
+    return () => {
+      cancelled = true;
+      if (rafHandle !== null) window.cancelAnimationFrame(rafHandle);
+      if (timeoutHandle !== null) window.clearTimeout(timeoutHandle);
+    };
+  }, [validationFocusRequest]);
 
   useEffect(() => {
     if (!stage1Preview || currentStep !== steps.length - 1) {
@@ -1127,8 +1156,7 @@ export function PlanIntakeForm() {
         ?? "This saved intake is over the current focus cap. Remove some goal or weak-area selections before generating.",
     );
     setInvalidFieldId("keyGoalsGroup");
-    pendingValidationFocusRef.current = "keyGoalsGroup";
-    setValidationFocusTick((tick) => tick + 1);
+    setValidationFocusRequest({ fieldId: "keyGoalsGroup", nonce: Date.now() });
     setCurrentStep(PERFORMANCE_STEP_INDEX);
     setIsMobileProgressOpen(true);
     router.replace("/onboarding", { scroll: false });
@@ -1385,6 +1413,7 @@ export function PlanIntakeForm() {
     if (availabilityConsistency.hardError) {
       return {
         kind: "hard_error",
+        source: "availability",
         message: `${availabilityConsistency.hardError} Reduce sessions or add more available days.`,
       };
     }
@@ -1397,6 +1426,7 @@ export function PlanIntakeForm() {
     if (sparringConsistency.hardError) {
       return {
         kind: "hard_error",
+        source: "sparring",
         message: sparringConsistency.hardError,
       };
     }
@@ -1437,9 +1467,13 @@ export function PlanIntakeForm() {
     }
 
     // hard_error from training gate covers availability/sparring consistency on the Training step.
+    // Route to the panel that actually surfaces the failing check.
+    const hardErrorFieldId = decision.source === "sparring"
+      ? "sparringConsistencyAlert"
+      : "availabilityConsistencyAlert";
     return reportInvalidField({
       message: decision.message,
-      fieldId: "trainingAvailabilityGroup",
+      fieldId: hardErrorFieldId,
       step: currentStep !== 2 ? 2 : undefined,
     });
   }
@@ -1451,8 +1485,9 @@ export function PlanIntakeForm() {
     const targetStep = args.step ?? resolveFieldStep(fieldId);
     setError(message);
     setInvalidFieldId(fieldId);
-    pendingValidationFocusRef.current = fieldId;
-    setValidationFocusTick((tick) => tick + 1);
+    // The nonce guarantees the focus effect re-fires even when validation
+    // hits the same field twice in a row (e.g. user re-clicks Continue).
+    setValidationFocusRequest({ fieldId, nonce: Date.now() });
     if (targetStep !== undefined && targetStep !== currentStep) {
       setCurrentStep(targetStep);
       setIsMobileProgressOpen(true);
@@ -2533,7 +2568,12 @@ export function PlanIntakeForm() {
           <div className="step-layout onboarding-step-layout">
             <div className="step-main athlete-motion-slot athlete-motion-main onboarding-step-main">
               {availabilityConsistency.hardError || availabilityConsistency.softWarning ? (
-                <div className={`support-panel ${availabilityConsistency.hardError ? "support-panel-alert" : ""}`.trim()}>
+                <div
+                  id="availabilityConsistencyAlert"
+                  className={`support-panel ${availabilityConsistency.hardError ? "support-panel-alert" : ""}${invalidFieldId === "availabilityConsistencyAlert" ? " field-invalid" : ""}`.trim()}
+                  tabIndex={invalidFieldId === "availabilityConsistencyAlert" ? -1 : undefined}
+                  aria-invalid={invalidFieldId === "availabilityConsistencyAlert" ? true : undefined}
+                >
                   <p className="kicker">Consistency check</p>
                   <p className={availabilityConsistency.hardError ? "error-text" : "muted"}>
                     {availabilityConsistency.hardError ?? availabilityConsistency.softWarning}
@@ -2541,7 +2581,12 @@ export function PlanIntakeForm() {
                 </div>
               ) : null}
               {sparringConsistency.hardError || sparringConsistency.softWarning ? (
-                <div className={`support-panel ${sparringConsistency.hardError ? "support-panel-alert" : ""}`.trim()}>
+                <div
+                  id="sparringConsistencyAlert"
+                  className={`support-panel ${sparringConsistency.hardError ? "support-panel-alert" : ""}${invalidFieldId === "sparringConsistencyAlert" ? " field-invalid" : ""}`.trim()}
+                  tabIndex={invalidFieldId === "sparringConsistencyAlert" ? -1 : undefined}
+                  aria-invalid={invalidFieldId === "sparringConsistencyAlert" ? true : undefined}
+                >
                   <p className="kicker">Sparring check</p>
                   <p className={sparringConsistency.hardError ? "error-text" : "muted"}>
                     {sparringConsistency.hardError ?? sparringConsistency.softWarning}
