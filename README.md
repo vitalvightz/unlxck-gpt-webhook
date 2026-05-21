@@ -166,6 +166,17 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=
 - The bank JSON files are loaded into memory on first request and cached for each worker process lifetime (with `--workers 2`, both workers will warm independently).
 - Keep the instance warm with a cron job hitting `/health` every 14 minutes or use Render Standard tier
 
+**Supabase schema requirements**
+
+- Apply every migration in `supabase/migrations/` before deploying. The latest required migrations are listed below; the backend will refuse to start if any of the plan runtime columns are missing.
+- Required plan runtime columns (validated at startup by `SupabaseAppStore.validate_runtime_schema`):
+  `draft_plan_text`, `final_plan_text`, `planning_brief`, `stage2_payload`,
+  `stage2_handoff_text`, `stage2_retry_text`, `stage2_validator_report`,
+  `stage2_status`, `stage2_attempt_count`, `parsing_metadata`.
+- If the schema is out of date, fix the schema — do not enable the legacy fallback.
+- `UNLXCK_ALLOW_LEGACY_PLAN_SCHEMA_FALLBACK=1` is a **development-only** escape hatch. It allows the API to keep running against an older `plans` table by silently dropping the runtime columns above. **Never** set this in production: the API explicitly ignores the flag when `APP_ENV`, `ENVIRONMENT`, `UNLXCK_ENV`, or `NODE_ENV` is `production`/`prod`/`live`, and a schema mismatch will fail the readiness check with a loud error so the misconfiguration is visible.
+- Set `APP_ENV=production` (or `ENVIRONMENT=production`) on every production deploy so the legacy fallback cannot run by accident.
+
 **Frontend (Vercel)**
 
 - All browser API calls use same-origin `/api/...` URLs
