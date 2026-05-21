@@ -1810,20 +1810,7 @@ def _build_runtime_app() -> FastAPI:
 def _build_startup_failure_app(detail: str) -> FastAPI:
     app = FastAPI(title="UNLXCK Fight Camp API", version="0.2.0")
 
-    @app.get("/", include_in_schema=False)
-    def root() -> dict[str, str | bool]:
-        return {
-            "ok": False,
-            "app": "unlxck-fight-camp-api",
-            "detail": detail,
-        }
-
-    @app.head("/", include_in_schema=False)
-    def root_head() -> None:
-        return None
-
-    @app.get("/health")
-    def health() -> JSONResponse:
+    def _failure_response() -> JSONResponse:
         return JSONResponse(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             content={
@@ -1832,6 +1819,18 @@ def _build_startup_failure_app(detail: str) -> FastAPI:
                 "detail": detail,
             },
         )
+
+    @app.get("/", include_in_schema=False)
+    def root() -> JSONResponse:
+        return _failure_response()
+
+    @app.head("/", include_in_schema=False)
+    def root_head() -> Response:
+        return Response(status_code=status.HTTP_503_SERVICE_UNAVAILABLE)
+
+    @app.get("/health")
+    def health() -> JSONResponse:
+        return _failure_response()
 
     return app
 

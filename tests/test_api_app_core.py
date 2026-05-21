@@ -189,14 +189,22 @@ def test_runtime_app_falls_back_to_health_endpoint_when_supabase_config_missing(
     reloaded = importlib.reload(app_module)
 
     client = TestClient(reloaded.app)
-    response = client.get("/health")
-
-    assert response.status_code == 503
-    assert response.json() == {
+    expected_body = {
         "ok": False,
         "app": "unlxck-fight-camp-api",
         "detail": "missing supabase configuration",
     }
+
+    health_response = client.get("/health")
+    assert health_response.status_code == 503
+    assert health_response.json() == expected_body
+
+    root_response = client.get("/")
+    assert root_response.status_code == 503
+    assert root_response.json() == expected_body
+
+    head_response = client.head("/")
+    assert head_response.status_code == 503
 
 
 def test_runtime_app_uses_supabase_store_and_auth(monkeypatch: pytest.MonkeyPatch):
