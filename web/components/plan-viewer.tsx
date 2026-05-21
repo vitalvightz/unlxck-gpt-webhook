@@ -27,7 +27,7 @@ import {
   type BlockedInjuryContextSummary,
 } from "@/lib/triage-block-reasons";
 import type { PlanAdvisory, PlanDetail, UserRole } from "@/lib/types";
-import { hasTriageResumeApproval } from "@/lib/triage-view";
+import { hasTriageResumeApproval, shouldShowTriageBlockedState } from "@/lib/triage-view";
 
 type ValidatorIssue = Record<string, unknown>;
 type ReviewIssue = {
@@ -773,11 +773,8 @@ export function PlanViewer({
   const hasPublishedPlan = Boolean(athletePlanText);
 
   const injuryTriage = readInjuryTriage(plan);
-  const isTriageBlocked =
-    plan.status === "triage_blocked" ||
-    plan.admin_outputs?.stage2_status === "triage_blocked" ||
-    injuryTriage?.mode === "medical_hold" ||
-    injuryTriage?.mode === "restricted_rehab_only";
+  const hasResumeApproval = hasTriageResumeApproval(plan);
+  const isTriageBlocked = shouldShowTriageBlockedState(plan, injuryTriage?.mode);
 
   const blockedTitle =
     injuryTriage?.mode === "medical_hold"
@@ -835,7 +832,6 @@ export function PlanViewer({
     athletePlanText ||
     "";
   const canApproveForRelease = isAdmin && !hasPublishedPlan && Boolean(approvableText);
-  const hasResumeApproval = hasTriageResumeApproval(plan);
   const canApproveAndResumeGeneration =
     isAdmin &&
     !hasResumeApproval &&
