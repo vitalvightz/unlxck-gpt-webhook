@@ -465,9 +465,30 @@ def test_production_cors_allows_safe_https_origin(monkeypatch: pytest.MonkeyPatc
     )
 
 
-def test_production_cors_rejects_wildcard_origin(monkeypatch: pytest.MonkeyPatch):
+def test_production_cors_warns_but_boots_on_unsafe_origin_by_default(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+):
+    """Hotfix behaviour: misconfigured production CORS logs an error but boots."""
     _clear_env_detection_vars(monkeypatch)
     monkeypatch.setenv("APP_ENV", "production")
+    monkeypatch.setenv("APP_CORS_ORIGINS", "*")
+    monkeypatch.delenv("APP_STRICT_PRODUCTION_CORS", raising=False)
+
+    # Should not raise even though the CORS config is unsafe.
+    create_app(
+        store=FakeStore(),
+        auth_service=FakeAuthService({}),
+        stage2_automator=FakeStage2Automator(),
+    )
+
+    captured = capsys.readouterr()
+    assert "production_cors_unsafe" in captured.out + captured.err
+
+
+def test_production_cors_strict_mode_rejects_wildcard_origin(monkeypatch: pytest.MonkeyPatch):
+    _clear_env_detection_vars(monkeypatch)
+    monkeypatch.setenv("APP_ENV", "production")
+    monkeypatch.setenv("APP_STRICT_PRODUCTION_CORS", "1")
     monkeypatch.setenv("APP_CORS_ORIGINS", "*")
 
     with pytest.raises(ValueError, match=r"\*"):
@@ -478,9 +499,10 @@ def test_production_cors_rejects_wildcard_origin(monkeypatch: pytest.MonkeyPatch
         )
 
 
-def test_production_cors_rejects_empty_origins(monkeypatch: pytest.MonkeyPatch):
+def test_production_cors_strict_mode_rejects_empty_origins(monkeypatch: pytest.MonkeyPatch):
     _clear_env_detection_vars(monkeypatch)
     monkeypatch.setenv("APP_ENV", "production")
+    monkeypatch.setenv("APP_STRICT_PRODUCTION_CORS", "1")
     monkeypatch.setenv("APP_CORS_ORIGINS", "")
     monkeypatch.delenv("APP_CORS_ORIGIN_REGEX", raising=False)
 
@@ -492,9 +514,10 @@ def test_production_cors_rejects_empty_origins(monkeypatch: pytest.MonkeyPatch):
         )
 
 
-def test_production_cors_rejects_localhost_origins(monkeypatch: pytest.MonkeyPatch):
+def test_production_cors_strict_mode_rejects_localhost_origins(monkeypatch: pytest.MonkeyPatch):
     _clear_env_detection_vars(monkeypatch)
     monkeypatch.setenv("APP_ENV", "production")
+    monkeypatch.setenv("APP_STRICT_PRODUCTION_CORS", "1")
     monkeypatch.setenv("APP_CORS_ORIGINS", "http://localhost:3000")
 
     with pytest.raises(ValueError, match="localhost"):
@@ -522,9 +545,10 @@ def test_production_cors_rejects_localhost_origins(monkeypatch: pytest.MonkeyPat
         "^http://.+$",
     ],
 )
-def test_production_cors_rejects_broad_regex(monkeypatch: pytest.MonkeyPatch, regex: str):
+def test_production_cors_strict_mode_rejects_broad_regex(monkeypatch: pytest.MonkeyPatch, regex: str):
     _clear_env_detection_vars(monkeypatch)
     monkeypatch.setenv("APP_ENV", "production")
+    monkeypatch.setenv("APP_STRICT_PRODUCTION_CORS", "1")
     monkeypatch.setenv("APP_CORS_ORIGINS", "https://app.example.com")
     monkeypatch.setenv("APP_CORS_ORIGIN_REGEX", regex)
 
@@ -537,9 +561,10 @@ def test_production_cors_rejects_broad_regex(monkeypatch: pytest.MonkeyPatch, re
 
 
 def test_production_cors_allows_narrow_subdomain_regex(monkeypatch: pytest.MonkeyPatch):
-    """Narrow regex constrained to a specific domain should still work."""
+    """Narrow regex constrained to a specific domain should still work even in strict mode."""
     _clear_env_detection_vars(monkeypatch)
     monkeypatch.setenv("APP_ENV", "production")
+    monkeypatch.setenv("APP_STRICT_PRODUCTION_CORS", "1")
     monkeypatch.setenv("APP_CORS_ORIGINS", "https://app.example.com")
     monkeypatch.setenv("APP_CORS_ORIGIN_REGEX", r"https://.*\.vercel\.app")
     # Should not raise

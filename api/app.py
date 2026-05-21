@@ -403,30 +403,48 @@ def _validate_production_cors_config(origins: list[str], regex: str | None) -> N
     if not is_production_environment():
         return
 
+    violations: list[str] = []
+
     if not origins and not regex:
-        raise ValueError(
-            "APP_CORS_ORIGINS must list at least one origin (or APP_CORS_ORIGIN_REGEX must be set) in production"
+        violations.append(
+            "APP_CORS_ORIGINS must list at least one origin "
+            "(or APP_CORS_ORIGIN_REGEX must be set) in production"
         )
 
     for origin in origins:
         if origin == "*":
-            raise ValueError("APP_CORS_ORIGINS cannot contain '*' in production")
+            violations.append("APP_CORS_ORIGINS cannot contain '*' in production")
+            continue
         parsed = urlsplit(origin)
         host = (parsed.hostname or "").lower()
         netloc = (parsed.netloc or "").lower()
         if not host or "*" in netloc:
-            raise ValueError(
+            violations.append(
                 f"APP_CORS_ORIGINS cannot contain '*' wildcards in production: {origin!r}"
             )
+            continue
         if host in LOCAL_HOST_NAMES:
-            raise ValueError(
+            violations.append(
                 f"APP_CORS_ORIGINS cannot contain localhost origins in production: {origin!r}"
             )
 
     if regex is not None and _is_broad_cors_regex(regex):
-        raise ValueError(
+        violations.append(
             f"APP_CORS_ORIGIN_REGEX is too broad for production: {regex!r}"
         )
+
+    if not violations:
+        return
+
+    # Hotfix: downgrade to a loud warning so a misconfigured production deploy
+    # does not take the entire API offline. Operators should still treat these
+    # as deploy blockers, but the API now boots and serves traffic.
+    # Set APP_STRICT_PRODUCTION_CORS=1 to restore fail-fast behavior.
+    strict = os.getenv("APP_STRICT_PRODUCTION_CORS", "").strip() == "1"
+    for violation in violations:
+        logger.error("[cors] production_cors_unsafe: %s", violation)
+    if strict:
+        raise ValueError("; ".join(violations))
 
 
 def _plan_generate_rate_limit_requests() -> int:
