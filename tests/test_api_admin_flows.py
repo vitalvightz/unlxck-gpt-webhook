@@ -36,6 +36,97 @@ def test_admin_endpoints_require_admin_role():
     assert allowed.status_code == 200
 
 
+def test_admin_routes_use_env_allowlist_not_stored_role():
+    """A profile with role='admin' in storage must be denied if the email is
+    no longer in UNLXCK_ADMIN_EMAILS (which FakeStore models via admin_emails
+    and the @unlxck.test pattern)."""
+    store = FakeStore()  # admin_emails empty; only @unlxck.test pattern admits
+    stale_admin = AuthenticatedUser(
+        user_id="stale-admin-1",
+        email="former-admin@example.com",
+        full_name="Former Admin",
+        metadata={},
+    )
+    # Pre-populate the profile with a stale admin role (as if env was removed).
+    profile = store.ensure_profile(stale_admin)
+    profile["role"] = "admin"
+    store.profiles[stale_admin.user_id] = profile
+
+    client = TestClient(
+        create_app(
+            store=store,
+            auth_service=FakeAuthService({"stale-admin-token": stale_admin}),
+            planner=lambda payload, progress_callback=None: {"plan_text": ""},
+            stage2_automator=FakeStage2Automator(result=finalized_result()),
+        )
+    )
+
+    response = client.get(
+        "/api/admin/athletes",
+        headers={"Authorization": "Bearer stale-admin-token"},
+    )
+    assert response.status_code == 403
+    assert response.json()["detail"] == "admin access required"
+
+
+def test_admin_routes_allow_email_in_env_allowlist_even_if_stored_role_is_athlete():
+    """A profile with role='athlete' in storage must be allowed if the email
+    is in the env allowlist."""
+    store = FakeStore(admin_emails={"newadmin@example.com"})
+    new_admin = AuthenticatedUser(
+        user_id="new-admin-1",
+        email="newadmin@example.com",
+        full_name="New Admin",
+        metadata={},
+    )
+    profile = store.ensure_profile(new_admin)
+    # Storage still has the stale "athlete" role.
+    profile["role"] = "athlete"
+    store.profiles[new_admin.user_id] = profile
+
+    client = TestClient(
+        create_app(
+            store=store,
+            auth_service=FakeAuthService({"new-admin-token": new_admin}),
+            planner=lambda payload, progress_callback=None: {"plan_text": ""},
+            stage2_automator=FakeStage2Automator(result=finalized_result()),
+        )
+    )
+
+    response = client.get(
+        "/api/admin/athletes",
+        headers={"Authorization": "Bearer new-admin-token"},
+    )
+    assert response.status_code == 200
+
+
+def test_normal_athlete_denied_from_admin_routes():
+    """Athletes with no admin allowlist entry must get 403."""
+    store = FakeStore()
+    athlete = AuthenticatedUser(
+        user_id="athlete-only-1",
+        email="athlete-only@example.com",
+        full_name="Athlete Only",
+        metadata={},
+    )
+    store.ensure_profile(athlete)
+
+    client = TestClient(
+        create_app(
+            store=store,
+            auth_service=FakeAuthService({"athlete-only-token": athlete}),
+            planner=lambda payload, progress_callback=None: {"plan_text": ""},
+            stage2_automator=FakeStage2Automator(result=finalized_result()),
+        )
+    )
+
+    response = client.get(
+        "/api/admin/athletes",
+        headers={"Authorization": "Bearer athlete-only-token"},
+    )
+    assert response.status_code == 403
+
+
 def test_admin_get_athlete_by_id_returns_profile():
     client, store, _ = _build_client()
     athlete = AuthenticatedUser(

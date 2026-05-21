@@ -10,6 +10,8 @@ import httpx
 from fastapi import HTTPException, status
 from supabase import Client, create_client
 
+from .environment import is_production_environment
+
 logger = logging.getLogger(__name__)
 
 
@@ -78,6 +80,17 @@ class SupabaseAuthService:
         if service_role_key:
             logger.info("[auth] initializing with SUPABASE_SERVICE_ROLE_KEY has_url=%s", bool(url))
             return cls(create_client(url, service_role_key))
+
+        if allow_anon_fallback and is_production_environment():
+            logger.error(
+                "[auth] anon_fallback_blocked_in_production "
+                "ALLOW_SUPABASE_ANON_AUTH_FALLBACK is ignored in production; "
+                "SUPABASE_SERVICE_ROLE_KEY must be set"
+            )
+            raise RuntimeError(
+                "SUPABASE_SERVICE_ROLE_KEY is required in production; "
+                "ALLOW_SUPABASE_ANON_AUTH_FALLBACK is ignored."
+            )
 
         if allow_anon_fallback and anon_key:
             logger.warning(
