@@ -132,7 +132,7 @@ function QuickBuildGuide({ steps }: { steps: QuickBuildGuideStep[] }) {
   const completedCount = steps.filter((step) => step.complete).length;
   const totalCount = steps.length;
   const nextStep = steps.find((step) => !step.complete);
-  const progressPct = Math.round((completedCount / totalCount) * 100);
+  const progressPct = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
 
   return (
     <section className="quick-build-guide" aria-label="Quick Build progress">
@@ -278,7 +278,7 @@ function QuickBuildFormInner() {
       !errors.hard_sparring_days &&
       !errors.equipment_access;
     const focusComplete = input.key_goals.length > 0 && !errors.key_goals && !errors.weak_areas && !errors.focus_cap;
-    const generateComplete = !hasValidationErrors;
+    const generateComplete = Object.keys(errors).length === 0;
 
     return [
       { key: "profile", label: "Profile", detail: "Name and style", complete: profileComplete },
@@ -287,27 +287,7 @@ function QuickBuildFormInner() {
       { key: "focus", label: "Focus", detail: "Goals selected", complete: focusComplete },
       { key: "generate", label: "Generate", detail: "Ready to build", complete: generateComplete },
     ];
-  }, [
-    errors.equipment_access,
-    errors.fight_date,
-    errors.focus_cap,
-    errors.full_name,
-    errors.hard_sparring_days,
-    errors.key_goals,
-    errors.rounds_format,
-    errors.technical_style,
-    errors.training_availability,
-    errors.weak_areas,
-    errors.weekly_training_frequency,
-    hasValidationErrors,
-    input.equipment_access.length,
-    input.fight_date,
-    input.full_name,
-    input.key_goals.length,
-    input.no_scheduled_fight,
-    input.technical_style.length,
-    input.training_availability.length,
-  ]);
+  }, [input, errors]);
   const readyToGenerate = !hasValidationErrors;
 
   function patch<K extends keyof QuickBuildInput>(key: K, value: QuickBuildInput[K]) {
