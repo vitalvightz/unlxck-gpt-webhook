@@ -367,6 +367,29 @@ class FakeStore:
         job["updated_at"] = now_iso
         return dict(job)
 
+    def count_active_generation_jobs(self, *, stale_after_seconds: int = 90) -> int:
+        now = datetime.now(timezone.utc)
+        count = 0
+        for job in self.generation_jobs.values():
+            if str(job.get("status") or "") != "running":
+                continue
+            heartbeat_raw = job.get("heartbeat_at")
+            started_raw = job.get("started_at")
+            heartbeat = (
+                datetime.fromisoformat(str(heartbeat_raw).replace("Z", "+00:00"))
+                if isinstance(heartbeat_raw, str) and heartbeat_raw
+                else None
+            )
+            started_at = (
+                datetime.fromisoformat(str(started_raw).replace("Z", "+00:00"))
+                if isinstance(started_raw, str) and started_raw
+                else None
+            )
+            last_progress_at = heartbeat or started_at
+            if last_progress_at and (now - last_progress_at).total_seconds() < stale_after_seconds:
+                count += 1
+        return count
+
     def update_generation_job(self, job_id: str, **changes: dict) -> dict:
         job = self.generation_jobs.get(job_id)
         if not job:

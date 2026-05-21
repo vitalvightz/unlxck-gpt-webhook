@@ -218,6 +218,106 @@ def test_generate_plan_persists_retry_pass_result():
     assert saved["stage2_attempt_count"] == 2
 
 
+def test_generation_job_starts_when_running_count_below_concurrency_cap(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setenv("APP_GENERATION_MAX_CONCURRENT_JOBS", "2")
+    client, store, _ = _build_client()
+    running = store.create_or_get_generation_job(
+        athlete_id="athlete-2",
+        client_request_id="running-cap-check",
+        source="self_serve",
+        request_payload=_build_request().model_dump(mode="json"),
+    )
+    now_iso = _now()
+    store.update_generation_job(running["id"], status="running", started_at=now_iso, heartbeat_at=now_iso)
+
+    body, job = _start_generation(client)
+    assert body["status"] in {"queued", "running", "completed"}
+    assert job["status"] == "completed"
+
+
+def test_generation_job_remains_queued_when_running_count_hits_concurrency_cap(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setenv("APP_GENERATION_MAX_CONCURRENT_JOBS", "1")
+    client, store, _ = _build_client()
+    running = store.create_or_get_generation_job(
+        athlete_id="athlete-2",
+        client_request_id="running-at-cap",
+        source="self_serve",
+        request_payload=_build_request().model_dump(mode="json"),
+    )
+    now_iso = _now()
+    store.update_generation_job(running["id"], status="running", started_at=now_iso, heartbeat_at=now_iso)
+
+    response = client.post(
+        "/api/plans/generate",
+        headers={"Authorization": "Bearer athlete-token"},
+        json=_build_request().model_dump(mode="json"),
+    )
+
+    assert response.status_code == 202
+    body = response.json()
+    assert body["status"] == "queued"
+    queued = store.get_generation_job(body["job_id"])
+    assert queued["status"] == "queued"
+
+
+def test_failed_completed_and_stale_running_jobs_do_not_count_against_concurrency_cap(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setenv("APP_GENERATION_MAX_CONCURRENT_JOBS", "1")
+    client, store, _ = _build_client()
+    stale = store.create_or_get_generation_job(
+        athlete_id="athlete-2",
+        client_request_id="stale-running",
+        source="self_serve",
+        request_payload=_build_request().model_dump(mode="json"),
+    )
+    store.update_generation_job(
+        stale["id"],
+        status="running",
+        started_at="2026-01-01T00:00:00+00:00",
+        heartbeat_at="2026-01-01T00:00:00+00:00",
+    )
+    completed = store.create_or_get_generation_job(
+        athlete_id="athlete-3",
+        client_request_id="completed-job",
+        source="self_serve",
+        request_payload=_build_request().model_dump(mode="json"),
+    )
+    store.update_generation_job(completed["id"], status="completed", completed_at=_now())
+    failed = store.create_or_get_generation_job(
+        athlete_id="athlete-4",
+        client_request_id="failed-job",
+        source="self_serve",
+        request_payload=_build_request().model_dump(mode="json"),
+    )
+    store.update_generation_job(failed["id"], status="failed", completed_at=_now(), error="fail")
+
+    body, job = _start_generation(client)
+    assert body["status"] in {"queued", "running", "completed"}
+    assert job["status"] == "completed"
+
+
+def test_admin_generation_respects_same_global_concurrency_cap(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setenv("APP_GENERATION_MAX_CONCURRENT_JOBS", "1")
+    client, store, _ = _build_client()
+    # Seed latest intake so admin generate-from-latest-intake can schedule a job.
+    _start_generation(client)
+    running = store.create_or_get_generation_job(
+        athlete_id="athlete-2",
+        client_request_id="running-admin-cap",
+        source="self_serve",
+        request_payload=_build_request().model_dump(mode="json"),
+    )
+    now_iso = _now()
+    store.update_generation_job(running["id"], status="running", started_at=now_iso, heartbeat_at=now_iso)
+
+    response = client.post(
+        "/api/admin/athletes/athlete-1/plans/generate-from-latest-intake",
+        headers={"Authorization": "Bearer admin-token", "X-Client-Request-Id": "admin-cap"},
+    )
+    assert response.status_code == 202
+    body = response.json()
+    assert body["status"] == "queued"
+
+
 def test_generate_plan_request_payload_strips_quick_build_only_metadata():
     client, store, _ = _build_client()
     payload = _build_request().model_dump(mode="json")
