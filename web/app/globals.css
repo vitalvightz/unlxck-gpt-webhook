@@ -8628,6 +8628,15 @@ html[data-theme="light"] .appearance-mode-card {
   color: var(--text-primary);
 }
 
+html[data-theme="light"] .inline-warning-ack {
+  border-color: var(--border-default);
+  background: linear-gradient(180deg, rgba(255, 254, 251, 0.96), rgba(253, 242, 235, 0.96));
+}
+
+html[data-theme="light"] .inline-warning-ack-checked {
+  border-color: rgba(163, 21, 45, 0.32);
+}
+
 html[data-theme="light"] .custom-select-trigger[aria-expanded="true"] {
   border-color: rgba(163, 21, 45, 0.24);
   background: linear-gradient(180deg, rgba(255, 241, 238, 0.98), rgba(255, 247, 242, 0.98));
