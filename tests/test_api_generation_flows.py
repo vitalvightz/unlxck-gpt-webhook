@@ -894,6 +894,56 @@ def test_generate_plan_daily_limit_blocks_request_at_limit(monkeypatch: pytest.M
     assert second.json()["detail"] == "Daily generation limit reached. Try again tomorrow."
 
 
+def test_generate_plan_daily_limit_excludes_exempt_email(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setenv("APP_PLAN_GENERATE_DAILY_LIMIT_PER_USER", "1")
+    client, _, _ = _build_client()
+    exempt_user = AuthenticatedUser(
+        user_id="athlete-exempt",
+        email="michaelokaforjr@gmail.com",
+        full_name="Michael Okafor Jr",
+        metadata={},
+    )
+    client.app.state.auth_service.users_by_token["exempt-token"] = exempt_user
+
+    first = client.post(
+        "/api/plans/generate",
+        headers={"Authorization": "Bearer exempt-token", "X-Client-Request-Id": "exempt-1"},
+        json=_build_request().model_dump(mode="json"),
+    )
+    second = client.post(
+        "/api/plans/generate",
+        headers={"Authorization": "Bearer exempt-token", "X-Client-Request-Id": "exempt-2"},
+        json=_build_request().model_dump(mode="json"),
+    )
+    assert first.status_code == 202
+    assert second.status_code == 202
+
+
+def test_generate_plan_daily_limit_excludes_exempt_email_case_insensitive(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setenv("APP_PLAN_GENERATE_DAILY_LIMIT_PER_USER", "1")
+    client, _, _ = _build_client()
+    exempt_user = AuthenticatedUser(
+        user_id="athlete-exempt-upper",
+        email="MichaelOkaforJr@Gmail.com",
+        full_name="Michael Okafor Jr",
+        metadata={},
+    )
+    client.app.state.auth_service.users_by_token["exempt-token-upper"] = exempt_user
+
+    first = client.post(
+        "/api/plans/generate",
+        headers={"Authorization": "Bearer exempt-token-upper", "X-Client-Request-Id": "exempt-upper-1"},
+        json=_build_request().model_dump(mode="json"),
+    )
+    second = client.post(
+        "/api/plans/generate",
+        headers={"Authorization": "Bearer exempt-token-upper", "X-Client-Request-Id": "exempt-upper-2"},
+        json=_build_request().model_dump(mode="json"),
+    )
+    assert first.status_code == 202
+    assert second.status_code == 202
+
+
 def test_generate_plan_daily_limit_idempotent_retry_same_client_request_id(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setenv("APP_PLAN_GENERATE_DAILY_LIMIT_PER_USER", "1")
     client, _, _ = _build_client()
