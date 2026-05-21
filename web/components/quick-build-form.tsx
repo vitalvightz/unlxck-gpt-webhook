@@ -184,8 +184,8 @@ function QuickBuildGuide({ steps }: { steps: QuickBuildGuideStep[] }) {
           {completedCount}/{totalCount} ready
         </span>
       </div>
-      <div className="quick-build-guide-track" role="presentation" aria-hidden="true">
-        <span className="quick-build-guide-fill" style={{ width: `${progressPct}%` }} />
+      <div className="overview-progress-track quick-build-guide-track" role="presentation" aria-hidden="true">
+        <span className="overview-progress-fill quick-build-guide-fill" style={{ width: `${progressPct}%` }} />
       </div>
       <div className="quick-build-guide-steps">
         {steps.map((step, index) => {
