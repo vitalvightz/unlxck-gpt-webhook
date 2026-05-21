@@ -46,8 +46,8 @@ export type FocusPreset = {
 export const EQUIPMENT_PRESETS: EquipmentPreset[] = [
   {
     key: "home",
-    label: "Home / bodyweight",
-    description: "Bands, bag, partner",
+    label: "Home fight kit",
+    description: "Bands, bag, partner, med ball",
     equipment_access: ["bands", "heavy_bag", "partner", "medicine_ball"],
   },
   {
@@ -149,8 +149,8 @@ export const TRAINING_PRESETS: TrainingPreset[] = [
   {
     key: "five_days",
     label: "5 days",
-    description: "Mon, Tue, Wed, Thu, Sat",
-    training_availability: ["Monday", "Tuesday", "Wednesday", "Thursday", "Saturday"],
+    description: "Mon, Tue, Thu, Fri, Sat",
+    training_availability: ["Monday", "Tuesday", "Thursday", "Friday", "Saturday"],
     weekly_training_frequency: 5,
   },
 ];
