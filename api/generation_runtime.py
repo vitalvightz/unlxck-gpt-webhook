@@ -409,7 +409,11 @@ async def run_generation_job(
             plan_row = await asyncio.to_thread(store.get_plan, plan_id)
         if not plan_row and intake_id:
             latest_plan = await asyncio.to_thread(store.get_latest_plan, athlete_id)
-            if latest_plan and str(latest_plan.get("intake_id") or "") == intake_id:
+            if (
+                latest_plan
+                and str(latest_plan.get("intake_id") or "") == intake_id
+                and str(latest_plan.get("status") or "").strip().lower() != "archived"
+            ):
                 plan_row = latest_plan
                 plan_id = str(latest_plan.get("id") or "")
         if plan_row and plan_id:
