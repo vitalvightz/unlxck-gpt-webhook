@@ -11361,3 +11361,277 @@ html[data-app-surface="workspace"][data-theme="dark"] .desktop-nav-toggle {
 .empty-state-actions {
   margin-top: 2px;
 }
+
+/* ────────────────────────────────────────────────────────────────────
+   Light-theme overrides for components whose hard-coded dark surfaces
+   leaked through (Quick Build readiness card, sticky action bar,
+   refine banners, save indicators, toasts, settings toggles, etc.).
+   Without these, text rendered on a dark background became invisible
+   once the root variables flipped to light.
+   ──────────────────────────────────────────────────────────────────── */
+
+html[data-theme="light"] .quick-build-guide {
+  border-color: rgba(88, 62, 58, 0.1);
+  background:
+    radial-gradient(circle at top right, rgba(163, 21, 45, 0.10), transparent 36%),
+    linear-gradient(180deg, rgba(255, 252, 248, 0.98), rgba(255, 245, 239, 0.98));
+  box-shadow: var(--shadow-support);
+}
+
+html[data-theme="light"] .quick-build-starters {
+  border-color: rgba(88, 62, 58, 0.08);
+  background: linear-gradient(180deg, rgba(255, 252, 248, 0.96), rgba(255, 244, 237, 0.96));
+}
+
+html[data-theme="light"] .quick-build-guide-track {
+  background: rgba(88, 62, 58, 0.08);
+}
+
+html[data-theme="light"] .quick-build-guide-step {
+  border-color: rgba(88, 62, 58, 0.1);
+  background: rgba(255, 255, 255, 0.62);
+}
+
+html[data-theme="light"] .quick-build-guide-step-current {
+  border-color: rgba(163, 21, 45, 0.28);
+  background: rgba(163, 21, 45, 0.08);
+}
+
+html[data-theme="light"] .quick-build-guide-step-complete {
+  border-color: rgba(37, 131, 82, 0.22);
+  background: rgba(37, 131, 82, 0.08);
+}
+
+html[data-theme="light"] .quick-build-guide-step-index {
+  border-color: rgba(88, 62, 58, 0.16);
+  color: var(--text-muted);
+}
+
+html[data-theme="light"] .quick-build-guide-step-complete .quick-build-guide-step-index {
+  color: #1a7a42;
+  border-color: rgba(37, 131, 82, 0.32);
+  background: rgba(37, 131, 82, 0.12);
+}
+
+html[data-theme="light"] .quick-build-action-bar {
+  border-color: rgba(163, 21, 45, 0.18);
+  background: linear-gradient(180deg, rgba(255, 252, 248, 0.98), rgba(255, 244, 237, 0.98));
+  box-shadow: 0 18px 38px rgba(88, 56, 48, 0.10);
+}
+
+html[data-theme="light"] .quick-build-refine-banner,
+html[data-theme="light"] .quick-build-refine-notice {
+  border-color: rgba(88, 62, 58, 0.1);
+  background: rgba(255, 255, 255, 0.78);
+  color: var(--text-secondary);
+}
+
+html[data-theme="light"] .priority-clarification-option {
+  border-color: rgba(88, 62, 58, 0.1);
+  background: rgba(255, 255, 255, 0.62);
+  color: var(--text-primary);
+}
+
+html[data-theme="light"] .priority-clarification-option:hover {
+  border-color: rgba(163, 21, 45, 0.28);
+}
+
+html[data-theme="light"] .priority-clarification-option-selected {
+  border-color: rgba(163, 21, 45, 0.36);
+  background: linear-gradient(180deg, rgba(163, 21, 45, 0.12), rgba(163, 21, 45, 0.05));
+  box-shadow: inset 0 0 0 1px rgba(163, 21, 45, 0.08);
+}
+
+html[data-theme="light"] .focus-cap-badge {
+  background: rgba(88, 62, 58, 0.08);
+}
+
+html[data-theme="light"] .support-panel-success {
+  border-color: rgba(37, 131, 82, 0.22);
+  background: linear-gradient(180deg, rgba(236, 249, 242, 0.98), rgba(247, 252, 249, 0.98));
+}
+
+html[data-theme="light"] .empty-state-example {
+  background: rgba(255, 255, 255, 0.7);
+  border-color: rgba(88, 62, 58, 0.12);
+}
+
+html[data-theme="light"] .gi-empty-state {
+  border-color: rgba(88, 62, 58, 0.12);
+  background: rgba(255, 255, 255, 0.6);
+}
+
+html[data-theme="light"] .weekly-sparring-view {
+  border-bottom-color: rgba(88, 62, 58, 0.1);
+}
+
+html[data-theme="light"] .onboarding-save-indicator {
+  background: rgba(255, 255, 255, 0.72);
+  border-color: rgba(88, 62, 58, 0.1);
+}
+
+html[data-theme="light"] .onboarding-save-indicator-retry:hover:not(:disabled) {
+  background: rgba(88, 62, 58, 0.06);
+}
+
+html[data-theme="light"] .toast {
+  border-color: rgba(88, 62, 58, 0.12);
+  background: linear-gradient(180deg, rgba(255, 252, 248, 0.98), rgba(255, 244, 237, 0.98));
+  box-shadow: 0 18px 40px rgba(88, 56, 48, 0.14);
+}
+
+html[data-theme="light"] .toast-action {
+  border-color: rgba(88, 62, 58, 0.12);
+  background: rgba(88, 62, 58, 0.05);
+}
+
+html[data-theme="light"] .toast-action:hover {
+  background: rgba(88, 62, 58, 0.1);
+}
+
+html[data-theme="light"] .toast-dismiss:hover {
+  background: rgba(88, 62, 58, 0.08);
+}
+
+html[data-theme="light"] .skeleton {
+  background: linear-gradient(
+    90deg,
+    rgba(88, 62, 58, 0.05) 25%,
+    rgba(88, 62, 58, 0.12) 50%,
+    rgba(88, 62, 58, 0.05) 75%
+  );
+  background-size: 200% 100%;
+}
+
+html[data-theme="light"] .mobile-tab-bar {
+  background: linear-gradient(180deg, rgba(255, 252, 248, 0.96), rgba(252, 244, 237, 0.98));
+  border-top-color: rgba(88, 62, 58, 0.1);
+}
+
+html[data-theme="light"] .settings-toggle-row {
+  background: rgba(255, 255, 255, 0.62);
+}
+
+html[data-theme="light"] .settings-toggle-row input[type="checkbox"] {
+  background: rgba(88, 62, 58, 0.12);
+  border-color: rgba(88, 62, 58, 0.16);
+}
+
+html[data-theme="light"] .settings-segmented-control {
+  background: rgba(255, 255, 255, 0.62);
+}
+
+html[data-theme="light"] .sidebar-user-actions {
+  border-top-color: rgba(88, 62, 58, 0.08);
+}
+
+html[data-theme="light"] .guided-injury-chip {
+  border-color: rgba(88, 62, 58, 0.16);
+  background: rgba(255, 255, 255, 0.85);
+}
+
+html[data-theme="light"] .guided-injury-chip-active {
+  border-color: rgba(163, 21, 45, 0.42);
+  box-shadow: 0 0 0 1px rgba(163, 21, 45, 0.1) inset;
+}
+
+html[data-theme="light"] .guided-injury-chip-remove {
+  background: rgba(88, 62, 58, 0.08);
+  color: var(--text-muted);
+}
+
+html[data-theme="light"] .guided-injury-editor-header {
+  border-color: rgba(88, 62, 58, 0.1);
+  background: linear-gradient(180deg, rgba(255, 252, 248, 0.98), rgba(255, 244, 237, 0.98));
+}
+
+html[data-theme="light"] .injury-card-status-pill {
+  border-color: rgba(88, 62, 58, 0.16);
+  color: var(--text-secondary);
+}
+
+html[data-theme="light"] .injury-card-edit-btn {
+  border-color: rgba(88, 62, 58, 0.16);
+  background: rgba(255, 255, 255, 0.6);
+}
+
+html[data-theme="light"] .injury-trend-badge {
+  background: rgba(88, 62, 58, 0.08);
+  color: var(--text-secondary);
+}
+
+html[data-theme="light"] .injury-trend-badge-improving {
+  background: rgba(37, 131, 82, 0.14);
+  color: #1a7a42;
+}
+
+html[data-theme="light"] .injury-trend-badge-worsening {
+  background: rgba(163, 21, 45, 0.14);
+  color: var(--danger-ink);
+}
+
+html[data-theme="light"] .weekly-sparring-class-badge {
+  border-color: rgba(88, 62, 58, 0.14);
+}
+
+html[data-theme="light"] .weekly-sparring-detail {
+  border-color: rgba(88, 62, 58, 0.12);
+  background: rgba(255, 255, 255, 0.7);
+}
+
+html[data-theme="light"] .plans-dashboard-management-actions {
+  border-top-color: rgba(88, 62, 58, 0.1);
+}
+
+html[data-theme="light"] .settings-coming-soon {
+  background: rgba(255, 255, 255, 0.6);
+  color: var(--text-secondary);
+}
+
+html[data-theme="light"] .settings-subsection {
+  background: rgba(255, 255, 255, 0.62);
+}
+
+html[data-theme="light"] .why-tooltip-trigger {
+  border-color: rgba(88, 62, 58, 0.16);
+  background: rgba(255, 255, 255, 0.62);
+  color: var(--text-secondary);
+}
+
+html[data-theme="light"] .why-tooltip-trigger:hover,
+html[data-theme="light"] .why-tooltip-trigger:focus-visible {
+  background: rgba(163, 21, 45, 0.1);
+  border-color: rgba(163, 21, 45, 0.3);
+  color: var(--brand-red);
+}
+
+html[data-theme="light"] .why-tooltip-trigger[aria-expanded="true"] {
+  background: rgba(163, 21, 45, 0.14);
+  border-color: rgba(163, 21, 45, 0.36);
+}
+
+html[data-theme="light"] .why-tooltip-bubble {
+  border-color: rgba(88, 62, 58, 0.14);
+  background: linear-gradient(180deg, rgba(255, 252, 248, 0.98), rgba(255, 244, 237, 0.98));
+  color: var(--text-secondary);
+  box-shadow: 0 18px 38px rgba(88, 56, 48, 0.16);
+}
+
+html[data-theme="light"] .loading-milestone-feed,
+html[data-theme="light"] .loading-milestone-rotator {
+  border-color: rgba(88, 62, 58, 0.12);
+  background: linear-gradient(180deg, rgba(255, 244, 237, 0.96), rgba(255, 250, 246, 0.98));
+}
+
+html[data-theme="light"] .loading-milestone-row {
+  border-top-color: rgba(88, 62, 58, 0.08);
+}
+
+html[data-theme="light"] .loading-milestone-progress {
+  background: rgba(88, 62, 58, 0.12);
+}
+
+html[data-theme="light"] .loading-operational-item {
+  border-color: rgba(88, 62, 58, 0.1);
+  background: rgba(255, 255, 255, 0.62);
+}
