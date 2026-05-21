@@ -241,7 +241,7 @@ function PresetSelect({
       <label htmlFor={id}>{label}</label>
       <CustomSelect
         id={id}
-        value={activeKey ?? ""}
+        value={options.some((o) => o.value === activeKey) ? (activeKey ?? "") : ""}
         options={options}
         placeholder={placeholder}
         includeEmptyOption
