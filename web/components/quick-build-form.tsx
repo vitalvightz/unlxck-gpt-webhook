@@ -53,6 +53,13 @@ const WEEKLY_FREQUENCY_OPTIONS: IntakeOption[] = Array.from({ length: 6 }, (_, i
   value: String(index + 1),
 }));
 
+type QuickBuildGuideStep = {
+  key: string;
+  label: string;
+  detail: string;
+  complete: boolean;
+};
+
 type ChipMultiSelectProps = {
   label: string;
   options: IntakeOption[];
@@ -118,6 +125,47 @@ function FieldError({ message }: { message?: string }) {
     <p className="quick-build-field-error" role="alert">
       {message}
     </p>
+  );
+}
+
+function QuickBuildGuide({ steps }: { steps: QuickBuildGuideStep[] }) {
+  const completedCount = steps.filter((step) => step.complete).length;
+  const totalCount = steps.length;
+  const nextStep = steps.find((step) => !step.complete);
+  const progressPct = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
+
+  return (
+    <section className="quick-build-guide" aria-label="Quick Build progress">
+      <div className="quick-build-guide-header">
+        <div>
+          <p className="kicker">Fast path</p>
+          <h2 className="quick-build-guide-title">Quick Build readiness</h2>
+        </div>
+        <span className={completedCount === totalCount ? "badge status-badge-success" : "badge status-badge-neutral"}>
+          {completedCount}/{totalCount} ready
+        </span>
+      </div>
+      <div className="quick-build-guide-track" role="presentation" aria-hidden="true">
+        <span className="quick-build-guide-fill" style={{ width: `${progressPct}%` }} />
+      </div>
+      <div className="quick-build-guide-steps">
+        {steps.map((step, index) => {
+          const isCurrent = nextStep?.key === step.key;
+          return (
+            <div
+              key={step.key}
+              className={`quick-build-guide-step ${step.complete ? "quick-build-guide-step-complete" : ""} ${isCurrent ? "quick-build-guide-step-current" : ""}`.trim()}
+            >
+              <span className="quick-build-guide-step-index">{String(index + 1).padStart(2, "0")}</span>
+              <span className="quick-build-guide-step-copy">
+                <span className="quick-build-guide-step-label">{step.label}</span>
+                <span className="quick-build-guide-step-detail">{step.complete ? "Ready" : step.detail}</span>
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    </section>
   );
 }
 
@@ -218,6 +266,29 @@ function QuickBuildFormInner() {
     () => (maxWeeklySessions > 0 ? WEEKLY_FREQUENCY_OPTIONS.slice(0, maxWeeklySessions) : []),
     [maxWeeklySessions],
   );
+  const hasValidationErrors = Object.keys(errors).length > 0;
+  const quickBuildGuideSteps: QuickBuildGuideStep[] = useMemo(() => {
+    const profileComplete = Boolean(input.full_name.trim()) && input.technical_style.length > 0 && !errors.full_name && !errors.technical_style;
+    const fightComplete = Boolean(input.no_scheduled_fight || input.fight_date) && !errors.fight_date && !errors.rounds_format;
+    const scheduleComplete =
+      input.training_availability.length > 0 &&
+      input.equipment_access.length > 0 &&
+      !errors.training_availability &&
+      !errors.weekly_training_frequency &&
+      !errors.hard_sparring_days &&
+      !errors.equipment_access;
+    const focusComplete = input.key_goals.length > 0 && !errors.key_goals && !errors.weak_areas && !errors.focus_cap;
+    const generateComplete = Object.keys(errors).length === 0;
+
+    return [
+      { key: "profile", label: "Profile", detail: "Name and style", complete: profileComplete },
+      { key: "fight", label: "Fight", detail: "Date or open camp", complete: fightComplete },
+      { key: "schedule", label: "Schedule", detail: "Days, sessions, kit", complete: scheduleComplete },
+      { key: "focus", label: "Focus", detail: "Goals selected", complete: focusComplete },
+      { key: "generate", label: "Generate", detail: "Ready to build", complete: generateComplete },
+    ];
+  }, [input, errors]);
+  const readyToGenerate = !hasValidationErrors;
 
   function patch<K extends keyof QuickBuildInput>(key: K, value: QuickBuildInput[K]) {
     setInput((current) => ({ ...current, [key]: value }));
@@ -394,6 +465,8 @@ function QuickBuildFormInner() {
           control - you can also refine this plan afterwards.
         </p>
       </section>
+
+      <QuickBuildGuide steps={quickBuildGuideSteps} />
 
       <article className="step-card">
         <div className="form-section-header">
@@ -627,7 +700,12 @@ function QuickBuildFormInner() {
       </article>
 
       <div className="form-actions quick-build-action-bar">
-        <p className="muted quick-build-action-copy">Refine fatigue, sparring days, and detailed weaknesses later from the plan page.</p>
+        <div className="quick-build-action-copy">
+          <p className="quick-build-action-title">
+            {readyToGenerate ? "Ready to generate." : "Quick Build is almost ready."}
+          </p>
+          <p className="muted">Refine fatigue, sparring days, and detailed weaknesses later from the plan page.</p>
+        </div>
         {submitError ? <FieldError message={submitError} /> : null}
         <div className="plan-summary-actions quick-build-action-buttons">
           <button type="submit" className="cta" disabled={isPending}>
