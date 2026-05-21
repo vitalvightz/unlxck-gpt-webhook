@@ -766,8 +766,8 @@ function QuickBuildFormInner() {
         </div>
         <PresetSelect
           id="qb-training-preset"
-          label="Recommended training"
-          placeholder="Select training preset"
+          label="Recommended training (optional)"
+          placeholder="Optional training preset"
           options={trainingPresetOptions}
           activeKey={activeTrainingPreset}
           onSelect={handleTrainingPresetSelect}
@@ -807,8 +807,8 @@ function QuickBuildFormInner() {
         </div>
         <PresetSelect
           id="qb-equipment-preset"
-          label="Recommended equipment"
-          placeholder="Select equipment preset"
+          label="Recommended equipment (optional)"
+          placeholder="Optional equipment preset"
           options={equipmentPresetOptions}
           activeKey={activeEquipmentPreset}
           onSelect={handleEquipmentPresetSelect}
@@ -829,8 +829,8 @@ function QuickBuildFormInner() {
         </div>
         <PresetSelect
           id="qb-focus-preset"
-          label="Recommended focus"
-          placeholder="Select focus preset"
+          label="Recommended focus (optional)"
+          placeholder="Optional focus preset"
           options={focusPresetOptions}
           activeKey={activeFocusPreset}
           onSelect={handleFocusPresetSelect}
