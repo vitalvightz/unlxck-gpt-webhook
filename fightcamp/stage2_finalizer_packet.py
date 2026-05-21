@@ -145,6 +145,14 @@ def _compact_role(role: dict[str, Any]) -> dict[str, Any]:
         "original_role_key",
         "original_unused_day_role",
 
+        # Dedicated recovery/mobility support markers
+        "is_dedicated_recovery_mobility_day",
+        "priority_recovery_touch",
+        "support_kind",
+        "counts_toward_conditioning_cap",
+        "counts_toward_exercise_cap",
+        "counts_toward_strength_cap",
+
         # Safety filters for low-aerobic recovery work
         "blocked_systems",
         "blocked_intensities",
@@ -366,6 +374,7 @@ def build_stage2_finalizer_packet(
             "Use priority_focus.derived_clarification_tags as internal emphasis signals when preserving the plan's intent. These tags clarify the kind of adaptation the athlete meant, but they do not override hard safety, schedule, injury, phase, or recovery constraints.",
             "Do not expose derived_clarification_tags or raw scoring/reason-code labels directly in athlete-facing text.",
             "Use parsed_injuries and guided_source_injury_subtypes as injury context only. Do not override parsed injury_type or invent diagnoses from subtype tags.",
+            "Small mobility prep, reset, or warm-up that appears inside another session does not satisfy or replace a dedicated recovery/mobility day. A role flagged is_dedicated_recovery_mobility_day is a session-level recovery tool and must not be suppressed because mobility already appears as prep elsewhere in the week.",
         ],
         "forbidden_output": {
             "phase_toolbox_labels": list(_FORBIDDEN_TOOLBOX_LABELS),

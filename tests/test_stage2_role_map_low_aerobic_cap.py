@@ -573,3 +573,339 @@ def test_hard_sparring_locked_day_blocks_other_assignments():
 
     assert hard_role.get("scheduled_day_hint") == "Wednesday"
     assert strength_role.get("scheduled_day_hint") != "Wednesday"
+
+
+# ---------------------------------------------------------------------------
+# Mobility / recovery support protection
+# ---------------------------------------------------------------------------
+
+
+def _rehab_athlete(**overrides):
+    base = {
+        "key_goals": ["rehab"],
+        "weaknesses": ["shoulder"],
+        "injuries": ["shoulder"],
+    }
+    base.update(overrides)
+    return base
+
+
+def test_converted_mobility_role_carries_protection_flags():
+    week = {
+        "phase": "GPP",
+        "calendar_days": [{"weekday": "thursday", "d_day": 36}],
+        "intentionally_unused_days": [{"day": "thursday", "role": "off_day"}],
+    }
+    athlete = _mobility_athlete()
+    upgraded = _upgrade_unused_days_to_low_load_support(week, [], athlete)
+    assert len(upgraded) == 1
+    role = upgraded[0]
+    assert role["role_key"] == "converted_mobility_support_day"
+    assert role["counts_toward_conditioning_cap"] is False
+    assert role["counts_toward_exercise_cap"] is False
+    assert role["counts_toward_strength_cap"] is False
+    assert role["is_dedicated_recovery_mobility_day"] is True
+    assert role["priority_recovery_touch"] is True
+    assert role["support_kind"] == "mobility"
+
+
+def test_converted_rehab_role_carries_protection_flags():
+    week = {
+        "phase": "GPP",
+        "calendar_days": [{"weekday": "thursday", "d_day": 36}],
+        "intentionally_unused_days": [{"day": "thursday", "role": "off_day"}],
+    }
+    upgraded = _upgrade_unused_days_to_low_load_support(week, [], _rehab_athlete())
+    assert len(upgraded) == 1
+    role = upgraded[0]
+    assert role["role_key"] == "converted_rehab_friendly_support_day"
+    assert role["counts_toward_conditioning_cap"] is False
+    assert role["is_dedicated_recovery_mobility_day"] is True
+    assert role["support_kind"] == "rehab_friendly"
+
+
+def test_converted_gas_tank_role_still_counts_toward_conditioning_cap():
+    week = {
+        "phase": "GPP",
+        "calendar_days": [{"weekday": "thursday", "d_day": 36}],
+        "intentionally_unused_days": [{"day": "thursday", "role": "off_day"}],
+    }
+    upgraded = _upgrade_unused_days_to_low_load_support(week, [], _gas_tank_athlete())
+    assert len(upgraded) == 1
+    role = upgraded[0]
+    assert role["role_key"] == "converted_low_aerobic_gas_tank_day"
+    assert role["counts_toward_conditioning_cap"] is True
+    assert role["support_kind"] == "gas_tank"
+    assert role.get("is_dedicated_recovery_mobility_day") is not True
+
+
+def test_recovery_day_gas_tank_upgrade_keeps_cap_pressure():
+    week = {
+        "phase": "GPP",
+        "calendar_days": [{"weekday": "tuesday", "d_day": 36}],
+    }
+    session_roles = [
+        {
+            "session_index": 1,
+            "category": "recovery",
+            "role_key": "recovery_reset_day",
+            "scheduled_day_hint": "tuesday",
+        }
+    ]
+    upgraded = _upgrade_recovery_days_to_gas_tank(week, session_roles, _gas_tank_athlete())
+    assert upgraded[0]["role_key"] == "recovery_aerobic_gas_tank_day"
+    assert upgraded[0]["counts_toward_conditioning_cap"] is True
+    assert upgraded[0]["support_kind"] == "gas_tank"
+
+
+def test_mobility_support_does_not_consume_conditioning_cap():
+    gas_tank_role = {
+        "category": "conditioning",
+        "role_key": "recovery_aerobic_gas_tank_day",
+        "preferred_system": "aerobic",
+        "recovery_compatible": True,
+        "gas_tank_recovery_touch": True,
+        "counts_toward_conditioning_cap": True,
+    }
+    mobility_role = {
+        "category": "conditioning",
+        "role_key": "converted_mobility_support_day",
+        "preferred_system": "aerobic",
+        "recovery_compatible": True,
+        "priority_recovery_touch": True,
+        "is_dedicated_recovery_mobility_day": True,
+        "counts_toward_conditioning_cap": False,
+    }
+    # Predicate still recognises both as low-aerobic support semantically.
+    assert _is_low_aerobic_support_role(gas_tank_role) is True
+    assert _is_low_aerobic_support_role(mobility_role) is True
+    # But the cap counter only counts the gas-tank role.
+    assert _count_low_aerobic_support_roles([gas_tank_role, mobility_role]) == 1
+
+
+def test_mobility_support_does_not_block_gas_tank_in_same_week():
+    """Mobility support already present must not displace gas-tank cap room."""
+    week = {
+        "phase": "GPP",
+        "calendar_days": [
+            {"weekday": "tuesday", "d_day": 36},
+            {"weekday": "thursday", "d_day": 34},
+        ],
+        # The week already has its mobility touch from a previous step.
+        "intentionally_unused_days": [{"day": "thursday", "role": "off_day"}],
+    }
+    mobility_role = {
+        "session_index": 1,
+        "category": "conditioning",
+        "role_key": "converted_mobility_support_day",
+        "preferred_system": "aerobic",
+        "scheduled_day_hint": "tuesday",
+        "recovery_compatible": True,
+        "priority_recovery_touch": True,
+        "is_dedicated_recovery_mobility_day": True,
+        "counts_toward_conditioning_cap": False,
+    }
+    # High-cut athlete: gas-tank cap is 1. The mobility role must not eat it.
+    athlete = _gas_tank_athlete(cut_severity_bucket="high")
+    upgraded = _upgrade_unused_days_to_low_load_support(week, [mobility_role], athlete)
+    converted_gas = [
+        r for r in upgraded if r["role_key"] == "converted_low_aerobic_gas_tank_day"
+    ]
+    assert len(converted_gas) == 1
+
+
+def test_dedicated_mobility_role_priority_rank_above_accessories():
+    from fightcamp.stage2_role_map import _non_spar_role_priority_rank
+
+    mobility_role = {
+        "category": "conditioning",
+        "role_key": "converted_mobility_support_day",
+        "preferred_system": "aerobic",
+        "is_dedicated_recovery_mobility_day": True,
+    }
+    accessory_role = {
+        "category": "strength",
+        "role_key": "secondary_strength_day",
+    }
+    primary_strength = {
+        "category": "strength",
+        "role_key": "primary_strength_day",
+    }
+
+    # GPP: primary_strength=4, mobility=3, accessory=2 → mobility above accessory, below primary.
+    mobility_rank = _non_spar_role_priority_rank(
+        mobility_role, "GPP", is_hard_spar_week=True, is_meaningful_cut=False
+    )
+    accessory_rank = _non_spar_role_priority_rank(
+        accessory_role, "GPP", is_hard_spar_week=True, is_meaningful_cut=False
+    )
+    primary_rank = _non_spar_role_priority_rank(
+        primary_strength, "GPP", is_hard_spar_week=True, is_meaningful_cut=False
+    )
+    assert mobility_rank > accessory_rank
+    assert mobility_rank < primary_rank
+
+
+def test_dedicated_mobility_role_survives_hard_fatigue_compression():
+    """Under high-fatigue spar-first compression with one non-spar slot, a dedicated
+    mobility role wins the tiebreak against a generic aerobic conditioning role."""
+    from fightcamp.stage2_role_map import _apply_high_fatigue_week_compression
+
+    week = {
+        "phase": "SPP",
+        "calendar_days": [
+            {"weekday": "monday", "d_day": 27},
+            {"weekday": "wednesday", "d_day": 25},
+            {"weekday": "friday", "d_day": 23},
+        ],
+        "resolved_rule_state": {},
+    }
+    # Generic aerobic conditioning (no protection flag), appended first.
+    generic_aerobic = {
+        "session_index": 1,
+        "category": "conditioning",
+        "role_key": "aerobic_support_day",
+        "preferred_system": "aerobic",
+        "scheduled_day_hint": "monday",
+    }
+    # Dedicated mobility support, appended LAST (matches real upgrade ordering).
+    mobility = {
+        "session_index": 2,
+        "category": "conditioning",
+        "role_key": "converted_mobility_support_day",
+        "preferred_system": "aerobic",
+        "scheduled_day_hint": "wednesday",
+        "is_dedicated_recovery_mobility_day": True,
+        "priority_recovery_touch": True,
+        "counts_toward_conditioning_cap": False,
+    }
+    # Hard sparring fills the Friday slot.
+    hard_spar = {
+        "session_index": 3,
+        "category": "sparring",
+        "role_key": "hard_sparring_day",
+        "scheduled_day_hint": "friday",
+    }
+    athlete = {
+        "training_days": ["monday", "wednesday", "friday"],
+        "hard_sparring_days": ["friday"],
+        "training_frequency": 3,
+        "fatigue": "high",
+    }
+    kept, _suppressed = _apply_high_fatigue_week_compression(
+        week, [generic_aerobic, mobility, hard_spar], [], athlete,
+    )
+    kept_keys = {r["role_key"] for r in kept}
+    assert "converted_mobility_support_day" in kept_keys
+    assert "hard_sparring_day" in kept_keys
+    # Only one non-spar slot remained, generic aerobic was dropped first.
+    assert "aerobic_support_day" not in kept_keys
+
+
+def test_mobility_goal_with_hard_sparring_keeps_mobility_role():
+    week = {
+        "phase": "SPP",
+        "calendar_days": [
+            {"weekday": "monday", "d_day": 27},
+            {"weekday": "wednesday", "d_day": 25},
+            {"weekday": "friday", "d_day": 23},
+        ],
+        "intentionally_unused_days": [{"day": "wednesday", "role": "off_day"}],
+    }
+    athlete = _mobility_athlete(
+        training_days=["monday", "wednesday", "friday"],
+        hard_sparring_days=["monday", "friday"],
+    )
+    plan = [
+        {"day": "monday", "status": "hard_as_planned"},
+        {"day": "friday", "status": "hard_as_planned"},
+    ]
+    upgraded = _upgrade_unused_days_to_low_load_support(week, [], athlete, hard_sparring_plan=plan)
+    role_keys = [r["role_key"] for r in upgraded]
+    assert "converted_mobility_support_day" in role_keys
+    mobility_role = next(r for r in upgraded if r["role_key"] == "converted_mobility_support_day")
+    assert mobility_role["counts_toward_conditioning_cap"] is False
+    assert mobility_role["is_dedicated_recovery_mobility_day"] is True
+
+
+def test_mobility_red_flag_injury_still_suppresses_mobility_creation():
+    """Safety must still win — red-flag injury blocks mobility conversion."""
+    week = {
+        "phase": "SPP",
+        "calendar_days": [{"weekday": "thursday", "d_day": 27}],
+        "intentionally_unused_days": [{"day": "thursday", "role": "off_day"}],
+    }
+    athlete = _mobility_athlete(
+        cut_severity_bucket="critical",
+        readiness_flags=["red_flag_injury"],
+    )
+    upgraded = _upgrade_unused_days_to_low_load_support(week, [], athlete)
+    assert upgraded == []
+    assert week["intentionally_unused_days"][0].get("low_aerobic_cap_skipped") is True
+
+
+def test_mobility_support_added_when_conditioning_cap_already_full():
+    """If a gas-tank role already fills the conditioning cap, a mobility
+    support conversion should still be added when the profile justifies it
+    and safety gates are clear — the mobility role does not consume the cap."""
+    week = {
+        "phase": "GPP",
+        "calendar_days": [
+            {"weekday": "tuesday", "d_day": 36},
+            {"weekday": "thursday", "d_day": 34},
+        ],
+        "intentionally_unused_days": [{"day": "thursday", "role": "off_day"}],
+    }
+    # Pre-existing gas-tank role that counts toward the conditioning cap.
+    gas_tank_role = {
+        "session_index": 1,
+        "category": "conditioning",
+        "role_key": "recovery_aerobic_gas_tank_day",
+        "preferred_system": "aerobic",
+        "scheduled_day_hint": "tuesday",
+        "recovery_compatible": True,
+        "gas_tank_recovery_touch": True,
+        "counts_toward_conditioning_cap": True,
+    }
+    # High-cut mobility-profile athlete → cap is 1, already filled by the
+    # gas-tank role. Mobility support must still be allowed through.
+    athlete = _mobility_athlete(cut_severity_bucket="high")
+    upgraded = _upgrade_unused_days_to_low_load_support(
+        week, [gas_tank_role], athlete
+    )
+    role_keys = [r["role_key"] for r in upgraded]
+    assert "recovery_aerobic_gas_tank_day" in role_keys
+    assert "converted_mobility_support_day" in role_keys
+    mobility = next(
+        r for r in upgraded if r["role_key"] == "converted_mobility_support_day"
+    )
+    assert mobility["counts_toward_conditioning_cap"] is False
+    assert mobility["is_dedicated_recovery_mobility_day"] is True
+    # Not annotated as cap-skipped — the day was converted, not skipped.
+    assert week["intentionally_unused_days"] == []
+
+
+def test_mobility_support_does_not_increment_cap_count_for_later_iterations():
+    """Two-day mobility week: both unused days should convert, because mobility
+    roles do not consume cap budget. (legacy_phase_ceiling still bounds them at 2.)"""
+    week = {
+        "phase": "GPP",
+        "calendar_days": [
+            {"weekday": "tuesday", "d_day": 36},
+            {"weekday": "thursday", "d_day": 34},
+        ],
+        "intentionally_unused_days": [
+            {"day": "tuesday", "role": "off_day"},
+            {"day": "thursday", "role": "off_day"},
+        ],
+    }
+    # cut_severity_bucket="high" → underlying cap is 1, but mobility bypasses it.
+    athlete = _mobility_athlete(cut_severity_bucket="high")
+    upgraded = _upgrade_unused_days_to_low_load_support(week, [], athlete)
+    mobility_roles = [
+        r for r in upgraded if r["role_key"] == "converted_mobility_support_day"
+    ]
+    # Both days converted — cap of 1 did not block the second mobility role.
+    assert len(mobility_roles) == 2
+    assert all(r["counts_toward_conditioning_cap"] is False for r in mobility_roles)
+    assert week["intentionally_unused_days"] == []
