@@ -397,6 +397,27 @@ def _plan_generate_rate_limit_window_seconds() -> float:
         return 60.0
 
 
+def _stage1_preview_rate_limit_requests() -> int:
+    raw_value = os.getenv("APP_STAGE1_PREVIEW_RATE_LIMIT", "3").strip()
+    try:
+        return max(0, int(raw_value))
+    except ValueError:
+        logger.warning("[rate-limit] invalid APP_STAGE1_PREVIEW_RATE_LIMIT=%r; falling back to 3", raw_value)
+        return 3
+
+
+def _stage1_preview_rate_limit_window_seconds() -> float:
+    raw_value = os.getenv("APP_STAGE1_PREVIEW_RATE_LIMIT_WINDOW_SECONDS", "60").strip()
+    try:
+        return max(1.0, float(raw_value))
+    except ValueError:
+        logger.warning(
+            "[rate-limit] invalid APP_STAGE1_PREVIEW_RATE_LIMIT_WINDOW_SECONDS=%r; falling back to 60",
+            raw_value,
+        )
+        return 60.0
+
+
 def _plan_generate_daily_limit_per_user() -> int:
     raw_value = os.getenv("APP_PLAN_GENERATE_DAILY_LIMIT_PER_USER", "5").strip()
     try:
@@ -867,6 +888,15 @@ def create_app(
         if rate_limit_requests > 0
         else None
     )
+    stage1_preview_rate_limit_requests = _stage1_preview_rate_limit_requests()
+    app.state.stage1_preview_rate_limiter = (
+        SlidingWindowRateLimiter(
+            max_requests=stage1_preview_rate_limit_requests,
+            window_seconds=_stage1_preview_rate_limit_window_seconds(),
+        )
+        if stage1_preview_rate_limit_requests > 0
+        else None
+    )
     app.add_middleware(
         CORSMiddleware,
         allow_origins=_cors_origins(),
@@ -973,6 +1003,9 @@ def create_app(
 
     def get_plan_generate_rate_limiter(request: Request) -> SlidingWindowRateLimiter | None:
         return request.app.state.plan_generate_rate_limiter
+
+    def get_stage1_preview_rate_limiter(request: Request) -> SlidingWindowRateLimiter | None:
+        return request.app.state.stage1_preview_rate_limiter
 
     def require_user(
         credentials: HTTPAuthorizationCredentials | None = Depends(security),
@@ -1254,6 +1287,7 @@ def create_app(
         request_body: PlanRequest,
         profile: ProfileRecord = Depends(require_profile),
         planner_fn: Planner = Depends(get_planner),
+        rate_limiter: SlidingWindowRateLimiter | None = Depends(get_stage1_preview_rate_limiter),
     ) -> PlanStage1PreviewResponse:
         focus_validation = validate_performance_focus_selections(
             request_body.fight_date,
@@ -1266,6 +1300,16 @@ def create_app(
                 status_code=status.HTTP_409_CONFLICT,
                 detail=focus_validation.error_message or "Too many focus selections for this camp.",
             )
+        if rate_limiter is not None:
+            retry_after = rate_limiter.check(profile.athlete_id)
+            if retry_after is not None:
+                raise HTTPException(
+                    status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                    detail={
+                        "message": "Too many Stage 1 preview requests. Try again shortly.",
+                        "retry_after_seconds": retry_after,
+                    },
+                )
 
         logger.info("[stage1-preview] start athlete_id=%s", profile.athlete_id)
         stage1_result = await _run_stage1_planner(planner_fn, request_body.to_payload())
@@ -1876,12 +1920,15 @@ def _build_startup_failure_app(detail: str) -> FastAPI:
         return None
 
     @app.get("/health")
-    def health() -> dict[str, str | bool]:
-        return {
-            "ok": False,
-            "app": "unlxck-fight-camp-api",
-            "detail": detail,
-        }
+    def health() -> JSONResponse:
+        return JSONResponse(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            content={
+                "ok": False,
+                "app": "unlxck-fight-camp-api",
+                "detail": detail,
+            },
+        )
 
     return app
 

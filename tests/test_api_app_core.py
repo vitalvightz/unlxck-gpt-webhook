@@ -208,7 +208,7 @@ def test_runtime_app_falls_back_to_health_endpoint_when_supabase_config_missing(
     client = TestClient(reloaded.app)
     response = client.get("/health")
 
-    assert response.status_code == 200
+    assert response.status_code == 503
     assert response.json() == {
         "ok": False,
         "app": "unlxck-fight-camp-api",
@@ -269,7 +269,7 @@ def test_runtime_app_falls_back_to_health_endpoint_when_runtime_config_is_invali
     client = TestClient(reloaded.app)
     response = client.get("/health")
 
-    assert response.status_code == 200
+    assert response.status_code == 503
     assert response.json() == {
         "ok": False,
         "app": "unlxck-fight-camp-api",
@@ -296,7 +296,7 @@ def test_runtime_app_fails_loudly_when_plan_schema_is_invalid_and_fallback_disab
     client = TestClient(reloaded.app)
     response = client.get("/health")
 
-    assert response.status_code == 200
+    assert response.status_code == 503
     assert response.json() == {
         "ok": False,
         "app": "unlxck-fight-camp-api",
@@ -324,7 +324,7 @@ def test_runtime_app_returns_startup_failure_when_store_is_restricted(
     client = TestClient(reloaded.app)
     response = client.get("/health")
 
-    assert response.status_code == 200
+    assert response.status_code == 503
     assert response.json()["ok"] is False
     assert response.json()["app"] == "unlxck-fight-camp-api"
     assert "JSON could not be generated" in response.json()["detail"]
