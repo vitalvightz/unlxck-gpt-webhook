@@ -464,7 +464,7 @@ def test_archived_plan_is_hidden_from_athlete_routes():
     assert admin_detail_response.json()["status"] == "archived"
 
 
-def test_athlete_can_delete_their_saved_plan():
+def test_athlete_can_archive_their_saved_plan():
     client, store, _ = _build_client()
     athlete = AuthenticatedUser(
         user_id="athlete-1",
@@ -486,10 +486,23 @@ def test_athlete_can_delete_their_saved_plan():
     )
 
     assert response.status_code == 204
-    assert store.get_plan(plan["id"]) is None
+    archived = store.get_plan(plan["id"])
+    assert archived is not None
+    assert archived["status"] == "archived"
+
+    list_response = client.get("/api/plans", headers={"Authorization": "Bearer athlete-token"})
+    latest_response = client.get("/api/plans/latest", headers={"Authorization": "Bearer athlete-token"})
+    detail_response = client.get(
+        f"/api/plans/{plan['id']}",
+        headers={"Authorization": "Bearer athlete-token"},
+    )
+    assert list_response.status_code == 200
+    assert list_response.json() == []
+    assert latest_response.status_code == 404
+    assert detail_response.status_code == 404
 
 
-def test_athlete_cannot_delete_someone_elses_plan():
+def test_athlete_cannot_archive_someone_elses_plan():
     client, store, _ = _build_client()
     owner = AuthenticatedUser(
         user_id="athlete-1",
@@ -520,6 +533,33 @@ def test_athlete_cannot_delete_someone_elses_plan():
 
     assert response.status_code == 403
     assert store.get_plan(plan["id"]) is not None
+
+
+def test_admin_can_archive_any_plan():
+    client, store, _ = _build_client()
+    athlete = AuthenticatedUser(
+        user_id="athlete-1",
+        email="ari@example.com",
+        full_name="Ari Mensah",
+        metadata={},
+    )
+    store.ensure_profile(athlete)
+    plan = store.create_plan(
+        athlete_id="athlete-1",
+        intake_id="intake_x",
+        request=_build_request(),
+        result=finalized_result(),
+    )
+
+    response = client.delete(
+        f"/api/plans/{plan['id']}",
+        headers={"Authorization": "Bearer admin-token"},
+    )
+
+    assert response.status_code == 204
+    archived = store.get_plan(plan["id"])
+    assert archived is not None
+    assert archived["status"] == "archived"
 
 
 def test_generation_job_endpoint_requires_same_athlete_or_admin():

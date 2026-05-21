@@ -223,10 +223,12 @@ class FakeStore:
         row["plan_name"] = plan_name
         return row
 
-    def delete_plan(self, plan_id: str) -> None:
+    def archive_plan(self, plan_id: str) -> dict:
         if plan_id not in self.plans:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
-        del self.plans[plan_id]
+        row = self.plans[plan_id]
+        row["status"] = "archived"
+        return row
 
     def create_or_get_generation_job(
         self,
