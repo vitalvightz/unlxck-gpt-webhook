@@ -1411,6 +1411,8 @@ def create_app(
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
         if profile.role != "admin" and str(plan_row["athlete_id"]) != profile.athlete_id:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="not allowed")
+        if profile.role != "admin" and _is_archived_plan(plan_row):
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
         updated = store.rename_plan(plan_id, update.plan_name)
         return _map_plan_detail(
             updated,
@@ -1419,7 +1421,7 @@ def create_app(
         )
 
     @app.delete("/api/plans/{plan_id}", status_code=status.HTTP_204_NO_CONTENT)
-    def delete_plan(
+    def archive_user_plan(
         plan_id: str,
         profile: ProfileRecord = Depends(require_profile),
         store: AppStore = Depends(get_store),
@@ -1429,7 +1431,7 @@ def create_app(
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
         if profile.role != "admin" and str(plan_row["athlete_id"]) != profile.athlete_id:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="not allowed")
-        store.delete_plan(plan_id)
+        store.archive_plan(plan_id)
         return Response(status_code=status.HTTP_204_NO_CONTENT)
 
     @app.get("/api/admin/plans", response_model=list[AdminPlanSummary])

@@ -461,6 +461,48 @@ def test_runtime_generation_saves_completed_plan():
     assert plans[0]["parsing_metadata"] == {}
 
 
+def test_run_generation_job_does_not_reuse_archived_latest_plan_for_same_intake():
+    store = FakeStore()
+    athlete = AuthenticatedUser(
+        user_id="athlete-1",
+        email="athlete@example.com",
+        full_name="Athlete One",
+        metadata={},
+    )
+    store.ensure_profile(athlete)
+    request = _build_request({"fight_date": "2026-08-15"})
+    intake = store.create_intake(athlete.user_id, request)
+    archived = store.create_plan(
+        athlete_id=athlete.user_id,
+        intake_id=str(intake["id"]),
+        request=request,
+        result=finalized_result(status="archived", stage2_status="admin_archived"),
+    )
+    job = store.create_or_get_generation_job(
+        athlete_id=athlete.user_id,
+        client_request_id="runtime-job-archived-latest",
+        source="self_serve",
+        request_payload=request.model_dump(mode="json"),
+    )
+    store.update_generation_job(job["id"], intake_id=str(intake["id"]))
+
+    asyncio.run(
+        run_generation_job(
+            job_id=job["id"],
+            store=store,
+            planner_fn=_planner,
+            stage2=FakeStage2Automator(result=finalized_result()),
+            active_tasks=set(),
+        )
+    )
+
+    completed_job = store.get_generation_job(job["id"])
+    assert completed_job["status"] == "completed"
+    assert completed_job["plan_id"] != archived["id"]
+    assert store.get_plan(archived["id"])["status"] == "archived"
+    assert len(store.list_user_plans(athlete.user_id)) == 2
+
+
 def test_should_skip_stage2_when_triage_blocked_status_has_no_nested_flag():
     assert (
         should_skip_stage2(

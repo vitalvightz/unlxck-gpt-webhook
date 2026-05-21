@@ -121,7 +121,7 @@ class AppStore(Protocol):
 
     def rename_plan(self, plan_id: str, plan_name: str) -> dict[str, Any]: ...
 
-    def delete_plan(self, plan_id: str) -> None: ...
+    def archive_plan(self, plan_id: str) -> dict[str, Any]: ...
 
     def create_or_get_generation_job(
         self,
@@ -1314,24 +1314,32 @@ class SupabaseAppStore:
                 exc=exc,
             )
 
-    def delete_plan(self, plan_id: str) -> None:
+    def archive_plan(self, plan_id: str) -> dict[str, Any]:
         try:
             existing = self.get_plan(plan_id)
             if not existing:
-                logger.warning("[store] delete_plan:not_found plan_id=%s", plan_id)
+                logger.warning("[store] archive_plan:not_found plan_id=%s", plan_id)
                 raise HTTPException(
                     status_code=status.HTTP_404_NOT_FOUND,
                     detail="plan not found",
                 )
-            logger.info("[store] delete_plan:start plan_id=%s", plan_id)
-            self.client.table("plans").delete().eq("id", plan_id).execute()
-            logger.info("[store] delete_plan:success plan_id=%s", plan_id)
+            logger.info("[store] archive_plan:start plan_id=%s", plan_id)
+            self.client.table("plans").update({"status": "archived"}).eq("id", plan_id).execute()
+            updated = self.get_plan(plan_id)
+            if not updated:
+                logger.warning("[store] archive_plan:plan_missing_after_update plan_id=%s", plan_id)
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="plan not found",
+                )
+            logger.info("[store] archive_plan:success plan_id=%s", plan_id)
+            return updated
         except HTTPException:
             raise
         except _STORE_CLIENT_ERRORS as exc:
             self._raise_operation_http_error(
-                operation=f"delete_plan plan_id={plan_id}",
-                detail="failed to delete plan",
+                operation=f"archive_plan plan_id={plan_id}",
+                detail="failed to archive plan",
                 exc=exc,
             )
 
