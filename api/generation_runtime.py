@@ -169,6 +169,19 @@ def _use_fastapi_background_tasks() -> bool:
     return scheduler in {"fastapi", "background_tasks", "backgroundtasks"}
 
 
+def generation_max_concurrent_jobs() -> int:
+    raw_value = os.getenv("APP_GENERATION_MAX_CONCURRENT_JOBS", "2").strip()
+    try:
+        parsed = int(raw_value)
+    except ValueError:
+        logger.warning(
+            "[jobs] generation:invalid_max_concurrent_jobs value=%r; falling back to 2",
+            raw_value,
+        )
+        return 2
+    return max(1, parsed)
+
+
 def _cleanup_detached_generation_task(task: asyncio.Task[None]) -> None:
     _DETACHED_GENERATION_TASKS.discard(task)
     if task.cancelled():
@@ -564,6 +577,30 @@ async def schedule_generation_job_if_needed(
 
     job_id = str(job["id"])
     if job_id in active_tasks:
+        return job
+
+    max_concurrent_jobs = generation_max_concurrent_jobs()
+    try:
+        active_running_jobs = await asyncio.to_thread(
+            store.count_active_generation_jobs,
+            stale_after_seconds=stale_after_seconds,
+        )
+    except HTTPException as exc:
+        if exc.status_code == status.HTTP_503_SERVICE_UNAVAILABLE:
+            logger.warning(
+                "[jobs] generation:schedule_capacity_count_deferred job_id=%s detail=%s",
+                job_id,
+                exc.detail,
+            )
+            return job
+        raise
+    if active_running_jobs >= max_concurrent_jobs:
+        logger.info(
+            "[jobs] generation:schedule_capacity_reached job_id=%s active_running_jobs=%s max_concurrent_jobs=%s",
+            job_id,
+            active_running_jobs,
+            max_concurrent_jobs,
+        )
         return job
 
     try:
