@@ -505,7 +505,23 @@ def test_production_cors_rejects_localhost_origins(monkeypatch: pytest.MonkeyPat
         )
 
 
-@pytest.mark.parametrize("regex", [".*", "^.*$", ".+", "^.+$"])
+@pytest.mark.parametrize(
+    "regex",
+    [
+        ".*",
+        "^.*$",
+        ".+",
+        "^.+$",
+        "https://.*",
+        "^https://.*$",
+        "https://.+",
+        "^https://.+$",
+        "http://.*",
+        "^http://.*$",
+        "http://.+",
+        "^http://.+$",
+    ],
+)
 def test_production_cors_rejects_broad_regex(monkeypatch: pytest.MonkeyPatch, regex: str):
     _clear_env_detection_vars(monkeypatch)
     monkeypatch.setenv("APP_ENV", "production")
@@ -518,6 +534,20 @@ def test_production_cors_rejects_broad_regex(monkeypatch: pytest.MonkeyPatch, re
             auth_service=FakeAuthService({}),
             stage2_automator=FakeStage2Automator(),
         )
+
+
+def test_production_cors_allows_narrow_subdomain_regex(monkeypatch: pytest.MonkeyPatch):
+    """Narrow regex constrained to a specific domain should still work."""
+    _clear_env_detection_vars(monkeypatch)
+    monkeypatch.setenv("APP_ENV", "production")
+    monkeypatch.setenv("APP_CORS_ORIGINS", "https://app.example.com")
+    monkeypatch.setenv("APP_CORS_ORIGIN_REGEX", r"https://.*\.vercel\.app")
+    # Should not raise
+    create_app(
+        store=FakeStore(),
+        auth_service=FakeAuthService({}),
+        stage2_automator=FakeStage2Automator(),
+    )
 
 
 def test_non_production_cors_allows_localhost(monkeypatch: pytest.MonkeyPatch):

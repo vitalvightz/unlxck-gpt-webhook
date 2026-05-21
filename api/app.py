@@ -376,6 +376,27 @@ def _cors_origin_regex() -> str | None:
 
 
 _UNSAFE_CORS_REGEX_PATTERNS = frozenset({".*", "^.*$", ".+", "^.+$", "^.*", ".*$", "^.+", ".+$"})
+_UNSAFE_CORS_REGEX_SCHEME_PATTERNS = frozenset({
+    "https://.*",
+    "^https://.*$",
+    "https://.+",
+    "^https://.+$",
+    "http://.*",
+    "^http://.*$",
+    "http://.+",
+    "^http://.+$",
+})
+
+
+def _is_broad_cors_regex(regex: str) -> bool:
+    normalized = regex.strip()
+    if not normalized:
+        return False
+    if normalized in _UNSAFE_CORS_REGEX_PATTERNS:
+        return True
+    if normalized in _UNSAFE_CORS_REGEX_SCHEME_PATTERNS:
+        return True
+    return False
 
 
 def _validate_production_cors_config(origins: list[str], regex: str | None) -> None:
@@ -402,7 +423,7 @@ def _validate_production_cors_config(origins: list[str], regex: str | None) -> N
                 f"APP_CORS_ORIGINS cannot contain localhost origins in production: {origin!r}"
             )
 
-    if regex is not None and regex.strip() in _UNSAFE_CORS_REGEX_PATTERNS:
+    if regex is not None and _is_broad_cors_regex(regex):
         raise ValueError(
             f"APP_CORS_ORIGIN_REGEX is too broad for production: {regex!r}"
         )
