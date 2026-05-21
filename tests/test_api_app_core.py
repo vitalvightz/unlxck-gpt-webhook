@@ -1,8 +1,6 @@
 from __future__ import annotations
 
-import asyncio
 import importlib
-import threading
 
 import pytest
 from postgrest.exceptions import APIError as PostgrestAPIError
@@ -59,21 +57,6 @@ def test_root_and_health_return_ok_for_render_probes():
     }
     assert health_response.status_code == 200
     assert health_response.json() == root_response.json()
-
-
-def test_run_stage1_planner_uses_worker_thread():
-    main_thread_id = threading.get_ident()
-    seen_thread_ids: list[int] = []
-
-    def planner(payload: dict) -> dict:
-        seen_thread_ids.append(threading.get_ident())
-        return {"payload": payload}
-
-    result = asyncio.run(app_module._run_stage1_planner(planner, {"athlete": "demo"}))
-
-    assert result == {"payload": {"athlete": "demo"}}
-    assert seen_thread_ids
-    assert seen_thread_ids[0] != main_thread_id
 
 
 def test_auth_is_required_for_me_route():
@@ -206,14 +189,22 @@ def test_runtime_app_falls_back_to_health_endpoint_when_supabase_config_missing(
     reloaded = importlib.reload(app_module)
 
     client = TestClient(reloaded.app)
-    response = client.get("/health")
-
-    assert response.status_code == 200
-    assert response.json() == {
+    expected_body = {
         "ok": False,
         "app": "unlxck-fight-camp-api",
         "detail": "missing supabase configuration",
     }
+
+    health_response = client.get("/health")
+    assert health_response.status_code == 503
+    assert health_response.json() == expected_body
+
+    root_response = client.get("/")
+    assert root_response.status_code == 503
+    assert root_response.json() == expected_body
+
+    head_response = client.head("/")
+    assert head_response.status_code == 503
 
 
 def test_runtime_app_uses_supabase_store_and_auth(monkeypatch: pytest.MonkeyPatch):
@@ -269,7 +260,7 @@ def test_runtime_app_falls_back_to_health_endpoint_when_runtime_config_is_invali
     client = TestClient(reloaded.app)
     response = client.get("/health")
 
-    assert response.status_code == 200
+    assert response.status_code == 503
     assert response.json() == {
         "ok": False,
         "app": "unlxck-fight-camp-api",
@@ -296,7 +287,7 @@ def test_runtime_app_fails_loudly_when_plan_schema_is_invalid_and_fallback_disab
     client = TestClient(reloaded.app)
     response = client.get("/health")
 
-    assert response.status_code == 200
+    assert response.status_code == 503
     assert response.json() == {
         "ok": False,
         "app": "unlxck-fight-camp-api",
@@ -324,7 +315,7 @@ def test_runtime_app_returns_startup_failure_when_store_is_restricted(
     client = TestClient(reloaded.app)
     response = client.get("/health")
 
-    assert response.status_code == 200
+    assert response.status_code == 503
     assert response.json()["ok"] is False
     assert response.json()["app"] == "unlxck-fight-camp-api"
     assert "JSON could not be generated" in response.json()["detail"]

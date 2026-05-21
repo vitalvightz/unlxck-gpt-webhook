@@ -1356,7 +1356,10 @@ class SupabaseAppStore:
             "stage2_handoff_text",
         ):
             if optional_field in result:
-                payload[optional_field] = result.get(optional_field)
+                value = result.get(optional_field)
+                if optional_field == "planning_brief":
+                    value = _encode_structured_text(value)
+                payload[optional_field] = value
         try:
             logger.info("[store] update_plan_stage2:start plan_id=%s status=%s", plan_id, payload["status"])
             self.client.table("plans").update(payload).eq("id", plan_id).execute()
