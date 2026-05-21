@@ -1,8 +1,6 @@
 from __future__ import annotations
 
-import asyncio
 import importlib
-import threading
 
 import pytest
 from postgrest.exceptions import APIError as PostgrestAPIError
@@ -59,21 +57,6 @@ def test_root_and_health_return_ok_for_render_probes():
     }
     assert health_response.status_code == 200
     assert health_response.json() == root_response.json()
-
-
-def test_run_stage1_planner_uses_worker_thread():
-    main_thread_id = threading.get_ident()
-    seen_thread_ids: list[int] = []
-
-    def planner(payload: dict) -> dict:
-        seen_thread_ids.append(threading.get_ident())
-        return {"payload": payload}
-
-    result = asyncio.run(app_module._run_stage1_planner(planner, {"athlete": "demo"}))
-
-    assert result == {"payload": {"athlete": "demo"}}
-    assert seen_thread_ids
-    assert seen_thread_ids[0] != main_thread_id
 
 
 def test_auth_is_required_for_me_route():

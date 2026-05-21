@@ -3408,99 +3408,6 @@ button.mobile-step-rail-item {
   line-height: 1.65;
 }
 
-.stage1-preview-panel {
-  display: grid;
-  gap: 18px;
-  padding: 20px;
-  border-radius: 18px;
-  border: 1px solid rgba(181, 18, 43, 0.26);
-  background: linear-gradient(180deg, rgba(17, 19, 24, 0.98), rgba(12, 14, 18, 0.98));
-  box-shadow: var(--shadow-support);
-}
-
-.stage1-preview-header,
-.stage1-preview-toolbar,
-.stage1-audit-item-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 16px;
-  flex-wrap: wrap;
-}
-
-.stage1-preview-title,
-.stage1-audit-item-header > div {
-  display: grid;
-  gap: 6px;
-  min-width: 0;
-}
-
-.stage1-preview-title h2,
-.stage1-audit-item h3 {
-  margin: 0;
-}
-
-.stage1-preview-badges,
-.stage1-audit-tags,
-.stage1-audit-evidence {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  align-items: center;
-}
-
-.stage1-preview-tabs {
-  display: inline-flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  padding: 4px;
-  border-radius: 12px;
-  border: 1px solid var(--border-default);
-  background: rgba(255, 255, 255, 0.035);
-}
-
-.stage1-preview-tab {
-  min-height: 36px;
-  padding: 0 12px;
-  border: 0;
-  border-radius: 8px;
-  background: transparent;
-  color: var(--text-secondary);
-  cursor: pointer;
-  font-weight: 600;
-}
-
-.stage1-preview-tab[data-active="true"] {
-  background: rgba(181, 18, 43, 0.18);
-  color: #fff0f3;
-}
-
-.stage1-audit-view,
-.stage1-audit-list {
-  display: grid;
-  gap: 12px;
-}
-
-.stage1-audit-item {
-  display: grid;
-  gap: 12px;
-  padding: 16px;
-  border-radius: 16px;
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  background: rgba(255, 255, 255, 0.035);
-}
-
-.stage1-audit-why {
-  margin: 0;
-  color: var(--text-primary);
-}
-
-.stage1-audit-evidence {
-  color: var(--text-muted);
-  font-family: var(--font-mono), monospace;
-  font-size: 12px;
-}
-
 .weekly-sparring-view {
   display: grid;
   gap: 14px;
@@ -5561,10 +5468,6 @@ button.mobile-step-rail-item {
     min-width: 0;
     min-height: 44px;
     padding-inline: 8px;
-  }
-
-  .onboarding-action-stage1 {
-    display: none;
   }
 
   .field textarea {
@@ -8694,22 +8597,6 @@ html[data-theme="light"] .plan-meta-item,
 html[data-theme="light"] .review-issue-group {
   border-color: var(--border-strong);
   background: linear-gradient(180deg, rgba(253, 245, 239, 0.98), rgba(249, 239, 232, 0.98));
-}
-
-html[data-theme="light"] .stage1-preview-panel {
-  border-color: rgba(163, 21, 45, 0.18);
-  background: linear-gradient(180deg, rgba(255, 250, 246, 0.98), rgba(255, 242, 235, 0.98));
-}
-
-html[data-theme="light"] .stage1-preview-tabs,
-html[data-theme="light"] .stage1-audit-item {
-  border-color: rgba(88, 62, 58, 0.1);
-  background: rgba(255, 255, 255, 0.62);
-}
-
-html[data-theme="light"] .stage1-preview-tab[data-active="true"] {
-  background: rgba(163, 21, 45, 0.1);
-  color: var(--brand-red);
 }
 
 html[data-theme="light"] .ghost-button,
