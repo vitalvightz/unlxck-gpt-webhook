@@ -224,7 +224,7 @@ def _find_blocking_generation_job_for_athlete(
         status_value = str(job.get("status") or "")
         if status_value == "queued":
             return job
-        if status_value == "running" and not is_startup_stale_generation_job(
+        if status_value == "running" and not _is_stale_job(
             job,
             stale_after_seconds=stale_after_seconds,
         ):
