@@ -200,13 +200,69 @@ def test_validate_stage2_output_flags_d0_expanded_beyond_fight_protocol():
     assert "late_fight_d0_protocol_expanded" in blocking_codes
 
 
+def test_validate_stage2_output_accepts_one_line_d0_fight_day_protocol_header():
+    report = validate_stage2_output(
+        planning_brief=_late_fight_planning_brief("D-0"),
+        final_plan_text="""
+        D-0 (Sunday) — Fight day protocol — follow coach warm-up and fight protocol; no additional app S&C.
+        """,
+    )
+
+    blocking_codes = {warning["code"] for warning in report["warnings"] if warning.get("blocking")}
+    assert "late_fight_d0_protocol_expanded" not in blocking_codes
+
+
+def test_validate_stage2_output_flags_d0_extra_work_after_protocol_header():
+    report = validate_stage2_output(
+        planning_brief=_late_fight_planning_brief("D-0"),
+        final_plan_text="""
+        D-0 (Sunday) — Fight day protocol — follow coach warm-up and fight protocol; no additional app S&C.
+        - Optional mobility reset - 5 min
+        """,
+    )
+
+    blocking_codes = {warning["code"] for warning in report["warnings"] if warning.get("blocking")}
+    assert "late_fight_d0_protocol_expanded" in blocking_codes
+
+
+def test_validate_stage2_output_allows_coach_facing_anchor_language():
+    report = validate_stage2_output(
+        planning_brief=_planning_brief_fixture(),
+        final_plan_text="""
+        ## PHASE 2: SPP
+        ### Week 3
+        #### Tuesday - Highest-neural anchor
+        - Landmine Press - 4 x 4.
+        """,
+    )
+
+    assert not any(
+        warning["code"] == "internal_render_contract_leak"
+        for warning in report["warnings"]
+    )
+
+
+def test_validate_stage2_output_flags_anchor_scaffold_label():
+    report = validate_stage2_output(
+        planning_brief=_planning_brief_fixture(),
+        final_plan_text="""
+        ## PHASE 2: SPP
+        ### Week 3
+        1) Anchor — Landmine Press - 4 x 4.
+        """,
+    )
+
+    labels = {warning.get("label") for warning in report["warnings"] if warning["code"] == "internal_render_contract_leak"}
+    assert "anchor_label" in labels
+
+
 def test_validate_stage2_output_flags_internal_render_contract_leaks():
     report = validate_stage2_output(
         planning_brief=_planning_brief_fixture(),
         final_plan_text="""
         ## PHASE 2: SPP
         ### Week 3
-        #### Tuesday - Strength anchor
+        #### Tuesday - Anchor — Strength
         - role_key: neural_plus_strength_day
         - Candidate pool option: Landmine Press
         """,
@@ -215,7 +271,7 @@ def test_validate_stage2_output_flags_internal_render_contract_leaks():
     blocking_codes = {warning["code"] for warning in report["warnings"] if warning.get("blocking")}
     labels = {warning.get("label") for warning in report["warnings"] if warning["code"] == "internal_render_contract_leak"}
     assert "internal_render_contract_leak" in blocking_codes
-    assert {"anchor", "role_key", "candidate pool"}.issubset(labels)
+    assert {"role_key", "candidate pool"}.issubset(labels)
 
 
 def test_validate_stage2_output_flags_overdetailed_coach_led_sparring_day():

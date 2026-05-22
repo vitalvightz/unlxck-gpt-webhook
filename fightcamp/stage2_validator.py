@@ -147,7 +147,7 @@ _COUNTDOWN_CONTRACT_HEADER = re.compile(
     re.IGNORECASE,
 )
 _INTERNAL_RENDER_LABEL_PATTERNS = (
-    ("anchor", re.compile(r"\banchor\b", re.IGNORECASE)),
+    ("anchor_label", re.compile(r"^\s*(?:\d+\)\s*)?anchor\s*(?:—|-|:)", re.IGNORECASE)),
     ("role_key", re.compile(r"\brole_key\b", re.IGNORECASE)),
     ("taper_micro_support", re.compile(r"\btaper_micro_support\b", re.IGNORECASE)),
     ("candidate pool", re.compile(r"\bcandidate\s+pools?\b", re.IGNORECASE)),
@@ -1343,7 +1343,10 @@ def _late_fight_d0_protocol_warnings(
         return []
 
     protocol_text = _normalize_render_line(FIGHT_DAY_PROTOCOL_TEXT)
+    header_line = _normalize_render_line(d0_lines[0] if d0_lines else "")
     body_lines = [line for line in d0_lines[1:] if _normalize_render_line(line)]
+    if not body_lines and protocol_text in header_line:
+        return []
     if len(body_lines) == 1 and _normalize_render_line(body_lines[0]) == protocol_text:
         return []
 
