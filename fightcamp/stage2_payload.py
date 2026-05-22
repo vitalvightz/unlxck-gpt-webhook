@@ -4196,7 +4196,7 @@ UNLXCK_FINAL_RENDER_CONTRACT = """UNLXCK FINAL RENDER CONTRACT
 Non-negotiable output contract:
 1. Late-fight plans must use D-X countdown headers.
 2. Late-fight active-day headers must be: D-X (Weekday) — clear athlete-facing session role.
-3. Do not use raw system titles as athlete-facing session titles. Avoid: Strength touch, Alactic sharpness, Neural primer, Glycolytic, Alactic, Aerobic.
+3. Do not use raw system titles as athlete-facing session titles. Avoid as session titles only: Strength touch, Alactic sharpness, Neural primer, Glycolytic, Alactic, Aerobic. Phase headers may still use GPP, SPP, and TAPER for longer camps.
 4. Longer camps must use phase/week headers in this style:
    GPP — Week 1 (D-X to D-X) — Objective
    SPP — Week 2 (D-X to D-X) — Objective
