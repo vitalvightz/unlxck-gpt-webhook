@@ -179,29 +179,29 @@ def _stage2_finalize_timeout_seconds() -> float | None:
 
 
 def _stage1_planner_timeout_seconds() -> float | None:
-    raw_value = os.getenv("APP_STAGE1_PLANNER_TIMEOUT_SECONDS", "180").strip()
+    raw_value = os.getenv("APP_STAGE1_PLANNER_TIMEOUT_SECONDS", "240").strip()
     if raw_value in {"", "0", "none", "None", "NONE"}:
         if is_production_environment():
             logger.warning(
-                "[jobs] generation:stage1_timeout_disabled_in_production value=%r; falling back to 180s",
+                "[jobs] generation:stage1_timeout_disabled_in_production value=%r; falling back to 240s",
                 raw_value,
             )
-            return 180.0
+            return 240.0
         return None
     try:
         parsed = float(raw_value)
     except ValueError:
         logger.warning(
-            "[jobs] generation:invalid_stage1_timeout value=%r; falling back to 180s",
+            "[jobs] generation:invalid_stage1_timeout value=%r; falling back to 240s",
             raw_value,
         )
-        return 180.0
+        return 240.0
     if parsed <= 0:
         logger.warning(
-            "[jobs] generation:invalid_stage1_timeout value=%r; falling back to 180s",
+            "[jobs] generation:invalid_stage1_timeout value=%r; falling back to 240s",
             raw_value,
         )
-        return 180.0
+        return 240.0
     return parsed
 
 
