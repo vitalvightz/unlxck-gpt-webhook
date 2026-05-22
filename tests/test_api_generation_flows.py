@@ -615,12 +615,12 @@ def test_admin_triage_resume_without_linked_plan_fails_without_creating_duplicat
     # to via intake_id). The worker must refuse to create a new plan.
     job = store.create_or_get_generation_job(
         athlete_id=athlete.user_id,
-        client_request_id="triage-resume-missing-plan",
+        client_request_id="triage-resume-job",
         source="admin_triage_resume",
         request_payload=request.model_dump(mode="json"),
+        intake_id=str(intake["id"]),
+        plan_id=str(blocked_plan["id"]),
     )
-    store.update_generation_job(job["id"], intake_id=str(intake["id"]))
-
     asyncio.run(
         run_generation_job(
             job_id=job["id"],
