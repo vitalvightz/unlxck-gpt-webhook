@@ -62,12 +62,12 @@ test("shouldShowTriageBlockedState returns true for restricted rehab without res
   );
 });
 
-test("shouldShowTriageBlockedState returns false when triage resume is approved", () => {
+test("shouldShowTriageBlockedState stays true when triage resume is approved but regeneration is pending", () => {
   assert.equal(
     shouldShowTriageBlockedState(
       { status: "triage_blocked", admin_outputs: { stage2_status: "triage_resume_approved" } } as never,
       "restricted_rehab_only",
     ),
-    false,
+    true,
   );
 });
