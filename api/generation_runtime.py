@@ -855,6 +855,7 @@ async def schedule_generation_job_if_needed(
     current_status = str(job.get("status") or "queued")
     if current_status not in {"queued", "running"}:
         return job
+
     if current_status == "running":
         if stale_job_checker(job, stale_after_seconds=stale_after_seconds):
             job = await asyncio.to_thread(
@@ -865,13 +866,14 @@ async def schedule_generation_job_if_needed(
             )
             return job
         return job
+
     if not enable_in_process_generation:
         return job
 
     job_id = str(job["id"])
     if job_id in active_tasks:
         return job
-=======
+
     max_concurrent_jobs = generation_max_concurrent_jobs()
     try:
         active_running_jobs = await asyncio.to_thread(
@@ -887,6 +889,7 @@ async def schedule_generation_job_if_needed(
             )
             return job
         raise
+
     if active_running_jobs >= max_concurrent_jobs:
         logger.info(
             "[jobs] generation:schedule_capacity_reached job_id=%s active_running_jobs=%s max_concurrent_jobs=%s",
@@ -897,7 +900,11 @@ async def schedule_generation_job_if_needed(
         return job
 
     try:
-        claimed = await asyncio.to_thread(store.claim_generation_job, job_id)
+        claimed_job = await asyncio.to_thread(
+            store.claim_generation_job,
+            job_id,
+            stale_after_seconds=stale_after_seconds,
+        )
     except HTTPException as exc:
         if exc.status_code == status.HTTP_503_SERVICE_UNAVAILABLE:
             logger.warning(
@@ -907,7 +914,8 @@ async def schedule_generation_job_if_needed(
             )
             return job
         raise
-    if not claimed:
+
+    if not claimed_job:
         try:
             refreshed = await asyncio.to_thread(store.get_generation_job, job_id)
         except HTTPException as exc:
@@ -921,7 +929,6 @@ async def schedule_generation_job_if_needed(
             raise
         return refreshed or job
 
->>>>>>> origin/Main
     active_tasks.add(job_id)
     try:
         if _use_fastapi_background_tasks():
@@ -952,4 +959,5 @@ async def schedule_generation_job_if_needed(
             completed_at=utc_now_iso(),
             heartbeat_at=utc_now_iso(),
         )
-    return job
+
+    return claimed_job
