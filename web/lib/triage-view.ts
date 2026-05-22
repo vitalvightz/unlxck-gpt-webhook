@@ -33,3 +33,17 @@ export function hasTriageResumeApproval(plan: Pick<PlanDetail, "admin_outputs">)
 
   return false;
 }
+
+export function shouldShowTriageBlockedState(
+  plan: Pick<PlanDetail, "status" | "admin_outputs">,
+  triageMode: string | null | undefined,
+): boolean {
+  const mode = String(triageMode || "").trim().toLowerCase();
+  const isBlockedByPlanState =
+    plan.status === "triage_blocked" ||
+    plan.admin_outputs?.stage2_status === "triage_blocked" ||
+    mode === "medical_hold" ||
+    mode === "restricted_rehab_only";
+
+  return isBlockedByPlanState && !hasTriageResumeApproval(plan);
+}

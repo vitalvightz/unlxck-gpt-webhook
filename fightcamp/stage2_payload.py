@@ -3977,6 +3977,16 @@ def build_stage2_payload(
         payload_mode=payload_mode,
         days_until_fight=training_context.days_until_fight,
     )
+    triage_summary = athlete_model.get("triage_summary")
+    triage_resume_approved = isinstance(triage_summary, dict) and bool(
+        triage_summary.get("triage_resume_approved")
+    )
+    if triage_resume_approved:
+        rewrite_guidance.setdefault("writing_rules", []).append(
+            "If triage_resume_approved is true, do not write 'clinician clearance required', "
+            "'until cleared', or equivalent re-clearance language. Keep only concrete current "
+            "load constraints and symptom stop-rules."
+        )
 
     days_until_fight = athlete_model.get("days_until_fight")
 
