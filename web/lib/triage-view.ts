@@ -39,7 +39,7 @@ export function shouldShowTriageBlockedState(
   triageMode: string | null | undefined,
 ): boolean {
   const mode = String(triageMode || "").trim().toLowerCase();
-  const stage2Status = plan.admin_outputs?.stage2_status;
+  const stage2Status = String(plan.admin_outputs?.stage2_status || "").trim().toLowerCase();
   const isBlockedByPlanState =
     plan.status === "triage_blocked" ||
     stage2Status === "triage_blocked" ||
