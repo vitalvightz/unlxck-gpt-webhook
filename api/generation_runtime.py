@@ -330,11 +330,28 @@ async def run_generation_job(
         athlete_id = str(job["athlete_id"])
         raw_request_payload = job.get("request_payload") or {}
         triage_resume_override_approved = False
+        triage_override_allowed_modes: list[Any] = []
         if isinstance(raw_request_payload, dict):
             triage_override = raw_request_payload.get(_TRIAGE_RESUME_OVERRIDE_KEY)
-            triage_resume_override_approved = isinstance(triage_override, dict) and triage_override.get("approved") is True
+            if isinstance(triage_override, dict):
+                triage_resume_override_approved = triage_override.get("approved") is True
+                modes = triage_override.get("allowed_modes")
+                if isinstance(modes, list):
+                    triage_override_allowed_modes = list(modes)
         request_body = parse_plan_request(raw_request_payload)
-        logger.info("[jobs] generation:start athlete_id=%s job_id=%s", athlete_id, job_id)
+        logger.info(
+            "[jobs] generation:start athlete_id=%s job_id=%s source=%s job_plan_id=%s job_intake_id=%s "
+            "override_present=%s override_approved=%s override_allowed_modes=%s",
+            athlete_id,
+            job_id,
+            job.get("source"),
+            job.get("plan_id"),
+            job.get("intake_id"),
+            isinstance(raw_request_payload, dict)
+            and _TRIAGE_RESUME_OVERRIDE_KEY in raw_request_payload,
+            triage_resume_override_approved,
+            triage_override_allowed_modes,
+        )
 
         try:
             await asyncio.to_thread(
@@ -386,6 +403,23 @@ async def run_generation_job(
                         "missing_fields": stage1_result.get("missing_fields", []),
                     },
                 )
+            _stage1_why_log = stage1_result.get("why_log") if isinstance(stage1_result.get("why_log"), dict) else {}
+            _injury_triage = _stage1_why_log.get("injury_triage") if isinstance(_stage1_why_log.get("injury_triage"), dict) else {}
+            _override_marker = (
+                _stage1_why_log.get("injury_triage_resume_override")
+                if isinstance(_stage1_why_log.get("injury_triage_resume_override"), dict)
+                else None
+            )
+            logger.info(
+                "[jobs] generation:stage1_done athlete_id=%s job_id=%s stage1_status=%s "
+                "triage_mode=%s should_block_stage2=%s override_applied=%s",
+                athlete_id,
+                job_id,
+                stage1_result.get("status"),
+                _injury_triage.get("mode"),
+                _injury_triage.get("should_block_stage2"),
+                bool(_override_marker and _override_marker.get("bypassed_blocking") is True),
+            )
             job = await asyncio.to_thread(
                 store.update_generation_job,
                 job_id,
@@ -500,12 +534,25 @@ async def run_generation_job(
             completed_at=utc_now_iso(),
             heartbeat_at=utc_now_iso(),
         )
+        _plan_why_log = plan_row.get("why_log") if isinstance(plan_row.get("why_log"), dict) else {}
         logger.info(
-            "[jobs] generation:complete athlete_id=%s job_id=%s plan_id=%s status=%s duration_ms=%s",
+            "[jobs] generation:complete athlete_id=%s job_id=%s plan_id=%s status=%s "
+            "plan_status=%s final_result_status=%s plan_triage_mode=%s plan_override_applied=%s "
+            "plan_override_approval=%s duration_ms=%s",
             athlete_id,
             job_id,
             plan_id,
             final_status,
+            plan_status,
+            (final_result or {}).get("status") if isinstance(final_result, dict) else None,
+            (_plan_why_log.get("injury_triage") or {}).get("mode")
+            if isinstance(_plan_why_log.get("injury_triage"), dict)
+            else None,
+            bool(
+                isinstance(_plan_why_log.get("injury_triage_resume_override"), dict)
+                and _plan_why_log["injury_triage_resume_override"].get("bypassed_blocking") is True
+            ),
+            isinstance(_plan_why_log.get("triage_resume_approval"), dict),
             round((time.perf_counter() - t_start) * 1000, 2),
         )
     except asyncio.TimeoutError:

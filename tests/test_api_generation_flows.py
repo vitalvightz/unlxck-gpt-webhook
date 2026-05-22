@@ -524,6 +524,70 @@ def test_run_generation_job_updates_existing_plan_for_same_intake_after_resume()
     assert len(store.list_user_plans(athlete.user_id)) == 1
 
 
+def test_triage_blocked_plans_are_hidden_from_athlete_archive_but_visible_to_admin():
+    """A triage block is a screening decision, not a plan — it must not
+    surface in athlete-facing lists (`/api/me`, `/api/plans`,
+    `/api/plans/latest`). Admin views must still see the row so the ops
+    team can review and approve-and-resume it."""
+    athlete = AuthenticatedUser(
+        user_id="athlete-1",
+        email="ari@example.com",
+        full_name="Ari Mensah",
+        metadata={},
+    )
+    admin = AuthenticatedUser(
+        user_id="admin-1",
+        email="ops@unlxck.test",
+        full_name="Ops Admin",
+        metadata={},
+    )
+    store = FakeStore()
+    store.ensure_profile(athlete)
+    request = _build_request()
+    intake = store.create_intake(athlete.user_id, request)
+    blocked_plan = store.create_plan(
+        athlete_id=athlete.user_id,
+        intake_id=str(intake["id"]),
+        request=request,
+        result=finalized_result(
+            status="triage_blocked",
+            stage2_status="triage_blocked",
+            plan_text="",
+            final_plan_text="",
+            why_log={"injury_triage": {"mode": "needs_review", "should_block_stage2": True}},
+        ),
+    )
+    client = TestClient(
+        create_app(
+            store=store,
+            auth_service=FakeAuthService({"athlete-token": athlete, "admin-token": admin}),
+            planner=_planner,
+            stage2_automator=FakeStage2Automator(result=finalized_result()),
+        )
+    )
+
+    athlete_me = client.get("/api/me", headers={"Authorization": "Bearer athlete-token"})
+    assert athlete_me.status_code == 200
+    assert athlete_me.json()["latest_plan"] is None
+    assert athlete_me.json()["plan_count"] == 0
+
+    athlete_list = client.get("/api/plans", headers={"Authorization": "Bearer athlete-token"})
+    assert athlete_list.status_code == 200
+    assert athlete_list.json() == []
+
+    athlete_latest = client.get("/api/plans/latest", headers={"Authorization": "Bearer athlete-token"})
+    assert athlete_latest.status_code == 404
+
+    # The plan is still in storage and admin can fetch it directly by id so
+    # the approve-and-resume workflow remains available.
+    assert store.get_plan(blocked_plan["id"]) is not None
+    admin_detail = client.get(
+        f"/api/plans/{blocked_plan['id']}",
+        headers={"Authorization": "Bearer admin-token"},
+    )
+    assert admin_detail.status_code == 200
+
+
 def test_admin_triage_resume_without_linked_plan_fails_without_creating_duplicate():
     store = FakeStore()
     athlete = AuthenticatedUser(
