@@ -655,7 +655,7 @@ export function approveAndResumeGeneration(
   payload: ApproveAndResumeGenerationRequest,
   clientRequestId?: string,
 ): Promise<GenerationJobResponse> {
-  const stableClientRequestId = clientRequestId ?? `triage_resume_${planId}`;
+  const stableClientRequestId = clientRequestId ?? createClientRequestId(`triage_resume_${planId}`);
 
   return withTransientRetries(() =>
     readJson<GenerationJobResponse>(
