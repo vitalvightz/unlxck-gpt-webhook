@@ -14,6 +14,7 @@ from fastapi import BackgroundTasks, HTTPException, status
 
 from fightcamp.main import generate_plan_sync
 
+from .environment import is_production_environment
 from .models import PlanRequest, ProfileUpdateRequest
 from .stage2_automation import Stage2AutomationError, Stage2AutomationUnavailableError, Stage2Automator
 from .store import AppStore
@@ -175,6 +176,33 @@ def _stage2_finalize_timeout_seconds() -> float | None:
             raw_value,
         )
         return 300.0
+
+
+def _stage1_planner_timeout_seconds() -> float | None:
+    raw_value = os.getenv("APP_STAGE1_PLANNER_TIMEOUT_SECONDS", "240").strip()
+    if raw_value in {"", "0", "none", "None", "NONE"}:
+        if is_production_environment():
+            logger.warning(
+                "[jobs] generation:stage1_timeout_disabled_in_production value=%r; falling back to 240s",
+                raw_value,
+            )
+            return 240.0
+        return None
+    try:
+        parsed = float(raw_value)
+    except ValueError:
+        logger.warning(
+            "[jobs] generation:invalid_stage1_timeout value=%r; falling back to 240s",
+            raw_value,
+        )
+        return 240.0
+    if parsed <= 0:
+        logger.warning(
+            "[jobs] generation:invalid_stage1_timeout value=%r; falling back to 240s",
+            raw_value,
+        )
+        return 240.0
+    return parsed
 
 
 def _use_fastapi_background_tasks() -> bool:
@@ -485,10 +513,39 @@ async def run_generation_job(
                 "Starting the deterministic planner pass.",
             )
             await _touch_heartbeat()
-            stage1_result = await run_stage1_planner(
+            planner_coro = run_stage1_planner(
                 planner_fn,
                 planner_payload,
                 progress_callback=progress_callback,
+            )
+            _emit_milestone(
+                "stage1_planner_invoked",
+                "Stage 1 planner invoked",
+                "Planner thread was invoked and is waiting for its first result.",
+            )
+            stage1_timeout_seconds = _stage1_planner_timeout_seconds()
+            try:
+                if stage1_timeout_seconds is None:
+                    stage1_result = await planner_coro
+                else:
+                    stage1_result = await asyncio.wait_for(planner_coro, timeout=stage1_timeout_seconds)
+            except asyncio.TimeoutError:
+                logger.exception("[jobs] generation:stage1_timeout athlete_id=%s job_id=%s", athlete_id, job_id)
+                now_iso = utc_now_iso()
+                with suppress(Exception):
+                    await asyncio.to_thread(
+                        store.update_generation_job,
+                        job_id,
+                        status="failed",
+                        error="Stage 1 planner timed out before producing a result.",
+                        completed_at=now_iso,
+                        heartbeat_at=now_iso,
+                    )
+                return
+            _emit_milestone(
+                "stage1_planner_finished",
+                "Stage 1 planner finished",
+                "Planner returned a Stage 1 result.",
             )
             await _touch_heartbeat()
             if stage1_result.get("status") == "invalid_input":
