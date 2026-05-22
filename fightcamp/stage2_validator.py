@@ -1419,7 +1419,7 @@ def _coach_led_body_line_is_minimal(line: str) -> bool:
     normalized = _normalize_render_line(line)
     if _COACH_LED_DETAIL_PATTERN.search(line):
         return False
-    return "no app s&c" in normalized and "freshness priority" in normalized
+    return phrase_in_text(normalized, "no app s&c") and phrase_in_text(normalized, "freshness priority")
 
 
 def _coach_owned_sparring_detail_warnings(final_plan_text: str) -> list[dict]:
