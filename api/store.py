@@ -130,6 +130,8 @@ class AppStore(Protocol):
         client_request_id: str,
         source: str,
         request_payload: dict[str, Any],
+        plan_id: str | None = None,
+        intake_id: str | None = None,
         stale_after_seconds: int = 90,
     ) -> dict[str, Any]: ...
     def count_generation_jobs_for_athlete_since(
