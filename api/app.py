@@ -169,6 +169,39 @@ def _is_stale_job(job: dict[str, Any], *, stale_after_seconds: int = 90) -> bool
     return runtime_is_stale_job(job, stale_after_seconds=stale_after_seconds)
 
 
+def _is_correctly_linked_admin_resume_job(
+    job: dict[str, Any],
+    *,
+    athlete_id: str,
+    plan_id: str,
+    intake_id: str,
+    client_request_id: str,
+) -> bool:
+    return (
+        str(job.get("source") or "").strip().lower() == "admin_triage_resume"
+        and str(job.get("athlete_id") or "").strip() == athlete_id
+        and str(job.get("plan_id") or "").strip() == plan_id
+        and str(job.get("intake_id") or "").strip() == intake_id
+        and str(job.get("client_request_id") or "").strip() == client_request_id
+    )
+
+
+def _resume_job_final_result_successful(job: dict[str, Any]) -> bool:
+    final_result = job.get("final_result")
+    if not isinstance(final_result, dict):
+        return False
+    result_status = str(final_result.get("status") or "").strip().lower()
+    if result_status in {"ready", "generated", "completed"}:
+        return True
+    stage2_status = str(final_result.get("stage2_status") or "").strip().lower()
+    return stage2_status in {"stage2_pass", "stage2_retry_pass", "manual_stage2_pass", "manual_stage2_retry_pass"}
+
+
+def _resume_job_resolved_successfully(job: dict[str, Any]) -> bool:
+    job_status = str(job.get("status") or "").strip().lower()
+    return job_status == "completed" and _resume_job_final_result_successful(job)
+
+
 def _generation_job_stale_after_seconds() -> int:
     fallback_seconds = 1400
     raw_value = os.getenv("APP_GENERATION_JOB_STALE_AFTER_SECONDS", str(fallback_seconds)).strip()
@@ -1647,40 +1680,115 @@ def create_app(
         intake_id = str(plan_row.get("intake_id") or "").strip()
         if not intake_id:
             raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="plan is missing intake_id")
-
         client_request_id = f"triage_resume_{plan_id}"
-
+        stale_after_seconds = _generation_job_stale_after_seconds()
         existing_resume_job = await asyncio.to_thread(
             store.get_generation_job_by_client_request_id,
             athlete_id=str(plan_row["athlete_id"]),
             client_request_id=client_request_id,
         )
 
-        if existing_resume_job:
-            existing_status = str(existing_resume_job.get("status") or "").strip().lower()
-            existing_intake_id = str(existing_resume_job.get("intake_id") or "").strip()
-            existing_plan_id = str(existing_resume_job.get("plan_id") or "").strip()
-            existing_is_stale = _is_stale_job(
-                existing_resume_job,
-                stale_after_seconds=_generation_job_stale_after_seconds(),
-            )
-            existing_linkage_matches = existing_intake_id == intake_id and existing_plan_id == plan_id
+        async def _build_resume_request_payload() -> dict[str, Any]:
+            intake_row = await asyncio.to_thread(store.get_intake, intake_id)
+            if not intake_row or not isinstance(intake_row.get("intake"), dict):
+                raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="stored intake is missing for this plan")
+            payload = copy.deepcopy(intake_row.get("intake"))
+            payload["_triage_resume_override"] = {
+                "approved": True,
+                "approved_by": {
+                    "user_id": profile.athlete_id,
+                    "email": profile.email,
+                },
+                "reason": approval.reason,
+                "allowed_modes": ["needs_review", "restricted_rehab_only"],
+            }
+            return payload
 
-            if not existing_linkage_matches:
-                if existing_status == "running" and not existing_is_stale:
-                    raise HTTPException(
-                        status_code=status.HTTP_409_CONFLICT,
-                        detail="existing running triage resume job has unsafe plan/intake linkage",
-                    )
-            else:
+        async def _requeue_existing_resume_job(job: dict[str, Any]) -> dict[str, Any]:
+            request_payload = await _build_resume_request_payload()
+            return await asyncio.to_thread(
+                store.update_generation_job,
+                str(job.get("id") or ""),
+                source="admin_triage_resume",
+                request_payload=request_payload,
+                intake_id=intake_id,
+                plan_id=plan_id,
+                stage1_result=None,
+                final_result=None,
+                error=None,
+                completed_at=None,
+                status="queued",
+                heartbeat_at=_utc_now_iso(),
+            )
+
+        # Check for an existing approval first: once the resume has already
+        # been run and the plan was updated in place, the triage state in
+        # why_log no longer exists, so the triage-mode guard below would
+        # otherwise mask the duplicate with a less specific error.
+        if existing_resume_job and not _is_correctly_linked_admin_resume_job(
+            existing_resume_job,
+            athlete_id=str(plan_row["athlete_id"]),
+            plan_id=plan_id,
+            intake_id=intake_id,
+            client_request_id=client_request_id,
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="existing triage resume job has unsafe linkage; create a new resume request",
+            )
+
+        if _has_existing_triage_resume_approval(plan_row):
+            if existing_resume_job:
                 if _resume_job_resolved_successfully(existing_resume_job):
                     raise HTTPException(
                         status_code=status.HTTP_409_CONFLICT,
                         detail="this blocked plan has already been approved and resumed",
                     )
+                job_status = str(existing_resume_job.get("status") or "").strip().lower()
+                if job_status == "running":
+                    if not _is_stale_job(
+                        existing_resume_job,
+                        stale_after_seconds=stale_after_seconds,
+                    ):
+                        return _job_response(existing_resume_job, viewer_role=profile.role)
+                    existing_resume_job = await _requeue_existing_resume_job(existing_resume_job)
+                    job_status = str(existing_resume_job.get("status") or "").strip().lower()
+                if job_status in {"failed", "completed"} and not _resume_job_final_result_successful(existing_resume_job):
+                    existing_resume_job = await _requeue_existing_resume_job(existing_resume_job)
+                    job_status = str(existing_resume_job.get("status") or "").strip().lower()
+                if job_status == "queued":
+                    job = await schedule_generation_job_if_needed(
+                        job=existing_resume_job,
+                        background_tasks=background_tasks,
+                        store=store,
+                        planner_fn=planner_fn,
+                        stage2=stage2,
+                        active_tasks=active_tasks,
+                        enable_in_process_generation=enable_in_process_generation,
+                        stale_job_checker=_is_stale_job,
+                        stale_after_seconds=stale_after_seconds,
+                    )
+                    return _job_response(job, viewer_role=profile.role)
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="this blocked plan has already been approved for resume",
+            )
 
+        if existing_resume_job:
+            existing_status = str(existing_resume_job.get("status") or "").strip().lower()
+            existing_is_stale = _is_stale_job(
+                existing_resume_job,
+                stale_after_seconds=stale_after_seconds,
+            )
+            if _resume_job_resolved_successfully(existing_resume_job):
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail="this blocked plan has already been approved and resumed",
+                )
+            if existing_status == "running":
                 if existing_status == "running" and not existing_is_stale:
                     return _job_response(existing_resume_job, viewer_role=profile.role)
+
         why_log = plan_row.get("why_log") if isinstance(plan_row.get("why_log"), dict) else {}
         triage = why_log.get("injury_triage") if isinstance(why_log.get("injury_triage"), dict) else {}
         triage_mode = str(triage.get("mode") or "").strip().lower()
@@ -1690,21 +1798,7 @@ def create_app(
                 detail="approve_and_resume_generation is only allowed for needs_review or restricted_rehab_only plans",
             )
 
-        intake_row = await asyncio.to_thread(store.get_intake, intake_id)
-        if not intake_row or not isinstance(intake_row.get("intake"), dict):
-            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="stored intake is missing for this plan")
-
-        request_payload = copy.deepcopy(intake_row.get("intake"))
-        request_payload["_triage_resume_override"] = {
-            "approved": True,
-            "approved_by": {
-                "user_id": profile.athlete_id,
-                "email": profile.email,
-            },
-            "reason": approval.reason,
-            "allowed_modes": ["needs_review", "restricted_rehab_only"],
-        }
-
+        request_payload = await _build_resume_request_payload()
         approval_log = {
             "approved_by_user_id": profile.athlete_id,
             "approved_by_email": profile.email,
@@ -1726,22 +1820,18 @@ def create_app(
             intake_id=intake_id,
             plan_id=plan_id,
         )
-        job_intake_id = str(job.get("intake_id") or "").strip()
-        job_plan_id = str(job.get("plan_id") or "").strip()
-        if job_intake_id != intake_id or job_plan_id != plan_id:
-            if (job_intake_id and job_intake_id != intake_id) or (job_plan_id and job_plan_id != plan_id):
-                job_status = str(job.get("status") or "").strip().lower()
-                if job_status in {"running", "completed"}:
-                    raise HTTPException(
-                        status_code=status.HTTP_409_CONFLICT,
-                        detail="existing triage resume job has unsafe linkage; create a new resume request",
-                    )
-            job = await asyncio.to_thread(
-                store.update_generation_job,
-                str(job.get("id") or ""),
-                intake_id=intake_id,
-                plan_id=plan_id,
+        if not _is_correctly_linked_admin_resume_job(
+            job,
+            athlete_id=str(plan_row["athlete_id"]),
+            plan_id=plan_id,
+            intake_id=intake_id,
+            client_request_id=client_request_id,
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="existing triage resume job has unsafe linkage; create a new resume request",
             )
+
         # Refresh/requeue only after run-state checks above. Non-stale running
         # jobs are returned as-is; completed successful jobs are rejected.
         job = await asyncio.to_thread(
@@ -1774,7 +1864,7 @@ def create_app(
             active_tasks=active_tasks,
             enable_in_process_generation=enable_in_process_generation,
             stale_job_checker=_is_stale_job,
-            stale_after_seconds=_generation_job_stale_after_seconds(),
+            stale_after_seconds=stale_after_seconds,
         )
         return _job_response(job, viewer_role=profile.role)
 

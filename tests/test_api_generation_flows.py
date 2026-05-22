@@ -477,8 +477,12 @@ def test_generation_pipeline_persists_triage_blocked_without_stage2_call():
     assert safety["stage2_skipped"] is True
 
 
-def test_run_generation_job_updates_existing_plan_for_same_intake_after_resume():
-    store = FakeStore()
+def test_admin_triage_resume_without_plan_id_does_not_fall_back_to_latest_plan_for_same_intake():
+    class NoLatestPlanFallbackStore(FakeStore):
+        def get_latest_plan(self, athlete_id: str) -> dict | None:
+            raise AssertionError("admin_triage_resume must not use latest_plan fallback")
+
+    store = NoLatestPlanFallbackStore()
     athlete = AuthenticatedUser(
         user_id="athlete-1",
         email="ari@example.com",
@@ -522,16 +526,11 @@ def test_run_generation_job_updates_existing_plan_for_same_intake_after_resume()
     refreshed_job = store.get_generation_job(job["id"])
     updated_plan = store.get_plan(blocked_plan["id"])
 
-    assert refreshed_job["status"] == "completed"
-    assert refreshed_job["plan_id"] == blocked_plan["id"]
-    assert stage2.calls[0]["_generation_source"] == "admin_triage_resume"
-    assert updated_plan["status"] == "ready"
-    assert updated_plan["stage2_status"] == "stage2_pass"
-    assert updated_plan["plan_text"] == "# Final Plan"
-    assert updated_plan["final_plan_text"] == "# Final Plan"
-    assert updated_plan["why_log"] == {"strength": {}}
-    assert updated_plan["coach_notes"] == "### Coach Review"
-    assert store.get_latest_plan(athlete.user_id)["id"] == blocked_plan["id"]
+    assert refreshed_job["status"] == "failed"
+    assert "missing plan_id" in str(refreshed_job["error"])
+    assert refreshed_job["plan_id"] is None
+    assert updated_plan["status"] == "triage_blocked"
+    assert updated_plan["stage2_status"] == "triage_blocked"
     assert len(store.list_user_plans(athlete.user_id)) == 1
 
 
@@ -641,8 +640,66 @@ def test_admin_triage_resume_without_linked_plan_fails_without_creating_duplicat
     refreshed_job = store.get_generation_job(job["id"])
     assert refreshed_job["status"] == "failed"
     assert "refusing to create a duplicate plan" in str(refreshed_job["error"])
-    assert refreshed_job["plan_id"] is None
+    assert refreshed_job["plan_id"] == str(blocked_plan["id"])
     assert store.list_user_plans(athlete.user_id) == []
+
+def test_admin_triage_resume_linked_plan_for_different_athlete_fails_before_planner():
+    store = FakeStore()
+    athlete = AuthenticatedUser(
+        user_id="athlete-1",
+        email="ari@example.com",
+        full_name="Ari Mensah",
+        metadata={},
+    )
+    other_athlete = AuthenticatedUser(
+        user_id="athlete-2",
+        email="bea@example.com",
+        full_name="Bea Santos",
+        metadata={},
+    )
+    store.ensure_profile(athlete)
+    store.ensure_profile(other_athlete)
+    request = _build_request()
+    other_intake = store.create_intake(other_athlete.user_id, request)
+    other_plan = store.create_plan(
+        athlete_id=other_athlete.user_id,
+        intake_id=str(other_intake["id"]),
+        request=request,
+        result=finalized_result(
+            status="triage_blocked",
+            stage2_status="triage_blocked",
+            why_log={"injury_triage": {"mode": "needs_review", "should_block_stage2": True}},
+        ),
+    )
+    job = store.create_or_get_generation_job(
+        athlete_id=athlete.user_id,
+        client_request_id="triage-resume-cross-athlete-plan",
+        source="admin_triage_resume",
+        request_payload={"invalid": "would fail if parsed"},
+        intake_id=str(other_intake["id"]),
+        plan_id=str(other_plan["id"]),
+    )
+    planner_calls = []
+
+    def planner(payload: dict) -> dict:
+        planner_calls.append(payload)
+        return stage1_result()
+
+    asyncio.run(
+        run_generation_job(
+            job_id=job["id"],
+            store=store,
+            planner_fn=planner,
+            stage2=FakeStage2Automator(result=finalized_result()),
+            active_tasks=set(),
+        )
+    )
+
+    refreshed_job = store.get_generation_job(job["id"])
+    assert refreshed_job["status"] == "failed"
+    assert refreshed_job["error"] == "admin triage resume job linked plan belongs to a different athlete"
+    assert planner_calls == []
+    assert store.get_plan(other_plan["id"])["status"] == "triage_blocked"
 
 
 def test_admin_triage_resume_without_plan_id_fails_before_planner():
@@ -826,6 +883,15 @@ def test_admin_triage_resume_with_override_updates_blocked_plan_in_place():
 
     assert refreshed_job["status"] == "completed"
     assert refreshed_job["plan_id"] == blocked_plan["id"]
+    milestone_codes = [entry["code"] for entry in refreshed_job.get("progress_milestones", [])]
+    assert milestone_codes[:6] == [
+        "job_loaded",
+        "admin_resume_linkage_validated",
+        "request_payload_parsed",
+        "profile_update_started",
+        "profile_update_finished",
+        "stage1_planner_starting",
+    ]
     assert updated_plan["status"] != "triage_blocked"
     assert updated_plan["status"] == "ready"
     why_log = updated_plan["why_log"]
