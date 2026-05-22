@@ -39,11 +39,23 @@ export function shouldShowTriageBlockedState(
   triageMode: string | null | undefined,
 ): boolean {
   const mode = String(triageMode || "").trim().toLowerCase();
+  const stage2Status = String(plan.admin_outputs?.stage2_status || "").trim().toLowerCase();
   const isBlockedByPlanState =
     plan.status === "triage_blocked" ||
-    plan.admin_outputs?.stage2_status === "triage_blocked" ||
+    stage2Status === "triage_blocked" ||
+    stage2Status === "triage_resume_approved" ||
     mode === "medical_hold" ||
     mode === "restricted_rehab_only";
 
-  return isBlockedByPlanState && !hasTriageResumeApproval(plan);
+  if (!isBlockedByPlanState) {
+    return false;
+  }
+
+  // triage_resume_approved means resume was approved, not that Stage 1/2 regeneration completed.
+  // Keep blocked state visible until a real regenerated output replaces the triage blocked state.
+  if (stage2Status === "triage_resume_approved") {
+    return true;
+  }
+
+  return !hasTriageResumeApproval(plan);
 }

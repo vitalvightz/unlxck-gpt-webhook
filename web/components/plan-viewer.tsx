@@ -76,6 +76,17 @@ const BLOCKING_WARNING_CODES = new Set([
   "late_camp_session_incomplete",
   "high_pressure_weight_cut_underaddressed",
 ]);
+const NON_PUBLISHABLE_STAGE2_STATUSES = new Set([
+  "triage_blocked",
+  "triage_resume_approved",
+  "medical_hold",
+  "restricted_rehab_only",
+]);
+const TRIAGE_BLOCKED_STUB_MARKERS = [
+  "## Injury Triage: Restricted Rehab Only",
+  "Normal fight-camp planning is intentionally suspended",
+  "Clinician clearance is required",
+];
 
 const ISSUE_TITLES: Record<string, string> = {
   restriction_violation: "Restriction violation",
@@ -559,10 +570,22 @@ function pluralize(count: number, singular: string) {
   return `${count} ${singular}${count === 1 ? "" : "s"}`;
 }
 
-function buildReviewSummary(
+export function hasBlockedTriageStubText(...texts: Array<string | null | undefined>): boolean {
+  const combined = texts
+    .map((text) => (typeof text === "string" ? text.trim() : ""))
+    .filter(Boolean)
+    .join("\n");
+  return TRIAGE_BLOCKED_STUB_MARKERS.some((marker) => combined.includes(marker));
+}
+
+export function buildReviewSummary(
   report: Record<string, unknown> | null | undefined,
   stage2Status: string,
+  options?: {
+    hasBlockedTriageStubText?: boolean;
+  },
 ) {
+  const normalizedStage2Status = String(stage2Status || "").trim().toLowerCase();
   const errors = safeIssueList(report?.errors).map((issue) => buildReviewIssue(issue, "error"));
   const { blockingWarnings, reviewFlags } = resolveWarningBuckets(report);
   const blocking = blockingWarnings.map((issue) => buildReviewIssue(issue, "warning"));
@@ -575,10 +598,14 @@ function buildReviewSummary(
     typeof report?.review_flag_count === "number"
       ? report.review_flag_count
       : reviewFlagsMapped.length;
-  const isPublishable =
+  const isPublishableFromReport =
     typeof report?.is_publishable === "boolean"
       ? report.is_publishable
       : errors.length === 0 && blocking.length === 0;
+  const isExplicitlyNonPublishableStatus = NON_PUBLISHABLE_STAGE2_STATUSES.has(normalizedStage2Status);
+  const isBlockedTriageStub = Boolean(options?.hasBlockedTriageStubText);
+  const isPublishable =
+    !isExplicitlyNonPublishableStatus && !isBlockedTriageStub && isPublishableFromReport;
 
   const summary = {
     errors,
@@ -594,11 +621,15 @@ function buildReviewSummary(
       ...summary,
       hasIssues: false,
       headline:
-        stage2Status === "stage2_failed"
+        normalizedStage2Status === "triage_resume_approved"
+          ? "Resume approved — regeneration pending. A regenerated final result is required before release."
+          : stage2Status === "stage2_failed"
           ? "Stage 2 held this plan, but no detailed validator reasons were saved in the report."
           : "No validator issues were saved for this plan.",
       guidance:
-        stage2Status === "stage2_failed"
+        normalizedStage2Status === "triage_resume_approved"
+          ? "Keep this plan blocked until Stage 2 regeneration completes and a real final result replaces the triage stub."
+          : stage2Status === "stage2_failed"
           ? "Open the latest model output and retry prompt below to see what still needs work."
           : "This usually means the plan is held for workflow reasons rather than a specific validator issue.",
     };
@@ -629,7 +660,9 @@ function buildReviewSummary(
     hasIssues: true,
     headline: `${summaryParts.join(" and ")} are currently holding this Stage 2 plan.`,
     guidance:
-      errors.length > 0
+      isBlockedTriageStub
+        ? "This plan still contains triage placeholder text and cannot be released to the athlete."
+        : errors.length > 0
         ? "Fix the blocking issues first. Review flags are secondary until the blockers are gone."
         : "These blockers were found on the latest validation pass. You can retry or approve anyway to release.",
   };
@@ -820,9 +853,14 @@ export function PlanViewer({
     typeof plan.admin_outputs.stage2_validator_report === "object"
       ? plan.admin_outputs.stage2_validator_report
       : {};
+  const containsBlockedTriageStub = hasBlockedTriageStubText(
+    plan.admin_outputs?.final_plan_text,
+    plan.admin_outputs?.draft_plan_text,
+  );
   const stage2ReviewSummary = buildReviewSummary(
     validatorReport,
     plan.admin_outputs?.stage2_status || "",
+    { hasBlockedTriageStubText: containsBlockedTriageStub },
   );
   const planningBriefText = formatStructuredValue(
     plan.admin_outputs?.planning_brief,
@@ -838,7 +876,8 @@ export function PlanViewer({
     plan.admin_outputs?.draft_plan_text?.trim() ||
     athletePlanText ||
     "";
-  const canApproveForRelease = isAdmin && !hasPublishedPlan && Boolean(approvableText);
+  const canApproveForRelease =
+    isAdmin && !hasPublishedPlan && Boolean(approvableText) && !containsBlockedTriageStub;
   const canApproveAndResumeGeneration =
     isAdmin &&
     !hasResumeApproval &&
@@ -1371,6 +1410,9 @@ export function PlanViewer({
                       ? injuryTriage?.mode === "medical_hold"
                         ? "Blocked"
                         : "Protected"
+                      : containsBlockedTriageStub ||
+                          plan.admin_outputs?.stage2_status === "triage_resume_approved"
+                        ? "Blocked / resume pending"
                       : stage2ReviewSummary.isPublishable
                         ? "Publishable"
                         : "Held"}
@@ -1424,6 +1466,8 @@ export function PlanViewer({
               <h2>
                 {isTriageBlocked
                   ? blockedTitle
+                  : plan.admin_outputs?.stage2_status === "triage_resume_approved"
+                    ? "Resume approved — regeneration pending"
                   : hasPublishedPlan
                     ? "Validated final plan"
                     : "Pending finalization"}
@@ -1442,6 +1486,8 @@ export function PlanViewer({
             >
               {isTriageBlocked
                 ? blockedTitle
+                : plan.admin_outputs?.stage2_status === "triage_resume_approved"
+                  ? "Resume pending"
                 : hasPublishedPlan
                   ? "Validated"
                   : "Review required"}
