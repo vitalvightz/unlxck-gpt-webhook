@@ -444,7 +444,7 @@ def _validate_production_cors_config(origins: list[str], regex: str | None) -> N
     for violation in violations:
         logger.error("[cors] production_cors_unsafe: %s", violation)
     if strict:
-        raise RuntimeError("; ".join(violations))
+        raise ValueError("; ".join(violations))
 
 
 def _plan_generate_rate_limit_requests() -> int:
@@ -915,6 +915,20 @@ def _has_existing_triage_resume_approval(plan_row: dict[str, Any]) -> bool:
     if not isinstance(why_log, dict):
         return False
     return bool(why_log.get("triage_regeneration_cleared"))
+
+
+def _resume_job_final_status(job: dict[str, Any]) -> str:
+    final_result = job.get("final_result")
+    if isinstance(final_result, dict):
+        return str(final_result.get("status") or "").strip().lower()
+    return ""
+
+
+def _resume_job_resolved_successfully(job: dict[str, Any]) -> bool:
+    if str(job.get("status") or "").strip().lower() != "completed":
+        return False
+    final_status = _resume_job_final_status(job)
+    return final_status not in {"", "triage_blocked", "failed"}
 
 
 def create_app(
@@ -1438,12 +1452,21 @@ def create_app(
                     )
 
         retry_client_request_id = (request.headers.get("X-Client-Request-Id") or "").strip() or f"retry_{job_id}_{uuid.uuid4().hex}"
+        retry_intake_id = str(original.get("intake_id") or "").strip() or None
+        retry_plan_id = str(original.get("plan_id") or "").strip() or None
+        if source == "admin_triage_resume" and (not retry_intake_id or not retry_plan_id):
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="admin triage resume retry is missing plan/intake linkage",
+            )
         job = await asyncio.to_thread(
             store.create_or_get_generation_job,
             athlete_id=target_athlete_id,
             client_request_id=retry_client_request_id,
             source=source,
             request_payload=copy.deepcopy(request_payload),
+            intake_id=retry_intake_id,
+            plan_id=retry_plan_id,
         )
         job = await schedule_generation_job_if_needed(
             job=job,
@@ -1621,15 +1644,6 @@ def create_app(
         if not plan_row:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
 
-        # Check for an existing approval first: once the resume has already
-        # been run and the plan was updated in place, the triage state in
-        # why_log no longer exists, so the triage-mode guard below would
-        # otherwise mask the duplicate with a less specific error.
-        if _has_existing_triage_resume_approval(plan_row):
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail="this blocked plan has already been approved for resume",
-            )
         why_log = plan_row.get("why_log") if isinstance(plan_row.get("why_log"), dict) else {}
         triage = why_log.get("injury_triage") if isinstance(why_log.get("injury_triage"), dict) else {}
         triage_mode = str(triage.get("mode") or "").strip().lower()
@@ -1669,6 +1683,35 @@ def create_app(
         
         client_request_id = f"triage_resume_{plan_id}"
         
+        existing_resume_job = await asyncio.to_thread(
+            store.get_generation_job_by_client_request_id,
+            athlete_id=str(plan_row["athlete_id"]),
+            client_request_id=client_request_id,
+        )
+        if existing_resume_job:
+            existing_status = str(existing_resume_job.get("status") or "").strip().lower()
+            existing_intake_id = str(existing_resume_job.get("intake_id") or "").strip()
+            existing_plan_id = str(existing_resume_job.get("plan_id") or "").strip()
+            if existing_intake_id != intake_id or existing_plan_id != plan_id:
+                if existing_status == "running" and not _is_stale_job(
+                    existing_resume_job,
+                    stale_after_seconds=_generation_job_stale_after_seconds(),
+                ):
+                    raise HTTPException(
+                        status_code=status.HTTP_409_CONFLICT,
+                        detail="existing running triage resume job has unsafe plan/intake linkage",
+                    )
+            if existing_status == "running" and not _is_stale_job(
+                existing_resume_job,
+                stale_after_seconds=_generation_job_stale_after_seconds(),
+            ):
+                return _job_response(existing_resume_job, viewer_role=profile.role)
+            if _resume_job_resolved_successfully(existing_resume_job):
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail="this blocked plan has already been approved and resumed",
+                )
+
         job = await asyncio.to_thread(
             store.create_or_get_generation_job,
             athlete_id=str(plan_row["athlete_id"]),
@@ -1694,11 +1737,8 @@ def create_app(
                 intake_id=intake_id,
                 plan_id=plan_id,
             )
-        # Ensure resume-specific override payload is always present on the job
-        # that will run. create_or_get_generation_job may return a pre-existing
-        # row keyed by the same client_request_id; if that row was created
-        # before this approval write, we must replace its payload so generation
-        # does not re-run without the override and fall back into triage-blocked.
+        # Refresh/requeue only after run-state checks above. Non-stale running
+        # jobs are returned as-is; completed successful jobs are rejected.
         job = await asyncio.to_thread(
             store.update_generation_job,
             str(job.get("id") or ""),
