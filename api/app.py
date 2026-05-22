@@ -213,6 +213,25 @@ def _generation_job_stale_after_seconds() -> int:
     return max(60, parsed)
 
 
+def _find_blocking_generation_job_for_athlete(
+    *,
+    store: AppStore,
+    athlete_id: str,
+    stale_after_seconds: int,
+) -> dict[str, Any] | None:
+    jobs = store.list_generation_jobs_for_athlete(athlete_id, limit=25)
+    for job in jobs:
+        status_value = str(job.get("status") or "")
+        if status_value == "queued":
+            return job
+        if status_value == "running" and not is_startup_stale_generation_job(
+            job,
+            stale_after_seconds=stale_after_seconds,
+        ):
+            return job
+    return None
+
+
 def _request_payload_summary(payload: Any) -> GenerationRequestPayloadSummary:
     if not isinstance(payload, dict):
         return GenerationRequestPayloadSummary()
@@ -1381,6 +1400,17 @@ def create_app(
                 stale_after_seconds=stale_after_seconds,
             )
             return _job_response(job, viewer_role=profile.role)
+        blocking_job = await asyncio.to_thread(
+            _find_blocking_generation_job_for_athlete,
+            store=store,
+            athlete_id=profile.athlete_id,
+            stale_after_seconds=stale_after_seconds,
+        )
+        if blocking_job:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="A generation job is already queued or running for this account.",
+            )
         daily_limit = _plan_generate_daily_limit_per_user()
         if daily_limit > 0 and profile.role != "admin" and not _is_exempt_from_daily_generation_cap(profile.email):
             utc_midnight = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0).isoformat()
@@ -2087,13 +2117,25 @@ def create_app(
                 detail=focus_validation.error_message or "Too many focus selections for this camp.",
             )
         client_request_id = (request.headers.get("X-Client-Request-Id") or "").strip() or f"cli_{uuid.uuid4().hex}"
+        stale_after_seconds = _generation_job_stale_after_seconds()
+        blocking_job = await asyncio.to_thread(
+            _find_blocking_generation_job_for_athlete,
+            store=store,
+            athlete_id=athlete_id,
+            stale_after_seconds=stale_after_seconds,
+        )
+        if blocking_job:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="A generation job is already queued or running for this account.",
+            )
         job = await asyncio.to_thread(
             store.create_or_get_generation_job,
             athlete_id=athlete_id,
             client_request_id=client_request_id,
             source="admin_latest_intake",
             request_payload=request_body.model_dump(mode="json"),
-            stale_after_seconds=_generation_job_stale_after_seconds(),
+            stale_after_seconds=stale_after_seconds,
         )
         job = await schedule_generation_job_if_needed(
             job=job,
@@ -2104,7 +2146,7 @@ def create_app(
             active_tasks=active_tasks,
             enable_in_process_generation=enable_in_process_generation,
             stale_job_checker=_is_stale_job,
-            stale_after_seconds=_generation_job_stale_after_seconds(),
+            stale_after_seconds=stale_after_seconds,
         )
         return _job_response(job, viewer_role="admin")
 
