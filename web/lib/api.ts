@@ -131,6 +131,14 @@ async function sleep(ms: number): Promise<void> {
   await new Promise((resolve) => globalThis.setTimeout(resolve, ms));
 }
 
+function createClientRequestId(prefix: string): string {
+  const randomId =
+    globalThis.crypto?.randomUUID?.() ??
+    `${Date.now()}_${Math.random().toString(16).slice(2)}`;
+
+  return `${prefix}_${randomId}`;
+}
+
 async function withTransientRetries<T>(
   operation: () => Promise<T>,
   {
@@ -468,11 +476,13 @@ export function createGenerationJob(
   clientRequestId?: string,
   planSource?: string | null,
 ): Promise<GenerationJobResponse> {
+  const stableClientRequestId = clientRequestId ?? createClientRequestId("plan_generate");
+
   return withTransientRetries(() =>
     readJson<GenerationJobResponse>("/api/plans/generate", {
       method: "POST",
       token,
-      clientRequestId,
+      clientRequestId: stableClientRequestId,
       planSource,
       body: JSON.stringify(payload),
     }),
@@ -490,11 +500,13 @@ export function retryGenerationJob(
   jobId: string,
   clientRequestId?: string,
 ): Promise<GenerationJobResponse> {
+  const stableClientRequestId = clientRequestId ?? createClientRequestId(`retry_${jobId}`);
+
   return withTransientRetries(() =>
-    readJson<GenerationJobResponse>(`/api/generation-jobs/${jobId}/retry`, {
+    readJson<GenerationJobResponse>(`/api/generation-jobs/${encodeURIComponent(jobId)}/retry`, {
       method: "POST",
       token,
-      clientRequestId,
+      clientRequestId: stableClientRequestId,
     }),
   );
 }
@@ -584,12 +596,18 @@ export function generateAdminAthletePlanFromLatestIntake(
   athleteId: string,
   clientRequestId?: string,
 ): Promise<GenerationJobResponse> {
+  const stableClientRequestId =
+    clientRequestId ?? createClientRequestId(`admin_latest_intake_${athleteId}`);
+
   return withTransientRetries(() =>
-    readJson<GenerationJobResponse>(`/api/admin/athletes/${athleteId}/plans/generate-from-latest-intake`, {
-      method: "POST",
-      token,
-      clientRequestId,
-    }),
+    readJson<GenerationJobResponse>(
+      `/api/admin/athletes/${encodeURIComponent(athleteId)}/plans/generate-from-latest-intake`,
+      {
+        method: "POST",
+        token,
+        clientRequestId: stableClientRequestId,
+      },
+    ),
   );
 }
 
@@ -637,13 +655,18 @@ export function approveAndResumeGeneration(
   payload: ApproveAndResumeGenerationRequest,
   clientRequestId?: string,
 ): Promise<GenerationJobResponse> {
+  const stableClientRequestId = clientRequestId ?? createClientRequestId(`triage_resume_${planId}`);
+
   return withTransientRetries(() =>
-    readJson<GenerationJobResponse>(`/api/admin/plans/${planId}/approve-and-resume-generation`, {
-      method: "POST",
-      token,
-      clientRequestId,
-      body: JSON.stringify(payload),
-    }),
+    readJson<GenerationJobResponse>(
+      `/api/admin/plans/${encodeURIComponent(planId)}/approve-and-resume-generation`,
+      {
+        method: "POST",
+        token,
+        clientRequestId: stableClientRequestId,
+        body: JSON.stringify(payload),
+      },
+    ),
   );
 }
 
