@@ -14,6 +14,7 @@ from postgrest.exceptions import APIError as PostgrestAPIError
 from supabase import Client, create_client
 
 from .auth import AuthenticatedUser
+from .environment import is_production_environment
 from .models import (
     PlanRequest,
     ProfileUpdateRequest,
@@ -89,9 +90,13 @@ _PLAN_INVALID_PAYLOAD_DETAIL = "invalid plans payload for table insert"
 GENERATION_JOB_UNAVAILABLE_DETAIL = "generation job service temporarily unavailable"
 GENERATION_JOB_SCHEMA_DETAIL = "generation job store is not ready; apply the latest Supabase schema and redeploy"
 
+_is_production_environment = is_production_environment
+
 
 class AppStore(Protocol):
     def validate_runtime_schema(self) -> None: ...
+
+    def is_admin_email(self, email: str) -> bool: ...
 
     def ensure_profile(self, user: AuthenticatedUser) -> dict[str, Any]: ...
 
@@ -121,7 +126,7 @@ class AppStore(Protocol):
 
     def rename_plan(self, plan_id: str, plan_name: str) -> dict[str, Any]: ...
 
-    def delete_plan(self, plan_id: str) -> None: ...
+    def archive_plan(self, plan_id: str) -> dict[str, Any]: ...
 
     def create_or_get_generation_job(
         self,
@@ -153,6 +158,8 @@ class AppStore(Protocol):
     def claim_generation_job_start(self, job_id: str, *, stale_after_seconds: int = 90) -> dict[str, Any] | None: ...
 
     def claim_generation_job(self, job_id: str, *, stale_after_seconds: int = 90) -> dict[str, Any] | None: ...
+
+    def count_active_generation_jobs(self, *, stale_after_seconds: int = 90) -> int: ...
 
     def update_generation_job(self, job_id: str, **changes: Any) -> dict[str, Any]: ...
 
@@ -256,6 +263,11 @@ class SupabaseAppStore:
         )
         return cls(create_client(url, key), admin_emails)
 
+    def is_admin_email(self, email: str) -> bool:
+        if not email:
+            return False
+        return email.strip().lower() in self.admin_emails
+
     def _select_first(self, query) -> dict[str, Any] | None:
         response = query.limit(1).execute()
         rows = getattr(response, "data", None) or []
@@ -324,7 +336,21 @@ class SupabaseAppStore:
         return any(column in text for column in _PLAN_RUNTIME_REQUIRED_COLUMNS_SET)
 
     def _legacy_plan_schema_fallback_enabled(self) -> bool:
-        return os.getenv("UNLXCK_ALLOW_LEGACY_PLAN_SCHEMA_FALLBACK", "").strip() == "1"
+        flag_set = os.getenv("UNLXCK_ALLOW_LEGACY_PLAN_SCHEMA_FALLBACK", "").strip() == "1"
+        if not flag_set:
+            return False
+        if _is_production_environment():
+            logger.error(
+                "[store] legacy_plan_schema_fallback:blocked_in_production "
+                "UNLXCK_ALLOW_LEGACY_PLAN_SCHEMA_FALLBACK is ignored in production; "
+                "apply the latest Supabase schema and redeploy"
+            )
+            return False
+        logger.warning(
+            "[store] Legacy plan schema fallback is enabled. Runtime columns may be "
+            "dropped. Do not use in production."
+        )
+        return True
 
     def _log_create_plan_postgrest_error(
         self,
@@ -1336,6 +1362,45 @@ class SupabaseAppStore:
     def claim_generation_job(self, job_id: str, *, stale_after_seconds: int = 90) -> dict[str, Any] | None:
         return self.claim_generation_job_start(job_id, stale_after_seconds=stale_after_seconds)
 
+    def count_active_generation_jobs(self, *, stale_after_seconds: int = 90) -> int:
+        try:
+            cutoff_iso = (
+                datetime.now(timezone.utc) - timedelta(seconds=max(1, stale_after_seconds))
+            ).isoformat()
+            response = self._run_with_transient_retry(
+                operation="count_active_generation_jobs:select_running",
+                fn=lambda: self.client.table("generation_jobs")
+                .select("id", count="exact")
+                .eq("status", "running")
+                .or_(f"heartbeat_at.gt.{cutoff_iso},and(heartbeat_at.is.null,started_at.gt.{cutoff_iso})")
+                .execute(),
+            )
+            count_value = getattr(response, "count", None)
+            return int(count_value or 0)
+        except HTTPException:
+            raise
+        except _STORE_CLIENT_ERRORS as exc:
+            if self._is_transient_store_error(exc):
+                logger.warning(
+                    "[store] count_active_generation_jobs:transient_failure error_type=%s",
+                    type(exc).__name__,
+                )
+                raise HTTPException(
+                    status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                    detail=GENERATION_JOB_UNAVAILABLE_DETAIL,
+                ) from exc
+            if self._is_generation_job_schema_error(exc):
+                logger.exception("[store] count_active_generation_jobs:schema_mismatch")
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail=GENERATION_JOB_SCHEMA_DETAIL,
+                ) from exc
+            logger.exception("[store] count_active_generation_jobs:exception")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="failed to count active generation jobs",
+            ) from exc
+
     def update_generation_job(self, job_id: str, **changes: Any) -> dict[str, Any]:
         try:
             payload = dict(changes)
@@ -1391,24 +1456,32 @@ class SupabaseAppStore:
                 exc=exc,
             )
 
-    def delete_plan(self, plan_id: str) -> None:
+    def archive_plan(self, plan_id: str) -> dict[str, Any]:
         try:
             existing = self.get_plan(plan_id)
             if not existing:
-                logger.warning("[store] delete_plan:not_found plan_id=%s", plan_id)
+                logger.warning("[store] archive_plan:not_found plan_id=%s", plan_id)
                 raise HTTPException(
                     status_code=status.HTTP_404_NOT_FOUND,
                     detail="plan not found",
                 )
-            logger.info("[store] delete_plan:start plan_id=%s", plan_id)
-            self.client.table("plans").delete().eq("id", plan_id).execute()
-            logger.info("[store] delete_plan:success plan_id=%s", plan_id)
+            logger.info("[store] archive_plan:start plan_id=%s", plan_id)
+            self.client.table("plans").update({"status": "archived"}).eq("id", plan_id).execute()
+            updated = self.get_plan(plan_id)
+            if not updated:
+                logger.warning("[store] archive_plan:plan_missing_after_update plan_id=%s", plan_id)
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="plan not found",
+                )
+            logger.info("[store] archive_plan:success plan_id=%s", plan_id)
+            return updated
         except HTTPException:
             raise
         except _STORE_CLIENT_ERRORS as exc:
             self._raise_operation_http_error(
-                operation=f"delete_plan plan_id={plan_id}",
-                detail="failed to delete plan",
+                operation=f"archive_plan plan_id={plan_id}",
+                detail="failed to archive plan",
                 exc=exc,
             )
 
@@ -1433,7 +1506,10 @@ class SupabaseAppStore:
             "stage2_handoff_text",
         ):
             if optional_field in result:
-                payload[optional_field] = result.get(optional_field)
+                value = result.get(optional_field)
+                if optional_field == "planning_brief":
+                    value = _encode_structured_text(value)
+                payload[optional_field] = value
         try:
             logger.info("[store] update_plan_stage2:start plan_id=%s status=%s", plan_id, payload["status"])
             self.client.table("plans").update(payload).eq("id", plan_id).execute()

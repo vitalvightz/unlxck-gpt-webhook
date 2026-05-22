@@ -46,8 +46,8 @@ export type FocusPreset = {
 export const EQUIPMENT_PRESETS: EquipmentPreset[] = [
   {
     key: "home",
-    label: "Home / bodyweight",
-    description: "Bands, bag, partner",
+    label: "Home fight kit",
+    description: "Bands, bag, partner, med ball",
     equipment_access: ["bands", "heavy_bag", "partner", "medicine_ball"],
   },
   {
@@ -80,7 +80,7 @@ export const FOCUS_PRESETS: FocusPreset[] = [
   {
     key: "strength_base",
     label: "Strength base",
-    description: "Strength, strength weakness",
+    description: "Strength",
     key_goals: ["strength"],
     weak_areas: ["strength"],
     allowNoScheduledFight: true,
@@ -90,7 +90,7 @@ export const FOCUS_PRESETS: FocusPreset[] = [
   {
     key: "explosive_power",
     label: "Explosive power",
-    description: "Power, power weakness",
+    description: "Power",
     key_goals: ["power"],
     weak_areas: ["power"],
     allowNoScheduledFight: true,
@@ -100,7 +100,7 @@ export const FOCUS_PRESETS: FocusPreset[] = [
   {
     key: "gas_tank",
     label: "Gas tank",
-    description: "Conditioning, gas tank weakness",
+    description: "Conditioning",
     key_goals: ["conditioning"],
     weak_areas: ["gas_tank"],
     allowNoScheduledFight: true,
@@ -110,7 +110,7 @@ export const FOCUS_PRESETS: FocusPreset[] = [
   {
     key: "fight_sharpness",
     label: "Fight sharpness",
-    description: "Speed, speed weakness",
+    description: "Speed",
     key_goals: ["speed"],
     weak_areas: ["speed"],
     allowNoScheduledFight: false,
@@ -149,8 +149,8 @@ export const TRAINING_PRESETS: TrainingPreset[] = [
   {
     key: "five_days",
     label: "5 days",
-    description: "Mon, Tue, Wed, Thu, Sat",
-    training_availability: ["Monday", "Tuesday", "Wednesday", "Thursday", "Saturday"],
+    description: "Mon, Tue, Thu, Fri, Sat",
+    training_availability: ["Monday", "Tuesday", "Thursday", "Friday", "Saturday"],
     weekly_training_frequency: 5,
   },
 ];

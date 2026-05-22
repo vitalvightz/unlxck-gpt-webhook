@@ -872,7 +872,7 @@ export default function PlansPage() {
         <div className="section-heading">
           <div className="athlete-motion-slot athlete-motion-header">
             <p className="kicker">Plan Dashboard</p>
-            <h1>Your plan command center</h1>
+            <h1>Your plan workspace</h1>
             <p className="muted">Reopen the latest camp fast, adjust the saved intake, and keep older plan versions in the archive below.</p>
           </div>
         </div>

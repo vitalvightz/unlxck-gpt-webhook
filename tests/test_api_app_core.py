@@ -1,8 +1,6 @@
 from __future__ import annotations
 
-import asyncio
 import importlib
-import threading
 
 import pytest
 from postgrest.exceptions import APIError as PostgrestAPIError
@@ -59,21 +57,6 @@ def test_root_and_health_return_ok_for_render_probes():
     }
     assert health_response.status_code == 200
     assert health_response.json() == root_response.json()
-
-
-def test_run_stage1_planner_uses_worker_thread():
-    main_thread_id = threading.get_ident()
-    seen_thread_ids: list[int] = []
-
-    def planner(payload: dict) -> dict:
-        seen_thread_ids.append(threading.get_ident())
-        return {"payload": payload}
-
-    result = asyncio.run(app_module._run_stage1_planner(planner, {"athlete": "demo"}))
-
-    assert result == {"payload": {"athlete": "demo"}}
-    assert seen_thread_ids
-    assert seen_thread_ids[0] != main_thread_id
 
 
 def test_auth_is_required_for_me_route():
@@ -206,14 +189,22 @@ def test_runtime_app_falls_back_to_health_endpoint_when_supabase_config_missing(
     reloaded = importlib.reload(app_module)
 
     client = TestClient(reloaded.app)
-    response = client.get("/health")
-
-    assert response.status_code == 200
-    assert response.json() == {
+    expected_body = {
         "ok": False,
         "app": "unlxck-fight-camp-api",
         "detail": "missing supabase configuration",
     }
+
+    health_response = client.get("/health")
+    assert health_response.status_code == 503
+    assert health_response.json() == expected_body
+
+    root_response = client.get("/")
+    assert root_response.status_code == 503
+    assert root_response.json() == expected_body
+
+    head_response = client.head("/")
+    assert head_response.status_code == 503
 
 
 def test_runtime_app_uses_supabase_store_and_auth(monkeypatch: pytest.MonkeyPatch):
@@ -269,7 +260,7 @@ def test_runtime_app_falls_back_to_health_endpoint_when_runtime_config_is_invali
     client = TestClient(reloaded.app)
     response = client.get("/health")
 
-    assert response.status_code == 200
+    assert response.status_code == 503
     assert response.json() == {
         "ok": False,
         "app": "unlxck-fight-camp-api",
@@ -296,7 +287,7 @@ def test_runtime_app_fails_loudly_when_plan_schema_is_invalid_and_fallback_disab
     client = TestClient(reloaded.app)
     response = client.get("/health")
 
-    assert response.status_code == 200
+    assert response.status_code == 503
     assert response.json() == {
         "ok": False,
         "app": "unlxck-fight-camp-api",
@@ -324,7 +315,7 @@ def test_runtime_app_returns_startup_failure_when_store_is_restricted(
     client = TestClient(reloaded.app)
     response = client.get("/health")
 
-    assert response.status_code == 200
+    assert response.status_code == 503
     assert response.json()["ok"] is False
     assert response.json()["app"] == "unlxck-fight-camp-api"
     assert "JSON could not be generated" in response.json()["detail"]
@@ -333,11 +324,15 @@ def test_runtime_app_does_not_fail_schema_check_when_legacy_fallback_enabled(
 ):
     class SchemaCheckingStore(FakeStore):
         def validate_runtime_schema(self) -> None:
+            if store_module._is_production_environment():
+                raise RuntimeError(store_module.PLAN_RUNTIME_SCHEMA_ERROR_DETAIL)
             if app_module.os.getenv("UNLXCK_ALLOW_LEGACY_PLAN_SCHEMA_FALLBACK") == "1":
                 return
             raise RuntimeError(store_module.PLAN_RUNTIME_SCHEMA_ERROR_DETAIL)
 
-        monkeypatch.setenv("UNLXCK_ALLOW_LEGACY_PLAN_SCHEMA_FALLBACK", "1")
+    for var in ("APP_ENV", "ENVIRONMENT", "UNLXCK_ENV", "NODE_ENV"):
+        monkeypatch.delenv(var, raising=False)
+    monkeypatch.setenv("UNLXCK_ALLOW_LEGACY_PLAN_SCHEMA_FALLBACK", "1")
     monkeypatch.setenv("SUPABASE_URL", "https://example.supabase.co")
     monkeypatch.setenv("SUPABASE_SERVICE_ROLE_KEY", "test-service-role-key")
     monkeypatch.setattr(store_module.SupabaseAppStore, "from_env", classmethod(lambda cls: SchemaCheckingStore()))
@@ -352,6 +347,37 @@ def test_runtime_app_does_not_fail_schema_check_when_legacy_fallback_enabled(
         "ok": True,
         "app": "unlxck-fight-camp-api",
         "mode": "supabase-authenticated",
+    }
+
+
+def test_runtime_app_fails_in_production_even_when_legacy_fallback_flag_set(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    class SchemaCheckingStore(FakeStore):
+        def validate_runtime_schema(self) -> None:
+            # Mirror real SupabaseAppStore: production blocks fallback.
+            if store_module._is_production_environment():
+                raise RuntimeError(store_module.PLAN_RUNTIME_SCHEMA_ERROR_DETAIL)
+            if app_module.os.getenv("UNLXCK_ALLOW_LEGACY_PLAN_SCHEMA_FALLBACK") == "1":
+                return
+            raise RuntimeError(store_module.PLAN_RUNTIME_SCHEMA_ERROR_DETAIL)
+
+    monkeypatch.setenv("APP_ENV", "production")
+    monkeypatch.setenv("UNLXCK_ALLOW_LEGACY_PLAN_SCHEMA_FALLBACK", "1")
+    monkeypatch.setenv("SUPABASE_URL", "https://example.supabase.co")
+    monkeypatch.setenv("SUPABASE_SERVICE_ROLE_KEY", "test-service-role-key")
+    monkeypatch.setattr(store_module.SupabaseAppStore, "from_env", classmethod(lambda cls: SchemaCheckingStore()))
+    monkeypatch.setattr(auth_module.SupabaseAuthService, "from_env", classmethod(lambda cls: FakeAuthService({})))
+
+    reloaded = importlib.reload(app_module)
+    client = TestClient(reloaded.app)
+    response = client.get("/health")
+
+    assert response.status_code == 503
+    assert response.json() == {
+        "ok": False,
+        "app": "unlxck-fight-camp-api",
+        "detail": store_module.PLAN_RUNTIME_SCHEMA_ERROR_DETAIL,
     }
 
 
@@ -420,3 +446,141 @@ def test_cors_does_not_allow_render_origin_when_only_vercel_origin_is_configured
 
     assert response.status_code == 400
     assert "access-control-allow-origin" not in response.headers
+
+
+def _clear_env_detection_vars(monkeypatch: pytest.MonkeyPatch) -> None:
+    for var in ("APP_ENV", "ENVIRONMENT", "UNLXCK_ENV", "NODE_ENV"):
+        monkeypatch.delenv(var, raising=False)
+
+
+def test_production_cors_allows_safe_https_origin(monkeypatch: pytest.MonkeyPatch):
+    _clear_env_detection_vars(monkeypatch)
+    monkeypatch.setenv("APP_ENV", "production")
+    monkeypatch.setenv("APP_CORS_ORIGINS", "https://app.example.com")
+    # Should not raise
+    create_app(
+        store=FakeStore(),
+        auth_service=FakeAuthService({}),
+        stage2_automator=FakeStage2Automator(),
+    )
+
+
+def test_production_cors_warns_but_boots_on_unsafe_origin_by_default(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+):
+    """Hotfix behaviour: misconfigured production CORS logs an error but boots."""
+    _clear_env_detection_vars(monkeypatch)
+    monkeypatch.setenv("APP_ENV", "production")
+    monkeypatch.setenv("APP_CORS_ORIGINS", "*")
+    monkeypatch.delenv("APP_STRICT_PRODUCTION_CORS", raising=False)
+
+    # Should not raise even though the CORS config is unsafe.
+    create_app(
+        store=FakeStore(),
+        auth_service=FakeAuthService({}),
+        stage2_automator=FakeStage2Automator(),
+    )
+
+    captured = capsys.readouterr()
+    assert "production_cors_unsafe" in captured.out + captured.err
+
+
+def test_production_cors_strict_mode_rejects_wildcard_origin(monkeypatch: pytest.MonkeyPatch):
+    _clear_env_detection_vars(monkeypatch)
+    monkeypatch.setenv("APP_ENV", "production")
+    monkeypatch.setenv("APP_STRICT_PRODUCTION_CORS", "1")
+    monkeypatch.setenv("APP_CORS_ORIGINS", "*")
+
+    with pytest.raises(ValueError, match=r"\*"):
+        create_app(
+            store=FakeStore(),
+            auth_service=FakeAuthService({}),
+            stage2_automator=FakeStage2Automator(),
+        )
+
+
+def test_production_cors_strict_mode_rejects_empty_origins(monkeypatch: pytest.MonkeyPatch):
+    _clear_env_detection_vars(monkeypatch)
+    monkeypatch.setenv("APP_ENV", "production")
+    monkeypatch.setenv("APP_STRICT_PRODUCTION_CORS", "1")
+    monkeypatch.setenv("APP_CORS_ORIGINS", "")
+    monkeypatch.delenv("APP_CORS_ORIGIN_REGEX", raising=False)
+
+    with pytest.raises(ValueError, match="at least one origin"):
+        create_app(
+            store=FakeStore(),
+            auth_service=FakeAuthService({}),
+            stage2_automator=FakeStage2Automator(),
+        )
+
+
+def test_production_cors_strict_mode_rejects_localhost_origins(monkeypatch: pytest.MonkeyPatch):
+    _clear_env_detection_vars(monkeypatch)
+    monkeypatch.setenv("APP_ENV", "production")
+    monkeypatch.setenv("APP_STRICT_PRODUCTION_CORS", "1")
+    monkeypatch.setenv("APP_CORS_ORIGINS", "http://localhost:3000")
+
+    with pytest.raises(ValueError, match="localhost"):
+        create_app(
+            store=FakeStore(),
+            auth_service=FakeAuthService({}),
+            stage2_automator=FakeStage2Automator(),
+        )
+
+
+@pytest.mark.parametrize(
+    "regex",
+    [
+        ".*",
+        "^.*$",
+        ".+",
+        "^.+$",
+        "https://.*",
+        "^https://.*$",
+        "https://.+",
+        "^https://.+$",
+        "http://.*",
+        "^http://.*$",
+        "http://.+",
+        "^http://.+$",
+    ],
+)
+def test_production_cors_strict_mode_rejects_broad_regex(monkeypatch: pytest.MonkeyPatch, regex: str):
+    _clear_env_detection_vars(monkeypatch)
+    monkeypatch.setenv("APP_ENV", "production")
+    monkeypatch.setenv("APP_STRICT_PRODUCTION_CORS", "1")
+    monkeypatch.setenv("APP_CORS_ORIGINS", "https://app.example.com")
+    monkeypatch.setenv("APP_CORS_ORIGIN_REGEX", regex)
+
+    with pytest.raises(ValueError, match="too broad"):
+        create_app(
+            store=FakeStore(),
+            auth_service=FakeAuthService({}),
+            stage2_automator=FakeStage2Automator(),
+        )
+
+
+def test_production_cors_allows_narrow_subdomain_regex(monkeypatch: pytest.MonkeyPatch):
+    """Narrow regex constrained to a specific domain should still work even in strict mode."""
+    _clear_env_detection_vars(monkeypatch)
+    monkeypatch.setenv("APP_ENV", "production")
+    monkeypatch.setenv("APP_STRICT_PRODUCTION_CORS", "1")
+    monkeypatch.setenv("APP_CORS_ORIGINS", "https://app.example.com")
+    monkeypatch.setenv("APP_CORS_ORIGIN_REGEX", r"https://.*\.vercel\.app")
+    # Should not raise
+    create_app(
+        store=FakeStore(),
+        auth_service=FakeAuthService({}),
+        stage2_automator=FakeStage2Automator(),
+    )
+
+
+def test_non_production_cors_allows_localhost(monkeypatch: pytest.MonkeyPatch):
+    _clear_env_detection_vars(monkeypatch)
+    monkeypatch.setenv("APP_CORS_ORIGINS", "http://localhost:3000")
+    # Should not raise
+    create_app(
+        store=FakeStore(),
+        auth_service=FakeAuthService({}),
+        stage2_automator=FakeStage2Automator(),
+    )

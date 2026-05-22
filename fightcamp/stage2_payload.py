@@ -3977,6 +3977,16 @@ def build_stage2_payload(
         payload_mode=payload_mode,
         days_until_fight=training_context.days_until_fight,
     )
+    triage_summary = athlete_model.get("triage_summary")
+    triage_resume_approved = isinstance(triage_summary, dict) and bool(
+        triage_summary.get("triage_resume_approved")
+    )
+    if triage_resume_approved:
+        rewrite_guidance.setdefault("writing_rules", []).append(
+            "If triage_resume_approved is true, do not write 'clinician clearance required', "
+            "'until cleared', or equivalent re-clearance language. Keep only concrete current "
+            "load constraints and symptom stop-rules."
+        )
 
     days_until_fight = athlete_model.get("days_until_fight")
 
@@ -4181,6 +4191,38 @@ Cut fluff: one sentence of "why today" per session maximum, no repeated explanat
 """
 
 
+UNLXCK_FINAL_RENDER_CONTRACT = """UNLXCK FINAL RENDER CONTRACT
+
+Non-negotiable output contract:
+1. Late-fight plans must use D-X countdown headers.
+2. Late-fight active-day headers must be: D-X (Weekday) — clear athlete-facing session role.
+3. Do not use raw system titles as athlete-facing session titles. Avoid as session titles only: Strength touch, Alactic sharpness, Neural primer, Glycolytic, Alactic, Aerobic. Phase headers may still use GPP, SPP, and TAPER for longer camps.
+4. Longer camps must use phase/week headers in this style:
+   GPP — Week 1 (D-X to D-X) — Objective
+   SPP — Week 2 (D-X to D-X) — Objective
+   TAPER — Week 3 (D-X to D-X) — Objective
+5. Every app-owned training day must clearly show:
+   - why the session exists today
+   - the main prescription
+   - injury/rehab insert when relevant
+   - coach call when needed
+6. Coach-led boxing/sparring days must stay minimal: coach-owned label plus one app-owned freshness note only.
+7. D-0 must be fight day protocol only.
+8. Active injury or active cut context must appear as a short lead summary before the training detail.
+9. Do not expose scaffold labels such as "Anchor —", "role_key", "taper_micro_support", "candidate pool", "validator", or "planning brief".
+10. Return only the athlete-facing final plan.
+
+Mini example:
+D-5 (Tuesday) — Fight-speed primer
+Why: sharpen punch speed without adding fatigue.
+- Movement prep: 5 min shoulder swings, band pull-aparts, easy shadowboxing.
+- Explosive Boxing Burst Intervals — 6 x 6-10 sec all-out bursts; full recovery 75-120 sec.
+- Coach call: Stop when speed drops. This sharpens output without soreness.
+
+Preferred longer-camp week header:
+SPP — Week 4 (D-28 to D-22) — Raise fight-pace repeatability without compromising sparring freshness."""
+
+
 
 
 _OPEN_ONGOING_RENDER_MODE_INSTRUCTIONS = """OPEN ONGOING RENDER MODE
@@ -4371,6 +4413,7 @@ def build_stage2_handoff_text(
 
     sections = [
         STAGE2_FINALIZER_PROMPT.strip(),
+        UNLXCK_FINAL_RENDER_CONTRACT.strip(),
     ]
 
     if mode_instructions:

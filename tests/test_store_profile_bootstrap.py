@@ -482,7 +482,13 @@ def test_validate_runtime_schema_raises_when_required_plan_columns_missing_by_de
     assert str(exc_info.value) == store_module.PLAN_RUNTIME_SCHEMA_ERROR_DETAIL
 
 
+def _clear_environment_env_vars(monkeypatch):
+    for var in ("APP_ENV", "ENVIRONMENT", "UNLXCK_ENV", "NODE_ENV"):
+        monkeypatch.delenv(var, raising=False)
+
+
 def test_validate_runtime_schema_allows_legacy_missing_columns_when_flag_enabled(monkeypatch):
+    _clear_environment_env_vars(monkeypatch)
     monkeypatch.setenv("UNLXCK_ALLOW_LEGACY_PLAN_SCHEMA_FALLBACK", "1")
     store = _make_store()
     schema_error = APIError(
@@ -498,7 +504,117 @@ def test_validate_runtime_schema_allows_legacy_missing_columns_when_flag_enabled
     store.validate_runtime_schema()
 
 
+@pytest.mark.parametrize(
+    "env_var,env_value",
+    [
+        ("APP_ENV", "production"),
+        ("ENVIRONMENT", "production"),
+        ("UNLXCK_ENV", "production"),
+        ("NODE_ENV", "production"),
+        ("APP_ENV", "prod"),
+        ("APP_ENV", "PRODUCTION"),
+    ],
+)
+def test_validate_runtime_schema_blocks_legacy_fallback_in_production(
+    monkeypatch, env_var, env_value
+):
+    _clear_environment_env_vars(monkeypatch)
+    monkeypatch.setenv(env_var, env_value)
+    monkeypatch.setenv("UNLXCK_ALLOW_LEGACY_PLAN_SCHEMA_FALLBACK", "1")
+    store = _make_store()
+    schema_error = APIError(
+        {
+            "message": "Could not find the 'stage2_payload' column of 'plans' in the schema cache",
+            "code": "PGRST204",
+            "hint": None,
+            "details": None,
+        }
+    )
+    store.client.table.return_value.select.return_value.limit.return_value.execute.side_effect = schema_error
+
+    with pytest.raises(RuntimeError) as exc_info:
+        store.validate_runtime_schema()
+
+    assert str(exc_info.value) == store_module.PLAN_RUNTIME_SCHEMA_ERROR_DETAIL
+
+
+def test_create_plan_blocks_legacy_fallback_in_production_even_when_flag_set(monkeypatch):
+    _clear_environment_env_vars(monkeypatch)
+    monkeypatch.setenv("APP_ENV", "production")
+    monkeypatch.setenv("UNLXCK_ALLOW_LEGACY_PLAN_SCHEMA_FALLBACK", "1")
+    store = _make_store()
+    request = _build_request()
+    schema_error = APIError(
+        {
+            "message": "Could not find the 'stage2_payload' column of 'plans' in the schema cache",
+            "code": "PGRST204",
+            "hint": None,
+            "details": None,
+        }
+    )
+    insert_execute = store.client.table.return_value.insert.return_value.execute
+    insert_execute.side_effect = schema_error
+
+    with pytest.raises(HTTPException) as exc_info:
+        store.create_plan(
+            athlete_id="athlete-1",
+            intake_id="intake-1",
+            request=request,
+            result={"plan_text": "# Plan", "stage2_payload": {"ok": True}},
+        )
+
+    assert exc_info.value.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
+    assert exc_info.value.detail == store_module.PLAN_RUNTIME_SCHEMA_ERROR_DETAIL
+    assert insert_execute.call_count == 1
+
+
+def test_legacy_plan_schema_fallback_disabled_without_flag(monkeypatch):
+    _clear_environment_env_vars(monkeypatch)
+    monkeypatch.delenv("UNLXCK_ALLOW_LEGACY_PLAN_SCHEMA_FALLBACK", raising=False)
+    store = _make_store()
+    assert store._legacy_plan_schema_fallback_enabled() is False
+
+
+def test_legacy_plan_schema_fallback_enabled_in_development_when_flag_set(monkeypatch):
+    _clear_environment_env_vars(monkeypatch)
+    monkeypatch.setenv("APP_ENV", "development")
+    monkeypatch.setenv("UNLXCK_ALLOW_LEGACY_PLAN_SCHEMA_FALLBACK", "1")
+    store = _make_store()
+    assert store._legacy_plan_schema_fallback_enabled() is True
+
+
+def test_legacy_plan_schema_fallback_logs_warning_in_development(monkeypatch, caplog):
+    _clear_environment_env_vars(monkeypatch)
+    monkeypatch.setenv("UNLXCK_ALLOW_LEGACY_PLAN_SCHEMA_FALLBACK", "1")
+    store = _make_store()
+
+    with caplog.at_level("WARNING", logger="api.store"):
+        store._legacy_plan_schema_fallback_enabled()
+
+    assert any(
+        "Legacy plan schema fallback is enabled" in record.getMessage()
+        for record in caplog.records
+    )
+
+
+def test_legacy_plan_schema_fallback_logs_error_when_blocked_in_production(monkeypatch, caplog):
+    _clear_environment_env_vars(monkeypatch)
+    monkeypatch.setenv("APP_ENV", "production")
+    monkeypatch.setenv("UNLXCK_ALLOW_LEGACY_PLAN_SCHEMA_FALLBACK", "1")
+    store = _make_store()
+
+    with caplog.at_level("ERROR", logger="api.store"):
+        result = store._legacy_plan_schema_fallback_enabled()
+
+    assert result is False
+    assert any(
+        "blocked_in_production" in record.getMessage()
+        for record in caplog.records
+    )
+
+
 def test_create_plan_retries_with_legacy_payload_when_optional_plan_columns_are_missing(monkeypatch):
+    _clear_environment_env_vars(monkeypatch)
     monkeypatch.setenv("UNLXCK_ALLOW_LEGACY_PLAN_SCHEMA_FALLBACK", "1")
     store = _make_store()
     request = _build_request()

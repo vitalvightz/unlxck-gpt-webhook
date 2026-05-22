@@ -7,6 +7,7 @@ import test, { afterEach, beforeEach } from "node:test";
 import {
   ApiError,
   RETRYABLE_NETWORK_MESSAGE,
+  deletePlan,
   getAdminAthlete,
   getAdminAthleteNutritionCurrent,
   isRetryableApiFailure,
@@ -163,6 +164,54 @@ test("listAdminPlans gives up after configured attempts on persistent 503", asyn
     (raised: unknown) => raised instanceof ApiError && raised.status === 503,
   );
   assert.equal(attempts, 3, "withTransientRetries defaults to 3 attempts");
+});
+
+test("deletePlan resolves on 204 No Content via the shared request pipeline", async () => {
+  const calls: { url: string; method: string; auth: string | null }[] = [];
+  globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    const headers = new Headers(init?.headers ?? {});
+    calls.push({
+      url: String(input),
+      method: init?.method ?? "GET",
+      auth: headers.get("authorization"),
+    });
+    return new Response(null, { status: 204 });
+  }) as typeof fetch;
+
+  await deletePlan("delete-token", "plan-42");
+
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0]?.method, "DELETE");
+  assert.equal(calls[0]?.auth, "Bearer delete-token");
+  assert.match(calls[0]?.url ?? "", /\/api\/plans\/plan-42$/);
+});
+
+test("deletePlan retries the idempotent DELETE on 503 then succeeds", async () => {
+  let attempts = 0;
+  globalThis.fetch = (async () => {
+    attempts += 1;
+    if (attempts === 1) {
+      return gatewayResponse(503);
+    }
+    return new Response(null, { status: 204 });
+  }) as typeof fetch;
+
+  await deletePlan("token", "plan-1");
+  assert.equal(attempts, 2);
+});
+
+test("deletePlan surfaces a 404 ApiError without retrying", async () => {
+  let attempts = 0;
+  globalThis.fetch = (async () => {
+    attempts += 1;
+    return jsonResponse(404, { detail: "plan not found" });
+  }) as typeof fetch;
+
+  await assert.rejects(
+    deletePlan("token", "missing-plan"),
+    (raised: unknown) => raised instanceof ApiError && raised.status === 404,
+  );
+  assert.equal(attempts, 1);
 });
 
 test("admin read helpers are wrapped in withTransientRetries (source regression)", () => {

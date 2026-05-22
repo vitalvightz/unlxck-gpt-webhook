@@ -423,7 +423,15 @@ def _is_low_aerobic_support_role(role: dict) -> bool:
 
 
 def _count_low_aerobic_support_roles(roles: list[dict]) -> int:
-    return sum(1 for role in roles if _is_low_aerobic_support_role(role))
+    # Dedicated mobility/rehab support roles are explicitly excluded from the
+    # conditioning cap budget — they are protective recovery touches, not
+    # production conditioning. Gas-tank low-aerobic support still counts.
+    return sum(
+        1
+        for role in roles
+        if _is_low_aerobic_support_role(role)
+        and role.get("counts_toward_conditioning_cap") is not False
+    )
 
 
 def _low_aerobic_support_cap_for_week(
@@ -619,6 +627,10 @@ def _upgrade_recovery_days_to_gas_tank(
                 "recovery_compatible": True,
                 "gas_tank_recovery_touch": True,
                 "allowed_on_recovery_day": True,
+                "support_kind": "gas_tank",
+                "counts_toward_conditioning_cap": True,
+                "counts_toward_exercise_cap": False,
+                "counts_toward_strength_cap": False,
                 "blocked_systems": ["glycolytic", "ATP-PCr"],
                 "blocked_intensities": ["high", "max"],
                 "blocked_tags": [
@@ -665,27 +677,35 @@ def _upgrade_unused_days_to_low_load_support(
     if not support_profile:
         return session_roles
 
+    # Dedicated mobility/rehab support is a protective recovery touch and is
+    # explicitly excluded from the conditioning cap budget. Gas-tank low-aerobic
+    # support still consumes the cap.
+    support_counts_toward_conditioning_cap = (
+        support_profile["role_key"] == "converted_low_aerobic_gas_tank_day"
+    )
+
     updated_unused_days: list[dict] = []
     added_roles: list[dict] = []
 
     phase = str(week_entry.get("phase", "")).strip().upper()
     legacy_phase_ceiling = 2 if phase in {"GPP", "SPP"} else 1
-    cap = _low_aerobic_support_cap_for_week(
+    base_cap = _low_aerobic_support_cap_for_week(
         week_entry,
         athlete_model,
         session_roles,
         hard_sparring_plan=hard_sparring_plan,
     )
-    # Preserve one low-load conversion slot for non-gas-tank support profiles.
-    # Mobility/rehab-friendly unused-day support should not be fully blocked by
-    # gas-tank-oriented cut-pressure logic.
-    if _can_preserve_one_non_gas_low_load_support(
+    # For non-gas mobility/rehab profiles, _can_preserve_one_non_gas_low_load_support
+    # is the hard safety gate (high fatigue, medical_hold, restricted_rehab_only,
+    # red_flag_injury, severe_injury, fight-week cap=0). It is computed against
+    # the unboosted base cap so the fight-week cap=0 check stays accurate.
+    can_preserve_non_gas = _can_preserve_one_non_gas_low_load_support(
         week_entry,
         athlete_model,
         support_profile,
-        cap,
-    ):
-        cap = max(cap, 1)
+        base_cap,
+    )
+    cap = max(base_cap, 1) if can_preserve_non_gas else base_cap
     current_count = _count_low_aerobic_support_roles(session_roles)
 
     existing_days = {
@@ -729,15 +749,30 @@ def _upgrade_unused_days_to_low_load_support(
             updated_unused_days.append(day_entry)
             continue
 
-        if current_count >= cap:
-            annotated = dict(day_entry)
-            annotated["low_aerobic_cap_skipped"] = True
-            annotated["low_aerobic_cap_reason"] = (
-                f"Low-aerobic support cap reached ({cap}); cut severity, "
-                f"phase, fatigue, or readiness blocked the upgrade for {day}."
-            )
-            updated_unused_days.append(annotated)
-            continue
+        if support_counts_toward_conditioning_cap:
+            if current_count >= cap:
+                annotated = dict(day_entry)
+                annotated["low_aerobic_cap_skipped"] = True
+                annotated["low_aerobic_cap_reason"] = (
+                    f"Low-aerobic support cap reached ({cap}); cut severity, "
+                    f"phase, fatigue, or readiness blocked the upgrade for {day}."
+                )
+                updated_unused_days.append(annotated)
+                continue
+        else:
+            # Non-gas mobility/rehab support does not consume the conditioning
+            # cap, but is still blocked when the safety gate trips (high fatigue,
+            # medical_hold, restricted_rehab_only, red_flag_injury, severe_injury,
+            # fight-week cap=0).
+            if not can_preserve_non_gas:
+                annotated = dict(day_entry)
+                annotated["low_aerobic_cap_skipped"] = True
+                annotated["low_aerobic_cap_reason"] = (
+                    "Mobility/rehab support blocked by safety gate "
+                    "(fatigue, medical hold, red-flag, or fight-week cap=0)."
+                )
+                updated_unused_days.append(annotated)
+                continue
 
         role_key = support_profile["role_key"]
         preferred_system = support_profile["preferred_system"]
@@ -786,6 +821,8 @@ def _upgrade_unused_days_to_low_load_support(
             "gas_tank_recovery_touch": role_key == "converted_low_aerobic_gas_tank_day",
             "priority_recovery_touch": role_key != "converted_low_aerobic_gas_tank_day",
             "allowed_on_recovery_day": True,
+            "counts_toward_exercise_cap": False,
+            "counts_toward_strength_cap": False,
             "blocked_systems": ["glycolytic", "ATP-PCr"],
             "blocked_intensities": ["high", "max"],
             "blocked_tags": [
@@ -798,11 +835,26 @@ def _upgrade_unused_days_to_low_load_support(
             ],
         }
 
+        if role_key == "converted_low_aerobic_gas_tank_day":
+            added_role["support_kind"] = "gas_tank"
+            added_role["counts_toward_conditioning_cap"] = True
+        else:
+            added_role["counts_toward_conditioning_cap"] = False
+            added_role["is_dedicated_recovery_mobility_day"] = True
+            added_role["support_kind"] = (
+                "mobility"
+                if role_key == "converted_mobility_support_day"
+                else "rehab_friendly"
+            )
+
         if preferred_exercise_names:
             added_role["preferred_exercise_names"] = preferred_exercise_names
 
         added_roles.append(added_role)
-        if _is_low_aerobic_support_role(added_role):
+        if (
+            _is_low_aerobic_support_role(added_role)
+            and added_role.get("counts_toward_conditioning_cap") is not False
+        ):
             current_count += 1
 
     week_entry["intentionally_unused_days"] = updated_unused_days
@@ -1823,6 +1875,15 @@ def _non_spar_role_priority_rank(
     if preferred_system in must_keep or role_key in must_keep:
         return 100
 
+    # Dedicated recovery/mobility support is a protected low-load touch. It sits
+    # below primary strength / hard sparring / must-keep / hard safety locks, but
+    # above generic accessories and non-essential extra conditioning. Creation-time
+    # guards (_can_preserve_one_non_gas_low_load_support, _low_aerobic_support_cap_for_week,
+    # the D-1/D-0 block) already prevent it from existing under red-flag injury,
+    # medical hold, fight-week cap=0, or severe-cut + high-fatigue conditions.
+    if role.get("is_dedicated_recovery_mobility_day") is True:
+        return 3
+
     athlete_model = athlete_model or {}
     preserve_low_noise = _conditioning_limiter_signal(athlete_model) and _can_keep_low_noise_conditioning(athlete_model)
     demote_glycolytic = is_hard_spar_week or is_meaningful_cut or _active_injury_is_moderate_plus(athlete_model)
@@ -2008,7 +2069,12 @@ def _apply_high_fatigue_week_compression(
 
     ranked_roles = sorted(
         non_spar_roles,
-        key=lambda r: _non_spar_role_priority_rank(r, phase, is_hard_spar_week, is_meaningful_cut, must_keep, athlete_model),
+        key=lambda r: (
+            _non_spar_role_priority_rank(r, phase, is_hard_spar_week, is_meaningful_cut, must_keep, athlete_model),
+            # Tiebreak: dedicated recovery/mobility support wins over generic
+            # non-essential extra conditioning at the same rank.
+            1 if r.get("is_dedicated_recovery_mobility_day") is True else 0,
+        ),
         reverse=True,  # highest priority first
     )
 
@@ -2153,6 +2219,7 @@ def _apply_legacy_high_fatigue_compression(
                 if role.get("category") == "conditioning"
                 and role.get("preferred_system") != "glycolytic"
                 and role.get("preferred_system") not in must_keep
+                and role.get("is_dedicated_recovery_mobility_day") is not True
             ),
             None,
         )
@@ -2160,7 +2227,9 @@ def _apply_legacy_high_fatigue_compression(
         removable_role = next(
             (
                 role for role in kept_roles
-                if role.get("category") == "conditioning" and role.get("preferred_system") not in must_keep
+                if role.get("category") == "conditioning"
+                and role.get("preferred_system") not in must_keep
+                and role.get("is_dedicated_recovery_mobility_day") is not True
             ),
             None,
         )

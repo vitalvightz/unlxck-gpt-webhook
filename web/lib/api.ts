@@ -12,7 +12,6 @@ import type {
   PlanRequest,
   PlanSummary,
   ProfileUpdateRequest,
-  Stage1PreviewResponse,
   UsernameChangeRequest,
   WeeklySchedule,
 } from "@/lib/types";
@@ -132,6 +131,14 @@ async function sleep(ms: number): Promise<void> {
   await new Promise((resolve) => globalThis.setTimeout(resolve, ms));
 }
 
+function createClientRequestId(prefix: string): string {
+  const randomId =
+    globalThis.crypto?.randomUUID?.() ??
+    `${Date.now()}_${Math.random().toString(16).slice(2)}`;
+
+  return `${prefix}_${randomId}`;
+}
+
 async function withTransientRetries<T>(
   operation: () => Promise<T>,
   {
@@ -163,7 +170,17 @@ function truncateForLog(value: string, max = 1200): string {
   return value.length > max ? `${value.slice(0, max)}…[truncated]` : value;
 }
 
-async function readJson<T>(path: string, init?: ApiRequestInit): Promise<T> {
+type ExecutedRequest = {
+  response: Response;
+  path: string;
+  method: string;
+  url: string;
+  durationMs: number;
+  contentType: string;
+  requestId: string | null;
+};
+
+async function executeRequest(path: string, init?: ApiRequestInit): Promise<ExecutedRequest> {
   const headers = new Headers(init?.headers ?? {});
   if (init?.body) {
     headers.set("Content-Type", "application/json");
@@ -310,6 +327,15 @@ async function readJson<T>(path: string, init?: ApiRequestInit): Promise<T> {
     );
   }
 
+  return { response, path, method, url, durationMs, contentType, requestId };
+}
+
+async function readJson<T>(path: string, init?: ApiRequestInit): Promise<T> {
+  const { response, method, url, durationMs, contentType, requestId } = await executeRequest(
+    path,
+    init,
+  );
+
   try {
     const data = (await response.json()) as T;
     console.info("[api] request:success", {
@@ -337,6 +363,30 @@ async function readJson<T>(path: string, init?: ApiRequestInit): Promise<T> {
     });
     throw new Error("Server returned an unreadable response.");
   }
+}
+
+async function requestVoid(path: string, init?: ApiRequestInit): Promise<void> {
+  const { response, method, url, durationMs, requestId } = await executeRequest(path, init);
+
+  // Drain the body so the connection can be released even when the server
+  // returned content alongside a 200/204. We do not parse or throw on body
+  // content here — success status is the contract for void requests.
+  if (response.status !== 204) {
+    try {
+      await response.text();
+    } catch {
+      // Ignore — the server may have already closed the stream.
+    }
+  }
+
+  console.info("[api] request:success", {
+    path,
+    method,
+    url,
+    requestId,
+    status: response.status,
+    durationMs,
+  });
 }
 
 export function getMe(token: string): Promise<MeResponse> {
@@ -426,28 +476,18 @@ export function createGenerationJob(
   clientRequestId?: string,
   planSource?: string | null,
 ): Promise<GenerationJobResponse> {
+  const stableClientRequestId = clientRequestId ?? createClientRequestId("plan_generate");
+
   return withTransientRetries(() =>
     readJson<GenerationJobResponse>("/api/plans/generate", {
       method: "POST",
       token,
-      clientRequestId,
+      clientRequestId: stableClientRequestId,
       planSource,
       body: JSON.stringify(payload),
     }),
   );
 }
-
-export function generateStage1Preview(
-  token: string,
-  payload: PlanRequest,
-): Promise<Stage1PreviewResponse> {
-  return readJson<Stage1PreviewResponse>("/api/plans/stage1-preview", {
-    method: "POST",
-    token,
-    body: JSON.stringify(payload),
-  });
-}
-
 
 export function getGenerationJob(token: string, jobId: string): Promise<GenerationJobResponse> {
   return withTransientRetries(() =>
@@ -460,11 +500,13 @@ export function retryGenerationJob(
   jobId: string,
   clientRequestId?: string,
 ): Promise<GenerationJobResponse> {
+  const stableClientRequestId = clientRequestId ?? createClientRequestId(`retry_${jobId}`);
+
   return withTransientRetries(() =>
-    readJson<GenerationJobResponse>(`/api/generation-jobs/${jobId}/retry`, {
+    readJson<GenerationJobResponse>(`/api/generation-jobs/${encodeURIComponent(jobId)}/retry`, {
       method: "POST",
       token,
-      clientRequestId,
+      clientRequestId: stableClientRequestId,
     }),
   );
 }
@@ -506,21 +548,12 @@ export function renamePlan(token: string, planId: string, planName: string): Pro
 }
 
 export async function deletePlan(token: string, planId: string): Promise<void> {
-  return withTransientRetries(async () => {
-    const headers = new Headers();
-    headers.set("Authorization", `Bearer ${token}`);
-
-    const response = await fetch(`${getApiBaseUrl()}/api/plans/${planId}`, {
+  return withTransientRetries(() =>
+    requestVoid(`/api/plans/${planId}`, {
       method: "DELETE",
-      cache: "no-store",
-      headers,
-    });
-
-    if (!response.ok) {
-      const message = (await response.text()).trim() || `Request failed: ${response.status}`;
-      throw new ApiError(message, response.status);
-    }
-  });
+      token,
+    }),
+  );
 }
 
 export function listAdminAthletes(token: string): Promise<AdminAthleteRecord[]> {
@@ -563,12 +596,18 @@ export function generateAdminAthletePlanFromLatestIntake(
   athleteId: string,
   clientRequestId?: string,
 ): Promise<GenerationJobResponse> {
+  const stableClientRequestId =
+    clientRequestId ?? createClientRequestId(`admin_latest_intake_${athleteId}`);
+
   return withTransientRetries(() =>
-    readJson<GenerationJobResponse>(`/api/admin/athletes/${athleteId}/plans/generate-from-latest-intake`, {
-      method: "POST",
-      token,
-      clientRequestId,
-    }),
+    readJson<GenerationJobResponse>(
+      `/api/admin/athletes/${encodeURIComponent(athleteId)}/plans/generate-from-latest-intake`,
+      {
+        method: "POST",
+        token,
+        clientRequestId: stableClientRequestId,
+      },
+    ),
   );
 }
 
@@ -616,13 +655,18 @@ export function approveAndResumeGeneration(
   payload: ApproveAndResumeGenerationRequest,
   clientRequestId?: string,
 ): Promise<GenerationJobResponse> {
+  const stableClientRequestId = clientRequestId ?? createClientRequestId(`triage_resume_${planId}`);
+
   return withTransientRetries(() =>
-    readJson<GenerationJobResponse>(`/api/admin/plans/${planId}/approve-and-resume-generation`, {
-      method: "POST",
-      token,
-      clientRequestId,
-      body: JSON.stringify(payload),
-    }),
+    readJson<GenerationJobResponse>(
+      `/api/admin/plans/${encodeURIComponent(planId)}/approve-and-resume-generation`,
+      {
+        method: "POST",
+        token,
+        clientRequestId: stableClientRequestId,
+        body: JSON.stringify(payload),
+      },
+    ),
   );
 }
 

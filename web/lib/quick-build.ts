@@ -52,6 +52,53 @@ export function emptyQuickBuildInput(fullName = ""): QuickBuildInput {
   };
 }
 
+export function planRequestToQuickBuildInput(plan: PlanRequest): QuickBuildInput {
+  const trainingAvailability = retainKnownOptionValues(
+    plan.training_availability ?? [],
+    TRAINING_AVAILABILITY_OPTIONS,
+  );
+  const weeklyFrequencyRaw = plan.weekly_training_frequency ?? 4;
+  const weeklyFrequency = Math.min(
+    Math.max(Number.isFinite(weeklyFrequencyRaw) ? weeklyFrequencyRaw : 4, 1),
+    6,
+  );
+  return {
+    full_name: plan.athlete?.full_name ?? "",
+    technical_style: retainKnownOptionValues(
+      plan.athlete?.technical_style ?? [],
+      TECHNICAL_STYLE_OPTIONS,
+    ).slice(0, 1),
+    tactical_style: retainKnownOptionValues(
+      plan.athlete?.tactical_style ?? [],
+      TACTICAL_STYLE_OPTIONS,
+    ).slice(0, 1),
+    fight_date: plan.no_scheduled_fight ? "" : (plan.fight_date ?? ""),
+    no_scheduled_fight: Boolean(plan.no_scheduled_fight),
+    rounds_format: plan.rounds_format || "3 x 3",
+    weekly_training_frequency: weeklyFrequency,
+    training_availability: trainingAvailability,
+    hard_sparring_days: retainKnownOptionValues(
+      plan.hard_sparring_days ?? [],
+      TRAINING_AVAILABILITY_OPTIONS,
+    )
+      .filter((day) => trainingAvailability.includes(day))
+      .slice(0, HARD_SPARRING_DAY_CAP),
+    equipment_access: retainKnownOptionValues(
+      plan.equipment_access ?? [],
+      EQUIPMENT_ACCESS_OPTIONS,
+    ),
+    key_goals: retainKnownOptionValues(plan.key_goals ?? [], KEY_GOAL_OPTIONS).slice(
+      0,
+      QUICK_BUILD_KEY_GOAL_CAP,
+    ),
+    weak_areas: retainKnownOptionValues(plan.weak_areas ?? [], WEAK_AREA_OPTIONS).slice(
+      0,
+      QUICK_BUILD_WEAK_AREA_CAP,
+    ),
+    injuries: (plan.injuries ?? "").trim(),
+  };
+}
+
 function isFutureOrToday(value: string, now: Date = new Date()): boolean {
   const match = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
   if (!match) return false;

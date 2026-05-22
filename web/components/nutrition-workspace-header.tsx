@@ -22,7 +22,7 @@ export function NutritionWorkspaceHeader({
         <p className="status-label">Athlete</p>
         <h2 className="plan-summary-title">{athleteName}</h2>
         <div className="plan-summary-actions nutrition-inline-actions">
-          <Link href="/onboarding" className="ghost-button">Onboarding</Link>
+          <Link href="/onboarding" className="ghost-button">Advanced Intake</Link>
           <Link href="/settings" className="ghost-button">Settings</Link>
         </div>
       </div>

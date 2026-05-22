@@ -139,10 +139,10 @@ function statusMessageForJob(status: GenerationJobStatus, startedAtMs: number): 
       : "";
 
   if (status === "queued") {
-    return `Your plan request is queued and waiting for the runner.${suffix}`;
+    return `Your saved intake is queued for planning.${suffix}`;
   }
   if (status === "running") {
-    return `Your plan is processing in the background.${suffix}`;
+    return `Your fight-camp plan is being built.${suffix}`;
   }
   return "Finalizing your plan.";
 }

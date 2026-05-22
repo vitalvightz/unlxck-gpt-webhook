@@ -43,14 +43,27 @@ class FakeAuthService:
 
 
 class FakeStore:
-    def __init__(self):
+    def __init__(self, admin_emails: set[str] | None = None):
         self.profiles: dict[str, dict] = {}
         self.intakes: dict[str, list[dict]] = {}
         self.plans: dict[str, dict] = {}
         self.generation_jobs: dict[str, dict] = {}
+        self.admin_emails: set[str] = {
+            email.strip().lower() for email in (admin_emails or set()) if email
+        }
 
     def validate_runtime_schema(self) -> None:
         return None
+
+    def is_admin_email(self, email: str) -> bool:
+        if not email:
+            return False
+        normalized = email.strip().lower()
+        if normalized in self.admin_emails:
+            return True
+        # Mirror ensure_profile's @unlxck.test test pattern so existing fixtures
+        # do not need to register every admin email explicitly.
+        return normalized.endswith("@unlxck.test")
 
     def ensure_profile(self, user: AuthenticatedUser) -> dict:
         existing = self.profiles.get(user.user_id)
@@ -224,10 +237,12 @@ class FakeStore:
         row["plan_name"] = plan_name
         return row
 
-    def delete_plan(self, plan_id: str) -> None:
+    def archive_plan(self, plan_id: str) -> dict:
         if plan_id not in self.plans:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
-        del self.plans[plan_id]
+        row = self.plans[plan_id]
+        row["status"] = "archived"
+        return row
 
     def create_or_get_generation_job(
         self,
@@ -401,6 +416,29 @@ class FakeStore:
 
     def claim_generation_job(self, job_id: str, *, stale_after_seconds: int = 90) -> dict | None:
         return self.claim_generation_job_start(job_id, stale_after_seconds=stale_after_seconds)
+
+    def count_active_generation_jobs(self, *, stale_after_seconds: int = 90) -> int:
+        now = datetime.now(timezone.utc)
+        count = 0
+        for job in self.generation_jobs.values():
+            if str(job.get("status") or "") != "running":
+                continue
+            heartbeat_raw = job.get("heartbeat_at")
+            started_raw = job.get("started_at")
+            heartbeat = (
+                datetime.fromisoformat(str(heartbeat_raw).replace("Z", "+00:00"))
+                if isinstance(heartbeat_raw, str) and heartbeat_raw
+                else None
+            )
+            started_at = (
+                datetime.fromisoformat(str(started_raw).replace("Z", "+00:00"))
+                if isinstance(started_raw, str) and started_raw
+                else None
+            )
+            last_progress_at = heartbeat or started_at
+            if last_progress_at and (now - last_progress_at).total_seconds() < stale_after_seconds:
+                count += 1
+        return count
 
     def update_generation_job(self, job_id: str, **changes: dict) -> dict:
         job = self.generation_jobs.get(job_id)

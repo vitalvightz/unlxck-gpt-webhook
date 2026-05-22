@@ -27,6 +27,13 @@ _BLOCKING_WARNING_CODES = {
     "late_fight_conditioning_round_structure_forbidden",
     "late_fight_unapproved_exercise_rendered",
     "late_fight_neural_power_stacking",
+    "late_fight_missing_countdown_header",
+    "late_fight_countdown_header_format",
+    "late_fight_d0_protocol_expanded",
+    "coach_owned_sparring_overdetailed",
+    "internal_render_contract_leak",
+    "missing_injury_lead_summary",
+    "missing_weight_cut_lead_summary",
 }
 
 
@@ -140,6 +147,20 @@ def _warning_detail_line(warning: dict) -> str:
         return "Rewrite hedged adjustment language into one clear coaching call with a short why."
     if warning.get("code") == "empty_safety_language":
         return "Replace empty safety lines with operational guardrails that change what the athlete does next."
+    if warning.get("code") == "late_fight_missing_countdown_header":
+        return "Restore D-X countdown headers for every active late-fight day."
+    if warning.get("code") == "late_fight_countdown_header_format":
+        return "Rewrite countdown headers as D-X (Weekday) — session role."
+    if warning.get("code") == "late_fight_d0_protocol_expanded":
+        return "Reduce D-0 to fight day protocol only."
+    if warning.get("code") == "coach_owned_sparring_overdetailed":
+        return "Reduce coach-led sparring days to the minimal coach-owned label and one app-owned freshness note."
+    if warning.get("code") == "internal_render_contract_leak":
+        return "Remove internal scaffolding labels from the athlete-facing plan."
+    if warning.get("code") == "missing_injury_lead_summary":
+        return "Add a short lead summary for active injury constraints."
+    if warning.get("code") == "missing_weight_cut_lead_summary":
+        return "Add a short lead summary for active weight-cut constraints."
     rewrite_hint = str(warning.get("rewrite_hint") or "").strip()
     if rewrite_hint:
         return rewrite_hint

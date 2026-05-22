@@ -129,7 +129,7 @@ function normalizeTrainingSelections(
 
 function formatNumber(value: number | null | undefined, unit?: string): string {
   if (value == null) {
-    return "Missing in onboarding";
+    return "Missing in Advanced Intake";
   }
   return unit ? `${value} ${unit}` : String(value);
 }
@@ -137,11 +137,11 @@ function formatNumber(value: number | null | undefined, unit?: string): string {
 function formatSex(value: NutritionProfileInput["sex"] | null | undefined): string {
   if (value === "male") return "Male";
   if (value === "female") return "Female";
-  return "Missing in onboarding";
+  return "Missing in Advanced Intake";
 }
 
 function formatRestrictionsSummary(value: string | null | undefined): string {
-  return value?.trim() ? value.trim() : "No restrictions reported in onboarding.";
+  return value?.trim() ? value.trim() : "No restrictions reported in Advanced Intake.";
 }
 
 function formatEnumLabel(value: string | null | undefined, fallback: string): string {
@@ -276,7 +276,7 @@ export function NutritionWorkspaceScreen() {
         <NutritionWorkspaceHeader
           athleteName={athleteName}
           title="Nutrition workspace"
-          description="Keep camp setup, readiness, and nutrition parameters here. Restrictions stay anchored to onboarding, and the dedicated bodyweight log now lives on its own fight-lab screen."
+          description="Keep camp setup, readiness, and nutrition parameters here. Restrictions stay anchored to Advanced Intake, and the dedicated bodyweight log now lives on its own fight-lab screen."
         />
         <NutritionSubnav />
 
@@ -322,14 +322,14 @@ export function NutritionWorkspaceScreen() {
                       </div>
                     ))}
                   </div>
-                  <p className="muted">These details come from onboarding so you only have to enter them once.</p>
+                  <p className="muted">These details come from Advanced Intake so you only have to enter them once.</p>
                   {coreMissingFields.length ? (
                     <p className="muted">
-                      Still missing in onboarding: {coreMissingFields.map((field) => CORE_FIELD_LABELS[field]).join(", ")}.
+                      Still missing in Advanced Intake: {coreMissingFields.map((field) => CORE_FIELD_LABELS[field]).join(", ")}.
                     </p>
                   ) : null}
                   <div className="plan-summary-actions">
-                    <Link href="/onboarding" className="ghost-button">Edit in onboarding</Link>
+                    <Link href="/onboarding" className="ghost-button">Edit in Advanced Intake</Link>
                   </div>
                 </article>
 
@@ -349,9 +349,9 @@ export function NutritionWorkspaceScreen() {
                       </div>
                     ))}
                   </div>
-                  <p className="muted">Restrictions live in onboarding so your nutrition workspace stays aligned with the core athlete profile.</p>
+                  <p className="muted">Restrictions live in Advanced Intake so your nutrition workspace stays aligned with the core athlete profile.</p>
                   <div className="plan-summary-actions">
-                    <Link href="/onboarding" className="ghost-button">Edit in onboarding</Link>
+                    <Link href="/onboarding" className="ghost-button">Edit in Advanced Intake</Link>
                   </div>
                 </article>
               </div>
@@ -445,7 +445,7 @@ export function NutritionWorkspaceScreen() {
                           <option key={value || "empty"} value={value}>{value || "Select"}</option>
                         ))}
                       </select>
-                      <p className="muted">This stays tied to onboarding/current weight data and still respects latest-log matching behavior.</p>
+                      <p className="muted">This stays tied to intake/current weight data and still respects latest-log matching behavior.</p>
                     </div>
                     <div className="field">
                       <label>Weight recorded at</label>

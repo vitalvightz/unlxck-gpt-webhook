@@ -28,6 +28,7 @@ from fightcamp.stage2_pipeline import build_stage2_retry, review_stage2_output
 from fightcamp.weekly_schedule_view import extract_weekly_schedule
 
 from .auth import AuthService, AuthenticatedUser, SupabaseAuthService, is_auth_api_error
+from .environment import is_production_environment
 from .models import (
     ApproveAndResumeGenerationRequest,
     AdminGenerationJobDiagnostic,
@@ -47,7 +48,6 @@ from .models import (
     PlanOutputs,
     PlanSafetyState,
     PlanRequest,
-    PlanStage1PreviewResponse,
     PlanSummary,
     ProfileRecord,
     ProfileUpdateRequest,
@@ -68,7 +68,6 @@ from .generation_runtime import (
     _OPENAI_QUOTA_ATHLETE_ERROR,
     default_planner as runtime_default_planner,
     is_stale_job as runtime_is_stale_job,
-    run_stage1_planner,
     schedule_generation_job_if_needed,
 )
 from .stage2_automation import (
@@ -169,6 +168,39 @@ def _job_response(
 
 def _is_stale_job(job: dict[str, Any], *, stale_after_seconds: int = 90) -> bool:
     return runtime_is_stale_job(job, stale_after_seconds=stale_after_seconds)
+
+
+def _is_correctly_linked_admin_resume_job(
+    job: dict[str, Any],
+    *,
+    athlete_id: str,
+    plan_id: str,
+    intake_id: str,
+    client_request_id: str,
+) -> bool:
+    return (
+        str(job.get("source") or "").strip().lower() == "admin_triage_resume"
+        and str(job.get("athlete_id") or "").strip() == athlete_id
+        and str(job.get("plan_id") or "").strip() == plan_id
+        and str(job.get("intake_id") or "").strip() == intake_id
+        and str(job.get("client_request_id") or "").strip() == client_request_id
+    )
+
+
+def _resume_job_final_result_successful(job: dict[str, Any]) -> bool:
+    final_result = job.get("final_result")
+    if not isinstance(final_result, dict):
+        return False
+    result_status = str(final_result.get("status") or "").strip().lower()
+    if result_status in {"ready", "generated", "completed"}:
+        return True
+    stage2_status = str(final_result.get("stage2_status") or "").strip().lower()
+    return stage2_status in {"stage2_pass", "stage2_retry_pass", "manual_stage2_pass", "manual_stage2_retry_pass"}
+
+
+def _resume_job_resolved_successfully(job: dict[str, Any]) -> bool:
+    job_status = str(job.get("status") or "").strip().lower()
+    return job_status == "completed" and _resume_job_final_result_successful(job)
 
 
 def _generation_job_stale_after_seconds() -> int:
@@ -377,6 +409,78 @@ def _cors_origin_regex() -> str | None:
     return value or None
 
 
+_UNSAFE_CORS_REGEX_PATTERNS = frozenset({".*", "^.*$", ".+", "^.+$", "^.*", ".*$", "^.+", ".+$"})
+_UNSAFE_CORS_REGEX_SCHEME_PATTERNS = frozenset({
+    "https://.*",
+    "^https://.*$",
+    "https://.+",
+    "^https://.+$",
+    "http://.*",
+    "^http://.*$",
+    "http://.+",
+    "^http://.+$",
+})
+
+
+def _is_broad_cors_regex(regex: str) -> bool:
+    normalized = regex.strip()
+    if not normalized:
+        return False
+    if normalized in _UNSAFE_CORS_REGEX_PATTERNS:
+        return True
+    if normalized in _UNSAFE_CORS_REGEX_SCHEME_PATTERNS:
+        return True
+    return False
+
+
+def _validate_production_cors_config(origins: list[str], regex: str | None) -> None:
+    if not is_production_environment():
+        return
+
+    violations: list[str] = []
+
+    if not origins and not regex:
+        violations.append(
+            "APP_CORS_ORIGINS must list at least one origin "
+            "(or APP_CORS_ORIGIN_REGEX must be set) in production"
+        )
+
+    for origin in origins:
+        if origin == "*":
+            violations.append("APP_CORS_ORIGINS cannot contain '*' in production")
+            continue
+        parsed = urlsplit(origin)
+        host = (parsed.hostname or "").lower()
+        netloc = (parsed.netloc or "").lower()
+        if not host or "*" in netloc:
+            violations.append(
+                f"APP_CORS_ORIGINS cannot contain '*' wildcards in production: {origin!r}"
+            )
+            continue
+        if host in LOCAL_HOST_NAMES:
+            violations.append(
+                f"APP_CORS_ORIGINS cannot contain localhost origins in production: {origin!r}"
+            )
+
+    if regex is not None and _is_broad_cors_regex(regex):
+        violations.append(
+            f"APP_CORS_ORIGIN_REGEX is too broad for production: {regex!r}"
+        )
+
+    if not violations:
+        return
+
+    # Hotfix: downgrade to a loud warning so a misconfigured production deploy
+    # does not take the entire API offline. Operators should still treat these
+    # as deploy blockers, but the API now boots and serves traffic.
+    # Set APP_STRICT_PRODUCTION_CORS=1 to restore fail-fast behavior.
+    strict = os.getenv("APP_STRICT_PRODUCTION_CORS", "").strip() == "1"
+    for violation in violations:
+        logger.error("[cors] production_cors_unsafe: %s", violation)
+    if strict:
+        raise ValueError("; ".join(violations))
+
+
 def _plan_generate_rate_limit_requests() -> int:
     raw_value = os.getenv("APP_PLAN_GENERATE_RATE_LIMIT", "5").strip()
     try:
@@ -410,6 +514,17 @@ def _plan_generate_daily_limit_per_user() -> int:
         return 5
 
 
+_DAILY_GENERATION_CAP_EXEMPT_EMAILS: frozenset[str] = frozenset(
+    email.strip().lower()
+    for email in os.getenv("APP_DAILY_GENERATION_CAP_EXEMPT_EMAILS", "michaelokaforjr@gmail.com").split(",")
+    if email.strip()
+)
+
+
+def _is_exempt_from_daily_generation_cap(email: str) -> bool:
+    return email.strip().lower() in _DAILY_GENERATION_CAP_EXEMPT_EMAILS
+
+
 def _default_planner(payload: dict[str, Any]) -> dict[str, Any]:
     return runtime_default_planner(payload)
 
@@ -420,10 +535,6 @@ def _health_payload(*, mode_label: str) -> dict[str, str | bool]:
         "app": "unlxck-fight-camp-api",
         "mode": mode_label,
     }
-
-
-async def _run_stage1_planner(planner_fn: Planner, payload: dict[str, Any]) -> dict[str, Any]:
-    return await run_stage1_planner(planner_fn, payload)
 
 
 def _decode_structured_text(value: Any) -> dict[str, Any] | None:
@@ -441,10 +552,6 @@ def _decode_structured_text(value: Any) -> dict[str, Any] | None:
             return {"raw": stripped}
         return decoded if isinstance(decoded, dict) else {"raw": decoded}
     return {"raw": value}
-
-
-def _dict_or_none(value: Any) -> dict[str, Any] | None:
-    return value if isinstance(value, dict) else None
 
 
 def _map_profile_row(row: dict[str, Any]) -> ProfileRecord:
@@ -517,8 +624,22 @@ def _is_archived_plan(row: dict[str, Any] | None) -> bool:
     return str(row.get("status") or "").strip().lower() == "archived"
 
 
+def _is_triage_blocked_plan(row: dict[str, Any] | None) -> bool:
+    if not isinstance(row, dict):
+        return False
+    return str(row.get("status") or "").strip().lower() == "triage_blocked"
+
+
 def _visible_plans_for_athlete(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    return [row for row in rows if not _is_archived_plan(row)]
+    # Triage-blocked outcomes are screening decisions, not plans — they must
+    # not surface in the athlete's archive or "latest plan" snapshot. Admin
+    # endpoints bypass this filter so the ops team can still review and
+    # approve-and-resume blocked attempts.
+    return [
+        row
+        for row in rows
+        if not _is_archived_plan(row) and not _is_triage_blocked_plan(row)
+    ]
 
 
 def _admin_draft_text(row: dict[str, Any]) -> str:
@@ -830,6 +951,20 @@ def _has_existing_triage_resume_approval(plan_row: dict[str, Any]) -> bool:
     return bool(why_log.get("triage_regeneration_cleared"))
 
 
+def _resume_job_final_status(job: dict[str, Any]) -> str:
+    final_result = job.get("final_result")
+    if isinstance(final_result, dict):
+        return str(final_result.get("status") or "").strip().lower()
+    return ""
+
+
+def _resume_job_resolved_successfully(job: dict[str, Any]) -> bool:
+    if str(job.get("status") or "").strip().lower() != "completed":
+        return False
+    final_status = _resume_job_final_status(job)
+    return final_status not in {"", "triage_blocked", "failed"}
+
+
 def create_app(
     *,
     store: AppStore,
@@ -868,10 +1003,13 @@ def create_app(
         if rate_limit_requests > 0
         else None
     )
+    cors_origins = _cors_origins()
+    cors_regex = _cors_origin_regex()
+    _validate_production_cors_config(cors_origins, cors_regex)
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=_cors_origins(),
-        allow_origin_regex=_cors_origin_regex(),
+        allow_origins=cors_origins,
+        allow_origin_regex=cors_regex,
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
@@ -1012,6 +1150,15 @@ def create_app(
     ) -> ProfileRecord:
         try:
             profile = _map_profile_row(store.ensure_profile(user))
+            # UNLXCK_ADMIN_EMAILS is the authoritative source for admin access.
+            # Sync the request-scoped role to the current allowlist so downstream
+            # checks (`profile.role == "admin"`) cannot drift if the DB role is
+            # stale after an env allowlist change.
+            env_is_admin = store.is_admin_email(profile.email)
+            if env_is_admin and profile.role != "admin":
+                profile = profile.model_copy(update={"role": "admin"})
+            elif not env_is_admin and profile.role == "admin":
+                profile = profile.model_copy(update={"role": "athlete"})
             logger.info("[auth] profile_resolved athlete_id=%s role=%s", profile.athlete_id, profile.role)
             return profile
         except HTTPException as exc:
@@ -1027,9 +1174,19 @@ def create_app(
             logger.exception("[auth] profile_resolution_failed user_id=%s email=%s", user.user_id, user.email)
             raise
 
-    def require_admin(profile: ProfileRecord = Depends(require_profile)) -> ProfileRecord:
-        if profile.role != "admin":
-            logger.warning("[auth] admin_access_denied athlete_id=%s role=%s", profile.athlete_id, profile.role)
+    def require_admin(
+        profile: ProfileRecord = Depends(require_profile),
+        store: AppStore = Depends(get_store),
+    ) -> ProfileRecord:
+        # Defense in depth: re-check the env allowlist directly so admin routes
+        # never depend on the stored DB role even if the require_profile sync
+        # is bypassed.
+        if not store.is_admin_email(profile.email):
+            logger.warning(
+                "[auth] admin_access_denied athlete_id=%s role=%s email_in_allowlist=False",
+                profile.athlete_id,
+                profile.role,
+            )
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="admin access required")
         return profile
 
@@ -1225,7 +1382,7 @@ def create_app(
             )
             return _job_response(job, viewer_role=profile.role)
         daily_limit = _plan_generate_daily_limit_per_user()
-        if daily_limit > 0:
+        if daily_limit > 0 and profile.role != "admin" and not _is_exempt_from_daily_generation_cap(profile.email):
             utc_midnight = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0).isoformat()
             jobs_today = await asyncio.to_thread(
                 store.count_generation_jobs_for_athlete_since,
@@ -1260,49 +1417,6 @@ def create_app(
             stale_after_seconds=stale_after_seconds,
         )
         return _job_response(job, viewer_role=profile.role)
-
-    @app.post("/api/plans/stage1-preview", response_model=PlanStage1PreviewResponse)
-    async def generate_current_user_stage1_preview(
-        request_body: PlanRequest,
-        profile: ProfileRecord = Depends(require_profile),
-        planner_fn: Planner = Depends(get_planner),
-    ) -> PlanStage1PreviewResponse:
-        focus_validation = validate_performance_focus_selections(
-            request_body.fight_date,
-            key_goals=request_body.key_goals,
-            weak_areas=request_body.weak_areas,
-            time_zone=request_body.athlete.athlete_timezone,
-        )
-        if focus_validation.is_over_cap:
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail=focus_validation.error_message or "Too many focus selections for this camp.",
-            )
-
-        logger.info("[stage1-preview] start athlete_id=%s", profile.athlete_id)
-        stage1_result = await _run_stage1_planner(planner_fn, request_body.to_payload())
-        if stage1_result.get("status") == "invalid_input":
-            raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail={
-                    "message": stage1_result.get("error", "invalid planning input"),
-                    "missing_fields": stage1_result.get("missing_fields", []),
-                },
-            )
-
-        logger.info("[stage1-preview] complete athlete_id=%s status=%s", profile.athlete_id, stage1_result.get("status") or "stage1_ready")
-        return PlanStage1PreviewResponse(
-            generated_at=_utc_now_iso(),
-            status=str(stage1_result.get("status") or "stage1_ready"),
-            stage2_skipped=True,
-            plan_text=str(stage1_result.get("plan_text") or ""),
-            coach_notes=str(stage1_result.get("coach_notes") or ""),
-            why_log=_dict_or_none(stage1_result.get("why_log")) or {},
-            planning_brief=_dict_or_none(stage1_result.get("planning_brief")),
-            stage2_payload=_dict_or_none(stage1_result.get("stage2_payload")),
-            stage2_handoff_text=str(stage1_result.get("stage2_handoff_text") or ""),
-            parsing_metadata=_dict_or_none(stage1_result.get("parsing_metadata")) or {},
-        )
 
     @app.get("/api/generation-jobs/{job_id}", response_model=GenerationJobResponse)
     async def get_generation_job(
@@ -1371,7 +1485,8 @@ def create_app(
         target_athlete_id = str(original["athlete_id"])
         source = str(original.get("source") or "").strip() or "self_serve"
 
-        if not is_admin and not is_pre_start_stale:
+        # Daily cap enforcement: admins and exempt emails are not rate-limited.
+        if not is_admin and not _is_exempt_from_daily_generation_cap(profile.email):
             daily_limit = _plan_generate_daily_limit_per_user()
             if daily_limit > 0:
                 utc_midnight = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0).isoformat()
@@ -1387,17 +1502,29 @@ def create_app(
                         detail="Daily generation limit reached. Try again tomorrow.",
                     )
 
+        # If the original job is a pre-start stale running job, reuse its client_request_id
+        # so we reset the existing job instead of creating a duplicate. Otherwise prefer
+        # the header-provided id or generate a retry id.
         retry_client_request_id = (
-            str(original.get("client_request_id") or "")
-            if is_pre_start_stale
+            str(original.get("client_request_id") or "") if is_pre_start_stale
             else (request.headers.get("X-Client-Request-Id") or "").strip() or f"retry_{job_id}_{uuid.uuid4().hex}"
         )
+        retry_intake_id = str(original.get("intake_id") or "").strip() or None
+        retry_plan_id = str(original.get("plan_id") or "").strip() or None
+        if source == "admin_triage_resume" and (not retry_intake_id or not retry_plan_id):
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="admin triage resume retry is missing plan/intake linkage",
+            )
+
         job = await asyncio.to_thread(
             store.create_or_get_generation_job,
             athlete_id=target_athlete_id,
             client_request_id=retry_client_request_id,
             source=source,
             request_payload=copy.deepcopy(request_payload),
+            plan_id=retry_plan_id,
+            intake_id=retry_intake_id,
             stale_after_seconds=stale_after_seconds,
         )
         job = await schedule_generation_job_if_needed(
@@ -1486,6 +1613,8 @@ def create_app(
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
         if profile.role != "admin" and str(plan_row["athlete_id"]) != profile.athlete_id:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="not allowed")
+        if profile.role != "admin" and _is_archived_plan(plan_row):
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
         updated = store.rename_plan(plan_id, update.plan_name)
         return _map_plan_detail(
             updated,
@@ -1494,7 +1623,7 @@ def create_app(
         )
 
     @app.delete("/api/plans/{plan_id}", status_code=status.HTTP_204_NO_CONTENT)
-    def delete_plan(
+    def archive_user_plan(
         plan_id: str,
         profile: ProfileRecord = Depends(require_profile),
         store: AppStore = Depends(get_store),
@@ -1504,7 +1633,7 @@ def create_app(
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
         if profile.role != "admin" and str(plan_row["athlete_id"]) != profile.athlete_id:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="not allowed")
-        store.delete_plan(plan_id)
+        store.archive_plan(plan_id)
         return Response(status_code=status.HTTP_204_NO_CONTENT)
 
     @app.get("/api/admin/plans", response_model=list[AdminPlanSummary])
@@ -1574,6 +1703,118 @@ def create_app(
         if not plan_row:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
 
+        intake_id = str(plan_row.get("intake_id") or "").strip()
+        if not intake_id:
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="plan is missing intake_id")
+        client_request_id = f"triage_resume_{plan_id}"
+        stale_after_seconds = _generation_job_stale_after_seconds()
+        existing_resume_job = await asyncio.to_thread(
+            store.get_generation_job_by_client_request_id,
+            athlete_id=str(plan_row["athlete_id"]),
+            client_request_id=client_request_id,
+        )
+
+        async def _build_resume_request_payload() -> dict[str, Any]:
+            intake_row = await asyncio.to_thread(store.get_intake, intake_id)
+            if not intake_row or not isinstance(intake_row.get("intake"), dict):
+                raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="stored intake is missing for this plan")
+            payload = copy.deepcopy(intake_row.get("intake"))
+            payload["_triage_resume_override"] = {
+                "approved": True,
+                "approved_by": {
+                    "user_id": profile.athlete_id,
+                    "email": profile.email,
+                },
+                "reason": approval.reason,
+                "allowed_modes": ["needs_review", "restricted_rehab_only"],
+            }
+            return payload
+
+        async def _requeue_existing_resume_job(job: dict[str, Any]) -> dict[str, Any]:
+            request_payload = await _build_resume_request_payload()
+            return await asyncio.to_thread(
+                store.update_generation_job,
+                str(job.get("id") or ""),
+                source="admin_triage_resume",
+                request_payload=request_payload,
+                intake_id=intake_id,
+                plan_id=plan_id,
+                stage1_result=None,
+                final_result=None,
+                error=None,
+                completed_at=None,
+                status="queued",
+                heartbeat_at=_utc_now_iso(),
+            )
+
+        # Check for an existing approval first: once the resume has already
+        # been run and the plan was updated in place, the triage state in
+        # why_log no longer exists, so the triage-mode guard below would
+        # otherwise mask the duplicate with a less specific error.
+        if existing_resume_job and not _is_correctly_linked_admin_resume_job(
+            existing_resume_job,
+            athlete_id=str(plan_row["athlete_id"]),
+            plan_id=plan_id,
+            intake_id=intake_id,
+            client_request_id=client_request_id,
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="existing triage resume job has unsafe linkage; create a new resume request",
+            )
+
+        if _has_existing_triage_resume_approval(plan_row):
+            if existing_resume_job:
+                if _resume_job_resolved_successfully(existing_resume_job):
+                    raise HTTPException(
+                        status_code=status.HTTP_409_CONFLICT,
+                        detail="this blocked plan has already been approved and resumed",
+                    )
+                job_status = str(existing_resume_job.get("status") or "").strip().lower()
+                if job_status == "running":
+                    if not _is_stale_job(
+                        existing_resume_job,
+                        stale_after_seconds=stale_after_seconds,
+                    ):
+                        return _job_response(existing_resume_job, viewer_role=profile.role)
+                    existing_resume_job = await _requeue_existing_resume_job(existing_resume_job)
+                    job_status = str(existing_resume_job.get("status") or "").strip().lower()
+                if job_status in {"failed", "completed"} and not _resume_job_final_result_successful(existing_resume_job):
+                    existing_resume_job = await _requeue_existing_resume_job(existing_resume_job)
+                    job_status = str(existing_resume_job.get("status") or "").strip().lower()
+                if job_status == "queued":
+                    job = await schedule_generation_job_if_needed(
+                        job=existing_resume_job,
+                        background_tasks=background_tasks,
+                        store=store,
+                        planner_fn=planner_fn,
+                        stage2=stage2,
+                        active_tasks=active_tasks,
+                        enable_in_process_generation=enable_in_process_generation,
+                        stale_job_checker=_is_stale_job,
+                        stale_after_seconds=stale_after_seconds,
+                    )
+                    return _job_response(job, viewer_role=profile.role)
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="this blocked plan has already been approved for resume",
+            )
+
+        if existing_resume_job:
+            existing_status = str(existing_resume_job.get("status") or "").strip().lower()
+            existing_is_stale = _is_stale_job(
+                existing_resume_job,
+                stale_after_seconds=stale_after_seconds,
+            )
+            if _resume_job_resolved_successfully(existing_resume_job):
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail="this blocked plan has already been approved and resumed",
+                )
+            if existing_status == "running":
+                if existing_status == "running" and not existing_is_stale:
+                    return _job_response(existing_resume_job, viewer_role=profile.role)
+
         why_log = plan_row.get("why_log") if isinstance(plan_row.get("why_log"), dict) else {}
         triage = why_log.get("injury_triage") if isinstance(why_log.get("injury_triage"), dict) else {}
         triage_mode = str(triage.get("mode") or "").strip().lower()
@@ -1600,23 +1841,59 @@ def create_app(
                 detail="this blocked plan has already been approved for resume",
             )
 
+        # intake_id and request_payload are used by the inner helpers
         intake_id = str(plan_row.get("intake_id") or "").strip()
         if not intake_id:
             raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="plan is missing intake_id")
-        intake_row = await asyncio.to_thread(store.get_intake, intake_id)
-        if not intake_row or not isinstance(intake_row.get("intake"), dict):
-            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="stored intake is missing for this plan")
-        request_payload = copy.deepcopy(intake_row.get("intake"))
-        request_payload["_triage_resume_override"] = {
-            "approved": True,
-            "approved_by": {
-                "user_id": profile.athlete_id,
-                "email": profile.email,
-            },
-            "reason": approval.reason,
-            "allowed_modes": ["needs_review", "restricted_rehab_only"],
-        }
 
+        async def _build_resume_request_payload() -> dict[str, Any]:
+            intake_row = await asyncio.to_thread(store.get_intake, intake_id)
+            if not intake_row or not isinstance(intake_row.get("intake"), dict):
+                raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="stored intake is missing for this plan")
+            payload = copy.deepcopy(intake_row.get("intake"))
+            payload["_triage_resume_override"] = {
+                "approved": True,
+                "approved_by": {
+                    "user_id": profile.athlete_id,
+                    "email": profile.email,
+                },
+                "reason": approval.reason,
+                "allowed_modes": ["needs_review", "restricted_rehab_only"],
+            }
+            return payload
+
+        async def _requeue_existing_resume_job(job: dict[str, Any]) -> dict[str, Any]:
+            request_payload = await _build_resume_request_payload()
+            return await asyncio.to_thread(
+                store.update_generation_job,
+                str(job.get("id") or ""),
+                source="admin_triage_resume",
+                request_payload=request_payload,
+                intake_id=intake_id,
+                plan_id=plan_id,
+                stage1_result=None,
+                final_result=None,
+                error=None,
+                completed_at=None,
+                status="queued",
+                heartbeat_at=_utc_now_iso(),
+            )
+
+        # If an existing resume job exists, ensure it is correctly linked and
+        # handle pre-start-stale semantics elsewhere.
+        if existing_resume_job and not _is_correctly_linked_admin_resume_job(
+            existing_resume_job,
+            athlete_id=str(plan_row["athlete_id"]),
+            plan_id=plan_id,
+            intake_id=intake_id,
+            client_request_id=client_request_id,
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="existing triage resume job has unsafe linkage; create a new resume request",
+            )
+
+        request_payload = await _build_resume_request_payload()
         approval_log = {
             "approved_by_user_id": profile.athlete_id,
             "approved_by_email": profile.email,
@@ -1624,10 +1901,10 @@ def create_app(
             "reason": approval.reason,
             "action": "approve_and_resume_generation",
         }
+
         updated_why_log = dict(why_log)
         updated_why_log["triage_resume_approval"] = approval_log
         updated_why_log["triage_regeneration_cleared"] = True
-        
         job = await asyncio.to_thread(
             store.create_or_get_generation_job,
             athlete_id=str(plan_row["athlete_id"]),
@@ -1638,7 +1915,35 @@ def create_app(
             intake_id=intake_id,
             stale_after_seconds=stale_after_seconds,
         )
-        
+        if not _is_correctly_linked_admin_resume_job(
+            job,
+            athlete_id=str(plan_row["athlete_id"]),
+            plan_id=plan_id,
+            intake_id=intake_id,
+            client_request_id=client_request_id,
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="existing triage resume job has unsafe linkage; create a new resume request",
+            )
+
+        # Refresh/requeue only after run-state checks above. Non-stale running
+        # jobs are returned as-is; completed successful jobs are rejected.
+        job = await asyncio.to_thread(
+            store.update_generation_job,
+            str(job.get("id") or ""),
+            source="admin_triage_resume",
+            request_payload=request_payload,
+            intake_id=intake_id,
+            plan_id=plan_id,
+            stage1_result=None,
+            final_result=None,
+            error=None,
+            completed_at=None,
+            status="queued",
+            heartbeat_at=_utc_now_iso(),
+        )
+
         await asyncio.to_thread(
             store.update_plan_triage_approval,
             plan_id,
@@ -1899,25 +2204,27 @@ def _build_runtime_app() -> FastAPI:
 def _build_startup_failure_app(detail: str) -> FastAPI:
     app = FastAPI(title="UNLXCK Fight Camp API", version="0.2.0")
 
+    def _failure_response() -> JSONResponse:
+        return JSONResponse(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            content={
+                "ok": False,
+                "app": "unlxck-fight-camp-api",
+                "detail": detail,
+            },
+        )
+
     @app.get("/", include_in_schema=False)
-    def root() -> dict[str, str | bool]:
-        return {
-            "ok": False,
-            "app": "unlxck-fight-camp-api",
-            "detail": detail,
-        }
+    def root() -> JSONResponse:
+        return _failure_response()
 
     @app.head("/", include_in_schema=False)
-    def root_head() -> None:
-        return None
+    def root_head() -> Response:
+        return Response(status_code=status.HTTP_503_SERVICE_UNAVAILABLE)
 
     @app.get("/health")
-    def health() -> dict[str, str | bool]:
-        return {
-            "ok": False,
-            "app": "unlxck-fight-camp-api",
-            "detail": detail,
-        }
+    def health() -> JSONResponse:
+        return _failure_response()
 
     return app
 
