@@ -1667,12 +1667,13 @@ def create_app(
         job_intake_id = str(job.get("intake_id") or "").strip()
         job_plan_id = str(job.get("plan_id") or "").strip()
         if job_intake_id != intake_id or job_plan_id != plan_id:
-            job_status = str(job.get("status") or "").strip().lower()
-            if job_status in {"running", "completed"}:
-                raise HTTPException(
-                    status_code=status.HTTP_409_CONFLICT,
-                    detail="existing triage resume job has unsafe linkage; create a new resume request",
-                )
+            if (job_intake_id and job_intake_id != intake_id) or (job_plan_id and job_plan_id != plan_id):
+                job_status = str(job.get("status") or "").strip().lower()
+                if job_status in {"running", "completed"}:
+                    raise HTTPException(
+                        status_code=status.HTTP_409_CONFLICT,
+                        detail="existing triage resume job has unsafe linkage; create a new resume request",
+                    )
             job = await asyncio.to_thread(
                 store.update_generation_job,
                 str(job.get("id") or ""),
