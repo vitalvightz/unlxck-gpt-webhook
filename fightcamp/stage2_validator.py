@@ -109,6 +109,14 @@ _TEMPLATE_PREFIXES = ("primary:", "fallback:", "drill:", "system:")
 _OPTION_ENUM_PATTERN = compile_regex("stage2_validator", "option_enum_pattern", flags=re.IGNORECASE)
 _WEEKDAY_HEADING = compile_regex("stage2_validator", "weekday_heading", flags=re.IGNORECASE)
 _NUMBERED_SESSION_HEADING = compile_regex("stage2_validator", "numbered_session_heading", flags=re.IGNORECASE)
+_INTERNAL_RENDER_LABEL_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
+    ("role_key", re.compile(r"\brole_key\b", re.IGNORECASE)),
+    ("taper_micro_support", re.compile(r"\btaper_micro_support\b", re.IGNORECASE)),
+    ("candidate_pool", re.compile(r"\bcandidate\s+pool\b", re.IGNORECASE)),
+    ("validator", re.compile(r"\bvalidator\b", re.IGNORECASE)),
+    ("planning_brief", re.compile(r"\bplanning\s+brief\b", re.IGNORECASE)),
+    ("anchor_label", re.compile(r"^\s*(?:\d+\)\s*)?anchor\s*(?:—|-|:)", re.IGNORECASE)),
+)
 _LATE_FIGHT_TOKEN_PHRASES = {
     "hard_sparring": ("hard spar", "hard sparring", "live spar", "full spar", "hard contact"),
     "standalone_glycolytic": ("glycolytic", "fight pace", "fight-pace", "repeatability", "hard shuttle", "bag sprint"),
@@ -843,6 +851,25 @@ def _rendering_discipline_warnings(planning_brief: dict, phase_sections: dict[st
     return warnings
 
 
+def _internal_render_contract_warnings(plan_lines: list[str]) -> list[dict]:
+    warnings: list[dict] = []
+    for line in plan_lines:
+        for label, pattern in _INTERNAL_RENDER_LABEL_PATTERNS:
+            if not pattern.search(line):
+                continue
+            warnings.append(
+                {
+                    "code": "internal_render_contract_leak",
+                    "message": "Plan leaked internal scaffold/render-contract language.",
+                    "line": line,
+                    "matched_token": label,
+                    "blocking": True,
+                }
+            )
+            break
+    return warnings
+
+
 def _equipment_congruence_warnings(
     planning_brief: dict,
     phase_sections: dict[str, list[str]],
@@ -1548,8 +1575,25 @@ def _calendar_spine_warnings(planning_brief: dict, final_plan_text: str) -> list
             if bool(calendar_day.get("is_fight_day")):
                 body_lines = [line.strip() for line in block[1:] if _normalize_render_line(line)]
                 protocol_text = _normalize_render_line(FIGHT_DAY_PROTOCOL_TEXT)
+                heading_text = _normalize_render_line(block[0]) if block else ""
 
-                if len(body_lines) != 1 or _normalize_render_line(body_lines[0]) != protocol_text:
+                heading_has_protocol = "fight day protocol" in heading_text
+                inline_heading_suffix = ""
+                if heading_has_protocol:
+                    idx = heading_text.find("fight day protocol")
+                    inline_heading_suffix = heading_text[idx + len("fight day protocol"):].strip()
+                    if inline_heading_suffix.startswith("—") or inline_heading_suffix.startswith("-"):
+                        inline_heading_suffix = inline_heading_suffix[1:].strip()
+
+                protocol_ok = False
+                if len(body_lines) == 1 and _normalize_render_line(body_lines[0]) == protocol_text:
+                    protocol_ok = True
+                elif heading_has_protocol and not body_lines:
+                    protocol_ok = inline_heading_suffix in {"", protocol_text}
+                elif heading_has_protocol and len(body_lines) == 1:
+                    protocol_ok = _normalize_render_line(body_lines[0]) == protocol_text
+
+                if not protocol_ok:
                     warnings.append(
                         {
                             "code": "calendar_spine_fight_day_protocol_violation",
@@ -2405,6 +2449,7 @@ def validate_stage2_output(*, planning_brief: dict, final_plan_text: str) -> dic
     sport_language_warnings = _sport_language_warnings(planning_brief, plan_lines)
     calendar_spine_warnings = _calendar_spine_warnings(planning_brief, final_plan_text)
     late_fight_warnings = _late_fight_warnings(planning_brief, final_plan_text)
+    internal_render_contract_warnings = _internal_render_contract_warnings(plan_lines)
 
     errors = [
         {
@@ -2448,6 +2493,7 @@ def validate_stage2_output(*, planning_brief: dict, final_plan_text: str) -> dic
     warnings.extend(sport_language_warnings)
     warnings.extend(calendar_spine_warnings)
     warnings.extend(late_fight_warnings)
+    warnings.extend(internal_render_contract_warnings)
 
     return {
         "is_valid": not errors,
@@ -2471,4 +2517,5 @@ def validate_stage2_output(*, planning_brief: dict, final_plan_text: str) -> dic
         "calendar_spine_warnings": calendar_spine_warnings,
         "late_fight_warnings": late_fight_warnings,
         "sport_language_warnings": sport_language_warnings,
+        "internal_render_contract_warnings": internal_render_contract_warnings,
     }

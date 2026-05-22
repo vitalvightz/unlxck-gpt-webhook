@@ -2113,3 +2113,48 @@ def test_calendar_spine_allows_unassigned_off_recovery_only_day():
         warning["code"] == "calendar_spine_session_role_not_authorized"
         for warning in report["warnings"]
     )
+
+def test_internal_render_contract_allows_coach_facing_anchor_phrase():
+    report = validate_stage2_output(
+        planning_brief={"athlete_model": {"sport": "boxing"}, "restrictions": [], "phase_strategy": {}, "candidate_pools": {}},
+        final_plan_text="Monday - Strength\n- Keep this as your highest-neural anchor with clean reps.",
+    )
+    assert not any(w["code"] == "internal_render_contract_leak" for w in report["warnings"])
+
+
+def test_internal_render_contract_blocks_scaffold_anchor_label():
+    report = validate_stage2_output(
+        planning_brief={"athlete_model": {"sport": "boxing"}, "restrictions": [], "phase_strategy": {}, "candidate_pools": {}},
+        final_plan_text="Monday - Strength\n- 1) Anchor — Trap-bar deadlift 3 x 3",
+    )
+    assert any(w["code"] == "internal_render_contract_leak" for w in report["warnings"])
+
+
+def test_calendar_spine_allows_one_line_d0_fight_day_protocol_header():
+    brief = {
+        "athlete_model": {"sport": "boxing"},
+        "restrictions": [],
+        "phase_strategy": {},
+        "candidate_pools": {},
+        "weekly_role_map": {"weeks": [{"week_index": 1, "phase": "TAPER", "calendar_days": [{"weekday": "sunday", "d_day": 0, "is_fight_day": True, "is_after_fight_day": False}], "session_roles": []}]},
+    }
+    report = validate_stage2_output(
+        planning_brief=brief,
+        final_plan_text="## Week 1\nD-0 (Sunday) — Fight day protocol — follow coach warm-up and fight protocol; no additional app S&C.",
+    )
+    assert not any(w["code"] == "calendar_spine_fight_day_protocol_violation" for w in report["warnings"])
+
+
+def test_calendar_spine_d0_still_rejects_extra_work():
+    brief = {
+        "athlete_model": {"sport": "boxing"},
+        "restrictions": [],
+        "phase_strategy": {},
+        "candidate_pools": {},
+        "weekly_role_map": {"weeks": [{"week_index": 1, "phase": "TAPER", "calendar_days": [{"weekday": "sunday", "d_day": 0, "is_fight_day": True, "is_after_fight_day": False}], "session_roles": []}]},
+    }
+    report = validate_stage2_output(
+        planning_brief=brief,
+        final_plan_text="## Week 1\nSunday - D-0 — Fight day protocol\n- Fight day protocol — follow coach warm-up and fight protocol; no additional app S&C.\n- Add mobility and accessory rounds.",
+    )
+    assert any(w["code"] == "calendar_spine_fight_day_protocol_violation" for w in report["warnings"])
