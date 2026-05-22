@@ -430,6 +430,17 @@ async def run_generation_job(
                 plan_row = latest_plan
                 plan_id = str(latest_plan.get("id") or "")
         if plan_row and plan_id:
+            # Preserve triage-approval audit markers that live on the existing
+            # plan's why_log so that updating it in place (e.g. after an admin
+            # resume) does not erase the trail the duplicate-approval guard
+            # and UI depend on.
+            existing_why_log = plan_row.get("why_log") if isinstance(plan_row.get("why_log"), dict) else {}
+            preserved_keys = ("triage_regeneration_cleared", "triage_resume_approval")
+            preserved = {key: existing_why_log[key] for key in preserved_keys if key in existing_why_log}
+            if preserved:
+                merged_why_log = dict(final_result.get("why_log") or {})
+                merged_why_log.update(preserved)
+                final_result = {**final_result, "why_log": merged_why_log}
             plan_row = await asyncio.to_thread(
                 store.update_plan_stage2,
                 plan_id,

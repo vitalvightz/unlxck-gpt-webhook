@@ -578,8 +578,72 @@ def test_needs_review_can_be_approved_and_resumed_with_normal_generation_flow():
         headers={"Authorization": "Bearer admin-token"},
     )
     assert refreshed_plan.status_code == 200
-    assert refreshed_plan.json()["admin_outputs"]["stage2_status"] == "triage_resume_approved"
+    # The resumed generation updates the original blocked plan in place, so the
+    # stage2_status reflects the new finalized run. The triage approval audit
+    # trail (triage_regeneration_cleared) must still be preserved on the plan.
+    assert refreshed_plan.json()["admin_outputs"]["stage2_status"] == "stage2_pass"
     assert refreshed_plan.json()["admin_outputs"]["why_log"]["triage_regeneration_cleared"] is True
+
+
+def test_approve_and_resume_generation_updates_blocked_plan_in_place():
+    athlete = AuthenticatedUser(
+        user_id="athlete-1",
+        email="ari@example.com",
+        full_name="Ari Mensah",
+        metadata={},
+    )
+    admin = AuthenticatedUser(
+        user_id="admin-1",
+        email="ops@unlxck.test",
+        full_name="Ops Admin",
+        metadata={},
+    )
+    store = FakeStore()
+    store.ensure_profile(athlete)
+    request = _build_request()
+    intake = store.create_intake(athlete.user_id, request)
+    blocked_plan = store.create_plan(
+        athlete_id=athlete.user_id,
+        intake_id=str(intake["id"]),
+        request=request,
+        result=finalized_result(
+            status="triage_blocked",
+            stage2_status="triage_blocked",
+            plan_text="## Injury Triage: Restricted Rehab Only\nNormal fight-camp planning is intentionally suspended.",
+            why_log={"injury_triage": {"mode": "restricted_rehab_only", "should_block_stage2": True}},
+        ),
+    )
+    finalized_text = "# Resumed Plan\nWeek 1: General prep"
+    stage2 = FakeStage2Automator(result=finalized_result(plan_text=finalized_text))
+
+    def planner(payload: dict) -> dict:
+        return stage1_result()
+
+    client = TestClient(
+        create_app(
+            store=store,
+            auth_service=FakeAuthService({"athlete-token": athlete, "admin-token": admin}),
+            planner=planner,
+            stage2_automator=stage2,
+        )
+    )
+
+    resume_response = client.post(
+        f"/api/admin/plans/{blocked_plan['id']}/approve-and-resume-generation",
+        headers={"Authorization": "Bearer admin-token"},
+        json={"reason": "clinician cleared structural injury"},
+    )
+    assert resume_response.status_code == 202
+
+    plans = store.list_user_plans(athlete.user_id)
+    assert len(plans) == 1, f"expected the blocked plan to be updated in place, got {len(plans)} plans"
+    assert plans[0]["id"] == blocked_plan["id"]
+    assert plans[0]["plan_text"] == finalized_text
+    assert plans[0]["status"] == "ready"
+    assert plans[0]["intake_id"] == str(intake["id"])
+
+    intakes_for_athlete = store.intakes.get(athlete.user_id, [])
+    assert len(intakes_for_athlete) == 1, "resume must reuse the original intake, not create a new one"
 
 
 def test_approve_and_resume_generation_rejects_duplicate_approval():
