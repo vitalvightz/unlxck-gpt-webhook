@@ -5,13 +5,14 @@ import time
 from typing import Any
 
 from fastapi import HTTPException, status
+from fastapi import BackgroundTasks
 from fastapi.testclient import TestClient
 import pytest
 
 import api.app as app_module
 from api.app import create_app
 from api.auth import AuthenticatedUser
-from api.generation_runtime import run_generation_job, should_skip_stage2
+from api.generation_runtime import run_generation_job, schedule_generation_job_if_needed, should_skip_stage2
 from api.models import ProfileUpdateRequest
 from api.stage2_automation import Stage2AutomationError, Stage2AutomationUnavailableError
 from support import (
@@ -136,6 +137,88 @@ def test_worker_claim_adds_job_loaded_milestone_and_fresh_heartbeat():
     assert claimed["heartbeat_at"] is not None
     assert claimed["progress_milestones"][0]["code"] == "job_loaded"
     assert claimed["progress_milestones"][0]["label"] == "Generation job loaded"
+
+
+def test_scheduler_keeps_queued_job_until_worker_claims_and_processes():
+    store = FakeStore()
+    stage2 = FakeStage2Automator(result=finalized_result())
+    created = store.create_or_get_generation_job(
+        athlete_id="athlete-1",
+        client_request_id="scheduler-does-not-claim",
+        source="self_serve",
+        request_payload=_build_request().model_dump(mode="json"),
+    )
+    active_tasks: set[str] = set()
+
+    scheduled = asyncio.run(
+        schedule_generation_job_if_needed(
+            job=created,
+            background_tasks=BackgroundTasks(),
+            store=store,
+            planner_fn=_planner,
+            stage2=stage2,
+            active_tasks=active_tasks,
+            enable_in_process_generation=True,
+            stale_job_checker=app_module.is_stale_job,
+            stale_after_seconds=90,
+        )
+    )
+
+    assert scheduled["status"] == "queued"
+    before_worker = store.get_generation_job(created["id"])
+    assert before_worker["status"] == "queued"
+    assert before_worker["progress_milestones"] == []
+    assert created["id"] in active_tasks
+
+    asyncio.run(
+        run_generation_job(
+            job_id=created["id"],
+            store=store,
+            planner_fn=_planner,
+            stage2=stage2,
+            active_tasks=active_tasks,
+        )
+    )
+
+    after_worker = store.get_generation_job(created["id"])
+    milestone_codes = [entry.get("code") for entry in after_worker["progress_milestones"]]
+    assert after_worker["status"] == "completed"
+    assert "job_loaded" in milestone_codes
+    assert "request_payload_parsed" in milestone_codes
+    assert after_worker["heartbeat_at"] is not None
+
+
+def test_retry_requeues_pre_start_stale_running_job_instead_of_leaving_running():
+    client, store, _ = _build_client(enable_in_process_generation=False)
+    stale = store.create_or_get_generation_job(
+        athlete_id="athlete-1",
+        client_request_id="prestart-stale-retry",
+        source="self_serve",
+        request_payload=_build_request().model_dump(mode="json"),
+    )
+    stale_started = "2026-01-01T00:00:00+00:00"
+    store.update_generation_job(
+        stale["id"],
+        status="running",
+        started_at=stale_started,
+        heartbeat_at=stale_started,
+        progress_milestones=[{"code": "job_loaded", "label": "Generation job loaded", "detail": ""}],
+    )
+
+    retried = client.post(
+        f"/api/generation-jobs/{stale['id']}/retry",
+        headers={"Authorization": "Bearer athlete-token"},
+        json={"reason": "retry pre-start stale"},
+    )
+
+    assert retried.status_code == 202
+    body = retried.json()
+    assert body["job_id"] == stale["id"]
+    assert body["status"] == "queued"
+    refreshed = store.get_generation_job(stale["id"])
+    assert refreshed["status"] == "queued"
+    assert refreshed["started_at"] is None
+    assert refreshed["heartbeat_at"] is None
 
 
 @pytest.mark.parametrize(
