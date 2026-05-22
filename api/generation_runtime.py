@@ -31,6 +31,10 @@ class TriageResumeMissingPlanError(RuntimeError):
     linked plan is missing we fail loudly rather than silently creating a
     duplicate plan.
     """
+
+    pass
+
+
 _DETACHED_GENERATION_TASKS: set[asyncio.Task[None]] = set()
 _MAX_PERSISTED_MILESTONES = 40
 _OPENAI_QUOTA_ADMIN_ERROR = "OpenAI quota exceeded. Check API billing, credits, project budget, or organization limits."
@@ -333,6 +337,39 @@ async def run_generation_job(
 
         athlete_id = str(job["athlete_id"])
         raw_request_payload = job.get("request_payload") or {}
+        job_source = str(job.get("source") or "").strip().lower()
+        intake_id = str(job.get("intake_id") or "").strip()
+        plan_id = str(job.get("plan_id") or "").strip() or None
+        admin_resume_plan_row: dict[str, Any] | None = None
+
+        if job_source == "admin_triage_resume":
+            if not plan_id:
+                raise TriageResumeMissingPlanError(
+                    "admin triage resume job is missing plan_id; refusing to create a duplicate plan"
+                )
+            if not intake_id:
+                raise TriageResumeMissingPlanError(
+                    "admin triage resume job is missing intake_id; refusing to create a duplicate plan"
+                )
+
+            admin_resume_plan_row = await asyncio.to_thread(store.get_plan, plan_id)
+            if not admin_resume_plan_row:
+                raise TriageResumeMissingPlanError(
+                    "admin triage resume job linked plan was not found; refusing to create a duplicate plan"
+                )
+
+            linked_athlete_id = str(admin_resume_plan_row.get("athlete_id") or "").strip()
+            linked_intake_id = str(admin_resume_plan_row.get("intake_id") or "").strip()
+
+            if linked_athlete_id != athlete_id:
+                raise TriageResumeMissingPlanError(
+                    "admin triage resume job linked plan belongs to a different athlete"
+                )
+
+            if linked_intake_id != intake_id:
+                raise TriageResumeMissingPlanError(
+                    "admin triage resume job intake_id does not match linked plan intake_id"
+                )
         triage_resume_override_approved = False
         triage_override_allowed_modes: list[Any] = []
         if isinstance(raw_request_payload, dict):
@@ -376,7 +413,7 @@ async def run_generation_job(
         except Exception:
             logger.exception("[jobs] generation:update_profile_failed athlete_id=%s job_id=%s", athlete_id, job_id)
 
-        intake_id = str(job.get("intake_id") or "")
+    
         if not intake_id:
             intake = await asyncio.to_thread(store.create_intake, athlete_id, request_body)
             intake_id = str(intake["id"])
