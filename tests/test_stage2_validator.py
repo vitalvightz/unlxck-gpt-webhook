@@ -144,6 +144,169 @@ def _late_fight_brief_with_allowed(days_out: str, allowed: list[str]) -> dict:
     return brief
 
 
+def test_validate_stage2_output_flags_missing_late_fight_countdown_header():
+    report = validate_stage2_output(
+        planning_brief=_late_fight_planning_brief("D-5"),
+        final_plan_text="""
+        Tuesday - Alactic sharpness
+        - Explosive Boxing Burst Intervals - 4 x 6 sec
+        """,
+    )
+
+    blocking_codes = {warning["code"] for warning in report["warnings"] if warning.get("blocking")}
+    assert "late_fight_missing_countdown_header" in blocking_codes
+
+
+def test_validate_stage2_output_flags_incomplete_late_fight_countdown_header():
+    report = validate_stage2_output(
+        planning_brief=_late_fight_planning_brief("D-5"),
+        final_plan_text="""
+        D-5 - Alactic sharpness
+        - Explosive Boxing Burst Intervals - 4 x 6 sec
+        """,
+    )
+
+    blocking_codes = {warning["code"] for warning in report["warnings"] if warning.get("blocking")}
+    assert "late_fight_countdown_header_format" in blocking_codes
+
+
+def test_validate_stage2_output_accepts_contract_late_fight_countdown_header():
+    report = validate_stage2_output(
+        planning_brief=_late_fight_planning_brief("D-5"),
+        final_plan_text="""
+        D-5 (Tuesday) — Alactic sharpness
+        Why: sharpen punch speed without adding fatigue.
+        - Explosive Boxing Burst Intervals - 4 x 6 sec
+        - Breathing reset - 3 min
+        """,
+    )
+
+    blocking_codes = {warning["code"] for warning in report["warnings"] if warning.get("blocking")}
+    assert "late_fight_missing_countdown_header" not in blocking_codes
+    assert "late_fight_countdown_header_format" not in blocking_codes
+
+
+def test_validate_stage2_output_flags_d0_expanded_beyond_fight_protocol():
+    report = validate_stage2_output(
+        planning_brief=_late_fight_planning_brief("D-0"),
+        final_plan_text="""
+        D-0 (Friday) — Fight day
+        - Fight day protocol — follow coach warm-up and fight protocol; no additional app S&C.
+        - Optional mobility reset - 5 min
+        """,
+    )
+
+    blocking_codes = {warning["code"] for warning in report["warnings"] if warning.get("blocking")}
+    assert "late_fight_d0_protocol_expanded" in blocking_codes
+
+
+def test_validate_stage2_output_accepts_one_line_d0_fight_day_protocol_header():
+    report = validate_stage2_output(
+        planning_brief=_late_fight_planning_brief("D-0"),
+        final_plan_text="""
+        D-0 (Sunday) — Fight day protocol — follow coach warm-up and fight protocol; no additional app S&C.
+        """,
+    )
+
+    blocking_codes = {warning["code"] for warning in report["warnings"] if warning.get("blocking")}
+    assert "late_fight_d0_protocol_expanded" not in blocking_codes
+
+
+def test_validate_stage2_output_flags_d0_extra_work_after_protocol_header():
+    report = validate_stage2_output(
+        planning_brief=_late_fight_planning_brief("D-0"),
+        final_plan_text="""
+        D-0 (Sunday) — Fight day protocol — follow coach warm-up and fight protocol; no additional app S&C.
+        - Optional mobility reset - 5 min
+        """,
+    )
+
+    blocking_codes = {warning["code"] for warning in report["warnings"] if warning.get("blocking")}
+    assert "late_fight_d0_protocol_expanded" in blocking_codes
+
+
+def test_validate_stage2_output_allows_coach_facing_anchor_language():
+    report = validate_stage2_output(
+        planning_brief=_planning_brief_fixture(),
+        final_plan_text="""
+        ## PHASE 2: SPP
+        ### Week 3
+        #### Tuesday - Highest-neural anchor
+        - Landmine Press - 4 x 4.
+        """,
+    )
+
+    assert not any(
+        warning["code"] == "internal_render_contract_leak"
+        for warning in report["warnings"]
+    )
+
+
+def test_validate_stage2_output_flags_anchor_scaffold_label():
+    report = validate_stage2_output(
+        planning_brief=_planning_brief_fixture(),
+        final_plan_text="""
+        ## PHASE 2: SPP
+        ### Week 3
+        1) Anchor — Landmine Press - 4 x 4.
+        """,
+    )
+
+    labels = {warning.get("label") for warning in report["warnings"] if warning["code"] == "internal_render_contract_leak"}
+    assert "anchor_label" in labels
+
+
+def test_validate_stage2_output_flags_internal_render_contract_leaks():
+    report = validate_stage2_output(
+        planning_brief=_planning_brief_fixture(),
+        final_plan_text="""
+        ## PHASE 2: SPP
+        ### Week 3
+        #### Tuesday - Anchor — Strength
+        - role_key: neural_plus_strength_day
+        - Candidate pool option: Landmine Press
+        """,
+    )
+
+    blocking_codes = {warning["code"] for warning in report["warnings"] if warning.get("blocking")}
+    labels = {warning.get("label") for warning in report["warnings"] if warning["code"] == "internal_render_contract_leak"}
+    assert "internal_render_contract_leak" in blocking_codes
+    assert {"role_key", "candidate pool"}.issubset(labels)
+
+
+def test_validate_stage2_output_flags_overdetailed_coach_led_sparring_day():
+    report = validate_stage2_output(
+        planning_brief=_boxing_crowded_week_planning_brief(),
+        final_plan_text="""
+        ## PHASE 2: SPP
+        ### Week 1
+        #### Tuesday - Coach-led boxing session
+        - 6 rounds technical sparring at coach-set intensity, RPE 7.
+        - No app S&C today. Keep freshness priority.
+        """,
+    )
+
+    blocking_codes = {warning["code"] for warning in report["warnings"] if warning.get("blocking")}
+    assert "coach_owned_sparring_overdetailed" in blocking_codes
+
+
+def test_validate_stage2_output_flags_missing_active_injury_lead_summary():
+    planning_brief = _planning_brief_fixture()
+    planning_brief["athlete_model"]["injuries"] = ["right shoulder pain"]
+    report = validate_stage2_output(
+        planning_brief=planning_brief,
+        final_plan_text="""
+        ## PHASE 2: SPP
+        ### Week 3
+        #### Tuesday - Strength
+        - Landmine Press - 4 x 5
+        """,
+    )
+
+    blocking_codes = {warning["code"] for warning in report["warnings"] if warning.get("blocking")}
+    assert "missing_injury_lead_summary" in blocking_codes
+
+
 def _boxing_crowded_week_planning_brief() -> dict:
     return {
         "athlete_model": {"sport": "boxing", "equipment": ["landmine", "bike", "bands"]},
@@ -1392,6 +1555,21 @@ def test_validate_stage2_output_weight_cut_profile_only_does_not_count_as_acknow
     warning_codes = [warning["code"] for warning in report["warnings"]]
     assert "missing_weight_cut_acknowledgement" in warning_codes
     assert "high_pressure_weight_cut_underaddressed" not in warning_codes
+
+
+def test_validate_stage2_output_flags_missing_active_cut_lead_summary():
+    report = validate_stage2_output(
+        planning_brief=_weight_cut_planning_brief(high_pressure=True),
+        final_plan_text="""
+        ## PHASE 2: SPP
+        ### Week 5
+        #### Strength
+        - Trap Bar Deadlift - 4x3
+        """,
+    )
+
+    blocking_codes = {warning["code"] for warning in report["warnings"] if warning.get("blocking")}
+    assert "missing_weight_cut_lead_summary" in blocking_codes
 
 
 def test_validate_stage2_output_accepts_summary_and_support_weight_cut_notes():
