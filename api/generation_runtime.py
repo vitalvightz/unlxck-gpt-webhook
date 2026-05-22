@@ -511,19 +511,9 @@ async def run_generation_job(
                 heartbeat_at=utc_now_iso(),
             )
 
-        plan_id = str(job.get("plan_id") or "") or None
         plan_row: dict[str, Any] | None = None
-        job_source = str(job.get("source") or "").strip().lower()
         if job_source == "admin_triage_resume":
-            if not plan_id:
-                raise TriageResumeMissingPlanError(
-                    "admin triage resume job is missing plan_id; refusing to create a duplicate plan"
-                )
-            plan_row = await asyncio.to_thread(store.get_plan, plan_id)
-            if not plan_row:
-                raise TriageResumeMissingPlanError(
-                    "admin triage resume job linked plan was not found; refusing to create a duplicate plan"
-                )
+            plan_row = admin_resume_plan_row
         else:
             if plan_id:
                 plan_row = await asyncio.to_thread(store.get_plan, plan_id)
