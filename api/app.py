@@ -480,6 +480,17 @@ def _plan_generate_daily_limit_per_user() -> int:
         return 5
 
 
+_DAILY_GENERATION_CAP_EXEMPT_EMAILS: frozenset[str] = frozenset(
+    email.strip().lower()
+    for email in os.getenv("APP_DAILY_GENERATION_CAP_EXEMPT_EMAILS", "michaelokaforjr@gmail.com").split(",")
+    if email.strip()
+)
+
+
+def _is_exempt_from_daily_generation_cap(email: str) -> bool:
+    return email.strip().lower() in _DAILY_GENERATION_CAP_EXEMPT_EMAILS
+
+
 def _default_planner(payload: dict[str, Any]) -> dict[str, Any]:
     return runtime_default_planner(payload)
 
@@ -1299,7 +1310,7 @@ def create_app(
             )
             return _job_response(job, viewer_role=profile.role)
         daily_limit = _plan_generate_daily_limit_per_user()
-        if daily_limit > 0:
+        if daily_limit > 0 and profile.role != "admin" and not _is_exempt_from_daily_generation_cap(profile.email):
             utc_midnight = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0).isoformat()
             jobs_today = await asyncio.to_thread(
                 store.count_generation_jobs_for_athlete_since,
@@ -1396,7 +1407,7 @@ def create_app(
         target_athlete_id = str(original["athlete_id"])
         source = str(original.get("source") or "").strip() or "self_serve"
 
-        if not is_admin:
+        if not is_admin and not _is_exempt_from_daily_generation_cap(profile.email):
             daily_limit = _plan_generate_daily_limit_per_user()
             if daily_limit > 0:
                 utc_midnight = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0).isoformat()

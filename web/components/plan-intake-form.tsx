@@ -948,7 +948,15 @@ export function PlanIntakeForm() {
           return !getSparringConsistency(form.training_availability, form.hard_sparring_days, form.support_work_days).hardError;
         default:
           if (invalidFieldId.startsWith("guidedInjuryCard-")) {
-            return !guidedInjuries.some((injury) => hasGuidedInjuryDescriptorWithoutArea(injury));
+            if (guidedInjuries.some((injury) => hasGuidedInjuryDescriptorWithoutArea(injury))) {
+              return false;
+            }
+            if (noRestrictions) {
+              return true;
+            }
+            return guidedInjuries.some(
+              (injury) => Boolean(injury.injury_type) || Boolean(injury.notes.trim()),
+            );
           }
           return false;
       }
@@ -963,6 +971,7 @@ export function PlanIntakeForm() {
     noScheduledFight,
     acknowledgedHardSparringWarningKey,
     guidedInjuries,
+    noRestrictions,
   ]);
 
   useEffect(() => {
@@ -1531,6 +1540,20 @@ export function PlanIntakeForm() {
         message: "Add a pain area or body part before choosing severity or trend.",
         fieldId: invalidIndex >= 0 ? `guidedInjuryCard-${invalidIndex}` : "guidedInjuriesSection",
       });
+    }
+    if (currentStep === 3 && !noRestrictions) {
+      const hasMeaningfulDetail = guidedInjuries.some(
+        (injury) => Boolean(injury.injury_type) || Boolean(injury.notes.trim()),
+      );
+      if (!hasMeaningfulDetail) {
+        const targetIndex = guidedInjuries.findIndex(
+          (injury) => !injury.injury_type && !injury.notes.trim(),
+        );
+        return reportInvalidField({
+          message: "Add an injury type or describe the injury, or tick \"No current injuries or restrictions\" to continue.",
+          fieldId: targetIndex >= 0 ? `guidedInjuryCard-${targetIndex}` : "guidedInjuryCard-0",
+        });
+      }
     }
     if (currentStep === PERFORMANCE_STEP_INDEX) {
       const focusValidation = validatePerformanceFocusSelections(
@@ -2521,59 +2544,6 @@ export function PlanIntakeForm() {
         {currentStep === 2 ? (
           <div className="step-layout onboarding-step-layout">
             <div className="step-main athlete-motion-slot athlete-motion-main onboarding-step-main">
-              {availabilityConsistency.hardError || availabilityConsistency.softWarning ? (
-                <div
-                  id="availabilityConsistencyAlert"
-                  className={`support-panel ${availabilityConsistency.hardError ? "support-panel-alert" : ""}${invalidFieldId === "availabilityConsistencyAlert" ? " field-invalid" : ""}`.trim()}
-                  tabIndex={invalidFieldId === "availabilityConsistencyAlert" ? -1 : undefined}
-                  aria-invalid={invalidFieldId === "availabilityConsistencyAlert" ? true : undefined}
-                >
-                  <p className="kicker">Consistency check</p>
-                  <p className={availabilityConsistency.hardError ? "error-text" : "muted"}>
-                    {availabilityConsistency.hardError ?? availabilityConsistency.softWarning}
-                  </p>
-                </div>
-              ) : null}
-              {sparringConsistency.hardError || sparringConsistency.softWarning ? (
-                <div
-                  id="sparringConsistencyAlert"
-                  className={`support-panel ${sparringConsistency.hardError ? "support-panel-alert" : ""}${invalidFieldId === "sparringConsistencyAlert" ? " field-invalid" : ""}`.trim()}
-                  tabIndex={invalidFieldId === "sparringConsistencyAlert" ? -1 : undefined}
-                  aria-invalid={invalidFieldId === "sparringConsistencyAlert" ? true : undefined}
-                >
-                  <p className="kicker">Sparring check</p>
-                  <p className={sparringConsistency.hardError ? "error-text" : "muted"}>
-                    {sparringConsistency.hardError ?? sparringConsistency.softWarning}
-                  </p>
-                </div>
-              ) : null}
-              {hardSparringWarning.message ? (
-                <div
-                  id="hardSparringAck"
-                  className={`inline-warning-banner ${hardSparringWarningLocked ? "inline-warning-banner-alert" : ""}${invalidFieldId === "hardSparringAck" ? " field-invalid" : ""}`.trim()}
-                  tabIndex={invalidFieldId === "hardSparringAck" ? -1 : undefined}
-                  aria-invalid={invalidFieldId === "hardSparringAck" ? true : undefined}
-                  aria-describedby={invalidFieldId === "hardSparringAck" ? "hardSparringAck-error" : undefined}
-                >
-                  <p className="inline-warning-banner-label">High-contact warning</p>
-                  <p className={hardSparringWarningLocked ? "error-text" : "muted"}>{hardSparringWarning.message}</p>
-                  <label className={`inline-warning-ack ${hardSparringWarningAcknowledged ? "inline-warning-ack-checked" : ""}`.trim()}>
-                    <input
-                      type="checkbox"
-                      checked={hardSparringWarningAcknowledged}
-                      onChange={(event) => {
-                        setAcknowledgedHardSparringWarningKey(
-                          event.target.checked ? hardSparringWarning.acknowledgementContextKey : null,
-                        );
-                      }}
-                    />
-                    <span className="inline-warning-ack-copy">I understand this requires deliberate recovery planning.</span>
-                  </label>
-                  {invalidFieldId === "hardSparringAck" && error ? (
-                    <p id="hardSparringAck-error" className="error-text" role="alert">{error}</p>
-                  ) : null}
-                </div>
-              ) : null}
               <article className="step-card">
                 <div className="form-section-header">
                   <p className="kicker">Schedule</p>
@@ -2600,6 +2570,19 @@ export function PlanIntakeForm() {
                   ) : null}
                 </>
                 )}
+                {availabilityConsistency.hardError || availabilityConsistency.softWarning ? (
+                  <div
+                    id="availabilityConsistencyAlert"
+                    className={`support-panel ${availabilityConsistency.hardError ? "support-panel-alert" : ""}${invalidFieldId === "availabilityConsistencyAlert" ? " field-invalid" : ""}`.trim()}
+                    tabIndex={invalidFieldId === "availabilityConsistencyAlert" ? -1 : undefined}
+                    aria-invalid={invalidFieldId === "availabilityConsistencyAlert" ? true : undefined}
+                  >
+                    <p className="kicker">Consistency check</p>
+                    <p className={availabilityConsistency.hardError ? "error-text" : "muted"}>
+                      {availabilityConsistency.hardError ?? availabilityConsistency.softWarning}
+                    </p>
+                  </div>
+                ) : null}
               </article>
               <article className="step-card">
                 <div className="form-section-header">
@@ -2641,6 +2624,33 @@ export function PlanIntakeForm() {
                   </p>
                   <p className="muted">Available hard sparring tags: {formatJoinedLabels(remainingHardSparringDays, "No days left")}</p>
                 </div>
+                {hardSparringWarning.message ? (
+                  <div
+                    id="hardSparringAck"
+                    className={`inline-warning-banner ${hardSparringWarningLocked ? "inline-warning-banner-alert" : ""}${invalidFieldId === "hardSparringAck" ? " field-invalid" : ""}`.trim()}
+                    tabIndex={invalidFieldId === "hardSparringAck" ? -1 : undefined}
+                    aria-invalid={invalidFieldId === "hardSparringAck" ? true : undefined}
+                    aria-describedby={invalidFieldId === "hardSparringAck" ? "hardSparringAck-error" : undefined}
+                  >
+                    <p className="inline-warning-banner-label">High-contact warning</p>
+                    <p className={hardSparringWarningLocked ? "error-text" : "muted"}>{hardSparringWarning.message}</p>
+                    <label className={`inline-warning-ack ${hardSparringWarningAcknowledged ? "inline-warning-ack-checked" : ""}`.trim()}>
+                      <input
+                        type="checkbox"
+                        checked={hardSparringWarningAcknowledged}
+                        onChange={(event) => {
+                          setAcknowledgedHardSparringWarningKey(
+                            event.target.checked ? hardSparringWarning.acknowledgementContextKey : null,
+                          );
+                        }}
+                      />
+                      <span className="inline-warning-ack-copy">I understand this requires deliberate recovery planning.</span>
+                    </label>
+                    {invalidFieldId === "hardSparringAck" && error ? (
+                      <p id="hardSparringAck-error" className="error-text" role="alert">{error}</p>
+                    ) : null}
+                  </div>
+                ) : null}
                 </>
                 )}
                 {shouldHideField(daysOutCtx, "support_work_days") ? (
@@ -2674,6 +2684,19 @@ export function PlanIntakeForm() {
                 </div>
                 </>
                 )}
+                {sparringConsistency.hardError || sparringConsistency.softWarning ? (
+                  <div
+                    id="sparringConsistencyAlert"
+                    className={`support-panel ${sparringConsistency.hardError ? "support-panel-alert" : ""}${invalidFieldId === "sparringConsistencyAlert" ? " field-invalid" : ""}`.trim()}
+                    tabIndex={invalidFieldId === "sparringConsistencyAlert" ? -1 : undefined}
+                    aria-invalid={invalidFieldId === "sparringConsistencyAlert" ? true : undefined}
+                  >
+                    <p className="kicker">Sparring check</p>
+                    <p className={sparringConsistency.hardError ? "error-text" : "muted"}>
+                      {sparringConsistency.hardError ?? sparringConsistency.softWarning}
+                    </p>
+                  </div>
+                ) : null}
               </article>
               <article className="step-card">
                 <div className="form-section-header">
