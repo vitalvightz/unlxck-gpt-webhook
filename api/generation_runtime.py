@@ -555,7 +555,7 @@ async def run_generation_job(
                 heartbeat_at=utc_now_iso(),
             )
     except TriageResumeMissingPlanError as exc:
-        logger.exception(
+        logger.error(
             "[jobs] generation:resume_missing_plan_failure athlete_id=%s job_id=%s",
             athlete_id,
             job_id,
