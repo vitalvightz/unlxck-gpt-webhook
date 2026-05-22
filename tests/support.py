@@ -18,7 +18,7 @@ from api.models import (
     USERNAME_MAX_CHANGES_PER_WINDOW,
     validate_username,
 )
-from api.store import is_pre_start_stale_generation_job
+from api.store import is_startup_stale_generation_job
 from datetime import timedelta
 
 os.environ.setdefault("APP_GENERATION_SCHEDULER", "fastapi")
@@ -257,7 +257,7 @@ class FakeStore:
     ) -> dict:
         for job in self.generation_jobs.values():
             if job["athlete_id"] == athlete_id and job["client_request_id"] == client_request_id:
-                if is_pre_start_stale_generation_job(job, stale_after_seconds=stale_after_seconds):
+                if is_startup_stale_generation_job(job, stale_after_seconds=stale_after_seconds):
                     now = _now()
                     reset_changes = {
                         "source": source,
@@ -377,7 +377,7 @@ class FakeStore:
                 else None
             )
             last_progress_at = heartbeat or started_at
-            if is_pre_start_stale_generation_job(job, stale_after_seconds=stale_after_seconds) or (
+            if is_startup_stale_generation_job(job, stale_after_seconds=stale_after_seconds) or (
                 last_progress_at and (now - last_progress_at).total_seconds() >= stale_after_seconds
             ):
                 rows.append(dict(job))
@@ -390,7 +390,7 @@ class FakeStore:
             return None
         if job["status"] not in {"queued", "running"}:
             return None
-        if job["status"] == "running" and not is_pre_start_stale_generation_job(
+        if job["status"] == "running" and not is_startup_stale_generation_job(
             job,
             stale_after_seconds=stale_after_seconds,
         ):

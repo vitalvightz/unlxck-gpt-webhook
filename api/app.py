@@ -74,7 +74,7 @@ from .stage2_automation import (
     Stage2Automator,
     build_default_stage2_automator,
 )
-from .store import AppStore, SupabaseAppStore, is_pre_start_stale_generation_job
+from .store import AppStore, SupabaseAppStore, is_startup_stale_generation_job
 
 Planner = Callable[[dict[str, Any]], dict[str, Any]]
 security = HTTPBearer(auto_error=False)
@@ -1360,7 +1360,7 @@ def create_app(
         )
         stale_after_seconds = _generation_job_stale_after_seconds()
         if existing_job:
-            if is_pre_start_stale_generation_job(existing_job, stale_after_seconds=stale_after_seconds):
+            if is_startup_stale_generation_job(existing_job, stale_after_seconds=stale_after_seconds):
                 existing_job = await asyncio.to_thread(
                     store.create_or_get_generation_job,
                     athlete_id=profile.athlete_id,
@@ -1466,11 +1466,11 @@ def create_app(
         if not is_admin and str(original["athlete_id"]) != profile.athlete_id:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="generation job not found")
         stale_after_seconds = _generation_job_stale_after_seconds()
-        is_pre_start_stale = is_pre_start_stale_generation_job(
+        is_startup_stale = is_startup_stale_generation_job(
             original,
             stale_after_seconds=stale_after_seconds,
         )
-        if str(original.get("status") or "") != "failed" and not is_pre_start_stale:
+        if str(original.get("status") or "") != "failed" and not is_startup_stale:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
                 detail="only failed generation jobs can be retried",
@@ -1506,7 +1506,7 @@ def create_app(
         # so we reset the existing job instead of creating a duplicate. Otherwise prefer
         # the header-provided id or generate a retry id.
         retry_client_request_id = (
-            str(original.get("client_request_id") or "") if is_pre_start_stale
+            str(original.get("client_request_id") or "") if is_startup_stale
             else (request.headers.get("X-Client-Request-Id") or "").strip() or f"retry_{job_id}_{uuid.uuid4().hex}"
         )
         retry_intake_id = str(original.get("intake_id") or "").strip() or None
