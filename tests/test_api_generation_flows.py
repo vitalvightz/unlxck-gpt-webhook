@@ -24,6 +24,7 @@ from support import (
     _planner,
     _start_generation,
     finalized_result,
+    stage1_result,
 )
 
 
@@ -520,6 +521,153 @@ def test_run_generation_job_updates_existing_plan_for_same_intake_after_resume()
     assert updated_plan["why_log"] == {"strength": {}}
     assert updated_plan["coach_notes"] == "### Coach Review"
     assert store.get_latest_plan(athlete.user_id)["id"] == blocked_plan["id"]
+    assert len(store.list_user_plans(athlete.user_id)) == 1
+
+
+def test_admin_triage_resume_without_linked_plan_fails_without_creating_duplicate():
+    store = FakeStore()
+    athlete = AuthenticatedUser(
+        user_id="athlete-1",
+        email="ari@example.com",
+        full_name="Ari Mensah",
+        metadata={},
+    )
+    store.ensure_profile(athlete)
+    request = _build_request()
+    intake = store.create_intake(athlete.user_id, request)
+    # Mirror the production hazard: an admin_triage_resume job whose linked
+    # plan no longer exists (and there is no non-archived plan to fall back
+    # to via intake_id). The worker must refuse to create a new plan.
+    job = store.create_or_get_generation_job(
+        athlete_id=athlete.user_id,
+        client_request_id="triage-resume-missing-plan",
+        source="admin_triage_resume",
+        request_payload=request.model_dump(mode="json"),
+    )
+    store.update_generation_job(job["id"], intake_id=str(intake["id"]))
+
+    asyncio.run(
+        run_generation_job(
+            job_id=job["id"],
+            store=store,
+            planner_fn=_planner,
+            stage2=FakeStage2Automator(result=finalized_result()),
+            active_tasks=set(),
+        )
+    )
+
+    refreshed_job = store.get_generation_job(job["id"])
+    assert refreshed_job["status"] == "failed"
+    assert "refusing to create a duplicate plan" in str(refreshed_job["error"])
+    assert refreshed_job["plan_id"] is None
+    assert store.list_user_plans(athlete.user_id) == []
+
+
+def test_admin_triage_resume_with_override_updates_blocked_plan_in_place():
+    store = FakeStore()
+    athlete = AuthenticatedUser(
+        user_id="athlete-1",
+        email="ari@example.com",
+        full_name="Ari Mensah",
+        metadata={},
+    )
+    store.ensure_profile(athlete)
+    request = _build_request()
+    intake = store.create_intake(athlete.user_id, request)
+    blocked_plan = store.create_plan(
+        athlete_id=athlete.user_id,
+        intake_id=str(intake["id"]),
+        request=request,
+        result=finalized_result(
+            status="triage_blocked",
+            stage2_status="triage_blocked",
+            plan_text="",
+            final_plan_text="",
+            why_log={
+                "injury_triage": {"mode": "needs_review", "should_block_stage2": True},
+                "triage_resume_approval": {"approved_by_email": "ops@unlxck.test"},
+                "triage_regeneration_cleared": True,
+            },
+        ),
+    )
+    request_payload = request.model_dump(mode="json")
+    request_payload["_triage_resume_override"] = {
+        "approved": True,
+        "allowed_modes": ["needs_review", "restricted_rehab_only"],
+        "approved_by": {"user_id": "admin-1", "email": "ops@unlxck.test"},
+        "reason": "injury details clarified",
+    }
+    job = store.create_or_get_generation_job(
+        athlete_id=athlete.user_id,
+        client_request_id="triage-resume-with-override",
+        source="admin_triage_resume",
+        request_payload=request_payload,
+    )
+    store.update_generation_job(
+        job["id"],
+        intake_id=str(intake["id"]),
+        plan_id=str(blocked_plan["id"]),
+    )
+
+    def _override_aware_planner(payload: dict) -> dict:
+        override = payload.get("_triage_resume_override") or {}
+        assert override.get("approved") is True, (
+            "worker must forward _triage_resume_override to the planner"
+        )
+        result = dict(stage1_result())
+        result["why_log"] = {
+            "strength": {},
+            "injury_triage_resume_override": {
+                "bypassed_blocking": True,
+                "triage_mode": "needs_review",
+                "runtime_triage_mode": "full_plan",
+            },
+            "injury_triage_original": {
+                "mode": "needs_review",
+                "should_block_stage2": True,
+            },
+        }
+        return result
+
+    asyncio.run(
+        run_generation_job(
+            job_id=job["id"],
+            store=store,
+            planner_fn=_override_aware_planner,
+            stage2=FakeStage2Automator(
+                result=finalized_result(
+                    why_log={
+                        "strength": {},
+                        "injury_triage_resume_override": {
+                            "bypassed_blocking": True,
+                            "triage_mode": "needs_review",
+                            "runtime_triage_mode": "full_plan",
+                        },
+                        "injury_triage_original": {
+                            "mode": "needs_review",
+                            "should_block_stage2": True,
+                        },
+                    },
+                )
+            ),
+            active_tasks=set(),
+        )
+    )
+
+    refreshed_job = store.get_generation_job(job["id"])
+    updated_plan = store.get_plan(blocked_plan["id"])
+
+    assert refreshed_job["status"] == "completed"
+    assert refreshed_job["plan_id"] == blocked_plan["id"]
+    assert updated_plan["status"] != "triage_blocked"
+    assert updated_plan["status"] == "ready"
+    why_log = updated_plan["why_log"]
+    assert why_log["injury_triage_resume_override"]["bypassed_blocking"] is True
+    assert why_log["injury_triage_original"]["mode"] == "needs_review"
+    # Audit markers placed on the plan by the approve-and-resume endpoint
+    # must survive the in-place update.
+    assert why_log["triage_resume_approval"] == {"approved_by_email": "ops@unlxck.test"}
+    assert why_log["triage_regeneration_cleared"] is True
     assert len(store.list_user_plans(athlete.user_id)) == 1
 
 
