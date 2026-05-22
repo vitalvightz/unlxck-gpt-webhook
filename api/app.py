@@ -1607,6 +1607,15 @@ def create_app(
         if not plan_row:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
 
+        # Check for an existing approval first: once the resume has already
+        # been run and the plan was updated in place, the triage state in
+        # why_log no longer exists, so the triage-mode guard below would
+        # otherwise mask the duplicate with a less specific error.
+        if _has_existing_triage_resume_approval(plan_row):
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="this blocked plan has already been approved for resume",
+            )
         why_log = plan_row.get("why_log") if isinstance(plan_row.get("why_log"), dict) else {}
         triage = why_log.get("injury_triage") if isinstance(why_log.get("injury_triage"), dict) else {}
         triage_mode = str(triage.get("mode") or "").strip().lower()
@@ -1614,11 +1623,6 @@ def create_app(
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
                 detail="approve_and_resume_generation is only allowed for needs_review or restricted_rehab_only plans",
-            )
-        if _has_existing_triage_resume_approval(plan_row):
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail="this blocked plan has already been approved for resume",
             )
 
         intake_id = str(plan_row.get("intake_id") or "").strip()

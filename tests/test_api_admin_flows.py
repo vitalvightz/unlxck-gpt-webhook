@@ -578,7 +578,10 @@ def test_needs_review_can_be_approved_and_resumed_with_normal_generation_flow():
         headers={"Authorization": "Bearer admin-token"},
     )
     assert refreshed_plan.status_code == 200
-    assert refreshed_plan.json()["admin_outputs"]["stage2_status"] == "triage_resume_approved"
+    # The resumed generation updates the original blocked plan in place, so the
+    # stage2_status reflects the new finalized run. The triage approval audit
+    # marker (triage_regeneration_cleared) must still be preserved on why_log.
+    assert refreshed_plan.json()["admin_outputs"]["stage2_status"] == "stage2_pass"
     assert refreshed_plan.json()["admin_outputs"]["why_log"]["triage_regeneration_cleared"] is True
 
 
