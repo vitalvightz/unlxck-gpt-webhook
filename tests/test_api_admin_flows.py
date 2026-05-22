@@ -686,6 +686,85 @@ def test_approve_and_resume_generation_creates_job_with_intake_and_plan_linked()
     assert job["plan_id"] == str(blocked_plan["id"])
 
 
+def test_approve_and_resume_generation_reuses_existing_job_with_fresh_override_payload():
+    athlete = AuthenticatedUser(
+        user_id="athlete-1",
+        email="ari@example.com",
+        full_name="Ari Mensah",
+        metadata={},
+    )
+    admin = AuthenticatedUser(
+        user_id="admin-1",
+        email="ops@unlxck.test",
+        full_name="Ops Admin",
+        metadata={},
+    )
+    store = FakeStore()
+    store.ensure_profile(athlete)
+    request = _build_request()
+    intake = store.create_intake(athlete.user_id, request)
+    blocked_plan = store.create_plan(
+        athlete_id=athlete.user_id,
+        intake_id=str(intake["id"]),
+        request=request,
+        result=finalized_result(
+            status="triage_blocked",
+            stage2_status="triage_blocked",
+            why_log={"injury_triage": {"mode": "needs_review", "should_block_stage2": True}},
+        ),
+    )
+    store.create_or_get_generation_job(
+        athlete_id=athlete.user_id,
+        client_request_id=f"triage_resume_{blocked_plan['id']}",
+        source="admin_triage_resume",
+        request_payload=request.to_payload(),
+        intake_id=str(intake["id"]),
+        plan_id=str(blocked_plan["id"]),
+    )
+
+    def override_aware_planner(payload: dict) -> dict:
+        override = payload.get("_triage_resume_override") or {}
+        result = dict(stage1_result())
+        if override.get("approved") is True:
+            result["why_log"] = {
+                "injury_triage_resume_override": {
+                    "bypassed_blocking": True,
+                    "triage_mode": "needs_review",
+                    "runtime_triage_mode": "full_plan",
+                },
+                "injury_triage_original": {
+                    "mode": "needs_review",
+                    "should_block_stage2": True,
+                },
+            }
+            return result
+        result["status"] = "triage_blocked"
+        result["why_log"] = {"injury_triage": {"mode": "needs_review", "should_block_stage2": True}}
+        return result
+
+    client = TestClient(
+        create_app(
+            store=store,
+            auth_service=FakeAuthService({"athlete-token": athlete, "admin-token": admin}),
+            planner=override_aware_planner,
+            stage2_automator=FakeStage2Automator(result=finalized_result()),
+        )
+    )
+
+    response = client.post(
+        f"/api/admin/plans/{blocked_plan['id']}/approve-and-resume-generation",
+        headers={"Authorization": "Bearer admin-token"},
+        json={"reason": "injury details clarified"},
+    )
+    assert response.status_code == 202
+
+    job = store.get_generation_job(response.json()["job_id"])
+    assert job is not None
+    assert job["request_payload"]["_triage_resume_override"]["approved"] is True
+    assert job["status"] == "completed"
+    assert job["final_result"]["status"] != "triage_blocked"
+
+
 def test_approve_and_resume_full_flow_updates_plan_in_place_with_override_metadata():
     """End-to-end (HTTP -> worker -> plan update) lock: a `needs_review` plan
     approved via `/approve-and-resume-generation` must result in the SAME
