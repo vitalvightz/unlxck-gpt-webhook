@@ -858,7 +858,8 @@ select:focus-visible {
 }
 
 .quick-build-form {
-  gap: 18px;
+  display: grid;
+  gap: 24px;
 }
 
 .quick-build-guide {
@@ -5163,6 +5164,10 @@ button.mobile-step-rail-item {
   .overview-grid,
   .admin-grid {
     grid-template-columns: 1fr;
+  }
+
+  .quick-build-form {
+    gap: 14px;
   }
 
   .quick-build-form .hero-panel,
