@@ -992,6 +992,94 @@ def test_approve_and_resume_generation_requeues_failed_resume_job_without_duplic
     assert refreshed["client_request_id"] == client_request_id
 
 
+def test_approve_and_resume_generation_requeues_stage1_timeout_resume_job_without_duplicate():
+    athlete = AuthenticatedUser(
+        user_id="athlete-1",
+        email="ari@example.com",
+        full_name="Ari Mensah",
+        metadata={},
+    )
+    admin = AuthenticatedUser(
+        user_id="admin-1",
+        email="ops@unlxck.test",
+        full_name="Ops Admin",
+        metadata={},
+    )
+    store = FakeStore()
+    store.ensure_profile(athlete)
+    request = _build_request()
+    intake = store.create_intake(athlete.user_id, request)
+    blocked_plan = store.create_plan(
+        athlete_id=athlete.user_id,
+        intake_id=str(intake["id"]),
+        request=request,
+        result=finalized_result(
+            status="triage_blocked",
+            stage2_status="triage_resume_approved",
+            why_log={
+                "injury_triage": {"mode": "needs_review", "should_block_stage2": True},
+                "triage_resume_approval": {"approved_by_email": "ops@unlxck.test"},
+                "triage_regeneration_cleared": True,
+            },
+        ),
+    )
+    client_request_id = f"triage_resume_{blocked_plan['id']}"
+    existing_job = store.create_or_get_generation_job(
+        athlete_id=athlete.user_id,
+        client_request_id=client_request_id,
+        source="admin_triage_resume",
+        request_payload={
+            **request.model_dump(mode="json"),
+            "_triage_resume_override": {"approved": True},
+        },
+        intake_id=str(intake["id"]),
+        plan_id=str(blocked_plan["id"]),
+    )
+    store.update_generation_job(
+        existing_job["id"],
+        status="failed",
+        attempt_count=1,
+        heartbeat_at=_old_iso(),
+        completed_at=_old_iso(),
+        stage1_result=None,
+        final_result=None,
+        error="Stage 1 planner timed out before producing a result.",
+    )
+    client = TestClient(
+        create_app(
+            store=store,
+            auth_service=FakeAuthService({"athlete-token": athlete, "admin-token": admin}),
+            planner=lambda payload: stage1_result(),
+            stage2_automator=FakeStage2Automator(result=finalized_result()),
+            enable_in_process_generation=False,
+        )
+    )
+
+    response = client.post(
+        f"/api/admin/plans/{blocked_plan['id']}/approve-and-resume-generation",
+        headers={"Authorization": "Bearer admin-token"},
+        json={"reason": "retry timed out resume"},
+    )
+
+    assert response.status_code == 202
+    body = response.json()
+    assert body["job_id"] == existing_job["id"]
+    assert body["status"] == "queued"
+    assert len(store.generation_jobs) == 1
+    refreshed = store.get_generation_job(existing_job["id"])
+    assert refreshed["status"] == "queued"
+    assert refreshed["error"] is None
+    assert refreshed["stage1_result"] is None
+    assert refreshed["final_result"] is None
+    assert refreshed["completed_at"] is None
+    assert refreshed["plan_id"] == str(blocked_plan["id"])
+    assert refreshed["intake_id"] == str(intake["id"])
+    assert refreshed["client_request_id"] == client_request_id
+    assert refreshed["request_payload"]["_triage_resume_override"]["approved"] is True
+    assert refreshed["request_payload"]["_triage_resume_override"]["reason"] == "retry timed out resume"
+    assert store.get_plan(blocked_plan["id"])["stage2_status"] == "triage_resume_approved"
+
+
 def test_approve_and_resume_generation_returns_non_stale_running_resume_job_as_is():
     athlete = AuthenticatedUser(
         user_id="athlete-1",

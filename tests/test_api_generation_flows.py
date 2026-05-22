@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import time
 
 from fastapi import HTTPException, status
 from fastapi.testclient import TestClient
@@ -884,13 +885,15 @@ def test_admin_triage_resume_with_override_updates_blocked_plan_in_place():
     assert refreshed_job["status"] == "completed"
     assert refreshed_job["plan_id"] == blocked_plan["id"]
     milestone_codes = [entry["code"] for entry in refreshed_job.get("progress_milestones", [])]
-    assert milestone_codes[:6] == [
+    assert milestone_codes[:8] == [
         "job_loaded",
         "admin_resume_linkage_validated",
         "request_payload_parsed",
         "profile_update_started",
         "profile_update_finished",
         "stage1_planner_starting",
+        "stage1_planner_invoked",
+        "stage1_planner_finished",
     ]
     assert updated_plan["status"] != "triage_blocked"
     assert updated_plan["status"] == "ready"
@@ -902,6 +905,102 @@ def test_admin_triage_resume_with_override_updates_blocked_plan_in_place():
     assert why_log["triage_resume_approval"] == {"approved_by_email": "ops@unlxck.test"}
     assert why_log["triage_regeneration_cleared"] is True
     assert len(store.list_user_plans(athlete.user_id)) == 1
+
+
+def test_admin_triage_resume_stage1_planner_timeout_fails_without_touching_plan(monkeypatch):
+    monkeypatch.setenv("APP_STAGE1_PLANNER_TIMEOUT_SECONDS", "0.01")
+
+    class NoLatestPlanFallbackStore(FakeStore):
+        def get_latest_plan(self, athlete_id: str) -> dict | None:
+            raise AssertionError("admin_triage_resume must not use latest_plan fallback")
+
+    store = NoLatestPlanFallbackStore()
+    athlete = AuthenticatedUser(
+        user_id="athlete-1",
+        email="ari@example.com",
+        full_name="Ari Mensah",
+        metadata={},
+    )
+    store.ensure_profile(athlete)
+    request = _build_request()
+    intake = store.create_intake(athlete.user_id, request)
+    blocked_plan = store.create_plan(
+        athlete_id=athlete.user_id,
+        intake_id=str(intake["id"]),
+        request=request,
+        result=finalized_result(
+            status="triage_blocked",
+            stage2_status="triage_resume_approved",
+            plan_text="",
+            final_plan_text="",
+            why_log={
+                "injury_triage": {"mode": "needs_review", "should_block_stage2": True},
+                "triage_resume_approval": {"approved_by_email": "ops@unlxck.test"},
+                "triage_regeneration_cleared": True,
+            },
+        ),
+    )
+    client_request_id = f"triage_resume_{blocked_plan['id']}"
+    request_payload = request.model_dump(mode="json")
+    request_payload["_triage_resume_override"] = {
+        "approved": True,
+        "allowed_modes": ["needs_review", "restricted_rehab_only"],
+        "approved_by": {"user_id": "admin-1", "email": "ops@unlxck.test"},
+        "reason": "retry after review",
+    }
+    job = store.create_or_get_generation_job(
+        athlete_id=athlete.user_id,
+        client_request_id=client_request_id,
+        source="admin_triage_resume",
+        request_payload=request_payload,
+        intake_id=str(intake["id"]),
+        plan_id=str(blocked_plan["id"]),
+    )
+    now_iso = _now()
+    store.update_generation_job(
+        job["id"],
+        status="running",
+        started_at=now_iso,
+        heartbeat_at=now_iso,
+    )
+    stage2 = FakeStage2Automator(result=finalized_result())
+
+    def _slow_planner(payload: dict, *, progress_callback=None) -> dict:
+        time.sleep(0.05)
+        return stage1_result()
+
+    asyncio.run(
+        run_generation_job(
+            job_id=job["id"],
+            store=store,
+            planner_fn=_slow_planner,
+            stage2=stage2,
+            active_tasks=set(),
+        )
+    )
+
+    refreshed_job = store.get_generation_job(job["id"])
+    updated_plan = store.get_plan(blocked_plan["id"])
+
+    assert refreshed_job["status"] == "failed"
+    assert refreshed_job["error"] == "Stage 1 planner timed out before producing a result."
+    assert refreshed_job["stage1_result"] is None
+    assert refreshed_job["final_result"] is None
+    assert refreshed_job["completed_at"] is not None
+    assert refreshed_job["heartbeat_at"] is not None
+    assert refreshed_job["plan_id"] == str(blocked_plan["id"])
+    assert refreshed_job["intake_id"] == str(intake["id"])
+    assert refreshed_job["client_request_id"] == client_request_id
+    milestone_codes = [entry["code"] for entry in refreshed_job.get("progress_milestones", [])]
+    assert "stage1_planner_starting" in milestone_codes
+    assert "stage1_planner_invoked" in milestone_codes
+    assert "stage1_planner_finished" not in milestone_codes
+    assert stage2.calls == []
+    assert len(store.plans) == 1
+    assert updated_plan["id"] == blocked_plan["id"]
+    assert updated_plan["status"] == "triage_blocked"
+    assert updated_plan["stage2_status"] == "triage_resume_approved"
+    assert updated_plan["why_log"]["triage_resume_approval"] == {"approved_by_email": "ops@unlxck.test"}
 
 
 def test_runtime_generation_saves_completed_plan():
