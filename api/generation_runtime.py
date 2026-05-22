@@ -22,6 +22,15 @@ Planner = Callable[..., dict[str, Any]]
 ProgressCallback = Callable[[str, str, str, dict[str, Any]], None]
 logger = logging.getLogger(__name__)
 _TRIAGE_RESUME_OVERRIDE_KEY = "_triage_resume_override"
+
+
+class TriageResumeMissingPlanError(RuntimeError):
+    """Raised when an admin_triage_resume job cannot find its linked plan.
+
+    A resume job must update the original triage-blocked plan in place; if the
+    linked plan is missing we fail loudly rather than silently creating a
+    duplicate plan.
+    """
 _DETACHED_GENERATION_TASKS: set[asyncio.Task[None]] = set()
 _MAX_PERSISTED_MILESTONES = 40
 _OPENAI_QUOTA_ADMIN_ERROR = "OpenAI quota exceeded. Check API billing, credits, project budget, or organization limits."
@@ -447,6 +456,19 @@ async def run_generation_job(
                 final_result,
             )
         if not plan_row:
+            job_source = str(job.get("source") or "").strip().lower()
+            if job_source == "admin_triage_resume":
+                logger.error(
+                    "[jobs] generation:resume_missing_plan job_id=%s athlete_id=%s intake_id=%s job_plan_id=%s",
+                    job_id,
+                    athlete_id,
+                    intake_id,
+                    job.get("plan_id"),
+                )
+                raise TriageResumeMissingPlanError(
+                    "admin triage resume job is missing its linked plan; "
+                    "refusing to create a duplicate plan"
+                )
             plan_row = await asyncio.to_thread(
                 store.create_plan,
                 athlete_id=athlete_id,
@@ -529,6 +551,21 @@ async def run_generation_job(
                 job_id,
                 status="failed",
                 error=detail,
+                completed_at=utc_now_iso(),
+                heartbeat_at=utc_now_iso(),
+            )
+    except TriageResumeMissingPlanError as exc:
+        logger.exception(
+            "[jobs] generation:resume_missing_plan_failure athlete_id=%s job_id=%s",
+            athlete_id,
+            job_id,
+        )
+        with suppress(Exception):
+            await asyncio.to_thread(
+                store.update_generation_job,
+                job_id,
+                status="failed",
+                error=str(exc),
                 completed_at=utc_now_iso(),
                 heartbeat_at=utc_now_iso(),
             )
