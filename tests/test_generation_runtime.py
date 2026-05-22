@@ -13,10 +13,10 @@ def _clear_environment_markers(monkeypatch):
         monkeypatch.delenv(var, raising=False)
 
 
-def test_stage1_planner_timeout_default_is_240(monkeypatch):
+def test_stage1_planner_timeout_default_is_600(monkeypatch):
     _clear_environment_markers(monkeypatch)
     monkeypatch.delenv("APP_STAGE1_PLANNER_TIMEOUT_SECONDS", raising=False)
-    assert _stage1_planner_timeout_seconds() == 240.0
+    assert _stage1_planner_timeout_seconds() == 600.0
 
 
 @pytest.mark.parametrize("sentinel", ["", "0", "none", "None", "NONE"])
@@ -30,13 +30,13 @@ def test_stage1_planner_timeout_sentinel_does_not_disable_in_production(monkeypa
     _clear_environment_markers(monkeypatch)
     monkeypatch.setenv("APP_ENV", "production")
     monkeypatch.setenv("APP_STAGE1_PLANNER_TIMEOUT_SECONDS", "0")
-    assert _stage1_planner_timeout_seconds() == 240.0
+    assert _stage1_planner_timeout_seconds() == 600.0
 
 
-def test_stage1_planner_timeout_invalid_falls_back_to_240(monkeypatch):
+def test_stage1_planner_timeout_invalid_falls_back_to_600(monkeypatch):
     _clear_environment_markers(monkeypatch)
     monkeypatch.setenv("APP_STAGE1_PLANNER_TIMEOUT_SECONDS", "not-a-number")
-    assert _stage1_planner_timeout_seconds() == 240.0
+    assert _stage1_planner_timeout_seconds() == 600.0
 
 
 def test_stage1_planner_timeout_respects_valid_override(monkeypatch):
