@@ -1672,11 +1672,10 @@ def create_app(
                 )
 
             if existing_intake_id != intake_id or existing_plan_id != plan_id:
-                if existing_status == "running" and not existing_is_stale:
-                    raise HTTPException(
-                        status_code=status.HTTP_409_CONFLICT,
-                        detail="existing running triage resume job has unsafe plan/intake linkage",
-                    )
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail="existing triage resume job has unsafe plan/intake linkage",
+                )
 
             if existing_status == "running" and not existing_is_stale:
                 return _job_response(existing_resume_job, viewer_role=profile.role)
