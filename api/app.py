@@ -1711,7 +1711,7 @@ def create_app(
             error=None,
             completed_at=None,
             status="queued",
-            heartbeat_at=datetime.now(timezone.utc).isoformat(),
+            heartbeat_at=_utc_now_iso(),
         )
 
         await asyncio.to_thread(
