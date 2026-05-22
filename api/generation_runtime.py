@@ -515,7 +515,6 @@ async def run_generation_job(
         if job_source == "admin_triage_resume":
             plan_row = admin_resume_plan_row
         else:
-            plan_id = str(job.get("plan_id") or "").strip() or None
             if plan_id:
                 plan_row = await asyncio.to_thread(store.get_plan, plan_id)
             if not plan_row and intake_id:
