@@ -64,8 +64,10 @@ def test_build_stage2_handoff_text_uses_finalizer_packet_as_single_structured_co
     assert "FINALIZER PACKET" in handoff
     assert "ATHLETE PROFILE" in handoff
     assert "UNLXCK FINAL RENDER CONTRACT" in handoff
-    assert "D-5 (Tuesday) — Alactic sharpness" in handoff
-    assert "PHASE — Week X (D-X to D-X) — Objective" in handoff
+    assert "D-5 (Tuesday) — Fight-speed primer" in handoff
+    assert "GPP — Week 1 (D-X to D-X) — Objective" in handoff
+    assert "SPP — Week 2 (D-X to D-X) — Objective" in handoff
+    assert "TAPER — Week 3 (D-X to D-X) — Objective" in handoff
     assert "Return only the athlete-facing final plan." in handoff
     assert '"packet_type":"stage2_finalizer_packet"' in handoff
     assert '"render_mode":"camp_plan"' in handoff
