@@ -75,7 +75,7 @@ from .stage2_automation import (
     Stage2Automator,
     build_default_stage2_automator,
 )
-from .store import AppStore, SupabaseAppStore
+from .store import AppStore, SupabaseAppStore, is_pre_start_stale_generation_job
 
 Planner = Callable[[dict[str, Any]], dict[str, Any]]
 security = HTTPBearer(auto_error=False)
@@ -158,6 +158,7 @@ def _job_response(
         created_at=str(job["created_at"]),
         updated_at=str(updated_at),
         started_at=str(job["started_at"]) if job.get("started_at") else None,
+        heartbeat_at=str(job["heartbeat_at"]) if job.get("heartbeat_at") else None,
         completed_at=str(job["completed_at"]) if job.get("completed_at") else None,
         error=error,
         plan_id=plan_id,
@@ -1200,7 +1201,17 @@ def create_app(
             athlete_id=profile.athlete_id,
             client_request_id=client_request_id,
         )
+        stale_after_seconds = _generation_job_stale_after_seconds()
         if existing_job:
+            if is_pre_start_stale_generation_job(existing_job, stale_after_seconds=stale_after_seconds):
+                existing_job = await asyncio.to_thread(
+                    store.create_or_get_generation_job,
+                    athlete_id=profile.athlete_id,
+                    client_request_id=client_request_id,
+                    source=str(existing_job.get("source") or "self_serve"),
+                    request_payload=request_body.model_dump(mode="json"),
+                    stale_after_seconds=stale_after_seconds,
+                )
             job = await schedule_generation_job_if_needed(
                 job=existing_job,
                 background_tasks=background_tasks,
@@ -1210,7 +1221,7 @@ def create_app(
                 active_tasks=active_tasks,
                 enable_in_process_generation=enable_in_process_generation,
                 stale_job_checker=_is_stale_job,
-                stale_after_seconds=_generation_job_stale_after_seconds(),
+                stale_after_seconds=stale_after_seconds,
             )
             return _job_response(job, viewer_role=profile.role)
         daily_limit = _plan_generate_daily_limit_per_user()
@@ -1235,6 +1246,7 @@ def create_app(
             client_request_id=client_request_id,
             source=resolved_source,
             request_payload=request_body.model_dump(mode="json"),
+            stale_after_seconds=stale_after_seconds,
         )
         job = await schedule_generation_job_if_needed(
             job=job,
@@ -1245,7 +1257,7 @@ def create_app(
             active_tasks=active_tasks,
             enable_in_process_generation=enable_in_process_generation,
             stale_job_checker=_is_stale_job,
-            stale_after_seconds=_generation_job_stale_after_seconds(),
+            stale_after_seconds=stale_after_seconds,
         )
         return _job_response(job, viewer_role=profile.role)
 
@@ -1339,7 +1351,12 @@ def create_app(
         is_admin = profile.role == "admin"
         if not is_admin and str(original["athlete_id"]) != profile.athlete_id:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="generation job not found")
-        if str(original.get("status") or "") != "failed":
+        stale_after_seconds = _generation_job_stale_after_seconds()
+        is_pre_start_stale = is_pre_start_stale_generation_job(
+            original,
+            stale_after_seconds=stale_after_seconds,
+        )
+        if str(original.get("status") or "") != "failed" and not is_pre_start_stale:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
                 detail="only failed generation jobs can be retried",
@@ -1354,7 +1371,7 @@ def create_app(
         target_athlete_id = str(original["athlete_id"])
         source = str(original.get("source") or "").strip() or "self_serve"
 
-        if not is_admin:
+        if not is_admin and not is_pre_start_stale:
             daily_limit = _plan_generate_daily_limit_per_user()
             if daily_limit > 0:
                 utc_midnight = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0).isoformat()
@@ -1370,13 +1387,18 @@ def create_app(
                         detail="Daily generation limit reached. Try again tomorrow.",
                     )
 
-        retry_client_request_id = (request.headers.get("X-Client-Request-Id") or "").strip() or f"retry_{job_id}_{uuid.uuid4().hex}"
+        retry_client_request_id = (
+            str(original.get("client_request_id") or "")
+            if is_pre_start_stale
+            else (request.headers.get("X-Client-Request-Id") or "").strip() or f"retry_{job_id}_{uuid.uuid4().hex}"
+        )
         job = await asyncio.to_thread(
             store.create_or_get_generation_job,
             athlete_id=target_athlete_id,
             client_request_id=retry_client_request_id,
             source=source,
             request_payload=copy.deepcopy(request_payload),
+            stale_after_seconds=stale_after_seconds,
         )
         job = await schedule_generation_job_if_needed(
             job=job,
@@ -1387,7 +1409,7 @@ def create_app(
             active_tasks=active_tasks,
             enable_in_process_generation=enable_in_process_generation,
             stale_job_checker=_is_stale_job,
-            stale_after_seconds=_generation_job_stale_after_seconds(),
+            stale_after_seconds=stale_after_seconds,
         )
         return _job_response(job, viewer_role=profile.role)
 
@@ -1560,7 +1582,19 @@ def create_app(
                 status_code=status.HTTP_409_CONFLICT,
                 detail="approve_and_resume_generation is only allowed for needs_review or restricted_rehab_only plans",
             )
-        if _has_existing_triage_resume_approval(plan_row):
+        client_request_id = f"triage_resume_{plan_id}"
+        stale_after_seconds = _generation_job_stale_after_seconds()
+        existing_resume_job = await asyncio.to_thread(
+            store.get_generation_job_by_client_request_id,
+            athlete_id=str(plan_row["athlete_id"]),
+            client_request_id=client_request_id,
+        )
+        existing_resume_is_pre_start_stale = (
+            is_pre_start_stale_generation_job(existing_resume_job, stale_after_seconds=stale_after_seconds)
+            if existing_resume_job
+            else False
+        )
+        if _has_existing_triage_resume_approval(plan_row) and not existing_resume_is_pre_start_stale:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
                 detail="this blocked plan has already been approved for resume",
@@ -1594,14 +1628,13 @@ def create_app(
         updated_why_log["triage_resume_approval"] = approval_log
         updated_why_log["triage_regeneration_cleared"] = True
         
-        client_request_id = f"triage_resume_{plan_id}"
-        
         job = await asyncio.to_thread(
             store.create_or_get_generation_job,
             athlete_id=str(plan_row["athlete_id"]),
             client_request_id=client_request_id,
             source="admin_triage_resume",
             request_payload=request_payload,
+            stale_after_seconds=stale_after_seconds,
         )
         
         await asyncio.to_thread(
@@ -1619,7 +1652,7 @@ def create_app(
             active_tasks=active_tasks,
             enable_in_process_generation=enable_in_process_generation,
             stale_job_checker=_is_stale_job,
-            stale_after_seconds=_generation_job_stale_after_seconds(),
+            stale_after_seconds=stale_after_seconds,
         )
         return _job_response(job, viewer_role=profile.role)
 
@@ -1823,6 +1856,7 @@ def create_app(
             client_request_id=client_request_id,
             source="admin_latest_intake",
             request_payload=request_body.model_dump(mode="json"),
+            stale_after_seconds=_generation_job_stale_after_seconds(),
         )
         job = await schedule_generation_job_if_needed(
             job=job,

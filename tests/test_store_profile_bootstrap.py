@@ -393,6 +393,53 @@ def test_create_or_get_generation_job_persists_source_in_insert_payload():
     assert result["source"] == "admin_latest_intake"
 
 
+def test_create_or_get_generation_job_resets_pre_start_stale_existing_job_without_replacing_plan_links():
+    store = _make_store()
+    existing_job = {
+        "id": "job-1",
+        "athlete_id": "athlete-1",
+        "client_request_id": "client-1",
+        "source": "self_serve",
+        "request_payload": {"fight_date": "2026-04-18"},
+        "status": "running",
+        "attempt_count": 1,
+        "heartbeat_at": "2026-04-05T12:00:00+00:00",
+        "started_at": "2026-04-05T12:00:00+00:00",
+        "completed_at": None,
+        "progress_milestones": [],
+        "stage1_result": None,
+        "final_result": None,
+        "plan_id": "plan-1",
+        "intake_id": "intake-1",
+    }
+    reset_job = {
+        **existing_job,
+        "status": "queued",
+        "heartbeat_at": None,
+        "started_at": None,
+        "progress_milestones": [],
+    }
+    store._lookup_generation_job_by_client_request_id = MagicMock(return_value=existing_job)
+    store.get_generation_job = MagicMock(return_value=reset_job)
+    store._run_with_transient_retry = MagicMock(side_effect=lambda *, fn, **_kwargs: fn())
+
+    result = store.create_or_get_generation_job(
+        athlete_id="athlete-1",
+        client_request_id="client-1",
+        source="self_serve",
+        request_payload={"fight_date": "2026-05-01"},
+    )
+
+    update_payload = store.client.table.return_value.update.call_args.args[0]
+    assert update_payload["status"] == "queued"
+    assert update_payload["progress_milestones"] == []
+    assert "plan_id" not in update_payload
+    assert "intake_id" not in update_payload
+    assert result["id"] == "job-1"
+    assert result["plan_id"] == "plan-1"
+    assert result["intake_id"] == "intake-1"
+
+
 def test_create_or_get_generation_job_raises_500_when_insert_returns_no_rows_and_lookup_is_none():
     store = _make_store()
     insert_response = MagicMock()
@@ -601,6 +648,7 @@ def test_claim_generation_job_returns_none_when_compare_and_swap_loses(monkeypat
         "attempt_count": 1,
         "heartbeat_at": "2026-04-05T12:00:01+00:00",
         "started_at": "2026-04-05T12:00:01+00:00",
+        "progress_milestones": [{"code": "job_loaded"}],
     }
     store.get_generation_job = MagicMock(side_effect=[queued_job, claimed_by_other_worker])
     store._run_with_transient_retry = lambda *, operation, fn, attempts=3, backoff_seconds=0.25: fn()
@@ -639,6 +687,15 @@ def test_claim_generation_job_returns_updated_row_when_compare_and_swap_succeeds
         "attempt_count": 1,
         "heartbeat_at": fixed_now,
         "started_at": fixed_now,
+        "progress_milestones": [
+            {
+                "code": "job_loaded",
+                "label": "Generation job loaded",
+                "detail": "Worker loaded the persisted generation job.",
+                "meta": {},
+                "at": fixed_now,
+            }
+        ],
     }
     store.get_generation_job = MagicMock(side_effect=[queued_job, claimed_job])
     store._run_with_transient_retry = lambda *, operation, fn, attempts=3, backoff_seconds=0.25: fn()
@@ -650,3 +707,5 @@ def test_claim_generation_job_returns_updated_row_when_compare_and_swap_succeeds
     result = store.claim_generation_job("job-1")
 
     assert result == claimed_job
+    update_payload = store.client.table.return_value.update.call_args.args[0]
+    assert update_payload["progress_milestones"][0]["code"] == "job_loaded"

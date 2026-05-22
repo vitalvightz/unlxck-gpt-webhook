@@ -1023,6 +1023,7 @@ class GenerationJobResponse(BaseModel):
     created_at: str
     updated_at: str
     started_at: str | None = None
+    heartbeat_at: str | None = None
     completed_at: str | None = None
     error: str | None = None
     plan_id: str | None = None

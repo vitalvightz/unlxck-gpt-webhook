@@ -130,6 +130,7 @@ class AppStore(Protocol):
         client_request_id: str,
         source: str,
         request_payload: dict[str, Any],
+        stale_after_seconds: int = 90,
     ) -> dict[str, Any]: ...
     def count_generation_jobs_for_athlete_since(
         self,
@@ -146,6 +147,8 @@ class AppStore(Protocol):
     def list_generation_jobs_for_athlete(self, athlete_id: str, *, limit: int = 10) -> list[dict[str, Any]]: ...
 
     def list_claimable_generation_jobs(self, *, limit: int = 20, stale_after_seconds: int = 90) -> list[dict[str, Any]]: ...
+
+    def claim_generation_job_start(self, job_id: str, *, stale_after_seconds: int = 90) -> dict[str, Any] | None: ...
 
     def claim_generation_job(self, job_id: str, *, stale_after_seconds: int = 90) -> dict[str, Any] | None: ...
 
@@ -187,6 +190,41 @@ def _parse_datetime(value: Any) -> datetime | None:
         except ValueError:
             return None
     return None
+
+
+def _progress_milestones(value: Any) -> list[Any]:
+    return value if isinstance(value, list) else []
+
+
+def is_pre_start_stale_generation_job(job: dict[str, Any], *, stale_after_seconds: int = 90) -> bool:
+    if str(job.get("status") or "") != "running":
+        return False
+    if _progress_milestones(job.get("progress_milestones")):
+        return False
+    if job.get("stage1_result") is not None:
+        return False
+    if job.get("final_result") is not None:
+        return False
+    if job.get("completed_at") is not None:
+        return False
+
+    heartbeat_at = _parse_datetime(job.get("heartbeat_at"))
+    started_at = _parse_datetime(job.get("started_at"))
+    if heartbeat_at is None:
+        return started_at is not None
+    if started_at is not None and heartbeat_at <= started_at:
+        return True
+    return (datetime.now(timezone.utc) - heartbeat_at).total_seconds() >= max(1, stale_after_seconds)
+
+
+def _job_loaded_milestone(now_iso: str) -> dict[str, Any]:
+    return {
+        "code": "job_loaded",
+        "label": "Generation job loaded",
+        "detail": "Worker loaded the persisted generation job.",
+        "meta": {},
+        "at": now_iso,
+    }
 
 
 @dataclass
@@ -871,6 +909,7 @@ class SupabaseAppStore:
         client_request_id: str,
         source: str,
         request_payload: dict[str, Any],
+        stale_after_seconds: int = 90,
     ) -> dict[str, Any]:
         last_error: Exception | None = None
 
@@ -906,6 +945,30 @@ class SupabaseAppStore:
             last_error = exc
             existing = None
         if existing:
+            if is_pre_start_stale_generation_job(existing, stale_after_seconds=stale_after_seconds):
+                reset_payload = {
+                    "status": "queued",
+                    "source": (source or "").strip() or "self_serve",
+                    "request_payload": request_payload,
+                    "error": None,
+                    "heartbeat_at": None,
+                    "started_at": None,
+                    "completed_at": None,
+                    "stage1_result": None,
+                    "final_result": None,
+                    "progress_milestones": [],
+                }
+                self._run_with_transient_retry(
+                    operation="create_or_get_generation_job:reset_pre_start_stale",
+                    fn=lambda: self.client.table("generation_jobs")
+                    .update(reset_payload)
+                    .eq("id", str(existing["id"]))
+                    .eq("status", "running")
+                    .execute(),
+                )
+                refreshed = self.get_generation_job(str(existing["id"]))
+                if refreshed:
+                    return refreshed
             return existing
 
         payload = {
@@ -1185,7 +1248,7 @@ class SupabaseAppStore:
                 detail="failed to list generation jobs",
             ) from exc
 
-    def claim_generation_job(self, job_id: str, *, stale_after_seconds: int = 90) -> dict[str, Any] | None:
+    def claim_generation_job_start(self, job_id: str, *, stale_after_seconds: int = 90) -> dict[str, Any] | None:
         try:
             job = self.get_generation_job(job_id)
             if not job:
@@ -1194,33 +1257,28 @@ class SupabaseAppStore:
             current_status = str(job.get("status") or "")
             current_attempt_count = int(job.get("attempt_count") or 0)
             now_iso = _utc_now_iso()
-            now_dt = _parse_datetime(now_iso)
-            heartbeat = _parse_datetime(job.get("heartbeat_at"))
-            started_at = _parse_datetime(job.get("started_at"))
-            last_progress_at = heartbeat or started_at
-            is_stale_running = (
-                current_status == "running"
-                and now_dt is not None
-                and last_progress_at is not None
-                and (now_dt - last_progress_at).total_seconds() >= stale_after_seconds
-            )
 
             if current_status not in {"queued", "running"}:
                 return None
-            if current_status == "running" and not is_stale_running:
+            if current_status == "running" and not is_pre_start_stale_generation_job(
+                job,
+                stale_after_seconds=stale_after_seconds,
+            ):
                 return None
 
             next_attempt_count = current_attempt_count + 1
-            next_started_at = job.get("started_at") or now_iso
+            next_started_at = now_iso if current_status == "queued" else (job.get("started_at") or now_iso)
             payload = {
                 "status": "running",
                 "heartbeat_at": now_iso,
                 "started_at": next_started_at,
                 "error": None,
                 "attempt_count": next_attempt_count,
+                "completed_at": None,
+                "progress_milestones": [_job_loaded_milestone(now_iso)],
             }
             self._run_with_transient_retry(
-                operation="claim_generation_job:update",
+                operation="claim_generation_job_start:update",
                 fn=lambda: self.client.table("generation_jobs")
                 .update(payload)
                 .eq("id", job_id)
@@ -1239,13 +1297,16 @@ class SupabaseAppStore:
                 return None
             if str(updated.get("started_at") or "") != str(next_started_at):
                 return None
+            milestones = _progress_milestones(updated.get("progress_milestones"))
+            if not milestones or str(milestones[0].get("code") if isinstance(milestones[0], dict) else "") != "job_loaded":
+                return None
             return updated
         except HTTPException:
             raise
         except _STORE_CLIENT_ERRORS as exc:
             if self._is_transient_store_error(exc):
                 logger.warning(
-                    "[store] claim_generation_job:transient_failure job_id=%s error_type=%s",
+                    "[store] claim_generation_job_start:transient_failure job_id=%s error_type=%s",
                     job_id,
                     type(exc).__name__,
                 )
@@ -1253,11 +1314,14 @@ class SupabaseAppStore:
                     status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                     detail=GENERATION_JOB_UNAVAILABLE_DETAIL,
                 ) from exc
-            logger.exception("[store] claim_generation_job:exception job_id=%s", job_id)
+            logger.exception("[store] claim_generation_job_start:exception job_id=%s", job_id)
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="failed to claim generation job",
             ) from exc
+
+    def claim_generation_job(self, job_id: str, *, stale_after_seconds: int = 90) -> dict[str, Any] | None:
+        return self.claim_generation_job_start(job_id, stale_after_seconds=stale_after_seconds)
 
     def update_generation_job(self, job_id: str, **changes: Any) -> dict[str, Any]:
         try:

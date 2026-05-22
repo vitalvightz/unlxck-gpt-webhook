@@ -16,7 +16,7 @@ from fightcamp.main import generate_plan_sync
 
 from .models import PlanRequest, ProfileUpdateRequest
 from .stage2_automation import Stage2AutomationError, Stage2AutomationUnavailableError, Stage2Automator
-from .store import AppStore
+from .store import AppStore, is_pre_start_stale_generation_job
 
 Planner = Callable[..., dict[str, Any]]
 ProgressCallback = Callable[[str, str, str, dict[str, Any]], None]
@@ -60,6 +60,7 @@ def build_progress_recorder(
     *,
     job_id: str,
     store: AppStore,
+    initial_milestones: list[dict[str, Any]] | None = None,
 ) -> tuple[list[dict[str, Any]], ProgressCallback]:
     """Return a milestone list + callback that persists each emit to the job row.
 
@@ -67,7 +68,7 @@ def build_progress_recorder(
     is fine. Persistence failures are logged and ignored — they must never
     surface into the planner pipeline.
     """
-    milestones: list[dict[str, Any]] = []
+    milestones: list[dict[str, Any]] = list(initial_milestones or [])
 
     def _callback(code: str, label: str, detail: str, meta: dict[str, Any]) -> None:
         entry = {
@@ -114,6 +115,8 @@ def parse_datetime(value: Any) -> datetime | None:
 def is_stale_job(job: dict[str, Any], *, stale_after_seconds: int = 90) -> bool:
     if str(job.get("status") or "") != "running":
         return False
+    if is_pre_start_stale_generation_job(job, stale_after_seconds=stale_after_seconds):
+        return True
     last_progress_at = parse_datetime(job.get("heartbeat_at")) or parse_datetime(job.get("started_at"))
     if last_progress_at is None:
         return False
@@ -134,6 +137,7 @@ def recover_stale_running_job(
         status="failed",
         error=error_message,
         completed_at=utc_now_iso(),
+        heartbeat_at=utc_now_iso(),
     )
 
 
@@ -289,21 +293,31 @@ async def run_generation_job(
 ) -> None:
     t_start = time.perf_counter()
     stop_event = asyncio.Event()
-    heartbeat_task = asyncio.create_task(heartbeat_generation_job(job_id, store, stop_event))
+    heartbeat_task: asyncio.Task[None] | None = None
     athlete_id = "unknown"
-    _, progress_callback = build_progress_recorder(job_id=job_id, store=store)
+    progress_callback: ProgressCallback | None = None
 
     def _emit_milestone(code: str, label: str, detail: str = "", **meta: Any) -> None:
+        if progress_callback is None:
+            return
         try:
             progress_callback(code, label, detail, meta)
         except Exception:
             logger.exception("[jobs] generation:milestone_emit_failed job_id=%s code=%s", job_id, code)
 
     try:
-        job = await asyncio.to_thread(store.get_generation_job, job_id)
+        job = await asyncio.to_thread(store.claim_generation_job_start, job_id)
         if not job:
-            logger.warning("[jobs] generation:job_missing job_id=%s", job_id)
+            logger.warning("[jobs] generation:claim_unavailable job_id=%s", job_id)
             return
+        persisted_milestones = job.get("progress_milestones")
+        initial_milestones = persisted_milestones if isinstance(persisted_milestones, list) else []
+        _, progress_callback = build_progress_recorder(
+            job_id=job_id,
+            store=store,
+            initial_milestones=initial_milestones,
+        )
+        heartbeat_task = asyncio.create_task(heartbeat_generation_job(job_id, store, stop_event))
 
         athlete_id = str(job["athlete_id"])
         raw_request_payload = job.get("request_payload") or {}
@@ -493,6 +507,14 @@ async def run_generation_job(
                 heartbeat_at=utc_now_iso(),
             )
     except HTTPException as exc:
+        if exc.status_code == status.HTTP_503_SERVICE_UNAVAILABLE:
+            logger.warning(
+                "[jobs] generation:store_unavailable_deferred athlete_id=%s job_id=%s detail=%s",
+                athlete_id,
+                job_id,
+                exc.detail,
+            )
+            return
         detail = exc.detail if isinstance(exc.detail, str) else json.dumps(exc.detail)
         logger.warning("[jobs] generation:http_error athlete_id=%s job_id=%s detail=%s", athlete_id, job_id, detail)
         with suppress(Exception):
@@ -528,9 +550,10 @@ async def run_generation_job(
             )
     finally:
         stop_event.set()
-        heartbeat_task.cancel()
-        with suppress(asyncio.CancelledError):
-            await heartbeat_task
+        if heartbeat_task is not None:
+            heartbeat_task.cancel()
+            with suppress(asyncio.CancelledError):
+                await heartbeat_task
         active_tasks.discard(job_id)
 
 
@@ -566,31 +589,6 @@ async def schedule_generation_job_if_needed(
     if job_id in active_tasks:
         return job
 
-    try:
-        claimed = await asyncio.to_thread(store.claim_generation_job, job_id)
-    except HTTPException as exc:
-        if exc.status_code == status.HTTP_503_SERVICE_UNAVAILABLE:
-            logger.warning(
-                "[jobs] generation:schedule_claim_deferred job_id=%s detail=%s",
-                job_id,
-                exc.detail,
-            )
-            return job
-        raise
-    if not claimed:
-        try:
-            refreshed = await asyncio.to_thread(store.get_generation_job, job_id)
-        except HTTPException as exc:
-            if exc.status_code == status.HTTP_503_SERVICE_UNAVAILABLE:
-                logger.warning(
-                    "[jobs] generation:schedule_refresh_deferred job_id=%s detail=%s",
-                    job_id,
-                    exc.detail,
-                )
-                return job
-            raise
-        return refreshed or job
-
     active_tasks.add(job_id)
     try:
         if _use_fastapi_background_tasks():
@@ -612,5 +610,13 @@ async def schedule_generation_job_if_needed(
             )
     except Exception:
         active_tasks.discard(job_id)
-        raise
-    return claimed
+        logger.exception("[jobs] generation:schedule_failed job_id=%s", job_id)
+        return await asyncio.to_thread(
+            store.update_generation_job,
+            job_id,
+            status="failed",
+            error="Generation worker failed to schedule.",
+            completed_at=utc_now_iso(),
+            heartbeat_at=utc_now_iso(),
+        )
+    return job

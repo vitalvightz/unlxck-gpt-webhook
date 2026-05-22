@@ -371,6 +371,7 @@ export type GenerationJobResponse = {
   created_at: string;
   updated_at: string;
   started_at?: string | null;
+  heartbeat_at?: string | null;
   completed_at?: string | null;
   error?: string | null;
   plan_id?: string | null;
