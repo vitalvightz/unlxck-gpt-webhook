@@ -244,21 +244,26 @@ class FakeStore:
             if job["athlete_id"] == athlete_id and job["client_request_id"] == client_request_id:
                 if is_pre_start_stale_generation_job(job, stale_after_seconds=stale_after_seconds):
                     now = _now()
-                    job.update(
-                        {
-                            "source": source,
-                            "request_payload": request_payload,
-                            "status": "queued",
-                            "error": None,
-                            "stage1_result": None,
-                            "final_result": None,
-                            "heartbeat_at": None,
-                            "started_at": None,
-                            "completed_at": None,
-                            "progress_milestones": [],
-                            "updated_at": now,
-                        }
-                    )
+                    reset_changes = {
+                        "source": source,
+                        "request_payload": request_payload,
+                        "status": "queued",
+                        "error": None,
+                        "stage1_result": None,
+                        "final_result": None,
+                        "heartbeat_at": None,
+                        "started_at": None,
+                        "completed_at": None,
+                        "progress_milestones": [],
+                        "updated_at": now,
+                    }
+
+                    if plan_id is not None:
+                        reset_changes["plan_id"] = plan_id
+                    if intake_id is not None:
+                        reset_changes["intake_id"] = intake_id
+
+                    job.update(reset_changes)
                 return dict(job)
         now = _now()
         job_id = f"job_{uuid4().hex[:10]}"

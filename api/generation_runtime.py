@@ -322,7 +322,7 @@ async def run_generation_job(
         athlete_id = str(job["athlete_id"])
         raw_request_payload = job.get("request_payload") or {}
         triage_resume_override_approved = False
-        job_source = str(job.get("source") or "").strip()
+        job_source = str(job.get("source") or "").strip().lower()
         if isinstance(raw_request_payload, dict):
             triage_override = raw_request_payload.get(_TRIAGE_RESUME_OVERRIDE_KEY)
             triage_resume_override_approved = isinstance(triage_override, dict) and triage_override.get("approved") is True
@@ -357,6 +357,14 @@ async def run_generation_job(
                     status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                     detail="admin_triage_resume linked plan intake mismatch",
                 )
+
+            _emit_milestone(
+                "admin_resume_linkage_validated",
+                "Admin resume linkage validated",
+                "Linked plan and intake were verified before parsing the request payload.",
+                plan_id=plan_id,
+                intake_id=intake_id,
+            )
 
         request_body = parse_plan_request(raw_request_payload)
         logger.info("[jobs] generation:start athlete_id=%s job_id=%s", athlete_id, job_id)

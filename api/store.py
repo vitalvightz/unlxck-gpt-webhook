@@ -963,6 +963,12 @@ class SupabaseAppStore:
                     "final_result": None,
                     "progress_milestones": [],
                 }
+
+                if plan_id is not None:
+                    reset_payload["plan_id"] = plan_id
+                if intake_id is not None:
+                    reset_payload["intake_id"] = intake_id
+
                 self._run_with_transient_retry(
                     operation="create_or_get_generation_job:reset_pre_start_stale",
                     fn=lambda: self.client.table("generation_jobs")

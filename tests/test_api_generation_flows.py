@@ -195,6 +195,39 @@ def test_create_with_same_client_request_resets_pre_start_stale_job_without_dupl
     assert reset_job["request_payload"]["fight_date"] == "2026-05-01"
 
 
+def test_create_or_get_generation_job_preserves_plan_and_intake_when_resetting_pre_start_stale_job():
+    store = FakeStore()
+    existing = store.create_or_get_generation_job(
+        athlete_id="athlete-1",
+        client_request_id="same-stale-request",
+        source="admin_triage_resume",
+        request_payload=_build_request().model_dump(mode="json"),
+        plan_id="plan-123",
+        intake_id="intake-123",
+    )
+    store.update_generation_job(
+        existing["id"],
+        status="running",
+        started_at="2026-01-01T00:00:00+00:00",
+        heartbeat_at="2026-01-01T00:00:00+00:00",
+        progress_milestones=[],
+    )
+
+    reset_job = store.create_or_get_generation_job(
+        athlete_id="athlete-1",
+        client_request_id="same-stale-request",
+        source="admin_triage_resume",
+        request_payload=_build_request({"fight_date": "2026-05-01"}).model_dump(mode="json"),
+        plan_id="plan-123",
+        intake_id="intake-123",
+    )
+
+    assert len(store.generation_jobs) == 1
+    assert reset_job["status"] == "queued"
+    assert reset_job["plan_id"] == "plan-123"
+    assert reset_job["intake_id"] == "intake-123"
+
+
 def test_status_endpoint_does_not_treat_pre_start_stale_job_as_active_running():
     client, store, _ = _build_client(enable_in_process_generation=False)
     created = store.create_or_get_generation_job(
@@ -548,6 +581,69 @@ def test_run_generation_job_updates_existing_plan_for_same_intake_after_resume()
     assert updated_plan["coach_notes"] == "### Coach Review"
     assert store.get_latest_plan(athlete.user_id)["id"] == blocked_plan["id"]
     assert len(store.list_user_plans(athlete.user_id)) == 1
+
+    milestone_codes = [
+        milestone.get("code")
+        for milestone in refreshed_job.get("progress_milestones", [])
+        if isinstance(milestone, dict)
+    ]
+    assert "job_loaded" in milestone_codes
+    assert "admin_resume_linkage_validated" in milestone_codes
+
+
+def test_admin_triage_resume_source_case_normalization_and_linkage_milestone():
+    store = FakeStore()
+    athlete = AuthenticatedUser(
+        user_id="athlete-1",
+        email="ari@example.com",
+        full_name="Ari Mensah",
+        metadata={},
+    )
+    store.ensure_profile(athlete)
+    request = _build_request()
+    intake = store.create_intake(athlete.user_id, request)
+    blocked_plan = store.create_plan(
+        athlete_id=athlete.user_id,
+        intake_id=str(intake["id"]),
+        request=request,
+        result=finalized_result(
+            status="triage_blocked",
+            stage2_status="triage_blocked",
+            plan_text="",
+            final_plan_text="",
+            why_log={"injury_triage": {"mode": "needs_review", "should_block_stage2": True}},
+        ),
+    )
+    job = store.create_or_get_generation_job(
+        athlete_id=athlete.user_id,
+        client_request_id="triage-resume-case-normalization",
+        source="Admin_Triage_Resume",
+        request_payload=request.model_dump(mode="json"),
+        plan_id=blocked_plan["id"],
+        intake_id=str(intake["id"]),
+    )
+    stage2 = FakeStage2Automator(result=finalized_result())
+
+    asyncio.run(
+        run_generation_job(
+            job_id=job["id"],
+            store=store,
+            planner_fn=_planner,
+            stage2=stage2,
+            active_tasks=set(),
+        )
+    )
+
+    refreshed_job = store.get_generation_job(job["id"])
+    assert refreshed_job["status"] == "completed"
+    assert refreshed_job["plan_id"] == blocked_plan["id"]
+    milestone_codes = [
+        milestone.get("code")
+        for milestone in refreshed_job.get("progress_milestones", [])
+        if isinstance(milestone, dict)
+    ]
+    assert "job_loaded" in milestone_codes
+    assert "admin_resume_linkage_validated" in milestone_codes
 
 
 def test_admin_triage_resume_missing_plan_id_fails_before_stage1():
