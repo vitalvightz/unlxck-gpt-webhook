@@ -1472,6 +1472,47 @@ def test_retry_generation_job_creates_new_job_with_original_request_payload():
     assert new_job["status"] in {"queued", "running", "completed", "review_required", "failed"}
 
 
+def test_retry_admin_triage_resume_preserves_plan_and_intake_linkage():
+    client, store, _ = _build_client()
+    store.ensure_profile(
+        AuthenticatedUser(user_id="athlete-1", email="ari@example.com", full_name="Ari Mensah", metadata={})
+    )
+    store.ensure_profile(
+        AuthenticatedUser(user_id="admin-1", email="ops@unlxck.test", full_name="Ops Admin", metadata={})
+    )
+    request = _build_request()
+    intake = store.create_intake("athlete-1", request)
+    blocked_plan = store.create_plan(
+        athlete_id="athlete-1",
+        intake_id=str(intake["id"]),
+        request=request,
+        result=finalized_result(
+            status="triage_blocked",
+            stage2_status="triage_blocked",
+            why_log={"injury_triage": {"mode": "needs_review", "should_block_stage2": True}},
+        ),
+    )
+    original = store.create_or_get_generation_job(
+        athlete_id="athlete-1",
+        client_request_id="orig-admin-triage-resume",
+        source="admin_triage_resume",
+        request_payload={**request.model_dump(mode="json"), "_triage_resume_override": {"approved": True}},
+        intake_id=str(intake["id"]),
+        plan_id=str(blocked_plan["id"]),
+    )
+    store.update_generation_job(original["id"], status="failed", error="failed run", completed_at=_now())
+    response = client.post(
+        f"/api/generation-jobs/{original['id']}/retry",
+        headers={"Authorization": "Bearer admin-token"},
+    )
+    assert response.status_code == 202
+    retried = store.get_generation_job(response.json()["job_id"])
+    assert retried is not None
+    assert retried["source"] == "admin_triage_resume"
+    assert retried["intake_id"] == str(intake["id"])
+    assert retried["plan_id"] == str(blocked_plan["id"])
+
+
 def test_retry_generation_job_respects_daily_limit_for_self_serve(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setenv("APP_PLAN_GENERATE_DAILY_LIMIT_PER_USER", "1")
     client, store, _ = _build_client()

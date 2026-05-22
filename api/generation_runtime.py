@@ -476,17 +476,29 @@ async def run_generation_job(
 
         plan_id = str(job.get("plan_id") or "") or None
         plan_row: dict[str, Any] | None = None
-        if plan_id:
+        job_source = str(job.get("source") or "").strip().lower()
+        if job_source == "admin_triage_resume":
+            if not plan_id:
+                raise TriageResumeMissingPlanError(
+                    "admin triage resume job is missing plan_id; refusing to create a duplicate plan"
+                )
             plan_row = await asyncio.to_thread(store.get_plan, plan_id)
-        if not plan_row and intake_id:
-            latest_plan = await asyncio.to_thread(store.get_latest_plan, athlete_id)
-            if (
-                latest_plan
-                and str(latest_plan.get("intake_id") or "") == intake_id
-                and str(latest_plan.get("status") or "").strip().lower() != "archived"
-            ):
-                plan_row = latest_plan
-                plan_id = str(latest_plan.get("id") or "")
+            if not plan_row:
+                raise TriageResumeMissingPlanError(
+                    "admin triage resume job linked plan was not found; refusing to create a duplicate plan"
+                )
+        else:
+            if plan_id:
+                plan_row = await asyncio.to_thread(store.get_plan, plan_id)
+            if not plan_row and intake_id:
+                latest_plan = await asyncio.to_thread(store.get_latest_plan, athlete_id)
+                if (
+                    latest_plan
+                    and str(latest_plan.get("intake_id") or "") == intake_id
+                    and str(latest_plan.get("status") or "").strip().lower() != "archived"
+                ):
+                    plan_row = latest_plan
+                    plan_id = str(latest_plan.get("id") or "")
         if plan_row and plan_id:
             # Preserve triage-approval audit markers that live on the existing
             # plan's why_log so that updating it in place (e.g. after an admin
@@ -505,7 +517,6 @@ async def run_generation_job(
                 final_result,
             )
         if not plan_row:
-            job_source = str(job.get("source") or "").strip().lower()
             if job_source == "admin_triage_resume":
                 logger.error(
                     "[jobs] generation:resume_missing_plan job_id=%s athlete_id=%s intake_id=%s job_plan_id=%s",
