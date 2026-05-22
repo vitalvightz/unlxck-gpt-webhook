@@ -82,14 +82,8 @@ def test_admin_athlete_profile_includes_latest_intake_details():
 
 
 def test_admin_can_generate_new_plan_from_latest_intake():
-    client, _, _ = _build_client()
-
-    generate_response = client.post(
-        "/api/plans/generate",
-        headers={"Authorization": "Bearer athlete-token"},
-        json=_build_request().model_dump(mode="json"),
-    )
-    assert generate_response.status_code == 202
+    client, store, _ = _build_client()
+    store.create_intake("athlete-1", _build_request())
 
     response = client.post(
         "/api/admin/athletes/athlete-1/plans/generate-from-latest-intake",
@@ -115,7 +109,7 @@ def test_admin_generation_does_not_consume_self_serve_daily_limit(monkeypatch: p
         "/api/admin/athletes/athlete-1/plans/generate-from-latest-intake",
         headers={"Authorization": "Bearer admin-token", "X-Client-Request-Id": "admin-1"},
     )
-    assert admin.status_code == 202
+    assert admin.status_code == 409
 
     retry_same = client.post(
         "/api/plans/generate",
@@ -129,7 +123,43 @@ def test_admin_generation_does_not_consume_self_serve_daily_limit(monkeypatch: p
         headers={"Authorization": "Bearer athlete-token", "X-Client-Request-Id": "self-serve-2"},
         json=_build_request().model_dump(mode="json"),
     )
-    assert second_new.status_code == 429
+    assert second_new.status_code == 409
+
+
+def test_self_serve_generation_rejects_new_job_when_another_job_is_active():
+    client, _, _ = _build_client()
+    first = client.post(
+        "/api/plans/generate",
+        headers={"Authorization": "Bearer athlete-token", "X-Client-Request-Id": "active-1"},
+        json=_build_request().model_dump(mode="json"),
+    )
+    assert first.status_code == 202
+
+    second = client.post(
+        "/api/plans/generate",
+        headers={"Authorization": "Bearer athlete-token", "X-Client-Request-Id": "active-2"},
+        json=_build_request().model_dump(mode="json"),
+    )
+    assert second.status_code == 409
+    assert second.json()["detail"] == "A generation job is already queued or running for this account."
+
+
+def test_admin_generate_from_latest_intake_is_idempotent_for_same_client_request_id():
+    client, store, _ = _build_client()
+    store.create_intake("athlete-1", _build_request())
+
+    first = client.post(
+        "/api/admin/athletes/athlete-1/plans/generate-from-latest-intake",
+        headers={"Authorization": "Bearer admin-token", "X-Client-Request-Id": "admin-retry-1"},
+    )
+    assert first.status_code == 202
+
+    retry_same = client.post(
+        "/api/admin/athletes/athlete-1/plans/generate-from-latest-intake",
+        headers={"Authorization": "Bearer admin-token", "X-Client-Request-Id": "admin-retry-1"},
+    )
+    assert retry_same.status_code == 202
+    assert retry_same.json()["job_id"] == first.json()["job_id"]
 
 
 def test_admin_generate_from_latest_intake_requires_existing_intake():
