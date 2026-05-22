@@ -467,8 +467,12 @@ def test_generation_pipeline_persists_triage_blocked_without_stage2_call():
     assert safety["stage2_skipped"] is True
 
 
-def test_run_generation_job_updates_existing_plan_for_same_intake_after_resume():
-    store = FakeStore()
+def test_admin_triage_resume_without_plan_id_does_not_fall_back_to_latest_plan_for_same_intake():
+    class NoLatestPlanFallbackStore(FakeStore):
+        def get_latest_plan(self, athlete_id: str) -> dict | None:
+            raise AssertionError("admin_triage_resume must not use latest_plan fallback")
+
+    store = NoLatestPlanFallbackStore()
     athlete = AuthenticatedUser(
         user_id="athlete-1",
         email="ari@example.com",
@@ -512,15 +516,11 @@ def test_run_generation_job_updates_existing_plan_for_same_intake_after_resume()
     refreshed_job = store.get_generation_job(job["id"])
     updated_plan = store.get_plan(blocked_plan["id"])
 
-    assert refreshed_job["status"] == "completed"
-    assert refreshed_job["plan_id"] == blocked_plan["id"]
-    assert updated_plan["status"] == "ready"
-    assert updated_plan["stage2_status"] == "stage2_pass"
-    assert updated_plan["plan_text"] == "# Final Plan"
-    assert updated_plan["final_plan_text"] == "# Final Plan"
-    assert updated_plan["why_log"] == {"strength": {}}
-    assert updated_plan["coach_notes"] == "### Coach Review"
-    assert store.get_latest_plan(athlete.user_id)["id"] == blocked_plan["id"]
+    assert refreshed_job["status"] == "failed"
+    assert "missing plan_id" in str(refreshed_job["error"])
+    assert refreshed_job["plan_id"] is None
+    assert updated_plan["status"] == "triage_blocked"
+    assert updated_plan["stage2_status"] == "triage_blocked"
     assert len(store.list_user_plans(athlete.user_id)) == 1
 
 
@@ -723,6 +723,15 @@ def test_admin_triage_resume_with_override_updates_blocked_plan_in_place():
 
     assert refreshed_job["status"] == "completed"
     assert refreshed_job["plan_id"] == blocked_plan["id"]
+    milestone_codes = [entry["code"] for entry in refreshed_job.get("progress_milestones", [])]
+    assert milestone_codes[:6] == [
+        "job_loaded",
+        "admin_resume_linkage_validated",
+        "request_payload_parsed",
+        "profile_update_started",
+        "profile_update_finished",
+        "stage1_planner_starting",
+    ]
     assert updated_plan["status"] != "triage_blocked"
     assert updated_plan["status"] == "ready"
     why_log = updated_plan["why_log"]

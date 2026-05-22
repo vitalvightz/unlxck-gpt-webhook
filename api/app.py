@@ -169,6 +169,40 @@ def _is_stale_job(job: dict[str, Any], *, stale_after_seconds: int = 90) -> bool
     return runtime_is_stale_job(job, stale_after_seconds=stale_after_seconds)
 
 
+def _is_correctly_linked_admin_resume_job(
+    job: dict[str, Any],
+    *,
+    athlete_id: str,
+    plan_id: str,
+    intake_id: str,
+    client_request_id: str,
+) -> bool:
+    return (
+        str(job.get("source") or "").strip().lower() == "admin_triage_resume"
+        and str(job.get("athlete_id") or "").strip() == athlete_id
+        and str(job.get("plan_id") or "").strip() == plan_id
+        and str(job.get("intake_id") or "").strip() == intake_id
+        and str(job.get("client_request_id") or "").strip() == client_request_id
+    )
+
+
+async def _reset_stale_admin_resume_job_to_queued(
+    *,
+    store: AppStore,
+    job: dict[str, Any],
+) -> dict[str, Any]:
+    return await asyncio.to_thread(
+        store.update_generation_job,
+        str(job.get("id") or ""),
+        status="queued",
+        error=None,
+        stage1_result=None,
+        final_result=None,
+        completed_at=None,
+        heartbeat_at=_utc_now_iso(),
+    )
+
+
 def _generation_job_stale_after_seconds() -> int:
     fallback_seconds = 1400
     raw_value = os.getenv("APP_GENERATION_JOB_STALE_AFTER_SECONDS", str(fallback_seconds)).strip()
@@ -1621,11 +1655,52 @@ def create_app(
         if not plan_row:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
 
+        intake_id = str(plan_row.get("intake_id") or "").strip()
+        if not intake_id:
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="plan is missing intake_id")
+        client_request_id = f"triage_resume_{plan_id}"
+        stale_after_seconds = _generation_job_stale_after_seconds()
+        existing_resume_job = await asyncio.to_thread(
+            store.get_generation_job_by_client_request_id,
+            athlete_id=str(plan_row["athlete_id"]),
+            client_request_id=client_request_id,
+        )
+
         # Check for an existing approval first: once the resume has already
         # been run and the plan was updated in place, the triage state in
         # why_log no longer exists, so the triage-mode guard below would
         # otherwise mask the duplicate with a less specific error.
         if _has_existing_triage_resume_approval(plan_row):
+            if existing_resume_job and _is_correctly_linked_admin_resume_job(
+                existing_resume_job,
+                athlete_id=str(plan_row["athlete_id"]),
+                plan_id=plan_id,
+                intake_id=intake_id,
+                client_request_id=client_request_id,
+            ):
+                job_status = str(existing_resume_job.get("status") or "").strip().lower()
+                if job_status == "running" and _is_stale_job(
+                    existing_resume_job,
+                    stale_after_seconds=stale_after_seconds,
+                ):
+                    existing_resume_job = await _reset_stale_admin_resume_job_to_queued(
+                        store=store,
+                        job=existing_resume_job,
+                    )
+                    job_status = str(existing_resume_job.get("status") or "").strip().lower()
+                if job_status in {"queued", "running"}:
+                    job = await schedule_generation_job_if_needed(
+                        job=existing_resume_job,
+                        background_tasks=background_tasks,
+                        store=store,
+                        planner_fn=planner_fn,
+                        stage2=stage2,
+                        active_tasks=active_tasks,
+                        enable_in_process_generation=enable_in_process_generation,
+                        stale_job_checker=_is_stale_job,
+                        stale_after_seconds=stale_after_seconds,
+                    )
+                    return _job_response(job, viewer_role=profile.role)
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
                 detail="this blocked plan has already been approved for resume",
@@ -1639,9 +1714,6 @@ def create_app(
                 detail="approve_and_resume_generation is only allowed for needs_review or restricted_rehab_only plans",
             )
 
-        intake_id = str(plan_row.get("intake_id") or "").strip()
-        if not intake_id:
-            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="plan is missing intake_id")
         intake_row = await asyncio.to_thread(store.get_intake, intake_id)
         if not intake_row or not isinstance(intake_row.get("intake"), dict):
             raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="stored intake is missing for this plan")
@@ -1666,8 +1738,6 @@ def create_app(
         updated_why_log = dict(why_log)
         updated_why_log["triage_resume_approval"] = approval_log
         updated_why_log["triage_regeneration_cleared"] = True
-        
-        client_request_id = f"triage_resume_{plan_id}"
         
         job = await asyncio.to_thread(
             store.create_or_get_generation_job,
@@ -1694,6 +1764,17 @@ def create_app(
                 intake_id=intake_id,
                 plan_id=plan_id,
             )
+        if _is_correctly_linked_admin_resume_job(
+            job,
+            athlete_id=str(plan_row["athlete_id"]),
+            plan_id=plan_id,
+            intake_id=intake_id,
+            client_request_id=client_request_id,
+        ) and str(job.get("status") or "").strip().lower() == "running" and _is_stale_job(
+            job,
+            stale_after_seconds=stale_after_seconds,
+        ):
+            job = await _reset_stale_admin_resume_job_to_queued(store=store, job=job)
         
         await asyncio.to_thread(
             store.update_plan_triage_approval,
@@ -1710,7 +1791,7 @@ def create_app(
             active_tasks=active_tasks,
             enable_in_process_generation=enable_in_process_generation,
             stale_job_checker=_is_stale_job,
-            stale_after_seconds=_generation_job_stale_after_seconds(),
+            stale_after_seconds=stale_after_seconds,
         )
         return _job_response(job, viewer_role=profile.role)
 
