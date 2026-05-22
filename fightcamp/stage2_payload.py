@@ -4191,6 +4191,31 @@ Cut fluff: one sentence of "why today" per session maximum, no repeated explanat
 """
 
 
+UNLXCK_FINAL_RENDER_CONTRACT = """UNLXCK FINAL RENDER CONTRACT
+
+Non-negotiable output contract:
+1. Late-fight plans must use D-X countdown headers.
+2. Late-fight active-day headers must be: D-X (Weekday) — Session role.
+3. Longer camps must use: PHASE — Week X (D-X to D-X) — Objective.
+4. Every app-owned training day must include Why, Main work, rehab brief when relevant, and coach call when needed.
+5. Coach-led boxing/sparring days must stay minimal: coach-owned label plus one app-owned freshness note only.
+6. D-0 must be fight day protocol only.
+7. Active injury or active cut context must appear as a short lead summary before the training detail.
+8. Do not expose internal labels or scaffolding: anchor, role_key, taper_micro_support, candidate pool, validator, planning brief.
+9. Return only the athlete-facing final plan.
+
+Mini examples:
+Preferred late-fight day format:
+D-5 (Tuesday) — Alactic sharpness
+Why: sharpen punch speed without adding fatigue.
+- Movement prep: 5 min shoulder swings, band pull-aparts, easy shadowboxing.
+- Explosive Boxing Burst Intervals — 6 x 6-10 sec all-out bursts; full recovery 75-120 sec.
+- Coach call: Stop when speed drops. This session sharpens output without soreness.
+
+Preferred longer-camp week header:
+SPP — Week 4 (D-28 to D-22) — Raise fight-pace repeatability without compromising sparring freshness."""
+
+
 
 
 _OPEN_ONGOING_RENDER_MODE_INSTRUCTIONS = """OPEN ONGOING RENDER MODE
@@ -4381,6 +4406,7 @@ def build_stage2_handoff_text(
 
     sections = [
         STAGE2_FINALIZER_PROMPT.strip(),
+        UNLXCK_FINAL_RENDER_CONTRACT.strip(),
     ]
 
     if mode_instructions:

@@ -30,7 +30,7 @@ def test_plan_missing_system_messaging():
 
 
 def test_conditioning_bank_taper_restrictions_for_flagged_drills():
-    conditioning_bank = json.loads(Path("data/conditioning_bank.json").read_text())
+    conditioning_bank = json.loads(Path("data/conditioning_bank.json").read_text(encoding="utf-8"))
     by_name = {entry["name"]: entry for entry in conditioning_bank}
 
     assert by_name["Split-Step Ankle Snap Pogo"]["phases"] == ["GPP", "SPP"]
