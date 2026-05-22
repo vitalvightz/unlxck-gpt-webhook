@@ -627,6 +627,65 @@ def test_admin_triage_resume_without_linked_plan_fails_without_creating_duplicat
     assert store.list_user_plans(athlete.user_id) == []
 
 
+def test_admin_triage_resume_linked_plan_for_different_athlete_fails_before_planner():
+    store = FakeStore()
+    athlete = AuthenticatedUser(
+        user_id="athlete-1",
+        email="ari@example.com",
+        full_name="Ari Mensah",
+        metadata={},
+    )
+    other_athlete = AuthenticatedUser(
+        user_id="athlete-2",
+        email="bea@example.com",
+        full_name="Bea Santos",
+        metadata={},
+    )
+    store.ensure_profile(athlete)
+    store.ensure_profile(other_athlete)
+    request = _build_request()
+    other_intake = store.create_intake(other_athlete.user_id, request)
+    other_plan = store.create_plan(
+        athlete_id=other_athlete.user_id,
+        intake_id=str(other_intake["id"]),
+        request=request,
+        result=finalized_result(
+            status="triage_blocked",
+            stage2_status="triage_blocked",
+            why_log={"injury_triage": {"mode": "needs_review", "should_block_stage2": True}},
+        ),
+    )
+    job = store.create_or_get_generation_job(
+        athlete_id=athlete.user_id,
+        client_request_id="triage-resume-cross-athlete-plan",
+        source="admin_triage_resume",
+        request_payload={"invalid": "would fail if parsed"},
+        intake_id=str(other_intake["id"]),
+        plan_id=str(other_plan["id"]),
+    )
+    planner_calls = []
+
+    def planner(payload: dict) -> dict:
+        planner_calls.append(payload)
+        return stage1_result()
+
+    asyncio.run(
+        run_generation_job(
+            job_id=job["id"],
+            store=store,
+            planner_fn=planner,
+            stage2=FakeStage2Automator(result=finalized_result()),
+            active_tasks=set(),
+        )
+    )
+
+    refreshed_job = store.get_generation_job(job["id"])
+    assert refreshed_job["status"] == "failed"
+    assert refreshed_job["error"] == "admin triage resume job linked plan belongs to a different athlete"
+    assert planner_calls == []
+    assert store.get_plan(other_plan["id"])["status"] == "triage_blocked"
+
+
 def test_admin_triage_resume_with_override_updates_blocked_plan_in_place():
     store = FakeStore()
     athlete = AuthenticatedUser(

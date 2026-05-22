@@ -361,6 +361,11 @@ async def run_generation_job(
                 raise TriageResumeMissingPlanError(
                     "admin triage resume job is missing its linked plan; refusing to create a duplicate plan"
                 )
+            linked_athlete_id = str(admin_resume_plan_row.get("athlete_id") or "").strip()
+            if linked_athlete_id != athlete_id:
+                raise TriageResumeMissingPlanError(
+                    "admin triage resume job linked plan belongs to a different athlete"
+                )
             plan_intake_id = str(admin_resume_plan_row.get("intake_id") or "").strip()
             if not linked_intake_id or linked_intake_id != plan_intake_id:
                 raise TriageResumeMissingPlanError(

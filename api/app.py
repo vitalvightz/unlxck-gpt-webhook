@@ -186,6 +186,22 @@ def _is_correctly_linked_admin_resume_job(
     )
 
 
+def _resume_job_final_result_successful(job: dict[str, Any]) -> bool:
+    final_result = job.get("final_result")
+    if not isinstance(final_result, dict):
+        return False
+    result_status = str(final_result.get("status") or "").strip().lower()
+    if result_status in {"ready", "generated", "completed"}:
+        return True
+    stage2_status = str(final_result.get("stage2_status") or "").strip().lower()
+    return stage2_status in {"stage2_pass", "stage2_retry_pass", "manual_stage2_pass", "manual_stage2_retry_pass"}
+
+
+def _resume_job_resolved_successfully(job: dict[str, Any]) -> bool:
+    job_status = str(job.get("status") or "").strip().lower()
+    return job_status == "completed" and _resume_job_final_result_successful(job)
+
+
 async def _reset_stale_admin_resume_job_to_queued(
     *,
     store: AppStore,
@@ -1671,24 +1687,42 @@ def create_app(
         # why_log no longer exists, so the triage-mode guard below would
         # otherwise mask the duplicate with a less specific error.
         if _has_existing_triage_resume_approval(plan_row):
-            if existing_resume_job and _is_correctly_linked_admin_resume_job(
-                existing_resume_job,
-                athlete_id=str(plan_row["athlete_id"]),
-                plan_id=plan_id,
-                intake_id=intake_id,
-                client_request_id=client_request_id,
-            ):
-                job_status = str(existing_resume_job.get("status") or "").strip().lower()
-                if job_status == "running" and _is_stale_job(
+            if existing_resume_job:
+                if not _is_correctly_linked_admin_resume_job(
                     existing_resume_job,
-                    stale_after_seconds=stale_after_seconds,
+                    athlete_id=str(plan_row["athlete_id"]),
+                    plan_id=plan_id,
+                    intake_id=intake_id,
+                    client_request_id=client_request_id,
                 ):
+                    raise HTTPException(
+                        status_code=status.HTTP_409_CONFLICT,
+                        detail="existing triage resume job has unsafe linkage; create a new resume request",
+                    )
+                if _resume_job_resolved_successfully(existing_resume_job):
+                    raise HTTPException(
+                        status_code=status.HTTP_409_CONFLICT,
+                        detail="this blocked plan has already been approved and resumed",
+                    )
+                job_status = str(existing_resume_job.get("status") or "").strip().lower()
+                if job_status == "running":
+                    if not _is_stale_job(
+                        existing_resume_job,
+                        stale_after_seconds=stale_after_seconds,
+                    ):
+                        return _job_response(existing_resume_job, viewer_role=profile.role)
                     existing_resume_job = await _reset_stale_admin_resume_job_to_queued(
                         store=store,
                         job=existing_resume_job,
                     )
                     job_status = str(existing_resume_job.get("status") or "").strip().lower()
-                if job_status in {"queued", "running"}:
+                if job_status == "failed" and not _resume_job_final_result_successful(existing_resume_job):
+                    existing_resume_job = await _reset_stale_admin_resume_job_to_queued(
+                        store=store,
+                        job=existing_resume_job,
+                    )
+                    job_status = str(existing_resume_job.get("status") or "").strip().lower()
+                if job_status == "queued":
                     job = await schedule_generation_job_if_needed(
                         job=existing_resume_job,
                         background_tasks=background_tasks,
