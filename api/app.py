@@ -590,8 +590,22 @@ def _is_archived_plan(row: dict[str, Any] | None) -> bool:
     return str(row.get("status") or "").strip().lower() == "archived"
 
 
+def _is_triage_blocked_plan(row: dict[str, Any] | None) -> bool:
+    if not isinstance(row, dict):
+        return False
+    return str(row.get("status") or "").strip().lower() == "triage_blocked"
+
+
 def _visible_plans_for_athlete(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    return [row for row in rows if not _is_archived_plan(row)]
+    # Triage-blocked outcomes are screening decisions, not plans — they must
+    # not surface in the athlete's archive or "latest plan" snapshot. Admin
+    # endpoints bypass this filter so the ops team can still review and
+    # approve-and-resume blocked attempts.
+    return [
+        row
+        for row in rows
+        if not _is_archived_plan(row) and not _is_triage_blocked_plan(row)
+    ]
 
 
 def _admin_draft_text(row: dict[str, Any]) -> str:
