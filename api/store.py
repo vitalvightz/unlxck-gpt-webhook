@@ -135,6 +135,8 @@ class AppStore(Protocol):
         client_request_id: str,
         source: str,
         request_payload: dict[str, Any],
+        intake_id: str | None = None,
+        plan_id: str | None = None,
     ) -> dict[str, Any]: ...
     def count_generation_jobs_for_athlete_since(
         self,
@@ -897,6 +899,8 @@ class SupabaseAppStore:
         client_request_id: str,
         source: str,
         request_payload: dict[str, Any],
+        intake_id: str | None = None,
+        plan_id: str | None = None,
     ) -> dict[str, Any]:
         last_error: Exception | None = None
 
@@ -945,10 +949,10 @@ class SupabaseAppStore:
             "started_at": None,
             "completed_at": None,
             "error": None,
-            "intake_id": None,
+            "intake_id": intake_id,
             "stage1_result": None,
             "final_result": None,
-            "plan_id": None,
+            "plan_id": plan_id,
         }
         try:
             response = self._run_with_transient_retry(

@@ -785,8 +785,8 @@ def test_approved_resume_runtime_context_keeps_structured_injury_truth():
     assert context.training_context.guided_injury is None
     assert context.training_context.guided_injuries == []
     assert context.training_context.injury_restrictions == [dict(entry) for entry in parsed.restrictions]
-    assert context.training_context.triage_summary["mode"] == "needs_review"
-    assert context.training_context.triage_summary["should_block_stage2"] is True
+    assert context.training_context.triage_summary["mode"] == "full_plan"
+    assert context.training_context.triage_summary["should_block_stage2"] is False
     assert context.training_context.triage_summary["triage_resume_approved"] is True
 
 

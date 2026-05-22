@@ -282,6 +282,54 @@ def test_stage2_payload_injury_context_carries_rich_injury_fields():
     assert injury_context["guided_injury"] == {"area": "left knee", "severity": "moderate", "avoid": "deep knee bend"}
     assert injury_context["restrictions"] == [{"restriction": "avoid deep knee flexion", "region": "knee"}]
 
+
+def test_stage2_payload_blocks_reclearance_wording_when_triage_resume_approved():
+    training_context = TrainingContext(
+        fatigue="moderate",
+        training_frequency=4,
+        days_available=4,
+        training_days=["Mon", "Tue", "Thu", "Sat"],
+        injuries=["left knee instability"],
+        style_technical=["boxing"],
+        style_tactical=["pressure_fighter"],
+        weaknesses=["gas_tank"],
+        equipment=["heavy_bag"],
+        weight_cut_risk=False,
+        weight_cut_pct=0.0,
+        fight_format="boxing",
+        status="amateur",
+        key_goals=["conditioning"],
+        training_preference="balanced",
+        mental_block=[],
+        age=25,
+        weight=70.0,
+        prev_exercises=[],
+        recent_exercises=[],
+        phase_weeks={"GPP": 2, "SPP": 2, "TAPER": 1, "days": {"GPP": 0, "SPP": 0, "TAPER": 0}},
+        days_until_fight=30,
+        injury_restrictions=[{"restriction": "single_leg_loading", "region": "knee"}],
+        triage_summary={"mode": "restricted_rehab_only", "triage_resume_approved": True},
+    )
+
+    payload = build_stage2_payload(
+        training_context=training_context,
+        mapped_format="boxing",
+        record="3-0",
+        rounds_format="3x3",
+        camp_len=5,
+        short_notice=False,
+        restrictions=[{"restriction": "single_leg_loading", "region": "knee"}],
+        phase_weeks={"GPP": 2, "SPP": 2, "TAPER": 1, "days": {"GPP": 0, "SPP": 0, "TAPER": 0}},
+        strength_blocks={},
+        conditioning_blocks={},
+        rehab_blocks={},
+    )
+
+    assert any(
+        "do not write 'clinician clearance required'" in line
+        for line in payload["rewrite_guidance"]["writing_rules"]
+    )
+
 def _build_taper_payload_and_brief() -> tuple[dict, dict]:
     training_context = TrainingContext(
         fatigue="moderate",
