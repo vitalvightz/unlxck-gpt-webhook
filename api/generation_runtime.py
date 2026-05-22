@@ -852,6 +852,7 @@ async def schedule_generation_job_if_needed(
     stale_job_checker: Callable[..., bool],
     stale_after_seconds: int,
 ) -> dict[str, Any]:
+    original_job = job
     current_status = str(job.get("status") or "queued")
     if current_status not in {"queued", "running"}:
         return job
@@ -864,8 +865,11 @@ async def schedule_generation_job_if_needed(
                 store=store,
                 stale_after_seconds=stale_after_seconds,
             )
+            current_status = str(job.get("status") or "")
+            if current_status != "queued":
+                return job
+        else:
             return job
-        return job
 
     if not enable_in_process_generation:
         return job
@@ -899,36 +903,6 @@ async def schedule_generation_job_if_needed(
         )
         return job
 
-    try:
-        claimed_job = await asyncio.to_thread(
-            store.claim_generation_job,
-            job_id,
-            stale_after_seconds=stale_after_seconds,
-        )
-    except HTTPException as exc:
-        if exc.status_code == status.HTTP_503_SERVICE_UNAVAILABLE:
-            logger.warning(
-                "[jobs] generation:schedule_claim_deferred job_id=%s detail=%s",
-                job_id,
-                exc.detail,
-            )
-            return job
-        raise
-
-    if not claimed_job:
-        try:
-            refreshed = await asyncio.to_thread(store.get_generation_job, job_id)
-        except HTTPException as exc:
-            if exc.status_code == status.HTTP_503_SERVICE_UNAVAILABLE:
-                logger.warning(
-                    "[jobs] generation:schedule_refresh_deferred job_id=%s detail=%s",
-                    job_id,
-                    exc.detail,
-                )
-                return job
-            raise
-        return refreshed or job
-
     active_tasks.add(job_id)
     try:
         if _use_fastapi_background_tasks():
@@ -960,4 +934,4 @@ async def schedule_generation_job_if_needed(
             heartbeat_at=utc_now_iso(),
         )
 
-    return claimed_job
+    return original_job

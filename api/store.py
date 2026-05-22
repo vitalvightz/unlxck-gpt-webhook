@@ -229,6 +229,42 @@ def is_pre_start_stale_generation_job(job: dict[str, Any], *, stale_after_second
     return (now - heartbeat_at).total_seconds() >= max(1, stale_after_seconds)
 
 
+def is_worker_start_stale_generation_job(job: dict[str, Any], *, stale_after_seconds: int = 90) -> bool:
+    if str(job.get("status") or "") != "running":
+        return False
+    if job.get("completed_at") is not None:
+        return False
+    if job.get("stage1_result") is not None:
+        return False
+    if job.get("final_result") is not None:
+        return False
+    milestones = _progress_milestones(job.get("progress_milestones"))
+    if len(milestones) != 1:
+        return False
+    first = milestones[0] if isinstance(milestones[0], dict) else {}
+    if str(first.get("code") or "") != "job_loaded":
+        return False
+
+    heartbeat_at = _parse_datetime(job.get("heartbeat_at"))
+    started_at = _parse_datetime(job.get("started_at"))
+    now = datetime.now(timezone.utc)
+    if heartbeat_at is None:
+        return started_at is not None and (now - started_at).total_seconds() >= max(1, stale_after_seconds)
+    if started_at is not None and heartbeat_at <= started_at:
+        return True
+    return (now - heartbeat_at).total_seconds() >= max(1, stale_after_seconds)
+
+
+def is_startup_stale_generation_job(job: dict[str, Any], *, stale_after_seconds: int = 90) -> bool:
+    return is_pre_start_stale_generation_job(
+        job,
+        stale_after_seconds=stale_after_seconds,
+    ) or is_worker_start_stale_generation_job(
+        job,
+        stale_after_seconds=stale_after_seconds,
+    )
+
+
 def _job_loaded_milestone(now_iso: str) -> dict[str, Any]:
     return {
         "code": "job_loaded",
@@ -978,7 +1014,7 @@ class SupabaseAppStore:
             last_error = exc
             existing = None
         if existing:
-            if is_pre_start_stale_generation_job(existing, stale_after_seconds=stale_after_seconds):
+            if is_startup_stale_generation_job(existing, stale_after_seconds=stale_after_seconds):
                 reset_payload = {
                     "status": "queued",
                     "source": (source or "").strip() or "self_serve",
@@ -998,7 +1034,7 @@ class SupabaseAppStore:
                     reset_payload["intake_id"] = intake_id
 
                 self._run_with_transient_retry(
-                    operation="create_or_get_generation_job:reset_pre_start_stale",
+                    operation="create_or_get_generation_job:reset_startup_stale",
                     fn=lambda: self.client.table("generation_jobs")
                     .update(reset_payload)
                     .eq("id", str(existing["id"]))
@@ -1299,7 +1335,7 @@ class SupabaseAppStore:
 
             if current_status not in {"queued", "running"}:
                 return None
-            if current_status == "running" and not is_pre_start_stale_generation_job(
+            if current_status == "running" and not is_startup_stale_generation_job(
                 job,
                 stale_after_seconds=stale_after_seconds,
             ):
