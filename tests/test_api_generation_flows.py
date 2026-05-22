@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+from typing import Any
 
 from fastapi import HTTPException, status
 from fastapi.testclient import TestClient
@@ -519,8 +520,9 @@ def test_run_generation_job_updates_existing_plan_for_same_intake_after_resume()
         client_request_id="triage-resume-job",
         source="admin_triage_resume",
         request_payload=request.model_dump(mode="json"),
+        plan_id=blocked_plan["id"],
+        intake_id=str(intake["id"]),
     )
-    store.update_generation_job(job["id"], intake_id=str(intake["id"]))
     stage2 = FakeStage2Automator(result=finalized_result())
 
     asyncio.run(
@@ -545,6 +547,302 @@ def test_run_generation_job_updates_existing_plan_for_same_intake_after_resume()
     assert updated_plan["why_log"] == {"strength": {}}
     assert updated_plan["coach_notes"] == "### Coach Review"
     assert store.get_latest_plan(athlete.user_id)["id"] == blocked_plan["id"]
+    assert len(store.list_user_plans(athlete.user_id)) == 1
+
+
+def test_admin_triage_resume_missing_plan_id_fails_before_stage1():
+    store = FakeStore()
+    athlete = AuthenticatedUser(
+        user_id="athlete-1",
+        email="ari@example.com",
+        full_name="Ari Mensah",
+        metadata={},
+    )
+    store.ensure_profile(athlete)
+    request = _build_request()
+    intake = store.create_intake(athlete.user_id, request)
+    store.create_plan(
+        athlete_id=athlete.user_id,
+        intake_id=str(intake["id"]),
+        request=request,
+        result=finalized_result(
+            status="triage_blocked",
+            stage2_status="triage_blocked",
+            why_log={"injury_triage": {"mode": "needs_review", "should_block_stage2": True}},
+        ),
+    )
+    job = store.create_or_get_generation_job(
+        athlete_id=athlete.user_id,
+        client_request_id="triage-resume-missing-plan",
+        source="admin_triage_resume",
+        request_payload=request.model_dump(mode="json"),
+        intake_id=str(intake["id"]),
+    )
+
+    def fail_planner(payload: dict) -> dict:
+        raise AssertionError("planner should not be called")
+
+    def fail_get_latest_plan(athlete_id: str) -> dict | None:
+        raise AssertionError("latest_plan fallback used")
+
+    def fail_create_plan(*args: Any, **kwargs: Any) -> dict:
+        raise AssertionError("create_plan should not be called")
+
+    store.get_latest_plan = fail_get_latest_plan
+    store.create_plan = fail_create_plan
+
+    asyncio.run(
+        run_generation_job(
+            job_id=job["id"],
+            store=store,
+            planner_fn=fail_planner,
+            stage2=FakeStage2Automator(result=finalized_result()),
+            active_tasks=set(),
+        )
+    )
+
+    refreshed_job = store.get_generation_job(job["id"])
+    assert refreshed_job["status"] == "failed"
+    assert "plan_id" in (refreshed_job["error"] or "")
+    assert refreshed_job["stage1_result"] is None
+
+
+def test_admin_triage_resume_missing_intake_id_fails_before_stage1():
+    store = FakeStore()
+    athlete = AuthenticatedUser(
+        user_id="athlete-1",
+        email="ari@example.com",
+        full_name="Ari Mensah",
+        metadata={},
+    )
+    store.ensure_profile(athlete)
+    request = _build_request()
+    intake = store.create_intake(athlete.user_id, request)
+    blocked_plan = store.create_plan(
+        athlete_id=athlete.user_id,
+        intake_id=str(intake["id"]),
+        request=request,
+        result=finalized_result(
+            status="triage_blocked",
+            stage2_status="triage_blocked",
+            why_log={"injury_triage": {"mode": "needs_review", "should_block_stage2": True}},
+        ),
+    )
+    job = store.create_or_get_generation_job(
+        athlete_id=athlete.user_id,
+        client_request_id="triage-resume-missing-intake",
+        source="admin_triage_resume",
+        request_payload=request.model_dump(mode="json"),
+        plan_id=blocked_plan["id"],
+    )
+
+    def fail_planner(payload: dict) -> dict:
+        raise AssertionError("planner should not be called")
+
+    def fail_get_latest_plan(athlete_id: str) -> dict | None:
+        raise AssertionError("latest_plan fallback used")
+
+    def fail_create_plan(*args: Any, **kwargs: Any) -> dict:
+        raise AssertionError("create_plan should not be called")
+
+    store.get_latest_plan = fail_get_latest_plan
+    store.create_plan = fail_create_plan
+
+    asyncio.run(
+        run_generation_job(
+            job_id=job["id"],
+            store=store,
+            planner_fn=fail_planner,
+            stage2=FakeStage2Automator(result=finalized_result()),
+            active_tasks=set(),
+        )
+    )
+
+    refreshed_job = store.get_generation_job(job["id"])
+    assert refreshed_job["status"] == "failed"
+    assert "intake_id" in (refreshed_job["error"] or "")
+    assert refreshed_job["stage1_result"] is None
+
+
+def test_admin_triage_resume_linked_plan_mismatch_fails_before_stage1():
+    store = FakeStore()
+    athlete = AuthenticatedUser(
+        user_id="athlete-1",
+        email="ari@example.com",
+        full_name="Ari Mensah",
+        metadata={},
+    )
+    store.ensure_profile(athlete)
+    request = _build_request()
+    intake = store.create_intake(athlete.user_id, request)
+    other_athlete = AuthenticatedUser(
+        user_id="other-athlete",
+        email="other@example.com",
+        full_name="Other Athlete",
+        metadata={},
+    )
+    store.ensure_profile(other_athlete)
+    other_plan = store.create_plan(
+        athlete_id="other-athlete",
+        intake_id=str(intake["id"]),
+        request=request,
+        result=finalized_result(
+            status="triage_blocked",
+            stage2_status="triage_blocked",
+            why_log={"injury_triage": {"mode": "needs_review", "should_block_stage2": True}},
+        ),
+    )
+    job = store.create_or_get_generation_job(
+        athlete_id=athlete.user_id,
+        client_request_id="triage-resume-athlete-mismatch",
+        source="admin_triage_resume",
+        request_payload=request.model_dump(mode="json"),
+        plan_id=other_plan["id"],
+        intake_id=str(intake["id"]),
+    )
+
+    def fail_planner(payload: dict) -> dict:
+        raise AssertionError("planner should not be called")
+
+    def fail_get_latest_plan(athlete_id: str) -> dict | None:
+        raise AssertionError("latest_plan fallback used")
+
+    def fail_create_plan(*args: Any, **kwargs: Any) -> dict:
+        raise AssertionError("create_plan should not be called")
+
+    store.get_latest_plan = fail_get_latest_plan
+    store.create_plan = fail_create_plan
+
+    asyncio.run(
+        run_generation_job(
+            job_id=job["id"],
+            store=store,
+            planner_fn=fail_planner,
+            stage2=FakeStage2Automator(result=finalized_result()),
+            active_tasks=set(),
+        )
+    )
+
+    refreshed_job = store.get_generation_job(job["id"])
+    assert refreshed_job["status"] == "failed"
+    assert "athlete" in (refreshed_job["error"] or "")
+    assert refreshed_job["stage1_result"] is None
+
+
+def test_admin_triage_resume_linked_intake_mismatch_fails_before_stage1():
+    store = FakeStore()
+    athlete = AuthenticatedUser(
+        user_id="athlete-1",
+        email="ari@example.com",
+        full_name="Ari Mensah",
+        metadata={},
+    )
+    store.ensure_profile(athlete)
+    request = _build_request()
+    intake = store.create_intake(athlete.user_id, request)
+    other_intake = store.create_intake(athlete.user_id, request)
+    blocked_plan = store.create_plan(
+        athlete_id=athlete.user_id,
+        intake_id=str(intake["id"]),
+        request=request,
+        result=finalized_result(
+            status="triage_blocked",
+            stage2_status="triage_blocked",
+            why_log={"injury_triage": {"mode": "needs_review", "should_block_stage2": True}},
+        ),
+    )
+    job = store.create_or_get_generation_job(
+        athlete_id=athlete.user_id,
+        client_request_id="triage-resume-intake-mismatch",
+        source="admin_triage_resume",
+        request_payload=request.model_dump(mode="json"),
+        plan_id=blocked_plan["id"],
+        intake_id=str(other_intake["id"]),
+    )
+
+    def fail_planner(payload: dict) -> dict:
+        raise AssertionError("planner should not be called")
+
+    def fail_get_latest_plan(athlete_id: str) -> dict | None:
+        raise AssertionError("latest_plan fallback used")
+
+    def fail_create_plan(*args: Any, **kwargs: Any) -> dict:
+        raise AssertionError("create_plan should not be called")
+
+    store.get_latest_plan = fail_get_latest_plan
+    store.create_plan = fail_create_plan
+
+    asyncio.run(
+        run_generation_job(
+            job_id=job["id"],
+            store=store,
+            planner_fn=fail_planner,
+            stage2=FakeStage2Automator(result=finalized_result()),
+            active_tasks=set(),
+        )
+    )
+
+    refreshed_job = store.get_generation_job(job["id"])
+    assert refreshed_job["status"] == "failed"
+    assert "intake" in (refreshed_job["error"] or "")
+    assert refreshed_job["stage1_result"] is None
+
+
+def test_admin_triage_resume_never_falls_back_to_latest_plan_or_create_plan():
+    store = FakeStore()
+    athlete = AuthenticatedUser(
+        user_id="athlete-1",
+        email="ari@example.com",
+        full_name="Ari Mensah",
+        metadata={},
+    )
+    store.ensure_profile(athlete)
+    request = _build_request()
+    intake = store.create_intake(athlete.user_id, request)
+    blocked_plan = store.create_plan(
+        athlete_id=athlete.user_id,
+        intake_id=str(intake["id"]),
+        request=request,
+        result=finalized_result(
+            status="triage_blocked",
+            stage2_status="triage_blocked",
+            why_log={"injury_triage": {"mode": "needs_review", "should_block_stage2": True}},
+        ),
+    )
+    job = store.create_or_get_generation_job(
+        athlete_id=athlete.user_id,
+        client_request_id="triage-resume-no-fallback",
+        source="admin_triage_resume",
+        request_payload=request.model_dump(mode="json"),
+        plan_id=blocked_plan["id"],
+        intake_id=str(intake["id"]),
+    )
+
+    def fail_get_latest_plan(athlete_id: str) -> dict | None:
+        raise AssertionError("latest_plan fallback used")
+
+    def fail_create_plan(*args: Any, **kwargs: Any) -> dict:
+        raise AssertionError("create_plan should not be called")
+
+    store.get_latest_plan = fail_get_latest_plan
+    store.create_plan = fail_create_plan
+
+    asyncio.run(
+        run_generation_job(
+            job_id=job["id"],
+            store=store,
+            planner_fn=_planner,
+            stage2=FakeStage2Automator(result=finalized_result()),
+            active_tasks=set(),
+        )
+    )
+
+    refreshed_job = store.get_generation_job(job["id"])
+    updated_plan = store.get_plan(blocked_plan["id"])
+
+    assert refreshed_job["status"] == "completed"
+    assert refreshed_job["plan_id"] == blocked_plan["id"]
+    assert updated_plan["status"] == "ready"
     assert len(store.list_user_plans(athlete.user_id)) == 1
 
 

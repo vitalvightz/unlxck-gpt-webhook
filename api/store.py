@@ -210,11 +210,14 @@ def is_pre_start_stale_generation_job(job: dict[str, Any], *, stale_after_second
 
     heartbeat_at = _parse_datetime(job.get("heartbeat_at"))
     started_at = _parse_datetime(job.get("started_at"))
+    now = datetime.now(timezone.utc)
     if heartbeat_at is None:
-        return started_at is not None
+        if started_at is None:
+            return False
+        return (now - started_at).total_seconds() >= max(1, stale_after_seconds)
     if started_at is not None and heartbeat_at <= started_at:
         return True
-    return (datetime.now(timezone.utc) - heartbeat_at).total_seconds() >= max(1, stale_after_seconds)
+    return (now - heartbeat_at).total_seconds() >= max(1, stale_after_seconds)
 
 
 def _job_loaded_milestone(now_iso: str) -> dict[str, Any]:
@@ -909,6 +912,8 @@ class SupabaseAppStore:
         client_request_id: str,
         source: str,
         request_payload: dict[str, Any],
+        plan_id: str | None = None,
+        intake_id: str | None = None,
         stale_after_seconds: int = 90,
     ) -> dict[str, Any]:
         last_error: Exception | None = None
@@ -982,10 +987,10 @@ class SupabaseAppStore:
             "started_at": None,
             "completed_at": None,
             "error": None,
-            "intake_id": None,
+            "intake_id": intake_id,
             "stage1_result": None,
             "final_result": None,
-            "plan_id": None,
+            "plan_id": plan_id,
         }
         try:
             response = self._run_with_transient_retry(

@@ -322,9 +322,42 @@ async def run_generation_job(
         athlete_id = str(job["athlete_id"])
         raw_request_payload = job.get("request_payload") or {}
         triage_resume_override_approved = False
+        job_source = str(job.get("source") or "").strip()
         if isinstance(raw_request_payload, dict):
             triage_override = raw_request_payload.get(_TRIAGE_RESUME_OVERRIDE_KEY)
             triage_resume_override_approved = isinstance(triage_override, dict) and triage_override.get("approved") is True
+
+        plan_id = str(job.get("plan_id") or "").strip() or None
+        intake_id = str(job.get("intake_id") or "").strip() or None
+        admin_resume_plan_row: dict[str, Any] | None = None
+        if job_source == "admin_triage_resume":
+            if not plan_id:
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    detail="admin_triage_resume jobs must be linked to an existing plan_id",
+                )
+            if not intake_id:
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    detail="admin_triage_resume jobs must be linked to an existing intake_id",
+                )
+            admin_resume_plan_row = await asyncio.to_thread(store.get_plan, plan_id)
+            if not admin_resume_plan_row:
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    detail="admin_triage_resume linked plan not found",
+                )
+            if str(admin_resume_plan_row.get("athlete_id") or "") != athlete_id:
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    detail="admin_triage_resume linked plan athlete mismatch",
+                )
+            if str(admin_resume_plan_row.get("intake_id") or "") != intake_id:
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    detail="admin_triage_resume linked plan intake mismatch",
+                )
+
         request_body = parse_plan_request(raw_request_payload)
         logger.info("[jobs] generation:start athlete_id=%s job_id=%s", athlete_id, job_id)
 
@@ -417,22 +450,37 @@ async def run_generation_job(
                 heartbeat_at=utc_now_iso(),
             )
 
-        plan_id = str(job.get("plan_id") or "") or None
-        plan_row: dict[str, Any] | None = None
-        if plan_id:
+        plan_id = plan_id or str(job.get("plan_id") or "") or None
+        plan_row: dict[str, Any] | None = admin_resume_plan_row
+        if not plan_row and plan_id:
             plan_row = await asyncio.to_thread(store.get_plan, plan_id)
-        if not plan_row and intake_id:
+        if not plan_row and intake_id and job_source != "admin_triage_resume":
             latest_plan = await asyncio.to_thread(store.get_latest_plan, athlete_id)
             if latest_plan and str(latest_plan.get("intake_id") or "") == intake_id:
                 plan_row = latest_plan
                 plan_id = str(latest_plan.get("id") or "")
         if plan_row and plan_id:
+            if (
+                job_source == "admin_triage_resume"
+                and str(plan_row.get("stage2_status") or "").strip().lower() == "triage_resume_approved"
+                and isinstance(plan_row.get("why_log"), dict)
+            ):
+                final_result = {
+                    **final_result,
+                    "stage2_status": plan_row.get("stage2_status"),
+                    "why_log": plan_row.get("why_log"),
+                }
             plan_row = await asyncio.to_thread(
                 store.update_plan_stage2,
                 plan_id,
                 final_result,
             )
-        if not plan_row:
+        elif job_source == "admin_triage_resume":
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="admin_triage_resume linked plan could not be loaded",
+            )
+        else:
             plan_row = await asyncio.to_thread(
                 store.create_plan,
                 athlete_id=athlete_id,

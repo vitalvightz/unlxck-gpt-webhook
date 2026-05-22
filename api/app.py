@@ -1634,6 +1634,8 @@ def create_app(
             client_request_id=client_request_id,
             source="admin_triage_resume",
             request_payload=request_payload,
+            plan_id=plan_id,
+            intake_id=intake_id,
             stale_after_seconds=stale_after_seconds,
         )
         

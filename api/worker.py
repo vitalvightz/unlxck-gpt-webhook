@@ -117,7 +117,7 @@ async def _tick(
                     active_tasks=active_tasks,
                 )
             )
-        except Exception as exc:
+        except Exception:
             logger.exception("[worker] failed to create task job_id=%s", job_id)
             active_tasks.discard(job_id)
             await _mark_job_failed_before_runtime(

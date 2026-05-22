@@ -236,6 +236,8 @@ class FakeStore:
         client_request_id: str,
         source: str,
         request_payload: dict,
+        plan_id: str | None = None,
+        intake_id: str | None = None,
         stale_after_seconds: int = 90,
     ) -> dict:
         for job in self.generation_jobs.values():
@@ -268,10 +270,10 @@ class FakeStore:
             "request_payload": request_payload,
             "status": "queued",
             "error": None,
-            "intake_id": None,
+            "intake_id": intake_id,
             "stage1_result": None,
             "final_result": None,
-            "plan_id": None,
+            "plan_id": plan_id,
             "attempt_count": 0,
             "heartbeat_at": None,
             "started_at": None,
