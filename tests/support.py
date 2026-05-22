@@ -250,6 +250,8 @@ class FakeStore:
         client_request_id: str,
         source: str,
         request_payload: dict,
+        intake_id: str | None = None,
+        plan_id: str | None = None,
     ) -> dict:
         for job in self.generation_jobs.values():
             if job["athlete_id"] == athlete_id and job["client_request_id"] == client_request_id:
@@ -264,10 +266,10 @@ class FakeStore:
             "request_payload": request_payload,
             "status": "queued",
             "error": None,
-            "intake_id": None,
+            "intake_id": intake_id,
             "stage1_result": None,
             "final_result": None,
-            "plan_id": None,
+            "plan_id": plan_id,
             "attempt_count": 0,
             "heartbeat_at": None,
             "started_at": None,

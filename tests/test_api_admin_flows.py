@@ -578,7 +578,10 @@ def test_needs_review_can_be_approved_and_resumed_with_normal_generation_flow():
         headers={"Authorization": "Bearer admin-token"},
     )
     assert refreshed_plan.status_code == 200
-    assert refreshed_plan.json()["admin_outputs"]["stage2_status"] == "triage_resume_approved"
+    # The resumed generation updates the original blocked plan in place, so the
+    # stage2_status reflects the new finalized run. The triage approval audit
+    # marker (triage_regeneration_cleared) must still be preserved on why_log.
+    assert refreshed_plan.json()["admin_outputs"]["stage2_status"] == "stage2_pass"
     assert refreshed_plan.json()["admin_outputs"]["why_log"]["triage_regeneration_cleared"] is True
 
 
@@ -632,6 +635,55 @@ def test_approve_and_resume_generation_rejects_duplicate_approval():
     )
     assert second_response.status_code == 409
     assert second_response.json()["detail"] == "this blocked plan has already been approved for resume"
+
+
+def test_approve_and_resume_generation_creates_job_with_intake_and_plan_linked():
+    athlete = AuthenticatedUser(
+        user_id="athlete-1",
+        email="ari@example.com",
+        full_name="Ari Mensah",
+        metadata={},
+    )
+    admin = AuthenticatedUser(
+        user_id="admin-1",
+        email="ops@unlxck.test",
+        full_name="Ops Admin",
+        metadata={},
+    )
+    store = FakeStore()
+    store.ensure_profile(athlete)
+    request = _build_request()
+    intake = store.create_intake(athlete.user_id, request)
+    blocked_plan = store.create_plan(
+        athlete_id=athlete.user_id,
+        intake_id=str(intake["id"]),
+        request=request,
+        result=finalized_result(
+            status="triage_blocked",
+            stage2_status="triage_blocked",
+            why_log={"injury_triage": {"mode": "needs_review", "should_block_stage2": True}},
+        ),
+    )
+    client = TestClient(
+        create_app(
+            store=store,
+            auth_service=FakeAuthService({"athlete-token": athlete, "admin-token": admin}),
+            planner=lambda payload: stage1_result(),
+            stage2_automator=FakeStage2Automator(result=finalized_result()),
+        )
+    )
+
+    response = client.post(
+        f"/api/admin/plans/{blocked_plan['id']}/approve-and-resume-generation",
+        headers={"Authorization": "Bearer admin-token"},
+        json={"reason": "injury details clarified"},
+    )
+    assert response.status_code == 202
+    job_id = response.json()["job_id"]
+    job = store.get_generation_job(job_id)
+    assert job is not None
+    assert job["intake_id"] == str(intake["id"])
+    assert job["plan_id"] == str(blocked_plan["id"])
 
 
 def test_medical_hold_cannot_use_approve_and_resume_generation():

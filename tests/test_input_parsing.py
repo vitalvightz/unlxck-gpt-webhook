@@ -776,7 +776,12 @@ def test_approved_resume_runtime_context_keeps_structured_injury_truth():
         plan_input=parsed,
         random_seed=None,
         logger=logging.getLogger(__name__),
-        triage_summary={"mode": "needs_review", "should_block_stage2": True},
+        triage_summary={
+            "mode": "needs_review",
+            "should_block_stage2": True,
+            "red_flags": ["instability"],
+            "sparring_risk_band": "red",
+        },
         is_approved_triage_resume=True,
     )
 
@@ -788,6 +793,8 @@ def test_approved_resume_runtime_context_keeps_structured_injury_truth():
     assert context.training_context.triage_summary["mode"] == "full_plan"
     assert context.training_context.triage_summary["should_block_stage2"] is False
     assert context.training_context.triage_summary["triage_resume_approved"] is True
+    assert context.training_context.triage_summary["red_flags"] == ["instability"]
+    assert context.training_context.triage_summary["sparring_risk_band"] == "red"
 
 
 def test_guided_injury_structural_notes_are_retained_in_original_phrase():
