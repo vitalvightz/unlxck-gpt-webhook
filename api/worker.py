@@ -107,19 +107,6 @@ async def _tick(
         ):
             continue
 
-        try:
-            claimed = await asyncio.to_thread(
-                store.claim_generation_job,
-                job_id,
-                stale_after_seconds=stale_after_seconds,
-            )
-        except Exception:
-            logger.exception("[worker] failed to claim job_id=%s", job_id)
-            continue
-
-        if not claimed:
-            continue
-
         active_tasks.add(job_id)
 
         try:
@@ -130,13 +117,13 @@ async def _tick(
                     active_tasks=active_tasks,
                 )
             )
-        except Exception as exc:
+        except Exception:
             logger.exception("[worker] failed to create task job_id=%s", job_id)
             active_tasks.discard(job_id)
             await _mark_job_failed_before_runtime(
                 store=store,
                 job_id=job_id,
-                error=f"Worker failed to create generation task: {exc}",
+                error="Generation worker failed to schedule.",
             )
             continue
 

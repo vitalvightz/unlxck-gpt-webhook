@@ -40,6 +40,7 @@ type StartGenerationOptions = {
 const INITIAL_POLL_MS = 2_000;
 const MEDIUM_POLL_MS = 5_000;
 const LONG_POLL_MS = 15_000;
+const PRE_START_STALE_MS = 90_000;
 const PENDING_GENERATION_PREFIX = "unlxck:pending-generation:";
 const TRAINING_AVAILABILITY_MISMATCH_ERROR =
   "invalid Weekly Training Frequency: cannot exceed selected Training Availability days";
@@ -156,6 +157,24 @@ function phaseForJobStatus(status: GenerationJobStatus): Exclude<GenerationUiPha
   return "finalizing";
 }
 
+export function isPreStartStaleGenerationJob(job: GenerationJobResponse, nowMs = Date.now()): boolean {
+  if (job.status !== "running") {
+    return false;
+  }
+  if (Array.isArray(job.progress_milestones) && job.progress_milestones.length > 0) {
+    return false;
+  }
+  const heartbeatAtMs = Date.parse(job.heartbeat_at || "");
+  const startedAtMs = Date.parse(job.started_at || "");
+  const hasHeartbeat = Number.isFinite(heartbeatAtMs);
+  const hasStartedAt = Number.isFinite(startedAtMs);
+  if (hasHeartbeat && hasStartedAt && heartbeatAtMs <= startedAtMs) {
+    return true;
+  }
+  const lastProgressAtMs = hasHeartbeat ? heartbeatAtMs : startedAtMs;
+  return Number.isFinite(lastProgressAtMs) && nowMs - lastProgressAtMs >= PRE_START_STALE_MS;
+}
+
 async function createJobWithReconnect(
   createJob: (clientRequestId: string) => Promise<GenerationJobResponse>,
   clientRequestId: string,
@@ -221,6 +240,11 @@ export function useGenerationController({
       if (Array.isArray(job.progress_milestones)) {
         setMilestones(job.progress_milestones);
       }
+      if (isPreStartStaleGenerationJob(job)) {
+        clearAllPendingGenerations();
+        setFailedJobId(job.job_id);
+        throw new Error("Build stalled — retry");
+      }
       savePendingGeneration(activeStorageKey, {
         clientRequestId,
         jobId: job.job_id,
@@ -232,6 +256,12 @@ export function useGenerationController({
 
         if (Array.isArray(currentJob.progress_milestones)) {
           setMilestones(currentJob.progress_milestones);
+        }
+
+        if (isPreStartStaleGenerationJob(currentJob)) {
+          clearAllPendingGenerations();
+          setFailedJobId(currentJob.job_id);
+          throw new Error("Build stalled — retry");
         }
 
         savePendingGeneration(activeStorageKey, {

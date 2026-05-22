@@ -1335,6 +1335,77 @@ def test_approve_and_resume_full_flow_updates_plan_in_place_with_override_metada
     assert why_log["triage_regeneration_cleared"] is True
 
 
+def test_admin_triage_resume_pre_start_stale_job_preserves_plan_and_intake_links():
+    athlete = AuthenticatedUser(
+        user_id="athlete-1",
+        email="ari@example.com",
+        full_name="Ari Mensah",
+        metadata={},
+    )
+    admin = AuthenticatedUser(
+        user_id="admin-1",
+        email="ops@unlxck.test",
+        full_name="Ops Admin",
+        metadata={},
+    )
+    store = FakeStore()
+    store.ensure_profile(athlete)
+    request = _build_request()
+    intake = store.create_intake(athlete.user_id, request)
+    blocked_plan = store.create_plan(
+        athlete_id=athlete.user_id,
+        intake_id=str(intake["id"]),
+        request=request,
+        result=finalized_result(
+            status="triage_blocked",
+            stage2_status="triage_resume_approved",
+            why_log={
+                "injury_triage": {"mode": "needs_review", "should_block_stage2": True},
+                "triage_resume_approval": {"reason": "first approval"},
+            },
+        ),
+    )
+    stale_job = store.create_or_get_generation_job(
+        athlete_id=athlete.user_id,
+        client_request_id=f"triage_resume_{blocked_plan['id']}",
+        source="admin_triage_resume",
+        request_payload=request.model_dump(mode="json"),
+    )
+    store.update_generation_job(
+        stale_job["id"],
+        status="running",
+        started_at="2026-01-01T00:00:00+00:00",
+        heartbeat_at="2026-01-01T00:00:00+00:00",
+        progress_milestones=[],
+        plan_id=blocked_plan["id"],
+        intake_id=intake["id"],
+    )
+    client = TestClient(
+        create_app(
+            store=store,
+            auth_service=FakeAuthService({"athlete-token": athlete, "admin-token": admin}),
+            planner=lambda payload: stage1_result(),
+            stage2_automator=FakeStage2Automator(result=finalized_result()),
+            enable_in_process_generation=False,
+        )
+    )
+
+    response = client.post(
+        f"/api/admin/plans/{blocked_plan['id']}/approve-and-resume-generation",
+        headers={"Authorization": "Bearer admin-token"},
+        json={"reason": "retry stale pre-start job"},
+    )
+
+    assert response.status_code == 202
+    body = response.json()
+    assert body["job_id"] == stale_job["id"]
+    assert body["status"] == "queued"
+    reset_job = store.get_generation_job(stale_job["id"])
+    assert reset_job["plan_id"] == blocked_plan["id"]
+    assert reset_job["intake_id"] == intake["id"]
+    assert len(store.generation_jobs) == 1
+
+
 def test_medical_hold_cannot_use_approve_and_resume_generation():
     client, store, _ = _build_client()
     athlete = AuthenticatedUser(

@@ -18,6 +18,7 @@ from api.models import (
     USERNAME_MAX_CHANGES_PER_WINDOW,
     validate_username,
 )
+from api.store import is_pre_start_stale_generation_job
 from datetime import timedelta
 
 os.environ.setdefault("APP_GENERATION_SCHEDULER", "fastapi")
@@ -250,11 +251,34 @@ class FakeStore:
         client_request_id: str,
         source: str,
         request_payload: dict,
-        intake_id: str | None = None,
         plan_id: str | None = None,
+        intake_id: str | None = None,
+        stale_after_seconds: int = 90,
     ) -> dict:
         for job in self.generation_jobs.values():
             if job["athlete_id"] == athlete_id and job["client_request_id"] == client_request_id:
+                if is_pre_start_stale_generation_job(job, stale_after_seconds=stale_after_seconds):
+                    now = _now()
+                    reset_changes = {
+                        "source": source,
+                        "request_payload": request_payload,
+                        "status": "queued",
+                        "error": None,
+                        "stage1_result": None,
+                        "final_result": None,
+                        "heartbeat_at": None,
+                        "started_at": None,
+                        "completed_at": None,
+                        "progress_milestones": [],
+                        "updated_at": now,
+                    }
+
+                    if plan_id is not None:
+                        reset_changes["plan_id"] = plan_id
+                    if intake_id is not None:
+                        reset_changes["intake_id"] = intake_id
+
+                    job.update(reset_changes)
                 return dict(job)
         now = _now()
         job_id = f"job_{uuid4().hex[:10]}"
@@ -274,6 +298,7 @@ class FakeStore:
             "heartbeat_at": None,
             "started_at": None,
             "completed_at": None,
+            "progress_milestones": [],
             "created_at": now,
             "updated_at": now,
         }
@@ -352,35 +377,45 @@ class FakeStore:
                 else None
             )
             last_progress_at = heartbeat or started_at
-            if last_progress_at and (now - last_progress_at).total_seconds() >= stale_after_seconds:
+            if is_pre_start_stale_generation_job(job, stale_after_seconds=stale_after_seconds) or (
+                last_progress_at and (now - last_progress_at).total_seconds() >= stale_after_seconds
+            ):
                 rows.append(dict(job))
         rows.sort(key=lambda row: str(row.get("created_at") or ""))
         return rows[:limit]
 
-    def claim_generation_job(self, job_id: str, *, stale_after_seconds: int = 90) -> dict | None:
+    def claim_generation_job_start(self, job_id: str, *, stale_after_seconds: int = 90) -> dict | None:
         job = self.generation_jobs.get(job_id)
         if not job:
             return None
-        heartbeat_raw = job.get("heartbeat_at")
-        heartbeat = None
-        if isinstance(heartbeat_raw, str) and heartbeat_raw:
-            heartbeat = datetime.fromisoformat(heartbeat_raw.replace("Z", "+00:00"))
-        now = datetime.now(timezone.utc)
-        is_stale_running = job["status"] == "running" and (
-            heartbeat is None or (now - heartbeat).total_seconds() >= stale_after_seconds
-        )
         if job["status"] not in {"queued", "running"}:
             return None
-        if job["status"] == "running" and not is_stale_running:
+        if job["status"] == "running" and not is_pre_start_stale_generation_job(
+            job,
+            stale_after_seconds=stale_after_seconds,
+        ):
             return None
         now_iso = _now()
         job["status"] = "running"
         job["heartbeat_at"] = now_iso
-        job["started_at"] = job["started_at"] or now_iso
+        job["started_at"] = now_iso if job.get("started_at") is None else job["started_at"]
         job["attempt_count"] = int(job.get("attempt_count") or 0) + 1
         job["error"] = None
+        job["completed_at"] = None
+        job["progress_milestones"] = [
+            {
+                "code": "job_loaded",
+                "label": "Generation job loaded",
+                "detail": "Worker loaded the persisted generation job.",
+                "meta": {},
+                "at": now_iso,
+            }
+        ]
         job["updated_at"] = now_iso
         return dict(job)
+
+    def claim_generation_job(self, job_id: str, *, stale_after_seconds: int = 90) -> dict | None:
+        return self.claim_generation_job_start(job_id, stale_after_seconds=stale_after_seconds)
 
     def count_active_generation_jobs(self, *, stale_after_seconds: int = 90) -> int:
         now = datetime.now(timezone.utc)
@@ -781,7 +816,11 @@ def _start_generation(client: TestClient, request: PlanRequest | None = None) ->
     return job_body, job_response.json()
 
 
-def _build_client(automator: FakeStage2Automator | None = None) -> tuple[TestClient, FakeStore, FakeStage2Automator]:
+def _build_client(
+    automator: FakeStage2Automator | None = None,
+    *,
+    enable_in_process_generation: bool = True,
+) -> tuple[TestClient, FakeStore, FakeStage2Automator]:
     athlete = AuthenticatedUser(
         user_id="athlete-1",
         email="ari@example.com",
@@ -802,6 +841,7 @@ def _build_client(automator: FakeStage2Automator | None = None) -> tuple[TestCli
             auth_service=FakeAuthService({"athlete-token": athlete, "admin-token": admin}),
             planner=_planner,
             stage2_automator=stage2,
+            enable_in_process_generation=enable_in_process_generation,
         )
     )
     return client, store, stage2

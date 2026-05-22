@@ -17,7 +17,7 @@ from fightcamp.main import generate_plan_sync
 from .environment import is_production_environment
 from .models import PlanRequest, ProfileUpdateRequest
 from .stage2_automation import Stage2AutomationError, Stage2AutomationUnavailableError, Stage2Automator
-from .store import AppStore
+from .store import AppStore, is_pre_start_stale_generation_job
 
 Planner = Callable[..., dict[str, Any]]
 ProgressCallback = Callable[[str, str, str, dict[str, Any]], None]
@@ -74,6 +74,7 @@ def build_progress_recorder(
     *,
     job_id: str,
     store: AppStore,
+    initial_milestones: list[dict[str, Any]] | None = None,
 ) -> tuple[list[dict[str, Any]], ProgressCallback]:
     """Return a milestone list + callback that persists each emit to the job row.
 
@@ -81,7 +82,7 @@ def build_progress_recorder(
     is fine. Persistence failures are logged and ignored — they must never
     surface into the planner pipeline.
     """
-    milestones: list[dict[str, Any]] = []
+    milestones: list[dict[str, Any]] = list(initial_milestones or [])
 
     def _callback(code: str, label: str, detail: str, meta: dict[str, Any]) -> None:
         entry = {
@@ -128,6 +129,8 @@ def parse_datetime(value: Any) -> datetime | None:
 def is_stale_job(job: dict[str, Any], *, stale_after_seconds: int = 90) -> bool:
     if str(job.get("status") or "") != "running":
         return False
+    if is_pre_start_stale_generation_job(job, stale_after_seconds=stale_after_seconds):
+        return True
     last_progress_at = parse_datetime(job.get("heartbeat_at")) or parse_datetime(job.get("started_at"))
     if last_progress_at is None:
         return False
@@ -148,6 +151,7 @@ def recover_stale_running_job(
         status="failed",
         error=error_message,
         completed_at=utc_now_iso(),
+        heartbeat_at=utc_now_iso(),
     )
 
 
@@ -347,11 +351,13 @@ async def run_generation_job(
 ) -> None:
     t_start = time.perf_counter()
     stop_event = asyncio.Event()
-    heartbeat_task = asyncio.create_task(heartbeat_generation_job(job_id, store, stop_event))
+    heartbeat_task: asyncio.Task[None] | None = None
     athlete_id = "unknown"
-    _, progress_callback = build_progress_recorder(job_id=job_id, store=store)
+    progress_callback: ProgressCallback | None = None
 
     def _emit_milestone(code: str, label: str, detail: str = "", **meta: Any) -> None:
+        if progress_callback is None:
+            return
         try:
             progress_callback(code, label, detail, meta)
         except Exception:
@@ -372,20 +378,41 @@ async def run_generation_job(
         return result
 
     try:
-        job = await _to_thread_with_heartbeat(store.get_generation_job, job_id)
+        # Claim the job for processing. This implements the worker-claim model
+        # introduced in #1417 while preserving Main's heartbeat-on-read safety.
+        job = await asyncio.to_thread(store.claim_generation_job_start, job_id)
         if not job:
-            logger.warning("[jobs] generation:job_missing job_id=%s", job_id)
+            logger.warning("[jobs] generation:claim_unavailable job_id=%s", job_id)
             return
-        _emit_milestone(
-            "job_loaded",
-            "Generation job loaded",
-            "Worker loaded the persisted generation job.",
+
+        # Use persisted milestones as the initial state for the progress recorder.
+        persisted_milestones = job.get("progress_milestones")
+        initial_milestones = persisted_milestones if isinstance(persisted_milestones, list) else []
+        _, progress_callback = build_progress_recorder(
+            job_id=job_id,
+            store=store,
+            initial_milestones=initial_milestones,
         )
+        heartbeat_task = asyncio.create_task(heartbeat_generation_job(job_id, store, stop_event))
 
         athlete_id = str(job["athlete_id"])
+        raw_request_payload = job.get("request_payload") or {}
+
+        # Triaging override information: track approval flag and any allowed modes.
+        triage_resume_override_approved = False
+        triage_override_allowed_modes: list[Any] = []
+        if isinstance(raw_request_payload, dict):
+            triage_override = raw_request_payload.get(_TRIAGE_RESUME_OVERRIDE_KEY)
+            if isinstance(triage_override, dict):
+                triage_resume_override_approved = triage_override.get("approved") is True
+                modes = triage_override.get("allowed_modes")
+                if isinstance(modes, list):
+                    triage_override_allowed_modes = list(modes)
+
+        # Normalize source and linked ids early for admin resume validation.
         job_source = str(job.get("source") or "").strip().lower()
-        intake_id = str(job.get("intake_id") or "").strip()
         plan_id = str(job.get("plan_id") or "").strip() or None
+        intake_id = str(job.get("intake_id") or "").strip() or None
         admin_resume_plan_row: dict[str, Any] | None = None
 
         if job_source == "admin_triage_resume":
@@ -398,6 +425,7 @@ async def run_generation_job(
                     "admin triage resume job is missing intake_id; refusing to create a duplicate plan"
                 )
 
+            # Use a heartbeat-aware read for the linked plan so the store sees activity.
             admin_resume_plan_row = await _to_thread_with_heartbeat(store.get_plan, plan_id)
             if not admin_resume_plan_row:
                 raise TriageResumeMissingPlanError(
@@ -416,6 +444,7 @@ async def run_generation_job(
                 raise TriageResumeMissingPlanError(
                     "admin triage resume job intake_id does not match linked plan intake_id"
                 )
+
             _emit_milestone(
                 "admin_resume_linkage_validated",
                 "Admin resume linkage validated",
@@ -424,16 +453,6 @@ async def run_generation_job(
                 intake_id=intake_id,
             )
 
-        raw_request_payload = job.get("request_payload") or {}
-        triage_resume_override_approved = False
-        triage_override_allowed_modes: list[Any] = []
-        if isinstance(raw_request_payload, dict):
-            triage_override = raw_request_payload.get(_TRIAGE_RESUME_OVERRIDE_KEY)
-            if isinstance(triage_override, dict):
-                triage_resume_override_approved = triage_override.get("approved") is True
-                modes = triage_override.get("allowed_modes")
-                if isinstance(modes, list):
-                    triage_override_allowed_modes = list(modes)
         await _touch_heartbeat()
         request_body = parse_plan_request(raw_request_payload)
         await _touch_heartbeat()
@@ -625,6 +644,7 @@ async def run_generation_job(
                 heartbeat_at=utc_now_iso(),
             )
 
+        plan_id = plan_id or (str(job.get("plan_id") or "") or None)
         plan_row: dict[str, Any] | None = None
         if job_source == "admin_triage_resume":
             plan_row = admin_resume_plan_row
@@ -640,11 +660,10 @@ async def run_generation_job(
                 ):
                     plan_row = latest_plan
                     plan_id = str(latest_plan.get("id") or "")
+
         if plan_row and plan_id:
-            # Preserve triage-approval audit markers that live on the existing
-            # plan's why_log so that updating it in place (e.g. after an admin
-            # resume) does not erase the trail the duplicate-approval guard
-            # and UI depend on.
+            # Preserve triage-approval audit markers so they aren't lost when
+            # updating the existing plan in-place (important for admin resume flows).
             existing_why_log = plan_row.get("why_log") if isinstance(plan_row.get("why_log"), dict) else {}
             preserved_keys = ("triage_regeneration_cleared", "triage_resume_approval")
             preserved = {key: existing_why_log[key] for key in preserved_keys if key in existing_why_log}
@@ -657,7 +676,7 @@ async def run_generation_job(
                 plan_id,
                 final_result,
             )
-        if not plan_row:
+        else:
             if job_source == "admin_triage_resume":
                 logger.error(
                     "[jobs] generation:resume_missing_plan job_id=%s athlete_id=%s intake_id=%s job_plan_id=%s",
@@ -667,8 +686,7 @@ async def run_generation_job(
                     job.get("plan_id"),
                 )
                 raise TriageResumeMissingPlanError(
-                    "admin triage resume job is missing its linked plan; "
-                    "refusing to create a duplicate plan"
+                    "admin triage resume job is missing its linked plan; refusing to create a duplicate plan"
                 )
             plan_row = await _to_thread_with_heartbeat(
                 store.create_plan,
@@ -757,6 +775,14 @@ async def run_generation_job(
                 heartbeat_at=utc_now_iso(),
             )
     except HTTPException as exc:
+        if exc.status_code == status.HTTP_503_SERVICE_UNAVAILABLE:
+            logger.warning(
+                "[jobs] generation:store_unavailable_deferred athlete_id=%s job_id=%s detail=%s",
+                athlete_id,
+                job_id,
+                exc.detail,
+            )
+            return
         detail = exc.detail if isinstance(exc.detail, str) else json.dumps(exc.detail)
         logger.warning("[jobs] generation:http_error athlete_id=%s job_id=%s detail=%s", athlete_id, job_id, detail)
         with suppress(Exception):
@@ -807,9 +833,10 @@ async def run_generation_job(
             )
     finally:
         stop_event.set()
-        heartbeat_task.cancel()
-        with suppress(asyncio.CancelledError):
-            await heartbeat_task
+        if heartbeat_task is not None:
+            heartbeat_task.cancel()
+            with suppress(asyncio.CancelledError):
+                await heartbeat_task
         active_tasks.discard(job_id)
 
 
@@ -844,7 +871,7 @@ async def schedule_generation_job_if_needed(
     job_id = str(job["id"])
     if job_id in active_tasks:
         return job
-
+=======
     max_concurrent_jobs = generation_max_concurrent_jobs()
     try:
         active_running_jobs = await asyncio.to_thread(
@@ -894,6 +921,7 @@ async def schedule_generation_job_if_needed(
             raise
         return refreshed or job
 
+>>>>>>> origin/Main
     active_tasks.add(job_id)
     try:
         if _use_fastapi_background_tasks():
@@ -915,5 +943,13 @@ async def schedule_generation_job_if_needed(
             )
     except Exception:
         active_tasks.discard(job_id)
-        raise
-    return claimed
+        logger.exception("[jobs] generation:schedule_failed job_id=%s", job_id)
+        return await asyncio.to_thread(
+            store.update_generation_job,
+            job_id,
+            status="failed",
+            error="Generation worker failed to schedule.",
+            completed_at=utc_now_iso(),
+            heartbeat_at=utc_now_iso(),
+        )
+    return job

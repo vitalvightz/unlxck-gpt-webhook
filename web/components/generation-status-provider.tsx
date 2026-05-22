@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useEffect, useRef, useState, useCallback, type ReactNode } from "react";
 import { getGenerationJob } from "@/lib/api";
+import { isPreStartStaleGenerationJob } from "@/lib/generation-controller";
 import type { GenerationJobResponse, GenerationJobStatus } from "@/lib/types";
 
 export type GlobalGenerationPhase = "queued" | "running" | "finalizing" | "completed" | "failed" | null;
@@ -167,23 +168,24 @@ export function GenerationStatusProvider({ children, token }: GenerationStatusPr
       if (pending.jobId && token) {
         try {
           const job: GenerationJobResponse = await getGenerationJob(token, pending.jobId);
-          const newPhase = phaseFromStatus(job.status);
+          const stalledBeforeStart = isPreStartStaleGenerationJob(job);
+          const newPhase = stalledBeforeStart ? "failed" : phaseFromStatus(job.status);
           setPhase(newPhase);
           setJobId(pending.jobId);
-          setStatusMessageText(statusMessage(newPhase));
+          setStatusMessageText(stalledBeforeStart ? "Build stalled — retry" : statusMessage(newPhase));
 
           if (job.status === "completed" || job.status === "review_required") {
             setPlanId(job.plan_id || job.latest_plan_id || null);
           }
 
-          if (isTerminalStatus(job.status)) {
+          if (stalledBeforeStart || isTerminalStatus(job.status)) {
             clearPendingGenerations();
 
             // Schedule the status clear — cancel any previous pending clear first
             if (clearTimerRef.current !== null) {
               clearTimeout(clearTimerRef.current);
             }
-            const delay = job.status === "failed" ? 3000 : 5000;
+            const delay = stalledBeforeStart || job.status === "failed" ? 3000 : 5000;
             clearTimerRef.current = setTimeout(() => {
               clearTimerRef.current = null;
               setPhase(null);
