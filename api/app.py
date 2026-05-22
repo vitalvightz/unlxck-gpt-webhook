@@ -1694,7 +1694,26 @@ def create_app(
                 intake_id=intake_id,
                 plan_id=plan_id,
             )
-        
+        # Ensure resume-specific override payload is always present on the job
+        # that will run. create_or_get_generation_job may return a pre-existing
+        # row keyed by the same client_request_id; if that row was created
+        # before this approval write, we must replace its payload so generation
+        # does not re-run without the override and fall back into triage-blocked.
+        job = await asyncio.to_thread(
+            store.update_generation_job,
+            str(job.get("id") or ""),
+            source="admin_triage_resume",
+            request_payload=request_payload,
+            intake_id=intake_id,
+            plan_id=plan_id,
+            stage1_result=None,
+            final_result=None,
+            error=None,
+            completed_at=None,
+            status="queued",
+            heartbeat_at=_utc_now_iso(),
+        )
+
         await asyncio.to_thread(
             store.update_plan_triage_approval,
             plan_id,
