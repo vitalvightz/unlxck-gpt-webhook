@@ -1664,22 +1664,23 @@ def create_app(
                 existing_resume_job,
                 stale_after_seconds=_generation_job_stale_after_seconds(),
             )
+            existing_linkage_matches = existing_intake_id == intake_id and existing_plan_id == plan_id
 
-            if _resume_job_resolved_successfully(existing_resume_job):
-                raise HTTPException(
-                    status_code=status.HTTP_409_CONFLICT,
-                    detail="this blocked plan has already been approved and resumed",
-                )
+            if not existing_linkage_matches:
+                if existing_status == "running" and not existing_is_stale:
+                    raise HTTPException(
+                        status_code=status.HTTP_409_CONFLICT,
+                        detail="existing running triage resume job has unsafe plan/intake linkage",
+                    )
+            else:
+                if _resume_job_resolved_successfully(existing_resume_job):
+                    raise HTTPException(
+                        status_code=status.HTTP_409_CONFLICT,
+                        detail="this blocked plan has already been approved and resumed",
+                    )
 
-            if existing_intake_id != intake_id or existing_plan_id != plan_id:
-                raise HTTPException(
-                    status_code=status.HTTP_409_CONFLICT,
-                    detail="existing triage resume job has unsafe plan/intake linkage",
-                )
-
-            if existing_status == "running" and not existing_is_stale:
-                return _job_response(existing_resume_job, viewer_role=profile.role)
-
+                if existing_status == "running" and not existing_is_stale:
+                    return _job_response(existing_resume_job, viewer_role=profile.role)
         why_log = plan_row.get("why_log") if isinstance(plan_row.get("why_log"), dict) else {}
         triage = why_log.get("injury_triage") if isinstance(why_log.get("injury_triage"), dict) else {}
         triage_mode = str(triage.get("mode") or "").strip().lower()
