@@ -365,6 +365,16 @@ def test_generate_plan_returns_review_required_when_stage2_needs_manual_review()
     _, job = _start_generation(client)
 
     assert job["status"] == "review_required"
+    milestone_details = [
+        milestone["detail"]
+        for milestone in job["progress_milestones"]
+        if milestone["code"].startswith("stage2_")
+    ]
+    assert (
+        "First-pass finalizer output did not pass validation. No automatic retry was sent."
+        in milestone_details
+    )
+    assert "Validator passed. Final coach-voice plan ready for handoff." not in milestone_details
     saved = next(iter(store.plans.values()))
     assert saved["final_plan_text"] == "# Failed Stage 2 Output"
     assert saved["stage2_status"] == "stage2_failed"
@@ -514,6 +524,7 @@ def test_run_generation_job_updates_existing_plan_for_same_intake_after_resume()
 
     assert refreshed_job["status"] == "completed"
     assert refreshed_job["plan_id"] == blocked_plan["id"]
+    assert stage2.calls[0]["_generation_source"] == "admin_triage_resume"
     assert updated_plan["status"] == "ready"
     assert updated_plan["stage2_status"] == "stage2_pass"
     assert updated_plan["plan_text"] == "# Final Plan"

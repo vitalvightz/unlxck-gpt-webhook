@@ -254,7 +254,11 @@ def _is_truthy_flag(value: Any) -> bool:
 
 def is_openai_quota_error(error: Exception) -> bool:
     message = str(error or "").lower()
-    if "insufficient_quota" in message or "exceeded your current quota" in message:
+    if (
+        "insufficient_quota" in message
+        or "exceeded your current quota" in message
+        or "openai quota/rate limit" in message
+    ):
         return True
     return "429" in message and "quota" in message
 
@@ -442,16 +446,27 @@ async def run_generation_job(
                     "Stage 2 finalizer drafting",
                     "Sending the planning brief to the AI finalizer.",
                 )
+                stage1_result = {
+                    **stage1_result,
+                    "_generation_source": str(job.get("source") or ""),
+                }
                 finalized_result = await finalize_stage2_with_timeout(
                     stage2=stage2,
                     stage1_result=stage1_result,
                 )
                 final_result = {**finalized_result, "full_name": request_body.athlete.full_name}
-                _emit_milestone(
-                    "stage2_validated",
-                    "Stage 2 finalizer complete",
-                    "Validator passed. Final coach-voice plan ready for handoff.",
-                )
+                if str(final_result.get("status") or "").strip().lower() == "ready":
+                    _emit_milestone(
+                        "stage2_validated",
+                        "Stage 2 finalizer complete",
+                        "Validator passed. Final coach-voice plan ready for handoff.",
+                    )
+                else:
+                    _emit_milestone(
+                        "stage2_review_required",
+                        "Stage 2 needs review",
+                        "First-pass finalizer output did not pass validation. No automatic retry was sent.",
+                    )
             job = await asyncio.to_thread(
                 store.update_generation_job,
                 job_id,
