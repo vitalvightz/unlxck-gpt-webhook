@@ -591,7 +591,7 @@ def test_needs_review_can_be_approved_and_resumed_with_normal_generation_flow():
     assert refreshed_plan.json()["admin_outputs"]["why_log"]["triage_regeneration_cleared"] is True
 
 
-def test_approve_and_resume_generation_rejects_duplicate_approval():
+def test_approve_and_resume_generation_blocks_duplicate_after_successful_resume():
     athlete = AuthenticatedUser(
         user_id="athlete-1",
         email="ari@example.com",
@@ -643,6 +643,136 @@ def test_approve_and_resume_generation_rejects_duplicate_approval():
     assert second_response.json()["detail"] == "this blocked plan has already been approved and resumed"
 
 
+def test_approve_and_resume_generation_does_not_reset_live_running_resume_job():
+    athlete = AuthenticatedUser(user_id="athlete-1", email="ari@example.com", full_name="Ari Mensah", metadata={})
+    admin = AuthenticatedUser(user_id="admin-1", email="ops@unlxck.test", full_name="Ops Admin", metadata={})
+    store = FakeStore()
+    store.ensure_profile(athlete)
+    request = _build_request()
+    intake = store.create_intake(athlete.user_id, request)
+    blocked_plan = store.create_plan(
+        athlete_id=athlete.user_id,
+        intake_id=str(intake["id"]),
+        request=request,
+        result=finalized_result(
+            status="triage_blocked",
+            stage2_status="triage_resume_approved",
+            why_log={
+                "injury_triage": {"mode": "needs_review", "should_block_stage2": True},
+                "triage_regeneration_cleared": True,
+            },
+        ),
+    )
+    existing_job = store.create_or_get_generation_job(
+        athlete_id=athlete.user_id,
+        client_request_id=f"triage_resume_{blocked_plan['id']}",
+        source="admin_triage_resume",
+        request_payload={"existing": True, "_triage_resume_override": {"approved": True}},
+        intake_id=str(intake["id"]),
+        plan_id=str(blocked_plan["id"]),
+    )
+    store.update_generation_job(
+        existing_job["id"],
+        status="running",
+        started_at=datetime.now(timezone.utc).isoformat(),
+        heartbeat_at=datetime.now(timezone.utc).isoformat(),
+        stage1_result={"status": "ready"},
+        final_result={"status": "working"},
+    )
+    client = TestClient(create_app(store=store, auth_service=FakeAuthService({"admin-token": admin})))
+    response = client.post(
+        f"/api/admin/plans/{blocked_plan['id']}/approve-and-resume-generation",
+        headers={"Authorization": "Bearer admin-token"},
+        json={"reason": "keep polling"},
+    )
+    assert response.status_code == 202
+    assert response.json()["job_id"] == existing_job["id"]
+    refreshed = store.get_generation_job(existing_job["id"])
+    assert refreshed["status"] == "running"
+    assert refreshed["stage1_result"] == {"status": "ready"}
+    assert refreshed["final_result"] == {"status": "working"}
+    assert refreshed["request_payload"] == {"existing": True, "_triage_resume_override": {"approved": True}}
+
+
+def test_approve_and_resume_generation_rejects_live_running_resume_job_with_unsafe_linkage():
+    athlete = AuthenticatedUser(user_id="athlete-1", email="ari@example.com", full_name="Ari Mensah", metadata={})
+    admin = AuthenticatedUser(user_id="admin-1", email="ops@unlxck.test", full_name="Ops Admin", metadata={})
+    store = FakeStore()
+    store.ensure_profile(athlete)
+    request = _build_request()
+    intake = store.create_intake(athlete.user_id, request)
+    blocked_plan = store.create_plan(
+        athlete_id=athlete.user_id,
+        intake_id=str(intake["id"]),
+        request=request,
+        result=finalized_result(
+            status="triage_blocked",
+            stage2_status="triage_resume_approved",
+            why_log={"injury_triage": {"mode": "needs_review", "should_block_stage2": True}},
+        ),
+    )
+    existing_job = store.create_or_get_generation_job(
+        athlete_id=athlete.user_id,
+        client_request_id=f"triage_resume_{blocked_plan['id']}",
+        source="admin_triage_resume",
+        request_payload={"existing": True},
+    )
+    store.update_generation_job(
+        existing_job["id"],
+        status="running",
+        started_at=datetime.now(timezone.utc).isoformat(),
+        heartbeat_at=datetime.now(timezone.utc).isoformat(),
+        intake_id=None,
+        plan_id=None,
+    )
+    client = TestClient(create_app(store=store, auth_service=FakeAuthService({"admin-token": admin})))
+    response = client.post(
+        f"/api/admin/plans/{blocked_plan['id']}/approve-and-resume-generation",
+        headers={"Authorization": "Bearer admin-token"},
+        json={"reason": "keep polling"},
+    )
+    assert response.status_code == 409
+    assert response.json()["detail"] == "existing triage resume job has unsafe linkage; create a new resume request"
+
+
+def test_approve_and_resume_generation_requeues_completed_triage_blocked_resume_job():
+    athlete = AuthenticatedUser(user_id="athlete-1", email="ari@example.com", full_name="Ari Mensah", metadata={})
+    admin = AuthenticatedUser(user_id="admin-1", email="ops@unlxck.test", full_name="Ops Admin", metadata={})
+    store = FakeStore()
+    store.ensure_profile(athlete)
+    request = _build_request()
+    intake = store.create_intake(athlete.user_id, request)
+    blocked_plan = store.create_plan(
+        athlete_id=athlete.user_id,
+        intake_id=str(intake["id"]),
+        request=request,
+        result=finalized_result(
+            status="triage_blocked",
+            stage2_status="triage_resume_approved",
+            why_log={"injury_triage": {"mode": "needs_review", "should_block_stage2": True}, "triage_regeneration_cleared": True},
+        ),
+    )
+    existing = store.create_or_get_generation_job(
+        athlete_id=athlete.user_id,
+        client_request_id=f"triage_resume_{blocked_plan['id']}",
+        source="admin_triage_resume",
+        request_payload=request.to_payload(),
+        intake_id=str(intake["id"]),
+        plan_id=str(blocked_plan["id"]),
+    )
+    store.update_generation_job(existing["id"], status="completed", final_result={"status": "triage_blocked"}, completed_at=datetime.now(timezone.utc).isoformat())
+    client = TestClient(create_app(store=store, auth_service=FakeAuthService({"admin-token": admin})))
+    response = client.post(
+        f"/api/admin/plans/{blocked_plan['id']}/approve-and-resume-generation",
+        headers={"Authorization": "Bearer admin-token"},
+        json={"reason": "retry blocked resume"},
+    )
+    assert response.status_code == 202
+    job = store.get_generation_job(response.json()["job_id"])
+    assert job["id"] == existing["id"]
+    assert job["request_payload"]["_triage_resume_override"]["approved"] is True
+
+
 def test_approve_and_resume_generation_creates_job_with_intake_and_plan_linked():
     athlete = AuthenticatedUser(
         user_id="athlete-1",
@@ -690,7 +820,6 @@ def test_approve_and_resume_generation_creates_job_with_intake_and_plan_linked()
     assert job is not None
     assert job["intake_id"] == str(intake["id"])
     assert job["plan_id"] == str(blocked_plan["id"])
-
 
 def test_approve_and_resume_generation_requeues_stale_running_resume_job_without_duplicate():
     athlete = AuthenticatedUser(

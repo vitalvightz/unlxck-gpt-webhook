@@ -31,6 +31,10 @@ class TriageResumeMissingPlanError(RuntimeError):
     linked plan is missing we fail loudly rather than silently creating a
     duplicate plan.
     """
+
+    pass
+
+
 _DETACHED_GENERATION_TASKS: set[asyncio.Task[None]] = set()
 _MAX_PERSISTED_MILESTONES = 40
 _OPENAI_QUOTA_ADMIN_ERROR = "OpenAI quota exceeded. Check API billing, credits, project budget, or organization limits."
@@ -254,7 +258,11 @@ def _is_truthy_flag(value: Any) -> bool:
 
 def is_openai_quota_error(error: Exception) -> bool:
     message = str(error or "").lower()
-    if "insufficient_quota" in message or "exceeded your current quota" in message:
+    if (
+        "insufficient_quota" in message
+        or "exceeded your current quota" in message
+        or "openai quota/rate limit" in message
+    ):
         return True
     return "429" in message and "quota" in message
 
@@ -348,35 +356,44 @@ async def run_generation_job(
 
         athlete_id = str(job["athlete_id"])
         job_source = str(job.get("source") or "").strip().lower()
+        intake_id = str(job.get("intake_id") or "").strip()
+        plan_id = str(job.get("plan_id") or "").strip() or None
         admin_resume_plan_row: dict[str, Any] | None = None
+
         if job_source == "admin_triage_resume":
-            linked_plan_id = str(job.get("plan_id") or "").strip()
-            linked_intake_id = str(job.get("intake_id") or "").strip()
-            if not linked_plan_id:
+            if not plan_id:
                 raise TriageResumeMissingPlanError(
                     "admin triage resume job is missing plan_id; refusing to create a duplicate plan"
                 )
-            admin_resume_plan_row = await _to_thread_with_heartbeat(store.get_plan, linked_plan_id)
+            if not intake_id:
+                raise TriageResumeMissingPlanError(
+                    "admin triage resume job is missing intake_id; refusing to create a duplicate plan"
+                )
+
+            admin_resume_plan_row = await _to_thread_with_heartbeat(store.get_plan, plan_id)
             if not admin_resume_plan_row:
                 raise TriageResumeMissingPlanError(
-                    "admin triage resume job is missing its linked plan; refusing to create a duplicate plan"
+                    "admin triage resume job linked plan was not found; refusing to create a duplicate plan"
                 )
+
             linked_athlete_id = str(admin_resume_plan_row.get("athlete_id") or "").strip()
+            linked_intake_id = str(admin_resume_plan_row.get("intake_id") or "").strip()
+
             if linked_athlete_id != athlete_id:
                 raise TriageResumeMissingPlanError(
                     "admin triage resume job linked plan belongs to a different athlete"
                 )
-            plan_intake_id = str(admin_resume_plan_row.get("intake_id") or "").strip()
-            if not linked_intake_id or linked_intake_id != plan_intake_id:
+
+            if linked_intake_id != intake_id:
                 raise TriageResumeMissingPlanError(
-                    "admin triage resume job has unsafe intake linkage; refusing to create a duplicate plan"
+                    "admin triage resume job intake_id does not match linked plan intake_id"
                 )
             _emit_milestone(
                 "admin_resume_linkage_validated",
                 "Admin resume linkage validated",
                 "Linked plan and intake were verified before parsing the request payload.",
-                plan_id=linked_plan_id,
-                intake_id=linked_intake_id,
+                plan_id=plan_id,
+                intake_id=intake_id,
             )
 
         raw_request_payload = job.get("request_payload") or {}
@@ -445,8 +462,6 @@ async def run_generation_job(
                 "Profile refresh failed; generation is continuing with the stored payload.",
                 failed=True,
             )
-
-        intake_id = str(job.get("intake_id") or "")
         if not intake_id:
             intake = await _to_thread_with_heartbeat(store.create_intake, athlete_id, request_body)
             intake_id = str(intake["id"])
@@ -524,17 +539,28 @@ async def run_generation_job(
                     "Sending the planning brief to the AI finalizer.",
                 )
                 await _touch_heartbeat()
+                stage1_result = {
+                    **stage1_result,
+                    "_generation_source": str(job.get("source") or ""),
+                }
                 finalized_result = await finalize_stage2_with_timeout(
                     stage2=stage2,
                     stage1_result=stage1_result,
                 )
                 await _touch_heartbeat()
                 final_result = {**finalized_result, "full_name": request_body.athlete.full_name}
-                _emit_milestone(
-                    "stage2_validated",
-                    "Stage 2 finalizer complete",
-                    "Validator passed. Final coach-voice plan ready for handoff.",
-                )
+                if str(final_result.get("status") or "").strip().lower() == "ready":
+                    _emit_milestone(
+                        "stage2_validated",
+                        "Stage 2 finalizer complete",
+                        "Validator passed. Final coach-voice plan ready for handoff.",
+                    )
+                else:
+                    _emit_milestone(
+                        "stage2_review_required",
+                        "Stage 2 needs review",
+                        "First-pass finalizer output did not pass validation. No automatic retry was sent.",
+                    )
             job = await _to_thread_with_heartbeat(
                 store.update_generation_job,
                 job_id,
@@ -542,19 +568,21 @@ async def run_generation_job(
                 heartbeat_at=utc_now_iso(),
             )
 
-        plan_id = str(job.get("plan_id") or "") or None
-        plan_row: dict[str, Any] | None = admin_resume_plan_row
-        if not plan_row and plan_id:
-            plan_row = await _to_thread_with_heartbeat(store.get_plan, plan_id)
-        if not plan_row and intake_id and job_source != "admin_triage_resume":
-            latest_plan = await asyncio.to_thread(store.get_latest_plan, athlete_id)
-            if (
-                latest_plan
-                and str(latest_plan.get("intake_id") or "") == intake_id
-                and str(latest_plan.get("status") or "").strip().lower() != "archived"
-            ):
-                plan_row = latest_plan
-                plan_id = str(latest_plan.get("id") or "")
+        plan_row: dict[str, Any] | None = None
+        if job_source == "admin_triage_resume":
+            plan_row = admin_resume_plan_row
+        else:
+            if plan_id:
+                plan_row = await _to_thread_with_heartbeat(store.get_plan, plan_id)
+            if not plan_row and intake_id:
+                latest_plan = await asyncio.to_thread(store.get_latest_plan, athlete_id)
+                if (
+                    latest_plan
+                    and str(latest_plan.get("intake_id") or "") == intake_id
+                    and str(latest_plan.get("status") or "").strip().lower() != "archived"
+                ):
+                    plan_row = latest_plan
+                    plan_id = str(latest_plan.get("id") or "")
         if plan_row and plan_id:
             # Preserve triage-approval audit markers that live on the existing
             # plan's why_log so that updating it in place (e.g. after an admin

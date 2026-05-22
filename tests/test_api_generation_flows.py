@@ -365,6 +365,16 @@ def test_generate_plan_returns_review_required_when_stage2_needs_manual_review()
     _, job = _start_generation(client)
 
     assert job["status"] == "review_required"
+    milestone_details = [
+        milestone["detail"]
+        for milestone in job["progress_milestones"]
+        if milestone["code"].startswith("stage2_")
+    ]
+    assert (
+        "First-pass finalizer output did not pass validation. No automatic retry was sent."
+        in milestone_details
+    )
+    assert "Validator passed. Final coach-voice plan ready for handoff." not in milestone_details
     saved = next(iter(store.plans.values()))
     assert saved["final_plan_text"] == "# Failed Stage 2 Output"
     assert saved["stage2_status"] == "stage2_failed"
@@ -599,17 +609,24 @@ def test_admin_triage_resume_without_linked_plan_fails_without_creating_duplicat
     store.ensure_profile(athlete)
     request = _build_request()
     intake = store.create_intake(athlete.user_id, request)
+    blocked_plan = store.create_plan(
+        athlete_id=athlete.user_id,
+        intake_id=str(intake["id"]),
+        request=request,
+        result=finalized_result(status="triage_blocked", stage2_status="triage_blocked"),
+    )
+    store.plans.pop(blocked_plan["id"], None)
     # Mirror the production hazard: an admin_triage_resume job whose linked
     # plan no longer exists (and there is no non-archived plan to fall back
     # to via intake_id). The worker must refuse to create a new plan.
     job = store.create_or_get_generation_job(
         athlete_id=athlete.user_id,
-        client_request_id="triage-resume-missing-plan",
+        client_request_id="triage-resume-job",
         source="admin_triage_resume",
         request_payload=request.model_dump(mode="json"),
+        intake_id=str(intake["id"]),
+        plan_id=str(blocked_plan["id"]),
     )
-    store.update_generation_job(job["id"], intake_id=str(intake["id"]))
-
     asyncio.run(
         run_generation_job(
             job_id=job["id"],
@@ -623,9 +640,8 @@ def test_admin_triage_resume_without_linked_plan_fails_without_creating_duplicat
     refreshed_job = store.get_generation_job(job["id"])
     assert refreshed_job["status"] == "failed"
     assert "refusing to create a duplicate plan" in str(refreshed_job["error"])
-    assert refreshed_job["plan_id"] is None
+    assert refreshed_job["plan_id"] == str(blocked_plan["id"])
     assert store.list_user_plans(athlete.user_id) == []
-
 
 def test_admin_triage_resume_linked_plan_for_different_athlete_fails_before_planner():
     store = FakeStore()
@@ -684,6 +700,91 @@ def test_admin_triage_resume_linked_plan_for_different_athlete_fails_before_plan
     assert refreshed_job["error"] == "admin triage resume job linked plan belongs to a different athlete"
     assert planner_calls == []
     assert store.get_plan(other_plan["id"])["status"] == "triage_blocked"
+
+
+def test_admin_triage_resume_without_plan_id_fails_before_planner():
+    store = FakeStore()
+    athlete = AuthenticatedUser(user_id="athlete-1", email="ari@example.com", full_name="Ari Mensah", metadata={})
+    store.ensure_profile(athlete)
+    request = _build_request()
+    intake = store.create_intake(athlete.user_id, request)
+    job = store.create_or_get_generation_job(
+        athlete_id=athlete.user_id,
+        client_request_id="triage-resume-missing-plan-id",
+        source="admin_triage_resume",
+        request_payload=request.model_dump(mode="json"),
+        intake_id=str(intake["id"]),
+    )
+    planner_called = False
+
+    def _planner_should_not_run(payload: dict) -> dict:
+        nonlocal planner_called
+        planner_called = True
+        return _planner(payload)
+
+    asyncio.run(run_generation_job(job_id=job["id"], store=store, planner_fn=_planner_should_not_run, stage2=FakeStage2Automator(result=finalized_result()), active_tasks=set()))
+    refreshed_job = store.get_generation_job(job["id"])
+    assert refreshed_job["status"] == "failed"
+    assert "missing plan_id" in str(refreshed_job["error"])
+    assert planner_called is False
+
+
+def test_admin_triage_resume_without_intake_id_fails_before_planner():
+    store = FakeStore()
+    athlete = AuthenticatedUser(user_id="athlete-1", email="ari@example.com", full_name="Ari Mensah", metadata={})
+    store.ensure_profile(athlete)
+    request = _build_request()
+    intake = store.create_intake(athlete.user_id, request)
+    blocked_plan = store.create_plan(athlete_id=athlete.user_id, intake_id=str(intake["id"]), request=request, result=finalized_result(status="triage_blocked", stage2_status="triage_blocked"))
+    job = store.create_or_get_generation_job(
+        athlete_id=athlete.user_id,
+        client_request_id="triage-resume-missing-intake-id",
+        source="admin_triage_resume",
+        request_payload=request.model_dump(mode="json"),
+        plan_id=str(blocked_plan["id"]),
+    )
+    planner_called = False
+
+    def _planner_should_not_run(payload: dict) -> dict:
+        nonlocal planner_called
+        planner_called = True
+        return _planner(payload)
+
+    asyncio.run(run_generation_job(job_id=job["id"], store=store, planner_fn=_planner_should_not_run, stage2=FakeStage2Automator(result=finalized_result()), active_tasks=set()))
+    refreshed_job = store.get_generation_job(job["id"])
+    assert refreshed_job["status"] == "failed"
+    assert "missing intake_id" in str(refreshed_job["error"])
+    assert planner_called is False
+
+
+def test_admin_triage_resume_mismatched_intake_fails_before_planner():
+    store = FakeStore()
+    athlete = AuthenticatedUser(user_id="athlete-1", email="ari@example.com", full_name="Ari Mensah", metadata={})
+    store.ensure_profile(athlete)
+    request = _build_request()
+    intake_a = store.create_intake(athlete.user_id, request)
+    intake_b = store.create_intake(athlete.user_id, request)
+    blocked_plan = store.create_plan(athlete_id=athlete.user_id, intake_id=str(intake_a["id"]), request=request, result=finalized_result(status="triage_blocked", stage2_status="triage_blocked"))
+    job = store.create_or_get_generation_job(
+        athlete_id=athlete.user_id,
+        client_request_id="triage-resume-mismatch-intake",
+        source="admin_triage_resume",
+        request_payload=request.model_dump(mode="json"),
+        intake_id=str(intake_b["id"]),
+        plan_id=str(blocked_plan["id"]),
+    )
+    planner_called = False
+
+    def _planner_should_not_run(payload: dict) -> dict:
+        nonlocal planner_called
+        planner_called = True
+        return _planner(payload)
+
+    asyncio.run(run_generation_job(job_id=job["id"], store=store, planner_fn=_planner_should_not_run, stage2=FakeStage2Automator(result=finalized_result()), active_tasks=set()))
+    refreshed_job = store.get_generation_job(job["id"])
+    assert refreshed_job["status"] == "failed"
+    assert "intake_id does not match linked plan intake_id" in str(refreshed_job["error"])
+    assert planner_called is False
 
 
 def test_admin_triage_resume_with_override_updates_blocked_plan_in_place():
@@ -1527,6 +1628,47 @@ def test_retry_generation_job_creates_new_job_with_original_request_payload():
     assert new_job["request_payload"] == original["request_payload"]
     assert new_job["source"] == original["source"]
     assert new_job["status"] in {"queued", "running", "completed", "review_required", "failed"}
+
+
+def test_retry_admin_triage_resume_preserves_plan_and_intake_linkage():
+    client, store, _ = _build_client()
+    store.ensure_profile(
+        AuthenticatedUser(user_id="athlete-1", email="ari@example.com", full_name="Ari Mensah", metadata={})
+    )
+    store.ensure_profile(
+        AuthenticatedUser(user_id="admin-1", email="ops@unlxck.test", full_name="Ops Admin", metadata={})
+    )
+    request = _build_request()
+    intake = store.create_intake("athlete-1", request)
+    blocked_plan = store.create_plan(
+        athlete_id="athlete-1",
+        intake_id=str(intake["id"]),
+        request=request,
+        result=finalized_result(
+            status="triage_blocked",
+            stage2_status="triage_blocked",
+            why_log={"injury_triage": {"mode": "needs_review", "should_block_stage2": True}},
+        ),
+    )
+    original = store.create_or_get_generation_job(
+        athlete_id="athlete-1",
+        client_request_id="orig-admin-triage-resume",
+        source="admin_triage_resume",
+        request_payload={**request.model_dump(mode="json"), "_triage_resume_override": {"approved": True}},
+        intake_id=str(intake["id"]),
+        plan_id=str(blocked_plan["id"]),
+    )
+    store.update_generation_job(original["id"], status="failed", error="failed run", completed_at=_now())
+    response = client.post(
+        f"/api/generation-jobs/{original['id']}/retry",
+        headers={"Authorization": "Bearer admin-token"},
+    )
+    assert response.status_code == 202
+    retried = store.get_generation_job(response.json()["job_id"])
+    assert retried is not None
+    assert retried["source"] == "admin_triage_resume"
+    assert retried["intake_id"] == str(intake["id"])
+    assert retried["plan_id"] == str(blocked_plan["id"])
 
 
 def test_retry_generation_job_respects_daily_limit_for_self_serve(monkeypatch: pytest.MonkeyPatch):
