@@ -260,6 +260,36 @@ def is_worker_start_stale_generation_job(job: dict[str, Any], *, stale_after_sec
     return (now - reference_time).total_seconds() >= max(1, stale_after_seconds)
 
 
+def is_job_loaded_stalled_generation_job(job: dict[str, Any], *, stale_after_seconds: int = 90) -> bool:
+    if str(job.get("status") or "") != "running":
+        return False
+    if job.get("completed_at") is not None:
+        return False
+    if job.get("stage1_result") is not None:
+        return False
+    if job.get("final_result") is not None:
+        return False
+    milestones = _progress_milestones(job.get("progress_milestones"))
+    if not milestones:
+        return False
+
+    saw_job_loaded_at: datetime | None = None
+    blocked_codes = {"request_payload_parsed", "profile_update_started", "stage1_planner_starting", "stage1_planner_invoked"}
+    for entry in milestones:
+        if not isinstance(entry, dict):
+            continue
+        code = str(entry.get("code") or "")
+        if code in blocked_codes:
+            return False
+        if code == "job_loaded":
+            parsed = _parse_datetime(entry.get("at"))
+            saw_job_loaded_at = parsed or saw_job_loaded_at
+    if saw_job_loaded_at is None:
+        return False
+    age = (datetime.now(timezone.utc) - saw_job_loaded_at).total_seconds()
+    return age >= max(1, stale_after_seconds)
+
+
 def is_startup_stale_generation_job(job: dict[str, Any], *, stale_after_seconds: int = 90) -> bool:
     return is_pre_start_stale_generation_job(
         job,
@@ -305,6 +335,15 @@ def _stage1_stale_after_seconds_for_reads() -> int:
     if parsed <= 0:
         return 180
     return max(1, int(parsed))
+
+
+def _generation_startup_max_attempts() -> int:
+    raw_value = os.getenv("APP_GENERATION_STARTUP_MAX_ATTEMPTS", "2").strip()
+    try:
+        parsed = int(float(raw_value))
+    except ValueError:
+        return 2
+    return max(1, parsed)
 
 
 def _job_loaded_milestone(now_iso: str) -> dict[str, Any]:
@@ -362,6 +401,8 @@ class SupabaseAppStore:
             return "fresh"
         if is_startup_stale_generation_job(job, stale_after_seconds=stale_after_seconds):
             return "startup_stale"
+        if is_job_loaded_stalled_generation_job(job, stale_after_seconds=stale_after_seconds):
+            return "job_loaded_stalled"
         stage1_threshold = stale_after_seconds if stage1_stale_after_seconds is None else stage1_stale_after_seconds
         if is_stage1_planner_stalled_generation_job(job, stale_after_seconds=stage1_threshold):
             return "stage1_planner_stalled"
@@ -1263,11 +1304,70 @@ class SupabaseAppStore:
             )
             if not job or str(job.get("status") or "") != "running":
                 return job
-            if self._classify_running_job_staleness(
+            staleness = self._classify_running_job_staleness(
                 job,
                 stale_after_seconds=90,
                 stage1_stale_after_seconds=_stage1_stale_after_seconds_for_reads(),
-            ) == "stage1_planner_stalled":
+            )
+            if staleness == "job_loaded_stalled":
+                attempt_count = int(job.get("attempt_count") or 0)
+                now_iso = _utc_now_iso()
+                milestones = _progress_milestones(job.get("progress_milestones"))
+                if attempt_count < _generation_startup_max_attempts():
+                    milestones.append(
+                        {
+                            "code": "worker_claim_stalled_requeued",
+                            "label": "Worker claim stalled",
+                            "detail": "Worker loaded the generation job but did not reach request parsing; job was requeued for recovery.",
+                            "meta": {},
+                            "at": now_iso,
+                        }
+                    )
+                    self._run_with_transient_retry(
+                        operation="get_generation_job:requeue_job_loaded_stalled",
+                        fn=lambda: self.client.table("generation_jobs")
+                        .update(
+                            {
+                                "status": "queued",
+                                "error": None,
+                                "started_at": None,
+                                "heartbeat_at": None,
+                                "completed_at": None,
+                                "progress_milestones": milestones,
+                            }
+                        )
+                        .eq("id", str(job.get("id") or ""))
+                        .eq("status", "running")
+                        .execute(),
+                    )
+                else:
+                    milestones.append(
+                        {
+                            "code": "worker_claim_stalled_failed",
+                            "label": "Worker stalled after loading job",
+                            "detail": "Worker loaded the generation job but did not reach request parsing after retry.",
+                            "meta": {},
+                            "at": now_iso,
+                        }
+                    )
+                    self._run_with_transient_retry(
+                        operation="get_generation_job:fail_job_loaded_stalled",
+                        fn=lambda: self.client.table("generation_jobs")
+                        .update(
+                            {
+                                "status": "failed",
+                                "error": "Generation worker stalled after loading the job.",
+                                "completed_at": now_iso,
+                                "heartbeat_at": now_iso,
+                                "progress_milestones": milestones,
+                            }
+                        )
+                        .eq("id", str(job.get("id") or ""))
+                        .eq("status", "running")
+                        .execute(),
+                    )
+                return self._read_generation_job(job_id)
+            if staleness == "stage1_planner_stalled":
                 now_iso = _utc_now_iso()
                 milestones = _progress_milestones(job.get("progress_milestones"))
                 milestones.append(
@@ -1395,6 +1495,63 @@ class SupabaseAppStore:
                         .eq("status", "running")
                         .execute(),
                     )
+                elif staleness == "job_loaded_stalled":
+                    attempt_count = int(row.get("attempt_count") or 0)
+                    now_iso = _utc_now_iso()
+                    milestones = _progress_milestones(row.get("progress_milestones"))
+                    if attempt_count < _generation_startup_max_attempts():
+                        milestones.append(
+                            {
+                                "code": "worker_claim_stalled_requeued",
+                                "label": "Worker claim stalled",
+                                "detail": "Worker loaded the generation job but did not reach request parsing; job was requeued for recovery.",
+                                "meta": {},
+                                "at": now_iso,
+                            }
+                        )
+                        self._run_with_transient_retry(
+                            operation="get_active_generation_job_for_athlete:requeue_job_loaded_stalled",
+                            fn=lambda: self.client.table("generation_jobs")
+                            .update(
+                                {
+                                    "status": "queued",
+                                    "error": None,
+                                    "heartbeat_at": None,
+                                    "started_at": None,
+                                    "completed_at": None,
+                                    "progress_milestones": milestones,
+                                }
+                            )
+                            .eq("id", str(row.get("id") or ""))
+                            .eq("status", "running")
+                            .execute(),
+                        )
+                    else:
+                        milestones.append(
+                            {
+                                "code": "worker_claim_stalled_failed",
+                                "label": "Worker stalled after loading job",
+                                "detail": "Worker loaded the generation job but did not reach request parsing after retry.",
+                                "meta": {},
+                                "at": now_iso,
+                            }
+                        )
+                        self._run_with_transient_retry(
+                            operation="get_active_generation_job_for_athlete:fail_job_loaded_stalled",
+                            fn=lambda: self.client.table("generation_jobs")
+                            .update(
+                                {
+                                    "status": "failed",
+                                    "error": "Generation worker stalled after loading the job.",
+                                    "completed_at": now_iso,
+                                    "heartbeat_at": now_iso,
+                                    "progress_milestones": milestones,
+                                }
+                            )
+                            .eq("id", str(row.get("id") or ""))
+                            .eq("status", "running")
+                            .execute(),
+                        )
                 elif staleness == "stage1_planner_stalled":
                     now_iso = _utc_now_iso()
                     milestones = _progress_milestones(row.get("progress_milestones"))
