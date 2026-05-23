@@ -381,12 +381,16 @@ async def run_generation_job(
     athlete_id = "unknown"
     progress_callback: ProgressCallback | None = None
     stage1_timed_out = threading.Event()
+    seen_milestone_codes: set[str] = set()
 
     def _emit_milestone(code: str, label: str, detail: str = "", **meta: Any) -> None:
         if progress_callback is None:
             return
+        if code == "stage1_planner_timeout" and code in seen_milestone_codes:
+            return
         try:
             progress_callback(code, label, detail, meta)
+            seen_milestone_codes.add(code)
         except Exception:
             logger.exception("[jobs] generation:milestone_emit_failed job_id=%s code=%s", job_id, code)
 
@@ -428,6 +432,11 @@ async def run_generation_job(
         # Use persisted milestones as the initial state for the progress recorder.
         persisted_milestones = job.get("progress_milestones")
         initial_milestones = persisted_milestones if isinstance(persisted_milestones, list) else []
+        for milestone in initial_milestones:
+            if isinstance(milestone, dict):
+                milestone_code = str(milestone.get("code") or "").strip()
+                if milestone_code:
+                    seen_milestone_codes.add(milestone_code)
         _, progress_callback = build_progress_recorder(
             job_id=job_id,
             store=store,

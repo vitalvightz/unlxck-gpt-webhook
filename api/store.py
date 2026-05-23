@@ -214,6 +214,13 @@ def _progress_milestones(value: Any) -> list[Any]:
     return value if isinstance(value, list) else []
 
 
+def _has_milestone_code(milestones: list[Any], code: str) -> bool:
+    for entry in milestones:
+        if isinstance(entry, dict) and str(entry.get("code") or "") == code:
+            return True
+    return False
+
+
 def is_pre_start_stale_generation_job(job: dict[str, Any], *, stale_after_seconds: int = 90) -> bool:
     if str(job.get("status") or "") != "running":
         return False
@@ -1370,15 +1377,16 @@ class SupabaseAppStore:
             if staleness == "stage1_planner_stalled":
                 now_iso = _utc_now_iso()
                 milestones = _progress_milestones(job.get("progress_milestones"))
-                milestones.append(
-                    {
-                        "code": "stage1_planner_timeout",
-                        "label": "Stage 1 planner timed out",
-                        "detail": "Planner did not return after invocation and the job was failed for recovery.",
-                        "meta": {},
-                        "at": now_iso,
-                    }
-                )
+                if not _has_milestone_code(milestones, "stage1_planner_timeout"):
+                    milestones.append(
+                        {
+                            "code": "stage1_planner_timeout",
+                            "label": "Stage 1 planner timed out",
+                            "detail": "Planner did not return after invocation and the job was failed for recovery.",
+                            "meta": {},
+                            "at": now_iso,
+                        }
+                    )
                 self._run_with_transient_retry(
                     operation="get_generation_job:fail_stage1_stalled",
                     fn=lambda: self.client.table("generation_jobs")
@@ -1555,15 +1563,16 @@ class SupabaseAppStore:
                 elif staleness == "stage1_planner_stalled":
                     now_iso = _utc_now_iso()
                     milestones = _progress_milestones(row.get("progress_milestones"))
-                    milestones.append(
-                        {
-                            "code": "stage1_planner_timeout",
-                            "label": "Stage 1 planner timed out",
-                            "detail": "Planner did not return after invocation and the job was failed for recovery.",
-                            "meta": {},
-                            "at": now_iso,
-                        }
-                    )
+                    if not _has_milestone_code(milestones, "stage1_planner_timeout"):
+                        milestones.append(
+                            {
+                                "code": "stage1_planner_timeout",
+                                "label": "Stage 1 planner timed out",
+                                "detail": "Planner did not return after invocation and the job was failed for recovery.",
+                                "meta": {},
+                                "at": now_iso,
+                            }
+                        )
                     self._run_with_transient_retry(
                         operation="get_active_generation_job_for_athlete:fail_stage1_stalled",
                         fn=lambda: self.client.table("generation_jobs")
