@@ -2601,6 +2601,52 @@ def _late_fight_warnings(planning_brief: dict, final_plan_text: str) -> list[dic
     return warnings
 
 
+
+
+def _stage2_output_incomplete_warnings(final_plan_text: str) -> list[dict[str, Any]]:
+    lines = [line.strip() for line in str(final_plan_text or "").splitlines() if line.strip()]
+    if not lines:
+        return []
+
+    warnings: list[dict[str, Any]] = []
+    countdown_lines = [line for line in lines if _COUNTDOWN_LABEL_LINE.match(line)]
+    has_countdown = bool(countdown_lines)
+    has_d0 = any(re.search(r"\bD-0\b", line, re.IGNORECASE) for line in lines)
+
+    def add_warning(reason: str, line: str) -> None:
+        warnings.append(
+            {
+                "code": "stage2_output_incomplete",
+                "message": "Stage 2 output looks truncated before the full plan was rendered.",
+                "reason": reason,
+                "line": line,
+                "blocking": True,
+            }
+        )
+
+    last_line = lines[-1]
+    if re.search(r"\bD-\d+\s*\([^)]*\)\s*(?:—|-|:)\s*(?:Coach|Why:|Anchor\s*—|Support\s*—|Rehab\s*—)?$", last_line, re.IGNORECASE):
+        add_warning("final_line_truncated_heading", last_line)
+
+    if re.search(r"(?:Coach|Why:|Anchor\s*—|Support\s*—|Rehab\s*—)$", last_line, re.IGNORECASE):
+        add_warning("final_line_incomplete_stem", last_line)
+
+    if has_countdown and not has_d0:
+        add_warning("countdown_missing_d0", last_line)
+
+    if has_countdown and not any("fight day protocol" in line.lower() for line in lines):
+        add_warning("countdown_missing_fight_day_protocol", last_line)
+
+    deduped = []
+    seen = set()
+    for warning in warnings:
+        key = warning["reason"]
+        if key in seen:
+            continue
+        seen.add(key)
+        deduped.append(warning)
+    return deduped
+
 def validate_stage2_output(*, planning_brief: dict, final_plan_text: str) -> dict:
     plan_lines = _extract_plan_lines(final_plan_text)
     phase_sections = _phase_sections(final_plan_text)
@@ -2656,6 +2702,7 @@ def validate_stage2_output(*, planning_brief: dict, final_plan_text: str) -> dic
     sport_language_warnings = _sport_language_warnings(planning_brief, plan_lines)
     calendar_spine_warnings = _calendar_spine_warnings(planning_brief, final_plan_text)
     late_fight_warnings = _late_fight_warnings(planning_brief, final_plan_text)
+    stage2_output_incomplete_warnings = _stage2_output_incomplete_warnings(final_plan_text)
 
     errors = [
         {
@@ -2704,6 +2751,7 @@ def validate_stage2_output(*, planning_brief: dict, final_plan_text: str) -> dic
     warnings.extend(sport_language_warnings)
     warnings.extend(calendar_spine_warnings)
     warnings.extend(late_fight_warnings)
+    warnings.extend(stage2_output_incomplete_warnings)
 
     return {
         "is_valid": not errors,
@@ -2731,5 +2779,6 @@ def validate_stage2_output(*, planning_brief: dict, final_plan_text: str) -> dic
         "coach_voice_warnings": coach_voice_warnings,
         "calendar_spine_warnings": calendar_spine_warnings,
         "late_fight_warnings": late_fight_warnings,
+        "stage2_output_incomplete_warnings": stage2_output_incomplete_warnings,
         "sport_language_warnings": sport_language_warnings,
     }

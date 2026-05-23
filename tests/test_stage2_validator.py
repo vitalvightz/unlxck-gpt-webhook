@@ -1,3 +1,4 @@
+from fightcamp.stage2_pipeline import review_stage2_output
 from fightcamp.stage2_validator import validate_stage2_output
 
 
@@ -2312,3 +2313,29 @@ def test_calendar_spine_allows_unassigned_off_recovery_only_day():
         warning["code"] == "calendar_spine_session_role_not_authorized"
         for warning in report["warnings"]
     )
+
+
+def test_validate_stage2_output_blocks_visibly_truncated_countdown_plan():
+    truncated_plan = """
+    Active weight cut: target ~4% body mass.
+    GPP — Week 1 (D-33 to D-27)
+    D-31 (Monday) — Coach-led boxing session
+    - No app S&C today.
+
+    SPP — Week 3 (D-19 to D-14)
+    D-17 (Monday) — Coach
+    """
+
+    report = validate_stage2_output(
+        planning_brief=_planning_brief_fixture(),
+        final_plan_text=truncated_plan,
+    )
+
+    blocking_codes = {warning["code"] for warning in report["warnings"] if warning.get("blocking")}
+    assert "stage2_output_incomplete" in blocking_codes
+
+    review = review_stage2_output(
+        planning_brief=_planning_brief_fixture(),
+        final_plan_text=truncated_plan,
+    )
+    assert review["status"] != "PASS"

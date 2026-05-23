@@ -156,6 +156,26 @@ def _strip_wrapping_code_fence(text: str) -> str:
     return normalized[first_newline + 1 : -3].strip()
 
 
+
+
+def _response_is_incomplete(response: Any) -> bool:
+    status = str(getattr(response, "status", "") or "").strip().lower()
+    if status == "incomplete":
+        return True
+
+    details = getattr(response, "incomplete_details", None)
+    if details is None:
+        return False
+    if hasattr(details, "model_dump"):
+        details = details.model_dump(mode="python")
+
+    if isinstance(details, dict):
+        detail_text = " ".join(str(value) for value in details.values() if value is not None).lower()
+    else:
+        detail_text = str(details).lower()
+
+    return any(marker in detail_text for marker in ("max_output_tokens", "output", "token", "length"))
+
 def _extract_response_text(response: Any) -> str:
     output_text = getattr(response, "output_text", None)
     if isinstance(output_text, str) and output_text.strip():
@@ -250,7 +270,6 @@ class DisabledStage2Automator:
 class OpenAIStage2Automator:
     client: Any
     model: str
-    max_output_tokens: int | None = None
 
     @classmethod
     def from_env(cls) -> Stage2Automator:
@@ -269,7 +288,6 @@ class OpenAIStage2Automator:
 
         model = os.getenv("UNLXCK_STAGE2_MODEL", "gpt-5-mini").strip() or "gpt-5-mini"
         timeout_seconds = float(os.getenv("UNLXCK_STAGE2_TIMEOUT_SECONDS", "90"))
-        max_output_tokens = os.getenv("UNLXCK_STAGE2_MAX_OUTPUT_TOKENS", "").strip()
         client = AsyncOpenAI(
             api_key=api_key,
             timeout=timeout_seconds,
@@ -278,7 +296,6 @@ class OpenAIStage2Automator:
         return cls(
             client=client,
             model=model,
-            max_output_tokens=int(max_output_tokens) if max_output_tokens else None,
         )
 
     async def _generate_text(self, prompt: str, *, attempt_label: str, source: str) -> str:
@@ -287,8 +304,6 @@ class OpenAIStage2Automator:
             "model": self.model,
             "input": prompt,
         }
-        if self.max_output_tokens is not None:
-            request["max_output_tokens"] = self.max_output_tokens
         logger.info(
             "[stage2] sending %s prompt to model=%s chars=%s",
             attempt_label,
@@ -304,6 +319,10 @@ class OpenAIStage2Automator:
                 ) from exc
             raise Stage2AutomationError(f"Stage 2 model request failed: {exc}") from exc
         response_id = getattr(response, "id", None) or "unknown"
+        if _response_is_incomplete(response):
+            raise Stage2AutomationError(
+                "Stage 2 model response was incomplete before producing a full plan."
+            )
         text = _extract_response_text(response)
         usage = _extract_response_usage(response)
         actual_input_tokens = usage["input_tokens"] or _estimated_input_tokens(prompt)
