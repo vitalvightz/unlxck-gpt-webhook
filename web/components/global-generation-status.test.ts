@@ -25,6 +25,7 @@ test("failed generation has no link target", () => {
 });
 
 
-test("review-required without plan id has no link target", () => {
+test("terminal states without plan id have no link target", () => {
+  assert.equal(getGenerationStatusTarget("completed", null, "completed"), null);
   assert.equal(getGenerationStatusTarget("completed", null, "review_required"), null);
 });
