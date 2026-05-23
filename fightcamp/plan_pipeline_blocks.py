@@ -92,6 +92,10 @@ def _generate_strength_blocks(context: PlanRuntimeContext, phase_mindset_cues: d
     previous_movements: set[str] = set()
     # Compute once per request; spread into per-phase flags dict below.
     base_flags = context.training_context.to_flags()
+    logger = logging.getLogger(__name__)
+
+    def _emit_strength_substep(code: str, label: str) -> None:
+        _emit_progress(context.progress_callback, code, label)
 
     for phase in PHASES:
         if not context.phase_active(phase):
@@ -102,15 +106,26 @@ def _generate_strength_blocks(context: PlanRuntimeContext, phase_mindset_cues: d
             "random_seed": context.random_seed,
             "restrictions": context.plan_input.restrictions,
             "ignore_restrictions": context.selection_ignore_restrictions,
+            "strength_substep_callback": _emit_strength_substep,
         }
         if previous_names:
             flags["prev_exercises"] = previous_names
             flags["recent_exercises"] = list(previous_movements)
-        block = generate_strength_block(
-            flags=flags,
-            weaknesses=context.training_context.weaknesses,
-            mindset_cue=phase_mindset_cues.get(phase),
-        )
+        phase_step = f"phase_{phase.lower()}"
+        _emit_strength_substep(f"stage1_strength_{phase_step}_started", f"Stage 1 strength {phase} started")
+        phase_started = perf_counter()
+        try:
+            block = generate_strength_block(
+                flags=flags,
+                weaknesses=context.training_context.weaknesses,
+                mindset_cue=phase_mindset_cues.get(phase),
+            )
+        finally:
+            phase_elapsed = perf_counter() - phase_started
+            logger.info("[stage1] strength_substep_elapsed step=%s elapsed=%.2f", phase_step, phase_elapsed)
+            if phase_elapsed > 5.0:
+                logger.warning("[stage1] slow_strength_substep step=%s elapsed=%.2f", phase_step, phase_elapsed)
+        _emit_strength_substep(f"stage1_strength_{phase_step}_finished", f"Stage 1 strength {phase} finished")
         strength_blocks[phase] = block
         strength_reason_log[phase] = block.get("why_log", [])
         phase_names = [exercise["name"] for exercise in block.get("exercises", []) if exercise.get("name")]
