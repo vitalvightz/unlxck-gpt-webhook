@@ -1694,6 +1694,11 @@ def create_app(
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
         if profile.role != "admin" and str(plan_row["athlete_id"]) != profile.athlete_id:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="not allowed")
+        if store.has_active_generation_job_for_plan(plan_id):
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Plan has an active generation job. Cancel or wait before deleting.",
+            )
         if profile.role == "admin" or _is_archived_plan(plan_row):
             store.delete_plan(plan_id)
         else:
