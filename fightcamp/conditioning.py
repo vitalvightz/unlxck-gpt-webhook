@@ -1940,6 +1940,7 @@ def generate_conditioning_block(flags):
         late_window_ambiguous[name] = ambiguous_gap
 
     def _load_and_score_base_conditioning_bank() -> None:
+            nonlocal restriction_candidates, restriction_blocked
             for drill in base_conditioning_bank:
                 d = drill.copy()
                 if d.get("placement", "conditioning").lower() != "conditioning":
@@ -2151,6 +2152,7 @@ def generate_conditioning_block(flags):
     # ---- Style specific conditioning ----
     target_style_tags = set(style_names + tech_style_tags)
     def _load_and_score_style_conditioning_bank() -> None:
+            nonlocal restriction_candidates, restriction_blocked
             for drill in style_conditioning_bank:
                 d = drill.copy()
                 if d.get("placement", "conditioning").lower() != "conditioning":
@@ -2512,7 +2514,7 @@ def generate_conditioning_block(flags):
             if _delay_pool_treading(drill, drills[idx + 1 :], system):
                 continue
             name = drill.get("name")
-            tags = normalize_tags(drill.get("tags", []))
+            tags = _cached_tags(drill)
             allow_repeat = (
                 phase.upper() == "TAPER"
                 and system == "alactic"
@@ -2533,7 +2535,7 @@ def generate_conditioning_block(flags):
                 if _delay_pool_treading(drill, drills[idx + 1 :], system):
                     continue
                 name = drill.get("name")
-                tags = normalize_tags(drill.get("tags", []))
+                tags = _cached_tags(drill)
                 allow_repeat = (
                     phase.upper() == "TAPER"
                     and system == "alactic"
@@ -2825,20 +2827,20 @@ def generate_conditioning_block(flags):
                             if not _is_machine_biased_gas_tank_drill(drill):
                                 continue
                             priority = 0 if system == "aerobic" else 1
-                            if "rower" in _conditioning_text_blob(drill):
+                            if "rower" in _cached_text_blob(drill):
                                 priority -= 1
                             machine_candidates.append((priority, score, drill, reasons))
                     if not machine_candidates:
-                        for drill in get_conditioning_bank():
+                        for drill in base_conditioning_bank:
                             if drill.get("placement", "conditioning").lower() != "conditioning":
                                 continue
                             if phase.upper() not in [str(p).upper() for p in drill.get("phases", [])]:
                                 continue
                             if not _is_machine_biased_gas_tank_drill(drill):
                                 continue
-                            drill_system = str(get_system_or_warn(drill, source="gas_tank_machine_bias_fallback") or "").strip().lower()
-                            drill_text = _conditioning_text_blob(drill)
-                            drill_structured = _conditioning_structured_profile(drill, system=drill_system)
+                            drill_system = str(_cached_system(drill, "gas_tank_machine_bias_fallback") or "").strip().lower()
+                            drill_text = _cached_text_blob(drill)
+                            drill_structured = _cached_structured_profile(drill, system=drill_system)
                             if drill_system == "glycolytic":
                                 continue
                             if drill_structured["high_lactate"] or drill_structured["glycolytic_density"]:
@@ -2847,7 +2849,7 @@ def generate_conditioning_block(flags):
                                 continue
                             if (drill_structured["rpe"] or 0) > 6:
                                 continue
-                            drill_eq = normalize_equipment_list(drill.get("equipment", []))
+                            drill_eq = _cached_equipment(drill)
                             if drill_eq and not set(drill_eq).issubset(equipment_access_set):
                                 continue
                             machine_candidates.append((0, 0.0, drill, {"reason_codes": ["gas_tank_machine_bias"], "final_score": 0}))
@@ -2891,10 +2893,10 @@ def generate_conditioning_block(flags):
                         continue
                     if drill.get("placement", "conditioning").lower() != "conditioning":
                         continue
-                    drill_eq = normalize_equipment_list(drill.get("equipment", []))
+                    drill_eq = _cached_equipment(drill)
                     if drill_eq and not set(drill_eq).issubset(equipment_access_set):
                         continue
-                    system = get_system_or_warn(drill, source="universal_gpp_conditioning.json")
+                    system = _cached_system(drill, "universal_gpp_conditioning.json")
                     if system is None:
                         continue
                     universal_candidates.append((system, drill))
@@ -2905,7 +2907,7 @@ def generate_conditioning_block(flags):
                     if injected >= injected_target or len(selected_drill_names) >= total_drills:
                         break
 
-                    drill_tags = set(normalize_tags(drill.get("tags", [])))
+                    drill_tags = set(_cached_tags(drill))
 
                     if not (
                         drill.get("name") in high_priority_names
@@ -2956,9 +2958,9 @@ def generate_conditioning_block(flags):
         for d in style_taper_bank:
             if d.get("placement", "conditioning").lower() != "conditioning":
                 continue
-            if not style_set.intersection(set(normalize_tags(d.get("tags", [])))):
+            if not style_set.intersection(set(_cached_tags(d))):
                 continue
-            eq = normalize_equipment_list(d.get("equipment", []))
+            eq = _cached_equipment(d)
             if eq and not set(eq).issubset(equipment_access_set):
                 continue
             taper_candidates.append(d)
@@ -2969,8 +2971,8 @@ def generate_conditioning_block(flags):
                 for d in style_taper_bank
                 if d.get("placement", "conditioning").lower() == "conditioning"
                 and (
-                    not normalize_equipment_list(d.get("equipment", []))
-                    or set(normalize_equipment_list(d.get("equipment", []))).issubset(
+                    not _cached_equipment(d)
+                    or set(_cached_equipment(d)).issubset(
                         equipment_access_set
                     )
                 )
@@ -3119,13 +3121,20 @@ def generate_conditioning_block(flags):
     # --------- OPTIONAL COORDINATION DRILL INSERTION ---------
     def _insert_coordination_drill() -> None:
         existing_names = {d.get("name") for _, drills in final_drills for d in drills}
+        normalized_focus = _normalize_focus_tokens([*goal_list, *weak_list, *goal_tags, *weak_tags])
+        coordination_expected = bool(
+            normalized_focus
+            & {"coordination", "proprioception", "coordination_proprioception"}
+        )
         coord_drill = select_coordination_drill({**flags, "equipment": equipment_access}, existing_names, injuries)
         if not coord_drill or len(selected_drill_names) >= total_drills:
-            log_fail_safe_degrade(module="conditioning", phase=phase, reason="coordination_no_candidate", target=1, actual=0)
+            if coordination_expected:
+                log_fail_safe_degrade(module="conditioning", phase=phase, reason="coordination_no_candidate", target=1, actual=0)
             return
         system = _cached_system(coord_drill, "coordination")
         if system is None or not _try_append_conditioning_drill(system, coord_drill, {"goal_hits": 0, "weakness_hits": 1, "style_hits": 0, "phase_hits": 1, "load_adjustments": 0, "equipment_boost": 0, "penalties": 0, "reason_codes": ["coordination_guarantee"], "final_score": 0}, source="coordination"):
-            log_fail_safe_degrade(module="conditioning", phase=phase, reason="coordination_no_candidate", target=1, actual=0)
+            if coordination_expected:
+                log_fail_safe_degrade(module="conditioning", phase=phase, reason="coordination_no_candidate", target=1, actual=0)
     _run_conditioning_poststep("coordination_insertion", _insert_coordination_drill)
 
     # --------- PRO NECK DRILL GUARANTEE ---------
@@ -3330,101 +3339,93 @@ def generate_conditioning_block(flags):
         and (bridge_rules or {}).get("glycolytic_touch_max", 0) > 0
     )
 
-    if (
-        phase.upper() == "SPP"
-        and not grouped_drills.get("glycolytic")
-        and not _is_late_fight_taper
-    ):
-        fallback = _glycolytic_fallback(phase)
-        decision = _guarded_injury_decision(fallback)
+    def _insert_energy_system_fallbacks() -> None:
+        if (
+            phase.upper() == "SPP"
+            and not grouped_drills.get("glycolytic")
+            and not _is_late_fight_taper
+        ):
+            fallback = _glycolytic_fallback(phase)
+            decision = _cached_injury_decision(fallback)
 
-        if decision.action != "exclude":
-            grouped_drills["glycolytic"] = [fallback]
-            selected_drill_names.append(fallback["name"])
-            reason_lookup[fallback["name"]] = {
-                "goal_hits": 0,
-                "weakness_hits": 0,
-                "style_hits": 0,
-                "phase_hits": 1,
-                "load_adjustments": 0,
-                "equipment_boost": 0,
-                "penalties": 0,
-                "reason_codes": ["spp_glycolytic_fallback"],
-                "final_score": 0,
-            }
-        else:
-            _log_exclusion(f"conditioning:{phase.upper()}:spp_glycolytic_fallback", fallback, decision)
+            if decision.action != "exclude":
+                grouped_drills["glycolytic"] = [fallback]
+                selected_drill_names.append(fallback["name"])
+                reason_lookup[fallback["name"]] = {
+                    "goal_hits": 0,
+                    "weakness_hits": 0,
+                    "style_hits": 0,
+                    "phase_hits": 1,
+                    "load_adjustments": 0,
+                    "equipment_boost": 0,
+                    "penalties": 0,
+                    "reason_codes": ["spp_glycolytic_fallback"],
+                    "final_score": 0,
+                }
+            else:
+                _log_exclusion(f"conditioning:{phase.upper()}:spp_glycolytic_fallback", fallback, decision)
 
-    elif (
-        phase.upper() == "TAPER"
-        and not grouped_drills.get("glycolytic")
-        and bridge_allows_glycolytic_touch
-    ):
-        fallback = _bridge_glycolytic_touch_fallback()
-        late_eval = _evaluate_conditioning_late_window(
-            fallback,
-            system="glycolytic",
-            window=late_window,
-            bridge_rules=bridge_rules,
-        )
-        decision = _guarded_injury_decision(fallback)
+        elif (
+            phase.upper() == "TAPER"
+            and not grouped_drills.get("glycolytic")
+            and bridge_allows_glycolytic_touch
+        ):
+            fallback = _bridge_glycolytic_touch_fallback()
+            late_eval = _cached_late_eval(fallback, "glycolytic")
+            decision = _cached_injury_decision(fallback)
 
-        if not late_eval["blocked"] and decision.action != "exclude":
-            grouped_drills["glycolytic"] = [fallback]
-            selected_drill_names.append(fallback["name"])
-            reason_lookup[fallback["name"]] = {
-                "goal_hits": 0,
-                "weakness_hits": 0,
-                "style_hits": 0,
-                "phase_hits": 1,
-                "load_adjustments": 0,
-                "equipment_boost": 0,
-                "penalties": 0,
-                "reason_codes": ["bridge_glycolytic_touch_fallback"]
-                + list(late_eval["reason_codes"]),
-                "late_window_adjustment": late_eval["adjustment"],
-                "final_score": round(float(late_eval["adjustment"] or 0), 4),
-            }
-        elif late_eval["blocked"]:
-            _record_late_block(fallback, 0.0, late_eval["block_codes"])
-        else:
-            _log_exclusion(f"conditioning:{phase.upper()}:bridge_glycolytic_touch_fallback", fallback, decision)
+            if not late_eval["blocked"] and decision.action != "exclude":
+                grouped_drills["glycolytic"] = [fallback]
+                selected_drill_names.append(fallback["name"])
+                reason_lookup[fallback["name"]] = {
+                    "goal_hits": 0,
+                    "weakness_hits": 0,
+                    "style_hits": 0,
+                    "phase_hits": 1,
+                    "load_adjustments": 0,
+                    "equipment_boost": 0,
+                    "penalties": 0,
+                    "reason_codes": ["bridge_glycolytic_touch_fallback"]
+                    + list(late_eval["reason_codes"]),
+                    "late_window_adjustment": late_eval["adjustment"],
+                    "final_score": round(float(late_eval["adjustment"] or 0), 4),
+                }
+            elif late_eval["blocked"]:
+                _record_late_block(fallback, 0.0, late_eval["block_codes"])
+            else:
+                _log_exclusion(f"conditioning:{phase.upper()}:bridge_glycolytic_touch_fallback", fallback, decision)
 
-    if (
-        selection_format in {"boxing", "kickboxing"}
-        and phase.upper() in {"SPP", "TAPER"}
-        and not grouped_drills.get("alactic")
-        and not _suppress_alactic_maintenance(fatigue=fatigue, injuries=injuries)
-    ):
-        fallback = _alactic_maintenance_fallback(phase)
-        late_eval = _evaluate_conditioning_late_window(
-            fallback,
-            system="alactic",
-            window=late_window,
-            bridge_rules=bridge_rules,
-        )
-        decision = _guarded_injury_decision(fallback)
+        if (
+            selection_format in {"boxing", "kickboxing"}
+            and phase.upper() in {"SPP", "TAPER"}
+            and not grouped_drills.get("alactic")
+            and not _suppress_alactic_maintenance(fatigue=fatigue, injuries=injuries)
+        ):
+            fallback = _alactic_maintenance_fallback(phase)
+            late_eval = _cached_late_eval(fallback, "alactic")
+            decision = _cached_injury_decision(fallback)
 
-        if not late_eval["blocked"] and decision.action != "exclude":
-            grouped_drills["alactic"] = [fallback]
-            selected_drill_names.append(fallback["name"])
-            reason_lookup[fallback["name"]] = {
-                "goal_hits": 0,
-                "weakness_hits": 0,
-                "style_hits": 0,
-                "phase_hits": 1,
-                "load_adjustments": 0,
-                "equipment_boost": 0,
-                "penalties": 0,
-                "reason_codes": ["alactic_maintenance_fallback"]
-                + list(late_eval["reason_codes"]),
-                "late_window_adjustment": late_eval["adjustment"],
-                "final_score": round(float(late_eval["adjustment"] or 0), 4),
-            }
-        elif late_eval["blocked"]:
-            _record_late_block(fallback, 0.0, late_eval["block_codes"])
-        else:
-            _log_exclusion(f"conditioning:{phase.upper()}:alactic_maintenance_fallback", fallback, decision)
+            if not late_eval["blocked"] and decision.action != "exclude":
+                grouped_drills["alactic"] = [fallback]
+                selected_drill_names.append(fallback["name"])
+                reason_lookup[fallback["name"]] = {
+                    "goal_hits": 0,
+                    "weakness_hits": 0,
+                    "style_hits": 0,
+                    "phase_hits": 1,
+                    "load_adjustments": 0,
+                    "equipment_boost": 0,
+                    "penalties": 0,
+                    "reason_codes": ["alactic_maintenance_fallback"]
+                    + list(late_eval["reason_codes"]),
+                    "late_window_adjustment": late_eval["adjustment"],
+                    "final_score": round(float(late_eval["adjustment"] or 0), 4),
+                }
+            elif late_eval["blocked"]:
+                _record_late_block(fallback, 0.0, late_eval["block_codes"])
+            else:
+                _log_exclusion(f"conditioning:{phase.upper()}:alactic_maintenance_fallback", fallback, decision)
+    _run_conditioning_poststep("energy_system_fallbacks", _insert_energy_system_fallbacks)
     resolved_sessions = _resolve_conditioning_sessions(
         grouped_drills,
         phase=phase,
@@ -3509,8 +3510,14 @@ def generate_conditioning_block(flags):
                 trimmed[system_name] = entries[:take]
                 remaining -= take
             for key, value in reservoir.items():
-                if key not in trimmed:
-                    trimmed[key] = value
+                if key in trimmed:
+                    continue
+                if remaining <= 0:
+                    trimmed[key] = []
+                    continue
+                take = min(len(value), remaining)
+                trimmed[key] = value[:take]
+                remaining -= take
             return trimmed
         return reservoir
 
