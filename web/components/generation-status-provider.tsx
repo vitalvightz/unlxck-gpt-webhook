@@ -152,6 +152,17 @@ export function GenerationStatusProvider({ children, token }: GenerationStatusPr
   }, []);
 
   const checkStatus = useCallback(async () => {
+    if (!token) {
+      clearPendingGenerations();
+      setPhase(null);
+      setJobId(null);
+      setClientRequestId(null);
+      setPlanId(null);
+      setStatusMessageText(null);
+      setStartedAtMs(null);
+      return;
+    }
+
     if (isCheckingRef.current) {
       return;
     }
@@ -162,7 +173,7 @@ export function GenerationStatusProvider({ children, token }: GenerationStatusPr
       const pending = getPendingGeneration();
 
       let activePending = pending;
-      if (!activePending && token) {
+      if (!activePending) {
         try {
           const activeJob = await getActiveGenerationJob(token);
           if (activeJob?.client_request_id && activeJob.created_at) {
