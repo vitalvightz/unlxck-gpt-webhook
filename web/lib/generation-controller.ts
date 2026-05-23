@@ -35,6 +35,7 @@ type GenerationControllerOptions = {
 type StartGenerationOptions = {
   clientRequestId?: string;
   recovered?: boolean;
+  existingJob?: GenerationJobResponse;
 };
 
 const INITIAL_POLL_MS = 2_000;
@@ -330,13 +331,14 @@ export function useGenerationController({
             : "Submitting your plan generation request.",
         );
         setMilestones([]);
-        const createdJob = await createJobWithReconnect(createJob, clientRequestId, setStatusMessage, setPhase);
-        const createdAtMs = Date.parse(createdJob.created_at || pendingCreatedAt) || Date.now();
+        const activeJob = options.existingJob
+          ?? await createJobWithReconnect(createJob, clientRequestId, setStatusMessage, setPhase);
+        const createdAtMs = Date.parse(activeJob.created_at || pendingCreatedAt) || Date.now();
         setStartedAtMs(createdAtMs);
         await watchJobUntilTerminal(
           token,
           storageKey,
-          createdJob,
+          activeJob,
           clientRequestId,
           pendingCreatedAt,
           createdAtMs,

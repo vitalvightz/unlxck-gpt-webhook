@@ -13,6 +13,7 @@ function buildJob(partial: Partial<GenerationJobResponse>): GenerationJobRespons
     client_request_id: "request-1",
     status: "running",
     created_at: "2026-05-22T23:00:00.000Z",
+    updated_at: "2026-05-22T23:30:00.000Z",
     started_at: "2026-05-22T23:00:00.000Z",
     heartbeat_at: "2026-05-22T23:30:00.000Z",
     ...partial,
@@ -38,6 +39,7 @@ test("fresh running job remains active", () => {
   const freshJob = buildJob({
     status: "running",
     created_at: "2026-05-22T23:00:00.000Z",
+    updated_at: "2026-05-22T23:30:00.000Z",
     started_at: "2026-05-22T23:00:00.000Z",
     heartbeat_at: "2026-05-22T23:30:00.000Z",
   });
