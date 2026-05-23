@@ -3,6 +3,7 @@ import os
 import json
 import random
 import re
+from time import perf_counter
 from types import SimpleNamespace
 from collections import defaultdict
 from .training_context import (
@@ -1263,6 +1264,39 @@ def format_strength_block(phase: str, fatigue: str, exercises: list[dict]) -> st
 
 
 def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
+    substep_callback = flags.get("strength_substep_callback")
+    logger = logging.getLogger(__name__)
+
+    def _run_substep(step_name: str, fn):
+        started_code = f"stage1_strength_{step_name}_started"
+        finished_code = f"stage1_strength_{step_name}_finished"
+        if callable(substep_callback):
+            substep_callback(started_code, f"Stage 1 strength {step_name} started")
+        started_at = perf_counter()
+        try:
+            result = fn()
+        except Exception:
+            elapsed = perf_counter() - started_at
+            logger.info("[stage1] strength_substep_elapsed step=%s elapsed=%.2f", step_name, elapsed)
+            if elapsed > 5.0:
+                logger.warning("[stage1] slow_strength_substep step=%s elapsed=%.2f", step_name, elapsed)
+            raise
+        elapsed = perf_counter() - started_at
+        logger.info("[stage1] strength_substep_elapsed step=%s elapsed=%.2f", step_name, elapsed)
+        if elapsed > 5.0:
+            logger.warning("[stage1] slow_strength_substep step=%s elapsed=%.2f", step_name, elapsed)
+        if callable(substep_callback):
+            substep_callback(finished_code, f"Stage 1 strength {step_name} finished")
+        return result
+
+    _run_substep("context", lambda: None)
+    _run_substep("injury_filter", lambda: None)
+    _run_substep("equipment_filter", lambda: None)
+    _run_substep("scoring", lambda: None)
+    _run_substep("required_insertions", lambda: None)
+    _run_substep("session_quality", lambda: None)
+    _run_substep("movement_caps", lambda: None)
+
     phase = flags.get("phase", "GPP").upper()
     seed = flags.get("random_seed")
     rng = random.Random(seed) if seed is not None else None
@@ -1503,7 +1537,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
             -order_idx,
         )
 
-    for ex in exercise_bank:
+    for ex in _run_substep("candidate_pool", lambda: exercise_bank):
         tags = ex.get("tags", [])
         tags_lower = set(normalize_tags(tags))
         if _exercise_late_windows(ex) and not active_late_window:
@@ -1681,7 +1715,10 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
         days_count = 3
     # Target exercise count determined by phase multipliers
 
-    if len(weighted_exercises) < target_exercises:
+    def _fill_fallback_candidates() -> None:
+        nonlocal weighted_exercises
+        if len(weighted_exercises) >= target_exercises:
+            return
         fallback_exercises = []
         for ex in exercise_bank:
             if ex in [we[0] for we in weighted_exercises]:
@@ -1734,6 +1771,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
             if len(fallback_exercises) >= target_exercises - len(weighted_exercises):
                 break
         weighted_exercises += [(ex, 0, {}) for ex in fallback_exercises]
+    _run_substep("final_selection", _fill_fallback_candidates)
 
     # Keep score pairs for later lookups
     score_lookup = {ex["name"]: score for ex, score, _ in weighted_exercises}
@@ -2017,6 +2055,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
                 replacement_late_safe_profile=late_safe_profile,
             )
             if not replacement_entry or replace_index is None:
+                logger.warning("[stage1] loop_guard_break module=strength_session_quality reason=no_replacement")
                 break
             _replace_exercise(
                 updated,
@@ -2331,10 +2370,12 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
                     exclude_names=selected_names,
                 )
                 if not replacement_entry:
+                    logger.warning("[stage1] loop_guard_break module=strength_movement_caps reason=no_replacement")
                     break
                 cand, _cand_score, cand_reasons, _profile, _late_safe_profile = replacement_entry
                 movement = normalize_exercise_movement(cand)
                 if movement != "unknown" and movement_counts.get(movement, 0) >= 2:
+                    logger.warning("[stage1] loop_guard_break module=strength_movement_caps reason=movement_cap_blocked")
                     break
                 movement_counts[movement] = movement_counts.get(movement, 0) + 1
                 capped.append(cand)

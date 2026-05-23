@@ -80,9 +80,30 @@ def test_knee_instability_low_stable_emits_stage1_block_and_no_timeout():
     codes = _collect_codes(payload)
     assert "camp_brief_built" in codes
     assert "stage1_blocks_generation_started" in codes
+    assert "stage1_strength_block_started" in codes
+    assert "stage1_strength_block_finished" in codes
+    assert "stage1_conditioning_block_started" in codes
     assert "stage1_blocks_generation_finished" in codes
     assert "plan_drafted" in codes
     assert "stage1_planner_timeout" not in codes
+
+
+def test_strength_substep_start_visible_when_substep_fails(monkeypatch):
+    from fightcamp import strength as strength_module
+
+    def _boom():
+        raise RuntimeError("simulated strength candidate pool failure")
+
+    monkeypatch.setattr(strength_module, "get_exercise_bank", _boom)
+    captured: list[str] = []
+
+    def _callback(code: str, _label: str, _detail: str, _meta: dict[str, Any]) -> None:
+        captured.append(code)
+
+    result = generate_plan_sync(_payload(), progress_callback=_callback)
+    assert result.get("status") == "invalid_input"
+    assert "stage1_strength_candidate_pool_started" in captured
+    assert "stage1_strength_candidate_pool_finished" not in captured
 
 
 def test_stage1_module_start_visible_when_module_hangs(monkeypatch):
