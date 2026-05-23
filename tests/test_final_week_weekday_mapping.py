@@ -263,7 +263,7 @@ class TestSessionSequenceWeekdayAnnotation:
         for entry in sequence:
             assert "real_weekday" not in entry
 
-    def test_session_moved_to_available_day_when_countdown_day_unavailable(self):
+    def test_session_keeps_calendar_true_weekday_when_countdown_day_unavailable(self):
         # Plan creation = friday, fight = wednesday (5 days later)
         # D-5 lands on friday which IS available → stays friday
         athlete = _athlete(
@@ -272,9 +272,10 @@ class TestSessionSequenceWeekdayAnnotation:
             training_days=["monday", "tuesday", "wednesday", "thursday", "friday"],
         )
         sequence = _build_late_fight_session_sequence(5, athlete)
-        assert sequence[0]["real_weekday"] in {"monday", "tuesday", "wednesday", "thursday", "friday"}
+        assert sequence[0]["real_weekday"] == "sunday"
+        assert sequence[0]["resolved_training_weekday"] == "monday"
 
-    def test_display_label_uses_resolved_available_weekday(self):
+    def test_display_label_keeps_raw_calendar_weekday(self):
         # Friday creation + 5 days = Wednesday fight, so D-3 is Sunday on the
         # raw calendar. Sunday is unavailable and must not leak into output.
         athlete = _athlete(
@@ -286,9 +287,9 @@ class TestSessionSequenceWeekdayAnnotation:
         freshness = next(entry for entry in sequence if entry["role_key"] == "fight_week_freshness_day")
 
         assert freshness["scheduled_countdown_label"] == "D-3"
-        assert freshness["real_weekday"] == "saturday"
-        assert freshness["countdown_display_label"] == "D-3 (Saturday)"
-        assert "Sunday" not in freshness["countdown_display_label"]
+        assert freshness["real_weekday"] == "sunday"
+        assert freshness["resolved_training_weekday"] == "saturday"
+        assert freshness["countdown_display_label"] == "D-3 (Sunday)"
 
     def test_countdown_label_absent_when_days_none(self):
         athlete = _athlete(5, plan_creation_weekday="monday")
