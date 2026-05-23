@@ -50,6 +50,7 @@ from .priority_profile import (
     weakness_priority_weight,
 )
 from .priority_clarification_tags import derive_clarification_tags
+from .stage1_fail_safe import bounded_max_iterations, log_fail_safe_degrade
 
 TAPER_AVOID_TAGS = {
     "contrast_pairing",
@@ -2671,11 +2672,11 @@ def generate_conditioning_block(flags):
             if quota <= 0:
                 continue
             guard = 0
-            max_iter = max(quota * 4, 8)
+            max_iter = bounded_max_iterations(quota)
             while quota > 0:
                 guard += 1
                 if guard > max_iter:
-                    logger.warning("[stage1] loop_guard_break module=conditioning_system_quota system=%s", system)
+                    log_fail_safe_degrade(module="conditioning", phase=phase, reason=f"system_quota_guard:{system}", target=system_quota.get(system, 0), actual=selected_counts.get(system, 0))
                     break
                 d, r = blended_pick(system)
                 if not d:
@@ -2691,11 +2692,11 @@ def generate_conditioning_block(flags):
             for s in system_quota
         }
         guard = 0
-        max_iter = max(remaining_slots * 4, 8)
+        max_iter = bounded_max_iterations(remaining_slots)
         while remaining_slots > 0 and any(deficits.values()):
             guard += 1
             if guard > max_iter:
-                logger.warning("[stage1] loop_guard_break module=conditioning_deficit_fill")
+                log_fail_safe_degrade(module="conditioning", phase=phase, reason="deficit_fill_guard", target=total_drills, actual=len(selected_drill_names))
                 break
             system = max(deficits, key=deficits.get)
             if deficits[system] <= 0:
@@ -3124,8 +3125,9 @@ def generate_conditioning_block(flags):
             candidates = all_candidates_by_system.get(system, [])
 
             while idx < len(drills):
-                if idx > len(drills) * 4:
-                    logger.warning("[stage1] loop_guard_break module=conditioning_replacement_scan system=%s", system)
+                max_iter = bounded_max_iterations(len(drills))
+                if idx > max_iter:
+                    log_fail_safe_degrade(module="conditioning", phase=phase, reason=f"replacement_scan_guard:{system}", target=len(drills), actual=idx)
                     break
                 drill = drills[idx]
                 decision = _decision(drill)

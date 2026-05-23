@@ -82,6 +82,8 @@ def test_knee_instability_low_stable_emits_stage1_block_and_no_timeout():
     assert "stage1_blocks_generation_started" in codes
     assert "stage1_strength_block_started" in codes
     assert "stage1_strength_block_finished" in codes
+    assert "stage1_strength_phase_gpp_finished" in codes
+    assert "stage1_strength_phase_spp_finished" in codes
     assert "stage1_conditioning_block_started" in codes
     assert "stage1_blocks_generation_finished" in codes
     assert "plan_drafted" in codes

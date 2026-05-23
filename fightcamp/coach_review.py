@@ -331,11 +331,11 @@ def run_coach_review(
         for system, drills in grouped_drills.items():
             idx = 0
             guard = 0
-            max_iter = max(len(drills) * 4, 8)
+            max_iter = bounded_max_iterations(len(drills))
             while idx < len(drills):
                 guard += 1
                 if guard > max_iter:
-                    logger.warning("[stage1] loop_guard_break module=coach_review_conditioning system=%s", system)
+                    log_fail_safe_degrade(module="coach_review", phase=phase_key, reason=f"conditioning_guard:{system}", target=len(drills), actual=idx)
                     break
                 drill = drills[idx]
                 region_key, decision = _decision_for_item(
