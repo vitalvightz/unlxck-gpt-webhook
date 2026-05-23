@@ -1314,7 +1314,6 @@ class SupabaseAppStore:
                 else:
                     now_iso = _utc_now_iso()
                     self._run_with_transient_retry(
-                    self._run_with_transient_retry(
                         operation="get_active_generation_job_for_athlete:fail_mid_pipeline_stale",
                         fn=lambda: self.client.table("generation_jobs")
                         .update(

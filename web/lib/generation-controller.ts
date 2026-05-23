@@ -19,6 +19,14 @@ type PendingGenerationState = {
   createdAt: string;
 };
 
+type RecoverablePendingGenerationState = PendingGenerationState & { jobId: string };
+
+export function canRecoverPendingGenerationWithoutCreate(
+  pending: PendingGenerationState | null,
+): pending is RecoverablePendingGenerationState {
+  return typeof pending?.jobId === "string" && pending.jobId.length > 0;
+}
+
 type GenerationCompletion = {
   planId: string;
   status: Extract<GenerationJobStatus, "completed" | "review_required">;
@@ -399,17 +407,33 @@ export function useGenerationController({
       return;
     }
     const pending = getPendingGeneration(storageKey);
-    if (!pending) {
+    if (!canRecoverPendingGenerationWithoutCreate(pending)) {
+      if (pending && !pending.jobId) {
+        clearPendingGeneration(storageKey);
+      }
       return;
     }
+    const recoverablePending = pending;
     if (recoveryAttemptedRef.current === pending.clientRequestId) {
       return;
     }
-    recoveryAttemptedRef.current = pending.clientRequestId;
-    void startGeneration({
-      clientRequestId: pending.clientRequestId,
-      recovered: true,
-    });
+    recoveryAttemptedRef.current = recoverablePending.clientRequestId;
+    void (async () => {
+      try {
+        const existingJob = await getGenerationJob(token, recoverablePending.jobId as string);
+        if (existingJob.status === "queued" || existingJob.status === "running") {
+          await startGeneration({
+            clientRequestId: recoverablePending.clientRequestId,
+            recovered: true,
+            existingJob,
+          });
+          return;
+        }
+        clearPendingGeneration(storageKey);
+      } catch {
+        clearPendingGeneration(storageKey);
+      }
+    })();
   }, [isGenerating, startGeneration, storageKey, token]);
 
   return {
