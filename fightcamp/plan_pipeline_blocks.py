@@ -145,15 +145,23 @@ def _generate_strength_blocks(
     return strength_blocks, strength_reason_log
 
 
-def _generate_conditioning_blocks(context: PlanRuntimeContext) -> tuple[dict[str, dict], dict[str, list[dict]]]:
+def _generate_conditioning_blocks(
+    context: PlanRuntimeContext,
+    *,
+    progress_callback: ProgressCallback | None = None,
+) -> tuple[dict[str, dict], dict[str, list[dict]]]:
     conditioning_blocks: dict[str, dict] = {}
     conditioning_reason_log: dict[str, list[dict]] = {}
     # Compute once per request; spread into per-phase flags dict below.
     base_flags = context.training_context.to_flags()
 
+    def _emit_conditioning_substep(code: str, label: str) -> None:
+        _emit_progress(progress_callback, code, label)
+
     for phase in PHASES:
         if not context.phase_active(phase):
             continue
+        _emit_progress(progress_callback, f"stage1_conditioning_phase_{phase.lower()}_started", f"Stage 1 conditioning {phase} started")
         (
             block_text,
             names,
@@ -171,6 +179,7 @@ def _generate_conditioning_blocks(context: PlanRuntimeContext) -> tuple[dict[str
                 "weeks_out": context.plan_input.weeks_out,
                 "restrictions": context.plan_input.restrictions,
                 "ignore_restrictions": context.selection_ignore_restrictions,
+                "conditioning_substep_callback": _emit_conditioning_substep,
             }
         )
         render_metadata = {
@@ -187,6 +196,7 @@ def _generate_conditioning_blocks(context: PlanRuntimeContext) -> tuple[dict[str
             },
             "sport": context.mapped_format,
         }
+        _emit_progress(progress_callback, f"stage1_conditioning_phase_{phase.lower()}_finished", f"Stage 1 conditioning {phase} finished")
         conditioning_reason_log[phase] = reasons
         conditioning_blocks[phase] = {
             "block": block_text,
@@ -459,7 +469,7 @@ def generate_plan_blocks(
         progress_callback=progress_callback,
         record_timing=record_timing,
         timing_label="conditioning",
-        fn=lambda: _generate_conditioning_blocks(context),
+        fn=lambda: _generate_conditioning_blocks(context, progress_callback=progress_callback),
     )
     conditioning_count = sum(
         len(conditioning_reason_log.get(phase, []) or []) for phase in PHASES
