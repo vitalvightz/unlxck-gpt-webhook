@@ -190,6 +190,25 @@ def test_get_active_generation_job_recovers_startup_stale_running_to_queued():
     assert body["status"] == "queued"
 
 
+def test_get_active_generation_job_never_returns_stale_running_status():
+    client, store, _ = _build_client(enable_in_process_generation=False)
+    created = store.create_or_get_generation_job(
+        athlete_id="athlete-1",
+        client_request_id="stale-running-never-visible",
+        source="self_serve",
+        request_payload=_build_request().model_dump(mode="json"),
+    )
+    old_iso = "2026-01-01T00:00:00+00:00"
+    store.update_generation_job(created["id"], status="running", started_at=old_iso, heartbeat_at=old_iso, progress_milestones=[])
+
+    response = client.get("/api/generation-jobs/active", headers={"Authorization": "Bearer athlete-token"})
+    assert response.status_code == 200
+    body = response.json()
+    assert body is not None
+    assert body["job_id"] == created["id"]
+    assert body["status"] != "running"
+
+
 def test_get_active_generation_job_schedules_queued_job_without_creating_new_job():
     client, store, _ = _build_client(enable_in_process_generation=False)
     created = store.create_or_get_generation_job(
