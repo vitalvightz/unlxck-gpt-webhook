@@ -6156,6 +6156,13 @@ button.mobile-step-rail-item {
   background: linear-gradient(180deg, rgba(23, 25, 30, 0.98), rgba(14, 15, 19, 0.98));
 }
 
+.global-generation-status-main {
+  all: unset;
+  display: grid;
+  gap: 0;
+  cursor: pointer;
+}
+
 .global-generation-status-failed {
   border-top-color: rgba(255, 100, 100, 0.4);
   background: linear-gradient(180deg, rgba(40, 20, 25, 0.98), rgba(25, 15, 18, 0.98));
@@ -6165,6 +6172,43 @@ button.mobile-step-rail-item {
   display: flex;
   align-items: center;
   gap: 12px;
+}
+
+.global-generation-status-dismiss {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 18px;
+  cursor: pointer;
+}
+
+.global-generation-status-reopen {
+  position: fixed;
+  right: 14px;
+  bottom: calc(14px + var(--safe-area-bottom));
+  z-index: 100;
+  min-height: 38px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(181, 18, 43, 0.35);
+  background: rgba(10, 11, 14, 0.95);
+  color: var(--text-primary);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.global-generation-status-main:focus-visible,
+.global-generation-status-dismiss:focus-visible,
+.global-generation-status-reopen:focus-visible {
+  outline: 2px solid rgba(181, 18, 43, 0.8);
+  outline-offset: 3px;
 }
 
 .global-generation-status-indicator {
@@ -6249,7 +6293,7 @@ button.mobile-step-rail-item {
   border-color: rgba(181, 18, 43, 0.45);
 }
 
-.global-generation-status:hover .global-generation-status-arrow {
+.global-generation-status-main:hover .global-generation-status-arrow {
   transform: translateX(4px);
 }
 
