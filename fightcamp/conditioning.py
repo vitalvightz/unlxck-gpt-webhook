@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+from time import perf_counter
 from pathlib import Path
 import re
 from types import SimpleNamespace
@@ -1697,6 +1698,27 @@ def _build_conditioning_candidate_reservoir(
 
 def generate_conditioning_block(flags):
     phase = str(flags.get("phase", "GPP") or "GPP").strip().upper()
+    conditioning_substep_callback = flags.get("conditioning_substep_callback")
+
+    def _emit_conditioning_substep(code: str, label: str) -> None:
+        if conditioning_substep_callback is None:
+            return
+        try:
+            conditioning_substep_callback(code, label)
+        except Exception:
+            logger.exception("[progress] conditioning_callback_failed code=%s", code)
+
+    def _run_conditioning_poststep(step_name: str, fn):
+        _emit_conditioning_substep(f"stage1_conditioning_{step_name}_started", f"Stage 1 conditioning {step_name} started")
+        step_started = perf_counter()
+        result = fn()
+        elapsed = perf_counter() - step_started
+        logger.info("[stage1] conditioning_substep_elapsed step=%s elapsed=%.2f", step_name, elapsed)
+        if elapsed > 5.0:
+            logger.warning("[stage1] slow_conditioning_substep step=%s elapsed=%.2f", step_name, elapsed)
+        _emit_conditioning_substep(f"stage1_conditioning_{step_name}_finished", f"Stage 1 conditioning {step_name} finished")
+        return result
+
     phase_color = {"GPP": "#4CAF50", "SPP": "#FF9800", "TAPER": "#F44336"}.get(phase, "#000")
 
     fatigue = str(flags.get("fatigue", "low") or "low").strip().lower()
@@ -1719,6 +1741,66 @@ def generate_conditioning_block(flags):
     training_frequency = flags.get("training_frequency", flags.get("days_available", 3))
     equipment_access = normalize_athlete_equipment_list(flags.get("equipment", []))
     equipment_access_set = set(equipment_access)
+
+    _normalize_tags_cache: dict[object, list[str]] = {}
+    _normalize_equipment_cache: dict[object, list[str]] = {}
+    _system_cache: dict[object, str | None] = {}
+    _injury_match_cache: dict[object, dict] = {}
+    _injury_decision_cache: dict[object, Decision] = {}
+    _text_blob_cache: dict[object, str] = {}
+    _structured_profile_cache: dict[tuple[object, str], dict] = {}
+    _late_eval_cache: dict[tuple[object, str], dict] = {}
+
+    def _drill_cache_key(drill: dict) -> object:
+        return drill.get("id") or drill.get("name") or id(drill)
+
+    def _cached_tags(drill: dict) -> list[str]:
+        key = _drill_cache_key(drill)
+        if key not in _normalize_tags_cache:
+            _normalize_tags_cache[key] = normalize_tags(drill.get("tags", []))
+        return _normalize_tags_cache[key]
+
+    def _cached_equipment(drill: dict) -> list[str]:
+        key = _drill_cache_key(drill)
+        if key not in _normalize_equipment_cache:
+            _normalize_equipment_cache[key] = normalize_equipment_list(drill.get("equipment", []))
+        return _normalize_equipment_cache[key]
+
+    def _cached_system(drill: dict, source: str) -> str | None:
+        key = _drill_cache_key(drill)
+        if key not in _system_cache:
+            _system_cache[key] = get_system_or_warn(drill, source=source)
+        return _system_cache[key]
+
+    def _cached_injury_decision(drill: dict) -> Decision:
+        key = _drill_cache_key(drill)
+        if key not in _injury_decision_cache:
+            _injury_decision_cache[key] = _guarded_injury_decision(drill)
+        return _injury_decision_cache[key]
+
+    def _cached_text_blob(drill: dict) -> str:
+        key = _drill_cache_key(drill)
+        if key not in _text_blob_cache:
+            _text_blob_cache[key] = _conditioning_text_blob(drill)
+        return _text_blob_cache[key]
+
+    def _cached_structured_profile(drill: dict, system: str) -> dict:
+        key = (_drill_cache_key(drill), str(system or ""))
+        if key not in _structured_profile_cache:
+            _structured_profile_cache[key] = _conditioning_structured_profile(drill, system=system)
+        return _structured_profile_cache[key]
+
+    def _cached_late_eval(drill: dict, system: str) -> dict:
+        key = (_drill_cache_key(drill), str(system or ""))
+        if key not in _late_eval_cache:
+            _late_eval_cache[key] = _evaluate_conditioning_late_window(
+                drill,
+                system=system,
+                window=late_window,
+                bridge_rules=bridge_rules,
+            )
+        return _late_eval_cache[key]
+
 
     days_until_fight = _coerce_optional_int(flags.get("days_until_fight"))
     late_window = classify_late_selector_window(days_until_fight, include_control=True)
@@ -1844,7 +1926,7 @@ def generate_conditioning_block(flags):
             return
         late_window_ambiguous[name] = ambiguous_gap
 
-    for drill in get_conditioning_bank():
+    for drill in _run_conditioning_poststep("candidate_normalization", get_conditioning_bank):
         d = drill.copy()
         if d.get("placement", "conditioning").lower() != "conditioning":
             continue
@@ -1858,13 +1940,13 @@ def generate_conditioning_block(flags):
         if phase.upper() not in d.get("phases", []):
             continue
 
-        system = get_system_or_warn(d, source="conditioning_bank.json")
+        system = _cached_system(d, "conditioning_bank.json")
         if system is None:
             continue
         if system == "alactic" and not _alactic_structure_ok(d):
             continue
 
-        tags = normalize_tags(d.get("tags", []))
+        tags = _cached_tags(d)
         details = " ".join(
             [
                 d.get("duration", ""),
@@ -1901,7 +1983,7 @@ def generate_conditioning_block(flags):
         ):
             continue
 
-        drill_equipment = normalize_equipment_list(d.get("equipment", []))
+        drill_equipment = _cached_equipment(d)
         if drill_equipment and not set(drill_equipment).issubset(equipment_access_set):
             continue
 
@@ -2009,12 +2091,7 @@ def generate_conditioning_block(flags):
         if not ignore_restrictions and restriction_penalty:
             total_score += restriction_penalty
             penalty += restriction_penalty
-        late_eval = _evaluate_conditioning_late_window(
-            d,
-            system=system,
-            window=late_window,
-            bridge_rules=bridge_rules,
-        )
+        late_eval = _cached_late_eval(d, system)
         _record_ambiguous_gap(late_eval.get("ambiguous_gap"))
         if late_eval["blocked"]:
             _record_late_block(d, total_score, late_eval["block_codes"])
@@ -2057,7 +2134,7 @@ def generate_conditioning_block(flags):
 
     # ---- Style specific conditioning ----
     target_style_tags = set(style_names + tech_style_tags)
-    for drill in get_style_conditioning_bank():
+    for drill in _run_conditioning_poststep("bank_load", get_style_conditioning_bank):
         d = drill.copy()
         if d.get("placement", "conditioning").lower() != "conditioning":
             continue
@@ -2068,7 +2145,7 @@ def generate_conditioning_block(flags):
                 for t in d.get("tags", [])
             ]
         d["name"] = _normalize_conditioning_name(d.get("name", ""), fight_format=selection_format)
-        tags = normalize_tags(d.get("tags", []))
+        tags = _cached_tags(d)
         details = " ".join(
             [
                 d.get("duration", ""),
@@ -2109,7 +2186,7 @@ def generate_conditioning_block(flags):
         ):
             continue
 
-        system = get_system_or_warn(d, source="style_conditioning_bank.json")
+        system = _cached_system(d, "style_conditioning_bank.json")
         if system is None:
             continue
         if system == "alactic" and not _alactic_structure_ok(d):
@@ -2133,7 +2210,7 @@ def generate_conditioning_block(flags):
             and not any(t in goal_tags or t in weak_tags for t in tags)
         ):
             continue
-        drill_equipment = normalize_equipment_list(d.get("equipment", []))
+        drill_equipment = _cached_equipment(d)
         if drill_equipment and not set(drill_equipment).issubset(equipment_access_set):
             continue
         equip_bonus = 0.5 if drill_equipment else 0.0
@@ -2221,12 +2298,7 @@ def generate_conditioning_block(flags):
         if not ignore_restrictions and restriction_penalty:
             score += restriction_penalty
             penalty += restriction_penalty
-        late_eval = _evaluate_conditioning_late_window(
-            d,
-            system=system,
-            window=late_window,
-            bridge_rules=bridge_rules,
-        )
+        late_eval = _cached_late_eval(d, system)
         _record_ambiguous_gap(late_eval.get("ambiguous_gap"))
         if late_eval["blocked"]:
             _record_late_block(d, score, late_eval["block_codes"])
