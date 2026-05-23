@@ -11172,6 +11172,16 @@ html[data-app-surface="workspace"][data-theme="dark"] .desktop-nav-toggle {
   font-weight: 600;
 }
 
+html[data-theme="light"] .blocked-context-line {
+  border-color: rgba(199, 92, 54, 0.4);
+  background: rgba(199, 92, 54, 0.12);
+  color: #6c2f22;
+}
+
+html[data-theme="light"] .blocked-context-line strong {
+  color: #4d1f16;
+}
+
 .welcome-panel {
   max-width: 760px;
 }
