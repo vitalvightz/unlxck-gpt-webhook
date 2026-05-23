@@ -2123,11 +2123,11 @@ def _visible_calendar_session_sequence(session_sequence: list[dict[str, Any]]) -
     unique: list[dict[str, Any]] = []
     seen: set[tuple[str, str, int | None]] = set()
     for session in combined:
-        key = (
-            str(session.get("role_key") or ""),
-            str(session.get("scheduled_countdown_label") or session.get("countdown_label") or session.get("scheduled_day_hint") or ""),
-            int(session.get("countdown_offset")) if isinstance(session.get("countdown_offset"), int) else None,
-        )
+        role_key = str(session.get("role_key") or "")
+        label = str(session.get("scheduled_countdown_label") or session.get("countdown_label") or session.get("scheduled_day_hint") or "")
+        offset_val = session.get("countdown_offset")
+        offset = int(offset_val) if isinstance(offset_val, int) else None
+        key = (role_key, label, offset)
         if key in seen:
             continue
         seen.add(key)
