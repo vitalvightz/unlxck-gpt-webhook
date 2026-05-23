@@ -251,6 +251,12 @@ def _compact_calendar_authority(weekly_role_map: Any) -> dict[str, Any]:
 
 
 def _compact_session_sequence(stage2_payload: dict[str, Any]) -> list[dict[str, Any]]:
+    plan_spec = stage2_payload.get("late_fight_plan_spec") or {}
+    if isinstance(plan_spec, dict):
+        value = plan_spec.get("visible_session_sequence")
+        if isinstance(value, list):
+            return [entry for entry in value if isinstance(entry, dict)]
+
     for key in (
         "late_fight_session_sequence",
         "session_sequence",
@@ -260,7 +266,6 @@ def _compact_session_sequence(stage2_payload: dict[str, Any]) -> list[dict[str, 
         if isinstance(value, list):
             return [entry for entry in value if isinstance(entry, dict)]
 
-    plan_spec = stage2_payload.get("late_fight_plan_spec") or {}
     if isinstance(plan_spec, dict):
         value = plan_spec.get("session_sequence") or plan_spec.get("sessions")
         if isinstance(value, list):

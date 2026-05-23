@@ -1,4 +1,5 @@
 from fightcamp.stage2_payload_late_fight import (
+    _coach_owned_context_session_sequence,
     _build_late_fight_plan_spec,
     _build_late_fight_session_sequence,
     _countdown_offset,
@@ -862,3 +863,40 @@ def test_bridge_mode_continuity_through_d1_does_not_place_on_d0_or_outside_label
     assert all(label.startswith("D-") for label in labels)
     assert "D-0" not in labels
     assert all(1 <= int(label.split("-")[1]) <= 14 for label in labels)
+
+
+def test_coach_owned_context_sequence_keeps_downgraded_declared_hard_day():
+    sessions = [
+        {
+            "role_key": "technical_touch_day",
+            "downgraded_from_role_key": "hard_sparring_day",
+            "scheduled_day_hint": "monday",
+            "countdown_offset": 5,
+        },
+        {
+            "role_key": "neural_primer_day",
+            "scheduled_day_hint": "tuesday",
+            "countdown_offset": 4,
+        },
+    ]
+    context = _coach_owned_context_session_sequence(sessions)
+    assert len(context) == 1
+    assert context[0]["role_key"] == "technical_touch_day"
+    assert context[0]["downgraded_from_role_key"] == "hard_sparring_day"
+    assert context[0]["athlete_facing_label"] == "Coach-led boxing — no hard sparring / technical only"
+    assert context[0]["display_text"] == "No app S&C today. Keep freshness priority."
+
+
+def test_coach_owned_context_sequence_forces_default_hard_spar_label_and_note():
+    sessions = [
+        {
+            "role_key": "hard_sparring_day",
+            "scheduled_day_hint": "friday",
+            "countdown_offset": 8,
+        }
+    ]
+    context = _coach_owned_context_session_sequence(sessions)
+    assert len(context) == 1
+    assert context[0]["role_key"] == "hard_sparring_day"
+    assert context[0]["athlete_facing_label"] == "Coach-led boxing session"
+    assert context[0]["display_text"] == "No app S&C today. Keep freshness priority."
