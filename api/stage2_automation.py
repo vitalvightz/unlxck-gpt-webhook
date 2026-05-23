@@ -252,7 +252,7 @@ def _review_required_result(
     return {
         **_base_result(stage1_result, draft_plan_text=draft_plan_text),
         "status": _APP_STATUS_REVIEW_REQUIRED,
-        "plan_text": "",
+        "plan_text": latest_plan_text,
         "final_plan_text": latest_plan_text,
         "stage2_status": _STAGE2_FAILED,
         "stage2_validator_report": validator_report,

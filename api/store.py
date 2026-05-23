@@ -839,6 +839,12 @@ class SupabaseAppStore:
         request: PlanRequest,
         result: dict[str, Any],
     ) -> dict[str, Any]:
+        visible_plan_text = str(
+            result.get("plan_text")
+            or result.get("final_plan_text")
+            or result.get("draft_plan_text")
+            or ""
+        )
         payload = {
             "athlete_id": athlete_id,
             "intake_id": intake_id,
@@ -847,7 +853,7 @@ class SupabaseAppStore:
             "full_name": request.athlete.full_name,
             "plan_name": "",
             "status": result.get("status", "generated"),
-            "plan_text": result.get("plan_text", ""),
+            "plan_text": visible_plan_text,
             "draft_plan_text": result.get("draft_plan_text", result.get("plan_text", "")),
             "final_plan_text": result.get("final_plan_text", result.get("plan_text", "")),
             "coach_notes": result.get("coach_notes", ""),
@@ -1710,9 +1716,15 @@ class SupabaseAppStore:
             )
 
     def update_plan_stage2(self, plan_id: str, result: dict[str, Any]) -> dict[str, Any]:
+        visible_plan_text = str(
+            result.get("plan_text")
+            or result.get("final_plan_text")
+            or result.get("draft_plan_text")
+            or ""
+        )
         payload = {
             "status": result.get("status", "generated"),
-            "plan_text": result.get("plan_text", ""),
+            "plan_text": visible_plan_text,
             "draft_plan_text": result.get("draft_plan_text", result.get("plan_text", "")),
             "final_plan_text": result.get("final_plan_text", result.get("plan_text", "")),
             "pdf_url": result.get("pdf_url"),

@@ -686,54 +686,11 @@ async def run_generation_job(
                         "Stage 2 needs review",
                         "First-pass finalizer output did not pass validation. No automatic retry was sent.",
                     )
-            _emit_milestone(
-                "final_result_persisting",
-                "Saving Stage 2 result",
-                "Persisting finalizer output to the generation job.",
-            )
-            compact_final_result = _compact_generation_job_final_result(final_result)
-            try:
-                job = await asyncio.wait_for(
-                    asyncio.to_thread(
-                        store.update_generation_job,
-                        job_id,
-                        final_result=compact_final_result,
-                        heartbeat_at=utc_now_iso(),
-                    ),
-                    timeout=_FINAL_RESULT_PERSIST_TIMEOUT_SECONDS,
-                )
-            except asyncio.TimeoutError:
-                logger.exception("[jobs] generation:final_result_persist_timeout athlete_id=%s job_id=%s", athlete_id, job_id)
-                now_iso = utc_now_iso()
-                with suppress(Exception):
-                    await asyncio.to_thread(
-                        store.update_generation_job,
-                        job_id,
-                        status="failed",
-                        error=_FINAL_RESULT_PERSIST_TIMEOUT_ERROR,
-                        completed_at=now_iso,
-                        heartbeat_at=now_iso,
-                    )
-                return
-            except Exception:
-                logger.exception("[jobs] generation:final_result_persist_failed athlete_id=%s job_id=%s", athlete_id, job_id)
-                now_iso = utc_now_iso()
-                with suppress(Exception):
-                    await asyncio.to_thread(
-                        store.update_generation_job,
-                        job_id,
-                        status="failed",
-                        error="Stage 2 result persistence failed before final_result was saved.",
-                        completed_at=now_iso,
-                        heartbeat_at=now_iso,
-                    )
-                return
-            _emit_milestone(
-                "final_result_persisted",
-                "Stage 2 result saved",
-                "Finalizer output was saved to the generation job.",
-            )
-
+        _emit_milestone(
+            "plan_persisting",
+            "Saving plan row",
+            "Creating or updating the saved plan from the Stage 2 result.",
+        )
         plan_id = plan_id or (str(job.get("plan_id") or "") or None)
         plan_row: dict[str, Any] | None = None
         if job_source == "admin_triage_resume":
@@ -786,6 +743,62 @@ async def run_generation_job(
                 result=final_result,
             )
             plan_id = str(plan_row.get("id") or "") or None
+        if not plan_id:
+            raise RuntimeError("Plan persistence failed: final_result exists but no linked plan_id was created.")
+        _emit_milestone(
+            "plan_persisted",
+            "Plan row persisted",
+            "Saved plan row was created or updated.",
+            plan_id=plan_id,
+        )
+        _emit_milestone(
+            "final_result_persisting",
+            "Saving Stage 2 result",
+            "Persisting finalizer output to the generation job.",
+        )
+        compact_final_result = _compact_generation_job_final_result(final_result)
+        try:
+            job = await asyncio.wait_for(
+                asyncio.to_thread(
+                    store.update_generation_job,
+                    job_id,
+                    final_result=compact_final_result,
+                    plan_id=plan_id,
+                    heartbeat_at=utc_now_iso(),
+                ),
+                timeout=_FINAL_RESULT_PERSIST_TIMEOUT_SECONDS,
+            )
+        except asyncio.TimeoutError:
+            logger.exception("[jobs] generation:final_result_persist_timeout athlete_id=%s job_id=%s", athlete_id, job_id)
+            now_iso = utc_now_iso()
+            with suppress(Exception):
+                await asyncio.to_thread(
+                    store.update_generation_job,
+                    job_id,
+                    status="failed",
+                    error=_FINAL_RESULT_PERSIST_TIMEOUT_ERROR,
+                    completed_at=now_iso,
+                    heartbeat_at=now_iso,
+                )
+            return
+        except Exception:
+            logger.exception("[jobs] generation:final_result_persist_failed athlete_id=%s job_id=%s", athlete_id, job_id)
+            now_iso = utc_now_iso()
+            with suppress(Exception):
+                await asyncio.to_thread(
+                    store.update_generation_job,
+                    job_id,
+                    status="failed",
+                    error="Stage 2 result persistence failed after plan persistence.",
+                    completed_at=now_iso,
+                    heartbeat_at=now_iso,
+                )
+            return
+        _emit_milestone(
+            "final_result_persisted",
+            "Stage 2 result saved",
+            "Finalizer output was saved to the generation job.",
+        )
 
         try:
             await _to_thread_with_heartbeat(store.clear_onboarding_draft, athlete_id)
