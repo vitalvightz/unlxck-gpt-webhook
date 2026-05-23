@@ -1140,7 +1140,7 @@ def _late_fight_countdown_context(days_until_fight: Any, athlete_model: dict[str
         )
     ]
     return {
-        "countdown_weekday_map": countdown_map,
+        "countdown_weekday_map": resolved_map,
         "raw_countdown_weekday_map": countdown_map,
         "legal_countdown_labels": legal_countdown_labels,
         "eligible_countdown_labels": eligible_countdown_labels,
