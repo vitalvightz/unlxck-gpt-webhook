@@ -615,8 +615,7 @@ async def run_generation_job(
 
         final_result = job.get("final_result")
         if not isinstance(final_result, dict):
-            job_plan_id = str(job.get("plan_id") or "").strip() or plan_id
-            await _ensure_admin_resume_plan_exists(job_plan_id)
+            await _ensure_admin_resume_plan_exists(plan_id)
             if should_skip_stage2(stage1_result, allow_triage_resume_override=triage_resume_override_approved):
                 _emit_milestone(
                     "stage2_skipped",
