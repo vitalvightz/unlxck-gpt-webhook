@@ -2670,7 +2670,13 @@ def generate_conditioning_block(flags):
             quota = system_quota.get(system, 0)
             if quota <= 0:
                 continue
+            guard = 0
+            max_iter = max(quota * 4, 8)
             while quota > 0:
+                guard += 1
+                if guard > max_iter:
+                    logger.warning("[stage1] loop_guard_break module=conditioning_system_quota system=%s", system)
+                    break
                 d, r = blended_pick(system)
                 if not d:
                     break
@@ -2684,7 +2690,13 @@ def generate_conditioning_block(flags):
             s: max(0, system_quota.get(s, 0) - selected_counts.get(s, 0))
             for s in system_quota
         }
+        guard = 0
+        max_iter = max(remaining_slots * 4, 8)
         while remaining_slots > 0 and any(deficits.values()):
+            guard += 1
+            if guard > max_iter:
+                logger.warning("[stage1] loop_guard_break module=conditioning_deficit_fill")
+                break
             system = max(deficits, key=deficits.get)
             if deficits[system] <= 0:
                 break
@@ -3112,6 +3124,9 @@ def generate_conditioning_block(flags):
             candidates = all_candidates_by_system.get(system, [])
 
             while idx < len(drills):
+                if idx > len(drills) * 4:
+                    logger.warning("[stage1] loop_guard_break module=conditioning_replacement_scan system=%s", system)
+                    break
                 drill = drills[idx]
                 decision = _decision(drill)
 

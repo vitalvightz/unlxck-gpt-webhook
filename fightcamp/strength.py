@@ -744,11 +744,22 @@ def _apply_late_strength_diversity_dampener(
     family_counts: dict[str, int] = defaultdict(int)
     reordered: list[tuple[dict, float, dict]] = []
     idx = 0
+    guard = 0
+    max_iter = max(len(weighted_exercises) * 4, 8)
     while idx < len(weighted_exercises):
+        guard += 1
+        if guard > max_iter:
+            logger.warning("[stage1] loop_guard_break module=late_strength_dampener_outer")
+            break
         leader_score = weighted_exercises[idx][1]
         group = [weighted_exercises[idx]]
         idx += 1
+        inner_guard = 0
         while idx < len(weighted_exercises) and leader_score - weighted_exercises[idx][1] <= LATE_STRENGTH_TRUE_CLUSTER_BAND:
+            inner_guard += 1
+            if inner_guard > max_iter:
+                logger.warning("[stage1] loop_guard_break module=late_strength_dampener_inner")
+                break
             group.append(weighted_exercises[idx])
             idx += 1
         if len(group) > 1 and len({_late_strength_family(exercise) for exercise, _, _ in group}) > 1:
@@ -1980,7 +1991,12 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
     def _enforce_session_quality(exercises: list[dict]) -> list[dict]:
         updated = list(exercises)
         support_cap = max(num_strength_sessions * SESSION_SUPPORT_CAP_MULTIPLIER, 2)
+        guard = 0
         while count_support_only(updated) > support_cap:
+            guard += 1
+            if guard > max(len(updated) * 4, 8):
+                logger.warning("[stage1] loop_guard_break module=strength_session_quality")
+                break
             selected_names = _selected_names(updated)
             replacement_entry = _best_candidate(
                 lambda cand, _score, _reasons, profile: profile["anchor_capable"],
@@ -2300,7 +2316,12 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
             capped.append(ex)
 
         if len(capped) < target_exercises:
+            guard = 0
             while len(capped) < target_exercises:
+                guard += 1
+                if guard > max(target_exercises * 4, 8):
+                    logger.warning("[stage1] loop_guard_break module=strength_movement_caps")
+                    break
                 selected_names = _selected_names(capped)
                 replacement_entry = _best_candidate(
                     lambda cand, _score, _reasons, _profile: (

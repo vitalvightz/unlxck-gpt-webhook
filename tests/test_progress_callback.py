@@ -32,10 +32,16 @@ def test_progress_callback_emits_full_pipeline_milestones():
         "injury_triage_done",
         "banks_primed",
         "camp_brief_built",
+        "stage1_blocks_generation_started",
+        "stage1_strength_block_started",
+        "stage1_strength_block_finished",
+        "stage1_conditioning_block_started",
+        "stage1_conditioning_block_finished",
         "strength_scored",
         "conditioning_scored",
         "rehab_support_built",
         "coach_review_done",
+        "stage1_blocks_generation_finished",
         "plan_drafted",
         "stage2_handoff_ready",
     ]
@@ -66,3 +72,32 @@ def test_progress_callback_optional_keeps_signature_compatible():
     result = generate_plan_sync(_payload())
     assert result.get("status") != "invalid_input"
     assert result.get("plan_text")
+
+
+def test_knee_instability_low_stable_emits_stage1_block_and_no_timeout():
+    payload = _payload()
+    payload["injuries"] = "Right knee is wobbly (low, stable). Type: instability"
+    codes = _collect_codes(payload)
+    assert "camp_brief_built" in codes
+    assert "stage1_blocks_generation_started" in codes
+    assert "stage1_blocks_generation_finished" in codes
+    assert "plan_drafted" in codes
+    assert "stage1_planner_timeout" not in codes
+
+
+def test_stage1_module_start_visible_when_module_hangs(monkeypatch):
+    from fightcamp import plan_pipeline_blocks as blocks_module
+
+    def _hang_conditioning(_context):
+        raise TimeoutError("simulated conditioning hang for diagnostics")
+
+    monkeypatch.setattr(blocks_module, "_generate_conditioning_blocks", _hang_conditioning)
+    captured: list[str] = []
+
+    def _callback(code: str, _label: str, _detail: str, _meta: dict[str, Any]) -> None:
+        captured.append(code)
+
+    result = generate_plan_sync(_payload(), progress_callback=_callback)
+    assert result.get("status") == "invalid_input"
+    assert "stage1_conditioning_block_started" in captured
+    assert "stage1_conditioning_block_finished" not in captured
