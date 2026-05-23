@@ -1451,7 +1451,7 @@ class SupabaseAppStore:
                     row_id = str(row.get("id") or "")
                     if not row_id:
                         continue
-                    if str(row.get("status") or "") == "running" and not is_startup_stale_generation_job(
+                    if not is_startup_stale_generation_job(
                         row,
                         stale_after_seconds=stale_after_seconds,
                     ):
