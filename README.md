@@ -23,7 +23,7 @@ Plan generation runs in two stages:
 The Python planner (`fightcamp/`) reads the athlete's intake profile and builds a full draft plan. It scores exercises and conditioning drills by weakness tags, goal tags, style tags, phase, and equipment availability. The injury guard removes anything that violates active restrictions and selects safe replacements. Output includes the draft plan text, candidate pools, coach review notes, and the Stage 2 handoff package.
 
 **Stage 2 — AI finalization**
-The handoff package is sent to OpenAI. Stage 2 applies the `STAGE2_FINALIZER_PROMPT` rules: hard-filtering any remaining restriction violations, improving sequencing, enforcing anchor session standards, and writing the final athlete-facing plan in coach voice. The validator reviews the output and can trigger a repair pass if quality thresholds are not met.
+The handoff package is sent to OpenAI. Stage 2 applies the `STAGE2_FINALIZER_PROMPT` rules: hard-filtering any remaining restriction violations, improving sequencing, enforcing anchor session standards, and writing the final athlete-facing plan in coach voice. The runtime currently does one automated finalizer call. If validation fails, the plan is marked `review_required` and the validator output/repair guidance is saved for manual review. Automatic retry is currently disabled unless future code changes enable it.
 
 ---
 
@@ -164,7 +164,13 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=
 - Worker tuning knobs: `UNLXCK_GENERATION_WORKER_INTERVAL_SECONDS` (default `3`) and `UNLXCK_GENERATION_WORKER_STALE_AFTER_SECONDS` (default `90`)
 - Job stale recovery timeout: `APP_GENERATION_JOB_STALE_AFTER_SECONDS` (default `1400`, minimum `60`)
 - Stage 1 planner timeout: `APP_STAGE1_PLANNER_TIMEOUT_SECONDS` (default `600`; use `0`/`none` to disable outside production)
+- Production CORS safety is fail-fast by default. Unsafe values (for example `*`, localhost origins, or broad regex patterns) raise startup errors in production. `APP_ALLOW_UNSAFE_PRODUCTION_CORS_BOOT=1` is an emergency-only override that logs loudly and should not be used for normal deployments.
 - The bank JSON files are loaded into memory on first request and cached for each worker process lifetime (with `--workers 2`, both workers will warm independently).
+- In-memory runtime guards are process-local best-effort protections only:
+  - `active_generation_tasks` is process-local.
+  - Per-minute `POST /api/plans/generate` throttling is process-local.
+  - Durable protections (daily cap and one-active-job-per-athlete / claim correctness) are database-backed in Supabase.
+  - If you scale beyond one API/worker process and need strict global rate/queue limits, add durable shared infrastructure (for example Redis-backed limiting/queueing).
 - Keep the instance warm with a cron job hitting `/health` every 14 minutes or use Render Standard tier
 
 **Supabase schema requirements**

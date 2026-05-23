@@ -156,6 +156,8 @@ async def run_worker() -> None:
         int(os.getenv("UNLXCK_GENERATION_WORKER_MAX_CONCURRENT_JOBS", "3")),
     )
 
+    # Best-effort process-local guard only. Each worker process tracks its own
+    # in-memory set, so global correctness depends on DB-backed job claiming.
     active_tasks: set[str] = set()
     detached_tasks: set[asyncio.Task[None]] = set()
 

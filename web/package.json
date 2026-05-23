@@ -5,7 +5,10 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "lint": "tsc --noEmit",
+    "test": "tsc --noEmit",
+    "test:watch": "tsc --noEmit --watch"
   },
   "dependencies": {
     "@supabase/supabase-js": "2.99.1",

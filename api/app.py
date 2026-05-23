@@ -83,6 +83,9 @@ LOCAL_HOST_NAMES = ("localhost", "127.0.0.1", "::1")
 
 
 class SlidingWindowRateLimiter:
+    # Best-effort guard only: this limiter is process-local in-memory state.
+    # In multi-process deployments limits apply per process and reset on
+    # restart. Durable correctness must come from DB-backed constraints.
     def __init__(
         self,
         *,
@@ -489,15 +492,16 @@ def _validate_production_cors_config(origins: list[str], regex: str | None) -> N
     if not violations:
         return
 
-    # Hotfix: downgrade to a loud warning so a misconfigured production deploy
-    # does not take the entire API offline. Operators should still treat these
-    # as deploy blockers, but the API now boots and serves traffic.
-    # Set APP_STRICT_PRODUCTION_CORS=1 to restore fail-fast behavior.
-    strict = os.getenv("APP_STRICT_PRODUCTION_CORS", "").strip() == "1"
+    allow_unsafe_boot = os.getenv("APP_ALLOW_UNSAFE_PRODUCTION_CORS_BOOT", "").strip() == "1"
     for violation in violations:
         logger.error("[cors] production_cors_unsafe: %s", violation)
-    if strict:
-        raise ValueError("; ".join(violations))
+    if allow_unsafe_boot:
+        logger.error(
+            "[cors] APP_ALLOW_UNSAFE_PRODUCTION_CORS_BOOT=1 set; allowing unsafe production CORS boot. "
+            "This is an emergency-only override."
+        )
+        return
+    raise ValueError("; ".join(violations))
 
 
 def _plan_generate_rate_limit_requests() -> int:
@@ -1012,6 +1016,7 @@ def create_app(
     app.state.stage2_automator = stage2_automator or build_default_stage2_automator()
     app.state.mode_label = mode_label
     app.state.enable_in_process_generation = enable_in_process_generation
+    # Best-effort process-local guard only; durable claim correctness is DB-backed.
     app.state.active_generation_tasks = set()
     rate_limit_requests = _plan_generate_rate_limit_requests()
     app.state.plan_generate_rate_limiter = (
