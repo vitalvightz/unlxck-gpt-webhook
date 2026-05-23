@@ -109,7 +109,20 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
             return;
           }
         } catch {
-          // Treat refresh failures as a genuine session expiry below.
+          // Treat refresh failures as a genuine session expiry below only when no session remains.
+        }
+
+        try {
+          const client = getSupabaseBrowserClient();
+          const currentSession = await client.auth.getSession();
+          const liveAccessToken = currentSession.data.session?.access_token ?? null;
+          if (liveAccessToken) {
+            setSession({ access_token: liveAccessToken });
+            return;
+          }
+        } catch {
+          // If we cannot confirm auth state, keep the current session and retry later.
+          return;
         }
       }
 
