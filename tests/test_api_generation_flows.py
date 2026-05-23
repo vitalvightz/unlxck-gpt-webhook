@@ -2062,7 +2062,11 @@ def test_admin_triage_resume_stage1_planner_timeout_fails_without_touching_plan(
     stage2 = FakeStage2Automator(result=finalized_result())
 
     def _slow_planner(payload: dict, *, progress_callback=None) -> dict:
+        if progress_callback is not None:
+            progress_callback("planner_work_started", "Planner work started", "", {})
         time.sleep(0.05)
+        if progress_callback is not None:
+            progress_callback("planner_late_emit", "Planner late emit", "", {})
         return stage1_result()
 
     asyncio.run(
@@ -2092,11 +2096,20 @@ def test_admin_triage_resume_stage1_planner_timeout_fails_without_touching_plan(
     assert "stage1_planner_invoked" in milestone_codes
     assert "stage1_planner_finished" not in milestone_codes
     assert stage2.calls == []
+    assert "planner_late_emit" not in milestone_codes
     assert len(store.plans) == 1
     assert updated_plan["id"] == blocked_plan["id"]
     assert updated_plan["status"] == "triage_blocked"
     assert updated_plan["stage2_status"] == "triage_resume_approved"
     assert updated_plan["why_log"]["triage_resume_approval"] == {"approved_by_email": "ops@unlxck.test"}
+
+    # The planner thread keeps running briefly after timeout; late callbacks
+    # must be ignored so the failed job cannot be mutated after return.
+    time.sleep(0.06)
+    post_timeout_job = store.get_generation_job(job["id"])
+    post_timeout_codes = [entry["code"] for entry in post_timeout_job.get("progress_milestones", [])]
+    assert "planner_late_emit" not in post_timeout_codes
+    assert post_timeout_job["status"] == "failed"
 
 
 def test_runtime_generation_saves_completed_plan():

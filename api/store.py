@@ -1443,7 +1443,18 @@ class SupabaseAppStore:
             )
 
             merged_rows: dict[str, dict[str, Any]] = {}
-            for response in (queued_response, stale_heartbeat_response, stale_without_heartbeat_response):
+
+            # Queued jobs are always claimable (oldest first).
+            for row in queued_response.data or []:
+                if not isinstance(row, dict):
+                    continue
+                row_id = str(row.get("id") or "")
+                if not row_id:
+                    continue
+                merged_rows[row_id] = dict(row)
+
+            # Running jobs are only claimable if they are startup-stale.
+            for response in (stale_heartbeat_response, stale_without_heartbeat_response):
                 for row in response.data or []:
                     if not isinstance(row, dict):
                         continue
