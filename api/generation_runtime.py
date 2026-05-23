@@ -683,7 +683,7 @@ async def run_generation_job(
             compact_final_result = _compact_generation_job_final_result(final_result)
             try:
                 job = await asyncio.wait_for(
-                    _to_thread_with_heartbeat(
+                    asyncio.to_thread(
                         store.update_generation_job,
                         job_id,
                         final_result=compact_final_result,
