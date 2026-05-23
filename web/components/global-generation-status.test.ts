@@ -3,12 +3,13 @@ import assert from "node:assert/strict";
 
 import { getGenerationStatusTarget } from "./global-generation-status";
 
-test("routes in-progress generation status to /generate", () => {
-  assert.equal(getGenerationStatusTarget("generating", null), "/generate");
-  assert.equal(getGenerationStatusTarget("submitting", null), "/generate");
+test("active generation states have no navigation target", () => {
+  assert.equal(getGenerationStatusTarget("queued", null), null);
+  assert.equal(getGenerationStatusTarget("running", null), null);
+  assert.equal(getGenerationStatusTarget("finalizing", null), null);
 });
 
-test("routes completed generation with plan id to plan detail", () => {
+test("completed generation with plan id routes to plan detail", () => {
   assert.equal(getGenerationStatusTarget("completed", "plan_123"), "/plans/plan_123");
 });
 
