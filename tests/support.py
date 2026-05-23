@@ -68,13 +68,13 @@ class FakeStore:
     def _classify_running_job_staleness(self, job: dict, *, stale_after_seconds: int) -> str:
         if str(job.get("status") or "") != "running":
             return "fresh"
-        raw_stage1_timeout = os.getenv("APP_STAGE1_PLANNER_TIMEOUT_SECONDS", "180").strip()
+        raw_stage1_timeout = os.getenv("APP_STAGE1_PLANNER_TIMEOUT_SECONDS", "240").strip()
         try:
             stage1_stale_after_seconds = max(1, int(float(raw_stage1_timeout)))
         except (TypeError, ValueError):
-            stage1_stale_after_seconds = 180
+            stage1_stale_after_seconds = 240
         if raw_stage1_timeout in {"", "0", "none", "None", "NONE"}:
-            stage1_stale_after_seconds = 180
+            stage1_stale_after_seconds = 240
         if is_job_loaded_stalled_generation_job(job, stale_after_seconds=stale_after_seconds):
             return "job_loaded_stalled"
         if is_startup_stale_generation_job(job, stale_after_seconds=stale_after_seconds):
