@@ -159,6 +159,7 @@ export function GenerationStatusProvider({ children, token }: GenerationStatusPr
   }, []);
 
   const checkStatus = useCallback(async () => {
+    if (token && isCheckingRef.current) return;
     const sequence = ++checkSequenceRef.current;
 
     if (!token) {
