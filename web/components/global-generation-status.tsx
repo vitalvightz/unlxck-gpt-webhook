@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { useGenerationStatus } from "./generation-status-provider";
 
@@ -18,12 +19,14 @@ const CELEBRATION_DURATION_MS = 1_600;
 
 export function GlobalGenerationStatus() {
   const { isActive, statusMessage, phase, planId, startedAtMs, refreshStatus } = useGenerationStatus();
+  const router = useRouter();
   const [now, setNow] = useState(() => Date.now());
   const [isCelebrating, setIsCelebrating] = useState(false);
   const previousPhaseRef = useRef(phase);
 
   const isFailed = phase === "failed";
   const isCompleted = phase === "completed";
+  const ctaLabel = isCompleted && planId ? "View" : isFailed ? "Refresh" : "Home";
   const showElapsed = isActive && !isCompleted && !isFailed && startedAtMs !== null;
 
   useEffect(() => {
@@ -85,7 +88,7 @@ export function GlobalGenerationStatus() {
           ) : null}
         </span>
         <span className="global-generation-status-cta">
-          <span className="global-generation-status-cta-label">{canNavigateToPlan ? "View" : "Refresh"}</span>
+          <span className="global-generation-status-cta-label">{ctaLabel}</span>
           <span className="global-generation-status-arrow" aria-hidden="true">→</span>
         </span>
       </div>
@@ -114,8 +117,18 @@ export function GlobalGenerationStatus() {
     <button
       type="button"
       className={className}
-      aria-label={isFailed ? "Plan failed. Tap to refresh status." : "Generation in progress. Tap to refresh status."}
+      aria-label={
+        isFailed
+          ? "Plan failed. Tap to refresh status."
+          : isCompleted
+            ? "Plan completed. Tap to return home."
+            : "Generation in progress. Tap to return home."
+      }
       onClick={() => {
+        if (!isFailed) {
+          router.push("/");
+          return;
+        }
         refreshStatus();
       }}
     >
