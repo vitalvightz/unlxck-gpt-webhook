@@ -4,6 +4,7 @@ import pytest
 
 import api.app as app_module
 from api import generation_runtime
+from api import worker as worker_module
 from api.generation_runtime import (
     _invoke_planner,
     _stage1_planner_timeout_seconds,
@@ -22,6 +23,7 @@ def _clear_environment_markers(monkeypatch):
 
 def test_stage1_planner_timeout_default_is_600(monkeypatch):
     _clear_environment_markers(monkeypatch)
+    monkeypatch.delenv("STAGE1_PLANNER_TIMEOUT_SECONDS", raising=False)
     monkeypatch.delenv("APP_STAGE1_PLANNER_TIMEOUT_SECONDS", raising=False)
     assert _stage1_planner_timeout_seconds() == 600.0
 
@@ -29,33 +31,52 @@ def test_stage1_planner_timeout_default_is_600(monkeypatch):
 @pytest.mark.parametrize("sentinel", ["", "0", "none", "None", "NONE"])
 def test_stage1_planner_timeout_sentinels_disable_timeout_outside_production(monkeypatch, sentinel):
     _clear_environment_markers(monkeypatch)
-    monkeypatch.setenv("APP_STAGE1_PLANNER_TIMEOUT_SECONDS", sentinel)
+    monkeypatch.setenv("STAGE1_PLANNER_TIMEOUT_SECONDS", sentinel)
     assert _stage1_planner_timeout_seconds() is None
 
 
 def test_stage1_planner_timeout_sentinel_does_not_disable_in_production(monkeypatch):
     _clear_environment_markers(monkeypatch)
     monkeypatch.setenv("APP_ENV", "production")
-    monkeypatch.setenv("APP_STAGE1_PLANNER_TIMEOUT_SECONDS", "0")
+    monkeypatch.setenv("STAGE1_PLANNER_TIMEOUT_SECONDS", "0")
     assert _stage1_planner_timeout_seconds() == 600.0
 
 
 def test_stage1_planner_timeout_invalid_falls_back_to_600(monkeypatch):
     _clear_environment_markers(monkeypatch)
-    monkeypatch.setenv("APP_STAGE1_PLANNER_TIMEOUT_SECONDS", "not-a-number")
+    monkeypatch.setenv("STAGE1_PLANNER_TIMEOUT_SECONDS", "not-a-number")
     assert _stage1_planner_timeout_seconds() == 600.0
 
 
 def test_stage1_planner_timeout_respects_valid_override(monkeypatch):
     _clear_environment_markers(monkeypatch)
-    monkeypatch.setenv("APP_STAGE1_PLANNER_TIMEOUT_SECONDS", "60")
+    monkeypatch.setenv("STAGE1_PLANNER_TIMEOUT_SECONDS", "60")
     assert _stage1_planner_timeout_seconds() == 60.0
 
 
 def test_stage1_planner_timeout_respects_fractional_positive_override(monkeypatch):
     _clear_environment_markers(monkeypatch)
-    monkeypatch.setenv("APP_STAGE1_PLANNER_TIMEOUT_SECONDS", "0.5")
+    monkeypatch.setenv("STAGE1_PLANNER_TIMEOUT_SECONDS", "0.5")
     assert _stage1_planner_timeout_seconds() == 0.5
+
+
+def test_stage1_planner_timeout_prefers_new_env_over_legacy(monkeypatch):
+    _clear_environment_markers(monkeypatch)
+    monkeypatch.setenv("STAGE1_PLANNER_TIMEOUT_SECONDS", "600")
+    monkeypatch.setenv("APP_STAGE1_PLANNER_TIMEOUT_SECONDS", "60")
+    assert _stage1_planner_timeout_seconds() == 600.0
+
+
+def test_worker_stale_timeout_default_tracks_stage1_timeout(monkeypatch):
+    monkeypatch.delenv("UNLXCK_GENERATION_WORKER_STALE_AFTER_SECONDS", raising=False)
+    monkeypatch.delenv("APP_STAGE1_PLANNER_TIMEOUT_SECONDS", raising=False)
+    monkeypatch.delenv("STAGE1_PLANNER_TIMEOUT_SECONDS", raising=False)
+    assert worker_module._worker_stale_after_seconds_default() == 660
+
+
+def test_worker_stale_timeout_default_uses_configured_stage1_timeout(monkeypatch):
+    monkeypatch.setenv("STAGE1_PLANNER_TIMEOUT_SECONDS", "720")
+    assert worker_module._worker_stale_after_seconds_default() == 780
 
 
 def test_stage2_finalize_timeout_default_is_600(monkeypatch):

@@ -228,7 +228,10 @@ def _stage2_finalize_timeout_seconds() -> float | None:
 
 
 def _stage1_planner_timeout_seconds() -> float | None:
-    raw_value = os.getenv("APP_STAGE1_PLANNER_TIMEOUT_SECONDS", "600").strip()
+    raw_value = os.getenv("STAGE1_PLANNER_TIMEOUT_SECONDS")
+    if raw_value is None:
+        raw_value = os.getenv("APP_STAGE1_PLANNER_TIMEOUT_SECONDS", "600")
+    raw_value = raw_value.strip()
     if raw_value in {"", "0", "none", "None", "NONE"}:
         if is_production_environment():
             logger.warning(
