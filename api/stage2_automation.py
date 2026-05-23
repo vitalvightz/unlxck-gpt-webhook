@@ -159,11 +159,14 @@ def _strip_wrapping_code_fence(text: str) -> str:
 
 
 def _response_is_incomplete(response: Any) -> bool:
-    status = str(getattr(response, "status", "") or "").strip().lower()
+    payload = response.model_dump(mode="python") if hasattr(response, "model_dump") else response
+    is_dict = isinstance(payload, dict)
+
+    status = str((payload.get("status") if is_dict else getattr(response, "status", "")) or "").strip().lower()
     if status == "incomplete":
         return True
 
-    details = getattr(response, "incomplete_details", None)
+    details = payload.get("incomplete_details") if is_dict else getattr(response, "incomplete_details", None)
     if details is None:
         return False
     if hasattr(details, "model_dump"):
