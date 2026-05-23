@@ -190,29 +190,29 @@ def _stage2_finalize_timeout_seconds() -> float | None:
 
 
 def _stage1_planner_timeout_seconds() -> float | None:
-    raw_value = os.getenv("APP_STAGE1_PLANNER_TIMEOUT_SECONDS", "600").strip()
+    raw_value = os.getenv("APP_STAGE1_PLANNER_TIMEOUT_SECONDS", "180").strip()
     if raw_value in {"", "0", "none", "None", "NONE"}:
         if is_production_environment():
             logger.warning(
-                "[jobs] generation:stage1_timeout_disabled_in_production value=%r; falling back to 600s",
+                "[jobs] generation:stage1_timeout_disabled_in_production value=%r; falling back to 180s",
                 raw_value,
             )
-            return 600.0
+            return 180.0
         return None
     try:
         parsed = float(raw_value)
     except ValueError:
         logger.warning(
-            "[jobs] generation:invalid_stage1_timeout value=%r; falling back to 600s",
+            "[jobs] generation:invalid_stage1_timeout value=%r; falling back to 180s",
             raw_value,
         )
-        return 600.0
+        return 180.0
     if parsed <= 0:
         logger.warning(
-            "[jobs] generation:invalid_stage1_timeout value=%r; falling back to 600s",
+            "[jobs] generation:invalid_stage1_timeout value=%r; falling back to 180s",
             raw_value,
         )
-        return 600.0
+        return 180.0
     return parsed
 
 
@@ -593,6 +593,13 @@ async def run_generation_job(
                 stage1_timed_out.set()
                 logger.exception("[jobs] generation:stage1_timeout athlete_id=%s job_id=%s", athlete_id, job_id)
                 now_iso = utc_now_iso()
+                _emit_milestone(
+                    "stage1_planner_timeout",
+                    "Stage 1 planner timed out",
+                    "Planner did not return after invocation and the job was failed for recovery.",
+                    timestamp=now_iso,
+                    failed=True,
+                )
                 with suppress(Exception):
                     await asyncio.to_thread(
                         store.update_generation_job,

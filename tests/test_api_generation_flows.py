@@ -232,6 +232,72 @@ def test_get_active_generation_job_marks_mid_pipeline_stale_running_failed():
     assert body["status"] == "failed"
 
 
+def test_get_active_generation_job_fails_stale_stage1_planner_invoked_running():
+    client, store, _ = _build_client(enable_in_process_generation=False)
+    created = store.create_or_get_generation_job(
+        athlete_id="athlete-1",
+        client_request_id="stage1-invoked-stale",
+        source="self_serve",
+        request_payload=_build_request().model_dump(mode="json"),
+    )
+    old_iso = "2026-01-01T00:00:00+00:00"
+    store.update_generation_job(
+        created["id"],
+        status="running",
+        started_at=old_iso,
+        heartbeat_at=_now(),
+        progress_milestones=[{"code": "stage1_planner_invoked", "label": "Stage 1 planner invoked", "detail": "", "at": old_iso}],
+    )
+    response = client.get("/api/generation-jobs/active", headers={"Authorization": "Bearer athlete-token"})
+    assert response.status_code == 200
+    assert response.json()["status"] == "failed"
+    failed = store.get_generation_job(created["id"])
+    assert failed["error"] == "Stage 1 planner stalled after planner invocation."
+    assert failed["completed_at"] is not None
+
+
+def test_get_generation_job_fails_stale_stage1_planner_invoked_running():
+    client, store, _ = _build_client(enable_in_process_generation=False)
+    created = store.create_or_get_generation_job(
+        athlete_id="athlete-1",
+        client_request_id="stage1-invoked-stale-direct",
+        source="self_serve",
+        request_payload=_build_request().model_dump(mode="json"),
+    )
+    old_iso = "2026-01-01T00:00:00+00:00"
+    store.update_generation_job(
+        created["id"],
+        status="running",
+        started_at=old_iso,
+        heartbeat_at=old_iso,
+        progress_milestones=[{"code": "stage1_planner_invoked", "label": "Stage 1 planner invoked", "detail": "", "at": old_iso}],
+    )
+    response = client.get(f"/api/generation-jobs/{created['id']}", headers={"Authorization": "Bearer athlete-token"})
+    assert response.status_code == 200
+    assert response.json()["status"] == "failed"
+
+
+def test_get_active_generation_job_keeps_fresh_stage1_planner_invoked_running():
+    client, store, _ = _build_client(enable_in_process_generation=False)
+    created = store.create_or_get_generation_job(
+        athlete_id="athlete-1",
+        client_request_id="stage1-invoked-fresh",
+        source="self_serve",
+        request_payload=_build_request().model_dump(mode="json"),
+    )
+    now_iso = _now()
+    store.update_generation_job(
+        created["id"],
+        status="running",
+        started_at=now_iso,
+        heartbeat_at=now_iso,
+        progress_milestones=[{"code": "stage1_planner_invoked", "label": "Stage 1 planner invoked", "detail": "", "at": now_iso}],
+    )
+    response = client.get("/api/generation-jobs/active", headers={"Authorization": "Bearer athlete-token"})
+    assert response.status_code == 200
+    assert response.json()["status"] == "running"
+
+
 def test_create_generation_job_blocks_different_client_request_id_when_active_exists():
     store = FakeStore()
     store.create_or_get_generation_job(
@@ -2094,6 +2160,7 @@ def test_admin_triage_resume_stage1_planner_timeout_fails_without_touching_plan(
     milestone_codes = [entry["code"] for entry in refreshed_job.get("progress_milestones", [])]
     assert "stage1_planner_starting" in milestone_codes
     assert "stage1_planner_invoked" in milestone_codes
+    assert "stage1_planner_timeout" in milestone_codes
     assert "stage1_planner_finished" not in milestone_codes
     assert stage2.calls == []
     assert "planner_late_emit" not in milestone_codes

@@ -270,6 +270,30 @@ def is_startup_stale_generation_job(job: dict[str, Any], *, stale_after_seconds:
     )
 
 
+def is_stage1_planner_stalled_generation_job(job: dict[str, Any], *, stale_after_seconds: int = 180) -> bool:
+    if str(job.get("status") or "") != "running":
+        return False
+    if job.get("completed_at") is not None or job.get("stage1_result") is not None or job.get("final_result") is not None:
+        return False
+    milestones = _progress_milestones(job.get("progress_milestones"))
+    if not milestones:
+        return False
+    milestone_invoked_at: datetime | None = None
+    saw_planner_finished = False
+    for entry in milestones:
+        if not isinstance(entry, dict):
+            continue
+        code = str(entry.get("code") or "")
+        if code == "stage1_planner_finished":
+            saw_planner_finished = True
+        if code == "stage1_planner_invoked":
+            milestone_invoked_at = _parse_datetime(entry.get("at")) or milestone_invoked_at
+    if saw_planner_finished or milestone_invoked_at is None:
+        return False
+    age = (datetime.now(timezone.utc) - milestone_invoked_at).total_seconds()
+    return age >= max(1, stale_after_seconds)
+
+
 def _job_loaded_milestone(now_iso: str) -> dict[str, Any]:
     return {
         "code": "job_loaded",
@@ -324,6 +348,8 @@ class SupabaseAppStore:
             return "fresh"
         if is_startup_stale_generation_job(job, stale_after_seconds=stale_after_seconds):
             return "startup_stale"
+        if is_stage1_planner_stalled_generation_job(job):
+            return "stage1_planner_stalled"
         heartbeat_at = _parse_datetime(job.get("heartbeat_at"))
         started_at = _parse_datetime(job.get("started_at"))
         reference_time = heartbeat_at or started_at
@@ -1216,10 +1242,42 @@ class SupabaseAppStore:
 
     def get_generation_job(self, job_id: str) -> dict[str, Any] | None:
         try:
-            return self._run_with_transient_retry(
+            job = self._run_with_transient_retry(
                 operation="get_generation_job:select",
                 fn=lambda: self._read_generation_job(job_id),
             )
+            if not job or str(job.get("status") or "") != "running":
+                return job
+            if self._classify_running_job_staleness(job, stale_after_seconds=90) == "stage1_planner_stalled":
+                now_iso = _utc_now_iso()
+                milestones = _progress_milestones(job.get("progress_milestones"))
+                milestones.append(
+                    {
+                        "code": "stage1_planner_timeout",
+                        "label": "Stage 1 planner timed out",
+                        "detail": "Planner did not return after invocation and the job was failed for recovery.",
+                        "meta": {},
+                        "at": now_iso,
+                    }
+                )
+                self._run_with_transient_retry(
+                    operation="get_generation_job:fail_stage1_stalled",
+                    fn=lambda: self.client.table("generation_jobs")
+                    .update(
+                        {
+                            "status": "failed",
+                            "error": "Stage 1 planner stalled after planner invocation.",
+                            "completed_at": now_iso,
+                            "heartbeat_at": now_iso,
+                            "progress_milestones": milestones,
+                        }
+                    )
+                    .eq("id", str(job.get("id") or ""))
+                    .eq("status", "running")
+                    .execute(),
+                )
+                return self._read_generation_job(job_id)
+            return job
         except _STORE_CLIENT_ERRORS as exc:
             if self._is_transient_store_error(exc):
                 logger.warning(
@@ -1311,6 +1369,34 @@ class SupabaseAppStore:
                                 "stage1_result": None,
                                 "final_result": None,
                                 "progress_milestones": [],
+                            }
+                        )
+                        .eq("id", str(row.get("id") or ""))
+                        .eq("status", "running")
+                        .execute(),
+                    )
+                elif staleness == "stage1_planner_stalled":
+                    now_iso = _utc_now_iso()
+                    milestones = _progress_milestones(row.get("progress_milestones"))
+                    milestones.append(
+                        {
+                            "code": "stage1_planner_timeout",
+                            "label": "Stage 1 planner timed out",
+                            "detail": "Planner did not return after invocation and the job was failed for recovery.",
+                            "meta": {},
+                            "at": now_iso,
+                        }
+                    )
+                    self._run_with_transient_retry(
+                        operation="get_active_generation_job_for_athlete:fail_stage1_stalled",
+                        fn=lambda: self.client.table("generation_jobs")
+                        .update(
+                            {
+                                "status": "failed",
+                                "error": "Stage 1 planner stalled after planner invocation.",
+                                "completed_at": now_iso,
+                                "heartbeat_at": now_iso,
+                                "progress_milestones": milestones,
                             }
                         )
                         .eq("id", str(row.get("id") or ""))
