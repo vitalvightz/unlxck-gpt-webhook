@@ -970,19 +970,6 @@ def _has_existing_triage_resume_approval(plan_row: dict[str, Any]) -> bool:
     return bool(why_log.get("triage_regeneration_cleared"))
 
 
-def _resume_job_final_status(job: dict[str, Any]) -> str:
-    final_result = job.get("final_result")
-    if isinstance(final_result, dict):
-        return str(final_result.get("status") or "").strip().lower()
-    return ""
-
-
-def _resume_job_resolved_successfully(job: dict[str, Any]) -> bool:
-    if str(job.get("status") or "").strip().lower() != "completed":
-        return False
-    final_status = _resume_job_final_status(job)
-    return final_status not in {"", "triage_blocked", "failed"}
-
 
 def create_app(
     *,
