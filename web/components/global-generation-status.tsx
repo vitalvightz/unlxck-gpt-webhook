@@ -117,7 +117,11 @@ export function GlobalGenerationStatus() {
       <Link
         href={navigationTarget}
         className={className}
-        aria-label="Plan ready. Tap to view."
+        aria-label={
+          isCompleted
+            ? "Plan ready. Tap to view."
+            : "Generation in progress. Tap to open generation status."
+        }
       >
         {content}
       </Link>
