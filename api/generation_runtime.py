@@ -854,14 +854,6 @@ async def run_generation_job(
                 heartbeat_at=utc_now_iso(),
             )
     except HTTPException as exc:
-        if exc.status_code == status.HTTP_503_SERVICE_UNAVAILABLE:
-            logger.warning(
-                "[jobs] generation:store_unavailable_deferred athlete_id=%s job_id=%s detail=%s",
-                athlete_id,
-                job_id,
-                exc.detail,
-            )
-            return
         detail = exc.detail if isinstance(exc.detail, str) else json.dumps(exc.detail)
         logger.warning("[jobs] generation:http_error athlete_id=%s job_id=%s detail=%s", athlete_id, job_id, detail)
         with suppress(Exception):

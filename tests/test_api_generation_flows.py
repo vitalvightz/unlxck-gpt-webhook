@@ -209,6 +209,75 @@ def test_get_active_generation_job_never_returns_stale_running_status():
     assert body["status"] != "running"
 
 
+def test_get_active_generation_job_marks_mid_pipeline_stale_running_failed():
+    client, store, _ = _build_client(enable_in_process_generation=False)
+    created = store.create_or_get_generation_job(
+        athlete_id="athlete-1",
+        client_request_id="mid-pipeline-stale",
+        source="self_serve",
+        request_payload=_build_request().model_dump(mode="json"),
+    )
+    old_iso = "2026-01-01T00:00:00+00:00"
+    store.update_generation_job(
+        created["id"],
+        status="running",
+        started_at=old_iso,
+        heartbeat_at=old_iso,
+        stage1_result=stage1_result(),
+    )
+    response = client.get("/api/generation-jobs/active", headers={"Authorization": "Bearer athlete-token"})
+    assert response.status_code == 200
+    body = response.json()
+    assert body["job_id"] == created["id"]
+    assert body["status"] == "failed"
+
+
+def test_create_generation_job_blocks_different_client_request_id_when_active_exists():
+    store = FakeStore()
+    store.create_or_get_generation_job(
+        athlete_id="athlete-1",
+        client_request_id="first-active",
+        source="self_serve",
+        request_payload=_build_request().model_dump(mode="json"),
+    )
+    with pytest.raises(HTTPException) as exc:
+        store.create_or_get_generation_job(
+            athlete_id="athlete-1",
+            client_request_id="second-active",
+            source="self_serve",
+            request_payload=_build_request().model_dump(mode="json"),
+        )
+    assert exc.value.status_code == status.HTTP_409_CONFLICT
+
+
+def test_claimable_jobs_excludes_mid_pipeline_stale_running():
+    store = FakeStore()
+    queued = store.create_or_get_generation_job(
+        athlete_id="athlete-1",
+        client_request_id="claimable-queued",
+        source="self_serve",
+        request_payload=_build_request().model_dump(mode="json"),
+    )
+    running = store.create_or_get_generation_job(
+        athlete_id="athlete-2",
+        client_request_id="claimable-running-mid-stale",
+        source="self_serve",
+        request_payload=_build_request().model_dump(mode="json"),
+    )
+    old_iso = "2026-01-01T00:00:00+00:00"
+    store.update_generation_job(
+        running["id"],
+        status="running",
+        started_at=old_iso,
+        heartbeat_at=old_iso,
+        stage1_result=stage1_result(),
+    )
+    claimable = store.list_claimable_generation_jobs(stale_after_seconds=1)
+    ids = {row["id"] for row in claimable}
+    assert queued["id"] in ids
+    assert running["id"] not in ids
+
+
 def test_get_active_generation_job_schedules_queued_job_without_creating_new_job():
     client, store, _ = _build_client(enable_in_process_generation=False)
     created = store.create_or_get_generation_job(
