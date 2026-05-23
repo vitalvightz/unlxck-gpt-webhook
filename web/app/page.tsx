@@ -260,10 +260,10 @@ export default function HomePage() {
         <h1>Workspace temporarily unavailable</h1>
         <p className="muted">Your session exists, but the app could not load your athlete profile.</p>
         <div className="hero-actions">
-          <button className="cta" onClick={() => window.location.reload()}>
+          <button type="button" className="cta" onClick={() => window.location.reload()}>
             Retry
           </button>
-          <button className="secondary-button" onClick={() => void signOut()}>
+          <button type="button" className="secondary-button" onClick={() => void signOut()}>
             Sign out
           </button>
         </div>
