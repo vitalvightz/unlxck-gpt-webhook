@@ -62,6 +62,7 @@ _GENERATION_JOB_CONFLICT_SNIPPETS = (
     "23505",
     "duplicate key value violates unique constraint",
     "generation_jobs_athlete_client_request_key",
+    "generation_jobs_one_active_job_per_athlete",
 )
 PLAN_RUNTIME_SCHEMA_ERROR_DETAIL = (
     "plans table is missing required runtime columns; apply latest Supabase schema and redeploy"
@@ -312,6 +313,25 @@ class SupabaseAppStore:
         response = query.limit(1).execute()
         rows = getattr(response, "data", None) or []
         return rows[0] if rows else None
+
+    def _classify_running_job_staleness(
+        self,
+        job: dict[str, Any],
+        *,
+        stale_after_seconds: int,
+    ) -> str:
+        if str(job.get("status") or "") != "running":
+            return "fresh"
+        if is_startup_stale_generation_job(job, stale_after_seconds=stale_after_seconds):
+            return "startup_stale"
+        heartbeat_at = _parse_datetime(job.get("heartbeat_at"))
+        started_at = _parse_datetime(job.get("started_at"))
+        reference_time = heartbeat_at or started_at
+        if reference_time is None:
+            return "fresh"
+        if (datetime.now(timezone.utc) - reference_time).total_seconds() < max(1, stale_after_seconds):
+            return "fresh"
+        return "mid_pipeline_stale"
 
     def _log_profile_event(self, *, operation: str, user: AuthenticatedUser, **fields: Any) -> None:
         details = " ".join(f"{key}=%r" % value for key, value in sorted(fields.items()))
@@ -1049,6 +1069,17 @@ class SupabaseAppStore:
                 if refreshed:
                     return refreshed
             return existing
+        active_job = self.get_active_generation_job_for_athlete(
+            athlete_id,
+            stale_after_seconds=stale_after_seconds,
+        )
+        if active_job and str(active_job.get("status") or "") in {"queued", "running"}:
+            if str(active_job.get("client_request_id") or "") == client_request_id:
+                return active_job
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="A generation job is already queued or running for this account.",
+            )
 
         payload = {
             "athlete_id": athlete_id,
@@ -1122,6 +1153,17 @@ class SupabaseAppStore:
             existing = None
         if existing:
             return existing
+        active_job = self.get_active_generation_job_for_athlete(
+            athlete_id,
+            stale_after_seconds=stale_after_seconds,
+        )
+        if active_job and str(active_job.get("status") or "") in {"queued", "running"}:
+            if str(active_job.get("client_request_id") or "") == client_request_id:
+                return active_job
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="A generation job is already queued or running for this account.",
+            )
         if last_error and self._is_transient_store_error(last_error):
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -1243,29 +1285,51 @@ class SupabaseAppStore:
                     return row
                 if str(row.get("status") or "") != "running":
                     continue
-                if not is_startup_stale_generation_job(row, stale_after_seconds=stale_after_seconds):
-                    return row
-                self._run_with_transient_retry(
-                    operation="get_active_generation_job_for_athlete:reset_startup_stale",
-                    fn=lambda: self.client.table("generation_jobs")
-                    .update(
-                        {
-                            "status": "queued",
-                            "error": None,
-                            "heartbeat_at": None,
-                            "started_at": None,
-                            "completed_at": None,
-                            "stage1_result": None,
-                            "final_result": None,
-                            "progress_milestones": [],
-                        }
-                    )
-                    .eq("id", str(row.get("id") or ""))
-                    .eq("status", "running")
-                    .execute(),
+                staleness = self._classify_running_job_staleness(
+                    row,
+                    stale_after_seconds=stale_after_seconds,
                 )
+                if staleness == "fresh":
+                    return row
+                if staleness == "startup_stale":
+                    self._run_with_transient_retry(
+                        operation="get_active_generation_job_for_athlete:reset_startup_stale",
+                        fn=lambda: self.client.table("generation_jobs")
+                        .update(
+                            {
+                                "status": "queued",
+                                "error": None,
+                                "heartbeat_at": None,
+                                "started_at": None,
+                                "completed_at": None,
+                                "stage1_result": None,
+                                "final_result": None,
+                                "progress_milestones": [],
+                            }
+                        )
+                        .eq("id", str(row.get("id") or ""))
+                        .eq("status", "running")
+                        .execute(),
+                    )
+                else:
+                    now_iso = _utc_now_iso()
+                    self._run_with_transient_retry(
+                        operation="get_active_generation_job_for_athlete:fail_mid_pipeline_stale",
+                        fn=lambda: self.client.table("generation_jobs")
+                        .update(
+                            {
+                                "status": "failed",
+                                "error": "Generation job stalled mid-pipeline and was failed for recovery.",
+                                "completed_at": now_iso,
+                                "heartbeat_at": now_iso,
+                            }
+                        )
+                        .eq("id", str(row.get("id") or ""))
+                        .eq("status", "running")
+                        .execute(),
+                    )
                 refreshed = self.get_generation_job(str(row.get("id") or ""))
-                if refreshed and str(refreshed.get("status") or "") == "queued":
+                if refreshed and str(refreshed.get("status") or "") in {"queued", "failed"}:
                     return refreshed
             return None
         except _STORE_CLIENT_ERRORS as exc:
@@ -1385,6 +1449,11 @@ class SupabaseAppStore:
                         continue
                     row_id = str(row.get("id") or "")
                     if not row_id:
+                        continue
+                    if str(row.get("status") or "") == "running" and not is_startup_stale_generation_job(
+                        row,
+                        stale_after_seconds=stale_after_seconds,
+                    ):
                         continue
                     merged_rows[row_id] = dict(row)
             return sorted(merged_rows.values(), key=lambda row: str(row.get("created_at") or ""))[:limit]

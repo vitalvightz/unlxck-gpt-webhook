@@ -65,6 +65,21 @@ class FakeStore:
         # do not need to register every admin email explicitly.
         return normalized.endswith("@unlxck.test")
 
+    def _classify_running_job_staleness(self, job: dict, *, stale_after_seconds: int) -> str:
+        if str(job.get("status") or "") != "running":
+            return "fresh"
+        if is_startup_stale_generation_job(job, stale_after_seconds=stale_after_seconds):
+            return "startup_stale"
+        heartbeat_raw = job.get("heartbeat_at")
+        started_raw = job.get("started_at")
+        heartbeat = datetime.fromisoformat(str(heartbeat_raw).replace("Z", "+00:00")) if heartbeat_raw else None
+        started_at = datetime.fromisoformat(str(started_raw).replace("Z", "+00:00")) if started_raw else None
+        reference = heartbeat or started_at
+        if reference is None:
+            return "fresh"
+        age = (datetime.now(timezone.utc) - reference).total_seconds()
+        return "fresh" if age < max(1, stale_after_seconds) else "mid_pipeline_stale"
+
     def ensure_profile(self, user: AuthenticatedUser) -> dict:
         existing = self.profiles.get(user.user_id)
         if existing:
@@ -285,6 +300,14 @@ class FakeStore:
 
                     job.update(reset_changes)
                 return dict(job)
+        active = self.get_active_generation_job_for_athlete(athlete_id, stale_after_seconds=stale_after_seconds)
+        if active:
+            if str(active.get("client_request_id") or "") == client_request_id:
+                return dict(active)
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="A generation job is already queued or running for this account.",
+            )
         now = _now()
         job_id = f"job_{uuid4().hex[:10]}"
         job = {
@@ -335,22 +358,35 @@ class FakeStore:
         for row in rows[:10]:
             if str(row.get("status") or "") == "queued":
                 return dict(row)
-            if not is_startup_stale_generation_job(row, stale_after_seconds=stale_after_seconds):
+            staleness = self._classify_running_job_staleness(row, stale_after_seconds=stale_after_seconds)
+            if staleness == "fresh":
                 return dict(row)
-            now = _now()
-            row.update(
-                {
-                    "status": "queued",
-                    "error": None,
-                    "heartbeat_at": None,
-                    "started_at": None,
-                    "completed_at": None,
-                    "stage1_result": None,
-                    "final_result": None,
-                    "progress_milestones": [],
-                    "updated_at": now,
-                }
-            )
+            if staleness == "startup_stale":
+                now = _now()
+                row.update(
+                    {
+                        "status": "queued",
+                        "error": None,
+                        "heartbeat_at": None,
+                        "started_at": None,
+                        "completed_at": None,
+                        "stage1_result": None,
+                        "final_result": None,
+                        "progress_milestones": [],
+                        "updated_at": now,
+                    }
+                )
+            else:
+                now = _now()
+                row.update(
+                    {
+                        "status": "failed",
+                        "error": "Generation job stalled mid-pipeline and was failed for recovery.",
+                        "completed_at": now,
+                        "heartbeat_at": now,
+                        "updated_at": now,
+                    }
+                )
             return dict(row)
         return None
 
@@ -400,7 +436,6 @@ class FakeStore:
         return rows[:limit]
 
     def list_claimable_generation_jobs(self, *, limit: int = 20, stale_after_seconds: int = 90) -> list[dict]:
-        now = datetime.now(timezone.utc)
         rows = []
         for job in self.generation_jobs.values():
             status_value = str(job.get("status") or "")
@@ -409,22 +444,7 @@ class FakeStore:
                 continue
             if status_value != "running":
                 continue
-            heartbeat_raw = job.get("heartbeat_at")
-            started_raw = job.get("started_at")
-            heartbeat = (
-                datetime.fromisoformat(str(heartbeat_raw).replace("Z", "+00:00"))
-                if isinstance(heartbeat_raw, str) and heartbeat_raw
-                else None
-            )
-            started_at = (
-                datetime.fromisoformat(str(started_raw).replace("Z", "+00:00"))
-                if isinstance(started_raw, str) and started_raw
-                else None
-            )
-            last_progress_at = heartbeat or started_at
-            if is_startup_stale_generation_job(job, stale_after_seconds=stale_after_seconds) or (
-                last_progress_at and (now - last_progress_at).total_seconds() >= stale_after_seconds
-            ):
+            if is_startup_stale_generation_job(job, stale_after_seconds=stale_after_seconds):
                 rows.append(dict(job))
         rows.sort(key=lambda row: str(row.get("created_at") or ""))
         return rows[:limit]
