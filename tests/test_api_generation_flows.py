@@ -2378,6 +2378,43 @@ def test_admin_triage_resume_stage1_planner_timeout_fails_without_touching_plan(
     assert post_timeout_job["status"] == "failed"
 
 
+def test_runtime_generation_stage1_planner_does_not_fail_before_configured_timeout(monkeypatch):
+    monkeypatch.setenv("STAGE1_PLANNER_TIMEOUT_SECONDS", "0.3")
+    store = FakeStore()
+    athlete = AuthenticatedUser(
+        user_id="athlete-1",
+        email="athlete@example.com",
+        full_name="Athlete",
+        metadata={},
+    )
+    store.ensure_profile(athlete)
+    request = _build_request()
+    job = store.create_or_get_generation_job(
+        athlete_id=athlete.user_id,
+        client_request_id="stage1-timeout-under-threshold",
+        source="self_serve",
+        request_payload=request.model_dump(mode="json"),
+    )
+    now_iso = _now()
+    store.update_generation_job(job["id"], status="running", started_at=now_iso, heartbeat_at=now_iso)
+
+    def _planner(payload: dict, *, progress_callback=None) -> dict:
+        time.sleep(0.2)
+        return stage1_result()
+
+    asyncio.run(
+        run_generation_job(
+            job_id=job["id"],
+            store=store,
+            planner_fn=_planner,
+            stage2=FakeStage2Automator(result=finalized_result()),
+            active_tasks=set(),
+        )
+    )
+    refreshed_job = store.get_generation_job(job["id"])
+    assert refreshed_job["status"] == "completed"
+
+
 def test_runtime_generation_saves_completed_plan():
     store = FakeStore()
     athlete = AuthenticatedUser(
