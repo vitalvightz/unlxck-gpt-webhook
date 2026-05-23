@@ -141,6 +141,7 @@ export function GenerationStatusProvider({ children, token }: GenerationStatusPr
   // state updates on an unmounted component
   const clearTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isCheckingRef = useRef(false);
+  const wasAuthenticatedRef = useRef(Boolean(token));
 
   // Cancel any pending clear timer when the component unmounts
   useEffect(() => {
@@ -152,6 +153,23 @@ export function GenerationStatusProvider({ children, token }: GenerationStatusPr
   }, []);
 
   const checkStatus = useCallback(async () => {
+    if (!token) {
+      if (wasAuthenticatedRef.current) {
+        clearPendingGenerations();
+      }
+      setPhase(null);
+      setJobId(null);
+      setClientRequestId(null);
+      setPlanId(null);
+      setStatusMessageText(null);
+      setStartedAtMs(null);
+      wasAuthenticatedRef.current = false;
+      isCheckingRef.current = false;
+      return;
+    }
+
+    wasAuthenticatedRef.current = true;
+
     if (isCheckingRef.current) {
       return;
     }
@@ -162,7 +180,7 @@ export function GenerationStatusProvider({ children, token }: GenerationStatusPr
       const pending = getPendingGeneration();
 
       let activePending = pending;
-      if (!activePending && token) {
+      if (!activePending) {
         try {
           const activeJob = await getActiveGenerationJob(token);
           if (activeJob?.client_request_id && activeJob.created_at) {
