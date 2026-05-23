@@ -2093,6 +2093,41 @@ def _visible_insert_session_sequence(session_sequence: list[dict[str, Any]]) -> 
     ]
 
 
+def _coach_owned_context_session_sequence(session_sequence: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Return coach-owned boxing context sessions that must stay visible in the calendar."""
+    coach_owned: list[dict[str, Any]] = []
+    for session in session_sequence:
+        role_key = str(session.get("role_key") or "").strip()
+        downgraded_from = str(session.get("downgraded_from_role_key") or "").strip()
+        is_declared_boxing_context = (
+            role_key == "hard_sparring_day"
+            or downgraded_from == "hard_sparring_day"
+        )
+        if not is_declared_boxing_context:
+            continue
+        if str(session.get("scheduled_day_hint") or "").strip():
+            coach_owned.append(session)
+    return coach_owned
+
+
+def _visible_calendar_session_sequence(session_sequence: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Return calendar-visible sessions (coach-owned boxing context + app-owned inserts)."""
+    combined = _coach_owned_context_session_sequence(session_sequence) + _visible_insert_session_sequence(session_sequence)
+    unique: list[dict[str, Any]] = []
+    seen: set[tuple[str, str, int | None]] = set()
+    for session in combined:
+        key = (
+            str(session.get("role_key") or ""),
+            str(session.get("scheduled_countdown_label") or session.get("countdown_label") or session.get("scheduled_day_hint") or ""),
+            int(session.get("countdown_offset")) if isinstance(session.get("countdown_offset"), int) else None,
+        )
+        if key in seen:
+            continue
+        seen.add(key)
+        unique.append(session)
+    return sorted(unique, key=lambda entry: int(entry.get("countdown_offset") or 0), reverse=True)
+
+
 def _title_case_days(days: list[str]) -> list[str]:
     return [str(day).strip().title() for day in days if str(day).strip()]
 
@@ -3811,7 +3846,7 @@ def _build_late_fight_plan_spec(days_until_fight: Any, athlete_model: dict) -> d
     allocation = _late_fight_practical_allocation_plan(days_until_fight, athlete_model)
     roles = list(allocation.get("session_roles", []))
     session_sequence = list(roles)
-    visible_session_sequence = _visible_insert_session_sequence(session_sequence)
+    visible_session_sequence = _visible_calendar_session_sequence(session_sequence)
     mode = payload_block["payload_mode"]
     max_blocks = _MAX_BLOCKS_PER_SESSION.get(mode)
     resolved_countdown_map = dict((allocation.get("allocator", {}) or {}).get("countdown_weekday_map", {}))
