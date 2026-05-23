@@ -72,7 +72,7 @@ function getPendingGeneration(storageKey: string | null): PendingGenerationState
   if (!storageKey || typeof window === "undefined") {
     return null;
   }
-  const raw = window.sessionStorage.getItem(storageKey);
+  const raw = window.localStorage.getItem(storageKey);
   if (!raw) {
     return null;
   }
@@ -80,7 +80,7 @@ function getPendingGeneration(storageKey: string | null): PendingGenerationState
     const decoded = JSON.parse(raw) as PendingGenerationState;
     return decoded?.clientRequestId ? decoded : null;
   } catch {
-    window.sessionStorage.removeItem(storageKey);
+    window.localStorage.removeItem(storageKey);
     return null;
   }
 }
@@ -90,9 +90,9 @@ function clearOtherPendingGenerations(activeStorageKey: string | null): void {
     return;
   }
 
-  Object.keys(window.sessionStorage)
+  Object.keys(window.localStorage)
     .filter((key) => key.startsWith(PENDING_GENERATION_PREFIX) && key !== activeStorageKey)
-    .forEach((key) => window.sessionStorage.removeItem(key));
+    .forEach((key) => window.localStorage.removeItem(key));
 }
 
 function clearAllPendingGenerations(): void {
@@ -100,9 +100,9 @@ function clearAllPendingGenerations(): void {
     return;
   }
 
-  Object.keys(window.sessionStorage)
+  Object.keys(window.localStorage)
     .filter((key) => key.startsWith(PENDING_GENERATION_PREFIX))
-    .forEach((key) => window.sessionStorage.removeItem(key));
+    .forEach((key) => window.localStorage.removeItem(key));
 }
 
 function savePendingGeneration(storageKey: string | null, pending: PendingGenerationState): void {
@@ -110,14 +110,14 @@ function savePendingGeneration(storageKey: string | null, pending: PendingGenera
     return;
   }
   clearOtherPendingGenerations(storageKey);
-  window.sessionStorage.setItem(storageKey, JSON.stringify(pending));
+  window.localStorage.setItem(storageKey, JSON.stringify(pending));
 }
 
 function clearPendingGeneration(storageKey: string | null): void {
   if (!storageKey || typeof window === "undefined") {
     return;
   }
-  window.sessionStorage.removeItem(storageKey);
+  window.localStorage.removeItem(storageKey);
 }
 
 function getPollDelay(startedAtMs: number): number {

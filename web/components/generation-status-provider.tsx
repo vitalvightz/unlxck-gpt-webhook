@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useEffect, useRef, useState, useCallback, type ReactNode } from "react";
-import { getGenerationJob } from "@/lib/api";
+import { getActiveGenerationJob, getGenerationJob } from "@/lib/api";
 import { isPreStartStaleGenerationJob } from "@/lib/generation-controller";
 import type { GenerationJobResponse, GenerationJobStatus } from "@/lib/types";
 
@@ -36,13 +36,13 @@ type StoredPendingGenerationState = PendingGenerationState & {
 function parsePendingGeneration(storageKey: string): StoredPendingGenerationState | null {
   if (typeof window === "undefined") return null;
 
-  const raw = window.sessionStorage.getItem(storageKey);
+  const raw = window.localStorage.getItem(storageKey);
   if (!raw) return null;
 
   try {
     const decoded = JSON.parse(raw) as PendingGenerationState;
     if (!decoded?.clientRequestId) {
-      window.sessionStorage.removeItem(storageKey);
+      window.localStorage.removeItem(storageKey);
       return null;
     }
     const createdAtMs = Date.parse(decoded.createdAt || "");
@@ -52,7 +52,7 @@ function parsePendingGeneration(storageKey: string): StoredPendingGenerationStat
       createdAtMs: Number.isFinite(createdAtMs) ? createdAtMs : 0,
     };
   } catch {
-    window.sessionStorage.removeItem(storageKey);
+    window.localStorage.removeItem(storageKey);
     return null;
   }
 }
@@ -60,7 +60,7 @@ function parsePendingGeneration(storageKey: string): StoredPendingGenerationStat
 function listPendingGenerations(): StoredPendingGenerationState[] {
   if (typeof window === "undefined") return [];
 
-  return Object.keys(window.sessionStorage)
+  return Object.keys(window.localStorage)
     .filter((key) => key.startsWith(PENDING_GENERATION_PREFIX))
     .map(parsePendingGeneration)
     .filter((pending): pending is StoredPendingGenerationState => pending !== null)
@@ -71,18 +71,28 @@ function getPendingGeneration(): PendingGenerationState | null {
   const [latest, ...duplicates] = listPendingGenerations();
 
   duplicates.forEach((pending) => {
-    window.sessionStorage.removeItem(pending.storageKey);
+    window.localStorage.removeItem(pending.storageKey);
   });
 
   return latest ?? null;
 }
 
+function savePendingGeneration(pending: PendingGenerationState): void {
+  if (typeof window === "undefined") return;
+  const existing = listPendingGenerations();
+  existing.forEach((item) => {
+    window.localStorage.removeItem(item.storageKey);
+  });
+  const key = `${PENDING_GENERATION_PREFIX}self`;
+  window.localStorage.setItem(key, JSON.stringify(pending));
+}
+
 function clearPendingGenerations(): void {
   if (typeof window === "undefined") return;
 
-  Object.keys(window.sessionStorage)
+  Object.keys(window.localStorage)
     .filter((key) => key.startsWith(PENDING_GENERATION_PREFIX))
-    .forEach((key) => window.sessionStorage.removeItem(key));
+    .forEach((key) => window.localStorage.removeItem(key));
 }
 
 function isTerminalStatus(status: GenerationJobStatus): boolean {
@@ -151,7 +161,19 @@ export function GenerationStatusProvider({ children, token }: GenerationStatusPr
     try {
       const pending = getPendingGeneration();
 
-      if (!pending) {
+      let activePending = pending;
+      if (!activePending && token) {
+        const activeJob = await getActiveGenerationJob(token);
+        if (activeJob?.client_request_id && activeJob.created_at) {
+          activePending = {
+            clientRequestId: activeJob.client_request_id,
+            jobId: activeJob.job_id,
+            createdAt: activeJob.created_at,
+          };
+          savePendingGeneration(activePending);
+        }
+      }
+      if (!activePending) {
         setPhase(null);
         setJobId(null);
         setClientRequestId(null);
@@ -161,17 +183,17 @@ export function GenerationStatusProvider({ children, token }: GenerationStatusPr
         return;
       }
 
-      setClientRequestId(pending.clientRequestId);
-      const pendingCreatedAt = Date.parse(pending.createdAt || "");
+      setClientRequestId(activePending.clientRequestId);
+      const pendingCreatedAt = Date.parse(activePending.createdAt || "");
       setStartedAtMs(Number.isFinite(pendingCreatedAt) ? pendingCreatedAt : null);
 
-      if (pending.jobId && token) {
+      if (activePending.jobId && token) {
         try {
-          const job: GenerationJobResponse = await getGenerationJob(token, pending.jobId);
+          const job: GenerationJobResponse = await getGenerationJob(token, activePending.jobId);
           const stalledBeforeStart = isPreStartStaleGenerationJob(job);
           const newPhase = stalledBeforeStart ? "failed" : phaseFromStatus(job.status);
           setPhase(newPhase);
-          setJobId(pending.jobId);
+          setJobId(activePending.jobId);
           setStatusMessageText(stalledBeforeStart ? "Build stalled — retry" : statusMessage(newPhase));
 
           if (job.status === "completed" || job.status === "review_required") {
