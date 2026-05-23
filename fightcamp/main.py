@@ -152,6 +152,12 @@ def generate_plan_sync(
 
     _safe_emit(
         progress_callback,
+        "stage1_parse_input_started",
+        "Stage 1 parse input started",
+        "Parsing planner payload into canonical Stage 1 input.",
+    )
+    _safe_emit(
+        progress_callback,
         "intake_received",
         "Intake received",
         "Locking in your intake and preparing the planner.",
@@ -165,6 +171,12 @@ def generate_plan_sync(
         logger.warning("invalid payload: %s", exc)
         return _invalid_result(str(exc))
     _record_timing("parse_input", timer_start)
+    _safe_emit(
+        progress_callback,
+        "stage1_parse_input_finished",
+        "Stage 1 parse input finished",
+        "Planner payload parsed into canonical Stage 1 input.",
+    )
 
     generation_issues = plan_input.generation_issues()
     if generation_issues:
@@ -188,6 +200,12 @@ def generate_plan_sync(
     )
 
     timer_start = perf_counter()
+    _safe_emit(
+        progress_callback,
+        "stage1_injury_triage_started",
+        "Stage 1 injury triage started",
+        "Evaluating injuries and triage mode.",
+    )
     triage_result = triage_injuries(plan_input)
     _record_timing("injury_triage", timer_start)
     triage_mode_value = str(triage_result.mode or "").strip().lower() or "full_plan"
@@ -198,6 +216,14 @@ def generate_plan_sync(
         )
     else:
         triage_detail = "No injuries reported. Routing as full plan."
+    _safe_emit(
+        progress_callback,
+        "stage1_injury_triage_finished",
+        "Stage 1 injury triage finished",
+        triage_detail,
+        triage_mode=triage_mode_value,
+        parsed_injury_count=parsed_injury_count,
+    )
     _safe_emit(
         progress_callback,
         "injury_triage_done",
@@ -227,6 +253,12 @@ def generate_plan_sync(
     )
 
     timer_start = perf_counter()
+    _safe_emit(
+        progress_callback,
+        "stage1_phase_mapping_started",
+        "Stage 1 phase mapping started",
+        "Mapping camp phases and timeline windows.",
+    )
     context = build_runtime_context(
         plan_input=plan_input,
         random_seed=data.get("random_seed"),
@@ -235,6 +267,12 @@ def generate_plan_sync(
         is_approved_triage_resume=triage_resume_override_applied,
     )
     _record_timing("runtime_context", timer_start)
+    _safe_emit(
+        progress_callback,
+        "stage1_phase_mapping_finished",
+        "Stage 1 phase mapping finished",
+        "Camp phase mapping completed.",
+    )
     phase_weeks_value = getattr(context, "phase_weeks", None)
     if not isinstance(phase_weeks_value, dict):
         phase_weeks_value = {}
@@ -276,10 +314,28 @@ def generate_plan_sync(
     # Build Stage 2 outputs before any optional PDF work so they are never
     # gated behind the (potentially slow) export step.
     timer_start = perf_counter()
+    _safe_emit(
+        progress_callback,
+        "stage1_role_map_started",
+        "Stage 1 role map started",
+        "Preparing Stage 2 role map and handoff structures.",
+    )
     stage2_payload, planning_brief, stage2_handoff_text = build_stage2_outputs(
         context=context,
         blocks=blocks,
         rendered=rendered,
+    )
+    _safe_emit(
+        progress_callback,
+        "stage1_role_map_finished",
+        "Stage 1 role map finished",
+        "Stage 2 role map and handoff structures are ready.",
+    )
+    _safe_emit(
+        progress_callback,
+        "stage1_payload_build_started",
+        "Stage 1 payload build started",
+        "Building Stage 1 output payload package.",
     )
     if isinstance(stage2_payload, dict):
         stage2_payload = {
@@ -287,6 +343,12 @@ def generate_plan_sync(
             "input_parsing_metadata": plan_input.parsing_metadata,
         }
     _record_timing("stage2_outputs", timer_start)
+    _safe_emit(
+        progress_callback,
+        "stage1_payload_build_finished",
+        "Stage 1 payload build finished",
+        "Stage 1 payload package built successfully.",
+    )
     _safe_emit(
         progress_callback,
         "stage2_handoff_ready",

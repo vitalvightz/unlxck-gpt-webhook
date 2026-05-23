@@ -395,6 +395,8 @@ def test_get_generation_job_fails_stage1_invoked_after_configured_stage1_timeout
     assert response.json()["status"] == "failed"
     failed = store.get_generation_job(created["id"])
     assert failed["error"] == "Stage 1 planner stalled after planner invocation."
+    timeout_codes = [m.get("code") for m in failed.get("progress_milestones", []) if isinstance(m, dict)]
+    assert timeout_codes.count("stage1_planner_timeout") == 1
 
 
 def test_get_generation_job_fails_stage1_invoked_after_timeout_even_with_fresh_heartbeat(monkeypatch):
@@ -1415,6 +1417,11 @@ def test_generation_pipeline_persists_triage_blocked_without_stage2_call():
     assert saved["status"] == "triage_blocked"
     assert saved["stage2_status"] == "triage_blocked"
     assert saved["stage2_payload"] is None
+    milestone_codes = [entry.get("code") for entry in job.get("progress_milestones", []) if isinstance(entry, dict)]
+    assert "stage1_planner_finished" in milestone_codes
+    assert "stage2_skipped" in milestone_codes
+    assert "stage1_planner_timeout" not in milestone_codes
+    assert "stage2_drafting" not in milestone_codes
     detail = client.get(
         f"/api/plans/{saved['id']}",
         headers={"Authorization": "Bearer athlete-token"},
@@ -2352,6 +2359,7 @@ def test_admin_triage_resume_stage1_planner_timeout_fails_without_touching_plan(
     assert "stage1_planner_starting" in milestone_codes
     assert "stage1_planner_invoked" in milestone_codes
     assert "stage1_planner_timeout" in milestone_codes
+    assert milestone_codes.count("stage1_planner_timeout") == 1
     assert "stage1_planner_finished" not in milestone_codes
     assert stage2.calls == []
     assert "planner_late_emit" not in milestone_codes
