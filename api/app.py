@@ -495,7 +495,7 @@ def _validate_production_cors_config(origins: list[str], regex: str | None) -> N
             logger.critical("[cors] UNSAFE_PRODUCTION_CORS_OVERRIDE_ACTIVE: %s", violation)
         return
 
-    raise ValueError(
+    raise RuntimeError(
         "Unsafe production CORS configuration. "
         "Refusing to boot unless APP_ALLOW_UNSAFE_PRODUCTION_CORS_BOOT=1 is set. "
         + "; ".join(violations)
