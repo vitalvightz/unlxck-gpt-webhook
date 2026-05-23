@@ -142,6 +142,12 @@ export function GenerationStatusProvider({ children, token }: GenerationStatusPr
   const clearTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isCheckingRef = useRef(false);
   const wasAuthenticatedRef = useRef(Boolean(token));
+  const latestTokenRef = useRef(token);
+  const checkSequenceRef = useRef(0);
+
+  useEffect(() => {
+    latestTokenRef.current = token;
+  }, [token]);
 
   // Cancel any pending clear timer when the component unmounts
   useEffect(() => {
@@ -153,7 +159,10 @@ export function GenerationStatusProvider({ children, token }: GenerationStatusPr
   }, []);
 
   const checkStatus = useCallback(async () => {
+    const sequence = ++checkSequenceRef.current;
+
     if (!token) {
+      checkSequenceRef.current++;
       if (wasAuthenticatedRef.current) {
         clearPendingGenerations();
       }
@@ -183,6 +192,9 @@ export function GenerationStatusProvider({ children, token }: GenerationStatusPr
       if (!activePending) {
         try {
           const activeJob = await getActiveGenerationJob(token);
+          if (sequence !== checkSequenceRef.current || !latestTokenRef.current) {
+            return;
+          }
           if (activeJob?.client_request_id && activeJob.created_at) {
             activePending = {
               clientRequestId: activeJob.client_request_id,
@@ -212,6 +224,9 @@ export function GenerationStatusProvider({ children, token }: GenerationStatusPr
       if (activePending.jobId && token) {
         try {
           const job: GenerationJobResponse = await getGenerationJob(token, activePending.jobId);
+          if (sequence !== checkSequenceRef.current || !latestTokenRef.current) {
+            return;
+          }
           const stalledBeforeStart = isPreStartStaleGenerationJob(job);
           const newPhase = stalledBeforeStart ? "failed" : phaseFromStatus(job.status);
           setPhase(newPhase);
