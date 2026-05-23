@@ -26,7 +26,7 @@ export function GlobalGenerationStatus() {
 
   const isFailed = phase === "failed";
   const isCompleted = phase === "completed";
-  const ctaLabel = isCompleted ? "View" : isFailed ? "Refresh" : "Home";
+  const ctaLabel = (isCompleted && planId) ? "View" : isFailed ? "Refresh" : "Home";
   const showElapsed = isActive && !isCompleted && !isFailed && startedAtMs !== null;
 
   useEffect(() => {
