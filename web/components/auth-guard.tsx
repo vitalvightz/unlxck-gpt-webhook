@@ -34,7 +34,7 @@ export function RequireAuth({
     if (adminOnly && !isMeHydrated) {
       return;
     }
-    if (isMeHydrated && !me && !hasTransientMeError) {
+    if (isMeHydrated && !me) {
       router.replace("/login");
       return;
     }
