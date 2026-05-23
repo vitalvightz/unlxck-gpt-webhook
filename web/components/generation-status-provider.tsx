@@ -7,6 +7,7 @@ import { isExpiredPendingGeneration, isStaleVisibleGenerationJob } from "@/lib/g
 import type { GenerationJobResponse, GenerationJobStatus } from "@/lib/types";
 
 export type GlobalGenerationPhase = "queued" | "running" | "finalizing" | "completed" | "failed" | null;
+export type GlobalTerminalGenerationStatus = "completed" | "review_required" | null;
 
 interface GenerationStatusContextValue {
   phase: GlobalGenerationPhase;
@@ -15,6 +16,7 @@ interface GenerationStatusContextValue {
   planId: string | null;
   isActive: boolean;
   statusMessage: string | null;
+  terminalStatus: GlobalTerminalGenerationStatus;
   startedAtMs: number | null;
   refreshStatus: () => void;
 }
@@ -108,7 +110,7 @@ function phaseFromStatus(status: GenerationJobStatus): GlobalGenerationPhase {
   return null;
 }
 
-function statusMessage(phase: GlobalGenerationPhase): string {
+function statusMessage(phase: GlobalGenerationPhase, terminalStatus: GlobalTerminalGenerationStatus): string {
   switch (phase) {
     case "queued":
       return "Plan request queued...";
@@ -117,7 +119,7 @@ function statusMessage(phase: GlobalGenerationPhase): string {
     case "finalizing":
       return "Finalizing plan...";
     case "completed":
-      return "Plan ready!";
+      return terminalStatus === "review_required" ? "Plan ready for review." : "Plan ready!";
     case "failed":
       return "Plan failed. Try again.";
     default:
@@ -136,6 +138,7 @@ export function GenerationStatusProvider({ children, token }: GenerationStatusPr
   const [clientRequestId, setClientRequestId] = useState<string | null>(null);
   const [planId, setPlanId] = useState<string | null>(null);
   const [statusMessageText, setStatusMessageText] = useState<string | null>(null);
+  const [terminalStatus, setTerminalStatus] = useState<GlobalTerminalGenerationStatus>(null);
   const [startedAtMs, setStartedAtMs] = useState<number | null>(null);
 
   // Track the clear timeout so we can cancel it on unmount — prevents
@@ -175,6 +178,7 @@ export function GenerationStatusProvider({ children, token }: GenerationStatusPr
       setClientRequestId(null);
       setPlanId(null);
       setStatusMessageText(null);
+      setTerminalStatus(null);
       setStartedAtMs(null);
       wasAuthenticatedRef.current = false;
       isCheckingRef.current = false;
@@ -221,6 +225,7 @@ export function GenerationStatusProvider({ children, token }: GenerationStatusPr
         setClientRequestId(null);
         setPlanId(null);
         setStatusMessageText(null);
+        setTerminalStatus(null);
         setStartedAtMs(null);
         return;
       }
@@ -238,9 +243,11 @@ export function GenerationStatusProvider({ children, token }: GenerationStatusPr
           const stalledBeforeStart = isPreStartStaleGenerationJob(job);
           const staleVisibleJob = isStaleVisibleGenerationJob(job);
           const newPhase = stalledBeforeStart || staleVisibleJob ? "failed" : phaseFromStatus(job.status);
+          const newTerminalStatus = job.status === "completed" || job.status === "review_required" ? job.status : null;
           setPhase(newPhase);
           setJobId(activePending.jobId);
-          setStatusMessageText(stalledBeforeStart || staleVisibleJob ? "Build stalled — retry" : statusMessage(newPhase));
+          setTerminalStatus(newTerminalStatus);
+          setStatusMessageText(stalledBeforeStart || staleVisibleJob ? "Build stalled — retry" : statusMessage(newPhase, newTerminalStatus));
 
           if (job.status === "completed" || job.status === "review_required") {
             setPlanId(job.plan_id || job.latest_plan_id || null);
@@ -261,6 +268,7 @@ export function GenerationStatusProvider({ children, token }: GenerationStatusPr
               setClientRequestId(null);
               setPlanId(null);
               setStatusMessageText(null);
+              setTerminalStatus(null);
               setStartedAtMs(null);
             }, delay);
           }
@@ -268,10 +276,16 @@ export function GenerationStatusProvider({ children, token }: GenerationStatusPr
           // If we can't check status but have pending data, assume still running
           setPhase("running");
           setStatusMessageText("Generating plan...");
+          setTerminalStatus(null);
         }
       } else {
-        setPhase("queued");
-        setStatusMessageText("Plan request queued...");
+        setPhase(null);
+        setJobId(null);
+        setClientRequestId(null);
+        setPlanId(null);
+        setStatusMessageText(null);
+        setTerminalStatus(null);
+        setStartedAtMs(null);
       }
     } finally {
       isCheckingRef.current = false;
@@ -314,6 +328,7 @@ export function GenerationStatusProvider({ children, token }: GenerationStatusPr
     planId,
     isActive: phase !== null,
     statusMessage: statusMessageText,
+    terminalStatus,
     startedAtMs,
     refreshStatus: checkStatus,
   };
