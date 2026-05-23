@@ -56,7 +56,7 @@ export default function GeneratePage() {
         search.set("recovered", "1");
       }
       const nextPath = `/plans/${planId}${search.toString() ? `?${search.toString()}` : ""}`;
-      window.location.replace(nextPath);
+      router.replace(nextPath);
     },
   });
 
