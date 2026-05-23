@@ -489,15 +489,17 @@ def _validate_production_cors_config(origins: list[str], regex: str | None) -> N
     if not violations:
         return
 
-    # Hotfix: downgrade to a loud warning so a misconfigured production deploy
-    # does not take the entire API offline. Operators should still treat these
-    # as deploy blockers, but the API now boots and serves traffic.
-    # Set APP_STRICT_PRODUCTION_CORS=1 to restore fail-fast behavior.
-    strict = os.getenv("APP_STRICT_PRODUCTION_CORS", "").strip() == "1"
-    for violation in violations:
-        logger.error("[cors] production_cors_unsafe: %s", violation)
-    if strict:
-        raise ValueError("; ".join(violations))
+    allow_unsafe = os.getenv("APP_ALLOW_UNSAFE_PRODUCTION_CORS_BOOT", "").strip() == "1"
+    if allow_unsafe:
+        for violation in violations:
+            logger.critical("[cors] UNSAFE_PRODUCTION_CORS_OVERRIDE_ACTIVE: %s", violation)
+        return
+
+    raise ValueError(
+        "Unsafe production CORS configuration. "
+        "Refusing to boot unless APP_ALLOW_UNSAFE_PRODUCTION_CORS_BOOT=1 is set. "
+        + "; ".join(violations)
+    )
 
 
 def _plan_generate_rate_limit_requests() -> int:

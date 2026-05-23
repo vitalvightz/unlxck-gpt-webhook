@@ -23,7 +23,7 @@ Plan generation runs in two stages:
 The Python planner (`fightcamp/`) reads the athlete's intake profile and builds a full draft plan. It scores exercises and conditioning drills by weakness tags, goal tags, style tags, phase, and equipment availability. The injury guard removes anything that violates active restrictions and selects safe replacements. Output includes the draft plan text, candidate pools, coach review notes, and the Stage 2 handoff package.
 
 **Stage 2 — AI finalization**
-The handoff package is sent to OpenAI. Stage 2 applies the `STAGE2_FINALIZER_PROMPT` rules: hard-filtering any remaining restriction violations, improving sequencing, enforcing anchor session standards, and writing the final athlete-facing plan in coach voice. The validator reviews the output and can trigger a repair pass if quality thresholds are not met.
+The handoff package is sent to OpenAI. Stage 2 currently makes one automated finalizer call. The validator then reviews that output. If validation fails, the plan is marked `review_required` and the validator report plus repair guidance are saved for manual review. Automatic retry is currently disabled unless future code changes explicitly enable it.
 
 ---
 
@@ -35,7 +35,7 @@ api/                    FastAPI application
   auth.py               Supabase token verification
   store.py              Supabase persistence (profiles, intakes, plans)
   models.py             Pydantic request/response models
-  stage2_automation.py  OpenAI Stage 2 call + retry logic
+  stage2_automation.py  OpenAI Stage 2 call orchestration
   nutrition_workspace.py Nutrition workspace endpoints
 
 fightcamp/              Plan generation engine
@@ -165,6 +165,12 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=
 - Job stale recovery timeout: `APP_GENERATION_JOB_STALE_AFTER_SECONDS` (default `1400`, minimum `60`)
 - Stage 1 planner timeout: `APP_STAGE1_PLANNER_TIMEOUT_SECONDS` (default `600`; use `0`/`none` to disable outside production)
 - The bank JSON files are loaded into memory on first request and cached for each worker process lifetime (with `--workers 2`, both workers will warm independently).
+- Runtime guards are split between process-local best-effort protections and durable database-backed protections:
+  - `active_generation_tasks` is process-local and only prevents duplicate scheduling inside one API process.
+  - The per-minute `POST /api/plans/generate` `SlidingWindowRateLimiter` is process-local and resets on restart.
+  - The daily generation cap, one-active-job-per-athlete rule, and job-claim correctness are durable Supabase/database-backed protections.
+  - If strict global rate limits are needed across multiple API/worker processes, add shared durable infrastructure later, such as Redis-backed rate limiting or queueing.
+- Production CORS is fail-fast by default. If CORS is unsafe in production, boot is blocked unless you explicitly set `APP_ALLOW_UNSAFE_PRODUCTION_CORS_BOOT=1` for emergency override.
 - Keep the instance warm with a cron job hitting `/health` every 14 minutes or use Render Standard tier
 
 **Supabase schema requirements**
