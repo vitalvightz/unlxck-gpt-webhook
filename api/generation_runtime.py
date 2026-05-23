@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import inspect
 import json
 import logging
 import traceback
@@ -54,7 +55,32 @@ def default_planner(
     *,
     progress_callback: ProgressCallback | None = None,
 ) -> dict[str, Any]:
+    if progress_callback is not None:
+        progress_callback(
+            "stage1_default_planner_entered",
+            "Stage 1 default planner entered",
+            "",
+            {},
+        )
+        progress_callback(
+            "stage1_generate_plan_sync_entering",
+            "Stage 1 generate_plan_sync entering",
+            "",
+            {},
+        )
     return generate_plan_sync(payload, progress_callback=progress_callback)
+
+
+def _planner_accepts_progress_callback(planner_fn: Planner) -> bool:
+    try:
+        signature = inspect.signature(planner_fn)
+    except (TypeError, ValueError):
+        return True
+
+    parameters = signature.parameters
+    if "progress_callback" in parameters:
+        return True
+    return any(p.kind == inspect.Parameter.VAR_KEYWORD for p in parameters.values())
 
 
 def _invoke_planner(
@@ -63,14 +89,26 @@ def _invoke_planner(
     progress_callback: ProgressCallback | None,
 ) -> dict[str, Any]:
     """Call a planner that may or may not accept a ``progress_callback`` kwarg."""
+    if progress_callback is not None:
+        progress_callback(
+            "stage1_planner_callable_entering",
+            "Stage 1 planner callable entering",
+            "",
+            {},
+        )
     if progress_callback is None:
         return planner_fn(payload)
-    try:
+
+    planner_supports_progress_callback = _planner_accepts_progress_callback(planner_fn)
+    if planner_supports_progress_callback:
+        progress_callback(
+            "stage1_planner_callable_supports_progress_callback",
+            "Stage 1 planner callable supports progress callback",
+            "",
+            {},
+        )
         return planner_fn(payload, progress_callback=progress_callback)
-    except TypeError:
-        # Planners written before milestones existed (or test stubs) won't
-        # accept the kwarg. Fall back transparently.
-        return planner_fn(payload)
+    return planner_fn(payload)
 
 
 def build_progress_recorder(

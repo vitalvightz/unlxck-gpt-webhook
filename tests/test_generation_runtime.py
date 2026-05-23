@@ -2,7 +2,13 @@ from __future__ import annotations
 
 import pytest
 
-from api.generation_runtime import _stage1_planner_timeout_seconds, _stage2_finalize_timeout_seconds
+from api import generation_runtime
+from api.generation_runtime import (
+    _invoke_planner,
+    _stage1_planner_timeout_seconds,
+    _stage2_finalize_timeout_seconds,
+    default_planner,
+)
 
 
 _ENVIRONMENT_VARS = ("APP_ENV", "ENVIRONMENT", "UNLXCK_ENV", "NODE_ENV")
@@ -75,3 +81,64 @@ def test_stage2_finalize_timeout_respects_valid_override(monkeypatch):
 def test_stage2_finalize_timeout_enforces_minimum_of_1(monkeypatch):
     monkeypatch.setenv("APP_STAGE2_FINALIZE_TIMEOUT_SECONDS", "0.5")
     assert _stage2_finalize_timeout_seconds() == 1.0
+
+
+def test_invoke_planner_passes_progress_callback_when_supported():
+    received: list[object] = []
+
+    def planner(payload, *, progress_callback=None):
+        received.append(progress_callback)
+        return payload
+
+    def callback(code, label, detail, meta):
+        return None
+
+    result = _invoke_planner(planner, {"ok": True}, callback)
+    assert result == {"ok": True}
+    assert received == [callback]
+
+
+def test_invoke_planner_skips_progress_callback_for_legacy_planner():
+    received: list[dict[str, bool]] = []
+
+    def planner(payload):
+        received.append(payload)
+        return payload
+
+    def callback(code, label, detail, meta):
+        return None
+
+    result = _invoke_planner(planner, {"ok": True}, callback)
+    assert result == {"ok": True}
+    assert received == [{"ok": True}]
+
+
+def test_invoke_planner_does_not_swallow_internal_type_error():
+    def planner(payload, *, progress_callback=None):
+        raise TypeError("internal bug")
+
+    with pytest.raises(TypeError, match="internal bug"):
+        _invoke_planner(planner, {"ok": True}, lambda *args: None)
+
+
+def test_default_planner_emits_diagnostic_milestones_before_generate_plan_sync(monkeypatch):
+    emitted_codes: list[str] = []
+    generate_plan_called = {"value": False}
+
+    def fake_generate_plan_sync(payload, *, progress_callback=None):
+        generate_plan_called["value"] = True
+        return {"plan": "ok"}
+
+    monkeypatch.setattr(generation_runtime, "generate_plan_sync", fake_generate_plan_sync)
+
+    def callback(code, label, detail, meta):
+        assert generate_plan_called["value"] is False
+        emitted_codes.append(code)
+
+    result = default_planner({"athlete": "x"}, progress_callback=callback)
+
+    assert result == {"plan": "ok"}
+    assert emitted_codes[:2] == [
+        "stage1_default_planner_entered",
+        "stage1_generate_plan_sync_entering",
+    ]
