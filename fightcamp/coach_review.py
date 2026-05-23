@@ -330,7 +330,13 @@ def run_coach_review(
         }
         for system, drills in grouped_drills.items():
             idx = 0
+            guard = 0
+            max_iter = max(len(drills) * 4, 8)
             while idx < len(drills):
+                guard += 1
+                if guard > max_iter:
+                    logger.warning("[stage1] loop_guard_break module=coach_review_conditioning system=%s", system)
+                    break
                 drill = drills[idx]
                 region_key, decision = _decision_for_item(
                     drill,
@@ -416,4 +422,3 @@ def run_coach_review(
 
     coach_notes = build_coach_review_notes(entries, substitutions)
     return coach_notes, updated_strength, updated_conditioning, substitutions
-

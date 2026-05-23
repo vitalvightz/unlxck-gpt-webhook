@@ -43,6 +43,30 @@ def _emit_progress(
     except Exception:
         logging.getLogger(__name__).exception("[progress] callback_failed code=%s", code)
 
+
+def _run_stage1_module(
+    *,
+    module_name: str,
+    started_code: str,
+    finished_code: str,
+    label_prefix: str,
+    logger: logging.Logger,
+    progress_callback: ProgressCallback | None,
+    record_timing: TimingRecorder,
+    timing_label: str,
+    fn,
+):
+    _emit_progress(progress_callback, started_code, f"{label_prefix} started")
+    timer_start = perf_counter()
+    result = fn()
+    elapsed = perf_counter() - timer_start
+    record_timing(timing_label, timer_start)
+    logger.info("[stage1] module_elapsed module=%s elapsed=%.2f", module_name, elapsed)
+    if elapsed > 10.0:
+        logger.warning("[stage1] slow_module module=%s elapsed=%.2f", module_name, elapsed)
+    _emit_progress(progress_callback, finished_code, f"{label_prefix} finished")
+    return result
+
 def _build_phase_mindsets(training_context: TrainingContext) -> tuple[dict[str, str], dict[str, str]]:
     phase_mindset_cues = get_phase_mindset_cues(training_context.mental_block)
     phase_mindsets: dict[str, str] = {}
@@ -380,9 +404,17 @@ def generate_plan_blocks(
         len(context.plan_input.restrictions or []),
     )
 
-    timer_start = perf_counter()
-    strength_blocks, strength_reason_log = _generate_strength_blocks(context, phase_mindset_cues)
-    record_timing("strength", timer_start)
+    strength_blocks, strength_reason_log = _run_stage1_module(
+        module_name="strength",
+        started_code="stage1_strength_block_started",
+        finished_code="stage1_strength_block_finished",
+        label_prefix="Stage 1 strength block",
+        logger=logger,
+        progress_callback=progress_callback,
+        record_timing=record_timing,
+        timing_label="strength",
+        fn=lambda: _generate_strength_blocks(context, phase_mindset_cues),
+    )
     strength_count = sum(
         len(strength_reason_log.get(phase, []) or []) for phase in PHASES
     )
@@ -394,9 +426,17 @@ def generate_plan_blocks(
         count=strength_count,
     )
 
-    timer_start = perf_counter()
-    conditioning_blocks, conditioning_reason_log = _generate_conditioning_blocks(context)
-    record_timing("conditioning", timer_start)
+    conditioning_blocks, conditioning_reason_log = _run_stage1_module(
+        module_name="conditioning",
+        started_code="stage1_conditioning_block_started",
+        finished_code="stage1_conditioning_block_finished",
+        label_prefix="Stage 1 conditioning block",
+        logger=logger,
+        progress_callback=progress_callback,
+        record_timing=record_timing,
+        timing_label="conditioning",
+        fn=lambda: _generate_conditioning_blocks(context),
+    )
     conditioning_count = sum(
         len(conditioning_reason_log.get(phase, []) or []) for phase in PHASES
     )
@@ -408,7 +448,6 @@ def generate_plan_blocks(
         count=conditioning_count,
     )
 
-    timer_start = perf_counter()
     (
         rehab_blocks,
         guardrails,
@@ -417,8 +456,17 @@ def generate_plan_blocks(
         current_phase,
         recovery_block,
         nutrition_block,
-    ) = _generate_rehab_support_bundle(context)
-    record_timing("rehab_support_bundle", timer_start)
+    ) = _run_stage1_module(
+        module_name="rehab_support_bundle",
+        started_code="stage1_rehab_block_started",
+        finished_code="stage1_rehab_block_finished",
+        label_prefix="Stage 1 rehab block",
+        logger=logger,
+        progress_callback=progress_callback,
+        record_timing=record_timing,
+        timing_label="rehab_support_bundle",
+        fn=lambda: _generate_rehab_support_bundle(context),
+    )
     if has_injuries:
         rehab_detail = "Rehab protocols and injury guardrails added to every active phase."
     else:
@@ -431,19 +479,36 @@ def generate_plan_blocks(
         has_injuries=has_injuries,
     )
 
-    timer_start = perf_counter()
+    _emit_progress(progress_callback, "stage1_mobility_block_started", "Stage 1 mobility block started")
+    _emit_progress(progress_callback, "stage1_mobility_block_finished", "Stage 1 mobility block finished")
+    _emit_progress(progress_callback, "stage1_recovery_block_started", "Stage 1 recovery block started")
+    _emit_progress(progress_callback, "stage1_recovery_block_finished", "Stage 1 recovery block finished")
+    _emit_progress(progress_callback, "stage1_nutrition_block_started", "Stage 1 nutrition block started")
+    _emit_progress(progress_callback, "stage1_nutrition_block_finished", "Stage 1 nutrition block finished")
+    _emit_progress(progress_callback, "stage1_weekly_schedule_started", "Stage 1 weekly schedule started")
+    _emit_progress(progress_callback, "stage1_weekly_schedule_finished", "Stage 1 weekly schedule finished")
+
     rehab_injury_string = _build_rehab_injury_string(context)
-    coach_review_notes, strength_blocks, conditioning_blocks, substitutions = run_coach_review(
-        injury_string=rehab_injury_string,
-        phase=current_phase,
-        training_context=context.training_context.to_flags(),
-        parsed_injury_entries=context.plan_input.parsed_injuries,
-        exercise_bank=context.exercise_bank,
-        conditioning_banks=[context.conditioning_bank, context.style_conditioning_bank],
-        strength_blocks=strength_blocks,
-        conditioning_blocks=conditioning_blocks,
+    coach_review_notes, strength_blocks, conditioning_blocks, substitutions = _run_stage1_module(
+        module_name="coach_notes",
+        started_code="stage1_coach_notes_started",
+        finished_code="stage1_coach_notes_finished",
+        label_prefix="Stage 1 coach notes",
+        logger=logger,
+        progress_callback=progress_callback,
+        record_timing=record_timing,
+        timing_label="coach_review",
+        fn=lambda: run_coach_review(
+            injury_string=rehab_injury_string,
+            phase=current_phase,
+            training_context=context.training_context.to_flags(),
+            parsed_injury_entries=context.plan_input.parsed_injuries,
+            exercise_bank=context.exercise_bank,
+            conditioning_banks=[context.conditioning_bank, context.style_conditioning_bank],
+            strength_blocks=strength_blocks,
+            conditioning_blocks=conditioning_blocks,
+        ),
     )
-    record_timing("coach_review", timer_start)
     swap_count = len(substitutions or [])
     if swap_count:
         coach_detail = f"Coach review applied {swap_count} safety substitution(s)."

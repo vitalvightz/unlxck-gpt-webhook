@@ -294,11 +294,23 @@ def generate_plan_sync(
         phase_weeks=dict(phase_weeks_value),
     )
 
+    _safe_emit(
+        progress_callback,
+        "stage1_blocks_generation_started",
+        "Stage 1 blocks generation started",
+        "Building strength, conditioning, recovery, mobility, rehab, and weekly training blocks.",
+    )
     blocks = generate_plan_blocks(
         context=context,
         record_timing=_record_timing,
         logger=logger,
         progress_callback=progress_callback,
+    )
+    _safe_emit(
+        progress_callback,
+        "stage1_blocks_generation_finished",
+        "Stage 1 blocks generation finished",
+        "Stage 1 training blocks generated.",
     )
 
     timer_start = perf_counter()
