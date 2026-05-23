@@ -473,7 +473,7 @@ def test_production_cors_fails_fast_on_unsafe_origin_by_default(
     monkeypatch.setenv("APP_CORS_ORIGINS", "*")
     monkeypatch.delenv("APP_ALLOW_UNSAFE_PRODUCTION_CORS_BOOT", raising=False)
 
-    with pytest.raises(ValueError, match="Refusing to boot unless APP_ALLOW_UNSAFE_PRODUCTION_CORS_BOOT=1"):
+    with pytest.raises(RuntimeError, match="Refusing to boot unless APP_ALLOW_UNSAFE_PRODUCTION_CORS_BOOT=1"):
         create_app(
             store=FakeStore(),
             auth_service=FakeAuthService({}),
