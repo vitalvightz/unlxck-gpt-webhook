@@ -6178,13 +6178,14 @@ button.mobile-step-rail-item {
   position: absolute;
   top: 8px;
   right: 10px;
-  width: 28px;
-  height: 28px;
+  width: 36px;
+  height: 36px;
   border: 0;
-  border-radius: 8px;
-  background: transparent;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.03);
   color: var(--text-muted);
-  font-size: 18px;
+  font-size: 20px;
+  line-height: 1;
   cursor: pointer;
 }
 
@@ -6478,12 +6479,30 @@ html[data-theme="light"] .global-generation-status-rail {
   background: rgba(88, 62, 58, 0.12);
 }
 
+html[data-theme="light"] .global-generation-status-reopen {
+  border-color: rgba(163, 21, 45, 0.32);
+  background: rgba(255, 251, 247, 0.96);
+  color: #231d1a;
+}
+
+html[data-theme="light"] .global-generation-status-dismiss {
+  background: rgba(98, 77, 69, 0.08);
+  color: rgba(65, 47, 41, 0.86);
+}
+
 /* Mobile adjustments */
 @media (max-width: 900px) {
   .global-generation-status {
-    left: 0;
-    padding: 10px 14px;
-    padding-bottom: calc(10px + var(--safe-area-bottom));
+    top: calc(var(--safe-area-top) + 12px);
+    right: 12px;
+    left: auto;
+    bottom: auto;
+    width: min(360px, calc(100vw - 24px));
+    min-height: 0;
+    padding: 10px 46px 10px 14px;
+    border: 1px solid rgba(181, 18, 43, 0.32);
+    border-radius: 14px;
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.28);
   }
 
   .global-generation-status-content {
@@ -6506,6 +6525,21 @@ html[data-theme="light"] .global-generation-status-rail {
 
   .global-generation-status-cta .global-generation-status-arrow {
     font-size: 18px;
+  }
+
+  .global-generation-status-dismiss {
+    top: 6px;
+    right: 6px;
+    width: 40px;
+    height: 40px;
+  }
+
+  .global-generation-status-reopen {
+    top: calc(var(--safe-area-top) + 12px);
+    right: 12px;
+    bottom: auto;
+    min-height: 40px;
+    padding: 0 14px;
   }
 }
 
@@ -10646,7 +10680,8 @@ html[data-app-surface="workspace"][data-theme="dark"] .desktop-nav-toggle {
 
   /* Lift the generation status bar above the tab bar when both are visible */
   html[data-mobile-tab-bar="stacked"] .global-generation-status {
-    bottom: var(--mobile-tab-bar-clearance);
+    bottom: auto;
+    top: calc(var(--safe-area-top) + 12px);
   }
 
   /* Add bottom padding to main content so the tab bar doesn't cover it */
