@@ -147,6 +147,8 @@ export function GenerationStatusProvider({ children, token }: GenerationStatusPr
 
   useEffect(() => {
     latestTokenRef.current = token;
+    checkSequenceRef.current++;
+    isCheckingRef.current = false;
   }, [token]);
 
   // Cancel any pending clear timer when the component unmounts
