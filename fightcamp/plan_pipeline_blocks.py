@@ -145,15 +145,21 @@ def _generate_strength_blocks(
     return strength_blocks, strength_reason_log
 
 
-def _generate_conditioning_blocks(context: PlanRuntimeContext) -> tuple[dict[str, dict], dict[str, list[dict]]]:
+def _generate_conditioning_blocks(context: PlanRuntimeContext, *, progress_callback: ProgressCallback | None = None) -> tuple[dict[str, dict], dict[str, list[dict]]]:
     conditioning_blocks: dict[str, dict] = {}
     conditioning_reason_log: dict[str, list[dict]] = {}
     # Compute once per request; spread into per-phase flags dict below.
     base_flags = context.training_context.to_flags()
 
+    logger = logging.getLogger(__name__)
+    conditioning_started = perf_counter()
+
     for phase in PHASES:
         if not context.phase_active(phase):
             continue
+        phase_code = f"stage1_conditioning_phase_{phase.lower()}"
+        _emit_progress(progress_callback, f"{phase_code}_started", f"Stage 1 conditioning {phase} started")
+        phase_started = perf_counter()
         (
             block_text,
             names,
@@ -171,8 +177,14 @@ def _generate_conditioning_blocks(context: PlanRuntimeContext) -> tuple[dict[str
                 "weeks_out": context.plan_input.weeks_out,
                 "restrictions": context.plan_input.restrictions,
                 "ignore_restrictions": context.selection_ignore_restrictions,
+                "conditioning_substep_callback": lambda code, label: _emit_progress(progress_callback, code, label),
             }
         )
+        phase_elapsed = perf_counter() - phase_started
+        logger.info("[stage1] conditioning_phase_elapsed phase=%s elapsed=%.2f", phase.lower(), phase_elapsed)
+        if phase_elapsed > 10.0:
+            logger.warning("[stage1] slow_conditioning_phase phase=%s elapsed=%.2f", phase.lower(), phase_elapsed)
+        _emit_progress(progress_callback, f"{phase_code}_finished", f"Stage 1 conditioning {phase} finished")
         render_metadata = {
             "num_sessions": allocate_sessions(context.training_context.training_frequency, phase).get("conditioning", 1),
             "diagnostic_context": {
@@ -201,6 +213,9 @@ def _generate_conditioning_blocks(context: PlanRuntimeContext) -> tuple[dict[str
             "sport": render_metadata.get("sport"),
         }
 
+    total_elapsed = perf_counter() - conditioning_started
+    if total_elapsed > 30.0:
+        logger.warning("[stage1] slow_conditioning_total elapsed=%.2f", total_elapsed)
     return conditioning_blocks, conditioning_reason_log
 
 
@@ -459,7 +474,7 @@ def generate_plan_blocks(
         progress_callback=progress_callback,
         record_timing=record_timing,
         timing_label="conditioning",
-        fn=lambda: _generate_conditioning_blocks(context),
+        fn=lambda: _generate_conditioning_blocks(context, progress_callback=progress_callback),
     )
     conditioning_count = sum(
         len(conditioning_reason_log.get(phase, []) or []) for phase in PHASES

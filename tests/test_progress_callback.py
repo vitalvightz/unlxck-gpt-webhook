@@ -85,6 +85,15 @@ def test_knee_instability_low_stable_emits_stage1_block_and_no_timeout():
     assert "stage1_strength_phase_gpp_finished" in codes
     assert "stage1_strength_phase_spp_finished" in codes
     assert "stage1_conditioning_block_started" in codes
+    assert "stage1_conditioning_phase_gpp_started" in codes
+    assert "stage1_conditioning_phase_gpp_finished" in codes
+    assert "stage1_conditioning_system_quota_fill_started" in codes
+    assert "stage1_conditioning_system_quota_fill_finished" in codes
+    assert "stage1_conditioning_injury_safe_finalize_started" in codes
+    assert "stage1_conditioning_injury_safe_finalize_finished" in codes
+    assert "stage1_conditioning_block_formatting_started" in codes
+    assert "stage1_conditioning_block_formatting_finished" in codes
+    assert "stage1_conditioning_block_finished" in codes
     assert "stage1_blocks_generation_finished" in codes
     assert "plan_drafted" in codes
     assert "stage1_planner_timeout" not in codes
