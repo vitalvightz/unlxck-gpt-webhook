@@ -16,22 +16,29 @@ function formatElapsed(ms: number): string {
 
 const CELEBRATION_DURATION_MS = 1_600;
 
-export function getGenerationStatusTarget(phase: string | null, planId: string | null): `/plans/${string}` | null {
+export function getGenerationStatusTarget(
+  phase: string | null,
+  planId: string | null,
+  terminalStatus: "completed" | "review_required" | null,
+): `/plans/${string}` | `/plans/${string}?review_required=1` | null {
   if (phase === "completed" && planId) {
+    if (terminalStatus === "review_required") {
+      return `/plans/${planId}?review_required=1`;
+    }
     return `/plans/${planId}`;
   }
   return null;
 }
 
 export function GlobalGenerationStatus() {
-  const { isActive, statusMessage, phase, planId, startedAtMs, refreshStatus } = useGenerationStatus();
+  const { isActive, statusMessage, phase, planId, terminalStatus, startedAtMs, refreshStatus } = useGenerationStatus();
   const [now, setNow] = useState(() => Date.now());
   const [isCelebrating, setIsCelebrating] = useState(false);
   const previousPhaseRef = useRef(phase);
 
   const isFailed = phase === "failed";
   const isCompleted = phase === "completed";
-  const navigationTarget = getGenerationStatusTarget(phase, planId);
+  const navigationTarget = getGenerationStatusTarget(phase, planId, terminalStatus);
   const ctaLabel = isCompleted && planId ? "View" : "Refresh";
   const showElapsed = isActive && !isCompleted && !isFailed && startedAtMs !== null;
 

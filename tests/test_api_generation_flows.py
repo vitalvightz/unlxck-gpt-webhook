@@ -2864,6 +2864,59 @@ def test_retry_generation_job_creates_new_job_with_original_request_payload():
     assert new_job["status"] in {"queued", "running", "completed", "review_required", "failed"}
 
 
+def test_retry_generation_job_blocks_when_different_queued_job_exists():
+    client, store, _ = _build_client(enable_in_process_generation=False)
+    store.ensure_profile(AuthenticatedUser(user_id="athlete-1", email="ari@example.com", full_name="Ari Mensah", metadata={}))
+    original = _seed_failed_job(store)
+    store.create_or_get_generation_job(
+        athlete_id="athlete-1",
+        client_request_id="other-active-queued",
+        source="self_serve",
+        request_payload=_build_request().model_dump(mode="json"),
+    )
+
+    response = client.post(f"/api/generation-jobs/{original['id']}/retry", headers={"Authorization": "Bearer athlete-token"})
+    assert response.status_code == status.HTTP_409_CONFLICT
+    assert response.json()["detail"] == "A generation job is already queued or running for this account."
+    assert len(store.generation_jobs) == 2
+
+
+def test_retry_generation_job_blocks_when_different_running_job_exists():
+    client, store, _ = _build_client(enable_in_process_generation=False)
+    store.ensure_profile(AuthenticatedUser(user_id="athlete-1", email="ari@example.com", full_name="Ari Mensah", metadata={}))
+    original = _seed_failed_job(store)
+    running = store.create_or_get_generation_job(
+        athlete_id="athlete-1",
+        client_request_id="other-active-running",
+        source="self_serve",
+        request_payload=_build_request().model_dump(mode="json"),
+    )
+    now_iso = _now()
+    store.update_generation_job(running["id"], status="running", started_at=now_iso, heartbeat_at=now_iso)
+
+    response = client.post(f"/api/generation-jobs/{original['id']}/retry", headers={"Authorization": "Bearer athlete-token"})
+    assert response.status_code == status.HTTP_409_CONFLICT
+    assert response.json()["detail"] == "A generation job is already queued or running for this account."
+    assert len(store.generation_jobs) == 2
+
+
+def test_retry_generation_job_idempotent_for_same_retry_client_request_id():
+    client, store, _ = _build_client(enable_in_process_generation=False)
+    store.ensure_profile(AuthenticatedUser(user_id="athlete-1", email="ari@example.com", full_name="Ari Mensah", metadata={}))
+    original = _seed_failed_job(store)
+    headers = {
+        "Authorization": "Bearer athlete-token",
+        "X-Client-Request-Id": "fixed-retry-id-1",
+    }
+
+    first = client.post(f"/api/generation-jobs/{original['id']}/retry", headers=headers)
+    second = client.post(f"/api/generation-jobs/{original['id']}/retry", headers=headers)
+    assert first.status_code == 202
+    assert second.status_code == 202
+    assert first.json()["job_id"] == second.json()["job_id"]
+    assert len(store.generation_jobs) == 2
+
+
 def test_retry_admin_triage_resume_preserves_plan_and_intake_linkage():
     client, store, _ = _build_client()
     store.ensure_profile(

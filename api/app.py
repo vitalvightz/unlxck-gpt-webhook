@@ -1577,6 +1577,35 @@ def create_app(
                 status_code=status.HTTP_409_CONFLICT,
                 detail="admin triage resume retry is missing plan/intake linkage",
             )
+        existing_retry_job = await asyncio.to_thread(
+            store.get_generation_job_by_client_request_id,
+            athlete_id=target_athlete_id,
+            client_request_id=retry_client_request_id,
+        )
+        if existing_retry_job:
+            job = await schedule_generation_job_if_needed(
+                job=existing_retry_job,
+                background_tasks=background_tasks,
+                store=store,
+                planner_fn=planner_fn,
+                stage2=stage2,
+                active_tasks=active_tasks,
+                enable_in_process_generation=enable_in_process_generation,
+                stale_job_checker=_is_stale_job,
+                stale_after_seconds=stale_after_seconds,
+            )
+            return _job_response(job, viewer_role=profile.role)
+        blocking_job = await asyncio.to_thread(
+            _find_blocking_generation_job_for_athlete,
+            store=store,
+            athlete_id=target_athlete_id,
+            stale_after_seconds=stale_after_seconds,
+        )
+        if blocking_job and str(blocking_job.get("id")) != str(original.get("id")):
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="A generation job is already queued or running for this account.",
+            )
 
         job = await asyncio.to_thread(
             store.create_or_get_generation_job,
