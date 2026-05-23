@@ -26,6 +26,7 @@ export function GlobalGenerationStatus() {
 
   const isFailed = phase === "failed";
   const isCompleted = phase === "completed";
+  const ctaLabel = isCompleted ? "View" : isFailed ? "Refresh" : "Home";
   const showElapsed = isActive && !isCompleted && !isFailed && startedAtMs !== null;
 
   useEffect(() => {
@@ -87,7 +88,7 @@ export function GlobalGenerationStatus() {
           ) : null}
         </span>
         <span className="global-generation-status-cta">
-          <span className="global-generation-status-cta-label">{canNavigateToPlan ? "View" : "Refresh"}</span>
+          <span className="global-generation-status-cta-label">{ctaLabel}</span>
           <span className="global-generation-status-arrow" aria-hidden="true">→</span>
         </span>
       </div>
