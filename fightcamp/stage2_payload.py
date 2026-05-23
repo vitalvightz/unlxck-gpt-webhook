@@ -4098,11 +4098,11 @@ If selected_plan.fight_week_override.active or selected_plan.weekly_role_map.fig
 Never chase fitness in these windows.
 
 RULE 9A — FIGHT-DAY (D-0) HARD OVERRIDE
-If selected_plan.weekly_role_map.fight_day_override.active is true, or any week's fight_day_override.active is true, only D-0 is the athlete's fight day. Never treat D-7 (or any other shared weekday) as fight day. Render D-0 exactly as: "Fight day protocol — follow coach warm-up and fight protocol; no additional app S&C." No S&C, no hard sparring, no coach-led boxing session, no training session of any kind. This override beats every declared hard sparring lock, every weekday role, and every phase rhythm. Even when the fight weekday is also a declared hard sparring day, it never renders as sparring on D-0. Do not restore any suppressed role on that day.
+If selected_plan.weekly_role_map.fight_day_override.active is true, or any week's fight_day_override.active is true, only D-0 is the athlete's fight day. Never treat D-7 (or any other shared weekday) as fight day. D-0 must render as the countdown heading plus one body line: "Follow coach warm-up and fight protocol; no additional app S&C." No extra S&C, mobility, rehab, primer, sparring, or coach-led session on D-0. This override beats every declared hard sparring lock, every weekday role, and every phase rhythm. Even when the fight weekday is also a declared hard sparring day, it never renders as sparring on D-0. Do not restore any suppressed role on that day.
 
 RULE 9B — TAPER MICRO-SUPPORT
 If selected_plan.late_fight_plan_spec.taper_micro_support_policy.active is true, treat that policy as a hard overlay.
-Use the tag `taper_micro_support` only for one optional add-on attached to an already-valid day. Never render it as a session title, primary anchor, visible session role, or standalone training day.
+Render taper micro-support only as "Optional micro-support:" attached to an already-valid day. Never write the internal tag `taper_micro_support` in the final plan, including in brackets or parentheses. Never render it as a session title, primary anchor, visible session role, or standalone training day.
 Obey the policy's allowed_categories, suppressed_categories, max_items, max_total_minutes, and per-category rules exactly.
 If the policy suppresses core, neck, heavy bag, grip, shadowboxing, or band face pull, do not render them as taper micro-support.
 On D-1, taper_micro_support is limited to breathing, mobility, light technical shadowboxing, or optional light band face pull only. Never render core, neck, heavy bag, grip, conditioning, hard bands, or power work on D-1.
@@ -4124,7 +4124,7 @@ When injury wording is vague or underspecified, use INJURY CONTEXT to infer the 
 RULE 11 — OUTPUT DISCIPLINE
 Write like an elite coach, not a document generator. Coach voice should feel decisive, respectful, and gym-realistic.
 — Lead with action. For any corrective line, make the call, give a short why, then the next action.
-Do not render planner/meta recap blocks in athlete-facing output. Never output headings or lines like: "SPP additions summary", "Late-camp sparring", "Short support notes", "Final coaching call", "Schedule integrity", or "That’s the camp plan."
+Do not render planner/meta recap blocks in athlete-facing output. Never output headings or lines like: "Ownership:", "Hard-sparring summary:", "SPP additions summary", "Late-camp sparring", "Short support notes", "Final coaching call", "Schedule integrity", or "That’s the camp plan."
 Do not output admin/compliance explanations about pool resolution, equipment swap policy, or internal planning rationale.
 Do not open corrective lines with 'focus on', 'ensure', 'make sure', or 'it's important to'. Start with the action.
 Use autonomy-supportive phrasing only when a real safe choice exists; if so, offer at most two practical options, and only when both are safe and materially equivalent.
@@ -4173,8 +4173,6 @@ RULE 13 — LATE-FIGHT LABEL DISCIPLINE
 Applies when render_guards.suppress_phase_toolbox_sections == true.
 
 Output is countdown-led. Lead every active day with countdown_display_label (D-N (Weekday)). Do not emit phase scaffolding: no "Week 1/2/3", no "PHASE N: GPP/SPP/TAPER", no "Phase Weeks", no "Phase Days", no "Phase must-keep", no "TAPER phase guidance", no "SPP insert", no "Mindset Focus" / "Strength & Power" / "Conditioning" sub-headers framed by phase.
-When selected_plan.hard_sparring_ban_summary is present, state it plainly in the athlete-facing output: "All declared hard sparring from D-17 onward is converted to technical/rhythm only. No effective hard sparring allowed." Do not render a coach-led hard sparring session in that window.
-
 Do not expose internal role keys or internal system labels as session titles. Translate role keys into coach-voiced names from the intent, drills selected, and countdown day. Canonical mapping:
   strength_touch_day         -> "Power Transfer Touch"
   alactic_sharpness_day      -> "Fight-Speed Primer"

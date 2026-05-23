@@ -150,6 +150,8 @@ _INTERNAL_RENDER_LABEL_PATTERNS = (
     ("anchor_label", re.compile(r"^\s*(?:\d+\)\s*)?anchor\s*(?:—|-|:)", re.IGNORECASE)),
     ("role_key", re.compile(r"\brole_key\b", re.IGNORECASE)),
     ("taper_micro_support", re.compile(r"\btaper_micro_support\b", re.IGNORECASE)),
+    ("ownership_label", re.compile(r"^\s*ownership\s*:", re.IGNORECASE)),
+    ("hard_sparring_summary_label", re.compile(r"^\s*hard-sparring summary\s*:", re.IGNORECASE)),
     ("candidate pool", re.compile(r"\bcandidate\s+pools?\b", re.IGNORECASE)),
     ("validator", re.compile(r"\bvalidator\b", re.IGNORECASE)),
     ("planning brief", re.compile(r"\bplanning\s+brief\b", re.IGNORECASE)),
@@ -1343,11 +1345,15 @@ def _late_fight_d0_protocol_warnings(
         return []
 
     protocol_text = _normalize_render_line(FIGHT_DAY_PROTOCOL_TEXT)
+    protocol_body_only = _normalize_render_line(
+        re.sub(r"^fight day protocol\s*[—:-]\s*", "", FIGHT_DAY_PROTOCOL_TEXT, flags=re.IGNORECASE)
+    )
     header_line = _normalize_render_line(d0_lines[0] if d0_lines else "")
     body_lines = [line for line in d0_lines[1:] if _normalize_render_line(line)]
     if not body_lines and protocol_text in header_line:
         return []
-    if len(body_lines) == 1 and _normalize_render_line(body_lines[0]) == protocol_text:
+    normalized_body_line = _normalize_render_line(body_lines[0]) if len(body_lines) == 1 else ""
+    if len(body_lines) == 1 and normalized_body_line in {protocol_text, protocol_body_only}:
         return []
 
     return [

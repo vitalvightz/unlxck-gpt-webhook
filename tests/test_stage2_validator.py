@@ -200,11 +200,12 @@ def test_validate_stage2_output_flags_d0_expanded_beyond_fight_protocol():
     assert "late_fight_d0_protocol_expanded" in blocking_codes
 
 
-def test_validate_stage2_output_accepts_one_line_d0_fight_day_protocol_header():
+def test_validate_stage2_output_accepts_two_line_d0_fight_day_protocol():
     report = validate_stage2_output(
         planning_brief=_late_fight_planning_brief("D-0"),
         final_plan_text="""
-        D-0 (Sunday) — Fight day protocol — follow coach warm-up and fight protocol; no additional app S&C.
+        D-0 (Sunday) — Fight day protocol
+        Follow coach warm-up and fight protocol; no additional app S&C.
         """,
     )
 
@@ -265,13 +266,33 @@ def test_validate_stage2_output_flags_internal_render_contract_leaks():
         #### Tuesday - Anchor — Strength
         - role_key: neural_plus_strength_day
         - Candidate pool option: Landmine Press
+        Ownership: Coach-led day lock.
+        Hard-sparring summary: Technical only.
         """,
     )
 
     blocking_codes = {warning["code"] for warning in report["warnings"] if warning.get("blocking")}
     labels = {warning.get("label") for warning in report["warnings"] if warning["code"] == "internal_render_contract_leak"}
     assert "internal_render_contract_leak" in blocking_codes
-    assert {"role_key", "candidate pool"}.issubset(labels)
+    assert {
+        "role_key",
+        "candidate pool",
+        "ownership_label",
+        "hard_sparring_summary_label",
+    }.issubset(labels)
+
+
+def test_validate_stage2_output_flags_taper_micro_support_parenthetical_leak():
+    report = validate_stage2_output(
+        planning_brief=_late_fight_planning_brief("D-5"),
+        final_plan_text="""
+        D-5 (Tuesday) — Fight-speed primer
+        Optional micro-support (taper_micro_support): 4 min breathing reset
+        """,
+    )
+
+    labels = {warning.get("label") for warning in report["warnings"] if warning["code"] == "internal_render_contract_leak"}
+    assert "taper_micro_support" in labels
 
 
 def test_validate_stage2_output_flags_overdetailed_coach_led_sparring_day():
