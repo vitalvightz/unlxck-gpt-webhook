@@ -55,6 +55,10 @@ _PRESERVED_ROLE_METADATA_KEYS: tuple[str, ...] = (
     "governance",
     "coach_notes",
 )
+_WEEKDAY_NAMES: tuple[str, ...] = (
+    "monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"
+)
+_WEEKDAY_ORDER: dict[str, int] = {name: idx for idx, name in enumerate(_WEEKDAY_NAMES)}
 
 
 def role_cost(role: dict[str, Any]) -> str:
@@ -69,6 +73,31 @@ def _is_preservable_metadata(value: Any) -> bool:
     if isinstance(value, str):
         return bool(value.strip())
     return True
+
+
+def _resolve_available_weekday(weekday: str | None, available_days: list[str] | None) -> str | None:
+    day = str(weekday or "").strip().lower()
+    if not day:
+        return None
+    available = [str(entry).strip().lower() for entry in (available_days or []) if str(entry).strip()]
+    if not available:
+        return day
+    if day in available:
+        return day
+    target_index = _WEEKDAY_ORDER.get(day)
+    if target_index is None:
+        return day
+    valid = [d for d in available if d in _WEEKDAY_ORDER]
+    if not valid:
+        return day
+    for delta in range(1, 7):
+        backward = _WEEKDAY_NAMES[(target_index - delta) % 7]
+        if backward in valid:
+            return backward
+        forward = _WEEKDAY_NAMES[(target_index + delta) % 7]
+        if forward in valid:
+            return forward
+    return day
 
 
 # ---------------------------------------------------------------------------
@@ -351,6 +380,7 @@ def place_roles_in_countdown(
         if off is not None
     ]
     context = dict(placement_context or {})
+    available_days = context.get("available_days")
 
     # ── 4. Split unlocked by cost bucket ────────────────────────────────────
     #      Sort high/medium by cost rank so high comes before medium
@@ -419,7 +449,8 @@ def place_roles_in_countdown(
     result: list[dict[str, Any]] = []
 
     for idx, (role, lbl) in enumerate(all_pairs, start=1):
-        weekday = countdown_weekday_map.get(lbl)
+        weekday = str(countdown_weekday_map.get(lbl) or "").strip().lower() or None
+        resolved_weekday = _resolve_available_weekday(weekday, available_days)
         is_locked = id(role) in locked_role_ids
 
         entry: dict[str, Any] = {
@@ -437,6 +468,13 @@ def place_roles_in_countdown(
         }
         if weekday:
             entry["real_weekday"] = weekday
+            if resolved_weekday and resolved_weekday != weekday:
+                entry["resolved_training_weekday"] = resolved_weekday
+                entry["availability_adjustment"] = {
+                    "raw_weekday": weekday,
+                    "resolved_training_weekday": resolved_weekday,
+                    "reason": "nearest_available_day",
+                }
         # Preserve meaningful role semantics from the budget layer.
         for key in _PRESERVED_ROLE_METADATA_KEYS:
             value = role.get(key)
