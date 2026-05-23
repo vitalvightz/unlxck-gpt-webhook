@@ -18,7 +18,7 @@ from api.models import (
     USERNAME_MAX_CHANGES_PER_WINDOW,
     validate_username,
 )
-from api.store import is_startup_stale_generation_job
+from api.store import is_stage1_planner_stalled_generation_job, is_startup_stale_generation_job
 from datetime import timedelta
 
 os.environ.setdefault("APP_GENERATION_SCHEDULER", "fastapi")
@@ -70,6 +70,8 @@ class FakeStore:
             return "fresh"
         if is_startup_stale_generation_job(job, stale_after_seconds=stale_after_seconds):
             return "startup_stale"
+        if is_stage1_planner_stalled_generation_job(job, stale_after_seconds=stale_after_seconds):
+            return "stage1_planner_stalled"
         heartbeat_raw = job.get("heartbeat_at")
         started_raw = job.get("started_at")
         heartbeat = datetime.fromisoformat(str(heartbeat_raw).replace("Z", "+00:00")) if heartbeat_raw else None
@@ -335,6 +337,28 @@ class FakeStore:
 
     def get_generation_job(self, job_id: str) -> dict | None:
         job = self.generation_jobs.get(job_id)
+        if job and self._classify_running_job_staleness(job, stale_after_seconds=90) == "stage1_planner_stalled":
+            now = _now()
+            milestones = list(job.get("progress_milestones") or [])
+            milestones.append(
+                {
+                    "code": "stage1_planner_timeout",
+                    "label": "Stage 1 planner timed out",
+                    "detail": "Planner did not return after invocation and the job was failed for recovery.",
+                    "meta": {},
+                    "at": now,
+                }
+            )
+            job.update(
+                {
+                    "status": "failed",
+                    "error": "Stage 1 planner stalled after planner invocation.",
+                    "completed_at": now,
+                    "heartbeat_at": now,
+                    "progress_milestones": milestones,
+                    "updated_at": now,
+                }
+            )
         return dict(job) if job else None
 
     def get_generation_job_by_client_request_id(self, *, athlete_id: str, client_request_id: str) -> dict | None:
@@ -373,6 +397,28 @@ class FakeStore:
                         "stage1_result": None,
                         "final_result": None,
                         "progress_milestones": [],
+                        "updated_at": now,
+                    }
+                )
+            elif staleness == "stage1_planner_stalled":
+                now = _now()
+                milestones = list(row.get("progress_milestones") or [])
+                milestones.append(
+                    {
+                        "code": "stage1_planner_timeout",
+                        "label": "Stage 1 planner timed out",
+                        "detail": "Planner did not return after invocation and the job was failed for recovery.",
+                        "meta": {},
+                        "at": now,
+                    }
+                )
+                row.update(
+                    {
+                        "status": "failed",
+                        "error": "Stage 1 planner stalled after planner invocation.",
+                        "completed_at": now,
+                        "heartbeat_at": now,
+                        "progress_milestones": milestones,
                         "updated_at": now,
                     }
                 )
