@@ -556,6 +556,12 @@ class FakeStore:
     def claim_generation_job(self, job_id: str, *, stale_after_seconds: int = 90) -> dict | None:
         return self.claim_generation_job_start(job_id, stale_after_seconds=stale_after_seconds)
 
+    def claim_next_queued_generation_job(self, *, stale_after_seconds: int = 90) -> dict | None:
+        jobs = self.list_claimable_generation_jobs(limit=1, stale_after_seconds=stale_after_seconds)
+        if not jobs:
+            return None
+        return self.claim_generation_job_start(str(jobs[0]["id"]), stale_after_seconds=stale_after_seconds)
+
     def count_active_generation_jobs(self, *, stale_after_seconds: int = 90) -> int:
         now = datetime.now(timezone.utc)
         count = 0

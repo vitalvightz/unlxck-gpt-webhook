@@ -168,6 +168,8 @@ class AppStore(Protocol):
 
     def claim_generation_job(self, job_id: str, *, stale_after_seconds: int = 90) -> dict[str, Any] | None: ...
 
+    def claim_next_queued_generation_job(self, *, stale_after_seconds: int = 90) -> dict[str, Any] | None: ...
+
     def count_active_generation_jobs(self, *, stale_after_seconds: int = 90) -> int: ...
 
     def update_generation_job(self, job_id: str, **changes: Any) -> dict[str, Any]: ...
@@ -1832,6 +1834,15 @@ class SupabaseAppStore:
             ) from exc
 
     def claim_generation_job(self, job_id: str, *, stale_after_seconds: int = 90) -> dict[str, Any] | None:
+        return self.claim_generation_job_start(job_id, stale_after_seconds=stale_after_seconds)
+
+    def claim_next_queued_generation_job(self, *, stale_after_seconds: int = 90) -> dict[str, Any] | None:
+        jobs = self.list_claimable_generation_jobs(limit=1, stale_after_seconds=stale_after_seconds)
+        if not jobs:
+            return None
+        job_id = str(jobs[0].get("id") or "")
+        if not job_id:
+            return None
         return self.claim_generation_job_start(job_id, stale_after_seconds=stale_after_seconds)
 
     def count_active_generation_jobs(self, *, stale_after_seconds: int = 90) -> int:
