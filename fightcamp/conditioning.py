@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+from time import perf_counter
 from pathlib import Path
 import re
 from types import SimpleNamespace
@@ -1697,6 +1698,27 @@ def _build_conditioning_candidate_reservoir(
 
 def generate_conditioning_block(flags):
     phase = str(flags.get("phase", "GPP") or "GPP").strip().upper()
+    conditioning_substep_callback = flags.get("conditioning_substep_callback")
+
+    def _emit_conditioning_substep(code: str, label: str) -> None:
+        if conditioning_substep_callback is None:
+            return
+        try:
+            conditioning_substep_callback(code, label)
+        except Exception:
+            logger.exception("[progress] conditioning_callback_failed code=%s", code)
+
+    def _run_conditioning_poststep(step_name: str, fn):
+        _emit_conditioning_substep(f"stage1_conditioning_{step_name}_started", f"Stage 1 conditioning {step_name} started")
+        step_started = perf_counter()
+        result = fn()
+        elapsed = perf_counter() - step_started
+        logger.info("[stage1] conditioning_substep_elapsed step=%s elapsed=%.2f", step_name, elapsed)
+        if elapsed > 5.0:
+            logger.warning("[stage1] slow_conditioning_substep step=%s elapsed=%.2f", step_name, elapsed)
+        _emit_conditioning_substep(f"stage1_conditioning_{step_name}_finished", f"Stage 1 conditioning {step_name} finished")
+        return result
+
     phase_color = {"GPP": "#4CAF50", "SPP": "#FF9800", "TAPER": "#F44336"}.get(phase, "#000")
 
     fatigue = str(flags.get("fatigue", "low") or "low").strip().lower()
@@ -1719,6 +1741,77 @@ def generate_conditioning_block(flags):
     training_frequency = flags.get("training_frequency", flags.get("days_available", 3))
     equipment_access = normalize_athlete_equipment_list(flags.get("equipment", []))
     equipment_access_set = set(equipment_access)
+
+    _normalize_tags_cache: dict[object, list[str]] = {}
+    _normalize_equipment_cache: dict[object, list[str]] = {}
+    _system_cache: dict[object, str | None] = {}
+    _injury_match_cache: dict[object, dict] = {}
+    _injury_decision_cache: dict[object, Decision] = {}
+    _text_blob_cache: dict[object, str] = {}
+    _structured_profile_cache: dict[tuple[object, str], dict] = {}
+    _late_eval_cache: dict[tuple[object, str], dict] = {}
+
+    def _drill_cache_key(drill: dict) -> object:
+        return drill.get("id") or drill.get("name") or id(drill)
+
+    def _cached_tags(drill: dict) -> list[str]:
+        key = _drill_cache_key(drill)
+        if key not in _normalize_tags_cache:
+            _normalize_tags_cache[key] = normalize_tags(drill.get("tags", []))
+        return _normalize_tags_cache[key]
+
+    def _cached_equipment(drill: dict) -> list[str]:
+        key = _drill_cache_key(drill)
+        if key not in _normalize_equipment_cache:
+            _normalize_equipment_cache[key] = normalize_equipment_list(drill.get("equipment", []))
+        return _normalize_equipment_cache[key]
+
+    def _cached_system(drill: dict, source: str) -> str | None:
+        key = _drill_cache_key(drill)
+        if key not in _system_cache:
+            _system_cache[key] = get_system_or_warn(drill, source=source)
+        return _system_cache[key]
+
+    def _cached_injury_decision(drill: dict) -> Decision:
+        key = _drill_cache_key(drill)
+        if key not in _injury_decision_cache:
+            _injury_decision_cache[key] = _guarded_injury_decision(drill)
+        return _injury_decision_cache[key]
+
+    def _cached_text_blob(drill: dict) -> str:
+        key = _drill_cache_key(drill)
+        if key not in _text_blob_cache:
+            _text_blob_cache[key] = _conditioning_text_blob(drill)
+        return _text_blob_cache[key]
+
+    def _cached_structured_profile(drill: dict, system: str) -> dict:
+        key = (_drill_cache_key(drill), str(system or ""))
+        if key not in _structured_profile_cache:
+            _structured_profile_cache[key] = _conditioning_structured_profile(drill, system=system)
+        return _structured_profile_cache[key]
+
+    def _cached_late_eval(drill: dict, system: str) -> dict:
+        key = (_drill_cache_key(drill), str(system or ""))
+        if key not in _late_eval_cache:
+            _late_eval_cache[key] = _evaluate_conditioning_late_window(
+                drill,
+                system=system,
+                window=late_window,
+                bridge_rules=bridge_rules,
+            )
+        return _late_eval_cache[key]
+
+    def _cached_injury_match(drill: dict, fields, risk_levels):
+        key = (_drill_cache_key(drill), tuple(fields), tuple(risk_levels))
+        if key not in _injury_match_cache:
+            _injury_match_cache[key] = injury_match_details(
+                drill,
+                injuries,
+                fields=fields,
+                risk_levels=risk_levels,
+            )
+        return _injury_match_cache[key]
+
 
     days_until_fight = _coerce_optional_int(flags.get("days_until_fight"))
     late_window = classify_late_selector_window(days_until_fight, include_control=True)
@@ -1844,430 +1937,426 @@ def generate_conditioning_block(flags):
             return
         late_window_ambiguous[name] = ambiguous_gap
 
-    for drill in get_conditioning_bank():
-        d = drill.copy()
-        if d.get("placement", "conditioning").lower() != "conditioning":
-            continue
-        if selection_format == "boxing":
-            d["name"] = rename_map.get(d.get("name"), d.get("name"))
-            d["tags"] = [
-                "boxing" if t.lower() == "muay_thai" else t
-                for t in d.get("tags", [])
-            ]
-        d["name"] = _normalize_conditioning_name(d.get("name", ""), fight_format=selection_format)
-        if phase.upper() not in d.get("phases", []):
-            continue
+    def _load_and_score_base_conditioning_bank() -> None:
+            for drill in get_conditioning_bank():
+                d = drill.copy()
+                if d.get("placement", "conditioning").lower() != "conditioning":
+                    continue
+                if selection_format == "boxing":
+                    d["name"] = rename_map.get(d.get("name"), d.get("name"))
+                    d["tags"] = [
+                        "boxing" if t.lower() == "muay_thai" else t
+                        for t in d.get("tags", [])
+                    ]
+                d["name"] = _normalize_conditioning_name(d.get("name", ""), fight_format=selection_format)
+                if phase.upper() not in d.get("phases", []):
+                    continue
 
-        system = get_system_or_warn(d, source="conditioning_bank.json")
-        if system is None:
-            continue
-        if system == "alactic" and not _alactic_structure_ok(d):
-            continue
+                system = _cached_system(d, "conditioning_bank.json")
+                if system is None:
+                    continue
+                if system == "alactic" and not _alactic_structure_ok(d):
+                    continue
 
-        tags = normalize_tags(d.get("tags", []))
-        details = " ".join(
-            [
-                d.get("duration", ""),
-                d.get("notes", ""),
-                d.get("modality", ""),
-                d.get("equipment_note", ""),
-            ]
-        )
-        restriction_text = " ".join(
-            [
-                d.get("name", ""),
-                d.get("modality", ""),
-                d.get("notes", ""),
-                d.get("equipment_note", ""),
-            ]
-        )
-        if is_banned_drill(
-            d.get("name", ""),
-            tags,
-            selection_format,
-            details,
-            style_names,
-            tech_style_tags,
-        ):
-            continue
-        if _violates_sport_language_blacklist(d, fight_format=selection_format):
-            continue
-
-        if (
-            selection_format == "boxing"
-            and phase.upper() == "TAPER"
-            and {"overhead", "rotational", "heavy_load"}.issubset(tags)
-            and not (shoulder_focus and fatigue == "low")
-        ):
-            continue
-
-        drill_equipment = normalize_equipment_list(d.get("equipment", []))
-        if drill_equipment and not set(drill_equipment).issubset(equipment_access_set):
-            continue
-
-        # Suppress high CNS drills in TAPER unless criteria met
-        if (
-            phase.upper() == "TAPER"
-            and "high_cns" in tags
-            and not (
-                fatigue == "low"
-                and system == "alactic"
-                and any(t in weak_tags or t in goal_tags for t in tags)
-            )
-        ):
-            continue
-
-        # Additional tag suppression in TAPER for moderate/high fatigue
-        if (
-            phase.upper() == "TAPER"
-            and fatigue != "low"
-            and any(t in TAPER_AVOID_TAGS for t in tags)
-            and not any(t in goal_tags or t in weak_tags for t in tags)
-        ):
-            continue
-
-        restriction_candidates += 1
-        restriction_result = evaluate_restriction_impact(
-            restrictions,
-            text=restriction_text,
-            tags=tags,
-            limit_penalty=-0.75,
-        )
-        restriction_penalty = restriction_result.get("penalty", 0.0)
-        matched_restrictions = restriction_result.get("matched", [])
-        if not ignore_restrictions and not restriction_result.get("allowed", True):
-            restriction_blocked += 1
-            for match in matched_restrictions:
-                restriction_reason_counts[match.get("restriction", "generic_constraint")] += 1
-            if matched_restrictions:
-                top_match = max(matched_restrictions, key=lambda m: m.get("confidence", 0))
-                restriction_blocked_items.append(
-                    {
-                        "name": d.get("name", "<unnamed>"),
-                        "match": top_match,
-                        "risk": restriction_result.get("risk", 0.0),
-                    }
+                tags = _cached_tags(d)
+                details = " ".join(
+                    [
+                        d.get("duration", ""),
+                        d.get("notes", ""),
+                        d.get("modality", ""),
+                        d.get("equipment_note", ""),
+                    ]
                 )
-            if injury_trace:
-                print(
-                    "[guard-block] conditioning:%s name=%s matched=%s risk=%.2f"
-                    % (
-                        phase.upper(),
-                        d.get("name", "<unnamed>"),
-                        matched_restrictions,
-                        restriction_result.get("risk", 0.0),
+                restriction_text = " ".join(
+                    [
+                        d.get("name", ""),
+                        d.get("modality", ""),
+                        d.get("notes", ""),
+                        d.get("equipment_note", ""),
+                    ]
+                )
+                if is_banned_drill(
+                    d.get("name", ""),
+                    tags,
+                    selection_format,
+                    details,
+                    style_names,
+                    tech_style_tags,
+                ):
+                    continue
+                if _violates_sport_language_blacklist(d, fight_format=selection_format):
+                    continue
+
+                if (
+                    selection_format == "boxing"
+                    and phase.upper() == "TAPER"
+                    and {"overhead", "rotational", "heavy_load"}.issubset(tags)
+                    and not (shoulder_focus and fatigue == "low")
+                ):
+                    continue
+
+                drill_equipment = _cached_equipment(d)
+                if drill_equipment and not set(drill_equipment).issubset(equipment_access_set):
+                    continue
+
+                # Suppress high CNS drills in TAPER unless criteria met
+                if (
+                    phase.upper() == "TAPER"
+                    and "high_cns" in tags
+                    and not (
+                        fatigue == "low"
+                        and system == "alactic"
+                        and any(t in weak_tags or t in goal_tags for t in tags)
                     )
+                ):
+                    continue
+
+                # Additional tag suppression in TAPER for moderate/high fatigue
+                if (
+                    phase.upper() == "TAPER"
+                    and fatigue != "low"
+                    and any(t in TAPER_AVOID_TAGS for t in tags)
+                    and not any(t in goal_tags or t in weak_tags for t in tags)
+                ):
+                    continue
+
+                restriction_candidates += 1
+                restriction_result = evaluate_restriction_impact(
+                    restrictions,
+                    text=restriction_text,
+                    tags=tags,
+                    limit_penalty=-0.75,
                 )
-            continue
-        if restriction_result.get("no_match_hints"):
-            for hint in restriction_result.get("no_match_hints", []):
-                restriction_warning_counts[hint] += 1
+                restriction_penalty = restriction_result.get("penalty", 0.0)
+                matched_restrictions = restriction_result.get("matched", [])
+                if not ignore_restrictions and not restriction_result.get("allowed", True):
+                    restriction_blocked += 1
+                    for match in matched_restrictions:
+                        restriction_reason_counts[match.get("restriction", "generic_constraint")] += 1
+                    if matched_restrictions:
+                        top_match = max(matched_restrictions, key=lambda m: m.get("confidence", 0))
+                        restriction_blocked_items.append(
+                            {
+                                "name": d.get("name", "<unnamed>"),
+                                "match": top_match,
+                                "risk": restriction_result.get("risk", 0.0),
+                            }
+                        )
+                    if injury_trace:
+                        print(
+                            "[guard-block] conditioning:%s name=%s matched=%s risk=%.2f"
+                            % (
+                                phase.upper(),
+                                d.get("name", "<unnamed>"),
+                                matched_restrictions,
+                                restriction_result.get("risk", 0.0),
+                            )
+                        )
+                    continue
+                if restriction_result.get("no_match_hints"):
+                    for hint in restriction_result.get("no_match_hints", []):
+                        restriction_warning_counts[hint] += 1
 
-        matched_weak_tags = sorted({t for t in tags if t in weak_tags})
-        matched_goal_tags = sorted({t for t in tags if t in goal_tags})
-        num_weak = len(matched_weak_tags)
-        num_goals = len(matched_goal_tags)
-        num_style = sum(1 for t in tags if t in style_tags)
-        num_format = sum(1 for t in tags if t in fight_format_tags)
+                matched_weak_tags = sorted({t for t in tags if t in weak_tags})
+                matched_goal_tags = sorted({t for t in tags if t in goal_tags})
+                num_weak = len(matched_weak_tags)
+                num_goals = len(matched_goal_tags)
+                num_style = sum(1 for t in tags if t in style_tags)
+                num_format = sum(1 for t in tags if t in fight_format_tags)
 
-        base_score = _conditioning_collision_safe_priority_bonus(
-            matched_goal_tags,
-            matched_weak_tags,
-            priority_profile,
-        )
-        clarification_bonus, clarification_hits = _conditioning_clarification_bonus(tags, derived_clarification_tags)
-        base_score += clarification_bonus
-        base_score += 0.75 * min(num_style, 2)
-        base_score += 1.0 * min(num_format, 1)
+                base_score = _conditioning_collision_safe_priority_bonus(
+                    matched_goal_tags,
+                    matched_weak_tags,
+                    priority_profile,
+                )
+                clarification_bonus, clarification_hits = _conditioning_clarification_bonus(tags, derived_clarification_tags)
+                base_score += clarification_bonus
+                base_score += 0.75 * min(num_style, 2)
+                base_score += 1.0 * min(num_format, 1)
 
-        energy_multiplier = energy_weights.get(system, 1.0)
-        system_score = round(energy_multiplier * 1.0, 2)
-        total_score = base_score + system_score
+                energy_multiplier = energy_weights.get(system, 1.0)
+                system_score = round(energy_multiplier * 1.0, 2)
+                total_score = base_score + system_score
 
-        preferred_name_match = str(d.get("name", "")).strip().lower() in preferred_exercise_names
-        if preferred_name_match:
-            total_score += PREFERRED_EXERCISE_NAME_BOOST
+                preferred_name_match = str(d.get("name", "")).strip().lower() in preferred_exercise_names
+                if preferred_name_match:
+                    total_score += PREFERRED_EXERCISE_NAME_BOOST
 
-        penalty = 0.0
-        if fatigue == "high" and "high_cns" in tags:
-            total_score -= 2.0
-            penalty = -2.0
-        elif fatigue == "moderate" and "high_cns" in tags:
-            total_score -= 1.0
-            penalty = -1.0
-        boxer_aerobic_adjustment = 0.0
-        if selection_format == "boxing" and system == "aerobic":
-            boxer_aerobic_adjustment = _boxing_aerobic_priority_adjustment(
-                d,
-                injuries=injuries,
-                weaknesses=weaknesses,
-                goals=goals,
-                restrictions=restrictions,
-                equipment_access_set=equipment_access_set,
-            )
-            total_score += boxer_aerobic_adjustment
-        if not ignore_restrictions and restriction_penalty:
-            total_score += restriction_penalty
-            penalty += restriction_penalty
-        late_eval = _evaluate_conditioning_late_window(
-            d,
-            system=system,
-            window=late_window,
-            bridge_rules=bridge_rules,
-        )
-        _record_ambiguous_gap(late_eval.get("ambiguous_gap"))
-        if late_eval["blocked"]:
-            _record_late_block(d, total_score, late_eval["block_codes"])
-            continue
-        if late_eval["adjustment"]:
-            total_score += late_eval["adjustment"]
-        if (
-            phase.upper() == "TAPER"
-            and isinstance(days_until_fight, int)
-            and days_until_fight <= 7
-            and d.get("name") not in TAPER_CONDITIONING_SAFE_NAMES
-        ):
-            _record_late_block(d, total_score, ["late_taper_safe_whitelist"])
-            continue
+                penalty = 0.0
+                if fatigue == "high" and "high_cns" in tags:
+                    total_score -= 2.0
+                    penalty = -2.0
+                elif fatigue == "moderate" and "high_cns" in tags:
+                    total_score -= 1.0
+                    penalty = -1.0
+                boxer_aerobic_adjustment = 0.0
+                if selection_format == "boxing" and system == "aerobic":
+                    boxer_aerobic_adjustment = _boxing_aerobic_priority_adjustment(
+                        d,
+                        injuries=injuries,
+                        weaknesses=weaknesses,
+                        goals=goals,
+                        restrictions=restrictions,
+                        equipment_access_set=equipment_access_set,
+                    )
+                    total_score += boxer_aerobic_adjustment
+                if not ignore_restrictions and restriction_penalty:
+                    total_score += restriction_penalty
+                    penalty += restriction_penalty
+                late_eval = _cached_late_eval(d, system)
+                _record_ambiguous_gap(late_eval.get("ambiguous_gap"))
+                if late_eval["blocked"]:
+                    _record_late_block(d, total_score, late_eval["block_codes"])
+                    continue
+                if late_eval["adjustment"]:
+                    total_score += late_eval["adjustment"]
+                if (
+                    phase.upper() == "TAPER"
+                    and isinstance(days_until_fight, int)
+                    and days_until_fight <= 7
+                    and d.get("name") not in TAPER_CONDITIONING_SAFE_NAMES
+                ):
+                    _record_late_block(d, total_score, ["late_taper_safe_whitelist"])
+                    continue
 
-        reasons = {
-            "weakness_hits": num_weak,
-            "goal_hits": num_goals,
-            "style_hits": num_style,
-            "phase_hits": 1,
-            "load_adjustments": system_score,
-            "equipment_boost": 0.0,
-            "preferred_exercise_name_match": PREFERRED_EXERCISE_NAME_BOOST if preferred_name_match else 0.0,
-            "penalties": penalty,
-            "restriction_hits": len(matched_restrictions),
-            "boxing_aerobic_preference": round(boxer_aerobic_adjustment, 4),
-            "clarification_tag_hits": clarification_hits,
-            "clarification_bonus": round(clarification_bonus, 4),
-            "reason_codes": list(late_eval["reason_codes"]),
-            "late_window_adjustment": late_eval["adjustment"],
-            "final_score": round(total_score, 4),
-        }
-        _add_conditioning_priority_reason_codes(reasons, matched_goal_tags, matched_weak_tags, priority_profile)
-        for tag in clarification_hits:
-            reasons["reason_codes"].append(f"priority_clarification_tag_match:{tag}")
-        if preferred_name_match:
-            reasons["reason_codes"].append(f"preferred_exercise_name_match:+{PREFERRED_EXERCISE_NAME_BOOST:.1f}")
+                reasons = {
+                    "weakness_hits": num_weak,
+                    "goal_hits": num_goals,
+                    "style_hits": num_style,
+                    "phase_hits": 1,
+                    "load_adjustments": system_score,
+                    "equipment_boost": 0.0,
+                    "preferred_exercise_name_match": PREFERRED_EXERCISE_NAME_BOOST if preferred_name_match else 0.0,
+                    "penalties": penalty,
+                    "restriction_hits": len(matched_restrictions),
+                    "boxing_aerobic_preference": round(boxer_aerobic_adjustment, 4),
+                    "clarification_tag_hits": clarification_hits,
+                    "clarification_bonus": round(clarification_bonus, 4),
+                    "reason_codes": list(late_eval["reason_codes"]),
+                    "late_window_adjustment": late_eval["adjustment"],
+                    "final_score": round(total_score, 4),
+                }
+                _add_conditioning_priority_reason_codes(reasons, matched_goal_tags, matched_weak_tags, priority_profile)
+                for tag in clarification_hits:
+                    reasons["reason_codes"].append(f"priority_clarification_tag_match:{tag}")
+                if preferred_name_match:
+                    reasons["reason_codes"].append(f"preferred_exercise_name_match:+{PREFERRED_EXERCISE_NAME_BOOST:.1f}")
 
-        system_drills[system].append((d, total_score, reasons))
+                system_drills[system].append((d, total_score, reasons))
+
+    _run_conditioning_poststep("base_bank_score", _load_and_score_base_conditioning_bank)
 
     # ---- Style specific conditioning ----
     target_style_tags = set(style_names + tech_style_tags)
-    for drill in get_style_conditioning_bank():
-        d = drill.copy()
-        if d.get("placement", "conditioning").lower() != "conditioning":
-            continue
-        if selection_format == "boxing":
-            d["name"] = rename_map.get(d.get("name"), d.get("name"))
-            d["tags"] = [
-                "boxing" if t.lower() == "muay_thai" else t
-                for t in d.get("tags", [])
-            ]
-        d["name"] = _normalize_conditioning_name(d.get("name", ""), fight_format=selection_format)
-        tags = normalize_tags(d.get("tags", []))
-        details = " ".join(
-            [
-                d.get("duration", ""),
-                d.get("notes", ""),
-                d.get("modality", ""),
-                d.get("equipment_note", ""),
-            ]
-        )
-        restriction_text = " ".join(
-            [
-                d.get("name", ""),
-                d.get("modality", ""),
-                d.get("notes", ""),
-                d.get("equipment_note", ""),
-            ]
-        )
-        if is_banned_drill(
-            d.get("name", ""),
-            tags,
-            selection_format,
-            details,
-            style_names,
-            tech_style_tags,
-        ):
-            continue
-        if _violates_sport_language_blacklist(d, fight_format=selection_format):
-            continue
-        if not target_style_tags.intersection(tags):
-            continue
-        if phase.upper() not in d.get("phases", []):
-            continue
-
-        if (
-            selection_format == "boxing"
-            and phase.upper() == "TAPER"
-            and {"overhead", "rotational", "heavy_load"}.issubset(tags)
-            and not (shoulder_focus and fatigue == "low")
-        ):
-            continue
-
-        system = get_system_or_warn(d, source="style_conditioning_bank.json")
-        if system is None:
-            continue
-        if system == "alactic" and not _alactic_structure_ok(d):
-            continue
-
-        # Apply same fatigue/CNS suppression rules
-        if (
-            phase.upper() == "TAPER"
-            and "high_cns" in tags
-            and not (
-                fatigue == "low"
-                and system == "alactic"
-                and any(t in weak_tags or t in goal_tags for t in tags)
-            )
-        ):
-            continue
-        if (
-            phase.upper() == "TAPER"
-            and fatigue != "low"
-            and any(t in TAPER_AVOID_TAGS for t in tags)
-            and not any(t in goal_tags or t in weak_tags for t in tags)
-        ):
-            continue
-        drill_equipment = normalize_equipment_list(d.get("equipment", []))
-        if drill_equipment and not set(drill_equipment).issubset(equipment_access_set):
-            continue
-        equip_bonus = 0.5 if drill_equipment else 0.0
-
-        restriction_candidates += 1
-        restriction_result = evaluate_restriction_impact(
-            restrictions,
-            text=restriction_text,
-            tags=tags,
-            limit_penalty=-0.75,
-        )
-        restriction_penalty = restriction_result.get("penalty", 0.0)
-        matched_restrictions = restriction_result.get("matched", [])
-        if not ignore_restrictions and not restriction_result.get("allowed", True):
-            restriction_blocked += 1
-            for match in matched_restrictions:
-                restriction_reason_counts[match.get("restriction", "generic_constraint")] += 1
-            if matched_restrictions:
-                top_match = max(matched_restrictions, key=lambda m: m.get("confidence", 0))
-                restriction_blocked_items.append(
-                    {
-                        "name": d.get("name", "<unnamed>"),
-                        "match": top_match,
-                        "risk": restriction_result.get("risk", 0.0),
-                    }
+    def _load_and_score_style_conditioning_bank() -> None:
+            for drill in get_style_conditioning_bank():
+                d = drill.copy()
+                if d.get("placement", "conditioning").lower() != "conditioning":
+                    continue
+                if selection_format == "boxing":
+                    d["name"] = rename_map.get(d.get("name"), d.get("name"))
+                    d["tags"] = [
+                        "boxing" if t.lower() == "muay_thai" else t
+                        for t in d.get("tags", [])
+                    ]
+                d["name"] = _normalize_conditioning_name(d.get("name", ""), fight_format=selection_format)
+                tags = _cached_tags(d)
+                details = " ".join(
+                    [
+                        d.get("duration", ""),
+                        d.get("notes", ""),
+                        d.get("modality", ""),
+                        d.get("equipment_note", ""),
+                    ]
                 )
-            if injury_trace:
-                print(
-                    "[guard-block] conditioning:%s name=%s matched=%s risk=%.2f"
-                    % (
-                        phase.upper(),
-                        d.get("name", "<unnamed>"),
-                        matched_restrictions,
-                        restriction_result.get("risk", 0.0),
+                restriction_text = " ".join(
+                    [
+                        d.get("name", ""),
+                        d.get("modality", ""),
+                        d.get("notes", ""),
+                        d.get("equipment_note", ""),
+                    ]
+                )
+                if is_banned_drill(
+                    d.get("name", ""),
+                    tags,
+                    selection_format,
+                    details,
+                    style_names,
+                    tech_style_tags,
+                ):
+                    continue
+                if _violates_sport_language_blacklist(d, fight_format=selection_format):
+                    continue
+                if not target_style_tags.intersection(tags):
+                    continue
+                if phase.upper() not in d.get("phases", []):
+                    continue
+
+                if (
+                    selection_format == "boxing"
+                    and phase.upper() == "TAPER"
+                    and {"overhead", "rotational", "heavy_load"}.issubset(tags)
+                    and not (shoulder_focus and fatigue == "low")
+                ):
+                    continue
+
+                system = _cached_system(d, "style_conditioning_bank.json")
+                if system is None:
+                    continue
+                if system == "alactic" and not _alactic_structure_ok(d):
+                    continue
+
+                # Apply same fatigue/CNS suppression rules
+                if (
+                    phase.upper() == "TAPER"
+                    and "high_cns" in tags
+                    and not (
+                        fatigue == "low"
+                        and system == "alactic"
+                        and any(t in weak_tags or t in goal_tags for t in tags)
                     )
+                ):
+                    continue
+                if (
+                    phase.upper() == "TAPER"
+                    and fatigue != "low"
+                    and any(t in TAPER_AVOID_TAGS for t in tags)
+                    and not any(t in goal_tags or t in weak_tags for t in tags)
+                ):
+                    continue
+                drill_equipment = _cached_equipment(d)
+                if drill_equipment and not set(drill_equipment).issubset(equipment_access_set):
+                    continue
+                equip_bonus = 0.5 if drill_equipment else 0.0
+
+                restriction_candidates += 1
+                restriction_result = evaluate_restriction_impact(
+                    restrictions,
+                    text=restriction_text,
+                    tags=tags,
+                    limit_penalty=-0.75,
                 )
-            continue
-        if restriction_result.get("no_match_hints"):
-            for hint in restriction_result.get("no_match_hints", []):
-                restriction_warning_counts[hint] += 1
+                restriction_penalty = restriction_result.get("penalty", 0.0)
+                matched_restrictions = restriction_result.get("matched", [])
+                if not ignore_restrictions and not restriction_result.get("allowed", True):
+                    restriction_blocked += 1
+                    for match in matched_restrictions:
+                        restriction_reason_counts[match.get("restriction", "generic_constraint")] += 1
+                    if matched_restrictions:
+                        top_match = max(matched_restrictions, key=lambda m: m.get("confidence", 0))
+                        restriction_blocked_items.append(
+                            {
+                                "name": d.get("name", "<unnamed>"),
+                                "match": top_match,
+                                "risk": restriction_result.get("risk", 0.0),
+                            }
+                        )
+                    if injury_trace:
+                        print(
+                            "[guard-block] conditioning:%s name=%s matched=%s risk=%.2f"
+                            % (
+                                phase.upper(),
+                                d.get("name", "<unnamed>"),
+                                matched_restrictions,
+                                restriction_result.get("risk", 0.0),
+                            )
+                        )
+                    continue
+                if restriction_result.get("no_match_hints"):
+                    for hint in restriction_result.get("no_match_hints", []):
+                        restriction_warning_counts[hint] += 1
 
-        matched_weak_tags = sorted({t for t in tags if t in weak_tags})
-        matched_goal_tags = sorted({t for t in tags if t in goal_tags})
-        weak_matches = len(matched_weak_tags)
-        goal_matches = len(matched_goal_tags)
-        top_system = preferred_order[0]
-        if system != top_system and not weak_matches and not goal_matches:
-            continue
+                matched_weak_tags = sorted({t for t in tags if t in weak_tags})
+                matched_goal_tags = sorted({t for t in tags if t in goal_tags})
+                weak_matches = len(matched_weak_tags)
+                goal_matches = len(matched_goal_tags)
+                top_system = preferred_order[0]
+                if system != top_system and not weak_matches and not goal_matches:
+                    continue
 
-        score = 0.0
-        score += 0.75  # style match already guaranteed by filter
-        score += 1.0  # phase match
-        if system == top_system:
-            score += 0.75
-        score += equip_bonus
-        score += _conditioning_collision_safe_priority_bonus(
-            matched_goal_tags,
-            matched_weak_tags,
-            priority_profile,
-        )
-        clarification_bonus, clarification_hits = _conditioning_clarification_bonus(tags, derived_clarification_tags)
-        score += clarification_bonus
-        preferred_name_match = str(d.get("name", "")).strip().lower() in preferred_exercise_names
-        if preferred_name_match:
-            score += PREFERRED_EXERCISE_NAME_BOOST
-        penalty = 0.0
-        if "high_cns" in tags:
-            if fatigue == "high":
-                score -= 1.0
-                penalty = -1.0
-            elif fatigue == "moderate":
-                score -= 0.5
-                penalty = -0.5
-        boxer_aerobic_adjustment = 0.0
-        if selection_format == "boxing" and system == "aerobic":
-            boxer_aerobic_adjustment = _boxing_aerobic_priority_adjustment(
-                d,
-                injuries=injuries,
-                weaknesses=weaknesses,
-                goals=goals,
-                restrictions=restrictions,
-                equipment_access_set=equipment_access_set,
-            )
-            score += boxer_aerobic_adjustment
-        if not ignore_restrictions and restriction_penalty:
-            score += restriction_penalty
-            penalty += restriction_penalty
-        late_eval = _evaluate_conditioning_late_window(
-            d,
-            system=system,
-            window=late_window,
-            bridge_rules=bridge_rules,
-        )
-        _record_ambiguous_gap(late_eval.get("ambiguous_gap"))
-        if late_eval["blocked"]:
-            _record_late_block(d, score, late_eval["block_codes"])
-            continue
-        if late_eval["adjustment"]:
-            score += late_eval["adjustment"]
-        if (
-            phase.upper() == "TAPER"
-            and isinstance(days_until_fight, int)
-            and days_until_fight <= 7
-            and d.get("name") not in TAPER_CONDITIONING_SAFE_NAMES
-        ):
-            _record_late_block(d, score, ["late_taper_safe_whitelist"])
-            continue
-        reasons = {
-            "weakness_hits": weak_matches,
-            "goal_hits": goal_matches,
-            "style_hits": 1,
-            "phase_hits": 1,
-            "load_adjustments": 0.75 if system == top_system else 0.0,
-            "equipment_boost": equip_bonus,
-            "preferred_exercise_name_match": PREFERRED_EXERCISE_NAME_BOOST if preferred_name_match else 0.0,
-            "penalties": penalty,
-            "restriction_hits": len(matched_restrictions),
-            "boxing_aerobic_preference": round(boxer_aerobic_adjustment, 4),
-            "clarification_tag_hits": clarification_hits,
-            "clarification_bonus": round(clarification_bonus, 4),
-            "reason_codes": list(late_eval["reason_codes"]),
-            "late_window_adjustment": late_eval["adjustment"],
-            "final_score": round(score, 4),
-        }
-        _add_conditioning_priority_reason_codes(reasons, matched_goal_tags, matched_weak_tags, priority_profile)
-        for tag in clarification_hits:
-            reasons["reason_codes"].append(f"priority_clarification_tag_match:{tag}")
-        if preferred_name_match:
-            reasons["reason_codes"].append(f"preferred_exercise_name_match:+{PREFERRED_EXERCISE_NAME_BOOST:.1f}")
+                score = 0.0
+                score += 0.75  # style match already guaranteed by filter
+                score += 1.0  # phase match
+                if system == top_system:
+                    score += 0.75
+                score += equip_bonus
+                score += _conditioning_collision_safe_priority_bonus(
+                    matched_goal_tags,
+                    matched_weak_tags,
+                    priority_profile,
+                )
+                clarification_bonus, clarification_hits = _conditioning_clarification_bonus(tags, derived_clarification_tags)
+                score += clarification_bonus
+                preferred_name_match = str(d.get("name", "")).strip().lower() in preferred_exercise_names
+                if preferred_name_match:
+                    score += PREFERRED_EXERCISE_NAME_BOOST
+                penalty = 0.0
+                if "high_cns" in tags:
+                    if fatigue == "high":
+                        score -= 1.0
+                        penalty = -1.0
+                    elif fatigue == "moderate":
+                        score -= 0.5
+                        penalty = -0.5
+                boxer_aerobic_adjustment = 0.0
+                if selection_format == "boxing" and system == "aerobic":
+                    boxer_aerobic_adjustment = _boxing_aerobic_priority_adjustment(
+                        d,
+                        injuries=injuries,
+                        weaknesses=weaknesses,
+                        goals=goals,
+                        restrictions=restrictions,
+                        equipment_access_set=equipment_access_set,
+                    )
+                    score += boxer_aerobic_adjustment
+                if not ignore_restrictions and restriction_penalty:
+                    score += restriction_penalty
+                    penalty += restriction_penalty
+                late_eval = _cached_late_eval(d, system)
+                _record_ambiguous_gap(late_eval.get("ambiguous_gap"))
+                if late_eval["blocked"]:
+                    _record_late_block(d, score, late_eval["block_codes"])
+                    continue
+                if late_eval["adjustment"]:
+                    score += late_eval["adjustment"]
+                if (
+                    phase.upper() == "TAPER"
+                    and isinstance(days_until_fight, int)
+                    and days_until_fight <= 7
+                    and d.get("name") not in TAPER_CONDITIONING_SAFE_NAMES
+                ):
+                    _record_late_block(d, score, ["late_taper_safe_whitelist"])
+                    continue
+                reasons = {
+                    "weakness_hits": weak_matches,
+                    "goal_hits": goal_matches,
+                    "style_hits": 1,
+                    "phase_hits": 1,
+                    "load_adjustments": 0.75 if system == top_system else 0.0,
+                    "equipment_boost": equip_bonus,
+                    "preferred_exercise_name_match": PREFERRED_EXERCISE_NAME_BOOST if preferred_name_match else 0.0,
+                    "penalties": penalty,
+                    "restriction_hits": len(matched_restrictions),
+                    "boxing_aerobic_preference": round(boxer_aerobic_adjustment, 4),
+                    "clarification_tag_hits": clarification_hits,
+                    "clarification_bonus": round(clarification_bonus, 4),
+                    "reason_codes": list(late_eval["reason_codes"]),
+                    "late_window_adjustment": late_eval["adjustment"],
+                    "final_score": round(score, 4),
+                }
+                _add_conditioning_priority_reason_codes(reasons, matched_goal_tags, matched_weak_tags, priority_profile)
+                for tag in clarification_hits:
+                    reasons["reason_codes"].append(f"priority_clarification_tag_match:{tag}")
+                if preferred_name_match:
+                    reasons["reason_codes"].append(f"preferred_exercise_name_match:+{PREFERRED_EXERCISE_NAME_BOOST:.1f}")
 
-        style_system_drills[system].append((d, score, reasons))
-        for st in style_names:
-            if st in tags:
-                style_drills_by_style[st][system].append((d, score, reasons))
+                style_system_drills[system].append((d, score, reasons))
+                for st in style_names:
+                    if st in tags:
+                        style_drills_by_style[st][system].append((d, score, reasons))
+
+    _run_conditioning_poststep("style_bank_score", _load_and_score_style_conditioning_bank)
 
     for drills in system_drills.values():
         drills.sort(key=lambda x: x[1], reverse=True)
@@ -2667,173 +2756,188 @@ def generate_conditioning_block(flags):
                 if _try_append_conditioning_drill("aerobic", drill, reasons, source="aerobic_maintenance_insert"):
                     break
     else:
-        for system in preferred_order:
-            quota = system_quota.get(system, 0)
-            if quota <= 0:
-                continue
+        def _fill_system_quotas() -> None:
+            for system in preferred_order:
+                quota = system_quota.get(system, 0)
+                if quota <= 0:
+                    continue
+                guard = 0
+                max_iter = bounded_max_iterations(quota)
+                while quota > 0:
+                    guard += 1
+                    if guard > max_iter:
+                        log_fail_safe_degrade(module="conditioning", phase=phase, reason=f"system_quota_guard:{system}", target=system_quota.get(system, 0), actual=selected_counts.get(system, 0))
+                        break
+                    d, r = blended_pick(system)
+                    if not d:
+                        log_fail_safe_degrade(module="conditioning", phase=phase, reason=f"system_quota_no_candidate:{system}", target=system_quota.get(system, 0), actual=selected_counts.get(system, 0))
+                        break
+                    final_drills.append((system, [d]))
+                    reason_lookup[d.get("name")] = r
+                    selected_counts[system] += 1
+                    quota -= 1
+
+        def _fill_deficits() -> None:
+            remaining_slots = total_drills - len(selected_drill_names)
+            deficits = {
+                s: max(0, system_quota.get(s, 0) - selected_counts.get(s, 0))
+                for s in system_quota
+            }
             guard = 0
-            max_iter = bounded_max_iterations(quota)
-            while quota > 0:
+            max_iter = bounded_max_iterations(remaining_slots)
+            while remaining_slots > 0 and any(deficits.values()):
                 guard += 1
                 if guard > max_iter:
-                    log_fail_safe_degrade(module="conditioning", phase=phase, reason=f"system_quota_guard:{system}", target=system_quota.get(system, 0), actual=selected_counts.get(system, 0))
+                    log_fail_safe_degrade(module="conditioning", phase=phase, reason="deficit_fill_guard", target=total_drills, actual=len(selected_drill_names))
+                    break
+                system = max(deficits, key=deficits.get)
+                if deficits[system] <= 0:
                     break
                 d, r = blended_pick(system)
                 if not d:
-                    break
+                    log_fail_safe_degrade(module="conditioning", phase=phase, reason=f"deficit_fill_no_candidate:{system}", target=deficits[system], actual=0)
+                    deficits[system] = 0
+                    continue
                 final_drills.append((system, [d]))
                 reason_lookup[d.get("name")] = r
                 selected_counts[system] += 1
-                quota -= 1
+                deficits[system] = max(0, deficits[system] - 1)
+                remaining_slots -= 1
 
-        remaining_slots = total_drills - len(selected_drill_names)
-        deficits = {
-            s: max(0, system_quota.get(s, 0) - selected_counts.get(s, 0))
-            for s in system_quota
-        }
-        guard = 0
-        max_iter = bounded_max_iterations(remaining_slots)
-        while remaining_slots > 0 and any(deficits.values()):
-            guard += 1
-            if guard > max_iter:
-                log_fail_safe_degrade(module="conditioning", phase=phase, reason="deficit_fill_guard", target=total_drills, actual=len(selected_drill_names))
-                break
-            system = max(deficits, key=deficits.get)
-            if deficits[system] <= 0:
-                break
-            d, r = blended_pick(system)
-            if not d:
-                deficits[system] = 0
-                continue
-            final_drills.append((system, [d]))
-            reason_lookup[d.get("name")] = r
-            selected_counts[system] += 1
-            deficits[system] = max(0, deficits[system] - 1)
-            remaining_slots -= 1
+        _run_conditioning_poststep("system_quota_fill", _fill_system_quotas)
+        _run_conditioning_poststep("deficit_fill", _fill_deficits)
 
-    normalized_focus = _normalize_focus_tokens([*goal_list, *weak_list])
-    needs_gas_tank_focus = bool(normalized_focus & _GAS_TANK_NORMALIZED_SIGNAL_TERMS)
-    has_machine_equipment = bool(_GAS_TANK_MACHINE_EQUIPMENT & equipment_access_set)
-    if (
-        phase.upper() in {"GPP", "SPP"}
-        and needs_gas_tank_focus
-        and has_machine_equipment
-    ):
-        has_machine_gas_tank = any(
-            _is_machine_biased_gas_tank_drill(drill)
-            for _system, drills in final_drills
-            for drill in drills
-        )
-        if not has_machine_gas_tank:
-            machine_candidates: list[tuple[int, float, dict, dict]] = []
-            for system in ("aerobic", "alactic"):
-                for drill, score, reasons in system_drills.get(system, []):
-                    if not _is_machine_biased_gas_tank_drill(drill):
+    def _insert_gas_tank_machine_bias() -> None:
+            normalized_focus = _normalize_focus_tokens([*goal_list, *weak_list])
+            needs_gas_tank_focus = bool(normalized_focus & _GAS_TANK_NORMALIZED_SIGNAL_TERMS)
+            has_machine_equipment = bool(_GAS_TANK_MACHINE_EQUIPMENT & equipment_access_set)
+            if (
+                phase.upper() in {"GPP", "SPP"}
+                and needs_gas_tank_focus
+                and has_machine_equipment
+            ):
+                has_machine_gas_tank = any(
+                    _is_machine_biased_gas_tank_drill(drill)
+                    for _system, drills in final_drills
+                    for drill in drills
+                )
+                if not has_machine_gas_tank:
+                    machine_candidates: list[tuple[int, float, dict, dict]] = []
+                    for system in ("aerobic", "alactic"):
+                        for drill, score, reasons in system_drills.get(system, []):
+                            if not _is_machine_biased_gas_tank_drill(drill):
+                                continue
+                            priority = 0 if system == "aerobic" else 1
+                            if "rower" in _conditioning_text_blob(drill):
+                                priority -= 1
+                            machine_candidates.append((priority, score, drill, reasons))
+                    if not machine_candidates:
+                        for drill in get_conditioning_bank():
+                            if drill.get("placement", "conditioning").lower() != "conditioning":
+                                continue
+                            if phase.upper() not in [str(p).upper() for p in drill.get("phases", [])]:
+                                continue
+                            if not _is_machine_biased_gas_tank_drill(drill):
+                                continue
+                            drill_system = str(get_system_or_warn(drill, source="gas_tank_machine_bias_fallback") or "").strip().lower()
+                            drill_text = _conditioning_text_blob(drill)
+                            drill_structured = _conditioning_structured_profile(drill, system=drill_system)
+                            if drill_system == "glycolytic":
+                                continue
+                            if drill_structured["high_lactate"] or drill_structured["glycolytic_density"]:
+                                continue
+                            if _conditioning_dense_pattern(drill_text) or _conditioning_multi_round_pattern(drill_text):
+                                continue
+                            if (drill_structured["rpe"] or 0) > 6:
+                                continue
+                            drill_eq = normalize_equipment_list(drill.get("equipment", []))
+                            if drill_eq and not set(drill_eq).issubset(equipment_access_set):
+                                continue
+                            machine_candidates.append((0, 0.0, drill, {"reason_codes": ["gas_tank_machine_bias"], "final_score": 0}))
+                    machine_candidates.sort(key=lambda item: (item[0], -item[1]))
+                    for _priority, _score, drill, reasons in machine_candidates:
+                        if _try_append_conditioning_drill("aerobic", drill, reasons, source="gas_tank_machine_bias"):
+                            break
+
+
+    _run_conditioning_poststep("gas_tank_machine_bias", _insert_gas_tank_machine_bias)
+
+    def _insert_universal_gpp_conditioning() -> None:
+            # --------- UNIVERSAL CONDITIONING INSERTION ---------
+            if phase == "GPP":
+                try:
+                    universal_conditioning = _load_bank(
+                        DATA_DIR / "universal_gpp_conditioning.json",
+                        source="universal_gpp_conditioning.json",
+                        enforce_conditioning_systems=True,
+                    )
+                except Exception:
+                    universal_conditioning = []
+
+                existing_cond_names = {d.get("name") for _, drills in final_drills for d in drills}
+                goal_tags_set = set(goal_tags or [])
+                weakness_tags_set = set(weak_tags or [])
+
+                high_priority_names = {
+                    "Jump Rope Endurance (Footwork Conditioning)",
+                    "Steady-State Cardio (Run / Bike / Row)",
+                    "Explosive Medicine Ball Throws",
+                }
+
+                injected_target = 2
+                injected = 0
+                universal_candidates = []
+                for drill in universal_conditioning:
+                    if injected >= injected_target or len(selected_drill_names) >= total_drills:
+                        break
+                    if drill.get("name") in existing_cond_names:
                         continue
-                    priority = 0 if system == "aerobic" else 1
-                    if "rower" in _conditioning_text_blob(drill):
-                        priority -= 1
-                    machine_candidates.append((priority, score, drill, reasons))
-            if not machine_candidates:
-                for drill in get_conditioning_bank():
                     if drill.get("placement", "conditioning").lower() != "conditioning":
-                        continue
-                    if phase.upper() not in [str(p).upper() for p in drill.get("phases", [])]:
-                        continue
-                    if not _is_machine_biased_gas_tank_drill(drill):
-                        continue
-                    drill_system = str(get_system_or_warn(drill, source="gas_tank_machine_bias_fallback") or "").strip().lower()
-                    drill_text = _conditioning_text_blob(drill)
-                    drill_structured = _conditioning_structured_profile(drill, system=drill_system)
-                    if drill_system == "glycolytic":
-                        continue
-                    if drill_structured["high_lactate"] or drill_structured["glycolytic_density"]:
-                        continue
-                    if _conditioning_dense_pattern(drill_text) or _conditioning_multi_round_pattern(drill_text):
-                        continue
-                    if (drill_structured["rpe"] or 0) > 6:
                         continue
                     drill_eq = normalize_equipment_list(drill.get("equipment", []))
                     if drill_eq and not set(drill_eq).issubset(equipment_access_set):
                         continue
-                    machine_candidates.append((0, 0.0, drill, {"reason_codes": ["gas_tank_machine_bias"], "final_score": 0}))
-            machine_candidates.sort(key=lambda item: (item[0], -item[1]))
-            for _priority, _score, drill, reasons in machine_candidates:
-                if _try_append_conditioning_drill("aerobic", drill, reasons, source="gas_tank_machine_bias"):
-                    break
+                    system = get_system_or_warn(drill, source="universal_gpp_conditioning.json")
+                    if system is None:
+                        continue
+                    universal_candidates.append((system, drill))
 
-    # --------- UNIVERSAL CONDITIONING INSERTION ---------
-    if phase == "GPP":
-        try:
-            universal_conditioning = _load_bank(
-                DATA_DIR / "universal_gpp_conditioning.json",
-                source="universal_gpp_conditioning.json",
-                enforce_conditioning_systems=True,
-            )
-        except Exception:
-            universal_conditioning = []
+                for system, drill in sorted(
+                    universal_candidates, key=lambda pair: pair[1].get("name") or ""
+                )[:INJURY_GUARD_SHORTLIST]:
+                    if injected >= injected_target or len(selected_drill_names) >= total_drills:
+                        break
 
-        existing_cond_names = {d.get("name") for _, drills in final_drills for d in drills}
-        goal_tags_set = set(goal_tags or [])
-        weakness_tags_set = set(weak_tags or [])
+                    drill_tags = set(normalize_tags(drill.get("tags", [])))
 
-        high_priority_names = {
-            "Jump Rope Endurance (Footwork Conditioning)",
-            "Steady-State Cardio (Run / Bike / Row)",
-            "Explosive Medicine Ball Throws",
-        }
+                    if not (
+                        drill.get("name") in high_priority_names
+                        or drill_tags & (goal_tags_set | weakness_tags_set)
+                    ):
+                        continue
 
-        injected_target = 2
-        injected = 0
-        universal_candidates = []
-        for drill in universal_conditioning:
-            if injected >= injected_target or len(selected_drill_names) >= total_drills:
-                break
-            if drill.get("name") in existing_cond_names:
-                continue
-            if drill.get("placement", "conditioning").lower() != "conditioning":
-                continue
-            drill_eq = normalize_equipment_list(drill.get("equipment", []))
-            if drill_eq and not set(drill_eq).issubset(equipment_access_set):
-                continue
-            system = get_system_or_warn(drill, source="universal_gpp_conditioning.json")
-            if system is None:
-                continue
-            universal_candidates.append((system, drill))
+                    if _try_append_conditioning_drill(
+                        system,
+                        drill,
+                        {
+                            "goal_hits": 0,
+                            "weakness_hits": 0,
+                            "style_hits": 0,
+                            "phase_hits": 1,
+                            "load_adjustments": 0,
+                            "equipment_boost": 0,
+                            "penalties": 0,
+                            "reason_codes": ["universal_gpp_guarantee"],
+                            "final_score": 0,
+                        },
+                        source="universal_gpp",
+                        enforce_late_window=False,
+                    ):
+                        existing_cond_names.add(drill.get("name"))
+                        injected += 1
 
-        for system, drill in sorted(
-            universal_candidates, key=lambda pair: pair[1].get("name") or ""
-        )[:INJURY_GUARD_SHORTLIST]:
-            if injected >= injected_target or len(selected_drill_names) >= total_drills:
-                break
 
-            drill_tags = set(normalize_tags(drill.get("tags", [])))
-
-            if not (
-                drill.get("name") in high_priority_names
-                or drill_tags & (goal_tags_set | weakness_tags_set)
-            ):
-                continue
-
-            if _try_append_conditioning_drill(
-                system,
-                drill,
-                {
-                    "goal_hits": 0,
-                    "weakness_hits": 0,
-                    "style_hits": 0,
-                    "phase_hits": 1,
-                    "load_adjustments": 0,
-                    "equipment_boost": 0,
-                    "penalties": 0,
-                    "reason_codes": ["universal_gpp_guarantee"],
-                    "final_score": 0,
-                },
-                source="universal_gpp",
-                enforce_late_window=False,
-            ):
-                existing_cond_names.add(drill.get("name"))
-                injected += 1
+    _run_conditioning_poststep("universal_gpp_insertion", _insert_universal_gpp_conditioning)
 
         # --------- STYLE TAPER DRILL INSERTION ---------
     if phase == "TAPER":
@@ -3082,9 +3186,13 @@ def generate_conditioning_block(flags):
         selected_drill_names = selected_drill_names[:-extra]
 
     # Group drills by energy system so each system only prints once
-    grouped_drills: dict[str, list[dict]] = {}
-    for system, drills in final_drills:
-        grouped_drills.setdefault(system, []).extend(drills)
+    def _build_grouped_drills() -> dict[str, list[dict]]:
+        grouped_drills_local: dict[str, list[dict]] = {}
+        for system, drills in final_drills:
+            grouped_drills_local.setdefault(system, []).extend(drills)
+        return grouped_drills_local
+
+    grouped_drills = _run_conditioning_poststep("grouped_drills_build", _build_grouped_drills)
 
     def _record_injury_exclusion(drill: dict, decision: Decision) -> None:
         reason = decision.reason if isinstance(decision.reason, dict) else {}
@@ -3199,13 +3307,16 @@ def generate_conditioning_block(flags):
 
             grouped[system] = drills
 
-    _finalize_injury_safe_drills(
-        grouped_drills,
-        injuries,
-        all_candidates_by_system,
-        selected_drill_names,
-        reason_lookup,
-    )
+    def _finalize_injury_safe_drills_step() -> None:
+        _finalize_injury_safe_drills(
+            grouped_drills,
+            injuries,
+            all_candidates_by_system,
+            selected_drill_names,
+            reason_lookup,
+        )
+
+    _run_conditioning_poststep("injury_safe_finalize", _finalize_injury_safe_drills_step)
 
     _is_late_fight_taper = active_late_window
     bridge_allows_glycolytic_touch = bool(
@@ -3316,11 +3427,23 @@ def generate_conditioning_block(flags):
     grouped_drills = _resolved_grouped_drills(resolved_sessions)
     selected_drill_names = _resolved_conditioning_names(resolved_sessions)
 
-    missing_systems = [
-        system_name
-        for system_name in ["aerobic", "glycolytic", "alactic"]
-        if not grouped_drills.get(system_name)
-    ]
+    def _build_missing_systems() -> list[str]:
+        missing = [
+            system_name
+            for system_name in ["aerobic", "glycolytic", "alactic"]
+            if not grouped_drills.get(system_name)
+        ]
+        for system_name in missing:
+            log_fail_safe_degrade(
+                module="conditioning",
+                phase=phase,
+                reason=f"missing_system_safe_omission:{system_name}",
+                target=1,
+                actual=0,
+            )
+        return missing
+
+    missing_systems = _run_conditioning_poststep("missing_systems_build", _build_missing_systems)
     diagnostic_context = {
         "phase": phase,
         "sport": flags.get("sport"),
@@ -3332,16 +3455,19 @@ def generate_conditioning_block(flags):
         "injuries": injuries,
         "fight_format": fight_format,
     }
-    output_lines = render_conditioning_block(
-        grouped_drills,
-        phase=phase,
-        phase_color=phase_color,
-        missing_systems=missing_systems,
-        num_sessions=num_conditioning_sessions,
-        diagnostic_context=diagnostic_context,
-        sport=flags.get("sport"),
-        resolved_sessions=resolved_sessions,
-    )
+    def _format_conditioning_output():
+        return render_conditioning_block(
+            grouped_drills,
+            phase=phase,
+            phase_color=phase_color,
+            missing_systems=missing_systems,
+            num_sessions=num_conditioning_sessions,
+            diagnostic_context=diagnostic_context,
+            sport=flags.get("sport"),
+            resolved_sessions=resolved_sessions,
+        )
+
+    output_lines = _run_conditioning_poststep("block_formatting", _format_conditioning_output)
 
     why_log = []
     for system, drills in grouped_drills.items():
@@ -3352,12 +3478,37 @@ def generate_conditioning_block(flags):
             explanation = _conditioning_explanation(reasons)
             why_log.append({"name": nm, "system": system, "reasons": reasons, "explanation": explanation})
 
-    candidate_reservoir = _build_conditioning_candidate_reservoir(
-        system_drills,
-        style_system_drills,
-        grouped_drills,
-        reason_lookup,
-    )
+    def _build_candidate_reservoir_step():
+        reservoir = _build_conditioning_candidate_reservoir(
+            system_drills,
+            style_system_drills,
+            grouped_drills,
+            reason_lookup,
+        )
+        total_candidates = sum(len(v) for v in reservoir.values())
+        max_candidates = 400
+        if total_candidates > max_candidates:
+            log_fail_safe_degrade(
+                module="conditioning",
+                phase=phase,
+                reason="candidate_reservoir_capped",
+                target=total_candidates,
+                actual=max_candidates,
+            )
+            trimmed: dict[str, list[dict]] = {}
+            remaining = max_candidates
+            for system_name in ("aerobic", "glycolytic", "alactic"):
+                entries = reservoir.get(system_name, [])
+                take = min(len(entries), remaining)
+                trimmed[system_name] = entries[:take]
+                remaining -= take
+            for key, value in reservoir.items():
+                if key not in trimmed:
+                    trimmed[key] = value
+            return trimmed
+        return reservoir
+
+    candidate_reservoir = _run_conditioning_poststep("candidate_reservoir_build", _build_candidate_reservoir_step)
     deduped_late_blocks = {
         (
             entry.get("name", ""),

@@ -31,3 +31,26 @@ def test_conditioning_returns_reduced_output_when_unavailable(monkeypatch):
     lines, grouped, *_ = conditioning.generate_conditioning_block(flags)
     assert isinstance(lines, list)
     assert isinstance(grouped, dict)
+
+
+def test_conditioning_impossible_constraints_degrades_without_timeout(caplog):
+    flags = {
+        "phase": "TAPER",
+        "sport": "boxing",
+        "key_goals": ["conditioning"],
+        "weaknesses": ["explosive power"],
+        "equipment": ["jump rope"],
+        "injuries": [{"region": "knee", "severity": "high", "type": "instability"}],
+        "fatigue": "high",
+        "training_frequency": 2,
+        "days_until_fight": 2,
+        "restrictions": ["no impact", "no plyometric"],
+    }
+    with caplog.at_level(logging.WARNING):
+        output_lines, selected, _why, grouped, missing, _reservoir = conditioning.generate_conditioning_block(flags)
+    assert isinstance(output_lines, list)
+    assert isinstance(selected, list)
+    assert isinstance(grouped, dict)
+    assert isinstance(missing, list)
+    assert "fail_safe_degrade module=conditioning" in caplog.text
+    assert "timeout" not in caplog.text.lower()
