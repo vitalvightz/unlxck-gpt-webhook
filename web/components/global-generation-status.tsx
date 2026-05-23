@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { useGenerationStatus } from "./generation-status-provider";
 
@@ -18,6 +19,7 @@ const CELEBRATION_DURATION_MS = 1_600;
 
 export function GlobalGenerationStatus() {
   const { isActive, statusMessage, phase, planId, startedAtMs, refreshStatus } = useGenerationStatus();
+  const router = useRouter();
   const [now, setNow] = useState(() => Date.now());
   const [isCelebrating, setIsCelebrating] = useState(false);
   const previousPhaseRef = useRef(phase);
@@ -116,6 +118,10 @@ export function GlobalGenerationStatus() {
       className={className}
       aria-label={isFailed ? "Plan failed. Tap to refresh status." : "Generation in progress. Tap to refresh status."}
       onClick={() => {
+        if (!isFailed) {
+          router.push("/");
+          return;
+        }
         refreshStatus();
       }}
     >
