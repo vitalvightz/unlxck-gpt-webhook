@@ -535,7 +535,7 @@ def test_athlete_cannot_archive_someone_elses_plan():
     assert store.get_plan(plan["id"]) is not None
 
 
-def test_admin_can_archive_any_plan():
+def test_admin_delete_hard_deletes_any_plan():
     client, store, _ = _build_client()
     athlete = AuthenticatedUser(
         user_id="athlete-1",
@@ -557,9 +557,37 @@ def test_admin_can_archive_any_plan():
     )
 
     assert response.status_code == 204
-    archived = store.get_plan(plan["id"])
-    assert archived is not None
-    assert archived["status"] == "archived"
+    assert store.get_plan(plan["id"]) is None
+
+
+def test_athlete_second_delete_hard_deletes_archived_plan():
+    client, store, _ = _build_client()
+    athlete = AuthenticatedUser(
+        user_id="athlete-1",
+        email="ari@example.com",
+        full_name="Ari Mensah",
+        metadata={},
+    )
+    store.ensure_profile(athlete)
+    plan = store.create_plan(
+        athlete_id="athlete-1",
+        intake_id="intake_x",
+        request=_build_request(),
+        result=finalized_result(),
+    )
+
+    first_delete = client.delete(
+        f"/api/plans/{plan['id']}",
+        headers={"Authorization": "Bearer athlete-token"},
+    )
+    second_delete = client.delete(
+        f"/api/plans/{plan['id']}",
+        headers={"Authorization": "Bearer athlete-token"},
+    )
+
+    assert first_delete.status_code == 204
+    assert second_delete.status_code == 204
+    assert store.get_plan(plan["id"]) is None
 
 
 def test_athlete_cannot_rename_archived_plan():

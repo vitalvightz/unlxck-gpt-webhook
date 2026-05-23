@@ -244,6 +244,11 @@ class FakeStore:
         row["status"] = "archived"
         return row
 
+    def delete_plan(self, plan_id: str) -> None:
+        if plan_id not in self.plans:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
+        del self.plans[plan_id]
+
     def create_or_get_generation_job(
         self,
         *,
