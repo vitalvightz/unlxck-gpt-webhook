@@ -3,10 +3,10 @@ import assert from "node:assert/strict";
 
 import { getGenerationStatusTarget } from "./global-generation-status";
 
-test("active generation states have no navigation target", () => {
-  assert.equal(getGenerationStatusTarget("queued", null, null), null);
-  assert.equal(getGenerationStatusTarget("running", null, null), null);
-  assert.equal(getGenerationStatusTarget("finalizing", null, null), null);
+test("active generation states route to generate workspace", () => {
+  assert.equal(getGenerationStatusTarget("queued", null, null), "/generate");
+  assert.equal(getGenerationStatusTarget("running", null, null), "/generate");
+  assert.equal(getGenerationStatusTarget("finalizing", null, null), "/generate");
 });
 
 test("completed generation with plan id routes to plan detail", () => {
