@@ -590,6 +590,15 @@ def _rehab_athlete(**overrides):
     return base
 
 
+def _recovery_athlete(**overrides):
+    base = {
+        "key_goals": ["recovery", "fatigue_management"],
+        "goals": ["freshness"],
+    }
+    base.update(overrides)
+    return base
+
+
 def test_converted_mobility_role_carries_protection_flags():
     week = {
         "phase": "GPP",
@@ -622,6 +631,21 @@ def test_converted_rehab_role_carries_protection_flags():
     assert role["counts_toward_conditioning_cap"] is False
     assert role["is_dedicated_recovery_mobility_day"] is True
     assert role["support_kind"] == "rehab_friendly"
+
+
+def test_converted_recovery_flush_role_carries_protection_flags():
+    week = {
+        "phase": "GPP",
+        "calendar_days": [{"weekday": "thursday", "d_day": 36}],
+        "intentionally_unused_days": [{"day": "thursday", "role": "off_day"}],
+    }
+    upgraded = _upgrade_unused_days_to_low_load_support(week, [], _recovery_athlete())
+    assert len(upgraded) == 1
+    role = upgraded[0]
+    assert role["role_key"] == "converted_recovery_flush_day"
+    assert role["counts_toward_conditioning_cap"] is False
+    assert role["is_dedicated_recovery_mobility_day"] is True
+    assert role["support_kind"] == "recovery"
 
 
 def test_converted_gas_tank_role_still_counts_toward_conditioning_cap():

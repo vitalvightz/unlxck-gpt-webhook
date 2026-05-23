@@ -799,11 +799,11 @@ class TestStage2PayloadBranching:
         assert "allocator" in brief["late_fight_plan_spec"]
         assert "role_budget" in brief["late_fight_plan_spec"]
 
-    def test_d7_plan_spec_keeps_boxing_roles_out_of_visible_insert_sessions(self):
+    def test_d7_plan_spec_keeps_boxing_roles_in_visible_calendar_sequence(self):
         spec = _build_late_fight_plan_spec(7, _athlete(7))
 
         assert "hard_sparring_day" in spec["session_roles"]
-        assert "hard_sparring_day" not in spec["visible_session_roles"]
+        assert "hard_sparring_day" in spec["visible_session_roles"]
         assert spec["visible_session_cap"] == len(spec["visible_session_sequence"])
         assert [entry["role_key"] for entry in spec["visible_session_sequence"]] == spec["visible_session_roles"]
 
