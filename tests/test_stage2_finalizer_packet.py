@@ -60,3 +60,22 @@ def test_finalizer_packet_hard_rules_include_subtype_context_guardrail():
         "Use parsed_injuries and guided_source_injury_subtypes as injury context only." in rule
         for rule in packet["hard_rules"]
     )
+
+
+def test_finalizer_packet_prefers_late_fight_visible_session_sequence():
+    stage2_payload = {
+        "athlete_model": {},
+        "late_fight_session_sequence": [{"role_key": "alactic_sharpness_day", "scheduled_day_hint": "tuesday"}],
+        "late_fight_plan_spec": {
+            "visible_session_sequence": [
+                {"role_key": "hard_sparring_day", "scheduled_day_hint": "monday"},
+                {"role_key": "neural_primer_day", "scheduled_day_hint": "tuesday"},
+            ],
+            "session_sequence": [{"role_key": "fight_week_freshness_day", "scheduled_day_hint": "wednesday"}],
+        },
+    }
+    packet = build_stage2_finalizer_packet(stage2_payload=stage2_payload, planning_brief={})
+    assert [entry["role_key"] for entry in packet["selected_plan"]["session_sequence"]] == [
+        "hard_sparring_day",
+        "neural_primer_day",
+    ]
