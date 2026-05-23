@@ -94,3 +94,25 @@ def test_conditioning_cached_try_append_reuses_injury_and_late_eval(monkeypatch)
     assert isinstance(missing, list)
     assert injury_calls > 0
     assert late_calls > 0
+
+
+def test_generate_conditioning_block_scope_audit_all_phases_no_name_or_unbound():
+    base_flags = {
+        "sport": "boxing",
+        "key_goals": ["conditioning"],
+        "weaknesses": ["gas tank"],
+        "equipment": ["jump rope", "assault bike"],
+        "injuries": [{"region": "knee", "severity": "low", "type": "instability"}],
+        "fatigue": "moderate",
+        "training_frequency": 3,
+    }
+    for phase in ("GPP", "SPP", "TAPER"):
+        flags = {**base_flags, "phase": phase, "days_until_fight": 10 if phase != "TAPER" else 5}
+        try:
+            result = conditioning.generate_conditioning_block(flags)
+        except (UnboundLocalError, NameError) as exc:
+            raise AssertionError(f"{phase} raised scope error: {exc}") from exc
+        except Exception as exc:
+            raise AssertionError(f"{phase} plan generation failed unexpectedly: {exc}") from exc
+        assert isinstance(result, tuple)
+        assert len(result) == 6

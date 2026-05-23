@@ -115,6 +115,8 @@ def test_knee_instability_low_stable_emits_stage1_block_and_no_timeout():
     assert "stage1_conditioning_candidate_reservoir_build_finished" in codes
     assert "stage1_conditioning_injury_safe_finalize_started" in codes
     assert "stage1_conditioning_injury_safe_finalize_finished" in codes
+    assert "stage1_conditioning_energy_system_fallbacks_started" in codes
+    assert "stage1_conditioning_energy_system_fallbacks_finished" in codes
     assert "stage1_conditioning_block_formatting_started" in codes
     assert "stage1_conditioning_block_formatting_finished" in codes
     assert "stage1_conditioning_block_finished" in codes
@@ -126,6 +128,32 @@ def test_knee_instability_low_stable_emits_stage1_block_and_no_timeout():
         "stage1_strength_context_started" in codes
         or "stage1_strength_candidate_pool_started" in codes
     )
+
+
+def test_conditioning_direct_gpp_call_returns_expected_structure():
+    from fightcamp import conditioning as conditioning_module
+
+    normal_gpp_flags = {
+        "phase": "GPP",
+        "sport": "boxing",
+        "key_goals": ["conditioning"],
+        "weaknesses": ["gas tank"],
+        "equipment": ["jump rope", "assault bike"],
+        "injuries": [{"region": "knee", "severity": "low", "type": "instability"}],
+        "fatigue": "moderate",
+        "training_frequency": 3,
+        "days_until_fight": 35,
+    }
+    result = conditioning_module.generate_conditioning_block(normal_gpp_flags)
+    assert isinstance(result, tuple)
+    assert len(result) == 6
+    output_lines, selected, why, grouped, missing, reservoir = result
+    assert isinstance(output_lines, list)
+    assert isinstance(selected, list)
+    assert isinstance(why, list)
+    assert isinstance(grouped, dict)
+    assert isinstance(missing, list)
+    assert isinstance(reservoir, dict)
 
 
 def test_strength_generation_does_not_require_context_progress_callback():
