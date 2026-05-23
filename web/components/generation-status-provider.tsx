@@ -164,6 +164,7 @@ export function GenerationStatusProvider({ children, token }: GenerationStatusPr
       setStatusMessageText(null);
       setStartedAtMs(null);
       wasAuthenticatedRef.current = false;
+      isCheckingRef.current = false;
       return;
     }
 
