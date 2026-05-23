@@ -611,8 +611,7 @@ async def run_generation_job(
                 stage1_result=stage1_result,
                 heartbeat_at=utc_now_iso(),
             )
-            job_plan_id = str(job.get("plan_id") or "").strip() or plan_id
-            await _ensure_admin_resume_plan_exists(job_plan_id)
+            await _ensure_admin_resume_plan_exists(plan_id)
 
         final_result = job.get("final_result")
         if not isinstance(final_result, dict):
