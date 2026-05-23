@@ -8,7 +8,7 @@ from typing import Literal
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 try:
     from dateutil.tz import gettz
-except Exception:  # pragma: no cover - fallback for minimal runtimes
+except ImportError:  # pragma: no cover - fallback for minimal runtimes
     def gettz(_: str | None):
         return None
 
