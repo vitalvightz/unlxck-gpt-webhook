@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 
 import { RequireAuth } from "@/components/auth-guard";
 import { useAppSession } from "@/components/auth-provider";
-import { createGenerationJob } from "@/lib/api";
+import { createGenerationJob, getActiveGenerationJob } from "@/lib/api";
 import { useGenerationController } from "@/lib/generation-controller";
 import { hydratePlanRequest } from "@/lib/onboarding";
 import { validatePerformanceFocusSelections } from "@/lib/performance-focus-cap";
@@ -75,7 +75,35 @@ export default function GeneratePage() {
     }
 
     autoStartRef.current = true;
-    void controller.startGeneration();
+    let cancelled = false;
+    const activeToken = session.access_token;
+
+    void (async () => {
+      try {
+        const activeJob = await getActiveGenerationJob(activeToken);
+        if (cancelled) return;
+
+        if (activeJob) {
+          if (cancelled) return;
+          await controller.startGeneration({
+            clientRequestId: activeJob.client_request_id,
+            recovered: true,
+            existingJob: activeJob,
+          });
+          return;
+        }
+      } catch {
+        if (cancelled) return;
+        // Fall through to normal create flow if active lookup is unavailable.
+      }
+
+      if (cancelled) return;
+      await controller.startGeneration();
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, [controller, payload, performanceFocusValidation?.isOverCap, router, session?.access_token]);
 
   return (
