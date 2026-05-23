@@ -36,13 +36,13 @@ type StoredPendingGenerationState = PendingGenerationState & {
 function parsePendingGeneration(storageKey: string): StoredPendingGenerationState | null {
   if (typeof window === "undefined") return null;
 
-  const raw = window.sessionStorage.getItem(storageKey);
+  const raw = window.localStorage.getItem(storageKey);
   if (!raw) return null;
 
   try {
     const decoded = JSON.parse(raw) as PendingGenerationState;
     if (!decoded?.clientRequestId) {
-      window.sessionStorage.removeItem(storageKey);
+      window.localStorage.removeItem(storageKey);
       return null;
     }
     const createdAtMs = Date.parse(decoded.createdAt || "");
@@ -52,7 +52,7 @@ function parsePendingGeneration(storageKey: string): StoredPendingGenerationStat
       createdAtMs: Number.isFinite(createdAtMs) ? createdAtMs : 0,
     };
   } catch {
-    window.sessionStorage.removeItem(storageKey);
+    window.localStorage.removeItem(storageKey);
     return null;
   }
 }
@@ -60,7 +60,7 @@ function parsePendingGeneration(storageKey: string): StoredPendingGenerationStat
 function listPendingGenerations(): StoredPendingGenerationState[] {
   if (typeof window === "undefined") return [];
 
-  return Object.keys(window.sessionStorage)
+  return Object.keys(window.localStorage)
     .filter((key) => key.startsWith(PENDING_GENERATION_PREFIX))
     .map(parsePendingGeneration)
     .filter((pending): pending is StoredPendingGenerationState => pending !== null)
@@ -71,7 +71,7 @@ function getPendingGeneration(): PendingGenerationState | null {
   const [latest, ...duplicates] = listPendingGenerations();
 
   duplicates.forEach((pending) => {
-    window.sessionStorage.removeItem(pending.storageKey);
+    window.localStorage.removeItem(pending.storageKey);
   });
 
   return latest ?? null;
@@ -80,9 +80,9 @@ function getPendingGeneration(): PendingGenerationState | null {
 function clearPendingGenerations(): void {
   if (typeof window === "undefined") return;
 
-  Object.keys(window.sessionStorage)
+  Object.keys(window.localStorage)
     .filter((key) => key.startsWith(PENDING_GENERATION_PREFIX))
-    .forEach((key) => window.sessionStorage.removeItem(key));
+    .forEach((key) => window.localStorage.removeItem(key));
 }
 
 function isTerminalStatus(status: GenerationJobStatus): boolean {
