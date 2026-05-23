@@ -127,7 +127,7 @@ export function GlobalGenerationStatus() {
     <button
       type="button"
       className={className}
-      aria-label={isFailed ? "Plan failed. Tap to refresh status." : "Generation in progress. Tap to refresh status."}
+      aria-label={isFailed ? "Plan failed. Tap to refresh status." : isCompleted ? "Plan ready. Tap to refresh status." : "Generation in progress. Tap to refresh status."}
       onClick={() => {
         refreshStatus();
       }}
