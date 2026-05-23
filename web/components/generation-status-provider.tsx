@@ -3,6 +3,7 @@
 import { createContext, useContext, useEffect, useRef, useState, useCallback, type ReactNode } from "react";
 import { getActiveGenerationJob, getGenerationJob } from "@/lib/api";
 import { isPreStartStaleGenerationJob } from "@/lib/generation-controller";
+import { isExpiredPendingGeneration, isStaleVisibleGenerationJob } from "@/lib/generation-status-guards";
 import type { GenerationJobResponse, GenerationJobStatus } from "@/lib/types";
 
 export type GlobalGenerationPhase = "queued" | "running" | "finalizing" | "completed" | "failed" | null;
@@ -192,6 +193,10 @@ export function GenerationStatusProvider({ children, token }: GenerationStatusPr
       const pending = getPendingGeneration();
 
       let activePending = pending;
+      if (activePending && isExpiredPendingGeneration(activePending.createdAt)) {
+        clearPendingGenerations();
+        activePending = null;
+      }
       if (!activePending) {
         try {
           const activeJob = await getActiveGenerationJob(token);
@@ -231,23 +236,24 @@ export function GenerationStatusProvider({ children, token }: GenerationStatusPr
             return;
           }
           const stalledBeforeStart = isPreStartStaleGenerationJob(job);
-          const newPhase = stalledBeforeStart ? "failed" : phaseFromStatus(job.status);
+          const staleVisibleJob = isStaleVisibleGenerationJob(job);
+          const newPhase = stalledBeforeStart || staleVisibleJob ? "failed" : phaseFromStatus(job.status);
           setPhase(newPhase);
           setJobId(activePending.jobId);
-          setStatusMessageText(stalledBeforeStart ? "Build stalled — retry" : statusMessage(newPhase));
+          setStatusMessageText(stalledBeforeStart || staleVisibleJob ? "Build stalled — retry" : statusMessage(newPhase));
 
           if (job.status === "completed" || job.status === "review_required") {
             setPlanId(job.plan_id || job.latest_plan_id || null);
           }
 
-          if (stalledBeforeStart || isTerminalStatus(job.status)) {
+          if (stalledBeforeStart || staleVisibleJob || isTerminalStatus(job.status)) {
             clearPendingGenerations();
 
             // Schedule the status clear — cancel any previous pending clear first
             if (clearTimerRef.current !== null) {
               clearTimeout(clearTimerRef.current);
             }
-            const delay = stalledBeforeStart || job.status === "failed" ? 3000 : 5000;
+            const delay = stalledBeforeStart || staleVisibleJob || job.status === "failed" ? 3000 : 5000;
             clearTimerRef.current = setTimeout(() => {
               clearTimerRef.current = null;
               setPhase(null);
