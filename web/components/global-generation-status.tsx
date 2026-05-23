@@ -17,6 +17,16 @@ function formatElapsed(ms: number): string {
 
 const CELEBRATION_DURATION_MS = 1_600;
 
+export function getGenerationStatusTarget(phase: string | null, planId: string | null): "/" | "/generate" | `/plans/${string}` | null {
+  if (phase === "completed" && planId) {
+    return `/plans/${planId}`;
+  }
+  if (phase === "failed") {
+    return null;
+  }
+  return "/generate";
+}
+
 export function GlobalGenerationStatus() {
   const { isActive, statusMessage, phase, planId, startedAtMs, refreshStatus } = useGenerationStatus();
   const router = useRouter();
@@ -26,7 +36,8 @@ export function GlobalGenerationStatus() {
 
   const isFailed = phase === "failed";
   const isCompleted = phase === "completed";
-  const ctaLabel = isCompleted && planId ? "View" : isFailed ? "Refresh" : "Home";
+  const navigationTarget = getGenerationStatusTarget(phase, planId);
+  const ctaLabel = isCompleted && planId ? "View" : isFailed ? "Refresh" : "Track";
   const showElapsed = isActive && !isCompleted && !isFailed && startedAtMs !== null;
 
   useEffect(() => {
@@ -60,7 +71,7 @@ export function GlobalGenerationStatus() {
     return null;
   }
 
-  const canNavigateToPlan = isCompleted && Boolean(planId);
+  const canNavigateToPlan = Boolean(navigationTarget);
   const elapsedLabel = showElapsed && startedAtMs !== null ? formatElapsed(now - startedAtMs) : null;
   const className = [
     "global-generation-status",
@@ -101,10 +112,10 @@ export function GlobalGenerationStatus() {
     </>
   );
 
-  if (canNavigateToPlan && planId) {
+  if (canNavigateToPlan && navigationTarget) {
     return (
       <Link
-        href={`/plans/${planId}`}
+        href={navigationTarget}
         className={className}
         aria-label="Plan ready. Tap to view."
       >
@@ -121,12 +132,12 @@ export function GlobalGenerationStatus() {
         isFailed
           ? "Plan failed. Tap to refresh status."
           : isCompleted
-            ? "Plan completed. Tap to return home."
-            : "Generation in progress. Tap to return home."
+            ? "Plan completed. Tap to open generation status."
+            : "Generation in progress. Tap to open generation status."
       }
       onClick={() => {
         if (!isFailed) {
-          router.push("/");
+          router.push("/generate");
           return;
         }
         refreshStatus();
