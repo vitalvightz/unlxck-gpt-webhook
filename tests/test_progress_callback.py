@@ -86,6 +86,20 @@ def test_knee_instability_low_stable_emits_stage1_block_and_no_timeout():
     assert "stage1_blocks_generation_finished" in codes
     assert "plan_drafted" in codes
     assert "stage1_planner_timeout" not in codes
+    assert "stage1_strength_phase_gpp_started" in codes
+    assert (
+        "stage1_strength_context_started" in codes
+        or "stage1_strength_candidate_pool_started" in codes
+    )
+
+
+def test_strength_generation_does_not_require_context_progress_callback():
+    payload = _payload()
+    payload["injuries"] = "Right knee is wobbly (low, stable). Type: instability"
+    codes = _collect_codes(payload)
+    assert "stage1_strength_block_started" in codes
+    assert "stage1_strength_block_finished" in codes
+    assert "stage1_conditioning_block_started" in codes
 
 
 def test_strength_substep_start_visible_when_substep_fails(monkeypatch):

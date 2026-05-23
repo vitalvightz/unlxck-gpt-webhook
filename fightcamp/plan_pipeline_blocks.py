@@ -85,7 +85,12 @@ def _build_phase_mindsets(training_context: TrainingContext) -> tuple[dict[str, 
     return phase_mindset_cues, phase_mindsets
 
 
-def _generate_strength_blocks(context: PlanRuntimeContext, phase_mindset_cues: dict[str, str]) -> tuple[dict[str, dict | None], dict[str, list[dict]]]:
+def _generate_strength_blocks(
+    context: PlanRuntimeContext,
+    phase_mindset_cues: dict[str, str],
+    *,
+    progress_callback: ProgressCallback | None = None,
+) -> tuple[dict[str, dict | None], dict[str, list[dict]]]:
     strength_blocks: dict[str, dict | None] = {phase: None for phase in PHASES}
     strength_reason_log: dict[str, list[dict]] = {}
     previous_names: list[str] = []
@@ -95,7 +100,7 @@ def _generate_strength_blocks(context: PlanRuntimeContext, phase_mindset_cues: d
     logger = logging.getLogger(__name__)
 
     def _emit_strength_substep(code: str, label: str) -> None:
-        _emit_progress(context.progress_callback, code, label)
+        _emit_progress(progress_callback, code, label)
 
     for phase in PHASES:
         if not context.phase_active(phase):
@@ -428,7 +433,11 @@ def generate_plan_blocks(
         progress_callback=progress_callback,
         record_timing=record_timing,
         timing_label="strength",
-        fn=lambda: _generate_strength_blocks(context, phase_mindset_cues),
+        fn=lambda: _generate_strength_blocks(
+            context,
+            phase_mindset_cues,
+            progress_callback=progress_callback,
+        ),
     )
     strength_count = sum(
         len(strength_reason_log.get(phase, []) or []) for phase in PHASES
