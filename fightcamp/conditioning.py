@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+from time import perf_counter
 from pathlib import Path
 import re
 from types import SimpleNamespace
@@ -1697,6 +1698,27 @@ def _build_conditioning_candidate_reservoir(
 
 def generate_conditioning_block(flags):
     phase = str(flags.get("phase", "GPP") or "GPP").strip().upper()
+    conditioning_substep_callback = flags.get("conditioning_substep_callback")
+
+    def _emit_conditioning_substep(code: str, label: str) -> None:
+        if conditioning_substep_callback is None:
+            return
+        try:
+            conditioning_substep_callback(code, label)
+        except Exception:
+            logger.exception("[progress] conditioning_callback_failed code=%s", code)
+
+    def _run_conditioning_poststep(step_name: str, fn):
+        _emit_conditioning_substep(f"stage1_conditioning_{step_name}_started", f"Stage 1 conditioning {step_name} started")
+        step_started = perf_counter()
+        result = fn()
+        elapsed = perf_counter() - step_started
+        logger.info("[stage1] conditioning_substep_elapsed step=%s elapsed=%.2f", step_name, elapsed)
+        if elapsed > 5.0:
+            logger.warning("[stage1] slow_conditioning_substep step=%s elapsed=%.2f", step_name, elapsed)
+        _emit_conditioning_substep(f"stage1_conditioning_{step_name}_finished", f"Stage 1 conditioning {step_name} finished")
+        return result
+
     phase_color = {"GPP": "#4CAF50", "SPP": "#FF9800", "TAPER": "#F44336"}.get(phase, "#000")
 
     fatigue = str(flags.get("fatigue", "low") or "low").strip().lower()
@@ -1719,6 +1741,77 @@ def generate_conditioning_block(flags):
     training_frequency = flags.get("training_frequency", flags.get("days_available", 3))
     equipment_access = normalize_athlete_equipment_list(flags.get("equipment", []))
     equipment_access_set = set(equipment_access)
+
+    _normalize_tags_cache: dict[object, list[str]] = {}
+    _normalize_equipment_cache: dict[object, list[str]] = {}
+    _system_cache: dict[object, str | None] = {}
+    _injury_match_cache: dict[object, dict] = {}
+    _injury_decision_cache: dict[object, Decision] = {}
+    _text_blob_cache: dict[object, str] = {}
+    _structured_profile_cache: dict[tuple[object, str], dict] = {}
+    _late_eval_cache: dict[tuple[object, str], dict] = {}
+
+    def _drill_cache_key(drill: dict) -> object:
+        return drill.get("id") or drill.get("name") or id(drill)
+
+    def _cached_tags(drill: dict) -> list[str]:
+        key = _drill_cache_key(drill)
+        if key not in _normalize_tags_cache:
+            _normalize_tags_cache[key] = normalize_tags(drill.get("tags", []))
+        return _normalize_tags_cache[key]
+
+    def _cached_equipment(drill: dict) -> list[str]:
+        key = _drill_cache_key(drill)
+        if key not in _normalize_equipment_cache:
+            _normalize_equipment_cache[key] = normalize_equipment_list(drill.get("equipment", []))
+        return _normalize_equipment_cache[key]
+
+    def _cached_system(drill: dict, source: str) -> str | None:
+        key = _drill_cache_key(drill)
+        if key not in _system_cache:
+            _system_cache[key] = get_system_or_warn(drill, source=source)
+        return _system_cache[key]
+
+    def _cached_injury_decision(drill: dict) -> Decision:
+        key = _drill_cache_key(drill)
+        if key not in _injury_decision_cache:
+            _injury_decision_cache[key] = _guarded_injury_decision(drill)
+        return _injury_decision_cache[key]
+
+    def _cached_text_blob(drill: dict) -> str:
+        key = _drill_cache_key(drill)
+        if key not in _text_blob_cache:
+            _text_blob_cache[key] = _conditioning_text_blob(drill)
+        return _text_blob_cache[key]
+
+    def _cached_structured_profile(drill: dict, system: str) -> dict:
+        key = (_drill_cache_key(drill), str(system or ""))
+        if key not in _structured_profile_cache:
+            _structured_profile_cache[key] = _conditioning_structured_profile(drill, system=system)
+        return _structured_profile_cache[key]
+
+    def _cached_late_eval(drill: dict, system: str) -> dict:
+        key = (_drill_cache_key(drill), str(system or ""))
+        if key not in _late_eval_cache:
+            _late_eval_cache[key] = _evaluate_conditioning_late_window(
+                drill,
+                system=system,
+                window=late_window,
+                bridge_rules=bridge_rules,
+            )
+        return _late_eval_cache[key]
+
+    def _cached_injury_match(drill: dict, fields, risk_levels):
+        key = (_drill_cache_key(drill), tuple(fields), tuple(risk_levels))
+        if key not in _injury_match_cache:
+            _injury_match_cache[key] = injury_match_details(
+                drill,
+                injuries,
+                fields=fields,
+                risk_levels=risk_levels,
+            )
+        return _injury_match_cache[key]
+
 
     days_until_fight = _coerce_optional_int(flags.get("days_until_fight"))
     late_window = classify_late_selector_window(days_until_fight, include_control=True)
@@ -1844,7 +1937,7 @@ def generate_conditioning_block(flags):
             return
         late_window_ambiguous[name] = ambiguous_gap
 
-    for drill in get_conditioning_bank():
+    for drill in _run_conditioning_poststep("base_bank_score", get_conditioning_bank):
         d = drill.copy()
         if d.get("placement", "conditioning").lower() != "conditioning":
             continue
@@ -1858,13 +1951,13 @@ def generate_conditioning_block(flags):
         if phase.upper() not in d.get("phases", []):
             continue
 
-        system = get_system_or_warn(d, source="conditioning_bank.json")
+        system = _cached_system(d, "conditioning_bank.json")
         if system is None:
             continue
         if system == "alactic" and not _alactic_structure_ok(d):
             continue
 
-        tags = normalize_tags(d.get("tags", []))
+        tags = _cached_tags(d)
         details = " ".join(
             [
                 d.get("duration", ""),
@@ -1901,7 +1994,7 @@ def generate_conditioning_block(flags):
         ):
             continue
 
-        drill_equipment = normalize_equipment_list(d.get("equipment", []))
+        drill_equipment = _cached_equipment(d)
         if drill_equipment and not set(drill_equipment).issubset(equipment_access_set):
             continue
 
@@ -2009,12 +2102,7 @@ def generate_conditioning_block(flags):
         if not ignore_restrictions and restriction_penalty:
             total_score += restriction_penalty
             penalty += restriction_penalty
-        late_eval = _evaluate_conditioning_late_window(
-            d,
-            system=system,
-            window=late_window,
-            bridge_rules=bridge_rules,
-        )
+        late_eval = _cached_late_eval(d, system)
         _record_ambiguous_gap(late_eval.get("ambiguous_gap"))
         if late_eval["blocked"]:
             _record_late_block(d, total_score, late_eval["block_codes"])
@@ -2057,7 +2145,7 @@ def generate_conditioning_block(flags):
 
     # ---- Style specific conditioning ----
     target_style_tags = set(style_names + tech_style_tags)
-    for drill in get_style_conditioning_bank():
+    for drill in _run_conditioning_poststep("style_bank_score", get_style_conditioning_bank):
         d = drill.copy()
         if d.get("placement", "conditioning").lower() != "conditioning":
             continue
@@ -2068,7 +2156,7 @@ def generate_conditioning_block(flags):
                 for t in d.get("tags", [])
             ]
         d["name"] = _normalize_conditioning_name(d.get("name", ""), fight_format=selection_format)
-        tags = normalize_tags(d.get("tags", []))
+        tags = _cached_tags(d)
         details = " ".join(
             [
                 d.get("duration", ""),
@@ -2109,7 +2197,7 @@ def generate_conditioning_block(flags):
         ):
             continue
 
-        system = get_system_or_warn(d, source="style_conditioning_bank.json")
+        system = _cached_system(d, "style_conditioning_bank.json")
         if system is None:
             continue
         if system == "alactic" and not _alactic_structure_ok(d):
@@ -2133,7 +2221,7 @@ def generate_conditioning_block(flags):
             and not any(t in goal_tags or t in weak_tags for t in tags)
         ):
             continue
-        drill_equipment = normalize_equipment_list(d.get("equipment", []))
+        drill_equipment = _cached_equipment(d)
         if drill_equipment and not set(drill_equipment).issubset(equipment_access_set):
             continue
         equip_bonus = 0.5 if drill_equipment else 0.0
@@ -2221,12 +2309,7 @@ def generate_conditioning_block(flags):
         if not ignore_restrictions and restriction_penalty:
             score += restriction_penalty
             penalty += restriction_penalty
-        late_eval = _evaluate_conditioning_late_window(
-            d,
-            system=system,
-            window=late_window,
-            bridge_rules=bridge_rules,
-        )
+        late_eval = _cached_late_eval(d, system)
         _record_ambiguous_gap(late_eval.get("ambiguous_gap"))
         if late_eval["blocked"]:
             _record_late_block(d, score, late_eval["block_codes"])
@@ -2667,49 +2750,56 @@ def generate_conditioning_block(flags):
                 if _try_append_conditioning_drill("aerobic", drill, reasons, source="aerobic_maintenance_insert"):
                     break
     else:
-        for system in preferred_order:
-            quota = system_quota.get(system, 0)
-            if quota <= 0:
-                continue
+        def _fill_system_quotas() -> None:
+            for system in preferred_order:
+                quota = system_quota.get(system, 0)
+                if quota <= 0:
+                    continue
+                guard = 0
+                max_iter = bounded_max_iterations(quota)
+                while quota > 0:
+                    guard += 1
+                    if guard > max_iter:
+                        log_fail_safe_degrade(module="conditioning", phase=phase, reason=f"system_quota_guard:{system}", target=system_quota.get(system, 0), actual=selected_counts.get(system, 0))
+                        break
+                    d, r = blended_pick(system)
+                    if not d:
+                        log_fail_safe_degrade(module="conditioning", phase=phase, reason=f"system_quota_no_candidate:{system}", target=system_quota.get(system, 0), actual=selected_counts.get(system, 0))
+                        break
+                    final_drills.append((system, [d]))
+                    reason_lookup[d.get("name")] = r
+                    selected_counts[system] += 1
+                    quota -= 1
+
+        def _fill_deficits() -> None:
+            remaining_slots = total_drills - len(selected_drill_names)
+            deficits = {
+                s: max(0, system_quota.get(s, 0) - selected_counts.get(s, 0))
+                for s in system_quota
+            }
             guard = 0
-            max_iter = bounded_max_iterations(quota)
-            while quota > 0:
+            max_iter = bounded_max_iterations(remaining_slots)
+            while remaining_slots > 0 and any(deficits.values()):
                 guard += 1
                 if guard > max_iter:
-                    log_fail_safe_degrade(module="conditioning", phase=phase, reason=f"system_quota_guard:{system}", target=system_quota.get(system, 0), actual=selected_counts.get(system, 0))
+                    log_fail_safe_degrade(module="conditioning", phase=phase, reason="deficit_fill_guard", target=total_drills, actual=len(selected_drill_names))
+                    break
+                system = max(deficits, key=deficits.get)
+                if deficits[system] <= 0:
                     break
                 d, r = blended_pick(system)
                 if not d:
-                    break
+                    log_fail_safe_degrade(module="conditioning", phase=phase, reason=f"deficit_fill_no_candidate:{system}", target=deficits[system], actual=0)
+                    deficits[system] = 0
+                    continue
                 final_drills.append((system, [d]))
                 reason_lookup[d.get("name")] = r
                 selected_counts[system] += 1
-                quota -= 1
+                deficits[system] = max(0, deficits[system] - 1)
+                remaining_slots -= 1
 
-        remaining_slots = total_drills - len(selected_drill_names)
-        deficits = {
-            s: max(0, system_quota.get(s, 0) - selected_counts.get(s, 0))
-            for s in system_quota
-        }
-        guard = 0
-        max_iter = bounded_max_iterations(remaining_slots)
-        while remaining_slots > 0 and any(deficits.values()):
-            guard += 1
-            if guard > max_iter:
-                log_fail_safe_degrade(module="conditioning", phase=phase, reason="deficit_fill_guard", target=total_drills, actual=len(selected_drill_names))
-                break
-            system = max(deficits, key=deficits.get)
-            if deficits[system] <= 0:
-                break
-            d, r = blended_pick(system)
-            if not d:
-                deficits[system] = 0
-                continue
-            final_drills.append((system, [d]))
-            reason_lookup[d.get("name")] = r
-            selected_counts[system] += 1
-            deficits[system] = max(0, deficits[system] - 1)
-            remaining_slots -= 1
+        _run_conditioning_poststep("system_quota_fill", _fill_system_quotas)
+        _run_conditioning_poststep("deficit_fill", _fill_deficits)
 
     normalized_focus = _normalize_focus_tokens([*goal_list, *weak_list])
     needs_gas_tank_focus = bool(normalized_focus & _GAS_TANK_NORMALIZED_SIGNAL_TERMS)
@@ -3082,9 +3172,13 @@ def generate_conditioning_block(flags):
         selected_drill_names = selected_drill_names[:-extra]
 
     # Group drills by energy system so each system only prints once
-    grouped_drills: dict[str, list[dict]] = {}
-    for system, drills in final_drills:
-        grouped_drills.setdefault(system, []).extend(drills)
+    def _build_grouped_drills() -> dict[str, list[dict]]:
+        grouped_drills_local: dict[str, list[dict]] = {}
+        for system, drills in final_drills:
+            grouped_drills_local.setdefault(system, []).extend(drills)
+        return grouped_drills_local
+
+    grouped_drills = _run_conditioning_poststep("grouped_drills_build", _build_grouped_drills)
 
     def _record_injury_exclusion(drill: dict, decision: Decision) -> None:
         reason = decision.reason if isinstance(decision.reason, dict) else {}
@@ -3199,13 +3293,16 @@ def generate_conditioning_block(flags):
 
             grouped[system] = drills
 
-    _finalize_injury_safe_drills(
-        grouped_drills,
-        injuries,
-        all_candidates_by_system,
-        selected_drill_names,
-        reason_lookup,
-    )
+    def _finalize_injury_safe_drills_step() -> None:
+        _finalize_injury_safe_drills(
+            grouped_drills,
+            injuries,
+            all_candidates_by_system,
+            selected_drill_names,
+            reason_lookup,
+        )
+
+    _run_conditioning_poststep("injury_safe_finalize", _finalize_injury_safe_drills_step)
 
     _is_late_fight_taper = active_late_window
     bridge_allows_glycolytic_touch = bool(
@@ -3316,11 +3413,23 @@ def generate_conditioning_block(flags):
     grouped_drills = _resolved_grouped_drills(resolved_sessions)
     selected_drill_names = _resolved_conditioning_names(resolved_sessions)
 
-    missing_systems = [
-        system_name
-        for system_name in ["aerobic", "glycolytic", "alactic"]
-        if not grouped_drills.get(system_name)
-    ]
+    def _build_missing_systems() -> list[str]:
+        missing = [
+            system_name
+            for system_name in ["aerobic", "glycolytic", "alactic"]
+            if not grouped_drills.get(system_name)
+        ]
+        for system_name in missing:
+            log_fail_safe_degrade(
+                module="conditioning",
+                phase=phase,
+                reason=f"missing_system_safe_omission:{system_name}",
+                target=1,
+                actual=0,
+            )
+        return missing
+
+    missing_systems = _run_conditioning_poststep("missing_systems_build", _build_missing_systems)
     diagnostic_context = {
         "phase": phase,
         "sport": flags.get("sport"),
@@ -3332,16 +3441,19 @@ def generate_conditioning_block(flags):
         "injuries": injuries,
         "fight_format": fight_format,
     }
-    output_lines = render_conditioning_block(
-        grouped_drills,
-        phase=phase,
-        phase_color=phase_color,
-        missing_systems=missing_systems,
-        num_sessions=num_conditioning_sessions,
-        diagnostic_context=diagnostic_context,
-        sport=flags.get("sport"),
-        resolved_sessions=resolved_sessions,
-    )
+    def _format_conditioning_output():
+        return render_conditioning_block(
+            grouped_drills,
+            phase=phase,
+            phase_color=phase_color,
+            missing_systems=missing_systems,
+            num_sessions=num_conditioning_sessions,
+            diagnostic_context=diagnostic_context,
+            sport=flags.get("sport"),
+            resolved_sessions=resolved_sessions,
+        )
+
+    output_lines = _run_conditioning_poststep("block_formatting", _format_conditioning_output)
 
     why_log = []
     for system, drills in grouped_drills.items():
@@ -3352,12 +3464,37 @@ def generate_conditioning_block(flags):
             explanation = _conditioning_explanation(reasons)
             why_log.append({"name": nm, "system": system, "reasons": reasons, "explanation": explanation})
 
-    candidate_reservoir = _build_conditioning_candidate_reservoir(
-        system_drills,
-        style_system_drills,
-        grouped_drills,
-        reason_lookup,
-    )
+    def _build_candidate_reservoir_step():
+        reservoir = _build_conditioning_candidate_reservoir(
+            system_drills,
+            style_system_drills,
+            grouped_drills,
+            reason_lookup,
+        )
+        total_candidates = sum(len(v) for v in reservoir.values())
+        max_candidates = 400
+        if total_candidates > max_candidates:
+            log_fail_safe_degrade(
+                module="conditioning",
+                phase=phase,
+                reason="candidate_reservoir_capped",
+                target=total_candidates,
+                actual=max_candidates,
+            )
+            trimmed: dict[str, list[dict]] = {}
+            remaining = max_candidates
+            for system_name in ("aerobic", "glycolytic", "alactic"):
+                entries = reservoir.get(system_name, [])
+                take = min(len(entries), remaining)
+                trimmed[system_name] = entries[:take]
+                remaining -= take
+            for key, value in reservoir.items():
+                if key not in trimmed:
+                    trimmed[key] = value
+            return trimmed
+        return reservoir
+
+    candidate_reservoir = _run_conditioning_poststep("candidate_reservoir_build", _build_candidate_reservoir_step)
     deduped_late_blocks = {
         (
             entry.get("name", ""),
