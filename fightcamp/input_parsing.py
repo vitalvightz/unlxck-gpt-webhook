@@ -6,7 +6,11 @@ import json
 import re
 from typing import Literal
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
-from dateutil.tz import gettz
+try:
+    from dateutil.tz import gettz
+except Exception:  # pragma: no cover - fallback for minimal runtimes
+    def gettz(_: str | None):
+        return None
 
 from .guided_injury_display import (
     is_clean_guided_display_location,
