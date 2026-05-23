@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+from time import perf_counter
 from pathlib import Path
 import re
 from types import SimpleNamespace
@@ -1697,6 +1698,27 @@ def _build_conditioning_candidate_reservoir(
 
 def generate_conditioning_block(flags):
     phase = str(flags.get("phase", "GPP") or "GPP").strip().upper()
+    conditioning_substep_callback = flags.get("conditioning_substep_callback")
+
+    def _emit_conditioning_substep(code: str, label: str) -> None:
+        if conditioning_substep_callback is None:
+            return
+        try:
+            conditioning_substep_callback(code, label)
+        except Exception:
+            logger.exception("[progress] conditioning_callback_failed code=%s", code)
+
+    def _run_conditioning_poststep(step_name: str, fn):
+        _emit_conditioning_substep(f"stage1_conditioning_{step_name}_started", f"Stage 1 conditioning {step_name} started")
+        step_started = perf_counter()
+        result = fn()
+        elapsed = perf_counter() - step_started
+        logger.info("[stage1] conditioning_substep_elapsed step=%s elapsed=%.2f", step_name, elapsed)
+        if elapsed > 5.0:
+            logger.warning("[stage1] slow_conditioning_substep step=%s elapsed=%.2f", step_name, elapsed)
+        _emit_conditioning_substep(f"stage1_conditioning_{step_name}_finished", f"Stage 1 conditioning {step_name} finished")
+        return result
+
     phase_color = {"GPP": "#4CAF50", "SPP": "#FF9800", "TAPER": "#F44336"}.get(phase, "#000")
 
     fatigue = str(flags.get("fatigue", "low") or "low").strip().lower()
@@ -1719,6 +1741,19 @@ def generate_conditioning_block(flags):
     training_frequency = flags.get("training_frequency", flags.get("days_available", 3))
     equipment_access = normalize_athlete_equipment_list(flags.get("equipment", []))
     equipment_access_set = set(equipment_access)
+
+    _normalize_tags_cache: dict[object, list[str]] = {}
+    _normalize_equipment_cache: dict[object, list[str]] = {}
+    _system_cache: dict[object, str | None] = {}
+    _injury_match_cache: dict[object, dict] = {}
+    _injury_decision_cache: dict[object, Decision] = {}
+    _text_blob_cache: dict[object, str] = {}
+    _structured_profile_cache: dict[tuple[object, str], dict] = {}
+    _late_eval_cache: dict[tuple[object, str], dict] = {}
+
+    def _drill_cache_key(drill: dict) -> object:
+        return drill.get("id") or drill.get("name") or id(drill)
+
 
     days_until_fight = _coerce_optional_int(flags.get("days_until_fight"))
     late_window = classify_late_selector_window(days_until_fight, include_control=True)
