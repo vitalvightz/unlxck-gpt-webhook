@@ -23,3 +23,9 @@ test("review-required generation routes with review query flag", () => {
 test("failed generation has no link target", () => {
   assert.equal(getGenerationStatusTarget("failed", "plan_123", null), null);
 });
+
+
+test("terminal states without plan id have no link target", () => {
+  assert.equal(getGenerationStatusTarget("completed", null, "completed"), null);
+  assert.equal(getGenerationStatusTarget("completed", null, "review_required"), null);
+});
