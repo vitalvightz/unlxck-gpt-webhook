@@ -208,7 +208,7 @@ export function PremiumLoadingScreen({
               </span>
             </div>
             <p className="muted loading-copy">{phaseContent.copy}</p>
-            <GenerationProgressMilestones phase={phase} startedAtMs={startedAtMs} nowMs={now} />
+            <GenerationProgressMilestones phase={phase} startedAtMs={startedAtMs} nowMs={now} milestones={milestones} />
             {stageOnePreview ? <StageOnePreviewCard preview={stageOnePreview} /> : null}
             <div className="loading-operational-strip" aria-label="Generation status">
               <div className="loading-operational-item">
