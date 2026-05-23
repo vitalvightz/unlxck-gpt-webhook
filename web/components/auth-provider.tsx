@@ -21,6 +21,7 @@ type AppSession = {
 type AppSessionValue = {
   isReady: boolean;
   isMeHydrated: boolean;
+  hasTransientMeError: boolean;
   session: AppSession | null;
   me: MeResponse | null;
   previewAppearanceMode: Dispatch<SetStateAction<AppearanceMode | null>>;
@@ -44,17 +45,35 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
   const [isMeHydrated, setIsMeHydrated] = useState(false);
   const [session, setSession] = useState<AppSession | null>(null);
   const [me, setMe] = useState<MeResponse | null>(null);
+  const [hasTransientMeError, setHasTransientMeError] = useState(false);
   const [appearancePreview, setAppearancePreview] = useState<AppearanceMode | null>(null);
   const handledAccessTokenRef = useRef<string | null>(null);
   const loadGenerationRef = useRef(0);
+  const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  function clearRetryTimer() {
+    if (retryTimerRef.current !== null) {
+      clearTimeout(retryTimerRef.current);
+      retryTimerRef.current = null;
+    }
+  }
+
+  useEffect(() => {
+    return () => {
+      clearRetryTimer();
+    };
+  }, []);
 
   async function loadMe(nextSession: AppSession | null, options: { allowRefresh?: boolean } = {}) {
     const allowRefresh = options.allowRefresh ?? true;
     const currentLoadId = loadGenerationRef.current + 1;
     loadGenerationRef.current = currentLoadId;
+    let shouldHoldHydration = false;
 
     if (!nextSession?.access_token) {
       if (loadGenerationRef.current === currentLoadId) {
+        clearRetryTimer();
+        setHasTransientMeError(false);
         setAppearancePreview(null);
         setMe(null);
         setIsMeHydrated(true);
@@ -90,6 +109,8 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
       if (loadGenerationRef.current !== currentLoadId) {
         return;
       }
+      clearRetryTimer();
+      setHasTransientMeError(false);
       setMe(nextMe);
       setSession(nextSession);
     } catch (err) {
@@ -109,19 +130,62 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
             return;
           }
         } catch {
-          // Treat refresh failures as a genuine session expiry below.
+          // Treat refresh failures as a genuine session expiry below only when no session remains.
+        }
+
+        try {
+          const client = getSupabaseBrowserClient();
+          const currentSession = await client.auth.getSession();
+          const liveAccessToken = currentSession.data.session?.access_token ?? null;
+          if (liveAccessToken) {
+            setHasTransientMeError(true);
+            setIsMeHydrated(false);
+            shouldHoldHydration = true;
+            setSession({ access_token: liveAccessToken });
+            clearRetryTimer();
+            retryTimerRef.current = setTimeout(() => {
+              retryTimerRef.current = null;
+              void loadMe({ access_token: liveAccessToken }, { allowRefresh: false });
+            }, ME_RETRY_DELAY_MS);
+            return;
+          }
+        } catch {
+          // If we cannot confirm auth state, keep the current session and retry later.
+          setHasTransientMeError(true);
+          setIsMeHydrated(false);
+          shouldHoldHydration = true;
+          clearRetryTimer();
+          retryTimerRef.current = setTimeout(() => {
+            retryTimerRef.current = null;
+            void loadMe(nextSession, { allowRefresh: false });
+          }, ME_RETRY_DELAY_MS);
+          return;
         }
       }
 
       if (err instanceof ApiError && err.status === 401) {
+        clearRetryTimer();
+        setHasTransientMeError(false);
         setAppearancePreview(null);
         setSession(null);
         setMe(null);
+        return;
       }
+
+      setHasTransientMeError(true);
+      setIsMeHydrated(false);
+      shouldHoldHydration = true;
+      clearRetryTimer();
+      retryTimerRef.current = setTimeout(() => {
+        retryTimerRef.current = null;
+        void loadMe(nextSession, { allowRefresh: false });
+      }, ME_RETRY_DELAY_MS);
     } finally {
       if (loadGenerationRef.current === currentLoadId) {
-        setIsMeHydrated(true);
         setIsReady(true);
+        if (!shouldHoldHydration) {
+          setIsMeHydrated(true);
+        }
       }
     }
   }
@@ -162,6 +226,8 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
           // Ignore cleanup failures after a stale browser auth session.
         }
         handledAccessTokenRef.current = null;
+        clearRetryTimer();
+        setHasTransientMeError(false);
         setAppearancePreview(null);
         setSession(null);
         setMe(null);
@@ -215,6 +281,8 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
       // Ignore missing client during sign-out cleanup.
     }
     handledAccessTokenRef.current = null;
+    clearRetryTimer();
+    setHasTransientMeError(false);
     setAppearancePreview(null);
     setSession(null);
     setMe(null);
@@ -228,6 +296,7 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
       value={{
         isReady,
         isMeHydrated,
+        hasTransientMeError,
         session,
         me,
         previewAppearanceMode: setAppearancePreview,

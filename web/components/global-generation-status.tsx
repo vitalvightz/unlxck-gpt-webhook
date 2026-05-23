@@ -17,7 +17,7 @@ function formatElapsed(ms: number): string {
 const CELEBRATION_DURATION_MS = 1_600;
 
 export function GlobalGenerationStatus() {
-  const { isActive, statusMessage, phase, planId, startedAtMs } = useGenerationStatus();
+  const { isActive, statusMessage, phase, planId, startedAtMs, refreshStatus } = useGenerationStatus();
   const [now, setNow] = useState(() => Date.now());
   const [isCelebrating, setIsCelebrating] = useState(false);
   const previousPhaseRef = useRef(phase);
@@ -57,7 +57,7 @@ export function GlobalGenerationStatus() {
     return null;
   }
 
-  const href = isCompleted && planId ? `/plans/${planId}` : "/generate";
+  const canNavigateToPlan = isCompleted && Boolean(planId);
   const elapsedLabel = showElapsed && startedAtMs !== null ? formatElapsed(now - startedAtMs) : null;
   const className = [
     "global-generation-status",
@@ -66,12 +66,8 @@ export function GlobalGenerationStatus() {
     isCelebrating ? "global-generation-status-celebrating" : "",
   ].filter(Boolean).join(" ");
 
-  return (
-    <Link
-      href={href}
-      className={className}
-      aria-label={isCompleted ? "Plan ready. Tap to view." : "Generation in progress. Tap to view details."}
-    >
+  const content = (
+    <>
       <div className="global-generation-status-content">
         <span className="global-generation-status-indicator" aria-hidden="true">
           {isCompleted ? (
@@ -89,7 +85,7 @@ export function GlobalGenerationStatus() {
           ) : null}
         </span>
         <span className="global-generation-status-cta">
-          <span className="global-generation-status-cta-label">{isCompleted ? "View" : "Open"}</span>
+          <span className="global-generation-status-cta-label">{canNavigateToPlan ? "View" : "Refresh"}</span>
           <span className="global-generation-status-arrow" aria-hidden="true">→</span>
         </span>
       </div>
@@ -99,6 +95,31 @@ export function GlobalGenerationStatus() {
         </div>
       )}
       {isCelebrating ? <span className="global-generation-status-celebrate-glow" aria-hidden="true" /> : null}
-    </Link>
+    </>
+  );
+
+  if (canNavigateToPlan && planId) {
+    return (
+      <Link
+        href={`/plans/${planId}`}
+        className={className}
+        aria-label="Plan ready. Tap to view."
+      >
+        {content}
+      </Link>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      className={className}
+      aria-label={isFailed ? "Plan failed. Tap to refresh status." : "Generation in progress. Tap to refresh status."}
+      onClick={() => {
+        refreshStatus();
+      }}
+    >
+      {content}
+    </button>
   );
 }

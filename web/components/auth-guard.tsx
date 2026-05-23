@@ -20,7 +20,7 @@ export function RequireAuth({
   adminOnly = false,
 }: Readonly<{ children: React.ReactNode; adminOnly?: boolean }>) {
   const router = useRouter();
-  const { isReady, isMeHydrated, session, me } = useAppSession();
+  const { isReady, isMeHydrated, hasTransientMeError, session, me } = useAppSession();
   const role = me?.profile.role;
 
   useEffect(() => {
@@ -41,7 +41,7 @@ export function RequireAuth({
     if (adminOnly && role && role !== "admin") {
       router.replace("/plans");
     }
-  }, [adminOnly, isMeHydrated, isReady, me, role, router, session]);
+  }, [adminOnly, hasTransientMeError, isMeHydrated, isReady, me, role, router, session]);
 
   if (!isReady) {
     return <LoadingCard label="Checking your access" />;
@@ -51,6 +51,9 @@ export function RequireAuth({
   }
   if (!isMeHydrated) {
     return <LoadingCard label={adminOnly ? "Restoring admin access" : "Restoring your workspace"} />;
+  }
+  if (hasTransientMeError && session && !me) {
+    return <LoadingCard label="Restoring your workspace" />;
   }
   if (!me) {
     return <LoadingCard label="Redirecting to login" />;
