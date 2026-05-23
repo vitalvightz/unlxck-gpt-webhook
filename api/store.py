@@ -150,6 +150,12 @@ class AppStore(Protocol):
 
     def get_generation_job(self, job_id: str) -> dict[str, Any] | None: ...
     def get_generation_job_by_client_request_id(self, *, athlete_id: str, client_request_id: str) -> dict[str, Any] | None: ...
+    def get_active_generation_job_for_athlete(
+        self,
+        athlete_id: str,
+        *,
+        stale_after_seconds: int = 90,
+    ) -> dict[str, Any] | None: ...
 
     def get_generation_job_by_plan_id(self, plan_id: str) -> dict[str, Any] | None: ...
     def list_generation_jobs_for_athlete(self, athlete_id: str, *, limit: int = 10) -> list[dict[str, Any]]: ...
@@ -1197,6 +1203,70 @@ class SupabaseAppStore:
                     client_request_id=client_request_id,
                 ),
             )
+        except _STORE_CLIENT_ERRORS as exc:
+            if self._is_transient_store_error(exc):
+                raise HTTPException(
+                    status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                    detail=GENERATION_JOB_UNAVAILABLE_DETAIL,
+                ) from exc
+            if self._is_generation_job_schema_error(exc):
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail=GENERATION_JOB_SCHEMA_DETAIL,
+                ) from exc
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="failed to load generation job",
+            ) from exc
+
+    def get_active_generation_job_for_athlete(
+        self,
+        athlete_id: str,
+        *,
+        stale_after_seconds: int = 90,
+    ) -> dict[str, Any] | None:
+        try:
+            response = self._run_with_transient_retry(
+                operation=f"get_active_generation_job_for_athlete athlete_id={athlete_id}",
+                fn=lambda: self.client.table("generation_jobs")
+                .select(GENERATION_JOB_SELECT)
+                .eq("athlete_id", athlete_id)
+                .in_("status", ["queued", "running"])
+                .order("created_at", desc=True)
+                .limit(10)
+                .execute(),
+            )
+            rows = [row for row in (getattr(response, "data", None) or []) if isinstance(row, dict)]
+            for row in rows:
+                if str(row.get("status") or "") == "queued":
+                    return row
+                if str(row.get("status") or "") != "running":
+                    continue
+                if not is_startup_stale_generation_job(row, stale_after_seconds=stale_after_seconds):
+                    return row
+                self._run_with_transient_retry(
+                    operation="get_active_generation_job_for_athlete:reset_startup_stale",
+                    fn=lambda: self.client.table("generation_jobs")
+                    .update(
+                        {
+                            "status": "queued",
+                            "error": None,
+                            "heartbeat_at": None,
+                            "started_at": None,
+                            "completed_at": None,
+                            "stage1_result": None,
+                            "final_result": None,
+                            "progress_milestones": [],
+                        }
+                    )
+                    .eq("id", str(row.get("id") or ""))
+                    .eq("status", "running")
+                    .execute(),
+                )
+                refreshed = self.get_generation_job(str(row.get("id") or ""))
+                if refreshed and str(refreshed.get("status") or "") == "queued":
+                    return refreshed
+            return None
         except _STORE_CLIENT_ERRORS as exc:
             if self._is_transient_store_error(exc):
                 raise HTTPException(

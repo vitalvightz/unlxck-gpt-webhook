@@ -103,6 +103,111 @@ def test_get_generation_job_keeps_running_when_heartbeat_is_fresh():
     assert response.json()["status"] == "running"
 
 
+def test_get_active_generation_job_returns_latest_queued_job_for_logged_in_athlete():
+    client, store, _ = _build_client(enable_in_process_generation=False)
+    store.create_or_get_generation_job(
+        athlete_id="athlete-1",
+        client_request_id="old-queued",
+        source="self_serve",
+        request_payload=_build_request().model_dump(mode="json"),
+    )
+    latest = store.create_or_get_generation_job(
+        athlete_id="athlete-1",
+        client_request_id="latest-queued",
+        source="self_serve",
+        request_payload=_build_request().model_dump(mode="json"),
+    )
+
+    response = client.get("/api/generation-jobs/active", headers={"Authorization": "Bearer athlete-token"})
+    assert response.status_code == 200
+    body = response.json()
+    assert body["job_id"] == latest["id"]
+    assert body["status"] == "queued"
+
+
+def test_get_active_generation_job_returns_running_job_for_logged_in_athlete():
+    client, store, _ = _build_client(enable_in_process_generation=False)
+    created = store.create_or_get_generation_job(
+        athlete_id="athlete-1",
+        client_request_id="running-active",
+        source="self_serve",
+        request_payload=_build_request().model_dump(mode="json"),
+    )
+    now_iso = _now()
+    store.update_generation_job(created["id"], status="running", started_at=now_iso, heartbeat_at=now_iso)
+
+    response = client.get("/api/generation-jobs/active", headers={"Authorization": "Bearer athlete-token"})
+    assert response.status_code == 200
+    body = response.json()
+    assert body["job_id"] == created["id"]
+    assert body["status"] == "running"
+
+
+@pytest.mark.parametrize("terminal_status", ["completed", "failed", "review_required"])
+def test_get_active_generation_job_excludes_terminal_statuses(terminal_status: str):
+    client, store, _ = _build_client(enable_in_process_generation=False)
+    created = store.create_or_get_generation_job(
+        athlete_id="athlete-1",
+        client_request_id=f"terminal-{terminal_status}",
+        source="self_serve",
+        request_payload=_build_request().model_dump(mode="json"),
+    )
+    store.update_generation_job(created["id"], status=terminal_status, completed_at=_now())
+
+    response = client.get("/api/generation-jobs/active", headers={"Authorization": "Bearer athlete-token"})
+    assert response.status_code == 200
+    assert response.json() is None
+
+
+def test_get_active_generation_job_does_not_return_other_athlete_job():
+    client, store, _ = _build_client(enable_in_process_generation=False)
+    store.create_or_get_generation_job(
+        athlete_id="athlete-2",
+        client_request_id="other-athlete-queued",
+        source="self_serve",
+        request_payload=_build_request().model_dump(mode="json"),
+    )
+    response = client.get("/api/generation-jobs/active", headers={"Authorization": "Bearer athlete-token"})
+    assert response.status_code == 200
+    assert response.json() is None
+
+
+def test_get_active_generation_job_recovers_startup_stale_running_to_queued():
+    client, store, _ = _build_client(enable_in_process_generation=False)
+    created = store.create_or_get_generation_job(
+        athlete_id="athlete-1",
+        client_request_id="stale-running-active",
+        source="self_serve",
+        request_payload=_build_request().model_dump(mode="json"),
+    )
+    old_iso = "2026-01-01T00:00:00+00:00"
+    store.update_generation_job(created["id"], status="running", started_at=old_iso, heartbeat_at=old_iso, progress_milestones=[])
+
+    response = client.get("/api/generation-jobs/active", headers={"Authorization": "Bearer athlete-token"})
+    assert response.status_code == 200
+    body = response.json()
+    assert body["job_id"] == created["id"]
+    assert body["status"] == "queued"
+
+
+def test_get_active_generation_job_schedules_queued_job_without_creating_new_job():
+    client, store, _ = _build_client(enable_in_process_generation=False)
+    created = store.create_or_get_generation_job(
+        athlete_id="athlete-1",
+        client_request_id="schedule-active-queued",
+        source="self_serve",
+        request_payload=_build_request().model_dump(mode="json"),
+    )
+    before_count = len(store.generation_jobs)
+
+    response = client.get("/api/generation-jobs/active", headers={"Authorization": "Bearer athlete-token"})
+    assert response.status_code == 200
+    body = response.json()
+    assert body["job_id"] == created["id"]
+    assert body["status"] == "queued"
+    assert len(store.generation_jobs) == before_count
+
+
 def test_self_serve_generation_job_is_created_queued_before_worker_claim():
     client, store, _ = _build_client(enable_in_process_generation=False)
 
