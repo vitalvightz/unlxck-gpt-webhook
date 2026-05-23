@@ -85,6 +85,39 @@ def test_knee_instability_low_stable_emits_stage1_block_and_no_timeout():
     assert "stage1_strength_phase_gpp_finished" in codes
     assert "stage1_strength_phase_spp_finished" in codes
     assert "stage1_conditioning_block_started" in codes
+    assert "stage1_conditioning_phase_gpp_started" in codes
+    assert "stage1_conditioning_phase_gpp_finished" in codes
+    assert "stage1_conditioning_base_bank_score_started" in codes
+    assert "stage1_conditioning_base_bank_score_finished" in codes
+    assert "stage1_conditioning_style_bank_score_started" in codes
+    assert "stage1_conditioning_style_bank_score_finished" in codes
+    assert "stage1_conditioning_system_quota_fill_started" in codes
+    assert "stage1_conditioning_system_quota_fill_finished" in codes
+    assert "stage1_conditioning_deficit_fill_started" in codes
+    assert "stage1_conditioning_deficit_fill_finished" in codes
+    assert "stage1_conditioning_gas_tank_machine_bias_started" in codes
+    assert "stage1_conditioning_gas_tank_machine_bias_finished" in codes
+    assert "stage1_conditioning_universal_gpp_insertion_started" in codes
+    assert "stage1_conditioning_universal_gpp_insertion_finished" in codes
+    assert "stage1_conditioning_style_taper_insertion_started" in codes
+    assert "stage1_conditioning_style_taper_insertion_finished" in codes
+    assert "stage1_conditioning_taper_plyometric_guarantee_started" in codes
+    assert "stage1_conditioning_taper_plyometric_guarantee_finished" in codes
+    assert "stage1_conditioning_skill_refinement_guarantee_started" in codes
+    assert "stage1_conditioning_skill_refinement_guarantee_finished" in codes
+    assert "stage1_conditioning_coordination_insertion_started" in codes
+    assert "stage1_conditioning_coordination_insertion_finished" in codes
+    assert "stage1_conditioning_pro_neck_guarantee_started" in codes
+    assert "stage1_conditioning_pro_neck_guarantee_finished" in codes
+    assert "stage1_conditioning_trim_extras_started" in codes
+    assert "stage1_conditioning_trim_extras_finished" in codes
+    assert "stage1_conditioning_candidate_reservoir_build_started" in codes
+    assert "stage1_conditioning_candidate_reservoir_build_finished" in codes
+    assert "stage1_conditioning_injury_safe_finalize_started" in codes
+    assert "stage1_conditioning_injury_safe_finalize_finished" in codes
+    assert "stage1_conditioning_block_formatting_started" in codes
+    assert "stage1_conditioning_block_formatting_finished" in codes
+    assert "stage1_conditioning_block_finished" in codes
     assert "stage1_blocks_generation_finished" in codes
     assert "plan_drafted" in codes
     assert "stage1_planner_timeout" not in codes
