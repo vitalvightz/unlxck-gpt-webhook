@@ -5,6 +5,7 @@ import json
 import logging
 import traceback
 import os
+import threading
 import time
 from contextlib import suppress
 from datetime import datetime, timezone
@@ -77,6 +78,7 @@ def build_progress_recorder(
     job_id: str,
     store: AppStore,
     initial_milestones: list[dict[str, Any]] | None = None,
+    should_persist: Callable[[], bool] | None = None,
 ) -> tuple[list[dict[str, Any]], ProgressCallback]:
     """Return a milestone list + callback that persists each emit to the job row.
 
@@ -87,6 +89,9 @@ def build_progress_recorder(
     milestones: list[dict[str, Any]] = list(initial_milestones or [])
 
     def _callback(code: str, label: str, detail: str, meta: dict[str, Any]) -> None:
+        if should_persist is not None and not should_persist():
+            return
+
         entry = {
             "code": code,
             "label": label,
@@ -280,6 +285,9 @@ async def run_stage1_planner(
     *,
     progress_callback: ProgressCallback | None = None,
 ) -> dict[str, Any]:
+    # NOTE: asyncio.to_thread cannot forcibly stop the worker thread on timeout.
+    # The caller must guard state writes so late planner callbacks/results cannot
+    # mutate a job that has already been marked failed.
     return await asyncio.to_thread(_invoke_planner, planner_fn, payload, progress_callback)
 
 
@@ -372,6 +380,7 @@ async def run_generation_job(
     heartbeat_task: asyncio.Task[None] | None = None
     athlete_id = "unknown"
     progress_callback: ProgressCallback | None = None
+    stage1_timed_out = threading.Event()
 
     def _emit_milestone(code: str, label: str, detail: str = "", **meta: Any) -> None:
         if progress_callback is None:
@@ -423,6 +432,7 @@ async def run_generation_job(
             job_id=job_id,
             store=store,
             initial_milestones=initial_milestones,
+            should_persist=lambda: not stage1_timed_out.is_set(),
         )
         heartbeat_task = asyncio.create_task(heartbeat_generation_job(job_id, store, stop_event))
 
@@ -580,6 +590,7 @@ async def run_generation_job(
                 else:
                     stage1_result = await asyncio.wait_for(planner_coro, timeout=stage1_timeout_seconds)
             except asyncio.TimeoutError:
+                stage1_timed_out.set()
                 logger.exception("[jobs] generation:stage1_timeout athlete_id=%s job_id=%s", athlete_id, job_id)
                 now_iso = utc_now_iso()
                 with suppress(Exception):
