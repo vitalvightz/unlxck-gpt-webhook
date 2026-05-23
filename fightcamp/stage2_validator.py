@@ -2611,7 +2611,7 @@ def _stage2_output_incomplete_warnings(final_plan_text: str) -> list[dict[str, A
     warnings: list[dict[str, Any]] = []
     countdown_lines = [line for line in lines if _COUNTDOWN_LABEL_LINE.match(line)]
     has_countdown = bool(countdown_lines)
-    has_d0 = any(re.search(r"\bD-0\b", line, re.IGNORECASE) for line in lines)
+    has_d0 = any(_COUNTDOWN_LABEL_LINE.match(line).group(2) == "0" for line in countdown_lines)
 
     def add_warning(reason: str, line: str) -> None:
         warnings.append(
