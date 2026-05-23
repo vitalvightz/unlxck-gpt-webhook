@@ -786,10 +786,13 @@ def _map_plan_detail(
         else {}
     )
     parsing_metadata = row.get("parsing_metadata") or fallback_parsing_metadata or {}
+    display_plan_text = str(row.get("plan_text") or "")
+    if include_admin and not display_plan_text:
+        display_plan_text = str(row.get("final_plan_text") or row.get("draft_plan_text") or "")
     return PlanDetail(
         **summary.model_dump(mode="json"),
         outputs=PlanOutputs(
-            plan_text=str(row.get("plan_text") or ""),
+            plan_text=display_plan_text,
             pdf_url=row.get("pdf_url"),
         ),
         safety_state=_map_plan_safety_state(row),
