@@ -40,6 +40,8 @@ _DETACHED_GENERATION_TASKS: set[asyncio.Task[None]] = set()
 _MAX_PERSISTED_MILESTONES = 40
 _OPENAI_QUOTA_ADMIN_ERROR = "OpenAI quota exceeded. Check API billing, credits, project budget, or organization limits."
 _OPENAI_QUOTA_ATHLETE_ERROR = "Generation is temporarily unavailable. Please try again later."
+_FINAL_RESULT_PERSIST_TIMEOUT_SECONDS = 40.0
+_FINAL_RESULT_PERSIST_TIMEOUT_ERROR = "Stage 2 result persistence timed out before final_result was saved."
 
 
 def utc_now_iso() -> str:
@@ -207,6 +209,22 @@ def _stage1_planner_timeout_seconds() -> float | None:
         )
         return 600.0
     return parsed
+
+
+def _compact_generation_job_final_result(final_result: dict[str, Any]) -> dict[str, Any]:
+    """Keep generation_jobs.final_result lean; canonical full text lives on plans."""
+    compact: dict[str, Any] = {}
+    for key in (
+        "status",
+        "stage2_status",
+        "stage2_attempt_count",
+        "stage2_validator_report",
+        "stage2_retry_text",
+        "error",
+    ):
+        if key in final_result:
+            compact[key] = final_result.get(key)
+    return compact
 
 
 def _use_fastapi_background_tasks() -> bool:
@@ -640,6 +658,11 @@ async def run_generation_job(
                 )
                 await _touch_heartbeat()
                 final_result = {**finalized_result, "full_name": request_body.athlete.full_name}
+                _emit_milestone(
+                    "stage2_result_ready",
+                    "Stage 2 result ready",
+                    "Finalizer result returned; saving review state.",
+                )
                 if str(final_result.get("status") or "").strip().lower() == "ready":
                     _emit_milestone(
                         "stage2_validated",
@@ -652,11 +675,52 @@ async def run_generation_job(
                         "Stage 2 needs review",
                         "First-pass finalizer output did not pass validation. No automatic retry was sent.",
                     )
-            job = await _to_thread_with_heartbeat(
-                store.update_generation_job,
-                job_id,
-                final_result=final_result,
-                heartbeat_at=utc_now_iso(),
+            _emit_milestone(
+                "final_result_persisting",
+                "Saving Stage 2 result",
+                "Persisting finalizer output to the generation job.",
+            )
+            compact_final_result = _compact_generation_job_final_result(final_result)
+            try:
+                job = await asyncio.wait_for(
+                    _to_thread_with_heartbeat(
+                        store.update_generation_job,
+                        job_id,
+                        final_result=compact_final_result,
+                        heartbeat_at=utc_now_iso(),
+                    ),
+                    timeout=_FINAL_RESULT_PERSIST_TIMEOUT_SECONDS,
+                )
+            except asyncio.TimeoutError:
+                logger.exception("[jobs] generation:final_result_persist_timeout athlete_id=%s job_id=%s", athlete_id, job_id)
+                now_iso = utc_now_iso()
+                with suppress(Exception):
+                    await asyncio.to_thread(
+                        store.update_generation_job,
+                        job_id,
+                        status="failed",
+                        error=_FINAL_RESULT_PERSIST_TIMEOUT_ERROR,
+                        completed_at=now_iso,
+                        heartbeat_at=now_iso,
+                    )
+                return
+            except Exception:
+                logger.exception("[jobs] generation:final_result_persist_failed athlete_id=%s job_id=%s", athlete_id, job_id)
+                now_iso = utc_now_iso()
+                with suppress(Exception):
+                    await asyncio.to_thread(
+                        store.update_generation_job,
+                        job_id,
+                        status="failed",
+                        error="Stage 2 result persistence failed before final_result was saved.",
+                        completed_at=now_iso,
+                        heartbeat_at=now_iso,
+                    )
+                return
+            _emit_milestone(
+                "final_result_persisted",
+                "Stage 2 result saved",
+                "Finalizer output was saved to the generation job.",
             )
 
         plan_id = plan_id or (str(job.get("plan_id") or "") or None)

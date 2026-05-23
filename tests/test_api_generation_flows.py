@@ -925,6 +925,34 @@ def test_generate_plan_returns_review_required_when_stage2_needs_manual_review()
     assert saved["stage2_status"] == "stage2_failed"
 
 
+def test_generation_fails_when_stage2_final_result_persistence_fails(monkeypatch: pytest.MonkeyPatch):
+    stage2_result = finalized_result(
+        status="review_required",
+        plan_text="",
+        final_plan_text="# Failed Stage 2 Output",
+        stage2_status="stage2_failed",
+        stage2_retry_text="repair prompt",
+        stage2_validator_report={"errors": [{"code": "restriction_violation"}], "warnings": []},
+        stage2_attempt_count=2,
+    )
+    client, store, _ = _build_client(FakeStage2Automator(result=stage2_result))
+    original_update = store.update_generation_job
+
+    def failing_update_generation_job(job_id: str, **changes: dict) -> dict:
+        if "final_result" in changes:
+            raise RuntimeError("simulated persistence failure")
+        return original_update(job_id, **changes)
+
+    monkeypatch.setattr(store, "update_generation_job", failing_update_generation_job)
+
+    _, job = _start_generation(client)
+
+    assert job["status"] == "failed"
+    assert job["error"] == "Stage 2 result persistence failed before final_result was saved."
+    assert job["completed_at"] is not None
+    assert job["final_result"] is None
+
+
 @pytest.mark.parametrize("scenario", SYSTEM_SCENARIOS, ids=lambda scenario: scenario.key)
 def test_curated_system_scenarios_cover_generation_and_hold_behavior(scenario: SystemScenario):
     client, store, _ = _build_client(FakeStage2Automator(result=scenario.automator_result))
