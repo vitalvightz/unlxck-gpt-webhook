@@ -52,6 +52,7 @@ from .normalization import normalize_fight_format as _normalize_fight_format
 from .selection_metadata import build_score_evidence, normalize_selection_metadata
 from .weight_cut import compute_cut_severity_score, cut_severity_bucket
 from .priority_clarification_tags import derive_clarification_tags
+from .stage1_fail_safe import bounded_max_iterations, log_fail_safe_degrade
 from .priority_profile import (
     PRIMARY_GOAL_WEIGHT,
     PRIMARY_WEAKNESS_WEIGHT,
@@ -2032,8 +2033,9 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
         guard = 0
         while count_support_only(updated) > support_cap:
             guard += 1
-            if guard > max(len(updated) * 4, 8):
-                logger.warning("[stage1] loop_guard_break module=strength_session_quality")
+            max_iter = bounded_max_iterations(len(updated))
+            if guard > max_iter:
+                log_fail_safe_degrade(module="strength", phase=phase, reason="session_quality_guard", target=support_cap, actual=count_support_only(updated))
                 break
             selected_names = _selected_names(updated)
             replacement_entry = _best_candidate(
@@ -2055,7 +2057,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
                 replacement_late_safe_profile=late_safe_profile,
             )
             if not replacement_entry or replace_index is None:
-                logger.warning("[stage1] loop_guard_break module=strength_session_quality reason=no_replacement")
+                log_fail_safe_degrade(module="strength", phase=phase, reason="session_quality_no_replacement", target=support_cap, actual=count_support_only(updated))
                 break
             _replace_exercise(
                 updated,
@@ -2358,8 +2360,9 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
             guard = 0
             while len(capped) < target_exercises:
                 guard += 1
-                if guard > max(target_exercises * 4, 8):
-                    logger.warning("[stage1] loop_guard_break module=strength_movement_caps")
+                max_iter = bounded_max_iterations(target_exercises)
+                if guard > max_iter:
+                    log_fail_safe_degrade(module="strength", phase=phase, reason="movement_caps_guard", target=target_exercises, actual=len(capped))
                     break
                 selected_names = _selected_names(capped)
                 replacement_entry = _best_candidate(
@@ -2370,12 +2373,12 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
                     exclude_names=selected_names,
                 )
                 if not replacement_entry:
-                    logger.warning("[stage1] loop_guard_break module=strength_movement_caps reason=no_replacement")
+                    log_fail_safe_degrade(module="strength", phase=phase, reason="movement_caps_no_replacement", target=target_exercises, actual=len(capped))
                     break
                 cand, _cand_score, cand_reasons, _profile, _late_safe_profile = replacement_entry
                 movement = normalize_exercise_movement(cand)
                 if movement != "unknown" and movement_counts.get(movement, 0) >= 2:
-                    logger.warning("[stage1] loop_guard_break module=strength_movement_caps reason=movement_cap_blocked")
+                    log_fail_safe_degrade(module="strength", phase=phase, reason="movement_cap_blocked", target=target_exercises, actual=len(capped))
                     break
                 movement_counts[movement] = movement_counts.get(movement, 0) + 1
                 capped.append(cand)
