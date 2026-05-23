@@ -158,6 +158,7 @@ class AppStore(Protocol):
     ) -> dict[str, Any] | None: ...
 
     def get_generation_job_by_plan_id(self, plan_id: str) -> dict[str, Any] | None: ...
+    def has_active_generation_job_for_plan(self, plan_id: str) -> bool: ...
     def list_generation_jobs_for_athlete(self, athlete_id: str, *, limit: int = 10) -> list[dict[str, Any]]: ...
 
     def list_claimable_generation_jobs(self, *, limit: int = 20, stale_after_seconds: int = 90) -> list[dict[str, Any]]: ...
@@ -1296,6 +1297,25 @@ class SupabaseAppStore:
         except _STORE_CLIENT_ERRORS:
             logger.exception("[store] get_generation_job_by_plan_id:exception plan_id=%s", plan_id)
             return None
+
+    def has_active_generation_job_for_plan(self, plan_id: str) -> bool:
+        try:
+            response = self._run_with_transient_retry(
+                operation=f"has_active_generation_job_for_plan plan_id={plan_id}",
+                fn=lambda: self.client.table("generation_jobs")
+                .select("id")
+                .eq("plan_id", plan_id)
+                .in_("status", ["queued", "running"])
+                .limit(1)
+                .execute(),
+            )
+            return bool(response.data)
+        except _STORE_CLIENT_ERRORS as exc:
+            self._raise_operation_http_error(
+                operation=f"has_active_generation_job_for_plan plan_id={plan_id}",
+                detail="failed to check active generation jobs",
+                exc=exc,
+            )
 
     def list_generation_jobs_for_athlete(self, athlete_id: str, *, limit: int = 10) -> list[dict[str, Any]]:
         try:

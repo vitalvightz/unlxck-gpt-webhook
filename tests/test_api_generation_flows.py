@@ -1170,6 +1170,51 @@ def test_admin_triage_resume_without_linked_plan_fails_without_creating_duplicat
     assert refreshed_job["plan_id"] == str(blocked_plan["id"])
     assert store.list_user_plans(athlete.user_id) == []
 
+
+def test_admin_triage_resume_fails_if_linked_plan_deleted_after_stage1():
+    store = FakeStore()
+    athlete = AuthenticatedUser(
+        user_id="athlete-1",
+        email="ari@example.com",
+        full_name="Ari Mensah",
+        metadata={},
+    )
+    store.ensure_profile(athlete)
+    request = _build_request()
+    intake = store.create_intake(athlete.user_id, request)
+    blocked_plan = store.create_plan(
+        athlete_id=athlete.user_id,
+        intake_id=str(intake["id"]),
+        request=request,
+        result=finalized_result(status="triage_blocked", stage2_status="triage_blocked"),
+    )
+    job = store.create_or_get_generation_job(
+        athlete_id=athlete.user_id,
+        client_request_id="triage-resume-delete-during-run",
+        source="admin_triage_resume",
+        request_payload=request.model_dump(mode="json"),
+        intake_id=str(intake["id"]),
+        plan_id=str(blocked_plan["id"]),
+    )
+
+    def planner(payload: dict) -> dict:
+        store.delete_plan(str(blocked_plan["id"]))
+        return stage1_result(status="ready")
+
+    asyncio.run(
+        run_generation_job(
+            job_id=job["id"],
+            store=store,
+            planner_fn=planner,
+            stage2=FakeStage2Automator(result=finalized_result()),
+            active_tasks=set(),
+        )
+    )
+
+    refreshed_job = store.get_generation_job(job["id"])
+    assert refreshed_job["status"] == "failed"
+    assert "linked plan was deleted while generation was running" in str(refreshed_job["error"])
+
 def test_admin_triage_resume_linked_plan_for_different_athlete_fails_before_planner():
     store = FakeStore()
     athlete = AuthenticatedUser(

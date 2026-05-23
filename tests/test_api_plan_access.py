@@ -560,6 +560,41 @@ def test_admin_delete_hard_deletes_any_plan():
     assert store.get_plan(plan["id"]) is None
 
 
+def test_delete_plan_returns_409_when_generation_job_active():
+    client, store, _ = _build_client()
+    athlete = AuthenticatedUser(
+        user_id="athlete-1",
+        email="ari@example.com",
+        full_name="Ari Mensah",
+        metadata={},
+    )
+    store.ensure_profile(athlete)
+    plan = store.create_plan(
+        athlete_id="athlete-1",
+        intake_id="intake_x",
+        request=_build_request(),
+        result=finalized_result(),
+    )
+    job = store.create_or_get_generation_job(
+        athlete_id="athlete-1",
+        client_request_id="active-delete-guard",
+        source="web_intake",
+        request_payload=_build_request().model_dump(mode="json"),
+        plan_id=plan["id"],
+        intake_id="intake_x",
+    )
+    store.update_generation_job(job["id"], status="running", started_at="2026-01-01T00:00:00+00:00")
+
+    response = client.delete(
+        f"/api/plans/{plan['id']}",
+        headers={"Authorization": "Bearer admin-token"},
+    )
+
+    assert response.status_code == 409
+    assert response.json()["detail"] == "Plan has an active generation job. Cancel or wait before deleting."
+    assert store.get_plan(plan["id"]) is not None
+
+
 def test_athlete_second_delete_hard_deletes_archived_plan():
     client, store, _ = _build_client()
     athlete = AuthenticatedUser(

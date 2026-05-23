@@ -377,6 +377,19 @@ async def run_generation_job(
         await _touch_heartbeat()
         return result
 
+    async def _ensure_admin_resume_plan_exists(linked_plan_id: str | None) -> None:
+        if job_source != "admin_triage_resume":
+            return
+        if not linked_plan_id:
+            raise TriageResumeMissingPlanError(
+                "admin triage resume job lost its linked plan_id; refusing to continue"
+            )
+        linked = await _to_thread_with_heartbeat(store.get_plan, linked_plan_id)
+        if not linked:
+            raise TriageResumeMissingPlanError(
+                "admin triage resume job linked plan was deleted while generation was running"
+            )
+
     try:
         # Claim the job for processing. This implements the worker-claim model
         # introduced in #1417 while preserving Main's heartbeat-on-read safety.
@@ -598,9 +611,13 @@ async def run_generation_job(
                 stage1_result=stage1_result,
                 heartbeat_at=utc_now_iso(),
             )
+            job_plan_id = str(job.get("plan_id") or "").strip() or plan_id
+            await _ensure_admin_resume_plan_exists(job_plan_id)
 
         final_result = job.get("final_result")
         if not isinstance(final_result, dict):
+            job_plan_id = str(job.get("plan_id") or "").strip() or plan_id
+            await _ensure_admin_resume_plan_exists(job_plan_id)
             if should_skip_stage2(stage1_result, allow_triage_resume_override=triage_resume_override_approved):
                 _emit_milestone(
                     "stage2_skipped",

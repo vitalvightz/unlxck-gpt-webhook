@@ -384,6 +384,12 @@ class FakeStore:
         matches.sort(key=lambda job: job.get("completed_at") or job.get("updated_at") or "", reverse=True)
         return dict(matches[0])
 
+    def has_active_generation_job_for_plan(self, plan_id: str) -> bool:
+        return any(
+            str(job.get("plan_id") or "") == plan_id and str(job.get("status") or "") in {"queued", "running"}
+            for job in self.generation_jobs.values()
+        )
+
     def list_generation_jobs_for_athlete(self, athlete_id: str, *, limit: int = 10) -> list[dict]:
         rows = [
             dict(job)
