@@ -332,15 +332,15 @@ def is_stage1_planner_stalled_generation_job(job: dict[str, Any], *, stale_after
 
 
 def _stage1_stale_after_seconds_for_reads() -> int:
-    raw_value = os.getenv("APP_STAGE1_PLANNER_TIMEOUT_SECONDS", "180").strip()
+    raw_value = os.getenv("APP_STAGE1_PLANNER_TIMEOUT_SECONDS", "600").strip()
     if raw_value in {"", "0", "none", "None", "NONE"}:
-        return 180
+        return 600
     try:
         parsed = float(raw_value)
     except ValueError:
-        return 180
+        return 600
     if parsed <= 0:
-        return 180
+        return 600
     return max(1, int(parsed))
 
 
