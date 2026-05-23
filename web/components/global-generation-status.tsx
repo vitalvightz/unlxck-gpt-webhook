@@ -15,12 +15,17 @@ function formatElapsed(ms: number): string {
 }
 
 const CELEBRATION_DURATION_MS = 1_600;
+const RIBBON_DISMISSED_KEY = "unlxck:generation-ribbon-dismissed";
 
 export function getGenerationStatusTarget(
   phase: string | null,
   planId: string | null,
   terminalStatus: "completed" | "review_required" | null,
-): `/plans/${string}` | `/plans/${string}?review_required=1` | null {
+): `/generate` | `/plans/${string}` | `/plans/${string}?review_required=1` | null {
+  if (phase === "queued" || phase === "running" || phase === "finalizing") {
+    return "/generate";
+  }
+
   if (phase === "completed" && planId) {
     if (terminalStatus === "review_required") {
       return `/plans/${planId}?review_required=1`;
@@ -34,12 +39,13 @@ export function GlobalGenerationStatus() {
   const { isActive, statusMessage, phase, planId, terminalStatus, startedAtMs, refreshStatus } = useGenerationStatus();
   const [now, setNow] = useState(() => Date.now());
   const [isCelebrating, setIsCelebrating] = useState(false);
+  const [isDismissed, setIsDismissed] = useState(false);
   const previousPhaseRef = useRef(phase);
 
   const isFailed = phase === "failed";
   const isCompleted = phase === "completed";
   const navigationTarget = getGenerationStatusTarget(phase, planId, terminalStatus);
-  const ctaLabel = isCompleted && planId ? "View" : "Refresh";
+  const ctaLabel = isCompleted && planId ? "View" : navigationTarget ? "Open" : "Refresh";
   const showElapsed = isActive && !isCompleted && !isFailed && startedAtMs !== null;
 
   useEffect(() => {
@@ -69,6 +75,14 @@ export function GlobalGenerationStatus() {
     previousPhaseRef.current = phase;
   }, [phase]);
 
+  useEffect(() => {
+    try {
+      setIsDismissed(window.localStorage.getItem(RIBBON_DISMISSED_KEY) === "1");
+    } catch {
+      setIsDismissed(false);
+    }
+  }, []);
+
   if (!isActive) {
     return null;
   }
@@ -81,6 +95,42 @@ export function GlobalGenerationStatus() {
     isCompleted ? "global-generation-status-completed" : "",
     isCelebrating ? "global-generation-status-celebrating" : "",
   ].filter(Boolean).join(" ");
+
+  const dismissButton = (
+    <button
+      type="button"
+      className="global-generation-status-dismiss"
+      aria-label="Hide generation ribbon"
+      onClick={(event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        setIsDismissed(true);
+        try {
+          window.localStorage.setItem(RIBBON_DISMISSED_KEY, "1");
+        } catch {}
+      }}
+    >
+      ×
+    </button>
+  );
+
+  if (isDismissed) {
+    return (
+      <button
+        type="button"
+        className="global-generation-status-reopen"
+        aria-label="Show generation ribbon"
+        onClick={() => {
+          setIsDismissed(false);
+          try {
+            window.localStorage.removeItem(RIBBON_DISMISSED_KEY);
+          } catch {}
+        }}
+      >
+        Show plan build
+      </button>
+    );
+  }
 
   const content = (
     <>
@@ -125,6 +175,7 @@ export function GlobalGenerationStatus() {
             : "Generation in progress. Tap to open generation status."
         }
       >
+        {dismissButton}
         {content}
       </Link>
     );
@@ -139,6 +190,7 @@ export function GlobalGenerationStatus() {
         refreshStatus();
       }}
     >
+      {dismissButton}
       {content}
     </button>
   );

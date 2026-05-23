@@ -6167,6 +6167,36 @@ button.mobile-step-rail-item {
   gap: 12px;
 }
 
+.global-generation-status-dismiss {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 18px;
+  cursor: pointer;
+}
+
+.global-generation-status-reopen {
+  position: fixed;
+  right: 14px;
+  bottom: calc(14px + var(--safe-area-bottom));
+  z-index: 100;
+  min-height: 38px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(181, 18, 43, 0.35);
+  background: rgba(10, 11, 14, 0.95);
+  color: var(--text-primary);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
 .global-generation-status-indicator {
   position: relative;
   width: 10px;
