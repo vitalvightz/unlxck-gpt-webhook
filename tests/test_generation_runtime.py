@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import pytest
 
+import api.app as app_module
 from api import generation_runtime
 from api.generation_runtime import (
     _invoke_planner,
@@ -139,6 +140,28 @@ def test_default_planner_emits_diagnostic_milestones_before_generate_plan_sync(m
 
     assert result == {"plan": "ok"}
     assert emitted_codes[:2] == [
+        "stage1_default_planner_entered",
+        "stage1_generate_plan_sync_entering",
+    ]
+
+
+def test_invoke_planner_with_app_default_planner_emits_full_stage1_diagnostics(monkeypatch):
+    emitted_codes: list[str] = []
+
+    def fake_generate_plan_sync(payload, *, progress_callback=None):
+        return {"plan": "ok"}
+
+    monkeypatch.setattr(generation_runtime, "generate_plan_sync", fake_generate_plan_sync)
+
+    def callback(code, label, detail, meta):
+        emitted_codes.append(code)
+
+    result = _invoke_planner(app_module._default_planner, {"athlete": "x"}, callback)
+
+    assert result == {"plan": "ok"}
+    assert emitted_codes[:4] == [
+        "stage1_planner_callable_entering",
+        "stage1_planner_callable_supports_progress_callback",
         "stage1_default_planner_entered",
         "stage1_generate_plan_sync_entering",
     ]

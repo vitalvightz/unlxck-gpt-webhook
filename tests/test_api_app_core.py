@@ -180,6 +180,24 @@ def test_plan_generate_daily_limit_zero_disables_cap(monkeypatch: pytest.MonkeyP
     assert app_module._plan_generate_daily_limit_per_user() == 0
 
 
+def test_default_planner_forwards_progress_callback_to_runtime_planner(monkeypatch: pytest.MonkeyPatch):
+    seen: dict[str, object] = {}
+
+    def fake_runtime_default_planner(payload, *, progress_callback=None):
+        seen["payload"] = payload
+        seen["progress_callback"] = progress_callback
+        return {"ok": True}
+
+    monkeypatch.setattr(app_module, "runtime_default_planner", fake_runtime_default_planner)
+
+    callback = lambda code, label, detail, meta: None
+    result = app_module._default_planner({"athlete": "x"}, progress_callback=callback)
+
+    assert result == {"ok": True}
+    assert seen["payload"] == {"athlete": "x"}
+    assert seen["progress_callback"] is callback
+
+
 def test_runtime_app_falls_back_to_health_endpoint_when_supabase_config_missing(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.delenv("UNLXCK_ENV", raising=False)
     monkeypatch.delenv("SUPABASE_URL", raising=False)

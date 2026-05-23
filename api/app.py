@@ -546,8 +546,12 @@ def _is_exempt_from_daily_generation_cap(email: str) -> bool:
     return email.strip().lower() in _DAILY_GENERATION_CAP_EXEMPT_EMAILS
 
 
-def _default_planner(payload: dict[str, Any]) -> dict[str, Any]:
-    return runtime_default_planner(payload)
+def _default_planner(
+    payload: dict[str, Any],
+    *,
+    progress_callback=None,
+) -> dict[str, Any]:
+    return runtime_default_planner(payload, progress_callback=progress_callback)
 
 
 def _health_payload(*, mode_label: str) -> dict[str, str | bool]:
