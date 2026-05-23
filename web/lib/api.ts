@@ -495,6 +495,12 @@ export function getGenerationJob(token: string, jobId: string): Promise<Generati
   );
 }
 
+export function getActiveGenerationJob(token: string): Promise<GenerationJobResponse | null> {
+  return withTransientRetries(() =>
+    readJson<GenerationJobResponse | null>("/api/generation-jobs/active", { token }),
+  );
+}
+
 export function retryGenerationJob(
   token: string,
   jobId: string,

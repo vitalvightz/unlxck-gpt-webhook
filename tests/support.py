@@ -320,6 +320,40 @@ class FakeStore:
                 return dict(job)
         return None
 
+    def get_active_generation_job_for_athlete(
+        self,
+        athlete_id: str,
+        *,
+        stale_after_seconds: int = 90,
+    ) -> dict | None:
+        rows = [
+            job
+            for job in self.generation_jobs.values()
+            if str(job.get("athlete_id") or "") == athlete_id and str(job.get("status") or "") in {"queued", "running"}
+        ]
+        rows.sort(key=lambda row: str(row.get("created_at") or ""), reverse=True)
+        for row in rows[:10]:
+            if str(row.get("status") or "") == "queued":
+                return dict(row)
+            if not is_startup_stale_generation_job(row, stale_after_seconds=stale_after_seconds):
+                return dict(row)
+            now = _now()
+            row.update(
+                {
+                    "status": "queued",
+                    "error": None,
+                    "heartbeat_at": None,
+                    "started_at": None,
+                    "completed_at": None,
+                    "stage1_result": None,
+                    "final_result": None,
+                    "progress_milestones": [],
+                    "updated_at": now,
+                }
+            )
+            return dict(row)
+        return None
+
     def count_generation_jobs_for_athlete_since(
         self,
         athlete_id: str,
