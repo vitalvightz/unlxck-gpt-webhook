@@ -18,7 +18,7 @@ from api.models import (
     USERNAME_MAX_CHANGES_PER_WINDOW,
     validate_username,
 )
-from api.store import is_stage1_planner_stalled_generation_job, is_startup_stale_generation_job
+from api.store import is_job_loaded_stalled_generation_job, is_stage1_planner_stalled_generation_job, is_startup_stale_generation_job
 from datetime import timedelta
 
 os.environ.setdefault("APP_GENERATION_SCHEDULER", "fastapi")
@@ -68,8 +68,6 @@ class FakeStore:
     def _classify_running_job_staleness(self, job: dict, *, stale_after_seconds: int) -> str:
         if str(job.get("status") or "") != "running":
             return "fresh"
-        if is_startup_stale_generation_job(job, stale_after_seconds=stale_after_seconds):
-            return "startup_stale"
         raw_stage1_timeout = os.getenv("APP_STAGE1_PLANNER_TIMEOUT_SECONDS", "180").strip()
         try:
             stage1_stale_after_seconds = max(1, int(float(raw_stage1_timeout)))
@@ -77,6 +75,10 @@ class FakeStore:
             stage1_stale_after_seconds = 180
         if raw_stage1_timeout in {"", "0", "none", "None", "NONE"}:
             stage1_stale_after_seconds = 180
+        if is_job_loaded_stalled_generation_job(job, stale_after_seconds=stale_after_seconds):
+            return "job_loaded_stalled"
+        if is_startup_stale_generation_job(job, stale_after_seconds=stale_after_seconds):
+            return "startup_stale"
         if is_stage1_planner_stalled_generation_job(job, stale_after_seconds=stage1_stale_after_seconds):
             return "stage1_planner_stalled"
         heartbeat_raw = job.get("heartbeat_at")
@@ -344,7 +346,17 @@ class FakeStore:
 
     def get_generation_job(self, job_id: str) -> dict | None:
         job = self.generation_jobs.get(job_id)
-        if job and self._classify_running_job_staleness(job, stale_after_seconds=90) == "stage1_planner_stalled":
+        staleness = self._classify_running_job_staleness(job, stale_after_seconds=90) if job else "fresh"
+        if job and staleness == "job_loaded_stalled":
+            milestones = list(job.get("progress_milestones") or [])
+            now = _now()
+            if int(job.get("attempt_count") or 0) < 2:
+                milestones.append({"code": "worker_claim_stalled_requeued", "label": "Worker claim stalled", "detail": "Worker loaded the generation job but did not reach request parsing; job was requeued for recovery.", "meta": {}, "at": now})
+                job.update({"status": "queued", "error": None, "started_at": None, "heartbeat_at": None, "completed_at": None, "progress_milestones": milestones, "updated_at": now})
+            else:
+                milestones.append({"code": "worker_claim_stalled_failed", "label": "Worker stalled after loading job", "detail": "Worker loaded the generation job but did not reach request parsing after retry.", "meta": {}, "at": now})
+                job.update({"status": "failed", "error": "Generation worker stalled after loading the job.", "completed_at": now, "heartbeat_at": now, "progress_milestones": milestones, "updated_at": now})
+        if job and staleness == "stage1_planner_stalled":
             now = _now()
             milestones = list(job.get("progress_milestones") or [])
             milestones.append(
@@ -407,6 +419,15 @@ class FakeStore:
                         "updated_at": now,
                     }
                 )
+            elif staleness == "job_loaded_stalled":
+                now = _now()
+                milestones = list(row.get("progress_milestones") or [])
+                if int(row.get("attempt_count") or 0) < 2:
+                    milestones.append({"code": "worker_claim_stalled_requeued", "label": "Worker claim stalled", "detail": "Worker loaded the generation job but did not reach request parsing; job was requeued for recovery.", "meta": {}, "at": now})
+                    row.update({"status": "queued", "error": None, "heartbeat_at": None, "started_at": None, "completed_at": None, "progress_milestones": milestones, "updated_at": now})
+                else:
+                    milestones.append({"code": "worker_claim_stalled_failed", "label": "Worker stalled after loading job", "detail": "Worker loaded the generation job but did not reach request parsing after retry.", "meta": {}, "at": now})
+                    row.update({"status": "failed", "error": "Generation worker stalled after loading the job.", "completed_at": now, "heartbeat_at": now, "progress_milestones": milestones, "updated_at": now})
             elif staleness == "stage1_planner_stalled":
                 now = _now()
                 milestones = list(row.get("progress_milestones") or [])

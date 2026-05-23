@@ -42,3 +42,13 @@ test("index never exceeds milestone bounds", () => {
   assert.ok(view.currentIndex >= 0);
   assert.ok(view.currentIndex < GENERATION_MILESTONES.length);
 });
+
+test("running with real job_loaded milestone does not fake advanced progress", () => {
+  const startedAt = Date.now() - 4 * 60_000;
+  const view = getGenerationMilestoneView("running", startedAt, Date.now(), [
+    { code: "job_loaded", label: "Generation job loaded", detail: "Worker loaded job.", at: new Date().toISOString() },
+  ]);
+  assert.equal(view.current.title, "Worker started");
+  assert.equal(view.current.detail, "Worker loaded the generation job and is preparing request parsing.");
+  assert.notEqual(view.current.title, "Running final coach review");
+});
