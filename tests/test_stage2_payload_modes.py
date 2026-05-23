@@ -221,6 +221,74 @@ class TestDaysOutPayloadBlock:
         assert block["days_out_bucket"] == "D-20"
         assert block["late_fight_window"] == "d21_to_d14"
 
+
+def test_camp_week_four_session_boxing_keeps_coach_days_and_recovery_flush_visible():
+    training_context = TrainingContext(
+        fatigue="moderate",
+        training_frequency=4,
+        days_available=6,
+        training_days=["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
+        injuries=[],
+        style_technical=["boxing"],
+        style_tactical=["distance striker"],
+        weaknesses=["speed"],
+        equipment=["bands", "medicine_ball", "kettlebell", "assault_bike"],
+        weight_cut_risk=True,
+        weight_cut_pct=4.0,
+        fight_format="boxing",
+        status="amateur",
+        key_goals=["speed", "power", "recovery"],
+        training_preference="short sessions",
+        mental_block=[],
+        age=26,
+        weight=155.0,
+        prev_exercises=[],
+        recent_exercises=[],
+        phase_weeks={"GPP": 2, "SPP": 2, "TAPER": 2, "days": {"GPP": 14, "SPP": 14, "TAPER": 14}},
+        days_until_fight=28,
+        hard_sparring_days=["Mon", "Fri"],
+        support_work_days=["Tue", "Thu", "Sat"],
+    )
+    payload = build_stage2_payload(
+        training_context=training_context,
+        mapped_format="boxing",
+        record="5-0",
+        rounds_format="3x3",
+        camp_len=8,
+        short_notice=False,
+        restrictions=[],
+        phase_weeks={"GPP": 2, "SPP": 2, "TAPER": 2, "days": {"GPP": 14, "SPP": 14, "TAPER": 14}},
+        strength_blocks={},
+        conditioning_blocks={},
+        rehab_blocks={},
+    )
+
+    brief = build_planning_brief(
+        athlete_model=payload["athlete_model"],
+        restrictions=payload.get("restrictions", []),
+        phase_briefs=payload["phase_briefs"],
+        candidate_pools=payload["candidate_pools"],
+        omission_ledger=payload["omission_ledger"],
+        rewrite_guidance=payload["rewrite_guidance"],
+    )
+
+    week = brief["weekly_role_map"]["weeks"][0]
+    session_roles = week["session_roles"]
+    hard_days = {
+        str(role.get("scheduled_day_hint") or "").lower()
+        for role in session_roles
+        if role.get("role_key") == "hard_sparring_day"
+    }
+    assert hard_days == {"mon", "fri"}
+
+    recovery_flush_days = [
+        str(role.get("scheduled_day_hint") or "").lower()
+        for role in session_roles
+        if role.get("role_key") == "converted_recovery_flush_day"
+    ]
+    assert recovery_flush_days
+    assert any(day in {"thu", "sat"} for day in recovery_flush_days)
+
     def test_pre_fight_compressed_block_has_bridge_window_metadata(self):
         block = _days_out_payload_block(10, _athlete(10))
         assert block["payload_mode"] == "pre_fight_compressed_payload"
@@ -799,11 +867,11 @@ class TestStage2PayloadBranching:
         assert "allocator" in brief["late_fight_plan_spec"]
         assert "role_budget" in brief["late_fight_plan_spec"]
 
-    def test_d7_plan_spec_keeps_boxing_roles_out_of_visible_insert_sessions(self):
+    def test_d7_plan_spec_keeps_boxing_roles_in_visible_calendar_sequence(self):
         spec = _build_late_fight_plan_spec(7, _athlete(7))
 
         assert "hard_sparring_day" in spec["session_roles"]
-        assert "hard_sparring_day" not in spec["visible_session_roles"]
+        assert "hard_sparring_day" in spec["visible_session_roles"]
         assert spec["visible_session_cap"] == len(spec["visible_session_sequence"])
         assert [entry["role_key"] for entry in spec["visible_session_sequence"]] == spec["visible_session_roles"]
 
