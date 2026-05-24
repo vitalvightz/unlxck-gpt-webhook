@@ -2711,7 +2711,7 @@ def validate_stage2_output(*, planning_brief: dict, final_plan_text: str) -> dic
         day = int(block["day"])
         safe_lines = [line for line in block["lines"] if not _line_is_instruction_only(line)]
         joined = " ".join(safe_lines)
-        has_blocking_hard_sparring = any(_has_blocking_hard_sparring(line) for line in safe_lines)
+        has_blocking_hard_sparring = _has_blocking_hard_sparring(block["header"]) or _has_blocking_hard_sparring(joined)
         if day == 12 and has_blocking_hard_sparring:
             warnings.append(_issue(code="late_fight_hard_sparring_d12_review", message="Hard sparring appears on D-12; review coach load and recovery risk.", severity="review", confidence="medium", line=block["header"]))
         if 0 <= day <= 11 and has_blocking_hard_sparring:
