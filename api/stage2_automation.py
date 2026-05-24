@@ -59,12 +59,13 @@ def _stage2_openai_max_retries() -> int:
 
 
 def _stage2_timeout_seconds() -> float:
-    raw_value = os.getenv("UNLXCK_STAGE2_TIMEOUT_SECONDS", "210").strip()
+    default_timeout = 210.0
+    raw_value = os.getenv("UNLXCK_STAGE2_TIMEOUT_SECONDS", str(default_timeout)).strip()
     try:
         return max(1.0, float(raw_value))
     except ValueError:
-        logger.warning("[stage2] invalid float env UNLXCK_STAGE2_TIMEOUT_SECONDS=%r; using 210", raw_value)
-        return 210.0
+        logger.warning("[stage2] invalid float env UNLXCK_STAGE2_TIMEOUT_SECONDS=%r; using %s", raw_value, default_timeout)
+        return default_timeout
 
 
 def _estimated_input_tokens(prompt: str) -> int:
