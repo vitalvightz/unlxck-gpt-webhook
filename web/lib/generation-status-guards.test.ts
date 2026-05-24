@@ -1,7 +1,11 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { isExpiredPendingGeneration, isStaleVisibleGenerationJob } from "@/lib/generation-status-guards";
+import {
+  isExpiredPendingGeneration,
+  isStaleVisibleGenerationJob,
+  shouldBlockGenerateAutoStartForMatchingPayload,
+} from "@/lib/generation-status-guards";
 import type { GenerationJobResponse } from "@/lib/types";
 
 const NOW_MS = Date.parse("2026-05-23T00:00:00.000Z");
@@ -44,4 +48,10 @@ test("fresh running job remains active", () => {
     heartbeat_at: "2026-05-22T23:30:00.000Z",
   });
   assert.equal(isStaleVisibleGenerationJob(freshJob, NOW_MS), false);
+});
+
+test("generate auto-start is blocked only when payload hash matches completed marker", () => {
+  assert.equal(shouldBlockGenerateAutoStartForMatchingPayload("hash_a", "hash_a"), true);
+  assert.equal(shouldBlockGenerateAutoStartForMatchingPayload("hash_a", "hash_b"), false);
+  assert.equal(shouldBlockGenerateAutoStartForMatchingPayload("hash_a", null), false);
 });

@@ -33,3 +33,14 @@ export function isStaleVisibleGenerationJob(job: GenerationJobResponse, nowMs = 
   }
   return nowMs - lastActivityMs > MAX_VISIBLE_GENERATION_AGE_MS;
 }
+
+export function shouldBlockGenerateAutoStartForMatchingPayload(
+  currentPayloadHash: string | null | undefined,
+  completedPayloadHash: string | null | undefined,
+): boolean {
+  return (
+    typeof currentPayloadHash === "string"
+    && currentPayloadHash.length > 0
+    && currentPayloadHash === completedPayloadHash
+  );
+}

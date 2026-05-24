@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { getGenerationStatusTarget } from "./global-generation-status";
+import { getGenerationStatusTarget, latestFailedJobHasOpenablePlan } from "./global-generation-status";
 
 test("active generation states route to generate workspace", () => {
   assert.equal(getGenerationStatusTarget("queued", null, null), "/generate");
@@ -22,6 +22,13 @@ test("review-required generation routes with review query flag", () => {
 
 test("failed generation has no link target", () => {
   assert.equal(getGenerationStatusTarget("failed", "plan_123", null), null);
+});
+
+test("failed latest job with plan shows open-plan path", () => {
+  assert.equal(
+    latestFailedJobHasOpenablePlan({ status: "failed", plan_id: "plan_123", latest_plan_id: null }),
+    true,
+  );
 });
 
 
