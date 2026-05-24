@@ -2669,8 +2669,7 @@ _HARD_SPARRING_PATTERN = re.compile(
 
 
 def _has_blocking_hard_sparring(text: str) -> bool:
-    line = str(text or "")
-    return _HARD_SPARRING_PATTERN.search(line) is not None
+    return _HARD_SPARRING_PATTERN.search(text) is not None
 
 def validate_stage2_output(*, planning_brief: dict, final_plan_text: str) -> dict:
     plan_lines = _extract_plan_lines(final_plan_text)
