@@ -116,7 +116,7 @@ function isFutureOrToday(value: string, now: Date = new Date()): boolean {
 export type QuickBuildValidationErrors = Partial<Record<keyof QuickBuildInput | "focus_cap", string>>;
 
 export function sanitizeQuickBuildFocusByDaysOut(input: QuickBuildInput): Pick<QuickBuildInput, "key_goals" | "weak_areas"> {
-  const daysUntilFight = input.no_scheduled_fight ? null : computeDaysUntilFight(input.fight_date);
+  const daysUntilFight = input.no_scheduled_fight ? null : computeDaysUntilFight(input.fight_date, now);
   const daysOutCtx = buildDaysOutContext(daysUntilFight);
   return {
     key_goals: filterAvailablePerformanceFocusValues(daysOutCtx, "key_goals", input.key_goals),
