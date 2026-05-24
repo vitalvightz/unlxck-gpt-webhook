@@ -8,6 +8,8 @@ from typing import Any, Protocol
 from fightcamp.stage2_pipeline import build_stage2_package, review_stage2_output
 
 _APP_STATUS_READY = "ready"
+_APP_STATUS_PUBLISHABLE_WITH_FLAGS = "publishable_with_flags"
+_APP_STATUS_HELD_FOR_REVIEW = "held_for_review"
 _APP_STATUS_REVIEW_REQUIRED = "review_required"
 _STAGE2_PASS = "stage2_pass"
 _STAGE2_FAILED = "stage2_failed"
@@ -227,10 +229,11 @@ def _approved_result(
     attempt_count: int,
     stage2_status: str,
     retry_text: str = "",
+    app_status: str = _APP_STATUS_READY,
 ) -> dict[str, Any]:
     return {
         **_base_result(stage1_result, draft_plan_text=draft_plan_text),
-        "status": _APP_STATUS_READY,
+        "status": app_status,
         "plan_text": final_plan_text,
         "final_plan_text": final_plan_text,
         "stage2_status": stage2_status,
@@ -251,8 +254,8 @@ def _review_required_result(
 ) -> dict[str, Any]:
     return {
         **_base_result(stage1_result, draft_plan_text=draft_plan_text),
-        "status": _APP_STATUS_REVIEW_REQUIRED,
-        "plan_text": latest_plan_text,
+        "status": _APP_STATUS_HELD_FOR_REVIEW,
+        "plan_text": "",
         "final_plan_text": latest_plan_text,
         "stage2_status": _STAGE2_FAILED,
         "stage2_validator_report": validator_report,
@@ -369,6 +372,11 @@ class OpenAIStage2Automator:
         )
 
         if first_review["status"] == "PASS":
+            app_status = (
+                _APP_STATUS_PUBLISHABLE_WITH_FLAGS
+                if int(first_review["validator_report"].get("review_flag_count") or 0) > 0
+                else _APP_STATUS_READY
+            )
             return _approved_result(
                 stage1_result,
                 draft_plan_text=draft_plan_text,
@@ -376,6 +384,7 @@ class OpenAIStage2Automator:
                 validator_report=first_review["validator_report"],
                 attempt_count=1,
                 stage2_status=_STAGE2_PASS,
+                app_status=app_status,
             )
 
         logger.warning("[stage2] review required after first_pass: automatic retry disabled")

@@ -810,7 +810,10 @@ export function PlanViewer({
     getOptionLabels(TECHNICAL_STYLE_OPTIONS, plan.technical_style).join(", ") || "Not provided";
 
   const athletePlanText = plan.outputs.plan_text.trim();
-  const hasPublishedPlan = Boolean(athletePlanText);
+  const athleteVisibleStatuses = new Set(["ready", "publishable_with_flags"]);
+  const hasPublishedPlan = athleteVisibleStatuses.has((plan.status || "").trim().toLowerCase())
+    ? Boolean(athletePlanText)
+    : false;
 
   const injuryTriage = readInjuryTriage(plan);
   const hasResumeApproval = hasTriageResumeApproval(plan);
