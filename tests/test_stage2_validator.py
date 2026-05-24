@@ -1117,6 +1117,26 @@ def test_validate_stage2_output_warns_for_boxing_sport_language_leaks():
     assert "sport_language_leak" in warning_codes
 
 
+def test_validate_stage2_output_normalizes_warning_shape():
+    report = validate_stage2_output(
+        planning_brief=_planning_brief_fixture(),
+        final_plan_text="""
+        SPP
+        - Landmine Press - 4x5
+        - Double-leg sprint entry - 6 x 6 sec
+        - Hard Shuttle - 6x20s / 60s
+        - Band External Rotation - 2x15
+        """,
+    )
+
+    for warning in report["warnings"]:
+        assert "code" in warning
+        assert "message" in warning
+        assert "severity" in warning
+        assert "confidence" in warning
+        assert "line" in warning
+
+
 def test_validate_stage2_output_warns_for_template_like_render_and_extra_fallbacks():
     report = validate_stage2_output(
         planning_brief=_planning_brief_fixture(),
