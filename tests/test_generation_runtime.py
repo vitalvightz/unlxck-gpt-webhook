@@ -7,6 +7,7 @@ import pytest
 import api.app as app_module
 from api import generation_runtime
 from api import worker as worker_module
+from api.runtime_config import validate_runtime_generation_config
 from api.generation_runtime import (
     _invoke_planner,
     _stage1_mp_start_method,
@@ -14,6 +15,7 @@ from api.generation_runtime import (
     _stage2_finalize_timeout_seconds,
     default_planner,
     is_in_process_generation_enabled,
+    recover_stale_running_job,
     run_stage1_planner,
 )
 from support import FakeStage2Automator, FakeStore, _build_request, finalized_result
@@ -201,16 +203,43 @@ def test_in_process_generation_env_override_enabled(monkeypatch):
     assert is_in_process_generation_enabled() is True
 
 
-def test_worker_stale_timeout_default_tracks_stage1_timeout(monkeypatch):
-    monkeypatch.delenv("UNLXCK_GENERATION_WORKER_STALE_AFTER_SECONDS", raising=False)
-    monkeypatch.delenv("APP_STAGE1_PLANNER_TIMEOUT_SECONDS", raising=False)
-    monkeypatch.delenv("STAGE1_PLANNER_TIMEOUT_SECONDS", raising=False)
-    assert worker_module._worker_stale_after_seconds_default() == 660
+def test_runtime_config_timeout_order_valid_in_non_production(monkeypatch):
+    monkeypatch.setenv("UNLXCK_STAGE2_TIMEOUT_SECONDS", "210")
+    monkeypatch.setenv("APP_STAGE2_FINALIZE_TIMEOUT_SECONDS", "240")
+    monkeypatch.setenv("APP_GENERATION_JOB_STALE_AFTER_SECONDS", "300")
+    cfg = validate_runtime_generation_config(startup_role="api")
+    assert cfg["openai_stage2_timeout_seconds"] == 210
+    assert cfg["app_stage2_finalize_timeout_seconds"] == 240
+    assert cfg["app_generation_job_stale_after_seconds"] == 300
 
 
-def test_worker_stale_timeout_default_uses_configured_stage1_timeout(monkeypatch):
-    monkeypatch.setenv("STAGE1_PLANNER_TIMEOUT_SECONDS", "720")
-    assert worker_module._worker_stale_after_seconds_default() == 780
+def test_runtime_config_invalid_timeout_order_fails_in_production(monkeypatch):
+    monkeypatch.setenv("APP_ENV", "production")
+    monkeypatch.setenv("UNLXCK_STAGE2_TIMEOUT_SECONDS", "240")
+    monkeypatch.setenv("APP_STAGE2_FINALIZE_TIMEOUT_SECONDS", "240")
+    monkeypatch.setenv("APP_GENERATION_JOB_STALE_AFTER_SECONDS", "300")
+    with pytest.raises(RuntimeError, match="UNLXCK_STAGE2_TIMEOUT_SECONDS must be lower"):
+        validate_runtime_generation_config(startup_role="worker")
+
+
+def test_recover_stale_stage2_drafting_job_uses_clear_failure_message():
+    store = FakeStore()
+    created = store.create_or_get_generation_job(
+        athlete_id="athlete-1",
+        client_request_id="stalled-stage2",
+        source="self_serve",
+        request_payload=_build_request().model_dump(mode="json"),
+    )
+    stale_job = store.update_generation_job(
+        created["id"],
+        status="running",
+        started_at="2026-01-01T00:00:00+00:00",
+        heartbeat_at="2026-01-01T00:00:00+00:00",
+        progress_milestones=[{"code": "stage2_drafting"}],
+    )
+    recovered = recover_stale_running_job(job=stale_job, store=store, stale_after_seconds=1)
+    assert recovered["status"] == "failed"
+    assert recovered["error"] == "Stage 2 finalizer stalled after drafting; worker likely stopped before result persistence."
 
 
 def test_worker_tick_processes_queued_job_to_terminal_status():

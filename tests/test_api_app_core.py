@@ -152,12 +152,12 @@ def test_is_stale_job_uses_started_at_when_heartbeat_is_missing_for_old_running_
 
 def test_generation_job_stale_after_seconds_defaults_when_env_invalid(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setenv("APP_GENERATION_JOB_STALE_AFTER_SECONDS", "invalid")
-    assert app_module._generation_job_stale_after_seconds() == 1400
+    assert app_module._generation_job_stale_after_seconds() == 300
 
 
 def test_generation_job_stale_after_seconds_defaults_when_unset(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.delenv("APP_GENERATION_JOB_STALE_AFTER_SECONDS", raising=False)
-    assert app_module._generation_job_stale_after_seconds() == 1400
+    assert app_module._generation_job_stale_after_seconds() == 300
 
 
 def test_generation_job_stale_after_seconds_enforces_minimum(monkeypatch: pytest.MonkeyPatch):

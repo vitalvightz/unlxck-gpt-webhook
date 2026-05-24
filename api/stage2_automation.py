@@ -58,6 +58,17 @@ def _stage2_openai_max_retries() -> int:
     )
 
 
+def _stage2_max_output_tokens() -> int | None:
+    raw_value = os.getenv("UNLXCK_STAGE2_MAX_OUTPUT_TOKENS", "").strip()
+    if not raw_value:
+        return None
+    try:
+        return max(1, int(raw_value))
+    except ValueError:
+        logger.warning("[stage2] invalid integer env UNLXCK_STAGE2_MAX_OUTPUT_TOKENS=%r; ignoring", raw_value)
+        return None
+
+
 def _estimated_input_tokens(prompt: str) -> int:
     if not prompt:
         return 0
@@ -310,6 +321,9 @@ class OpenAIStage2Automator:
             "model": self.model,
             "input": prompt,
         }
+        max_output_tokens = _stage2_max_output_tokens()
+        if max_output_tokens is not None:
+            request["max_output_tokens"] = max_output_tokens
         logger.info(
             "[stage2] sending %s prompt to model=%s chars=%s",
             attempt_label,

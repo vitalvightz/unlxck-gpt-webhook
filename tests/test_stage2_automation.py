@@ -82,6 +82,15 @@ def test_first_pass_pass_returns_ready_with_one_provider_call(monkeypatch: pytes
     assert result["stage2_attempt_count"] == 1
     assert result["stage2_retry_text"] == ""
 
+
+def test_stage2_passes_max_output_tokens_when_configured(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("UNLXCK_STAGE2_MAX_OUTPUT_TOKENS", "6000")
+    monkeypatch.setattr(stage2_module, "review_stage2_output", lambda **_: _review("PASS"))
+    client = FakeClient([_response("# final plan")])
+    automator = OpenAIStage2Automator(client=client, model="test-model")
+    asyncio.run(automator.finalize(stage1_result=_stage1_result()))
+    assert client.responses.calls[0]["max_output_tokens"] == 6000
+
 def test_first_pass_pass_with_review_flags_returns_publishable_with_flags(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(stage2_module, "review_stage2_output", lambda **_: _review("PASS_WITH_FLAGS"))
     client = FakeClient([_response("# final plan with minor flags")])

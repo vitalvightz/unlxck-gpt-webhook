@@ -194,6 +194,18 @@ def recover_stale_running_job(
 ) -> dict[str, Any]:
     if not is_stale_job(job, stale_after_seconds=stale_after_seconds):
         return job
+    milestones = job.get("progress_milestones") if isinstance(job.get("progress_milestones"), list) else []
+    milestone_codes = {
+        str(entry.get("code") or "")
+        for entry in milestones
+        if isinstance(entry, dict)
+    }
+    if (
+        "stage2_drafting" in milestone_codes
+        and not isinstance(job.get("final_result"), dict)
+        and not str(job.get("plan_id") or "").strip()
+    ):
+        error_message = "Stage 2 finalizer stalled after drafting; worker likely stopped before result persistence."
     return store.update_generation_job(
         str(job["id"]),
         status="failed",

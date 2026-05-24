@@ -72,6 +72,7 @@ from .generation_runtime import (
     is_stale_job as runtime_is_stale_job,
     schedule_generation_job_if_needed,
 )
+from .runtime_config import validate_runtime_generation_config
 from .stage2_automation import (
     Stage2Automator,
     build_default_stage2_automator,
@@ -233,7 +234,7 @@ def _resume_job_resolved_successfully(job: dict[str, Any]) -> bool:
 
 
 def _generation_job_stale_after_seconds() -> int:
-    fallback_seconds = 1400
+    fallback_seconds = 300
     raw_value = os.getenv("APP_GENERATION_JOB_STALE_AFTER_SECONDS", str(fallback_seconds)).strip()
     try:
         parsed = int(raw_value)
@@ -2356,6 +2357,7 @@ def create_app(
 
 
 def _build_runtime_app() -> FastAPI:
+    validate_runtime_generation_config(startup_role="api")
     enable_in_process_generation = is_in_process_generation_enabled()
     logger.info(
         "[app] build_runtime_app:start has_supabase_url=%s has_service_role_key=%s in_process_generation=%s",
