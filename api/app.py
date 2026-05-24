@@ -292,6 +292,10 @@ def _request_payload_summary(payload: Any) -> GenerationRequestPayloadSummary:
     if not isinstance(payload, dict):
         return GenerationRequestPayloadSummary()
     athlete = payload.get("athlete") if isinstance(payload.get("athlete"), dict) else {}
+    technical_style_value = athlete.get("technical_style")
+    technical_style: list[str] = []
+    if isinstance(technical_style_value, list):
+        technical_style = [str(item).strip() for item in technical_style_value if str(item).strip()]
     injuries_value = payload.get("injuries")
     injuries: list[str] = []
     if isinstance(injuries_value, list):
@@ -319,6 +323,7 @@ def _request_payload_summary(payload: Any) -> GenerationRequestPayloadSummary:
         weaknesses=[str(item) for item in (payload.get("weak_areas") or []) if isinstance(item, str)],
         injuries=injuries,
         training_availability=availability_summary,
+        technical_style=technical_style,
     )
 
 
@@ -340,6 +345,8 @@ def _admin_generation_job_diagnostic(job: dict[str, Any], *, stale_after_seconds
 
     return AdminGenerationJobDiagnostic(
         job_id=str(job.get("id") or ""),
+        athlete_id=str(job.get("athlete_id") or ""),
+        intake_id=str(job.get("intake_id") or "") or None,
         status=normalized_status,
         source=str(job.get("source") or ""),
         created_at=str(job.get("created_at") or ""),
@@ -2269,6 +2276,18 @@ def create_app(
                 status_code=status.HTTP_409_CONFLICT,
                 detail="latest intake not found for athlete",
             )
+        latest_intake_athlete_id = str(latest_intake.get("athlete_id") or "").strip()
+        latest_intake_id = str(latest_intake.get("id") or "").strip() or None
+        if latest_intake_athlete_id != athlete_id:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="latest intake belongs to a different athlete",
+            )
+        if not latest_intake_id:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="latest intake is missing id",
+            )
         try:
             request_body = PlanRequest.model_validate(latest_intake["intake"])
         except ValidationError as exc:
@@ -2310,6 +2329,7 @@ def create_app(
                     client_request_id=client_request_id,
                     source=str(existing_job.get("source") or "admin_latest_intake"),
                     request_payload=request_body.model_dump(mode="json"),
+                    intake_id=latest_intake_id,
                     stale_after_seconds=stale_after_seconds,
                 )
             job = await schedule_generation_job_if_needed(
@@ -2341,6 +2361,7 @@ def create_app(
             client_request_id=client_request_id,
             source="admin_latest_intake",
             request_payload=request_body.model_dump(mode="json"),
+            intake_id=latest_intake_id,
             stale_after_seconds=stale_after_seconds,
         )
         job = await schedule_generation_job_if_needed(

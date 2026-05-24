@@ -1023,6 +1023,7 @@ class GenerationJobResponse(BaseModel):
 
 class GenerationRequestPayloadSummary(BaseModel):
     athlete_name: str = ""
+    technical_style: list[str] = Field(default_factory=list)
     fight_date: str = ""
     phase: str = ""
     fight_format: str = ""
@@ -1035,6 +1036,8 @@ class GenerationRequestPayloadSummary(BaseModel):
 
 class AdminGenerationJobDiagnostic(BaseModel):
     job_id: str
+    athlete_id: str = ""
+    intake_id: str | None = None
     status: GenerationJobStatus
     source: str = ""
     created_at: str

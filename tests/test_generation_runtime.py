@@ -368,3 +368,52 @@ def test_invoke_planner_with_app_default_planner_emits_full_stage1_diagnostics(m
         "stage1_default_planner_entered",
         "stage1_generate_plan_sync_entering",
     ]
+
+
+def test_admin_latest_intake_job_fails_when_intake_id_is_missing():
+    store = FakeStore()
+    request = _build_request().model_dump(mode="json")
+    store.generation_jobs["job-1"] = {
+        "id": "job-1",
+        "athlete_id": "athlete-1",
+        "status": "queued",
+        "source": "admin_latest_intake",
+        "request_payload": request,
+        "intake_id": None,
+    }
+    asyncio.run(
+        generation_runtime.run_generation_job(
+            job_id="job-1",
+            store=store,
+            planner_fn=app_module._noop_planner,
+            stage2=FakeStage2Automator(result_factory=finalized_result),
+            active_tasks=set(),
+        )
+    )
+    assert store.generation_jobs["job-1"]["status"] == "failed"
+    assert "missing intake_id" in str(store.generation_jobs["job-1"]["error"])
+
+
+def test_admin_latest_intake_job_fails_when_linked_intake_is_for_different_athlete():
+    store = FakeStore()
+    request = _build_request().model_dump(mode="json")
+    intake = store.create_intake("athlete-2", _build_request())
+    store.generation_jobs["job-1"] = {
+        "id": "job-1",
+        "athlete_id": "athlete-1",
+        "status": "queued",
+        "source": "admin_latest_intake",
+        "request_payload": request,
+        "intake_id": intake["id"],
+    }
+    asyncio.run(
+        generation_runtime.run_generation_job(
+            job_id="job-1",
+            store=store,
+            planner_fn=app_module._noop_planner,
+            stage2=FakeStage2Automator(result_factory=finalized_result),
+            active_tasks=set(),
+        )
+    )
+    assert store.generation_jobs["job-1"]["status"] == "failed"
+    assert "different athlete" in str(store.generation_jobs["job-1"]["error"])
