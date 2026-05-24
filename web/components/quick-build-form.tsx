@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 
 import { RequireAuth } from "@/components/auth-guard";
 import { useAppSession } from "@/components/auth-provider";
@@ -22,6 +22,12 @@ import {
 import { FOCUS_CAP_DISABLED_REASON, validatePerformanceFocusSelections } from "@/lib/performance-focus-cap";
 import { HARD_SPARRING_DAY_CAP } from "@/lib/training-schedule";
 import {
+  buildDaysOutContext,
+  computeDaysUntilFight,
+  filterAvailablePerformanceFocusValues,
+  getPerformanceFocusOptionAvailability,
+} from "@/lib/days-out-policy";
+import {
   buildRoundsFormat,
   parseRoundsFormat,
   ROUND_COUNT_OPTIONS,
@@ -33,6 +39,7 @@ import {
   emptyQuickBuildInput,
   planRequestToQuickBuildInput,
   quickBuildToPlanRequest,
+  sanitizeQuickBuildFocusByDaysOut,
   validateQuickBuildInput,
   type QuickBuildInput,
   type QuickBuildValidationErrors,
@@ -273,9 +280,29 @@ function QuickBuildFormInner() {
       : null),
     [input.no_scheduled_fight, input.fight_date, input.key_goals, input.weak_areas],
   );
+  const daysUntilFight = useMemo(
+    () => (input.no_scheduled_fight ? null : computeDaysUntilFight(input.fight_date)),
+    [input.fight_date, input.no_scheduled_fight],
+  );
+  const daysOutCtx = useMemo(
+    () => buildDaysOutContext(daysUntilFight),
+    [daysUntilFight],
+  );
   const sharedFocusCap = focusValidation?.cap?.maxSelections ?? null;
   const sharedFocusCount = input.key_goals.length + input.weak_areas.length;
   const sharedFocusCapReached = sharedFocusCap !== null && sharedFocusCount >= sharedFocusCap;
+  const unavailableGoalValues = useMemo(
+    () => KEY_GOAL_OPTIONS
+      .filter((option) => !getPerformanceFocusOptionAvailability(daysOutCtx, "key_goals", option.value).available)
+      .map((option) => option.value),
+    [daysOutCtx],
+  );
+  const unavailableWeakAreaValues = useMemo(
+    () => WEAK_AREA_OPTIONS
+      .filter((option) => !getPerformanceFocusOptionAvailability(daysOutCtx, "weak_areas", option.value).available)
+      .map((option) => option.value),
+    [daysOutCtx],
+  );
 
   const activeEquipmentPreset = useMemo(
     () => matchesEquipmentPreset(input.equipment_access),
@@ -365,6 +392,23 @@ function QuickBuildFormInner() {
   }, [input, errors]);
   const readyToGenerate = !hasValidationErrors;
 
+  useEffect(() => {
+    setInput((current) => {
+      const sanitized = sanitizeQuickBuildFocusByDaysOut(current);
+      if (
+        sanitized.key_goals.length === current.key_goals.length &&
+        sanitized.weak_areas.length === current.weak_areas.length
+      ) {
+        return current;
+      }
+      return {
+        ...current,
+        key_goals: sanitized.key_goals,
+        weak_areas: sanitized.weak_areas,
+      };
+    });
+  }, [input.fight_date, input.no_scheduled_fight]);
+
   function patch<K extends keyof QuickBuildInput>(key: K, value: QuickBuildInput[K]) {
     if (submitError) {
       setSubmitError(null);
@@ -393,6 +437,29 @@ function QuickBuildFormInner() {
         };
       }
       return { ...current, [key]: nextValues };
+    });
+  }
+
+  function togglePerformanceFocusField(key: "key_goals" | "weak_areas", value: string) {
+    if (submitError) {
+      setSubmitError(null);
+    }
+    setInput((current) => {
+      const isSelected = current[key].includes(value);
+      if (!isSelected) {
+        const availability = getPerformanceFocusOptionAvailability(daysOutCtx, key, value);
+        if (!availability.available) {
+          return current;
+        }
+      }
+
+      const nextValues = toggleListValue(current[key], value);
+      const next = { ...current, [key]: nextValues };
+      return {
+        ...next,
+        key_goals: filterAvailablePerformanceFocusValues(daysOutCtx, "key_goals", next.key_goals),
+        weak_areas: filterAvailablePerformanceFocusValues(daysOutCtx, "weak_areas", next.weak_areas),
+      };
     });
   }
 
@@ -824,21 +891,25 @@ function QuickBuildFormInner() {
           onSelect={handleFocusPresetSelect}
         />
         <ChipMultiSelect
-          label={`Key goals (pick up to ${QUICK_BUILD_KEY_GOAL_CAP})`}
+          label={sharedFocusCap !== null ? `Key goals (shared cap: ${sharedFocusCap})` : `Key goals (pick up to ${QUICK_BUILD_KEY_GOAL_CAP})`}
           options={KEY_GOAL_OPTIONS}
           selectedValues={input.key_goals}
-          onToggle={(value) => toggleField("key_goals", value)}
+          onToggle={(value) => togglePerformanceFocusField("key_goals", value)}
           disableAdditionalSelections={input.key_goals.length >= QUICK_BUILD_KEY_GOAL_CAP || sharedFocusCapReached}
           capDisabledReason={sharedFocusCapReached ? FOCUS_CAP_DISABLED_REASON : `Limit ${QUICK_BUILD_KEY_GOAL_CAP}`}
+          disabledValues={unavailableGoalValues}
+          disabledValueReason="Not available for this fight window"
         />
         <FieldError message={visibleError("key_goals")} />
         <ChipMultiSelect
-          label={`Weak areas (optional, up to ${QUICK_BUILD_WEAK_AREA_CAP})`}
+          label={sharedFocusCap !== null ? `Weak areas (shared cap: ${sharedFocusCap})` : `Weak areas (optional, up to ${QUICK_BUILD_WEAK_AREA_CAP})`}
           options={WEAK_AREA_OPTIONS}
           selectedValues={input.weak_areas}
-          onToggle={(value) => toggleField("weak_areas", value)}
+          onToggle={(value) => togglePerformanceFocusField("weak_areas", value)}
           disableAdditionalSelections={input.weak_areas.length >= QUICK_BUILD_WEAK_AREA_CAP || sharedFocusCapReached}
           capDisabledReason={sharedFocusCapReached ? FOCUS_CAP_DISABLED_REASON : `Limit ${QUICK_BUILD_WEAK_AREA_CAP}`}
+          disabledValues={unavailableWeakAreaValues}
+          disabledValueReason="Not available for this fight window"
         />
         <FieldError message={visibleError("weak_areas")} />
         <FieldError message={visibleError("focus_cap")} />

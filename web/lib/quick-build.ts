@@ -9,6 +9,11 @@ import {
   retainKnownOptionValues,
 } from "@/lib/intake-options";
 import { applyNoScheduledFightSnapshot, emptyPlanRequest } from "@/lib/onboarding";
+import {
+  buildDaysOutContext,
+  computeDaysUntilFight,
+  filterAvailablePerformanceFocusValues,
+} from "@/lib/days-out-policy";
 import { validatePerformanceFocusSelections } from "@/lib/performance-focus-cap";
 import { HARD_SPARRING_DAY_CAP } from "@/lib/training-schedule";
 import type { PlanRequest } from "@/lib/types";
@@ -110,6 +115,15 @@ function isFutureOrToday(value: string, now: Date = new Date()): boolean {
 
 export type QuickBuildValidationErrors = Partial<Record<keyof QuickBuildInput | "focus_cap", string>>;
 
+export function sanitizeQuickBuildFocusByDaysOut(input: QuickBuildInput): Pick<QuickBuildInput, "key_goals" | "weak_areas"> {
+  const daysUntilFight = input.no_scheduled_fight ? null : computeDaysUntilFight(input.fight_date);
+  const daysOutCtx = buildDaysOutContext(daysUntilFight);
+  return {
+    key_goals: filterAvailablePerformanceFocusValues(daysOutCtx, "key_goals", input.key_goals),
+    weak_areas: filterAvailablePerformanceFocusValues(daysOutCtx, "weak_areas", input.weak_areas),
+  };
+}
+
 export function validateQuickBuildInput(
   input: QuickBuildInput,
   options?: { now?: Date; timeZone?: string | null },
@@ -169,6 +183,13 @@ export function validateQuickBuildInput(
   }
   if (input.weak_areas.length > QUICK_BUILD_WEAK_AREA_CAP) {
     errors.weak_areas = `Pick at most ${QUICK_BUILD_WEAK_AREA_CAP} weak areas.`;
+  }
+  const sanitizedFocus = sanitizeQuickBuildFocusByDaysOut(input);
+  if (sanitizedFocus.key_goals.length !== input.key_goals.length) {
+    errors.key_goals = "One or more goals are not available for this fight window.";
+  }
+  if (sanitizedFocus.weak_areas.length !== input.weak_areas.length) {
+    errors.weak_areas = "One or more weak areas are not available for this fight window.";
   }
 
   if (!input.no_scheduled_fight && input.fight_date && !errors.fight_date) {
