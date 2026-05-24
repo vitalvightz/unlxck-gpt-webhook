@@ -201,16 +201,23 @@ def test_in_process_generation_env_override_enabled(monkeypatch):
     assert is_in_process_generation_enabled() is True
 
 
-def test_worker_stale_timeout_default_tracks_stage1_timeout(monkeypatch):
+def test_worker_stale_timeout_default_is_300_when_env_unset(monkeypatch):
     monkeypatch.delenv("UNLXCK_GENERATION_WORKER_STALE_AFTER_SECONDS", raising=False)
-    monkeypatch.delenv("APP_STAGE1_PLANNER_TIMEOUT_SECONDS", raising=False)
-    monkeypatch.delenv("STAGE1_PLANNER_TIMEOUT_SECONDS", raising=False)
-    assert worker_module._worker_stale_after_seconds_default() == 660
+    stale_after_seconds = max(
+        30,
+        int(os.getenv("UNLXCK_GENERATION_WORKER_STALE_AFTER_SECONDS", "300")),
+    )
+    assert stale_after_seconds == 300
 
 
-def test_worker_stale_timeout_default_uses_configured_stage1_timeout(monkeypatch):
+def test_worker_stale_timeout_default_ignores_stage1_timeout(monkeypatch):
+    monkeypatch.delenv("UNLXCK_GENERATION_WORKER_STALE_AFTER_SECONDS", raising=False)
     monkeypatch.setenv("STAGE1_PLANNER_TIMEOUT_SECONDS", "720")
-    assert worker_module._worker_stale_after_seconds_default() == 780
+    stale_after_seconds = max(
+        30,
+        int(os.getenv("UNLXCK_GENERATION_WORKER_STALE_AFTER_SECONDS", "300")),
+    )
+    assert stale_after_seconds == 300
 
 
 def test_worker_tick_processes_queued_job_to_terminal_status():

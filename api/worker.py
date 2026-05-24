@@ -13,26 +13,6 @@ from .store import AppStore, SupabaseAppStore
 
 logger = logging.getLogger(__name__)
 
-_STAGE1_PLANNER_TIMEOUT_DEFAULT_SECONDS = 600
-_WORKER_STALE_BUFFER_SECONDS = 60
-
-
-def _worker_stale_after_seconds_default() -> int:
-    raw_timeout = os.getenv("STAGE1_PLANNER_TIMEOUT_SECONDS")
-    if raw_timeout is None:
-        raw_timeout = os.getenv("APP_STAGE1_PLANNER_TIMEOUT_SECONDS", str(_STAGE1_PLANNER_TIMEOUT_DEFAULT_SECONDS))
-    try:
-        stage1_timeout_seconds = float(str(raw_timeout).strip())
-    except ValueError:
-        stage1_timeout_seconds = float(_STAGE1_PLANNER_TIMEOUT_DEFAULT_SECONDS)
-    if stage1_timeout_seconds <= 0:
-        stage1_timeout_seconds = float(_STAGE1_PLANNER_TIMEOUT_DEFAULT_SECONDS)
-    return max(
-        _STAGE1_PLANNER_TIMEOUT_DEFAULT_SECONDS + _WORKER_STALE_BUFFER_SECONDS,
-        int(stage1_timeout_seconds) + _WORKER_STALE_BUFFER_SECONDS,
-    )
-
-
 async def _mark_job_failed_before_runtime(
     *,
     store: AppStore,
@@ -168,11 +148,11 @@ async def run_worker() -> None:
     )
     stale_after_seconds = max(
         30,
-        int(os.getenv("UNLXCK_GENERATION_WORKER_STALE_AFTER_SECONDS", str(_worker_stale_after_seconds_default()))),
+        int(os.getenv("UNLXCK_GENERATION_WORKER_STALE_AFTER_SECONDS", "300")),
     )
     max_concurrent_jobs = max(
         1,
-        int(os.getenv("UNLXCK_GENERATION_WORKER_MAX_CONCURRENT_JOBS", "3")),
+        int(os.getenv("UNLXCK_GENERATION_WORKER_MAX_CONCURRENT_JOBS", "1")),
     )
 
     active_tasks: set[str] = set()

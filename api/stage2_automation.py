@@ -293,7 +293,7 @@ class OpenAIStage2Automator:
             )
 
         model = os.getenv("UNLXCK_STAGE2_MODEL", "gpt-5-mini").strip() or "gpt-5-mini"
-        timeout_seconds = float(os.getenv("UNLXCK_STAGE2_TIMEOUT_SECONDS", "90"))
+        timeout_seconds = float(os.getenv("UNLXCK_STAGE2_TIMEOUT_SECONDS", "210"))
         client = AsyncOpenAI(
             api_key=api_key,
             timeout=timeout_seconds,
