@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
+import { retryGenerationJob } from "@/lib/api";
+import { useAppSession } from "./auth-provider";
 import { useGenerationStatus } from "./generation-status-provider";
 
 function formatElapsed(ms: number): string {
@@ -16,6 +18,7 @@ function formatElapsed(ms: number): string {
 
 const CELEBRATION_DURATION_MS = 1_600;
 const RIBBON_DISMISSED_KEY = "unlxck:generation-ribbon-dismissed";
+const latestJobDismissKey = (jobId: string) => `${RIBBON_DISMISSED_KEY}:${jobId}`;
 
 export function getGenerationStatusTarget(
   phase: string | null,
@@ -36,10 +39,13 @@ export function getGenerationStatusTarget(
 }
 
 export function GlobalGenerationStatus() {
-  const { isActive, statusMessage, phase, jobId, planId, terminalStatus, startedAtMs, refreshStatus } = useGenerationStatus();
+  const { session } = useAppSession();
+  const { isActive, statusMessage, phase, jobId, planId, terminalStatus, startedAtMs, refreshStatus, latestJob } = useGenerationStatus();
   const [now, setNow] = useState(() => Date.now());
   const [isCelebrating, setIsCelebrating] = useState(false);
   const [isDismissed, setIsDismissed] = useState(false);
+  const [isRetryingLatest, setIsRetryingLatest] = useState(false);
+  const [retryLatestError, setRetryLatestError] = useState<string | null>(null);
   const previousPhaseRef = useRef(phase);
   const previousGenerationKeyRef = useRef<string | null>(null);
 
@@ -77,12 +83,13 @@ export function GlobalGenerationStatus() {
   }, [phase]);
 
   useEffect(() => {
+    const latestDismissed = latestJob?.job_id ? window.localStorage.getItem(latestJobDismissKey(latestJob.job_id)) === "1" : false;
     try {
-      setIsDismissed(window.localStorage.getItem(RIBBON_DISMISSED_KEY) === "1");
+      setIsDismissed(latestDismissed || window.localStorage.getItem(RIBBON_DISMISSED_KEY) === "1");
     } catch {
       setIsDismissed(false);
     }
-  }, []);
+  }, [latestJob?.job_id]);
 
   useEffect(() => {
     if (!isActive) {
@@ -102,8 +109,81 @@ export function GlobalGenerationStatus() {
     previousGenerationKeyRef.current = generationKey;
   }, [isActive, jobId, startedAtMs]);
 
-  if (!isActive) {
+  if (!isActive && !latestJob) {
     return null;
+  }
+
+  const mapLatestError = (error?: string | null): string => {
+    if (!error) return "Generation failed unexpectedly. Retry or contact support.";
+    if (error.includes("Stage 2 first_pass prompt too large")) return "Your plan was too large to finalize automatically. Retry is available.";
+    if (error.includes("Stage 1 planner timed out")) return "Generation took too long and stopped. Retry is available.";
+    if (error.includes("Plan generation failed unexpectedly")) return "Generation failed unexpectedly. Retry or contact support.";
+    return "Generation failed unexpectedly. Retry or contact support.";
+  };
+
+  const dismissCurrentBanner = () => {
+    setIsDismissed(true);
+    try {
+      if (!isActive && latestJob?.job_id && (latestJob.status === "failed" || latestJob.status === "review_required")) {
+        window.localStorage.setItem(latestJobDismissKey(latestJob.job_id), "1");
+        return;
+      }
+      window.localStorage.setItem(RIBBON_DISMISSED_KEY, "1");
+    } catch {}
+  };
+
+  if (!isActive && latestJob) {
+    if (isDismissed && (latestJob.status === "failed" || latestJob.status === "review_required")) {
+      return null;
+    }
+    if (latestJob.status === "failed") {
+      return (
+        <div className="global-generation-status global-generation-status-failed">
+          <div className="global-generation-status-main">
+            <div className="global-generation-status-content">
+              <span className="global-generation-status-text">
+                <span className="global-generation-status-message">{mapLatestError(latestJob.error)}</span>
+                {latestJob.completed_at ? <span className="global-generation-status-elapsed">Completed {new Date(latestJob.completed_at).toLocaleString()}</span> : null}
+              </span>
+              {latestJob.can_retry ? (
+                <button
+                  type="button"
+                  className="global-generation-status-cta-label"
+                  disabled={isRetryingLatest}
+                  onClick={() => {
+                    if (!session?.access_token || isRetryingLatest) return;
+                    setRetryLatestError(null);
+                    setIsRetryingLatest(true);
+                    void retryGenerationJob(session.access_token, latestJob.job_id)
+                      .then(() => refreshStatus())
+                      .catch(() => setRetryLatestError("Retry failed. Open Generate and try again."))
+                      .finally(() => setIsRetryingLatest(false));
+                  }}
+                >
+                  {isRetryingLatest ? "Retrying..." : "Retry"}
+                </button>
+              ) : null}
+            </div>
+            {retryLatestError ? <div className="global-generation-status-message">{retryLatestError}</div> : null}
+          </div>
+          <button type="button" className="global-generation-status-dismiss" aria-label="Hide generation ribbon" onClick={dismissCurrentBanner}>×</button>
+        </div>
+      );
+    }
+    if (latestJob.status === "review_required" && latestJob.plan_id) {
+      return (
+        <div className="global-generation-status global-generation-status-completed">
+          <Link href={`/plans/${latestJob.plan_id}?review_required=1`} className="global-generation-status-main">
+            <div className="global-generation-status-message">Your plan is ready for review</div>
+            <span className="global-generation-status-cta-label">Open plan</span>
+          </Link>
+          <button type="button" className="global-generation-status-dismiss" aria-label="Hide generation ribbon" onClick={dismissCurrentBanner}>×</button>
+        </div>
+      );
+    }
+    if (!latestJob.plan_id && latestJob.status === "completed") {
+      return <div className="global-generation-status"><div className="global-generation-status-main">Your plan was generated but needs recovery/support</div></div>;
+    }
   }
 
   const canNavigateToPlan = Boolean(navigationTarget);
@@ -124,7 +204,11 @@ export function GlobalGenerationStatus() {
         onClick={() => {
           setIsDismissed(false);
           try {
-            window.localStorage.removeItem(RIBBON_DISMISSED_KEY);
+            if (!isActive && latestJob?.job_id && (latestJob.status === "failed" || latestJob.status === "review_required")) {
+              window.localStorage.removeItem(latestJobDismissKey(latestJob.job_id));
+            } else {
+              window.localStorage.removeItem(RIBBON_DISMISSED_KEY);
+            }
           } catch {}
         }}
       >
@@ -195,12 +279,7 @@ export function GlobalGenerationStatus() {
         type="button"
         className="global-generation-status-dismiss"
         aria-label="Hide generation ribbon"
-        onClick={() => {
-          setIsDismissed(true);
-          try {
-            window.localStorage.setItem(RIBBON_DISMISSED_KEY, "1");
-          } catch {}
-        }}
+        onClick={dismissCurrentBanner}
       >
         ×
       </button>
