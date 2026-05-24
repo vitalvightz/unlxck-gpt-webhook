@@ -172,7 +172,7 @@ async def run_worker() -> None:
     )
     max_concurrent_jobs = max(
         1,
-        int(os.getenv("UNLXCK_GENERATION_WORKER_MAX_CONCURRENT_JOBS", "3")),
+        int(os.getenv("UNLXCK_GENERATION_WORKER_MAX_CONCURRENT_JOBS", "1")),
     )
 
     active_tasks: set[str] = set()

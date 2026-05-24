@@ -119,7 +119,7 @@ SUPABASE_URL=
 SUPABASE_SERVICE_ROLE_KEY=
 SUPABASE_ANON_KEY=
 UNLXCK_ADMIN_EMAILS=you@example.com
-APP_CORS_ORIGINS=http://localhost:3000
+APP_CORS_ORIGINS=https://your-production-frontend-domain
 OPENAI_API_KEY=
 APP_PLAN_GENERATE_DAILY_LIMIT_PER_USER=5
 ```
@@ -165,9 +165,13 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=
   - `1`: API can schedule in-process generation (legacy compatibility mode).
   - `0` (default): durable worker-only mode. API only creates generation jobs, worker processes queued jobs.
 - In worker-only mode, frontend should poll `GET /api/generation-jobs/{id}` (or active-job endpoint) for status. Closing the browser tab does not stop generation because work is owned by the worker service.
-- Worker tuning knobs: `UNLXCK_GENERATION_WORKER_INTERVAL_SECONDS` (default `3`) and `UNLXCK_GENERATION_WORKER_STALE_AFTER_SECONDS` (default `90`)
-- Job stale recovery timeout: `APP_GENERATION_JOB_STALE_AFTER_SECONDS` (default `1400`, minimum `60`)
-- Stage 1 planner timeout: `APP_STAGE1_PLANNER_TIMEOUT_SECONDS` (default `600`; use `0`/`none` to disable outside production)
+- Worker tuning knobs: `UNLXCK_GENERATION_WORKER_INTERVAL_SECONDS` (default `3`), `UNLXCK_GENERATION_WORKER_STALE_AFTER_SECONDS` (default `300`), and `UNLXCK_GENERATION_WORKER_MAX_CONCURRENT_JOBS` (default `1`)
+- Job stale recovery timeout: `APP_GENERATION_JOB_STALE_AFTER_SECONDS` (default `300`, minimum `60`)
+- Stage 1 planner timeout: `APP_STAGE1_PLANNER_TIMEOUT_SECONDS` / `STAGE1_PLANNER_TIMEOUT_SECONDS` (default `600`; `STAGE1_PLANNER_TIMEOUT_SECONDS` takes precedence when both are set)
+- Stage 2 automation timeout: `UNLXCK_STAGE2_TIMEOUT_SECONDS` (default `210`)
+- Stage 2 finalize timeout: `APP_STAGE2_FINALIZE_TIMEOUT_SECONDS` (default `240`)
+- Stage 2 first-pass prompt cap: `UNLXCK_STAGE2_MAX_FIRST_PASS_CHARS` (default `180000`)
+- API generation concurrency cap: `APP_GENERATION_MAX_CONCURRENT_JOBS` (default `1`)
 - The bank JSON files are loaded into memory on first request and cached for each worker process lifetime (with `--workers 2`, both workers will warm independently).
 - Runtime guards are split between process-local best-effort protections and durable database-backed protections:
   - `active_generation_tasks` is process-local and only prevents duplicate scheduling inside one API process.
