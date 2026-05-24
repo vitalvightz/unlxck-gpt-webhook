@@ -457,8 +457,8 @@ function QuickBuildFormInner() {
       const next = { ...current, [key]: nextValues };
       return {
         ...next,
-        key_goals: filterAvailablePerformanceFocusValues(daysOutCtx, "key_goals", next.key_goals),
-        weak_areas: filterAvailablePerformanceFocusValues(daysOutCtx, "weak_areas", next.weak_areas),
+        key_goals: key === "key_goals" ? filterAvailablePerformanceFocusValues(daysOutCtx, "key_goals", next.key_goals) : next.key_goals,
+        weak_areas: key === "weak_areas" ? filterAvailablePerformanceFocusValues(daysOutCtx, "weak_areas", next.weak_areas) : next.weak_areas,
       };
     });
   }
