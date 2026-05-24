@@ -13,25 +13,22 @@ from .store import AppStore, SupabaseAppStore
 
 logger = logging.getLogger(__name__)
 
-_STAGE1_PLANNER_TIMEOUT_DEFAULT_SECONDS = 600
-_WORKER_STALE_BUFFER_SECONDS = 60
 
-
-def _worker_stale_after_seconds_default() -> int:
-    raw_timeout = os.getenv("STAGE1_PLANNER_TIMEOUT_SECONDS")
-    if raw_timeout is None:
-        raw_timeout = os.getenv("APP_STAGE1_PLANNER_TIMEOUT_SECONDS", str(_STAGE1_PLANNER_TIMEOUT_DEFAULT_SECONDS))
+def _int_env(name: str, default: int, *, minimum: int = 1) -> int:
+    raw_value = os.getenv(name, str(default)).strip()
     try:
-        stage1_timeout_seconds = float(str(raw_timeout).strip())
+        return max(minimum, int(raw_value))
     except ValueError:
-        stage1_timeout_seconds = float(_STAGE1_PLANNER_TIMEOUT_DEFAULT_SECONDS)
-    if stage1_timeout_seconds <= 0:
-        stage1_timeout_seconds = float(_STAGE1_PLANNER_TIMEOUT_DEFAULT_SECONDS)
-    return max(
-        _STAGE1_PLANNER_TIMEOUT_DEFAULT_SECONDS + _WORKER_STALE_BUFFER_SECONDS,
-        int(stage1_timeout_seconds) + _WORKER_STALE_BUFFER_SECONDS,
-    )
+        logger.warning("[worker] invalid integer env %s=%r; using %s", name, raw_value, default)
+        return default
 
+
+def _worker_stale_after_seconds() -> int:
+    return _int_env("UNLXCK_GENERATION_WORKER_STALE_AFTER_SECONDS", 300, minimum=30)
+
+
+def _worker_max_concurrent_jobs() -> int:
+    return _int_env("UNLXCK_GENERATION_WORKER_MAX_CONCURRENT_JOBS", 1, minimum=1)
 
 async def _mark_job_failed_before_runtime(
     *,
@@ -166,14 +163,8 @@ async def run_worker() -> None:
         1.0,
         float(os.getenv("UNLXCK_GENERATION_WORKER_INTERVAL_SECONDS", "3")),
     )
-    stale_after_seconds = max(
-        30,
-        int(os.getenv("UNLXCK_GENERATION_WORKER_STALE_AFTER_SECONDS", str(_worker_stale_after_seconds_default()))),
-    )
-    max_concurrent_jobs = max(
-        1,
-        int(os.getenv("UNLXCK_GENERATION_WORKER_MAX_CONCURRENT_JOBS", "3")),
-    )
+    stale_after_seconds = _worker_stale_after_seconds()
+    max_concurrent_jobs = _worker_max_concurrent_jobs()
 
     active_tasks: set[str] = set()
     detached_tasks: set[asyncio.Task[None]] = set()

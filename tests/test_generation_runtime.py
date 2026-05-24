@@ -201,16 +201,30 @@ def test_in_process_generation_env_override_enabled(monkeypatch):
     assert is_in_process_generation_enabled() is True
 
 
-def test_worker_stale_timeout_default_tracks_stage1_timeout(monkeypatch):
+def test_worker_stale_timeout_default_is_300_when_env_unset(monkeypatch):
     monkeypatch.delenv("UNLXCK_GENERATION_WORKER_STALE_AFTER_SECONDS", raising=False)
-    monkeypatch.delenv("APP_STAGE1_PLANNER_TIMEOUT_SECONDS", raising=False)
-    monkeypatch.delenv("STAGE1_PLANNER_TIMEOUT_SECONDS", raising=False)
-    assert worker_module._worker_stale_after_seconds_default() == 660
+    assert worker_module._worker_stale_after_seconds() == 300
 
 
-def test_worker_stale_timeout_default_uses_configured_stage1_timeout(monkeypatch):
+def test_worker_stale_timeout_default_ignores_stage1_timeout(monkeypatch):
+    monkeypatch.delenv("UNLXCK_GENERATION_WORKER_STALE_AFTER_SECONDS", raising=False)
     monkeypatch.setenv("STAGE1_PLANNER_TIMEOUT_SECONDS", "720")
-    assert worker_module._worker_stale_after_seconds_default() == 780
+    assert worker_module._worker_stale_after_seconds() == 300
+
+
+def test_worker_stale_timeout_invalid_falls_back_to_300(monkeypatch):
+    monkeypatch.setenv("UNLXCK_GENERATION_WORKER_STALE_AFTER_SECONDS", "not-a-number")
+    assert worker_module._worker_stale_after_seconds() == 300
+
+
+def test_worker_max_concurrency_default_is_1(monkeypatch):
+    monkeypatch.delenv("UNLXCK_GENERATION_WORKER_MAX_CONCURRENT_JOBS", raising=False)
+    assert worker_module._worker_max_concurrent_jobs() == 1
+
+
+def test_worker_max_concurrency_invalid_falls_back_to_1(monkeypatch):
+    monkeypatch.setenv("UNLXCK_GENERATION_WORKER_MAX_CONCURRENT_JOBS", "not-a-number")
+    assert worker_module._worker_max_concurrent_jobs() == 1
 
 
 def test_worker_tick_processes_queued_job_to_terminal_status():

@@ -58,6 +58,16 @@ def _stage2_openai_max_retries() -> int:
     )
 
 
+def _stage2_timeout_seconds() -> float:
+    default_timeout = 210.0
+    raw_value = os.getenv("UNLXCK_STAGE2_TIMEOUT_SECONDS", str(default_timeout)).strip()
+    try:
+        return max(1.0, float(raw_value))
+    except ValueError:
+        logger.warning("[stage2] invalid float env UNLXCK_STAGE2_TIMEOUT_SECONDS=%r; using %s", raw_value, default_timeout)
+        return default_timeout
+
+
 def _estimated_input_tokens(prompt: str) -> int:
     if not prompt:
         return 0
@@ -293,7 +303,7 @@ class OpenAIStage2Automator:
             )
 
         model = os.getenv("UNLXCK_STAGE2_MODEL", "gpt-5-mini").strip() or "gpt-5-mini"
-        timeout_seconds = float(os.getenv("UNLXCK_STAGE2_TIMEOUT_SECONDS", "90"))
+        timeout_seconds = _stage2_timeout_seconds()
         client = AsyncOpenAI(
             api_key=api_key,
             timeout=timeout_seconds,

@@ -216,3 +216,20 @@ def test_from_env_disables_openai_sdk_retries_by_default(monkeypatch: pytest.Mon
 
     assert isinstance(automator, OpenAIStage2Automator)
     assert captured_kwargs["max_retries"] == 0
+
+
+def test_from_env_invalid_timeout_falls_back_to_210(monkeypatch: pytest.MonkeyPatch) -> None:
+    captured_kwargs: dict[str, object] = {}
+
+    class FakeAsyncOpenAI:
+        def __init__(self, **kwargs: object) -> None:
+            captured_kwargs.update(kwargs)
+
+    monkeypatch.setitem(sys.modules, "openai", SimpleNamespace(AsyncOpenAI=FakeAsyncOpenAI))
+    monkeypatch.setenv("OPENAI_API_KEY", "test-key")
+    monkeypatch.setenv("UNLXCK_STAGE2_TIMEOUT_SECONDS", "not-a-number")
+
+    automator = OpenAIStage2Automator.from_env()
+
+    assert isinstance(automator, OpenAIStage2Automator)
+    assert captured_kwargs["timeout"] == 210.0
