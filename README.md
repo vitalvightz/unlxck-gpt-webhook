@@ -162,8 +162,8 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=
   - Web/API service start command: `uvicorn api.app:app --host 0.0.0.0 --port $PORT --workers 2`
   - Worker service start command: `python -m api.worker`
 - `UNLXCK_ENABLE_IN_PROCESS_GENERATION` controls generation execution mode:
-  - `1` (default): API can schedule in-process generation (backward-compatible mode).
-  - `0`: durable worker-only mode. API only creates generation jobs, worker processes queued jobs.
+  - `1`: API can schedule in-process generation (legacy compatibility mode).
+  - `0` (default): durable worker-only mode. API only creates generation jobs, worker processes queued jobs.
 - In worker-only mode, frontend should poll `GET /api/generation-jobs/{id}` (or active-job endpoint) for status. Closing the browser tab does not stop generation because work is owned by the worker service.
 - Worker tuning knobs: `UNLXCK_GENERATION_WORKER_INTERVAL_SECONDS` (default `3`) and `UNLXCK_GENERATION_WORKER_STALE_AFTER_SECONDS` (default `90`)
 - Job stale recovery timeout: `APP_GENERATION_JOB_STALE_AFTER_SECONDS` (default `1400`, minimum `60`)

@@ -8,6 +8,8 @@ import traceback
 import os
 import threading
 import time
+import multiprocessing as mp
+import queue
 from contextlib import suppress
 from datetime import datetime, timezone
 from typing import Any, Callable
@@ -280,7 +282,7 @@ def _use_fastapi_background_tasks() -> bool:
 
 
 def is_in_process_generation_enabled() -> bool:
-    return os.getenv("UNLXCK_ENABLE_IN_PROCESS_GENERATION", "1").strip() == "1"
+    return os.getenv("UNLXCK_ENABLE_IN_PROCESS_GENERATION", "0").strip() == "1"
 
 
 def generation_max_concurrent_jobs() -> int:
@@ -325,16 +327,72 @@ def _schedule_detached_generation_task(
     task.add_done_callback(_cleanup_detached_generation_task)
 
 
+
+
+def _run_planner_in_subprocess(
+    planner_fn: Planner,
+    payload: dict[str, Any],
+    result_queue: Any,
+    progress_queue: Any,
+) -> None:
+    def _child_progress_callback(code: str, label: str, detail: str, meta: dict[str, Any]) -> None:
+        progress_queue.put((code, label, detail, meta))
+
+    try:
+        result = _invoke_planner(planner_fn, payload, _child_progress_callback)
+        result_queue.put(("ok", result))
+    except Exception as exc:  # pragma: no cover - defensive relay
+        result_queue.put(("error", {"message": str(exc), "traceback": traceback.format_exc()}))
+
+
+async def _drain_stage1_progress_queue(
+    progress_queue: Any,
+    progress_callback: ProgressCallback | None,
+) -> None:
+    while True:
+        try:
+            code, label, detail, meta = progress_queue.get_nowait()
+        except queue.Empty:
+            return
+        if progress_callback is not None:
+            progress_callback(code, label, detail, meta)
+
 async def run_stage1_planner(
     planner_fn: Planner,
     payload: dict[str, Any],
     *,
     progress_callback: ProgressCallback | None = None,
+    timeout_seconds: float | None = None,
 ) -> dict[str, Any]:
-    # NOTE: asyncio.to_thread cannot forcibly stop the worker thread on timeout.
-    # The caller must guard state writes so late planner callbacks/results cannot
-    # mutate a job that has already been marked failed.
-    return await asyncio.to_thread(_invoke_planner, planner_fn, payload, progress_callback)
+    ctx = mp.get_context("fork")
+    result_queue = ctx.Queue()
+    progress_queue = ctx.Queue()
+    process = ctx.Process(
+        target=_run_planner_in_subprocess,
+        args=(planner_fn, payload, result_queue, progress_queue),
+        daemon=True,
+    )
+    process.start()
+
+    start = time.monotonic()
+    try:
+        while True:
+            await _drain_stage1_progress_queue(progress_queue, progress_callback)
+            if not process.is_alive():
+                await _drain_stage1_progress_queue(progress_queue, progress_callback)
+                status, payload_or_error = result_queue.get_nowait()
+                if status == "ok":
+                    return payload_or_error
+                raise RuntimeError(payload_or_error.get("message") or "Stage 1 planner failed")
+            if timeout_seconds is not None and (time.monotonic() - start) >= timeout_seconds:
+                process.terminate()
+                process.join(timeout=1)
+                raise asyncio.TimeoutError
+            await asyncio.sleep(0.05)
+    finally:
+        if process.is_alive():
+            process.terminate()
+            process.join(timeout=1)
 
 
 async def finalize_stage2_with_timeout(
@@ -628,22 +686,19 @@ async def run_generation_job(
                 "Starting the deterministic planner pass.",
             )
             await _touch_heartbeat()
-            planner_coro = run_stage1_planner(
-                planner_fn,
-                planner_payload,
-                progress_callback=progress_callback,
-            )
             _emit_milestone(
                 "stage1_planner_invoked",
                 "Stage 1 planner invoked",
-                "Planner thread was invoked and is waiting for its first result.",
+                "Planner process was invoked and is waiting for its first result.",
             )
             stage1_timeout_seconds = _stage1_planner_timeout_seconds()
             try:
-                if stage1_timeout_seconds is None:
-                    stage1_result = await planner_coro
-                else:
-                    stage1_result = await asyncio.wait_for(planner_coro, timeout=stage1_timeout_seconds)
+                stage1_result = await run_stage1_planner(
+                    planner_fn,
+                    planner_payload,
+                    progress_callback=progress_callback,
+                    timeout_seconds=stage1_timeout_seconds,
+                )
             except asyncio.TimeoutError:
                 logger.exception("[jobs] generation:stage1_timeout athlete_id=%s job_id=%s", athlete_id, job_id)
                 now_iso = utc_now_iso()
