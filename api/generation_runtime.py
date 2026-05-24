@@ -44,6 +44,7 @@ _OPENAI_QUOTA_ADMIN_ERROR = "OpenAI quota exceeded. Check API billing, credits, 
 _OPENAI_QUOTA_ATHLETE_ERROR = "Generation is temporarily unavailable. Please try again later."
 _FINAL_RESULT_PERSIST_TIMEOUT_SECONDS = 40.0
 _FINAL_RESULT_PERSIST_TIMEOUT_ERROR = "Stage 2 result persistence timed out before final_result was saved."
+_POST_PERSIST_CLEANUP_TIMEOUT_SECONDS = 8.0
 
 
 def utc_now_iso() -> str:
@@ -856,12 +857,6 @@ async def run_generation_job(
             "Stage 2 result saved",
             "Finalizer output was saved to the generation job.",
         )
-
-        try:
-            await _to_thread_with_heartbeat(store.clear_onboarding_draft, athlete_id)
-        except Exception:
-            logger.exception("[jobs] generation:clear_onboarding_draft_failed athlete_id=%s job_id=%s", athlete_id, job_id)
-
         plan_status = str(plan_row.get("status") or "failed")
         final_status = "completed" if plan_status in {"ready", "triage_blocked"} else plan_status
         if final_status == "completed":
@@ -879,6 +874,28 @@ async def run_generation_job(
             completed_at=utc_now_iso(),
             heartbeat_at=utc_now_iso(),
         )
+        _emit_milestone(
+            "generation_job_terminal_status_persisted",
+            "Generation job terminal status persisted",
+            "Terminal generation job lifecycle status was saved.",
+            final_status=final_status,
+            plan_status=plan_status,
+            plan_id=plan_id,
+        )
+        try:
+            await asyncio.wait_for(
+                _to_thread_with_heartbeat(store.clear_onboarding_draft, athlete_id),
+                timeout=_POST_PERSIST_CLEANUP_TIMEOUT_SECONDS,
+            )
+        except asyncio.TimeoutError:
+            logger.warning(
+                "[jobs] generation:clear_onboarding_draft_timeout athlete_id=%s job_id=%s timeout_seconds=%s",
+                athlete_id,
+                job_id,
+                _POST_PERSIST_CLEANUP_TIMEOUT_SECONDS,
+            )
+        except Exception:
+            logger.exception("[jobs] generation:clear_onboarding_draft_failed athlete_id=%s job_id=%s", athlete_id, job_id)
         _plan_why_log = plan_row.get("why_log") if isinstance(plan_row.get("why_log"), dict) else {}
         logger.info(
             "[jobs] generation:complete athlete_id=%s job_id=%s plan_id=%s status=%s "

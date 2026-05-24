@@ -10,6 +10,7 @@ from fastapi.testclient import TestClient
 import pytest
 
 import api.app as app_module
+import api.generation_runtime as generation_runtime
 from api.app import create_app
 from api.auth import AuthenticatedUser
 from api.generation_runtime import run_generation_job, schedule_generation_job_if_needed, should_skip_stage2
@@ -2450,6 +2451,118 @@ def test_runtime_generation_saves_completed_plan():
     assert len(plans) == 1
     assert plans[0]["status"] == "ready"
     assert plans[0]["parsing_metadata"] == {}
+
+
+def test_runtime_generation_marks_review_required_job_terminal_after_final_result_persisted():
+    store = FakeStore()
+    athlete = AuthenticatedUser(
+        user_id="athlete-1",
+        email="athlete@example.com",
+        full_name="Athlete One",
+        metadata={},
+    )
+    store.ensure_profile(athlete)
+    request = _build_request({"fight_date": "2026-08-15"})
+    job = store.create_or_get_generation_job(
+        athlete_id=athlete.user_id,
+        client_request_id="runtime-job-review-required",
+        source="self_serve",
+        request_payload=request.model_dump(mode="json"),
+    )
+
+    asyncio.run(
+        run_generation_job(
+            job_id=job["id"],
+            store=store,
+            planner_fn=_planner,
+            stage2=FakeStage2Automator(result=finalized_result(status="review_required", stage2_status="stage2_failed")),
+            active_tasks=set(),
+        )
+    )
+
+    terminal_job = store.get_generation_job(job["id"])
+    milestone_codes = [entry.get("code") for entry in terminal_job.get("progress_milestones", []) if isinstance(entry, dict)]
+    assert "plan_persisted" in milestone_codes
+    assert "final_result_persisted" in milestone_codes
+    assert terminal_job["status"] == "review_required"
+    assert terminal_job["completed_at"] is not None
+    assert terminal_job["error"] is None
+
+
+def test_runtime_generation_emits_plan_saved_and_marks_completed_terminal():
+    store = FakeStore()
+    athlete = AuthenticatedUser(
+        user_id="athlete-1",
+        email="athlete@example.com",
+        full_name="Athlete One",
+        metadata={},
+    )
+    store.ensure_profile(athlete)
+    request = _build_request({"fight_date": "2026-08-15"})
+    job = store.create_or_get_generation_job(
+        athlete_id=athlete.user_id,
+        client_request_id="runtime-job-completed-plan-saved",
+        source="self_serve",
+        request_payload=request.model_dump(mode="json"),
+    )
+
+    asyncio.run(
+        run_generation_job(
+            job_id=job["id"],
+            store=store,
+            planner_fn=_planner,
+            stage2=FakeStage2Automator(result=finalized_result()),
+            active_tasks=set(),
+        )
+    )
+
+    terminal_job = store.get_generation_job(job["id"])
+    milestone_codes = [entry.get("code") for entry in terminal_job.get("progress_milestones", []) if isinstance(entry, dict)]
+    assert "plan_saved" in milestone_codes
+    assert terminal_job["status"] == "completed"
+    assert terminal_job["completed_at"] is not None
+
+
+def test_runtime_generation_cleanup_failure_does_not_block_terminal_status(monkeypatch):
+    monkeypatch.setattr(generation_runtime, "_POST_PERSIST_CLEANUP_TIMEOUT_SECONDS", 0.01)
+    store = FakeStore()
+    athlete = AuthenticatedUser(
+        user_id="athlete-1",
+        email="athlete@example.com",
+        full_name="Athlete One",
+        metadata={},
+    )
+    store.ensure_profile(athlete)
+    request = _build_request({"fight_date": "2026-08-15"})
+    job = store.create_or_get_generation_job(
+        athlete_id=athlete.user_id,
+        client_request_id="runtime-job-cleanup-timeout",
+        source="self_serve",
+        request_payload=request.model_dump(mode="json"),
+    )
+
+    original_clear = store.clear_onboarding_draft
+
+    def _slow_clear_onboarding_draft(athlete_id: str) -> None:
+        time.sleep(0.05)
+        original_clear(athlete_id)
+
+    monkeypatch.setattr(store, "clear_onboarding_draft", _slow_clear_onboarding_draft)
+
+    asyncio.run(
+        run_generation_job(
+            job_id=job["id"],
+            store=store,
+            planner_fn=_planner,
+            stage2=FakeStage2Automator(result=finalized_result()),
+            active_tasks=set(),
+        )
+    )
+
+    terminal_job = store.get_generation_job(job["id"])
+    assert terminal_job["status"] == "completed"
+    assert terminal_job["completed_at"] is not None
+    assert terminal_job["status"] != "running"
 
 
 def test_run_generation_job_does_not_reuse_archived_latest_plan_for_same_intake():
