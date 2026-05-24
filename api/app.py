@@ -292,6 +292,10 @@ def _request_payload_summary(payload: Any) -> GenerationRequestPayloadSummary:
     if not isinstance(payload, dict):
         return GenerationRequestPayloadSummary()
     athlete = payload.get("athlete") if isinstance(payload.get("athlete"), dict) else {}
+    technical_style_value = athlete.get("technical_style")
+    technical_style: list[str] = []
+    if isinstance(technical_style_value, list):
+        technical_style = [str(item).strip() for item in technical_style_value if str(item).strip()]
     injuries_value = payload.get("injuries")
     injuries: list[str] = []
     if isinstance(injuries_value, list):
@@ -319,6 +323,7 @@ def _request_payload_summary(payload: Any) -> GenerationRequestPayloadSummary:
         weaknesses=[str(item) for item in (payload.get("weak_areas") or []) if isinstance(item, str)],
         injuries=injuries,
         training_availability=availability_summary,
+        technical_style=technical_style,
     )
 
 
@@ -340,6 +345,8 @@ def _admin_generation_job_diagnostic(job: dict[str, Any], *, stale_after_seconds
 
     return AdminGenerationJobDiagnostic(
         job_id=str(job.get("id") or ""),
+        athlete_id=str(job.get("athlete_id") or ""),
+        intake_id=str(job.get("intake_id") or "") or None,
         status=normalized_status,
         source=str(job.get("source") or ""),
         created_at=str(job.get("created_at") or ""),
@@ -2269,6 +2276,18 @@ def create_app(
                 status_code=status.HTTP_409_CONFLICT,
                 detail="latest intake not found for athlete",
             )
+        latest_intake_athlete_id = str(latest_intake.get("athlete_id") or "").strip()
+        latest_intake_id = str(latest_intake.get("id") or "").strip() or None
+        if latest_intake_athlete_id != athlete_id:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="latest intake belongs to a different athlete",
+            )
+        if not latest_intake_id:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="latest intake is missing id",
+            )
         try:
             request_body = PlanRequest.model_validate(latest_intake["intake"])
         except ValidationError as exc:
@@ -2297,21 +2316,49 @@ def create_app(
             "cli",
         )
         stale_after_seconds = _generation_job_stale_after_seconds()
+        request_payload = request_body.model_dump(mode="json")
         existing_job = await asyncio.to_thread(
             store.get_generation_job_by_client_request_id,
             athlete_id=athlete_id,
             client_request_id=client_request_id,
         )
         if existing_job:
-            if is_startup_stale_generation_job(existing_job, stale_after_seconds=stale_after_seconds):
+            existing_source = str(existing_job.get("source") or "").strip()
+            existing_intake_id = str(existing_job.get("intake_id") or "").strip() or None
+            existing_payload = existing_job.get("request_payload")
+            has_safe_linkage = (
+                existing_source == "admin_latest_intake"
+                and existing_intake_id == latest_intake_id
+                and isinstance(existing_payload, dict)
+                and _stable_payload_hash(existing_payload) == _stable_payload_hash(request_payload)
+            )
+            is_startup_stale = is_startup_stale_generation_job(existing_job, stale_after_seconds=stale_after_seconds)
+            if not has_safe_linkage and not is_startup_stale:
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail="unsafe existing admin generation job linkage",
+                )
+            if is_startup_stale:
                 existing_job = await asyncio.to_thread(
                     store.create_or_get_generation_job,
                     athlete_id=athlete_id,
                     client_request_id=client_request_id,
-                    source=str(existing_job.get("source") or "admin_latest_intake"),
-                    request_payload=request_body.model_dump(mode="json"),
+                    source="admin_latest_intake",
+                    request_payload=request_payload,
+                    intake_id=latest_intake_id,
                     stale_after_seconds=stale_after_seconds,
                 )
+                existing_payload_after_reset = existing_job.get("request_payload")
+                if (
+                    str(existing_job.get("source") or "").strip() != "admin_latest_intake"
+                    or str(existing_job.get("intake_id") or "").strip() != (latest_intake_id or "")
+                    or not isinstance(existing_payload_after_reset, dict)
+                    or _stable_payload_hash(existing_payload_after_reset) != _stable_payload_hash(request_payload)
+                ):
+                    raise HTTPException(
+                        status_code=status.HTTP_409_CONFLICT,
+                        detail="unsafe existing admin generation job linkage",
+                    )
             job = await schedule_generation_job_if_needed(
                 job=existing_job,
                 background_tasks=background_tasks,
@@ -2340,7 +2387,8 @@ def create_app(
             athlete_id=athlete_id,
             client_request_id=client_request_id,
             source="admin_latest_intake",
-            request_payload=request_body.model_dump(mode="json"),
+            request_payload=request_payload,
+            intake_id=latest_intake_id,
             stale_after_seconds=stale_after_seconds,
         )
         job = await schedule_generation_job_if_needed(

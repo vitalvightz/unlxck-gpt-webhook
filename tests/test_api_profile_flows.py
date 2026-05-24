@@ -94,6 +94,140 @@ def test_admin_can_generate_new_plan_from_latest_intake():
     assert response.json()["athlete_id"] == "athlete-1"
 
 
+def test_admin_generate_uses_selected_athlete_latest_intake_not_admin_draft():
+    client, store, _ = _build_client()
+    admin_request = _build_request({"athlete": {"full_name": "Admin Name", "technical_style": ["mma"]}})
+    store.update_profile("admin-1", ProfileUpdateRequest(onboarding_draft=admin_request.model_dump(mode="json")))
+
+    athlete_request = _build_request({"athlete": {"full_name": "Athlete One", "technical_style": ["boxing"]}})
+    athlete_intake = store.create_intake("athlete-1", athlete_request)
+
+    response = client.post(
+        "/api/admin/athletes/athlete-1/plans/generate-from-latest-intake",
+        headers={"Authorization": "Bearer admin-token"},
+    )
+    assert response.status_code == 202
+
+    job = next(iter(store.generation_jobs.values()))
+    assert job["athlete_id"] == "athlete-1"
+    assert job["intake_id"] == athlete_intake["id"]
+    assert job["source"] == "admin_latest_intake"
+    assert job["request_payload"]["athlete"]["full_name"] == "Athlete One"
+    assert job["request_payload"]["athlete"]["full_name"] != "Admin Name"
+
+    plan = next(iter(store.plans.values()))
+    assert plan["athlete_id"] == "athlete-1"
+
+
+def test_admin_generate_from_latest_intake_rejects_mismatched_intake_athlete():
+    client, store, _ = _build_client()
+    store.intakes["athlete-1"] = [
+        {
+            "id": "intake_bad_link",
+            "athlete_id": "athlete-2",
+            "fight_date": "2099-01-01",
+            "technical_style": ["boxing"],
+            "intake": _build_request().model_dump(mode="json"),
+            "created_at": "2026-01-01T00:00:00+00:00",
+        }
+    ]
+
+    response = client.post(
+        "/api/admin/athletes/athlete-1/plans/generate-from-latest-intake",
+        headers={"Authorization": "Bearer admin-token"},
+    )
+    assert response.status_code == 409
+    assert response.json()["detail"] == "latest intake belongs to a different athlete"
+
+
+def test_admin_generate_rejects_existing_job_with_self_serve_source():
+    client, store, _ = _build_client()
+    latest_intake = store.create_intake("athlete-1", _build_request())
+    store.create_or_get_generation_job(
+        athlete_id="athlete-1",
+        client_request_id="admin-linkage-1",
+        source="self_serve",
+        request_payload=_build_request().model_dump(mode="json"),
+        intake_id=latest_intake["id"],
+    )
+
+    response = client.post(
+        "/api/admin/athletes/athlete-1/plans/generate-from-latest-intake",
+        headers={"Authorization": "Bearer admin-token", "X-Client-Request-Id": "admin-linkage-1"},
+    )
+    assert response.status_code == 409
+    assert response.json()["detail"] == "unsafe existing admin generation job linkage"
+
+
+def test_admin_generate_rejects_existing_admin_job_with_wrong_intake_id():
+    client, store, _ = _build_client()
+    latest_intake = store.create_intake("athlete-1", _build_request())
+    wrong_intake = store.create_intake("athlete-1", _build_request({"athlete": {"full_name": "Wrong Intake"}}))
+    store.intakes["athlete-1"] = [wrong_intake, latest_intake]
+    store.create_or_get_generation_job(
+        athlete_id="athlete-1",
+        client_request_id="admin-linkage-2",
+        source="admin_latest_intake",
+        request_payload=latest_intake["intake"],
+        intake_id=wrong_intake["id"],
+    )
+
+    response = client.post(
+        "/api/admin/athletes/athlete-1/plans/generate-from-latest-intake",
+        headers={"Authorization": "Bearer admin-token", "X-Client-Request-Id": "admin-linkage-2"},
+    )
+    assert response.status_code == 409
+    assert response.json()["detail"] == "unsafe existing admin generation job linkage"
+
+
+def test_admin_generate_rejects_existing_admin_job_with_mismatched_payload():
+    client, store, _ = _build_client()
+    latest_intake = store.create_intake("athlete-1", _build_request())
+    store.create_or_get_generation_job(
+        athlete_id="athlete-1",
+        client_request_id="admin-linkage-3",
+        source="admin_latest_intake",
+        request_payload=_build_request({"athlete": {"full_name": "Bad Payload"}}).model_dump(mode="json"),
+        intake_id=latest_intake["id"],
+    )
+
+    response = client.post(
+        "/api/admin/athletes/athlete-1/plans/generate-from-latest-intake",
+        headers={"Authorization": "Bearer admin-token", "X-Client-Request-Id": "admin-linkage-3"},
+    )
+    assert response.status_code == 409
+    assert response.json()["detail"] == "unsafe existing admin generation job linkage"
+
+
+def test_admin_generate_resets_stale_existing_job_to_admin_latest_intake_linkage():
+    client, store, _ = _build_client()
+    latest_intake = store.create_intake("athlete-1", _build_request({"athlete": {"full_name": "Latest Name"}}))
+    existing_job = store.create_or_get_generation_job(
+        athlete_id="athlete-1",
+        client_request_id="admin-linkage-4",
+        source="self_serve",
+        request_payload=_build_request({"athlete": {"full_name": "Old Name"}}).model_dump(mode="json"),
+        intake_id=None,
+    )
+    store.update_generation_job(
+        existing_job["id"],
+        status="running",
+        started_at="2020-01-01T00:00:00+00:00",
+        heartbeat_at="2020-01-01T00:00:00+00:00",
+    )
+
+    response = client.post(
+        "/api/admin/athletes/athlete-1/plans/generate-from-latest-intake",
+        headers={"Authorization": "Bearer admin-token", "X-Client-Request-Id": "admin-linkage-4"},
+    )
+    assert response.status_code == 202
+    job = store.get_generation_job(response.json()["job_id"])
+    assert job is not None
+    assert job["source"] == "admin_latest_intake"
+    assert job["intake_id"] == latest_intake["id"]
+    assert job["request_payload"]["athlete"]["full_name"] == "Latest Name"
+
+
 def test_admin_generation_does_not_consume_self_serve_daily_limit(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setenv("APP_PLAN_GENERATE_DAILY_LIMIT_PER_USER", "1")
     client, _, _ = _build_client()
