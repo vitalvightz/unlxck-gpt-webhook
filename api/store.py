@@ -88,6 +88,21 @@ _PLAN_RUNTIME_SCHEMA_ERROR_SNIPPETS = (
 )
 _PLAN_SCHEMA_MISMATCH_DETAIL = "plans table schema mismatch; apply latest Supabase schema and redeploy"
 _PLAN_INVALID_PAYLOAD_DETAIL = "invalid plans payload for table insert"
+_VISIBLE_PLAN_STATUSES = {"ready", "publishable_with_flags"}
+
+
+def _visible_plan_text_for_status(result: dict[str, Any]) -> str:
+    status_value = str(result.get("status") or "").strip().lower()
+    if status_value not in _VISIBLE_PLAN_STATUSES:
+        return ""
+    return str(
+        result.get("plan_text")
+        or result.get("final_plan_text")
+        or result.get("draft_plan_text")
+        or ""
+    )
+
+
 GENERATION_JOB_UNAVAILABLE_DETAIL = "generation job service temporarily unavailable"
 GENERATION_JOB_SCHEMA_DETAIL = "generation job store is not ready; apply the latest Supabase schema and redeploy"
 
@@ -931,12 +946,7 @@ class SupabaseAppStore:
         request: PlanRequest,
         result: dict[str, Any],
     ) -> dict[str, Any]:
-        visible_plan_text = str(
-            result.get("plan_text")
-            or result.get("final_plan_text")
-            or result.get("draft_plan_text")
-            or ""
-        )
+        visible_plan_text = _visible_plan_text_for_status(result)
         payload = {
             "athlete_id": athlete_id,
             "intake_id": intake_id,
@@ -1991,12 +2001,7 @@ class SupabaseAppStore:
             )
 
     def update_plan_stage2(self, plan_id: str, result: dict[str, Any]) -> dict[str, Any]:
-        visible_plan_text = str(
-            result.get("plan_text")
-            or result.get("final_plan_text")
-            or result.get("draft_plan_text")
-            or ""
-        )
+        visible_plan_text = _visible_plan_text_for_status(result)
         payload = {
             "status": result.get("status", "generated"),
             "plan_text": visible_plan_text,

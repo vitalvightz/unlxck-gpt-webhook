@@ -221,6 +221,85 @@ def test_admin_can_view_internal_plan_outputs():
     assert admin_outputs["parsing_metadata"] == {"athlete_timezone": {"source": "defaulted_missing"}}
 
 
+def test_create_plan_held_for_review_keeps_athlete_plan_text_empty():
+    client, store, _ = _build_client()
+    athlete = AuthenticatedUser(user_id="athlete-1", email="ari@example.com", full_name="Ari Mensah", metadata={})
+    store.ensure_profile(athlete)
+    plan = store.create_plan(
+        athlete_id="athlete-1",
+        intake_id="intake_x",
+        request=_build_request(),
+        result=finalized_result(
+            status="held_for_review",
+            plan_text="",
+            final_plan_text="# Internal held plan",
+            stage2_status="stage2_failed",
+        ),
+    )
+    assert plan["plan_text"] == ""
+    assert plan["final_plan_text"] == "# Internal held plan"
+
+
+def test_update_plan_stage2_publishable_with_flags_populates_athlete_plan_text():
+    client, store, _ = _build_client()
+    athlete = AuthenticatedUser(user_id="athlete-1", email="ari@example.com", full_name="Ari Mensah", metadata={})
+    store.ensure_profile(athlete)
+    plan = store.create_plan(athlete_id="athlete-1", intake_id="intake_x", request=_build_request(), result=finalized_result())
+    updated = store.update_plan_stage2(
+        plan["id"],
+        finalized_result(
+            status="publishable_with_flags",
+            plan_text="# Publishable with minor flags",
+            final_plan_text="# Publishable with minor flags",
+        ),
+    )
+    assert updated["plan_text"] == "# Publishable with minor flags"
+
+
+def test_legacy_review_required_publishable_row_uses_final_plan_text_for_athlete_visibility():
+    client, store, _ = _build_client()
+    athlete = AuthenticatedUser(user_id="athlete-1", email="ari@example.com", full_name="Ari Mensah", metadata={})
+    store.ensure_profile(athlete)
+    plan = store.create_plan(
+        athlete_id="athlete-1",
+        intake_id="intake_x",
+        request=_build_request(),
+        result=finalized_result(
+            status="review_required",
+            plan_text="",
+            final_plan_text="# Legacy final plan",
+            stage2_validator_report={"errors": [], "warnings": [{"code": "generic_filler_phrase"}]},
+        ),
+    )
+    response = client.get(f"/api/plans/{plan['id']}", headers={"Authorization": "Bearer athlete-token"})
+    assert response.status_code == 200
+    body = response.json()
+    assert body["status"] == "publishable_with_flags"
+    assert body["outputs"]["plan_text"] == "# Legacy final plan"
+
+
+def test_legacy_review_required_blocking_row_remains_hidden_from_athlete():
+    client, store, _ = _build_client()
+    athlete = AuthenticatedUser(user_id="athlete-1", email="ari@example.com", full_name="Ari Mensah", metadata={})
+    store.ensure_profile(athlete)
+    plan = store.create_plan(
+        athlete_id="athlete-1",
+        intake_id="intake_x",
+        request=_build_request(),
+        result=finalized_result(
+            status="review_required",
+            plan_text="",
+            final_plan_text="# Held legacy final plan",
+            stage2_validator_report={"errors": [], "warnings": [{"code": "missing_required_element", "blocking": True}]},
+        ),
+    )
+    response = client.get(f"/api/plans/{plan['id']}", headers={"Authorization": "Bearer athlete-token"})
+    assert response.status_code == 200
+    body = response.json()
+    assert body["status"] == "held_for_review"
+    assert body["outputs"]["plan_text"] == ""
+
+
 def test_legacy_rows_with_only_plan_text_remain_readable():
     client, store, _ = _build_client()
     athlete = AuthenticatedUser(

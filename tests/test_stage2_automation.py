@@ -43,10 +43,15 @@ def _response(text: str, *, input_tokens: int = 10, output_tokens: int = 5) -> S
 def _review(status_value: str) -> dict:
     errors = [{"code": "restriction_violation"}] if status_value == "FAIL" else []
     warnings = [{"code": "missing_required_element", "blocking": True}] if status_value == "WARN" else []
+    review_flags = [{"code": "generic_filler_phrase"}] if status_value == "PASS_WITH_FLAGS" else []
     return {
-        "status": status_value,
-        "needs_retry": status_value != "PASS",
-        "validator_report": {"errors": errors, "warnings": warnings},
+        "status": "PASS" if status_value == "PASS_WITH_FLAGS" else status_value,
+        "needs_retry": status_value not in {"PASS", "PASS_WITH_FLAGS"},
+        "validator_report": {
+            "errors": errors,
+            "warnings": warnings + review_flags,
+            "review_flag_count": len(review_flags),
+        },
     }
 
 
@@ -77,9 +82,17 @@ def test_first_pass_pass_returns_ready_with_one_provider_call(monkeypatch: pytes
     assert result["stage2_attempt_count"] == 1
     assert result["stage2_retry_text"] == ""
 
+def test_first_pass_pass_with_review_flags_returns_publishable_with_flags(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(stage2_module, "review_stage2_output", lambda **_: _review("PASS_WITH_FLAGS"))
+    client = FakeClient([_response("# final plan with minor flags")])
+    automator = OpenAIStage2Automator(client=client, model="test-model")
+    result = asyncio.run(automator.finalize(stage1_result=_stage1_result()))
+    assert result["status"] == "publishable_with_flags"
+    assert result["plan_text"] == "# final plan with minor flags"
+
 
 @pytest.mark.parametrize("review_status", ["FAIL", "WARN"])
-def test_first_pass_non_pass_returns_review_required_with_one_provider_call(
+def test_first_pass_non_pass_returns_held_for_review_with_one_provider_call(
     monkeypatch: pytest.MonkeyPatch,
     review_status: str,
 ) -> None:
@@ -90,7 +103,7 @@ def test_first_pass_non_pass_returns_review_required_with_one_provider_call(
     result = asyncio.run(automator.finalize(stage1_result=_stage1_result()))
 
     assert len(client.responses.calls) == 1
-    assert result["status"] == "review_required"
+    assert result["status"] == "held_for_review"
     assert result["plan_text"] == ""
     assert result["final_plan_text"] == "# first pass needs review"
     assert result["stage2_status"] == "stage2_failed"
@@ -119,7 +132,7 @@ def test_build_stage2_retry_is_not_called_during_automatic_finalization(
     result = asyncio.run(automator.finalize(stage1_result=_stage1_result()))
 
     assert len(client.responses.calls) == 1
-    assert result["status"] == "review_required"
+    assert result["status"] == "held_for_review"
 
 
 def test_retry_pass_is_never_sent_during_automatic_finalization(
@@ -141,7 +154,7 @@ def test_retry_pass_is_never_sent_during_automatic_finalization(
 
     result = asyncio.run(automator.finalize(stage1_result=_stage1_result()))
 
-    assert result["status"] == "review_required"
+    assert result["status"] == "held_for_review"
     assert seen_attempts == ["first_pass"]
     assert len(client.responses.calls) == 1
 
