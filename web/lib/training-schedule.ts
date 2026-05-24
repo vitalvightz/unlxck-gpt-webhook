@@ -74,7 +74,7 @@ export function getSparringConsistency(
   const invalidSupport = supportWorkDays.filter((day) => !available.has(day));
   if (invalidSupport.length) {
     return {
-      hardError: `Support Work Days (non-hard training / S&C-compatible slots) must also be selected as available days: ${invalidSupport.join(", ")}.`,
+      hardError: `Support Work Days (Light Combat / S&C-compatible slots) must also be selected as available days: ${invalidSupport.join(", ")}.`,
       softWarning: null,
     };
   }
@@ -82,7 +82,7 @@ export function getSparringConsistency(
   const overlap = hardSparringDays.filter((day) => supportWorkDays.includes(day));
   if (overlap.length) {
     return {
-      hardError: `A day cannot be both hard sparring and Support Work (non-hard training): ${overlap.join(", ")}.`,
+      hardError: `A day cannot be both hard sparring and Support Work (Light Combat): ${overlap.join(", ")}.`,
       softWarning: null,
     };
   }
@@ -90,7 +90,7 @@ export function getSparringConsistency(
   if (!hardSparringDays.length && supportWorkDays.length) {
     return {
       hardError: null,
-      softWarning: "Non-hard training days are set, but hard sparring days are blank. That's fine if sparring is light or not fixed yet.",
+      softWarning: "Light Combat days are set, but hard sparring days are blank. That's fine if sparring is light or not fixed yet.",
     };
   }
 

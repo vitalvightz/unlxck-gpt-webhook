@@ -1445,7 +1445,7 @@ def _assign_declared_day_hints(
         elif idx == glycolytic_idx and day in hard_sparring_days:
             reason = "Let declared hard sparring own the main collision-heavy combat load when it already exists."
         elif idx == aerobic_idx and day in support_work_days:
-            reason = "Use declared Support Work Days (non-hard training days / S&C-compatible slots) for lower-noise support work when possible."
+            reason = "Use declared Support Work Days (Light Combat days / S&C-compatible slots) for lower-noise support work when possible."
         _append_day_hint(role, day, reason)
     
     for idx, role in enumerate(ordered):
@@ -1473,7 +1473,7 @@ def _assign_declared_day_hints(
                 _append_day_hint(
                     role,
                     fallback_day,
-                    "Use sandwiched days for low-load recovery-compatible support first, then fill unused non-hard days.",
+                    "Use sandwiched days for low-load recovery-compatible support first, then fill unused Light Combat days.",
                 )
             continue
 
