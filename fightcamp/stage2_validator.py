@@ -2614,6 +2614,17 @@ def _issue(*, code: str, message: str, severity: str, confidence: str, line: str
     }
 
 
+def _normalize_warning(item: dict[str, Any]) -> dict[str, Any]:
+    defaults = {
+        "code": "stage2_warning",
+        "message": "Stage 2 validation warning.",
+        "severity": "warning",
+        "confidence": "medium",
+        "line": "",
+    }
+    return {**defaults, **item}
+
+
 def _stage2_output_incomplete_errors(final_plan_text: str) -> list[dict[str, Any]]:
     lines = [line.strip() for line in str(final_plan_text or "").splitlines() if line.strip()]
     if not lines:
@@ -2687,8 +2698,8 @@ def _has_blocking_hard_sparring(text: str) -> bool:
 
 def validate_stage2_output(*, planning_brief: dict, final_plan_text: str) -> dict:
     plan_lines = _extract_plan_lines(final_plan_text)
+    phase_sections = _phase_sections(final_plan_text)
     restricted_hits = _find_restricted_hits(planning_brief, plan_lines)
-    text_lower = str(final_plan_text or "").lower()
     countdown_blocks = _countdown_blocks(final_plan_text)
 
     errors: list[dict[str, Any]] = []
@@ -2734,32 +2745,96 @@ def validate_stage2_output(*, planning_brief: dict, final_plan_text: str) -> dic
         if day == 0 and d0_extra_pattern.search(joined):
             errors.append(_issue(code="fight_day_protocol_violation", message="D-0 includes extra training beyond fight-day protocol.", severity="blocker", confidence="medium", line=block["header"]))
 
+    missing_required_elements = _find_missing_required_elements(planning_brief, final_plan_text)
+    missing_phase_sections = _find_missing_phase_sections(planning_brief, phase_sections)
+    strength_session_warnings = _strength_session_quality_warnings(planning_brief, phase_sections, plan_lines)
+    conditioning_choice_warnings = _conditioning_choice_warnings(plan_lines)
+    rendering_discipline_warnings = _rendering_discipline_warnings(planning_brief, phase_sections)
+    equipment_congruence_warnings = _equipment_congruence_warnings(planning_brief, phase_sections, plan_lines)
+    unresolved_access_fallback_warnings = _unresolved_access_fallback_warnings(planning_brief, phase_sections)
+    week_completeness_warnings = _week_completeness_warnings(planning_brief, final_plan_text)
+    crowded_week_warnings = _boxing_crowded_week_warnings(planning_brief, final_plan_text)
+    weight_cut_acknowledgement_warnings = _weight_cut_acknowledgement_warnings(planning_brief, final_plan_text)
+    weight_cut_contradiction_warnings = _weight_cut_contradiction_warnings(planning_brief, final_plan_text)
+    late_fight_header_contract_warnings = _late_fight_header_contract_warnings(planning_brief, plan_lines)
+    late_fight_d0_protocol_warnings = _late_fight_d0_protocol_warnings(planning_brief, final_plan_text, plan_lines)
+    internal_render_contract_leak_warnings = _internal_render_contract_leak_warnings(plan_lines)
+    coach_owned_sparring_detail_warnings = _coach_owned_sparring_detail_warnings(final_plan_text)
+    lead_summary_contract_warnings = _lead_summary_contract_warnings(planning_brief, plan_lines)
+    overstyled_name_warnings = _overstyled_name_warnings(plan_lines)
+    coach_voice_warnings = _coach_voice_warnings(planning_brief, plan_lines)
+    calendar_spine_warnings = _calendar_spine_warnings(planning_brief, final_plan_text)
+    late_fight_warnings = _late_fight_warnings(planning_brief, final_plan_text)
+    sport_language_warnings = _sport_language_warnings(planning_brief, plan_lines)
+
+    warnings.extend(
+        _issue(
+            code="missing_required_element",
+            message=item.get("reason", "Missing required element."),
+            severity=item.get("severity", "warning"),
+            confidence="medium",
+            phase=item.get("phase"),
+            requirement=item.get("requirement"),
+            candidate_names=item.get("candidate_names"),
+        )
+        for item in missing_required_elements
+    )
+    warnings.extend(
+        _issue(
+            code="phase_section_missing",
+            message=item.get("reason", "Missing required phase section."),
+            severity=item.get("severity", "warning"),
+            confidence="medium",
+            phase=item.get("phase"),
+        )
+        for item in missing_phase_sections
+    )
+    warnings.extend(_normalize_warning(item) for item in strength_session_warnings)
+    warnings.extend(_normalize_warning(item) for item in conditioning_choice_warnings)
+    warnings.extend(_normalize_warning(item) for item in rendering_discipline_warnings)
+    warnings.extend(_normalize_warning(item) for item in equipment_congruence_warnings)
+    warnings.extend(_normalize_warning(item) for item in unresolved_access_fallback_warnings)
+    warnings.extend(_normalize_warning(item) for item in week_completeness_warnings)
+    warnings.extend(_normalize_warning(item) for item in crowded_week_warnings)
+    warnings.extend(_normalize_warning(item) for item in weight_cut_acknowledgement_warnings)
+    warnings.extend(_normalize_warning(item) for item in weight_cut_contradiction_warnings)
+    warnings.extend(_normalize_warning(item) for item in late_fight_header_contract_warnings)
+    warnings.extend(_normalize_warning(item) for item in late_fight_d0_protocol_warnings)
+    warnings.extend(_normalize_warning(item) for item in internal_render_contract_leak_warnings)
+    warnings.extend(_normalize_warning(item) for item in coach_owned_sparring_detail_warnings)
+    warnings.extend(_normalize_warning(item) for item in lead_summary_contract_warnings)
+    warnings.extend(_normalize_warning(item) for item in overstyled_name_warnings)
+    warnings.extend(_normalize_warning(item) for item in coach_voice_warnings)
+    warnings.extend(_normalize_warning(item) for item in calendar_spine_warnings)
+    warnings.extend(_normalize_warning(item) for item in late_fight_warnings)
+    warnings.extend(_normalize_warning(item) for item in sport_language_warnings)
+
     return {
         "is_valid": len(errors) == 0,
         "errors": errors,
         "warnings": warnings,
-        "missing_required_elements": [],
-        "missing_phase_sections": [],
+        "missing_required_elements": missing_required_elements,
+        "missing_phase_sections": missing_phase_sections,
         "restricted_hits": restricted_hits,
-        "strength_session_warnings": [],
-        "conditioning_choice_warnings": [],
-        "rendering_discipline_warnings": [],
-        "equipment_congruence_warnings": [],
-        "unresolved_access_fallback_warnings": [],
-        "week_completeness_warnings": [],
-        "crowded_week_warnings": [],
-        "weight_cut_acknowledgement_warnings": [],
-        "weight_cut_contradiction_warnings": [],
-        "late_fight_header_contract_warnings": [],
-        "late_fight_d0_protocol_warnings": [],
-        "internal_render_contract_leak_warnings": [],
-        "coach_owned_sparring_detail_warnings": [],
-        "lead_summary_contract_warnings": [],
-        "overstyled_name_warnings": [],
+        "strength_session_warnings": strength_session_warnings,
+        "conditioning_choice_warnings": conditioning_choice_warnings,
+        "rendering_discipline_warnings": rendering_discipline_warnings,
+        "equipment_congruence_warnings": equipment_congruence_warnings,
+        "unresolved_access_fallback_warnings": unresolved_access_fallback_warnings,
+        "week_completeness_warnings": week_completeness_warnings,
+        "crowded_week_warnings": crowded_week_warnings,
+        "weight_cut_acknowledgement_warnings": weight_cut_acknowledgement_warnings,
+        "weight_cut_contradiction_warnings": weight_cut_contradiction_warnings,
+        "late_fight_header_contract_warnings": late_fight_header_contract_warnings,
+        "late_fight_d0_protocol_warnings": late_fight_d0_protocol_warnings,
+        "internal_render_contract_leak_warnings": internal_render_contract_leak_warnings,
+        "coach_owned_sparring_detail_warnings": coach_owned_sparring_detail_warnings,
+        "lead_summary_contract_warnings": lead_summary_contract_warnings,
+        "overstyled_name_warnings": overstyled_name_warnings,
         "gimmick_name_warnings": [],
-        "coach_voice_warnings": [],
-        "calendar_spine_warnings": [],
-        "late_fight_warnings": [],
+        "coach_voice_warnings": coach_voice_warnings,
+        "calendar_spine_warnings": calendar_spine_warnings,
+        "late_fight_warnings": late_fight_warnings,
         "stage2_output_incomplete_warnings": [],
-        "sport_language_warnings": [],
+        "sport_language_warnings": sport_language_warnings,
     }
