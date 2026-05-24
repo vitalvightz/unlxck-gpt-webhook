@@ -1356,7 +1356,7 @@ export function PlanIntakeForm() {
       const nextValues = toggleListValue(currentValues, value);
 
       // When a training-availability day is unchecked, also strip it from the
-      // hard sparring / non-hard pickers so stale picks don't trigger the
+      // hard sparring / Light Combat pickers so stale picks don't trigger the
       // sparring-consistency hard error.
       if (key === "training_availability" && alreadySelected) {
         return {
@@ -1851,7 +1851,7 @@ export function PlanIntakeForm() {
   const selectedTrainingAvailability = formatJoinedLabels(selectedTrainingAvailabilityLabels, "No availability selected");
   const selectedEquipmentAccess = formatJoinedLabels(selectedEquipmentAccessLabels, "No equipment selected");
   const selectedHardSparring = formatJoinedLabels(selectedHardSparringLabels, "No fixed hard sparring days");
-  const selectedSupportWorkDays = formatJoinedLabels(selectedSupportWorkLabels, "No non-hard training days selected");
+  const selectedSupportWorkDays = formatJoinedLabels(selectedSupportWorkLabels, "No Light Combat days selected");
   const remainingHardSparringDays = TRAINING_AVAILABILITY_OPTIONS
     .filter((option) => form.training_availability.includes(option.value) && !form.support_work_days.includes(option.value) && !form.hard_sparring_days.includes(option.value))
     .map((option) => option.value);
@@ -1942,7 +1942,7 @@ export function PlanIntakeForm() {
   const trainingReviewItems = [
     { label: "Training availability", value: selectedTrainingAvailability },
     { label: "Hard sparring days", value: selectedHardSparring },
-    { label: "Non-hard training days", value: selectedSupportWorkDays },
+    { label: "Light Combat days", value: selectedSupportWorkDays },
     { label: "Equipment access", value: selectedEquipmentAccess },
     ...(availabilityConsistency.hardError
       ? [{ label: "Schedule issue", value: availabilityConsistency.hardError }]
@@ -2492,7 +2492,7 @@ export function PlanIntakeForm() {
                       />
                       <p className="muted">
                         {getFieldHelperText(daysOutCtx, "weekly_training_frequency") ||
-                          "Count the total training sessions the week should carry. Hard sparring days and non-hard training days are labels inside that weekly total, not extra sessions on top."}
+                          "Count the total training sessions the week should carry. Hard sparring days and Light Combat days are labels inside that weekly total, not extra sessions on top."}
                       </p>
                       {invalidFieldId === "sessionsPerWeek" && error ? (
                         <p id="sessionsPerWeek-error" className="error-text" role="alert">{error}</p>
@@ -2587,11 +2587,11 @@ export function PlanIntakeForm() {
               <article className="step-card">
                 <div className="form-section-header">
                   <p className="kicker">Combat load</p>
-                  <h2 className="form-section-title">Sparring and non-hard day tags</h2>
+                  <h2 className="form-section-title">Sparring and Light Combat day tags</h2>
                 </div>
                 <p className="muted">
                   These selections do not add extra sessions. They just show which available days are hard-contact days versus
-                  non-hard work inside the same weekly total.
+                  Light Combat work inside the same weekly total.
                 </p>
                 {shouldHideField(daysOutCtx, "hard_sparring_days") ? (
                   <div className="field">
@@ -2611,7 +2611,7 @@ export function PlanIntakeForm() {
                       : !form.training_availability.includes(option.value)
                         ? "Add to availability first"
                         : form.support_work_days.includes(option.value)
-                          ? "Already tagged as non-hard training"
+                          ? "Already tagged as Light Combat"
                           : form.hard_sparring_days.length >= HARD_SPARRING_DAY_CAP
                             ? `Hard sparring cap (${HARD_SPARRING_DAY_CAP}) reached`
                             : null
@@ -2655,12 +2655,12 @@ export function PlanIntakeForm() {
                 )}
                 {shouldHideField(daysOutCtx, "support_work_days") ? (
                   <div className="field">
-                    <p className="muted" style={{ opacity: 0.5 }}>Non-hard training day selection is not used for planning at this stage.</p>
+                    <p className="muted" style={{ opacity: 0.5 }}>Light Combat day selection is not used for planning at this stage.</p>
                   </div>
                 ) : (
                 <>
                 <CheckboxGroup
-                  label="Non-hard training days"
+                  label="Light Combat days"
                   options={TRAINING_AVAILABILITY_OPTIONS}
                   selectedValues={form.support_work_days}
                   onToggle={(value) => toggleFieldValue("support_work_days", value)}
@@ -2680,7 +2680,7 @@ export function PlanIntakeForm() {
                     {getFieldHelperText(daysOutCtx, "support_work_days") ||
                       "Select days available for lighter work, recovery, technical practice, or S&C. Do not include hard sparring days here."}
                   </p>
-                  <p className="muted">Available non-hard tags: {formatJoinedLabels(remainingSupportWorkDays, "No days left")}</p>
+                  <p className="muted">Available Light Combat tags: {formatJoinedLabels(remainingSupportWorkDays, "No days left")}</p>
                 </div>
                 </>
                 )}
@@ -2742,7 +2742,7 @@ export function PlanIntakeForm() {
                 <ul className="summary-list">
                   <li>Training Availability: {selectedTrainingAvailability}</li>
                   <li>Hard Sparring Days: {selectedHardSparring}</li>
-                  <li>Non-hard training days: {selectedSupportWorkDays}</li>
+                  <li>Light Combat days: {selectedSupportWorkDays}</li>
                   <li>Equipment Access: {selectedEquipmentAccess}</li>
                 </ul>
               </div>

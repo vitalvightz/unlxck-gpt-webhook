@@ -109,7 +109,7 @@ _CRITICAL_LABEL_ALIASES = {
     },
     _normalize_label("Support Work Days"): {
         _normalize_label("Support work days"),
-        _normalize_label("Non-hard training days"),
+        _normalize_label("Light Combat days"),
         _normalize_label("S&C-compatible slots"),
         _normalize_label("Technical days"),
         _normalize_label("Technical skill days"),
