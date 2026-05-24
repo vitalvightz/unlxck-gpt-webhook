@@ -5,6 +5,7 @@ import copy
 import json
 import logging
 import os
+import re
 import time
 import uuid
 from collections import deque
@@ -81,6 +82,7 @@ Planner = Callable[[dict[str, Any]], dict[str, Any]]
 security = HTTPBearer(auto_error=False)
 logger = logging.getLogger(__name__)
 LOCAL_HOST_NAMES = ("localhost", "127.0.0.1", "::1")
+_CLIENT_REQUEST_ID_PATTERN = re.compile(r"^[A-Za-z0-9._:-]{1,128}$")
 
 
 class SlidingWindowRateLimiter:
@@ -113,6 +115,13 @@ class SlidingWindowRateLimiter:
 
 def _utc_now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
+
+
+def _normalized_client_request_id(raw_value: str | None, fallback_prefix: str) -> str:
+    normalized = (raw_value or "").strip()
+    if normalized and _CLIENT_REQUEST_ID_PATTERN.fullmatch(normalized):
+        return normalized
+    return f"{fallback_prefix}_{uuid.uuid4().hex}"
 
 
 def _normalize_progress_milestones(raw: Any) -> list[dict[str, Any]]:
@@ -1103,11 +1112,11 @@ def create_app(
         bind_log_context(request_id=request_id, method=request.method, path=request.url.path)
 
         logger.info(
-            "[http] request:start request_id=%s method=%s path=%s query=%s client=%s",
+            "[http] request:start request_id=%s method=%s path=%s has_query=%s client=%s",
             request_id,
             request.method,
             request.url.path,
-            str(request.url.query),
+            bool(request.url.query),
             request.client.host if request.client else "unknown",
         )
 
@@ -1432,7 +1441,10 @@ def create_app(
                         "retry_after_seconds": retry_after,
                     },
                 )
-        client_request_id = (request.headers.get("X-Client-Request-Id") or "").strip() or f"cli_{uuid.uuid4().hex}"
+        client_request_id = _normalized_client_request_id(
+            request.headers.get("X-Client-Request-Id"),
+            "cli",
+        )
         existing_job = await asyncio.to_thread(
             store.get_generation_job_by_client_request_id,
             athlete_id=profile.athlete_id,
@@ -1655,7 +1667,10 @@ def create_app(
         # the header-provided id or generate a retry id.
         retry_client_request_id = (
             str(original.get("client_request_id") or "") if is_startup_stale
-            else (request.headers.get("X-Client-Request-Id") or "").strip() or f"retry_{job_id}_{uuid.uuid4().hex}"
+            else _normalized_client_request_id(
+                request.headers.get("X-Client-Request-Id"),
+                f"retry_{job_id}",
+            )
         )
         retry_intake_id = str(original.get("intake_id") or "").strip() or None
         retry_plan_id = existing_plan_id or None
@@ -2271,7 +2286,10 @@ def create_app(
                 status_code=status.HTTP_409_CONFLICT,
                 detail=focus_validation.error_message or "Too many focus selections for this camp.",
             )
-        client_request_id = (request.headers.get("X-Client-Request-Id") or "").strip() or f"cli_{uuid.uuid4().hex}"
+        client_request_id = _normalized_client_request_id(
+            request.headers.get("X-Client-Request-Id"),
+            "cli",
+        )
         stale_after_seconds = _generation_job_stale_after_seconds()
         existing_job = await asyncio.to_thread(
             store.get_generation_job_by_client_request_id,
