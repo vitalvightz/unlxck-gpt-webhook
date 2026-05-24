@@ -18,6 +18,7 @@ import {
   retryGenerationJob,
   updateAdminAthleteNutritionCurrent,
 } from "@/lib/api";
+import { loadAdminAthleteProfileData } from "@/lib/admin-athlete-profile-loader";
 import { useGenerationController } from "@/lib/generation-controller";
 import { validatePerformanceFocusSelections } from "@/lib/performance-focus-cap";
 import type { AdminAthleteRecord, AdminGenerationJobDiagnostic, NutritionWorkspaceState, NutritionWorkspaceUpdateRequest } from "@/lib/types";
@@ -64,6 +65,8 @@ export default function AdminAthletePage() {
   const [isReloading, setIsReloading] = useState(false);
   const [jobs, setJobs] = useState<AdminGenerationJobDiagnostic[]>([]);
   const [retryingJobId, setRetryingJobId] = useState<string | null>(null);
+  const [nutritionLoadWarning, setNutritionLoadWarning] = useState<string | null>(null);
+  const [jobsLoadWarning, setJobsLoadWarning] = useState<string | null>(null);
 
   const handleRetry = useCallback(() => {
     setLoadError(null);
@@ -113,17 +116,21 @@ export default function AdminAthletePage() {
 
     let active = true;
     setLoadError(null);
+    setNutritionLoadWarning(null);
+    setJobsLoadWarning(null);
     setIsReloading(true);
-    Promise.all([
-      getAdminAthlete(session.access_token, athleteId),
-      getAdminAthleteNutritionCurrent(session.access_token, athleteId),
-      getAdminAthleteGenerationJobs(session.access_token, athleteId),
-    ])
-      .then(([nextAthlete, nextNutrition, nextJobs]) => {
+    loadAdminAthleteProfileData({
+      getAdminAthlete: () => getAdminAthlete(session.access_token, athleteId),
+      getAdminAthleteNutritionCurrent: () => getAdminAthleteNutritionCurrent(session.access_token, athleteId),
+      getAdminAthleteGenerationJobs: () => getAdminAthleteGenerationJobs(session.access_token, athleteId),
+    })
+      .then((profileData) => {
         if (!active) return;
-        setAthlete(nextAthlete);
-        setNutrition(nextNutrition);
-        setJobs(nextJobs);
+        setAthlete(profileData.athlete);
+        setNutrition(profileData.nutrition);
+        setJobs(profileData.jobs);
+        setNutritionLoadWarning(profileData.nutritionWarning);
+        setJobsLoadWarning(profileData.jobsWarning);
       })
       .catch((athleteError) => {
         if (!active) return;
@@ -259,6 +266,7 @@ export default function AdminAthletePage() {
               <p className="kicker">Admin debugging</p>
               <h2 className="form-section-title">Generation diagnostics</h2>
             </div>
+            {jobsLoadWarning ? <p className="error-text">{jobsLoadWarning}</p> : null}
             {!jobs.length ? <p className="muted">No generation jobs found.</p> : jobs.map((job) => (
               <div key={job.job_id} className="review-detail-row" style={{ display: "block", marginBottom: "1rem" }}>
                 <p><strong>{job.status.toUpperCase()}</strong> · {job.job_id}</p>
@@ -315,11 +323,12 @@ export default function AdminAthletePage() {
 
               <aside className="step-aside athlete-motion-slot athlete-motion-rail">
                 <div className="support-panel">
-                  <div className="form-section-header">
-                    <p className="kicker">Coach controls</p>
-                    <h2 className="form-section-title">Admin-only overrides</h2>
-                  </div>
-                  <div className="nutrition-admin-controls">
+                <div className="form-section-header">
+                  <p className="kicker">Coach controls</p>
+                  <h2 className="form-section-title">Admin-only overrides</h2>
+                </div>
+                {nutritionLoadWarning ? <p className="error-text">{nutritionLoadWarning}</p> : null}
+                <div className="nutrition-admin-controls">
                     <label className="checkbox-card">
                       <input
                         type="checkbox"
@@ -462,6 +471,14 @@ export default function AdminAthletePage() {
                 </div>
               </aside>
             </div>
+          ) : nutritionLoadWarning ? (
+            <article className="step-card">
+              <div className="form-section-header">
+                <p className="kicker">Coach controls</p>
+                <h2 className="form-section-title">Admin-only overrides</h2>
+              </div>
+              <p className="error-text">{nutritionLoadWarning}</p>
+            </article>
           ) : null}
           {message ? <div className="success-banner">{message}</div> : null}
         </section>

@@ -323,6 +323,10 @@ def _request_payload_summary(payload: Any) -> GenerationRequestPayloadSummary:
 
 
 def _admin_generation_job_diagnostic(job: dict[str, Any], *, stale_after_seconds: int) -> AdminGenerationJobDiagnostic:
+    raw_status = str(job.get("status") or "queued").strip().lower()
+    normalized_status = "completed" if raw_status == "ready" else raw_status
+    if normalized_status not in {"queued", "running", "completed", "review_required", "failed"}:
+        normalized_status = "queued"
     is_stale = str(job.get("status") or "") == "running" and _is_stale_job(job, stale_after_seconds=stale_after_seconds)
     stale_reason = "Heartbeat timed out while job is still running." if is_stale else None
     error_message = str(job.get("error") or "") or None
@@ -336,7 +340,7 @@ def _admin_generation_job_diagnostic(job: dict[str, Any], *, stale_after_seconds
 
     return AdminGenerationJobDiagnostic(
         job_id=str(job.get("id") or ""),
-        status=str(job.get("status") or "queued"),
+        status=normalized_status,
         source=str(job.get("source") or ""),
         created_at=str(job.get("created_at") or ""),
         started_at=job.get("started_at"),

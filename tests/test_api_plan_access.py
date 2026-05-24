@@ -859,3 +859,22 @@ def test_non_admin_cannot_list_admin_generation_jobs_and_stale_job_is_flagged():
     assert stale["is_stale"] is True
     assert stale["stale_reason"]
     assert stale["retry_of"] == "old_job"
+
+
+def test_admin_generation_jobs_normalizes_legacy_ready_status():
+    client, store, _ = _build_client()
+    store.ensure_profile(client.app.state.auth_service.users_by_token["athlete-token"])
+    job = store.create_or_get_generation_job(
+        athlete_id="athlete-1",
+        client_request_id="legacy_ready",
+        source="self_serve",
+        request_payload=_build_request().model_dump(mode="json"),
+    )
+    store.update_generation_job(job["id"], status="ready", completed_at="2026-01-01T00:00:00+00:00")
+
+    response = client.get(
+        "/api/admin/athletes/athlete-1/generation-jobs",
+        headers={"Authorization": "Bearer admin-token"},
+    )
+    assert response.status_code == 200
+    assert response.json()[0]["status"] == "completed"
