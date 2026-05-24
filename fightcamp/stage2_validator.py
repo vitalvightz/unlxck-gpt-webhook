@@ -2669,7 +2669,7 @@ _HARD_SPARRING_PATTERN = re.compile(
 
 _NEGATED_HARD_SPARRING_PATTERN = re.compile(
     r"\b(?:no|avoid|without|do\s+not|don't|not)\s+(?:\w+\s+){0,3}"
-    r"(?:hard spar|hard sparring|live spar|live sparring|full spar|full sparring|full contact|hard contact|fight-pace sparring|competitive sparring|open sparring)\b",
+    r"(?:" + "|".join(re.escape(t) for t in HARD_SPARRING_TERMS) + r")$",
     re.IGNORECASE,
 )
 
