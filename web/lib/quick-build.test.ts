@@ -8,6 +8,7 @@ import {
   sanitizeQuickBuildFocusByDaysOut,
   validateQuickBuildInput,
 } from "@/lib/quick-build";
+import { buildDaysOutContext, getPerformanceFocusOptionAvailability } from "@/lib/days-out-policy";
 import { emptyPlanRequest } from "@/lib/onboarding";
 
 function buildValidInput() {
@@ -170,6 +171,37 @@ test("validateQuickBuildInput allows open camp focus values", () => {
 });
 
 test("validateQuickBuildInput keeps shared focus cap active with days-out filtering", () => {
+  const input = buildValidInput();
+  input.no_scheduled_fight = false;
+  input.fight_date = "2026-06-20";
+  input.key_goals = ["conditioning", "power", "mobility"];
+  input.weak_areas = ["gas_tank"];
+  const errors = validateQuickBuildInput(input, { now: new Date("2026-05-24T00:00:00Z") });
+  assert.equal(typeof errors.focus_cap, "string");
+});
+
+test("D-1 blocks gas_tank and conditioning availability", () => {
+  const ctx = buildDaysOutContext(1);
+  assert.equal(getPerformanceFocusOptionAvailability(ctx, "weak_areas", "gas_tank").available, false);
+  assert.equal(getPerformanceFocusOptionAvailability(ctx, "key_goals", "conditioning").available, false);
+});
+
+test("sanitizeQuickBuildFocusByDaysOut removes gas_tank when fight date changes from D-30 to D-1", () => {
+  const input = buildValidInput();
+  input.no_scheduled_fight = false;
+  input.key_goals = ["mobility"];
+  input.weak_areas = ["gas_tank", "mobility"];
+
+  input.fight_date = "2026-06-23";
+  const stillFar = sanitizeQuickBuildFocusByDaysOut(input, new Date("2026-05-24T00:00:00Z"));
+  assert.deepEqual(stillFar.weak_areas, ["gas_tank", "mobility"]);
+
+  input.fight_date = "2026-05-25";
+  const d1 = sanitizeQuickBuildFocusByDaysOut(input, new Date("2026-05-24T00:00:00Z"));
+  assert.deepEqual(d1.weak_areas, ["mobility"]);
+});
+
+test("validateQuickBuildInput blocks generation when focus cap is exceeded", () => {
   const input = buildValidInput();
   input.no_scheduled_fight = false;
   input.fight_date = "2026-06-20";
