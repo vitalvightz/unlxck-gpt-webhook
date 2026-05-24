@@ -92,10 +92,10 @@ export default function GeneratePage() {
     if (!session?.access_token || !payload || autoStartRef.current || controller.hasPendingGeneration) {
       return;
     }
-    const completedPayloadHash = getCompletedPayloadHash();
+    const completed = getCompletedGeneration();
     const currentPayloadHash = hashPayload(payload);
-    if (shouldBlockGenerateAutoStartForMatchingPayload(currentPayloadHash, completedPayloadHash) && me?.latest_plan?.plan_id) {
-      router.replace(`/plans/${me.latest_plan.plan_id}`);
+    if (completed && shouldBlockGenerateAutoStartForMatchingPayload(currentPayloadHash, completed.payloadHash)) {
+      router.replace(`/plans/${completed.planId}`);
       return;
     }
 
