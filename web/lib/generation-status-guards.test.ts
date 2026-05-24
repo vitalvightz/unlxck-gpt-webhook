@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 import {
   isExpiredPendingGeneration,
   isStaleVisibleGenerationJob,
+  normalizeLegacyGenerationJobStatus,
   shouldBlockGenerateAutoStartForMatchingPayload,
 } from "@/lib/generation-status-guards";
 import type { GenerationJobResponse } from "@/lib/types";
@@ -54,4 +55,9 @@ test("generate auto-start is blocked only when payload hash matches completed ma
   assert.equal(shouldBlockGenerateAutoStartForMatchingPayload("hash_a", "hash_a"), true);
   assert.equal(shouldBlockGenerateAutoStartForMatchingPayload("hash_a", "hash_b"), false);
   assert.equal(shouldBlockGenerateAutoStartForMatchingPayload("hash_a", null), false);
+});
+
+test("legacy generation statuses normalize to supported generation lifecycle values", () => {
+  assert.equal(normalizeLegacyGenerationJobStatus("held_for_review"), "review_required");
+  assert.equal(normalizeLegacyGenerationJobStatus("publishable_with_flags"), "completed");
 });

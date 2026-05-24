@@ -13,6 +13,7 @@ from api.generation_runtime import (
     _stage1_planner_timeout_seconds,
     _stage2_finalize_timeout_seconds,
     default_planner,
+    generation_status_from_plan_status,
     is_in_process_generation_enabled,
     run_stage1_planner,
 )
@@ -454,3 +455,22 @@ def test_terminal_success_without_plan_id_is_downgraded_to_failed_with_error_mes
     assert job["status"] == "failed"
     assert isinstance(job.get("error"), str)
     assert job["error"].strip() == "Plan was saved but the generation job lost its plan_id. Open plan history or contact support."
+
+
+@pytest.mark.parametrize(
+    ("plan_status", "expected_generation_status"),
+    [
+        ("ready", "completed"),
+        ("publishable_with_flags", "completed"),
+        ("held_for_review", "review_required"),
+        ("review_required", "review_required"),
+    ],
+)
+def test_generation_status_from_plan_status_mapper(plan_status: str, expected_generation_status: str):
+    assert generation_status_from_plan_status(plan_status) == expected_generation_status
+
+
+def test_generation_job_status_never_uses_legacy_plan_status_values():
+    for legacy_status in ("publishable_with_flags", "held_for_review"):
+        mapped = generation_status_from_plan_status(legacy_status)
+        assert mapped != legacy_status

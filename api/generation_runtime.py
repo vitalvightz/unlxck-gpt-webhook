@@ -53,10 +53,22 @@ _OPENAI_QUOTA_ATHLETE_ERROR = "Generation is temporarily unavailable. Please try
 _FINAL_RESULT_PERSIST_TIMEOUT_SECONDS = 40.0
 _FINAL_RESULT_PERSIST_TIMEOUT_ERROR = "Stage 2 result persistence timed out before final_result was saved."
 _POST_PERSIST_CLEANUP_TIMEOUT_SECONDS = 8.0
+_TERMINAL_GENERATION_JOB_STATUSES = {"completed", "review_required", "failed"}
 
 
 def utc_now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
+
+
+def generation_status_from_plan_status(plan_status: str) -> str:
+    normalized = str(plan_status or "").strip().lower()
+    if normalized in {"ready", "publishable_with_flags", "triage_blocked"}:
+        return "completed"
+    if normalized in {"review_required", "held_for_review"}:
+        return "review_required"
+    if normalized == "failed":
+        return "failed"
+    return "review_required"
 
 
 def _stable_payload_hash(payload: dict[str, Any]) -> str:
@@ -1029,8 +1041,11 @@ async def run_generation_job(
         if not persisted_plan_id:
             plan_id = None
         plan_status = str(plan_row.get("status") or "failed")
-        final_status = "completed" if plan_status in {"ready", "triage_blocked"} else plan_status
+        final_status = generation_status_from_plan_status(plan_status)
         terminal_missing_plan_id_error = None
+        if final_status not in _TERMINAL_GENERATION_JOB_STATUSES:
+            final_status = "review_required"
+            terminal_missing_plan_id_error = "Generation completed but produced an unmapped plan status."
         if final_status in {"completed", "review_required"} and not plan_id:
             final_status = "failed"
             terminal_missing_plan_id_error = (

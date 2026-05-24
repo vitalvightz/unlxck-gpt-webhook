@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { getGenerationJob, isRetryableApiFailure, retryGenerationJob } from "@/lib/api";
+import { normalizeLegacyGenerationJobStatus } from "@/lib/generation-status-guards";
 import type { GenerationJobResponse, GenerationJobStatus, ProgressMilestone } from "@/lib/types";
 
 export type GenerationUiPhase =
@@ -28,7 +29,7 @@ export function canRecoverPendingGenerationWithoutCreate(
 }
 
 export function resolveFailedJobWithSavedPlan(job: GenerationJobResponse): string | null {
-  if (job.status !== "failed") {
+  if (normalizeLegacyGenerationJobStatus(job.status) !== "failed") {
     return null;
   }
   return job.plan_id || job.latest_plan_id || null;
@@ -303,7 +304,8 @@ export function useGenerationController({
           createdAt: currentJob.created_at || pendingCreatedAtFallback,
         });
 
-        if (currentJob.status === "completed" || currentJob.status === "review_required") {
+        const normalizedStatus = normalizeLegacyGenerationJobStatus(currentJob.status);
+        if (normalizedStatus === "completed" || normalizedStatus === "review_required") {
           const planId = resolveTerminalJobPlanId(currentJob);
           if (!planId) {
             clearAllPendingGenerations();
@@ -316,13 +318,13 @@ export function useGenerationController({
           await sleep(220);
           onComplete({
             planId,
-            status: currentJob.status,
+            status: normalizedStatus,
             recovered,
           });
           return;
         }
 
-        if (currentJob.status === "failed") {
+        if (normalizedStatus === "failed") {
           const recoveredPlanId = resolveFailedJobWithSavedPlan(currentJob);
           if (recoveredPlanId) {
             clearAllPendingGenerations();
@@ -341,8 +343,11 @@ export function useGenerationController({
           throw new Error(currentJob.error || "Plan generation failed.");
         }
 
-        setPhase(phaseForJobStatus(currentJob.status));
-        setStatusMessage(statusMessageForJob(currentJob.status, createdAtMs));
+        const liveStatus: GenerationJobStatus = normalizedStatus === "queued" || normalizedStatus === "running"
+          ? normalizedStatus
+          : "running";
+        setPhase(phaseForJobStatus(liveStatus));
+        setStatusMessage(statusMessageForJob(liveStatus, createdAtMs));
         await sleep(getPollDelay(createdAtMs));
       }
     },

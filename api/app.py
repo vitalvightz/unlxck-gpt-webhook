@@ -158,9 +158,10 @@ def _job_response(
     viewer_role: str = "athlete",
 ) -> GenerationJobResponse:
     status_value = str(job.get("status") or "")
+    normalized_status = normalize_generation_job_status(status_value)
     plan_id = str(job.get("plan_id")) if job.get("plan_id") else None
     resolved_latest_plan_id = latest_plan_id
-    if status_value in {"completed", "review_required", "ready"} and not plan_id:
+    if normalized_status in {"completed", "review_required"} and not plan_id:
         milestones = _normalize_progress_milestones(job.get("progress_milestones"))
         for milestone in reversed(milestones):
             meta = milestone.get("meta")
@@ -186,7 +187,7 @@ def _job_response(
     if viewer_role != "admin" and error == _OPENAI_QUOTA_ADMIN_ERROR:
         error = _OPENAI_QUOTA_ATHLETE_ERROR
     can_retry = (
-        str(job.get("status") or "") == "failed"
+        normalized_status == "failed"
         and isinstance(job.get("request_payload"), dict)
         and not plan_id
     )
@@ -196,13 +197,12 @@ def _job_response(
         "failed": "Generation failed.",
         "review_required": "Your plan is ready for review.",
         "completed": "Your plan is ready.",
-        "ready": "Your plan is ready.",
     }
     return GenerationJobResponse(
         job_id=str(job["id"]),
         athlete_id=str(job["athlete_id"]),
         client_request_id=str(job.get("client_request_id") or ""),
-        status=str(job["status"]),
+        status=normalized_status,
         created_at=str(job["created_at"]),
         updated_at=str(updated_at),
         started_at=str(job["started_at"]) if job.get("started_at") else None,
@@ -212,10 +212,21 @@ def _job_response(
         plan_id=plan_id,
         latest_plan_id=resolved_latest_plan_id or plan_id,
         status_url=f"/api/generation-jobs/{job['id']}",
-        message=status_messages.get(status_value, "Generation queued and will be processed shortly."),
+        message=status_messages.get(normalized_status, "Generation queued and will be processed shortly."),
         progress_milestones=_normalize_progress_milestones(job.get("progress_milestones")),
         can_retry=can_retry,
     )
+
+
+def normalize_generation_job_status(status: str) -> str:
+    normalized = str(status or "").strip().lower()
+    if normalized == "held_for_review":
+        return "review_required"
+    if normalized in {"publishable_with_flags", "ready"}:
+        return "completed"
+    if normalized in {"queued", "running", "completed", "review_required", "failed"}:
+        return normalized
+    return "failed"
 
 
 def _is_stale_job(job: dict[str, Any], *, stale_after_seconds: int = 90) -> bool:
