@@ -270,6 +270,7 @@ function QuickBuildFormInner() {
   );
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [showErrors, setShowErrors] = useState(false);
+  const [daysOutRemovalMessage, setDaysOutRemovalMessage] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
   const errors: QuickBuildValidationErrors = useMemo(() => validateQuickBuildInput(input), [input]);
@@ -399,8 +400,10 @@ function QuickBuildFormInner() {
         sanitized.key_goals.length === current.key_goals.length &&
         sanitized.weak_areas.length === current.weak_areas.length
       ) {
+        setDaysOutRemovalMessage(null);
         return current;
       }
+      setDaysOutRemovalMessage("Some picks were removed because they are not available this close to fight day.");
       return {
         ...current,
         key_goals: sanitized.key_goals,
@@ -913,6 +916,9 @@ function QuickBuildFormInner() {
         />
         <FieldError message={visibleError("weak_areas")} />
         <FieldError message={visibleError("focus_cap")} />
+        {daysOutRemovalMessage ? (
+          <p className="muted" role="status" aria-live="polite">{daysOutRemovalMessage}</p>
+        ) : null}
       </article>
 
       <article className="step-card">

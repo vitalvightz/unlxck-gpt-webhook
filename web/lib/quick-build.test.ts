@@ -178,3 +178,48 @@ test("validateQuickBuildInput keeps shared focus cap active with days-out filter
   const errors = validateQuickBuildInput(input, { now: new Date("2026-05-24T00:00:00Z") });
   assert.equal(typeof errors.focus_cap, "string");
 });
+
+test("fight date 1 day away disables gas tank weak area", () => {
+  const input = buildValidInput();
+  input.no_scheduled_fight = false;
+  input.fight_date = "2026-05-25";
+  input.weak_areas = ["gas_tank"];
+  const errors = validateQuickBuildInput(input, { now: new Date("2026-05-24T00:00:00Z") });
+  assert.equal(errors.weak_areas, "One or more weak areas are not available for this fight window.");
+});
+
+test("fight date 1 day away disables conditioning goal", () => {
+  const input = buildValidInput();
+  input.no_scheduled_fight = false;
+  input.fight_date = "2026-05-25";
+  input.key_goals = ["conditioning"];
+  const errors = validateQuickBuildInput(input, { now: new Date("2026-05-24T00:00:00Z") });
+  assert.equal(errors.key_goals, "One or more goals are not available for this fight window.");
+});
+
+test("changing fight date from 30 days to 1 day removes gas tank", () => {
+  const input = buildValidInput();
+  input.no_scheduled_fight = false;
+  input.weak_areas = ["gas_tank", "mobility"];
+  input.fight_date = "2026-06-23";
+  const farOut = sanitizeQuickBuildFocusByDaysOut(input, new Date("2026-05-24T00:00:00Z"));
+  assert.deepEqual(farOut.weak_areas, ["gas_tank", "mobility"]);
+
+  input.fight_date = "2026-05-25";
+  const closeOut = sanitizeQuickBuildFocusByDaysOut(input, new Date("2026-05-24T00:00:00Z"));
+  assert.deepEqual(closeOut.weak_areas, ["mobility"]);
+});
+
+test("changing fight date so shared cap drops blocks generation validation", () => {
+  const input = buildValidInput();
+  input.no_scheduled_fight = false;
+  input.fight_date = "2026-06-23";
+  input.key_goals = ["conditioning", "mobility", "power"];
+  input.weak_areas = [];
+  const farOutErrors = validateQuickBuildInput(input, { now: new Date("2026-05-24T00:00:00Z") });
+  assert.equal(farOutErrors.focus_cap, undefined);
+
+  input.fight_date = "2026-06-10";
+  const closeOutErrors = validateQuickBuildInput(input, { now: new Date("2026-05-24T00:00:00Z") });
+  assert.equal(typeof closeOutErrors.focus_cap, "string");
+});
