@@ -4,6 +4,17 @@ export const MAX_PENDING_GENERATION_AGE_MS = 90 * 1000;
 export const MAX_VISIBLE_GENERATION_AGE_MS = 10 * 60 * 1000;
 export const MAX_STAGE1_INVOKED_VISIBLE_AGE_MS = 3 * 60 * 1000;
 
+export function normalizeLegacyGenerationJobStatus(status: string | null | undefined): string {
+  const normalized = String(status || "").trim().toLowerCase();
+  if (normalized === "held_for_review") {
+    return "review_required";
+  }
+  if (normalized === "publishable_with_flags") {
+    return "completed";
+  }
+  return normalized;
+}
+
 export function isExpiredPendingGeneration(createdAt: string | null | undefined, nowMs = Date.now()): boolean {
   const createdAtMs = Date.parse(createdAt || "");
   if (!Number.isFinite(createdAtMs)) {
@@ -13,7 +24,8 @@ export function isExpiredPendingGeneration(createdAt: string | null | undefined,
 }
 
 export function isStaleVisibleGenerationJob(job: GenerationJobResponse, nowMs = Date.now()): boolean {
-  if (job.status !== "queued" && job.status !== "running") {
+  const normalizedStatus = normalizeLegacyGenerationJobStatus(job.status);
+  if (normalizedStatus !== "queued" && normalizedStatus !== "running") {
     return false;
   }
 
