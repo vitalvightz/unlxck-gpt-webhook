@@ -2707,6 +2707,104 @@ def test_runtime_generation_marks_review_required_job_terminal_after_final_resul
     assert terminal_job["error"] is None
 
 
+def test_runtime_generation_fails_when_created_plan_cannot_be_reloaded():
+    store = FakeStore()
+    athlete = AuthenticatedUser(user_id="athlete-1", email="athlete@example.com", full_name="Athlete One", metadata={})
+    store.ensure_profile(athlete)
+    request = _build_request({"fight_date": "2026-08-15"})
+    job = store.create_or_get_generation_job(
+        athlete_id=athlete.user_id,
+        client_request_id="runtime-job-plan-verify-missing",
+        source="self_serve",
+        request_payload=request.model_dump(mode="json"),
+    )
+
+    created_plan_id: str | None = None
+    original_create_plan = store.create_plan
+    original_get_plan = store.get_plan
+
+    def _create_plan(*args: Any, **kwargs: Any) -> dict:
+        nonlocal created_plan_id
+        row = original_create_plan(*args, **kwargs)
+        created_plan_id = row["id"]
+        return row
+
+    def _get_plan(plan_id: str) -> dict | None:
+        if created_plan_id and plan_id == created_plan_id:
+            return None
+        return original_get_plan(plan_id)
+
+    store.create_plan = _create_plan
+    store.get_plan = _get_plan
+
+    asyncio.run(run_generation_job(job_id=job["id"], store=store, planner_fn=_planner, stage2=FakeStage2Automator(result=finalized_result()), active_tasks=set()))
+
+    failed_job = store.get_generation_job(job["id"])
+    milestone_codes = [entry.get("code") for entry in failed_job.get("progress_milestones", []) if isinstance(entry, dict)]
+    assert failed_job["status"] == "failed"
+    assert failed_job["error"] == "Plan persistence verification failed after create_plan."
+    assert failed_job["completed_at"] is not None
+    assert "plan_persisted" not in milestone_codes
+
+
+def test_runtime_generation_fails_when_created_plan_has_wrong_athlete():
+    store = FakeStore()
+    athlete = AuthenticatedUser(user_id="athlete-1", email="athlete@example.com", full_name="Athlete One", metadata={})
+    store.ensure_profile(athlete)
+    request = _build_request({"fight_date": "2026-08-15"})
+    job = store.create_or_get_generation_job(
+        athlete_id=athlete.user_id,
+        client_request_id="runtime-job-plan-verify-athlete-mismatch",
+        source="self_serve",
+        request_payload=request.model_dump(mode="json"),
+    )
+
+    original_get_plan = store.get_plan
+
+    def _get_plan(plan_id: str) -> dict | None:
+        row = original_get_plan(plan_id)
+        if row:
+            return {**row, "athlete_id": "athlete-other"}
+        return row
+
+    store.get_plan = _get_plan
+
+    asyncio.run(run_generation_job(job_id=job["id"], store=store, planner_fn=_planner, stage2=FakeStage2Automator(result=finalized_result()), active_tasks=set()))
+
+    failed_job = store.get_generation_job(job["id"])
+    assert failed_job["status"] == "failed"
+    assert failed_job["error"] == "Plan persistence verification failed after create_plan."
+
+
+def test_runtime_generation_fails_when_created_plan_has_wrong_intake():
+    store = FakeStore()
+    athlete = AuthenticatedUser(user_id="athlete-1", email="athlete@example.com", full_name="Athlete One", metadata={})
+    store.ensure_profile(athlete)
+    request = _build_request({"fight_date": "2026-08-15"})
+    job = store.create_or_get_generation_job(
+        athlete_id=athlete.user_id,
+        client_request_id="runtime-job-plan-verify-intake-mismatch",
+        source="self_serve",
+        request_payload=request.model_dump(mode="json"),
+    )
+
+    original_get_plan = store.get_plan
+
+    def _get_plan(plan_id: str) -> dict | None:
+        row = original_get_plan(plan_id)
+        if row:
+            return {**row, "intake_id": "intake-other"}
+        return row
+
+    store.get_plan = _get_plan
+
+    asyncio.run(run_generation_job(job_id=job["id"], store=store, planner_fn=_planner, stage2=FakeStage2Automator(result=finalized_result()), active_tasks=set()))
+
+    failed_job = store.get_generation_job(job["id"])
+    assert failed_job["status"] == "failed"
+    assert failed_job["error"] == "Plan persistence verification failed after create_plan."
+
+
 def test_runtime_generation_emits_plan_saved_and_marks_completed_terminal():
     store = FakeStore()
     athlete = AuthenticatedUser(
