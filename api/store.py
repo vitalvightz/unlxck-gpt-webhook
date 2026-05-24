@@ -168,6 +168,14 @@ class AppStore(Protocol):
 
     def claim_generation_job(self, job_id: str, *, stale_after_seconds: int = 90) -> dict[str, Any] | None: ...
 
+    def claim_next_generation_job(
+        self,
+        *,
+        worker_id: str,
+        stale_after_seconds: int = 90,
+        max_attempts: int = 3,
+    ) -> dict[str, Any] | None: ...
+
     def count_active_generation_jobs(self, *, stale_after_seconds: int = 90) -> int: ...
 
     def update_generation_job(self, job_id: str, **changes: Any) -> dict[str, Any]: ...
@@ -1845,6 +1853,56 @@ class SupabaseAppStore:
 
     def claim_generation_job(self, job_id: str, *, stale_after_seconds: int = 90) -> dict[str, Any] | None:
         return self.claim_generation_job_start(job_id, stale_after_seconds=stale_after_seconds)
+
+    def claim_next_generation_job(
+        self,
+        *,
+        worker_id: str,
+        stale_after_seconds: int = 90,
+        max_attempts: int = 3,
+    ) -> dict[str, Any] | None:
+        try:
+            response = self._run_with_transient_retry(
+                operation="claim_next_generation_job:rpc",
+                fn=lambda: self.client.rpc(
+                    "claim_next_generation_job",
+                    {
+                        "worker_id": worker_id,
+                        "stale_after_seconds": max(1, int(stale_after_seconds)),
+                        "max_attempts": max(1, int(max_attempts)),
+                    },
+                ).execute(),
+            )
+            rows = response.data or []
+            if isinstance(rows, dict):
+                return rows
+            if isinstance(rows, list) and rows and isinstance(rows[0], dict):
+                return rows[0]
+            return None
+        except HTTPException:
+            raise
+        except _STORE_CLIENT_ERRORS as exc:
+            if self._is_transient_store_error(exc):
+                logger.warning(
+                    "[store] claim_next_generation_job:transient_failure worker_id=%s error_type=%s",
+                    worker_id,
+                    type(exc).__name__,
+                )
+                raise HTTPException(
+                    status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                    detail=GENERATION_JOB_UNAVAILABLE_DETAIL,
+                ) from exc
+            if self._is_generation_job_schema_error(exc):
+                logger.exception("[store] claim_next_generation_job:schema_mismatch")
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail=GENERATION_JOB_SCHEMA_DETAIL,
+                ) from exc
+            logger.exception("[store] claim_next_generation_job:exception worker_id=%s", worker_id)
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="failed to claim generation job",
+            ) from exc
 
     def count_active_generation_jobs(self, *, stale_after_seconds: int = 90) -> int:
         try:

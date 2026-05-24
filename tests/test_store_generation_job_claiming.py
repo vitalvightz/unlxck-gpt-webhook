@@ -4,79 +4,81 @@ from unittest.mock import MagicMock
 from api.store import SupabaseAppStore
 
 
-def _build_store_with_rows(*, queued_rows, running_heartbeat_rows, running_started_rows):
+def _store_with_rpc_rows(rows_per_call):
     store = SupabaseAppStore(client=MagicMock(), admin_emails=set())
+    calls = {"count": 0}
 
     def _run_with_transient_retry(*, operation, fn):
+        assert operation == "claim_next_generation_job:rpc"
         del fn
-        if operation == "list_claimable_generation_jobs:select_queued":
-            return SimpleNamespace(data=queued_rows)
-        if operation == "list_claimable_generation_jobs:select_running_stale_heartbeat":
-            return SimpleNamespace(data=running_heartbeat_rows)
-        if operation == "list_claimable_generation_jobs:select_running_stale_started":
-            return SimpleNamespace(data=running_started_rows)
-        raise AssertionError(f"unexpected operation: {operation}")
+        idx = calls["count"]
+        calls["count"] += 1
+        rows = rows_per_call[idx] if idx < len(rows_per_call) else []
+        return SimpleNamespace(data=rows)
 
     store._run_with_transient_retry = _run_with_transient_retry  # type: ignore[attr-defined]
     return store
 
 
-def test_supabase_list_claimable_generation_jobs_includes_normal_queued_rows():
-    queued_job = {"id": "queued-1", "status": "queued", "created_at": "2026-01-01T00:00:00+00:00"}
-    store = _build_store_with_rows(
-        queued_rows=[queued_job],
-        running_heartbeat_rows=[],
-        running_started_rows=[],
-    )
-
-    claimable = store.list_claimable_generation_jobs(limit=20, stale_after_seconds=90)
-
-    assert [job["id"] for job in claimable] == ["queued-1"]
-
-
-def test_supabase_list_claimable_generation_jobs_filters_running_by_startup_stale_only():
-    fresh_running = {
-        "id": "running-fresh",
+def test_claim_next_generation_job_single_worker_claims_queued_job():
+    claimed = {
+        "id": "job-1",
         "status": "running",
-        "created_at": "2026-01-01T00:00:00+00:00",
-        "started_at": "3026-01-01T00:00:00+00:00",
-        "heartbeat_at": "3026-01-01T00:00:00+00:00",
+        "attempt_count": 1,
         "progress_milestones": [{"code": "job_loaded"}],
-        "stage1_result": None,
-        "final_result": None,
-        "completed_at": None,
     }
-    startup_stale_running = {
-        "id": "running-startup-stale",
+    store = _store_with_rpc_rows([[claimed]])
+
+    row = store.claim_next_generation_job(worker_id="w-1", stale_after_seconds=90)
+
+    assert row is not None
+    assert row["id"] == "job-1"
+    assert row["status"] == "running"
+    assert row["attempt_count"] == 1
+    assert row["progress_milestones"][0]["code"] == "job_loaded"
+
+
+def test_claim_next_generation_job_no_duplicate_claim_on_second_call():
+    claimed = {"id": "job-1", "status": "running", "attempt_count": 1}
+    store = _store_with_rpc_rows([[claimed], []])
+
+    first = store.claim_next_generation_job(worker_id="w-1", stale_after_seconds=90)
+    second = store.claim_next_generation_job(worker_id="w-2", stale_after_seconds=90)
+
+    assert first is not None
+    assert first["id"] == "job-1"
+    assert second is None
+
+
+def test_claim_next_generation_job_returns_oldest_queued_first():
+    oldest = {"id": "job-oldest", "created_at": "2026-01-01T00:00:00+00:00", "status": "running", "attempt_count": 1}
+    store = _store_with_rpc_rows([[oldest]])
+
+    row = store.claim_next_generation_job(worker_id="w-1", stale_after_seconds=90)
+
+    assert row is not None
+    assert row["id"] == "job-oldest"
+
+
+def test_claim_next_generation_job_retries_startup_stale_running_job():
+    stale_running = {
+        "id": "job-stale",
         "status": "running",
-        "created_at": "2026-01-01T00:00:01+00:00",
-        "started_at": "2026-01-01T00:00:01+00:00",
-        "heartbeat_at": "2026-01-01T00:00:01+00:00",
-        "progress_milestones": [{"code": "job_loaded"}],
-        "stage1_result": None,
-        "final_result": None,
-        "completed_at": None,
+        "attempt_count": 2,
+        "progress_milestones": [{"code": "job_loaded"}, {"code": "job_recovered_startup_stale"}],
     }
-    mid_pipeline_stale_running = {
-        "id": "running-mid-pipeline",
-        "status": "running",
-        "created_at": "2026-01-01T00:00:02+00:00",
-        "started_at": "2026-01-01T00:00:02+00:00",
-        "heartbeat_at": "2026-01-01T00:00:02+00:00",
-        "progress_milestones": [{"code": "job_loaded"}, {"code": "stage1_planner_starting"}],
-        "stage1_result": {"status": "ready"},
-        "final_result": None,
-        "completed_at": None,
-    }
+    store = _store_with_rpc_rows([[stale_running]])
 
-    store = _build_store_with_rows(
-        queued_rows=[],
-        running_heartbeat_rows=[fresh_running, startup_stale_running, mid_pipeline_stale_running],
-        running_started_rows=[],
-    )
+    row = store.claim_next_generation_job(worker_id="w-1", stale_after_seconds=90)
 
-    claimable = store.list_claimable_generation_jobs(limit=20, stale_after_seconds=1)
+    assert row is not None
+    assert row["id"] == "job-stale"
+    assert row["attempt_count"] == 2
 
-    assert "running-startup-stale" in [job["id"] for job in claimable]
-    assert "running-fresh" not in [job["id"] for job in claimable]
-    assert "running-mid-pipeline" not in [job["id"] for job in claimable]
+
+def test_claim_next_generation_job_does_not_claim_fresh_running_job():
+    store = _store_with_rpc_rows([[]])
+
+    row = store.claim_next_generation_job(worker_id="w-1", stale_after_seconds=90)
+
+    assert row is None

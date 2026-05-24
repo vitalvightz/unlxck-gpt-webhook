@@ -7,7 +7,7 @@ from contextlib import suppress
 
 from fightcamp.logging_utils import configure_logging
 
-from .generation_runtime import default_planner, is_stale_job, run_generation_job, utc_now_iso
+from .generation_runtime import default_planner, run_generation_job, utc_now_iso
 from .stage2_automation import build_default_stage2_automator
 from .store import AppStore, SupabaseAppStore
 
@@ -64,6 +64,7 @@ async def _run_claimed_job(
             planner_fn=default_planner,
             stage2=stage2,
             active_tasks=active_tasks,
+            claim_on_start=False,
         )
     except Exception as exc:
         logger.exception("[worker] job failed before generation runtime job_id=%s", job_id)
@@ -97,34 +98,32 @@ async def _tick(
     stale_after_seconds: int,
     max_concurrent_jobs: int,
 ) -> None:
-    remaining_capacity = max_concurrent_jobs - len(active_tasks)
-    if remaining_capacity <= 0:
-        return
+    while len(active_tasks) < max_concurrent_jobs:
+        worker_id = f"pid-{os.getpid()}"
+        logger.info("[worker] generation:claim_attempt worker_id=%s", worker_id)
+        try:
+            claimed = await asyncio.to_thread(
+                store.claim_next_generation_job,
+                worker_id=worker_id,
+                stale_after_seconds=stale_after_seconds,
+            )
+        except Exception:
+            logger.exception("[worker] failed to claim generation job atomically")
+            return
 
-    try:
-        candidates = await asyncio.to_thread(
-            store.list_claimable_generation_jobs,
-            limit=remaining_capacity,
-            stale_after_seconds=stale_after_seconds,
-        )
-    except Exception:
-        logger.exception("[worker] failed to list claimable generation jobs")
-        return
+        if not claimed:
+            logger.info("[worker] generation:no_claimable_jobs")
+            return
 
-    for job in candidates:
-        if len(active_tasks) >= max_concurrent_jobs:
-            break
-
-        job_id = str(job.get("id") or "")
+        job_id = str(claimed.get("id") or "")
         if not job_id or job_id in active_tasks:
             continue
 
-        status = str(job.get("status") or "")
-        if status == "running" and not is_stale_job(
-            job,
-            stale_after_seconds=stale_after_seconds,
-        ):
-            continue
+        logger.info(
+            "[worker] generation:claim_success job_id=%s attempt=%s",
+            job_id,
+            int(claimed.get("attempt_count") or 0),
+        )
 
         active_tasks.add(job_id)
 

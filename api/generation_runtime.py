@@ -420,6 +420,7 @@ async def run_generation_job(
     planner_fn: Planner,
     stage2: Stage2Automator,
     active_tasks: set[str],
+    claim_on_start: bool = True,
 ) -> None:
     t_start = time.perf_counter()
     stop_event = asyncio.Event()
@@ -470,10 +471,16 @@ async def run_generation_job(
     try:
         # Claim the job for processing. This implements the worker-claim model
         # introduced in #1417 while preserving Main's heartbeat-on-read safety.
-        job = await asyncio.to_thread(store.claim_generation_job_start, job_id)
-        if not job:
-            logger.warning("[jobs] generation:claim_unavailable job_id=%s", job_id)
-            return
+        if claim_on_start:
+            job = await asyncio.to_thread(store.claim_generation_job_start, job_id)
+            if not job:
+                logger.warning("[jobs] generation:claim_unavailable job_id=%s", job_id)
+                return
+        else:
+            job = await asyncio.to_thread(store.get_generation_job, job_id)
+            if not job:
+                logger.warning("[jobs] generation:job_missing job_id=%s", job_id)
+                return
 
         # Use persisted milestones as the initial state for the progress recorder.
         persisted_milestones = job.get("progress_milestones")
