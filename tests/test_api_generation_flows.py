@@ -2932,13 +2932,31 @@ def test_generate_plan_daily_limit_blocks_request_at_limit(monkeypatch: pytest.M
     assert second.json()["detail"] == "Daily generation limit reached. Try again tomorrow."
 
 
-def test_generate_plan_daily_limit_excludes_exempt_email(monkeypatch: pytest.MonkeyPatch):
+def test_daily_generation_cap_exemptions_default_to_empty(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.delenv("APP_DAILY_GENERATION_CAP_EXEMPT_EMAILS", raising=False)
+    assert app_module._daily_generation_cap_exempt_emails() == frozenset()
+    assert app_module._is_exempt_from_daily_generation_cap("michaelokaforjr@gmail.com") is False
+
+
+def test_daily_generation_cap_exemptions_use_env_var(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setenv("APP_DAILY_GENERATION_CAP_EXEMPT_EMAILS", "test@example.com")
+    assert app_module._is_exempt_from_daily_generation_cap("test@example.com") is True
+
+
+def test_daily_generation_cap_exemptions_normalize_case_and_whitespace(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setenv("APP_DAILY_GENERATION_CAP_EXEMPT_EMAILS", " Test@Example.com , other@example.com ")
+    assert app_module._is_exempt_from_daily_generation_cap("test@example.com") is True
+    assert app_module._is_exempt_from_daily_generation_cap("OTHER@example.com") is True
+
+
+def test_generate_plan_daily_limit_allows_env_configured_exempt_email(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setenv("APP_PLAN_GENERATE_DAILY_LIMIT_PER_USER", "1")
+    monkeypatch.setenv("APP_DAILY_GENERATION_CAP_EXEMPT_EMAILS", "test@example.com")
     client, _, _ = _build_client()
     exempt_user = AuthenticatedUser(
         user_id="athlete-exempt",
-        email="michaelokaforjr@gmail.com",
-        full_name="Michael Okafor Jr",
+        email="test@example.com",
+        full_name="Test Exempt",
         metadata={},
     )
     client.app.state.auth_service.users_by_token["exempt-token"] = exempt_user
@@ -2957,13 +2975,14 @@ def test_generate_plan_daily_limit_excludes_exempt_email(monkeypatch: pytest.Mon
     assert second.status_code == 202
 
 
-def test_generate_plan_daily_limit_excludes_exempt_email_case_insensitive(monkeypatch: pytest.MonkeyPatch):
+def test_generate_plan_daily_limit_allows_env_configured_exempt_email_case_insensitive(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setenv("APP_PLAN_GENERATE_DAILY_LIMIT_PER_USER", "1")
+    monkeypatch.setenv("APP_DAILY_GENERATION_CAP_EXEMPT_EMAILS", "test@example.com")
     client, _, _ = _build_client()
     exempt_user = AuthenticatedUser(
         user_id="athlete-exempt-upper",
-        email="MichaelOkaforJr@Gmail.com",
-        full_name="Michael Okafor Jr",
+        email="Test@Example.com",
+        full_name="Test Exempt",
         metadata={},
     )
     client.app.state.auth_service.users_by_token["exempt-token-upper"] = exempt_user
