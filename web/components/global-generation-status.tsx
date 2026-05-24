@@ -143,7 +143,7 @@ export function GlobalGenerationStatus() {
             <div className="global-generation-status-content">
               <span className="global-generation-status-text">
                 <span className="global-generation-status-message">{mapLatestError(latestJob.error)}</span>
-                {latestJob.completed_at ? <span className="global-generation-status-elapsed">Completed {new Date(latestJob.completed_at).toLocaleString()}</span> : null}
+{latestJob.completed_at ? <span className="global-generation-status-elapsed" suppressHydrationWarning>Completed {new Date(latestJob.completed_at).toLocaleString()}</span> : null}
               </span>
               {latestJob.can_retry ? (
                 <button
