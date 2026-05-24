@@ -9,14 +9,42 @@ from api import generation_runtime
 from api import worker as worker_module
 from api.generation_runtime import (
     _invoke_planner,
+    _stage1_mp_start_method,
     _stage1_planner_timeout_seconds,
     _stage2_finalize_timeout_seconds,
     default_planner,
+    is_in_process_generation_enabled,
+    run_stage1_planner,
 )
 from support import FakeStage2Automator, FakeStore, _build_request, finalized_result
 
 
 _ENVIRONMENT_VARS = ("APP_ENV", "ENVIRONMENT", "UNLXCK_ENV", "NODE_ENV")
+
+
+def _spawn_planner_returns(payload):
+    return {"ok": payload["value"]}
+
+
+def _spawn_planner_with_progress(payload, *, progress_callback=None):
+    assert progress_callback is not None
+    progress_callback("planner_started", "Planner started", "", {})
+    return {"ok": True}
+
+
+def _spawn_planner_raises(payload):
+    raise RuntimeError("boom")
+
+
+def _spawn_planner_hangs(payload):
+    import time
+    time.sleep(2)
+    return {"ok": True}
+
+
+def _spawn_planner_exits(payload):
+    import os
+    os._exit(0)
 
 
 def _clear_environment_markers(monkeypatch):
@@ -68,6 +96,67 @@ def test_stage1_planner_timeout_prefers_new_env_over_legacy(monkeypatch):
     monkeypatch.setenv("STAGE1_PLANNER_TIMEOUT_SECONDS", "600")
     monkeypatch.setenv("APP_STAGE1_PLANNER_TIMEOUT_SECONDS", "60")
     assert _stage1_planner_timeout_seconds() == 600.0
+
+
+def test_stage1_mp_start_method_defaults_to_spawn(monkeypatch):
+    monkeypatch.delenv("UNLXCK_STAGE1_MP_START_METHOD", raising=False)
+    assert _stage1_mp_start_method() == "spawn"
+
+
+def test_stage1_mp_start_method_invalid_falls_back_to_spawn(monkeypatch):
+    monkeypatch.setenv("UNLXCK_STAGE1_MP_START_METHOD", "invalid")
+    assert _stage1_mp_start_method() == "spawn"
+
+
+def test_stage1_run_planner_returns_result(monkeypatch):
+    monkeypatch.setenv("UNLXCK_STAGE1_MP_START_METHOD", "spawn")
+    result = asyncio.run(run_stage1_planner(_spawn_planner_returns, {"value": 3}, timeout_seconds=2))
+    assert result == {"ok": 3}
+
+
+def test_stage1_run_planner_relays_progress(monkeypatch):
+    monkeypatch.setenv("UNLXCK_STAGE1_MP_START_METHOD", "spawn")
+    codes: list[str] = []
+
+    def callback(code, label, detail, meta):
+        codes.append(code)
+
+    result = asyncio.run(
+        run_stage1_planner(_spawn_planner_with_progress, {"value": 1}, progress_callback=callback, timeout_seconds=2)
+    )
+    assert result == {"ok": True}
+    assert "planner_started" in codes
+
+
+def test_stage1_run_planner_raises_controlled_runtime_error(monkeypatch):
+    monkeypatch.setenv("UNLXCK_STAGE1_MP_START_METHOD", "spawn")
+
+    with pytest.raises(RuntimeError, match="boom"):
+        asyncio.run(run_stage1_planner(_spawn_planner_raises, {}, timeout_seconds=2))
+
+
+def test_stage1_run_planner_timeout(monkeypatch):
+    monkeypatch.setenv("UNLXCK_STAGE1_MP_START_METHOD", "spawn")
+
+    with pytest.raises(asyncio.TimeoutError):
+        asyncio.run(run_stage1_planner(_spawn_planner_hangs, {}, timeout_seconds=0.1))
+
+
+def test_stage1_run_planner_child_exit_without_result_raises_controlled_error(monkeypatch):
+    monkeypatch.setenv("UNLXCK_STAGE1_MP_START_METHOD", "spawn")
+
+    with pytest.raises(RuntimeError, match="Stage 1 planner process exited without result"):
+        asyncio.run(run_stage1_planner(_spawn_planner_exits, {}, timeout_seconds=2))
+
+
+def test_in_process_generation_default_is_worker_only(monkeypatch):
+    monkeypatch.delenv("UNLXCK_ENABLE_IN_PROCESS_GENERATION", raising=False)
+    assert is_in_process_generation_enabled() is False
+
+
+def test_in_process_generation_env_override_enabled(monkeypatch):
+    monkeypatch.setenv("UNLXCK_ENABLE_IN_PROCESS_GENERATION", "1")
+    assert is_in_process_generation_enabled() is True
 
 
 def test_worker_stale_timeout_default_tracks_stage1_timeout(monkeypatch):
