@@ -151,7 +151,11 @@ def _job_response(
     error = str(job["error"]) if job.get("error") else None
     if viewer_role != "admin" and error == _OPENAI_QUOTA_ADMIN_ERROR:
         error = _OPENAI_QUOTA_ATHLETE_ERROR
-    can_retry = str(job.get("status") or "") == "failed" and isinstance(job.get("request_payload"), dict)
+    can_retry = (
+        str(job.get("status") or "") == "failed"
+        and isinstance(job.get("request_payload"), dict)
+        and not plan_id
+    )
     status_messages = {
         "queued": "Generation queued and will be processed shortly.",
         "running": "Generation started and is processing.",
@@ -1587,6 +1591,12 @@ def create_app(
 
         target_athlete_id = str(original["athlete_id"])
         source = str(original.get("source") or "").strip() or "self_serve"
+        existing_plan_id = str(original.get("plan_id") or "").strip()
+        if existing_plan_id and source != "admin_triage_resume":
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="generation job already produced a saved plan",
+            )
 
         # Daily cap enforcement: admins and exempt emails are not rate-limited.
         if not is_admin and not _is_exempt_from_daily_generation_cap(profile.email):
@@ -1613,7 +1623,7 @@ def create_app(
             else (request.headers.get("X-Client-Request-Id") or "").strip() or f"retry_{job_id}_{uuid.uuid4().hex}"
         )
         retry_intake_id = str(original.get("intake_id") or "").strip() or None
-        retry_plan_id = str(original.get("plan_id") or "").strip() or None
+        retry_plan_id = existing_plan_id or None
         if source == "admin_triage_resume" and (not retry_intake_id or not retry_plan_id):
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
