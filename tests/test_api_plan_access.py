@@ -218,6 +218,41 @@ def test_admin_can_view_internal_plan_outputs():
     assert admin_outputs["draft_plan_text"] == "# Stage 1 Draft"
     assert admin_outputs["stage2_retry_text"] == "repair prompt"
     assert admin_outputs["stage2_status"] == "stage2_pass"
+
+
+def test_create_plan_held_for_review_keeps_athlete_plan_text_empty():
+    client, store, _ = _build_client()
+    athlete = AuthenticatedUser(user_id="athlete-1", email="ari@example.com", full_name="Ari Mensah", metadata={})
+    store.ensure_profile(athlete)
+    plan = store.create_plan(
+        athlete_id="athlete-1",
+        intake_id="intake_x",
+        request=_build_request(),
+        result=finalized_result(
+            status="held_for_review",
+            plan_text="",
+            final_plan_text="# Internal held plan",
+            stage2_status="stage2_failed",
+        ),
+    )
+    assert plan["plan_text"] == ""
+    assert plan["final_plan_text"] == "# Internal held plan"
+
+
+def test_update_plan_stage2_publishable_with_flags_populates_athlete_plan_text():
+    client, store, _ = _build_client()
+    athlete = AuthenticatedUser(user_id="athlete-1", email="ari@example.com", full_name="Ari Mensah", metadata={})
+    store.ensure_profile(athlete)
+    plan = store.create_plan(athlete_id="athlete-1", intake_id="intake_x", request=_build_request(), result=finalized_result())
+    updated = store.update_plan_stage2(
+        plan["id"],
+        finalized_result(
+            status="publishable_with_flags",
+            plan_text="# Publishable with minor flags",
+            final_plan_text="# Publishable with minor flags",
+        ),
+    )
+    assert updated["plan_text"] == "# Publishable with minor flags"
     assert admin_outputs["parsing_metadata"] == {"athlete_timezone": {"source": "defaulted_missing"}}
 
 
