@@ -634,6 +634,20 @@ def _username_rate_limit_info(history: list[str]) -> UsernameRateLimitInfo:
 
 
 def _map_plan_summary(row: dict[str, Any]) -> PlanSummary:
+    raw_status = str(row.get("status") or "generated")
+    normalized_status = raw_status
+    if raw_status == "review_required":
+        report = row.get("stage2_validator_report") if isinstance(row.get("stage2_validator_report"), dict) else {}
+        report_exists = bool(report)
+        if not report_exists:
+            normalized_status = "held_for_review"
+        else:
+            has_errors = bool(report.get("errors"))
+            has_blocking = bool(report.get("blocking_warnings"))
+            if not has_blocking:
+                warnings = list(report.get("warnings") or [])
+                has_blocking = any(bool(w.get("blocking")) for w in warnings if isinstance(w, dict))
+            normalized_status = "held_for_review" if has_errors or has_blocking else "publishable_with_flags"
     return PlanSummary(
         plan_id=str(row["id"]),
         plan_name=(str(row["plan_name"]).strip() if row.get("plan_name") is not None else None) or None,
@@ -642,7 +656,7 @@ def _map_plan_summary(row: dict[str, Any]) -> PlanSummary:
         fight_date=str(row.get("fight_date") or ""),
         technical_style=list(row.get("technical_style") or []),
         created_at=str(row.get("created_at") or ""),
-        status=str(row.get("status") or "generated"),
+        status=normalized_status,
         pdf_url=row.get("pdf_url"),
     )
 
@@ -795,8 +809,13 @@ def _map_plan_detail(
     )
     parsing_metadata = row.get("parsing_metadata") or fallback_parsing_metadata or {}
     display_plan_text = str(row.get("plan_text") or "")
-    if include_admin and not display_plan_text:
-        display_plan_text = str(row.get("final_plan_text") or row.get("draft_plan_text") or "")
+    is_legacy_review_required = str(row.get("status") or "").strip().lower() == "review_required"
+    if (
+        not display_plan_text
+        and is_legacy_review_required
+        and summary.status == "publishable_with_flags"
+    ):
+        display_plan_text = str(row.get("final_plan_text") or "")
     return PlanDetail(
         **summary.model_dump(mode="json"),
         outputs=PlanOutputs(
