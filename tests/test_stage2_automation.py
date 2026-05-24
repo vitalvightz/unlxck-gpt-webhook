@@ -172,6 +172,19 @@ def test_first_pass_over_limit_blocks_before_openai(monkeypatch: pytest.MonkeyPa
     assert client.responses.calls == []
 
 
+def test_first_pass_default_limit_is_180k_chars(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("UNLXCK_STAGE2_MAX_FIRST_PASS_CHARS", raising=False)
+    stage1 = _stage1_result()
+    stage1["stage2_handoff_text"] = "x" * 180_001
+    client = FakeClient([_response("# should not be called")])
+    automator = OpenAIStage2Automator(client=client, model="test-model")
+
+    with pytest.raises(Stage2AutomationError, match="chars > 180000"):
+        asyncio.run(automator.finalize(stage1_result=stage1))
+
+    assert client.responses.calls == []
+
+
 def test_quota_error_stops_after_single_provider_call(monkeypatch: pytest.MonkeyPatch) -> None:
     client = FakeClient(
         [

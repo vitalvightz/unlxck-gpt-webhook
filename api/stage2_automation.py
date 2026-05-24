@@ -15,7 +15,7 @@ _STAGE2_PASS = "stage2_pass"
 _STAGE2_FAILED = "stage2_failed"
 
 logger = logging.getLogger(__name__)
-_DEFAULT_FIRST_PASS_CHAR_LIMIT = 120_000
+_DEFAULT_FIRST_PASS_CHAR_LIMIT = 180_000
 _DEFAULT_OPENAI_MAX_RETRIES = 0
 
 
