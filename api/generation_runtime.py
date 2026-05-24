@@ -934,7 +934,7 @@ async def run_generation_job(
             plan_id = str(plan_row.get("id") or "") or None
         if not plan_id:
             raise RuntimeError("Plan persistence failed: final_result exists but no linked plan_id was created.")
-        job = await _to_thread_with_heartbeat(
+        job = await asyncio.to_thread(
             store.update_generation_job,
             job_id,
             plan_id=plan_id,
