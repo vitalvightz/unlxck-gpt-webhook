@@ -931,7 +931,7 @@ async def run_generation_job(
         else:
             if plan_id:
                 plan_row = await _to_thread_with_heartbeat(store.get_plan, plan_id)
-            if not plan_row and intake_id:
+            if job_source != "admin_latest_intake" and not plan_row and intake_id:
                 latest_plan = await asyncio.to_thread(store.get_latest_plan, athlete_id)
                 if (
                     latest_plan
