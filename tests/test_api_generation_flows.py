@@ -1652,6 +1652,64 @@ def test_generation_pipeline_persists_triage_blocked_without_stage2_call():
     assert safety["stage2_skipped"] is True
 
 
+
+
+def test_admin_latest_intake_creates_new_plan_per_generation_job_and_triage_resume_still_updates_existing_plan():
+    store = FakeStore()
+    athlete = AuthenticatedUser(user_id="athlete-1", email="ari@example.com", full_name="Ari Mensah", metadata={})
+    store.ensure_profile(athlete)
+    request = _build_request()
+    intake = store.create_intake(athlete.user_id, request)
+
+    job_a = store.create_or_get_generation_job(
+        athlete_id=athlete.user_id,
+        client_request_id="admin-latest-a",
+        source="admin_latest_intake",
+        request_payload=request.model_dump(mode="json"),
+        intake_id=str(intake["id"]),
+    )
+    asyncio.run(run_generation_job(job_id=job_a["id"], store=store, planner_fn=_planner, stage2=FakeStage2Automator(result=finalized_result()), active_tasks=set()))
+    refreshed_a = store.get_generation_job(job_a["id"])
+    plan_a_id = str(refreshed_a.get("plan_id") or "")
+    assert refreshed_a["status"] == "completed"
+    assert plan_a_id
+
+    job_b = store.create_or_get_generation_job(
+        athlete_id=athlete.user_id,
+        client_request_id="admin-latest-b",
+        source="admin_latest_intake",
+        request_payload=request.model_dump(mode="json"),
+        intake_id=str(intake["id"]),
+    )
+    asyncio.run(run_generation_job(job_id=job_b["id"], store=store, planner_fn=_planner, stage2=FakeStage2Automator(result=finalized_result()), active_tasks=set()))
+    refreshed_b = store.get_generation_job(job_b["id"])
+    plan_b_id = str(refreshed_b.get("plan_id") or "")
+    assert refreshed_b["status"] == "completed"
+    assert plan_b_id
+
+    assert plan_b_id != plan_a_id
+    assert store.get_plan(plan_a_id) is not None
+    assert store.get_plan(plan_b_id) is not None
+    assert refreshed_a["plan_id"] == plan_a_id
+    assert refreshed_b["plan_id"] == plan_b_id
+
+    triage_request_payload = request.model_dump(mode="json")
+    triage_request_payload["_triage_resume_override"] = {"approved": True, "allowed_modes": ["needs_review"]}
+    triage_job = store.create_or_get_generation_job(
+        athlete_id=athlete.user_id,
+        client_request_id="admin-triage-resume-same-plan",
+        source="admin_triage_resume",
+        request_payload=triage_request_payload,
+        intake_id=str(intake["id"]),
+        plan_id=plan_b_id,
+    )
+    asyncio.run(run_generation_job(job_id=triage_job["id"], store=store, planner_fn=_planner, stage2=FakeStage2Automator(result=finalized_result()), active_tasks=set()))
+    refreshed_triage = store.get_generation_job(triage_job["id"])
+
+    assert refreshed_triage["status"] == "completed"
+    assert refreshed_triage["plan_id"] == plan_b_id
+    assert len(store.list_user_plans(athlete.user_id)) == 2
+
 def test_admin_triage_resume_without_plan_id_does_not_fall_back_to_latest_plan_for_same_intake():
     class NoLatestPlanFallbackStore(FakeStore):
         def get_latest_plan(self, athlete_id: str) -> dict | None:
