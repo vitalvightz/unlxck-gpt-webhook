@@ -2390,3 +2390,81 @@ def test_validate_stage2_output_marks_d12_hard_sparring_as_review_only():
     )
     assert not any(error["code"] == "late_fight_hard_sparring_violation" for error in report["errors"])
     assert any(w["code"] == "late_fight_hard_sparring_d12_review" for w in report["warnings"])
+
+
+def test_validate_stage2_output_allows_light_technical_sparring_in_late_fight():
+    report = validate_stage2_output(
+        planning_brief=_planning_brief_fixture(),
+        final_plan_text="""
+        D-5 (Monday) — Technical boxing
+        - Light technical sparring, 3 controlled rounds
+        """,
+    )
+    assert not any(error["code"] == "late_fight_hard_sparring_violation" for error in report["errors"])
+
+
+def test_validate_stage2_output_blocks_hard_sparring_in_late_fight():
+    report = validate_stage2_output(
+        planning_brief=_planning_brief_fixture(),
+        final_plan_text="""
+        D-5 (Monday) — Sparring
+        - Hard sparring, 6 rounds
+        """,
+    )
+    assert any(error["code"] == "late_fight_hard_sparring_violation" for error in report["errors"])
+
+
+def test_validate_stage2_output_allows_flow_sparring_in_late_fight():
+    report = validate_stage2_output(
+        planning_brief=_planning_brief_fixture(),
+        final_plan_text="""
+        D-7 (Monday) — Technical touch
+        - Flow sparring, controlled intensity
+        """,
+    )
+    assert not any(error["code"] == "late_fight_hard_sparring_violation" for error in report["errors"])
+
+
+def test_validate_stage2_output_allows_pads_and_shadowboxing_only_in_late_fight():
+    report = validate_stage2_output(
+        planning_brief=_planning_brief_fixture(),
+        final_plan_text="""
+        D-1 (Friday) — Freshness
+        - Pads and shadowboxing only
+        """,
+    )
+    assert not any(error["code"] == "late_fight_hard_sparring_violation" for error in report["errors"])
+
+
+def test_validate_stage2_output_blocks_when_light_and_hard_sparring_are_in_same_day():
+    report = validate_stage2_output(
+        planning_brief=_planning_brief_fixture(),
+        final_plan_text="""
+        D-5 (Monday) — Boxing
+        - Light technical sparring, 3 rounds
+        - Hard sparring, 6 rounds
+        """,
+    )
+    assert any(error["code"] == "late_fight_hard_sparring_violation" for error in report["errors"])
+
+
+def test_validate_stage2_output_blocks_hard_sparring_with_technical_focus():
+    report = validate_stage2_output(
+        planning_brief=_planning_brief_fixture(),
+        final_plan_text="""
+        D-5 (Monday) — Boxing
+        - Hard sparring, technical focus
+        """,
+    )
+    assert any(error["code"] == "late_fight_hard_sparring_violation" for error in report["errors"])
+
+
+def test_validate_stage2_output_blocks_controlled_hard_sparring():
+    report = validate_stage2_output(
+        planning_brief=_planning_brief_fixture(),
+        final_plan_text="""
+        D-5 (Monday) — Boxing
+        - Controlled hard sparring
+        """,
+    )
+    assert any(error["code"] == "late_fight_hard_sparring_violation" for error in report["errors"])
