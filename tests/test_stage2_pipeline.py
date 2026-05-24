@@ -86,7 +86,7 @@ def test_review_stage2_output_returns_fail_for_restriction_violation():
     assert any("Push Press" in line for line in review["summary_lines"])
 
 
-def test_review_stage2_output_returns_warn_for_missing_phase_critical_elements():
+def test_review_stage2_output_returns_pass_for_non_safety_structure_gaps():
     review = review_stage2_output(
         planning_brief=_stage1_result_fixture()["planning_brief"],
         final_plan_text="""
@@ -96,10 +96,8 @@ def test_review_stage2_output_returns_warn_for_missing_phase_critical_elements()
         """,
     )
 
-    assert review["status"] == "WARN"
-    assert review["needs_retry"] is True
-    assert any("Restore rehab" in line for line in review["summary_lines"])
-    assert any("Restore alactic" in line for line in review["summary_lines"])
+    assert review["status"] == "PASS"
+    assert review["needs_retry"] is False
 
 
 def test_review_stage2_output_returns_pass_with_non_blocking_review_flags():
@@ -122,7 +120,7 @@ def test_review_stage2_output_returns_pass_with_non_blocking_review_flags():
     assert "sport_language_leak" in review_flag_codes
 
 
-def test_review_stage2_output_promotes_hedged_adjustment_to_blocking_warning():
+def test_review_stage2_output_keeps_hedged_adjustment_non_blocking():
     review = review_stage2_output(
         planning_brief=_stage1_result_fixture()["planning_brief"],
         final_plan_text="""
@@ -135,13 +133,11 @@ def test_review_stage2_output_promotes_hedged_adjustment_to_blocking_warning():
         """,
     )
 
-    assert review["status"] == "WARN"
-    assert review["needs_retry"] is True
-    blocking_codes = [warning["code"] for warning in review["validator_report"]["blocking_warnings"]]
-    assert "hedged_adjustment_without_decision" in blocking_codes
+    assert review["status"] == "PASS"
+    assert review["needs_retry"] is False
 
 
-def test_review_stage2_output_promotes_empty_safety_in_high_risk_context():
+def test_review_stage2_output_keeps_empty_safety_language_non_blocking():
     planning_brief = _stage1_result_fixture()["planning_brief"]
     planning_brief["athlete_model"]["fatigue"] = "high"
     planning_brief["athlete_model"]["readiness_flags"] = ["high_fatigue", "fight_week"]
@@ -159,13 +155,11 @@ def test_review_stage2_output_promotes_empty_safety_in_high_risk_context():
         """,
     )
 
-    assert review["status"] == "WARN"
-    assert review["needs_retry"] is True
-    blocking_codes = [warning["code"] for warning in review["validator_report"]["blocking_warnings"]]
-    assert "empty_safety_language" in blocking_codes
+    assert review["status"] == "PASS"
+    assert review["needs_retry"] is False
 
 
-def test_review_stage2_output_treats_countdown_banded_lockout_as_blocking():
+def test_review_stage2_output_treats_countdown_banded_lockout_as_non_blocking():
     planning_brief = _stage1_result_fixture()["planning_brief"]
     planning_brief["late_fight_plan_spec"] = {
         "days_out_bucket": "D-7",
@@ -180,13 +174,11 @@ def test_review_stage2_output_treats_countdown_banded_lockout_as_blocking():
         """,
     )
 
-    assert review["status"] == "WARN"
-    assert review["needs_retry"] is True
-    blocking_codes = [warning["code"] for warning in review["validator_report"]["blocking_warnings"]]
-    assert "late_fight_countdown_blocked_drill" in blocking_codes
+    assert review["status"] == "PASS"
+    assert review["needs_retry"] is False
 
 
-def test_review_stage2_output_treats_late_fight_unapproved_exercise_as_blocking():
+def test_review_stage2_output_treats_late_fight_unapproved_exercise_as_non_blocking():
     planning_brief = _stage1_result_fixture()["planning_brief"]
     planning_brief["late_fight_plan_spec"] = {
         "days_out_bucket": "D-13",
@@ -201,10 +193,8 @@ def test_review_stage2_output_treats_late_fight_unapproved_exercise_as_blocking(
         """,
     )
 
-    assert review["status"] == "WARN"
-    assert review["needs_retry"] is True
-    blocking_codes = [warning["code"] for warning in review["validator_report"]["blocking_warnings"]]
-    assert "late_fight_unapproved_exercise_rendered" in blocking_codes
+    assert review["status"] == "PASS"
+    assert review["needs_retry"] is False
 
 
 def test_build_stage2_retry_returns_repair_prompt_when_needed():

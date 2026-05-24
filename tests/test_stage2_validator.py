@@ -2323,7 +2323,7 @@ def test_validate_stage2_output_blocks_visibly_truncated_countdown_plan():
     - No app S&C today.
 
     SPP — Week 3 (D-19 to D-14)
-    D-17 (Monday) — Coach
+    D-17 (Monday) — Coach:
     """
 
     report = validate_stage2_output(
@@ -2331,11 +2331,62 @@ def test_validate_stage2_output_blocks_visibly_truncated_countdown_plan():
         final_plan_text=truncated_plan,
     )
 
-    blocking_codes = {warning["code"] for warning in report["warnings"] if warning.get("blocking")}
-    assert "stage2_output_incomplete" in blocking_codes
+    error_codes = {error["code"] for error in report["errors"]}
+    assert "stage2_output_truncated" in error_codes
 
     review = review_stage2_output(
         planning_brief=_planning_brief_fixture(),
         final_plan_text=truncated_plan,
     )
-    assert review["status"] != "PASS"
+    assert review["status"] == "FAIL"
+
+
+def test_validate_stage2_output_flags_spaced_internal_system_terms():
+    report = validate_stage2_output(
+        planning_brief=_planning_brief_fixture(),
+        final_plan_text="""
+        D-7 (Monday) — Technical touch
+        - validator report: draft only
+        - candidate pool selected from short list
+        """,
+    )
+    assert any(error["code"] == "true_internal_system_leak" for error in report["errors"])
+
+
+def test_validate_stage2_output_ignores_negated_safety_lines_in_d1_and_d0():
+    report = validate_stage2_output(
+        planning_brief=_planning_brief_fixture(),
+        final_plan_text="""
+        D-1 (Friday) — Reset
+        - No strength or conditioning today.
+        D-0 (Saturday) — Fight day protocol
+        - Do not add extra conditioning or lift work.
+        """,
+    )
+    error_codes = {error["code"] for error in report["errors"]}
+    assert "dangerous_late_fight_strength_or_conditioning" not in error_codes
+    assert "fight_day_protocol_violation" not in error_codes
+
+
+def test_validate_stage2_output_blocks_hard_sparring_from_d11_to_d0():
+    report = validate_stage2_output(
+        planning_brief=_planning_brief_fixture(),
+        final_plan_text="""
+        D-11 (Tuesday) — Coach-led boxing session
+        - Hard sparring - 6 rounds
+        """,
+    )
+    error_codes = {error["code"] for error in report["errors"]}
+    assert "late_fight_hard_sparring_violation" in error_codes
+
+
+def test_validate_stage2_output_marks_d12_hard_sparring_as_review_only():
+    report = validate_stage2_output(
+        planning_brief=_planning_brief_fixture(),
+        final_plan_text="""
+        D-12 (Wednesday) — Coach-led boxing session
+        - Hard sparring - 6 rounds
+        """,
+    )
+    assert not any(error["code"] == "late_fight_hard_sparring_violation" for error in report["errors"])
+    assert any(w["code"] == "late_fight_hard_sparring_d12_review" for w in report["warnings"])
