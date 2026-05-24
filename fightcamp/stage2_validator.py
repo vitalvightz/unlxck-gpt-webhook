@@ -2615,14 +2615,14 @@ def _issue(*, code: str, message: str, severity: str, confidence: str, line: str
 
 
 def _normalize_warning(item: dict[str, Any]) -> dict[str, Any]:
-    return {
-        "code": item.get("code", "stage2_warning"),
-        "message": item.get("message", "Stage 2 validation warning."),
-        "severity": item.get("severity", "warning"),
-        "confidence": item.get("confidence", "medium"),
-        "line": item.get("line", ""),
-        **item,
+    defaults = {
+        "code": "stage2_warning",
+        "message": "Stage 2 validation warning.",
+        "severity": "warning",
+        "confidence": "medium",
+        "line": "",
     }
+    return {**defaults, **item}
 
 
 def _stage2_output_incomplete_errors(final_plan_text: str) -> list[dict[str, Any]]:
