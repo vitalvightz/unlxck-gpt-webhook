@@ -39,7 +39,6 @@ import {
   emptyQuickBuildInput,
   planRequestToQuickBuildInput,
   quickBuildToPlanRequest,
-  sanitizeQuickBuildFocusByDaysOut,
   validateQuickBuildInput,
   type QuickBuildInput,
   type QuickBuildValidationErrors,
@@ -269,6 +268,7 @@ function QuickBuildFormInner() {
       : emptyQuickBuildInput(""),
   );
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
   const [showErrors, setShowErrors] = useState(false);
   const [isPending, startTransition] = useTransition();
 
@@ -394,24 +394,26 @@ function QuickBuildFormInner() {
 
   useEffect(() => {
     setInput((current) => {
-      const sanitized = sanitizeQuickBuildFocusByDaysOut(current);
-      if (
-        sanitized.key_goals.length === current.key_goals.length &&
-        sanitized.weak_areas.length === current.weak_areas.length
-      ) {
+      const nextKeyGoals = filterAvailablePerformanceFocusValues(daysOutCtx, "key_goals", current.key_goals);
+      const nextWeakAreas = filterAvailablePerformanceFocusValues(daysOutCtx, "weak_areas", current.weak_areas);
+      if (nextKeyGoals.length === current.key_goals.length && nextWeakAreas.length === current.weak_areas.length) {
         return current;
       }
+      setMessage("Some picks were removed because they are not available this close to fight day.");
       return {
         ...current,
-        key_goals: sanitized.key_goals,
-        weak_areas: sanitized.weak_areas,
+        key_goals: nextKeyGoals,
+        weak_areas: nextWeakAreas,
       };
     });
-  }, [input.fight_date, input.no_scheduled_fight]);
+  }, [daysOutCtx]);
 
   function patch<K extends keyof QuickBuildInput>(key: K, value: QuickBuildInput[K]) {
     if (submitError) {
       setSubmitError(null);
+    }
+    if (message) {
+      setMessage(null);
     }
     setInput((current) => ({ ...current, [key]: value }));
   }
@@ -419,6 +421,9 @@ function QuickBuildFormInner() {
   function toggleField(key: keyof Pick<QuickBuildInput, "technical_style" | "tactical_style" | "training_availability" | "hard_sparring_days" | "equipment_access" | "key_goals" | "weak_areas">, value: string) {
     if (submitError) {
       setSubmitError(null);
+    }
+    if (message) {
+      setMessage(null);
     }
     setInput((current) => {
       const nextValues = toggleListValue(current[key], value);
@@ -470,6 +475,9 @@ function QuickBuildFormInner() {
   }
 
   function applyStarterPreset(starter: QuickBuildStarter) {
+    if (message) {
+      setMessage(null);
+    }
     const trainingPreset = TRAINING_PRESETS.find((entry) => entry.key === starter.trainingPreset);
     const equipmentPreset = EQUIPMENT_PRESETS.find((entry) => entry.key === starter.equipmentPreset);
     const focusEntry = availableFocusPresets.find(
@@ -507,6 +515,9 @@ function QuickBuildFormInner() {
   }
 
   function clearStarterPreset() {
+    if (message) {
+      setMessage(null);
+    }
     setSubmitError(null);
     setInput((current) => ({
       ...current,
@@ -520,16 +531,25 @@ function QuickBuildFormInner() {
   }
 
   function applyEquipmentPreset(preset: EquipmentPreset) {
+    if (message) {
+      setMessage(null);
+    }
     setSubmitError(null);
     patch("equipment_access", [...preset.equipment_access]);
   }
 
   function clearEquipmentPreset() {
+    if (message) {
+      setMessage(null);
+    }
     setSubmitError(null);
     patch("equipment_access", []);
   }
 
   function applyTrainingPreset(preset: TrainingPreset) {
+    if (message) {
+      setMessage(null);
+    }
     setSubmitError(null);
     setInput((currentInput) => ({
       ...currentInput,
@@ -540,6 +560,9 @@ function QuickBuildFormInner() {
   }
 
   function clearTrainingPreset() {
+    if (message) {
+      setMessage(null);
+    }
     setSubmitError(null);
     setInput((currentInput) => ({
       ...currentInput,
@@ -549,6 +572,9 @@ function QuickBuildFormInner() {
   }
 
   function applyFocusPreset(preset: FocusPreset) {
+    if (message) {
+      setMessage(null);
+    }
     setSubmitError(null);
     setInput((currentInput) => ({
       ...currentInput,
@@ -558,6 +584,9 @@ function QuickBuildFormInner() {
   }
 
   function clearFocusPreset() {
+    if (message) {
+      setMessage(null);
+    }
     setSubmitError(null);
     setInput((currentInput) => ({
       ...currentInput,
@@ -606,6 +635,12 @@ function QuickBuildFormInner() {
     event.preventDefault();
     setSubmitError(null);
     const currentErrors = validateQuickBuildInput(input);
+    const currentFocusValidation = (!input.no_scheduled_fight && input.fight_date)
+      ? validatePerformanceFocusSelections(input.fight_date, { keyGoals: input.key_goals, weakAreas: input.weak_areas }, { timeZone: typeof Intl !== "undefined" ? Intl.DateTimeFormat().resolvedOptions().timeZone : null })
+      : null;
+    if (currentFocusValidation?.isOverCap) {
+      currentErrors.focus_cap = currentFocusValidation.errorMessage ?? "Adjust goals and weak areas before generating.";
+    }
     if (Object.keys(currentErrors).length > 0) {
       setShowErrors(true);
       const errorCount = Object.keys(currentErrors).length;
@@ -939,6 +974,12 @@ function QuickBuildFormInner() {
           </p>
           <p className="muted">Refine fatigue, sparring days, and detailed weaknesses later from the plan page.</p>
         </div>
+        {message ? (
+          <div className="quick-build-action-feedback" role="status" aria-live="polite">
+            <span className="quick-build-action-feedback-label">Notice</span>
+            <span>{message}</span>
+          </div>
+        ) : null}
         {submitError ? (
           <div id={submitErrorId} className="quick-build-action-feedback" role="alert" aria-live="assertive">
             <span className="quick-build-action-feedback-label">Check</span>
