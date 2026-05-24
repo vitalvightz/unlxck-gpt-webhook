@@ -363,6 +363,7 @@ export type GenerationJobResponse = {
   error?: string | null;
   plan_id?: string | null;
   latest_plan_id?: string | null;
+  source?: string | null;
   progress_milestones?: ProgressMilestone[];
   can_retry?: boolean;
   status_url?: string | null;
