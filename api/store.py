@@ -236,6 +236,25 @@ def _has_milestone_code(milestones: list[Any], code: str) -> bool:
     return False
 
 
+def _should_recover_stalled_job(job: dict[str, Any]) -> bool:
+    if isinstance(job.get("final_result"), dict):
+        return True
+    if str(job.get("plan_id") or "").strip():
+        return True
+    milestones = _progress_milestones(job.get("progress_milestones"))
+    terminal_like_codes = {
+        "final_result_persisted",
+        "plan_saved",
+        "generation_job_terminal_status_persisted",
+    }
+    for entry in milestones:
+        if not isinstance(entry, dict):
+            continue
+        if str(entry.get("code") or "") in terminal_like_codes:
+            return True
+    return False
+
+
 def is_pre_start_stale_generation_job(job: dict[str, Any], *, stale_after_seconds: int = 90) -> bool:
     if str(job.get("status") or "") != "running":
         return False
@@ -1400,13 +1419,19 @@ class SupabaseAppStore:
                             "at": now_iso,
                         }
                     )
+                recovered_status = "review_required" if _should_recover_stalled_job(job) else "failed"
+                error_message = (
+                    "Recovered stalled job with persisted output."
+                    if recovered_status == "review_required"
+                    else "Stage 1 planner stalled after planner invocation."
+                )
                 self._run_with_transient_retry(
-                    operation="get_generation_job:fail_stage1_stalled",
+                    operation="get_generation_job:resolve_stage1_stalled",
                     fn=lambda: self.client.table("generation_jobs")
                     .update(
                         {
-                            "status": "failed",
-                            "error": "Stage 1 planner stalled after planner invocation.",
+                            "status": recovered_status,
+                            "error": error_message,
                             "completed_at": now_iso,
                             "heartbeat_at": now_iso,
                             "progress_milestones": milestones,
@@ -1586,13 +1611,19 @@ class SupabaseAppStore:
                                 "at": now_iso,
                             }
                         )
+                    recovered_status = "review_required" if _should_recover_stalled_job(row) else "failed"
+                    error_message = (
+                        "Recovered stalled job with persisted output."
+                        if recovered_status == "review_required"
+                        else "Stage 1 planner stalled after planner invocation."
+                    )
                     self._run_with_transient_retry(
-                        operation="get_active_generation_job_for_athlete:fail_stage1_stalled",
+                        operation="get_active_generation_job_for_athlete:resolve_stage1_stalled",
                         fn=lambda: self.client.table("generation_jobs")
                         .update(
                             {
-                                "status": "failed",
-                                "error": "Stage 1 planner stalled after planner invocation.",
+                                "status": recovered_status,
+                                "error": error_message,
                                 "completed_at": now_iso,
                                 "heartbeat_at": now_iso,
                                 "progress_milestones": milestones,
@@ -1604,13 +1635,19 @@ class SupabaseAppStore:
                     )
                 else:
                     now_iso = _utc_now_iso()
+                    recovered_status = "review_required" if _should_recover_stalled_job(row) else "failed"
+                    error_message = (
+                        "Recovered stalled job with persisted output."
+                        if recovered_status == "review_required"
+                        else "Generation job stalled mid-pipeline and was failed for recovery."
+                    )
                     self._run_with_transient_retry(
-                        operation="get_active_generation_job_for_athlete:fail_mid_pipeline_stale",
+                        operation="get_active_generation_job_for_athlete:resolve_mid_pipeline_stale",
                         fn=lambda: self.client.table("generation_jobs")
                         .update(
                             {
-                                "status": "failed",
-                                "error": "Generation job stalled mid-pipeline and was failed for recovery.",
+                                "status": recovered_status,
+                                "error": error_message,
                                 "completed_at": now_iso,
                                 "heartbeat_at": now_iso,
                             }

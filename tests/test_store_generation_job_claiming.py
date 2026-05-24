@@ -1,7 +1,7 @@
 from types import SimpleNamespace
 from unittest.mock import MagicMock
 
-from api.store import SupabaseAppStore
+from api.store import SupabaseAppStore, _should_recover_stalled_job
 
 
 def _build_store_with_rows(*, queued_rows, running_heartbeat_rows, running_started_rows):
@@ -80,3 +80,24 @@ def test_supabase_list_claimable_generation_jobs_filters_running_by_startup_stal
     assert "running-startup-stale" in [job["id"] for job in claimable]
     assert "running-fresh" not in [job["id"] for job in claimable]
     assert "running-mid-pipeline" not in [job["id"] for job in claimable]
+
+
+def test_should_recover_stalled_job_when_final_result_present():
+    assert _should_recover_stalled_job({"final_result": {"status": "ready"}}) is True
+
+
+def test_should_recover_stalled_job_when_plan_id_present():
+    assert _should_recover_stalled_job({"plan_id": "plan_123", "final_result": None}) is True
+
+
+def test_should_recover_stalled_job_when_terminal_milestone_present():
+    assert (
+        _should_recover_stalled_job(
+            {"progress_milestones": [{"code": "request_payload_parsed"}, {"code": "final_result_persisted"}]}
+        )
+        is True
+    )
+
+
+def test_should_not_recover_stalled_job_without_outputs_or_terminal_milestone():
+    assert _should_recover_stalled_job({"progress_milestones": [{"code": "stage1_planner_invoked"}]}) is False
