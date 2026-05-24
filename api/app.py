@@ -67,6 +67,7 @@ from .generation_runtime import (
     _OPENAI_QUOTA_ADMIN_ERROR,
     _OPENAI_QUOTA_ATHLETE_ERROR,
     default_planner as runtime_default_planner,
+    is_in_process_generation_enabled,
     is_stale_job as runtime_is_stale_job,
     schedule_generation_job_if_needed,
 )
@@ -162,6 +163,8 @@ def _job_response(
         error=error,
         plan_id=plan_id,
         latest_plan_id=latest_plan_id or plan_id,
+        status_url=f"/api/generation-jobs/{job['id']}",
+        message="Generation started and is processing." if str(job.get("status") or "") == "running" else "Generation queued and will be processed shortly.",
         progress_milestones=_normalize_progress_milestones(job.get("progress_milestones")),
     )
 
@@ -2245,7 +2248,7 @@ def create_app(
 
 
 def _build_runtime_app() -> FastAPI:
-    enable_in_process_generation = os.getenv("UNLXCK_ENABLE_IN_PROCESS_GENERATION", "0").strip() == "1"
+    enable_in_process_generation = is_in_process_generation_enabled()
     logger.info(
         "[app] build_runtime_app:start has_supabase_url=%s has_service_role_key=%s in_process_generation=%s",
         bool(os.getenv("SUPABASE_URL")),

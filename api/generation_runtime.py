@@ -279,6 +279,10 @@ def _use_fastapi_background_tasks() -> bool:
     return scheduler in {"fastapi", "background_tasks", "backgroundtasks"}
 
 
+def is_in_process_generation_enabled() -> bool:
+    return os.getenv("UNLXCK_ENABLE_IN_PROCESS_GENERATION", "1").strip() == "1"
+
+
 def generation_max_concurrent_jobs() -> int:
     raw_value = os.getenv("APP_GENERATION_MAX_CONCURRENT_JOBS", "2").strip()
     try:
@@ -1040,6 +1044,10 @@ async def schedule_generation_job_if_needed(
             return job
 
     if not enable_in_process_generation:
+        logger.info(
+            "[api] generation:job_created_worker_will_process job_id=%s",
+            str(job.get("id") or ""),
+        )
         return job
 
     job_id = str(job["id"])

@@ -185,6 +185,8 @@ async def run_worker() -> None:
         stale_after_seconds,
         max_concurrent_jobs,
     )
+    if os.getenv("UNLXCK_ENABLE_IN_PROCESS_GENERATION", "1").strip() == "0":
+        logger.info("[worker] generation:worker_only_mode enabled")
 
     while True:
         await _tick(

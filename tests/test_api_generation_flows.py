@@ -688,6 +688,39 @@ def test_scheduler_returns_recovered_queued_row_for_stale_running_job():
     assert scheduled["heartbeat_at"] is None
 
 
+def test_generate_plan_worker_only_mode_returns_queue_metadata_and_does_not_schedule():
+    client, store, _ = _build_client(enable_in_process_generation=False)
+    response = client.post(
+        "/api/plans/generate",
+        headers={"Authorization": "Bearer athlete-token"},
+        json=_build_request().model_dump(mode="json"),
+    )
+    assert response.status_code == 202
+    body = response.json()
+    assert body["status"] == "queued"
+    assert body["status_url"] == f"/api/generation-jobs/{body['job_id']}"
+    assert "queued" in str(body.get("message") or "").lower()
+    persisted = store.get_generation_job(body["job_id"])
+    assert persisted is not None
+    assert persisted["status"] == "queued"
+    assert persisted["completed_at"] is None
+
+
+def test_generate_plan_in_process_mode_still_schedules_and_completes():
+    client, store, _ = _build_client(enable_in_process_generation=True)
+    response = client.post(
+        "/api/plans/generate",
+        headers={"Authorization": "Bearer athlete-token"},
+        json=_build_request().model_dump(mode="json"),
+    )
+    assert response.status_code == 202
+    body = response.json()
+    assert body["status_url"] == f"/api/generation-jobs/{body['job_id']}"
+    job = store.get_generation_job(body["job_id"])
+    assert job is not None
+    assert job["status"] in {"running", "completed"}
+
+
 def test_retry_requeues_pre_start_stale_running_job_instead_of_leaving_running():
     client, store, _ = _build_client(enable_in_process_generation=False)
     stale = store.create_or_get_generation_job(
