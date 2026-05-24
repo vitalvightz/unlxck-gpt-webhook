@@ -151,7 +151,11 @@ def _job_response(
     error = str(job["error"]) if job.get("error") else None
     if viewer_role != "admin" and error == _OPENAI_QUOTA_ADMIN_ERROR:
         error = _OPENAI_QUOTA_ATHLETE_ERROR
-    can_retry = str(job.get("status") or "") == "failed" and isinstance(job.get("request_payload"), dict)
+    can_retry = (
+        str(job.get("status") or "") == "failed"
+        and isinstance(job.get("request_payload"), dict)
+        and not plan_id
+    )
     status_messages = {
         "queued": "Generation queued and will be processed shortly.",
         "running": "Generation started and is processing.",
@@ -242,6 +246,33 @@ def _find_blocking_generation_job_for_athlete(
             job,
             stale_after_seconds=stale_after_seconds,
         ):
+            return job
+    return None
+
+
+def _stable_payload_hash(payload: dict[str, Any]) -> str:
+    return json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+
+
+def _find_existing_terminal_job_for_same_payload(
+    *,
+    store: AppStore,
+    athlete_id: str,
+    request_payload: dict[str, Any],
+) -> dict[str, Any] | None:
+    target_hash = _stable_payload_hash(request_payload)
+    jobs = store.list_generation_jobs_for_athlete(athlete_id, limit=25)
+    for job in jobs:
+        job_payload = job.get("request_payload")
+        if not isinstance(job_payload, dict):
+            continue
+        if _stable_payload_hash(job_payload) != target_hash:
+            continue
+        status_value = str(job.get("status") or "").strip().lower()
+        has_plan = bool(str(job.get("plan_id") or "").strip())
+        if status_value in {"completed", "review_required"}:
+            return job
+        if has_plan:
             return job
     return None
 
@@ -1430,6 +1461,14 @@ def create_app(
                 stale_after_seconds=stale_after_seconds,
             )
             return _job_response(job, viewer_role=profile.role)
+        recovered_existing = await asyncio.to_thread(
+            _find_existing_terminal_job_for_same_payload,
+            store=store,
+            athlete_id=profile.athlete_id,
+            request_payload=request_body.model_dump(mode="json"),
+        )
+        if recovered_existing:
+            return _job_response(recovered_existing, viewer_role=profile.role)
         blocking_job = await asyncio.to_thread(
             _find_blocking_generation_job_for_athlete,
             store=store,
@@ -1587,6 +1626,12 @@ def create_app(
 
         target_athlete_id = str(original["athlete_id"])
         source = str(original.get("source") or "").strip() or "self_serve"
+        existing_plan_id = str(original.get("plan_id") or "").strip()
+        if existing_plan_id and source != "admin_triage_resume":
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="generation job already produced a saved plan",
+            )
 
         # Daily cap enforcement: admins and exempt emails are not rate-limited.
         if not is_admin and not _is_exempt_from_daily_generation_cap(profile.email):
@@ -1613,7 +1658,7 @@ def create_app(
             else (request.headers.get("X-Client-Request-Id") or "").strip() or f"retry_{job_id}_{uuid.uuid4().hex}"
         )
         retry_intake_id = str(original.get("intake_id") or "").strip() or None
-        retry_plan_id = str(original.get("plan_id") or "").strip() or None
+        retry_plan_id = existing_plan_id or None
         if source == "admin_triage_resume" and (not retry_intake_id or not retry_plan_id):
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,

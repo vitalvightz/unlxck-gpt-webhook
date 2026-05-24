@@ -7,17 +7,39 @@ import { RequireAuth } from "@/components/auth-guard";
 import { useAppSession } from "@/components/auth-provider";
 import { createGenerationJob, getActiveGenerationJob } from "@/lib/api";
 import { useGenerationController } from "@/lib/generation-controller";
+import { shouldBlockGenerateAutoStartForMatchingPayload } from "@/lib/generation-status-guards";
 import { hydratePlanRequest } from "@/lib/onboarding";
 import { validatePerformanceFocusSelections } from "@/lib/performance-focus-cap";
 import { PremiumLoadingScreen } from "@/components/premium-loading-screen";
 
 const STORAGE_KEY = "unlxck:pending-generation:self";
+const COMPLETED_GENERATION_KEY = "unlxck:completed-generation:self";
 const ALLOWED_PLAN_SOURCES = new Set(["quick_build", "self_serve"]);
 
 function resolvePlanSource(me: ReturnType<typeof useAppSession>["me"]): string {
   const draft = me?.profile.onboarding_draft as { plan_source?: unknown } | null | undefined;
   const candidate = typeof draft?.plan_source === "string" ? draft.plan_source.trim() : "";
   return ALLOWED_PLAN_SOURCES.has(candidate) ? candidate : "self_serve";
+}
+
+function hashPayload(payload: unknown): string {
+  return JSON.stringify(payload);
+}
+
+function getCompletedPayloadHash(): string | null {
+  if (typeof window === "undefined") {
+    return null;
+  }
+  const raw = window.localStorage.getItem(COMPLETED_GENERATION_KEY);
+  if (!raw) {
+    return null;
+  }
+  try {
+    const parsed = JSON.parse(raw) as { payloadHash?: unknown };
+    return typeof parsed.payloadHash === "string" ? parsed.payloadHash : null;
+  } catch {
+    return null;
+  }
 }
 
 export default function GeneratePage() {
@@ -48,6 +70,12 @@ export default function GeneratePage() {
       return createGenerationJob(session.access_token, payload, clientRequestId, resolvePlanSource(me));
     },
     onComplete: ({ planId, status, recovered }) => {
+      if (payload && typeof window !== "undefined") {
+        window.localStorage.setItem(
+          COMPLETED_GENERATION_KEY,
+          JSON.stringify({ payloadHash: hashPayload(payload), planId, completedAt: new Date().toISOString() }),
+        );
+      }
       const search = new URLSearchParams();
       if (status === "review_required") {
         search.set("review_required", "1");
@@ -62,6 +90,12 @@ export default function GeneratePage() {
 
   useEffect(() => {
     if (!session?.access_token || !payload || autoStartRef.current || controller.hasPendingGeneration) {
+      return;
+    }
+    const completed = getCompletedGeneration();
+    const currentPayloadHash = hashPayload(payload);
+    if (completed && shouldBlockGenerateAutoStartForMatchingPayload(currentPayloadHash, completed.payloadHash)) {
+      router.replace(`/plans/${completed.planId}`);
       return;
     }
 

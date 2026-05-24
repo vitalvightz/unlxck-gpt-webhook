@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { canRecoverPendingGenerationWithoutCreate } from "./generation-controller";
+import { canRecoverPendingGenerationWithoutCreate, resolveFailedJobWithSavedPlan } from "./generation-controller";
 
 test("controller recovery does not create from localStorage-only pending state", () => {
   assert.equal(
@@ -21,5 +21,20 @@ test("controller recovery requires an exact pending job id", () => {
       createdAt: "2026-01-01T00:00:00Z",
     }),
     true,
+  );
+});
+
+test("failed job with plan id is recovered to open saved plan", () => {
+  assert.equal(
+    resolveFailedJobWithSavedPlan({
+      job_id: "job-1",
+      athlete_id: "athlete-1",
+      client_request_id: "request-1",
+      status: "failed",
+      created_at: "2026-05-22T23:00:00.000Z",
+      updated_at: "2026-05-22T23:30:00.000Z",
+      plan_id: "plan_123",
+    }),
+    "plan_123",
   );
 });

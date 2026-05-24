@@ -20,6 +20,18 @@ const CELEBRATION_DURATION_MS = 1_600;
 const RIBBON_DISMISSED_KEY = "unlxck:generation-ribbon-dismissed";
 const latestJobDismissKey = (jobId: string) => `${RIBBON_DISMISSED_KEY}:${jobId}`;
 
+export function latestFailedJobHasOpenablePlan(
+  latestJob:
+    | { status?: string | null; plan_id?: string | null; latest_plan_id?: string | null }
+    | null
+    | undefined,
+): boolean {
+  if (!latestJob || latestJob.status !== "failed") {
+    return false;
+  }
+  return Boolean(latestJob.plan_id || latestJob.latest_plan_id);
+}
+
 export function getGenerationStatusTarget(
   phase: string | null,
   planId: string | null,
@@ -137,6 +149,18 @@ export function GlobalGenerationStatus() {
       return null;
     }
     if (latestJob.status === "failed") {
+      const failedPlanId = latestJob.plan_id || latestJob.latest_plan_id || null;
+      if (latestFailedJobHasOpenablePlan(latestJob) && failedPlanId) {
+        return (
+          <div className="global-generation-status global-generation-status-completed">
+            <Link href={`/plans/${failedPlanId}`} className="global-generation-status-main">
+              <div className="global-generation-status-message">Your plan is saved and ready.</div>
+              <span className="global-generation-status-cta-label">Open plan</span>
+            </Link>
+            <button type="button" className="global-generation-status-dismiss" aria-label="Hide generation ribbon" onClick={dismissCurrentBanner}>×</button>
+          </div>
+        );
+      }
       return (
         <div className="global-generation-status global-generation-status-failed">
           <div className="global-generation-status-main">

@@ -27,6 +27,13 @@ export function canRecoverPendingGenerationWithoutCreate(
   return typeof pending?.jobId === "string" && pending.jobId.length > 0;
 }
 
+export function resolveFailedJobWithSavedPlan(job: GenerationJobResponse): string | null {
+  if (job.status !== "failed") {
+    return null;
+  }
+  return job.plan_id || job.latest_plan_id || null;
+}
+
 type GenerationCompletion = {
   planId: string;
   status: Extract<GenerationJobStatus, "completed" | "review_required">;
@@ -299,6 +306,19 @@ export function useGenerationController({
         }
 
         if (currentJob.status === "failed") {
+          const recoveredPlanId = resolveFailedJobWithSavedPlan(currentJob);
+          if (recoveredPlanId) {
+            clearAllPendingGenerations();
+            setPhase("finalizing");
+            setStatusMessage("Opening your saved plan.");
+            setIsGenerating(false);
+            onComplete({
+              planId: recoveredPlanId,
+              status: "completed",
+              recovered: true,
+            });
+            return;
+          }
           clearAllPendingGenerations();
           setFailedJobId(currentJob.job_id);
           throw new Error(currentJob.error || "Plan generation failed.");
