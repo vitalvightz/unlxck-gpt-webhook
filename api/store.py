@@ -236,6 +236,39 @@ def _has_milestone_code(milestones: list[Any], code: str) -> bool:
     return False
 
 
+def _should_recover_stalled_job(job: dict[str, Any]) -> bool:
+    if isinstance(job.get("final_result"), dict):
+        return True
+    if str(job.get("plan_id") or "").strip():
+        return True
+    milestones = _progress_milestones(job.get("progress_milestones"))
+    for entry in milestones:
+        if not isinstance(entry, dict):
+            continue
+        code = str(entry.get("code") or "")
+        if code not in {"final_result_persisted", "plan_saved", "generation_job_terminal_status_persisted"}:
+            continue
+        meta = entry.get("meta") if isinstance(entry.get("meta"), dict) else {}
+        if str(meta.get("plan_id") or "").strip():
+            return True
+    return False
+
+
+def _plan_id_from_terminal_milestones(job: dict[str, Any]) -> str | None:
+    milestones = _progress_milestones(job.get("progress_milestones"))
+    for entry in reversed(milestones):
+        if not isinstance(entry, dict):
+            continue
+        code = str(entry.get("code") or "")
+        if code not in {"final_result_persisted", "plan_saved", "generation_job_terminal_status_persisted"}:
+            continue
+        meta = entry.get("meta") if isinstance(entry.get("meta"), dict) else {}
+        plan_id = str(meta.get("plan_id") or "").strip()
+        if plan_id:
+            return plan_id
+    return None
+
+
 def is_pre_start_stale_generation_job(job: dict[str, Any], *, stale_after_seconds: int = 90) -> bool:
     if str(job.get("status") or "") != "running":
         return False
@@ -1400,16 +1433,29 @@ class SupabaseAppStore:
                             "at": now_iso,
                         }
                     )
+                recovered_plan_id = _plan_id_from_terminal_milestones(job)
+                recovered_status = "review_required" if _should_recover_stalled_job(job) else "failed"
+                if recovered_status == "review_required":
+                    milestones.append(
+                        {
+                            "code": "stalled_job_recovered",
+                            "label": "Stalled job recovered",
+                            "detail": "Recovered as review required because usable output was already persisted.",
+                            "meta": {"recovery_reason": "persisted_output"},
+                            "at": now_iso,
+                        }
+                    )
                 self._run_with_transient_retry(
-                    operation="get_generation_job:fail_stage1_stalled",
+                    operation="get_generation_job:resolve_stage1_stalled",
                     fn=lambda: self.client.table("generation_jobs")
                     .update(
                         {
-                            "status": "failed",
-                            "error": "Stage 1 planner stalled after planner invocation.",
+                            "status": recovered_status,
+                            "error": None if recovered_status == "review_required" else "Stage 1 planner stalled after planner invocation.",
                             "completed_at": now_iso,
                             "heartbeat_at": now_iso,
                             "progress_milestones": milestones,
+                            "plan_id": recovered_plan_id or str(job.get("plan_id") or "") or None,
                         }
                     )
                     .eq("id", str(job.get("id") or ""))
@@ -1583,19 +1629,32 @@ class SupabaseAppStore:
                                 "label": "Stage 1 planner timed out",
                                 "detail": "Planner did not return after invocation and the job was failed for recovery.",
                                 "meta": {},
+                            "at": now_iso,
+                            }
+                        )
+                    recovered_plan_id = _plan_id_from_terminal_milestones(row)
+                    recovered_status = "review_required" if _should_recover_stalled_job(row) else "failed"
+                    if recovered_status == "review_required":
+                        milestones.append(
+                            {
+                                "code": "stalled_job_recovered",
+                                "label": "Stalled job recovered",
+                                "detail": "Recovered as review required because usable output was already persisted.",
+                                "meta": {"recovery_reason": "persisted_output"},
                                 "at": now_iso,
                             }
                         )
                     self._run_with_transient_retry(
-                        operation="get_active_generation_job_for_athlete:fail_stage1_stalled",
+                        operation="get_active_generation_job_for_athlete:resolve_stage1_stalled",
                         fn=lambda: self.client.table("generation_jobs")
                         .update(
                             {
-                                "status": "failed",
-                                "error": "Stage 1 planner stalled after planner invocation.",
+                                "status": recovered_status,
+                                "error": None if recovered_status == "review_required" else "Stage 1 planner stalled after planner invocation.",
                                 "completed_at": now_iso,
                                 "heartbeat_at": now_iso,
                                 "progress_milestones": milestones,
+                                "plan_id": recovered_plan_id or str(row.get("plan_id") or "") or None,
                             }
                         )
                         .eq("id", str(row.get("id") or ""))
@@ -1604,15 +1663,30 @@ class SupabaseAppStore:
                     )
                 else:
                     now_iso = _utc_now_iso()
+                    milestones = _progress_milestones(row.get("progress_milestones"))
+                    recovered_plan_id = _plan_id_from_terminal_milestones(row)
+                    recovered_status = "review_required" if _should_recover_stalled_job(row) else "failed"
+                    if recovered_status == "review_required":
+                        milestones.append(
+                            {
+                                "code": "stalled_job_recovered",
+                                "label": "Stalled job recovered",
+                                "detail": "Recovered as review required because usable output was already persisted.",
+                                "meta": {"recovery_reason": "persisted_output"},
+                                "at": now_iso,
+                            }
+                        )
                     self._run_with_transient_retry(
-                        operation="get_active_generation_job_for_athlete:fail_mid_pipeline_stale",
+                        operation="get_active_generation_job_for_athlete:resolve_mid_pipeline_stale",
                         fn=lambda: self.client.table("generation_jobs")
                         .update(
                             {
-                                "status": "failed",
-                                "error": "Generation job stalled mid-pipeline and was failed for recovery.",
+                                "status": recovered_status,
+                                "error": None if recovered_status == "review_required" else "Generation job stalled mid-pipeline and was failed for recovery.",
                                 "completed_at": now_iso,
                                 "heartbeat_at": now_iso,
+                                "progress_milestones": milestones,
+                                "plan_id": recovered_plan_id or str(row.get("plan_id") or "") or None,
                             }
                         )
                         .eq("id", str(row.get("id") or ""))
@@ -1620,7 +1694,7 @@ class SupabaseAppStore:
                         .execute(),
                     )
                 refreshed = self.get_generation_job(str(row.get("id") or ""))
-                if refreshed and str(refreshed.get("status") or "") in {"queued", "failed"}:
+                if refreshed and str(refreshed.get("status") or "") in {"queued", "failed", "review_required"}:
                     return refreshed
             return None
         except _STORE_CLIENT_ERRORS as exc:

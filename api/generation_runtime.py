@@ -379,6 +379,27 @@ def _stop_stage1_process(process: Any) -> None:
         process.join(timeout=1)
 
 
+def _read_stage1_result_queue_nowait(result_queue: Any) -> tuple[str, Any] | None:
+    try:
+        return result_queue.get_nowait()
+    except queue.Empty:
+        return None
+
+
+def _handle_stage1_result_message(message: tuple[str, Any]) -> dict[str, Any]:
+    status, payload_or_error = message
+
+    if status == "ok":
+        if not isinstance(payload_or_error, dict):
+            raise RuntimeError("Stage 1 planner returned a non-dict result.")
+        return payload_or_error
+
+    if isinstance(payload_or_error, dict):
+        raise RuntimeError(payload_or_error.get("message") or "Stage 1 planner failed")
+
+    raise RuntimeError("Stage 1 planner failed")
+
+
 async def run_stage1_planner(
     planner_fn: Planner,
     payload: dict[str, Any],
@@ -400,18 +421,30 @@ async def run_stage1_planner(
     try:
         while True:
             await _drain_stage1_progress_queue(progress_queue, progress_callback)
+            result_message = _read_stage1_result_queue_nowait(result_queue)
+            if result_message is not None:
+                if progress_callback is not None:
+                    progress_callback(
+                        "stage1_result_queue_received",
+                        "Stage 1 result queue received",
+                        "Parent runtime received the Stage 1 planner result from the subprocess.",
+                        {},
+                    )
+                return _handle_stage1_result_message(result_message)
             if not process.is_alive():
                 await _drain_stage1_progress_queue(progress_queue, progress_callback)
                 try:
-                    status, payload_or_error = result_queue.get(timeout=1)
+                    result_message = result_queue.get(timeout=1)
                 except queue.Empty as exc:
                     raise RuntimeError(
                         f"Stage 1 planner process exited without result. exitcode={process.exitcode}"
                     ) from exc
-                if status == "ok":
-                    return payload_or_error
-                raise RuntimeError(payload_or_error.get("message") or "Stage 1 planner failed")
+                return _handle_stage1_result_message(result_message)
             if timeout_seconds is not None and (time.monotonic() - start) >= timeout_seconds:
+                await _drain_stage1_progress_queue(progress_queue, progress_callback)
+                result_message = _read_stage1_result_queue_nowait(result_queue)
+                if result_message is not None:
+                    return _handle_stage1_result_message(result_message)
                 _stop_stage1_process(process)
                 raise asyncio.TimeoutError
             await asyncio.sleep(0.05)
@@ -780,11 +813,21 @@ async def run_generation_job(
                 _injury_triage.get("should_block_stage2"),
                 bool(_override_marker and _override_marker.get("bypassed_blocking") is True),
             )
+            _emit_milestone(
+                "stage1_result_persist_started",
+                "Stage 1 result persist started",
+                "Saving Stage 1 planner result to the generation job.",
+            )
             job = await _to_thread_with_heartbeat(
                 store.update_generation_job,
                 job_id,
                 stage1_result=stage1_result,
                 heartbeat_at=utc_now_iso(),
+            )
+            _emit_milestone(
+                "stage1_result_persisted",
+                "Stage 1 result persisted",
+                "Stage 1 planner result was saved to the generation job.",
             )
             await _ensure_admin_resume_plan_exists(plan_id)
 
@@ -891,6 +934,12 @@ async def run_generation_job(
             plan_id = str(plan_row.get("id") or "") or None
         if not plan_id:
             raise RuntimeError("Plan persistence failed: final_result exists but no linked plan_id was created.")
+        job = await asyncio.to_thread(
+            store.update_generation_job,
+            job_id,
+            plan_id=plan_id,
+            heartbeat_at=utc_now_iso(),
+        )
         _emit_milestone(
             "plan_persisted",
             "Plan row persisted",

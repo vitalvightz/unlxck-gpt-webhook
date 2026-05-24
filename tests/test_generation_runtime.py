@@ -47,6 +47,21 @@ def _spawn_planner_exits(payload):
     os._exit(0)
 
 
+def _spawn_planner_returns_then_sleeps(payload):
+    import time
+
+    if payload.get("progress_callback"):
+        payload["progress_callback"]("handoff_ready", "handoff ready", "", {})
+    result = {"status": "ok", "value": payload["value"]}
+    time.sleep(0.3)
+    return result
+
+
+def _spawn_planner_returns_large_result(payload):
+    blob = "x" * 2_000_000
+    return {"status": "ok", "blob": blob, "value": payload["value"]}
+
+
 def _clear_environment_markers(monkeypatch):
     for var in _ENVIRONMENT_VARS:
         monkeypatch.delenv(var, raising=False)
@@ -147,6 +162,33 @@ def test_stage1_run_planner_child_exit_without_result_raises_controlled_error(mo
 
     with pytest.raises(RuntimeError, match="Stage 1 planner process exited without result"):
         asyncio.run(run_stage1_planner(_spawn_planner_exits, {}, timeout_seconds=2))
+
+
+def test_stage1_run_planner_returns_after_planner_returns(monkeypatch):
+    monkeypatch.setenv("UNLXCK_STAGE1_MP_START_METHOD", "spawn")
+    result = asyncio.run(run_stage1_planner(_spawn_planner_returns_then_sleeps, {"value": 7}, timeout_seconds=1.0))
+    assert result == {"status": "ok", "value": 7}
+
+
+def test_stage1_run_planner_reads_large_result_from_queue(monkeypatch):
+    monkeypatch.setenv("UNLXCK_STAGE1_MP_START_METHOD", "spawn")
+    codes: list[str] = []
+
+    def callback(code, label, detail, meta):
+        codes.append(code)
+
+    result = asyncio.run(
+        run_stage1_planner(
+            _spawn_planner_returns_large_result,
+            {"value": 9},
+            progress_callback=callback,
+            timeout_seconds=2,
+        )
+    )
+    assert result["status"] == "ok"
+    assert result["value"] == 9
+    assert len(result["blob"]) == 2_000_000
+    assert "stage1_result_queue_received" in codes
 
 
 def test_in_process_generation_default_is_worker_only(monkeypatch):
