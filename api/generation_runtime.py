@@ -400,6 +400,15 @@ async def run_stage1_planner(
     try:
         while True:
             await _drain_stage1_progress_queue(progress_queue, progress_callback)
+            try:
+                status, payload_or_error = result_queue.get_nowait()
+            except queue.Empty:
+                status = None
+                payload_or_error = None
+            if status is not None:
+                if status == "ok":
+                    return payload_or_error
+                raise RuntimeError(payload_or_error.get("message") or "Stage 1 planner failed")
             if not process.is_alive():
                 await _drain_stage1_progress_queue(progress_queue, progress_callback)
                 try:
@@ -780,11 +789,21 @@ async def run_generation_job(
                 _injury_triage.get("should_block_stage2"),
                 bool(_override_marker and _override_marker.get("bypassed_blocking") is True),
             )
+            _emit_milestone(
+                "stage1_result_persist_started",
+                "Stage 1 result persist started",
+                "Saving Stage 1 planner result to the generation job.",
+            )
             job = await _to_thread_with_heartbeat(
                 store.update_generation_job,
                 job_id,
                 stage1_result=stage1_result,
                 heartbeat_at=utc_now_iso(),
+            )
+            _emit_milestone(
+                "stage1_result_persisted",
+                "Stage 1 result persisted",
+                "Stage 1 planner result was saved to the generation job.",
             )
             await _ensure_admin_resume_plan_exists(plan_id)
 
@@ -891,6 +910,12 @@ async def run_generation_job(
             plan_id = str(plan_row.get("id") or "") or None
         if not plan_id:
             raise RuntimeError("Plan persistence failed: final_result exists but no linked plan_id was created.")
+        job = await _to_thread_with_heartbeat(
+            store.update_generation_job,
+            job_id,
+            plan_id=plan_id,
+            heartbeat_at=utc_now_iso(),
+        )
         _emit_milestone(
             "plan_persisted",
             "Plan row persisted",

@@ -47,6 +47,16 @@ def _spawn_planner_exits(payload):
     os._exit(0)
 
 
+def _spawn_planner_puts_result_then_sleeps(payload):
+    import time
+
+    if payload.get("progress_callback"):
+        payload["progress_callback"]("handoff_ready", "handoff ready", "", {})
+    result = {"status": "ok", "value": payload["value"]}
+    time.sleep(0.3)
+    return result
+
+
 def _clear_environment_markers(monkeypatch):
     for var in _ENVIRONMENT_VARS:
         monkeypatch.delenv(var, raising=False)
@@ -147,6 +157,12 @@ def test_stage1_run_planner_child_exit_without_result_raises_controlled_error(mo
 
     with pytest.raises(RuntimeError, match="Stage 1 planner process exited without result"):
         asyncio.run(run_stage1_planner(_spawn_planner_exits, {}, timeout_seconds=2))
+
+
+def test_stage1_run_planner_reads_result_before_process_exit(monkeypatch):
+    monkeypatch.setenv("UNLXCK_STAGE1_MP_START_METHOD", "spawn")
+    result = asyncio.run(run_stage1_planner(_spawn_planner_puts_result_then_sleeps, {"value": 7}, timeout_seconds=0.1))
+    assert result == {"status": "ok", "value": 7}
 
 
 def test_in_process_generation_default_is_worker_only(monkeypatch):
