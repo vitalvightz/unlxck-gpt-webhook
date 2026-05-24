@@ -417,3 +417,40 @@ def test_admin_latest_intake_job_fails_when_linked_intake_is_for_different_athle
     )
     assert store.generation_jobs["job-1"]["status"] == "failed"
     assert store.generation_jobs["job-1"]["error"] == "admin latest intake job intake belongs to a different athlete"
+
+
+def test_terminal_success_without_plan_id_is_downgraded_to_failed_with_error_message():
+    store = FakeStore()
+    request_payload = _build_request().model_dump(mode="json")
+    created = store.create_or_get_generation_job(
+        athlete_id="athlete-1",
+        client_request_id="terminal-missing-plan-id",
+        source="self_serve",
+        request_payload=request_payload,
+    )
+
+    original_update_generation_job = store.update_generation_job
+
+    def flaky_update_generation_job(job_id: str, **changes: dict) -> dict:
+        updated = original_update_generation_job(job_id, **changes)
+        if "final_result" in changes:
+            updated = original_update_generation_job(job_id, plan_id=None)
+        return updated
+
+    store.update_generation_job = flaky_update_generation_job  # type: ignore[assignment]
+
+    asyncio.run(
+        generation_runtime.run_generation_job(
+            job_id=created["id"],
+            store=store,
+            planner_fn=app_module._noop_planner,
+            stage2=FakeStage2Automator(result_factory=finalized_result),
+            active_tasks=set(),
+        )
+    )
+
+    job = store.get_generation_job(created["id"])
+    assert job is not None
+    assert job["status"] == "failed"
+    assert isinstance(job.get("error"), str)
+    assert job["error"].strip() == "Plan was saved but the generation job lost its plan_id. Open plan history or contact support."
