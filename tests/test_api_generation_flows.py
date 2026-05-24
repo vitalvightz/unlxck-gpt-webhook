@@ -177,6 +177,73 @@ def test_get_active_generation_job_does_not_return_other_athlete_job():
     assert response.json() is None
 
 
+def test_get_latest_generation_job_returns_latest_failed_after_active_null():
+    client, store, _ = _build_client(enable_in_process_generation=False)
+    created = store.create_or_get_generation_job(
+        athlete_id="athlete-1",
+        client_request_id="latest-failed",
+        source="self_serve",
+        request_payload=_build_request().model_dump(mode="json"),
+    )
+    store.update_generation_job(created["id"], status="failed", error="Plan generation failed unexpectedly", completed_at=_now())
+
+    active = client.get("/api/generation-jobs/active", headers={"Authorization": "Bearer athlete-token"})
+    assert active.status_code == 200
+    assert active.json() is None
+
+    latest = client.get("/api/generation-jobs/latest", headers={"Authorization": "Bearer athlete-token"})
+    assert latest.status_code == 200
+    body = latest.json()
+    assert body["job_id"] == created["id"]
+    assert body["status"] == "failed"
+
+
+def test_get_latest_generation_job_returns_review_required_with_plan_id():
+    client, store, _ = _build_client(enable_in_process_generation=False)
+    created = store.create_or_get_generation_job(
+        athlete_id="athlete-1",
+        client_request_id="latest-review-required",
+        source="self_serve",
+        request_payload=_build_request().model_dump(mode="json"),
+    )
+    store.update_generation_job(created["id"], status="review_required", plan_id="plan_review_1", completed_at=_now())
+
+    response = client.get("/api/generation-jobs/latest", headers={"Authorization": "Bearer athlete-token"})
+    assert response.status_code == 200
+    body = response.json()
+    assert body["status"] == "review_required"
+    assert body["plan_id"] == "plan_review_1"
+
+
+def test_get_latest_generation_job_does_not_leak_other_athlete_job():
+    client, store, _ = _build_client(enable_in_process_generation=False)
+    store.create_or_get_generation_job(
+        athlete_id="athlete-2",
+        client_request_id="other-athlete-latest",
+        source="self_serve",
+        request_payload=_build_request().model_dump(mode="json"),
+    )
+    response = client.get("/api/generation-jobs/latest", headers={"Authorization": "Bearer athlete-token"})
+    assert response.status_code == 200
+    assert response.json() is None
+
+
+def test_get_latest_generation_job_failed_exposes_can_retry():
+    client, store, _ = _build_client(enable_in_process_generation=False)
+    created = store.create_or_get_generation_job(
+        athlete_id="athlete-1",
+        client_request_id="failed-can-retry",
+        source="self_serve",
+        request_payload=_build_request().model_dump(mode="json"),
+    )
+    store.update_generation_job(created["id"], status="failed", error="Stage 1 planner timed out", completed_at=_now())
+    response = client.get("/api/generation-jobs/latest", headers={"Authorization": "Bearer athlete-token"})
+    assert response.status_code == 200
+    body = response.json()
+    assert body["status"] == "failed"
+    assert body["can_retry"] is True
+
+
 def test_get_active_generation_job_recovers_startup_stale_running_to_queued():
     client, store, _ = _build_client(enable_in_process_generation=False)
     created = store.create_or_get_generation_job(

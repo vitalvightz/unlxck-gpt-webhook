@@ -1018,6 +1018,7 @@ class GenerationJobResponse(BaseModel):
     status_url: str | None = None
     message: str | None = None
     progress_milestones: list[ProgressMilestone] = Field(default_factory=list)
+    can_retry: bool = False
 
 
 class GenerationRequestPayloadSummary(BaseModel):
