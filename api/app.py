@@ -327,7 +327,7 @@ def _admin_generation_job_diagnostic(job: dict[str, Any], *, stale_after_seconds
     normalized_status = "completed" if raw_status == "ready" else raw_status
     if normalized_status not in {"queued", "running", "completed", "review_required", "failed"}:
         normalized_status = "queued"
-    is_stale = str(job.get("status") or "") == "running" and _is_stale_job(job, stale_after_seconds=stale_after_seconds)
+    is_stale = normalized_status == "running" and _is_stale_job(job, stale_after_seconds=stale_after_seconds)
     stale_reason = "Heartbeat timed out while job is still running." if is_stale else None
     error_message = str(job.get("error") or "") or None
     client_request_id = str(job.get("client_request_id") or "")
