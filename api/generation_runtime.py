@@ -40,6 +40,12 @@ class TriageResumeMissingPlanError(RuntimeError):
     pass
 
 
+class AdminLatestIntakeLinkageError(RuntimeError):
+    """Raised when an admin_latest_intake job linkage/ownership validation fails."""
+
+    pass
+
+
 _DETACHED_GENERATION_TASKS: set[asyncio.Task[None]] = set()
 _MAX_PERSISTED_MILESTONES = 40
 _OPENAI_QUOTA_ADMIN_ERROR = "OpenAI quota exceeded. Check API billing, credits, project budget, or organization limits."
@@ -51,6 +57,14 @@ _POST_PERSIST_CLEANUP_TIMEOUT_SECONDS = 8.0
 
 def utc_now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
+
+
+def _stable_payload_hash(payload: dict[str, Any]) -> str:
+    try:
+        normalized = json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+    except (TypeError, ValueError):
+        normalized = json.dumps(str(payload), ensure_ascii=False)
+    return normalized
 
 
 def default_planner(
@@ -669,6 +683,23 @@ async def run_generation_job(
                 intake_id=intake_id,
             )
 
+        if job_source == "admin_latest_intake":
+            if not intake_id:
+                raise AdminLatestIntakeLinkageError("admin latest intake job is missing intake_id")
+            linked_intake = await _to_thread_with_heartbeat(store.get_intake, intake_id)
+            if not linked_intake:
+                raise AdminLatestIntakeLinkageError("admin latest intake job intake_id was not found")
+            linked_athlete_id = str(linked_intake.get("athlete_id") or "").strip()
+            if linked_athlete_id != athlete_id:
+                raise AdminLatestIntakeLinkageError("admin latest intake job intake belongs to a different athlete")
+            linked_payload = linked_intake.get("intake")
+            if not isinstance(linked_payload, dict):
+                raise AdminLatestIntakeLinkageError("admin latest intake job linked intake payload is invalid")
+            if _stable_payload_hash(linked_payload) != _stable_payload_hash(raw_request_payload):
+                raise AdminLatestIntakeLinkageError(
+                    "admin latest intake job request_payload does not match linked intake payload"
+                )
+
         await _touch_heartbeat()
         request_body = parse_plan_request(raw_request_payload)
         await _touch_heartbeat()
@@ -1103,6 +1134,21 @@ async def run_generation_job(
     except TriageResumeMissingPlanError as exc:
         logger.error(
             "[jobs] generation:resume_missing_plan_failure athlete_id=%s job_id=%s",
+            athlete_id,
+            job_id,
+        )
+        with suppress(Exception):
+            await asyncio.to_thread(
+                store.update_generation_job,
+                job_id,
+                status="failed",
+                error=str(exc),
+                completed_at=utc_now_iso(),
+                heartbeat_at=utc_now_iso(),
+            )
+    except AdminLatestIntakeLinkageError as exc:
+        logger.error(
+            "[jobs] generation:admin_latest_intake_linkage_failure athlete_id=%s job_id=%s",
             athlete_id,
             job_id,
         )
