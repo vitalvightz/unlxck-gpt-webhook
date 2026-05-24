@@ -7,6 +7,7 @@ from .conditioning import is_banned_drill, normalize_system, render_conditioning
 from .injury_filtering import injury_match_details
 from .injury_guard import choose_injury_replacement, injury_decision
 from .rehab_protocols import build_coach_review_entries
+from .stage1_fail_safe import bounded_max_iterations, log_fail_safe_degrade
 from .strength import format_strength_block, is_banned_exercise
 from .training_context import normalize_equipment_list
 
