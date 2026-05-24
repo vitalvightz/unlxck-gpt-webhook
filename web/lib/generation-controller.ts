@@ -33,6 +33,23 @@ export function resolveFailedJobWithSavedPlan(job: GenerationJobResponse): strin
   }
   return job.plan_id || job.latest_plan_id || null;
 }
+export function resolveTerminalJobPlanId(job: GenerationJobResponse): string | null {
+  const direct = job.plan_id || job.latest_plan_id;
+  if (direct) {
+    return direct;
+  }
+  if (!Array.isArray(job.progress_milestones)) {
+    return null;
+  }
+  for (let index = job.progress_milestones.length - 1; index >= 0; index -= 1) {
+    const milestone = job.progress_milestones[index];
+    const planId = typeof milestone?.meta?.plan_id === "string" ? milestone.meta.plan_id.trim() : "";
+    if (planId) {
+      return planId;
+    }
+  }
+  return null;
+}
 
 type GenerationCompletion = {
   planId: string;
@@ -287,7 +304,7 @@ export function useGenerationController({
         });
 
         if (currentJob.status === "completed" || currentJob.status === "review_required") {
-          const planId = currentJob.plan_id || currentJob.latest_plan_id;
+          const planId = resolveTerminalJobPlanId(currentJob);
           if (!planId) {
             clearAllPendingGenerations();
             throw new Error("Generation finished, but no saved plan was returned.");

@@ -1027,6 +1027,14 @@ async def run_generation_job(
         )
         plan_status = str(plan_row.get("status") or "failed")
         final_status = "completed" if plan_status in {"ready", "triage_blocked"} else plan_status
+        if final_status in {"completed", "review_required"} and not plan_id:
+            final_status = "failed"
+            logger.error(
+                "[jobs] generation:terminal_missing_plan_id athlete_id=%s job_id=%s plan_status=%s",
+                athlete_id,
+                job_id,
+                plan_status,
+            )
         if final_status == "completed":
             _emit_milestone(
                 "plan_saved",

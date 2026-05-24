@@ -159,6 +159,9 @@ export default function GeneratePage() {
           void controller.retryGeneration();
         }}
         canRetry={controller.canRetry}
+        onOpenPlanHistory={() => router.push("/plans")}
+        onReturnToWorkspace={() => router.push("/")}
+        onRefreshStatus={() => router.refresh()}
       />
     </RequireAuth>
   );

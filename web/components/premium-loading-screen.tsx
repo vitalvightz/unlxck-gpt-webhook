@@ -134,6 +134,9 @@ interface PremiumLoadingScreenProps {
   intake?: PlanRequest | null;
   onRetry?: (() => void) | null;
   canRetry?: boolean;
+  onOpenPlanHistory?: (() => void) | null;
+  onReturnToWorkspace?: (() => void) | null;
+  onRefreshStatus?: (() => void) | null;
 }
 
 function formatRelativeTimestamp(at: string, baseMs: number | null): string {
@@ -162,6 +165,9 @@ export function PremiumLoadingScreen({
   intake = null,
   onRetry = null,
   canRetry = false,
+  onOpenPlanHistory = null,
+  onReturnToWorkspace = null,
+  onRefreshStatus = null,
 }: PremiumLoadingScreenProps) {
   const phaseContent = PHASE_CONTENT[phase];
   const activeIndex = PHASE_ORDER[phase];
@@ -270,15 +276,21 @@ export function PremiumLoadingScreen({
             {phase === "failed" ? (
               <div className="loading-failure-actions">
                 <p className="loading-failure-headline">Generation failed.</p>
-                {onRetry ? (
+                {onRetry && canRetry ? (
                   <button
                     type="button"
                     className="cta"
                     onClick={onRetry}
-                    disabled={!canRetry}
                   >
                     Try again
                   </button>
+                ) : null}
+                {!canRetry ? (
+                  <div className="loading-failure-secondary-actions">
+                    {onOpenPlanHistory ? <button type="button" className="cta ghost" onClick={onOpenPlanHistory}>Open plan history</button> : null}
+                    {onReturnToWorkspace ? <button type="button" className="cta ghost" onClick={onReturnToWorkspace}>Return to workspace</button> : null}
+                    {onRefreshStatus ? <button type="button" className="cta ghost" onClick={onRefreshStatus}>Refresh status</button> : null}
+                  </div>
                 ) : null}
               </div>
             ) : null}
