@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useEffect, useRef, useState, useCallback, type ReactNode } from "react";
-import { getActiveGenerationJob, getGenerationJob } from "@/lib/api";
+import { getActiveGenerationJob, getGenerationJob, getLatestGenerationJob } from "@/lib/api";
 import { isPreStartStaleGenerationJob } from "@/lib/generation-controller";
 import { isExpiredPendingGeneration, isStaleVisibleGenerationJob } from "@/lib/generation-status-guards";
 import type { GenerationJobResponse, GenerationJobStatus } from "@/lib/types";
@@ -19,6 +19,7 @@ interface GenerationStatusContextValue {
   terminalStatus: GlobalTerminalGenerationStatus;
   startedAtMs: number | null;
   refreshStatus: () => void;
+  latestJob: GenerationJobResponse | null;
 }
 
 const GenerationStatusContext = createContext<GenerationStatusContextValue | null>(null);
@@ -144,6 +145,7 @@ export function GenerationStatusProvider({ children, token }: GenerationStatusPr
   const [statusMessageText, setStatusMessageText] = useState<string | null>(null);
   const [terminalStatus, setTerminalStatus] = useState<GlobalTerminalGenerationStatus>(null);
   const [startedAtMs, setStartedAtMs] = useState<number | null>(null);
+  const [latestJob, setLatestJob] = useState<GenerationJobResponse | null>(null);
 
   // Track the clear timeout so we can cancel it on unmount — prevents
   // state updates on an unmounted component
@@ -184,6 +186,7 @@ export function GenerationStatusProvider({ children, token }: GenerationStatusPr
       setStatusMessageText(null);
       setTerminalStatus(null);
       setStartedAtMs(null);
+      setLatestJob(null);
       wasAuthenticatedRef.current = false;
       isCheckingRef.current = false;
       return;
@@ -210,6 +213,7 @@ export function GenerationStatusProvider({ children, token }: GenerationStatusPr
             jobId: activeJob.job_id,
             createdAt: activeJob.created_at,
           };
+          setLatestJob(null);
           savePendingGeneration(activePending);
         }
       } catch {
@@ -226,6 +230,13 @@ export function GenerationStatusProvider({ children, token }: GenerationStatusPr
         }
       }
       if (!activePending) {
+        try {
+          const latest = await getLatestGenerationJob(token);
+          if (sequence !== checkSequenceRef.current || !latestTokenRef.current) return;
+          setLatestJob(latest);
+        } catch {
+          setLatestJob(null);
+        }
         setPhase(null);
         setJobId(null);
         setClientRequestId(null);
@@ -239,6 +250,7 @@ export function GenerationStatusProvider({ children, token }: GenerationStatusPr
       setClientRequestId(activePending.clientRequestId);
       const pendingCreatedAt = Date.parse(activePending.createdAt || "");
       setStartedAtMs(Number.isFinite(pendingCreatedAt) ? pendingCreatedAt : null);
+      setLatestJob(null);
 
       if (activePending.jobId && token) {
         try {
@@ -287,6 +299,7 @@ export function GenerationStatusProvider({ children, token }: GenerationStatusPr
           setStatusMessageText(null);
           setTerminalStatus(null);
           setStartedAtMs(null);
+          setLatestJob(null);
         }
       } else {
         clearPendingGenerations();
@@ -342,6 +355,7 @@ export function GenerationStatusProvider({ children, token }: GenerationStatusPr
     terminalStatus,
     startedAtMs,
     refreshStatus: checkStatus,
+    latestJob,
   };
 
   return (

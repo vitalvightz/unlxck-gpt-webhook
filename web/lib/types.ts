@@ -364,6 +364,9 @@ export type GenerationJobResponse = {
   plan_id?: string | null;
   latest_plan_id?: string | null;
   progress_milestones?: ProgressMilestone[];
+  can_retry?: boolean;
+  status_url?: string | null;
+  message?: string | null;
 };
 
 export type MeResponse = {

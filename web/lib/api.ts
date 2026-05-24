@@ -501,6 +501,12 @@ export function getActiveGenerationJob(token: string): Promise<GenerationJobResp
   );
 }
 
+export function getLatestGenerationJob(token: string): Promise<GenerationJobResponse | null> {
+  return withTransientRetries(() =>
+    readJson<GenerationJobResponse | null>("/api/generation-jobs/latest", { token }),
+  );
+}
+
 export function retryGenerationJob(
   token: string,
   jobId: string,
