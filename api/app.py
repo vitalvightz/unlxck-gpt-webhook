@@ -153,11 +153,34 @@ def _normalize_progress_milestones(raw: Any) -> list[dict[str, Any]]:
 def _job_response(
     job: dict[str, Any],
     *,
+    store: AppStore | None = None,
     latest_plan_id: str | None = None,
     viewer_role: str = "athlete",
 ) -> GenerationJobResponse:
     status_value = str(job.get("status") or "")
     plan_id = str(job.get("plan_id")) if job.get("plan_id") else None
+    resolved_latest_plan_id = latest_plan_id
+    if status_value in {"completed", "review_required", "ready"} and not plan_id:
+        milestones = _normalize_progress_milestones(job.get("progress_milestones"))
+        for milestone in reversed(milestones):
+            meta = milestone.get("meta")
+            if not isinstance(meta, dict):
+                continue
+            milestone_plan_id = str(meta.get("plan_id") or "").strip()
+            if milestone_plan_id:
+                plan_id = milestone_plan_id
+                break
+        if not plan_id and store is not None:
+            athlete_id = str(job.get("athlete_id") or "").strip()
+            intake_id = str(job.get("intake_id") or "").strip()
+            if athlete_id:
+                latest_plan = store.get_latest_plan(athlete_id)
+                latest_id = str(latest_plan.get("id") or "").strip() if latest_plan else ""
+                latest_intake = str(latest_plan.get("intake_id") or "").strip() if latest_plan else ""
+                latest_status = str(latest_plan.get("status") or "").strip().lower() if latest_plan else ""
+                if latest_id and latest_status != "archived" and (not intake_id or latest_intake == intake_id):
+                    plan_id = latest_id
+        resolved_latest_plan_id = resolved_latest_plan_id or plan_id
     updated_at = job.get("updated_at") or job.get("created_at") or _utc_now_iso()
     error = str(job["error"]) if job.get("error") else None
     if viewer_role != "admin" and error == _OPENAI_QUOTA_ADMIN_ERROR:
@@ -187,7 +210,7 @@ def _job_response(
         completed_at=str(job["completed_at"]) if job.get("completed_at") else None,
         error=error,
         plan_id=plan_id,
-        latest_plan_id=latest_plan_id or plan_id,
+        latest_plan_id=resolved_latest_plan_id or plan_id,
         status_url=f"/api/generation-jobs/{job['id']}",
         message=status_messages.get(status_value, "Generation queued and will be processed shortly."),
         progress_milestones=_normalize_progress_milestones(job.get("progress_milestones")),
@@ -1485,7 +1508,7 @@ def create_app(
                 stale_job_checker=_is_stale_job,
                 stale_after_seconds=stale_after_seconds,
             )
-            return _job_response(job, viewer_role=profile.role)
+            return _job_response(job, store=store, viewer_role=profile.role)
         recovered_existing = await asyncio.to_thread(
             _find_existing_terminal_job_for_same_payload,
             store=store,
@@ -1493,7 +1516,7 @@ def create_app(
             request_payload=request_body.model_dump(mode="json"),
         )
         if recovered_existing:
-            return _job_response(recovered_existing, viewer_role=profile.role)
+            return _job_response(recovered_existing, store=store, viewer_role=profile.role)
         blocking_job = await asyncio.to_thread(
             _find_blocking_generation_job_for_athlete,
             store=store,
@@ -1540,7 +1563,7 @@ def create_app(
             stale_job_checker=_is_stale_job,
             stale_after_seconds=stale_after_seconds,
         )
-        return _job_response(job, viewer_role=profile.role)
+        return _job_response(job, store=store, viewer_role=profile.role)
 
     @app.get("/api/generation-jobs/active", response_model=GenerationJobResponse | None)
     async def get_active_generation_job(
@@ -1571,7 +1594,7 @@ def create_app(
             stale_job_checker=_is_stale_job,
             stale_after_seconds=stale_after_seconds,
         )
-        return _job_response(job, viewer_role=profile.role)
+        return _job_response(job, store=store, viewer_role=profile.role)
 
     @app.get("/api/generation-jobs/latest", response_model=GenerationJobResponse | None)
     async def get_latest_generation_job(
@@ -1583,7 +1606,7 @@ def create_app(
             return None
         if profile.role != "admin" and str(job["athlete_id"]) != profile.athlete_id:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="not allowed")
-        return _job_response(job, viewer_role=profile.role)
+        return _job_response(job, store=store, viewer_role=profile.role)
 
     @app.get("/api/generation-jobs/{job_id}", response_model=GenerationJobResponse)
     async def get_generation_job(
@@ -1612,7 +1635,7 @@ def create_app(
             stale_job_checker=_is_stale_job,
             stale_after_seconds=_generation_job_stale_after_seconds(),
         )
-        return _job_response(job, viewer_role=profile.role)
+        return _job_response(job, store=store, viewer_role=profile.role)
 
     @app.post("/api/generation-jobs/{job_id}/retry", response_model=GenerationJobResponse, status_code=202)
     async def retry_generation_job(
@@ -1709,7 +1732,7 @@ def create_app(
                 stale_job_checker=_is_stale_job,
                 stale_after_seconds=stale_after_seconds,
             )
-            return _job_response(job, viewer_role=profile.role)
+            return _job_response(job, store=store, viewer_role=profile.role)
         blocking_job = await asyncio.to_thread(
             _find_blocking_generation_job_for_athlete,
             store=store,
@@ -1743,7 +1766,7 @@ def create_app(
             stale_job_checker=_is_stale_job,
             stale_after_seconds=stale_after_seconds,
         )
-        return _job_response(job, viewer_role=profile.role)
+        return _job_response(job, store=store, viewer_role=profile.role)
 
     @app.get("/api/plans/latest", response_model=PlanDetail)
     def get_latest_plan(
@@ -1989,7 +2012,7 @@ def create_app(
                         existing_resume_job,
                         stale_after_seconds=stale_after_seconds,
                     ):
-                        return _job_response(existing_resume_job, viewer_role=profile.role)
+                        return _job_response(existing_resume_job, store=store, viewer_role=profile.role)
                     existing_resume_job = await _requeue_existing_resume_job(existing_resume_job)
                     job_status = str(existing_resume_job.get("status") or "").strip().lower()
                 if job_status in {"failed", "completed"} and not _resume_job_final_result_successful(existing_resume_job):
@@ -2007,7 +2030,7 @@ def create_app(
                         stale_job_checker=_is_stale_job,
                         stale_after_seconds=stale_after_seconds,
                     )
-                    return _job_response(job, viewer_role=profile.role)
+                    return _job_response(job, store=store, viewer_role=profile.role)
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
                 detail="this blocked plan has already been approved for resume",
@@ -2026,7 +2049,7 @@ def create_app(
                 )
             if existing_status == "running":
                 if existing_status == "running" and not existing_is_stale:
-                    return _job_response(existing_resume_job, viewer_role=profile.role)
+                    return _job_response(existing_resume_job, store=store, viewer_role=profile.role)
 
         why_log = plan_row.get("why_log") if isinstance(plan_row.get("why_log"), dict) else {}
         triage = why_log.get("injury_triage") if isinstance(why_log.get("injury_triage"), dict) else {}
@@ -2104,7 +2127,7 @@ def create_app(
             stale_job_checker=_is_stale_job,
             stale_after_seconds=stale_after_seconds,
         )
-        return _job_response(job, viewer_role=profile.role)
+        return _job_response(job, store=store, viewer_role=profile.role)
 
     @app.post("/api/admin/plans/{plan_id}/reject", response_model=PlanDetail)
     def reject_approved_plan(
@@ -2370,7 +2393,7 @@ def create_app(
                 stale_job_checker=_is_stale_job,
                 stale_after_seconds=stale_after_seconds,
             )
-            return _job_response(job, viewer_role="admin")
+            return _job_response(job, store=store, viewer_role="admin")
         blocking_job = await asyncio.to_thread(
             _find_blocking_generation_job_for_athlete,
             store=store,
@@ -2402,7 +2425,7 @@ def create_app(
             stale_job_checker=_is_stale_job,
             stale_after_seconds=stale_after_seconds,
         )
-        return _job_response(job, viewer_role="admin")
+        return _job_response(job, store=store, viewer_role="admin")
 
     return app
 

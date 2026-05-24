@@ -1025,8 +1025,23 @@ async def run_generation_job(
             "Stage 2 result saved",
             "Finalizer output was saved to the generation job.",
         )
+        persisted_plan_id = str(job.get("plan_id") or "").strip() if isinstance(job, dict) else ""
+        if not persisted_plan_id:
+            plan_id = None
         plan_status = str(plan_row.get("status") or "failed")
         final_status = "completed" if plan_status in {"ready", "triage_blocked"} else plan_status
+        terminal_missing_plan_id_error = None
+        if final_status in {"completed", "review_required"} and not plan_id:
+            final_status = "failed"
+            terminal_missing_plan_id_error = (
+                "Plan was saved but the generation job lost its plan_id. Open plan history or contact support."
+            )
+            logger.error(
+                "[jobs] generation:terminal_missing_plan_id athlete_id=%s job_id=%s plan_status=%s",
+                athlete_id,
+                job_id,
+                plan_status,
+            )
         if final_status == "completed":
             _emit_milestone(
                 "plan_saved",
@@ -1037,7 +1052,7 @@ async def run_generation_job(
             store.update_generation_job,
             job_id,
             status=final_status,
-            error=None,
+            error=terminal_missing_plan_id_error,
             plan_id=plan_id,
             completed_at=utc_now_iso(),
             heartbeat_at=utc_now_iso(),

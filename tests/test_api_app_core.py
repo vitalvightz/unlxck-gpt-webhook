@@ -120,6 +120,61 @@ def test_job_response_falls_back_to_created_at_when_updated_at_is_missing():
     assert response.updated_at == created_at
 
 
+def test_job_response_recovers_plan_id_from_terminal_milestone_meta():
+    response = app_module._job_response(
+        {
+            "id": "job_terminal_meta",
+            "athlete_id": "athlete-1",
+            "client_request_id": "client-1",
+            "status": "completed",
+            "created_at": _now(),
+            "updated_at": _now(),
+            "started_at": None,
+            "completed_at": None,
+            "error": None,
+            "plan_id": None,
+            "progress_milestones": [
+                {"code": "plan_persisted", "meta": {"plan_id": "plan_from_milestone"}},
+            ],
+        }
+    )
+
+    assert response.plan_id == "plan_from_milestone"
+    assert response.latest_plan_id == "plan_from_milestone"
+
+
+def test_job_response_recovers_plan_id_from_latest_visible_plan_when_terminal_plan_missing():
+    store = FakeStore()
+    store.create_intake("athlete-1", _planner())
+    intake = store.get_latest_intake("athlete-1")
+    assert intake is not None
+    store.create_plan(
+        athlete_id="athlete-1",
+        intake_id=str(intake["id"]),
+        request=_planner(),
+        result=finalized_result(),
+    )
+    response = app_module._job_response(
+        {
+            "id": "job_terminal_lookup",
+            "athlete_id": "athlete-1",
+            "intake_id": str(intake["id"]),
+            "client_request_id": "client-1",
+            "status": "completed",
+            "created_at": _now(),
+            "updated_at": _now(),
+            "started_at": None,
+            "completed_at": None,
+            "error": None,
+            "plan_id": None,
+            "progress_milestones": [],
+        },
+        store=store,
+    )
+
+    assert response.plan_id is not None
+
+
 def test_is_stale_job_does_not_flag_new_running_job_without_heartbeat():
     started_at = _now()
 
