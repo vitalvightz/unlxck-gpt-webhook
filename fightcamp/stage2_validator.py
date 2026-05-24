@@ -2667,9 +2667,23 @@ _HARD_SPARRING_PATTERN = re.compile(
     re.IGNORECASE,
 )
 
+_NEGATED_HARD_SPARRING_PATTERN = re.compile(
+    r"\b(?:no|avoid|without|do\s+not|don't|not)\s+(?:\w+\s+){0,3}"
+    r"(?:hard spar|hard sparring|live spar|live sparring|full spar|full sparring|full contact|hard contact|fight-pace sparring|competitive sparring|open sparring)\b",
+    re.IGNORECASE,
+)
+
 
 def _has_blocking_hard_sparring(text: str) -> bool:
-    return _HARD_SPARRING_PATTERN.search(text) is not None
+    if not text:
+        return False
+    for match in _HARD_SPARRING_PATTERN.finditer(text):
+        window_start = max(0, match.start() - 40)
+        candidate = text[window_start:match.end()]
+        if _NEGATED_HARD_SPARRING_PATTERN.search(candidate):
+            continue
+        return True
+    return False
 
 def validate_stage2_output(*, planning_brief: dict, final_plan_text: str) -> dict:
     plan_lines = _extract_plan_lines(final_plan_text)

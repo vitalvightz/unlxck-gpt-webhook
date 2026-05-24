@@ -737,6 +737,19 @@ def test_late_fight_window_rules_do_not_flag_instructional_negation_lines():
     assert "late_fight_window_forbidden_exercise" not in warning_codes
 
 
+def test_validate_stage2_output_does_not_block_no_hard_sparring_label_in_d11_to_d0():
+    report = validate_stage2_output(
+        planning_brief=_late_fight_planning_brief("D-10"),
+        final_plan_text="""
+        ## D-10
+        Tuesday — Coach-led boxing — no hard sparring / technical only
+        - No app S&C today. Keep freshness priority.
+        """,
+    )
+    error_codes = {error["code"] for error in report["errors"]}
+    assert "late_fight_hard_sparring_violation" not in error_codes
+
+
 def test_late_fight_window_rules_do_not_count_negated_preferred_cues_as_present():
     report = validate_stage2_output(
         planning_brief=_late_fight_planning_brief("D-3"),
