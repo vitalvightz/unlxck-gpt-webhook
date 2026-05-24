@@ -184,7 +184,7 @@ export function validateQuickBuildInput(
   if (input.weak_areas.length > QUICK_BUILD_WEAK_AREA_CAP) {
     errors.weak_areas = `Pick at most ${QUICK_BUILD_WEAK_AREA_CAP} weak areas.`;
   }
-  const sanitizedFocus = sanitizeQuickBuildFocusByDaysOut(input);
+  const sanitizedFocus = sanitizeQuickBuildFocusByDaysOut(input, options?.now);
   if (sanitizedFocus.key_goals.length !== input.key_goals.length) {
     errors.key_goals = "One or more goals are not available for this fight window.";
   }
