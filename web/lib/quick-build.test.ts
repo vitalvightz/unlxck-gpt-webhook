@@ -5,6 +5,7 @@ import {
   emptyQuickBuildInput,
   planRequestToQuickBuildInput,
   quickBuildToPlanRequest,
+  sanitizeQuickBuildFocusByDaysOut,
   validateQuickBuildInput,
 } from "@/lib/quick-build";
 import { emptyPlanRequest } from "@/lib/onboarding";
@@ -22,6 +23,12 @@ function buildValidInput() {
     key_goals: ["conditioning", "power"],
     weak_areas: ["gas_tank"],
   };
+}
+
+function formatDateOffsetFrom(baseIsoDate: string, offsetDays: number): string {
+  const base = new Date(`${baseIsoDate}T00:00:00Z`);
+  base.setUTCDate(base.getUTCDate() + offsetDays);
+  return base.toISOString().slice(0, 10);
 }
 
 test("validateQuickBuildInput rejects multiple technical styles", () => {
@@ -126,4 +133,48 @@ test("planRequestToQuickBuildInput clears fight_date when no_scheduled_fight is 
   const input = planRequestToQuickBuildInput(plan);
   assert.equal(input.no_scheduled_fight, true);
   assert.equal(input.fight_date, "");
+});
+
+test("sanitizeQuickBuildFocusByDaysOut prunes conditioning and power when fight date moves close", () => {
+  const input = buildValidInput();
+  input.no_scheduled_fight = false;
+  input.fight_date = formatDateOffsetFrom(new Date().toISOString().slice(0, 10), 3);
+  input.key_goals = ["conditioning", "power", "mobility"];
+  input.weak_areas = ["power", "gas_tank", "mobility"];
+
+  const sanitized = sanitizeQuickBuildFocusByDaysOut(input);
+  assert.deepEqual(sanitized.key_goals, ["mobility"]);
+  assert.deepEqual(sanitized.weak_areas, ["mobility"]);
+});
+
+test("validateQuickBuildInput rejects unavailable days-out focus values", () => {
+  const input = buildValidInput();
+  input.no_scheduled_fight = false;
+  input.fight_date = "2026-05-27";
+  input.key_goals = ["conditioning"];
+  input.weak_areas = ["gas_tank"];
+  const errors = validateQuickBuildInput(input, { now: new Date("2026-05-24T00:00:00Z") });
+  assert.equal(errors.key_goals, "One or more goals are not available for this fight window.");
+  assert.equal(errors.weak_areas, "One or more weak areas are not available for this fight window.");
+});
+
+test("validateQuickBuildInput allows open camp focus values", () => {
+  const input = buildValidInput();
+  input.no_scheduled_fight = true;
+  input.fight_date = "";
+  input.key_goals = ["conditioning", "power"];
+  input.weak_areas = ["gas_tank", "power"];
+  const errors = validateQuickBuildInput(input, { now: new Date("2026-05-24T00:00:00Z") });
+  assert.equal(errors.key_goals, undefined);
+  assert.equal(errors.weak_areas, undefined);
+});
+
+test("validateQuickBuildInput keeps shared focus cap active with days-out filtering", () => {
+  const input = buildValidInput();
+  input.no_scheduled_fight = false;
+  input.fight_date = "2026-06-20";
+  input.key_goals = ["conditioning", "power", "mobility"];
+  input.weak_areas = ["gas_tank"];
+  const errors = validateQuickBuildInput(input, { now: new Date("2026-05-24T00:00:00Z") });
+  assert.equal(typeof errors.focus_cap, "string");
 });
