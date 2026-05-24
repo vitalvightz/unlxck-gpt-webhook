@@ -179,7 +179,7 @@ def test_first_pass_default_limit_is_180k_chars(monkeypatch: pytest.MonkeyPatch)
     client = FakeClient([_response("# should not be called")])
     automator = OpenAIStage2Automator(client=client, model="test-model")
 
-    with pytest.raises(Stage2AutomationError, match="first_pass prompt too large"):
+    with pytest.raises(Stage2AutomationError, match="chars > 180000"):
         asyncio.run(automator.finalize(stage1_result=stage1))
 
     assert client.responses.calls == []
