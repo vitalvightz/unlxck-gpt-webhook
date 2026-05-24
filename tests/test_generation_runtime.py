@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import asyncio
+
 import pytest
 
 import api.app as app_module
@@ -11,6 +13,7 @@ from api.generation_runtime import (
     _stage2_finalize_timeout_seconds,
     default_planner,
 )
+from support import FakeStage2Automator, FakeStore, _build_request, finalized_result
 
 
 _ENVIRONMENT_VARS = ("APP_ENV", "ENVIRONMENT", "UNLXCK_ENV", "NODE_ENV")
@@ -77,6 +80,40 @@ def test_worker_stale_timeout_default_tracks_stage1_timeout(monkeypatch):
 def test_worker_stale_timeout_default_uses_configured_stage1_timeout(monkeypatch):
     monkeypatch.setenv("STAGE1_PLANNER_TIMEOUT_SECONDS", "720")
     assert worker_module._worker_stale_after_seconds_default() == 780
+
+
+def test_worker_tick_processes_queued_job_to_terminal_status():
+    store = FakeStore()
+    created = store.create_or_get_generation_job(
+        athlete_id="athlete-1",
+        client_request_id="worker-processes-queued",
+        source="self_serve",
+        request_payload=_build_request().model_dump(mode="json"),
+    )
+    active_tasks: set[str] = set()
+    detached_tasks: set[asyncio.Task[None]] = set()
+
+    original_builder = worker_module.build_default_stage2_automator
+    worker_module.build_default_stage2_automator = lambda: FakeStage2Automator(result=finalized_result())
+    try:
+        asyncio.run(
+            worker_module._tick(
+                store=store,
+                active_tasks=active_tasks,
+                detached_tasks=detached_tasks,
+                stale_after_seconds=660,
+                max_concurrent_jobs=1,
+            )
+        )
+        while detached_tasks:
+            asyncio.run(asyncio.gather(*list(detached_tasks)))
+    finally:
+        worker_module.build_default_stage2_automator = original_builder
+
+    job = store.get_generation_job(created["id"])
+    assert job is not None
+    assert job["status"] in {"completed", "review_required"}
+    assert job["completed_at"] is not None
 
 
 def test_stage2_finalize_timeout_default_is_600(monkeypatch):

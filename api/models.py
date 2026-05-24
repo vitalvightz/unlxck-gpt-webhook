@@ -1015,6 +1015,8 @@ class GenerationJobResponse(BaseModel):
     error: str | None = None
     plan_id: str | None = None
     latest_plan_id: str | None = None
+    status_url: str | None = None
+    message: str | None = None
     progress_milestones: list[ProgressMilestone] = Field(default_factory=list)
 
 
