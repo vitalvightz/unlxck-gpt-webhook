@@ -150,6 +150,7 @@ def _job_response(
     error = str(job["error"]) if job.get("error") else None
     if viewer_role != "admin" and error == _OPENAI_QUOTA_ADMIN_ERROR:
         error = _OPENAI_QUOTA_ATHLETE_ERROR
+    can_retry = str(job.get("status") or "") == "failed" and isinstance(job.get("request_payload"), dict)
     return GenerationJobResponse(
         job_id=str(job["id"]),
         athlete_id=str(job["athlete_id"]),
@@ -166,6 +167,7 @@ def _job_response(
         status_url=f"/api/generation-jobs/{job['id']}",
         message="Generation started and is processing." if str(job.get("status") or "") == "running" else "Generation queued and will be processed shortly.",
         progress_milestones=_normalize_progress_milestones(job.get("progress_milestones")),
+        can_retry=can_retry,
     )
 
 
@@ -1496,6 +1498,18 @@ def create_app(
             stale_job_checker=_is_stale_job,
             stale_after_seconds=stale_after_seconds,
         )
+        return _job_response(job, viewer_role=profile.role)
+
+    @app.get("/api/generation-jobs/latest", response_model=GenerationJobResponse | None)
+    async def get_latest_generation_job(
+        profile: ProfileRecord = Depends(require_profile),
+        store: AppStore = Depends(get_store),
+    ) -> GenerationJobResponse | None:
+        job = await asyncio.to_thread(store.get_latest_generation_job_for_athlete, profile.athlete_id)
+        if not job:
+            return None
+        if profile.role != "admin" and str(job["athlete_id"]) != profile.athlete_id:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="not allowed")
         return _job_response(job, viewer_role=profile.role)
 
     @app.get("/api/generation-jobs/{job_id}", response_model=GenerationJobResponse)

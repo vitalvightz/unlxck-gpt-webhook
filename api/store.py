@@ -172,6 +172,7 @@ class AppStore(Protocol):
         *,
         stale_after_seconds: int = 90,
     ) -> dict[str, Any] | None: ...
+    def get_latest_generation_job_for_athlete(self, athlete_id: str) -> dict[str, Any] | None: ...
 
     def get_generation_job_by_plan_id(self, plan_id: str) -> dict[str, Any] | None: ...
     def has_active_generation_job_for_plan(self, plan_id: str) -> bool: ...
@@ -1726,6 +1727,38 @@ class SupabaseAppStore:
         except _STORE_CLIENT_ERRORS:
             logger.exception("[store] get_generation_job_by_plan_id:exception plan_id=%s", plan_id)
             return None
+
+    def get_latest_generation_job_for_athlete(self, athlete_id: str) -> dict[str, Any] | None:
+        try:
+            response = self._run_with_transient_retry(
+                operation=f"get_latest_generation_job_for_athlete athlete_id={athlete_id}",
+                fn=lambda: self.client.table("generation_jobs")
+                .select(GENERATION_JOB_SELECT)
+                .eq("athlete_id", athlete_id)
+                .order("created_at", desc=True)
+                .limit(1)
+                .execute(),
+            )
+            rows = response.data or []
+            if not rows:
+                return None
+            row = rows[0]
+            return row if isinstance(row, dict) else None
+        except _STORE_CLIENT_ERRORS as exc:
+            if self._is_transient_store_error(exc):
+                raise HTTPException(
+                    status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                    detail=GENERATION_JOB_UNAVAILABLE_DETAIL,
+                ) from exc
+            if self._is_generation_job_schema_error(exc):
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail=GENERATION_JOB_SCHEMA_DETAIL,
+                ) from exc
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="failed to load generation job",
+            ) from exc
 
     def has_active_generation_job_for_plan(self, plan_id: str) -> bool:
         try:

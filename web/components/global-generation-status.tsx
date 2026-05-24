@@ -36,7 +36,7 @@ export function getGenerationStatusTarget(
 }
 
 export function GlobalGenerationStatus() {
-  const { isActive, statusMessage, phase, jobId, planId, terminalStatus, startedAtMs, refreshStatus } = useGenerationStatus();
+  const { isActive, statusMessage, phase, jobId, planId, terminalStatus, startedAtMs, refreshStatus, latestJob } = useGenerationStatus();
   const [now, setNow] = useState(() => Date.now());
   const [isCelebrating, setIsCelebrating] = useState(false);
   const [isDismissed, setIsDismissed] = useState(false);
@@ -102,8 +102,47 @@ export function GlobalGenerationStatus() {
     previousGenerationKeyRef.current = generationKey;
   }, [isActive, jobId, startedAtMs]);
 
-  if (!isActive) {
+  if (!isActive && !latestJob) {
     return null;
+  }
+
+  const mapLatestError = (error?: string | null): string => {
+    if (!error) return "Generation failed unexpectedly. Retry or contact support.";
+    if (error.includes("Stage 2 first_pass prompt too large")) return "Your plan was too large to finalize automatically. Retry is available.";
+    if (error.includes("Stage 1 planner timed out")) return "Generation took too long and stopped. Retry is available.";
+    if (error.includes("Plan generation failed unexpectedly")) return "Generation failed unexpectedly. Retry or contact support.";
+    return "Generation failed unexpectedly. Retry or contact support.";
+  };
+
+  if (!isActive && latestJob) {
+    if (latestJob.status === "failed") {
+      return (
+        <div className="global-generation-status global-generation-status-failed">
+          <div className="global-generation-status-main">
+            <div className="global-generation-status-content">
+              <span className="global-generation-status-text">
+                <span className="global-generation-status-message">{mapLatestError(latestJob.error)}</span>
+                {latestJob.completed_at ? <span className="global-generation-status-elapsed">Completed {new Date(latestJob.completed_at).toLocaleString()}</span> : null}
+              </span>
+              {latestJob.can_retry ? <Link href="/generate" className="global-generation-status-cta-label">Retry</Link> : null}
+            </div>
+          </div>
+        </div>
+      );
+    }
+    if (latestJob.status === "review_required" && latestJob.plan_id) {
+      return (
+        <div className="global-generation-status global-generation-status-completed">
+          <Link href={`/plans/${latestJob.plan_id}?review_required=1`} className="global-generation-status-main">
+            <div className="global-generation-status-message">Your plan is ready for review</div>
+            <span className="global-generation-status-cta-label">Open plan</span>
+          </Link>
+        </div>
+      );
+    }
+    if (!latestJob.plan_id && latestJob.status === "completed") {
+      return <div className="global-generation-status"><div className="global-generation-status-main">Your plan was generated but needs recovery/support</div></div>;
+    }
   }
 
   const canNavigateToPlan = Boolean(navigationTarget);
