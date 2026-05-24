@@ -26,7 +26,7 @@ function hashPayload(payload: unknown): string {
   return JSON.stringify(payload);
 }
 
-function getCompletedPayloadHash(): string | null {
+function getCompletedGeneration(): { planId: string; payloadHash: string | null } | null {
   if (typeof window === "undefined") {
     return null;
   }
@@ -35,8 +35,14 @@ function getCompletedPayloadHash(): string | null {
     return null;
   }
   try {
-    const parsed = JSON.parse(raw) as { payloadHash?: unknown };
-    return typeof parsed.payloadHash === "string" ? parsed.payloadHash : null;
+    const parsed = JSON.parse(raw) as { payloadHash?: unknown; planId?: unknown };
+    if (typeof parsed.planId !== "string" || !parsed.planId.trim()) {
+      return null;
+    }
+    return {
+      planId: parsed.planId,
+      payloadHash: typeof parsed.payloadHash === "string" ? parsed.payloadHash : null,
+    };
   } catch {
     return null;
   }
