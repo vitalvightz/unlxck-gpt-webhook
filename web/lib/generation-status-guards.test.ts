@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { isExpiredPendingGeneration, isStaleVisibleGenerationJob } from "@/lib/generation-status-guards";
+import { isExpiredPendingGeneration, isStaleVisibleGenerationJob, shouldBlockGenerateAutoStart } from "@/lib/generation-status-guards";
 import type { GenerationJobResponse } from "@/lib/types";
 
 const NOW_MS = Date.parse("2026-05-23T00:00:00.000Z");
@@ -44,4 +44,10 @@ test("fresh running job remains active", () => {
     heartbeat_at: "2026-05-22T23:30:00.000Z",
   });
   assert.equal(isStaleVisibleGenerationJob(freshJob, NOW_MS), false);
+});
+
+test("generate auto-start is blocked when latest plan id exists", () => {
+  assert.equal(shouldBlockGenerateAutoStart("plan_123"), true);
+  assert.equal(shouldBlockGenerateAutoStart(""), false);
+  assert.equal(shouldBlockGenerateAutoStart(null), false);
 });

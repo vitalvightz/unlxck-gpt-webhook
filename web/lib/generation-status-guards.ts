@@ -33,3 +33,7 @@ export function isStaleVisibleGenerationJob(job: GenerationJobResponse, nowMs = 
   }
   return nowMs - lastActivityMs > MAX_VISIBLE_GENERATION_AGE_MS;
 }
+
+export function shouldBlockGenerateAutoStart(latestPlanId: string | null | undefined): boolean {
+  return typeof latestPlanId === "string" && latestPlanId.trim().length > 0;
+}

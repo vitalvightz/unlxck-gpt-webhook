@@ -151,7 +151,11 @@ def _job_response(
     error = str(job["error"]) if job.get("error") else None
     if viewer_role != "admin" and error == _OPENAI_QUOTA_ADMIN_ERROR:
         error = _OPENAI_QUOTA_ATHLETE_ERROR
-    can_retry = str(job.get("status") or "") == "failed" and isinstance(job.get("request_payload"), dict)
+    can_retry = (
+        str(job.get("status") or "") == "failed"
+        and isinstance(job.get("request_payload"), dict)
+        and not plan_id
+    )
     status_messages = {
         "queued": "Generation queued and will be processed shortly.",
         "running": "Generation started and is processing.",

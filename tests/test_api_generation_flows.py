@@ -244,6 +244,29 @@ def test_get_latest_generation_job_failed_exposes_can_retry():
     assert body["can_retry"] is True
 
 
+def test_get_latest_generation_job_failed_with_plan_does_not_expose_can_retry():
+    client, store, _ = _build_client(enable_in_process_generation=False)
+    created = store.create_or_get_generation_job(
+        athlete_id="athlete-1",
+        client_request_id="failed-with-plan-no-retry",
+        source="self_serve",
+        request_payload=_build_request().model_dump(mode="json"),
+    )
+    store.update_generation_job(
+        created["id"],
+        status="failed",
+        error="Stage 1 planner timed out",
+        completed_at=_now(),
+        plan_id="plan_123",
+    )
+    response = client.get("/api/generation-jobs/latest", headers={"Authorization": "Bearer athlete-token"})
+    assert response.status_code == 200
+    body = response.json()
+    assert body["status"] == "failed"
+    assert body["plan_id"] == "plan_123"
+    assert body["can_retry"] is False
+
+
 def test_get_active_generation_job_recovers_startup_stale_running_to_queued():
     client, store, _ = _build_client(enable_in_process_generation=False)
     created = store.create_or_get_generation_job(

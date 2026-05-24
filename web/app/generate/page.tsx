@@ -7,6 +7,7 @@ import { RequireAuth } from "@/components/auth-guard";
 import { useAppSession } from "@/components/auth-provider";
 import { createGenerationJob, getActiveGenerationJob } from "@/lib/api";
 import { useGenerationController } from "@/lib/generation-controller";
+import { shouldBlockGenerateAutoStart } from "@/lib/generation-status-guards";
 import { hydratePlanRequest } from "@/lib/onboarding";
 import { validatePerformanceFocusSelections } from "@/lib/performance-focus-cap";
 import { PremiumLoadingScreen } from "@/components/premium-loading-screen";
@@ -61,7 +62,12 @@ export default function GeneratePage() {
   });
 
   useEffect(() => {
+    const latestPlanId = me?.latest_plan?.plan_id;
     if (!session?.access_token || !payload || autoStartRef.current || controller.hasPendingGeneration) {
+      return;
+    }
+    if (shouldBlockGenerateAutoStart(latestPlanId)) {
+      router.replace(`/plans/${latestPlanId}`);
       return;
     }
 
@@ -104,7 +110,7 @@ export default function GeneratePage() {
     return () => {
       cancelled = true;
     };
-  }, [controller, payload, performanceFocusValidation?.isOverCap, router, session?.access_token]);
+  }, [controller, me?.latest_plan?.plan_id, payload, performanceFocusValidation?.isOverCap, router, session?.access_token]);
 
   return (
     <RequireAuth>
