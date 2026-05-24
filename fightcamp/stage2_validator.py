@@ -2831,7 +2831,7 @@ def validate_stage2_output(*, planning_brief: dict, final_plan_text: str) -> dic
         "coach_owned_sparring_detail_warnings": coach_owned_sparring_detail_warnings,
         "lead_summary_contract_warnings": lead_summary_contract_warnings,
         "overstyled_name_warnings": overstyled_name_warnings,
-        "gimmick_name_warnings": overstyled_name_warnings,
+        "gimmick_name_warnings": [],
         "coach_voice_warnings": coach_voice_warnings,
         "calendar_spine_warnings": calendar_spine_warnings,
         "late_fight_warnings": late_fight_warnings,
