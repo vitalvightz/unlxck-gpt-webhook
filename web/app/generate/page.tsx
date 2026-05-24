@@ -138,7 +138,7 @@ export default function GeneratePage() {
     return () => {
       cancelled = true;
     };
-  }, [controller, me?.latest_plan?.plan_id, payload, performanceFocusValidation?.isOverCap, router, session?.access_token]);
+  }, [controller, payload, performanceFocusValidation?.isOverCap, router, session?.access_token]);
 
   return (
     <RequireAuth>
