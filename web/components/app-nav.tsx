@@ -58,9 +58,10 @@ export function AppNav() {
   const [pendingNavHref, setPendingNavHref] = useState<string | null>(null);
   const closeTimeoutRef = useRef<number | null>(null);
   const desktopNavToggleRef = useRef<HTMLButtonElement | null>(null);
+  const hasSession = Boolean(session);
   const hasHydratedSession = Boolean(session && me);
   const isSessionResolving = Boolean(session && !isMeHydrated);
-  const shellSurface = getShellSurface(pathname, hasHydratedSession);
+  const shellSurface = getShellSurface(pathname, hasSession);
 
   const isMobileDrawerVisible = mobileNavState !== "closed";
 
@@ -372,7 +373,7 @@ export function AppNav() {
             </>
           ) : null}
 
-          {isReady && hasHydratedSession ? (
+          {isReady && hasSession ? (
             <>
               <nav className="sidebar-nav">
                 <p className="sidebar-section-label">Workspace</p>
