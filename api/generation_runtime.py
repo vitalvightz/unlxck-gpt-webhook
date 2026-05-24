@@ -52,6 +52,7 @@ _OPENAI_QUOTA_ADMIN_ERROR = "OpenAI quota exceeded. Check API billing, credits, 
 _OPENAI_QUOTA_ATHLETE_ERROR = "Generation is temporarily unavailable. Please try again later."
 _FINAL_RESULT_PERSIST_TIMEOUT_SECONDS = 40.0
 _FINAL_RESULT_PERSIST_TIMEOUT_ERROR = "Stage 2 result persistence timed out before final_result was saved."
+_PLAN_PERSIST_VERIFICATION_ERROR = "Plan persistence verification failed after create_plan."
 _POST_PERSIST_CLEANUP_TIMEOUT_SECONDS = 8.0
 _TERMINAL_GENERATION_JOB_STATUSES = {"completed", "review_required", "failed"}
 
@@ -974,6 +975,24 @@ async def run_generation_job(
                 request=request_body,
                 result=final_result,
             )
+            created_plan_id = str(plan_row.get("id") or "").strip()
+            verified_plan_row = await _to_thread_with_heartbeat(store.get_plan, created_plan_id) if created_plan_id else None
+            verified_athlete_id = str((verified_plan_row or {}).get("athlete_id") or "").strip()
+            verified_intake_id = str((verified_plan_row or {}).get("intake_id") or "").strip()
+            expected_intake_id = str(intake_id or "").strip()
+            intake_id_matches = (not expected_intake_id) or (verified_intake_id == expected_intake_id)
+            if not created_plan_id or not verified_plan_row or verified_athlete_id != athlete_id or not intake_id_matches:
+                now_iso = utc_now_iso()
+                with suppress(Exception):
+                    await asyncio.to_thread(
+                        store.update_generation_job,
+                        job_id,
+                        status="failed",
+                        error=_PLAN_PERSIST_VERIFICATION_ERROR,
+                        completed_at=now_iso,
+                        heartbeat_at=now_iso,
+                    )
+                return
             plan_id = str(plan_row.get("id") or "") or None
         if not plan_id:
             raise RuntimeError("Plan persistence failed: final_result exists but no linked plan_id was created.")
