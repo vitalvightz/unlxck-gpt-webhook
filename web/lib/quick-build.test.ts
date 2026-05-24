@@ -6,6 +6,7 @@ import {
   planRequestToQuickBuildInput,
   quickBuildToPlanRequest,
   sanitizeQuickBuildFocusByDaysOut,
+  sanitizeQuickBuildFocusSelections,
   validateQuickBuildInput,
 } from "@/lib/quick-build";
 import { emptyPlanRequest } from "@/lib/onboarding";
@@ -162,11 +163,21 @@ test("validateQuickBuildInput allows open camp focus values", () => {
   const input = buildValidInput();
   input.no_scheduled_fight = true;
   input.fight_date = "";
-  input.key_goals = ["conditioning", "power"];
-  input.weak_areas = ["gas_tank", "power"];
+  input.key_goals = ["conditioning", "power", "speed", "recovery"];
+  input.weak_areas = ["gas_tank", "power", "mobility"];
   const errors = validateQuickBuildInput(input, { now: new Date("2026-05-24T00:00:00Z") });
-  assert.equal(errors.key_goals, undefined);
-  assert.equal(errors.weak_areas, undefined);
+  assert.equal(typeof errors.focus_cap, "string");
+});
+
+test("sanitizeQuickBuildFocusSelections trims over-cap picks after date change", () => {
+  const input = buildValidInput();
+  input.no_scheduled_fight = false;
+  input.fight_date = "2026-05-31";
+  input.key_goals = ["mobility", "recovery", "speed"];
+  input.weak_areas = ["mobility", "power"];
+  const sanitized = sanitizeQuickBuildFocusSelections(input, { now: new Date("2026-05-24T00:00:00Z") });
+  assert.deepEqual(sanitized.key_goals, ["mobility", "recovery"]);
+  assert.deepEqual(sanitized.weak_areas, []);
 });
 
 test("validateQuickBuildInput keeps shared focus cap active with days-out filtering", () => {

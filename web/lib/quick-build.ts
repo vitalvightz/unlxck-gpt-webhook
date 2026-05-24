@@ -14,12 +14,10 @@ import {
   computeDaysUntilFight,
   filterAvailablePerformanceFocusValues,
 } from "@/lib/days-out-policy";
-import { validatePerformanceFocusSelections } from "@/lib/performance-focus-cap";
+import { getPerformanceFocusCap, validatePerformanceFocusSelections } from "@/lib/performance-focus-cap";
 import { HARD_SPARRING_DAY_CAP } from "@/lib/training-schedule";
 import type { PlanRequest } from "@/lib/types";
 
-export const QUICK_BUILD_KEY_GOAL_CAP = 3;
-export const QUICK_BUILD_WEAK_AREA_CAP = 2;
 const ROUNDS_FORMAT_PATTERN = /^\d+\s*[xX]\s*\d+$/;
 const FIGHT_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -92,14 +90,8 @@ export function planRequestToQuickBuildInput(plan: PlanRequest): QuickBuildInput
       plan.equipment_access ?? [],
       EQUIPMENT_ACCESS_OPTIONS,
     ),
-    key_goals: retainKnownOptionValues(plan.key_goals ?? [], KEY_GOAL_OPTIONS).slice(
-      0,
-      QUICK_BUILD_KEY_GOAL_CAP,
-    ),
-    weak_areas: retainKnownOptionValues(plan.weak_areas ?? [], WEAK_AREA_OPTIONS).slice(
-      0,
-      QUICK_BUILD_WEAK_AREA_CAP,
-    ),
+    key_goals: retainKnownOptionValues(plan.key_goals ?? [], KEY_GOAL_OPTIONS),
+    weak_areas: retainKnownOptionValues(plan.weak_areas ?? [], WEAK_AREA_OPTIONS),
     injuries: (plan.injuries ?? "").trim(),
   };
 }
@@ -116,11 +108,34 @@ function isFutureOrToday(value: string, now: Date = new Date()): boolean {
 export type QuickBuildValidationErrors = Partial<Record<keyof QuickBuildInput | "focus_cap", string>>;
 
 export function sanitizeQuickBuildFocusByDaysOut(input: QuickBuildInput, now?: Date): Pick<QuickBuildInput, "key_goals" | "weak_areas"> {
-  const daysUntilFight = input.no_scheduled_fight ? null : computeDaysUntilFight(input.fight_date, now);
+  const daysUntilFight = input.no_scheduled_fight ? null : computeDaysUntilFight(input.fight_date);
   const daysOutCtx = buildDaysOutContext(daysUntilFight);
   return {
     key_goals: filterAvailablePerformanceFocusValues(daysOutCtx, "key_goals", input.key_goals),
     weak_areas: filterAvailablePerformanceFocusValues(daysOutCtx, "weak_areas", input.weak_areas),
+  };
+}
+
+export function sanitizeQuickBuildFocusSelections(
+  input: QuickBuildInput,
+  options?: { now?: Date; timeZone?: string | null },
+): Pick<QuickBuildInput, "key_goals" | "weak_areas"> {
+  const daysOutSanitized = sanitizeQuickBuildFocusByDaysOut(input, options?.now);
+  const cap = getPerformanceFocusCap(
+    input.no_scheduled_fight ? null : input.fight_date,
+    { now: options?.now, timeZone: options?.timeZone },
+  );
+  if (!cap) {
+    return daysOutSanitized;
+  }
+  const merged = [...daysOutSanitized.key_goals, ...daysOutSanitized.weak_areas];
+  if (merged.length <= cap.maxSelections) {
+    return daysOutSanitized;
+  }
+  const keep = new Set(merged.slice(0, cap.maxSelections));
+  return {
+    key_goals: daysOutSanitized.key_goals.filter((value) => keep.has(value)),
+    weak_areas: daysOutSanitized.weak_areas.filter((value) => keep.has(value)),
   };
 }
 
@@ -178,11 +193,6 @@ export function validateQuickBuildInput(
   }
   if (input.key_goals.length === 0) {
     errors.key_goals = "Choose at least one focus.";
-  } else if (input.key_goals.length > QUICK_BUILD_KEY_GOAL_CAP) {
-    errors.key_goals = `Pick at most ${QUICK_BUILD_KEY_GOAL_CAP} goals.`;
-  }
-  if (input.weak_areas.length > QUICK_BUILD_WEAK_AREA_CAP) {
-    errors.weak_areas = `Pick at most ${QUICK_BUILD_WEAK_AREA_CAP} weak areas.`;
   }
   const sanitizedFocus = sanitizeQuickBuildFocusByDaysOut(input, options?.now);
   if (sanitizedFocus.key_goals.length !== input.key_goals.length) {
@@ -192,9 +202,9 @@ export function validateQuickBuildInput(
     errors.weak_areas = "One or more weak areas are not available for this fight window.";
   }
 
-  if (!input.no_scheduled_fight && input.fight_date && !errors.fight_date) {
+  if ((input.no_scheduled_fight || input.fight_date) && !errors.fight_date) {
     const focus = validatePerformanceFocusSelections(
-      input.fight_date,
+      input.no_scheduled_fight ? null : input.fight_date,
       { keyGoals: input.key_goals, weakAreas: input.weak_areas },
       { now: options?.now, timeZone: options?.timeZone },
     );

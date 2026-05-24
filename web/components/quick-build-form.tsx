@@ -34,12 +34,10 @@ import {
   ROUND_DURATION_OPTIONS,
 } from "@/lib/rounds-format";
 import {
-  QUICK_BUILD_KEY_GOAL_CAP,
-  QUICK_BUILD_WEAK_AREA_CAP,
   emptyQuickBuildInput,
   planRequestToQuickBuildInput,
   quickBuildToPlanRequest,
-  sanitizeQuickBuildFocusByDaysOut,
+  sanitizeQuickBuildFocusSelections,
   validateQuickBuildInput,
   type QuickBuildInput,
   type QuickBuildValidationErrors,
@@ -275,8 +273,8 @@ function QuickBuildFormInner() {
   const errors: QuickBuildValidationErrors = useMemo(() => validateQuickBuildInput(input), [input]);
   const parsedRounds = parseRoundsFormat(input.rounds_format);
   const focusValidation = useMemo(
-    () => (!input.no_scheduled_fight && input.fight_date
-      ? validatePerformanceFocusSelections(input.fight_date, { keyGoals: input.key_goals, weakAreas: input.weak_areas }, { timeZone: typeof Intl !== "undefined" ? Intl.DateTimeFormat().resolvedOptions().timeZone : null })
+    () => ((input.no_scheduled_fight || input.fight_date)
+      ? validatePerformanceFocusSelections(input.no_scheduled_fight ? null : input.fight_date, { keyGoals: input.key_goals, weakAreas: input.weak_areas }, { timeZone: typeof Intl !== "undefined" ? Intl.DateTimeFormat().resolvedOptions().timeZone : null })
       : null),
     [input.no_scheduled_fight, input.fight_date, input.key_goals, input.weak_areas],
   );
@@ -394,7 +392,9 @@ function QuickBuildFormInner() {
 
   useEffect(() => {
     setInput((current) => {
-      const sanitized = sanitizeQuickBuildFocusByDaysOut(current);
+      const sanitized = sanitizeQuickBuildFocusSelections(current, {
+        timeZone: typeof Intl !== "undefined" ? Intl.DateTimeFormat().resolvedOptions().timeZone : null,
+      });
       if (
         sanitized.key_goals.length === current.key_goals.length &&
         sanitized.weak_areas.length === current.weak_areas.length
@@ -891,23 +891,23 @@ function QuickBuildFormInner() {
           onSelect={handleFocusPresetSelect}
         />
         <ChipMultiSelect
-          label={sharedFocusCap !== null ? `Key goals (shared cap: ${sharedFocusCap})` : `Key goals (pick up to ${QUICK_BUILD_KEY_GOAL_CAP})`}
+          label="Key goals"
           options={KEY_GOAL_OPTIONS}
           selectedValues={input.key_goals}
           onToggle={(value) => togglePerformanceFocusField("key_goals", value)}
-          disableAdditionalSelections={input.key_goals.length >= QUICK_BUILD_KEY_GOAL_CAP || sharedFocusCapReached}
-          capDisabledReason={sharedFocusCapReached ? FOCUS_CAP_DISABLED_REASON : `Limit ${QUICK_BUILD_KEY_GOAL_CAP}`}
+          disableAdditionalSelections={sharedFocusCapReached}
+          capDisabledReason={FOCUS_CAP_DISABLED_REASON}
           disabledValues={unavailableGoalValues}
           disabledValueReason="Not available for this fight window"
         />
         <FieldError message={visibleError("key_goals")} />
         <ChipMultiSelect
-          label={sharedFocusCap !== null ? `Weak areas (shared cap: ${sharedFocusCap})` : `Weak areas (optional, up to ${QUICK_BUILD_WEAK_AREA_CAP})`}
+          label="Weak areas (optional)"
           options={WEAK_AREA_OPTIONS}
           selectedValues={input.weak_areas}
           onToggle={(value) => togglePerformanceFocusField("weak_areas", value)}
-          disableAdditionalSelections={input.weak_areas.length >= QUICK_BUILD_WEAK_AREA_CAP || sharedFocusCapReached}
-          capDisabledReason={sharedFocusCapReached ? FOCUS_CAP_DISABLED_REASON : `Limit ${QUICK_BUILD_WEAK_AREA_CAP}`}
+          disableAdditionalSelections={sharedFocusCapReached}
+          capDisabledReason={FOCUS_CAP_DISABLED_REASON}
           disabledValues={unavailableWeakAreaValues}
           disabledValueReason="Not available for this fight window"
         />
