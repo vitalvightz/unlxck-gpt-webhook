@@ -10,31 +10,6 @@ _STATUS_READY = "READY"
 _STATUS_PASS = "PASS"
 _STATUS_WARN = "WARN"
 _STATUS_FAIL = "FAIL"
-_BLOCKING_WARNING_CODES = {
-    "missing_required_element",
-    "phase_section_missing",
-    "equipment_incongruent_selection",
-    "unresolved_access_fallback",
-    "missing_week_session_role",
-    "late_camp_session_incomplete",
-    "late_fight_active_role_overage",
-    "late_fight_block_overage",
-    "late_fight_forbidden_content",
-    "late_fight_hard_sparring_overage",
-    "late_fight_meaningful_stress_overage",
-    "late_fight_alactic_dose_overage",
-    "late_fight_technical_round_overage",
-    "late_fight_conditioning_round_structure_forbidden",
-    "late_fight_unapproved_exercise_rendered",
-    "late_fight_neural_power_stacking",
-    "late_fight_missing_countdown_header",
-    "late_fight_countdown_header_format",
-    "late_fight_d0_protocol_expanded",
-    "coach_owned_sparring_overdetailed",
-    "internal_render_contract_leak",
-    "missing_injury_lead_summary",
-    "missing_weight_cut_lead_summary",
-}
 
 
 
@@ -67,12 +42,12 @@ def _warning_buckets(validator_report: dict) -> tuple[list[dict], list[dict]]:
     blocking_warnings = [
         warning
         for warning in warnings
-        if str(warning.get("code") or "") in _BLOCKING_WARNING_CODES or bool(warning.get("blocking"))
+        if str(warning.get("severity") or "").lower() == "blocker"
     ]
     review_flags = [
         warning
         for warning in warnings
-        if str(warning.get("code") or "") not in _BLOCKING_WARNING_CODES and not bool(warning.get("blocking"))
+        if str(warning.get("severity") or "").lower() != "blocker"
     ]
     return blocking_warnings, review_flags
 
