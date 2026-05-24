@@ -2647,6 +2647,31 @@ def _countdown_blocks(final_plan_text: str) -> list[dict[str, Any]]:
         blocks.append(current)
     return blocks
 
+
+HARD_SPARRING_TERMS = (
+    "hard spar",
+    "hard sparring",
+    "live spar",
+    "live sparring",
+    "full spar",
+    "full sparring",
+    "full contact",
+    "hard contact",
+    "fight-pace sparring",
+    "competitive sparring",
+    "open sparring",
+)
+
+_HARD_SPARRING_PATTERN = re.compile(
+    r"\b(" + "|".join(re.escape(term) for term in HARD_SPARRING_TERMS) + r")\b",
+    re.IGNORECASE,
+)
+
+
+def _has_blocking_hard_sparring(text: str) -> bool:
+    line = str(text or "")
+    return _HARD_SPARRING_PATTERN.search(line) is not None
+
 def validate_stage2_output(*, planning_brief: dict, final_plan_text: str) -> dict:
     plan_lines = _extract_plan_lines(final_plan_text)
     restricted_hits = _find_restricted_hits(planning_brief, plan_lines)
@@ -2680,16 +2705,16 @@ def validate_stage2_output(*, planning_brief: dict, final_plan_text: str) -> dic
                 leaked = leak_match.group(0)
                 errors.append(_issue(code="true_internal_system_leak", message=f"Internal system term leaked: {leaked}.", severity="blocker", confidence="high", line=line))
                 break
-    hard_spar_pattern = re.compile(r"\b(hard spar|hard sparring|live spar|full spar|hard contact)\b", re.IGNORECASE)
     d1_risk_pattern = re.compile(r"\b(strength|conditioning|sprints?|interval|heavy|loaded|deadlift|squat|trap bar|barbell)\b", re.IGNORECASE)
     d0_extra_pattern = re.compile(r"\b(?:extra|plus|add|conditioning|strength|finisher|circuit|sprint|lift)\b", re.IGNORECASE)
     for block in countdown_blocks:
         day = int(block["day"])
         safe_lines = [line for line in block["lines"] if not _line_is_instruction_only(line)]
         joined = " ".join(safe_lines)
-        if day == 12 and hard_spar_pattern.search(joined):
+        has_blocking_hard_sparring = any(_has_blocking_hard_sparring(line) for line in safe_lines)
+        if day == 12 and has_blocking_hard_sparring:
             warnings.append(_issue(code="late_fight_hard_sparring_d12_review", message="Hard sparring appears on D-12; review coach load and recovery risk.", severity="review", confidence="medium", line=block["header"]))
-        if 0 <= day <= 11 and hard_spar_pattern.search(joined):
+        if 0 <= day <= 11 and has_blocking_hard_sparring:
             errors.append(_issue(code="late_fight_hard_sparring_violation", message="Hard sparring appears inside D-11 to D-0.", severity="blocker", confidence="high", line=block["header"]))
         if day == 1 and d1_risk_pattern.search(joined):
             errors.append(_issue(code="dangerous_late_fight_strength_or_conditioning", message="D-1 includes hard strength/conditioning exposure.", severity="blocker", confidence="medium", line=block["header"]))
