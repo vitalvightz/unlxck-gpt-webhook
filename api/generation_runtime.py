@@ -286,15 +286,15 @@ def is_in_process_generation_enabled() -> bool:
 
 
 def generation_max_concurrent_jobs() -> int:
-    raw_value = os.getenv("APP_GENERATION_MAX_CONCURRENT_JOBS", "2").strip()
+    raw_value = os.getenv("APP_GENERATION_MAX_CONCURRENT_JOBS", "1").strip()
     try:
         parsed = int(raw_value)
     except ValueError:
         logger.warning(
-            "[jobs] generation:invalid_max_concurrent_jobs value=%r; falling back to 2",
+            "[jobs] generation:invalid_max_concurrent_jobs value=%r; falling back to 1",
             raw_value,
         )
-        return 2
+        return 1
     return max(1, parsed)
 
 
