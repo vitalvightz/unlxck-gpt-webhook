@@ -36,8 +36,17 @@ export function getGenerationStatusTarget(
   phase: string | null,
   planId: string | null,
   terminalStatus: "completed" | "review_required" | null,
-): `/generate` | `/plans/${string}` | `/plans/${string}?review_required=1` | null {
+  source: string | null,
+  athleteId: string | null,
+): `/generate` | `/admin/athletes/${string}` | `/plans/${string}` | `/plans/${string}?review_required=1` | null {
   if (phase === "queued" || phase === "running" || phase === "finalizing") {
+    if (source === "admin_latest_intake" && athleteId) {
+      return `/admin/athletes/${athleteId}`;
+    }
+    if (source === "admin_triage_resume") {
+      if (planId) return `/plans/${planId}`;
+      if (athleteId) return `/admin/athletes/${athleteId}`;
+    }
     return "/generate";
   }
 
@@ -52,7 +61,7 @@ export function getGenerationStatusTarget(
 
 export function GlobalGenerationStatus() {
   const { session } = useAppSession();
-  const { isActive, statusMessage, phase, jobId, planId, terminalStatus, startedAtMs, refreshStatus, latestJob } = useGenerationStatus();
+  const { isActive, statusMessage, phase, jobId, planId, terminalStatus, startedAtMs, refreshStatus, latestJob, source, athleteId } = useGenerationStatus();
   const [now, setNow] = useState(() => Date.now());
   const [isCelebrating, setIsCelebrating] = useState(false);
   const [isDismissed, setIsDismissed] = useState(false);
@@ -63,7 +72,7 @@ export function GlobalGenerationStatus() {
 
   const isFailed = phase === "failed";
   const isCompleted = phase === "completed";
-  const navigationTarget = getGenerationStatusTarget(phase, planId, terminalStatus);
+  const navigationTarget = getGenerationStatusTarget(phase, planId, terminalStatus, source, athleteId);
   const ctaLabel = isCompleted && planId ? "View" : navigationTarget ? "Open" : "Refresh";
   const showElapsed = isActive && !isCompleted && !isFailed && startedAtMs !== null;
 

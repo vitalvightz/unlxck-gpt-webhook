@@ -14,6 +14,8 @@ interface GenerationStatusContextValue {
   jobId: string | null;
   clientRequestId: string | null;
   planId: string | null;
+  athleteId: string | null;
+  source: string | null;
   isActive: boolean;
   statusMessage: string | null;
   terminalStatus: GlobalTerminalGenerationStatus;
@@ -142,6 +144,8 @@ export function GenerationStatusProvider({ children, token }: GenerationStatusPr
   const [jobId, setJobId] = useState<string | null>(null);
   const [clientRequestId, setClientRequestId] = useState<string | null>(null);
   const [planId, setPlanId] = useState<string | null>(null);
+  const [athleteId, setAthleteId] = useState<string | null>(null);
+  const [source, setSource] = useState<string | null>(null);
   const [statusMessageText, setStatusMessageText] = useState<string | null>(null);
   const [terminalStatus, setTerminalStatus] = useState<GlobalTerminalGenerationStatus>(null);
   const [startedAtMs, setStartedAtMs] = useState<number | null>(null);
@@ -183,6 +187,8 @@ export function GenerationStatusProvider({ children, token }: GenerationStatusPr
       setJobId(null);
       setClientRequestId(null);
       setPlanId(null);
+      setAthleteId(null);
+      setSource(null);
       setStatusMessageText(null);
       setTerminalStatus(null);
       setStartedAtMs(null);
@@ -241,6 +247,8 @@ export function GenerationStatusProvider({ children, token }: GenerationStatusPr
         setJobId(null);
         setClientRequestId(null);
         setPlanId(null);
+        setAthleteId(null);
+        setSource(null);
         setStatusMessageText(null);
         setTerminalStatus(null);
         setStartedAtMs(null);
@@ -269,8 +277,12 @@ export function GenerationStatusProvider({ children, token }: GenerationStatusPr
           setStatusMessageText(stalledBeforeStart || staleVisibleJob ? "Build stalled — retry" : statusMessage(newPhase, newTerminalStatus));
 
           if (normalizedStatus === "completed" || normalizedStatus === "review_required") {
-            setPlanId(job.plan_id || job.latest_plan_id || null);
+            setPlanId(job.plan_id || null);
+          } else {
+            setPlanId(null);
           }
+          setAthleteId(job.athlete_id || null);
+          setSource(job.source || null);
 
           if (stalledBeforeStart || staleVisibleJob || isTerminalStatus(normalizedStatus)) {
             clearPendingGenerations();
@@ -286,6 +298,8 @@ export function GenerationStatusProvider({ children, token }: GenerationStatusPr
               setJobId(null);
               setClientRequestId(null);
               setPlanId(null);
+              setAthleteId(null);
+              setSource(null);
               setStatusMessageText(null);
               setTerminalStatus(null);
               setStartedAtMs(null);
@@ -297,6 +311,8 @@ export function GenerationStatusProvider({ children, token }: GenerationStatusPr
           setJobId(null);
           setClientRequestId(null);
           setPlanId(null);
+          setAthleteId(null);
+          setSource(null);
           setStatusMessageText(null);
           setTerminalStatus(null);
           setStartedAtMs(null);
@@ -308,6 +324,8 @@ export function GenerationStatusProvider({ children, token }: GenerationStatusPr
         setJobId(null);
         setClientRequestId(null);
         setPlanId(null);
+        setAthleteId(null);
+        setSource(null);
         setStatusMessageText(null);
         setTerminalStatus(null);
         setStartedAtMs(null);
@@ -351,6 +369,8 @@ export function GenerationStatusProvider({ children, token }: GenerationStatusPr
     jobId,
     clientRequestId,
     planId,
+    athleteId,
+    source,
     isActive: phase !== null,
     statusMessage: statusMessageText,
     terminalStatus,
