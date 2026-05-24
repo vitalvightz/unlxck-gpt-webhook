@@ -3558,6 +3558,50 @@ def test_retry_generation_job_idempotent_for_same_retry_client_request_id():
     assert len(store.generation_jobs) == 2
 
 
+def test_generate_plan_rejects_invalid_client_request_id_header():
+    client, _, _ = _build_client(enable_in_process_generation=False)
+    response = client.post(
+        "/api/plans/generate",
+        headers={
+            "Authorization": "Bearer athlete-token",
+            "X-Client-Request-Id": "invalid request id with spaces",
+        },
+        json=_build_request().model_dump(mode="json"),
+    )
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Invalid X-Client-Request-Id"
+
+
+def test_generate_plan_uses_fallback_for_whitespace_client_request_id_header():
+    client, _, _ = _build_client(enable_in_process_generation=False)
+    response = client.post(
+        "/api/plans/generate",
+        headers={
+            "Authorization": "Bearer athlete-token",
+            "X-Client-Request-Id": "   ",
+        },
+        json=_build_request().model_dump(mode="json"),
+    )
+    assert response.status_code == 202
+    assert response.json()["client_request_id"].startswith("cli_")
+
+
+def test_retry_generation_job_rejects_invalid_client_request_id_header():
+    client, store, _ = _build_client(enable_in_process_generation=False)
+    store.ensure_profile(AuthenticatedUser(user_id="athlete-1", email="ari@example.com", full_name="Ari Mensah", metadata={}))
+    original = _seed_failed_job(store)
+
+    response = client.post(
+        f"/api/generation-jobs/{original['id']}/retry",
+        headers={
+            "Authorization": "Bearer athlete-token",
+            "X-Client-Request-Id": "invalid/retry/id",
+        },
+    )
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Invalid X-Client-Request-Id"
+
+
 def test_retry_admin_triage_resume_preserves_plan_and_intake_linkage():
     client, store, _ = _build_client()
     store.ensure_profile(
