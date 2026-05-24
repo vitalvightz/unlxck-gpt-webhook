@@ -2674,11 +2674,12 @@ def validate_stage2_output(*, planning_brief: dict, final_plan_text: str) -> dic
         r"\brender(?:_|\s+)contract\b",
     )
     for pattern in internal_patterns:
-        leak_match = re.search(pattern, text_lower, re.IGNORECASE)
-        if leak_match:
-            leaked = leak_match.group(0)
-            errors.append(_issue(code="true_internal_system_leak", message=f"Internal system term leaked: {leaked}.", severity="blocker", confidence="high", line=leaked))
-            continue
+        for line in plan_lines:
+            leak_match = re.search(pattern, line, re.IGNORECASE)
+            if leak_match:
+                leaked = leak_match.group(0)
+                errors.append(_issue(code="true_internal_system_leak", message=f"Internal system term leaked: {leaked}.", severity="blocker", confidence="high", line=line))
+                break
     hard_spar_pattern = re.compile(r"\b(hard spar|hard sparring|live spar|full spar|hard contact)\b", re.IGNORECASE)
     d1_risk_pattern = re.compile(r"\b(strength|conditioning|sprints?|interval|heavy|loaded|deadlift|squat|trap bar|barbell)\b", re.IGNORECASE)
     d0_extra_pattern = re.compile(r"\b(?:extra|plus|add|conditioning|strength|finisher|circuit|sprint|lift)\b", re.IGNORECASE)
