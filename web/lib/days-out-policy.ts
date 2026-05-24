@@ -14,11 +14,14 @@ export type PerformanceFocusOptionAvailability = {
   reason?: string;
 };
 
-export function computeDaysUntilFight(fightDate: string | null | undefined): number | null {
+export function computeDaysUntilFight(
+  fightDate: string | null | undefined,
+  nowInput?: Date,
+): number | null {
   if (!fightDate) return null;
   const parsed = new Date(fightDate + "T00:00:00");
   if (Number.isNaN(parsed.getTime())) return null;
-  const now = new Date();
+  const now = nowInput ? new Date(nowInput) : new Date();
   now.setHours(0, 0, 0, 0);
   const diffMs = parsed.getTime() - now.getTime();
   const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
