@@ -4,5 +4,5 @@ export function shouldShowAdminPanelLink(
   role: UserRole | null | undefined,
   isAdminRoute = false,
 ): boolean {
-  return role === "admin" || isAdminRoute;
+  return role === "admin" || (isAdminRoute && !role);
 }
