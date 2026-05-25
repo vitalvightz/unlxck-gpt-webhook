@@ -3221,11 +3221,11 @@ def test_generate_plan_response_shape_is_preserved_with_deferred_writes():
 
 
 def test_generate_plan_rate_limits_repeat_requests():
-    client, _, _ = _build_client()
-    client.app.state.plan_generate_rate_limiter = app_module.SlidingWindowRateLimiter(
+    client, store, _ = _build_client()
+    store.check_plan_generation_short_window_limit(
+        athlete_id="athlete-1",
         max_requests=1,
         window_seconds=60.0,
-        time_fn=lambda: 100.0,
     )
 
     first = client.post(
@@ -3241,7 +3241,27 @@ def test_generate_plan_rate_limits_repeat_requests():
 
     assert first.status_code == 202
     assert second.status_code == status.HTTP_429_TOO_MANY_REQUESTS
-    assert second.json()["detail"]["retry_after_seconds"] == 60
+    assert second.json()["detail"]["retry_after_seconds"] > 0
+
+
+def test_generate_plan_short_window_limit_uses_store_method(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setenv("APP_PLAN_GENERATE_RATE_LIMIT", "1")
+    monkeypatch.setenv("APP_PLAN_GENERATE_RATE_LIMIT_WINDOW_SECONDS", "60")
+    client, store, _ = _build_client()
+    calls: list[tuple[str, int, float]] = []
+
+    def _spy(*, athlete_id: str, max_requests: int, window_seconds: float) -> tuple[bool, int]:
+        calls.append((athlete_id, max_requests, window_seconds))
+        return True, 0
+
+    store.check_plan_generation_short_window_limit = _spy  # type: ignore[method-assign]
+    response = client.post(
+        "/api/plans/generate",
+        headers={"Authorization": "Bearer athlete-token", "X-Client-Request-Id": "store-limit-spy"},
+        json=_build_request().model_dump(mode="json"),
+    )
+    assert response.status_code == 202
+    assert calls == [("athlete-1", 1, 60.0)]
 
 
 def test_generate_plan_daily_limit_allows_request_below_limit(monkeypatch: pytest.MonkeyPatch):

@@ -48,6 +48,7 @@ class FakeStore:
         self.intakes: dict[str, list[dict]] = {}
         self.plans: dict[str, dict] = {}
         self.generation_jobs: dict[str, dict] = {}
+        self.plan_generation_rate_limit_attempts: list[dict[str, str]] = []
         self.admin_emails: set[str] = {
             email.strip().lower() for email in (admin_emails or set()) if email
         }
@@ -489,6 +490,34 @@ class FakeStore:
                 continue
             count += 1
         return count
+
+    def check_plan_generation_short_window_limit(
+        self,
+        *,
+        athlete_id: str,
+        max_requests: int,
+        window_seconds: float,
+    ) -> tuple[bool, int]:
+        if max_requests <= 0:
+            return True, 0
+        now = datetime.now(timezone.utc)
+        cutoff = now - timedelta(seconds=max(1.0, window_seconds))
+        self.plan_generation_rate_limit_attempts = [
+            row
+            for row in self.plan_generation_rate_limit_attempts
+            if datetime.fromisoformat(row["created_at"].replace("Z", "+00:00")) > cutoff
+        ]
+        recent = [
+            row
+            for row in self.plan_generation_rate_limit_attempts
+            if row["athlete_id"] == athlete_id
+        ]
+        if len(recent) >= max_requests:
+            oldest = min(datetime.fromisoformat(row["created_at"].replace("Z", "+00:00")) for row in recent)
+            retry_after = max(1, int(window_seconds - (now - oldest).total_seconds()))
+            return False, retry_after
+        self.plan_generation_rate_limit_attempts.append({"athlete_id": athlete_id, "created_at": now.isoformat()})
+        return True, 0
 
     def get_generation_job_by_plan_id(self, plan_id: str) -> dict | None:
         matches = [job for job in self.generation_jobs.values() if str(job.get("plan_id") or "") == plan_id]
