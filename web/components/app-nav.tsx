@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type TransitionEvent } from "react";
 
 import { useAppSession } from "@/components/auth-provider";
+import { shouldShowAdminPanelLink } from "@/lib/admin-nav-visibility";
 
 type MobileNavState = "closed" | "opening" | "open" | "closing";
 
@@ -263,7 +264,7 @@ export function AppNav() {
   const initials = getInitials(displayName);
   const avatarUrl = (profile?.avatar_url && isSafeImageUrl(profile.avatar_url)) ? profile.avatar_url : null;
   const role = profile?.role ?? null;
-  const isAdminWorkspace = role === "admin" || isActive(pathname, "/admin");
+  const isAdminWorkspace = shouldShowAdminPanelLink(role, isActive(pathname, "/admin"));
 
   return (
     <>
