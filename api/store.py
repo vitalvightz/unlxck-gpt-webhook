@@ -16,6 +16,7 @@ from supabase import Client, create_client
 
 from .auth import AuthenticatedUser
 from .environment import is_production_environment
+from .generation_config import generation_job_stale_after_seconds
 from .models import (
     PlanRequest,
     ProfileUpdateRequest,
@@ -190,7 +191,7 @@ class AppStore(Protocol):
         self,
         athlete_id: str,
         *,
-        stale_after_seconds: int = 90,
+        stale_after_seconds: int = 300,
     ) -> dict[str, Any] | None: ...
     def get_latest_generation_job_for_athlete(self, athlete_id: str) -> dict[str, Any] | None: ...
 
@@ -610,7 +611,7 @@ class SupabaseAppStore:
     def _validate_generation_job_active_lock(self) -> None:
         try:
             response = self.client.rpc("validate_generation_job_active_lock").execute()
-        except PostgrestAPIError as exc:
+        except _STORE_CLIENT_ERRORS as exc:
             logger.exception("[store] validate_runtime_schema:active_job_lock_check_failed")
             raise RuntimeError(GENERATION_JOB_ACTIVE_LOCK_ERROR_DETAIL) from exc
 
@@ -640,9 +641,9 @@ class SupabaseAppStore:
                 logger.warning(
                     "[store] validate_runtime_schema:legacy_fallback_enabled; continuing despite schema mismatch"
                 )
-                return
-            logger.exception("[store] validate_runtime_schema:schema_mismatch")
-            raise RuntimeError(PLAN_RUNTIME_SCHEMA_ERROR_DETAIL) from exc
+            else:
+                logger.exception("[store] validate_runtime_schema:schema_mismatch")
+                raise RuntimeError(PLAN_RUNTIME_SCHEMA_ERROR_DETAIL) from exc
 
         self._validate_generation_job_active_lock()
         logger.info("[store] validate_runtime_schema:ok")
@@ -1460,7 +1461,7 @@ class SupabaseAppStore:
                 return job
             staleness = self._classify_running_job_staleness(
                 job,
-                stale_after_seconds=90,
+                stale_after_seconds=generation_job_stale_after_seconds(minimum=1),
                 stage1_stale_after_seconds=_stage1_stale_after_seconds_for_reads(),
             )
             if staleness == "job_loaded_stalled":
@@ -1617,7 +1618,7 @@ class SupabaseAppStore:
         self,
         athlete_id: str,
         *,
-        stale_after_seconds: int = 90,
+        stale_after_seconds: int = 300,
     ) -> dict[str, Any] | None:
         try:
             response = self._run_with_transient_retry(

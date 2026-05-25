@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import time
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from fastapi import HTTPException, status
@@ -1094,6 +1095,65 @@ def test_get_generation_job_keeps_recent_job_loaded_running():
     response = client.get(f"/api/generation-jobs/{created['id']}", headers={"Authorization": "Bearer athlete-token"})
     assert response.status_code == 200
     assert response.json()["status"] == "running"
+
+
+def test_get_generation_job_keeps_running_within_configured_stale_timeout(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setenv("APP_GENERATION_JOB_STALE_AFTER_SECONDS", "300")
+    client, store, _ = _build_client(enable_in_process_generation=False)
+    created = store.create_or_get_generation_job(
+        athlete_id="athlete-1",
+        client_request_id="running-within-timeout",
+        source="self_serve",
+        request_payload=_build_request().model_dump(mode="json"),
+    )
+    now = datetime.now(timezone.utc)
+    started_at = (now - timedelta(seconds=120)).isoformat()
+    heartbeat_at = (now - timedelta(seconds=120)).isoformat()
+    store.update_generation_job(created["id"], status="running", started_at=started_at, heartbeat_at=heartbeat_at)
+    response = client.get(f"/api/generation-jobs/{created['id']}", headers={"Authorization": "Bearer athlete-token"})
+    assert response.status_code == 200
+    assert response.json()["status"] == "running"
+
+
+def test_get_active_generation_job_keeps_running_within_configured_stale_timeout(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setenv("APP_GENERATION_JOB_STALE_AFTER_SECONDS", "300")
+    client, store, _ = _build_client(enable_in_process_generation=False)
+    created = store.create_or_get_generation_job(
+        athlete_id="athlete-1",
+        client_request_id="active-running-within-timeout",
+        source="self_serve",
+        request_payload=_build_request().model_dump(mode="json"),
+    )
+    now = datetime.now(timezone.utc)
+    started_at = (now - timedelta(seconds=120)).isoformat()
+    heartbeat_at = (now - timedelta(seconds=120)).isoformat()
+    store.update_generation_job(created["id"], status="running", started_at=started_at, heartbeat_at=heartbeat_at)
+    response = client.get("/api/generation-jobs/active", headers={"Authorization": "Bearer athlete-token"})
+    assert response.status_code == 200
+    body = response.json()
+    assert body["id"] == created["id"]
+    assert body["status"] == "running"
+
+
+def test_get_generation_job_marks_stale_running_failed_when_timeout_lower_than_job_age(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setenv("APP_GENERATION_JOB_STALE_AFTER_SECONDS", "60")
+    client, store, _ = _build_client(enable_in_process_generation=False)
+    created = store.create_or_get_generation_job(
+        athlete_id="athlete-1",
+        client_request_id="running-over-timeout",
+        source="self_serve",
+        request_payload=_build_request().model_dump(mode="json"),
+    )
+    now = datetime.now(timezone.utc)
+    store.update_generation_job(
+        created["id"],
+        status="running",
+        started_at=(now - timedelta(seconds=120)).isoformat(),
+        heartbeat_at=(now - timedelta(seconds=120)).isoformat(),
+    )
+    response = client.get(f"/api/generation-jobs/{created['id']}", headers={"Authorization": "Bearer athlete-token"})
+    assert response.status_code == 200
+    assert response.json()["status"] == "failed"
 
 
 def test_create_with_same_client_request_resets_pre_start_stale_job_without_duplicate():

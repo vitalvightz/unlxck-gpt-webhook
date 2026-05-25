@@ -495,11 +495,40 @@ def test_validate_runtime_schema_passes_when_generation_job_active_lock_is_valid
     store.client.rpc.assert_called_once_with("validate_generation_job_active_lock")
 
 
+def test_validate_runtime_schema_calls_active_lock_rpc_after_plan_validation():
+    store = _make_store()
+    lock_response = MagicMock()
+    lock_response.data = True
+    store.client.rpc.return_value.execute.return_value = lock_response
+
+    store.validate_runtime_schema()
+
+    store.client.table.return_value.select.return_value.limit.return_value.execute.assert_called_once()
+    store.client.rpc.assert_called_once_with("validate_generation_job_active_lock")
+
+
 def test_validate_runtime_schema_raises_when_generation_job_active_lock_is_missing():
     store = _make_store()
     lock_response = MagicMock()
     lock_response.data = False
     store.client.rpc.return_value.execute.return_value = lock_response
+
+    with pytest.raises(RuntimeError) as exc_info:
+        store.validate_runtime_schema()
+
+    assert str(exc_info.value) == store_module.GENERATION_JOB_ACTIVE_LOCK_ERROR_DETAIL
+
+
+def test_validate_runtime_schema_raises_when_generation_job_active_lock_rpc_errors():
+    store = _make_store()
+    store.client.rpc.return_value.execute.side_effect = APIError(
+        {
+            "message": "rpc failed",
+            "code": "PGRST001",
+            "hint": None,
+            "details": None,
+        }
+    )
 
     with pytest.raises(RuntimeError) as exc_info:
         store.validate_runtime_schema()
@@ -525,7 +554,36 @@ def test_validate_runtime_schema_allows_legacy_missing_columns_when_flag_enabled
     )
     store.client.table.return_value.select.return_value.limit.return_value.execute.side_effect = schema_error
 
+    lock_response = MagicMock()
+    lock_response.data = True
+    store.client.rpc.return_value.execute.return_value = lock_response
+
     store.validate_runtime_schema()
+
+    store.client.rpc.assert_called_once_with("validate_generation_job_active_lock")
+
+
+def test_validate_runtime_schema_legacy_fallback_still_raises_when_active_lock_is_missing(monkeypatch):
+    _clear_environment_env_vars(monkeypatch)
+    monkeypatch.setenv("UNLXCK_ALLOW_LEGACY_PLAN_SCHEMA_FALLBACK", "1")
+    store = _make_store()
+    schema_error = APIError(
+        {
+            "message": "Could not find the 'stage2_payload' column of 'plans' in the schema cache",
+            "code": "PGRST204",
+            "hint": None,
+            "details": None,
+        }
+    )
+    store.client.table.return_value.select.return_value.limit.return_value.execute.side_effect = schema_error
+    lock_response = MagicMock()
+    lock_response.data = False
+    store.client.rpc.return_value.execute.return_value = lock_response
+
+    with pytest.raises(RuntimeError) as exc_info:
+        store.validate_runtime_schema()
+
+    assert str(exc_info.value) == store_module.GENERATION_JOB_ACTIVE_LOCK_ERROR_DETAIL
 
 
 @pytest.mark.parametrize(

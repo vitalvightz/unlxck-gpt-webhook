@@ -19,6 +19,7 @@ from fastapi import BackgroundTasks, HTTPException, status
 from fightcamp.main import generate_plan_sync
 
 from .environment import is_production_environment
+from .generation_config import generation_job_stale_after_seconds
 from .models import PlanRequest, ProfileUpdateRequest
 from .stage2_automation import Stage2AutomationError, Stage2AutomationUnavailableError, Stage2Automator
 from .store import AppStore, is_pre_start_stale_generation_job
@@ -201,7 +202,9 @@ def parse_datetime(value: Any) -> datetime | None:
     return None
 
 
-def is_stale_job(job: dict[str, Any], *, stale_after_seconds: int = 90) -> bool:
+def is_stale_job(job: dict[str, Any], *, stale_after_seconds: int | None = None) -> bool:
+    if stale_after_seconds is None:
+        stale_after_seconds = generation_job_stale_after_seconds(minimum=1)
     if str(job.get("status") or "") != "running":
         return False
     if is_pre_start_stale_generation_job(job, stale_after_seconds=stale_after_seconds):

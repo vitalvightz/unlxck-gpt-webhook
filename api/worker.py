@@ -8,6 +8,7 @@ from contextlib import suppress
 from fightcamp.logging_utils import configure_logging
 
 from .generation_runtime import default_planner, is_stale_job, run_generation_job, utc_now_iso
+from .generation_config import generation_job_stale_after_seconds
 from .stage2_automation import build_default_stage2_automator
 from .store import AppStore, SupabaseAppStore
 
@@ -24,7 +25,7 @@ def _int_env(name: str, default: int, *, minimum: int = 1) -> int:
 
 
 def _worker_stale_after_seconds() -> int:
-    return _int_env("UNLXCK_GENERATION_WORKER_STALE_AFTER_SECONDS", 300, minimum=30)
+    return generation_job_stale_after_seconds(minimum=30)
 
 
 def _worker_max_concurrent_jobs() -> int:
