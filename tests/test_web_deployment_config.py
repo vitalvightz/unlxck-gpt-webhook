@@ -74,6 +74,7 @@ def test_delete_plan_uses_shared_request_pipeline():
 
 
 def test_no_public_env_var_exposes_supabase_service_role_key():
-    web_env_usage = (WEB_ROOT / "lib" / "supabase.ts").read_text() + "\n" + NEXT_CONFIG_SOURCE
+    web_lib_usage = "\n".join(p.read_text() for p in (WEB_ROOT / "lib").rglob("*") if p.is_file())
+    web_env_usage = web_lib_usage + "\n" + NEXT_CONFIG_SOURCE
     assert "NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY" not in web_env_usage
     assert "SUPABASE_SERVICE_ROLE_KEY" not in web_env_usage
