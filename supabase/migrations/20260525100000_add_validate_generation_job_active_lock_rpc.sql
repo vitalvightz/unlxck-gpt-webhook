@@ -1,3 +1,10 @@
+-- Deployment safety check before creating the active-job unique index:
+-- select athlete_id, count(*)
+-- from public.generation_jobs
+-- where status in ('queued', 'running')
+-- group by athlete_id
+-- having count(*) > 1;
+
 create unique index if not exists generation_jobs_one_active_job_per_athlete
 on public.generation_jobs (athlete_id)
 where status in ('queued', 'running');

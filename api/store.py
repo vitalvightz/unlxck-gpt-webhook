@@ -16,6 +16,7 @@ from supabase import Client, create_client
 
 from .auth import AuthenticatedUser
 from .environment import is_production_environment
+from .generation_config import generation_job_stale_after_seconds
 from .models import (
     PlanRequest,
     ProfileUpdateRequest,
@@ -190,7 +191,7 @@ class AppStore(Protocol):
         self,
         athlete_id: str,
         *,
-        stale_after_seconds: int = 90,
+        stale_after_seconds: int | None = None,
     ) -> dict[str, Any] | None: ...
     def get_latest_generation_job_for_athlete(self, athlete_id: str) -> dict[str, Any] | None: ...
 
@@ -198,13 +199,13 @@ class AppStore(Protocol):
     def has_active_generation_job_for_plan(self, plan_id: str) -> bool: ...
     def list_generation_jobs_for_athlete(self, athlete_id: str, *, limit: int = 10) -> list[dict[str, Any]]: ...
 
-    def list_claimable_generation_jobs(self, *, limit: int = 20, stale_after_seconds: int = 90) -> list[dict[str, Any]]: ...
+    def list_claimable_generation_jobs(self, *, limit: int = 20, stale_after_seconds: int | None = None) -> list[dict[str, Any]]: ...
 
-    def claim_generation_job_start(self, job_id: str, *, stale_after_seconds: int = 90) -> dict[str, Any] | None: ...
+    def claim_generation_job_start(self, job_id: str, *, stale_after_seconds: int | None = None) -> dict[str, Any] | None: ...
 
-    def claim_generation_job(self, job_id: str, *, stale_after_seconds: int = 90) -> dict[str, Any] | None: ...
+    def claim_generation_job(self, job_id: str, *, stale_after_seconds: int | None = None) -> dict[str, Any] | None: ...
 
-    def count_active_generation_jobs(self, *, stale_after_seconds: int = 90) -> int: ...
+    def count_active_generation_jobs(self, *, stale_after_seconds: int | None = None) -> int: ...
 
     def update_generation_job(self, job_id: str, **changes: Any) -> dict[str, Any]: ...
 
@@ -610,7 +611,7 @@ class SupabaseAppStore:
     def _validate_generation_job_active_lock(self) -> None:
         try:
             response = self.client.rpc("validate_generation_job_active_lock").execute()
-        except PostgrestAPIError as exc:
+        except _STORE_CLIENT_ERRORS as exc:
             logger.exception("[store] validate_runtime_schema:active_job_lock_check_failed")
             raise RuntimeError(GENERATION_JOB_ACTIVE_LOCK_ERROR_DETAIL) from exc
 
@@ -640,9 +641,9 @@ class SupabaseAppStore:
                 logger.warning(
                     "[store] validate_runtime_schema:legacy_fallback_enabled; continuing despite schema mismatch"
                 )
-                return
-            logger.exception("[store] validate_runtime_schema:schema_mismatch")
-            raise RuntimeError(PLAN_RUNTIME_SCHEMA_ERROR_DETAIL) from exc
+            else:
+                logger.exception("[store] validate_runtime_schema:schema_mismatch")
+                raise RuntimeError(PLAN_RUNTIME_SCHEMA_ERROR_DETAIL) from exc
 
         self._validate_generation_job_active_lock()
         logger.info("[store] validate_runtime_schema:ok")
@@ -1460,7 +1461,7 @@ class SupabaseAppStore:
                 return job
             staleness = self._classify_running_job_staleness(
                 job,
-                stale_after_seconds=90,
+                stale_after_seconds=generation_job_stale_after_seconds(),
                 stage1_stale_after_seconds=_stage1_stale_after_seconds_for_reads(),
             )
             if staleness == "job_loaded_stalled":
@@ -1617,8 +1618,10 @@ class SupabaseAppStore:
         self,
         athlete_id: str,
         *,
-        stale_after_seconds: int = 90,
+        stale_after_seconds: int | None = None,
     ) -> dict[str, Any] | None:
+        if stale_after_seconds is None:
+            stale_after_seconds = generation_job_stale_after_seconds()
         try:
             response = self._run_with_transient_retry(
                 operation=f"get_active_generation_job_for_athlete athlete_id={athlete_id}",
@@ -1904,7 +1907,9 @@ class SupabaseAppStore:
             )
         return []
 
-    def list_claimable_generation_jobs(self, *, limit: int = 20, stale_after_seconds: int = 90) -> list[dict[str, Any]]:
+    def list_claimable_generation_jobs(self, *, limit: int = 20, stale_after_seconds: int | None = None) -> list[dict[str, Any]]:
+        if stale_after_seconds is None:
+            stale_after_seconds = generation_job_stale_after_seconds()
         try:
             cutoff_iso = (
                 datetime.now(timezone.utc) - timedelta(seconds=max(1, stale_after_seconds))
@@ -1988,7 +1993,9 @@ class SupabaseAppStore:
                 detail="failed to list generation jobs",
             ) from exc
 
-    def claim_generation_job_start(self, job_id: str, *, stale_after_seconds: int = 90) -> dict[str, Any] | None:
+    def claim_generation_job_start(self, job_id: str, *, stale_after_seconds: int | None = None) -> dict[str, Any] | None:
+        if stale_after_seconds is None:
+            stale_after_seconds = generation_job_stale_after_seconds()
         try:
             job = self.get_generation_job(job_id)
             if not job:
@@ -2060,10 +2067,12 @@ class SupabaseAppStore:
                 detail="failed to claim generation job",
             ) from exc
 
-    def claim_generation_job(self, job_id: str, *, stale_after_seconds: int = 90) -> dict[str, Any] | None:
+    def claim_generation_job(self, job_id: str, *, stale_after_seconds: int | None = None) -> dict[str, Any] | None:
         return self.claim_generation_job_start(job_id, stale_after_seconds=stale_after_seconds)
 
-    def count_active_generation_jobs(self, *, stale_after_seconds: int = 90) -> int:
+    def count_active_generation_jobs(self, *, stale_after_seconds: int | None = None) -> int:
+        if stale_after_seconds is None:
+            stale_after_seconds = generation_job_stale_after_seconds()
         try:
             cutoff_iso = (
                 datetime.now(timezone.utc) - timedelta(seconds=max(1, stale_after_seconds))
