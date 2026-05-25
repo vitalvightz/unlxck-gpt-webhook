@@ -177,6 +177,12 @@ class AppStore(Protocol):
         *,
         sources: set[str] | None = None,
     ) -> int: ...
+    def check_plan_generation_short_window_limit(
+        self,
+        athlete_id: str,
+        max_requests: int,
+        window_seconds: float,
+    ) -> tuple[bool, int]: ...
 
     def get_generation_job(self, job_id: str) -> dict[str, Any] | None: ...
     def get_generation_job_by_client_request_id(self, *, athlete_id: str, client_request_id: str) -> dict[str, Any] | None: ...
@@ -1400,7 +1406,47 @@ class SupabaseAppStore:
                 detail="failed to count generation jobs",
                 exc=exc,
             )
-        return 0
+
+    def check_plan_generation_short_window_limit(
+        self,
+        athlete_id: str,
+        max_requests: int,
+        window_seconds: float,
+    ) -> tuple[bool, int]:
+        try:
+            response = self._run_with_transient_retry(
+                operation=f"check_plan_generation_short_window_limit athlete_id={athlete_id}",
+                fn=lambda: self.client.rpc(
+                    "check_plan_generation_short_window_limit",
+                    {
+                        "p_athlete_id": athlete_id,
+                        "p_max_requests": max_requests,
+                        "p_window_seconds": window_seconds,
+                    },
+                ).execute(),
+            )
+            payload = getattr(response, "data", None)
+            if not isinstance(payload, dict):
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail="invalid short-window rate limit response",
+                )
+            allowed = payload.get("allowed")
+            retry_after_seconds = payload.get("retry_after_seconds")
+            if not isinstance(allowed, bool) or not isinstance(retry_after_seconds, int):
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail="invalid short-window rate limit response",
+                )
+            return allowed, max(0, retry_after_seconds)
+        except HTTPException:
+            raise
+        except _STORE_CLIENT_ERRORS as exc:
+            self._raise_operation_http_error(
+                operation=f"check_plan_generation_short_window_limit athlete_id={athlete_id}",
+                detail="failed to enforce short-window rate limit",
+                exc=exc,
+            )
 
     def get_generation_job(self, job_id: str) -> dict[str, Any] | None:
         try:
