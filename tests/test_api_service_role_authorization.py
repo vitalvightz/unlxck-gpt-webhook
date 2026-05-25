@@ -9,6 +9,7 @@ def _create_two_athletes(client, store):
     athlete_b = AuthenticatedUser(user_id="athlete-2", email="bea@example.com", full_name="Bea Jones", metadata={})
     store.ensure_profile(athlete_a)
     store.ensure_profile(athlete_b)
+    client.app.state.auth_service.users_by_token["athlete-token"] = athlete_a
     client.app.state.auth_service.users_by_token["athlete-b-token"] = athlete_b
 
 
