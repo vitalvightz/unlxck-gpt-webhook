@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { getGenerationStatusTarget, latestFailedJobHasOpenablePlan } from "./global-generation-status";
+import { getGenerationStatusTarget, latestFailedJobHasOpenablePlan, shouldRenderPassiveLatestJobRibbon } from "./global-generation-status";
 
 test("active generation states route to generate workspace", () => {
   assert.equal(getGenerationStatusTarget("queued", null, null, "self_serve", null), "/generate");
@@ -59,4 +59,24 @@ test("completed admin generation routes to job-linked plan", () => {
 test("admin generation running target never points to onboarding", () => {
   const target = getGenerationStatusTarget("running", null, null, "admin_latest_intake", "ath_123");
   assert.notEqual(target, "/onboarding");
+});
+
+test("no active generation plus latest completed job with plan id is hidden", () => {
+  assert.equal(shouldRenderPassiveLatestJobRibbon({ status: "completed", plan_id: "plan_123" }), false);
+});
+
+test("no active generation plus latest failed job remains visible", () => {
+  assert.equal(shouldRenderPassiveLatestJobRibbon({ status: "failed", plan_id: null }), true);
+});
+
+test("no active generation plus latest review_required job with plan id is visible", () => {
+  assert.equal(shouldRenderPassiveLatestJobRibbon({ status: "review_required", plan_id: "plan_123" }), true);
+});
+
+test("active running job path still routes to generate", () => {
+  assert.equal(getGenerationStatusTarget("running", null, null, "self_serve", null), "/generate");
+});
+
+test("generic ribbon guard blocks render when phase/status/target are all null and passive job is not actionable", () => {
+  assert.equal(shouldRenderPassiveLatestJobRibbon({ status: "completed", plan_id: "plan_555" }), false);
 });

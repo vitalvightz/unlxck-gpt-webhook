@@ -19,6 +19,20 @@ function formatElapsed(ms: number): string {
 const CELEBRATION_DURATION_MS = 1_600;
 const RIBBON_DISMISSED_KEY = "unlxck:generation-ribbon-dismissed";
 const latestJobDismissKey = (jobId: string) => `${RIBBON_DISMISSED_KEY}:${jobId}`;
+type PassiveLatestJobStatus = "failed" | "review_required" | "completed" | "queued" | "running";
+
+export function shouldRenderPassiveLatestJobRibbon(
+  latestJob:
+    | { status?: PassiveLatestJobStatus | null; plan_id?: string | null; latest_plan_id?: string | null }
+    | null
+    | undefined,
+): boolean {
+  if (!latestJob) return false;
+  if (latestJob.status === "failed") return true;
+  if (latestJob.status === "review_required" && Boolean(latestJob.plan_id)) return true;
+  if (latestJob.status === "completed" && !latestJob.plan_id) return true;
+  return false;
+}
 
 export function latestFailedJobHasOpenablePlan(
   latestJob:
@@ -154,6 +168,9 @@ export function GlobalGenerationStatus() {
   };
 
   if (!isActive && latestJob) {
+    if (!shouldRenderPassiveLatestJobRibbon(latestJob)) {
+      return null;
+    }
     if (isDismissed && (latestJob.status === "failed" || latestJob.status === "review_required")) {
       return null;
     }
@@ -227,6 +244,10 @@ export function GlobalGenerationStatus() {
     isCompleted ? "global-generation-status-completed" : "",
     isCelebrating ? "global-generation-status-celebrating" : "",
   ].filter(Boolean).join(" ");
+
+  if (!statusMessage && !phase && !navigationTarget) {
+    return null;
+  }
 
   if (isDismissed) {
     return (
