@@ -878,55 +878,27 @@ class SupabaseAppStore:
                 )
                 return profile
 
-            history_raw = profile.get("username_change_history") or []
-            history: list[str] = [str(entry) for entry in history_raw if entry]
-
-            now = datetime.now(timezone.utc)
-            cutoff = now - timedelta(days=USERNAME_CHANGE_WINDOW_DAYS)
-            recent: list[datetime] = []
-            for entry in history:
-                try:
-                    parsed = datetime.fromisoformat(entry.replace("Z", "+00:00"))
-                except ValueError:
-                    continue
-                if parsed.tzinfo is None:
-                    parsed = parsed.replace(tzinfo=timezone.utc)
-                if parsed >= cutoff:
-                    recent.append(parsed)
-
-            if len(recent) >= USERNAME_MAX_CHANGES_PER_WINDOW:
-                earliest = min(recent)
-                next_available = earliest + timedelta(days=USERNAME_CHANGE_WINDOW_DAYS)
-                logger.info(
-                    "[store] change_username:rate_limited athlete_id=%s recent=%s next=%s",
-                    athlete_id,
-                    len(recent),
-                    next_available.isoformat(),
-                )
-                raise HTTPException(
-                    status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                    detail=(
-                        f"You can change your username up to {USERNAME_MAX_CHANGES_PER_WINDOW} times "
-                        f"every {USERNAME_CHANGE_WINDOW_DAYS} days. "
-                        f"Next change available {next_available.isoformat()}."
-                    ),
-                )
-
-            new_history = [entry.isoformat() for entry in recent] + [now.isoformat()]
             try:
-                logger.info(
-                    "[store] change_username:start athlete_id=%s recent=%s",
-                    athlete_id,
-                    len(recent),
-                )
-                self.client.table("profiles").update(
+                logger.info("[store] change_username:start athlete_id=%s", athlete_id)
+                self.client.rpc(
+                    "change_profile_username",
                     {
-                        "username": normalized,
-                        "username_change_history": new_history,
-                    }
-                ).eq("id", athlete_id).execute()
-            except _STORE_CLIENT_ERRORS as exc:
-                message = str(exc).lower()
+                        "p_profile_id": athlete_id,
+                        "p_username": normalized,
+                    },
+                ).execute()
+            except PostgrestAPIError as exc:
+                message = " ".join(
+                    str(part).lower()
+                    for part in (
+                        getattr(exc, "message", None),
+                        getattr(exc, "details", None),
+                        getattr(exc, "hint", None),
+                        getattr(exc, "code", None),
+                        str(exc),
+                    )
+                    if part
+                )
                 if "duplicate" in message or "23505" in message or "unique" in message:
                     logger.info(
                         "[store] change_username:duplicate athlete_id=%s username=%s",
@@ -936,6 +908,18 @@ class SupabaseAppStore:
                     raise HTTPException(
                         status_code=status.HTTP_409_CONFLICT,
                         detail="That username is already taken. Pick another.",
+                    ) from exc
+                if "username_rate_limit_exceeded" in message:
+                    logger.info(
+                        "[store] change_username:rate_limited athlete_id=%s",
+                        athlete_id,
+                    )
+                    raise HTTPException(
+                        status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                        detail=(
+                            f"You can change your username up to {USERNAME_MAX_CHANGES_PER_WINDOW} times "
+                            f"every {USERNAME_CHANGE_WINDOW_DAYS} days."
+                        ),
                     ) from exc
                 raise
 

@@ -9,6 +9,12 @@ USERNAME_MIGRATION_PATH = (
     / "migrations"
     / "20260518000000_add_profile_username.sql"
 )
+USERNAME_ATOMIC_MIGRATION_PATH = (
+    Path(__file__).resolve().parents[1]
+    / "supabase"
+    / "migrations"
+    / "20260525000000_change_username_atomic_rpc.sql"
+)
 
 
 def _read_schema() -> str:
@@ -17,6 +23,10 @@ def _read_schema() -> str:
 
 def _read_username_migration() -> str:
     return USERNAME_MIGRATION_PATH.read_text(encoding="utf-8")
+
+
+def _read_username_atomic_migration() -> str:
+    return USERNAME_ATOMIC_MIGRATION_PATH.read_text(encoding="utf-8")
 
 
 def test_profiles_table_declares_avatar_url_column():
@@ -176,3 +186,17 @@ def test_schema_has_update_delete_rls_policies():
     assert re.search(r'create policy "plans_self_or_admin_delete" on public\.plans\s+for delete\s+using\s+\(athlete_id = auth\.uid\(\) or public\.is_admin\(\)\);', schema, re.IGNORECASE)
     assert re.search(r'create policy "intakes_self_or_admin_delete" on public\.athlete_intakes\s+for delete\s+using\s+\(athlete_id = auth\.uid\(\) or public\.is_admin\(\)\);', schema, re.IGNORECASE)
     assert re.search(r'create policy "generation_jobs_self_or_admin_delete" on public\.generation_jobs\s+for delete\s+using\s+\(athlete_id = auth\.uid\(\) or public\.is_admin\(\)\);', schema, re.IGNORECASE)
+
+
+def test_change_profile_username_rpc_exists_in_schema():
+    schema = _read_schema()
+    assert "create or replace function public.change_profile_username(" in schema
+    assert "for update;" in schema
+    assert "raise exception 'username_rate_limit_exceeded';" in schema
+
+
+def test_change_profile_username_rpc_migration_exists():
+    migration = _read_username_atomic_migration()
+    assert "create or replace function public.change_profile_username(" in migration
+    assert "for update;" in migration
+    assert "raise exception 'username_rate_limit_exceeded';" in migration
