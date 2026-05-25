@@ -2473,7 +2473,7 @@ def create_app(
         )
         if focus_validation.is_over_cap:
             raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=focus_validation.error_message or "Too many focus selections for this camp.")
-        if request_body.weekly_training_frequency and len(request_body.training_availability) and request_body.weekly_training_frequency > len(request_body.training_availability):
+        if request_body.weekly_training_frequency and request_body.weekly_training_frequency > len(request_body.training_availability):
             raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="weekly_training_frequency cannot exceed selected training_availability days")
         refreshed = store.update_intake(
             latest_intake_id,
