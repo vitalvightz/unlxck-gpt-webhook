@@ -608,8 +608,6 @@ class SupabaseAppStore:
             raise RuntimeError(GENERATION_JOB_ACTIVE_LOCK_ERROR_DETAIL) from exc
 
         lock_present = bool(response.data)
-        if isinstance(response.data, dict):
-            lock_present = bool(response.data.get("is_valid"))
 
         if not lock_present:
             logger.error("[store] validate_runtime_schema:active_job_lock_missing")
