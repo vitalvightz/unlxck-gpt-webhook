@@ -1,6 +1,7 @@
 import type {
   ApproveAndResumeGenerationRequest,
   AdminAthleteRecord,
+  AdminLatestIntakeUpdateRequest,
   AdminGenerationJobDiagnostic,
   AdminPlanSummary,
   ManualStage2SubmissionRequest,
@@ -577,6 +578,20 @@ export function listAdminAthletes(token: string): Promise<AdminAthleteRecord[]> 
 export function getAdminAthlete(token: string, athleteId: string): Promise<AdminAthleteRecord> {
   return withTransientRetries(() =>
     readJson<AdminAthleteRecord>(`/api/admin/athletes/${athleteId}`, { token }),
+  );
+}
+
+export function updateAdminAthleteLatestIntake(
+  token: string,
+  athleteId: string,
+  payload: AdminLatestIntakeUpdateRequest,
+): Promise<AdminAthleteRecord> {
+  return withTransientRetries(() =>
+    readJson<AdminAthleteRecord>(`/api/admin/athletes/${athleteId}/latest-intake`, {
+      method: "PATCH",
+      token,
+      body: JSON.stringify(payload),
+    }),
   );
 }
 

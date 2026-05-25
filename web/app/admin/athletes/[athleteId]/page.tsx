@@ -17,6 +17,7 @@ import {
   getAdminAthleteNutritionCurrent,
   retryGenerationJob,
   updateAdminAthleteNutritionCurrent,
+  updateAdminAthleteLatestIntake,
 } from "@/lib/api";
 import { loadAdminAthleteProfileData } from "@/lib/admin-athlete-profile-loader";
 import { useGenerationController } from "@/lib/generation-controller";
@@ -67,6 +68,11 @@ export default function AdminAthletePage() {
   const [retryingJobId, setRetryingJobId] = useState<string | null>(null);
   const [nutritionLoadWarning, setNutritionLoadWarning] = useState<string | null>(null);
   const [jobsLoadWarning, setJobsLoadWarning] = useState<string | null>(null);
+  const [isSavingIntake, setIsSavingIntake] = useState(false);
+  const [intakeDraft, setIntakeDraft] = useState<{
+    key_goals: string[];
+    weak_areas: string[];
+  } | null>(null);
 
   const handleRetry = useCallback(() => {
     setLoadError(null);
@@ -86,6 +92,20 @@ export default function AdminAthletePage() {
     : null;
   const latestIntakeFocusError = latestIntakeFocusValidation?.isOverCap
     ? `Latest saved intake is over the focus cap. ${latestIntakeFocusValidation.errorMessage}`
+    : null;
+  useEffect(() => {
+    if (!athlete?.latest_intake) return;
+    setIntakeDraft({
+      key_goals: athlete.latest_intake.key_goals ?? [],
+      weak_areas: athlete.latest_intake.weak_areas ?? [],
+    });
+  }, [athlete?.athlete_id, athlete?.latest_intake]);
+  const draftFocusValidation = athlete?.latest_intake && intakeDraft
+    ? validatePerformanceFocusSelections(
+      athlete.latest_intake.fight_date,
+      { keyGoals: intakeDraft.key_goals, weakAreas: intakeDraft.weak_areas },
+      { timeZone: athlete.latest_intake.athlete.athlete_timezone },
+    )
     : null;
 
   const controller = useGenerationController({
@@ -194,6 +214,26 @@ export default function AdminAthletePage() {
       setIsSavingControls(false);
     }
   }
+  async function handleSaveIntake(andGenerate = false) {
+    if (!session?.access_token || !athleteId || !intakeDraft || !athlete?.latest_intake || isSavingIntake) return;
+    setIsSavingIntake(true);
+    setError(null);
+    try {
+      const updated = await updateAdminAthleteLatestIntake(session.access_token, athleteId, {
+        key_goals: intakeDraft.key_goals,
+        weak_areas: intakeDraft.weak_areas,
+      });
+      setAthlete(updated);
+      setMessage("Intake updated.");
+      if (andGenerate) {
+        await controller.startGeneration();
+      }
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : "Unable to save intake updates.");
+    } finally {
+      setIsSavingIntake(false);
+    }
+  }
 
   return (
     <RequireAuth adminOnly>
@@ -256,6 +296,33 @@ export default function AdminAthletePage() {
             <div className="error-banner" role="alert">{error}</div>
           ) : null}
           {latestIntakeFocusError ? <p className="error-text">{latestIntakeFocusError}</p> : null}
+          {latestIntakeFocusError && intakeDraft && athlete.latest_intake ? (
+            <article className="step-card">
+              <div className="form-section-header">
+                <h2 className="form-section-title">Resolve intake issues</h2>
+                <p className="muted">This saved intake needs a small update before a new plan can be generated.</p>
+              </div>
+              <p className="error-text">
+                Focus cap exceeded. This camp allows {latestIntakeFocusValidation?.cap?.maxSelections} total focus picks. Current intake has {draftFocusValidation?.totalSelections ?? 0}.
+              </p>
+              <p><strong>Key goals</strong></p>
+              <div className="athlete-profile-inline-pills">
+                {intakeDraft.key_goals.map((goal) => <button key={goal} type="button" className="athlete-profile-pill athlete-profile-pill-compact" onClick={() => setIntakeDraft((c) => c ? { ...c, key_goals: c.key_goals.filter((g) => g !== goal) } : c)}>{goal} ✕</button>)}
+              </div>
+              <p><strong>Weak areas</strong></p>
+              <div className="athlete-profile-inline-pills">
+                {intakeDraft.weak_areas.map((area) => <button key={area} type="button" className="athlete-profile-pill athlete-profile-pill-compact athlete-profile-pill-warning" onClick={() => setIntakeDraft((c) => c ? { ...c, weak_areas: c.weak_areas.filter((g) => g !== area) } : c)}>{area} ✕</button>)}
+              </div>
+              <p className={draftFocusValidation?.isOverCap ? "error-text" : "muted"}>
+                {draftFocusValidation?.totalSelections ?? 0} / {draftFocusValidation?.cap?.maxSelections ?? latestIntakeFocusValidation?.cap?.maxSelections ?? 0} selected
+              </p>
+              <div className="plan-summary-actions">
+                <button type="button" className="ghost-button" onClick={() => setIntakeDraft({ key_goals: athlete.latest_intake?.key_goals ?? [], weak_areas: athlete.latest_intake?.weak_areas ?? [] })}>Cancel changes</button>
+                <button type="button" className="ghost-button" disabled={Boolean(draftFocusValidation?.isOverCap) || isSavingIntake} onClick={() => void handleSaveIntake(false)}>Save updated intake</button>
+                <button type="button" className="cta" disabled={Boolean(draftFocusValidation?.isOverCap) || isSavingIntake || controller.isGenerating} onClick={() => void handleSaveIntake(true)}>Save and generate</button>
+              </div>
+            </article>
+          ) : null}
           {!athlete.latest_intake ? (
             <p className="muted">Generate is available after this athlete has at least one saved intake.</p>
           ) : null}
