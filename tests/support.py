@@ -51,9 +51,34 @@ class FakeStore:
         self.admin_emails: set[str] = {
             email.strip().lower() for email in (admin_emails or set()) if email
         }
+        self._plan_generation_limit_events: dict[str, list[datetime]] = {}
 
     def validate_runtime_schema(self) -> None:
         return None
+
+    def check_plan_generation_short_window_limit(
+        self,
+        athlete_id: str,
+        max_requests: int,
+        window_seconds: float,
+    ) -> tuple[bool, int]:
+        if max_requests <= 0:
+            return True, 0
+        now = datetime.now(timezone.utc)
+        cutoff = now - timedelta(seconds=max(1.0, window_seconds))
+        bucket = [
+            ts for ts in self._plan_generation_limit_events.get(athlete_id, [])
+            if ts > cutoff
+        ]
+        self._plan_generation_limit_events[athlete_id] = bucket
+        if len(bucket) >= max_requests:
+            retry_after = max(
+                1,
+                int(max(1.0, window_seconds) - (now - bucket[0]).total_seconds()),
+            )
+            return False, retry_after
+        bucket.append(now)
+        return True, 0
 
     def is_admin_email(self, email: str) -> bool:
         if not email:
