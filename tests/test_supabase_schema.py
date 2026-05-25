@@ -9,6 +9,12 @@ USERNAME_MIGRATION_PATH = (
     / "migrations"
     / "20260518000000_add_profile_username.sql"
 )
+PLAN_RATE_LIMIT_MIGRATION_PATH = (
+    Path(__file__).resolve().parents[1]
+    / "supabase"
+    / "migrations"
+    / "20260525113000_add_plan_generation_rate_limits.sql"
+)
 
 
 def _read_schema() -> str:
@@ -17,6 +23,10 @@ def _read_schema() -> str:
 
 def _read_username_migration() -> str:
     return USERNAME_MIGRATION_PATH.read_text(encoding="utf-8")
+
+
+def _read_plan_rate_limit_migration() -> str:
+    return PLAN_RATE_LIMIT_MIGRATION_PATH.read_text(encoding="utf-8")
 
 
 def test_profiles_table_declares_avatar_url_column():
@@ -176,3 +186,18 @@ def test_schema_has_update_delete_rls_policies():
     assert re.search(r'create policy "plans_self_or_admin_delete" on public\.plans\s+for delete\s+using\s+\(athlete_id = auth\.uid\(\) or public\.is_admin\(\)\);', schema, re.IGNORECASE)
     assert re.search(r'create policy "intakes_self_or_admin_delete" on public\.athlete_intakes\s+for delete\s+using\s+\(athlete_id = auth\.uid\(\) or public\.is_admin\(\)\);', schema, re.IGNORECASE)
     assert re.search(r'create policy "generation_jobs_self_or_admin_delete" on public\.generation_jobs\s+for delete\s+using\s+\(athlete_id = auth\.uid\(\) or public\.is_admin\(\)\);', schema, re.IGNORECASE)
+
+
+def test_schema_includes_plan_generation_short_window_rate_limit_objects():
+    schema = _read_schema()
+
+    assert "create table if not exists public.plan_generation_rate_limits (" in schema
+    assert "create index if not exists plan_generation_rate_limits_athlete_created_idx" in schema
+    assert "create or replace function public.check_plan_generation_short_window_limit(" in schema
+
+
+def test_plan_generation_short_window_migration_uses_advisory_lock():
+    migration = _read_plan_rate_limit_migration()
+
+    assert "pg_advisory_xact_lock" in migration
+    assert "hashtext('plan_generation_rate_limit:' || p_athlete_id)" in migration
