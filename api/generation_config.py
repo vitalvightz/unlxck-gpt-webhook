@@ -7,7 +7,7 @@ DEFAULT_GENERATION_JOB_STALE_AFTER_SECONDS = 300
 
 def generation_job_stale_after_seconds(*, minimum: int = 60) -> int:
     raw_value = os.getenv("APP_GENERATION_JOB_STALE_AFTER_SECONDS")
-    if raw_value is None:
+    if not raw_value:
         raw_value = os.getenv(
             "UNLXCK_GENERATION_WORKER_STALE_AFTER_SECONDS",
             str(DEFAULT_GENERATION_JOB_STALE_AFTER_SECONDS),
