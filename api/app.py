@@ -8,10 +8,8 @@ import os
 import re
 import time
 import uuid
-from collections import deque
 from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
-from threading import Lock
 from typing import Any, Callable
 from urllib.parse import urlsplit
 
@@ -84,34 +82,6 @@ security = HTTPBearer(auto_error=False)
 logger = logging.getLogger(__name__)
 LOCAL_HOST_NAMES = ("localhost", "127.0.0.1", "::1")
 _CLIENT_REQUEST_ID_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$")
-
-
-class SlidingWindowRateLimiter:
-    def __init__(
-        self,
-        *,
-        max_requests: int,
-        window_seconds: float,
-        time_fn: Callable[[], float] | None = None,
-    ):
-        self.max_requests = max_requests
-        self.window_seconds = window_seconds
-        self._time_fn = time_fn or time.monotonic
-        self._lock = Lock()
-        self._requests_by_key: dict[str, deque[float]] = {}
-
-    def check(self, key: str) -> int | None:
-        now = self._time_fn()
-        cutoff = now - self.window_seconds
-        with self._lock:
-            bucket = self._requests_by_key.setdefault(key, deque())
-            while bucket and bucket[0] <= cutoff:
-                bucket.popleft()
-            if len(bucket) >= self.max_requests:
-                retry_after = max(1, int(self.window_seconds - (now - bucket[0])))
-                return retry_after
-            bucket.append(now)
-        return None
 
 
 def _utc_now_iso() -> str:
@@ -1131,15 +1101,6 @@ def create_app(
     app.state.mode_label = mode_label
     app.state.enable_in_process_generation = enable_in_process_generation
     app.state.active_generation_tasks = set()
-    rate_limit_requests = _plan_generate_rate_limit_requests()
-    app.state.plan_generate_rate_limiter = (
-        SlidingWindowRateLimiter(
-            max_requests=rate_limit_requests,
-            window_seconds=_plan_generate_rate_limit_window_seconds(),
-        )
-        if rate_limit_requests > 0
-        else None
-    )
     cors_origins = _cors_origins()
     cors_regex = _cors_origin_regex()
     _validate_production_cors_config(cors_origins, cors_regex)
@@ -1246,9 +1207,6 @@ def create_app(
 
     def get_enable_in_process_generation(request: Request) -> bool:
         return bool(request.app.state.enable_in_process_generation)
-
-    def get_plan_generate_rate_limiter(request: Request) -> SlidingWindowRateLimiter | None:
-        return request.app.state.plan_generate_rate_limiter
 
     def require_user(
         credentials: HTTPAuthorizationCredentials | None = Depends(security),
@@ -1466,7 +1424,6 @@ def create_app(
         stage2: Stage2Automator = Depends(get_stage2_automator),
         active_tasks: set[str] = Depends(get_active_generation_tasks),
         enable_in_process_generation: bool = Depends(get_enable_in_process_generation),
-        rate_limiter: SlidingWindowRateLimiter | None = Depends(get_plan_generate_rate_limiter),
     ) -> GenerationJobResponse:
         focus_validation = validate_performance_focus_selections(
             request_body.fight_date,
@@ -1479,9 +1436,15 @@ def create_app(
                 status_code=status.HTTP_409_CONFLICT,
                 detail=focus_validation.error_message or "Too many focus selections for this camp.",
             )
-        if rate_limiter is not None:
-            retry_after = rate_limiter.check(profile.athlete_id)
-            if retry_after is not None:
+        short_window_limit = _plan_generate_rate_limit_requests()
+        if short_window_limit > 0:
+            allowed, retry_after = await asyncio.to_thread(
+                store.check_plan_generation_short_window_limit,
+                athlete_id=profile.athlete_id,
+                max_requests=short_window_limit,
+                window_seconds=_plan_generate_rate_limit_window_seconds(),
+            )
+            if not allowed:
                 raise HTTPException(
                     status_code=status.HTTP_429_TOO_MANY_REQUESTS,
                     detail={

@@ -175,9 +175,8 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=
 - The bank JSON files are loaded into memory on first request and cached for each worker process lifetime (with `--workers 2`, both workers will warm independently).
 - Runtime guards are split between process-local best-effort protections and durable database-backed protections:
   - `active_generation_tasks` is process-local and only prevents duplicate scheduling inside one API process.
-  - The per-minute `POST /api/plans/generate` `SlidingWindowRateLimiter` is process-local and resets on restart.
-  - The daily generation cap, one-active-job-per-athlete rule, and job-claim correctness are durable Supabase/database-backed protections.
-  - If strict global rate limits are needed across multiple API/worker processes, add shared durable infrastructure later, such as Redis-backed rate limiting or queueing.
+  - The short-window `POST /api/plans/generate` limiter is durable and database-backed (`plan_generation_rate_limits` + RPC), so it works across API/worker processes and survives API restarts.
+  - The daily generation cap, one-active-job-per-athlete rule, and job-claim correctness are also durable Supabase/database-backed protections.
 - Production CORS is fail-fast by default. If CORS is unsafe in production, boot is blocked unless you explicitly set `APP_ALLOW_UNSAFE_PRODUCTION_CORS_BOOT=1` for emergency override.
 - Keep the instance warm with a cron job hitting `/health` every 14 minutes or use Render Standard tier
 

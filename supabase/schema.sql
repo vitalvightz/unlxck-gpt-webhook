@@ -51,6 +51,50 @@ select exists (
 );
 $$;
 
+create or replace function public.check_plan_generation_short_window_limit(
+  p_athlete_id uuid,
+  p_max_requests integer,
+  p_window_seconds double precision
+)
+returns table(allowed boolean, retry_after_seconds integer)
+language plpgsql
+as $$
+declare
+  v_now timestamptz := timezone('utc', now());
+  v_cutoff timestamptz := v_now - make_interval(secs => greatest(1, p_window_seconds)::integer);
+  v_count integer := 0;
+  v_oldest timestamptz;
+begin
+  if coalesce(p_max_requests, 0) <= 0 then
+    return query select true, 0;
+    return;
+  end if;
+
+  perform pg_advisory_xact_lock(hashtext('plan_generation_rate_limit:' || p_athlete_id::text));
+
+  delete from public.plan_generation_rate_limits
+  where athlete_id = p_athlete_id
+    and created_at <= v_cutoff;
+
+  select count(*), min(created_at)
+    into v_count, v_oldest
+  from public.plan_generation_rate_limits
+  where athlete_id = p_athlete_id
+    and created_at > v_cutoff;
+
+  if v_count >= p_max_requests then
+    return query
+      select false, greatest(1, ceil(extract(epoch from ((v_oldest + make_interval(secs => greatest(1, p_window_seconds)::integer)) - v_now)))::integer);
+    return;
+  end if;
+
+  insert into public.plan_generation_rate_limits (athlete_id, created_at)
+  values (p_athlete_id, v_now);
+
+  return query select true, 0;
+end;
+$$;
+
 create table if not exists public.profiles (
   id uuid primary key references auth.users(id) on delete cascade,
   email text not null unique,
@@ -172,6 +216,11 @@ create table if not exists public.generation_jobs (
   constraint generation_jobs_athlete_client_request_key unique (athlete_id, client_request_id)
 );
 
+create table if not exists public.plan_generation_rate_limits (
+  athlete_id uuid not null references public.profiles(id) on delete cascade,
+  created_at timestamptz not null default timezone('utc', now())
+);
+
 alter table public.plans add column if not exists draft_plan_text text not null default '';
 alter table public.plans add column if not exists final_plan_text text not null default '';
 alter table public.plans add column if not exists plan_name text not null default '';
@@ -255,6 +304,7 @@ create index if not exists generation_jobs_athlete_id_created_at_idx on public.g
 create index if not exists generation_jobs_status_heartbeat_at_idx on public.generation_jobs (status, heartbeat_at);
 create unique index if not exists generation_jobs_athlete_client_request_uidx on public.generation_jobs (athlete_id, client_request_id);
 create unique index if not exists generation_jobs_one_active_job_per_athlete on public.generation_jobs (athlete_id) where status in ('queued', 'running');
+create index if not exists plan_generation_rate_limits_athlete_created_idx on public.plan_generation_rate_limits (athlete_id, created_at);
 
 drop trigger if exists profiles_set_updated_at on public.profiles;
 create trigger profiles_set_updated_at
