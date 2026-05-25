@@ -2478,7 +2478,7 @@ def create_app(
         refreshed = store.update_intake(
             latest_intake_id,
             intake=request_body.model_dump(mode="json"),
-            fight_date=request_body.fight_date.strip() or None,
+            fight_date=None if request_body.no_scheduled_fight else (request_body.fight_date.strip() or None),
             technical_style=list(request_body.athlete.technical_style),
         )
         return _map_admin_athlete(row, latest_intake=refreshed)
