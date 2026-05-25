@@ -3220,13 +3220,10 @@ def test_generate_plan_response_shape_is_preserved_with_deferred_writes():
     assert body["athlete_id"] == "athlete-1"
 
 
-def test_generate_plan_rate_limits_repeat_requests():
+def test_generate_plan_rate_limits_repeat_requests(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setenv("APP_PLAN_GENERATE_RATE_LIMIT", "1")
+    monkeypatch.setenv("APP_PLAN_GENERATE_RATE_LIMIT_WINDOW_SECONDS", "60")
     client, _, _ = _build_client()
-    client.app.state.plan_generate_rate_limiter = app_module.SlidingWindowRateLimiter(
-        max_requests=1,
-        window_seconds=60.0,
-        time_fn=lambda: 100.0,
-    )
 
     first = client.post(
         "/api/plans/generate",
