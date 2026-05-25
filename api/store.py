@@ -67,6 +67,9 @@ _GENERATION_JOB_CONFLICT_SNIPPETS = (
 PLAN_RUNTIME_SCHEMA_ERROR_DETAIL = (
     "plans table is missing required runtime columns; apply latest Supabase schema and redeploy"
 )
+GENERATION_JOB_ACTIVE_LOCK_ERROR_DETAIL = (
+    "generation job active lock is missing; apply latest Supabase migrations and redeploy"
+)
 PLAN_RUNTIME_REQUIRED_COLUMNS = (
     "draft_plan_text",
     "final_plan_text",
@@ -597,6 +600,21 @@ class SupabaseAppStore:
             return _PLAN_SCHEMA_MISMATCH_DETAIL
         return "plan persistence failed"
 
+    def _validate_generation_job_active_lock(self) -> None:
+        try:
+            response = self.client.rpc("validate_generation_job_active_lock").execute()
+        except PostgrestAPIError as exc:
+            logger.exception("[store] validate_runtime_schema:active_job_lock_check_failed")
+            raise RuntimeError(GENERATION_JOB_ACTIVE_LOCK_ERROR_DETAIL) from exc
+
+        lock_present = bool(response.data)
+        if isinstance(response.data, dict):
+            lock_present = bool(response.data.get("is_valid"))
+
+        if not lock_present:
+            logger.error("[store] validate_runtime_schema:active_job_lock_missing")
+            raise RuntimeError(GENERATION_JOB_ACTIVE_LOCK_ERROR_DETAIL)
+
     def validate_runtime_schema(self) -> None:
         legacy_fallback_enabled = self._legacy_plan_schema_fallback_enabled()
         logger.info(
@@ -620,6 +638,8 @@ class SupabaseAppStore:
                 return
             logger.exception("[store] validate_runtime_schema:schema_mismatch")
             raise RuntimeError(PLAN_RUNTIME_SCHEMA_ERROR_DETAIL) from exc
+
+        self._validate_generation_job_active_lock()
         logger.info("[store] validate_runtime_schema:ok")
 
     def _raise_operation_http_error(
