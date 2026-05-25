@@ -16,6 +16,7 @@ from supabase import Client, create_client
 
 from .auth import AuthenticatedUser
 from .environment import is_production_environment
+from .generation_config import generation_job_stale_after_seconds
 from .models import (
     PlanRequest,
     ProfileUpdateRequest,
@@ -190,7 +191,7 @@ class AppStore(Protocol):
         self,
         athlete_id: str,
         *,
-        stale_after_seconds: int = 90,
+        stale_after_seconds: int = 300,
     ) -> dict[str, Any] | None: ...
     def get_latest_generation_job_for_athlete(self, athlete_id: str) -> dict[str, Any] | None: ...
 
@@ -1460,7 +1461,7 @@ class SupabaseAppStore:
                 return job
             staleness = self._classify_running_job_staleness(
                 job,
-                stale_after_seconds=90,
+                stale_after_seconds=generation_job_stale_after_seconds(minimum=1),
                 stage1_stale_after_seconds=_stage1_stale_after_seconds_for_reads(),
             )
             if staleness == "job_loaded_stalled":
@@ -1617,7 +1618,7 @@ class SupabaseAppStore:
         self,
         athlete_id: str,
         *,
-        stale_after_seconds: int = 90,
+        stale_after_seconds: int = 300,
     ) -> dict[str, Any] | None:
         try:
             response = self._run_with_transient_retry(

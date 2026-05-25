@@ -28,6 +28,7 @@ from fightcamp.weekly_schedule_view import extract_weekly_schedule
 
 from .auth import AuthService, AuthenticatedUser, SupabaseAuthService, is_auth_api_error
 from .environment import is_production_environment
+from .generation_config import generation_job_stale_after_seconds
 from .models import (
     ApproveAndResumeGenerationRequest,
     AdminGenerationJobDiagnostic,
@@ -238,13 +239,7 @@ def _resume_job_resolved_successfully(job: dict[str, Any]) -> bool:
 
 
 def _generation_job_stale_after_seconds() -> int:
-    fallback_seconds = 300
-    raw_value = os.getenv("APP_GENERATION_JOB_STALE_AFTER_SECONDS", str(fallback_seconds)).strip()
-    try:
-        parsed = int(raw_value)
-    except ValueError:
-        return fallback_seconds
-    return max(60, parsed)
+    return generation_job_stale_after_seconds(minimum=60)
 
 
 def _find_blocking_generation_job_for_athlete(
