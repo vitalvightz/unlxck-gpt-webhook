@@ -34,6 +34,7 @@ from .models import (
     ApproveAndResumeGenerationRequest,
     AdminGenerationJobDiagnostic,
     AdminAthleteRecord,
+    AdminLatestIntakeUpdateRequest,
     AdminPlanOutputs,
     AdminPlanSummary,
     GenerationJobResponse,
@@ -2437,6 +2438,50 @@ def create_app(
             stale_after_seconds=stale_after_seconds,
         )
         return _job_response(job, store=store, viewer_role="admin")
+
+    @app.patch("/api/admin/athletes/{athlete_id}/latest-intake", response_model=AdminAthleteRecord)
+    def update_admin_athlete_latest_intake(
+        athlete_id: str,
+        update: AdminLatestIntakeUpdateRequest,
+        _: ProfileRecord = Depends(require_admin),
+        store: AppStore = Depends(get_store),
+    ) -> AdminAthleteRecord:
+        row = store.get_admin_athlete(athlete_id)
+        if not row:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="athlete not found")
+        latest_intake = store.get_latest_intake(athlete_id)
+        if not latest_intake or not isinstance(latest_intake.get("intake"), dict):
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="latest intake not found for athlete")
+        if str(latest_intake.get("athlete_id") or "").strip() != athlete_id:
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="latest intake belongs to a different athlete")
+        latest_intake_id = str(latest_intake.get("id") or "").strip()
+        if not latest_intake_id:
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="latest intake is missing id")
+        merged = dict(latest_intake["intake"])
+        for field in ("fight_date", "no_scheduled_fight", "rounds_format", "weekly_training_frequency", "training_availability", "equipment_access", "key_goals", "weak_areas", "injuries"):
+            if field in update.model_fields_set:
+                merged[field] = getattr(update, field)
+        try:
+            request_body = PlanRequest.model_validate(merged)
+        except ValidationError as exc:
+            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=exc.errors()) from exc
+        focus_validation = validate_performance_focus_selections(
+            request_body.fight_date,
+            key_goals=request_body.key_goals,
+            weak_areas=request_body.weak_areas,
+            time_zone=request_body.athlete.athlete_timezone,
+        )
+        if focus_validation.is_over_cap:
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=focus_validation.error_message or "Too many focus selections for this camp.")
+        if request_body.weekly_training_frequency and request_body.weekly_training_frequency > len(request_body.training_availability):
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="weekly_training_frequency cannot exceed selected training_availability days")
+        refreshed = store.update_intake(
+            latest_intake_id,
+            intake=request_body.model_dump(mode="json"),
+            fight_date=None if request_body.no_scheduled_fight else (request_body.fight_date.strip() or None),
+            technical_style=list(request_body.athlete.technical_style),
+        )
+        return _map_admin_athlete(row, latest_intake=refreshed)
 
     return app
 

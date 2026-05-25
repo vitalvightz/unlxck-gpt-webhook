@@ -400,6 +400,18 @@ export type AdminAthleteRecord = {
   latest_plan_created_at?: string | null;
 };
 
+export type AdminLatestIntakeUpdateRequest = {
+  fight_date?: string | null;
+  no_scheduled_fight?: boolean;
+  rounds_format?: string | null;
+  weekly_training_frequency?: number | null;
+  training_availability?: string[];
+  equipment_access?: string[];
+  key_goals?: string[];
+  weak_areas?: string[];
+  injuries?: string | null;
+};
+
 export type AdminPlanSummary = PlanSummary & {
   athlete_email: string;
 };
