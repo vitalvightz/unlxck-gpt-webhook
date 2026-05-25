@@ -75,6 +75,22 @@ def test_admin_routes_use_env_allowlist_not_stored_role():
     assert response.json()["detail"] == "admin access required"
 
 
+def test_ensure_profile_demotes_stale_admin_role_when_email_removed_from_allowlist():
+    store = FakeStore(admin_emails={"admin@example.com"})
+    user = AuthenticatedUser(
+        user_id="admin-demote-1",
+        email="admin@example.com",
+        full_name="Admin Demote",
+        metadata={},
+    )
+    profile = store.ensure_profile(user)
+    assert profile["role"] == "admin"
+
+    store.admin_emails = set()
+    refreshed = store.ensure_profile(user)
+    assert refreshed["role"] == "athlete"
+
+
 def test_admin_routes_allow_email_in_env_allowlist_even_if_stored_role_is_athlete():
     """A profile with role='athlete' in storage must be allowed if the email
     is in the env allowlist."""
