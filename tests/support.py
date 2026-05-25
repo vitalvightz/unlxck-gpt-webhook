@@ -94,8 +94,11 @@ class FakeStore:
     def ensure_profile(self, user: AuthenticatedUser) -> dict:
         existing = self.profiles.get(user.user_id)
         if existing:
+            expected_role = "admin" if self._is_admin_email(user.email) else "athlete"
+            existing["role"] = expected_role
+            existing["updated_at"] = _now()
             return existing
-        role = "admin" if user.email.endswith("@unlxck.test") else "athlete"
+        role = "admin" if self._is_admin_email(user.email) else "athlete"
         profile = {
             "id": user.user_id,
             "email": user.email,
