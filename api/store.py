@@ -125,6 +125,35 @@ class AppStore(Protocol):
 
     def create_intake(self, athlete_id: str, request: PlanRequest) -> dict[str, Any]: ...
 
+
+    def update_intake(
+        self,
+        intake_id: str,
+        *,
+        intake: dict[str, Any],
+        fight_date: str | None,
+        technical_style: list[str],
+    ) -> dict[str, Any]:
+        payload = {
+            "intake": intake,
+            "fight_date": (fight_date or "").strip() or None,
+            "technical_style": technical_style,
+        }
+        try:
+            response = self.client.table("athlete_intakes").update(payload).eq("id", intake_id).execute()
+            rows = getattr(response, "data", None) or []
+            if not rows:
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="intake not found")
+            return rows[0]
+        except HTTPException:
+            raise
+        except _STORE_CLIENT_ERRORS as exc:
+            self._raise_operation_http_error(
+                operation=f"update_intake intake_id={intake_id}",
+                detail="failed to update intake",
+                exc=exc,
+            )
+
     def create_plan(
         self,
         *,

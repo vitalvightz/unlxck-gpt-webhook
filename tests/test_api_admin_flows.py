@@ -1473,3 +1473,49 @@ def test_curated_review_required_scenarios_are_fast_for_admin_to_resolve():
             raise AssertionError(f"Unexpected resolution strategy: {scenario.expected_resolution}")
 
         assert store.get_plan(plan_id)["status"] == "ready"
+
+def test_admin_can_patch_latest_intake_focus_fields_and_persist():
+    client, store, _ = _build_client()
+    athlete = AuthenticatedUser(user_id="athlete-intake-1", email="a1@example.com", full_name="A One", metadata={})
+    store.ensure_profile(athlete)
+    intake = store.create_intake("athlete-intake-1", _build_request())
+
+    response = client.patch(
+        "/api/admin/athletes/athlete-intake-1/latest-intake",
+        headers={"Authorization": "Bearer admin-token"},
+        json={"key_goals": ["power"], "weak_areas": ["conditioning"]},
+    )
+    assert response.status_code == 200
+    saved = store.get_intake(intake["id"])
+    assert saved["intake"]["key_goals"] == ["power"]
+    assert saved["intake"]["weak_areas"] == ["conditioning"]
+
+
+def test_admin_patch_latest_intake_rejects_over_cap_focus():
+    client, store, _ = _build_client()
+    athlete = AuthenticatedUser(user_id="athlete-intake-2", email="a2@example.com", full_name="A Two", metadata={})
+    store.ensure_profile(athlete)
+    base = _build_request({"fight_date": (datetime.now(timezone.utc) + timedelta(days=2)).date().isoformat()})
+    store.create_intake("athlete-intake-2", base)
+
+    response = client.patch(
+        "/api/admin/athletes/athlete-intake-2/latest-intake",
+        headers={"Authorization": "Bearer admin-token"},
+        json={"key_goals": ["power", "conditioning"], "weak_areas": ["defense"]},
+    )
+    assert response.status_code == 409
+
+
+def test_admin_patch_latest_intake_rejects_wrong_athlete_linkage():
+    client, store, _ = _build_client()
+    athlete = AuthenticatedUser(user_id="athlete-intake-3", email="a3@example.com", full_name="A Three", metadata={})
+    store.ensure_profile(athlete)
+    store.create_intake("athlete-intake-3", _build_request())
+    store.intakes["athlete-intake-3"][-1]["athlete_id"] = "other-athlete"
+
+    response = client.patch(
+        "/api/admin/athletes/athlete-intake-3/latest-intake",
+        headers={"Authorization": "Bearer admin-token"},
+        json={"key_goals": ["power"]},
+    )
+    assert response.status_code == 409

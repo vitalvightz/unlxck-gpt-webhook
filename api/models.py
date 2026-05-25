@@ -1084,5 +1084,17 @@ class AdminAthleteRecord(BaseModel):
     latest_plan_created_at: str | None = None
 
 
+class AdminLatestIntakeUpdateRequest(BaseModel):
+    fight_date: str | None = None
+    no_scheduled_fight: bool | None = None
+    rounds_format: str | None = None
+    weekly_training_frequency: int | None = None
+    training_availability: list[str] | None = None
+    equipment_access: list[str] | None = None
+    key_goals: list[str] | None = None
+    weak_areas: list[str] | None = None
+    injuries: str | None = None
+
+
 class AdminPlanSummary(PlanSummary):
     athlete_email: str
