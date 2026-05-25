@@ -13,7 +13,7 @@ def generation_job_stale_after_seconds(*, minimum: int = 60) -> int:
             str(DEFAULT_GENERATION_JOB_STALE_AFTER_SECONDS),
         )
     try:
-        parsed = int(str(raw_value).strip())
+        parsed = int(raw_value.strip())
     except ValueError:
         return max(1, minimum, DEFAULT_GENERATION_JOB_STALE_AFTER_SECONDS)
     return max(1, minimum, parsed)
