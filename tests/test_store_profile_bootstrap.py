@@ -482,6 +482,30 @@ def test_validate_runtime_schema_raises_when_required_plan_columns_missing_by_de
     assert str(exc_info.value) == store_module.PLAN_RUNTIME_SCHEMA_ERROR_DETAIL
 
 
+
+
+def test_validate_runtime_schema_passes_when_generation_job_active_lock_is_valid():
+    store = _make_store()
+    lock_response = MagicMock()
+    lock_response.data = True
+    store.client.rpc.return_value.execute.return_value = lock_response
+
+    store.validate_runtime_schema()
+
+    store.client.rpc.assert_called_once_with("validate_generation_job_active_lock")
+
+
+def test_validate_runtime_schema_raises_when_generation_job_active_lock_is_missing():
+    store = _make_store()
+    lock_response = MagicMock()
+    lock_response.data = False
+    store.client.rpc.return_value.execute.return_value = lock_response
+
+    with pytest.raises(RuntimeError) as exc_info:
+        store.validate_runtime_schema()
+
+    assert str(exc_info.value) == store_module.GENERATION_JOB_ACTIVE_LOCK_ERROR_DETAIL
+
 def _clear_environment_env_vars(monkeypatch):
     for var in ("APP_ENV", "ENVIRONMENT", "UNLXCK_ENV", "NODE_ENV"):
         monkeypatch.delenv(var, raising=False)
