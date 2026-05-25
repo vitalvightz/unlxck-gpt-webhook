@@ -60,6 +60,7 @@ def test_store_change_username_uses_shared_validator():
     )
     assert change_username is not None
     assert "normalized = validate_username(username)" in change_username.group(0)
+    assert '"change_profile_username"' in change_username.group(0)
 
 
 def test_schema_contains_required_role_and_username_security_triggers():
