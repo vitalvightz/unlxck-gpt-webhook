@@ -1079,7 +1079,8 @@ class SupabaseAppStore:
             "stage2_attempt_count": result.get("stage2_attempt_count", 0),
             "parsing_metadata": result.get("parsing_metadata"),
         }
-        PersistedPlanRuntime.model_validate(payload)
+        validated = PersistedPlanRuntime.model_validate(payload)
+        payload = validated.model_dump()
 
         def _insert_plan(insert_payload: dict[str, Any]) -> dict[str, Any]:
             response = self.client.table("plans").insert(insert_payload).execute()
