@@ -46,7 +46,7 @@ class PersistedPlanRuntime(BaseModel):
     athlete_id: str
     intake_id: str
     full_name: str
-    status: str
+    status: PlanStatus
     fight_date: str | None = None
     technical_style: list[str] = Field(default_factory=list)
     plan_name: str = ""
