@@ -241,8 +241,8 @@ def generate_plan_sync(
     if triage_result.mode != FULL_PLAN and not triage_resume_override_applied:
         blocked = blocked_mode_output(triage=triage_result, parsed_injuries=plan_input.parsed_injuries)
         blocked["parsing_metadata"] = plan_input.parsing_metadata
-        Stage1Result.model_validate(blocked)
-        return blocked
+        validated = Stage1Result.model_validate(blocked)
+        return validated.model_dump()
 
     timer_start = perf_counter()
     prime_plan_banks(logger=logger)
