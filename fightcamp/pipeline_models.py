@@ -84,8 +84,8 @@ class Stage1Result(BaseModel):
 
     model_config = ConfigDict(extra="allow")
 
-    plan_text: str
-    coach_notes: str
+    plan_text: str = ""
+    coach_notes: str = ""
     why_log: dict[str, Any] = Field(default_factory=dict)
     stage2_handoff_text: str = ""
     parsing_metadata: dict[str, Any] = Field(default_factory=dict)
