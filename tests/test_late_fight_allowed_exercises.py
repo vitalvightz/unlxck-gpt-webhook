@@ -7,6 +7,7 @@ def _brief_with_scheduled_allowed_exercises() -> dict:
         athlete_model={
             "sport": "boxing",
             "days_until_fight": 13,
+            "plan_creation_weekday": "monday",
             "fatigue": "moderate",
             "readiness_flags": [],
             "training_days": ["monday", "wednesday", "friday"],
@@ -161,17 +162,17 @@ def test_valid_late_fight_output_using_each_days_allowed_exercises_passes():
     report = validate_stage2_output(
         planning_brief=brief,
         final_plan_text="""
-        D-13 - Power transfer touch
+        D-13 (Monday) — Power transfer touch
         - Staggered-Stance Medicine-Ball Punch Throw - 2 x 3
 
-        D-6 - Fight-speed primer
+        D-6 (Monday) — Fight-speed primer
         - Reactive Shuffle Repeats - 3 x 6 sec
 
-        D-3 - Freshness reset
+        D-3 (Thursday) — Freshness reset
         - Mobility Reset Flow - 6 min
         - Breathing reset - 3 min
 
-        D-1 - Final neural cue
+        D-1 (Saturday) — Final neural cue
         - Punch-Specific Max Isometric Hold - 2 x 5 sec
         - Technical shadowboxing - 2 light rounds
         """,

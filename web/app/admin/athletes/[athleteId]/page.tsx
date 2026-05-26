@@ -17,7 +17,9 @@ import {
   getAdminAthleteNutritionCurrent,
   retryGenerationJob,
   updateAdminAthleteNutritionCurrent,
+  updateAdminAthleteLatestIntake,
 } from "@/lib/api";
+import { loadAdminAthleteProfileData } from "@/lib/admin-athlete-profile-loader";
 import { useGenerationController } from "@/lib/generation-controller";
 import { validatePerformanceFocusSelections } from "@/lib/performance-focus-cap";
 import type { AdminAthleteRecord, AdminGenerationJobDiagnostic, NutritionWorkspaceState, NutritionWorkspaceUpdateRequest } from "@/lib/types";
@@ -64,6 +66,13 @@ export default function AdminAthletePage() {
   const [isReloading, setIsReloading] = useState(false);
   const [jobs, setJobs] = useState<AdminGenerationJobDiagnostic[]>([]);
   const [retryingJobId, setRetryingJobId] = useState<string | null>(null);
+  const [nutritionLoadWarning, setNutritionLoadWarning] = useState<string | null>(null);
+  const [jobsLoadWarning, setJobsLoadWarning] = useState<string | null>(null);
+  const [isSavingIntake, setIsSavingIntake] = useState(false);
+  const [intakeDraft, setIntakeDraft] = useState<{
+    key_goals: string[];
+    weak_areas: string[];
+  } | null>(null);
 
   const handleRetry = useCallback(() => {
     setLoadError(null);
@@ -83,6 +92,20 @@ export default function AdminAthletePage() {
     : null;
   const latestIntakeFocusError = latestIntakeFocusValidation?.isOverCap
     ? `Latest saved intake is over the focus cap. ${latestIntakeFocusValidation.errorMessage}`
+    : null;
+  useEffect(() => {
+    if (!athlete?.latest_intake) return;
+    setIntakeDraft({
+      key_goals: athlete.latest_intake.key_goals ?? [],
+      weak_areas: athlete.latest_intake.weak_areas ?? [],
+    });
+  }, [athlete?.athlete_id, athlete?.latest_intake]);
+  const draftFocusValidation = athlete?.latest_intake && intakeDraft
+    ? validatePerformanceFocusSelections(
+      athlete.latest_intake.fight_date,
+      { keyGoals: intakeDraft.key_goals, weakAreas: intakeDraft.weak_areas },
+      { timeZone: athlete.latest_intake.athlete.athlete_timezone },
+    )
     : null;
 
   const controller = useGenerationController({
@@ -113,17 +136,21 @@ export default function AdminAthletePage() {
 
     let active = true;
     setLoadError(null);
+    setNutritionLoadWarning(null);
+    setJobsLoadWarning(null);
     setIsReloading(true);
-    Promise.all([
-      getAdminAthlete(session.access_token, athleteId),
-      getAdminAthleteNutritionCurrent(session.access_token, athleteId),
-      getAdminAthleteGenerationJobs(session.access_token, athleteId),
-    ])
-      .then(([nextAthlete, nextNutrition, nextJobs]) => {
+    loadAdminAthleteProfileData({
+      getAdminAthlete: () => getAdminAthlete(session.access_token, athleteId),
+      getAdminAthleteNutritionCurrent: () => getAdminAthleteNutritionCurrent(session.access_token, athleteId),
+      getAdminAthleteGenerationJobs: () => getAdminAthleteGenerationJobs(session.access_token, athleteId),
+    })
+      .then((profileData) => {
         if (!active) return;
-        setAthlete(nextAthlete);
-        setNutrition(nextNutrition);
-        setJobs(nextJobs);
+        setAthlete(profileData.athlete);
+        setNutrition(profileData.nutrition);
+        setJobs(profileData.jobs);
+        setNutritionLoadWarning(profileData.nutritionWarning);
+        setJobsLoadWarning(profileData.jobsWarning);
       })
       .catch((athleteError) => {
         if (!active) return;
@@ -185,6 +212,26 @@ export default function AdminAthletePage() {
       setError(saveError instanceof Error ? saveError.message : "Unable to save coach controls.");
     } finally {
       setIsSavingControls(false);
+    }
+  }
+  async function handleSaveIntake(andGenerate = false) {
+    if (!session?.access_token || !athleteId || !intakeDraft || !athlete?.latest_intake || isSavingIntake) return;
+    setIsSavingIntake(true);
+    setError(null);
+    try {
+      const updated = await updateAdminAthleteLatestIntake(session.access_token, athleteId, {
+        key_goals: intakeDraft.key_goals,
+        weak_areas: intakeDraft.weak_areas,
+      });
+      setAthlete(updated);
+      setMessage("Intake updated.");
+      if (andGenerate) {
+        await controller.startGeneration();
+      }
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : "Unable to save intake updates.");
+    } finally {
+      setIsSavingIntake(false);
     }
   }
 
@@ -249,6 +296,33 @@ export default function AdminAthletePage() {
             <div className="error-banner" role="alert">{error}</div>
           ) : null}
           {latestIntakeFocusError ? <p className="error-text">{latestIntakeFocusError}</p> : null}
+          {latestIntakeFocusError && intakeDraft && athlete.latest_intake ? (
+            <article className="step-card">
+              <div className="form-section-header">
+                <h2 className="form-section-title">Resolve intake issues</h2>
+                <p className="muted">This saved intake needs a small update before a new plan can be generated.</p>
+              </div>
+              <p className="error-text">
+                Focus cap exceeded. This camp allows {latestIntakeFocusValidation?.cap?.maxSelections} total focus picks. Current intake has {draftFocusValidation?.totalSelections ?? 0}.
+              </p>
+              <p><strong>Key goals</strong></p>
+              <div className="athlete-profile-inline-pills">
+                {intakeDraft.key_goals.map((goal) => <button key={goal} type="button" className="athlete-profile-pill athlete-profile-pill-compact" onClick={() => setIntakeDraft((c) => c ? { ...c, key_goals: c.key_goals.filter((g) => g !== goal) } : c)}>{goal} ✕</button>)}
+              </div>
+              <p><strong>Weak areas</strong></p>
+              <div className="athlete-profile-inline-pills">
+                {intakeDraft.weak_areas.map((area) => <button key={area} type="button" className="athlete-profile-pill athlete-profile-pill-compact athlete-profile-pill-warning" onClick={() => setIntakeDraft((c) => c ? { ...c, weak_areas: c.weak_areas.filter((g) => g !== area) } : c)}>{area} ✕</button>)}
+              </div>
+              <p className={draftFocusValidation?.isOverCap ? "error-text" : "muted"}>
+                {draftFocusValidation?.totalSelections ?? 0} / {draftFocusValidation?.cap?.maxSelections ?? latestIntakeFocusValidation?.cap?.maxSelections ?? 0} selected
+              </p>
+              <div className="plan-summary-actions">
+                <button type="button" className="ghost-button" onClick={() => setIntakeDraft({ key_goals: athlete.latest_intake?.key_goals ?? [], weak_areas: athlete.latest_intake?.weak_areas ?? [] })}>Cancel changes</button>
+                <button type="button" className="ghost-button" disabled={Boolean(draftFocusValidation?.isOverCap) || isSavingIntake} onClick={() => void handleSaveIntake(false)}>Save updated intake</button>
+                <button type="button" className="cta" disabled={Boolean(draftFocusValidation?.isOverCap) || isSavingIntake || controller.isGenerating} onClick={() => void handleSaveIntake(true)}>Save and generate</button>
+              </div>
+            </article>
+          ) : null}
           {!athlete.latest_intake ? (
             <p className="muted">Generate is available after this athlete has at least one saved intake.</p>
           ) : null}
@@ -259,6 +333,7 @@ export default function AdminAthletePage() {
               <p className="kicker">Admin debugging</p>
               <h2 className="form-section-title">Generation diagnostics</h2>
             </div>
+            {jobsLoadWarning ? <p className="error-text">{jobsLoadWarning}</p> : null}
             {!jobs.length ? <p className="muted">No generation jobs found.</p> : jobs.map((job) => (
               <div key={job.job_id} className="review-detail-row" style={{ display: "block", marginBottom: "1rem" }}>
                 <p><strong>{job.status.toUpperCase()}</strong> · {job.job_id}</p>
@@ -315,11 +390,12 @@ export default function AdminAthletePage() {
 
               <aside className="step-aside athlete-motion-slot athlete-motion-rail">
                 <div className="support-panel">
-                  <div className="form-section-header">
-                    <p className="kicker">Coach controls</p>
-                    <h2 className="form-section-title">Admin-only overrides</h2>
-                  </div>
-                  <div className="nutrition-admin-controls">
+                <div className="form-section-header">
+                  <p className="kicker">Coach controls</p>
+                  <h2 className="form-section-title">Admin-only overrides</h2>
+                </div>
+                {nutritionLoadWarning ? <p className="error-text">{nutritionLoadWarning}</p> : null}
+                <div className="nutrition-admin-controls">
                     <label className="checkbox-card">
                       <input
                         type="checkbox"
@@ -462,6 +538,14 @@ export default function AdminAthletePage() {
                 </div>
               </aside>
             </div>
+          ) : nutritionLoadWarning ? (
+            <article className="step-card">
+              <div className="form-section-header">
+                <p className="kicker">Coach controls</p>
+                <h2 className="form-section-title">Admin-only overrides</h2>
+              </div>
+              <p className="error-text">{nutritionLoadWarning}</p>
+            </article>
           ) : null}
           {message ? <div className="success-banner">{message}</div> : null}
         </section>

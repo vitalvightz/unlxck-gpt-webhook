@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { getGenerationJob, isRetryableApiFailure, retryGenerationJob } from "@/lib/api";
+import { normalizeLegacyGenerationJobStatus } from "@/lib/generation-status-guards";
 import type { GenerationJobResponse, GenerationJobStatus, ProgressMilestone } from "@/lib/types";
 
 export type GenerationUiPhase =
@@ -18,6 +19,38 @@ type PendingGenerationState = {
   jobId?: string | null;
   createdAt: string;
 };
+
+type RecoverablePendingGenerationState = PendingGenerationState & { jobId: string };
+
+export function canRecoverPendingGenerationWithoutCreate(
+  pending: PendingGenerationState | null,
+): pending is RecoverablePendingGenerationState {
+  return typeof pending?.jobId === "string" && pending.jobId.length > 0;
+}
+
+export function resolveFailedJobWithSavedPlan(job: GenerationJobResponse): string | null {
+  if (normalizeLegacyGenerationJobStatus(job.status) !== "failed") {
+    return null;
+  }
+  return job.plan_id || job.latest_plan_id || null;
+}
+export function resolveTerminalJobPlanId(job: GenerationJobResponse): string | null {
+  const direct = job.plan_id || job.latest_plan_id;
+  if (direct) {
+    return direct;
+  }
+  if (!Array.isArray(job.progress_milestones)) {
+    return null;
+  }
+  for (let index = job.progress_milestones.length - 1; index >= 0; index -= 1) {
+    const milestone = job.progress_milestones[index];
+    const planId = typeof milestone?.meta?.plan_id === "string" ? milestone.meta.plan_id.trim() : "";
+    if (planId) {
+      return planId;
+    }
+  }
+  return null;
+}
 
 type GenerationCompletion = {
   planId: string;
@@ -35,11 +68,13 @@ type GenerationControllerOptions = {
 type StartGenerationOptions = {
   clientRequestId?: string;
   recovered?: boolean;
+  existingJob?: GenerationJobResponse;
 };
 
 const INITIAL_POLL_MS = 2_000;
 const MEDIUM_POLL_MS = 5_000;
 const LONG_POLL_MS = 15_000;
+const PRE_START_STALE_MS = 90_000;
 const PENDING_GENERATION_PREFIX = "unlxck:pending-generation:";
 const TRAINING_AVAILABILITY_MISMATCH_ERROR =
   "invalid Weekly Training Frequency: cannot exceed selected Training Availability days";
@@ -71,7 +106,7 @@ function getPendingGeneration(storageKey: string | null): PendingGenerationState
   if (!storageKey || typeof window === "undefined") {
     return null;
   }
-  const raw = window.sessionStorage.getItem(storageKey);
+  const raw = window.localStorage.getItem(storageKey);
   if (!raw) {
     return null;
   }
@@ -79,7 +114,7 @@ function getPendingGeneration(storageKey: string | null): PendingGenerationState
     const decoded = JSON.parse(raw) as PendingGenerationState;
     return decoded?.clientRequestId ? decoded : null;
   } catch {
-    window.sessionStorage.removeItem(storageKey);
+    window.localStorage.removeItem(storageKey);
     return null;
   }
 }
@@ -89,9 +124,9 @@ function clearOtherPendingGenerations(activeStorageKey: string | null): void {
     return;
   }
 
-  Object.keys(window.sessionStorage)
+  Object.keys(window.localStorage)
     .filter((key) => key.startsWith(PENDING_GENERATION_PREFIX) && key !== activeStorageKey)
-    .forEach((key) => window.sessionStorage.removeItem(key));
+    .forEach((key) => window.localStorage.removeItem(key));
 }
 
 function clearAllPendingGenerations(): void {
@@ -99,9 +134,9 @@ function clearAllPendingGenerations(): void {
     return;
   }
 
-  Object.keys(window.sessionStorage)
+  Object.keys(window.localStorage)
     .filter((key) => key.startsWith(PENDING_GENERATION_PREFIX))
-    .forEach((key) => window.sessionStorage.removeItem(key));
+    .forEach((key) => window.localStorage.removeItem(key));
 }
 
 function savePendingGeneration(storageKey: string | null, pending: PendingGenerationState): void {
@@ -109,14 +144,14 @@ function savePendingGeneration(storageKey: string | null, pending: PendingGenera
     return;
   }
   clearOtherPendingGenerations(storageKey);
-  window.sessionStorage.setItem(storageKey, JSON.stringify(pending));
+  window.localStorage.setItem(storageKey, JSON.stringify(pending));
 }
 
 function clearPendingGeneration(storageKey: string | null): void {
   if (!storageKey || typeof window === "undefined") {
     return;
   }
-  window.sessionStorage.removeItem(storageKey);
+  window.localStorage.removeItem(storageKey);
 }
 
 function getPollDelay(startedAtMs: number): number {
@@ -154,6 +189,24 @@ function phaseForJobStatus(status: GenerationJobStatus): Exclude<GenerationUiPha
     return "running";
   }
   return "finalizing";
+}
+
+export function isPreStartStaleGenerationJob(job: GenerationJobResponse, nowMs = Date.now()): boolean {
+  if (job.status !== "running") {
+    return false;
+  }
+  if (Array.isArray(job.progress_milestones) && job.progress_milestones.length > 0) {
+    return false;
+  }
+  const heartbeatAtMs = Date.parse(job.heartbeat_at || "");
+  const startedAtMs = Date.parse(job.started_at || "");
+  const hasHeartbeat = Number.isFinite(heartbeatAtMs);
+  const hasStartedAt = Number.isFinite(startedAtMs);
+  if (hasHeartbeat && hasStartedAt && heartbeatAtMs <= startedAtMs) {
+    return true;
+  }
+  const lastProgressAtMs = hasHeartbeat ? heartbeatAtMs : startedAtMs;
+  return Number.isFinite(lastProgressAtMs) && nowMs - lastProgressAtMs >= PRE_START_STALE_MS;
 }
 
 async function createJobWithReconnect(
@@ -221,6 +274,11 @@ export function useGenerationController({
       if (Array.isArray(job.progress_milestones)) {
         setMilestones(job.progress_milestones);
       }
+      if (isPreStartStaleGenerationJob(job)) {
+        clearAllPendingGenerations();
+        setFailedJobId(job.job_id);
+        throw new Error("Build stalled — retry");
+      }
       savePendingGeneration(activeStorageKey, {
         clientRequestId,
         jobId: job.job_id,
@@ -234,14 +292,21 @@ export function useGenerationController({
           setMilestones(currentJob.progress_milestones);
         }
 
+        if (isPreStartStaleGenerationJob(currentJob)) {
+          clearAllPendingGenerations();
+          setFailedJobId(currentJob.job_id);
+          throw new Error("Build stalled — retry");
+        }
+
         savePendingGeneration(activeStorageKey, {
           clientRequestId,
           jobId: currentJob.job_id,
           createdAt: currentJob.created_at || pendingCreatedAtFallback,
         });
 
-        if (currentJob.status === "completed" || currentJob.status === "review_required") {
-          const planId = currentJob.plan_id || currentJob.latest_plan_id;
+        const normalizedStatus = normalizeLegacyGenerationJobStatus(currentJob.status);
+        if (normalizedStatus === "completed" || normalizedStatus === "review_required") {
+          const planId = resolveTerminalJobPlanId(currentJob);
           if (!planId) {
             clearAllPendingGenerations();
             throw new Error("Generation finished, but no saved plan was returned.");
@@ -253,20 +318,36 @@ export function useGenerationController({
           await sleep(220);
           onComplete({
             planId,
-            status: currentJob.status,
+            status: normalizedStatus,
             recovered,
           });
           return;
         }
 
-        if (currentJob.status === "failed") {
+        if (normalizedStatus === "failed") {
+          const recoveredPlanId = resolveFailedJobWithSavedPlan(currentJob);
+          if (recoveredPlanId) {
+            clearAllPendingGenerations();
+            setPhase("finalizing");
+            setStatusMessage("Opening your saved plan.");
+            setIsGenerating(false);
+            onComplete({
+              planId: recoveredPlanId,
+              status: "completed",
+              recovered: true,
+            });
+            return;
+          }
           clearAllPendingGenerations();
           setFailedJobId(currentJob.job_id);
           throw new Error(currentJob.error || "Plan generation failed.");
         }
 
-        setPhase(phaseForJobStatus(currentJob.status));
-        setStatusMessage(statusMessageForJob(currentJob.status, createdAtMs));
+        const liveStatus: GenerationJobStatus = normalizedStatus === "queued" || normalizedStatus === "running"
+          ? normalizedStatus
+          : "running";
+        setPhase(phaseForJobStatus(liveStatus));
+        setStatusMessage(statusMessageForJob(liveStatus, createdAtMs));
         await sleep(getPollDelay(createdAtMs));
       }
     },
@@ -300,13 +381,14 @@ export function useGenerationController({
             : "Submitting your plan generation request.",
         );
         setMilestones([]);
-        const createdJob = await createJobWithReconnect(createJob, clientRequestId, setStatusMessage, setPhase);
-        const createdAtMs = Date.parse(createdJob.created_at || pendingCreatedAt) || Date.now();
+        const activeJob = options.existingJob
+          ?? await createJobWithReconnect(createJob, clientRequestId, setStatusMessage, setPhase);
+        const createdAtMs = Date.parse(activeJob.created_at || pendingCreatedAt) || Date.now();
         setStartedAtMs(createdAtMs);
         await watchJobUntilTerminal(
           token,
           storageKey,
-          createdJob,
+          activeJob,
           clientRequestId,
           pendingCreatedAt,
           createdAtMs,
@@ -367,17 +449,33 @@ export function useGenerationController({
       return;
     }
     const pending = getPendingGeneration(storageKey);
-    if (!pending) {
+    if (!canRecoverPendingGenerationWithoutCreate(pending)) {
+      if (pending && !pending.jobId) {
+        clearPendingGeneration(storageKey);
+      }
       return;
     }
+    const recoverablePending = pending;
     if (recoveryAttemptedRef.current === pending.clientRequestId) {
       return;
     }
-    recoveryAttemptedRef.current = pending.clientRequestId;
-    void startGeneration({
-      clientRequestId: pending.clientRequestId,
-      recovered: true,
-    });
+    recoveryAttemptedRef.current = recoverablePending.clientRequestId;
+    void (async () => {
+      try {
+        const existingJob = await getGenerationJob(token, recoverablePending.jobId as string);
+        if (existingJob.status === "queued" || existingJob.status === "running") {
+          await startGeneration({
+            clientRequestId: recoverablePending.clientRequestId,
+            recovered: true,
+            existingJob,
+          });
+          return;
+        }
+        clearPendingGeneration(storageKey);
+      } catch {
+        clearPendingGeneration(storageKey);
+      }
+    })();
   }, [isGenerating, startGeneration, storageKey, token]);
 
   return {

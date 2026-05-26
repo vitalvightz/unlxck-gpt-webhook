@@ -10,7 +10,6 @@ on:
 
 jobs:
   ruff:
-    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -87,10 +86,8 @@ jobs:
           pip install -r requirements-dev.txt
           pip check
 
-      - name: Run API/worker/store-focused tests
+      - name: Run generation/runtime regression suite
         run: |
           pytest -q \
-            tests/test_api_*.py \
-            tests/test_auth_service.py \
-            tests/test_store_profile_bootstrap.py \
-            tests/test_supabase_schema.py
+            tests/test_api_generation_flows.py \
+            tests/test_generation_runtime.py

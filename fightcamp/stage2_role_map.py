@@ -277,7 +277,8 @@ def _low_load_support_profile_for_unused_day(athlete_model: dict) -> dict[str, A
     Priority:
     1. Gas tank / conditioning
     2. Mobility
-    3. Injury prevention / rehab-friendly support
+    3. Recovery / freshness / cut-stress support
+    4. Injury prevention / rehab-friendly support
 
     Only gas tank gets preferred_exercise_names because we specifically want to bias
     Assault Bike / Rower / Nasal Shadowboxing / Nasal Walk.
@@ -334,6 +335,16 @@ def _low_load_support_profile_for_unused_day(athlete_model: dict) -> dict[str, A
         "hip",
         "back",
     }
+    recovery_terms = {
+        "recovery",
+        "freshness",
+        "fatigue_management",
+        "active_recovery",
+        "restore",
+        "regeneration",
+        "cut_stress",
+        "weight_cut",
+    }
 
     gas_tank_profile_tokens = {
         str(value).strip().lower().replace("-", "_").replace(" ", "_")
@@ -369,6 +380,31 @@ def _low_load_support_profile_for_unused_day(athlete_model: dict) -> dict[str, A
             "reason": (
                 "Mobility is a profile goal or weakness, so this unused day becomes "
                 "a low-load mobility support touch."
+            ),
+        }
+
+    if (tokens & recovery_terms) or athlete_model.get("weight_cut_risk"):
+        return {
+            "role_key": "converted_recovery_flush_day",
+            "athlete_facing_label": "Low-load recovery flush",
+            "preferred_system": "aerobic",
+            "preferred_tags": [
+                "recovery",
+                "freshness",
+                "mobility",
+                "low_impact",
+                "low_cns",
+                "low_lactate",
+            ],
+            "preferred_exercise_names": [
+                "Assault Bike Easy Recovery Flush",
+                "Mobility Reset Flow",
+                "Breathing Reset",
+                "Nasal Shadowboxing Flow",
+            ],
+            "reason": (
+                "Recovery, fatigue management, or active cut stress is present, "
+                "so this unused day becomes a low-load recovery flush."
             ),
         }
 
@@ -841,11 +877,12 @@ def _upgrade_unused_days_to_low_load_support(
         else:
             added_role["counts_toward_conditioning_cap"] = False
             added_role["is_dedicated_recovery_mobility_day"] = True
-            added_role["support_kind"] = (
-                "mobility"
-                if role_key == "converted_mobility_support_day"
-                else "rehab_friendly"
-            )
+            if role_key == "converted_mobility_support_day":
+                added_role["support_kind"] = "mobility"
+            elif role_key == "converted_recovery_flush_day":
+                added_role["support_kind"] = "recovery"
+            else:
+                added_role["support_kind"] = "rehab_friendly"
 
         if preferred_exercise_names:
             added_role["preferred_exercise_names"] = preferred_exercise_names
@@ -1408,7 +1445,7 @@ def _assign_declared_day_hints(
         elif idx == glycolytic_idx and day in hard_sparring_days:
             reason = "Let declared hard sparring own the main collision-heavy combat load when it already exists."
         elif idx == aerobic_idx and day in support_work_days:
-            reason = "Use declared Support Work Days (non-hard training days / S&C-compatible slots) for lower-noise support work when possible."
+            reason = "Use declared Support Work Days (Light Combat days / S&C-compatible slots) for lower-noise support work when possible."
         _append_day_hint(role, day, reason)
     
     for idx, role in enumerate(ordered):
@@ -1436,7 +1473,7 @@ def _assign_declared_day_hints(
                 _append_day_hint(
                     role,
                     fallback_day,
-                    "Use sandwiched days for low-load recovery-compatible support first, then fill unused non-hard days.",
+                    "Use sandwiched days for low-load recovery-compatible support first, then fill unused Light Combat days.",
                 )
             continue
 

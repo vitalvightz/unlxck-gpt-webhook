@@ -10,6 +10,7 @@ from .restriction_filtering import evaluate_restriction_impact
 from .normalization import clean_list, phrase_in_text, dedupe_preserve_order
 from .late_selector_windows import classify_late_selector_window
 from .fight_day_override import FIGHT_DAY_PROTOCOL_TEXT
+from .stage2_render_guards import _has_active_injury_from_athlete_model
 
 _BULLET_PREFIX = compile_regex("stage2_validator", "bullet_prefix")
 _PHASE_HEADER = PHASE_HEADER_PATTERN
@@ -136,6 +137,49 @@ _LATE_FIGHT_BAND_REHAB_ALLOW_PHRASES = (
     "reset",
 )
 _COUNTDOWN_LABEL_LINE = re.compile(r"^(?:#{1,6}\s*)?(?:[-*]\s*)?(?:\*\*)?(D-(\d+))\b", re.IGNORECASE)
+_COUNTDOWN_CONTRACT_WEEKDAY = (
+    r"mon(?:day)?|tue(?:s(?:day)?)?|wed(?:nesday)?|thu(?:r(?:sday)?)?|"
+    r"fri(?:day)?|sat(?:urday)?|sun(?:day)?"
+)
+_COUNTDOWN_CONTRACT_HEADER = re.compile(
+    rf"^(?:#{{1,6}}\s*)?(?:[-*]\s*)?(?:\*\*)?D-(\d+)\s*"
+    rf"\(\s*(?:{_COUNTDOWN_CONTRACT_WEEKDAY})\s*\)\s*(?:—|-|:)\s*\S",
+    re.IGNORECASE,
+)
+_INTERNAL_RENDER_LABEL_PATTERNS = (
+    ("anchor_label", re.compile(r"^\s*(?:\d+\)\s*)?anchor\s*(?:—|-|:)", re.IGNORECASE)),
+    ("role_key", re.compile(r"\brole_key\b", re.IGNORECASE)),
+    ("taper_micro_support", re.compile(r"\btaper_micro_support\b", re.IGNORECASE)),
+    ("ownership_label", re.compile(r"^\s*ownership\s*:", re.IGNORECASE)),
+    ("hard_sparring_summary_label", re.compile(r"^\s*hard-sparring summary\s*:", re.IGNORECASE)),
+    ("spp_additions_summary_label", re.compile(r"^\s*spp additions summary\s*:", re.IGNORECASE)),
+    ("late_camp_sparring_label", re.compile(r"^\s*late-camp sparring\s*:", re.IGNORECASE)),
+    ("short_support_notes_label", re.compile(r"^\s*short support notes\s*:", re.IGNORECASE)),
+    ("final_coaching_call_label", re.compile(r"^\s*final coaching call\s*:", re.IGNORECASE)),
+    ("schedule_integrity_label", re.compile(r"^\s*schedule integrity\s*:", re.IGNORECASE)),
+    ("camp_plan_closing_label", re.compile(r"that[’']s the camp plan", re.IGNORECASE)),
+    ("candidate pool", re.compile(r"\bcandidate\s+pools?\b", re.IGNORECASE)),
+    ("validator", re.compile(r"\bvalidator\b", re.IGNORECASE)),
+    ("planning brief", re.compile(r"\bplanning\s+brief\b", re.IGNORECASE)),
+)
+_COACH_LED_SESSION_PATTERN = re.compile(
+    r"\bcoach[-\s]+led\s+(?:boxing|mma|muay\s+thai|kickboxing)\b",
+    re.IGNORECASE,
+)
+_COACH_LED_DETAIL_PATTERN = re.compile(
+    r"\b(?:rounds?|rpe|intensity|dose|work\s*:\s*rest|live rounds?|technical sparring|"
+    r"pad|bag|clinch|moderate intensity|\d+\s*(?:-|to|x|×)\s*\d+\s*min)\b",
+    re.IGNORECASE,
+)
+_INJURY_LEAD_SUMMARY_PATTERN = re.compile(
+    r"\b(?:injur|pain|strain|sprain|restriction|constraint|rehab|symptom|stop rule|clearance)\b",
+    re.IGNORECASE,
+)
+_WEIGHT_CUT_LEAD_SUMMARY_PATTERN = re.compile(
+    r"\b(?:weight[-\s]?cut|weigh[-\s]?in|cut stress|target weight|scale|recovery margin|"
+    r"dehydrat|rehydrat|refeed)\b",
+    re.IGNORECASE,
+)
 _LATE_FIGHT_COUNTDOWN_BLOCKED_DRILLS = {
     13: (
         "Band-Resisted Sprint Start",
@@ -542,7 +586,7 @@ def _risk_tone_context(planning_brief: dict) -> dict[str, bool]:
     fatigue = str(athlete.get("fatigue", "")).strip().lower()
     days_until_fight = athlete.get("days_until_fight")
     weight_cut = _weight_cut_context(planning_brief)
-    injury_present = bool(clean_list(athlete.get("injuries"))) or "injury_management" in readiness_flags
+    injury_present = _has_active_injury_from_athlete_model(athlete) or "injury_management" in readiness_flags
     fight_week = bool(
         "fight_week" in readiness_flags
         or (isinstance(days_until_fight, int) and days_until_fight <= 7)
@@ -1254,6 +1298,201 @@ def _weight_cut_contradiction_warnings(planning_brief: dict, final_plan_text: st
             "high_pressure": context["high_pressure"],
         }
     ]
+
+
+def _late_fight_header_contract_warnings(planning_brief: dict, plan_lines: list[str]) -> list[dict]:
+    spec = _late_fight_plan_spec(planning_brief)
+    if not spec:
+        return []
+
+    countdown_heading_lines = [line for line in plan_lines if _COUNTDOWN_LABEL_LINE.match(line)]
+    if not countdown_heading_lines:
+        return [
+            {
+                "code": "late_fight_missing_countdown_header",
+                "message": "Late-fight output must lead active days with D-X countdown headers.",
+                "payload_mode": spec.get("payload_mode"),
+                "days_out_bucket": spec.get("days_out_bucket"),
+                "blocking": True,
+            }
+        ]
+
+    warnings: list[dict] = []
+    for line in countdown_heading_lines:
+        if _COUNTDOWN_CONTRACT_HEADER.match(line):
+            continue
+        warnings.append(
+            {
+                "code": "late_fight_countdown_header_format",
+                "message": "Late-fight countdown headers must use D-X (Weekday) — Session role.",
+                "payload_mode": spec.get("payload_mode"),
+                "days_out_bucket": spec.get("days_out_bucket"),
+                "line": line,
+                "blocking": True,
+            }
+        )
+    return warnings
+
+
+def _late_fight_d0_protocol_warnings(
+    planning_brief: dict,
+    final_plan_text: str,
+    plan_lines: list[str],
+) -> list[dict]:
+    spec = _late_fight_plan_spec(planning_brief)
+    if not spec:
+        return []
+
+    day_blocks = _late_fight_countdown_blocks_by_day(final_plan_text)
+    d0_lines = day_blocks.get(0)
+    if not d0_lines and str(spec.get("days_out_bucket") or "").strip().upper() == "D-0":
+        d0_lines = plan_lines
+    if not d0_lines:
+        return []
+
+    protocol_text = _normalize_render_line(FIGHT_DAY_PROTOCOL_TEXT)
+    protocol_body_only = _normalize_render_line(
+        re.sub(r"^fight day protocol\s*[—:-]\s*", "", FIGHT_DAY_PROTOCOL_TEXT, flags=re.IGNORECASE)
+    )
+    header_line = _normalize_render_line(d0_lines[0] if d0_lines else "")
+    body_lines = [line for line in d0_lines[1:] if _normalize_render_line(line)]
+    if not body_lines and protocol_text in header_line:
+        return []
+    normalized_body_line = _normalize_render_line(body_lines[0]) if len(body_lines) == 1 else ""
+    if len(body_lines) == 1 and normalized_body_line in {protocol_text, protocol_body_only}:
+        return []
+
+    return [
+        {
+            "code": "late_fight_d0_protocol_expanded",
+            "message": "D-0 must render fight day protocol only.",
+            "payload_mode": spec.get("payload_mode"),
+            "days_out_bucket": "D-0",
+            "line": d0_lines[0] if d0_lines else "",
+            "body_lines": body_lines[:3],
+            "blocking": True,
+        }
+    ]
+
+
+def _internal_render_contract_leak_warnings(plan_lines: list[str]) -> list[dict]:
+    warnings: list[dict] = []
+    seen: set[tuple[str, str]] = set()
+    for line in plan_lines:
+        for label, pattern in _INTERNAL_RENDER_LABEL_PATTERNS:
+            if not pattern.search(line):
+                continue
+            dedupe_key = (label, _normalize_render_line(line))
+            if dedupe_key in seen:
+                continue
+            seen.add(dedupe_key)
+            warnings.append(
+                {
+                    "code": "internal_render_contract_leak",
+                    "message": f"Final plan exposes internal render label: {label}.",
+                    "label": label,
+                    "line": line,
+                    "blocking": True,
+                }
+            )
+    return warnings
+
+
+def _render_contract_blocks(final_plan_text: str) -> list[list[str]]:
+    blocks: list[list[str]] = []
+    current: list[str] = []
+
+    for raw_line in (final_plan_text or "").splitlines():
+        cleaned = _BULLET_PREFIX.sub("", raw_line).strip()
+        if not cleaned:
+            continue
+        header_match = _MARKDOWN_HEADER.match(raw_line)
+        heading_text = header_match.group(2).strip() if header_match else cleaned
+        is_heading = bool(
+            header_match
+            or _COUNTDOWN_LABEL_LINE.match(heading_text)
+            or _WEEKDAY_HEADING.match(_normalize_render_line(heading_text))
+            or _is_session_heading(heading_text)
+            or _COACH_LED_SESSION_PATTERN.search(heading_text)
+        )
+        if is_heading:
+            if current:
+                blocks.append(current)
+            current = [heading_text]
+            continue
+        if current:
+            current.append(cleaned)
+    if current:
+        blocks.append(current)
+    return blocks
+
+
+def _coach_led_body_line_is_minimal(line: str) -> bool:
+    normalized = _normalize_render_line(line)
+    if _COACH_LED_DETAIL_PATTERN.search(line):
+        return False
+    return phrase_in_text(normalized, "no app s&c") and phrase_in_text(normalized, "freshness priority")
+
+
+def _coach_owned_sparring_detail_warnings(final_plan_text: str) -> list[dict]:
+    warnings: list[dict] = []
+    for block in _render_contract_blocks(final_plan_text):
+        block_text = " ".join(block)
+        if not _COACH_LED_SESSION_PATTERN.search(block_text):
+            continue
+
+        heading = block[0]
+        body_lines = [line for line in block[1:] if _normalize_render_line(line)]
+        detailed_lines = [
+            line
+            for line in block
+            if _COACH_LED_DETAIL_PATTERN.search(line)
+        ]
+        non_minimal_body = [
+            line
+            for line in body_lines
+            if not _coach_led_body_line_is_minimal(line)
+        ]
+
+        if not detailed_lines and len(body_lines) <= 1 and not non_minimal_body:
+            continue
+
+        warnings.append(
+            {
+                "code": "coach_owned_sparring_overdetailed",
+                "message": "Coach-led sparring/boxing day includes app-authored detail beyond the minimal coach-owned render.",
+                "line": heading,
+                "matched_lines": (detailed_lines or non_minimal_body or body_lines)[:3],
+                "blocking": True,
+            }
+        )
+    return warnings
+
+
+def _lead_summary_contract_warnings(planning_brief: dict, plan_lines: list[str]) -> list[dict]:
+    lead_text = "\n".join(plan_lines[:10])
+    warnings: list[dict] = []
+    risk_context = _risk_tone_context(planning_brief)
+    weight_cut = _weight_cut_context(planning_brief)
+
+    if risk_context.get("injury_present") and not _INJURY_LEAD_SUMMARY_PATTERN.search(lead_text):
+        warnings.append(
+            {
+                "code": "missing_injury_lead_summary",
+                "message": "Active injury context must be summarized before training detail.",
+                "blocking": True,
+            }
+        )
+    if weight_cut["active"] and not _WEIGHT_CUT_LEAD_SUMMARY_PATTERN.search(lead_text):
+        warnings.append(
+            {
+                "code": "missing_weight_cut_lead_summary",
+                "message": "Active cut context must be summarized before training detail.",
+                "high_pressure": weight_cut["high_pressure"],
+                "blocking": True,
+            }
+        )
+    return warnings
 
 
 def _overstyled_name_warnings(plan_lines: list[str]) -> list[dict]:
@@ -2362,95 +2601,216 @@ def _late_fight_warnings(planning_brief: dict, final_plan_text: str) -> list[dic
     return warnings
 
 
+
+
+def _issue(*, code: str, message: str, severity: str, confidence: str, line: str = "", **extra: Any) -> dict[str, Any]:
+    return {
+        "code": code,
+        "message": message,
+        "severity": severity,
+        "confidence": confidence,
+        "line": line,
+        **extra,
+    }
+
+
+def _normalize_warning(item: dict[str, Any]) -> dict[str, Any]:
+    defaults = {
+        "code": "stage2_warning",
+        "message": "Stage 2 validation warning.",
+        "severity": "warning",
+        "confidence": "medium",
+        "line": "",
+    }
+    return {**defaults, **item}
+
+
+def _stage2_output_incomplete_errors(final_plan_text: str) -> list[dict[str, Any]]:
+    lines = [line.strip() for line in str(final_plan_text or "").splitlines() if line.strip()]
+    if not lines:
+        return []
+    last_line = lines[-1]
+    if re.search(r"(?:^|\s)(?:Anchor|Support|Rehab)\s*[—-]\s*$", last_line, re.IGNORECASE):
+        return [_issue(code="stage2_output_truncated", message="Stage 2 output ends on an unfinished label.", severity="blocker", confidence="high", line=last_line)]
+    if re.search(r"^\s*(?:#+\s*)?D-\d+\s*(?:\([^)]*\))?\s*(?:—|-|:)\s*$", last_line, re.IGNORECASE):
+        return [_issue(code="stage2_output_truncated", message="Stage 2 output ends on an unfinished heading.", severity="blocker", confidence="high", line=last_line)]
+    if re.search(r"(?:^|\s)(?:Why|Coach|Support|Rehab)\s*:\s*$", last_line, re.IGNORECASE):
+        return [_issue(code="stage2_output_truncated", message="Stage 2 output looks cut off mid-line.", severity="blocker", confidence="high", line=last_line)]
+    return []
+
+
+def _countdown_blocks(final_plan_text: str) -> list[dict[str, Any]]:
+    blocks: list[dict[str, Any]] = []
+    current: dict[str, Any] | None = None
+    for raw in str(final_plan_text or "").splitlines():
+        line = raw.strip()
+        if not line:
+            continue
+        match = _COUNTDOWN_LABEL_LINE.match(line)
+        if match:
+            if current:
+                blocks.append(current)
+            current = {"day": int(match.group(2)), "header": line, "lines": []}
+            continue
+        if current:
+            current["lines"].append(line)
+    if current:
+        blocks.append(current)
+    return blocks
+
+
+HARD_SPARRING_TERMS = (
+    "hard spar",
+    "hard sparring",
+    "live spar",
+    "live sparring",
+    "full spar",
+    "full sparring",
+    "full contact",
+    "hard contact",
+    "fight-pace sparring",
+    "competitive sparring",
+    "open sparring",
+)
+
+_HARD_SPARRING_PATTERN = re.compile(
+    r"\b(" + "|".join(re.escape(term) for term in HARD_SPARRING_TERMS) + r")\b",
+    re.IGNORECASE,
+)
+
+_NEGATED_HARD_SPARRING_PATTERN = re.compile(
+    r"\b(?:no|avoid|without|do\s+not|don't|not)\s+(?:\w+\s+){0,3}"
+    r"(?:" + "|".join(re.escape(t) for t in HARD_SPARRING_TERMS) + r")$",
+    re.IGNORECASE,
+)
+
+
+def _has_blocking_hard_sparring(text: str) -> bool:
+    if not text:
+        return False
+    for match in _HARD_SPARRING_PATTERN.finditer(text):
+        window_start = max(0, match.start() - 40)
+        candidate = text[window_start:match.end()]
+        if _NEGATED_HARD_SPARRING_PATTERN.search(candidate):
+            continue
+        return True
+    return False
+
 def validate_stage2_output(*, planning_brief: dict, final_plan_text: str) -> dict:
     plan_lines = _extract_plan_lines(final_plan_text)
     phase_sections = _phase_sections(final_plan_text)
     restricted_hits = _find_restricted_hits(planning_brief, plan_lines)
+    countdown_blocks = _countdown_blocks(final_plan_text)
+
+    errors: list[dict[str, Any]] = []
+    warnings: list[dict[str, Any]] = []
+    if not plan_lines:
+        errors.append(_issue(code="stage2_output_empty", message="Stage 2 output is empty.", severity="blocker", confidence="high"))
+    errors.extend(_stage2_output_incomplete_errors(final_plan_text))
+    errors.extend(
+        _issue(code="restriction_violation", message=f"Restriction {hit['restriction']} matched line.", severity="blocker", confidence="high", line=hit["line"], restriction=hit["restriction"], strength=hit.get("strength"))
+        for hit in restricted_hits
+    )
+    internal_patterns = (
+        r"\brole(?:_|\s+)key\b",
+        r"\bcandidate(?:_|\s+)pool\b",
+        r"\bplanning(?:_|\s+)brief\b",
+        r"\bstage2(?:_|\s+)payload\b",
+        r"\bstage2(?:_|\s+)handoff\b",
+        r"\bvalidator(?:_|\s+)report\b",
+        r"\bwhy(?:_|\s+)log\b",
+        r"\btaper(?:_|\s+)micro(?:_|\s+)support\b",
+        r"\brender(?:_|\s+)contract\b",
+    )
+    for pattern in internal_patterns:
+        for line in plan_lines:
+            leak_match = re.search(pattern, line, re.IGNORECASE)
+            if leak_match:
+                leaked = leak_match.group(0)
+                errors.append(_issue(code="true_internal_system_leak", message=f"Internal system term leaked: {leaked}.", severity="blocker", confidence="high", line=line))
+                break
+    d1_risk_pattern = re.compile(r"\b(strength|conditioning|sprints?|interval|heavy|loaded|deadlift|squat|trap bar|barbell)\b", re.IGNORECASE)
+    d0_extra_pattern = re.compile(r"\b(?:extra|plus|add|conditioning|strength|finisher|circuit|sprint|lift)\b", re.IGNORECASE)
+    for block in countdown_blocks:
+        day = int(block["day"])
+        safe_lines = [line for line in block["lines"] if not _line_is_instruction_only(line)]
+        joined = " ".join(safe_lines)
+        has_blocking_hard_sparring = _has_blocking_hard_sparring(block["header"]) or _has_blocking_hard_sparring(joined)
+        if day == 12 and has_blocking_hard_sparring:
+            warnings.append(_issue(code="late_fight_hard_sparring_d12_review", message="Hard sparring appears on D-12; review coach load and recovery risk.", severity="review", confidence="medium", line=block["header"]))
+        if 0 <= day <= 11 and has_blocking_hard_sparring:
+            errors.append(_issue(code="late_fight_hard_sparring_violation", message="Hard sparring appears inside D-11 to D-0.", severity="blocker", confidence="high", line=block["header"]))
+        if day == 1 and d1_risk_pattern.search(joined):
+            errors.append(_issue(code="dangerous_late_fight_strength_or_conditioning", message="D-1 includes hard strength/conditioning exposure.", severity="blocker", confidence="medium", line=block["header"]))
+        if day == 0 and d0_extra_pattern.search(joined):
+            errors.append(_issue(code="fight_day_protocol_violation", message="D-0 includes extra training beyond fight-day protocol.", severity="blocker", confidence="medium", line=block["header"]))
+
     missing_required_elements = _find_missing_required_elements(planning_brief, final_plan_text)
     missing_phase_sections = _find_missing_phase_sections(planning_brief, phase_sections)
-    strength_session_warnings = _strength_session_quality_warnings(
-        planning_brief,
-        phase_sections,
-        plan_lines,
-    )
+    strength_session_warnings = _strength_session_quality_warnings(planning_brief, phase_sections, plan_lines)
     conditioning_choice_warnings = _conditioning_choice_warnings(plan_lines)
     rendering_discipline_warnings = _rendering_discipline_warnings(planning_brief, phase_sections)
-    equipment_congruence_warnings = _equipment_congruence_warnings(
-        planning_brief,
-        phase_sections,
-        plan_lines,
-    )
-    unresolved_access_fallback_warnings = _unresolved_access_fallback_warnings(
-        planning_brief,
-        phase_sections,
-    )
-    week_completeness_warnings = _week_completeness_warnings(
-        planning_brief,
-        final_plan_text,
-    )
-    crowded_week_warnings = _boxing_crowded_week_warnings(
-        planning_brief,
-        final_plan_text,
-    )
-    weight_cut_acknowledgement_warnings = _weight_cut_acknowledgement_warnings(
-        planning_brief,
-        final_plan_text,
-    )
-    weight_cut_contradiction_warnings = _weight_cut_contradiction_warnings(
-        planning_brief,
-        final_plan_text,
-    )
+    equipment_congruence_warnings = _equipment_congruence_warnings(planning_brief, phase_sections, plan_lines)
+    unresolved_access_fallback_warnings = _unresolved_access_fallback_warnings(planning_brief, phase_sections)
+    week_completeness_warnings = _week_completeness_warnings(planning_brief, final_plan_text)
+    crowded_week_warnings = _boxing_crowded_week_warnings(planning_brief, final_plan_text)
+    weight_cut_acknowledgement_warnings = _weight_cut_acknowledgement_warnings(planning_brief, final_plan_text)
+    weight_cut_contradiction_warnings = _weight_cut_contradiction_warnings(planning_brief, final_plan_text)
+    late_fight_header_contract_warnings = _late_fight_header_contract_warnings(planning_brief, plan_lines)
+    late_fight_d0_protocol_warnings = _late_fight_d0_protocol_warnings(planning_brief, final_plan_text, plan_lines)
+    internal_render_contract_leak_warnings = _internal_render_contract_leak_warnings(plan_lines)
+    coach_owned_sparring_detail_warnings = _coach_owned_sparring_detail_warnings(final_plan_text)
+    lead_summary_contract_warnings = _lead_summary_contract_warnings(planning_brief, plan_lines)
     overstyled_name_warnings = _overstyled_name_warnings(plan_lines)
     coach_voice_warnings = _coach_voice_warnings(planning_brief, plan_lines)
-    sport_language_warnings = _sport_language_warnings(planning_brief, plan_lines)
     calendar_spine_warnings = _calendar_spine_warnings(planning_brief, final_plan_text)
     late_fight_warnings = _late_fight_warnings(planning_brief, final_plan_text)
+    sport_language_warnings = _sport_language_warnings(planning_brief, plan_lines)
 
-    errors = [
-        {
-            "code": "restriction_violation",
-            "message": f"Restriction {hit['restriction']} matched line: {hit['line']}",
-            "restriction": hit["restriction"],
-            "line": hit["line"],
-            "strength": hit.get("strength"),
-        }
-        for hit in restricted_hits
-    ]
-    warnings = [
-        {
-            "code": "missing_required_element",
-            "message": item["reason"],
-            "phase": item["phase"],
-            "requirement": item["requirement"],
-            "candidate_names": item["candidate_names"],
-        }
-        for item in missing_required_elements
-    ]
     warnings.extend(
-        {
-            "code": "phase_section_missing",
-            "message": item["reason"],
-            "phase": item["phase"],
-        }
+        _issue(
+            code="missing_required_element",
+            message=item.get("reason", "Missing required element."),
+            severity=item.get("severity", "warning"),
+            confidence="medium",
+            phase=item.get("phase"),
+            requirement=item.get("requirement"),
+            candidate_names=item.get("candidate_names"),
+        )
+        for item in missing_required_elements
+    )
+    warnings.extend(
+        _issue(
+            code="phase_section_missing",
+            message=item.get("reason", "Missing required phase section."),
+            severity=item.get("severity", "warning"),
+            confidence="medium",
+            phase=item.get("phase"),
+        )
         for item in missing_phase_sections
     )
-    warnings.extend(strength_session_warnings)
-    warnings.extend(conditioning_choice_warnings)
-    warnings.extend(rendering_discipline_warnings)
-    warnings.extend(equipment_congruence_warnings)
-    warnings.extend(unresolved_access_fallback_warnings)
-    warnings.extend(week_completeness_warnings)
-    warnings.extend(crowded_week_warnings)
-    warnings.extend(weight_cut_acknowledgement_warnings)
-    warnings.extend(weight_cut_contradiction_warnings)
-    warnings.extend(overstyled_name_warnings)
-    warnings.extend(coach_voice_warnings)
-    warnings.extend(sport_language_warnings)
-    warnings.extend(calendar_spine_warnings)
-    warnings.extend(late_fight_warnings)
+    warnings.extend(_normalize_warning(item) for item in strength_session_warnings)
+    warnings.extend(_normalize_warning(item) for item in conditioning_choice_warnings)
+    warnings.extend(_normalize_warning(item) for item in rendering_discipline_warnings)
+    warnings.extend(_normalize_warning(item) for item in equipment_congruence_warnings)
+    warnings.extend(_normalize_warning(item) for item in unresolved_access_fallback_warnings)
+    warnings.extend(_normalize_warning(item) for item in week_completeness_warnings)
+    warnings.extend(_normalize_warning(item) for item in crowded_week_warnings)
+    warnings.extend(_normalize_warning(item) for item in weight_cut_acknowledgement_warnings)
+    warnings.extend(_normalize_warning(item) for item in weight_cut_contradiction_warnings)
+    warnings.extend(_normalize_warning(item) for item in late_fight_header_contract_warnings)
+    warnings.extend(_normalize_warning(item) for item in late_fight_d0_protocol_warnings)
+    warnings.extend(_normalize_warning(item) for item in internal_render_contract_leak_warnings)
+    warnings.extend(_normalize_warning(item) for item in coach_owned_sparring_detail_warnings)
+    warnings.extend(_normalize_warning(item) for item in lead_summary_contract_warnings)
+    warnings.extend(_normalize_warning(item) for item in overstyled_name_warnings)
+    warnings.extend(_normalize_warning(item) for item in coach_voice_warnings)
+    warnings.extend(_normalize_warning(item) for item in calendar_spine_warnings)
+    warnings.extend(_normalize_warning(item) for item in late_fight_warnings)
+    warnings.extend(_normalize_warning(item) for item in sport_language_warnings)
 
     return {
-        "is_valid": not errors,
+        "is_valid": len(errors) == 0,
         "errors": errors,
         "warnings": warnings,
         "missing_required_elements": missing_required_elements,
@@ -2465,10 +2825,16 @@ def validate_stage2_output(*, planning_brief: dict, final_plan_text: str) -> dic
         "crowded_week_warnings": crowded_week_warnings,
         "weight_cut_acknowledgement_warnings": weight_cut_acknowledgement_warnings,
         "weight_cut_contradiction_warnings": weight_cut_contradiction_warnings,
+        "late_fight_header_contract_warnings": late_fight_header_contract_warnings,
+        "late_fight_d0_protocol_warnings": late_fight_d0_protocol_warnings,
+        "internal_render_contract_leak_warnings": internal_render_contract_leak_warnings,
+        "coach_owned_sparring_detail_warnings": coach_owned_sparring_detail_warnings,
+        "lead_summary_contract_warnings": lead_summary_contract_warnings,
         "overstyled_name_warnings": overstyled_name_warnings,
-        "gimmick_name_warnings": overstyled_name_warnings,
+        "gimmick_name_warnings": [],
         "coach_voice_warnings": coach_voice_warnings,
         "calendar_spine_warnings": calendar_spine_warnings,
         "late_fight_warnings": late_fight_warnings,
+        "stage2_output_incomplete_warnings": [],
         "sport_language_warnings": sport_language_warnings,
     }

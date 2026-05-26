@@ -29,6 +29,7 @@ const OPEN_PLAN_FOCUS_CAP: PerformanceFocusCap = {
   reason: "Open plans use a focused cap to keep goals and weak areas clear without a fight-date countdown.",
 };
 
+// Keep in sync with api/performance_focus.py
 const PERFORMANCE_FOCUS_CAP_WINDOWS: PerformanceFocusCapWindow[] = [
   {
     maxDaysUntilFight: 7,

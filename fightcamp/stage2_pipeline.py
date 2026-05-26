@@ -10,24 +10,6 @@ _STATUS_READY = "READY"
 _STATUS_PASS = "PASS"
 _STATUS_WARN = "WARN"
 _STATUS_FAIL = "FAIL"
-_BLOCKING_WARNING_CODES = {
-    "missing_required_element",
-    "phase_section_missing",
-    "equipment_incongruent_selection",
-    "unresolved_access_fallback",
-    "missing_week_session_role",
-    "late_camp_session_incomplete",
-    "late_fight_active_role_overage",
-    "late_fight_block_overage",
-    "late_fight_forbidden_content",
-    "late_fight_hard_sparring_overage",
-    "late_fight_meaningful_stress_overage",
-    "late_fight_alactic_dose_overage",
-    "late_fight_technical_round_overage",
-    "late_fight_conditioning_round_structure_forbidden",
-    "late_fight_unapproved_exercise_rendered",
-    "late_fight_neural_power_stacking",
-}
 
 
 
@@ -60,12 +42,12 @@ def _warning_buckets(validator_report: dict) -> tuple[list[dict], list[dict]]:
     blocking_warnings = [
         warning
         for warning in warnings
-        if str(warning.get("code") or "") in _BLOCKING_WARNING_CODES or bool(warning.get("blocking"))
+        if str(warning.get("severity") or "").lower() == "blocker"
     ]
     review_flags = [
         warning
         for warning in warnings
-        if str(warning.get("code") or "") not in _BLOCKING_WARNING_CODES and not bool(warning.get("blocking"))
+        if str(warning.get("severity") or "").lower() != "blocker"
     ]
     return blocking_warnings, review_flags
 
@@ -140,6 +122,20 @@ def _warning_detail_line(warning: dict) -> str:
         return "Rewrite hedged adjustment language into one clear coaching call with a short why."
     if warning.get("code") == "empty_safety_language":
         return "Replace empty safety lines with operational guardrails that change what the athlete does next."
+    if warning.get("code") == "late_fight_missing_countdown_header":
+        return "Restore D-X countdown headers for every active late-fight day."
+    if warning.get("code") == "late_fight_countdown_header_format":
+        return "Rewrite countdown headers as D-X (Weekday) — session role."
+    if warning.get("code") == "late_fight_d0_protocol_expanded":
+        return "Reduce D-0 to fight day protocol only."
+    if warning.get("code") == "coach_owned_sparring_overdetailed":
+        return "Reduce coach-led sparring days to the minimal coach-owned label and one app-owned freshness note."
+    if warning.get("code") == "internal_render_contract_leak":
+        return "Remove internal scaffolding labels from the athlete-facing plan."
+    if warning.get("code") == "missing_injury_lead_summary":
+        return "Add a short lead summary for active injury constraints."
+    if warning.get("code") == "missing_weight_cut_lead_summary":
+        return "Add a short lead summary for active weight-cut constraints."
     rewrite_hint = str(warning.get("rewrite_hint") or "").strip()
     if rewrite_hint:
         return rewrite_hint

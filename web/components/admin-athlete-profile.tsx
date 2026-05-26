@@ -236,7 +236,7 @@ function buildOverviewSections(athlete: AdminAthleteRecord): OverviewSection[] {
         value: <InlinePills items={getOptionLabels(TRAINING_AVAILABILITY_OPTIONS, intake.hard_sparring_days)} tone="warning" />,
       },
       {
-        label: "Non-hard training days",
+        label: "Light Combat days",
         value: <InlinePills items={getOptionLabels(TRAINING_AVAILABILITY_OPTIONS, intake.support_work_days)} tone="alt" />,
       },
       {

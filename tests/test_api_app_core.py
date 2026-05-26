@@ -120,6 +120,61 @@ def test_job_response_falls_back_to_created_at_when_updated_at_is_missing():
     assert response.updated_at == created_at
 
 
+def test_job_response_recovers_plan_id_from_terminal_milestone_meta():
+    response = app_module._job_response(
+        {
+            "id": "job_terminal_meta",
+            "athlete_id": "athlete-1",
+            "client_request_id": "client-1",
+            "status": "completed",
+            "created_at": _now(),
+            "updated_at": _now(),
+            "started_at": None,
+            "completed_at": None,
+            "error": None,
+            "plan_id": None,
+            "progress_milestones": [
+                {"code": "plan_persisted", "meta": {"plan_id": "plan_from_milestone"}},
+            ],
+        }
+    )
+
+    assert response.plan_id == "plan_from_milestone"
+    assert response.latest_plan_id == "plan_from_milestone"
+
+
+def test_job_response_recovers_plan_id_from_latest_visible_plan_when_terminal_plan_missing():
+    store = FakeStore()
+    store.create_intake("athlete-1", _planner())
+    intake = store.get_latest_intake("athlete-1")
+    assert intake is not None
+    store.create_plan(
+        athlete_id="athlete-1",
+        intake_id=str(intake["id"]),
+        request=_planner(),
+        result=finalized_result(),
+    )
+    response = app_module._job_response(
+        {
+            "id": "job_terminal_lookup",
+            "athlete_id": "athlete-1",
+            "intake_id": str(intake["id"]),
+            "client_request_id": "client-1",
+            "status": "completed",
+            "created_at": _now(),
+            "updated_at": _now(),
+            "started_at": None,
+            "completed_at": None,
+            "error": None,
+            "plan_id": None,
+            "progress_milestones": [],
+        },
+        store=store,
+    )
+
+    assert response.plan_id is not None
+
+
 def test_is_stale_job_does_not_flag_new_running_job_without_heartbeat():
     started_at = _now()
 
@@ -151,13 +206,21 @@ def test_is_stale_job_uses_started_at_when_heartbeat_is_missing_for_old_running_
 
 
 def test_generation_job_stale_after_seconds_defaults_when_env_invalid(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.delenv("UNLXCK_GENERATION_WORKER_STALE_AFTER_SECONDS", raising=False)
     monkeypatch.setenv("APP_GENERATION_JOB_STALE_AFTER_SECONDS", "invalid")
-    assert app_module._generation_job_stale_after_seconds() == 1400
+    assert app_module._generation_job_stale_after_seconds() == 300
 
 
 def test_generation_job_stale_after_seconds_defaults_when_unset(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.delenv("APP_GENERATION_JOB_STALE_AFTER_SECONDS", raising=False)
-    assert app_module._generation_job_stale_after_seconds() == 1400
+    monkeypatch.delenv("UNLXCK_GENERATION_WORKER_STALE_AFTER_SECONDS", raising=False)
+    assert app_module._generation_job_stale_after_seconds() == 300
+
+
+def test_generation_job_stale_after_seconds_falls_back_to_worker_env(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.delenv("APP_GENERATION_JOB_STALE_AFTER_SECONDS", raising=False)
+    monkeypatch.setenv("UNLXCK_GENERATION_WORKER_STALE_AFTER_SECONDS", "420")
+    assert app_module._generation_job_stale_after_seconds() == 420
 
 
 def test_generation_job_stale_after_seconds_enforces_minimum(monkeypatch: pytest.MonkeyPatch):
@@ -178,6 +241,24 @@ def test_plan_generate_daily_limit_defaults_when_invalid(monkeypatch: pytest.Mon
 def test_plan_generate_daily_limit_zero_disables_cap(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setenv("APP_PLAN_GENERATE_DAILY_LIMIT_PER_USER", "0")
     assert app_module._plan_generate_daily_limit_per_user() == 0
+
+
+def test_default_planner_forwards_progress_callback_to_runtime_planner(monkeypatch: pytest.MonkeyPatch):
+    seen: dict[str, object] = {}
+
+    def fake_runtime_default_planner(payload, *, progress_callback=None):
+        seen["payload"] = payload
+        seen["progress_callback"] = progress_callback
+        return {"ok": True}
+
+    monkeypatch.setattr(app_module, "runtime_default_planner", fake_runtime_default_planner)
+
+    callback = lambda code, label, detail, meta: None
+    result = app_module._default_planner({"athlete": "x"}, progress_callback=callback)
+
+    assert result == {"ok": True}
+    assert seen["payload"] == {"athlete": "x"}
+    assert seen["progress_callback"] is callback
 
 
 def test_runtime_app_falls_back_to_health_endpoint_when_supabase_config_missing(monkeypatch: pytest.MonkeyPatch):
@@ -465,33 +546,15 @@ def test_production_cors_allows_safe_https_origin(monkeypatch: pytest.MonkeyPatc
     )
 
 
-def test_production_cors_warns_but_boots_on_unsafe_origin_by_default(
-    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+def test_production_cors_fails_fast_on_unsafe_origin_by_default(
+    monkeypatch: pytest.MonkeyPatch,
 ):
-    """Hotfix behaviour: misconfigured production CORS logs an error but boots."""
     _clear_env_detection_vars(monkeypatch)
     monkeypatch.setenv("APP_ENV", "production")
     monkeypatch.setenv("APP_CORS_ORIGINS", "*")
-    monkeypatch.delenv("APP_STRICT_PRODUCTION_CORS", raising=False)
+    monkeypatch.delenv("APP_ALLOW_UNSAFE_PRODUCTION_CORS_BOOT", raising=False)
 
-    # Should not raise even though the CORS config is unsafe.
-    create_app(
-        store=FakeStore(),
-        auth_service=FakeAuthService({}),
-        stage2_automator=FakeStage2Automator(),
-    )
-
-    captured = capsys.readouterr()
-    assert "production_cors_unsafe" in captured.out + captured.err
-
-
-def test_production_cors_strict_mode_rejects_wildcard_origin(monkeypatch: pytest.MonkeyPatch):
-    _clear_env_detection_vars(monkeypatch)
-    monkeypatch.setenv("APP_ENV", "production")
-    monkeypatch.setenv("APP_STRICT_PRODUCTION_CORS", "1")
-    monkeypatch.setenv("APP_CORS_ORIGINS", "*")
-
-    with pytest.raises(ValueError, match=r"\*"):
+    with pytest.raises(RuntimeError, match="Refusing to boot unless APP_ALLOW_UNSAFE_PRODUCTION_CORS_BOOT=1"):
         create_app(
             store=FakeStore(),
             auth_service=FakeAuthService({}),
@@ -499,10 +562,25 @@ def test_production_cors_strict_mode_rejects_wildcard_origin(monkeypatch: pytest
         )
 
 
-def test_production_cors_strict_mode_rejects_empty_origins(monkeypatch: pytest.MonkeyPatch):
+def test_production_cors_override_allows_boot_on_unsafe_origin(
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+):
     _clear_env_detection_vars(monkeypatch)
     monkeypatch.setenv("APP_ENV", "production")
-    monkeypatch.setenv("APP_STRICT_PRODUCTION_CORS", "1")
+    monkeypatch.setenv("APP_CORS_ORIGINS", "*")
+    monkeypatch.setenv("APP_ALLOW_UNSAFE_PRODUCTION_CORS_BOOT", "1")
+    caplog.set_level("CRITICAL")
+    create_app(
+        store=FakeStore(),
+        auth_service=FakeAuthService({}),
+        stage2_automator=FakeStage2Automator(),
+    )
+    assert "UNSAFE_PRODUCTION_CORS_OVERRIDE_ACTIVE" in caplog.text
+
+
+def test_production_cors_rejects_empty_origins(monkeypatch: pytest.MonkeyPatch):
+    _clear_env_detection_vars(monkeypatch)
+    monkeypatch.setenv("APP_ENV", "production")
     monkeypatch.setenv("APP_CORS_ORIGINS", "")
     monkeypatch.delenv("APP_CORS_ORIGIN_REGEX", raising=False)
 
@@ -514,10 +592,9 @@ def test_production_cors_strict_mode_rejects_empty_origins(monkeypatch: pytest.M
         )
 
 
-def test_production_cors_strict_mode_rejects_localhost_origins(monkeypatch: pytest.MonkeyPatch):
+def test_production_cors_rejects_localhost_origins(monkeypatch: pytest.MonkeyPatch):
     _clear_env_detection_vars(monkeypatch)
     monkeypatch.setenv("APP_ENV", "production")
-    monkeypatch.setenv("APP_STRICT_PRODUCTION_CORS", "1")
     monkeypatch.setenv("APP_CORS_ORIGINS", "http://localhost:3000")
 
     with pytest.raises(ValueError, match="localhost"):
@@ -548,7 +625,6 @@ def test_production_cors_strict_mode_rejects_localhost_origins(monkeypatch: pyte
 def test_production_cors_strict_mode_rejects_broad_regex(monkeypatch: pytest.MonkeyPatch, regex: str):
     _clear_env_detection_vars(monkeypatch)
     monkeypatch.setenv("APP_ENV", "production")
-    monkeypatch.setenv("APP_STRICT_PRODUCTION_CORS", "1")
     monkeypatch.setenv("APP_CORS_ORIGINS", "https://app.example.com")
     monkeypatch.setenv("APP_CORS_ORIGIN_REGEX", regex)
 
@@ -561,10 +637,9 @@ def test_production_cors_strict_mode_rejects_broad_regex(monkeypatch: pytest.Mon
 
 
 def test_production_cors_allows_narrow_subdomain_regex(monkeypatch: pytest.MonkeyPatch):
-    """Narrow regex constrained to a specific domain should still work even in strict mode."""
+    """Narrow regex constrained to a specific domain should still work in production."""
     _clear_env_detection_vars(monkeypatch)
     monkeypatch.setenv("APP_ENV", "production")
-    monkeypatch.setenv("APP_STRICT_PRODUCTION_CORS", "1")
     monkeypatch.setenv("APP_CORS_ORIGINS", "https://app.example.com")
     monkeypatch.setenv("APP_CORS_ORIGIN_REGEX", r"https://.*\.vercel\.app")
     # Should not raise

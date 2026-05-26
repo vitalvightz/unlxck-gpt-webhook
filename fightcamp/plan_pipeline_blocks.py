@@ -43,6 +43,30 @@ def _emit_progress(
     except Exception:
         logging.getLogger(__name__).exception("[progress] callback_failed code=%s", code)
 
+
+def _run_stage1_module(
+    *,
+    module_name: str,
+    started_code: str,
+    finished_code: str,
+    label_prefix: str,
+    logger: logging.Logger,
+    progress_callback: ProgressCallback | None,
+    record_timing: TimingRecorder,
+    timing_label: str,
+    fn,
+):
+    _emit_progress(progress_callback, started_code, f"{label_prefix} started")
+    timer_start = perf_counter()
+    result = fn()
+    elapsed = perf_counter() - timer_start
+    record_timing(timing_label, timer_start)
+    logger.info("[stage1] module_elapsed module=%s elapsed=%.2f", module_name, elapsed)
+    if elapsed > 10.0:
+        logger.warning("[stage1] slow_module module=%s elapsed=%.2f", module_name, elapsed)
+    _emit_progress(progress_callback, finished_code, f"{label_prefix} finished")
+    return result
+
 def _build_phase_mindsets(training_context: TrainingContext) -> tuple[dict[str, str], dict[str, str]]:
     phase_mindset_cues = get_phase_mindset_cues(training_context.mental_block)
     phase_mindsets: dict[str, str] = {}
@@ -61,13 +85,22 @@ def _build_phase_mindsets(training_context: TrainingContext) -> tuple[dict[str, 
     return phase_mindset_cues, phase_mindsets
 
 
-def _generate_strength_blocks(context: PlanRuntimeContext, phase_mindset_cues: dict[str, str]) -> tuple[dict[str, dict | None], dict[str, list[dict]]]:
+def _generate_strength_blocks(
+    context: PlanRuntimeContext,
+    phase_mindset_cues: dict[str, str],
+    *,
+    progress_callback: ProgressCallback | None = None,
+) -> tuple[dict[str, dict | None], dict[str, list[dict]]]:
     strength_blocks: dict[str, dict | None] = {phase: None for phase in PHASES}
     strength_reason_log: dict[str, list[dict]] = {}
     previous_names: list[str] = []
     previous_movements: set[str] = set()
     # Compute once per request; spread into per-phase flags dict below.
     base_flags = context.training_context.to_flags()
+    logger = logging.getLogger(__name__)
+
+    def _emit_strength_substep(code: str, label: str) -> None:
+        _emit_progress(progress_callback, code, label)
 
     for phase in PHASES:
         if not context.phase_active(phase):
@@ -78,15 +111,26 @@ def _generate_strength_blocks(context: PlanRuntimeContext, phase_mindset_cues: d
             "random_seed": context.random_seed,
             "restrictions": context.plan_input.restrictions,
             "ignore_restrictions": context.selection_ignore_restrictions,
+            "strength_substep_callback": _emit_strength_substep,
         }
         if previous_names:
             flags["prev_exercises"] = previous_names
             flags["recent_exercises"] = list(previous_movements)
-        block = generate_strength_block(
-            flags=flags,
-            weaknesses=context.training_context.weaknesses,
-            mindset_cue=phase_mindset_cues.get(phase),
-        )
+        phase_step = f"phase_{phase.lower()}"
+        _emit_strength_substep(f"stage1_strength_{phase_step}_started", f"Stage 1 strength {phase} started")
+        phase_started = perf_counter()
+        try:
+            block = generate_strength_block(
+                flags=flags,
+                weaknesses=context.training_context.weaknesses,
+                mindset_cue=phase_mindset_cues.get(phase),
+            )
+        finally:
+            phase_elapsed = perf_counter() - phase_started
+            logger.info("[stage1] strength_substep_elapsed step=%s elapsed=%.2f", phase_step, phase_elapsed)
+            if phase_elapsed > 5.0:
+                logger.warning("[stage1] slow_strength_substep step=%s elapsed=%.2f", phase_step, phase_elapsed)
+        _emit_strength_substep(f"stage1_strength_{phase_step}_finished", f"Stage 1 strength {phase} finished")
         strength_blocks[phase] = block
         strength_reason_log[phase] = block.get("why_log", [])
         phase_names = [exercise["name"] for exercise in block.get("exercises", []) if exercise.get("name")]
@@ -101,15 +145,21 @@ def _generate_strength_blocks(context: PlanRuntimeContext, phase_mindset_cues: d
     return strength_blocks, strength_reason_log
 
 
-def _generate_conditioning_blocks(context: PlanRuntimeContext) -> tuple[dict[str, dict], dict[str, list[dict]]]:
+def _generate_conditioning_blocks(context: PlanRuntimeContext, *, progress_callback: ProgressCallback | None = None) -> tuple[dict[str, dict], dict[str, list[dict]]]:
     conditioning_blocks: dict[str, dict] = {}
     conditioning_reason_log: dict[str, list[dict]] = {}
     # Compute once per request; spread into per-phase flags dict below.
     base_flags = context.training_context.to_flags()
 
+    logger = logging.getLogger(__name__)
+    conditioning_started = perf_counter()
+
     for phase in PHASES:
         if not context.phase_active(phase):
             continue
+        phase_code = f"stage1_conditioning_phase_{phase.lower()}"
+        _emit_progress(progress_callback, f"{phase_code}_started", f"Stage 1 conditioning {phase} started")
+        phase_started = perf_counter()
         (
             block_text,
             names,
@@ -127,8 +177,14 @@ def _generate_conditioning_blocks(context: PlanRuntimeContext) -> tuple[dict[str
                 "weeks_out": context.plan_input.weeks_out,
                 "restrictions": context.plan_input.restrictions,
                 "ignore_restrictions": context.selection_ignore_restrictions,
+                "conditioning_substep_callback": lambda code, label: _emit_progress(progress_callback, code, label),
             }
         )
+        phase_elapsed = perf_counter() - phase_started
+        logger.info("[stage1] conditioning_phase_elapsed phase=%s elapsed=%.2f", phase.lower(), phase_elapsed)
+        if phase_elapsed > 10.0:
+            logger.warning("[stage1] slow_conditioning_phase phase=%s elapsed=%.2f", phase.lower(), phase_elapsed)
+        _emit_progress(progress_callback, f"{phase_code}_finished", f"Stage 1 conditioning {phase} finished")
         render_metadata = {
             "num_sessions": allocate_sessions(context.training_context.training_frequency, phase).get("conditioning", 1),
             "diagnostic_context": {
@@ -157,6 +213,9 @@ def _generate_conditioning_blocks(context: PlanRuntimeContext) -> tuple[dict[str
             "sport": render_metadata.get("sport"),
         }
 
+    total_elapsed = perf_counter() - conditioning_started
+    if total_elapsed > 30.0:
+        logger.warning("[stage1] slow_conditioning_total elapsed=%.2f", total_elapsed)
     return conditioning_blocks, conditioning_reason_log
 
 
@@ -380,9 +439,21 @@ def generate_plan_blocks(
         len(context.plan_input.restrictions or []),
     )
 
-    timer_start = perf_counter()
-    strength_blocks, strength_reason_log = _generate_strength_blocks(context, phase_mindset_cues)
-    record_timing("strength", timer_start)
+    strength_blocks, strength_reason_log = _run_stage1_module(
+        module_name="strength",
+        started_code="stage1_strength_block_started",
+        finished_code="stage1_strength_block_finished",
+        label_prefix="Stage 1 strength block",
+        logger=logger,
+        progress_callback=progress_callback,
+        record_timing=record_timing,
+        timing_label="strength",
+        fn=lambda: _generate_strength_blocks(
+            context,
+            phase_mindset_cues,
+            progress_callback=progress_callback,
+        ),
+    )
     strength_count = sum(
         len(strength_reason_log.get(phase, []) or []) for phase in PHASES
     )
@@ -394,9 +465,17 @@ def generate_plan_blocks(
         count=strength_count,
     )
 
-    timer_start = perf_counter()
-    conditioning_blocks, conditioning_reason_log = _generate_conditioning_blocks(context)
-    record_timing("conditioning", timer_start)
+    conditioning_blocks, conditioning_reason_log = _run_stage1_module(
+        module_name="conditioning",
+        started_code="stage1_conditioning_block_started",
+        finished_code="stage1_conditioning_block_finished",
+        label_prefix="Stage 1 conditioning block",
+        logger=logger,
+        progress_callback=progress_callback,
+        record_timing=record_timing,
+        timing_label="conditioning",
+        fn=lambda: _generate_conditioning_blocks(context, progress_callback=progress_callback),
+    )
     conditioning_count = sum(
         len(conditioning_reason_log.get(phase, []) or []) for phase in PHASES
     )
@@ -408,7 +487,6 @@ def generate_plan_blocks(
         count=conditioning_count,
     )
 
-    timer_start = perf_counter()
     (
         rehab_blocks,
         guardrails,
@@ -417,8 +495,17 @@ def generate_plan_blocks(
         current_phase,
         recovery_block,
         nutrition_block,
-    ) = _generate_rehab_support_bundle(context)
-    record_timing("rehab_support_bundle", timer_start)
+    ) = _run_stage1_module(
+        module_name="rehab_support_bundle",
+        started_code="stage1_rehab_block_started",
+        finished_code="stage1_rehab_block_finished",
+        label_prefix="Stage 1 rehab block",
+        logger=logger,
+        progress_callback=progress_callback,
+        record_timing=record_timing,
+        timing_label="rehab_support_bundle",
+        fn=lambda: _generate_rehab_support_bundle(context),
+    )
     if has_injuries:
         rehab_detail = "Rehab protocols and injury guardrails added to every active phase."
     else:
@@ -431,19 +518,36 @@ def generate_plan_blocks(
         has_injuries=has_injuries,
     )
 
-    timer_start = perf_counter()
+    _emit_progress(progress_callback, "stage1_mobility_block_started", "Stage 1 mobility block started")
+    _emit_progress(progress_callback, "stage1_mobility_block_finished", "Stage 1 mobility block finished")
+    _emit_progress(progress_callback, "stage1_recovery_block_started", "Stage 1 recovery block started")
+    _emit_progress(progress_callback, "stage1_recovery_block_finished", "Stage 1 recovery block finished")
+    _emit_progress(progress_callback, "stage1_nutrition_block_started", "Stage 1 nutrition block started")
+    _emit_progress(progress_callback, "stage1_nutrition_block_finished", "Stage 1 nutrition block finished")
+    _emit_progress(progress_callback, "stage1_weekly_schedule_started", "Stage 1 weekly schedule started")
+    _emit_progress(progress_callback, "stage1_weekly_schedule_finished", "Stage 1 weekly schedule finished")
+
     rehab_injury_string = _build_rehab_injury_string(context)
-    coach_review_notes, strength_blocks, conditioning_blocks, substitutions = run_coach_review(
-        injury_string=rehab_injury_string,
-        phase=current_phase,
-        training_context=context.training_context.to_flags(),
-        parsed_injury_entries=context.plan_input.parsed_injuries,
-        exercise_bank=context.exercise_bank,
-        conditioning_banks=[context.conditioning_bank, context.style_conditioning_bank],
-        strength_blocks=strength_blocks,
-        conditioning_blocks=conditioning_blocks,
+    coach_review_notes, strength_blocks, conditioning_blocks, substitutions = _run_stage1_module(
+        module_name="coach_notes",
+        started_code="stage1_coach_notes_started",
+        finished_code="stage1_coach_notes_finished",
+        label_prefix="Stage 1 coach notes",
+        logger=logger,
+        progress_callback=progress_callback,
+        record_timing=record_timing,
+        timing_label="coach_review",
+        fn=lambda: run_coach_review(
+            injury_string=rehab_injury_string,
+            phase=current_phase,
+            training_context=context.training_context.to_flags(),
+            parsed_injury_entries=context.plan_input.parsed_injuries,
+            exercise_bank=context.exercise_bank,
+            conditioning_banks=[context.conditioning_bank, context.style_conditioning_bank],
+            strength_blocks=strength_blocks,
+            conditioning_blocks=conditioning_blocks,
+        ),
     )
-    record_timing("coach_review", timer_start)
     swap_count = len(substitutions or [])
     if swap_count:
         coach_detail = f"Coach review applied {swap_count} safety substitution(s)."

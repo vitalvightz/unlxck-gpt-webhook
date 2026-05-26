@@ -1011,15 +1011,20 @@ class GenerationJobResponse(BaseModel):
     created_at: str
     updated_at: str
     started_at: str | None = None
+    heartbeat_at: str | None = None
     completed_at: str | None = None
     error: str | None = None
     plan_id: str | None = None
     latest_plan_id: str | None = None
+    status_url: str | None = None
+    message: str | None = None
     progress_milestones: list[ProgressMilestone] = Field(default_factory=list)
+    can_retry: bool = False
 
 
 class GenerationRequestPayloadSummary(BaseModel):
     athlete_name: str = ""
+    technical_style: list[str] = Field(default_factory=list)
     fight_date: str = ""
     phase: str = ""
     fight_format: str = ""
@@ -1032,6 +1037,8 @@ class GenerationRequestPayloadSummary(BaseModel):
 
 class AdminGenerationJobDiagnostic(BaseModel):
     job_id: str
+    athlete_id: str = ""
+    intake_id: str | None = None
     status: GenerationJobStatus
     source: str = ""
     created_at: str
@@ -1076,6 +1083,18 @@ class AdminAthleteRecord(BaseModel):
     updated_at: str
     plan_count: int = 0
     latest_plan_created_at: str | None = None
+
+
+class AdminLatestIntakeUpdateRequest(BaseModel):
+    fight_date: str | None = None
+    no_scheduled_fight: bool | None = None
+    rounds_format: str | None = None
+    weekly_training_frequency: int | None = None
+    training_availability: list[str] | None = None
+    equipment_access: list[str] | None = None
+    key_goals: list[str] | None = None
+    weak_areas: list[str] | None = None
+    injuries: str | None = None
 
 
 class AdminPlanSummary(PlanSummary):

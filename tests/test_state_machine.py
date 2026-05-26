@@ -30,6 +30,8 @@ def test_known_status_sets_include_review_and_triage_states() -> None:
 
 def test_generation_job_transition_examples_are_canonical() -> None:
     assert can_transition("generation_job", "queued", "running")
+    assert can_transition("generation_job", "queued", "completed")
+    assert can_transition("generation_job", "queued", "review_required")
     assert can_transition("generation_job", "running", "review_required")
     assert can_transition("generation_job", "running", "failed")
     assert can_transition("generation_job", "failed", "queued")
@@ -64,6 +66,7 @@ def test_status_classification_does_not_mix_job_and_plan_lifecycles() -> None:
 @pytest.mark.parametrize(
     ("plan_status", "job_status"),
     [
+        ("generated", "completed"),
         ("ready", "completed"),
         ("publishable_with_flags", "completed"),
         ("triage_blocked", "completed"),

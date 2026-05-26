@@ -32,6 +32,25 @@ as $$
   );
 $$;
 
+create or replace function public.validate_generation_job_active_lock()
+returns boolean
+language sql
+stable
+as $$
+select exists (
+  select 1
+  from pg_indexes
+  where schemaname = 'public'
+    and tablename = 'generation_jobs'
+    and indexname = 'generation_jobs_one_active_job_per_athlete'
+    and lower(indexdef) like 'create unique index%'
+    and lower(indexdef) like '%(athlete_id)%'
+    and lower(indexdef) like '%where%'
+    and lower(indexdef) like '%queued%'
+    and lower(indexdef) like '%running%'
+);
+$$;
+
 create table if not exists public.profiles (
   id uuid primary key references auth.users(id) on delete cascade,
   email text not null unique,
@@ -153,6 +172,11 @@ create table if not exists public.generation_jobs (
   constraint generation_jobs_athlete_client_request_key unique (athlete_id, client_request_id)
 );
 
+create table if not exists public.plan_generation_rate_limits (
+  athlete_id uuid not null references public.profiles(id) on delete cascade,
+  created_at timestamptz not null default timezone('utc', now())
+);
+
 alter table public.plans add column if not exists draft_plan_text text not null default '';
 alter table public.plans add column if not exists final_plan_text text not null default '';
 alter table public.plans add column if not exists plan_name text not null default '';
@@ -235,6 +259,8 @@ create index if not exists plans_athlete_id_created_at_idx on public.plans (athl
 create index if not exists generation_jobs_athlete_id_created_at_idx on public.generation_jobs (athlete_id, created_at desc);
 create index if not exists generation_jobs_status_heartbeat_at_idx on public.generation_jobs (status, heartbeat_at);
 create unique index if not exists generation_jobs_athlete_client_request_uidx on public.generation_jobs (athlete_id, client_request_id);
+create unique index if not exists generation_jobs_one_active_job_per_athlete on public.generation_jobs (athlete_id) where status in ('queued', 'running');
+create index if not exists plan_generation_rate_limits_athlete_created_idx on public.plan_generation_rate_limits (athlete_id, created_at);
 
 drop trigger if exists profiles_set_updated_at on public.profiles;
 create trigger profiles_set_updated_at
@@ -254,6 +280,143 @@ create trigger profiles_prevent_username_policy_bypass
 before update on public.profiles
 for each row
 execute function public.prevent_username_policy_bypass();
+
+create or replace function public.try_parse_timestamptz(p_value text)
+returns timestamptz
+language plpgsql
+stable
+as $$
+begin
+  return p_value::timestamptz;
+exception when others then
+  return null;
+end;
+$$;
+
+create or replace function public.change_profile_username(
+  p_profile_id uuid,
+  p_username text
+)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_profile public.profiles%rowtype;
+  v_now timestamptz := now();
+  v_cutoff timestamptz := v_now - interval '30 days';
+  v_recent jsonb := '[]'::jsonb;
+  v_next_available timestamptz;
+begin
+  select *
+  into v_profile
+  from public.profiles
+  where id = p_profile_id
+  for update;
+
+  if not found then
+    raise exception 'profile_not_found';
+  end if;
+
+  if v_profile.username is not null and v_profile.username = p_username then
+    return;
+  end if;
+
+  select coalesce(jsonb_agg(to_jsonb(parsed_at)), '[]'::jsonb),
+         min(parsed_at)
+  into v_recent
+       ,v_next_available
+  from (
+    select candidate.parsed_at
+    from (
+      select public.try_parse_timestamptz(value_text) as parsed_at
+      from jsonb_array_elements_text(
+        case
+          when jsonb_typeof(v_profile.username_change_history) = 'array'
+            then v_profile.username_change_history
+          else '[]'::jsonb
+        end
+      ) as value_text
+    ) candidate
+    where candidate.parsed_at is not null and candidate.parsed_at >= v_cutoff
+  ) filtered;
+
+  if jsonb_array_length(v_recent) >= 4 then
+    raise exception 'username_rate_limit_exceeded:%',
+      coalesce((v_next_available + interval '30 days')::text, '');
+  end if;
+
+  update public.profiles
+  set
+    username = p_username,
+    username_change_history = v_recent || to_jsonb(v_now),
+    updated_at = v_now
+  where id = p_profile_id;
+end;
+$$;
+
+revoke execute on function public.change_profile_username(uuid, text) from public;
+revoke execute on function public.change_profile_username(uuid, text) from anon;
+revoke execute on function public.change_profile_username(uuid, text) from authenticated;
+grant execute on function public.change_profile_username(uuid, text) to service_role;
+
+create or replace function public.check_plan_generation_short_window_limit(
+  p_athlete_id uuid,
+  p_max_requests integer,
+  p_window_seconds double precision
+)
+returns table (allowed boolean, retry_after_seconds integer)
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_now timestamptz := timezone('utc', now());
+  v_cutoff timestamptz;
+  v_oldest timestamptz;
+  v_count integer;
+begin
+  if p_max_requests <= 0 then
+    return query select true, 0;
+    return;
+  end if;
+
+  v_cutoff := v_now - make_interval(secs => p_window_seconds);
+
+  perform pg_advisory_xact_lock(
+    hashtext('plan_generation_rate_limits'),
+    hashtext(p_athlete_id::text)
+  );
+
+  delete from public.plan_generation_rate_limits
+  where athlete_id = p_athlete_id
+    and created_at <= v_cutoff;
+
+  select count(*), min(created_at)
+  into v_count, v_oldest
+  from public.plan_generation_rate_limits
+  where athlete_id = p_athlete_id;
+
+  if v_count >= p_max_requests then
+    return query
+    select
+      false,
+      greatest(1, ceil(extract(epoch from ((v_oldest + make_interval(secs => p_window_seconds)) - v_now)))::integer);
+    return;
+  end if;
+
+  insert into public.plan_generation_rate_limits (athlete_id, created_at)
+  values (p_athlete_id, v_now);
+
+  return query select true, 0;
+end;
+$$;
+
+revoke all on function public.check_plan_generation_short_window_limit(uuid, integer, double precision) from public;
+revoke all on function public.check_plan_generation_short_window_limit(uuid, integer, double precision) from anon;
+revoke all on function public.check_plan_generation_short_window_limit(uuid, integer, double precision) from authenticated;
+grant execute on function public.check_plan_generation_short_window_limit(uuid, integer, double precision) to service_role;
 
 drop trigger if exists generation_jobs_set_updated_at on public.generation_jobs;
 create trigger generation_jobs_set_updated_at
@@ -313,6 +476,7 @@ alter table public.profiles enable row level security;
 alter table public.athlete_intakes enable row level security;
 alter table public.plans enable row level security;
 alter table public.generation_jobs enable row level security;
+alter table public.plan_generation_rate_limits enable row level security;
 
 drop policy if exists "profiles_self_or_admin_select" on public.profiles;
 create policy "profiles_self_or_admin_select" on public.profiles

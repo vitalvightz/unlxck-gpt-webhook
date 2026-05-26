@@ -9,6 +9,18 @@ USERNAME_MIGRATION_PATH = (
     / "migrations"
     / "20260518000000_add_profile_username.sql"
 )
+USERNAME_ATOMIC_MIGRATION_PATH = (
+    Path(__file__).resolve().parents[1]
+    / "supabase"
+    / "migrations"
+    / "20260525000000_change_username_atomic_rpc.sql"
+)
+PLAN_RATE_LIMIT_MIGRATION_PATH = (
+    Path(__file__).resolve().parents[1]
+    / "supabase"
+    / "migrations"
+    / "20260525110000_add_plan_generation_short_window_rate_limit.sql"
+)
 
 
 def _read_schema() -> str:
@@ -17,6 +29,14 @@ def _read_schema() -> str:
 
 def _read_username_migration() -> str:
     return USERNAME_MIGRATION_PATH.read_text(encoding="utf-8")
+
+
+def _read_username_atomic_migration() -> str:
+    return USERNAME_ATOMIC_MIGRATION_PATH.read_text(encoding="utf-8")
+
+
+def _read_plan_rate_limit_migration() -> str:
+    return PLAN_RATE_LIMIT_MIGRATION_PATH.read_text(encoding="utf-8")
 
 
 def test_profiles_table_declares_avatar_url_column():
@@ -176,3 +196,105 @@ def test_schema_has_update_delete_rls_policies():
     assert re.search(r'create policy "plans_self_or_admin_delete" on public\.plans\s+for delete\s+using\s+\(athlete_id = auth\.uid\(\) or public\.is_admin\(\)\);', schema, re.IGNORECASE)
     assert re.search(r'create policy "intakes_self_or_admin_delete" on public\.athlete_intakes\s+for delete\s+using\s+\(athlete_id = auth\.uid\(\) or public\.is_admin\(\)\);', schema, re.IGNORECASE)
     assert re.search(r'create policy "generation_jobs_self_or_admin_delete" on public\.generation_jobs\s+for delete\s+using\s+\(athlete_id = auth\.uid\(\) or public\.is_admin\(\)\);', schema, re.IGNORECASE)
+
+
+def test_change_profile_username_rpc_exists_in_schema():
+    schema = _read_schema()
+    parser_function_match = re.search(
+        r"create or replace function public\.try_parse_timestamptz\(p_value text\).*?\$\$;",
+        schema,
+        re.IGNORECASE | re.DOTALL,
+    )
+    assert parser_function_match is not None
+    parser_function_section = parser_function_match.group(0)
+
+    function_match = re.search(
+        r"create or replace function public\.change_profile_username\(.*?\$\$;",
+        schema,
+        re.IGNORECASE | re.DOTALL,
+    )
+    assert function_match is not None
+    function_section = function_match.group(0)
+
+    assert "create or replace function public.change_profile_username(" in schema
+    assert "create or replace function public.try_parse_timestamptz(" in schema
+    assert "stable" in parser_function_section
+    assert "immutable" not in parser_function_section
+    assert "for update;" in schema
+    assert "raise exception 'username_rate_limit_exceeded:%'" in schema
+    assert "(value #>> '{}')::timestamptz" not in schema
+    assert "jsonb_typeof(v_profile.username_change_history) = 'array'" in function_section
+    assert "public.try_parse_timestamptz(value_text)" in function_section
+    assert "value_text::timestamptz" not in function_section
+    assert "revoke execute on function public.change_profile_username(uuid, text) from public;" in schema
+    assert "revoke execute on function public.change_profile_username(uuid, text) from anon;" in schema
+    assert "revoke execute on function public.change_profile_username(uuid, text) from authenticated;" in schema
+    assert "grant execute on function public.change_profile_username(uuid, text) to service_role;" in schema
+
+
+def test_change_profile_username_rpc_migration_exists():
+    migration = _read_username_atomic_migration()
+    parser_function_match = re.search(
+        r"create or replace function public\.try_parse_timestamptz\(p_value text\).*?\$\$;",
+        migration,
+        re.IGNORECASE | re.DOTALL,
+    )
+    assert parser_function_match is not None
+    parser_function_section = parser_function_match.group(0)
+
+    function_match = re.search(
+        r"create or replace function public\.change_profile_username\(.*?\$\$;",
+        migration,
+        re.IGNORECASE | re.DOTALL,
+    )
+    assert function_match is not None
+    function_section = function_match.group(0)
+
+    assert "create or replace function public.change_profile_username(" in migration
+    assert "create or replace function public.try_parse_timestamptz(" in migration
+    assert "stable" in parser_function_section
+    assert "immutable" not in parser_function_section
+    assert "for update;" in migration
+    assert "raise exception 'username_rate_limit_exceeded:%'" in migration
+    assert "(value #>> '{}')::timestamptz" not in migration
+    assert "jsonb_typeof(v_profile.username_change_history) = 'array'" in function_section
+    assert "public.try_parse_timestamptz(value_text)" in function_section
+    assert "value_text::timestamptz" not in function_section
+    assert "revoke execute on function public.change_profile_username(uuid, text) from public;" in migration
+    assert "revoke execute on function public.change_profile_username(uuid, text) from anon;" in migration
+    assert "revoke execute on function public.change_profile_username(uuid, text) from authenticated;" in migration
+    assert "grant execute on function public.change_profile_username(uuid, text) to service_role;" in migration
+
+
+def test_plan_generation_short_window_rate_limit_schema_and_migration():
+    schema = _read_schema()
+    migration = _read_plan_rate_limit_migration()
+
+    for sql in (schema, migration):
+        assert "create table if not exists public.plan_generation_rate_limits (" in sql
+        assert "athlete_id uuid not null references public.profiles(id) on delete cascade" in sql
+        assert "alter table public.plan_generation_rate_limits enable row level security;" in sql
+        assert "create index if not exists plan_generation_rate_limits_athlete_created_idx" in sql
+        assert "create or replace function public.check_plan_generation_short_window_limit(" in sql
+        assert "delete from public.plan_generation_rate_limits" in sql
+        assert "where athlete_id = p_athlete_id" in sql
+        assert "created_at <= v_cutoff" in sql
+        assert "pg_advisory_xact_lock(" in sql
+        assert "hashtext('plan_generation_rate_limits')" in sql
+        assert "hashtext(p_athlete_id::text)" in sql
+        assert (
+            "revoke all on function public.check_plan_generation_short_window_limit(uuid, integer, double precision) from public;"
+            in sql
+        )
+        assert (
+            "revoke all on function public.check_plan_generation_short_window_limit(uuid, integer, double precision) from anon;"
+            in sql
+        )
+        assert (
+            "revoke all on function public.check_plan_generation_short_window_limit(uuid, integer, double precision) from authenticated;"
+            in sql
+        )
+        assert (
+            "grant execute on function public.check_plan_generation_short_window_limit(uuid, integer, double precision) to service_role;"
+            in sql
+        )

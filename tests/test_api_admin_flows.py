@@ -75,6 +75,22 @@ def test_admin_routes_use_env_allowlist_not_stored_role():
     assert response.json()["detail"] == "admin access required"
 
 
+def test_ensure_profile_demotes_stale_admin_role_when_email_removed_from_allowlist():
+    store = FakeStore(admin_emails={"admin@example.com"})
+    user = AuthenticatedUser(
+        user_id="admin-demote-1",
+        email="admin@example.com",
+        full_name="Admin Demote",
+        metadata={},
+    )
+    profile = store.ensure_profile(user)
+    assert profile["role"] == "admin"
+
+    store.admin_emails = set()
+    refreshed = store.ensure_profile(user)
+    assert refreshed["role"] == "athlete"
+
+
 def test_admin_routes_allow_email_in_env_allowlist_even_if_stored_role_is_athlete():
     """A profile with role='athlete' in storage must be allowed if the email
     is in the env allowlist."""
@@ -1336,6 +1352,77 @@ def test_approve_and_resume_full_flow_updates_plan_in_place_with_override_metada
     assert why_log["triage_regeneration_cleared"] is True
 
 
+def test_admin_triage_resume_pre_start_stale_job_preserves_plan_and_intake_links():
+    athlete = AuthenticatedUser(
+        user_id="athlete-1",
+        email="ari@example.com",
+        full_name="Ari Mensah",
+        metadata={},
+    )
+    admin = AuthenticatedUser(
+        user_id="admin-1",
+        email="ops@unlxck.test",
+        full_name="Ops Admin",
+        metadata={},
+    )
+    store = FakeStore()
+    store.ensure_profile(athlete)
+    request = _build_request()
+    intake = store.create_intake(athlete.user_id, request)
+    blocked_plan = store.create_plan(
+        athlete_id=athlete.user_id,
+        intake_id=str(intake["id"]),
+        request=request,
+        result=finalized_result(
+            status="triage_blocked",
+            stage2_status="triage_resume_approved",
+            why_log={
+                "injury_triage": {"mode": "needs_review", "should_block_stage2": True},
+                "triage_resume_approval": {"reason": "first approval"},
+            },
+        ),
+    )
+    stale_job = store.create_or_get_generation_job(
+        athlete_id=athlete.user_id,
+        client_request_id=f"triage_resume_{blocked_plan['id']}",
+        source="admin_triage_resume",
+        request_payload=request.model_dump(mode="json"),
+    )
+    store.update_generation_job(
+        stale_job["id"],
+        status="running",
+        started_at="2026-01-01T00:00:00+00:00",
+        heartbeat_at="2026-01-01T00:00:00+00:00",
+        progress_milestones=[],
+        plan_id=blocked_plan["id"],
+        intake_id=intake["id"],
+    )
+    client = TestClient(
+        create_app(
+            store=store,
+            auth_service=FakeAuthService({"athlete-token": athlete, "admin-token": admin}),
+            planner=lambda payload: stage1_result(),
+            stage2_automator=FakeStage2Automator(result=finalized_result()),
+            enable_in_process_generation=False,
+        )
+    )
+
+    response = client.post(
+        f"/api/admin/plans/{blocked_plan['id']}/approve-and-resume-generation",
+        headers={"Authorization": "Bearer admin-token"},
+        json={"reason": "retry stale pre-start job"},
+    )
+
+    assert response.status_code == 202
+    body = response.json()
+    assert body["job_id"] == stale_job["id"]
+    assert body["status"] == "queued"
+    reset_job = store.get_generation_job(stale_job["id"])
+    assert reset_job["plan_id"] == blocked_plan["id"]
+    assert reset_job["intake_id"] == intake["id"]
+    assert len(store.generation_jobs) == 1
+
+
 def test_medical_hold_cannot_use_approve_and_resume_generation():
     client, store, _ = _build_client()
     athlete = AuthenticatedUser(
@@ -1403,3 +1490,72 @@ def test_curated_review_required_scenarios_are_fast_for_admin_to_resolve():
             raise AssertionError(f"Unexpected resolution strategy: {scenario.expected_resolution}")
 
         assert store.get_plan(plan_id)["status"] == "ready"
+
+def test_admin_can_patch_latest_intake_focus_fields_and_persist():
+    client, store, _ = _build_client()
+    athlete = AuthenticatedUser(user_id="athlete-intake-1", email="a1@example.com", full_name="A One", metadata={})
+    store.ensure_profile(athlete)
+    intake = store.create_intake("athlete-intake-1", _build_request())
+
+    response = client.patch(
+        "/api/admin/athletes/athlete-intake-1/latest-intake",
+        headers={"Authorization": "Bearer admin-token"},
+        json={"key_goals": ["power"], "weak_areas": ["conditioning"]},
+    )
+    assert response.status_code == 200
+    saved = store.get_intake(intake["id"])
+    assert saved["intake"]["key_goals"] == ["power"]
+    assert saved["intake"]["weak_areas"] == ["conditioning"]
+
+
+def test_admin_patch_latest_intake_rejects_over_cap_focus():
+    client, store, _ = _build_client()
+    athlete = AuthenticatedUser(user_id="athlete-intake-2", email="a2@example.com", full_name="A Two", metadata={})
+    store.ensure_profile(athlete)
+    base = _build_request({"fight_date": (datetime.now(timezone.utc) + timedelta(days=2)).date().isoformat()})
+    store.create_intake("athlete-intake-2", base)
+
+    response = client.patch(
+        "/api/admin/athletes/athlete-intake-2/latest-intake",
+        headers={"Authorization": "Bearer admin-token"},
+        json={"key_goals": ["power", "conditioning"], "weak_areas": ["defense"]},
+    )
+    assert response.status_code == 409
+
+
+def test_admin_patch_latest_intake_rejects_wrong_athlete_linkage():
+    client, store, _ = _build_client()
+    athlete = AuthenticatedUser(user_id="athlete-intake-3", email="a3@example.com", full_name="A Three", metadata={})
+    store.ensure_profile(athlete)
+    store.create_intake("athlete-intake-3", _build_request())
+    store.intakes["athlete-intake-3"][-1]["athlete_id"] = "other-athlete"
+
+    response = client.patch(
+        "/api/admin/athletes/athlete-intake-3/latest-intake",
+        headers={"Authorization": "Bearer admin-token"},
+        json={"key_goals": ["power"]},
+    )
+    assert response.status_code == 409
+
+
+def test_admin_patch_latest_intake_uses_store_update_intake():
+    client, store, _ = _build_client()
+    athlete = AuthenticatedUser(user_id="athlete-intake-4", email="a4@example.com", full_name="A Four", metadata={})
+    store.ensure_profile(athlete)
+    intake = store.create_intake("athlete-intake-4", _build_request())
+    calls: list[str] = []
+    original = store.update_intake
+
+    def tracking_update_intake(intake_id: str, *, intake: dict, fight_date: str | None, technical_style: list[str]) -> dict:
+        calls.append(intake_id)
+        return original(intake_id, intake=intake, fight_date=fight_date, technical_style=technical_style)
+
+    store.update_intake = tracking_update_intake  # type: ignore[assignment]
+
+    response = client.patch(
+        "/api/admin/athletes/athlete-intake-4/latest-intake",
+        headers={"Authorization": "Bearer admin-token"},
+        json={"key_goals": ["power"]},
+    )
+    assert response.status_code == 200
+    assert calls == [intake["id"]]

@@ -82,14 +82,8 @@ def test_admin_athlete_profile_includes_latest_intake_details():
 
 
 def test_admin_can_generate_new_plan_from_latest_intake():
-    client, _, _ = _build_client()
-
-    generate_response = client.post(
-        "/api/plans/generate",
-        headers={"Authorization": "Bearer athlete-token"},
-        json=_build_request().model_dump(mode="json"),
-    )
-    assert generate_response.status_code == 202
+    client, store, _ = _build_client()
+    store.create_intake("athlete-1", _build_request())
 
     response = client.post(
         "/api/admin/athletes/athlete-1/plans/generate-from-latest-intake",
@@ -98,6 +92,140 @@ def test_admin_can_generate_new_plan_from_latest_intake():
 
     assert response.status_code == 202
     assert response.json()["athlete_id"] == "athlete-1"
+
+
+def test_admin_generate_uses_selected_athlete_latest_intake_not_admin_draft():
+    client, store, _ = _build_client()
+    admin_request = _build_request({"athlete": {"full_name": "Admin Name", "technical_style": ["mma"]}})
+    store.update_profile("admin-1", ProfileUpdateRequest(onboarding_draft=admin_request.model_dump(mode="json")))
+
+    athlete_request = _build_request({"athlete": {"full_name": "Athlete One", "technical_style": ["boxing"]}})
+    athlete_intake = store.create_intake("athlete-1", athlete_request)
+
+    response = client.post(
+        "/api/admin/athletes/athlete-1/plans/generate-from-latest-intake",
+        headers={"Authorization": "Bearer admin-token"},
+    )
+    assert response.status_code == 202
+
+    job = next(iter(store.generation_jobs.values()))
+    assert job["athlete_id"] == "athlete-1"
+    assert job["intake_id"] == athlete_intake["id"]
+    assert job["source"] == "admin_latest_intake"
+    assert job["request_payload"]["athlete"]["full_name"] == "Athlete One"
+    assert job["request_payload"]["athlete"]["full_name"] != "Admin Name"
+
+    plan = next(iter(store.plans.values()))
+    assert plan["athlete_id"] == "athlete-1"
+
+
+def test_admin_generate_from_latest_intake_rejects_mismatched_intake_athlete():
+    client, store, _ = _build_client()
+    store.intakes["athlete-1"] = [
+        {
+            "id": "intake_bad_link",
+            "athlete_id": "athlete-2",
+            "fight_date": "2099-01-01",
+            "technical_style": ["boxing"],
+            "intake": _build_request().model_dump(mode="json"),
+            "created_at": "2026-01-01T00:00:00+00:00",
+        }
+    ]
+
+    response = client.post(
+        "/api/admin/athletes/athlete-1/plans/generate-from-latest-intake",
+        headers={"Authorization": "Bearer admin-token"},
+    )
+    assert response.status_code == 409
+    assert response.json()["detail"] == "latest intake belongs to a different athlete"
+
+
+def test_admin_generate_rejects_existing_job_with_self_serve_source():
+    client, store, _ = _build_client()
+    latest_intake = store.create_intake("athlete-1", _build_request())
+    store.create_or_get_generation_job(
+        athlete_id="athlete-1",
+        client_request_id="admin-linkage-1",
+        source="self_serve",
+        request_payload=_build_request().model_dump(mode="json"),
+        intake_id=latest_intake["id"],
+    )
+
+    response = client.post(
+        "/api/admin/athletes/athlete-1/plans/generate-from-latest-intake",
+        headers={"Authorization": "Bearer admin-token", "X-Client-Request-Id": "admin-linkage-1"},
+    )
+    assert response.status_code == 409
+    assert response.json()["detail"] == "unsafe existing admin generation job linkage"
+
+
+def test_admin_generate_rejects_existing_admin_job_with_wrong_intake_id():
+    client, store, _ = _build_client()
+    latest_intake = store.create_intake("athlete-1", _build_request())
+    wrong_intake = store.create_intake("athlete-1", _build_request({"athlete": {"full_name": "Wrong Intake"}}))
+    store.intakes["athlete-1"] = [wrong_intake, latest_intake]
+    store.create_or_get_generation_job(
+        athlete_id="athlete-1",
+        client_request_id="admin-linkage-2",
+        source="admin_latest_intake",
+        request_payload=latest_intake["intake"],
+        intake_id=wrong_intake["id"],
+    )
+
+    response = client.post(
+        "/api/admin/athletes/athlete-1/plans/generate-from-latest-intake",
+        headers={"Authorization": "Bearer admin-token", "X-Client-Request-Id": "admin-linkage-2"},
+    )
+    assert response.status_code == 409
+    assert response.json()["detail"] == "unsafe existing admin generation job linkage"
+
+
+def test_admin_generate_rejects_existing_admin_job_with_mismatched_payload():
+    client, store, _ = _build_client()
+    latest_intake = store.create_intake("athlete-1", _build_request())
+    store.create_or_get_generation_job(
+        athlete_id="athlete-1",
+        client_request_id="admin-linkage-3",
+        source="admin_latest_intake",
+        request_payload=_build_request({"athlete": {"full_name": "Bad Payload"}}).model_dump(mode="json"),
+        intake_id=latest_intake["id"],
+    )
+
+    response = client.post(
+        "/api/admin/athletes/athlete-1/plans/generate-from-latest-intake",
+        headers={"Authorization": "Bearer admin-token", "X-Client-Request-Id": "admin-linkage-3"},
+    )
+    assert response.status_code == 409
+    assert response.json()["detail"] == "unsafe existing admin generation job linkage"
+
+
+def test_admin_generate_resets_stale_existing_job_to_admin_latest_intake_linkage():
+    client, store, _ = _build_client()
+    latest_intake = store.create_intake("athlete-1", _build_request({"athlete": {"full_name": "Latest Name"}}))
+    existing_job = store.create_or_get_generation_job(
+        athlete_id="athlete-1",
+        client_request_id="admin-linkage-4",
+        source="self_serve",
+        request_payload=_build_request({"athlete": {"full_name": "Old Name"}}).model_dump(mode="json"),
+        intake_id=None,
+    )
+    store.update_generation_job(
+        existing_job["id"],
+        status="running",
+        started_at="2020-01-01T00:00:00+00:00",
+        heartbeat_at="2020-01-01T00:00:00+00:00",
+    )
+
+    response = client.post(
+        "/api/admin/athletes/athlete-1/plans/generate-from-latest-intake",
+        headers={"Authorization": "Bearer admin-token", "X-Client-Request-Id": "admin-linkage-4"},
+    )
+    assert response.status_code == 202
+    job = store.get_generation_job(response.json()["job_id"])
+    assert job is not None
+    assert job["source"] == "admin_latest_intake"
+    assert job["intake_id"] == latest_intake["id"]
+    assert job["request_payload"]["athlete"]["full_name"] == "Latest Name"
 
 
 def test_admin_generation_does_not_consume_self_serve_daily_limit(monkeypatch: pytest.MonkeyPatch):
@@ -115,7 +243,7 @@ def test_admin_generation_does_not_consume_self_serve_daily_limit(monkeypatch: p
         "/api/admin/athletes/athlete-1/plans/generate-from-latest-intake",
         headers={"Authorization": "Bearer admin-token", "X-Client-Request-Id": "admin-1"},
     )
-    assert admin.status_code == 202
+    assert admin.status_code == 409
 
     retry_same = client.post(
         "/api/plans/generate",
@@ -129,7 +257,43 @@ def test_admin_generation_does_not_consume_self_serve_daily_limit(monkeypatch: p
         headers={"Authorization": "Bearer athlete-token", "X-Client-Request-Id": "self-serve-2"},
         json=_build_request().model_dump(mode="json"),
     )
-    assert second_new.status_code == 429
+    assert second_new.status_code == 409
+
+
+def test_self_serve_generation_rejects_new_job_when_another_job_is_active():
+    client, _, _ = _build_client()
+    first = client.post(
+        "/api/plans/generate",
+        headers={"Authorization": "Bearer athlete-token", "X-Client-Request-Id": "active-1"},
+        json=_build_request().model_dump(mode="json"),
+    )
+    assert first.status_code == 202
+
+    second = client.post(
+        "/api/plans/generate",
+        headers={"Authorization": "Bearer athlete-token", "X-Client-Request-Id": "active-2"},
+        json=_build_request().model_dump(mode="json"),
+    )
+    assert second.status_code == 409
+    assert second.json()["detail"] == "A generation job is already queued or running for this account."
+
+
+def test_admin_generate_from_latest_intake_is_idempotent_for_same_client_request_id():
+    client, store, _ = _build_client()
+    store.create_intake("athlete-1", _build_request())
+
+    first = client.post(
+        "/api/admin/athletes/athlete-1/plans/generate-from-latest-intake",
+        headers={"Authorization": "Bearer admin-token", "X-Client-Request-Id": "admin-retry-1"},
+    )
+    assert first.status_code == 202
+
+    retry_same = client.post(
+        "/api/admin/athletes/athlete-1/plans/generate-from-latest-intake",
+        headers={"Authorization": "Bearer admin-token", "X-Client-Request-Id": "admin-retry-1"},
+    )
+    assert retry_same.status_code == 202
+    assert retry_same.json()["job_id"] == first.json()["job_id"]
 
 
 def test_admin_generate_from_latest_intake_requires_existing_intake():

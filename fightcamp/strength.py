@@ -3,6 +3,7 @@ import os
 import json
 import random
 import re
+from time import perf_counter
 from types import SimpleNamespace
 from collections import defaultdict
 from .training_context import (
@@ -51,6 +52,7 @@ from .normalization import normalize_fight_format as _normalize_fight_format
 from .selection_metadata import build_score_evidence, normalize_selection_metadata
 from .weight_cut import compute_cut_severity_score, cut_severity_bucket
 from .priority_clarification_tags import derive_clarification_tags
+from .stage1_fail_safe import bounded_max_iterations, log_fail_safe_degrade
 from .priority_profile import (
     PRIMARY_GOAL_WEIGHT,
     PRIMARY_WEAKNESS_WEIGHT,
@@ -744,11 +746,22 @@ def _apply_late_strength_diversity_dampener(
     family_counts: dict[str, int] = defaultdict(int)
     reordered: list[tuple[dict, float, dict]] = []
     idx = 0
+    guard = 0
+    max_iter = max(len(weighted_exercises) * 4, 8)
     while idx < len(weighted_exercises):
+        guard += 1
+        if guard > max_iter:
+            logger.warning("[stage1] loop_guard_break module=late_strength_dampener_outer")
+            break
         leader_score = weighted_exercises[idx][1]
         group = [weighted_exercises[idx]]
         idx += 1
+        inner_guard = 0
         while idx < len(weighted_exercises) and leader_score - weighted_exercises[idx][1] <= LATE_STRENGTH_TRUE_CLUSTER_BAND:
+            inner_guard += 1
+            if inner_guard > max_iter:
+                logger.warning("[stage1] loop_guard_break module=late_strength_dampener_inner")
+                break
             group.append(weighted_exercises[idx])
             idx += 1
         if len(group) > 1 and len({_late_strength_family(exercise) for exercise, _, _ in group}) > 1:
@@ -1252,6 +1265,40 @@ def format_strength_block(phase: str, fatigue: str, exercises: list[dict]) -> st
 
 
 def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
+    strength_started_at = perf_counter()
+    substep_callback = flags.get("strength_substep_callback")
+    logger = logging.getLogger(__name__)
+
+    def _run_substep(step_name: str, fn):
+        started_code = f"stage1_strength_{step_name}_started"
+        finished_code = f"stage1_strength_{step_name}_finished"
+        if callable(substep_callback):
+            substep_callback(started_code, f"Stage 1 strength {step_name} started")
+        started_at = perf_counter()
+        try:
+            result = fn()
+        except Exception:
+            elapsed = perf_counter() - started_at
+            logger.info("[stage1] strength_substep_elapsed step=%s elapsed=%.2f", step_name, elapsed)
+            if elapsed > 5.0:
+                logger.warning("[stage1] slow_strength_substep step=%s elapsed=%.2f", step_name, elapsed)
+            raise
+        elapsed = perf_counter() - started_at
+        logger.info("[stage1] strength_substep_elapsed step=%s elapsed=%.2f", step_name, elapsed)
+        if elapsed > 5.0:
+            logger.warning("[stage1] slow_strength_substep step=%s elapsed=%.2f", step_name, elapsed)
+        if callable(substep_callback):
+            substep_callback(finished_code, f"Stage 1 strength {step_name} finished")
+        return result
+
+    def _run_real_poststep(step_name: str, fn):
+        started_at = perf_counter()
+        result = _run_substep(step_name, fn)
+        elapsed = perf_counter() - started_at
+        if elapsed > 5.0:
+            logger.warning("[stage1] slow_strength_poststep step=%s phase=%s elapsed=%.2f", step_name, phase, elapsed)
+        return result
+
     phase = flags.get("phase", "GPP").upper()
     seed = flags.get("random_seed")
     rng = random.Random(seed) if seed is not None else None
@@ -1492,7 +1539,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
             -order_idx,
         )
 
-    for ex in exercise_bank:
+    for ex in _run_substep("candidate_pool", lambda: exercise_bank):
         tags = ex.get("tags", [])
         tags_lower = set(normalize_tags(tags))
         if _exercise_late_windows(ex) and not active_late_window:
@@ -1670,7 +1717,10 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
         days_count = 3
     # Target exercise count determined by phase multipliers
 
-    if len(weighted_exercises) < target_exercises:
+    def _fill_fallback_candidates() -> None:
+        nonlocal weighted_exercises
+        if len(weighted_exercises) >= target_exercises:
+            return
         fallback_exercises = []
         for ex in exercise_bank:
             if ex in [we[0] for we in weighted_exercises]:
@@ -1723,6 +1773,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
             if len(fallback_exercises) >= target_exercises - len(weighted_exercises):
                 break
         weighted_exercises += [(ex, 0, {}) for ex in fallback_exercises]
+    _run_real_poststep("top_selection", _fill_fallback_candidates)
 
     # Keep score pairs for later lookups
     score_lookup = {ex["name"]: score for ex, score, _ in weighted_exercises}
@@ -1743,6 +1794,65 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
         restrictions=restrictions,
         ignore_restrictions=ignore_restrictions,
     )
+    def _exercise_key(exercise: dict) -> str:
+        return str(exercise.get("id") or exercise.get("name") or id(exercise))
+
+    profile_cache: dict[str, dict] = {}
+    movement_cache: dict[str, str] = {}
+    tags_cache: dict[str, set[str]] = {}
+    equipment_cache: dict[str, set[str]] = {}
+    guarded_decision_cache: dict[tuple[str, str], Decision] = {}
+    injury_match_cache: dict[tuple[str, tuple[str, ...], tuple[str, ...]], bool] = {}
+    post_score_late_eval_cache: dict[str, dict] = {}
+    late_safe_profile_cache: dict[tuple[str, tuple], dict] = {}
+
+    def _cached_classify(exercise: dict) -> dict:
+        key = _exercise_key(exercise)
+        if key not in profile_cache:
+            profile_cache[key] = classify_strength_item(exercise)
+        return profile_cache[key]
+
+    def _cached_movement(exercise: dict) -> str:
+        key = _exercise_key(exercise)
+        if key not in movement_cache:
+            movement_cache[key] = normalize_exercise_movement(exercise)
+        return movement_cache[key]
+
+    def _cached_tags(exercise: dict) -> set[str]:
+        key = _exercise_key(exercise)
+        if key not in tags_cache:
+            tags_cache[key] = set(normalize_tags(exercise.get("tags", [])))
+        return tags_cache[key]
+
+    def _cached_equipment(exercise: dict) -> set[str]:
+        key = _exercise_key(exercise)
+        if key not in equipment_cache:
+            equipment_cache[key] = set(normalize_equipment_list(exercise.get("equipment", [])))
+        return equipment_cache[key]
+
+    def _cached_guarded_decision(exercise: dict) -> Decision:
+        key = (_exercise_key(exercise), phase)
+        if key not in guarded_decision_cache:
+            guarded_decision_cache[key] = _guarded_injury_decision(exercise)
+        return guarded_decision_cache[key]
+
+    def _cached_injury_match(exercise: dict, fields: tuple[str, ...], risk_levels: tuple[str, ...]) -> bool:
+        key = (_exercise_key(exercise), fields, risk_levels)
+        if key not in injury_match_cache:
+            injury_match_cache[key] = bool(injury_match_details(exercise, injuries, fields=fields, risk_levels=risk_levels))
+        return injury_match_cache[key]
+
+    def _cached_post_score_late_eval(exercise: dict, fallback_score: float) -> dict:
+        key = f"{_exercise_key(exercise)}:{round(float(fallback_score or 0.0), 4)}"
+        if key not in post_score_late_eval_cache:
+            post_score_late_eval_cache[key] = _get_post_score_late_eval(exercise, fallback_score=fallback_score)
+        return post_score_late_eval_cache[key]
+
+    def _cached_late_safe_profile(exercise: dict, profile: dict, late_eval: dict) -> dict:
+        key = (_exercise_key(exercise), tuple(sorted(late_eval.get("reason_codes", []))), bool(late_eval.get("blocked")))
+        if key not in late_safe_profile_cache:
+            late_safe_profile_cache[key] = _late_safe_marker_profile(exercise, profile=profile, late_eval=late_eval)
+        return late_safe_profile_cache[key]
 
     def _selected_names(exercises: list[dict]) -> set[str]:
         return {ex.get("name") for ex in exercises if ex.get("name")}
@@ -1758,11 +1868,11 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
             cand_name = cand.get("name")
             if not cand_name or cand_name in blocked_names:
                 continue
-            profile = classify_strength_item(cand)
-            late_eval = _get_post_score_late_eval(cand, fallback_score=cand_score)
+            profile = _cached_classify(cand)
+            late_eval = _cached_post_score_late_eval(cand, fallback_score=cand_score)
             if active_late_window and late_eval["blocked"]:
                 continue
-            late_safe_profile = _late_safe_marker_profile(
+            late_safe_profile = _cached_late_safe_profile(
                 cand,
                 profile=profile,
                 late_eval=late_eval,
@@ -1830,7 +1940,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
         support_positions = [
             idx
             for idx, exercise in enumerate(exercises)
-            if classify_strength_item(exercise)["support_only"]
+            if _cached_classify(exercise)["support_only"]
         ]
         candidate_indices = support_positions or list(range(len(exercises)))
         if not candidate_indices:
@@ -1868,14 +1978,14 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
             cand_name = cand.get("name")
             if not cand_name or cand_name in blocked_names:
                 continue
-            profile = classify_strength_item(cand)
-            late_eval = _get_post_score_late_eval(
+            profile = _cached_classify(cand)
+            late_eval = _cached_post_score_late_eval(
                 cand,
                 fallback_score=score_lookup.get(cand_name, 0.0),
             )
             if active_late_window and late_eval["blocked"]:
                 continue
-            late_safe_profile = _late_safe_marker_profile(
+            late_safe_profile = _cached_late_safe_profile(
                 cand,
                 profile=profile,
                 late_eval=late_eval,
@@ -1938,7 +2048,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
     def _maybe_add_force_isometric(exercises: list[dict]) -> list[dict]:
         if phase not in {"GPP", "SPP"}:
             return exercises
-        selected_profiles = [classify_strength_item(ex) for ex in exercises]
+        selected_profiles = [_cached_classify(ex) for ex in exercises]
         if any(profile["force_isometric"] for profile in selected_profiles):
             return exercises
         protective_context = bool(injuries or restrictions or fatigue in {"moderate", "high"})
@@ -1980,7 +2090,13 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
     def _enforce_session_quality(exercises: list[dict]) -> list[dict]:
         updated = list(exercises)
         support_cap = max(num_strength_sessions * SESSION_SUPPORT_CAP_MULTIPLIER, 2)
+        guard = 0
         while count_support_only(updated) > support_cap:
+            guard += 1
+            max_iter = bounded_max_iterations(len(updated))
+            if guard > max_iter:
+                log_fail_safe_degrade(module="strength", phase=phase, reason="session_quality_guard", target=support_cap, actual=count_support_only(updated))
+                break
             selected_names = _selected_names(updated)
             replacement_entry = _best_candidate(
                 lambda cand, _score, _reasons, profile: profile["anchor_capable"],
@@ -2001,6 +2117,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
                 replacement_late_safe_profile=late_safe_profile,
             )
             if not replacement_entry or replace_index is None:
+                log_fail_safe_degrade(module="strength", phase=phase, reason="session_quality_no_replacement", target=support_cap, actual=count_support_only(updated))
                 break
             _replace_exercise(
                 updated,
@@ -2016,7 +2133,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
             positions = session.get("positions", [])
             if not items or not positions:
                 continue
-            has_anchor = any(classify_strength_item(ex)["anchor_capable"] for ex in items)
+            has_anchor = any(_cached_classify(ex)["anchor_capable"] for ex in items)
             if not has_anchor:
                 selected_names = _selected_names(updated)
                 replacement_entry = _best_candidate(
@@ -2028,7 +2145,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
                     local_candidates = [
                         idx
                         for idx, exercise in enumerate(items)
-                        if classify_strength_item(exercise)["support_only"]
+                        if _cached_classify(exercise)["support_only"]
                     ] or list(range(len(items)))
                     if _generic_loaded_anchor(replacement_profile, late_safe_profile):
                         local_candidates = [
@@ -2060,7 +2177,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
                 (
                     idx
                     for idx, exercise in enumerate(items)
-                    if classify_strength_item(exercise)["anchor_capable"]
+                    if _cached_classify(exercise)["anchor_capable"]
                 ),
                 None,
             )
@@ -2072,6 +2189,25 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
                 updated[first_position], updated[anchor_position] = updated[anchor_position], updated[first_position]
         return updated
 
+    candidate_metadata: dict[str, dict[str, object]] = {}
+    for ex, score, reasons in weighted_exercises:
+        name = ex.get("name")
+        if not name:
+            continue
+        profile = _cached_classify(ex)
+        late_eval = _cached_post_score_late_eval(ex, fallback_score=score)
+        candidate_metadata[name] = {
+            "exercise": ex,
+            "score": score,
+            "reasons": reasons,
+            "profile": profile,
+            "movement": _cached_movement(ex),
+            "tags": _cached_tags(ex),
+            "equipment": _cached_equipment(ex),
+            "late_eval": late_eval,
+            "late_safe_profile": _cached_late_safe_profile(ex, profile, late_eval),
+        }
+
     top_pairs = weighted_exercises[:target_exercises]
     top_exercises = [ex for ex, _, _ in top_pairs]
     # Remove any duplicate exercise names that slipped through scoring
@@ -2081,7 +2217,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
     for ex in top_exercises:
         name = ex.get("name")
         if name not in seen_exercises:
-            movement = normalize_exercise_movement(ex)
+            movement = _cached_movement(ex)
             if movement != "unknown" and movement_counts.get(movement, 0) >= 2:
                 continue
             seen_exercises.add(name)
@@ -2104,7 +2240,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
                 drill_name = drill.get("name")
                 if not drill_name:
                     continue
-                if _guarded_injury_decision(drill).action == "exclude":
+                if _cached_guarded_decision(drill).action == "exclude":
                     continue
                 if category not in drill_profile["base_categories"]:
                     continue
@@ -2141,12 +2277,12 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
             continue
         if _exercise_late_windows(ex) and not active_late_window:
             continue
-        if _guarded_injury_decision(ex).action == "exclude":
+        if _cached_guarded_decision(ex).action == "exclude":
             continue
         ex_tags = set(ex.get("tags", []))
         if not ex_tags & athlete_style_set:
             continue
-        ex_eq = set(normalize_equipment_list(ex.get("equipment", [])))
+        ex_eq = _cached_equipment(ex)
         if ex_eq and ex_eq != {"bodyweight"} and not ex_eq.issubset(available_eq):
             continue
         if any(e.get("name") == ex.get("name") for e in base_exercises):
@@ -2163,7 +2299,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
             current_phase=phase,
             fatigue_level=fatigue,
             available_equipment=equipment_access,
-            required_equipment=normalize_equipment_list(ex.get("equipment", [])),
+            required_equipment=list(_cached_equipment(ex)),
             is_rehab=ex.get("method", "").lower() == "rehab",
             priority_profile=priority_profile,
             must_have_bonus_multiplier=must_have_bonus_multiplier,
@@ -2244,7 +2380,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
             reason_lookup[protected_name] = protected_reasons
             return updated
 
-        protected_movement = normalize_exercise_movement(protected_ex)
+        protected_movement = _cached_movement(protected_ex)
         replaceable_indices = [
             idx for idx, exercise in enumerate(updated) if exercise.get("name") not in protected_style_names
         ]
@@ -2254,7 +2390,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
         same_movement_indices = [
             idx
             for idx in replaceable_indices
-            if normalize_exercise_movement(updated[idx]) == protected_movement
+            if _cached_movement(updated[idx]) == protected_movement
         ]
         candidate_indices = same_movement_indices or replaceable_indices
         replace_index = min(
@@ -2280,14 +2416,14 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
         capped: list[dict] = []
         for ex in exercises:
             name = ex.get("name")
-            movement = normalize_exercise_movement(ex)
+            movement = _cached_movement(ex)
             if movement != "unknown" and movement_counts.get(movement, 0) >= 2:
                 if name in protected_names:
                     replaceable_indices = [
                         idx
                         for idx, existing in enumerate(capped)
                         if existing.get("name") not in protected_names
-                        and normalize_exercise_movement(existing) == movement
+                        and _cached_movement(existing) == movement
                     ]
                     if replaceable_indices:
                         replace_index = min(
@@ -2300,43 +2436,49 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
             capped.append(ex)
 
         if len(capped) < target_exercises:
+            guard = 0
             while len(capped) < target_exercises:
+                guard += 1
+                max_iter = bounded_max_iterations(target_exercises)
+                if guard > max_iter:
+                    log_fail_safe_degrade(module="strength", phase=phase, reason="movement_caps_guard", target=target_exercises, actual=len(capped))
+                    break
                 selected_names = _selected_names(capped)
                 replacement_entry = _best_candidate(
                     lambda cand, _score, _reasons, _profile: (
-                        normalize_exercise_movement(cand) == "unknown"
-                        or movement_counts.get(normalize_exercise_movement(cand), 0) < 2
+                        _cached_movement(cand) == "unknown"
+                        or movement_counts.get(_cached_movement(cand), 0) < 2
                     ),
                     exclude_names=selected_names,
                 )
                 if not replacement_entry:
+                    log_fail_safe_degrade(module="strength", phase=phase, reason="movement_caps_no_replacement", target=target_exercises, actual=len(capped))
                     break
                 cand, _cand_score, cand_reasons, _profile, _late_safe_profile = replacement_entry
-                movement = normalize_exercise_movement(cand)
+                movement = _cached_movement(cand)
                 if movement != "unknown" and movement_counts.get(movement, 0) >= 2:
+                    log_fail_safe_degrade(module="strength", phase=phase, reason="movement_cap_blocked", target=target_exercises, actual=len(capped))
                     break
                 movement_counts[movement] = movement_counts.get(movement, 0) + 1
                 capped.append(cand)
                 reason_lookup.setdefault(cand.get("name"), cand_reasons)
         return capped
 
-    base_exercises = _ensure_protected_style_selection(base_exercises)
-    base_exercises = _apply_movement_caps(base_exercises, protected_names=protected_style_names)
-    base_exercises = _promote_base_categories(base_exercises)
-    base_exercises = _ensure_protected_style_selection(base_exercises)
-    base_exercises = _apply_movement_caps(base_exercises, protected_names=protected_style_names)
-    base_exercises = _maybe_add_force_isometric(base_exercises)
-    base_exercises = _ensure_protected_style_selection(base_exercises)
-    base_exercises = _apply_movement_caps(base_exercises, protected_names=protected_style_names)
-    base_exercises = _enforce_session_quality(base_exercises)
-    base_exercises = _ensure_protected_style_selection(base_exercises)
-    base_exercises = _apply_movement_caps(base_exercises, protected_names=protected_style_names)
+    base_exercises = _run_real_poststep("protected_style_selection", lambda: _ensure_protected_style_selection(base_exercises))
+    base_exercises = _run_real_poststep("movement_caps_pass_1", lambda: _apply_movement_caps(base_exercises, protected_names=protected_style_names))
+    base_exercises = _run_real_poststep("base_category_promotion", lambda: _promote_base_categories(base_exercises))
+    base_exercises = _run_real_poststep("style_injection", lambda: _ensure_protected_style_selection(base_exercises))
+    base_exercises = _run_real_poststep("movement_caps_pass_2", lambda: _apply_movement_caps(base_exercises, protected_names=protected_style_names))
+    base_exercises = _run_real_poststep("force_isometric", lambda: _maybe_add_force_isometric(base_exercises))
+    base_exercises = _run_real_poststep("universal_insertion", lambda: _ensure_protected_style_selection(base_exercises))
+    base_exercises = _run_real_poststep("movement_caps_pass_3", lambda: _apply_movement_caps(base_exercises, protected_names=protected_style_names))
+    base_exercises = _run_real_poststep("session_quality", lambda: _enforce_session_quality(base_exercises))
 
     # ------ CONFLICT GUARD: heavy RDL with med-ball rotation ------
     def _enforce_conflicts(ex_list):
         has_med_ball_rot = any(
-            "medicine_ball" in normalize_equipment_list(ex.get("equipment", []))
-            and "rotational" in set(normalize_tags(ex.get("tags", [])))
+            "medicine_ball" in _cached_equipment(ex)
+            and "rotational" in _cached_tags(ex)
             for ex in ex_list
         )
         if not has_med_ball_rot:
@@ -2349,8 +2491,8 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
                         cand.get("name", "").lower() != name_lower
                         and "heavy rdl" not in cand.get("name", "").lower()
                         and not (
-                            "medicine_ball" in normalize_equipment_list(cand.get("equipment", []))
-                            and "rotational" in set(normalize_tags(cand.get("tags", [])))
+                            "medicine_ball" in _cached_equipment(cand)
+                            and "rotational" in _cached_tags(cand)
                         )
                     ),
                     exclude_names=_selected_names(ex_list) - {ex.get("name")},
@@ -2361,7 +2503,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
                     reason_lookup[cand.get("name")] = cand_reasons
                     return
 
-    _enforce_conflicts(base_exercises)
+    _run_real_poststep("conflict_guard", lambda: _enforce_conflicts(base_exercises))
 
     def _finalize_injury_safe_exercises(ex_list: list[dict]) -> list[dict]:
         used_names = {ex.get("name") for ex in ex_list if ex.get("name")}
@@ -2377,8 +2519,12 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
                 "bucket": reason.get("bucket"),
                 "matched_tags": list(decision.matched_tags or []),
             })
-        for ex in ex_list:
-            decision = _guarded_injury_decision(ex)
+        max_scan = bounded_max_iterations(len(ex_list))
+        for scan_count, ex in enumerate(ex_list, start=1):
+            if scan_count > max_scan:
+                log_fail_safe_degrade(module="strength", phase=phase, reason="injury_finalize_scan_guard", target=len(ex_list), actual=len(updated))
+                break
+            decision = _cached_guarded_decision(ex)
             if decision.action != "exclude":
                 updated.append(ex)
                 continue
@@ -2399,6 +2545,8 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
                     continue
                 candidate_pool.append(cand)
                 safe_reasons[cand_name] = cand_reasons
+                if len(candidate_pool) >= bounded_max_iterations(len(ex_list), multiplier=6, floor=16):
+                    break
 
             if candidate_pool:
                 replacement, replacement_decision = pick_safe_replacement(
@@ -2415,12 +2563,13 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
                 _log_replacement(f"strength:{phase}", ex.get("name", "<unnamed>"), rep_name or "<unnamed>")
                 updated.append(replacement)
             else:
+                log_fail_safe_degrade(module="strength", phase=phase, reason="injury_finalize_no_replacement", target=len(ex_list), actual=len(updated))
                 updated.append(None)
         finalized: list[dict] = []
         for ex in updated:
             if not ex:
                 continue
-            final_decision = _guarded_injury_decision(ex)
+            final_decision = _cached_guarded_decision(ex)
             if final_decision.action == "exclude":
                 _record_exclusion(ex, final_decision)
                 # Log exclusion using new helper
@@ -2436,21 +2585,18 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
             return ex_list
         used_names = {ex.get("name") for ex in ex_list if ex.get("name")}
         updated: list[dict] = []
-        for ex in ex_list:
-            if not injury_match_details(
-                ex, injuries, fields=("name", "movement", "method"), risk_levels=("exclude",)
-            ):
+        max_scan = bounded_max_iterations(len(ex_list))
+        for scan_count, ex in enumerate(ex_list, start=1):
+            if scan_count > max_scan:
+                log_fail_safe_degrade(module="strength", phase=phase, reason="keyword_guard_scan_guard", target=len(ex_list), actual=len(updated))
+                break
+            if not _cached_injury_match(ex, ("name", "movement", "method"), ("exclude",)):
                 updated.append(ex)
                 continue
             replacement = None
             replacement_entry = _best_candidate(
-                lambda cand, _score, _reasons, _profile: not injury_match_details(
-                    cand,
-                    injuries,
-                    fields=("name", "movement", "method"),
-                    risk_levels=("exclude",),
-                )
-                and _guarded_injury_decision(cand).action != "exclude",
+                lambda cand, _score, _reasons, _profile: not _cached_injury_match(cand, ("name", "movement", "method"), ("exclude",))
+                and _cached_guarded_decision(cand).action != "exclude",
                 exclude_names=used_names,
             )
             if replacement_entry:
@@ -2462,15 +2608,17 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
                 replacement = cand
             if replacement:
                 updated.append(replacement)
+            else:
+                log_fail_safe_degrade(module="strength", phase=phase, reason="keyword_guard_no_replacement", target=len(ex_list), actual=len(updated))
         return updated
 
-    base_exercises = _enforce_session_quality(base_exercises)
-    base_exercises = _apply_movement_caps(base_exercises)
-    base_exercises = _finalize_injury_safe_exercises(base_exercises)
-    base_exercises = _final_keyword_guard(base_exercises)
+    base_exercises = _run_real_poststep("injury_safe_finalize_1", lambda: _finalize_injury_safe_exercises(base_exercises))
+    base_exercises = _run_real_poststep("session_quality_final", lambda: _enforce_session_quality(base_exercises))
+    base_exercises = _run_real_poststep("movement_caps_final", lambda: _apply_movement_caps(base_exercises))
+    base_exercises = _run_real_poststep("injury_safe_finalize_2", lambda: _finalize_injury_safe_exercises(base_exercises))
+    base_exercises = _run_real_poststep("keyword_guard", lambda: _final_keyword_guard(base_exercises))
 
-    for ex in base_exercises:
-        normalize_exercise_movement(ex)
+    _run_real_poststep("movement_normalization", lambda: [_cached_movement(ex) for ex in base_exercises])
 
     if injury_trace and restrictions:
         active_restrictions = sorted({r.get("restriction", "generic_constraint") for r in restrictions})
@@ -2510,8 +2658,13 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
 
     used_days = training_days[:num_strength_sessions]
 
-    strength_output = format_strength_block(phase, fatigue, base_exercises)
-    candidate_reservoir = _build_strength_candidate_reservoir(weighted_exercises)
+    strength_output = _run_real_poststep("format_strength_block", lambda: format_strength_block(phase, fatigue, base_exercises))
+    def _build_capped_candidate_reservoir():
+        capped_weighted = weighted_exercises[:500]
+        if len(weighted_exercises) > len(capped_weighted):
+            log_fail_safe_degrade(module="strength", phase=phase, reason="candidate_reservoir_capped", target=len(weighted_exercises), actual=len(capped_weighted))
+        return _build_strength_candidate_reservoir(capped_weighted)
+    candidate_reservoir = _run_real_poststep("candidate_reservoir_build", _build_capped_candidate_reservoir)
     deduped_late_blocks = {
         (
             entry.get("name", ""),
@@ -2528,20 +2681,30 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
         "ambiguous_tag_gaps": [
             late_window_ambiguous[name]
             for name in sorted(late_window_ambiguous)
-        ],
+        ][:300],
     }
 
     all_tags = []
     for ex in base_exercises:
         all_tags.extend(ex.get("tags", []))
 
-    why_log = []
-    for ex in base_exercises:
-        name = ex.get("name")
-        reasons = reason_lookup.get(name, {}).copy()
-        reasons.setdefault("final_score", score_lookup.get(name, 0))
-        explanation = _strength_explanation(reasons)
-        why_log.append({"name": name, "reasons": reasons, "explanation": explanation})
+    def _build_why_log():
+        entries = []
+        for ex in base_exercises:
+            name = ex.get("name")
+            reasons = reason_lookup.get(name, {}).copy()
+            reasons.setdefault("final_score", score_lookup.get(name, 0))
+            explanation = _strength_explanation(reasons)
+            entries.append({"name": name, "reasons": reasons, "explanation": explanation})
+        return entries
+    why_log = _run_real_poststep("why_log_build", _build_why_log)
+
+    total_elapsed = perf_counter() - strength_started_at
+    logger.info("[stage1] strength_phase_elapsed phase=%s elapsed=%.2f", phase, total_elapsed)
+    if total_elapsed > 10.0:
+        logger.warning("[stage1] slow_strength_phase phase=%s elapsed=%.2f", phase, total_elapsed)
+    if total_elapsed > 30.0:
+        logger.warning("[stage1] slow_strength_total elapsed=%.2f", total_elapsed)
 
     return {
         "block": strength_output,

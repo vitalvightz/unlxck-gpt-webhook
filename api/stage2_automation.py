@@ -8,12 +8,14 @@ from typing import Any, Protocol
 from fightcamp.stage2_pipeline import build_stage2_package, review_stage2_output
 
 _APP_STATUS_READY = "ready"
+_APP_STATUS_PUBLISHABLE_WITH_FLAGS = "publishable_with_flags"
+_APP_STATUS_HELD_FOR_REVIEW = "held_for_review"
 _APP_STATUS_REVIEW_REQUIRED = "review_required"
 _STAGE2_PASS = "stage2_pass"
 _STAGE2_FAILED = "stage2_failed"
 
 logger = logging.getLogger(__name__)
-_DEFAULT_FIRST_PASS_CHAR_LIMIT = 120_000
+_DEFAULT_FIRST_PASS_CHAR_LIMIT = 180_000
 _DEFAULT_OPENAI_MAX_RETRIES = 0
 
 
@@ -54,6 +56,16 @@ def _stage2_openai_max_retries() -> int:
         _DEFAULT_OPENAI_MAX_RETRIES,
         minimum=0,
     )
+
+
+def _stage2_timeout_seconds() -> float:
+    default_timeout = 210.0
+    raw_value = os.getenv("UNLXCK_STAGE2_TIMEOUT_SECONDS", str(default_timeout)).strip()
+    try:
+        return max(1.0, float(raw_value))
+    except ValueError:
+        logger.warning("[stage2] invalid float env UNLXCK_STAGE2_TIMEOUT_SECONDS=%r; using %s", raw_value, default_timeout)
+        return default_timeout
 
 
 def _estimated_input_tokens(prompt: str) -> int:
@@ -156,6 +168,29 @@ def _strip_wrapping_code_fence(text: str) -> str:
     return normalized[first_newline + 1 : -3].strip()
 
 
+
+
+def _response_is_incomplete(response: Any) -> bool:
+    payload = response.model_dump(mode="python") if hasattr(response, "model_dump") else response
+    is_dict = isinstance(payload, dict)
+
+    status = str((payload.get("status") if is_dict else getattr(response, "status", "")) or "").strip().lower()
+    if status == "incomplete":
+        return True
+
+    details = payload.get("incomplete_details") if is_dict else getattr(response, "incomplete_details", None)
+    if details is None:
+        return False
+    if hasattr(details, "model_dump"):
+        details = details.model_dump(mode="python")
+
+    if isinstance(details, dict):
+        detail_text = " ".join(str(value) for value in details.values() if value is not None).lower()
+    else:
+        detail_text = str(details).lower()
+
+    return any(marker in detail_text for marker in ("max_output_tokens", "output", "token", "length"))
+
 def _extract_response_text(response: Any) -> str:
     output_text = getattr(response, "output_text", None)
     if isinstance(output_text, str) and output_text.strip():
@@ -204,10 +239,11 @@ def _approved_result(
     attempt_count: int,
     stage2_status: str,
     retry_text: str = "",
+    app_status: str = _APP_STATUS_READY,
 ) -> dict[str, Any]:
     return {
         **_base_result(stage1_result, draft_plan_text=draft_plan_text),
-        "status": _APP_STATUS_READY,
+        "status": app_status,
         "plan_text": final_plan_text,
         "final_plan_text": final_plan_text,
         "stage2_status": stage2_status,
@@ -228,7 +264,7 @@ def _review_required_result(
 ) -> dict[str, Any]:
     return {
         **_base_result(stage1_result, draft_plan_text=draft_plan_text),
-        "status": _APP_STATUS_REVIEW_REQUIRED,
+        "status": _APP_STATUS_HELD_FOR_REVIEW,
         "plan_text": "",
         "final_plan_text": latest_plan_text,
         "stage2_status": _STAGE2_FAILED,
@@ -250,7 +286,6 @@ class DisabledStage2Automator:
 class OpenAIStage2Automator:
     client: Any
     model: str
-    max_output_tokens: int | None = None
 
     @classmethod
     def from_env(cls) -> Stage2Automator:
@@ -268,8 +303,7 @@ class OpenAIStage2Automator:
             )
 
         model = os.getenv("UNLXCK_STAGE2_MODEL", "gpt-5-mini").strip() or "gpt-5-mini"
-        timeout_seconds = float(os.getenv("UNLXCK_STAGE2_TIMEOUT_SECONDS", "90"))
-        max_output_tokens = os.getenv("UNLXCK_STAGE2_MAX_OUTPUT_TOKENS", "").strip()
+        timeout_seconds = _stage2_timeout_seconds()
         client = AsyncOpenAI(
             api_key=api_key,
             timeout=timeout_seconds,
@@ -278,7 +312,6 @@ class OpenAIStage2Automator:
         return cls(
             client=client,
             model=model,
-            max_output_tokens=int(max_output_tokens) if max_output_tokens else None,
         )
 
     async def _generate_text(self, prompt: str, *, attempt_label: str, source: str) -> str:
@@ -287,8 +320,6 @@ class OpenAIStage2Automator:
             "model": self.model,
             "input": prompt,
         }
-        if self.max_output_tokens is not None:
-            request["max_output_tokens"] = self.max_output_tokens
         logger.info(
             "[stage2] sending %s prompt to model=%s chars=%s",
             attempt_label,
@@ -304,6 +335,10 @@ class OpenAIStage2Automator:
                 ) from exc
             raise Stage2AutomationError(f"Stage 2 model request failed: {exc}") from exc
         response_id = getattr(response, "id", None) or "unknown"
+        if _response_is_incomplete(response):
+            raise Stage2AutomationError(
+                "Stage 2 model response was incomplete before producing a full plan."
+            )
         text = _extract_response_text(response)
         usage = _extract_response_usage(response)
         actual_input_tokens = usage["input_tokens"] or _estimated_input_tokens(prompt)
@@ -347,6 +382,11 @@ class OpenAIStage2Automator:
         )
 
         if first_review["status"] == "PASS":
+            app_status = (
+                _APP_STATUS_PUBLISHABLE_WITH_FLAGS
+                if int(first_review["validator_report"].get("review_flag_count") or 0) > 0
+                else _APP_STATUS_READY
+            )
             return _approved_result(
                 stage1_result,
                 draft_plan_text=draft_plan_text,
@@ -354,6 +394,7 @@ class OpenAIStage2Automator:
                 validator_report=first_review["validator_report"],
                 attempt_count=1,
                 stage2_status=_STAGE2_PASS,
+                app_status=app_status,
             )
 
         logger.warning("[stage2] review required after first_pass: automatic retry disabled")

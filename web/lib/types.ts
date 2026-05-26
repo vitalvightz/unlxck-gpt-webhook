@@ -358,11 +358,16 @@ export type GenerationJobResponse = {
   created_at: string;
   updated_at: string;
   started_at?: string | null;
+  heartbeat_at?: string | null;
   completed_at?: string | null;
   error?: string | null;
   plan_id?: string | null;
   latest_plan_id?: string | null;
+  source?: string | null;
   progress_milestones?: ProgressMilestone[];
+  can_retry?: boolean;
+  status_url?: string | null;
+  message?: string | null;
 };
 
 export type MeResponse = {
@@ -393,6 +398,18 @@ export type AdminAthleteRecord = {
   updated_at: string;
   plan_count: number;
   latest_plan_created_at?: string | null;
+};
+
+export type AdminLatestIntakeUpdateRequest = {
+  fight_date?: string | null;
+  no_scheduled_fight?: boolean;
+  rounds_format?: string | null;
+  weekly_training_frequency?: number | null;
+  training_availability?: string[];
+  equipment_access?: string[];
+  key_goals?: string[];
+  weak_areas?: string[];
+  injuries?: string | null;
 };
 
 export type AdminPlanSummary = PlanSummary & {

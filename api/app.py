@@ -5,12 +5,11 @@ import copy
 import json
 import logging
 import os
+import re
 import time
 import uuid
-from collections import deque
 from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
-from threading import Lock
 from typing import Any, Callable
 from urllib.parse import urlsplit
 
@@ -29,10 +28,12 @@ from fightcamp.weekly_schedule_view import extract_weekly_schedule
 
 from .auth import AuthService, AuthenticatedUser, SupabaseAuthService, is_auth_api_error
 from .environment import is_production_environment
+from .generation_config import generation_job_stale_after_seconds
 from .models import (
     ApproveAndResumeGenerationRequest,
     AdminGenerationJobDiagnostic,
     AdminAthleteRecord,
+    AdminLatestIntakeUpdateRequest,
     AdminPlanOutputs,
     AdminPlanSummary,
     GenerationJobResponse,
@@ -67,6 +68,7 @@ from .generation_runtime import (
     _OPENAI_QUOTA_ADMIN_ERROR,
     _OPENAI_QUOTA_ATHLETE_ERROR,
     default_planner as runtime_default_planner,
+    is_in_process_generation_enabled,
     is_stale_job as runtime_is_stale_job,
     schedule_generation_job_if_needed,
 )
@@ -74,44 +76,26 @@ from .stage2_automation import (
     Stage2Automator,
     build_default_stage2_automator,
 )
-from .store import AppStore, SupabaseAppStore
+from .store import AppStore, SupabaseAppStore, is_startup_stale_generation_job
 
 Planner = Callable[[dict[str, Any]], dict[str, Any]]
 security = HTTPBearer(auto_error=False)
 logger = logging.getLogger(__name__)
 LOCAL_HOST_NAMES = ("localhost", "127.0.0.1", "::1")
-
-
-class SlidingWindowRateLimiter:
-    def __init__(
-        self,
-        *,
-        max_requests: int,
-        window_seconds: float,
-        time_fn: Callable[[], float] | None = None,
-    ):
-        self.max_requests = max_requests
-        self.window_seconds = window_seconds
-        self._time_fn = time_fn or time.monotonic
-        self._lock = Lock()
-        self._requests_by_key: dict[str, deque[float]] = {}
-
-    def check(self, key: str) -> int | None:
-        now = self._time_fn()
-        cutoff = now - self.window_seconds
-        with self._lock:
-            bucket = self._requests_by_key.setdefault(key, deque())
-            while bucket and bucket[0] <= cutoff:
-                bucket.popleft()
-            if len(bucket) >= self.max_requests:
-                retry_after = max(1, int(self.window_seconds - (now - bucket[0])))
-                return retry_after
-            bucket.append(now)
-        return None
+_CLIENT_REQUEST_ID_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$")
 
 
 def _utc_now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
+
+
+def _normalized_client_request_id(raw_value: str | None, fallback_prefix: str) -> str:
+    normalized = (raw_value or "").strip()
+    if not normalized:
+        return f"{fallback_prefix}_{uuid.uuid4().hex}"
+    if _CLIENT_REQUEST_ID_PATTERN.fullmatch(normalized):
+        return normalized
+    raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid X-Client-Request-Id")
 
 
 def _normalize_progress_milestones(raw: Any) -> list[dict[str, Any]]:
@@ -141,28 +125,80 @@ def _normalize_progress_milestones(raw: Any) -> list[dict[str, Any]]:
 def _job_response(
     job: dict[str, Any],
     *,
+    store: AppStore | None = None,
     latest_plan_id: str | None = None,
     viewer_role: str = "athlete",
 ) -> GenerationJobResponse:
+    status_value = str(job.get("status") or "")
+    normalized_status = normalize_generation_job_status(status_value)
     plan_id = str(job.get("plan_id")) if job.get("plan_id") else None
+    resolved_latest_plan_id = latest_plan_id
+    if normalized_status in {"completed", "review_required"} and not plan_id:
+        milestones = _normalize_progress_milestones(job.get("progress_milestones"))
+        for milestone in reversed(milestones):
+            meta = milestone.get("meta")
+            if not isinstance(meta, dict):
+                continue
+            milestone_plan_id = str(meta.get("plan_id") or "").strip()
+            if milestone_plan_id:
+                plan_id = milestone_plan_id
+                break
+        if not plan_id and store is not None:
+            athlete_id = str(job.get("athlete_id") or "").strip()
+            intake_id = str(job.get("intake_id") or "").strip()
+            if athlete_id:
+                latest_plan = store.get_latest_plan(athlete_id)
+                latest_id = str(latest_plan.get("id") or "").strip() if latest_plan else ""
+                latest_intake = str(latest_plan.get("intake_id") or "").strip() if latest_plan else ""
+                latest_status = str(latest_plan.get("status") or "").strip().lower() if latest_plan else ""
+                if latest_id and latest_status != "archived" and (not intake_id or latest_intake == intake_id):
+                    plan_id = latest_id
+        resolved_latest_plan_id = resolved_latest_plan_id or plan_id
     updated_at = job.get("updated_at") or job.get("created_at") or _utc_now_iso()
     error = str(job["error"]) if job.get("error") else None
     if viewer_role != "admin" and error == _OPENAI_QUOTA_ADMIN_ERROR:
         error = _OPENAI_QUOTA_ATHLETE_ERROR
+    can_retry = (
+        normalized_status == "failed"
+        and isinstance(job.get("request_payload"), dict)
+        and not plan_id
+    )
+    status_messages = {
+        "queued": "Generation queued and will be processed shortly.",
+        "running": "Generation started and is processing.",
+        "failed": "Generation failed.",
+        "review_required": "Your plan is ready for review.",
+        "completed": "Your plan is ready.",
+    }
     return GenerationJobResponse(
         job_id=str(job["id"]),
         athlete_id=str(job["athlete_id"]),
         client_request_id=str(job.get("client_request_id") or ""),
-        status=str(job["status"]),
+        status=normalized_status,
         created_at=str(job["created_at"]),
         updated_at=str(updated_at),
         started_at=str(job["started_at"]) if job.get("started_at") else None,
+        heartbeat_at=str(job["heartbeat_at"]) if job.get("heartbeat_at") else None,
         completed_at=str(job["completed_at"]) if job.get("completed_at") else None,
         error=error,
         plan_id=plan_id,
-        latest_plan_id=latest_plan_id or plan_id,
+        latest_plan_id=resolved_latest_plan_id or plan_id,
+        status_url=f"/api/generation-jobs/{job['id']}",
+        message=status_messages.get(normalized_status, "Generation queued and will be processed shortly."),
         progress_milestones=_normalize_progress_milestones(job.get("progress_milestones")),
+        can_retry=can_retry,
     )
+
+
+def normalize_generation_job_status(status: str) -> str:
+    normalized = str(status or "").strip().lower()
+    if normalized == "held_for_review":
+        return "review_required"
+    if normalized in {"publishable_with_flags", "ready"}:
+        return "completed"
+    if normalized in {"queued", "running", "completed", "review_required", "failed"}:
+        return normalized
+    return "failed"
 
 
 def _is_stale_job(job: dict[str, Any], *, stale_after_seconds: int = 90) -> bool:
@@ -203,19 +239,63 @@ def _resume_job_resolved_successfully(job: dict[str, Any]) -> bool:
 
 
 def _generation_job_stale_after_seconds() -> int:
-    fallback_seconds = 1400
-    raw_value = os.getenv("APP_GENERATION_JOB_STALE_AFTER_SECONDS", str(fallback_seconds)).strip()
-    try:
-        parsed = int(raw_value)
-    except ValueError:
-        return fallback_seconds
-    return max(60, parsed)
+    return generation_job_stale_after_seconds(minimum=60)
+
+
+def _find_blocking_generation_job_for_athlete(
+    *,
+    store: AppStore,
+    athlete_id: str,
+    stale_after_seconds: int,
+) -> dict[str, Any] | None:
+    jobs = store.list_generation_jobs_for_athlete(athlete_id, limit=25)
+    for job in jobs:
+        status_value = str(job.get("status") or "")
+        if status_value == "queued":
+            return job
+        if status_value == "running" and not _is_stale_job(
+            job,
+            stale_after_seconds=stale_after_seconds,
+        ):
+            return job
+    return None
+
+
+def _stable_payload_hash(payload: dict[str, Any]) -> str:
+    return json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+
+
+def _find_existing_terminal_job_for_same_payload(
+    *,
+    store: AppStore,
+    athlete_id: str,
+    request_payload: dict[str, Any],
+) -> dict[str, Any] | None:
+    target_hash = _stable_payload_hash(request_payload)
+    jobs = store.list_generation_jobs_for_athlete(athlete_id, limit=25)
+    for job in jobs:
+        job_payload = job.get("request_payload")
+        if not isinstance(job_payload, dict):
+            continue
+        if _stable_payload_hash(job_payload) != target_hash:
+            continue
+        status_value = str(job.get("status") or "").strip().lower()
+        has_plan = bool(str(job.get("plan_id") or "").strip())
+        if status_value in {"completed", "review_required"}:
+            return job
+        if has_plan:
+            return job
+    return None
 
 
 def _request_payload_summary(payload: Any) -> GenerationRequestPayloadSummary:
     if not isinstance(payload, dict):
         return GenerationRequestPayloadSummary()
     athlete = payload.get("athlete") if isinstance(payload.get("athlete"), dict) else {}
+    technical_style_value = athlete.get("technical_style")
+    technical_style: list[str] = []
+    if isinstance(technical_style_value, list):
+        technical_style = [str(item).strip() for item in technical_style_value if str(item).strip()]
     injuries_value = payload.get("injuries")
     injuries: list[str] = []
     if isinstance(injuries_value, list):
@@ -243,11 +323,16 @@ def _request_payload_summary(payload: Any) -> GenerationRequestPayloadSummary:
         weaknesses=[str(item) for item in (payload.get("weak_areas") or []) if isinstance(item, str)],
         injuries=injuries,
         training_availability=availability_summary,
+        technical_style=technical_style,
     )
 
 
 def _admin_generation_job_diagnostic(job: dict[str, Any], *, stale_after_seconds: int) -> AdminGenerationJobDiagnostic:
-    is_stale = str(job.get("status") or "") == "running" and _is_stale_job(job, stale_after_seconds=stale_after_seconds)
+    raw_status = str(job.get("status") or "queued").strip().lower()
+    normalized_status = "completed" if raw_status == "ready" else raw_status
+    if normalized_status not in {"queued", "running", "completed", "review_required", "failed"}:
+        normalized_status = "queued"
+    is_stale = normalized_status == "running" and _is_stale_job(job, stale_after_seconds=stale_after_seconds)
     stale_reason = "Heartbeat timed out while job is still running." if is_stale else None
     error_message = str(job.get("error") or "") or None
     client_request_id = str(job.get("client_request_id") or "")
@@ -260,7 +345,9 @@ def _admin_generation_job_diagnostic(job: dict[str, Any], *, stale_after_seconds
 
     return AdminGenerationJobDiagnostic(
         job_id=str(job.get("id") or ""),
-        status=str(job.get("status") or "queued"),
+        athlete_id=str(job.get("athlete_id") or ""),
+        intake_id=str(job.get("intake_id") or "") or None,
+        status=normalized_status,
         source=str(job.get("source") or ""),
         created_at=str(job.get("created_at") or ""),
         started_at=job.get("started_at"),
@@ -469,15 +556,17 @@ def _validate_production_cors_config(origins: list[str], regex: str | None) -> N
     if not violations:
         return
 
-    # Hotfix: downgrade to a loud warning so a misconfigured production deploy
-    # does not take the entire API offline. Operators should still treat these
-    # as deploy blockers, but the API now boots and serves traffic.
-    # Set APP_STRICT_PRODUCTION_CORS=1 to restore fail-fast behavior.
-    strict = os.getenv("APP_STRICT_PRODUCTION_CORS", "").strip() == "1"
-    for violation in violations:
-        logger.error("[cors] production_cors_unsafe: %s", violation)
-    if strict:
-        raise ValueError("; ".join(violations))
+    allow_unsafe = os.getenv("APP_ALLOW_UNSAFE_PRODUCTION_CORS_BOOT", "").strip() == "1"
+    if allow_unsafe:
+        for violation in violations:
+            logger.critical("[cors] UNSAFE_PRODUCTION_CORS_OVERRIDE_ACTIVE: %s", violation)
+        return
+
+    raise RuntimeError(
+        "Unsafe production CORS configuration. "
+        "Refusing to boot unless APP_ALLOW_UNSAFE_PRODUCTION_CORS_BOOT=1 is set. "
+        + "; ".join(violations)
+    )
 
 
 def _plan_generate_rate_limit_requests() -> int:
@@ -513,19 +602,24 @@ def _plan_generate_daily_limit_per_user() -> int:
         return 5
 
 
-_DAILY_GENERATION_CAP_EXEMPT_EMAILS: frozenset[str] = frozenset(
-    email.strip().lower()
-    for email in os.getenv("APP_DAILY_GENERATION_CAP_EXEMPT_EMAILS", "michaelokaforjr@gmail.com").split(",")
-    if email.strip()
-)
+def _daily_generation_cap_exempt_emails() -> frozenset[str]:
+    return frozenset(
+        email.strip().lower()
+        for email in os.getenv("APP_DAILY_GENERATION_CAP_EXEMPT_EMAILS", "").split(",")
+        if email.strip()
+    )
 
 
 def _is_exempt_from_daily_generation_cap(email: str) -> bool:
-    return email.strip().lower() in _DAILY_GENERATION_CAP_EXEMPT_EMAILS
+    return email.strip().lower() in _daily_generation_cap_exempt_emails()
 
 
-def _default_planner(payload: dict[str, Any]) -> dict[str, Any]:
-    return runtime_default_planner(payload)
+def _default_planner(
+    payload: dict[str, Any],
+    *,
+    progress_callback=None,
+) -> dict[str, Any]:
+    return runtime_default_planner(payload, progress_callback=progress_callback)
 
 
 def _health_payload(*, mode_label: str) -> dict[str, str | bool]:
@@ -604,6 +698,20 @@ def _username_rate_limit_info(history: list[str]) -> UsernameRateLimitInfo:
 
 
 def _map_plan_summary(row: dict[str, Any]) -> PlanSummary:
+    raw_status = str(row.get("status") or "generated")
+    normalized_status = raw_status
+    if raw_status == "review_required":
+        report = row.get("stage2_validator_report") if isinstance(row.get("stage2_validator_report"), dict) else {}
+        report_exists = bool(report)
+        if not report_exists:
+            normalized_status = "held_for_review"
+        else:
+            has_errors = bool(report.get("errors"))
+            has_blocking = bool(report.get("blocking_warnings"))
+            if not has_blocking:
+                warnings = list(report.get("warnings") or [])
+                has_blocking = any(bool(w.get("blocking")) for w in warnings if isinstance(w, dict))
+            normalized_status = "held_for_review" if has_errors or has_blocking else "publishable_with_flags"
     return PlanSummary(
         plan_id=str(row["id"]),
         plan_name=(str(row["plan_name"]).strip() if row.get("plan_name") is not None else None) or None,
@@ -612,7 +720,7 @@ def _map_plan_summary(row: dict[str, Any]) -> PlanSummary:
         fight_date=str(row.get("fight_date") or ""),
         technical_style=list(row.get("technical_style") or []),
         created_at=str(row.get("created_at") or ""),
-        status=str(row.get("status") or "generated"),
+        status=normalized_status,
         pdf_url=row.get("pdf_url"),
     )
 
@@ -764,10 +872,18 @@ def _map_plan_detail(
         else {}
     )
     parsing_metadata = row.get("parsing_metadata") or fallback_parsing_metadata or {}
+    display_plan_text = str(row.get("plan_text") or "")
+    is_legacy_review_required = str(row.get("status") or "").strip().lower() == "review_required"
+    if (
+        not display_plan_text
+        and is_legacy_review_required
+        and summary.status == "publishable_with_flags"
+    ):
+        display_plan_text = str(row.get("final_plan_text") or "")
     return PlanDetail(
         **summary.model_dump(mode="json"),
         outputs=PlanOutputs(
-            plan_text=str(row.get("plan_text") or ""),
+            plan_text=display_plan_text,
             pdf_url=row.get("pdf_url"),
         ),
         safety_state=_map_plan_safety_state(row),
@@ -950,19 +1066,6 @@ def _has_existing_triage_resume_approval(plan_row: dict[str, Any]) -> bool:
     return bool(why_log.get("triage_regeneration_cleared"))
 
 
-def _resume_job_final_status(job: dict[str, Any]) -> str:
-    final_result = job.get("final_result")
-    if isinstance(final_result, dict):
-        return str(final_result.get("status") or "").strip().lower()
-    return ""
-
-
-def _resume_job_resolved_successfully(job: dict[str, Any]) -> bool:
-    if str(job.get("status") or "").strip().lower() != "completed":
-        return False
-    final_status = _resume_job_final_status(job)
-    return final_status not in {"", "triage_blocked", "failed"}
-
 
 def create_app(
     *,
@@ -993,15 +1096,6 @@ def create_app(
     app.state.mode_label = mode_label
     app.state.enable_in_process_generation = enable_in_process_generation
     app.state.active_generation_tasks = set()
-    rate_limit_requests = _plan_generate_rate_limit_requests()
-    app.state.plan_generate_rate_limiter = (
-        SlidingWindowRateLimiter(
-            max_requests=rate_limit_requests,
-            window_seconds=_plan_generate_rate_limit_window_seconds(),
-        )
-        if rate_limit_requests > 0
-        else None
-    )
     cors_origins = _cors_origins()
     cors_regex = _cors_origin_regex()
     _validate_production_cors_config(cors_origins, cors_regex)
@@ -1022,11 +1116,11 @@ def create_app(
         bind_log_context(request_id=request_id, method=request.method, path=request.url.path)
 
         logger.info(
-            "[http] request:start request_id=%s method=%s path=%s query=%s client=%s",
+            "[http] request:start request_id=%s method=%s path=%s has_query=%s client=%s",
             request_id,
             request.method,
             request.url.path,
-            str(request.url.query),
+            bool(request.url.query),
             request.client.host if request.client else "unknown",
         )
 
@@ -1108,9 +1202,6 @@ def create_app(
 
     def get_enable_in_process_generation(request: Request) -> bool:
         return bool(request.app.state.enable_in_process_generation)
-
-    def get_plan_generate_rate_limiter(request: Request) -> SlidingWindowRateLimiter | None:
-        return request.app.state.plan_generate_rate_limiter
 
     def require_user(
         credentials: HTTPAuthorizationCredentials | None = Depends(security),
@@ -1328,7 +1419,6 @@ def create_app(
         stage2: Stage2Automator = Depends(get_stage2_automator),
         active_tasks: set[str] = Depends(get_active_generation_tasks),
         enable_in_process_generation: bool = Depends(get_enable_in_process_generation),
-        rate_limiter: SlidingWindowRateLimiter | None = Depends(get_plan_generate_rate_limiter),
     ) -> GenerationJobResponse:
         focus_validation = validate_performance_focus_selections(
             request_body.fight_date,
@@ -1341,9 +1431,15 @@ def create_app(
                 status_code=status.HTTP_409_CONFLICT,
                 detail=focus_validation.error_message or "Too many focus selections for this camp.",
             )
-        if rate_limiter is not None:
-            retry_after = rate_limiter.check(profile.athlete_id)
-            if retry_after is not None:
+        short_window_limit = _plan_generate_rate_limit_requests()
+        if short_window_limit > 0:
+            allowed, retry_after = await asyncio.to_thread(
+                store.check_plan_generation_short_window_limit,
+                athlete_id=profile.athlete_id,
+                max_requests=short_window_limit,
+                window_seconds=_plan_generate_rate_limit_window_seconds(),
+            )
+            if not allowed:
                 raise HTTPException(
                     status_code=status.HTTP_429_TOO_MANY_REQUESTS,
                     detail={
@@ -1351,13 +1447,26 @@ def create_app(
                         "retry_after_seconds": retry_after,
                     },
                 )
-        client_request_id = (request.headers.get("X-Client-Request-Id") or "").strip() or f"cli_{uuid.uuid4().hex}"
+        client_request_id = _normalized_client_request_id(
+            request.headers.get("X-Client-Request-Id"),
+            "cli",
+        )
         existing_job = await asyncio.to_thread(
             store.get_generation_job_by_client_request_id,
             athlete_id=profile.athlete_id,
             client_request_id=client_request_id,
         )
+        stale_after_seconds = _generation_job_stale_after_seconds()
         if existing_job:
+            if is_startup_stale_generation_job(existing_job, stale_after_seconds=stale_after_seconds):
+                existing_job = await asyncio.to_thread(
+                    store.create_or_get_generation_job,
+                    athlete_id=profile.athlete_id,
+                    client_request_id=client_request_id,
+                    source=str(existing_job.get("source") or "self_serve"),
+                    request_payload=request_body.model_dump(mode="json"),
+                    stale_after_seconds=stale_after_seconds,
+                )
             job = await schedule_generation_job_if_needed(
                 job=existing_job,
                 background_tasks=background_tasks,
@@ -1367,9 +1476,28 @@ def create_app(
                 active_tasks=active_tasks,
                 enable_in_process_generation=enable_in_process_generation,
                 stale_job_checker=_is_stale_job,
-                stale_after_seconds=_generation_job_stale_after_seconds(),
+                stale_after_seconds=stale_after_seconds,
             )
-            return _job_response(job, viewer_role=profile.role)
+            return _job_response(job, store=store, viewer_role=profile.role)
+        recovered_existing = await asyncio.to_thread(
+            _find_existing_terminal_job_for_same_payload,
+            store=store,
+            athlete_id=profile.athlete_id,
+            request_payload=request_body.model_dump(mode="json"),
+        )
+        if recovered_existing:
+            return _job_response(recovered_existing, store=store, viewer_role=profile.role)
+        blocking_job = await asyncio.to_thread(
+            _find_blocking_generation_job_for_athlete,
+            store=store,
+            athlete_id=profile.athlete_id,
+            stale_after_seconds=stale_after_seconds,
+        )
+        if blocking_job:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="A generation job is already queued or running for this account.",
+            )
         daily_limit = _plan_generate_daily_limit_per_user()
         if daily_limit > 0 and profile.role != "admin" and not _is_exempt_from_daily_generation_cap(profile.email):
             utc_midnight = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0).isoformat()
@@ -1392,6 +1520,7 @@ def create_app(
             client_request_id=client_request_id,
             source=resolved_source,
             request_payload=request_body.model_dump(mode="json"),
+            stale_after_seconds=stale_after_seconds,
         )
         job = await schedule_generation_job_if_needed(
             job=job,
@@ -1402,9 +1531,52 @@ def create_app(
             active_tasks=active_tasks,
             enable_in_process_generation=enable_in_process_generation,
             stale_job_checker=_is_stale_job,
-            stale_after_seconds=_generation_job_stale_after_seconds(),
+            stale_after_seconds=stale_after_seconds,
         )
-        return _job_response(job, viewer_role=profile.role)
+        return _job_response(job, store=store, viewer_role=profile.role)
+
+    @app.get("/api/generation-jobs/active", response_model=GenerationJobResponse | None)
+    async def get_active_generation_job(
+        background_tasks: BackgroundTasks,
+        profile: ProfileRecord = Depends(require_profile),
+        store: AppStore = Depends(get_store),
+        planner_fn: Planner = Depends(get_planner),
+        stage2: Stage2Automator = Depends(get_stage2_automator),
+        active_tasks: set[str] = Depends(get_active_generation_tasks),
+        enable_in_process_generation: bool = Depends(get_enable_in_process_generation),
+    ) -> GenerationJobResponse | None:
+        stale_after_seconds = _generation_job_stale_after_seconds()
+        job = await asyncio.to_thread(
+            store.get_active_generation_job_for_athlete,
+            profile.athlete_id,
+            stale_after_seconds=stale_after_seconds,
+        )
+        if not job:
+            return None
+        job = await schedule_generation_job_if_needed(
+            job=job,
+            background_tasks=background_tasks,
+            store=store,
+            planner_fn=planner_fn,
+            stage2=stage2,
+            active_tasks=active_tasks,
+            enable_in_process_generation=enable_in_process_generation,
+            stale_job_checker=_is_stale_job,
+            stale_after_seconds=stale_after_seconds,
+        )
+        return _job_response(job, store=store, viewer_role=profile.role)
+
+    @app.get("/api/generation-jobs/latest", response_model=GenerationJobResponse | None)
+    async def get_latest_generation_job(
+        profile: ProfileRecord = Depends(require_profile),
+        store: AppStore = Depends(get_store),
+    ) -> GenerationJobResponse | None:
+        job = await asyncio.to_thread(store.get_latest_generation_job_for_athlete, profile.athlete_id)
+        if not job:
+            return None
+        if profile.role != "admin" and str(job["athlete_id"]) != profile.athlete_id:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="not allowed")
+        return _job_response(job, store=store, viewer_role=profile.role)
 
     @app.get("/api/generation-jobs/{job_id}", response_model=GenerationJobResponse)
     async def get_generation_job(
@@ -1433,7 +1605,7 @@ def create_app(
             stale_job_checker=_is_stale_job,
             stale_after_seconds=_generation_job_stale_after_seconds(),
         )
-        return _job_response(job, viewer_role=profile.role)
+        return _job_response(job, store=store, viewer_role=profile.role)
 
     @app.post("/api/generation-jobs/{job_id}/retry", response_model=GenerationJobResponse, status_code=202)
     async def retry_generation_job(
@@ -1453,7 +1625,12 @@ def create_app(
         is_admin = profile.role == "admin"
         if not is_admin and str(original["athlete_id"]) != profile.athlete_id:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="generation job not found")
-        if str(original.get("status") or "") != "failed":
+        stale_after_seconds = _generation_job_stale_after_seconds()
+        is_startup_stale = is_startup_stale_generation_job(
+            original,
+            stale_after_seconds=stale_after_seconds,
+        )
+        if str(original.get("status") or "") != "failed" and not is_startup_stale:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
                 detail="only failed generation jobs can be retried",
@@ -1467,7 +1644,14 @@ def create_app(
 
         target_athlete_id = str(original["athlete_id"])
         source = str(original.get("source") or "").strip() or "self_serve"
+        existing_plan_id = str(original.get("plan_id") or "").strip()
+        if existing_plan_id and source != "admin_triage_resume":
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="generation job already produced a saved plan",
+            )
 
+        # Daily cap enforcement: admins and exempt emails are not rate-limited.
         if not is_admin and not _is_exempt_from_daily_generation_cap(profile.email):
             daily_limit = _plan_generate_daily_limit_per_user()
             if daily_limit > 0:
@@ -1484,22 +1668,62 @@ def create_app(
                         detail="Daily generation limit reached. Try again tomorrow.",
                     )
 
-        retry_client_request_id = (request.headers.get("X-Client-Request-Id") or "").strip() or f"retry_{job_id}_{uuid.uuid4().hex}"
+        # If the original job is a pre-start stale running job, reuse its client_request_id
+        # so we reset the existing job instead of creating a duplicate. Otherwise prefer
+        # the header-provided id or generate a retry id.
+        retry_client_request_id = (
+            str(original.get("client_request_id") or "") if is_startup_stale
+            else _normalized_client_request_id(
+                request.headers.get("X-Client-Request-Id"),
+                f"retry_{job_id}",
+            )
+        )
         retry_intake_id = str(original.get("intake_id") or "").strip() or None
-        retry_plan_id = str(original.get("plan_id") or "").strip() or None
+        retry_plan_id = existing_plan_id or None
         if source == "admin_triage_resume" and (not retry_intake_id or not retry_plan_id):
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
                 detail="admin triage resume retry is missing plan/intake linkage",
             )
+        existing_retry_job = await asyncio.to_thread(
+            store.get_generation_job_by_client_request_id,
+            athlete_id=target_athlete_id,
+            client_request_id=retry_client_request_id,
+        )
+        if existing_retry_job:
+            job = await schedule_generation_job_if_needed(
+                job=existing_retry_job,
+                background_tasks=background_tasks,
+                store=store,
+                planner_fn=planner_fn,
+                stage2=stage2,
+                active_tasks=active_tasks,
+                enable_in_process_generation=enable_in_process_generation,
+                stale_job_checker=_is_stale_job,
+                stale_after_seconds=stale_after_seconds,
+            )
+            return _job_response(job, store=store, viewer_role=profile.role)
+        blocking_job = await asyncio.to_thread(
+            _find_blocking_generation_job_for_athlete,
+            store=store,
+            athlete_id=target_athlete_id,
+            stale_after_seconds=stale_after_seconds,
+        )
+        if blocking_job and str(blocking_job.get("id")) != str(original.get("id")):
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="A generation job is already queued or running for this account.",
+            )
+
         job = await asyncio.to_thread(
             store.create_or_get_generation_job,
             athlete_id=target_athlete_id,
             client_request_id=retry_client_request_id,
             source=source,
             request_payload=copy.deepcopy(request_payload),
-            intake_id=retry_intake_id,
             plan_id=retry_plan_id,
+            intake_id=retry_intake_id,
+            stale_after_seconds=stale_after_seconds,
         )
         job = await schedule_generation_job_if_needed(
             job=job,
@@ -1510,9 +1734,9 @@ def create_app(
             active_tasks=active_tasks,
             enable_in_process_generation=enable_in_process_generation,
             stale_job_checker=_is_stale_job,
-            stale_after_seconds=_generation_job_stale_after_seconds(),
+            stale_after_seconds=stale_after_seconds,
         )
-        return _job_response(job, viewer_role=profile.role)
+        return _job_response(job, store=store, viewer_role=profile.role)
 
     @app.get("/api/plans/latest", response_model=PlanDetail)
     def get_latest_plan(
@@ -1607,7 +1831,15 @@ def create_app(
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
         if profile.role != "admin" and str(plan_row["athlete_id"]) != profile.athlete_id:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="not allowed")
-        store.archive_plan(plan_id)
+        if store.has_active_generation_job_for_plan(plan_id):
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Plan has an active generation job. Cancel or wait before deleting.",
+            )
+        if profile.role == "admin" or _is_archived_plan(plan_row):
+            store.delete_plan(plan_id)
+        else:
+            store.archive_plan(plan_id)
         return Response(status_code=status.HTTP_204_NO_CONTENT)
 
     @app.get("/api/admin/plans", response_model=list[AdminPlanSummary])
@@ -1750,7 +1982,7 @@ def create_app(
                         existing_resume_job,
                         stale_after_seconds=stale_after_seconds,
                     ):
-                        return _job_response(existing_resume_job, viewer_role=profile.role)
+                        return _job_response(existing_resume_job, store=store, viewer_role=profile.role)
                     existing_resume_job = await _requeue_existing_resume_job(existing_resume_job)
                     job_status = str(existing_resume_job.get("status") or "").strip().lower()
                 if job_status in {"failed", "completed"} and not _resume_job_final_result_successful(existing_resume_job):
@@ -1768,7 +2000,7 @@ def create_app(
                         stale_job_checker=_is_stale_job,
                         stale_after_seconds=stale_after_seconds,
                     )
-                    return _job_response(job, viewer_role=profile.role)
+                    return _job_response(job, store=store, viewer_role=profile.role)
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
                 detail="this blocked plan has already been approved for resume",
@@ -1787,7 +2019,7 @@ def create_app(
                 )
             if existing_status == "running":
                 if existing_status == "running" and not existing_is_stale:
-                    return _job_response(existing_resume_job, viewer_role=profile.role)
+                    return _job_response(existing_resume_job, store=store, viewer_role=profile.role)
 
         why_log = plan_row.get("why_log") if isinstance(plan_row.get("why_log"), dict) else {}
         triage = why_log.get("injury_triage") if isinstance(why_log.get("injury_triage"), dict) else {}
@@ -1797,7 +2029,6 @@ def create_app(
                 status_code=status.HTTP_409_CONFLICT,
                 detail="approve_and_resume_generation is only allowed for needs_review or restricted_rehab_only plans",
             )
-
         request_payload = await _build_resume_request_payload()
         approval_log = {
             "approved_by_user_id": profile.athlete_id,
@@ -1810,15 +2041,15 @@ def create_app(
         updated_why_log = dict(why_log)
         updated_why_log["triage_resume_approval"] = approval_log
         updated_why_log["triage_regeneration_cleared"] = True
-
         job = await asyncio.to_thread(
             store.create_or_get_generation_job,
             athlete_id=str(plan_row["athlete_id"]),
             client_request_id=client_request_id,
             source="admin_triage_resume",
             request_payload=request_payload,
-            intake_id=intake_id,
             plan_id=plan_id,
+            intake_id=intake_id,
+            stale_after_seconds=stale_after_seconds,
         )
         if not _is_correctly_linked_admin_resume_job(
             job,
@@ -1866,7 +2097,7 @@ def create_app(
             stale_job_checker=_is_stale_job,
             stale_after_seconds=stale_after_seconds,
         )
-        return _job_response(job, viewer_role=profile.role)
+        return _job_response(job, store=store, viewer_role=profile.role)
 
     @app.post("/api/admin/plans/{plan_id}/reject", response_model=PlanDetail)
     def reject_approved_plan(
@@ -2038,6 +2269,18 @@ def create_app(
                 status_code=status.HTTP_409_CONFLICT,
                 detail="latest intake not found for athlete",
             )
+        latest_intake_athlete_id = str(latest_intake.get("athlete_id") or "").strip()
+        latest_intake_id = str(latest_intake.get("id") or "").strip() or None
+        if latest_intake_athlete_id != athlete_id:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="latest intake belongs to a different athlete",
+            )
+        if not latest_intake_id:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="latest intake is missing id",
+            )
         try:
             request_body = PlanRequest.model_validate(latest_intake["intake"])
         except ValidationError as exc:
@@ -2061,13 +2304,85 @@ def create_app(
                 status_code=status.HTTP_409_CONFLICT,
                 detail=focus_validation.error_message or "Too many focus selections for this camp.",
             )
-        client_request_id = (request.headers.get("X-Client-Request-Id") or "").strip() or f"cli_{uuid.uuid4().hex}"
+        client_request_id = _normalized_client_request_id(
+            request.headers.get("X-Client-Request-Id"),
+            "cli",
+        )
+        stale_after_seconds = _generation_job_stale_after_seconds()
+        request_payload = request_body.model_dump(mode="json")
+        existing_job = await asyncio.to_thread(
+            store.get_generation_job_by_client_request_id,
+            athlete_id=athlete_id,
+            client_request_id=client_request_id,
+        )
+        if existing_job:
+            existing_source = str(existing_job.get("source") or "").strip()
+            existing_intake_id = str(existing_job.get("intake_id") or "").strip() or None
+            existing_payload = existing_job.get("request_payload")
+            has_safe_linkage = (
+                existing_source == "admin_latest_intake"
+                and existing_intake_id == latest_intake_id
+                and isinstance(existing_payload, dict)
+                and _stable_payload_hash(existing_payload) == _stable_payload_hash(request_payload)
+            )
+            is_startup_stale = is_startup_stale_generation_job(existing_job, stale_after_seconds=stale_after_seconds)
+            if not has_safe_linkage and not is_startup_stale:
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail="unsafe existing admin generation job linkage",
+                )
+            if is_startup_stale:
+                existing_job = await asyncio.to_thread(
+                    store.create_or_get_generation_job,
+                    athlete_id=athlete_id,
+                    client_request_id=client_request_id,
+                    source="admin_latest_intake",
+                    request_payload=request_payload,
+                    intake_id=latest_intake_id,
+                    stale_after_seconds=stale_after_seconds,
+                )
+                existing_payload_after_reset = existing_job.get("request_payload")
+                if (
+                    str(existing_job.get("source") or "").strip() != "admin_latest_intake"
+                    or str(existing_job.get("intake_id") or "").strip() != (latest_intake_id or "")
+                    or not isinstance(existing_payload_after_reset, dict)
+                    or _stable_payload_hash(existing_payload_after_reset) != _stable_payload_hash(request_payload)
+                ):
+                    raise HTTPException(
+                        status_code=status.HTTP_409_CONFLICT,
+                        detail="unsafe existing admin generation job linkage",
+                    )
+            job = await schedule_generation_job_if_needed(
+                job=existing_job,
+                background_tasks=background_tasks,
+                store=store,
+                planner_fn=planner_fn,
+                stage2=stage2,
+                active_tasks=active_tasks,
+                enable_in_process_generation=enable_in_process_generation,
+                stale_job_checker=_is_stale_job,
+                stale_after_seconds=stale_after_seconds,
+            )
+            return _job_response(job, store=store, viewer_role="admin")
+        blocking_job = await asyncio.to_thread(
+            _find_blocking_generation_job_for_athlete,
+            store=store,
+            athlete_id=athlete_id,
+            stale_after_seconds=stale_after_seconds,
+        )
+        if blocking_job:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="A generation job is already queued or running for this account.",
+            )
         job = await asyncio.to_thread(
             store.create_or_get_generation_job,
             athlete_id=athlete_id,
             client_request_id=client_request_id,
             source="admin_latest_intake",
-            request_payload=request_body.model_dump(mode="json"),
+            request_payload=request_payload,
+            intake_id=latest_intake_id,
+            stale_after_seconds=stale_after_seconds,
         )
         job = await schedule_generation_job_if_needed(
             job=job,
@@ -2078,15 +2393,59 @@ def create_app(
             active_tasks=active_tasks,
             enable_in_process_generation=enable_in_process_generation,
             stale_job_checker=_is_stale_job,
-            stale_after_seconds=_generation_job_stale_after_seconds(),
+            stale_after_seconds=stale_after_seconds,
         )
-        return _job_response(job, viewer_role="admin")
+        return _job_response(job, store=store, viewer_role="admin")
+
+    @app.patch("/api/admin/athletes/{athlete_id}/latest-intake", response_model=AdminAthleteRecord)
+    def update_admin_athlete_latest_intake(
+        athlete_id: str,
+        update: AdminLatestIntakeUpdateRequest,
+        _: ProfileRecord = Depends(require_admin),
+        store: AppStore = Depends(get_store),
+    ) -> AdminAthleteRecord:
+        row = store.get_admin_athlete(athlete_id)
+        if not row:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="athlete not found")
+        latest_intake = store.get_latest_intake(athlete_id)
+        if not latest_intake or not isinstance(latest_intake.get("intake"), dict):
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="latest intake not found for athlete")
+        if str(latest_intake.get("athlete_id") or "").strip() != athlete_id:
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="latest intake belongs to a different athlete")
+        latest_intake_id = str(latest_intake.get("id") or "").strip()
+        if not latest_intake_id:
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="latest intake is missing id")
+        merged = dict(latest_intake["intake"])
+        for field in ("fight_date", "no_scheduled_fight", "rounds_format", "weekly_training_frequency", "training_availability", "equipment_access", "key_goals", "weak_areas", "injuries"):
+            if field in update.model_fields_set:
+                merged[field] = getattr(update, field)
+        try:
+            request_body = PlanRequest.model_validate(merged)
+        except ValidationError as exc:
+            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=exc.errors()) from exc
+        focus_validation = validate_performance_focus_selections(
+            request_body.fight_date,
+            key_goals=request_body.key_goals,
+            weak_areas=request_body.weak_areas,
+            time_zone=request_body.athlete.athlete_timezone,
+        )
+        if focus_validation.is_over_cap:
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=focus_validation.error_message or "Too many focus selections for this camp.")
+        if request_body.weekly_training_frequency and request_body.weekly_training_frequency > len(request_body.training_availability):
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="weekly_training_frequency cannot exceed selected training_availability days")
+        refreshed = store.update_intake(
+            latest_intake_id,
+            intake=request_body.model_dump(mode="json"),
+            fight_date=None if request_body.no_scheduled_fight else (request_body.fight_date.strip() or None),
+            technical_style=list(request_body.athlete.technical_style),
+        )
+        return _map_admin_athlete(row, latest_intake=refreshed)
 
     return app
 
 
 def _build_runtime_app() -> FastAPI:
-    enable_in_process_generation = os.getenv("UNLXCK_ENABLE_IN_PROCESS_GENERATION", "0").strip() == "1"
+    enable_in_process_generation = is_in_process_generation_enabled()
     logger.info(
         "[app] build_runtime_app:start has_supabase_url=%s has_service_role_key=%s in_process_generation=%s",
         bool(os.getenv("SUPABASE_URL")),

@@ -1,11 +1,15 @@
 from __future__ import annotations
 
 import asyncio
+import inspect
 import json
 import logging
 import traceback
 import os
+import threading
 import time
+import multiprocessing as mp
+import queue
 from contextlib import suppress
 from datetime import datetime, timezone
 from typing import Any, Callable
@@ -15,10 +19,11 @@ from fastapi import BackgroundTasks, HTTPException, status
 from fightcamp.main import generate_plan_sync
 
 from .environment import is_production_environment
+from .generation_config import generation_job_stale_after_seconds
 from .models import PlanRequest, ProfileUpdateRequest
 from .stage2_automation import Stage2AutomationError, Stage2AutomationUnavailableError, Stage2Automator
 from .state_machine import job_status_for_plan_status
-from .store import AppStore
+from .store import AppStore, is_pre_start_stale_generation_job
 
 Planner = Callable[..., dict[str, Any]]
 ProgressCallback = Callable[[str, str, str, dict[str, Any]], None]
@@ -37,14 +42,37 @@ class TriageResumeMissingPlanError(RuntimeError):
     pass
 
 
+class AdminLatestIntakeLinkageError(RuntimeError):
+    """Raised when an admin_latest_intake job linkage/ownership validation fails."""
+
+    pass
+
+
 _DETACHED_GENERATION_TASKS: set[asyncio.Task[None]] = set()
 _MAX_PERSISTED_MILESTONES = 40
 _OPENAI_QUOTA_ADMIN_ERROR = "OpenAI quota exceeded. Check API billing, credits, project budget, or organization limits."
 _OPENAI_QUOTA_ATHLETE_ERROR = "Generation is temporarily unavailable. Please try again later."
+_FINAL_RESULT_PERSIST_TIMEOUT_SECONDS = 40.0
+_FINAL_RESULT_PERSIST_TIMEOUT_ERROR = "Stage 2 result persistence timed out before final_result was saved."
+_PLAN_PERSIST_VERIFICATION_ERROR = "Plan persistence verification failed after create_plan."
+_POST_PERSIST_CLEANUP_TIMEOUT_SECONDS = 8.0
+_TERMINAL_GENERATION_JOB_STATUSES = {"completed", "review_required", "failed"}
 
 
 def utc_now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
+
+
+def generation_status_from_plan_status(plan_status: str) -> str:
+    return job_status_for_plan_status(plan_status)
+
+
+def _stable_payload_hash(payload: dict[str, Any]) -> str:
+    try:
+        normalized = json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+    except (TypeError, ValueError):
+        normalized = json.dumps(str(payload), ensure_ascii=False)
+    return normalized
 
 
 def default_planner(
@@ -52,7 +80,32 @@ def default_planner(
     *,
     progress_callback: ProgressCallback | None = None,
 ) -> dict[str, Any]:
+    if progress_callback is not None:
+        progress_callback(
+            "stage1_default_planner_entered",
+            "Stage 1 default planner entered",
+            "",
+            {},
+        )
+        progress_callback(
+            "stage1_generate_plan_sync_entering",
+            "Stage 1 generate_plan_sync entering",
+            "",
+            {},
+        )
     return generate_plan_sync(payload, progress_callback=progress_callback)
+
+
+def _planner_accepts_progress_callback(planner_fn: Planner) -> bool:
+    try:
+        signature = inspect.signature(planner_fn)
+    except (TypeError, ValueError):
+        return True
+
+    parameters = signature.parameters
+    if "progress_callback" in parameters:
+        return True
+    return any(p.kind == inspect.Parameter.VAR_KEYWORD for p in parameters.values())
 
 
 def _invoke_planner(
@@ -61,20 +114,34 @@ def _invoke_planner(
     progress_callback: ProgressCallback | None,
 ) -> dict[str, Any]:
     """Call a planner that may or may not accept a ``progress_callback`` kwarg."""
+    if progress_callback is not None:
+        progress_callback(
+            "stage1_planner_callable_entering",
+            "Stage 1 planner callable entering",
+            "",
+            {},
+        )
     if progress_callback is None:
         return planner_fn(payload)
-    try:
+
+    planner_supports_progress_callback = _planner_accepts_progress_callback(planner_fn)
+    if planner_supports_progress_callback:
+        progress_callback(
+            "stage1_planner_callable_supports_progress_callback",
+            "Stage 1 planner callable supports progress callback",
+            "",
+            {},
+        )
         return planner_fn(payload, progress_callback=progress_callback)
-    except TypeError:
-        # Planners written before milestones existed (or test stubs) won't
-        # accept the kwarg. Fall back transparently.
-        return planner_fn(payload)
+    return planner_fn(payload)
 
 
 def build_progress_recorder(
     *,
     job_id: str,
     store: AppStore,
+    initial_milestones: list[dict[str, Any]] | None = None,
+    should_persist: Callable[[], bool] | None = None,
 ) -> tuple[list[dict[str, Any]], ProgressCallback]:
     """Return a milestone list + callback that persists each emit to the job row.
 
@@ -82,9 +149,12 @@ def build_progress_recorder(
     is fine. Persistence failures are logged and ignored — they must never
     surface into the planner pipeline.
     """
-    milestones: list[dict[str, Any]] = []
+    milestones: list[dict[str, Any]] = list(initial_milestones or [])
 
     def _callback(code: str, label: str, detail: str, meta: dict[str, Any]) -> None:
+        if should_persist is not None and not should_persist():
+            return
+
         entry = {
             "code": code,
             "label": label,
@@ -126,9 +196,13 @@ def parse_datetime(value: Any) -> datetime | None:
     return None
 
 
-def is_stale_job(job: dict[str, Any], *, stale_after_seconds: int = 90) -> bool:
+def is_stale_job(job: dict[str, Any], *, stale_after_seconds: int | None = None) -> bool:
+    if stale_after_seconds is None:
+        stale_after_seconds = generation_job_stale_after_seconds()
     if str(job.get("status") or "") != "running":
         return False
+    if is_pre_start_stale_generation_job(job, stale_after_seconds=stale_after_seconds):
+        return True
     last_progress_at = parse_datetime(job.get("heartbeat_at")) or parse_datetime(job.get("started_at"))
     if last_progress_at is None:
         return False
@@ -149,6 +223,7 @@ def recover_stale_running_job(
         status="failed",
         error=error_message,
         completed_at=utc_now_iso(),
+        heartbeat_at=utc_now_iso(),
     )
 
 
@@ -180,30 +255,49 @@ def _stage2_finalize_timeout_seconds() -> float | None:
 
 
 def _stage1_planner_timeout_seconds() -> float | None:
-    raw_value = os.getenv("APP_STAGE1_PLANNER_TIMEOUT_SECONDS", "240").strip()
+    raw_value = os.getenv("STAGE1_PLANNER_TIMEOUT_SECONDS")
+    if raw_value is None:
+        raw_value = os.getenv("APP_STAGE1_PLANNER_TIMEOUT_SECONDS", "600")
+    raw_value = raw_value.strip()
     if raw_value in {"", "0", "none", "None", "NONE"}:
         if is_production_environment():
             logger.warning(
-                "[jobs] generation:stage1_timeout_disabled_in_production value=%r; falling back to 240s",
+                "[jobs] generation:stage1_timeout_disabled_in_production value=%r; falling back to 600s",
                 raw_value,
             )
-            return 240.0
+            return 600.0
         return None
     try:
         parsed = float(raw_value)
     except ValueError:
         logger.warning(
-            "[jobs] generation:invalid_stage1_timeout value=%r; falling back to 240s",
+            "[jobs] generation:invalid_stage1_timeout value=%r; falling back to 600s",
             raw_value,
         )
-        return 240.0
+        return 600.0
     if parsed <= 0:
         logger.warning(
-            "[jobs] generation:invalid_stage1_timeout value=%r; falling back to 240s",
+            "[jobs] generation:invalid_stage1_timeout value=%r; falling back to 600s",
             raw_value,
         )
-        return 240.0
+        return 600.0
     return parsed
+
+
+def _compact_generation_job_final_result(final_result: dict[str, Any]) -> dict[str, Any]:
+    """Keep generation_jobs.final_result lean; canonical full text lives on plans."""
+    compact: dict[str, Any] = {}
+    for key in (
+        "status",
+        "stage2_status",
+        "stage2_attempt_count",
+        "stage2_validator_report",
+        "stage2_retry_text",
+        "error",
+    ):
+        if key in final_result:
+            compact[key] = final_result.get(key)
+    return compact
 
 
 def _use_fastapi_background_tasks() -> bool:
@@ -211,16 +305,20 @@ def _use_fastapi_background_tasks() -> bool:
     return scheduler in {"fastapi", "background_tasks", "backgroundtasks"}
 
 
+def is_in_process_generation_enabled() -> bool:
+    return os.getenv("UNLXCK_ENABLE_IN_PROCESS_GENERATION", "0").strip() == "1"
+
+
 def generation_max_concurrent_jobs() -> int:
-    raw_value = os.getenv("APP_GENERATION_MAX_CONCURRENT_JOBS", "2").strip()
+    raw_value = os.getenv("APP_GENERATION_MAX_CONCURRENT_JOBS", "1").strip()
     try:
         parsed = int(raw_value)
     except ValueError:
         logger.warning(
-            "[jobs] generation:invalid_max_concurrent_jobs value=%r; falling back to 2",
+            "[jobs] generation:invalid_max_concurrent_jobs value=%r; falling back to 1",
             raw_value,
         )
-        return 2
+        return 1
     return max(1, parsed)
 
 
@@ -253,13 +351,134 @@ def _schedule_detached_generation_task(
     task.add_done_callback(_cleanup_detached_generation_task)
 
 
+
+
+def _run_planner_in_subprocess(
+    planner_fn: Planner,
+    payload: dict[str, Any],
+    result_queue: Any,
+    progress_queue: Any,
+) -> None:
+    def _child_progress_callback(code: str, label: str, detail: str, meta: dict[str, Any]) -> None:
+        progress_queue.put((code, label, detail, meta))
+
+    try:
+        result = _invoke_planner(planner_fn, payload, _child_progress_callback)
+        result_queue.put(("ok", result))
+    except Exception as exc:  # pragma: no cover - defensive relay
+        result_queue.put(("error", {"message": str(exc), "traceback": traceback.format_exc()}))
+
+
+async def _drain_stage1_progress_queue(
+    progress_queue: Any,
+    progress_callback: ProgressCallback | None,
+) -> None:
+    while True:
+        try:
+            code, label, detail, meta = progress_queue.get_nowait()
+        except queue.Empty:
+            return
+        if progress_callback is not None:
+            progress_callback(code, label, detail, meta)
+
+
+def _stage1_mp_start_method() -> str:
+    raw_value = os.getenv("UNLXCK_STAGE1_MP_START_METHOD", "spawn").strip().lower()
+    if raw_value in {"spawn", "fork", "forkserver"}:
+        return raw_value
+    logger.warning(
+        "[jobs] generation:invalid_stage1_mp_start_method value=%r; falling back to spawn",
+        raw_value,
+    )
+    return "spawn"
+
+
+def _stop_stage1_process(process: Any) -> None:
+    if not process.is_alive():
+        return
+    process.terminate()
+    process.join(timeout=1)
+    if process.is_alive():
+        process.kill()
+        process.join(timeout=1)
+
+
+def _read_stage1_result_queue_nowait(result_queue: Any) -> tuple[str, Any] | None:
+    try:
+        return result_queue.get_nowait()
+    except queue.Empty:
+        return None
+
+
+def _handle_stage1_result_message(message: tuple[str, Any]) -> dict[str, Any]:
+    status, payload_or_error = message
+
+    if status == "ok":
+        if not isinstance(payload_or_error, dict):
+            raise RuntimeError("Stage 1 planner returned a non-dict result.")
+        return payload_or_error
+
+    if isinstance(payload_or_error, dict):
+        raise RuntimeError(payload_or_error.get("message") or "Stage 1 planner failed")
+
+    raise RuntimeError("Stage 1 planner failed")
+
+
 async def run_stage1_planner(
     planner_fn: Planner,
     payload: dict[str, Any],
     *,
     progress_callback: ProgressCallback | None = None,
+    timeout_seconds: float | None = None,
 ) -> dict[str, Any]:
-    return await asyncio.to_thread(_invoke_planner, planner_fn, payload, progress_callback)
+    ctx = mp.get_context(_stage1_mp_start_method())
+    result_queue = ctx.Queue()
+    progress_queue = ctx.Queue()
+    process = ctx.Process(
+        target=_run_planner_in_subprocess,
+        args=(planner_fn, payload, result_queue, progress_queue),
+        daemon=True,
+    )
+    process.start()
+
+    start = time.monotonic()
+    try:
+        while True:
+            await _drain_stage1_progress_queue(progress_queue, progress_callback)
+            result_message = _read_stage1_result_queue_nowait(result_queue)
+            if result_message is not None:
+                if progress_callback is not None:
+                    progress_callback(
+                        "stage1_result_queue_received",
+                        "Stage 1 result queue received",
+                        "Parent runtime received the Stage 1 planner result from the subprocess.",
+                        {},
+                    )
+                return _handle_stage1_result_message(result_message)
+            if not process.is_alive():
+                await _drain_stage1_progress_queue(progress_queue, progress_callback)
+                try:
+                    result_message = result_queue.get(timeout=1)
+                except queue.Empty as exc:
+                    raise RuntimeError(
+                        f"Stage 1 planner process exited without result. exitcode={process.exitcode}"
+                    ) from exc
+                return _handle_stage1_result_message(result_message)
+            if timeout_seconds is not None and (time.monotonic() - start) >= timeout_seconds:
+                await _drain_stage1_progress_queue(progress_queue, progress_callback)
+                result_message = _read_stage1_result_queue_nowait(result_queue)
+                if result_message is not None:
+                    return _handle_stage1_result_message(result_message)
+                _stop_stage1_process(process)
+                raise asyncio.TimeoutError
+            await asyncio.sleep(0.05)
+    finally:
+        _stop_stage1_process(process)
+        for q in (result_queue, progress_queue):
+            with suppress(Exception):
+                q.close()
+            with suppress(Exception):
+                q.join_thread()
 
 
 async def finalize_stage2_with_timeout(
@@ -348,13 +567,20 @@ async def run_generation_job(
 ) -> None:
     t_start = time.perf_counter()
     stop_event = asyncio.Event()
-    heartbeat_task = asyncio.create_task(heartbeat_generation_job(job_id, store, stop_event))
+    heartbeat_task: asyncio.Task[None] | None = None
     athlete_id = "unknown"
-    _, progress_callback = build_progress_recorder(job_id=job_id, store=store)
+    progress_callback: ProgressCallback | None = None
+    stage1_timed_out = threading.Event()
+    seen_milestone_codes: set[str] = set()
 
     def _emit_milestone(code: str, label: str, detail: str = "", **meta: Any) -> None:
+        if progress_callback is None:
+            return
+        if code == "stage1_planner_timeout" and code in seen_milestone_codes:
+            return
         try:
             progress_callback(code, label, detail, meta)
+            seen_milestone_codes.add(code)
         except Exception:
             logger.exception("[jobs] generation:milestone_emit_failed job_id=%s code=%s", job_id, code)
 
@@ -372,21 +598,61 @@ async def run_generation_job(
         await _touch_heartbeat()
         return result
 
-    try:
-        job = await _to_thread_with_heartbeat(store.get_generation_job, job_id)
-        if not job:
-            logger.warning("[jobs] generation:job_missing job_id=%s", job_id)
+    async def _ensure_admin_resume_plan_exists(linked_plan_id: str | None) -> None:
+        if job_source != "admin_triage_resume":
             return
-        _emit_milestone(
-            "job_loaded",
-            "Generation job loaded",
-            "Worker loaded the persisted generation job.",
+        if not linked_plan_id:
+            raise TriageResumeMissingPlanError(
+                "admin triage resume job lost its linked plan_id; refusing to continue"
+            )
+        linked = await _to_thread_with_heartbeat(store.get_plan, linked_plan_id)
+        if not linked:
+            raise TriageResumeMissingPlanError(
+                "admin triage resume job linked plan was deleted while generation was running"
+            )
+
+    try:
+        # Claim the job for processing. This implements the worker-claim model
+        # introduced in #1417 while preserving Main's heartbeat-on-read safety.
+        job = await asyncio.to_thread(store.claim_generation_job_start, job_id)
+        if not job:
+            logger.warning("[jobs] generation:claim_unavailable job_id=%s", job_id)
+            return
+
+        # Use persisted milestones as the initial state for the progress recorder.
+        persisted_milestones = job.get("progress_milestones")
+        initial_milestones = persisted_milestones if isinstance(persisted_milestones, list) else []
+        for milestone in initial_milestones:
+            if isinstance(milestone, dict):
+                milestone_code = str(milestone.get("code") or "").strip()
+                if milestone_code:
+                    seen_milestone_codes.add(milestone_code)
+        _, progress_callback = build_progress_recorder(
+            job_id=job_id,
+            store=store,
+            initial_milestones=initial_milestones,
+            should_persist=lambda: not stage1_timed_out.is_set(),
         )
+        heartbeat_task = asyncio.create_task(heartbeat_generation_job(job_id, store, stop_event))
 
         athlete_id = str(job["athlete_id"])
+        raw_request_payload = job.get("request_payload") or {}
+
+        # Triaging override information: track approval flag and any allowed modes.
+        triage_resume_override_approved = False
+        triage_override_allowed_modes: list[Any] = []
+        if isinstance(raw_request_payload, dict):
+            triage_override = raw_request_payload.get(_TRIAGE_RESUME_OVERRIDE_KEY)
+            if isinstance(triage_override, dict):
+                triage_resume_override_approved = triage_override.get("approved") is True
+                modes = triage_override.get("allowed_modes")
+                if isinstance(modes, list):
+                    triage_override_allowed_modes = list(modes)
+
+        # Normalize source and linked ids early for admin resume validation.
         job_source = str(job.get("source") or "").strip().lower()
-        intake_id = str(job.get("intake_id") or "").strip()
         plan_id = str(job.get("plan_id") or "").strip() or None
+        intake_id = str(job.get("intake_id") or "").strip() or None
         admin_resume_plan_row: dict[str, Any] | None = None
 
         if job_source == "admin_triage_resume":
@@ -399,6 +665,7 @@ async def run_generation_job(
                     "admin triage resume job is missing intake_id; refusing to create a duplicate plan"
                 )
 
+            # Use a heartbeat-aware read for the linked plan so the store sees activity.
             admin_resume_plan_row = await _to_thread_with_heartbeat(store.get_plan, plan_id)
             if not admin_resume_plan_row:
                 raise TriageResumeMissingPlanError(
@@ -417,6 +684,7 @@ async def run_generation_job(
                 raise TriageResumeMissingPlanError(
                     "admin triage resume job intake_id does not match linked plan intake_id"
                 )
+
             _emit_milestone(
                 "admin_resume_linkage_validated",
                 "Admin resume linkage validated",
@@ -425,16 +693,23 @@ async def run_generation_job(
                 intake_id=intake_id,
             )
 
-        raw_request_payload = job.get("request_payload") or {}
-        triage_resume_override_approved = False
-        triage_override_allowed_modes: list[Any] = []
-        if isinstance(raw_request_payload, dict):
-            triage_override = raw_request_payload.get(_TRIAGE_RESUME_OVERRIDE_KEY)
-            if isinstance(triage_override, dict):
-                triage_resume_override_approved = triage_override.get("approved") is True
-                modes = triage_override.get("allowed_modes")
-                if isinstance(modes, list):
-                    triage_override_allowed_modes = list(modes)
+        if job_source == "admin_latest_intake":
+            if not intake_id:
+                raise AdminLatestIntakeLinkageError("admin latest intake job is missing intake_id")
+            linked_intake = await _to_thread_with_heartbeat(store.get_intake, intake_id)
+            if not linked_intake:
+                raise AdminLatestIntakeLinkageError("admin latest intake job intake_id was not found")
+            linked_athlete_id = str(linked_intake.get("athlete_id") or "").strip()
+            if linked_athlete_id != athlete_id:
+                raise AdminLatestIntakeLinkageError("admin latest intake job intake belongs to a different athlete")
+            linked_payload = linked_intake.get("intake")
+            if not isinstance(linked_payload, dict):
+                raise AdminLatestIntakeLinkageError("admin latest intake job linked intake payload is invalid")
+            if _stable_payload_hash(linked_payload) != _stable_payload_hash(raw_request_payload):
+                raise AdminLatestIntakeLinkageError(
+                    "admin latest intake job request_payload does not match linked intake payload"
+                )
+
         await _touch_heartbeat()
         request_body = parse_plan_request(raw_request_payload)
         await _touch_heartbeat()
@@ -514,25 +789,30 @@ async def run_generation_job(
                 "Starting the deterministic planner pass.",
             )
             await _touch_heartbeat()
-            planner_coro = run_stage1_planner(
-                planner_fn,
-                planner_payload,
-                progress_callback=progress_callback,
-            )
             _emit_milestone(
                 "stage1_planner_invoked",
                 "Stage 1 planner invoked",
-                "Planner thread was invoked and is waiting for its first result.",
+                "Planner process was invoked and is waiting for its first result.",
             )
             stage1_timeout_seconds = _stage1_planner_timeout_seconds()
             try:
-                if stage1_timeout_seconds is None:
-                    stage1_result = await planner_coro
-                else:
-                    stage1_result = await asyncio.wait_for(planner_coro, timeout=stage1_timeout_seconds)
+                stage1_result = await run_stage1_planner(
+                    planner_fn,
+                    planner_payload,
+                    progress_callback=progress_callback,
+                    timeout_seconds=stage1_timeout_seconds,
+                )
             except asyncio.TimeoutError:
                 logger.exception("[jobs] generation:stage1_timeout athlete_id=%s job_id=%s", athlete_id, job_id)
                 now_iso = utc_now_iso()
+                _emit_milestone(
+                    "stage1_planner_timeout",
+                    "Stage 1 planner timed out",
+                    "Planner did not return after invocation and the job was failed for recovery.",
+                    timestamp=now_iso,
+                    failed=True,
+                )
+                stage1_timed_out.set()
                 with suppress(Exception):
                     await asyncio.to_thread(
                         store.update_generation_job,
@@ -574,15 +854,27 @@ async def run_generation_job(
                 _injury_triage.get("should_block_stage2"),
                 bool(_override_marker and _override_marker.get("bypassed_blocking") is True),
             )
+            _emit_milestone(
+                "stage1_result_persist_started",
+                "Stage 1 result persist started",
+                "Saving Stage 1 planner result to the generation job.",
+            )
             job = await _to_thread_with_heartbeat(
                 store.update_generation_job,
                 job_id,
                 stage1_result=stage1_result,
                 heartbeat_at=utc_now_iso(),
             )
+            _emit_milestone(
+                "stage1_result_persisted",
+                "Stage 1 result persisted",
+                "Stage 1 planner result was saved to the generation job.",
+            )
+            await _ensure_admin_resume_plan_exists(plan_id)
 
         final_result = job.get("final_result")
         if not isinstance(final_result, dict):
+            await _ensure_admin_resume_plan_exists(plan_id)
             if should_skip_stage2(stage1_result, allow_triage_resume_override=triage_resume_override_approved):
                 _emit_milestone(
                     "stage2_skipped",
@@ -607,6 +899,11 @@ async def run_generation_job(
                 )
                 await _touch_heartbeat()
                 final_result = {**finalized_result, "full_name": request_body.athlete.full_name}
+                _emit_milestone(
+                    "stage2_result_ready",
+                    "Stage 2 result ready",
+                    "Finalizer result returned; saving review state.",
+                )
                 if str(final_result.get("status") or "").strip().lower() == "ready":
                     _emit_milestone(
                         "stage2_validated",
@@ -619,20 +916,19 @@ async def run_generation_job(
                         "Stage 2 needs review",
                         "First-pass finalizer output did not pass validation. No automatic retry was sent.",
                     )
-            job = await _to_thread_with_heartbeat(
-                store.update_generation_job,
-                job_id,
-                final_result=final_result,
-                heartbeat_at=utc_now_iso(),
-            )
-
+        _emit_milestone(
+            "plan_persisting",
+            "Saving plan row",
+            "Creating or updating the saved plan from the Stage 2 result.",
+        )
+        plan_id = plan_id or (str(job.get("plan_id") or "") or None)
         plan_row: dict[str, Any] | None = None
         if job_source == "admin_triage_resume":
             plan_row = admin_resume_plan_row
         else:
             if plan_id:
                 plan_row = await _to_thread_with_heartbeat(store.get_plan, plan_id)
-            if not plan_row and intake_id:
+            if job_source != "admin_latest_intake" and not plan_row and intake_id:
                 latest_plan = await asyncio.to_thread(store.get_latest_plan, athlete_id)
                 if (
                     latest_plan
@@ -641,11 +937,10 @@ async def run_generation_job(
                 ):
                     plan_row = latest_plan
                     plan_id = str(latest_plan.get("id") or "")
+
         if plan_row and plan_id:
-            # Preserve triage-approval audit markers that live on the existing
-            # plan's why_log so that updating it in place (e.g. after an admin
-            # resume) does not erase the trail the duplicate-approval guard
-            # and UI depend on.
+            # Preserve triage-approval audit markers so they aren't lost when
+            # updating the existing plan in-place (important for admin resume flows).
             existing_why_log = plan_row.get("why_log") if isinstance(plan_row.get("why_log"), dict) else {}
             preserved_keys = ("triage_regeneration_cleared", "triage_resume_approval")
             preserved = {key: existing_why_log[key] for key in preserved_keys if key in existing_why_log}
@@ -658,7 +953,7 @@ async def run_generation_job(
                 plan_id,
                 final_result,
             )
-        if not plan_row:
+        else:
             if job_source == "admin_triage_resume":
                 logger.error(
                     "[jobs] generation:resume_missing_plan job_id=%s athlete_id=%s intake_id=%s job_plan_id=%s",
@@ -668,8 +963,7 @@ async def run_generation_job(
                     job.get("plan_id"),
                 )
                 raise TriageResumeMissingPlanError(
-                    "admin triage resume job is missing its linked plan; "
-                    "refusing to create a duplicate plan"
+                    "admin triage resume job is missing its linked plan; refusing to create a duplicate plan"
                 )
             plan_row = await _to_thread_with_heartbeat(
                 store.create_plan,
@@ -678,15 +972,104 @@ async def run_generation_job(
                 request=request_body,
                 result=final_result,
             )
+            created_plan_id = str(plan_row.get("id") or "").strip()
+            verified_plan_row = await _to_thread_with_heartbeat(store.get_plan, created_plan_id) if created_plan_id else None
+            verified_athlete_id = str((verified_plan_row or {}).get("athlete_id") or "").strip()
+            verified_intake_id = str((verified_plan_row or {}).get("intake_id") or "").strip()
+            expected_intake_id = str(intake_id or "").strip()
+            intake_id_matches = (not expected_intake_id) or (verified_intake_id == expected_intake_id)
+            if not created_plan_id or not verified_plan_row or verified_athlete_id != athlete_id or not intake_id_matches:
+                now_iso = utc_now_iso()
+                with suppress(Exception):
+                    await asyncio.to_thread(
+                        store.update_generation_job,
+                        job_id,
+                        status="failed",
+                        error=_PLAN_PERSIST_VERIFICATION_ERROR,
+                        completed_at=now_iso,
+                        heartbeat_at=now_iso,
+                    )
+                return
             plan_id = str(plan_row.get("id") or "") or None
-
+        if not plan_id:
+            raise RuntimeError("Plan persistence failed: final_result exists but no linked plan_id was created.")
+        job = await asyncio.to_thread(
+            store.update_generation_job,
+            job_id,
+            plan_id=plan_id,
+            heartbeat_at=utc_now_iso(),
+        )
+        _emit_milestone(
+            "plan_persisted",
+            "Plan row persisted",
+            "Saved plan row was created or updated.",
+            plan_id=plan_id,
+        )
+        _emit_milestone(
+            "final_result_persisting",
+            "Saving Stage 2 result",
+            "Persisting finalizer output to the generation job.",
+        )
+        compact_final_result = _compact_generation_job_final_result(final_result)
         try:
-            await _to_thread_with_heartbeat(store.clear_onboarding_draft, athlete_id)
+            job = await asyncio.wait_for(
+                asyncio.to_thread(
+                    store.update_generation_job,
+                    job_id,
+                    final_result=compact_final_result,
+                    plan_id=plan_id,
+                    heartbeat_at=utc_now_iso(),
+                ),
+                timeout=_FINAL_RESULT_PERSIST_TIMEOUT_SECONDS,
+            )
+        except asyncio.TimeoutError:
+            logger.exception("[jobs] generation:final_result_persist_timeout athlete_id=%s job_id=%s", athlete_id, job_id)
+            now_iso = utc_now_iso()
+            with suppress(Exception):
+                await asyncio.to_thread(
+                    store.update_generation_job,
+                    job_id,
+                    status="failed",
+                    error=_FINAL_RESULT_PERSIST_TIMEOUT_ERROR,
+                    completed_at=now_iso,
+                    heartbeat_at=now_iso,
+                )
+            return
         except Exception:
-            logger.exception("[jobs] generation:clear_onboarding_draft_failed athlete_id=%s job_id=%s", athlete_id, job_id)
-
+            logger.exception("[jobs] generation:final_result_persist_failed athlete_id=%s job_id=%s", athlete_id, job_id)
+            now_iso = utc_now_iso()
+            with suppress(Exception):
+                await asyncio.to_thread(
+                    store.update_generation_job,
+                    job_id,
+                    status="failed",
+                    error="Stage 2 result persistence failed after plan persistence.",
+                    completed_at=now_iso,
+                    heartbeat_at=now_iso,
+                )
+            return
+        _emit_milestone(
+            "final_result_persisted",
+            "Stage 2 result saved",
+            "Finalizer output was saved to the generation job.",
+        )
+        persisted_plan_id = str(job.get("plan_id") or "").strip() if isinstance(job, dict) else ""
+        if not persisted_plan_id:
+            plan_id = None
         plan_status = str(plan_row.get("status") or "failed")
         final_status = job_status_for_plan_status(plan_status)
+        terminal_missing_plan_id_error = None
+        if final_status in {"completed", "review_required"} and not plan_id:
+            final_status = "failed"
+            terminal_missing_plan_id_error = (
+                "Plan was saved but the generation job lost its plan_id. Open plan history or contact support."
+            )
+            logger.error(
+                "[jobs] generation:terminal_missing_plan_id athlete_id=%s job_id=%s plan_status=%s",
+                athlete_id,
+                job_id,
+                plan_status,
+            )
         if final_status == "completed":
             _emit_milestone(
                 "plan_saved",
@@ -697,11 +1080,33 @@ async def run_generation_job(
             store.update_generation_job,
             job_id,
             status=final_status,
-            error=None,
+            error=terminal_missing_plan_id_error,
             plan_id=plan_id,
             completed_at=utc_now_iso(),
             heartbeat_at=utc_now_iso(),
         )
+        _emit_milestone(
+            "generation_job_terminal_status_persisted",
+            "Generation job terminal status persisted",
+            "Terminal generation job lifecycle status was saved.",
+            final_status=final_status,
+            plan_status=plan_status,
+            plan_id=plan_id,
+        )
+        try:
+            await asyncio.wait_for(
+                _to_thread_with_heartbeat(store.clear_onboarding_draft, athlete_id),
+                timeout=_POST_PERSIST_CLEANUP_TIMEOUT_SECONDS,
+            )
+        except asyncio.TimeoutError:
+            logger.warning(
+                "[jobs] generation:clear_onboarding_draft_timeout athlete_id=%s job_id=%s timeout_seconds=%s",
+                athlete_id,
+                job_id,
+                _POST_PERSIST_CLEANUP_TIMEOUT_SECONDS,
+            )
+        except Exception:
+            logger.exception("[jobs] generation:clear_onboarding_draft_failed athlete_id=%s job_id=%s", athlete_id, job_id)
         _plan_why_log = plan_row.get("why_log") if isinstance(plan_row.get("why_log"), dict) else {}
         logger.info(
             "[jobs] generation:complete athlete_id=%s job_id=%s plan_id=%s status=%s "
@@ -784,6 +1189,21 @@ async def run_generation_job(
                 completed_at=utc_now_iso(),
                 heartbeat_at=utc_now_iso(),
             )
+    except AdminLatestIntakeLinkageError as exc:
+        logger.error(
+            "[jobs] generation:admin_latest_intake_linkage_failure athlete_id=%s job_id=%s",
+            athlete_id,
+            job_id,
+        )
+        with suppress(Exception):
+            await asyncio.to_thread(
+                store.update_generation_job,
+                job_id,
+                status="failed",
+                error=str(exc),
+                completed_at=utc_now_iso(),
+                heartbeat_at=utc_now_iso(),
+            )
     except Exception as exc:
         tb = traceback.extract_tb(exc.__traceback__)
         frame = tb[-1] if tb else None
@@ -808,9 +1228,10 @@ async def run_generation_job(
             )
     finally:
         stop_event.set()
-        heartbeat_task.cancel()
-        with suppress(asyncio.CancelledError):
-            await heartbeat_task
+        if heartbeat_task is not None:
+            heartbeat_task.cancel()
+            with suppress(asyncio.CancelledError):
+                await heartbeat_task
         active_tasks.discard(job_id)
 
 
@@ -829,6 +1250,7 @@ async def schedule_generation_job_if_needed(
     current_status = str(job.get("status") or "queued")
     if current_status not in {"queued", "running"}:
         return job
+
     if current_status == "running":
         if stale_job_checker(job, stale_after_seconds=stale_after_seconds):
             job = await asyncio.to_thread(
@@ -837,9 +1259,17 @@ async def schedule_generation_job_if_needed(
                 store=store,
                 stale_after_seconds=stale_after_seconds,
             )
+            current_status = str(job.get("status") or "")
+            if current_status != "queued":
+                return job
+        else:
             return job
-        return job
+
     if not enable_in_process_generation:
+        logger.info(
+            "[api] generation:job_created_worker_will_process job_id=%s",
+            str(job.get("id") or ""),
+        )
         return job
 
     job_id = str(job["id"])
@@ -861,6 +1291,7 @@ async def schedule_generation_job_if_needed(
             )
             return job
         raise
+
     if active_running_jobs >= max_concurrent_jobs:
         logger.info(
             "[jobs] generation:schedule_capacity_reached job_id=%s active_running_jobs=%s max_concurrent_jobs=%s",
@@ -869,31 +1300,6 @@ async def schedule_generation_job_if_needed(
             max_concurrent_jobs,
         )
         return job
-
-    try:
-        claimed = await asyncio.to_thread(store.claim_generation_job, job_id)
-    except HTTPException as exc:
-        if exc.status_code == status.HTTP_503_SERVICE_UNAVAILABLE:
-            logger.warning(
-                "[jobs] generation:schedule_claim_deferred job_id=%s detail=%s",
-                job_id,
-                exc.detail,
-            )
-            return job
-        raise
-    if not claimed:
-        try:
-            refreshed = await asyncio.to_thread(store.get_generation_job, job_id)
-        except HTTPException as exc:
-            if exc.status_code == status.HTTP_503_SERVICE_UNAVAILABLE:
-                logger.warning(
-                    "[jobs] generation:schedule_refresh_deferred job_id=%s detail=%s",
-                    job_id,
-                    exc.detail,
-                )
-                return job
-            raise
-        return refreshed or job
 
     active_tasks.add(job_id)
     try:
@@ -916,5 +1322,14 @@ async def schedule_generation_job_if_needed(
             )
     except Exception:
         active_tasks.discard(job_id)
-        raise
-    return claimed
+        logger.exception("[jobs] generation:schedule_failed job_id=%s", job_id)
+        return await asyncio.to_thread(
+            store.update_generation_job,
+            job_id,
+            status="failed",
+            error="Generation worker failed to schedule.",
+            completed_at=utc_now_iso(),
+            heartbeat_at=utc_now_iso(),
+        )
+
+    return job

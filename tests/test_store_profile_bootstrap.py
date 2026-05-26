@@ -1,6 +1,7 @@
 """Tests for SupabaseAppStore profile bootstrap role assignment and retry logic."""
 from __future__ import annotations
 
+from datetime import datetime, timedelta, timezone
 from unittest.mock import MagicMock
 
 import httpx
@@ -349,7 +350,9 @@ def test_create_or_get_generation_job_returns_existing_row_after_unique_conflict
             "details": "Key (athlete_id, client_request_id)=(athlete-1, client-1) already exists.",
         }
     )
-    store._run_with_transient_retry = MagicMock(side_effect=[None, duplicate_error, existing_job])
+    active_response = MagicMock()
+    active_response.data = []
+    store._run_with_transient_retry = MagicMock(side_effect=[None, active_response, duplicate_error, existing_job])
 
     result = store.create_or_get_generation_job(
         athlete_id="athlete-1",
@@ -391,6 +394,53 @@ def test_create_or_get_generation_job_persists_source_in_insert_payload():
     insert_payload = table_query.insert.call_args.args[0]
     assert insert_payload["source"] == "admin_latest_intake"
     assert result["source"] == "admin_latest_intake"
+
+
+def test_create_or_get_generation_job_resets_pre_start_stale_existing_job_without_replacing_plan_links():
+    store = _make_store()
+    existing_job = {
+        "id": "job-1",
+        "athlete_id": "athlete-1",
+        "client_request_id": "client-1",
+        "source": "self_serve",
+        "request_payload": {"fight_date": "2026-04-18"},
+        "status": "running",
+        "attempt_count": 1,
+        "heartbeat_at": "2026-04-05T12:00:00+00:00",
+        "started_at": "2026-04-05T12:00:00+00:00",
+        "completed_at": None,
+        "progress_milestones": [],
+        "stage1_result": None,
+        "final_result": None,
+        "plan_id": "plan-1",
+        "intake_id": "intake-1",
+    }
+    reset_job = {
+        **existing_job,
+        "status": "queued",
+        "heartbeat_at": None,
+        "started_at": None,
+        "progress_milestones": [],
+    }
+    store._lookup_generation_job_by_client_request_id = MagicMock(return_value=existing_job)
+    store.get_generation_job = MagicMock(return_value=reset_job)
+    store._run_with_transient_retry = MagicMock(side_effect=lambda *, fn, **_kwargs: fn())
+
+    result = store.create_or_get_generation_job(
+        athlete_id="athlete-1",
+        client_request_id="client-1",
+        source="self_serve",
+        request_payload={"fight_date": "2026-05-01"},
+    )
+
+    update_payload = store.client.table.return_value.update.call_args.args[0]
+    assert update_payload["status"] == "queued"
+    assert update_payload["progress_milestones"] == []
+    assert "plan_id" not in update_payload
+    assert "intake_id" not in update_payload
+    assert result["id"] == "job-1"
+    assert result["plan_id"] == "plan-1"
+    assert result["intake_id"] == "intake-1"
 
 
 def test_create_or_get_generation_job_raises_500_when_insert_returns_no_rows_and_lookup_is_none():
@@ -435,6 +485,59 @@ def test_validate_runtime_schema_raises_when_required_plan_columns_missing_by_de
     assert str(exc_info.value) == store_module.PLAN_RUNTIME_SCHEMA_ERROR_DETAIL
 
 
+
+
+def test_validate_runtime_schema_passes_when_generation_job_active_lock_is_valid():
+    store = _make_store()
+    lock_response = MagicMock()
+    lock_response.data = True
+    store.client.rpc.return_value.execute.return_value = lock_response
+
+    store.validate_runtime_schema()
+
+    store.client.rpc.assert_called_once_with("validate_generation_job_active_lock")
+
+
+def test_validate_runtime_schema_calls_active_lock_rpc_after_plan_validation():
+    store = _make_store()
+    lock_response = MagicMock()
+    lock_response.data = True
+    store.client.rpc.return_value.execute.return_value = lock_response
+
+    store.validate_runtime_schema()
+
+    store.client.table.return_value.select.return_value.limit.return_value.execute.assert_called_once()
+    store.client.rpc.assert_called_once_with("validate_generation_job_active_lock")
+
+
+def test_validate_runtime_schema_raises_when_generation_job_active_lock_is_missing():
+    store = _make_store()
+    lock_response = MagicMock()
+    lock_response.data = False
+    store.client.rpc.return_value.execute.return_value = lock_response
+
+    with pytest.raises(RuntimeError) as exc_info:
+        store.validate_runtime_schema()
+
+    assert str(exc_info.value) == store_module.GENERATION_JOB_ACTIVE_LOCK_ERROR_DETAIL
+
+
+def test_validate_runtime_schema_raises_when_generation_job_active_lock_rpc_errors():
+    store = _make_store()
+    store.client.rpc.return_value.execute.side_effect = APIError(
+        {
+            "message": "rpc failed",
+            "code": "PGRST001",
+            "hint": None,
+            "details": None,
+        }
+    )
+
+    with pytest.raises(RuntimeError) as exc_info:
+        store.validate_runtime_schema()
+
+    assert str(exc_info.value) == store_module.GENERATION_JOB_ACTIVE_LOCK_ERROR_DETAIL
+
 def _clear_environment_env_vars(monkeypatch):
     for var in ("APP_ENV", "ENVIRONMENT", "UNLXCK_ENV", "NODE_ENV"):
         monkeypatch.delenv(var, raising=False)
@@ -454,7 +557,36 @@ def test_validate_runtime_schema_allows_legacy_missing_columns_when_flag_enabled
     )
     store.client.table.return_value.select.return_value.limit.return_value.execute.side_effect = schema_error
 
+    lock_response = MagicMock()
+    lock_response.data = True
+    store.client.rpc.return_value.execute.return_value = lock_response
+
     store.validate_runtime_schema()
+
+    store.client.rpc.assert_called_once_with("validate_generation_job_active_lock")
+
+
+def test_validate_runtime_schema_legacy_fallback_still_raises_when_active_lock_is_missing(monkeypatch):
+    _clear_environment_env_vars(monkeypatch)
+    monkeypatch.setenv("UNLXCK_ALLOW_LEGACY_PLAN_SCHEMA_FALLBACK", "1")
+    store = _make_store()
+    schema_error = APIError(
+        {
+            "message": "Could not find the 'stage2_payload' column of 'plans' in the schema cache",
+            "code": "PGRST204",
+            "hint": None,
+            "details": None,
+        }
+    )
+    store.client.table.return_value.select.return_value.limit.return_value.execute.side_effect = schema_error
+    lock_response = MagicMock()
+    lock_response.data = False
+    store.client.rpc.return_value.execute.return_value = lock_response
+
+    with pytest.raises(RuntimeError) as exc_info:
+        store.validate_runtime_schema()
+
+    assert str(exc_info.value) == store_module.GENERATION_JOB_ACTIVE_LOCK_ERROR_DETAIL
 
 
 @pytest.mark.parametrize(
@@ -822,6 +954,23 @@ def test_update_plan_stage2_defaults_blank_current_status_to_generated(legacy_st
     assert result == ready_plan
 
 
+def test_update_plan_stage2_preserves_existing_status_when_result_status_missing():
+    store = _make_store()
+    updated_plan = {"id": "plan-1", "status": "review_required"}
+    store.get_plan = MagicMock(
+        side_effect=[
+            {"id": "plan-1", "status": "review_required"},
+            updated_plan,
+        ]
+    )
+
+    result = store.update_plan_stage2("plan-1", {"plan_text": "# Manual review text"})
+
+    payload = store.client.table.return_value.update.call_args.args[0]
+    assert payload["status"] == "review_required"
+    assert result == updated_plan
+
+
 def test_update_plan_stage2_rejects_invalid_transition_with_409():
     store = _make_store()
     store.get_plan = MagicMock(return_value={"id": "plan-1", "status": "archived"})
@@ -954,6 +1103,7 @@ def test_claim_generation_job_returns_none_when_compare_and_swap_loses(monkeypat
         "attempt_count": 1,
         "heartbeat_at": "2026-04-05T12:00:01+00:00",
         "started_at": "2026-04-05T12:00:01+00:00",
+        "progress_milestones": [{"code": "job_loaded"}],
     }
     store.get_generation_job = MagicMock(side_effect=[queued_job, claimed_by_other_worker])
     store._run_with_transient_retry = lambda *, operation, fn, attempts=3, backoff_seconds=0.25: fn()
@@ -992,6 +1142,15 @@ def test_claim_generation_job_returns_updated_row_when_compare_and_swap_succeeds
         "attempt_count": 1,
         "heartbeat_at": fixed_now,
         "started_at": fixed_now,
+        "progress_milestones": [
+            {
+                "code": "job_loaded",
+                "label": "Generation job loaded",
+                "detail": "Worker loaded the persisted generation job.",
+                "meta": {},
+                "at": fixed_now,
+            }
+        ],
     }
     store.get_generation_job = MagicMock(side_effect=[queued_job, claimed_job])
     store._run_with_transient_retry = lambda *, operation, fn, attempts=3, backoff_seconds=0.25: fn()
@@ -1003,3 +1162,132 @@ def test_claim_generation_job_returns_updated_row_when_compare_and_swap_succeeds
     result = store.claim_generation_job("job-1")
 
     assert result == claimed_job
+    update_payload = store.client.table.return_value.update.call_args.args[0]
+    assert update_payload["progress_milestones"][0]["code"] == "job_loaded"
+
+
+def test_get_active_generation_job_for_athlete_uses_app_stale_timeout_by_default(monkeypatch):
+    monkeypatch.setenv("APP_GENERATION_JOB_STALE_AFTER_SECONDS", "300")
+    store = _make_store()
+    now = datetime.now(timezone.utc)
+    running = {
+        "id": "job-1",
+        "athlete_id": "athlete-1",
+        "status": "running",
+        "started_at": (now - timedelta(seconds=120)).isoformat(),
+        "heartbeat_at": (now - timedelta(seconds=120)).isoformat(),
+        "progress_milestones": [],
+    }
+    response = MagicMock()
+    response.data = [running]
+    store._run_with_transient_retry = lambda *, operation, fn, attempts=3, backoff_seconds=0.25: response
+
+    result = store.get_active_generation_job_for_athlete("athlete-1")
+
+    assert result is not None
+    assert result["id"] == "job-1"
+
+
+def test_list_claimable_generation_jobs_uses_app_stale_timeout_by_default(monkeypatch):
+    monkeypatch.setenv("APP_GENERATION_JOB_STALE_AFTER_SECONDS", "60")
+    store = _make_store()
+    now = datetime.now(timezone.utc)
+    running_stale = {
+        "id": "job-1",
+        "status": "running",
+        "created_at": (now - timedelta(seconds=80)).isoformat(),
+        "started_at": (now - timedelta(seconds=80)).isoformat(),
+        "heartbeat_at": (now - timedelta(seconds=80)).isoformat(),
+        "progress_milestones": [],
+    }
+    queued_response = MagicMock()
+    queued_response.data = []
+    stale_heartbeat_response = MagicMock()
+    stale_heartbeat_response.data = [running_stale]
+    stale_without_heartbeat_response = MagicMock()
+    stale_without_heartbeat_response.data = []
+    responses = [queued_response, stale_heartbeat_response, stale_without_heartbeat_response]
+
+    def _run(*, operation, fn, attempts=3, backoff_seconds=0.25):
+        return responses.pop(0)
+
+    store._run_with_transient_retry = _run
+
+    claimable = store.list_claimable_generation_jobs()
+
+    assert [row["id"] for row in claimable] == ["job-1"]
+
+
+def test_claim_generation_job_start_uses_app_stale_timeout_by_default(monkeypatch):
+    monkeypatch.setenv("APP_GENERATION_JOB_STALE_AFTER_SECONDS", "60")
+    fixed_now = "2026-04-05T12:00:00+00:00"
+    monkeypatch.setattr(store_module, "_utc_now_iso", lambda: fixed_now)
+    store = _make_store()
+    now = datetime.now(timezone.utc)
+    running_stale = {
+        "id": "job-1",
+        "status": "running",
+        "attempt_count": 1,
+        "heartbeat_at": (now - timedelta(seconds=80)).isoformat(),
+        "started_at": (now - timedelta(seconds=80)).isoformat(),
+        "progress_milestones": [],
+    }
+    claimed_job = {
+        "id": "job-1",
+        "status": "running",
+        "attempt_count": 2,
+        "heartbeat_at": fixed_now,
+        "started_at": running_stale["started_at"],
+        "progress_milestones": [{"code": "job_loaded"}],
+    }
+    store.get_generation_job = MagicMock(side_effect=[running_stale, claimed_job])
+    store._run_with_transient_retry = lambda *, operation, fn, attempts=3, backoff_seconds=0.25: fn()
+    store.client.table.return_value.update.return_value.eq.return_value.eq.return_value.eq.return_value.execute.return_value = MagicMock()
+
+    result = store.claim_generation_job_start("job-1")
+
+    assert result is not None
+    assert result["attempt_count"] == 2
+
+
+def test_count_active_generation_jobs_uses_app_stale_timeout_by_default(monkeypatch):
+    monkeypatch.setenv("APP_GENERATION_JOB_STALE_AFTER_SECONDS", "60")
+    store = _make_store()
+    response = MagicMock()
+    response.count = 3
+    def _run(*, operation, fn, attempts=3, backoff_seconds=0.25):
+        return fn()
+    store._run_with_transient_retry = _run
+    store.client.table.return_value.select.return_value.eq.return_value.or_.return_value.execute.return_value = response
+
+    assert store.count_active_generation_jobs() == 3
+    or_arg = store.client.table.return_value.select.return_value.eq.return_value.or_.call_args.args[0]
+    cutoff_token = "heartbeat_at.gt."
+    cutoff_start = or_arg.index(cutoff_token) + len(cutoff_token)
+    cutoff_end = or_arg.index(",and(")
+    cutoff_iso = or_arg[cutoff_start:cutoff_end]
+    cutoff = datetime.fromisoformat(cutoff_iso)
+    age = (datetime.now(timezone.utc) - cutoff).total_seconds()
+    assert 50 <= age <= 70
+
+
+def test_generation_stale_timeout_falls_back_to_worker_env_when_app_env_unset(monkeypatch):
+    monkeypatch.delenv("APP_GENERATION_JOB_STALE_AFTER_SECONDS", raising=False)
+    monkeypatch.setenv("UNLXCK_GENERATION_WORKER_STALE_AFTER_SECONDS", "420")
+    store = _make_store()
+    response = MagicMock()
+    response.count = 1
+    def _run(*, operation, fn, attempts=3, backoff_seconds=0.25):
+        return fn()
+    store._run_with_transient_retry = _run
+    store.client.table.return_value.select.return_value.eq.return_value.or_.return_value.execute.return_value = response
+
+    assert store.count_active_generation_jobs() == 1
+    or_arg = store.client.table.return_value.select.return_value.eq.return_value.or_.call_args.args[0]
+    cutoff_token = "heartbeat_at.gt."
+    cutoff_start = or_arg.index(cutoff_token) + len(cutoff_token)
+    cutoff_end = or_arg.index(",and(")
+    cutoff_iso = or_arg[cutoff_start:cutoff_end]
+    cutoff = datetime.fromisoformat(cutoff_iso)
+    age = (datetime.now(timezone.utc) - cutoff).total_seconds()
+    assert 410 <= age <= 430

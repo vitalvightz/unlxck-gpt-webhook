@@ -6156,6 +6156,13 @@ button.mobile-step-rail-item {
   background: linear-gradient(180deg, rgba(23, 25, 30, 0.98), rgba(14, 15, 19, 0.98));
 }
 
+.global-generation-status-main {
+  all: unset;
+  display: grid;
+  gap: 0;
+  cursor: pointer;
+}
+
 .global-generation-status-failed {
   border-top-color: rgba(255, 100, 100, 0.4);
   background: linear-gradient(180deg, rgba(40, 20, 25, 0.98), rgba(25, 15, 18, 0.98));
@@ -6165,6 +6172,37 @@ button.mobile-step-rail-item {
   display: flex;
   align-items: center;
   gap: 12px;
+}
+
+.global-generation-status-dismiss {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text-muted);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.global-generation-status-reopen {
+  position: fixed;
+  right: 14px;
+  bottom: calc(14px + var(--safe-area-bottom));
+  z-index: 100;
+  min-height: 38px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(181, 18, 43, 0.35);
+  background: rgba(10, 11, 14, 0.95);
+  color: var(--text-primary);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
 }
 
 .global-generation-status-indicator {
@@ -6249,7 +6287,7 @@ button.mobile-step-rail-item {
   border-color: rgba(181, 18, 43, 0.45);
 }
 
-.global-generation-status:hover .global-generation-status-arrow {
+.global-generation-status-main:hover .global-generation-status-arrow {
   transform: translateX(4px);
 }
 
@@ -6441,6 +6479,17 @@ html[data-theme="light"] .global-generation-status-rail {
   background: rgba(88, 62, 58, 0.12);
 }
 
+html[data-theme="light"] .global-generation-status-reopen {
+  border-color: rgba(163, 21, 45, 0.32);
+  background: rgba(255, 251, 247, 0.96);
+  color: #231d1a;
+}
+
+html[data-theme="light"] .global-generation-status-dismiss {
+  background: rgba(98, 77, 69, 0.08);
+  color: rgba(65, 47, 41, 0.86);
+}
+
 /* Mobile adjustments */
 @media (max-width: 900px) {
   .global-generation-status {
@@ -6469,6 +6518,18 @@ html[data-theme="light"] .global-generation-status-rail {
 
   .global-generation-status-cta .global-generation-status-arrow {
     font-size: 18px;
+  }
+
+  .global-generation-status-dismiss {
+    top: 6px;
+    right: 6px;
+    width: 40px;
+    height: 40px;
+  }
+
+  .global-generation-status-reopen {
+    min-height: 40px;
+    padding: 0 14px;
   }
 }
 
@@ -11170,6 +11231,16 @@ html[data-app-surface="workspace"][data-theme="dark"] .desktop-nav-toggle {
 .blocked-context-line strong {
   color: #ffe6ea;
   font-weight: 600;
+}
+
+html[data-theme="light"] .blocked-context-line {
+  border-color: rgba(199, 92, 54, 0.4);
+  background: rgba(199, 92, 54, 0.12);
+  color: #6c2f22;
+}
+
+html[data-theme="light"] .blocked-context-line strong {
+  color: #4d1f16;
 }
 
 .welcome-panel {

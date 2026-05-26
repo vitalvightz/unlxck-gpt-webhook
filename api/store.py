@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import re
 import time
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
@@ -15,6 +16,7 @@ from supabase import Client, create_client
 
 from .auth import AuthenticatedUser
 from .environment import is_production_environment
+from .generation_config import generation_job_stale_after_seconds
 from .models import (
     PlanRequest,
     ProfileUpdateRequest,
@@ -68,9 +70,13 @@ _GENERATION_JOB_CONFLICT_SNIPPETS = (
     "23505",
     "duplicate key value violates unique constraint",
     "generation_jobs_athlete_client_request_key",
+    "generation_jobs_one_active_job_per_athlete",
 )
 PLAN_RUNTIME_SCHEMA_ERROR_DETAIL = (
     "plans table is missing required runtime columns; apply latest Supabase schema and redeploy"
+)
+GENERATION_JOB_ACTIVE_LOCK_ERROR_DETAIL = (
+    "generation job active lock is missing; apply latest Supabase migrations and redeploy"
 )
 PLAN_RUNTIME_REQUIRED_COLUMNS = (
     "draft_plan_text",
@@ -93,6 +99,22 @@ _PLAN_RUNTIME_SCHEMA_ERROR_SNIPPETS = (
 )
 _PLAN_SCHEMA_MISMATCH_DETAIL = "plans table schema mismatch; apply latest Supabase schema and redeploy"
 _PLAN_INVALID_PAYLOAD_DETAIL = "invalid plans payload for table insert"
+_VISIBLE_PLAN_STATUSES = {"ready", "publishable_with_flags"}
+
+
+def _visible_plan_text_for_status(result: dict[str, Any], *, status_value: object | None = None) -> str:
+    raw_status = result.get("status") if status_value is None else status_value
+    status_text = str(raw_status or "").strip().lower()
+    if status_text not in _VISIBLE_PLAN_STATUSES:
+        return ""
+    return str(
+        result.get("plan_text")
+        or result.get("final_plan_text")
+        or result.get("draft_plan_text")
+        or ""
+    )
+
+
 GENERATION_JOB_UNAVAILABLE_DETAIL = "generation job service temporarily unavailable"
 GENERATION_JOB_SCHEMA_DETAIL = "generation job store is not ready; apply the latest Supabase schema and redeploy"
 
@@ -115,6 +137,16 @@ class AppStore(Protocol):
 
     def create_intake(self, athlete_id: str, request: PlanRequest) -> dict[str, Any]: ...
 
+
+    def update_intake(
+        self,
+        intake_id: str,
+        *,
+        intake: dict[str, Any],
+        fight_date: str | None,
+        technical_style: list[str],
+    ) -> dict[str, Any]: ...
+
     def create_plan(
         self,
         *,
@@ -133,6 +165,7 @@ class AppStore(Protocol):
     def rename_plan(self, plan_id: str, plan_name: str) -> dict[str, Any]: ...
 
     def archive_plan(self, plan_id: str) -> dict[str, Any]: ...
+    def delete_plan(self, plan_id: str) -> None: ...
 
     def create_or_get_generation_job(
         self,
@@ -141,8 +174,9 @@ class AppStore(Protocol):
         client_request_id: str,
         source: str,
         request_payload: dict[str, Any],
-        intake_id: str | None = None,
         plan_id: str | None = None,
+        intake_id: str | None = None,
+        stale_after_seconds: int = 90,
     ) -> dict[str, Any]: ...
     def count_generation_jobs_for_athlete_since(
         self,
@@ -151,18 +185,34 @@ class AppStore(Protocol):
         *,
         sources: set[str] | None = None,
     ) -> int: ...
+    def check_plan_generation_short_window_limit(
+        self,
+        athlete_id: str,
+        max_requests: int,
+        window_seconds: float,
+    ) -> tuple[bool, int]: ...
 
     def get_generation_job(self, job_id: str) -> dict[str, Any] | None: ...
     def get_generation_job_by_client_request_id(self, *, athlete_id: str, client_request_id: str) -> dict[str, Any] | None: ...
+    def get_active_generation_job_for_athlete(
+        self,
+        athlete_id: str,
+        *,
+        stale_after_seconds: int | None = None,
+    ) -> dict[str, Any] | None: ...
+    def get_latest_generation_job_for_athlete(self, athlete_id: str) -> dict[str, Any] | None: ...
 
     def get_generation_job_by_plan_id(self, plan_id: str) -> dict[str, Any] | None: ...
+    def has_active_generation_job_for_plan(self, plan_id: str) -> bool: ...
     def list_generation_jobs_for_athlete(self, athlete_id: str, *, limit: int = 10) -> list[dict[str, Any]]: ...
 
-    def list_claimable_generation_jobs(self, *, limit: int = 20, stale_after_seconds: int = 90) -> list[dict[str, Any]]: ...
+    def list_claimable_generation_jobs(self, *, limit: int = 20, stale_after_seconds: int | None = None) -> list[dict[str, Any]]: ...
 
-    def claim_generation_job(self, job_id: str, *, stale_after_seconds: int = 90) -> dict[str, Any] | None: ...
+    def claim_generation_job_start(self, job_id: str, *, stale_after_seconds: int | None = None) -> dict[str, Any] | None: ...
 
-    def count_active_generation_jobs(self, *, stale_after_seconds: int = 90) -> int: ...
+    def claim_generation_job(self, job_id: str, *, stale_after_seconds: int | None = None) -> dict[str, Any] | None: ...
+
+    def count_active_generation_jobs(self, *, stale_after_seconds: int | None = None) -> int: ...
 
     def update_generation_job(self, job_id: str, **changes: Any) -> dict[str, Any]: ...
 
@@ -208,6 +258,195 @@ def _status_transition_error(detail: str) -> HTTPException:
     return HTTPException(status_code=status.HTTP_409_CONFLICT, detail=detail)
 
 
+def _progress_milestones(value: Any) -> list[Any]:
+    return value if isinstance(value, list) else []
+
+
+def _has_milestone_code(milestones: list[Any], code: str) -> bool:
+    for entry in milestones:
+        if isinstance(entry, dict) and str(entry.get("code") or "") == code:
+            return True
+    return False
+
+
+def _should_recover_stalled_job(job: dict[str, Any]) -> bool:
+    if isinstance(job.get("final_result"), dict):
+        return True
+    if str(job.get("plan_id") or "").strip():
+        return True
+    milestones = _progress_milestones(job.get("progress_milestones"))
+    for entry in milestones:
+        if not isinstance(entry, dict):
+            continue
+        code = str(entry.get("code") or "")
+        if code not in {"final_result_persisted", "plan_saved", "generation_job_terminal_status_persisted"}:
+            continue
+        meta = entry.get("meta") if isinstance(entry.get("meta"), dict) else {}
+        if str(meta.get("plan_id") or "").strip():
+            return True
+    return False
+
+
+def _plan_id_from_terminal_milestones(job: dict[str, Any]) -> str | None:
+    milestones = _progress_milestones(job.get("progress_milestones"))
+    for entry in reversed(milestones):
+        if not isinstance(entry, dict):
+            continue
+        code = str(entry.get("code") or "")
+        if code not in {"final_result_persisted", "plan_saved", "generation_job_terminal_status_persisted"}:
+            continue
+        meta = entry.get("meta") if isinstance(entry.get("meta"), dict) else {}
+        plan_id = str(meta.get("plan_id") or "").strip()
+        if plan_id:
+            return plan_id
+    return None
+
+
+def is_pre_start_stale_generation_job(job: dict[str, Any], *, stale_after_seconds: int = 90) -> bool:
+    if str(job.get("status") or "") != "running":
+        return False
+    if _progress_milestones(job.get("progress_milestones")):
+        return False
+    if job.get("stage1_result") is not None:
+        return False
+    if job.get("final_result") is not None:
+        return False
+    if job.get("completed_at") is not None:
+        return False
+
+    heartbeat_at = _parse_datetime(job.get("heartbeat_at"))
+    started_at = _parse_datetime(job.get("started_at"))
+    now = datetime.now(timezone.utc)
+    reference_time = heartbeat_at or started_at
+    if reference_time is None:
+        return False
+    return (now - reference_time).total_seconds() >= max(1, stale_after_seconds)
+
+
+def is_worker_start_stale_generation_job(job: dict[str, Any], *, stale_after_seconds: int = 90) -> bool:
+    if str(job.get("status") or "") != "running":
+        return False
+    if job.get("completed_at") is not None:
+        return False
+    if job.get("stage1_result") is not None:
+        return False
+    if job.get("final_result") is not None:
+        return False
+    milestones = _progress_milestones(job.get("progress_milestones"))
+    if len(milestones) != 1:
+        return False
+    first = milestones[0] if isinstance(milestones[0], dict) else {}
+    if str(first.get("code") or "") != "job_loaded":
+        return False
+
+    heartbeat_at = _parse_datetime(job.get("heartbeat_at"))
+    started_at = _parse_datetime(job.get("started_at"))
+    now = datetime.now(timezone.utc)
+    reference_time = heartbeat_at or started_at
+    if reference_time is None:
+        return False
+    return (now - reference_time).total_seconds() >= max(1, stale_after_seconds)
+
+
+def is_job_loaded_stalled_generation_job(job: dict[str, Any], *, stale_after_seconds: int = 90) -> bool:
+    if str(job.get("status") or "") != "running":
+        return False
+    if job.get("completed_at") is not None:
+        return False
+    if job.get("stage1_result") is not None:
+        return False
+    if job.get("final_result") is not None:
+        return False
+    milestones = _progress_milestones(job.get("progress_milestones"))
+    if not milestones:
+        return False
+
+    saw_job_loaded_at: datetime | None = None
+    blocked_codes = {"request_payload_parsed", "profile_update_started", "stage1_planner_starting", "stage1_planner_invoked"}
+    for entry in milestones:
+        if not isinstance(entry, dict):
+            continue
+        code = str(entry.get("code") or "")
+        if code in blocked_codes:
+            return False
+        if code == "job_loaded":
+            parsed = _parse_datetime(entry.get("at"))
+            saw_job_loaded_at = parsed or saw_job_loaded_at
+    if saw_job_loaded_at is None:
+        return False
+    age = (datetime.now(timezone.utc) - saw_job_loaded_at).total_seconds()
+    return age >= max(1, stale_after_seconds)
+
+
+def is_startup_stale_generation_job(job: dict[str, Any], *, stale_after_seconds: int = 90) -> bool:
+    return is_pre_start_stale_generation_job(
+        job,
+        stale_after_seconds=stale_after_seconds,
+    ) or is_worker_start_stale_generation_job(
+        job,
+        stale_after_seconds=stale_after_seconds,
+    )
+
+
+def is_stage1_planner_stalled_generation_job(job: dict[str, Any], *, stale_after_seconds: int = 180) -> bool:
+    if str(job.get("status") or "") != "running":
+        return False
+    if job.get("completed_at") is not None or job.get("stage1_result") is not None or job.get("final_result") is not None:
+        return False
+    milestones = _progress_milestones(job.get("progress_milestones"))
+    if not milestones:
+        return False
+    milestone_invoked_at: datetime | None = None
+    saw_planner_finished = False
+    for entry in milestones:
+        if not isinstance(entry, dict):
+            continue
+        code = str(entry.get("code") or "")
+        if code == "stage1_planner_finished":
+            saw_planner_finished = True
+        if code == "stage1_planner_invoked":
+            milestone_invoked_at = _parse_datetime(entry.get("at")) or milestone_invoked_at
+    if saw_planner_finished or milestone_invoked_at is None:
+        return False
+    age = (datetime.now(timezone.utc) - milestone_invoked_at).total_seconds()
+    return age >= max(1, stale_after_seconds)
+
+
+def _stage1_stale_after_seconds_for_reads() -> int:
+    raw_value = os.getenv("STAGE1_PLANNER_TIMEOUT_SECONDS")
+    if raw_value is None:
+        raw_value = os.getenv("APP_STAGE1_PLANNER_TIMEOUT_SECONDS", "600")
+    raw_value = raw_value.strip()
+    if raw_value in {"", "0", "none", "None", "NONE"}:
+        return 600
+    try:
+        parsed = float(raw_value)
+    except ValueError:
+        return 600
+    if parsed <= 0:
+        return 600
+    return max(1, int(parsed))
+
+
+def _generation_startup_max_attempts() -> int:
+    raw_value = os.getenv("APP_GENERATION_STARTUP_MAX_ATTEMPTS", "2").strip()
+    try:
+        parsed = int(float(raw_value))
+    except ValueError:
+        return 2
+    return max(1, parsed)
+
+
+def _job_loaded_milestone(now_iso: str) -> dict[str, Any]:
+    return {
+        "code": "job_loaded",
+        "label": "Generation job loaded",
+        "detail": "Worker loaded the persisted generation job.",
+        "meta": {},
+        "at": now_iso,
+    }
+
+
 @dataclass
 class SupabaseAppStore:
     client: Client
@@ -241,6 +480,31 @@ class SupabaseAppStore:
         response = query.limit(1).execute()
         rows = getattr(response, "data", None) or []
         return rows[0] if rows else None
+
+    def _classify_running_job_staleness(
+        self,
+        job: dict[str, Any],
+        *,
+        stale_after_seconds: int,
+        stage1_stale_after_seconds: int | None = None,
+    ) -> str:
+        if str(job.get("status") or "") != "running":
+            return "fresh"
+        if is_job_loaded_stalled_generation_job(job, stale_after_seconds=stale_after_seconds):
+            return "job_loaded_stalled"
+        if is_startup_stale_generation_job(job, stale_after_seconds=stale_after_seconds):
+            return "startup_stale"
+        stage1_threshold = stale_after_seconds if stage1_stale_after_seconds is None else stage1_stale_after_seconds
+        if is_stage1_planner_stalled_generation_job(job, stale_after_seconds=stage1_threshold):
+            return "stage1_planner_stalled"
+        heartbeat_at = _parse_datetime(job.get("heartbeat_at"))
+        started_at = _parse_datetime(job.get("started_at"))
+        reference_time = heartbeat_at or started_at
+        if reference_time is None:
+            return "fresh"
+        if (datetime.now(timezone.utc) - reference_time).total_seconds() < max(1, stale_after_seconds):
+            return "fresh"
+        return "mid_pipeline_stale"
 
     def _log_profile_event(self, *, operation: str, user: AuthenticatedUser, **fields: Any) -> None:
         details = " ".join(f"{key}=%r" % value for key, value in sorted(fields.items()))
@@ -355,6 +619,19 @@ class SupabaseAppStore:
             return _PLAN_SCHEMA_MISMATCH_DETAIL
         return "plan persistence failed"
 
+    def _validate_generation_job_active_lock(self) -> None:
+        try:
+            response = self.client.rpc("validate_generation_job_active_lock").execute()
+        except _STORE_CLIENT_ERRORS as exc:
+            logger.exception("[store] validate_runtime_schema:active_job_lock_check_failed")
+            raise RuntimeError(GENERATION_JOB_ACTIVE_LOCK_ERROR_DETAIL) from exc
+
+        lock_present = bool(response.data)
+
+        if not lock_present:
+            logger.error("[store] validate_runtime_schema:active_job_lock_missing")
+            raise RuntimeError(GENERATION_JOB_ACTIVE_LOCK_ERROR_DETAIL)
+
     def validate_runtime_schema(self) -> None:
         legacy_fallback_enabled = self._legacy_plan_schema_fallback_enabled()
         logger.info(
@@ -375,9 +652,11 @@ class SupabaseAppStore:
                 logger.warning(
                     "[store] validate_runtime_schema:legacy_fallback_enabled; continuing despite schema mismatch"
                 )
-                return
-            logger.exception("[store] validate_runtime_schema:schema_mismatch")
-            raise RuntimeError(PLAN_RUNTIME_SCHEMA_ERROR_DETAIL) from exc
+            else:
+                logger.exception("[store] validate_runtime_schema:schema_mismatch")
+                raise RuntimeError(PLAN_RUNTIME_SCHEMA_ERROR_DETAIL) from exc
+
+        self._validate_generation_job_active_lock()
         logger.info("[store] validate_runtime_schema:ok")
 
     def _raise_operation_http_error(
@@ -524,14 +803,17 @@ class SupabaseAppStore:
             self._log_profile_event(operation="ensure_start", user=user)
             existing = self._get_profile_by_id(user.user_id)
             if existing:
-                expected_role = self._default_role_for(user)
-                if expected_role == "admin" and existing.get("role") != "admin":
+                expected_role = "admin" if existing.get("role") == "admin" else self._default_role_for(user)
+                if existing.get("role") != expected_role:
                     self._run_with_transient_retry(
-                        operation="ensure_profile:promote_admin",
-                        fn=lambda: self.client.table("profiles").update({"role": "admin"}).eq("id", user.user_id).execute(),
+                        operation=f"ensure_profile:sync_role_{expected_role}",
+                        fn=lambda: self.client.table("profiles")
+                        .update({"role": expected_role})
+                        .eq("id", user.user_id)
+                        .execute(),
                     )
                     existing = self._run_with_transient_retry(
-                        operation="ensure_profile:refresh_after_promotion",
+                        operation="ensure_profile:refresh_after_role_sync",
                         fn=lambda: self._require_profile(user.user_id),
                     )
                 self._log_profile_event(
@@ -615,55 +897,27 @@ class SupabaseAppStore:
                 )
                 return profile
 
-            history_raw = profile.get("username_change_history") or []
-            history: list[str] = [str(entry) for entry in history_raw if entry]
-
-            now = datetime.now(timezone.utc)
-            cutoff = now - timedelta(days=USERNAME_CHANGE_WINDOW_DAYS)
-            recent: list[datetime] = []
-            for entry in history:
-                try:
-                    parsed = datetime.fromisoformat(entry.replace("Z", "+00:00"))
-                except ValueError:
-                    continue
-                if parsed.tzinfo is None:
-                    parsed = parsed.replace(tzinfo=timezone.utc)
-                if parsed >= cutoff:
-                    recent.append(parsed)
-
-            if len(recent) >= USERNAME_MAX_CHANGES_PER_WINDOW:
-                earliest = min(recent)
-                next_available = earliest + timedelta(days=USERNAME_CHANGE_WINDOW_DAYS)
-                logger.info(
-                    "[store] change_username:rate_limited athlete_id=%s recent=%s next=%s",
-                    athlete_id,
-                    len(recent),
-                    next_available.isoformat(),
-                )
-                raise HTTPException(
-                    status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                    detail=(
-                        f"You can change your username up to {USERNAME_MAX_CHANGES_PER_WINDOW} times "
-                        f"every {USERNAME_CHANGE_WINDOW_DAYS} days. "
-                        f"Next change available {next_available.isoformat()}."
-                    ),
-                )
-
-            new_history = [entry.isoformat() for entry in recent] + [now.isoformat()]
             try:
-                logger.info(
-                    "[store] change_username:start athlete_id=%s recent=%s",
-                    athlete_id,
-                    len(recent),
-                )
-                self.client.table("profiles").update(
+                logger.info("[store] change_username:start athlete_id=%s", athlete_id)
+                self.client.rpc(
+                    "change_profile_username",
                     {
-                        "username": normalized,
-                        "username_change_history": new_history,
-                    }
-                ).eq("id", athlete_id).execute()
-            except _STORE_CLIENT_ERRORS as exc:
-                message = str(exc).lower()
+                        "p_profile_id": athlete_id,
+                        "p_username": normalized,
+                    },
+                ).execute()
+            except PostgrestAPIError as exc:
+                message = " ".join(
+                    str(part).lower()
+                    for part in (
+                        getattr(exc, "message", None),
+                        getattr(exc, "details", None),
+                        getattr(exc, "hint", None),
+                        getattr(exc, "code", None),
+                        str(exc),
+                    )
+                    if part
+                )
                 if "duplicate" in message or "23505" in message or "unique" in message:
                     logger.info(
                         "[store] change_username:duplicate athlete_id=%s username=%s",
@@ -673,6 +927,26 @@ class SupabaseAppStore:
                     raise HTTPException(
                         status_code=status.HTTP_409_CONFLICT,
                         detail="That username is already taken. Pick another.",
+                    ) from exc
+                if "username_rate_limit_exceeded" in message:
+                    next_available: str | None = None
+                    rate_limit_text = str(getattr(exc, "message", "") or "")
+                    match = re.search(r"username_rate_limit_exceeded:([0-9T:\-+.\sZ]+)", rate_limit_text)
+                    if match:
+                        next_available = match.group(1).strip()
+                    logger.info(
+                        "[store] change_username:rate_limited athlete_id=%s",
+                        athlete_id,
+                    )
+                    detail = (
+                        f"You can change your username up to {USERNAME_MAX_CHANGES_PER_WINDOW} times "
+                        f"every {USERNAME_CHANGE_WINDOW_DAYS} days."
+                    )
+                    if next_available:
+                        detail = f"{detail} Next change available {next_available}."
+                    raise HTTPException(
+                        status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                        detail=detail,
                     ) from exc
                 raise
 
@@ -740,6 +1014,34 @@ class SupabaseAppStore:
                 detail="create_intake failed",
             ) from exc
 
+    def update_intake(
+        self,
+        intake_id: str,
+        *,
+        intake: dict[str, Any],
+        fight_date: str | None,
+        technical_style: list[str],
+    ) -> dict[str, Any]:
+        payload = {
+            "intake": intake,
+            "fight_date": (fight_date or "").strip() or None,
+            "technical_style": technical_style,
+        }
+        try:
+            response = self.client.table("athlete_intakes").update(payload).eq("id", intake_id).execute()
+            rows = getattr(response, "data", None) or []
+            if not rows:
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="intake not found")
+            return rows[0]
+        except HTTPException:
+            raise
+        except _STORE_CLIENT_ERRORS as exc:
+            self._raise_operation_http_error(
+                operation=f"update_intake intake_id={intake_id}",
+                detail="failed to update intake",
+                exc=exc,
+            )
+
     def create_plan(
         self,
         *,
@@ -751,6 +1053,7 @@ class SupabaseAppStore:
         result_status = str(result.get("status") or "generated").strip().lower()
         if not is_plan_status(result_status):
             raise _status_transition_error(f"unknown plan status: {result_status!r}")
+        visible_plan_text = _visible_plan_text_for_status(result, status_value=result_status)
         payload = {
             "athlete_id": athlete_id,
             "intake_id": intake_id,
@@ -759,7 +1062,7 @@ class SupabaseAppStore:
             "full_name": request.athlete.full_name,
             "plan_name": "",
             "status": result_status,
-            "plan_text": result.get("plan_text", ""),
+            "plan_text": visible_plan_text,
             "draft_plan_text": result.get("draft_plan_text", result.get("plan_text", "")),
             "final_plan_text": result.get("final_plan_text", result.get("plan_text", "")),
             "coach_notes": result.get("coach_notes", ""),
@@ -912,8 +1215,9 @@ class SupabaseAppStore:
         client_request_id: str,
         source: str,
         request_payload: dict[str, Any],
-        intake_id: str | None = None,
         plan_id: str | None = None,
+        intake_id: str | None = None,
+        stale_after_seconds: int = 90,
     ) -> dict[str, Any]:
         last_error: Exception | None = None
 
@@ -949,7 +1253,48 @@ class SupabaseAppStore:
             last_error = exc
             existing = None
         if existing:
+            if is_startup_stale_generation_job(existing, stale_after_seconds=stale_after_seconds):
+                reset_payload = {
+                    "status": "queued",
+                    "source": (source or "").strip() or "self_serve",
+                    "request_payload": request_payload,
+                    "error": None,
+                    "heartbeat_at": None,
+                    "started_at": None,
+                    "completed_at": None,
+                    "stage1_result": None,
+                    "final_result": None,
+                    "progress_milestones": [],
+                }
+
+                if plan_id is not None:
+                    reset_payload["plan_id"] = plan_id
+                if intake_id is not None:
+                    reset_payload["intake_id"] = intake_id
+
+                self._run_with_transient_retry(
+                    operation="create_or_get_generation_job:reset_startup_stale",
+                    fn=lambda: self.client.table("generation_jobs")
+                    .update(reset_payload)
+                    .eq("id", str(existing["id"]))
+                    .eq("status", "running")
+                    .execute(),
+                )
+                refreshed = self.get_generation_job(str(existing["id"]))
+                if refreshed:
+                    return refreshed
             return existing
+        active_job = self.get_active_generation_job_for_athlete(
+            athlete_id,
+            stale_after_seconds=stale_after_seconds,
+        )
+        if active_job and str(active_job.get("status") or "") in {"queued", "running"}:
+            if str(active_job.get("client_request_id") or "") == client_request_id:
+                return active_job
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="A generation job is already queued or running for this account.",
+            )
 
         payload = {
             "athlete_id": athlete_id,
@@ -1023,6 +1368,17 @@ class SupabaseAppStore:
             existing = None
         if existing:
             return existing
+        active_job = self.get_active_generation_job_for_athlete(
+            athlete_id,
+            stale_after_seconds=stale_after_seconds,
+        )
+        if active_job and str(active_job.get("status") or "") in {"queued", "running"}:
+            if str(active_job.get("client_request_id") or "") == client_request_id:
+                return active_job
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="A generation job is already queued or running for this account.",
+            )
         if last_error and self._is_transient_store_error(last_error):
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -1065,14 +1421,165 @@ class SupabaseAppStore:
                 detail="failed to count generation jobs",
                 exc=exc,
             )
-        return 0
+
+    def check_plan_generation_short_window_limit(
+        self,
+        athlete_id: str,
+        max_requests: int,
+        window_seconds: float,
+    ) -> tuple[bool, int]:
+        try:
+            response = self._run_with_transient_retry(
+                operation=f"check_plan_generation_short_window_limit athlete_id={athlete_id}",
+                fn=lambda: self.client.rpc(
+                    "check_plan_generation_short_window_limit",
+                    {
+                        "p_athlete_id": athlete_id,
+                        "p_max_requests": max_requests,
+                        "p_window_seconds": window_seconds,
+                    },
+                ).execute(),
+            )
+            payload = getattr(response, "data", None)
+            if isinstance(payload, list):
+                payload = payload[0] if payload else {}
+            if not isinstance(payload, dict):
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail="invalid short-window rate limit response",
+                )
+            allowed = payload.get("allowed")
+            retry_after_seconds = payload.get("retry_after_seconds")
+            if not isinstance(allowed, bool) or not isinstance(retry_after_seconds, int):
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail="invalid short-window rate limit response",
+                )
+            return allowed, max(0, retry_after_seconds)
+        except HTTPException:
+            raise
+        except _STORE_CLIENT_ERRORS as exc:
+            self._raise_operation_http_error(
+                operation=f"check_plan_generation_short_window_limit athlete_id={athlete_id}",
+                detail="failed to enforce short-window rate limit",
+                exc=exc,
+            )
 
     def get_generation_job(self, job_id: str) -> dict[str, Any] | None:
         try:
-            return self._run_with_transient_retry(
+            job = self._run_with_transient_retry(
                 operation="get_generation_job:select",
                 fn=lambda: self._read_generation_job(job_id),
             )
+            if not job or str(job.get("status") or "") != "running":
+                return job
+            staleness = self._classify_running_job_staleness(
+                job,
+                stale_after_seconds=generation_job_stale_after_seconds(),
+                stage1_stale_after_seconds=_stage1_stale_after_seconds_for_reads(),
+            )
+            if staleness == "job_loaded_stalled":
+                attempt_count = int(job.get("attempt_count") or 0)
+                now_iso = _utc_now_iso()
+                milestones = _progress_milestones(job.get("progress_milestones"))
+                if attempt_count < _generation_startup_max_attempts():
+                    milestones.append(
+                        {
+                            "code": "worker_claim_stalled_requeued",
+                            "label": "Worker claim stalled",
+                            "detail": "Worker loaded the generation job but did not reach request parsing; job was requeued for recovery.",
+                            "meta": {},
+                            "at": now_iso,
+                        }
+                    )
+                    self._run_with_transient_retry(
+                        operation="get_generation_job:requeue_job_loaded_stalled",
+                        fn=lambda: self.client.table("generation_jobs")
+                        .update(
+                            {
+                                "status": "queued",
+                                "error": None,
+                                "started_at": None,
+                                "heartbeat_at": None,
+                                "completed_at": None,
+                                "progress_milestones": milestones,
+                            }
+                        )
+                        .eq("id", str(job.get("id") or ""))
+                        .eq("status", "running")
+                        .execute(),
+                    )
+                else:
+                    milestones.append(
+                        {
+                            "code": "worker_claim_stalled_failed",
+                            "label": "Worker stalled after loading job",
+                            "detail": "Worker loaded the generation job but did not reach request parsing after retry.",
+                            "meta": {},
+                            "at": now_iso,
+                        }
+                    )
+                    self._run_with_transient_retry(
+                        operation="get_generation_job:fail_job_loaded_stalled",
+                        fn=lambda: self.client.table("generation_jobs")
+                        .update(
+                            {
+                                "status": "failed",
+                                "error": "Generation worker stalled after loading the job.",
+                                "completed_at": now_iso,
+                                "heartbeat_at": now_iso,
+                                "progress_milestones": milestones,
+                            }
+                        )
+                        .eq("id", str(job.get("id") or ""))
+                        .eq("status", "running")
+                        .execute(),
+                    )
+                return self._read_generation_job(job_id)
+            if staleness == "stage1_planner_stalled":
+                now_iso = _utc_now_iso()
+                milestones = _progress_milestones(job.get("progress_milestones"))
+                if not _has_milestone_code(milestones, "stage1_planner_timeout"):
+                    milestones.append(
+                        {
+                            "code": "stage1_planner_timeout",
+                            "label": "Stage 1 planner timed out",
+                            "detail": "Planner did not return after invocation and the job was failed for recovery.",
+                            "meta": {},
+                            "at": now_iso,
+                        }
+                    )
+                recovered_plan_id = _plan_id_from_terminal_milestones(job)
+                recovered_status = "review_required" if _should_recover_stalled_job(job) else "failed"
+                if recovered_status == "review_required":
+                    milestones.append(
+                        {
+                            "code": "stalled_job_recovered",
+                            "label": "Stalled job recovered",
+                            "detail": "Recovered as review required because usable output was already persisted.",
+                            "meta": {"recovery_reason": "persisted_output"},
+                            "at": now_iso,
+                        }
+                    )
+                self._run_with_transient_retry(
+                    operation="get_generation_job:resolve_stage1_stalled",
+                    fn=lambda: self.client.table("generation_jobs")
+                    .update(
+                        {
+                            "status": recovered_status,
+                            "error": None if recovered_status == "review_required" else "Stage 1 planner stalled after planner invocation.",
+                            "completed_at": now_iso,
+                            "heartbeat_at": now_iso,
+                            "progress_milestones": milestones,
+                            "plan_id": recovered_plan_id or str(job.get("plan_id") or "") or None,
+                        }
+                    )
+                    .eq("id", str(job.get("id") or ""))
+                    .eq("status", "running")
+                    .execute(),
+                )
+                return self._read_generation_job(job_id)
+            return job
         except _STORE_CLIENT_ERRORS as exc:
             if self._is_transient_store_error(exc):
                 logger.warning(
@@ -1121,6 +1628,209 @@ class SupabaseAppStore:
                 detail="failed to load generation job",
             ) from exc
 
+    def get_active_generation_job_for_athlete(
+        self,
+        athlete_id: str,
+        *,
+        stale_after_seconds: int | None = None,
+    ) -> dict[str, Any] | None:
+        if stale_after_seconds is None:
+            stale_after_seconds = generation_job_stale_after_seconds()
+        try:
+            response = self._run_with_transient_retry(
+                operation=f"get_active_generation_job_for_athlete athlete_id={athlete_id}",
+                fn=lambda: self.client.table("generation_jobs")
+                .select(GENERATION_JOB_SELECT)
+                .eq("athlete_id", athlete_id)
+                .in_("status", ["queued", "running"])
+                .order("created_at", desc=True)
+                .limit(10)
+                .execute(),
+            )
+            rows = [row for row in (getattr(response, "data", None) or []) if isinstance(row, dict)]
+            for row in rows:
+                if str(row.get("status") or "") == "queued":
+                    return row
+                if str(row.get("status") or "") != "running":
+                    continue
+                staleness = self._classify_running_job_staleness(
+                    row,
+                    stale_after_seconds=stale_after_seconds,
+                    stage1_stale_after_seconds=_stage1_stale_after_seconds_for_reads(),
+                )
+                if staleness == "fresh":
+                    return row
+                if staleness == "startup_stale":
+                    self._run_with_transient_retry(
+                        operation="get_active_generation_job_for_athlete:reset_startup_stale",
+                        fn=lambda: self.client.table("generation_jobs")
+                        .update(
+                            {
+                                "status": "queued",
+                                "error": None,
+                                "heartbeat_at": None,
+                                "started_at": None,
+                                "completed_at": None,
+                                "stage1_result": None,
+                                "final_result": None,
+                                "progress_milestones": [],
+                            }
+                        )
+                        .eq("id", str(row.get("id") or ""))
+                        .eq("status", "running")
+                        .execute(),
+                    )
+                elif staleness == "job_loaded_stalled":
+                    attempt_count = int(row.get("attempt_count") or 0)
+                    now_iso = _utc_now_iso()
+                    milestones = _progress_milestones(row.get("progress_milestones"))
+                    if attempt_count < _generation_startup_max_attempts():
+                        milestones.append(
+                            {
+                                "code": "worker_claim_stalled_requeued",
+                                "label": "Worker claim stalled",
+                                "detail": "Worker loaded the generation job but did not reach request parsing; job was requeued for recovery.",
+                                "meta": {},
+                                "at": now_iso,
+                            }
+                        )
+                        self._run_with_transient_retry(
+                            operation="get_active_generation_job_for_athlete:requeue_job_loaded_stalled",
+                            fn=lambda: self.client.table("generation_jobs")
+                            .update(
+                                {
+                                    "status": "queued",
+                                    "error": None,
+                                    "heartbeat_at": None,
+                                    "started_at": None,
+                                    "completed_at": None,
+                                    "progress_milestones": milestones,
+                                }
+                            )
+                            .eq("id", str(row.get("id") or ""))
+                            .eq("status", "running")
+                            .execute(),
+                        )
+                    else:
+                        milestones.append(
+                            {
+                                "code": "worker_claim_stalled_failed",
+                                "label": "Worker stalled after loading job",
+                                "detail": "Worker loaded the generation job but did not reach request parsing after retry.",
+                                "meta": {},
+                                "at": now_iso,
+                            }
+                        )
+                        self._run_with_transient_retry(
+                            operation="get_active_generation_job_for_athlete:fail_job_loaded_stalled",
+                            fn=lambda: self.client.table("generation_jobs")
+                            .update(
+                                {
+                                    "status": "failed",
+                                    "error": "Generation worker stalled after loading the job.",
+                                    "completed_at": now_iso,
+                                    "heartbeat_at": now_iso,
+                                    "progress_milestones": milestones,
+                                }
+                            )
+                            .eq("id", str(row.get("id") or ""))
+                            .eq("status", "running")
+                            .execute(),
+                        )
+                elif staleness == "stage1_planner_stalled":
+                    now_iso = _utc_now_iso()
+                    milestones = _progress_milestones(row.get("progress_milestones"))
+                    if not _has_milestone_code(milestones, "stage1_planner_timeout"):
+                        milestones.append(
+                            {
+                                "code": "stage1_planner_timeout",
+                                "label": "Stage 1 planner timed out",
+                                "detail": "Planner did not return after invocation and the job was failed for recovery.",
+                                "meta": {},
+                            "at": now_iso,
+                            }
+                        )
+                    recovered_plan_id = _plan_id_from_terminal_milestones(row)
+                    recovered_status = "review_required" if _should_recover_stalled_job(row) else "failed"
+                    if recovered_status == "review_required":
+                        milestones.append(
+                            {
+                                "code": "stalled_job_recovered",
+                                "label": "Stalled job recovered",
+                                "detail": "Recovered as review required because usable output was already persisted.",
+                                "meta": {"recovery_reason": "persisted_output"},
+                                "at": now_iso,
+                            }
+                        )
+                    self._run_with_transient_retry(
+                        operation="get_active_generation_job_for_athlete:resolve_stage1_stalled",
+                        fn=lambda: self.client.table("generation_jobs")
+                        .update(
+                            {
+                                "status": recovered_status,
+                                "error": None if recovered_status == "review_required" else "Stage 1 planner stalled after planner invocation.",
+                                "completed_at": now_iso,
+                                "heartbeat_at": now_iso,
+                                "progress_milestones": milestones,
+                                "plan_id": recovered_plan_id or str(row.get("plan_id") or "") or None,
+                            }
+                        )
+                        .eq("id", str(row.get("id") or ""))
+                        .eq("status", "running")
+                        .execute(),
+                    )
+                else:
+                    now_iso = _utc_now_iso()
+                    milestones = _progress_milestones(row.get("progress_milestones"))
+                    recovered_plan_id = _plan_id_from_terminal_milestones(row)
+                    recovered_status = "review_required" if _should_recover_stalled_job(row) else "failed"
+                    if recovered_status == "review_required":
+                        milestones.append(
+                            {
+                                "code": "stalled_job_recovered",
+                                "label": "Stalled job recovered",
+                                "detail": "Recovered as review required because usable output was already persisted.",
+                                "meta": {"recovery_reason": "persisted_output"},
+                                "at": now_iso,
+                            }
+                        )
+                    self._run_with_transient_retry(
+                        operation="get_active_generation_job_for_athlete:resolve_mid_pipeline_stale",
+                        fn=lambda: self.client.table("generation_jobs")
+                        .update(
+                            {
+                                "status": recovered_status,
+                                "error": None if recovered_status == "review_required" else "Generation job stalled mid-pipeline and was failed for recovery.",
+                                "completed_at": now_iso,
+                                "heartbeat_at": now_iso,
+                                "progress_milestones": milestones,
+                                "plan_id": recovered_plan_id or str(row.get("plan_id") or "") or None,
+                            }
+                        )
+                        .eq("id", str(row.get("id") or ""))
+                        .eq("status", "running")
+                        .execute(),
+                    )
+                refreshed = self.get_generation_job(str(row.get("id") or ""))
+                if refreshed and str(refreshed.get("status") or "") in {"queued", "failed", "review_required"}:
+                    return refreshed
+            return None
+        except _STORE_CLIENT_ERRORS as exc:
+            if self._is_transient_store_error(exc):
+                raise HTTPException(
+                    status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                    detail=GENERATION_JOB_UNAVAILABLE_DETAIL,
+                ) from exc
+            if self._is_generation_job_schema_error(exc):
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail=GENERATION_JOB_SCHEMA_DETAIL,
+                ) from exc
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="failed to load generation job",
+            ) from exc
+
     def get_generation_job_by_plan_id(self, plan_id: str) -> dict[str, Any] | None:
         # Soft-fails to None so plan detail loads even if generation_jobs is unavailable —
         # the plan_source field is non-critical (banner-only).
@@ -1134,6 +1844,57 @@ class SupabaseAppStore:
         except _STORE_CLIENT_ERRORS:
             logger.exception("[store] get_generation_job_by_plan_id:exception plan_id=%s", plan_id)
             return None
+
+    def get_latest_generation_job_for_athlete(self, athlete_id: str) -> dict[str, Any] | None:
+        try:
+            response = self._run_with_transient_retry(
+                operation=f"get_latest_generation_job_for_athlete athlete_id={athlete_id}",
+                fn=lambda: self.client.table("generation_jobs")
+                .select(GENERATION_JOB_SELECT)
+                .eq("athlete_id", athlete_id)
+                .order("created_at", desc=True)
+                .limit(1)
+                .execute(),
+            )
+            rows = response.data or []
+            if not rows:
+                return None
+            row = rows[0]
+            return row if isinstance(row, dict) else None
+        except _STORE_CLIENT_ERRORS as exc:
+            if self._is_transient_store_error(exc):
+                raise HTTPException(
+                    status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                    detail=GENERATION_JOB_UNAVAILABLE_DETAIL,
+                ) from exc
+            if self._is_generation_job_schema_error(exc):
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail=GENERATION_JOB_SCHEMA_DETAIL,
+                ) from exc
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="failed to load generation job",
+            ) from exc
+
+    def has_active_generation_job_for_plan(self, plan_id: str) -> bool:
+        try:
+            response = self._run_with_transient_retry(
+                operation=f"has_active_generation_job_for_plan plan_id={plan_id}",
+                fn=lambda: self.client.table("generation_jobs")
+                .select("id")
+                .eq("plan_id", plan_id)
+                .in_("status", ["queued", "running"])
+                .limit(1)
+                .execute(),
+            )
+            return bool(response.data)
+        except _STORE_CLIENT_ERRORS as exc:
+            self._raise_operation_http_error(
+                operation=f"has_active_generation_job_for_plan plan_id={plan_id}",
+                detail="failed to check active generation jobs",
+                exc=exc,
+            )
 
     def list_generation_jobs_for_athlete(self, athlete_id: str, *, limit: int = 10) -> list[dict[str, Any]]:
         try:
@@ -1160,7 +1921,9 @@ class SupabaseAppStore:
             )
         return []
 
-    def list_claimable_generation_jobs(self, *, limit: int = 20, stale_after_seconds: int = 90) -> list[dict[str, Any]]:
+    def list_claimable_generation_jobs(self, *, limit: int = 20, stale_after_seconds: int | None = None) -> list[dict[str, Any]]:
+        if stale_after_seconds is None:
+            stale_after_seconds = generation_job_stale_after_seconds()
         try:
             cutoff_iso = (
                 datetime.now(timezone.utc) - timedelta(seconds=max(1, stale_after_seconds))
@@ -1197,12 +1960,28 @@ class SupabaseAppStore:
             )
 
             merged_rows: dict[str, dict[str, Any]] = {}
-            for response in (queued_response, stale_heartbeat_response, stale_without_heartbeat_response):
+
+            # Queued jobs are always claimable (oldest first).
+            for row in queued_response.data or []:
+                if not isinstance(row, dict):
+                    continue
+                row_id = str(row.get("id") or "")
+                if not row_id:
+                    continue
+                merged_rows[row_id] = dict(row)
+
+            # Running jobs are only claimable if they are startup-stale.
+            for response in (stale_heartbeat_response, stale_without_heartbeat_response):
                 for row in response.data or []:
                     if not isinstance(row, dict):
                         continue
                     row_id = str(row.get("id") or "")
                     if not row_id:
+                        continue
+                    if not is_startup_stale_generation_job(
+                        row,
+                        stale_after_seconds=stale_after_seconds,
+                    ):
                         continue
                     merged_rows[row_id] = dict(row)
             return sorted(merged_rows.values(), key=lambda row: str(row.get("created_at") or ""))[:limit]
@@ -1228,7 +2007,9 @@ class SupabaseAppStore:
                 detail="failed to list generation jobs",
             ) from exc
 
-    def claim_generation_job(self, job_id: str, *, stale_after_seconds: int = 90) -> dict[str, Any] | None:
+    def claim_generation_job_start(self, job_id: str, *, stale_after_seconds: int | None = None) -> dict[str, Any] | None:
+        if stale_after_seconds is None:
+            stale_after_seconds = generation_job_stale_after_seconds()
         try:
             job = self.get_generation_job(job_id)
             if not job:
@@ -1238,20 +2019,13 @@ class SupabaseAppStore:
             current_status = str(raw_status or "").strip().lower() or "queued"
             current_attempt_count = int(job.get("attempt_count") or 0)
             now_iso = _utc_now_iso()
-            now_dt = _parse_datetime(now_iso)
-            heartbeat = _parse_datetime(job.get("heartbeat_at"))
-            started_at = _parse_datetime(job.get("started_at"))
-            last_progress_at = heartbeat or started_at
-            is_stale_running = (
-                current_status == "running"
-                and now_dt is not None
-                and last_progress_at is not None
-                and (now_dt - last_progress_at).total_seconds() >= stale_after_seconds
-            )
 
             if current_status not in {"queued", "running"}:
                 return None
-            if current_status == "running" and not is_stale_running:
+            if current_status == "running" and not is_startup_stale_generation_job(
+                job,
+                stale_after_seconds=stale_after_seconds,
+            ):
                 return None
             try:
                 require_generation_job_transition(current_status, "running")
@@ -1259,13 +2033,15 @@ class SupabaseAppStore:
                 return None
 
             next_attempt_count = current_attempt_count + 1
-            next_started_at = job.get("started_at") or now_iso
+            next_started_at = now_iso if current_status == "queued" else (job.get("started_at") or now_iso)
             payload = {
                 "status": "running",
                 "heartbeat_at": now_iso,
                 "started_at": next_started_at,
                 "error": None,
                 "attempt_count": next_attempt_count,
+                "completed_at": None,
+                "progress_milestones": [_job_loaded_milestone(now_iso)],
             }
 
             def _claim_update():
@@ -1277,7 +2053,7 @@ class SupabaseAppStore:
                 return query.eq("attempt_count", current_attempt_count).execute()
 
             self._run_with_transient_retry(
-                operation="claim_generation_job:update",
+                operation="claim_generation_job_start:update",
                 fn=_claim_update,
             )
             updated = self.get_generation_job(job_id)
@@ -1291,13 +2067,16 @@ class SupabaseAppStore:
                 return None
             if str(updated.get("started_at") or "") != str(next_started_at):
                 return None
+            milestones = _progress_milestones(updated.get("progress_milestones"))
+            if not milestones or str(milestones[0].get("code") if isinstance(milestones[0], dict) else "") != "job_loaded":
+                return None
             return updated
         except HTTPException:
             raise
         except _STORE_CLIENT_ERRORS as exc:
             if self._is_transient_store_error(exc):
                 logger.warning(
-                    "[store] claim_generation_job:transient_failure job_id=%s error_type=%s",
+                    "[store] claim_generation_job_start:transient_failure job_id=%s error_type=%s",
                     job_id,
                     type(exc).__name__,
                 )
@@ -1305,13 +2084,18 @@ class SupabaseAppStore:
                     status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                     detail=GENERATION_JOB_UNAVAILABLE_DETAIL,
                 ) from exc
-            logger.exception("[store] claim_generation_job:exception job_id=%s", job_id)
+            logger.exception("[store] claim_generation_job_start:exception job_id=%s", job_id)
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="failed to claim generation job",
             ) from exc
 
-    def count_active_generation_jobs(self, *, stale_after_seconds: int = 90) -> int:
+    def claim_generation_job(self, job_id: str, *, stale_after_seconds: int | None = None) -> dict[str, Any] | None:
+        return self.claim_generation_job_start(job_id, stale_after_seconds=stale_after_seconds)
+
+    def count_active_generation_jobs(self, *, stale_after_seconds: int | None = None) -> int:
+        if stale_after_seconds is None:
+            stale_after_seconds = generation_job_stale_after_seconds()
         try:
             cutoff_iso = (
                 datetime.now(timezone.utc) - timedelta(seconds=max(1, stale_after_seconds))
@@ -1452,6 +2236,27 @@ class SupabaseAppStore:
                 exc=exc,
             )
 
+    def delete_plan(self, plan_id: str) -> None:
+        try:
+            existing = self.get_plan(plan_id)
+            if not existing:
+                logger.warning("[store] delete_plan:not_found plan_id=%s", plan_id)
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="plan not found",
+                )
+            logger.info("[store] delete_plan:start plan_id=%s", plan_id)
+            self.client.table("plans").delete().eq("id", plan_id).execute()
+            logger.info("[store] delete_plan:success plan_id=%s", plan_id)
+        except HTTPException:
+            raise
+        except _STORE_CLIENT_ERRORS as exc:
+            self._raise_operation_http_error(
+                operation=f"delete_plan plan_id={plan_id}",
+                detail="failed to delete plan",
+                exc=exc,
+            )
+
     def update_plan_stage2(self, plan_id: str, result: dict[str, Any]) -> dict[str, Any]:
         existing = self.get_plan(plan_id)
         if not existing:
@@ -1460,12 +2265,15 @@ class SupabaseAppStore:
                 detail="plan not found",
             )
         try:
-            next_status = require_plan_transition(existing.get("status") or "generated", result.get("status") or "generated")
+            current_status = existing.get("status") or "generated"
+            next_status_input = result.get("status") or current_status
+            next_status = require_plan_transition(current_status, next_status_input)
         except ValueError as exc:
             raise _status_transition_error(str(exc)) from exc
+        visible_plan_text = _visible_plan_text_for_status(result, status_value=next_status)
         payload = {
             "status": next_status,
-            "plan_text": result.get("plan_text", ""),
+            "plan_text": visible_plan_text,
             "draft_plan_text": result.get("draft_plan_text", result.get("plan_text", "")),
             "final_plan_text": result.get("final_plan_text", result.get("plan_text", "")),
             "pdf_url": result.get("pdf_url"),

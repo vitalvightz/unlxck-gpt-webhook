@@ -172,7 +172,7 @@ function OverviewDisclosure({
 }
 
 export default function HomePage() {
-  const { isReady, isMeHydrated, session, me } = useAppSession();
+  const { isReady, isMeHydrated, hasTransientMeError, session, me, signOut } = useAppSession();
   const router = useRouter();
   const [recentPlans, setRecentPlans] = useState<PlanSummary[]>([]);
   const [activePreviewIndex, setActivePreviewIndex] = useState(0);
@@ -252,6 +252,24 @@ export default function HomePage() {
       active = false;
     };
   }, [me?.latest_plan?.plan_id, me?.plan_count, session?.access_token]);
+
+  if (session && hasTransientMeError) {
+    return (
+      <section className="panel loading-card">
+        <p className="kicker">Overview</p>
+        <h1>Workspace temporarily unavailable</h1>
+        <p className="muted">Your session exists, but the app could not load your athlete profile.</p>
+        <div className="hero-actions">
+          <button type="button" className="cta" onClick={() => window.location.reload()}>
+            Retry
+          </button>
+          <button type="button" className="secondary-button" onClick={() => void signOut()}>
+            Sign out
+          </button>
+        </div>
+      </section>
+    );
+  }
 
   if (!isReady || (session && !isMeHydrated)) {
     return (

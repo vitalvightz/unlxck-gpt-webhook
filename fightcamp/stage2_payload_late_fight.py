@@ -373,12 +373,12 @@ def _nearest_available_day(
     if target_index in available_indices:
         return available_indices[target_index]
     for delta in range(1, 7):
-        forward = (target_index + delta) % 7
-        if forward in available_indices:
-            return available_indices[forward]
         backward = (target_index - delta) % 7
         if backward in available_indices:
             return available_indices[backward]
+        forward = (target_index + delta) % 7
+        if forward in available_indices:
+            return available_indices[forward]
     return list(available_indices.values())[0]
 
 
@@ -402,8 +402,9 @@ def _late_fight_legal_offsets(days_until_fight: Any) -> list[int]:
         return [0]
     mode = _days_out_payload_mode(days)
     if mode == "bridge_compression_payload":
-        # Bridge allocations must stay inside D-21..D-14.
-        return list(range(days, 13, -1))
+        # Bridge starts at D-21..D-14 but must carry countdown continuity
+        # through fight week so role placement can use legal downstream slots.
+        return list(range(days, 0, -1))
     return list(range(min(days, 21), 0, -1))
 
 
@@ -1101,14 +1102,33 @@ def _late_fight_countdown_context(days_until_fight: Any, athlete_model: dict[str
     plan_creation_weekday = _resolve_plan_creation_weekday(days_until_fight, athlete_model)
     available_days = clean_list(athlete_model.get("training_days", []))
     countdown_map = _countdown_weekday_map(plan_creation_weekday, days_until_fight)
-    resolved_map = dict(countdown_map)
+    resolved_map: dict[str, str] = {}
     legal_countdown_labels = _late_fight_legal_countdown_labels(days_until_fight)
+    for label, weekday in countdown_map.items():
+        weekday_name = str(weekday or "").strip().lower()
+        if not weekday_name:
+            continue
+        resolved_day = _nearest_available_day(weekday_name, available_days)
+        if resolved_day:
+            resolved_map[label] = resolved_day
     legal_weekdays = [
-        str(countdown_map.get(label) or "").strip().lower()
+        str(resolved_map.get(label) or "").strip().lower()
         for label in legal_countdown_labels
-        if str(countdown_map.get(label) or "").strip()
+        if str(resolved_map.get(label) or "").strip()
     ]
     availability_adjustments: list[dict[str, Any]] = []
+    for label in legal_countdown_labels:
+        raw_weekday = str(countdown_map.get(label) or "").strip().lower()
+        resolved_weekday = str(resolved_map.get(label) or "").strip().lower()
+        if raw_weekday and resolved_weekday and raw_weekday != resolved_weekday:
+            availability_adjustments.append(
+                {
+                    "countdown_label": label,
+                    "raw_weekday": raw_weekday,
+                    "resolved_weekday": resolved_weekday,
+                    "reason": "nearest_available_day",
+                }
+            )
     eligible_countdown_labels = [
         label
         for label in legal_countdown_labels
@@ -2073,6 +2093,48 @@ def _visible_insert_session_sequence(session_sequence: list[dict[str, Any]]) -> 
     ]
 
 
+def _coach_owned_context_session_sequence(session_sequence: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Return coach-owned boxing context sessions that must stay visible in the calendar."""
+    coach_owned: list[dict[str, Any]] = []
+    for session in session_sequence:
+        role_key = str(session.get("role_key") or "").strip()
+        downgraded_from = str(session.get("downgraded_from_role_key") or "").strip()
+        is_declared_boxing_context = (
+            role_key == "hard_sparring_day"
+            or downgraded_from == "hard_sparring_day"
+        )
+        if not is_declared_boxing_context:
+            continue
+        if str(session.get("scheduled_day_hint") or "").strip():
+            session_copy = dict(session)
+            if role_key == "hard_sparring_day":
+                session_copy["athlete_facing_label"] = CANONICAL_HARD_SPARRING_LABEL
+                session_copy["display_text"] = CANONICAL_HARD_SPARRING_NOTE
+            elif downgraded_from == "hard_sparring_day":
+                session_copy["athlete_facing_label"] = CANONICAL_HARD_SPARRING_BAN_LABEL
+                session_copy["display_text"] = CANONICAL_HARD_SPARRING_NOTE
+            coach_owned.append(session_copy)
+    return coach_owned
+
+
+def _visible_calendar_session_sequence(session_sequence: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Return calendar-visible sessions (coach-owned boxing context + app-owned inserts)."""
+    combined = _coach_owned_context_session_sequence(session_sequence) + _visible_insert_session_sequence(session_sequence)
+    unique: list[dict[str, Any]] = []
+    seen: set[tuple[str, str, int | None]] = set()
+    for session in combined:
+        role_key = str(session.get("role_key") or "")
+        label = str(session.get("scheduled_countdown_label") or session.get("countdown_label") or session.get("scheduled_day_hint") or "")
+        offset_val = session.get("countdown_offset")
+        offset = int(offset_val) if isinstance(offset_val, int) else None
+        key = (role_key, label, offset)
+        if key in seen:
+            continue
+        seen.add(key)
+        unique.append(session)
+    return sorted(unique, key=lambda entry: int(entry.get("countdown_offset") or 0), reverse=True)
+
+
 def _title_case_days(days: list[str]) -> list[str]:
     return [str(day).strip().title() for day in days if str(day).strip()]
 
@@ -2567,6 +2629,7 @@ def _late_fight_best_assignment(
     legal_countdown_labels: list[str],
     label_to_weekday: dict[str, str],
     label_to_display_weekday: dict[str, str] | None = None,
+    label_to_resolved_training_weekday: dict[str, str] | None = None,
 ) -> tuple[int, list[dict[str, Any]]] | None:
     locked_labels: dict[int, str] = {}
     occupied_labels: set[str] = set()
@@ -2612,6 +2675,16 @@ def _late_fight_best_assignment(
             if real_weekday:
                 role_copy["scheduled_day_hint"] = real_weekday
                 role_copy["real_weekday"] = real_weekday
+            resolved_training_weekday = str(
+                (label_to_resolved_training_weekday or {}).get(assigned_label) or ""
+            ).strip()
+            if resolved_training_weekday and resolved_training_weekday != real_weekday:
+                role_copy["resolved_training_weekday"] = resolved_training_weekday
+                role_copy["availability_adjustment"] = {
+                    "raw_weekday": real_weekday,
+                    "resolved_training_weekday": resolved_training_weekday,
+                    "reason": "nearest_available_day",
+                }
             if display_weekday:
                 role_copy["countdown_weekday"] = display_weekday
                 role_copy["countdown_display_label"] = _countdown_display_label(assigned_label, display_weekday)
@@ -2688,6 +2761,11 @@ def _late_fight_allocation_plan(days_until_fight: Any, athlete_model: dict[str, 
         if str(permission_policy.get("countdown_weekday_map", {}).get(label) or "").strip()
     }
     label_to_display_weekday = dict(label_to_weekday)
+    label_to_resolved_training_weekday = {
+        str(item.get("countdown_label") or ""): str(item.get("resolved_weekday") or "").strip().lower()
+        for item in permission_policy.get("availability_adjustments", [])
+        if str(item.get("countdown_label") or "").strip() and str(item.get("resolved_weekday") or "").strip()
+    }
 
     invalid_locked_roles: list[dict[str, Any]] = []
     eligible_candidates: list[dict[str, Any]] = []
@@ -2725,6 +2803,7 @@ def _late_fight_allocation_plan(days_until_fight: Any, athlete_model: dict[str, 
                 eligible_countdown_labels,
                 label_to_weekday,
                 label_to_display_weekday,
+                label_to_resolved_training_weekday,
             )
             if assignment is None:
                 continue
@@ -2899,6 +2978,7 @@ def _assign_role_to_countdown_label(
     label: str,
     label_to_weekday: dict[str, str],
     label_to_display_weekday: dict[str, str] | None = None,
+    label_to_resolved_training_weekday: dict[str, str] | None = None,
 ) -> dict[str, Any]:
     role_copy = dict(role)
     role_copy["scheduled_countdown_label"] = label
@@ -2911,6 +2991,14 @@ def _assign_role_to_countdown_label(
     if weekday:
         role_copy["scheduled_day_hint"] = weekday
         role_copy["real_weekday"] = weekday
+    resolved_training_weekday = str((label_to_resolved_training_weekday or {}).get(label) or "").strip()
+    if resolved_training_weekday and resolved_training_weekday != weekday:
+        role_copy["resolved_training_weekday"] = resolved_training_weekday
+        role_copy["availability_adjustment"] = {
+            "raw_weekday": weekday,
+            "resolved_training_weekday": resolved_training_weekday,
+            "reason": "nearest_available_day",
+        }
     if display_weekday:
         role_copy["countdown_weekday"] = display_weekday
         role_copy["countdown_display_label"] = _countdown_display_label(label, display_weekday)
@@ -3082,6 +3170,11 @@ def _space_bridge_countdown_roles(
     label_to_display_weekday = dict(label_to_weekday)
     hard_weekdays = _declared_hard_weekdays(athlete_model)
     training_days = clean_list(athlete_model.get("training_days", []))
+    label_to_resolved_training_weekday = {
+        label: str(_nearest_available_day(weekday, training_days) or "").strip().lower()
+        for label, weekday in label_to_weekday.items()
+        if str(weekday or "").strip()
+    }
     ordered_roles = sorted(
         roles,
         key=lambda role: (
@@ -3168,6 +3261,7 @@ def _space_bridge_countdown_roles(
                 label,
                 label_to_weekday,
                 label_to_display_weekday,
+                label_to_resolved_training_weekday,
             )
             _search(
                 index + 1,
@@ -3759,7 +3853,7 @@ def _build_late_fight_plan_spec(days_until_fight: Any, athlete_model: dict) -> d
     allocation = _late_fight_practical_allocation_plan(days_until_fight, athlete_model)
     roles = list(allocation.get("session_roles", []))
     session_sequence = list(roles)
-    visible_session_sequence = _visible_insert_session_sequence(session_sequence)
+    visible_session_sequence = _visible_calendar_session_sequence(session_sequence)
     mode = payload_block["payload_mode"]
     max_blocks = _MAX_BLOCKS_PER_SESSION.get(mode)
     resolved_countdown_map = dict((allocation.get("allocator", {}) or {}).get("countdown_weekday_map", {}))

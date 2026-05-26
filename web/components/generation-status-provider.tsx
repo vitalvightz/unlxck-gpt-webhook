@@ -1,20 +1,27 @@
 "use client";
 
 import { createContext, useContext, useEffect, useRef, useState, useCallback, type ReactNode } from "react";
-import { getGenerationJob } from "@/lib/api";
+import { getActiveGenerationJob, getGenerationJob, getLatestGenerationJob } from "@/lib/api";
+import { isPreStartStaleGenerationJob } from "@/lib/generation-controller";
+import { isExpiredPendingGeneration, isStaleVisibleGenerationJob, normalizeLegacyGenerationJobStatus } from "@/lib/generation-status-guards";
 import type { GenerationJobResponse, GenerationJobStatus } from "@/lib/types";
 
 export type GlobalGenerationPhase = "queued" | "running" | "finalizing" | "completed" | "failed" | null;
+export type GlobalTerminalGenerationStatus = "completed" | "review_required" | null;
 
 interface GenerationStatusContextValue {
   phase: GlobalGenerationPhase;
   jobId: string | null;
   clientRequestId: string | null;
   planId: string | null;
+  athleteId: string | null;
+  source: string | null;
   isActive: boolean;
   statusMessage: string | null;
+  terminalStatus: GlobalTerminalGenerationStatus;
   startedAtMs: number | null;
   refreshStatus: () => void;
+  latestJob: GenerationJobResponse | null;
 }
 
 const GenerationStatusContext = createContext<GenerationStatusContextValue | null>(null);
@@ -32,16 +39,20 @@ type StoredPendingGenerationState = PendingGenerationState & {
   createdAtMs: number;
 };
 
+export function shouldUseLocalPendingForRecovery(pending: PendingGenerationState | null): boolean {
+  return Boolean(pending?.jobId);
+}
+
 function parsePendingGeneration(storageKey: string): StoredPendingGenerationState | null {
   if (typeof window === "undefined") return null;
 
-  const raw = window.sessionStorage.getItem(storageKey);
+  const raw = window.localStorage.getItem(storageKey);
   if (!raw) return null;
 
   try {
     const decoded = JSON.parse(raw) as PendingGenerationState;
     if (!decoded?.clientRequestId) {
-      window.sessionStorage.removeItem(storageKey);
+      window.localStorage.removeItem(storageKey);
       return null;
     }
     const createdAtMs = Date.parse(decoded.createdAt || "");
@@ -51,7 +62,7 @@ function parsePendingGeneration(storageKey: string): StoredPendingGenerationStat
       createdAtMs: Number.isFinite(createdAtMs) ? createdAtMs : 0,
     };
   } catch {
-    window.sessionStorage.removeItem(storageKey);
+    window.localStorage.removeItem(storageKey);
     return null;
   }
 }
@@ -59,7 +70,7 @@ function parsePendingGeneration(storageKey: string): StoredPendingGenerationStat
 function listPendingGenerations(): StoredPendingGenerationState[] {
   if (typeof window === "undefined") return [];
 
-  return Object.keys(window.sessionStorage)
+  return Object.keys(window.localStorage)
     .filter((key) => key.startsWith(PENDING_GENERATION_PREFIX))
     .map(parsePendingGeneration)
     .filter((pending): pending is StoredPendingGenerationState => pending !== null)
@@ -70,18 +81,28 @@ function getPendingGeneration(): PendingGenerationState | null {
   const [latest, ...duplicates] = listPendingGenerations();
 
   duplicates.forEach((pending) => {
-    window.sessionStorage.removeItem(pending.storageKey);
+    window.localStorage.removeItem(pending.storageKey);
   });
 
   return latest ?? null;
 }
 
+function savePendingGeneration(pending: PendingGenerationState): void {
+  if (typeof window === "undefined") return;
+  const existing = listPendingGenerations();
+  existing.forEach((item) => {
+    window.localStorage.removeItem(item.storageKey);
+  });
+  const key = `${PENDING_GENERATION_PREFIX}self`;
+  window.localStorage.setItem(key, JSON.stringify(pending));
+}
+
 function clearPendingGenerations(): void {
   if (typeof window === "undefined") return;
 
-  Object.keys(window.sessionStorage)
+  Object.keys(window.localStorage)
     .filter((key) => key.startsWith(PENDING_GENERATION_PREFIX))
-    .forEach((key) => window.sessionStorage.removeItem(key));
+    .forEach((key) => window.localStorage.removeItem(key));
 }
 
 function isTerminalStatus(status: GenerationJobStatus): boolean {
@@ -96,7 +117,7 @@ function phaseFromStatus(status: GenerationJobStatus): GlobalGenerationPhase {
   return null;
 }
 
-function statusMessage(phase: GlobalGenerationPhase): string {
+function statusMessage(phase: GlobalGenerationPhase, terminalStatus: GlobalTerminalGenerationStatus): string {
   switch (phase) {
     case "queued":
       return "Plan request queued...";
@@ -105,7 +126,7 @@ function statusMessage(phase: GlobalGenerationPhase): string {
     case "finalizing":
       return "Finalizing plan...";
     case "completed":
-      return "Plan ready!";
+      return terminalStatus === "review_required" ? "Plan ready for review." : "Plan ready!";
     case "failed":
       return "Plan failed. Try again.";
     default:
@@ -123,13 +144,26 @@ export function GenerationStatusProvider({ children, token }: GenerationStatusPr
   const [jobId, setJobId] = useState<string | null>(null);
   const [clientRequestId, setClientRequestId] = useState<string | null>(null);
   const [planId, setPlanId] = useState<string | null>(null);
+  const [athleteId, setAthleteId] = useState<string | null>(null);
+  const [source, setSource] = useState<string | null>(null);
   const [statusMessageText, setStatusMessageText] = useState<string | null>(null);
+  const [terminalStatus, setTerminalStatus] = useState<GlobalTerminalGenerationStatus>(null);
   const [startedAtMs, setStartedAtMs] = useState<number | null>(null);
+  const [latestJob, setLatestJob] = useState<GenerationJobResponse | null>(null);
 
   // Track the clear timeout so we can cancel it on unmount — prevents
   // state updates on an unmounted component
   const clearTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isCheckingRef = useRef(false);
+  const wasAuthenticatedRef = useRef(Boolean(token));
+  const latestTokenRef = useRef(token);
+  const checkSequenceRef = useRef(0);
+
+  useEffect(() => {
+    latestTokenRef.current = token;
+    checkSequenceRef.current++;
+    isCheckingRef.current = false;
+  }, [token]);
 
   // Cancel any pending clear timer when the component unmounts
   useEffect(() => {
@@ -141,6 +175,31 @@ export function GenerationStatusProvider({ children, token }: GenerationStatusPr
   }, []);
 
   const checkStatus = useCallback(async () => {
+    if (token && isCheckingRef.current) return;
+    const sequence = ++checkSequenceRef.current;
+
+    if (!token) {
+      checkSequenceRef.current++;
+      if (wasAuthenticatedRef.current) {
+        clearPendingGenerations();
+      }
+      setPhase(null);
+      setJobId(null);
+      setClientRequestId(null);
+      setPlanId(null);
+      setAthleteId(null);
+      setSource(null);
+      setStatusMessageText(null);
+      setTerminalStatus(null);
+      setStartedAtMs(null);
+      setLatestJob(null);
+      wasAuthenticatedRef.current = false;
+      isCheckingRef.current = false;
+      return;
+    }
+
+    wasAuthenticatedRef.current = true;
+
     if (isCheckingRef.current) {
       return;
     }
@@ -148,60 +207,128 @@ export function GenerationStatusProvider({ children, token }: GenerationStatusPr
     isCheckingRef.current = true;
 
     try {
-      const pending = getPendingGeneration();
-
-      if (!pending) {
+      let activePending: PendingGenerationState | null = null;
+      try {
+        const activeJob = await getActiveGenerationJob(token);
+        if (sequence !== checkSequenceRef.current || !latestTokenRef.current) {
+          return;
+        }
+        if (activeJob?.client_request_id && activeJob.created_at) {
+          activePending = {
+            clientRequestId: activeJob.client_request_id,
+            jobId: activeJob.job_id,
+            createdAt: activeJob.created_at,
+          };
+          setLatestJob(null);
+          savePendingGeneration(activePending);
+        }
+      } catch {
+        // Active endpoint unavailable: fall back to local pending recovery.
+      }
+      if (!activePending) {
+        const pending = getPendingGeneration();
+        if (pending && isExpiredPendingGeneration(pending.createdAt)) {
+          clearPendingGenerations();
+        } else if (shouldUseLocalPendingForRecovery(pending)) {
+          activePending = pending;
+        } else {
+          clearPendingGenerations();
+        }
+      }
+      if (!activePending) {
+        try {
+          const latest = await getLatestGenerationJob(token);
+          if (sequence !== checkSequenceRef.current || !latestTokenRef.current) return;
+          setLatestJob(latest);
+        } catch {
+          setLatestJob(null);
+        }
         setPhase(null);
         setJobId(null);
         setClientRequestId(null);
         setPlanId(null);
+        setAthleteId(null);
+        setSource(null);
         setStatusMessageText(null);
+        setTerminalStatus(null);
         setStartedAtMs(null);
         return;
       }
 
-      setClientRequestId(pending.clientRequestId);
-      const pendingCreatedAt = Date.parse(pending.createdAt || "");
+      setClientRequestId(activePending.clientRequestId);
+      const pendingCreatedAt = Date.parse(activePending.createdAt || "");
       setStartedAtMs(Number.isFinite(pendingCreatedAt) ? pendingCreatedAt : null);
+      setLatestJob(null);
 
-      if (pending.jobId && token) {
+      if (activePending.jobId && token) {
         try {
-          const job: GenerationJobResponse = await getGenerationJob(token, pending.jobId);
-          const newPhase = phaseFromStatus(job.status);
-          setPhase(newPhase);
-          setJobId(pending.jobId);
-          setStatusMessageText(statusMessage(newPhase));
-
-          if (job.status === "completed" || job.status === "review_required") {
-            setPlanId(job.plan_id || job.latest_plan_id || null);
+          const job: GenerationJobResponse = await getGenerationJob(token, activePending.jobId);
+          if (sequence !== checkSequenceRef.current || !latestTokenRef.current) {
+            return;
           }
+          const stalledBeforeStart = isPreStartStaleGenerationJob(job);
+          const staleVisibleJob = isStaleVisibleGenerationJob(job);
+          const normalizedStatus = normalizeLegacyGenerationJobStatus(job.status) as GenerationJobStatus;
+          const newPhase = stalledBeforeStart || staleVisibleJob ? "failed" : phaseFromStatus(normalizedStatus);
+          const newTerminalStatus = normalizedStatus === "completed" || normalizedStatus === "review_required" ? normalizedStatus : null;
+          setPhase(newPhase);
+          setJobId(activePending.jobId);
+          setTerminalStatus(newTerminalStatus);
+          setStatusMessageText(stalledBeforeStart || staleVisibleJob ? "Build stalled — retry" : statusMessage(newPhase, newTerminalStatus));
 
-          if (isTerminalStatus(job.status)) {
+          if (normalizedStatus === "completed" || normalizedStatus === "review_required") {
+            setPlanId(job.plan_id || null);
+          } else {
+            setPlanId(null);
+          }
+          setAthleteId(job.athlete_id || null);
+          setSource(job.source || null);
+
+          if (stalledBeforeStart || staleVisibleJob || isTerminalStatus(normalizedStatus)) {
             clearPendingGenerations();
 
             // Schedule the status clear — cancel any previous pending clear first
             if (clearTimerRef.current !== null) {
               clearTimeout(clearTimerRef.current);
             }
-            const delay = job.status === "failed" ? 3000 : 5000;
+            const delay = stalledBeforeStart || staleVisibleJob || normalizedStatus === "failed" ? 3000 : 5000;
             clearTimerRef.current = setTimeout(() => {
               clearTimerRef.current = null;
               setPhase(null);
               setJobId(null);
               setClientRequestId(null);
               setPlanId(null);
+              setAthleteId(null);
+              setSource(null);
               setStatusMessageText(null);
+              setTerminalStatus(null);
               setStartedAtMs(null);
             }, delay);
           }
         } catch {
-          // If we can't check status but have pending data, assume still running
-          setPhase("running");
-          setStatusMessageText("Generating plan...");
+          clearPendingGenerations();
+          setPhase(null);
+          setJobId(null);
+          setClientRequestId(null);
+          setPlanId(null);
+          setAthleteId(null);
+          setSource(null);
+          setStatusMessageText(null);
+          setTerminalStatus(null);
+          setStartedAtMs(null);
+          setLatestJob(null);
         }
       } else {
-        setPhase("queued");
-        setStatusMessageText("Plan request queued...");
+        clearPendingGenerations();
+        setPhase(null);
+        setJobId(null);
+        setClientRequestId(null);
+        setPlanId(null);
+        setAthleteId(null);
+        setSource(null);
+        setStatusMessageText(null);
+        setTerminalStatus(null);
+        setStartedAtMs(null);
       }
     } finally {
       isCheckingRef.current = false;
@@ -242,10 +369,14 @@ export function GenerationStatusProvider({ children, token }: GenerationStatusPr
     jobId,
     clientRequestId,
     planId,
+    athleteId,
+    source,
     isActive: phase !== null,
     statusMessage: statusMessageText,
+    terminalStatus,
     startedAtMs,
     refreshStatus: checkStatus,
+    latestJob,
   };
 
   return (

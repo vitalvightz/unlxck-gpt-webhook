@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import copy
+import math
 import os
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -24,6 +25,7 @@ from api.state_machine import (
     require_generation_job_transition,
     require_plan_transition,
 )
+from api.store import is_job_loaded_stalled_generation_job, is_stage1_planner_stalled_generation_job, is_startup_stale_generation_job
 from datetime import timedelta
 
 os.environ.setdefault("APP_GENERATION_SCHEDULER", "fastapi")
@@ -60,9 +62,34 @@ class FakeStore:
         self.admin_emails: set[str] = {
             email.strip().lower() for email in (admin_emails or set()) if email
         }
+        self._plan_generation_limit_events: dict[str, list[datetime]] = {}
 
     def validate_runtime_schema(self) -> None:
         return None
+
+    def check_plan_generation_short_window_limit(
+        self,
+        athlete_id: str,
+        max_requests: int,
+        window_seconds: float,
+    ) -> tuple[bool, int]:
+        if max_requests <= 0:
+            return True, 0
+        now = datetime.now(timezone.utc)
+        cutoff = now - timedelta(seconds=max(1.0, window_seconds))
+        bucket = [
+            ts for ts in self._plan_generation_limit_events.get(athlete_id, [])
+            if ts > cutoff
+        ]
+        self._plan_generation_limit_events[athlete_id] = bucket
+        if len(bucket) >= max_requests:
+            retry_after = max(
+                1,
+                math.ceil(max(1.0, window_seconds) - (now - bucket[0]).total_seconds()),
+            )
+            return False, retry_after
+        bucket.append(now)
+        return True, 0
 
     def is_admin_email(self, email: str) -> bool:
         if not email:
@@ -74,11 +101,43 @@ class FakeStore:
         # do not need to register every admin email explicitly.
         return normalized.endswith("@unlxck.test")
 
+    def _is_admin_email(self, email: str) -> bool:
+        return self.is_admin_email(email)
+
+    def _classify_running_job_staleness(self, job: dict, *, stale_after_seconds: int) -> str:
+        if str(job.get("status") or "") != "running":
+            return "fresh"
+        raw_stage1_timeout = os.getenv("APP_STAGE1_PLANNER_TIMEOUT_SECONDS", "240").strip()
+        try:
+            stage1_stale_after_seconds = max(1, int(float(raw_stage1_timeout)))
+        except (TypeError, ValueError):
+            stage1_stale_after_seconds = 240
+        if raw_stage1_timeout in {"", "0", "none", "None", "NONE"}:
+            stage1_stale_after_seconds = 240
+        if is_job_loaded_stalled_generation_job(job, stale_after_seconds=stale_after_seconds):
+            return "job_loaded_stalled"
+        if is_startup_stale_generation_job(job, stale_after_seconds=stale_after_seconds):
+            return "startup_stale"
+        if is_stage1_planner_stalled_generation_job(job, stale_after_seconds=stage1_stale_after_seconds):
+            return "stage1_planner_stalled"
+        heartbeat_raw = job.get("heartbeat_at")
+        started_raw = job.get("started_at")
+        heartbeat = datetime.fromisoformat(str(heartbeat_raw).replace("Z", "+00:00")) if heartbeat_raw else None
+        started_at = datetime.fromisoformat(str(started_raw).replace("Z", "+00:00")) if started_raw else None
+        reference = heartbeat or started_at
+        if reference is None:
+            return "fresh"
+        age = (datetime.now(timezone.utc) - reference).total_seconds()
+        return "fresh" if age < max(1, stale_after_seconds) else "mid_pipeline_stale"
+
     def ensure_profile(self, user: AuthenticatedUser) -> dict:
         existing = self.profiles.get(user.user_id)
         if existing:
+            expected_role = "admin" if existing.get("role") == "admin" or self._is_admin_email(user.email) else "athlete"
+            existing["role"] = expected_role
+            existing["updated_at"] = _now()
             return existing
-        role = "admin" if user.email.endswith("@unlxck.test") else "athlete"
+        role = "admin" if self._is_admin_email(user.email) else "athlete"
         profile = {
             "id": user.user_id,
             "email": user.email,
@@ -259,6 +318,11 @@ class FakeStore:
             raise _status_transition_error(str(exc)) from exc
         return row
 
+    def delete_plan(self, plan_id: str) -> None:
+        if plan_id not in self.plans:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
+        del self.plans[plan_id]
+
     def create_or_get_generation_job(
         self,
         *,
@@ -266,11 +330,34 @@ class FakeStore:
         client_request_id: str,
         source: str,
         request_payload: dict,
-        intake_id: str | None = None,
         plan_id: str | None = None,
+        intake_id: str | None = None,
+        stale_after_seconds: int = 90,
     ) -> dict:
         for job in self.generation_jobs.values():
             if job["athlete_id"] == athlete_id and job["client_request_id"] == client_request_id:
+                if is_startup_stale_generation_job(job, stale_after_seconds=stale_after_seconds):
+                    now = _now()
+                    reset_changes = {
+                        "source": source,
+                        "request_payload": request_payload,
+                        "status": "queued",
+                        "error": None,
+                        "stage1_result": None,
+                        "final_result": None,
+                        "heartbeat_at": None,
+                        "started_at": None,
+                        "completed_at": None,
+                        "progress_milestones": [],
+                        "updated_at": now,
+                    }
+
+                    if plan_id is not None:
+                        reset_changes["plan_id"] = plan_id
+                    if intake_id is not None:
+                        reset_changes["intake_id"] = intake_id
+
+                    job.update(reset_changes)
                 return dict(job)
         now = _now()
         job_id = f"job_{uuid4().hex[:10]}"
@@ -290,6 +377,7 @@ class FakeStore:
             "heartbeat_at": None,
             "started_at": None,
             "completed_at": None,
+            "progress_milestones": [],
             "created_at": now,
             "updated_at": now,
         }
@@ -298,12 +386,122 @@ class FakeStore:
 
     def get_generation_job(self, job_id: str) -> dict | None:
         job = self.generation_jobs.get(job_id)
+        staleness = self._classify_running_job_staleness(job, stale_after_seconds=90) if job else "fresh"
+        if job and staleness == "job_loaded_stalled":
+            milestones = list(job.get("progress_milestones") or [])
+            now = _now()
+            if int(job.get("attempt_count") or 0) < 2:
+                milestones.append({"code": "worker_claim_stalled_requeued", "label": "Worker claim stalled", "detail": "Worker loaded the generation job but did not reach request parsing; job was requeued for recovery.", "meta": {}, "at": now})
+                job.update({"status": "queued", "error": None, "started_at": None, "heartbeat_at": None, "completed_at": None, "progress_milestones": milestones, "updated_at": now})
+            else:
+                milestones.append({"code": "worker_claim_stalled_failed", "label": "Worker stalled after loading job", "detail": "Worker loaded the generation job but did not reach request parsing after retry.", "meta": {}, "at": now})
+                job.update({"status": "failed", "error": "Generation worker stalled after loading the job.", "completed_at": now, "heartbeat_at": now, "progress_milestones": milestones, "updated_at": now})
+        if job and staleness == "stage1_planner_stalled":
+            now = _now()
+            milestones = list(job.get("progress_milestones") or [])
+            milestones.append(
+                {
+                    "code": "stage1_planner_timeout",
+                    "label": "Stage 1 planner timed out",
+                    "detail": "Planner did not return after invocation and the job was failed for recovery.",
+                    "meta": {},
+                    "at": now,
+                }
+            )
+            job.update(
+                {
+                    "status": "failed",
+                    "error": "Stage 1 planner stalled after planner invocation.",
+                    "completed_at": now,
+                    "heartbeat_at": now,
+                    "progress_milestones": milestones,
+                    "updated_at": now,
+                }
+            )
         return dict(job) if job else None
 
     def get_generation_job_by_client_request_id(self, *, athlete_id: str, client_request_id: str) -> dict | None:
         for job in self.generation_jobs.values():
             if job["athlete_id"] == athlete_id and job["client_request_id"] == client_request_id:
                 return dict(job)
+        return None
+
+    def get_active_generation_job_for_athlete(
+        self,
+        athlete_id: str,
+        *,
+        stale_after_seconds: int = 90,
+    ) -> dict | None:
+        rows = [
+            job
+            for job in self.generation_jobs.values()
+            if str(job.get("athlete_id") or "") == athlete_id and str(job.get("status") or "") in {"queued", "running"}
+        ]
+        rows.sort(key=lambda row: str(row.get("created_at") or ""), reverse=True)
+        for row in rows[:10]:
+            if str(row.get("status") or "") == "queued":
+                return dict(row)
+            staleness = self._classify_running_job_staleness(row, stale_after_seconds=stale_after_seconds)
+            if staleness == "fresh":
+                return dict(row)
+            if staleness == "startup_stale":
+                now = _now()
+                row.update(
+                    {
+                        "status": "queued",
+                        "error": None,
+                        "heartbeat_at": None,
+                        "started_at": None,
+                        "completed_at": None,
+                        "stage1_result": None,
+                        "final_result": None,
+                        "progress_milestones": [],
+                        "updated_at": now,
+                    }
+                )
+            elif staleness == "job_loaded_stalled":
+                now = _now()
+                milestones = list(row.get("progress_milestones") or [])
+                if int(row.get("attempt_count") or 0) < 2:
+                    milestones.append({"code": "worker_claim_stalled_requeued", "label": "Worker claim stalled", "detail": "Worker loaded the generation job but did not reach request parsing; job was requeued for recovery.", "meta": {}, "at": now})
+                    row.update({"status": "queued", "error": None, "heartbeat_at": None, "started_at": None, "completed_at": None, "progress_milestones": milestones, "updated_at": now})
+                else:
+                    milestones.append({"code": "worker_claim_stalled_failed", "label": "Worker stalled after loading job", "detail": "Worker loaded the generation job but did not reach request parsing after retry.", "meta": {}, "at": now})
+                    row.update({"status": "failed", "error": "Generation worker stalled after loading the job.", "completed_at": now, "heartbeat_at": now, "progress_milestones": milestones, "updated_at": now})
+            elif staleness == "stage1_planner_stalled":
+                now = _now()
+                milestones = list(row.get("progress_milestones") or [])
+                milestones.append(
+                    {
+                        "code": "stage1_planner_timeout",
+                        "label": "Stage 1 planner timed out",
+                        "detail": "Planner did not return after invocation and the job was failed for recovery.",
+                        "meta": {},
+                        "at": now,
+                    }
+                )
+                row.update(
+                    {
+                        "status": "failed",
+                        "error": "Stage 1 planner stalled after planner invocation.",
+                        "completed_at": now,
+                        "heartbeat_at": now,
+                        "progress_milestones": milestones,
+                        "updated_at": now,
+                    }
+                )
+            else:
+                now = _now()
+                row.update(
+                    {
+                        "status": "failed",
+                        "error": "Generation job stalled mid-pipeline and was failed for recovery.",
+                        "completed_at": now,
+                        "heartbeat_at": now,
+                        "updated_at": now,
+                    }
+                )
+            return dict(row)
         return None
 
     def count_generation_jobs_for_athlete_since(
@@ -336,6 +534,21 @@ class FakeStore:
         matches.sort(key=lambda job: job.get("completed_at") or job.get("updated_at") or "", reverse=True)
         return dict(matches[0])
 
+    def get_latest_generation_job_for_athlete(self, athlete_id: str) -> dict | None:
+        rows = [
+            dict(job)
+            for job in self.generation_jobs.values()
+            if str(job.get("athlete_id") or "") == athlete_id
+        ]
+        rows.sort(key=lambda row: str(row.get("created_at") or ""), reverse=True)
+        return rows[0] if rows else None
+
+    def has_active_generation_job_for_plan(self, plan_id: str) -> bool:
+        return any(
+            str(job.get("plan_id") or "") == plan_id and str(job.get("status") or "") in {"queued", "running"}
+            for job in self.generation_jobs.values()
+        )
+
     def list_generation_jobs_for_athlete(self, athlete_id: str, *, limit: int = 10) -> list[dict]:
         rows = [
             dict(job)
@@ -346,7 +559,6 @@ class FakeStore:
         return rows[:limit]
 
     def list_claimable_generation_jobs(self, *, limit: int = 20, stale_after_seconds: int = 90) -> list[dict]:
-        now = datetime.now(timezone.utc)
         rows = []
         for job in self.generation_jobs.values():
             status_value = str(job.get("status") or "")
@@ -355,48 +567,44 @@ class FakeStore:
                 continue
             if status_value != "running":
                 continue
-            heartbeat_raw = job.get("heartbeat_at")
-            started_raw = job.get("started_at")
-            heartbeat = (
-                datetime.fromisoformat(str(heartbeat_raw).replace("Z", "+00:00"))
-                if isinstance(heartbeat_raw, str) and heartbeat_raw
-                else None
-            )
-            started_at = (
-                datetime.fromisoformat(str(started_raw).replace("Z", "+00:00"))
-                if isinstance(started_raw, str) and started_raw
-                else None
-            )
-            last_progress_at = heartbeat or started_at
-            if last_progress_at and (now - last_progress_at).total_seconds() >= stale_after_seconds:
+            if is_startup_stale_generation_job(job, stale_after_seconds=stale_after_seconds):
                 rows.append(dict(job))
         rows.sort(key=lambda row: str(row.get("created_at") or ""))
         return rows[:limit]
 
-    def claim_generation_job(self, job_id: str, *, stale_after_seconds: int = 90) -> dict | None:
+    def claim_generation_job_start(self, job_id: str, *, stale_after_seconds: int = 90) -> dict | None:
         job = self.generation_jobs.get(job_id)
         if not job:
             return None
-        heartbeat_raw = job.get("heartbeat_at")
-        heartbeat = None
-        if isinstance(heartbeat_raw, str) and heartbeat_raw:
-            heartbeat = datetime.fromisoformat(heartbeat_raw.replace("Z", "+00:00"))
-        now = datetime.now(timezone.utc)
-        is_stale_running = job["status"] == "running" and (
-            heartbeat is None or (now - heartbeat).total_seconds() >= stale_after_seconds
-        )
-        if job["status"] not in {"queued", "running"}:
+        current_status = str(job.get("status") or "").strip().lower() or "queued"
+        if current_status not in {"queued", "running"}:
             return None
-        if job["status"] == "running" and not is_stale_running:
+        if current_status == "running" and not is_startup_stale_generation_job(
+            job,
+            stale_after_seconds=stale_after_seconds,
+        ):
             return None
         now_iso = _now()
         job["status"] = "running"
         job["heartbeat_at"] = now_iso
-        job["started_at"] = job["started_at"] or now_iso
+        job["started_at"] = now_iso if job.get("started_at") is None else job["started_at"]
         job["attempt_count"] = int(job.get("attempt_count") or 0) + 1
         job["error"] = None
+        job["completed_at"] = None
+        job["progress_milestones"] = [
+            {
+                "code": "job_loaded",
+                "label": "Generation job loaded",
+                "detail": "Worker loaded the persisted generation job.",
+                "meta": {},
+                "at": now_iso,
+            }
+        ]
         job["updated_at"] = now_iso
         return dict(job)
+
+    def claim_generation_job(self, job_id: str, *, stale_after_seconds: int = 90) -> dict | None:
+        return self.claim_generation_job_start(job_id, stale_after_seconds=stale_after_seconds)
 
     def count_active_generation_jobs(self, *, stale_after_seconds: int = 90) -> int:
         now = datetime.now(timezone.utc)
@@ -428,6 +636,10 @@ class FakeStore:
         payload = dict(changes)
         if "status" in payload:
             next_status = str(payload.get("status") or "").strip().lower()
+            if next_status == "held_for_review":
+                next_status = "review_required"
+            elif next_status in {"publishable_with_flags", "ready"}:
+                next_status = "completed"
             if not is_generation_job_status(next_status):
                 raise _status_transition_error(f"unknown generation job status: {next_status!r}")
             try:
@@ -443,7 +655,9 @@ class FakeStore:
         if not row:
             return None
         try:
-            next_status = require_plan_transition(row.get("status") or "generated", result.get("status") or "generated")
+            current_status = row.get("status") or "generated"
+            next_status_input = result.get("status") or current_status
+            next_status = require_plan_transition(current_status, next_status_input)
         except ValueError as exc:
             raise _status_transition_error(str(exc)) from exc
         row.update(
@@ -810,7 +1024,11 @@ def _start_generation(client: TestClient, request: PlanRequest | None = None) ->
     return job_body, job_response.json()
 
 
-def _build_client(automator: FakeStage2Automator | None = None) -> tuple[TestClient, FakeStore, FakeStage2Automator]:
+def _build_client(
+    automator: FakeStage2Automator | None = None,
+    *,
+    enable_in_process_generation: bool = True,
+) -> tuple[TestClient, FakeStore, FakeStage2Automator]:
     athlete = AuthenticatedUser(
         user_id="athlete-1",
         email="ari@example.com",
@@ -831,6 +1049,7 @@ def _build_client(automator: FakeStage2Automator | None = None) -> tuple[TestCli
             auth_service=FakeAuthService({"athlete-token": athlete, "admin-token": admin}),
             planner=_planner,
             stage2_automator=stage2,
+            enable_in_process_generation=enable_in_process_generation,
         )
     )
     return client, store, stage2

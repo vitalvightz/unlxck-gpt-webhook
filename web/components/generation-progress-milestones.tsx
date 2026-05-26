@@ -4,15 +4,17 @@ import { useMemo } from "react";
 
 import { GENERATION_MILESTONES, getGenerationMilestoneView } from "@/lib/generation-milestones";
 import type { GenerationUiPhase } from "@/lib/generation-controller";
+import type { ProgressMilestone } from "@/lib/types";
 
 interface GenerationProgressMilestonesProps {
   phase: GenerationUiPhase;
   startedAtMs: number | null;
   nowMs: number;
+  milestones?: ProgressMilestone[];
 }
 
-export function GenerationProgressMilestones({ phase, startedAtMs, nowMs }: GenerationProgressMilestonesProps) {
-  const view = useMemo(() => getGenerationMilestoneView(phase, startedAtMs, nowMs), [nowMs, phase, startedAtMs]);
+export function GenerationProgressMilestones({ phase, startedAtMs, nowMs, milestones = [] }: GenerationProgressMilestonesProps) {
+  const view = useMemo(() => getGenerationMilestoneView(phase, startedAtMs, nowMs, milestones), [milestones, nowMs, phase, startedAtMs]);
   if (phase === "failed") {
     return null;
   }

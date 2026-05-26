@@ -37,7 +37,7 @@ PLAN_STATUSES: tuple[PlanStatus, ...] = (
 )
 
 _GENERATION_JOB_TRANSITIONS: dict[GenerationJobStatus, frozenset[GenerationJobStatus]] = {
-    "queued": frozenset({"queued", "running", "failed"}),
+    "queued": frozenset({"queued", "running", "completed", "review_required", "failed"}),
     "running": frozenset({"queued", "running", "completed", "review_required", "failed"}),
     "failed": frozenset({"queued", "failed"}),
     "completed": frozenset({"queued", "completed"}),
@@ -81,6 +81,7 @@ _PLAN_TRANSITIONS: dict[PlanStatus, frozenset[PlanStatus]] = {
 }
 
 _PLAN_STATUS_TO_JOB_STATUS: dict[str, GenerationJobStatus] = {
+    "generated": "completed",
     "ready": "completed",
     "publishable_with_flags": "completed",
     "triage_blocked": "completed",

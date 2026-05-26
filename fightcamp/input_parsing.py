@@ -6,7 +6,11 @@ import json
 import re
 from typing import Literal
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
-from dateutil.tz import gettz
+try:
+    from dateutil.tz import gettz
+except ImportError:  # pragma: no cover - fallback for minimal runtimes
+    def gettz(_: str | None):
+        return None
 
 from .guided_injury_display import (
     is_clean_guided_display_location,
@@ -105,7 +109,7 @@ _CRITICAL_LABEL_ALIASES = {
     },
     _normalize_label("Support Work Days"): {
         _normalize_label("Support work days"),
-        _normalize_label("Non-hard training days"),
+        _normalize_label("Light Combat days"),
         _normalize_label("S&C-compatible slots"),
         _normalize_label("Technical days"),
         _normalize_label("Technical skill days"),

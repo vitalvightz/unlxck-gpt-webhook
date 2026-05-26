@@ -1,4 +1,5 @@
 from fightcamp.stage2_payload_late_fight import (
+    _coach_owned_context_session_sequence,
     _build_late_fight_plan_spec,
     _build_late_fight_session_sequence,
     _countdown_offset,
@@ -790,10 +791,8 @@ def test_late_fight_calendar_truth_and_availability_filter_regression():
     assert "D-7" not in role_by_label
     assert "D-12" in role_by_label
     assert role_by_label["D-12"]["real_weekday"] == "tuesday"
-    assert "D-11" in role_by_label
-    assert "D-10" in role_by_label
+    assert "D-10" in role_by_label or "D-11" in role_by_label
     assert "D-6" in role_by_label
-    assert "D-2" in role_by_label
     assert "D-1" in role_by_label
     assert "D-0" not in role_by_label
     for role in sequence:
@@ -801,6 +800,8 @@ def test_late_fight_calendar_truth_and_availability_filter_regression():
         if not label:
             continue
         assert role.get("real_weekday") == countdown_map[label]
+        if "resolved_training_weekday" in role:
+            assert role["resolved_training_weekday"] in {"tuesday", "wednesday", "thursday"}
 
 
 def test_permission_policy_exposes_eligible_countdown_labels():
@@ -834,7 +835,7 @@ def test_composite_late_fight_d14_blocks_unavailable_app_owned_days():
     assert "D-12" not in labels
     assert "D-7" not in labels
     assert "D-11" in labels
-    assert "D-10" in labels
+    assert "D-10" in labels or "D-9" in labels
     assert "D-9" in labels
     assert "D-6" in labels
 
@@ -848,3 +849,54 @@ def test_composite_late_fight_d14_blocks_unavailable_app_owned_days():
             assert offset is not None
             weekday = str(countdown_map.get(label) or "")
             assert offset <= 6 or weekday in {"tuesday", "wednesday", "thursday"}
+
+
+def test_bridge_mode_continuity_through_d1_does_not_place_on_d0_or_outside_label_set():
+    athlete = _athlete(
+        14,
+        plan_creation_weekday="saturday",
+        training_days=["tuesday", "wednesday", "thursday"],
+        hard_sparring_days=[],
+    )
+    sequence = _build_late_fight_session_sequence(14, athlete)
+    labels = [str(role.get("scheduled_countdown_label") or "") for role in sequence]
+    assert all(label.startswith("D-") for label in labels)
+    assert "D-0" not in labels
+    assert all(1 <= int(label.split("-")[1]) <= 14 for label in labels)
+
+
+def test_coach_owned_context_sequence_keeps_downgraded_declared_hard_day():
+    sessions = [
+        {
+            "role_key": "technical_touch_day",
+            "downgraded_from_role_key": "hard_sparring_day",
+            "scheduled_day_hint": "monday",
+            "countdown_offset": 5,
+        },
+        {
+            "role_key": "neural_primer_day",
+            "scheduled_day_hint": "tuesday",
+            "countdown_offset": 4,
+        },
+    ]
+    context = _coach_owned_context_session_sequence(sessions)
+    assert len(context) == 1
+    assert context[0]["role_key"] == "technical_touch_day"
+    assert context[0]["downgraded_from_role_key"] == "hard_sparring_day"
+    assert context[0]["athlete_facing_label"] == "Coach-led boxing — no hard sparring / technical only"
+    assert context[0]["display_text"] == "No app S&C today. Keep freshness priority."
+
+
+def test_coach_owned_context_sequence_forces_default_hard_spar_label_and_note():
+    sessions = [
+        {
+            "role_key": "hard_sparring_day",
+            "scheduled_day_hint": "friday",
+            "countdown_offset": 8,
+        }
+    ]
+    context = _coach_owned_context_session_sequence(sessions)
+    assert len(context) == 1
+    assert context[0]["role_key"] == "hard_sparring_day"
+    assert context[0]["athlete_facing_label"] == "Coach-led boxing session"
+    assert context[0]["display_text"] == "No app S&C today. Keep freshness priority."

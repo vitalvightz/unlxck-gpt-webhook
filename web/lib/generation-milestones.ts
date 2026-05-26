@@ -1,4 +1,5 @@
 import type { GenerationUiPhase } from "@/lib/generation-controller";
+import type { ProgressMilestone } from "@/lib/types";
 
 export type GenerationMilestone = {
   title: string;
@@ -46,6 +47,12 @@ export type MilestoneView = {
   current: GenerationMilestone;
   completed: GenerationMilestone[];
 };
+const REAL_BACKEND_MILESTONE_OVERRIDES: Record<string, GenerationMilestone> = {
+  job_loaded: {
+    title: "Worker started",
+    detail: "Worker loaded the generation job and is preparing request parsing.",
+  },
+};
 
 const QUEUED_MAX_INDEX = 2;
 const RUNNING_MAX_INDEX = 18;
@@ -61,7 +68,27 @@ function withVariant(milestone: GenerationMilestone, tick: number): GenerationMi
   };
 }
 
-export function getGenerationMilestoneView(phase: GenerationUiPhase, startedAtMs: number | null, nowMs = Date.now()): MilestoneView {
+export function getGenerationMilestoneView(
+  phase: GenerationUiPhase,
+  startedAtMs: number | null,
+  nowMs = Date.now(),
+  realMilestones: ProgressMilestone[] = [],
+): MilestoneView {
+  const latestReal = realMilestones.length > 0 ? realMilestones[realMilestones.length - 1] : null;
+  if (latestReal && typeof latestReal.code === "string" && latestReal.code.length > 0) {
+    const override = REAL_BACKEND_MILESTONE_OVERRIDES[latestReal.code];
+    if (override) {
+      return { currentIndex: 0, current: override, completed: [] };
+    }
+    return {
+      currentIndex: 0,
+      current: {
+        title: latestReal.label || "Generation update",
+        detail: latestReal.detail || "Generation is in progress.",
+      },
+      completed: [],
+    };
+  }
   const elapsed = startedAtMs ? Math.max(0, nowMs - startedAtMs) : 0;
   const tick = Math.floor(elapsed / ROTATION_MS);
 
