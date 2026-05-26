@@ -1594,6 +1594,7 @@ def create_app(
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="generation job not found")
         if profile.role != "admin" and str(job["athlete_id"]) != profile.athlete_id:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="not allowed")
+        job = await asyncio.to_thread(store.recover_generation_job_if_stale, job)
         job = await schedule_generation_job_if_needed(
             job=job,
             background_tasks=background_tasks,

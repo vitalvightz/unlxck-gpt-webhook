@@ -394,19 +394,27 @@ class FakeStore:
 
     def get_generation_job(self, job_id: str) -> dict | None:
         job = self.generation_jobs.get(job_id)
-        staleness = self._classify_running_job_staleness(job, stale_after_seconds=90) if job else "fresh"
-        if job and staleness == "job_loaded_stalled":
-            milestones = list(job.get("progress_milestones") or [])
+        return dict(job) if job else None
+
+    def recover_generation_job_if_stale(self, job: dict | None) -> dict | None:
+        if not job or str(job.get("status") or "") != "running":
+            return dict(job) if job else None
+        live = self.generation_jobs.get(str(job.get("id") or ""))
+        if live is None:
+            return dict(job)
+        staleness = self._classify_running_job_staleness(live, stale_after_seconds=90)
+        if staleness == "job_loaded_stalled":
+            milestones = list(live.get("progress_milestones") or [])
             now = _now()
-            if int(job.get("attempt_count") or 0) < 2:
+            if int(live.get("attempt_count") or 0) < 2:
                 milestones.append({"code": "worker_claim_stalled_requeued", "label": "Worker claim stalled", "detail": "Worker loaded the generation job but did not reach request parsing; job was requeued for recovery.", "meta": {}, "at": now})
-                job.update({"status": "queued", "error": None, "started_at": None, "heartbeat_at": None, "completed_at": None, "progress_milestones": milestones, "updated_at": now})
+                live.update({"status": "queued", "error": None, "started_at": None, "heartbeat_at": None, "completed_at": None, "progress_milestones": milestones, "updated_at": now})
             else:
                 milestones.append({"code": "worker_claim_stalled_failed", "label": "Worker stalled after loading job", "detail": "Worker loaded the generation job but did not reach request parsing after retry.", "meta": {}, "at": now})
-                job.update({"status": "failed", "error": "Generation worker stalled after loading the job.", "completed_at": now, "heartbeat_at": now, "progress_milestones": milestones, "updated_at": now})
-        if job and staleness == "stage1_planner_stalled":
+                live.update({"status": "failed", "error": "Generation worker stalled after loading the job.", "completed_at": now, "heartbeat_at": now, "progress_milestones": milestones, "updated_at": now})
+        if staleness == "stage1_planner_stalled":
             now = _now()
-            milestones = list(job.get("progress_milestones") or [])
+            milestones = list(live.get("progress_milestones") or [])
             milestones.append(
                 {
                     "code": "stage1_planner_timeout",
@@ -416,7 +424,7 @@ class FakeStore:
                     "at": now,
                 }
             )
-            job.update(
+            live.update(
                 {
                     "status": "failed",
                     "error": "Stage 1 planner stalled after planner invocation.",
@@ -426,7 +434,7 @@ class FakeStore:
                     "updated_at": now,
                 }
             )
-        return dict(job) if job else None
+        return dict(live)
 
     def get_generation_job_by_client_request_id(self, *, athlete_id: str, client_request_id: str) -> dict | None:
         for job in self.generation_jobs.values():

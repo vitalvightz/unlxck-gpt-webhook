@@ -193,6 +193,7 @@ class AppStore(Protocol):
     ) -> tuple[bool, int]: ...
 
     def get_generation_job(self, job_id: str) -> dict[str, Any] | None: ...
+    def recover_generation_job_if_stale(self, job: dict[str, Any] | None) -> dict[str, Any] | None: ...
     def get_generation_job_by_client_request_id(self, *, athlete_id: str, client_request_id: str) -> dict[str, Any] | None: ...
     def get_active_generation_job_for_athlete(
         self,
@@ -1466,13 +1467,51 @@ class SupabaseAppStore:
             )
 
     def get_generation_job(self, job_id: str) -> dict[str, Any] | None:
+        """Pure read. Never mutates job state.
+
+        Stale ``running`` jobs are recovered separately via
+        :meth:`recover_generation_job_if_stale` so that callers performing a
+        plain lookup (including read-after-write refreshes) cannot trigger
+        hidden status changes.
+        """
         try:
-            job = self._run_with_transient_retry(
+            return self._run_with_transient_retry(
                 operation="get_generation_job:select",
                 fn=lambda: self._read_generation_job(job_id),
             )
-            if not job or str(job.get("status") or "") != "running":
-                return job
+        except _STORE_CLIENT_ERRORS as exc:
+            if self._is_transient_store_error(exc):
+                logger.warning(
+                    "[store] get_generation_job:transient_failure job_id=%s error_type=%s",
+                    job_id,
+                    type(exc).__name__,
+                )
+                raise HTTPException(
+                    status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                    detail=GENERATION_JOB_UNAVAILABLE_DETAIL,
+                ) from exc
+            if self._is_generation_job_schema_error(exc):
+                logger.exception("[store] get_generation_job:schema_mismatch job_id=%s", job_id)
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail=GENERATION_JOB_SCHEMA_DETAIL,
+                ) from exc
+            logger.exception("[store] get_generation_job:exception job_id=%s", job_id)
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="failed to load generation job",
+            ) from exc
+
+    def recover_generation_job_if_stale(self, job: dict[str, Any] | None) -> dict[str, Any] | None:
+        """Requeue, fail, or recover a stale ``running`` job and return it refreshed.
+
+        This is the explicit, mutating counterpart to :meth:`get_generation_job`.
+        Non-running jobs (and ``None``) are returned unchanged.
+        """
+        if not job or str(job.get("status") or "") != "running":
+            return job
+        job_id = str(job.get("id") or "")
+        try:
             staleness = self._classify_running_job_staleness(
                 job,
                 stale_after_seconds=generation_job_stale_after_seconds(),
@@ -1493,7 +1532,7 @@ class SupabaseAppStore:
                         }
                     )
                     self._run_with_transient_retry(
-                        operation="get_generation_job:requeue_job_loaded_stalled",
+                        operation="recover_generation_job_if_stale:requeue_job_loaded_stalled",
                         fn=lambda: self.client.table("generation_jobs")
                         .update(
                             {
@@ -1520,7 +1559,7 @@ class SupabaseAppStore:
                         }
                     )
                     self._run_with_transient_retry(
-                        operation="get_generation_job:fail_job_loaded_stalled",
+                        operation="recover_generation_job_if_stale:fail_job_loaded_stalled",
                         fn=lambda: self.client.table("generation_jobs")
                         .update(
                             {
@@ -1562,7 +1601,7 @@ class SupabaseAppStore:
                         }
                     )
                 self._run_with_transient_retry(
-                    operation="get_generation_job:resolve_stage1_stalled",
+                    operation="recover_generation_job_if_stale:resolve_stage1_stalled",
                     fn=lambda: self.client.table("generation_jobs")
                     .update(
                         {
@@ -1583,7 +1622,7 @@ class SupabaseAppStore:
         except _STORE_CLIENT_ERRORS as exc:
             if self._is_transient_store_error(exc):
                 logger.warning(
-                    "[store] get_generation_job:transient_failure job_id=%s error_type=%s",
+                    "[store] recover_generation_job_if_stale:transient_failure job_id=%s error_type=%s",
                     job_id,
                     type(exc).__name__,
                 )
@@ -1592,15 +1631,15 @@ class SupabaseAppStore:
                     detail=GENERATION_JOB_UNAVAILABLE_DETAIL,
                 ) from exc
             if self._is_generation_job_schema_error(exc):
-                logger.exception("[store] get_generation_job:schema_mismatch job_id=%s", job_id)
+                logger.exception("[store] recover_generation_job_if_stale:schema_mismatch job_id=%s", job_id)
                 raise HTTPException(
                     status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                     detail=GENERATION_JOB_SCHEMA_DETAIL,
                 ) from exc
-            logger.exception("[store] get_generation_job:exception job_id=%s", job_id)
+            logger.exception("[store] recover_generation_job_if_stale:exception job_id=%s", job_id)
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="failed to load generation job",
+                detail="failed to recover generation job",
             ) from exc
 
     def get_generation_job_by_client_request_id(self, *, athlete_id: str, client_request_id: str) -> dict[str, Any] | None:

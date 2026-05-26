@@ -122,6 +122,55 @@ def test_get_generation_job_does_not_mutate_terminal_non_running_statuses(status
     assert response.json()["status"] == status_value
 
 
+def test_get_generation_job_is_a_pure_read_for_stale_running_jobs():
+    # get_generation_job must never mutate; recovery is the explicit job of
+    # recover_generation_job_if_stale.
+    _client, store, _ = _build_client()
+    created = store.create_or_get_generation_job(
+        athlete_id="athlete-1",
+        client_request_id="pure-read-stale",
+        source="self_serve",
+        request_payload=_build_request().model_dump(mode="json"),
+    )
+    old_iso = "2026-01-01T00:00:00+00:00"
+    store.update_generation_job(
+        created["id"],
+        status="running",
+        attempt_count=1,
+        started_at=old_iso,
+        heartbeat_at=old_iso,
+        progress_milestones=[{"code": "job_loaded", "label": "Generation job loaded", "detail": "", "at": old_iso}],
+    )
+
+    read = store.get_generation_job(created["id"])
+    assert read["status"] == "running"
+    # A second read still sees running: the first read changed nothing.
+    assert store.get_generation_job(created["id"])["status"] == "running"
+
+    recovered = store.recover_generation_job_if_stale(read)
+    assert recovered["status"] == "queued"
+    assert store.get_generation_job(created["id"])["status"] == "queued"
+
+
+def test_recover_generation_job_if_stale_is_noop_for_non_running_jobs():
+    _client, store, _ = _build_client()
+    created = store.create_or_get_generation_job(
+        athlete_id="athlete-1",
+        client_request_id="recover-noop",
+        source="self_serve",
+        request_payload=_build_request().model_dump(mode="json"),
+    )
+    failed = store.update_generation_job(
+        created["id"],
+        status="failed",
+        error="boom",
+        completed_at="2026-01-01T00:00:00+00:00",
+    )
+
+    assert store.recover_generation_job_if_stale(failed) == failed
+    assert store.recover_generation_job_if_stale(None) is None
+
+
 def test_get_generation_job_keeps_running_when_heartbeat_is_fresh():
     client, store, _ = _build_client()
     created = store.create_or_get_generation_job(
@@ -1371,10 +1420,22 @@ def test_non_owner_cannot_trigger_stale_recovery_on_another_users_job():
         source="self_serve",
         request_payload=_build_request().model_dump(mode="json"),
     )
-    store.update_generation_job(created["id"], status="running", started_at="2026-01-01T00:00:00+00:00", heartbeat_at=None)
+    old_iso = "2026-01-01T00:00:00+00:00"
+    store.update_generation_job(
+        created["id"],
+        status="running",
+        attempt_count=1,
+        started_at=old_iso,
+        heartbeat_at=old_iso,
+        progress_milestones=[{"code": "job_loaded", "label": "Generation job loaded", "detail": "", "at": old_iso}],
+    )
 
     response = client.get(f"/api/generation-jobs/{created['id']}", headers={"Authorization": "Bearer athlete-token"})
     assert response.status_code == 403
+    # Recovery runs only after the ownership check, so a non-owner's read must
+    # not mutate another athlete's stale job.
+    untouched = store.get_generation_job(created["id"])
+    assert untouched["status"] == "running"
 
 
 def test_get_generation_job_marks_stale_running_failed_when_in_process_generation_disabled():
