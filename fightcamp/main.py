@@ -406,8 +406,8 @@ def generate_plan_sync(
                 "override_key": _TRIAGE_RESUME_OVERRIDE_KEY,
             }
             why_log["injury_triage_original"] = triage_result.to_dict()
-    Stage1Result.model_validate(result)
-    return result
+    validated = Stage1Result.model_validate(result)
+    return validated.model_dump()
 
 
 async def generate_plan(
