@@ -24,6 +24,12 @@ from .models import (
     USERNAME_MAX_CHANGES_PER_WINDOW,
     validate_username,
 )
+from .state_machine import (
+    is_generation_job_status,
+    is_plan_status,
+    require_generation_job_transition,
+    require_plan_transition,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -96,9 +102,10 @@ _PLAN_INVALID_PAYLOAD_DETAIL = "invalid plans payload for table insert"
 _VISIBLE_PLAN_STATUSES = {"ready", "publishable_with_flags"}
 
 
-def _visible_plan_text_for_status(result: dict[str, Any]) -> str:
-    status_value = str(result.get("status") or "").strip().lower()
-    if status_value not in _VISIBLE_PLAN_STATUSES:
+def _visible_plan_text_for_status(result: dict[str, Any], *, status_value: object | None = None) -> str:
+    raw_status = result.get("status") if status_value is None else status_value
+    status_text = str(raw_status or "").strip().lower()
+    if status_text not in _VISIBLE_PLAN_STATUSES:
         return ""
     return str(
         result.get("plan_text")
@@ -245,6 +252,10 @@ def _parse_datetime(value: Any) -> datetime | None:
         except ValueError:
             return None
     return None
+
+
+def _status_transition_error(detail: str) -> HTTPException:
+    return HTTPException(status_code=status.HTTP_409_CONFLICT, detail=detail)
 
 
 def _progress_milestones(value: Any) -> list[Any]:
@@ -792,7 +803,7 @@ class SupabaseAppStore:
             self._log_profile_event(operation="ensure_start", user=user)
             existing = self._get_profile_by_id(user.user_id)
             if existing:
-                expected_role = self._default_role_for(user)
+                expected_role = "admin" if existing.get("role") == "admin" else self._default_role_for(user)
                 if existing.get("role") != expected_role:
                     self._run_with_transient_retry(
                         operation=f"ensure_profile:sync_role_{expected_role}",
@@ -1039,7 +1050,10 @@ class SupabaseAppStore:
         request: PlanRequest,
         result: dict[str, Any],
     ) -> dict[str, Any]:
-        visible_plan_text = _visible_plan_text_for_status(result)
+        result_status = str(result.get("status") or "generated").strip().lower()
+        if not is_plan_status(result_status):
+            raise _status_transition_error(f"unknown plan status: {result_status!r}")
+        visible_plan_text = _visible_plan_text_for_status(result, status_value=result_status)
         payload = {
             "athlete_id": athlete_id,
             "intake_id": intake_id,
@@ -1047,7 +1061,7 @@ class SupabaseAppStore:
             "technical_style": request.athlete.technical_style,
             "full_name": request.athlete.full_name,
             "plan_name": "",
-            "status": result.get("status", "generated"),
+            "status": result_status,
             "plan_text": visible_plan_text,
             "draft_plan_text": result.get("draft_plan_text", result.get("plan_text", "")),
             "final_plan_text": result.get("final_plan_text", result.get("plan_text", "")),
@@ -1923,6 +1937,24 @@ class SupabaseAppStore:
                 .limit(limit)
                 .execute(),
             )
+            null_status_response = self._run_with_transient_retry(
+                operation="list_claimable_generation_jobs:select_null_status",
+                fn=lambda: self.client.table("generation_jobs")
+                .select(GENERATION_JOB_SELECT)
+                .is_("status", "null")
+                .order("created_at", desc=False)
+                .limit(limit)
+                .execute(),
+            )
+            blank_status_response = self._run_with_transient_retry(
+                operation="list_claimable_generation_jobs:select_blank_status",
+                fn=lambda: self.client.table("generation_jobs")
+                .select(GENERATION_JOB_SELECT)
+                .eq("status", "")
+                .order("created_at", desc=False)
+                .limit(limit)
+                .execute(),
+            )
             stale_heartbeat_response = self._run_with_transient_retry(
                 operation="list_claimable_generation_jobs:select_running_stale_heartbeat",
                 fn=lambda: self.client.table("generation_jobs")
@@ -1947,14 +1979,15 @@ class SupabaseAppStore:
 
             merged_rows: dict[str, dict[str, Any]] = {}
 
-            # Queued jobs are always claimable (oldest first).
-            for row in queued_response.data or []:
-                if not isinstance(row, dict):
-                    continue
-                row_id = str(row.get("id") or "")
-                if not row_id:
-                    continue
-                merged_rows[row_id] = dict(row)
+            # Queued jobs and legacy blank/null statuses are always claimable (oldest first).
+            for response in (queued_response, null_status_response, blank_status_response):
+                for row in response.data or []:
+                    if not isinstance(row, dict):
+                        continue
+                    row_id = str(row.get("id") or "")
+                    if not row_id:
+                        continue
+                    merged_rows[row_id] = dict(row)
 
             # Running jobs are only claimable if they are startup-stale.
             for response in (stale_heartbeat_response, stale_without_heartbeat_response):
@@ -2001,7 +2034,8 @@ class SupabaseAppStore:
             if not job:
                 return None
 
-            current_status = str(job.get("status") or "")
+            raw_status = job.get("status")
+            current_status = str(raw_status or "").strip().lower() or "queued"
             current_attempt_count = int(job.get("attempt_count") or 0)
             now_iso = _utc_now_iso()
 
@@ -2011,6 +2045,10 @@ class SupabaseAppStore:
                 job,
                 stale_after_seconds=stale_after_seconds,
             ):
+                return None
+            try:
+                require_generation_job_transition(current_status, "running")
+            except ValueError:
                 return None
 
             next_attempt_count = current_attempt_count + 1
@@ -2024,14 +2062,18 @@ class SupabaseAppStore:
                 "completed_at": None,
                 "progress_milestones": [_job_loaded_milestone(now_iso)],
             }
+
+            def _claim_update():
+                query = self.client.table("generation_jobs").update(payload).eq("id", job_id)
+                if raw_status is None:
+                    query = query.is_("status", "null")
+                else:
+                    query = query.eq("status", raw_status)
+                return query.eq("attempt_count", current_attempt_count).execute()
+
             self._run_with_transient_retry(
                 operation="claim_generation_job_start:update",
-                fn=lambda: self.client.table("generation_jobs")
-                .update(payload)
-                .eq("id", job_id)
-                .eq("status", current_status)
-                .eq("attempt_count", current_attempt_count)
-                .execute(),
+                fn=_claim_update,
             )
             updated = self.get_generation_job(job_id)
             if not updated:
@@ -2114,6 +2156,20 @@ class SupabaseAppStore:
     def update_generation_job(self, job_id: str, **changes: Any) -> dict[str, Any]:
         try:
             payload = dict(changes)
+            if "status" in payload:
+                next_status = str(payload.get("status") or "").strip().lower()
+                if not is_generation_job_status(next_status):
+                    raise _status_transition_error(f"unknown generation job status: {next_status!r}")
+                existing = self._read_generation_job(job_id)
+                if not existing:
+                    raise HTTPException(
+                        status_code=status.HTTP_404_NOT_FOUND,
+                        detail="generation job not found",
+                    )
+                try:
+                    payload["status"] = require_generation_job_transition(existing.get("status") or "queued", next_status)
+                except ValueError as exc:
+                    raise _status_transition_error(str(exc)) from exc
             self._run_with_transient_retry(
                 operation="update_generation_job:update",
                 fn=lambda: self.client.table("generation_jobs").update(payload).eq("id", job_id).execute(),
@@ -2175,8 +2231,12 @@ class SupabaseAppStore:
                     status_code=status.HTTP_404_NOT_FOUND,
                     detail="plan not found",
                 )
+            try:
+                next_status = require_plan_transition(existing.get("status") or "generated", "archived")
+            except ValueError as exc:
+                raise _status_transition_error(str(exc)) from exc
             logger.info("[store] archive_plan:start plan_id=%s", plan_id)
-            self.client.table("plans").update({"status": "archived"}).eq("id", plan_id).execute()
+            self.client.table("plans").update({"status": next_status}).eq("id", plan_id).execute()
             updated = self.get_plan(plan_id)
             if not updated:
                 logger.warning("[store] archive_plan:plan_missing_after_update plan_id=%s", plan_id)
@@ -2217,9 +2277,21 @@ class SupabaseAppStore:
             )
 
     def update_plan_stage2(self, plan_id: str, result: dict[str, Any]) -> dict[str, Any]:
-        visible_plan_text = _visible_plan_text_for_status(result)
+        existing = self.get_plan(plan_id)
+        if not existing:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="plan not found",
+            )
+        try:
+            current_status = existing.get("status") or "generated"
+            next_status_input = result.get("status") or current_status
+            next_status = require_plan_transition(current_status, next_status_input)
+        except ValueError as exc:
+            raise _status_transition_error(str(exc)) from exc
+        visible_plan_text = _visible_plan_text_for_status(result, status_value=next_status)
         payload = {
-            "status": result.get("status", "generated"),
+            "status": next_status,
             "plan_text": visible_plan_text,
             "draft_plan_text": result.get("draft_plan_text", result.get("plan_text", "")),
             "final_plan_text": result.get("final_plan_text", result.get("plan_text", "")),

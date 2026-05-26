@@ -460,10 +460,16 @@ def test_terminal_success_without_plan_id_is_downgraded_to_failed_with_error_mes
 @pytest.mark.parametrize(
     ("plan_status", "expected_generation_status"),
     [
+        ("generated", "completed"),
         ("ready", "completed"),
         ("publishable_with_flags", "completed"),
+        ("triage_blocked", "completed"),
+        ("archived", "completed"),
         ("held_for_review", "review_required"),
         ("review_required", "review_required"),
+        ("medical_hold", "review_required"),
+        ("restricted_rehab_only", "review_required"),
+        ("needs_review", "review_required"),
     ],
 )
 def test_generation_status_from_plan_status_mapper(plan_status: str, expected_generation_status: str):
@@ -474,3 +480,7 @@ def test_generation_job_status_never_uses_legacy_plan_status_values():
     for legacy_status in ("publishable_with_flags", "held_for_review"):
         mapped = generation_status_from_plan_status(legacy_status)
         assert mapped != legacy_status
+
+
+def test_generation_status_from_unknown_plan_status_requires_review():
+    assert generation_status_from_plan_status("new_clinical_hold") == "review_required"

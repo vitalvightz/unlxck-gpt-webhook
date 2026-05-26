@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import copy
+import math
 import os
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -18,6 +19,12 @@ from api.models import (
     USERNAME_MAX_CHANGES_PER_WINDOW,
     validate_username,
 )
+from api.state_machine import (
+    is_generation_job_status,
+    is_plan_status,
+    require_generation_job_transition,
+    require_plan_transition,
+)
 from api.store import is_job_loaded_stalled_generation_job, is_stage1_planner_stalled_generation_job, is_startup_stale_generation_job
 from datetime import timedelta
 
@@ -26,6 +33,10 @@ os.environ.setdefault("APP_GENERATION_SCHEDULER", "fastapi")
 
 def _now() -> str:
     return datetime.now(timezone.utc).isoformat()
+
+
+def _status_transition_error(detail: str) -> HTTPException:
+    return HTTPException(status_code=status.HTTP_409_CONFLICT, detail=detail)
 
 
 @dataclass
@@ -74,7 +85,7 @@ class FakeStore:
         if len(bucket) >= max_requests:
             retry_after = max(
                 1,
-                int(max(1.0, window_seconds) - (now - bucket[0]).total_seconds()),
+                math.ceil(max(1.0, window_seconds) - (now - bucket[0]).total_seconds()),
             )
             return False, retry_after
         bucket.append(now)
@@ -89,6 +100,9 @@ class FakeStore:
         # Mirror ensure_profile's @unlxck.test test pattern so existing fixtures
         # do not need to register every admin email explicitly.
         return normalized.endswith("@unlxck.test")
+
+    def _is_admin_email(self, email: str) -> bool:
+        return self.is_admin_email(email)
 
     def _classify_running_job_staleness(self, job: dict, *, stale_after_seconds: int) -> str:
         if str(job.get("status") or "") != "running":
@@ -119,7 +133,7 @@ class FakeStore:
     def ensure_profile(self, user: AuthenticatedUser) -> dict:
         existing = self.profiles.get(user.user_id)
         if existing:
-            expected_role = "admin" if self._is_admin_email(user.email) else "athlete"
+            expected_role = "admin" if existing.get("role") == "admin" or self._is_admin_email(user.email) else "athlete"
             existing["role"] = expected_role
             existing["updated_at"] = _now()
             return existing
@@ -245,6 +259,9 @@ class FakeStore:
     def create_plan(self, *, athlete_id: str, intake_id: str, request: PlanRequest, result: dict) -> dict:
         profile = self.profiles[athlete_id]
         plan_id = f"plan_{uuid4().hex[:10]}"
+        result_status = str(result.get("status") or "generated").strip().lower()
+        if not is_plan_status(result_status):
+            raise _status_transition_error(f"unknown plan status: {result_status!r}")
         row = {
             "id": plan_id,
             "athlete_id": athlete_id,
@@ -252,7 +269,7 @@ class FakeStore:
             "fight_date": request.fight_date.strip() or None,
             "technical_style": request.athlete.technical_style,
             "plan_name": "",
-            "status": result.get("status", "generated"),
+            "status": result_status,
             "plan_text": result.get("plan_text", ""),
             "draft_plan_text": result.get("draft_plan_text", result.get("plan_text", "")),
             "final_plan_text": result.get("final_plan_text", result.get("plan_text", "")),
@@ -295,7 +312,10 @@ class FakeStore:
         if plan_id not in self.plans:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
         row = self.plans[plan_id]
-        row["status"] = "archived"
+        try:
+            row["status"] = require_plan_transition(row.get("status") or "generated", "archived")
+        except ValueError as exc:
+            raise _status_transition_error(str(exc)) from exc
         return row
 
     def delete_plan(self, plan_id: str) -> None:
@@ -522,6 +542,15 @@ class FakeStore:
         matches.sort(key=lambda job: job.get("completed_at") or job.get("updated_at") or "", reverse=True)
         return dict(matches[0])
 
+    def get_latest_generation_job_for_athlete(self, athlete_id: str) -> dict | None:
+        rows = [
+            dict(job)
+            for job in self.generation_jobs.values()
+            if str(job.get("athlete_id") or "") == athlete_id
+        ]
+        rows.sort(key=lambda row: str(row.get("created_at") or ""), reverse=True)
+        return rows[0] if rows else None
+
     def has_active_generation_job_for_plan(self, plan_id: str) -> bool:
         return any(
             str(job.get("plan_id") or "") == plan_id and str(job.get("status") or "") in {"queued", "running"}
@@ -555,9 +584,10 @@ class FakeStore:
         job = self.generation_jobs.get(job_id)
         if not job:
             return None
-        if job["status"] not in {"queued", "running"}:
+        current_status = str(job.get("status") or "").strip().lower() or "queued"
+        if current_status not in {"queued", "running"}:
             return None
-        if job["status"] == "running" and not is_startup_stale_generation_job(
+        if current_status == "running" and not is_startup_stale_generation_job(
             job,
             stale_after_seconds=stale_after_seconds,
         ):
@@ -611,7 +641,16 @@ class FakeStore:
         job = self.generation_jobs.get(job_id)
         if not job:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="generation job not found")
-        job.update(changes)
+        payload = dict(changes)
+        if "status" in payload:
+            next_status = str(payload.get("status") or "").strip().lower()
+            if not is_generation_job_status(next_status):
+                raise _status_transition_error(f"unknown generation job status: {next_status!r}")
+            try:
+                payload["status"] = require_generation_job_transition(job.get("status") or "queued", next_status)
+            except ValueError as exc:
+                raise _status_transition_error(str(exc)) from exc
+        job.update(payload)
         job["updated_at"] = _now()
         return dict(job)
 
@@ -619,9 +658,15 @@ class FakeStore:
         row = self.plans.get(plan_id)
         if not row:
             return None
+        try:
+            current_status = row.get("status") or "generated"
+            next_status_input = result.get("status") or current_status
+            next_status = require_plan_transition(current_status, next_status_input)
+        except ValueError as exc:
+            raise _status_transition_error(str(exc)) from exc
         row.update(
             {
-                "status": result.get("status", row.get("status", "generated")),
+                "status": next_status,
                 "plan_text": result.get("plan_text", row.get("plan_text", "")),
                 "draft_plan_text": result.get("draft_plan_text", row.get("draft_plan_text", row.get("plan_text", ""))),
                 "final_plan_text": result.get("final_plan_text", row.get("final_plan_text", row.get("plan_text", ""))),

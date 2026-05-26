@@ -1,0 +1,149 @@
+from __future__ import annotations
+
+from typing import Literal
+
+GenerationJobStatus = Literal["queued", "running", "completed", "review_required", "failed"]
+PlanStatus = Literal[
+    "generated",
+    "ready",
+    "review_required",
+    "held_for_review",
+    "publishable_with_flags",
+    "triage_blocked",
+    "medical_hold",
+    "restricted_rehab_only",
+    "needs_review",
+    "archived",
+]
+
+GENERATION_JOB_STATUSES: tuple[GenerationJobStatus, ...] = (
+    "queued",
+    "running",
+    "completed",
+    "review_required",
+    "failed",
+)
+PLAN_STATUSES: tuple[PlanStatus, ...] = (
+    "generated",
+    "ready",
+    "review_required",
+    "held_for_review",
+    "publishable_with_flags",
+    "triage_blocked",
+    "medical_hold",
+    "restricted_rehab_only",
+    "needs_review",
+    "archived",
+)
+
+_GENERATION_JOB_TRANSITIONS: dict[GenerationJobStatus, frozenset[GenerationJobStatus]] = {
+    "queued": frozenset({"queued", "running", "failed"}),
+    "running": frozenset({"queued", "running", "completed", "review_required", "failed"}),
+    "failed": frozenset({"queued", "failed"}),
+    "completed": frozenset({"queued", "completed"}),
+    "review_required": frozenset({"queued", "review_required", "completed", "failed"}),
+}
+
+_PLAN_TRANSITIONS: dict[PlanStatus, frozenset[PlanStatus]] = {
+    "generated": frozenset(
+        {
+            "generated",
+            "ready",
+            "review_required",
+            "held_for_review",
+            "publishable_with_flags",
+            "triage_blocked",
+            "medical_hold",
+            "restricted_rehab_only",
+            "needs_review",
+            "archived",
+        }
+    ),
+    "ready": frozenset({"ready", "review_required", "held_for_review", "publishable_with_flags", "archived"}),
+    "publishable_with_flags": frozenset({"ready", "publishable_with_flags", "review_required", "archived"}),
+    "review_required": frozenset({"ready", "review_required", "held_for_review", "archived"}),
+    "held_for_review": frozenset({"ready", "review_required", "held_for_review", "archived"}),
+    "triage_blocked": frozenset(
+        {
+            "ready",
+            "review_required",
+            "triage_blocked",
+            "medical_hold",
+            "restricted_rehab_only",
+            "needs_review",
+            "archived",
+        }
+    ),
+    "medical_hold": frozenset({"medical_hold", "needs_review", "restricted_rehab_only", "archived"}),
+    "restricted_rehab_only": frozenset({"ready", "restricted_rehab_only", "needs_review", "archived"}),
+    "needs_review": frozenset({"ready", "review_required", "needs_review", "restricted_rehab_only", "medical_hold", "archived"}),
+    "archived": frozenset({"archived"}),
+}
+
+_PLAN_STATUS_TO_JOB_STATUS: dict[str, GenerationJobStatus] = {
+    "generated": "completed",
+    "ready": "completed",
+    "publishable_with_flags": "completed",
+    "triage_blocked": "completed",
+    "archived": "completed",
+    "review_required": "review_required",
+    "held_for_review": "review_required",
+    "needs_review": "review_required",
+    "medical_hold": "review_required",
+    "restricted_rehab_only": "review_required",
+}
+
+
+def normalize_status(value: object) -> str:
+    return str(value or "").strip().lower()
+
+
+def is_generation_job_status(value: object) -> bool:
+    return normalize_status(value) in GENERATION_JOB_STATUSES
+
+
+def is_plan_status(value: object) -> bool:
+    return normalize_status(value) in PLAN_STATUSES
+
+
+def can_transition(kind: Literal["generation_job", "plan"], current: object, next_status: object) -> bool:
+    normalized_current = normalize_status(current)
+    normalized_next = normalize_status(next_status)
+    if kind == "generation_job":
+        if normalized_current not in GENERATION_JOB_STATUSES or normalized_next not in GENERATION_JOB_STATUSES:
+            return False
+        return normalized_next in _GENERATION_JOB_TRANSITIONS[normalized_current]  # type: ignore[index]
+    if kind == "plan":
+        if normalized_current not in PLAN_STATUSES or normalized_next not in PLAN_STATUSES:
+            return False
+        return normalized_next in _PLAN_TRANSITIONS[normalized_current]  # type: ignore[index]
+    return False
+
+
+def require_generation_job_transition(current: object, next_status: object) -> GenerationJobStatus:
+    normalized_current = normalize_status(current)
+    normalized_next = normalize_status(next_status)
+    if not is_generation_job_status(normalized_next):
+        raise ValueError(f"unknown generation job status: {next_status!r}")
+    if not is_generation_job_status(normalized_current):
+        raise ValueError(f"unknown current generation job status: {current!r}")
+    if not can_transition("generation_job", normalized_current, normalized_next):
+        raise ValueError(f"invalid generation job status transition: {normalized_current} -> {normalized_next}")
+    return normalized_next  # type: ignore[return-value]
+
+
+def require_plan_transition(current: object, next_status: object) -> PlanStatus:
+    normalized_current = normalize_status(current)
+    normalized_next = normalize_status(next_status)
+    if not is_plan_status(normalized_next):
+        raise ValueError(f"unknown plan status: {next_status!r}")
+    if not is_plan_status(normalized_current):
+        raise ValueError(f"unknown current plan status: {current!r}")
+    if not can_transition("plan", normalized_current, normalized_next):
+        raise ValueError(f"invalid plan status transition: {normalized_current} -> {normalized_next}")
+    return normalized_next  # type: ignore[return-value]
+
+
+def job_status_for_plan_status(plan_status: object) -> GenerationJobStatus:
+    normalized = normalize_status(plan_status)
+    return _PLAN_STATUS_TO_JOB_STATUS.get(normalized, "review_required")

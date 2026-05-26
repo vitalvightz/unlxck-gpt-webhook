@@ -22,6 +22,7 @@ from .environment import is_production_environment
 from .generation_config import generation_job_stale_after_seconds
 from .models import PlanRequest, ProfileUpdateRequest
 from .stage2_automation import Stage2AutomationError, Stage2AutomationUnavailableError, Stage2Automator
+from .state_machine import job_status_for_plan_status
 from .store import AppStore, is_pre_start_stale_generation_job
 
 Planner = Callable[..., dict[str, Any]]
@@ -63,14 +64,7 @@ def utc_now_iso() -> str:
 
 
 def generation_status_from_plan_status(plan_status: str) -> str:
-    normalized = str(plan_status or "").strip().lower()
-    if normalized in {"ready", "publishable_with_flags", "triage_blocked"}:
-        return "completed"
-    if normalized in {"review_required", "held_for_review"}:
-        return "review_required"
-    if normalized == "failed":
-        return "failed"
-    return "review_required"
+    return job_status_for_plan_status(plan_status)
 
 
 def _stable_payload_hash(payload: dict[str, Any]) -> str:
@@ -1063,11 +1057,8 @@ async def run_generation_job(
         if not persisted_plan_id:
             plan_id = None
         plan_status = str(plan_row.get("status") or "failed")
-        final_status = generation_status_from_plan_status(plan_status)
+        final_status = job_status_for_plan_status(plan_status)
         terminal_missing_plan_id_error = None
-        if final_status not in _TERMINAL_GENERATION_JOB_STATUSES:
-            final_status = "review_required"
-            terminal_missing_plan_id_error = "Generation completed but produced an unmapped plan status."
         if final_status in {"completed", "review_required"} and not plan_id:
             final_status = "failed"
             terminal_missing_plan_id_error = (

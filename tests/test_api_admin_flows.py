@@ -776,6 +776,7 @@ def test_approve_and_resume_generation_requeues_completed_triage_blocked_resume_
         intake_id=str(intake["id"]),
         plan_id=str(blocked_plan["id"]),
     )
+    store.update_generation_job(existing["id"], status="running", started_at=datetime.now(timezone.utc).isoformat(), heartbeat_at=datetime.now(timezone.utc).isoformat())
     store.update_generation_job(existing["id"], status="completed", final_result={"status": "triage_blocked"}, completed_at=datetime.now(timezone.utc).isoformat())
     client = TestClient(create_app(store=store, auth_service=FakeAuthService({"admin-token": admin})))
     response = client.post(

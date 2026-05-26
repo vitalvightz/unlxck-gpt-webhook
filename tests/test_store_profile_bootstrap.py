@@ -350,7 +350,9 @@ def test_create_or_get_generation_job_returns_existing_row_after_unique_conflict
             "details": "Key (athlete_id, client_request_id)=(athlete-1, client-1) already exists.",
         }
     )
-    store._run_with_transient_retry = MagicMock(side_effect=[None, duplicate_error, existing_job])
+    active_response = MagicMock()
+    active_response.data = []
+    store._run_with_transient_retry = MagicMock(side_effect=[None, active_response, duplicate_error, existing_job])
 
     result = store.create_or_get_generation_job(
         athlete_id="athlete-1",
@@ -729,6 +731,26 @@ def test_create_plan_retries_with_legacy_payload_when_optional_plan_columns_are_
     assert "stage2_payload" not in second_payload
 
 
+@pytest.mark.parametrize("blank_status", [None, ""])
+def test_create_plan_defaults_blank_result_status_to_generated(blank_status):
+    store = _make_store()
+    request = _build_request()
+    success_response = MagicMock()
+    success_response.data = [{"id": "plan-1", "status": "generated"}]
+    store.client.table.return_value.insert.return_value.execute.return_value = success_response
+
+    row = store.create_plan(
+        athlete_id="athlete-1",
+        intake_id="intake-1",
+        request=request,
+        result={"status": blank_status, "plan_text": "# Plan"},
+    )
+
+    payload = store.client.table.return_value.insert.call_args.args[0]
+    assert payload["status"] == "generated"
+    assert row["status"] == "generated"
+
+
 def test_create_plan_raises_clear_schema_error_when_required_columns_missing_by_default():
     store = _make_store()
     request = _build_request()
@@ -828,6 +850,240 @@ def test_create_plan_raises_specific_error_for_invalid_payload():
 
     assert exc_info.value.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
     assert exc_info.value.detail == store_module._PLAN_INVALID_PAYLOAD_DETAIL
+
+
+@pytest.mark.parametrize("legacy_status", [None, ""])
+def test_update_generation_job_defaults_blank_current_status_to_queued(legacy_status):
+    store = _make_store()
+    updated_job = {"id": "job-1", "status": "running"}
+    store.get_generation_job = MagicMock(
+        side_effect=[
+            {"id": "job-1", "status": legacy_status},
+            updated_job,
+        ]
+    )
+    store._run_with_transient_retry = lambda *, operation, fn, attempts=3, backoff_seconds=0.25: fn()
+
+    result = store.update_generation_job("job-1", status="running")
+
+    payload = store.client.table.return_value.update.call_args.args[0]
+    assert payload["status"] == "running"
+    assert result == updated_job
+
+
+def test_update_generation_job_allows_failed_job_retry_to_queued():
+    store = _make_store()
+    updated_job = {"id": "job-1", "status": "queued"}
+    store.get_generation_job = MagicMock(
+        side_effect=[
+            {"id": "job-1", "status": "failed"},
+            updated_job,
+        ]
+    )
+    store._run_with_transient_retry = lambda *, operation, fn, attempts=3, backoff_seconds=0.25: fn()
+
+    result = store.update_generation_job("job-1", status="queued")
+
+    payload = store.client.table.return_value.update.call_args.args[0]
+    assert payload["status"] == "queued"
+    assert result == updated_job
+
+
+def test_update_generation_job_rejects_invalid_transition_with_409():
+    store = _make_store()
+    store.get_generation_job = MagicMock(return_value={"id": "job-1", "status": "completed"})
+
+    with pytest.raises(HTTPException) as exc_info:
+        store.update_generation_job("job-1", status="failed")
+
+    assert exc_info.value.status_code == status.HTTP_409_CONFLICT
+    assert "invalid generation job status transition" in str(exc_info.value.detail)
+    store.client.table.return_value.update.assert_not_called()
+
+
+@pytest.mark.parametrize("legacy_status", [None, ""])
+def test_archive_plan_defaults_blank_current_status_to_generated(legacy_status):
+    store = _make_store()
+    archived_plan = {"id": "plan-1", "status": "archived"}
+    store.get_plan = MagicMock(
+        side_effect=[
+            {"id": "plan-1", "status": legacy_status},
+            archived_plan,
+        ]
+    )
+
+    result = store.archive_plan("plan-1")
+
+    payload = store.client.table.return_value.update.call_args.args[0]
+    assert payload["status"] == "archived"
+    assert result == archived_plan
+
+
+def test_update_plan_stage2_allows_triage_blocked_to_ready():
+    store = _make_store()
+    ready_plan = {"id": "plan-1", "status": "ready"}
+    store.get_plan = MagicMock(
+        side_effect=[
+            {"id": "plan-1", "status": "triage_blocked"},
+            ready_plan,
+        ]
+    )
+
+    result = store.update_plan_stage2("plan-1", {"status": "ready", "plan_text": "# Plan"})
+
+    payload = store.client.table.return_value.update.call_args.args[0]
+    assert payload["status"] == "ready"
+    assert result == ready_plan
+
+
+@pytest.mark.parametrize("legacy_status", [None, ""])
+def test_update_plan_stage2_defaults_blank_current_status_to_generated(legacy_status):
+    store = _make_store()
+    ready_plan = {"id": "plan-1", "status": "ready"}
+    store.get_plan = MagicMock(
+        side_effect=[
+            {"id": "plan-1", "status": legacy_status},
+            ready_plan,
+        ]
+    )
+
+    result = store.update_plan_stage2("plan-1", {"status": "ready", "plan_text": "# Plan"})
+
+    payload = store.client.table.return_value.update.call_args.args[0]
+    assert payload["status"] == "ready"
+    assert result == ready_plan
+
+
+def test_update_plan_stage2_preserves_existing_status_when_result_status_missing():
+    store = _make_store()
+    updated_plan = {"id": "plan-1", "status": "review_required"}
+    store.get_plan = MagicMock(
+        side_effect=[
+            {"id": "plan-1", "status": "review_required"},
+            updated_plan,
+        ]
+    )
+
+    result = store.update_plan_stage2("plan-1", {"plan_text": "# Manual review text"})
+
+    payload = store.client.table.return_value.update.call_args.args[0]
+    assert payload["status"] == "review_required"
+    assert result == updated_plan
+
+
+def test_update_plan_stage2_rejects_invalid_transition_with_409():
+    store = _make_store()
+    store.get_plan = MagicMock(return_value={"id": "plan-1", "status": "archived"})
+
+    with pytest.raises(HTTPException) as exc_info:
+        store.update_plan_stage2("plan-1", {"status": "ready", "plan_text": "# Plan"})
+
+    assert exc_info.value.status_code == status.HTTP_409_CONFLICT
+    assert "invalid plan status transition" in str(exc_info.value.detail)
+    store.client.table.return_value.update.assert_not_called()
+
+
+def test_claim_generation_job_treats_null_status_as_queued(monkeypatch):
+    fixed_now = "2026-04-05T12:00:00+00:00"
+    monkeypatch.setattr(store_module, "_utc_now_iso", lambda: fixed_now)
+    store = _make_store()
+    legacy_job = {
+        "id": "job-1",
+        "status": None,
+        "attempt_count": 0,
+        "heartbeat_at": None,
+        "started_at": None,
+    }
+    claimed_job = {
+        "id": "job-1",
+        "status": "running",
+        "attempt_count": 1,
+        "heartbeat_at": fixed_now,
+        "started_at": fixed_now,
+        "progress_milestones": [{"code": "job_loaded"}],
+    }
+    store.get_generation_job = MagicMock(side_effect=[legacy_job, claimed_job])
+    store._run_with_transient_retry = lambda *, operation, fn, attempts=3, backoff_seconds=0.25: fn()
+    execute = (
+        store.client.table.return_value.update.return_value.eq.return_value.is_.return_value.eq.return_value.execute
+    )
+    execute.return_value = MagicMock()
+
+    result = store.claim_generation_job("job-1")
+
+    assert result == claimed_job
+    update_payload = store.client.table.return_value.update.call_args.args[0]
+    assert update_payload["status"] == "running"
+    assert update_payload["started_at"] == fixed_now
+    store.client.table.return_value.update.return_value.eq.assert_called_once_with("id", "job-1")
+    store.client.table.return_value.update.return_value.eq.return_value.is_.assert_called_once_with(
+        "status", "null"
+    )
+    store.client.table.return_value.update.return_value.eq.return_value.is_.return_value.eq.assert_called_once_with(
+        "attempt_count", 0
+    )
+
+
+def test_claim_generation_job_treats_blank_status_as_queued(monkeypatch):
+    fixed_now = "2026-04-05T12:00:00+00:00"
+    monkeypatch.setattr(store_module, "_utc_now_iso", lambda: fixed_now)
+    store = _make_store()
+    legacy_job = {
+        "id": "job-1",
+        "status": "",
+        "attempt_count": 0,
+        "heartbeat_at": None,
+        "started_at": None,
+    }
+    claimed_job = {
+        "id": "job-1",
+        "status": "running",
+        "attempt_count": 1,
+        "heartbeat_at": fixed_now,
+        "started_at": fixed_now,
+        "progress_milestones": [{"code": "job_loaded"}],
+    }
+    store.get_generation_job = MagicMock(side_effect=[legacy_job, claimed_job])
+    store._run_with_transient_retry = lambda *, operation, fn, attempts=3, backoff_seconds=0.25: fn()
+    execute = (
+        store.client.table.return_value.update.return_value.eq.return_value.eq.return_value.eq.return_value.execute
+    )
+    execute.return_value = MagicMock()
+
+    result = store.claim_generation_job("job-1")
+
+    assert result == claimed_job
+    update_payload = store.client.table.return_value.update.call_args.args[0]
+    assert update_payload["status"] == "running"
+    assert update_payload["started_at"] == fixed_now
+    store.client.table.return_value.update.return_value.eq.assert_called_once_with("id", "job-1")
+    store.client.table.return_value.update.return_value.eq.return_value.eq.assert_called_once_with(
+        "status", ""
+    )
+    store.client.table.return_value.update.return_value.eq.return_value.eq.return_value.eq.assert_called_once_with(
+        "attempt_count", 0
+    )
+
+
+@pytest.mark.parametrize("current_status", ["completed", "failed", "review_required"])
+def test_claim_generation_job_returns_none_for_invalid_non_blank_statuses(current_status):
+    store = _make_store()
+    store.get_generation_job = MagicMock(
+        return_value={
+            "id": "job-1",
+            "status": current_status,
+            "attempt_count": 0,
+            "heartbeat_at": None,
+            "started_at": None,
+        }
+    )
+    store._run_with_transient_retry = MagicMock()
+
+    result = store.claim_generation_job("job-1")
+
+    assert result is None
+    store.client.table.return_value.update.assert_not_called()
+    store._run_with_transient_retry.assert_not_called()
 
 
 def test_claim_generation_job_returns_none_when_compare_and_swap_loses(monkeypatch):
@@ -946,11 +1202,21 @@ def test_list_claimable_generation_jobs_uses_app_stale_timeout_by_default(monkey
     }
     queued_response = MagicMock()
     queued_response.data = []
+    null_status_response = MagicMock()
+    null_status_response.data = []
+    blank_status_response = MagicMock()
+    blank_status_response.data = []
     stale_heartbeat_response = MagicMock()
     stale_heartbeat_response.data = [running_stale]
     stale_without_heartbeat_response = MagicMock()
     stale_without_heartbeat_response.data = []
-    responses = [queued_response, stale_heartbeat_response, stale_without_heartbeat_response]
+    responses = [
+        queued_response,
+        null_status_response,
+        blank_status_response,
+        stale_heartbeat_response,
+        stale_without_heartbeat_response,
+    ]
 
     def _run(*, operation, fn, attempts=3, backoff_seconds=0.25):
         return responses.pop(0)

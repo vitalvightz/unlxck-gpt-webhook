@@ -870,7 +870,9 @@ def test_admin_generation_jobs_normalizes_legacy_ready_status():
         source="self_serve",
         request_payload=_build_request().model_dump(mode="json"),
     )
-    store.update_generation_job(job["id"], status="ready", completed_at="2026-01-01T00:00:00+00:00")
+    store.generation_jobs[job["id"]].update(
+        {"status": "ready", "completed_at": "2026-01-01T00:00:00+00:00"}
+    )
 
     response = client.get(
         "/api/admin/athletes/athlete-1/generation-jobs",
