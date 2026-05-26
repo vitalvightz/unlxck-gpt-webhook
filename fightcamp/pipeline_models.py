@@ -45,11 +45,13 @@ class Stage2Payload(BaseModel):
     schema_version: str
     generator_mode: str
     athlete_model: AthleteModel
-    restrictions: list[Any] = Field(default_factory=list)
-    phase_briefs: dict[str, Any] = Field(default_factory=dict)
-    candidate_pools: dict[str, Any] = Field(default_factory=dict)
-    omission_ledger: dict[str, Any] = Field(default_factory=dict)
-    rewrite_guidance: dict[str, Any] = Field(default_factory=dict)
+    # Stable boundary fields: required so a dropped key fails fast. An empty
+    # dict/list is acceptable, a missing key is not.
+    restrictions: list[Any]
+    phase_briefs: dict[str, Any]
+    candidate_pools: dict[str, Any]
+    omission_ledger: dict[str, Any]
+    rewrite_guidance: dict[str, Any]
     injury_context: dict[str, Any] = Field(default_factory=dict)
 
 
