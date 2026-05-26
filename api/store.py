@@ -2160,7 +2160,7 @@ class SupabaseAppStore:
                 next_status = str(payload.get("status") or "").strip().lower()
                 if not is_generation_job_status(next_status):
                     raise _status_transition_error(f"unknown generation job status: {next_status!r}")
-                existing = self.get_generation_job(job_id)
+                existing = self._read_generation_job(job_id)
                 if not existing:
                     raise HTTPException(
                         status_code=status.HTTP_404_NOT_FOUND,
