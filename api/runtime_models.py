@@ -14,7 +14,7 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from .state_machine import GenerationJobStatus
+from .state_machine import GenerationJobStatus, PlanStatus
 
 
 class GenerationJobState(BaseModel):
