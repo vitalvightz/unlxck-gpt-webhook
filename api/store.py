@@ -1234,7 +1234,8 @@ class SupabaseAppStore:
             if not job:
                 return None
 
-            current_status = str(job.get("status") or "").strip().lower()
+            raw_status = job.get("status")
+            current_status = str(raw_status or "").strip().lower() or "queued"
             current_attempt_count = int(job.get("attempt_count") or 0)
             now_iso = _utc_now_iso()
             now_dt = _parse_datetime(now_iso)
@@ -1266,14 +1267,18 @@ class SupabaseAppStore:
                 "error": None,
                 "attempt_count": next_attempt_count,
             }
+
+            def _claim_update():
+                query = self.client.table("generation_jobs").update(payload).eq("id", job_id)
+                if raw_status is None:
+                    query = query.is_("status", "null")
+                else:
+                    query = query.eq("status", raw_status)
+                return query.eq("attempt_count", current_attempt_count).execute()
+
             self._run_with_transient_retry(
                 operation="claim_generation_job:update",
-                fn=lambda: self.client.table("generation_jobs")
-                .update(payload)
-                .eq("id", job_id)
-                .eq("status", current_status)
-                .eq("attempt_count", current_attempt_count)
-                .execute(),
+                fn=_claim_update,
             )
             updated = self.get_generation_job(job_id)
             if not updated:

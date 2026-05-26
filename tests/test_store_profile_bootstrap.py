@@ -834,6 +834,109 @@ def test_update_plan_stage2_rejects_invalid_transition_with_409():
     store.client.table.return_value.update.assert_not_called()
 
 
+def test_claim_generation_job_treats_null_status_as_queued(monkeypatch):
+    fixed_now = "2026-04-05T12:00:00+00:00"
+    monkeypatch.setattr(store_module, "_utc_now_iso", lambda: fixed_now)
+    store = _make_store()
+    legacy_job = {
+        "id": "job-1",
+        "status": None,
+        "attempt_count": 0,
+        "heartbeat_at": None,
+        "started_at": None,
+    }
+    claimed_job = {
+        "id": "job-1",
+        "status": "running",
+        "attempt_count": 1,
+        "heartbeat_at": fixed_now,
+        "started_at": fixed_now,
+        "progress_milestones": [{"code": "job_loaded"}],
+    }
+    store.get_generation_job = MagicMock(side_effect=[legacy_job, claimed_job])
+    store._run_with_transient_retry = lambda *, operation, fn, attempts=3, backoff_seconds=0.25: fn()
+    execute = (
+        store.client.table.return_value.update.return_value.eq.return_value.is_.return_value.eq.return_value.execute
+    )
+    execute.return_value = MagicMock()
+
+    result = store.claim_generation_job("job-1")
+
+    assert result == claimed_job
+    update_payload = store.client.table.return_value.update.call_args.args[0]
+    assert update_payload["status"] == "running"
+    assert update_payload["started_at"] == fixed_now
+    store.client.table.return_value.update.return_value.eq.assert_called_once_with("id", "job-1")
+    store.client.table.return_value.update.return_value.eq.return_value.is_.assert_called_once_with(
+        "status", "null"
+    )
+    store.client.table.return_value.update.return_value.eq.return_value.is_.return_value.eq.assert_called_once_with(
+        "attempt_count", 0
+    )
+
+
+def test_claim_generation_job_treats_blank_status_as_queued(monkeypatch):
+    fixed_now = "2026-04-05T12:00:00+00:00"
+    monkeypatch.setattr(store_module, "_utc_now_iso", lambda: fixed_now)
+    store = _make_store()
+    legacy_job = {
+        "id": "job-1",
+        "status": "",
+        "attempt_count": 0,
+        "heartbeat_at": None,
+        "started_at": None,
+    }
+    claimed_job = {
+        "id": "job-1",
+        "status": "running",
+        "attempt_count": 1,
+        "heartbeat_at": fixed_now,
+        "started_at": fixed_now,
+        "progress_milestones": [{"code": "job_loaded"}],
+    }
+    store.get_generation_job = MagicMock(side_effect=[legacy_job, claimed_job])
+    store._run_with_transient_retry = lambda *, operation, fn, attempts=3, backoff_seconds=0.25: fn()
+    execute = (
+        store.client.table.return_value.update.return_value.eq.return_value.eq.return_value.eq.return_value.execute
+    )
+    execute.return_value = MagicMock()
+
+    result = store.claim_generation_job("job-1")
+
+    assert result == claimed_job
+    update_payload = store.client.table.return_value.update.call_args.args[0]
+    assert update_payload["status"] == "running"
+    assert update_payload["started_at"] == fixed_now
+    store.client.table.return_value.update.return_value.eq.assert_called_once_with("id", "job-1")
+    store.client.table.return_value.update.return_value.eq.return_value.eq.assert_called_once_with(
+        "status", ""
+    )
+    store.client.table.return_value.update.return_value.eq.return_value.eq.return_value.eq.assert_called_once_with(
+        "attempt_count", 0
+    )
+
+
+@pytest.mark.parametrize("current_status", ["completed", "failed", "review_required"])
+def test_claim_generation_job_returns_none_for_invalid_non_blank_statuses(current_status):
+    store = _make_store()
+    store.get_generation_job = MagicMock(
+        return_value={
+            "id": "job-1",
+            "status": current_status,
+            "attempt_count": 0,
+            "heartbeat_at": None,
+            "started_at": None,
+        }
+    )
+    store._run_with_transient_retry = MagicMock()
+
+    result = store.claim_generation_job("job-1")
+
+    assert result is None
+    store.client.table.return_value.update.assert_not_called()
+    store._run_with_transient_retry.assert_not_called()
+
+
 def test_claim_generation_job_returns_none_when_compare_and_swap_loses(monkeypatch):
     fixed_now = "2026-04-05T12:00:00+00:00"
     monkeypatch.setattr(store_module, "_utc_now_iso", lambda: fixed_now)
