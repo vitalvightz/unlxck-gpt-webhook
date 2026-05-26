@@ -319,13 +319,32 @@ def test_get_latest_generation_job_normalizes_legacy_status_values(raw_status: s
         source="self_serve",
         request_payload=_build_request().model_dump(mode="json"),
     )
-    store.update_generation_job(created["id"], status=raw_status, completed_at=_now(), plan_id="plan_legacy_1")
+    store.generation_jobs[created["id"]].update(
+        {"status": raw_status, "completed_at": _now(), "plan_id": "plan_legacy_1"}
+    )
 
     response = client.get("/api/generation-jobs/latest", headers={"Authorization": "Bearer athlete-token"})
     assert response.status_code == 200
     body = response.json()
     assert body["status"] == expected_status
     assert body["status"] in {"queued", "running", "completed", "review_required", "failed"}
+
+
+@pytest.mark.parametrize("plan_status", ["held_for_review", "publishable_with_flags", "ready"])
+def test_fake_store_update_generation_job_rejects_plan_status_values(plan_status: str):
+    _, store, _ = _build_client(enable_in_process_generation=False)
+    created = store.create_or_get_generation_job(
+        athlete_id="athlete-1",
+        client_request_id=f"invalid-job-status-{plan_status}",
+        source="self_serve",
+        request_payload=_build_request().model_dump(mode="json"),
+    )
+
+    with pytest.raises(HTTPException) as exc_info:
+        store.update_generation_job(created["id"], status=plan_status)
+
+    assert exc_info.value.status_code == status.HTTP_409_CONFLICT
+    assert "unknown generation job status" in str(exc_info.value.detail)
 
 
 def test_get_active_generation_job_recovers_startup_stale_running_to_queued():

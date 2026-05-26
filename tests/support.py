@@ -644,10 +644,6 @@ class FakeStore:
         payload = dict(changes)
         if "status" in payload:
             next_status = str(payload.get("status") or "").strip().lower()
-            if next_status == "held_for_review":
-                next_status = "review_required"
-            elif next_status in {"publishable_with_flags", "ready"}:
-                next_status = "completed"
             if not is_generation_job_status(next_status):
                 raise _status_transition_error(f"unknown generation job status: {next_status!r}")
             try:
