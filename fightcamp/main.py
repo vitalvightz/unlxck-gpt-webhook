@@ -7,6 +7,7 @@ from typing import Any, Callable
 from .input_parsing import PlanInput
 from .injury_triage import FULL_PLAN, blocked_mode_output, triage_injuries
 from .logging_utils import configure_logging
+from .pipeline_models import Stage1Result
 from .plan_pipeline import (
     _filter_mindset_blocks,
     build_runtime_context,
@@ -240,6 +241,7 @@ def generate_plan_sync(
     if triage_result.mode != FULL_PLAN and not triage_resume_override_applied:
         blocked = blocked_mode_output(triage=triage_result, parsed_injuries=plan_input.parsed_injuries)
         blocked["parsing_metadata"] = plan_input.parsing_metadata
+        Stage1Result.model_validate(blocked)
         return blocked
 
     timer_start = perf_counter()
@@ -404,6 +406,7 @@ def generate_plan_sync(
                 "override_key": _TRIAGE_RESUME_OVERRIDE_KEY,
             }
             why_log["injury_triage_original"] = triage_result.to_dict()
+    Stage1Result.model_validate(result)
     return result
 
 

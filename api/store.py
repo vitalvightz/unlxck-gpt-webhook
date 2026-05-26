@@ -24,6 +24,7 @@ from .models import (
     USERNAME_MAX_CHANGES_PER_WINDOW,
     validate_username,
 )
+from .runtime_models import GenerationJobState, PersistedPlanRuntime
 from .state_machine import (
     is_generation_job_status,
     is_plan_status,
@@ -1078,6 +1079,7 @@ class SupabaseAppStore:
             "stage2_attempt_count": result.get("stage2_attempt_count", 0),
             "parsing_metadata": result.get("parsing_metadata"),
         }
+        PersistedPlanRuntime.model_validate(payload)
 
         def _insert_plan(insert_payload: dict[str, Any]) -> dict[str, Any]:
             response = self.client.table("plans").insert(insert_payload).execute()
@@ -1313,6 +1315,7 @@ class SupabaseAppStore:
             "final_result": None,
             "plan_id": plan_id,
         }
+        GenerationJobState.model_validate(payload)
         try:
             response = self._run_with_transient_retry(
                 operation="create_or_get_generation_job:insert",
