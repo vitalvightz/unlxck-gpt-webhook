@@ -18,6 +18,12 @@ from api.models import (
     USERNAME_MAX_CHANGES_PER_WINDOW,
     validate_username,
 )
+from api.state_machine import (
+    is_generation_job_status,
+    is_plan_status,
+    require_generation_job_transition,
+    require_plan_transition,
+)
 from datetime import timedelta
 
 os.environ.setdefault("APP_GENERATION_SCHEDULER", "fastapi")
@@ -25,6 +31,10 @@ os.environ.setdefault("APP_GENERATION_SCHEDULER", "fastapi")
 
 def _now() -> str:
     return datetime.now(timezone.utc).isoformat()
+
+
+def _status_transition_error(detail: str) -> HTTPException:
+    return HTTPException(status_code=status.HTTP_409_CONFLICT, detail=detail)
 
 
 @dataclass
@@ -190,6 +200,9 @@ class FakeStore:
     def create_plan(self, *, athlete_id: str, intake_id: str, request: PlanRequest, result: dict) -> dict:
         profile = self.profiles[athlete_id]
         plan_id = f"plan_{uuid4().hex[:10]}"
+        result_status = str(result.get("status") or "generated").strip().lower()
+        if not is_plan_status(result_status):
+            raise _status_transition_error(f"unknown plan status: {result_status!r}")
         row = {
             "id": plan_id,
             "athlete_id": athlete_id,
@@ -197,7 +210,7 @@ class FakeStore:
             "fight_date": request.fight_date.strip() or None,
             "technical_style": request.athlete.technical_style,
             "plan_name": "",
-            "status": result.get("status", "generated"),
+            "status": result_status,
             "plan_text": result.get("plan_text", ""),
             "draft_plan_text": result.get("draft_plan_text", result.get("plan_text", "")),
             "final_plan_text": result.get("final_plan_text", result.get("plan_text", "")),
@@ -240,7 +253,10 @@ class FakeStore:
         if plan_id not in self.plans:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
         row = self.plans[plan_id]
-        row["status"] = "archived"
+        try:
+            row["status"] = require_plan_transition(row.get("status") or "generated", "archived")
+        except ValueError as exc:
+            raise _status_transition_error(str(exc)) from exc
         return row
 
     def create_or_get_generation_job(
@@ -409,7 +425,16 @@ class FakeStore:
         job = self.generation_jobs.get(job_id)
         if not job:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="generation job not found")
-        job.update(changes)
+        payload = dict(changes)
+        if "status" in payload:
+            next_status = str(payload.get("status") or "").strip().lower()
+            if not is_generation_job_status(next_status):
+                raise _status_transition_error(f"unknown generation job status: {next_status!r}")
+            try:
+                payload["status"] = require_generation_job_transition(job.get("status") or "queued", next_status)
+            except ValueError as exc:
+                raise _status_transition_error(str(exc)) from exc
+        job.update(payload)
         job["updated_at"] = _now()
         return dict(job)
 
@@ -417,9 +442,13 @@ class FakeStore:
         row = self.plans.get(plan_id)
         if not row:
             return None
+        try:
+            next_status = require_plan_transition(row.get("status") or "generated", result.get("status") or "generated")
+        except ValueError as exc:
+            raise _status_transition_error(str(exc)) from exc
         row.update(
             {
-                "status": result.get("status", row.get("status", "generated")),
+                "status": next_status,
                 "plan_text": result.get("plan_text", row.get("plan_text", "")),
                 "draft_plan_text": result.get("draft_plan_text", row.get("draft_plan_text", row.get("plan_text", ""))),
                 "final_plan_text": result.get("final_plan_text", row.get("final_plan_text", row.get("plan_text", ""))),

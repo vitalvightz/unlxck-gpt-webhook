@@ -5,6 +5,8 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
+from .state_machine import GenerationJobStatus
+
 UserRole = Literal["athlete", "admin"]
 GuidedInjurySeverity = Literal["", "low", "moderate", "high"]
 AppearanceMode = Literal["dark", "light"]
@@ -27,7 +29,6 @@ SparringDayClass = Literal["primary_hard", "secondary_hard", "managed_hard", "te
 EffectiveLoad = Literal["hard", "technical", "reduced", "none"]
 
 
-GenerationJobStatus = Literal["queued", "running", "completed", "review_required", "failed"]
 _RECORD_PATTERN = re.compile(r"^\d+-\d+(?:-\d+)?$")
 _ROUNDS_FORMAT_PATTERN = re.compile(r"^(\d+)\s*[xX]\s*(\d+)$")
 # Keep this alias map aligned with web/lib/intake-options.ts so the API accepts

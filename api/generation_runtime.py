@@ -17,6 +17,7 @@ from fightcamp.main import generate_plan_sync
 from .environment import is_production_environment
 from .models import PlanRequest, ProfileUpdateRequest
 from .stage2_automation import Stage2AutomationError, Stage2AutomationUnavailableError, Stage2Automator
+from .state_machine import job_status_for_plan_status
 from .store import AppStore
 
 Planner = Callable[..., dict[str, Any]]
@@ -685,7 +686,7 @@ async def run_generation_job(
             logger.exception("[jobs] generation:clear_onboarding_draft_failed athlete_id=%s job_id=%s", athlete_id, job_id)
 
         plan_status = str(plan_row.get("status") or "failed")
-        final_status = "completed" if plan_status in {"ready", "triage_blocked"} else plan_status
+        final_status = job_status_for_plan_status(plan_status)
         if final_status == "completed":
             _emit_milestone(
                 "plan_saved",

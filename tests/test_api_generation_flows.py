@@ -71,6 +71,13 @@ def test_get_generation_job_does_not_mutate_terminal_non_running_statuses(status
         source="self_serve",
         request_payload=_build_request().model_dump(mode="json"),
     )
+    if status_value != "failed":
+        store.update_generation_job(
+            created["id"],
+            status="running",
+            started_at="2026-01-01T00:00:00+00:00",
+            heartbeat_at="2026-01-01T00:00:00+00:00",
+        )
     store.update_generation_job(created["id"], status=status_value, started_at="2026-01-01T00:00:00+00:00", heartbeat_at="2026-01-01T00:00:00+00:00")
 
     response = client.get(f"/api/generation-jobs/{created['id']}", headers={"Authorization": "Bearer athlete-token"})
@@ -283,6 +290,7 @@ def test_failed_completed_and_stale_running_jobs_do_not_count_against_concurrenc
         source="self_serve",
         request_payload=_build_request().model_dump(mode="json"),
     )
+    store.update_generation_job(completed["id"], status="running", started_at=_now(), heartbeat_at=_now())
     store.update_generation_job(completed["id"], status="completed", completed_at=_now())
     failed = store.create_or_get_generation_job(
         athlete_id="athlete-4",
@@ -832,6 +840,9 @@ def test_admin_triage_resume_with_override_updates_blocked_plan_in_place():
         job["id"],
         intake_id=str(intake["id"]),
         plan_id=str(blocked_plan["id"]),
+        status="running",
+        started_at=_now(),
+        heartbeat_at=_now(),
     )
 
     def _override_aware_planner(payload: dict) -> dict:
@@ -1065,6 +1076,7 @@ def test_run_generation_job_does_not_reuse_archived_latest_plan_for_same_intake(
         request_payload=request.model_dump(mode="json"),
     )
     store.update_generation_job(job["id"], intake_id=str(intake["id"]))
+    store.update_generation_job(job["id"], status="running", started_at=_now(), heartbeat_at=_now())
 
     asyncio.run(
         run_generation_job(

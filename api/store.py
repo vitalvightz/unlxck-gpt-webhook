@@ -22,6 +22,12 @@ from .models import (
     USERNAME_MAX_CHANGES_PER_WINDOW,
     validate_username,
 )
+from .state_machine import (
+    is_generation_job_status,
+    is_plan_status,
+    require_generation_job_transition,
+    require_plan_transition,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -196,6 +202,10 @@ def _parse_datetime(value: Any) -> datetime | None:
         except ValueError:
             return None
     return None
+
+
+def _status_transition_error(detail: str) -> HTTPException:
+    return HTTPException(status_code=status.HTTP_409_CONFLICT, detail=detail)
 
 
 @dataclass
@@ -738,6 +748,9 @@ class SupabaseAppStore:
         request: PlanRequest,
         result: dict[str, Any],
     ) -> dict[str, Any]:
+        result_status = str(result.get("status") or "generated").strip().lower()
+        if not is_plan_status(result_status):
+            raise _status_transition_error(f"unknown plan status: {result_status!r}")
         payload = {
             "athlete_id": athlete_id,
             "intake_id": intake_id,
@@ -745,7 +758,7 @@ class SupabaseAppStore:
             "technical_style": request.athlete.technical_style,
             "full_name": request.athlete.full_name,
             "plan_name": "",
-            "status": result.get("status", "generated"),
+            "status": result_status,
             "plan_text": result.get("plan_text", ""),
             "draft_plan_text": result.get("draft_plan_text", result.get("plan_text", "")),
             "final_plan_text": result.get("final_plan_text", result.get("plan_text", "")),
@@ -1221,7 +1234,7 @@ class SupabaseAppStore:
             if not job:
                 return None
 
-            current_status = str(job.get("status") or "")
+            current_status = str(job.get("status") or "").strip().lower()
             current_attempt_count = int(job.get("attempt_count") or 0)
             now_iso = _utc_now_iso()
             now_dt = _parse_datetime(now_iso)
@@ -1238,6 +1251,10 @@ class SupabaseAppStore:
             if current_status not in {"queued", "running"}:
                 return None
             if current_status == "running" and not is_stale_running:
+                return None
+            try:
+                require_generation_job_transition(current_status, "running")
+            except ValueError:
                 return None
 
             next_attempt_count = current_attempt_count + 1
@@ -1331,6 +1348,20 @@ class SupabaseAppStore:
     def update_generation_job(self, job_id: str, **changes: Any) -> dict[str, Any]:
         try:
             payload = dict(changes)
+            if "status" in payload:
+                next_status = str(payload.get("status") or "").strip().lower()
+                if not is_generation_job_status(next_status):
+                    raise _status_transition_error(f"unknown generation job status: {next_status!r}")
+                existing = self.get_generation_job(job_id)
+                if not existing:
+                    raise HTTPException(
+                        status_code=status.HTTP_404_NOT_FOUND,
+                        detail="generation job not found",
+                    )
+                try:
+                    payload["status"] = require_generation_job_transition(existing.get("status") or "queued", next_status)
+                except ValueError as exc:
+                    raise _status_transition_error(str(exc)) from exc
             self._run_with_transient_retry(
                 operation="update_generation_job:update",
                 fn=lambda: self.client.table("generation_jobs").update(payload).eq("id", job_id).execute(),
@@ -1392,8 +1423,12 @@ class SupabaseAppStore:
                     status_code=status.HTTP_404_NOT_FOUND,
                     detail="plan not found",
                 )
+            try:
+                next_status = require_plan_transition(existing.get("status") or "generated", "archived")
+            except ValueError as exc:
+                raise _status_transition_error(str(exc)) from exc
             logger.info("[store] archive_plan:start plan_id=%s", plan_id)
-            self.client.table("plans").update({"status": "archived"}).eq("id", plan_id).execute()
+            self.client.table("plans").update({"status": next_status}).eq("id", plan_id).execute()
             updated = self.get_plan(plan_id)
             if not updated:
                 logger.warning("[store] archive_plan:plan_missing_after_update plan_id=%s", plan_id)
@@ -1413,8 +1448,18 @@ class SupabaseAppStore:
             )
 
     def update_plan_stage2(self, plan_id: str, result: dict[str, Any]) -> dict[str, Any]:
+        existing = self.get_plan(plan_id)
+        if not existing:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="plan not found",
+            )
+        try:
+            next_status = require_plan_transition(existing.get("status") or "generated", result.get("status") or "generated")
+        except ValueError as exc:
+            raise _status_transition_error(str(exc)) from exc
         payload = {
-            "status": result.get("status", "generated"),
+            "status": next_status,
             "plan_text": result.get("plan_text", ""),
             "draft_plan_text": result.get("draft_plan_text", result.get("plan_text", "")),
             "final_plan_text": result.get("final_plan_text", result.get("plan_text", "")),
