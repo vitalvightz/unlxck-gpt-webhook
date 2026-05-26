@@ -1937,6 +1937,24 @@ class SupabaseAppStore:
                 .limit(limit)
                 .execute(),
             )
+            null_status_response = self._run_with_transient_retry(
+                operation="list_claimable_generation_jobs:select_null_status",
+                fn=lambda: self.client.table("generation_jobs")
+                .select(GENERATION_JOB_SELECT)
+                .is_("status", "null")
+                .order("created_at", desc=False)
+                .limit(limit)
+                .execute(),
+            )
+            blank_status_response = self._run_with_transient_retry(
+                operation="list_claimable_generation_jobs:select_blank_status",
+                fn=lambda: self.client.table("generation_jobs")
+                .select(GENERATION_JOB_SELECT)
+                .eq("status", "")
+                .order("created_at", desc=False)
+                .limit(limit)
+                .execute(),
+            )
             stale_heartbeat_response = self._run_with_transient_retry(
                 operation="list_claimable_generation_jobs:select_running_stale_heartbeat",
                 fn=lambda: self.client.table("generation_jobs")
@@ -1961,14 +1979,15 @@ class SupabaseAppStore:
 
             merged_rows: dict[str, dict[str, Any]] = {}
 
-            # Queued jobs are always claimable (oldest first).
-            for row in queued_response.data or []:
-                if not isinstance(row, dict):
-                    continue
-                row_id = str(row.get("id") or "")
-                if not row_id:
-                    continue
-                merged_rows[row_id] = dict(row)
+            # Queued jobs and legacy blank/null statuses are always claimable (oldest first).
+            for response in (queued_response, null_status_response, blank_status_response):
+                for row in response.data or []:
+                    if not isinstance(row, dict):
+                        continue
+                    row_id = str(row.get("id") or "")
+                    if not row_id:
+                        continue
+                    merged_rows[row_id] = dict(row)
 
             # Running jobs are only claimable if they are startup-stale.
             for response in (stale_heartbeat_response, stale_without_heartbeat_response):

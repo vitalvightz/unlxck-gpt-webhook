@@ -359,6 +359,14 @@ class FakeStore:
 
                     job.update(reset_changes)
                 return dict(job)
+        active = self.get_active_generation_job_for_athlete(athlete_id, stale_after_seconds=stale_after_seconds)
+        if active:
+            if str(active.get("client_request_id") or "") == client_request_id:
+                return dict(active)
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="A generation job is already queued or running for this account.",
+            )
         now = _now()
         job_id = f"job_{uuid4().hex[:10]}"
         job = {

@@ -37,7 +37,7 @@ PLAN_STATUSES: tuple[PlanStatus, ...] = (
 )
 
 _GENERATION_JOB_TRANSITIONS: dict[GenerationJobStatus, frozenset[GenerationJobStatus]] = {
-    "queued": frozenset({"queued", "running", "completed", "review_required", "failed"}),
+    "queued": frozenset({"queued", "running", "failed"}),
     "running": frozenset({"queued", "running", "completed", "review_required", "failed"}),
     "failed": frozenset({"queued", "failed"}),
     "completed": frozenset({"queued", "completed"}),
@@ -146,4 +146,4 @@ def require_plan_transition(current: object, next_status: object) -> PlanStatus:
 
 def job_status_for_plan_status(plan_status: object) -> GenerationJobStatus:
     normalized = normalize_status(plan_status)
-    return _PLAN_STATUS_TO_JOB_STATUS.get(normalized, "failed")
+    return _PLAN_STATUS_TO_JOB_STATUS.get(normalized, "review_required")

@@ -1202,11 +1202,21 @@ def test_list_claimable_generation_jobs_uses_app_stale_timeout_by_default(monkey
     }
     queued_response = MagicMock()
     queued_response.data = []
+    null_status_response = MagicMock()
+    null_status_response.data = []
+    blank_status_response = MagicMock()
+    blank_status_response.data = []
     stale_heartbeat_response = MagicMock()
     stale_heartbeat_response.data = [running_stale]
     stale_without_heartbeat_response = MagicMock()
     stale_without_heartbeat_response.data = []
-    responses = [queued_response, stale_heartbeat_response, stale_without_heartbeat_response]
+    responses = [
+        queued_response,
+        null_status_response,
+        blank_status_response,
+        stale_heartbeat_response,
+        stale_without_heartbeat_response,
+    ]
 
     def _run(*, operation, fn, attempts=3, backoff_seconds=0.25):
         return responses.pop(0)

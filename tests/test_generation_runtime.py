@@ -480,3 +480,7 @@ def test_generation_job_status_never_uses_legacy_plan_status_values():
     for legacy_status in ("publishable_with_flags", "held_for_review"):
         mapped = generation_status_from_plan_status(legacy_status)
         assert mapped != legacy_status
+
+
+def test_generation_status_from_unknown_plan_status_requires_review():
+    assert generation_status_from_plan_status("new_clinical_hold") == "review_required"

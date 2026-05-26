@@ -30,8 +30,8 @@ def test_known_status_sets_include_review_and_triage_states() -> None:
 
 def test_generation_job_transition_examples_are_canonical() -> None:
     assert can_transition("generation_job", "queued", "running")
-    assert can_transition("generation_job", "queued", "completed")
-    assert can_transition("generation_job", "queued", "review_required")
+    assert not can_transition("generation_job", "queued", "completed")
+    assert not can_transition("generation_job", "queued", "review_required")
     assert can_transition("generation_job", "running", "review_required")
     assert can_transition("generation_job", "running", "failed")
     assert can_transition("generation_job", "failed", "queued")
@@ -76,7 +76,7 @@ def test_status_classification_does_not_mix_job_and_plan_lifecycles() -> None:
         ("medical_hold", "review_required"),
         ("restricted_rehab_only", "review_required"),
         ("needs_review", "review_required"),
-        ("unknown", "failed"),
+        ("unknown", "review_required"),
     ],
 )
 def test_job_status_for_plan_status(plan_status: str, job_status: str) -> None:

@@ -23,6 +23,9 @@ Allowed transitions:
 - `review_required` -> `queued`, `completed`, `failed`
 
 Self-transitions are allowed for idempotent updates.
+Workers must claim a job and move it through `running` before writing
+`completed` or `review_required`; direct `queued` -> terminal success/review
+transitions are not part of the contract.
 
 ## Plan States
 Plans describe the saved planning result and review/safety state.
@@ -44,6 +47,9 @@ Allowed transitions are defined in `api/state_machine.py`. In plain terms:
 - Review states may resolve to `ready`, stay under review, or be archived.
 - Triage-blocked/restricted review states may resolve to `ready`, remain constrained, move to another triage safety state, or be archived.
 - `archived` is terminal except for idempotent archive writes.
+
+Unknown plan statuses map to `review_required` for generation-job reporting so
+new safety/review states fail closed to human review instead of worker failure.
 
 ## Implementation Rule
 Use:
