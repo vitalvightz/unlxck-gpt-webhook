@@ -330,6 +330,9 @@ begin
   end if;
 end
 $$;
+
+alter table public.plans validate constraint plans_status_check;
+
 alter table public.athlete_intakes add column if not exists updated_at timestamptz not null default timezone('utc', now());
 
 create index if not exists profiles_email_idx on public.profiles (email);
