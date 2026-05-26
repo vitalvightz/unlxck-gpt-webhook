@@ -4,6 +4,8 @@ import os
 from time import perf_counter
 from typing import Any, Callable
 
+from pydantic import BaseModel, ConfigDict, model_validator
+
 from .input_parsing import PlanInput
 from .injury_triage import FULL_PLAN, blocked_mode_output, triage_injuries
 from .logging_utils import configure_logging
@@ -32,6 +34,7 @@ __all__ = [
     "_normalize_time_labels",
     "_sanitize_phase_text",
     "_sanitize_stage_output",
+    "Stage1Result",
 ]
 
 ProgressCallback = Callable[[str, str, str, dict[str, Any]], None]
@@ -90,6 +93,57 @@ def _invalid_result(error: str, *, missing_fields: list[str] | None = None) -> d
         "stage2_handoff_text": "",
         "parsing_metadata": {},
     }
+
+
+# Statuses that represent a non-successful Stage 1 outcome, where the Stage 2
+# handoff structures (``stage2_payload``/``planning_brief``) are legitimately
+# absent. Any other status (including the empty status used by the normal
+# success path) must carry both structures.
+_NON_SUCCESS_STAGE1_STATUSES = frozenset(
+    {
+        "invalid_input",
+        "triage_blocked",
+        "medical_hold",
+        "restricted_rehab_only",
+        "needs_review",
+    }
+)
+
+
+class Stage1Result(BaseModel):
+    """Variant-aware contract for a Stage 1 generation result.
+
+    Blocked/invalid variants may omit the Stage 2 handoff structures, but a
+    successful generation must carry both ``stage2_payload`` and
+    ``planning_brief`` so the failure surfaces here instead of downstream.
+    """
+
+    model_config = ConfigDict(extra="allow")
+
+    status: str = ""
+    stage2_payload: dict[str, Any] | None = None
+    planning_brief: dict[str, Any] | None = None
+
+    @model_validator(mode="after")
+    def _require_stage2_outputs_for_success(self) -> "Stage1Result":
+        status = str(self.status or "").strip().lower()
+        if status in _NON_SUCCESS_STAGE1_STATUSES:
+            return self
+        if self.stage2_payload is None:
+            raise ValueError("stage2_payload is required for a successful Stage 1 result")
+        if self.planning_brief is None:
+            raise ValueError("planning_brief is required for a successful Stage 1 result")
+        return self
+
+
+def _validate_stage1_result(result: dict) -> dict:
+    """Validate ``result`` against :class:`Stage1Result` and return it unchanged.
+
+    Validation fails fast on a malformed success result; the original dict is
+    returned so downstream consumers keep their existing dict contract.
+    """
+    Stage1Result.model_validate(result)
+    return result
 
 
 class _LazyListProxy:
@@ -169,7 +223,7 @@ def generate_plan_sync(
     except ValueError as exc:
         _record_timing("parse_input", timer_start)
         logger.warning("invalid payload: %s", exc)
-        return _invalid_result(str(exc))
+        return _validate_stage1_result(_invalid_result(str(exc)))
     _record_timing("parse_input", timer_start)
     _safe_emit(
         progress_callback,
@@ -185,9 +239,11 @@ def generate_plan_sync(
             for issue in generation_issues
         )
         logger.warning("invalid planning input: %s", generation_issues)
-        return _invalid_result(
-            f"missing required planning inputs: {missing_summary}",
-            missing_fields=generation_issues,
+        return _validate_stage1_result(
+            _invalid_result(
+                f"missing required planning inputs: {missing_summary}",
+                missing_fields=generation_issues,
+            )
         )
 
     _safe_emit(
@@ -240,7 +296,7 @@ def generate_plan_sync(
     if triage_result.mode != FULL_PLAN and not triage_resume_override_applied:
         blocked = blocked_mode_output(triage=triage_result, parsed_injuries=plan_input.parsed_injuries)
         blocked["parsing_metadata"] = plan_input.parsing_metadata
-        return blocked
+        return _validate_stage1_result(blocked)
 
     timer_start = perf_counter()
     prime_plan_banks(logger=logger)
@@ -404,7 +460,7 @@ def generate_plan_sync(
                 "override_key": _TRIAGE_RESUME_OVERRIDE_KEY,
             }
             why_log["injury_triage_original"] = triage_result.to_dict()
-    return result
+    return _validate_stage1_result(result)
 
 
 async def generate_plan(
