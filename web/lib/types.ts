@@ -368,6 +368,8 @@ export type GenerationJobResponse = {
   can_retry?: boolean;
   status_url?: string | null;
   message?: string | null;
+  stage2_status?: string | null;
+  requires_admin_resume?: boolean;
 };
 
 export type MeResponse = {
