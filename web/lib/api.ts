@@ -529,7 +529,9 @@ export function listPlans(token: string): Promise<PlanSummary[]> {
 }
 
 export function getPlan(token: string, planId: string): Promise<PlanDetail> {
-  return readJson<PlanDetail>(`/api/plans/${planId}`, { token });
+  return withTransientRetries(() =>
+    readJson<PlanDetail>(`/api/plans/${encodeURIComponent(planId)}`, { token }),
+  );
 }
 
 export async function fetchWeeklySchedule(
