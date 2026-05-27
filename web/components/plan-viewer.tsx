@@ -578,6 +578,30 @@ export function hasBlockedTriageStubText(...texts: Array<string | null | undefin
   return TRIAGE_BLOCKED_STUB_MARKERS.some((marker) => combined.includes(marker));
 }
 
+export function isProtectedTriageResumePendingState(input: {
+  isTriageBlocked: boolean;
+  stage2Status?: string | null;
+  containsBlockedTriageStub: boolean;
+  athletePlanText: string;
+  finalPlanText?: string | null;
+}): boolean {
+  const normalizedStage2Status = (input.stage2Status || "").trim().toLowerCase();
+  const hasEmptyAthletePlanWithFinalStub =
+    !input.athletePlanText.trim() && hasBlockedTriageStubText(input.finalPlanText);
+  return (
+    input.isTriageBlocked ||
+    normalizedStage2Status === "triage_resume_approved" ||
+    normalizedStage2Status === "triage_blocked" ||
+    input.containsBlockedTriageStub ||
+    hasEmptyAthletePlanWithFinalStub
+  );
+}
+
+export function isResumableTriageMode(modeOrStatus?: string | null): boolean {
+  const normalized = String(modeOrStatus || "").trim().toLowerCase();
+  return normalized === "needs_review" || normalized === "restricted_rehab_only";
+}
+
 export function buildReviewSummary(
   report: Record<string, unknown> | null | undefined,
   stage2Status: string,
@@ -860,6 +884,13 @@ export function PlanViewer({
     plan.admin_outputs?.final_plan_text,
     plan.admin_outputs?.draft_plan_text,
   );
+  const isProtectedTriageResumePending = isProtectedTriageResumePendingState({
+    isTriageBlocked,
+    stage2Status: plan.admin_outputs?.stage2_status,
+    containsBlockedTriageStub,
+    athletePlanText,
+    finalPlanText: plan.admin_outputs?.final_plan_text,
+  });
   const stage2ReviewSummary = buildReviewSummary(
     validatorReport,
     plan.admin_outputs?.stage2_status || "",
@@ -880,11 +911,11 @@ export function PlanViewer({
     athletePlanText ||
     "";
   const canApproveForRelease =
-    isAdmin && !hasPublishedPlan && Boolean(approvableText) && !containsBlockedTriageStub;
-  const canApproveAndResumeGeneration =
+    isAdmin && !hasPublishedPlan && Boolean(approvableText) && !isProtectedTriageResumePending;
+  const canRetryResumeGeneration =
     isAdmin &&
-    isTriageBlocked &&
-    (injuryTriage?.mode === "needs_review" || injuryTriage?.mode === "restricted_rehab_only");
+    isProtectedTriageResumePending &&
+    (isResumableTriageMode(injuryTriage?.mode) || isResumableTriageMode(plan.status));
   const canRejectApproval = isAdmin;
   const blockedInjuryContext = injuryTriage
     ? buildBlockedInjuryContextSummary({
@@ -1075,7 +1106,7 @@ export function PlanViewer({
       setResumeError("Admin session missing. Please sign in again.");
       return;
     }
-    if (!canApproveAndResumeGeneration) {
+    if (!canRetryResumeGeneration) {
       setResumeError("This plan cannot be resumed from its current triage state.");
       return;
     }
@@ -1412,8 +1443,7 @@ export function PlanViewer({
                       ? injuryTriage?.mode === "medical_hold"
                         ? "Blocked"
                         : "Protected"
-                      : containsBlockedTriageStub ||
-                          plan.admin_outputs?.stage2_status === "triage_resume_approved"
+                      : isProtectedTriageResumePending
                         ? "Blocked / resume pending"
                       : stage2ReviewSummary.isPublishable
                         ? "Publishable"
@@ -1767,7 +1797,7 @@ export function PlanViewer({
       </div>
 
       {isAdmin ? (
-        <div className="admin-review-stack">
+        <div id={`admin-review-${plan.plan_id}`} className="admin-review-stack">
           <section className="viewer-panel">
             <div className="form-section-header">
               <p className="kicker">ADMIN REVIEW</p>
@@ -1784,7 +1814,7 @@ export function PlanViewer({
                       ? "This intake contains urgent or medically disqualifying signals. No planning should continue until medical review is complete."
                       : "Normal planning is paused for this intake. Stage 2 was skipped intentionally until additional review is complete."}
                 </p>
-                {canApproveAndResumeGeneration ? (
+                {canRetryResumeGeneration ? (
                   <div className="support-panel">
                     <div className="field">
                       <label htmlFor="resume-generation-reason">Reason</label>
@@ -1798,7 +1828,7 @@ export function PlanViewer({
                     </div>
                     <div className="plan-summary-actions">
                       <button type="button" className="cta" onClick={handleApproveAndResumeGeneration} disabled={resumePending}>
-                        {resumePending ? "Resuming..." : "Approve and resume generation"}
+                        {resumePending ? "Resuming..." : hasResumeApproval ? "Retry resume generation" : "Approve and resume generation"}
                       </button>
                     </div>
                     {resumeMessage ? <div className="success-banner">{resumeMessage}</div> : null}
