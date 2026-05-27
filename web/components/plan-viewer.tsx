@@ -170,10 +170,6 @@ function formatRiskBandLabel(riskBand: NonNullable<PlanAdvisory["risk_band"]>) {
 }
 
 function readInjuryTriage(plan: PlanDetail): InjuryTriageView | null {
-  if (hasTriageResumeApproval(plan)) {
-    return null;
-  }
-
   const whyLogTriage =
     plan.admin_outputs?.why_log && typeof plan.admin_outputs.why_log === "object"
       ? (plan.admin_outputs.why_log as Record<string, unknown>).injury_triage
@@ -227,6 +223,30 @@ function readInjuryTriage(plan: PlanDetail): InjuryTriageView | null {
       sparring_risk_band: undefined,
       clinician_clearance_required: undefined,
     };
+  }
+
+  return null;
+}
+
+function readRawTriageMode(plan: PlanDetail): string | null {
+  const whyLog = plan.admin_outputs?.why_log;
+  const whyLogTriage =
+    whyLog && typeof whyLog === "object"
+      ? (whyLog as Record<string, unknown>).injury_triage
+      : null;
+
+  const adminOutputsRecord = plan.admin_outputs as Record<string, unknown> | undefined;
+  const planRecord = plan as Record<string, unknown>;
+
+  const sources = [whyLogTriage, adminOutputsRecord?.injury_triage, planRecord.injury_triage];
+
+  for (const source of sources) {
+    if (source && typeof source === "object") {
+      const mode = (source as Record<string, unknown>).mode;
+      if (typeof mode === "string" && mode.trim()) {
+        return mode.trim();
+      }
+    }
   }
 
   return null;
@@ -840,9 +860,13 @@ export function PlanViewer({
     : false;
 
   const injuryTriage = readInjuryTriage(plan);
+  const rawTriageMode = readRawTriageMode(plan);
   const hasResumeApproval = hasTriageResumeApproval(plan);
-  const isTriageBlocked = shouldShowTriageBlockedState(plan, injuryTriage?.mode);
-
+  const isTriageBlocked = shouldShowTriageBlockedState(
+    plan,
+    injuryTriage?.mode || rawTriageMode || undefined,
+  );
+  
   const blockedTitle =
     injuryTriage?.mode === "medical_hold"
       ? "Medical hold"
@@ -913,9 +937,11 @@ export function PlanViewer({
   const canApproveForRelease =
     isAdmin && !hasPublishedPlan && Boolean(approvableText) && !isProtectedTriageResumePending;
   const canRetryResumeGeneration =
-    isAdmin &&
-    isProtectedTriageResumePending &&
-    (isResumableTriageMode(injuryTriage?.mode) || isResumableTriageMode(plan.status));
+  isAdmin &&
+  isProtectedTriageResumePending &&
+  (isResumableTriageMode(injuryTriage?.mode) ||
+    isResumableTriageMode(rawTriageMode) ||
+    isResumableTriageMode(plan.status));
   const canRejectApproval = isAdmin;
   const blockedInjuryContext = injuryTriage
     ? buildBlockedInjuryContextSummary({
@@ -1815,7 +1841,16 @@ export function PlanViewer({
                       : "Normal planning is paused for this intake. Stage 2 was skipped intentionally until additional review is complete."}
                 </p>
                 {canRetryResumeGeneration ? (
-                  <div className="support-panel">
+                  <div className="support-panel support-panel-alert">
+                    <div className="form-section-header">
+                      <p className="kicker">Resume generation required</p>
+                      <h3>{hasResumeApproval ? "Retry resume generation" : "Approve and resume generation"}</h3>
+                    </div>
+                
+                    <p className="muted">
+                      This protected triage plan cannot be approved for athlete release until admin resume generation completes and a real final plan replaces the triage stub.
+                    </p>
+                
                     <div className="field">
                       <label htmlFor="resume-generation-reason">Reason</label>
                       <input
@@ -1826,19 +1861,31 @@ export function PlanViewer({
                         placeholder="Short reason"
                       />
                     </div>
+                
                     <div className="plan-summary-actions">
-                      <button type="button" className="cta" onClick={handleApproveAndResumeGeneration} disabled={resumePending}>
+                      <button
+                        type="button"
+                        className="cta"
+                        onClick={handleApproveAndResumeGeneration}
+                        disabled={resumePending}
+                      >
                         {resumePending ? "Resuming..." : hasResumeApproval ? "Retry resume generation" : "Approve and resume generation"}
                       </button>
                     </div>
+                
                     {resumeMessage ? <div className="success-banner">{resumeMessage}</div> : null}
                     {resumeError ? <div className="error-banner">{resumeError}</div> : null}
                   </div>
                 ) : hasResumeApproval ? (
-                  <div className="support-panel">
+                  <div className="support-panel support-panel-alert">
+                    <div className="form-section-header">
+                      <p className="kicker">Resume unavailable</p>
+                      <h3>This plan is not currently resumable</h3>
+                    </div>
                     <p className="muted">
-                      Resume was approved before. If the linked resume job failed, timed out, or stayed blocked, you can submit a new resume request.
+                      Resume was approved before, but this plan is not currently in a resumable triage mode. Medical holds or unresolved protected states must stay blocked until the intake is corrected or reviewed.
                     </p>
+                    {resumeError ? <div className="error-banner">{resumeError}</div> : null}
                   </div>
                 ) : null}
               </>
