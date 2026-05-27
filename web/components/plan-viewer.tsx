@@ -942,6 +942,10 @@ export function PlanViewer({
   (isResumableTriageMode(injuryTriage?.mode) ||
     isResumableTriageMode(rawTriageMode) ||
     isResumableTriageMode(plan.status));
+
+  const showProtectedResumeAdminReview =
+    isTriageBlocked || isProtectedTriageResumePending || hasResumeApproval;
+  
   const canRejectApproval = isAdmin;
   const blockedInjuryContext = injuryTriage
     ? buildBlockedInjuryContextSummary({
@@ -1828,10 +1832,14 @@ export function PlanViewer({
             <div className="form-section-header">
               <p className="kicker">ADMIN REVIEW</p>
               <h3>
-                {isTriageBlocked ? "Planning blocked before Stage 2" : "Manual Stage 2 actions"}
-              </h3>
+              {showProtectedResumeAdminReview
+                ? hasResumeApproval
+                  ? "Resume generation required"
+                  : "Planning blocked before Stage 2"
+                : "Manual Stage 2 actions"}
+            </h3>
             </div>
-            {isTriageBlocked ? (
+            {showProtectedResumeAdminReview ? (
               <>
                 <p className="muted">
                   {injuryTriage?.mode === "restricted_rehab_only"
