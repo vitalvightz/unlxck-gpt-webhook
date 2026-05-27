@@ -1538,7 +1538,7 @@ def create_app(
         latest_plan = await asyncio.to_thread(store.get_latest_plan, profile.athlete_id)
         if isinstance(latest_plan, dict):
             latest_status = str(latest_plan.get("status") or "").strip().lower()
-            latest_stage2_status = str((latest_plan.get("admin_outputs") or {}).get("stage2_status") or "").strip().lower()
+            latest_stage2_status = str(latest_plan.get("stage2_status") or "").strip().lower()
             latest_intake_id = str(latest_plan.get("intake_id") or "").strip()
             request_intake_id = str(request_body.intake_id or "").strip()
             if (
