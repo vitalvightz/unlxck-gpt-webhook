@@ -1020,6 +1020,8 @@ class GenerationJobResponse(BaseModel):
     message: str | None = None
     progress_milestones: list[ProgressMilestone] = Field(default_factory=list)
     can_retry: bool = False
+    stage2_status: str | None = None
+    requires_admin_resume: bool = False
 
 
 class GenerationRequestPayloadSummary(BaseModel):
@@ -1051,6 +1053,8 @@ class AdminGenerationJobDiagnostic(BaseModel):
     stale_reason: str | None = None
     plan_id: str | None = None
     can_retry: bool = False
+    stage2_status: str | None = None
+    requires_admin_resume: bool = False
     is_stale: bool = False
     request_payload_summary: GenerationRequestPayloadSummary = Field(default_factory=GenerationRequestPayloadSummary)
 
