@@ -309,7 +309,7 @@ export function PremiumLoadingScreen({
             ) : null}
             {phase === "already_generated" ? (
               <div className="loading-failure-actions">
-                <p className="loading-failure-headline">This intake already has a generated plan.</p>
+                <p className="loading-failure-headline">What would you like to do next?</p>
                 <div className="loading-failure-secondary-actions">
                   {onOpenPlanHistory ? <button type="button" className="cta ghost" onClick={onOpenPlanHistory}>Open plan history</button> : null}
                   {onRefineIntake ? <button type="button" className="cta ghost" onClick={onRefineIntake}>Refine intake</button> : null}
