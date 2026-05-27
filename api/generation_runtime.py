@@ -1061,8 +1061,7 @@ async def run_generation_job(
         terminal_missing_plan_id_error = None
         missing_or_invalid_terminal_plan_id = False
         if final_status in {"completed", "review_required"} and plan_id:
-            persisted_plan_row = await _to_thread_with_heartbeat(store.get_plan, plan_id)
-            if not persisted_plan_row:
+            if not plan_row:
                 missing_or_invalid_terminal_plan_id = True
                 logger.error(
                     "[jobs] generation:terminal_plan_row_missing athlete_id=%s job_id=%s plan_id=%s plan_status=%s",
