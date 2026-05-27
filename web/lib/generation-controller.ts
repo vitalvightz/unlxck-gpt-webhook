@@ -45,7 +45,7 @@ export type CompletedTerminalJobOutcome =
 
 export function resolveCompletedTerminalJobOutcome(job: GenerationJobResponse): CompletedTerminalJobOutcome {
   const planId = resolveTerminalJobPlanId(job);
-  return planId ? { type: "open", planId } : { type: "already_generated" };
+  return planId && planId.trim() ? { type: "open", planId: planId.trim() } : { type: "already_generated" };
 }
 
 type GenerationCompletion = {
