@@ -278,10 +278,11 @@ export function canRetryResumeGenerationForPlan(input: {
   rawTriageMode?: string | null;
   planStatus?: string | null;
 }): boolean {
+  const normalize = (val?: string | null) => String(val || "").trim().toLowerCase();
   if (
-    input.injuryTriageMode === "medical_hold" ||
-    input.rawTriageMode === "medical_hold" ||
-    input.planStatus === "medical_hold"
+    normalize(input.injuryTriageMode) === "medical_hold" ||
+    normalize(input.rawTriageMode) === "medical_hold" ||
+    normalize(input.planStatus) === "medical_hold"
   ) {
     return false;
   }
