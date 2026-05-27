@@ -222,7 +222,7 @@ def _job_response(
 def _build_protected_triage_response(plan: dict[str, Any], athlete_id: str) -> GenerationJobResponse:
     plan_id = str(plan.get("id") or "").strip()
     plan_status = str(plan.get("status") or "").strip().lower()
-    stage2_status = str((plan.get("admin_outputs") or {}).get("stage2_status") or "").strip().lower()
+    stage2_status = str(plan.get("stage2_status") or "").strip().lower()
     return GenerationJobResponse(
         job_id=f"protected_{plan_id or athlete_id}",
         athlete_id=athlete_id,
