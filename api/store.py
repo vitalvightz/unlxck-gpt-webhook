@@ -206,6 +206,8 @@ class AppStore(Protocol):
     def get_generation_job_by_plan_id(self, plan_id: str) -> dict[str, Any] | None: ...
     def has_active_generation_job_for_plan(self, plan_id: str) -> bool: ...
     def list_generation_jobs_for_athlete(self, athlete_id: str, *, limit: int = 10) -> list[dict[str, Any]]: ...
+    def list_orphaned_terminal_generation_jobs(self, *, limit: int = 500) -> list[dict[str, Any]]: ...
+    def list_failed_triage_resume_jobs_with_approved_marker(self, *, limit: int = 500) -> list[dict[str, Any]]: ...
 
     def list_claimable_generation_jobs(self, *, limit: int = 20, stale_after_seconds: int | None = None) -> list[dict[str, Any]]: ...
 
@@ -1956,6 +1958,74 @@ class SupabaseAppStore:
             self._raise_operation_http_error(
                 operation=f"list_generation_jobs_for_athlete athlete_id={athlete_id}",
                 detail="failed to list generation jobs",
+                exc=exc,
+            )
+        return []
+
+    def list_orphaned_terminal_generation_jobs(self, *, limit: int = 500) -> list[dict[str, Any]]:
+        try:
+            response = self._run_with_transient_retry(
+                operation=f"list_orphaned_terminal_generation_jobs limit={limit}",
+                fn=lambda: self.client.table("generation_jobs")
+                .select("id, athlete_id, status, source, plan_id, plans!left(id)")
+                .in_("status", ["completed", "review_required"])
+                .order("updated_at", desc=True)
+                .limit(limit)
+                .execute(),
+            )
+            rows = [row for row in (response.data or []) if isinstance(row, dict)]
+            orphaned: list[dict[str, Any]] = []
+            for row in rows:
+                plan_ref = row.get("plans")
+                has_plan = isinstance(plan_ref, dict) and bool(str(plan_ref.get("id") or "").strip())
+                if not has_plan:
+                    orphaned.append(
+                        {
+                            "job_id": str(row.get("id") or ""),
+                            "athlete_id": str(row.get("athlete_id") or ""),
+                            "status": str(row.get("status") or ""),
+                            "source": str(row.get("source") or ""),
+                            "plan_id": str(row.get("plan_id") or ""),
+                        }
+                    )
+            return orphaned
+        except _STORE_CLIENT_ERRORS as exc:
+            self._raise_operation_http_error(
+                operation=f"list_orphaned_terminal_generation_jobs limit={limit}",
+                detail="failed to list orphaned terminal generation jobs",
+                exc=exc,
+            )
+        return []
+
+    def list_failed_triage_resume_jobs_with_approved_marker(self, *, limit: int = 500) -> list[dict[str, Any]]:
+        try:
+            response = self._run_with_transient_retry(
+                operation=f"list_failed_triage_resume_jobs_with_approved_marker limit={limit}",
+                fn=lambda: self.client.table("generation_jobs")
+                .select("id, athlete_id, status, source, plan_id, plans!inner(id,stage2_status)")
+                .eq("status", "failed")
+                .eq("source", "admin_triage_resume")
+                .eq("plans.stage2_status", "triage_resume_approved")
+                .order("updated_at", desc=True)
+                .limit(limit)
+                .execute(),
+            )
+            rows = [row for row in (response.data or []) if isinstance(row, dict)]
+            findings: list[dict[str, Any]] = []
+            for row in rows:
+                linked_plan = row.get("plans") if isinstance(row.get("plans"), dict) else {}
+                findings.append(
+                    {
+                        "job_id": str(row.get("id") or ""),
+                        "plan_id": str(linked_plan.get("id") or row.get("plan_id") or ""),
+                        "athlete_id": str(row.get("athlete_id") or ""),
+                    }
+                )
+            return findings
+        except _STORE_CLIENT_ERRORS as exc:
+            self._raise_operation_http_error(
+                operation=f"list_failed_triage_resume_jobs_with_approved_marker limit={limit}",
+                detail="failed to list failed triage resume jobs with approved marker",
                 exc=exc,
             )
         return []

@@ -41,8 +41,50 @@ def test_generation_job_transition_examples_are_canonical() -> None:
 def test_plan_transition_examples_are_canonical() -> None:
     assert can_transition("plan", "review_required", "ready")
     assert can_transition("plan", "triage_blocked", "ready")
+    assert can_transition("plan", "triage_blocked", "held_for_review")
     assert can_transition("plan", "ready", "archived")
     assert not can_transition("plan", "archived", "ready")
+
+
+@pytest.mark.parametrize(
+    ("from_status", "allowed_targets"),
+    [
+        (
+            "triage_blocked",
+            {"ready", "review_required", "held_for_review", "triage_blocked", "medical_hold", "restricted_rehab_only", "needs_review", "archived"},
+        ),
+        (
+            "needs_review",
+            {"ready", "review_required", "held_for_review", "needs_review", "restricted_rehab_only", "medical_hold", "archived"},
+        ),
+        (
+            "restricted_rehab_only",
+            {"ready", "held_for_review", "restricted_rehab_only", "needs_review", "archived"},
+        ),
+        (
+            "medical_hold",
+            {"medical_hold", "needs_review", "restricted_rehab_only", "archived"},
+        ),
+    ],
+)
+def test_protected_state_transition_matrix_is_explicit(from_status: str, allowed_targets: set[str]) -> None:
+    actual = {candidate for candidate in PLAN_STATUSES if can_transition("plan", from_status, candidate)}
+    assert actual == allowed_targets
+
+
+@pytest.mark.parametrize("from_status", ["triage_blocked", "needs_review", "restricted_rehab_only"])
+@pytest.mark.parametrize("resume_output", ["ready", "review_required", "held_for_review", "publishable_with_flags"])
+def test_resume_outputs_are_allowed_from_resumable_protected_states(from_status: str, resume_output: str) -> None:
+    expected = resume_output in {"ready", "held_for_review"} or (
+        from_status in {"triage_blocked", "needs_review"} and resume_output == "review_required"
+    )
+    assert can_transition("plan", from_status, resume_output) is expected
+
+
+def test_medical_hold_cannot_resume_directly_to_ready_or_publishable_states() -> None:
+    assert not can_transition("plan", "medical_hold", "ready")
+    assert not can_transition("plan", "medical_hold", "publishable_with_flags")
+    assert not can_transition("plan", "medical_hold", "held_for_review")
 
 
 def test_require_transition_rejects_unknown_or_invalid_states() -> None:

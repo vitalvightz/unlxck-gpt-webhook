@@ -120,7 +120,17 @@ def test_job_response_falls_back_to_created_at_when_updated_at_is_missing():
     assert response.updated_at == created_at
 
 
-def test_job_response_recovers_plan_id_from_terminal_milestone_meta():
+def test_job_response_recovers_plan_id_from_terminal_milestone_meta_when_plan_exists():
+    store = FakeStore()
+    store.create_intake("athlete-1", _planner())
+    intake = store.get_latest_intake("athlete-1")
+    assert intake is not None
+    plan = store.create_plan(
+        athlete_id="athlete-1",
+        intake_id=str(intake["id"]),
+        request=_planner(),
+        result=finalized_result(),
+    )
     response = app_module._job_response(
         {
             "id": "job_terminal_meta",
@@ -134,13 +144,39 @@ def test_job_response_recovers_plan_id_from_terminal_milestone_meta():
             "error": None,
             "plan_id": None,
             "progress_milestones": [
-                {"code": "plan_persisted", "meta": {"plan_id": "plan_from_milestone"}},
+                {"code": "plan_persisted", "meta": {"plan_id": plan["id"]}},
             ],
-        }
+        },
+        store=store,
     )
 
-    assert response.plan_id == "plan_from_milestone"
-    assert response.latest_plan_id == "plan_from_milestone"
+    assert response.plan_id == plan["id"]
+    assert response.latest_plan_id == plan["id"]
+
+
+def test_job_response_ignores_terminal_milestone_plan_id_when_plan_is_missing():
+    store = FakeStore()
+    response = app_module._job_response(
+        {
+            "id": "job_terminal_meta_missing_plan",
+            "athlete_id": "athlete-1",
+            "client_request_id": "client-1",
+            "status": "completed",
+            "created_at": _now(),
+            "updated_at": _now(),
+            "started_at": None,
+            "completed_at": None,
+            "error": None,
+            "plan_id": None,
+            "progress_milestones": [
+                {"code": "plan_persisted", "meta": {"plan_id": "missing_plan_id"}},
+            ],
+        },
+        store=store,
+    )
+
+    assert response.plan_id is None
+    assert response.latest_plan_id is None
 
 
 def test_job_response_recovers_plan_id_from_latest_visible_plan_when_terminal_plan_missing():
