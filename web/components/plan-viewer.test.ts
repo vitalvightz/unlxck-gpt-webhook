@@ -3,9 +3,13 @@ import assert from "node:assert/strict";
 
 import {
   buildReviewSummary,
+  canRetryResumeGenerationForPlan,
+  getAdminReviewHeading,
   hasBlockedTriageStubText,
-  isResumableTriageMode,
   isProtectedTriageResumePendingState,
+  readInjuryTriage,
+  readRawTriageMode,
+  shouldShowProtectedResumeAdminReview,
 } from "./plan-viewer";
 
 test("triage_resume_approved with empty validator report and restricted rehab stub is not publishable", () => {
@@ -43,21 +47,73 @@ test("triage resume approved state is protected even without explicit stub", () 
   assert.equal(protectedState, true);
 });
 
-test("empty athlete text plus final blocked stub is protected", () => {
-  const protectedState = isProtectedTriageResumePendingState({
+test("protected resume-approved state exposes retry action and hides release controls", () => {
+  const showProtected = shouldShowProtectedResumeAdminReview({
     isTriageBlocked: false,
-    stage2Status: "stage2_pass",
-    containsBlockedTriageStub: false,
-    athletePlanText: "",
-    finalPlanText:
-      "## Injury Triage: Restricted Rehab Only\nNormal fight-camp planning is intentionally suspended\nClinician clearance is required",
+    isProtectedTriageResumePending: true,
+    hasResumeApproval: true,
   });
-
-  assert.equal(protectedState, true);
+  assert.equal(showProtected, true);
+  assert.equal(
+    getAdminReviewHeading({ showProtectedResumeAdminReview: showProtected, hasResumeApproval: true }),
+    "Resume generation required",
+  );
 });
 
-test("isResumableTriageMode allows needs_review and restricted_rehab_only", () => {
-  assert.equal(isResumableTriageMode("needs_review"), true);
-  assert.equal(isResumableTriageMode("restricted_rehab_only"), true);
-  assert.equal(isResumableTriageMode("medical_hold"), false);
+test("readRawTriageMode keeps original mode after resume approval", () => {
+  const plan = {
+    status: "triage_resume_approved",
+    admin_outputs: {
+      stage2_status: "triage_resume_approved",
+      why_log: { injury_triage: { mode: "needs_review" } },
+    },
+  };
+
+  assert.equal(readRawTriageMode(plan as never), "needs_review");
+  assert.equal(readInjuryTriage(plan as never)?.mode, "needs_review");
+});
+
+test("medical_hold does not allow retry resume", () => {
+  const canRetry = canRetryResumeGenerationForPlan({
+    isAdmin: true,
+    isProtectedTriageResumePending: true,
+    injuryTriageMode: "medical_hold",
+  });
+  assert.equal(canRetry, false);
+});
+
+test("medical_hold always blocks retry even when another source looks resumable", () => {
+  const canRetry = canRetryResumeGenerationForPlan({
+    isAdmin: true,
+    isProtectedTriageResumePending: true,
+    injuryTriageMode: "needs_review",
+    rawTriageMode: "Medical_Hold",
+    planStatus: "triage_resume_approved",
+  });
+  assert.equal(canRetry, false);
+});
+
+test("needs_review and restricted_rehab_only allow retry resume", () => {
+  assert.equal(
+    canRetryResumeGenerationForPlan({
+      isAdmin: true,
+      isProtectedTriageResumePending: true,
+      injuryTriageMode: "needs_review",
+    }),
+    true,
+  );
+  assert.equal(
+    canRetryResumeGenerationForPlan({
+      isAdmin: true,
+      isProtectedTriageResumePending: true,
+      rawTriageMode: "restricted_rehab_only",
+    }),
+    true,
+  );
+});
+
+test("admin review anchor id format remains stable", () => {
+  const planId = "plan_123";
+  const anchorId = `admin-review-${planId}`;
+  assert.equal(anchorId, "admin-review-plan_123");
 });
