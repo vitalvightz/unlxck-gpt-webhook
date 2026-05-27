@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useEffect, useRef, useState, useCallback, type ReactNode } from "react";
 import { getActiveGenerationJob, getGenerationJob, getLatestGenerationJob } from "@/lib/api";
-import { isPreStartStaleGenerationJob } from "@/lib/generation-controller";
+import { isPreStartStaleGenerationJob, resolveTerminalJobPlanId } from "@/lib/generation-controller";
 import { isExpiredPendingGeneration, isStaleVisibleGenerationJob, normalizeLegacyGenerationJobStatus } from "@/lib/generation-status-guards";
 import type { GenerationJobResponse, GenerationJobStatus } from "@/lib/types";
 
@@ -109,6 +109,17 @@ function isTerminalStatus(status: GenerationJobStatus): boolean {
   return status === "completed" || status === "review_required" || status === "failed";
 }
 
+export function shouldRetainLatestJob(job: GenerationJobResponse | null | undefined): boolean {
+  if (!job) return false;
+  const normalizedStatus = normalizeLegacyGenerationJobStatus(job.status) as GenerationJobStatus;
+  // A terminal job with no openable plan (no plan_id and no latest_plan_id) has
+  // nothing to show or act on, so it must not linger as a passive ribbon.
+  if (isTerminalStatus(normalizedStatus) && !resolveTerminalJobPlanId(job)) {
+    return false;
+  }
+  return true;
+}
+
 function phaseFromStatus(status: GenerationJobStatus): GlobalGenerationPhase {
   if (status === "queued") return "queued";
   if (status === "running") return "running";
@@ -159,11 +170,33 @@ export function GenerationStatusProvider({ children, token }: GenerationStatusPr
   const latestTokenRef = useRef(token);
   const checkSequenceRef = useRef(0);
 
+  const resetGenerationState = useCallback(() => {
+    setPhase(null);
+    setJobId(null);
+    setClientRequestId(null);
+    setPlanId(null);
+    setAthleteId(null);
+    setSource(null);
+    setStatusMessageText(null);
+    setTerminalStatus(null);
+    setStartedAtMs(null);
+    setLatestJob(null);
+  }, []);
+
   useEffect(() => {
     latestTokenRef.current = token;
     checkSequenceRef.current++;
     isCheckingRef.current = false;
-  }, [token]);
+    if (clearTimerRef.current !== null) {
+      clearTimeout(clearTimerRef.current);
+      clearTimerRef.current = null;
+    }
+    resetGenerationState();
+    // Clear local pending state on every auth change so the previous session's
+    // global key cannot leak into the next authenticated user; backend
+    // active/latest endpoints restore the current user's real state after login.
+    clearPendingGenerations();
+  }, [token, resetGenerationState]);
 
   // Cancel any pending clear timer when the component unmounts
   useEffect(() => {
@@ -183,16 +216,7 @@ export function GenerationStatusProvider({ children, token }: GenerationStatusPr
       if (wasAuthenticatedRef.current) {
         clearPendingGenerations();
       }
-      setPhase(null);
-      setJobId(null);
-      setClientRequestId(null);
-      setPlanId(null);
-      setAthleteId(null);
-      setSource(null);
-      setStatusMessageText(null);
-      setTerminalStatus(null);
-      setStartedAtMs(null);
-      setLatestJob(null);
+      resetGenerationState();
       wasAuthenticatedRef.current = false;
       isCheckingRef.current = false;
       return;
@@ -239,7 +263,7 @@ export function GenerationStatusProvider({ children, token }: GenerationStatusPr
         try {
           const latest = await getLatestGenerationJob(token);
           if (sequence !== checkSequenceRef.current || !latestTokenRef.current) return;
-          setLatestJob(latest);
+          setLatestJob(shouldRetainLatestJob(latest) ? latest : null);
         } catch {
           setLatestJob(null);
         }
@@ -333,7 +357,7 @@ export function GenerationStatusProvider({ children, token }: GenerationStatusPr
     } finally {
       isCheckingRef.current = false;
     }
-  }, [token]);
+  }, [token, resetGenerationState]);
 
   useEffect(() => {
     void checkStatus();
