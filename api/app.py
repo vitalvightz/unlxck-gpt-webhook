@@ -190,7 +190,7 @@ def _job_response(
         linked_plan = store.get_plan(plan_id)
         linked_status = str(linked_plan.get("status") or "").strip().lower() if isinstance(linked_plan, dict) else ""
         linked_stage2 = (
-            str((linked_plan.get("admin_outputs") or {}).get("stage2_status") or "").strip().lower()
+            str(linked_plan.get("stage2_status") or "").strip().lower()
             if isinstance(linked_plan, dict)
             else ""
         )
