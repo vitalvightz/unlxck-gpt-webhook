@@ -78,6 +78,7 @@ test("medical_hold does not allow retry resume", () => {
     isAdmin: true,
     isProtectedTriageResumePending: true,
     injuryTriageMode: "medical_hold",
+    rawTriageMode: "needs_review",
   });
   assert.equal(canRetry, false);
 });
