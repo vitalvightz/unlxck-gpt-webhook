@@ -75,7 +75,7 @@ export default function GeneratePage() {
       }
       return createGenerationJob(session.access_token, payload, clientRequestId, resolvePlanSource(me));
     },
-    onComplete: ({ planId, status, recovered }) => {
+    onComplete: ({ planId, status, recovered, requiresAdminResume, stage2Status }) => {
       if (payload && typeof window !== "undefined") {
         window.localStorage.setItem(
           COMPLETED_GENERATION_KEY,
@@ -88,6 +88,12 @@ export default function GeneratePage() {
       }
       if (recovered) {
         search.set("recovered", "1");
+      }
+      if (requiresAdminResume) {
+        search.set("protected_triage", "1");
+        if (stage2Status) {
+          search.set("stage2_status", stage2Status);
+        }
       }
       const nextPath = `/plans/${planId}${search.toString() ? `?${search.toString()}` : ""}`;
       router.replace(nextPath);
