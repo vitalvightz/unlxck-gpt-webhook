@@ -1969,6 +1969,7 @@ class SupabaseAppStore:
                 fn=lambda: self.client.table("generation_jobs")
                 .select("id, athlete_id, status, source, plan_id, plans!left(id)")
                 .in_("status", ["completed", "review_required"])
+                .is_("plans.id", "null")
                 .order("updated_at", desc=True)
                 .limit(limit)
                 .execute(),
