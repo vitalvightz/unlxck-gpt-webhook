@@ -55,7 +55,7 @@ def test_plan_transition_examples_are_canonical() -> None:
         ),
         (
             "needs_review",
-            {"ready", "review_required", "needs_review", "restricted_rehab_only", "medical_hold", "archived"},
+            {"ready", "review_required", "held_for_review", "needs_review", "restricted_rehab_only", "medical_hold", "archived"},
         ),
         (
             "restricted_rehab_only",
