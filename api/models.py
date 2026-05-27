@@ -331,6 +331,7 @@ class NutritionSandCPreferences(BaseModel):
     mindset_challenges: str = ""
     notes: str = ""
     random_seed: int | None = None
+    intake_id: str | None = None
 
     @field_validator("equipment_access", "key_goals", "weak_areas", "goal_weakness_collision_tags", mode="before")
     @classmethod
@@ -549,6 +550,7 @@ class PlanRequest(BaseModel):
     mindset_challenges: str = ""
     notes: str = ""
     random_seed: int | None = None
+    intake_id: str | None = None
 
     @model_validator(mode="before")
     @classmethod

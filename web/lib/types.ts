@@ -194,6 +194,7 @@ export type PlanRequest = {
   mindset_challenges?: string;
   notes?: string;
   random_seed?: number | null;
+  intake_id?: string | null;
   current_step?: number;
   shared_camp_context?: NutritionSharedCampContext;
   s_and_c_preferences?: NutritionSandCPreferences;

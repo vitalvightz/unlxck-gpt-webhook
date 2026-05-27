@@ -106,6 +106,20 @@ def test_plan_request_collision_clarification_defaults_are_optional():
     assert request.goal_weakness_collision_detail == ""
 
 
+def test_plan_request_accepts_optional_intake_id_field():
+    request = PlanRequest(
+        athlete={
+            "full_name": "Ari Mensah",
+            "technical_style": ["boxing"],
+            "tactical_style": [],
+        },
+        fight_date="2026-04-18",
+        intake_id="intake-123",
+    )
+
+    assert request.intake_id == "intake-123"
+
+
 def test_plan_request_rejects_more_than_four_hard_sparring_days():
     with pytest.raises(ValidationError, match="hard sparring days cap is 4"):
         PlanRequest(
