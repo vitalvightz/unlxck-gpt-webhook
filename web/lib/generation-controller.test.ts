@@ -58,7 +58,7 @@ test("completed job with plan id resolves directly", () => {
   );
 });
 
-test("completed job with missing plan id recovers from milestone meta plan_id", () => {
+test("completed job with missing plan ids does not recover from milestone meta plan_id", () => {
   assert.equal(
     resolveTerminalJobPlanId({
       job_id: "job-3",
@@ -73,7 +73,7 @@ test("completed job with missing plan id recovers from milestone meta plan_id", 
         { code: "plan_persisted", label: "Plan row persisted", detail: "", at: "", meta: { plan_id: "plan_from_meta" } },
       ],
     }),
-    "plan_from_meta",
+    null,
   );
 });
 

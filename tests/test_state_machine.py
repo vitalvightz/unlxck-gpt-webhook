@@ -41,6 +41,7 @@ def test_generation_job_transition_examples_are_canonical() -> None:
 def test_plan_transition_examples_are_canonical() -> None:
     assert can_transition("plan", "review_required", "ready")
     assert can_transition("plan", "triage_blocked", "ready")
+    assert can_transition("plan", "triage_blocked", "held_for_review")
     assert can_transition("plan", "ready", "archived")
     assert not can_transition("plan", "archived", "ready")
 

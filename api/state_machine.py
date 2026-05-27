@@ -67,6 +67,7 @@ _PLAN_TRANSITIONS: dict[PlanStatus, frozenset[PlanStatus]] = {
         {
             "ready",
             "review_required",
+            "held_for_review",
             "triage_blocked",
             "medical_hold",
             "restricted_rehab_only",
