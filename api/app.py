@@ -1540,7 +1540,7 @@ def create_app(
             latest_status = str(latest_plan.get("status") or "").strip().lower()
             latest_stage2_status = str(latest_plan.get("stage2_status") or "").strip().lower()
             latest_intake_id = str(latest_plan.get("intake_id") or "").strip()
-            request_intake_id = str(request_body.intake_id or "").strip()
+            request_intake_id = str(getattr(request_body, "intake_id", None) or "").strip()
             if (
                 profile.role == "admin"
                 and latest_intake_id
