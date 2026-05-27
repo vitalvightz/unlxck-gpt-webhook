@@ -578,6 +578,25 @@ export function hasBlockedTriageStubText(...texts: Array<string | null | undefin
   return TRIAGE_BLOCKED_STUB_MARKERS.some((marker) => combined.includes(marker));
 }
 
+export function isProtectedTriageResumePendingState(input: {
+  isTriageBlocked: boolean;
+  stage2Status?: string | null;
+  containsBlockedTriageStub: boolean;
+  athletePlanText: string;
+  finalPlanText?: string | null;
+}): boolean {
+  const normalizedStage2Status = (input.stage2Status || "").trim().toLowerCase();
+  const hasEmptyAthletePlanWithFinalStub =
+    !input.athletePlanText.trim() && hasBlockedTriageStubText(input.finalPlanText);
+  return (
+    input.isTriageBlocked ||
+    normalizedStage2Status === "triage_resume_approved" ||
+    normalizedStage2Status === "triage_blocked" ||
+    input.containsBlockedTriageStub ||
+    hasEmptyAthletePlanWithFinalStub
+  );
+}
+
 export function buildReviewSummary(
   report: Record<string, unknown> | null | undefined,
   stage2Status: string,
@@ -860,6 +879,13 @@ export function PlanViewer({
     plan.admin_outputs?.final_plan_text,
     plan.admin_outputs?.draft_plan_text,
   );
+  const isProtectedTriageResumePending = isProtectedTriageResumePendingState({
+    isTriageBlocked,
+    stage2Status: plan.admin_outputs?.stage2_status,
+    containsBlockedTriageStub,
+    athletePlanText,
+    finalPlanText: plan.admin_outputs?.final_plan_text,
+  });
   const stage2ReviewSummary = buildReviewSummary(
     validatorReport,
     plan.admin_outputs?.stage2_status || "",
@@ -880,7 +906,7 @@ export function PlanViewer({
     athletePlanText ||
     "";
   const canApproveForRelease =
-    isAdmin && !hasPublishedPlan && Boolean(approvableText) && !containsBlockedTriageStub;
+    isAdmin && !hasPublishedPlan && Boolean(approvableText) && !isProtectedTriageResumePending;
   const canApproveAndResumeGeneration =
     isAdmin &&
     isTriageBlocked &&
@@ -1412,8 +1438,7 @@ export function PlanViewer({
                       ? injuryTriage?.mode === "medical_hold"
                         ? "Blocked"
                         : "Protected"
-                      : containsBlockedTriageStub ||
-                          plan.admin_outputs?.stage2_status === "triage_resume_approved"
+                      : isProtectedTriageResumePending
                         ? "Blocked / resume pending"
                       : stage2ReviewSummary.isPublishable
                         ? "Publishable"
