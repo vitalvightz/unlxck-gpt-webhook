@@ -119,12 +119,18 @@ export function GlobalGenerationStatus() {
 
   useEffect(() => {
     try {
-      const latestDismissed = latestJob?.job_id ? window.localStorage.getItem(latestJobDismissKey(latestJob.job_id)) === "1" : false;
-      setIsDismissed(latestDismissed || window.localStorage.getItem(RIBBON_DISMISSED_KEY) === "1");
+      const dismissKey =
+        !isActive && latestJob?.job_id
+          ? latestJobDismissKey(latestJob.job_id)
+          : jobId
+            ? latestJobDismissKey(jobId)
+            : RIBBON_DISMISSED_KEY;
+  
+      setIsDismissed(window.localStorage.getItem(dismissKey) === "1");
     } catch {
       setIsDismissed(false);
     }
-  }, [latestJob?.job_id]);
+  }, [isActive, jobId, latestJob?.job_id]);
 
   useEffect(() => {
     if (!isActive) {
@@ -158,12 +164,16 @@ export function GlobalGenerationStatus() {
 
   const dismissCurrentBanner = () => {
     setIsDismissed(true);
+  
     try {
-      if (!isActive && latestJob?.job_id && (latestJob.status === "failed" || latestJob.status === "review_required")) {
-        window.localStorage.setItem(latestJobDismissKey(latestJob.job_id), "1");
-        return;
-      }
-      window.localStorage.setItem(RIBBON_DISMISSED_KEY, "1");
+      const dismissKey =
+        !isActive && latestJob?.job_id
+          ? latestJobDismissKey(latestJob.job_id)
+          : jobId
+            ? latestJobDismissKey(jobId)
+            : RIBBON_DISMISSED_KEY;
+  
+      window.localStorage.setItem(dismissKey, "1");
     } catch {}
   };
 
@@ -171,8 +181,9 @@ export function GlobalGenerationStatus() {
     if (!shouldRenderPassiveLatestJobRibbon(latestJob)) {
       return null;
     }
-    if (isDismissed && (latestJob.status === "failed" || latestJob.status === "review_required")) {
+    if (isDismissed) {
       return null;
+    }
     }
     if (latestJob.status === "failed") {
       const failedPlanId = latestJob.plan_id || latestJob.latest_plan_id || null;
@@ -232,9 +243,24 @@ export function GlobalGenerationStatus() {
       );
     }
     if (!latestJob.plan_id && latestJob.status === "completed") {
-      return <div className="global-generation-status"><div className="global-generation-status-main">Your plan was generated but needs recovery/support</div></div>;
-    }
-  }
+        return (
+          <div className="global-generation-status global-generation-status-failed">
+            <div className="global-generation-status-main">
+              <div className="global-generation-status-message">
+                Your plan was generated but needs recovery/support
+              </div>
+            </div>
+            <button
+              type="button"
+              className="global-generation-status-dismiss"
+              aria-label="Hide generation ribbon"
+              onClick={dismissCurrentBanner}
+            >
+              ×
+            </button>
+          </div>
+        );
+      }
 
   const canNavigateToPlan = Boolean(navigationTarget);
   const elapsedLabel = showElapsed && startedAtMs !== null ? formatElapsed(now - startedAtMs) : null;
