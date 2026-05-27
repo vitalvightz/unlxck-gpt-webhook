@@ -883,7 +883,6 @@ export function PlanViewer({
     isAdmin && !hasPublishedPlan && Boolean(approvableText) && !containsBlockedTriageStub;
   const canApproveAndResumeGeneration =
     isAdmin &&
-    !hasResumeApproval &&
     isTriageBlocked &&
     (injuryTriage?.mode === "needs_review" || injuryTriage?.mode === "restricted_rehab_only");
   const canRejectApproval = isAdmin;
@@ -1808,7 +1807,7 @@ export function PlanViewer({
                 ) : hasResumeApproval ? (
                   <div className="support-panel">
                     <p className="muted">
-                      Resume already approved for this blocked plan. Additional approve-and-resume actions are disabled.
+                      Resume was approved before. If the linked resume job failed, timed out, or stayed blocked, you can submit a new resume request.
                     </p>
                   </div>
                 ) : null}

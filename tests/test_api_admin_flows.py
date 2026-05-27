@@ -1454,6 +1454,47 @@ def test_medical_hold_cannot_use_approve_and_resume_generation():
     assert response.status_code == 409
 
 
+def test_admin_state_integrity_diagnostics_reports_orphans_and_failed_resume_markers():
+    client, store, _ = _build_client()
+    athlete = AuthenticatedUser(user_id="athlete-diag-1", email="a1@example.com", full_name="A One", metadata={})
+    store.ensure_profile(athlete)
+    request = _build_request()
+    intake = store.create_intake(athlete.user_id, request)
+    blocked_plan = store.create_plan(
+        athlete_id=athlete.user_id,
+        intake_id=str(intake["id"]),
+        request=request,
+        result=finalized_result(status="triage_blocked", stage2_status="triage_resume_approved"),
+    )
+    resume_job = store.create_or_get_generation_job(
+        athlete_id=athlete.user_id,
+        client_request_id=f"triage_resume_{blocked_plan['id']}",
+        source="admin_triage_resume",
+        request_payload=request.model_dump(mode="json"),
+        plan_id=blocked_plan["id"],
+        intake_id=str(intake["id"]),
+    )
+    store.update_generation_job(resume_job["id"], status="failed", error="failed resume")
+    orphan_job = store.create_or_get_generation_job(
+        athlete_id=athlete.user_id,
+        client_request_id="orphan-terminal-diag",
+        source="self_serve",
+        request_payload=request.model_dump(mode="json"),
+        plan_id="",
+        intake_id=str(intake["id"]),
+    )
+    store.update_generation_job(orphan_job["id"], status="completed")
+
+    response = client.get(
+        "/api/admin/diagnostics/state-integrity",
+        headers={"Authorization": "Bearer admin-token"},
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["orphaned_terminal_job_count"] >= 1
+    assert body["failed_resume_with_approved_marker_count"] >= 1
+
+
 def test_curated_review_required_scenarios_are_fast_for_admin_to_resolve():
     for scenario in [item for item in SYSTEM_SCENARIOS if item.expected_resolution]:
         client, store, _ = _build_client(FakeStage2Automator(result=scenario.automator_result))

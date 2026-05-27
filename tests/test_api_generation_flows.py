@@ -2344,6 +2344,48 @@ def test_admin_triage_resume_with_override_updates_blocked_plan_in_place():
     assert "admin_resume_linkage_validated" in milestone_codes
 
 
+def test_admin_triage_resume_with_override_can_transition_blocked_plan_to_held_for_review():
+    store = FakeStore()
+    athlete = AuthenticatedUser(user_id="athlete-1", email="ari@example.com", full_name="Ari Mensah", metadata={})
+    store.ensure_profile(athlete)
+    request = _build_request()
+    intake = store.create_intake(athlete.user_id, request)
+    blocked_plan = store.create_plan(
+        athlete_id=athlete.user_id,
+        intake_id=str(intake["id"]),
+        request=request,
+        result=finalized_result(status="triage_blocked", stage2_status="triage_blocked", plan_text="", final_plan_text=""),
+    )
+    request_payload = request.model_dump(mode="json")
+    request_payload["_triage_resume_override"] = {"approved": True}
+    job = store.create_or_get_generation_job(
+        athlete_id=athlete.user_id,
+        client_request_id="triage-resume-to-held-for-review",
+        source="admin_triage_resume",
+        request_payload=request_payload,
+        intake_id=str(intake["id"]),
+        plan_id=str(blocked_plan["id"]),
+    )
+    store.update_generation_job(job["id"], status="running", started_at=_now(), heartbeat_at=_now())
+
+    asyncio.run(
+        run_generation_job(
+            job_id=job["id"],
+            store=store,
+            planner_fn=_planner,
+            stage2=FakeStage2Automator(
+                result=finalized_result(status="held_for_review", stage2_status="stage2_failed", plan_text="", final_plan_text="")
+            ),
+            active_tasks=set(),
+        )
+    )
+
+    refreshed_job = store.get_generation_job(job["id"])
+    updated_plan = store.get_plan(blocked_plan["id"])
+    assert refreshed_job["status"] == "review_required"
+    assert updated_plan["status"] == "held_for_review"
+
+
 def test_admin_triage_resume_source_case_normalization_and_linkage_milestone():
     store = FakeStore()
     athlete = AuthenticatedUser(

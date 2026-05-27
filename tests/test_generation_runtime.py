@@ -457,6 +457,41 @@ def test_terminal_success_without_plan_id_is_downgraded_to_failed_with_error_mes
     assert job["error"].strip() == "Plan was saved but the generation job lost its plan_id. Open plan history or contact support."
 
 
+def test_terminal_success_with_deleted_plan_row_is_downgraded_to_failed():
+    store = FakeStore()
+    request_payload = _build_request().model_dump(mode="json")
+    created = store.create_or_get_generation_job(
+        athlete_id="athlete-1",
+        client_request_id="terminal-deleted-plan-row",
+        source="self_serve",
+        request_payload=request_payload,
+    )
+
+    original_get_plan = store.get_plan
+
+    def flaky_get_plan(plan_id: str):  # type: ignore[no-untyped-def]
+        row = original_get_plan(plan_id)
+        if row and str(plan_id).startswith("plan_"):
+            return None
+        return row
+
+    store.get_plan = flaky_get_plan  # type: ignore[assignment]
+
+    asyncio.run(
+        generation_runtime.run_generation_job(
+            job_id=created["id"],
+            store=store,
+            planner_fn=app_module._noop_planner,
+            stage2=FakeStage2Automator(result_factory=finalized_result),
+            active_tasks=set(),
+        )
+    )
+
+    job = store.get_generation_job(created["id"])
+    assert job is not None
+    assert job["status"] == "failed"
+
+
 @pytest.mark.parametrize(
     ("plan_status", "expected_generation_status"),
     [
