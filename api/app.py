@@ -129,9 +129,20 @@ def _job_response(
     latest_plan_id: str | None = None,
     viewer_role: str = "athlete",
 ) -> GenerationJobResponse:
+    def _resolve_existing_plan_id(candidate: str | None) -> str | None:
+        if not candidate:
+            return None
+        normalized_candidate = str(candidate).strip()
+        if not normalized_candidate:
+            return None
+        if store is None:
+            return normalized_candidate
+        existing_plan = store.get_plan(normalized_candidate)
+        return normalized_candidate if existing_plan is not None else None
+
     status_value = str(job.get("status") or "")
     normalized_status = normalize_generation_job_status(status_value)
-    plan_id = str(job.get("plan_id")) if job.get("plan_id") else None
+    plan_id = _resolve_existing_plan_id(str(job.get("plan_id")) if job.get("plan_id") else None)
     resolved_latest_plan_id = latest_plan_id
     if normalized_status in {"completed", "review_required"} and not plan_id:
         milestones = _normalize_progress_milestones(job.get("progress_milestones"))
@@ -141,8 +152,10 @@ def _job_response(
                 continue
             milestone_plan_id = str(meta.get("plan_id") or "").strip()
             if milestone_plan_id:
-                plan_id = milestone_plan_id
-                break
+                resolved_milestone_plan_id = _resolve_existing_plan_id(milestone_plan_id)
+                if resolved_milestone_plan_id:
+                    plan_id = resolved_milestone_plan_id
+                    break
         if not plan_id and store is not None:
             athlete_id = str(job.get("athlete_id") or "").strip()
             intake_id = str(job.get("intake_id") or "").strip()
