@@ -83,6 +83,7 @@ security = HTTPBearer(auto_error=False)
 logger = logging.getLogger(__name__)
 LOCAL_HOST_NAMES = ("localhost", "127.0.0.1", "::1")
 _CLIENT_REQUEST_ID_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$")
+_PROTECTED_TRIAGE_STATUSES = frozenset({"triage_blocked", "needs_review", "restricted_rehab_only", "medical_hold"})
 
 
 def _utc_now_iso() -> str:
@@ -183,6 +184,19 @@ def _job_response(
         "review_required": "Your plan is ready for review.",
         "completed": "Your plan is ready.",
     }
+    stage2_status = ""
+    requires_admin_resume = False
+    if plan_id and store is not None:
+        linked_plan = store.get_plan(plan_id)
+        linked_status = str(linked_plan.get("status") or "").strip().lower() if isinstance(linked_plan, dict) else ""
+        linked_stage2 = (
+            str((linked_plan.get("admin_outputs") or {}).get("stage2_status") or "").strip().lower()
+            if isinstance(linked_plan, dict)
+            else ""
+        )
+        stage2_status = linked_stage2
+        if linked_status in _PROTECTED_TRIAGE_STATUSES or linked_stage2 in _PROTECTED_TRIAGE_STATUSES:
+            requires_admin_resume = True
     return GenerationJobResponse(
         job_id=str(job["id"]),
         athlete_id=str(job["athlete_id"]),
@@ -200,6 +214,27 @@ def _job_response(
         message=status_messages.get(normalized_status, "Generation queued and will be processed shortly."),
         progress_milestones=_normalize_progress_milestones(job.get("progress_milestones")),
         can_retry=can_retry,
+        stage2_status=stage2_status or None,
+        requires_admin_resume=requires_admin_resume,
+    )
+
+
+def _build_protected_triage_response(plan: dict[str, Any], athlete_id: str) -> GenerationJobResponse:
+    plan_id = str(plan.get("id") or "").strip()
+    plan_status = str(plan.get("status") or "").strip().lower()
+    stage2_status = str((plan.get("admin_outputs") or {}).get("stage2_status") or "").strip().lower()
+    return GenerationJobResponse(
+        job_id=f"protected_{plan_id or athlete_id}",
+        athlete_id=athlete_id,
+        client_request_id="protected_triage_restore",
+        status="completed",
+        created_at=_utc_now_iso(),
+        updated_at=_utc_now_iso(),
+        plan_id=plan_id or None,
+        latest_plan_id=plan_id or None,
+        message="This intake is protected. Normal Generate Plan cannot bypass triage. Use Admin Review → Resume Generation.",
+        stage2_status=stage2_status or plan_status or None,
+        requires_admin_resume=True,
     )
 
 
@@ -1500,6 +1535,20 @@ def create_app(
         )
         if recovered_existing:
             return _job_response(recovered_existing, store=store, viewer_role=profile.role)
+        latest_plan = await asyncio.to_thread(store.get_latest_plan, profile.athlete_id)
+        if isinstance(latest_plan, dict):
+            latest_status = str(latest_plan.get("status") or "").strip().lower()
+            latest_stage2_status = str((latest_plan.get("admin_outputs") or {}).get("stage2_status") or "").strip().lower()
+            latest_intake_id = str(latest_plan.get("intake_id") or "").strip()
+            request_intake_id = str(request_body.intake_id or "").strip()
+            if (
+                profile.role == "admin"
+                and latest_intake_id
+                and request_intake_id
+                and latest_intake_id == request_intake_id
+                and (latest_status in _PROTECTED_TRIAGE_STATUSES or latest_stage2_status in _PROTECTED_TRIAGE_STATUSES)
+            ):
+                return _build_protected_triage_response(latest_plan, profile.athlete_id)
         blocking_job = await asyncio.to_thread(
             _find_blocking_generation_job_for_athlete,
             store=store,

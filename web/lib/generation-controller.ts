@@ -42,6 +42,8 @@ type GenerationCompletion = {
   planId: string;
   status: Extract<GenerationJobStatus, "completed" | "review_required">;
   recovered: boolean;
+  requiresAdminResume?: boolean;
+  stage2Status?: string | null;
 };
 
 type GenerationControllerOptions = {
@@ -306,6 +308,8 @@ export function useGenerationController({
             planId,
             status: normalizedStatus,
             recovered,
+            requiresAdminResume: currentJob.requires_admin_resume === true,
+            stage2Status: currentJob.stage2_status ?? null,
           });
           return;
         }
