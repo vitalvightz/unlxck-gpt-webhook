@@ -38,11 +38,13 @@ function PlanDetailStateCard({
             <p className="loading-eyebrow">{eyebrow}</p>
             <h1 className="loading-title">{title}</h1>
             <p className="muted loading-copy">{copy}</p>
+
             {phase !== "failed" ? (
               <div className="loading-scan-rail" aria-hidden="true">
                 <span className="loading-scan-line" />
               </div>
             ) : null}
+
             {error ? (
               <div className="error-banner">{error}</div>
             ) : (
@@ -50,6 +52,7 @@ function PlanDetailStateCard({
             )}
           </article>
         </div>
+
         <aside className="step-aside athlete-motion-slot athlete-motion-rail">
           <div className="support-panel loading-secondary-panel">
             <div className="form-section-header">
@@ -67,6 +70,7 @@ function PlanDetailStateCard({
 export function PlanDetailScreen({ planId }: { planId: string }) {
   const { me, session, refreshMe } = useAppSession();
   const searchParams = useSearchParams();
+
   const [plan, setPlan] = useState<PlanDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -88,6 +92,8 @@ export function PlanDetailScreen({ planId }: { planId: string }) {
   const protectedTriage = searchParams.get("protected_triage") === "1";
   const stage2Status = (searchParams.get("stage2_status") || "").trim().toLowerCase();
   const showResumeFailureHint = stage2Status === "triage_resume_approved";
+  const resolvedPlanId = plan?.plan_id || planId;
+  const isAdminViewer = me?.profile.role === "admin";
 
   return (
     <RequireAuth>
@@ -95,24 +101,35 @@ export function PlanDetailScreen({ planId }: { planId: string }) {
         <section className="panel loading-card loading-shell loading-phase-finalizing athlete-motion-slot athlete-motion-status">
           <article className="status-card loading-context-panel loading-context-panel-compact">
             <p className="loading-eyebrow">Plan synced</p>
-            <div className="loading-status-strip">Plan was restored after a timeout and synced back into your workspace.</div>
+            <div className="loading-status-strip">
+              Plan was restored after a timeout and synced back into your workspace.
+            </div>
           </article>
         </section>
       ) : null}
+
       {protectedTriage ? (
         <section className="panel loading-card loading-shell loading-phase-finalizing athlete-motion-slot athlete-motion-status">
           <article className="status-card loading-context-panel loading-context-panel-compact">
             <p className="loading-eyebrow">Protected triage plan restored</p>
             <div className="loading-status-strip">
-              Use Admin Review → Resume Generation.
-              {showResumeFailureHint ? " Previous resume failed or did not complete. Submit a new resume request." : ""}
+              {isAdminViewer
+                ? "Use Admin Review → Resume Generation."
+                : "This plan is protected and still requires review before release."}
+              {isAdminViewer && showResumeFailureHint
+                ? " Previous resume failed or did not complete. Submit a new resume request."
+                : ""}
             </div>
-            {planId ? (
-              <a className="button button-secondary" href={`#admin-review-${planId}`}>Open Admin Review</a>
+
+            {isAdminViewer && resolvedPlanId ? (
+              <a className="button button-secondary" href={`#admin-review-${resolvedPlanId}`}>
+                Open Admin Review
+              </a>
             ) : null}
           </article>
         </section>
       ) : null}
+
       {error ? (
         <PlanDetailStateCard
           phase="failed"
