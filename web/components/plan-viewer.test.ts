@@ -87,7 +87,7 @@ test("medical_hold always blocks retry even when another source looks resumable"
     isAdmin: true,
     isProtectedTriageResumePending: true,
     injuryTriageMode: "needs_review",
-    rawTriageMode: "medical_hold",
+    rawTriageMode: "Medical_Hold",
     planStatus: "triage_resume_approved",
   });
   assert.equal(canRetry, false);
