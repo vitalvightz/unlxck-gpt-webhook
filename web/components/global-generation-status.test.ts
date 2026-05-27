@@ -1,7 +1,12 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { getGenerationStatusTarget, latestFailedJobHasOpenablePlan, shouldRenderPassiveLatestJobRibbon } from "./global-generation-status";
+import {
+  getGenerationStatusTarget,
+  latestCompletedJobOpenablePlanId,
+  latestFailedJobHasOpenablePlan,
+  shouldRenderPassiveLatestJobRibbon,
+} from "./global-generation-status";
 
 test("active generation states route to generate workspace", () => {
   assert.equal(getGenerationStatusTarget("queued", null, null, "self_serve", null), "/generate");
@@ -28,6 +33,27 @@ test("failed latest job with plan shows open-plan path", () => {
   assert.equal(
     latestFailedJobHasOpenablePlan({ status: "failed", plan_id: "plan_123", latest_plan_id: null }),
     true,
+  );
+});
+
+test("completed latest job with only latest_plan_id is openable via latest_plan_id", () => {
+  assert.equal(
+    latestCompletedJobOpenablePlanId({ status: "completed", plan_id: null, latest_plan_id: "plan_latest" }),
+    "plan_latest",
+  );
+});
+
+test("completed latest job that already has plan_id is not opened via latest_plan_id", () => {
+  assert.equal(
+    latestCompletedJobOpenablePlanId({ status: "completed", plan_id: "plan_main", latest_plan_id: "plan_latest" }),
+    null,
+  );
+});
+
+test("failed latest job with latest_plan_id is not treated as a completed openable plan", () => {
+  assert.equal(
+    latestCompletedJobOpenablePlanId({ status: "failed", plan_id: null, latest_plan_id: "plan_latest" }),
+    null,
   );
 });
 

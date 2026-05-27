@@ -63,6 +63,19 @@ export function latestFailedJobHasOpenablePlan(
   return Boolean(latestJob.plan_id || latestJob.latest_plan_id);
 }
 
+export function latestCompletedJobOpenablePlanId(
+  latestJob:
+    | { status?: string | null; plan_id?: string | null; latest_plan_id?: string | null }
+    | null
+    | undefined,
+): string | null {
+  if (!latestJob || latestJob.status !== "completed" || latestJob.plan_id) {
+    return null;
+  }
+
+  return latestJob.latest_plan_id || null;
+}
+
 export function getGenerationStatusTarget(
   phase: string | null,
   planId: string | null,
@@ -357,6 +370,28 @@ export function GlobalGenerationStatus() {
     }
 
     if (latestJob.status === "completed" && !latestJob.plan_id) {
+      const completedPlanId = latestCompletedJobOpenablePlanId(latestJob);
+
+      if (completedPlanId) {
+        return (
+          <div className="global-generation-status global-generation-status-completed">
+            <Link href={`/plans/${completedPlanId}`} className="global-generation-status-main">
+              <div className="global-generation-status-message">Your plan is saved and ready.</div>
+              <span className="global-generation-status-cta-label">Open plan</span>
+            </Link>
+
+            <button
+              type="button"
+              className="global-generation-status-dismiss"
+              aria-label="Hide generation ribbon"
+              onClick={dismissCurrentBanner}
+            >
+              ×
+            </button>
+          </div>
+        );
+      }
+
       return (
         <div className="global-generation-status global-generation-status-failed">
           <div className="global-generation-status-main">
