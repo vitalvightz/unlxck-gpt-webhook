@@ -56,3 +56,20 @@ export function shouldBlockGenerateAutoStartForMatchingPayload(
     && currentPayloadHash === completedPayloadHash
   );
 }
+
+export type MatchingPayloadGenerationAction =
+  | { type: "redirect"; planId: string }
+  | { type: "already_generated" }
+  | { type: "proceed" };
+
+export function resolveMatchingPayloadGenerationAction(
+  currentPayloadHash: string | null | undefined,
+  completed: { planId: string | null; payloadHash: string | null } | null,
+): MatchingPayloadGenerationAction {
+  if (!completed || !shouldBlockGenerateAutoStartForMatchingPayload(currentPayloadHash, completed.payloadHash)) {
+    return { type: "proceed" };
+  }
+  return completed.planId && completed.planId.trim()
+    ? { type: "redirect", planId: completed.planId }
+    : { type: "already_generated" };
+}

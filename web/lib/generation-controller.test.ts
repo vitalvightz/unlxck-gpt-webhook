@@ -3,9 +3,23 @@ import assert from "node:assert/strict";
 
 import {
   canRecoverPendingGenerationWithoutCreate,
+  resolveCompletedTerminalJobOutcome,
   resolveFailedJobWithSavedPlan,
   resolveTerminalJobPlanId,
 } from "./generation-controller";
+import type { GenerationJobResponse } from "@/lib/types";
+
+function buildTerminalJob(partial: Partial<GenerationJobResponse>): GenerationJobResponse {
+  return {
+    job_id: "job-terminal",
+    athlete_id: "athlete-1",
+    client_request_id: "request-1",
+    status: "completed",
+    created_at: "2026-05-22T23:00:00.000Z",
+    updated_at: "2026-05-22T23:30:00.000Z",
+    ...partial,
+  };
+}
 
 test("controller recovery does not create from localStorage-only pending state", () => {
   assert.equal(
@@ -93,5 +107,30 @@ test("terminal plan resolution prefers saved plan_id over stale milestone plan_i
       ],
     }),
     "real_saved_plan_id",
+  );
+});
+
+test("completed terminal job with plan_id opens that plan", () => {
+  assert.deepEqual(
+    resolveCompletedTerminalJobOutcome(buildTerminalJob({ plan_id: "plan_direct" })),
+    { type: "open", planId: "plan_direct" },
+  );
+});
+
+test("completed terminal job with only latest_plan_id opens that plan", () => {
+  assert.deepEqual(
+    resolveCompletedTerminalJobOutcome(buildTerminalJob({ plan_id: null, latest_plan_id: "plan_latest" })),
+    { type: "open", planId: "plan_latest" },
+  );
+});
+
+test("completed terminal job with no openable plan is already-generated, not a failure", () => {
+  assert.deepEqual(
+    resolveCompletedTerminalJobOutcome(buildTerminalJob({ plan_id: null, latest_plan_id: null })),
+    { type: "already_generated" }
+  );
+  assert.deepEqual(
+    resolveCompletedTerminalJobOutcome(buildTerminalJob({ plan_id: "   ", latest_plan_id: "" })),
+    { type: "already_generated" }
   );
 });

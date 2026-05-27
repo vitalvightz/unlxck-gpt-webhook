@@ -12,6 +12,7 @@ export type GenerationUiPhase =
   | "running"
   | "reconnecting"
   | "finalizing"
+  | "already_generated"
   | "failed";
 
 type PendingGenerationState = {
@@ -36,6 +37,15 @@ export function resolveFailedJobWithSavedPlan(job: GenerationJobResponse): strin
 }
 export function resolveTerminalJobPlanId(job: GenerationJobResponse): string | null {
   return job.plan_id || job.latest_plan_id || null;
+}
+
+export type CompletedTerminalJobOutcome =
+  | { type: "open"; planId: string }
+  | { type: "already_generated" };
+
+export function resolveCompletedTerminalJobOutcome(job: GenerationJobResponse): CompletedTerminalJobOutcome {
+  const planId = resolveTerminalJobPlanId(job);
+  return planId && planId.trim() ? { type: "open", planId: planId.trim() } : { type: "already_generated" };
 }
 
 type GenerationCompletion = {
@@ -169,7 +179,7 @@ function statusMessageForJob(status: GenerationJobStatus, startedAtMs: number): 
   return "Finalizing your plan.";
 }
 
-function phaseForJobStatus(status: GenerationJobStatus): Exclude<GenerationUiPhase, "submitting" | "reconnecting" | "failed"> {
+function phaseForJobStatus(status: GenerationJobStatus): Exclude<GenerationUiPhase, "submitting" | "reconnecting" | "already_generated" | "failed"> {
   if (status === "queued") {
     return "queued";
   }
@@ -294,10 +304,13 @@ export function useGenerationController({
 
         const normalizedStatus = normalizeLegacyGenerationJobStatus(currentJob.status);
         if (normalizedStatus === "completed" || normalizedStatus === "review_required") {
-          const planId = resolveTerminalJobPlanId(currentJob);
-          if (!planId) {
+          const outcome = resolveCompletedTerminalJobOutcome(currentJob);
+          if (outcome.type === "already_generated") {
             clearAllPendingGenerations();
-            throw new Error("Generation finished, but no saved plan was returned.");
+            setPhase("already_generated");
+            setStatusMessage("This intake already has a generated plan.");
+            setIsGenerating(false);
+            return;
           }
           clearAllPendingGenerations();
           setPhase("finalizing");
@@ -305,7 +318,7 @@ export function useGenerationController({
           setIsGenerating(false);
           await sleep(220);
           onComplete({
-            planId,
+            planId: outcome.planId,
             status: normalizedStatus,
             recovered,
             requiresAdminResume: currentJob.requires_admin_resume === true,
