@@ -5,7 +5,7 @@ import pytest
 
 from api.auth import AuthenticatedUser
 from api.models import ProfileUpdateRequest
-from support import _build_client, _build_request
+from support import _build_client, _build_request, finalized_result
 
 
 def test_admin_athlete_profile_includes_latest_intake_details():
@@ -157,6 +157,55 @@ def test_admin_generate_rejects_existing_job_with_self_serve_source():
     )
     assert response.status_code == 409
     assert response.json()["detail"] == "unsafe existing admin generation job linkage"
+
+
+def test_admin_self_serve_on_protected_triage_intake_returns_protected_guidance_without_new_job():
+    client, store, _ = _build_client()
+    request = _build_request()
+    intake = store.create_intake("admin-1", request)
+    plan = store.create_plan(
+        athlete_id="admin-1",
+        intake_id=intake["id"],
+        request=request,
+        result=finalized_result(status="triage_blocked", stage2_status="needs_review"),
+    )
+
+    response = client.post(
+        "/api/plans/generate",
+        headers={"Authorization": "Bearer admin-token"},
+        json=request.model_dump(mode="json") | {"intake_id": intake["id"]},
+    )
+    assert response.status_code == 202
+    payload = response.json()
+    assert payload["plan_id"] == plan["id"]
+    assert payload["requires_admin_resume"] is True
+    assert payload["stage2_status"] == "needs_review"
+    assert "cannot bypass triage" in payload["message"]
+    assert store.list_generation_jobs_for_athlete("admin-1", limit=25) == []
+
+
+def test_athlete_self_serve_on_protected_triage_intake_does_not_get_admin_protected_response():
+    client, store, _ = _build_client()
+    request = _build_request()
+    intake = store.create_intake("athlete-1", request)
+    store.create_plan(
+        athlete_id="athlete-1",
+        intake_id=intake["id"],
+        request=request,
+        result=finalized_result(status="triage_blocked", stage2_status="needs_review"),
+    )
+
+    response = client.post(
+        "/api/plans/generate",
+        headers={"Authorization": "Bearer athlete-token"},
+        json=request.model_dump(mode="json") | {"intake_id": intake["id"]},
+    )
+    assert response.status_code == 202
+    payload = response.json()
+    assert payload["requires_admin_resume"] is False
+    assert "cannot bypass triage" not in (payload.get("message") or "").lower()
+    assert not str(payload["job_id"]).startswith("protected_")
+    assert len(store.list_generation_jobs_for_athlete("athlete-1", limit=25)) == 1
 
 
 def test_admin_generate_rejects_existing_admin_job_with_wrong_intake_id():
