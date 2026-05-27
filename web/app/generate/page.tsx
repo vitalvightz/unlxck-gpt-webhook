@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { RequireAuth } from "@/components/auth-guard";
 import { useAppSession } from "@/components/auth-provider";
 import { createGenerationJob, getActiveGenerationJob } from "@/lib/api";
 import { useGenerationController } from "@/lib/generation-controller";
-import { shouldBlockGenerateAutoStartForMatchingPayload } from "@/lib/generation-status-guards";
+import { resolveMatchingPayloadGenerationAction } from "@/lib/generation-status-guards";
 import { hydratePlanRequest } from "@/lib/onboarding";
 import { validatePerformanceFocusSelections } from "@/lib/performance-focus-cap";
 import { PremiumLoadingScreen } from "@/components/premium-loading-screen";
@@ -26,7 +26,7 @@ function hashPayload(payload: unknown): string {
   return JSON.stringify(payload);
 }
 
-function getCompletedGeneration(): { planId: string; payloadHash: string | null } | null {
+function getCompletedGeneration(): { planId: string | null; payloadHash: string | null } | null {
   if (typeof window === "undefined") {
     return null;
   }
@@ -36,13 +36,12 @@ function getCompletedGeneration(): { planId: string; payloadHash: string | null 
   }
   try {
     const parsed = JSON.parse(raw) as { payloadHash?: unknown; planId?: unknown };
-    if (typeof parsed.planId !== "string" || !parsed.planId.trim()) {
+    const planId = typeof parsed.planId === "string" && parsed.planId.trim() ? parsed.planId : null;
+    const payloadHash = typeof parsed.payloadHash === "string" ? parsed.payloadHash : null;
+    if (!planId && !payloadHash) {
       return null;
     }
-    return {
-      planId: parsed.planId,
-      payloadHash: typeof parsed.payloadHash === "string" ? parsed.payloadHash : null,
-    };
+    return { planId, payloadHash };
   } catch {
     return null;
   }
@@ -52,6 +51,7 @@ export default function GeneratePage() {
   const router = useRouter();
   const { me, session } = useAppSession();
   const autoStartRef = useRef(false);
+  const [forceAlreadyGenerated, setForceAlreadyGenerated] = useState(false);
   const payload = me ? hydratePlanRequest(me) : null;
   const performanceFocusValidation = payload
     ? validatePerformanceFocusSelections(
@@ -104,10 +104,16 @@ export default function GeneratePage() {
     if (!session?.access_token || !payload || autoStartRef.current || controller.hasPendingGeneration) {
       return;
     }
-    const completed = getCompletedGeneration();
-    const currentPayloadHash = hashPayload(payload);
-    if (completed && shouldBlockGenerateAutoStartForMatchingPayload(currentPayloadHash, completed.payloadHash)) {
-      router.replace(`/plans/${completed.planId}`);
+    const matchingPayloadAction = resolveMatchingPayloadGenerationAction(
+      hashPayload(payload),
+      getCompletedGeneration(),
+    );
+    if (matchingPayloadAction.type === "redirect") {
+      router.replace(`/plans/${matchingPayloadAction.planId}`);
+      return;
+    }
+    if (matchingPayloadAction.type === "already_generated") {
+      setForceAlreadyGenerated(true);
       return;
     }
 
@@ -155,7 +161,7 @@ export default function GeneratePage() {
   return (
     <RequireAuth>
       <PremiumLoadingScreen
-        phase={controller.phase}
+        phase={forceAlreadyGenerated ? "already_generated" : controller.phase}
         error={controller.error}
         statusMessage={controller.statusMessage}
         startedAtMs={controller.startedAtMs}
@@ -168,6 +174,7 @@ export default function GeneratePage() {
         onOpenPlanHistory={() => router.push("/plans")}
         onReturnToWorkspace={() => router.push("/")}
         onRefreshStatus={() => router.refresh()}
+        onRefineIntake={() => router.push("/onboarding")}
       />
     </RequireAuth>
   );

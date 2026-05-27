@@ -42,10 +42,11 @@ const PHASE_ORDER: Record<GenerationUiPhase, number> = {
   running: 2,
   reconnecting: 3,
   finalizing: 4,
+  already_generated: 4,
   failed: 4,
 };
 
-const PHASE_CONTENT: Record<
+export const PHASE_CONTENT: Record<
   GenerationUiPhase,
   {
     eyebrow: string;
@@ -102,6 +103,15 @@ const PHASE_CONTENT: Record<
     reassurance: "The saved plan is ready. This page is only closing the final handoff before your workspace opens.",
     buildState: "Opening",
   },
+  already_generated: {
+    eyebrow: "Plan already exists",
+    title: "This intake already has a generated plan.",
+    copy: "Open the existing plan or refine the intake to create a new version.",
+    chip: "Already generated",
+    statusFallback: "This intake already has a generated plan.",
+    reassurance: "No new duplicate was created.",
+    buildState: "Existing plan",
+  },
   failed: {
     eyebrow: "Generation stopped",
     title: "Plan failed. Try again.",
@@ -137,6 +147,7 @@ interface PremiumLoadingScreenProps {
   onOpenPlanHistory?: (() => void) | null;
   onReturnToWorkspace?: (() => void) | null;
   onRefreshStatus?: (() => void) | null;
+  onRefineIntake?: (() => void) | null;
 }
 
 function formatRelativeTimestamp(at: string, baseMs: number | null): string {
@@ -168,12 +179,14 @@ export function PremiumLoadingScreen({
   onOpenPlanHistory = null,
   onReturnToWorkspace = null,
   onRefreshStatus = null,
+  onRefineIntake = null,
 }: PremiumLoadingScreenProps) {
   const phaseContent = PHASE_CONTENT[phase];
   const activeIndex = PHASE_ORDER[phase];
-  const showElapsed = phase !== "failed" && phase !== "finalizing" && startedAtMs !== null;
+  const isTerminalNonProgress = phase === "failed" || phase === "already_generated";
+  const showElapsed = !isTerminalNonProgress && phase !== "finalizing" && startedAtMs !== null;
   const [now, setNow] = useState(() => Date.now());
-  const stageOnePreview = phase === "failed" ? null : buildStageOnePreview(intake, milestones);
+  const stageOnePreview = isTerminalNonProgress ? null : buildStageOnePreview(intake, milestones);
 
   useEffect(() => {
     if (!showElapsed) {
@@ -200,7 +213,7 @@ export function PremiumLoadingScreen({
                 <p className="loading-eyebrow">{phaseContent.eyebrow}</p>
                 <h1 className="loading-title">
                   {phaseContent.title}
-                  {phase !== "failed" ? (
+                  {!isTerminalNonProgress ? (
                     <span className="loading-title-dots" aria-hidden="true">
                       <span />
                       <span />
@@ -232,7 +245,7 @@ export function PremiumLoadingScreen({
                 </span>
               </div>
             </div>
-            {phase !== "failed" ? (
+            {!isTerminalNonProgress ? (
               <p className="loading-estimate muted">{ESTIMATE_COPY}</p>
             ) : null}
             {showMilestones ? (
@@ -263,7 +276,7 @@ export function PremiumLoadingScreen({
                 </ol>
               </div>
             ) : null}
-            {phase !== "failed" ? (
+            {!isTerminalNonProgress ? (
               <div className="loading-scan-rail" aria-hidden="true">
                 <span className="loading-scan-line" />
               </div>
@@ -292,6 +305,15 @@ export function PremiumLoadingScreen({
                     {onRefreshStatus ? <button type="button" className="cta ghost" onClick={onRefreshStatus}>Refresh status</button> : null}
                   </div>
                 ) : null}
+              </div>
+            ) : null}
+            {phase === "already_generated" ? (
+              <div className="loading-failure-actions">
+                <p className="loading-failure-headline">This intake already has a generated plan.</p>
+                <div className="loading-failure-secondary-actions">
+                  {onOpenPlanHistory ? <button type="button" className="cta ghost" onClick={onOpenPlanHistory}>Open plan history</button> : null}
+                  {onRefineIntake ? <button type="button" className="cta ghost" onClick={onRefineIntake}>Refine intake</button> : null}
+                </div>
               </div>
             ) : null}
             <p className="loading-reassurance">{phaseContent.reassurance}</p>

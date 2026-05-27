@@ -5,6 +5,7 @@ import {
   isExpiredPendingGeneration,
   isStaleVisibleGenerationJob,
   normalizeLegacyGenerationJobStatus,
+  resolveMatchingPayloadGenerationAction,
   shouldBlockGenerateAutoStartForMatchingPayload,
 } from "@/lib/generation-status-guards";
 import type { GenerationJobResponse } from "@/lib/types";
@@ -60,4 +61,30 @@ test("generate auto-start is blocked only when payload hash matches completed ma
 test("legacy generation statuses normalize to supported generation lifecycle values", () => {
   assert.equal(normalizeLegacyGenerationJobStatus("held_for_review"), "review_required");
   assert.equal(normalizeLegacyGenerationJobStatus("publishable_with_flags"), "completed");
+});
+
+test("matching payload with completed local generation redirects to existing plan", () => {
+  assert.deepEqual(
+    resolveMatchingPayloadGenerationAction("hash_a", { planId: "plan_123", payloadHash: "hash_a" }),
+    { type: "redirect", planId: "plan_123" },
+  );
+});
+
+test("matching payload without an openable plan id shows already-generated state", () => {
+  assert.deepEqual(
+    resolveMatchingPayloadGenerationAction("hash_a", { planId: null, payloadHash: "hash_a" }),
+    { type: "already_generated" },
+  );
+  assert.deepEqual(
+    resolveMatchingPayloadGenerationAction("hash_a", { planId: "   ", payloadHash: "hash_a" }),
+    { type: "already_generated" },
+  );
+});
+
+test("non-matching payload proceeds with a fresh generation", () => {
+  assert.deepEqual(
+    resolveMatchingPayloadGenerationAction("hash_a", { planId: "plan_123", payloadHash: "hash_b" }),
+    { type: "proceed" },
+  );
+  assert.deepEqual(resolveMatchingPayloadGenerationAction("hash_a", null), { type: "proceed" });
 });
