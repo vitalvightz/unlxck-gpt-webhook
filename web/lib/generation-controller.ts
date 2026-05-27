@@ -435,38 +435,52 @@ export function useGenerationController({
   }, [failedJobId, isGenerating, storageKey, token, watchJobUntilTerminal]);
 
   useEffect(() => {
-    if (!token || !storageKey || isGenerating) {
-      return;
+  if (!token || !storageKey || isGenerating) {
+    return;
+  }
+
+  const pending = getPendingGeneration(storageKey);
+  if (!canRecoverPendingGenerationWithoutCreate(pending)) {
+    if (pending && !pending.jobId) {
+      clearPendingGeneration(storageKey);
     }
-    const pending = getPendingGeneration(storageKey);
-    if (!canRecoverPendingGenerationWithoutCreate(pending)) {
-      if (pending && !pending.jobId) {
-        clearPendingGeneration(storageKey);
+    return;
+  }
+
+  const recoverablePending = pending;
+  if (recoveryAttemptedRef.current === recoverablePending.clientRequestId) {
+    return;
+  }
+
+  recoveryAttemptedRef.current = recoverablePending.clientRequestId;
+
+  void (async () => {
+    try {
+      const existingJob = await getGenerationJob(token, recoverablePending.jobId);
+      const normalizedStatus = normalizeLegacyGenerationJobStatus(existingJob.status);
+      const failedJobSavedPlanId = resolveFailedJobWithSavedPlan(existingJob);
+
+      if (
+        normalizedStatus === "queued" ||
+        normalizedStatus === "running" ||
+        normalizedStatus === "completed" ||
+        normalizedStatus === "review_required" ||
+        failedJobSavedPlanId
+      ) {
+        await startGeneration({
+          clientRequestId: recoverablePending.clientRequestId,
+          recovered: true,
+          existingJob,
+        });
+        return;
       }
-      return;
+
+      clearPendingGeneration(storageKey);
+    } catch {
+      clearPendingGeneration(storageKey);
     }
-    const recoverablePending = pending;
-    if (recoveryAttemptedRef.current === pending.clientRequestId) {
-      return;
-    }
-    recoveryAttemptedRef.current = recoverablePending.clientRequestId;
-    void (async () => {
-      try {
-        const existingJob = await getGenerationJob(token, recoverablePending.jobId as string);
-        if (existingJob.status === "queued" || existingJob.status === "running") {
-          await startGeneration({
-            clientRequestId: recoverablePending.clientRequestId,
-            recovered: true,
-            existingJob,
-          });
-          return;
-        }
-        clearPendingGeneration(storageKey);
-      } catch {
-        clearPendingGeneration(storageKey);
-      }
-    })();
-  }, [isGenerating, startGeneration, storageKey, token]);
+  })();
+}, [isGenerating, startGeneration, storageKey, token]);
 
   return {
     isGenerating,
