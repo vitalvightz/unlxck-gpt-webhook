@@ -137,7 +137,10 @@ def _job_response(
             return None
         if store is None:
             return normalized_candidate
-        existing_plan = store.get_plan(normalized_candidate)
+        try:
+            existing_plan = store.get_plan(normalized_candidate)
+        except Exception:
+            existing_plan = None
         return normalized_candidate if existing_plan is not None else None
 
     status_value = str(job.get("status") or "")
