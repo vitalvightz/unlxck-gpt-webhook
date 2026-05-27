@@ -87,13 +87,17 @@ function getPendingGeneration(): PendingGenerationState | null {
   return latest ?? null;
 }
 
-function savePendingGeneration(pending: PendingGenerationState): void {
+function pendingGenerationStorageKey(token: string): string {
+  return `${PENDING_GENERATION_PREFIX}${encodeURIComponent(token)}`;
+}
+
+function savePendingGeneration(token: string, pending: PendingGenerationState): void {
   if (typeof window === "undefined") return;
   const existing = listPendingGenerations();
   existing.forEach((item) => {
     window.localStorage.removeItem(item.storageKey);
   });
-  const key = `${PENDING_GENERATION_PREFIX}self`;
+  const key = pendingGenerationStorageKey(token);
   window.localStorage.setItem(key, JSON.stringify(pending));
 }
 
@@ -139,6 +143,14 @@ interface GenerationStatusProviderProps {
   token: string | null;
 }
 
+export function shouldShowLatestGenerationJob(job: GenerationJobResponse | null): job is GenerationJobResponse {
+  if (!job) return false;
+  const hasOpenablePlan = Boolean(job.plan_id || job.latest_plan_id);
+  const normalizedStatus = normalizeLegacyGenerationJobStatus(job.status) as GenerationJobStatus;
+  if (!isTerminalStatus(normalizedStatus)) return true;
+  return hasOpenablePlan;
+}
+
 export function GenerationStatusProvider({ children, token }: GenerationStatusProviderProps) {
   const [phase, setPhase] = useState<GlobalGenerationPhase>(null);
   const [jobId, setJobId] = useState<string | null>(null);
@@ -159,11 +171,33 @@ export function GenerationStatusProvider({ children, token }: GenerationStatusPr
   const latestTokenRef = useRef(token);
   const checkSequenceRef = useRef(0);
 
+  const resetGenerationState = useCallback(() => {
+    setPhase(null);
+    setJobId(null);
+    setClientRequestId(null);
+    setPlanId(null);
+    setAthleteId(null);
+    setSource(null);
+    setStatusMessageText(null);
+    setTerminalStatus(null);
+    setStartedAtMs(null);
+    setLatestJob(null);
+  }, []);
+
   useEffect(() => {
     latestTokenRef.current = token;
     checkSequenceRef.current++;
     isCheckingRef.current = false;
-  }, [token]);
+    if (clearTimerRef.current !== null) {
+      clearTimeout(clearTimerRef.current);
+      clearTimerRef.current = null;
+    }
+    clearPendingGenerations();
+    resetGenerationState();
+    if (!token) {
+      clearPendingGenerations();
+    }
+  }, [token, resetGenerationState]);
 
   // Cancel any pending clear timer when the component unmounts
   useEffect(() => {
@@ -183,16 +217,7 @@ export function GenerationStatusProvider({ children, token }: GenerationStatusPr
       if (wasAuthenticatedRef.current) {
         clearPendingGenerations();
       }
-      setPhase(null);
-      setJobId(null);
-      setClientRequestId(null);
-      setPlanId(null);
-      setAthleteId(null);
-      setSource(null);
-      setStatusMessageText(null);
-      setTerminalStatus(null);
-      setStartedAtMs(null);
-      setLatestJob(null);
+      resetGenerationState();
       wasAuthenticatedRef.current = false;
       isCheckingRef.current = false;
       return;
@@ -220,7 +245,7 @@ export function GenerationStatusProvider({ children, token }: GenerationStatusPr
             createdAt: activeJob.created_at,
           };
           setLatestJob(null);
-          savePendingGeneration(activePending);
+          savePendingGeneration(token, activePending);
         }
       } catch {
         // Active endpoint unavailable: fall back to local pending recovery.
@@ -239,19 +264,11 @@ export function GenerationStatusProvider({ children, token }: GenerationStatusPr
         try {
           const latest = await getLatestGenerationJob(token);
           if (sequence !== checkSequenceRef.current || !latestTokenRef.current) return;
-          setLatestJob(latest);
+          setLatestJob(shouldShowLatestGenerationJob(latest) ? latest : null);
         } catch {
           setLatestJob(null);
         }
-        setPhase(null);
-        setJobId(null);
-        setClientRequestId(null);
-        setPlanId(null);
-        setAthleteId(null);
-        setSource(null);
-        setStatusMessageText(null);
-        setTerminalStatus(null);
-        setStartedAtMs(null);
+        resetGenerationState();
         return;
       }
 
@@ -294,46 +311,21 @@ export function GenerationStatusProvider({ children, token }: GenerationStatusPr
             const delay = stalledBeforeStart || staleVisibleJob || normalizedStatus === "failed" ? 3000 : 5000;
             clearTimerRef.current = setTimeout(() => {
               clearTimerRef.current = null;
-              setPhase(null);
-              setJobId(null);
-              setClientRequestId(null);
-              setPlanId(null);
-              setAthleteId(null);
-              setSource(null);
-              setStatusMessageText(null);
-              setTerminalStatus(null);
-              setStartedAtMs(null);
+              resetGenerationState();
             }, delay);
           }
         } catch {
           clearPendingGenerations();
-          setPhase(null);
-          setJobId(null);
-          setClientRequestId(null);
-          setPlanId(null);
-          setAthleteId(null);
-          setSource(null);
-          setStatusMessageText(null);
-          setTerminalStatus(null);
-          setStartedAtMs(null);
-          setLatestJob(null);
+          resetGenerationState();
         }
       } else {
         clearPendingGenerations();
-        setPhase(null);
-        setJobId(null);
-        setClientRequestId(null);
-        setPlanId(null);
-        setAthleteId(null);
-        setSource(null);
-        setStatusMessageText(null);
-        setTerminalStatus(null);
-        setStartedAtMs(null);
+        resetGenerationState();
       }
     } finally {
       isCheckingRef.current = false;
     }
-  }, [token]);
+  }, [resetGenerationState, token]);
 
   useEffect(() => {
     void checkStatus();
