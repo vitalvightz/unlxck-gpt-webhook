@@ -85,6 +85,9 @@ export function PlanDetailScreen({ planId }: { planId: string }) {
   }, [planId, session?.access_token]);
 
   const recovered = searchParams.get("recovered") === "1";
+  const protectedTriage = searchParams.get("protected_triage") === "1";
+  const stage2Status = (searchParams.get("stage2_status") || "").trim().toLowerCase();
+  const showResumeFailureHint = stage2Status === "triage_resume_approved";
 
   return (
     <RequireAuth>
@@ -93,6 +96,20 @@ export function PlanDetailScreen({ planId }: { planId: string }) {
           <article className="status-card loading-context-panel loading-context-panel-compact">
             <p className="loading-eyebrow">Plan synced</p>
             <div className="loading-status-strip">Plan was restored after a timeout and synced back into your workspace.</div>
+          </article>
+        </section>
+      ) : null}
+      {protectedTriage ? (
+        <section className="panel loading-card loading-shell loading-phase-finalizing athlete-motion-slot athlete-motion-status">
+          <article className="status-card loading-context-panel loading-context-panel-compact">
+            <p className="loading-eyebrow">Protected triage plan restored</p>
+            <div className="loading-status-strip">
+              Use Admin Review → Resume Generation.
+              {showResumeFailureHint ? " Previous resume failed or did not complete. Submit a new resume request." : ""}
+            </div>
+            {planId ? (
+              <a className="button button-secondary" href={`#admin-review-${planId}`}>Open Admin Review</a>
+            ) : null}
           </article>
         </section>
       ) : null}
