@@ -169,7 +169,7 @@ function formatRiskBandLabel(riskBand: NonNullable<PlanAdvisory["risk_band"]>) {
   return normalized.charAt(0).toUpperCase() + normalized.slice(1);
 }
 
-function readInjuryTriage(plan: PlanDetail): InjuryTriageView | null {
+export function readInjuryTriage(plan: PlanDetail): InjuryTriageView | null {
   const whyLogTriage =
     plan.admin_outputs?.why_log && typeof plan.admin_outputs.why_log === "object"
       ? (plan.admin_outputs.why_log as Record<string, unknown>).injury_triage
@@ -228,7 +228,7 @@ function readInjuryTriage(plan: PlanDetail): InjuryTriageView | null {
   return null;
 }
 
-function readRawTriageMode(plan: PlanDetail): string | null {
+export function readRawTriageMode(plan: PlanDetail): string | null {
   const whyLog = plan.admin_outputs?.why_log;
   const whyLogTriage =
     whyLog && typeof whyLog === "object"
@@ -250,6 +250,49 @@ function readRawTriageMode(plan: PlanDetail): string | null {
   }
 
   return null;
+}
+
+
+export function shouldShowProtectedResumeAdminReview(input: {
+  isTriageBlocked: boolean;
+  isProtectedTriageResumePending: boolean;
+  hasResumeApproval: boolean;
+}): boolean {
+  return input.isTriageBlocked || input.isProtectedTriageResumePending || input.hasResumeApproval;
+}
+
+export function getAdminReviewHeading(input: {
+  showProtectedResumeAdminReview: boolean;
+  hasResumeApproval: boolean;
+}): string {
+  if (!input.showProtectedResumeAdminReview) {
+    return "Manual Stage 2 actions";
+  }
+  return input.hasResumeApproval ? "Resume generation required" : "Planning blocked before Stage 2";
+}
+
+export function canRetryResumeGenerationForPlan(input: {
+  isAdmin: boolean;
+  isProtectedTriageResumePending: boolean;
+  injuryTriageMode?: string | null;
+  rawTriageMode?: string | null;
+  planStatus?: string | null;
+}): boolean {
+  if (
+    input.injuryTriageMode === "medical_hold" ||
+    input.rawTriageMode === "medical_hold" ||
+    input.planStatus === "medical_hold"
+  ) {
+    return false;
+  }
+
+  return (
+    input.isAdmin &&
+    input.isProtectedTriageResumePending &&
+    (isResumableTriageMode(input.injuryTriageMode) ||
+      isResumableTriageMode(input.rawTriageMode) ||
+      isResumableTriageMode(input.planStatus))
+  );
 }
 
 function BlockedPlanDecisionCard({
@@ -936,15 +979,19 @@ export function PlanViewer({
     "";
   const canApproveForRelease =
     isAdmin && !hasPublishedPlan && Boolean(approvableText) && !isProtectedTriageResumePending;
-  const canRetryResumeGeneration =
-  isAdmin &&
-  isProtectedTriageResumePending &&
-  (isResumableTriageMode(injuryTriage?.mode) ||
-    isResumableTriageMode(rawTriageMode) ||
-    isResumableTriageMode(plan.status));
+  const canRetryResumeGeneration = canRetryResumeGenerationForPlan({
+    isAdmin,
+    isProtectedTriageResumePending,
+    injuryTriageMode: injuryTriage?.mode,
+    rawTriageMode,
+    planStatus: plan.status,
+  });
 
-  const showProtectedResumeAdminReview =
-    isTriageBlocked || isProtectedTriageResumePending || hasResumeApproval;
+  const showProtectedResumeAdminReview = shouldShowProtectedResumeAdminReview({
+    isTriageBlocked,
+    isProtectedTriageResumePending,
+    hasResumeApproval,
+  });
   
   const canRejectApproval = isAdmin;
   const blockedInjuryContext = injuryTriage
@@ -1831,13 +1878,7 @@ export function PlanViewer({
           <section className="viewer-panel">
             <div className="form-section-header">
               <p className="kicker">ADMIN REVIEW</p>
-              <h3>
-              {showProtectedResumeAdminReview
-                ? hasResumeApproval
-                  ? "Resume generation required"
-                  : "Planning blocked before Stage 2"
-                : "Manual Stage 2 actions"}
-            </h3>
+              <h3>{getAdminReviewHeading({ showProtectedResumeAdminReview, hasResumeApproval })}</h3>
             </div>
             {showProtectedResumeAdminReview ? (
               <>
