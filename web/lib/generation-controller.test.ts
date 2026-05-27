@@ -127,6 +127,10 @@ test("completed terminal job with only latest_plan_id opens that plan", () => {
 test("completed terminal job with no openable plan is already-generated, not a failure", () => {
   assert.deepEqual(
     resolveCompletedTerminalJobOutcome(buildTerminalJob({ plan_id: null, latest_plan_id: null })),
-    { type: "already_generated" },
+    { type: "already_generated" }
+  );
+  assert.deepEqual(
+    resolveCompletedTerminalJobOutcome(buildTerminalJob({ plan_id: "   ", latest_plan_id: "" })),
+    { type: "already_generated" }
   );
 });
