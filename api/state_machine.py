@@ -67,6 +67,7 @@ _PLAN_TRANSITIONS: dict[PlanStatus, frozenset[PlanStatus]] = {
         {
             "ready",
             "review_required",
+            "held_for_review",
             "triage_blocked",
             "medical_hold",
             "restricted_rehab_only",
@@ -75,8 +76,8 @@ _PLAN_TRANSITIONS: dict[PlanStatus, frozenset[PlanStatus]] = {
         }
     ),
     "medical_hold": frozenset({"medical_hold", "needs_review", "restricted_rehab_only", "archived"}),
-    "restricted_rehab_only": frozenset({"ready", "restricted_rehab_only", "needs_review", "archived"}),
-    "needs_review": frozenset({"ready", "review_required", "needs_review", "restricted_rehab_only", "medical_hold", "archived"}),
+    "restricted_rehab_only": frozenset({"ready", "held_for_review", "restricted_rehab_only", "needs_review", "archived"}),
+    "needs_review": frozenset({"ready", "review_required", "held_for_review", "needs_review", "restricted_rehab_only", "medical_hold", "archived"}),
     "archived": frozenset({"archived"}),
 }
 

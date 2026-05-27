@@ -71,3 +71,13 @@ test("shouldShowTriageBlockedState stays true when triage resume is approved but
     true,
   );
 });
+
+test("production resume-failed state remains blocked in UI model", () => {
+  assert.equal(
+    shouldShowTriageBlockedState(
+      { status: "triage_blocked", admin_outputs: { stage2_status: "triage_resume_approved", why_log: { triage_regeneration_cleared: true } } } as never,
+      "needs_review",
+    ),
+    true,
+  );
+});

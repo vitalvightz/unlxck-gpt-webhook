@@ -48,6 +48,42 @@ Allowed transitions are defined in `api/state_machine.py`. In plain terms:
 - Triage-blocked/restricted review states may resolve to `ready`, remain constrained, move to another triage safety state, or be archived.
 - `archived` is terminal except for idempotent archive writes.
 
+### Explicit plan transition matrix
+
+| From \ To | generated | ready | review_required | held_for_review | publishable_with_flags | triage_blocked | medical_hold | restricted_rehab_only | needs_review | archived |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| generated | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| ready | ❌ | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ | ✅ |
+| review_required | ❌ | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
+| held_for_review | ❌ | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
+| publishable_with_flags | ❌ | ✅ | ✅ | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ | ✅ |
+| triage_blocked | ❌ | ✅ | ✅ | ✅ | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| medical_hold | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ |
+| restricted_rehab_only | ❌ | ✅ | ❌ | ✅ | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ |
+| needs_review | ❌ | ✅ | ✅ | ✅ | ❌ | ❌ | ✅ | ✅ | ✅ | ✅ |
+| archived | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
+
+### Protected-state resume contract
+
+- `approve-and-resume-generation` is only allowed for triage modes `needs_review` and `restricted_rehab_only`.
+- `medical_hold` is intentionally non-resumable via approve-and-resume.
+- Resumed jobs may end as:
+  - plan `ready` (job `completed`)
+  - plan `review_required` / `held_for_review` (job `review_required` according to `job_status_for_plan_status`)
+  - job `failed` if worker/runtime cannot safely persist a valid linked plan
+
+### Triage resume UI lifecycle
+
+The backend currently uses `stage2_status = triage_resume_approved` as an audit marker that approval happened. It is **not** proof that resumed generation completed successfully. UI should treat it as "approved previously" and keep retry/resume controls available when the linked `admin_triage_resume` job is stale, failed, or still blocked.
+
+### Backend invariant for terminal jobs
+
+For generation jobs ending in `completed` or `review_required`:
+
+- `plan_id` must point to an existing `plans` row.
+
+Otherwise the job is downgraded to `failed` to avoid exposing orphaned terminal job links.
+
 Unknown plan statuses map to `review_required` for generation-job reporting so
 new safety/review states fail closed to human review instead of worker failure.
 

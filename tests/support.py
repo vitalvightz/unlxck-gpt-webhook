@@ -574,6 +574,50 @@ class FakeStore:
         rows.sort(key=lambda row: str(row.get("created_at") or ""), reverse=True)
         return rows[:limit]
 
+    def list_orphaned_terminal_generation_jobs(self, *, limit: int = 500) -> list[dict]:
+        rows: list[dict] = []
+        for job in self.generation_jobs.values():
+            status_value = str(job.get("status") or "").strip().lower()
+            if status_value not in {"completed", "review_required"}:
+                continue
+            plan_id = str(job.get("plan_id") or "").strip()
+            if not plan_id or self.get_plan(plan_id) is None:
+                rows.append(
+                    {
+                        "job_id": str(job.get("id") or ""),
+                        "athlete_id": str(job.get("athlete_id") or ""),
+                        "status": status_value,
+                        "source": str(job.get("source") or ""),
+                        "plan_id": plan_id,
+                    }
+                )
+        rows.sort(key=lambda row: row["job_id"], reverse=True)
+        return rows[:limit]
+
+    def list_failed_triage_resume_jobs_with_approved_marker(self, *, limit: int = 500) -> list[dict]:
+        rows: list[dict] = []
+        for job in self.generation_jobs.values():
+            status_value = str(job.get("status") or "").strip().lower()
+            source_value = str(job.get("source") or "").strip().lower()
+            if status_value != "failed" or source_value != "admin_triage_resume":
+                continue
+            plan_id = str(job.get("plan_id") or "").strip()
+            plan_row = self.get_plan(plan_id) if plan_id else None
+            if not plan_row:
+                continue
+            stage2_status = str(plan_row.get("stage2_status") or "").strip().lower()
+            if stage2_status != "triage_resume_approved":
+                continue
+            rows.append(
+                {
+                    "job_id": str(job.get("id") or ""),
+                    "plan_id": str(plan_row.get("id") or ""),
+                    "athlete_id": str(job.get("athlete_id") or ""),
+                }
+            )
+        rows.sort(key=lambda row: row["job_id"], reverse=True)
+        return rows[:limit]
+
     def list_claimable_generation_jobs(self, *, limit: int = 20, stale_after_seconds: int = 90) -> list[dict]:
         rows = []
         for job in self.generation_jobs.values():
