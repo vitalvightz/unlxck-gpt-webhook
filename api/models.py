@@ -549,6 +549,7 @@ class PlanRequest(BaseModel):
     mindset_challenges: str = ""
     notes: str = ""
     random_seed: int | None = None
+    intake_id: str | None = None
 
     @model_validator(mode="before")
     @classmethod
