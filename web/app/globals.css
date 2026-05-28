@@ -6618,6 +6618,12 @@ html[data-theme="light"] .global-generation-status-dismiss {
   color: rgba(65, 47, 41, 0.86);
 }
 
+html[data-theme="light"] .global-generation-status-dismiss:hover {
+  background: rgba(98, 77, 69, 0.14);
+  border-color: rgba(98, 77, 69, 0.2);
+  color: rgba(65, 47, 41, 1);
+}
+
 /* Mobile adjustments */
 @media (max-width: 900px) {
   .global-generation-status {
