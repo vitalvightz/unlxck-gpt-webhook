@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 
 import {
   canRecoverPendingGenerationWithoutCreate,
+  isGenerationAlreadyInFlightError,
   resolveCompletedTerminalJobOutcome,
   resolveFailedJobWithSavedPlan,
   resolveTerminalJobPlanId,
@@ -150,4 +151,22 @@ test("completed terminal job with no plan but requires_admin_resume is review_pa
     ),
     { type: "review_paused" },
   );
+});
+
+test("recognizes the 'already queued or running' multi-tab conflict error", () => {
+  // The backend emits this exact detail string from
+  // _find_blocking_generation_job_for_athlete when another tab/device beat
+  // the current request to the active-job slot. Detecting it lets the
+  // controller fall back to attaching to the existing job instead of
+  // showing a raw 409.
+  const error = new Error(
+    "A generation job is already queued or running for this account.",
+  );
+  assert.equal(isGenerationAlreadyInFlightError(error), true);
+});
+
+test("does not misclassify unrelated errors as the multi-tab conflict", () => {
+  assert.equal(isGenerationAlreadyInFlightError(new Error("Plan generation failed.")), false);
+  assert.equal(isGenerationAlreadyInFlightError(null), false);
+  assert.equal(isGenerationAlreadyInFlightError("string-error"), false);
 });
