@@ -384,13 +384,30 @@ select:focus-visible {
   flex: 1;
   align-content: start;
   overflow-y: auto;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.18) transparent;
+  -ms-overflow-style: auto;
   min-height: 0;
 }
 
 .sidebar-nav::-webkit-scrollbar {
-  display: none;
+  width: 8px;
+}
+
+.sidebar-nav::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sidebar-nav::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.16);
+  border-radius: 999px;
+  background-clip: padding-box;
+  border: 2px solid transparent;
+}
+
+.sidebar-nav:hover::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.28);
+  background-clip: padding-box;
 }
 
 .sidebar-link {
@@ -4910,7 +4927,7 @@ button.mobile-step-rail-item {
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
     max-height: 52dvh;
-    scrollbar-width: none;
+    scrollbar-width: thin;
   }
 
   .app-main {
@@ -10103,6 +10120,20 @@ html[data-theme="light"] .sidebar-shell::-webkit-scrollbar-thumb {
 }
 
 html[data-theme="light"] .sidebar-shell:hover::-webkit-scrollbar-thumb {
+  background: rgba(98, 77, 69, 0.38);
+  background-clip: padding-box;
+}
+
+html[data-theme="light"] .sidebar-nav {
+  scrollbar-color: rgba(98, 77, 69, 0.38) transparent;
+}
+
+html[data-theme="light"] .sidebar-nav::-webkit-scrollbar-thumb {
+  background: rgba(98, 77, 69, 0.26);
+  background-clip: padding-box;
+}
+
+html[data-theme="light"] .sidebar-nav:hover::-webkit-scrollbar-thumb {
   background: rgba(98, 77, 69, 0.38);
   background-clip: padding-box;
 }
