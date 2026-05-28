@@ -313,11 +313,29 @@ def _stable_payload_hash(payload: dict[str, Any]) -> str:
     return json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
 
 
+def _plan_blocks_duplicate_generation(
+    plan: dict[str, Any] | None,
+    *,
+    viewer_role: str,
+) -> bool:
+    # Duplicate prevention must only apply to plans the viewer can still open.
+    # Athlete soft-delete archives the plan (hidden from athlete views) and a
+    # hard-delete removes it entirely, so a stale same-payload job pointing at
+    # such a plan must not block a fresh generation. Triage-blocked/protected
+    # plans still block here so the existing admin-review behaviour is kept.
+    if not isinstance(plan, dict):
+        return False
+    if _is_archived_plan(plan):
+        return viewer_role == "admin"
+    return True
+
+
 def _find_existing_terminal_job_for_same_payload(
     *,
     store: AppStore,
     athlete_id: str,
     request_payload: dict[str, Any],
+    viewer_role: str = "athlete",
 ) -> dict[str, Any] | None:
     target_hash = _stable_payload_hash(request_payload)
     jobs = store.list_generation_jobs_for_athlete(athlete_id, limit=25)
@@ -327,12 +345,12 @@ def _find_existing_terminal_job_for_same_payload(
             continue
         if _stable_payload_hash(job_payload) != target_hash:
             continue
-        status_value = str(job.get("status") or "").strip().lower()
-        has_plan = bool(str(job.get("plan_id") or "").strip())
-        if status_value in {"completed", "review_required"}:
-            return job
-        if has_plan:
-            return job
+        plan_id = str(job.get("plan_id") or "").strip()
+        if not plan_id:
+            continue
+        if not _plan_blocks_duplicate_generation(store.get_plan(plan_id), viewer_role=viewer_role):
+            continue
+        return job
     return None
 
 
@@ -1532,6 +1550,7 @@ def create_app(
             store=store,
             athlete_id=profile.athlete_id,
             request_payload=request_body.model_dump(mode="json"),
+            viewer_role=profile.role,
         )
         if recovered_existing:
             return _job_response(recovered_existing, store=store, viewer_role=profile.role)

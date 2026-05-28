@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 
 import { RequireAuth } from "@/components/auth-guard";
 import { useAppSession } from "@/components/auth-provider";
 import { createGenerationJob, getActiveGenerationJob } from "@/lib/api";
+import { COMPLETED_GENERATION_KEY, parseCompletedGeneration } from "@/lib/completed-generation";
 import { useGenerationController } from "@/lib/generation-controller";
 import { resolveMatchingPayloadGenerationAction } from "@/lib/generation-status-guards";
 import { hydratePlanRequest } from "@/lib/onboarding";
@@ -13,7 +14,6 @@ import { validatePerformanceFocusSelections } from "@/lib/performance-focus-cap"
 import { PremiumLoadingScreen } from "@/components/premium-loading-screen";
 
 const STORAGE_KEY = "unlxck:pending-generation:self";
-const COMPLETED_GENERATION_KEY = "unlxck:completed-generation:self";
 const ALLOWED_PLAN_SOURCES = new Set(["quick_build", "self_serve"]);
 
 function resolvePlanSource(me: ReturnType<typeof useAppSession>["me"]): string {
@@ -26,32 +26,17 @@ function hashPayload(payload: unknown): string {
   return JSON.stringify(payload);
 }
 
-function getCompletedGeneration(): { planId: string | null; payloadHash: string | null } | null {
+function getCompletedGeneration() {
   if (typeof window === "undefined") {
     return null;
   }
-  const raw = window.localStorage.getItem(COMPLETED_GENERATION_KEY);
-  if (!raw) {
-    return null;
-  }
-  try {
-    const parsed = JSON.parse(raw) as { payloadHash?: unknown; planId?: unknown };
-    const planId = typeof parsed.planId === "string" && parsed.planId.trim() ? parsed.planId : null;
-    const payloadHash = typeof parsed.payloadHash === "string" ? parsed.payloadHash : null;
-    if (!planId && !payloadHash) {
-      return null;
-    }
-    return { planId, payloadHash };
-  } catch {
-    return null;
-  }
+  return parseCompletedGeneration(window.localStorage.getItem(COMPLETED_GENERATION_KEY));
 }
 
 export default function GeneratePage() {
   const router = useRouter();
   const { me, session } = useAppSession();
   const autoStartRef = useRef(false);
-  const [forceAlreadyGenerated, setForceAlreadyGenerated] = useState(false);
   const payload = me ? hydratePlanRequest(me) : null;
   const performanceFocusValidation = payload
     ? validatePerformanceFocusSelections(
@@ -112,10 +97,6 @@ export default function GeneratePage() {
       router.replace(`/plans/${matchingPayloadAction.planId}`);
       return;
     }
-    if (matchingPayloadAction.type === "already_generated") {
-      setForceAlreadyGenerated(true);
-      return;
-    }
 
     if ((!payload.fight_date && !payload.no_scheduled_fight) || !payload.athlete.technical_style.length) {
       router.replace("/onboarding");
@@ -161,7 +142,7 @@ export default function GeneratePage() {
   return (
     <RequireAuth>
       <PremiumLoadingScreen
-        phase={forceAlreadyGenerated ? "already_generated" : controller.phase}
+        phase={controller.phase}
         error={controller.error}
         statusMessage={controller.statusMessage}
         startedAtMs={controller.startedAtMs}

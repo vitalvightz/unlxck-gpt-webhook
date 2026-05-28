@@ -59,7 +59,6 @@ export function shouldBlockGenerateAutoStartForMatchingPayload(
 
 export type MatchingPayloadGenerationAction =
   | { type: "redirect"; planId: string }
-  | { type: "already_generated" }
   | { type: "proceed" };
 
 export function resolveMatchingPayloadGenerationAction(
@@ -69,7 +68,10 @@ export function resolveMatchingPayloadGenerationAction(
   if (!completed || !shouldBlockGenerateAutoStartForMatchingPayload(currentPayloadHash, completed.payloadHash)) {
     return { type: "proceed" };
   }
+  // Only block (redirect) when the cached plan is still openable. A matching
+  // payload with no usable plan id (e.g. the plan was deleted/archived) must
+  // proceed to a fresh generation rather than surface a stale duplicate state.
   return completed.planId && completed.planId.trim()
     ? { type: "redirect", planId: completed.planId }
-    : { type: "already_generated" };
+    : { type: "proceed" };
 }

@@ -16,6 +16,7 @@ import {
   renamePlan,
   submitManualStage2,
 } from "@/lib/api";
+import { clearCompletedGenerationForDeletedPlan } from "@/lib/completed-generation";
 import { PremiumLoadingScreen } from "@/components/premium-loading-screen";
 import { QuickBuildRefinementBanner } from "@/components/quick-build-refinement-banner";
 import { WhyTooltip } from "@/components/why-tooltip";
@@ -1332,6 +1333,7 @@ export function PlanViewer({
 
     try {
       await deletePlan(accessToken, plan.plan_id);
+      clearCompletedGenerationForDeletedPlan(plan.plan_id);
       await onPlanDeleted?.();
       router.push(viewerRole === "admin" ? "/admin" : "/plans");
       router.refresh();
