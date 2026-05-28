@@ -1424,15 +1424,6 @@ def create_app(
     ) -> ProfileRecord:
         try:
             profile = _map_profile_row(store.ensure_profile(user))
-            # UNLXCK_ADMIN_EMAILS is the authoritative source for admin access.
-            # Sync the request-scoped role to the current allowlist so downstream
-            # checks (`profile.role == "admin"`) cannot drift if the DB role is
-            # stale after an env allowlist change.
-            env_is_admin = store.is_admin_email(profile.email)
-            if env_is_admin and profile.role != "admin":
-                profile = profile.model_copy(update={"role": "admin"})
-            elif not env_is_admin and profile.role == "admin":
-                profile = profile.model_copy(update={"role": "athlete"})
             logger.info("[auth] profile_resolved athlete_id=%s role=%s", profile.athlete_id, profile.role)
             return profile
         except HTTPException as exc:
@@ -1450,14 +1441,10 @@ def create_app(
 
     def require_admin(
         profile: ProfileRecord = Depends(require_profile),
-        store: AppStore = Depends(get_store),
     ) -> ProfileRecord:
-        # Defense in depth: re-check the env allowlist directly so admin routes
-        # never depend on the stored DB role even if the require_profile sync
-        # is bypassed.
-        if not store.is_admin_email(profile.email):
+        if profile.role != "admin":
             logger.warning(
-                "[auth] admin_access_denied athlete_id=%s role=%s email_in_allowlist=False",
+                "[auth] admin_access_denied athlete_id=%s role=%s",
                 profile.athlete_id,
                 profile.role,
             )

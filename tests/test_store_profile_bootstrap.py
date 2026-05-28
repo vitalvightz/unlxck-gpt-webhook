@@ -137,7 +137,7 @@ def test_ensure_profile_existing_user_returns_without_upsert():
     store.client.table.return_value.upsert.assert_not_called()
 
 
-def test_ensure_profile_existing_admin_is_not_auto_demoted_when_email_removed_from_env():
+def test_ensure_profile_existing_admin_role_is_profile_authoritative():
     store = _make_store(admin_emails=set())
     user = _user("former-admin@example.com")
     existing = {
@@ -156,7 +156,7 @@ def test_ensure_profile_existing_admin_is_not_auto_demoted_when_email_removed_fr
 
 
 
-def test_ensure_profile_existing_athlete_is_promoted_to_admin_when_email_is_configured():
+def test_ensure_profile_existing_athlete_is_not_promoted_when_email_is_configured():
     store = _make_store(admin_emails={"promoted@example.com"})
     user = _user("promoted@example.com")
     existing = {
@@ -165,14 +165,12 @@ def test_ensure_profile_existing_athlete_is_promoted_to_admin_when_email_is_conf
         "role": "athlete",
         "full_name": user.full_name,
     }
-    promoted = {**existing, "role": "admin"}
-    _configure_profile_reads(store, existing, promoted)
-    store.client.table.return_value.update.return_value.eq.return_value.execute.return_value = MagicMock()
+    _configure_profile_reads(store, existing)
 
     result = store.ensure_profile(user)
 
-    store.client.table.return_value.update.assert_called_once_with({"role": "admin"})
-    assert result["role"] == "admin"
+    store.client.table.return_value.update.assert_not_called()
+    assert result["role"] == "athlete"
     store.client.table.return_value.upsert.assert_not_called()
 
 

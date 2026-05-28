@@ -133,8 +133,6 @@ class FakeStore:
     def ensure_profile(self, user: AuthenticatedUser) -> dict:
         existing = self.profiles.get(user.user_id)
         if existing:
-            expected_role = "admin" if existing.get("role") == "admin" or self._is_admin_email(user.email) else "athlete"
-            existing["role"] = expected_role
             existing["updated_at"] = _now()
             return existing
         role = "admin" if self._is_admin_email(user.email) else "athlete"

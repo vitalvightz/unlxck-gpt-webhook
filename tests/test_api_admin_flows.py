@@ -42,26 +42,25 @@ def test_admin_endpoints_require_admin_role():
     assert allowed.status_code == 200
 
 
-def test_admin_routes_use_env_allowlist_not_stored_role():
-    """A profile with role='admin' in storage must be denied if the email is
-    no longer in UNLXCK_ADMIN_EMAILS (which FakeStore models via admin_emails
-    and the @unlxck.test pattern)."""
-    store = FakeStore()  # admin_emails empty; only @unlxck.test pattern admits
-    stale_admin = AuthenticatedUser(
-        user_id="stale-admin-1",
+def test_admin_routes_use_stored_profile_role_not_env_allowlist():
+    """Demoting an existing admin in profiles must revoke access even if their
+    email still appears in the bootstrap allowlist."""
+    store = FakeStore(admin_emails={"former-admin@example.com"})
+    demoted_admin = AuthenticatedUser(
+        user_id="demoted-admin-1",
         email="former-admin@example.com",
         full_name="Former Admin",
         metadata={},
     )
-    # Pre-populate the profile with a stale admin role (as if env was removed).
-    profile = store.ensure_profile(stale_admin)
-    profile["role"] = "admin"
-    store.profiles[stale_admin.user_id] = profile
+    profile = store.ensure_profile(demoted_admin)
+    assert profile["role"] == "admin"
+    profile["role"] = "athlete"
+    store.profiles[demoted_admin.user_id] = profile
 
     client = TestClient(
         create_app(
             store=store,
-            auth_service=FakeAuthService({"stale-admin-token": stale_admin}),
+            auth_service=FakeAuthService({"demoted-admin-token": demoted_admin}),
             planner=lambda payload, progress_callback=None: {"plan_text": ""},
             stage2_automator=FakeStage2Automator(result=finalized_result()),
         )
@@ -69,13 +68,17 @@ def test_admin_routes_use_env_allowlist_not_stored_role():
 
     response = client.get(
         "/api/admin/athletes",
-        headers={"Authorization": "Bearer stale-admin-token"},
+        headers={"Authorization": "Bearer demoted-admin-token"},
     )
     assert response.status_code == 403
     assert response.json()["detail"] == "admin access required"
 
+    me_response = client.get("/api/me", headers={"Authorization": "Bearer demoted-admin-token"})
+    assert me_response.status_code == 200
+    assert me_response.json()["profile"]["role"] == "athlete"
 
-def test_ensure_profile_demotes_stale_admin_role_when_email_removed_from_allowlist():
+
+def test_ensure_profile_preserves_demoted_existing_role_even_when_email_is_allowlisted():
     store = FakeStore(admin_emails={"admin@example.com"})
     user = AuthenticatedUser(
         user_id="admin-demote-1",
@@ -86,14 +89,14 @@ def test_ensure_profile_demotes_stale_admin_role_when_email_removed_from_allowli
     profile = store.ensure_profile(user)
     assert profile["role"] == "admin"
 
-    store.admin_emails = set()
+    profile["role"] = "athlete"
+    store.profiles[user.user_id] = profile
     refreshed = store.ensure_profile(user)
     assert refreshed["role"] == "athlete"
 
 
-def test_admin_routes_allow_email_in_env_allowlist_even_if_stored_role_is_athlete():
-    """A profile with role='athlete' in storage must be allowed if the email
-    is in the env allowlist."""
+def test_admin_routes_deny_email_in_env_allowlist_when_stored_role_is_athlete():
+    """Env allowlist is only bootstrap; stored role is runtime authority."""
     store = FakeStore(admin_emails={"newadmin@example.com"})
     new_admin = AuthenticatedUser(
         user_id="new-admin-1",
@@ -119,7 +122,8 @@ def test_admin_routes_allow_email_in_env_allowlist_even_if_stored_role_is_athlet
         "/api/admin/athletes",
         headers={"Authorization": "Bearer new-admin-token"},
     )
-    assert response.status_code == 200
+    assert response.status_code == 403
+    assert response.json()["detail"] == "admin access required"
 
 
 def test_normal_athlete_denied_from_admin_routes():
