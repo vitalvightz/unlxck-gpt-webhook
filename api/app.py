@@ -2060,7 +2060,7 @@ def create_app(
         stale_after_seconds = _generation_job_stale_after_seconds()
         diagnostics = [
             _admin_generation_job_diagnostic(job, stale_after_seconds=stale_after_seconds)
-            for job in store.list_admin_triage_generation_jobs(limit=limit)
+            for job in store.list_admin_triage_generation_jobs(limit=limit * 4)
         ]
         return [job for job in diagnostics if job.requires_admin_resume][:limit]
 
