@@ -77,6 +77,7 @@ from .stage2_automation import (
     build_default_stage2_automator,
 )
 from .store import AppStore, SupabaseAppStore, is_startup_stale_generation_job
+from .sentry_config import init_sentry
 
 Planner = Callable[[dict[str, Any]], dict[str, Any]]
 security = HTTPBearer(auto_error=False)
@@ -84,6 +85,8 @@ logger = logging.getLogger(__name__)
 LOCAL_HOST_NAMES = ("localhost", "127.0.0.1", "::1")
 _CLIENT_REQUEST_ID_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$")
 _PROTECTED_TRIAGE_STATUSES = frozenset({"triage_blocked", "needs_review", "restricted_rehab_only", "medical_hold"})
+
+init_sentry()
 
 
 def _utc_now_iso() -> str:
@@ -1476,6 +1479,11 @@ def create_app(
     @app.get("/health")
     def health(request: Request) -> dict[str, str | bool]:
         return _health_payload(mode_label=str(request.app.state.mode_label))
+
+    if os.getenv("ENABLE_SENTRY_DEBUG_ROUTE", "false").strip().lower() == "true":
+        @app.get("/sentry-debug", include_in_schema=False)
+        def sentry_debug() -> None:
+            raise Exception("Sentry backend test error")
 
     @app.get("/api/me", response_model=MeResponse)
     def get_me(
