@@ -312,7 +312,7 @@ export default function AdminPage() {
                       type="button"
                       className="cta"
                       onClick={() => void handleApproveAndResumeJob(job.job_id)}
-                      disabled={resumingJobId === job.job_id}
+                      disabled={resumingJobId !== null}
                     >
                       {resumingJobId === job.job_id ? "Approving..." : "Approve & Resume"}
                     </button>
