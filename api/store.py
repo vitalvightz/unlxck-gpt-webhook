@@ -121,6 +121,10 @@ GENERATION_JOB_SCHEMA_DETAIL = "generation job store is not ready; apply the lat
 _is_production_environment = is_production_environment
 
 
+def _claim_legacy_blank_status_jobs_enabled() -> bool:
+    return os.getenv("UNLXCK_CLAIM_LEGACY_BLANK_STATUS_JOBS", "").strip() == "1"
+
+
 class AppStore(Protocol):
     def validate_runtime_schema(self) -> None: ...
 
@@ -2061,24 +2065,28 @@ class SupabaseAppStore:
                 .limit(limit)
                 .execute(),
             )
-            null_status_response = self._run_with_transient_retry(
-                operation="list_claimable_generation_jobs:select_null_status",
-                fn=lambda: self.client.table("generation_jobs")
-                .select(GENERATION_JOB_SELECT)
-                .is_("status", "null")
-                .order("created_at", desc=False)
-                .limit(limit)
-                .execute(),
-            )
-            blank_status_response = self._run_with_transient_retry(
-                operation="list_claimable_generation_jobs:select_blank_status",
-                fn=lambda: self.client.table("generation_jobs")
-                .select(GENERATION_JOB_SELECT)
-                .eq("status", "")
-                .order("created_at", desc=False)
-                .limit(limit)
-                .execute(),
-            )
+            legacy_status_responses: list[Any] = []
+            if _claim_legacy_blank_status_jobs_enabled():
+                legacy_status_responses = [
+                    self._run_with_transient_retry(
+                        operation="list_claimable_generation_jobs:select_null_status",
+                        fn=lambda: self.client.table("generation_jobs")
+                        .select(GENERATION_JOB_SELECT)
+                        .is_("status", "null")
+                        .order("created_at", desc=False)
+                        .limit(limit)
+                        .execute(),
+                    ),
+                    self._run_with_transient_retry(
+                        operation="list_claimable_generation_jobs:select_blank_status",
+                        fn=lambda: self.client.table("generation_jobs")
+                        .select(GENERATION_JOB_SELECT)
+                        .eq("status", "")
+                        .order("created_at", desc=False)
+                        .limit(limit)
+                        .execute(),
+                    ),
+                ]
             stale_heartbeat_response = self._run_with_transient_retry(
                 operation="list_claimable_generation_jobs:select_running_stale_heartbeat",
                 fn=lambda: self.client.table("generation_jobs")
@@ -2103,8 +2111,10 @@ class SupabaseAppStore:
 
             merged_rows: dict[str, dict[str, Any]] = {}
 
-            # Queued jobs and legacy blank/null statuses are always claimable (oldest first).
-            for response in (queued_response, null_status_response, blank_status_response):
+            # Queued jobs are always claimable. Legacy blank/null status scans
+            # are opt-in only; the migration normalizes old rows and the hot
+            # worker loop should stay on indexed canonical statuses.
+            for response in (queued_response, *legacy_status_responses):
                 for row in response.data or []:
                     if not isinstance(row, dict):
                         continue

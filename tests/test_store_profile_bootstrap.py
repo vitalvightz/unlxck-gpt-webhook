@@ -1188,6 +1188,7 @@ def test_get_active_generation_job_for_athlete_uses_app_stale_timeout_by_default
 
 def test_list_claimable_generation_jobs_uses_app_stale_timeout_by_default(monkeypatch):
     monkeypatch.setenv("APP_GENERATION_JOB_STALE_AFTER_SECONDS", "60")
+    monkeypatch.delenv("UNLXCK_CLAIM_LEGACY_BLANK_STATUS_JOBS", raising=False)
     store = _make_store()
     now = datetime.now(timezone.utc)
     running_stale = {
@@ -1200,18 +1201,12 @@ def test_list_claimable_generation_jobs_uses_app_stale_timeout_by_default(monkey
     }
     queued_response = MagicMock()
     queued_response.data = []
-    null_status_response = MagicMock()
-    null_status_response.data = []
-    blank_status_response = MagicMock()
-    blank_status_response.data = []
     stale_heartbeat_response = MagicMock()
     stale_heartbeat_response.data = [running_stale]
     stale_without_heartbeat_response = MagicMock()
     stale_without_heartbeat_response.data = []
     responses = [
         queued_response,
-        null_status_response,
-        blank_status_response,
         stale_heartbeat_response,
         stale_without_heartbeat_response,
     ]
