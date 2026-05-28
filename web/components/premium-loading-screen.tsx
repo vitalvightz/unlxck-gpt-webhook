@@ -43,6 +43,7 @@ const PHASE_ORDER: Record<GenerationUiPhase, number> = {
   reconnecting: 3,
   finalizing: 4,
   already_generated: 4,
+  review_paused: 4,
   failed: 4,
 };
 
@@ -111,6 +112,15 @@ export const PHASE_CONTENT: Record<
     statusFallback: "This intake already has a generated plan.",
     reassurance: "No new duplicate was created.",
     buildState: "Existing plan",
+  },
+  review_paused: {
+    eyebrow: "Planning paused",
+    title: "Admin review required",
+    copy: "Stage 1 triage flagged this intake for admin review before generation can continue. No plan was created; nothing was lost. The admin team can approve and resume from their console.",
+    chip: "Admin review",
+    statusFallback: "Planning paused. Admin review is required before generation can continue.",
+    reassurance: "Your intake is saved and visible to admins. You'll be notified when the plan is ready.",
+    buildState: "Paused",
   },
   failed: {
     eyebrow: "Generation stopped",
@@ -183,7 +193,7 @@ export function PremiumLoadingScreen({
 }: PremiumLoadingScreenProps) {
   const phaseContent = PHASE_CONTENT[phase];
   const activeIndex = PHASE_ORDER[phase];
-  const isTerminalNonProgress = phase === "failed" || phase === "already_generated";
+  const isTerminalNonProgress = phase === "failed" || phase === "already_generated" || phase === "review_paused";
   const showElapsed = !isTerminalNonProgress && phase !== "finalizing" && startedAtMs !== null;
   const [now, setNow] = useState(() => Date.now());
   const stageOnePreview = isTerminalNonProgress ? null : buildStageOnePreview(intake, milestones);
@@ -312,6 +322,15 @@ export function PremiumLoadingScreen({
                 <p className="loading-failure-headline">What would you like to do next?</p>
                 <div className="loading-failure-secondary-actions">
                   {onOpenPlanHistory ? <button type="button" className="cta ghost" onClick={onOpenPlanHistory}>Open plan history</button> : null}
+                  {onRefineIntake ? <button type="button" className="cta ghost" onClick={onRefineIntake}>Refine intake</button> : null}
+                </div>
+              </div>
+            ) : null}
+            {phase === "review_paused" ? (
+              <div className="loading-failure-actions">
+                <p className="loading-failure-headline">No plan was created. Nothing was lost.</p>
+                <div className="loading-failure-secondary-actions">
+                  {onReturnToWorkspace ? <button type="button" className="cta" onClick={onReturnToWorkspace}>Return to workspace</button> : null}
                   {onRefineIntake ? <button type="button" className="cta ghost" onClick={onRefineIntake}>Refine intake</button> : null}
                 </div>
               </div>

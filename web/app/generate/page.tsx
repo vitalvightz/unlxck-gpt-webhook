@@ -63,11 +63,17 @@ export default function GeneratePage() {
     onComplete: ({ planId, status, recovered, requiresAdminResume, stage2Status }) => {
       const isProtectedTriageOutcome =
         requiresAdminResume === true || (stage2Status || "").toLowerCase() === "triage_blocked";
-      if (payload && typeof window !== "undefined" && !isProtectedTriageOutcome) {
+      if (payload && typeof window !== "undefined" && !isProtectedTriageOutcome && planId) {
         window.localStorage.setItem(
           COMPLETED_GENERATION_KEY,
           JSON.stringify({ payloadHash: hashPayload(payload), planId, completedAt: new Date().toISOString() }),
         );
+      }
+      // Protected triage outcomes have no plan row. Stay on the generate
+      // screen — the controller's `review_paused` phase renders the paused
+      // card with admin-review copy and a stopped elapsed timer.
+      if (!planId) {
+        return;
       }
       const search = new URLSearchParams();
       if (status === "review_required") {

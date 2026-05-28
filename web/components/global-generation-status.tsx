@@ -65,6 +65,12 @@ export function shouldRenderPassiveLatestJobRibbon(
     return true;
   }
 
+  // Triage outcomes have no plan_id and the backend reports them as
+  // review_required. Surface them via the protected-triage ribbon copy.
+  if (latestJob.status === "review_required" && isProtectedTriageLatestJob(latestJob)) {
+    return true;
+  }
+
   if (latestJob.status === "completed" && !latestJob.plan_id) {
     return true;
   }
@@ -389,6 +395,46 @@ export function GlobalGenerationStatus() {
             <div className="global-generation-status-message">Your plan is ready for review</div>
             <span className="global-generation-status-cta-label">Open plan</span>
           </Link>
+
+          <button
+            type="button"
+            className="global-generation-status-dismiss"
+            aria-label="Hide generation ribbon"
+            onClick={dismissCurrentBanner}
+          >
+            ×
+          </button>
+        </div>
+      );
+    }
+
+    // Protected triage outcomes that live only on the job (no plan_id) —
+    // backend reports these as review_required + requires_admin_resume.
+    // The user cannot open a plan; the ribbon links to the admin profile
+    // for admins, or stays as a static notice otherwise.
+    if (
+      latestJob.status === "review_required"
+      && !latestJob.plan_id
+      && isProtectedTriageLatestJob(latestJob)
+    ) {
+      const adminTarget = latestJob.athlete_id ? `/admin/athletes/${latestJob.athlete_id}` : null;
+      const content = (
+        <>
+          <div className="global-generation-status-message">Plan is held for admin review.</div>
+          <span className="global-generation-status-cta-label">
+            {adminTarget ? "Open admin review" : "Awaiting admin"}
+          </span>
+        </>
+      );
+      return (
+        <div className="global-generation-status global-generation-status-completed">
+          {adminTarget ? (
+            <Link href={adminTarget} className="global-generation-status-main">
+              {content}
+            </Link>
+          ) : (
+            <div className="global-generation-status-main">{content}</div>
+          )}
 
           <button
             type="button"

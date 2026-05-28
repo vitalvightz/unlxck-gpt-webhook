@@ -838,6 +838,162 @@ def test_approve_and_resume_generation_creates_job_with_intake_and_plan_linked()
     assert job["intake_id"] == str(intake["id"])
     assert job["plan_id"] == str(blocked_plan["id"])
 
+
+def _seed_triage_blocked_job(store, *, athlete_id: str, intake_id: str, request) -> dict:
+    """Seed a generation_jobs row that represents a new-style triage outcome
+    (no plan row, final_result carries the triage state on the job)."""
+    job = store.create_or_get_generation_job(
+        athlete_id=athlete_id,
+        client_request_id=f"triage_seed_{intake_id}",
+        source="self_serve",
+        request_payload=request.model_dump(mode="json"),
+        intake_id=intake_id,
+    )
+    store.update_generation_job(
+        job["id"],
+        status="running",
+        started_at="2026-01-01T00:00:00+00:00",
+        heartbeat_at="2026-01-01T00:00:00+00:00",
+    )
+    store.update_generation_job(
+        job["id"],
+        status="review_required",
+        final_result={
+            "status": "triage_blocked",
+            "stage2_status": "triage_blocked",
+            "why_log": {"injury_triage": {"mode": "needs_review", "should_block_stage2": True}},
+        },
+        heartbeat_at="2026-01-01T00:00:00+00:00",
+        completed_at="2026-01-01T00:00:00+00:00",
+    )
+    return store.get_generation_job(job["id"])
+
+
+def test_approve_and_resume_generation_from_job_creates_resume_job_without_plan_id():
+    """The new endpoint takes a generation_job_id (not a plan_id). It must
+    create an admin_triage_resume job linked to the intake but NOT to any
+    plan row — the resume produces a real plan only when Stage 2 succeeds."""
+    athlete = AuthenticatedUser(user_id="athlete-1", email="ari@example.com", full_name="Ari Mensah", metadata={})
+    admin = AuthenticatedUser(user_id="admin-1", email="ops@unlxck.test", full_name="Ops Admin", metadata={})
+    store = FakeStore()
+    store.ensure_profile(athlete)
+    request = _build_request()
+    intake = store.create_intake(athlete.user_id, request)
+    triage_job = _seed_triage_blocked_job(
+        store, athlete_id=athlete.user_id, intake_id=str(intake["id"]), request=request
+    )
+
+    client = TestClient(
+        create_app(
+            store=store,
+            auth_service=FakeAuthService({"athlete-token": athlete, "admin-token": admin}),
+            planner=lambda payload: stage1_result(),
+            stage2_automator=FakeStage2Automator(result=finalized_result()),
+            enable_in_process_generation=False,
+        )
+    )
+
+    response = client.post(
+        f"/api/admin/generation-jobs/{triage_job['id']}/approve-and-resume-generation",
+        headers={"Authorization": "Bearer admin-token"},
+        json={"reason": "intake reviewed"},
+    )
+    assert response.status_code == 202
+    body = response.json()
+    resume_job = store.get_generation_job(body["job_id"])
+    assert resume_job is not None
+    assert resume_job["id"] != triage_job["id"]
+    assert resume_job["source"] == "admin_triage_resume"
+    assert resume_job["intake_id"] == str(intake["id"])
+    # New endpoint must NOT pre-link a plan_id — the resume runtime creates
+    # a real plan only after Stage 2 succeeds.
+    assert resume_job.get("plan_id") in (None, "")
+    # No plan row exists yet (no Stage 2 has run).
+    assert store.plans == {}
+    # Source job got the approval marker so a second approval is rejected.
+    source_after = store.get_generation_job(triage_job["id"])
+    final_after = source_after.get("final_result") or {}
+    assert final_after.get("stage2_status") == "triage_resume_approved"
+    assert isinstance(final_after.get("why_log", {}).get("triage_resume_approval"), dict)
+
+
+def test_approve_and_resume_generation_from_job_rejects_non_triage_job():
+    """The new endpoint refuses jobs that are not in a protected triage state."""
+    athlete = AuthenticatedUser(user_id="athlete-1", email="ari@example.com", full_name="Ari Mensah", metadata={})
+    admin = AuthenticatedUser(user_id="admin-1", email="ops@unlxck.test", full_name="Ops Admin", metadata={})
+    store = FakeStore()
+    store.ensure_profile(athlete)
+    request = _build_request()
+    intake = store.create_intake(athlete.user_id, request)
+    plain_job = store.create_or_get_generation_job(
+        athlete_id=athlete.user_id,
+        client_request_id="not-triage",
+        source="self_serve",
+        request_payload=request.model_dump(mode="json"),
+        intake_id=str(intake["id"]),
+    )
+    store.update_generation_job(
+        plain_job["id"],
+        status="running",
+        started_at="2026-01-01T00:00:00+00:00",
+        heartbeat_at="2026-01-01T00:00:00+00:00",
+    )
+    store.update_generation_job(plain_job["id"], status="completed", final_result={"status": "ready"})
+
+    client = TestClient(
+        create_app(
+            store=store,
+            auth_service=FakeAuthService({"athlete-token": athlete, "admin-token": admin}),
+            planner=lambda payload: stage1_result(),
+            stage2_automator=FakeStage2Automator(result=finalized_result()),
+            enable_in_process_generation=False,
+        )
+    )
+
+    response = client.post(
+        f"/api/admin/generation-jobs/{plain_job['id']}/approve-and-resume-generation",
+        headers={"Authorization": "Bearer admin-token"},
+        json={"reason": "n/a"},
+    )
+    assert response.status_code == 409
+    assert "protected triage" in response.json().get("detail", "")
+
+
+def test_approve_and_resume_generation_from_job_rejects_already_approved():
+    """A second approval on the same triage job is rejected with a clear conflict."""
+    athlete = AuthenticatedUser(user_id="athlete-1", email="ari@example.com", full_name="Ari Mensah", metadata={})
+    admin = AuthenticatedUser(user_id="admin-1", email="ops@unlxck.test", full_name="Ops Admin", metadata={})
+    store = FakeStore()
+    store.ensure_profile(athlete)
+    request = _build_request()
+    intake = store.create_intake(athlete.user_id, request)
+    triage_job = _seed_triage_blocked_job(
+        store, athlete_id=athlete.user_id, intake_id=str(intake["id"]), request=request
+    )
+    # Mark as already approved.
+    final_result = triage_job["final_result"]
+    final_result["stage2_status"] = "triage_resume_approved"
+    store.update_generation_job(triage_job["id"], final_result=final_result)
+
+    client = TestClient(
+        create_app(
+            store=store,
+            auth_service=FakeAuthService({"athlete-token": athlete, "admin-token": admin}),
+            planner=lambda payload: stage1_result(),
+            stage2_automator=FakeStage2Automator(result=finalized_result()),
+            enable_in_process_generation=False,
+        )
+    )
+
+    response = client.post(
+        f"/api/admin/generation-jobs/{triage_job['id']}/approve-and-resume-generation",
+        headers={"Authorization": "Bearer admin-token"},
+        json={"reason": "duplicate approval"},
+    )
+    assert response.status_code == 409
+    assert "already" in response.json().get("detail", "")
+
+
 def test_approve_and_resume_generation_requeues_stale_running_resume_job_without_duplicate():
     athlete = AuthenticatedUser(
         user_id="athlete-1",

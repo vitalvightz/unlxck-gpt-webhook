@@ -111,7 +111,7 @@ def test_status_classification_does_not_mix_job_and_plan_lifecycles() -> None:
         ("generated", "completed"),
         ("ready", "completed"),
         ("publishable_with_flags", "completed"),
-        ("triage_blocked", "completed"),
+        ("triage_blocked", "review_required"),
         ("archived", "completed"),
         ("review_required", "review_required"),
         ("held_for_review", "review_required"),

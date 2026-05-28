@@ -132,3 +132,29 @@ test("triage-blocked completed job with plan_id still surfaces a passive ribbon 
     true,
   );
 });
+
+test("triage-blocked review_required job without plan id surfaces a passive ribbon for admin review", () => {
+  // New-style triage outcomes: no plan row, status is review_required,
+  // requires_admin_resume signals the protected-triage hold.
+  assert.equal(
+    shouldRenderPassiveLatestJobRibbon({
+      status: "review_required",
+      plan_id: null,
+      requires_admin_resume: true,
+      stage2_status: "triage_blocked",
+    }),
+    true,
+  );
+});
+
+test("review_required job without plan id and no admin-resume signal is not retained as ribbon", () => {
+  // A review_required job that lost its plan id but isn't a triage hold
+  // has nothing actionable for the user, so the ribbon must stay hidden.
+  assert.equal(
+    shouldRenderPassiveLatestJobRibbon({
+      status: "review_required",
+      plan_id: null,
+    }),
+    false,
+  );
+});

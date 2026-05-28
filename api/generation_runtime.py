@@ -284,8 +284,31 @@ def _stage1_planner_timeout_seconds() -> float | None:
     return parsed
 
 
+_TRIAGE_FINAL_RESULT_STATUSES = frozenset(
+    {"triage_blocked", "medical_hold", "restricted_rehab_only", "needs_review"}
+)
+
+
+def _is_triage_skipped_final_result(final_result: dict[str, Any] | None) -> bool:
+    """A Stage-1-only outcome that should not be persisted as a plan row.
+
+    Triage holds are not plans: they are review states that live on the
+    generation job (`generation_jobs.final_result`). The athlete-facing
+    `plans` table only stores real plans, so no `triage_blocked` row is
+    created or updated for these outcomes.
+    """
+    if not isinstance(final_result, dict):
+        return False
+    return str(final_result.get("status") or "").strip().lower() in _TRIAGE_FINAL_RESULT_STATUSES
+
+
 def _compact_generation_job_final_result(final_result: dict[str, Any]) -> dict[str, Any]:
-    """Keep generation_jobs.final_result lean; canonical full text lives on plans."""
+    """Keep generation_jobs.final_result lean; canonical full text lives on plans.
+
+    Triage-blocked outcomes have no plan row, so the job's final_result is
+    the canonical record. Preserve the triage context (why_log, injury_triage)
+    that the admin resume endpoint needs to gate approval.
+    """
     compact: dict[str, Any] = {}
     for key in (
         "status",
@@ -297,6 +320,10 @@ def _compact_generation_job_final_result(final_result: dict[str, Any]) -> dict[s
     ):
         if key in final_result:
             compact[key] = final_result.get(key)
+    if _is_triage_skipped_final_result(final_result):
+        for key in ("why_log", "injury_triage", "full_name"):
+            if key in final_result:
+                compact[key] = final_result.get(key)
     return compact
 
 
@@ -601,7 +628,12 @@ async def run_generation_job(
     async def _ensure_admin_resume_plan_exists(linked_plan_id: str | None) -> None:
         if job_source != "admin_triage_resume":
             return
+        # resume-from-job (no legacy plan_id) is valid: a real plan row
+        # will be created after Stage 2 succeeds. Only validate when the
+        # resume was started against a legacy plan row.
         if not linked_plan_id:
+            if resume_from_job_only:
+                return
             raise TriageResumeMissingPlanError(
                 "admin triage resume job lost its linked plan_id; refusing to continue"
             )
@@ -655,43 +687,64 @@ async def run_generation_job(
         intake_id = str(job.get("intake_id") or "").strip() or None
         admin_resume_plan_row: dict[str, Any] | None = None
 
+        # Track whether this resume was started without a legacy plan_id —
+        # in that case the resume runs against the generation job/intake
+        # directly, and a real plan is created only when Stage 2 succeeds.
+        resume_from_job_only = job_source == "admin_triage_resume" and not plan_id
+
         if job_source == "admin_triage_resume":
-            if not plan_id:
-                raise TriageResumeMissingPlanError(
-                    "admin triage resume job is missing plan_id; refusing to create a duplicate plan"
-                )
             if not intake_id:
                 raise TriageResumeMissingPlanError(
                     "admin triage resume job is missing intake_id; refusing to create a duplicate plan"
                 )
 
-            # Use a heartbeat-aware read for the linked plan so the store sees activity.
-            admin_resume_plan_row = await _to_thread_with_heartbeat(store.get_plan, plan_id)
-            if not admin_resume_plan_row:
-                raise TriageResumeMissingPlanError(
-                    "admin triage resume job linked plan was not found; refusing to create a duplicate plan"
+            if plan_id:
+                # Legacy plan-row resume: validate the linked plan exists and
+                # is owned by the same athlete/intake before continuing.
+                admin_resume_plan_row = await _to_thread_with_heartbeat(store.get_plan, plan_id)
+                if not admin_resume_plan_row:
+                    raise TriageResumeMissingPlanError(
+                        "admin triage resume job linked plan was not found; refusing to create a duplicate plan"
+                    )
+
+                linked_athlete_id = str(admin_resume_plan_row.get("athlete_id") or "").strip()
+                linked_intake_id = str(admin_resume_plan_row.get("intake_id") or "").strip()
+
+                if linked_athlete_id != athlete_id:
+                    raise TriageResumeMissingPlanError(
+                        "admin triage resume job linked plan belongs to a different athlete"
+                    )
+
+                if linked_intake_id != intake_id:
+                    raise TriageResumeMissingPlanError(
+                        "admin triage resume job intake_id does not match linked plan intake_id"
+                    )
+
+                _emit_milestone(
+                    "admin_resume_linkage_validated",
+                    "Admin resume linkage validated",
+                    "Linked plan and intake were verified before parsing the request payload.",
+                    plan_id=plan_id,
+                    intake_id=intake_id,
                 )
-
-            linked_athlete_id = str(admin_resume_plan_row.get("athlete_id") or "").strip()
-            linked_intake_id = str(admin_resume_plan_row.get("intake_id") or "").strip()
-
-            if linked_athlete_id != athlete_id:
-                raise TriageResumeMissingPlanError(
-                    "admin triage resume job linked plan belongs to a different athlete"
+            else:
+                # Resume-from-job (no legacy plan row): validate intake exists.
+                linked_intake = await _to_thread_with_heartbeat(store.get_intake, intake_id)
+                if not linked_intake:
+                    raise TriageResumeMissingPlanError(
+                        "admin triage resume job intake_id was not found"
+                    )
+                linked_athlete_id = str(linked_intake.get("athlete_id") or "").strip()
+                if linked_athlete_id != athlete_id:
+                    raise TriageResumeMissingPlanError(
+                        "admin triage resume job intake belongs to a different athlete"
+                    )
+                _emit_milestone(
+                    "admin_resume_linkage_validated",
+                    "Admin resume linkage validated",
+                    "Intake was verified before parsing the request payload.",
+                    intake_id=intake_id,
                 )
-
-            if linked_intake_id != intake_id:
-                raise TriageResumeMissingPlanError(
-                    "admin triage resume job intake_id does not match linked plan intake_id"
-                )
-
-            _emit_milestone(
-                "admin_resume_linkage_validated",
-                "Admin resume linkage validated",
-                "Linked plan and intake were verified before parsing the request payload.",
-                plan_id=plan_id,
-                intake_id=intake_id,
-            )
 
         if job_source == "admin_latest_intake":
             if not intake_id:
@@ -924,13 +977,125 @@ async def run_generation_job(
                         "Stage 2 needs review",
                         "First-pass finalizer output did not pass validation. No automatic retry was sent.",
                     )
+        # Triage-blocked Stage 1 outcomes are protected review states, not
+        # plans. They live exclusively on the generation job — no plan row
+        # is created or updated. The admin "Approve & Resume" flow drives
+        # the next generation from the job; if Stage 2 then succeeds, the
+        # resume runtime branch persists a real plan row at that point.
+        triage_skipped = _is_triage_skipped_final_result(final_result)
+        plan_id = plan_id or (str(job.get("plan_id") or "") or None)
+        plan_row: dict[str, Any] | None = None
+
+        if triage_skipped:
+            # admin_triage_resume keeps its linked legacy plan row visible
+            # for backwards compat (it stays at its prior status), but we
+            # do NOT re-write the plan with another triage_blocked result.
+            if job_source == "admin_triage_resume" and plan_id:
+                plan_row = admin_resume_plan_row or await _to_thread_with_heartbeat(
+                    store.get_plan, plan_id
+                )
+            _emit_milestone(
+                "triage_review_required",
+                "Planning paused for admin review",
+                "Stage 1 triage held the request; no plan row was created. "
+                "Admin must approve & resume before generation continues.",
+            )
+            compact_final_result = _compact_generation_job_final_result(final_result)
+            try:
+                job = await asyncio.wait_for(
+                    asyncio.to_thread(
+                        store.update_generation_job,
+                        job_id,
+                        final_result=compact_final_result,
+                        heartbeat_at=utc_now_iso(),
+                    ),
+                    timeout=_FINAL_RESULT_PERSIST_TIMEOUT_SECONDS,
+                )
+            except asyncio.TimeoutError:
+                logger.exception(
+                    "[jobs] generation:triage_final_result_persist_timeout athlete_id=%s job_id=%s",
+                    athlete_id,
+                    job_id,
+                )
+                now_iso = utc_now_iso()
+                with suppress(Exception):
+                    await asyncio.to_thread(
+                        store.update_generation_job,
+                        job_id,
+                        status="failed",
+                        error=_FINAL_RESULT_PERSIST_TIMEOUT_ERROR,
+                        completed_at=now_iso,
+                        heartbeat_at=now_iso,
+                    )
+                return
+            except Exception:
+                logger.exception(
+                    "[jobs] generation:triage_final_result_persist_failed athlete_id=%s job_id=%s",
+                    athlete_id,
+                    job_id,
+                )
+                now_iso = utc_now_iso()
+                with suppress(Exception):
+                    await asyncio.to_thread(
+                        store.update_generation_job,
+                        job_id,
+                        status="failed",
+                        error="Stage 1 triage result persistence failed.",
+                        completed_at=now_iso,
+                        heartbeat_at=now_iso,
+                    )
+                return
+            await _to_thread_with_heartbeat(
+                store.update_generation_job,
+                job_id,
+                status="review_required",
+                error=None,
+                plan_id=plan_id,
+                completed_at=utc_now_iso(),
+                heartbeat_at=utc_now_iso(),
+            )
+            _emit_milestone(
+                "generation_job_terminal_status_persisted",
+                "Generation job terminal status persisted",
+                "Terminal generation job lifecycle status was saved.",
+                final_status="review_required",
+                plan_status=str((final_result or {}).get("status") or ""),
+                plan_id=plan_id,
+            )
+            try:
+                await asyncio.wait_for(
+                    _to_thread_with_heartbeat(store.clear_onboarding_draft, athlete_id),
+                    timeout=_POST_PERSIST_CLEANUP_TIMEOUT_SECONDS,
+                )
+            except asyncio.TimeoutError:
+                logger.warning(
+                    "[jobs] generation:clear_onboarding_draft_timeout athlete_id=%s job_id=%s timeout_seconds=%s",
+                    athlete_id,
+                    job_id,
+                    _POST_PERSIST_CLEANUP_TIMEOUT_SECONDS,
+                )
+            except Exception:
+                logger.exception(
+                    "[jobs] generation:clear_onboarding_draft_failed athlete_id=%s job_id=%s",
+                    athlete_id,
+                    job_id,
+                )
+            logger.info(
+                "[jobs] generation:complete_triage_review athlete_id=%s job_id=%s plan_id=%s "
+                "final_result_status=%s duration_ms=%s",
+                athlete_id,
+                job_id,
+                plan_id,
+                (final_result or {}).get("status"),
+                round((time.perf_counter() - t_start) * 1000, 2),
+            )
+            return
+
         _emit_milestone(
             "plan_persisting",
             "Saving plan row",
             "Creating or updating the saved plan from the Stage 2 result.",
         )
-        plan_id = plan_id or (str(job.get("plan_id") or "") or None)
-        plan_row: dict[str, Any] | None = None
         if job_source == "admin_triage_resume":
             plan_row = admin_resume_plan_row
         else:
@@ -962,7 +1127,7 @@ async def run_generation_job(
                 final_result,
             )
         else:
-            if job_source == "admin_triage_resume":
+            if job_source == "admin_triage_resume" and not resume_from_job_only:
                 logger.error(
                     "[jobs] generation:resume_missing_plan job_id=%s athlete_id=%s intake_id=%s job_plan_id=%s",
                     job_id,

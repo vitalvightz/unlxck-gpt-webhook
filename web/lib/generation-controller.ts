@@ -13,6 +13,7 @@ export type GenerationUiPhase =
   | "reconnecting"
   | "finalizing"
   | "already_generated"
+  | "review_paused"
   | "failed";
 
 type PendingGenerationState = {
@@ -41,15 +42,25 @@ export function resolveTerminalJobPlanId(job: GenerationJobResponse): string | n
 
 export type CompletedTerminalJobOutcome =
   | { type: "open"; planId: string }
+  | { type: "review_paused" }
   | { type: "already_generated" };
 
 export function resolveCompletedTerminalJobOutcome(job: GenerationJobResponse): CompletedTerminalJobOutcome {
   const planId = resolveTerminalJobPlanId(job);
-  return planId && planId.trim() ? { type: "open", planId: planId.trim() } : { type: "already_generated" };
+  if (planId && planId.trim()) {
+    return { type: "open", planId: planId.trim() };
+  }
+  // Triage outcomes live on the job (no plan_id). The UI must stop polling
+  // and surface admin-review copy instead of "already generated".
+  if (job.requires_admin_resume === true) {
+    return { type: "review_paused" };
+  }
+  return { type: "already_generated" };
 }
 
 type GenerationCompletion = {
-  planId: string;
+  // Null when the outcome is a protected triage hold — no plan row exists.
+  planId: string | null;
   status: Extract<GenerationJobStatus, "completed" | "review_required">;
   recovered: boolean;
   requiresAdminResume?: boolean;
@@ -310,6 +321,26 @@ export function useGenerationController({
             setPhase("already_generated");
             setStatusMessage("This intake already has a generated plan.");
             setIsGenerating(false);
+            return;
+          }
+          if (outcome.type === "review_paused") {
+            // Triage-blocked outcome: no plan row. Stop polling, halt the
+            // elapsed timer, and surface admin-review copy. onComplete is
+            // invoked without a planId so the generate page won't redirect
+            // to /plans/{id}.
+            clearAllPendingGenerations();
+            setPhase("review_paused");
+            setStatusMessage(
+              "Planning paused. Admin review is required before generation can continue.",
+            );
+            setIsGenerating(false);
+            onComplete({
+              planId: null,
+              status: normalizedStatus,
+              recovered,
+              requiresAdminResume: true,
+              stage2Status: currentJob.stage2_status ?? null,
+            });
             return;
           }
           clearAllPendingGenerations();
