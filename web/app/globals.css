@@ -6205,6 +6205,21 @@ button.mobile-step-rail-item {
   font-weight: 600;
 }
 
+.loading-failure-secondary-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+@media (max-width: 540px) {
+  .loading-failure-secondary-actions {
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+  }
+}
+
 .loading-steps {
   list-style: none;
   margin: 0;
@@ -6237,10 +6252,11 @@ button.mobile-step-rail-item {
   left: var(--sidebar-width);
   right: 0;
   z-index: 100;
-  display: grid;
-  gap: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
   min-height: 56px;
-  padding: 12px 20px;
+  padding: 12px 16px 12px 20px;
   background: linear-gradient(180deg, rgba(17, 19, 23, 0.98), rgba(10, 11, 14, 0.98));
   border-top: 1px solid rgba(181, 18, 43, 0.3);
   text-decoration: none;
@@ -6257,6 +6273,8 @@ button.mobile-step-rail-item {
   display: grid;
   gap: 0;
   cursor: pointer;
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 .global-generation-status-failed {
@@ -6271,18 +6289,32 @@ button.mobile-step-rail-item {
 }
 
 .global-generation-status-dismiss {
-  position: absolute;
-  top: 8px;
-  right: 10px;
-  width: 36px;
-  height: 36px;
-  border: 0;
+  flex: 0 0 auto;
+  align-self: center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
   border-radius: 10px;
   background: rgba(255, 255, 255, 0.03);
   color: var(--text-muted);
   font-size: 20px;
   line-height: 1;
   cursor: pointer;
+  transition: background 160ms ease, color 160ms ease, border-color 160ms ease;
+}
+
+.global-generation-status-dismiss:hover {
+  background: rgba(255, 255, 255, 0.07);
+  border-color: rgba(255, 255, 255, 0.12);
+  color: var(--text-primary);
+}
+
+.global-generation-status-dismiss:focus-visible {
+  outline: 2px solid rgba(181, 18, 43, 0.6);
+  outline-offset: 2px;
 }
 
 .global-generation-status-reopen {
@@ -6586,11 +6618,18 @@ html[data-theme="light"] .global-generation-status-dismiss {
   color: rgba(65, 47, 41, 0.86);
 }
 
+html[data-theme="light"] .global-generation-status-dismiss:hover {
+  background: rgba(98, 77, 69, 0.14);
+  border-color: rgba(98, 77, 69, 0.2);
+  color: rgba(65, 47, 41, 1);
+}
+
 /* Mobile adjustments */
 @media (max-width: 900px) {
   .global-generation-status {
     left: 0;
-    padding: 10px 14px;
+    gap: 8px;
+    padding: 10px 10px 10px 14px;
     padding-bottom: calc(10px + var(--safe-area-bottom));
   }
 
@@ -6617,8 +6656,6 @@ html[data-theme="light"] .global-generation-status-dismiss {
   }
 
   .global-generation-status-dismiss {
-    top: 6px;
-    right: 6px;
     width: 40px;
     height: 40px;
   }
