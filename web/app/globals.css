@@ -1088,6 +1088,69 @@ select:focus-visible {
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
 }
 
+.admin-dashboard-panel {
+  align-content: start;
+}
+
+.admin-dashboard-heading {
+  align-items: stretch;
+}
+
+.admin-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(130px, 1fr));
+  gap: 12px;
+  flex: 1 1 520px;
+  max-width: 680px;
+}
+
+.admin-toolbar {
+  display: flex;
+  gap: 14px;
+  align-items: end;
+  flex-wrap: wrap;
+}
+
+.admin-search-field {
+  flex: 1 1 320px;
+}
+
+.admin-refresh-button {
+  min-width: 120px;
+}
+
+.admin-triage-panel {
+  border-color: rgba(181, 18, 43, 0.24);
+}
+
+.admin-queue-grid {
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+}
+
+.admin-triage-card {
+  padding: 14px;
+  border-radius: var(--radius-support);
+  border: 1px solid rgba(181, 18, 43, 0.18);
+  background: linear-gradient(180deg, rgba(32, 22, 26, 0.78), rgba(18, 20, 24, 0.96));
+}
+
+.admin-job-meta,
+.admin-job-summary {
+  display: grid;
+  gap: 6px;
+}
+
+.admin-job-meta {
+  padding: 10px 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  color: var(--text-muted);
+  font-family: var(--font-mono), monospace;
+  font-size: 11px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
 .review-grid,
 .admin-output-grid {
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
@@ -5002,6 +5065,22 @@ button.mobile-step-rail-item {
   .metric-card,
   .plan-meta-item {
     padding: 12px 14px;
+  }
+
+  .admin-summary-grid,
+  .admin-toolbar,
+  .admin-refresh-button {
+    width: 100%;
+    max-width: none;
+  }
+
+  .admin-summary-grid,
+  .admin-queue-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-toolbar {
+    align-items: stretch;
   }
 
   .app-sidebar .sidebar-user-card {
