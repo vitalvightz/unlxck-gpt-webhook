@@ -120,6 +120,7 @@ _GUIDED_DERIVED_TYPE_SOURCES = {
     "guided_tendon_ligament",
     "guided_subtype",
     "guided_type",
+    "fallback",
 }
 
 _TRAUMA_CONTEXT_PATTERNS = (
