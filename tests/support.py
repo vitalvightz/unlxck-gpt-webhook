@@ -1080,6 +1080,32 @@ def _start_generation(client: TestClient, request: PlanRequest | None = None) ->
     return job_body, job_response.json()
 
 
+DEFAULT_ATHLETE_USER = AuthenticatedUser(
+    user_id="athlete-1",
+    email="ari@example.com",
+    full_name="Ari Mensah",
+    metadata={},
+)
+DEFAULT_ADMIN_USER = AuthenticatedUser(
+    user_id="admin-1",
+    email="ops@unlxck.test",
+    full_name="Ops Admin",
+    metadata={},
+)
+
+
+def seed_default_profiles(store: "FakeStore") -> None:
+    """Ensure the default athlete and admin profiles exist in ``store``.
+
+    Mirrors production where ``require_profile`` calls ``ensure_profile`` on the
+    first authenticated request. Tests that build a ``FakeStore`` directly and
+    seed intakes/plans without going through ``_build_client`` should call this
+    to satisfy the profile-row prerequisite of admin/plan endpoints.
+    """
+    store.ensure_profile(DEFAULT_ATHLETE_USER)
+    store.ensure_profile(DEFAULT_ADMIN_USER)
+
+
 def _build_client(
     automator: FakeStage2Automator | None = None,
     *,
@@ -1098,6 +1124,11 @@ def _build_client(
         metadata={},
     )
     store = FakeStore()
+    # Mirror production: every authenticated request ensures the caller's profile
+    # via require_profile -> ensure_profile. Seed both up front so tests that
+    # don't make a request first (e.g. seeding store state directly) still see
+    # the profiles their endpoints expect.
+    seed_default_profiles(store)
     stage2 = automator or FakeStage2Automator(result=finalized_result())
     client = TestClient(
         create_app(

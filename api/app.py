@@ -803,6 +803,14 @@ def _default_planner(
     return runtime_default_planner(payload, progress_callback=progress_callback)
 
 
+def _noop_planner(
+    payload: dict[str, Any],
+    *,
+    progress_callback=None,
+) -> dict[str, Any]:
+    return {}
+
+
 def _health_payload(*, mode_label: str) -> dict[str, str | bool]:
     return {
         "ok": True,

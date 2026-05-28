@@ -10,7 +10,7 @@ import api.app as app_module
 import api.auth as auth_module
 import api.store as store_module
 from api.app import create_app
-from support import FakeAuthService, FakeStage2Automator, FakeStore, _build_client, _planner, _now, finalized_result
+from support import FakeAuthService, FakeStage2Automator, FakeStore, _build_client, _build_request, _planner, _now, finalized_result, seed_default_profiles
 from conftest import RENDER_BACKEND_URL
 
 
@@ -122,13 +122,14 @@ def test_job_response_falls_back_to_created_at_when_updated_at_is_missing():
 
 def test_job_response_recovers_plan_id_from_terminal_milestone_meta_when_plan_exists():
     store = FakeStore()
-    store.create_intake("athlete-1", _planner())
+    seed_default_profiles(store)
+    store.create_intake("athlete-1", _build_request())
     intake = store.get_latest_intake("athlete-1")
     assert intake is not None
     plan = store.create_plan(
         athlete_id="athlete-1",
         intake_id=str(intake["id"]),
-        request=_planner(),
+        request=_build_request(),
         result=finalized_result(),
     )
     response = app_module._job_response(
@@ -181,13 +182,14 @@ def test_job_response_ignores_terminal_milestone_plan_id_when_plan_is_missing():
 
 def test_job_response_recovers_plan_id_from_latest_visible_plan_when_terminal_plan_missing():
     store = FakeStore()
-    store.create_intake("athlete-1", _planner())
+    seed_default_profiles(store)
+    store.create_intake("athlete-1", _build_request())
     intake = store.get_latest_intake("athlete-1")
     assert intake is not None
     store.create_plan(
         athlete_id="athlete-1",
         intake_id=str(intake["id"]),
-        request=_planner(),
+        request=_build_request(),
         result=finalized_result(),
     )
     response = app_module._job_response(
