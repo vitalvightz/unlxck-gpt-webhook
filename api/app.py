@@ -2377,11 +2377,26 @@ def create_app(
             athlete_id=athlete_id,
             client_request_id=client_request_id,
         )
-        if existing_resume_job and _resume_job_resolved_successfully(existing_resume_job):
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail="this blocked job has already been approved and resumed",
+        if existing_resume_job:
+            if _resume_job_resolved_successfully(existing_resume_job):
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail="this blocked job has already been approved and resumed",
+                )
+            existing_status = str(existing_resume_job.get("status") or "").strip().lower()
+            existing_is_stale = _is_stale_job(
+                existing_resume_job,
+                stale_after_seconds=stale_after_seconds,
             )
+            # A healthy in-flight resume job already represents the approved
+            # regeneration. Returning it as-is preserves stage1_result,
+            # final_result, plan_id, and heartbeat state — the reset path
+            # below would otherwise wipe in-progress work. Mirrors the
+            # plan-based flow's running-not-stale early return at line
+            # ~2212. Stale running jobs fall through to the reset/recovery
+            # path below.
+            if existing_status == "running" and not existing_is_stale:
+                return _job_response(existing_resume_job, store=store, viewer_role=profile.role)
 
         intake_row = await asyncio.to_thread(store.get_intake, intake_id)
         if not intake_row or not isinstance(intake_row.get("intake"), dict):

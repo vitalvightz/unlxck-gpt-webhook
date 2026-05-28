@@ -1120,6 +1120,92 @@ def test_approve_and_resume_generation_from_job_rejects_resolved_resume_job_expl
     assert (resume_after.get("final_result") or {}).get("status") == "ready"
 
 
+def test_approve_and_resume_generation_from_job_returns_running_resume_without_wiping_progress():
+    """Regression: a re-approval against an existing healthy running resume
+    job must NOT reset its state. The endpoint must return the in-flight
+    job as-is so its stage1_result, final_result, plan_id, and heartbeat
+    state survive the additional approval call.
+    """
+    athlete = AuthenticatedUser(user_id="athlete-1", email="ari@example.com", full_name="Ari Mensah", metadata={})
+    admin = AuthenticatedUser(user_id="admin-1", email="ops@unlxck.test", full_name="Ops Admin", metadata={})
+    store = FakeStore()
+    store.ensure_profile(athlete)
+    request = _build_request()
+    intake = store.create_intake(athlete.user_id, request)
+    triage_job = _seed_triage_blocked_job(
+        store, athlete_id=athlete.user_id, intake_id=str(intake["id"]), request=request
+    )
+
+    # Seed an existing in-flight resume job under the deterministic
+    # client_request_id, with partial progress that must NOT be wiped.
+    existing_resume = store.create_or_get_generation_job(
+        athlete_id=athlete.user_id,
+        client_request_id=f"triage_resume_job_{triage_job['id']}",
+        source="admin_triage_resume",
+        request_payload=request.model_dump(mode="json"),
+        intake_id=str(intake["id"]),
+    )
+    fresh_heartbeat = datetime.now(timezone.utc).isoformat()
+    preserved_stage1 = {"status": "ready", "plan_text": "halfway done"}
+    store.update_generation_job(
+        existing_resume["id"],
+        status="running",
+        started_at=fresh_heartbeat,
+        heartbeat_at=fresh_heartbeat,
+        stage1_result=preserved_stage1,
+    )
+    pre_call_resume_count = len([
+        job for job in store.generation_jobs.values()
+        if str(job.get("source") or "") == "admin_triage_resume"
+    ])
+    assert pre_call_resume_count == 1
+
+    client = TestClient(
+        create_app(
+            store=store,
+            auth_service=FakeAuthService({"athlete-token": athlete, "admin-token": admin}),
+            planner=lambda payload: stage1_result(),
+            stage2_automator=FakeStage2Automator(result=finalized_result()),
+            enable_in_process_generation=False,
+        )
+    )
+
+    response = client.post(
+        f"/api/admin/generation-jobs/{triage_job['id']}/approve-and-resume-generation",
+        headers={"Authorization": "Bearer admin-token"},
+        json={"reason": "second attempt while resume is still running"},
+    )
+    assert response.status_code == 202
+    body = response.json()
+    # Same in-flight job is returned, not a new one.
+    assert body["job_id"] == existing_resume["id"]
+    assert body["status"] == "running"
+
+    # Progress must be intact — no reset of stage1_result, no wiped
+    # heartbeat, no flip back to queued.
+    after = store.get_generation_job(existing_resume["id"])
+    assert after["status"] == "running"
+    assert after.get("stage1_result") == preserved_stage1
+    assert after.get("final_result") is None
+    assert after.get("started_at") == fresh_heartbeat
+    assert after.get("heartbeat_at") == fresh_heartbeat
+    # Marker on the source job must NOT have been written either — the
+    # in-flight resume already represents the approval; writing a fresh
+    # marker would imply a fresh attempt that didn't happen.
+    source_after = store.get_generation_job(triage_job["id"])
+    final_after = source_after.get("final_result") or {}
+    assert final_after.get("stage2_status") != "triage_resume_approved"
+    why_log_after = final_after.get("why_log") or {}
+    assert "triage_resume_approval" not in why_log_after
+
+    # No duplicate resume job created.
+    post_call_resume_count = len([
+        job for job in store.generation_jobs.values()
+        if str(job.get("source") or "") == "admin_triage_resume"
+    ])
+    assert post_call_resume_count == 1
+
+
 def test_approve_and_resume_generation_writes_plan_triage_approval_before_scheduling():
     """The plan-based resume flow must persist triage-approval markers onto
     the plan BEFORE scheduling the runtime. The runtime reads existing
