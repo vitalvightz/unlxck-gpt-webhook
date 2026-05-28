@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { withSentryConfig } from "@sentry/nextjs";
 
 const LOCAL_API_BASE_URL = "http://127.0.0.1:8000";
 const MISSING_PRODUCTION_REWRITE_ERROR =
@@ -51,4 +52,10 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+export default withSentryConfig(nextConfig, {
+  org: process.env.SENTRY_ORG ?? "unlxck",
+  project: process.env.SENTRY_PROJECT ?? "javascript-nextjs",
+  authToken: process.env.SENTRY_AUTH_TOKEN,
+  widenClientFileUpload: true,
+  silent: !process.env.CI,
+});
