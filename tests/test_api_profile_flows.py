@@ -94,6 +94,21 @@ def test_admin_can_generate_new_plan_from_latest_intake():
     assert response.json()["athlete_id"] == "athlete-1"
 
 
+def test_admin_athlete_account_can_generate_from_own_latest_intake_via_admin_route():
+    client, store, _ = _build_client()
+    store.create_intake("admin-1", _build_request())
+
+    response = client.post(
+        "/api/admin/athletes/admin-1/plans/generate-from-latest-intake",
+        headers={"Authorization": "Bearer admin-token"},
+    )
+
+    assert response.status_code == 202
+    job = next(iter(store.generation_jobs.values()))
+    assert job["source"] == "admin_latest_intake"
+    assert job["athlete_id"] == "admin-1"
+
+
 def test_admin_generate_uses_selected_athlete_latest_intake_not_admin_draft():
     client, store, _ = _build_client()
     admin_request = _build_request({"athlete": {"full_name": "Admin Name", "technical_style": ["mma"]}})
