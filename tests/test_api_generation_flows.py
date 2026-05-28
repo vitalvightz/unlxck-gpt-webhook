@@ -636,6 +636,82 @@ def test_get_latest_generation_job_returns_review_required_with_plan_id():
     assert body["plan_id"] == "plan_review_1"
 
 
+def test_job_response_does_not_backfill_plan_id_when_job_has_no_intake_id():
+    """Regression: `_job_response` previously fell back to the athlete's
+    latest non-archived plan even when the job had no intake_id, which
+    silently surfaced an unrelated plan_id (e.g., the most recent plan from
+    a different intake). The fallback must require an explicit intake_id
+    match to prevent cross-job association.
+    """
+    client, store, _ = _build_client(enable_in_process_generation=False)
+    _seed_athlete_profile(store)
+    # Seed an unrelated successful plan (different intake).
+    other_intake = store.create_intake("athlete-1", _build_request())
+    other_plan = store.create_plan(
+        athlete_id="athlete-1",
+        intake_id=str(other_intake["id"]),
+        request=_build_request(),
+        result=finalized_result(),
+    )
+    # Create a terminal job with NO intake_id (legacy state).
+    job = store.create_or_get_generation_job(
+        athlete_id="athlete-1",
+        client_request_id="terminal-no-intake-id",
+        source="self_serve",
+        request_payload=_build_request().model_dump(mode="json"),
+    )
+    store.update_generation_job(job["id"], status="running", started_at=_now(), heartbeat_at=_now())
+    store.update_generation_job(job["id"], status="completed", completed_at=_now())
+
+    response = client.get(
+        f"/api/generation-jobs/{job['id']}",
+        headers={"Authorization": "Bearer athlete-token"},
+    )
+    assert response.status_code == 200
+    body = response.json()
+    # Without an intake_id link, we cannot prove `other_plan` belongs to this
+    # job, so we must not surface it as plan_id or latest_plan_id.
+    assert body["plan_id"] is None
+    assert body["latest_plan_id"] is None
+    # Sanity: the unrelated plan still exists in the store; the API just
+    # refuses to back-fill it without a verifiable link.
+    assert store.get_plan(other_plan["id"]) is not None
+
+
+def test_job_response_backfills_plan_id_when_intake_id_matches():
+    """The intake_id-gated fallback still works when the job and the latest
+    plan share an intake_id — this preserves the existing recovery path for
+    jobs whose plan_id was dropped but whose intake linkage is intact.
+    """
+    client, store, _ = _build_client(enable_in_process_generation=False)
+    _seed_athlete_profile(store)
+    intake = store.create_intake("athlete-1", _build_request())
+    plan = store.create_plan(
+        athlete_id="athlete-1",
+        intake_id=str(intake["id"]),
+        request=_build_request(),
+        result=finalized_result(),
+    )
+    job = store.create_or_get_generation_job(
+        athlete_id="athlete-1",
+        client_request_id="terminal-matching-intake",
+        source="self_serve",
+        request_payload=_build_request().model_dump(mode="json"),
+        intake_id=str(intake["id"]),
+    )
+    store.update_generation_job(job["id"], status="running", started_at=_now(), heartbeat_at=_now())
+    store.update_generation_job(job["id"], status="completed", completed_at=_now())
+
+    response = client.get(
+        f"/api/generation-jobs/{job['id']}",
+        headers={"Authorization": "Bearer athlete-token"},
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["plan_id"] == plan["id"]
+    assert body["latest_plan_id"] == plan["id"]
+
+
 def test_get_latest_generation_job_does_not_leak_other_athlete_job():
     client, store, _ = _build_client(enable_in_process_generation=False)
     store.create_or_get_generation_job(
