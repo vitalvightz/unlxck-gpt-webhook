@@ -807,23 +807,10 @@ class SupabaseAppStore:
             self._log_profile_event(operation="ensure_start", user=user)
             existing = self._get_profile_by_id(user.user_id)
             if existing:
-                expected_role = "admin" if existing.get("role") == "admin" else self._default_role_for(user)
-                if existing.get("role") != expected_role:
-                    self._run_with_transient_retry(
-                        operation=f"ensure_profile:sync_role_{expected_role}",
-                        fn=lambda: self.client.table("profiles")
-                        .update({"role": expected_role})
-                        .eq("id", user.user_id)
-                        .execute(),
-                    )
-                    existing = self._run_with_transient_retry(
-                        operation="ensure_profile:refresh_after_role_sync",
-                        fn=lambda: self._require_profile(user.user_id),
-                    )
                 self._log_profile_event(
                     operation="ensure_existing",
                     user=user,
-                    role=existing.get("role") or expected_role,
+                    role=existing.get("role"),
                 )
                 return existing
 
