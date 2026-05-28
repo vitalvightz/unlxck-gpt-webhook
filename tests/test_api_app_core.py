@@ -289,7 +289,9 @@ def test_default_planner_forwards_progress_callback_to_runtime_planner(monkeypat
 
     monkeypatch.setattr(app_module, "runtime_default_planner", fake_runtime_default_planner)
 
-    callback = lambda code, label, detail, meta: None
+    def callback(code, label, detail, meta):
+        return None
+
     result = app_module._default_planner({"athlete": "x"}, progress_callback=callback)
 
     assert result == {"ok": True}
