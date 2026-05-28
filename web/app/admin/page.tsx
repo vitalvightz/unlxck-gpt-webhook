@@ -1,32 +1,118 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 
 import { RequireAuth } from "@/components/auth-guard";
 import { useAppSession } from "@/components/auth-provider";
 import { EmptyState } from "@/components/empty-state";
-import { listAdminAthletes, listAdminPlans } from "@/lib/api";
-import type { AdminAthleteRecord, AdminPlanSummary } from "@/lib/types";
+import {
+  approveAndResumeGenerationFromJob,
+  listAdminAthletes,
+  listAdminPlans,
+  listAdminTriageGenerationJobs,
+} from "@/lib/api";
+import type {
+  AdminAthleteRecord,
+  AdminGenerationJobDiagnostic,
+  AdminPlanSummary,
+} from "@/lib/types";
 
 function getPlanDisplayName(plan: { plan_name?: string | null; full_name?: string | null; athlete_email: string }) {
   return plan.plan_name?.trim() || plan.full_name || plan.athlete_email;
+}
+
+function getErrorMessage(error: unknown, fallback: string): string {
+  return error instanceof Error ? error.message : fallback;
+}
+
+function formatDateTime(value: string | null | undefined): string {
+  if (!value) {
+    return "Not recorded";
+  }
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? "Not recorded" : date.toLocaleString();
+}
+
+function normalizeForSearch(...parts: unknown[]): string {
+  return parts
+    .flatMap((part) => (Array.isArray(part) ? part : [part]))
+    .filter((part): part is string | number => typeof part === "string" || typeof part === "number")
+    .join(" ")
+    .toLowerCase();
+}
+
+function joinOrDash(values: string[] | null | undefined): string {
+  const joined = Array.isArray(values)
+    ? values.filter((value) => value?.trim()).join(", ")
+    : "";
+  return joined || "None logged";
+}
+
+function getJobDisplayName(job: AdminGenerationJobDiagnostic): string {
+  return (
+    job.athlete_full_name?.trim() ||
+    job.request_payload_summary.athlete_name?.trim() ||
+    job.athlete_email?.trim() ||
+    "Unassigned athlete"
+  );
 }
 
 export default function AdminPage() {
   const { isReady, isMeHydrated, session, me } = useAppSession();
   const [athletes, setAthletes] = useState<AdminAthleteRecord[]>([]);
   const [plans, setPlans] = useState<AdminPlanSummary[]>([]);
+  const [triageJobs, setTriageJobs] = useState<AdminGenerationJobDiagnostic[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
+  const [triageWarning, setTriageWarning] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [resumingJobId, setResumingJobId] = useState<string | null>(null);
 
   const isAdminReady =
     isReady && isMeHydrated && Boolean(session?.access_token) && me?.profile?.role === "admin";
 
   const handleRetry = useCallback(() => {
+    setMessage(null);
     setReloadKey((value) => value + 1);
   }, []);
+
+  const searchNeedle = searchQuery.trim().toLowerCase();
+  const filteredAthletes = useMemo(() => {
+    if (!searchNeedle) return athletes;
+    return athletes.filter((athlete) =>
+      normalizeForSearch(
+        athlete.full_name,
+        athlete.email,
+        athlete.role,
+        athlete.professional_status,
+        athlete.record,
+        athlete.technical_style,
+        athlete.tactical_style,
+      ).includes(searchNeedle),
+    );
+  }, [athletes, searchNeedle]);
+
+  const filteredPlans = useMemo(() => {
+    if (!searchNeedle) return plans;
+    return plans.filter((plan) =>
+      normalizeForSearch(
+        getPlanDisplayName(plan),
+        plan.athlete_email,
+        plan.full_name,
+        plan.status,
+        plan.fight_date,
+        plan.technical_style,
+      ).includes(searchNeedle),
+    );
+  }, [plans, searchNeedle]);
+
+  const triageAthleteCount = useMemo(
+    () => new Set(triageJobs.map((job) => job.athlete_id).filter(Boolean)).size,
+    [triageJobs],
+  );
 
   useEffect(() => {
     if (!isAdminReady || !session?.access_token) {
@@ -39,11 +125,36 @@ export default function AdminPage() {
     let active = true;
     setIsLoading(true);
     setError(null);
-    Promise.all([listAdminAthletes(session.access_token), listAdminPlans(session.access_token)])
-      .then(([nextAthletes, nextPlans]) => {
+    setTriageWarning(null);
+    Promise.allSettled([
+      listAdminAthletes(session.access_token),
+      listAdminPlans(session.access_token),
+      listAdminTriageGenerationJobs(session.access_token),
+    ])
+      .then(([athletesResult, plansResult, triageResult]) => {
         if (!active) return;
-        setAthletes(nextAthletes);
-        setPlans(nextPlans);
+        const loadErrors: string[] = [];
+
+        if (athletesResult.status === "fulfilled") {
+          setAthletes(athletesResult.value);
+        } else {
+          loadErrors.push(getErrorMessage(athletesResult.reason, "Unable to load athlete accounts."));
+        }
+
+        if (plansResult.status === "fulfilled") {
+          setPlans(plansResult.value);
+        } else {
+          loadErrors.push(getErrorMessage(plansResult.reason, "Unable to load plan history."));
+        }
+
+        if (triageResult.status === "fulfilled") {
+          setTriageJobs(triageResult.value);
+        } else {
+          setTriageJobs([]);
+          setTriageWarning(getErrorMessage(triageResult.reason, "Unable to load suspended triage jobs."));
+        }
+
+        setError(loadErrors.length ? loadErrors.join(" ") : null);
       })
       .catch((adminError) => {
         if (!active) return;
@@ -58,21 +169,51 @@ export default function AdminPage() {
     };
   }, [isAdminReady, isReady, isMeHydrated, me?.profile.role, session?.access_token, reloadKey]);
 
+  async function handleApproveAndResumeJob(jobId: string) {
+    if (!session?.access_token || resumingJobId) return;
+    setResumingJobId(jobId);
+    setError(null);
+    setMessage(null);
+    try {
+      await approveAndResumeGenerationFromJob(
+        session.access_token,
+        jobId,
+        { reason: "admin reviewed and approved from dashboard" },
+      );
+      setMessage("Resume queued. The triage item will leave the queue after refresh.");
+      setReloadKey((value) => value + 1);
+    } catch (resumeError) {
+      setError(resumeError instanceof Error ? resumeError.message : "Failed to approve and resume generation.");
+    } finally {
+      setResumingJobId(null);
+    }
+  }
+
   return (
     <RequireAuth adminOnly>
-      <section className="panel">
-        <div className="section-heading">
+      <section className="panel admin-dashboard-panel">
+        <div className="section-heading admin-dashboard-heading">
           <div>
             <p className="kicker">Admin</p>
             <h1>Support dashboard</h1>
-            <p className="muted">Theme parity only. This view stays lightweight and support-focused while the athlete experience remains primary.</p>
+            <p className="muted">Review suspended triage generations, open athlete records, and audit recent plan output from one workspace.</p>
           </div>
-          <div className="status-card">
-            <p className="status-label">Records</p>
-            <h2 className="plan-summary-title">
-              {isLoading ? "—" : athletes.length + plans.length}
-            </h2>
-            <p className="muted">Athlete accounts and saved plans visible in support mode.</p>
+          <div className="admin-summary-grid" aria-label="Admin dashboard summary">
+            <article className="status-card">
+              <p className="status-label">Triage queue</p>
+              <h2 className="plan-summary-title">{isLoading ? "-" : triageJobs.length}</h2>
+              <p className="muted">{isLoading ? "Checking jobs." : `${triageAthleteCount} athlete${triageAthleteCount === 1 ? "" : "s"} waiting.`}</p>
+            </article>
+            <article className="status-card">
+              <p className="status-label">Athletes</p>
+              <h2 className="plan-summary-title">{isLoading ? "-" : athletes.length}</h2>
+              <p className="muted">Accounts visible in support mode.</p>
+            </article>
+            <article className="status-card">
+              <p className="status-label">Plans</p>
+              <h2 className="plan-summary-title">{isLoading ? "-" : plans.length}</h2>
+              <p className="muted">Generated plans and review states.</p>
+            </article>
           </div>
         </div>
 
@@ -90,16 +231,108 @@ export default function AdminPage() {
           </div>
         ) : null}
 
+        {message ? <div className="success-banner">{message}</div> : null}
+
+        <div className="admin-toolbar">
+          <div className="field admin-search-field">
+            <label htmlFor="adminSearch">Search support records</label>
+            <input
+              id="adminSearch"
+              type="search"
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
+              placeholder="Name, email, status, style, fight date"
+            />
+          </div>
+          <button
+            type="button"
+            className="ghost-button admin-refresh-button"
+            onClick={handleRetry}
+            disabled={isLoading}
+          >
+            {isLoading ? "Refreshing..." : "Refresh"}
+          </button>
+        </div>
+
+        <article className="list-card admin-triage-panel">
+          <div className="form-section-header">
+            <div>
+              <p className="kicker">Triage resume queue</p>
+              <h2>Suspended generations</h2>
+            </div>
+            <span className="badge">{isLoading ? "Checking" : `${triageJobs.length} open`}</span>
+          </div>
+
+          {isLoading ? (
+            <div className="support-panel">
+              <p className="muted">Loading protected triage jobs...</p>
+            </div>
+          ) : triageWarning ? (
+            <div className="support-panel">
+              <p className="error-text">{triageWarning}</p>
+              <p className="muted">Athlete accounts and plan history can still be reviewed while the queue retries.</p>
+            </div>
+          ) : triageJobs.length === 0 ? (
+            <div className="support-panel support-panel-success">
+              <p className="kicker">Clear</p>
+              <h3 className="form-section-title">No suspended triage generations need approval.</h3>
+              <p className="muted">New protected triage outcomes will appear here even when no plan row was created.</p>
+            </div>
+          ) : (
+            <div className="plans-grid admin-queue-grid">
+              {triageJobs.map((job) => (
+                <article key={job.job_id} className="plan-card admin-triage-card">
+                  <div className="plan-card-header">
+                    <div>
+                      <h3 className="plan-card-title">{getJobDisplayName(job)}</h3>
+                      <p className="muted">{job.athlete_email || job.athlete_id || "No athlete email"}</p>
+                    </div>
+                    <span className="badge">Needs resume</span>
+                  </div>
+                  <p className="muted">
+                    {job.stage2_status || "triage_blocked"} - no plan row was created, so this item is anchored to the generation job.
+                  </p>
+                  <div className="admin-job-meta">
+                    <span>Created {formatDateTime(job.created_at)}</span>
+                    <span>Source {job.source || "unknown"}</span>
+                    <span>Job {job.job_id}</span>
+                  </div>
+                  <div className="admin-job-summary">
+                    <p className="muted">Fight date: {job.request_payload_summary.fight_date || "Not set"}</p>
+                    <p className="muted">Goals: {joinOrDash(job.request_payload_summary.goals)}</p>
+                    <p className="muted">Injuries: {joinOrDash(job.request_payload_summary.injuries)}</p>
+                  </div>
+                  <div className="plan-card-actions">
+                    {job.athlete_id ? (
+                      <Link href={`/admin/athletes/${job.athlete_id}`} className="ghost-button">
+                        Open athlete
+                      </Link>
+                    ) : null}
+                    <button
+                      type="button"
+                      className="cta"
+                      onClick={() => void handleApproveAndResumeJob(job.job_id)}
+                      disabled={resumingJobId === job.job_id}
+                    >
+                      {resumingJobId === job.job_id ? "Approving..." : "Approve & Resume"}
+                    </button>
+                  </div>
+                </article>
+              ))}
+            </div>
+          )}
+        </article>
+
         <div className="admin-grid">
           <article className="list-card">
             <div className="form-section-header">
               <p className="kicker">Athletes</p>
-              <h2>Recent accounts</h2>
+              <h2>{searchNeedle ? "Matching accounts" : "Recent accounts"}</h2>
             </div>
 
             {isLoading ? (
               <div className="support-panel">
-                <p className="muted">Loading athlete accounts…</p>
+                <p className="muted">Loading athlete accounts...</p>
               </div>
             ) : athletes.length === 0 ? (
               <EmptyState
@@ -109,9 +342,13 @@ export default function AdminPage() {
                 example="Each row will show the athlete's name, email, saved plan count, and a link into their profile for support."
                 primaryAction={{ label: "Open signup page", href: "/signup" }}
               />
+            ) : filteredAthletes.length === 0 ? (
+              <div className="support-panel">
+                <p className="muted">No athlete accounts match this search.</p>
+              </div>
             ) : (
               <div className="plans-grid">
-                {athletes.map((athlete) => (
+                {filteredAthletes.map((athlete) => (
                   <article key={athlete.athlete_id} className="plan-card">
                     <div className="plan-card-header">
                       <div>
@@ -122,7 +359,7 @@ export default function AdminPage() {
                       </div>
                       <span className="badge">{athlete.plan_count} plan{athlete.plan_count === 1 ? "" : "s"}</span>
                     </div>
-                    <p className="muted">Created {new Date(athlete.created_at).toLocaleString()}</p>
+                    <p className="muted">Created {formatDateTime(athlete.created_at)}</p>
                     <div className="plan-card-actions">
                       <Link href={`/admin/athletes/${athlete.athlete_id}`} className="ghost-button">
                         View profile
@@ -137,12 +374,12 @@ export default function AdminPage() {
           <article className="list-card">
             <div className="form-section-header">
               <p className="kicker">Plans</p>
-              <h2>Latest generations</h2>
+              <h2>{searchNeedle ? "Matching generations" : "Latest generations"}</h2>
             </div>
 
             {isLoading ? (
               <div className="support-panel">
-                <p className="muted">Loading plan history…</p>
+                <p className="muted">Loading plan history...</p>
               </div>
             ) : plans.length === 0 ? (
               <EmptyState
@@ -152,9 +389,13 @@ export default function AdminPage() {
                 example="Each row will show plan name, athlete email, status, creation time, and a quick open link."
                 primaryAction={{ label: "Open Demo Plan", href: "/demo-plan" }}
               />
+            ) : filteredPlans.length === 0 ? (
+              <div className="support-panel">
+                <p className="muted">No plan history matches this search.</p>
+              </div>
             ) : (
               <div className="plans-grid">
-                {plans.map((plan) => (
+                {filteredPlans.map((plan) => (
                   <article key={plan.plan_id} className="plan-card">
                     <div className="plan-card-header">
                       <div>
@@ -165,7 +406,7 @@ export default function AdminPage() {
                       </div>
                       <span className="badge">{plan.status}</span>
                     </div>
-                    <p className="muted">Created {new Date(plan.created_at).toLocaleString()}</p>
+                    <p className="muted">Created {formatDateTime(plan.created_at)}</p>
                     <div className="plan-card-actions">
                       <Link href={`/plans/${plan.plan_id}`} className="ghost-button">
                         Open plan

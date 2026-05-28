@@ -434,6 +434,8 @@ export type GenerationRequestPayloadSummary = {
 export type AdminGenerationJobDiagnostic = {
   job_id: string;
   athlete_id?: string;
+  athlete_email?: string;
+  athlete_full_name?: string;
   intake_id?: string | null;
   status: GenerationJobStatus;
   source: string;

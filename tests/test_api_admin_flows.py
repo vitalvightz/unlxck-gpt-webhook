@@ -869,6 +869,83 @@ def _seed_triage_blocked_job(store, *, athlete_id: str, intake_id: str, request)
     return store.get_generation_job(job["id"])
 
 
+def test_admin_triage_queue_lists_suspended_job_without_plan_row():
+    athlete = AuthenticatedUser(user_id="athlete-1", email="ari@example.com", full_name="Ari Mensah", metadata={})
+    admin = AuthenticatedUser(user_id="admin-1", email="ops@unlxck.test", full_name="Ops Admin", metadata={})
+    store = FakeStore()
+    store.ensure_profile(athlete)
+    request = _build_request()
+    intake = store.create_intake(athlete.user_id, request)
+    triage_job = _seed_triage_blocked_job(
+        store, athlete_id=athlete.user_id, intake_id=str(intake["id"]), request=request
+    )
+
+    client = TestClient(
+        create_app(
+            store=store,
+            auth_service=FakeAuthService({"athlete-token": athlete, "admin-token": admin}),
+            planner=lambda payload: stage1_result(),
+            stage2_automator=FakeStage2Automator(result=finalized_result()),
+            enable_in_process_generation=False,
+        )
+    )
+
+    forbidden = client.get(
+        "/api/admin/generation-jobs/triage",
+        headers={"Authorization": "Bearer athlete-token"},
+    )
+    response = client.get(
+        "/api/admin/generation-jobs/triage",
+        headers={"Authorization": "Bearer admin-token"},
+    )
+
+    assert forbidden.status_code == 403
+    assert response.status_code == 200
+    body = response.json()
+    assert len(body) == 1
+    assert body[0]["job_id"] == triage_job["id"]
+    assert body[0]["athlete_id"] == athlete.user_id
+    assert body[0]["athlete_email"] == athlete.email
+    assert body[0]["athlete_full_name"] == athlete.full_name
+    assert body[0]["plan_id"] is None
+    assert body[0]["stage2_status"] == "triage_blocked"
+    assert body[0]["requires_admin_resume"] is True
+    assert body[0]["request_payload_summary"]["athlete_name"] == request.athlete.full_name
+
+
+def test_admin_triage_queue_hides_approved_source_job():
+    athlete = AuthenticatedUser(user_id="athlete-1", email="ari@example.com", full_name="Ari Mensah", metadata={})
+    admin = AuthenticatedUser(user_id="admin-1", email="ops@unlxck.test", full_name="Ops Admin", metadata={})
+    store = FakeStore()
+    store.ensure_profile(athlete)
+    request = _build_request()
+    intake = store.create_intake(athlete.user_id, request)
+    triage_job = _seed_triage_blocked_job(
+        store, athlete_id=athlete.user_id, intake_id=str(intake["id"]), request=request
+    )
+    final_result = dict(store.get_generation_job(triage_job["id"])["final_result"])
+    final_result["stage2_status"] = "triage_resume_approved"
+    store.update_generation_job(triage_job["id"], final_result=final_result)
+
+    client = TestClient(
+        create_app(
+            store=store,
+            auth_service=FakeAuthService({"admin-token": admin}),
+            planner=lambda payload: stage1_result(),
+            stage2_automator=FakeStage2Automator(result=finalized_result()),
+            enable_in_process_generation=False,
+        )
+    )
+
+    response = client.get(
+        "/api/admin/generation-jobs/triage",
+        headers={"Authorization": "Bearer admin-token"},
+    )
+
+    assert response.status_code == 200
+    assert response.json() == []
+
+
 def test_approve_and_resume_generation_from_job_creates_resume_job_without_plan_id():
     """The new endpoint takes a generation_job_id (not a plan_id). It must
     create an admin_triage_resume job linked to the intake but NOT to any

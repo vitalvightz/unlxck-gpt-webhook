@@ -521,10 +521,13 @@ def _admin_generation_job_diagnostic(job: dict[str, Any], *, stale_after_seconds
     if triage_status and not _triage_job_has_resume_approval(job):
         requires_admin_resume = True
         stage2_status = stage2_status or triage_status
+    profile = job.get("profiles") if isinstance(job.get("profiles"), dict) else {}
 
     return AdminGenerationJobDiagnostic(
         job_id=str(job.get("id") or ""),
         athlete_id=str(job.get("athlete_id") or ""),
+        athlete_email=str(profile.get("email") or ""),
+        athlete_full_name=str(profile.get("full_name") or ""),
         intake_id=str(job.get("intake_id") or "") or None,
         status=normalized_status,
         source=str(job.get("source") or ""),
@@ -2047,6 +2050,19 @@ def create_app(
         store: AppStore = Depends(get_store),
     ) -> list[AdminPlanSummary]:
         return [_map_admin_plan_summary(row) for row in store.list_admin_plans(limit=limit, offset=offset)]
+
+    @app.get("/api/admin/generation-jobs/triage", response_model=list[AdminGenerationJobDiagnostic])
+    def list_admin_triage_generation_jobs(
+        _: ProfileRecord = Depends(require_admin),
+        limit: int = Query(50, ge=1, le=200),
+        store: AppStore = Depends(get_store),
+    ) -> list[AdminGenerationJobDiagnostic]:
+        stale_after_seconds = _generation_job_stale_after_seconds()
+        diagnostics = [
+            _admin_generation_job_diagnostic(job, stale_after_seconds=stale_after_seconds)
+            for job in store.list_admin_triage_generation_jobs(limit=limit)
+        ]
+        return [job for job in diagnostics if job.requires_admin_resume][:limit]
 
     @app.post("/api/admin/plans/{plan_id}/manual-stage2", response_model=PlanDetail)
     def submit_manual_stage2(
