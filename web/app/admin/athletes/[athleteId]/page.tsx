@@ -16,6 +16,7 @@ import {
   generateAdminAthletePlanFromLatestIntake,
   getAdminAthlete,
   getAdminAthleteNutritionCurrent,
+  listAdminPlans,
   retryGenerationJob,
   updateAdminAthleteNutritionCurrent,
   updateAdminAthleteLatestIntake,
@@ -23,7 +24,13 @@ import {
 import { loadAdminAthleteProfileData } from "@/lib/admin-athlete-profile-loader";
 import { useGenerationController } from "@/lib/generation-controller";
 import { validatePerformanceFocusSelections } from "@/lib/performance-focus-cap";
-import type { AdminAthleteRecord, AdminGenerationJobDiagnostic, NutritionWorkspaceState, NutritionWorkspaceUpdateRequest } from "@/lib/types";
+import type {
+  AdminAthleteRecord,
+  AdminGenerationJobDiagnostic,
+  AdminPlanSummary,
+  NutritionWorkspaceState,
+  NutritionWorkspaceUpdateRequest,
+} from "@/lib/types";
 
 function humanizeEnumValue(value: string | null | undefined, fallback: string): string {
   if (!value?.trim()) {
@@ -35,11 +42,27 @@ function humanizeEnumValue(value: string | null | undefined, fallback: string): 
     .replace(/\b\w/g, (character) => character.toUpperCase());
 }
 
-function joinOrDash(values: string[] | null | undefined): string {
+function formatDateTime(value: string | null | undefined): string {
+  if (!value) {
+    return "Not recorded";
+  }
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? "Not recorded" : date.toLocaleString();
+}
+
+function formatListOrDash(values: string[] | null | undefined): string {
   const joined = Array.isArray(values)
-    ? values.filter((v) => v?.trim()).join(", ")
+    ? values.filter((value) => value?.trim()).join(", ")
     : "";
-  return joined || "—";
+  return joined || "-";
+}
+
+function getPlanDisplayName(plan: AdminPlanSummary): string {
+  return plan.plan_name?.trim() || plan.full_name || plan.athlete_email || "Untitled plan";
+}
+
+function statusLabel(value: string | null | undefined): string {
+  return value?.trim() ? humanizeEnumValue(value, value) : "-";
 }
 
 function toNutritionUpdateRequest(workspace: NutritionWorkspaceState): NutritionWorkspaceUpdateRequest {
@@ -51,6 +74,155 @@ function toNutritionUpdateRequest(workspace: NutritionWorkspaceState): Nutrition
     nutrition_monitoring: workspace.nutrition_monitoring,
     nutrition_coach_controls: workspace.nutrition_coach_controls,
   };
+}
+
+function AthletePlanAccessCard({
+  plans,
+  warning,
+}: {
+  plans: AdminPlanSummary[];
+  warning: string | null;
+}) {
+  return (
+    <article className="step-card admin-athlete-plan-access">
+      <div className="form-section-header">
+        <div>
+          <p className="kicker">Athlete plans</p>
+          <h2 className="form-section-title">Saved plan history</h2>
+        </div>
+        <span className="badge">{plans.length} plan{plans.length === 1 ? "" : "s"}</span>
+      </div>
+      {warning ? <p className="error-text">{warning}</p> : null}
+      {plans.length === 0 ? (
+        <p className="muted">No saved plans were found for this athlete.</p>
+      ) : (
+        <div className="admin-athlete-plan-list">
+          {plans.map((plan) => (
+            <Link key={plan.plan_id} href={`/plans/${plan.plan_id}`} className="admin-athlete-plan-row">
+              <span>
+                <strong>{getPlanDisplayName(plan)}</strong>
+                <small>{formatDateTime(plan.created_at)} - fight date {plan.fight_date || "not set"}</small>
+              </span>
+              <span className="badge">{statusLabel(plan.status)}</span>
+            </Link>
+          ))}
+        </div>
+      )}
+    </article>
+  );
+}
+
+function DiagnosticMetaItem({ label, value }: { label: string; value: string | null | undefined }) {
+  return (
+    <div className="admin-diagnostic-meta-item">
+      <span>{label}</span>
+      <strong>{value?.trim() || "-"}</strong>
+    </div>
+  );
+}
+
+function GenerationDiagnosticCard({
+  job,
+  retryingJobId,
+  resumingJobId,
+  onRetry,
+  onApproveAndResume,
+}: {
+  job: AdminGenerationJobDiagnostic;
+  retryingJobId: string | null;
+  resumingJobId: string | null;
+  onRetry: (jobId: string) => void;
+  onApproveAndResume: (jobId: string) => void;
+}) {
+  const summary = job.request_payload_summary;
+
+  return (
+    <article className="admin-diagnostic-card">
+      <div className="admin-diagnostic-card-header">
+        <div>
+          <p className="kicker">Job {job.job_id}</p>
+          <h3 className="review-card-title">{statusLabel(job.status)}</h3>
+        </div>
+        <div className="admin-diagnostic-badges">
+          <span className="badge">{job.source || "unknown source"}</span>
+          {job.stage2_status ? <span className="badge">{statusLabel(job.stage2_status)}</span> : null}
+          {job.is_stale ? <span className="badge admin-diagnostic-badge-warning">Stale</span> : null}
+        </div>
+      </div>
+
+      <div className="admin-diagnostic-meta-grid" aria-label="Generation job timeline">
+        <DiagnosticMetaItem label="Created" value={formatDateTime(job.created_at)} />
+        <DiagnosticMetaItem label="Started" value={formatDateTime(job.started_at)} />
+        <DiagnosticMetaItem label="Heartbeat" value={formatDateTime(job.heartbeat_at)} />
+        <DiagnosticMetaItem label="Completed" value={formatDateTime(job.completed_at)} />
+      </div>
+
+      <div className="admin-diagnostic-section">
+        <p className="admin-diagnostic-section-title">Request summary</p>
+        <div className="admin-diagnostic-summary-grid">
+          <DiagnosticMetaItem label="Athlete" value={summary.athlete_name} />
+          <DiagnosticMetaItem label="Fight date" value={summary.fight_date} />
+          <DiagnosticMetaItem label="Phase" value={summary.phase} />
+          <DiagnosticMetaItem label="Format" value={summary.fight_format} />
+          <DiagnosticMetaItem label="Fatigue" value={summary.fatigue_level} />
+          <DiagnosticMetaItem label="Availability" value={summary.training_availability} />
+        </div>
+      </div>
+
+      <div className="admin-diagnostic-pill-groups">
+        <div>
+          <p className="review-detail-label">Goals</p>
+          <p className="review-detail-value">{formatListOrDash(summary.goals)}</p>
+        </div>
+        <div>
+          <p className="review-detail-label">Weaknesses</p>
+          <p className="review-detail-value">{formatListOrDash(summary.weaknesses)}</p>
+        </div>
+        <div>
+          <p className="review-detail-label">Injuries</p>
+          <p className="review-detail-value">{formatListOrDash(summary.injuries)}</p>
+        </div>
+      </div>
+
+      <div className="admin-diagnostic-technical">
+        <DiagnosticMetaItem label="Client request" value={job.client_request_id} />
+        {job.retry_of ? <DiagnosticMetaItem label="Retry of" value={job.retry_of} /> : null}
+      </div>
+
+      {job.requires_admin_resume && !job.plan_id ? (
+        <div className="admin-diagnostic-alert">
+          Protected triage: no plan row was created. Approve and resume to create a plan if Stage 2 succeeds.
+        </div>
+      ) : null}
+      {job.error ? <div className="error-banner" role="alert">Error: {job.error}</div> : null}
+      {job.is_stale ? (
+        <div className="error-banner" role="alert">Stale warning: {job.stale_reason || "Job appears stale."}</div>
+      ) : null}
+
+      <div className="plan-summary-actions">
+        {job.plan_id ? (
+          <Link href={`/plans/${job.plan_id}`} className="ghost-button">
+            Open plan
+          </Link>
+        ) : null}
+        {job.status === "failed" ? (
+          <button type="button" className="ghost-button" onClick={() => onRetry(job.job_id)} disabled={retryingJobId === job.job_id}>
+            {retryingJobId === job.job_id ? "Retrying..." : "Retry job"}
+          </button>
+        ) : null}
+        {job.requires_admin_resume && !job.plan_id ? (
+          <button
+            type="button"
+            className="cta"
+            onClick={() => onApproveAndResume(job.job_id)}
+            disabled={resumingJobId === job.job_id}
+          >
+            {resumingJobId === job.job_id ? "Approving..." : "Approve & Resume"}
+          </button>
+        ) : null}
+      </div>
+    </article>
+  );
 }
 
 export default function AdminAthletePage() {
@@ -66,9 +238,11 @@ export default function AdminAthletePage() {
   const [reloadKey, setReloadKey] = useState(0);
   const [isReloading, setIsReloading] = useState(false);
   const [jobs, setJobs] = useState<AdminGenerationJobDiagnostic[]>([]);
+  const [athletePlans, setAthletePlans] = useState<AdminPlanSummary[]>([]);
   const [retryingJobId, setRetryingJobId] = useState<string | null>(null);
   const [nutritionLoadWarning, setNutritionLoadWarning] = useState<string | null>(null);
   const [jobsLoadWarning, setJobsLoadWarning] = useState<string | null>(null);
+  const [plansLoadWarning, setPlansLoadWarning] = useState<string | null>(null);
   const [isSavingIntake, setIsSavingIntake] = useState(false);
   const [intakeDraft, setIntakeDraft] = useState<{
     key_goals: string[];
@@ -139,19 +313,24 @@ export default function AdminAthletePage() {
     setLoadError(null);
     setNutritionLoadWarning(null);
     setJobsLoadWarning(null);
+    setPlansLoadWarning(null);
+    setAthletePlans([]);
     setIsReloading(true);
     loadAdminAthleteProfileData({
       getAdminAthlete: () => getAdminAthlete(session.access_token, athleteId),
       getAdminAthleteNutritionCurrent: () => getAdminAthleteNutritionCurrent(session.access_token, athleteId),
       getAdminAthleteGenerationJobs: () => getAdminAthleteGenerationJobs(session.access_token, athleteId),
+      listAdminPlans: () => listAdminPlans(session.access_token),
     })
       .then((profileData) => {
         if (!active) return;
         setAthlete(profileData.athlete);
         setNutrition(profileData.nutrition);
         setJobs(profileData.jobs);
+        setAthletePlans(profileData.plans);
         setNutritionLoadWarning(profileData.nutritionWarning);
         setJobsLoadWarning(profileData.jobsWarning);
+        setPlansLoadWarning(profileData.plansWarning);
       })
       .catch((athleteError) => {
         if (!active) return;
@@ -351,52 +530,34 @@ export default function AdminAthletePage() {
           ) : null}
 
           <AthleteProfileOverviewCard athlete={athlete} />
+          <AthletePlanAccessCard plans={athletePlans} warning={plansLoadWarning} />
           <article className="step-card">
             <div className="form-section-header">
-              <p className="kicker">Admin debugging</p>
-              <h2 className="form-section-title">Generation diagnostics</h2>
+              <div>
+                <p className="kicker">Generation diagnosis</p>
+                <h2 className="form-section-title">Recent generation jobs</h2>
+              </div>
+              <span className="badge">{jobs.length} job{jobs.length === 1 ? "" : "s"}</span>
             </div>
             {jobsLoadWarning ? <p className="error-text">{jobsLoadWarning}</p> : null}
             {resumeError ? <p className="error-text">{resumeError}</p> : null}
-            {!jobs.length ? <p className="muted">No generation jobs found.</p> : jobs.map((job) => (
-              <div key={job.job_id} className="review-detail-row" style={{ display: "block", marginBottom: "1rem" }}>
-                <p><strong>{job.status.toUpperCase()}</strong> · {job.job_id}</p>
-                <p className="muted">source {job.source} · created {job.created_at}</p>
-                <p className="muted">started {job.started_at || "—"} · heartbeat {job.heartbeat_at || "—"} · completed {job.completed_at || "—"}</p>
-                <p className="muted">client request {job.client_request_id || "—"}</p>
-                {job.retry_of ? <p className="muted">retry of {job.retry_of}</p> : null}
-                {job.plan_id ? <p><Link href={`/plans/${job.plan_id}`}>Open plan</Link></p> : null}
-                {job.requires_admin_resume && !job.plan_id ? (
-                  <p className="kicker">PROTECTED TRIAGE · stage2_status: {job.stage2_status || "triage_blocked"} · no plan row was created</p>
-                ) : null}
-                {job.error ? <p className="error-text">Error: {job.error}</p> : null}
-                {job.is_stale ? <p className="error-text">Stale warning: {job.stale_reason || "Job appears stale."}</p> : null}
-                <p className="muted">
-                  Payload: {job.request_payload_summary.athlete_name || "—"} · {job.request_payload_summary.fight_date || "—"} · {job.request_payload_summary.phase || "—"} · {job.request_payload_summary.fight_format || "—"} · fatigue {job.request_payload_summary.fatigue_level || "—"}
-                </p>
-                <p className="muted">Goals: {joinOrDash(job.request_payload_summary.goals)}</p>
-                <p className="muted">Weaknesses: {joinOrDash(job.request_payload_summary.weaknesses)}</p>
-                <p className="muted">Injuries: {joinOrDash(job.request_payload_summary.injuries)}</p>
-                <p className="muted">Training availability: {job.request_payload_summary.training_availability || "—"}</p>
-                {job.status === "failed" ? (
-                  <button type="button" className="ghost-button" onClick={() => void handleRetryJob(job.job_id)} disabled={retryingJobId === job.job_id}>
-                    {retryingJobId === job.job_id ? "Retrying..." : "Retry"}
-                  </button>
-                ) : null}
-                {job.requires_admin_resume && !job.plan_id ? (
-                  <button
-                    type="button"
-                    className="cta"
-                    onClick={() => void handleApproveAndResumeJob(job.job_id)}
-                    disabled={resumingJobId === job.job_id}
-                  >
-                    {resumingJobId === job.job_id ? "Approving..." : "Approve & Resume"}
-                  </button>
-                ) : null}
+            {!jobs.length ? (
+              <p className="muted">No generation jobs found.</p>
+            ) : (
+              <div className="admin-diagnostic-list">
+                {jobs.map((job) => (
+                  <GenerationDiagnosticCard
+                    key={job.job_id}
+                    job={job}
+                    retryingJobId={retryingJobId}
+                    resumingJobId={resumingJobId}
+                    onRetry={(jobId) => void handleRetryJob(jobId)}
+                    onApproveAndResume={(jobId) => void handleApproveAndResumeJob(jobId)}
+                  />
+                ))}
               </div>
-            ))}
+            )}
           </article>
-
           {nutrition ? (
             <div className="split-layout nutrition-admin-split">
               <article className="step-card">
