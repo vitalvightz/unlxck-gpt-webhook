@@ -71,14 +71,23 @@ def test_generate_plan_persists_validated_final_plan_and_history():
 
 def test_generate_plan_reuses_existing_terminal_job_for_same_payload():
     client, store, _ = _build_client(enable_in_process_generation=False)
-    payload = _build_request().model_dump(mode="json")
+    _seed_athlete_profile(store)
+    request = _build_request()
+    payload = request.model_dump(mode="json")
+    plan = store.create_plan(
+        athlete_id="athlete-1",
+        intake_id="intake_existing",
+        request=request,
+        result=finalized_result(),
+    )
     existing = store.create_or_get_generation_job(
         athlete_id="athlete-1",
         client_request_id="existing-completed-same-payload",
         source="self_serve",
         request_payload=payload,
-        plan_id="plan_existing",
+        plan_id=plan["id"],
     )
+    store.update_generation_job(existing["id"], status="running", started_at=_now(), heartbeat_at=_now())
     store.update_generation_job(existing["id"], status="completed", completed_at=_now())
 
     response = client.post(
@@ -92,7 +101,152 @@ def test_generate_plan_reuses_existing_terminal_job_for_same_payload():
     assert response.status_code == 202
     body = response.json()
     assert body["job_id"] == existing["id"]
-    assert body["plan_id"] == "plan_existing"
+    assert body["plan_id"] == plan["id"]
+    jobs = store.list_generation_jobs_for_athlete("athlete-1", limit=25)
+    assert len(jobs) == 1
+
+
+def _seed_athlete_profile(store) -> None:
+    store.ensure_profile(
+        AuthenticatedUser(
+            user_id="athlete-1",
+            email="ari@example.com",
+            full_name="Ari Mensah",
+            metadata={},
+        )
+    )
+
+
+def _seed_completed_same_payload_job(store, *, plan_id: str | None, client_request_id: str):
+    request = _build_request()
+    payload = request.model_dump(mode="json")
+    job = store.create_or_get_generation_job(
+        athlete_id="athlete-1",
+        client_request_id=client_request_id,
+        source="self_serve",
+        request_payload=payload,
+        plan_id=plan_id,
+    )
+    store.update_generation_job(job["id"], status="running", started_at=_now(), heartbeat_at=_now())
+    store.update_generation_job(job["id"], status="completed", completed_at=_now())
+    return job, payload
+
+
+def test_generate_plan_allows_fresh_generation_after_athlete_archives_plan():
+    client, store, _ = _build_client(enable_in_process_generation=False)
+    _seed_athlete_profile(store)
+    request = _build_request()
+    plan = store.create_plan(
+        athlete_id="athlete-1",
+        intake_id="intake_archived",
+        request=request,
+        result=finalized_result(),
+    )
+    existing, payload = _seed_completed_same_payload_job(
+        store, plan_id=plan["id"], client_request_id="completed-then-archived"
+    )
+    store.archive_plan(plan["id"])
+
+    response = client.post(
+        "/api/plans/generate",
+        headers={
+            "Authorization": "Bearer athlete-token",
+            "X-Client-Request-Id": "fresh-after-archive",
+        },
+        json=payload,
+    )
+
+    assert response.status_code == 202
+    body = response.json()
+    assert body["job_id"] != existing["id"]
+    jobs = store.list_generation_jobs_for_athlete("athlete-1", limit=25)
+    assert len(jobs) == 2
+
+
+def test_generate_plan_allows_fresh_generation_after_plan_hard_deleted():
+    client, store, _ = _build_client(enable_in_process_generation=False)
+    _seed_athlete_profile(store)
+    request = _build_request()
+    plan = store.create_plan(
+        athlete_id="athlete-1",
+        intake_id="intake_deleted",
+        request=request,
+        result=finalized_result(),
+    )
+    existing, payload = _seed_completed_same_payload_job(
+        store, plan_id=plan["id"], client_request_id="completed-then-deleted"
+    )
+    store.delete_plan(plan["id"])
+
+    response = client.post(
+        "/api/plans/generate",
+        headers={
+            "Authorization": "Bearer athlete-token",
+            "X-Client-Request-Id": "fresh-after-delete",
+        },
+        json=payload,
+    )
+
+    assert response.status_code == 202
+    body = response.json()
+    assert body["job_id"] != existing["id"]
+    jobs = store.list_generation_jobs_for_athlete("athlete-1", limit=25)
+    assert len(jobs) == 2
+
+
+def test_generate_plan_allows_fresh_generation_when_terminal_job_has_no_plan_id():
+    client, store, _ = _build_client(enable_in_process_generation=False)
+    existing, payload = _seed_completed_same_payload_job(
+        store, plan_id=None, client_request_id="completed-no-plan"
+    )
+
+    response = client.post(
+        "/api/plans/generate",
+        headers={
+            "Authorization": "Bearer athlete-token",
+            "X-Client-Request-Id": "fresh-after-no-plan",
+        },
+        json=payload,
+    )
+
+    assert response.status_code == 202
+    body = response.json()
+    assert body["job_id"] != existing["id"]
+    jobs = store.list_generation_jobs_for_athlete("athlete-1", limit=25)
+    assert len(jobs) == 2
+
+
+def test_generate_plan_blocks_duplicate_for_active_triage_blocked_plan():
+    client, store, _ = _build_client(enable_in_process_generation=False)
+    _seed_athlete_profile(store)
+    request = _build_request()
+    plan = store.create_plan(
+        athlete_id="athlete-1",
+        intake_id="intake_triage",
+        request=request,
+        result=finalized_result(
+            status="triage_blocked",
+            stage2_status="triage_blocked",
+            why_log={"injury_triage": {"mode": "needs_review", "should_block_stage2": True}},
+        ),
+    )
+    existing, payload = _seed_completed_same_payload_job(
+        store, plan_id=plan["id"], client_request_id="completed-triage-blocked"
+    )
+
+    response = client.post(
+        "/api/plans/generate",
+        headers={
+            "Authorization": "Bearer athlete-token",
+            "X-Client-Request-Id": "retry-triage-blocked",
+        },
+        json=payload,
+    )
+
+    assert response.status_code == 202
+    body = response.json()
+    assert body["job_id"] == existing["id"]
+    assert body["requires_admin_resume"] is True
     jobs = store.list_generation_jobs_for_athlete("athlete-1", limit=25)
     assert len(jobs) == 1
 

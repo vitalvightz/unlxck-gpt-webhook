@@ -70,14 +70,14 @@ test("matching payload with completed local generation redirects to existing pla
   );
 });
 
-test("matching payload without an openable plan id shows already-generated state", () => {
+test("matching payload without an openable plan id proceeds with a fresh generation", () => {
   assert.deepEqual(
     resolveMatchingPayloadGenerationAction("hash_a", { planId: null, payloadHash: "hash_a" }),
-    { type: "already_generated" },
+    { type: "proceed" },
   );
   assert.deepEqual(
     resolveMatchingPayloadGenerationAction("hash_a", { planId: "   ", payloadHash: "hash_a" }),
-    { type: "already_generated" },
+    { type: "proceed" },
   );
 });
 
