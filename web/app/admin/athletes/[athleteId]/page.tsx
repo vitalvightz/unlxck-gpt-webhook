@@ -134,7 +134,7 @@ function GenerationDiagnosticCard({
   onRetry: (jobId: string) => void;
   onApproveAndResume: (jobId: string) => void;
 }) {
-  const summary = job.request_payload_summary;
+  const summary = job.request_payload_summary ?? {};
 
   return (
     <article className="admin-diagnostic-card">
