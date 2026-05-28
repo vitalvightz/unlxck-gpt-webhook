@@ -433,6 +433,8 @@ export type GenerationRequestPayloadSummary = {
 
 export type AdminGenerationJobDiagnostic = {
   job_id: string;
+  athlete_id?: string;
+  intake_id?: string | null;
   status: GenerationJobStatus;
   source: string;
   created_at: string;
@@ -445,6 +447,8 @@ export type AdminGenerationJobDiagnostic = {
   stale_reason?: string | null;
   plan_id?: string | null;
   can_retry: boolean;
+  stage2_status?: string | null;
+  requires_admin_resume?: boolean;
   is_stale: boolean;
   request_payload_summary: GenerationRequestPayloadSummary;
 };

@@ -11,6 +11,7 @@ import {
 import { RequireAuth } from "@/components/auth-guard";
 import { useAppSession } from "@/components/auth-provider";
 import {
+  approveAndResumeGenerationFromJob,
   getAdminAthleteGenerationJobs,
   generateAdminAthletePlanFromLatestIntake,
   getAdminAthlete,
@@ -193,6 +194,28 @@ export default function AdminAthletePage() {
     }
   }
 
+  const [resumingJobId, setResumingJobId] = useState<string | null>(null);
+  const [resumeError, setResumeError] = useState<string | null>(null);
+
+  async function handleApproveAndResumeJob(jobId: string) {
+    if (!session?.access_token || resumingJobId) return;
+    setResumingJobId(jobId);
+    setResumeError(null);
+    try {
+      await approveAndResumeGenerationFromJob(
+        session.access_token,
+        jobId,
+        { reason: "admin reviewed and approved" },
+      );
+      setMessage("Resume queued. The new generation will create a real plan if Stage 2 succeeds.");
+      setReloadKey((value) => value + 1);
+    } catch (error) {
+      setResumeError(error instanceof Error ? error.message : "Failed to start resume generation.");
+    } finally {
+      setResumingJobId(null);
+    }
+  }
+
   async function handleSaveCoachControls() {
     if (!session?.access_token || !athleteId || !nutrition || isSavingControls) {
       return;
@@ -334,6 +357,7 @@ export default function AdminAthletePage() {
               <h2 className="form-section-title">Generation diagnostics</h2>
             </div>
             {jobsLoadWarning ? <p className="error-text">{jobsLoadWarning}</p> : null}
+            {resumeError ? <p className="error-text">{resumeError}</p> : null}
             {!jobs.length ? <p className="muted">No generation jobs found.</p> : jobs.map((job) => (
               <div key={job.job_id} className="review-detail-row" style={{ display: "block", marginBottom: "1rem" }}>
                 <p><strong>{job.status.toUpperCase()}</strong> · {job.job_id}</p>
@@ -342,6 +366,9 @@ export default function AdminAthletePage() {
                 <p className="muted">client request {job.client_request_id || "—"}</p>
                 {job.retry_of ? <p className="muted">retry of {job.retry_of}</p> : null}
                 {job.plan_id ? <p><Link href={`/plans/${job.plan_id}`}>Open plan</Link></p> : null}
+                {job.requires_admin_resume && !job.plan_id ? (
+                  <p className="kicker">PROTECTED TRIAGE · stage2_status: {job.stage2_status || "triage_blocked"} · no plan row was created</p>
+                ) : null}
                 {job.error ? <p className="error-text">Error: {job.error}</p> : null}
                 {job.is_stale ? <p className="error-text">Stale warning: {job.stale_reason || "Job appears stale."}</p> : null}
                 <p className="muted">
@@ -354,6 +381,16 @@ export default function AdminAthletePage() {
                 {job.status === "failed" ? (
                   <button type="button" className="ghost-button" onClick={() => void handleRetryJob(job.job_id)} disabled={retryingJobId === job.job_id}>
                     {retryingJobId === job.job_id ? "Retrying..." : "Retry"}
+                  </button>
+                ) : null}
+                {job.requires_admin_resume && !job.plan_id ? (
+                  <button
+                    type="button"
+                    className="cta"
+                    onClick={() => void handleApproveAndResumeJob(job.job_id)}
+                    disabled={resumingJobId === job.job_id}
+                  >
+                    {resumingJobId === job.job_id ? "Approving..." : "Approve & Resume"}
                   </button>
                 ) : null}
               </div>

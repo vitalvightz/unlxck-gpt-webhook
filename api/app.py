@@ -502,6 +502,21 @@ def _admin_generation_job_diagnostic(job: dict[str, Any], *, stale_after_seconds
         if "_" in content:
             retry_of = content.rsplit("_", 1)[0]
 
+    # Surface protected-triage signals on diagnostic rows so admin UI can
+    # show an explicit "Approve & Resume" CTA for new-style triage outcomes
+    # that have no plan_id.
+    triage_status = _job_final_result_triage_status(job)
+    stage2_status: str | None = None
+    requires_admin_resume = False
+    final_result = job.get("final_result") if isinstance(job.get("final_result"), dict) else {}
+    if final_result:
+        stage2_raw = str(final_result.get("stage2_status") or "").strip().lower()
+        if stage2_raw:
+            stage2_status = stage2_raw
+    if triage_status and not _triage_job_has_resume_approval(job):
+        requires_admin_resume = True
+        stage2_status = stage2_status or triage_status
+
     return AdminGenerationJobDiagnostic(
         job_id=str(job.get("id") or ""),
         athlete_id=str(job.get("athlete_id") or ""),
@@ -518,6 +533,8 @@ def _admin_generation_job_diagnostic(job: dict[str, Any], *, stale_after_seconds
         stale_reason=stale_reason,
         plan_id=job.get("plan_id"),
         can_retry=str(job.get("status") or "") == "failed",
+        stage2_status=stage2_status,
+        requires_admin_resume=requires_admin_resume,
         is_stale=is_stale,
         request_payload_summary=_request_payload_summary(job.get("request_payload")),
     )

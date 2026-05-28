@@ -113,9 +113,12 @@ export function shouldRetainLatestJob(job: GenerationJobResponse | null | undefi
   if (!job) return false;
   const normalizedStatus = normalizeLegacyGenerationJobStatus(job.status) as GenerationJobStatus;
   // A terminal job with no openable plan (no plan_id and no latest_plan_id) has
-  // nothing to show or act on, so it must not linger as a passive ribbon.
+  // nothing to show or act on, so it must not linger as a passive ribbon —
+  // UNLESS it is a protected triage outcome that lives only on the job, in
+  // which case the ribbon must keep surfacing the "admin review required"
+  // state so the user can see it and an admin can act on it.
   if (isTerminalStatus(normalizedStatus) && !resolveTerminalJobPlanId(job)) {
-    return false;
+    return job.requires_admin_resume === true;
   }
   return true;
 }

@@ -699,6 +699,27 @@ export function approveAndResumeGeneration(
   );
 }
 
+export function approveAndResumeGenerationFromJob(
+  token: string,
+  jobId: string,
+  payload: ApproveAndResumeGenerationRequest,
+  clientRequestId?: string,
+): Promise<GenerationJobResponse> {
+  const stableClientRequestId = clientRequestId ?? createClientRequestId(`triage_resume_job_${jobId}`);
+
+  return withTransientRetries(() =>
+    readJson<GenerationJobResponse>(
+      `/api/admin/generation-jobs/${encodeURIComponent(jobId)}/approve-and-resume-generation`,
+      {
+        method: "POST",
+        token,
+        clientRequestId: stableClientRequestId,
+        body: JSON.stringify(payload),
+      },
+    ),
+  );
+}
+
 export function rejectApprovedPlan(token: string, planId: string): Promise<PlanDetail> {
   return readJson<PlanDetail>(`/api/admin/plans/${planId}/reject`, {
     method: "POST",

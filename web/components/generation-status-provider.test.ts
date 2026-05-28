@@ -69,3 +69,20 @@ test("non-terminal latest job is retained", () => {
   assert.equal(shouldRetainLatestJob({ ...baseJob, status: "queued" }), true);
   assert.equal(shouldRetainLatestJob({ ...baseJob, status: "running" }), true);
 });
+
+test("triage-blocked terminal job without plan id is retained for admin-review ribbon", () => {
+  // Protected triage outcomes live only on the job (no plan row). The
+  // ribbon must keep showing "admin review required" so the user can
+  // see it and an admin can act on it.
+  assert.equal(
+    shouldRetainLatestJob({
+      ...baseJob,
+      status: "review_required",
+      plan_id: null,
+      latest_plan_id: null,
+      requires_admin_resume: true,
+      stage2_status: "triage_blocked",
+    }),
+    true,
+  );
+});

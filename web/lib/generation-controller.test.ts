@@ -134,3 +134,20 @@ test("completed terminal job with no openable plan is already-generated, not a f
     { type: "already_generated" }
   );
 });
+
+test("completed terminal job with no plan but requires_admin_resume is review_paused", () => {
+  // Triage-blocked outcomes live only on the job. The controller must
+  // surface "review_paused" instead of "already_generated" so the UI
+  // routes to admin review (and the elapsed timer halts).
+  assert.deepEqual(
+    resolveCompletedTerminalJobOutcome(
+      buildTerminalJob({
+        plan_id: null,
+        latest_plan_id: null,
+        requires_admin_resume: true,
+        stage2_status: "triage_blocked",
+      }),
+    ),
+    { type: "review_paused" },
+  );
+});
