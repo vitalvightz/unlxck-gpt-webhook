@@ -2375,7 +2375,7 @@ def create_app(
         approval_log = {
             "approved_by_user_id": profile.athlete_id,
             "approved_by_email": profile.email,
-            "approved_at": datetime.now(timezone.utc).isoformat(),
+            "approved_at": _utc_now_iso(),
             "reason": approval.reason,
             "action": "approve_and_resume_generation_from_job",
             "source_job_id": job_id,
