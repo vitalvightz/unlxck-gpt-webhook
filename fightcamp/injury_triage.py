@@ -111,6 +111,18 @@ _DANGEROUS_RED_FLAGS = {
 
 _WORSENING_TRENDS = {"worse", "worsening", "regressing", "worsened"}
 
+# ``injury_type_source`` values set by guided_injury_resolver when the resolved
+# injury_type came from the guided card rather than the free-text parser. These
+# must not suppress guided structured diagnosis (see use_guided_diagnosis_fields).
+_GUIDED_DERIVED_TYPE_SOURCES = {
+    "surface_type",
+    "guided_serious_type",
+    "guided_tendon_ligament",
+    "guided_subtype",
+    "guided_type",
+    "fallback",
+}
+
 _TRAUMA_CONTEXT_PATTERNS = (
     r"\bhit\b",
     r"\bimpact\b",
@@ -1208,8 +1220,16 @@ def triage_injuries(plan_input: PlanInput) -> InjuryTriageResult:
         routing_reasons=routing_reasons,
     )
 
+    # Only a free-text *parser*-derived injury type should suppress the guided
+    # diagnosis fields. Guided-sourced types are now merged into parsed_injuries,
+    # so keying off the bare merged ``injury_type`` would let a guided card disable
+    # its own structured handling. Items whose ``injury_type`` originated from the
+    # guided card (injury_type_source in _GUIDED_DERIVED_TYPE_SOURCES) must not
+    # count; items without a source marker are treated as parser-derived.
     use_guided_diagnosis_fields = not any(
-        isinstance(item, dict) and str(item.get("injury_type") or "").strip()
+        isinstance(item, dict)
+        and str(item.get("injury_type") or "").strip()
+        and item.get("injury_type_source") not in _GUIDED_DERIVED_TYPE_SOURCES
         for item in plan_input.parsed_injuries or []
     )
 
