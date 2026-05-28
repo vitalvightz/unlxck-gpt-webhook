@@ -72,7 +72,27 @@ type GenerationControllerOptions = {
   storageKey: string | null;
   createJob: (clientRequestId: string) => Promise<GenerationJobResponse>;
   onComplete: (result: GenerationCompletion) => void;
+  // Optional fallback used when the backend reports an existing in-flight job
+  // for the same athlete (typical when the user submitted from another tab or
+  // device). If provided and createJob raises that conflict, the controller
+  // attaches to the returned active job instead of surfacing a raw 409.
+  recoverActiveJob?: () => Promise<GenerationJobResponse | null>;
 };
+
+// Matches the FastAPI 409 detail emitted by
+// _find_blocking_generation_job_for_athlete when another tab/device beat us
+// to the active-job slot. Detail strings are surfaced verbatim through
+// ApiError.message in readJson, so substring matching is the cheapest stable
+// hook we have without expanding ApiError to carry the parsed body.
+const GENERATION_ALREADY_IN_FLIGHT_ERROR_SNIPPET =
+  "A generation job is already queued or running for this account.";
+
+export function isGenerationAlreadyInFlightError(error: unknown): boolean {
+  if (!(error instanceof Error)) {
+    return false;
+  }
+  return error.message.includes(GENERATION_ALREADY_IN_FLIGHT_ERROR_SNIPPET);
+}
 
 type StartGenerationOptions = {
   clientRequestId?: string;
@@ -223,6 +243,7 @@ async function createJobWithReconnect(
   clientRequestId: string,
   setStatusMessage: (message: string | null) => void,
   setPhase: (phase: GenerationUiPhase) => void,
+  recoverActiveJob?: () => Promise<GenerationJobResponse | null>,
 ): Promise<GenerationJobResponse> {
   let lastError: unknown;
   for (let attempt = 1; attempt <= 3; attempt += 1) {
@@ -230,6 +251,24 @@ async function createJobWithReconnect(
       return await createJob(clientRequestId);
     } catch (error) {
       lastError = error;
+      if (isGenerationAlreadyInFlightError(error) && recoverActiveJob) {
+        // Another tab/device already started a job for this athlete. Rather
+        // than surfacing a raw 409, attach to the in-flight job so the UI
+        // shows the live build instead of a confusing "create failed" state.
+        try {
+          const activeJob = await recoverActiveJob();
+          if (activeJob) {
+            setPhase("reconnecting");
+            setStatusMessage(
+              "Reconnecting to a plan build already in progress on another tab or device.",
+            );
+            return activeJob;
+          }
+        } catch {
+          // Active lookup unavailable; fall through to the original error.
+        }
+        throw error;
+      }
       if (!isRetryableApiFailure(error)) {
         throw error;
       }
@@ -249,6 +288,7 @@ export function useGenerationController({
   storageKey,
   createJob,
   onComplete,
+  recoverActiveJob,
 }: GenerationControllerOptions) {
   const [isGenerating, setIsGenerating] = useState(false);
   const [phase, setPhase] = useState<GenerationUiPhase>(() =>
@@ -416,7 +456,13 @@ export function useGenerationController({
         );
         setMilestones([]);
         const activeJob = options.existingJob
-          ?? await createJobWithReconnect(createJob, clientRequestId, setStatusMessage, setPhase);
+          ?? await createJobWithReconnect(
+            createJob,
+            clientRequestId,
+            setStatusMessage,
+            setPhase,
+            recoverActiveJob,
+          );
         const createdAtMs = Date.parse(activeJob.created_at || pendingCreatedAt) || Date.now();
         setStartedAtMs(createdAtMs);
         await watchJobUntilTerminal(

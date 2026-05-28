@@ -60,6 +60,12 @@ export default function GeneratePage() {
       }
       return createGenerationJob(session.access_token, payload, clientRequestId, resolvePlanSource(me));
     },
+    recoverActiveJob: async () => {
+      if (!session?.access_token) {
+        return null;
+      }
+      return getActiveGenerationJob(session.access_token);
+    },
     onComplete: ({ planId, status, recovered, requiresAdminResume, stage2Status }) => {
       const isProtectedTriageOutcome =
         requiresAdminResume === true || (stage2Status || "").toLowerCase() === "triage_blocked";
