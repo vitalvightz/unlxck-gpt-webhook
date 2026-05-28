@@ -420,6 +420,65 @@ def test_admin_latest_intake_job_fails_when_linked_intake_is_for_different_athle
     assert store.generation_jobs["job-1"]["error"] == "admin latest intake job intake belongs to a different athlete"
 
 
+def test_admin_latest_intake_job_accepts_semantically_equivalent_linked_payload():
+    store = FakeStore()
+    request = _build_request().model_dump(mode="json")
+    intake = store.create_intake("athlete-1", _build_request())
+    linked_payload = dict(intake["intake"])
+    linked_payload.pop("no_scheduled_fight", None)
+    linked_payload.pop("open_camp_weeks", None)
+    store.update_intake(
+        intake["id"],
+        intake=linked_payload,
+        fight_date=intake["fight_date"],
+        technical_style=intake["technical_style"],
+    )
+    store.generation_jobs["job-1"] = {
+        "id": "job-1",
+        "athlete_id": "athlete-1",
+        "status": "queued",
+        "source": "admin_latest_intake",
+        "request_payload": request,
+        "intake_id": intake["id"],
+    }
+    asyncio.run(
+        generation_runtime.run_generation_job(
+            job_id="job-1",
+            store=store,
+            planner_fn=app_module._noop_planner,
+            stage2=FakeStage2Automator(result_factory=finalized_result),
+            active_tasks=set(),
+        )
+    )
+    assert store.generation_jobs["job-1"]["status"] == "completed"
+
+
+def test_admin_latest_intake_job_fails_when_linked_payload_differs_from_request_payload():
+    store = FakeStore()
+    request = _build_request().model_dump(mode="json")
+    linked_request = _build_request({"fatigue_level": "high"})
+    intake = store.create_intake("athlete-1", linked_request)
+    store.generation_jobs["job-1"] = {
+        "id": "job-1",
+        "athlete_id": "athlete-1",
+        "status": "queued",
+        "source": "admin_latest_intake",
+        "request_payload": request,
+        "intake_id": intake["id"],
+    }
+    asyncio.run(
+        generation_runtime.run_generation_job(
+            job_id="job-1",
+            store=store,
+            planner_fn=app_module._noop_planner,
+            stage2=FakeStage2Automator(result_factory=finalized_result),
+            active_tasks=set(),
+        )
+    )
+    assert store.generation_jobs["job-1"]["status"] == "failed"
+    assert store.generation_jobs["job-1"]["error"] == "admin latest intake job request_payload does not match linked intake payload"
+
+
 def test_terminal_success_without_plan_id_is_downgraded_to_failed_with_error_message():
     store = FakeStore()
     request_payload = _build_request().model_dump(mode="json")

@@ -705,7 +705,14 @@ async def run_generation_job(
             linked_payload = linked_intake.get("intake")
             if not isinstance(linked_payload, dict):
                 raise AdminLatestIntakeLinkageError("admin latest intake job linked intake payload is invalid")
-            if _stable_payload_hash(linked_payload) != _stable_payload_hash(raw_request_payload):
+            try:
+                normalized_linked_payload = parse_plan_request(linked_payload).model_dump(mode="json")
+            except PayloadValidationError as exc:
+                raise AdminLatestIntakeLinkageError("admin latest intake job linked intake payload is invalid") from exc
+
+            normalized_request_payload = parse_plan_request(raw_request_payload).model_dump(mode="json")
+
+            if _stable_payload_hash(normalized_linked_payload) != _stable_payload_hash(normalized_request_payload):
                 raise AdminLatestIntakeLinkageError(
                     "admin latest intake job request_payload does not match linked intake payload"
                 )
