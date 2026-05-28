@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 
 import {
   getGenerationStatusTarget,
+  isProtectedTriageLatestJob,
   latestCompletedJobOpenablePlanId,
   latestFailedJobHasOpenablePlan,
   shouldRenderPassiveLatestJobRibbon,
@@ -105,4 +106,29 @@ test("active running job path still routes to generate", () => {
 
 test("generic ribbon guard blocks render when phase/status/target are all null and passive job is not actionable", () => {
   assert.equal(shouldRenderPassiveLatestJobRibbon({ status: "completed", plan_id: "plan_555" }), false);
+});
+
+test("isProtectedTriageLatestJob detects requires_admin_resume", () => {
+  assert.equal(isProtectedTriageLatestJob({ requires_admin_resume: true }), true);
+});
+
+test("isProtectedTriageLatestJob detects triage_blocked stage2_status", () => {
+  assert.equal(isProtectedTriageLatestJob({ stage2_status: "triage_blocked" }), true);
+});
+
+test("isProtectedTriageLatestJob returns false for normal completed jobs", () => {
+  assert.equal(isProtectedTriageLatestJob({ stage2_status: "stage2_pass" }), false);
+  assert.equal(isProtectedTriageLatestJob({}), false);
+  assert.equal(isProtectedTriageLatestJob(null), false);
+});
+
+test("triage-blocked completed job with plan_id still surfaces a passive ribbon for admin review", () => {
+  assert.equal(
+    shouldRenderPassiveLatestJobRibbon({
+      status: "completed",
+      plan_id: "plan_blocked",
+      requires_admin_resume: true,
+    }),
+    true,
+  );
 });

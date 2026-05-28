@@ -61,7 +61,9 @@ export default function GeneratePage() {
       return createGenerationJob(session.access_token, payload, clientRequestId, resolvePlanSource(me));
     },
     onComplete: ({ planId, status, recovered, requiresAdminResume, stage2Status }) => {
-      if (payload && typeof window !== "undefined") {
+      const isProtectedTriageOutcome =
+        requiresAdminResume === true || (stage2Status || "").toLowerCase() === "triage_blocked";
+      if (payload && typeof window !== "undefined" && !isProtectedTriageOutcome) {
         window.localStorage.setItem(
           COMPLETED_GENERATION_KEY,
           JSON.stringify({ payloadHash: hashPayload(payload), planId, completedAt: new Date().toISOString() }),

@@ -25,9 +25,31 @@ const latestJobDismissKey = (jobId: string) => `${RIBBON_DISMISSED_KEY}:${jobId}
 
 type PassiveLatestJobStatus = "failed" | "review_required" | "completed" | "queued" | "running";
 
+export function isProtectedTriageLatestJob(
+  latestJob:
+    | { stage2_status?: string | null; requires_admin_resume?: boolean | null }
+    | null
+    | undefined,
+): boolean {
+  if (!latestJob) {
+    return false;
+  }
+  if (latestJob.requires_admin_resume === true) {
+    return true;
+  }
+  const stage2 = String(latestJob.stage2_status || "").trim().toLowerCase();
+  return stage2 === "triage_blocked";
+}
+
 export function shouldRenderPassiveLatestJobRibbon(
   latestJob:
-    | { status?: PassiveLatestJobStatus | null; plan_id?: string | null; latest_plan_id?: string | null }
+    | {
+        status?: PassiveLatestJobStatus | null;
+        plan_id?: string | null;
+        latest_plan_id?: string | null;
+        stage2_status?: string | null;
+        requires_admin_resume?: boolean | null;
+      }
     | null
     | undefined,
 ): boolean {
@@ -44,6 +66,10 @@ export function shouldRenderPassiveLatestJobRibbon(
   }
 
   if (latestJob.status === "completed" && !latestJob.plan_id) {
+    return true;
+  }
+
+  if (latestJob.status === "completed" && isProtectedTriageLatestJob(latestJob)) {
     return true;
   }
 
@@ -273,11 +299,18 @@ export function GlobalGenerationStatus() {
       const failedPlanId = latestJob.plan_id || latestJob.latest_plan_id || null;
 
       if (latestFailedJobHasOpenablePlan(latestJob) && failedPlanId) {
+        const isProtectedTriage = isProtectedTriageLatestJob(latestJob);
         return (
           <div className="global-generation-status global-generation-status-completed">
             <Link href={`/plans/${failedPlanId}`} className="global-generation-status-main">
-              <div className="global-generation-status-message">Your plan is saved and ready.</div>
-              <span className="global-generation-status-cta-label">Open plan</span>
+              <div className="global-generation-status-message">
+                {isProtectedTriage
+                  ? "Plan is held for admin review."
+                  : "Your plan is saved and ready."}
+              </div>
+              <span className="global-generation-status-cta-label">
+                {isProtectedTriage ? "Open admin review" : "Open plan"}
+              </span>
             </Link>
 
             <button
@@ -373,11 +406,18 @@ export function GlobalGenerationStatus() {
       const completedPlanId = latestCompletedJobOpenablePlanId(latestJob);
 
       if (completedPlanId) {
+        const isProtectedTriage = isProtectedTriageLatestJob(latestJob);
         return (
           <div className="global-generation-status global-generation-status-completed">
             <Link href={`/plans/${completedPlanId}`} className="global-generation-status-main">
-              <div className="global-generation-status-message">Your plan is saved and ready.</div>
-              <span className="global-generation-status-cta-label">Open plan</span>
+              <div className="global-generation-status-message">
+                {isProtectedTriage
+                  ? "Plan is held for admin review."
+                  : "Your plan is saved and ready."}
+              </div>
+              <span className="global-generation-status-cta-label">
+                {isProtectedTriage ? "Open admin review" : "Open plan"}
+              </span>
             </Link>
 
             <button

@@ -247,8 +247,109 @@ def test_generate_plan_blocks_duplicate_for_active_triage_blocked_plan():
     body = response.json()
     assert body["job_id"] == existing["id"]
     assert body["requires_admin_resume"] is True
+    # Terminal triage-blocked plans must not be framed as "your plan is ready"
+    # — the UI must be steered to the protected admin-review flow.
+    assert "ready" not in (body.get("message") or "").lower()
+    assert "admin" in (body.get("message") or "").lower() or "review" in (body.get("message") or "").lower()
     jobs = store.list_generation_jobs_for_athlete("athlete-1", limit=25)
     assert len(jobs) == 1
+
+
+def test_generate_plan_does_not_return_old_triage_blocked_job_after_resume_approval():
+    """After admin approves resume for a triage-blocked plan, the stale
+    same-payload terminal job must not be returned as a completed
+    duplicate — otherwise generation loops back into the old blocked
+    decision instead of letting the resume flow drive a new plan."""
+    client, store, _ = _build_client(enable_in_process_generation=False)
+    _seed_athlete_profile(store)
+    request = _build_request()
+    plan = store.create_plan(
+        athlete_id="athlete-1",
+        intake_id="intake_triage_approved",
+        request=request,
+        result=finalized_result(
+            status="triage_blocked",
+            stage2_status="triage_resume_approved",
+            why_log={
+                "injury_triage": {"mode": "needs_review", "should_block_stage2": True},
+                "triage_resume_approval": {"approved_by_email": "ops@unlxck.test"},
+                "triage_regeneration_cleared": True,
+            },
+        ),
+    )
+    existing, payload = _seed_completed_same_payload_job(
+        store, plan_id=plan["id"], client_request_id="completed-pre-approval"
+    )
+
+    response = client.post(
+        "/api/plans/generate",
+        headers={
+            "Authorization": "Bearer athlete-token",
+            "X-Client-Request-Id": "fresh-after-resume-approval",
+        },
+        json=payload,
+    )
+
+    assert response.status_code == 202
+    body = response.json()
+    assert body["job_id"] != existing["id"]
+    jobs = store.list_generation_jobs_for_athlete("athlete-1", limit=25)
+    assert len(jobs) == 2
+
+
+def test_triage_plan_has_resume_approval_detects_all_documented_markers():
+    from api.app import _triage_plan_has_resume_approval
+
+    # stage2_status marker
+    assert _triage_plan_has_resume_approval({"stage2_status": "triage_resume_approved"}) is True
+    # why_log.triage_regeneration_cleared marker
+    assert (
+        _triage_plan_has_resume_approval({"why_log": {"triage_regeneration_cleared": True}})
+        is True
+    )
+    # why_log.triage_resume_approval marker
+    assert (
+        _triage_plan_has_resume_approval(
+            {"why_log": {"triage_resume_approval": {"approved_by_email": "ops@unlxck.test"}}}
+        )
+        is True
+    )
+    # why_log.injury_triage_resume_override.bypassed_blocking marker
+    assert (
+        _triage_plan_has_resume_approval(
+            {
+                "why_log": {
+                    "injury_triage_resume_override": {
+                        "bypassed_blocking": True,
+                        "triage_mode": "needs_review",
+                    }
+                }
+            }
+        )
+        is True
+    )
+    # why_log.injury_triage_original.triage_resume_approved marker
+    assert (
+        _triage_plan_has_resume_approval(
+            {
+                "why_log": {
+                    "injury_triage_original": {
+                        "mode": "needs_review",
+                        "triage_resume_approved": True,
+                    }
+                }
+            }
+        )
+        is True
+    )
+    # No markers
+    assert _triage_plan_has_resume_approval({"stage2_status": "triage_blocked"}) is False
+    assert (
+        _triage_plan_has_resume_approval({"why_log": {"injury_triage": {"mode": "needs_review"}}})
+        is False
+    )
+    assert _triage_plan_has_resume_approval(None) is False
+    assert _triage_plan_has_resume_approval({}) is False
 
 
 @pytest.mark.parametrize("status_value", ["completed", "review_required", "failed"])

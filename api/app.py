@@ -197,6 +197,15 @@ def _job_response(
         stage2_status = linked_stage2
         if linked_status in _PROTECTED_TRIAGE_STATUSES or linked_stage2 in _PROTECTED_TRIAGE_STATUSES:
             requires_admin_resume = True
+    # A terminal job whose linked plan is still triage-blocked must not be
+    # framed as a normal "plan ready" outcome — the UI needs to route to
+    # admin review instead of celebrating a saved plan.
+    message = status_messages.get(normalized_status, "Generation queued and will be processed shortly.")
+    if requires_admin_resume and normalized_status in {"completed", "review_required"}:
+        message = (
+            "This intake is held in protected triage review. "
+            "Admin must resume generation before a plan can be published."
+        )
     return GenerationJobResponse(
         job_id=str(job["id"]),
         athlete_id=str(job["athlete_id"]),
@@ -211,7 +220,7 @@ def _job_response(
         plan_id=plan_id,
         latest_plan_id=resolved_latest_plan_id or plan_id,
         status_url=f"/api/generation-jobs/{job['id']}",
-        message=status_messages.get(normalized_status, "Generation queued and will be processed shortly."),
+        message=message,
         progress_milestones=_normalize_progress_milestones(job.get("progress_milestones")),
         can_retry=can_retry,
         stage2_status=stage2_status or None,
@@ -313,6 +322,31 @@ def _stable_payload_hash(payload: dict[str, Any]) -> str:
     return json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
 
 
+def _triage_plan_has_resume_approval(plan: dict[str, Any] | None) -> bool:
+    # Once a triage-blocked plan has been approved for resume, the old
+    # same-payload terminal job no longer represents the live decision —
+    # the admin resume flow owns the next regeneration and the old
+    # triage-blocked output must not be returned as a completed duplicate.
+    if not isinstance(plan, dict):
+        return False
+    if str(plan.get("stage2_status") or "").strip().lower() == "triage_resume_approved":
+        return True
+    why_log = plan.get("why_log")
+    if not isinstance(why_log, dict):
+        return False
+    if why_log.get("triage_regeneration_cleared") is True:
+        return True
+    if isinstance(why_log.get("triage_resume_approval"), dict):
+        return True
+    resume_override = why_log.get("injury_triage_resume_override")
+    if isinstance(resume_override, dict) and resume_override.get("bypassed_blocking") is True:
+        return True
+    triage_original = why_log.get("injury_triage_original")
+    if isinstance(triage_original, dict) and triage_original.get("triage_resume_approved") is True:
+        return True
+    return False
+
+
 def _plan_blocks_duplicate_generation(
     plan: dict[str, Any] | None,
     *,
@@ -321,11 +355,16 @@ def _plan_blocks_duplicate_generation(
     # Duplicate prevention must only apply to plans the viewer can still open.
     # Athlete soft-delete archives the plan (hidden from athlete views) and a
     # hard-delete removes it entirely, so a stale same-payload job pointing at
-    # such a plan must not block a fresh generation. Triage-blocked/protected
-    # plans still block here so the existing admin-review behaviour is kept.
+    # such a plan must not block a fresh generation. Unapproved triage-blocked
+    # plans still block here so the existing admin-review behaviour is kept,
+    # but once a triage-blocked plan has resume approval markers, the original
+    # same-payload terminal job no longer reflects the live decision — the
+    # admin resume flow must drive the next regeneration instead.
     if not isinstance(plan, dict):
         return False
     if _is_archived_plan(plan):
+        return False
+    if _is_triage_blocked_plan(plan) and _triage_plan_has_resume_approval(plan):
         return False
     return True
 
