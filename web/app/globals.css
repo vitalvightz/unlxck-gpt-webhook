@@ -7210,6 +7210,147 @@ html[data-theme="light"] .global-generation-status-dismiss {
   background: rgba(255, 184, 77, 0.12);
 }
 
+.admin-athlete-plan-access {
+  display: grid;
+  gap: 16px;
+}
+
+.admin-athlete-plan-list,
+.admin-diagnostic-list {
+  display: grid;
+  gap: 12px;
+}
+
+.admin-athlete-plan-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 14px 16px;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.035);
+  color: var(--text-primary);
+  text-decoration: none;
+}
+
+.admin-athlete-plan-row:hover,
+.admin-athlete-plan-row:focus-visible {
+  border-color: rgba(181, 18, 43, 0.32);
+  background: rgba(181, 18, 43, 0.08);
+}
+
+.admin-athlete-plan-row span:first-child {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.admin-athlete-plan-row small {
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  line-height: 1.35;
+}
+
+.admin-diagnostic-card {
+  display: grid;
+  gap: 16px;
+  padding: 16px;
+  border-radius: 22px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.02)),
+    rgba(12, 14, 18, 0.58);
+}
+
+.admin-diagnostic-card-header,
+.admin-diagnostic-badges,
+.admin-diagnostic-technical {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.admin-diagnostic-badges {
+  justify-content: flex-end;
+}
+
+.admin-diagnostic-badge-warning {
+  border-color: rgba(255, 184, 77, 0.3);
+  background: rgba(255, 184, 77, 0.12);
+}
+
+.admin-diagnostic-meta-grid,
+.admin-diagnostic-summary-grid,
+.admin-diagnostic-pill-groups {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 10px;
+}
+
+.admin-diagnostic-meta-item,
+.admin-diagnostic-pill-groups > div,
+.admin-diagnostic-technical {
+  padding: 12px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.026);
+}
+
+.admin-diagnostic-meta-item {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+
+.admin-diagnostic-meta-item span,
+.admin-diagnostic-section-title {
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  line-height: 1.25;
+  text-transform: uppercase;
+}
+
+.admin-diagnostic-meta-item strong {
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  font-weight: 600;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.admin-diagnostic-section {
+  display: grid;
+  gap: 10px;
+}
+
+.admin-diagnostic-section-title {
+  margin: 0;
+}
+
+.admin-diagnostic-pill-groups .review-detail-label,
+.admin-diagnostic-pill-groups .review-detail-value {
+  margin: 0;
+}
+
+.admin-diagnostic-pill-groups .review-detail-value {
+  margin-top: 6px;
+  color: var(--text-primary);
+}
+
+.admin-diagnostic-alert {
+  padding: 12px 14px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 184, 77, 0.24);
+  background: rgba(255, 184, 77, 0.1);
+  color: var(--text-primary);
+  line-height: 1.45;
+}
+
 .empty-state-card {
   padding: 20px;
   border-radius: 24px;
@@ -7313,6 +7454,22 @@ html[data-theme="light"] .global-generation-status-dismiss {
     min-height: 24px;
     padding: 4px 8px;
     font-size: 0.76rem;
+  }
+
+  .admin-athlete-plan-row {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .admin-diagnostic-card {
+    padding: 14px;
+    border-radius: 18px;
+  }
+
+  .admin-diagnostic-meta-grid,
+  .admin-diagnostic-summary-grid,
+  .admin-diagnostic-pill-groups {
+    grid-template-columns: 1fr;
   }
 }
 
@@ -9334,6 +9491,30 @@ html[data-theme="light"] .athlete-profile-metric-accent {
 html[data-theme="light"] .athlete-profile-overview-section {
   border-color: rgba(98, 77, 69, 0.08);
   background: rgba(255, 255, 255, 0.72);
+}
+
+html[data-theme="light"] .admin-athlete-plan-row,
+html[data-theme="light"] .admin-diagnostic-card {
+  border-color: rgba(98, 77, 69, 0.08);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(248, 242, 234, 0.86));
+}
+
+html[data-theme="light"] .admin-athlete-plan-row:hover,
+html[data-theme="light"] .admin-athlete-plan-row:focus-visible {
+  border-color: rgba(146, 43, 45, 0.18);
+  background: rgba(255, 246, 244, 0.98);
+}
+
+html[data-theme="light"] .admin-diagnostic-meta-item,
+html[data-theme="light"] .admin-diagnostic-pill-groups > div,
+html[data-theme="light"] .admin-diagnostic-technical {
+  border-color: rgba(98, 77, 69, 0.08);
+  background: rgba(255, 255, 255, 0.64);
+}
+
+html[data-theme="light"] .admin-diagnostic-alert {
+  border-color: rgba(170, 111, 24, 0.2);
+  background: rgba(255, 246, 222, 0.9);
 }
 
 html[data-theme="light"] .eyebrow,
