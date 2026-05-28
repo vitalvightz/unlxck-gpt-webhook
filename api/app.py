@@ -145,7 +145,16 @@ def _job_response(
     normalized_status = normalize_generation_job_status(status_value)
     plan_id = _resolve_existing_plan_id(str(job.get("plan_id")) if job.get("plan_id") else None)
     resolved_latest_plan_id = latest_plan_id
-    if normalized_status in {"completed", "review_required"} and not plan_id:
+    # Triage-blocked outcomes live only on the job — they explicitly must
+    # not back-fill a plan_id from milestones or latest_plan, otherwise the
+    # UI would re-open the wrong (old) plan and the duplicate-generation
+    # loop returns. Skip the fallback chain for these outcomes.
+    job_triage_status = _job_final_result_triage_status(job)
+    if (
+        normalized_status in {"completed", "review_required"}
+        and not plan_id
+        and not job_triage_status
+    ):
         milestones = _normalize_progress_milestones(job.get("progress_milestones"))
         for milestone in reversed(milestones):
             meta = milestone.get("meta")
@@ -197,14 +206,18 @@ def _job_response(
         stage2_status = linked_stage2
         if linked_status in _PROTECTED_TRIAGE_STATUSES or linked_stage2 in _PROTECTED_TRIAGE_STATUSES:
             requires_admin_resume = True
+    # Triage outcomes without a plan_id derive their state from the job's
+    # final_result. They are protected review states, not saved plans.
+    if not plan_id and job_triage_status:
+        requires_admin_resume = True
+        stage2_status = stage2_status or job_triage_status
     # A terminal job whose linked plan is still triage-blocked must not be
     # framed as a normal "plan ready" outcome — the UI needs to route to
     # admin review instead of celebrating a saved plan.
     message = status_messages.get(normalized_status, "Generation queued and will be processed shortly.")
     if requires_admin_resume and normalized_status in {"completed", "review_required"}:
         message = (
-            "This intake is held in protected triage review. "
-            "Admin must resume generation before a plan can be published."
+            "Planning paused. Admin review is required before generation can continue."
         )
     return GenerationJobResponse(
         job_id=str(job["id"]),
@@ -322,16 +335,14 @@ def _stable_payload_hash(payload: dict[str, Any]) -> str:
     return json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
 
 
-def _triage_plan_has_resume_approval(plan: dict[str, Any] | None) -> bool:
-    # Once a triage-blocked plan has been approved for resume, the old
-    # same-payload terminal job no longer represents the live decision —
-    # the admin resume flow owns the next regeneration and the old
-    # triage-blocked output must not be returned as a completed duplicate.
-    if not isinstance(plan, dict):
-        return False
-    if str(plan.get("stage2_status") or "").strip().lower() == "triage_resume_approved":
+def _has_triage_resume_approval_markers(
+    *,
+    stage2_status: str | None,
+    why_log: Any,
+) -> bool:
+    """Detect resume-approval markers regardless of source (plan row vs job final_result)."""
+    if str(stage2_status or "").strip().lower() == "triage_resume_approved":
         return True
-    why_log = plan.get("why_log")
     if not isinstance(why_log, dict):
         return False
     if why_log.get("triage_regeneration_cleared") is True:
@@ -345,6 +356,45 @@ def _triage_plan_has_resume_approval(plan: dict[str, Any] | None) -> bool:
     if isinstance(triage_original, dict) and triage_original.get("triage_resume_approved") is True:
         return True
     return False
+
+
+def _triage_plan_has_resume_approval(plan: dict[str, Any] | None) -> bool:
+    # Once a triage-blocked plan has been approved for resume, the old
+    # same-payload terminal job no longer represents the live decision —
+    # the admin resume flow owns the next regeneration and the old
+    # triage-blocked output must not be returned as a completed duplicate.
+    if not isinstance(plan, dict):
+        return False
+    return _has_triage_resume_approval_markers(
+        stage2_status=plan.get("stage2_status"),
+        why_log=plan.get("why_log"),
+    )
+
+
+def _triage_job_has_resume_approval(job: dict[str, Any] | None) -> bool:
+    """Resume-approval markers stored on a generation job's final_result."""
+    if not isinstance(job, dict):
+        return False
+    final_result = job.get("final_result")
+    if not isinstance(final_result, dict):
+        return False
+    return _has_triage_resume_approval_markers(
+        stage2_status=final_result.get("stage2_status"),
+        why_log=final_result.get("why_log"),
+    )
+
+
+def _job_final_result_triage_status(job: dict[str, Any] | None) -> str | None:
+    """Return the triage status from job.final_result, or None."""
+    if not isinstance(job, dict):
+        return None
+    final_result = job.get("final_result")
+    if not isinstance(final_result, dict):
+        return None
+    status_value = str(final_result.get("status") or "").strip().lower()
+    if status_value in _PROTECTED_TRIAGE_STATUSES:
+        return status_value
+    return None
 
 
 def _plan_blocks_duplicate_generation(
@@ -385,11 +435,15 @@ def _find_existing_terminal_job_for_same_payload(
         if _stable_payload_hash(job_payload) != target_hash:
             continue
         plan_id = str(job.get("plan_id") or "").strip()
-        if not plan_id:
-            continue
-        if not _plan_blocks_duplicate_generation(store.get_plan(plan_id), viewer_role=viewer_role):
-            continue
-        return job
+        if plan_id:
+            if not _plan_blocks_duplicate_generation(store.get_plan(plan_id), viewer_role=viewer_role):
+                continue
+            return job
+        # No plan_id: this is a new-style triage outcome that lives only on
+        # the job. Block the duplicate only if the job still holds a triage
+        # state and has not been approved for resume.
+        if _job_final_result_triage_status(job) and not _triage_job_has_resume_approval(job):
+            return job
     return None
 
 
@@ -2219,6 +2273,149 @@ def create_app(
             stale_after_seconds=stale_after_seconds,
         )
         return _job_response(job, store=store, viewer_role=profile.role)
+
+    @app.post(
+        "/api/admin/generation-jobs/{job_id}/approve-and-resume-generation",
+        response_model=GenerationJobResponse,
+        status_code=202,
+    )
+    async def approve_and_resume_generation_from_job(
+        request: Request,
+        job_id: str,
+        approval: ApproveAndResumeGenerationRequest,
+        background_tasks: BackgroundTasks,
+        profile: ProfileRecord = Depends(require_admin),
+        store: AppStore = Depends(get_store),
+        planner_fn: Planner = Depends(get_planner),
+        stage2: Stage2Automator = Depends(get_stage2_automator),
+        active_tasks: set[str] = Depends(get_active_generation_tasks),
+        enable_in_process_generation: bool = Depends(get_enable_in_process_generation),
+    ) -> GenerationJobResponse:
+        """Approve and resume generation for a triage-blocked outcome that
+        lives only on the generation job (no plan row).
+
+        Mirrors `/api/admin/plans/{plan_id}/approve-and-resume-generation`
+        but reads athlete_id/intake_id/triage_mode from the source job's
+        `final_result`. The resume job is created without a `plan_id`;
+        Stage 2 produces a real plan row only if it succeeds.
+        """
+        source_job = await asyncio.to_thread(store.get_generation_job, job_id)
+        if not source_job:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="generation job not found")
+
+        triage_status = _job_final_result_triage_status(source_job)
+        if not triage_status:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="generation job is not in a protected triage state",
+            )
+
+        athlete_id = str(source_job.get("athlete_id") or "").strip()
+        intake_id = str(source_job.get("intake_id") or "").strip()
+        if not athlete_id or not intake_id:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="generation job is missing athlete_id or intake_id",
+            )
+
+        source_final_result = source_job.get("final_result") if isinstance(source_job.get("final_result"), dict) else {}
+        source_why_log = source_final_result.get("why_log") if isinstance(source_final_result.get("why_log"), dict) else {}
+        triage = source_why_log.get("injury_triage") if isinstance(source_why_log.get("injury_triage"), dict) else {}
+        triage_mode = str(triage.get("mode") or "").strip().lower()
+        if not _can_approve_and_resume_triage(triage_mode):
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="approve_and_resume_generation is only allowed for needs_review or restricted_rehab_only outcomes",
+            )
+
+        if _triage_job_has_resume_approval(source_job):
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="this blocked job has already been approved for resume",
+            )
+
+        client_request_id = f"triage_resume_job_{job_id}"
+        stale_after_seconds = _generation_job_stale_after_seconds()
+
+        intake_row = await asyncio.to_thread(store.get_intake, intake_id)
+        if not intake_row or not isinstance(intake_row.get("intake"), dict):
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="stored intake is missing for this job",
+            )
+
+        request_payload = copy.deepcopy(intake_row.get("intake"))
+        request_payload["_triage_resume_override"] = {
+            "approved": True,
+            "approved_by": {
+                "user_id": profile.athlete_id,
+                "email": profile.email,
+            },
+            "reason": approval.reason,
+            "allowed_modes": ["needs_review", "restricted_rehab_only"],
+        }
+
+        approval_log = {
+            "approved_by_user_id": profile.athlete_id,
+            "approved_by_email": profile.email,
+            "approved_at": datetime.now(timezone.utc).isoformat(),
+            "reason": approval.reason,
+            "action": "approve_and_resume_generation_from_job",
+            "source_job_id": job_id,
+        }
+
+        # Mark the source job's final_result with the approval marker so a
+        # second approval attempt is rejected with a clear conflict error.
+        updated_source_final_result = dict(source_final_result)
+        merged_source_why_log = dict(source_why_log)
+        merged_source_why_log["triage_resume_approval"] = approval_log
+        merged_source_why_log["triage_regeneration_cleared"] = True
+        updated_source_final_result["why_log"] = merged_source_why_log
+        updated_source_final_result["stage2_status"] = "triage_resume_approved"
+        await asyncio.to_thread(
+            store.update_generation_job,
+            job_id,
+            final_result=updated_source_final_result,
+            heartbeat_at=_utc_now_iso(),
+        )
+
+        # Create the resume job — no plan_id is passed; a real plan is
+        # created only when Stage 2 succeeds inside the runtime.
+        resume_job = await asyncio.to_thread(
+            store.create_or_get_generation_job,
+            athlete_id=athlete_id,
+            client_request_id=client_request_id,
+            source="admin_triage_resume",
+            request_payload=request_payload,
+            intake_id=intake_id,
+            stale_after_seconds=stale_after_seconds,
+        )
+        # Reset job state in case it was reused (idempotent retry).
+        resume_job = await asyncio.to_thread(
+            store.update_generation_job,
+            str(resume_job.get("id") or ""),
+            source="admin_triage_resume",
+            request_payload=request_payload,
+            intake_id=intake_id,
+            stage1_result=None,
+            final_result=None,
+            error=None,
+            completed_at=None,
+            status="queued",
+            heartbeat_at=_utc_now_iso(),
+        )
+        resume_job = await schedule_generation_job_if_needed(
+            job=resume_job,
+            background_tasks=background_tasks,
+            store=store,
+            planner_fn=planner_fn,
+            stage2=stage2,
+            active_tasks=active_tasks,
+            enable_in_process_generation=enable_in_process_generation,
+            stale_job_checker=_is_stale_job,
+            stale_after_seconds=stale_after_seconds,
+        )
+        return _job_response(resume_job, store=store, viewer_role=profile.role)
 
     @app.post("/api/admin/plans/{plan_id}/reject", response_model=PlanDetail)
     def reject_approved_plan(

@@ -297,6 +297,87 @@ def test_generate_plan_does_not_return_old_triage_blocked_job_after_resume_appro
     assert len(jobs) == 2
 
 
+def test_generate_plan_blocks_duplicate_for_active_triage_blocked_job_without_plan_id():
+    """A new-style triage outcome (no plan row, final_result on the job)
+    must still block duplicate self-serve generation and return the
+    existing triage job with `requires_admin_resume=True`."""
+    client, store, _ = _build_client(enable_in_process_generation=False)
+    _seed_athlete_profile(store)
+    request = _build_request()
+    payload = request.model_dump(mode="json")
+    existing = store.create_or_get_generation_job(
+        athlete_id="athlete-1",
+        client_request_id="completed-triage-no-plan",
+        source="self_serve",
+        request_payload=payload,
+    )
+    store.update_generation_job(
+        existing["id"],
+        status="running",
+        started_at=_now(),
+        heartbeat_at=_now(),
+    )
+    store.update_generation_job(
+        existing["id"],
+        status="review_required",
+        completed_at=_now(),
+        final_result={
+            "status": "triage_blocked",
+            "stage2_status": "triage_blocked",
+            "why_log": {"injury_triage": {"mode": "needs_review", "should_block_stage2": True}},
+        },
+    )
+
+    response = client.post(
+        "/api/plans/generate",
+        headers={
+            "Authorization": "Bearer athlete-token",
+            "X-Client-Request-Id": "retry-triage-no-plan",
+        },
+        json=payload,
+    )
+
+    assert response.status_code == 202
+    body = response.json()
+    assert body["job_id"] == existing["id"]
+    assert body["requires_admin_resume"] is True
+    assert body.get("plan_id") in (None, "")
+    # Message must steer to admin review, not "plan ready".
+    message = (body.get("message") or "").lower()
+    assert "ready" not in message
+    assert "admin" in message or "paused" in message
+
+
+def test_triage_job_has_resume_approval_detects_markers_on_job_final_result():
+    from api.app import _triage_job_has_resume_approval
+
+    job_with_marker = {
+        "final_result": {
+            "status": "triage_blocked",
+            "stage2_status": "triage_resume_approved",
+        }
+    }
+    assert _triage_job_has_resume_approval(job_with_marker) is True
+
+    job_with_why_log = {
+        "final_result": {
+            "status": "triage_blocked",
+            "why_log": {"triage_regeneration_cleared": True},
+        }
+    }
+    assert _triage_job_has_resume_approval(job_with_why_log) is True
+
+    job_without_marker = {
+        "final_result": {
+            "status": "triage_blocked",
+            "why_log": {"injury_triage": {"mode": "needs_review"}},
+        }
+    }
+    assert _triage_job_has_resume_approval(job_without_marker) is False
+    assert _triage_job_has_resume_approval({}) is False
+    assert _triage_job_has_resume_approval(None) is False
+
+
 def test_triage_plan_has_resume_approval_detects_all_documented_markers():
     from api.app import _triage_plan_has_resume_approval
 
@@ -1987,72 +2068,83 @@ def test_curated_system_scenarios_cover_generation_and_hold_behavior(scenario: S
 
 
 
-def test_generation_pipeline_persists_triage_blocked_without_stage2_call():
-    stage2 = FakeStage2Automator(result=finalized_result())
+def _triage_blocked_planner(payload: dict, *, progress_callback=None) -> dict:
+    return {
+        "status": "triage_blocked",
+        "ok": False,
+        "plan_text": "## Injury Triage: Medical Hold",
+        "coach_notes": "medical_hold",
+        "pdf_url": None,
+        "why_log": {"injury_triage": {"mode": "medical_hold", "should_block_stage2": True}},
+        "stage2_payload": None,
+        "planning_brief": None,
+        "stage2_handoff_text": "",
+        "stage2_status": "triage_blocked",
+        "injury_triage": {
+            "mode": "medical_hold",
+            "should_block_stage2": True,
+        },
+        "parsing_metadata": {},
+    }
 
-    def triage_blocked_planner(payload: dict) -> dict:
-        return {
-            "status": "triage_blocked",
-            "ok": False,
-            "plan_text": "## Injury Triage: Medical Hold",
-            "coach_notes": "medical_hold",
-            "pdf_url": None,
-            "why_log": {"injury_triage": {"mode": "medical_hold"}},
-            "stage2_payload": None,
-            "planning_brief": None,
-            "stage2_handoff_text": "",
-            "stage2_status": "triage_blocked",
-            "injury_triage": {
-                "mode": "medical_hold",
-                "should_block_stage2": True,
-            },
-            "parsing_metadata": {},
-        }
 
+def test_generation_pipeline_does_not_persist_triage_blocked_plan_row():
+    """Stage-1-skipped triage outcomes live only on the generation job.
+
+    No plan row is created. The job reaches review_required and carries
+    the triage state on `final_result`, so the admin "Approve & Resume"
+    flow can drive the next generation without a fake plan anchor.
+    """
+    store = FakeStore()
     athlete = AuthenticatedUser(
         user_id="athlete-1",
         email="ari@example.com",
         full_name="Ari Mensah",
         metadata={},
     )
-    admin = AuthenticatedUser(
-        user_id="admin-1",
-        email="ops@unlxck.test",
-        full_name="Ops Admin",
-        metadata={},
+    store.ensure_profile(athlete)
+    request = _build_request()
+    stage2 = FakeStage2Automator(result=finalized_result())
+
+    job = store.create_or_get_generation_job(
+        athlete_id=athlete.user_id,
+        client_request_id="triage-no-plan",
+        source="self_serve",
+        request_payload=request.model_dump(mode="json"),
     )
-    store = FakeStore()
-    client = TestClient(
-        create_app(
+
+    asyncio.run(
+        run_generation_job(
+            job_id=job["id"],
             store=store,
-            auth_service=FakeAuthService({"athlete-token": athlete, "admin-token": admin}),
-            planner=triage_blocked_planner,
-            stage2_automator=stage2,
+            planner_fn=_triage_blocked_planner,
+            stage2=stage2,
+            active_tasks=set(),
         )
     )
 
-    _, job = _start_generation(client)
-    saved = next(iter(store.plans.values()))
-
+    refreshed = store.get_generation_job(job["id"])
     assert stage2.calls == []
-    assert job["status"] == "completed"
-    assert saved["status"] == "triage_blocked"
-    assert saved["stage2_status"] == "triage_blocked"
-    assert saved["stage2_payload"] is None
-    milestone_codes = [entry.get("code") for entry in job.get("progress_milestones", []) if isinstance(entry, dict)]
+    assert store.plans == {}
+    assert store.list_user_plans(athlete.user_id) == []
+    assert refreshed["status"] == "review_required"
+    assert refreshed.get("plan_id") in (None, "")
+    final_result = refreshed.get("final_result") or {}
+    assert final_result.get("status") == "triage_blocked"
+    assert final_result.get("stage2_status") == "triage_blocked"
+    # The triage why_log must be preserved on the job so admin resume can
+    # gate approval without needing a plan row.
+    assert isinstance(final_result.get("why_log"), dict)
+    assert final_result["why_log"].get("injury_triage", {}).get("mode") == "medical_hold"
+
+    milestone_codes = [entry.get("code") for entry in refreshed.get("progress_milestones", []) if isinstance(entry, dict)]
     assert "stage1_planner_finished" in milestone_codes
     assert "stage2_skipped" in milestone_codes
-    assert "stage1_planner_timeout" not in milestone_codes
+    assert "triage_review_required" in milestone_codes
+    assert "plan_persisting" not in milestone_codes
+    assert "plan_persisted" not in milestone_codes
+    assert "plan_saved" not in milestone_codes
     assert "stage2_drafting" not in milestone_codes
-    detail = client.get(
-        f"/api/plans/{saved['id']}",
-        headers={"Authorization": "Bearer athlete-token"},
-    )
-    assert detail.status_code == 200
-    safety = detail.json()["safety_state"]
-    assert safety["state"] == "medical_hold"
-    assert safety["status_chip"] == "MEDICAL HOLD"
-    assert safety["stage2_skipped"] is True
 
 
 
@@ -2384,7 +2476,11 @@ def test_admin_triage_resume_linked_plan_for_different_athlete_fails_before_plan
     assert store.get_plan(other_plan["id"])["status"] == "triage_blocked"
 
 
-def test_admin_triage_resume_without_plan_id_fails_before_planner():
+def test_admin_triage_resume_without_plan_id_creates_real_plan_only_after_stage2_pass():
+    """Resume-from-job: an admin_triage_resume job without plan_id is the
+    new entry point for resuming a triage outcome that lives only on the
+    generation job. The resume runs Stage 1 + Stage 2 and creates a real
+    plan row only when Stage 2 actually produces a plan."""
     store = FakeStore()
     athlete = AuthenticatedUser(user_id="athlete-1", email="ari@example.com", full_name="Ari Mensah", metadata={})
     store.ensure_profile(athlete)
@@ -2392,23 +2488,27 @@ def test_admin_triage_resume_without_plan_id_fails_before_planner():
     intake = store.create_intake(athlete.user_id, request)
     job = store.create_or_get_generation_job(
         athlete_id=athlete.user_id,
-        client_request_id="triage-resume-missing-plan-id",
+        client_request_id="triage-resume-from-job",
         source="admin_triage_resume",
         request_payload=request.model_dump(mode="json"),
         intake_id=str(intake["id"]),
     )
-    planner_called = False
 
-    def _planner_should_not_run(payload: dict) -> dict:
-        nonlocal planner_called
-        planner_called = True
-        return _planner(payload)
-
-    asyncio.run(run_generation_job(job_id=job["id"], store=store, planner_fn=_planner_should_not_run, stage2=FakeStage2Automator(result=finalized_result()), active_tasks=set()))
+    asyncio.run(
+        run_generation_job(
+            job_id=job["id"],
+            store=store,
+            planner_fn=_planner,
+            stage2=FakeStage2Automator(result=finalized_result()),
+            active_tasks=set(),
+        )
+    )
     refreshed_job = store.get_generation_job(job["id"])
-    assert refreshed_job["status"] == "failed"
-    assert "missing plan_id" in str(refreshed_job["error"])
-    assert planner_called is False
+    assert refreshed_job["status"] == "completed"
+    assert refreshed_job.get("plan_id")
+    plans = store.list_user_plans(athlete.user_id)
+    assert len(plans) == 1
+    assert plans[0]["status"] == "ready"
 
 
 def test_admin_triage_resume_without_intake_id_fails_before_planner():
@@ -2696,7 +2796,10 @@ def test_admin_triage_resume_source_case_normalization_and_linkage_milestone():
     assert "admin_resume_linkage_validated" in milestone_codes
 
 
-def test_admin_triage_resume_missing_plan_id_fails_before_stage1():
+def test_admin_triage_resume_missing_plan_id_does_not_reuse_legacy_blocked_plan():
+    """Resume-from-job must not back-fill plan_id from an unrelated legacy
+    triage_blocked plan row. The resume creates a new plan row only after
+    Stage 2 succeeds; legacy rows remain untouched."""
     store = FakeStore()
     athlete = AuthenticatedUser(
         user_id="athlete-1",
@@ -2707,7 +2810,7 @@ def test_admin_triage_resume_missing_plan_id_fails_before_stage1():
     store.ensure_profile(athlete)
     request = _build_request()
     intake = store.create_intake(athlete.user_id, request)
-    store.create_plan(
+    legacy_blocked = store.create_plan(
         athlete_id=athlete.user_id,
         intake_id=str(intake["id"]),
         request=request,
@@ -2717,40 +2820,38 @@ def test_admin_triage_resume_missing_plan_id_fails_before_stage1():
             why_log={"injury_triage": {"mode": "needs_review", "should_block_stage2": True}},
         ),
     )
+
+    def fail_get_latest_plan(athlete_id: str) -> dict | None:
+        raise AssertionError("latest_plan fallback used")
+
+    store.get_latest_plan = fail_get_latest_plan
+
     job = store.create_or_get_generation_job(
         athlete_id=athlete.user_id,
-        client_request_id="triage-resume-missing-plan",
+        client_request_id="triage-resume-from-job-no-legacy-reuse",
         source="admin_triage_resume",
         request_payload=request.model_dump(mode="json"),
         intake_id=str(intake["id"]),
     )
 
-    def fail_planner(payload: dict) -> dict:
-        raise AssertionError("planner should not be called")
-
-    def fail_get_latest_plan(athlete_id: str) -> dict | None:
-        raise AssertionError("latest_plan fallback used")
-
-    def fail_create_plan(*args: Any, **kwargs: Any) -> dict:
-        raise AssertionError("create_plan should not be called")
-
-    store.get_latest_plan = fail_get_latest_plan
-    store.create_plan = fail_create_plan
-
     asyncio.run(
         run_generation_job(
             job_id=job["id"],
             store=store,
-            planner_fn=fail_planner,
+            planner_fn=_planner,
             stage2=FakeStage2Automator(result=finalized_result()),
             active_tasks=set(),
         )
     )
 
     refreshed_job = store.get_generation_job(job["id"])
-    assert refreshed_job["status"] == "failed"
-    assert "plan_id" in (refreshed_job["error"] or "")
-    assert refreshed_job["stage1_result"] is None
+    new_plan_id = str(refreshed_job.get("plan_id") or "")
+    assert refreshed_job["status"] == "completed"
+    assert new_plan_id and new_plan_id != legacy_blocked["id"]
+    # Legacy blocked plan remains untouched.
+    assert store.get_plan(legacy_blocked["id"])["status"] == "triage_blocked"
+    # Resume produced a new plan row.
+    assert store.get_plan(new_plan_id)["status"] == "ready"
 
 
 def test_admin_triage_resume_missing_intake_id_fails_before_stage1():

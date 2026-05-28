@@ -85,7 +85,7 @@ _PLAN_STATUS_TO_JOB_STATUS: dict[str, GenerationJobStatus] = {
     "generated": "completed",
     "ready": "completed",
     "publishable_with_flags": "completed",
-    "triage_blocked": "completed",
+    "triage_blocked": "review_required",
     "archived": "completed",
     "review_required": "review_required",
     "held_for_review": "review_required",
