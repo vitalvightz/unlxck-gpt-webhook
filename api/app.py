@@ -326,7 +326,7 @@ def _plan_blocks_duplicate_generation(
     if not isinstance(plan, dict):
         return False
     if _is_archived_plan(plan):
-        return viewer_role == "admin"
+        return False
     return True
 
 
