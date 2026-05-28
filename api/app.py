@@ -169,12 +169,17 @@ def _job_response(
         if not plan_id and store is not None:
             athlete_id = str(job.get("athlete_id") or "").strip()
             intake_id = str(job.get("intake_id") or "").strip()
-            if athlete_id:
+            # Require an explicit intake_id link AND an exact match. Without
+            # an intake_id we cannot prove the latest plan was produced by
+            # this job, so we must not surface it: a stale "latest_plan_id"
+            # would let the UI open an unrelated plan that just happens to
+            # be the newest row for the athlete.
+            if athlete_id and intake_id:
                 latest_plan = store.get_latest_plan(athlete_id)
                 latest_id = str(latest_plan.get("id") or "").strip() if latest_plan else ""
                 latest_intake = str(latest_plan.get("intake_id") or "").strip() if latest_plan else ""
                 latest_status = str(latest_plan.get("status") or "").strip().lower() if latest_plan else ""
-                if latest_id and latest_status != "archived" and (not intake_id or latest_intake == intake_id):
+                if latest_id and latest_status != "archived" and latest_intake == intake_id:
                     plan_id = latest_id
         resolved_latest_plan_id = resolved_latest_plan_id or plan_id
     updated_at = job.get("updated_at") or job.get("created_at") or _utc_now_iso()
@@ -2272,6 +2277,13 @@ def create_app(
             heartbeat_at=_utc_now_iso(),
         )
 
+        # Persist the plan's triage-approval markers BEFORE scheduling the
+        # runtime. The runtime's `update_plan_stage2` preserve-keys block
+        # (generation_runtime.py) reads `triage_regeneration_cleared` and
+        # `triage_resume_approval` out of the existing plan's why_log and
+        # carries them onto the new Stage 2 result. Persisting after the
+        # runtime can race the worker reading a not-yet-marked plan and lose
+        # the audit trail.
         await asyncio.to_thread(
             store.update_plan_triage_approval,
             plan_id,
@@ -2354,6 +2366,23 @@ def create_app(
         client_request_id = f"triage_resume_job_{job_id}"
         stale_after_seconds = _generation_job_stale_after_seconds()
 
+        # If a prior resume attempt already produced a successful resume job
+        # under the deterministic client_request_id, refuse re-approval. This
+        # prevents the state_machine's completed→queued transition from
+        # silently wiping a good resume_job's final_result/plan_id, and it
+        # avoids reaching the marker write below without first surfacing a
+        # clear conflict to the admin.
+        existing_resume_job = await asyncio.to_thread(
+            store.get_generation_job_by_client_request_id,
+            athlete_id=athlete_id,
+            client_request_id=client_request_id,
+        )
+        if existing_resume_job and _resume_job_resolved_successfully(existing_resume_job):
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="this blocked job has already been approved and resumed",
+            )
+
         intake_row = await asyncio.to_thread(store.get_intake, intake_id)
         if not intake_row or not isinstance(intake_row.get("intake"), dict):
             raise HTTPException(
@@ -2381,23 +2410,12 @@ def create_app(
             "source_job_id": job_id,
         }
 
-        # Mark the source job's final_result with the approval marker so a
-        # second approval attempt is rejected with a clear conflict error.
-        updated_source_final_result = dict(source_final_result)
-        merged_source_why_log = dict(source_why_log)
-        merged_source_why_log["triage_resume_approval"] = approval_log
-        merged_source_why_log["triage_regeneration_cleared"] = True
-        updated_source_final_result["why_log"] = merged_source_why_log
-        updated_source_final_result["stage2_status"] = "triage_resume_approved"
-        await asyncio.to_thread(
-            store.update_generation_job,
-            job_id,
-            final_result=updated_source_final_result,
-            heartbeat_at=_utc_now_iso(),
-        )
-
-        # Create the resume job — no plan_id is passed; a real plan is
-        # created only when Stage 2 succeeds inside the runtime.
+        # Create + reset the resume job FIRST. The source-job approval marker
+        # is the gate that future re-approval attempts hit (line 2348), so it
+        # must only be written once the resume job is durably persisted —
+        # otherwise a failure between marker-write and resume-job-create would
+        # permanently lock the source job in "already approved" without any
+        # functional resume job to drive the regeneration.
         resume_job = await asyncio.to_thread(
             store.create_or_get_generation_job,
             athlete_id=athlete_id,
@@ -2419,6 +2437,22 @@ def create_app(
             error=None,
             completed_at=None,
             status="queued",
+            heartbeat_at=_utc_now_iso(),
+        )
+
+        # Resume job is durable; now mark the source job's final_result with
+        # the approval marker so a second approval attempt is rejected with a
+        # clear conflict error.
+        updated_source_final_result = dict(source_final_result)
+        merged_source_why_log = dict(source_why_log)
+        merged_source_why_log["triage_resume_approval"] = approval_log
+        merged_source_why_log["triage_regeneration_cleared"] = True
+        updated_source_final_result["why_log"] = merged_source_why_log
+        updated_source_final_result["stage2_status"] = "triage_resume_approved"
+        await asyncio.to_thread(
+            store.update_generation_job,
+            job_id,
+            final_result=updated_source_final_result,
             heartbeat_at=_utc_now_iso(),
         )
         resume_job = await schedule_generation_job_if_needed(

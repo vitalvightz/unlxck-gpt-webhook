@@ -994,6 +994,213 @@ def test_approve_and_resume_generation_from_job_rejects_already_approved():
     assert "already" in response.json().get("detail", "")
 
 
+def test_approve_and_resume_generation_from_job_does_not_lock_source_when_resume_persistence_fails():
+    """Regression: if persisting the resume job fails, the source job MUST
+    NOT carry the resume-approval marker — otherwise the source is locked
+    in "already approved" with no functional resume job to drive the
+    regeneration. The marker write has to happen AFTER the resume job is
+    durable, not before."""
+    athlete = AuthenticatedUser(user_id="athlete-1", email="ari@example.com", full_name="Ari Mensah", metadata={})
+    admin = AuthenticatedUser(user_id="admin-1", email="ops@unlxck.test", full_name="Ops Admin", metadata={})
+    store = FakeStore()
+    store.ensure_profile(athlete)
+    request = _build_request()
+    intake = store.create_intake(athlete.user_id, request)
+    triage_job = _seed_triage_blocked_job(
+        store, athlete_id=athlete.user_id, intake_id=str(intake["id"]), request=request
+    )
+
+    # Force resume-job creation to fail to simulate a transient DB outage.
+    original_create = store.create_or_get_generation_job
+
+    def failing_create_or_get(*args, **kwargs):
+        if kwargs.get("client_request_id", "").startswith("triage_resume_job_"):
+            raise RuntimeError("simulated supabase transient failure")
+        return original_create(*args, **kwargs)
+
+    store.create_or_get_generation_job = failing_create_or_get  # type: ignore[assignment]
+
+    client = TestClient(
+        create_app(
+            store=store,
+            auth_service=FakeAuthService({"athlete-token": athlete, "admin-token": admin}),
+            planner=lambda payload: stage1_result(),
+            stage2_automator=FakeStage2Automator(result=finalized_result()),
+            enable_in_process_generation=False,
+        )
+    )
+
+    response = client.post(
+        f"/api/admin/generation-jobs/{triage_job['id']}/approve-and-resume-generation",
+        headers={"Authorization": "Bearer admin-token"},
+        json={"reason": "transient failure"},
+    )
+    # The request itself surfaces the failure (5xx). The contract under test
+    # is the side effect on the source job, not the response code.
+    assert response.status_code >= 500
+
+    # Critical: the source job must remain "approve-able" — no resume-approval
+    # marker should be written, because no resume job was durably created.
+    source_after = store.get_generation_job(triage_job["id"])
+    final_after = source_after.get("final_result") or {}
+    why_log_after = final_after.get("why_log") or {}
+    assert final_after.get("stage2_status") != "triage_resume_approved"
+    assert "triage_resume_approval" not in why_log_after
+    assert why_log_after.get("triage_regeneration_cleared") is not True
+
+    # Restore the store and confirm a retry succeeds normally.
+    store.create_or_get_generation_job = original_create  # type: ignore[assignment]
+    retry = client.post(
+        f"/api/admin/generation-jobs/{triage_job['id']}/approve-and-resume-generation",
+        headers={"Authorization": "Bearer admin-token"},
+        json={"reason": "retry after transient failure"},
+    )
+    assert retry.status_code == 202
+
+
+def test_approve_and_resume_generation_from_job_rejects_resolved_resume_job_explicitly():
+    """If a prior approval already produced a successful resume job under
+    the deterministic client_request_id, a re-approval must surface a clear
+    409 "already approved and resumed" instead of silently re-queueing the
+    completed resume job via the state_machine's completed→queued path."""
+    athlete = AuthenticatedUser(user_id="athlete-1", email="ari@example.com", full_name="Ari Mensah", metadata={})
+    admin = AuthenticatedUser(user_id="admin-1", email="ops@unlxck.test", full_name="Ops Admin", metadata={})
+    store = FakeStore()
+    store.ensure_profile(athlete)
+    request = _build_request()
+    intake = store.create_intake(athlete.user_id, request)
+    triage_job = _seed_triage_blocked_job(
+        store, athlete_id=athlete.user_id, intake_id=str(intake["id"]), request=request
+    )
+
+    # Seed a successful resume job under the deterministic client_request_id
+    # WITHOUT marking the source job (simulates a half-applied earlier
+    # approval that recovered after the marker write was lost).
+    resume_job = store.create_or_get_generation_job(
+        athlete_id=athlete.user_id,
+        client_request_id=f"triage_resume_job_{triage_job['id']}",
+        source="admin_triage_resume",
+        request_payload=request.model_dump(mode="json"),
+        intake_id=str(intake["id"]),
+    )
+    store.update_generation_job(
+        resume_job["id"],
+        status="running",
+        started_at="2026-01-01T00:00:00+00:00",
+        heartbeat_at="2026-01-01T00:00:00+00:00",
+    )
+    store.update_generation_job(
+        resume_job["id"],
+        status="completed",
+        final_result={"status": "ready", "stage2_status": "stage2_pass"},
+        completed_at="2026-01-01T00:01:00+00:00",
+    )
+
+    client = TestClient(
+        create_app(
+            store=store,
+            auth_service=FakeAuthService({"athlete-token": athlete, "admin-token": admin}),
+            planner=lambda payload: stage1_result(),
+            stage2_automator=FakeStage2Automator(result=finalized_result()),
+            enable_in_process_generation=False,
+        )
+    )
+
+    response = client.post(
+        f"/api/admin/generation-jobs/{triage_job['id']}/approve-and-resume-generation",
+        headers={"Authorization": "Bearer admin-token"},
+        json={"reason": "second attempt"},
+    )
+    assert response.status_code == 409
+    assert "already" in response.json().get("detail", "")
+
+    # And the successful resume_job must not have been reset.
+    resume_after = store.get_generation_job(resume_job["id"])
+    assert resume_after["status"] == "completed"
+    assert (resume_after.get("final_result") or {}).get("status") == "ready"
+
+
+def test_approve_and_resume_generation_writes_plan_triage_approval_before_scheduling():
+    """The plan-based resume flow must persist triage-approval markers onto
+    the plan BEFORE scheduling the runtime. The runtime reads existing
+    why_log to preserve `triage_regeneration_cleared` and
+    `triage_resume_approval` across Stage 2 updates; writing the markers
+    after schedule risks losing the audit trail if the worker reads first.
+    """
+    import api.app as app_module
+
+    athlete = AuthenticatedUser(user_id="athlete-1", email="ari@example.com", full_name="Ari Mensah", metadata={})
+    admin = AuthenticatedUser(user_id="admin-1", email="ops@unlxck.test", full_name="Ops Admin", metadata={})
+    store = FakeStore()
+    store.ensure_profile(athlete)
+    request = _build_request()
+    intake = store.create_intake(athlete.user_id, request)
+    blocked_plan = store.create_plan(
+        athlete_id=athlete.user_id,
+        intake_id=str(intake["id"]),
+        request=request,
+        result=finalized_result(
+            status="triage_blocked",
+            stage2_status="triage_blocked",
+            why_log={"injury_triage": {"mode": "needs_review", "should_block_stage2": True}},
+        ),
+    )
+
+    # Spy on relative ordering of the plan-marker write vs the scheduler call.
+    call_order: list[str] = []
+    original_update_triage = store.update_plan_triage_approval
+    original_schedule = app_module.schedule_generation_job_if_needed
+
+    def trace_update_triage(*args, **kwargs):
+        call_order.append("update_plan_triage_approval")
+        return original_update_triage(*args, **kwargs)
+
+    async def trace_schedule(**kwargs):
+        call_order.append("schedule_generation_job_if_needed")
+        return await original_schedule(**kwargs)
+
+    store.update_plan_triage_approval = trace_update_triage  # type: ignore[assignment]
+    app_module.schedule_generation_job_if_needed = trace_schedule  # type: ignore[assignment]
+
+    try:
+        client = TestClient(
+            create_app(
+                store=store,
+                auth_service=FakeAuthService({"athlete-token": athlete, "admin-token": admin}),
+                planner=lambda payload: stage1_result(),
+                stage2_automator=FakeStage2Automator(result=finalized_result()),
+                enable_in_process_generation=False,
+            )
+        )
+
+        response = client.post(
+            f"/api/admin/plans/{blocked_plan['id']}/approve-and-resume-generation",
+            headers={"Authorization": "Bearer admin-token"},
+            json={"reason": "approve for resume"},
+        )
+        assert response.status_code == 202
+    finally:
+        app_module.schedule_generation_job_if_needed = original_schedule  # type: ignore[assignment]
+
+    triage_index = next(
+        (i for i, label in enumerate(call_order) if label == "update_plan_triage_approval"),
+        None,
+    )
+    schedule_index = next(
+        (i for i, label in enumerate(call_order) if label == "schedule_generation_job_if_needed"),
+        None,
+    )
+    assert triage_index is not None, call_order
+    assert schedule_index is not None, call_order
+    assert triage_index < schedule_index, call_order
+    # And the plan now carries the markers.
+    plan_after = store.get_plan(blocked_plan["id"])
+    why_log_after = plan_after.get("why_log") or {}
+    assert plan_after.get("stage2_status") == "triage_resume_approved"
+    assert isinstance(why_log_after.get("triage_resume_approval"), dict)
+    assert why_log_after.get("triage_regeneration_cleared") is True
+
+
 def test_approve_and_resume_generation_requeues_stale_running_resume_job_without_duplicate():
     athlete = AuthenticatedUser(
         user_id="athlete-1",
