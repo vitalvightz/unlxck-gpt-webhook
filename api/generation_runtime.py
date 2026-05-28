@@ -1001,13 +1001,18 @@ async def run_generation_job(
                 "Admin must approve & resume before generation continues.",
             )
             compact_final_result = _compact_generation_job_final_result(final_result)
+            now_iso = utc_now_iso()
             try:
                 job = await asyncio.wait_for(
                     asyncio.to_thread(
                         store.update_generation_job,
                         job_id,
                         final_result=compact_final_result,
-                        heartbeat_at=utc_now_iso(),
+                        status="review_required",
+                        error=None,
+                        plan_id=plan_id,
+                        completed_at=now_iso,
+                        heartbeat_at=now_iso,
                     ),
                     timeout=_FINAL_RESULT_PERSIST_TIMEOUT_SECONDS,
                 )
@@ -1045,15 +1050,6 @@ async def run_generation_job(
                         heartbeat_at=now_iso,
                     )
                 return
-            await _to_thread_with_heartbeat(
-                store.update_generation_job,
-                job_id,
-                status="review_required",
-                error=None,
-                plan_id=plan_id,
-                completed_at=utc_now_iso(),
-                heartbeat_at=utc_now_iso(),
-            )
             _emit_milestone(
                 "generation_job_terminal_status_persisted",
                 "Generation job terminal status persisted",
