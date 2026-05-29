@@ -253,6 +253,126 @@ async def validate_admin_latest_intake_linkage(
         )
 
 
+async def persist_triage_review_required(
+    *,
+    job_id: str,
+    athlete_id: str,
+    plan_id: str | None,
+    job_source: str,
+    final_result: dict[str, Any],
+    admin_resume_plan_row: dict[str, Any] | None,
+    store: AppStore,
+    emit_milestone: Callable[..., None],
+    to_thread_with_heartbeat: Callable[..., Any],
+    t_start: float,
+) -> None:
+    """Persist a triage-blocked Stage 1 outcome as a review_required job.
+
+    Triage holds are not plans: the outcome lives on the generation job's
+    final_result and no plan row is created or updated. On persistence
+    timeout/failure the job is marked failed and we return early (the caller
+    then returns from run_generation_job too).
+    """
+    # admin_triage_resume keeps its linked legacy plan row visible
+    # for backwards compat (it stays at its prior status), but we
+    # do NOT re-write the plan with another triage_blocked result.
+    if job_source == "admin_triage_resume" and plan_id:
+        _ = admin_resume_plan_row or await to_thread_with_heartbeat(
+            store.get_plan, plan_id
+        )
+    emit_milestone(
+        "triage_review_required",
+        "Planning paused for admin review",
+        "Stage 1 triage held the request; no plan row was created. "
+        "Admin must approve & resume before generation continues.",
+    )
+    compact_final_result = _compact_generation_job_final_result(final_result)
+    now_iso = utc_now_iso()
+    try:
+        await asyncio.wait_for(
+            asyncio.to_thread(
+                store.update_generation_job,
+                job_id,
+                final_result=compact_final_result,
+                status="review_required",
+                error=None,
+                plan_id=plan_id,
+                completed_at=now_iso,
+                heartbeat_at=now_iso,
+            ),
+            timeout=_FINAL_RESULT_PERSIST_TIMEOUT_SECONDS,
+        )
+    except asyncio.TimeoutError:
+        logger.exception(
+            "[jobs] generation:triage_final_result_persist_timeout athlete_id=%s job_id=%s",
+            athlete_id,
+            job_id,
+        )
+        now_iso = utc_now_iso()
+        with suppress(Exception):
+            await asyncio.to_thread(
+                store.update_generation_job,
+                job_id,
+                status="failed",
+                error=_FINAL_RESULT_PERSIST_TIMEOUT_ERROR,
+                completed_at=now_iso,
+                heartbeat_at=now_iso,
+            )
+        return
+    except Exception:
+        logger.exception(
+            "[jobs] generation:triage_final_result_persist_failed athlete_id=%s job_id=%s",
+            athlete_id,
+            job_id,
+        )
+        now_iso = utc_now_iso()
+        with suppress(Exception):
+            await asyncio.to_thread(
+                store.update_generation_job,
+                job_id,
+                status="failed",
+                error="Stage 1 triage result persistence failed.",
+                completed_at=now_iso,
+                heartbeat_at=now_iso,
+            )
+        return
+    emit_milestone(
+        "generation_job_terminal_status_persisted",
+        "Generation job terminal status persisted",
+        "Terminal generation job lifecycle status was saved.",
+        final_status="review_required",
+        plan_status=str((final_result or {}).get("status") or ""),
+        plan_id=plan_id,
+    )
+    try:
+        await asyncio.wait_for(
+            to_thread_with_heartbeat(store.clear_onboarding_draft, athlete_id),
+            timeout=_POST_PERSIST_CLEANUP_TIMEOUT_SECONDS,
+        )
+    except asyncio.TimeoutError:
+        logger.warning(
+            "[jobs] generation:clear_onboarding_draft_timeout athlete_id=%s job_id=%s timeout_seconds=%s",
+            athlete_id,
+            job_id,
+            _POST_PERSIST_CLEANUP_TIMEOUT_SECONDS,
+        )
+    except Exception:
+        logger.exception(
+            "[jobs] generation:clear_onboarding_draft_failed athlete_id=%s job_id=%s",
+            athlete_id,
+            job_id,
+        )
+    logger.info(
+        "[jobs] generation:complete_triage_review athlete_id=%s job_id=%s plan_id=%s "
+        "final_result_status=%s duration_ms=%s",
+        athlete_id,
+        job_id,
+        plan_id,
+        (final_result or {}).get("status"),
+        round((time.perf_counter() - t_start) * 1000, 2),
+    )
+
+
 async def run_generation_job(
     *,
     job_id: str,
@@ -594,103 +714,17 @@ async def run_generation_job(
         plan_row: dict[str, Any] | None = None
 
         if triage_skipped:
-            # admin_triage_resume keeps its linked legacy plan row visible
-            # for backwards compat (it stays at its prior status), but we
-            # do NOT re-write the plan with another triage_blocked result.
-            if job_source == "admin_triage_resume" and plan_id:
-                plan_row = admin_resume_plan_row or await _to_thread_with_heartbeat(
-                    store.get_plan, plan_id
-                )
-            _emit_milestone(
-                "triage_review_required",
-                "Planning paused for admin review",
-                "Stage 1 triage held the request; no plan row was created. "
-                "Admin must approve & resume before generation continues.",
-            )
-            compact_final_result = _compact_generation_job_final_result(final_result)
-            now_iso = utc_now_iso()
-            try:
-                job = await asyncio.wait_for(
-                    asyncio.to_thread(
-                        store.update_generation_job,
-                        job_id,
-                        final_result=compact_final_result,
-                        status="review_required",
-                        error=None,
-                        plan_id=plan_id,
-                        completed_at=now_iso,
-                        heartbeat_at=now_iso,
-                    ),
-                    timeout=_FINAL_RESULT_PERSIST_TIMEOUT_SECONDS,
-                )
-            except asyncio.TimeoutError:
-                logger.exception(
-                    "[jobs] generation:triage_final_result_persist_timeout athlete_id=%s job_id=%s",
-                    athlete_id,
-                    job_id,
-                )
-                now_iso = utc_now_iso()
-                with suppress(Exception):
-                    await asyncio.to_thread(
-                        store.update_generation_job,
-                        job_id,
-                        status="failed",
-                        error=_FINAL_RESULT_PERSIST_TIMEOUT_ERROR,
-                        completed_at=now_iso,
-                        heartbeat_at=now_iso,
-                    )
-                return
-            except Exception:
-                logger.exception(
-                    "[jobs] generation:triage_final_result_persist_failed athlete_id=%s job_id=%s",
-                    athlete_id,
-                    job_id,
-                )
-                now_iso = utc_now_iso()
-                with suppress(Exception):
-                    await asyncio.to_thread(
-                        store.update_generation_job,
-                        job_id,
-                        status="failed",
-                        error="Stage 1 triage result persistence failed.",
-                        completed_at=now_iso,
-                        heartbeat_at=now_iso,
-                    )
-                return
-            _emit_milestone(
-                "generation_job_terminal_status_persisted",
-                "Generation job terminal status persisted",
-                "Terminal generation job lifecycle status was saved.",
-                final_status="review_required",
-                plan_status=str((final_result or {}).get("status") or ""),
+            await persist_triage_review_required(
+                job_id=job_id,
+                athlete_id=athlete_id,
                 plan_id=plan_id,
-            )
-            try:
-                await asyncio.wait_for(
-                    _to_thread_with_heartbeat(store.clear_onboarding_draft, athlete_id),
-                    timeout=_POST_PERSIST_CLEANUP_TIMEOUT_SECONDS,
-                )
-            except asyncio.TimeoutError:
-                logger.warning(
-                    "[jobs] generation:clear_onboarding_draft_timeout athlete_id=%s job_id=%s timeout_seconds=%s",
-                    athlete_id,
-                    job_id,
-                    _POST_PERSIST_CLEANUP_TIMEOUT_SECONDS,
-                )
-            except Exception:
-                logger.exception(
-                    "[jobs] generation:clear_onboarding_draft_failed athlete_id=%s job_id=%s",
-                    athlete_id,
-                    job_id,
-                )
-            logger.info(
-                "[jobs] generation:complete_triage_review athlete_id=%s job_id=%s plan_id=%s "
-                "final_result_status=%s duration_ms=%s",
-                athlete_id,
-                job_id,
-                plan_id,
-                (final_result or {}).get("status"),
-                round((time.perf_counter() - t_start) * 1000, 2),
+                job_source=job_source,
+                final_result=final_result,
+                admin_resume_plan_row=admin_resume_plan_row,
+                store=store,
+                emit_milestone=_emit_milestone,
+                to_thread_with_heartbeat=_to_thread_with_heartbeat,
+                t_start=t_start,
             )
             return
 
