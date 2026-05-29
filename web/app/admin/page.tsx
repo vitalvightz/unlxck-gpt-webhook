@@ -131,19 +131,19 @@ export default function AdminPage() {
   }, []);
 
   // Debounce the raw search box into the value we send to the server so that
-  // each keystroke does not fire a paginated query against the API.
+  // each keystroke does not fire a paginated query against the API. Resetting
+  // the page offsets in the same batched update (rather than a separate effect
+  // keyed on searchNeedle) keeps a search change to a single directory fetch:
+  // splitting them would fire one request with the stale offset and another at
+  // page 1, racing each other for which result lands last.
   useEffect(() => {
     const handle = setTimeout(() => {
       setSearchNeedle(searchQuery.trim().toLowerCase());
+      setAthletesOffset(0);
+      setPlansOffset(0);
     }, SEARCH_DEBOUNCE_MS);
     return () => clearTimeout(handle);
   }, [searchQuery]);
-
-  // A new search always returns to the first page of each directory list.
-  useEffect(() => {
-    setAthletesOffset(0);
-    setPlansOffset(0);
-  }, [searchNeedle]);
 
   const filteredActiveJobs = useMemo(() => {
     if (!searchNeedle) return activeJobs;
