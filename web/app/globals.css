@@ -1136,8 +1136,34 @@ select:focus-visible {
   min-width: 120px;
 }
 
+.admin-panel-subtext {
+  margin-top: 6px;
+}
+
 .admin-active-panel {
   border-color: rgba(74, 144, 226, 0.22);
+}
+
+.admin-active-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: -4px;
+}
+
+.admin-active-summary span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  padding: 0 10px;
+  border-radius: var(--radius-pill);
+  border: 1px solid rgba(74, 144, 226, 0.2);
+  background: rgba(74, 144, 226, 0.08);
+  color: var(--text-secondary);
+  font-family: var(--font-mono), monospace;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .admin-active-list {
@@ -4823,6 +4849,20 @@ button.mobile-step-rail-item {
   max-width: 720px;
 }
 
+.auth-recovery-card {
+  align-content: start;
+}
+
+.auth-recovery-actions {
+  margin-top: 2px;
+}
+
+.auth-recovery-note {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
 .status-card .plan-summary-actions,
 .plan-summary-card .plan-summary-actions {
   margin-top: 12px;
@@ -4832,6 +4872,23 @@ button.mobile-step-rail-item {
 .desktop-nav-toggle,
 .nav-scrim {
   display: none;
+}
+
+.nav-toggle-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  color: currentColor;
+}
+
+.nav-toggle-icon svg {
+  display: block;
+}
+
+.nav-toggle-label {
+  line-height: 1;
 }
 
 @media (min-width: 961px) {
@@ -5149,6 +5206,11 @@ button.mobile-step-rail-item {
 
   .admin-toolbar {
     align-items: stretch;
+  }
+
+  .admin-active-summary span {
+    flex: 1 1 96px;
+    justify-content: center;
   }
 
   .admin-active-row-main {
@@ -9719,6 +9781,12 @@ html[data-theme="light"] .badge {
   background: rgba(146, 43, 45, 0.06);
   border-color: rgba(146, 43, 45, 0.12);
   color: var(--brand-red);
+}
+
+html[data-theme="light"] .admin-active-summary span {
+  background: rgba(74, 144, 226, 0.08);
+  border-color: rgba(74, 144, 226, 0.18);
+  color: var(--text-secondary);
 }
 
 html[data-theme="light"] .panel,
