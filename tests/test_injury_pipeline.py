@@ -778,7 +778,7 @@ def test_generate_rehab_support_bundle_counts_guided_only_parsed_injury_as_injur
         training_context=SimpleNamespace(to_flags=lambda: {}),
         exercise_bank=[],
         apply_muay_thai_filters=False,
-        sanitize_labels=False,
+        sanitize_labels=(),
     )
 
     _, _, support_notes, has_injuries, *_ = _generate_rehab_support_bundle(context)
@@ -985,7 +985,10 @@ def test_structural_injury_end_to_end_blocks_unsafe_output(injury, forbidden_ter
     request["random_seed"] = 17
     result = generate_plan_sync(request)
     text = (result.get("plan_text") or "").lower()
-    assert "red flag detected" in text
+    # Canonical safety marker after the injury-triage block: "## Injury Triage:"
+    # heading prefix; older fixtures looked for "red flag detected" which the
+    # blocked_mode_output template no longer emits.
+    assert "injury triage:" in text
     assert not any(term in text for term in forbidden_terms)
 
 
@@ -996,7 +999,7 @@ def test_concussion_end_to_end_blocks_contact_and_high_cns_output():
     request["random_seed"] = 17
     result = generate_plan_sync(request)
     text = (result.get("plan_text") or "").lower()
-    assert "red flag detected" in text
+    assert "injury triage:" in text
     assert "sparring" not in text
     for forbidden in (
         "contact",

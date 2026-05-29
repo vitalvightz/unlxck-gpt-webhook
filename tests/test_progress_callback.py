@@ -188,7 +188,7 @@ def test_strength_substep_start_visible_when_substep_fails(monkeypatch):
 def test_stage1_module_start_visible_when_module_hangs(monkeypatch):
     from fightcamp import plan_pipeline_blocks as blocks_module
 
-    def _hang_conditioning(_context):
+    def _hang_conditioning(_context, **_kwargs):
         raise TimeoutError("simulated conditioning hang for diagnostics")
 
     monkeypatch.setattr(blocks_module, "_generate_conditioning_blocks", _hang_conditioning)
