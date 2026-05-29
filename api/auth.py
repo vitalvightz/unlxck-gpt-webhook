@@ -123,13 +123,6 @@ class SupabaseAuthService:
 
         try:
             response = self.client.auth.get_user(token)
-        except httpx.RemoteProtocolError as exc:  # HTTP/2 GOAWAY - retry on a fresh connection
-            logger.warning("[auth] http2_connection_terminated_retrying error=%s", exc)
-            try:
-                response = self.client.auth.get_user(token)
-            except httpx.HTTPError as retry_exc:
-                logger.exception("[auth] upstream token verification failed after retry")
-                raise self._auth_unavailable() from retry_exc
         except httpx.HTTPError as exc:  # pragma: no cover - network/runtime integration
             logger.exception("[auth] upstream token verification failed")
             raise self._auth_unavailable() from exc
