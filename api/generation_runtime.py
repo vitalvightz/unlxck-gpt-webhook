@@ -24,6 +24,7 @@ from .models import PlanRequest, ProfileUpdateRequest
 from .stage2_automation import Stage2AutomationError, Stage2AutomationUnavailableError, Stage2Automator
 from .state_machine import job_status_for_plan_status
 from .store import AppStore, is_pre_start_stale_generation_job
+from .generation.time_utils import utc_now_iso
 
 Planner = Callable[..., dict[str, Any]]
 ProgressCallback = Callable[[str, str, str, dict[str, Any]], None]
@@ -57,10 +58,6 @@ _FINAL_RESULT_PERSIST_TIMEOUT_ERROR = "Stage 2 result persistence timed out befo
 _PLAN_PERSIST_VERIFICATION_ERROR = "Plan persistence verification failed after create_plan."
 _POST_PERSIST_CLEANUP_TIMEOUT_SECONDS = 8.0
 _TERMINAL_GENERATION_JOB_STATUSES = {"completed", "review_required", "failed"}
-
-
-def utc_now_iso() -> str:
-    return datetime.now(timezone.utc).isoformat()
 
 
 def generation_status_from_plan_status(plan_status: str) -> str:
