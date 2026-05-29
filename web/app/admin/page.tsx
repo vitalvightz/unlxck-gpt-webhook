@@ -78,6 +78,22 @@ function getActiveJobProgress(job: AdminGenerationJobDiagnostic): number {
   return job.status === "running" ? 64 : 28;
 }
 
+function countActiveJobStates(jobs: AdminGenerationJobDiagnostic[]) {
+  return jobs.reduce(
+    (counts, job) => {
+      if (job.is_stale) {
+        counts.stale += 1;
+      } else if (job.status === "running") {
+        counts.running += 1;
+      } else {
+        counts.queued += 1;
+      }
+      return counts;
+    },
+    { queued: 0, running: 0, stale: 0 },
+  );
+}
+
 export default function AdminPage() {
   const { isReady, isMeHydrated, session, me } = useAppSession();
   const [athletes, setAthletes] = useState<AdminAthleteRecord[]>([]);
@@ -92,6 +108,7 @@ export default function AdminPage() {
   const [reloadKey, setReloadKey] = useState(0);
   const [searchQuery, setSearchQuery] = useState("");
   const [resumingJobId, setResumingJobId] = useState<string | null>(null);
+  const [lastCheckedAt, setLastCheckedAt] = useState<string | null>(null);
 
   const isAdminReady =
     isReady && isMeHydrated && Boolean(session?.access_token) && me?.profile?.role === "admin";
@@ -155,10 +172,18 @@ export default function AdminPage() {
     [activeJobs],
   );
 
+  const activeJobStates = useMemo(() => countActiveJobStates(activeJobs), [activeJobs]);
+
   const triageAthleteCount = useMemo(
     () => new Set(triageJobs.map((job) => job.athlete_id).filter(Boolean)).size,
     [triageJobs],
   );
+
+  const lastCheckedLabel = lastCheckedAt
+    ? `Checked ${formatDateTime(lastCheckedAt)}`
+    : isLoading
+      ? "Checking current support data"
+      : "Not checked yet";
 
   useEffect(() => {
     if (!isAdminReady || !session?.access_token) {
@@ -216,7 +241,10 @@ export default function AdminPage() {
         setError(adminError instanceof Error ? adminError.message : "Unable to load admin data.");
       })
       .finally(() => {
-        if (active) setIsLoading(false);
+        if (active) {
+          setLastCheckedAt(new Date().toISOString());
+          setIsLoading(false);
+        }
       });
 
     return () => {
@@ -323,6 +351,7 @@ export default function AdminPage() {
             <div>
               <p className="kicker">Live generation monitor</p>
               <h2>Plans currently being generated</h2>
+              <p className="muted admin-panel-subtext">{lastCheckedLabel}</p>
             </div>
             <span className="badge">
               {isLoading
@@ -332,6 +361,14 @@ export default function AdminPage() {
                   : `${activeJobs.length} active`}
             </span>
           </div>
+
+          {!isLoading ? (
+            <div className="admin-active-summary" aria-label="Active generation states">
+              <span>Running {activeJobStates.running}</span>
+              <span>Queued {activeJobStates.queued}</span>
+              <span>Stale {activeJobStates.stale}</span>
+            </div>
+          ) : null}
 
           {isLoading ? (
             <div className="support-panel">
