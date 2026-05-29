@@ -140,6 +140,10 @@ function createClientRequestId(prefix: string): string {
   return `${prefix}_${randomId}`;
 }
 
+function shouldLogApiDetails(): boolean {
+  return process.env.NODE_ENV !== "production" || process.env.NEXT_PUBLIC_API_DEBUG === "true";
+}
+
 async function withTransientRetries<T>(
   operation: () => Promise<T>,
   {
@@ -210,14 +214,16 @@ async function executeRequest(path: string, init?: ApiRequestInit): Promise<Exec
     init?.signal?.addEventListener("abort", abortFromCaller, { once: true });
   }
 
-  console.info("[api] request:start", {
-    path,
-    method,
-    url,
-    hasBody: Boolean(init?.body),
-    hasToken: Boolean(init?.token),
-    startedAtIso: new Date(startedAt).toISOString(),
-  });
+  if (shouldLogApiDetails()) {
+    console.info("[api] request:start", {
+      path,
+      method,
+      url,
+      hasBody: Boolean(init?.body),
+      hasToken: Boolean(init?.token),
+      startedAtIso: new Date(startedAt).toISOString(),
+    });
+  }
 
   let response: Response;
   try {
@@ -232,17 +238,19 @@ async function executeRequest(path: string, init?: ApiRequestInit): Promise<Exec
     });
   } catch (networkError) {
     const durationMs = Date.now() - startedAt;
-    console.error("[api] request:network_error", {
-      path,
-      method,
-      url,
-      durationMs,
-      online: typeof navigator !== "undefined" ? navigator.onLine : "unknown",
-      error:
-        networkError instanceof Error
-          ? { name: networkError.name, message: networkError.message, stack: networkError.stack }
-          : networkError,
-    });
+    if (shouldLogApiDetails()) {
+      console.error("[api] request:network_error", {
+        path,
+        method,
+        url,
+        durationMs,
+        online: typeof navigator !== "undefined" ? navigator.onLine : "unknown",
+        error:
+          networkError instanceof Error
+            ? { name: networkError.name, message: networkError.message, stack: networkError.stack }
+            : networkError,
+      });
+    }
     throw new Error(RETRYABLE_NETWORK_MESSAGE, {
       cause: networkError,
     });
@@ -266,34 +274,38 @@ async function executeRequest(path: string, init?: ApiRequestInit): Promise<Exec
       try {
         parsedBody = JSON.parse(trimmedText);
       } catch (parseError) {
-        console.warn("[api] request:error_body_json_parse_failed", {
-          path,
-          method,
-          url,
-          requestId,
-          status: response.status,
-          contentType,
-          durationMs,
-          parseError:
-            parseError instanceof Error
-              ? { name: parseError.name, message: parseError.message }
-              : parseError,
-        });
+        if (shouldLogApiDetails()) {
+          console.warn("[api] request:error_body_json_parse_failed", {
+            path,
+            method,
+            url,
+            requestId,
+            status: response.status,
+            contentType,
+            durationMs,
+            parseError:
+              parseError instanceof Error
+                ? { name: parseError.name, message: parseError.message }
+                : parseError,
+          });
+        }
       }
     }
 
-    console.error("[api] request:failed", {
-      path,
-      method,
-      url,
-      requestId,
-      status: response.status,
-      statusText: response.statusText,
-      contentType,
-      durationMs,
-      rawText: truncateForLog(trimmedText),
-      parsedBody,
-    });
+    if (shouldLogApiDetails()) {
+      console.error("[api] request:failed", {
+        path,
+        method,
+        url,
+        requestId,
+        status: response.status,
+        statusText: response.statusText,
+        contentType,
+        durationMs,
+        rawText: truncateForLog(trimmedText),
+        parsedBody,
+      });
+    }
 
     if (parsedBody && typeof parsedBody === "object" && parsedBody !== null) {
       const detail = "detail" in parsedBody ? (parsedBody as { detail?: unknown }).detail : null;
@@ -339,29 +351,33 @@ async function readJson<T>(path: string, init?: ApiRequestInit): Promise<T> {
 
   try {
     const data = (await response.json()) as T;
-    console.info("[api] request:success", {
-      path,
-      method,
-      url,
-      requestId,
-      status: response.status,
-      durationMs,
-    });
+    if (shouldLogApiDetails()) {
+      console.info("[api] request:success", {
+        path,
+        method,
+        url,
+        requestId,
+        status: response.status,
+        durationMs,
+      });
+    }
     return data;
   } catch (parseError) {
-    console.error("[api] request:success_body_parse_failed", {
-      path,
-      method,
-      url,
-      requestId,
-      status: response.status,
-      contentType,
-      durationMs,
-      parseError:
-        parseError instanceof Error
-          ? { name: parseError.name, message: parseError.message, stack: parseError.stack }
-          : parseError,
-    });
+    if (shouldLogApiDetails()) {
+      console.error("[api] request:success_body_parse_failed", {
+        path,
+        method,
+        url,
+        requestId,
+        status: response.status,
+        contentType,
+        durationMs,
+        parseError:
+          parseError instanceof Error
+            ? { name: parseError.name, message: parseError.message, stack: parseError.stack }
+            : parseError,
+      });
+    }
     throw new Error("Server returned an unreadable response.");
   }
 }
@@ -380,14 +396,16 @@ async function requestVoid(path: string, init?: ApiRequestInit): Promise<void> {
     }
   }
 
-  console.info("[api] request:success", {
-    path,
-    method,
-    url,
-    requestId,
-    status: response.status,
-    durationMs,
-  });
+  if (shouldLogApiDetails()) {
+    console.info("[api] request:success", {
+      path,
+      method,
+      url,
+      requestId,
+      status: response.status,
+      durationMs,
+    });
+  }
 }
 
 export function getMe(token: string): Promise<MeResponse> {
