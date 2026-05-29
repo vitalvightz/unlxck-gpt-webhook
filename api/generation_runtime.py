@@ -26,7 +26,16 @@ from .store import AppStore, is_pre_start_stale_generation_job
 from .generation.time_utils import utc_now_iso
 from .generation.types import Planner, ProgressCallback
 from .generation.errors import AdminLatestIntakeLinkageError, TriageResumeMissingPlanError
-from .generation.timeouts import _stage1_planner_timeout_seconds, _stage2_finalize_timeout_seconds
+from .generation.timeouts import (
+    _stage1_planner_timeout_seconds,
+    _stage2_finalize_timeout_seconds as _stage2_finalize_timeout_seconds,
+)
+from .generation.stage2_runner import (
+    _OPENAI_QUOTA_ADMIN_ERROR,
+    _OPENAI_QUOTA_ATHLETE_ERROR as _OPENAI_QUOTA_ATHLETE_ERROR,
+    finalize_stage2_with_timeout,
+    is_openai_quota_error,
+)
 
 logger = logging.getLogger(__name__)
 _TRIAGE_RESUME_OVERRIDE_KEY = "_triage_resume_override"
@@ -34,8 +43,6 @@ _TRIAGE_RESUME_OVERRIDE_KEY = "_triage_resume_override"
 
 _DETACHED_GENERATION_TASKS: set[asyncio.Task[None]] = set()
 _MAX_PERSISTED_MILESTONES = 40
-_OPENAI_QUOTA_ADMIN_ERROR = "OpenAI quota exceeded. Check API billing, credits, project budget, or organization limits."
-_OPENAI_QUOTA_ATHLETE_ERROR = "Generation is temporarily unavailable. Please try again later."
 _FINAL_RESULT_PERSIST_TIMEOUT_SECONDS = 40.0
 _FINAL_RESULT_PERSIST_TIMEOUT_ERROR = "Stage 2 result persistence timed out before final_result was saved."
 _PLAN_PERSIST_VERIFICATION_ERROR = "Plan persistence verification failed after create_plan."
@@ -444,18 +451,6 @@ async def run_stage1_planner(
                 q.join_thread()
 
 
-async def finalize_stage2_with_timeout(
-    *,
-    stage2: Stage2Automator,
-    stage1_result: dict[str, Any],
-) -> dict[str, Any]:
-    finalize = stage2.finalize(stage1_result=stage1_result)
-    timeout_seconds = _stage2_finalize_timeout_seconds()
-    if timeout_seconds is None:
-        return await finalize
-    return await asyncio.wait_for(finalize, timeout=timeout_seconds)
-
-
 def _is_truthy_flag(value: Any) -> bool:
     if isinstance(value, bool):
         return value
@@ -465,17 +460,6 @@ def _is_truthy_flag(value: Any) -> bool:
         normalized = value.strip().lower()
         return normalized in {"1", "true", "yes", "y", "on"}
     return False
-
-
-def is_openai_quota_error(error: Exception) -> bool:
-    message = str(error or "").lower()
-    if (
-        "insufficient_quota" in message
-        or "exceeded your current quota" in message
-        or "openai quota/rate limit" in message
-    ):
-        return True
-    return "429" in message and "quota" in message
 
 
 def should_skip_stage2(stage1_result: dict[str, Any], *, allow_triage_resume_override: bool = False) -> bool:
