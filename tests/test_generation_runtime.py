@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import asyncio
+import time
 
 import pytest
+from fastapi import BackgroundTasks, HTTPException
 
 import api.app as app_module
 from api import generation_runtime
@@ -585,3 +587,347 @@ def test_generation_job_status_never_uses_legacy_plan_status_values():
 
 def test_generation_status_from_unknown_plan_status_requires_review():
     assert generation_status_from_plan_status("new_clinical_hold") == "review_required"
+
+
+# ---------------------------------------------------------------------------
+# Direct seam coverage added ahead of the generation_runtime split refactor.
+# These pin behaviour that was previously only exercised indirectly, so later
+# code-movement PRs have a tight regression net. No production code changes.
+# ---------------------------------------------------------------------------
+
+
+class _RecordingStore:
+    """Minimal store stub that records update_generation_job calls."""
+
+    def __init__(self) -> None:
+        self.calls: list[tuple[str, dict]] = []
+
+    def update_generation_job(self, job_id: str, **changes: object) -> dict:
+        self.calls.append((job_id, dict(changes)))
+        return {"id": job_id, **changes}
+
+
+class _FailingUpdateStore:
+    """Store stub whose update_generation_job always raises."""
+
+    def update_generation_job(self, job_id: str, **changes: object) -> dict:
+        raise RuntimeError("db down")
+
+
+class _CapacityStore:
+    """Store stub controlling count_active_generation_jobs for scheduler tests."""
+
+    def __init__(self, *, count_result: int = 0, count_exc: Exception | None = None) -> None:
+        self._count_result = count_result
+        self._count_exc = count_exc
+
+    def count_active_generation_jobs(self, *, stale_after_seconds: int) -> int:
+        if self._count_exc is not None:
+            raise self._count_exc
+        return self._count_result
+
+
+# --- should_skip_stage2 (triage skip decision) -----------------------------
+
+
+def test_should_skip_stage2_blocks_triage_blocked_status():
+    assert generation_runtime.should_skip_stage2({"status": "triage_blocked"}) is True
+
+
+def test_should_skip_stage2_triage_blocked_status_allows_with_override():
+    assert (
+        generation_runtime.should_skip_stage2(
+            {"status": "triage_blocked"}, allow_triage_resume_override=True
+        )
+        is False
+    )
+
+
+def test_should_skip_stage2_blocks_when_injury_triage_should_block():
+    stage1 = {"status": "ready", "injury_triage": {"should_block_stage2": True}}
+    assert generation_runtime.should_skip_stage2(stage1) is True
+    assert generation_runtime.should_skip_stage2(stage1, allow_triage_resume_override=True) is False
+
+
+@pytest.mark.parametrize("mode", ["medical_hold", "restricted_rehab_only", "needs_review"])
+def test_should_skip_stage2_blocks_on_injury_triage_mode(mode: str):
+    stage1 = {"status": "ready", "injury_triage": {"mode": mode}}
+    assert generation_runtime.should_skip_stage2(stage1) is True
+    assert generation_runtime.should_skip_stage2(stage1, allow_triage_resume_override=True) is False
+
+
+def test_should_skip_stage2_blocks_on_why_log_injury_triage():
+    stage1 = {"why_log": {"injury_triage": {"should_block_stage2": True}}}
+    assert generation_runtime.should_skip_stage2(stage1) is True
+
+
+def test_should_skip_stage2_allows_clean_ready_result():
+    assert generation_runtime.should_skip_stage2({"status": "ready"}) is False
+
+
+# --- is_openai_quota_error (admin-safe error mapping) ----------------------
+
+
+@pytest.mark.parametrize(
+    "message",
+    [
+        "insufficient_quota",
+        "You exceeded your current quota, please check your plan",
+        "OpenAI quota/rate limit reached",
+        "Error 429: quota exceeded for this org",
+    ],
+)
+def test_is_openai_quota_error_detects_quota_messages(message: str):
+    assert generation_runtime.is_openai_quota_error(Exception(message)) is True
+
+
+@pytest.mark.parametrize(
+    "message",
+    [
+        "connection reset by peer",
+        "429 Too Many Requests",  # rate limit without quota wording
+        "validation failed",
+    ],
+)
+def test_is_openai_quota_error_ignores_non_quota_messages(message: str):
+    assert generation_runtime.is_openai_quota_error(Exception(message)) is False
+
+
+# --- _compact_generation_job_final_result (final_result shaping) -----------
+
+
+def test_compact_final_result_drops_non_essential_keys_for_real_plan():
+    final_result = {
+        "status": "ready",
+        "stage2_status": "stage2_pass",
+        "plan_text": "# big plan text",
+        "why_log": {"x": 1},
+        "full_name": "Jordan",
+    }
+    compact = generation_runtime._compact_generation_job_final_result(final_result)
+    assert compact == {"status": "ready", "stage2_status": "stage2_pass"}
+
+
+def test_compact_final_result_preserves_triage_context_for_held_outcome():
+    final_result = {
+        "status": "medical_hold",
+        "stage2_status": "skipped",
+        "plan_text": "# should be dropped",
+        "why_log": {"injury_triage": {"mode": "medical_hold"}},
+        "injury_triage": {"mode": "medical_hold"},
+        "full_name": "Jordan",
+    }
+    compact = generation_runtime._compact_generation_job_final_result(final_result)
+    assert compact == {
+        "status": "medical_hold",
+        "stage2_status": "skipped",
+        "why_log": {"injury_triage": {"mode": "medical_hold"}},
+        "injury_triage": {"mode": "medical_hold"},
+        "full_name": "Jordan",
+    }
+
+
+# --- build_progress_recorder (milestone persistence) -----------------------
+
+
+def test_build_progress_recorder_persists_milestone_and_heartbeat():
+    store = _RecordingStore()
+    milestones, callback = generation_runtime.build_progress_recorder(job_id="job-x", store=store)
+    callback("stage1_planner_invoked", "Stage 1 planner invoked", "detail", {"k": "v"})
+
+    assert len(store.calls) == 1
+    job_id, changes = store.calls[0]
+    assert job_id == "job-x"
+    assert changes["heartbeat_at"]
+    persisted = changes["progress_milestones"]
+    assert persisted[-1]["code"] == "stage1_planner_invoked"
+    assert persisted[-1]["meta"] == {"k": "v"}
+    assert milestones[-1]["code"] == "stage1_planner_invoked"
+
+
+def test_build_progress_recorder_swallows_persist_failures():
+    store = _FailingUpdateStore()
+    milestones, callback = generation_runtime.build_progress_recorder(job_id="job-x", store=store)
+
+    # Must not raise even though the store write fails.
+    callback("stage1_planner_invoked", "label", "detail", {})
+
+    assert milestones[-1]["code"] == "stage1_planner_invoked"
+
+
+def test_build_progress_recorder_respects_should_persist_guard():
+    store = _RecordingStore()
+    milestones, callback = generation_runtime.build_progress_recorder(
+        job_id="job-x", store=store, should_persist=lambda: False
+    )
+    callback("stage1_planner_invoked", "label", "detail", {})
+
+    assert store.calls == []
+    assert milestones == []
+
+
+def test_build_progress_recorder_caps_persisted_milestones():
+    store = _RecordingStore()
+    cap = generation_runtime._MAX_PERSISTED_MILESTONES
+    milestones, callback = generation_runtime.build_progress_recorder(job_id="job-x", store=store)
+    for index in range(cap + 5):
+        callback(f"code-{index}", "label", "detail", {})
+
+    assert len(milestones) == cap
+    last_snapshot = store.calls[-1][1]["progress_milestones"]
+    assert len(last_snapshot) == cap
+    assert milestones[-1]["code"] == f"code-{cap + 4}"
+
+
+# --- schedule_generation_job_if_needed (isolated branches) -----------------
+
+
+def test_schedule_worker_only_mode_does_not_schedule_or_consume_capacity():
+    store = _CapacityStore(count_result=0)
+    background_tasks = BackgroundTasks()
+    active_tasks: set[str] = set()
+    job = {"id": "job-1", "status": "queued"}
+
+    returned = asyncio.run(
+        generation_runtime.schedule_generation_job_if_needed(
+            job=job,
+            background_tasks=background_tasks,
+            store=store,
+            planner_fn=app_module._noop_planner,
+            stage2=FakeStage2Automator(result_factory=finalized_result),
+            active_tasks=active_tasks,
+            enable_in_process_generation=False,
+            stale_job_checker=lambda j, **kw: False,
+            stale_after_seconds=300,
+        )
+    )
+
+    assert returned == job
+    assert background_tasks.tasks == []
+    assert active_tasks == set()
+
+
+def test_schedule_defers_when_capacity_reached(monkeypatch):
+    monkeypatch.setenv("APP_GENERATION_MAX_CONCURRENT_JOBS", "1")
+    store = _CapacityStore(count_result=1)
+    background_tasks = BackgroundTasks()
+    active_tasks: set[str] = set()
+    job = {"id": "job-1", "status": "queued"}
+
+    returned = asyncio.run(
+        generation_runtime.schedule_generation_job_if_needed(
+            job=job,
+            background_tasks=background_tasks,
+            store=store,
+            planner_fn=app_module._noop_planner,
+            stage2=FakeStage2Automator(result_factory=finalized_result),
+            active_tasks=active_tasks,
+            enable_in_process_generation=True,
+            stale_job_checker=lambda j, **kw: False,
+            stale_after_seconds=300,
+        )
+    )
+
+    assert returned == job
+    assert background_tasks.tasks == []
+    assert "job-1" not in active_tasks
+
+
+def test_schedule_defers_when_capacity_count_unavailable(monkeypatch):
+    monkeypatch.setenv("APP_GENERATION_MAX_CONCURRENT_JOBS", "1")
+    store = _CapacityStore(
+        count_exc=HTTPException(status_code=503, detail="capacity check unavailable")
+    )
+    background_tasks = BackgroundTasks()
+    active_tasks: set[str] = set()
+    job = {"id": "job-1", "status": "queued"}
+
+    returned = asyncio.run(
+        generation_runtime.schedule_generation_job_if_needed(
+            job=job,
+            background_tasks=background_tasks,
+            store=store,
+            planner_fn=app_module._noop_planner,
+            stage2=FakeStage2Automator(result_factory=finalized_result),
+            active_tasks=active_tasks,
+            enable_in_process_generation=True,
+            stale_job_checker=lambda j, **kw: False,
+            stale_after_seconds=300,
+        )
+    )
+
+    assert returned == job
+    assert background_tasks.tasks == []
+    assert "job-1" not in active_tasks
+
+
+# --- post-terminal cleanup must not undo saved plan/job state --------------
+
+
+def test_cleanup_failure_after_terminal_persist_preserves_plan_and_job():
+    store = FakeStore()
+    seed_default_profiles(store)
+    request_payload = _build_request().model_dump(mode="json")
+    created = store.create_or_get_generation_job(
+        athlete_id="athlete-1",
+        client_request_id="cleanup-failure",
+        source="self_serve",
+        request_payload=request_payload,
+    )
+
+    def boom_clear(athlete_id: str) -> None:
+        raise RuntimeError("cleanup boom")
+
+    store.clear_onboarding_draft = boom_clear  # type: ignore[assignment]
+
+    asyncio.run(
+        generation_runtime.run_generation_job(
+            job_id=created["id"],
+            store=store,
+            planner_fn=app_module._noop_planner,
+            stage2=FakeStage2Automator(result_factory=finalized_result),
+            active_tasks=set(),
+        )
+    )
+
+    job = store.get_generation_job(created["id"])
+    assert job is not None
+    assert job["status"] == "completed"
+    plan_id = job.get("plan_id")
+    assert plan_id
+    assert store.get_plan(plan_id) is not None
+
+
+def test_cleanup_timeout_after_terminal_persist_preserves_plan_and_job(monkeypatch):
+    monkeypatch.setattr(generation_runtime, "_POST_PERSIST_CLEANUP_TIMEOUT_SECONDS", 0.05)
+    store = FakeStore()
+    seed_default_profiles(store)
+    request_payload = _build_request().model_dump(mode="json")
+    created = store.create_or_get_generation_job(
+        athlete_id="athlete-1",
+        client_request_id="cleanup-timeout",
+        source="self_serve",
+        request_payload=request_payload,
+    )
+
+    def slow_clear(athlete_id: str) -> None:
+        time.sleep(0.3)
+
+    store.clear_onboarding_draft = slow_clear  # type: ignore[assignment]
+
+    asyncio.run(
+        generation_runtime.run_generation_job(
+            job_id=created["id"],
+            store=store,
+            planner_fn=app_module._noop_planner,
+            stage2=FakeStage2Automator(result_factory=finalized_result),
+            active_tasks=set(),
+        )
+    )
+
+    job = store.get_generation_job(created["id"])
+    assert job is not None
+    assert job["status"] == "completed"
+    plan_id = job.get("plan_id")
+    assert plan_id
+    assert store.get_plan(plan_id) is not None
