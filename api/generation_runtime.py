@@ -18,35 +18,18 @@ from fastapi import BackgroundTasks, HTTPException, status
 
 from fightcamp.main import generate_plan_sync
 
-from .environment import is_production_environment
 from .generation_config import generation_job_stale_after_seconds
 from .models import PlanRequest, ProfileUpdateRequest
 from .stage2_automation import Stage2AutomationError, Stage2AutomationUnavailableError, Stage2Automator
 from .state_machine import job_status_for_plan_status
 from .store import AppStore, is_pre_start_stale_generation_job
 from .generation.time_utils import utc_now_iso
+from .generation.types import Planner, ProgressCallback
+from .generation.errors import AdminLatestIntakeLinkageError, TriageResumeMissingPlanError
+from .generation.timeouts import _stage1_planner_timeout_seconds, _stage2_finalize_timeout_seconds
 
-Planner = Callable[..., dict[str, Any]]
-ProgressCallback = Callable[[str, str, str, dict[str, Any]], None]
 logger = logging.getLogger(__name__)
 _TRIAGE_RESUME_OVERRIDE_KEY = "_triage_resume_override"
-
-
-class TriageResumeMissingPlanError(RuntimeError):
-    """Raised when an admin_triage_resume job cannot find its linked plan.
-
-    A resume job must update the original triage-blocked plan in place; if the
-    linked plan is missing we fail loudly rather than silently creating a
-    duplicate plan.
-    """
-
-    pass
-
-
-class AdminLatestIntakeLinkageError(RuntimeError):
-    """Raised when an admin_latest_intake job linkage/ownership validation fails."""
-
-    pass
 
 
 _DETACHED_GENERATION_TASKS: set[asyncio.Task[None]] = set()
@@ -235,50 +218,6 @@ def parse_plan_request(value: Any) -> PlanRequest:
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         detail="generation job payload is invalid",
     )
-
-
-def _stage2_finalize_timeout_seconds() -> float | None:
-    raw_value = os.getenv("APP_STAGE2_FINALIZE_TIMEOUT_SECONDS", "240").strip()
-    if raw_value in {"", "0", "none", "None", "NONE"}:
-        return None
-    try:
-        return max(1.0, float(raw_value))
-    except ValueError:
-        logger.warning(
-            "[jobs] generation:invalid_stage2_timeout value=%r; falling back to 300s",
-            raw_value,
-        )
-        return 300.0
-
-
-def _stage1_planner_timeout_seconds() -> float | None:
-    raw_value = os.getenv("STAGE1_PLANNER_TIMEOUT_SECONDS")
-    if raw_value is None:
-        raw_value = os.getenv("APP_STAGE1_PLANNER_TIMEOUT_SECONDS", "600")
-    raw_value = raw_value.strip()
-    if raw_value in {"", "0", "none", "None", "NONE"}:
-        if is_production_environment():
-            logger.warning(
-                "[jobs] generation:stage1_timeout_disabled_in_production value=%r; falling back to 600s",
-                raw_value,
-            )
-            return 600.0
-        return None
-    try:
-        parsed = float(raw_value)
-    except ValueError:
-        logger.warning(
-            "[jobs] generation:invalid_stage1_timeout value=%r; falling back to 600s",
-            raw_value,
-        )
-        return 600.0
-    if parsed <= 0:
-        logger.warning(
-            "[jobs] generation:invalid_stage1_timeout value=%r; falling back to 600s",
-            raw_value,
-        )
-        return 600.0
-    return parsed
 
 
 _TRIAGE_FINAL_RESULT_STATUSES = frozenset(
