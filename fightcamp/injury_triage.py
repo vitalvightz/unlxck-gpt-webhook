@@ -200,6 +200,15 @@ _NEGATED_STRUCTURAL_HISTORY_RE = re.compile(
     r"(?:fracture|dislocat\w*|rupture|tear)\b"
 )
 
+# Matches an explicit denial of the break/crack/snap signal in the SAME chunk
+# (e.g. "not broken", "scan ruled out fracture", "ankle not cracked"). Used by
+# _has_structural_break_with_location to keep a structural keyword from
+# routing fracture when the chunk itself negates it.
+_NEGATED_STRUCTURAL_BREAK_RE = re.compile(
+    r"\b(?:no|not|without|denies?|denied|did\s+not|ruled\s+out)\s+(?:\w+\s+){0,3}"
+    r"(?:broke|broken|crack(?:ed)?|snap(?:ped)?)\b"
+)
+
 
 @dataclass(frozen=True)
 class InjuryTriageResult:
@@ -297,6 +306,11 @@ def _has_structural_break_with_location(text: str) -> bool:
         if _is_benign_joint_noise_chunk(raw_chunk):
             continue
 
+        # Catch explicit denials that the spaCy-based remove_negated_phrases
+        # may miss (e.g. "not broken", "ruled out fracture").
+        if _NEGATED_STRUCTURAL_BREAK_RE.search(raw_chunk):
+            continue
+
         cleaned_chunk = remove_negated_phrases(raw_chunk).strip().lower()
         if not cleaned_chunk or not _STRUCTURAL_BREAK_RE.search(cleaned_chunk):
             continue
@@ -319,6 +333,11 @@ def _has_structural_break_signal(*, text: str, context_text: str) -> bool:
         # Must happen before negation stripping.
         # Example: "ankle cracked but no pain" needs "no pain" intact.
         if _is_benign_joint_noise_chunk(raw_chunk):
+            continue
+
+        # Catch explicit denials that the spaCy-based remove_negated_phrases
+        # may miss (e.g. "not broken", "ruled out fracture").
+        if _NEGATED_STRUCTURAL_BREAK_RE.search(raw_chunk):
             continue
 
         cleaned_chunk = remove_negated_phrases(raw_chunk).strip().lower()

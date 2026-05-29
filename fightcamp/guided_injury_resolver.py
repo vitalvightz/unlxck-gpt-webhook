@@ -117,7 +117,10 @@ def resolve_guided_injury_entry(guided_injury: Any, parsed_entry: dict[str, Any]
             parser_entry["canonical_location"] = area_entry.get("canonical_location")
             parser_entry["side"] = area_entry.get("side")
             parser_entry["laterality"] = area_entry.get("laterality")
-            parser_entry["original_phrase"] = combined_text
+            # Use the user-facing area string here, not combined_text. Otherwise
+            # internal notes (passed to the parser only to improve type detection)
+            # leak into downstream surfaces like injuries_only_text.
+            parser_entry["original_phrase"] = area
 
     parser_type = _specific_parser_type(parser_entry)
     parser_location = (parser_entry or {}).get("canonical_location")

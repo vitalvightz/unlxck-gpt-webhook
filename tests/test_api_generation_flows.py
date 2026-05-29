@@ -1227,7 +1227,7 @@ def test_scheduler_keeps_queued_job_until_worker_claims_and_processes():
             stage2=stage2,
             active_tasks=active_tasks,
             enable_in_process_generation=True,
-            stale_job_checker=app_module.is_stale_job,
+            stale_job_checker=app_module._is_stale_job,
             stale_after_seconds=90,
         )
     )
@@ -1309,7 +1309,7 @@ def test_scheduler_returns_recovered_queued_row_for_stale_running_job():
             stage2=FakeStage2Automator(result=finalized_result()),
             active_tasks=set(),
             enable_in_process_generation=False,
-            stale_job_checker=app_module.is_stale_job,
+            stale_job_checker=app_module._is_stale_job,
             stale_after_seconds=90,
         )
     )

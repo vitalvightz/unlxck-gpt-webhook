@@ -83,7 +83,7 @@ def test_field_alias_matching_for_key_inputs():
             {"label": "Fight date", "value": "2099-01-20"},
             {"label": "Technical style", "value": "Boxing"},
             {"label": "Tactical style", "value": "Pressure Fighter"},
-            {"label": "Training frequency", "value": "4"},
+            {"label": "Training frequency", "value": "3"},
             {"label": "Available training days", "value": "Mon, Wed, Fri"},
             {"label": "Current injuries", "value": "wrist soreness"},
         ]
@@ -92,7 +92,7 @@ def test_field_alias_matching_for_key_inputs():
     assert parsed.next_fight_date == "2099-01-20"
     assert parsed.tech_styles == ["boxing"]
     assert parsed.tactical_styles == ["pressure fighter"]
-    assert parsed.training_frequency == 4
+    assert parsed.training_frequency == 3
     assert parsed.training_days == ["Mon", "Wed", "Fri"]
     assert parsed.injuries == "wrist soreness"
 
@@ -100,13 +100,13 @@ def test_field_alias_matching_for_key_inputs():
 def test_whitespace_case_insensitive_label_matching():
     data = _payload(
         [
-            {"label": "  weekly training frequency  ", "value": "3"},
+            {"label": "  weekly training frequency  ", "value": "2"},
             {"label": "  training availability  ", "value": "Tue, Thu"},
             {"label": "  when IS your NEXT fight?  ", "value": "2099-02-01"},
         ]
     )
     parsed = PlanInput.from_payload(data)
-    assert parsed.training_frequency == 3
+    assert parsed.training_frequency == 2
     assert parsed.training_days == ["Tue", "Thu"]
     assert parsed.next_fight_date == "2099-02-01"
 
@@ -616,8 +616,8 @@ def test_free_text_injury_fallback_still_parses_without_guided_injury():
         ("Head / Neck", "neck"),
         ("Upper back", "upper back"),
         ("Lower back", "lower back"),
-        ("Left glute", "glutes"),
-        ("Right quad", "quads"),
+        ("Left glute", "glute"),
+        ("Right quad", "quad"),
         ("Core", "core"),
     ],
 )
@@ -975,7 +975,7 @@ def test_user_supplied_frequency_is_marked_user_supplied():
         _payload(
             [
                 {"label": "Weekly Training Frequency", "value": "4"},
-                {"label": "Training Availability", "value": "Mon, Thu, Sat"},
+                {"label": "Training Availability", "value": "Mon, Wed, Thu, Sat"},
             ]
         )
     )

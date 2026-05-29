@@ -15,6 +15,14 @@ REHAB_COVERAGE_EXCEPTIONS = {
     "pneumothorax": "medical_hold",
     "hemothorax": "medical_hold",
     "septic_joint_or_bone_infection": "medical_hold",
+    # Surface injuries (cut/laceration/abrasion/graze/blister) are first-aid
+    # /wound-care decisions, not rehab-bank items; the planning surface gates
+    # them through guided_injury.surface_type instead of rehab protocols.
+    "cut": "surface_injury_handling",
+    "laceration": "surface_injury_handling",
+    "abrasion": "surface_injury_handling",
+    "graze": "surface_injury_handling",
+    "blister": "surface_injury_handling",
 }
 
 GENERIC_REHAB_FALLBACK_TYPES = {"unspecified"}

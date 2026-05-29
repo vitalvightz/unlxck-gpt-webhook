@@ -749,7 +749,7 @@ def _validate_production_cors_config(origins: list[str], regex: str | None) -> N
             logger.critical("[cors] UNSAFE_PRODUCTION_CORS_OVERRIDE_ACTIVE: %s", violation)
         return
 
-    raise RuntimeError(
+    raise ValueError(
         "Unsafe production CORS configuration. "
         "Refusing to boot unless APP_ALLOW_UNSAFE_PRODUCTION_CORS_BOOT=1 is set. "
         + "; ".join(violations)
@@ -807,6 +807,14 @@ def _default_planner(
     progress_callback=None,
 ) -> dict[str, Any]:
     return runtime_default_planner(payload, progress_callback=progress_callback)
+
+
+def _noop_planner(
+    payload: dict[str, Any],
+    *,
+    progress_callback=None,
+) -> dict[str, Any]:
+    return {}
 
 
 def _health_payload(*, mode_label: str) -> dict[str, str | bool]:

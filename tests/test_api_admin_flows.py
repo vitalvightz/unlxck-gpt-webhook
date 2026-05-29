@@ -14,6 +14,8 @@ from support import (
     FakeStage2Automator,
     _build_client,
     _build_request,
+    _empty_plan_planner,
+    _planner,
     _review_required_result,
     _start_generation,
     finalized_result,
@@ -61,7 +63,7 @@ def test_admin_routes_use_stored_profile_role_not_env_allowlist():
         create_app(
             store=store,
             auth_service=FakeAuthService({"demoted-admin-token": demoted_admin}),
-            planner=lambda payload, progress_callback=None: {"plan_text": ""},
+            planner=_empty_plan_planner,
             stage2_automator=FakeStage2Automator(result=finalized_result()),
         )
     )
@@ -113,7 +115,7 @@ def test_admin_routes_deny_email_in_env_allowlist_when_stored_role_is_athlete():
         create_app(
             store=store,
             auth_service=FakeAuthService({"new-admin-token": new_admin}),
-            planner=lambda payload, progress_callback=None: {"plan_text": ""},
+            planner=_empty_plan_planner,
             stage2_automator=FakeStage2Automator(result=finalized_result()),
         )
     )
@@ -141,7 +143,7 @@ def test_normal_athlete_denied_from_admin_routes():
         create_app(
             store=store,
             auth_service=FakeAuthService({"athlete-only-token": athlete}),
-            planner=lambda payload, progress_callback=None: {"plan_text": ""},
+            planner=_empty_plan_planner,
             stage2_automator=FakeStage2Automator(result=finalized_result()),
         )
     )
@@ -642,7 +644,7 @@ def test_approve_and_resume_generation_blocks_duplicate_after_successful_resume(
         create_app(
             store=store,
             auth_service=FakeAuthService({"athlete-token": athlete, "admin-token": admin}),
-            planner=lambda payload: stage1_result(),
+            planner=_planner,
             stage2_automator=FakeStage2Automator(result=finalized_result()),
         )
     )
@@ -825,7 +827,7 @@ def test_approve_and_resume_generation_creates_job_with_intake_and_plan_linked()
         create_app(
             store=store,
             auth_service=FakeAuthService({"athlete-token": athlete, "admin-token": admin}),
-            planner=lambda payload: stage1_result(),
+            planner=_planner,
             stage2_automator=FakeStage2Automator(result=finalized_result()),
         )
     )
@@ -968,7 +970,7 @@ def test_approve_and_resume_generation_from_job_creates_resume_job_without_plan_
         create_app(
             store=store,
             auth_service=FakeAuthService({"athlete-token": athlete, "admin-token": admin}),
-            planner=lambda payload: stage1_result(),
+            planner=_planner,
             stage2_automator=FakeStage2Automator(result=finalized_result()),
             enable_in_process_generation=False,
         )
@@ -1025,7 +1027,7 @@ def test_approve_and_resume_generation_from_job_rejects_non_triage_job():
         create_app(
             store=store,
             auth_service=FakeAuthService({"athlete-token": athlete, "admin-token": admin}),
-            planner=lambda payload: stage1_result(),
+            planner=_planner,
             stage2_automator=FakeStage2Automator(result=finalized_result()),
             enable_in_process_generation=False,
         )
@@ -1060,7 +1062,7 @@ def test_approve_and_resume_generation_from_job_rejects_already_approved():
         create_app(
             store=store,
             auth_service=FakeAuthService({"athlete-token": athlete, "admin-token": admin}),
-            planner=lambda payload: stage1_result(),
+            planner=_planner,
             stage2_automator=FakeStage2Automator(result=finalized_result()),
             enable_in_process_generation=False,
         )
@@ -1105,7 +1107,7 @@ def test_approve_and_resume_generation_from_job_does_not_lock_source_when_resume
         create_app(
             store=store,
             auth_service=FakeAuthService({"athlete-token": athlete, "admin-token": admin}),
-            planner=lambda payload: stage1_result(),
+            planner=_planner,
             stage2_automator=FakeStage2Automator(result=finalized_result()),
             enable_in_process_generation=False,
         )
@@ -1181,7 +1183,7 @@ def test_approve_and_resume_generation_from_job_rejects_resolved_resume_job_expl
         create_app(
             store=store,
             auth_service=FakeAuthService({"athlete-token": athlete, "admin-token": admin}),
-            planner=lambda payload: stage1_result(),
+            planner=_planner,
             stage2_automator=FakeStage2Automator(result=finalized_result()),
             enable_in_process_generation=False,
         )
@@ -1245,7 +1247,7 @@ def test_approve_and_resume_generation_from_job_returns_running_resume_without_w
         create_app(
             store=store,
             auth_service=FakeAuthService({"athlete-token": athlete, "admin-token": admin}),
-            planner=lambda payload: stage1_result(),
+            planner=_planner,
             stage2_automator=FakeStage2Automator(result=finalized_result()),
             enable_in_process_generation=False,
         )
@@ -1334,7 +1336,7 @@ def test_approve_and_resume_generation_writes_plan_triage_approval_before_schedu
             create_app(
                 store=store,
                 auth_service=FakeAuthService({"athlete-token": athlete, "admin-token": admin}),
-                planner=lambda payload: stage1_result(),
+                planner=_planner,
                 stage2_automator=FakeStage2Automator(result=finalized_result()),
                 enable_in_process_generation=False,
             )
@@ -1425,7 +1427,7 @@ def test_approve_and_resume_generation_requeues_stale_running_resume_job_without
         create_app(
             store=store,
             auth_service=FakeAuthService({"athlete-token": athlete, "admin-token": admin}),
-            planner=lambda payload: stage1_result(),
+            planner=_planner,
             stage2_automator=FakeStage2Automator(result=finalized_result()),
             enable_in_process_generation=False,
         )
@@ -1511,7 +1513,7 @@ def test_approve_and_resume_generation_requeues_failed_resume_job_without_duplic
         create_app(
             store=store,
             auth_service=FakeAuthService({"athlete-token": athlete, "admin-token": admin}),
-            planner=lambda payload: stage1_result(),
+            planner=_planner,
             stage2_automator=FakeStage2Automator(result=finalized_result()),
             enable_in_process_generation=False,
         )
@@ -1596,7 +1598,7 @@ def test_approve_and_resume_generation_requeues_stage1_timeout_resume_job_withou
         create_app(
             store=store,
             auth_service=FakeAuthService({"athlete-token": athlete, "admin-token": admin}),
-            planner=lambda payload: stage1_result(),
+            planner=_planner,
             stage2_automator=FakeStage2Automator(result=finalized_result()),
             enable_in_process_generation=False,
         )
@@ -1685,7 +1687,7 @@ def test_approve_and_resume_generation_returns_non_stale_running_resume_job_as_i
         create_app(
             store=store,
             auth_service=FakeAuthService({"athlete-token": athlete, "admin-token": admin}),
-            planner=lambda payload: stage1_result(),
+            planner=_planner,
             stage2_automator=FakeStage2Automator(result=finalized_result()),
             enable_in_process_generation=False,
         )
@@ -1754,7 +1756,7 @@ def test_approve_and_resume_generation_rejects_wrongly_linked_existing_resume_jo
         create_app(
             store=store,
             auth_service=FakeAuthService({"athlete-token": athlete, "admin-token": admin}),
-            planner=lambda payload: stage1_result(),
+            planner=_planner,
             stage2_automator=FakeStage2Automator(result=finalized_result()),
             enable_in_process_generation=False,
         )
@@ -1931,7 +1933,7 @@ def test_admin_triage_resume_pre_start_stale_job_preserves_plan_and_intake_links
         create_app(
             store=store,
             auth_service=FakeAuthService({"athlete-token": athlete, "admin-token": admin}),
-            planner=lambda payload: stage1_result(),
+            planner=_planner,
             stage2_automator=FakeStage2Automator(result=finalized_result()),
             enable_in_process_generation=False,
         )
