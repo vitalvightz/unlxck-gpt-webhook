@@ -41,13 +41,16 @@ from .generation.triage import (
     _is_triage_skipped_final_result,
     should_skip_stage2,
 )
+from .generation.milestones import (
+    _MAX_PERSISTED_MILESTONES as _MAX_PERSISTED_MILESTONES,
+    build_progress_recorder,
+)
 
 logger = logging.getLogger(__name__)
 _TRIAGE_RESUME_OVERRIDE_KEY = "_triage_resume_override"
 
 
 _DETACHED_GENERATION_TASKS: set[asyncio.Task[None]] = set()
-_MAX_PERSISTED_MILESTONES = 40
 _FINAL_RESULT_PERSIST_TIMEOUT_SECONDS = 40.0
 _FINAL_RESULT_PERSIST_TIMEOUT_ERROR = "Stage 2 result persistence timed out before final_result was saved."
 _PLAN_PERSIST_VERIFICATION_ERROR = "Plan persistence verification failed after create_plan."
@@ -126,53 +129,6 @@ def _invoke_planner(
         )
         return planner_fn(payload, progress_callback=progress_callback)
     return planner_fn(payload)
-
-
-def build_progress_recorder(
-    *,
-    job_id: str,
-    store: AppStore,
-    initial_milestones: list[dict[str, Any]] | None = None,
-    should_persist: Callable[[], bool] | None = None,
-) -> tuple[list[dict[str, Any]], ProgressCallback]:
-    """Return a milestone list + callback that persists each emit to the job row.
-
-    Emits are low-volume (~10 over several minutes), so writing on every event
-    is fine. Persistence failures are logged and ignored — they must never
-    surface into the planner pipeline.
-    """
-    milestones: list[dict[str, Any]] = list(initial_milestones or [])
-
-    def _callback(code: str, label: str, detail: str, meta: dict[str, Any]) -> None:
-        if should_persist is not None and not should_persist():
-            return
-
-        entry = {
-            "code": code,
-            "label": label,
-            "detail": detail or "",
-            "meta": dict(meta or {}),
-            "at": utc_now_iso(),
-        }
-        milestones.append(entry)
-        # Cap list size so a runaway emitter cannot bloat the row.
-        if len(milestones) > _MAX_PERSISTED_MILESTONES:
-            del milestones[:-_MAX_PERSISTED_MILESTONES]
-        snapshot = list(milestones)
-        try:
-            store.update_generation_job(
-                job_id,
-                progress_milestones=snapshot,
-                heartbeat_at=utc_now_iso(),
-            )
-        except Exception:
-            logger.exception(
-                "[jobs] generation:milestone_persist_failed job_id=%s code=%s",
-                job_id,
-                code,
-            )
-
-    return milestones, _callback
 
 
 def parse_datetime(value: Any) -> datetime | None:
