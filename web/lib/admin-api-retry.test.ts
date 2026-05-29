@@ -102,6 +102,39 @@ test("listAdminAthletes retries on a transient 503 then succeeds", async () => {
   assert.equal(calls.length, 2, "should retry once after a 503");
 });
 
+test("listAdminAthletes forwards q/limit/offset as encoded query params", async () => {
+  const calls: string[] = [];
+  globalThis.fetch = (async (input: RequestInfo | URL) => {
+    calls.push(String(input));
+    return jsonResponse(200, []);
+  }) as typeof fetch;
+
+  await listAdminAthletes("token", { q: "ari & co", limit: 20, offset: 40 });
+
+  assert.equal(calls.length, 1);
+  const url = new URL(calls[0]!);
+  assert.equal(url.pathname, "/api/admin/athletes");
+  assert.equal(url.searchParams.get("q"), "ari & co");
+  assert.equal(url.searchParams.get("limit"), "20");
+  assert.equal(url.searchParams.get("offset"), "40");
+});
+
+test("listAdminPlans omits the q param when the search term is blank", async () => {
+  const calls: string[] = [];
+  globalThis.fetch = (async (input: RequestInfo | URL) => {
+    calls.push(String(input));
+    return jsonResponse(200, []);
+  }) as typeof fetch;
+
+  await listAdminPlans("token", { q: "   ", limit: 20, offset: 0 });
+
+  assert.equal(calls.length, 1);
+  const url = new URL(calls[0]!);
+  assert.equal(url.searchParams.has("q"), false);
+  assert.equal(url.searchParams.get("limit"), "20");
+  assert.equal(url.searchParams.get("offset"), "0");
+});
+
 test("getAdminAthlete does not retry on 403", async () => {
   let attempts = 0;
   globalThis.fetch = (async () => {

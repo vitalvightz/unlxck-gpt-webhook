@@ -235,6 +235,74 @@ def test_admin_plans_support_limit_and_offset_query_params():
     assert body[0]["plan_id"] != second_job["plan_id"]
 
 
+def test_admin_plans_support_server_side_search_query():
+    client, _, _ = _build_client()
+
+    _, kept_job = _start_generation(
+        client, _build_request({"athlete": {"full_name": "Mariana Sokolova"}})
+    )
+    _start_generation(client, _build_request({"athlete": {"full_name": "Bruno Tavares"}}))
+
+    response = client.get(
+        "/api/admin/plans?q=sokolova",
+        headers={"Authorization": "Bearer admin-token"},
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert [plan["plan_id"] for plan in body] == [kept_job["plan_id"]]
+
+
+def test_admin_athletes_support_server_side_search_query():
+    client, store, _ = _build_client()
+    store.ensure_profile(
+        AuthenticatedUser(
+            user_id="athlete-search-1",
+            email="needle@example.com",
+            full_name="Needle Fighter",
+            metadata={},
+        )
+    )
+    store.ensure_profile(
+        AuthenticatedUser(
+            user_id="athlete-search-2",
+            email="haystack@example.com",
+            full_name="Haystack Fighter",
+            metadata={},
+        )
+    )
+
+    response = client.get(
+        "/api/admin/athletes?q=needle@example.com",
+        headers={"Authorization": "Bearer admin-token"},
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert [athlete["email"] for athlete in body] == ["needle@example.com"]
+
+
+def test_admin_athletes_search_query_is_case_insensitive_and_partial():
+    client, store, _ = _build_client()
+    store.ensure_profile(
+        AuthenticatedUser(
+            user_id="athlete-partial-1",
+            email="zoe@example.com",
+            full_name="Zoe Park",
+            metadata={},
+        )
+    )
+
+    response = client.get(
+        "/api/admin/athletes?q=ZO",
+        headers={"Authorization": "Bearer admin-token"},
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert any(athlete["email"] == "zoe@example.com" for athlete in body)
+
+
 def test_admin_athletes_support_limit_and_offset_query_params():
     client, store, _ = _build_client()
     store.ensure_profile(

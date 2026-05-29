@@ -589,9 +589,34 @@ export async function deletePlan(token: string, planId: string): Promise<void> {
   );
 }
 
-export function listAdminAthletes(token: string): Promise<AdminAthleteRecord[]> {
+export type AdminListQuery = {
+  q?: string;
+  limit?: number;
+  offset?: number;
+};
+
+function buildAdminListPath(basePath: string, query?: AdminListQuery): string {
+  const params = new URLSearchParams();
+  const trimmedQuery = query?.q?.trim();
+  if (trimmedQuery) {
+    params.set("q", trimmedQuery);
+  }
+  if (typeof query?.limit === "number") {
+    params.set("limit", String(query.limit));
+  }
+  if (typeof query?.offset === "number") {
+    params.set("offset", String(query.offset));
+  }
+  const search = params.toString();
+  return search ? `${basePath}?${search}` : basePath;
+}
+
+export function listAdminAthletes(
+  token: string,
+  query?: AdminListQuery,
+): Promise<AdminAthleteRecord[]> {
   return withTransientRetries(() =>
-    readJson<AdminAthleteRecord[]>("/api/admin/athletes", { token }),
+    readJson<AdminAthleteRecord[]>(buildAdminListPath("/api/admin/athletes", query), { token }),
   );
 }
 
@@ -695,9 +720,12 @@ export function listAdminActiveGenerationJobs(
   );
 }
 
-export function listAdminPlans(token: string): Promise<AdminPlanSummary[]> {
+export function listAdminPlans(
+  token: string,
+  query?: AdminListQuery,
+): Promise<AdminPlanSummary[]> {
   return withTransientRetries(() =>
-    readJson<AdminPlanSummary[]>("/api/admin/plans", { token }),
+    readJson<AdminPlanSummary[]>(buildAdminListPath("/api/admin/plans", query), { token }),
   );
 }
 

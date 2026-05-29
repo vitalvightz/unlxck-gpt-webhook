@@ -245,6 +245,27 @@ def _encode_structured_text(value: Any) -> str | None:
     return json.dumps(value)
 
 
+_ADMIN_SEARCH_RESERVED = re.compile(r'[,()*\\"]+')
+
+
+def _admin_search_clause(columns: tuple[str, ...], q: str | None) -> str | None:
+    """Build a PostgREST ``or()`` expression of case-insensitive ilike matches.
+
+    The raw query is stripped of characters that are structurally significant
+    in a PostgREST ``or()`` expression (commas, parentheses, wildcards, quotes,
+    backslashes) so a user-supplied search string cannot inject extra
+    conditions or break the filter grammar. Returns ``None`` when the sanitized
+    term is empty so callers can skip filtering entirely.
+    """
+    if not q:
+        return None
+    term = " ".join(_ADMIN_SEARCH_RESERVED.sub(" ", q).split())
+    if not term:
+        return None
+    pattern = f"*{term}*"
+    return ",".join(f"{column}.ilike.{pattern}" for column in columns)
+
+
 def _utc_now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
 
@@ -2551,24 +2572,34 @@ class SupabaseAppStore:
                 exc=exc,
             )
 
-    def list_admin_plans(self, *, limit: int = 50, offset: int = 0) -> list[dict[str, Any]]:
+    def list_admin_plans(
+        self, *, limit: int = 50, offset: int = 0, q: str | None = None
+    ) -> list[dict[str, Any]]:
+        query = self.client.table("plans").select(
+            "id, athlete_id, full_name, fight_date, technical_style, plan_name, status, "
+            "pdf_url, created_at, profiles!plans_athlete_id_fkey(email, full_name)"
+        )
+        clause = _admin_search_clause(("plan_name", "full_name", "status"), q)
+        if clause:
+            query = query.or_(clause)
         response = (
-            self.client.table("plans")
-            .select(
-                "id, athlete_id, full_name, fight_date, technical_style, plan_name, status, "
-                "pdf_url, created_at, profiles!plans_athlete_id_fkey(email, full_name)"
-            )
-            .order("created_at", desc=True)
+            query.order("created_at", desc=True)
             .range(offset, offset + limit - 1)
             .execute()
         )
         return getattr(response, "data", None) or []
 
-    def list_admin_athletes(self, *, limit: int = 50, offset: int = 0) -> list[dict[str, Any]]:
+    def list_admin_athletes(
+        self, *, limit: int = 50, offset: int = 0, q: str | None = None
+    ) -> list[dict[str, Any]]:
+        query = self.client.table("admin_athlete_rollups").select("*")
+        clause = _admin_search_clause(
+            ("email", "full_name", "username", "professional_status", "record_summary"), q
+        )
+        if clause:
+            query = query.or_(clause)
         response = (
-            self.client.table("admin_athlete_rollups")
-            .select("*")
-            .order("updated_at", desc=True)
+            query.order("updated_at", desc=True)
             .range(offset, offset + limit - 1)
             .execute()
         )
