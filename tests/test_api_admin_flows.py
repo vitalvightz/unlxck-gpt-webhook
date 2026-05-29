@@ -952,6 +952,77 @@ def test_admin_triage_queue_hides_approved_source_job():
     assert response.json() == []
 
 
+def test_admin_can_list_active_generation_jobs():
+    athlete = AuthenticatedUser(user_id="athlete-1", email="ari@example.com", full_name="Ari Mensah", metadata={})
+    running_athlete = AuthenticatedUser(user_id="athlete-2", email="zoe@example.com", full_name="Zoe Park", metadata={})
+    done_athlete = AuthenticatedUser(user_id="athlete-3", email="done@example.com", full_name="Done Athlete", metadata={})
+    admin = AuthenticatedUser(user_id="admin-1", email="ops@unlxck.test", full_name="Ops Admin", metadata={})
+    store = FakeStore()
+    store.ensure_profile(athlete)
+    store.ensure_profile(running_athlete)
+    store.ensure_profile(done_athlete)
+    request = _build_request()
+    queued_job = store.create_or_get_generation_job(
+        athlete_id=athlete.user_id,
+        client_request_id="active_queued",
+        source="self_serve",
+        request_payload=request.model_dump(mode="json"),
+    )
+    running_job = store.create_or_get_generation_job(
+        athlete_id=running_athlete.user_id,
+        client_request_id="active_running",
+        source="admin_latest_intake",
+        request_payload=request.model_dump(mode="json"),
+    )
+    now = datetime.now(timezone.utc).isoformat()
+    store.update_generation_job(
+        running_job["id"],
+        status="running",
+        started_at=now,
+        heartbeat_at=now,
+    )
+    terminal_job = store.create_or_get_generation_job(
+        athlete_id=done_athlete.user_id,
+        client_request_id="already_done",
+        source="self_serve",
+        request_payload=request.model_dump(mode="json"),
+    )
+    store.update_generation_job(terminal_job["id"], status="running", started_at=now, heartbeat_at=now)
+    store.update_generation_job(terminal_job["id"], status="completed", completed_at=now)
+
+    client = TestClient(
+        create_app(
+            store=store,
+            auth_service=FakeAuthService({"athlete-token": athlete, "admin-token": admin}),
+            planner=lambda payload: stage1_result(),
+            stage2_automator=FakeStage2Automator(result=finalized_result()),
+            enable_in_process_generation=False,
+        )
+    )
+
+    forbidden = client.get(
+        "/api/admin/generation-jobs/active",
+        headers={"Authorization": "Bearer athlete-token"},
+    )
+    response = client.get(
+        "/api/admin/generation-jobs/active",
+        headers={"Authorization": "Bearer admin-token"},
+    )
+
+    assert forbidden.status_code == 403
+    assert response.status_code == 200
+    body = response.json()
+    job_ids = {job["job_id"] for job in body}
+    assert queued_job["id"] in job_ids
+    assert running_job["id"] in job_ids
+    assert terminal_job["id"] not in job_ids
+    listed_running = next(job for job in body if job["job_id"] == running_job["id"])
+    assert listed_running["status"] == "running"
+    assert listed_running["athlete_email"] == running_athlete.email
+    assert listed_running["athlete_full_name"] == running_athlete.full_name
+    assert listed_running["request_payload_summary"]["athlete_name"] == request.athlete.full_name
+
+
 def test_approve_and_resume_generation_from_job_creates_resume_job_without_plan_id():
     """The new endpoint takes a generation_job_id (not a plan_id). It must
     create an admin_triage_resume job linked to the intake but NOT to any

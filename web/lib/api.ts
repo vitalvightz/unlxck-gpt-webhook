@@ -665,6 +665,18 @@ export function listAdminTriageGenerationJobs(
   );
 }
 
+export function listAdminActiveGenerationJobs(
+  token: string,
+  limit = 50,
+): Promise<AdminGenerationJobDiagnostic[]> {
+  return withTransientRetries(() =>
+    readJson<AdminGenerationJobDiagnostic[]>(
+      `/api/admin/generation-jobs/active?limit=${limit}`,
+      { token },
+    ),
+  );
+}
+
 export function listAdminPlans(token: string): Promise<AdminPlanSummary[]> {
   return withTransientRetries(() =>
     readJson<AdminPlanSummary[]>("/api/admin/plans", { token }),

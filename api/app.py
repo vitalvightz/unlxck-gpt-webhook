@@ -2067,6 +2067,18 @@ def create_app(
         ]
         return [job for job in diagnostics if job.requires_admin_resume][:limit]
 
+    @app.get("/api/admin/generation-jobs/active", response_model=list[AdminGenerationJobDiagnostic])
+    def list_admin_active_generation_jobs(
+        _: ProfileRecord = Depends(require_admin),
+        limit: int = Query(50, ge=1, le=200),
+        store: AppStore = Depends(get_store),
+    ) -> list[AdminGenerationJobDiagnostic]:
+        stale_after_seconds = _generation_job_stale_after_seconds()
+        return [
+            _admin_generation_job_diagnostic(job, stale_after_seconds=stale_after_seconds)
+            for job in store.list_admin_active_generation_jobs(limit=limit)
+        ]
+
     @app.post("/api/admin/plans/{plan_id}/manual-stage2", response_model=PlanDetail)
     def submit_manual_stage2(
         plan_id: str,

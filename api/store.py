@@ -210,6 +210,7 @@ class AppStore(Protocol):
     def get_generation_job_by_plan_id(self, plan_id: str) -> dict[str, Any] | None: ...
     def has_active_generation_job_for_plan(self, plan_id: str) -> bool: ...
     def list_generation_jobs_for_athlete(self, athlete_id: str, *, limit: int = 10) -> list[dict[str, Any]]: ...
+    def list_admin_active_generation_jobs(self, *, limit: int = 50) -> list[dict[str, Any]]: ...
     def list_admin_triage_generation_jobs(self, *, limit: int = 50) -> list[dict[str, Any]]: ...
     def list_orphaned_terminal_generation_jobs(self, *, limit: int = 500) -> list[dict[str, Any]]: ...
     def list_failed_triage_resume_jobs_with_approved_marker(self, *, limit: int = 500) -> list[dict[str, Any]]: ...
@@ -1998,6 +1999,31 @@ class SupabaseAppStore:
             self._raise_operation_http_error(
                 operation=f"list_admin_triage_generation_jobs limit={limit}",
                 detail="failed to list triage generation jobs",
+                exc=exc,
+            )
+        return []
+
+    def list_admin_active_generation_jobs(self, *, limit: int = 50) -> list[dict[str, Any]]:
+        try:
+            response = self._run_with_transient_retry(
+                operation=f"list_admin_active_generation_jobs limit={limit}",
+                fn=lambda: self.client.table("generation_jobs")
+                .select(f"{GENERATION_JOB_SELECT}, profiles!generation_jobs_athlete_id_fkey(email, full_name)")
+                .in_("status", ["queued", "running"])
+                .order("created_at", desc=True)
+                .limit(limit)
+                .execute(),
+            )
+            return [row for row in (response.data or []) if isinstance(row, dict)]
+        except _STORE_CLIENT_ERRORS as exc:
+            if self._is_generation_job_schema_error(exc):
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail=GENERATION_JOB_SCHEMA_DETAIL,
+                ) from exc
+            self._raise_operation_http_error(
+                operation=f"list_admin_active_generation_jobs limit={limit}",
+                detail="failed to list active generation jobs",
                 exc=exc,
             )
         return []

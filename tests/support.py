@@ -597,6 +597,23 @@ class FakeStore:
         rows.sort(key=lambda row: str(row.get("created_at") or ""), reverse=True)
         return rows[:limit]
 
+    def list_admin_active_generation_jobs(self, *, limit: int = 50) -> list[dict]:
+        rows = []
+        for job in self.generation_jobs.values():
+            status_value = str(job.get("status") or "").strip().lower()
+            if status_value not in {"queued", "running"}:
+                continue
+            profile = self.profiles.get(str(job.get("athlete_id") or ""), {})
+            rows.append({
+                **dict(job),
+                "profiles": {
+                    "email": profile.get("email", ""),
+                    "full_name": profile.get("full_name", ""),
+                },
+            })
+        rows.sort(key=lambda row: str(row.get("created_at") or ""), reverse=True)
+        return rows[:limit]
+
     def list_orphaned_terminal_generation_jobs(self, *, limit: int = 500) -> list[dict]:
         rows: list[dict] = []
         for job in self.generation_jobs.values():
