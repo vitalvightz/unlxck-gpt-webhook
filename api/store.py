@@ -809,7 +809,24 @@ class SupabaseAppStore:
     def ensure_profile(self, user: AuthenticatedUser) -> dict[str, Any]:
         try:
             self._log_profile_event(operation="ensure_start", user=user)
-            existing = self._get_profile_by_id(user.user_id)
+            existing = None
+            _last_read_exc: Exception | None = None
+            for _attempt in range(2):
+                try:
+                    existing = self._get_profile_by_id(user.user_id)
+                    _last_read_exc = None
+                    break
+                except _TRANSIENT_SUPABASE_ERRORS as exc:
+                    _last_read_exc = exc
+                    logger.warning(
+                        "[store] ensure_profile:transient_read_error attempt=%d athlete_id=%s error_type=%s",
+                        _attempt,
+                        user.user_id,
+                        type(exc).__name__,
+                    )
+                    time.sleep(0.5)
+            if _last_read_exc is not None:
+                raise _last_read_exc
             if existing:
                 self._log_profile_event(
                     operation="ensure_existing",
@@ -851,6 +868,11 @@ class SupabaseAppStore:
                 user.email,
                 type(exc).__name__,
             )
+            if isinstance(exc, _TRANSIENT_SUPABASE_ERRORS):
+                raise HTTPException(
+                    status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                    detail="profile service temporarily unavailable",
+                ) from exc
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="failed to ensure profile",
