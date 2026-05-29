@@ -391,7 +391,7 @@ def test_self_serve_generation_rejects_focus_picks_above_cap():
     )
 
     assert response.status_code == 409
-    assert response.json()["detail"] == "This camp allows 7 total focus picks. Remove 1 goal or weak-area selection before generating."
+    assert response.json()["detail"] == "This camp allows 6 total focus picks. Remove 2 goal or weak-area selections before generating."
 
 
 def test_admin_generation_from_latest_intake_rejects_focus_picks_above_cap():
@@ -415,7 +415,7 @@ def test_admin_generation_from_latest_intake_rejects_focus_picks_above_cap():
     )
 
     assert response.status_code == 409
-    assert response.json()["detail"] == "This camp allows 7 total focus picks. Remove 1 goal or weak-area selection before generating."
+    assert response.json()["detail"] == "This camp allows 6 total focus picks. Remove 2 goal or weak-area selections before generating."
 
 
 def test_admin_generation_from_latest_intake_rejects_invalid_saved_payload():
