@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 
 import { retryGenerationJob } from "@/lib/api";
 import { useAppSession } from "./auth-provider";
@@ -165,9 +165,124 @@ export function GlobalGenerationStatus() {
   const [isDismissed, setIsDismissed] = useState(false);
   const [isRetryingLatest, setIsRetryingLatest] = useState(false);
   const [retryLatestError, setRetryLatestError] = useState<string | null>(null);
+  const [reopenPos, setReopenPos] = useState<{ x: number; y: number } | null>(null);
 
   const previousPhaseRef = useRef(phase);
   const previousGenerationKeyRef = useRef<string | null>(null);
+  const reopenRef = useRef<HTMLButtonElement>(null);
+  const reopenDragRef = useRef<{
+    pointerId: number;
+    startX: number;
+    startY: number;
+    originX: number;
+    originY: number;
+    moved: boolean;
+  } | null>(null);
+  const reopenJustDraggedRef = useRef(false);
+
+  // Keep the draggable "Show plan build" pill on-screen if the viewport resizes.
+  useEffect(() => {
+    if (!reopenPos) {
+      return;
+    }
+
+    const clamp = () => {
+      const el = reopenRef.current;
+      const width = el?.offsetWidth ?? 0;
+      const height = el?.offsetHeight ?? 0;
+      const maxX = Math.max(8, window.innerWidth - width - 8);
+      const maxY = Math.max(8, window.innerHeight - height - 8);
+
+      setReopenPos((prev) =>
+        prev
+          ? {
+              x: Math.min(Math.max(8, prev.x), maxX),
+              y: Math.min(Math.max(8, prev.y), maxY),
+            }
+          : prev,
+      );
+    };
+
+    window.addEventListener("resize", clamp);
+    return () => window.removeEventListener("resize", clamp);
+  }, [reopenPos]);
+
+  const handleReopenPointerDown = (event: ReactPointerEvent<HTMLButtonElement>) => {
+    const el = reopenRef.current;
+    if (!el) {
+      return;
+    }
+
+    const rect = el.getBoundingClientRect();
+    reopenDragRef.current = {
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      originX: rect.left,
+      originY: rect.top,
+      moved: false,
+    };
+
+    try {
+      el.setPointerCapture(event.pointerId);
+    } catch {
+      // Pointer capture unsupported; dragging still works via window coords.
+    }
+  };
+
+  const handleReopenPointerMove = (event: ReactPointerEvent<HTMLButtonElement>) => {
+    const drag = reopenDragRef.current;
+    if (!drag || drag.pointerId !== event.pointerId) {
+      return;
+    }
+
+    const dx = event.clientX - drag.startX;
+    const dy = event.clientY - drag.startY;
+
+    // Ignore micro-movements so a tap still registers as a click.
+    if (!drag.moved && Math.hypot(dx, dy) < 6) {
+      return;
+    }
+
+    drag.moved = true;
+
+    const el = reopenRef.current;
+    const width = el?.offsetWidth ?? 0;
+    const height = el?.offsetHeight ?? 0;
+    const maxX = Math.max(8, window.innerWidth - width - 8);
+    const maxY = Math.max(8, window.innerHeight - height - 8);
+
+    setReopenPos({
+      x: Math.min(Math.max(8, drag.originX + dx), maxX),
+      y: Math.min(Math.max(8, drag.originY + dy), maxY),
+    });
+  };
+
+  const handleReopenPointerUp = (event: ReactPointerEvent<HTMLButtonElement>) => {
+    const drag = reopenDragRef.current;
+    if (!drag) {
+      return;
+    }
+
+    reopenJustDraggedRef.current = drag.moved;
+    reopenDragRef.current = null;
+
+    try {
+      reopenRef.current?.releasePointerCapture(event.pointerId);
+    } catch {
+      // Ignore release failures.
+    }
+  };
+
+  const handleReopenClick = () => {
+    // Suppress the click that ends a drag so the ribbon doesn't reopen on drop.
+    if (reopenJustDraggedRef.current) {
+      reopenJustDraggedRef.current = false;
+      return;
+    }
+
+    reopenCurrentBanner();
+  };
 
   const isFailed = phase === "failed";
   const isCompleted = phase === "completed";
@@ -517,10 +632,20 @@ export function GlobalGenerationStatus() {
   if (isDismissed) {
     return (
       <button
+        ref={reopenRef}
         type="button"
         className="global-generation-status-reopen"
         aria-label="Show generation ribbon"
-        onClick={reopenCurrentBanner}
+        style={
+          reopenPos
+            ? { left: reopenPos.x, top: reopenPos.y, right: "auto", bottom: "auto" }
+            : undefined
+        }
+        onPointerDown={handleReopenPointerDown}
+        onPointerMove={handleReopenPointerMove}
+        onPointerUp={handleReopenPointerUp}
+        onPointerCancel={handleReopenPointerUp}
+        onClick={handleReopenClick}
       >
         Show plan build
       </button>
