@@ -12,7 +12,7 @@ from typing import Any, Callable, Protocol
 import httpx
 from fastapi import HTTPException, status
 from postgrest.exceptions import APIError as PostgrestAPIError
-from supabase import Client, create_client
+from supabase import Client, ClientOptions, create_client
 
 from .auth import AuthenticatedUser
 from .environment import is_production_environment
@@ -477,7 +477,12 @@ class SupabaseAppStore:
             bool(key),
             len(admin_emails),
         )
-        return cls(create_client(url, key), admin_emails)
+        # Disable HTTP/2 to avoid RemoteProtocolError (GOAWAY frames) when
+        # Supabase terminates a multiplexed connection after several streams.
+        # HTTP/1.1 uses a simple request-per-connection model that is immune
+        # to this class of failure.
+        http_client = httpx.Client(http2=False)
+        return cls(create_client(url, key, options=ClientOptions(httpx_client=http_client)), admin_emails)
 
     def is_admin_email(self, email: str) -> bool:
         if not email:
