@@ -134,7 +134,10 @@ class FakeStore:
     def ensure_profile(self, user: AuthenticatedUser) -> dict:
         existing = self.profiles.get(user.user_id)
         if existing:
-            expected_role = "admin" if existing.get("role") == "admin" or self._is_admin_email(user.email) else "athlete"
+            # Mirror production require_profile: email allowlist is the source
+            # of truth, so a stored admin role is demoted when the email is
+            # removed from admin_emails.
+            expected_role = "admin" if self._is_admin_email(user.email) else "athlete"
             existing["role"] = expected_role
             existing["updated_at"] = _now()
             return existing
@@ -1068,6 +1071,16 @@ SYSTEM_SCENARIOS = [
 
 def _planner(payload: dict) -> dict:
     return stage1_result()
+
+
+def _empty_plan_planner(payload: dict, *, progress_callback=None) -> dict:
+    """Module-level planner that returns an empty plan result.
+
+    Tests that pipe a planner through the generation subprocess need a
+    picklable callable; in-test ``lambda`` planners raise AttributeError when
+    the subprocess tries to pickle them.
+    """
+    return {"plan_text": ""}
 
 
 def _start_generation(client: TestClient, request: PlanRequest | None = None) -> tuple[dict, dict]:
