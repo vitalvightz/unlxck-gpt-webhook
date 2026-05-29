@@ -59,8 +59,8 @@ function getJobDisplayName(job: AdminGenerationJobDiagnostic): string {
   );
 }
 
-function formatJobSource(source: string): string {
-  const label = source.trim().replace(/_/g, " ");
+function formatJobSource(source?: string | null): string {
+  const label = (source || "").trim().replace(/_/g, " ");
   return label || "unknown source";
 }
 
