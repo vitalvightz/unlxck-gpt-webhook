@@ -8,6 +8,7 @@ import { useAppSession } from "@/components/auth-provider";
 import { EmptyState } from "@/components/empty-state";
 import {
   approveAndResumeGenerationFromJob,
+  listAdminActiveGenerationJobs,
   listAdminAthletes,
   listAdminPlans,
   listAdminTriageGenerationJobs,
@@ -58,14 +59,35 @@ function getJobDisplayName(job: AdminGenerationJobDiagnostic): string {
   );
 }
 
+function formatJobSource(source?: string | null): string {
+  const label = (source || "").trim().replace(/_/g, " ");
+  return label || "unknown source";
+}
+
+function getJobStatusLabel(job: AdminGenerationJobDiagnostic): string {
+  if (job.is_stale) {
+    return "Stale";
+  }
+  return job.status === "queued" ? "Queued" : "Running";
+}
+
+function getActiveJobProgress(job: AdminGenerationJobDiagnostic): number {
+  if (job.is_stale) {
+    return 88;
+  }
+  return job.status === "running" ? 64 : 28;
+}
+
 export default function AdminPage() {
   const { isReady, isMeHydrated, session, me } = useAppSession();
   const [athletes, setAthletes] = useState<AdminAthleteRecord[]>([]);
   const [plans, setPlans] = useState<AdminPlanSummary[]>([]);
+  const [activeJobs, setActiveJobs] = useState<AdminGenerationJobDiagnostic[]>([]);
   const [triageJobs, setTriageJobs] = useState<AdminGenerationJobDiagnostic[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const [activeWarning, setActiveWarning] = useState<string | null>(null);
   const [triageWarning, setTriageWarning] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
   const [searchQuery, setSearchQuery] = useState("");
@@ -109,6 +131,30 @@ export default function AdminPage() {
     );
   }, [plans, searchNeedle]);
 
+  const filteredActiveJobs = useMemo(() => {
+    if (!searchNeedle) return activeJobs;
+    return activeJobs.filter((job) =>
+      normalizeForSearch(
+        getJobDisplayName(job),
+        job.athlete_email,
+        job.athlete_id,
+        job.status,
+        job.source,
+        job.stage2_status,
+        job.request_payload_summary?.athlete_name,
+        job.request_payload_summary?.fight_date,
+        job.request_payload_summary?.fight_format,
+        job.request_payload_summary?.goals,
+        job.request_payload_summary?.injuries,
+      ).includes(searchNeedle),
+    );
+  }, [activeJobs, searchNeedle]);
+
+  const activeAthleteCount = useMemo(
+    () => new Set(activeJobs.map((job) => job.athlete_id).filter(Boolean)).size,
+    [activeJobs],
+  );
+
   const triageAthleteCount = useMemo(
     () => new Set(triageJobs.map((job) => job.athlete_id).filter(Boolean)).size,
     [triageJobs],
@@ -125,13 +171,15 @@ export default function AdminPage() {
     let active = true;
     setIsLoading(true);
     setError(null);
+    setActiveWarning(null);
     setTriageWarning(null);
     Promise.allSettled([
       listAdminAthletes(session.access_token),
       listAdminPlans(session.access_token),
+      listAdminActiveGenerationJobs(session.access_token),
       listAdminTriageGenerationJobs(session.access_token),
     ])
-      .then(([athletesResult, plansResult, triageResult]) => {
+      .then(([athletesResult, plansResult, activeResult, triageResult]) => {
         if (!active) return;
         const loadErrors: string[] = [];
 
@@ -145,6 +193,13 @@ export default function AdminPage() {
           setPlans(plansResult.value);
         } else {
           loadErrors.push(getErrorMessage(plansResult.reason, "Unable to load plan history."));
+        }
+
+        if (activeResult.status === "fulfilled") {
+          setActiveJobs(activeResult.value);
+        } else {
+          setActiveJobs([]);
+          setActiveWarning(getErrorMessage(activeResult.reason, "Unable to load active generation jobs."));
         }
 
         if (triageResult.status === "fulfilled") {
@@ -200,6 +255,15 @@ export default function AdminPage() {
           </div>
           <div className="admin-summary-grid" aria-label="Admin dashboard summary">
             <article className="status-card">
+              <p className="status-label">Generating now</p>
+              <h2 className="plan-summary-title">{isLoading ? "-" : activeJobs.length}</h2>
+              <p className="muted">
+                {isLoading
+                  ? "Checking jobs."
+                  : `${activeAthleteCount} athlete${activeAthleteCount === 1 ? "" : "s"} in progress.`}
+              </p>
+            </article>
+            <article className="status-card">
               <p className="status-label">Triage queue</p>
               <h2 className="plan-summary-title">{isLoading ? "-" : triageJobs.length}</h2>
               <p className="muted">{isLoading ? "Checking jobs." : `${triageAthleteCount} athlete${triageAthleteCount === 1 ? "" : "s"} waiting.`}</p>
@@ -253,6 +317,87 @@ export default function AdminPage() {
             {isLoading ? "Refreshing..." : "Refresh"}
           </button>
         </div>
+
+        <article className="list-card admin-active-panel">
+          <div className="form-section-header">
+            <div>
+              <p className="kicker">Live generation monitor</p>
+              <h2>Plans currently being generated</h2>
+            </div>
+            <span className="badge">
+              {isLoading
+                ? "Checking"
+                : searchNeedle
+                  ? `${filteredActiveJobs.length}/${activeJobs.length} active`
+                  : `${activeJobs.length} active`}
+            </span>
+          </div>
+
+          {isLoading ? (
+            <div className="support-panel">
+              <p className="muted">Loading active generation jobs...</p>
+            </div>
+          ) : activeWarning ? (
+            <div className="support-panel">
+              <p className="error-text">{activeWarning}</p>
+              <p className="muted">Triage, athlete, and plan history can still be reviewed while this feed retries.</p>
+            </div>
+          ) : activeJobs.length === 0 ? (
+            <div className="support-panel support-panel-success">
+              <p className="kicker">Idle</p>
+              <h3 className="form-section-title">No plans are generating right now.</h3>
+              <p className="muted">Queued and running jobs will appear here with athlete, timing, and plan context.</p>
+            </div>
+          ) : filteredActiveJobs.length === 0 ? (
+            <div className="support-panel">
+              <p className="muted">No active generation jobs match this search.</p>
+            </div>
+          ) : (
+            <div className="admin-active-list">
+              {filteredActiveJobs.map((job) => (
+                <article
+                  key={job.job_id}
+                  className={`admin-active-row ${job.is_stale ? "admin-active-row-stale" : ""}`.trim()}
+                >
+                  <div className="admin-active-row-main">
+                    <div>
+                      <h3 className="plan-card-title">{getJobDisplayName(job)}</h3>
+                      <p className="muted">{job.athlete_email || job.athlete_id || "No athlete email"}</p>
+                    </div>
+                    <span className="badge">{getJobStatusLabel(job)}</span>
+                  </div>
+                  <div className="admin-active-progress" aria-label={`${getJobStatusLabel(job)} progress`}>
+                    <span style={{ width: `${getActiveJobProgress(job)}%` }} />
+                  </div>
+                  <div className="admin-job-meta">
+                    <span>Created {formatDateTime(job.created_at)}</span>
+                    <span>Started {formatDateTime(job.started_at)}</span>
+                    <span>Heartbeat {formatDateTime(job.heartbeat_at)}</span>
+                    <span>Source {formatJobSource(job.source)}</span>
+                  </div>
+                  <div className="admin-job-summary">
+                    {job.is_stale ? <p className="error-text">{job.stale_reason || "This generation has stopped heartbeating."}</p> : null}
+                    <p className="muted">Fight date: {job.request_payload_summary?.fight_date || "Not set"}</p>
+                    <p className="muted">Format: {job.request_payload_summary?.fight_format || "Not set"}</p>
+                    <p className="muted">Goals: {joinOrDash(job.request_payload_summary?.goals)}</p>
+                  </div>
+                  <div className="plan-card-actions">
+                    {job.athlete_id ? (
+                      <Link href={`/admin/athletes/${job.athlete_id}`} className="ghost-button">
+                        Open athlete
+                      </Link>
+                    ) : null}
+                    {job.plan_id ? (
+                      <Link href={`/plans/${job.plan_id}`} className="ghost-button">
+                        Open plan
+                      </Link>
+                    ) : null}
+                  </div>
+                </article>
+              ))}
+            </div>
+          )}
+        </article>
 
         <article className="list-card admin-triage-panel">
           <div className="form-section-header">
