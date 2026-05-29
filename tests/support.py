@@ -40,6 +40,19 @@ def _status_transition_error(detail: str) -> HTTPException:
     return HTTPException(status_code=status.HTTP_409_CONFLICT, detail=detail)
 
 
+def _filter_admin_rows(rows: list[dict], q: str | None, columns: tuple[str, ...]) -> list[dict]:
+    """Mirror the server-side ``q`` search the real store performs in Postgres:
+    a case-insensitive substring match across the given text columns."""
+    term = " ".join((q or "").split()).lower()
+    if not term:
+        return rows
+    return [
+        row
+        for row in rows
+        if any(term in str(row.get(column) or "").lower() for column in columns)
+    ]
+
+
 @dataclass
 class FakeAuthService:
     users_by_token: dict[str, AuthenticatedUser]
@@ -789,15 +802,16 @@ class FakeStore:
         row["stage2_status"] = stage2_status
         return row
 
-    def list_admin_plans(self, *, limit: int = 50, offset: int = 0) -> list[dict]:
+    def list_admin_plans(self, *, limit: int = 50, offset: int = 0, q: str | None = None) -> list[dict]:
         rows = []
         for plan in self.plans.values():
             profile = self.profiles[plan["athlete_id"]]
             rows.append({**plan, "profiles": {"email": profile["email"], "full_name": profile["full_name"]}})
         rows.sort(key=lambda row: row["created_at"], reverse=True)
+        rows = _filter_admin_rows(rows, q, ("plan_name", "full_name", "status"))
         return rows[offset:offset + limit]
 
-    def list_admin_athletes(self, *, limit: int = 50, offset: int = 0) -> list[dict]:
+    def list_admin_athletes(self, *, limit: int = 50, offset: int = 0, q: str | None = None) -> list[dict]:
         rows = []
         for profile in self.profiles.values():
             plans = self.list_user_plans(profile["id"])
@@ -807,6 +821,9 @@ class FakeStore:
                 "latest_plan_created_at": plans[-1]["created_at"] if plans else None,
             })
         rows.sort(key=lambda row: row["updated_at"], reverse=True)
+        rows = _filter_admin_rows(
+            rows, q, ("email", "full_name", "username", "professional_status", "record_summary")
+        )
         return rows[offset:offset + limit]
 
     def get_admin_athlete(self, athlete_id: str) -> dict | None:

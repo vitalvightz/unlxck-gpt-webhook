@@ -2054,9 +2054,13 @@ def create_app(
         _: ProfileRecord = Depends(require_admin),
         limit: int = Query(50, ge=1, le=200),
         offset: int = Query(0, ge=0),
+        q: str | None = Query(None, max_length=200),
         store: AppStore = Depends(get_store),
     ) -> list[AdminPlanSummary]:
-        return [_map_admin_plan_summary(row) for row in store.list_admin_plans(limit=limit, offset=offset)]
+        return [
+            _map_admin_plan_summary(row)
+            for row in store.list_admin_plans(limit=limit, offset=offset, q=q)
+        ]
 
     @app.get("/api/admin/generation-jobs/triage", response_model=list[AdminGenerationJobDiagnostic])
     def list_admin_triage_generation_jobs(
@@ -2563,9 +2567,13 @@ def create_app(
         _: ProfileRecord = Depends(require_admin),
         limit: int = Query(50, ge=1, le=200),
         offset: int = Query(0, ge=0),
+        q: str | None = Query(None, max_length=200),
         store: AppStore = Depends(get_store),
     ) -> list[AdminAthleteRecord]:
-        return [_map_admin_athlete(row) for row in store.list_admin_athletes(limit=limit, offset=offset)]
+        return [
+            _map_admin_athlete(row)
+            for row in store.list_admin_athletes(limit=limit, offset=offset, q=q)
+        ]
 
     @app.get("/api/admin/athletes/{athlete_id}", response_model=AdminAthleteRecord)
     def get_admin_athlete(

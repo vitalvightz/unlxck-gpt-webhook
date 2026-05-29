@@ -94,59 +94,56 @@ function countActiveJobStates(jobs: AdminGenerationJobDiagnostic[]) {
   );
 }
 
+const DIRECTORY_PAGE_SIZE = 20;
+const ACTIVE_JOBS_POLL_INTERVAL_MS = 8000;
+const SEARCH_DEBOUNCE_MS = 300;
+
 export default function AdminPage() {
   const { isReady, isMeHydrated, session, me } = useAppSession();
   const [athletes, setAthletes] = useState<AdminAthleteRecord[]>([]);
   const [plans, setPlans] = useState<AdminPlanSummary[]>([]);
   const [activeJobs, setActiveJobs] = useState<AdminGenerationJobDiagnostic[]>([]);
   const [triageJobs, setTriageJobs] = useState<AdminGenerationJobDiagnostic[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isDirectoryLoading, setIsDirectoryLoading] = useState(true);
+  const [isJobsLoading, setIsJobsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [activeWarning, setActiveWarning] = useState<string | null>(null);
   const [triageWarning, setTriageWarning] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
   const [searchQuery, setSearchQuery] = useState("");
+  const [searchNeedle, setSearchNeedle] = useState("");
+  const [athletesOffset, setAthletesOffset] = useState(0);
+  const [plansOffset, setPlansOffset] = useState(0);
+  const [athletesHasMore, setAthletesHasMore] = useState(false);
+  const [plansHasMore, setPlansHasMore] = useState(false);
   const [resumingJobId, setResumingJobId] = useState<string | null>(null);
   const [lastCheckedAt, setLastCheckedAt] = useState<string | null>(null);
 
+  const token = session?.access_token;
   const isAdminReady =
-    isReady && isMeHydrated && Boolean(session?.access_token) && me?.profile?.role === "admin";
+    isReady && isMeHydrated && Boolean(token) && me?.profile?.role === "admin";
+  const isLoading = isDirectoryLoading || isJobsLoading;
 
   const handleRetry = useCallback(() => {
     setMessage(null);
     setReloadKey((value) => value + 1);
   }, []);
 
-  const searchNeedle = searchQuery.trim().toLowerCase();
-  const filteredAthletes = useMemo(() => {
-    if (!searchNeedle) return athletes;
-    return athletes.filter((athlete) =>
-      normalizeForSearch(
-        athlete.full_name,
-        athlete.email,
-        athlete.role,
-        athlete.professional_status,
-        athlete.record,
-        athlete.technical_style,
-        athlete.tactical_style,
-      ).includes(searchNeedle),
-    );
-  }, [athletes, searchNeedle]);
-
-  const filteredPlans = useMemo(() => {
-    if (!searchNeedle) return plans;
-    return plans.filter((plan) =>
-      normalizeForSearch(
-        getPlanDisplayName(plan),
-        plan.athlete_email,
-        plan.full_name,
-        plan.status,
-        plan.fight_date,
-        plan.technical_style,
-      ).includes(searchNeedle),
-    );
-  }, [plans, searchNeedle]);
+  // Debounce the raw search box into the value we send to the server so that
+  // each keystroke does not fire a paginated query against the API. Resetting
+  // the page offsets in the same batched update (rather than a separate effect
+  // keyed on searchNeedle) keeps a search change to a single directory fetch:
+  // splitting them would fire one request with the stale offset and another at
+  // page 1, racing each other for which result lands last.
+  useEffect(() => {
+    const handle = setTimeout(() => {
+      setSearchNeedle(searchQuery.trim().toLowerCase());
+      setAthletesOffset(0);
+      setPlansOffset(0);
+    }, SEARCH_DEBOUNCE_MS);
+    return () => clearTimeout(handle);
+  }, [searchQuery]);
 
   const filteredActiveJobs = useMemo(() => {
     if (!searchNeedle) return activeJobs;
@@ -180,58 +177,45 @@ export default function AdminPage() {
   );
 
   const lastCheckedLabel = lastCheckedAt
-    ? `Checked ${formatDateTime(lastCheckedAt)}`
-    : isLoading
-      ? "Checking current support data"
+    ? `Live jobs checked ${formatDateTime(lastCheckedAt)}`
+    : isJobsLoading
+      ? "Checking live generation jobs"
       : "Not checked yet";
 
+  // Directory data (athletes + plans). Filtering and pagination happen on the
+  // server so the dashboard scales past a few dozen records: the search term
+  // and page offsets are query parameters, not client-side array work.
   useEffect(() => {
-    if (!isAdminReady || !session?.access_token) {
+    if (!isAdminReady || !token) {
       if (isReady && isMeHydrated) {
-        setIsLoading(false);
+        setIsDirectoryLoading(false);
       }
       return;
     }
 
     let active = true;
-    setIsLoading(true);
+    setIsDirectoryLoading(true);
     setError(null);
-    setActiveWarning(null);
-    setTriageWarning(null);
     Promise.allSettled([
-      listAdminAthletes(session.access_token),
-      listAdminPlans(session.access_token),
-      listAdminActiveGenerationJobs(session.access_token),
-      listAdminTriageGenerationJobs(session.access_token),
+      listAdminAthletes(token, { q: searchNeedle, limit: DIRECTORY_PAGE_SIZE, offset: athletesOffset }),
+      listAdminPlans(token, { q: searchNeedle, limit: DIRECTORY_PAGE_SIZE, offset: plansOffset }),
     ])
-      .then(([athletesResult, plansResult, activeResult, triageResult]) => {
+      .then(([athletesResult, plansResult]) => {
         if (!active) return;
         const loadErrors: string[] = [];
 
         if (athletesResult.status === "fulfilled") {
           setAthletes(athletesResult.value);
+          setAthletesHasMore(athletesResult.value.length === DIRECTORY_PAGE_SIZE);
         } else {
           loadErrors.push(getErrorMessage(athletesResult.reason, "Unable to load athlete accounts."));
         }
 
         if (plansResult.status === "fulfilled") {
           setPlans(plansResult.value);
+          setPlansHasMore(plansResult.value.length === DIRECTORY_PAGE_SIZE);
         } else {
           loadErrors.push(getErrorMessage(plansResult.reason, "Unable to load plan history."));
-        }
-
-        if (activeResult.status === "fulfilled") {
-          setActiveJobs(activeResult.value);
-        } else {
-          setActiveJobs([]);
-          setActiveWarning(getErrorMessage(activeResult.reason, "Unable to load active generation jobs."));
-        }
-
-        if (triageResult.status === "fulfilled") {
-          setTriageJobs(triageResult.value);
-        } else {
-          setTriageJobs([]);
-          setTriageWarning(getErrorMessage(triageResult.reason, "Unable to load suspended triage jobs."));
         }
 
         setError(loadErrors.length ? loadErrors.join(" ") : null);
@@ -242,15 +226,95 @@ export default function AdminPage() {
       })
       .finally(() => {
         if (active) {
-          setLastCheckedAt(new Date().toISOString());
-          setIsLoading(false);
+          setIsDirectoryLoading(false);
         }
       });
 
     return () => {
       active = false;
     };
-  }, [isAdminReady, isReady, isMeHydrated, me?.profile.role, session?.access_token, reloadKey]);
+  }, [
+    isAdminReady,
+    isReady,
+    isMeHydrated,
+    me?.profile.role,
+    token,
+    searchNeedle,
+    athletesOffset,
+    plansOffset,
+    reloadKey,
+  ]);
+
+  // Live generation jobs (active + triage). These are bounded queues that move
+  // on their own, so we poll them on a fixed interval instead of reloading the
+  // whole dashboard. Athlete and plan directories stay put while jobs refresh.
+  useEffect(() => {
+    if (!isAdminReady || !token) {
+      if (isReady && isMeHydrated) {
+        setIsJobsLoading(false);
+      }
+      return;
+    }
+
+    let active = true;
+
+    const loadJobs = (isInitial: boolean) => {
+      if (isInitial) {
+        setIsJobsLoading(true);
+      }
+      Promise.allSettled([
+        listAdminActiveGenerationJobs(token),
+        listAdminTriageGenerationJobs(token),
+      ])
+        .then(([activeResult, triageResult]) => {
+          if (!active) return;
+
+          if (activeResult.status === "fulfilled") {
+            setActiveJobs(activeResult.value);
+            setActiveWarning(null);
+          } else {
+            // On a transient poll failure keep the last good snapshot rather
+            // than blanking the live monitor; only clear it on first load.
+            if (isInitial) setActiveJobs([]);
+            setActiveWarning(getErrorMessage(activeResult.reason, "Unable to load active generation jobs."));
+          }
+
+          if (triageResult.status === "fulfilled") {
+            setTriageJobs(triageResult.value);
+            setTriageWarning(null);
+          } else {
+            if (isInitial) setTriageJobs([]);
+            setTriageWarning(getErrorMessage(triageResult.reason, "Unable to load suspended triage jobs."));
+          }
+
+          setLastCheckedAt(new Date().toISOString());
+        })
+        .finally(() => {
+          if (active && isInitial) {
+            setIsJobsLoading(false);
+          }
+        });
+    };
+
+    loadJobs(true);
+    const timer = setInterval(() => loadJobs(false), ACTIVE_JOBS_POLL_INTERVAL_MS);
+
+    return () => {
+      active = false;
+      clearInterval(timer);
+    };
+  }, [isAdminReady, isReady, isMeHydrated, me?.profile.role, token, reloadKey]);
+
+  const athletesPage = Math.floor(athletesOffset / DIRECTORY_PAGE_SIZE) + 1;
+  const plansPage = Math.floor(plansOffset / DIRECTORY_PAGE_SIZE) + 1;
+
+  const goToAthletesPage = useCallback((delta: number) => {
+    setAthletesOffset((value) => Math.max(0, value + delta * DIRECTORY_PAGE_SIZE));
+  }, []);
+
+  const goToPlansPage = useCallback((delta: number) => {
+    setPlansOffset((value) => Math.max(0, value + delta * DIRECTORY_PAGE_SIZE));
+  }, []);
 
   async function handleApproveAndResumeJob(jobId: string) {
     if (!session?.access_token || resumingJobId) return;
@@ -284,27 +348,27 @@ export default function AdminPage() {
           <div className="admin-summary-grid" aria-label="Admin dashboard summary">
             <article className="status-card">
               <p className="status-label">Generating now</p>
-              <h2 className="plan-summary-title">{isLoading ? "-" : activeJobs.length}</h2>
+              <h2 className="plan-summary-title">{isJobsLoading ? "-" : activeJobs.length}</h2>
               <p className="muted">
-                {isLoading
+                {isJobsLoading
                   ? "Checking jobs."
                   : `${activeAthleteCount} athlete${activeAthleteCount === 1 ? "" : "s"} in progress.`}
               </p>
             </article>
             <article className="status-card">
               <p className="status-label">Triage queue</p>
-              <h2 className="plan-summary-title">{isLoading ? "-" : triageJobs.length}</h2>
-              <p className="muted">{isLoading ? "Checking jobs." : `${triageAthleteCount} athlete${triageAthleteCount === 1 ? "" : "s"} waiting.`}</p>
+              <h2 className="plan-summary-title">{isJobsLoading ? "-" : triageJobs.length}</h2>
+              <p className="muted">{isJobsLoading ? "Checking jobs." : `${triageAthleteCount} athlete${triageAthleteCount === 1 ? "" : "s"} waiting.`}</p>
             </article>
             <article className="status-card">
               <p className="status-label">Athletes</p>
-              <h2 className="plan-summary-title">{isLoading ? "-" : athletes.length}</h2>
-              <p className="muted">Accounts visible in support mode.</p>
+              <h2 className="plan-summary-title">{isDirectoryLoading ? "-" : athletes.length}</h2>
+              <p className="muted">{searchNeedle ? "Matches on this page." : "Accounts on this page."}</p>
             </article>
             <article className="status-card">
               <p className="status-label">Plans</p>
-              <h2 className="plan-summary-title">{isLoading ? "-" : plans.length}</h2>
-              <p className="muted">Generated plans and review states.</p>
+              <h2 className="plan-summary-title">{isDirectoryLoading ? "-" : plans.length}</h2>
+              <p className="muted">{searchNeedle ? "Matches on this page." : "Generations on this page."}</p>
             </article>
           </div>
         </div>
@@ -333,7 +397,7 @@ export default function AdminPage() {
               type="search"
               value={searchQuery}
               onChange={(event) => setSearchQuery(event.target.value)}
-              placeholder="Name, email, status, style, fight date"
+              placeholder="Name, email, username, status"
             />
           </div>
           <button
@@ -354,7 +418,7 @@ export default function AdminPage() {
               <p className="muted admin-panel-subtext">{lastCheckedLabel}</p>
             </div>
             <span className="badge">
-              {isLoading
+              {isJobsLoading
                 ? "Checking"
                 : searchNeedle
                   ? `${filteredActiveJobs.length}/${activeJobs.length} active`
@@ -362,7 +426,7 @@ export default function AdminPage() {
             </span>
           </div>
 
-          {!isLoading ? (
+          {!isJobsLoading ? (
             <div className="admin-active-summary" aria-label="Active generation states">
               <span>Running {activeJobStates.running}</span>
               <span>Queued {activeJobStates.queued}</span>
@@ -370,7 +434,7 @@ export default function AdminPage() {
             </div>
           ) : null}
 
-          {isLoading ? (
+          {isJobsLoading ? (
             <div className="support-panel">
               <p className="muted">Loading active generation jobs...</p>
             </div>
@@ -442,10 +506,10 @@ export default function AdminPage() {
               <p className="kicker">Triage resume queue</p>
               <h2>Suspended generations</h2>
             </div>
-            <span className="badge">{isLoading ? "Checking" : `${triageJobs.length} open`}</span>
+            <span className="badge">{isJobsLoading ? "Checking" : `${triageJobs.length} open`}</span>
           </div>
 
-          {isLoading ? (
+          {isJobsLoading ? (
             <div className="support-panel">
               <p className="muted">Loading protected triage jobs...</p>
             </div>
@@ -512,9 +576,17 @@ export default function AdminPage() {
               <h2>{searchNeedle ? "Matching accounts" : "Recent accounts"}</h2>
             </div>
 
-            {isLoading ? (
+            {isDirectoryLoading ? (
               <div className="support-panel">
                 <p className="muted">Loading athlete accounts...</p>
+              </div>
+            ) : athletes.length === 0 && searchNeedle ? (
+              <div className="support-panel">
+                <p className="muted">No athlete accounts match this search.</p>
+              </div>
+            ) : athletes.length === 0 && athletesOffset > 0 ? (
+              <div className="support-panel">
+                <p className="muted">No more athlete accounts on this page.</p>
               </div>
             ) : athletes.length === 0 ? (
               <EmptyState
@@ -524,32 +596,49 @@ export default function AdminPage() {
                 example="Each row will show the athlete's name, email, saved plan count, and a link into their profile for support."
                 primaryAction={{ label: "Open signup page", href: "/signup" }}
               />
-            ) : filteredAthletes.length === 0 ? (
-              <div className="support-panel">
-                <p className="muted">No athlete accounts match this search.</p>
-              </div>
             ) : (
-              <div className="plans-grid">
-                {filteredAthletes.map((athlete) => (
-                  <article key={athlete.athlete_id} className="plan-card">
-                    <div className="plan-card-header">
-                      <div>
-                        <Link href={`/admin/athletes/${athlete.athlete_id}`}>
-                          <h3 className="plan-card-title">{athlete.full_name || athlete.email}</h3>
-                        </Link>
-                        <p className="muted">{athlete.email}</p>
+              <>
+                <div className="plans-grid">
+                  {athletes.map((athlete) => (
+                    <article key={athlete.athlete_id} className="plan-card">
+                      <div className="plan-card-header">
+                        <div>
+                          <Link href={`/admin/athletes/${athlete.athlete_id}`}>
+                            <h3 className="plan-card-title">{athlete.full_name || athlete.email}</h3>
+                          </Link>
+                          <p className="muted">{athlete.email}</p>
+                        </div>
+                        <span className="badge">{athlete.plan_count} plan{athlete.plan_count === 1 ? "" : "s"}</span>
                       </div>
-                      <span className="badge">{athlete.plan_count} plan{athlete.plan_count === 1 ? "" : "s"}</span>
-                    </div>
-                    <p className="muted">Created {formatDateTime(athlete.created_at)}</p>
-                    <div className="plan-card-actions">
-                      <Link href={`/admin/athletes/${athlete.athlete_id}`} className="ghost-button">
-                        View profile
-                      </Link>
-                    </div>
-                  </article>
-                ))}
-              </div>
+                      <p className="muted">Created {formatDateTime(athlete.created_at)}</p>
+                      <div className="plan-card-actions">
+                        <Link href={`/admin/athletes/${athlete.athlete_id}`} className="ghost-button">
+                          View profile
+                        </Link>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+                <div className="admin-pager" aria-label="Athlete pagination">
+                  <button
+                    type="button"
+                    className="ghost-button"
+                    onClick={() => goToAthletesPage(-1)}
+                    disabled={isDirectoryLoading || athletesOffset === 0}
+                  >
+                    Previous
+                  </button>
+                  <span className="muted">Page {athletesPage}</span>
+                  <button
+                    type="button"
+                    className="ghost-button"
+                    onClick={() => goToAthletesPage(1)}
+                    disabled={isDirectoryLoading || !athletesHasMore}
+                  >
+                    Next
+                  </button>
+                </div>
+              </>
             )}
           </article>
 
@@ -559,9 +648,17 @@ export default function AdminPage() {
               <h2>{searchNeedle ? "Matching generations" : "Latest generations"}</h2>
             </div>
 
-            {isLoading ? (
+            {isDirectoryLoading ? (
               <div className="support-panel">
                 <p className="muted">Loading plan history...</p>
+              </div>
+            ) : plans.length === 0 && searchNeedle ? (
+              <div className="support-panel">
+                <p className="muted">No plan history matches this search.</p>
+              </div>
+            ) : plans.length === 0 && plansOffset > 0 ? (
+              <div className="support-panel">
+                <p className="muted">No more plans on this page.</p>
               </div>
             ) : plans.length === 0 ? (
               <EmptyState
@@ -571,32 +668,49 @@ export default function AdminPage() {
                 example="Each row will show plan name, athlete email, status, creation time, and a quick open link."
                 primaryAction={{ label: "Open Demo Plan", href: "/demo-plan" }}
               />
-            ) : filteredPlans.length === 0 ? (
-              <div className="support-panel">
-                <p className="muted">No plan history matches this search.</p>
-              </div>
             ) : (
-              <div className="plans-grid">
-                {filteredPlans.map((plan) => (
-                  <article key={plan.plan_id} className="plan-card">
-                    <div className="plan-card-header">
-                      <div>
-                        <Link href={`/plans/${plan.plan_id}`}>
-                          <h3 className="plan-card-title">{getPlanDisplayName(plan)}</h3>
-                        </Link>
-                        <p className="muted">{plan.athlete_email}</p>
+              <>
+                <div className="plans-grid">
+                  {plans.map((plan) => (
+                    <article key={plan.plan_id} className="plan-card">
+                      <div className="plan-card-header">
+                        <div>
+                          <Link href={`/plans/${plan.plan_id}`}>
+                            <h3 className="plan-card-title">{getPlanDisplayName(plan)}</h3>
+                          </Link>
+                          <p className="muted">{plan.athlete_email}</p>
+                        </div>
+                        <span className="badge">{plan.status}</span>
                       </div>
-                      <span className="badge">{plan.status}</span>
-                    </div>
-                    <p className="muted">Created {formatDateTime(plan.created_at)}</p>
-                    <div className="plan-card-actions">
-                      <Link href={`/plans/${plan.plan_id}`} className="ghost-button">
-                        Open plan
-                      </Link>
-                    </div>
-                  </article>
-                ))}
-              </div>
+                      <p className="muted">Created {formatDateTime(plan.created_at)}</p>
+                      <div className="plan-card-actions">
+                        <Link href={`/plans/${plan.plan_id}`} className="ghost-button">
+                          Open plan
+                        </Link>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+                <div className="admin-pager" aria-label="Plan pagination">
+                  <button
+                    type="button"
+                    className="ghost-button"
+                    onClick={() => goToPlansPage(-1)}
+                    disabled={isDirectoryLoading || plansOffset === 0}
+                  >
+                    Previous
+                  </button>
+                  <span className="muted">Page {plansPage}</span>
+                  <button
+                    type="button"
+                    className="ghost-button"
+                    onClick={() => goToPlansPage(1)}
+                    disabled={isDirectoryLoading || !plansHasMore}
+                  >
+                    Next
+                  </button>
+                </div>
+              </>
             )}
           </article>
         </div>
