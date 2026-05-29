@@ -340,7 +340,12 @@ _STRUCTURAL_TISSUE_TERMS = (
 
 _NEGATED_SEVERE_PATTERNS = (
     rf"\b(?:no|not|without|denies?|denied)\s+(?:an?\s+)?(?:fracture|stress\s+fracture|dislocation|concussion|acl\s+{_TEAR_SYNONYM_PATTERN}|pcl\s+{_TEAR_SYNONYM_PATTERN}|{_TEAR_SYNONYM_PATTERN}|{_RUPTURE_OR_TEAR_PATTERN}|pneumothorax|hemothorax|vomit(?:ing)?)\b",
+    # 'not broken'/'no broken' is the lay equivalent of 'no fracture' for the
+    # body parts the structural regex (line ~188) treats as fracture indicators.
+    r"\b(?:no|not|without|denies?|denied|did\s+not)\s+(?:\w+\s+){0,3}(?:broke|broken)\b",
     rf"\bruled\s+out\s+(?:an?\s+)?(?:fracture|dislocation|concussion|{_TEAR_SYNONYM_PATTERN}|{_RUPTURE_OR_TEAR_PATTERN}|pneumothorax|hemothorax)\b",
+    # 'ruled out broken X' / 'scan ruled out fracture' / 'thought i broke it'
+    r"\bruled\s+out\s+(?:\w+\s+){0,3}(?:broke|broken|fracture)\b",
     r"\b(?:acl|pcl)\s+intact\b",
     r"\bno\s+fracture\s+seen\b",
 )

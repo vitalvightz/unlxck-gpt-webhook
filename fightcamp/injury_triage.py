@@ -335,6 +335,11 @@ def _has_structural_break_signal(*, text: str, context_text: str) -> bool:
         if _is_benign_joint_noise_chunk(raw_chunk):
             continue
 
+        # Catch explicit denials that the spaCy-based remove_negated_phrases
+        # may miss (e.g. "not broken", "ruled out fracture").
+        if _NEGATED_STRUCTURAL_BREAK_RE.search(raw_chunk):
+            continue
+
         cleaned_chunk = remove_negated_phrases(raw_chunk).strip().lower()
         if not cleaned_chunk or not _STRUCTURAL_BREAK_RE.search(cleaned_chunk):
             continue
