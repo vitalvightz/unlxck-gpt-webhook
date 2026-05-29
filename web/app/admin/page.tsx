@@ -377,9 +377,9 @@ export default function AdminPage() {
                   </div>
                   <div className="admin-job-summary">
                     {job.is_stale ? <p className="error-text">{job.stale_reason || "This generation has stopped heartbeating."}</p> : null}
-                    <p className="muted">Fight date: {job.request_payload_summary.fight_date || "Not set"}</p>
-                    <p className="muted">Format: {job.request_payload_summary.fight_format || "Not set"}</p>
-                    <p className="muted">Goals: {joinOrDash(job.request_payload_summary.goals)}</p>
+                    <p className="muted">Fight date: {job.request_payload_summary?.fight_date || "Not set"}</p>
+                    <p className="muted">Format: {job.request_payload_summary?.fight_format || "Not set"}</p>
+                    <p className="muted">Goals: {joinOrDash(job.request_payload_summary?.goals)}</p>
                   </div>
                   <div className="plan-card-actions">
                     {job.athlete_id ? (
