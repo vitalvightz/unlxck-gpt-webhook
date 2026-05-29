@@ -134,11 +134,6 @@ class FakeStore:
     def ensure_profile(self, user: AuthenticatedUser) -> dict:
         existing = self.profiles.get(user.user_id)
         if existing:
-            # Mirror production require_profile: email allowlist is the source
-            # of truth, so a stored admin role is demoted when the email is
-            # removed from admin_emails.
-            expected_role = "admin" if self._is_admin_email(user.email) else "athlete"
-            existing["role"] = expected_role
             existing["updated_at"] = _now()
             return existing
         role = "admin" if self._is_admin_email(user.email) else "athlete"
@@ -575,6 +570,30 @@ class FakeStore:
             for job in self.generation_jobs.values()
             if str(job.get("athlete_id") or "") == athlete_id
         ]
+        rows.sort(key=lambda row: str(row.get("created_at") or ""), reverse=True)
+        return rows[:limit]
+
+    def list_admin_triage_generation_jobs(self, *, limit: int = 50) -> list[dict]:
+        protected_statuses = {"triage_blocked", "needs_review", "restricted_rehab_only", "medical_hold"}
+        rows = []
+        for job in self.generation_jobs.values():
+            final_result = job.get("final_result") if isinstance(job.get("final_result"), dict) else {}
+            status_value = str(job.get("status") or "").strip().lower()
+            plan_id = str(job.get("plan_id") or "").strip()
+            triage_status = str(final_result.get("status") or "").strip().lower()
+            stage2_status = str(final_result.get("stage2_status") or "").strip().lower()
+            if status_value != "review_required" or plan_id or triage_status not in protected_statuses:
+                continue
+            if stage2_status == "triage_resume_approved":
+                continue
+            profile = self.profiles.get(str(job.get("athlete_id") or ""), {})
+            rows.append({
+                **dict(job),
+                "profiles": {
+                    "email": profile.get("email", ""),
+                    "full_name": profile.get("full_name", ""),
+                },
+            })
         rows.sort(key=lambda row: str(row.get("created_at") or ""), reverse=True)
         return rows[:limit]
 

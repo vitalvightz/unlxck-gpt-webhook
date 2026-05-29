@@ -384,13 +384,30 @@ select:focus-visible {
   flex: 1;
   align-content: start;
   overflow-y: auto;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.18) transparent;
+  -ms-overflow-style: auto;
   min-height: 0;
 }
 
 .sidebar-nav::-webkit-scrollbar {
-  display: none;
+  width: 8px;
+}
+
+.sidebar-nav::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sidebar-nav::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.16);
+  border-radius: 999px;
+  background-clip: padding-box;
+  border: 2px solid transparent;
+}
+
+.sidebar-nav:hover::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.28);
+  background-clip: padding-box;
 }
 
 .sidebar-link {
@@ -1086,6 +1103,69 @@ select:focus-visible {
 
 .plans-grid {
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+}
+
+.admin-dashboard-panel {
+  align-content: start;
+}
+
+.admin-dashboard-heading {
+  align-items: stretch;
+}
+
+.admin-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(130px, 1fr));
+  gap: 12px;
+  flex: 1 1 520px;
+  max-width: 680px;
+}
+
+.admin-toolbar {
+  display: flex;
+  gap: 14px;
+  align-items: end;
+  flex-wrap: wrap;
+}
+
+.admin-search-field {
+  flex: 1 1 320px;
+}
+
+.admin-refresh-button {
+  min-width: 120px;
+}
+
+.admin-triage-panel {
+  border-color: rgba(181, 18, 43, 0.24);
+}
+
+.admin-queue-grid {
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+}
+
+.admin-triage-card {
+  padding: 14px;
+  border-radius: var(--radius-support);
+  border: 1px solid rgba(181, 18, 43, 0.18);
+  background: linear-gradient(180deg, rgba(32, 22, 26, 0.78), rgba(18, 20, 24, 0.96));
+}
+
+.admin-job-meta,
+.admin-job-summary {
+  display: grid;
+  gap: 6px;
+}
+
+.admin-job-meta {
+  padding: 10px 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  color: var(--text-muted);
+  font-family: var(--font-mono), monospace;
+  font-size: 11px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
 }
 
 .review-grid,
@@ -4847,7 +4927,7 @@ button.mobile-step-rail-item {
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
     max-height: 52dvh;
-    scrollbar-width: none;
+    scrollbar-width: thin;
   }
 
   .app-main {
@@ -5002,6 +5082,22 @@ button.mobile-step-rail-item {
   .metric-card,
   .plan-meta-item {
     padding: 12px 14px;
+  }
+
+  .admin-summary-grid,
+  .admin-toolbar,
+  .admin-refresh-button {
+    width: 100%;
+    max-width: none;
+  }
+
+  .admin-summary-grid,
+  .admin-queue-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-toolbar {
+    align-items: stretch;
   }
 
   .app-sidebar .sidebar-user-card {
@@ -6109,6 +6205,21 @@ button.mobile-step-rail-item {
   font-weight: 600;
 }
 
+.loading-failure-secondary-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+@media (max-width: 540px) {
+  .loading-failure-secondary-actions {
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+  }
+}
+
 .loading-steps {
   list-style: none;
   margin: 0;
@@ -6141,10 +6252,11 @@ button.mobile-step-rail-item {
   left: var(--sidebar-width);
   right: 0;
   z-index: 100;
-  display: grid;
-  gap: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
   min-height: 56px;
-  padding: 12px 20px;
+  padding: 12px 16px 12px 20px;
   background: linear-gradient(180deg, rgba(17, 19, 23, 0.98), rgba(10, 11, 14, 0.98));
   border-top: 1px solid rgba(181, 18, 43, 0.3);
   text-decoration: none;
@@ -6161,6 +6273,8 @@ button.mobile-step-rail-item {
   display: grid;
   gap: 0;
   cursor: pointer;
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 .global-generation-status-failed {
@@ -6175,18 +6289,32 @@ button.mobile-step-rail-item {
 }
 
 .global-generation-status-dismiss {
-  position: absolute;
-  top: 8px;
-  right: 10px;
-  width: 36px;
-  height: 36px;
-  border: 0;
+  flex: 0 0 auto;
+  align-self: center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
   border-radius: 10px;
   background: rgba(255, 255, 255, 0.03);
   color: var(--text-muted);
   font-size: 20px;
   line-height: 1;
   cursor: pointer;
+  transition: background 160ms ease, color 160ms ease, border-color 160ms ease;
+}
+
+.global-generation-status-dismiss:hover {
+  background: rgba(255, 255, 255, 0.07);
+  border-color: rgba(255, 255, 255, 0.12);
+  color: var(--text-primary);
+}
+
+.global-generation-status-dismiss:focus-visible {
+  outline: 2px solid rgba(181, 18, 43, 0.6);
+  outline-offset: 2px;
 }
 
 .global-generation-status-reopen {
@@ -6490,11 +6618,18 @@ html[data-theme="light"] .global-generation-status-dismiss {
   color: rgba(65, 47, 41, 0.86);
 }
 
+html[data-theme="light"] .global-generation-status-dismiss:hover {
+  background: rgba(98, 77, 69, 0.14);
+  border-color: rgba(98, 77, 69, 0.2);
+  color: rgba(65, 47, 41, 1);
+}
+
 /* Mobile adjustments */
 @media (max-width: 900px) {
   .global-generation-status {
     left: 0;
-    padding: 10px 14px;
+    gap: 8px;
+    padding: 10px 10px 10px 14px;
     padding-bottom: calc(10px + var(--safe-area-bottom));
   }
 
@@ -6521,8 +6656,6 @@ html[data-theme="light"] .global-generation-status-dismiss {
   }
 
   .global-generation-status-dismiss {
-    top: 6px;
-    right: 6px;
     width: 40px;
     height: 40px;
   }
@@ -7131,6 +7264,147 @@ html[data-theme="light"] .global-generation-status-dismiss {
   background: rgba(255, 184, 77, 0.12);
 }
 
+.admin-athlete-plan-access {
+  display: grid;
+  gap: 16px;
+}
+
+.admin-athlete-plan-list,
+.admin-diagnostic-list {
+  display: grid;
+  gap: 12px;
+}
+
+.admin-athlete-plan-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 14px 16px;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.035);
+  color: var(--text-primary);
+  text-decoration: none;
+}
+
+.admin-athlete-plan-row:hover,
+.admin-athlete-plan-row:focus-visible {
+  border-color: rgba(181, 18, 43, 0.32);
+  background: rgba(181, 18, 43, 0.08);
+}
+
+.admin-athlete-plan-row span:first-child {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.admin-athlete-plan-row small {
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  line-height: 1.35;
+}
+
+.admin-diagnostic-card {
+  display: grid;
+  gap: 16px;
+  padding: 16px;
+  border-radius: 22px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.02)),
+    rgba(12, 14, 18, 0.58);
+}
+
+.admin-diagnostic-card-header,
+.admin-diagnostic-badges,
+.admin-diagnostic-technical {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.admin-diagnostic-badges {
+  justify-content: flex-end;
+}
+
+.admin-diagnostic-badge-warning {
+  border-color: rgba(255, 184, 77, 0.3);
+  background: rgba(255, 184, 77, 0.12);
+}
+
+.admin-diagnostic-meta-grid,
+.admin-diagnostic-summary-grid,
+.admin-diagnostic-pill-groups {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 10px;
+}
+
+.admin-diagnostic-meta-item,
+.admin-diagnostic-pill-groups > div,
+.admin-diagnostic-technical {
+  padding: 12px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.026);
+}
+
+.admin-diagnostic-meta-item {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+
+.admin-diagnostic-meta-item span,
+.admin-diagnostic-section-title {
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  line-height: 1.25;
+  text-transform: uppercase;
+}
+
+.admin-diagnostic-meta-item strong {
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  font-weight: 600;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.admin-diagnostic-section {
+  display: grid;
+  gap: 10px;
+}
+
+.admin-diagnostic-section-title {
+  margin: 0;
+}
+
+.admin-diagnostic-pill-groups .review-detail-label,
+.admin-diagnostic-pill-groups .review-detail-value {
+  margin: 0;
+}
+
+.admin-diagnostic-pill-groups .review-detail-value {
+  margin-top: 6px;
+  color: var(--text-primary);
+}
+
+.admin-diagnostic-alert {
+  padding: 12px 14px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 184, 77, 0.24);
+  background: rgba(255, 184, 77, 0.1);
+  color: var(--text-primary);
+  line-height: 1.45;
+}
+
 .empty-state-card {
   padding: 20px;
   border-radius: 24px;
@@ -7234,6 +7508,22 @@ html[data-theme="light"] .global-generation-status-dismiss {
     min-height: 24px;
     padding: 4px 8px;
     font-size: 0.76rem;
+  }
+
+  .admin-athlete-plan-row {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .admin-diagnostic-card {
+    padding: 14px;
+    border-radius: 18px;
+  }
+
+  .admin-diagnostic-meta-grid,
+  .admin-diagnostic-summary-grid,
+  .admin-diagnostic-pill-groups {
+    grid-template-columns: 1fr;
   }
 }
 
@@ -9257,6 +9547,30 @@ html[data-theme="light"] .athlete-profile-overview-section {
   background: rgba(255, 255, 255, 0.72);
 }
 
+html[data-theme="light"] .admin-athlete-plan-row,
+html[data-theme="light"] .admin-diagnostic-card {
+  border-color: rgba(98, 77, 69, 0.08);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(248, 242, 234, 0.86));
+}
+
+html[data-theme="light"] .admin-athlete-plan-row:hover,
+html[data-theme="light"] .admin-athlete-plan-row:focus-visible {
+  border-color: rgba(146, 43, 45, 0.18);
+  background: rgba(255, 246, 244, 0.98);
+}
+
+html[data-theme="light"] .admin-diagnostic-meta-item,
+html[data-theme="light"] .admin-diagnostic-pill-groups > div,
+html[data-theme="light"] .admin-diagnostic-technical {
+  border-color: rgba(98, 77, 69, 0.08);
+  background: rgba(255, 255, 255, 0.64);
+}
+
+html[data-theme="light"] .admin-diagnostic-alert {
+  border-color: rgba(170, 111, 24, 0.2);
+  background: rgba(255, 246, 222, 0.9);
+}
+
 html[data-theme="light"] .eyebrow,
 html[data-theme="light"] .kicker,
 html[data-theme="light"] .status-label {
@@ -9843,6 +10157,20 @@ html[data-theme="light"] .sidebar-shell::-webkit-scrollbar-thumb {
 }
 
 html[data-theme="light"] .sidebar-shell:hover::-webkit-scrollbar-thumb {
+  background: rgba(98, 77, 69, 0.38);
+  background-clip: padding-box;
+}
+
+html[data-theme="light"] .sidebar-nav {
+  scrollbar-color: rgba(98, 77, 69, 0.38) transparent;
+}
+
+html[data-theme="light"] .sidebar-nav::-webkit-scrollbar-thumb {
+  background: rgba(98, 77, 69, 0.26);
+  background-clip: padding-box;
+}
+
+html[data-theme="light"] .sidebar-nav:hover::-webkit-scrollbar-thumb {
   background: rgba(98, 77, 69, 0.38);
   background-clip: padding-box;
 }

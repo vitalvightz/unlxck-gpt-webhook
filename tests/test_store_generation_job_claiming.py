@@ -45,7 +45,25 @@ def test_supabase_list_claimable_generation_jobs_includes_normal_queued_rows():
     assert [job["id"] for job in claimable] == ["queued-1"]
 
 
-def test_supabase_list_claimable_generation_jobs_includes_legacy_blank_status_rows():
+def test_supabase_list_claimable_generation_jobs_skips_legacy_blank_status_rows_by_default(monkeypatch):
+    monkeypatch.delenv("UNLXCK_CLAIM_LEGACY_BLANK_STATUS_JOBS", raising=False)
+    null_status_job = {"id": "legacy-null", "status": None, "created_at": "2026-01-01T00:00:00+00:00"}
+    blank_status_job = {"id": "legacy-blank", "status": "", "created_at": "2026-01-01T00:00:01+00:00"}
+    store = _build_store_with_rows(
+        queued_rows=[],
+        null_status_rows=[null_status_job],
+        blank_status_rows=[blank_status_job],
+        running_heartbeat_rows=[],
+        running_started_rows=[],
+    )
+
+    claimable = store.list_claimable_generation_jobs(limit=20, stale_after_seconds=90)
+
+    assert claimable == []
+
+
+def test_supabase_list_claimable_generation_jobs_can_opt_into_legacy_blank_status_rows(monkeypatch):
+    monkeypatch.setenv("UNLXCK_CLAIM_LEGACY_BLANK_STATUS_JOBS", "1")
     null_status_job = {"id": "legacy-null", "status": None, "created_at": "2026-01-01T00:00:00+00:00"}
     blank_status_job = {"id": "legacy-blank", "status": "", "created_at": "2026-01-01T00:00:01+00:00"}
     store = _build_store_with_rows(

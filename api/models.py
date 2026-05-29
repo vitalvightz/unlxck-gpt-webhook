@@ -1041,6 +1041,8 @@ class GenerationRequestPayloadSummary(BaseModel):
 class AdminGenerationJobDiagnostic(BaseModel):
     job_id: str
     athlete_id: str = ""
+    athlete_email: str = ""
+    athlete_full_name: str = ""
     intake_id: str | None = None
     status: GenerationJobStatus
     source: str = ""

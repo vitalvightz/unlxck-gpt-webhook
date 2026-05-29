@@ -77,6 +77,7 @@ from .stage2_automation import (
     build_default_stage2_automator,
 )
 from .store import AppStore, SupabaseAppStore, is_startup_stale_generation_job
+from .sentry_config import init_sentry
 
 Planner = Callable[[dict[str, Any]], dict[str, Any]]
 security = HTTPBearer(auto_error=False)
@@ -84,6 +85,8 @@ logger = logging.getLogger(__name__)
 LOCAL_HOST_NAMES = ("localhost", "127.0.0.1", "::1")
 _CLIENT_REQUEST_ID_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$")
 _PROTECTED_TRIAGE_STATUSES = frozenset({"triage_blocked", "needs_review", "restricted_rehab_only", "medical_hold"})
+
+init_sentry()
 
 
 def _utc_now_iso() -> str:
@@ -521,10 +524,13 @@ def _admin_generation_job_diagnostic(job: dict[str, Any], *, stale_after_seconds
     if triage_status and not _triage_job_has_resume_approval(job):
         requires_admin_resume = True
         stage2_status = stage2_status or triage_status
+    profile = job.get("profiles") if isinstance(job.get("profiles"), dict) else {}
 
     return AdminGenerationJobDiagnostic(
         job_id=str(job.get("id") or ""),
         athlete_id=str(job.get("athlete_id") or ""),
+        athlete_email=str(profile.get("email") or ""),
+        athlete_full_name=str(profile.get("full_name") or ""),
         intake_id=str(job.get("intake_id") or "") or None,
         status=normalized_status,
         source=str(job.get("source") or ""),
@@ -1429,15 +1435,6 @@ def create_app(
     ) -> ProfileRecord:
         try:
             profile = _map_profile_row(store.ensure_profile(user))
-            # UNLXCK_ADMIN_EMAILS is the authoritative source for admin access.
-            # Sync the request-scoped role to the current allowlist so downstream
-            # checks (`profile.role == "admin"`) cannot drift if the DB role is
-            # stale after an env allowlist change.
-            env_is_admin = store.is_admin_email(profile.email)
-            if env_is_admin and profile.role != "admin":
-                profile = profile.model_copy(update={"role": "admin"})
-            elif not env_is_admin and profile.role == "admin":
-                profile = profile.model_copy(update={"role": "athlete"})
             logger.info("[auth] profile_resolved athlete_id=%s role=%s", profile.athlete_id, profile.role)
             return profile
         except HTTPException as exc:
@@ -1455,14 +1452,10 @@ def create_app(
 
     def require_admin(
         profile: ProfileRecord = Depends(require_profile),
-        store: AppStore = Depends(get_store),
     ) -> ProfileRecord:
-        # Defense in depth: re-check the env allowlist directly so admin routes
-        # never depend on the stored DB role even if the require_profile sync
-        # is bypassed.
-        if not store.is_admin_email(profile.email):
+        if profile.role != "admin":
             logger.warning(
-                "[auth] admin_access_denied athlete_id=%s role=%s email_in_allowlist=False",
+                "[auth] admin_access_denied athlete_id=%s role=%s",
                 profile.athlete_id,
                 profile.role,
             )
@@ -1494,6 +1487,11 @@ def create_app(
     @app.get("/health")
     def health(request: Request) -> dict[str, str | bool]:
         return _health_payload(mode_label=str(request.app.state.mode_label))
+
+    if os.getenv("ENABLE_SENTRY_DEBUG_ROUTE", "false").strip().lower() == "true":
+        @app.get("/sentry-debug", include_in_schema=False)
+        def sentry_debug() -> None:
+            raise Exception("Sentry backend test error")
 
     @app.get("/api/me", response_model=MeResponse)
     def get_me(
@@ -2055,6 +2053,19 @@ def create_app(
         store: AppStore = Depends(get_store),
     ) -> list[AdminPlanSummary]:
         return [_map_admin_plan_summary(row) for row in store.list_admin_plans(limit=limit, offset=offset)]
+
+    @app.get("/api/admin/generation-jobs/triage", response_model=list[AdminGenerationJobDiagnostic])
+    def list_admin_triage_generation_jobs(
+        _: ProfileRecord = Depends(require_admin),
+        limit: int = Query(50, ge=1, le=200),
+        store: AppStore = Depends(get_store),
+    ) -> list[AdminGenerationJobDiagnostic]:
+        stale_after_seconds = _generation_job_stale_after_seconds()
+        diagnostics = [
+            _admin_generation_job_diagnostic(job, stale_after_seconds=stale_after_seconds)
+            for job in store.list_admin_triage_generation_jobs(limit=limit * 4)
+        ]
+        return [job for job in diagnostics if job.requires_admin_resume][:limit]
 
     @app.post("/api/admin/plans/{plan_id}/manual-stage2", response_model=PlanDetail)
     def submit_manual_stage2(

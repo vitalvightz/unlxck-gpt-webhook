@@ -16,6 +16,7 @@ web/node_modules/
 .venv/
 *.log
 web/.env.local
+web/.env.sentry-build-plugin
 *.tsbuildinfo
 
 # Generated artifacts (rebuild with tools/split_rehab_bank.py)

@@ -6,8 +6,27 @@ import { useSearchParams } from "next/navigation";
 import { RequireAuth } from "@/components/auth-guard";
 import { useAppSession } from "@/components/auth-provider";
 import { PlanViewer } from "@/components/plan-viewer";
-import { getPlan } from "@/lib/api";
+import { ApiError, getPlan } from "@/lib/api";
 import type { PlanDetail } from "@/lib/types";
+
+// Right after generation completes the app redirects straight to
+// `/plans/{planId}`, but the saved plan row can briefly lag behind the
+// completion event (read-after-write replication). That window surfaces as a
+// transient 404 — the plan is genuinely there a moment later (it shows up in
+// plan history). `getPlan`'s transient retries deliberately ignore 404s, so we
+// re-attempt the initial load here before surfacing the alarming "could not
+// restore" card.
+const PLAN_LOAD_MAX_ATTEMPTS = 5;
+const PLAN_LOAD_RETRY_DELAY_MS = 1500;
+
+/**
+ * Whether a failed plan load should be retried instead of surfaced. Only the
+ * read-after-write 404 window is retried; genuine errors (403, malformed
+ * responses, exhausted gateway/network retries) are shown immediately.
+ */
+export function shouldRetryPlanLoad(error: unknown): boolean {
+  return error instanceof ApiError && error.status === 404;
+}
 
 type PlanDetailStateCardProps = {
   phase: "finalizing" | "failed";
@@ -81,11 +100,35 @@ export function PlanDetailScreen({ planId }: { planId: string }) {
 
     setError(null);
 
-    getPlan(session.access_token, planId)
-      .then(setPlan)
-      .catch((planError) => {
-        setError(planError instanceof Error ? planError.message : "Unable to load plan.");
-      });
+    let cancelled = false;
+    const token = session.access_token;
+
+    const loadPlan = async () => {
+      for (let attempt = 1; attempt <= PLAN_LOAD_MAX_ATTEMPTS; attempt += 1) {
+        try {
+          const loaded = await getPlan(token, planId);
+          if (!cancelled) {
+            setPlan(loaded);
+          }
+          return;
+        } catch (planError) {
+          if (cancelled) {
+            return;
+          }
+          if (attempt === PLAN_LOAD_MAX_ATTEMPTS || !shouldRetryPlanLoad(planError)) {
+            setError(planError instanceof Error ? planError.message : "Unable to load plan.");
+            return;
+          }
+          await new Promise((resolve) => setTimeout(resolve, PLAN_LOAD_RETRY_DELAY_MS));
+        }
+      }
+    };
+
+    void loadPlan();
+
+    return () => {
+      cancelled = true;
+    };
   }, [planId, session?.access_token]);
 
   const recovered = searchParams.get("recovered") === "1";

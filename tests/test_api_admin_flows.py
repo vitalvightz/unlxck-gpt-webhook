@@ -44,26 +44,25 @@ def test_admin_endpoints_require_admin_role():
     assert allowed.status_code == 200
 
 
-def test_admin_routes_use_env_allowlist_not_stored_role():
-    """A profile with role='admin' in storage must be denied if the email is
-    no longer in UNLXCK_ADMIN_EMAILS (which FakeStore models via admin_emails
-    and the @unlxck.test pattern)."""
-    store = FakeStore()  # admin_emails empty; only @unlxck.test pattern admits
-    stale_admin = AuthenticatedUser(
-        user_id="stale-admin-1",
+def test_admin_routes_use_stored_profile_role_not_env_allowlist():
+    """Demoting an existing admin in profiles must revoke access even if their
+    email still appears in the bootstrap allowlist."""
+    store = FakeStore(admin_emails={"former-admin@example.com"})
+    demoted_admin = AuthenticatedUser(
+        user_id="demoted-admin-1",
         email="former-admin@example.com",
         full_name="Former Admin",
         metadata={},
     )
-    # Pre-populate the profile with a stale admin role (as if env was removed).
-    profile = store.ensure_profile(stale_admin)
-    profile["role"] = "admin"
-    store.profiles[stale_admin.user_id] = profile
+    profile = store.ensure_profile(demoted_admin)
+    assert profile["role"] == "admin"
+    profile["role"] = "athlete"
+    store.profiles[demoted_admin.user_id] = profile
 
     client = TestClient(
         create_app(
             store=store,
-            auth_service=FakeAuthService({"stale-admin-token": stale_admin}),
+            auth_service=FakeAuthService({"demoted-admin-token": demoted_admin}),
             planner=_empty_plan_planner,
             stage2_automator=FakeStage2Automator(result=finalized_result()),
         )
@@ -71,13 +70,17 @@ def test_admin_routes_use_env_allowlist_not_stored_role():
 
     response = client.get(
         "/api/admin/athletes",
-        headers={"Authorization": "Bearer stale-admin-token"},
+        headers={"Authorization": "Bearer demoted-admin-token"},
     )
     assert response.status_code == 403
     assert response.json()["detail"] == "admin access required"
 
+    me_response = client.get("/api/me", headers={"Authorization": "Bearer demoted-admin-token"})
+    assert me_response.status_code == 200
+    assert me_response.json()["profile"]["role"] == "athlete"
 
-def test_ensure_profile_demotes_stale_admin_role_when_email_removed_from_allowlist():
+
+def test_ensure_profile_preserves_demoted_existing_role_even_when_email_is_allowlisted():
     store = FakeStore(admin_emails={"admin@example.com"})
     user = AuthenticatedUser(
         user_id="admin-demote-1",
@@ -88,14 +91,14 @@ def test_ensure_profile_demotes_stale_admin_role_when_email_removed_from_allowli
     profile = store.ensure_profile(user)
     assert profile["role"] == "admin"
 
-    store.admin_emails = set()
+    profile["role"] = "athlete"
+    store.profiles[user.user_id] = profile
     refreshed = store.ensure_profile(user)
     assert refreshed["role"] == "athlete"
 
 
-def test_admin_routes_allow_email_in_env_allowlist_even_if_stored_role_is_athlete():
-    """A profile with role='athlete' in storage must be allowed if the email
-    is in the env allowlist."""
+def test_admin_routes_deny_email_in_env_allowlist_when_stored_role_is_athlete():
+    """Env allowlist is only bootstrap; stored role is runtime authority."""
     store = FakeStore(admin_emails={"newadmin@example.com"})
     new_admin = AuthenticatedUser(
         user_id="new-admin-1",
@@ -121,7 +124,8 @@ def test_admin_routes_allow_email_in_env_allowlist_even_if_stored_role_is_athlet
         "/api/admin/athletes",
         headers={"Authorization": "Bearer new-admin-token"},
     )
-    assert response.status_code == 200
+    assert response.status_code == 403
+    assert response.json()["detail"] == "admin access required"
 
 
 def test_normal_athlete_denied_from_admin_routes():
@@ -869,6 +873,83 @@ def _seed_triage_blocked_job(store, *, athlete_id: str, intake_id: str, request)
         completed_at="2026-01-01T00:00:00+00:00",
     )
     return store.get_generation_job(job["id"])
+
+
+def test_admin_triage_queue_lists_suspended_job_without_plan_row():
+    athlete = AuthenticatedUser(user_id="athlete-1", email="ari@example.com", full_name="Ari Mensah", metadata={})
+    admin = AuthenticatedUser(user_id="admin-1", email="ops@unlxck.test", full_name="Ops Admin", metadata={})
+    store = FakeStore()
+    store.ensure_profile(athlete)
+    request = _build_request()
+    intake = store.create_intake(athlete.user_id, request)
+    triage_job = _seed_triage_blocked_job(
+        store, athlete_id=athlete.user_id, intake_id=str(intake["id"]), request=request
+    )
+
+    client = TestClient(
+        create_app(
+            store=store,
+            auth_service=FakeAuthService({"athlete-token": athlete, "admin-token": admin}),
+            planner=lambda payload: stage1_result(),
+            stage2_automator=FakeStage2Automator(result=finalized_result()),
+            enable_in_process_generation=False,
+        )
+    )
+
+    forbidden = client.get(
+        "/api/admin/generation-jobs/triage",
+        headers={"Authorization": "Bearer athlete-token"},
+    )
+    response = client.get(
+        "/api/admin/generation-jobs/triage",
+        headers={"Authorization": "Bearer admin-token"},
+    )
+
+    assert forbidden.status_code == 403
+    assert response.status_code == 200
+    body = response.json()
+    assert len(body) == 1
+    assert body[0]["job_id"] == triage_job["id"]
+    assert body[0]["athlete_id"] == athlete.user_id
+    assert body[0]["athlete_email"] == athlete.email
+    assert body[0]["athlete_full_name"] == athlete.full_name
+    assert body[0]["plan_id"] is None
+    assert body[0]["stage2_status"] == "triage_blocked"
+    assert body[0]["requires_admin_resume"] is True
+    assert body[0]["request_payload_summary"]["athlete_name"] == request.athlete.full_name
+
+
+def test_admin_triage_queue_hides_approved_source_job():
+    athlete = AuthenticatedUser(user_id="athlete-1", email="ari@example.com", full_name="Ari Mensah", metadata={})
+    admin = AuthenticatedUser(user_id="admin-1", email="ops@unlxck.test", full_name="Ops Admin", metadata={})
+    store = FakeStore()
+    store.ensure_profile(athlete)
+    request = _build_request()
+    intake = store.create_intake(athlete.user_id, request)
+    triage_job = _seed_triage_blocked_job(
+        store, athlete_id=athlete.user_id, intake_id=str(intake["id"]), request=request
+    )
+    final_result = dict(store.get_generation_job(triage_job["id"])["final_result"])
+    final_result["stage2_status"] = "triage_resume_approved"
+    store.update_generation_job(triage_job["id"], final_result=final_result)
+
+    client = TestClient(
+        create_app(
+            store=store,
+            auth_service=FakeAuthService({"admin-token": admin}),
+            planner=lambda payload: stage1_result(),
+            stage2_automator=FakeStage2Automator(result=finalized_result()),
+            enable_in_process_generation=False,
+        )
+    )
+
+    response = client.get(
+        "/api/admin/generation-jobs/triage",
+        headers={"Authorization": "Bearer admin-token"},
+    )
+
+    assert response.status_code == 200
+    assert response.json() == []
 
 
 def test_approve_and_resume_generation_from_job_creates_resume_job_without_plan_id():

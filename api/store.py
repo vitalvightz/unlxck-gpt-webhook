@@ -121,6 +121,10 @@ GENERATION_JOB_SCHEMA_DETAIL = "generation job store is not ready; apply the lat
 _is_production_environment = is_production_environment
 
 
+def _claim_legacy_blank_status_jobs_enabled() -> bool:
+    return os.getenv("UNLXCK_CLAIM_LEGACY_BLANK_STATUS_JOBS", "").strip() == "1"
+
+
 class AppStore(Protocol):
     def validate_runtime_schema(self) -> None: ...
 
@@ -206,6 +210,7 @@ class AppStore(Protocol):
     def get_generation_job_by_plan_id(self, plan_id: str) -> dict[str, Any] | None: ...
     def has_active_generation_job_for_plan(self, plan_id: str) -> bool: ...
     def list_generation_jobs_for_athlete(self, athlete_id: str, *, limit: int = 10) -> list[dict[str, Any]]: ...
+    def list_admin_triage_generation_jobs(self, *, limit: int = 50) -> list[dict[str, Any]]: ...
     def list_orphaned_terminal_generation_jobs(self, *, limit: int = 500) -> list[dict[str, Any]]: ...
     def list_failed_triage_resume_jobs_with_approved_marker(self, *, limit: int = 500) -> list[dict[str, Any]]: ...
 
@@ -806,23 +811,10 @@ class SupabaseAppStore:
             self._log_profile_event(operation="ensure_start", user=user)
             existing = self._get_profile_by_id(user.user_id)
             if existing:
-                expected_role = "admin" if existing.get("role") == "admin" else self._default_role_for(user)
-                if existing.get("role") != expected_role:
-                    self._run_with_transient_retry(
-                        operation=f"ensure_profile:sync_role_{expected_role}",
-                        fn=lambda: self.client.table("profiles")
-                        .update({"role": expected_role})
-                        .eq("id", user.user_id)
-                        .execute(),
-                    )
-                    existing = self._run_with_transient_retry(
-                        operation="ensure_profile:refresh_after_role_sync",
-                        fn=lambda: self._require_profile(user.user_id),
-                    )
                 self._log_profile_event(
                     operation="ensure_existing",
                     user=user,
-                    role=existing.get("role") or expected_role,
+                    role=existing.get("role"),
                 )
                 return existing
 
@@ -1962,6 +1954,32 @@ class SupabaseAppStore:
             )
         return []
 
+    def list_admin_triage_generation_jobs(self, *, limit: int = 50) -> list[dict[str, Any]]:
+        try:
+            response = self._run_with_transient_retry(
+                operation=f"list_admin_triage_generation_jobs limit={limit}",
+                fn=lambda: self.client.table("generation_jobs")
+                .select(f"{GENERATION_JOB_SELECT}, profiles!generation_jobs_athlete_id_fkey(email, full_name)")
+                .eq("status", "review_required")
+                .is_("plan_id", "null")
+                .order("created_at", desc=True)
+                .limit(limit)
+                .execute(),
+            )
+            return [row for row in (response.data or []) if isinstance(row, dict)]
+        except _STORE_CLIENT_ERRORS as exc:
+            if self._is_generation_job_schema_error(exc):
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail=GENERATION_JOB_SCHEMA_DETAIL,
+                ) from exc
+            self._raise_operation_http_error(
+                operation=f"list_admin_triage_generation_jobs limit={limit}",
+                detail="failed to list triage generation jobs",
+                exc=exc,
+            )
+        return []
+
     def list_orphaned_terminal_generation_jobs(self, *, limit: int = 500) -> list[dict[str, Any]]:
         try:
             response = self._run_with_transient_retry(
@@ -2047,24 +2065,28 @@ class SupabaseAppStore:
                 .limit(limit)
                 .execute(),
             )
-            null_status_response = self._run_with_transient_retry(
-                operation="list_claimable_generation_jobs:select_null_status",
-                fn=lambda: self.client.table("generation_jobs")
-                .select(GENERATION_JOB_SELECT)
-                .is_("status", "null")
-                .order("created_at", desc=False)
-                .limit(limit)
-                .execute(),
-            )
-            blank_status_response = self._run_with_transient_retry(
-                operation="list_claimable_generation_jobs:select_blank_status",
-                fn=lambda: self.client.table("generation_jobs")
-                .select(GENERATION_JOB_SELECT)
-                .eq("status", "")
-                .order("created_at", desc=False)
-                .limit(limit)
-                .execute(),
-            )
+            legacy_status_responses: list[Any] = []
+            if _claim_legacy_blank_status_jobs_enabled():
+                legacy_status_responses = [
+                    self._run_with_transient_retry(
+                        operation="list_claimable_generation_jobs:select_null_status",
+                        fn=lambda: self.client.table("generation_jobs")
+                        .select(GENERATION_JOB_SELECT)
+                        .is_("status", "null")
+                        .order("created_at", desc=False)
+                        .limit(limit)
+                        .execute(),
+                    ),
+                    self._run_with_transient_retry(
+                        operation="list_claimable_generation_jobs:select_blank_status",
+                        fn=lambda: self.client.table("generation_jobs")
+                        .select(GENERATION_JOB_SELECT)
+                        .eq("status", "")
+                        .order("created_at", desc=False)
+                        .limit(limit)
+                        .execute(),
+                    ),
+                ]
             stale_heartbeat_response = self._run_with_transient_retry(
                 operation="list_claimable_generation_jobs:select_running_stale_heartbeat",
                 fn=lambda: self.client.table("generation_jobs")
@@ -2089,8 +2111,10 @@ class SupabaseAppStore:
 
             merged_rows: dict[str, dict[str, Any]] = {}
 
-            # Queued jobs and legacy blank/null statuses are always claimable (oldest first).
-            for response in (queued_response, null_status_response, blank_status_response):
+            # Queued jobs are always claimable. Legacy blank/null status scans
+            # are opt-in only; the migration normalizes old rows and the hot
+            # worker loop should stay on indexed canonical statuses.
+            for response in (queued_response, *legacy_status_responses):
                 for row in response.data or []:
                     if not isinstance(row, dict):
                         continue
