@@ -17,7 +17,7 @@ from api.generation_runtime import (
     is_in_process_generation_enabled,
     run_stage1_planner,
 )
-from support import FakeStage2Automator, FakeStore, _build_request, finalized_result
+from support import FakeStage2Automator, FakeStore, _build_request, finalized_result, seed_default_profiles
 
 
 _ENVIRONMENT_VARS = ("APP_ENV", "ENVIRONMENT", "UNLXCK_ENV", "NODE_ENV")
@@ -230,6 +230,7 @@ def test_worker_max_concurrency_invalid_falls_back_to_1(monkeypatch):
 
 def test_worker_tick_processes_queued_job_to_terminal_status():
     store = FakeStore()
+    seed_default_profiles(store)
     created = store.create_or_get_generation_job(
         athlete_id="athlete-1",
         client_request_id="worker-processes-queued",
@@ -373,6 +374,7 @@ def test_invoke_planner_with_app_default_planner_emits_full_stage1_diagnostics(m
 
 def test_admin_latest_intake_job_fails_when_intake_id_is_missing():
     store = FakeStore()
+    seed_default_profiles(store)
     request = _build_request().model_dump(mode="json")
     store.generation_jobs["job-1"] = {
         "id": "job-1",
@@ -397,6 +399,7 @@ def test_admin_latest_intake_job_fails_when_intake_id_is_missing():
 
 def test_admin_latest_intake_job_fails_when_linked_intake_is_for_different_athlete():
     store = FakeStore()
+    seed_default_profiles(store)
     request = _build_request().model_dump(mode="json")
     intake = store.create_intake("athlete-2", _build_request())
     store.generation_jobs["job-1"] = {
@@ -422,6 +425,7 @@ def test_admin_latest_intake_job_fails_when_linked_intake_is_for_different_athle
 
 def test_admin_latest_intake_job_accepts_semantically_equivalent_linked_payload():
     store = FakeStore()
+    seed_default_profiles(store)
     request = _build_request().model_dump(mode="json")
     intake = store.create_intake("athlete-1", _build_request())
     linked_payload = dict(intake["intake"])
@@ -455,6 +459,7 @@ def test_admin_latest_intake_job_accepts_semantically_equivalent_linked_payload(
 
 def test_admin_latest_intake_job_fails_when_linked_payload_differs_from_request_payload():
     store = FakeStore()
+    seed_default_profiles(store)
     request = _build_request().model_dump(mode="json")
     linked_request = _build_request({"fatigue_level": "high"})
     intake = store.create_intake("athlete-1", linked_request)
@@ -481,6 +486,7 @@ def test_admin_latest_intake_job_fails_when_linked_payload_differs_from_request_
 
 def test_terminal_success_without_plan_id_is_downgraded_to_failed_with_error_message():
     store = FakeStore()
+    seed_default_profiles(store)
     request_payload = _build_request().model_dump(mode="json")
     created = store.create_or_get_generation_job(
         athlete_id="athlete-1",
@@ -518,6 +524,7 @@ def test_terminal_success_without_plan_id_is_downgraded_to_failed_with_error_mes
 
 def test_terminal_success_with_deleted_plan_row_is_downgraded_to_failed():
     store = FakeStore()
+    seed_default_profiles(store)
     request_payload = _build_request().model_dump(mode="json")
     created = store.create_or_get_generation_job(
         athlete_id="athlete-1",
@@ -557,7 +564,7 @@ def test_terminal_success_with_deleted_plan_row_is_downgraded_to_failed():
         ("generated", "completed"),
         ("ready", "completed"),
         ("publishable_with_flags", "completed"),
-        ("triage_blocked", "completed"),
+        ("triage_blocked", "review_required"),
         ("archived", "completed"),
         ("held_for_review", "review_required"),
         ("review_required", "review_required"),

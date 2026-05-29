@@ -3,6 +3,7 @@ from __future__ import annotations
 import copy
 import math
 import os
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from uuid import uuid4
@@ -789,12 +790,17 @@ class FakeStage2Automator:
     result: dict | None = None
     error: Exception | None = None
     calls: list[dict] = field(default_factory=list)
+    # Tests pass a zero-arg callable when each invocation should produce a fresh
+    # finalized payload (e.g. distinct ids per call). When set, it takes
+    # precedence over the static ``result``.
+    result_factory: Callable[[], dict] | None = None
 
     async def finalize(self, *, stage1_result: dict) -> dict:
         self.calls.append(stage1_result)
         if self.error:
             raise self.error
-        return {**stage1_result, **(self.result or {})}
+        overlay = self.result_factory() if self.result_factory is not None else (self.result or {})
+        return {**stage1_result, **overlay}
 
 
 def _build_request(overrides: dict | None = None) -> PlanRequest:
