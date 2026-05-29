@@ -50,6 +50,14 @@ function isSafeImageUrl(url: string): boolean {
   }
 }
 
+function MenuIcon() {
+  return (
+    <svg viewBox="0 0 20 20" width="18" height="18" fill="none" aria-hidden="true" focusable="false">
+      <path d="M4 6h12M4 10h12M4 14h12" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 export function AppNav() {
   const pathname = usePathname();
   const router = useRouter();
@@ -277,7 +285,10 @@ export function AppNav() {
           aria-controls="app-sidebar"
           onClick={openMobileDrawer}
         >
-          <span>Menu</span>
+          <span className="nav-toggle-icon" aria-hidden="true">
+            <MenuIcon />
+          </span>
+          <span className="nav-toggle-label">Menu</span>
           {!session && isReady ? <span className="badge status-badge-neutral">Entry</span> : null}
         </button>
       ) : null}
@@ -291,7 +302,10 @@ export function AppNav() {
           aria-controls="app-sidebar"
           onClick={() => setDesktopNavCollapsed(false)}
         >
-          <span>Menu</span>
+          <span className="nav-toggle-icon" aria-hidden="true">
+            <MenuIcon />
+          </span>
+          <span className="nav-toggle-label">Menu</span>
         </button>
       ) : null}
       {isMobileDrawerVisible ? (
