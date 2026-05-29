@@ -206,7 +206,7 @@ _NEGATED_STRUCTURAL_HISTORY_RE = re.compile(
 # routing fracture when the chunk itself negates it.
 _NEGATED_STRUCTURAL_BREAK_RE = re.compile(
     r"\b(?:no|not|without|denies?|denied|did\s+not|ruled\s+out)\s+(?:\w+\s+){0,3}"
-    r"(?:broke|broken|crack(?:ed)?|snap(?:ped)?|fracture|dislocat\w*|rupture|tear)\b"
+    r"(?:broke|broken|crack(?:ed)?|snap(?:ped)?)\b"
 )
 
 
