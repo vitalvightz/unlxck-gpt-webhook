@@ -141,11 +141,11 @@ export default function AdminPage() {
         job.status,
         job.source,
         job.stage2_status,
-        job.request_payload_summary.athlete_name,
-        job.request_payload_summary.fight_date,
-        job.request_payload_summary.fight_format,
-        job.request_payload_summary.goals,
-        job.request_payload_summary.injuries,
+        job.request_payload_summary?.athlete_name,
+        job.request_payload_summary?.fight_date,
+        job.request_payload_summary?.fight_format,
+        job.request_payload_summary?.goals,
+        job.request_payload_summary?.injuries,
       ).includes(searchNeedle),
     );
   }, [activeJobs, searchNeedle]);
