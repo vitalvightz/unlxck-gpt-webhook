@@ -263,9 +263,9 @@ def test_worker_tick_processes_queued_job_to_terminal_status():
     assert job["completed_at"] is not None
 
 
-def test_stage2_finalize_timeout_default_is_600(monkeypatch):
+def test_stage2_finalize_timeout_default_is_240(monkeypatch):
     monkeypatch.delenv("APP_STAGE2_FINALIZE_TIMEOUT_SECONDS", raising=False)
-    assert _stage2_finalize_timeout_seconds() == 600.0
+    assert _stage2_finalize_timeout_seconds() == 240.0
 
 
 @pytest.mark.parametrize("sentinel", ["", "0", "none", "None", "NONE"])
