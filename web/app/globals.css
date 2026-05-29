@@ -6294,8 +6294,8 @@ button.mobile-step-rail-item {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 40px;
-  height: 40px;
+  width: 44px;
+  height: 44px;
   border: 1px solid rgba(255, 255, 255, 0.06);
   border-radius: 10px;
   background: rgba(255, 255, 255, 0.03);
@@ -6330,7 +6330,14 @@ button.mobile-step-rail-item {
   color: var(--text-primary);
   font-size: 12px;
   font-weight: 600;
-  cursor: pointer;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.global-generation-status-reopen:active {
+  cursor: grabbing;
 }
 
 .global-generation-status-indicator {
@@ -6642,9 +6649,14 @@ html[data-theme="light"] .global-generation-status-dismiss:hover {
     gap: 6px;
   }
 
+  /* On mobile the label is hidden, so the CTA collapses to an arrow-only
+     square that matches the dismiss (×) button exactly. */
   .global-generation-status-cta {
+    width: 44px;
+    height: 44px;
     min-height: 44px;
-    padding: 0 12px;
+    padding: 0;
+    justify-content: center;
   }
 
   .global-generation-status-cta-label {
@@ -6652,12 +6664,14 @@ html[data-theme="light"] .global-generation-status-dismiss:hover {
   }
 
   .global-generation-status-cta .global-generation-status-arrow {
-    font-size: 18px;
+    font-size: 20px;
+    line-height: 1;
   }
 
   .global-generation-status-dismiss {
-    width: 40px;
-    height: 40px;
+    width: 44px;
+    height: 44px;
+    font-size: 20px;
   }
 
   .global-generation-status-reopen {
