@@ -9,6 +9,7 @@ from fastapi import BackgroundTasks, HTTPException
 import api.app as app_module
 from api import generation_runtime
 from api import worker as worker_module
+from api.generation import stage1_runner
 from api.generation_runtime import (
     _invoke_planner,
     _stage1_mp_start_method,
@@ -337,7 +338,7 @@ def test_default_planner_emits_diagnostic_milestones_before_generate_plan_sync(m
         generate_plan_called["value"] = True
         return {"plan": "ok"}
 
-    monkeypatch.setattr(generation_runtime, "generate_plan_sync", fake_generate_plan_sync)
+    monkeypatch.setattr(stage1_runner, "generate_plan_sync", fake_generate_plan_sync)
 
     def callback(code, label, detail, meta):
         assert generate_plan_called["value"] is False
@@ -358,7 +359,7 @@ def test_invoke_planner_with_app_default_planner_emits_full_stage1_diagnostics(m
     def fake_generate_plan_sync(payload, *, progress_callback=None):
         return {"plan": "ok"}
 
-    monkeypatch.setattr(generation_runtime, "generate_plan_sync", fake_generate_plan_sync)
+    monkeypatch.setattr(stage1_runner, "generate_plan_sync", fake_generate_plan_sync)
 
     def callback(code, label, detail, meta):
         emitted_codes.append(code)
