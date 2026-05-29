@@ -68,7 +68,8 @@ export function MobileTabBar() {
   const { isReady, session } = useAppSession();
   const { isActive: generationActive } = useGenerationStatus();
 
-  const isHidden = !isReady || !session || HIDDEN_ROUTES.has(pathname);
+  const isAdminRoute = pathname === "/admin" || pathname.startsWith("/admin/");
+  const isHidden = !isReady || !session || isAdminRoute || HIDDEN_ROUTES.has(pathname);
 
   useEffect(() => {
     const { documentElement } = document;
