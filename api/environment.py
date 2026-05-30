@@ -8,7 +8,16 @@ _PRODUCTION_ENV_DEFAULTS = {"APP_ENV": "production", "UNLXCK_ENV": "production"}
 
 
 def should_default_to_production() -> bool:
-    return bool(os.getenv("SUPABASE_URL") or os.getenv("SUPABASE_SERVICE_ROLE_KEY"))
+    if "PYTEST_CURRENT_TEST" in os.environ:
+        return False
+
+    supabase_url = os.getenv("SUPABASE_URL", "").strip()
+    supabase_key = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "").strip()
+
+    if any(local in supabase_url for local in ("localhost", "127.0.0.1", "::1")):
+        return False
+
+    return bool(supabase_url or supabase_key)
 
 
 def apply_production_environment_defaults() -> None:
