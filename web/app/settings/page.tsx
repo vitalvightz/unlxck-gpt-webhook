@@ -7,6 +7,7 @@ import { RequireAuth } from "@/components/auth-guard";
 import { useAppSession } from "@/components/auth-provider";
 import { PasswordStrengthMeter } from "@/components/password-strength-meter";
 import { ApiError, changeUsername, updateMe } from "@/lib/api";
+import { isSafeAvatarImageUrl } from "@/lib/avatar-image-url";
 import {
   EQUIPMENT_ACCESS_OPTIONS,
   KEY_GOAL_OPTIONS,
@@ -129,20 +130,8 @@ function getInitials(name: string): string {
   return result || "A";
 }
 
-function isDataUrl(url: string): boolean {
+function isDataAvatarImageUrl(url: string): boolean {
   return url.startsWith("data:image/");
-}
-
-function isSafeImageUrl(url: string): boolean {
-  if (isDataUrl(url)) {
-    return true;
-  }
-  try {
-    const parsed = new URL(url);
-    return parsed.protocol === "https:" || parsed.protocol === "http:";
-  } catch {
-    return false;
-  }
 }
 
 function validateUsernameClient(value: string): string | null {
@@ -349,7 +338,7 @@ export default function SettingsPage() {
     setAppearanceMode(me.profile.appearance_mode ?? "dark");
     const storedAvatar = me.profile.avatar_url ?? "";
     setAvatarUrl(storedAvatar);
-    if (!isDataUrl(storedAvatar)) {
+    if (!isDataAvatarImageUrl(storedAvatar)) {
       setUrlInputValue(storedAvatar);
     }
     setUsernameDraft(currentUsername);
@@ -399,7 +388,7 @@ export default function SettingsPage() {
           full_name: fullName,
           athlete_timezone: detectDeviceTimeZone() || me?.profile.athlete_timezone || "",
           appearance_mode: appearanceMode,
-          avatar_url: avatarUrl.trim() && isSafeImageUrl(avatarUrl.trim()) ? avatarUrl.trim() : null,
+          avatar_url: avatarUrl.trim() && isSafeAvatarImageUrl(avatarUrl.trim()) ? avatarUrl.trim() : null,
         });
         replaceMe(updatedMe);
         setMessage("Account settings updated.");
@@ -589,7 +578,7 @@ export default function SettingsPage() {
             onClick={() => fileInputRef.current?.click()}
           >
             <div className="avatar-upload-circle">
-              {avatarUrl.trim() && isSafeImageUrl(avatarUrl.trim()) ? (
+              {avatarUrl.trim() && isSafeAvatarImageUrl(avatarUrl.trim()) ? (
                 <img src={avatarUrl.trim()} alt="Profile" className="avatar-preview-img" />
               ) : (
                 <span className="avatar-preview-initials">{initials}</span>
@@ -619,10 +608,10 @@ export default function SettingsPage() {
 
           <div className="avatar-editor-actions">
             <button type="button" className="secondary-button avatar-upload-btn" onClick={() => fileInputRef.current?.click()}>
-              {avatarUrl.trim() && isSafeImageUrl(avatarUrl.trim()) ? "Change photo" : "Upload photo"}
+              {avatarUrl.trim() && isSafeAvatarImageUrl(avatarUrl.trim()) ? "Change photo" : "Upload photo"}
             </button>
 
-            {avatarUrl.trim() && isSafeImageUrl(avatarUrl.trim()) ? (
+            {avatarUrl.trim() && isSafeAvatarImageUrl(avatarUrl.trim()) ? (
               <button type="button" className="ghost-button danger-button" onClick={handleRemoveAvatar}>
                 Remove
               </button>

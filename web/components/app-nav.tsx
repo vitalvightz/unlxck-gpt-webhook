@@ -6,6 +6,7 @@ import { useEffect, useRef, useState, type TransitionEvent } from "react";
 
 import { useAppSession } from "@/components/auth-provider";
 import { shouldShowAdminPanelLink } from "@/lib/admin-nav-visibility";
+import { isSafeAvatarImageUrl } from "@/lib/avatar-image-url";
 
 type MobileNavState = "closed" | "opening" | "open" | "closing";
 
@@ -34,20 +35,6 @@ function getInitials(name: string): string {
     .map((word) => word[0]?.toUpperCase() ?? "")
     .join("");
   return result || "A";
-}
-
-const SAFE_DATA_IMAGE_RE = /^data:image\/[a-zA-Z0-9.+\-]+;base64,[A-Za-z0-9+/]+=*$/;
-
-function isSafeImageUrl(url: string): boolean {
-  if (url.startsWith("data:image/")) {
-    return SAFE_DATA_IMAGE_RE.test(url);
-  }
-  try {
-    const parsed = new URL(url);
-    return parsed.protocol === "https:" || parsed.protocol === "http:";
-  } catch {
-    return false;
-  }
 }
 
 function MenuIcon() {
@@ -270,7 +257,7 @@ export function AppNav() {
   const profile = me?.profile;
   const displayName = profile?.full_name || "Athlete";
   const initials = getInitials(displayName);
-  const avatarUrl = (profile?.avatar_url && isSafeImageUrl(profile.avatar_url)) ? profile.avatar_url : null;
+  const avatarUrl = (profile?.avatar_url && isSafeAvatarImageUrl(profile.avatar_url)) ? profile.avatar_url : null;
   const role = profile?.role ?? null;
   const isAdminWorkspace = shouldShowAdminPanelLink(role, isActive(pathname, "/admin"));
 
