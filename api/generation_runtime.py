@@ -373,6 +373,258 @@ async def persist_triage_review_required(
     )
 
 
+async def persist_plan_and_finalize(
+    *,
+    job: dict[str, Any],
+    job_id: str,
+    athlete_id: str,
+    plan_id: str | None,
+    intake_id: str | None,
+    job_source: str,
+    resume_from_job_only: bool,
+    admin_resume_plan_row: dict[str, Any] | None,
+    final_result: dict[str, Any],
+    request_body: PlanRequest,
+    store: AppStore,
+    emit_milestone: Callable[..., None],
+    to_thread_with_heartbeat: Callable[..., Any],
+    t_start: float,
+) -> None:
+    """Persist the Stage 2 plan and finalize the generation job (success path).
+
+    Creates or updates the plan row, persists the compact final_result, resolves
+    the terminal job status (downgrading to failed if the plan_id is missing or
+    the plan row disappeared), and clears the onboarding draft. On any
+    persistence timeout/failure the job is marked failed and we return early
+    (the caller then falls through to its finally block, as before).
+    """
+    plan_row: dict[str, Any] | None = None
+    emit_milestone(
+        "plan_persisting",
+        "Saving plan row",
+        "Creating or updating the saved plan from the Stage 2 result.",
+    )
+    if job_source == "admin_triage_resume":
+        plan_row = admin_resume_plan_row
+    else:
+        if plan_id:
+            plan_row = await to_thread_with_heartbeat(store.get_plan, plan_id)
+        if job_source != "admin_latest_intake" and not plan_row and intake_id:
+            latest_plan = await asyncio.to_thread(store.get_latest_plan, athlete_id)
+            if (
+                latest_plan
+                and str(latest_plan.get("intake_id") or "") == intake_id
+                and str(latest_plan.get("status") or "").strip().lower() != "archived"
+            ):
+                plan_row = latest_plan
+                plan_id = str(latest_plan.get("id") or "")
+
+    if plan_row and plan_id:
+        # Preserve triage-approval audit markers so they aren't lost when
+        # updating the existing plan in-place (important for admin resume flows).
+        existing_why_log = plan_row.get("why_log") if isinstance(plan_row.get("why_log"), dict) else {}
+        preserved_keys = ("triage_regeneration_cleared", "triage_resume_approval")
+        preserved = {key: existing_why_log[key] for key in preserved_keys if key in existing_why_log}
+        if preserved:
+            merged_why_log = dict(final_result.get("why_log") or {})
+            merged_why_log.update(preserved)
+            final_result = {**final_result, "why_log": merged_why_log}
+        plan_row = await to_thread_with_heartbeat(
+            store.update_plan_stage2,
+            plan_id,
+            final_result,
+        )
+    else:
+        if job_source == "admin_triage_resume" and not resume_from_job_only:
+            logger.error(
+                "[jobs] generation:resume_missing_plan job_id=%s athlete_id=%s intake_id=%s job_plan_id=%s",
+                job_id,
+                athlete_id,
+                intake_id,
+                job.get("plan_id"),
+            )
+            raise TriageResumeMissingPlanError(
+                "admin triage resume job is missing its linked plan; refusing to create a duplicate plan"
+            )
+        plan_row = await to_thread_with_heartbeat(
+            store.create_plan,
+            athlete_id=athlete_id,
+            intake_id=intake_id,
+            request=request_body,
+            result=final_result,
+        )
+        created_plan_id = str(plan_row.get("id") or "").strip()
+        verified_plan_row = await to_thread_with_heartbeat(store.get_plan, created_plan_id) if created_plan_id else None
+        verified_athlete_id = str((verified_plan_row or {}).get("athlete_id") or "").strip()
+        verified_intake_id = str((verified_plan_row or {}).get("intake_id") or "").strip()
+        expected_intake_id = str(intake_id or "").strip()
+        intake_id_matches = (not expected_intake_id) or (verified_intake_id == expected_intake_id)
+        if not created_plan_id or not verified_plan_row or verified_athlete_id != athlete_id or not intake_id_matches:
+            now_iso = utc_now_iso()
+            with suppress(Exception):
+                await asyncio.to_thread(
+                    store.update_generation_job,
+                    job_id,
+                    status="failed",
+                    error=_PLAN_PERSIST_VERIFICATION_ERROR,
+                    completed_at=now_iso,
+                    heartbeat_at=now_iso,
+                )
+            return
+        plan_id = str(plan_row.get("id") or "") or None
+    if not plan_id:
+        raise RuntimeError("Plan persistence failed: final_result exists but no linked plan_id was created.")
+    job = await asyncio.to_thread(
+        store.update_generation_job,
+        job_id,
+        plan_id=plan_id,
+        heartbeat_at=utc_now_iso(),
+    )
+    emit_milestone(
+        "plan_persisted",
+        "Plan row persisted",
+        "Saved plan row was created or updated.",
+        plan_id=plan_id,
+    )
+    emit_milestone(
+        "final_result_persisting",
+        "Saving Stage 2 result",
+        "Persisting finalizer output to the generation job.",
+    )
+    compact_final_result = _compact_generation_job_final_result(final_result)
+    try:
+        job = await asyncio.wait_for(
+            asyncio.to_thread(
+                store.update_generation_job,
+                job_id,
+                final_result=compact_final_result,
+                plan_id=plan_id,
+                heartbeat_at=utc_now_iso(),
+            ),
+            timeout=_FINAL_RESULT_PERSIST_TIMEOUT_SECONDS,
+        )
+    except asyncio.TimeoutError:
+        logger.exception("[jobs] generation:final_result_persist_timeout athlete_id=%s job_id=%s", athlete_id, job_id)
+        now_iso = utc_now_iso()
+        with suppress(Exception):
+            await asyncio.to_thread(
+                store.update_generation_job,
+                job_id,
+                status="failed",
+                error=_FINAL_RESULT_PERSIST_TIMEOUT_ERROR,
+                completed_at=now_iso,
+                heartbeat_at=now_iso,
+            )
+        return
+    except Exception:
+        logger.exception("[jobs] generation:final_result_persist_failed athlete_id=%s job_id=%s", athlete_id, job_id)
+        now_iso = utc_now_iso()
+        with suppress(Exception):
+            await asyncio.to_thread(
+                store.update_generation_job,
+                job_id,
+                status="failed",
+                error="Stage 2 result persistence failed after plan persistence.",
+                completed_at=now_iso,
+                heartbeat_at=now_iso,
+            )
+        return
+    emit_milestone(
+        "final_result_persisted",
+        "Stage 2 result saved",
+        "Finalizer output was saved to the generation job.",
+    )
+    persisted_plan_id = str(job.get("plan_id") or "").strip() if isinstance(job, dict) else ""
+    if not persisted_plan_id:
+        plan_id = None
+    plan_status = str(plan_row.get("status") or "failed")
+    final_status = job_status_for_plan_status(plan_status)
+    terminal_missing_plan_id_error = None
+    missing_or_invalid_terminal_plan_id = False
+    if final_status in {"completed", "review_required"} and plan_id:
+        persisted_plan_row = await to_thread_with_heartbeat(store.get_plan, plan_id)
+        if not persisted_plan_row:
+            missing_or_invalid_terminal_plan_id = True
+            logger.error(
+                "[jobs] generation:terminal_plan_row_missing athlete_id=%s job_id=%s plan_id=%s plan_status=%s",
+                athlete_id,
+                job_id,
+                plan_id,
+                plan_status,
+            )
+    if final_status in {"completed", "review_required"} and not plan_id:
+        missing_or_invalid_terminal_plan_id = True
+    if missing_or_invalid_terminal_plan_id:
+        final_status = "failed"
+        terminal_missing_plan_id_error = (
+            "Plan was saved but the generation job lost its plan_id. Open plan history or contact support."
+        )
+        logger.error(
+            "[jobs] generation:terminal_missing_plan_id athlete_id=%s job_id=%s plan_status=%s",
+            athlete_id,
+            job_id,
+            plan_status,
+        )
+    if final_status == "completed":
+        emit_milestone(
+            "plan_saved",
+            "Plan saved to your workspace",
+            "Opening the saved plan for review.",
+        )
+    await to_thread_with_heartbeat(
+        store.update_generation_job,
+        job_id,
+        status=final_status,
+        error=terminal_missing_plan_id_error,
+        plan_id=plan_id,
+        completed_at=utc_now_iso(),
+        heartbeat_at=utc_now_iso(),
+    )
+    emit_milestone(
+        "generation_job_terminal_status_persisted",
+        "Generation job terminal status persisted",
+        "Terminal generation job lifecycle status was saved.",
+        final_status=final_status,
+        plan_status=plan_status,
+        plan_id=plan_id,
+    )
+    try:
+        await asyncio.wait_for(
+            to_thread_with_heartbeat(store.clear_onboarding_draft, athlete_id),
+            timeout=_POST_PERSIST_CLEANUP_TIMEOUT_SECONDS,
+        )
+    except asyncio.TimeoutError:
+        logger.warning(
+            "[jobs] generation:clear_onboarding_draft_timeout athlete_id=%s job_id=%s timeout_seconds=%s",
+            athlete_id,
+            job_id,
+            _POST_PERSIST_CLEANUP_TIMEOUT_SECONDS,
+        )
+    except Exception:
+        logger.exception("[jobs] generation:clear_onboarding_draft_failed athlete_id=%s job_id=%s", athlete_id, job_id)
+    _plan_why_log = plan_row.get("why_log") if isinstance(plan_row.get("why_log"), dict) else {}
+    logger.info(
+        "[jobs] generation:complete athlete_id=%s job_id=%s plan_id=%s status=%s "
+        "plan_status=%s final_result_status=%s plan_triage_mode=%s plan_override_applied=%s "
+        "plan_override_approval=%s duration_ms=%s",
+        athlete_id,
+        job_id,
+        plan_id,
+        final_status,
+        plan_status,
+        (final_result or {}).get("status") if isinstance(final_result, dict) else None,
+        (_plan_why_log.get("injury_triage") or {}).get("mode")
+        if isinstance(_plan_why_log.get("injury_triage"), dict)
+        else None,
+        bool(
+            isinstance(_plan_why_log.get("injury_triage_resume_override"), dict)
+            and _plan_why_log["injury_triage_resume_override"].get("bypassed_blocking") is True
+        ),
+        isinstance(_plan_why_log.get("triage_resume_approval"), dict),
+        round((time.perf_counter() - t_start) * 1000, 2),
+    )
+
+
 async def run_generation_job(
     *,
     job_id: str,
@@ -711,7 +963,6 @@ async def run_generation_job(
         # resume runtime branch persists a real plan row at that point.
         triage_skipped = _is_triage_skipped_final_result(final_result)
         plan_id = plan_id or (str(job.get("plan_id") or "") or None)
-        plan_row: dict[str, Any] | None = None
 
         if triage_skipped:
             await persist_triage_review_required(
@@ -728,229 +979,21 @@ async def run_generation_job(
             )
             return
 
-        _emit_milestone(
-            "plan_persisting",
-            "Saving plan row",
-            "Creating or updating the saved plan from the Stage 2 result.",
-        )
-        if job_source == "admin_triage_resume":
-            plan_row = admin_resume_plan_row
-        else:
-            if plan_id:
-                plan_row = await _to_thread_with_heartbeat(store.get_plan, plan_id)
-            if job_source != "admin_latest_intake" and not plan_row and intake_id:
-                latest_plan = await asyncio.to_thread(store.get_latest_plan, athlete_id)
-                if (
-                    latest_plan
-                    and str(latest_plan.get("intake_id") or "") == intake_id
-                    and str(latest_plan.get("status") or "").strip().lower() != "archived"
-                ):
-                    plan_row = latest_plan
-                    plan_id = str(latest_plan.get("id") or "")
-
-        if plan_row and plan_id:
-            # Preserve triage-approval audit markers so they aren't lost when
-            # updating the existing plan in-place (important for admin resume flows).
-            existing_why_log = plan_row.get("why_log") if isinstance(plan_row.get("why_log"), dict) else {}
-            preserved_keys = ("triage_regeneration_cleared", "triage_resume_approval")
-            preserved = {key: existing_why_log[key] for key in preserved_keys if key in existing_why_log}
-            if preserved:
-                merged_why_log = dict(final_result.get("why_log") or {})
-                merged_why_log.update(preserved)
-                final_result = {**final_result, "why_log": merged_why_log}
-            plan_row = await _to_thread_with_heartbeat(
-                store.update_plan_stage2,
-                plan_id,
-                final_result,
-            )
-        else:
-            if job_source == "admin_triage_resume" and not resume_from_job_only:
-                logger.error(
-                    "[jobs] generation:resume_missing_plan job_id=%s athlete_id=%s intake_id=%s job_plan_id=%s",
-                    job_id,
-                    athlete_id,
-                    intake_id,
-                    job.get("plan_id"),
-                )
-                raise TriageResumeMissingPlanError(
-                    "admin triage resume job is missing its linked plan; refusing to create a duplicate plan"
-                )
-            plan_row = await _to_thread_with_heartbeat(
-                store.create_plan,
-                athlete_id=athlete_id,
-                intake_id=intake_id,
-                request=request_body,
-                result=final_result,
-            )
-            created_plan_id = str(plan_row.get("id") or "").strip()
-            verified_plan_row = await _to_thread_with_heartbeat(store.get_plan, created_plan_id) if created_plan_id else None
-            verified_athlete_id = str((verified_plan_row or {}).get("athlete_id") or "").strip()
-            verified_intake_id = str((verified_plan_row or {}).get("intake_id") or "").strip()
-            expected_intake_id = str(intake_id or "").strip()
-            intake_id_matches = (not expected_intake_id) or (verified_intake_id == expected_intake_id)
-            if not created_plan_id or not verified_plan_row or verified_athlete_id != athlete_id or not intake_id_matches:
-                now_iso = utc_now_iso()
-                with suppress(Exception):
-                    await asyncio.to_thread(
-                        store.update_generation_job,
-                        job_id,
-                        status="failed",
-                        error=_PLAN_PERSIST_VERIFICATION_ERROR,
-                        completed_at=now_iso,
-                        heartbeat_at=now_iso,
-                    )
-                return
-            plan_id = str(plan_row.get("id") or "") or None
-        if not plan_id:
-            raise RuntimeError("Plan persistence failed: final_result exists but no linked plan_id was created.")
-        job = await asyncio.to_thread(
-            store.update_generation_job,
-            job_id,
+        await persist_plan_and_finalize(
+            job=job,
+            job_id=job_id,
+            athlete_id=athlete_id,
             plan_id=plan_id,
-            heartbeat_at=utc_now_iso(),
-        )
-        _emit_milestone(
-            "plan_persisted",
-            "Plan row persisted",
-            "Saved plan row was created or updated.",
-            plan_id=plan_id,
-        )
-        _emit_milestone(
-            "final_result_persisting",
-            "Saving Stage 2 result",
-            "Persisting finalizer output to the generation job.",
-        )
-        compact_final_result = _compact_generation_job_final_result(final_result)
-        try:
-            job = await asyncio.wait_for(
-                asyncio.to_thread(
-                    store.update_generation_job,
-                    job_id,
-                    final_result=compact_final_result,
-                    plan_id=plan_id,
-                    heartbeat_at=utc_now_iso(),
-                ),
-                timeout=_FINAL_RESULT_PERSIST_TIMEOUT_SECONDS,
-            )
-        except asyncio.TimeoutError:
-            logger.exception("[jobs] generation:final_result_persist_timeout athlete_id=%s job_id=%s", athlete_id, job_id)
-            now_iso = utc_now_iso()
-            with suppress(Exception):
-                await asyncio.to_thread(
-                    store.update_generation_job,
-                    job_id,
-                    status="failed",
-                    error=_FINAL_RESULT_PERSIST_TIMEOUT_ERROR,
-                    completed_at=now_iso,
-                    heartbeat_at=now_iso,
-                )
-            return
-        except Exception:
-            logger.exception("[jobs] generation:final_result_persist_failed athlete_id=%s job_id=%s", athlete_id, job_id)
-            now_iso = utc_now_iso()
-            with suppress(Exception):
-                await asyncio.to_thread(
-                    store.update_generation_job,
-                    job_id,
-                    status="failed",
-                    error="Stage 2 result persistence failed after plan persistence.",
-                    completed_at=now_iso,
-                    heartbeat_at=now_iso,
-                )
-            return
-        _emit_milestone(
-            "final_result_persisted",
-            "Stage 2 result saved",
-            "Finalizer output was saved to the generation job.",
-        )
-        persisted_plan_id = str(job.get("plan_id") or "").strip() if isinstance(job, dict) else ""
-        if not persisted_plan_id:
-            plan_id = None
-        plan_status = str(plan_row.get("status") or "failed")
-        final_status = job_status_for_plan_status(plan_status)
-        terminal_missing_plan_id_error = None
-        missing_or_invalid_terminal_plan_id = False
-        if final_status in {"completed", "review_required"} and plan_id:
-            persisted_plan_row = await _to_thread_with_heartbeat(store.get_plan, plan_id)
-            if not persisted_plan_row:
-                missing_or_invalid_terminal_plan_id = True
-                logger.error(
-                    "[jobs] generation:terminal_plan_row_missing athlete_id=%s job_id=%s plan_id=%s plan_status=%s",
-                    athlete_id,
-                    job_id,
-                    plan_id,
-                    plan_status,
-                )
-        if final_status in {"completed", "review_required"} and not plan_id:
-            missing_or_invalid_terminal_plan_id = True
-        if missing_or_invalid_terminal_plan_id:
-            final_status = "failed"
-            terminal_missing_plan_id_error = (
-                "Plan was saved but the generation job lost its plan_id. Open plan history or contact support."
-            )
-            logger.error(
-                "[jobs] generation:terminal_missing_plan_id athlete_id=%s job_id=%s plan_status=%s",
-                athlete_id,
-                job_id,
-                plan_status,
-            )
-        if final_status == "completed":
-            _emit_milestone(
-                "plan_saved",
-                "Plan saved to your workspace",
-                "Opening the saved plan for review.",
-            )
-        await _to_thread_with_heartbeat(
-            store.update_generation_job,
-            job_id,
-            status=final_status,
-            error=terminal_missing_plan_id_error,
-            plan_id=plan_id,
-            completed_at=utc_now_iso(),
-            heartbeat_at=utc_now_iso(),
-        )
-        _emit_milestone(
-            "generation_job_terminal_status_persisted",
-            "Generation job terminal status persisted",
-            "Terminal generation job lifecycle status was saved.",
-            final_status=final_status,
-            plan_status=plan_status,
-            plan_id=plan_id,
-        )
-        try:
-            await asyncio.wait_for(
-                _to_thread_with_heartbeat(store.clear_onboarding_draft, athlete_id),
-                timeout=_POST_PERSIST_CLEANUP_TIMEOUT_SECONDS,
-            )
-        except asyncio.TimeoutError:
-            logger.warning(
-                "[jobs] generation:clear_onboarding_draft_timeout athlete_id=%s job_id=%s timeout_seconds=%s",
-                athlete_id,
-                job_id,
-                _POST_PERSIST_CLEANUP_TIMEOUT_SECONDS,
-            )
-        except Exception:
-            logger.exception("[jobs] generation:clear_onboarding_draft_failed athlete_id=%s job_id=%s", athlete_id, job_id)
-        _plan_why_log = plan_row.get("why_log") if isinstance(plan_row.get("why_log"), dict) else {}
-        logger.info(
-            "[jobs] generation:complete athlete_id=%s job_id=%s plan_id=%s status=%s "
-            "plan_status=%s final_result_status=%s plan_triage_mode=%s plan_override_applied=%s "
-            "plan_override_approval=%s duration_ms=%s",
-            athlete_id,
-            job_id,
-            plan_id,
-            final_status,
-            plan_status,
-            (final_result or {}).get("status") if isinstance(final_result, dict) else None,
-            (_plan_why_log.get("injury_triage") or {}).get("mode")
-            if isinstance(_plan_why_log.get("injury_triage"), dict)
-            else None,
-            bool(
-                isinstance(_plan_why_log.get("injury_triage_resume_override"), dict)
-                and _plan_why_log["injury_triage_resume_override"].get("bypassed_blocking") is True
-            ),
-            isinstance(_plan_why_log.get("triage_resume_approval"), dict),
-            round((time.perf_counter() - t_start) * 1000, 2),
+            intake_id=intake_id,
+            job_source=job_source,
+            resume_from_job_only=resume_from_job_only,
+            admin_resume_plan_row=admin_resume_plan_row,
+            final_result=final_result,
+            request_body=request_body,
+            store=store,
+            emit_milestone=_emit_milestone,
+            to_thread_with_heartbeat=_to_thread_with_heartbeat,
+            t_start=t_start,
         )
     except asyncio.TimeoutError:
         logger.exception("[jobs] generation:stage2_timeout athlete_id=%s job_id=%s", athlete_id, job_id)
