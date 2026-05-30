@@ -33,8 +33,8 @@ const landingPreviewStages = [
   {
     label: "Plans",
     title: "The latest camp reopens fast",
-    summary: "Saved history, latest plan, and PDF export stay attached to the athlete account.",
-    highlights: ["Plan history", "PDF export"],
+    summary: "Saved history and the latest plan stay attached to the athlete account.",
+    highlights: ["Plan history", "In-app display"],
   },
 ] as const;
 
@@ -499,7 +499,7 @@ export default function HomePage() {
           <div className="hero-panel-copy public-hero-copy">
             <p className="eyebrow">Athlete-first beta</p>
             <h1 className="hero-title">See the camp workflow before you sign up.</h1>
-            <p className="public-hero-summary">UNLXCK brings intake, readiness, generation, saved history, and exports into one athlete workspace instead of scattering them across notes, forms, and PDFs.</p>
+            <p className="public-hero-summary">UNLXCK brings intake, readiness, generation, and saved history into one athlete workspace instead of scattering them across notes and forms.</p>
             <div className="hero-actions">
               <Link href="/signup" className="cta">
                 Start free beta
@@ -515,7 +515,7 @@ export default function HomePage() {
               </div>
               <div className="public-proof-pill">
                 <span className="label">Saved plans</span>
-                <span className="public-proof-value">Latest camp, history, and PDF exports stay attached</span>
+                <span className="public-proof-value">Latest camp and history stay attached</span>
               </div>
               <div className="public-proof-pill">
                 <span className="label">Built to return to</span>

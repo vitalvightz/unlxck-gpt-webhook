@@ -110,7 +110,7 @@ Use this checklist for beta-readiness verification against the production fronte
 - [ ] Older plans remain accessible from the archive.
 - [ ] Rename plan still works.
 - [ ] Delete plan still works.
-- [ ] PDF/download action still works where available.
+- [ ] Saved plan opens in-app without requiring a download/export action.
 - [ ] Quick Build plan shows the refinement banner.
 - [ ] Non-Quick-Build plan does not show the Quick Build refinement banner.
 - [ ] Refinement CTA opens Advanced Intake.

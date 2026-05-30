@@ -2,14 +2,10 @@ from __future__ import annotations
 
 import logging
 import re
-from time import perf_counter
-
 from .build_block import (
     PhaseBlock,
     _md_to_html,
     build_html_document,
-    html_to_pdf,
-    upload_to_supabase,
 )
 from .fight_date_utils import resolve_fight_weekday
 from .fight_day_override import FIGHT_DAY_PROTOCOL_TEXT
@@ -21,7 +17,6 @@ from .plan_pipeline_runtime import (
     PlanBlocksBundle,
     PlanRuntimeContext,
     RenderedPlanBundle,
-    TimingRecorder,
     _apply_muay_thai_filters,
 )
 from .plan_rendering_utils import sanitize_phase_text, sanitize_stage_output
@@ -393,31 +388,6 @@ def render_plan_bundle(*, context: PlanRuntimeContext, blocks: PlanBlocksBundle,
         },
         html=html,
     )
-
-
-def export_plan_pdf(
-    *,
-    full_name: str,
-    html: str,
-    record_timing: TimingRecorder,
-    logger: logging.Logger,
-) -> str:
-    timer_start = perf_counter()
-    safe_name = full_name.replace(" ", "_") or "plan"
-    pdf_path = html_to_pdf(html, f"{safe_name}_fight_plan.pdf")
-    if pdf_path:
-        try:
-            pdf_url = upload_to_supabase(pdf_path)
-        except Exception:
-            logger.exception(
-                "[export-error] code=pdf_upload_failed stage=upload file=%s",
-                pdf_path,
-            )
-            pdf_url = "PDF upload failed"
-    else:
-        pdf_url = "PDF generation failed"
-    record_timing("export_pdf", timer_start)
-    return pdf_url
 
 
 def build_stage2_outputs(

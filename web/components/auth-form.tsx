@@ -259,7 +259,7 @@ export function AuthForm({ mode }: { mode: "signup" | "login" }) {
                 </div>
                 <div className="auth-preview-item">
                   <span className="label">Saved plans</span>
-                  <p className="muted">The latest camp reopens fast, with history and PDF exports still in reach.</p>
+                  <p className="muted">The latest camp reopens fast, with plan history still in reach.</p>
                 </div>
                 <div className="auth-preview-item">
                   <span className="label">Nutrition</span>

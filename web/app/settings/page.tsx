@@ -43,7 +43,6 @@ type ProgrammeControls = {
 type AdminTemplateDraft = {
   welcomeMessage: string;
   planEmail: string;
-  pdfLayout: string;
   coachNotes: string;
 };
 
@@ -116,7 +115,6 @@ const DEFAULT_PROGRAMME_CONTROLS: ProgrammeControls = {
 const DEFAULT_ADMIN_TEMPLATES: AdminTemplateDraft = {
   welcomeMessage: "Welcome to camp. Complete Advanced Intake so your plan starts with the right context.",
   planEmail: "Your updated training plan is ready.",
-  pdfLayout: "Standard branded PDF",
   coachNotes: "Keep review notes short, specific, and tied to athlete risk.",
 };
 
@@ -945,7 +943,6 @@ export default function SettingsPage() {
             <SettingsSummaryItem label="Brand name" value="Not connected" />
             <SettingsSummaryItem label="Logo" value="Not connected" />
             <SettingsSummaryItem label="Contact email" value="Not connected" />
-            <SettingsSummaryItem label="PDF branding" value="Not connected" />
           </div>
           <p className="settings-coming-soon">Organisation settings will appear here once backend organisation records are connected.</p>
         </article>
@@ -1057,14 +1054,6 @@ export default function SettingsPage() {
                 value={adminTemplates.planEmail}
                 onChange={(event) => updateAdminTemplate("planEmail", event.target.value)}
                 rows={3}
-              />
-            </div>
-            <div className="field">
-              <label htmlFor="settingsPdfLayout">PDF layout</label>
-              <input
-                id="settingsPdfLayout"
-                value={adminTemplates.pdfLayout}
-                onChange={(event) => updateAdminTemplate("pdfLayout", event.target.value)}
               />
             </div>
             <div className="field">

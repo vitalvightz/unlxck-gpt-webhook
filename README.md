@@ -25,6 +25,8 @@ The Python planner (`fightcamp/`) reads the athlete's intake profile and builds 
 **Stage 2 — AI finalization**
 The handoff package is sent to OpenAI. Stage 2 currently makes one automated finalizer call. The validator then reviews that output. If validation fails, the plan is marked `review_required` and the validator report plus repair guidance are saved for manual review. Automatic retry is currently disabled unless future code changes explicitly enable it.
 
+Generated plans are saved and displayed in-app as structured text, HTML, and JSON artifacts. New plans are not exported as PDFs, and no PDF renderer or system binary is required to run the app.
+
 ---
 
 ## Repository structure
