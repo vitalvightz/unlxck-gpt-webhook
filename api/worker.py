@@ -7,6 +7,7 @@ from contextlib import suppress
 
 from fightcamp.logging_utils import configure_logging
 
+from .environment import apply_production_environment_defaults
 from .generation_runtime import default_planner, is_stale_job, run_generation_job, utc_now_iso
 from .generation_config import generation_job_stale_after_seconds
 from .stage2_automation import build_default_stage2_automator
@@ -155,6 +156,7 @@ async def _tick(
 
 async def run_worker() -> None:
     configure_logging()
+    apply_production_environment_defaults()
 
     store = SupabaseAppStore.from_env()
     store.validate_runtime_schema()

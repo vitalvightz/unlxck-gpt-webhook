@@ -27,7 +27,7 @@ from fightcamp.stage2_pipeline import build_stage2_retry, review_stage2_output
 from fightcamp.weekly_schedule_view import extract_weekly_schedule
 
 from .auth import AuthService, AuthenticatedUser, SupabaseAuthService, is_auth_api_error
-from .environment import is_production_environment
+from .environment import apply_production_environment_defaults, is_production_environment
 from .generation_config import generation_job_stale_after_seconds
 from .models import (
     ApproveAndResumeGenerationRequest,
@@ -2889,6 +2889,9 @@ def create_app(
 
 
 def _build_runtime_app() -> FastAPI:
+    if os.getenv("SUPABASE_URL") or os.getenv("SUPABASE_SERVICE_ROLE_KEY"):
+        apply_production_environment_defaults()
+
     enable_in_process_generation = is_in_process_generation_enabled()
     logger.info(
         "[app] build_runtime_app:start has_supabase_url=%s has_service_role_key=%s in_process_generation=%s",
