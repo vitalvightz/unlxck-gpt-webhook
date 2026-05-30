@@ -11,7 +11,6 @@ from fastapi.testclient import TestClient
 import pytest
 
 import api.app as app_module
-import api.generation_runtime as generation_runtime
 from api.generation import persistence
 from api.app import create_app
 from api.auth import AuthenticatedUser
