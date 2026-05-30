@@ -31,12 +31,25 @@ The handoff package is sent to OpenAI. Stage 2 currently makes one automated fin
 
 ```
 api/                    FastAPI application
-  app.py                Routes, lifespan, generation job handler
+  app.py                Routes, lifespan, generation job creation, admin endpoints
+  worker.py             Durable generation worker entry point
   auth.py               Supabase token verification
-  store.py              Supabase persistence (profiles, intakes, plans)
+  store.py              Supabase persistence (profiles, intakes, plans, jobs)
   models.py             Pydantic request/response models
   stage2_automation.py  OpenAI Stage 2 call orchestration
   nutrition_workspace.py Nutrition workspace endpoints
+  state_machine.py      Shared plan/job status mapping
+  generation_config.py  Generation timeout and stale-job settings
+  generation_runtime.py Backward-compatible re-export shim for api.generation
+  generation/           Generation runtime package
+    scheduler.py        API-side in-process scheduling gate
+    orchestrator.py     Job claim, Stage 1, Stage 2, persistence orchestration
+    stage1_runner.py    Planner subprocess execution and timeout handling
+    stage2_runner.py    Stage 2 finalization timeout and quota handling
+    persistence.py      Plan and job persistence helpers
+    milestones.py       Progress milestone recording
+    heartbeat.py        Stale-job heartbeat helpers
+    triage.py           Review-required and Stage 2 skip logic
 
 fightcamp/              Plan generation engine
   main.py               Entry point — orchestrates full generation pipeline
@@ -218,16 +231,39 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=
 | GET | `/health` | Health check |
 | GET | `/api/me` | Current athlete profile |
 | PUT | `/api/me` | Update profile |
+| POST | `/api/me/username` | Update username |
+| PATCH | `/api/onboarding/draft` | Save onboarding draft intake data |
 | POST | `/api/plans/generate` | Start plan generation (returns job ID) |
+| GET | `/api/generation-jobs/active` | Current athlete's active generation job |
+| GET | `/api/generation-jobs/latest` | Current athlete's latest generation job |
 | GET | `/api/generation-jobs/{id}` | Poll generation status |
+| POST | `/api/generation-jobs/{id}/retry` | Retry a failed or review-required generation job |
+| GET | `/api/plans/latest` | Get latest plan detail |
+| GET | `/api/plans/latest/weekly-schedule` | Get latest plan weekly schedule |
 | GET | `/api/plans` | List saved plans |
 | GET | `/api/plans/{id}` | Get plan detail |
-| DELETE | `/api/plans/{id}` | Delete plan |
+| GET | `/api/plans/{id}/weekly-schedule` | Get plan weekly schedule |
+| PATCH | `/api/plans/{id}` | Update plan metadata |
 | PATCH | `/api/plans/{id}/name` | Rename plan |
+| DELETE | `/api/plans/{id}` | Delete plan |
 | GET | `/api/nutrition/current` | Get nutrition workspace |
 | PUT | `/api/nutrition/current` | Update nutrition workspace |
 | GET | `/api/admin/athletes` | Admin: list athletes |
+| GET | `/api/admin/athletes/{athlete_id}` | Admin: athlete detail |
+| GET | `/api/admin/athletes/{athlete_id}/generation-jobs` | Admin: athlete generation jobs |
+| PATCH | `/api/admin/athletes/{athlete_id}/latest-intake` | Admin: update latest intake |
+| POST | `/api/admin/athletes/{athlete_id}/plans/generate-from-latest-intake` | Admin: generate from latest intake |
+| GET | `/api/admin/athletes/{athlete_id}/nutrition/current` | Admin: get athlete nutrition workspace |
+| PUT | `/api/admin/athletes/{athlete_id}/nutrition/current` | Admin: update athlete nutrition workspace |
 | GET | `/api/admin/plans` | Admin: list all plans |
+| POST | `/api/admin/plans/{plan_id}/manual-stage2` | Admin: run manual Stage 2 |
+| POST | `/api/admin/plans/{plan_id}/approve` | Admin: approve review-required plan |
+| POST | `/api/admin/plans/{plan_id}/approve-and-resume-generation` | Admin: approve and resume generation |
+| POST | `/api/admin/plans/{plan_id}/reject` | Admin: reject review-required plan |
+| POST | `/api/admin/plans/{plan_id}/archive` | Admin: archive plan |
+| GET | `/api/admin/generation-jobs/triage` | Admin: triage generation jobs |
+| GET | `/api/admin/generation-jobs/active` | Admin: active generation jobs |
+| GET | `/api/admin/diagnostics/state-integrity` | Admin: state integrity diagnostics |
 
 ---
 
