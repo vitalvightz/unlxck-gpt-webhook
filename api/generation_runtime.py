@@ -12,7 +12,7 @@ from typing import Any, Callable
 
 from fastapi import BackgroundTasks, HTTPException, status
 
-from .models import PlanRequest, ProfileUpdateRequest
+from .models import ProfileUpdateRequest
 from .stage2_automation import Stage2AutomationError, Stage2AutomationUnavailableError, Stage2Automator
 from .state_machine import job_status_for_plan_status
 from .store import AppStore
@@ -37,6 +37,11 @@ from .generation.triage import (
 from .generation.persistence import (
     persist_plan_and_finalize,
     persist_triage_review_required,
+)
+from .generation.payloads import parse_plan_request
+from .generation.admin_linkage import (
+    validate_admin_latest_intake_linkage,
+    validate_admin_triage_resume_linkage,
 )
 from .generation.milestones import (
     _MAX_PERSISTED_MILESTONES as _MAX_PERSISTED_MILESTONES,
