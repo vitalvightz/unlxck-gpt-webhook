@@ -578,7 +578,7 @@ export default function SettingsPage() {
             onClick={() => fileInputRef.current?.click()}
           >
             <div className="avatar-upload-circle">
-              {avatarUrl.trim() && isSafeAvatarImageUrl(avatarUrl.trim()) ? (
+              {isSafeAvatarImageUrl(avatarUrl) ? (
                 <img src={avatarUrl.trim()} alt="Profile" className="avatar-preview-img" />
               ) : (
                 <span className="avatar-preview-initials">{initials}</span>
