@@ -1286,3 +1286,41 @@ def test_generation_stale_timeout_falls_back_to_worker_env_when_app_env_unset(mo
     cutoff = datetime.fromisoformat(cutoff_iso)
     age = (datetime.now(timezone.utc) - cutoff).total_seconds()
     assert 410 <= age <= 430
+
+
+def test_profile_bootstrap_logs_omit_email(caplog):
+    store = _make_store(admin_emails=set())
+    user = _user("private@example.com", user_id="athlete-safe-log")
+
+    with caplog.at_level("INFO", logger="api.store"):
+        store._log_profile_event(operation="ensure_start", user=user)
+
+    assert "private@example.com" not in caplog.text
+    assert "email=" not in caplog.text
+    assert "athlete_id=athlete-safe-log" in caplog.text
+    record = caplog.records[-1]
+    assert record.athlete_id == "athlete-safe-log"
+    assert record.auth_event == "profile_ensure_start"
+
+
+def test_profile_upsert_failure_logs_sanitized_error(caplog):
+    store = _make_store(admin_emails=set())
+    user = _user("private@example.com", user_id="athlete-safe-log")
+    raw_error = (
+        "connection failed email=private@example.com "
+        'full_name="Private User" '
+        "Authorization=Bearer abcdefghijklmnopqrstuvwxyz123456 "
+        "request_payload={'injuries': ['private note']}"
+    )
+    store.client.table.return_value.upsert.return_value.execute.side_effect = httpx.ConnectError(raw_error)
+
+    with caplog.at_level("WARNING", logger="api.store"), pytest.raises(httpx.ConnectError):
+        store._upsert_profile_with_retry(user=user, payload={"id": user.user_id}, attempts=1)
+
+    assert "error=" in caplog.text
+    assert "ConnectError" in caplog.text
+    assert "private@example.com" not in caplog.text
+    assert "Private User" not in caplog.text
+    assert "abcdefghijklmnopqrstuvwxyz123456" not in caplog.text
+    assert "private note" not in caplog.text
+    assert "request_payload=[redacted_payload]" in caplog.text

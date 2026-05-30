@@ -700,3 +700,35 @@ def test_non_production_cors_allows_localhost(monkeypatch: pytest.MonkeyPatch):
         auth_service=FakeAuthService({}),
         stage2_automator=FakeStage2Automator(),
     )
+
+
+def test_auth_success_log_uses_safe_identifiers(caplog):
+    client, _, _ = _build_client()
+
+    with caplog.at_level("INFO", logger="api.app"):
+        response = client.get("/api/me", headers={"Authorization": "Bearer athlete-token"})
+
+    assert response.status_code == 200
+    messages = [record.getMessage() for record in caplog.records]
+    assert any("token_resolved" in message for message in messages)
+    assert "ari@example.com" not in caplog.text
+    assert "email=" not in caplog.text
+    token_record = next(record for record in caplog.records if "token_resolved" in record.getMessage())
+    assert token_record.athlete_id == "athlete-1"
+    assert token_record.auth_event == "token_resolved"
+    assert token_record.status == "success"
+
+
+def test_request_logs_omit_personal_request_body_fields(caplog):
+    client, _, _ = _build_client()
+
+    with caplog.at_level("INFO", logger="api.app"):
+        response = client.post(
+            "/api/plans/generate",
+            json={"email": "private@example.com", "full_name": "Private User"},
+        )
+
+    assert response.status_code == 401
+    assert "private@example.com" not in caplog.text
+    assert "full_name" not in caplog.text
+    assert "authentication_required" in caplog.text
