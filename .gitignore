@@ -21,3 +21,5 @@ web/.env.sentry-build-plugin
 
 # Generated artifacts (rebuild with tools/split_rehab_bank.py)
 data/rehab_bank_split.json
+
+supabase/.temp/
