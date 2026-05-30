@@ -12,6 +12,7 @@ import pytest
 
 import api.app as app_module
 import api.generation_runtime as generation_runtime
+from api.generation import persistence
 from api.app import create_app
 from api.auth import AuthenticatedUser
 from api.generation_runtime import run_generation_job, schedule_generation_job_if_needed, should_skip_stage2
@@ -3523,7 +3524,7 @@ def test_runtime_generation_emits_plan_saved_and_marks_completed_terminal():
 
 
 def test_runtime_generation_cleanup_failure_does_not_block_terminal_status(monkeypatch):
-    monkeypatch.setattr(generation_runtime, "_POST_PERSIST_CLEANUP_TIMEOUT_SECONDS", 0.01)
+    monkeypatch.setattr(persistence, "_POST_PERSIST_CLEANUP_TIMEOUT_SECONDS", 0.01)
     store = FakeStore()
     athlete = AuthenticatedUser(
         user_id="athlete-1",
