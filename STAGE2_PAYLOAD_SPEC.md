@@ -19,7 +19,7 @@ For the current backend flow, Stage 1 should return a complete Stage 2 handoff p
 - `plan_text`
 - `why_log`
 - `coach_notes`
-- `pdf_url`
+- `pdf_url` (legacy compatibility field; always `null` for new plans)
 - `stage2_payload`
 - `planning_brief`
 - `stage2_handoff_text`
@@ -28,7 +28,7 @@ Suggested top-level shape:
 
 ```json
 {
-  "pdf_url": "string",
+  "pdf_url": null,
   "why_log": {},
   "coach_notes": "string",
   "plan_text": "string",

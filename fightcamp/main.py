@@ -13,7 +13,6 @@ from .plan_pipeline import (
     _filter_mindset_blocks,
     build_runtime_context,
     build_stage2_outputs,
-    export_plan_pdf,
     generate_plan_blocks,
     prime_plan_banks,
     render_plan_bundle,
@@ -25,8 +24,6 @@ from .plan_rendering_utils import (
 )
 from .strength import get_exercise_bank as get_strength_exercise_bank
 
-# PDF export is off by default; set UNLXCK_ENABLE_PLAN_PDF=1 to enable.
-_PDF_ENABLED_BY_DEFAULT: bool = os.environ.get("UNLXCK_ENABLE_PLAN_PDF", "0") == "1"
 
 # Keep historical imports from fightcamp.main stable for tests and scripts.
 __all__ = [
@@ -172,7 +169,6 @@ exercise_bank = _LazyListProxy(get_strength_exercise_bank)
 def generate_plan_sync(
     data: dict,
     *,
-    generate_pdf: bool | None = None,
     progress_callback: ProgressCallback | None = None,
 ):
     """Generate a fight-camp plan.
@@ -181,11 +177,6 @@ def generate_plan_sync(
     ----------
     data:
         Raw planner bridge payload.
-    generate_pdf:
-        Whether to render and upload a PDF.  When *None* (the default) the
-        value of the ``UNLXCK_ENABLE_PLAN_PDF`` environment variable is used
-        (defaults to ``False``).  Pass ``True`` explicitly to force PDF
-        generation regardless of the environment flag.
     progress_callback:
         Optional ``(code, label, detail, meta)`` callable invoked at each
         semantic milestone (intake parsed, banks primed, strength scored,
@@ -195,9 +186,6 @@ def generate_plan_sync(
     configure_logging()
     logger = logging.getLogger(__name__)
     timings: dict[str, float] = {}
-
-    if generate_pdf is None:
-        generate_pdf = _PDF_ENABLED_BY_DEFAULT
 
     def _record_timing(label: str, start: float) -> None:
         elapsed = perf_counter() - start
@@ -379,8 +367,8 @@ def generate_plan_sync(
         "Stage 1 plan rendered with weekly structure and coach notes.",
     )
 
-    # Build Stage 2 outputs before any optional PDF work so they are never
-    # gated behind the (potentially slow) export step.
+    # Build Stage 2 outputs immediately after rendering so the structured
+    # handoff remains available to the finalizer.
     timer_start = perf_counter()
     _safe_emit(
         progress_callback,
@@ -424,17 +412,7 @@ def generate_plan_sync(
         "Planning brief and candidate pools packaged for the AI finalizer.",
     )
 
-    # PDF generation is optional and off by default.
-    if generate_pdf:
-        pdf_url: str | None = export_plan_pdf(
-            full_name=plan_input.full_name,
-            html=rendered.html,
-            record_timing=_record_timing,
-            logger=logger,
-        )
-    else:
-        logger.info("[timing] pdf_export=skipped (generate_pdf=False)")
-        pdf_url = None
+    pdf_url: str | None = None
 
     if timings:
         slowest_label = max(timings, key=timings.get)
@@ -466,14 +444,12 @@ def generate_plan_sync(
 async def generate_plan(
     data: dict,
     *,
-    generate_pdf: bool | None = None,
     progress_callback: ProgressCallback | None = None,
 ):
     import asyncio
     return await asyncio.to_thread(
         generate_plan_sync,
         data,
-        generate_pdf=generate_pdf,
         progress_callback=progress_callback,
     )
 
@@ -498,8 +474,8 @@ def main():
 
     with open(args.input, "r", encoding="utf-8") as f:
         data = json.load(f)
-    result = generate_plan_sync(data)
-    print(f"::notice title=Plan PDF::{result.get('pdf_url')}")
+    generate_plan_sync(data)
+    print("::notice title=Plan Generated::Plan generated in app")
 
 
 if __name__ == "__main__":

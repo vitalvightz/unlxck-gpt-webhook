@@ -1,17 +1,8 @@
-"""HTML export builder for fight camp plans.
+"""HTML builder for fight camp plans.
 
-This module mirrors the style used for the elite mental plan export. It
-constructs PDFKit-ready HTML with strict spacing and semantic tags. The resulting
-HTML is converted to PDF and, if Supabase credentials are supplied, the PDF is
-uploaded directly to Supabase Storage.
-
-Environment Variables
----------------------
-SUPABASE_URL is required unless ALLOW_DEFAULT_SUPABASE_URL=1 is explicitly set.
-For authentication, set either SUPABASE_SERVICE_ROLE_KEY or
-SUPABASE_PUBLISHABLE_KEY. When credentials are provided, the
-``upload_to_supabase`` function will place the generated PDF into the
-``fight-plans`` bucket. No raw HTML is stored.
+This module renders the structured plan content used by the app. Plans are
+stored and displayed in-app as text, HTML, and JSON artifacts rather than PDF
+exports.
 """
 
 from __future__ import annotations
@@ -23,7 +14,6 @@ import importlib
 import logging
 from typing import Optional
 
-import os
 import re
 import unicodedata
 
@@ -155,7 +145,6 @@ def _load_optional_module(module_name: str):
 
 
 markdown2 = _load_optional_module("markdown2")
-pdfkit = _load_optional_module("pdfkit")
 
 # Map of emoji and symbols that should be stripped from output
 _CHAR_MAP = {
@@ -514,106 +503,3 @@ def build_html_document(
     html = "\n\n".join(lines)
 
     return html
-
-
-def html_to_pdf(html: str, output_path: str) -> Optional[str]:
-    """Convert HTML string to PDF if pdfkit is installed."""
-
-    if not pdfkit:
-        _log_export_error("pdfkit_unavailable", stage="pdf_export", output_path=output_path)
-        return None
-    try:  # pragma: no cover - external call
-        options = {"encoding": "UTF-8"}
-        html_utf8 = html.encode("utf-8").decode("utf-8")
-        pdfkit.from_string(html_utf8, output_path, options=options)
-        return output_path
-    except Exception:  # pragma: no cover - external renderer failures are environment dependent
-        logger.exception(
-            "[export-error] code=pdf_render_failed stage=pdf_export output_path=%s",
-            output_path,
-        )
-        return None
-
-
-DEFAULT_SUPABASE_URL = "https://leienvqynijrgghhzczt.supabase.co"
-
-
-def _resolve_supabase_url() -> str:
-    url = os.environ.get("SUPABASE_URL", "").strip()
-    if not url:
-        if os.environ.get("ALLOW_DEFAULT_SUPABASE_URL", "0") == "1":
-            return DEFAULT_SUPABASE_URL
-        _log_export_error("supabase_url_missing", stage="upload")
-        raise RuntimeError(
-            "Missing SUPABASE_URL. Set SUPABASE_URL or ALLOW_DEFAULT_SUPABASE_URL=1."
-        )
-    if url.upper().startswith("SUPABASE_URL="):
-        url = url.split("=", 1)[1].strip()
-    return url.rstrip("/")
-
-
-def upload_to_supabase(pdf_path: str, bucket: str = "fight-plans") -> str:
-    """Upload a PDF to Supabase Storage and return the public URL."""
-
-    url = _resolve_supabase_url()
-    key = os.environ.get("SUPABASE_SERVICE_ROLE_KEY") or os.environ.get("SUPABASE_PUBLISHABLE_KEY")
-    if not key:
-        _log_export_error(
-            "supabase_credentials_missing",
-            stage="upload",
-            bucket=bucket,
-            pdf_path=pdf_path,
-        )
-        raise RuntimeError(
-            "Missing Supabase credentials. Set SUPABASE_SERVICE_ROLE_KEY or SUPABASE_PUBLISHABLE_KEY."
-        )
-
-    import mimetypes
-    from urllib import request
-    from urllib.error import HTTPError
-    import os as _os
-
-    filename = _os.path.basename(pdf_path)
-    storage_path = f"{url}/storage/v1/object/{bucket}/{filename}"
-
-    with open(pdf_path, "rb") as f:
-        data = f.read()
-
-    req = request.Request(storage_path, data=data, method="POST")
-    req.add_header("Authorization", f"Bearer {key}")
-    req.add_header("apikey", key)
-    req.add_header("Content-Type", mimetypes.guess_type(filename)[0] or "application/pdf")
-    req.add_header("x-upsert", "true")
-
-    try:
-        with request.urlopen(req) as r:
-            if r.status not in (200, 201):
-                _log_export_error(
-                    "supabase_upload_unexpected_status",
-                    stage="upload",
-                    bucket=bucket,
-                    pdf_path=pdf_path,
-                    status=r.status,
-                )
-                raise RuntimeError(f"Upload failed: HTTP {r.status}")
-    except HTTPError as e:
-        logger.exception(
-            "[export-error] code=supabase_upload_http_error stage=upload bucket=%s pdf_path=%s status=%s",
-            bucket,
-            pdf_path,
-            getattr(e, "code", "unknown"),
-        )
-        raise RuntimeError("Supabase upload failed") from e
-    except Exception:
-        logger.exception(
-            "[export-error] code=supabase_upload_failed stage=upload bucket=%s pdf_path=%s",
-            bucket,
-            pdf_path,
-        )
-        raise
-
-    return f"{url}/storage/v1/object/public/{bucket}/{filename}"
-
-
-
-

@@ -220,7 +220,7 @@ def _base_result(stage1_result: dict[str, Any], *, draft_plan_text: str) -> dict
     return {
         **stage1_result,
         "draft_plan_text": draft_plan_text,
-        # The Stage 1 PDF reflects the raw draft, so do not publish it as the final athlete artifact.
+        # Keep the legacy response field null; plans are displayed in-app, not exported.
         "pdf_url": None,
         "stage2_retry_text": "",
         "stage2_validator_report": {},

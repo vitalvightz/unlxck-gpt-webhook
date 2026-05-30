@@ -394,11 +394,6 @@ function PlanCard({
             <button type="button" className="ghost-button danger-button" onClick={handleDeleteRequest} disabled={isActionPending || isRenaming}>
               {pendingAction === "delete" ? "Deleting..." : "Delete"}
             </button>
-            {plan.pdf_url ? (
-              <Link href={plan.pdf_url} target="_blank" rel="noreferrer" className="secondary-button">
-                Open PDF
-              </Link>
-            ) : null}
           </div>
         </div>
         {message || (error && !isDeleteConfirmOpen) ? (
@@ -693,7 +688,7 @@ function LatestPlanCard({
               <div className="empty-state-example plans-dashboard-empty-example">
                 <p className="label">What appears here next</p>
                 <p className="empty-state-example-body">
-                  Once generated, your latest camp opens here with fight date, status, PDF export, and rename or delete actions.
+                  Once generated, your latest camp opens here with fight date, status, and rename or delete actions.
                 </p>
               </div>
             ) : null}
@@ -737,11 +732,6 @@ function LatestPlanCard({
             <button type="button" className="ghost-button danger-button" onClick={handleDeleteRequest} disabled={isActionPending || isRenaming}>
               {pendingAction === "delete" ? "Deleting..." : "Delete"}
             </button>
-            {plan.pdf_url ? (
-              <Link href={plan.pdf_url} target="_blank" rel="noreferrer" className="secondary-button">
-                Open PDF
-              </Link>
-            ) : null}
           </div>
         ) : null}
 

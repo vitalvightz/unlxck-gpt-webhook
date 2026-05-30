@@ -1468,11 +1468,6 @@ export function PlanViewer({
               View athlete profile
             </Link>
           ) : null}
-          {plan.outputs.pdf_url ? (
-            <Link href={plan.outputs.pdf_url} target="_blank" rel="noreferrer" className="cta">
-              Open PDF
-            </Link>
-          ) : null}
         </div>
         {planActionMessage ? <div className="success-banner">{planActionMessage}</div> : null}
         {planActionError ? <div className="error-banner">{planActionError}</div> : null}
