@@ -388,7 +388,7 @@ export default function SettingsPage() {
           full_name: fullName,
           athlete_timezone: detectDeviceTimeZone() || me?.profile.athlete_timezone || "",
           appearance_mode: appearanceMode,
-          avatar_url: avatarUrl.trim() && isSafeAvatarImageUrl(avatarUrl.trim()) ? avatarUrl.trim() : null,
+          avatar_url: isSafeAvatarImageUrl(avatarUrl) ? avatarUrl.trim() : null,
         });
         replaceMe(updatedMe);
         setMessage("Account settings updated.");
