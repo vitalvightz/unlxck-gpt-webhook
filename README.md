@@ -205,7 +205,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=
   `stage2_status`, `stage2_attempt_count`, `parsing_metadata`.
 - If the schema is out of date, fix the schema — do not enable the legacy fallback.
 - `UNLXCK_ALLOW_LEGACY_PLAN_SCHEMA_FALLBACK=1` is a **development-only** escape hatch. It allows the API to keep running against an older `plans` table by silently dropping the runtime columns above. **Never** set this in production: the API explicitly ignores the flag when `APP_ENV`, `ENVIRONMENT`, `UNLXCK_ENV`, or `NODE_ENV` is `production`/`prod`/`live`, and a schema mismatch will fail the readiness check with a loud error so the misconfiguration is visible.
-- Set `APP_ENV=production` (or `ENVIRONMENT=production`) on every production deploy so the legacy fallback cannot run by accident.
+- Set `APP_ENV=production` and `UNLXCK_ENV=production` on every production deploy so production-only guards cannot be missed by accident.
 
 **Frontend (Vercel)**
 
