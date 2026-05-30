@@ -12,6 +12,19 @@ except ImportError:  # pragma: no cover - optional dependency in test environmen
     structlog = None
 
 
+_SAFE_LOG_EXTRA_FIELDS = frozenset(
+    {
+        "request_id",
+        "athlete_id",
+        "session_id",
+        "plan_id",
+        "auth_event",
+        "status",
+        "error_code",
+    }
+)
+
+
 class _JsonLogFormatter(logging.Formatter):
     def format(self, record: logging.LogRecord) -> str:
         payload = {
@@ -20,6 +33,9 @@ class _JsonLogFormatter(logging.Formatter):
             "logger": record.name,
             "event": record.getMessage(),
         }
+        for field in _SAFE_LOG_EXTRA_FIELDS:
+            if hasattr(record, field):
+                payload[field] = getattr(record, field)
         if record.exc_info:
             payload["exception"] = self.formatException(record.exc_info)
         return json.dumps(payload, default=str)

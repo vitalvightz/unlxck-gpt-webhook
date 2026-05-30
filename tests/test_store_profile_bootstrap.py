@@ -1286,3 +1286,18 @@ def test_generation_stale_timeout_falls_back_to_worker_env_when_app_env_unset(mo
     cutoff = datetime.fromisoformat(cutoff_iso)
     age = (datetime.now(timezone.utc) - cutoff).total_seconds()
     assert 410 <= age <= 430
+
+
+def test_profile_bootstrap_logs_omit_email(caplog):
+    store = _make_store(admin_emails=set())
+    user = _user("private@example.com", user_id="athlete-safe-log")
+
+    with caplog.at_level("INFO", logger="api.store"):
+        store._log_profile_event(operation="ensure_start", user=user)
+
+    assert "private@example.com" not in caplog.text
+    assert "email=" not in caplog.text
+    assert "athlete_id=athlete-safe-log" in caplog.text
+    record = caplog.records[-1]
+    assert record.athlete_id == "athlete-safe-log"
+    assert record.auth_event == "profile_ensure_start"

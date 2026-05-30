@@ -1311,12 +1311,15 @@ def create_app(
         bind_log_context(request_id=request_id, method=request.method, path=request.url.path)
 
         logger.info(
-            "[http] request:start request_id=%s method=%s path=%s has_query=%s client=%s",
+            "[http] request:start request_id=%s method=%s path=%s has_query=%s",
             request_id,
             request.method,
             request.url.path,
             bool(request.url.query),
-            request.client.host if request.client else "unknown",
+            extra={
+                "request_id": request_id,
+                "status": "started",
+            },
         )
 
         try:
@@ -1330,18 +1333,27 @@ def create_app(
                 request.url.path,
                 response.status_code,
                 duration_ms,
+                extra={
+                    "request_id": request_id,
+                    "status": response.status_code,
+                },
             )
             return response
         except HTTPException as exc:
             duration_ms = round((time.perf_counter() - started) * 1000, 2)
             logger.warning(
-                "[http] request:http_exception request_id=%s method=%s path=%s status=%s duration_ms=%s detail=%r",
+                "[http] request:http_exception request_id=%s method=%s path=%s status=%s duration_ms=%s error_code=%s",
                 request_id,
                 request.method,
                 request.url.path,
                 exc.status_code,
                 duration_ms,
-                exc.detail,
+                "http_exception",
+                extra={
+                    "request_id": request_id,
+                    "status": exc.status_code,
+                    "error_code": "http_exception",
+                },
             )
             return JSONResponse(
                 status_code=exc.status_code,
@@ -1354,11 +1366,17 @@ def create_app(
         except Exception:
             duration_ms = round((time.perf_counter() - started) * 1000, 2)
             logger.exception(
-                "[http] request:exception request_id=%s method=%s path=%s duration_ms=%s",
+                "[http] request:exception request_id=%s method=%s path=%s duration_ms=%s error_code=%s",
                 request_id,
                 request.method,
                 request.url.path,
                 duration_ms,
+                "unhandled_exception",
+                extra={
+                    "request_id": request_id,
+                    "status": status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    "error_code": "unhandled_exception",
+                },
             )
             return JSONResponse(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -1399,55 +1417,150 @@ def create_app(
         return bool(request.app.state.enable_in_process_generation)
 
     def require_user(
+        request: Request,
         credentials: HTTPAuthorizationCredentials | None = Depends(security),
         auth: AuthService = Depends(get_auth_service),
     ) -> AuthenticatedUser:
+        request_id = getattr(request.state, "request_id", "")
         if credentials is None or credentials.scheme.lower() != "bearer":
-            logger.warning("[auth] missing_or_invalid_bearer_token")
+            logger.warning(
+                "[auth] missing_or_invalid_bearer_token request_id=%s auth_event=%s status=%s error_code=%s",
+                request_id,
+                "missing_or_invalid_bearer_token",
+                "failure",
+                "authentication_required",
+                extra={
+                    "request_id": request_id,
+                    "auth_event": "missing_or_invalid_bearer_token",
+                    "status": "failure",
+                    "error_code": "authentication_required",
+                },
+            )
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="authentication required",
             )
         try:
             user = auth.get_user_from_token(credentials.credentials)
-            logger.info("[auth] token_resolved user_id=%s email=%s", user.user_id, user.email)
+            logger.info(
+                "[auth] token_resolved request_id=%s athlete_id=%s auth_event=%s status=%s",
+                request_id,
+                user.user_id,
+                "token_resolved",
+                "success",
+                extra={
+                    "request_id": request_id,
+                    "athlete_id": user.user_id,
+                    "auth_event": "token_resolved",
+                    "status": "success",
+                },
+            )
             return user
         except HTTPException as exc:
-            logger.warning("[auth] token_resolution_http_error status=%s", exc.status_code)
+            logger.warning(
+                "[auth] token_resolution_http_error request_id=%s status=%s auth_event=%s error_code=%s",
+                request_id,
+                exc.status_code,
+                "token_resolution_http_error",
+                "auth_http_error",
+                extra={
+                    "request_id": request_id,
+                    "auth_event": "token_resolution_http_error",
+                    "status": exc.status_code,
+                    "error_code": "auth_http_error",
+                },
+            )
             raise
         except Exception as exc:
             if is_auth_api_error(exc):
                 logger.warning(
-                    "[auth] token_resolution_invalid_token error_class=%s error=%s",
+                    "[auth] token_resolution_invalid_token request_id=%s auth_event=%s status=%s error_code=%s error_class=%s",
+                    request_id,
+                    "token_resolution_invalid_token",
+                    status.HTTP_401_UNAUTHORIZED,
+                    "invalid_authentication_token",
                     exc.__class__.__module__ + "." + exc.__class__.__name__,
-                    exc,
+                    extra={
+                        "request_id": request_id,
+                        "auth_event": "token_resolution_invalid_token",
+                        "status": status.HTTP_401_UNAUTHORIZED,
+                        "error_code": "invalid_authentication_token",
+                    },
                 )
                 raise HTTPException(
                     status_code=status.HTTP_401_UNAUTHORIZED,
                     detail="invalid authentication token",
                 ) from exc
-            logger.exception("[auth] token_resolution_failed")
+            logger.exception(
+                "[auth] token_resolution_failed request_id=%s auth_event=%s status=%s error_code=%s",
+                request_id,
+                "token_resolution_failed",
+                "failure",
+                "auth_resolution_failed",
+                extra={
+                    "request_id": request_id,
+                    "auth_event": "token_resolution_failed",
+                    "status": "failure",
+                    "error_code": "auth_resolution_failed",
+                },
+            )
             raise
 
     def require_profile(
+        request: Request,
         user: AuthenticatedUser = Depends(require_user),
         store: AppStore = Depends(get_store),
     ) -> ProfileRecord:
+        request_id = getattr(request.state, "request_id", "")
         try:
             profile = _map_profile_row(store.ensure_profile(user))
-            logger.info("[auth] profile_resolved athlete_id=%s role=%s", profile.athlete_id, profile.role)
+            logger.info(
+                "[auth] profile_resolved request_id=%s athlete_id=%s auth_event=%s status=%s",
+                request_id,
+                profile.athlete_id,
+                "profile_resolved",
+                "success",
+                extra={
+                    "request_id": request_id,
+                    "athlete_id": profile.athlete_id,
+                    "auth_event": "profile_resolved",
+                    "status": "success",
+                },
+            )
             return profile
         except HTTPException as exc:
             logger.warning(
-                "[auth] profile_resolution_http_error user_id=%s email=%s status_code=%s detail=%s",
+                "[auth] profile_resolution_http_error request_id=%s athlete_id=%s status=%s auth_event=%s error_code=%s",
+                request_id,
                 user.user_id,
-                user.email,
                 exc.status_code,
-                exc.detail,
+                "profile_resolution_http_error",
+                "profile_http_error",
+                extra={
+                    "request_id": request_id,
+                    "athlete_id": user.user_id,
+                    "auth_event": "profile_resolution_http_error",
+                    "status": exc.status_code,
+                    "error_code": "profile_http_error",
+                },
             )
             raise
         except Exception:
-            logger.exception("[auth] profile_resolution_failed user_id=%s email=%s", user.user_id, user.email)
+            logger.exception(
+                "[auth] profile_resolution_failed request_id=%s athlete_id=%s auth_event=%s status=%s error_code=%s",
+                request_id,
+                user.user_id,
+                "profile_resolution_failed",
+                "failure",
+                "profile_resolution_failed",
+                extra={
+                    "request_id": request_id,
+                    "athlete_id": user.user_id,
+                    "auth_event": "profile_resolution_failed",
+                    "status": "failure",
+                    "error_code": "profile_resolution_failed",
+                },
+            )
             raise
 
     def require_admin(
@@ -2729,9 +2842,15 @@ def create_app(
             request_body = PlanRequest.model_validate(latest_intake["intake"])
         except ValidationError as exc:
             logger.warning(
-                "[admin] generate_from_latest_intake:invalid_intake athlete_id=%s errors=%s",
+                "[admin] generate_from_latest_intake:invalid_intake athlete_id=%s error_code=%s validation_error_count=%s",
                 athlete_id,
-                exc.errors(),
+                "invalid_intake",
+                len(exc.errors()),
+                extra={
+                    "athlete_id": athlete_id,
+                    "status": status.HTTP_409_CONFLICT,
+                    "error_code": "invalid_intake",
+                },
             )
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,

@@ -549,11 +549,15 @@ class SupabaseAppStore:
         details = " ".join(f"{key}=%r" % value for key, value in sorted(fields.items()))
         suffix = f" {details}" if details else ""
         logger.info(
-            "[store] profile:%s user_id=%s email=%s%s",
+            "[store] profile:%s athlete_id=%s%s",
             operation,
             user.user_id,
-            user.email,
             suffix,
+            extra={
+                "athlete_id": user.user_id,
+                "auth_event": f"profile_{operation}",
+                "status": fields.get("status") or "ok",
+            },
         )
 
     def _is_transient_profile_error(self, exc: Exception) -> bool:
@@ -813,13 +817,18 @@ class SupabaseAppStore:
             except _STORE_CLIENT_ERRORS as exc:
                 transient = self._is_transient_profile_error(exc)
                 logger.warning(
-                    "[store] profile:upsert_failure user_id=%s email=%s attempt=%s transient=%s error_type=%s error=%s",
+                    "[store] profile:upsert_failure athlete_id=%s attempt=%s transient=%s error_type=%s error_code=%s",
                     user.user_id,
-                    user.email,
                     attempt,
                     transient,
                     type(exc).__name__,
-                    exc,
+                    "profile_upsert_failure",
+                    extra={
+                        "athlete_id": user.user_id,
+                        "auth_event": "profile_upsert_failure",
+                        "status": "failure",
+                        "error_code": "profile_upsert_failure",
+                    },
                 )
                 if not transient or attempt >= attempts:
                     raise
@@ -871,10 +880,16 @@ class SupabaseAppStore:
                 self._upsert_profile_with_retry(user=user, payload=payload)
             except _STORE_CLIENT_ERRORS as exc:
                 logger.exception(
-                    "[store] profile:ensure_upsert_exception user_id=%s email=%s error_type=%s",
+                    "[store] profile:ensure_upsert_exception athlete_id=%s error_type=%s error_code=%s",
                     user.user_id,
-                    user.email,
                     type(exc).__name__,
+                    "profile_ensure_upsert_exception",
+                    extra={
+                        "athlete_id": user.user_id,
+                        "auth_event": "profile_ensure_upsert_exception",
+                        "status": "failure",
+                        "error_code": "profile_ensure_upsert_exception",
+                    },
                 )
                 fallback = self._get_profile_by_id(user.user_id)
                 if fallback:
@@ -894,10 +909,16 @@ class SupabaseAppStore:
             raise
         except _STORE_CLIENT_ERRORS as exc:
             logger.exception(
-                "[store] ensure_profile:exception athlete_id=%s email=%s error_type=%s",
+                "[store] ensure_profile:exception athlete_id=%s error_type=%s error_code=%s",
                 user.user_id,
-                user.email,
                 type(exc).__name__,
+                "ensure_profile_exception",
+                extra={
+                    "athlete_id": user.user_id,
+                    "auth_event": "ensure_profile_exception",
+                    "status": "failure",
+                    "error_code": "ensure_profile_exception",
+                },
             )
             if isinstance(exc, _TRANSIENT_SUPABASE_ERRORS):
                 raise HTTPException(
