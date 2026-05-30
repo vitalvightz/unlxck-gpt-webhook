@@ -9,7 +9,7 @@ from fastapi import BackgroundTasks, HTTPException
 import api.app as app_module
 from api import generation_runtime
 from api import worker as worker_module
-from api.generation import stage1_runner
+from api.generation import persistence, stage1_runner
 from api.generation_runtime import (
     _invoke_planner,
     _stage1_mp_start_method,
@@ -900,7 +900,7 @@ def test_cleanup_failure_after_terminal_persist_preserves_plan_and_job():
 
 
 def test_cleanup_timeout_after_terminal_persist_preserves_plan_and_job(monkeypatch):
-    monkeypatch.setattr(generation_runtime, "_POST_PERSIST_CLEANUP_TIMEOUT_SECONDS", 0.05)
+    monkeypatch.setattr(persistence, "_POST_PERSIST_CLEANUP_TIMEOUT_SECONDS", 0.05)
     store = FakeStore()
     seed_default_profiles(store)
     request_payload = _build_request().model_dump(mode="json")
