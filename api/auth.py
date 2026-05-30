@@ -8,7 +8,7 @@ from typing import Any, Protocol
 
 import httpx
 from fastapi import HTTPException, status
-from supabase import Client, create_client
+from supabase import Client, ClientOptions, create_client
 
 from .environment import is_production_environment
 
@@ -77,9 +77,13 @@ class SupabaseAuthService:
         if not url:
             raise RuntimeError("SUPABASE_URL is required")
 
+        # Disable HTTP/2 to avoid RemoteProtocolError (GOAWAY frames) when
+        # Supabase terminates a multiplexed connection after several streams.
+        _client_opts = ClientOptions(httpx_client=httpx.Client(http2=False))
+
         if service_role_key:
             logger.info("[auth] initializing with SUPABASE_SERVICE_ROLE_KEY has_url=%s", bool(url))
-            return cls(create_client(url, service_role_key))
+            return cls(create_client(url, service_role_key, options=_client_opts))
 
         if allow_anon_fallback and is_production_environment():
             logger.error(
@@ -98,7 +102,7 @@ class SupabaseAuthService:
                 "ALLOW_SUPABASE_ANON_AUTH_FALLBACK is enabled has_url=%s",
                 bool(url),
             )
-            return cls(create_client(url, anon_key))
+            return cls(create_client(url, anon_key, options=_client_opts))
 
         raise RuntimeError(
             "SUPABASE_SERVICE_ROLE_KEY is required. "

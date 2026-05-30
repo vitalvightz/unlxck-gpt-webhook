@@ -3,6 +3,7 @@ from __future__ import annotations
 import copy
 import math
 import os
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from uuid import uuid4
@@ -37,6 +38,19 @@ def _now() -> str:
 
 def _status_transition_error(detail: str) -> HTTPException:
     return HTTPException(status_code=status.HTTP_409_CONFLICT, detail=detail)
+
+
+def _filter_admin_rows(rows: list[dict], q: str | None, columns: tuple[str, ...]) -> list[dict]:
+    """Mirror the server-side ``q`` search the real store performs in Postgres:
+    a case-insensitive substring match across the given text columns."""
+    term = " ".join((q or "").split()).lower()
+    if not term:
+        return rows
+    return [
+        row
+        for row in rows
+        if any(term in str(row.get(column) or "").lower() for column in columns)
+    ]
 
 
 @dataclass
@@ -596,6 +610,23 @@ class FakeStore:
         rows.sort(key=lambda row: str(row.get("created_at") or ""), reverse=True)
         return rows[:limit]
 
+    def list_admin_active_generation_jobs(self, *, limit: int = 50) -> list[dict]:
+        rows = []
+        for job in self.generation_jobs.values():
+            status_value = str(job.get("status") or "").strip().lower()
+            if status_value not in {"queued", "running"}:
+                continue
+            profile = self.profiles.get(str(job.get("athlete_id") or ""), {})
+            rows.append({
+                **dict(job),
+                "profiles": {
+                    "email": profile.get("email", ""),
+                    "full_name": profile.get("full_name", ""),
+                },
+            })
+        rows.sort(key=lambda row: str(row.get("created_at") or ""), reverse=True)
+        return rows[:limit]
+
     def list_orphaned_terminal_generation_jobs(self, *, limit: int = 500) -> list[dict]:
         rows: list[dict] = []
         for job in self.generation_jobs.values():
@@ -771,15 +802,16 @@ class FakeStore:
         row["stage2_status"] = stage2_status
         return row
 
-    def list_admin_plans(self, *, limit: int = 50, offset: int = 0) -> list[dict]:
+    def list_admin_plans(self, *, limit: int = 50, offset: int = 0, q: str | None = None) -> list[dict]:
         rows = []
         for plan in self.plans.values():
             profile = self.profiles[plan["athlete_id"]]
             rows.append({**plan, "profiles": {"email": profile["email"], "full_name": profile["full_name"]}})
         rows.sort(key=lambda row: row["created_at"], reverse=True)
+        rows = _filter_admin_rows(rows, q, ("plan_name", "full_name", "status"))
         return rows[offset:offset + limit]
 
-    def list_admin_athletes(self, *, limit: int = 50, offset: int = 0) -> list[dict]:
+    def list_admin_athletes(self, *, limit: int = 50, offset: int = 0, q: str | None = None) -> list[dict]:
         rows = []
         for profile in self.profiles.values():
             plans = self.list_user_plans(profile["id"])
@@ -789,6 +821,9 @@ class FakeStore:
                 "latest_plan_created_at": plans[-1]["created_at"] if plans else None,
             })
         rows.sort(key=lambda row: row["updated_at"], reverse=True)
+        rows = _filter_admin_rows(
+            rows, q, ("email", "full_name", "username", "professional_status", "record_summary")
+        )
         return rows[offset:offset + limit]
 
     def get_admin_athlete(self, athlete_id: str) -> dict | None:
@@ -811,12 +846,17 @@ class FakeStage2Automator:
     result: dict | None = None
     error: Exception | None = None
     calls: list[dict] = field(default_factory=list)
+    # Tests pass a zero-arg callable when each invocation should produce a fresh
+    # finalized payload (e.g. distinct ids per call). When set, it takes
+    # precedence over the static ``result``.
+    result_factory: Callable[[], dict] | None = None
 
     async def finalize(self, *, stage1_result: dict) -> dict:
         self.calls.append(stage1_result)
         if self.error:
             raise self.error
-        return {**stage1_result, **(self.result or {})}
+        overlay = self.result_factory() if self.result_factory is not None else (self.result or {})
+        return {**stage1_result, **overlay}
 
 
 def _build_request(overrides: dict | None = None) -> PlanRequest:
@@ -1086,6 +1126,16 @@ def _planner(payload: dict) -> dict:
     return stage1_result()
 
 
+def _empty_plan_planner(payload: dict, *, progress_callback=None) -> dict:
+    """Module-level planner that returns an empty plan result.
+
+    Tests that pipe a planner through the generation subprocess need a
+    picklable callable; in-test ``lambda`` planners raise AttributeError when
+    the subprocess tries to pickle them.
+    """
+    return {"plan_text": ""}
+
+
 def _start_generation(client: TestClient, request: PlanRequest | None = None) -> tuple[dict, dict]:
     response = client.post(
         "/api/plans/generate",
@@ -1100,6 +1150,32 @@ def _start_generation(client: TestClient, request: PlanRequest | None = None) ->
     )
     assert job_response.status_code == 200
     return job_body, job_response.json()
+
+
+DEFAULT_ATHLETE_USER = AuthenticatedUser(
+    user_id="athlete-1",
+    email="ari@example.com",
+    full_name="Ari Mensah",
+    metadata={},
+)
+DEFAULT_ADMIN_USER = AuthenticatedUser(
+    user_id="admin-1",
+    email="ops@unlxck.test",
+    full_name="Ops Admin",
+    metadata={},
+)
+
+
+def seed_default_profiles(store: "FakeStore") -> None:
+    """Ensure the default athlete and admin profiles exist in ``store``.
+
+    Mirrors production where ``require_profile`` calls ``ensure_profile`` on the
+    first authenticated request. Tests that build a ``FakeStore`` directly and
+    seed intakes/plans without going through ``_build_client`` should call this
+    to satisfy the profile-row prerequisite of admin/plan endpoints.
+    """
+    store.ensure_profile(DEFAULT_ATHLETE_USER)
+    store.ensure_profile(DEFAULT_ADMIN_USER)
 
 
 def _build_client(
@@ -1120,6 +1196,11 @@ def _build_client(
         metadata={},
     )
     store = FakeStore()
+    # Mirror production: every authenticated request ensures the caller's profile
+    # via require_profile -> ensure_profile. Seed both up front so tests that
+    # don't make a request first (e.g. seeding store state directly) still see
+    # the profiles their endpoints expect.
+    seed_default_profiles(store)
     stage2 = automator or FakeStage2Automator(result=finalized_result())
     client = TestClient(
         create_app(

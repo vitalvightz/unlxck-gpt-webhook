@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { useAppSession } from "@/components/auth-provider";
@@ -15,12 +15,44 @@ function LoadingCard({ label }: { label: string }) {
   );
 }
 
+function RecoveryCard({
+  adminOnly,
+  isRetrying,
+  onRetry,
+  onSignOut,
+}: {
+  adminOnly: boolean;
+  isRetrying: boolean;
+  onRetry: () => void;
+  onSignOut: () => void;
+}) {
+  return (
+    <section className="panel loading-card auth-recovery-card" role="alert">
+      <p className="kicker">{adminOnly ? "Admin access" : "Workspace"}</p>
+      <h1>{adminOnly ? "Admin access needs a refresh" : "Workspace needs a refresh"}</h1>
+      <p className="muted">
+        Your session is still present, but profile access did not finish loading.
+      </p>
+      <div className="hero-actions auth-recovery-actions">
+        <button type="button" className="cta" onClick={onRetry} disabled={isRetrying}>
+          {isRetrying ? "Retrying..." : "Retry now"}
+        </button>
+        <button type="button" className="secondary-button" onClick={onSignOut} disabled={isRetrying}>
+          Sign out
+        </button>
+      </div>
+      <p className="auth-recovery-note">If the connection recovers, retry returns you to this page.</p>
+    </section>
+  );
+}
+
 export function RequireAuth({
   children,
   adminOnly = false,
 }: Readonly<{ children: React.ReactNode; adminOnly?: boolean }>) {
   const router = useRouter();
-  const { isReady, isMeHydrated, hasTransientMeError, session, me } = useAppSession();
+  const { isReady, isMeHydrated, hasTransientMeError, session, me, refreshMe, signOut } = useAppSession();
+  const [isRetryingRecovery, setIsRetryingRecovery] = useState(false);
   const role = me?.profile.role;
 
   useEffect(() => {
@@ -43,17 +75,47 @@ export function RequireAuth({
     }
   }, [adminOnly, hasTransientMeError, isMeHydrated, isReady, me, role, router, session]);
 
+  useEffect(() => {
+    if (!hasTransientMeError) {
+      setIsRetryingRecovery(false);
+    }
+  }, [hasTransientMeError]);
+
+  async function handleRetryRecovery() {
+    if (isRetryingRecovery) {
+      return;
+    }
+    setIsRetryingRecovery(true);
+    try {
+      await refreshMe();
+    } finally {
+      setIsRetryingRecovery(false);
+    }
+  }
+
+  async function handleRecoverySignOut() {
+    await signOut();
+    router.push("/login");
+  }
+
   if (!isReady) {
     return <LoadingCard label="Checking your access" />;
   }
   if (!session) {
     return <LoadingCard label="Redirecting to login" />;
   }
+  if (hasTransientMeError && session && !me) {
+    return (
+      <RecoveryCard
+        adminOnly={adminOnly}
+        isRetrying={isRetryingRecovery}
+        onRetry={() => void handleRetryRecovery()}
+        onSignOut={() => void handleRecoverySignOut()}
+      />
+    );
+  }
   if (!isMeHydrated) {
     return <LoadingCard label={adminOnly ? "Restoring admin access" : "Restoring your workspace"} />;
-  }
-  if (hasTransientMeError && session && !me) {
-    return <LoadingCard label="Restoring your workspace" />;
   }
   if (!me) {
     return <LoadingCard label="Redirecting to login" />;

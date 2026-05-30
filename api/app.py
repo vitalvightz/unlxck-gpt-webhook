@@ -749,7 +749,7 @@ def _validate_production_cors_config(origins: list[str], regex: str | None) -> N
             logger.critical("[cors] UNSAFE_PRODUCTION_CORS_OVERRIDE_ACTIVE: %s", violation)
         return
 
-    raise RuntimeError(
+    raise ValueError(
         "Unsafe production CORS configuration. "
         "Refusing to boot unless APP_ALLOW_UNSAFE_PRODUCTION_CORS_BOOT=1 is set. "
         + "; ".join(violations)
@@ -807,6 +807,14 @@ def _default_planner(
     progress_callback=None,
 ) -> dict[str, Any]:
     return runtime_default_planner(payload, progress_callback=progress_callback)
+
+
+def _noop_planner(
+    payload: dict[str, Any],
+    *,
+    progress_callback=None,
+) -> dict[str, Any]:
+    return {}
 
 
 def _health_payload(*, mode_label: str) -> dict[str, str | bool]:
@@ -1459,6 +1467,10 @@ def create_app(
         profile: ProfileRecord = Depends(require_profile),
         store: AppStore = Depends(get_store),
     ) -> dict[str, Any]:
+        try:
+            uuid.UUID(plan_id)
+        except (ValueError, AttributeError):
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
         plan_row = store.get_plan(plan_id)
         if not plan_row:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
@@ -2042,9 +2054,13 @@ def create_app(
         _: ProfileRecord = Depends(require_admin),
         limit: int = Query(50, ge=1, le=200),
         offset: int = Query(0, ge=0),
+        q: str | None = Query(None, max_length=200),
         store: AppStore = Depends(get_store),
     ) -> list[AdminPlanSummary]:
-        return [_map_admin_plan_summary(row) for row in store.list_admin_plans(limit=limit, offset=offset)]
+        return [
+            _map_admin_plan_summary(row)
+            for row in store.list_admin_plans(limit=limit, offset=offset, q=q)
+        ]
 
     @app.get("/api/admin/generation-jobs/triage", response_model=list[AdminGenerationJobDiagnostic])
     def list_admin_triage_generation_jobs(
@@ -2058,6 +2074,18 @@ def create_app(
             for job in store.list_admin_triage_generation_jobs(limit=limit * 4)
         ]
         return [job for job in diagnostics if job.requires_admin_resume][:limit]
+
+    @app.get("/api/admin/generation-jobs/active", response_model=list[AdminGenerationJobDiagnostic])
+    def list_admin_active_generation_jobs(
+        _: ProfileRecord = Depends(require_admin),
+        limit: int = Query(50, ge=1, le=200),
+        store: AppStore = Depends(get_store),
+    ) -> list[AdminGenerationJobDiagnostic]:
+        stale_after_seconds = _generation_job_stale_after_seconds()
+        return [
+            _admin_generation_job_diagnostic(job, stale_after_seconds=stale_after_seconds)
+            for job in store.list_admin_active_generation_jobs(limit=limit)
+        ]
 
     @app.post("/api/admin/plans/{plan_id}/manual-stage2", response_model=PlanDetail)
     def submit_manual_stage2(
@@ -2539,9 +2567,13 @@ def create_app(
         _: ProfileRecord = Depends(require_admin),
         limit: int = Query(50, ge=1, le=200),
         offset: int = Query(0, ge=0),
+        q: str | None = Query(None, max_length=200),
         store: AppStore = Depends(get_store),
     ) -> list[AdminAthleteRecord]:
-        return [_map_admin_athlete(row) for row in store.list_admin_athletes(limit=limit, offset=offset)]
+        return [
+            _map_admin_athlete(row)
+            for row in store.list_admin_athletes(limit=limit, offset=offset, q=q)
+        ]
 
     @app.get("/api/admin/athletes/{athlete_id}", response_model=AdminAthleteRecord)
     def get_admin_athlete(

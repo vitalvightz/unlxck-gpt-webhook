@@ -10,7 +10,7 @@ import api.app as app_module
 import api.auth as auth_module
 import api.store as store_module
 from api.app import create_app
-from support import FakeAuthService, FakeStage2Automator, FakeStore, _build_client, _planner, _now, finalized_result
+from support import FakeAuthService, FakeStage2Automator, FakeStore, _build_client, _build_request, _planner, _now, finalized_result, seed_default_profiles
 from conftest import RENDER_BACKEND_URL
 
 
@@ -122,13 +122,14 @@ def test_job_response_falls_back_to_created_at_when_updated_at_is_missing():
 
 def test_job_response_recovers_plan_id_from_terminal_milestone_meta_when_plan_exists():
     store = FakeStore()
-    store.create_intake("athlete-1", _planner())
+    seed_default_profiles(store)
+    store.create_intake("athlete-1", _build_request())
     intake = store.get_latest_intake("athlete-1")
     assert intake is not None
     plan = store.create_plan(
         athlete_id="athlete-1",
         intake_id=str(intake["id"]),
-        request=_planner(),
+        request=_build_request(),
         result=finalized_result(),
     )
     response = app_module._job_response(
@@ -181,13 +182,14 @@ def test_job_response_ignores_terminal_milestone_plan_id_when_plan_is_missing():
 
 def test_job_response_recovers_plan_id_from_latest_visible_plan_when_terminal_plan_missing():
     store = FakeStore()
-    store.create_intake("athlete-1", _planner())
+    seed_default_profiles(store)
+    store.create_intake("athlete-1", _build_request())
     intake = store.get_latest_intake("athlete-1")
     assert intake is not None
     store.create_plan(
         athlete_id="athlete-1",
         intake_id=str(intake["id"]),
-        request=_planner(),
+        request=_build_request(),
         result=finalized_result(),
     )
     response = app_module._job_response(
@@ -592,7 +594,7 @@ def test_production_cors_fails_fast_on_unsafe_origin_by_default(
     monkeypatch.setenv("APP_CORS_ORIGINS", "*")
     monkeypatch.delenv("APP_ALLOW_UNSAFE_PRODUCTION_CORS_BOOT", raising=False)
 
-    with pytest.raises(RuntimeError, match="Refusing to boot unless APP_ALLOW_UNSAFE_PRODUCTION_CORS_BOOT=1"):
+    with pytest.raises(ValueError, match="Refusing to boot unless APP_ALLOW_UNSAFE_PRODUCTION_CORS_BOOT=1"):
         create_app(
             store=FakeStore(),
             auth_service=FakeAuthService({}),
@@ -601,19 +603,20 @@ def test_production_cors_fails_fast_on_unsafe_origin_by_default(
 
 
 def test_production_cors_override_allows_boot_on_unsafe_origin(
-    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ):
     _clear_env_detection_vars(monkeypatch)
     monkeypatch.setenv("APP_ENV", "production")
     monkeypatch.setenv("APP_CORS_ORIGINS", "*")
     monkeypatch.setenv("APP_ALLOW_UNSAFE_PRODUCTION_CORS_BOOT", "1")
-    caplog.set_level("CRITICAL")
     create_app(
         store=FakeStore(),
         auth_service=FakeAuthService({}),
         stage2_automator=FakeStage2Automator(),
     )
-    assert "UNSAFE_PRODUCTION_CORS_OVERRIDE_ACTIVE" in caplog.text
+    # configure_logging() resets the root logger and routes structlog JSON to
+    # stdout, so the override marker is captured via capsys, not caplog.
+    assert "UNSAFE_PRODUCTION_CORS_OVERRIDE_ACTIVE" in capsys.readouterr().out
 
 
 def test_production_cors_rejects_empty_origins(monkeypatch: pytest.MonkeyPatch):

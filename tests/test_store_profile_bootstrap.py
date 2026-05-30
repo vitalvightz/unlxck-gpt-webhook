@@ -854,12 +854,8 @@ def test_create_plan_raises_specific_error_for_invalid_payload():
 def test_update_generation_job_defaults_blank_current_status_to_queued(legacy_status):
     store = _make_store()
     updated_job = {"id": "job-1", "status": "running"}
-    store.get_generation_job = MagicMock(
-        side_effect=[
-            {"id": "job-1", "status": legacy_status},
-            updated_job,
-        ]
-    )
+    store._read_generation_job = MagicMock(return_value={"id": "job-1", "status": legacy_status})
+    store.get_generation_job = MagicMock(return_value=updated_job)
     store._run_with_transient_retry = lambda *, operation, fn, attempts=3, backoff_seconds=0.25: fn()
 
     result = store.update_generation_job("job-1", status="running")
@@ -872,12 +868,8 @@ def test_update_generation_job_defaults_blank_current_status_to_queued(legacy_st
 def test_update_generation_job_allows_failed_job_retry_to_queued():
     store = _make_store()
     updated_job = {"id": "job-1", "status": "queued"}
-    store.get_generation_job = MagicMock(
-        side_effect=[
-            {"id": "job-1", "status": "failed"},
-            updated_job,
-        ]
-    )
+    store._read_generation_job = MagicMock(return_value={"id": "job-1", "status": "failed"})
+    store.get_generation_job = MagicMock(return_value=updated_job)
     store._run_with_transient_retry = lambda *, operation, fn, attempts=3, backoff_seconds=0.25: fn()
 
     result = store.update_generation_job("job-1", status="queued")
@@ -889,7 +881,7 @@ def test_update_generation_job_allows_failed_job_retry_to_queued():
 
 def test_update_generation_job_rejects_invalid_transition_with_409():
     store = _make_store()
-    store.get_generation_job = MagicMock(return_value={"id": "job-1", "status": "completed"})
+    store._read_generation_job = MagicMock(return_value={"id": "job-1", "status": "completed"})
 
     with pytest.raises(HTTPException) as exc_info:
         store.update_generation_job("job-1", status="failed")

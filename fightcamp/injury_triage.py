@@ -111,6 +111,18 @@ _DANGEROUS_RED_FLAGS = {
 
 _WORSENING_TRENDS = {"worse", "worsening", "regressing", "worsened"}
 
+# ``injury_type_source`` values set by guided_injury_resolver when the resolved
+# injury_type came from the guided card rather than the free-text parser. These
+# must not suppress guided structured diagnosis (see use_guided_diagnosis_fields).
+_GUIDED_DERIVED_TYPE_SOURCES = {
+    "surface_type",
+    "guided_serious_type",
+    "guided_tendon_ligament",
+    "guided_subtype",
+    "guided_type",
+    "fallback",
+}
+
 _TRAUMA_CONTEXT_PATTERNS = (
     r"\bhit\b",
     r"\bimpact\b",
@@ -186,6 +198,15 @@ _STRUCTURAL_HISTORY_KEYWORDS = ("fracture", "dislocat", "rupture", "tear")
 _NEGATED_STRUCTURAL_HISTORY_RE = re.compile(
     r"\b(?:no|not|without|denies?|denied|did\s+not)\s+(?:\w+\s+){0,3}"
     r"(?:fracture|dislocat\w*|rupture|tear)\b"
+)
+
+# Matches an explicit denial of the break/crack/snap signal in the SAME chunk
+# (e.g. "not broken", "scan ruled out fracture", "ankle not cracked"). Used by
+# _has_structural_break_with_location to keep a structural keyword from
+# routing fracture when the chunk itself negates it.
+_NEGATED_STRUCTURAL_BREAK_RE = re.compile(
+    r"\b(?:no|not|without|denies?|denied|did\s+not|ruled\s+out)\s+(?:\w+\s+){0,3}"
+    r"(?:broke|broken|crack(?:ed)?|snap(?:ped)?)\b"
 )
 
 
@@ -285,6 +306,11 @@ def _has_structural_break_with_location(text: str) -> bool:
         if _is_benign_joint_noise_chunk(raw_chunk):
             continue
 
+        # Catch explicit denials that the spaCy-based remove_negated_phrases
+        # may miss (e.g. "not broken", "ruled out fracture").
+        if _NEGATED_STRUCTURAL_BREAK_RE.search(raw_chunk):
+            continue
+
         cleaned_chunk = remove_negated_phrases(raw_chunk).strip().lower()
         if not cleaned_chunk or not _STRUCTURAL_BREAK_RE.search(cleaned_chunk):
             continue
@@ -307,6 +333,11 @@ def _has_structural_break_signal(*, text: str, context_text: str) -> bool:
         # Must happen before negation stripping.
         # Example: "ankle cracked but no pain" needs "no pain" intact.
         if _is_benign_joint_noise_chunk(raw_chunk):
+            continue
+
+        # Catch explicit denials that the spaCy-based remove_negated_phrases
+        # may miss (e.g. "not broken", "ruled out fracture").
+        if _NEGATED_STRUCTURAL_BREAK_RE.search(raw_chunk):
             continue
 
         cleaned_chunk = remove_negated_phrases(raw_chunk).strip().lower()
@@ -1208,8 +1239,16 @@ def triage_injuries(plan_input: PlanInput) -> InjuryTriageResult:
         routing_reasons=routing_reasons,
     )
 
+    # Only a free-text *parser*-derived injury type should suppress the guided
+    # diagnosis fields. Guided-sourced types are now merged into parsed_injuries,
+    # so keying off the bare merged ``injury_type`` would let a guided card disable
+    # its own structured handling. Items whose ``injury_type`` originated from the
+    # guided card (injury_type_source in _GUIDED_DERIVED_TYPE_SOURCES) must not
+    # count; items without a source marker are treated as parser-derived.
     use_guided_diagnosis_fields = not any(
-        isinstance(item, dict) and str(item.get("injury_type") or "").strip()
+        isinstance(item, dict)
+        and str(item.get("injury_type") or "").strip()
+        and item.get("injury_type_source") not in _GUIDED_DERIVED_TYPE_SOURCES
         for item in plan_input.parsed_injuries or []
     )
 
