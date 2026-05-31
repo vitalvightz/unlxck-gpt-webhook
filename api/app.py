@@ -19,7 +19,6 @@ from pydantic import ValidationError
 
 from fightcamp.logging_utils import bind_log_context, clear_log_context, configure_logging
 from fightcamp.plan_pipeline import prime_plan_banks
-from fightcamp.stage2_pipeline import build_stage2_retry, review_stage2_output
 
 from .auth import AuthService, AuthenticatedUser, SupabaseAuthService, is_auth_api_error
 from .environment import (
@@ -53,6 +52,10 @@ from .stage2_automation import (
 from .store import AppStore, SupabaseAppStore, is_startup_stale_generation_job
 from .sentry_config import init_sentry
 from .services.generation_request_service import generate_plan_for_current_user
+from .services.admin_stage2_service import (
+    approve_review_required_plan as approve_review_required_plan_service,
+    submit_manual_stage2 as submit_manual_stage2_service,
+)
 from .services.generation_retry_service import retry_generation_job as retry_generation_job_service
 from .cors_config import (
     get_cors_origins as get_cors_origins,
@@ -60,7 +63,6 @@ from .cors_config import (
     validate_production_cors_config as validate_production_cors_config,
 )
 from .plan_mappers import (
-    _decode_structured_text,
     _map_profile_row,
     _is_archived_plan,
     _lookup_plan_source,
@@ -269,68 +271,6 @@ def _health_payload(*, mode_label: str) -> dict[str, str | bool]:
         "ok": True,
         "app": "unlxck-fight-camp-api",
         "mode": mode_label,
-    }
-
-
-def _manual_stage2_result(plan_row: dict[str, Any], final_plan_text: str) -> dict[str, Any]:
-    planning_brief = _decode_structured_text(plan_row.get("planning_brief")) or {}
-    review = review_stage2_output(planning_brief=planning_brief, final_plan_text=final_plan_text)
-    next_attempt_count = int(plan_row.get("stage2_attempt_count") or 0) + 1
-    had_retry_prompt = bool(str(plan_row.get("stage2_retry_text") or "").strip())
-
-    if review["status"] == "PASS":
-        return {
-            "status": "ready",
-            "plan_text": final_plan_text,
-            "draft_plan_text": str(plan_row.get("draft_plan_text") or plan_row.get("plan_text") or ""),
-            "final_plan_text": final_plan_text,
-            "pdf_url": None,
-            "stage2_retry_text": "",
-            "stage2_validator_report": review["validator_report"],
-            "stage2_status": "manual_stage2_retry_pass" if had_retry_prompt else "manual_stage2_pass",
-            "stage2_attempt_count": next_attempt_count,
-        }
-
-    retry = build_stage2_retry(
-        stage1_result={"planning_brief": planning_brief},
-        final_plan_text=final_plan_text,
-        validator_report=review["validator_report"],
-    )
-    return {
-        "status": "review_required",
-        "plan_text": "",
-        "draft_plan_text": str(plan_row.get("draft_plan_text") or plan_row.get("plan_text") or ""),
-        "final_plan_text": final_plan_text,
-        "pdf_url": None,
-        "stage2_retry_text": str(retry.get("repair_prompt") or ""),
-        "stage2_validator_report": review["validator_report"],
-        "stage2_status": "manual_stage2_retry_required",
-        "stage2_attempt_count": next_attempt_count,
-    }
-
-
-def _admin_approved_result(plan_row: dict[str, Any]) -> dict[str, Any]:
-    approved_text = str(plan_row.get("final_plan_text") or plan_row.get("draft_plan_text") or plan_row.get("plan_text") or "").strip()
-    if not approved_text:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="No saved Stage 2 or draft text is available to approve.",
-        )
-    planning_brief = _decode_structured_text(plan_row.get("planning_brief")) or {}
-    validator_report = plan_row.get("stage2_validator_report") or {}
-    if planning_brief:
-        review = review_stage2_output(planning_brief=planning_brief, final_plan_text=approved_text)
-        validator_report = review["validator_report"]
-    return {
-        "status": "ready",
-        "plan_text": approved_text,
-        "draft_plan_text": str(plan_row.get("draft_plan_text") or plan_row.get("plan_text") or ""),
-        "final_plan_text": approved_text,
-        "pdf_url": None,
-        "stage2_retry_text": str(plan_row.get("stage2_retry_text") or ""),
-        "stage2_validator_report": validator_report,
-        "stage2_status": "admin_review_approved",
-        "stage2_attempt_count": int(plan_row.get("stage2_attempt_count") or 0),
     }
 
 
@@ -855,18 +795,10 @@ def create_app(
         _: ProfileRecord = Depends(require_admin),
         store: AppStore = Depends(get_store),
     ) -> PlanDetail:
-        plan_row = store.get_plan(plan_id)
-        if not plan_row:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
-
-        updated = store.update_plan_stage2(
-            plan_id,
-            _manual_stage2_result(plan_row, submission.final_plan_text),
-        )
-        return _map_plan_detail(
-            updated,
-            include_admin=True,
-            plan_source=_lookup_plan_source(store, plan_id),
+        return submit_manual_stage2_service(
+            plan_id=plan_id,
+            final_plan_text=submission.final_plan_text,
+            store=store,
         )
 
     @app.post("/api/admin/plans/{plan_id}/approve", response_model=PlanDetail)
@@ -875,18 +807,9 @@ def create_app(
         _: ProfileRecord = Depends(require_admin),
         store: AppStore = Depends(get_store),
     ) -> PlanDetail:
-        plan_row = store.get_plan(plan_id)
-        if not plan_row:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
-
-        updated = store.update_plan_stage2(
-            plan_id,
-            _admin_approved_result(plan_row),
-        )
-        return _map_plan_detail(
-            updated,
-            include_admin=True,
-            plan_source=_lookup_plan_source(store, plan_id),
+        return approve_review_required_plan_service(
+            plan_id=plan_id,
+            store=store,
         )
 
     @app.post("/api/admin/plans/{plan_id}/approve-and-resume-generation", response_model=GenerationJobResponse, status_code=202)
