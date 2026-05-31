@@ -80,8 +80,8 @@ from .generation_job_helpers import (
     _find_blocking_generation_job_for_athlete,
     _stable_payload_signature,
     _admin_generation_job_diagnostic,
-    _triage_job_has_resume_approval as _triage_job_has_resume_approval_impl,
-    _triage_plan_has_resume_approval as _triage_plan_has_resume_approval_impl,
+    _triage_job_has_resume_approval as _triage_job_has_resume_approval,
+    _triage_plan_has_resume_approval as _triage_plan_has_resume_approval,
 )
 from .routes import (
     build_generation_jobs_router,
