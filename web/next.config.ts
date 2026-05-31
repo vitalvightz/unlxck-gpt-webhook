@@ -27,7 +27,7 @@ const CONTENT_SECURITY_POLICY = [
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob: https:",
   "font-src 'self' data:",
-  "connect-src 'self' https://*.supabase.co https://*.sentry.io https://*.ingest.sentry.io",
+  `connect-src 'self' https://*.supabase.co https://*.sentry.io https://*.ingest.sentry.io ${process.env.NEXT_PUBLIC_SUPABASE_URL ?? ""}`,
   "worker-src 'self' blob:",
   "manifest-src 'self'",
   "form-action 'self'",
