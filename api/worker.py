@@ -86,7 +86,8 @@ async def _drain_active_tasks(
             for task in still_pending:
                 task.cancel()
             with suppress(Exception):
-                await asyncio.gather(*still_pending, return_exceptions=True)
+                # Use a short timeout to prevent hanging indefinitely if a cancelled task blocks during cleanup
+                await asyncio.wait(still_pending, timeout=5.0)
 
     detached_tasks.clear()
     active_tasks.clear()
