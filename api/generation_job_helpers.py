@@ -7,6 +7,11 @@ import uuid
 from datetime import datetime, timezone
 from typing import Any
 
+try:  # zoneinfo is stdlib on Python 3.9+; degrade gracefully if unavailable.
+    from zoneinfo import ZoneInfo
+except ImportError:  # pragma: no cover - defensive fallback only
+    ZoneInfo = None  # type: ignore[assignment]
+
 from fastapi import HTTPException, status
 
 from .generation_config import generation_job_stale_after_seconds
@@ -32,6 +37,55 @@ _PROTECTED_TRIAGE_STATUSES = frozenset({"triage_blocked", "needs_review", "restr
 
 def _utc_now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
+
+
+_DAILY_LIMIT_DETAIL_TZ_AWARE = (
+    "Daily generation limit reached. Try again after midnight in your athlete timezone."
+)
+_DAILY_LIMIT_DETAIL_UTC = (
+    "Daily generation limit reached. Try again after midnight UTC."
+)
+
+
+def daily_generation_cap_window(
+    athlete_timezone: str | None,
+    *,
+    now: datetime | None = None,
+) -> tuple[str, str]:
+    """Compute the start of the current local day for the daily generation cap.
+
+    Returns a ``(cutoff_iso_utc, limit_reached_detail)`` tuple:
+
+    * ``cutoff_iso_utc`` is the UTC ISO timestamp for the start of the current
+      day in the athlete's timezone, suitable for
+      ``store.count_generation_jobs_for_athlete_since``.
+    * ``limit_reached_detail`` is the user-facing message describing when the
+      cap resets.
+
+    When the timezone is missing or invalid (or ``zoneinfo`` is unavailable),
+    this safely falls back to UTC midnight and a UTC-based reset message.
+    """
+    reference = now or datetime.now(timezone.utc)
+    if reference.tzinfo is None:
+        reference = reference.replace(tzinfo=timezone.utc)
+
+    tz_name = (athlete_timezone or "").strip()
+    if tz_name and ZoneInfo is not None:
+        try:
+            local_now = reference.astimezone(ZoneInfo(tz_name))
+            local_midnight = local_now.replace(hour=0, minute=0, second=0, microsecond=0)
+            cutoff_iso = local_midnight.astimezone(timezone.utc).isoformat()
+            return cutoff_iso, _DAILY_LIMIT_DETAIL_TZ_AWARE
+        except Exception:
+            # Invalid/unknown timezone — fall back to UTC below.
+            pass
+
+    utc_midnight = (
+        reference.astimezone(timezone.utc)
+        .replace(hour=0, minute=0, second=0, microsecond=0)
+        .isoformat()
+    )
+    return utc_midnight, _DAILY_LIMIT_DETAIL_UTC
 
 
 def _normalized_client_request_id(raw_value: str | None, fallback_prefix: str) -> str:

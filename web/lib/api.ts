@@ -141,7 +141,16 @@ function createClientRequestId(prefix: string): string {
 }
 
 function shouldLogApiDetails(): boolean {
-  return process.env.NODE_ENV !== "production" || process.env.NEXT_PUBLIC_API_DEBUG === "true";
+  // Detailed API logging can include raw response bodies, which may contain
+  // athlete or plan data. Never enable it in production browser logs,
+  // regardless of NEXT_PUBLIC_API_DEBUG.
+  if (process.env.NODE_ENV === "production") {
+    return false;
+  }
+  // Outside production, keep the existing local/dev debugging behaviour:
+  // detailed logging is on by default. NEXT_PUBLIC_API_DEBUG can be set to
+  // "false" to silence it locally.
+  return process.env.NEXT_PUBLIC_API_DEBUG !== "false";
 }
 
 async function withTransientRetries<T>(
