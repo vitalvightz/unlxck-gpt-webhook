@@ -35,7 +35,37 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
+      - name: Lint
+        run: npm run lint
+
+      - name: Dependency audit (high/critical only)
+        run: npm run audit:high
+
       - name: Build frontend with CI-safe API base URL
         env:
-          NEXT_PUBLIC_API_BASE_URL: http://localhost:8000
+          # Placeholder public values only — no real secrets. NEXT_PUBLIC_* are
+          # inlined at build time so the smoke server can boot the Supabase
+          # client without crashing. Smoke tests block all real network traffic.
+          NEXT_PUBLIC_API_BASE_URL: http://127.0.0.1:8000
+          NEXT_PUBLIC_SUPABASE_URL: https://stub.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: stub-anon-key
         run: npm run build
+
+      - name: Install Playwright browser (chromium)
+        run: npx playwright install --with-deps chromium
+
+      - name: Frontend smoke + accessibility tests
+        env:
+          # `next start` re-evaluates rewrites() at runtime, so it needs the API
+          # base URL present. Placeholder only; tests never hit a real backend.
+          NEXT_PUBLIC_API_BASE_URL: http://127.0.0.1:8000
+        run: npm run test:e2e
+
+      - name: Upload Playwright report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: web/playwright-report/
+          retention-days: 7
+          if-no-files-found: ignore

@@ -159,6 +159,45 @@ NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
 ```
 
+#### Frontend quality gates
+
+All commands run from `web/`:
+
+```bash
+npm run typecheck     # tsc --noEmit
+npm run lint          # eslint . (Next core-web-vitals ruleset)
+npm run build         # production build
+npm run audit:high    # fails only on high/critical npm vulnerabilities
+npm run test:e2e      # Playwright smoke + accessibility tests
+```
+
+**Running smoke/e2e tests locally:**
+
+```bash
+# One-time: download the Chromium browser Playwright drives
+npx playwright install chromium
+
+# Build first — Playwright's web server runs `next start` against the build.
+# NEXT_PUBLIC_* values are inlined at build time, so pass CI-safe placeholders:
+NEXT_PUBLIC_API_BASE_URL=http://127.0.0.1:8000 \
+NEXT_PUBLIC_SUPABASE_URL=https://stub.supabase.co \
+NEXT_PUBLIC_SUPABASE_ANON_KEY=stub-anon-key \
+  npm run build
+
+npm run test:e2e
+```
+
+The smoke/accessibility tests (`web/e2e/`) are deterministic: they block all
+cross-origin network traffic and stub the same-origin `/api/*` proxy, so they
+never require a real Supabase session or OpenAI credentials. They verify that
+core public/auth routes load without crashing, that the app shell + navigation
+render, that protected routes redirect unauthenticated users to `/login`, and
+that primary routes have no serious/critical accessibility violations.
+
+The **Web Build** CI workflow runs, in order: install → typecheck → lint →
+`audit:high` → build → Playwright smoke/accessibility tests. No secrets are
+required; CI uses public placeholder env values.
+
 ---
 
 

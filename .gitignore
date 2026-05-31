@@ -11,6 +11,8 @@ stage2_retry.txt
 .app_data/
 web/.next/
 web/node_modules/
+web/playwright-report/
+web/test-results/
 .demo-*.log
 .demo-*.err.log
 .venv/

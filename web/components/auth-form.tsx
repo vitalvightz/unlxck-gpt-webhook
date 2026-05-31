@@ -237,7 +237,7 @@ export function AuthForm({ mode }: { mode: "signup" | "login" }) {
           </p>
         </div>
         <details className="auth-rail-extras">
-          <summary>What's inside the workspace</summary>
+          <summary>What&apos;s inside the workspace</summary>
           <div className="auth-rail-extras-body">
             <div className="support-panel">
               <p className="kicker">Flow</p>
