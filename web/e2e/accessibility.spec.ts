@@ -12,8 +12,8 @@ const BASE_URL = "http://127.0.0.1:3100";
 const ACCESSIBILITY_ROUTES = ["/", "/login"] as const;
 
 for (const route of ACCESSIBILITY_ROUTES) {
-  test(`a11y: ${route} has no serious/critical violations`, async ({ page }) => {
-    await isolateFromNetwork(page, BASE_URL);
+  test(`a11y: ${route} has no serious/critical violations`, async ({ page, baseURL }) => {
+    await isolateFromNetwork(page, baseURL ?? BASE_URL);
     await page.goto(route, { waitUntil: "domcontentloaded" });
 
     // Basic landmark + title expectations.
