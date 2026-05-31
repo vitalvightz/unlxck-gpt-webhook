@@ -343,7 +343,7 @@ def _find_blocking_generation_job_for_athlete(
     return None
 
 
-def _stable_payload_hash(payload: dict[str, Any]) -> str:
+def _stable_payload_signature(payload: dict[str, Any]) -> str:
     return json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
 
 
@@ -411,8 +411,6 @@ def _job_final_result_triage_status(job: dict[str, Any] | None) -> str | None:
 
 def _plan_blocks_duplicate_generation(
     plan: dict[str, Any] | None,
-    *,
-    viewer_role: str,
 ) -> bool:
     # Duplicate prevention must only apply to plans the viewer can still open.
     # Athlete soft-delete archives the plan (hidden from athlete views) and a
@@ -436,19 +434,18 @@ def _find_existing_terminal_job_for_same_payload(
     store: AppStore,
     athlete_id: str,
     request_payload: dict[str, Any],
-    viewer_role: str = "athlete",
 ) -> dict[str, Any] | None:
-    target_hash = _stable_payload_hash(request_payload)
+    target_hash = _stable_payload_signature(request_payload)
     jobs = store.list_generation_jobs_for_athlete(athlete_id, limit=25)
     for job in jobs:
         job_payload = job.get("request_payload")
         if not isinstance(job_payload, dict):
             continue
-        if _stable_payload_hash(job_payload) != target_hash:
+        if _stable_payload_signature(job_payload) != target_hash:
             continue
         plan_id = str(job.get("plan_id") or "").strip()
         if plan_id:
-            if not _plan_blocks_duplicate_generation(store.get_plan(plan_id), viewer_role=viewer_role):
+            if not _plan_blocks_duplicate_generation(store.get_plan(plan_id)):
                 continue
             return job
         # No plan_id: this is a new-style triage outcome that lives only on
@@ -1265,7 +1262,6 @@ def _has_existing_triage_resume_approval(plan_row: dict[str, Any]) -> bool:
     return bool(why_log.get("triage_regeneration_cleared"))
 
 
-
 def create_app(
     *,
     store: AppStore,
@@ -1792,7 +1788,6 @@ def create_app(
             store=store,
             athlete_id=profile.athlete_id,
             request_payload=request_body.model_dump(mode="json"),
-            viewer_role=profile.role,
         )
         if recovered_existing:
             return _job_response(recovered_existing, store=store, viewer_role=profile.role)
@@ -2005,21 +2000,19 @@ def create_app(
         retry_intake_id = str(original.get("intake_id") or "").strip() or None
         retry_plan_id = existing_plan_id or None
         if source == "admin_triage_resume":
-        is_job_based_triage_resume = str(original.get("client_request_id") or "").startswith(
-            "triage_resume_job_"
-        )
-
-    if not retry_intake_id:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="admin triage resume retry is missing intake linkage",
-        )
-
-    if not is_job_based_triage_resume and not retry_plan_id:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="admin triage resume retry is missing plan linkage",
-        )
+            is_job_based_triage_resume = str(original.get("client_request_id") or "").startswith(
+                "triage_resume_job_"
+            )
+            if not retry_intake_id:
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail="admin triage resume retry is missing intake linkage",
+                )
+            if not is_job_based_triage_resume and not retry_plan_id:
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail="admin triage resume retry is missing plan linkage",
+                )
         existing_retry_job = await asyncio.to_thread(
             store.get_generation_job_by_client_request_id,
             athlete_id=target_athlete_id,
@@ -2901,7 +2894,7 @@ def create_app(
                 existing_source == "admin_latest_intake"
                 and existing_intake_id == latest_intake_id
                 and isinstance(existing_payload, dict)
-                and _stable_payload_hash(existing_payload) == _stable_payload_hash(request_payload)
+                and _stable_payload_signature(existing_payload) == _stable_payload_signature(request_payload)
             )
             is_startup_stale = is_startup_stale_generation_job(existing_job, stale_after_seconds=stale_after_seconds)
             if not has_safe_linkage and not is_startup_stale:
@@ -2924,7 +2917,7 @@ def create_app(
                     str(existing_job.get("source") or "").strip() != "admin_latest_intake"
                     or str(existing_job.get("intake_id") or "").strip() != (latest_intake_id or "")
                     or not isinstance(existing_payload_after_reset, dict)
-                    or _stable_payload_hash(existing_payload_after_reset) != _stable_payload_hash(request_payload)
+                    or _stable_payload_signature(existing_payload_after_reset) != _stable_payload_signature(request_payload)
                 ):
                     raise HTTPException(
                         status_code=status.HTTP_409_CONFLICT,
@@ -3042,7 +3035,6 @@ def _build_runtime_app() -> FastAPI:
         mode_label="supabase-authenticated",
         enable_in_process_generation=enable_in_process_generation,
     )
-
 
 
 def _build_startup_failure_app(detail: str) -> FastAPI:
