@@ -2,16 +2,13 @@ from __future__ import annotations
 
 import asyncio
 import copy
-import json
 import logging
 import os
-import re
 import time
 import uuid
 from contextlib import asynccontextmanager
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from typing import Any, Callable
-from urllib.parse import urlsplit
 
 from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException, Query, Request, status
 from fastapi.middleware.cors import CORSMiddleware
@@ -22,26 +19,20 @@ from pydantic import ValidationError
 
 from fightcamp.logging_utils import bind_log_context, clear_log_context, configure_logging
 from fightcamp.plan_pipeline import prime_plan_banks
-from fightcamp.sparring_advisories import build_plan_advisories
 from fightcamp.stage2_pipeline import build_stage2_retry, review_stage2_output
-from fightcamp.weekly_schedule_view import extract_weekly_schedule
 
 from .auth import AuthService, AuthenticatedUser, SupabaseAuthService, is_auth_api_error
 from .environment import (
     apply_production_environment_defaults,
-    is_production_environment,
     should_default_to_production,
 )
-from .generation_config import generation_job_stale_after_seconds
 from .models import (
     ApproveAndResumeGenerationRequest,
     AdminGenerationJobDiagnostic,
     AdminAthleteRecord,
     AdminLatestIntakeUpdateRequest,
-    AdminPlanOutputs,
     AdminPlanSummary,
     GenerationJobResponse,
-    GenerationRequestPayloadSummary,
     ManualStage2SubmissionRequest,
     MeResponse,
     NutritionWorkspaceState,
@@ -50,16 +41,11 @@ from .models import (
     OnboardingDraftSaveResponse,
     PlanDetail,
     PlanRenameRequest,
-    PlanOutputs,
-    PlanSafetyState,
     PlanRequest,
     PlanSummary,
     ProfileRecord,
     ProfileUpdateRequest,
-    USERNAME_CHANGE_WINDOW_DAYS,
-    USERNAME_MAX_CHANGES_PER_WINDOW,
     UsernameChangeRequest,
-    UsernameRateLimitInfo,
     WeeklySchedule,
 )
 from .nutrition_workspace import (
@@ -69,11 +55,8 @@ from .nutrition_workspace import (
 )
 from .performance_focus import validate_performance_focus_selections
 from .generation_runtime import (
-    _OPENAI_QUOTA_ADMIN_ERROR,
-    _OPENAI_QUOTA_ATHLETE_ERROR,
     default_planner as runtime_default_planner,
     is_in_process_generation_enabled,
-    is_stale_job as runtime_is_stale_job,
     schedule_generation_job_if_needed,
 )
 from .stage2_automation import (
@@ -82,209 +65,51 @@ from .stage2_automation import (
 )
 from .store import AppStore, SupabaseAppStore, is_startup_stale_generation_job
 from .sentry_config import init_sentry
+from .cors_config import (
+    get_cors_origins as get_cors_origins,
+    get_cors_origin_regex as get_cors_origin_regex,
+    validate_production_cors_config as validate_production_cors_config,
+)
+from .plan_mappers import (
+    _decode_structured_text,
+    _map_profile_row,
+    _map_plan_summary,
+    _is_archived_plan,
+    _visible_plans_for_athlete,
+    _ALLOWED_PLAN_SOURCES,
+    _lookup_plan_source,
+    _map_plan_detail,
+    _map_weekly_schedule,
+    _map_admin_plan_summary,
+    _map_admin_athlete,
+    _build_me_response,
+)
+from .generation_job_helpers import (
+    _utc_now_iso,
+    _PROTECTED_TRIAGE_STATUSES,
+    _normalized_client_request_id,
+    _job_response,
+    _build_protected_triage_response,
+    _is_stale_job,
+    _generation_job_stale_after_seconds,
+    _find_blocking_generation_job_for_athlete,
+    _stable_payload_signature,
+    _triage_job_has_resume_approval,
+    _job_final_result_triage_status,
+    _find_existing_terminal_job_for_same_payload,
+    _admin_generation_job_diagnostic,
+    _resume_job_final_result_successful,
+    _resume_job_resolved_successfully,
+    _can_approve_and_resume_triage,
+    _has_existing_triage_resume_approval,
+    _triage_plan_has_resume_approval as _triage_plan_has_resume_approval,
+)
 
 Planner = Callable[[dict[str, Any]], dict[str, Any]]
 security = HTTPBearer(auto_error=False)
 logger = logging.getLogger(__name__)
-LOCAL_HOST_NAMES = ("localhost", "127.0.0.1", "::1")
-_CLIENT_REQUEST_ID_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$")
-_PROTECTED_TRIAGE_STATUSES = frozenset({"triage_blocked", "needs_review", "restricted_rehab_only", "medical_hold"})
 
 init_sentry()
-
-
-def _utc_now_iso() -> str:
-    return datetime.now(timezone.utc).isoformat()
-
-
-def _normalized_client_request_id(raw_value: str | None, fallback_prefix: str) -> str:
-    normalized = (raw_value or "").strip()
-    if not normalized:
-        return f"{fallback_prefix}_{uuid.uuid4().hex}"
-    if _CLIENT_REQUEST_ID_PATTERN.fullmatch(normalized):
-        return normalized
-    raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid X-Client-Request-Id")
-
-
-def _normalize_progress_milestones(raw: Any) -> list[dict[str, Any]]:
-    if not isinstance(raw, list):
-        return []
-    normalized: list[dict[str, Any]] = []
-    for entry in raw:
-        if not isinstance(entry, dict):
-            continue
-        code = str(entry.get("code") or "").strip()
-        if not code:
-            continue
-        meta_raw = entry.get("meta")
-        meta = meta_raw if isinstance(meta_raw, dict) else {}
-        normalized.append(
-            {
-                "code": code,
-                "label": str(entry.get("label") or "").strip(),
-                "detail": str(entry.get("detail") or ""),
-                "at": str(entry.get("at") or ""),
-                "meta": meta,
-            }
-        )
-    return normalized
-
-
-def _job_response(
-    job: dict[str, Any],
-    *,
-    store: AppStore | None = None,
-    latest_plan_id: str | None = None,
-    viewer_role: str = "athlete",
-) -> GenerationJobResponse:
-    def _resolve_existing_plan_id(candidate: str | None) -> str | None:
-        if not candidate:
-            return None
-        normalized_candidate = str(candidate).strip()
-        if not normalized_candidate:
-            return None
-        if store is None:
-            return normalized_candidate
-        existing_plan = store.get_plan(normalized_candidate)
-        return normalized_candidate if existing_plan is not None else None
-
-    status_value = str(job.get("status") or "")
-    normalized_status = normalize_generation_job_status(status_value)
-    plan_id = _resolve_existing_plan_id(str(job.get("plan_id")) if job.get("plan_id") else None)
-    resolved_latest_plan_id = latest_plan_id
-    # Triage-blocked outcomes live only on the job — they explicitly must
-    # not back-fill a plan_id from milestones or latest_plan, otherwise the
-    # UI would re-open the wrong (old) plan and the duplicate-generation
-    # loop returns. Skip the fallback chain for these outcomes.
-    job_triage_status = _job_final_result_triage_status(job)
-    if (
-        normalized_status in {"completed", "review_required"}
-        and not plan_id
-        and not job_triage_status
-    ):
-        milestones = _normalize_progress_milestones(job.get("progress_milestones"))
-        for milestone in reversed(milestones):
-            meta = milestone.get("meta")
-            if not isinstance(meta, dict):
-                continue
-            milestone_plan_id = str(meta.get("plan_id") or "").strip()
-            if milestone_plan_id:
-                resolved_milestone_plan_id = _resolve_existing_plan_id(milestone_plan_id)
-                if resolved_milestone_plan_id:
-                    plan_id = resolved_milestone_plan_id
-                    break
-        if not plan_id and store is not None:
-            athlete_id = str(job.get("athlete_id") or "").strip()
-            intake_id = str(job.get("intake_id") or "").strip()
-            # Require an explicit intake_id link AND an exact match. Without
-            # an intake_id we cannot prove the latest plan was produced by
-            # this job, so we must not surface it: a stale "latest_plan_id"
-            # would let the UI open an unrelated plan that just happens to
-            # be the newest row for the athlete.
-            if athlete_id and intake_id:
-                latest_plan = store.get_latest_plan(athlete_id)
-                latest_id = str(latest_plan.get("id") or "").strip() if latest_plan else ""
-                latest_intake = str(latest_plan.get("intake_id") or "").strip() if latest_plan else ""
-                latest_status = str(latest_plan.get("status") or "").strip().lower() if latest_plan else ""
-                if latest_id and latest_status != "archived" and latest_intake == intake_id:
-                    plan_id = latest_id
-        resolved_latest_plan_id = resolved_latest_plan_id or plan_id
-    updated_at = job.get("updated_at") or job.get("created_at") or _utc_now_iso()
-    error = str(job["error"]) if job.get("error") else None
-    if viewer_role != "admin" and error == _OPENAI_QUOTA_ADMIN_ERROR:
-        error = _OPENAI_QUOTA_ATHLETE_ERROR
-    can_retry = (
-        normalized_status == "failed"
-        and isinstance(job.get("request_payload"), dict)
-        and not plan_id
-    )
-    status_messages = {
-        "queued": "Generation queued and will be processed shortly.",
-        "running": "Generation started and is processing.",
-        "failed": "Generation failed.",
-        "review_required": "Your plan is ready for review.",
-        "completed": "Your plan is ready.",
-    }
-    stage2_status = ""
-    requires_admin_resume = False
-    if plan_id and store is not None:
-        linked_plan = store.get_plan(plan_id)
-        linked_status = str(linked_plan.get("status") or "").strip().lower() if isinstance(linked_plan, dict) else ""
-        linked_stage2 = (
-            str(linked_plan.get("stage2_status") or "").strip().lower()
-            if isinstance(linked_plan, dict)
-            else ""
-        )
-        stage2_status = linked_stage2
-        if linked_status in _PROTECTED_TRIAGE_STATUSES or linked_stage2 in _PROTECTED_TRIAGE_STATUSES:
-            requires_admin_resume = True
-    # Triage outcomes without a plan_id derive their state from the job's
-    # final_result. They are protected review states, not saved plans.
-    if not plan_id and job_triage_status:
-        requires_admin_resume = True
-        stage2_status = stage2_status or job_triage_status
-    # A terminal job whose linked plan is still triage-blocked must not be
-    # framed as a normal "plan ready" outcome — the UI needs to route to
-    # admin review instead of celebrating a saved plan.
-    message = status_messages.get(normalized_status, "Generation queued and will be processed shortly.")
-    if requires_admin_resume and normalized_status in {"completed", "review_required"}:
-        message = (
-            "Planning paused. Admin review is required before generation can continue."
-        )
-    return GenerationJobResponse(
-        job_id=str(job["id"]),
-        athlete_id=str(job["athlete_id"]),
-        client_request_id=str(job.get("client_request_id") or ""),
-        status=normalized_status,
-        created_at=str(job["created_at"]),
-        updated_at=str(updated_at),
-        started_at=str(job["started_at"]) if job.get("started_at") else None,
-        heartbeat_at=str(job["heartbeat_at"]) if job.get("heartbeat_at") else None,
-        completed_at=str(job["completed_at"]) if job.get("completed_at") else None,
-        error=error,
-        plan_id=plan_id,
-        latest_plan_id=resolved_latest_plan_id or plan_id,
-        status_url=f"/api/generation-jobs/{job['id']}",
-        message=message,
-        progress_milestones=_normalize_progress_milestones(job.get("progress_milestones")),
-        can_retry=can_retry,
-        stage2_status=stage2_status or None,
-        requires_admin_resume=requires_admin_resume,
-    )
-
-
-def _build_protected_triage_response(plan: dict[str, Any], athlete_id: str) -> GenerationJobResponse:
-    plan_id = str(plan.get("id") or "").strip()
-    plan_status = str(plan.get("status") or "").strip().lower()
-    stage2_status = str(plan.get("stage2_status") or "").strip().lower()
-    return GenerationJobResponse(
-        job_id=f"protected_{plan_id or athlete_id}",
-        athlete_id=athlete_id,
-        client_request_id="protected_triage_restore",
-        status="completed",
-        created_at=_utc_now_iso(),
-        updated_at=_utc_now_iso(),
-        plan_id=plan_id or None,
-        latest_plan_id=plan_id or None,
-        message="This intake is protected. Normal Generate Plan cannot bypass triage. Use Admin Review → Resume Generation.",
-        stage2_status=stage2_status or plan_status or None,
-        requires_admin_resume=True,
-    )
-
-
-def normalize_generation_job_status(status: str) -> str:
-    normalized = str(status or "").strip().lower()
-    if normalized == "held_for_review":
-        return "review_required"
-    if normalized in {"publishable_with_flags", "ready"}:
-        return "completed"
-    if normalized in {"queued", "running", "completed", "review_required", "failed"}:
-        return normalized
-    return "failed"
-
-
-def _is_stale_job(job: dict[str, Any], *, stale_after_seconds: int = 90) -> bool:
-    return runtime_is_stale_job(job, stale_after_seconds=stale_after_seconds)
 
 
 def _is_correctly_linked_admin_resume_job(
@@ -301,267 +126,6 @@ def _is_correctly_linked_admin_resume_job(
         and str(job.get("plan_id") or "").strip() == plan_id
         and str(job.get("intake_id") or "").strip() == intake_id
         and str(job.get("client_request_id") or "").strip() == client_request_id
-    )
-
-
-def _resume_job_final_result_successful(job: dict[str, Any]) -> bool:
-    final_result = job.get("final_result")
-    if not isinstance(final_result, dict):
-        return False
-    result_status = str(final_result.get("status") or "").strip().lower()
-    if result_status in {"ready", "generated", "completed"}:
-        return True
-    stage2_status = str(final_result.get("stage2_status") or "").strip().lower()
-    return stage2_status in {"stage2_pass", "stage2_retry_pass", "manual_stage2_pass", "manual_stage2_retry_pass"}
-
-
-def _resume_job_resolved_successfully(job: dict[str, Any]) -> bool:
-    job_status = str(job.get("status") or "").strip().lower()
-    return job_status == "completed" and _resume_job_final_result_successful(job)
-
-
-def _generation_job_stale_after_seconds() -> int:
-    return generation_job_stale_after_seconds(minimum=60)
-
-
-def _find_blocking_generation_job_for_athlete(
-    *,
-    store: AppStore,
-    athlete_id: str,
-    stale_after_seconds: int,
-) -> dict[str, Any] | None:
-    jobs = store.list_generation_jobs_for_athlete(athlete_id, limit=25)
-    for job in jobs:
-        status_value = str(job.get("status") or "")
-        if status_value == "queued":
-            return job
-        if status_value == "running" and not _is_stale_job(
-            job,
-            stale_after_seconds=stale_after_seconds,
-        ):
-            return job
-    return None
-
-
-def _stable_payload_signature(payload: dict[str, Any]) -> str:
-    return json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
-
-
-def _has_triage_resume_approval_markers(
-    *,
-    stage2_status: str | None,
-    why_log: Any,
-) -> bool:
-    """Detect resume-approval markers regardless of source (plan row vs job final_result)."""
-    if str(stage2_status or "").strip().lower() == "triage_resume_approved":
-        return True
-    if not isinstance(why_log, dict):
-        return False
-    if why_log.get("triage_regeneration_cleared") is True:
-        return True
-    if isinstance(why_log.get("triage_resume_approval"), dict):
-        return True
-    resume_override = why_log.get("injury_triage_resume_override")
-    if isinstance(resume_override, dict) and resume_override.get("bypassed_blocking") is True:
-        return True
-    triage_original = why_log.get("injury_triage_original")
-    if isinstance(triage_original, dict) and triage_original.get("triage_resume_approved") is True:
-        return True
-    return False
-
-
-def _triage_plan_has_resume_approval(plan: dict[str, Any] | None) -> bool:
-    # Once a triage-blocked plan has been approved for resume, the old
-    # same-payload terminal job no longer represents the live decision —
-    # the admin resume flow owns the next regeneration and the old
-    # triage-blocked output must not be returned as a completed duplicate.
-    if not isinstance(plan, dict):
-        return False
-    return _has_triage_resume_approval_markers(
-        stage2_status=plan.get("stage2_status"),
-        why_log=plan.get("why_log"),
-    )
-
-
-def _triage_job_has_resume_approval(job: dict[str, Any] | None) -> bool:
-    """Resume-approval markers stored on a generation job's final_result."""
-    if not isinstance(job, dict):
-        return False
-    final_result = job.get("final_result")
-    if not isinstance(final_result, dict):
-        return False
-    return _has_triage_resume_approval_markers(
-        stage2_status=final_result.get("stage2_status"),
-        why_log=final_result.get("why_log"),
-    )
-
-
-def _job_final_result_triage_status(job: dict[str, Any] | None) -> str | None:
-    """Return the triage status from job.final_result, or None."""
-    if not isinstance(job, dict):
-        return None
-    final_result = job.get("final_result")
-    if not isinstance(final_result, dict):
-        return None
-    status_value = str(final_result.get("status") or "").strip().lower()
-    if status_value in _PROTECTED_TRIAGE_STATUSES:
-        return status_value
-    return None
-
-
-def _plan_blocks_duplicate_generation(
-    plan: dict[str, Any] | None,
-) -> bool:
-    # Duplicate prevention must only apply to plans the viewer can still open.
-    # Athlete soft-delete archives the plan (hidden from athlete views) and a
-    # hard-delete removes it entirely, so a stale same-payload job pointing at
-    # such a plan must not block a fresh generation. Unapproved triage-blocked
-    # plans still block here so the existing admin-review behaviour is kept,
-    # but once a triage-blocked plan has resume approval markers, the original
-    # same-payload terminal job no longer reflects the live decision — the
-    # admin resume flow must drive the next regeneration instead.
-    if not isinstance(plan, dict):
-        return False
-    if _is_archived_plan(plan):
-        return False
-    if _is_triage_blocked_plan(plan) and _triage_plan_has_resume_approval(plan):
-        return False
-    return True
-
-
-def _find_existing_terminal_job_for_same_payload(
-    *,
-    store: AppStore,
-    athlete_id: str,
-    request_payload: dict[str, Any],
-) -> dict[str, Any] | None:
-    target_hash = _stable_payload_signature(request_payload)
-    jobs = store.list_generation_jobs_for_athlete(athlete_id, limit=25)
-    for job in jobs:
-        job_payload = job.get("request_payload")
-        if not isinstance(job_payload, dict):
-            continue
-        if _stable_payload_signature(job_payload) != target_hash:
-            continue
-        plan_id = str(job.get("plan_id") or "").strip()
-        if plan_id:
-            if not _plan_blocks_duplicate_generation(store.get_plan(plan_id)):
-                continue
-            return job
-        # No plan_id: this is a new-style triage outcome that lives only on
-        # the job. Block the duplicate only if the job still holds a triage
-        # state and has not been approved for resume.
-        if _job_final_result_triage_status(job) and not _triage_job_has_resume_approval(job):
-            return job
-    return None
-
-
-def _request_payload_summary(payload: Any) -> GenerationRequestPayloadSummary:
-    if not isinstance(payload, dict):
-        return GenerationRequestPayloadSummary()
-    athlete = payload.get("athlete") if isinstance(payload.get("athlete"), dict) else {}
-    technical_style_value = athlete.get("technical_style")
-    technical_style: list[str] = []
-    if isinstance(technical_style_value, list):
-        technical_style = [str(item).strip() for item in technical_style_value if str(item).strip()]
-    injuries_value = payload.get("injuries")
-    injuries: list[str] = []
-    if isinstance(injuries_value, list):
-        injuries = [str(item).strip() for item in injuries_value if str(item).strip()]
-    elif isinstance(injuries_value, str) and injuries_value.strip():
-        injuries = [injuries_value.strip()]
-    guided_injury = payload.get("guided_injury")
-    if isinstance(guided_injury, dict):
-        area = str(guided_injury.get("area") or "").strip()
-        severity = str(guided_injury.get("severity") or "").strip()
-        guidance = ", ".join([part for part in [area, severity] if part])
-        if guidance:
-            injuries.append(f"guided_injury: {guidance}")
-    training_availability = payload.get("training_availability")
-    availability_summary = ""
-    if isinstance(training_availability, list):
-        availability_summary = ", ".join([str(day).strip() for day in training_availability if str(day).strip()])
-    return GenerationRequestPayloadSummary(
-        athlete_name=str(athlete.get("full_name") or ""),
-        fight_date=str(payload.get("fight_date") or ""),
-        phase=str(payload.get("phase") or payload.get("training_phase") or ""),
-        fight_format=str(payload.get("rounds_format") or ""),
-        fatigue_level=str(payload.get("fatigue_level") or ""),
-        goals=[str(item) for item in (payload.get("key_goals") or []) if isinstance(item, str)],
-        weaknesses=[str(item) for item in (payload.get("weak_areas") or []) if isinstance(item, str)],
-        injuries=injuries,
-        training_availability=availability_summary,
-        technical_style=technical_style,
-    )
-
-
-def _admin_generation_job_diagnostic(job: dict[str, Any], *, stale_after_seconds: int) -> AdminGenerationJobDiagnostic:
-    raw_status = str(job.get("status") or "queued").strip().lower()
-    normalized_status = "completed" if raw_status == "ready" else raw_status
-    if normalized_status not in {"queued", "running", "completed", "review_required", "failed"}:
-        normalized_status = "queued"
-    is_stale = normalized_status == "running" and _is_stale_job(job, stale_after_seconds=stale_after_seconds)
-    stale_reason = "Heartbeat timed out while job is still running." if is_stale else None
-    error_message = str(job.get("error") or "") or None
-    client_request_id = str(job.get("client_request_id") or "")
-
-    retry_of = None
-    if client_request_id.startswith("retry_"):
-        content = client_request_id[6:]
-        if "_" in content:
-            retry_of = content.rsplit("_", 1)[0]
-
-    # Surface protected-triage signals on diagnostic rows so admin UI can
-    # show an explicit "Approve & Resume" CTA for new-style triage outcomes
-    # that have no plan_id.
-    triage_status = _job_final_result_triage_status(job)
-    stage2_status: str | None = None
-    requires_admin_resume = False
-    final_result = job.get("final_result") if isinstance(job.get("final_result"), dict) else {}
-    if final_result:
-        stage2_raw = str(final_result.get("stage2_status") or "").strip().lower()
-        if stage2_raw:
-            stage2_status = stage2_raw
-    if triage_status and not _triage_job_has_resume_approval(job):
-        requires_admin_resume = True
-        stage2_status = stage2_status or triage_status
-    profile = job.get("profiles") if isinstance(job.get("profiles"), dict) else {}
-
-    return AdminGenerationJobDiagnostic(
-        job_id=str(job.get("id") or ""),
-        athlete_id=str(job.get("athlete_id") or ""),
-        athlete_email=str(profile.get("email") or ""),
-        athlete_full_name=str(profile.get("full_name") or ""),
-        intake_id=str(job.get("intake_id") or "") or None,
-        status=normalized_status,
-        source=str(job.get("source") or ""),
-        created_at=str(job.get("created_at") or ""),
-        started_at=job.get("started_at"),
-        heartbeat_at=job.get("heartbeat_at"),
-        completed_at=job.get("completed_at"),
-        client_request_id=client_request_id,
-        retry_of=retry_of,
-        error=error_message,
-        stale_reason=stale_reason,
-        plan_id=job.get("plan_id"),
-        can_retry=str(job.get("status") or "") == "failed",
-        stage2_status=stage2_status,
-        requires_admin_resume=requires_admin_resume,
-        is_stale=is_stale,
-        request_payload_summary=_request_payload_summary(job.get("request_payload")),
-    )
-
-
-def _build_me_response(profile: ProfileRecord, store: AppStore) -> MeResponse:
-    latest_intake = store.get_latest_intake(profile.athlete_id)
-    plans = _visible_plans_for_athlete(store.list_user_plans(profile.athlete_id))
-    latest_plan = _map_plan_summary(plans[0]) if plans else None
-    return MeResponse(
-        profile=profile,
-        latest_intake=latest_intake.get("intake") if latest_intake else None,
-        latest_plan=latest_plan,
-        plan_count=len(plans),
-        username_rate_limit=_username_rate_limit_info(profile.username_change_history),
     )
 
 
@@ -652,111 +216,6 @@ def _update_profile_with_nutrition_fallback(
         return _map_profile_row(store.update_profile(athlete_id, fallback_update))
 
 
-def _cors_origins() -> list[str]:
-    value = os.getenv(
-        "APP_CORS_ORIGINS",
-        "http://127.0.0.1:3000,http://localhost:3000",
-    )
-    return [_normalize_origin(origin) for origin in value.split(",") if origin.strip()]
-
-
-def _normalize_origin(origin: str) -> str:
-    normalized = origin.strip()
-    if not normalized:
-        return ""
-    if "://" not in normalized:
-        host = normalized.split("/", 1)[0].lower()
-        if host.startswith("[") and "]" in host:
-            host_name = host[1:].split("]", 1)[0]
-        else:
-            host_name = host.split(":", 1)[0]
-        scheme = "http" if host_name in LOCAL_HOST_NAMES else "https"
-        normalized = f"{scheme}://{normalized}"
-    parsed = urlsplit(normalized)
-    if not parsed.scheme or not parsed.netloc:
-        raise ValueError(f"APP_CORS_ORIGINS entries must be full origins. Received: {origin!r}")
-    return f"{parsed.scheme}://{parsed.netloc}"
-
-
-def _cors_origin_regex() -> str | None:
-    value = os.getenv("APP_CORS_ORIGIN_REGEX", "").strip()
-    return value or None
-
-
-_UNSAFE_CORS_REGEX_PATTERNS = frozenset({".*", "^.*$", ".+", "^.+$", "^.*", ".*$", "^.+", ".+$"})
-_UNSAFE_CORS_REGEX_SCHEME_PATTERNS = frozenset({
-    "https://.*",
-    "^https://.*$",
-    "https://.+",
-    "^https://.+$",
-    "http://.*",
-    "^http://.*$",
-    "http://.+",
-    "^http://.+$",
-})
-
-
-def _is_broad_cors_regex(regex: str) -> bool:
-    normalized = regex.strip()
-    if not normalized:
-        return False
-    if normalized in _UNSAFE_CORS_REGEX_PATTERNS:
-        return True
-    if normalized in _UNSAFE_CORS_REGEX_SCHEME_PATTERNS:
-        return True
-    return False
-
-
-def _validate_production_cors_config(origins: list[str], regex: str | None) -> None:
-    if not is_production_environment():
-        return
-
-    violations: list[str] = []
-
-    if not origins and not regex:
-        violations.append(
-            "APP_CORS_ORIGINS must list at least one origin "
-            "(or APP_CORS_ORIGIN_REGEX must be set) in production"
-        )
-
-    for origin in origins:
-        if origin == "*":
-            violations.append("APP_CORS_ORIGINS cannot contain '*' in production")
-            continue
-        parsed = urlsplit(origin)
-        host = (parsed.hostname or "").lower()
-        netloc = (parsed.netloc or "").lower()
-        if not host or "*" in netloc:
-            violations.append(
-                f"APP_CORS_ORIGINS cannot contain '*' wildcards in production: {origin!r}"
-            )
-            continue
-        if host in LOCAL_HOST_NAMES:
-            violations.append(
-                f"APP_CORS_ORIGINS cannot contain localhost origins in production: {origin!r}"
-            )
-
-    if regex is not None and _is_broad_cors_regex(regex):
-        violations.append(
-            f"APP_CORS_ORIGIN_REGEX is too broad for production: {regex!r}"
-        )
-
-    if not violations:
-        return
-
-    allow_unsafe = os.getenv("APP_ALLOW_UNSAFE_PRODUCTION_CORS_BOOT", "").strip() == "1"
-    if allow_unsafe:
-        for violation in violations:
-            logger.critical("[cors] UNSAFE_PRODUCTION_CORS_OVERRIDE_ACTIVE: %s", violation)
-        return
-
-    raise ValueError(
-        "Unsafe production CORS configuration. "
-        "Refusing to boot unless APP_ALLOW_UNSAFE_PRODUCTION_CORS_BOOT=1 is set. "
-        + "; ".join(violations)
-    )
-
-
 def _plan_generate_rate_limit_requests() -> int:
     raw_value = os.getenv("APP_PLAN_GENERATE_RATE_LIMIT", "5").strip()
     try:
@@ -824,332 +283,6 @@ def _health_payload(*, mode_label: str) -> dict[str, str | bool]:
         "app": "unlxck-fight-camp-api",
         "mode": mode_label,
     }
-
-
-def _decode_structured_text(value: Any) -> dict[str, Any] | None:
-    if value is None:
-        return None
-    if isinstance(value, dict):
-        return value
-    if isinstance(value, str):
-        stripped = value.strip()
-        if not stripped:
-            return None
-        try:
-            decoded = json.loads(stripped)
-        except json.JSONDecodeError:
-            return {"raw": stripped}
-        return decoded if isinstance(decoded, dict) else {"raw": decoded}
-    return {"raw": value}
-
-
-def _map_profile_row(row: dict[str, Any]) -> ProfileRecord:
-    raw_username = row.get("username")
-    history_raw = row.get("username_change_history") or []
-    username_history: list[str] = [str(entry) for entry in history_raw if entry]
-    return ProfileRecord(
-        athlete_id=str(row["id"]),
-        email=str(row.get("email") or ""),
-        username=str(raw_username) if raw_username else None,
-        username_change_history=username_history,
-        role=str(row.get("role") or "athlete"),
-        full_name=str(row.get("full_name") or ""),
-        technical_style=list(row.get("technical_style") or []),
-        tactical_style=list(row.get("tactical_style") or []),
-        stance=str(row.get("stance") or ""),
-        professional_status=str(row.get("professional_status") or ""),
-        record=str(row.get("record_summary") or ""),
-        athlete_timezone=str(row.get("athlete_timezone") or ""),
-        athlete_locale=str(row.get("athlete_locale") or ""),
-        appearance_mode=str(row.get("appearance_mode") or "dark"),
-        onboarding_draft=row.get("onboarding_draft"),
-        avatar_url=row.get("avatar_url") or None,
-        nutrition_profile=row.get("nutrition_profile") or {},
-        created_at=str(row.get("created_at") or ""),
-        updated_at=str(row.get("updated_at") or ""),
-    )
-
-
-def _username_rate_limit_info(history: list[str]) -> UsernameRateLimitInfo:
-    now = datetime.now(timezone.utc)
-    cutoff = now - timedelta(days=USERNAME_CHANGE_WINDOW_DAYS)
-    recent: list[datetime] = []
-    for entry in history:
-        try:
-            parsed = datetime.fromisoformat(str(entry).replace("Z", "+00:00"))
-        except ValueError:
-            continue
-        if parsed.tzinfo is None:
-            parsed = parsed.replace(tzinfo=timezone.utc)
-        if parsed >= cutoff:
-            recent.append(parsed)
-    remaining = max(0, USERNAME_MAX_CHANGES_PER_WINDOW - len(recent))
-    next_available_at: str | None = None
-    if remaining == 0 and recent:
-        next_available_at = (min(recent) + timedelta(days=USERNAME_CHANGE_WINDOW_DAYS)).isoformat()
-    return UsernameRateLimitInfo(
-        remaining=remaining,
-        next_available_at=next_available_at,
-    )
-
-
-def _map_plan_summary(row: dict[str, Any]) -> PlanSummary:
-    raw_status = str(row.get("status") or "generated")
-    normalized_status = raw_status
-    if raw_status == "review_required":
-        report = row.get("stage2_validator_report") if isinstance(row.get("stage2_validator_report"), dict) else {}
-        report_exists = bool(report)
-        if not report_exists:
-            normalized_status = "held_for_review"
-        else:
-            has_errors = bool(report.get("errors"))
-            has_blocking = bool(report.get("blocking_warnings"))
-            if not has_blocking:
-                warnings = list(report.get("warnings") or [])
-                has_blocking = any(bool(w.get("blocking")) for w in warnings if isinstance(w, dict))
-            normalized_status = "held_for_review" if has_errors or has_blocking else "publishable_with_flags"
-    return PlanSummary(
-        plan_id=str(row["id"]),
-        plan_name=(str(row["plan_name"]).strip() if row.get("plan_name") is not None else None) or None,
-        athlete_id=str(row["athlete_id"]),
-        full_name=str(row.get("full_name") or ""),
-        fight_date=str(row.get("fight_date") or ""),
-        technical_style=list(row.get("technical_style") or []),
-        created_at=str(row.get("created_at") or ""),
-        status=normalized_status,
-        pdf_url=row.get("pdf_url"),
-    )
-
-
-def _is_archived_plan(row: dict[str, Any] | None) -> bool:
-    if not isinstance(row, dict):
-        return False
-    return str(row.get("status") or "").strip().lower() == "archived"
-
-
-def _is_triage_blocked_plan(row: dict[str, Any] | None) -> bool:
-    if not isinstance(row, dict):
-        return False
-    return str(row.get("status") or "").strip().lower() == "triage_blocked"
-
-
-def _visible_plans_for_athlete(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    # Triage-blocked outcomes are screening decisions, not plans — they must
-    # not surface in the athlete's archive or "latest plan" snapshot. Admin
-    # endpoints bypass this filter so the ops team can still review and
-    # approve-and-resume blocked attempts.
-    return [
-        row
-        for row in rows
-        if not _is_archived_plan(row) and not _is_triage_blocked_plan(row)
-    ]
-
-
-def _admin_draft_text(row: dict[str, Any]) -> str:
-    return str(row.get("draft_plan_text") or row.get("plan_text") or "")
-
-
-def _admin_final_text(row: dict[str, Any]) -> str:
-    return str(row.get("final_plan_text") or row.get("plan_text") or "")
-
-
-def _map_plan_safety_state(row: dict[str, Any]) -> PlanSafetyState:
-    triage = {}
-    why_log = row.get("why_log")
-    if isinstance(why_log, dict):
-        triage = why_log.get("injury_triage") or {}
-    if not isinstance(triage, dict):
-        triage = {}
-
-    mode = str(triage.get("mode") or "")
-    triage_blocked = str(row.get("status") or "").strip().lower() == "triage_blocked"
-    stage2_was_skipped = bool(triage.get("should_block_stage2")) or triage_blocked
-    if mode == "medical_hold":
-        return PlanSafetyState(
-            state="medical_hold",
-            status_chip="MEDICAL HOLD",
-            header="Medical hold: no training plan generated",
-            subtext=(
-                "Urgent neurological or medical red-flag signals were detected. "
-                "Planning was intentionally blocked before normal generation."
-            ),
-            stage2_skipped=stage2_was_skipped,
-            clinician_clearance_required=bool(triage.get("clinician_clearance_required", True)),
-            matched_high_risk_categories=list(triage.get("matched_high_risk_categories") or []),
-            red_flags=list(triage.get("red_flags") or []),
-            sparring_risk_band=triage.get("sparring_risk_band"),
-            next_steps=[
-                "Seek appropriate medical review before training guidance.",
-                "Update the intake after clearance.",
-                "Regenerate only when medically cleared.",
-            ],
-        )
-    if mode == "restricted_rehab_only":
-        return PlanSafetyState(
-            state="restricted_rehab_only",
-            status_chip="RESTRICTED REHAB ONLY",
-            header="Planning paused: clinician clearance required",
-            subtext=(
-                "Serious structural injury signals were detected. "
-                "Normal fight-camp generation is paused to avoid unsafe loading recommendations."
-            ),
-            stage2_skipped=stage2_was_skipped,
-            clinician_clearance_required=bool(triage.get("clinician_clearance_required", True)),
-            matched_high_risk_categories=list(triage.get("matched_high_risk_categories") or []),
-            red_flags=list(triage.get("red_flags") or []),
-            sparring_risk_band=triage.get("sparring_risk_band"),
-            next_steps=[
-                "Review injury details and current restrictions.",
-                "Update the intake after clinician clearance.",
-                "Regenerate normal planning only when safe.",
-            ],
-        )
-    if mode == "needs_review":
-        return PlanSafetyState(
-            state="needs_review",
-            status_chip="NEEDS REVIEW",
-            header="Safety review required before planning",
-            subtext=(
-                "Guided injury severity/trend combinations triggered a conservative safety gate. "
-                "Automatic planning is paused pending coach/admin review."
-            ),
-            stage2_skipped=stage2_was_skipped,
-            clinician_clearance_required=bool(triage.get("clinician_clearance_required", False)),
-            matched_high_risk_categories=list(triage.get("matched_high_risk_categories") or []),
-            red_flags=list(triage.get("red_flags") or []),
-            sparring_risk_band=triage.get("sparring_risk_band"),
-            next_steps=[
-                "Review guided injury severity/trend details.",
-                "Clarify diagnosis progression and restrictions.",
-                "Approve before rerunning full planning.",
-            ],
-        )
-
-    return PlanSafetyState(
-        state="plan_ready",
-        status_chip="PLAN READY",
-        header="Plan ready",
-        subtext="Normal planning completed.",
-        stage2_skipped=False,
-        clinician_clearance_required=False,
-        matched_high_risk_categories=[],
-        red_flags=[],
-        sparring_risk_band=None,
-        next_steps=[],
-    )
-
-
-_ALLOWED_PLAN_SOURCES: frozenset[str] = frozenset({"quick_build", "self_serve"})
-
-
-def _lookup_plan_source(store: AppStore, plan_id: str) -> str | None:
-    job = store.get_generation_job_by_plan_id(plan_id)
-    if not isinstance(job, dict):
-        return None
-    raw = job.get("source")
-    if not isinstance(raw, str):
-        return None
-    value = raw.strip()
-    return value if value in _ALLOWED_PLAN_SOURCES else None
-
-
-def _map_plan_detail(
-    row: dict[str, Any],
-    *,
-    include_admin: bool,
-    plan_source: str | None = None,
-) -> PlanDetail:
-    summary = _map_plan_summary(row)
-    planning_brief = _decode_structured_text(row.get("planning_brief"))
-    raw_stage2_payload = row.get("stage2_payload")
-    fallback_parsing_metadata = (
-        raw_stage2_payload.get("input_parsing_metadata")
-        if isinstance(raw_stage2_payload, dict)
-        else {}
-    )
-    parsing_metadata = row.get("parsing_metadata") or fallback_parsing_metadata or {}
-    display_plan_text = str(row.get("plan_text") or "")
-    is_legacy_review_required = str(row.get("status") or "").strip().lower() == "review_required"
-    if (
-        not display_plan_text
-        and is_legacy_review_required
-        and summary.status == "publishable_with_flags"
-    ):
-        display_plan_text = str(row.get("final_plan_text") or "")
-    return PlanDetail(
-        **summary.model_dump(mode="json"),
-        outputs=PlanOutputs(
-            plan_text=display_plan_text,
-            pdf_url=row.get("pdf_url"),
-        ),
-        safety_state=_map_plan_safety_state(row),
-        advisories=build_plan_advisories(planning_brief=planning_brief),
-        plan_source=plan_source,
-        admin_outputs=(
-            AdminPlanOutputs(
-                coach_notes=str(row.get("coach_notes") or ""),
-                why_log=row.get("why_log") or {},
-                planning_brief=planning_brief,
-                stage2_payload=raw_stage2_payload,
-                parsing_metadata=parsing_metadata if isinstance(parsing_metadata, dict) else {},
-                stage2_handoff_text=str(row.get("stage2_handoff_text") or ""),
-                draft_plan_text=_admin_draft_text(row),
-                final_plan_text=_admin_final_text(row),
-                stage2_retry_text=str(row.get("stage2_retry_text") or ""),
-                stage2_validator_report=row.get("stage2_validator_report") or {},
-                stage2_status=str(row.get("stage2_status") or "legacy"),
-                stage2_attempt_count=int(row.get("stage2_attempt_count") or 0),
-            )
-            if include_admin
-            else None
-        ),
-    )
-
-
-def _map_weekly_schedule(row: dict[str, Any], *, week_index: int) -> WeeklySchedule:
-    planning_brief = _decode_structured_text(row.get("planning_brief"))
-    schedule = extract_weekly_schedule(
-        planning_brief,
-        week_index=week_index,
-        fight_date=row.get("fight_date"),
-    )
-    if schedule is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="weekly schedule not found")
-    return WeeklySchedule(plan_id=str(row["id"]), **schedule)
-
-
-def _map_admin_plan_summary(row: dict[str, Any]) -> AdminPlanSummary:
-    profile = row.get("profiles") or {}
-    summary = _map_plan_summary(row)
-    return AdminPlanSummary(
-        **summary.model_dump(mode="json"),
-        athlete_email=str(profile.get("email") or ""),
-    )
-
-
-def _map_admin_athlete(row: dict[str, Any], latest_intake: dict[str, Any] | None = None) -> AdminAthleteRecord:
-    onboarding_draft = row.get("onboarding_draft")
-    return AdminAthleteRecord(
-        athlete_id=str(row["id"]),
-        email=str(row.get("email") or ""),
-        role=str(row.get("role") or "athlete"),
-        full_name=str(row.get("full_name") or ""),
-        technical_style=list(row.get("technical_style") or []),
-        tactical_style=list(row.get("tactical_style") or []),
-        stance=str(row.get("stance") or ""),
-        professional_status=str(row.get("professional_status") or ""),
-        record=str(row.get("record") or row.get("record_summary") or ""),
-        athlete_timezone=str(row.get("athlete_timezone") or ""),
-        athlete_locale=str(row.get("athlete_locale") or ""),
-        appearance_mode=str(row.get("appearance_mode") or "dark"),
-        onboarding_draft=onboarding_draft if isinstance(onboarding_draft, dict) else None,
-        latest_intake=latest_intake.get("intake") if isinstance(latest_intake, dict) else None,
-        nutrition_profile=row.get("nutrition_profile") or {},
-        created_at=str(row.get("created_at") or ""),
-        updated_at=str(row.get("updated_at") or ""),
-        plan_count=int(row.get("plan_count") or 0),
-        latest_plan_created_at=row.get("latest_plan_created_at"),
-    )
 
 
 def _manual_stage2_result(plan_row: dict[str, Any], final_plan_text: str) -> dict[str, Any]:
@@ -1249,19 +382,6 @@ def _admin_archived_result(plan_row: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def _can_approve_and_resume_triage(triage_mode: str) -> bool:
-    return triage_mode in {"needs_review", "restricted_rehab_only"}
-
-
-def _has_existing_triage_resume_approval(plan_row: dict[str, Any]) -> bool:
-    if str(plan_row.get("stage2_status") or "").strip().lower() == "triage_resume_approved":
-        return True
-    why_log = plan_row.get("why_log")
-    if not isinstance(why_log, dict):
-        return False
-    return bool(why_log.get("triage_regeneration_cleared"))
-
-
 def create_app(
     *,
     store: AppStore,
@@ -1291,9 +411,9 @@ def create_app(
     app.state.mode_label = mode_label
     app.state.enable_in_process_generation = enable_in_process_generation
     app.state.active_generation_tasks = set()
-    cors_origins = _cors_origins()
-    cors_regex = _cors_origin_regex()
-    _validate_production_cors_config(cors_origins, cors_regex)
+    cors_origins = get_cors_origins()
+    cors_regex = get_cors_origin_regex()
+    validate_production_cors_config(cors_origins, cors_regex)
     app.add_middleware(
         CORSMiddleware,
         allow_origins=cors_origins,
