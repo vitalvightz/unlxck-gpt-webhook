@@ -6,8 +6,8 @@ const BASE_URL = "http://127.0.0.1:3100";
 
 test.describe("public routes load without crashing", () => {
   for (const route of PUBLIC_ROUTES) {
-    test(`GET ${route} renders the app shell`, async ({ page }) => {
-      await isolateFromNetwork(page, BASE_URL);
+    test(`GET ${route} renders the app shell`, async ({ page, baseURL }) => {
+      await isolateFromNetwork(page, baseURL ?? BASE_URL);
 
       const uncaughtErrors: string[] = [];
       page.on("pageerror", (error) => uncaughtErrors.push(error.message));
