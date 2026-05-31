@@ -2272,3 +2272,128 @@ def test_admin_patch_latest_intake_uses_store_update_intake():
     )
     assert response.status_code == 200
     assert calls == [intake["id"]]
+
+
+def _seed_named_plan(store, *, name: str = "Camp Plan") -> dict:
+    athlete = AuthenticatedUser(
+        user_id="athlete-1",
+        email="ari@example.com",
+        full_name="Ari Mensah",
+        metadata={},
+    )
+    store.ensure_profile(athlete)
+    plan = store.create_plan(
+        athlete_id="athlete-1",
+        intake_id="intake_x",
+        request=_build_request(),
+        result=finalized_result(),
+    )
+    if name:
+        plan = store.rename_plan(plan["id"], name)
+    return plan
+
+
+def test_admin_permanent_delete_with_matching_name_hard_deletes_plan():
+    client, store, _ = _build_client()
+    plan = _seed_named_plan(store, name="Camp Plan")
+
+    response = client.request(
+        "DELETE",
+        f"/api/admin/plans/{plan['id']}/permanent",
+        headers={"Authorization": "Bearer admin-token"},
+        json={"confirm_plan_name": "Camp Plan"},
+    )
+
+    assert response.status_code == 204
+    assert store.get_plan(plan["id"]) is None
+
+
+def test_admin_permanent_delete_with_wrong_name_returns_400_and_keeps_plan():
+    client, store, _ = _build_client()
+    plan = _seed_named_plan(store, name="Camp Plan")
+
+    response = client.request(
+        "DELETE",
+        f"/api/admin/plans/{plan['id']}/permanent",
+        headers={"Authorization": "Bearer admin-token"},
+        json={"confirm_plan_name": "camp plan"},
+    )
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Confirmation does not match the plan name."
+    assert store.get_plan(plan["id"]) is not None
+
+
+def test_admin_permanent_delete_unnamed_plan_returns_400():
+    client, store, _ = _build_client()
+    plan = _seed_named_plan(store, name="")
+
+    response = client.request(
+        "DELETE",
+        f"/api/admin/plans/{plan['id']}/permanent",
+        headers={"Authorization": "Bearer admin-token"},
+        json={"confirm_plan_name": "anything"},
+    )
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Plan has no name. Rename it before permanent deletion."
+    assert store.get_plan(plan["id"]) is not None
+
+
+def test_permanent_delete_requires_admin_role():
+    client, store, _ = _build_client()
+    plan = _seed_named_plan(store, name="Camp Plan")
+
+    response = client.request(
+        "DELETE",
+        f"/api/admin/plans/{plan['id']}/permanent",
+        headers={"Authorization": "Bearer athlete-token"},
+        json={"confirm_plan_name": "Camp Plan"},
+    )
+
+    assert response.status_code == 403
+    assert store.get_plan(plan["id"]) is not None
+
+
+def test_admin_permanent_delete_blocked_by_active_generation_job():
+    client, store, _ = _build_client()
+    plan = _seed_named_plan(store, name="Camp Plan")
+    job = store.create_or_get_generation_job(
+        athlete_id="athlete-1",
+        client_request_id="active-permanent-delete-guard",
+        source="web_intake",
+        request_payload=_build_request().model_dump(mode="json"),
+        plan_id=plan["id"],
+        intake_id="intake_x",
+    )
+    store.update_generation_job(job["id"], status="running", started_at="2026-01-01T00:00:00+00:00")
+
+    response = client.request(
+        "DELETE",
+        f"/api/admin/plans/{plan['id']}/permanent",
+        headers={"Authorization": "Bearer admin-token"},
+        json={"confirm_plan_name": "Camp Plan"},
+    )
+
+    assert response.status_code == 409
+    assert store.get_plan(plan["id"]) is not None
+
+
+def test_admin_permanent_delete_unknown_plan_returns_404():
+    client, _, _ = _build_client()
+
+    missing = client.request(
+        "DELETE",
+        "/api/admin/plans/00000000-0000-4000-8000-000000000000/permanent",
+        headers={"Authorization": "Bearer admin-token"},
+        json={"confirm_plan_name": "Camp Plan"},
+    )
+    assert missing.status_code == 404
+
+    malformed = client.request(
+        "DELETE",
+        "/api/admin/plans/not-a-uuid/permanent",
+        headers={"Authorization": "Bearer admin-token"},
+        json={"confirm_plan_name": "Camp Plan"},
+    )
+    assert malformed.status_code == 404

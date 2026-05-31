@@ -33,6 +33,7 @@ from .models import (
     ManualStage2SubmissionRequest,
     NutritionWorkspaceUpdateRequest,
     PlanDetail,
+    PlanPermanentDeleteRequest,
     PlanRequest,
     ProfileRecord,
     ProfileUpdateRequest,
@@ -884,6 +885,42 @@ def create_app(
             include_admin=True,
             plan_source=_lookup_plan_source(store, plan_id),
         )
+
+    @app.delete(
+        "/api/admin/plans/{plan_id}/permanent",
+        status_code=status.HTTP_204_NO_CONTENT,
+    )
+    def permanent_delete_plan(
+        plan_id: str,
+        request_body: PlanPermanentDeleteRequest,
+        _: ProfileRecord = Depends(require_admin),
+        store: AppStore = Depends(get_store),
+    ) -> Response:
+        try:
+            uuid.UUID(plan_id)
+        except (ValueError, AttributeError):
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
+        plan_row = store.get_plan(plan_id)
+        if not plan_row:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
+        if store.has_active_generation_job_for_plan(plan_id):
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Plan has an active generation job. Cancel or wait before deleting.",
+            )
+        expected = str(plan_row.get("plan_name") or "").strip()
+        if not expected:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Plan has no name. Rename it before permanent deletion.",
+            )
+        if request_body.confirm_plan_name != expected:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Confirmation does not match the plan name.",
+            )
+        store.delete_plan(plan_id)
+        return Response(status_code=status.HTTP_204_NO_CONTENT)
 
     @app.get("/api/admin/athletes", response_model=list[AdminAthleteRecord])
     def list_admin_athletes(
