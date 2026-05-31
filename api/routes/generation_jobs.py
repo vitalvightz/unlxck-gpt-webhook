@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import asyncio
 from typing import Any, Callable
-import uuid
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 
@@ -80,10 +79,6 @@ def build_generation_jobs_router(
         active_tasks: set[str] = Depends(get_active_generation_tasks),
         enable_in_process_generation: bool = Depends(get_enable_in_process_generation),
     ) -> GenerationJobResponse:
-        try:
-            uuid.UUID(job_id)
-        except (ValueError, AttributeError):
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="generation job not found")
         job = await asyncio.to_thread(store.get_generation_job, job_id)
         if not job:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="generation job not found")
