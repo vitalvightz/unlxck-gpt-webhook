@@ -2004,11 +2004,22 @@ def create_app(
         )
         retry_intake_id = str(original.get("intake_id") or "").strip() or None
         retry_plan_id = existing_plan_id or None
-        if source == "admin_triage_resume" and (not retry_intake_id or not retry_plan_id):
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail="admin triage resume retry is missing plan/intake linkage",
-            )
+        if source == "admin_triage_resume":
+        is_job_based_triage_resume = str(original.get("client_request_id") or "").startswith(
+            "triage_resume_job_"
+        )
+
+    if not retry_intake_id:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="admin triage resume retry is missing intake linkage",
+        )
+
+    if not is_job_based_triage_resume and not retry_plan_id:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="admin triage resume retry is missing plan linkage",
+        )
         existing_retry_job = await asyncio.to_thread(
             store.get_generation_job_by_client_request_id,
             athlete_id=target_athlete_id,
