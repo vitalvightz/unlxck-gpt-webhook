@@ -31,9 +31,9 @@ Use this checklist for beta-readiness verification against the production fronte
 ### Supabase DB Migrations
 
 - [ ] Profile role escalation trigger is applied.
-- [ ] Plans update/delete RLS policies are applied.
-- [ ] Athlete intake delete RLS policy is applied.
-- [ ] Generation job delete RLS policy is applied.
+- [ ] Plans direct insert/update/delete RLS policies are absent.
+- [ ] Athlete intake direct insert/update/delete RLS policies are absent.
+- [ ] Generation job direct insert/update/delete RLS policies are absent.
 - [ ] Profile username columns and constraints are applied.
 - [ ] Username bypass trigger is applied.
 

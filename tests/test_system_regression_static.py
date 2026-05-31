@@ -93,36 +93,26 @@ def test_schema_contains_required_role_and_username_security_triggers():
     assert "create trigger profiles_prevent_username_policy_bypass" in schema
 
 
-def test_schema_contains_required_update_delete_rls_policies():
+def test_schema_blocks_direct_critical_table_mutation_rls_policies():
     schema = SCHEMA.read_text(encoding="utf-8")
 
-    required_policies = [
+    for policy in (
+        "plans_self_or_admin_insert",
         "plans_self_or_admin_update",
         "plans_self_or_admin_delete",
+        "intakes_self_or_admin_insert",
+        "intakes_self_or_admin_update",
         "intakes_self_or_admin_delete",
-        "generation_jobs_self_or_admin_delete",
-    ]
-    for policy in required_policies:
-        assert f'create policy "{policy}"' in schema
-
-    plans_update = re.search(
-        r'create policy "plans_self_or_admin_update" on public\.plans\s+for update\s+using\s+\((?P<using>.*?)\)\s+with check\s+\((?P<check>.*?)\);',
-        schema,
-        re.IGNORECASE | re.DOTALL,
-    )
-    assert plans_update is not None
-    assert "athlete_id = auth.uid() or public.is_admin()" in plans_update.group("using")
-    assert "athlete_id = auth.uid() or public.is_admin()" in plans_update.group("check")
-
-    for policy in (
-        "plans_self_or_admin_delete",
-        "intakes_self_or_admin_delete",
+        "generation_jobs_self_or_admin_insert",
+        "generation_jobs_self_or_admin_update",
         "generation_jobs_self_or_admin_delete",
     ):
-        policy_match = re.search(
-            rf'create policy "{policy}".*?for delete\s+using\s+\((.*?)\);',
-            schema,
-            re.IGNORECASE | re.DOTALL,
-        )
-        assert policy_match is not None
-        assert "athlete_id = auth.uid() or public.is_admin()" in policy_match.group(1)
+        assert f'drop policy if exists "{policy}"' in schema
+        assert f'create policy "{policy}"' not in schema
+
+    for policy in (
+        "plans_self_or_admin_select",
+        "intakes_self_or_admin_select",
+        "generation_jobs_self_or_admin_select",
+    ):
+        assert f'create policy "{policy}"' in schema

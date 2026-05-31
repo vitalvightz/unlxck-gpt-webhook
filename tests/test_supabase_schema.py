@@ -21,6 +21,12 @@ PLAN_RATE_LIMIT_MIGRATION_PATH = (
     / "migrations"
     / "20260525110000_add_plan_generation_short_window_rate_limit.sql"
 )
+CRITICAL_RLS_MIGRATION_PATH = (
+    Path(__file__).resolve().parents[1]
+    / "supabase"
+    / "migrations"
+    / "20260531000000_harden_critical_table_rls.sql"
+)
 
 
 def _read_schema() -> str:
@@ -37,6 +43,10 @@ def _read_username_atomic_migration() -> str:
 
 def _read_plan_rate_limit_migration() -> str:
     return PLAN_RATE_LIMIT_MIGRATION_PATH.read_text(encoding="utf-8")
+
+
+def _read_critical_rls_migration() -> str:
+    return CRITICAL_RLS_MIGRATION_PATH.read_text(encoding="utf-8")
 
 
 def test_profiles_table_declares_avatar_url_column():
@@ -189,13 +199,53 @@ def test_direct_non_admin_username_update_is_blocked_by_schema():
     assert guard_match is not None, "non-admin username/history update must raise"
 
 
-def test_schema_has_update_delete_rls_policies():
+def test_schema_blocks_direct_critical_table_mutations():
     schema = _read_schema()
 
-    assert re.search(r'create policy "plans_self_or_admin_update" on public\.plans\s+for update\s+using\s+\(athlete_id = auth\.uid\(\) or public\.is_admin\(\)\)\s+with check\s+\(athlete_id = auth\.uid\(\) or public\.is_admin\(\)\);', schema, re.IGNORECASE)
-    assert re.search(r'create policy "plans_self_or_admin_delete" on public\.plans\s+for delete\s+using\s+\(athlete_id = auth\.uid\(\) or public\.is_admin\(\)\);', schema, re.IGNORECASE)
-    assert re.search(r'create policy "intakes_self_or_admin_delete" on public\.athlete_intakes\s+for delete\s+using\s+\(athlete_id = auth\.uid\(\) or public\.is_admin\(\)\);', schema, re.IGNORECASE)
-    assert re.search(r'create policy "generation_jobs_self_or_admin_delete" on public\.generation_jobs\s+for delete\s+using\s+\(athlete_id = auth\.uid\(\) or public\.is_admin\(\)\);', schema, re.IGNORECASE)
+    for policy in (
+        "intakes_self_or_admin_insert",
+        "intakes_self_or_admin_update",
+        "intakes_self_or_admin_delete",
+        "athlete_intakes_self_or_admin_insert",
+        "athlete_intakes_self_or_admin_update",
+        "athlete_intakes_self_or_admin_delete",
+        "plans_self_or_admin_insert",
+        "plans_self_or_admin_update",
+        "plans_self_or_admin_delete",
+        "generation_jobs_self_or_admin_insert",
+        "generation_jobs_self_or_admin_update",
+        "generation_jobs_self_or_admin_delete",
+    ):
+        assert f'drop policy if exists "{policy}"' in schema
+        assert f'create policy "{policy}"' not in schema
+
+    for policy in (
+        "intakes_self_or_admin_select",
+        "plans_self_or_admin_select",
+        "generation_jobs_self_or_admin_select",
+    ):
+        assert f'create policy "{policy}"' in schema
+
+
+def test_critical_table_rls_hardening_migration_drops_direct_mutation_policies():
+    migration = _read_critical_rls_migration()
+
+    for policy in (
+        "intakes_self_or_admin_insert",
+        "intakes_self_or_admin_update",
+        "intakes_self_or_admin_delete",
+        "athlete_intakes_self_or_admin_insert",
+        "athlete_intakes_self_or_admin_update",
+        "athlete_intakes_self_or_admin_delete",
+        "plans_self_or_admin_insert",
+        "plans_self_or_admin_update",
+        "plans_self_or_admin_delete",
+        "generation_jobs_self_or_admin_insert",
+        "generation_jobs_self_or_admin_update",
+        "generation_jobs_self_or_admin_delete",
+    ):
+        assert f'drop policy if exists "{policy}"' in migration
+        assert f'create policy "{policy}"' not in migration
 
 
 def test_change_profile_username_rpc_exists_in_schema():

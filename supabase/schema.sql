@@ -574,50 +574,31 @@ drop policy if exists "intakes_self_or_admin_select" on public.athlete_intakes;
 create policy "intakes_self_or_admin_select" on public.athlete_intakes
 for select using (athlete_id = auth.uid() or public.is_admin());
 
+-- athlete_intakes: authenticated browser clients may read their own records,
+-- but writes must go through FastAPI/service-role business logic.
 drop policy if exists "intakes_self_or_admin_insert" on public.athlete_intakes;
-create policy "intakes_self_or_admin_insert" on public.athlete_intakes
-for insert with check (athlete_id = auth.uid() or public.is_admin());
-
 drop policy if exists "intakes_self_or_admin_update" on public.athlete_intakes;
-create policy "intakes_self_or_admin_update" on public.athlete_intakes
-for update using (athlete_id = auth.uid() or public.is_admin())
-with check (athlete_id = auth.uid() or public.is_admin());
-
 drop policy if exists "intakes_self_or_admin_delete" on public.athlete_intakes;
-create policy "intakes_self_or_admin_delete" on public.athlete_intakes
-for delete using (athlete_id = auth.uid() or public.is_admin());
+drop policy if exists "athlete_intakes_self_or_admin_insert" on public.athlete_intakes;
+drop policy if exists "athlete_intakes_self_or_admin_update" on public.athlete_intakes;
+drop policy if exists "athlete_intakes_self_or_admin_delete" on public.athlete_intakes;
 
 drop policy if exists "plans_self_or_admin_select" on public.plans;
 create policy "plans_self_or_admin_select" on public.plans
 for select using (athlete_id = auth.uid() or public.is_admin());
 
+-- plans: authenticated browser clients may read their own plans,
+-- but writes must go through FastAPI/service-role business logic.
 drop policy if exists "plans_self_or_admin_insert" on public.plans;
-create policy "plans_self_or_admin_insert" on public.plans
-for insert with check (athlete_id = auth.uid() or public.is_admin());
-
 drop policy if exists "plans_self_or_admin_update" on public.plans;
-create policy "plans_self_or_admin_update" on public.plans
-for update using (athlete_id = auth.uid() or public.is_admin())
-with check (athlete_id = auth.uid() or public.is_admin());
-
 drop policy if exists "plans_self_or_admin_delete" on public.plans;
-create policy "plans_self_or_admin_delete" on public.plans
-for delete using (athlete_id = auth.uid() or public.is_admin());
 
 drop policy if exists "generation_jobs_self_or_admin_select" on public.generation_jobs;
 create policy "generation_jobs_self_or_admin_select" on public.generation_jobs
 for select using (athlete_id = auth.uid() or public.is_admin());
 
+-- generation_jobs: authenticated browser clients may read their own jobs,
+-- but writes must go through FastAPI/service-role business logic.
 drop policy if exists "generation_jobs_self_or_admin_insert" on public.generation_jobs;
-create policy "generation_jobs_self_or_admin_insert" on public.generation_jobs
-for insert with check (athlete_id = auth.uid() or public.is_admin());
-
 drop policy if exists "generation_jobs_self_or_admin_update" on public.generation_jobs;
-create policy "generation_jobs_self_or_admin_update" on public.generation_jobs
-for update using (athlete_id = auth.uid() or public.is_admin())
-with check (athlete_id = auth.uid() or public.is_admin());
-
-
 drop policy if exists "generation_jobs_self_or_admin_delete" on public.generation_jobs;
-create policy "generation_jobs_self_or_admin_delete" on public.generation_jobs
-for delete using (athlete_id = auth.uid() or public.is_admin());
