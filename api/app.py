@@ -52,6 +52,7 @@ from .stage2_automation import (
 )
 from .store import AppStore, SupabaseAppStore, is_startup_stale_generation_job
 from .sentry_config import init_sentry
+from .services.generation_request_service import generate_plan_for_current_user
 from .services.generation_retry_service import retry_generation_job as retry_generation_job_service
 from .cors_config import (
     get_cors_origins as get_cors_origins,
@@ -62,7 +63,6 @@ from .plan_mappers import (
     _decode_structured_text,
     _map_profile_row,
     _is_archived_plan,
-    _ALLOWED_PLAN_SOURCES,
     _lookup_plan_source,
     _map_plan_detail,
     _map_admin_plan_summary,
@@ -70,17 +70,14 @@ from .plan_mappers import (
 )
 from .generation_job_helpers import (
     _utc_now_iso,
-    _PROTECTED_TRIAGE_STATUSES,
     _normalized_client_request_id,
     _job_response,
-    _build_protected_triage_response,
     _is_stale_job,
     _generation_job_stale_after_seconds,
     _find_blocking_generation_job_for_athlete,
     _stable_payload_signature,
     _triage_job_has_resume_approval,
     _job_final_result_triage_status,
-    _find_existing_terminal_job_for_same_payload,
     _admin_generation_job_diagnostic,
     _resume_job_final_result_successful,
     _resume_job_resolved_successfully,
@@ -749,134 +746,22 @@ def create_app(
         active_tasks: set[str] = Depends(get_active_generation_tasks),
         enable_in_process_generation: bool = Depends(get_enable_in_process_generation),
     ) -> GenerationJobResponse:
-        focus_validation = validate_performance_focus_selections(
-            request_body.fight_date,
-            key_goals=request_body.key_goals,
-            weak_areas=request_body.weak_areas,
-            time_zone=request_body.athlete.athlete_timezone,
-        )
-        if focus_validation.is_over_cap:
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail=focus_validation.error_message or "Too many focus selections for this camp.",
-            )
-        short_window_limit = _plan_generate_rate_limit_requests()
-        if short_window_limit > 0:
-            allowed, retry_after = await asyncio.to_thread(
-                store.check_plan_generation_short_window_limit,
-                athlete_id=profile.athlete_id,
-                max_requests=short_window_limit,
-                window_seconds=_plan_generate_rate_limit_window_seconds(),
-            )
-            if not allowed:
-                raise HTTPException(
-                    status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                    detail={
-                        "message": "Too many plan generation requests. Try again shortly.",
-                        "retry_after_seconds": retry_after,
-                    },
-                )
-        client_request_id = _normalized_client_request_id(
-            request.headers.get("X-Client-Request-Id"),
-            "cli",
-        )
-        existing_job = await asyncio.to_thread(
-            store.get_generation_job_by_client_request_id,
-            athlete_id=profile.athlete_id,
-            client_request_id=client_request_id,
-        )
-        stale_after_seconds = _generation_job_stale_after_seconds()
-        if existing_job:
-            if is_startup_stale_generation_job(existing_job, stale_after_seconds=stale_after_seconds):
-                existing_job = await asyncio.to_thread(
-                    store.create_or_get_generation_job,
-                    athlete_id=profile.athlete_id,
-                    client_request_id=client_request_id,
-                    source=str(existing_job.get("source") or "self_serve"),
-                    request_payload=request_body.model_dump(mode="json"),
-                    stale_after_seconds=stale_after_seconds,
-                )
-            job = await schedule_generation_job_if_needed(
-                job=existing_job,
-                background_tasks=background_tasks,
-                store=store,
-                planner_fn=planner_fn,
-                stage2=stage2,
-                active_tasks=active_tasks,
-                enable_in_process_generation=enable_in_process_generation,
-                stale_job_checker=_is_stale_job,
-                stale_after_seconds=stale_after_seconds,
-            )
-            return _job_response(job, store=store, viewer_role=profile.role)
-        recovered_existing = await asyncio.to_thread(
-            _find_existing_terminal_job_for_same_payload,
-            store=store,
-            athlete_id=profile.athlete_id,
-            request_payload=request_body.model_dump(mode="json"),
-        )
-        if recovered_existing:
-            return _job_response(recovered_existing, store=store, viewer_role=profile.role)
-        latest_plan = await asyncio.to_thread(store.get_latest_plan, profile.athlete_id)
-        if isinstance(latest_plan, dict):
-            latest_status = str(latest_plan.get("status") or "").strip().lower()
-            latest_stage2_status = str(latest_plan.get("stage2_status") or "").strip().lower()
-            latest_intake_id = str(latest_plan.get("intake_id") or "").strip()
-            request_intake_id = str(request_body.intake_id or "").strip()
-            if (
-                profile.role == "admin"
-                and latest_intake_id
-                and request_intake_id
-                and latest_intake_id == request_intake_id
-                and (latest_status in _PROTECTED_TRIAGE_STATUSES or latest_stage2_status in _PROTECTED_TRIAGE_STATUSES)
-            ):
-                return _build_protected_triage_response(latest_plan, profile.athlete_id)
-        blocking_job = await asyncio.to_thread(
-            _find_blocking_generation_job_for_athlete,
-            store=store,
-            athlete_id=profile.athlete_id,
-            stale_after_seconds=stale_after_seconds,
-        )
-        if blocking_job:
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail="A generation job is already queued or running for this account.",
-            )
-        daily_limit = _plan_generate_daily_limit_per_user()
-        if daily_limit > 0 and profile.role != "admin" and not _is_exempt_from_daily_generation_cap(profile.email):
-            utc_midnight = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0).isoformat()
-            jobs_today = await asyncio.to_thread(
-                store.count_generation_jobs_for_athlete_since,
-                profile.athlete_id,
-                utc_midnight,
-                sources=_ALLOWED_PLAN_SOURCES,
-            )
-            if jobs_today >= daily_limit:
-                raise HTTPException(
-                    status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                    detail="Daily generation limit reached. Try again tomorrow.",
-                )
-        plan_source_header = (request.headers.get("X-Plan-Source") or "").strip()
-        resolved_source = plan_source_header if plan_source_header in _ALLOWED_PLAN_SOURCES else "self_serve"
-        job = await asyncio.to_thread(
-            store.create_or_get_generation_job,
-            athlete_id=profile.athlete_id,
-            client_request_id=client_request_id,
-            source=resolved_source,
-            request_payload=request_body.model_dump(mode="json"),
-            stale_after_seconds=stale_after_seconds,
-        )
-        job = await schedule_generation_job_if_needed(
-            job=job,
+        return await generate_plan_for_current_user(
+            request=request,
+            request_body=request_body,
             background_tasks=background_tasks,
+            profile=profile,
             store=store,
             planner_fn=planner_fn,
             stage2=stage2,
             active_tasks=active_tasks,
             enable_in_process_generation=enable_in_process_generation,
-            stale_job_checker=_is_stale_job,
-            stale_after_seconds=stale_after_seconds,
+            schedule_generation_job_if_needed=schedule_generation_job_if_needed,
+            plan_generate_rate_limit_requests=_plan_generate_rate_limit_requests,
+            plan_generate_rate_limit_window_seconds=_plan_generate_rate_limit_window_seconds,
+            plan_generate_daily_limit_per_user=_plan_generate_daily_limit_per_user,
+            is_exempt_from_daily_generation_cap=_is_exempt_from_daily_generation_cap,
         )
-        return _job_response(job, store=store, viewer_role=profile.role)
 
     app.include_router(
         build_generation_jobs_router(
