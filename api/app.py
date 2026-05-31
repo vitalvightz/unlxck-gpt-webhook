@@ -80,6 +80,8 @@ from .generation_job_helpers import (
     _find_blocking_generation_job_for_athlete,
     _stable_payload_signature,
     _admin_generation_job_diagnostic,
+    _triage_job_has_resume_approval as _triage_job_has_resume_approval,
+    _triage_plan_has_resume_approval as _triage_plan_has_resume_approval,
 )
 from .routes import (
     build_generation_jobs_router,
@@ -93,6 +95,16 @@ security = HTTPBearer(auto_error=False)
 logger = logging.getLogger(__name__)
 
 init_sentry()
+
+
+def _triage_job_has_resume_approval(job: dict[str, Any] | None) -> bool:
+    """Compatibility seam for tests/importers after triage service extraction."""
+    return _triage_job_has_resume_approval_impl(job)
+
+
+def _triage_plan_has_resume_approval(plan: dict[str, Any] | None) -> bool:
+    """Compatibility seam for tests/importers after triage service extraction."""
+    return _triage_plan_has_resume_approval_impl(plan)
 
 
 def _validate_session_type_consistency(workspace: NutritionWorkspaceUpdateRequest) -> None:
