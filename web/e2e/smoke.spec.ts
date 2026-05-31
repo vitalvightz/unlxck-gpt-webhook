@@ -30,12 +30,18 @@ test.describe("public routes load without crashing", () => {
   }
 });
 
-test("primary navigation renders for an anonymous visitor", async ({ page, baseURL }) => {
+test("app shell and navigation render for an anonymous visitor", async ({ page, baseURL }) => {
   await isolateFromNetwork(page, baseURL ?? BASE_URL);
   await page.goto("/", { waitUntil: "domcontentloaded" });
 
-  // The app shell always renders the top-level navigation landmark.
-  await expect(page.locator("nav").first()).toBeVisible();
+  // The persistent sidebar shell renders on every route at desktop widths.
+  // (The semantic <nav> only renders once a session is hydrated, so we anchor
+  // on the always-present shell + its anonymous access links instead.)
+  const sidebar = page.locator("#app-sidebar");
+  await expect(sidebar).toBeVisible();
+
+  // Anonymous visitors get a navigable login link inside the shell.
+  await expect(sidebar.getByRole("link", { name: /log in/i })).toBeVisible();
 });
 
 test("protected route redirects unauthenticated users to login", async ({ page, baseURL }) => {
