@@ -97,16 +97,6 @@ logger = logging.getLogger(__name__)
 init_sentry()
 
 
-def _triage_job_has_resume_approval(job: dict[str, Any] | None) -> bool:
-    """Compatibility seam for tests/importers after triage service extraction."""
-    return _triage_job_has_resume_approval_impl(job)
-
-
-def _triage_plan_has_resume_approval(plan: dict[str, Any] | None) -> bool:
-    """Compatibility seam for tests/importers after triage service extraction."""
-    return _triage_plan_has_resume_approval_impl(plan)
-
-
 def _validate_session_type_consistency(workspace: NutritionWorkspaceUpdateRequest) -> None:
     training_days = {day.strip().lower() for day in workspace.shared_camp_context.training_availability if str(day).strip()}
     hard_days = {day.strip().lower() for day in workspace.shared_camp_context.hard_sparring_days if str(day).strip()}
