@@ -49,6 +49,7 @@ GENERATION_JOB_ADMIN_LIST_SELECT = (
 _TRANSIENT_SUPABASE_ERRORS = (
     httpx.RemoteProtocolError,
     httpx.ConnectError,
+    httpx.ConnectTimeout,
     httpx.ReadTimeout,
 )
 _STORE_CLIENT_ERRORS = (PostgrestAPIError, httpx.HTTPError)
@@ -553,7 +554,12 @@ class SupabaseAppStore:
         # Supabase terminates a multiplexed connection after several streams.
         # HTTP/1.1 uses a simple request-per-connection model that is immune
         # to this class of failure.
-        http_client = httpx.Client(http2=False)
+        # Use a generous read timeout (20 s) so requests survive Supabase
+        # free-tier database cold-starts, which can take 10–15 s.
+        http_client = httpx.Client(
+            http2=False,
+            timeout=httpx.Timeout(connect=5.0, read=20.0, write=10.0, pool=5.0),
+        )
         return cls(create_client(url, key, options=ClientOptions(httpx_client=http_client)), admin_emails)
 
     def is_admin_email(self, email: str) -> bool:
@@ -898,7 +904,7 @@ class SupabaseAppStore:
             self._log_profile_event(operation="ensure_start", user=user)
             existing = None
             _last_read_exc: Exception | None = None
-            for _attempt in range(2):
+            for _attempt in range(3):
                 try:
                     existing = self._get_profile_by_id(user.user_id)
                     _last_read_exc = None
@@ -911,7 +917,7 @@ class SupabaseAppStore:
                         user.user_id,
                         type(exc).__name__,
                     )
-                    time.sleep(0.5)
+                    time.sleep(2.0)
             if _last_read_exc is not None:
                 raise _last_read_exc
             if existing:
