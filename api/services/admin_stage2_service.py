@@ -5,9 +5,9 @@ from typing import Any
 from fastapi import HTTPException, status
 from fightcamp.stage2_pipeline import build_stage2_retry, review_stage2_output
 
-from api.models import PlanDetail
-from api.plan_mappers import _decode_structured_text, _lookup_plan_source, _map_plan_detail
-from api.store import AppStore
+from ..models import PlanDetail
+from ..plan_mappers import _decode_structured_text, _lookup_plan_source, _map_plan_detail
+from ..store import AppStore
 
 
 def _manual_stage2_result(plan_row: dict[str, Any], final_plan_text: str) -> dict[str, Any]:
