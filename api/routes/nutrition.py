@@ -1,0 +1,172 @@
+from __future__ import annotations
+
+import uuid
+
+from fastapi import APIRouter, Depends, HTTPException, status
+
+from api.models import NutritionWorkspaceState, NutritionWorkspaceUpdateRequest, ProfileRecord, ProfileUpdateRequest
+from api.nutrition_workspace import (
+    build_nutrition_workspace,
+    merge_workspace_into_payload,
+    normalize_nutrition_update_request,
+)
+from api.plan_mappers import _map_admin_athlete
+from api.store import AppStore
+
+
+def build_nutrition_router(
+    *,
+    require_profile,
+    require_admin,
+    get_store,
+    validate_schedule_consistency,
+    validate_session_type_consistency,
+    update_profile_with_nutrition_fallback,
+) -> APIRouter:
+    router = APIRouter()
+
+    @router.get("/api/nutrition/current", response_model=NutritionWorkspaceState)
+    def get_nutrition_current(
+        profile: ProfileRecord = Depends(require_profile),
+        store: AppStore = Depends(get_store),
+    ) -> NutritionWorkspaceState:
+        latest_intake = store.get_latest_intake(profile.athlete_id)
+        return build_nutrition_workspace(profile=profile, latest_intake_row=latest_intake)
+
+    @router.put("/api/nutrition/current", response_model=NutritionWorkspaceState)
+    def update_nutrition_current(
+        update: NutritionWorkspaceUpdateRequest,
+        profile: ProfileRecord = Depends(require_profile),
+        store: AppStore = Depends(get_store),
+    ) -> NutritionWorkspaceState:
+        latest_intake = store.get_latest_intake(profile.athlete_id)
+        current_workspace = build_nutrition_workspace(profile=profile, latest_intake_row=latest_intake)
+        update = update.model_copy(update={"nutrition_coach_controls": current_workspace.nutrition_coach_controls})
+        normalized_update = normalize_nutrition_update_request(
+            update=update,
+            existing_shared_camp_context=current_workspace.shared_camp_context,
+        )
+        validate_schedule_consistency(normalized_update)
+        validate_session_type_consistency(normalized_update)
+
+        merged_payload = merge_workspace_into_payload(
+            base_payload=(
+                profile.onboarding_draft
+                if current_workspace.source == "draft" and isinstance(profile.onboarding_draft, dict)
+                else latest_intake.get("intake")
+                if current_workspace.source == "intake" and isinstance(latest_intake, dict)
+                else {}
+            ),
+            workspace=normalized_update,
+            profile=profile,
+        )
+
+        if current_workspace.source == "intake" and current_workspace.intake_id:
+            updated_profile = update_profile_with_nutrition_fallback(
+                store=store,
+                athlete_id=profile.athlete_id,
+                update=ProfileUpdateRequest(nutrition_profile=normalized_update.nutrition_profile),
+            )
+            store.update_intake(
+                current_workspace.intake_id,
+                intake=merged_payload,
+                fight_date=normalized_update.shared_camp_context.fight_date or None,
+                technical_style=list(merged_payload.get("athlete", {}).get("technical_style") or updated_profile.technical_style),
+            )
+            refreshed_intake = store.get_latest_intake(profile.athlete_id)
+            return build_nutrition_workspace(profile=updated_profile, latest_intake_row=refreshed_intake)
+
+        updated_profile = update_profile_with_nutrition_fallback(
+            store=store,
+            athlete_id=profile.athlete_id,
+            update=ProfileUpdateRequest(
+                nutrition_profile=normalized_update.nutrition_profile,
+                onboarding_draft=merged_payload,
+            ),
+        )
+        refreshed_intake = store.get_latest_intake(profile.athlete_id)
+        return build_nutrition_workspace(profile=updated_profile, latest_intake_row=refreshed_intake)
+
+    @router.get("/api/admin/athletes/{athlete_id}/nutrition/current", response_model=NutritionWorkspaceState)
+    def get_admin_athlete_nutrition_current(
+        athlete_id: str,
+        _: ProfileRecord = Depends(require_admin),
+        store: AppStore = Depends(get_store),
+    ) -> NutritionWorkspaceState:
+        try:
+            uuid.UUID(athlete_id)
+        except (ValueError, AttributeError):
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="athlete not found")
+        row = store.get_admin_athlete(athlete_id)
+        if not row:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="athlete not found")
+        latest_intake = store.get_latest_intake(athlete_id)
+        athlete = _map_admin_athlete(row, latest_intake=latest_intake)
+        return build_nutrition_workspace(profile=athlete, latest_intake_row=latest_intake)
+
+    @router.put("/api/admin/athletes/{athlete_id}/nutrition/current", response_model=NutritionWorkspaceState)
+    def update_admin_athlete_nutrition_current(
+        athlete_id: str,
+        update: NutritionWorkspaceUpdateRequest,
+        _: ProfileRecord = Depends(require_admin),
+        store: AppStore = Depends(get_store),
+    ) -> NutritionWorkspaceState:
+        try:
+            uuid.UUID(athlete_id)
+        except (ValueError, AttributeError):
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="athlete not found")
+        row = store.get_admin_athlete(athlete_id)
+        if not row:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="athlete not found")
+
+        latest_intake = store.get_latest_intake(athlete_id)
+        athlete = _map_admin_athlete(row, latest_intake=latest_intake)
+        current_workspace = build_nutrition_workspace(profile=athlete, latest_intake_row=latest_intake)
+        if "nutrition_coach_controls" not in update.model_fields_set:
+            update = update.model_copy(update={"nutrition_coach_controls": current_workspace.nutrition_coach_controls})
+        normalized_update = normalize_nutrition_update_request(
+            update=update,
+            existing_shared_camp_context=current_workspace.shared_camp_context,
+        )
+        validate_schedule_consistency(normalized_update)
+        validate_session_type_consistency(normalized_update)
+
+        merged_payload = merge_workspace_into_payload(
+            base_payload=(
+                athlete.onboarding_draft
+                if current_workspace.source == "draft" and isinstance(athlete.onboarding_draft, dict)
+                else latest_intake.get("intake")
+                if current_workspace.source == "intake" and isinstance(latest_intake, dict)
+                else {}
+            ),
+            workspace=normalized_update,
+            profile=athlete,
+        )
+
+        if current_workspace.source == "intake" and current_workspace.intake_id:
+            updated_profile = update_profile_with_nutrition_fallback(
+                store=store,
+                athlete_id=athlete_id,
+                update=ProfileUpdateRequest(nutrition_profile=normalized_update.nutrition_profile),
+            )
+            store.update_intake(
+                current_workspace.intake_id,
+                intake=merged_payload,
+                fight_date=normalized_update.shared_camp_context.fight_date or None,
+                technical_style=list(merged_payload.get("athlete", {}).get("technical_style") or updated_profile.technical_style),
+            )
+            refreshed_intake = store.get_latest_intake(athlete_id)
+            return build_nutrition_workspace(profile=updated_profile, latest_intake_row=refreshed_intake)
+
+        updated_profile = update_profile_with_nutrition_fallback(
+            store=store,
+            athlete_id=athlete_id,
+            update=ProfileUpdateRequest(
+                nutrition_profile=normalized_update.nutrition_profile,
+                onboarding_draft=merged_payload,
+            ),
+        )
+        refreshed_intake = store.get_latest_intake(athlete_id)
+        return build_nutrition_workspace(profile=updated_profile, latest_intake_row=refreshed_intake)
+
+    return router
