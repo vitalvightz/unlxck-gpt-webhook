@@ -93,6 +93,10 @@ def build_nutrition_router(
         _: ProfileRecord = Depends(require_admin),
         store: AppStore = Depends(get_store),
     ) -> NutritionWorkspaceState:
+        try:
+            uuid.UUID(athlete_id)
+        except (ValueError, AttributeError):
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="athlete not found")
         row = store.get_admin_athlete(athlete_id)
         if not row:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="athlete not found")
