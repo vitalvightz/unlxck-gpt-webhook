@@ -88,6 +88,10 @@ def build_plans_router(*, require_profile, require_plan_row, get_store) -> APIRo
         profile: ProfileRecord = Depends(require_profile),
         store: AppStore = Depends(get_store),
     ) -> PlanDetail:
+        try:
+            uuid.UUID(plan_id)
+        except (ValueError, AttributeError):
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
         plan_row = store.get_plan(plan_id)
         if not plan_row:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
