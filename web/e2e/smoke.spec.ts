@@ -38,8 +38,8 @@ test("primary navigation renders for an anonymous visitor", async ({ page, baseU
   await expect(page.locator("nav").first()).toBeVisible();
 });
 
-test("protected route redirects unauthenticated users to login", async ({ page }) => {
-  await isolateFromNetwork(page, BASE_URL);
+test("protected route redirects unauthenticated users to login", async ({ page, baseURL }) => {
+  await isolateFromNetwork(page, baseURL ?? BASE_URL);
 
   await page.goto("/generate", { waitUntil: "domcontentloaded" });
 
