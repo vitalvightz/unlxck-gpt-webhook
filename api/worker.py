@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import os
+import signal
 from contextlib import suppress
 
 from fightcamp.logging_utils import configure_logging
@@ -31,6 +32,64 @@ def _worker_stale_after_seconds() -> int:
 
 def _worker_max_concurrent_jobs() -> int:
     return _int_env("UNLXCK_GENERATION_WORKER_MAX_CONCURRENT_JOBS", 1, minimum=1)
+
+
+def _worker_shutdown_grace_seconds() -> int:
+    return _int_env("UNLXCK_GENERATION_WORKER_SHUTDOWN_GRACE_SECONDS", 25, minimum=1)
+
+
+def _install_shutdown_handlers(
+    loop: asyncio.AbstractEventLoop,
+    shutdown_event: asyncio.Event,
+) -> None:
+    """Trip ``shutdown_event`` on SIGTERM/SIGINT so the worker can drain cleanly."""
+
+    def _request_shutdown(signal_name: str) -> None:
+        if not shutdown_event.is_set():
+            logger.info("[worker] shutdown:signal received=%s", signal_name)
+            shutdown_event.set()
+
+    for sig in (signal.SIGTERM, signal.SIGINT):
+        try:
+            loop.add_signal_handler(sig, _request_shutdown, sig.name)
+        except (NotImplementedError, RuntimeError, ValueError):
+            # Signal handlers may be unavailable (e.g. non-main thread or some
+            # platforms). Fall back to the default behaviour in that case.
+            logger.debug("[worker] shutdown:add_signal_handler unsupported sig=%s", sig.name)
+
+
+async def _drain_active_tasks(
+    *,
+    detached_tasks: set[asyncio.Task[None]],
+    active_tasks: set[str],
+    grace_seconds: int,
+) -> None:
+    """Give in-flight generation tasks a grace period, then cancel stragglers.
+
+    Leaves both ``detached_tasks`` and ``active_tasks`` empty so shutdown does
+    not pollute in-memory state. Jobs are intentionally not marked failed here:
+    cancelled work is recovered via the heartbeat/stale-job path on restart.
+    """
+    pending = {task for task in detached_tasks if not task.done()}
+    if pending:
+        logger.info(
+            "[worker] shutdown:draining pending_tasks=%s grace_seconds=%s",
+            len(pending),
+            grace_seconds,
+        )
+        _, still_pending = await asyncio.wait(pending, timeout=grace_seconds)
+        if still_pending:
+            logger.warning(
+                "[worker] shutdown:cancelling unfinished_tasks=%s after grace period",
+                len(still_pending),
+            )
+            for task in still_pending:
+                task.cancel()
+            with suppress(Exception):
+                await asyncio.gather(*still_pending, return_exceptions=True)
+
+    detached_tasks.clear()
+    active_tasks.clear()
 
 async def _mark_job_failed_before_runtime(
     *,
@@ -169,29 +228,50 @@ async def run_worker() -> None:
     )
     stale_after_seconds = _worker_stale_after_seconds()
     max_concurrent_jobs = _worker_max_concurrent_jobs()
+    shutdown_grace_seconds = _worker_shutdown_grace_seconds()
 
     active_tasks: set[str] = set()
     detached_tasks: set[asyncio.Task[None]] = set()
 
+    shutdown_event = asyncio.Event()
+    _install_shutdown_handlers(asyncio.get_running_loop(), shutdown_event)
+
     logger.info(
-        "[worker] started mode=%s interval_seconds=%s stale_after_seconds=%s max_concurrent_jobs=%s",
+        "[worker] started mode=%s interval_seconds=%s stale_after_seconds=%s max_concurrent_jobs=%s shutdown_grace_seconds=%s",
         mode,
         interval_seconds,
         stale_after_seconds,
         max_concurrent_jobs,
+        shutdown_grace_seconds,
     )
     if os.getenv("UNLXCK_ENABLE_IN_PROCESS_GENERATION", "0").strip() == "0":
         logger.info("[worker] generation:worker_only_mode enabled")
 
-    while True:
-        await _tick(
-            store=store,
-            active_tasks=active_tasks,
-            detached_tasks=detached_tasks,
-            stale_after_seconds=stale_after_seconds,
-            max_concurrent_jobs=max_concurrent_jobs,
+    try:
+        while not shutdown_event.is_set():
+            await _tick(
+                store=store,
+                active_tasks=active_tasks,
+                detached_tasks=detached_tasks,
+                stale_after_seconds=stale_after_seconds,
+                max_concurrent_jobs=max_concurrent_jobs,
+            )
+            # Wake early if shutdown is requested mid-interval; otherwise this
+            # preserves the existing poll cadence between ticks.
+            with suppress(asyncio.TimeoutError):
+                await asyncio.wait_for(shutdown_event.wait(), timeout=interval_seconds)
+    finally:
+        logger.info(
+            "[worker] shutdown:start active_tasks=%s grace_seconds=%s",
+            len(active_tasks),
+            shutdown_grace_seconds,
         )
-        await asyncio.sleep(interval_seconds)
+        await _drain_active_tasks(
+            detached_tasks=detached_tasks,
+            active_tasks=active_tasks,
+            grace_seconds=shutdown_grace_seconds,
+        )
+        logger.info("[worker] shutdown:complete")
 
 
 def main() -> None:

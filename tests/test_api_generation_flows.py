@@ -3933,7 +3933,10 @@ def test_generate_plan_daily_limit_blocks_request_at_limit(monkeypatch: pytest.M
     )
     assert first.status_code == 202
     assert second.status_code == status.HTTP_429_TOO_MANY_REQUESTS
-    assert second.json()["detail"] == "Daily generation limit reached. Try again tomorrow."
+    assert (
+        second.json()["detail"]
+        == "Daily generation limit reached. Try again after midnight in your athlete timezone."
+    )
 
 
 def test_daily_generation_cap_exemptions_default_to_empty(monkeypatch: pytest.MonkeyPatch):
@@ -4668,7 +4671,10 @@ def test_retry_generation_job_respects_daily_limit_for_self_serve(monkeypatch: p
     )
 
     assert response.status_code == status.HTTP_429_TOO_MANY_REQUESTS
-    assert response.json()["detail"] == "Daily generation limit reached. Try again tomorrow."
+    assert (
+        response.json()["detail"]
+        == "Daily generation limit reached. Try again after midnight in your athlete timezone."
+    )
 
 
 def test_retry_generation_job_bypasses_daily_limit_for_admin(monkeypatch: pytest.MonkeyPatch):

@@ -3,7 +3,6 @@ from __future__ import annotations
 import asyncio
 import copy
 from collections.abc import Awaitable, Callable
-from datetime import datetime, timezone
 from typing import Any
 
 from fastapi import BackgroundTasks, HTTPException, Request, status
@@ -14,6 +13,7 @@ from api.generation_job_helpers import (
     _is_stale_job,
     _job_response,
     _normalized_client_request_id,
+    daily_generation_cap_window,
 )
 from api.models import GenerationJobResponse, ProfileRecord
 from api.plan_mappers import _ALLOWED_PLAN_SOURCES
@@ -75,17 +75,23 @@ async def retry_generation_job(
     if not is_admin and not is_exempt_from_daily_generation_cap(profile.email):
         daily_limit = plan_generate_daily_limit_per_user()
         if daily_limit > 0:
-            utc_midnight = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0).isoformat()
+            athlete_payload = request_payload.get("athlete")
+            athlete_timezone = (
+                athlete_payload.get("athlete_timezone")
+                if isinstance(athlete_payload, dict)
+                else None
+            )
+            day_start_iso, limit_reached_detail = daily_generation_cap_window(athlete_timezone)
             jobs_today = await asyncio.to_thread(
                 store.count_generation_jobs_for_athlete_since,
                 target_athlete_id,
-                utc_midnight,
+                day_start_iso,
                 sources=_ALLOWED_PLAN_SOURCES,
             )
             if jobs_today >= daily_limit:
                 raise HTTPException(
                     status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                    detail="Daily generation limit reached. Try again tomorrow.",
+                    detail=limit_reached_detail,
                 )
 
     # If the original job is a pre-start stale running job, reuse its client_request_id
