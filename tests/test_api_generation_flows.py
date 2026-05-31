@@ -4199,6 +4199,38 @@ def _seed_failed_job(
     return store.get_generation_job(job["id"])
 
 
+def test_retry_generation_job_route_delegates_to_retry_service(monkeypatch: pytest.MonkeyPatch):
+    client, _, _ = _build_client()
+    calls: dict[str, Any] = {}
+
+    async def fake_retry_service(**kwargs):
+        calls.update(kwargs)
+        now = _now()
+        return {
+            "job_id": "service-job",
+            "athlete_id": "athlete-1",
+            "client_request_id": "retry-from-service",
+            "status": "queued",
+            "created_at": now,
+            "updated_at": now,
+        }
+
+    monkeypatch.setattr(app_module, "retry_generation_job_service", fake_retry_service)
+
+    response = client.post(
+        "/api/generation-jobs/original-job/retry",
+        headers={"Authorization": "Bearer athlete-token"},
+    )
+
+    assert response.status_code == 202
+    assert response.json()["job_id"] == "service-job"
+    assert calls["job_id"] == "original-job"
+    assert calls["profile"].athlete_id == "athlete-1"
+    assert calls["schedule_generation_job_if_needed"] is schedule_generation_job_if_needed
+    assert calls["plan_generate_daily_limit_per_user"] is app_module._plan_generate_daily_limit_per_user
+    assert calls["is_exempt_from_daily_generation_cap"] is app_module._is_exempt_from_daily_generation_cap
+
+
 def test_retry_generation_job_allows_owner_to_retry_failed_job():
     client, store, _ = _build_client()
     store.ensure_profile(
