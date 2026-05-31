@@ -257,7 +257,7 @@ export function AppNav() {
   const profile = me?.profile;
   const displayName = profile?.full_name || "Athlete";
   const initials = getInitials(displayName);
-  const avatarUrl = isSafeAvatarImageUrl(profile?.avatar_url) ? profile.avatar_url : null;
+  const avatarUrl = profile && isSafeAvatarImageUrl(profile.avatar_url) ? profile.avatar_url : null;
   const role = profile?.role ?? null;
   const isAdminWorkspace = shouldShowAdminPanelLink(role, isActive(pathname, "/admin"));
 
