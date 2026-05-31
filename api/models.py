@@ -839,6 +839,18 @@ class PlanRenameRequest(BaseModel):
         return normalized
 
 
+class PlanPermanentDeleteRequest(BaseModel):
+    confirm_plan_name: str
+
+    @field_validator("confirm_plan_name")
+    @classmethod
+    def validate_confirm_plan_name(cls, value: str) -> str:
+        normalized = str(value or "").strip()
+        if not normalized:
+            raise ValueError("confirm_plan_name is required")
+        return normalized
+
+
 USERNAME_MAX_CHANGES_PER_WINDOW = 4
 USERNAME_CHANGE_WINDOW_DAYS = 30
 USERNAME_MIN_LENGTH = 3

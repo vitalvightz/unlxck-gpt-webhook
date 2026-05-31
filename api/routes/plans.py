@@ -124,12 +124,11 @@ def build_plans_router(*, require_profile, require_plan_row, get_store) -> APIRo
         if store.has_active_generation_job_for_plan(plan_id):
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
-                detail="Plan has an active generation job. Cancel or wait before deleting.",
+                detail="Plan has an active generation job. Cancel or wait before archiving.",
             )
-        if profile.role == "admin" or _is_archived_plan(plan_row):
-            store.delete_plan(plan_id)
-        else:
-            store.archive_plan(plan_id)
+        if _is_archived_plan(plan_row):
+            return Response(status_code=status.HTTP_204_NO_CONTENT)
+        store.archive_plan(plan_id)
         return Response(status_code=status.HTTP_204_NO_CONTENT)
 
     return router

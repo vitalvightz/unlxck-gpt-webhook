@@ -293,7 +293,7 @@ function PlanCard({
       await deletePlan(accessToken, plan.plan_id);
       setIsDeleteConfirmOpen(false);
       onPlanDeleted(plan.plan_id);
-      showToast(`Deleted ${getPlanDisplayName(plan)}.`, { tone: "success" });
+      showToast(`Archived ${getPlanDisplayName(plan)}.`, { tone: "success" });
     } catch (deleteError) {
       const errorMessage = deleteError instanceof Error ? deleteError.message : "Unable to delete this plan.";
       if (errorMessage.includes("Unable to reach the server") || errorMessage.includes("502") || errorMessage.includes("503") || errorMessage.includes("504")) {
@@ -345,21 +345,21 @@ function PlanCard({
           onClick={(event) => event.stopPropagation()}
         >
           <div className="plan-dialog-header">
-            <p className="kicker">Delete plan</p>
+            <p className="kicker">Archive plan</p>
             <h2 id={`delete-plan-title-${plan.plan_id}`} className="plan-dialog-title">
-              Remove {getPlanDisplayName(plan)}?
+              Archive {getPlanDisplayName(plan)}?
             </h2>
           </div>
           <p id={`delete-plan-body-${plan.plan_id}`} className="muted">
-            This deletes the saved plan and its export links from your account. This action cannot be undone.
+            This moves the plan to your archived list. You can still view it later.
           </p>
           {error ? <div className="error-banner">{error}</div> : null}
           <div className="plan-dialog-actions">
             <button type="button" className="ghost-button" onClick={handleDeleteDismiss} disabled={pendingAction === "delete"}>
               Cancel
             </button>
-            <button type="button" className="secondary-button danger-button" onClick={handleDeleteConfirm} disabled={pendingAction === "delete"}>
-              {pendingAction === "delete" ? "Deleting..." : "Delete plan"}
+            <button type="button" className="secondary-button" onClick={handleDeleteConfirm} disabled={pendingAction === "delete"}>
+              {pendingAction === "delete" ? "Archiving..." : "Archive"}
             </button>
           </div>
         </div>
@@ -391,8 +391,8 @@ function PlanCard({
             <button type="button" className="ghost-button" onClick={handleRenameStart} disabled={isActionPending || isRenaming}>
               {pendingAction === "rename" ? "Saving..." : isRenaming ? "Editing name" : "Rename"}
             </button>
-            <button type="button" className="ghost-button danger-button" onClick={handleDeleteRequest} disabled={isActionPending || isRenaming}>
-              {pendingAction === "delete" ? "Deleting..." : "Delete"}
+            <button type="button" className="ghost-button" onClick={handleDeleteRequest} disabled={isActionPending || isRenaming}>
+              {pendingAction === "delete" ? "Archiving..." : "Archive"}
             </button>
           </div>
         </div>
@@ -595,7 +595,7 @@ function LatestPlanCard({
       await deletePlan(accessToken, plan.plan_id);
       setIsDeleteConfirmOpen(false);
       onPlanDeleted(plan.plan_id);
-      showToast(`Deleted ${getPlanDisplayName(plan)}.`, { tone: "success" });
+      showToast(`Archived ${getPlanDisplayName(plan)}.`, { tone: "success" });
     } catch (deleteError) {
       const errorMessage = deleteError instanceof Error ? deleteError.message : "Unable to delete this plan.";
       if (errorMessage.includes("Unable to reach the server") || errorMessage.includes("502") || errorMessage.includes("503") || errorMessage.includes("504")) {
@@ -647,21 +647,21 @@ function LatestPlanCard({
           onClick={(event) => event.stopPropagation()}
         >
           <div className="plan-dialog-header">
-            <p className="kicker">Delete latest plan</p>
+            <p className="kicker">Archive latest plan</p>
             <h2 id={`delete-latest-plan-title-${plan.plan_id}`} className="plan-dialog-title">
-              Remove {getPlanDisplayName(plan)}?
+              Archive {getPlanDisplayName(plan)}?
             </h2>
           </div>
           <p id={`delete-latest-plan-body-${plan.plan_id}`} className="muted">
-            This deletes the saved plan and its export links from your account. This action cannot be undone.
+            This moves the plan to your archived list. You can still view it later.
           </p>
           {error ? <div className="error-banner">{error}</div> : null}
           <div className="plan-dialog-actions">
             <button type="button" className="ghost-button" onClick={handleDeleteDismiss} disabled={pendingAction === "delete"}>
               Cancel
             </button>
-            <button type="button" className="secondary-button danger-button" onClick={handleDeleteConfirm} disabled={pendingAction === "delete"}>
-              {pendingAction === "delete" ? "Deleting..." : "Delete plan"}
+            <button type="button" className="secondary-button" onClick={handleDeleteConfirm} disabled={pendingAction === "delete"}>
+              {pendingAction === "delete" ? "Archiving..." : "Archive"}
             </button>
           </div>
         </div>
@@ -729,8 +729,8 @@ function LatestPlanCard({
             <button type="button" className="ghost-button" onClick={handleRenameStart} disabled={isActionPending || isRenaming}>
               {pendingAction === "rename" ? "Saving..." : isRenaming ? "Editing name" : "Rename"}
             </button>
-            <button type="button" className="ghost-button danger-button" onClick={handleDeleteRequest} disabled={isActionPending || isRenaming}>
-              {pendingAction === "delete" ? "Deleting..." : "Delete"}
+            <button type="button" className="ghost-button" onClick={handleDeleteRequest} disabled={isActionPending || isRenaming}>
+              {pendingAction === "delete" ? "Archiving..." : "Archive"}
             </button>
           </div>
         ) : null}

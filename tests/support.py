@@ -270,7 +270,7 @@ class FakeStore:
 
     def create_plan(self, *, athlete_id: str, intake_id: str, request: PlanRequest, result: dict) -> dict:
         profile = self.profiles[athlete_id]
-        plan_id = f"plan_{uuid4().hex[:10]}"
+        plan_id = str(uuid4())
         result_status = str(result.get("status") or "generated").strip().lower()
         if not is_plan_status(result_status):
             raise _status_transition_error(f"unknown plan status: {result_status!r}")

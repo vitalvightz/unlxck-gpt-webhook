@@ -636,7 +636,7 @@ def test_athlete_cannot_archive_someone_elses_plan():
     assert store.get_plan(plan["id"]) is not None
 
 
-def test_admin_delete_hard_deletes_any_plan():
+def test_admin_delete_archives_plan_without_hard_delete():
     client, store, _ = _build_client()
     athlete = AuthenticatedUser(
         user_id="athlete-1",
@@ -658,7 +658,10 @@ def test_admin_delete_hard_deletes_any_plan():
     )
 
     assert response.status_code == 204
-    assert store.get_plan(plan["id"]) is None
+    # The user-facing delete is archive-only: the row must survive, archived.
+    archived = store.get_plan(plan["id"])
+    assert archived is not None
+    assert archived["status"] == "archived"
 
 
 def test_delete_plan_returns_409_when_generation_job_active():
@@ -692,11 +695,11 @@ def test_delete_plan_returns_409_when_generation_job_active():
     )
 
     assert response.status_code == 409
-    assert response.json()["detail"] == "Plan has an active generation job. Cancel or wait before deleting."
+    assert response.json()["detail"] == "Plan has an active generation job. Cancel or wait before archiving."
     assert store.get_plan(plan["id"]) is not None
 
 
-def test_athlete_second_delete_hard_deletes_archived_plan():
+def test_athlete_repeated_delete_is_idempotent_archive():
     client, store, _ = _build_client()
     athlete = AuthenticatedUser(
         user_id="athlete-1",
@@ -722,8 +725,12 @@ def test_athlete_second_delete_hard_deletes_archived_plan():
     )
 
     assert first_delete.status_code == 204
+    # A second delete on an already-archived plan is an idempotent no-op,
+    # never a hard delete.
     assert second_delete.status_code == 204
-    assert store.get_plan(plan["id"]) is None
+    archived = store.get_plan(plan["id"])
+    assert archived is not None
+    assert archived["status"] == "archived"
 
 
 def test_athlete_cannot_rename_archived_plan():

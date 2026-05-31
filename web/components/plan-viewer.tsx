@@ -12,6 +12,7 @@ import {
   archivePlan,
   deletePlan,
   getPlan,
+  permanentlyDeletePlan,
   rejectApprovedPlan,
   renamePlan,
   submitManualStage2,
@@ -1034,7 +1035,9 @@ export function PlanViewer({
   const [archivePending, setArchivePending] = useState(false);
   const [archiveMessage, setArchiveMessage] = useState<string | null>(null);
   const [archiveError, setArchiveError] = useState<string | null>(null);
-  const [planActionPending, setPlanActionPending] = useState<"rename" | "delete" | null>(null);
+  const [planActionPending, setPlanActionPending] = useState<
+    "rename" | "archive" | "permanent-delete" | null
+  >(null);
   const [planActionMessage, setPlanActionMessage] = useState<string | null>(null);
   const [planActionError, setPlanActionError] = useState<string | null>(null);
   const [stage2RetryInProgress, setStage2RetryInProgress] = useState(false);
@@ -1316,18 +1319,18 @@ export function PlanViewer({
     }
   }
 
-  async function handleDeletePlan() {
+  async function handleArchiveOwnPlan() {
     if (!accessToken) {
       setPlanActionError("Session expired. Sign in again.");
       return;
     }
 
-    const confirmed = window.confirm(`Delete "${getPlanDisplayName(plan)}"? This cannot be undone.`);
+    const confirmed = window.confirm(`Archive "${getPlanDisplayName(plan)}"?`);
     if (!confirmed) {
       return;
     }
 
-    setPlanActionPending("delete");
+    setPlanActionPending("archive");
     setPlanActionError(null);
     setPlanActionMessage(null);
 
@@ -1336,6 +1339,56 @@ export function PlanViewer({
       clearCompletedGenerationForDeletedPlan(plan.plan_id);
       await onPlanDeleted?.();
       router.push(viewerRole === "admin" ? "/admin" : "/plans");
+      router.refresh();
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Unable to archive this plan.";
+      if (
+        errorMessage.includes("Unable to reach the server") ||
+        errorMessage.includes("502") ||
+        errorMessage.includes("503") ||
+        errorMessage.includes("504")
+      ) {
+        setPlanActionError("Connection issue. Try again in a minute.");
+      } else {
+        setPlanActionError(errorMessage);
+      }
+    } finally {
+      setPlanActionPending(null);
+    }
+  }
+
+  async function handlePermanentDelete() {
+    if (!accessToken) {
+      setPlanActionError("Session expired. Sign in again.");
+      return;
+    }
+
+    const planName = plan.plan_name?.trim() ?? "";
+    if (!planName) {
+      setPlanActionError("This plan has no name. Rename it before permanent deletion.");
+      return;
+    }
+
+    const typed = window.prompt(
+      `Permanent delete cannot be undone.\n\nType the plan name to confirm:\n${planName}`,
+    );
+    if (typed == null) {
+      return;
+    }
+    if (typed.trim() !== planName) {
+      setPlanActionError("Confirmation did not match the plan name. Nothing was deleted.");
+      return;
+    }
+
+    setPlanActionPending("permanent-delete");
+    setPlanActionError(null);
+    setPlanActionMessage(null);
+
+    try {
+      await permanentlyDeletePlan(accessToken, plan.plan_id, planName);
+      clearCompletedGenerationForDeletedPlan(plan.plan_id);
+      await onPlanDeleted?.();
+      router.push("/admin");
       router.refresh();
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "Unable to delete this plan.";
@@ -1455,13 +1508,23 @@ export function PlanViewer({
               </button>
               <button
                 type="button"
-                className="ghost-button danger-button"
-                onClick={handleDeletePlan}
+                className="ghost-button"
+                onClick={handleArchiveOwnPlan}
                 disabled={planActionPending !== null}
               >
-                {planActionPending === "delete" ? "Deleting..." : "Delete"}
+                {planActionPending === "archive" ? "Archiving..." : "Archive"}
               </button>
             </>
+          ) : null}
+          {isAdmin ? (
+            <button
+              type="button"
+              className="ghost-button danger-button"
+              onClick={handlePermanentDelete}
+              disabled={planActionPending !== null}
+            >
+              {planActionPending === "permanent-delete" ? "Deleting..." : "Permanent delete"}
+            </button>
           ) : null}
           {isAdmin && plan.athlete_id ? (
             <Link href={`/admin/athletes/${plan.athlete_id}`} className="ghost-button">

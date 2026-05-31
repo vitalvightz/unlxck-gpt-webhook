@@ -580,6 +580,8 @@ export function renamePlan(token: string, planId: string, planName: string): Pro
   );
 }
 
+// Archives the plan (soft delete). The server-side DELETE route is archive-only;
+// the plan stays recoverable in the athlete's archived list.
 export async function deletePlan(token: string, planId: string): Promise<void> {
   return withTransientRetries(() =>
     requestVoid(`/api/plans/${planId}`, {
@@ -587,6 +589,19 @@ export async function deletePlan(token: string, planId: string): Promise<void> {
       token,
     }),
   );
+}
+
+// Admin-only hard delete. Requires the exact plan name as typed confirmation.
+export async function permanentlyDeletePlan(
+  token: string,
+  planId: string,
+  confirmPlanName: string,
+): Promise<void> {
+  return requestVoid(`/api/admin/plans/${planId}/permanent`, {
+    method: "DELETE",
+    token,
+    body: JSON.stringify({ confirm_plan_name: confirmPlanName }),
+  });
 }
 
 export type AdminListQuery = {

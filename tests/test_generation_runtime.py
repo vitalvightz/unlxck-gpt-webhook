@@ -540,7 +540,8 @@ def test_terminal_success_with_deleted_plan_row_is_downgraded_to_failed():
 
     def flaky_get_plan(plan_id: str):  # type: ignore[no-untyped-def]
         row = original_get_plan(plan_id)
-        if row and str(plan_id).startswith("plan_"):
+        if row is not None:
+            # Simulate the plan row being deleted right after it was persisted.
             return None
         return row
 
