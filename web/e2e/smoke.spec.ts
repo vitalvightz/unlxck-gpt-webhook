@@ -30,8 +30,8 @@ test.describe("public routes load without crashing", () => {
   }
 });
 
-test("primary navigation renders for an anonymous visitor", async ({ page }) => {
-  await isolateFromNetwork(page, BASE_URL);
+test("primary navigation renders for an anonymous visitor", async ({ page, baseURL }) => {
+  await isolateFromNetwork(page, baseURL ?? BASE_URL);
   await page.goto("/", { waitUntil: "domcontentloaded" });
 
   // The app shell always renders the top-level navigation landmark.
