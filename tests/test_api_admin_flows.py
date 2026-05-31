@@ -607,6 +607,41 @@ def test_admin_can_archive_plan_and_remove_athlete_facing_output():
     assert athlete_response.status_code == 404
 
 
+def test_admin_archive_blocked_by_active_generation_job():
+    client, store, _ = _build_client()
+    athlete = AuthenticatedUser(
+        user_id="athlete-1",
+        email="ari@example.com",
+        full_name="Ari Mensah",
+        metadata={},
+    )
+    store.ensure_profile(athlete)
+    plan = store.create_plan(
+        athlete_id="athlete-1",
+        intake_id="intake_x",
+        request=_build_request(),
+        result=finalized_result(),
+    )
+    job = store.create_or_get_generation_job(
+        athlete_id="athlete-1",
+        client_request_id="active-admin-archive-guard",
+        source="web_intake",
+        request_payload=_build_request().model_dump(mode="json"),
+        plan_id=plan["id"],
+        intake_id="intake_x",
+    )
+    store.update_generation_job(job["id"], status="running", started_at="2026-01-01T00:00:00+00:00")
+
+    response = client.post(
+        f"/api/admin/plans/{plan['id']}/archive",
+        headers={"Authorization": "Bearer admin-token"},
+    )
+
+    assert response.status_code == 409
+    assert response.json()["detail"] == "Plan has an active generation job. Cancel or wait before archiving."
+    assert store.get_plan(plan["id"])["status"] != "archived"
+
+
 def test_needs_review_can_be_approved_and_resumed_with_normal_generation_flow():
     athlete = AuthenticatedUser(
         user_id="athlete-1",

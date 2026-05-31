@@ -876,6 +876,12 @@ def create_app(
         if not plan_row:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
 
+        if store.has_active_generation_job_for_plan(plan_id):
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Plan has an active generation job. Cancel or wait before archiving.",
+            )
+
         updated = store.update_plan_stage2(
             plan_id,
             _admin_archived_result(plan_row),
