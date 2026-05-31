@@ -34,24 +34,11 @@ from .models import (
     AdminPlanSummary,
     GenerationJobResponse,
     ManualStage2SubmissionRequest,
-    MeResponse,
-    NutritionWorkspaceState,
     NutritionWorkspaceUpdateRequest,
-    OnboardingDraftSaveRequest,
-    OnboardingDraftSaveResponse,
     PlanDetail,
-    PlanRenameRequest,
     PlanRequest,
-    PlanSummary,
     ProfileRecord,
     ProfileUpdateRequest,
-    UsernameChangeRequest,
-    WeeklySchedule,
-)
-from .nutrition_workspace import (
-    build_nutrition_workspace,
-    merge_workspace_into_payload,
-    normalize_nutrition_update_request,
 )
 from .performance_focus import validate_performance_focus_selections
 from .generation_runtime import (
@@ -73,16 +60,12 @@ from .cors_config import (
 from .plan_mappers import (
     _decode_structured_text,
     _map_profile_row,
-    _map_plan_summary,
     _is_archived_plan,
-    _visible_plans_for_athlete,
     _ALLOWED_PLAN_SOURCES,
     _lookup_plan_source,
     _map_plan_detail,
-    _map_weekly_schedule,
     _map_admin_plan_summary,
     _map_admin_athlete,
-    _build_me_response,
 )
 from .generation_job_helpers import (
     _utc_now_iso,
@@ -103,6 +86,12 @@ from .generation_job_helpers import (
     _can_approve_and_resume_triage,
     _has_existing_triage_resume_approval,
     _triage_plan_has_resume_approval as _triage_plan_has_resume_approval,
+)
+from .routes import (
+    build_generation_jobs_router,
+    build_nutrition_router,
+    build_plans_router,
+    build_profile_router,
 )
 
 Planner = Callable[[dict[str, Any]], dict[str, Any]]
@@ -730,107 +719,22 @@ def create_app(
         def sentry_debug() -> None:
             raise Exception("Sentry backend test error")
 
-    @app.get("/api/me", response_model=MeResponse)
-    def get_me(
-        profile: ProfileRecord = Depends(require_profile),
-        store: AppStore = Depends(get_store),
-    ) -> MeResponse:
-        return _build_me_response(profile, store)
-
-    @app.put("/api/me", response_model=MeResponse)
-    def update_me(
-        update: ProfileUpdateRequest,
-        profile: ProfileRecord = Depends(require_profile),
-        store: AppStore = Depends(get_store),
-    ) -> MeResponse:
-        updated = _map_profile_row(store.update_profile(profile.athlete_id, update))
-        return _build_me_response(updated, store)
-
-    @app.post("/api/me/username", response_model=MeResponse)
-    def change_username_endpoint(
-        update: UsernameChangeRequest,
-        profile: ProfileRecord = Depends(require_profile),
-        store: AppStore = Depends(get_store),
-    ) -> MeResponse:
-        updated = _map_profile_row(store.change_username(profile.athlete_id, update.username))
-        return _build_me_response(updated, store)
-
-    @app.patch("/api/onboarding/draft", response_model=OnboardingDraftSaveResponse)
-    def save_onboarding_draft(
-        update: OnboardingDraftSaveRequest,
-        profile: ProfileRecord = Depends(require_profile),
-        store: AppStore = Depends(get_store),
-    ) -> OnboardingDraftSaveResponse:
-        update_data = update.model_dump(exclude_unset=True)
-        updated = _map_profile_row(
-            store.update_profile(
-                profile.athlete_id,
-                ProfileUpdateRequest(**update_data),
-            )
+    app.include_router(
+        build_profile_router(
+            require_profile=require_profile,
+            get_store=get_store,
         )
-        return OnboardingDraftSaveResponse(updated_at=updated.updated_at)
-
-    @app.get("/api/nutrition/current", response_model=NutritionWorkspaceState)
-    def get_nutrition_current(
-        profile: ProfileRecord = Depends(require_profile),
-        store: AppStore = Depends(get_store),
-    ) -> NutritionWorkspaceState:
-        latest_intake = store.get_latest_intake(profile.athlete_id)
-        return build_nutrition_workspace(profile=profile, latest_intake_row=latest_intake)
-
-    @app.put("/api/nutrition/current", response_model=NutritionWorkspaceState)
-    def update_nutrition_current(
-        update: NutritionWorkspaceUpdateRequest,
-        profile: ProfileRecord = Depends(require_profile),
-        store: AppStore = Depends(get_store),
-    ) -> NutritionWorkspaceState:
-        latest_intake = store.get_latest_intake(profile.athlete_id)
-        current_workspace = build_nutrition_workspace(profile=profile, latest_intake_row=latest_intake)
-        update = update.model_copy(update={"nutrition_coach_controls": current_workspace.nutrition_coach_controls})
-        normalized_update = normalize_nutrition_update_request(
-            update=update,
-            existing_shared_camp_context=current_workspace.shared_camp_context,
+    )
+    app.include_router(
+        build_nutrition_router(
+            require_profile=require_profile,
+            require_admin=require_admin,
+            get_store=get_store,
+            validate_schedule_consistency=_validate_schedule_consistency,
+            validate_session_type_consistency=_validate_session_type_consistency,
+            update_profile_with_nutrition_fallback=_update_profile_with_nutrition_fallback,
         )
-        _validate_schedule_consistency(normalized_update)
-        _validate_session_type_consistency(normalized_update)
-
-        merged_payload = merge_workspace_into_payload(
-            base_payload=(
-                profile.onboarding_draft
-                if current_workspace.source == "draft" and isinstance(profile.onboarding_draft, dict)
-                else latest_intake.get("intake")
-                if current_workspace.source == "intake" and isinstance(latest_intake, dict)
-                else {}
-            ),
-            workspace=normalized_update,
-            profile=profile,
-        )
-
-        if current_workspace.source == "intake" and current_workspace.intake_id:
-            updated_profile = _update_profile_with_nutrition_fallback(
-                store=store,
-                athlete_id=profile.athlete_id,
-                update=ProfileUpdateRequest(nutrition_profile=normalized_update.nutrition_profile),
-            )
-            store.update_intake(
-                current_workspace.intake_id,
-                intake=merged_payload,
-                fight_date=normalized_update.shared_camp_context.fight_date or None,
-                technical_style=list(merged_payload.get("athlete", {}).get("technical_style") or updated_profile.technical_style),
-            )
-            refreshed_intake = store.get_latest_intake(profile.athlete_id)
-            return build_nutrition_workspace(profile=updated_profile, latest_intake_row=refreshed_intake)
-
-        updated_profile = _update_profile_with_nutrition_fallback(
-            store=store,
-            athlete_id=profile.athlete_id,
-            update=ProfileUpdateRequest(
-                nutrition_profile=normalized_update.nutrition_profile,
-                onboarding_draft=merged_payload,
-            ),
-        )
-        refreshed_intake = store.get_latest_intake(profile.athlete_id)
-        return build_nutrition_workspace(profile=updated_profile, latest_intake_row=refreshed_intake)
+    )
 
     @app.post("/api/plans/generate", response_model=GenerationJobResponse, status_code=202)
     async def generate_current_user_plan(
@@ -973,78 +877,17 @@ def create_app(
         )
         return _job_response(job, store=store, viewer_role=profile.role)
 
-    @app.get("/api/generation-jobs/active", response_model=GenerationJobResponse | None)
-    async def get_active_generation_job(
-        background_tasks: BackgroundTasks,
-        profile: ProfileRecord = Depends(require_profile),
-        store: AppStore = Depends(get_store),
-        planner_fn: Planner = Depends(get_planner),
-        stage2: Stage2Automator = Depends(get_stage2_automator),
-        active_tasks: set[str] = Depends(get_active_generation_tasks),
-        enable_in_process_generation: bool = Depends(get_enable_in_process_generation),
-    ) -> GenerationJobResponse | None:
-        stale_after_seconds = _generation_job_stale_after_seconds()
-        job = await asyncio.to_thread(
-            store.get_active_generation_job_for_athlete,
-            profile.athlete_id,
-            stale_after_seconds=stale_after_seconds,
+    app.include_router(
+        build_generation_jobs_router(
+            require_profile=require_profile,
+            get_store=get_store,
+            get_planner=get_planner,
+            get_stage2_automator=get_stage2_automator,
+            get_active_generation_tasks=get_active_generation_tasks,
+            get_enable_in_process_generation=get_enable_in_process_generation,
+            schedule_generation_job_if_needed=schedule_generation_job_if_needed,
         )
-        if not job:
-            return None
-        job = await schedule_generation_job_if_needed(
-            job=job,
-            background_tasks=background_tasks,
-            store=store,
-            planner_fn=planner_fn,
-            stage2=stage2,
-            active_tasks=active_tasks,
-            enable_in_process_generation=enable_in_process_generation,
-            stale_job_checker=_is_stale_job,
-            stale_after_seconds=stale_after_seconds,
-        )
-        return _job_response(job, store=store, viewer_role=profile.role)
-
-    @app.get("/api/generation-jobs/latest", response_model=GenerationJobResponse | None)
-    async def get_latest_generation_job(
-        profile: ProfileRecord = Depends(require_profile),
-        store: AppStore = Depends(get_store),
-    ) -> GenerationJobResponse | None:
-        job = await asyncio.to_thread(store.get_latest_generation_job_for_athlete, profile.athlete_id)
-        if not job:
-            return None
-        if profile.role != "admin" and str(job["athlete_id"]) != profile.athlete_id:
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="not allowed")
-        return _job_response(job, store=store, viewer_role=profile.role)
-
-    @app.get("/api/generation-jobs/{job_id}", response_model=GenerationJobResponse)
-    async def get_generation_job(
-        job_id: str,
-        background_tasks: BackgroundTasks,
-        profile: ProfileRecord = Depends(require_profile),
-        store: AppStore = Depends(get_store),
-        planner_fn: Planner = Depends(get_planner),
-        stage2: Stage2Automator = Depends(get_stage2_automator),
-        active_tasks: set[str] = Depends(get_active_generation_tasks),
-        enable_in_process_generation: bool = Depends(get_enable_in_process_generation),
-    ) -> GenerationJobResponse:
-        job = await asyncio.to_thread(store.get_generation_job, job_id)
-        if not job:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="generation job not found")
-        if profile.role != "admin" and str(job["athlete_id"]) != profile.athlete_id:
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="not allowed")
-        job = await asyncio.to_thread(store.recover_generation_job_if_stale, job)
-        job = await schedule_generation_job_if_needed(
-            job=job,
-            background_tasks=background_tasks,
-            store=store,
-            planner_fn=planner_fn,
-            stage2=stage2,
-            active_tasks=active_tasks,
-            enable_in_process_generation=enable_in_process_generation,
-            stale_job_checker=_is_stale_job,
-            stale_after_seconds=_generation_job_stale_after_seconds(),
-        )
-        return _job_response(job, store=store, viewer_role=profile.role)
+    )
 
     @app.post("/api/generation-jobs/{job_id}/retry", response_model=GenerationJobResponse, status_code=202)
     async def retry_generation_job(
@@ -1186,109 +1029,13 @@ def create_app(
         )
         return _job_response(job, store=store, viewer_role=profile.role)
 
-    @app.get("/api/plans/latest", response_model=PlanDetail)
-    def get_latest_plan(
-        profile: ProfileRecord = Depends(require_profile),
-        store: AppStore = Depends(get_store),
-    ) -> PlanDetail:
-        plan_row = next(
-            iter(_visible_plans_for_athlete(store.list_user_plans(profile.athlete_id))),
-            None,
+    app.include_router(
+        build_plans_router(
+            require_profile=require_profile,
+            require_plan_row=require_plan_row,
+            get_store=get_store,
         )
-        if not plan_row:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
-        return _map_plan_detail(
-            plan_row,
-            include_admin=profile.role == "admin",
-            plan_source=_lookup_plan_source(store, str(plan_row.get("id") or "")),
-        )
-
-    @app.get("/api/plans/latest/weekly-schedule", response_model=WeeklySchedule)
-    def get_latest_weekly_schedule(
-        week_index: int = Query(0, ge=0),
-        profile: ProfileRecord = Depends(require_profile),
-        store: AppStore = Depends(get_store),
-    ) -> WeeklySchedule:
-        plan_row = next(
-            iter(_visible_plans_for_athlete(store.list_user_plans(profile.athlete_id))),
-            None,
-        )
-        if not plan_row:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
-        return _map_weekly_schedule(plan_row, week_index=week_index)
-
-    @app.get("/api/plans", response_model=list[PlanSummary])
-    def list_plans(
-        profile: ProfileRecord = Depends(require_profile),
-        store: AppStore = Depends(get_store),
-    ) -> list[PlanSummary]:
-        rows = store.list_user_plans(profile.athlete_id)
-        if profile.role != "admin":
-            rows = _visible_plans_for_athlete(rows)
-        return [_map_plan_summary(row) for row in rows]
-
-    @app.get("/api/plans/{plan_id}", response_model=PlanDetail)
-    def get_plan(
-        plan_row: dict[str, Any] = Depends(require_plan_row),
-        profile: ProfileRecord = Depends(require_profile),
-        store: AppStore = Depends(get_store),
-    ) -> PlanDetail:
-        return _map_plan_detail(
-            plan_row,
-            include_admin=profile.role == "admin",
-            plan_source=_lookup_plan_source(store, str(plan_row.get("id") or "")),
-        )
-
-    @app.get("/api/plans/{plan_id}/weekly-schedule", response_model=WeeklySchedule)
-    def get_plan_weekly_schedule(
-        week_index: int = Query(0, ge=0),
-        plan_row: dict[str, Any] = Depends(require_plan_row),
-    ) -> WeeklySchedule:
-        return _map_weekly_schedule(plan_row, week_index=week_index)
-
-    @app.patch("/api/plans/{plan_id}", response_model=PlanDetail)
-    @app.patch("/api/plans/{plan_id}/name", response_model=PlanDetail)
-    def rename_plan(
-        plan_id: str,
-        update: PlanRenameRequest,
-        profile: ProfileRecord = Depends(require_profile),
-        store: AppStore = Depends(get_store),
-    ) -> PlanDetail:
-        plan_row = store.get_plan(plan_id)
-        if not plan_row:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
-        if profile.role != "admin" and str(plan_row["athlete_id"]) != profile.athlete_id:
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="not allowed")
-        if profile.role != "admin" and _is_archived_plan(plan_row):
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
-        updated = store.rename_plan(plan_id, update.plan_name)
-        return _map_plan_detail(
-            updated,
-            include_admin=profile.role == "admin",
-            plan_source=_lookup_plan_source(store, plan_id),
-        )
-
-    @app.delete("/api/plans/{plan_id}", status_code=status.HTTP_204_NO_CONTENT)
-    def archive_user_plan(
-        plan_id: str,
-        profile: ProfileRecord = Depends(require_profile),
-        store: AppStore = Depends(get_store),
-    ) -> Response:
-        plan_row = store.get_plan(plan_id)
-        if not plan_row:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
-        if profile.role != "admin" and str(plan_row["athlete_id"]) != profile.athlete_id:
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="not allowed")
-        if store.has_active_generation_job_for_plan(plan_id):
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail="Plan has an active generation job. Cancel or wait before deleting.",
-            )
-        if profile.role == "admin" or _is_archived_plan(plan_row):
-            store.delete_plan(plan_id)
-        else:
-            store.archive_plan(plan_id)
-        return Response(status_code=status.HTTP_204_NO_CONTENT)
+    )
 
     @app.get("/api/admin/plans", response_model=list[AdminPlanSummary])
     def list_admin_plans(
@@ -1858,80 +1605,6 @@ def create_app(
             "orphaned_terminal_job_count": len(orphaned_terminal_jobs),
             "failed_resume_with_approved_marker_count": len(failed_resume_with_approved_marker),
         }
-
-    @app.get("/api/admin/athletes/{athlete_id}/nutrition/current", response_model=NutritionWorkspaceState)
-    def get_admin_athlete_nutrition_current(
-        athlete_id: str,
-        _: ProfileRecord = Depends(require_admin),
-        store: AppStore = Depends(get_store),
-    ) -> NutritionWorkspaceState:
-        row = store.get_admin_athlete(athlete_id)
-        if not row:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="athlete not found")
-        latest_intake = store.get_latest_intake(athlete_id)
-        athlete = _map_admin_athlete(row, latest_intake=latest_intake)
-        return build_nutrition_workspace(profile=athlete, latest_intake_row=latest_intake)
-
-    @app.put("/api/admin/athletes/{athlete_id}/nutrition/current", response_model=NutritionWorkspaceState)
-    def update_admin_athlete_nutrition_current(
-        athlete_id: str,
-        update: NutritionWorkspaceUpdateRequest,
-        _: ProfileRecord = Depends(require_admin),
-        store: AppStore = Depends(get_store),
-    ) -> NutritionWorkspaceState:
-        row = store.get_admin_athlete(athlete_id)
-        if not row:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="athlete not found")
-
-        latest_intake = store.get_latest_intake(athlete_id)
-        athlete = _map_admin_athlete(row, latest_intake=latest_intake)
-        current_workspace = build_nutrition_workspace(profile=athlete, latest_intake_row=latest_intake)
-        if "nutrition_coach_controls" not in update.model_fields_set:
-            update = update.model_copy(update={"nutrition_coach_controls": current_workspace.nutrition_coach_controls})
-        normalized_update = normalize_nutrition_update_request(
-            update=update,
-            existing_shared_camp_context=current_workspace.shared_camp_context,
-        )
-        _validate_schedule_consistency(normalized_update)
-        _validate_session_type_consistency(normalized_update)
-
-        merged_payload = merge_workspace_into_payload(
-            base_payload=(
-                athlete.onboarding_draft
-                if current_workspace.source == "draft" and isinstance(athlete.onboarding_draft, dict)
-                else latest_intake.get("intake")
-                if current_workspace.source == "intake" and isinstance(latest_intake, dict)
-                else {}
-            ),
-            workspace=normalized_update,
-            profile=athlete,
-        )
-
-        if current_workspace.source == "intake" and current_workspace.intake_id:
-            updated_profile = _update_profile_with_nutrition_fallback(
-                store=store,
-                athlete_id=athlete_id,
-                update=ProfileUpdateRequest(nutrition_profile=normalized_update.nutrition_profile),
-            )
-            store.update_intake(
-                current_workspace.intake_id,
-                intake=merged_payload,
-                fight_date=normalized_update.shared_camp_context.fight_date or None,
-                technical_style=list(merged_payload.get("athlete", {}).get("technical_style") or updated_profile.technical_style),
-            )
-            refreshed_intake = store.get_latest_intake(athlete_id)
-            return build_nutrition_workspace(profile=updated_profile, latest_intake_row=refreshed_intake)
-
-        updated_profile = _update_profile_with_nutrition_fallback(
-            store=store,
-            athlete_id=athlete_id,
-            update=ProfileUpdateRequest(
-                nutrition_profile=normalized_update.nutrition_profile,
-                onboarding_draft=merged_payload,
-            ),
-        )
-        refreshed_intake = store.get_latest_intake(athlete_id)
-        return build_nutrition_workspace(profile=updated_profile, latest_intake_row=refreshed_intake)
 
     @app.post("/api/admin/athletes/{athlete_id}/plans/generate-from-latest-intake", response_model=GenerationJobResponse, status_code=202)
     async def generate_admin_athlete_plan_from_latest_intake(

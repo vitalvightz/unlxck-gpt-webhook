@@ -1,0 +1,126 @@
+from __future__ import annotations
+
+from typing import Any
+
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
+
+from api.models import PlanDetail, PlanRenameRequest, PlanSummary, ProfileRecord, WeeklySchedule
+from api.plan_mappers import (
+    _is_archived_plan,
+    _lookup_plan_source,
+    _map_plan_detail,
+    _map_plan_summary,
+    _map_weekly_schedule,
+    _visible_plans_for_athlete,
+)
+from api.store import AppStore
+
+
+def build_plans_router(*, require_profile, require_plan_row, get_store) -> APIRouter:
+    router = APIRouter()
+
+    @router.get("/api/plans/latest", response_model=PlanDetail)
+    def get_latest_plan(
+        profile: ProfileRecord = Depends(require_profile),
+        store: AppStore = Depends(get_store),
+    ) -> PlanDetail:
+        plan_row = next(
+            iter(_visible_plans_for_athlete(store.list_user_plans(profile.athlete_id))),
+            None,
+        )
+        if not plan_row:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
+        return _map_plan_detail(
+            plan_row,
+            include_admin=profile.role == "admin",
+            plan_source=_lookup_plan_source(store, str(plan_row.get("id") or "")),
+        )
+
+    @router.get("/api/plans/latest/weekly-schedule", response_model=WeeklySchedule)
+    def get_latest_weekly_schedule(
+        week_index: int = Query(0, ge=0),
+        profile: ProfileRecord = Depends(require_profile),
+        store: AppStore = Depends(get_store),
+    ) -> WeeklySchedule:
+        plan_row = next(
+            iter(_visible_plans_for_athlete(store.list_user_plans(profile.athlete_id))),
+            None,
+        )
+        if not plan_row:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
+        return _map_weekly_schedule(plan_row, week_index=week_index)
+
+    @router.get("/api/plans", response_model=list[PlanSummary])
+    def list_plans(
+        profile: ProfileRecord = Depends(require_profile),
+        store: AppStore = Depends(get_store),
+    ) -> list[PlanSummary]:
+        rows = store.list_user_plans(profile.athlete_id)
+        if profile.role != "admin":
+            rows = _visible_plans_for_athlete(rows)
+        return [_map_plan_summary(row) for row in rows]
+
+    @router.get("/api/plans/{plan_id}", response_model=PlanDetail)
+    def get_plan(
+        plan_row: dict[str, Any] = Depends(require_plan_row),
+        profile: ProfileRecord = Depends(require_profile),
+        store: AppStore = Depends(get_store),
+    ) -> PlanDetail:
+        return _map_plan_detail(
+            plan_row,
+            include_admin=profile.role == "admin",
+            plan_source=_lookup_plan_source(store, str(plan_row.get("id") or "")),
+        )
+
+    @router.get("/api/plans/{plan_id}/weekly-schedule", response_model=WeeklySchedule)
+    def get_plan_weekly_schedule(
+        week_index: int = Query(0, ge=0),
+        plan_row: dict[str, Any] = Depends(require_plan_row),
+    ) -> WeeklySchedule:
+        return _map_weekly_schedule(plan_row, week_index=week_index)
+
+    @router.patch("/api/plans/{plan_id}", response_model=PlanDetail)
+    @router.patch("/api/plans/{plan_id}/name", response_model=PlanDetail)
+    def rename_plan(
+        plan_id: str,
+        update: PlanRenameRequest,
+        profile: ProfileRecord = Depends(require_profile),
+        store: AppStore = Depends(get_store),
+    ) -> PlanDetail:
+        plan_row = store.get_plan(plan_id)
+        if not plan_row:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
+        if profile.role != "admin" and str(plan_row["athlete_id"]) != profile.athlete_id:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="not allowed")
+        if profile.role != "admin" and _is_archived_plan(plan_row):
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
+        updated = store.rename_plan(plan_id, update.plan_name)
+        return _map_plan_detail(
+            updated,
+            include_admin=profile.role == "admin",
+            plan_source=_lookup_plan_source(store, plan_id),
+        )
+
+    @router.delete("/api/plans/{plan_id}", status_code=status.HTTP_204_NO_CONTENT)
+    def archive_user_plan(
+        plan_id: str,
+        profile: ProfileRecord = Depends(require_profile),
+        store: AppStore = Depends(get_store),
+    ) -> Response:
+        plan_row = store.get_plan(plan_id)
+        if not plan_row:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
+        if profile.role != "admin" and str(plan_row["athlete_id"]) != profile.athlete_id:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="not allowed")
+        if store.has_active_generation_job_for_plan(plan_id):
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Plan has an active generation job. Cancel or wait before deleting.",
+            )
+        if profile.role == "admin" or _is_archived_plan(plan_row):
+            store.delete_plan(plan_id)
+        else:
+            store.archive_plan(plan_id)
+        return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+    return router
