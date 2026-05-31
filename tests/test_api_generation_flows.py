@@ -348,6 +348,46 @@ def test_generate_plan_blocks_duplicate_for_active_triage_blocked_job_without_pl
     assert "admin" in message or "paused" in message
 
 
+def test_generate_plan_ignores_old_triage_blocked_job_after_resume_approval_marker():
+    client, store, _ = _build_client(enable_in_process_generation=False)
+    _seed_athlete_profile(store)
+    request = _build_request()
+    payload = request.model_dump(mode="json")
+    existing = store.create_or_get_generation_job(
+        athlete_id="athlete-1",
+        client_request_id="completed-triage-no-plan-approved",
+        source="self_serve",
+        request_payload=payload,
+    )
+    store.update_generation_job(existing["id"], status="running", started_at=_now(), heartbeat_at=_now())
+    store.update_generation_job(
+        existing["id"],
+        status="review_required",
+        completed_at=_now(),
+        final_result={
+            "status": "triage_blocked",
+            "stage2_status": "triage_resume_approved",
+            "why_log": {"triage_resume_approval": {"approved_by_email": "ops@unlxck.test"}},
+        },
+    )
+
+    response = client.post(
+        "/api/plans/generate",
+        headers={
+            "Authorization": "Bearer athlete-token",
+            "X-Client-Request-Id": "fresh-after-job-resume-approval",
+        },
+        json=payload,
+    )
+
+    assert response.status_code == 202
+    body = response.json()
+    assert body["job_id"] != existing["id"]
+    assert body["client_request_id"] == "fresh-after-job-resume-approval"
+    jobs = store.list_generation_jobs_for_athlete("athlete-1", limit=25)
+    assert len(jobs) == 2
+
+
 def test_triage_job_has_resume_approval_detects_markers_on_job_final_result():
     from api.app import _triage_job_has_resume_approval
 
@@ -4131,13 +4171,24 @@ def test_generation_job_status_reports_review_required_result():
     assert job_response.json()["status"] == "review_required"
 
 
-def _seed_failed_job(store: FakeStore, *, athlete_id: str = "athlete-1", source: str = "self_serve") -> dict:
-    request_payload = _build_request().model_dump(mode="json")
+def _seed_failed_job(
+    store: FakeStore,
+    *,
+    athlete_id: str = "athlete-1",
+    source: str = "self_serve",
+    client_request_id: str | None = None,
+    request_payload: dict[str, Any] | None = None,
+    plan_id: str | None = None,
+    intake_id: str | None = None,
+) -> dict:
+    request_payload = request_payload or _build_request().model_dump(mode="json")
     job = store.create_or_get_generation_job(
         athlete_id=athlete_id,
-        client_request_id=f"orig-{athlete_id}",
+        client_request_id=client_request_id or f"orig-{athlete_id}",
         source=source,
         request_payload=request_payload,
+        plan_id=plan_id,
+        intake_id=intake_id,
     )
     store.update_generation_job(
         job["id"],
@@ -4245,6 +4296,130 @@ def test_retry_generation_job_rejects_non_owner_non_admin():
     )
 
     assert response.status_code == status.HTTP_404_NOT_FOUND
+
+
+def test_retry_generation_job_rejects_failed_job_missing_request_payload():
+    client, store, _ = _build_client()
+    _seed_athlete_profile(store)
+    original = _seed_failed_job(store)
+    store.generation_jobs[original["id"]]["request_payload"] = None
+
+    response = client.post(
+        f"/api/generation-jobs/{original['id']}/retry",
+        headers={"Authorization": "Bearer athlete-token"},
+    )
+
+    assert response.status_code == status.HTTP_409_CONFLICT
+    assert response.json()["detail"] == "original job request payload is missing"
+    assert len(store.generation_jobs) == 1
+
+
+def test_retry_generation_job_rejects_saved_plan_for_normal_generation_job():
+    client, store, _ = _build_client()
+    _seed_athlete_profile(store)
+    request = _build_request()
+    plan = store.create_plan(
+        athlete_id="athlete-1",
+        intake_id="intake_saved_plan_retry",
+        request=request,
+        result=finalized_result(),
+    )
+    original = _seed_failed_job(
+        store,
+        request_payload=request.model_dump(mode="json"),
+        plan_id=plan["id"],
+    )
+
+    response = client.post(
+        f"/api/generation-jobs/{original['id']}/retry",
+        headers={"Authorization": "Bearer athlete-token"},
+    )
+
+    assert response.status_code == status.HTTP_409_CONFLICT
+    assert response.json()["detail"] == "generation job already produced a saved plan"
+    assert len(store.generation_jobs) == 1
+
+
+def test_retry_generation_job_allows_job_based_admin_triage_resume_without_plan_linkage():
+    client, store, _ = _build_client(enable_in_process_generation=False)
+    _seed_athlete_profile(store)
+    original = _seed_failed_job(
+        store,
+        source="admin_triage_resume",
+        client_request_id="triage_resume_job_original",
+        intake_id="intake_triage_resume_job",
+    )
+
+    response = client.post(
+        f"/api/generation-jobs/{original['id']}/retry",
+        headers={"Authorization": "Bearer athlete-token"},
+    )
+
+    assert response.status_code == 202
+    body = response.json()
+    assert body["job_id"] != original["id"]
+    retried = store.get_generation_job(body["job_id"])
+    assert retried is not None
+    assert retried["source"] == "admin_triage_resume"
+    assert retried["client_request_id"].startswith(f"retry_{original['id']}_")
+    assert retried["intake_id"] == "intake_triage_resume_job"
+    assert retried.get("plan_id") is None
+
+
+def test_retry_generation_job_rejects_plan_based_admin_triage_resume_without_plan_linkage():
+    client, store, _ = _build_client(enable_in_process_generation=False)
+    _seed_athlete_profile(store)
+    original = _seed_failed_job(
+        store,
+        source="admin_triage_resume",
+        client_request_id="triage_resume_plan_original",
+        intake_id="intake_triage_resume_plan",
+    )
+
+    response = client.post(
+        f"/api/generation-jobs/{original['id']}/retry",
+        headers={"Authorization": "Bearer athlete-token"},
+    )
+
+    assert response.status_code == status.HTTP_409_CONFLICT
+    assert response.json()["detail"] == "admin triage resume retry is missing plan linkage"
+    assert len(store.generation_jobs) == 1
+
+
+def test_retry_generation_job_allows_admin_triage_resume_with_saved_plan_linkage():
+    client, store, _ = _build_client(enable_in_process_generation=False)
+    _seed_athlete_profile(store)
+    request = _build_request()
+    plan = store.create_plan(
+        athlete_id="athlete-1",
+        intake_id="intake_triage_resume_plan",
+        request=request,
+        result=finalized_result(
+            status="triage_blocked",
+            stage2_status="triage_resume_approved",
+            why_log={"triage_resume_approval": {"approved_by_email": "ops@unlxck.test"}},
+        ),
+    )
+    original = _seed_failed_job(
+        store,
+        source="admin_triage_resume",
+        client_request_id="triage_resume_plan_with_link",
+        request_payload=request.model_dump(mode="json"),
+        plan_id=plan["id"],
+        intake_id="intake_triage_resume_plan",
+    )
+
+    response = client.post(
+        f"/api/generation-jobs/{original['id']}/retry",
+        headers={"Authorization": "Bearer athlete-token"},
+    )
+
+    assert response.status_code == 202
+    retried = store.get_generation_job(response.json()["job_id"])
+    assert retried is not None
+    assert retried["source"] == "admin_triage_resume"
+    assert retried["plan_id"] == plan["id"]
+    assert retried["intake_id"] == "intake_triage_resume_plan"
 
 
 def test_retry_generation_job_rejects_non_failed_status():
