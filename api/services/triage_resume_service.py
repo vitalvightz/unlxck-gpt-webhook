@@ -398,9 +398,9 @@ async def approve_and_resume_job_triage(
         # regeneration. Returning it as-is preserves stage1_result,
         # final_result, plan_id, and heartbeat state — the reset path
         # below would otherwise wipe in-progress work. Mirrors the
-        # plan-based flow's running-not-stale early return at line
-        # ~2212. Stale running jobs fall through to the reset/recovery
-        # path below.
+        # plan-based flow's running-not-stale early return in
+        # approve_and_resume_plan_triage. Stale running jobs fall through
+        # to the reset/recovery path below.
         if existing_status == "running" and not existing_is_stale:
             return _job_response(
                 existing_resume_job, store=store, viewer_role=profile.role
