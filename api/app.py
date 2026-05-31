@@ -49,6 +49,7 @@ from .stage2_automation import (
 )
 from .store import AppStore, SupabaseAppStore, is_startup_stale_generation_job
 from .sentry_config import init_sentry
+from .memory_diagnostics import memory_snapshot
 from .services.generation_request_service import generate_plan_for_current_user
 from .services.admin_stage2_service import (
     approve_review_required_plan as approve_review_required_plan_service,
@@ -245,11 +246,12 @@ def _noop_planner(
     return {}
 
 
-def _health_payload(*, mode_label: str) -> dict[str, str | bool]:
+def _health_payload(*, mode_label: str) -> dict[str, Any]:
     return {
         "ok": True,
         "app": "unlxck-fight-camp-api",
         "mode": mode_label,
+        "memory": memory_snapshot(),
     }
 
 
