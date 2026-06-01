@@ -54,13 +54,12 @@ def _max_depth(value: Any, *, limit: int) -> int:
             return deepest
         if isinstance(node, dict):
             for child in node.values():
-                if isinstance(child, (dict, list)):
+                if isinstance(child, (dict, list, tuple)):
                     stack.append((child, depth + 1))
-        elif isinstance(node, list):
+        elif isinstance(node, (list, tuple)):
             for child in node:
-                if isinstance(child, (dict, list)):
+                if isinstance(child, (dict, list, tuple)):
                     stack.append((child, depth + 1))
-    return deepest
 
 
 def validate_json_field(
