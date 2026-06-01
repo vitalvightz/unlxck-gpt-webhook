@@ -21,7 +21,6 @@ from .json_limits import (
     MAX_CLIENT_JSON_BYTES,
     MAX_JSON_DEPTH,
     MAX_SERVER_JSON_BYTES,
-    json_byte_size,
     validate_json_field,
 )
 from .models import (
@@ -64,13 +63,13 @@ def _guard_persisted_json(
             max_depth=MAX_JSON_DEPTH,
             exc_factory=ValueError,
         )
-    except ValueError:
+    except ValueError as exc:
         logger.warning(
-            "[store] payload_too_large field=%s bytes=%s max_bytes=%s %s",
+            "[store] payload_too_large field=%s max_bytes=%s %s reason=%s",
             field,
-            json_byte_size(value) if value is not None else 0,
             max_bytes,
             context,
+            str(exc),
         )
         raise HTTPException(
             status_code=status.HTTP_413_CONTENT_TOO_LARGE,

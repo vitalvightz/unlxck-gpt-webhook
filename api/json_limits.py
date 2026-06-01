@@ -60,6 +60,7 @@ def _max_depth(value: Any, *, limit: int) -> int:
             for child in node:
                 if isinstance(child, (dict, list, tuple)):
                     stack.append((child, depth + 1))
+    return deepest
 
 
 def validate_json_field(
