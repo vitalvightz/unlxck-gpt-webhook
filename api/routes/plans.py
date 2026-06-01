@@ -92,14 +92,18 @@ def build_plans_router(*, require_profile, require_plan_row, get_store) -> APIRo
             uuid.UUID(plan_id)
         except (ValueError, AttributeError):
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
-        plan_row = store.get_plan(plan_id)
-        if not plan_row:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
-        if profile.role != "admin" and str(plan_row["athlete_id"]) != profile.athlete_id:
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="not allowed")
-        if profile.role != "admin" and _is_archived_plan(plan_row):
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
-        updated = store.rename_plan(plan_id, update.plan_name)
+        if profile.role == "admin":
+            plan_row = store.get_plan(plan_id)
+            if not plan_row:
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
+            updated = store.rename_plan(plan_id, update.plan_name)
+        else:
+            # Ownership is enforced by the athlete-scoped store methods: a plan
+            # owned by someone else reads back as missing (404).
+            plan_row = store.get_plan_for_athlete(plan_id, profile.athlete_id)
+            if not plan_row or _is_archived_plan(plan_row):
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
+            updated = store.rename_plan_for_athlete(plan_id, profile.athlete_id, update.plan_name)
         return _map_plan_detail(
             updated,
             include_admin=profile.role == "admin",
@@ -116,11 +120,14 @@ def build_plans_router(*, require_profile, require_plan_row, get_store) -> APIRo
             uuid.UUID(plan_id)
         except (ValueError, AttributeError):
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
-        plan_row = store.get_plan(plan_id)
+        # Ownership is enforced by the athlete-scoped store methods for
+        # non-admins; admins intentionally operate on the raw plan id.
+        if profile.role == "admin":
+            plan_row = store.get_plan(plan_id)
+        else:
+            plan_row = store.get_plan_for_athlete(plan_id, profile.athlete_id)
         if not plan_row:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
-        if profile.role != "admin" and str(plan_row["athlete_id"]) != profile.athlete_id:
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="not allowed")
         if store.has_active_generation_job_for_plan(plan_id):
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
@@ -128,7 +135,10 @@ def build_plans_router(*, require_profile, require_plan_row, get_store) -> APIRo
             )
         if _is_archived_plan(plan_row):
             return Response(status_code=status.HTTP_204_NO_CONTENT)
-        store.archive_plan(plan_id)
+        if profile.role == "admin":
+            store.archive_plan(plan_id)
+        else:
+            store.archive_plan_for_athlete(plan_id, profile.athlete_id)
         return Response(status_code=status.HTTP_204_NO_CONTENT)
 
     return router

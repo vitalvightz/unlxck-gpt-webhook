@@ -632,8 +632,45 @@ def test_athlete_cannot_archive_someone_elses_plan():
         headers={"Authorization": "Bearer other-token"},
     )
 
-    assert response.status_code == 403
+    # Athlete-scoped store methods treat another athlete's plan as missing, so
+    # the response is 404 (existence is not leaked) rather than 403.
+    assert response.status_code == 404
     assert store.get_plan(plan["id"]) is not None
+
+
+def test_athlete_cannot_rename_someone_elses_plan():
+    client, store, _ = _build_client()
+    owner = AuthenticatedUser(
+        user_id="athlete-1",
+        email="ari@example.com",
+        full_name="Ari Mensah",
+        metadata={},
+    )
+    other_user = AuthenticatedUser(
+        user_id="athlete-2",
+        email="other@example.com",
+        full_name="Other Athlete",
+        metadata={},
+    )
+    store.ensure_profile(owner)
+    store.ensure_profile(other_user)
+    client.app.state.auth_service.users_by_token["other-token"] = other_user
+    plan = store.create_plan(
+        athlete_id="athlete-1",
+        intake_id="intake_x",
+        request=_build_request(),
+        result=finalized_result(),
+    )
+
+    response = client.patch(
+        f"/api/plans/{plan['id']}",
+        headers={"Authorization": "Bearer other-token"},
+        json={"plan_name": "hijacked"},
+    )
+
+    # Scoped rename does not leak existence: 404, and the name is unchanged.
+    assert response.status_code == 404
+    assert store.get_plan(plan["id"])["plan_name"] == ""
 
 
 def test_admin_delete_archives_plan_without_hard_delete():

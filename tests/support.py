@@ -309,12 +309,25 @@ class FakeStore:
     def get_plan(self, plan_id: str) -> dict | None:
         return self.plans.get(plan_id)
 
+    def get_plan_for_athlete(self, plan_id: str, athlete_id: str) -> dict | None:
+        row = self.plans.get(plan_id)
+        if not row or str(row.get("athlete_id")) != athlete_id:
+            return None
+        return row
+
     def get_latest_plan(self, athlete_id: str) -> dict | None:
         plans = self.list_user_plans(athlete_id)
         return plans[0] if plans else None
 
     def rename_plan(self, plan_id: str, plan_name: str) -> dict:
         row = self.plans.get(plan_id)
+        if not row:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
+        row["plan_name"] = plan_name
+        return row
+
+    def rename_plan_for_athlete(self, plan_id: str, athlete_id: str, plan_name: str) -> dict:
+        row = self.get_plan_for_athlete(plan_id, athlete_id)
         if not row:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
         row["plan_name"] = plan_name
@@ -330,8 +343,24 @@ class FakeStore:
             raise _status_transition_error(str(exc)) from exc
         return row
 
+    def archive_plan_for_athlete(self, plan_id: str, athlete_id: str) -> dict:
+        row = self.get_plan_for_athlete(plan_id, athlete_id)
+        if not row:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
+        try:
+            row["status"] = require_plan_transition(row.get("status") or "generated", "archived")
+        except ValueError as exc:
+            raise _status_transition_error(str(exc)) from exc
+        return row
+
     def delete_plan(self, plan_id: str) -> None:
         if plan_id not in self.plans:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
+        del self.plans[plan_id]
+
+    def delete_plan_for_athlete(self, plan_id: str, athlete_id: str) -> None:
+        row = self.get_plan_for_athlete(plan_id, athlete_id)
+        if not row:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
         del self.plans[plan_id]
 
