@@ -669,6 +669,7 @@ def _fight_local_date(
 
 CampTimelineType = Literal["scheduled_fight", "open_camp"]
 DEFAULT_OPEN_CAMP_WEEKS = 12
+MAX_OPEN_CAMP_WEEKS = 24
 
 # Keep these tables in sync with ``api.models.PlanRequest.coerce_no_scheduled_fight``
 # so a payload coerced once by PlanRequest still coerces the same way when it
@@ -706,7 +707,7 @@ def _coerce_open_camp_weeks(value: object) -> int:
         except ValueError:
             raise ValueError("open_camp_weeks must be numeric") from None
     if isinstance(value, (int, float)):
-        return max(1, int(round(float(value))))
+        return max(1, min(int(round(float(value))), MAX_OPEN_CAMP_WEEKS))
     return DEFAULT_OPEN_CAMP_WEEKS
 
 

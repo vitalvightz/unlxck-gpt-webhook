@@ -5,6 +5,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
+from .json_limits import MAX_CLIENT_JSON_BYTES, MAX_JSON_DEPTH, validate_json_field
 from .state_machine import GenerationJobStatus
 
 UserRole = Literal["athlete", "admin"]
@@ -235,6 +236,16 @@ class NutritionProfileInput(BaseModel):
         if isinstance(value, (int, float)):
             return int(round(float(value)))
         return value
+
+    @model_validator(mode="after")
+    def enforce_payload_size(self) -> "NutritionProfileInput":
+        validate_json_field(
+            self.model_dump(mode="json"),
+            field="nutrition_profile",
+            max_bytes=MAX_CLIENT_JSON_BYTES,
+            max_depth=MAX_JSON_DEPTH,
+        )
+        return self
 
 
 class NutritionBodyweightLogEntry(BaseModel):
@@ -521,6 +532,7 @@ class NutritionWorkspaceUpdateRequest(BaseModel):
 
 CampTimelineType = Literal["scheduled_fight", "open_camp"]
 _DEFAULT_OPEN_CAMP_WEEKS = 12
+MAX_OPEN_CAMP_WEEKS = 24
 
 
 class PlanRequest(BaseModel):
@@ -628,7 +640,7 @@ class PlanRequest(BaseModel):
             except ValueError:
                 raise ValueError("open_camp_weeks must be numeric") from None
         if isinstance(value, (int, float)):
-            return max(1, int(round(float(value))))
+            return max(1, min(int(round(float(value))), MAX_OPEN_CAMP_WEEKS))
         return _DEFAULT_OPEN_CAMP_WEEKS
 
     @field_validator("equipment_access", "key_goals", "weak_areas", "goal_weakness_collision_tags", mode="before")
@@ -772,6 +784,16 @@ class ProfileUpdateRequest(BaseModel):
     avatar_url: str | None = None
     nutrition_profile: NutritionProfileInput | None = None
 
+    @field_validator("onboarding_draft")
+    @classmethod
+    def validate_onboarding_draft_size(cls, value: Any) -> Any:
+        return validate_json_field(
+            value,
+            field="onboarding_draft",
+            max_bytes=MAX_CLIENT_JSON_BYTES,
+            max_depth=MAX_JSON_DEPTH,
+        )
+
     @field_validator("record")
     @classmethod
     def validate_record(cls, value: str | None) -> str | None:
@@ -789,6 +811,16 @@ class OnboardingDraftSaveRequest(BaseModel):
     professional_status: str | None = None
     record: str | None = None
     athlete_timezone: str | None = None
+
+    @field_validator("onboarding_draft")
+    @classmethod
+    def validate_onboarding_draft_size(cls, value: Any) -> Any:
+        return validate_json_field(
+            value,
+            field="onboarding_draft",
+            max_bytes=MAX_CLIENT_JSON_BYTES,
+            max_depth=MAX_JSON_DEPTH,
+        )
 
     @field_validator("record")
     @classmethod

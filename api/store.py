@@ -17,6 +17,13 @@ from supabase import Client, ClientOptions, create_client
 from .auth import AuthenticatedUser
 from .environment import is_production_environment
 from .generation_config import generation_job_stale_after_seconds
+from .json_limits import (
+    MAX_CLIENT_JSON_BYTES,
+    MAX_JSON_DEPTH,
+    MAX_SERVER_JSON_BYTES,
+    json_byte_size,
+    validate_json_field,
+)
 from .models import (
     PlanRequest,
     ProfileUpdateRequest,
@@ -32,6 +39,44 @@ from .state_machine import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+def _guard_persisted_json(
+    value: Any,
+    *,
+    field: str,
+    max_bytes: int,
+    context: str,
+) -> None:
+    """Reject oversized/too-deep JSON before it is written to Supabase.
+
+    Defense-in-depth backstop for the Pydantic validators: server-assembled
+    payloads (request_payload, stage2_payload) never pass through a request
+    model, and some callers bypass the HTTP layer entirely. Raises a generic
+    413 without echoing payload contents.
+    """
+
+    try:
+        validate_json_field(
+            value,
+            field=field,
+            max_bytes=max_bytes,
+            max_depth=MAX_JSON_DEPTH,
+            exc_factory=ValueError,
+        )
+    except ValueError:
+        logger.warning(
+            "[store] payload_too_large field=%s bytes=%s max_bytes=%s %s",
+            field,
+            json_byte_size(value) if value is not None else 0,
+            max_bytes,
+            context,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_413_CONTENT_TOO_LARGE,
+            detail=f"{field} payload too large",
+        ) from None
+
 
 PLAN_SUMMARY_SELECT = "id, athlete_id, full_name, fight_date, technical_style, plan_name, status, pdf_url, created_at"
 GENERATION_JOB_SELECT = "*"
@@ -210,12 +255,21 @@ class AppStore(Protocol):
 
     def get_plan(self, plan_id: str) -> dict[str, Any] | None: ...
 
+    def get_plan_for_athlete(self, plan_id: str, athlete_id: str) -> dict[str, Any] | None: ...
+
     def get_latest_plan(self, athlete_id: str) -> dict[str, Any] | None: ...
 
     def rename_plan(self, plan_id: str, plan_name: str) -> dict[str, Any]: ...
 
+    def rename_plan_for_athlete(self, plan_id: str, athlete_id: str, plan_name: str) -> dict[str, Any]: ...
+
     def archive_plan(self, plan_id: str) -> dict[str, Any]: ...
+
+    def archive_plan_for_athlete(self, plan_id: str, athlete_id: str) -> dict[str, Any]: ...
+
     def delete_plan(self, plan_id: str) -> None: ...
+
+    def delete_plan_for_athlete(self, plan_id: str, athlete_id: str) -> None: ...
 
     def create_or_get_generation_job(
         self,
@@ -982,6 +1036,14 @@ class SupabaseAppStore:
             fields = update.model_dump(mode="json", exclude_none=True)
             if "record" in fields:
                 fields["record_summary"] = fields.pop("record")
+            for json_field in ("onboarding_draft", "nutrition_profile"):
+                if json_field in fields:
+                    _guard_persisted_json(
+                        fields[json_field],
+                        field=json_field,
+                        max_bytes=MAX_CLIENT_JSON_BYTES,
+                        context=f"athlete_id={athlete_id}",
+                    )
             if not fields:
                 logger.info("[store] update_profile:no_fields athlete_id=%s", athlete_id)
                 return self._require_profile(athlete_id)
@@ -1194,6 +1256,13 @@ class SupabaseAppStore:
             "parsing_metadata": result.get("parsing_metadata"),
         }
 
+        _guard_persisted_json(
+            payload.get("stage2_payload"),
+            field="stage2_payload",
+            max_bytes=MAX_SERVER_JSON_BYTES,
+            context=f"athlete_id={athlete_id} intake_id={intake_id}",
+        )
+
         def _insert_plan(insert_payload: dict[str, Any]) -> dict[str, Any]:
             response = self.client.table("plans").insert(insert_payload).execute()
             rows = getattr(response, "data", None) or []
@@ -1306,6 +1375,30 @@ class SupabaseAppStore:
                 exc=exc,
             )
 
+    def get_plan_for_athlete(self, plan_id: str, athlete_id: str) -> dict[str, Any] | None:
+        """Read a plan scoped to its owner.
+
+        Scoping the query by both ``id`` and ``athlete_id`` means a plan owned by
+        another athlete is indistinguishable from a missing one (returns
+        ``None``), so callers cannot accidentally leak or mutate it.
+        """
+        try:
+            return self._run_with_transient_retry(
+                operation=f"get_plan_for_athlete plan_id={plan_id} athlete_id={athlete_id}",
+                fn=lambda: self._select_first(
+                    self.client.table("plans")
+                    .select("*")
+                    .eq("id", plan_id)
+                    .eq("athlete_id", athlete_id)
+                ),
+            )
+        except _STORE_CLIENT_ERRORS as exc:
+            self._raise_operation_http_error(
+                operation=f"get_plan_for_athlete plan_id={plan_id} athlete_id={athlete_id}",
+                detail="failed to read plan",
+                exc=exc,
+            )
+
     def get_latest_plan(self, athlete_id: str) -> dict[str, Any] | None:
         try:
             return self._run_with_transient_retry(
@@ -1336,6 +1429,13 @@ class SupabaseAppStore:
         stale_after_seconds: int = 90,
     ) -> dict[str, Any]:
         last_error: Exception | None = None
+
+        _guard_persisted_json(
+            request_payload,
+            field="request_payload",
+            max_bytes=MAX_SERVER_JSON_BYTES,
+            context=f"athlete_id={athlete_id} client_request_id={client_request_id}",
+        )
 
         try:
             existing = self._run_with_transient_retry(
@@ -2502,6 +2602,38 @@ class SupabaseAppStore:
                 exc=exc,
             )
 
+    def rename_plan_for_athlete(self, plan_id: str, athlete_id: str, plan_name: str) -> dict[str, Any]:
+        """Rename a plan only if it belongs to ``athlete_id``.
+
+        The update is scoped by both ``id`` and ``athlete_id`` so another
+        athlete's plan is untouched; the scoped re-read then yields ``None`` and
+        we surface a 404 rather than leaking that the plan exists.
+        """
+        try:
+            logger.info("[store] rename_plan_for_athlete:start plan_id=%s athlete_id=%s", plan_id, athlete_id)
+            self.client.table("plans").update({"plan_name": plan_name}).eq("id", plan_id).eq(
+                "athlete_id", athlete_id
+            ).execute()
+            updated = self.get_plan_for_athlete(plan_id, athlete_id)
+            if not updated:
+                logger.warning(
+                    "[store] rename_plan_for_athlete:not_found plan_id=%s athlete_id=%s", plan_id, athlete_id
+                )
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="plan not found",
+                )
+            logger.info("[store] rename_plan_for_athlete:success plan_id=%s athlete_id=%s", plan_id, athlete_id)
+            return updated
+        except HTTPException:
+            raise
+        except _STORE_CLIENT_ERRORS as exc:
+            self._raise_operation_http_error(
+                operation=f"rename_plan_for_athlete plan_id={plan_id} athlete_id={athlete_id}",
+                detail="failed to rename plan",
+                exc=exc,
+            )
+
     def archive_plan(self, plan_id: str) -> dict[str, Any]:
         try:
             existing = self.get_plan(plan_id)
@@ -2535,6 +2667,48 @@ class SupabaseAppStore:
                 exc=exc,
             )
 
+    def archive_plan_for_athlete(self, plan_id: str, athlete_id: str) -> dict[str, Any]:
+        """Archive a plan only if it belongs to ``athlete_id`` (404 otherwise)."""
+        try:
+            existing = self.get_plan_for_athlete(plan_id, athlete_id)
+            if not existing:
+                logger.warning(
+                    "[store] archive_plan_for_athlete:not_found plan_id=%s athlete_id=%s", plan_id, athlete_id
+                )
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="plan not found",
+                )
+            try:
+                next_status = require_plan_transition(existing.get("status") or "generated", "archived")
+            except ValueError as exc:
+                raise _status_transition_error(str(exc)) from exc
+            logger.info("[store] archive_plan_for_athlete:start plan_id=%s athlete_id=%s", plan_id, athlete_id)
+            self.client.table("plans").update({"status": next_status}).eq("id", plan_id).eq(
+                "athlete_id", athlete_id
+            ).execute()
+            updated = self.get_plan_for_athlete(plan_id, athlete_id)
+            if not updated:
+                logger.warning(
+                    "[store] archive_plan_for_athlete:plan_missing_after_update plan_id=%s athlete_id=%s",
+                    plan_id,
+                    athlete_id,
+                )
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="plan not found",
+                )
+            logger.info("[store] archive_plan_for_athlete:success plan_id=%s athlete_id=%s", plan_id, athlete_id)
+            return updated
+        except HTTPException:
+            raise
+        except _STORE_CLIENT_ERRORS as exc:
+            self._raise_operation_http_error(
+                operation=f"archive_plan_for_athlete plan_id={plan_id} athlete_id={athlete_id}",
+                detail="failed to archive plan",
+                exc=exc,
+            )
+
     def delete_plan(self, plan_id: str) -> None:
         try:
             existing = self.get_plan(plan_id)
@@ -2552,6 +2726,30 @@ class SupabaseAppStore:
         except _STORE_CLIENT_ERRORS as exc:
             self._raise_operation_http_error(
                 operation=f"delete_plan plan_id={plan_id}",
+                detail="failed to delete plan",
+                exc=exc,
+            )
+
+    def delete_plan_for_athlete(self, plan_id: str, athlete_id: str) -> None:
+        """Delete a plan only if it belongs to ``athlete_id`` (404 otherwise)."""
+        try:
+            existing = self.get_plan_for_athlete(plan_id, athlete_id)
+            if not existing:
+                logger.warning(
+                    "[store] delete_plan_for_athlete:not_found plan_id=%s athlete_id=%s", plan_id, athlete_id
+                )
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="plan not found",
+                )
+            logger.info("[store] delete_plan_for_athlete:start plan_id=%s athlete_id=%s", plan_id, athlete_id)
+            self.client.table("plans").delete().eq("id", plan_id).eq("athlete_id", athlete_id).execute()
+            logger.info("[store] delete_plan_for_athlete:success plan_id=%s athlete_id=%s", plan_id, athlete_id)
+        except HTTPException:
+            raise
+        except _STORE_CLIENT_ERRORS as exc:
+            self._raise_operation_http_error(
+                operation=f"delete_plan_for_athlete plan_id={plan_id} athlete_id={athlete_id}",
                 detail="failed to delete plan",
                 exc=exc,
             )
@@ -2594,6 +2792,13 @@ class SupabaseAppStore:
                 if optional_field == "planning_brief":
                     value = _encode_structured_text(value)
                 payload[optional_field] = value
+        if "stage2_payload" in payload:
+            _guard_persisted_json(
+                payload.get("stage2_payload"),
+                field="stage2_payload",
+                max_bytes=MAX_SERVER_JSON_BYTES,
+                context=f"plan_id={plan_id}",
+            )
         try:
             logger.info("[store] update_plan_stage2:start plan_id=%s status=%s", plan_id, payload["status"])
             self.client.table("plans").update(payload).eq("id", plan_id).execute()
