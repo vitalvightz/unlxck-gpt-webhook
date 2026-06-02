@@ -30,6 +30,7 @@ from .models import (
     USERNAME_MAX_CHANGES_PER_WINDOW,
     validate_username,
 )
+from .schema_requirements import PLAN_RUNTIME_REQUIRED_COLUMNS
 from .state_machine import (
     is_generation_job_status,
     is_plan_status,
@@ -132,18 +133,9 @@ PLAN_RUNTIME_SCHEMA_ERROR_DETAIL = (
 GENERATION_JOB_ACTIVE_LOCK_ERROR_DETAIL = (
     "generation job active lock is missing; apply latest Supabase migrations and redeploy"
 )
-PLAN_RUNTIME_REQUIRED_COLUMNS = (
-    "draft_plan_text",
-    "final_plan_text",
-    "planning_brief",
-    "stage2_payload",
-    "stage2_handoff_text",
-    "stage2_retry_text",
-    "stage2_validator_report",
-    "stage2_status",
-    "stage2_attempt_count",
-    "parsing_metadata",
-)
+# Canonical source lives in api/schema_requirements.py so the live store and the
+# deploy-gate runtime schema checker (tools/check_supabase_runtime_schema.py)
+# can never drift apart. Re-exported here to preserve the existing import path.
 _PLAN_RUNTIME_REQUIRED_COLUMNS_SET = set(PLAN_RUNTIME_REQUIRED_COLUMNS)
 _PLAN_RUNTIME_SCHEMA_ERROR_SNIPPETS = (
     "schema cache",
