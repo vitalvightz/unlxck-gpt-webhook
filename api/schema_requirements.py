@@ -66,6 +66,15 @@ REQUIRED_PLANS_COLUMNS: tuple[str, ...] = (
     "intake_id",
     "plan_text",
     *PLAN_RUNTIME_REQUIRED_COLUMNS,
+    # Non-runtime columns the backend reads/writes in create_plan() and
+    # list_user_plans() (PLAN_SUMMARY_SELECT) — see api/store.py.
+    "fight_date",
+    "technical_style",
+    "full_name",
+    "plan_name",
+    "coach_notes",
+    "pdf_url",
+    "why_log",
     "status",
     "created_at",
 )
@@ -102,6 +111,16 @@ REQUIRED_PROFILES_COLUMNS: tuple[str, ...] = (
     "onboarding_draft",
     "created_at",
     "updated_at",
+    # Additional columns written by profile bootstrap in
+    # _build_profile_payload() — see api/store.py.
+    "technical_style",
+    "tactical_style",
+    "stance",
+    "professional_status",
+    "record_summary",
+    "athlete_timezone",
+    "athlete_locale",
+    "appearance_mode",
 )
 
 # Map of table -> required columns, used by the checker.
@@ -124,6 +143,9 @@ REQUIRED_FUNCTIONS: tuple[str, ...] = (
     "public.prevent_self_role_escalation",
     "public.prevent_username_policy_bypass",
     "public.is_admin",
+    # Invoked during AppStore.validate_runtime_schema() at backend startup
+    # (api/store.py); a missing lock RPC must fail this check too.
+    "public.validate_generation_job_active_lock",
 )
 
 # ---------------------------------------------------------------------------

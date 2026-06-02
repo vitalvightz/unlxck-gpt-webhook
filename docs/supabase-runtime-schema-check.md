@@ -26,7 +26,8 @@ The returned snapshot is diffed against the centralized requirements in
   `planning_brief`, and `parsing_metadata`).
 - **Required functions/RPCs:** `change_profile_username`,
   `try_parse_timestamptz`, `check_plan_generation_short_window_limit`,
-  `prevent_self_role_escalation`, `prevent_username_policy_bypass`, `is_admin`.
+  `prevent_self_role_escalation`, `prevent_username_policy_bypass`, `is_admin`,
+  and `validate_generation_job_active_lock` (called at backend startup).
 - **Required indexes/constraints:** the `generation_jobs` active-job
   uniqueness/lock, the `generation_jobs` athlete/client-request uniqueness, the
   `plan_generation_rate_limits` athlete/created index, and `profiles` username
