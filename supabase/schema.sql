@@ -501,6 +501,66 @@ revoke all on function public.check_plan_generation_short_window_limit(uuid, int
 revoke all on function public.check_plan_generation_short_window_limit(uuid, integer, double precision) from authenticated;
 grant execute on function public.check_plan_generation_short_window_limit(uuid, integer, double precision) to service_role;
 
+-- Deploy-gate introspection helper. Returns ONLY catalog metadata (object
+-- names + per-table RLS flags) for the public schema as a single jsonb object.
+-- It never reads application/user row data. Consumed by
+-- tools/check_supabase_runtime_schema.py to verify the live database matches the
+-- schema the backend depends on before deploy. Restricted to service_role.
+create or replace function public.runtime_schema_introspection()
+returns jsonb
+language sql
+security definer
+stable
+set search_path = public
+as $$
+  select jsonb_build_object(
+    'tables', (
+      select coalesce(jsonb_agg(table_name order by table_name), '[]'::jsonb)
+      from information_schema.tables
+      where table_schema = 'public'
+        and table_type = 'BASE TABLE'
+    ),
+    'columns', (
+      select coalesce(jsonb_object_agg(table_name, cols), '{}'::jsonb)
+      from (
+        select table_name, jsonb_agg(column_name order by column_name) as cols
+        from information_schema.columns
+        where table_schema = 'public'
+        group by table_name
+      ) grouped
+    ),
+    'functions', (
+      select coalesce(jsonb_agg(distinct p.proname order by p.proname), '[]'::jsonb)
+      from pg_proc p
+      join pg_namespace n on n.oid = p.pronamespace
+      where n.nspname = 'public'
+    ),
+    'indexes', (
+      select coalesce(jsonb_agg(indexname order by indexname), '[]'::jsonb)
+      from pg_indexes
+      where schemaname = 'public'
+    ),
+    'constraints', (
+      select coalesce(jsonb_agg(c.conname order by c.conname), '[]'::jsonb)
+      from pg_constraint c
+      join pg_namespace n on n.oid = c.connamespace
+      where n.nspname = 'public'
+    ),
+    'rls', (
+      select coalesce(jsonb_object_agg(c.relname, c.relrowsecurity), '{}'::jsonb)
+      from pg_class c
+      join pg_namespace n on n.oid = c.relnamespace
+      where n.nspname = 'public'
+        and c.relkind = 'r'
+    )
+  );
+$$;
+
+revoke all on function public.runtime_schema_introspection() from public;
+revoke all on function public.runtime_schema_introspection() from anon;
+revoke all on function public.runtime_schema_introspection() from authenticated;
+grant execute on function public.runtime_schema_introspection() to service_role;
+
 drop trigger if exists generation_jobs_set_updated_at on public.generation_jobs;
 create trigger generation_jobs_set_updated_at
 before update on public.generation_jobs
