@@ -15,6 +15,7 @@ from postgrest.exceptions import APIError as PostgrestAPIError
 from supabase import Client, ClientOptions, create_client
 
 from .auth import AuthenticatedUser
+from .errors import generation_already_in_flight_error
 from .environment import is_production_environment
 from .generation_config import generation_job_stale_after_seconds
 from .json_limits import (
@@ -1498,10 +1499,7 @@ class SupabaseAppStore:
         if active_job and str(active_job.get("status") or "") in {"queued", "running"}:
             if str(active_job.get("client_request_id") or "") == client_request_id:
                 return active_job
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail="A generation job is already queued or running for this account.",
-            )
+            raise generation_already_in_flight_error()
 
         payload = {
             "athlete_id": athlete_id,
@@ -1582,10 +1580,7 @@ class SupabaseAppStore:
         if active_job and str(active_job.get("status") or "") in {"queued", "running"}:
             if str(active_job.get("client_request_id") or "") == client_request_id:
                 return active_job
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail="A generation job is already queued or running for this account.",
-            )
+            raise generation_already_in_flight_error()
         if last_error and self._is_transient_store_error(last_error):
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,

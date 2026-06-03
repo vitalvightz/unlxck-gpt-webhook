@@ -8,6 +8,7 @@ import {
   resolveFailedJobWithSavedPlan,
   resolveTerminalJobPlanId,
 } from "./generation-controller";
+import { ApiError } from "@/lib/api";
 import type { GenerationJobResponse } from "@/lib/types";
 
 function buildTerminalJob(partial: Partial<GenerationJobResponse>): GenerationJobResponse {
@@ -163,6 +164,16 @@ test("recognizes the 'already queued or running' multi-tab conflict error", () =
     "A generation job is already queued or running for this account.",
   );
   assert.equal(isGenerationAlreadyInFlightError(error), true);
+});
+
+test("recognizes the multi-tab conflict by machine-readable code", () => {
+  // The backend now attaches a stable `code` so recovery survives copy edits to
+  // the human-readable detail string.
+  const error = new ApiError("Some reworded conflict message.", 409, "generation_already_in_flight");
+  assert.equal(isGenerationAlreadyInFlightError(error), true);
+
+  const unrelated = new ApiError("Conflict.", 409, "some_other_code");
+  assert.equal(isGenerationAlreadyInFlightError(unrelated), false);
 });
 
 test("does not misclassify unrelated errors as the multi-tab conflict", () => {

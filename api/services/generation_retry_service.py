@@ -15,6 +15,7 @@ from api.generation_job_helpers import (
     _normalized_client_request_id,
     daily_generation_cap_window,
 )
+from api.errors import generation_already_in_flight_error
 from api.models import GenerationJobResponse, ProfileRecord
 from api.plan_mappers import _ALLOWED_PLAN_SOURCES
 from api.stage2_automation import Stage2Automator
@@ -146,10 +147,7 @@ async def retry_generation_job(
         stale_after_seconds=stale_after_seconds,
     )
     if blocking_job and str(blocking_job.get("id")) != str(original.get("id")):
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="A generation job is already queued or running for this account.",
-        )
+        raise generation_already_in_flight_error()
 
     job = await asyncio.to_thread(
         store.create_or_get_generation_job,

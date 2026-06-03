@@ -45,11 +45,17 @@ type ApiRequestInit = RequestInit & {
   planSource?: string | null;
 };
 
-/** Error thrown for non-2xx HTTP responses. Includes the HTTP `status` code. */
+/**
+ * Error thrown for non-2xx HTTP responses. Includes the HTTP `status` code and,
+ * when the backend supplies one, a stable machine-readable `code` (e.g.
+ * `generation_already_in_flight`). Prefer branching on `code` over matching the
+ * human-readable `message`, which is free to change.
+ */
 export class ApiError extends Error {
   constructor(
     message: string,
     public readonly status: number,
+    public readonly code?: string,
   ) {
     super(message);
     this.name = "ApiError";
@@ -320,11 +326,14 @@ async function executeRequest(path: string, init?: ApiRequestInit): Promise<Exec
       const detail = "detail" in parsedBody ? (parsedBody as { detail?: unknown }).detail : null;
       const bodyRequestId =
         "request_id" in parsedBody ? (parsedBody as { request_id?: unknown }).request_id : null;
+      const rawCode = "code" in parsedBody ? (parsedBody as { code?: unknown }).code : null;
+      const errorCode = typeof rawCode === "string" && rawCode ? rawCode : undefined;
 
       if (typeof detail === "string") {
         throw new ApiError(
           bodyRequestId ? `${detail} (request id: ${String(bodyRequestId)})` : detail,
           response.status,
+          errorCode,
         );
       }
 
@@ -334,6 +343,7 @@ async function executeRequest(path: string, init?: ApiRequestInit): Promise<Exec
             ? `${JSON.stringify(detail)} (request id: ${String(bodyRequestId)})`
             : JSON.stringify(detail),
           response.status,
+          errorCode,
         );
       }
     }

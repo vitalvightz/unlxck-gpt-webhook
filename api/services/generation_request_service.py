@@ -17,6 +17,7 @@ from api.generation_job_helpers import (
     _normalized_client_request_id,
     daily_generation_cap_window,
 )
+from api.errors import generation_already_in_flight_error
 from api.models import GenerationJobResponse, PlanRequest, ProfileRecord
 from api.performance_focus import validate_performance_focus_selections
 from api.plan_mappers import _ALLOWED_PLAN_SOURCES
@@ -138,10 +139,7 @@ async def generate_plan_for_current_user(
         stale_after_seconds=stale_after_seconds,
     )
     if blocking_job:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="A generation job is already queued or running for this account.",
-        )
+        raise generation_already_in_flight_error()
 
     daily_limit = plan_generate_daily_limit_per_user()
     if daily_limit > 0 and profile.role != "admin" and not is_exempt_from_daily_generation_cap(profile.email):
