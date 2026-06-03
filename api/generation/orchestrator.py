@@ -19,6 +19,7 @@ from typing import Any, Callable
 
 from fastapi import HTTPException, status
 
+from ..error_sanitizer import sanitize_error_text
 from ..models import ProfileUpdateRequest
 from ..stage2_automation import (
     Stage2AutomationError,
@@ -62,6 +63,11 @@ async def run_generation_job(
     stage1_timed_out = threading.Event()
     seen_milestone_codes: set[str] = set()
 
+    def _safe_error_and_frame(exc: Exception) -> tuple[str, traceback.FrameSummary | None]:
+        tb = traceback.extract_tb(exc.__traceback__)
+        frame = tb[-1] if tb else None
+        return sanitize_error_text(exc), frame
+
     def _emit_milestone(code: str, label: str, detail: str = "", **meta: Any) -> None:
         if progress_callback is None:
             return
@@ -70,8 +76,19 @@ async def run_generation_job(
         try:
             progress_callback(code, label, detail, meta)
             seen_milestone_codes.add(code)
-        except Exception:
-            logger.exception("[jobs] generation:milestone_emit_failed job_id=%s code=%s", job_id, code)
+        except Exception as exc:
+            safe_error, frame = _safe_error_and_frame(exc)
+            logger.error(
+                "[jobs] generation:milestone_emit_failed athlete_id=%s job_id=%s code=%s exc_type=%s error=%s location=%s:%s:%s",
+                athlete_id,
+                job_id,
+                code,
+                type(exc).__name__,
+                safe_error,
+                frame.filename if frame else "",
+                frame.lineno if frame else "",
+                frame.name if frame else "",
+            )
 
     async def _touch_heartbeat() -> None:
         with suppress(Exception):
@@ -219,8 +236,18 @@ async def run_generation_job(
                 "Profile update finished",
                 "Athlete profile fields were refreshed.",
             )
-        except Exception:
-            logger.exception("[jobs] generation:update_profile_failed athlete_id=%s job_id=%s", athlete_id, job_id)
+        except Exception as exc:
+            safe_error, frame = _safe_error_and_frame(exc)
+            logger.error(
+                "[jobs] generation:update_profile_failed athlete_id=%s job_id=%s exc_type=%s error=%s location=%s:%s:%s",
+                athlete_id,
+                job_id,
+                type(exc).__name__,
+                safe_error,
+                frame.filename if frame else "",
+                frame.lineno if frame else "",
+                frame.name if frame else "",
+            )
             _emit_milestone(
                 "profile_update_finished",
                 "Profile update finished",
@@ -263,8 +290,18 @@ async def run_generation_job(
                     progress_callback=progress_callback,
                     timeout_seconds=stage1_timeout_seconds,
                 )
-            except asyncio.TimeoutError:
-                logger.exception("[jobs] generation:stage1_timeout athlete_id=%s job_id=%s", athlete_id, job_id)
+            except asyncio.TimeoutError as exc:
+                safe_error, frame = _safe_error_and_frame(exc)
+                logger.error(
+                    "[jobs] generation:stage1_timeout athlete_id=%s job_id=%s exc_type=%s error=%s location=%s:%s:%s",
+                    athlete_id,
+                    job_id,
+                    type(exc).__name__,
+                    safe_error,
+                    frame.filename if frame else "",
+                    frame.lineno if frame else "",
+                    frame.name if frame else "",
+                )
                 now_iso = utc_now_iso()
                 _emit_milestone(
                     "stage1_planner_timeout",
@@ -416,8 +453,18 @@ async def run_generation_job(
             to_thread_with_heartbeat=_to_thread_with_heartbeat,
             t_start=t_start,
         )
-    except asyncio.TimeoutError:
-        logger.exception("[jobs] generation:stage2_timeout athlete_id=%s job_id=%s", athlete_id, job_id)
+    except asyncio.TimeoutError as exc:
+        safe_error, frame = _safe_error_and_frame(exc)
+        logger.error(
+            "[jobs] generation:stage2_timeout athlete_id=%s job_id=%s exc_type=%s error=%s location=%s:%s:%s",
+            athlete_id,
+            job_id,
+            type(exc).__name__,
+            safe_error,
+            frame.filename if frame else "",
+            frame.lineno if frame else "",
+            frame.name if frame else "",
+        )
         with suppress(Exception):
             await asyncio.to_thread(
                 store.update_generation_job,
@@ -428,19 +475,39 @@ async def run_generation_job(
                 heartbeat_at=utc_now_iso(),
             )
     except Stage2AutomationUnavailableError as exc:
-        logger.warning("[jobs] generation:stage2_unavailable athlete_id=%s job_id=%s detail=%s", athlete_id, job_id, exc)
+        safe_error, frame = _safe_error_and_frame(exc)
+        logger.warning(
+            "[jobs] generation:stage2_unavailable athlete_id=%s job_id=%s exc_type=%s error=%s location=%s:%s:%s",
+            athlete_id,
+            job_id,
+            type(exc).__name__,
+            safe_error,
+            frame.filename if frame else "",
+            frame.lineno if frame else "",
+            frame.name if frame else "",
+        )
         with suppress(Exception):
             await asyncio.to_thread(
                 store.update_generation_job,
                 job_id,
                 status="failed",
-                error=str(exc),
+                error=safe_error,
                 completed_at=utc_now_iso(),
                 heartbeat_at=utc_now_iso(),
             )
     except Stage2AutomationError as exc:
-        logger.exception("[jobs] generation:stage2_failed athlete_id=%s job_id=%s", athlete_id, job_id)
-        resolved_error = _OPENAI_QUOTA_ADMIN_ERROR if is_openai_quota_error(exc) else str(exc)
+        safe_error, frame = _safe_error_and_frame(exc)
+        logger.error(
+            "[jobs] generation:stage2_failed athlete_id=%s job_id=%s exc_type=%s error=%s location=%s:%s:%s",
+            athlete_id,
+            job_id,
+            type(exc).__name__,
+            safe_error,
+            frame.filename if frame else "",
+            frame.lineno if frame else "",
+            frame.name if frame else "",
+        )
+        resolved_error = _OPENAI_QUOTA_ADMIN_ERROR if is_openai_quota_error(exc) else safe_error
         with suppress(Exception):
             await asyncio.to_thread(
                 store.update_generation_job,
@@ -451,7 +518,7 @@ async def run_generation_job(
                 heartbeat_at=utc_now_iso(),
             )
     except HTTPException as exc:
-        detail = exc.detail if isinstance(exc.detail, str) else json.dumps(exc.detail)
+        detail = sanitize_error_text(exc.detail if isinstance(exc.detail, str) else json.dumps(exc.detail))
         logger.warning("[jobs] generation:http_error athlete_id=%s job_id=%s detail=%s", athlete_id, job_id, detail)
         with suppress(Exception):
             await asyncio.to_thread(
@@ -463,58 +530,59 @@ async def run_generation_job(
                 heartbeat_at=utc_now_iso(),
             )
     except TriageResumeMissingPlanError as exc:
+        safe_error, frame = _safe_error_and_frame(exc)
         logger.error(
-            "[jobs] generation:resume_missing_plan_failure athlete_id=%s job_id=%s",
+            "[jobs] generation:resume_missing_plan_failure athlete_id=%s job_id=%s exc_type=%s error=%s location=%s:%s:%s",
             athlete_id,
             job_id,
+            type(exc).__name__,
+            safe_error,
+            frame.filename if frame else "",
+            frame.lineno if frame else "",
+            frame.name if frame else "",
         )
         with suppress(Exception):
             await asyncio.to_thread(
                 store.update_generation_job,
                 job_id,
                 status="failed",
-                error=str(exc),
+                error=safe_error,
                 completed_at=utc_now_iso(),
                 heartbeat_at=utc_now_iso(),
             )
     except AdminLatestIntakeLinkageError as exc:
+        safe_error, frame = _safe_error_and_frame(exc)
         logger.error(
-            "[jobs] generation:admin_latest_intake_linkage_failure athlete_id=%s job_id=%s",
+            "[jobs] generation:admin_latest_intake_linkage_failure athlete_id=%s job_id=%s exc_type=%s error=%s location=%s:%s:%s",
             athlete_id,
             job_id,
+            type(exc).__name__,
+            safe_error,
+            frame.filename if frame else "",
+            frame.lineno if frame else "",
+            frame.name if frame else "",
         )
         with suppress(Exception):
             await asyncio.to_thread(
                 store.update_generation_job,
                 job_id,
                 status="failed",
-                error=str(exc),
+                error=safe_error,
                 completed_at=utc_now_iso(),
                 heartbeat_at=utc_now_iso(),
             )
     except Exception as exc:
-        if isinstance(exc, Stage1PlannerError) and exc.child_traceback:
-            # The Stage 1 planner runs in a child process; its real stack trace
-            # is otherwise lost when the parent re-raises only the message.
-            # Preserve it in structured logs keyed by job ID for admin-only
-            # diagnostics (the user-facing job error stays generic below).
-            logger.error(
-                "[jobs] generation:stage1_child_traceback athlete_id=%s job_id=%s\n%s",
-                athlete_id,
-                job_id,
-                exc.child_traceback,
-            )
-        tb = traceback.extract_tb(exc.__traceback__)
-        frame = tb[-1] if tb else None
-        logger.exception(
-            "[jobs] generation:unhandled_exception athlete_id=%s job_id=%s exception_type=%s exception_msg=%s file=%s line=%s function=%s",
+        safe_error, frame = _safe_error_and_frame(exc)
+        logger.error(
+            "[jobs] generation:unhandled_exception athlete_id=%s job_id=%s exc_type=%s error=%s location=%s:%s:%s child_traceback_present=%s",
             athlete_id,
             job_id,
             type(exc).__name__,
-            str(exc),
+            safe_error,
             frame.filename if frame else "",
             frame.lineno if frame else "",
             frame.name if frame else "",
+            isinstance(exc, Stage1PlannerError) and bool(exc.child_traceback),
         )
         with suppress(Exception):
             await asyncio.to_thread(
