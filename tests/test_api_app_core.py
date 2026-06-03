@@ -99,6 +99,55 @@ def test_request_middleware_returns_json_request_id_for_unhandled_exceptions():
     assert len(response.json()["request_id"]) == 8
 
 
+def test_job_response_surfaces_warning_milestones():
+    warning = "Profile refresh failed; plan generated from submitted intake only."
+    response = app_module._job_response(
+        {
+            "id": "job_warning",
+            "athlete_id": "athlete-1",
+            "client_request_id": "client-1",
+            "status": "completed",
+            "created_at": _now(),
+            "updated_at": _now(),
+            "started_at": None,
+            "completed_at": None,
+            "error": None,
+            "plan_id": None,
+            "progress_milestones": [
+                {"code": "profile_refresh_failed_warning", "detail": warning, "meta": {"warning": True}},
+                {"code": "profile_refresh_failed_warning_duplicate", "detail": warning, "meta": {"warning": True}},
+            ],
+        }
+    )
+
+    assert response.warnings == [warning]
+
+
+def test_admin_generation_job_diagnostic_surfaces_warning_milestones():
+    warning = "Profile refresh failed; plan generated from submitted intake only."
+    diagnostic = app_module._admin_generation_job_diagnostic(
+        {
+            "id": "job_warning",
+            "athlete_id": "athlete-1",
+            "client_request_id": "client-1",
+            "status": "completed",
+            "created_at": _now(),
+            "updated_at": _now(),
+            "started_at": None,
+            "heartbeat_at": None,
+            "completed_at": _now(),
+            "error": None,
+            "plan_id": None,
+            "progress_milestones": [
+                {"code": "profile_refresh_failed_warning", "detail": warning, "meta": {"warning": True}},
+            ],
+        },
+        stale_after_seconds=90,
+    )
+
+    assert diagnostic.warnings == [warning]
+
+
 def test_job_response_falls_back_to_created_at_when_updated_at_is_missing():
     created_at = _now()
     response = app_module._job_response(

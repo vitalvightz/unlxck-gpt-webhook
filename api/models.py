@@ -1079,6 +1079,7 @@ class GenerationJobResponse(BaseModel):
     status_url: str | None = None
     message: str | None = None
     progress_milestones: list[ProgressMilestone] = Field(default_factory=list)
+    warnings: list[str] = Field(default_factory=list)
     can_retry: bool = False
     stage2_status: str | None = None
     requires_admin_resume: bool = False
@@ -1118,6 +1119,7 @@ class AdminGenerationJobDiagnostic(BaseModel):
     stage2_status: str | None = None
     requires_admin_resume: bool = False
     is_stale: bool = False
+    warnings: list[str] = Field(default_factory=list)
     request_payload_summary: GenerationRequestPayloadSummary = Field(default_factory=GenerationRequestPayloadSummary)
 
 
