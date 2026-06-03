@@ -1,6 +1,11 @@
 import pytest
 
-from api.models import MAX_OPEN_CAMP_WEEKS, AthleteProfileInput, PlanRequest
+from api.models import (
+    MAX_OPEN_CAMP_WEEKS,
+    AthleteProfileInput,
+    GuidedInjuryInput,
+    PlanRequest,
+)
 
 
 def _athlete() -> AthleteProfileInput:
@@ -30,6 +35,43 @@ def test_to_payload_open_camp_clears_fight_date_field() -> None:
     assert fight_date_field["value"] == ""
     assert payload["camp_timeline_type"] == "open_camp"
     assert payload["no_scheduled_fight"] is True
+
+
+def test_to_payload_forwards_all_guided_injuries() -> None:
+    request = PlanRequest(
+        athlete=_athlete(),
+        fight_date="2026-12-01",
+        rounds_format="3 x 3",
+        weekly_training_frequency=4,
+        guided_injuries=[
+            GuidedInjuryInput(area="left knee", severity="moderate"),
+            GuidedInjuryInput(area="right shoulder", severity="high"),
+            GuidedInjuryInput(area="concussion", severity="high"),
+        ],
+    )
+
+    payload = request.to_payload()
+
+    # Every guided injury must reach Stage 1 via the plural key it consumes.
+    assert [entry["area"] for entry in payload["guided_injuries"]] == [
+        "left knee",
+        "right shoulder",
+        "concussion",
+    ]
+    # Singular key retained for back-compat, mirrors the first entry.
+    assert payload["guided_injury"]["area"] == "left knee"
+
+
+def test_to_payload_singular_guided_injury_unchanged() -> None:
+    request = PlanRequest(
+        athlete=_athlete(),
+        guided_injury=GuidedInjuryInput(area="left knee", severity="moderate"),
+    )
+
+    payload = request.to_payload()
+
+    assert payload["guided_injury"]["area"] == "left knee"
+    assert "guided_injuries" not in payload
 
 
 @pytest.mark.parametrize(

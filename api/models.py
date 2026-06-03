@@ -769,6 +769,15 @@ class PlanRequest(BaseModel):
         if self.guided_injury is not None:
             payload["guided_injury"] = _legacy_guided_injury_payload(self.guided_injury)
         elif self.guided_injuries:
+            # Stage 1 (``fightcamp.input_parsing``) consumes the plural
+            # ``guided_injuries`` key and parses every entry; forward the full
+            # list so additional guided injuries are not silently dropped. The
+            # singular ``guided_injury`` is kept for back-compat with consumers
+            # that still read it (Stage 1 falls back to it only when the plural
+            # key is absent).
+            payload["guided_injuries"] = [
+                _legacy_guided_injury_payload(guided) for guided in self.guided_injuries
+            ]
             payload["guided_injury"] = _legacy_guided_injury_payload(self.guided_injuries[0])
         if self.random_seed is not None:
             payload["random_seed"] = self.random_seed
