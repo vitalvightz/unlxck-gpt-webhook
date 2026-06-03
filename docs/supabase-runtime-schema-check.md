@@ -116,8 +116,10 @@ so the schema check can only succeed once migrations have been applied.
 
 ## Running the live check in CI (optional)
 
-The default backend CI workflow (`.github/workflows/backend-checks.yml`) runs
-only the unit tests, which use fake catalog data and need no credentials.
+The backend CI workflow (`.github/workflows/backend-checks.yml`) runs the
+checker's unit tests (fake catalog data, no credentials) plus the static
+`schema.sql` test. The full backend suite is covered separately by
+`python-quality.yml`.
 
 To additionally run the **live** check in CI, add these GitHub repository
 secrets and call the script in a job after migrations have run against the

@@ -1,7 +1,10 @@
 name: Backend Checks
 
-# Runs the Python backend test suite, including the Supabase runtime schema
-# checker's unit tests (which use fake catalog data and need no credentials).
+# Runs the Supabase runtime schema checker's tests: the checker unit tests
+# (fake catalog data, no credentials) plus the static schema.sql test. The full
+# backend test suite is already exercised by python-quality.yml, so this
+# workflow stays scoped to the deploy-gate checker this PR introduces and
+# remains a fast, self-contained signal.
 #
 # The LIVE Supabase runtime schema check is intentionally NOT run here by
 # default, because it requires service-role credentials and a migrated target
@@ -41,8 +44,8 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements-dev.txt
 
-      - name: Run pytest
-        run: pytest
+      - name: Run runtime schema checker tests
+        run: pytest tests/test_supabase_runtime_schema_checker.py tests/test_supabase_schema.py
 
       # To enable the live Supabase runtime schema check, configure the
       # SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY repository secrets and
