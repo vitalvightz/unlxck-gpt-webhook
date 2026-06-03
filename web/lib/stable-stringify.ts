@@ -17,6 +17,16 @@ function sortValue(value: unknown): unknown {
     return value.map(sortValue);
   }
   if (value && typeof value === "object") {
+    // Defer to JSON.stringify for anything that isn't a plain object: values
+    // with a toJSON() hook (e.g. Date) own their serialization, and class
+    // instances shouldn't have their internals reordered key-by-key. Walking
+    // only plain objects keeps key sorting safe and predictable.
+    if (typeof (value as { toJSON?: unknown }).toJSON === "function") {
+      return value;
+    }
+    if (Object.getPrototypeOf(value) !== Object.prototype) {
+      return value;
+    }
     const source = value as Record<string, unknown>;
     return Object.keys(source)
       .sort()

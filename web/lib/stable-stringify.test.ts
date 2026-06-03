@@ -24,3 +24,11 @@ test("handles primitives and null", () => {
   assert.equal(stableStringify(42), "42");
   assert.equal(stableStringify("x"), '"x"');
 });
+
+test("preserves Date JSON serialization", () => {
+  const value = { createdAt: new Date("2026-06-03T00:00:00.000Z") };
+  assert.equal(
+    stableStringify(value),
+    '{"createdAt":"2026-06-03T00:00:00.000Z"}',
+  );
+});

@@ -20,7 +20,13 @@ logger = logging.getLogger("api")
 
 
 class _RequestBodyTooLarge(BaseException):
-    """Internal signal that the streamed body crossed the configured ceiling."""
+    """Internal signal that the streamed body crossed the configured ceiling.
+
+    Inherits from ``BaseException`` (not ``Exception``) so that if it ever has
+    to propagate — e.g. in the ``response_started`` re-raise path — Starlette's
+    ``ServerErrorMiddleware``, which only catches ``Exception``, can't swallow
+    it and rewrite the response into a generic 500.
+    """
 
 
 class RequestBodySizeLimitMiddleware:
