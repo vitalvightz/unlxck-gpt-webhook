@@ -276,6 +276,7 @@ def test_worker_tick_processes_queued_job_to_terminal_status():
         )
         while detached_tasks:
             await asyncio.gather(*list(detached_tasks))
+            await asyncio.sleep(0)
 
     original_builder = worker_module.build_default_stage2_automator
     worker_module.build_default_stage2_automator = lambda: FakeStage2Automator(result=finalized_result())
