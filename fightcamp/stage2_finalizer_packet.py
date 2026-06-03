@@ -207,7 +207,11 @@ def _compact_weekly_role_map(weekly_role_map: Any) -> dict[str, Any]:
                     "declared_training_days": week.get("declared_training_days"),
                     "declared_hard_sparring_days": week.get("declared_hard_sparring_days"),
                     "declared_support_work_days": week.get("declared_support_work_days"),
-                    "hard_sparring_plan": week.get("hard_sparring_plan"),
+                    "hard_sparring_plan": [
+                        {k: v for k, v in entry.items() if v not in (None, "", [])}
+                        for entry in week.get("hard_sparring_plan")
+                        if isinstance(entry, dict)
+                    ] if isinstance(week.get("hard_sparring_plan"), list) else None,
                     "effective_hard_sparring_days": week.get("effective_hard_sparring_days"),
                     "final_week_sparring_cap": week.get("final_week_sparring_cap"),
                     "coach_note_flags": week.get("coach_note_flags"),
