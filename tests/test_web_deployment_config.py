@@ -59,6 +59,14 @@ def test_next_config_sets_baseline_security_headers():
     assert "camera=(), microphone=(), geolocation=()" in NEXT_CONFIG_SOURCE
 
 
+def test_next_config_tightens_production_script_csp():
+    assert 'const scriptSrc =' in NEXT_CONFIG_SOURCE
+    assert "? \"script-src 'self' 'unsafe-inline' 'unsafe-eval'\"" in NEXT_CONFIG_SOURCE
+    assert ": \"script-src 'self'\"" in NEXT_CONFIG_SOURCE
+    assert "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com" in NEXT_CONFIG_SOURCE
+    assert "`script-src 'self' 'unsafe-inline'" not in NEXT_CONFIG_SOURCE
+
+
 def test_delete_plan_uses_shared_request_pipeline():
     api_client_source = (WEB_ROOT / "lib" / "api.ts").read_text()
     # deletePlan must route through requestVoid (which wraps the shared
