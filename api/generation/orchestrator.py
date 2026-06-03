@@ -45,6 +45,7 @@ from .types import Planner, ProgressCallback
 
 logger = logging.getLogger(__name__)
 _TRIAGE_RESUME_OVERRIDE_KEY = "_triage_resume_override"
+_PROFILE_REFRESH_FAILED_WARNING = "Profile refresh failed; plan generated from submitted intake only."
 
 
 async def run_generation_job(
@@ -253,6 +254,12 @@ async def run_generation_job(
                 "Profile update finished",
                 "Profile refresh failed; generation is continuing with the stored payload.",
                 failed=True,
+            )
+            _emit_milestone(
+                "profile_refresh_failed_warning",
+                "Job warning",
+                _PROFILE_REFRESH_FAILED_WARNING,
+                warning=True,
             )
         if not intake_id:
             intake = await _to_thread_with_heartbeat(store.create_intake, athlete_id, request_body)

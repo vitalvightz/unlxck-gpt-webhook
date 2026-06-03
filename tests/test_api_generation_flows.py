@@ -2685,6 +2685,49 @@ def test_admin_triage_resume_mismatched_intake_fails_before_planner():
     assert planner_called is False
 
 
+def test_run_generation_job_warns_when_profile_refresh_fails_but_generation_continues():
+    class ProfileFailingStore(FakeStore):
+        def update_profile(self, athlete_id: str, update: ProfileUpdateRequest) -> dict:
+            raise RuntimeError("profile write unavailable")
+
+    store = ProfileFailingStore()
+    _seed_athlete_profile(store)
+    request = _build_request()
+    job = store.create_or_get_generation_job(
+        athlete_id="athlete-1",
+        client_request_id="profile-refresh-fails",
+        source="self_serve",
+        request_payload=request.model_dump(mode="json"),
+    )
+
+    asyncio.run(
+        run_generation_job(
+            job_id=job["id"],
+            store=store,
+            planner_fn=_planner,
+            stage2=FakeStage2Automator(result=finalized_result()),
+            active_tasks=set(),
+        )
+    )
+
+    refreshed_job = store.get_generation_job(job["id"])
+    assert refreshed_job["status"] == "completed"
+    assert refreshed_job["plan_id"]
+    warning = "Profile refresh failed; plan generated from submitted intake only."
+    warning_milestones = [
+        milestone
+        for milestone in refreshed_job.get("progress_milestones", [])
+        if milestone.get("code") == "profile_refresh_failed_warning"
+    ]
+    assert len(warning_milestones) == 1
+    assert warning_milestones[0]["detail"] == warning
+    assert warning_milestones[0]["meta"] == {"warning": True}
+    response = app_module._job_response(refreshed_job, store=store)
+    diagnostic = app_module._admin_generation_job_diagnostic(refreshed_job, stale_after_seconds=90)
+    assert response.warnings == [warning]
+    assert diagnostic.warnings == [warning]
+
+
 def test_admin_triage_resume_with_override_updates_blocked_plan_in_place():
     store = FakeStore()
     athlete = AuthenticatedUser(

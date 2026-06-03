@@ -121,6 +121,21 @@ def _normalize_progress_milestones(raw: Any) -> list[dict[str, Any]]:
     return normalized
 
 
+def _job_warnings_from_milestones(raw: Any) -> list[str]:
+    warnings: list[str] = []
+    seen: set[str] = set()
+    for milestone in _normalize_progress_milestones(raw):
+        meta = milestone.get("meta")
+        if not isinstance(meta, dict) or meta.get("warning") is not True:
+            continue
+        detail = str(milestone.get("detail") or "").strip()
+        if not detail or detail in seen:
+            continue
+        warnings.append(detail)
+        seen.add(detail)
+    return warnings
+
+
 def _job_response(
     job: dict[str, Any],
     *,
@@ -238,6 +253,7 @@ def _job_response(
         status_url=f"/api/generation-jobs/{job['id']}",
         message=message,
         progress_milestones=_normalize_progress_milestones(job.get("progress_milestones")),
+        warnings=_job_warnings_from_milestones(job.get("progress_milestones")),
         can_retry=can_retry,
         stage2_status=stage2_status or None,
         requires_admin_resume=requires_admin_resume,
@@ -522,6 +538,7 @@ def _admin_generation_job_diagnostic(job: dict[str, Any], *, stale_after_seconds
         stage2_status=stage2_status,
         requires_admin_resume=requires_admin_resume,
         is_stale=is_stale,
+        warnings=_job_warnings_from_milestones(job.get("progress_milestones")),
         request_payload_summary=_request_payload_summary(job.get("request_payload")),
     )
 
