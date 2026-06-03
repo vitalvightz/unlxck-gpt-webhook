@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 
 import { RequireAuth } from "@/components/auth-guard";
@@ -11,6 +11,7 @@ import { useGenerationController } from "@/lib/generation-controller";
 import { resolveMatchingPayloadGenerationAction } from "@/lib/generation-status-guards";
 import { hydratePlanRequest } from "@/lib/onboarding";
 import { validatePerformanceFocusSelections } from "@/lib/performance-focus-cap";
+import { stableStringify } from "@/lib/stable-stringify";
 import { PremiumLoadingScreen } from "@/components/premium-loading-screen";
 
 const STORAGE_KEY = "unlxck:pending-generation:self";
@@ -20,10 +21,6 @@ function resolvePlanSource(me: ReturnType<typeof useAppSession>["me"]): string {
   const draft = me?.profile.onboarding_draft as { plan_source?: unknown } | null | undefined;
   const candidate = typeof draft?.plan_source === "string" ? draft.plan_source.trim() : "";
   return ALLOWED_PLAN_SOURCES.has(candidate) ? candidate : "self_serve";
-}
-
-function hashPayload(payload: unknown): string {
-  return JSON.stringify(payload);
 }
 
 function getCompletedGeneration() {
@@ -37,19 +34,27 @@ export default function GeneratePage() {
   const router = useRouter();
   const { me, session } = useAppSession();
   const autoStartRef = useRef(false);
-  const payload = me ? hydratePlanRequest(me) : null;
-  const performanceFocusValidation = payload
-    ? validatePerformanceFocusSelections(
-      payload.fight_date,
-      {
-        keyGoals: payload.key_goals,
-        weakAreas: payload.weak_areas,
-      },
-      {
-        timeZone: payload.athlete.athlete_timezone,
-      },
-    )
-    : null;
+  // Memoize so a re-render with the same session doesn't rebuild a fresh
+  // payload object on every pass (which would churn the start effect below).
+  const payload = useMemo(() => (me ? hydratePlanRequest(me) : null), [me]);
+  // Canonical hash so re-ordered-but-identical payloads are treated as equal.
+  const payloadHash = useMemo(() => stableStringify(payload), [payload]);
+  const performanceFocusValidation = useMemo(
+    () =>
+      payload
+        ? validatePerformanceFocusSelections(
+            payload.fight_date,
+            {
+              keyGoals: payload.key_goals,
+              weakAreas: payload.weak_areas,
+            },
+            {
+              timeZone: payload.athlete.athlete_timezone,
+            },
+          )
+        : null,
+    [payload],
+  );
 
   const controller = useGenerationController({
     token: session?.access_token ?? null,
@@ -72,7 +77,7 @@ export default function GeneratePage() {
       if (payload && typeof window !== "undefined" && !isProtectedTriageOutcome && planId) {
         window.localStorage.setItem(
           COMPLETED_GENERATION_KEY,
-          JSON.stringify({ payloadHash: hashPayload(payload), planId, completedAt: new Date().toISOString() }),
+          JSON.stringify({ payloadHash, planId, completedAt: new Date().toISOString() }),
         );
       }
       // Protected triage outcomes have no plan row. Stay on the generate
@@ -104,7 +109,7 @@ export default function GeneratePage() {
       return;
     }
     const matchingPayloadAction = resolveMatchingPayloadGenerationAction(
-      hashPayload(payload),
+      payloadHash,
       getCompletedGeneration(),
     );
     if (matchingPayloadAction.type === "redirect") {
@@ -151,7 +156,7 @@ export default function GeneratePage() {
     return () => {
       cancelled = true;
     };
-  }, [controller, payload, performanceFocusValidation?.isOverCap, router, session?.access_token]);
+  }, [controller, payload, payloadHash, performanceFocusValidation?.isOverCap, router, session?.access_token]);
 
   return (
     <RequireAuth>

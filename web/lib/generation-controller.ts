@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { getGenerationJob, isRetryableApiFailure, retryGenerationJob } from "@/lib/api";
+import { ApiError, getGenerationJob, isRetryableApiFailure, retryGenerationJob } from "@/lib/api";
 import { normalizeLegacyGenerationJobStatus } from "@/lib/generation-status-guards";
 import type { GenerationJobResponse, GenerationJobStatus, ProgressMilestone } from "@/lib/types";
 
@@ -79,15 +79,19 @@ type GenerationControllerOptions = {
   recoverActiveJob?: () => Promise<GenerationJobResponse | null>;
 };
 
-// Matches the FastAPI 409 detail emitted by
-// _find_blocking_generation_job_for_athlete when another tab/device beat us
-// to the active-job slot. Detail strings are surfaced verbatim through
-// ApiError.message in readJson, so substring matching is the cheapest stable
-// hook we have without expanding ApiError to carry the parsed body.
+// Stable machine-readable code the backend attaches to the 409 raised when
+// another tab/device beat us to the active-job slot. Branching on the code
+// keeps recovery working even if the human-readable copy is reworded.
+const GENERATION_ALREADY_IN_FLIGHT_CODE = "generation_already_in_flight";
+// Legacy fallback: older backends (and any response that loses the code field)
+// only carry the detail string, surfaced verbatim through ApiError.message.
 const GENERATION_ALREADY_IN_FLIGHT_ERROR_SNIPPET =
   "A generation job is already queued or running for this account.";
 
 export function isGenerationAlreadyInFlightError(error: unknown): boolean {
+  if (error instanceof ApiError && error.code === GENERATION_ALREADY_IN_FLIGHT_CODE) {
+    return true;
+  }
   if (!(error instanceof Error)) {
     return false;
   }

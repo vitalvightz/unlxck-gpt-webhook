@@ -19,6 +19,8 @@ from fightcamp.logging_utils import bind_log_context, clear_log_context, configu
 from fightcamp.plan_pipeline import prime_plan_banks
 
 from .auth import AuthService, AuthenticatedUser, SupabaseAuthService, is_auth_api_error
+from .errors import generation_already_in_flight_error
+from .request_body_guard import RequestBodySizeLimitMiddleware
 from .environment import (
     apply_production_environment_defaults,
     should_default_to_production,
@@ -330,14 +332,19 @@ def create_app(
         allow_methods=["*"],
         allow_headers=["*"],
     )
+    # Hard ceiling on the actual number of body bytes received, enforced as the
+    # body streams in. This backstops the Content-Length check below, which a
+    # chunked or mislabelled request can slip past.
+    app.add_middleware(RequestBodySizeLimitMiddleware, max_body_bytes=MAX_REQUEST_BODY_BYTES)
 
     @app.middleware("http")
     async def enforce_request_body_size(request: Request, call_next):
         # Reject obviously oversized requests up front (via the declared
         # Content-Length) before they are buffered, parsed, or routed. This is a
-        # coarse DoS guard; per-field caps and json_limits provide finer-grained
-        # validation once the body is parsed. Registered after log_requests so it
-        # wraps it and runs first.
+        # coarse, cheap DoS guard; RequestBodySizeLimitMiddleware enforces the
+        # same ceiling against the bytes actually received for requests that
+        # understate or omit Content-Length, and per-field caps and json_limits
+        # provide finer-grained validation once the body is parsed.
         content_length = request.headers.get("content-length")
         if content_length is not None:
             try:
@@ -354,7 +361,7 @@ def create_app(
                 )
                 return JSONResponse(
                     status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
-                    content={"detail": "request body too large"},
+                    content={"detail": "request body too large", "code": "request_body_too_large"},
                 )
         return await call_next(request)
 
@@ -410,12 +417,16 @@ def create_app(
                     "error_code": "http_exception",
                 },
             )
+            exc_content: dict[str, Any] = {
+                "detail": exc.detail,
+                "request_id": request_id,
+            }
+            error_code = getattr(exc, "code", None)
+            if error_code:
+                exc_content["code"] = error_code
             return JSONResponse(
                 status_code=exc.status_code,
-                content={
-                    "detail": exc.detail,
-                    "request_id": request_id,
-                },
+                content=exc_content,
                 headers={"X-Request-ID": request_id},
             )
         except Exception:
@@ -448,6 +459,9 @@ def create_app(
     async def http_exception_handler(request: Request, exc: HTTPException) -> JSONResponse:
         request_id = getattr(request.state, "request_id", "")
         content: dict[str, Any] = {"detail": exc.detail}
+        error_code = getattr(exc, "code", None)
+        if error_code:
+            content["code"] = error_code
         if request_id:
             content["request_id"] = request_id
         headers = {"X-Request-ID": request_id} if request_id else None
@@ -1141,10 +1155,7 @@ def create_app(
             stale_after_seconds=stale_after_seconds,
         )
         if blocking_job:
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail="A generation job is already queued or running for this account.",
-            )
+            raise generation_already_in_flight_error()
         job = await asyncio.to_thread(
             store.create_or_get_generation_job,
             athlete_id=athlete_id,
