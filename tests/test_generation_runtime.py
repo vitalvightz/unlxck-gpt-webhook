@@ -168,6 +168,20 @@ def test_stage1_run_planner_raises_controlled_runtime_error(monkeypatch):
         asyncio.run(run_stage1_planner(_spawn_planner_raises, {}, timeout_seconds=_SPAWN_TEST_TIMEOUT_SECONDS))
 
 
+def test_stage1_run_planner_preserves_child_traceback(monkeypatch):
+    monkeypatch.setenv("UNLXCK_STAGE1_MP_START_METHOD", "spawn")
+
+    with pytest.raises(stage1_runner.Stage1PlannerError) as exc_info:
+        asyncio.run(run_stage1_planner(_spawn_planner_raises, {}, timeout_seconds=_SPAWN_TEST_TIMEOUT_SECONDS))
+
+    # The child-process stack trace must survive the parent re-raise so it can
+    # be surfaced in structured logs for admin diagnostics.
+    child_traceback = exc_info.value.child_traceback
+    assert child_traceback is not None
+    assert "Traceback" in child_traceback
+    assert "boom" in child_traceback
+
+
 def test_stage1_run_planner_timeout(monkeypatch):
     monkeypatch.setenv("UNLXCK_STAGE1_MP_START_METHOD", "spawn")
 

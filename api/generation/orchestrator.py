@@ -35,7 +35,7 @@ from .heartbeat import heartbeat_generation_job
 from .milestones import build_progress_recorder
 from .payloads import parse_plan_request
 from .persistence import persist_plan_and_finalize, persist_triage_review_required
-from .stage1_runner import run_stage1_planner
+from .stage1_runner import Stage1PlannerError, run_stage1_planner
 from .stage2_runner import _OPENAI_QUOTA_ADMIN_ERROR, finalize_stage2_with_timeout, is_openai_quota_error
 from .timeouts import _stage1_planner_timeout_seconds
 from .time_utils import utc_now_iso
@@ -493,6 +493,17 @@ async def run_generation_job(
                 heartbeat_at=utc_now_iso(),
             )
     except Exception as exc:
+        if isinstance(exc, Stage1PlannerError) and exc.child_traceback:
+            # The Stage 1 planner runs in a child process; its real stack trace
+            # is otherwise lost when the parent re-raises only the message.
+            # Preserve it in structured logs keyed by job ID for admin-only
+            # diagnostics (the user-facing job error stays generic below).
+            logger.error(
+                "[jobs] generation:stage1_child_traceback athlete_id=%s job_id=%s\n%s",
+                athlete_id,
+                job_id,
+                exc.child_traceback,
+            )
         tb = traceback.extract_tb(exc.__traceback__)
         frame = tb[-1] if tb else None
         logger.exception(

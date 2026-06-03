@@ -25,6 +25,20 @@ from .types import Planner, ProgressCallback
 logger = logging.getLogger(__name__)
 
 
+class Stage1PlannerError(RuntimeError):
+    """Raised when the Stage 1 planner subprocess reports a failure.
+
+    Subclasses ``RuntimeError`` so existing handlers keep catching it. It also
+    carries the child-process traceback (when the subprocess captured one) so
+    the parent can surface it in structured logs for admin diagnostics instead
+    of discarding it.
+    """
+
+    def __init__(self, message: str, *, child_traceback: str | None = None) -> None:
+        super().__init__(message)
+        self.child_traceback = child_traceback
+
+
 def default_planner(
     payload: dict[str, Any],
     *,
@@ -152,9 +166,12 @@ def _handle_stage1_result_message(message: tuple[str, Any]) -> dict[str, Any]:
         return payload_or_error
 
     if isinstance(payload_or_error, dict):
-        raise RuntimeError(payload_or_error.get("message") or "Stage 1 planner failed")
+        raise Stage1PlannerError(
+            payload_or_error.get("message") or "Stage 1 planner failed",
+            child_traceback=payload_or_error.get("traceback"),
+        )
 
-    raise RuntimeError("Stage 1 planner failed")
+    raise Stage1PlannerError("Stage 1 planner failed")
 
 
 async def run_stage1_planner(

@@ -17,6 +17,7 @@ _STAGE2_FAILED = "stage2_failed"
 logger = logging.getLogger(__name__)
 _DEFAULT_FIRST_PASS_CHAR_LIMIT = 180_000
 _DEFAULT_OPENAI_MAX_RETRIES = 0
+_DEFAULT_MAX_OUTPUT_TOKENS = 6000
 
 
 class Stage2AutomationError(RuntimeError):
@@ -54,6 +55,19 @@ def _stage2_openai_max_retries() -> int:
     return _env_int(
         "UNLXCK_STAGE2_OPENAI_MAX_RETRIES",
         _DEFAULT_OPENAI_MAX_RETRIES,
+        minimum=0,
+    )
+
+
+def _stage2_max_output_tokens() -> int:
+    # Bounds output token count (and therefore cost/latency) on the Stage 2
+    # call. The ``.env.example`` ships this knob and ``_response_is_incomplete``
+    # already treats a ``max_output_tokens`` truncation as review-required, so a
+    # cap that is hit fails safe rather than shipping a partial plan. Set to 0 to
+    # send no cap (provider default).
+    return _env_int(
+        "UNLXCK_STAGE2_MAX_OUTPUT_TOKENS",
+        _DEFAULT_MAX_OUTPUT_TOKENS,
         minimum=0,
     )
 
@@ -320,11 +334,15 @@ class OpenAIStage2Automator:
             "model": self.model,
             "input": prompt,
         }
+        max_output_tokens = _stage2_max_output_tokens()
+        if max_output_tokens > 0:
+            request["max_output_tokens"] = max_output_tokens
         logger.info(
-            "[stage2] sending %s prompt to model=%s chars=%s",
+            "[stage2] sending %s prompt to model=%s chars=%s max_output_tokens=%s",
             attempt_label,
             self.model,
             len(prompt),
+            max_output_tokens or "unset",
         )
         try:
             response = await self.client.responses.create(**request)
