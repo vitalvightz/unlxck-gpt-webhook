@@ -412,7 +412,7 @@ def test_runtime_app_fails_loudly_when_plan_schema_is_invalid_and_fallback_disab
     assert response.json() == {
         "ok": False,
         "app": "unlxck-fight-camp-api",
-        "detail": store_module.PLAN_RUNTIME_SCHEMA_ERROR_DETAIL,
+        "detail": "service temporarily unavailable",
     }
 def test_runtime_app_returns_startup_failure_when_store_is_restricted(
     monkeypatch: pytest.MonkeyPatch,
@@ -439,7 +439,7 @@ def test_runtime_app_returns_startup_failure_when_store_is_restricted(
     assert response.status_code == 503
     assert response.json()["ok"] is False
     assert response.json()["app"] == "unlxck-fight-camp-api"
-    assert "JSON could not be generated" in response.json()["detail"]
+    assert response.json()["detail"] == "service temporarily unavailable"
 def test_runtime_app_does_not_fail_schema_check_when_legacy_fallback_enabled(
     monkeypatch: pytest.MonkeyPatch,
 ):
@@ -498,7 +498,7 @@ def test_runtime_app_fails_in_production_even_when_legacy_fallback_flag_set(
     assert response.json() == {
         "ok": False,
         "app": "unlxck-fight-camp-api",
-        "detail": store_module.PLAN_RUNTIME_SCHEMA_ERROR_DETAIL,
+        "detail": "service temporarily unavailable",
     }
 
 

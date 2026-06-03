@@ -1247,7 +1247,7 @@ def _build_runtime_app() -> FastAPI:
     )
 
 
-def _build_startup_failure_app(detail: str) -> FastAPI:
+def _build_startup_failure_app() -> FastAPI:
     app = FastAPI(title="UNLXCK Fight Camp API", version="0.2.0")
 
     def _failure_response() -> JSONResponse:
@@ -1256,7 +1256,7 @@ def _build_startup_failure_app(detail: str) -> FastAPI:
             content={
                 "ok": False,
                 "app": "unlxck-fight-camp-api",
-                "detail": detail,
+                "detail": "service temporarily unavailable",
             },
         )
 
@@ -1279,16 +1279,12 @@ try:
     app = _build_runtime_app()
 except RuntimeError as exc:
     logger.exception("[app] runtime_app_build_failed")
-    detail = str(exc)
-    if "SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required" in detail:
-        detail = "missing supabase configuration"
-    elif not detail:
-        detail = "application startup failed"
-    app = _build_startup_failure_app(detail)
+    del exc
+    app = _build_startup_failure_app()
 except PostgrestAPIError as exc:
     logger.exception("[app] runtime_app_build_failed")
-    detail = str(exc) or "store service unavailable"
-    app = _build_startup_failure_app(detail)
+    del exc
+    app = _build_startup_failure_app()
 except ValueError:
     logger.exception("[app] runtime_app_build_failed")
-    app = _build_startup_failure_app("application startup failed")
+    app = _build_startup_failure_app()

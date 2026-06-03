@@ -19,6 +19,7 @@ from typing import Any, Callable
 
 from fastapi import HTTPException, status
 
+from ..error_sanitizer import sanitize_error_text
 from ..models import ProfileUpdateRequest
 from ..stage2_automation import (
     Stage2AutomationError,
@@ -428,19 +429,21 @@ async def run_generation_job(
                 heartbeat_at=utc_now_iso(),
             )
     except Stage2AutomationUnavailableError as exc:
-        logger.warning("[jobs] generation:stage2_unavailable athlete_id=%s job_id=%s detail=%s", athlete_id, job_id, exc)
+        safe_error = sanitize_error_text(exc)
+        logger.warning("[jobs] generation:stage2_unavailable athlete_id=%s job_id=%s detail=%s", athlete_id, job_id, safe_error)
         with suppress(Exception):
             await asyncio.to_thread(
                 store.update_generation_job,
                 job_id,
                 status="failed",
-                error=str(exc),
+                error=safe_error,
                 completed_at=utc_now_iso(),
                 heartbeat_at=utc_now_iso(),
             )
     except Stage2AutomationError as exc:
-        logger.exception("[jobs] generation:stage2_failed athlete_id=%s job_id=%s", athlete_id, job_id)
-        resolved_error = _OPENAI_QUOTA_ADMIN_ERROR if is_openai_quota_error(exc) else str(exc)
+        safe_error = sanitize_error_text(exc)
+        logger.exception("[jobs] generation:stage2_failed athlete_id=%s job_id=%s error=%s", athlete_id, job_id, safe_error)
+        resolved_error = _OPENAI_QUOTA_ADMIN_ERROR if is_openai_quota_error(exc) else safe_error
         with suppress(Exception):
             await asyncio.to_thread(
                 store.update_generation_job,
@@ -451,7 +454,7 @@ async def run_generation_job(
                 heartbeat_at=utc_now_iso(),
             )
     except HTTPException as exc:
-        detail = exc.detail if isinstance(exc.detail, str) else json.dumps(exc.detail)
+        detail = sanitize_error_text(exc.detail if isinstance(exc.detail, str) else json.dumps(exc.detail))
         logger.warning("[jobs] generation:http_error athlete_id=%s job_id=%s detail=%s", athlete_id, job_id, detail)
         with suppress(Exception):
             await asyncio.to_thread(
@@ -463,36 +466,41 @@ async def run_generation_job(
                 heartbeat_at=utc_now_iso(),
             )
     except TriageResumeMissingPlanError as exc:
+        safe_error = sanitize_error_text(exc)
         logger.error(
-            "[jobs] generation:resume_missing_plan_failure athlete_id=%s job_id=%s",
+            "[jobs] generation:resume_missing_plan_failure athlete_id=%s job_id=%s error=%s",
             athlete_id,
             job_id,
+            safe_error,
         )
         with suppress(Exception):
             await asyncio.to_thread(
                 store.update_generation_job,
                 job_id,
                 status="failed",
-                error=str(exc),
+                error=safe_error,
                 completed_at=utc_now_iso(),
                 heartbeat_at=utc_now_iso(),
             )
     except AdminLatestIntakeLinkageError as exc:
+        safe_error = sanitize_error_text(exc)
         logger.error(
-            "[jobs] generation:admin_latest_intake_linkage_failure athlete_id=%s job_id=%s",
+            "[jobs] generation:admin_latest_intake_linkage_failure athlete_id=%s job_id=%s error=%s",
             athlete_id,
             job_id,
+            safe_error,
         )
         with suppress(Exception):
             await asyncio.to_thread(
                 store.update_generation_job,
                 job_id,
                 status="failed",
-                error=str(exc),
+                error=safe_error,
                 completed_at=utc_now_iso(),
                 heartbeat_at=utc_now_iso(),
             )
     except Exception as exc:
+        safe_error = sanitize_error_text(exc)
         if isinstance(exc, Stage1PlannerError) and exc.child_traceback:
             # The Stage 1 planner runs in a child process; its real stack trace
             # is otherwise lost when the parent re-raises only the message.
@@ -511,7 +519,7 @@ async def run_generation_job(
             athlete_id,
             job_id,
             type(exc).__name__,
-            str(exc),
+            safe_error,
             frame.filename if frame else "",
             frame.lineno if frame else "",
             frame.name if frame else "",
