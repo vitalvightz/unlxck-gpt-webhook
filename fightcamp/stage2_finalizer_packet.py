@@ -137,6 +137,17 @@ def _compact_role(role: dict[str, Any]) -> dict[str, Any]:
         "countdown_offset",
         "placement_basis",
 
+        # Sparring dose truth from the planner / role map
+        "hard_sparring_status",
+        "hard_sparring_class",
+        "hard_sparring_reason_codes",
+        "hard_sparring_reason",
+        "coach_note_flags",
+        "coach_note",
+        "replacement_role_key",
+        "downgraded_from_role_key",
+        "locked_day",
+
         # Gas-tank / recovery-day upgrade flags
         "gas_tank_recovery_touch",
         "allowed_on_recovery_day",
@@ -196,6 +207,7 @@ def _compact_weekly_role_map(weekly_role_map: Any) -> dict[str, Any]:
                     "declared_training_days": week.get("declared_training_days"),
                     "declared_hard_sparring_days": week.get("declared_hard_sparring_days"),
                     "declared_support_work_days": week.get("declared_support_work_days"),
+                    "hard_sparring_plan": week.get("hard_sparring_plan"),
                     "effective_hard_sparring_days": week.get("effective_hard_sparring_days"),
                     "final_week_sparring_cap": week.get("final_week_sparring_cap"),
                     "coach_note_flags": week.get("coach_note_flags"),
