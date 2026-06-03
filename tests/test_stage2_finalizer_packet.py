@@ -79,3 +79,107 @@ def test_finalizer_packet_prefers_late_fight_visible_session_sequence():
         "hard_sparring_day",
         "neural_primer_day",
     ]
+
+
+def test_finalizer_packet_preserves_week_hard_sparring_plan_truth():
+    stage2_payload = {
+        "athlete_model": {},
+        "weekly_role_map": {
+            "weeks": [
+                {
+                    "week_index": 1,
+                    "phase": "TAPER",
+                    "declared_hard_sparring_days": ["Monday", "Wednesday"],
+                    "hard_sparring_plan": [
+                        {
+                            "day": "Monday",
+                            "status": "hard_as_planned",
+                            "effective_load": "hard",
+                            "hard_day_class": "primary_hard",
+                            "reason_codes": [],
+                            "reason": "",
+                        },
+                        {
+                            "day": "Wednesday",
+                            "status": "deload_suggested",
+                            "effective_load": "reduced",
+                            "hard_day_class": "managed_hard",
+                            "reason_codes": ["fight_week_taper", "final_week_sparring_cap"],
+                            "reason": "Final taper week cap.",
+                            "coach_note": "Keep the rounds controlled.",
+                        },
+                    ],
+                    "effective_hard_sparring_days": ["Monday"],
+                    "final_week_sparring_cap": {
+                        "active": True,
+                        "capped_declared_hard_sparring_days": ["Wednesday"],
+                    },
+                }
+            ]
+        },
+    }
+
+    packet = build_stage2_finalizer_packet(stage2_payload=stage2_payload, planning_brief={})
+    week = packet["selected_plan"]["weekly_role_map"]["weeks"][0]
+
+    assert week["hard_sparring_plan"] == stage2_payload["weekly_role_map"]["weeks"][0]["hard_sparring_plan"]
+    assert week["effective_hard_sparring_days"] == ["Monday"]
+    assert week["final_week_sparring_cap"]["active"] is True
+
+
+def test_finalizer_packet_preserves_hard_sparring_role_dose_fields():
+    stage2_payload = {
+        "athlete_model": {},
+        "weekly_role_map": {
+            "weeks": [
+                {
+                    "week_index": 1,
+                    "phase": "SPP",
+                    "session_roles": [
+                        {
+                            "session_index": 1,
+                            "category": "sparring",
+                            "role_key": "hard_sparring_day",
+                            "scheduled_day_hint": "Wednesday",
+                            "hard_sparring_status": "deload_suggested",
+                            "hard_sparring_class": "managed_hard",
+                            "hard_sparring_reason_codes": ["high_fatigue"],
+                            "hard_sparring_reason": "high_fatigue",
+                            "coach_note_flags": ["deload hard sparring"],
+                            "coach_note": "Keep the rounds controlled.",
+                            "locked_day": "Wednesday",
+                        }
+                    ],
+                    "suppressed_roles": [
+                        {
+                            "category": "sparring",
+                            "role_key": "hard_sparring_day",
+                            "scheduled_day_hint": "Friday",
+                            "replacement_role_key": "no_hard_sparring_day",
+                            "downgraded_from_role_key": "hard_sparring_day",
+                            "hard_sparring_status": "convert_to_technical_suggested",
+                            "hard_sparring_reason_codes": ["d17_hard_sparring_ban"],
+                            "hard_sparring_reason": "D-17 ban.",
+                            "locked_day": "Friday",
+                        }
+                    ],
+                }
+            ]
+        },
+    }
+
+    packet = build_stage2_finalizer_packet(stage2_payload=stage2_payload, planning_brief={})
+    week = packet["selected_plan"]["weekly_role_map"]["weeks"][0]
+    role = week["session_roles"][0]
+    suppressed = week["suppressed_roles"][0]
+
+    assert role["hard_sparring_status"] == "deload_suggested"
+    assert role["hard_sparring_class"] == "managed_hard"
+    assert role["hard_sparring_reason_codes"] == ["high_fatigue"]
+    assert role["hard_sparring_reason"] == "high_fatigue"
+    assert role["coach_note_flags"] == ["deload hard sparring"]
+    assert role["locked_day"] == "Wednesday"
+    assert suppressed["replacement_role_key"] == "no_hard_sparring_day"
+    assert suppressed["downgraded_from_role_key"] == "hard_sparring_day"
+    assert suppressed["hard_sparring_status"] == "convert_to_technical_suggested"
+    assert suppressed["hard_sparring_reason_codes"] == ["d17_hard_sparring_ban"]
