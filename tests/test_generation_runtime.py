@@ -25,6 +25,13 @@ from support import FakeStage2Automator, FakeStore, _build_request, finalized_re
 
 _ENVIRONMENT_VARS = ("APP_ENV", "ENVIRONMENT", "UNLXCK_ENV", "NODE_ENV")
 
+# With the "spawn" start method the planner child cold-imports this test module
+# (and its api.app import chain), which can take a couple of seconds in a slow
+# CI sandbox. These tests exercise result/error delivery, not startup latency,
+# so they need a timeout that comfortably clears spawn import cost. Production
+# uses a 600s Stage 1 timeout, so import overhead is irrelevant there.
+_SPAWN_TEST_TIMEOUT_SECONDS = 30.0
+
 
 def _spawn_planner_returns(payload):
     return {"ok": payload["value"]}
@@ -129,7 +136,9 @@ def test_stage1_mp_start_method_invalid_falls_back_to_spawn(monkeypatch):
 
 def test_stage1_run_planner_returns_result(monkeypatch):
     monkeypatch.setenv("UNLXCK_STAGE1_MP_START_METHOD", "spawn")
-    result = asyncio.run(run_stage1_planner(_spawn_planner_returns, {"value": 3}, timeout_seconds=2))
+    result = asyncio.run(
+        run_stage1_planner(_spawn_planner_returns, {"value": 3}, timeout_seconds=_SPAWN_TEST_TIMEOUT_SECONDS)
+    )
     assert result == {"ok": 3}
 
 
@@ -141,7 +150,12 @@ def test_stage1_run_planner_relays_progress(monkeypatch):
         codes.append(code)
 
     result = asyncio.run(
-        run_stage1_planner(_spawn_planner_with_progress, {"value": 1}, progress_callback=callback, timeout_seconds=2)
+        run_stage1_planner(
+            _spawn_planner_with_progress,
+            {"value": 1},
+            progress_callback=callback,
+            timeout_seconds=_SPAWN_TEST_TIMEOUT_SECONDS,
+        )
     )
     assert result == {"ok": True}
     assert "planner_started" in codes
@@ -151,7 +165,7 @@ def test_stage1_run_planner_raises_controlled_runtime_error(monkeypatch):
     monkeypatch.setenv("UNLXCK_STAGE1_MP_START_METHOD", "spawn")
 
     with pytest.raises(RuntimeError, match="boom"):
-        asyncio.run(run_stage1_planner(_spawn_planner_raises, {}, timeout_seconds=2))
+        asyncio.run(run_stage1_planner(_spawn_planner_raises, {}, timeout_seconds=_SPAWN_TEST_TIMEOUT_SECONDS))
 
 
 def test_stage1_run_planner_timeout(monkeypatch):
@@ -165,12 +179,16 @@ def test_stage1_run_planner_child_exit_without_result_raises_controlled_error(mo
     monkeypatch.setenv("UNLXCK_STAGE1_MP_START_METHOD", "spawn")
 
     with pytest.raises(RuntimeError, match="Stage 1 planner process exited without result"):
-        asyncio.run(run_stage1_planner(_spawn_planner_exits, {}, timeout_seconds=2))
+        asyncio.run(run_stage1_planner(_spawn_planner_exits, {}, timeout_seconds=_SPAWN_TEST_TIMEOUT_SECONDS))
 
 
 def test_stage1_run_planner_returns_after_planner_returns(monkeypatch):
     monkeypatch.setenv("UNLXCK_STAGE1_MP_START_METHOD", "spawn")
-    result = asyncio.run(run_stage1_planner(_spawn_planner_returns_then_sleeps, {"value": 7}, timeout_seconds=1.0))
+    result = asyncio.run(
+        run_stage1_planner(
+            _spawn_planner_returns_then_sleeps, {"value": 7}, timeout_seconds=_SPAWN_TEST_TIMEOUT_SECONDS
+        )
+    )
     assert result == {"status": "ok", "value": 7}
 
 
@@ -186,7 +204,7 @@ def test_stage1_run_planner_reads_large_result_from_queue(monkeypatch):
             _spawn_planner_returns_large_result,
             {"value": 9},
             progress_callback=callback,
-            timeout_seconds=2,
+            timeout_seconds=_SPAWN_TEST_TIMEOUT_SECONDS,
         )
     )
     assert result["status"] == "ok"
@@ -243,20 +261,26 @@ def test_worker_tick_processes_queued_job_to_terminal_status():
     active_tasks: set[str] = set()
     detached_tasks: set[asyncio.Task[None]] = set()
 
+    # Drive the tick and drain the detached job task inside a single event loop.
+    # _tick() schedules the job as a detached task and returns without awaiting
+    # it; if each step ran in its own asyncio.run(), that call's shutdown would
+    # cancel the still-pending task before it could claim and process the job.
+    # Production keeps one long-lived loop across ticks, so this mirrors it.
+    async def _drive_until_drained() -> None:
+        await worker_module._tick(
+            store=store,
+            active_tasks=active_tasks,
+            detached_tasks=detached_tasks,
+            stale_after_seconds=660,
+            max_concurrent_jobs=1,
+        )
+        while detached_tasks:
+            await asyncio.gather(*list(detached_tasks))
+
     original_builder = worker_module.build_default_stage2_automator
     worker_module.build_default_stage2_automator = lambda: FakeStage2Automator(result=finalized_result())
     try:
-        asyncio.run(
-            worker_module._tick(
-                store=store,
-                active_tasks=active_tasks,
-                detached_tasks=detached_tasks,
-                stale_after_seconds=660,
-                max_concurrent_jobs=1,
-            )
-        )
-        while detached_tasks:
-            asyncio.run(asyncio.gather(*list(detached_tasks)))
+        asyncio.run(_drive_until_drained())
     finally:
         worker_module.build_default_stage2_automator = original_builder
 
