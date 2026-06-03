@@ -11,7 +11,7 @@ _SENSITIVE_PAYLOAD_PATTERN = re.compile(
 )
 _EMAIL_PATTERN = re.compile(r"(?i)\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b")
 _BEARER_TOKEN_PATTERN = re.compile(r"(?i)bearer\s+[A-Za-z0-9._~+/-]+=*")
-_LONG_SECRET_PATTERN = re.compile(r"\b[A-Za-z0-9_]{32,}\b")
+_LONG_SECRET_PATTERN = re.compile(r"\b[A-Za-z0-9_]{40,}\b")
 _ERROR_TEXT_MAX_LENGTH = 300
 
 
