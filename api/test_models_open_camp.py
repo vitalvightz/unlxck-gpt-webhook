@@ -62,6 +62,30 @@ def test_to_payload_forwards_all_guided_injuries() -> None:
     assert payload["guided_injury"]["area"] == "left knee"
 
 
+def test_to_payload_prioritizes_plural_guided_injuries_when_both_present() -> None:
+    # The frontend always submits both fields (guided_injury mirrors the first
+    # of guided_injuries), so the plural list must win or extra injuries are
+    # dropped before they reach Stage 1.
+    request = PlanRequest(
+        athlete=_athlete(),
+        guided_injury=GuidedInjuryInput(area="legacy knee", severity="low"),
+        guided_injuries=[
+            GuidedInjuryInput(area="left knee", severity="moderate"),
+            GuidedInjuryInput(area="right shoulder", severity="high"),
+            GuidedInjuryInput(area="concussion", severity="high"),
+        ],
+    )
+
+    payload = request.to_payload()
+
+    assert [entry["area"] for entry in payload["guided_injuries"]] == [
+        "left knee",
+        "right shoulder",
+        "concussion",
+    ]
+    assert payload["guided_injury"]["area"] == "left knee"
+
+
 def test_to_payload_singular_guided_injury_unchanged() -> None:
     request = PlanRequest(
         athlete=_athlete(),

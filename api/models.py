@@ -766,19 +766,20 @@ class PlanRequest(BaseModel):
             "open_camp_weeks": self.open_camp_weeks,
             "camp_timeline_type": camp_timeline_type,
         }
-        if self.guided_injury is not None:
-            payload["guided_injury"] = _legacy_guided_injury_payload(self.guided_injury)
-        elif self.guided_injuries:
-            # Stage 1 (``fightcamp.input_parsing``) consumes the plural
-            # ``guided_injuries`` key and parses every entry; forward the full
-            # list so additional guided injuries are not silently dropped. The
-            # singular ``guided_injury`` is kept for back-compat with consumers
-            # that still read it (Stage 1 falls back to it only when the plural
-            # key is absent).
+        if self.guided_injuries:
+            # The frontend (buildGuidedInjuryFields) always sends BOTH the plural
+            # ``guided_injuries`` list and a singular ``guided_injury`` mirror of
+            # the first entry, so the plural list must take priority — otherwise
+            # additional injuries are silently dropped. Stage 1
+            # (fightcamp.input_parsing) consumes the plural key and parses every
+            # entry; the singular key is kept for back-compat with callers that
+            # only send it.
             payload["guided_injuries"] = [
                 _legacy_guided_injury_payload(guided) for guided in self.guided_injuries
             ]
             payload["guided_injury"] = _legacy_guided_injury_payload(self.guided_injuries[0])
+        elif self.guided_injury is not None:
+            payload["guided_injury"] = _legacy_guided_injury_payload(self.guided_injury)
         if self.random_seed is not None:
             payload["random_seed"] = self.random_seed
         return payload
