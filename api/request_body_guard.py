@@ -19,7 +19,7 @@ from starlette.types import ASGIApp, Message, Receive, Scope, Send
 logger = logging.getLogger("api")
 
 
-class _RequestBodyTooLarge(Exception):
+class _RequestBodyTooLarge(BaseException):
     """Internal signal that the streamed body crossed the configured ceiling."""
 
 
