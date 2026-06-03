@@ -139,7 +139,19 @@ OPENAI_API_KEY=
 APP_PLAN_GENERATE_DAILY_LIMIT_PER_USER=5
 ```
 
-`UNLXCK_ADMIN_EMAILS` is the only admin role source of truth. Use a comma-separated list:
+`UNLXCK_ADMIN_EMAILS` is the **bootstrap allowlist** for admin roles, not the
+runtime source of truth. When a profile is first created, an email in this list
+seeds the profile with `role = admin`; thereafter the stored `profiles.role`
+column is authoritative and is what every admin-gated route checks. This means:
+
+- Adding an email here grants admin only on first profile creation. To promote
+  an existing user, update their `profiles.role` in the database.
+- Removing an email here does **not** demote an existing admin. To revoke
+  access, set that user's `profiles.role` back to `athlete` in the database.
+
+This is enforced by `tests/test_api_admin_flows.py`
+(`test_admin_routes_use_stored_profile_role_not_env_allowlist`). Use a
+comma-separated list:
 `UNLXCK_ADMIN_EMAILS=email1@example.com,email2@example.com`.
 
 ### Frontend

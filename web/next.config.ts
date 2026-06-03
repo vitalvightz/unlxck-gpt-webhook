@@ -36,6 +36,13 @@ const CONTENT_SECURITY_POLICY = [
 
 const SECURITY_HEADERS = [
   { key: "Content-Security-Policy", value: CONTENT_SECURITY_POLICY },
+  // Force HTTPS for a year, including subdomains. `preload` is intentionally
+  // omitted until every subdomain is confirmed HTTPS-only — add it only when
+  // ready to submit to the HSTS preload list (the decision is hard to reverse).
+  {
+    key: "Strict-Transport-Security",
+    value: "max-age=31536000; includeSubDomains",
+  },
   { key: "X-Frame-Options", value: "DENY" },
   { key: "X-Content-Type-Options", value: "nosniff" },
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },

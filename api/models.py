@@ -543,23 +543,28 @@ class PlanRequest(BaseModel):
     rounds_format: str = ""
     weekly_training_frequency: int | None = None
     fatigue_level: str = ""
-    equipment_access: list[str] = Field(default_factory=list)
-    training_availability: list[str] = Field(default_factory=list)
-    hard_sparring_days: list[str] = Field(default_factory=list)
-    support_work_days: list[str] = Field(default_factory=list)
-    injuries: str = ""
+    # Free-form text and list fields below carry field-level caps so oversized
+    # payloads are rejected by validation before they reach the persistence
+    # guards in ``json_limits``. Caps are generous relative to real submissions
+    # (UI selections top out well under these) and exist to bound abuse, not to
+    # enforce business rules.
+    equipment_access: list[str] = Field(default_factory=list, max_length=64)
+    training_availability: list[str] = Field(default_factory=list, max_length=64)
+    hard_sparring_days: list[str] = Field(default_factory=list, max_length=64)
+    support_work_days: list[str] = Field(default_factory=list, max_length=64)
+    injuries: str = Field(default="", max_length=4000)
     guided_injury: GuidedInjuryInput | None = None
-    guided_injuries: list[GuidedInjuryInput] | None = None
-    key_goals: list[str] = Field(default_factory=list)
+    guided_injuries: list[GuidedInjuryInput] | None = Field(default=None, max_length=64)
+    key_goals: list[str] = Field(default_factory=list, max_length=32)
     primary_goal: str | None = None
-    weak_areas: list[str] = Field(default_factory=list)
+    weak_areas: list[str] = Field(default_factory=list, max_length=32)
     primary_weak_area: str | None = None
-    goal_weakness_collision_detail: str = ""
-    goal_weakness_collision_tags: list[str] = Field(default_factory=list)
-    goal_weakness_collision_details: list[dict[str, str]] = Field(default_factory=list)
-    training_preference: str = ""
-    mindset_challenges: str = ""
-    notes: str = ""
+    goal_weakness_collision_detail: str = Field(default="", max_length=4000)
+    goal_weakness_collision_tags: list[str] = Field(default_factory=list, max_length=64)
+    goal_weakness_collision_details: list[dict[str, str]] = Field(default_factory=list, max_length=64)
+    training_preference: str = Field(default="", max_length=2000)
+    mindset_challenges: str = Field(default="", max_length=4000)
+    notes: str = Field(default="", max_length=4000)
     random_seed: int | None = None
     intake_id: str | None = None
 

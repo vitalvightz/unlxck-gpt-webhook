@@ -60,6 +60,7 @@ from .services.triage_resume_service import (
     approve_and_resume_job_triage,
     approve_and_resume_plan_triage,
 )
+from .json_limits import MAX_REQUEST_BODY_BYTES
 from .cors_config import (
     get_cors_origins as get_cors_origins,
     get_cors_origin_regex as get_cors_origin_regex,
@@ -329,6 +330,33 @@ def create_app(
         allow_methods=["*"],
         allow_headers=["*"],
     )
+
+    @app.middleware("http")
+    async def enforce_request_body_size(request: Request, call_next):
+        # Reject obviously oversized requests up front (via the declared
+        # Content-Length) before they are buffered, parsed, or routed. This is a
+        # coarse DoS guard; per-field caps and json_limits provide finer-grained
+        # validation once the body is parsed. Registered after log_requests so it
+        # wraps it and runs first.
+        content_length = request.headers.get("content-length")
+        if content_length is not None:
+            try:
+                declared = int(content_length)
+            except ValueError:
+                declared = -1
+            if declared > MAX_REQUEST_BODY_BYTES:
+                logger.warning(
+                    "[http] request:body_too_large method=%s path=%s content_length=%s limit=%s",
+                    request.method,
+                    request.url.path,
+                    content_length,
+                    MAX_REQUEST_BODY_BYTES,
+                )
+                return JSONResponse(
+                    status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                    content={"detail": "request body too large"},
+                )
+        return await call_next(request)
 
     @app.middleware("http")
     async def log_requests(request: Request, call_next):

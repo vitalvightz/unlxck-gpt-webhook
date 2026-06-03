@@ -25,6 +25,12 @@ MAX_CLIENT_JSON_BYTES = 100 * 1024
 MAX_SERVER_JSON_BYTES = 256 * 1024
 # Reject structures nested deeper than this regardless of byte size.
 MAX_JSON_DEPTH = 32
+# Coarse ceiling for the entire HTTP request body, enforced at the middleware
+# layer via the declared Content-Length before the body is parsed or routed.
+# Set comfortably above the largest legitimate server payload
+# (``MAX_SERVER_JSON_BYTES``) so well-formed requests are never rejected, while
+# still bounding pathological uploads.
+MAX_REQUEST_BODY_BYTES = 1024 * 1024
 
 
 def json_byte_size(value: Any) -> int:
