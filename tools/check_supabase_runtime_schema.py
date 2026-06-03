@@ -23,6 +23,7 @@ Usage:
 from __future__ import annotations
 
 import os
+import re
 import sys
 from pathlib import Path
 
@@ -38,6 +39,10 @@ from api.schema_requirements import (  # noqa: E402  (after sys.path setup)
 )
 
 INTROSPECTION_RPC = "runtime_schema_introspection"
+
+# Defense in depth: redact long token-like strings (service-role keys, JWTs)
+# from any exception text we surface, mirroring api/store.py's secret scrubbing.
+_LONG_SECRET_PATTERN = re.compile(r"\b[A-Za-z0-9_\-]{32,}\b")
 
 _MISSING_RPC_HINT = (
     f"The '{INTROSPECTION_RPC}' RPC was not found in the database. Apply the "
@@ -78,10 +83,15 @@ def _build_client(url: str, key: str):
         ) from exc
 
     # Match api/store.py: HTTP/1.1 only to avoid GOAWAY-frame RemoteProtocolErrors.
-    http_client = httpx.Client(http2=False)
-    client: Client = create_client(
-        url, key, options=ClientOptions(httpx_client=http_client)
-    )
+    try:
+        http_client = httpx.Client(http2=False)
+        client: Client = create_client(
+            url, key, options=ClientOptions(httpx_client=http_client)
+        )
+    except Exception as exc:  # noqa: BLE001 - normalize into a clean operator message
+        raise RuntimeSchemaCheckError(
+            f"Failed to initialize the Supabase client. {_summarize_exc(exc)}"
+        ) from exc
     return client
 
 
@@ -119,6 +129,8 @@ def fetch_introspection(client) -> dict:
 def _summarize_exc(exc: Exception) -> str:
     """Short, secret-free one-liner describing an exception."""
     summary = " ".join(str(exc).split())
+    # Redact long token-like strings (e.g. the service-role key) before logging.
+    summary = _LONG_SECRET_PATTERN.sub("[redacted_secret]", summary)
     if len(summary) > 200:
         summary = summary[:200] + "…"
     return f"{type(exc).__name__}: {summary}" if summary else type(exc).__name__

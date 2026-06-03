@@ -245,10 +245,13 @@ class SchemaIntrospection:
         columns_raw = payload.get("columns") or {}
         if not isinstance(columns_raw, Mapping):
             raise SchemaIntrospectionError("'columns' must be an object")
-        columns_by_table = {
-            str(table): frozenset(str(c) for c in (cols or []) if c is not None)
-            for table, cols in columns_raw.items()
-        }
+        columns_by_table: dict[str, frozenset[str]] = {}
+        for table, cols in columns_raw.items():
+            if cols is not None and not isinstance(cols, (list, tuple)):
+                raise SchemaIntrospectionError(f"columns for table '{table}' must be a list")
+            columns_by_table[str(table)] = frozenset(
+                str(c) for c in (cols or []) if c is not None
+            )
 
         rls_raw = payload.get("rls") or {}
         if not isinstance(rls_raw, Mapping):

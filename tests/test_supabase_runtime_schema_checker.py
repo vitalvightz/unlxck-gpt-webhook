@@ -236,7 +236,30 @@ def test_introspection_rejects_bad_columns_shape():
         SchemaIntrospection.from_payload({"columns": ["not", "a", "map"]})
 
 
+def test_introspection_rejects_non_list_column_values():
+    # A table whose column list is a bare string must raise cleanly rather than
+    # silently iterating into single characters.
+    with pytest.raises(SchemaIntrospectionError):
+        SchemaIntrospection.from_payload({"columns": {"plans": "id"}})
+
+
+def test_introspection_allows_null_column_value():
+    snapshot = SchemaIntrospection.from_payload({"columns": {"plans": None}})
+    assert snapshot.columns_by_table["plans"] == frozenset()
+
+
 def test_evaluate_schema_matches_evaluate_payload():
     payload = _valid_payload()
     snapshot = SchemaIntrospection.from_payload(payload)
     assert evaluate_schema(snapshot).ok == evaluate_payload(payload).ok
+
+
+def test_summarize_exc_redacts_long_secrets():
+    # Importing the checker module is credential-free (the Supabase client is
+    # built lazily inside functions), so this stays in the normal test run.
+    from tools.check_supabase_runtime_schema import _summarize_exc
+
+    secret = "sbp_" + "a1B2c3D4" * 6  # long token-like string
+    summary = _summarize_exc(RuntimeError(f"connect failed key={secret}"))
+    assert secret not in summary
+    assert "[redacted_secret]" in summary
