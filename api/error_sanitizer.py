@@ -7,7 +7,7 @@ _SENSITIVE_ERROR_KEY_PATTERN = re.compile(
     r"refresh_token|id_token|token|password)\b\1\s*([:=]|=>)\s*(\"[^\"\n]*\"|'[^'\n]*'|[^,;\s}]+)"
 )
 _SENSITIVE_PAYLOAD_PATTERN = re.compile(
-    r"(?i)([\"']?)\b(request_payload|payload|intake|onboarding_draft)\b\1\s*([:=]|=>)\s*.*"
+    r"(?i)([\"']?)\b(request_payload|payload|intake|onboarding_draft)\b\1\s*([:=]|=>)\s*(\{.*?\}|\[.*?\]|'[^']*'|\"[^\"]*\"|[^,;\s]+)"
 )
 _EMAIL_PATTERN = re.compile(r"(?i)\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b")
 _BEARER_TOKEN_PATTERN = re.compile(r"(?i)bearer\s+[A-Za-z0-9._~+/-]+=*")
