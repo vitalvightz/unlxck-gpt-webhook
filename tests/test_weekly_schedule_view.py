@@ -240,7 +240,7 @@ def test_extract_weekly_schedule_taper_missing_plan_does_not_fallback_to_declare
     assert by_day["Wed"]["status"] == "missing_effective_sparring_plan"
 
 
-def test_extract_weekly_schedule_empty_late_plan_marks_declared_hard_days_technical_only():
+def test_extract_weekly_schedule_empty_late_plan_does_not_infer_declared_hard_days():
     schedule = extract_weekly_schedule(
         {
             "weekly_role_map": {
@@ -264,10 +264,10 @@ def test_extract_weekly_schedule_empty_late_plan_marks_declared_hard_days_techni
     assert schedule is not None
     by_day = {day["weekday"]: day for day in schedule["days"]}
     for weekday in ("Tue", "Thu"):
-        assert by_day[weekday]["sparring_day_class"] == "technical"
-        assert by_day[weekday]["effective_load"] == "technical"
-        assert by_day[weekday]["status"] == "convert_to_technical_suggested"
-        assert by_day[weekday]["reason_codes"] == ["d17_hard_sparring_ban"]
+        assert by_day[weekday]["sparring_day_class"] == "none"
+        assert by_day[weekday]["effective_load"] == "none"
+        assert by_day[weekday]["status"] == ""
+        assert by_day[weekday]["reason_codes"] == []
 
 
 def test_weekly_schedule_view_exposes_d_day_labels_from_calendar_days():
@@ -467,7 +467,7 @@ def test_extract_weekly_schedule_countdown_fallback_does_not_create_cross_week_o
     assert schedule["original_countdown_range"] == [17, 11]
 
 
-def test_extract_weekly_schedule_preserves_d17_hard_sparring_ban_with_calendar_week_fallback():
+def test_extract_weekly_schedule_does_not_create_d17_ban_without_planner_entry():
     schedule = extract_weekly_schedule(
         {
             "fight_date": "2026-05-17",
@@ -490,5 +490,5 @@ def test_extract_weekly_schedule_preserves_d17_hard_sparring_ban_with_calendar_w
     assert schedule is not None
     monday = next(day for day in schedule["days"] if day["weekday"] == "Mon")
     assert monday["d_day"] == 13
-    assert monday["status"] == "convert_to_technical_suggested"
-    assert monday["reason_codes"] == ["d17_hard_sparring_ban"]
+    assert monday["status"] == ""
+    assert monday["reason_codes"] == []

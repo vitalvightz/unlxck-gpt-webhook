@@ -326,19 +326,11 @@ def extract_weekly_schedule(
                 if weekday and weekday in days_by_weekday:
                     _mark_missing_effective_sparring_plan(days_by_weekday[weekday])
         else:
-            for day_name in _clean_list(week.get("effective_hard_sparring_days")):
-                weekday = _normalize_weekday(day_name)
-                if weekday and weekday in days_by_weekday:
-                    _fill_legacy_hard_day(days_by_weekday[weekday])
-            for day_name in _clean_list(week.get("declared_hard_sparring_days")):
-                weekday = _normalize_weekday(day_name)
-                if (
-                    weekday
-                    and weekday in days_by_weekday
-                    and days_by_weekday[weekday]["effective_load"] != "hard"
-                    and _is_d17_or_closer(days_by_weekday[weekday])
-                ):
-                    _mark_late_hard_sparring_ban(days_by_weekday[weekday])
+            # Protected late/countdown weeks must not infer sparring dose from
+            # declarations or legacy effective-day lists. The structured
+            # hard_sparring_plan is the only authority for hard/technical/
+            # managed sparring truth in these weeks.
+            pass
     else:
         for day_name in _clean_list(week.get("declared_hard_sparring_days")):
             weekday = _normalize_weekday(day_name)
