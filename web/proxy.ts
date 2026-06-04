@@ -13,7 +13,7 @@ function buildContentSecurityPolicy(nonce: string): string {
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     "img-src 'self' data: blob: https:",
     "font-src 'self' data: https://fonts.gstatic.com",
-    `connect-src 'self' https://*.supabase.co https://*.sentry.io https://*.ingest.sentry.io ${supabaseUrl}`,
+    `connect-src 'self' https://*.supabase.co https://*.sentry.io https://*.ingest.sentry.io${supabaseUrl ? ` ${supabaseUrl}` : ""}`,
     "worker-src 'self' blob:",
     "manifest-src 'self'",
     "form-action 'self'",
