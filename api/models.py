@@ -633,6 +633,8 @@ class PlanRequest(BaseModel):
                 value = int(round(float(normalized)))
             except ValueError:
                 raise ValueError("weekly_training_frequency must be numeric") from None
+        if isinstance(value, bool):
+            raise ValueError("weekly_training_frequency must be numeric")
         if isinstance(value, (int, float)):
             # Reject out-of-range rather than silently clamping (e.g. 999 -> 6),
             # which would mask a malformed payload. The intake UI already enforces
