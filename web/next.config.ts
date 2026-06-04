@@ -18,29 +18,9 @@ function resolveBackendUrl(): string | null {
   return null;
 }
 
-const scriptSrc =
-  process.env.NODE_ENV === "development"
-    ? "script-src 'self' 'unsafe-inline' 'unsafe-eval'"
-    : "script-src 'self'";
-
-const CONTENT_SECURITY_POLICY = [
-  "default-src 'self'",
-  "base-uri 'self'",
-  "frame-ancestors 'none'",
-  "object-src 'none'",
-  scriptSrc,
-  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-  "img-src 'self' data: blob: https:",
-  "font-src 'self' data: https://fonts.gstatic.com",
-  `connect-src 'self' https://*.supabase.co https://*.sentry.io https://*.ingest.sentry.io ${process.env.NEXT_PUBLIC_SUPABASE_URL ?? ""}`,
-  "worker-src 'self' blob:",
-  "manifest-src 'self'",
-  "form-action 'self'",
-  "upgrade-insecure-requests",
-].join("; ");
-
+// Content-Security-Policy is set per request in proxy.ts so each response can
+// carry a fresh nonce for Next's inline bootstrap and hydration scripts.
 const SECURITY_HEADERS = [
-  { key: "Content-Security-Policy", value: CONTENT_SECURITY_POLICY },
   // Force HTTPS for a year, including subdomains. `preload` is intentionally
   // omitted until every subdomain is confirmed HTTPS-only — add it only when
   // ready to submit to the HSTS preload list (the decision is hard to reverse).
