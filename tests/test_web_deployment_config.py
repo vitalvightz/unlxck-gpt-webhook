@@ -8,6 +8,7 @@ from conftest import RENDER_BACKEND_URL
 REPO_ROOT = Path(__file__).resolve().parents[1]
 WEB_ROOT = REPO_ROOT / "web"
 NEXT_CONFIG_SOURCE = (WEB_ROOT / "next.config.ts").read_text()
+PROXY_SOURCE = (WEB_ROOT / "proxy.ts").read_text()
 
 
 def _expected_destination(api_base_url: str) -> str:
@@ -59,12 +60,15 @@ def test_next_config_sets_baseline_security_headers():
     assert "camera=(), microphone=(), geolocation=()" in NEXT_CONFIG_SOURCE
 
 
-def test_next_config_tightens_production_script_csp():
-    assert 'const scriptSrc =' in NEXT_CONFIG_SOURCE
-    assert "? \"script-src 'self' 'unsafe-inline' 'unsafe-eval'\"" in NEXT_CONFIG_SOURCE
-    assert ": \"script-src 'self'\"" in NEXT_CONFIG_SOURCE
-    assert "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com" in NEXT_CONFIG_SOURCE
-    assert "`script-src 'self' 'unsafe-inline'" not in NEXT_CONFIG_SOURCE
+def test_csp_uses_per_request_nonce_for_next_hydration_scripts():
+    assert '{ key: "Content-Security-Policy"' not in NEXT_CONFIG_SOURCE
+    assert "function buildContentSecurityPolicy" in PROXY_SOURCE
+    assert "response.headers.set(\"Content-Security-Policy\", csp)" in PROXY_SOURCE
+    assert "requestHeaders.set(\"Content-Security-Policy\", csp)" in PROXY_SOURCE
+    assert "\"x-nonce\"" in PROXY_SOURCE
+    assert "'nonce-${nonce}'" in PROXY_SOURCE
+    assert "'strict-dynamic'" in PROXY_SOURCE
+    assert "'unsafe-inline'" not in PROXY_SOURCE.split("script-src", 1)[1].split("style-src", 1)[0]
 
 
 def test_delete_plan_uses_shared_request_pipeline():
