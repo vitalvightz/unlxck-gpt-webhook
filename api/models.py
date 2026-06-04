@@ -44,6 +44,9 @@ _GUIDED_INJURY_SEVERITY_ALIASES = {
 }
 _HARD_SPARRING_DAY_CAP = 4
 
+# Upper bound on a manually submitted Stage 2 plan body (admin-only path).
+MANUAL_STAGE2_MAX_CHARS = 80_000
+
 
 def _clean_list(values: list[str] | None) -> list[str]:
     return [str(value).strip() for value in values or [] if str(value).strip()]
@@ -708,13 +711,32 @@ class PlanRequest(BaseModel):
         return self
 
     def to_payload(self) -> dict[str, Any]:
-        def _legacy_guided_injury_payload(guided: GuidedInjuryInput) -> dict[str, Any]:
+        def _guided_injury_payload(guided: GuidedInjuryInput) -> dict[str, Any]:
+            # Forward the full structured guided-injury contract. Stage 1
+            # (``fightcamp.input_parsing._build_guided_injury``) and the injury
+            # triage layer (``fightcamp.injury_triage`` /
+            # ``fightcamp.guided_injury_resolver``) consume every field below to
+            # classify the injury (e.g. fracture/dislocation/post_surgery via
+            # ``injury_type``, surface injuries via ``surface_type``) and to
+            # surface medical-safety signals (open wound, bleeding, infection).
+            # Dropping any of these silently downgrades triage, so keep this
+            # serialization in lockstep with ``GuidedInjuryInput``.
             return {
                 "area": guided.area,
                 "severity": guided.severity,
                 "trend": guided.trend,
                 "avoid": guided.avoid,
                 "notes": guided.notes,
+                "injury_type": guided.injury_type,
+                "injury_subtypes": list(guided.injury_subtypes),
+                "surface_type": guided.surface_type,
+                "timeframe": guided.timeframe,
+                "cleared": guided.cleared,
+                "open_wound": guided.open_wound,
+                "bleeding_status": guided.bleeding_status,
+                "infection_signs": list(guided.infection_signs),
+                "impact_related": guided.impact_related,
+                "sensitive_area": guided.sensitive_area,
             }
 
         athlete = self.athlete
@@ -775,11 +797,11 @@ class PlanRequest(BaseModel):
             # entry; the singular key is kept for back-compat with callers that
             # only send it.
             payload["guided_injuries"] = [
-                _legacy_guided_injury_payload(guided) for guided in self.guided_injuries
+                _guided_injury_payload(guided) for guided in self.guided_injuries
             ]
-            payload["guided_injury"] = _legacy_guided_injury_payload(self.guided_injuries[0])
+            payload["guided_injury"] = _guided_injury_payload(self.guided_injuries[0])
         elif self.guided_injury is not None:
-            payload["guided_injury"] = _legacy_guided_injury_payload(self.guided_injury)
+            payload["guided_injury"] = _guided_injury_payload(self.guided_injury)
         if self.random_seed is not None:
             payload["random_seed"] = self.random_seed
         return payload
@@ -851,7 +873,13 @@ class OnboardingDraftSaveResponse(BaseModel):
 
 
 class ManualStage2SubmissionRequest(BaseModel):
-    final_plan_text: str
+    # Generous cap relative to a normal generated plan: the automated Stage 2
+    # call defaults to 6000 output tokens (~24k chars), so 80k chars leaves ~3x
+    # headroom for a hand-written admin submission while preventing an accidental
+    # paste from bloating the database or stalling plan rendering. ``max_length``
+    # is enforced before the validator runs so oversize input is rejected with a
+    # 422 rather than persisted.
+    final_plan_text: str = Field(..., max_length=MANUAL_STAGE2_MAX_CHARS)
 
     @field_validator("final_plan_text")
     @classmethod
