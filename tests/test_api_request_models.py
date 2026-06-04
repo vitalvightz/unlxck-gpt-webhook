@@ -824,3 +824,7 @@ def test_guided_injury_input_enforces_field_caps():
         GuidedInjuryInput(area="x" * 201)
     with pytest.raises(ValidationError):
         GuidedInjuryInput(injury_subtypes=["s"] * 65)
+    with pytest.raises(ValidationError):
+        GuidedInjuryInput(injury_subtypes=["s" * 65])
+    with pytest.raises(ValidationError):
+        GuidedInjuryInput(infection_signs=["s" * 65])
