@@ -8,6 +8,7 @@ from conftest import RENDER_BACKEND_URL
 REPO_ROOT = Path(__file__).resolve().parents[1]
 WEB_ROOT = REPO_ROOT / "web"
 NEXT_CONFIG_SOURCE = (WEB_ROOT / "next.config.ts").read_text()
+ROOT_LAYOUT_SOURCE = (WEB_ROOT / "app" / "layout.tsx").read_text()
 PROXY_SOURCE = (WEB_ROOT / "proxy.ts").read_text()
 
 
@@ -62,6 +63,7 @@ def test_next_config_sets_baseline_security_headers():
 
 def test_csp_uses_per_request_nonce_for_next_hydration_scripts():
     assert '{ key: "Content-Security-Policy"' not in NEXT_CONFIG_SOURCE
+    assert 'export const dynamic = "force-dynamic";' in ROOT_LAYOUT_SOURCE
     assert "function buildContentSecurityPolicy" in PROXY_SOURCE
     assert "response.headers.set(\"Content-Security-Policy\", csp)" in PROXY_SOURCE
     assert "requestHeaders.set(\"Content-Security-Policy\", csp)" in PROXY_SOURCE

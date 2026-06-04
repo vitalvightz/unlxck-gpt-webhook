@@ -8,6 +8,8 @@ import { GenerationStatusShell } from "@/components/generation-status-shell";
 import { ToastProvider } from "@/components/toast-provider";
 import "./globals.css";
 
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: "UNLXCK Athlete Control Room",
   description: "Athlete-first fight camp planning on the web.",
