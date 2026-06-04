@@ -5,7 +5,12 @@ import logging
 import pytest
 from pydantic import ValidationError
 
-from api.models import NutritionSharedCampContext, PlanRequest
+from api.models import (
+    MANUAL_STAGE2_MAX_CHARS,
+    ManualStage2SubmissionRequest,
+    NutritionSharedCampContext,
+    PlanRequest,
+)
 from fightcamp.input_parsing import PlanInput
 from fightcamp.plan_pipeline_runtime import build_runtime_context
 from support import _build_request
@@ -244,7 +249,7 @@ def test_plan_request_to_payload_includes_guided_injury_when_present():
     assert payload["guided_injury"]["avoid"] == "deep hip flexion"
 
 
-def test_plan_request_to_payload_uses_first_guided_injury_card_for_legacy_payload():
+def test_plan_request_to_payload_forwards_every_guided_injury_card():
     payload = PlanRequest(
         athlete={
             "full_name": "Ari Mensah",
@@ -266,32 +271,22 @@ def test_plan_request_to_payload_uses_first_guided_injury_card_for_legacy_payloa
         ],
     ).to_payload()
 
+    # Stage 1 consumes the plural list and parses every entry, so all cards must
+    # be forwarded. The singular key mirrors the first entry for back-compat.
+    assert [entry["area"] for entry in payload["guided_injuries"]] == [
+        "hip flexor",
+        "right heel",
+    ]
     assert payload["guided_injury"]["area"] == "hip flexor"
-    assert "guided_injuries" not in payload
 
 
-def test_plan_request_to_payload_guided_injury_uses_legacy_contract_only():
+def test_plan_request_to_payload_guided_injury_forwards_full_structured_contract():
     payload = PlanRequest(
         athlete={
             "full_name": "Ari Mensah",
             "technical_style": ["boxing"],
         },
         fight_date="2026-04-18",
-        guided_injury={
-            "area": "right knee",
-            "severity": "moderate",
-            "trend": "worsening",
-            "avoid": "deep flexion and hard pivots",
-            "notes": "hyperextension in sparring last week",
-            "injury_type": "sprain",
-            "timeframe": "last_week",
-            "cleared": "no",
-            "open_wound": "no",
-            "bleeding_status": "none",
-            "infection_signs": ["none"],
-            "impact_related": "yes",
-            "sensitive_area": "no",
-        },
         guided_injuries=[
             {
                 "area": "right knee",
@@ -300,12 +295,47 @@ def test_plan_request_to_payload_guided_injury_uses_legacy_contract_only():
                 "avoid": "deep flexion and hard pivots",
                 "notes": "hyperextension in sparring last week",
                 "injury_type": "sprain",
+                "injury_subtypes": ["mcl"],
+                "surface_type": "",
+                "timeframe": "last_week",
+                "cleared": "no",
+                "open_wound": "no",
+                "bleeding_status": "none",
+                "infection_signs": ["none"],
+                "impact_related": "yes",
+                "sensitive_area": "no",
             }
         ],
     ).to_payload()
 
-    assert set(payload["guided_injury"].keys()) == {"area", "severity", "trend", "avoid", "notes"}
-    assert "guided_injuries" not in payload
+    # The full structured guided-injury contract must reach Stage 1 / injury
+    # triage; dropping any field silently downgrades classification and loses
+    # medical-safety signals (open wound, bleeding, infection).
+    expected_keys = {
+        "area",
+        "severity",
+        "trend",
+        "avoid",
+        "notes",
+        "injury_type",
+        "injury_subtypes",
+        "surface_type",
+        "timeframe",
+        "cleared",
+        "open_wound",
+        "bleeding_status",
+        "infection_signs",
+        "impact_related",
+        "sensitive_area",
+    }
+    entry = payload["guided_injuries"][0]
+    assert set(entry.keys()) == expected_keys
+    assert entry["injury_type"] == "sprain"
+    assert entry["injury_subtypes"] == ["mcl"]
+    assert entry["bleeding_status"] == "none"
+    assert entry["infection_signs"] == ["none"]
+    # Singular mirror carries the same full contract for back-compat consumers.
+    assert set(payload["guided_injury"].keys()) == expected_keys
 
 
 def test_plan_request_payload_round_trip_into_plan_input():
@@ -767,3 +797,18 @@ def test_plan_input_open_camp_weeks_invalid_string_raises_like_plan_request():
 
     with pytest.raises(ValueError, match="open_camp_weeks"):
         PlanInput.from_payload(payload)
+
+
+def test_manual_stage2_submission_rejects_empty_text():
+    with pytest.raises(ValidationError, match="final_plan_text is required"):
+        ManualStage2SubmissionRequest(final_plan_text="   ")
+
+
+def test_manual_stage2_submission_accepts_text_at_cap():
+    request = ManualStage2SubmissionRequest(final_plan_text="x" * MANUAL_STAGE2_MAX_CHARS)
+    assert len(request.final_plan_text) == MANUAL_STAGE2_MAX_CHARS
+
+
+def test_manual_stage2_submission_rejects_oversize_text():
+    with pytest.raises(ValidationError, match="at most"):
+        ManualStage2SubmissionRequest(final_plan_text="x" * (MANUAL_STAGE2_MAX_CHARS + 1))
