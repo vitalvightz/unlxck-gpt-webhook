@@ -529,7 +529,7 @@ export function createGenerationJob(
 
 export function getGenerationJob(token: string, jobId: string): Promise<GenerationJobResponse> {
   return withTransientRetries(() =>
-    readJson<GenerationJobResponse>(`/api/generation-jobs/${jobId}`, { token }),
+    readJson<GenerationJobResponse>(`/api/generation-jobs/${encodeURIComponent(jobId)}`, { token }),
   );
 }
 
@@ -591,7 +591,7 @@ export async function fetchWeeklySchedule(
 
 export function renamePlan(token: string, planId: string, planName: string): Promise<PlanDetail> {
   return withTransientRetries(() =>
-    readJson<PlanDetail>(`/api/plans/${planId}`, {
+    readJson<PlanDetail>(`/api/plans/${encodeURIComponent(planId)}`, {
       method: "PATCH",
       token,
       body: JSON.stringify({ plan_name: planName }),
@@ -603,7 +603,7 @@ export function renamePlan(token: string, planId: string, planName: string): Pro
 // the plan stays recoverable in the athlete's archived list.
 export async function deletePlan(token: string, planId: string): Promise<void> {
   return withTransientRetries(() =>
-    requestVoid(`/api/plans/${planId}`, {
+    requestVoid(`/api/plans/${encodeURIComponent(planId)}`, {
       method: "DELETE",
       token,
     }),
@@ -616,7 +616,7 @@ export async function permanentlyDeletePlan(
   planId: string,
   confirmPlanName: string,
 ): Promise<void> {
-  return requestVoid(`/api/admin/plans/${planId}/permanent`, {
+  return requestVoid(`/api/admin/plans/${encodeURIComponent(planId)}/permanent`, {
     method: "DELETE",
     token,
     body: JSON.stringify({ confirm_plan_name: confirmPlanName }),
@@ -656,7 +656,7 @@ export function listAdminAthletes(
 
 export function getAdminAthlete(token: string, athleteId: string): Promise<AdminAthleteRecord> {
   return withTransientRetries(() =>
-    readJson<AdminAthleteRecord>(`/api/admin/athletes/${athleteId}`, { token }),
+    readJson<AdminAthleteRecord>(`/api/admin/athletes/${encodeURIComponent(athleteId)}`, { token }),
   );
 }
 
@@ -666,7 +666,7 @@ export function updateAdminAthleteLatestIntake(
   payload: AdminLatestIntakeUpdateRequest,
 ): Promise<AdminAthleteRecord> {
   return withTransientRetries(() =>
-    readJson<AdminAthleteRecord>(`/api/admin/athletes/${athleteId}/latest-intake`, {
+    readJson<AdminAthleteRecord>(`/api/admin/athletes/${encodeURIComponent(athleteId)}/latest-intake`, {
       method: "PATCH",
       token,
       body: JSON.stringify(payload),
@@ -679,7 +679,7 @@ export function getAdminAthleteNutritionCurrent(
   athleteId: string,
 ): Promise<NutritionWorkspaceState> {
   return withTransientRetries(() =>
-    readJson<NutritionWorkspaceState>(`/api/admin/athletes/${athleteId}/nutrition/current`, { token }),
+    readJson<NutritionWorkspaceState>(`/api/admin/athletes/${encodeURIComponent(athleteId)}/nutrition/current`, { token }),
   );
 }
 
@@ -689,7 +689,7 @@ export function updateAdminAthleteNutritionCurrent(
   payload: NutritionWorkspaceUpdateRequest,
 ): Promise<NutritionWorkspaceState> {
   return withTransientRetries(() =>
-    readJson<NutritionWorkspaceState>(`/api/admin/athletes/${athleteId}/nutrition/current`, {
+    readJson<NutritionWorkspaceState>(`/api/admin/athletes/${encodeURIComponent(athleteId)}/nutrition/current`, {
       method: "PUT",
       token,
       body: JSON.stringify(payload),
@@ -768,7 +768,7 @@ export function submitManualStage2(
   planId: string,
   payload: ManualStage2SubmissionRequest,
 ): Promise<PlanDetail> {
-  return readJson<PlanDetail>(`/api/admin/plans/${planId}/manual-stage2`, {
+  return readJson<PlanDetail>(`/api/admin/plans/${encodeURIComponent(planId)}/manual-stage2`, {
     method: "POST",
     token,
     body: JSON.stringify(payload),
@@ -776,7 +776,7 @@ export function submitManualStage2(
 }
 
 export function approvePlanForRelease(token: string, planId: string): Promise<PlanDetail> {
-  return readJson<PlanDetail>(`/api/admin/plans/${planId}/approve`, {
+  return readJson<PlanDetail>(`/api/admin/plans/${encodeURIComponent(planId)}/approve`, {
     method: "POST",
     token,
   });
@@ -825,14 +825,14 @@ export function approveAndResumeGenerationFromJob(
 }
 
 export function rejectApprovedPlan(token: string, planId: string): Promise<PlanDetail> {
-  return readJson<PlanDetail>(`/api/admin/plans/${planId}/reject`, {
+  return readJson<PlanDetail>(`/api/admin/plans/${encodeURIComponent(planId)}/reject`, {
     method: "POST",
     token,
   });
 }
 
 export function archivePlan(token: string, planId: string): Promise<PlanDetail> {
-  return readJson<PlanDetail>(`/api/admin/plans/${planId}/archive`, {
+  return readJson<PlanDetail>(`/api/admin/plans/${encodeURIComponent(planId)}/archive`, {
     method: "POST",
     token,
   });

@@ -86,3 +86,35 @@ def test_drain_with_no_tasks_clears_state():
         assert active_tasks == set()
 
     asyncio.run(scenario())
+
+
+def test_run_claimed_job_sanitizes_pre_runtime_error(monkeypatch: pytest.MonkeyPatch):
+    """A pre-runtime worker failure must not persist raw exception text (which can
+    carry tokens/PII) into the athlete/admin-visible job error."""
+    import api.worker as worker
+
+    captured: dict[str, object] = {}
+
+    class _CaptureStore:
+        def update_generation_job(self, job_id, **kwargs):
+            captured["job_id"] = job_id
+            captured.update(kwargs)
+            return {}
+
+    def _boom(**_kwargs):
+        raise RuntimeError("connect failed for user@example.com with token=abcdef1234567890")
+
+    monkeypatch.setattr(worker, "build_default_stage2_automator", lambda: object())
+    monkeypatch.setattr(worker, "run_generation_job", _boom)
+
+    active_tasks: set[str] = {"job-1"}
+    asyncio.run(
+        worker._run_claimed_job(job_id="job-1", store=_CaptureStore(), active_tasks=active_tasks)
+    )
+
+    stored_error = str(captured.get("error", ""))
+    assert captured.get("status") == "failed"
+    assert "Worker failed before generation runtime" in stored_error
+    assert "user@example.com" not in stored_error
+    assert "abcdef1234567890" not in stored_error
+    assert active_tasks == set()

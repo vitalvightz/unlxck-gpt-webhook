@@ -9,6 +9,7 @@ from contextlib import suppress
 from fightcamp.logging_utils import configure_logging
 
 from .environment import apply_production_environment_defaults, should_default_to_production
+from .error_sanitizer import sanitize_error_text
 from .generation_runtime import default_planner, is_stale_job, run_generation_job, utc_now_iso
 from .generation_config import generation_job_stale_after_seconds
 from .stage2_automation import build_default_stage2_automator
@@ -126,10 +127,14 @@ async def _run_claimed_job(
         )
     except Exception as exc:
         logger.exception("[worker] job failed before generation runtime job_id=%s", job_id)
+        # The full traceback is in the server log above. The stored job error is
+        # athlete/admin-visible, so sanitize it (redacts tokens/PII/payloads and
+        # truncates) to match the orchestrator's error-handling convention rather
+        # than persisting the raw exception text.
         await _mark_job_failed_before_runtime(
             store=store,
             job_id=job_id,
-            error=f"Worker failed before generation runtime: {exc}",
+            error=f"Worker failed before generation runtime: {sanitize_error_text(exc)}",
         )
         active_tasks.discard(job_id)
 

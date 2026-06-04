@@ -7,6 +7,7 @@ from pydantic import ValidationError
 
 from api.models import (
     MANUAL_STAGE2_MAX_CHARS,
+    GuidedInjuryInput,
     ManualStage2SubmissionRequest,
     NutritionSharedCampContext,
     PlanRequest,
@@ -812,3 +813,18 @@ def test_manual_stage2_submission_accepts_text_at_cap():
 def test_manual_stage2_submission_rejects_oversize_text():
     with pytest.raises(ValidationError, match="at most"):
         ManualStage2SubmissionRequest(final_plan_text="x" * (MANUAL_STAGE2_MAX_CHARS + 1))
+
+
+def test_guided_injury_input_enforces_field_caps():
+    # Free-text fields accept generous input but reject abuse beyond the cap.
+    GuidedInjuryInput(area="knee", notes="x" * 4000, avoid="y" * 2000)
+    with pytest.raises(ValidationError):
+        GuidedInjuryInput(notes="x" * 4001)
+    with pytest.raises(ValidationError):
+        GuidedInjuryInput(area="x" * 201)
+    with pytest.raises(ValidationError):
+        GuidedInjuryInput(injury_subtypes=["s"] * 65)
+    with pytest.raises(ValidationError):
+        GuidedInjuryInput(injury_subtypes=["s" * 65])
+    with pytest.raises(ValidationError):
+        GuidedInjuryInput(infection_signs=["s" * 65])

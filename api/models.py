@@ -47,6 +47,9 @@ _HARD_SPARRING_DAY_CAP = 4
 # Upper bound on a manually submitted Stage 2 plan body (admin-only path).
 MANUAL_STAGE2_MAX_CHARS = 80_000
 
+# Per-element cap for GuidedInjuryInput list fields (enum-ish tokens).
+_GUIDED_LIST_ITEM_MAX_CHARS = 64
+
 
 def _clean_list(values: list[str] | None) -> list[str]:
     return [str(value).strip() for value in values or [] if str(value).strip()]
@@ -116,21 +119,24 @@ class AthleteProfileInput(BaseModel):
 
 
 class GuidedInjuryInput(BaseModel):
-    area: str = ""
+    # Per-field caps mirror the PlanRequest convention: generous relative to real
+    # UI submissions (selections/free-text top out well under these) and present
+    # only to bound abuse, complementing the global json_limits guards.
+    area: str = Field(default="", max_length=200)
     severity: GuidedInjurySeverity = ""
-    trend: str = ""
-    avoid: str = ""
-    notes: str = ""
-    injury_type: str = ""
-    injury_subtypes: list[str] = Field(default_factory=list)
-    surface_type: str = ""
-    timeframe: str = ""
-    cleared: str = ""
-    open_wound: str = ""
-    bleeding_status: str = ""
-    infection_signs: list[str] = Field(default_factory=list)
-    impact_related: str = ""
-    sensitive_area: str = ""
+    trend: str = Field(default="", max_length=50)
+    avoid: str = Field(default="", max_length=2000)
+    notes: str = Field(default="", max_length=4000)
+    injury_type: str = Field(default="", max_length=64)
+    injury_subtypes: list[str] = Field(default_factory=list, max_length=64)
+    surface_type: str = Field(default="", max_length=64)
+    timeframe: str = Field(default="", max_length=64)
+    cleared: str = Field(default="", max_length=32)
+    open_wound: str = Field(default="", max_length=32)
+    bleeding_status: str = Field(default="", max_length=64)
+    infection_signs: list[str] = Field(default_factory=list, max_length=64)
+    impact_related: str = Field(default="", max_length=32)
+    sensitive_area: str = Field(default="", max_length=64)
 
     @field_validator(
         "area",
@@ -176,6 +182,20 @@ class GuidedInjuryInput(BaseModel):
         if isinstance(value, str):
             return _clean_list([part.strip() for part in value.split(",")])
         return _clean_list([value])
+
+    @field_validator("infection_signs", "injury_subtypes", mode="after")
+    @classmethod
+    def cap_list_item_length(cls, value: list[str]) -> list[str]:
+        # The list-level ``max_length`` caps the item count, not item size. These
+        # are short enum-ish tokens (e.g. ``surface_injury:bruise``, ``pus``), so
+        # cap each element too — otherwise a client could send a few megabyte-long
+        # strings and slip under the per-field guards.
+        for item in value:
+            if len(item) > _GUIDED_LIST_ITEM_MAX_CHARS:
+                raise ValueError(
+                    f"list elements must be at most {_GUIDED_LIST_ITEM_MAX_CHARS} characters long"
+                )
+        return value
 
     @field_validator("severity", mode="before")
     @classmethod
