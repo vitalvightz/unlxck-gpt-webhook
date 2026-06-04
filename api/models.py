@@ -634,7 +634,13 @@ class PlanRequest(BaseModel):
             except ValueError:
                 raise ValueError("weekly_training_frequency must be numeric") from None
         if isinstance(value, (int, float)):
-            return max(1, min(int(round(float(value))), 6))
+            # Reject out-of-range rather than silently clamping (e.g. 999 -> 6),
+            # which would mask a malformed payload. The intake UI already enforces
+            # 1-6, so a clean 422 only surfaces non-UI/abnormal callers.
+            parsed = int(round(float(value)))
+            if parsed < 1 or parsed > 6:
+                raise ValueError("weekly_training_frequency must be between 1 and 6")
+            return parsed
         return value
 
     @field_validator("no_scheduled_fight", mode="before")
@@ -923,7 +929,7 @@ class ApproveAndResumeGenerationRequest(BaseModel):
 
 
 class PlanRenameRequest(BaseModel):
-    plan_name: str
+    plan_name: str = Field(..., max_length=120)
 
     @field_validator("plan_name")
     @classmethod

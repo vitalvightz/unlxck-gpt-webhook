@@ -234,6 +234,23 @@ def test_quota_error_stops_after_single_provider_call(monkeypatch: pytest.Monkey
     assert len(client.responses.calls) == 1
 
 
+def test_generic_provider_failure_raises_sanitized_error(monkeypatch: pytest.MonkeyPatch) -> None:
+    # A non-quota provider failure must not surface raw exception text (which can
+    # carry request payloads/provider internals) in the raised/stored error.
+    raw = "boom connecting to https://api.openai.com with key sk-secret-payload-12345"
+    client = FakeClient([RuntimeError(raw)])
+    automator = OpenAIStage2Automator(client=client, model="test-model")
+
+    with pytest.raises(Stage2AutomationError) as exc_info:
+        asyncio.run(automator.finalize(stage1_result=_stage1_result()))
+
+    message = str(exc_info.value)
+    assert message == "Stage 2 model request failed. Check server logs."
+    assert "sk-secret-payload-12345" not in message
+    assert "api.openai.com" not in message
+    assert len(client.responses.calls) == 1
+
+
 def test_from_env_disables_openai_sdk_retries_by_default(monkeypatch: pytest.MonkeyPatch) -> None:
     captured_kwargs: dict[str, object] = {}
 
