@@ -108,7 +108,21 @@ async def run_generation_job(
     try:
         # Claim the job for processing. This implements the worker-claim model
         # introduced in #1417 while preserving Main's heartbeat-on-read safety.
-        job = await asyncio.to_thread(store.claim_generation_job_start, job_id)
+        try:
+            job = await asyncio.to_thread(store.claim_generation_job_start, job_id)
+        except HTTPException as exc:
+            if exc.status_code == status.HTTP_503_SERVICE_UNAVAILABLE:
+                # Transient claim unavailability (store temporarily overloaded).
+                # Leave the job queued so a later worker pass can retry it,
+                # instead of failing it like a permanent error. Mirrors the
+                # scheduler's 503 handling for the capacity-count call.
+                logger.warning(
+                    "[jobs] generation:claim_unavailable_transient job_id=%s detail=%s",
+                    job_id,
+                    exc.detail,
+                )
+                return
+            raise
         if not job:
             logger.warning("[jobs] generation:claim_unavailable job_id=%s", job_id)
             return
