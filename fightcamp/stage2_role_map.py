@@ -2609,16 +2609,29 @@ def _build_weekly_role_map(
             for role in filtered_roles
             if role.get("role_key") == "hard_sparring_day" and str(role.get("scheduled_day_hint") or "").strip()
         }
-        week["hard_sparring_plan"] = [
-            entry
-            for entry in list(week.get("hard_sparring_plan") or [])
-            if str(entry.get("day") or "").strip().lower() in active_spar_days
-        ]
-        week["effective_hard_sparring_days"] = [
-            day
-            for day in list(week.get("effective_hard_sparring_days") or [])
-            if str(day or "").strip().lower() in active_spar_days
-        ]
+        updated_hard_sparring_plan = []
+        for entry in list(week.get("hard_sparring_plan") or []):
+            day_key = str(entry.get("day") or "").strip().lower()
+            if day_key in active_spar_days:
+                updated_hard_sparring_plan.append(entry)
+                continue
+            updated_entry = dict(entry)
+            reason_codes = list(clean_list(updated_entry.get("reason_codes", [])))
+            if "fight_week_override" not in reason_codes:
+                reason_codes.append("fight_week_override")
+            reason = str(updated_entry.get("reason") or "").strip()
+            override_reason = str(fight_week_override.get("coach_note") or "fight-week override active")
+            updated_entry.update(
+                {
+                    "status": "suppressed",
+                    "effective_load": "none",
+                    "reason_codes": reason_codes,
+                    "reason": f"{reason}; {override_reason}" if reason else override_reason,
+                }
+            )
+            updated_hard_sparring_plan.append(updated_entry)
+        week["hard_sparring_plan"] = updated_hard_sparring_plan
+        week["effective_hard_sparring_days"] = effective_hard_days(updated_hard_sparring_plan)
         suppressed_roles = list(week.get("suppressed_roles") or [])
         suppressed_roles.append(
             {

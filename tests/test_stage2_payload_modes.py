@@ -202,8 +202,8 @@ class TestPayloadModeClassification:
         assert _days_out_payload_mode("3") == "late_fight_session_payload"
         assert _days_out_payload_mode("0") == "fight_day_protocol_payload"
 
-    def test_bridge_legal_offsets_stay_inside_bridge_window(self):
-        assert _late_fight_legal_offsets(16) == [16, 15, 14]
+    def test_bridge_legal_offsets_carry_countdown_continuity(self):
+        assert _late_fight_legal_offsets(16) == list(range(16, 0, -1))
 
 
 class TestDaysOutPayloadBlock:
@@ -867,13 +867,38 @@ class TestStage2PayloadBranching:
         assert "allocator" in brief["late_fight_plan_spec"]
         assert "role_budget" in brief["late_fight_plan_spec"]
 
-    def test_d7_plan_spec_keeps_boxing_roles_in_visible_calendar_sequence(self):
+    def test_d7_plan_spec_keeps_downgraded_boxing_context_out_of_visible_app_sequence(self):
         spec = _build_late_fight_plan_spec(7, _athlete(7))
 
         assert "hard_sparring_day" in spec["session_roles"]
-        assert "hard_sparring_day" in spec["visible_session_roles"]
+        assert "hard_sparring_day" not in spec["visible_session_roles"]
         assert spec["visible_session_cap"] == len(spec["visible_session_sequence"])
         assert [entry["role_key"] for entry in spec["visible_session_sequence"]] == spec["visible_session_roles"]
+
+
+    def test_late_fight_weekly_role_map_carries_planner_sparring_plan_for_d17_ban(self):
+        role_map = _build_late_fight_weekly_role_map(
+            13,
+            _athlete(13, plan_creation_weekday="monday", hard_sparring_days=["tuesday", "thursday"]),
+        )
+
+        first_week = role_map["weeks"][0]
+        assert first_week["hard_sparring_plan"]
+        assert first_week["effective_hard_sparring_days"] == []
+        assert {entry["effective_load"] for entry in first_week["hard_sparring_plan"]} == {"technical"}
+        assert all(entry["status"] == "convert_to_technical_suggested" for entry in first_week["hard_sparring_plan"])
+
+    def test_bridge_weekly_role_map_uses_planner_cap_one_for_d21_to_d18(self):
+        role_map = _build_late_fight_weekly_role_map(
+            20,
+            _athlete(20, plan_creation_weekday="monday", hard_sparring_days=["tuesday", "thursday"]),
+        )
+
+        bridge_week = role_map["weeks"][0]
+        hard_plan = bridge_week["hard_sparring_plan"]
+        assert hard_plan
+        assert len(bridge_week["effective_hard_sparring_days"]) <= 1
+        assert [entry["effective_load"] for entry in hard_plan].count("hard") <= 1
 
     def test_d5_plan_spec_adds_structured_hard_sparring_context(self):
         spec = _build_late_fight_plan_spec(
