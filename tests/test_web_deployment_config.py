@@ -8,7 +8,7 @@ from conftest import RENDER_BACKEND_URL
 REPO_ROOT = Path(__file__).resolve().parents[1]
 WEB_ROOT = REPO_ROOT / "web"
 NEXT_CONFIG_SOURCE = (WEB_ROOT / "next.config.ts").read_text()
-ROOT_LAYOUT_SOURCE = (WEB_ROOT / "app" / "layout.tsx").read_text()
+ROOT_LAYOUT_SOURCE = (WEB_ROOT / "app" / "layout.tsx").read_text(encoding="utf-8")
 PROXY_SOURCE = (WEB_ROOT / "proxy.ts").read_text()
 
 
