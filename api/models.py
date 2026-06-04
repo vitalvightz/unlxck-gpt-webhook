@@ -933,7 +933,7 @@ class ApproveAndResumeGenerationRequest(BaseModel):
 class PlanRenameRequest(BaseModel):
     plan_name: str = Field(..., max_length=120)
 
-    @field_validator("plan_name")
+    @field_validator("plan_name", mode="before")
     @classmethod
     def validate_plan_name(cls, value: str) -> str:
         normalized = str(value or "").strip()
