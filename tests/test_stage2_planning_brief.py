@@ -1329,9 +1329,12 @@ def test_weekly_role_map_fight_week_override_only_modifies_relevant_week():
         for role in overridden["weeks"][2]["session_roles"]
         if role.get("role_key") == "hard_sparring_day"
     }
-    assert {
-        str(entry.get("day") or "").strip().lower() for entry in overridden["weeks"][2]["hard_sparring_plan"]
-    } <= active_spar_days
+    for entry in overridden["weeks"][2]["hard_sparring_plan"]:
+        day = str(entry.get("day") or "").strip().lower()
+        if day not in active_spar_days:
+            assert entry["status"] == "suppressed"
+            assert entry["effective_load"] == "none"
+            assert "fight_week_override" in entry["reason_codes"]
     assert {
         str(day or "").strip().lower() for day in overridden["weeks"][2]["effective_hard_sparring_days"]
     } <= active_spar_days
