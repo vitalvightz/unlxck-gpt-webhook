@@ -10,6 +10,7 @@ from api.models import (
     GuidedInjuryInput,
     ManualStage2SubmissionRequest,
     NutritionSharedCampContext,
+    PlanRenameRequest,
     PlanRequest,
 )
 from fightcamp.input_parsing import PlanInput
@@ -828,3 +829,43 @@ def test_guided_injury_input_enforces_field_caps():
         GuidedInjuryInput(injury_subtypes=["s" * 65])
     with pytest.raises(ValidationError):
         GuidedInjuryInput(infection_signs=["s" * 65])
+
+
+def _freq_request(value):
+    return PlanRequest(
+        athlete={"full_name": "Ari Mensah", "technical_style": ["boxing"]},
+        fight_date="2026-04-18",
+        weekly_training_frequency=value,
+    )
+
+
+def test_plan_rename_request_accepts_normal_name():
+    assert PlanRenameRequest(plan_name="  Fight Camp 1  ").plan_name == "Fight Camp 1"
+
+
+def test_plan_rename_request_rejects_empty_name():
+    with pytest.raises(ValidationError, match="plan_name is required"):
+        PlanRenameRequest(plan_name="   ")
+
+
+def test_plan_rename_request_rejects_overlong_name():
+    PlanRenameRequest(plan_name="x" * 120)
+    with pytest.raises(ValidationError):
+        PlanRenameRequest(plan_name="x" * 121)
+
+
+def test_weekly_training_frequency_accepts_bounds():
+    assert _freq_request(1).weekly_training_frequency == 1
+    assert _freq_request(6).weekly_training_frequency == 6
+    assert _freq_request(None).weekly_training_frequency is None
+
+
+def test_weekly_training_frequency_rejects_out_of_range_instead_of_clamping():
+    for bad in (0, 7, 999, -3):
+        with pytest.raises(ValidationError, match="between 1 and 6"):
+            _freq_request(bad)
+
+
+def test_weekly_training_frequency_rejects_non_numeric():
+    with pytest.raises(ValidationError, match="must be numeric"):
+        _freq_request("lots")

@@ -351,7 +351,13 @@ class OpenAIStage2Automator:
                 raise Stage2AutomationError(
                     "Stage 2 stopped: OpenAI quota/rate limit hit. No further retry attempted."
                 ) from exc
-            raise Stage2AutomationError(f"Stage 2 model request failed: {exc}") from exc
+            # Keep the raw provider exception (which can carry request payloads or
+            # provider internals) out of the stored/visible error; the full detail
+            # is captured in the server log below.
+            logger.exception("[stage2] model_request_failed error_type=%s", type(exc).__name__)
+            raise Stage2AutomationError(
+                "Stage 2 model request failed. Check server logs."
+            ) from exc
         response_id = getattr(response, "id", None) or "unknown"
         if _response_is_incomplete(response):
             raise Stage2AutomationError(
