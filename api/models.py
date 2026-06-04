@@ -116,21 +116,24 @@ class AthleteProfileInput(BaseModel):
 
 
 class GuidedInjuryInput(BaseModel):
-    area: str = ""
+    # Per-field caps mirror the PlanRequest convention: generous relative to real
+    # UI submissions (selections/free-text top out well under these) and present
+    # only to bound abuse, complementing the global json_limits guards.
+    area: str = Field(default="", max_length=200)
     severity: GuidedInjurySeverity = ""
-    trend: str = ""
-    avoid: str = ""
-    notes: str = ""
-    injury_type: str = ""
-    injury_subtypes: list[str] = Field(default_factory=list)
-    surface_type: str = ""
-    timeframe: str = ""
-    cleared: str = ""
-    open_wound: str = ""
-    bleeding_status: str = ""
-    infection_signs: list[str] = Field(default_factory=list)
-    impact_related: str = ""
-    sensitive_area: str = ""
+    trend: str = Field(default="", max_length=50)
+    avoid: str = Field(default="", max_length=2000)
+    notes: str = Field(default="", max_length=4000)
+    injury_type: str = Field(default="", max_length=64)
+    injury_subtypes: list[str] = Field(default_factory=list, max_length=64)
+    surface_type: str = Field(default="", max_length=64)
+    timeframe: str = Field(default="", max_length=64)
+    cleared: str = Field(default="", max_length=32)
+    open_wound: str = Field(default="", max_length=32)
+    bleeding_status: str = Field(default="", max_length=64)
+    infection_signs: list[str] = Field(default_factory=list, max_length=64)
+    impact_related: str = Field(default="", max_length=32)
+    sensitive_area: str = Field(default="", max_length=64)
 
     @field_validator(
         "area",
