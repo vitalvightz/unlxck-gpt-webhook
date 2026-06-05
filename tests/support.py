@@ -26,7 +26,7 @@ from api.state_machine import (
     require_generation_job_transition,
     require_plan_transition,
 )
-from api.store import is_job_loaded_stalled_generation_job, is_stage1_planner_stalled_generation_job, is_startup_stale_generation_job
+from api.store import _generation_startup_max_attempts, is_job_loaded_stalled_generation_job, is_stage1_planner_stalled_generation_job, is_startup_stale_generation_job
 from datetime import timedelta
 
 os.environ.setdefault("APP_GENERATION_SCHEDULER", "fastapi")
@@ -725,6 +725,36 @@ class FakeStore:
             job,
             stale_after_seconds=stale_after_seconds,
         ):
+            return None
+        # Mirror SupabaseAppStore: the worker reclaim path enforces the same
+        # job_loaded retry cap as the read-side recovery so a repeatedly-dying
+        # worker cannot re-grab the job past its attempt budget.
+        if (
+            current_status == "running"
+            and int(job.get("attempt_count") or 0) >= _generation_startup_max_attempts()
+            and is_job_loaded_stalled_generation_job(job, stale_after_seconds=stale_after_seconds)
+        ):
+            now_iso = _now()
+            milestones = list(job.get("progress_milestones") or [])
+            milestones.append(
+                {
+                    "code": "worker_claim_stalled_failed",
+                    "label": "Worker stalled after loading job",
+                    "detail": "Worker loaded the generation job but did not reach request parsing after retry.",
+                    "meta": {},
+                    "at": now_iso,
+                }
+            )
+            job.update(
+                {
+                    "status": "failed",
+                    "error": "Generation worker stalled after loading the job.",
+                    "completed_at": now_iso,
+                    "heartbeat_at": now_iso,
+                    "progress_milestones": milestones,
+                    "updated_at": now_iso,
+                }
+            )
             return None
         now_iso = _now()
         job["status"] = "running"

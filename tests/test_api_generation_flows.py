@@ -1614,6 +1614,47 @@ def test_get_generation_job_fails_job_loaded_stall_when_attempt_count_hits_env_m
     assert any(m["code"] == "worker_claim_stalled_failed" for m in body["progress_milestones"])
 
 
+def test_worker_reclaim_fails_job_loaded_stall_at_attempt_cap():
+    client, store, _ = _build_client(enable_in_process_generation=False)
+    created = store.create_or_get_generation_job(
+        athlete_id="athlete-1",
+        client_request_id="worker-reclaim-cap",
+        source="self_serve",
+        request_payload=_build_request().model_dump(mode="json"),
+    )
+    old_iso = "2026-01-01T00:00:00+00:00"
+    store.update_generation_job(
+        created["id"], status="running", attempt_count=2, started_at=old_iso, heartbeat_at=old_iso, progress_milestones=[{"code": "job_loaded", "label": "Generation job loaded", "detail": "", "at": old_iso}]
+    )
+    # The worker re-claim path must refuse + fail rather than bump attempt_count to 3,
+    # otherwise a repeatedly-dying worker re-grabs the same job forever.
+    result = store.claim_generation_job_start(created["id"], stale_after_seconds=90)
+    assert result is None
+    job = store.get_generation_job(created["id"])
+    assert job["status"] == "failed"
+    assert job["attempt_count"] == 2
+    assert any(m["code"] == "worker_claim_stalled_failed" for m in job["progress_milestones"])
+
+
+def test_worker_reclaim_allows_job_loaded_stall_under_attempt_cap():
+    client, store, _ = _build_client(enable_in_process_generation=False)
+    created = store.create_or_get_generation_job(
+        athlete_id="athlete-1",
+        client_request_id="worker-reclaim-allow",
+        source="self_serve",
+        request_payload=_build_request().model_dump(mode="json"),
+    )
+    old_iso = "2026-01-01T00:00:00+00:00"
+    store.update_generation_job(
+        created["id"], status="running", attempt_count=1, started_at=old_iso, heartbeat_at=old_iso, progress_milestones=[{"code": "job_loaded", "label": "Generation job loaded", "detail": "", "at": old_iso}]
+    )
+    # Still within the attempt budget: the worker reclaims and gets one more pass.
+    result = store.claim_generation_job_start(created["id"], stale_after_seconds=90)
+    assert result is not None
+    assert result["status"] == "running"
+    assert result["attempt_count"] == 2
+
+
 def test_get_generation_job_keeps_recent_job_loaded_running():
     client, store, _ = _build_client(enable_in_process_generation=False)
     created = store.create_or_get_generation_job(athlete_id="athlete-1", client_request_id="job-loaded-fresh", source="self_serve", request_payload=_build_request().model_dump(mode="json"))
