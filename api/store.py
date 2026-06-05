@@ -2360,6 +2360,42 @@ class SupabaseAppStore:
                 detail="failed to list generation jobs",
             ) from exc
 
+    def _fail_stalled_job_loaded_job(
+        self, job_id: str, job: dict[str, Any], now_iso: str
+    ) -> None:
+        """Mark a ``job_loaded``-stalled job failed once its retry budget is spent.
+
+        Mirrors the read-side recovery in ``recover_generation_job_if_stale`` so the
+        terminal status, error, and milestone are identical regardless of which path
+        observes the exhausted attempt budget.
+        """
+        milestones = _progress_milestones(job.get("progress_milestones"))
+        milestones.append(
+            {
+                "code": "worker_claim_stalled_failed",
+                "label": "Worker stalled after loading job",
+                "detail": "Worker loaded the generation job but did not reach request parsing after retry.",
+                "meta": {},
+                "at": now_iso,
+            }
+        )
+        self._run_with_transient_retry(
+            operation="claim_generation_job_start:fail_job_loaded_stalled",
+            fn=lambda: self.client.table("generation_jobs")
+            .update(
+                {
+                    "status": "failed",
+                    "error": "Generation worker stalled after loading the job.",
+                    "completed_at": now_iso,
+                    "heartbeat_at": now_iso,
+                    "progress_milestones": milestones,
+                }
+            )
+            .eq("id", job_id)
+            .eq("status", "running")
+            .execute(),
+        )
+
     def claim_generation_job_start(self, job_id: str, *, stale_after_seconds: int | None = None) -> dict[str, Any] | None:
         if stale_after_seconds is None:
             stale_after_seconds = generation_job_stale_after_seconds()
@@ -2379,6 +2415,22 @@ class SupabaseAppStore:
                 job,
                 stale_after_seconds=stale_after_seconds,
             ):
+                return None
+            # The worker reclaims startup-stale ``running`` jobs directly through this
+            # path. Jobs stalled at ``job_loaded`` (claimed, then dead before request
+            # parsing) are retry-capped by the read-side recovery; enforce the same cap
+            # here so a repeatedly-dying worker cannot re-grab the job forever, bumping
+            # attempt_count without bound. Once the budget is spent, fail the job
+            # instead of reclaiming it.
+            if (
+                current_status == "running"
+                and current_attempt_count >= _generation_startup_max_attempts()
+                and is_job_loaded_stalled_generation_job(
+                    job,
+                    stale_after_seconds=stale_after_seconds,
+                )
+            ):
+                self._fail_stalled_job_loaded_job(job_id, job, now_iso)
                 return None
             try:
                 require_generation_job_transition(current_status, "running")
