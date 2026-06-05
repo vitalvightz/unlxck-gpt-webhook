@@ -194,13 +194,13 @@ def _resolve_week_anchor_d_day(week: dict[str, Any]) -> int | None:
         try:
             return int(countdown_range[1])
         except (TypeError, ValueError):
-            return None
+            pass
     countdown_span = week.get("countdown_span")
     if isinstance(countdown_span, dict):
         try:
             return int(countdown_span.get("end_day"))
         except (TypeError, ValueError):
-            return None
+            pass
     return None
 
 
