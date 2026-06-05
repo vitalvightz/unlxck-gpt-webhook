@@ -1273,7 +1273,7 @@ def test_claim_generation_job_start_fails_job_loaded_stall_at_attempt_cap(monkey
         return fn()
 
     store._run_with_transient_retry = _run
-    store.client.table.return_value.update.return_value.eq.return_value.eq.return_value.execute.return_value = MagicMock()
+    store.client.table.return_value.update.return_value.eq.return_value.eq.return_value.eq.return_value.execute.return_value = MagicMock()
 
     result = store.claim_generation_job_start("job-1")
 
