@@ -31,10 +31,15 @@ import pytest
 from fightcamp.fight_day_override import apply_fight_day_override_to_weekly_role_map
 from fightcamp.input_parsing import _compute_days_until_fight, _parse_fight_datetime
 from fightcamp.stage2_payload_late_fight import (
+    _build_late_fight_session_sequence,
     _build_late_fight_weekly_role_map,
     _days_out_payload_mode,
+    _is_app_owned_visible_role,
+    _late_fight_active_role_count,
+    _late_fight_allocation_plan,
     _uses_late_fight_stage2_payload,
 )
+import fightcamp.stage2_payload_late_fight as late_fight_module
 from fightcamp.weekly_schedule_view import (
     _resolve_week_anchor_d_day,
     extract_weekly_schedule,
@@ -233,6 +238,143 @@ def test_days_until_fight_is_calendar_day_difference_not_clock_sensitive(hour):
 def test_fight_tomorrow_is_one_day_out():
     fight = _parse_fight_datetime("2026-06-06")
     assert _compute_days_until_fight("2026-06-06", fight, now_utc=PLAN_TODAY) == 1
+
+
+# ── The plan body must not start at D-13: bridge-window allocation ────────────
+#
+# Second, distinct root cause behind "the plan starts a week late": in the
+# D-21..D-18 bridge window the athlete has a *required* coach-owned
+# `hard_sparring_day` plus the app's required strength + freshness = 3 roles,
+# but `max_active_roles` is 2. The coach-owned sparring placeholder wrongly
+# counted against the app's active-role budget, so the allocator dropped every
+# role and the whole D-21..D-18 window rendered empty — the first real session
+# fell to D-13. The budget must count only app-owned sessions.
+
+def _pro_pressure_boxer(days_until_fight: int, fight_date: str):
+    return {
+        "sport": "boxing",
+        "status": "professional",
+        "rounds_format": "3x3",
+        "training_days": ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday"],
+        "hard_sparring_days": ["monday", "thursday"],
+        "fatigue": "moderate",
+        "weight_cut_pct": 0.0,
+        "weight_cut_risk": False,
+        "readiness_flags": [],
+        "key_goals": ["recovery", "strength"],
+        "weaknesses": ["gas_tank"],
+        "injuries": [],
+        "fight_date": fight_date,
+        "days_until_fight": days_until_fight,
+        "plan_creation_weekday": "friday",
+    }
+
+
+def test_active_role_count_excludes_coach_owned_sparring():
+    roles = [
+        {"role_key": "hard_sparring_day"},      # coach-owned → not counted
+        {"role_key": "strength_touch_day"},     # app-owned   → counted
+        {"role_key": "fight_week_freshness_day"},  # app-owned → counted
+    ]
+    assert _late_fight_active_role_count(roles) == 2
+
+
+@pytest.mark.parametrize("days_until_fight", [21, 20, 19, 18])
+def test_bridge_window_allocation_is_not_empty(days_until_fight):
+    # Every day in the D-21..D-18 bridge window must place at least the app's
+    # required strength + freshness sessions (previously dropped to nothing).
+    athlete = _pro_pressure_boxer(days_until_fight, FIGHT_FRIDAY)
+    roles = _late_fight_allocation_plan(days_until_fight, athlete).get("session_roles", [])
+    role_keys = {role.get("role_key") for role in roles}
+    assert "strength_touch_day" in role_keys, f"D-{days_until_fight} dropped the strength touch"
+    assert "fight_week_freshness_day" in role_keys, f"D-{days_until_fight} dropped freshness"
+    assert all(
+        isinstance(role.get("countdown_offset"), int) for role in roles
+    ), "every placed role must carry a countdown offset"
+
+
+def test_d21_pressure_boxer_plan_starts_at_d21_not_d13():
+    # The exact reported case: 26 Jun fight, pro pressure boxer, Mon/Thu hard
+    # sparring, made on a Friday (D-21). The visible plan must open at D-21.
+    athlete = _pro_pressure_boxer(21, FIGHT_FRIDAY)
+    sequence = _build_late_fight_session_sequence(21, athlete)
+    offsets = [role.get("countdown_offset") for role in sequence if isinstance(role.get("countdown_offset"), int)]
+    assert offsets, "late-fight session sequence must not be empty"
+    assert max(offsets) == 21, f"plan should open at D-21, opened at D-{max(offsets)}"
+
+
+# ── System invariant: no active window ever resolves to zero sessions ─────────
+#
+# Required roles are mandatory; the budget caps may only limit optional roles.
+# This sweep is the durable, fail-loud guard against the whole class of bug
+# (caps silently dropping required roles → empty window → plan starts late),
+# not just the coach-owned-sparring trigger that first surfaced it.
+
+def _all_days_boxer(days_until_fight: int):
+    return {
+        "sport": "boxing", "status": "professional", "rounds_format": "3x3",
+        "training_days": ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"],
+        "hard_sparring_days": ["tuesday", "thursday"], "fatigue": "moderate",
+        "weight_cut_pct": 0.0, "weight_cut_risk": False, "readiness_flags": [],
+        "key_goals": ["recovery", "strength"], "weaknesses": ["gas_tank"],
+        "injuries": [], "fight_date": FIGHT_FRIDAY, "days_until_fight": days_until_fight,
+        "plan_creation_weekday": "friday",
+    }
+
+
+def _sparse_boxer(days_until_fight: int):
+    return {
+        "sport": "boxing", "status": "amateur", "rounds_format": "3x3",
+        "training_days": ["wednesday"], "hard_sparring_days": [], "fatigue": "low",
+        "weight_cut_pct": 0.0, "weight_cut_risk": False, "readiness_flags": [],
+        "key_goals": ["conditioning_endurance"], "weaknesses": ["gas_tank"],
+        "injuries": [], "fight_date": FIGHT_FRIDAY, "days_until_fight": days_until_fight,
+        "plan_creation_weekday": "friday",
+    }
+
+
+_PROFILE_BUILDERS = {
+    "pro_pressure_mon_thu": lambda d: _pro_pressure_boxer(d, FIGHT_FRIDAY),
+    "all_days": _all_days_boxer,
+    "sparse_wed": _sparse_boxer,
+}
+
+
+@pytest.mark.parametrize("profile", list(_PROFILE_BUILDERS))
+@pytest.mark.parametrize("days_until_fight", list(range(1, 22)))
+def test_no_active_window_resolves_to_zero_sessions(profile, days_until_fight):
+    # Every active late-fight window (D-1..D-21) must place at least one
+    # app-owned session for every athlete shape. D-0 is the only legitimately
+    # empty active mode and is excluded from the sweep.
+    athlete = _PROFILE_BUILDERS[profile](days_until_fight)
+    roles = _late_fight_allocation_plan(days_until_fight, athlete).get("session_roles", [])
+    assert roles, f"{profile} D-{days_until_fight} resolved to an empty active window"
+    app_owned = [r for r in roles if _is_app_owned_visible_role(r.get("role_key"))]
+    assert app_owned, f"{profile} D-{days_until_fight} placed no app-owned session"
+
+
+def test_caps_relax_to_keep_required_roles_when_required_meets_cap():
+    # Bridge D-21: required app-owned roles (strength + freshness) == max_active
+    # cap of 2, and a coach-owned hard spar also sits in the window. The cap must
+    # not drop the required app-owned roles. (Generalises the coach-owned fix
+    # into the "caps only limit optional" invariant.)
+    athlete = _pro_pressure_boxer(21, FIGHT_FRIDAY)
+    roles = _late_fight_allocation_plan(21, athlete).get("session_roles", [])
+    role_keys = {r.get("role_key") for r in roles}
+    assert {"strength_touch_day", "fight_week_freshness_day"} <= role_keys
+    # The app-owned active count still honours the cap (coach sparring excluded).
+    assert _late_fight_active_role_count(roles) <= 2
+
+
+def test_empty_active_window_fails_loud(monkeypatch, caplog):
+    # If placement is genuinely impossible (every subset fails assignment), the
+    # allocator must log a warning rather than silently shipping an empty window.
+    monkeypatch.setattr(late_fight_module, "_late_fight_best_assignment", lambda *a, **k: None)
+    athlete = _pro_pressure_boxer(21, FIGHT_FRIDAY)
+    with caplog.at_level("WARNING"):
+        result = _late_fight_allocation_plan(21, athlete)
+    assert result.get("session_roles") == []
+    assert any("late_fight_allocation_empty_active_window" in rec.message for rec in caplog.records)
 
 
 def test_d22_and_d21_are_adjacent_but_route_differently():
