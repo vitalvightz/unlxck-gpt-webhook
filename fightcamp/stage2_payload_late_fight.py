@@ -1,10 +1,13 @@
 from __future__ import annotations
+import logging
 from .normalization import clean_list, dedupe_preserve_order, normalize_fatigue_level, ordered_weekdays as _ordered_weekdays
 from .fight_date_utils import resolve_fight_weekday
 from .sparring_dose_planner import compute_hard_sparring_plan, effective_hard_days
 
 from itertools import combinations, permutations
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 
 CANONICAL_HARD_SPARRING_LABEL = "Coach-led boxing session"
@@ -2833,16 +2836,30 @@ def _late_fight_allocation_plan(days_until_fight: Any, athlete_model: dict[str, 
     required_roles = [role for role in eligible_candidates if role.get("_required")]
     optional_roles = [role for role in eligible_candidates if not role.get("_required")]
 
+    # Required roles are mandatory by definition: the budget caps may only limit
+    # how many *optional* roles ride on top of them. If a required set already
+    # meets or exceeds a cap, raising the effective cap to the required floor
+    # keeps the required-only baseline selectable instead of skipping every
+    # subset and silently emitting an empty window (which made plans start a
+    # week late). On healthy windows required < cap, so the effective cap equals
+    # the original cap and behaviour is unchanged.
+    required_active = _late_fight_active_role_count(required_roles)
+    required_stress = _late_fight_meaningful_stress_count(required_roles)
+    required_support = _late_fight_support_role_count(required_roles)
+    effective_max_active = max(max_active_roles, required_active) if isinstance(max_active_roles, int) else None
+    effective_max_stress = max(max_meaningful_stress_exposures, required_stress) if isinstance(max_meaningful_stress_exposures, int) else None
+    effective_max_support = max(max_support_roles, required_support) if isinstance(max_support_roles, int) else None
+
     best_roles: list[dict[str, Any]] = []
     best_score: int | None = None
     for optional_count in range(len(optional_roles) + 1):
         for optional_subset in combinations(optional_roles, optional_count):
             selected_roles = required_roles + list(optional_subset)
-            if isinstance(max_active_roles, int) and _late_fight_active_role_count(selected_roles) > max_active_roles:
+            if effective_max_active is not None and _late_fight_active_role_count(selected_roles) > effective_max_active:
                 continue
-            if isinstance(max_meaningful_stress_exposures, int) and _late_fight_meaningful_stress_count(selected_roles) > max_meaningful_stress_exposures:
+            if effective_max_stress is not None and _late_fight_meaningful_stress_count(selected_roles) > effective_max_stress:
                 continue
-            if isinstance(max_support_roles, int) and _late_fight_support_role_count(selected_roles) > max_support_roles:
+            if effective_max_support is not None and _late_fight_support_role_count(selected_roles) > effective_max_support:
                 continue
             assignment = _late_fight_best_assignment(
                 selected_roles,
@@ -2857,6 +2874,20 @@ def _late_fight_allocation_plan(days_until_fight: Any, athlete_model: dict[str, 
             if best_score is None or score > best_score:
                 best_score = score
                 best_roles = assigned_roles
+
+    if required_roles and not best_roles:
+        # Invariant breach: an active window has required roles but none could be
+        # placed (every subset failed _late_fight_best_assignment — e.g. a locked
+        # declared-hard-spar weekday with no legal countdown label). We never
+        # fabricate illegal placements here; surface it loudly so the CI sweep
+        # fails and prod is observable, rather than silently shipping an empty
+        # window that makes the plan start late.
+        logger.warning(
+            "late_fight_allocation_empty_active_window days_until_fight=%s mode=%s required_roles=%s",
+            days_until_fight,
+            mode,
+            [role.get("role_key") for role in required_roles],
+        )
 
     ordered_roles = sorted(
         best_roles,
