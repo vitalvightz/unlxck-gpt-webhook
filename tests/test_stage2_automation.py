@@ -40,6 +40,18 @@ def _response(text: str, *, input_tokens: int = 10, output_tokens: int = 5) -> S
     )
 
 
+def _incomplete_response() -> SimpleNamespace:
+    # Mirrors an OpenAI Responses result truncated by the output-token budget
+    # (reasoning tokens + plan text exceeded max_output_tokens).
+    return SimpleNamespace(
+        id="resp_incomplete",
+        status="incomplete",
+        incomplete_details=SimpleNamespace(reason="max_output_tokens"),
+        output_text="# Fight Camp Plan\n\nWeek 1 of a cut-off pl",
+        usage=SimpleNamespace(input_tokens=10, output_tokens=24000, total_tokens=24010),
+    )
+
+
 def _review(status_value: str) -> dict:
     errors = [{"code": "restriction_violation"}] if status_value == "FAIL" else []
     warnings = [{"code": "missing_required_element", "blocking": True}] if status_value == "WARN" else []
@@ -82,7 +94,7 @@ def test_first_pass_pass_returns_ready_with_one_provider_call(monkeypatch: pytes
     assert result["stage2_attempt_count"] == 1
     assert result["stage2_retry_text"] == ""
 
-def test_first_pass_sends_default_max_output_tokens(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_first_pass_omits_max_output_tokens_by_default(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("UNLXCK_STAGE2_MAX_OUTPUT_TOKENS", raising=False)
     monkeypatch.setattr(stage2_module, "review_stage2_output", lambda **_: _review("PASS"))
     client = FakeClient([_response("# final plan")])
@@ -90,7 +102,8 @@ def test_first_pass_sends_default_max_output_tokens(monkeypatch: pytest.MonkeyPa
 
     asyncio.run(automator.finalize(stage1_result=_stage1_result()))
 
-    assert client.responses.calls[0]["max_output_tokens"] == 6000
+    # Default is 0 (no cap) so the model is never truncated mid-plan.
+    assert "max_output_tokens" not in client.responses.calls[0]
 
 
 def test_first_pass_honors_max_output_tokens_override(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -113,6 +126,18 @@ def test_first_pass_omits_max_output_tokens_when_disabled(monkeypatch: pytest.Mo
     asyncio.run(automator.finalize(stage1_result=_stage1_result()))
 
     assert "max_output_tokens" not in client.responses.calls[0]
+
+
+def test_first_pass_incomplete_response_fails_the_job(monkeypatch: pytest.MonkeyPatch) -> None:
+    # A response truncated by the output-token cap must hard-fail (athlete retries)
+    # rather than ship a half-written plan. This is the production failure that the
+    # generous default + 0-means-no-cap knob are meant to avoid.
+    monkeypatch.setattr(stage2_module, "review_stage2_output", lambda **_: _review("PASS"))
+    client = FakeClient([_incomplete_response()])
+    automator = OpenAIStage2Automator(client=client, model="test-model")
+
+    with pytest.raises(Stage2AutomationError, match="incomplete before producing a full plan"):
+        asyncio.run(automator.finalize(stage1_result=_stage1_result()))
 
 
 def test_first_pass_pass_with_review_flags_returns_publishable_with_flags(monkeypatch: pytest.MonkeyPatch) -> None:
