@@ -2542,6 +2542,20 @@ def _late_fight_meaningful_stress_count(roles: list[dict[str, Any]]) -> int:
     return sum(1 for role in roles if role.get("stress_class") == "meaningful_stress")
 
 
+def _late_fight_active_role_count(roles: list[dict[str, Any]]) -> int:
+    """Count app-owned active sessions for the ``max_active_roles`` budget.
+
+    Coach-owned placeholders (declared hard sparring) live in the placement map
+    as context but are never rendered as app-prescribed sessions
+    (``_is_app_owned_visible_role``). They must not consume the app's
+    active-role budget — otherwise a required declared hard-spar day in the
+    D-21..D-18 bridge window pushes the app's own strength + freshness past the
+    cap of 2 and the allocator drops *every* role, leaving that window empty and
+    making the visible plan start at D-13 instead of D-21.
+    """
+    return sum(1 for role in roles if _is_app_owned_visible_role(role.get("role_key")))
+
+
 def _late_fight_support_role_count(roles: list[dict[str, Any]]) -> int:
     return sum(1 for role in roles if role.get("stress_class") == "support")
 
@@ -2824,7 +2838,7 @@ def _late_fight_allocation_plan(days_until_fight: Any, athlete_model: dict[str, 
     for optional_count in range(len(optional_roles) + 1):
         for optional_subset in combinations(optional_roles, optional_count):
             selected_roles = required_roles + list(optional_subset)
-            if isinstance(max_active_roles, int) and len(selected_roles) > max_active_roles:
+            if isinstance(max_active_roles, int) and _late_fight_active_role_count(selected_roles) > max_active_roles:
                 continue
             if isinstance(max_meaningful_stress_exposures, int) and _late_fight_meaningful_stress_count(selected_roles) > max_meaningful_stress_exposures:
                 continue
