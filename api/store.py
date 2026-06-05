@@ -2379,21 +2379,40 @@ class SupabaseAppStore:
                 "at": now_iso,
             }
         )
+        # Optimistic lock: only fail the exact row we read. Guarding on
+        # attempt_count blocks a concurrent worker that re-claimed the job (the
+        # claim bumps attempt_count), and guarding on heartbeat_at blocks a job
+        # whose heartbeat advanced after our read — i.e. a worker that is in fact
+        # alive. Either change means the row moved on, so the update no-ops and the
+        # next pass re-evaluates instead of clobbering live state.
+        expected_attempt_count = int(job.get("attempt_count") or 0)
+        expected_heartbeat_at = job.get("heartbeat_at")
+
+        def _fail_update():
+            query = (
+                self.client.table("generation_jobs")
+                .update(
+                    {
+                        "status": "failed",
+                        "error": "Generation worker stalled after loading the job.",
+                        "completed_at": now_iso,
+                        "heartbeat_at": now_iso,
+                        "progress_milestones": milestones,
+                    }
+                )
+                .eq("id", job_id)
+                .eq("status", "running")
+                .eq("attempt_count", expected_attempt_count)
+            )
+            if expected_heartbeat_at is None:
+                query = query.is_("heartbeat_at", "null")
+            else:
+                query = query.eq("heartbeat_at", expected_heartbeat_at)
+            return query.execute()
+
         self._run_with_transient_retry(
             operation="claim_generation_job_start:fail_job_loaded_stalled",
-            fn=lambda: self.client.table("generation_jobs")
-            .update(
-                {
-                    "status": "failed",
-                    "error": "Generation worker stalled after loading the job.",
-                    "completed_at": now_iso,
-                    "heartbeat_at": now_iso,
-                    "progress_milestones": milestones,
-                }
-            )
-            .eq("id", job_id)
-            .eq("status", "running")
-            .execute(),
+            fn=_fail_update,
         )
 
     def claim_generation_job_start(self, job_id: str, *, stale_after_seconds: int | None = None) -> dict[str, Any] | None:

@@ -1273,7 +1273,8 @@ def test_claim_generation_job_start_fails_job_loaded_stall_at_attempt_cap(monkey
         return fn()
 
     store._run_with_transient_retry = _run
-    store.client.table.return_value.update.return_value.eq.return_value.eq.return_value.eq.return_value.execute.return_value = MagicMock()
+    # update().eq(id).eq(status).eq(attempt_count).eq(heartbeat_at).execute()
+    store.client.table.return_value.update.return_value.eq.return_value.eq.return_value.eq.return_value.eq.return_value.execute.return_value = MagicMock()
 
     result = store.claim_generation_job_start("job-1")
 
@@ -1285,6 +1286,15 @@ def test_claim_generation_job_start_fails_job_loaded_stall_at_attempt_cap(monkey
     assert update_payload["status"] == "failed"
     assert update_payload["error"] == "Generation worker stalled after loading the job."
     assert any(m["code"] == "worker_claim_stalled_failed" for m in update_payload["progress_milestones"])
+    # Optimistic lock guards the exact row we read (id + status + attempt_count + heartbeat_at).
+    eq_chain = store.client.table.return_value.update.return_value.eq
+    assert eq_chain.call_args.args == ("id", "job-1")
+    status_eq = eq_chain.return_value.eq
+    assert status_eq.call_args.args == ("status", "running")
+    attempt_eq = status_eq.return_value.eq
+    assert attempt_eq.call_args.args == ("attempt_count", 2)
+    heartbeat_eq = attempt_eq.return_value.eq
+    assert heartbeat_eq.call_args.args == ("heartbeat_at", old_iso)
 
 
 def test_count_active_generation_jobs_uses_app_stale_timeout_by_default(monkeypatch):
