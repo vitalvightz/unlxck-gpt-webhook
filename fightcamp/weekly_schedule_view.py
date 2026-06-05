@@ -178,6 +178,32 @@ def _is_d17_or_closer(day: dict[str, Any]) -> bool:
     return isinstance(d_day, int) and 0 <= d_day <= 17
 
 
+def _resolve_week_anchor_d_day(week: dict[str, Any]) -> int | None:
+    """Resolve the closest-to-fight D-day for a week from any countdown contract.
+
+    The normal-camp pipeline ships a list ``countdown_range`` (``[start, end]``)
+    while the late-fight pipeline ships a ``countdown_span`` dict
+    (``{"start_day": ..., "end_day": ...}``). Both describe the same thing — the
+    end (closest-to-fight) D-day is the calendar anchor. Recognising both keeps
+    the calendar the single source of truth regardless of which planner built
+    the plan, so ≤21-day (late-fight) camps render the same countdown spine as
+    longer camps instead of falling back to a blank day grid.
+    """
+    countdown_range = week.get("countdown_range")
+    if isinstance(countdown_range, list) and len(countdown_range) == 2:
+        try:
+            return int(countdown_range[1])
+        except (TypeError, ValueError):
+            return None
+    countdown_span = week.get("countdown_span")
+    if isinstance(countdown_span, dict):
+        try:
+            return int(countdown_span.get("end_day"))
+        except (TypeError, ValueError):
+            return None
+    return None
+
+
 def _build_calendar_week_from_fight_date(
     *,
     fight_date: Any,
@@ -240,11 +266,11 @@ def extract_weekly_schedule(
         entry for entry in calendar_days if isinstance(entry, dict)
     ] if isinstance(calendar_days, list) else []
     if not calendar_entries:
-        countdown_range = week.get("countdown_range")
-        if isinstance(countdown_range, list) and len(countdown_range) == 2:
+        anchor_d_day = _resolve_week_anchor_d_day(week)
+        if anchor_d_day is not None:
             calendar_entries = _build_calendar_week_from_fight_date(
                 fight_date=resolved_fight_date,
-                anchor_d_day=countdown_range[1],
+                anchor_d_day=anchor_d_day,
             )
 
     if calendar_entries:
