@@ -6,11 +6,10 @@ name: Backend Checks
 # workflow stays scoped to the deploy-gate checker this PR introduces and
 # remains a fast, self-contained signal.
 #
-# The LIVE Supabase runtime schema check below runs ONLY when the SUPABASE_URL
-# and SUPABASE_SERVICE_ROLE_KEY repository secrets are configured (point them at
-# a STAGING project, never production). Until those secrets exist the step skips
-# itself, so this stays a fast, self-contained signal. Configure the secrets to
-# turn it into a real deploy gate (see docs/supabase-runtime-schema-check.md).
+# The LIVE Supabase runtime schema check below may skip on PRs and non-Main/main
+# branches without credentials, but it is mandatory on protected Main/main
+# deploys. Configure SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY for protected
+# Main/main before treating this workflow as a deploy gate.
 
 on:
   push:
@@ -47,17 +46,12 @@ jobs:
       - name: Run runtime schema checker tests
         run: pytest tests/test_supabase_runtime_schema_checker.py tests/test_supabase_schema.py
 
-      # Runs only when both secrets are configured (point them at STAGING). The
-      # service-role key is scoped to THIS step's env so the install/test steps
-      # above never see it. When the secrets are unset the script skips itself,
-      # so the workflow stays green on forks/PRs without credentials.
+      # The service-role key is scoped to THIS step's env so the install/test
+      # steps above never see it. The gate only permits missing credentials on
+      # PRs or non-protected-Main/main branch runs; protected Main/main deploys must run
+      # the live check and pass.
       - name: Live Supabase runtime schema check (staging)
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-        run: |
-          if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_SERVICE_ROLE_KEY" ]; then
-            echo "Skipping live schema check; staging secrets not configured."
-            exit 0
-          fi
-          python tools/check_supabase_runtime_schema.py
+        run: python tools/run_supabase_runtime_schema_gate.py
