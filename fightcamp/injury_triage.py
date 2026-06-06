@@ -125,6 +125,18 @@ _NEUROLOGICAL_RED_FLAGS = {
 
 _WORSENING_TRENDS = {"worse", "worsening", "regressing", "worsened"}
 
+# Red flags that signal a *current* danger. Their presence blocks the RULE 1/2
+# resolution/benign-noise down-gate (a resolved or benign mention with any of
+# these is no longer benign and must keep its blocking mode).
+_CURRENT_DANGER_RED_FLAGS = {
+    *_DANGEROUS_RED_FLAGS,
+    *_NEUROLOGICAL_RED_FLAGS,
+    "cannot_bear_weight",
+    "rapid_swelling",
+    "worsening_course",
+    "deformity",
+}
+
 # ``injury_type_source`` values set by guided_injury_resolver when the resolved
 # injury_type came from the guided card rather than the free-text parser. These
 # must not suppress guided structured diagnosis (see use_guided_diagnosis_fields).
@@ -160,6 +172,7 @@ _BENIGN_JOINT_NOISE_RE = re.compile(
 _BENIGN_JOINT_NOISE_SUPPRESSOR_PATTERNS = (
     r"\bno\s+pain\b",
     r"\bpainless\b",
+    r"\bno\s+(?:\w+\s+){0,3}swelling\b",
     r"\bno\s+swelling\b",
     r"\bno\s+deformity\b",
     r"\bcan\s+bear\s+weight\b",
@@ -306,6 +319,92 @@ def _is_benign_joint_noise_chunk(text: str) -> bool:
     return True
 
 
+# ── RULE 1 (resolution/negation) & RULE 2 (benign joint noise) down-gate ──────
+# A structural mention that is either benign joint noise or an old/resolved/ruled-
+# out history, with NO current danger symptom, must not block planning. These
+# helpers classify the free-text evidence so triage can suppress text-scored
+# structural signals for those cases (see _structural_signals_are_downgradeable).
+
+_RESOLUTION_MARKER_RE = re.compile(
+    r"\b(?:old|former|previous(?:ly)?|prior|history\s+of|"
+    r"years?\s+ago|months?\s+ago|long\s+ago|"
+    r"healed|fully\s+recovered|recovered|resolved|"
+    r"cleared|rehabbed|used\s+to|ruled\s+out)\b"
+)
+
+# Present-tense danger SYMPTOMS only. Structural nouns ("fracture"/"tear"/…) name
+# the injury rather than a current symptom, so they are deliberately excluded —
+# otherwise "old tendon rupture, now healed" would look like a live danger.
+_CURRENT_DANGER_SYMPTOM_RE = re.compile(
+    r"\b(?:cannot\s+bear\s+weight|can'?t\s+bear\s+weight|unable\s+to\s+bear\s+weight|"
+    r"unable\s+to\s+walk|can'?t\s+walk|"
+    r"swelling|swollen|"
+    r"(?:severe|sharp)\s+pain|"
+    r"instability|giv(?:ing|e|en)\s+way|buckl(?:ed|ing)|locked\s+joint|"
+    r"(?:visible|obvious)\s+deformity|"
+    r"numb(?:ness)?|tingl(?:e|ing)|weak(?:ness)?)\b"
+)
+_PLAIN_PAIN_RE = re.compile(r"\bpain(?:ful)?\b|\bach(?:e|ing|y)\b|\bsore(?:ness)?\b")
+
+_STRUCTURAL_OR_NOISE_KEYWORD_RE = re.compile(
+    r"\b(?:fracture[d]?|broke|broken|dislocat\w*|rupture[d]?|"
+    r"tear|torn|acl|achilles|tendon|ligament|meniscus|"
+    r"crack(?:ed)?|snap(?:ped)?|pop(?:ped)?|click(?:ed|ing)?)\b"
+)
+
+# Confirmed serious structural failure (RULE 3). A bare rupture/avulsion or a
+# complete/full-thickness tear is treated as a structural-severe signal when it
+# is not resolved/benign (the resolution gate runs first).
+_SERIOUS_RUPTURE_RE = re.compile(
+    r"\b(?:rupture[d]?|avulsion|complete\s+(?:tear|rupture)|full[-\s]thickness\s+tear)\b"
+)
+
+
+def _text_has_current_danger(text: str) -> bool:
+    """Whether the text carries a present-tense danger symptom that is not negated
+    ("no pain"/"no swelling"/"can walk"). spaCy negation runs first, then the
+    explicit benign suppressors are stripped, so conjunction-split phrasing like
+    "ankle popped but no pain, no swelling" does not read as a live danger."""
+    cleaned = remove_negated_phrases(str(text or "")).lower()
+    # Strip negated symptom lists first ("no pain or swelling") before the narrow
+    # per-symptom suppressors, which otherwise consume "no pain" and orphan "or
+    # swelling".
+    cleaned = re.sub(
+        r"\bno\s+(?:pain|swelling|swollen)(?:\s*(?:or|and|,)\s*(?:pain|swelling|swollen))*\b",
+        " ",
+        cleaned,
+    )
+    for pattern in _BENIGN_JOINT_NOISE_SUPPRESSOR_PATTERNS:
+        cleaned = re.sub(pattern, " ", cleaned)
+    if _CURRENT_DANGER_SYMPTOM_RE.search(cleaned):
+        return True
+    if _PLAIN_PAIN_RE.search(cleaned):
+        return True
+    return False
+
+
+def _structural_signals_are_downgradeable(injury_texts: list[str]) -> bool:
+    """True when the injury text carries a structural / joint-noise keyword, has no
+    current danger symptom, and is either benign joint noise (RULE 2) or an
+    old/resolved/ruled-out history (RULE 1). Evaluated over the whole text so a
+    suppressor or resolution marker in a different clause still applies. Callers
+    additionally require the absence of other live danger signals before acting."""
+    combined = " ".join(str(t or "") for t in injury_texts).strip().lower()
+    if not combined or not _STRUCTURAL_OR_NOISE_KEYWORD_RE.search(combined):
+        return False
+    if _text_has_current_danger(combined):
+        return False
+    is_benign_noise = bool(_BENIGN_JOINT_NOISE_RE.search(combined)) and _has_any_pattern(
+        combined, _BENIGN_JOINT_NOISE_SUPPRESSOR_PATTERNS
+    )
+    is_resolved = bool(
+        _RESOLUTION_MARKER_RE.search(combined)
+        or _NEGATED_STRUCTURAL_HISTORY_RE.search(combined)
+        or _NEGATED_STRUCTURAL_BREAK_RE.search(combined)
+    )
+    return is_benign_noise or is_resolved
+
+
 def _has_structural_break_with_location(text: str) -> bool:
     if not text:
         return False
@@ -447,6 +546,34 @@ def _effective_guided_injuries(plan_input: PlanInput) -> list[GuidedInjury]:
 
     guided = getattr(plan_input, "guided_injury", None)
     return [guided] if guided is not None else []
+
+
+_GUIDED_STRUCTURAL_INJURY_TYPES = {"fracture", "dislocation", "tendon_ligament"}
+
+
+def _guided_card_resolved_structural(guided: GuidedInjury) -> bool | None:
+    """For a structural guided card (fracture/dislocation/tendon-ligament), return
+    whether it is old-and-cleared with no current concern (RULE 1). Returns None
+    when the card is not a structural type (so callers can ignore it)."""
+    injury_type = _normalized_text(getattr(guided, "injury_type", ""))
+    if injury_type not in _GUIDED_STRUCTURAL_INJURY_TYPES:
+        return None
+    timeframe = _normalized_text(getattr(guided, "timeframe", ""))
+    cleared = _normalized_text(getattr(guided, "cleared", ""))
+    severity = _normalize_guided_severity_token(getattr(guided, "severity", "") or "")
+    trend = _normalized_text(getattr(guided, "trend", ""))
+    tags = parse_guided_note_tags(_normalized_text(getattr(guided, "notes", "")))
+    dislocation_tags = tags.get("dislocation", set())
+    recurrent = "recurrent_yes" in dislocation_tags or bool(
+        {"relocated_no", "relocated_not_sure"} & dislocation_tags
+    )
+    return (
+        timeframe in _OLD_CLEARED_TIMEFRAMES
+        and cleared == "yes"
+        and severity != "high"
+        and trend not in _WORSENING_TRENDS
+        and not recurrent
+    )
 
 
 def _guided_combos(cards: list[_GuidedCard]) -> set[tuple[str, str]]:
@@ -651,7 +778,7 @@ def _initial_restricted_rehab_gate(
     *,
     red_flags: set[str],
     matched_categories: set[str],
-    features: Any,
+    structural_severe_signals: set[str],
     clinician_restriction_signals: set[str],
     routing_reasons: set[str],
 ) -> bool:
@@ -668,7 +795,7 @@ def _initial_restricted_rehab_gate(
         restricted_rehab = True
         routing_reasons.add("structural_function_red_flag")
 
-    if features.structural_severe_signals:
+    if structural_severe_signals:
         restricted_rehab = True
         routing_reasons.add("scored_structural_severe_signal")
 
@@ -777,13 +904,15 @@ def _combo_gate_result(
                 sparring_risk_band=highest_band,
             )
 
+        # RULE 3: a high-severity *worsening* injury is a confirmed serious signal
+        # and is held in restricted rehab, not merely flagged for review.
         return _build_result(
-            mode=NEEDS_REVIEW,
+            mode=RESTRICTED_REHAB_ONLY,
             reasons=[
-                "High-severity worsening injury requires coach/admin review before any normal plan.",
+                "High-severity worsening injury is held in restricted rehab before any normal plan.",
                 "Automatic full-plan generation is blocked by triage combo gate.",
             ],
-            clinician_clearance_required=False,
+            clinician_clearance_required=True,
             should_block_stage2=True,
             red_flags=red_flags,
             matched_categories=matched_categories,
@@ -1238,6 +1367,16 @@ def triage_injuries(plan_input: PlanInput) -> InjuryTriageResult:
         if normalized != category:
             matched_categories.add(normalized)
             routing_reasons.add(f"triage_category_alias:{category}->{normalized}")
+    # RULE 4: a parsed-injury ``injury_type`` (e.g. "ligament_tear") that aliases
+    # to a known high-risk category is added as that specific category rather than
+    # being left to a generic fallback later.
+    for item in plan_input.parsed_injuries or []:
+        if not isinstance(item, dict):
+            continue
+        parsed_category = normalize_triage_category(_normalized_text(item.get("injury_type")))
+        if parsed_category in _HIGH_RISK_CATEGORY_ROUTE:
+            matched_categories.add(parsed_category)
+            routing_reasons.add(f"parsed_injury_category:{parsed_category}")
     red_flags = set(features.red_flags)
     urgent_flags = set(features.urgent_flags)
     clinician_restriction_signals = set(features.clinician_restriction_signals)
@@ -1318,7 +1457,7 @@ def triage_injuries(plan_input: PlanInput) -> InjuryTriageResult:
 
     if any(
         token in guided_avoid
-        for token in ("contact", "spar", "impact", "loaded", "weight bearing")
+        for token in ("contact", "spar", "impact", "loaded", "weight bearing", "cut", "jump")
     ):
         routing_reasons.add("guided_injury:avoid_high_load")
 
@@ -1326,6 +1465,63 @@ def triage_injuries(plan_input: PlanInput) -> InjuryTriageResult:
     if "breath" in cleaned_guided_notes and any(token in safety_context_text for token in ("rib", "chest", "pain")):
         red_flags.add("breathing_pain")
         routing_reasons.add("guided_injury:breathing_symptoms")
+
+    # RULE 1 (resolution/negation) & RULE 2 (benign joint noise): when the only
+    # structural evidence is old/resolved/ruled-out history or benign joint noise,
+    # and no other live danger signal is present, suppress the text-scored
+    # structural signals and text-derived high-severity combos so the case is not
+    # blocked. A current danger symptom (handled above via red flags / guided
+    # high-severity / worsening) keeps the block.
+    structural_severe_signals = set(features.structural_severe_signals or [])
+    # Only a genuine guided card (not one synthesized from the parsed free text we
+    # are evaluating) counts as an independent high-severity/worsening report. A
+    # medical-hold category or a non-structural urgent flag (e.g. urgent_nerve)
+    # must keep the block; structural urgent flags (urgent_fracture/dislocation)
+    # may themselves be a false positive on a resolved/benign mention.
+    _guided_eff = _effective_guided_injuries(plan_input)
+    _real_guided_serious = any(
+        _normalize_guided_severity_token(getattr(g, "severity", "") or "") == "high"
+        or _normalized_text(getattr(g, "trend", "")) in _WORSENING_TRENDS
+        for g in _guided_eff
+    )
+    # Guided structural cards that are all old-and-cleared with no current concern.
+    _guided_resolved_flags = [_guided_card_resolved_structural(g) for g in _guided_eff]
+    _guided_structural_resolved = any(f is not None for f in _guided_resolved_flags) and all(
+        f for f in _guided_resolved_flags if f is not None
+    )
+    # Free-text path: exclude structured serialization tokens like "cleared:no" /
+    # "timeframe:last_month" so guided metadata cannot masquerade as resolved
+    # free text. Guided resolution is decided by _guided_structural_resolved above.
+    _free_text_evidence = [t for t in injury_texts if ":" not in str(t)]
+    _STRUCTURAL_URGENT_FLAGS = {"urgent", "urgent_fracture", "urgent_dislocation"}
+    _blocking_urgent = urgent_flags - _STRUCTURAL_URGENT_FLAGS
+    downgraded_resolved_or_benign = (
+        (_structural_signals_are_downgradeable(_free_text_evidence) or _guided_structural_resolved)
+        and not _blocking_urgent
+        and not (red_flags & _CURRENT_DANGER_RED_FLAGS)
+        and not _real_guided_serious
+        and not _has_mapped_route(matched_categories, MEDICAL_HOLD)
+    )
+    if downgraded_resolved_or_benign:
+        routing_reasons.add("resolution_or_benign_downgrade")
+        structural_severe_signals.clear()
+        clinician_restriction_signals = {
+            sig for sig in clinician_restriction_signals if not sig.startswith("danger_term:")
+        }
+        # Clear the structural categories/urgent flags explained by the resolved or
+        # benign mention (anything routing to RESTRICTED, plus the generic fallbacks).
+        for category in list(matched_categories):
+            if category in {"fracture", "structural_high_severity"} or (
+                _HIGH_RISK_CATEGORY_ROUTE.get(category) == RESTRICTED_REHAB_ONLY
+            ):
+                matched_categories.discard(category)
+        urgent_flags = urgent_flags - _STRUCTURAL_URGENT_FLAGS
+        combos = {(sev, tr) for (sev, tr) in combos if sev not in {"high", "moderate"}}
+        has_recent_structural_history_signal = False
+    elif _SERIOUS_RUPTURE_RE.search(" ".join(str(t) for t in _free_text_evidence).lower()):
+        # RULE 3: a confirmed serious structural rupture/avulsion that was NOT
+        # resolved/benign is a structural-severe signal (→ restricted rehab).
+        structural_severe_signals.add("scored_structural_severe:rupture")
 
     medical_hold, has_chest_or_rib_combo, has_neuro_combo = _initial_medical_hold_gate(
         red_flags=red_flags,
@@ -1337,7 +1533,7 @@ def triage_injuries(plan_input: PlanInput) -> InjuryTriageResult:
     restricted_rehab = _initial_restricted_rehab_gate(
         red_flags=red_flags,
         matched_categories=matched_categories,
-        features=features,
+        structural_severe_signals=structural_severe_signals,
         clinician_restriction_signals=clinician_restriction_signals,
         routing_reasons=routing_reasons,
     )
@@ -1447,7 +1643,7 @@ def triage_injuries(plan_input: PlanInput) -> InjuryTriageResult:
     has_mapped_restricted = _has_mapped_route(matched_categories, RESTRICTED_REHAB_ONLY)
     has_dangerous_red_flags = bool(red_flags & _DANGEROUS_RED_FLAGS)
     has_chest_or_neuro_combo = has_chest_or_rib_combo or has_neuro_combo
-    has_structural_severe_signal = bool(features.structural_severe_signals)
+    has_structural_severe_signal = bool(structural_severe_signals)
     has_clinician_restriction_signal = bool(clinician_restriction_signals)
     has_function_loss_signal = bool(features.function_loss_signals)
     has_uncertainty_trigger = _has_uncertainty_trigger(
