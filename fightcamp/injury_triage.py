@@ -370,7 +370,7 @@ def _text_has_current_danger(text: str) -> bool:
     # per-symptom suppressors, which otherwise consume "no pain" and orphan "or
     # swelling".
     cleaned = re.sub(
-        r"\bno\s+(?:pain|swelling|swollen)(?:\s*(?:or|and|,)\s*(?:pain|swelling|swollen))*\b",
+        r"\bno\s+(?:pain|swelling|swollen)(?:\s*(?:or|and)\s*(?:pain|swelling|swollen))*\b",
         " ",
         cleaned,
     )
