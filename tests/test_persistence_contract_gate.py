@@ -1,7 +1,15 @@
 """Tests for the contract-validation gate wired into plan persistence."""
 from __future__ import annotations
 
-from api.generation.persistence import _apply_plan_contract_validation
+from dataclasses import dataclass
+
+from api.generation.persistence import _apply_plan_contract_validation, _contract_fight_date
+
+
+@dataclass
+class _Req:
+    fight_date: str = ""
+    no_scheduled_fight: bool = False
 
 FIGHT_DATE = "2026-07-01"
 
@@ -66,6 +74,40 @@ def test_already_non_visible_status_is_not_changed():
     )
     assert result["status"] == "held_for_review"
     assert "plan_contract_validation" in result["why_log"]
+    assert events == []
+
+
+def test_contract_fight_date_uses_scheduled_fight_date():
+    assert _contract_fight_date(_Req(fight_date=FIGHT_DATE)) == FIGHT_DATE
+
+
+def test_open_camp_with_stale_fight_date_resolves_to_none():
+    # no_scheduled_fight wins even if a stale fight_date lingers on the request.
+    assert _contract_fight_date(_Req(fight_date=FIGHT_DATE, no_scheduled_fight=True)) is None
+
+
+def test_open_camp_with_stale_fight_date_does_not_require_d0():
+    # End-to-end through the gate: an open camp whose week never reaches D-0 must
+    # not be flagged for a missing fight day once the date is resolved to None.
+    emit, events = _emit_collector()
+    fight_date = _contract_fight_date(_Req(fight_date=FIGHT_DATE, no_scheduled_fight=True))
+    calendar_days = [
+        {"weekday": wd, "d_day": d, "calendar_date": f"2026-06-{day:02d}"}
+        for wd, d, day in [
+            ("Mon", 21, 8), ("Tue", 20, 9), ("Wed", 19, 10), ("Thu", 18, 11),
+            ("Fri", 17, 12), ("Sat", 16, 13), ("Sun", 15, 14),
+        ]
+    ]
+    result = _apply_plan_contract_validation(
+        _result("ready", [{"countdown_range": [21, 15], "calendar_days": calendar_days}]),
+        fight_date=fight_date,
+        athlete_id="ath-1",
+        job_id="job-1",
+        emit_milestone=emit,
+    )
+    report = result["why_log"]["plan_contract_validation"]
+    assert "fight_day_missing" not in [v["code"] for v in report["violations"]]
+    assert result["status"] == "ready"
     assert events == []
 
 

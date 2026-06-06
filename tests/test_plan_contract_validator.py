@@ -118,6 +118,25 @@ def test_no_fight_date_does_not_require_fight_day():
     assert report["has_errors"] is False
 
 
+def test_stale_brief_fight_date_does_not_assert_d0_when_caller_passes_none():
+    # Open-camp safety: the D-0 assertion is driven by the caller's explicit
+    # fight_date, never by a stale value lingering in the planning brief.
+    report = validate_plan_contract(
+        {
+            "status": "ready",
+            "plan_text": "plan",
+            # brief still carries a fight_date, but the caller passes None
+            "planning_brief": {
+                "fight_date": FIGHT_DATE,
+                "weekly_role_map": {"weeks": [{"phase": "camp", "countdown_range": [21, 14]}]},
+            },
+        },
+        fight_date=None,
+    )
+    assert "fight_day_missing" not in _codes(report)
+    assert report["has_errors"] is False
+
+
 def test_late_fight_variant_missing_session_sequence_is_an_error():
     report = validate_plan_contract(
         _result(

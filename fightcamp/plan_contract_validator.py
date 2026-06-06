@@ -113,7 +113,13 @@ def validate_plan_contract(
     try:
         planning_brief = final_result.get("planning_brief")
         weeks = _weeks(planning_brief)
-        resolved_fight_date = (
+        # The fight-day (D-0) assertion is driven solely by the fight_date the
+        # caller affirmatively passes. Open camps pass None even when a stale
+        # fight_date lingers on the request/brief, so we must NOT fall back to
+        # planning_brief here or the missing-D-0 invariant would falsely trip.
+        # The brief value is only used to help the calendar render below.
+        assert_fight_day = bool(str(fight_date or "").strip())
+        render_fight_date = (
             fight_date
             or (planning_brief.get("fight_date") if isinstance(planning_brief, dict) else None)
             or None
@@ -143,7 +149,7 @@ def validate_plan_contract(
             rendered = None
             try:
                 rendered = extract_weekly_schedule(
-                    planning_brief, week_index=index, fight_date=resolved_fight_date
+                    planning_brief, week_index=index, fight_date=render_fight_date
                 )
             except Exception:  # pragma: no cover - defensive: renderer must not break validation
                 rendered = None
@@ -184,7 +190,7 @@ def validate_plan_contract(
         # this once we have at least one renderable week, so a wholesale render
         # failure surfaces as calendar_unrenderable rather than a misleading
         # missing-D-0 finding.
-        if resolved_fight_date and renderable_count > 0:
+        if assert_fight_day and renderable_count > 0:
             has_fight_day = 0 in all_d_days
             checks["fight_day_present"] = has_fight_day
             if not has_fight_day:

@@ -36,6 +36,18 @@ _CONTRACT_VISIBLE_PLAN_STATUSES = {"ready", "publishable_with_flags"}
 _CONTRACT_REVIEW_PLAN_STATUS = "review_required"
 
 
+def _contract_fight_date(request_body: Any) -> Any:
+    """Resolve the fight date the contract validator should use.
+
+    Mirrors ``PlanRequest.to_payload``: open camps (``no_scheduled_fight``) have
+    no fight day even when ``fight_date`` still holds a stale value, so return
+    None to avoid falsely tripping the missing-D-0 invariant.
+    """
+    if getattr(request_body, "no_scheduled_fight", False):
+        return None
+    return getattr(request_body, "fight_date", None)
+
+
 def _apply_plan_contract_validation(
     final_result: dict[str, Any],
     *,
@@ -282,9 +294,13 @@ async def persist_plan_and_finalize(
     # before it is written. Hard violations (blank calendar week, missing D-0,
     # empty late-fight sequence) downgrade a would-be-visible plan to
     # review_required so an admin sees it before the athlete does.
+    #
+    # Open camps (no_scheduled_fight) have no fight day even when fight_date
+    # carries a stale value; mirror PlanRequest.to_payload and pass None so the
+    # missing-D-0 invariant is not falsely tripped.
     final_result = _apply_plan_contract_validation(
         final_result,
-        fight_date=getattr(request_body, "fight_date", None),
+        fight_date=_contract_fight_date(request_body),
         athlete_id=athlete_id,
         job_id=job_id,
         emit_milestone=emit_milestone,
