@@ -23,6 +23,7 @@ returns boolean
 language sql
 security definer
 stable
+set search_path = public
 as $$
   select exists(
     select 1
@@ -573,7 +574,8 @@ before update on public.athlete_intakes
 for each row
 execute function public.set_updated_at();
 
-create or replace view public.admin_athlete_rollups as
+create or replace view public.admin_athlete_rollups
+with (security_invoker = true) as
 select
   p.id,
   p.email,
@@ -614,6 +616,14 @@ group by
   p.nutrition_profile,
   p.created_at,
   p.updated_at;
+
+-- The rollup view aggregates every athlete's profile. It is read only by the
+-- service-role backend (api/store.py). security_invoker keeps it bound to the
+-- caller's RLS context, and the explicit grants ensure browser-facing roles
+-- cannot read it directly even if default privileges grant SELECT on new views.
+revoke all on public.admin_athlete_rollups from anon;
+revoke all on public.admin_athlete_rollups from authenticated;
+grant select on public.admin_athlete_rollups to service_role;
 
 alter table public.profiles enable row level security;
 alter table public.athlete_intakes enable row level security;

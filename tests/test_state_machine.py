@@ -118,6 +118,7 @@ def test_status_classification_does_not_mix_job_and_plan_lifecycles() -> None:
         ("medical_hold", "review_required"),
         ("restricted_rehab_only", "review_required"),
         ("needs_review", "review_required"),
+        ("failed", "failed"),
         ("unknown", "review_required"),
     ],
 )

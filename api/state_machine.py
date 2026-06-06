@@ -92,6 +92,7 @@ _PLAN_STATUS_TO_JOB_STATUS: dict[str, GenerationJobStatus] = {
     "needs_review": "review_required",
     "medical_hold": "review_required",
     "restricted_rehab_only": "review_required",
+    "failed": "failed",
 }
 
 
