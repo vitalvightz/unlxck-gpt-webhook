@@ -244,7 +244,7 @@ required; CI uses public placeholder env values.
   - The per-minute `POST /api/plans/generate` `SlidingWindowRateLimiter` is process-local and resets on restart.
   - The daily generation cap, one-active-job-per-athlete rule, and job-claim correctness are durable Supabase/database-backed protections.
   - If strict global rate limits are needed across multiple API/worker processes, add shared durable infrastructure later, such as Redis-backed rate limiting or queueing.
-- Production CORS is fail-fast by default. If CORS is unsafe in production, boot is blocked unless you explicitly set `APP_ALLOW_UNSAFE_PRODUCTION_CORS_BOOT=1` for emergency override.
+- Production CORS is fail-fast. If CORS is unsafe in production, boot is blocked until the configured origins/regex are safe.
 - Keep the instance warm with a cron job hitting `/health` every 14 minutes or use Render Standard tier
 
 **Supabase schema requirements**

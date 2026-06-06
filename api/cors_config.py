@@ -1,13 +1,10 @@
 """CORS configuration helpers extracted from api.app (PR2: pure helpers)."""
 from __future__ import annotations
 
-import logging
 import os
 from urllib.parse import urlsplit
 
 from .environment import is_production_environment
-
-logger = logging.getLogger(__name__)
 
 
 LOCAL_HOST_NAMES = ("localhost", "127.0.0.1", "::1")
@@ -107,14 +104,8 @@ def validate_production_cors_config(origins: list[str], regex: str | None) -> No
     if not violations:
         return
 
-    allow_unsafe = os.getenv("APP_ALLOW_UNSAFE_PRODUCTION_CORS_BOOT", "").strip() == "1"
-    if allow_unsafe:
-        for violation in violations:
-            logger.critical("[cors] UNSAFE_PRODUCTION_CORS_OVERRIDE_ACTIVE: %s", violation)
-        return
-
     raise ValueError(
         "Unsafe production CORS configuration. "
-        "Refusing to boot unless APP_ALLOW_UNSAFE_PRODUCTION_CORS_BOOT=1 is set. "
+        "Refusing to boot with unsafe production CORS. "
         + "; ".join(violations)
     )
