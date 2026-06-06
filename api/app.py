@@ -292,6 +292,32 @@ def _admin_archived_result(plan_row: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _log_admin_count_on_startup(store: AppStore) -> None:
+    """Log the live admin count at startup so operators can spot drift.
+
+    profiles.role is authoritative once seeded, so UNLXCK_ADMIN_EMAILS no longer
+    reflects who actually holds admin. Surfacing the real count (and warning when
+    it is zero) makes an accidental lockout or lingering admin visible in the
+    boot logs. Best-effort: never block startup on this.
+    """
+    counter = getattr(store, "count_admin_profiles", None)
+    if not callable(counter):
+        return
+    try:
+        admin_count = counter()
+    except Exception as exc:  # pragma: no cover - diagnostics must not block boot
+        logger.warning("[admin] startup_admin_count_failed error_type=%s", type(exc).__name__)
+        return
+    if admin_count == 0:
+        logger.warning(
+            "[admin] startup_admin_count=0 — no admin profiles exist; the admin "
+            "surface is inaccessible. Seed one via UNLXCK_ADMIN_EMAILS (first "
+            "sign-in) or tools/manage_admin.py."
+        )
+    else:
+        logger.info("[admin] startup_admin_count=%s", admin_count)
+
+
 def create_app(
     *,
     store: AppStore,
@@ -306,6 +332,7 @@ def create_app(
     @asynccontextmanager
     async def _app_lifespan(_: FastAPI):
         await asyncio.to_thread(prime_plan_banks, logger=logger)
+        await asyncio.to_thread(_log_admin_count_on_startup, store)
         yield
 
     app = FastAPI(

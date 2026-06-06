@@ -910,7 +910,7 @@ class FakeStage2Automator:
     # precedence over the static ``result``.
     result_factory: Callable[[], dict] | None = None
 
-    async def finalize(self, *, stage1_result: dict) -> dict:
+    async def finalize(self, *, stage1_result: dict, log_context: dict | None = None) -> dict:
         self.calls.append(stage1_result)
         if self.error:
             raise self.error

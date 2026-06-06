@@ -6,11 +6,11 @@ name: Backend Checks
 # workflow stays scoped to the deploy-gate checker this PR introduces and
 # remains a fast, self-contained signal.
 #
-# The LIVE Supabase runtime schema check is intentionally NOT run here by
-# default, because it requires service-role credentials and a migrated target
-# database. To enable it, add the SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY
-# repository secrets and uncomment the "Live Supabase runtime schema check" step
-# below (see docs/supabase-runtime-schema-check.md).
+# The LIVE Supabase runtime schema check below runs ONLY when the SUPABASE_URL
+# and SUPABASE_SERVICE_ROLE_KEY repository secrets are configured (point them at
+# a STAGING project, never production). Until those secrets exist the step skips
+# itself, so this stays a fast, self-contained signal. Configure the secrets to
+# turn it into a real deploy gate (see docs/supabase-runtime-schema-check.md).
 
 on:
   push:
@@ -47,13 +47,17 @@ jobs:
       - name: Run runtime schema checker tests
         run: pytest tests/test_supabase_runtime_schema_checker.py tests/test_supabase_schema.py
 
-      # To enable the live Supabase runtime schema check, configure the
-      # SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY repository secrets and
-      # uncomment the step below. It only runs when both secrets are present.
-      #
-      # - name: Live Supabase runtime schema check
-      #   if: ${{ secrets.SUPABASE_URL != '' && secrets.SUPABASE_SERVICE_ROLE_KEY != '' }}
-      #   env:
-      #     SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-      #     SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-      #   run: python tools/check_supabase_runtime_schema.py
+      # Runs only when both secrets are configured (point them at STAGING). The
+      # service-role key is scoped to THIS step's env so the install/test steps
+      # above never see it. When the secrets are unset the script skips itself,
+      # so the workflow stays green on forks/PRs without credentials.
+      - name: Live Supabase runtime schema check (staging)
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_SERVICE_ROLE_KEY" ]; then
+            echo "Skipping live schema check; staging secrets not configured."
+            exit 0
+          fi
+          python tools/check_supabase_runtime_schema.py

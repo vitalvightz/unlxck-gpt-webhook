@@ -15,8 +15,9 @@ async def finalize_stage2_with_timeout(
     *,
     stage2: Stage2Automator,
     stage1_result: dict[str, Any],
+    log_context: dict[str, str] | None = None,
 ) -> dict[str, Any]:
-    finalize = stage2.finalize(stage1_result=stage1_result)
+    finalize = stage2.finalize(stage1_result=stage1_result, log_context=log_context)
     timeout_seconds = _stage2_finalize_timeout_seconds()
     if timeout_seconds is None:
         return await finalize

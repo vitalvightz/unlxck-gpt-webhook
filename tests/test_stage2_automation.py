@@ -202,11 +202,15 @@ def test_retry_pass_is_never_sent_during_automatic_finalization(
     original_generate_text = automator._generate_text
     seen_attempts: list[str] = []
 
-    async def _record_attempt(prompt: str, *, attempt_label: str, source: str) -> str:
+    async def _record_attempt(
+        prompt: str, *, attempt_label: str, source: str, log_context: dict | None = None
+    ) -> str:
         seen_attempts.append(attempt_label)
         if attempt_label == "retry_pass":
             raise AssertionError("automatic Stage 2 finalization must not send retry_pass")
-        return await original_generate_text(prompt, attempt_label=attempt_label, source=source)
+        return await original_generate_text(
+            prompt, attempt_label=attempt_label, source=source, log_context=log_context
+        )
 
     monkeypatch.setattr(automator, "_generate_text", _record_attempt)
 

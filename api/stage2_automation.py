@@ -29,7 +29,9 @@ class Stage2AutomationUnavailableError(Stage2AutomationError):
 
 
 class Stage2Automator(Protocol):
-    async def finalize(self, *, stage1_result: dict[str, Any]) -> dict[str, Any]: ...
+    async def finalize(
+        self, *, stage1_result: dict[str, Any], log_context: dict[str, str] | None = None
+    ) -> dict[str, Any]: ...
 
 
 def _env_int(name: str, default: int, *, minimum: int) -> int:
@@ -295,7 +297,9 @@ def _review_required_result(
 class DisabledStage2Automator:
     reason: str
 
-    async def finalize(self, *, stage1_result: dict[str, Any]) -> dict[str, Any]:
+    async def finalize(
+        self, *, stage1_result: dict[str, Any], log_context: dict[str, str] | None = None
+    ) -> dict[str, Any]:
         raise Stage2AutomationUnavailableError(self.reason)
 
 
@@ -331,7 +335,14 @@ class OpenAIStage2Automator:
             model=model,
         )
 
-    async def _generate_text(self, prompt: str, *, attempt_label: str, source: str) -> str:
+    async def _generate_text(
+        self,
+        prompt: str,
+        *,
+        attempt_label: str,
+        source: str,
+        log_context: dict[str, str] | None = None,
+    ) -> str:
         _enforce_stage2_prompt_budget(prompt, attempt_label=attempt_label, source=source)
         request: dict[str, Any] = {
             "model": self.model,
@@ -371,11 +382,16 @@ class OpenAIStage2Automator:
         actual_input_tokens = usage["input_tokens"] or _estimated_input_tokens(prompt)
         actual_output_tokens = usage["output_tokens"] or _estimated_input_tokens(text)
         total_tokens = usage["total_tokens"] or actual_input_tokens + actual_output_tokens
+        # Attribute cost to the job/athlete so it can be aggregated per user from
+        # the logs. Falls back to "unknown" when the caller does not supply it.
+        context = log_context or {}
         logger.info(
-            "[stage2] received %s response id=%s chars=%s actual_input_tokens=%s "
-            "actual_output_tokens=%s total_tokens=%s estimated_cost_usd=%s",
+            "[stage2] received %s response id=%s job_id=%s athlete_id=%s chars=%s "
+            "actual_input_tokens=%s actual_output_tokens=%s total_tokens=%s estimated_cost_usd=%s",
             attempt_label,
             response_id,
+            context.get("job_id") or "unknown",
+            context.get("athlete_id") or "unknown",
             len(text),
             actual_input_tokens,
             actual_output_tokens,
@@ -384,7 +400,9 @@ class OpenAIStage2Automator:
         )
         return text
 
-    async def finalize(self, *, stage1_result: dict[str, Any]) -> dict[str, Any]:
+    async def finalize(
+        self, *, stage1_result: dict[str, Any], log_context: dict[str, str] | None = None
+    ) -> dict[str, Any]:
         package = build_stage2_package(stage1_result=stage1_result)
         draft_plan_text = str(package.get("draft_plan_text") or "")
         handoff_text = str(package["handoff_text"])
@@ -397,7 +415,9 @@ class OpenAIStage2Automator:
             len(draft_plan_text),
         )
 
-        first_pass_text = await self._generate_text(handoff_text, attempt_label="first_pass", source=source)
+        first_pass_text = await self._generate_text(
+            handoff_text, attempt_label="first_pass", source=source, log_context=log_context
+        )
         first_review = review_stage2_output(
             planning_brief=package["planning_brief"],
             final_plan_text=first_pass_text,

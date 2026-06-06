@@ -99,6 +99,14 @@ _TRANSIENT_SUPABASE_ERRORS = (
     httpx.ReadTimeout,
 )
 _STORE_CLIENT_ERRORS = (PostgrestAPIError, httpx.HTTPError)
+
+
+class LastAdminError(RuntimeError):
+    """Raised when a revoke would demote the only remaining admin.
+
+    Guards against accidentally locking everyone out of the admin surface.
+    Callers that genuinely intend this must pass ``allow_last_admin=True``.
+    """
 _TRANSIENT_POSTGREST_SNIPPETS = (
     "connection",
     "connect",
@@ -1020,6 +1028,154 @@ class SupabaseAppStore:
                 operation=f"update_profile athlete_id={athlete_id}",
                 detail="failed to update profile",
                 exc=exc,
+            )
+
+    # ------------------------------------------------------------------
+    # Admin role management
+    #
+    # UNLXCK_ADMIN_EMAILS only *seeds* a profile's role the first time the
+    # profile is created (see _default_role_for). After that, profiles.role is
+    # authoritative and the env var has no further effect — so removing an email
+    # from UNLXCK_ADMIN_EMAILS does NOT demote an existing admin. Grants and
+    # revocations after first sign-in must go through here, which updates
+    # profiles.role and records the change in public.admin_role_audit. The
+    # service-role key bypasses the prevent_self_role_escalation trigger, so the
+    # backend is the only sanctioned path for role changes.
+    # ------------------------------------------------------------------
+
+    def _get_profile_by_email(self, email: str) -> dict[str, Any] | None:
+        normalized = (email or "").strip().lower()
+        if not normalized:
+            return None
+        # Fast path: the indexed unique column, which is lowercase for any
+        # profile created after email normalization landed.
+        row = self._select_first(
+            self.client.table("profiles").select("*").eq("email", normalized)
+        )
+        if row:
+            return row
+        # Fallback for legacy rows stored with mixed-case emails. ilike is
+        # case-insensitive; `_`/`%` in a local part are treated as wildcards, so
+        # the result is a superset that we narrow with an exact lowercase match.
+        response = (
+            self.client.table("profiles").select("*").ilike("email", normalized).execute()
+        )
+        for candidate in getattr(response, "data", None) or []:
+            if str(candidate.get("email") or "").strip().lower() == normalized:
+                return candidate
+        return None
+
+    def list_admin_profiles(self) -> list[dict[str, Any]]:
+        response = self._run_with_transient_retry(
+            operation="list_admin_profiles",
+            fn=lambda: (
+                self.client.table("profiles")
+                .select("id,email,role")
+                .eq("role", "admin")
+                .execute()
+            ),
+        )
+        return list(getattr(response, "data", None) or [])
+
+    def count_admin_profiles(self) -> int:
+        return len(self.list_admin_profiles())
+
+    def set_profile_role(
+        self,
+        *,
+        email: str,
+        new_role: str,
+        actor: str,
+        reason: str | None = None,
+        allow_last_admin: bool = False,
+    ) -> dict[str, Any]:
+        """Grant or revoke admin by email; records an audit row on any change.
+
+        Returns a summary dict with ``changed=False`` when the profile is
+        already in the requested role (no write, no audit row). Raises
+        ``ValueError`` for an unsupported role, ``LookupError`` when no profile
+        matches the email, and ``LastAdminError`` when revoking would leave zero
+        admins (unless ``allow_last_admin=True``).
+        """
+        normalized_role = (new_role or "").strip().lower()
+        if normalized_role not in {"admin", "athlete"}:
+            raise ValueError(f"unsupported role {new_role!r}; expected 'admin' or 'athlete'")
+        profile = self._get_profile_by_email(email)
+        if not profile:
+            raise LookupError(f"no profile found for email {email!r}")
+
+        athlete_id = str(profile["id"])
+        previous_role = str(profile.get("role") or "athlete")
+        target_email = str(profile.get("email") or email).strip().lower()
+        summary = {
+            "athlete_id": athlete_id,
+            "email": target_email,
+            "previous_role": previous_role,
+            "new_role": normalized_role,
+        }
+        if previous_role == normalized_role:
+            logger.info(
+                "[admin] role:unchanged email=%s role=%s actor=%s",
+                target_email, normalized_role, actor,
+            )
+            return {**summary, "changed": False}
+
+        # Lockout guard: refuse to demote the only remaining admin unless the
+        # caller explicitly opts in.
+        if previous_role == "admin" and normalized_role != "admin" and not allow_last_admin:
+            if self.count_admin_profiles() <= 1:
+                raise LastAdminError(
+                    f"refusing to revoke {target_email}: they are the only admin. "
+                    "Pass allow_last_admin=True to override."
+                )
+
+        self.client.table("profiles").update({"role": normalized_role}).eq("id", athlete_id).execute()
+        action = "promote" if normalized_role == "admin" else "revoke"
+        self._record_admin_role_audit(
+            athlete_id=athlete_id,
+            target_email=target_email,
+            previous_role=previous_role,
+            new_role=normalized_role,
+            action=action,
+            actor=actor,
+            reason=reason,
+        )
+        logger.warning(
+            "[admin] role:changed action=%s email=%s previous_role=%s new_role=%s actor=%s",
+            action, target_email, previous_role, normalized_role, actor,
+        )
+        return {**summary, "changed": True, "action": action}
+
+    def _record_admin_role_audit(
+        self,
+        *,
+        athlete_id: str,
+        target_email: str,
+        previous_role: str,
+        new_role: str,
+        action: str,
+        actor: str,
+        reason: str | None,
+    ) -> None:
+        # The role change has already committed; an audit-write failure (e.g. the
+        # admin_role_audit table is not migrated yet) must not roll it back. Log
+        # loudly so the operator knows the audit trail is missing this entry.
+        try:
+            self.client.table("admin_role_audit").insert(
+                {
+                    "target_athlete_id": athlete_id,
+                    "target_email": target_email,
+                    "previous_role": previous_role,
+                    "new_role": new_role,
+                    "action": action,
+                    "actor": actor,
+                    "reason": reason,
+                }
+            ).execute()
+        except _STORE_CLIENT_ERRORS as exc:
+            logger.error(
+                "[admin] role_audit:write_failed action=%s email=%s actor=%s error_type=%s error=%s",
+                action, target_email, actor, type(exc).__name__, _sanitize_error_text(exc),
             )
 
     def change_username(self, athlete_id: str, username: str) -> dict[str, Any]:
