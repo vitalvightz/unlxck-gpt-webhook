@@ -592,14 +592,14 @@ def _guided_card_resolved_structural(guided: GuidedInjury) -> bool | None:
     """For a structural guided card (fracture/dislocation/tendon-ligament), return
     whether it is old-and-cleared with no current concern (RULE 1). Returns None
     when the card is not a structural type (so callers can ignore it)."""
-    injury_type = _normalized_text(getattr(guided, "injury_type", ""))
+    injury_type = _normalized_text(guided.injury_type)
     if injury_type not in _GUIDED_STRUCTURAL_INJURY_TYPES:
         return None
-    timeframe = _normalized_text(getattr(guided, "timeframe", ""))
-    cleared = _normalized_text(getattr(guided, "cleared", ""))
-    severity = _normalize_guided_severity_token(getattr(guided, "severity", "") or "")
-    trend = _normalized_text(getattr(guided, "trend", ""))
-    tags = parse_guided_note_tags(_normalized_text(getattr(guided, "notes", "")))
+    timeframe = _normalized_text(guided.timeframe)
+    cleared = _normalized_text(guided.cleared)
+    severity = _normalize_guided_severity_token(guided.severity or "")
+    trend = _normalized_text(guided.trend)
+    tags = parse_guided_note_tags(_normalized_text(guided.notes))
     dislocation_tags = tags.get("dislocation", set())
     recurrent = "recurrent_yes" in dislocation_tags or bool(
         {"relocated_no", "relocated_not_sure"} & dislocation_tags
