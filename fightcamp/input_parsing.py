@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 import json
+import math
 import re
 from typing import Literal
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
@@ -677,6 +678,43 @@ MAX_OPEN_CAMP_WEEKS = 24
 # behaves identically to the API path).
 _NO_SCHEDULED_FIGHT_TRUE_TOKENS = {"true", "1", "yes", "y", "on"}
 _NO_SCHEDULED_FIGHT_FALSE_TOKENS = {"", "false", "0", "no", "n", "off"}
+
+
+def parse_int_or_none(value: object) -> int | None:
+    if value is None or isinstance(value, bool):
+        return None
+    if isinstance(value, int):
+        return value
+    if isinstance(value, float):
+        return int(value) if math.isfinite(value) and value.is_integer() else None
+    if isinstance(value, str):
+        normalized = value.strip()
+        if not normalized:
+            return None
+        try:
+            parsed = float(normalized)
+        except ValueError:
+            return None
+        return int(parsed) if math.isfinite(parsed) and parsed.is_integer() else None
+    return None
+
+
+def parse_float_or_none(value: object) -> float | None:
+    if value is None or isinstance(value, bool):
+        return None
+    if isinstance(value, (int, float)):
+        parsed = float(value)
+        return parsed if math.isfinite(parsed) else None
+    if isinstance(value, str):
+        normalized = value.strip()
+        if not normalized:
+            return None
+        try:
+            parsed = float(normalized)
+        except ValueError:
+            return None
+        return parsed if math.isfinite(parsed) else None
+    return None
 
 
 def _coerce_no_scheduled_fight(value: object) -> bool:

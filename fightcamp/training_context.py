@@ -108,8 +108,8 @@ class TrainingContext:
     key_goals: list[str]
     training_preference: str
     mental_block: list[str] | str
-    age: int
-    weight: float
+    age: int | None
+    weight: float | None
     prev_exercises: list[str]
     recent_exercises: list[str]
     phase_weeks: dict

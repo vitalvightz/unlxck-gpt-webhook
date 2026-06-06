@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 import re
 from typing import Any, Literal
 
@@ -672,12 +673,20 @@ class PlanRequest(BaseModel):
             if not normalized:
                 return _DEFAULT_OPEN_CAMP_WEEKS
             try:
-                value = int(round(float(normalized)))
+                value = float(normalized)
             except ValueError:
                 raise ValueError("open_camp_weeks must be numeric") from None
+        if isinstance(value, bool):
+            raise ValueError("open_camp_weeks must be numeric")
         if isinstance(value, (int, float)):
-            return max(1, min(int(round(float(value))), MAX_OPEN_CAMP_WEEKS))
-        return _DEFAULT_OPEN_CAMP_WEEKS
+            numeric = float(value)
+            if not math.isfinite(numeric):
+                raise ValueError("open_camp_weeks must be numeric")
+            parsed = int(round(numeric))
+            if parsed < 1 or parsed > MAX_OPEN_CAMP_WEEKS:
+                raise ValueError(f"open_camp_weeks must be between 1 and {MAX_OPEN_CAMP_WEEKS}")
+            return parsed
+        raise ValueError("open_camp_weeks must be numeric")
 
     @field_validator("equipment_access", "key_goals", "weak_areas", "goal_weakness_collision_tags", mode="before")
     @classmethod

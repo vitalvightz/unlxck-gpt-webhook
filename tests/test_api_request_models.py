@@ -626,6 +626,60 @@ def test_plan_request_open_camp_honours_custom_open_camp_weeks():
     assert context.camp_len == 12
 
 
+def test_runtime_context_preserves_none_for_invalid_age_and_weight():
+    payload = {
+        "data": {
+            "fields": [
+                {"label": "Full name", "value": "Ari Mensah"},
+                {"label": "Age", "value": "85kg"},
+                {"label": "Weight", "value": "85,5"},
+                {"label": "Fighting Style (Technical)", "value": ["boxing"]},
+                {"label": "Training Availability", "value": ["Monday", "Wednesday", "Friday"]},
+                {"label": "Sessions per Week", "value": 3},
+                {"label": "When is your next fight?", "value": ""},
+            ]
+        },
+        "no_scheduled_fight": True,
+    }
+
+    parsed = PlanInput.from_payload(payload)
+    context = build_runtime_context(
+        plan_input=parsed,
+        random_seed=1,
+        logger=logging.getLogger(__name__),
+    )
+
+    assert context.training_context.age is None
+    assert context.training_context.weight is None
+
+
+def test_runtime_context_parses_trimmed_numeric_age_and_weight():
+    payload = {
+        "data": {
+            "fields": [
+                {"label": "Full name", "value": "Ari Mensah"},
+                {"label": "Age", "value": " 27 "},
+                {"label": "Weight", "value": " 72.5 "},
+                {"label": "Fighting Style (Technical)", "value": ["boxing"]},
+                {"label": "Training Availability", "value": ["Monday", "Wednesday", "Friday"]},
+                {"label": "Sessions per Week", "value": 3},
+                {"label": "When is your next fight?", "value": ""},
+            ]
+        },
+        "no_scheduled_fight": True,
+    }
+
+    parsed = PlanInput.from_payload(payload)
+    context = build_runtime_context(
+        plan_input=parsed,
+        random_seed=1,
+        logger=logging.getLogger(__name__),
+    )
+
+    assert context.training_context.age == 27
+    assert context.training_context.weight == 72.5
+
+
 def test_plan_input_blocks_scheduled_fight_without_date():
     # Explicit ``no_scheduled_fight=false`` plus empty ``fight_date`` is the
     # contract a future frontend would send when the user picked "scheduled
@@ -768,7 +822,7 @@ def test_plan_input_open_camp_weeks_float_rounds_not_truncates():
     assert parsed.open_camp_weeks == 13
 
 
-def test_plan_input_open_camp_weeks_zero_clamps_to_one():
+def test_plan_input_legacy_open_camp_weeks_zero_clamps_to_one():
     payload = {
         "data": {"fields": _open_camp_legacy_fields()},
         "no_scheduled_fight": True,
@@ -852,6 +906,34 @@ def test_plan_rename_request_rejects_overlong_name():
     PlanRenameRequest(plan_name="x" * 120)
     with pytest.raises(ValidationError):
         PlanRenameRequest(plan_name="x" * 121)
+
+
+
+def _open_weeks_request(value):
+    return PlanRequest(
+        athlete={"full_name": "Ari Mensah", "technical_style": ["boxing"]},
+        no_scheduled_fight=True,
+        open_camp_weeks=value,
+        weekly_training_frequency=3,
+        training_availability=["Monday", "Wednesday", "Friday"],
+    )
+
+
+def test_open_camp_weeks_accepts_bounds():
+    assert _open_weeks_request(1).open_camp_weeks == 1
+    assert _open_weeks_request(24).open_camp_weeks == 24
+    assert _open_weeks_request("8.0").open_camp_weeks == 8
+
+
+def test_open_camp_weeks_rejects_out_of_range_instead_of_clamping():
+    for bad in (0, 25, 999, -3):
+        with pytest.raises(ValidationError, match="between 1 and 24"):
+            _open_weeks_request(bad)
+
+
+def test_open_camp_weeks_rejects_non_numeric():
+    with pytest.raises(ValidationError, match="must be numeric"):
+        _open_weeks_request("banana")
 
 
 def test_weekly_training_frequency_accepts_bounds():

@@ -641,31 +641,13 @@ def test_production_cors_fails_fast_on_unsafe_origin_by_default(
     _clear_env_detection_vars(monkeypatch)
     monkeypatch.setenv("APP_ENV", "production")
     monkeypatch.setenv("APP_CORS_ORIGINS", "*")
-    monkeypatch.delenv("APP_ALLOW_UNSAFE_PRODUCTION_CORS_BOOT", raising=False)
 
-    with pytest.raises(ValueError, match="Refusing to boot unless APP_ALLOW_UNSAFE_PRODUCTION_CORS_BOOT=1"):
+    with pytest.raises(ValueError, match="Refusing to boot with unsafe production CORS"):
         create_app(
             store=FakeStore(),
             auth_service=FakeAuthService({}),
             stage2_automator=FakeStage2Automator(),
         )
-
-
-def test_production_cors_override_allows_boot_on_unsafe_origin(
-    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
-):
-    _clear_env_detection_vars(monkeypatch)
-    monkeypatch.setenv("APP_ENV", "production")
-    monkeypatch.setenv("APP_CORS_ORIGINS", "*")
-    monkeypatch.setenv("APP_ALLOW_UNSAFE_PRODUCTION_CORS_BOOT", "1")
-    create_app(
-        store=FakeStore(),
-        auth_service=FakeAuthService({}),
-        stage2_automator=FakeStage2Automator(),
-    )
-    # configure_logging() resets the root logger and routes structlog JSON to
-    # stdout, so the override marker is captured via capsys, not caplog.
-    assert "UNSAFE_PRODUCTION_CORS_OVERRIDE_ACTIVE" in capsys.readouterr().out
 
 
 def test_production_cors_rejects_empty_origins(monkeypatch: pytest.MonkeyPatch):

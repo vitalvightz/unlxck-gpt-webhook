@@ -12,7 +12,13 @@ from .conditioning import (
     get_style_conditioning_bank,
     prime_conditioning_banks,
 )
-from .input_parsing import DEFAULT_OPEN_CAMP_WEEKS, PlanInput, is_short_notice_days
+from .input_parsing import (
+    DEFAULT_OPEN_CAMP_WEEKS,
+    PlanInput,
+    is_short_notice_days,
+    parse_float_or_none,
+    parse_int_or_none,
+)
 from .mindset_module import classify_mental_block
 from .rehab_protocols import prime_rehab_bank
 from .strength import (
@@ -340,8 +346,8 @@ def build_runtime_context(
         ],
         training_preference=plan_input.training_preference.strip().lower() if plan_input.training_preference else "",
         mental_block=mental_block_class,
-        age=int(plan_input.age) if plan_input.age.isdigit() else 0,
-        weight=float(weight) if weight.replace(".", "", 1).isdigit() else 0.0,
+        age=parse_int_or_none(plan_input.age),
+        weight=parse_float_or_none(weight),
         prev_exercises=[],
         recent_exercises=[],
         phase_weeks=phase_weeks,
