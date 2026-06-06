@@ -36,6 +36,20 @@ _CONTRACT_VISIBLE_PLAN_STATUSES = {"ready", "publishable_with_flags"}
 _CONTRACT_REVIEW_PLAN_STATUS = "review_required"
 
 
+def _record_stage2_cost_if_available(
+    store: AppStore, job_id: str, final_result: dict[str, Any]
+) -> None:
+    """Persist Stage 2 token/cost telemetry for a successful finalization.
+
+    The metadata rides on ``final_result["stage2_cost"]`` (built by the Stage 2
+    automator). ``store.record_stage2_cost`` is itself best-effort and never
+    raises, so this is safe to call on the critical persistence path.
+    """
+    cost = final_result.get("stage2_cost") if isinstance(final_result, dict) else None
+    if isinstance(cost, dict) and cost:
+        store.record_stage2_cost(job_id, cost)
+
+
 def _contract_fight_date(request_body: Any) -> Any:
     """Resolve the fight date the contract validator should use.
 
@@ -421,6 +435,10 @@ async def persist_plan_and_finalize(
         "Stage 2 result saved",
         "Finalizer output was saved to the generation job.",
     )
+    # Audit trail: store Stage 2 token/cost metadata on the generation job so
+    # high-cost jobs can be identified per athlete/job from the database. Runs
+    # after the canonical final_result is persisted and never blocks finalize.
+    await asyncio.to_thread(_record_stage2_cost_if_available, store, job_id, final_result)
     persisted_plan_id = str(job.get("plan_id") or "").strip() if isinstance(job, dict) else ""
     if not persisted_plan_id:
         plan_id = None

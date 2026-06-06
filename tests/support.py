@@ -26,6 +26,7 @@ from api.state_machine import (
     require_generation_job_transition,
     require_plan_transition,
 )
+from api.schema_requirements import GENERATION_JOB_STAGE2_COST_COLUMNS
 from api.store import _generation_startup_max_attempts, is_job_loaded_stalled_generation_job, is_stage1_planner_stalled_generation_job, is_startup_stale_generation_job
 from datetime import timedelta
 
@@ -817,6 +818,18 @@ class FakeStore:
         job.update(payload)
         job["updated_at"] = _now()
         return dict(job)
+
+    def record_stage2_cost(self, job_id: str, metadata: dict) -> None:
+        job = self.generation_jobs.get(job_id)
+        if not job or not isinstance(metadata, dict):
+            return
+        job.update(
+            {
+                column: metadata[column]
+                for column in GENERATION_JOB_STAGE2_COST_COLUMNS
+                if column in metadata
+            }
+        )
 
     def update_plan_stage2(self, plan_id: str, result: dict) -> dict:
         row = self.plans.get(plan_id)

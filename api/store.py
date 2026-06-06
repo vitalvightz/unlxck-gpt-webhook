@@ -32,7 +32,10 @@ from .models import (
     USERNAME_MAX_CHANGES_PER_WINDOW,
     validate_username,
 )
-from .schema_requirements import PLAN_RUNTIME_REQUIRED_COLUMNS
+from .schema_requirements import (
+    GENERATION_JOB_STAGE2_COST_COLUMNS,
+    PLAN_RUNTIME_REQUIRED_COLUMNS,
+)
 from .state_machine import (
     is_generation_job_status,
     is_plan_status,
@@ -292,6 +295,8 @@ class AppStore(Protocol):
     def count_active_generation_jobs(self, *, stale_after_seconds: int | None = None) -> int: ...
 
     def update_generation_job(self, job_id: str, **changes: Any) -> dict[str, Any]: ...
+
+    def record_stage2_cost(self, job_id: str, metadata: dict[str, Any]) -> None: ...
 
     def update_plan_stage2(self, plan_id: str, result: dict[str, Any]) -> dict[str, Any]: ...
     def update_plan_triage_approval(self, plan_id: str, *, why_log: dict[str, Any], stage2_status: str) -> dict[str, Any]: ...
@@ -2760,6 +2765,43 @@ class SupabaseAppStore:
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="failed to update generation job",
             ) from exc
+
+    def record_stage2_cost(self, job_id: str, metadata: dict[str, Any]) -> None:
+        """Best-effort persistence of Stage 2 token/cost telemetry to generation_jobs.
+
+        Telemetry only — this NEVER raises. The canonical generation outcome
+        (status, plan, final_result) is already persisted via
+        update_generation_job before this is called, so a schema gap (migration
+        not yet applied) or a transient store error here must not fail or roll
+        back the job. Only the known Stage 2 cost columns are written; any stray
+        keys in ``metadata`` are dropped so the payload can never carry plan text
+        or other unrelated fields into the database.
+        """
+        if not isinstance(metadata, dict):
+            return
+        payload = {
+            column: metadata[column]
+            for column in GENERATION_JOB_STAGE2_COST_COLUMNS
+            if column in metadata
+        }
+        if not payload:
+            return
+        try:
+            self.client.table("generation_jobs").update(payload).eq("id", job_id).execute()
+            logger.info(
+                "[store] record_stage2_cost:ok job_id=%s model=%s total_tokens=%s estimated_cost_usd=%s",
+                job_id,
+                payload.get("stage2_model"),
+                payload.get("stage2_total_tokens"),
+                payload.get("stage2_estimated_cost_usd"),
+            )
+        except Exception as exc:  # noqa: BLE001 - telemetry write must never break generation
+            logger.warning(
+                "[store] record_stage2_cost:skipped job_id=%s error_type=%s error=%s",
+                job_id,
+                type(exc).__name__,
+                _sanitize_error_text(exc),
+            )
 
     def rename_plan(self, plan_id: str, plan_name: str) -> dict[str, Any]:
         try:

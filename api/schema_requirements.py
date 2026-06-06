@@ -83,6 +83,25 @@ REQUIRED_PLANS_COLUMNS: tuple[str, ...] = (
     "created_at",
 )
 
+# Stage 2 token/cost telemetry written to generation_jobs after finalization
+# (see api/store.py::record_stage2_cost). These let an admin/dev audit cost per
+# athlete/job straight from the database instead of scraping logs. All columns
+# are nullable: a row predating the feature, or a Stage 2 call where the OpenAI
+# response omitted usage, simply leaves them NULL. The runtime write is
+# best-effort and degrades gracefully if the columns are absent, but they are
+# listed here so the deploy gate (tools/check_supabase_runtime_schema.py)
+# guarantees the migration is applied in production where the audit is relied on.
+GENERATION_JOB_STAGE2_COST_COLUMNS: tuple[str, ...] = (
+    "stage2_model",
+    "stage2_input_tokens",
+    "stage2_output_tokens",
+    "stage2_total_tokens",
+    "stage2_estimated_cost_usd",
+    "stage2_attempt_count",
+    "stage2_response_id",
+    "stage2_cost_recorded_at",
+)
+
 REQUIRED_GENERATION_JOBS_COLUMNS: tuple[str, ...] = (
     "id",
     "athlete_id",
@@ -102,6 +121,7 @@ REQUIRED_GENERATION_JOBS_COLUMNS: tuple[str, ...] = (
     "request_payload",
     "stage1_result",
     "final_result",
+    *GENERATION_JOB_STAGE2_COST_COLUMNS,
 )
 
 REQUIRED_PROFILES_COLUMNS: tuple[str, ...] = (
@@ -394,6 +414,7 @@ __all__: Sequence[str] = (
     "REQUIRED_TABLES",
     "PLAN_RUNTIME_REQUIRED_COLUMNS",
     "REQUIRED_PLANS_COLUMNS",
+    "GENERATION_JOB_STAGE2_COST_COLUMNS",
     "REQUIRED_GENERATION_JOBS_COLUMNS",
     "REQUIRED_PROFILES_COLUMNS",
     "REQUIRED_COLUMNS",

@@ -204,7 +204,7 @@ def test_retry_pass_is_never_sent_during_automatic_finalization(
 
     async def _record_attempt(
         prompt: str, *, attempt_label: str, source: str, log_context: dict | None = None
-    ) -> str:
+    ) -> tuple[str, dict]:
         seen_attempts.append(attempt_label)
         if attempt_label == "retry_pass":
             raise AssertionError("automatic Stage 2 finalization must not send retry_pass")
@@ -278,6 +278,89 @@ def test_generic_provider_failure_raises_sanitized_error(monkeypatch: pytest.Mon
     assert "sk-secret-payload-12345" not in message
     assert "api.openai.com" not in message
     assert len(client.responses.calls) == 1
+
+
+def test_first_pass_pass_records_token_cost_metadata(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(stage2_module, "review_stage2_output", lambda **_: _review("PASS"))
+    client = FakeClient([_response("# final plan", input_tokens=123, output_tokens=456)])
+    automator = OpenAIStage2Automator(client=client, model="gpt-5-mini")
+
+    result = asyncio.run(automator.finalize(stage1_result=_stage1_result()))
+
+    cost = result["stage2_cost"]
+    assert cost["stage2_model"] == "gpt-5-mini"
+    assert cost["stage2_input_tokens"] == 123
+    assert cost["stage2_output_tokens"] == 456
+    assert cost["stage2_total_tokens"] == 579
+    assert cost["stage2_attempt_count"] == 1
+    assert cost["stage2_response_id"] == "resp_test"
+    assert cost["stage2_cost_recorded_at"]
+    assert isinstance(cost["stage2_estimated_cost_usd"], float)
+
+
+def test_review_required_result_also_carries_cost(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(stage2_module, "review_stage2_output", lambda **_: _review("FAIL"))
+    client = FakeClient([_response("# first pass needs review", input_tokens=7, output_tokens=9)])
+    automator = OpenAIStage2Automator(client=client, model="test-model")
+
+    result = asyncio.run(automator.finalize(stage1_result=_stage1_result()))
+
+    assert result["status"] == "held_for_review"
+    assert result["stage2_cost"]["stage2_input_tokens"] == 7
+    assert result["stage2_cost"]["stage2_output_tokens"] == 9
+
+
+def test_missing_usage_does_not_crash_and_falls_back_to_estimates(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # An OpenAI response with no ``usage`` field must not crash generation; cost
+    # falls back to char-based estimates so the row is still populated.
+    monkeypatch.setattr(stage2_module, "review_stage2_output", lambda **_: _review("PASS"))
+    response = SimpleNamespace(id="resp_no_usage", output_text="# final plan")
+    client = FakeClient([response])
+    automator = OpenAIStage2Automator(client=client, model="test-model")
+
+    result = asyncio.run(automator.finalize(stage1_result=_stage1_result()))
+
+    cost = result["stage2_cost"]
+    assert result["status"] == "ready"
+    assert cost["stage2_input_tokens"] >= 1
+    assert cost["stage2_output_tokens"] >= 1
+    assert cost["stage2_response_id"] == "resp_no_usage"
+
+
+def test_incomplete_response_failure_carries_actual_cost(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(stage2_module, "review_stage2_output", lambda **_: _review("PASS"))
+    client = FakeClient([_incomplete_response()])
+    automator = OpenAIStage2Automator(client=client, model="test-model")
+
+    with pytest.raises(Stage2AutomationError) as exc_info:
+        asyncio.run(automator.finalize(stage1_result=_stage1_result()))
+
+    cost = exc_info.value.stage2_cost
+    assert cost is not None
+    assert cost["stage2_model"] == "test-model"
+    assert cost["stage2_input_tokens"] == 10
+    assert cost["stage2_output_tokens"] == 24000
+    assert cost["stage2_response_id"] == "resp_incomplete"
+
+
+def test_request_failure_carries_estimated_cost(monkeypatch: pytest.MonkeyPatch) -> None:
+    # No response means no actual usage; the failed attempt still records an
+    # estimated input cost and leaves genuinely-unknown fields as None.
+    client = FakeClient([RuntimeError("boom")])
+    automator = OpenAIStage2Automator(client=client, model="test-model")
+
+    with pytest.raises(Stage2AutomationError) as exc_info:
+        asyncio.run(automator.finalize(stage1_result=_stage1_result()))
+
+    cost = exc_info.value.stage2_cost
+    assert cost is not None
+    assert cost["stage2_model"] == "test-model"
+    assert cost["stage2_input_tokens"] >= 1
+    assert cost["stage2_output_tokens"] is None
+    assert cost["stage2_total_tokens"] is None
+    assert cost["stage2_response_id"] is None
 
 
 def test_from_env_disables_openai_sdk_retries_by_default(monkeypatch: pytest.MonkeyPatch) -> None:

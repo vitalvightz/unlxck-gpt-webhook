@@ -539,6 +539,12 @@ async def run_generation_job(
                 completed_at=utc_now_iso(),
                 heartbeat_at=utc_now_iso(),
             )
+        # Record whatever token/cost was captured before the failure so a failed
+        # Stage 2 attempt is still auditable. Best-effort: never re-raise.
+        stage2_cost = getattr(exc, "stage2_cost", None)
+        if isinstance(stage2_cost, dict) and stage2_cost:
+            with suppress(Exception):
+                await asyncio.to_thread(store.record_stage2_cost, job_id, stage2_cost)
     except HTTPException as exc:
         detail = sanitize_error_text(exc.detail if isinstance(exc.detail, str) else json.dumps(exc.detail))
         logger.warning("[jobs] generation:http_error athlete_id=%s job_id=%s detail=%s", athlete_id, job_id, detail)
