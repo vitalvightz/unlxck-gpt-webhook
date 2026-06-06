@@ -1483,7 +1483,7 @@ def triage_injuries(plan_input: PlanInput) -> InjuryTriageResult:
     # that survived every gate above must be held for review rather than routed
     # to an automatic full plan. Placed after the combo gate so it can only
     # upgrade a would-be full plan to needs_review — never downgrade a block.
-    if red_flags & _NEUROLOGICAL_RED_FLAGS:
+    if (red_flags | matched_categories) & _NEUROLOGICAL_RED_FLAGS:
         routing_reasons.add("neurological_red_flags_require_review")
         return _build_result(
             mode=NEEDS_REVIEW,
