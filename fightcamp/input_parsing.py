@@ -332,6 +332,11 @@ _PLAN_FIELD_LABELS = {
     "notes": "Are there any parts of your previous plan you hated or loved?",
 }
 
+_PLAN_FIELD_LABEL_FALLBACKS = {
+    "weight": ("Weight",),
+    "target_weight": ("Target Weight",),
+}
+
 
 def _extract_fields(data: dict) -> list[dict]:
     fields = data.get("data", {}).get("fields") if isinstance(data, dict) else None
@@ -341,7 +346,16 @@ def _extract_fields(data: dict) -> list[dict]:
 
 
 def _get_plan_field_values(fields: list[dict]) -> dict[str, str]:
-    return {name: get_value(label, fields) for name, label in _PLAN_FIELD_LABELS.items()}
+    values: dict[str, str] = {}
+    for name, label in _PLAN_FIELD_LABELS.items():
+        value = get_value(label, fields)
+        if not value:
+            for fallback_label in _PLAN_FIELD_LABEL_FALLBACKS.get(name, ()):
+                value = get_value(fallback_label, fields)
+                if value:
+                    break
+        values[name] = value
+    return values
 
 
 def _extract_goal_weakness_collision_details(fields: list[dict]) -> list[dict[str, str]]:
