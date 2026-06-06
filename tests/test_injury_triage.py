@@ -1317,6 +1317,41 @@ def test_recovered_rupture_with_current_swelling_and_pain_does_not_full_plan():
     assert triage.should_block_stage2 is True
 
 
+def test_resolved_structural_card_with_separate_active_high_severity_card_blocks():
+    # A first guided card that is old-and-cleared must not down-gate a SECOND,
+    # active high-severity/worsening guided injury in the same payload.
+    payload = _payload_with_injury("")
+    payload["guided_injuries"] = [
+        {
+            "area": "old shin",
+            "injury_type": "fracture",
+            "timeframe": "old_cleared",
+            "cleared": "yes",
+            "severity": "low",
+            "trend": "stable",
+        },
+        {"area": "left knee", "severity": "high", "trend": "worsening", "notes": "pain"},
+    ]
+    triage = triage_injuries(PlanInput.from_payload(payload))
+
+    assert triage.mode != FULL_PLAN
+    assert triage.should_block_stage2 is True
+
+
+def test_resolved_free_text_with_active_high_severity_guided_card_blocks():
+    payload = _payload_with_injury("old ACL tear fully healed")
+    payload["guided_injury"] = {
+        "area": "left knee",
+        "severity": "high",
+        "trend": "worsening",
+        "notes": "pain",
+    }
+    triage = triage_injuries(PlanInput.from_payload(payload))
+
+    assert triage.mode != FULL_PLAN
+    assert triage.should_block_stage2 is True
+
+
 def test_achilles_rupture_routes_to_restricted_rehab_only():
     parsed = PlanInput.from_payload(_payload_with_injury("felt pop then achilles rupture while sprinting"))
     triage = triage_injuries(parsed)
