@@ -69,6 +69,35 @@ def test_already_non_visible_status_is_not_changed():
     assert events == []
 
 
+def test_gate_never_raises_when_emit_milestone_throws():
+    # A throwing milestone callback must not crash the persistence flow; the
+    # plan is still returned with the review downgrade applied beforehand.
+    def boom(*_args, **_kwargs):
+        raise RuntimeError("milestone sink exploded")
+
+    result = _apply_plan_contract_validation(
+        _result("ready", [{"phase": "camp"}]),  # blank week => routes to review
+        fight_date=FIGHT_DATE,
+        athlete_id="ath-1",
+        job_id="job-1",
+        emit_milestone=boom,
+    )
+    assert result["status"] == "review_required"
+
+
+def test_gate_never_raises_on_garbage_final_result():
+    emit, _ = _emit_collector()
+    for garbage in (None, "nope", 42, []):
+        result = _apply_plan_contract_validation(
+            garbage,  # type: ignore[arg-type]
+            fight_date=FIGHT_DATE,
+            athlete_id="ath-1",
+            job_id="job-1",
+            emit_milestone=emit,
+        )
+        assert result is garbage
+
+
 def test_existing_why_log_entries_are_preserved():
     emit, _ = _emit_collector()
     result = _apply_plan_contract_validation(

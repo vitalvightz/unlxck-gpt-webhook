@@ -55,56 +55,61 @@ def _apply_plan_contract_validation(
     """
     try:
         report = validate_plan_contract(final_result, fight_date=fight_date)
+
+        existing_why_log = final_result.get("why_log")
+        why_log = dict(existing_why_log) if isinstance(existing_why_log, dict) else {}
+        why_log["plan_contract_validation"] = report
+        final_result = {**final_result, "why_log": why_log}
+
+        if not contract_report_requires_review(report):
+            return final_result
+
+        error_codes = ",".join(
+            str(v.get("code"))
+            for v in report.get("violations", [])
+            if isinstance(v, dict) and v.get("severity") == "error"
+        )
+        current_status = str(final_result.get("status") or "").strip().lower()
+        if current_status not in _CONTRACT_VISIBLE_PLAN_STATUSES:
+            # Already non-visible (e.g. held_for_review); the report is recorded but
+            # the status is left as-is — there is nothing to gate.
+            logger.warning(
+                "[jobs] generation:plan_contract_violation_noop athlete_id=%s job_id=%s status=%s codes=%s",
+                athlete_id,
+                job_id,
+                current_status or "unknown",
+                error_codes,
+            )
+            return final_result
+
+        final_result = {**final_result, "status": _CONTRACT_REVIEW_PLAN_STATUS}
+        logger.warning(
+            "[jobs] generation:plan_contract_routed_to_review athlete_id=%s job_id=%s from_status=%s codes=%s",
+            athlete_id,
+            job_id,
+            current_status,
+            error_codes,
+        )
+        emit_milestone(
+            "plan_contract_review_required",
+            "Plan held for review",
+            "Post-generation contract checks found calendar/payload issues; "
+            "routing to admin review before the athlete sees it.",
+            violation_codes=error_codes,
+        )
+        return final_result
     except Exception:
+        # Honour the "never raises" contract for the whole gate, not just the
+        # validator call: status routing and the emit_milestone callback are
+        # external surfaces that must never crash the persistence flow. Returns
+        # the latest final_result binding (already carrying any review downgrade
+        # applied before the failure).
         logger.exception(
             "[jobs] generation:plan_contract_validation_failed athlete_id=%s job_id=%s",
             athlete_id,
             job_id,
         )
         return final_result
-
-    existing_why_log = final_result.get("why_log")
-    why_log = dict(existing_why_log) if isinstance(existing_why_log, dict) else {}
-    why_log["plan_contract_validation"] = report
-    final_result = {**final_result, "why_log": why_log}
-
-    if not contract_report_requires_review(report):
-        return final_result
-
-    error_codes = ",".join(
-        str(v.get("code"))
-        for v in report.get("violations", [])
-        if isinstance(v, dict) and v.get("severity") == "error"
-    )
-    current_status = str(final_result.get("status") or "").strip().lower()
-    if current_status not in _CONTRACT_VISIBLE_PLAN_STATUSES:
-        # Already non-visible (e.g. held_for_review); the report is recorded but
-        # the status is left as-is — there is nothing to gate.
-        logger.warning(
-            "[jobs] generation:plan_contract_violation_noop athlete_id=%s job_id=%s status=%s codes=%s",
-            athlete_id,
-            job_id,
-            current_status or "unknown",
-            error_codes,
-        )
-        return final_result
-
-    final_result = {**final_result, "status": _CONTRACT_REVIEW_PLAN_STATUS}
-    logger.warning(
-        "[jobs] generation:plan_contract_routed_to_review athlete_id=%s job_id=%s from_status=%s codes=%s",
-        athlete_id,
-        job_id,
-        current_status,
-        error_codes,
-    )
-    emit_milestone(
-        "plan_contract_review_required",
-        "Plan held for review",
-        "Post-generation contract checks found calendar/payload issues; "
-        "routing to admin review before the athlete sees it.",
-        violation_codes=error_codes,
-    )
-    return final_result
 
 
 async def persist_triage_review_required(
