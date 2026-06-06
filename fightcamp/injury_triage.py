@@ -405,6 +405,43 @@ def _structural_signals_are_downgradeable(injury_texts: list[str]) -> bool:
     return is_benign_noise or is_resolved
 
 
+# A serious structural FAILURE (not benign joint noise). Used to ensure a
+# resolution/benign marker on one injury cannot down-gate a *different* current
+# serious injury in the same payload (e.g. "old fracture healed, new Achilles
+# rupture today").
+_SERIOUS_STRUCTURAL_KEYWORD_RE = re.compile(
+    r"\b(?:rupture[d]?|avulsion|fracture[d]?|broke|broken|dislocat\w*|"
+    r"acl|achilles|complete\s+(?:tear|rupture)|full[-\s]thickness\s+tear|tear|torn)\b"
+)
+
+
+def _chunk_resolved_or_benign(chunk: str) -> bool:
+    if _is_benign_joint_noise_chunk(chunk):
+        return True
+    if _text_has_current_danger(chunk):
+        return False
+    return bool(
+        _RESOLUTION_MARKER_RE.search(chunk)
+        or _NEGATED_STRUCTURAL_HISTORY_RE.search(chunk)
+        or _NEGATED_STRUCTURAL_BREAK_RE.search(chunk)
+    )
+
+
+def _has_unresolved_serious_structural(injury_texts: list[str]) -> bool:
+    """True when any clause names a serious structural injury that is NOT itself
+    resolved/old/benign. Evaluated per chunk so a resolution marker in one clause
+    cannot mask a live serious injury in another. This blocks the RULE 1/2
+    down-gate from ever clearing a current serious structural signal."""
+    for raw in injury_texts:
+        for chunk in split_injury_text(str(raw or "")):
+            c = str(chunk or "").strip().lower()
+            if not c or not _SERIOUS_STRUCTURAL_KEYWORD_RE.search(c):
+                continue
+            if not _chunk_resolved_or_benign(c):
+                return True
+    return False
+
+
 def _has_structural_break_with_location(text: str) -> bool:
     if not text:
         return False
@@ -1493,10 +1530,20 @@ def triage_injuries(plan_input: PlanInput) -> InjuryTriageResult:
     # "timeframe:last_month" so guided metadata cannot masquerade as resolved
     # free text. Guided resolution is decided by _guided_structural_resolved above.
     _free_text_evidence = [t for t in injury_texts if ":" not in str(t)]
+    # Genuine free-text injury input (not synthesized guided representations), used
+    # to detect a *current* serious structural injury that must never be cleared by
+    # a resolution marker belonging to a different injury in the same payload.
+    _raw_injuries = plan_input.injuries
+    _genuine_free_text = (
+        [str(x) for x in _raw_injuries]
+        if isinstance(_raw_injuries, (list, tuple))
+        else [str(_raw_injuries or "")]
+    )
     _STRUCTURAL_URGENT_FLAGS = {"urgent", "urgent_fracture", "urgent_dislocation"}
     _blocking_urgent = urgent_flags - _STRUCTURAL_URGENT_FLAGS
     downgraded_resolved_or_benign = (
         (_structural_signals_are_downgradeable(_free_text_evidence) or _guided_structural_resolved)
+        and not _has_unresolved_serious_structural(_genuine_free_text)
         and not _blocking_urgent
         and not (red_flags & _CURRENT_DANGER_RED_FLAGS)
         and not _real_guided_serious
