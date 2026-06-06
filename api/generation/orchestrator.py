@@ -415,6 +415,7 @@ async def run_generation_job(
                 finalized_result = await finalize_stage2_with_timeout(
                     stage2=stage2,
                     stage1_result=stage1_result,
+                    log_context={"job_id": job_id, "athlete_id": athlete_id},
                 )
                 await _touch_heartbeat()
                 final_result = {**finalized_result, "full_name": request_body.athlete.full_name}
