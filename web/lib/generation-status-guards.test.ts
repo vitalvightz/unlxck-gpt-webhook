@@ -5,6 +5,7 @@ import {
   isExpiredPendingGeneration,
   isStaleVisibleGenerationJob,
   normalizeLegacyGenerationJobStatus,
+  resolveGenerateAutoStartDecision,
   resolveMatchingPayloadGenerationAction,
   shouldBlockGenerateAutoStartForMatchingPayload,
 } from "@/lib/generation-status-guards";
@@ -87,4 +88,29 @@ test("non-matching payload proceeds with a fresh generation", () => {
     { type: "proceed" },
   );
   assert.deepEqual(resolveMatchingPayloadGenerationAction("hash_a", null), { type: "proceed" });
+});
+
+test("active in-flight job is always recovered regardless of intent", () => {
+  assert.equal(
+    resolveGenerateAutoStartDecision({ hasActiveJob: true, hasIntent: false }),
+    "recover",
+  );
+  assert.equal(
+    resolveGenerateAutoStartDecision({ hasActiveJob: true, hasIntent: true }),
+    "recover",
+  );
+});
+
+test("explicit intent with no active job starts a new generation", () => {
+  assert.equal(
+    resolveGenerateAutoStartDecision({ hasActiveJob: false, hasIntent: true }),
+    "start",
+  );
+});
+
+test("no intent and no active job redirects instead of auto-starting", () => {
+  assert.equal(
+    resolveGenerateAutoStartDecision({ hasActiveJob: false, hasIntent: false }),
+    "redirect",
+  );
 });
