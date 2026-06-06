@@ -168,6 +168,16 @@ create table if not exists public.generation_jobs (
   heartbeat_at timestamptz,
   started_at timestamptz,
   completed_at timestamptz,
+  -- Stage 2 token/cost telemetry (nullable; populated best-effort after Stage 2
+  -- finalization so cost can be audited per athlete/job from the database).
+  stage2_model text,
+  stage2_input_tokens integer,
+  stage2_output_tokens integer,
+  stage2_total_tokens integer,
+  stage2_estimated_cost_usd numeric(14, 6),
+  stage2_attempt_count integer,
+  stage2_response_id text,
+  stage2_cost_recorded_at timestamptz,
   created_at timestamptz not null default timezone('utc', now()),
   updated_at timestamptz not null default timezone('utc', now()),
   constraint generation_jobs_athlete_client_request_key unique (athlete_id, client_request_id)
@@ -200,6 +210,14 @@ alter table public.generation_jobs add column if not exists started_at timestamp
 alter table public.generation_jobs add column if not exists completed_at timestamptz;
 alter table public.generation_jobs add column if not exists updated_at timestamptz not null default timezone('utc', now());
 alter table public.generation_jobs add column if not exists progress_milestones jsonb not null default '[]'::jsonb;
+alter table public.generation_jobs add column if not exists stage2_model text;
+alter table public.generation_jobs add column if not exists stage2_input_tokens integer;
+alter table public.generation_jobs add column if not exists stage2_output_tokens integer;
+alter table public.generation_jobs add column if not exists stage2_total_tokens integer;
+alter table public.generation_jobs add column if not exists stage2_estimated_cost_usd numeric(14, 6);
+alter table public.generation_jobs add column if not exists stage2_attempt_count integer;
+alter table public.generation_jobs add column if not exists stage2_response_id text;
+alter table public.generation_jobs add column if not exists stage2_cost_recorded_at timestamptz;
 alter table public.profiles add column if not exists appearance_mode text not null default 'dark';
 alter table public.profiles add column if not exists avatar_url text;
 alter table public.profiles add column if not exists nutrition_profile jsonb not null default '{}'::jsonb;
@@ -344,6 +362,8 @@ create index if not exists generation_jobs_athlete_id_created_at_idx on public.g
 create index if not exists generation_jobs_status_heartbeat_at_idx on public.generation_jobs (status, heartbeat_at);
 create unique index if not exists generation_jobs_athlete_client_request_uidx on public.generation_jobs (athlete_id, client_request_id);
 create unique index if not exists generation_jobs_one_active_job_per_athlete on public.generation_jobs (athlete_id) where status in ('queued', 'running');
+-- Supports admin/dev "highest-cost jobs" lookups.
+create index if not exists generation_jobs_stage2_estimated_cost_idx on public.generation_jobs (stage2_estimated_cost_usd desc nulls last);
 create index if not exists plan_generation_rate_limits_athlete_created_idx on public.plan_generation_rate_limits (athlete_id, created_at);
 
 drop trigger if exists profiles_set_updated_at on public.profiles;

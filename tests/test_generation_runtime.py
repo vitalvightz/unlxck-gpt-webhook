@@ -20,6 +20,7 @@ from api.generation_runtime import (
     is_in_process_generation_enabled,
     run_stage1_planner,
 )
+from api.stage2_automation import Stage2AutomationError
 from support import FakeStage2Automator, FakeStore, _build_request, finalized_result, seed_default_profiles
 
 
@@ -900,6 +901,120 @@ def test_schedule_defers_when_capacity_count_unavailable(monkeypatch):
     assert returned == job
     assert background_tasks.tasks == []
     assert "job-1" not in active_tasks
+
+
+# --- Stage 2 token/cost metadata persistence -------------------------------
+
+
+_STAGE2_COST_FIXTURE = {
+    "stage2_model": "gpt-5-mini",
+    "stage2_input_tokens": 1000,
+    "stage2_output_tokens": 2000,
+    "stage2_total_tokens": 3000,
+    "stage2_estimated_cost_usd": 0.123456,
+    "stage2_attempt_count": 1,
+    "stage2_response_id": "resp_abc",
+    "stage2_cost_recorded_at": "2026-06-06T00:00:00+00:00",
+}
+
+
+def test_successful_generation_records_stage2_cost_on_job():
+    store = FakeStore()
+    seed_default_profiles(store)
+    created = store.create_or_get_generation_job(
+        athlete_id="athlete-1",
+        client_request_id="stage2-cost-success",
+        source="self_serve",
+        request_payload=_build_request().model_dump(mode="json"),
+    )
+
+    asyncio.run(
+        generation_runtime.run_generation_job(
+            job_id=created["id"],
+            store=store,
+            planner_fn=app_module._noop_planner,
+            stage2=FakeStage2Automator(
+                result=finalized_result(stage2_cost=dict(_STAGE2_COST_FIXTURE))
+            ),
+            active_tasks=set(),
+        )
+    )
+
+    job = store.get_generation_job(created["id"])
+    assert job is not None
+    assert job["status"] == "completed"
+    assert job["stage2_model"] == "gpt-5-mini"
+    assert job["stage2_total_tokens"] == 3000
+    assert job["stage2_estimated_cost_usd"] == 0.123456
+    assert job["stage2_response_id"] == "resp_abc"
+
+
+def test_failed_stage2_records_available_cost_on_job():
+    store = FakeStore()
+    seed_default_profiles(store)
+    created = store.create_or_get_generation_job(
+        athlete_id="athlete-1",
+        client_request_id="stage2-cost-failure",
+        source="self_serve",
+        request_payload=_build_request().model_dump(mode="json"),
+    )
+
+    error = Stage2AutomationError("Stage 2 model request failed. Check server logs.")
+    error.stage2_cost = {
+        "stage2_model": "gpt-5-mini",
+        "stage2_input_tokens": 500,
+        "stage2_output_tokens": None,
+        "stage2_total_tokens": None,
+        "stage2_estimated_cost_usd": 0.0,
+        "stage2_attempt_count": 1,
+        "stage2_response_id": None,
+        "stage2_cost_recorded_at": "2026-06-06T00:00:00+00:00",
+    }
+
+    asyncio.run(
+        generation_runtime.run_generation_job(
+            job_id=created["id"],
+            store=store,
+            planner_fn=app_module._noop_planner,
+            stage2=FakeStage2Automator(error=error),
+            active_tasks=set(),
+        )
+    )
+
+    job = store.get_generation_job(created["id"])
+    assert job is not None
+    assert job["status"] == "failed"
+    assert job["stage2_model"] == "gpt-5-mini"
+    assert job["stage2_input_tokens"] == 500
+    assert job["stage2_output_tokens"] is None
+
+
+def test_missing_stage2_cost_metadata_does_not_crash_generation():
+    # A finalized result without stage2_cost (e.g. legacy automator) must still
+    # complete the job; the cost columns simply stay unset.
+    store = FakeStore()
+    seed_default_profiles(store)
+    created = store.create_or_get_generation_job(
+        athlete_id="athlete-1",
+        client_request_id="stage2-cost-absent",
+        source="self_serve",
+        request_payload=_build_request().model_dump(mode="json"),
+    )
+
+    asyncio.run(
+        generation_runtime.run_generation_job(
+            job_id=created["id"],
+            store=store,
+            planner_fn=app_module._noop_planner,
+            stage2=FakeStage2Automator(result=finalized_result()),
+            active_tasks=set(),
+        )
+    )
+
+    job = store.get_generation_job(created["id"])
+    assert job is not None
+    assert job["status"] == "completed"
+    assert job.get("stage2_model") is None
 
 
 # --- post-terminal cleanup must not undo saved plan/job state --------------

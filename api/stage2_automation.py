@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 import os
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from typing import Any, Protocol
 
 from fightcamp.stage2_pipeline import build_stage2_package, review_stage2_output
@@ -21,7 +22,21 @@ _DEFAULT_MAX_OUTPUT_TOKENS = 0
 
 
 class Stage2AutomationError(RuntimeError):
-    """Raised when Stage 2 automation cannot complete successfully."""
+    """Raised when Stage 2 automation cannot complete successfully.
+
+    Carries an optional ``stage2_cost`` payload (token/cost telemetry captured up
+    to the point of failure) so the orchestrator can still persist what is known
+    about a failed attempt.
+    """
+
+    stage2_cost: dict[str, Any] | None = None
+
+
+def _with_stage2_cost(
+    error: Stage2AutomationError, cost: dict[str, Any]
+) -> Stage2AutomationError:
+    error.stage2_cost = cost
+    return error
 
 
 class Stage2AutomationUnavailableError(Stage2AutomationError):
@@ -87,6 +102,10 @@ def _stage2_timeout_seconds() -> float:
         return default_timeout
 
 
+def _utc_now_iso() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+
 def _estimated_input_tokens(prompt: str) -> int:
     if not prompt:
         return 0
@@ -128,6 +147,59 @@ def _extract_response_usage(response: Any) -> dict[str, int | None]:
         "input_tokens": _get_usage_value(usage, "input_tokens") or _get_usage_value(usage, "prompt_tokens"),
         "output_tokens": _get_usage_value(usage, "output_tokens") or _get_usage_value(usage, "completion_tokens"),
         "total_tokens": _get_usage_value(usage, "total_tokens"),
+    }
+
+
+def _build_stage2_cost(
+    model: str,
+    *,
+    prompt: str,
+    response: Any = None,
+    text: str | None = None,
+    attempt_count: int = 1,
+) -> dict[str, Any]:
+    """Build the Stage 2 token/cost telemetry row persisted to generation_jobs.
+
+    Captures *actual* usage from the OpenAI response when present, falling back
+    to char-based estimates only when the provider omits a usage field. Safe to
+    call on the failure path: anything genuinely unknown (e.g. output tokens
+    when the request failed before a response) is recorded as ``None`` rather
+    than fabricated, and the function never raises. The dict keys match the
+    generation_jobs columns so the store can persist it directly. This carries
+    no plan text or raw response body — only counts, the model id, the response
+    id, and a timestamp.
+    """
+    usage = (
+        _extract_response_usage(response)
+        if response is not None
+        else {"input_tokens": None, "output_tokens": None, "total_tokens": None}
+    )
+
+    input_tokens = usage["input_tokens"]
+    if input_tokens is None:
+        input_tokens = _estimated_input_tokens(prompt)
+
+    output_tokens = usage["output_tokens"]
+    if output_tokens is None and text is not None:
+        output_tokens = _estimated_input_tokens(text)
+
+    total_tokens = usage["total_tokens"]
+    if total_tokens is None and output_tokens is not None:
+        total_tokens = (input_tokens or 0) + output_tokens
+
+    response_id = getattr(response, "id", None) if response is not None else None
+    if not response_id or response_id == "unknown":
+        response_id = None
+
+    return {
+        "stage2_model": model,
+        "stage2_input_tokens": input_tokens,
+        "stage2_output_tokens": output_tokens,
+        "stage2_total_tokens": total_tokens,
+        "stage2_estimated_cost_usd": _estimated_cost_usd(input_tokens or 0, output_tokens or 0),
+        "stage2_attempt_count": attempt_count,
+        "stage2_response_id": response_id,
+        "stage2_cost_recorded_at": _utc_now_iso(),
     }
 
 
@@ -235,7 +307,12 @@ def _extract_response_text(response: Any) -> str:
     return _strip_wrapping_code_fence(combined)
 
 
-def _base_result(stage1_result: dict[str, Any], *, draft_plan_text: str) -> dict[str, Any]:
+def _base_result(
+    stage1_result: dict[str, Any],
+    *,
+    draft_plan_text: str,
+    stage2_cost: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     return {
         **stage1_result,
         "draft_plan_text": draft_plan_text,
@@ -246,6 +323,9 @@ def _base_result(stage1_result: dict[str, Any], *, draft_plan_text: str) -> dict
         "stage2_attempt_count": 0,
         "stage2_status": "",
         "final_plan_text": "",
+        # Token/cost telemetry captured from the Stage 2 model call. Persistence
+        # maps this to dedicated generation_jobs columns; it is not the plan body.
+        "stage2_cost": stage2_cost or {},
     }
 
 
@@ -259,9 +339,10 @@ def _approved_result(
     stage2_status: str,
     retry_text: str = "",
     app_status: str = _APP_STATUS_READY,
+    stage2_cost: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     return {
-        **_base_result(stage1_result, draft_plan_text=draft_plan_text),
+        **_base_result(stage1_result, draft_plan_text=draft_plan_text, stage2_cost=stage2_cost),
         "status": app_status,
         "plan_text": final_plan_text,
         "final_plan_text": final_plan_text,
@@ -280,9 +361,10 @@ def _review_required_result(
     validator_report: dict[str, Any],
     retry_text: str,
     attempt_count: int,
+    stage2_cost: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     return {
-        **_base_result(stage1_result, draft_plan_text=draft_plan_text),
+        **_base_result(stage1_result, draft_plan_text=draft_plan_text, stage2_cost=stage2_cost),
         "status": _APP_STATUS_HELD_FOR_REVIEW,
         "plan_text": "",
         "final_plan_text": latest_plan_text,
@@ -342,7 +424,7 @@ class OpenAIStage2Automator:
         attempt_label: str,
         source: str,
         log_context: dict[str, str] | None = None,
-    ) -> str:
+    ) -> tuple[str, dict[str, Any]]:
         _enforce_stage2_prompt_budget(prompt, attempt_label=attempt_label, source=source)
         request: dict[str, Any] = {
             "model": self.model,
@@ -361,27 +443,41 @@ class OpenAIStage2Automator:
         try:
             response = await self.client.responses.create(**request)
         except Exception as exc:  # pragma: no cover - provider failure surfaces via integration
+            # No response means no actual usage; record the estimated input cost
+            # so a failed attempt still leaves an auditable cost row.
+            failure_cost = _build_stage2_cost(self.model, prompt=prompt, response=None)
             if _is_quota_or_rate_limit_error(exc):
-                raise Stage2AutomationError(
-                    "Stage 2 stopped: OpenAI quota/rate limit hit. No further retry attempted."
+                raise _with_stage2_cost(
+                    Stage2AutomationError(
+                        "Stage 2 stopped: OpenAI quota/rate limit hit. No further retry attempted."
+                    ),
+                    failure_cost,
                 ) from exc
             # Keep the raw provider exception (which can carry request payloads or
             # provider internals) out of the stored/visible error; the full detail
             # is captured in the server log below.
             logger.exception("[stage2] model_request_failed error_type=%s", type(exc).__name__)
-            raise Stage2AutomationError(
-                "Stage 2 model request failed. Check server logs."
+            raise _with_stage2_cost(
+                Stage2AutomationError("Stage 2 model request failed. Check server logs."),
+                failure_cost,
             ) from exc
         response_id = getattr(response, "id", None) or "unknown"
         if _response_is_incomplete(response):
-            raise Stage2AutomationError(
-                "Stage 2 model response was incomplete before producing a full plan."
+            # We have a response (with usage), just not a full plan — capture the
+            # actual tokens burned before truncation.
+            raise _with_stage2_cost(
+                Stage2AutomationError(
+                    "Stage 2 model response was incomplete before producing a full plan."
+                ),
+                _build_stage2_cost(self.model, prompt=prompt, response=response),
             )
-        text = _extract_response_text(response)
-        usage = _extract_response_usage(response)
-        actual_input_tokens = usage["input_tokens"] or _estimated_input_tokens(prompt)
-        actual_output_tokens = usage["output_tokens"] or _estimated_input_tokens(text)
-        total_tokens = usage["total_tokens"] or actual_input_tokens + actual_output_tokens
+        try:
+            text = _extract_response_text(response)
+        except Stage2AutomationError as exc:
+            raise _with_stage2_cost(
+                exc, _build_stage2_cost(self.model, prompt=prompt, response=response)
+            )
+        cost = _build_stage2_cost(self.model, prompt=prompt, response=response, text=text)
         # Attribute cost to the job/athlete so it can be aggregated per user from
         # the logs. Falls back to "unknown" when the caller does not supply it.
         context = log_context or {}
@@ -393,12 +489,12 @@ class OpenAIStage2Automator:
             context.get("job_id") or "unknown",
             context.get("athlete_id") or "unknown",
             len(text),
-            actual_input_tokens,
-            actual_output_tokens,
-            total_tokens,
-            _estimated_cost_usd(actual_input_tokens, actual_output_tokens),
+            cost["stage2_input_tokens"],
+            cost["stage2_output_tokens"],
+            cost["stage2_total_tokens"],
+            cost["stage2_estimated_cost_usd"],
         )
-        return text
+        return text, cost
 
     async def finalize(
         self, *, stage1_result: dict[str, Any], log_context: dict[str, str] | None = None
@@ -415,7 +511,7 @@ class OpenAIStage2Automator:
             len(draft_plan_text),
         )
 
-        first_pass_text = await self._generate_text(
+        first_pass_text, first_pass_cost = await self._generate_text(
             handoff_text, attempt_label="first_pass", source=source, log_context=log_context
         )
         first_review = review_stage2_output(
@@ -442,6 +538,7 @@ class OpenAIStage2Automator:
                 attempt_count=1,
                 stage2_status=_STAGE2_PASS,
                 app_status=app_status,
+                stage2_cost=first_pass_cost,
             )
 
         logger.warning("[stage2] review required after first_pass: automatic retry disabled")
@@ -452,6 +549,7 @@ class OpenAIStage2Automator:
             validator_report=first_review["validator_report"],
             retry_text="",
             attempt_count=1,
+            stage2_cost=first_pass_cost,
         )
 
 
