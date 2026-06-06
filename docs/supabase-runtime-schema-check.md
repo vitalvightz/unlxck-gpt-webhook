@@ -114,30 +114,32 @@ found, apply the migrations first (see below) — the RPC ships in
 This ordering matters: the introspection RPC is itself shipped as a migration,
 so the schema check can only succeed once migrations have been applied.
 
-## Running the live check in CI (optional)
+## Running the live check in CI
 
 The backend CI workflow (`.github/workflows/backend-checks.yml`) runs the
 checker's unit tests (fake catalog data, no credentials) plus the static
 `schema.sql` test. The full backend suite is covered separately by
 `python-quality.yml`.
 
-To additionally run the **live** check in CI, add these GitHub repository
-secrets and call the script in a job after migrations have run against the
-target database:
+The same workflow also calls `tools/run_supabase_runtime_schema_gate.py` for the
+live check. That gate keeps PRs and non-main branches workable without secrets,
+but it **fails protected `main` push runs** when either Supabase credential is
+missing. On protected `main`, the live check must run and must pass.
+
+Configure these GitHub repository secrets for the protected `main` deploy
+workflow and point them at the correct, already-migrated environment:
 
 - `SUPABASE_URL`
 - `SUPABASE_SERVICE_ROLE_KEY`
 
-Example step (only safe where the secrets are configured and point at the
-correct, already-migrated environment):
+Workflow step:
 
 ```yaml
 - name: Live Supabase runtime schema check
-  if: ${{ secrets.SUPABASE_URL != '' && secrets.SUPABASE_SERVICE_ROLE_KEY != '' }}
   env:
     SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
     SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-  run: python tools/check_supabase_runtime_schema.py
+  run: python tools/run_supabase_runtime_schema_gate.py
 ```
 
 Do not point the live check at production unless production migrations have
