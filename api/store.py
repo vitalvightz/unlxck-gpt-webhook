@@ -1768,6 +1768,19 @@ class SupabaseAppStore:
             context=f"athlete_id={athlete_id} client_request_id={client_request_id}",
         )
 
+        # Recover stale `running` jobs before the atomic RPC runs. The RPC's
+        # in-flight guard checks `status in ('queued', 'running')` purely at the
+        # SQL level and has no staleness awareness, so without this a stale
+        # `running` row left by a crashed worker would raise
+        # `generation_job_in_flight` and permanently block new generation
+        # requests. This mirrors the recovery that create_or_get_generation_job
+        # performs via get_active_generation_job_for_athlete; the requeue/fail
+        # mutations land before the RPC re-checks in-flight state atomically.
+        self.get_active_generation_job_for_athlete(
+            athlete_id,
+            stale_after_seconds=stale_after_seconds,
+        )
+
         try:
             response = self._run_with_transient_retry(
                 operation=f"create_or_get_generation_job_with_daily_limit athlete_id={athlete_id}",
