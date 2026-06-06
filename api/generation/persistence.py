@@ -13,6 +13,8 @@ import time
 from contextlib import suppress
 from typing import Any, Callable
 
+from fightcamp.plan_contract_validator import contract_report_requires_review, validate_plan_contract
+
 from ..models import PlanRequest
 from ..state_machine import job_status_for_plan_status
 from ..store import AppStore
@@ -26,6 +28,100 @@ _FINAL_RESULT_PERSIST_TIMEOUT_SECONDS = 40.0
 _FINAL_RESULT_PERSIST_TIMEOUT_ERROR = "Stage 2 result persistence timed out before final_result was saved."
 _PLAN_PERSIST_VERIFICATION_ERROR = "Plan persistence verification failed after create_plan."
 _POST_PERSIST_CLEANUP_TIMEOUT_SECONDS = 8.0
+
+# Statuses that surface the plan to the athlete. A contract violation on one of
+# these is routed to review_required (an admin sees it first); a violation on an
+# already-non-visible status is recorded without changing the status.
+_CONTRACT_VISIBLE_PLAN_STATUSES = {"ready", "publishable_with_flags"}
+_CONTRACT_REVIEW_PLAN_STATUS = "review_required"
+
+
+def _contract_fight_date(request_body: Any) -> Any:
+    """Resolve the fight date the contract validator should use.
+
+    Mirrors ``PlanRequest.to_payload``: open camps (``no_scheduled_fight``) have
+    no fight day even when ``fight_date`` still holds a stale value, so return
+    None to avoid falsely tripping the missing-D-0 invariant.
+    """
+    if getattr(request_body, "no_scheduled_fight", False):
+        return None
+    return getattr(request_body, "fight_date", None)
+
+
+def _apply_plan_contract_validation(
+    final_result: dict[str, Any],
+    *,
+    fight_date: Any,
+    athlete_id: str,
+    job_id: str,
+    emit_milestone: Callable[..., None],
+) -> dict[str, Any]:
+    """Validate plan invariants before persistence and route hard violations to review.
+
+    Runs the post-generation contract validator, attaches its report to
+    ``why_log`` for visibility, and — when a would-be-visible plan has
+    error-severity findings — downgrades the status to ``review_required`` so an
+    admin reviews the plan before the athlete sees it. Returns the (possibly
+    updated) final_result. Never raises: a validator failure leaves the plan
+    untouched so generation is never blocked by a defect in this layer.
+    """
+    try:
+        report = validate_plan_contract(final_result, fight_date=fight_date)
+
+        existing_why_log = final_result.get("why_log")
+        why_log = dict(existing_why_log) if isinstance(existing_why_log, dict) else {}
+        why_log["plan_contract_validation"] = report
+        final_result = {**final_result, "why_log": why_log}
+
+        if not contract_report_requires_review(report):
+            return final_result
+
+        error_codes = ",".join(
+            str(v.get("code"))
+            for v in report.get("violations", [])
+            if isinstance(v, dict) and v.get("severity") == "error"
+        )
+        current_status = str(final_result.get("status") or "").strip().lower()
+        if current_status not in _CONTRACT_VISIBLE_PLAN_STATUSES:
+            # Already non-visible (e.g. held_for_review); the report is recorded but
+            # the status is left as-is — there is nothing to gate.
+            logger.warning(
+                "[jobs] generation:plan_contract_violation_noop athlete_id=%s job_id=%s status=%s codes=%s",
+                athlete_id,
+                job_id,
+                current_status or "unknown",
+                error_codes,
+            )
+            return final_result
+
+        final_result = {**final_result, "status": _CONTRACT_REVIEW_PLAN_STATUS}
+        logger.warning(
+            "[jobs] generation:plan_contract_routed_to_review athlete_id=%s job_id=%s from_status=%s codes=%s",
+            athlete_id,
+            job_id,
+            current_status,
+            error_codes,
+        )
+        emit_milestone(
+            "plan_contract_review_required",
+            "Plan held for review",
+            "Post-generation contract checks found calendar/payload issues; "
+            "routing to admin review before the athlete sees it.",
+            violation_codes=error_codes,
+        )
+        return final_result
+    except Exception:
+        # Honour the "never raises" contract for the whole gate, not just the
+        # validator call: status routing and the emit_milestone callback are
+        # external surfaces that must never crash the persistence flow. Returns
+        # the latest final_result binding (already carrying any review downgrade
+        # applied before the failure).
+        logger.exception(
+            "[jobs] generation:plan_contract_validation_failed athlete_id=%s job_id=%s",
+            athlete_id,
+            job_id,
+        )
+        return final_result
 
 
 async def persist_triage_review_required(
@@ -193,6 +289,22 @@ async def persist_plan_and_finalize(
             ):
                 plan_row = latest_plan
                 plan_id = str(latest_plan.get("id") or "")
+
+    # Post-generation contract/invariant gate: validate the finalized plan
+    # before it is written. Hard violations (blank calendar week, missing D-0,
+    # empty late-fight sequence) downgrade a would-be-visible plan to
+    # review_required so an admin sees it before the athlete does.
+    #
+    # Open camps (no_scheduled_fight) have no fight day even when fight_date
+    # carries a stale value; mirror PlanRequest.to_payload and pass None so the
+    # missing-D-0 invariant is not falsely tripped.
+    final_result = _apply_plan_contract_validation(
+        final_result,
+        fight_date=_contract_fight_date(request_body),
+        athlete_id=athlete_id,
+        job_id=job_id,
+        emit_milestone=emit_milestone,
+    )
 
     if plan_row and plan_id:
         # Preserve triage-approval audit markers so they aren't lost when
