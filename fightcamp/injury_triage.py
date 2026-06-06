@@ -1517,8 +1517,8 @@ def triage_injuries(plan_input: PlanInput) -> InjuryTriageResult:
     # may themselves be a false positive on a resolved/benign mention.
     _guided_eff = _effective_guided_injuries(plan_input)
     _real_guided_serious = any(
-        _normalize_guided_severity_token(getattr(g, "severity", "") or "") == "high"
-        or _normalized_text(getattr(g, "trend", "")) in _WORSENING_TRENDS
+        _normalize_guided_severity_token(g.severity or "") == "high"
+        or _normalized_text(g.trend) in _WORSENING_TRENDS
         for g in _guided_eff
     )
     # Guided structural cards that are all old-and-cleared with no current concern.
