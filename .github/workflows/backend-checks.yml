@@ -25,12 +25,6 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-    # Mapped from secrets here so the live-check step's `if:` can test them via
-    # the env context (the secrets context is not reliably usable in `if:`).
-    # Both resolve to empty strings until the secrets are configured.
-    env:
-      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
 
     steps:
       - name: Checkout repository
@@ -53,9 +47,17 @@ jobs:
       - name: Run runtime schema checker tests
         run: pytest tests/test_supabase_runtime_schema_checker.py tests/test_supabase_schema.py
 
-      # Runs only when both secrets are configured (point them at STAGING). When
-      # they are unset the env values are empty and this step is skipped, so the
-      # workflow stays green on forks/PRs without credentials.
+      # Runs only when both secrets are configured (point them at STAGING). The
+      # service-role key is scoped to THIS step's env so the install/test steps
+      # above never see it. When the secrets are unset the script skips itself,
+      # so the workflow stays green on forks/PRs without credentials.
       - name: Live Supabase runtime schema check (staging)
-        if: ${{ env.SUPABASE_URL != '' && env.SUPABASE_SERVICE_ROLE_KEY != '' }}
-        run: python tools/check_supabase_runtime_schema.py
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_SERVICE_ROLE_KEY" ]; then
+            echo "Skipping live schema check; staging secrets not configured."
+            exit 0
+          fi
+          python tools/check_supabase_runtime_schema.py

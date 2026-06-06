@@ -32,7 +32,7 @@ _REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
-from api.store import SupabaseAppStore  # noqa: E402  (after sys.path setup)
+from api.store import LastAdminError, SupabaseAppStore  # noqa: E402  (after sys.path setup)
 
 
 def _actor() -> str:
@@ -68,14 +68,26 @@ def _cmd_list(store: SupabaseAppStore) -> int:
     return 0
 
 
-def _cmd_set_role(store: SupabaseAppStore, *, email: str, new_role: str, reason: str | None) -> int:
+def _cmd_set_role(
+    store: SupabaseAppStore,
+    *,
+    email: str,
+    new_role: str,
+    reason: str | None,
+    allow_last_admin: bool = False,
+) -> int:
     try:
         result = store.set_profile_role(
             email=email,
             new_role=new_role,
             actor=_actor(),
             reason=reason,
+            allow_last_admin=allow_last_admin,
         )
+    except LastAdminError as exc:
+        print(f"error: {exc}")
+        print("Re-run with --force-last-admin if you really intend to leave zero admins.")
+        return 2
     except (LookupError, ValueError) as exc:
         print(f"error: {exc}")
         return 2
@@ -109,6 +121,11 @@ def main(argv: list[str] | None = None) -> int:
     revoke = sub.add_parser("revoke", help="Revoke admin from an email (demote to athlete).")
     revoke.add_argument("email")
     revoke.add_argument("--reason", default=None, help="Recorded in the audit trail.")
+    revoke.add_argument(
+        "--force-last-admin",
+        action="store_true",
+        help="Allow revoking the only remaining admin (leaves zero admins).",
+    )
 
     args = parser.parse_args(argv)
     store = _build_store()
@@ -118,7 +135,13 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "promote":
         return _cmd_set_role(store, email=args.email, new_role="admin", reason=args.reason)
     if args.command == "revoke":
-        return _cmd_set_role(store, email=args.email, new_role="athlete", reason=args.reason)
+        return _cmd_set_role(
+            store,
+            email=args.email,
+            new_role="athlete",
+            reason=args.reason,
+            allow_last_admin=args.force_last_admin,
+        )
     parser.error(f"unknown command {args.command!r}")
     return 2
 

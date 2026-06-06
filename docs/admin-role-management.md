@@ -44,6 +44,14 @@ python tools/manage_admin.py promote athlete@example.com --reason "new head coac
 python tools/manage_admin.py revoke former-admin@example.com --reason "offboarded 2026-06-06"
 ```
 
+Revoking the **only** remaining admin is blocked by default to prevent lockout —
+the command exits non-zero and changes nothing. If you genuinely intend to leave
+zero admins, re-run with `--force-last-admin`:
+
+```bash
+python tools/manage_admin.py revoke former-admin@example.com --force-last-admin
+```
+
 Each command is idempotent: re-running a promote/revoke that matches the current
 role makes no change and writes no audit row. `--reason` is optional but strongly
 encouraged — it is stored verbatim in the audit trail.
@@ -75,10 +83,10 @@ limit 50;
 
 ## Operational guardrails
 
-- **Lockout safety:** the tool warns when a revoke would leave **0 admins**. The
-  backend also logs the live admin count at startup
-  (`[admin] startup_admin_count=...`), and warns when it is zero. Alert on that
-  warning.
+- **Lockout safety:** revoking the last admin is **blocked** unless
+  `--force-last-admin` is passed. The backend also logs the live admin count at
+  startup (`[admin] startup_admin_count=...`) and warns when it is zero. Alert on
+  that warning.
 - **Run against the right project:** double-check `SUPABASE_URL` points at the
   intended environment before promoting/revoking.
 - **Offboarding checklist:** revoke admin here **and** disable/remove the

@@ -99,6 +99,14 @@ _TRANSIENT_SUPABASE_ERRORS = (
     httpx.ReadTimeout,
 )
 _STORE_CLIENT_ERRORS = (PostgrestAPIError, httpx.HTTPError)
+
+
+class LastAdminError(RuntimeError):
+    """Raised when a revoke would demote the only remaining admin.
+
+    Guards against accidentally locking everyone out of the admin surface.
+    Callers that genuinely intend this must pass ``allow_last_admin=True``.
+    """
 _TRANSIENT_POSTGREST_SNIPPETS = (
     "connection",
     "connect",
@@ -1039,9 +1047,23 @@ class SupabaseAppStore:
         normalized = (email or "").strip().lower()
         if not normalized:
             return None
-        return self._select_first(
+        # Fast path: the indexed unique column, which is lowercase for any
+        # profile created after email normalization landed.
+        row = self._select_first(
             self.client.table("profiles").select("*").eq("email", normalized)
         )
+        if row:
+            return row
+        # Fallback for legacy rows stored with mixed-case emails. ilike is
+        # case-insensitive; `_`/`%` in a local part are treated as wildcards, so
+        # the result is a superset that we narrow with an exact lowercase match.
+        response = (
+            self.client.table("profiles").select("*").ilike("email", normalized).execute()
+        )
+        for candidate in getattr(response, "data", None) or []:
+            if str(candidate.get("email") or "").strip().lower() == normalized:
+                return candidate
+        return None
 
     def list_admin_profiles(self) -> list[dict[str, Any]]:
         response = self._run_with_transient_retry(
@@ -1065,13 +1087,15 @@ class SupabaseAppStore:
         new_role: str,
         actor: str,
         reason: str | None = None,
+        allow_last_admin: bool = False,
     ) -> dict[str, Any]:
         """Grant or revoke admin by email; records an audit row on any change.
 
         Returns a summary dict with ``changed=False`` when the profile is
         already in the requested role (no write, no audit row). Raises
-        ``ValueError`` for an unsupported role and ``LookupError`` when no
-        profile matches the email.
+        ``ValueError`` for an unsupported role, ``LookupError`` when no profile
+        matches the email, and ``LastAdminError`` when revoking would leave zero
+        admins (unless ``allow_last_admin=True``).
         """
         normalized_role = (new_role or "").strip().lower()
         if normalized_role not in {"admin", "athlete"}:
@@ -1095,6 +1119,15 @@ class SupabaseAppStore:
                 target_email, normalized_role, actor,
             )
             return {**summary, "changed": False}
+
+        # Lockout guard: refuse to demote the only remaining admin unless the
+        # caller explicitly opts in.
+        if previous_role == "admin" and normalized_role != "admin" and not allow_last_admin:
+            if self.count_admin_profiles() <= 1:
+                raise LastAdminError(
+                    f"refusing to revoke {target_email}: they are the only admin. "
+                    "Pass allow_last_admin=True to override."
+                )
 
         self.client.table("profiles").update({"role": normalized_role}).eq("id", athlete_id).execute()
         action = "promote" if normalized_role == "admin" else "revoke"

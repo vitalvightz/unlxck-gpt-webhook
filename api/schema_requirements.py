@@ -38,6 +38,10 @@ REQUIRED_TABLES: tuple[str, ...] = (
     "generation_jobs",
     INTAKES_TABLE,
     "plan_generation_rate_limits",
+    # Accountability trail for admin role changes (api/store.py::set_profile_role).
+    # Required so the deploy gate catches an environment where the migration has
+    # not been applied and admin changes would silently lose their audit record.
+    "admin_role_audit",
 )
 
 # ---------------------------------------------------------------------------
@@ -123,11 +127,24 @@ REQUIRED_PROFILES_COLUMNS: tuple[str, ...] = (
     "appearance_mode",
 )
 
+REQUIRED_ADMIN_ROLE_AUDIT_COLUMNS: tuple[str, ...] = (
+    "id",
+    "target_athlete_id",
+    "target_email",
+    "previous_role",
+    "new_role",
+    "action",
+    "actor",
+    "reason",
+    "created_at",
+)
+
 # Map of table -> required columns, used by the checker.
 REQUIRED_COLUMNS: Mapping[str, tuple[str, ...]] = {
     "plans": REQUIRED_PLANS_COLUMNS,
     "generation_jobs": REQUIRED_GENERATION_JOBS_COLUMNS,
     "profiles": REQUIRED_PROFILES_COLUMNS,
+    "admin_role_audit": REQUIRED_ADMIN_ROLE_AUDIT_COLUMNS,
 }
 
 # ---------------------------------------------------------------------------
@@ -203,6 +220,7 @@ RLS_REQUIRED_TABLES: tuple[str, ...] = (
     INTAKES_TABLE,
     "generation_jobs",
     "plan_generation_rate_limits",
+    "admin_role_audit",
 )
 
 

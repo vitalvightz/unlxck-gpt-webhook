@@ -3,7 +3,14 @@ from __future__ import annotations
 
 import pytest
 
-from api.store import SupabaseAppStore
+import re
+
+from api.store import LastAdminError, SupabaseAppStore
+
+
+def _ilike_match(value: str, pattern: str) -> bool:
+    regex = re.escape(pattern).replace(re.escape("%"), ".*").replace("_", ".")
+    return re.fullmatch(regex, value, re.IGNORECASE) is not None
 
 
 class _Result:
@@ -19,11 +26,17 @@ class _Query:
         self._table = table
         self._rows = rows
         self._filters: dict[str, object] = {}
+        self._ilike: tuple[str, str] | None = None
         self._op = "select"
         self._payload = None
 
     def select(self, *_args, **_kwargs):
         self._op = "select"
+        return self
+
+    def ilike(self, column, pattern):
+        self._op = "select"
+        self._ilike = (column, pattern)
         return self
 
     def insert(self, payload):
@@ -44,7 +57,12 @@ class _Query:
         return self
 
     def _matches(self, row) -> bool:
-        return all(str(row.get(k)) == str(v) for k, v in self._filters.items())
+        if not all(str(row.get(k)) == str(v) for k, v in self._filters.items()):
+            return False
+        if self._ilike is not None:
+            column, pattern = self._ilike
+            return _ilike_match(str(row.get(column) or ""), pattern)
+        return True
 
     def execute(self):
         if self._op == "insert":
@@ -101,13 +119,42 @@ def test_promote_changes_role_and_writes_audit():
     assert audit[0]["reason"] == "coach"
 
 
-def test_revoke_demotes_to_athlete():
-    store, client = _store([_profile("b@x.com", "admin")])
+def test_revoke_demotes_to_athlete_when_other_admins_remain():
+    store, client = _store(
+        [_profile("b@x.com", "admin", pid="1"), _profile("keeper@x.com", "admin", pid="2")]
+    )
     result = store.set_profile_role(email="b@x.com", new_role="athlete", actor="op")
 
     assert result["action"] == "revoke"
     assert client.tables["profiles"][0]["role"] == "athlete"
     assert client.inserted["admin_role_audit"][0]["action"] == "revoke"
+
+
+def test_revoke_last_admin_is_blocked_and_writes_nothing():
+    store, client = _store([_profile("solo@x.com", "admin")])
+    with pytest.raises(LastAdminError):
+        store.set_profile_role(email="solo@x.com", new_role="athlete", actor="op")
+
+    # No demotion, no audit row.
+    assert client.tables["profiles"][0]["role"] == "admin"
+    assert "admin_role_audit" not in client.inserted
+
+
+def test_revoke_last_admin_allowed_with_override():
+    store, client = _store([_profile("solo@x.com", "admin")])
+    result = store.set_profile_role(
+        email="solo@x.com", new_role="athlete", actor="op", allow_last_admin=True
+    )
+    assert result["changed"] is True
+    assert client.tables["profiles"][0]["role"] == "athlete"
+
+
+def test_email_lookup_falls_back_to_case_insensitive_for_legacy_rows():
+    # Legacy row stored with mixed-case email; the lowercase fast-path misses it.
+    store, client = _store([_profile("Mixed@X.com", "athlete")])
+    result = store.set_profile_role(email="mixed@x.com", new_role="admin", actor="op")
+    assert result["changed"] is True
+    assert client.tables["profiles"][0]["role"] == "admin"
 
 
 def test_set_role_is_idempotent_and_writes_no_audit():
@@ -187,14 +234,26 @@ def test_cli_promote_changes_role(monkeypatch, capsys):
     assert "promoted a@x.com" in capsys.readouterr().out
 
 
-def test_cli_revoke_to_zero_admins_warns(monkeypatch, capsys):
-    store, _ = _store([_profile("only@x.com", "admin")])
+def test_cli_revoke_last_admin_is_blocked(monkeypatch, capsys):
+    store, client = _store([_profile("only@x.com", "admin")])
     manage_admin = _patch_cli_store(monkeypatch, store)
 
     exit_code = manage_admin.main(["revoke", "only@x.com"])
 
+    assert exit_code == 2
+    assert "--force-last-admin" in capsys.readouterr().out
+    assert client.tables["profiles"][0]["role"] == "admin"
+
+
+def test_cli_revoke_last_admin_forced_succeeds(monkeypatch, capsys):
+    store, client = _store([_profile("only@x.com", "admin")])
+    manage_admin = _patch_cli_store(monkeypatch, store)
+
+    exit_code = manage_admin.main(["revoke", "only@x.com", "--force-last-admin"])
+
     assert exit_code == 0
     assert "0 admins" in capsys.readouterr().out
+    assert client.tables["profiles"][0]["role"] == "athlete"
 
 
 def test_cli_unknown_email_returns_error_code(monkeypatch, capsys):
