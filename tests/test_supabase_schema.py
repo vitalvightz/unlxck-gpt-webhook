@@ -21,6 +21,12 @@ PLAN_RATE_LIMIT_MIGRATION_PATH = (
     / "migrations"
     / "20260525110000_add_plan_generation_short_window_rate_limit.sql"
 )
+DAILY_CAP_MIGRATION_PATH = (
+    Path(__file__).resolve().parents[1]
+    / "supabase"
+    / "migrations"
+    / "20260606000000_atomic_daily_generation_cap.sql"
+)
 CRITICAL_RLS_MIGRATION_PATH = (
     Path(__file__).resolve().parents[1]
     / "supabase"
@@ -43,6 +49,10 @@ def _read_username_atomic_migration() -> str:
 
 def _read_plan_rate_limit_migration() -> str:
     return PLAN_RATE_LIMIT_MIGRATION_PATH.read_text(encoding="utf-8")
+
+
+def _read_daily_cap_migration() -> str:
+    return DAILY_CAP_MIGRATION_PATH.read_text(encoding="utf-8")
 
 
 def _read_critical_rls_migration() -> str:
@@ -348,3 +358,31 @@ def test_plan_generation_short_window_rate_limit_schema_and_migration():
             "grant execute on function public.check_plan_generation_short_window_limit(uuid, integer, double precision) to service_role;"
             in sql
         )
+
+
+def test_daily_generation_cap_atomic_create_rpc_schema_and_migration():
+    schema = _read_schema()
+    migration = _read_daily_cap_migration()
+
+    for sql in (schema, migration):
+        assert "create or replace function public.create_generation_job_with_daily_limit(" in sql
+        assert "returns table (job jsonb, limit_exceeded boolean)" in sql
+        assert "pg_advisory_xact_lock(" in sql
+        assert "hashtext('generation_jobs_daily_cap')" in sql
+        assert "hashtext(p_athlete_id::text)" in sql
+        assert "where athlete_id = p_athlete_id" in sql
+        assert "and created_at >= p_day_start" in sql
+        assert "v_count >= p_daily_limit" in sql
+        assert "insert into public.generation_jobs" in sql
+        assert "raise exception 'generation_job_in_flight'" in sql
+        assert (
+            "revoke all on function public.create_generation_job_with_daily_limit(uuid, text, text, jsonb, integer, timestamptz, text[], uuid, uuid) from public;"
+            in sql
+        )
+        assert (
+            "grant execute on function public.create_generation_job_with_daily_limit(uuid, text, text, jsonb, integer, timestamptz, text[], uuid, uuid) to service_role;"
+            in sql
+        )
+
+    assert "Rollback notes:" in migration
+    assert "drop function if exists public.create_generation_job_with_daily_limit" in migration
