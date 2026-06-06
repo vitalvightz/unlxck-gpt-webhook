@@ -109,6 +109,20 @@ _DANGEROUS_RED_FLAGS = {
     "breathing_pain",
 }
 
+# Neurological red flags must never silently route to a full plan. When they
+# survive every higher-severity gate above (medical hold, restricted rehab,
+# structural history, surface, combo), they still warrant coach/admin review
+# rather than automatic full-plan generation. These tokens are only added to
+# ``red_flags`` for non-negated, current neurological symptoms (see the negation
+# guards in triage_features), so gating on them does not over-fire on "no
+# numbness"-style phrasing.
+_NEUROLOGICAL_RED_FLAGS = {
+    "numbness",
+    "tingling",
+    "weakness",
+    "neurological_symptoms",
+}
+
 _WORSENING_TRENDS = {"worse", "worsening", "regressing", "worsened"}
 
 # ``injury_type_source`` values set by guided_injury_resolver when the resolved
@@ -1464,6 +1478,27 @@ def triage_injuries(plan_input: PlanInput) -> InjuryTriageResult:
     )
     if combo_result is not None:
         return combo_result
+
+    # Safety backstop: current neurological symptoms (numbness/tingling/weakness)
+    # that survived every gate above must be held for review rather than routed
+    # to an automatic full plan. Placed after the combo gate so it can only
+    # upgrade a would-be full plan to needs_review — never downgrade a block.
+    if red_flags & _NEUROLOGICAL_RED_FLAGS:
+        routing_reasons.add("neurological_red_flags_require_review")
+        return _build_result(
+            mode=NEEDS_REVIEW,
+            reasons=[
+                "Neurological symptoms (numbness, tingling, or weakness) were detected.",
+                "Coach/admin review is required before normal plan generation.",
+            ],
+            clinician_clearance_required=False,
+            should_block_stage2=True,
+            red_flags=red_flags,
+            matched_categories=matched_categories,
+            routing_reasons=routing_reasons,
+            urgent_flags=urgent_flags,
+            sparring_risk_band=highest_band,
+        )
 
     return _build_result(
         mode=FULL_PLAN,
