@@ -31,6 +31,10 @@ as $$
   );
 $$;
 
+-- CREATE OR REPLACE VIEW can set security_invoker on an existing view in
+-- Postgres 15/16 (verified), but drop-then-create is the portable idiom for a
+-- view-option change and keeps this migration robust across environments.
+drop view if exists public.admin_athlete_rollups;
 create or replace view public.admin_athlete_rollups
 with (security_invoker = true) as
 select

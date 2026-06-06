@@ -574,6 +574,7 @@ before update on public.athlete_intakes
 for each row
 execute function public.set_updated_at();
 
+drop view if exists public.admin_athlete_rollups;
 create or replace view public.admin_athlete_rollups
 with (security_invoker = true) as
 select
