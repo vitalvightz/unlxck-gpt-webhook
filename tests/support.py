@@ -401,7 +401,12 @@ class FakeStore:
                     job.update(reset_changes)
                 return dict(job)
         active = self.get_active_generation_job_for_athlete(athlete_id, stale_after_seconds=stale_after_seconds)
-        if active:
+        # Mirror SupabaseAppStore.create_or_get_generation_job: only a job that is
+        # still queued/running blocks a new request. get_active_generation_job_for_athlete
+        # recovers a stale running job to a terminal status (e.g. failed) and returns
+        # it; such a job must not be treated as in-flight, otherwise a mid-pipeline
+        # stale job would wrongly 409 a new request instead of being superseded.
+        if active and str(active.get("status") or "") in {"queued", "running"}:
             if str(active.get("client_request_id") or "") == client_request_id:
                 return dict(active)
             raise HTTPException(
