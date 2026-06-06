@@ -172,6 +172,8 @@ _BENIGN_JOINT_NOISE_RE = re.compile(
 _BENIGN_JOINT_NOISE_SUPPRESSOR_PATTERNS = (
     r"\bno\s+pain\b",
     r"\bpainless\b",
+    r"\bno\s+sore(?:ness)?\b",
+    r"\bno\s+ach(?:e|ing)\b",
     r"\bno\s+(?:\w+\s+){0,3}swelling\b",
     r"\bno\s+swelling\b",
     r"\bno\s+deformity\b",
