@@ -142,32 +142,39 @@ async def generate_plan_for_current_user(
         raise generation_already_in_flight_error()
 
     daily_limit = plan_generate_daily_limit_per_user()
-    if daily_limit > 0 and profile.role != "admin" and not is_exempt_from_daily_generation_cap(profile.email):
-        day_start_iso, limit_reached_detail = daily_generation_cap_window(
-            request_body.athlete.athlete_timezone
-        )
-        jobs_today = await asyncio.to_thread(
-            store.count_generation_jobs_for_athlete_since,
-            profile.athlete_id,
-            day_start_iso,
-            sources=_ALLOWED_PLAN_SOURCES,
-        )
-        if jobs_today >= daily_limit:
-            raise HTTPException(
-                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                detail=limit_reached_detail,
-            )
+    enforce_daily_limit = (
+        daily_limit > 0
+        and profile.role != "admin"
+        and not is_exempt_from_daily_generation_cap(profile.email)
+    )
 
     plan_source_header = (request.headers.get("X-Plan-Source") or "").strip()
     resolved_source = plan_source_header if plan_source_header in _ALLOWED_PLAN_SOURCES else "self_serve"
-    job = await asyncio.to_thread(
-        store.create_or_get_generation_job,
-        athlete_id=profile.athlete_id,
-        client_request_id=client_request_id,
-        source=resolved_source,
-        request_payload=request_payload,
-        stale_after_seconds=stale_after_seconds,
-    )
+    if enforce_daily_limit:
+        day_start_iso, limit_reached_detail = daily_generation_cap_window(
+            request_body.athlete.athlete_timezone
+        )
+        job = await asyncio.to_thread(
+            store.create_or_get_generation_job_with_daily_limit,
+            athlete_id=profile.athlete_id,
+            client_request_id=client_request_id,
+            source=resolved_source,
+            request_payload=request_payload,
+            daily_limit=daily_limit,
+            day_start_iso=day_start_iso,
+            limit_reached_detail=limit_reached_detail,
+            counted_sources=_ALLOWED_PLAN_SOURCES,
+            stale_after_seconds=stale_after_seconds,
+        )
+    else:
+        job = await asyncio.to_thread(
+            store.create_or_get_generation_job,
+            athlete_id=profile.athlete_id,
+            client_request_id=client_request_id,
+            source=resolved_source,
+            request_payload=request_payload,
+            stale_after_seconds=stale_after_seconds,
+        )
     job = await schedule_generation_job_if_needed(
         job=job,
         background_tasks=background_tasks,
