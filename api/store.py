@@ -1044,11 +1044,14 @@ class SupabaseAppStore:
         )
 
     def list_admin_profiles(self) -> list[dict[str, Any]]:
-        response = (
-            self.client.table("profiles")
-            .select("id,email,role")
-            .eq("role", "admin")
-            .execute()
+        response = self._run_with_transient_retry(
+            operation="list_admin_profiles",
+            fn=lambda: (
+                self.client.table("profiles")
+                .select("id,email,role")
+                .eq("role", "admin")
+                .execute()
+            ),
         )
         return list(getattr(response, "data", None) or [])
 
