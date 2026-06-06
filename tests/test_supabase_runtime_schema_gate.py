@@ -18,6 +18,12 @@ def _env(**overrides: str) -> dict[str, str]:
     return env
 
 
+def test_protected_main_deploy_detection_accepts_capitalized_main_branch():
+    assert is_protected_main_deploy(
+        _env(GITHUB_REF_NAME="Main", GITHUB_REF_PROTECTED="true")
+    )
+
+
 def test_protected_main_deploy_detection_requires_push_main_and_protection():
     assert is_protected_main_deploy(
         _env(GITHUB_REF_NAME="main", GITHUB_REF_PROTECTED="true")
@@ -46,14 +52,14 @@ def test_gate_fails_when_protected_main_deploy_lacks_supabase_credentials(capsys
         return 0
 
     result = run_gate(
-        _env(GITHUB_REF_NAME="main", GITHUB_REF_PROTECTED="true"),
+        _env(GITHUB_REF_NAME="Main", GITHUB_REF_PROTECTED="true"),
         schema_check=schema_check,
     )
 
     assert result == 2
     assert not called
     output = capsys.readouterr().out
-    assert "mandatory for protected main deploys" in output
+    assert "mandatory for protected Main/main deploys" in output
     assert "SUPABASE_URL" in output
     assert "SUPABASE_SERVICE_ROLE_KEY" in output
 

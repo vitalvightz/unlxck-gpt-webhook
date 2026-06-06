@@ -16,12 +16,12 @@ if str(_REPO_ROOT) not in sys.path:
 from tools.check_supabase_runtime_schema import main as run_runtime_schema_check  # noqa: E402
 
 MANDATORY_MISSING_ENV_MESSAGE = (
-    "Supabase runtime schema check is mandatory for protected main deploys. "
+    "Supabase runtime schema check is mandatory for protected Main/main deploys. "
     "Configure SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY for this workflow."
 )
 SKIP_MISSING_ENV_MESSAGE = (
     "Skipping live schema check; Supabase credentials are not configured for this "
-    "non-protected-main run."
+    "non-protected-Main/main run."
 )
 
 
@@ -31,9 +31,10 @@ def _is_truthy(value: str | None) -> bool:
 
 def is_protected_main_deploy(env: Mapping[str, str]) -> bool:
     """Return whether this GitHub Actions run is a protected main-branch deploy."""
+    ref_name = str(env.get("GITHUB_REF_NAME") or "").strip()
     return (
         env.get("GITHUB_EVENT_NAME") == "push"
-        and env.get("GITHUB_REF_NAME") == "main"
+        and ref_name in {"Main", "main"}
         and _is_truthy(env.get("GITHUB_REF_PROTECTED"))
     )
 

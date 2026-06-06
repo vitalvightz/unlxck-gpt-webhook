@@ -6,10 +6,10 @@ name: Backend Checks
 # workflow stays scoped to the deploy-gate checker this PR introduces and
 # remains a fast, self-contained signal.
 #
-# The LIVE Supabase runtime schema check below may skip on PRs and non-main
-# branches without credentials, but it is mandatory on protected main-branch
+# The LIVE Supabase runtime schema check below may skip on PRs and non-Main/main
+# branches without credentials, but it is mandatory on protected Main/main
 # deploys. Configure SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY for protected
-# main before treating this workflow as a deploy gate.
+# Main/main before treating this workflow as a deploy gate.
 
 on:
   push:
@@ -48,7 +48,7 @@ jobs:
 
       # The service-role key is scoped to THIS step's env so the install/test
       # steps above never see it. The gate only permits missing credentials on
-      # PRs or non-protected-main branch runs; protected main deploys must run
+      # PRs or non-protected-Main/main branch runs; protected Main/main deploys must run
       # the live check and pass.
       - name: Live Supabase runtime schema check (staging)
         env:

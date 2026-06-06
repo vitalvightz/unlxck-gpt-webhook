@@ -123,10 +123,11 @@ checker's unit tests (fake catalog data, no credentials) plus the static
 
 The same workflow also calls `tools/run_supabase_runtime_schema_gate.py` for the
 live check. That gate keeps PRs and non-main branches workable without secrets,
-but it **fails protected `main` push runs** when either Supabase credential is
-missing. On protected `main`, the live check must run and must pass.
+but it **fails protected `Main`/`main` push runs** when either Supabase
+credential is missing. On protected `Main` or `main`, the live check must run
+and must pass.
 
-Configure these GitHub repository secrets for the protected `main` deploy
+Configure these GitHub repository secrets for the protected `Main`/`main` deploy
 workflow and point them at the correct, already-migrated environment:
 
 - `SUPABASE_URL`
