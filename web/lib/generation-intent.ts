@@ -12,22 +12,33 @@
 // navigation into /generate but is naturally absent on a cold tab restore.
 const GENERATION_INTENT_KEY = "unlxck:generation-intent";
 
+// In-memory mirror of the intent flag. sessionStorage can be unavailable or
+// throw (private browsing, strict storage policies, quota). Without a fallback
+// the user could click Generate, fail to persist intent, land on /generate,
+// and get bounced back to the workspace — unable to generate at all. Since the
+// click and the /generate mount happen in the same client-side runtime, a
+// module-level flag is enough to carry intent across that navigation.
+let memoryIntent = false;
+
 export function markGenerationIntent(): void {
   if (typeof window === "undefined") {
     return;
   }
+  memoryIntent = true;
   try {
     window.sessionStorage.setItem(GENERATION_INTENT_KEY, "1");
   } catch {
-    // Storage can throw in private-mode/quota edge cases. The worst case is the
-    // generate page falls back to recover-only and the user re-triggers from
-    // the workspace, which is far safer than an unwanted generation.
+    // In-memory fallback keeps client-side Generate navigation working when
+    // sessionStorage is unavailable.
   }
 }
 
 export function hasGenerationIntent(): boolean {
   if (typeof window === "undefined") {
     return false;
+  }
+  if (memoryIntent) {
+    return true;
   }
   try {
     return window.sessionStorage.getItem(GENERATION_INTENT_KEY) === "1";
@@ -40,6 +51,7 @@ export function clearGenerationIntent(): void {
   if (typeof window === "undefined") {
     return;
   }
+  memoryIntent = false;
   try {
     window.sessionStorage.removeItem(GENERATION_INTENT_KEY);
   } catch {

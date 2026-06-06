@@ -18,6 +18,24 @@ function installMockSessionStorage(): void {
   (globalThis as { window?: unknown }).window = { sessionStorage } as unknown;
 }
 
+function installThrowingSessionStorage(): void {
+  const sessionStorage = {
+    getItem: () => {
+      throw new Error("storage disabled");
+    },
+    setItem: () => {
+      throw new Error("storage disabled");
+    },
+    removeItem: () => {
+      throw new Error("storage disabled");
+    },
+    clear: () => {
+      throw new Error("storage disabled");
+    },
+  };
+  (globalThis as { window?: unknown }).window = { sessionStorage } as unknown;
+}
+
 function removeMockWindow(): void {
   delete (globalThis as { window?: unknown }).window;
 }
@@ -28,6 +46,21 @@ test("intent defaults to absent and reflects mark/clear", () => {
     assert.equal(hasGenerationIntent(), false);
     markGenerationIntent();
     assert.equal(hasGenerationIntent(), true);
+    clearGenerationIntent();
+    assert.equal(hasGenerationIntent(), false);
+  } finally {
+    removeMockWindow();
+  }
+});
+
+test("intent survives via in-memory fallback when sessionStorage throws", () => {
+  installThrowingSessionStorage();
+  try {
+    assert.equal(hasGenerationIntent(), false);
+    // setItem throws, but the in-memory mirror must still record the intent.
+    markGenerationIntent();
+    assert.equal(hasGenerationIntent(), true);
+    // clear must reset the in-memory mirror even though removeItem throws.
     clearGenerationIntent();
     assert.equal(hasGenerationIntent(), false);
   } finally {
