@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import concurrent.futures
 import time
 from datetime import datetime, timedelta, timezone
 from typing import Any
@@ -4020,6 +4021,52 @@ def test_generate_plan_daily_limit_blocks_request_at_limit(monkeypatch: pytest.M
     assert (
         second.json()["detail"]
         == "Daily generation limit reached. Try again after midnight in your athlete timezone."
+    )
+
+
+def test_fake_store_daily_limit_create_is_atomic_for_concurrent_requests():
+    store = FakeStore()
+    day_start_iso = (
+        datetime.now(timezone.utc)
+        .replace(hour=0, minute=0, second=0, microsecond=0)
+        .isoformat()
+    )
+
+    def create(client_request_id: str) -> tuple[int, str]:
+        try:
+            job = store.create_or_get_generation_job_with_daily_limit(
+                athlete_id="athlete-1",
+                client_request_id=client_request_id,
+                source="self_serve",
+                request_payload=_build_request().model_dump(mode="json"),
+                daily_limit=1,
+                day_start_iso=day_start_iso,
+                limit_reached_detail=(
+                    "Daily generation limit reached. "
+                    "Try again after midnight in your athlete timezone."
+                ),
+                counted_sources={"self_serve", "admin", "admin_triage_resume"},
+            )
+            return status.HTTP_202_ACCEPTED, str(job["id"])
+        except HTTPException as exc:
+            return exc.status_code, str(exc.detail)
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
+        results = list(executor.map(create, ["daily-race-a", "daily-race-b"]))
+
+    assert sorted(code for code, _ in results) == [
+        status.HTTP_202_ACCEPTED,
+        status.HTTP_429_TOO_MANY_REQUESTS,
+    ]
+    assert (
+        sum(1 for job in store.generation_jobs.values() if job["athlete_id"] == "athlete-1")
+        == 1
+    )
+    assert any(
+        detail
+        == "Daily generation limit reached. Try again after midnight in your athlete timezone."
+        for code, detail in results
+        if code == status.HTTP_429_TOO_MANY_REQUESTS
     )
 
 

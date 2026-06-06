@@ -177,6 +177,7 @@ REQUIRED_FUNCTIONS: tuple[str, ...] = (
     "public.change_profile_username",
     "public.try_parse_timestamptz",
     "public.check_plan_generation_short_window_limit",
+    "public.create_generation_job_with_daily_limit",
     "public.prevent_self_role_escalation",
     "public.prevent_username_policy_bypass",
     "public.is_admin",

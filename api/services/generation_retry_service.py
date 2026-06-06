@@ -72,28 +72,22 @@ async def retry_generation_job(
             detail="generation job already produced a saved plan",
         )
 
-    # Daily cap enforcement: admins and exempt emails are not rate-limited.
-    if not is_admin and not is_exempt_from_daily_generation_cap(profile.email):
-        daily_limit = plan_generate_daily_limit_per_user()
-        if daily_limit > 0:
-            athlete_payload = request_payload.get("athlete")
-            athlete_timezone = (
-                athlete_payload.get("athlete_timezone")
-                if isinstance(athlete_payload, dict)
-                else None
-            )
-            day_start_iso, limit_reached_detail = daily_generation_cap_window(athlete_timezone)
-            jobs_today = await asyncio.to_thread(
-                store.count_generation_jobs_for_athlete_since,
-                target_athlete_id,
-                day_start_iso,
-                sources=_ALLOWED_PLAN_SOURCES,
-            )
-            if jobs_today >= daily_limit:
-                raise HTTPException(
-                    status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                    detail=limit_reached_detail,
-                )
+    daily_limit = plan_generate_daily_limit_per_user()
+    enforce_daily_limit = (
+        daily_limit > 0
+        and not is_admin
+        and not is_exempt_from_daily_generation_cap(profile.email)
+    )
+    limit_reached_detail = ""
+    day_start_iso = ""
+    if enforce_daily_limit:
+        athlete_payload = request_payload.get("athlete")
+        athlete_timezone = (
+            athlete_payload.get("athlete_timezone")
+            if isinstance(athlete_payload, dict)
+            else None
+        )
+        day_start_iso, limit_reached_detail = daily_generation_cap_window(athlete_timezone)
 
     # If the original job is a pre-start stale running job, reuse its client_request_id
     # so we reset the existing job instead of creating a duplicate. Otherwise prefer
@@ -149,16 +143,32 @@ async def retry_generation_job(
     if blocking_job and str(blocking_job.get("id")) != str(original.get("id")):
         raise generation_already_in_flight_error()
 
-    job = await asyncio.to_thread(
-        store.create_or_get_generation_job,
-        athlete_id=target_athlete_id,
-        client_request_id=retry_client_request_id,
-        source=source,
-        request_payload=copy.deepcopy(request_payload),
-        plan_id=retry_plan_id,
-        intake_id=retry_intake_id,
-        stale_after_seconds=stale_after_seconds,
-    )
+    if enforce_daily_limit:
+        job = await asyncio.to_thread(
+            store.create_or_get_generation_job_with_daily_limit,
+            athlete_id=target_athlete_id,
+            client_request_id=retry_client_request_id,
+            source=source,
+            request_payload=copy.deepcopy(request_payload),
+            daily_limit=daily_limit,
+            day_start_iso=day_start_iso,
+            limit_reached_detail=limit_reached_detail,
+            counted_sources=_ALLOWED_PLAN_SOURCES,
+            plan_id=retry_plan_id,
+            intake_id=retry_intake_id,
+            stale_after_seconds=stale_after_seconds,
+        )
+    else:
+        job = await asyncio.to_thread(
+            store.create_or_get_generation_job,
+            athlete_id=target_athlete_id,
+            client_request_id=retry_client_request_id,
+            source=source,
+            request_payload=copy.deepcopy(request_payload),
+            plan_id=retry_plan_id,
+            intake_id=retry_intake_id,
+            stale_after_seconds=stale_after_seconds,
+        )
     job = await schedule_generation_job_if_needed(
         job=job,
         background_tasks=background_tasks,

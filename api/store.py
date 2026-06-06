@@ -253,6 +253,21 @@ class AppStore(Protocol):
         intake_id: str | None = None,
         stale_after_seconds: int = 90,
     ) -> dict[str, Any]: ...
+    def create_or_get_generation_job_with_daily_limit(
+        self,
+        *,
+        athlete_id: str,
+        client_request_id: str,
+        source: str,
+        request_payload: dict[str, Any],
+        daily_limit: int,
+        day_start_iso: str,
+        limit_reached_detail: str,
+        counted_sources: set[str],
+        plan_id: str | None = None,
+        intake_id: str | None = None,
+        stale_after_seconds: int = 90,
+    ) -> dict[str, Any]: ...
     def count_generation_jobs_for_athlete_since(
         self,
         athlete_id: str,
@@ -1719,6 +1734,100 @@ class SupabaseAppStore:
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="failed to persist generation job",
         )
+
+    def create_or_get_generation_job_with_daily_limit(
+        self,
+        *,
+        athlete_id: str,
+        client_request_id: str,
+        source: str,
+        request_payload: dict[str, Any],
+        daily_limit: int,
+        day_start_iso: str,
+        limit_reached_detail: str,
+        counted_sources: set[str],
+        plan_id: str | None = None,
+        intake_id: str | None = None,
+        stale_after_seconds: int = 90,
+    ) -> dict[str, Any]:
+        if daily_limit <= 0:
+            return self.create_or_get_generation_job(
+                athlete_id=athlete_id,
+                client_request_id=client_request_id,
+                source=source,
+                request_payload=request_payload,
+                plan_id=plan_id,
+                intake_id=intake_id,
+                stale_after_seconds=stale_after_seconds,
+            )
+
+        _guard_persisted_json(
+            request_payload,
+            field="request_payload",
+            max_bytes=MAX_SERVER_JSON_BYTES,
+            context=f"athlete_id={athlete_id} client_request_id={client_request_id}",
+        )
+
+        try:
+            response = self._run_with_transient_retry(
+                operation=f"create_or_get_generation_job_with_daily_limit athlete_id={athlete_id}",
+                fn=lambda: self.client.rpc(
+                    "create_generation_job_with_daily_limit",
+                    {
+                        "p_athlete_id": athlete_id,
+                        "p_client_request_id": client_request_id,
+                        "p_source": source,
+                        "p_request_payload": request_payload,
+                        "p_daily_limit": daily_limit,
+                        "p_day_start": day_start_iso,
+                        "p_counted_sources": sorted(counted_sources),
+                        "p_plan_id": plan_id,
+                        "p_intake_id": intake_id,
+                    },
+                ).execute(),
+            )
+        except _STORE_CLIENT_ERRORS as exc:
+            error_text = _sanitize_error_text(exc)
+            if "generation_job_in_flight" in error_text:
+                raise generation_already_in_flight_error() from exc
+            if self._is_generation_job_schema_error(exc):
+                logger.exception(
+                    "[store] create_or_get_generation_job_with_daily_limit:schema_mismatch athlete_id=%s client_request_id=%s",
+                    athlete_id,
+                    client_request_id,
+                )
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail=GENERATION_JOB_SCHEMA_DETAIL,
+                ) from exc
+            if self._is_generation_job_conflict_error(exc):
+                raise generation_already_in_flight_error() from exc
+            self._raise_operation_http_error(
+                operation=f"create_or_get_generation_job_with_daily_limit athlete_id={athlete_id}",
+                detail="failed to persist generation job",
+                exc=exc,
+            )
+
+        payload = getattr(response, "data", None)
+        if isinstance(payload, list):
+            payload = payload[0] if payload else {}
+        if not isinstance(payload, dict):
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="invalid daily generation limit response",
+            )
+        if payload.get("limit_exceeded") is True:
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail=limit_reached_detail,
+            )
+        job = payload.get("job")
+        if not isinstance(job, dict):
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="invalid daily generation limit response",
+            )
+        return job
 
     def count_generation_jobs_for_athlete_since(
         self,

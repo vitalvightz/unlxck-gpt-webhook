@@ -3,6 +3,7 @@ from __future__ import annotations
 import copy
 import math
 import os
+import threading
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -78,6 +79,7 @@ class FakeStore:
             email.strip().lower() for email in (admin_emails or set()) if email
         }
         self._plan_generation_limit_events: dict[str, list[datetime]] = {}
+        self._generation_job_daily_limit_lock = threading.RLock()
 
     def validate_runtime_schema(self) -> None:
         return None
@@ -438,6 +440,46 @@ class FakeStore:
         }
         self.generation_jobs[job_id] = job
         return dict(job)
+
+    def create_or_get_generation_job_with_daily_limit(
+        self,
+        *,
+        athlete_id: str,
+        client_request_id: str,
+        source: str,
+        request_payload: dict,
+        daily_limit: int,
+        day_start_iso: str,
+        limit_reached_detail: str,
+        counted_sources: set[str],
+        plan_id: str | None = None,
+        intake_id: str | None = None,
+        stale_after_seconds: int = 90,
+    ) -> dict:
+        with self._generation_job_daily_limit_lock:
+            for job in self.generation_jobs.values():
+                if job["athlete_id"] == athlete_id and job["client_request_id"] == client_request_id:
+                    return dict(job)
+            if daily_limit > 0:
+                jobs_today = self.count_generation_jobs_for_athlete_since(
+                    athlete_id,
+                    day_start_iso,
+                    sources=counted_sources,
+                )
+                if jobs_today >= daily_limit:
+                    raise HTTPException(
+                        status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                        detail=limit_reached_detail,
+                    )
+            return self.create_or_get_generation_job(
+                athlete_id=athlete_id,
+                client_request_id=client_request_id,
+                source=source,
+                request_payload=request_payload,
+                plan_id=plan_id,
+                intake_id=intake_id,
+                stale_after_seconds=stale_after_seconds,
+            )
 
     def get_generation_job(self, job_id: str) -> dict | None:
         job = self.generation_jobs.get(job_id)
