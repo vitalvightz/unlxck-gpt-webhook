@@ -9,6 +9,7 @@ import { useAppSession } from "@/components/auth-provider";
 import { BodyMap, type BodyMapSide } from "@/components/body-map";
 import { CustomSelect } from "@/components/custom-select";
 import { saveOnboardingDraft } from "@/lib/api";
+import { markGenerationIntent } from "@/lib/generation-intent";
 import {
   detectDeviceTimeZone,
   EQUIPMENT_ACCESS_OPTIONS,
@@ -1794,6 +1795,7 @@ export function PlanIntakeForm() {
       }
       try {
         await persistDraft(steps.length - 1);
+        markGenerationIntent();
         router.push("/generate");
       } catch (draftError) {
         setError(draftError instanceof Error ? draftError.message : "Unable to prepare plan generation.");

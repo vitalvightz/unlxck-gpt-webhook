@@ -10,6 +10,7 @@ import { useAppSession } from "@/components/auth-provider";
 import { PlanHistoryRowSkeleton, PlansFeaturedSkeleton } from "@/components/skeleton";
 import { useToast } from "@/components/toast-provider";
 import { deletePlan, listPlans, renamePlan } from "@/lib/api";
+import { markGenerationIntent } from "@/lib/generation-intent";
 import {
   EQUIPMENT_ACCESS_OPTIONS,
   getOptionLabel,
@@ -718,7 +719,15 @@ function LatestPlanCard({
             {plan ? "Refine intake" : "Edit Advanced Intake"}
           </Link>
           {plan ? (
-            <Link href={intake ? "/generate" : "/onboarding"} className="ghost-button">
+            <Link
+              href={intake ? "/generate" : "/onboarding"}
+              className="ghost-button"
+              onClick={() => {
+                if (intake) {
+                  markGenerationIntent();
+                }
+              }}
+            >
               Generate updated plan
             </Link>
           ) : null}

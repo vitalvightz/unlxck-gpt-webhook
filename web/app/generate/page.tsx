@@ -8,7 +8,11 @@ import { useAppSession } from "@/components/auth-provider";
 import { createGenerationJob, getActiveGenerationJob } from "@/lib/api";
 import { COMPLETED_GENERATION_KEY, parseCompletedGeneration } from "@/lib/completed-generation";
 import { useGenerationController } from "@/lib/generation-controller";
-import { resolveMatchingPayloadGenerationAction } from "@/lib/generation-status-guards";
+import { clearGenerationIntent, hasGenerationIntent } from "@/lib/generation-intent";
+import {
+  resolveGenerateAutoStartDecision,
+  resolveMatchingPayloadGenerationAction,
+} from "@/lib/generation-status-guards";
 import { hydratePlanRequest } from "@/lib/onboarding";
 import { validatePerformanceFocusSelections } from "@/lib/performance-focus-cap";
 import { stableStringify } from "@/lib/stable-stringify";
@@ -113,15 +117,19 @@ export default function GeneratePage() {
       getCompletedGeneration(),
     );
     if (matchingPayloadAction.type === "redirect") {
+      // A matching plan already exists — open it. Any stale intent is moot.
+      clearGenerationIntent();
       router.replace(`/plans/${matchingPayloadAction.planId}`);
       return;
     }
 
     if ((!payload.fight_date && !payload.no_scheduled_fight) || !payload.athlete.technical_style.length) {
+      clearGenerationIntent();
       router.replace("/onboarding");
       return;
     }
     if (performanceFocusValidation?.isOverCap) {
+      clearGenerationIntent();
       router.replace("/onboarding?issue=focus-cap&step=performance");
       return;
     }
@@ -131,25 +139,39 @@ export default function GeneratePage() {
     const activeToken = session.access_token;
 
     void (async () => {
+      let activeJob: Awaited<ReturnType<typeof getActiveGenerationJob>> = null;
       try {
-        const activeJob = await getActiveGenerationJob(activeToken);
+        activeJob = await getActiveGenerationJob(activeToken);
         if (cancelled) return;
-
-        if (activeJob) {
-          if (cancelled) return;
-          await controller.startGeneration({
-            clientRequestId: activeJob.client_request_id,
-            recovered: true,
-            existingJob: activeJob,
-          });
-          return;
-        }
       } catch {
         if (cancelled) return;
-        // Fall through to normal create flow if active lookup is unavailable.
+        // Active lookup unavailable; fall through to the intent-gated decision.
       }
 
-      if (cancelled) return;
+      const decision = resolveGenerateAutoStartDecision({
+        hasActiveJob: Boolean(activeJob),
+        hasIntent: hasGenerationIntent(),
+      });
+
+      if (decision === "recover" && activeJob) {
+        clearGenerationIntent();
+        await controller.startGeneration({
+          clientRequestId: activeJob.client_request_id,
+          recovered: true,
+          existingJob: activeJob,
+        });
+        return;
+      }
+
+      if (decision === "redirect") {
+        // The page mounted without an explicit request to generate (e.g. a
+        // reopened or reloaded tab) and there is nothing to reconnect to. Do
+        // not silently start a new build — return the user to the workspace.
+        router.replace("/");
+        return;
+      }
+
+      clearGenerationIntent();
       await controller.startGeneration();
     })();
 

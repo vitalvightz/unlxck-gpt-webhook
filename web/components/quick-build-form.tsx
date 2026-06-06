@@ -8,6 +8,7 @@ import { RequireAuth } from "@/components/auth-guard";
 import { useAppSession } from "@/components/auth-provider";
 import { CustomSelect } from "@/components/custom-select";
 import { saveOnboardingDraft } from "@/lib/api";
+import { markGenerationIntent } from "@/lib/generation-intent";
 import { hydratePlanRequest } from "@/lib/onboarding";
 import {
   EQUIPMENT_ACCESS_OPTIONS,
@@ -697,6 +698,7 @@ function QuickBuildFormInner() {
             },
           });
         }
+        markGenerationIntent();
         router.push("/generate");
       } catch (err) {
         const message = err instanceof Error ? err.message : "";

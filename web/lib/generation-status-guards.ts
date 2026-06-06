@@ -57,6 +57,27 @@ export function shouldBlockGenerateAutoStartForMatchingPayload(
   );
 }
 
+// Decision for the /generate page once it has confirmed there is no completed
+// duplicate to redirect to and no locally-pending build to reconnect to.
+//
+// - "recover": an in-flight job exists on the server (possibly started on
+//   another tab/device) — reattach to it.
+// - "start": the user explicitly asked to generate — create a new job.
+// - "redirect": the page mounted without any explicit request (reopened or
+//   reloaded tab) and nothing to reconnect to — leave instead of silently
+//   kicking off an unwanted generation.
+export type GenerateAutoStartDecision = "recover" | "start" | "redirect";
+
+export function resolveGenerateAutoStartDecision(input: {
+  hasActiveJob: boolean;
+  hasIntent: boolean;
+}): GenerateAutoStartDecision {
+  if (input.hasActiveJob) {
+    return "recover";
+  }
+  return input.hasIntent ? "start" : "redirect";
+}
+
 export type MatchingPayloadGenerationAction =
   | { type: "redirect"; planId: string }
   | { type: "proceed" };
