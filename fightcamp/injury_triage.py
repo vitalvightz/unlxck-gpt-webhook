@@ -1522,10 +1522,10 @@ def triage_injuries(plan_input: PlanInput) -> InjuryTriageResult:
         for g in _guided_eff
     )
     # Guided structural cards that are all old-and-cleared with no current concern.
-    _guided_resolved_flags = [_guided_card_resolved_structural(g) for g in _guided_eff]
-    _guided_structural_resolved = any(f is not None for f in _guided_resolved_flags) and all(
-        f for f in _guided_resolved_flags if f is not None
-    )
+    _guided_resolved_flags = [
+        f for g in _guided_eff if (f := _guided_card_resolved_structural(g)) is not None
+    ]
+    _guided_structural_resolved = bool(_guided_resolved_flags) and all(_guided_resolved_flags)
     # Free-text path: exclude structured serialization tokens like "cleared:no" /
     # "timeframe:last_month" so guided metadata cannot masquerade as resolved
     # free text. Guided resolution is decided by _guided_structural_resolved above.
