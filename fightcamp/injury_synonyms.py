@@ -231,14 +231,23 @@ POSTERIOR_THIGH_HINTS = {"back of thigh", "back thigh", "rear thigh", "posterior
 # New code should import from fightcamp.injury_negation.
 
 
+# Compiled boundary-match patterns keyed by normalized phrase. Phrases come
+# from finite synonym/hint sets, so this cache is bounded; it avoids recompiling
+# the same pattern on every hint-scoring call (a hot path during plan generation).
+_PHRASE_IN_TEXT_PATTERN_CACHE: dict[str, re.Pattern[str]] = {}
+
+
 def _phrase_in_text(phrase: str, text: str) -> bool:
     """Boundary-aware phrase check for degraded mode and hint scoring."""
     cleaned_phrase = " ".join(str(phrase or "").lower().strip().split())
     cleaned_text = " ".join(str(text or "").lower().strip().split())
     if not cleaned_phrase or not cleaned_text:
         return False
-    pattern = rf"(?<!\w){re.escape(cleaned_phrase)}(?!\w)"
-    return re.search(pattern, cleaned_text) is not None
+    pattern = _PHRASE_IN_TEXT_PATTERN_CACHE.get(cleaned_phrase)
+    if pattern is None:
+        pattern = re.compile(rf"(?<!\w){re.escape(cleaned_phrase)}(?!\w)")
+        _PHRASE_IN_TEXT_PATTERN_CACHE[cleaned_phrase] = pattern
+    return pattern.search(cleaned_text) is not None
 
 
 def _taxonomy_flags_for(category: str) -> tuple[str, ...]:

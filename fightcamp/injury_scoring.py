@@ -67,6 +67,14 @@ def _normalize(text: str) -> str:
     return " ".join((text or "").lower().strip().split())
 
 
+from functools import lru_cache
+
+
+@lru_cache(maxsize=None)
+def _phrase_pattern(p: str) -> re.Pattern[str]:
+    return re.compile(rf"(?:^|\W){re.escape(p)}(?:\W|$)")
+
+
 def safe_phrase_search(phrase: str, text: str) -> bool:
     """
     Boundary match that works for:
@@ -78,8 +86,7 @@ def safe_phrase_search(phrase: str, text: str) -> bool:
     p = _normalize(phrase)
     if not p or not t:
         return False
-    pattern = rf"(?:^|\W){re.escape(p)}(?:\W|$)"
-    return re.search(pattern, t) is not None
+    return _phrase_pattern(p).search(t) is not None
 
 
 def _build_location_map(location_map: dict[str, str]) -> dict[str, list[str]]:
