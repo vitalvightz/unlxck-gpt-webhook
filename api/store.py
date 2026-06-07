@@ -190,7 +190,7 @@ def _claim_legacy_blank_status_jobs_enabled() -> bool:
 
 def _raise_client_request_payload_mismatch_if_known(job: dict[str, Any], payload_hash: str) -> None:
     existing_hash = job.get("payload_hash")
-    if existing_hash and str(existing_hash) != payload_hash:
+    if existing_hash and existing_hash != payload_hash:
         raise client_request_id_payload_mismatch_error()
 
 
