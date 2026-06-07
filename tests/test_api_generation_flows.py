@@ -5019,3 +5019,35 @@ def test_retry_generation_job_bypasses_daily_limit_for_admin(monkeypatch: pytest
     )
 
     assert response.status_code == 202
+
+
+def test_generate_plan_rejects_overlong_profile_and_injury_fields_with_422():
+    client, _, _ = _build_client()
+    payload = _build_request().model_dump(mode="json")
+    payload["athlete"]["full_name"] = "A" * 121
+    payload["injuries"] = "x" * 2001
+
+    response = client.post(
+        "/api/plans/generate",
+        headers={"Authorization": "Bearer athlete-token"},
+        json=payload,
+    )
+
+    assert response.status_code == 422
+    assert "full_name" in str(response.json()["detail"])
+    assert "injuries" in str(response.json()["detail"])
+
+
+def test_generate_plan_rejects_overlong_list_item_with_422():
+    client, _, _ = _build_client()
+    payload = _build_request().model_dump(mode="json")
+    payload["key_goals"] = ["x" * 121]
+
+    response = client.post(
+        "/api/plans/generate",
+        headers={"Authorization": "Bearer athlete-token"},
+        json=payload,
+    )
+
+    assert response.status_code == 422
+    assert "key_goals" in str(response.json()["detail"])

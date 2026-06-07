@@ -4,7 +4,7 @@ import math
 import re
 from typing import Any, Literal
 
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import BaseModel, Field, ValidationInfo, field_validator, model_validator
 
 from .json_limits import MAX_CLIENT_JSON_BYTES, MAX_JSON_DEPTH, validate_json_field
 from .state_machine import GenerationJobStatus
@@ -50,10 +50,142 @@ MANUAL_STAGE2_MAX_CHARS = 80_000
 
 # Per-element cap for GuidedInjuryInput list fields (enum-ish tokens).
 _GUIDED_LIST_ITEM_MAX_CHARS = 64
+GUIDED_INJURIES_MAX_ITEMS = 64
+
+ATHLETE_FULL_NAME_MAX_CHARS = 120
+RECORD_MAX_CHARS = 40
+PROFILE_SHORT_TEXT_MAX_CHARS = 120
+PROFILE_TIMEZONE_MAX_CHARS = 100
+PROFILE_LOCALE_MAX_CHARS = 35
+AVATAR_URL_MAX_CHARS = 2048
+ATHLETE_STYLE_LIST_MAX_ITEMS = 32
+ATHLETE_LIST_ITEM_MAX_CHARS = 120
+PLAN_LIST_ITEM_MAX_CHARS = 120
+PLAN_DAY_ITEM_MAX_CHARS = 80
+INJURIES_MAX_CHARS = 2000
+TRAINING_PREFERENCE_MAX_CHARS = 1000
+MENTAL_BLOCKERS_MAX_CHARS = 1500
+PREVIOUS_PLAN_FEEDBACK_MAX_CHARS = 1500
+GENERIC_PROFILE_NOTES_MAX_CHARS = 1000
+
+_PROFILE_TEXT_LIMITS = {
+    "full_name": ATHLETE_FULL_NAME_MAX_CHARS,
+    "stance": PROFILE_SHORT_TEXT_MAX_CHARS,
+    "professional_status": PROFILE_SHORT_TEXT_MAX_CHARS,
+    "record": RECORD_MAX_CHARS,
+    "athlete_timezone": PROFILE_TIMEZONE_MAX_CHARS,
+    "athlete_locale": PROFILE_LOCALE_MAX_CHARS,
+    "avatar_url": AVATAR_URL_MAX_CHARS,
+}
+
+_PLAN_TEXT_LIMITS = {
+    "injuries": INJURIES_MAX_CHARS,
+    "goal_weakness_collision_detail": GENERIC_PROFILE_NOTES_MAX_CHARS,
+    "training_preference": TRAINING_PREFERENCE_MAX_CHARS,
+    "mindset_challenges": MENTAL_BLOCKERS_MAX_CHARS,
+    "notes": PREVIOUS_PLAN_FEEDBACK_MAX_CHARS,
+    "primary_goal": PLAN_LIST_ITEM_MAX_CHARS,
+    "primary_weak_area": PLAN_LIST_ITEM_MAX_CHARS,
+}
 
 
 def _clean_list(values: list[str] | None) -> list[str]:
     return [str(value).strip() for value in values or [] if str(value).strip()]
+
+
+def _clean_optional_text(value: Any) -> str | None:
+    if value is None:
+        return None
+    return str(value).strip()
+
+
+def _clean_text(value: Any) -> str:
+    return str(value or "").strip()
+
+
+def _validate_list_item_lengths(values: list[str], *, field: str, max_chars: int) -> list[str]:
+    for item in values:
+        if len(item) > max_chars:
+            raise ValueError(f"{field} items must be at most {max_chars} characters long")
+    return values
+
+
+def _validate_detail_string_lengths(values: list[dict[str, str]], *, field: str) -> list[dict[str, str]]:
+    for index, detail in enumerate(values):
+        if not isinstance(detail, dict):
+            raise ValueError(f"{field}[{index}] must be an object")
+        for key, item in detail.items():
+            if len(str(key)) > PLAN_LIST_ITEM_MAX_CHARS:
+                raise ValueError(
+                    f"{field}[{index}] keys must be at most {PLAN_LIST_ITEM_MAX_CHARS} characters long"
+                )
+            if len(str(item)) > GENERIC_PROFILE_NOTES_MAX_CHARS:
+                raise ValueError(
+                    f"{field}[{index}] values must be at most {GENERIC_PROFILE_NOTES_MAX_CHARS} characters long"
+                )
+    return values
+
+
+def _validate_guided_injury_draft(value: Any, *, field: str) -> None:
+    if value is None:
+        return
+    from pydantic import ValidationError
+    try:
+        GuidedInjuryInput.model_validate(value)
+    except (ValueError, ValidationError) as exc:
+        raise ValueError(f"onboarding_draft.{field} is invalid: {exc}") from exc
+
+
+def _validate_onboarding_draft_field_lengths(value: Any) -> Any:
+    if not isinstance(value, dict):
+        return value
+
+    def check_text(container: dict[str, Any], key: str, max_chars: int) -> None:
+        if key in container and container[key] is not None and len(str(container[key]).strip()) > max_chars:
+            raise ValueError(f"onboarding_draft.{key} must be at most {max_chars} characters long")
+
+    def check_list(container: dict[str, Any], key: str, max_items: int, max_item_chars: int) -> None:
+        if key not in container or container[key] is None:
+            return
+        raw_items = container[key]
+        items = raw_items if isinstance(raw_items, list) else [raw_items]
+        cleaned = _clean_list(items)
+        if len(cleaned) > max_items:
+            raise ValueError(f"onboarding_draft.{key} must contain at most {max_items} items")
+        _validate_list_item_lengths(cleaned, field=f"onboarding_draft.{key}", max_chars=max_item_chars)
+
+    for key, max_chars in _PLAN_TEXT_LIMITS.items():
+        check_text(value, key, max_chars)
+    for key, max_chars in _PROFILE_TEXT_LIMITS.items():
+        check_text(value, key, max_chars)
+    for key in ("equipment_access", "key_goals", "weak_areas", "goal_weakness_collision_tags"):
+        check_list(value, key, 64 if key == "equipment_access" or key == "goal_weakness_collision_tags" else 32, PLAN_LIST_ITEM_MAX_CHARS)
+    for key in ("training_availability", "hard_sparring_days", "support_work_days", "technical_skill_days"):
+        check_list(value, key, 64, PLAN_DAY_ITEM_MAX_CHARS)
+    if isinstance(value.get("goal_weakness_collision_details"), list):
+        _validate_detail_string_lengths(
+            value["goal_weakness_collision_details"],
+            field="onboarding_draft.goal_weakness_collision_details",
+        )
+    if "guided_injury" in value:
+        _validate_guided_injury_draft(value.get("guided_injury"), field="guided_injury")
+    if "guided_injuries" in value and value.get("guided_injuries") is not None:
+        guided_injuries = value["guided_injuries"]
+        if not isinstance(guided_injuries, list):
+            raise ValueError("onboarding_draft.guided_injuries must be a list")
+        if len(guided_injuries) > GUIDED_INJURIES_MAX_ITEMS:
+            raise ValueError(f"onboarding_draft.guided_injuries must contain at most {GUIDED_INJURIES_MAX_ITEMS} items")
+        for index, guided in enumerate(guided_injuries):
+            _validate_guided_injury_draft(guided, field=f"guided_injuries[{index}]")
+
+    athlete = value.get("athlete")
+    if isinstance(athlete, dict):
+        for key, max_chars in _PROFILE_TEXT_LIMITS.items():
+            check_text(athlete, key, max_chars)
+        for key in ("technical_style", "tactical_style"):
+            check_list(athlete, key, ATHLETE_STYLE_LIST_MAX_ITEMS, ATHLETE_LIST_ITEM_MAX_CHARS)
+
+    return value
 
 
 def _field(label: str, value: Any) -> dict[str, Any]:
@@ -82,19 +214,40 @@ def _validate_rounds_format(value: str) -> str:
 
 
 class AthleteProfileInput(BaseModel):
-    full_name: str
+    full_name: str = Field(..., max_length=ATHLETE_FULL_NAME_MAX_CHARS)
     sex: SexValue | None = None
     age: int | None = None
     weight_kg: float | None = None
     target_weight_kg: float | None = None
     height_cm: int | None = None
-    technical_style: list[str] = Field(default_factory=list)
-    tactical_style: list[str] = Field(default_factory=list)
-    stance: str = ""
-    professional_status: str = ""
-    record: str = ""
-    athlete_timezone: str = ""
-    athlete_locale: str = ""
+    technical_style: list[str] = Field(default_factory=list, max_length=ATHLETE_STYLE_LIST_MAX_ITEMS)
+    tactical_style: list[str] = Field(default_factory=list, max_length=ATHLETE_STYLE_LIST_MAX_ITEMS)
+    stance: str = Field(default="", max_length=PROFILE_SHORT_TEXT_MAX_CHARS)
+    professional_status: str = Field(default="", max_length=PROFILE_SHORT_TEXT_MAX_CHARS)
+    record: str = Field(default="", max_length=RECORD_MAX_CHARS)
+    athlete_timezone: str = Field(default="", max_length=PROFILE_TIMEZONE_MAX_CHARS)
+    athlete_locale: str = Field(default="", max_length=PROFILE_LOCALE_MAX_CHARS)
+
+    @field_validator("full_name", "stance", "professional_status", "record", "athlete_timezone", "athlete_locale", mode="before")
+    @classmethod
+    def clean_profile_text(cls, value: Any) -> str:
+        return _clean_text(value)
+
+    @field_validator("technical_style", "tactical_style", mode="before")
+    @classmethod
+    def clean_style_lists(cls, value: Any) -> list[str]:
+        if value is None:
+            return []
+        if isinstance(value, str):
+            return _clean_list([part.strip() for part in value.split(",")])
+        if isinstance(value, list):
+            return _clean_list(value)
+        return _clean_list([value])
+
+    @field_validator("technical_style", "tactical_style", mode="after")
+    @classmethod
+    def cap_style_list_items(cls, value: list[str], info: ValidationInfo) -> list[str]:
+        return _validate_list_item_lengths(value, field=info.field_name or "style", max_chars=ATHLETE_LIST_ITEM_MAX_CHARS)
 
     @field_validator("record")
     @classmethod
@@ -354,17 +507,17 @@ class NutritionCoachControlsInput(BaseModel):
 
 
 class NutritionSandCPreferences(BaseModel):
-    equipment_access: list[str] = Field(default_factory=list)
-    key_goals: list[str] = Field(default_factory=list)
-    primary_goal: str | None = None
-    weak_areas: list[str] = Field(default_factory=list)
-    primary_weak_area: str | None = None
-    goal_weakness_collision_detail: str = ""
-    goal_weakness_collision_tags: list[str] = Field(default_factory=list)
-    goal_weakness_collision_details: list[dict[str, str]] = Field(default_factory=list)
-    training_preference: str = ""
-    mindset_challenges: str = ""
-    notes: str = ""
+    equipment_access: list[str] = Field(default_factory=list, max_length=64)
+    key_goals: list[str] = Field(default_factory=list, max_length=32)
+    primary_goal: str | None = Field(default=None, max_length=PLAN_LIST_ITEM_MAX_CHARS)
+    weak_areas: list[str] = Field(default_factory=list, max_length=32)
+    primary_weak_area: str | None = Field(default=None, max_length=PLAN_LIST_ITEM_MAX_CHARS)
+    goal_weakness_collision_detail: str = Field(default="", max_length=GENERIC_PROFILE_NOTES_MAX_CHARS)
+    goal_weakness_collision_tags: list[str] = Field(default_factory=list, max_length=64)
+    goal_weakness_collision_details: list[dict[str, str]] = Field(default_factory=list, max_length=64)
+    training_preference: str = Field(default="", max_length=TRAINING_PREFERENCE_MAX_CHARS)
+    mindset_challenges: str = Field(default="", max_length=MENTAL_BLOCKERS_MAX_CHARS)
+    notes: str = Field(default="", max_length=PREVIOUS_PLAN_FEEDBACK_MAX_CHARS)
     random_seed: int | None = None
 
     @field_validator("equipment_access", "key_goals", "weak_areas", "goal_weakness_collision_tags", mode="before")
@@ -377,6 +530,26 @@ class NutritionSandCPreferences(BaseModel):
         if isinstance(value, list):
             return _clean_list(value)
         return _clean_list([value])
+
+    @field_validator("equipment_access", "key_goals", "weak_areas", "goal_weakness_collision_tags", mode="after")
+    @classmethod
+    def cap_array_field_items(cls, value: list[str], info: ValidationInfo) -> list[str]:
+        return _validate_list_item_lengths(value, field=info.field_name or "list", max_chars=PLAN_LIST_ITEM_MAX_CHARS)
+
+    @field_validator("goal_weakness_collision_details", mode="after")
+    @classmethod
+    def cap_collision_detail_strings(cls, value: list[dict[str, str]]) -> list[dict[str, str]]:
+        return _validate_detail_string_lengths(value, field="goal_weakness_collision_details")
+
+    @field_validator("goal_weakness_collision_detail", "training_preference", "mindset_challenges", "notes", mode="before")
+    @classmethod
+    def clean_preference_text(cls, value: Any) -> str:
+        return _clean_text(value)
+
+    @field_validator("primary_goal", "primary_weak_area", mode="before")
+    @classmethod
+    def clean_optional_preference_text(cls, value: Any) -> str | None:
+        return _clean_optional_text(value)
 
 
 class NutritionSharedCampContext(BaseModel):
@@ -396,7 +569,7 @@ class NutritionSharedCampContext(BaseModel):
     hard_sparring_days: list[str] = Field(default_factory=list)
     support_work_days: list[str] = Field(default_factory=list)
     session_types_by_day: dict[str, SessionDayType] = Field(default_factory=dict)
-    injuries: str = ""
+    injuries: str = Field(default="", max_length=INJURIES_MAX_CHARS)
     guided_injury: GuidedInjuryInput | None = None
     training_restriction_level: TrainingRestrictionLevel | None = None
 
@@ -424,6 +597,16 @@ class NutritionSharedCampContext(BaseModel):
         if isinstance(value, list):
             return _clean_list(value)
         return _clean_list([value])
+
+    @field_validator("training_availability", "hard_sparring_days", "support_work_days", mode="after")
+    @classmethod
+    def cap_day_array_items(cls, value: list[str], info: ValidationInfo) -> list[str]:
+        return _validate_list_item_lengths(value, field=info.field_name or "day list", max_chars=PLAN_DAY_ITEM_MAX_CHARS)
+
+    @field_validator("injuries", mode="before")
+    @classmethod
+    def clean_injuries(cls, value: Any) -> str:
+        return _clean_text(value)
 
     @field_validator("rounds_format")
     @classmethod
@@ -576,19 +759,19 @@ class PlanRequest(BaseModel):
     training_availability: list[str] = Field(default_factory=list, max_length=64)
     hard_sparring_days: list[str] = Field(default_factory=list, max_length=64)
     support_work_days: list[str] = Field(default_factory=list, max_length=64)
-    injuries: str = Field(default="", max_length=4000)
+    injuries: str = Field(default="", max_length=INJURIES_MAX_CHARS)
     guided_injury: GuidedInjuryInput | None = None
-    guided_injuries: list[GuidedInjuryInput] | None = Field(default=None, max_length=64)
+    guided_injuries: list[GuidedInjuryInput] | None = Field(default=None, max_length=GUIDED_INJURIES_MAX_ITEMS)
     key_goals: list[str] = Field(default_factory=list, max_length=32)
-    primary_goal: str | None = None
+    primary_goal: str | None = Field(default=None, max_length=PLAN_LIST_ITEM_MAX_CHARS)
     weak_areas: list[str] = Field(default_factory=list, max_length=32)
-    primary_weak_area: str | None = None
-    goal_weakness_collision_detail: str = Field(default="", max_length=4000)
+    primary_weak_area: str | None = Field(default=None, max_length=PLAN_LIST_ITEM_MAX_CHARS)
+    goal_weakness_collision_detail: str = Field(default="", max_length=GENERIC_PROFILE_NOTES_MAX_CHARS)
     goal_weakness_collision_tags: list[str] = Field(default_factory=list, max_length=64)
     goal_weakness_collision_details: list[dict[str, str]] = Field(default_factory=list, max_length=64)
-    training_preference: str = Field(default="", max_length=2000)
-    mindset_challenges: str = Field(default="", max_length=4000)
-    notes: str = Field(default="", max_length=4000)
+    training_preference: str = Field(default="", max_length=TRAINING_PREFERENCE_MAX_CHARS)
+    mindset_challenges: str = Field(default="", max_length=MENTAL_BLOCKERS_MAX_CHARS)
+    notes: str = Field(default="", max_length=PREVIOUS_PLAN_FEEDBACK_MAX_CHARS)
     random_seed: int | None = None
     intake_id: str | None = None
 
@@ -699,6 +882,26 @@ class PlanRequest(BaseModel):
             return _clean_list(value)
         return _clean_list([value])
 
+    @field_validator("equipment_access", "key_goals", "weak_areas", "goal_weakness_collision_tags", mode="after")
+    @classmethod
+    def cap_array_field_items(cls, value: list[str], info: ValidationInfo) -> list[str]:
+        return _validate_list_item_lengths(value, field=info.field_name or "list", max_chars=PLAN_LIST_ITEM_MAX_CHARS)
+
+    @field_validator("goal_weakness_collision_details", mode="after")
+    @classmethod
+    def cap_collision_detail_strings(cls, value: list[dict[str, str]]) -> list[dict[str, str]]:
+        return _validate_detail_string_lengths(value, field="goal_weakness_collision_details")
+
+    @field_validator("injuries", "goal_weakness_collision_detail", "training_preference", "mindset_challenges", "notes", mode="before")
+    @classmethod
+    def clean_plan_text(cls, value: Any) -> str:
+        return _clean_text(value)
+
+    @field_validator("primary_goal", "primary_weak_area", mode="before")
+    @classmethod
+    def clean_optional_plan_text(cls, value: Any) -> str | None:
+        return _clean_optional_text(value)
+
     @field_validator("rounds_format")
     @classmethod
     def validate_rounds_format(cls, value: str) -> str:
@@ -714,6 +917,11 @@ class PlanRequest(BaseModel):
         if isinstance(value, list):
             return _clean_list(value)
         return _clean_list([value])
+
+    @field_validator("training_availability", "hard_sparring_days", "support_work_days", mode="after")
+    @classmethod
+    def cap_day_array_items(cls, value: list[str], info: ValidationInfo) -> list[str]:
+        return _validate_list_item_lengths(value, field=info.field_name or "day list", max_chars=PLAN_DAY_ITEM_MAX_CHARS)
 
     @field_validator("hard_sparring_days")
     @classmethod
@@ -845,28 +1053,52 @@ class PlanRequest(BaseModel):
 
 
 class ProfileUpdateRequest(BaseModel):
-    full_name: str | None = None
-    technical_style: list[str] | None = None
-    tactical_style: list[str] | None = None
-    stance: str | None = None
-    professional_status: str | None = None
-    record: str | None = None
-    athlete_timezone: str | None = None
-    athlete_locale: str | None = None
+    full_name: str | None = Field(default=None, max_length=ATHLETE_FULL_NAME_MAX_CHARS)
+    technical_style: list[str] | None = Field(default=None, max_length=ATHLETE_STYLE_LIST_MAX_ITEMS)
+    tactical_style: list[str] | None = Field(default=None, max_length=ATHLETE_STYLE_LIST_MAX_ITEMS)
+    stance: str | None = Field(default=None, max_length=PROFILE_SHORT_TEXT_MAX_CHARS)
+    professional_status: str | None = Field(default=None, max_length=PROFILE_SHORT_TEXT_MAX_CHARS)
+    record: str | None = Field(default=None, max_length=RECORD_MAX_CHARS)
+    athlete_timezone: str | None = Field(default=None, max_length=PROFILE_TIMEZONE_MAX_CHARS)
+    athlete_locale: str | None = Field(default=None, max_length=PROFILE_LOCALE_MAX_CHARS)
     appearance_mode: AppearanceMode | None = None
     onboarding_draft: dict[str, Any] | None = None
-    avatar_url: str | None = None
+    avatar_url: str | None = Field(default=None, max_length=AVATAR_URL_MAX_CHARS)
     nutrition_profile: NutritionProfileInput | None = None
+
+    @field_validator("full_name", "stance", "professional_status", "record", "athlete_timezone", "athlete_locale", "avatar_url", mode="before")
+    @classmethod
+    def clean_profile_text(cls, value: Any) -> str | None:
+        return _clean_optional_text(value)
+
+    @field_validator("technical_style", "tactical_style", mode="before")
+    @classmethod
+    def clean_style_lists(cls, value: Any) -> list[str] | None:
+        if value is None:
+            return None
+        if isinstance(value, str):
+            return _clean_list([part.strip() for part in value.split(",")])
+        if isinstance(value, list):
+            return _clean_list(value)
+        return _clean_list([value])
+
+    @field_validator("technical_style", "tactical_style", mode="after")
+    @classmethod
+    def cap_style_list_items(cls, value: list[str] | None, info: ValidationInfo) -> list[str] | None:
+        if value is None:
+            return None
+        return _validate_list_item_lengths(value, field=info.field_name or "style", max_chars=ATHLETE_LIST_ITEM_MAX_CHARS)
 
     @field_validator("onboarding_draft")
     @classmethod
     def validate_onboarding_draft_size(cls, value: Any) -> Any:
-        return validate_json_field(
+        validated = validate_json_field(
             value,
             field="onboarding_draft",
             max_bytes=MAX_CLIENT_JSON_BYTES,
             max_depth=MAX_JSON_DEPTH,
         )
+        return _validate_onboarding_draft_field_lengths(validated)
 
     @field_validator("record")
     @classmethod
@@ -878,23 +1110,47 @@ class ProfileUpdateRequest(BaseModel):
 
 class OnboardingDraftSaveRequest(BaseModel):
     onboarding_draft: dict[str, Any] | None = None
-    full_name: str | None = None
-    technical_style: list[str] | None = None
-    tactical_style: list[str] | None = None
-    stance: str | None = None
-    professional_status: str | None = None
-    record: str | None = None
-    athlete_timezone: str | None = None
+    full_name: str | None = Field(default=None, max_length=ATHLETE_FULL_NAME_MAX_CHARS)
+    technical_style: list[str] | None = Field(default=None, max_length=ATHLETE_STYLE_LIST_MAX_ITEMS)
+    tactical_style: list[str] | None = Field(default=None, max_length=ATHLETE_STYLE_LIST_MAX_ITEMS)
+    stance: str | None = Field(default=None, max_length=PROFILE_SHORT_TEXT_MAX_CHARS)
+    professional_status: str | None = Field(default=None, max_length=PROFILE_SHORT_TEXT_MAX_CHARS)
+    record: str | None = Field(default=None, max_length=RECORD_MAX_CHARS)
+    athlete_timezone: str | None = Field(default=None, max_length=PROFILE_TIMEZONE_MAX_CHARS)
+
+    @field_validator("full_name", "stance", "professional_status", "record", "athlete_timezone", mode="before")
+    @classmethod
+    def clean_profile_text(cls, value: Any) -> str | None:
+        return _clean_optional_text(value)
+
+    @field_validator("technical_style", "tactical_style", mode="before")
+    @classmethod
+    def clean_style_lists(cls, value: Any) -> list[str] | None:
+        if value is None:
+            return None
+        if isinstance(value, str):
+            return _clean_list([part.strip() for part in value.split(",")])
+        if isinstance(value, list):
+            return _clean_list(value)
+        return _clean_list([value])
+
+    @field_validator("technical_style", "tactical_style", mode="after")
+    @classmethod
+    def cap_style_list_items(cls, value: list[str] | None, info: ValidationInfo) -> list[str] | None:
+        if value is None:
+            return None
+        return _validate_list_item_lengths(value, field=info.field_name or "style", max_chars=ATHLETE_LIST_ITEM_MAX_CHARS)
 
     @field_validator("onboarding_draft")
     @classmethod
     def validate_onboarding_draft_size(cls, value: Any) -> Any:
-        return validate_json_field(
+        validated = validate_json_field(
             value,
             field="onboarding_draft",
             max_bytes=MAX_CLIENT_JSON_BYTES,
             max_depth=MAX_JSON_DEPTH,
         )
+        return _validate_onboarding_draft_field_lengths(validated)
 
     @field_validator("record")
     @classmethod
@@ -1223,11 +1479,30 @@ class AdminLatestIntakeUpdateRequest(BaseModel):
     no_scheduled_fight: bool | None = None
     rounds_format: str | None = None
     weekly_training_frequency: int | None = None
-    training_availability: list[str] | None = None
-    equipment_access: list[str] | None = None
-    key_goals: list[str] | None = None
-    weak_areas: list[str] | None = None
-    injuries: str | None = None
+    training_availability: list[str] | None = Field(default=None, max_length=64)
+    equipment_access: list[str] | None = Field(default=None, max_length=64)
+    key_goals: list[str] | None = Field(default=None, max_length=32)
+    weak_areas: list[str] | None = Field(default=None, max_length=32)
+    injuries: str | None = Field(default=None, max_length=INJURIES_MAX_CHARS)
+
+    @field_validator("injuries", mode="before")
+    @classmethod
+    def clean_injuries(cls, value: Any) -> str | None:
+        return _clean_optional_text(value)
+
+    @field_validator("training_availability", mode="after")
+    @classmethod
+    def cap_day_items(cls, value: list[str] | None) -> list[str] | None:
+        if value is None:
+            return None
+        return _validate_list_item_lengths(_clean_list(value), field="training_availability", max_chars=PLAN_DAY_ITEM_MAX_CHARS)
+
+    @field_validator("equipment_access", "key_goals", "weak_areas", mode="after")
+    @classmethod
+    def cap_list_items(cls, value: list[str] | None, info: ValidationInfo) -> list[str] | None:
+        if value is None:
+            return None
+        return _validate_list_item_lengths(_clean_list(value), field=info.field_name or "list", max_chars=PLAN_LIST_ITEM_MAX_CHARS)
 
 
 class AdminPlanSummary(PlanSummary):

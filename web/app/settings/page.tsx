@@ -23,6 +23,7 @@ import {
 import { hydratePlanRequest } from "@/lib/onboarding";
 import { evaluatePasswordStrength } from "@/lib/password-strength";
 import { getSupabaseBrowserClient } from "@/lib/supabase";
+import { ATHLETE_FULL_NAME_MAX, AVATAR_URL_MAX } from "@/lib/input-limits";
 import type { AppearanceMode, GuidedInjuryInput, PlanRequest } from "@/lib/types";
 
 type SettingsSection = {
@@ -627,6 +628,7 @@ export default function SettingsPage() {
                   setUrlInputValue(event.target.value);
                   setAvatarUrl(event.target.value);
                 }}
+                maxLength={AVATAR_URL_MAX}
                 placeholder="https://example.com/photo.jpg"
               />
             </div>
@@ -648,6 +650,7 @@ export default function SettingsPage() {
               autoComplete="name"
               value={fullName}
               onChange={(event) => setFullName(event.target.value)}
+              maxLength={ATHLETE_FULL_NAME_MAX}
             />
           </div>
           <div className="field">
