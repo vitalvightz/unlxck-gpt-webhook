@@ -67,6 +67,22 @@ def _normalize(text: str) -> str:
     return " ".join((text or "").lower().strip().split())
 
 
+# Compiled boundary-match patterns keyed by normalized phrase. Phrases come
+# from finite synonym/term maps, so this cache is bounded. Caching here avoids
+# recompiling the same patterns on every call — safe_phrase_search is invoked
+# on the order of a million times per injury-heavy plan generation, and regex
+# compilation (not matching) dominated those runs.
+_PHRASE_PATTERN_CACHE: dict[str, re.Pattern[str]] = {}
+
+
+def _phrase_pattern(p: str) -> re.Pattern[str]:
+    pattern = _PHRASE_PATTERN_CACHE.get(p)
+    if pattern is None:
+        pattern = re.compile(rf"(?:^|\W){re.escape(p)}(?:\W|$)")
+        _PHRASE_PATTERN_CACHE[p] = pattern
+    return pattern
+
+
 def safe_phrase_search(phrase: str, text: str) -> bool:
     """
     Boundary match that works for:
@@ -78,8 +94,7 @@ def safe_phrase_search(phrase: str, text: str) -> bool:
     p = _normalize(phrase)
     if not p or not t:
         return False
-    pattern = rf"(?:^|\W){re.escape(p)}(?:\W|$)"
-    return re.search(pattern, t) is not None
+    return _phrase_pattern(p).search(t) is not None
 
 
 def _build_location_map(location_map: dict[str, str]) -> dict[str, list[str]]:
