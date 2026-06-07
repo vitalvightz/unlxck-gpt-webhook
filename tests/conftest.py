@@ -61,4 +61,7 @@ def nlp():
     """
     from fightcamp.injury_synonyms import get_nlp
 
-    return get_nlp()
+    nlp_obj = get_nlp()
+    if nlp_obj is None:
+        pytest.skip("spaCy or the en_core_web_sm model is not available")
+    return nlp_obj
