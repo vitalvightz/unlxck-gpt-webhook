@@ -20,6 +20,10 @@ GENERATION_ALREADY_IN_FLIGHT_CODE = "generation_already_in_flight"
 GENERATION_ALREADY_IN_FLIGHT_MESSAGE = (
     "A generation job is already queued or running for this account."
 )
+CLIENT_REQUEST_ID_PAYLOAD_MISMATCH_CODE = "client_request_id_payload_mismatch"
+CLIENT_REQUEST_ID_PAYLOAD_MISMATCH_MESSAGE = (
+    "This request id has already been used for a different generation payload."
+)
 
 
 class CodedHTTPException(HTTPException):
@@ -44,4 +48,14 @@ def generation_already_in_flight_error() -> CodedHTTPException:
         status_code=status.HTTP_409_CONFLICT,
         code=GENERATION_ALREADY_IN_FLIGHT_CODE,
         detail=GENERATION_ALREADY_IN_FLIGHT_MESSAGE,
+    )
+
+
+def client_request_id_payload_mismatch_error() -> CodedHTTPException:
+    """409 raised when a reused client request id carries a different payload."""
+
+    return CodedHTTPException(
+        status_code=status.HTTP_409_CONFLICT,
+        code=CLIENT_REQUEST_ID_PAYLOAD_MISMATCH_CODE,
+        detail=CLIENT_REQUEST_ID_PAYLOAD_MISMATCH_MESSAGE,
     )

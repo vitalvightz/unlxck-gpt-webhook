@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+from functools import lru_cache
 from typing import Dict, List, TypedDict
 
 from .injury_negation import remove_negated_phrases
@@ -65,9 +66,6 @@ class ScoredInjuryPhrase(TypedDict):
 def _normalize(text: str) -> str:
     """Lowercase + compress whitespace. Keep hyphens (for l-spine) and slashes (for n/a)."""
     return " ".join((text or "").lower().strip().split())
-
-
-from functools import lru_cache
 
 
 @lru_cache(maxsize=None)
