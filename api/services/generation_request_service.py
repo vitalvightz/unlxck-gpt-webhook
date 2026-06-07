@@ -72,7 +72,7 @@ async def generate_plan_for_current_user(
     stale_after_seconds = _generation_job_stale_after_seconds()
     if existing_job:
         existing_payload_hash = existing_job.get("payload_hash")
-        if existing_payload_hash and str(existing_payload_hash) != payload_hash:
+        if existing_payload_hash and existing_payload_hash != payload_hash:
             raise client_request_id_payload_mismatch_error()
         if is_startup_stale_generation_job(existing_job, stale_after_seconds=stale_after_seconds):
             existing_job = await asyncio.to_thread(
