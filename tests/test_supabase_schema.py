@@ -66,6 +66,16 @@ def test_profiles_table_declares_avatar_url_column():
     assert "avatar_url text," in profiles_definition
 
 
+def test_generation_jobs_schema_declares_payload_hash_column():
+    schema = _read_schema()
+    generation_jobs_definition = schema.split(
+        "create table if not exists public.generation_jobs (", 1
+    )[1].split(");", 1)[0]
+
+    assert "payload_hash text," in generation_jobs_definition
+    assert "alter table public.generation_jobs add column if not exists payload_hash text;" in schema
+
+
 def test_profiles_migration_backfills_avatar_url_column():
     schema = _read_schema()
 
@@ -375,14 +385,23 @@ def test_daily_generation_cap_atomic_create_rpc_schema_and_migration():
         assert "v_count >= p_daily_limit" in sql
         assert "insert into public.generation_jobs" in sql
         assert "raise exception 'generation_job_in_flight'" in sql
-        assert (
-            "revoke all on function public.create_generation_job_with_daily_limit(uuid, text, text, jsonb, integer, timestamptz, text[], uuid, uuid) from public;"
-            in sql
-        )
-        assert (
-            "grant execute on function public.create_generation_job_with_daily_limit(uuid, text, text, jsonb, integer, timestamptz, text[], uuid, uuid) to service_role;"
-            in sql
-        )
+
+    assert (
+        "revoke all on function public.create_generation_job_with_daily_limit(uuid, text, text, jsonb, integer, timestamptz, text[], uuid, uuid, text) from public;"
+        in schema
+    )
+    assert (
+        "grant execute on function public.create_generation_job_with_daily_limit(uuid, text, text, jsonb, integer, timestamptz, text[], uuid, uuid, text) to service_role;"
+        in schema
+    )
+    assert (
+        "revoke all on function public.create_generation_job_with_daily_limit(uuid, text, text, jsonb, integer, timestamptz, text[], uuid, uuid) from public;"
+        in migration
+    )
+    assert (
+        "grant execute on function public.create_generation_job_with_daily_limit(uuid, text, text, jsonb, integer, timestamptz, text[], uuid, uuid) to service_role;"
+        in migration
+    )
 
     assert "Rollback notes:" in migration
     assert "drop function if exists public.create_generation_job_with_daily_limit" in migration

@@ -5,6 +5,7 @@ Kept dependency-light (stdlib + fastapi + models) so other generation modules
 """
 from __future__ import annotations
 
+import hashlib
 import json
 from typing import Any
 
@@ -18,7 +19,7 @@ def _stable_payload_hash(payload: dict[str, Any]) -> str:
         normalized = json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
     except (TypeError, ValueError):
         normalized = json.dumps(str(payload), ensure_ascii=False)
-    return normalized
+    return hashlib.sha256(normalized.encode("utf-8")).hexdigest()
 
 
 def parse_plan_request(value: Any) -> PlanRequest:
