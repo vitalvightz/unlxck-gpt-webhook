@@ -15,10 +15,11 @@ from postgrest.exceptions import APIError as PostgrestAPIError
 from supabase import Client, ClientOptions, create_client
 
 from .auth import AuthenticatedUser
-from .errors import generation_already_in_flight_error
+from .errors import client_request_id_payload_mismatch_error, generation_already_in_flight_error
 from .environment import is_production_environment
 from .error_sanitizer import sanitize_error_text
 from .generation_config import generation_job_stale_after_seconds
+from .generation.payloads import _stable_payload_hash
 from .json_limits import (
     MAX_CLIENT_JSON_BYTES,
     MAX_JSON_DEPTH,
@@ -185,6 +186,12 @@ _is_production_environment = is_production_environment
 
 def _claim_legacy_blank_status_jobs_enabled() -> bool:
     return os.getenv("UNLXCK_CLAIM_LEGACY_BLANK_STATUS_JOBS", "").strip() == "1"
+
+
+def _raise_client_request_payload_mismatch_if_known(job: dict[str, Any], payload_hash: str) -> None:
+    existing_hash = job.get("payload_hash")
+    if existing_hash and existing_hash != payload_hash:
+        raise client_request_id_payload_mismatch_error()
 
 
 class AppStore(Protocol):
@@ -1572,6 +1579,7 @@ class SupabaseAppStore:
             max_bytes=MAX_SERVER_JSON_BYTES,
             context=f"athlete_id={athlete_id} client_request_id={client_request_id}",
         )
+        payload_hash = _stable_payload_hash(request_payload)
 
         try:
             existing = self._run_with_transient_retry(
@@ -1605,11 +1613,13 @@ class SupabaseAppStore:
             last_error = exc
             existing = None
         if existing:
+            _raise_client_request_payload_mismatch_if_known(existing, payload_hash)
             if is_startup_stale_generation_job(existing, stale_after_seconds=stale_after_seconds):
                 reset_payload = {
                     "status": "queued",
                     "source": (source or "").strip() or "self_serve",
                     "request_payload": request_payload,
+                    "payload_hash": payload_hash,
                     "error": None,
                     "heartbeat_at": None,
                     "started_at": None,
@@ -1642,6 +1652,7 @@ class SupabaseAppStore:
         )
         if active_job and str(active_job.get("status") or "") in {"queued", "running"}:
             if str(active_job.get("client_request_id") or "") == client_request_id:
+                _raise_client_request_payload_mismatch_if_known(active_job, payload_hash)
                 return active_job
             raise generation_already_in_flight_error()
 
@@ -1650,6 +1661,7 @@ class SupabaseAppStore:
             "client_request_id": client_request_id,
             "source": (source or "").strip() or "self_serve",
             "request_payload": request_payload,
+            "payload_hash": payload_hash,
             "status": "queued",
             "attempt_count": 0,
             "heartbeat_at": None,
@@ -1716,6 +1728,7 @@ class SupabaseAppStore:
             last_error = exc
             existing = None
         if existing:
+            _raise_client_request_payload_mismatch_if_known(existing, payload_hash)
             return existing
         active_job = self.get_active_generation_job_for_athlete(
             athlete_id,
@@ -1723,6 +1736,7 @@ class SupabaseAppStore:
         )
         if active_job and str(active_job.get("status") or "") in {"queued", "running"}:
             if str(active_job.get("client_request_id") or "") == client_request_id:
+                _raise_client_request_payload_mismatch_if_known(active_job, payload_hash)
                 return active_job
             raise generation_already_in_flight_error()
         if last_error and self._is_transient_store_error(last_error):
@@ -1767,6 +1781,7 @@ class SupabaseAppStore:
             max_bytes=MAX_SERVER_JSON_BYTES,
             context=f"athlete_id={athlete_id} client_request_id={client_request_id}",
         )
+        payload_hash = _stable_payload_hash(request_payload)
 
         # Recover stale `running` jobs before the atomic RPC runs. The RPC's
         # in-flight guard checks `status in ('queued', 'running')` purely at the
@@ -1791,6 +1806,7 @@ class SupabaseAppStore:
                         "p_client_request_id": client_request_id,
                         "p_source": source,
                         "p_request_payload": request_payload,
+                        "p_payload_hash": payload_hash,
                         "p_daily_limit": daily_limit,
                         "p_day_start": day_start_iso,
                         "p_counted_sources": sorted(counted_sources),
@@ -1840,6 +1856,7 @@ class SupabaseAppStore:
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="invalid daily generation limit response",
             )
+        _raise_client_request_payload_mismatch_if_known(job, payload_hash)
         return job
 
     def count_generation_jobs_for_athlete_since(

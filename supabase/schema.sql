@@ -158,6 +158,7 @@ create table if not exists public.generation_jobs (
   client_request_id text not null,
   source text not null default 'self_serve',
   request_payload jsonb not null default '{}'::jsonb,
+  payload_hash text,
   status text not null default 'queued',
   error text,
   intake_id uuid references public.athlete_intakes(id) on delete set null,
@@ -198,6 +199,7 @@ alter table public.plans add column if not exists stage2_attempt_count integer n
 alter table public.plans add column if not exists parsing_metadata jsonb not null default '{}'::jsonb;
 alter table public.generation_jobs add column if not exists source text not null default 'self_serve';
 alter table public.generation_jobs add column if not exists request_payload jsonb not null default '{}'::jsonb;
+alter table public.generation_jobs add column if not exists payload_hash text;
 alter table public.generation_jobs add column if not exists status text not null default 'queued';
 alter table public.generation_jobs add column if not exists error text;
 alter table public.generation_jobs add column if not exists intake_id uuid references public.athlete_intakes(id) on delete set null;
@@ -522,6 +524,8 @@ revoke all on function public.check_plan_generation_short_window_limit(uuid, int
 revoke all on function public.check_plan_generation_short_window_limit(uuid, integer, double precision) from authenticated;
 grant execute on function public.check_plan_generation_short_window_limit(uuid, integer, double precision) to service_role;
 
+drop function if exists public.create_generation_job_with_daily_limit(uuid, text, text, jsonb, integer, timestamptz, text[], uuid, uuid);
+
 create or replace function public.create_generation_job_with_daily_limit(
   p_athlete_id uuid,
   p_client_request_id text,
@@ -531,7 +535,8 @@ create or replace function public.create_generation_job_with_daily_limit(
   p_day_start timestamptz,
   p_counted_sources text[],
   p_plan_id uuid default null,
-  p_intake_id uuid default null
+  p_intake_id uuid default null,
+  p_payload_hash text default null
 )
 returns table (job jsonb, limit_exceeded boolean)
 language plpgsql
@@ -597,6 +602,7 @@ begin
     client_request_id,
     source,
     request_payload,
+    payload_hash,
     status,
     attempt_count,
     heartbeat_at,
@@ -613,6 +619,7 @@ begin
     p_client_request_id,
     v_source,
     coalesce(p_request_payload, '{}'::jsonb),
+    nullif(trim(p_payload_hash), ''),
     'queued',
     0,
     null,
@@ -630,10 +637,10 @@ begin
 end;
 $$;
 
-revoke all on function public.create_generation_job_with_daily_limit(uuid, text, text, jsonb, integer, timestamptz, text[], uuid, uuid) from public;
-revoke all on function public.create_generation_job_with_daily_limit(uuid, text, text, jsonb, integer, timestamptz, text[], uuid, uuid) from anon;
-revoke all on function public.create_generation_job_with_daily_limit(uuid, text, text, jsonb, integer, timestamptz, text[], uuid, uuid) from authenticated;
-grant execute on function public.create_generation_job_with_daily_limit(uuid, text, text, jsonb, integer, timestamptz, text[], uuid, uuid) to service_role;
+revoke all on function public.create_generation_job_with_daily_limit(uuid, text, text, jsonb, integer, timestamptz, text[], uuid, uuid, text) from public;
+revoke all on function public.create_generation_job_with_daily_limit(uuid, text, text, jsonb, integer, timestamptz, text[], uuid, uuid, text) from anon;
+revoke all on function public.create_generation_job_with_daily_limit(uuid, text, text, jsonb, integer, timestamptz, text[], uuid, uuid, text) from authenticated;
+grant execute on function public.create_generation_job_with_daily_limit(uuid, text, text, jsonb, integer, timestamptz, text[], uuid, uuid, text) to service_role;
 
 -- Deploy-gate introspection helper. Returns ONLY catalog metadata (object
 -- names + per-table RLS flags) for the public schema as a single jsonb object.

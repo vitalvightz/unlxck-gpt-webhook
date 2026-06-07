@@ -119,6 +119,7 @@ REQUIRED_GENERATION_JOBS_COLUMNS: tuple[str, ...] = (
     "plan_id",
     "progress_milestones",
     "request_payload",
+    "payload_hash",
     "stage1_result",
     "final_result",
     *GENERATION_JOB_STAGE2_COST_COLUMNS,

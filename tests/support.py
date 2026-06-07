@@ -14,6 +14,8 @@ from fastapi.testclient import TestClient
 
 from api.app import create_app
 from api.auth import AuthenticatedUser
+from api.errors import client_request_id_payload_mismatch_error
+from api.generation.payloads import _stable_payload_hash
 from api.models import (
     PlanRequest,
     ProfileUpdateRequest,
@@ -378,13 +380,18 @@ class FakeStore:
         intake_id: str | None = None,
         stale_after_seconds: int = 90,
     ) -> dict:
+        payload_hash = _stable_payload_hash(request_payload)
         for job in self.generation_jobs.values():
             if job["athlete_id"] == athlete_id and job["client_request_id"] == client_request_id:
+                existing_hash = job.get("payload_hash")
+                if existing_hash and str(existing_hash) != payload_hash:
+                    raise client_request_id_payload_mismatch_error()
                 if is_startup_stale_generation_job(job, stale_after_seconds=stale_after_seconds):
                     now = _now()
                     reset_changes = {
                         "source": source,
                         "request_payload": request_payload,
+                        "payload_hash": payload_hash,
                         "status": "queued",
                         "error": None,
                         "stage1_result": None,
@@ -411,6 +418,9 @@ class FakeStore:
         # stale job would wrongly 409 a new request instead of being superseded.
         if active and str(active.get("status") or "") in {"queued", "running"}:
             if str(active.get("client_request_id") or "") == client_request_id:
+                existing_hash = active.get("payload_hash")
+                if existing_hash and str(existing_hash) != payload_hash:
+                    raise client_request_id_payload_mismatch_error()
                 return dict(active)
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
@@ -424,6 +434,7 @@ class FakeStore:
             "client_request_id": client_request_id,
             "source": source,
             "request_payload": request_payload,
+            "payload_hash": payload_hash,
             "status": "queued",
             "error": None,
             "intake_id": intake_id,
@@ -457,8 +468,12 @@ class FakeStore:
         stale_after_seconds: int = 90,
     ) -> dict:
         with self._generation_job_daily_limit_lock:
+            payload_hash = _stable_payload_hash(request_payload)
             for job in self.generation_jobs.values():
                 if job["athlete_id"] == athlete_id and job["client_request_id"] == client_request_id:
+                    existing_hash = job.get("payload_hash")
+                    if existing_hash and str(existing_hash) != payload_hash:
+                        raise client_request_id_payload_mismatch_error()
                     return dict(job)
             if daily_limit > 0:
                 jobs_today = self.count_generation_jobs_for_athlete_since(
