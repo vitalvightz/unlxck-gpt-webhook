@@ -1,4 +1,5 @@
 import pytest
+from pydantic import ValidationError
 
 from api.models import (
     MAX_OPEN_CAMP_WEEKS,
@@ -101,15 +102,20 @@ def test_to_payload_singular_guided_injury_unchanged() -> None:
 @pytest.mark.parametrize(
     "raw, expected",
     [
-        (999, MAX_OPEN_CAMP_WEEKS),
-        (MAX_OPEN_CAMP_WEEKS + 1, MAX_OPEN_CAMP_WEEKS),
         (MAX_OPEN_CAMP_WEEKS, MAX_OPEN_CAMP_WEEKS),
-        (0, 1),
-        (-5, 1),
-        ("9999", MAX_OPEN_CAMP_WEEKS),
+        ("8.0", 8),
         (8, 8),
+        (1, 1),
     ],
 )
-def test_open_camp_weeks_is_clamped(raw: object, expected: int) -> None:
+def test_open_camp_weeks_accepts_in_range(raw: object, expected: int) -> None:
     request = PlanRequest(athlete=_athlete(), open_camp_weeks=raw)
     assert request.open_camp_weeks == expected
+
+
+@pytest.mark.parametrize("raw", [999, MAX_OPEN_CAMP_WEEKS + 1, 0, -5, "9999"])
+def test_open_camp_weeks_rejects_out_of_range(raw: object) -> None:
+    # Out-of-range values are rejected with a clean 422 rather than silently
+    # clamped, so malformed payloads surface instead of being masked.
+    with pytest.raises(ValidationError, match=f"between 1 and {MAX_OPEN_CAMP_WEEKS}"):
+        PlanRequest(athlete=_athlete(), open_camp_weeks=raw)
