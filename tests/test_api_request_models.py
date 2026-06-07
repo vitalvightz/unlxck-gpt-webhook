@@ -951,3 +951,68 @@ def test_weekly_training_frequency_rejects_out_of_range_instead_of_clamping():
 def test_weekly_training_frequency_rejects_non_numeric():
     with pytest.raises(ValidationError, match="must be numeric"):
         _freq_request("lots")
+
+
+def test_plan_request_accepts_normal_profile_text_and_normalizes_blank_optional_text():
+    request = PlanRequest(
+        athlete={"full_name": " Ari Mensah ", "technical_style": [" boxing "]},
+        fight_date="2026-04-18",
+        injuries="   ",
+        training_preference="  Short pads first.  ",
+        mindset_challenges="   ",
+        notes="  Loved reactive defence. ",
+    )
+
+    assert request.athlete.full_name == "Ari Mensah"
+    assert request.injuries == ""
+    assert request.training_preference == "Short pads first."
+    assert request.mindset_challenges == ""
+    assert request.notes == "Loved reactive defence."
+
+
+def test_plan_request_rejects_overlong_athlete_full_name():
+    with pytest.raises(ValidationError) as exc_info:
+        PlanRequest(athlete={"full_name": "A" * 121, "technical_style": ["boxing"]})
+
+    assert "athlete.full_name" in str(exc_info.value) or "full_name" in str(exc_info.value)
+
+
+def test_plan_request_rejects_overlong_injuries_and_free_text_notes():
+    with pytest.raises(ValidationError) as injuries_exc:
+        PlanRequest(athlete={"full_name": "Ari Mensah"}, injuries="x" * 2001)
+    assert "injuries" in str(injuries_exc.value)
+
+    with pytest.raises(ValidationError) as notes_exc:
+        PlanRequest(athlete={"full_name": "Ari Mensah"}, notes="x" * 1501)
+    assert "notes" in str(notes_exc.value)
+
+
+def test_plan_request_rejects_overlong_list_item_and_excessive_profile_list_length():
+    with pytest.raises(ValidationError) as item_exc:
+        PlanRequest(athlete={"full_name": "Ari Mensah"}, key_goals=["x" * 121])
+    assert "key_goals" in str(item_exc.value)
+
+    with pytest.raises(ValidationError) as length_exc:
+        PlanRequest(
+            athlete={
+                "full_name": "Ari Mensah",
+                "technical_style": [f"style-{idx}" for idx in range(33)],
+            }
+        )
+    assert "technical_style" in str(length_exc.value)
+
+
+def test_collision_detail_key_and_value_errors_use_specific_limits():
+    with pytest.raises(ValidationError) as key_exc:
+        PlanRequest(
+            athlete={"full_name": "Ari Mensah"},
+            goal_weakness_collision_details=[{"k" * 121: "ok"}],
+        )
+    assert "keys must be at most 120 characters" in str(key_exc.value)
+
+    with pytest.raises(ValidationError) as value_exc:
+        PlanRequest(
+            athlete={"full_name": "Ari Mensah"},
+            goal_weakness_collision_details=[{"power": "x" * 1001}],
+        )
+    assert "values must be at most 1000 characters" in str(value_exc.value)

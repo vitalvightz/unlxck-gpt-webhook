@@ -722,3 +722,137 @@ def test_change_username_rate_limits_after_four_changes_in_window():
 
     assert response.status_code == 429
     assert "You can change your username up to 4 times every 30 days." in response.json()["detail"]
+
+
+def test_profile_update_rejects_overlong_profile_fields():
+    client, _, _ = _build_client()
+
+    response = client.put(
+        "/api/me",
+        headers={"Authorization": "Bearer athlete-token"},
+        json={"full_name": "A" * 121},
+    )
+
+    assert response.status_code == 422
+    assert "full_name" in str(response.json()["detail"])
+
+
+def test_profile_update_normalizes_whitespace_optional_text():
+    client, store, _ = _build_client()
+
+    response = client.put(
+        "/api/me",
+        headers={"Authorization": "Bearer athlete-token"},
+        json={"stance": "   ", "record": " 5-1 "},
+    )
+
+    assert response.status_code == 200
+    assert store.profiles["athlete-1"]["stance"] == ""
+    assert store.profiles["athlete-1"]["record_summary"] == "5-1"
+
+
+def test_onboarding_draft_endpoint_rejects_oversized_draft_fields():
+    client, _, _ = _build_client()
+
+    response = client.patch(
+        "/api/onboarding/draft",
+        headers={"Authorization": "Bearer athlete-token"},
+        json={"onboarding_draft": {"athlete": {"full_name": "A" * 121}}},
+    )
+
+    assert response.status_code == 422
+    assert "full_name" in str(response.json()["detail"])
+
+
+def test_onboarding_draft_endpoint_rejects_oversized_list_item():
+    client, _, _ = _build_client()
+
+    response = client.patch(
+        "/api/onboarding/draft",
+        headers={"Authorization": "Bearer athlete-token"},
+        json={"onboarding_draft": {"key_goals": ["x" * 121]}},
+    )
+
+    assert response.status_code == 422
+    assert "key_goals" in str(response.json()["detail"])
+
+
+def test_onboarding_draft_endpoint_accepts_valid_guided_injury():
+    client, store, _ = _build_client()
+
+    response = client.patch(
+        "/api/onboarding/draft",
+        headers={"Authorization": "Bearer athlete-token"},
+        json={
+            "onboarding_draft": {
+                "current_step": 3,
+                "guided_injury": {
+                    "area": "left shoulder",
+                    "severity": "moderate",
+                    "trend": "improving",
+                    "avoid": "heavy overhead pressing",
+                    "notes": "Irritated after sparring but settling.",
+                },
+            }
+        },
+    )
+
+    assert response.status_code == 200
+    assert store.profiles["athlete-1"]["onboarding_draft"]["guided_injury"]["area"] == "left shoulder"
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("notes", "x" * 4001),
+        ("avoid", "x" * 2001),
+        ("area", "x" * 201),
+    ],
+)
+def test_onboarding_draft_endpoint_rejects_oversized_guided_injury_fields(field: str, value: str):
+    client, _, _ = _build_client()
+
+    response = client.patch(
+        "/api/onboarding/draft",
+        headers={"Authorization": "Bearer athlete-token"},
+        json={"onboarding_draft": {"guided_injury": {field: value}}},
+    )
+
+    assert response.status_code == 422
+    assert "guided_injury" in str(response.json()["detail"])
+    assert field in str(response.json()["detail"])
+
+
+def test_onboarding_draft_endpoint_rejects_oversized_guided_injuries_list():
+    client, _, _ = _build_client()
+
+    response = client.patch(
+        "/api/onboarding/draft",
+        headers={"Authorization": "Bearer athlete-token"},
+        json={"onboarding_draft": {"guided_injuries": [{"area": "knee"}] * 65}},
+    )
+
+    assert response.status_code == 422
+    assert "guided_injuries" in str(response.json()["detail"])
+    assert "64" in str(response.json()["detail"])
+
+
+def test_onboarding_draft_endpoint_rejects_oversized_item_inside_guided_injuries():
+    client, _, _ = _build_client()
+
+    response = client.patch(
+        "/api/onboarding/draft",
+        headers={"Authorization": "Bearer athlete-token"},
+        json={
+            "onboarding_draft": {
+                "guided_injuries": [
+                    {"area": "left knee"},
+                    {"area": "right ankle", "injury_subtypes": ["x" * 65]},
+                ]
+            }
+        },
+    )
+
+    assert response.status_code == 422
+    assert "guided_injuries[1]" in str(response.json()["detail"])
+    assert "injury_subtypes" in str(response.json()["detail"])

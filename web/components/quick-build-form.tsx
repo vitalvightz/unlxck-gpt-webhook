@@ -44,6 +44,7 @@ import {
   type QuickBuildInput,
   type QuickBuildValidationErrors,
 } from "@/lib/quick-build";
+import { ATHLETE_FULL_NAME_MAX } from "@/lib/input-limits";
 import {
   EQUIPMENT_PRESETS,
   TRAINING_PRESETS,
@@ -754,6 +755,7 @@ function QuickBuildFormInner() {
             value={input.full_name}
             onChange={(event) => patch("full_name", event.target.value)}
             autoComplete="name"
+            maxLength={ATHLETE_FULL_NAME_MAX}
             required
           />
           <FieldError message={visibleError("full_name")} />

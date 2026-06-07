@@ -9,6 +9,7 @@ import { PasswordStrengthMeter } from "@/components/password-strength-meter";
 import { getMe } from "@/lib/api";
 import { getAuthenticatedLandingHref } from "@/lib/auth-routing";
 import { evaluatePasswordStrength } from "@/lib/password-strength";
+import { ATHLETE_FULL_NAME_MAX } from "@/lib/input-limits";
 import { getSiteOrigin } from "@/lib/site-url";
 import { getSupabaseBrowserClient } from "@/lib/supabase";
 
@@ -152,6 +153,7 @@ export function AuthForm({ mode }: { mode: "signup" | "login" }) {
                 autoComplete="name"
                 value={fullName}
                 onChange={(event) => setFullName(event.target.value)}
+                maxLength={ATHLETE_FULL_NAME_MAX}
                 required
               />
             </div>
