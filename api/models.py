@@ -129,9 +129,10 @@ def _validate_detail_string_lengths(values: list[dict[str, str]], *, field: str)
 def _validate_guided_injury_draft(value: Any, *, field: str) -> None:
     if value is None:
         return
+    from pydantic import ValidationError
     try:
         GuidedInjuryInput.model_validate(value)
-    except ValueError as exc:
+    except (ValueError, ValidationError) as exc:
         raise ValueError(f"onboarding_draft.{field} is invalid: {exc}") from exc
 
 
