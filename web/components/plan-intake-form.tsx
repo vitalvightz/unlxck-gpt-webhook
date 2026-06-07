@@ -62,6 +62,13 @@ import {
   type PerformanceFocusGroup,
 } from "@/lib/days-out-policy";
 import type { PlanRequest } from "@/lib/types";
+import {
+  ATHLETE_FULL_NAME_MAX,
+  MENTAL_BLOCKERS_MAX,
+  PREVIOUS_PLAN_FEEDBACK_MAX,
+  RECORD_MAX,
+  TRAINING_PREFERENCE_MAX,
+} from "@/lib/input-limits";
 
 const steps = ["Profile", "Fight Context", "Training", "Restrictions", "Performance", "Review"] as const;
 const PERFORMANCE_STEP_INDEX = 4;
@@ -2254,6 +2261,7 @@ export function PlanIntakeForm() {
                       autoComplete="name"
                       value={form.athlete.full_name}
                       onChange={(event) => updateAthlete("full_name", event.target.value)}
+                      maxLength={ATHLETE_FULL_NAME_MAX}
                       required
                     />
                   </div>
@@ -2362,6 +2370,7 @@ export function PlanIntakeForm() {
                       onChange={(event) => updateAthlete("record", sanitizeRecordInput(event.target.value))}
                       placeholder="5-1 or 12-2-1"
                       inputMode="text"
+                      maxLength={RECORD_MAX}
                       aria-invalid={invalidFieldId === "record" || recordHasError ? true : undefined}
                       aria-describedby={invalidFieldId === "record" ? "record-error" : undefined}
                     />
@@ -2724,6 +2733,7 @@ export function PlanIntakeForm() {
                     disabled={shouldDisableField(daysOutCtx, "training_preference")}
                     value={form.training_preference ?? ""}
                     onChange={(event) => updateField("training_preference", event.target.value)}
+                    maxLength={TRAINING_PREFERENCE_MAX}
                     placeholder="Example: shorter hard sessions, less circuit work, more technical warm-ups, avoid long grinders"
                   />
                   <p className="muted">
@@ -3035,6 +3045,7 @@ export function PlanIntakeForm() {
                       id="mindsetChallenges"
                       value={form.mindset_challenges ?? ""}
                       onChange={(event) => updateField("mindset_challenges", event.target.value)}
+                      maxLength={MENTAL_BLOCKERS_MAX}
                       placeholder="Optional: anxiety under pressure, low confidence late in camp, trouble switching on"
                     />
                     <p className="muted">Only use this if there is a real mental or confidence issue the plan should respect.</p>
@@ -3045,6 +3056,7 @@ export function PlanIntakeForm() {
                       id="notes"
                       value={form.notes ?? ""}
                       onChange={(event) => updateField("notes", event.target.value)}
+                      maxLength={PREVIOUS_PLAN_FEEDBACK_MAX}
                       placeholder="Optional: travel, school/work load, sparring schedule, recovery issue, or anything else the planner should know"
                     />
                     <p className="muted">Use this for extra coach context that does not fit the other fields.</p>

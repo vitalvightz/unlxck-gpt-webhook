@@ -722,3 +722,56 @@ def test_change_username_rate_limits_after_four_changes_in_window():
 
     assert response.status_code == 429
     assert "You can change your username up to 4 times every 30 days." in response.json()["detail"]
+
+
+def test_profile_update_rejects_overlong_profile_fields():
+    client, _, _ = _build_client()
+
+    response = client.put(
+        "/api/me",
+        headers={"Authorization": "Bearer athlete-token"},
+        json={"full_name": "A" * 121},
+    )
+
+    assert response.status_code == 422
+    assert "full_name" in str(response.json()["detail"])
+
+
+def test_profile_update_normalizes_whitespace_optional_text():
+    client, store, _ = _build_client()
+
+    response = client.put(
+        "/api/me",
+        headers={"Authorization": "Bearer athlete-token"},
+        json={"stance": "   ", "record": " 5-1 "},
+    )
+
+    assert response.status_code == 200
+    assert store.profiles["athlete-1"]["stance"] == ""
+    assert store.profiles["athlete-1"]["record_summary"] == "5-1"
+
+
+def test_onboarding_draft_endpoint_rejects_oversized_draft_fields():
+    client, _, _ = _build_client()
+
+    response = client.patch(
+        "/api/onboarding/draft",
+        headers={"Authorization": "Bearer athlete-token"},
+        json={"onboarding_draft": {"athlete": {"full_name": "A" * 121}}},
+    )
+
+    assert response.status_code == 422
+    assert "full_name" in str(response.json()["detail"])
+
+
+def test_onboarding_draft_endpoint_rejects_oversized_list_item():
+    client, _, _ = _build_client()
+
+    response = client.patch(
+        "/api/onboarding/draft",
+        headers={"Authorization": "Bearer athlete-token"},
+        json={"onboarding_draft": {"key_goals": ["x" * 121]}},
+    )
+
+    assert response.status_code == 422
+    assert "key_goals" in str(response.json()["detail"])

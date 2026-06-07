@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { GUIDED_INJURY_AREA_MAX, GUIDED_INJURY_NOTES_MAX } from "@/lib/input-limits";
 import type { GuidedInjuryState } from "@/lib/guided-injury";
 import {
   GUIDED_INJURY_SEVERITY_OPTIONS,
@@ -1075,6 +1076,7 @@ function handleTypeSelect(opt: InjuryTypeOption | null) {
               id={`gi-area-${index}`}
               value={injury.area}
               onChange={(e) => onUpdate("area", e.target.value)}
+              maxLength={GUIDED_INJURY_AREA_MAX}
               placeholder="e.g. hyperextended right knee, rolled ankle, tight hamstring"
               className="gi-area-input"
               rows={3}
@@ -1239,6 +1241,7 @@ function handleTypeSelect(opt: InjuryTypeOption | null) {
                 id={`gi-notes-${index}`}
                 value={injury.notes}
                 onChange={(e) => onUpdate("notes", e.target.value)}
+                maxLength={GUIDED_INJURY_NOTES_MAX}
                 placeholder="What happened, what irritates it, anything else the planner should know"
                 rows={2}
               />
