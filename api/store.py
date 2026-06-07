@@ -292,6 +292,7 @@ class AppStore(Protocol):
     def get_generation_job(self, job_id: str) -> dict[str, Any] | None: ...
     def recover_generation_job_if_stale(self, job: dict[str, Any] | None) -> dict[str, Any] | None: ...
     def get_generation_job_by_client_request_id(self, *, athlete_id: str, client_request_id: str) -> dict[str, Any] | None: ...
+    def get_visible_active_generation_job_for_athlete(self, athlete_id: str) -> dict[str, Any] | None: ...
     def get_active_generation_job_for_athlete(
         self,
         athlete_id: str,
@@ -2120,6 +2121,37 @@ class SupabaseAppStore:
                     client_request_id=client_request_id,
                 ),
             )
+        except _STORE_CLIENT_ERRORS as exc:
+            if self._is_transient_store_error(exc):
+                raise HTTPException(
+                    status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                    detail=GENERATION_JOB_UNAVAILABLE_DETAIL,
+                ) from exc
+            if self._is_generation_job_schema_error(exc):
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail=GENERATION_JOB_SCHEMA_DETAIL,
+                ) from exc
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="failed to load generation job",
+            ) from exc
+
+    def get_visible_active_generation_job_for_athlete(self, athlete_id: str) -> dict[str, Any] | None:
+        """Pure read of the latest queued/running generation job for polling endpoints."""
+        try:
+            response = self._run_with_transient_retry(
+                operation=f"get_visible_active_generation_job_for_athlete athlete_id={athlete_id}",
+                fn=lambda: self.client.table("generation_jobs")
+                .select(GENERATION_JOB_SELECT)
+                .eq("athlete_id", athlete_id)
+                .in_("status", ["queued", "running"])
+                .order("created_at", desc=True)
+                .limit(1)
+                .execute(),
+            )
+            rows = [row for row in (getattr(response, "data", None) or []) if isinstance(row, dict)]
+            return rows[0] if rows else None
         except _STORE_CLIENT_ERRORS as exc:
             if self._is_transient_store_error(exc):
                 raise HTTPException(

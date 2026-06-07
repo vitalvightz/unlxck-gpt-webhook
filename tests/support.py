@@ -546,6 +546,16 @@ class FakeStore:
                 return dict(job)
         return None
 
+    def get_visible_active_generation_job_for_athlete(self, athlete_id: str) -> dict | None:
+        rows = [
+            dict(job)
+            for job in self.generation_jobs.values()
+            if str(job.get("athlete_id") or "") == athlete_id
+            and str(job.get("status") or "") in {"queued", "running"}
+        ]
+        rows.sort(key=lambda row: str(row.get("created_at") or ""), reverse=True)
+        return rows[0] if rows else None
+
     def get_active_generation_job_for_athlete(
         self,
         athlete_id: str,
