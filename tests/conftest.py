@@ -46,7 +46,7 @@ def _file_uses_spacy(path: Path) -> bool:
 def pytest_collection_modifyitems(config, items):
     """Auto-apply the `spacy` marker to tests that hit the spaCy injury path."""
     for item in items:
-        path = Path(getattr(item, "fspath", str(item.path)))
+        path = getattr(item, "path", None)
         if _file_uses_spacy(path):
             item.add_marker("spacy")
 
