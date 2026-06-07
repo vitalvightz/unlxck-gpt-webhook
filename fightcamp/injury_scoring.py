@@ -67,20 +67,12 @@ def _normalize(text: str) -> str:
     return " ".join((text or "").lower().strip().split())
 
 
-# Compiled boundary-match patterns keyed by normalized phrase. Phrases come
-# from finite synonym/term maps, so this cache is bounded. Caching here avoids
-# recompiling the same patterns on every call — safe_phrase_search is invoked
-# on the order of a million times per injury-heavy plan generation, and regex
-# compilation (not matching) dominated those runs.
-_PHRASE_PATTERN_CACHE: dict[str, re.Pattern[str]] = {}
+from functools import lru_cache
 
 
+@lru_cache(maxsize=None)
 def _phrase_pattern(p: str) -> re.Pattern[str]:
-    pattern = _PHRASE_PATTERN_CACHE.get(p)
-    if pattern is None:
-        pattern = re.compile(rf"(?:^|\W){re.escape(p)}(?:\W|$)")
-        _PHRASE_PATTERN_CACHE[p] = pattern
-    return pattern
+    return re.compile(rf"(?:^|\W){re.escape(p)}(?:\W|$)")
 
 
 def safe_phrase_search(phrase: str, text: str) -> bool:
