@@ -323,7 +323,10 @@ required; CI uses public placeholder env values.
 ## Testing
 
 ```bash
-# Run full test suite
+# Run full test suite IN PARALLEL (fastest full run; uses all CPU cores)
+pytest -n auto
+
+# Run the full suite serially
 pytest
 
 # Run specific file
@@ -331,11 +334,34 @@ pytest tests/test_injury_guard.py
 
 # Run with verbose output
 pytest -v
-
-# Run only fast unit tests (skip API integration tests)
-pytest --ignore=tests/test_api_admin_flows.py \
-       --ignore=tests/test_api_generation_flows.py
 ```
+
+### Fast lane (skip the heavy spaCy stack)
+
+Only ~14 of the test files exercise the spaCy/negspacy injury-parsing path
+(which installs spaCy + the `en_core_web_sm` model and loads it at runtime).
+Those tests are auto-tagged with the `spacy` marker, so day-to-day iteration on
+everything else can skip both the slow install and the model load:
+
+```bash
+# Install dev deps WITHOUT spaCy/negspacy/en_core_web_sm
+pip install -r requirements-dev-fast.txt
+
+# Run every test except the spaCy-dependent ones, in parallel
+pytest -n auto -m "not spacy"
+
+# Conversely, run ONLY the spaCy injury tests
+pytest -m spacy
+```
+
+Performance notes:
+- `pytest -n auto` (via `pytest-xdist`) distributes the 122 test files across
+  CPU cores; spaCy loads once per worker rather than once for the whole serial
+  run.
+- The injury PhraseMatchers are built with `nlp.make_doc()` (tokenizer only)
+  instead of the full pipeline, cutting matcher construction from ~1.5s to
+  ~0.01s, and the model loads with unused components (tagger/lemmatizer/
+  attribute_ruler) disabled.
 
 Tests covering: injury guard, sparring advisories, stage 2 payload modes, planning brief, conditioning diagnostics, surgical rehab integration, input parsing, restriction parsing, and more.
 

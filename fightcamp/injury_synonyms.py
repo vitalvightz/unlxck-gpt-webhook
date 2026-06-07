@@ -92,7 +92,16 @@ def get_nlp():
         _NLP = None
         return _NLP
     try:
-        _NLP = spacy.load("en_core_web_sm")
+        # The injury pipeline relies only on tokenization, NER (which feeds
+        # Negex), sentence boundaries (the parser, which Negex uses for
+        # termination boundaries) and the negex component. The tagger,
+        # lemmatizer and attribute_ruler produce POS/lemma annotations that are
+        # never read here, so disabling them trims per-doc processing time
+        # without changing matching or negation behavior.
+        _NLP = spacy.load(
+            "en_core_web_sm",
+            disable=["tagger", "lemmatizer", "attribute_ruler"],
+        )
     except Exception:
         _NLP = None
         return _NLP
@@ -118,7 +127,10 @@ def get_matchers(nlp):
     INJURY_MATCH_ID_TO_CANONICAL = {}
     for _canonical, _syns in INJURY_SYNONYM_MAP.items():
         patterns = [_canonical] + _syns
-        docs = [nlp(p) for p in patterns]
+        # PhraseMatcher with attr="LOWER" only needs token text, so tokenize the
+        # patterns with make_doc instead of running the full tagger/parser/NER
+        # pipeline over every synonym (the spaCy-recommended fast path).
+        docs = [nlp.make_doc(p) for p in patterns]
         match_id = nlp.vocab.strings.add(_canonical)
         INJURY_MATCHER.add(_canonical, docs)
         INJURY_MATCH_ID_TO_CANONICAL[match_id] = _canonical
@@ -126,7 +138,7 @@ def get_matchers(nlp):
     LOCATION_MATCHER = PhraseMatcher(nlp.vocab, attr="LOWER")
     LOC_MATCH_ID_TO_CANONICAL = {}
     for _key, _canonical in LOCATION_MAP.items():
-        doc = nlp(_key)
+        doc = nlp.make_doc(_key)
         match_id = nlp.vocab.strings.add(_key)
         LOCATION_MATCHER.add(_key, [doc])
         LOC_MATCH_ID_TO_CANONICAL[match_id] = _canonical
