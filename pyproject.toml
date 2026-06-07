@@ -1,3 +1,12 @@
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+# -ra: short summary of non-passing tests. --strict-markers: typo'd markers fail
+# loudly instead of silently doing nothing.
+addopts = "-ra --strict-markers"
+markers = [
+  "spacy: test exercises the spaCy/negspacy injury-parsing path (loads en_core_web_sm)",
+]
+
 [tool.ruff]
 target-version = "py310"
 extend-exclude = [
