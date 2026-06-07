@@ -6,6 +6,7 @@ from typing import Any
 
 from fastapi import BackgroundTasks, HTTPException, Request, status
 
+from api.generation.payloads import _stable_payload_hash
 from api.generation_job_helpers import (
     _PROTECTED_TRIAGE_STATUSES,
     _build_protected_triage_response,
@@ -17,7 +18,7 @@ from api.generation_job_helpers import (
     _normalized_client_request_id,
     daily_generation_cap_window,
 )
-from api.errors import generation_already_in_flight_error
+from api.errors import client_request_id_payload_mismatch_error, generation_already_in_flight_error
 from api.models import GenerationJobResponse, PlanRequest, ProfileRecord
 from api.performance_focus import validate_performance_focus_selections
 from api.plan_mappers import _ALLOWED_PLAN_SOURCES
@@ -57,28 +58,12 @@ async def generate_plan_for_current_user(
             detail=focus_validation.error_message or "Too many focus selections for this camp.",
         )
 
-    short_window_limit = plan_generate_rate_limit_requests()
-    if short_window_limit > 0:
-        allowed, retry_after = await asyncio.to_thread(
-            store.check_plan_generation_short_window_limit,
-            athlete_id=profile.athlete_id,
-            max_requests=short_window_limit,
-            window_seconds=plan_generate_rate_limit_window_seconds(),
-        )
-        if not allowed:
-            raise HTTPException(
-                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                detail={
-                    "message": "Too many plan generation requests. Try again shortly.",
-                    "retry_after_seconds": retry_after,
-                },
-            )
-
     client_request_id = _normalized_client_request_id(
         request.headers.get("X-Client-Request-Id"),
         "cli",
     )
     request_payload = request_body.model_dump(mode="json")
+    payload_hash = _stable_payload_hash(request_payload)
     existing_job = await asyncio.to_thread(
         store.get_generation_job_by_client_request_id,
         athlete_id=profile.athlete_id,
@@ -86,6 +71,9 @@ async def generate_plan_for_current_user(
     )
     stale_after_seconds = _generation_job_stale_after_seconds()
     if existing_job:
+        existing_payload_hash = existing_job.get("payload_hash")
+        if existing_payload_hash and str(existing_payload_hash) != payload_hash:
+            raise client_request_id_payload_mismatch_error()
         if is_startup_stale_generation_job(existing_job, stale_after_seconds=stale_after_seconds):
             existing_job = await asyncio.to_thread(
                 store.create_or_get_generation_job,
@@ -140,6 +128,23 @@ async def generate_plan_for_current_user(
     )
     if blocking_job:
         raise generation_already_in_flight_error()
+
+    short_window_limit = plan_generate_rate_limit_requests()
+    if short_window_limit > 0:
+        allowed, retry_after = await asyncio.to_thread(
+            store.check_plan_generation_short_window_limit,
+            athlete_id=profile.athlete_id,
+            max_requests=short_window_limit,
+            window_seconds=plan_generate_rate_limit_window_seconds(),
+        )
+        if not allowed:
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail={
+                    "message": "Too many plan generation requests. Try again shortly.",
+                    "retry_after_seconds": retry_after,
+                },
+            )
 
     daily_limit = plan_generate_daily_limit_per_user()
     enforce_daily_limit = (

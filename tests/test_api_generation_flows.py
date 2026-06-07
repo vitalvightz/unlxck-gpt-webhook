@@ -1744,7 +1744,7 @@ def test_create_with_same_client_request_resets_pre_start_stale_job_without_dupl
     response = client.post(
         "/api/plans/generate",
         headers={"Authorization": "Bearer athlete-token", "X-Client-Request-Id": "same-stale-request"},
-        json=_build_request({"fight_date": "2026-05-01"}).model_dump(mode="json"),
+        json=_build_request().model_dump(mode="json"),
     )
 
     assert response.status_code == 202
@@ -1756,7 +1756,7 @@ def test_create_with_same_client_request_resets_pre_start_stale_job_without_dupl
     assert reset_job["status"] == "queued"
     assert reset_job["started_at"] is None
     assert reset_job["heartbeat_at"] is None
-    assert reset_job["request_payload"]["fight_date"] == "2026-05-01"
+    assert reset_job["request_payload"]["fight_date"] == "2026-04-18"
 
 
 def test_create_with_same_client_request_resets_worker_start_stale_job_without_duplicate():
@@ -1781,7 +1781,7 @@ def test_create_with_same_client_request_resets_worker_start_stale_job_without_d
     response = client.post(
         "/api/plans/generate",
         headers={"Authorization": "Bearer athlete-token", "X-Client-Request-Id": "same-worker-start-stale-request"},
-        json=_build_request({"fight_date": "2026-05-02"}).model_dump(mode="json"),
+        json=_build_request().model_dump(mode="json"),
     )
 
     assert response.status_code == 202
@@ -1794,7 +1794,7 @@ def test_create_with_same_client_request_resets_worker_start_stale_job_without_d
     assert reset_job["started_at"] is None
     assert reset_job["heartbeat_at"] is None
     assert reset_job["progress_milestones"] == []
-    assert reset_job["request_payload"]["fight_date"] == "2026-05-02"
+    assert reset_job["request_payload"]["fight_date"] == "2026-04-18"
 
 
 def test_create_with_same_client_request_does_not_reset_fresh_worker_start_job():
@@ -1819,7 +1819,7 @@ def test_create_with_same_client_request_does_not_reset_fresh_worker_start_job()
     response = client.post(
         "/api/plans/generate",
         headers={"Authorization": "Bearer athlete-token", "X-Client-Request-Id": "same-worker-start-fresh-request"},
-        json=_build_request({"fight_date": "2026-05-03"}).model_dump(mode="json"),
+        json=_build_request().model_dump(mode="json"),
     )
 
     assert response.status_code == 202
@@ -3978,18 +3978,67 @@ def test_generate_plan_rate_limits_repeat_requests(monkeypatch: pytest.MonkeyPat
 
     first = client.post(
         "/api/plans/generate",
-        headers={"Authorization": "Bearer athlete-token"},
+        headers={"Authorization": "Bearer athlete-token", "X-Client-Request-Id": "rate-first"},
         json=_build_request().model_dump(mode="json"),
     )
     second = client.post(
         "/api/plans/generate",
-        headers={"Authorization": "Bearer athlete-token"},
-        json=_build_request().model_dump(mode="json"),
+        headers={"Authorization": "Bearer athlete-token", "X-Client-Request-Id": "rate-second"},
+        json=_build_request({"fight_date": "2026-05-09"}).model_dump(mode="json"),
     )
 
     assert first.status_code == 202
     assert second.status_code == status.HTTP_429_TOO_MANY_REQUESTS
     assert second.json()["detail"]["retry_after_seconds"] == 60
+
+
+def test_generate_plan_idempotent_retry_does_not_consume_short_window_quota(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setenv("APP_PLAN_GENERATE_RATE_LIMIT", "2")
+    monkeypatch.setenv("APP_PLAN_GENERATE_RATE_LIMIT_WINDOW_SECONDS", "60")
+    client, store, _ = _build_client()
+    payload = _build_request().model_dump(mode="json")
+
+    first = client.post(
+        "/api/plans/generate",
+        headers={"Authorization": "Bearer athlete-token", "X-Client-Request-Id": "short-idem"},
+        json=payload,
+    )
+    retry = client.post(
+        "/api/plans/generate",
+        headers={"Authorization": "Bearer athlete-token", "X-Client-Request-Id": "short-idem"},
+        json=payload,
+    )
+    new_request = client.post(
+        "/api/plans/generate",
+        headers={"Authorization": "Bearer athlete-token", "X-Client-Request-Id": "short-new"},
+        json=_build_request({"fight_date": "2026-05-10"}).model_dump(mode="json"),
+    )
+
+    assert first.status_code == 202
+    assert retry.status_code == 202
+    assert retry.json()["job_id"] == first.json()["job_id"]
+    assert new_request.status_code == 202
+    assert new_request.json()["job_id"] != first.json()["job_id"]
+    assert len(store._plan_generation_limit_events["athlete-1"]) == 2
+
+
+def test_generate_plan_reused_client_request_id_with_different_payload_conflicts():
+    client, _, _ = _build_client(enable_in_process_generation=False)
+    first = client.post(
+        "/api/plans/generate",
+        headers={"Authorization": "Bearer athlete-token", "X-Client-Request-Id": "payload-mismatch"},
+        json=_build_request().model_dump(mode="json"),
+    )
+    second = client.post(
+        "/api/plans/generate",
+        headers={"Authorization": "Bearer athlete-token", "X-Client-Request-Id": "payload-mismatch"},
+        json=_build_request({"fight_date": "2026-05-11"}).model_dump(mode="json"),
+    )
+
+    assert first.status_code == 202
+    assert second.status_code == status.HTTP_409_CONFLICT
+    assert second.json()["detail"] == "This request id has already been used for a different generation payload."
+    assert second.json()["code"] == "client_request_id_payload_mismatch"
 
 
 def test_generate_plan_daily_limit_allows_request_below_limit(monkeypatch: pytest.MonkeyPatch):
