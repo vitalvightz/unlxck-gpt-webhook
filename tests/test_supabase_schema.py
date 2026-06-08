@@ -446,7 +446,7 @@ def test_generation_job_terminal_rpcs_schema_and_migration():
         assert "generation_job_missing" in sql
         assert "completed_at = v_completed_at" in sql
         assert "failed_at = v_failed_at" in sql
-        assert "updated_at = timezone('utc', now())" in sql
+        assert "updated_at = now()" in sql
         assert (
             "revoke all on function public.complete_generation_job(uuid, text, integer, text, jsonb, uuid, text, timestamptz, timestamptz) from public;"
             in sql

@@ -16,7 +16,7 @@ create or replace function public.complete_generation_job(
   p_final_result jsonb default null,
   p_plan_id uuid default null,
   p_error text default null,
-  p_completed_at timestamptz default timezone('utc', now()),
+  p_completed_at timestamptz default now(),
   p_heartbeat_at timestamptz default null
 )
 returns jsonb
@@ -28,7 +28,7 @@ declare
   v_job public.generation_jobs%rowtype;
   v_expected_status text := coalesce(nullif(lower(btrim(p_expected_status)), ''), 'running');
   v_final_status text := lower(btrim(p_final_status));
-  v_completed_at timestamptz := coalesce(p_completed_at, timezone('utc', now()));
+  v_completed_at timestamptz := coalesce(p_completed_at, now());
   v_heartbeat_at timestamptz := coalesce(p_heartbeat_at, v_completed_at);
 begin
   if v_final_status not in ('completed', 'review_required') then
@@ -68,7 +68,7 @@ begin
     completed_at = v_completed_at,
     failed_at = null,
     heartbeat_at = v_heartbeat_at,
-    updated_at = timezone('utc', now())
+    updated_at = now()
   where id = p_job_id
   returning * into v_job;
 
@@ -84,7 +84,7 @@ create or replace function public.fail_generation_job(
   p_final_result jsonb default null,
   p_plan_id uuid default null,
   p_progress_milestones jsonb default null,
-  p_failed_at timestamptz default timezone('utc', now()),
+  p_failed_at timestamptz default now(),
   p_heartbeat_at timestamptz default null
 )
 returns jsonb
@@ -95,7 +95,7 @@ as $$
 declare
   v_job public.generation_jobs%rowtype;
   v_expected_status text := coalesce(nullif(lower(btrim(p_expected_status)), ''), 'running');
-  v_failed_at timestamptz := coalesce(p_failed_at, timezone('utc', now()));
+  v_failed_at timestamptz := coalesce(p_failed_at, now());
   v_heartbeat_at timestamptz := coalesce(p_heartbeat_at, v_failed_at);
 begin
   select *
@@ -131,7 +131,7 @@ begin
     completed_at = v_failed_at,
     failed_at = v_failed_at,
     heartbeat_at = v_heartbeat_at,
-    updated_at = timezone('utc', now())
+    updated_at = now()
   where id = p_job_id
   returning * into v_job;
 

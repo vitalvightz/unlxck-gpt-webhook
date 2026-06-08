@@ -102,6 +102,7 @@ async def run_generation_job(
                     status="failed",
                     error=error,
                     completed_at=failed_at,
+                    failed_at=failed_at,
                     heartbeat_at=failed_at,
                 )
             return
