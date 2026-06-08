@@ -177,25 +177,17 @@ async def persist_triage_review_required(
     try:
         await asyncio.wait_for(
             asyncio.to_thread(
-                store.update_generation_job,
+                store.complete_generation_job,
                 job_id,
+                expected_attempt_count=expected_attempt_count,
+                final_status="review_required",
                 final_result=compact_final_result,
-                error=None,
                 plan_id=plan_id,
+                error=None,
+                completed_at=now_iso,
                 heartbeat_at=now_iso,
             ),
             timeout=_FINAL_RESULT_PERSIST_TIMEOUT_SECONDS,
-        )
-        await asyncio.to_thread(
-            store.complete_generation_job,
-            job_id,
-            expected_attempt_count=expected_attempt_count,
-            final_status="review_required",
-            final_result=compact_final_result,
-            plan_id=plan_id,
-            error=None,
-            completed_at=now_iso,
-            heartbeat_at=now_iso,
         )
     except asyncio.TimeoutError:
         logger.exception(
