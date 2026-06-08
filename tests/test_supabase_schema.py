@@ -25,7 +25,7 @@ DAILY_CAP_MIGRATION_PATH = (
     Path(__file__).resolve().parents[1]
     / "supabase"
     / "migrations"
-    / "20260606000000_atomic_daily_generation_cap.sql"
+    / "20260606005000_atomic_daily_generation_cap.sql"
 )
 CRITICAL_RLS_MIGRATION_PATH = (
     Path(__file__).resolve().parents[1]
