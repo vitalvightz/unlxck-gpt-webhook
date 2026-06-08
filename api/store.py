@@ -141,6 +141,14 @@ _GENERATION_JOB_CONFLICT_SNIPPETS = (
     "generation_jobs_athlete_client_request_key",
     "generation_jobs_one_active_job_per_athlete",
 )
+_GENERATION_JOB_TERMINAL_CONFLICT_SNIPPETS = (
+    "wrong_generation_job_status",
+    "stale_generation_job_attempt",
+    "invalid_terminal_status",
+)
+_GENERATION_JOB_TERMINAL_MISSING_SNIPPETS = (
+    "generation_job_missing",
+)
 PLAN_RUNTIME_SCHEMA_ERROR_DETAIL = (
     "plans table is missing required runtime columns; apply latest Supabase schema and redeploy"
 )
@@ -316,6 +324,34 @@ class AppStore(Protocol):
     def claim_generation_job(self, job_id: str, *, stale_after_seconds: int | None = None) -> dict[str, Any] | None: ...
 
     def count_active_generation_jobs(self, *, stale_after_seconds: int | None = None) -> int: ...
+
+    def complete_generation_job(
+        self,
+        job_id: str,
+        *,
+        expected_attempt_count: int,
+        final_status: str,
+        final_result: dict[str, Any] | None = None,
+        plan_id: str | None = None,
+        error: str | None = None,
+        completed_at: str | None = None,
+        heartbeat_at: str | None = None,
+        expected_status: str = "running",
+    ) -> dict[str, Any]: ...
+
+    def fail_generation_job(
+        self,
+        job_id: str,
+        *,
+        expected_attempt_count: int,
+        error: str,
+        final_result: dict[str, Any] | None = None,
+        plan_id: str | None = None,
+        progress_milestones: list[Any] | None = None,
+        failed_at: str | None = None,
+        heartbeat_at: str | None = None,
+        expected_status: str = "running",
+    ) -> dict[str, Any]: ...
 
     def update_generation_job(self, job_id: str, **changes: Any) -> dict[str, Any]: ...
 
@@ -692,6 +728,26 @@ class SupabaseAppStore:
             if part
         ).lower()
         return any(snippet in text for snippet in _GENERATION_JOB_CONFLICT_SNIPPETS)
+
+    def _is_generation_job_terminal_conflict_error(self, exc: Exception) -> bool:
+        if not isinstance(exc, PostgrestAPIError):
+            return False
+        text = " ".join(
+            str(part)
+            for part in (exc.code, exc.message, exc.hint, exc.details)
+            if part
+        ).lower()
+        return any(snippet in text for snippet in _GENERATION_JOB_TERMINAL_CONFLICT_SNIPPETS)
+
+    def _is_generation_job_terminal_missing_error(self, exc: Exception) -> bool:
+        if not isinstance(exc, PostgrestAPIError):
+            return False
+        text = " ".join(
+            str(part)
+            for part in (exc.code, exc.message, exc.hint, exc.details)
+            if part
+        ).lower()
+        return any(snippet in text for snippet in _GENERATION_JOB_TERMINAL_MISSING_SNIPPETS)
 
     def _is_plan_schema_column_error(self, exc: Exception) -> bool:
         if not isinstance(exc, PostgrestAPIError):
@@ -2718,33 +2774,15 @@ class SupabaseAppStore:
         # alive. Either change means the row moved on, so the update no-ops and the
         # next pass re-evaluates instead of clobbering live state.
         expected_attempt_count = int(job.get("attempt_count") or 0)
-        expected_heartbeat_at = job.get("heartbeat_at")
 
-        def _fail_update():
-            query = (
-                self.client.table("generation_jobs")
-                .update(
-                    {
-                        "status": "failed",
-                        "error": "Generation worker stalled after loading the job.",
-                        "completed_at": now_iso,
-                        "heartbeat_at": now_iso,
-                        "progress_milestones": milestones,
-                    }
-                )
-                .eq("id", job_id)
-                .eq("status", "running")
-                .eq("attempt_count", expected_attempt_count)
-            )
-            if expected_heartbeat_at is None:
-                query = query.is_("heartbeat_at", "null")
-            else:
-                query = query.eq("heartbeat_at", expected_heartbeat_at)
-            return query.execute()
-
-        self._run_with_transient_retry(
-            operation="claim_generation_job_start:fail_job_loaded_stalled",
-            fn=_fail_update,
+        self.fail_generation_job(
+            job_id,
+            expected_status="running",
+            expected_attempt_count=expected_attempt_count,
+            error="Generation worker stalled after loading the job.",
+            progress_milestones=milestones,
+            failed_at=now_iso,
+            heartbeat_at=now_iso,
         )
 
     def claim_generation_job_start(self, job_id: str, *, stale_after_seconds: int | None = None) -> dict[str, Any] | None:
@@ -2888,6 +2926,148 @@ class SupabaseAppStore:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="failed to count active generation jobs",
+            ) from exc
+
+    def _terminal_generation_job_rpc_result(self, response: Any) -> dict[str, Any] | None:
+        data = getattr(response, "data", None)
+        if isinstance(data, dict):
+            return data
+        if isinstance(data, list) and data and isinstance(data[0], dict):
+            return data[0]
+        return None
+
+    def _handle_terminal_generation_job_error(
+        self,
+        *,
+        exc: Exception,
+        operation: str,
+        job_id: str,
+    ) -> None:
+        if self._is_transient_store_error(exc):
+            logger.warning(
+                "[store] %s:transient_failure job_id=%s error_type=%s",
+                operation,
+                job_id,
+                type(exc).__name__,
+            )
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail=GENERATION_JOB_UNAVAILABLE_DETAIL,
+            ) from exc
+        if self._is_generation_job_terminal_missing_error(exc):
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="generation job not found",
+            ) from exc
+        if self._is_generation_job_terminal_conflict_error(exc):
+            raise _status_transition_error(_sanitize_error_text(exc)) from exc
+        if self._is_generation_job_schema_error(exc):
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=GENERATION_JOB_SCHEMA_DETAIL,
+            ) from exc
+
+    def complete_generation_job(
+        self,
+        job_id: str,
+        *,
+        expected_attempt_count: int,
+        final_status: str,
+        final_result: dict[str, Any] | None = None,
+        plan_id: str | None = None,
+        error: str | None = None,
+        completed_at: str | None = None,
+        heartbeat_at: str | None = None,
+        expected_status: str = "running",
+    ) -> dict[str, Any]:
+        next_status = str(final_status or "").strip().lower()
+        if next_status not in {"completed", "review_required"}:
+            raise _status_transition_error(f"invalid terminal generation job status: {final_status!r}")
+        try:
+            payload = {
+                "p_job_id": job_id,
+                "p_expected_status": expected_status,
+                "p_expected_attempt_count": int(expected_attempt_count),
+                "p_final_status": next_status,
+                "p_final_result": final_result,
+                "p_plan_id": plan_id,
+                "p_error": error,
+                "p_completed_at": completed_at,
+                "p_heartbeat_at": heartbeat_at,
+            }
+            response = self._run_with_transient_retry(
+                operation="complete_generation_job:rpc",
+                fn=lambda: self.client.rpc("complete_generation_job", payload).execute(),
+            )
+            updated = self._terminal_generation_job_rpc_result(response)
+            if not updated:
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail="generation job completion returned no row",
+                )
+            return updated
+        except HTTPException:
+            raise
+        except _STORE_CLIENT_ERRORS as exc:
+            self._handle_terminal_generation_job_error(
+                exc=exc,
+                operation="complete_generation_job",
+                job_id=job_id,
+            )
+            logger.exception("[store] complete_generation_job:exception job_id=%s", job_id)
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="failed to complete generation job",
+            ) from exc
+
+    def fail_generation_job(
+        self,
+        job_id: str,
+        *,
+        expected_attempt_count: int,
+        error: str,
+        final_result: dict[str, Any] | None = None,
+        plan_id: str | None = None,
+        progress_milestones: list[Any] | None = None,
+        failed_at: str | None = None,
+        heartbeat_at: str | None = None,
+        expected_status: str = "running",
+    ) -> dict[str, Any]:
+        try:
+            payload = {
+                "p_job_id": job_id,
+                "p_expected_status": expected_status,
+                "p_expected_attempt_count": int(expected_attempt_count),
+                "p_error": str(error or "Generation job failed."),
+                "p_final_result": final_result,
+                "p_plan_id": plan_id,
+                "p_progress_milestones": progress_milestones,
+                "p_failed_at": failed_at,
+                "p_heartbeat_at": heartbeat_at,
+            }
+            response = self._run_with_transient_retry(
+                operation="fail_generation_job:rpc",
+                fn=lambda: self.client.rpc("fail_generation_job", payload).execute(),
+            )
+            updated = self._terminal_generation_job_rpc_result(response)
+            if not updated:
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail="generation job failure returned no row",
+                )
+            return updated
+        except HTTPException:
+            raise
+        except _STORE_CLIENT_ERRORS as exc:
+            self._handle_terminal_generation_job_error(
+                exc=exc,
+                operation="fail_generation_job",
+                job_id=job_id,
+            )
+            logger.exception("[store] fail_generation_job:exception job_id=%s", job_id)
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="failed to fail generation job",
             ) from exc
 
     def update_generation_job(self, job_id: str, **changes: Any) -> dict[str, Any]:

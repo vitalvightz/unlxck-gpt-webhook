@@ -96,9 +96,13 @@ def test_run_claimed_job_sanitizes_pre_runtime_error(monkeypatch: pytest.MonkeyP
     captured: dict[str, object] = {}
 
     class _CaptureStore:
-        def update_generation_job(self, job_id, **kwargs):
+        def get_generation_job(self, job_id):
+            return {"id": job_id, "status": "queued", "attempt_count": 0}
+
+        def fail_generation_job(self, job_id, **kwargs):
             captured["job_id"] = job_id
             captured.update(kwargs)
+            captured["status"] = "failed"
             return {}
 
     def _boom(**_kwargs):

@@ -143,6 +143,7 @@ async def persist_triage_review_required(
     job_id: str,
     athlete_id: str,
     plan_id: str | None,
+    expected_attempt_count: int,
     job_source: str,
     final_result: dict[str, Any],
     admin_resume_plan_row: dict[str, Any] | None,
@@ -179,13 +180,22 @@ async def persist_triage_review_required(
                 store.update_generation_job,
                 job_id,
                 final_result=compact_final_result,
-                status="review_required",
                 error=None,
                 plan_id=plan_id,
-                completed_at=now_iso,
                 heartbeat_at=now_iso,
             ),
             timeout=_FINAL_RESULT_PERSIST_TIMEOUT_SECONDS,
+        )
+        await asyncio.to_thread(
+            store.complete_generation_job,
+            job_id,
+            expected_attempt_count=expected_attempt_count,
+            final_status="review_required",
+            final_result=compact_final_result,
+            plan_id=plan_id,
+            error=None,
+            completed_at=now_iso,
+            heartbeat_at=now_iso,
         )
     except asyncio.TimeoutError:
         logger.exception(
@@ -196,11 +206,11 @@ async def persist_triage_review_required(
         now_iso = utc_now_iso()
         with suppress(Exception):
             await asyncio.to_thread(
-                store.update_generation_job,
+                store.fail_generation_job,
                 job_id,
-                status="failed",
+                expected_attempt_count=expected_attempt_count,
                 error=_FINAL_RESULT_PERSIST_TIMEOUT_ERROR,
-                completed_at=now_iso,
+                failed_at=now_iso,
                 heartbeat_at=now_iso,
             )
         return
@@ -213,11 +223,11 @@ async def persist_triage_review_required(
         now_iso = utc_now_iso()
         with suppress(Exception):
             await asyncio.to_thread(
-                store.update_generation_job,
+                store.fail_generation_job,
                 job_id,
-                status="failed",
+                expected_attempt_count=expected_attempt_count,
                 error="Stage 1 triage result persistence failed.",
-                completed_at=now_iso,
+                failed_at=now_iso,
                 heartbeat_at=now_iso,
             )
         return
@@ -364,11 +374,11 @@ async def persist_plan_and_finalize(
             now_iso = utc_now_iso()
             with suppress(Exception):
                 await asyncio.to_thread(
-                    store.update_generation_job,
+                    store.fail_generation_job,
                     job_id,
-                    status="failed",
+                    expected_attempt_count=int(job.get("attempt_count") or 0),
                     error=_PLAN_PERSIST_VERIFICATION_ERROR,
-                    completed_at=now_iso,
+                    failed_at=now_iso,
                     heartbeat_at=now_iso,
                 )
             return
@@ -409,11 +419,11 @@ async def persist_plan_and_finalize(
         now_iso = utc_now_iso()
         with suppress(Exception):
             await asyncio.to_thread(
-                store.update_generation_job,
+                store.fail_generation_job,
                 job_id,
-                status="failed",
+                expected_attempt_count=int(job.get("attempt_count") or 0),
                 error=_FINAL_RESULT_PERSIST_TIMEOUT_ERROR,
-                completed_at=now_iso,
+                failed_at=now_iso,
                 heartbeat_at=now_iso,
             )
         return
@@ -422,11 +432,11 @@ async def persist_plan_and_finalize(
         now_iso = utc_now_iso()
         with suppress(Exception):
             await asyncio.to_thread(
-                store.update_generation_job,
+                store.fail_generation_job,
                 job_id,
-                status="failed",
+                expected_attempt_count=int(job.get("attempt_count") or 0),
                 error="Stage 2 result persistence failed after plan persistence.",
-                completed_at=now_iso,
+                failed_at=now_iso,
                 heartbeat_at=now_iso,
             )
         return
@@ -476,15 +486,28 @@ async def persist_plan_and_finalize(
             "Plan saved to your workspace",
             "Opening the saved plan for review.",
         )
-    await to_thread_with_heartbeat(
-        store.update_generation_job,
-        job_id,
-        status=final_status,
-        error=terminal_missing_plan_id_error,
-        plan_id=plan_id,
-        completed_at=utc_now_iso(),
-        heartbeat_at=utc_now_iso(),
-    )
+    terminal_at = utc_now_iso()
+    if final_status == "failed":
+        await asyncio.to_thread(
+            store.fail_generation_job,
+            job_id,
+            expected_attempt_count=int(job.get("attempt_count") or 0),
+            error=terminal_missing_plan_id_error or "Generation job failed.",
+            plan_id=plan_id,
+            failed_at=terminal_at,
+            heartbeat_at=terminal_at,
+        )
+    else:
+        await asyncio.to_thread(
+            store.complete_generation_job,
+            job_id,
+            expected_attempt_count=int(job.get("attempt_count") or 0),
+            final_status=final_status,
+            error=terminal_missing_plan_id_error,
+            plan_id=plan_id,
+            completed_at=terminal_at,
+            heartbeat_at=terminal_at,
+        )
     emit_milestone(
         "generation_job_terminal_status_persisted",
         "Generation job terminal status persisted",

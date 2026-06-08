@@ -100,13 +100,18 @@ async def _mark_job_failed_before_runtime(
     error: str,
 ) -> None:
     with suppress(Exception):
+        job = await asyncio.to_thread(store.get_generation_job, job_id)
+        if not job:
+            return
+        failed_at = utc_now_iso()
         await asyncio.to_thread(
-            store.update_generation_job,
+            store.fail_generation_job,
             job_id,
-            status="failed",
+            expected_status=str(job.get("status") or "queued"),
+            expected_attempt_count=int(job.get("attempt_count") or 0),
             error=error,
-            completed_at=utc_now_iso(),
-            heartbeat_at=utc_now_iso(),
+            failed_at=failed_at,
+            heartbeat_at=failed_at,
         )
 
 

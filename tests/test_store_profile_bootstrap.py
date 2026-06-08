@@ -1273,28 +1273,162 @@ def test_claim_generation_job_start_fails_job_loaded_stall_at_attempt_cap(monkey
         return fn()
 
     store._run_with_transient_retry = _run
-    # update().eq(id).eq(status).eq(attempt_count).eq(heartbeat_at).execute()
-    store.client.table.return_value.update.return_value.eq.return_value.eq.return_value.eq.return_value.eq.return_value.execute.return_value = MagicMock()
+    response = MagicMock()
+    response.data = {"id": "job-1", "status": "failed", "attempt_count": 2}
+    store.client.rpc.return_value.execute.return_value = response
 
     result = store.claim_generation_job_start("job-1")
 
     # Worker reclaim refuses to re-grab the job past its attempt budget and fails it
     # instead of bumping attempt_count to 3.
     assert result is None
-    assert captured["operation"] == "claim_generation_job_start:fail_job_loaded_stalled"
-    update_payload = store.client.table.return_value.update.call_args.args[0]
-    assert update_payload["status"] == "failed"
-    assert update_payload["error"] == "Generation worker stalled after loading the job."
-    assert any(m["code"] == "worker_claim_stalled_failed" for m in update_payload["progress_milestones"])
-    # Optimistic lock guards the exact row we read (id + status + attempt_count + heartbeat_at).
-    eq_chain = store.client.table.return_value.update.return_value.eq
-    assert eq_chain.call_args.args == ("id", "job-1")
-    status_eq = eq_chain.return_value.eq
-    assert status_eq.call_args.args == ("status", "running")
-    attempt_eq = status_eq.return_value.eq
-    assert attempt_eq.call_args.args == ("attempt_count", 2)
-    heartbeat_eq = attempt_eq.return_value.eq
-    assert heartbeat_eq.call_args.args == ("heartbeat_at", old_iso)
+    assert captured["operation"] == "fail_generation_job:rpc"
+    rpc_name, payload = store.client.rpc.call_args.args
+    assert rpc_name == "fail_generation_job"
+    assert payload["p_job_id"] == "job-1"
+    assert payload["p_expected_status"] == "running"
+    assert payload["p_expected_attempt_count"] == 2
+    assert payload["p_error"] == "Generation worker stalled after loading the job."
+    assert payload["p_failed_at"] == fixed_now
+    assert payload["p_heartbeat_at"] == fixed_now
+    assert any(m["code"] == "worker_claim_stalled_failed" for m in payload["p_progress_milestones"])
+
+
+def test_complete_generation_job_calls_terminal_rpc_successfully():
+    store = _make_store()
+    response = MagicMock()
+    response.data = {
+        "id": "job-1",
+        "status": "completed",
+        "attempt_count": 2,
+        "completed_at": "2026-04-05T12:00:00+00:00",
+        "failed_at": None,
+    }
+    store.client.rpc.return_value.execute.return_value = response
+    store._run_with_transient_retry = lambda *, operation, fn, attempts=3, backoff_seconds=0.25: fn()
+
+    result = store.complete_generation_job(
+        "job-1",
+        expected_attempt_count=2,
+        final_status="completed",
+        final_result={"status": "ready"},
+        plan_id="11111111-1111-1111-1111-111111111111",
+        completed_at="2026-04-05T12:00:00+00:00",
+        heartbeat_at="2026-04-05T12:00:00+00:00",
+    )
+
+    assert result["status"] == "completed"
+    rpc_name, payload = store.client.rpc.call_args.args
+    assert rpc_name == "complete_generation_job"
+    assert payload["p_job_id"] == "job-1"
+    assert payload["p_expected_status"] == "running"
+    assert payload["p_expected_attempt_count"] == 2
+    assert payload["p_final_status"] == "completed"
+    assert payload["p_final_result"] == {"status": "ready"}
+
+
+def test_fail_generation_job_calls_terminal_rpc_successfully():
+    store = _make_store()
+    response = MagicMock()
+    response.data = {
+        "id": "job-1",
+        "status": "failed",
+        "attempt_count": 2,
+        "error": "Stage 2 failed",
+        "failed_at": "2026-04-05T12:00:00+00:00",
+    }
+    store.client.rpc.return_value.execute.return_value = response
+    store._run_with_transient_retry = lambda *, operation, fn, attempts=3, backoff_seconds=0.25: fn()
+
+    result = store.fail_generation_job(
+        "job-1",
+        expected_attempt_count=2,
+        error="Stage 2 failed",
+        progress_milestones=[{"code": "failed"}],
+        failed_at="2026-04-05T12:00:00+00:00",
+        heartbeat_at="2026-04-05T12:00:00+00:00",
+    )
+
+    assert result["status"] == "failed"
+    rpc_name, payload = store.client.rpc.call_args.args
+    assert rpc_name == "fail_generation_job"
+    assert payload["p_job_id"] == "job-1"
+    assert payload["p_expected_status"] == "running"
+    assert payload["p_expected_attempt_count"] == 2
+    assert payload["p_error"] == "Stage 2 failed"
+    assert payload["p_progress_milestones"] == [{"code": "failed"}]
+
+
+def test_complete_generation_job_rejects_stale_attempt_with_409():
+    store = _make_store()
+    store._run_with_transient_retry = MagicMock(
+        side_effect=APIError(
+            {
+                "message": "stale_generation_job_attempt:job-1 expected 2, got 3",
+                "code": "P0001",
+                "hint": None,
+                "details": None,
+            }
+        )
+    )
+
+    with pytest.raises(HTTPException) as exc_info:
+        store.complete_generation_job(
+            "job-1",
+            expected_attempt_count=2,
+            final_status="completed",
+        )
+
+    assert exc_info.value.status_code == status.HTTP_409_CONFLICT
+    assert "stale_generation_job_attempt" in str(exc_info.value.detail)
+
+
+def test_fail_generation_job_rejects_wrong_status_with_409():
+    store = _make_store()
+    store._run_with_transient_retry = MagicMock(
+        side_effect=APIError(
+            {
+                "message": "wrong_generation_job_status:job-1 expected running, got completed",
+                "code": "P0001",
+                "hint": None,
+                "details": None,
+            }
+        )
+    )
+
+    with pytest.raises(HTTPException) as exc_info:
+        store.fail_generation_job(
+            "job-1",
+            expected_attempt_count=2,
+            error="failed",
+        )
+
+    assert exc_info.value.status_code == status.HTTP_409_CONFLICT
+    assert "wrong_generation_job_status" in str(exc_info.value.detail)
+
+
+def test_fail_generation_job_missing_job_returns_404():
+    store = _make_store()
+    store._run_with_transient_retry = MagicMock(
+        side_effect=APIError(
+            {
+                "message": "generation_job_missing:job-1",
+                "code": "P0002",
+                "hint": None,
+                "details": None,
+            }
+        )
+    )
+
+    with pytest.raises(HTTPException) as exc_info:
+        store.fail_generation_job(
+            "job-1",
+            expected_attempt_count=2,
+            error="failed",
+        )
+
+    assert exc_info.value.status_code == status.HTTP_404_NOT_FOUND
+    assert exc_info.value.detail == "generation job not found"
 
 
 def test_count_active_generation_jobs_uses_app_stale_timeout_by_default(monkeypatch):

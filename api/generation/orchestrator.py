@@ -63,6 +63,7 @@ async def run_generation_job(
     progress_callback: ProgressCallback | None = None
     stage1_timed_out = threading.Event()
     seen_milestone_codes: set[str] = set()
+    claimed_attempt_count: int | None = None
 
     def _safe_error_and_frame(exc: Exception) -> tuple[str, traceback.FrameSummary | None]:
         tb = traceback.extract_tb(exc.__traceback__)
@@ -89,6 +90,29 @@ async def run_generation_job(
                 frame.filename if frame else "",
                 frame.lineno if frame else "",
                 frame.name if frame else "",
+            )
+
+    async def _fail_claimed_job(error: str, *, now_iso: str | None = None) -> None:
+        failed_at = now_iso or utc_now_iso()
+        if claimed_attempt_count is None:
+            with suppress(Exception):
+                await asyncio.to_thread(
+                    store.update_generation_job,
+                    job_id,
+                    status="failed",
+                    error=error,
+                    completed_at=failed_at,
+                    heartbeat_at=failed_at,
+                )
+            return
+        with suppress(Exception):
+            await asyncio.to_thread(
+                store.fail_generation_job,
+                job_id,
+                expected_attempt_count=claimed_attempt_count,
+                error=error,
+                failed_at=failed_at,
+                heartbeat_at=failed_at,
             )
 
     async def _touch_heartbeat() -> None:
@@ -144,6 +168,7 @@ async def run_generation_job(
         if not job:
             logger.warning("[jobs] generation:claim_unavailable job_id=%s", job_id)
             return
+        claimed_attempt_count = int(job.get("attempt_count") or 0)
 
         # Use persisted milestones as the initial state for the progress recorder.
         persisted_milestones = job.get("progress_milestones")
@@ -332,15 +357,10 @@ async def run_generation_job(
                     failed=True,
                 )
                 stage1_timed_out.set()
-                with suppress(Exception):
-                    await asyncio.to_thread(
-                        store.update_generation_job,
-                        job_id,
-                        status="failed",
-                        error="Stage 1 planner timed out before producing a result.",
-                        completed_at=now_iso,
-                        heartbeat_at=now_iso,
-                    )
+                await _fail_claimed_job(
+                    "Stage 1 planner timed out before producing a result.",
+                    now_iso=now_iso,
+                )
                 return
             _emit_milestone(
                 "stage1_planner_finished",
@@ -449,6 +469,7 @@ async def run_generation_job(
                 job_id=job_id,
                 athlete_id=athlete_id,
                 plan_id=plan_id,
+                expected_attempt_count=claimed_attempt_count or 0,
                 job_source=job_source,
                 final_result=final_result,
                 admin_resume_plan_row=admin_resume_plan_row,
@@ -487,15 +508,7 @@ async def run_generation_job(
             frame.lineno if frame else "",
             frame.name if frame else "",
         )
-        with suppress(Exception):
-            await asyncio.to_thread(
-                store.update_generation_job,
-                job_id,
-                status="failed",
-                error="Stage 2 finalization timed out. Retry the job or run manual review.",
-                completed_at=utc_now_iso(),
-                heartbeat_at=utc_now_iso(),
-            )
+        await _fail_claimed_job("Stage 2 finalization timed out. Retry the job or run manual review.")
     except Stage2AutomationUnavailableError as exc:
         safe_error, frame = _safe_error_and_frame(exc)
         logger.warning(
@@ -508,15 +521,7 @@ async def run_generation_job(
             frame.lineno if frame else "",
             frame.name if frame else "",
         )
-        with suppress(Exception):
-            await asyncio.to_thread(
-                store.update_generation_job,
-                job_id,
-                status="failed",
-                error=safe_error,
-                completed_at=utc_now_iso(),
-                heartbeat_at=utc_now_iso(),
-            )
+        await _fail_claimed_job(safe_error)
     except Stage2AutomationError as exc:
         safe_error, frame = _safe_error_and_frame(exc)
         logger.error(
@@ -530,15 +535,7 @@ async def run_generation_job(
             frame.name if frame else "",
         )
         resolved_error = _OPENAI_QUOTA_ADMIN_ERROR if is_openai_quota_error(exc) else safe_error
-        with suppress(Exception):
-            await asyncio.to_thread(
-                store.update_generation_job,
-                job_id,
-                status="failed",
-                error=resolved_error,
-                completed_at=utc_now_iso(),
-                heartbeat_at=utc_now_iso(),
-            )
+        await _fail_claimed_job(resolved_error)
         # Record whatever token/cost was captured before the failure so a failed
         # Stage 2 attempt is still auditable. Best-effort: never re-raise.
         stage2_cost = getattr(exc, "stage2_cost", None)
@@ -548,15 +545,7 @@ async def run_generation_job(
     except HTTPException as exc:
         detail = sanitize_error_text(exc.detail if isinstance(exc.detail, str) else json.dumps(exc.detail))
         logger.warning("[jobs] generation:http_error athlete_id=%s job_id=%s detail=%s", athlete_id, job_id, detail)
-        with suppress(Exception):
-            await asyncio.to_thread(
-                store.update_generation_job,
-                job_id,
-                status="failed",
-                error=detail,
-                completed_at=utc_now_iso(),
-                heartbeat_at=utc_now_iso(),
-            )
+        await _fail_claimed_job(detail)
     except TriageResumeMissingPlanError as exc:
         safe_error, frame = _safe_error_and_frame(exc)
         logger.error(
@@ -569,15 +558,7 @@ async def run_generation_job(
             frame.lineno if frame else "",
             frame.name if frame else "",
         )
-        with suppress(Exception):
-            await asyncio.to_thread(
-                store.update_generation_job,
-                job_id,
-                status="failed",
-                error=safe_error,
-                completed_at=utc_now_iso(),
-                heartbeat_at=utc_now_iso(),
-            )
+        await _fail_claimed_job(safe_error)
     except AdminLatestIntakeLinkageError as exc:
         safe_error, frame = _safe_error_and_frame(exc)
         logger.error(
@@ -590,15 +571,7 @@ async def run_generation_job(
             frame.lineno if frame else "",
             frame.name if frame else "",
         )
-        with suppress(Exception):
-            await asyncio.to_thread(
-                store.update_generation_job,
-                job_id,
-                status="failed",
-                error=safe_error,
-                completed_at=utc_now_iso(),
-                heartbeat_at=utc_now_iso(),
-            )
+        await _fail_claimed_job(safe_error)
     except Exception as exc:
         safe_error, frame = _safe_error_and_frame(exc)
         logger.error(
@@ -612,15 +585,7 @@ async def run_generation_job(
             frame.name if frame else "",
             isinstance(exc, Stage1PlannerError) and bool(exc.child_traceback),
         )
-        with suppress(Exception):
-            await asyncio.to_thread(
-                store.update_generation_job,
-                job_id,
-                status="failed",
-                error="Plan generation failed unexpectedly. Check server logs with the request ID.",
-                completed_at=utc_now_iso(),
-                heartbeat_at=utc_now_iso(),
-            )
+        await _fail_claimed_job("Plan generation failed unexpectedly. Check server logs with the request ID.")
     finally:
         stop_event.set()
         if heartbeat_task is not None:

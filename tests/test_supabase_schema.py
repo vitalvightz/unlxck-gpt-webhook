@@ -33,6 +33,12 @@ CRITICAL_RLS_MIGRATION_PATH = (
     / "migrations"
     / "20260531000000_harden_critical_table_rls.sql"
 )
+TERMINAL_RPCS_MIGRATION_PATH = (
+    Path(__file__).resolve().parents[1]
+    / "supabase"
+    / "migrations"
+    / "20260608184148_harden_generation_job_terminal_rpcs.sql"
+)
 
 
 def _read_schema() -> str:
@@ -59,6 +65,10 @@ def _read_critical_rls_migration() -> str:
     return CRITICAL_RLS_MIGRATION_PATH.read_text(encoding="utf-8")
 
 
+def _read_terminal_rpcs_migration() -> str:
+    return TERMINAL_RPCS_MIGRATION_PATH.read_text(encoding="utf-8")
+
+
 def test_profiles_table_declares_avatar_url_column():
     schema = _read_schema()
     profiles_definition = schema.split("create table if not exists public.profiles (", 1)[1].split(");", 1)[0]
@@ -74,6 +84,16 @@ def test_generation_jobs_schema_declares_payload_hash_column():
 
     assert "payload_hash text," in generation_jobs_definition
     assert "alter table public.generation_jobs add column if not exists payload_hash text;" in schema
+
+
+def test_generation_jobs_schema_declares_failed_at_column():
+    schema = _read_schema()
+    generation_jobs_definition = schema.split(
+        "create table if not exists public.generation_jobs (", 1
+    )[1].split(");", 1)[0]
+
+    assert "failed_at timestamptz," in generation_jobs_definition
+    assert "alter table public.generation_jobs add column if not exists failed_at timestamptz;" in schema
 
 
 def test_profiles_migration_backfills_avatar_url_column():
@@ -405,3 +425,41 @@ def test_daily_generation_cap_atomic_create_rpc_schema_and_migration():
 
     assert "Rollback notes:" in migration
     assert "drop function if exists public.create_generation_job_with_daily_limit" in migration
+
+
+def test_generation_job_terminal_rpcs_schema_and_migration():
+    schema = _read_schema()
+    migration = _read_terminal_rpcs_migration()
+
+    for sql in (schema, migration):
+        assert "alter table public.generation_jobs" in sql
+        assert "add column if not exists failed_at timestamptz" in sql
+        assert "create or replace function public.complete_generation_job(" in sql
+        assert "create or replace function public.fail_generation_job(" in sql
+        assert "returns jsonb" in sql
+        assert "security definer" in sql
+        assert "set search_path = public" in sql
+        assert "for update;" in sql
+        assert "p_expected_attempt_count" in sql
+        assert "wrong_generation_job_status" in sql
+        assert "stale_generation_job_attempt" in sql
+        assert "generation_job_missing" in sql
+        assert "completed_at = v_completed_at" in sql
+        assert "failed_at = v_failed_at" in sql
+        assert "updated_at = timezone('utc', now())" in sql
+        assert (
+            "revoke all on function public.complete_generation_job(uuid, text, integer, text, jsonb, uuid, text, timestamptz, timestamptz) from public;"
+            in sql
+        )
+        assert (
+            "grant execute on function public.complete_generation_job(uuid, text, integer, text, jsonb, uuid, text, timestamptz, timestamptz) to service_role;"
+            in sql
+        )
+        assert (
+            "revoke all on function public.fail_generation_job(uuid, text, integer, text, jsonb, uuid, jsonb, timestamptz, timestamptz) from public;"
+            in sql
+        )
+        assert (
+            "grant execute on function public.fail_generation_job(uuid, text, integer, text, jsonb, uuid, jsonb, timestamptz, timestamptz) to service_role;"
+            in sql
+        )
