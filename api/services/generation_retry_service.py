@@ -121,7 +121,7 @@ async def retry_generation_job(
         athlete_id=target_athlete_id,
         client_request_id=retry_client_request_id,
     )
-    if existing_retry_job:
+    if existing_retry_job and not is_startup_stale:
         job = await schedule_generation_job_if_needed(
             job=existing_retry_job,
             background_tasks=background_tasks,
@@ -143,7 +143,18 @@ async def retry_generation_job(
     if blocking_job and str(blocking_job.get("id")) != str(original.get("id")):
         raise generation_already_in_flight_error()
 
-    if enforce_daily_limit:
+    if is_startup_stale:
+        job = await asyncio.to_thread(
+            store.create_or_get_generation_job,
+            athlete_id=target_athlete_id,
+            client_request_id=retry_client_request_id,
+            source=source,
+            request_payload=copy.deepcopy(request_payload),
+            plan_id=retry_plan_id,
+            intake_id=retry_intake_id,
+            stale_after_seconds=stale_after_seconds,
+        )
+    elif enforce_daily_limit:
         job = await asyncio.to_thread(
             store.create_or_get_generation_job_with_daily_limit,
             athlete_id=target_athlete_id,

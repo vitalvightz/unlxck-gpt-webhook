@@ -166,13 +166,15 @@ async def schedule_generation_job_if_needed(
     except Exception:
         active_tasks.discard(job_id)
         logger.exception("[jobs] generation:schedule_failed job_id=%s", job_id)
+        failed_at = utc_now_iso()
         return await asyncio.to_thread(
-            store.update_generation_job,
+            store.fail_generation_job,
             job_id,
-            status="failed",
+            expected_status=str(job.get("status") or "queued"),
+            expected_attempt_count=int(job.get("attempt_count") or 0),
             error="Generation worker failed to schedule.",
-            completed_at=utc_now_iso(),
-            heartbeat_at=utc_now_iso(),
+            failed_at=failed_at,
+            heartbeat_at=failed_at,
         )
 
     return job

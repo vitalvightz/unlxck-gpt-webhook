@@ -445,6 +445,7 @@ class FakeStore:
             "heartbeat_at": None,
             "started_at": None,
             "completed_at": None,
+            "failed_at": None,
             "progress_milestones": [],
             "created_at": now,
             "updated_at": now,
@@ -889,6 +890,107 @@ class FakeStore:
                 raise _status_transition_error(str(exc)) from exc
         job.update(payload)
         job["updated_at"] = _now()
+        return dict(job)
+
+    def _assert_generation_job_terminal_owner(
+        self,
+        job_id: str,
+        *,
+        expected_status: str,
+        expected_attempt_count: int,
+    ) -> dict:
+        job = self.generation_jobs.get(job_id)
+        if not job:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="generation job not found")
+        current_status = str(job.get("status") or "")
+        if current_status != expected_status:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=f"wrong_generation_job_status:{job_id} expected {expected_status}, got {current_status or '<null>'}",
+            )
+        current_attempt = int(job.get("attempt_count") or 0)
+        if current_attempt != expected_attempt_count:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=f"stale_generation_job_attempt:{job_id} expected {expected_attempt_count}, got {current_attempt}",
+            )
+        return job
+
+    def complete_generation_job(
+        self,
+        job_id: str,
+        *,
+        expected_attempt_count: int,
+        final_status: str,
+        final_result: dict | None = None,
+        plan_id: str | None = None,
+        error: str | None = None,
+        completed_at: str | None = None,
+        heartbeat_at: str | None = None,
+        expected_status: str = "running",
+    ) -> dict:
+        if final_status not in {"completed", "review_required"}:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=f"invalid_terminal_status:{final_status}",
+            )
+        job = self._assert_generation_job_terminal_owner(
+            job_id,
+            expected_status=expected_status,
+            expected_attempt_count=expected_attempt_count,
+        )
+        now = completed_at or _now()
+        job.update(
+            {
+                "status": final_status,
+                "error": error,
+                "completed_at": now,
+                "failed_at": None,
+                "heartbeat_at": heartbeat_at or now,
+                "updated_at": _now(),
+            }
+        )
+        if final_result is not None:
+            job["final_result"] = final_result
+        if plan_id is not None:
+            job["plan_id"] = plan_id
+        return dict(job)
+
+    def fail_generation_job(
+        self,
+        job_id: str,
+        *,
+        expected_attempt_count: int,
+        error: str,
+        final_result: dict | None = None,
+        plan_id: str | None = None,
+        progress_milestones: list | None = None,
+        failed_at: str | None = None,
+        heartbeat_at: str | None = None,
+        expected_status: str = "running",
+    ) -> dict:
+        job = self._assert_generation_job_terminal_owner(
+            job_id,
+            expected_status=expected_status,
+            expected_attempt_count=expected_attempt_count,
+        )
+        now = failed_at or _now()
+        job.update(
+            {
+                "status": "failed",
+                "error": error or "Generation job failed.",
+                "completed_at": now,
+                "failed_at": now,
+                "heartbeat_at": heartbeat_at or now,
+                "updated_at": _now(),
+            }
+        )
+        if final_result is not None:
+            job["final_result"] = final_result
+        if plan_id is not None:
+            job["plan_id"] = plan_id
+        if progress_milestones is not None:
+            job["progress_milestones"] = progress_milestones
         return dict(job)
 
     def record_stage2_cost(self, job_id: str, metadata: dict) -> None:
