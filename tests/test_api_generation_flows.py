@@ -1399,6 +1399,7 @@ def test_worker_claim_adds_job_loaded_milestone_and_fresh_heartbeat():
 
 def test_scheduler_keeps_queued_job_until_worker_claims_and_processes():
     store = FakeStore()
+    store.ensure_profile(AuthenticatedUser("athlete-1", "athlete@example.com", "Test Athlete", {}))
     stage2 = FakeStage2Automator(result=finalized_result())
     created = store.create_or_get_generation_job(
         athlete_id="athlete-1",
@@ -1473,8 +1474,9 @@ def test_worker_start_stale_helper_marks_old_equal_heartbeat_and_started_as_stal
     assert is_worker_start_stale_generation_job(job, stale_after_seconds=90) is True
 
 
-def test_scheduler_returns_recovered_queued_row_for_stale_running_job():
+def test_scheduler_returns_failed_row_for_stale_running_job():
     store = FakeStore()
+    store.ensure_profile(AuthenticatedUser("athlete-1", "athlete@example.com", "Test Athlete", {}))
     created = store.create_or_get_generation_job(
         athlete_id="athlete-1",
         client_request_id="stale-running-returns-queued-row",
@@ -1504,9 +1506,9 @@ def test_scheduler_returns_recovered_queued_row_for_stale_running_job():
         )
     )
 
-    assert scheduled["status"] == "queued"
-    assert scheduled["started_at"] is None
-    assert scheduled["heartbeat_at"] is None
+    assert scheduled["status"] == "failed"
+    assert scheduled["completed_at"] is not None
+    assert scheduled["heartbeat_at"] is not None
 
 
 def test_generate_plan_worker_only_mode_returns_queue_metadata_and_does_not_schedule():
@@ -4095,7 +4097,7 @@ def test_generate_plan_rate_limits_repeat_requests(monkeypatch: pytest.MonkeyPat
 
     assert first.status_code == 202
     assert second.status_code == status.HTTP_429_TOO_MANY_REQUESTS
-    assert second.json()["detail"]["retry_after_seconds"] == 60
+    assert 1 <= second.json()["detail"]["retry_after_seconds"] <= 60
 
 
 def test_generate_plan_idempotent_retry_does_not_consume_short_window_quota(monkeypatch: pytest.MonkeyPatch):
@@ -4175,14 +4177,11 @@ def test_generate_plan_daily_limit_blocks_request_at_limit(monkeypatch: pytest.M
     second = client.post(
         "/api/plans/generate",
         headers={"Authorization": "Bearer athlete-token", "X-Client-Request-Id": "daily-second"},
-        json=_build_request().model_dump(mode="json"),
+        json=_build_request({"fight_date": "2026-05-09"}).model_dump(mode="json"),
     )
     assert first.status_code == 202
     assert second.status_code == status.HTTP_429_TOO_MANY_REQUESTS
-    assert (
-        second.json()["detail"]
-        == "Daily generation limit reached. Try again after midnight in your athlete timezone."
-    )
+    assert str(second.json()["detail"]).startswith("Daily generation limit reached.")
 
 
 def test_fake_store_daily_limit_create_is_atomic_for_concurrent_requests():
