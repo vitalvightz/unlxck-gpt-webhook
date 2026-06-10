@@ -1227,7 +1227,7 @@ class SupabaseAppStore:
         # produce a misleading audit trail.
         action = "promote" if normalized_role == "admin" else "revoke"
         try:
-            self.client.rpc(
+            response = self.client.rpc(
                 "set_profile_role_with_audit",
                 {
                     "p_athlete_id": athlete_id,
@@ -1247,11 +1247,32 @@ class SupabaseAppStore:
                 f"admin role change for {target_email} was rolled back "
                 f"(role and audit write commit together): {_sanitize_error_text(exc)}"
             ) from exc
+        result = response.data
+        if isinstance(result, list):
+            result = result[0] if result else {}
+        if not isinstance(result, dict):
+            result = {}
+
+        authoritative_email = str(result.get("email") or target_email)
+        authoritative_previous_role = str(result.get("previous_role") or previous_role)
+        authoritative_new_role = str(result.get("new_role") or normalized_role)
+        authoritative_action = str(result.get("action") or action)
         logger.warning(
             "[admin] role:changed action=%s email=%s previous_role=%s new_role=%s actor=%s",
-            action, target_email, previous_role, normalized_role, actor,
+            authoritative_action,
+            authoritative_email,
+            authoritative_previous_role,
+            authoritative_new_role,
+            actor,
         )
-        return {**summary, "changed": True, "action": action}
+        return {
+            "athlete_id": athlete_id,
+            "email": authoritative_email,
+            "previous_role": authoritative_previous_role,
+            "new_role": authoritative_new_role,
+            "changed": result.get("changed", True),
+            "action": authoritative_action,
+        }
 
     def change_username(self, athlete_id: str, username: str) -> dict[str, Any]:
         try:

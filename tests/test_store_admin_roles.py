@@ -191,6 +191,37 @@ def test_promote_changes_role_and_writes_audit():
     assert audit[0]["reason"] == "coach"
 
 
+def test_set_role_returns_authoritative_rpc_values():
+    store, client = _store([_profile("stale@x.com", "athlete", pid="uid-1")])
+    original_rpc = client._set_profile_role_with_audit
+
+    def _return_authoritative_row(params):
+        original_rpc(params)
+        return [
+            {
+                "athlete_id": "uid-1",
+                "email": "authoritative@x.com",
+                "previous_role": "athlete",
+                "new_role": "admin",
+                "action": "promote",
+                "changed": True,
+            }
+        ]
+
+    client._set_profile_role_with_audit = _return_authoritative_row
+
+    result = store.set_profile_role(email="stale@x.com", new_role="admin", actor="op")
+
+    assert result == {
+        "athlete_id": "uid-1",
+        "email": "authoritative@x.com",
+        "previous_role": "athlete",
+        "new_role": "admin",
+        "action": "promote",
+        "changed": True,
+    }
+
+
 def test_revoke_demotes_to_athlete_when_other_admins_remain():
     store, client = _store(
         [_profile("b@x.com", "admin", pid="1"), _profile("keeper@x.com", "admin", pid="2")]

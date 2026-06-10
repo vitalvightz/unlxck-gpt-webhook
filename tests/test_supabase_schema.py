@@ -551,6 +551,7 @@ def test_atomic_admin_role_change_audit_schema_and_migration():
         assert "set search_path = public" in sql
         assert "for update;" in sql
         assert "unsupported_profile_role" in sql
+        assert "if v_new_role is null or v_new_role not in ('admin', 'athlete') then" in sql
         assert "profile_missing" in sql
         assert "stale_profile_role" in sql
         # Role update and audit insert must live in the same function body so

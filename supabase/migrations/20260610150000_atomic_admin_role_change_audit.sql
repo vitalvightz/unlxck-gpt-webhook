@@ -39,7 +39,7 @@ declare
   v_target_email text;
   v_action text;
 begin
-  if v_new_role not in ('admin', 'athlete') then
+  if v_new_role is null or v_new_role not in ('admin', 'athlete') then
     raise exception 'unsupported_profile_role:%', p_new_role
       using errcode = 'P0001';
   end if;
