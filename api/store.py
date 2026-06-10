@@ -1183,8 +1183,10 @@ class SupabaseAppStore:
         Returns a summary dict with ``changed=False`` when the profile is
         already in the requested role (no write, no audit row). Raises
         ``ValueError`` for an unsupported role, ``LookupError`` when no profile
-        matches the email, and ``LastAdminError`` when revoking would leave zero
-        admins (unless ``allow_last_admin=True``).
+        matches the email, ``LastAdminError`` when revoking would leave zero
+        admins (unless ``allow_last_admin=True``), and ``RuntimeError`` when
+        the atomic role+audit transaction fails — in that case neither the
+        role change nor the audit row was committed.
         """
         normalized_role = (new_role or "").strip().lower()
         if normalized_role not in {"admin", "athlete"}:
@@ -1218,54 +1220,38 @@ class SupabaseAppStore:
                     "Pass allow_last_admin=True to override."
                 )
 
-        self.client.table("profiles").update({"role": normalized_role}).eq("id", athlete_id).execute()
+        # Atomic RPC: the role update and the audit insert commit in one
+        # database transaction, so a role change can never land without its
+        # audit record (and vice versa). The expected previous role is
+        # CAS-checked against the locked row so a concurrent change cannot
+        # produce a misleading audit trail.
         action = "promote" if normalized_role == "admin" else "revoke"
-        self._record_admin_role_audit(
-            athlete_id=athlete_id,
-            target_email=target_email,
-            previous_role=previous_role,
-            new_role=normalized_role,
-            action=action,
-            actor=actor,
-            reason=reason,
-        )
+        try:
+            self.client.rpc(
+                "set_profile_role_with_audit",
+                {
+                    "p_athlete_id": athlete_id,
+                    "p_new_role": normalized_role,
+                    "p_actor": actor,
+                    "p_expected_previous_role": previous_role,
+                    "p_reason": reason,
+                    "p_target_email": target_email,
+                },
+            ).execute()
+        except _STORE_CLIENT_ERRORS as exc:
+            logger.error(
+                "[admin] role:change_rolled_back action=%s email=%s actor=%s error_type=%s error=%s",
+                action, target_email, actor, type(exc).__name__, _sanitize_error_text(exc),
+            )
+            raise RuntimeError(
+                f"admin role change for {target_email} was rolled back "
+                f"(role and audit write commit together): {_sanitize_error_text(exc)}"
+            ) from exc
         logger.warning(
             "[admin] role:changed action=%s email=%s previous_role=%s new_role=%s actor=%s",
             action, target_email, previous_role, normalized_role, actor,
         )
         return {**summary, "changed": True, "action": action}
-
-    def _record_admin_role_audit(
-        self,
-        *,
-        athlete_id: str,
-        target_email: str,
-        previous_role: str,
-        new_role: str,
-        action: str,
-        actor: str,
-        reason: str | None,
-    ) -> None:
-        # The role change has already committed; an audit-write failure (e.g. the
-        # admin_role_audit table is not migrated yet) must not roll it back. Log
-        # loudly so the operator knows the audit trail is missing this entry.
-        try:
-            self.client.table("admin_role_audit").insert(
-                {
-                    "target_athlete_id": athlete_id,
-                    "target_email": target_email,
-                    "previous_role": previous_role,
-                    "new_role": new_role,
-                    "action": action,
-                    "actor": actor,
-                    "reason": reason,
-                }
-            ).execute()
-        except _STORE_CLIENT_ERRORS as exc:
-            logger.error(
-                "[admin] role_audit:write_failed action=%s email=%s actor=%s error_type=%s error=%s",
-                action, target_email, actor, type(exc).__name__, _sanitize_error_text(exc),
-            )
 
     def change_username(self, athlete_id: str, username: str) -> dict[str, Any]:
         try:

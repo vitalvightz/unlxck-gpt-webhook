@@ -5,6 +5,8 @@ import pytest
 
 import re
 
+from postgrest.exceptions import APIError
+
 from api.store import LastAdminError, SupabaseAppStore
 
 
@@ -80,6 +82,18 @@ class _Query:
         return _Result([row for row in self._rows if self._matches(row)])
 
 
+class _Rpc:
+    def __init__(self, client, name, params):
+        self._client = client
+        self._name = name
+        self._params = params
+
+    def execute(self):
+        if self._name != "set_profile_role_with_audit":
+            raise AssertionError(f"unexpected rpc {self._name!r}")
+        return _Result(self._client._set_profile_role_with_audit(self._params))
+
+
 class FakeSupabaseClient:
     def __init__(self, profiles):
         self.tables: dict[str, list[dict]] = {"profiles": profiles}
@@ -89,6 +103,64 @@ class FakeSupabaseClient:
     def table(self, name):
         rows = self.tables.setdefault(name, [])
         return _Query(self, name, rows)
+
+    def rpc(self, name, params):
+        return _Rpc(self, name, params)
+
+    def _set_profile_role_with_audit(self, params):
+        """Mirror the SQL function: role update + audit insert, all-or-nothing."""
+        athlete_id = str(params["p_athlete_id"])
+        profile = next(
+            (row for row in self.tables["profiles"] if str(row.get("id")) == athlete_id),
+            None,
+        )
+        if profile is None:
+            raise APIError({"message": f"profile_missing:{athlete_id}", "code": "P0002"})
+        previous_role = str(profile.get("role") or "athlete")
+        expected = params.get("p_expected_previous_role")
+        if expected is not None and previous_role != expected:
+            raise APIError(
+                {
+                    "message": f"stale_profile_role:{athlete_id} expected {expected}, got {previous_role}",
+                    "code": "P0001",
+                }
+            )
+        new_role = str(params["p_new_role"])
+        target_email = str(profile.get("email") or params.get("p_target_email") or "").lower()
+        if previous_role == new_role:
+            return {
+                "athlete_id": athlete_id,
+                "email": target_email,
+                "previous_role": previous_role,
+                "new_role": new_role,
+                "changed": False,
+            }
+        action = "promote" if new_role == "admin" else "revoke"
+        # Transactional emulation: a failing audit insert aborts before the
+        # role is touched, exactly like the single-transaction SQL function.
+        failure = self.insert_should_fail.get("admin_role_audit")
+        if failure is not None:
+            raise failure
+        profile["role"] = new_role
+        self.inserted.setdefault("admin_role_audit", []).append(
+            {
+                "target_athlete_id": athlete_id,
+                "target_email": target_email,
+                "previous_role": previous_role,
+                "new_role": new_role,
+                "action": action,
+                "actor": params.get("p_actor"),
+                "reason": params.get("p_reason"),
+            }
+        )
+        return {
+            "athlete_id": athlete_id,
+            "email": target_email,
+            "previous_role": previous_role,
+            "new_role": new_role,
+            "action": action,
+            "changed": True,
+        }
 
 
 def _store(profiles):
@@ -184,18 +256,38 @@ def test_invalid_role_raises_value_error():
         store.set_profile_role(email="a@x.com", new_role="superuser", actor="op")
 
 
-def test_audit_write_failure_does_not_roll_back_role(caplog):
-    from postgrest.exceptions import APIError
-
+def test_audit_write_failure_rolls_back_role_change(caplog):
     store, client = _store([_profile("a@x.com", "athlete")])
     client.insert_should_fail["admin_role_audit"] = APIError({"message": "no table"})
 
-    result = store.set_profile_role(email="a@x.com", new_role="admin", actor="op")
+    with pytest.raises(RuntimeError, match="rolled back"):
+        store.set_profile_role(email="a@x.com", new_role="admin", actor="op")
 
-    # Role change persists even though the audit insert failed.
-    assert result["changed"] is True
-    assert client.tables["profiles"][0]["role"] == "admin"
-    assert any("role_audit:write_failed" in rec.message for rec in caplog.records)
+    # The role change and the audit insert commit in one transaction: if the
+    # audit write fails, the role change must not land either.
+    assert client.tables["profiles"][0]["role"] == "athlete"
+    assert "admin_role_audit" not in client.inserted
+    assert any("role:change_rolled_back" in rec.message for rec in caplog.records)
+
+
+def test_concurrent_role_change_is_rejected_by_cas_guard():
+    # The RPC CAS-checks the expected previous role against the locked row, so
+    # a decision made against a stale read cannot write a misleading audit row.
+    store, client = _store([_profile("a@x.com", "athlete")])
+    original_rpc = client._set_profile_role_with_audit
+
+    def _race_then_call(params):
+        # Simulate another actor changing the role between the store's read
+        # and the RPC executing.
+        client.tables["profiles"][0]["role"] = "admin"
+        return original_rpc(params)
+
+    client._set_profile_role_with_audit = _race_then_call
+
+    with pytest.raises(RuntimeError, match="rolled back"):
+        store.set_profile_role(email="a@x.com", new_role="admin", actor="op")
+
+    assert "admin_role_audit" not in client.inserted
 
 
 def test_list_and_count_admins():

@@ -189,6 +189,10 @@ REQUIRED_FUNCTIONS: tuple[str, ...] = (
     "public.fail_generation_job",
     "public.prevent_self_role_escalation",
     "public.prevent_username_policy_bypass",
+    # Atomic role change + audit write (api/store.py::set_profile_role); a
+    # missing function would silently break the only sanctioned role-change
+    # path, so the deploy gate must catch it.
+    "public.set_profile_role_with_audit",
     "public.is_admin",
     # Invoked during AppStore.validate_runtime_schema() at backend startup
     # (api/store.py); a missing lock RPC must fail this check too.
