@@ -23,8 +23,12 @@ def generation_worker_id() -> str:
         return configured
     global _DEFAULT_GENERATION_WORKER_ID
     if _DEFAULT_GENERATION_WORKER_ID is None:
+        try:
+            hostname = socket.gethostname()
+        except Exception:
+            hostname = "unknown-host"
         _DEFAULT_GENERATION_WORKER_ID = (
-            f"{socket.gethostname()}:{os.getpid()}:{uuid.uuid4().hex[:8]}"
+            f"{hostname}:{os.getpid()}:{uuid.uuid4().hex[:8]}"
         )
     return _DEFAULT_GENERATION_WORKER_ID
 
