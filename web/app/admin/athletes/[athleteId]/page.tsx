@@ -24,6 +24,11 @@ import {
 import { loadAdminAthleteProfileData } from "@/lib/admin-athlete-profile-loader";
 import { useGenerationController } from "@/lib/generation-controller";
 import { validatePerformanceFocusSelections } from "@/lib/performance-focus-cap";
+import {
+  PROFILE_REFRESH_FAILED_BANNER_BODY,
+  PROFILE_REFRESH_FAILED_BANNER_TITLE,
+  hasProfileRefreshFailedWarning,
+} from "@/lib/profile-refresh-warning";
 import type {
   AdminAthleteRecord,
   AdminGenerationJobDiagnostic,
@@ -135,6 +140,7 @@ function GenerationDiagnosticCard({
   onApproveAndResume: (jobId: string) => void;
 }) {
   const summary = job.request_payload_summary ?? {};
+  const showProfileRefreshWarning = hasProfileRefreshFailedWarning(job);
 
   return (
     <article className="admin-diagnostic-card">
@@ -192,6 +198,12 @@ function GenerationDiagnosticCard({
       {job.requires_admin_resume && !job.plan_id ? (
         <div className="admin-diagnostic-alert">
           Protected triage: no plan row was created. Approve and resume to create a plan if Stage 2 succeeds.
+        </div>
+      ) : null}
+      {showProfileRefreshWarning ? (
+        <div className="admin-profile-refresh-warning" role="alert">
+          <strong>{PROFILE_REFRESH_FAILED_BANNER_TITLE}</strong>
+          <p>{PROFILE_REFRESH_FAILED_BANNER_BODY}</p>
         </div>
       ) : null}
       {job.error ? <div className="error-banner" role="alert">Error: {job.error}</div> : null}

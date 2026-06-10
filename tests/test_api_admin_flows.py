@@ -1085,6 +1085,7 @@ def test_admin_can_list_active_generation_jobs():
     store.ensure_profile(running_athlete)
     store.ensure_profile(done_athlete)
     request = _build_request()
+    warning = "Profile refresh failed; plan generated from submitted intake only."
     queued_job = store.create_or_get_generation_job(
         athlete_id=athlete.user_id,
         client_request_id="active_queued",
@@ -1103,6 +1104,9 @@ def test_admin_can_list_active_generation_jobs():
         status="running",
         started_at=now,
         heartbeat_at=now,
+        progress_milestones=[
+            {"code": "profile_refresh_failed_warning", "detail": warning, "meta": {"warning": True}},
+        ],
     )
     terminal_job = store.create_or_get_generation_job(
         athlete_id=done_athlete.user_id,
@@ -1143,7 +1147,10 @@ def test_admin_can_list_active_generation_jobs():
     assert listed_running["status"] == "running"
     assert listed_running["athlete_email"] == running_athlete.email
     assert listed_running["athlete_full_name"] == running_athlete.full_name
+    assert listed_running["warnings"] == [warning]
     assert listed_running["request_payload_summary"]["athlete_name"] == request.athlete.full_name
+    listed_queued = next(job for job in body if job["job_id"] == queued_job["id"])
+    assert listed_queued["warnings"] == []
 
 
 def test_approve_and_resume_generation_from_job_creates_resume_job_without_plan_id():

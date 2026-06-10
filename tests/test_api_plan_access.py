@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from unittest.mock import MagicMock
+
 from api.auth import AuthenticatedUser
 from api.models import PlanRenameRequest
 from support import advisory_planning_brief, _build_client, _build_request, finalized_result, stage1_result
@@ -828,11 +830,26 @@ def test_generation_job_endpoint_requires_same_athlete_or_admin():
     assert allowed.status_code == 200
 
 
+def test_generation_job_endpoint_rejects_malformed_job_id_before_store_lookup():
+    client, store, _ = _build_client()
+    store.get_generation_job = MagicMock(side_effect=AssertionError("store should not be called"))  # type: ignore[method-assign]
+
+    response = client.get(
+        "/api/generation-jobs/not-a-generation-job",
+        headers={"Authorization": "Bearer admin-token"},
+    )
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == "generation job not found"
+    store.get_generation_job.assert_not_called()
+
+
 def test_admin_can_list_athlete_generation_jobs_with_sanitized_summary_and_retry_flags():
     client, store, _ = _build_client()
     store.ensure_profile(client.app.state.auth_service.users_by_token["athlete-token"])
     request_payload = _build_request().model_dump(mode="json")
     request_payload["api_key"] = "should-not-return"
+    warning = "Profile refresh failed; plan generated from submitted intake only."
     failed = store.create_or_get_generation_job(
         athlete_id="athlete-1",
         client_request_id="cli_failed",
@@ -844,6 +861,9 @@ def test_admin_can_list_athlete_generation_jobs_with_sanitized_summary_and_retry
         status="failed",
         error="Stage 2 timeout",
         completed_at="2026-05-01T12:00:00+00:00",
+        progress_milestones=[
+            {"code": "profile_refresh_failed_warning", "detail": warning, "meta": {"warning": True}},
+        ],
     )
     response = client.get(
         "/api/admin/athletes/athlete-1/generation-jobs",
@@ -859,6 +879,7 @@ def test_admin_can_list_athlete_generation_jobs_with_sanitized_summary_and_retry
     assert first["error"] == "Stage 2 timeout"
     assert first["client_request_id"] == "cli_failed"
     assert first["can_retry"] is True
+    assert first["warnings"] == [warning]
     summary = first["request_payload_summary"]
     assert summary["athlete_name"] == request_payload["athlete"]["full_name"]
     assert summary["fight_date"] == request_payload["fight_date"]
