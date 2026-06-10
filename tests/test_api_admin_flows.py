@@ -27,6 +27,31 @@ def _old_iso(seconds: int = 3600) -> str:
     return (datetime.now(timezone.utc) - timedelta(seconds=seconds)).isoformat()
 
 
+def _override_aware_triage_resume_planner(payload: dict) -> dict:
+    override = payload.get("_triage_resume_override") or {}
+    # Mirror fightcamp.main: with an approved override, the planner continues
+    # past the triage block and decorates why_log with both the override marker
+    # and the preserved original triage decision.
+    result = dict(stage1_result())
+    if override.get("approved") is True:
+        result["why_log"] = {
+            "strength": {},
+            "injury_triage_resume_override": {
+                "bypassed_blocking": True,
+                "triage_mode": "needs_review",
+                "runtime_triage_mode": "full_plan",
+            },
+            "injury_triage_original": {
+                "mode": "needs_review",
+                "should_block_stage2": True,
+            },
+        }
+    else:
+        result["status"] = "triage_blocked"
+        result["why_log"] = {"injury_triage": {"mode": "needs_review", "should_block_stage2": True}}
+    return result
+
+
 def test_admin_endpoints_require_admin_role():
     client, store, _ = _build_client()
     athlete = AuthenticatedUser(
@@ -670,17 +695,12 @@ def test_needs_review_can_be_approved_and_resumed_with_normal_generation_flow():
         ),
     )
     stage2 = FakeStage2Automator(result=finalized_result())
-    planner_calls: list[dict] = []
-
-    def planner(payload: dict) -> dict:
-        planner_calls.append(payload)
-        return stage1_result()
 
     client = TestClient(
         create_app(
             store=store,
             auth_service=FakeAuthService({"athlete-token": athlete, "admin-token": admin}),
-            planner=planner,
+            planner=_planner,
             stage2_automator=stage2,
         )
     )
@@ -697,10 +717,10 @@ def test_needs_review_can_be_approved_and_resumed_with_normal_generation_flow():
     assert job_response.status_code == 200
     job = job_response.json()
     assert job["status"] == "completed"
-    assert len(planner_calls) == 1
-    assert planner_calls[0]["_triage_resume_override"]["approved"] is True
-    assert planner_calls[0]["_triage_resume_override"]["reason"] == "injury details clarified"
-    assert planner_calls[0]["_triage_resume_override"]["allowed_modes"] == ["needs_review", "restricted_rehab_only"]
+    resume_payload = store.get_generation_job(job_id)["request_payload"]
+    assert resume_payload["_triage_resume_override"]["approved"] is True
+    assert resume_payload["_triage_resume_override"]["reason"] == "injury details clarified"
+    assert resume_payload["_triage_resume_override"]["allowed_modes"] == ["needs_review", "restricted_rehab_only"]
     assert "_triage_resume_override" not in intake["intake"]
     assert len(stage2.calls) == 1
     assert stage2.calls[0]["plan_text"] == "# Stage 1 Draft"
@@ -1470,7 +1490,7 @@ def test_approve_and_resume_generation_writes_plan_triage_approval_before_schedu
     `triage_resume_approval` across Stage 2 updates; writing the markers
     after schedule risks losing the audit trail if the worker reads first.
     """
-    import api.app as app_module
+    import api.services.triage_resume_service as triage_resume_service
 
     athlete = AuthenticatedUser(user_id="athlete-1", email="ari@example.com", full_name="Ari Mensah", metadata={})
     admin = AuthenticatedUser(user_id="admin-1", email="ops@unlxck.test", full_name="Ops Admin", metadata={})
@@ -1492,7 +1512,7 @@ def test_approve_and_resume_generation_writes_plan_triage_approval_before_schedu
     # Spy on relative ordering of the plan-marker write vs the scheduler call.
     call_order: list[str] = []
     original_update_triage = store.update_plan_triage_approval
-    original_schedule = app_module.schedule_generation_job_if_needed
+    original_schedule = triage_resume_service.schedule_generation_job_if_needed
 
     def trace_update_triage(*args, **kwargs):
         call_order.append("update_plan_triage_approval")
@@ -1503,7 +1523,7 @@ def test_approve_and_resume_generation_writes_plan_triage_approval_before_schedu
         return await original_schedule(**kwargs)
 
     store.update_plan_triage_approval = trace_update_triage  # type: ignore[assignment]
-    app_module.schedule_generation_job_if_needed = trace_schedule  # type: ignore[assignment]
+    triage_resume_service.schedule_generation_job_if_needed = trace_schedule  # type: ignore[assignment]
 
     try:
         client = TestClient(
@@ -1523,7 +1543,7 @@ def test_approve_and_resume_generation_writes_plan_triage_approval_before_schedu
         )
         assert response.status_code == 202
     finally:
-        app_module.schedule_generation_job_if_needed = original_schedule  # type: ignore[assignment]
+        triage_resume_service.schedule_generation_job_if_needed = original_schedule  # type: ignore[assignment]
 
     triage_index = next(
         (i for i, label in enumerate(call_order) if label == "update_plan_triage_approval"),
@@ -1984,30 +2004,6 @@ def test_approve_and_resume_full_flow_updates_plan_in_place_with_override_metada
         ),
     )
 
-    def override_aware_planner(payload: dict) -> dict:
-        override = payload.get("_triage_resume_override") or {}
-        # Mirror fightcamp.main: with an approved override, the planner
-        # continues past the triage block and decorates why_log with both
-        # the override marker and the preserved original triage decision.
-        result = dict(stage1_result())
-        if override.get("approved") is True:
-            result["why_log"] = {
-                "strength": {},
-                "injury_triage_resume_override": {
-                    "bypassed_blocking": True,
-                    "triage_mode": "needs_review",
-                    "runtime_triage_mode": "full_plan",
-                },
-                "injury_triage_original": {
-                    "mode": "needs_review",
-                    "should_block_stage2": True,
-                },
-            }
-        else:
-            result["status"] = "triage_blocked"
-            result["why_log"] = {"injury_triage": {"mode": "needs_review", "should_block_stage2": True}}
-        return result
-
     stage2 = FakeStage2Automator(
         result=finalized_result(
             why_log={
@@ -2028,7 +2024,7 @@ def test_approve_and_resume_full_flow_updates_plan_in_place_with_override_metada
         create_app(
             store=store,
             auth_service=FakeAuthService({"athlete-token": athlete, "admin-token": admin}),
-            planner=override_aware_planner,
+            planner=_override_aware_triage_resume_planner,
             stage2_automator=stage2,
         )
     )

@@ -306,6 +306,51 @@ def test_worker_tick_processes_queued_job_to_terminal_status():
     assert job["completed_at"] is not None
 
 
+def test_generation_job_request_parse_failure_is_diagnostic(caplog):
+    store = FakeStore()
+    seed_default_profiles(store)
+    created = store.create_or_get_generation_job(
+        athlete_id="athlete-1",
+        client_request_id="worker-parse-failure",
+        source="self_serve",
+        request_payload={"_triage_resume_override": {"approved": True}},
+    )
+    planner_called = False
+
+    def planner(payload: dict) -> dict:
+        nonlocal planner_called
+        planner_called = True
+        return {"status": "ready"}
+
+    with caplog.at_level("INFO"):
+        asyncio.run(
+            generation_runtime.run_generation_job(
+                job_id=created["id"],
+                store=store,
+                planner_fn=planner,
+                stage2=FakeStage2Automator(result_factory=finalized_result),
+                active_tasks=set(),
+            )
+        )
+
+    job = store.get_generation_job(created["id"])
+    assert job is not None
+    assert job["status"] == "failed"
+    assert str(job["error"]).startswith("request_parse_failed:")
+    assert planner_called is False
+    milestone_codes = [milestone["code"] for milestone in job["progress_milestones"]]
+    assert milestone_codes == [
+        "job_loaded",
+        "request_payload_parse_started",
+        "request_payload_parse_failed",
+    ]
+    assert "worker:job_loaded" in caplog.text
+    assert "worker:payload_raw" in caplog.text
+    assert "worker:before_request_parse" in caplog.text
+    assert "worker:request_parse_failed" in caplog.text
+    assert "worker:after_request_parse" not in caplog.text
+
+
 def test_stage2_finalize_timeout_default_is_240(monkeypatch):
     monkeypatch.delenv("APP_STAGE2_FINALIZE_TIMEOUT_SECONDS", raising=False)
     assert _stage2_finalize_timeout_seconds() == 240.0
