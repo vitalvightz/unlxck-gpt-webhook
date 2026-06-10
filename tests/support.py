@@ -29,6 +29,7 @@ from api.state_machine import (
     require_generation_job_transition,
     require_plan_transition,
 )
+from api.generation_config import generation_worker_id
 from api.schema_requirements import GENERATION_JOB_STAGE2_COST_COLUMNS
 from api.store import _generation_startup_max_attempts, is_job_loaded_stalled_generation_job, is_stage1_planner_stalled_generation_job, is_startup_stale_generation_job
 from datetime import timedelta
@@ -400,6 +401,8 @@ class FakeStore:
                         "started_at": None,
                         "completed_at": None,
                         "progress_milestones": [],
+                        "claimed_by": None,
+                        "claimed_at": None,
                         "updated_at": now,
                     }
 
@@ -446,6 +449,8 @@ class FakeStore:
             "started_at": None,
             "completed_at": None,
             "failed_at": None,
+            "claimed_by": None,
+            "claimed_at": None,
             "progress_milestones": [],
             "created_at": now,
             "updated_at": now,
@@ -513,7 +518,7 @@ class FakeStore:
             now = _now()
             if int(live.get("attempt_count") or 0) < 2:
                 milestones.append({"code": "worker_claim_stalled_requeued", "label": "Worker claim stalled", "detail": "Worker loaded the generation job but did not reach request parsing; job was requeued for recovery.", "meta": {}, "at": now})
-                live.update({"status": "queued", "error": None, "started_at": None, "heartbeat_at": None, "completed_at": None, "progress_milestones": milestones, "updated_at": now})
+                live.update({"status": "queued", "error": None, "started_at": None, "heartbeat_at": None, "completed_at": None, "progress_milestones": milestones, "claimed_by": None, "claimed_at": None, "updated_at": now})
             else:
                 milestones.append({"code": "worker_claim_stalled_failed", "label": "Worker stalled after loading job", "detail": "Worker loaded the generation job but did not reach request parsing after retry.", "meta": {}, "at": now})
                 live.update({"status": "failed", "error": "Generation worker stalled after loading the job.", "completed_at": now, "heartbeat_at": now, "progress_milestones": milestones, "updated_at": now})
@@ -587,6 +592,8 @@ class FakeStore:
                         "stage1_result": None,
                         "final_result": None,
                         "progress_milestones": [],
+                        "claimed_by": None,
+                        "claimed_at": None,
                         "updated_at": now,
                     }
                 )
@@ -595,7 +602,7 @@ class FakeStore:
                 milestones = list(row.get("progress_milestones") or [])
                 if int(row.get("attempt_count") or 0) < 2:
                     milestones.append({"code": "worker_claim_stalled_requeued", "label": "Worker claim stalled", "detail": "Worker loaded the generation job but did not reach request parsing; job was requeued for recovery.", "meta": {}, "at": now})
-                    row.update({"status": "queued", "error": None, "heartbeat_at": None, "started_at": None, "completed_at": None, "progress_milestones": milestones, "updated_at": now})
+                    row.update({"status": "queued", "error": None, "heartbeat_at": None, "started_at": None, "completed_at": None, "progress_milestones": milestones, "claimed_by": None, "claimed_at": None, "updated_at": now})
                 else:
                     milestones.append({"code": "worker_claim_stalled_failed", "label": "Worker stalled after loading job", "detail": "Worker loaded the generation job but did not reach request parsing after retry.", "meta": {}, "at": now})
                     row.update({"status": "failed", "error": "Generation worker stalled after loading the job.", "completed_at": now, "heartbeat_at": now, "progress_milestones": milestones, "updated_at": now})
@@ -788,7 +795,7 @@ class FakeStore:
         rows.sort(key=lambda row: str(row.get("created_at") or ""))
         return rows[:limit]
 
-    def claim_generation_job_start(self, job_id: str, *, stale_after_seconds: int = 90) -> dict | None:
+    def claim_generation_job_start(self, job_id: str, *, stale_after_seconds: int = 90, worker_id: str | None = None) -> dict | None:
         job = self.generation_jobs.get(job_id)
         if not job:
             return None
@@ -835,6 +842,8 @@ class FakeStore:
         job["heartbeat_at"] = now_iso
         job["started_at"] = now_iso if job.get("started_at") is None else job["started_at"]
         job["attempt_count"] = int(job.get("attempt_count") or 0) + 1
+        job["claimed_by"] = (worker_id or "").strip() or generation_worker_id()
+        job["claimed_at"] = now_iso
         job["error"] = None
         job["completed_at"] = None
         job["progress_milestones"] = [
@@ -849,8 +858,8 @@ class FakeStore:
         job["updated_at"] = now_iso
         return dict(job)
 
-    def claim_generation_job(self, job_id: str, *, stale_after_seconds: int = 90) -> dict | None:
-        return self.claim_generation_job_start(job_id, stale_after_seconds=stale_after_seconds)
+    def claim_generation_job(self, job_id: str, *, stale_after_seconds: int = 90, worker_id: str | None = None) -> dict | None:
+        return self.claim_generation_job_start(job_id, stale_after_seconds=stale_after_seconds, worker_id=worker_id)
 
     def count_active_generation_jobs(self, *, stale_after_seconds: int = 90) -> int:
         now = datetime.now(timezone.utc)
@@ -898,6 +907,8 @@ class FakeStore:
         *,
         expected_status: str,
         expected_attempt_count: int,
+        expected_worker_id: str | None = None,
+        enforce_worker_ownership: bool = True,
     ) -> dict:
         job = self.generation_jobs.get(job_id)
         if not job:
@@ -914,6 +925,16 @@ class FakeStore:
                 status_code=status.HTTP_409_CONFLICT,
                 detail=f"stale_generation_job_attempt:{job_id} expected {expected_attempt_count}, got {current_attempt}",
             )
+        # Mirror the SQL RPC ownership guard: enforce only when the job has a
+        # recorded owner (rows claimed before the migration have none).
+        if enforce_worker_ownership:
+            checked_worker_id = (expected_worker_id or "").strip() or generation_worker_id()
+            claimed_by = str(job.get("claimed_by") or "")
+            if claimed_by and claimed_by != checked_worker_id:
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail=f"stale_generation_job_worker:{job_id} expected {checked_worker_id}, got {claimed_by}",
+                )
         return job
 
     def complete_generation_job(
@@ -928,6 +949,8 @@ class FakeStore:
         completed_at: str | None = None,
         heartbeat_at: str | None = None,
         expected_status: str = "running",
+        expected_worker_id: str | None = None,
+        enforce_worker_ownership: bool = True,
     ) -> dict:
         if final_status not in {"completed", "review_required"}:
             raise HTTPException(
@@ -938,6 +961,8 @@ class FakeStore:
             job_id,
             expected_status=expected_status,
             expected_attempt_count=expected_attempt_count,
+            expected_worker_id=expected_worker_id,
+            enforce_worker_ownership=enforce_worker_ownership,
         )
         now = completed_at or _now()
         job.update(
@@ -968,11 +993,15 @@ class FakeStore:
         failed_at: str | None = None,
         heartbeat_at: str | None = None,
         expected_status: str = "running",
+        expected_worker_id: str | None = None,
+        enforce_worker_ownership: bool = True,
     ) -> dict:
         job = self._assert_generation_job_terminal_owner(
             job_id,
             expected_status=expected_status,
             expected_attempt_count=expected_attempt_count,
+            expected_worker_id=expected_worker_id,
+            enforce_worker_ownership=enforce_worker_ownership,
         )
         now = failed_at or _now()
         job.update(

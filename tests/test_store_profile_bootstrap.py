@@ -12,6 +12,7 @@ from postgrest.exceptions import APIError
 import api.store as store_module
 from support import _build_request
 from api.auth import AuthenticatedUser
+from api.generation_config import generation_worker_id
 from api.store import SupabaseAppStore
 
 
@@ -990,28 +991,27 @@ def test_claim_generation_job_treats_null_status_as_queued(monkeypatch):
         "attempt_count": 1,
         "heartbeat_at": fixed_now,
         "started_at": fixed_now,
+        "claimed_by": generation_worker_id(),
+        "claimed_at": fixed_now,
         "progress_milestones": [{"code": "job_loaded"}],
     }
-    store.get_generation_job = MagicMock(side_effect=[legacy_job, claimed_job])
+    store.get_generation_job = MagicMock(return_value=legacy_job)
     store._run_with_transient_retry = lambda *, operation, fn, attempts=3, backoff_seconds=0.25: fn()
-    execute = (
-        store.client.table.return_value.update.return_value.eq.return_value.is_.return_value.eq.return_value.execute
-    )
-    execute.return_value = MagicMock()
+    response = MagicMock()
+    response.data = claimed_job
+    store.client.rpc.return_value.execute.return_value = response
 
     result = store.claim_generation_job("job-1")
 
     assert result == claimed_job
-    update_payload = store.client.table.return_value.update.call_args.args[0]
-    assert update_payload["status"] == "running"
-    assert update_payload["started_at"] == fixed_now
-    store.client.table.return_value.update.return_value.eq.assert_called_once_with("id", "job-1")
-    store.client.table.return_value.update.return_value.eq.return_value.is_.assert_called_once_with(
-        "status", "null"
-    )
-    store.client.table.return_value.update.return_value.eq.return_value.is_.return_value.eq.assert_called_once_with(
-        "attempt_count", 0
-    )
+    rpc_name, payload = store.client.rpc.call_args.args
+    assert rpc_name == "claim_generation_job"
+    assert payload["p_job_id"] == "job-1"
+    assert payload["p_expected_status"] == "queued"
+    assert payload["p_expected_attempt_count"] == 0
+    assert payload["p_worker_id"] == generation_worker_id()
+    assert payload["p_claimed_at"] == fixed_now
+    assert payload["p_progress_milestones"][0]["code"] == "job_loaded"
 
 
 def test_claim_generation_job_treats_blank_status_as_queued(monkeypatch):
@@ -1031,28 +1031,24 @@ def test_claim_generation_job_treats_blank_status_as_queued(monkeypatch):
         "attempt_count": 1,
         "heartbeat_at": fixed_now,
         "started_at": fixed_now,
+        "claimed_by": generation_worker_id(),
+        "claimed_at": fixed_now,
         "progress_milestones": [{"code": "job_loaded"}],
     }
-    store.get_generation_job = MagicMock(side_effect=[legacy_job, claimed_job])
+    store.get_generation_job = MagicMock(return_value=legacy_job)
     store._run_with_transient_retry = lambda *, operation, fn, attempts=3, backoff_seconds=0.25: fn()
-    execute = (
-        store.client.table.return_value.update.return_value.eq.return_value.eq.return_value.eq.return_value.execute
-    )
-    execute.return_value = MagicMock()
+    response = MagicMock()
+    response.data = claimed_job
+    store.client.rpc.return_value.execute.return_value = response
 
     result = store.claim_generation_job("job-1")
 
     assert result == claimed_job
-    update_payload = store.client.table.return_value.update.call_args.args[0]
-    assert update_payload["status"] == "running"
-    assert update_payload["started_at"] == fixed_now
-    store.client.table.return_value.update.return_value.eq.assert_called_once_with("id", "job-1")
-    store.client.table.return_value.update.return_value.eq.return_value.eq.assert_called_once_with(
-        "status", ""
-    )
-    store.client.table.return_value.update.return_value.eq.return_value.eq.return_value.eq.assert_called_once_with(
-        "attempt_count", 0
-    )
+    rpc_name, payload = store.client.rpc.call_args.args
+    assert rpc_name == "claim_generation_job"
+    assert payload["p_expected_status"] == "queued"
+    assert payload["p_expected_attempt_count"] == 0
+    assert payload["p_worker_id"] == generation_worker_id()
 
 
 @pytest.mark.parametrize("current_status", ["completed", "failed", "review_required"])
@@ -1072,11 +1068,11 @@ def test_claim_generation_job_returns_none_for_invalid_non_blank_statuses(curren
     result = store.claim_generation_job("job-1")
 
     assert result is None
-    store.client.table.return_value.update.assert_not_called()
+    store.client.rpc.assert_not_called()
     store._run_with_transient_retry.assert_not_called()
 
 
-def test_claim_generation_job_returns_none_when_compare_and_swap_loses(monkeypatch):
+def test_claim_generation_job_returns_none_when_claim_race_loses(monkeypatch):
     fixed_now = "2026-04-05T12:00:00+00:00"
     monkeypatch.setattr(store_module, "_utc_now_iso", lambda: fixed_now)
     store = _make_store()
@@ -1087,35 +1083,24 @@ def test_claim_generation_job_returns_none_when_compare_and_swap_loses(monkeypat
         "heartbeat_at": None,
         "started_at": None,
     }
-    claimed_by_other_worker = {
-        "id": "job-1",
-        "status": "running",
-        "attempt_count": 1,
-        "heartbeat_at": "2026-04-05T12:00:01+00:00",
-        "started_at": "2026-04-05T12:00:01+00:00",
-        "progress_milestones": [{"code": "job_loaded"}],
-    }
-    store.get_generation_job = MagicMock(side_effect=[queued_job, claimed_by_other_worker])
+    store.get_generation_job = MagicMock(return_value=queued_job)
     store._run_with_transient_retry = lambda *, operation, fn, attempts=3, backoff_seconds=0.25: fn()
-    execute = (
-        store.client.table.return_value.update.return_value.eq.return_value.eq.return_value.eq.return_value.execute
-    )
-    execute.return_value = MagicMock()
+    # Another worker won the atomic claim, so the RPC's guarded update matched
+    # nothing and returned null.
+    response = MagicMock()
+    response.data = None
+    store.client.rpc.return_value.execute.return_value = response
 
     result = store.claim_generation_job("job-1")
 
     assert result is None
-    store.client.table.return_value.update.assert_called_once()
-    store.client.table.return_value.update.return_value.eq.assert_called_once_with("id", "job-1")
-    store.client.table.return_value.update.return_value.eq.return_value.eq.assert_called_once_with(
-        "status", "queued"
-    )
-    store.client.table.return_value.update.return_value.eq.return_value.eq.return_value.eq.assert_called_once_with(
-        "attempt_count", 0
-    )
+    rpc_name, payload = store.client.rpc.call_args.args
+    assert rpc_name == "claim_generation_job"
+    assert payload["p_expected_status"] == "queued"
+    assert payload["p_expected_attempt_count"] == 0
 
 
-def test_claim_generation_job_returns_updated_row_when_compare_and_swap_succeeds(monkeypatch):
+def test_claim_generation_job_returns_claimed_row_with_worker_ownership(monkeypatch):
     fixed_now = "2026-04-05T12:00:00+00:00"
     monkeypatch.setattr(store_module, "_utc_now_iso", lambda: fixed_now)
     store = _make_store()
@@ -1132,6 +1117,8 @@ def test_claim_generation_job_returns_updated_row_when_compare_and_swap_succeeds
         "attempt_count": 1,
         "heartbeat_at": fixed_now,
         "started_at": fixed_now,
+        "claimed_by": "worker-a",
+        "claimed_at": fixed_now,
         "progress_milestones": [
             {
                 "code": "job_loaded",
@@ -1142,18 +1129,19 @@ def test_claim_generation_job_returns_updated_row_when_compare_and_swap_succeeds
             }
         ],
     }
-    store.get_generation_job = MagicMock(side_effect=[queued_job, claimed_job])
+    store.get_generation_job = MagicMock(return_value=queued_job)
     store._run_with_transient_retry = lambda *, operation, fn, attempts=3, backoff_seconds=0.25: fn()
-    execute = (
-        store.client.table.return_value.update.return_value.eq.return_value.eq.return_value.eq.return_value.execute
-    )
-    execute.return_value = MagicMock()
+    response = MagicMock()
+    response.data = claimed_job
+    store.client.rpc.return_value.execute.return_value = response
 
-    result = store.claim_generation_job("job-1")
+    result = store.claim_generation_job("job-1", worker_id="worker-a")
 
     assert result == claimed_job
-    update_payload = store.client.table.return_value.update.call_args.args[0]
-    assert update_payload["progress_milestones"][0]["code"] == "job_loaded"
+    rpc_name, payload = store.client.rpc.call_args.args
+    assert rpc_name == "claim_generation_job"
+    assert payload["p_worker_id"] == "worker-a"
+    assert payload["p_progress_milestones"][0]["code"] == "job_loaded"
 
 
 def test_get_active_generation_job_for_athlete_uses_app_stale_timeout_by_default(monkeypatch):
@@ -1233,16 +1221,24 @@ def test_claim_generation_job_start_uses_app_stale_timeout_by_default(monkeypatc
         "attempt_count": 2,
         "heartbeat_at": fixed_now,
         "started_at": running_stale["started_at"],
+        "claimed_by": generation_worker_id(),
+        "claimed_at": fixed_now,
         "progress_milestones": [{"code": "job_loaded"}],
     }
-    store.get_generation_job = MagicMock(side_effect=[running_stale, claimed_job])
+    store.get_generation_job = MagicMock(return_value=running_stale)
     store._run_with_transient_retry = lambda *, operation, fn, attempts=3, backoff_seconds=0.25: fn()
-    store.client.table.return_value.update.return_value.eq.return_value.eq.return_value.eq.return_value.execute.return_value = MagicMock()
+    response = MagicMock()
+    response.data = claimed_job
+    store.client.rpc.return_value.execute.return_value = response
 
     result = store.claim_generation_job_start("job-1")
 
     assert result is not None
     assert result["attempt_count"] == 2
+    rpc_name, payload = store.client.rpc.call_args.args
+    assert rpc_name == "claim_generation_job"
+    assert payload["p_expected_status"] == "running"
+    assert payload["p_expected_attempt_count"] == 1
 
 
 def test_claim_generation_job_start_fails_job_loaded_stall_at_attempt_cap(monkeypatch):
@@ -1291,6 +1287,9 @@ def test_claim_generation_job_start_fails_job_loaded_stall_at_attempt_cap(monkey
     assert payload["p_error"] == "Generation worker stalled after loading the job."
     assert payload["p_failed_at"] == fixed_now
     assert payload["p_heartbeat_at"] == fixed_now
+    # The stalled job belongs to a dead worker, so the recovery path must not
+    # assert ownership for itself.
+    assert payload["p_expected_worker_id"] is None
     assert any(m["code"] == "worker_claim_stalled_failed" for m in payload["p_progress_milestones"])
 
 
@@ -1325,6 +1324,7 @@ def test_complete_generation_job_calls_terminal_rpc_successfully():
     assert payload["p_expected_attempt_count"] == 2
     assert payload["p_final_status"] == "completed"
     assert payload["p_final_result"] == {"status": "ready"}
+    assert payload["p_expected_worker_id"] == generation_worker_id()
 
 
 def test_fail_generation_job_calls_terminal_rpc_successfully():
@@ -1357,6 +1357,7 @@ def test_fail_generation_job_calls_terminal_rpc_successfully():
     assert payload["p_expected_attempt_count"] == 2
     assert payload["p_error"] == "Stage 2 failed"
     assert payload["p_progress_milestones"] == [{"code": "failed"}]
+    assert payload["p_expected_worker_id"] == generation_worker_id()
 
 
 def test_complete_generation_job_rejects_stale_attempt_with_409():
