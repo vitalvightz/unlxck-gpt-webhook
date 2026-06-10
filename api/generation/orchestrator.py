@@ -170,6 +170,14 @@ async def run_generation_job(
             logger.warning("[jobs] generation:claim_unavailable job_id=%s", job_id)
             return
         claimed_attempt_count = int(job.get("attempt_count") or 0)
+        logger.info(
+            "[jobs] worker:job_loaded athlete_id=%s job_id=%s source=%s status=%s attempt_count=%s",
+            job.get("athlete_id"),
+            job_id,
+            job.get("source"),
+            job.get("status"),
+            claimed_attempt_count,
+        )
 
         # Use persisted milestones as the initial state for the progress recorder.
         persisted_milestones = job.get("progress_milestones")
@@ -189,6 +197,15 @@ async def run_generation_job(
 
         athlete_id = str(job["athlete_id"])
         raw_request_payload = job.get("request_payload") or {}
+        payload_keys = sorted(str(key) for key in raw_request_payload.keys()) if isinstance(raw_request_payload, dict) else []
+        logger.info(
+            "[jobs] worker:payload_raw athlete_id=%s job_id=%s job_keys=%s request_payload_type=%s request_payload_keys=%s",
+            athlete_id,
+            job_id,
+            sorted(str(key) for key in job.keys()),
+            type(raw_request_payload).__name__,
+            payload_keys,
+        )
 
         # Triaging override information: track approval flag and any allowed modes.
         triage_resume_override_approved = False
@@ -230,13 +247,41 @@ async def run_generation_job(
         )
 
         await _touch_heartbeat()
-        request_body = parse_plan_request(raw_request_payload)
+        logger.info("[jobs] worker:before_request_parse athlete_id=%s job_id=%s", athlete_id, job_id)
+        _emit_milestone(
+            "request_payload_parse_started",
+            "Request payload parse started",
+            "Validating the stored intake payload.",
+        )
+        try:
+            request_body = parse_plan_request(raw_request_payload)
+        except Exception as exc:
+            safe_error, frame = _safe_error_and_frame(exc)
+            logger.error(
+                "[jobs] worker:request_parse_failed athlete_id=%s job_id=%s exc_type=%s error=%s location=%s:%s:%s",
+                athlete_id,
+                job_id,
+                type(exc).__name__,
+                safe_error,
+                frame.filename if frame else "",
+                frame.lineno if frame else "",
+                frame.name if frame else "",
+            )
+            _emit_milestone(
+                "request_payload_parse_failed",
+                "Request payload parse failed",
+                "Stored intake payload failed request validation.",
+                failed=True,
+            )
+            await _fail_claimed_job(f"request_parse_failed: {safe_error}")
+            return
         await _touch_heartbeat()
         _emit_milestone(
             "request_payload_parsed",
             "Request payload parsed",
             "Stored intake payload passed request validation.",
         )
+        logger.info("[jobs] worker:after_request_parse athlete_id=%s job_id=%s", athlete_id, job_id)
         logger.info(
             "[jobs] generation:start athlete_id=%s job_id=%s source=%s job_plan_id=%s job_intake_id=%s "
             "override_present=%s override_approved=%s override_allowed_modes=%s",
