@@ -20,7 +20,7 @@ def _validate_generation_job_id(job_id: str) -> None:
     try:
         uuid.UUID(job_id)
         return
-    except (ValueError, AttributeError):
+    except (ValueError, TypeError, AttributeError):
         if _FAKE_STORE_JOB_ID_PATTERN.fullmatch(str(job_id or "")):
             return
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="generation job not found")

@@ -2,8 +2,12 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock
 
+import pytest
+from fastapi import HTTPException
+
 from api.auth import AuthenticatedUser
 from api.models import PlanRenameRequest
+from api.routes.generation_jobs import _validate_generation_job_id
 from support import advisory_planning_brief, _build_client, _build_request, finalized_result, stage1_result
 
 
@@ -842,6 +846,14 @@ def test_generation_job_endpoint_rejects_malformed_job_id_before_store_lookup():
     assert response.status_code == 404
     assert response.json()["detail"] == "generation job not found"
     store.get_generation_job.assert_not_called()
+
+
+def test_generation_job_id_validation_handles_non_string_ids_cleanly():
+    with pytest.raises(HTTPException) as exc_info:
+        _validate_generation_job_id(None)  # type: ignore[arg-type]
+
+    assert exc_info.value.status_code == 404
+    assert exc_info.value.detail == "generation job not found"
 
 
 def test_admin_can_list_athlete_generation_jobs_with_sanitized_summary_and_retry_flags():
