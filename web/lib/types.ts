@@ -366,6 +366,7 @@ export type GenerationJobResponse = {
   latest_plan_id?: string | null;
   source?: string | null;
   progress_milestones?: ProgressMilestone[];
+  warnings?: string[];
   can_retry?: boolean;
   status_url?: string | null;
   message?: string | null;
@@ -452,5 +453,6 @@ export type AdminGenerationJobDiagnostic = {
   stage2_status?: string | null;
   requires_admin_resume?: boolean;
   is_stale: boolean;
+  warnings?: string[];
   request_payload_summary: GenerationRequestPayloadSummary;
 };

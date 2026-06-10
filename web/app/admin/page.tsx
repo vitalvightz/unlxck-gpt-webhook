@@ -13,6 +13,11 @@ import {
   listAdminPlans,
   listAdminTriageGenerationJobs,
 } from "@/lib/api";
+import {
+  PROFILE_REFRESH_FAILED_BANNER_BODY,
+  PROFILE_REFRESH_FAILED_BANNER_TITLE,
+  hasProfileRefreshFailedWarning,
+} from "@/lib/profile-refresh-warning";
 import type {
   AdminAthleteRecord,
   AdminGenerationJobDiagnostic,
@@ -91,6 +96,19 @@ function countActiveJobStates(jobs: AdminGenerationJobDiagnostic[]) {
       return counts;
     },
     { queued: 0, running: 0, stale: 0 },
+  );
+}
+
+function ProfileRefreshWarningBanner({ job }: { job: AdminGenerationJobDiagnostic }) {
+  if (!hasProfileRefreshFailedWarning(job)) {
+    return null;
+  }
+
+  return (
+    <div className="admin-profile-refresh-warning" role="alert">
+      <strong>{PROFILE_REFRESH_FAILED_BANNER_TITLE}</strong>
+      <p>{PROFILE_REFRESH_FAILED_BANNER_BODY}</p>
+    </div>
   );
 }
 
@@ -477,6 +495,7 @@ export default function AdminPage() {
                     <span>Source {formatJobSource(job.source)}</span>
                   </div>
                   <div className="admin-job-summary">
+                    <ProfileRefreshWarningBanner job={job} />
                     {job.is_stale ? <p className="error-text">{job.stale_reason || "This generation has stopped heartbeating."}</p> : null}
                     <p className="muted">Fight date: {job.request_payload_summary?.fight_date || "Not set"}</p>
                     <p className="muted">Format: {job.request_payload_summary?.fight_format || "Not set"}</p>
@@ -544,6 +563,7 @@ export default function AdminPage() {
                     <span>Job {job.job_id}</span>
                   </div>
                   <div className="admin-job-summary">
+                    <ProfileRefreshWarningBanner job={job} />
                     <p className="muted">Fight date: {job.request_payload_summary.fight_date || "Not set"}</p>
                     <p className="muted">Goals: {joinOrDash(job.request_payload_summary.goals)}</p>
                     <p className="muted">Injuries: {joinOrDash(job.request_payload_summary.injuries)}</p>

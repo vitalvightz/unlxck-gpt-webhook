@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import asyncio
+import re
+import uuid
 from typing import Any, Callable
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -10,6 +12,18 @@ from api.models import GenerationJobResponse, ProfileRecord
 from api.store import AppStore
 
 Planner = Callable[[dict[str, Any]], dict[str, Any]]
+
+_FAKE_STORE_JOB_ID_PATTERN = re.compile(r"^job_[0-9a-f]{10}$")
+
+
+def _validate_generation_job_id(job_id: str) -> None:
+    try:
+        uuid.UUID(job_id)
+        return
+    except (ValueError, TypeError, AttributeError):
+        if _FAKE_STORE_JOB_ID_PATTERN.fullmatch(str(job_id or "")):
+            return
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="generation job not found")
 
 
 def build_generation_jobs_router(
@@ -52,6 +66,7 @@ def build_generation_jobs_router(
         profile: ProfileRecord = Depends(require_profile),
         store: AppStore = Depends(get_store),
     ) -> GenerationJobResponse:
+        _validate_generation_job_id(job_id)
         job = await asyncio.to_thread(store.get_generation_job, job_id)
         if not job:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="generation job not found")
