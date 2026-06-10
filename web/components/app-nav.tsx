@@ -263,6 +263,22 @@ export function AppNav() {
 
   return (
     <>
+      {shellSurface === "brand" && isReady && !isSessionResolving && !hasHydratedSession ? (
+        <header className="brand-topbar" aria-label="UNLXCK entry navigation">
+          <Link href="/" className="brand-topbar-mark">
+            <span className="eyebrow">UNLXCK</span>
+            <span>Fight Camp</span>
+          </Link>
+          <nav className="brand-topbar-actions" aria-label="Account access">
+            <Link href="/login" className="ghost-button">
+              Log in
+            </Link>
+            <Link href="/signup" className="cta">
+              Start free beta
+            </Link>
+          </nav>
+        </header>
+      ) : null}
       {!isMobileDrawerVisible ? (
         <button
           type="button"
