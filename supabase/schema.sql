@@ -170,6 +170,11 @@ create table if not exists public.generation_jobs (
   started_at timestamptz,
   completed_at timestamptz,
   failed_at timestamptz,
+  -- Worker ownership for the current running attempt (set by
+  -- claim_generation_job; checked by the terminal RPCs). Lock expiry rides on
+  -- heartbeat_at staleness, so there is no separate lock_expires_at.
+  claimed_by text,
+  claimed_at timestamptz,
   -- Stage 2 token/cost telemetry (nullable; populated best-effort after Stage 2
   -- finalization so cost can be audited per athlete/job from the database).
   stage2_model text,
@@ -212,6 +217,8 @@ alter table public.generation_jobs add column if not exists heartbeat_at timesta
 alter table public.generation_jobs add column if not exists started_at timestamptz;
 alter table public.generation_jobs add column if not exists completed_at timestamptz;
 alter table public.generation_jobs add column if not exists failed_at timestamptz;
+alter table public.generation_jobs add column if not exists claimed_by text;
+alter table public.generation_jobs add column if not exists claimed_at timestamptz;
 alter table public.generation_jobs add column if not exists updated_at timestamptz not null default timezone('utc', now());
 alter table public.generation_jobs add column if not exists progress_milestones jsonb not null default '[]'::jsonb;
 alter table public.generation_jobs add column if not exists stage2_model text;
@@ -644,6 +651,75 @@ revoke all on function public.create_generation_job_with_daily_limit(uuid, text,
 revoke all on function public.create_generation_job_with_daily_limit(uuid, text, text, jsonb, integer, timestamptz, text[], uuid, uuid, text) from authenticated;
 grant execute on function public.create_generation_job_with_daily_limit(uuid, text, text, jsonb, integer, timestamptz, text[], uuid, uuid, text) to service_role;
 
+-- Atomic claim: flip an eligible job to running, bump attempt_count, and
+-- record worker ownership in one guarded update. Concurrent claimers
+-- serialize on the row lock; the loser re-evaluates the status/attempt guards
+-- against the winner's row, matches nothing, and receives null (a lost claim
+-- race is normal, not an error). Eligibility policy (startup-staleness,
+-- retry caps) stays in the application; this function only guarantees the
+-- transition itself is atomic and owned.
+create or replace function public.claim_generation_job(
+  p_job_id uuid,
+  p_worker_id text,
+  p_expected_status text,
+  p_expected_attempt_count integer,
+  p_progress_milestones jsonb default null,
+  p_claimed_at timestamptz default now()
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_job public.generation_jobs%rowtype;
+  v_expected_status text := coalesce(nullif(lower(btrim(p_expected_status)), ''), 'queued');
+  v_worker_id text := nullif(btrim(p_worker_id), '');
+  v_claimed_at timestamptz := coalesce(p_claimed_at, now());
+begin
+  if v_worker_id is null then
+    raise exception 'missing_generation_job_worker_id:%', p_job_id
+      using errcode = 'P0001';
+  end if;
+
+  if v_expected_status not in ('queued', 'running') then
+    return null;
+  end if;
+
+  update public.generation_jobs
+  set
+    status = 'running',
+    attempt_count = coalesce(attempt_count, 0) + 1,
+    claimed_by = v_worker_id,
+    claimed_at = v_claimed_at,
+    heartbeat_at = v_claimed_at,
+    started_at = case
+      when v_expected_status = 'queued' then v_claimed_at
+      else coalesce(started_at, v_claimed_at)
+    end,
+    error = null,
+    completed_at = null,
+    failed_at = null,
+    progress_milestones = coalesce(p_progress_milestones, '[]'::jsonb),
+    updated_at = now()
+  where id = p_job_id
+    and coalesce(nullif(lower(btrim(status)), ''), 'queued') = v_expected_status
+    and coalesce(attempt_count, 0) = p_expected_attempt_count
+  returning * into v_job;
+
+  if not found then
+    return null;
+  end if;
+
+  return to_jsonb(v_job);
+end;
+$$;
+
+-- The terminal RPCs gained a worker-ownership argument; drop the pre-ownership
+-- signatures so re-running this schema never leaves stale overloads behind.
+drop function if exists public.complete_generation_job(uuid, text, integer, text, jsonb, uuid, text, timestamptz, timestamptz);
+drop function if exists public.fail_generation_job(uuid, text, integer, text, jsonb, uuid, jsonb, timestamptz, timestamptz);
+
 create or replace function public.complete_generation_job(
   p_job_id uuid,
   p_expected_status text,
@@ -653,7 +729,8 @@ create or replace function public.complete_generation_job(
   p_plan_id uuid default null,
   p_error text default null,
   p_completed_at timestamptz default now(),
-  p_heartbeat_at timestamptz default null
+  p_heartbeat_at timestamptz default null,
+  p_expected_worker_id text default null
 )
 returns jsonb
 language plpgsql
@@ -695,6 +772,18 @@ begin
       using errcode = 'P0001';
   end if;
 
+  -- Ownership guard: a caller that claims to be a specific worker may only
+  -- finish a job that worker still owns. claimed_by stays null only for rows
+  -- claimed before the worker-ownership migration, so the null case is let
+  -- through and the status/attempt guards above carry the protection there.
+  if p_expected_worker_id is not null
+    and v_job.claimed_by is not null
+    and v_job.claimed_by <> p_expected_worker_id then
+    raise exception 'stale_generation_job_worker:% expected %, got %',
+      p_job_id, p_expected_worker_id, v_job.claimed_by
+      using errcode = 'P0001';
+  end if;
+
   update public.generation_jobs
   set
     status = v_final_status,
@@ -721,7 +810,8 @@ create or replace function public.fail_generation_job(
   p_plan_id uuid default null,
   p_progress_milestones jsonb default null,
   p_failed_at timestamptz default now(),
-  p_heartbeat_at timestamptz default null
+  p_heartbeat_at timestamptz default null,
+  p_expected_worker_id text default null
 )
 returns jsonb
 language plpgsql
@@ -757,6 +847,16 @@ begin
       using errcode = 'P0001';
   end if;
 
+  -- Ownership guard: see complete_generation_job for the null-claimed_by
+  -- rationale.
+  if p_expected_worker_id is not null
+    and v_job.claimed_by is not null
+    and v_job.claimed_by <> p_expected_worker_id then
+    raise exception 'stale_generation_job_worker:% expected %, got %',
+      p_job_id, p_expected_worker_id, v_job.claimed_by
+      using errcode = 'P0001';
+  end if;
+
   update public.generation_jobs
   set
     status = 'failed',
@@ -775,15 +875,20 @@ begin
 end;
 $$;
 
-revoke all on function public.complete_generation_job(uuid, text, integer, text, jsonb, uuid, text, timestamptz, timestamptz) from public;
-revoke all on function public.complete_generation_job(uuid, text, integer, text, jsonb, uuid, text, timestamptz, timestamptz) from anon;
-revoke all on function public.complete_generation_job(uuid, text, integer, text, jsonb, uuid, text, timestamptz, timestamptz) from authenticated;
-grant execute on function public.complete_generation_job(uuid, text, integer, text, jsonb, uuid, text, timestamptz, timestamptz) to service_role;
+revoke all on function public.claim_generation_job(uuid, text, text, integer, jsonb, timestamptz) from public;
+revoke all on function public.claim_generation_job(uuid, text, text, integer, jsonb, timestamptz) from anon;
+revoke all on function public.claim_generation_job(uuid, text, text, integer, jsonb, timestamptz) from authenticated;
+grant execute on function public.claim_generation_job(uuid, text, text, integer, jsonb, timestamptz) to service_role;
 
-revoke all on function public.fail_generation_job(uuid, text, integer, text, jsonb, uuid, jsonb, timestamptz, timestamptz) from public;
-revoke all on function public.fail_generation_job(uuid, text, integer, text, jsonb, uuid, jsonb, timestamptz, timestamptz) from anon;
-revoke all on function public.fail_generation_job(uuid, text, integer, text, jsonb, uuid, jsonb, timestamptz, timestamptz) from authenticated;
-grant execute on function public.fail_generation_job(uuid, text, integer, text, jsonb, uuid, jsonb, timestamptz, timestamptz) to service_role;
+revoke all on function public.complete_generation_job(uuid, text, integer, text, jsonb, uuid, text, timestamptz, timestamptz, text) from public;
+revoke all on function public.complete_generation_job(uuid, text, integer, text, jsonb, uuid, text, timestamptz, timestamptz, text) from anon;
+revoke all on function public.complete_generation_job(uuid, text, integer, text, jsonb, uuid, text, timestamptz, timestamptz, text) from authenticated;
+grant execute on function public.complete_generation_job(uuid, text, integer, text, jsonb, uuid, text, timestamptz, timestamptz, text) to service_role;
+
+revoke all on function public.fail_generation_job(uuid, text, integer, text, jsonb, uuid, jsonb, timestamptz, timestamptz, text) from public;
+revoke all on function public.fail_generation_job(uuid, text, integer, text, jsonb, uuid, jsonb, timestamptz, timestamptz, text) from anon;
+revoke all on function public.fail_generation_job(uuid, text, integer, text, jsonb, uuid, jsonb, timestamptz, timestamptz, text) from authenticated;
+grant execute on function public.fail_generation_job(uuid, text, integer, text, jsonb, uuid, jsonb, timestamptz, timestamptz, text) to service_role;
 
 -- Deploy-gate introspection helper. Returns ONLY catalog metadata (object
 -- names + per-table RLS flags) for the public schema as a single jsonb object.

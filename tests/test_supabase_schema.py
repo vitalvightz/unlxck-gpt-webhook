@@ -39,6 +39,12 @@ TERMINAL_RPCS_MIGRATION_PATH = (
     / "migrations"
     / "20260608184148_harden_generation_job_terminal_rpcs.sql"
 )
+WORKER_OWNERSHIP_MIGRATION_PATH = (
+    Path(__file__).resolve().parents[1]
+    / "supabase"
+    / "migrations"
+    / "20260610120000_add_generation_job_worker_ownership.sql"
+)
 
 
 def _read_schema() -> str:
@@ -67,6 +73,10 @@ def _read_critical_rls_migration() -> str:
 
 def _read_terminal_rpcs_migration() -> str:
     return TERMINAL_RPCS_MIGRATION_PATH.read_text(encoding="utf-8")
+
+
+def _read_worker_ownership_migration() -> str:
+    return WORKER_OWNERSHIP_MIGRATION_PATH.read_text(encoding="utf-8")
 
 
 def test_profiles_table_declares_avatar_url_column():
@@ -447,19 +457,74 @@ def test_generation_job_terminal_rpcs_schema_and_migration():
         assert "completed_at = v_completed_at" in sql
         assert "failed_at = v_failed_at" in sql
         assert "updated_at = now()" in sql
+
+    # The original migration carries the pre-ownership signatures; the schema
+    # (and the worker-ownership migration) carry the p_expected_worker_id ones.
+    assert (
+        "revoke all on function public.complete_generation_job(uuid, text, integer, text, jsonb, uuid, text, timestamptz, timestamptz) from public;"
+        in migration
+    )
+    assert (
+        "grant execute on function public.complete_generation_job(uuid, text, integer, text, jsonb, uuid, text, timestamptz, timestamptz) to service_role;"
+        in migration
+    )
+    assert (
+        "revoke all on function public.fail_generation_job(uuid, text, integer, text, jsonb, uuid, jsonb, timestamptz, timestamptz) from public;"
+        in migration
+    )
+    assert (
+        "grant execute on function public.fail_generation_job(uuid, text, integer, text, jsonb, uuid, jsonb, timestamptz, timestamptz) to service_role;"
+        in migration
+    )
+
+
+def test_generation_job_worker_ownership_schema_and_migration():
+    schema = _read_schema()
+    migration = _read_worker_ownership_migration()
+
+    for sql in (schema, migration):
+        assert "add column if not exists claimed_by text" in sql
+        assert "add column if not exists claimed_at timestamptz" in sql
+        assert "create or replace function public.claim_generation_job(" in sql
+        assert "p_worker_id" in sql
+        assert "missing_generation_job_worker_id" in sql
+        assert "claimed_by = v_worker_id" in sql
+        assert "claimed_at = v_claimed_at" in sql
+        assert "and coalesce(attempt_count, 0) = p_expected_attempt_count" in sql
+        # Terminal RPCs must carry the ownership guard.
+        assert "p_expected_worker_id text default null" in sql
+        assert "stale_generation_job_worker" in sql
+        # The pre-ownership terminal RPC signatures must be dropped so PostgREST
+        # never sees two overloads.
         assert (
-            "revoke all on function public.complete_generation_job(uuid, text, integer, text, jsonb, uuid, text, timestamptz, timestamptz) from public;"
+            "drop function if exists public.complete_generation_job(uuid, text, integer, text, jsonb, uuid, text, timestamptz, timestamptz);"
             in sql
         )
         assert (
-            "grant execute on function public.complete_generation_job(uuid, text, integer, text, jsonb, uuid, text, timestamptz, timestamptz) to service_role;"
+            "drop function if exists public.fail_generation_job(uuid, text, integer, text, jsonb, uuid, jsonb, timestamptz, timestamptz);"
             in sql
         )
         assert (
-            "revoke all on function public.fail_generation_job(uuid, text, integer, text, jsonb, uuid, jsonb, timestamptz, timestamptz) from public;"
+            "revoke all on function public.claim_generation_job(uuid, text, text, integer, jsonb, timestamptz) from public;"
             in sql
         )
         assert (
-            "grant execute on function public.fail_generation_job(uuid, text, integer, text, jsonb, uuid, jsonb, timestamptz, timestamptz) to service_role;"
+            "revoke all on function public.claim_generation_job(uuid, text, text, integer, jsonb, timestamptz) from anon;"
+            in sql
+        )
+        assert (
+            "revoke all on function public.claim_generation_job(uuid, text, text, integer, jsonb, timestamptz) from authenticated;"
+            in sql
+        )
+        assert (
+            "grant execute on function public.claim_generation_job(uuid, text, text, integer, jsonb, timestamptz) to service_role;"
+            in sql
+        )
+        assert (
+            "grant execute on function public.complete_generation_job(uuid, text, integer, text, jsonb, uuid, text, timestamptz, timestamptz, text) to service_role;"
+            in sql
+        )
+        assert (
+            "grant execute on function public.fail_generation_job(uuid, text, integer, text, jsonb, uuid, jsonb, timestamptz, timestamptz, text) to service_role;"
             in sql
         )

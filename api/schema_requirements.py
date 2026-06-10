@@ -113,6 +113,10 @@ REQUIRED_GENERATION_JOBS_COLUMNS: tuple[str, ...] = (
     "started_at",
     "completed_at",
     "failed_at",
+    # Worker ownership for the running attempt (claim_generation_job writes
+    # them; the terminal RPCs enforce them).
+    "claimed_by",
+    "claimed_at",
     "created_at",
     "updated_at",
     "error",
@@ -180,6 +184,7 @@ REQUIRED_FUNCTIONS: tuple[str, ...] = (
     "public.try_parse_timestamptz",
     "public.check_plan_generation_short_window_limit",
     "public.create_generation_job_with_daily_limit",
+    "public.claim_generation_job",
     "public.complete_generation_job",
     "public.fail_generation_job",
     "public.prevent_self_role_escalation",

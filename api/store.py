@@ -18,7 +18,7 @@ from .auth import AuthenticatedUser
 from .errors import client_request_id_payload_mismatch_error, generation_already_in_flight_error
 from .environment import is_production_environment
 from .error_sanitizer import sanitize_error_text
-from .generation_config import generation_job_stale_after_seconds
+from .generation_config import generation_job_stale_after_seconds, generation_worker_id
 from .generation.payloads import _stable_payload_hash
 from .json_limits import (
     MAX_CLIENT_JSON_BYTES,
@@ -144,6 +144,7 @@ _GENERATION_JOB_CONFLICT_SNIPPETS = (
 _GENERATION_JOB_TERMINAL_CONFLICT_SNIPPETS = (
     "wrong_generation_job_status",
     "stale_generation_job_attempt",
+    "stale_generation_job_worker",
     "invalid_terminal_status",
 )
 _GENERATION_JOB_TERMINAL_MISSING_SNIPPETS = (
@@ -319,9 +320,9 @@ class AppStore(Protocol):
 
     def list_claimable_generation_jobs(self, *, limit: int = 20, stale_after_seconds: int | None = None) -> list[dict[str, Any]]: ...
 
-    def claim_generation_job_start(self, job_id: str, *, stale_after_seconds: int | None = None) -> dict[str, Any] | None: ...
+    def claim_generation_job_start(self, job_id: str, *, stale_after_seconds: int | None = None, worker_id: str | None = None) -> dict[str, Any] | None: ...
 
-    def claim_generation_job(self, job_id: str, *, stale_after_seconds: int | None = None) -> dict[str, Any] | None: ...
+    def claim_generation_job(self, job_id: str, *, stale_after_seconds: int | None = None, worker_id: str | None = None) -> dict[str, Any] | None: ...
 
     def count_active_generation_jobs(self, *, stale_after_seconds: int | None = None) -> int: ...
 
@@ -337,6 +338,8 @@ class AppStore(Protocol):
         completed_at: str | None = None,
         heartbeat_at: str | None = None,
         expected_status: str = "running",
+        expected_worker_id: str | None = None,
+        enforce_worker_ownership: bool = True,
     ) -> dict[str, Any]: ...
 
     def fail_generation_job(
@@ -351,6 +354,8 @@ class AppStore(Protocol):
         failed_at: str | None = None,
         heartbeat_at: str | None = None,
         expected_status: str = "running",
+        expected_worker_id: str | None = None,
+        enforce_worker_ownership: bool = True,
     ) -> dict[str, Any]: ...
 
     def update_generation_job(self, job_id: str, **changes: Any) -> dict[str, Any]: ...
@@ -1684,6 +1689,10 @@ class SupabaseAppStore:
                     "stage1_result": None,
                     "final_result": None,
                     "progress_milestones": [],
+                    # Back to the queue means back to unowned; the next claim
+                    # records the new owner.
+                    "claimed_by": None,
+                    "claimed_at": None,
                 }
 
                 if plan_id is not None:
@@ -2068,6 +2077,10 @@ class SupabaseAppStore:
                                 "heartbeat_at": None,
                                 "completed_at": None,
                                 "progress_milestones": milestones,
+                                # Back to the queue means back to unowned; the
+                                # next claim records the new owner.
+                                "claimed_by": None,
+                                "claimed_at": None,
                             }
                         )
                         .eq("id", str(job.get("id") or ""))
@@ -2783,9 +2796,12 @@ class SupabaseAppStore:
             progress_milestones=milestones,
             failed_at=now_iso,
             heartbeat_at=now_iso,
+            # The stalled job is owned by a dead worker, not this process; the
+            # status + attempt_count guards above are the protection here.
+            enforce_worker_ownership=False,
         )
 
-    def claim_generation_job_start(self, job_id: str, *, stale_after_seconds: int | None = None) -> dict[str, Any] | None:
+    def claim_generation_job_start(self, job_id: str, *, stale_after_seconds: int | None = None, worker_id: str | None = None) -> dict[str, Any] | None:
         if stale_after_seconds is None:
             stale_after_seconds = generation_job_stale_after_seconds()
         try:
@@ -2793,8 +2809,7 @@ class SupabaseAppStore:
             if not job:
                 return None
 
-            raw_status = job.get("status")
-            current_status = str(raw_status or "").strip().lower() or "queued"
+            current_status = str(job.get("status") or "").strip().lower() or "queued"
             current_attempt_count = int(job.get("attempt_count") or 0)
             now_iso = _utc_now_iso()
 
@@ -2826,45 +2841,23 @@ class SupabaseAppStore:
             except ValueError:
                 return None
 
-            next_attempt_count = current_attempt_count + 1
-            next_started_at = now_iso if current_status == "queued" else (job.get("started_at") or now_iso)
+            # Atomic claim RPC: the status/attempt guards and the
+            # running/ownership write happen in one statement, so two workers
+            # racing for the same row cannot both win. A null result means the
+            # row moved on (claimed elsewhere or finished) — not an error.
             payload = {
-                "status": "running",
-                "heartbeat_at": now_iso,
-                "started_at": next_started_at,
-                "error": None,
-                "attempt_count": next_attempt_count,
-                "completed_at": None,
-                "progress_milestones": [_job_loaded_milestone(now_iso)],
+                "p_job_id": job_id,
+                "p_worker_id": (worker_id or "").strip() or generation_worker_id(),
+                "p_expected_status": current_status,
+                "p_expected_attempt_count": current_attempt_count,
+                "p_progress_milestones": [_job_loaded_milestone(now_iso)],
+                "p_claimed_at": now_iso,
             }
-
-            def _claim_update():
-                query = self.client.table("generation_jobs").update(payload).eq("id", job_id)
-                if raw_status is None:
-                    query = query.is_("status", "null")
-                else:
-                    query = query.eq("status", raw_status)
-                return query.eq("attempt_count", current_attempt_count).execute()
-
-            self._run_with_transient_retry(
-                operation="claim_generation_job_start:update",
-                fn=_claim_update,
+            response = self._run_with_transient_retry(
+                operation="claim_generation_job_start:rpc",
+                fn=lambda: self.client.rpc("claim_generation_job", payload).execute(),
             )
-            updated = self.get_generation_job(job_id)
-            if not updated:
-                return None
-            if str(updated.get("status") or "") != "running":
-                return None
-            if int(updated.get("attempt_count") or 0) != next_attempt_count:
-                return None
-            if str(updated.get("heartbeat_at") or "") != now_iso:
-                return None
-            if str(updated.get("started_at") or "") != str(next_started_at):
-                return None
-            milestones = _progress_milestones(updated.get("progress_milestones"))
-            if not milestones or str(milestones[0].get("code") if isinstance(milestones[0], dict) else "") != "job_loaded":
-                return None
-            return updated
+            return self._terminal_generation_job_rpc_result(response)
         except HTTPException:
             raise
         except _STORE_CLIENT_ERRORS as exc:
@@ -2884,8 +2877,8 @@ class SupabaseAppStore:
                 detail="failed to claim generation job",
             ) from exc
 
-    def claim_generation_job(self, job_id: str, *, stale_after_seconds: int | None = None) -> dict[str, Any] | None:
-        return self.claim_generation_job_start(job_id, stale_after_seconds=stale_after_seconds)
+    def claim_generation_job(self, job_id: str, *, stale_after_seconds: int | None = None, worker_id: str | None = None) -> dict[str, Any] | None:
+        return self.claim_generation_job_start(job_id, stale_after_seconds=stale_after_seconds, worker_id=worker_id)
 
     def count_active_generation_jobs(self, *, stale_after_seconds: int | None = None) -> int:
         if stale_after_seconds is None:
@@ -2979,6 +2972,8 @@ class SupabaseAppStore:
         completed_at: str | None = None,
         heartbeat_at: str | None = None,
         expected_status: str = "running",
+        expected_worker_id: str | None = None,
+        enforce_worker_ownership: bool = True,
     ) -> dict[str, Any]:
         next_status = str(final_status or "").strip().lower()
         if next_status not in {"completed", "review_required"}:
@@ -2994,6 +2989,11 @@ class SupabaseAppStore:
                 "p_error": error,
                 "p_completed_at": completed_at,
                 "p_heartbeat_at": heartbeat_at,
+                "p_expected_worker_id": (
+                    ((expected_worker_id or "").strip() or generation_worker_id())
+                    if enforce_worker_ownership
+                    else None
+                ),
             }
             response = self._run_with_transient_retry(
                 operation="complete_generation_job:rpc",
@@ -3032,6 +3032,8 @@ class SupabaseAppStore:
         failed_at: str | None = None,
         heartbeat_at: str | None = None,
         expected_status: str = "running",
+        expected_worker_id: str | None = None,
+        enforce_worker_ownership: bool = True,
     ) -> dict[str, Any]:
         try:
             payload = {
@@ -3044,6 +3046,11 @@ class SupabaseAppStore:
                 "p_progress_milestones": progress_milestones,
                 "p_failed_at": failed_at,
                 "p_heartbeat_at": heartbeat_at,
+                "p_expected_worker_id": (
+                    ((expected_worker_id or "").strip() or generation_worker_id())
+                    if enforce_worker_ownership
+                    else None
+                ),
             }
             response = self._run_with_transient_retry(
                 operation="fail_generation_job:rpc",
