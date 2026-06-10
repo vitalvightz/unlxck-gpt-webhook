@@ -91,6 +91,10 @@ def _cmd_set_role(
     except (LookupError, ValueError) as exc:
         print(f"error: {exc}")
         return 2
+    except RuntimeError as exc:
+        # Atomic role+audit transaction failed: nothing was committed.
+        print(f"error: {exc}")
+        return 2
 
     if not result.get("changed"):
         print(f"No change: {result['email']} is already '{result['new_role']}'.")

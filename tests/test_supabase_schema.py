@@ -45,6 +45,12 @@ WORKER_OWNERSHIP_MIGRATION_PATH = (
     / "migrations"
     / "20260610120000_add_generation_job_worker_ownership.sql"
 )
+ATOMIC_ROLE_AUDIT_MIGRATION_PATH = (
+    Path(__file__).resolve().parents[1]
+    / "supabase"
+    / "migrations"
+    / "20260610150000_atomic_admin_role_change_audit.sql"
+)
 
 
 def _read_schema() -> str:
@@ -77,6 +83,10 @@ def _read_terminal_rpcs_migration() -> str:
 
 def _read_worker_ownership_migration() -> str:
     return WORKER_OWNERSHIP_MIGRATION_PATH.read_text(encoding="utf-8")
+
+
+def _read_atomic_role_audit_migration() -> str:
+    return ATOMIC_ROLE_AUDIT_MIGRATION_PATH.read_text(encoding="utf-8")
 
 
 def test_profiles_table_declares_avatar_url_column():
@@ -526,5 +536,40 @@ def test_generation_job_worker_ownership_schema_and_migration():
         )
         assert (
             "grant execute on function public.fail_generation_job(uuid, text, integer, text, jsonb, uuid, jsonb, timestamptz, timestamptz, text) to service_role;"
+            in sql
+        )
+
+
+def test_atomic_admin_role_change_audit_schema_and_migration():
+    schema = _read_schema()
+    migration = _read_atomic_role_audit_migration()
+
+    for sql in (schema, migration):
+        assert "create or replace function public.set_profile_role_with_audit(" in sql
+        assert "returns jsonb" in sql
+        assert "security definer" in sql
+        assert "set search_path = public" in sql
+        assert "for update;" in sql
+        assert "unsupported_profile_role" in sql
+        assert "profile_missing" in sql
+        assert "stale_profile_role" in sql
+        # Role update and audit insert must live in the same function body so
+        # they commit (or roll back) together.
+        assert "update public.profiles" in sql
+        assert "insert into public.admin_role_audit (" in sql
+        assert (
+            "revoke all on function public.set_profile_role_with_audit(uuid, text, text, text, text, text) from public;"
+            in sql
+        )
+        assert (
+            "revoke all on function public.set_profile_role_with_audit(uuid, text, text, text, text, text) from anon;"
+            in sql
+        )
+        assert (
+            "revoke all on function public.set_profile_role_with_audit(uuid, text, text, text, text, text) from authenticated;"
+            in sql
+        )
+        assert (
+            "grant execute on function public.set_profile_role_with_audit(uuid, text, text, text, text, text) to service_role;"
             in sql
         )
