@@ -67,8 +67,17 @@ class SupabaseAuthService:
         self.client = client
         self._token_cache: dict[str, tuple[AuthenticatedUser, float]] = {}
         self._cache_lock = RLock()
-        self._cache_ttl_seconds = int(os.getenv("AUTH_TOKEN_CACHE_TTL", "60"))
-        self._max_cache_size = int(os.getenv("AUTH_TOKEN_CACHE_MAX_SIZE", "1000"))
+        try:
+            self._cache_ttl_seconds = int(os.getenv("AUTH_TOKEN_CACHE_TTL") or "60")
+        except ValueError:
+            logger.warning("[auth] invalid AUTH_TOKEN_CACHE_TTL; falling back to 60")
+            self._cache_ttl_seconds = 60
+
+        try:
+            self._max_cache_size = int(os.getenv("AUTH_TOKEN_CACHE_MAX_SIZE") or "1000")
+        except ValueError:
+            logger.warning("[auth] invalid AUTH_TOKEN_CACHE_MAX_SIZE; falling back to 1000")
+            self._max_cache_size = 1000
 
     @classmethod
     def from_env(cls) -> "SupabaseAuthService":
@@ -236,16 +245,9 @@ class SupabaseAuthService:
         for cache_token in expired_tokens:
             self._token_cache.pop(cache_token, None)
 
-        if len(self._token_cache) <= self._max_cache_size:
-            return
-
-        oldest_tokens = sorted(
-            self._token_cache,
-            key=lambda cache_token: self._token_cache[cache_token][1],
-        )[: len(self._token_cache) - self._max_cache_size]
-
-        for cache_token in oldest_tokens:
-            self._token_cache.pop(cache_token, None)
+        while self._token_cache and len(self._token_cache) > self._max_cache_size:
+            oldest_token = next(iter(self._token_cache))
+            self._token_cache.pop(oldest_token, None)
 
     @staticmethod
     def _unauthorized() -> HTTPException:
