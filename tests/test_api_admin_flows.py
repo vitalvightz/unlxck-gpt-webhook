@@ -69,7 +69,7 @@ def test_admin_endpoints_require_admin_role():
     assert allowed.status_code == 200
 
 
-def test_admin_routes_use_stored_profile_role_not_env_allowlist():
+def test_admin_routes_require_stored_profile_role_even_when_email_is_allowlisted():
     """Demoting an existing admin in profiles must revoke access even if their
     email still appears in the bootstrap allowlist."""
     store = FakeStore(admin_emails={"former-admin@example.com"})
@@ -123,7 +123,7 @@ def test_ensure_profile_preserves_demoted_existing_role_even_when_email_is_allow
 
 
 def test_admin_routes_deny_email_in_env_allowlist_when_stored_role_is_athlete():
-    """Env allowlist is only bootstrap; stored role is runtime authority."""
+    """Runtime admin access requires both an allowlisted email and stored role."""
     store = FakeStore(admin_emails={"newadmin@example.com"})
     new_admin = AuthenticatedUser(
         user_id="new-admin-1",
@@ -151,6 +151,85 @@ def test_admin_routes_deny_email_in_env_allowlist_when_stored_role_is_athlete():
     )
     assert response.status_code == 403
     assert response.json()["detail"] == "admin access required"
+
+
+def test_admin_routes_deny_stored_admin_role_when_email_removed_from_allowlist():
+    store = FakeStore(admin_emails=set())
+    removed_admin = AuthenticatedUser(
+        user_id="removed-admin-1",
+        email="removed-admin@example.com",
+        full_name="Removed Admin",
+        metadata={},
+    )
+    profile = store.ensure_profile(removed_admin)
+    profile["role"] = "admin"
+    store.profiles[removed_admin.user_id] = profile
+
+    client = TestClient(
+        create_app(
+            store=store,
+            auth_service=FakeAuthService({"removed-admin-token": removed_admin}),
+            planner=_empty_plan_planner,
+            stage2_automator=FakeStage2Automator(result=finalized_result()),
+        )
+    )
+
+    response = client.get(
+        "/api/admin/athletes",
+        headers={"Authorization": "Bearer removed-admin-token"},
+    )
+    assert response.status_code == 403
+    assert response.json()["detail"] == "admin access required"
+
+
+def test_removed_allowlist_admin_cannot_use_role_bypass_on_shared_routes():
+    store = FakeStore(admin_emails=set())
+    athlete = AuthenticatedUser(user_id="athlete-owned-1", email="athlete@example.com", full_name="Athlete", metadata={})
+    removed_admin = AuthenticatedUser(
+        user_id="removed-admin-2",
+        email="removed-admin@example.com",
+        full_name="Removed Admin",
+        metadata={},
+    )
+    store.ensure_profile(athlete)
+    profile = store.ensure_profile(removed_admin)
+    profile["role"] = "admin"
+    store.profiles[removed_admin.user_id] = profile
+    request = _build_request()
+    intake = store.create_intake(athlete.user_id, request)
+    plan = store.create_plan(
+        athlete_id=athlete.user_id,
+        intake_id=str(intake["id"]),
+        request=request,
+        result=finalized_result(),
+    )
+    job = store.create_or_get_generation_job(
+        athlete_id=athlete.user_id,
+        client_request_id="removed-admin-cross-job",
+        source="self_serve",
+        request_payload=request.model_dump(mode="json"),
+    )
+
+    client = TestClient(
+        create_app(
+            store=store,
+            auth_service=FakeAuthService({"removed-admin-token": removed_admin}),
+            planner=_empty_plan_planner,
+            stage2_automator=FakeStage2Automator(result=finalized_result()),
+        )
+    )
+
+    plan_response = client.get(
+        f"/api/plans/{plan['id']}",
+        headers={"Authorization": "Bearer removed-admin-token"},
+    )
+    job_response = client.get(
+        f"/api/generation-jobs/{job['id']}",
+        headers={"Authorization": "Bearer removed-admin-token"},
+    )
+
+    assert plan_response.status_code == 403
+    assert job_response.status_code == 403
 
 
 def test_normal_athlete_denied_from_admin_routes():
@@ -235,7 +314,7 @@ def test_admin_can_list_and_open_review_required_plan_for_resolution():
     admin_list = client.get("/api/admin/plans", headers={"Authorization": "Bearer admin-token"})
     assert admin_list.status_code == 200
     listed_plan = next(plan for plan in admin_list.json() if plan["plan_id"] == plan_id)
-    assert listed_plan["status"] == "review_required"
+    assert listed_plan["status"] == "held_for_review"
 
     admin_detail = client.get(f"/api/plans/{plan_id}", headers={"Authorization": "Bearer admin-token"})
     assert admin_detail.status_code == 200
@@ -414,6 +493,13 @@ def test_manual_stage2_submission_generates_retry_prompt_when_output_needs_revis
             plan_text="",
             final_plan_text="",
             planning_brief={
+                "restrictions": [
+                    {
+                        "restriction": "heavy_overhead_pressing",
+                        "strength": "avoid",
+                        "blocked_patterns": ["push press"],
+                    }
+                ],
                 "phase_strategy": {"SPP": {"must_keep": ["rehab"]}},
                 "candidate_pools": {
                     "SPP": {
@@ -439,13 +525,13 @@ def test_manual_stage2_submission_generates_retry_prompt_when_output_needs_revis
         f"/api/admin/plans/{plan['id']}/manual-stage2",
         headers={"Authorization": "Bearer admin-token"},
         json=ManualStage2SubmissionRequest(
-            final_plan_text="## PHASE 2: SPP\n- Air Bike Sprint - 6 x 6 sec"
+            final_plan_text="## PHASE 2: SPP\n- Push Press - 4x3"
         ).model_dump(mode="json"),
     )
 
     assert response.status_code == 200
     body = response.json()
-    assert body["status"] == "review_required"
+    assert body["status"] == "held_for_review"
     assert body["outputs"]["plan_text"] == ""
     assert body["admin_outputs"]["stage2_status"] == "manual_stage2_retry_required"
     assert body["admin_outputs"]["stage2_retry_text"]
@@ -584,7 +670,7 @@ def test_admin_can_reject_approved_plan_back_to_review():
 
     assert response.status_code == 200
     body = response.json()
-    assert body["status"] == "review_required"
+    assert body["status"] == "held_for_review"
     assert body["outputs"]["plan_text"] == ""
     assert body["admin_outputs"]["final_plan_text"] == "# Released Stage 2 Output"
     assert body["admin_outputs"]["stage2_status"] == "admin_review_rejected"
@@ -2192,6 +2278,7 @@ def test_admin_state_integrity_diagnostics_reports_orphans_and_failed_resume_mar
         plan_id="",
         intake_id=str(intake["id"]),
     )
+    store.update_generation_job(orphan_job["id"], status="running")
     store.update_generation_job(orphan_job["id"], status="completed")
 
     response = client.get(

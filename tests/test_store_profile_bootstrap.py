@@ -66,6 +66,12 @@ def test_default_role_admin_email_check_is_case_insensitive():
     assert store._default_role_for(user) == "admin"
 
 
+def test_default_role_admin_email_check_trims_whitespace():
+    store = _make_store(admin_emails={"boss@example.com"})
+    user = _user("  boss@example.com  ")
+    assert store._default_role_for(user) == "admin"
+
+
 
 def test_default_role_athlete_when_no_admin_emails_configured():
     store = _make_store(admin_emails=set())

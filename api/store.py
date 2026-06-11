@@ -197,6 +197,16 @@ def _claim_legacy_blank_status_jobs_enabled() -> bool:
     return os.getenv("UNLXCK_CLAIM_LEGACY_BLANK_STATUS_JOBS", "").strip() == "1"
 
 
+def is_effective_admin_profile(profile: Any, store: "AppStore") -> bool:
+    if isinstance(profile, dict):
+        role = profile.get("role")
+        email = profile.get("email")
+    else:
+        role = getattr(profile, "role", None)
+        email = getattr(profile, "email", None)
+    return role == "admin" and store.is_admin_email(str(email or ""))
+
+
 def _raise_client_request_payload_mismatch_if_known(job: dict[str, Any], payload_hash: str) -> None:
     existing_hash = job.get("payload_hash")
     if existing_hash and existing_hash != payload_hash:
@@ -1034,7 +1044,7 @@ class SupabaseAppStore:
         return profile
 
     def _default_role_for(self, user: AuthenticatedUser) -> str:
-        if user.email.lower() in self.admin_emails:
+        if self.is_admin_email(user.email):
             return "admin"
         return "athlete"
 
@@ -1156,11 +1166,11 @@ class SupabaseAppStore:
     # ------------------------------------------------------------------
     # Admin role management
     #
-    # UNLXCK_ADMIN_EMAILS only *seeds* a profile's role the first time the
-    # profile is created (see _default_role_for). After that, profiles.role is
-    # authoritative and the env var has no further effect — so removing an email
-    # from UNLXCK_ADMIN_EMAILS does NOT demote an existing admin. Grants and
-    # revocations after first sign-in must go through here, which updates
+    # UNLXCK_ADMIN_EMAILS seeds a profile's role the first time the profile is
+    # created (see _default_role_for), and effective admin access also requires
+    # allowlist membership on each backend decision. Removing an email from the
+    # env var does not demote the existing database role, though, so grants and
+    # revocations after first sign-in must still go through here, which updates
     # profiles.role and records the change in public.admin_role_audit. The
     # service-role key bypasses the prevent_self_role_escalation trigger, so the
     # backend is the only sanctioned path for role changes.

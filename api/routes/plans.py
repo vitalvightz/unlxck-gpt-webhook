@@ -14,7 +14,7 @@ from api.plan_mappers import (
     _map_weekly_schedule,
     _visible_plans_for_athlete,
 )
-from api.store import AppStore
+from api.store import AppStore, is_effective_admin_profile
 
 
 def build_plans_router(*, require_profile, require_plan_row, get_store) -> APIRouter:
@@ -31,9 +31,10 @@ def build_plans_router(*, require_profile, require_plan_row, get_store) -> APIRo
         )
         if not plan_row:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
+        is_admin = is_effective_admin_profile(profile, store)
         return _map_plan_detail(
             plan_row,
-            include_admin=profile.role == "admin",
+            include_admin=is_admin,
             plan_source=_lookup_plan_source(store, str(plan_row.get("id") or "")),
         )
 
@@ -57,7 +58,7 @@ def build_plans_router(*, require_profile, require_plan_row, get_store) -> APIRo
         store: AppStore = Depends(get_store),
     ) -> list[PlanSummary]:
         rows = store.list_user_plans(profile.athlete_id)
-        if profile.role != "admin":
+        if not is_effective_admin_profile(profile, store):
             rows = _visible_plans_for_athlete(rows)
         return [_map_plan_summary(row) for row in rows]
 
@@ -67,9 +68,10 @@ def build_plans_router(*, require_profile, require_plan_row, get_store) -> APIRo
         profile: ProfileRecord = Depends(require_profile),
         store: AppStore = Depends(get_store),
     ) -> PlanDetail:
+        is_admin = is_effective_admin_profile(profile, store)
         return _map_plan_detail(
             plan_row,
-            include_admin=profile.role == "admin",
+            include_admin=is_admin,
             plan_source=_lookup_plan_source(store, str(plan_row.get("id") or "")),
         )
 
@@ -92,7 +94,8 @@ def build_plans_router(*, require_profile, require_plan_row, get_store) -> APIRo
             uuid.UUID(plan_id)
         except (ValueError, AttributeError):
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
-        if profile.role == "admin":
+        is_admin = is_effective_admin_profile(profile, store)
+        if is_admin:
             plan_row = store.get_plan(plan_id)
             if not plan_row:
                 raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
@@ -106,7 +109,7 @@ def build_plans_router(*, require_profile, require_plan_row, get_store) -> APIRo
             updated = store.rename_plan_for_athlete(plan_id, profile.athlete_id, update.plan_name)
         return _map_plan_detail(
             updated,
-            include_admin=profile.role == "admin",
+            include_admin=is_admin,
             plan_source=_lookup_plan_source(store, plan_id),
         )
 
@@ -122,7 +125,8 @@ def build_plans_router(*, require_profile, require_plan_row, get_store) -> APIRo
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
         # Ownership is enforced by the athlete-scoped store methods for
         # non-admins; admins intentionally operate on the raw plan id.
-        if profile.role == "admin":
+        is_admin = is_effective_admin_profile(profile, store)
+        if is_admin:
             plan_row = store.get_plan(plan_id)
         else:
             plan_row = store.get_plan_for_athlete(plan_id, profile.athlete_id)
@@ -135,7 +139,7 @@ def build_plans_router(*, require_profile, require_plan_row, get_store) -> APIRo
             )
         if _is_archived_plan(plan_row):
             return Response(status_code=status.HTTP_204_NO_CONTENT)
-        if profile.role == "admin":
+        if is_admin:
             store.archive_plan(plan_id)
         else:
             store.archive_plan_for_athlete(plan_id, profile.athlete_id)
