@@ -1411,5 +1411,5 @@ grant select on public.admin_reviews to authenticated;
 grant all on public.daily_checkins to service_role;
 grant all on public.session_logs to service_role;
 grant all on public.injury_flags to service_role;
-grant all on public.adaptation_notes to service_role;
+grant select, insert on public.adaptation_notes to service_role;
 grant all on public.admin_reviews to service_role;
