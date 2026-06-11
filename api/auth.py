@@ -4,6 +4,8 @@ import logging
 import os
 import warnings
 from dataclasses import dataclass
+from threading import RLock
+from time import monotonic
 from typing import Any, Protocol
 
 import httpx
@@ -63,6 +65,10 @@ class AuthService(Protocol):
 class SupabaseAuthService:
     def __init__(self, client: Client):
         self.client = client
+        self._token_cache: dict[str, tuple[AuthenticatedUser, float]] = {}
+        self._cache_lock = RLock()
+        self._cache_ttl_seconds = int(os.getenv("AUTH_TOKEN_CACHE_TTL", "60"))
+        self._max_cache_size = int(os.getenv("AUTH_TOKEN_CACHE_MAX_SIZE", "1000"))
 
     @classmethod
     def from_env(cls) -> "SupabaseAuthService":
@@ -79,7 +85,24 @@ class SupabaseAuthService:
 
         # Disable HTTP/2 to avoid RemoteProtocolError (GOAWAY frames) when
         # Supabase terminates a multiplexed connection after several streams.
-        _client_opts = ClientOptions(httpx_client=httpx.Client(http2=False))
+        # Explicit timeout avoids httpx's short default read timeout causing
+        # false auth outages during transient Supabase latency spikes.
+        _client_opts = ClientOptions(
+            httpx_client=httpx.Client(
+                http2=False,
+                timeout=httpx.Timeout(
+                    connect=5.0,
+                    read=30.0,
+                    write=5.0,
+                    pool=5.0,
+                ),
+                limits=httpx.Limits(
+                    max_connections=20,
+                    max_keepalive_connections=10,
+                    keepalive_expiry=30.0,
+                ),
+            )
+        )
 
         if service_role_key:
             logger.info("[auth] initializing with SUPABASE_SERVICE_ROLE_KEY has_url=%s", bool(url))
@@ -120,6 +143,10 @@ class SupabaseAuthService:
 
         if not token:
             raise self._unauthorized()
+
+        cached_user = self._get_cached_user(token)
+        if cached_user is not None:
+            return cached_user
 
         try:
             response = self.client.auth.get_user(token)
@@ -164,12 +191,61 @@ class SupabaseAuthService:
             or "Athlete"
         )
 
-        return AuthenticatedUser(
+        authenticated_user = AuthenticatedUser(
             user_id=str(user_id),
             email=email,
             full_name=str(full_name),
             metadata=metadata,
         )
+
+        self._cache_user(token, authenticated_user)
+
+        return authenticated_user
+
+    def _get_cached_user(self, token: str) -> AuthenticatedUser | None:
+        now = monotonic()
+
+        with self._cache_lock:
+            cached = self._token_cache.get(token)
+
+            if cached is None:
+                return None
+
+            user, expires_at = cached
+
+            if expires_at <= now:
+                self._token_cache.pop(token, None)
+                return None
+
+            return user
+
+    def _cache_user(self, token: str, user: AuthenticatedUser) -> None:
+        now = monotonic()
+
+        with self._cache_lock:
+            self._token_cache[token] = (user, now + self._cache_ttl_seconds)
+            self._prune_cache(now)
+
+    def _prune_cache(self, now: float) -> None:
+        expired_tokens = [
+            cache_token
+            for cache_token, (_, expires_at) in self._token_cache.items()
+            if expires_at <= now
+        ]
+
+        for cache_token in expired_tokens:
+            self._token_cache.pop(cache_token, None)
+
+        if len(self._token_cache) <= self._max_cache_size:
+            return
+
+        oldest_tokens = sorted(
+            self._token_cache,
+            key=lambda cache_token: self._token_cache[cache_token][1],
+        )[: len(self._token_cache) - self._max_cache_size]
+
+        for cache_token in oldest_tokens:
+            self._token_cache.pop(cache_token, None)
 
     @staticmethod
     def _unauthorized() -> HTTPException:
