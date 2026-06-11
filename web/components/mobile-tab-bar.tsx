@@ -26,6 +26,17 @@ const TABS: Tab[] = [
     ),
   },
   {
+    href: "/dashboard",
+    label: "Today",
+    icon: (
+      <svg viewBox="0 0 20 20" width="20" height="20" fill="none" aria-hidden="true">
+        <rect x="3" y="4" width="14" height="13" rx="2" stroke="currentColor" strokeWidth="1.5" />
+        <path d="M3 8h14M7 2v3M13 2v3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+        <path d="M7 12l2 2 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    ),
+  },
+  {
     href: "/onboarding",
     label: "Intake",
     icon: (

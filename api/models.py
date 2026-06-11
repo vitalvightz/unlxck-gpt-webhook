@@ -1507,3 +1507,230 @@ class AdminLatestIntakeUpdateRequest(BaseModel):
 
 class AdminPlanSummary(PlanSummary):
     athlete_email: str
+
+
+# ---------------------------------------------------------------------------
+# Live athlete daily tracking (dashboard, check-ins, session logs, injury
+# flags, adaptation notes, admin review queue). See api/routes/daily.py and
+# api/readiness.py.
+# ---------------------------------------------------------------------------
+
+ReadinessState = Literal["ready", "caution", "high_fatigue", "injury_flag"]
+AdaptationDecisionValue = Literal[
+    "keep_plan",
+    "reduce_intensity",
+    "swap_session",
+    "add_recovery",
+    "flag_admin_review",
+]
+InjuryFlagSeverity = Literal["mild", "moderate", "severe"]
+InjuryFlagStatus = Literal["open", "monitoring", "resolved"]
+AdminReviewStatus = Literal["pending", "acknowledged", "resolved"]
+
+_DATE_PATTERN = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+DAILY_NOTE_MAX_CHARS = 2000
+
+
+def _validate_optional_iso_date(value: Any, *, field: str) -> str | None:
+    if value is None:
+        return None
+    text = str(value).strip()
+    if not text:
+        return None
+    if not _DATE_PATTERN.match(text):
+        raise ValueError(f"{field} must be an ISO date (YYYY-MM-DD)")
+    return text
+
+
+class DailyCheckinRequest(BaseModel):
+    checkin_date: str | None = None
+    readiness: int = Field(ge=1, le=5)
+    fatigue: int = Field(ge=1, le=5)
+    soreness: int = Field(ge=1, le=5)
+    sleep_quality: int = Field(ge=1, le=5)
+    sleep_hours: float | None = Field(default=None, ge=0, le=24)
+    injury_note: str = Field(default="", max_length=DAILY_NOTE_MAX_CHARS)
+    notes: str = Field(default="", max_length=DAILY_NOTE_MAX_CHARS)
+
+    @field_validator("checkin_date", mode="before")
+    @classmethod
+    def clean_checkin_date(cls, value: Any) -> str | None:
+        return _validate_optional_iso_date(value, field="checkin_date")
+
+    @field_validator("injury_note", "notes", mode="before")
+    @classmethod
+    def clean_text(cls, value: Any) -> str:
+        return str(value or "").strip()
+
+
+class DailyCheckinRecord(BaseModel):
+    id: str
+    athlete_id: str
+    checkin_date: str
+    readiness: int
+    fatigue: int
+    soreness: int
+    sleep_quality: int
+    sleep_hours: float | None = None
+    injury_note: str = ""
+    notes: str = ""
+    readiness_state: ReadinessState = "ready"
+    created_at: str = ""
+    updated_at: str = ""
+
+
+class SessionLogRequest(BaseModel):
+    session_date: str | None = None
+    session_type: str = Field(default="training", max_length=100)
+    completed: bool = True
+    rpe: int | None = Field(default=None, ge=1, le=10)
+    duration_minutes: int | None = Field(default=None, ge=1, le=600)
+    plan_id: str | None = None
+    notes: str = Field(default="", max_length=DAILY_NOTE_MAX_CHARS)
+
+    @field_validator("session_date", mode="before")
+    @classmethod
+    def clean_session_date(cls, value: Any) -> str | None:
+        return _validate_optional_iso_date(value, field="session_date")
+
+    @field_validator("session_type", mode="before")
+    @classmethod
+    def clean_session_type(cls, value: Any) -> str:
+        return str(value or "").strip() or "training"
+
+    @field_validator("notes", mode="before")
+    @classmethod
+    def clean_notes(cls, value: Any) -> str:
+        return str(value or "").strip()
+
+
+class SessionLogRecord(BaseModel):
+    id: str
+    athlete_id: str
+    plan_id: str | None = None
+    session_date: str
+    session_type: str = "training"
+    completed: bool = True
+    rpe: int | None = None
+    duration_minutes: int | None = None
+    notes: str = ""
+    created_at: str = ""
+    updated_at: str = ""
+
+
+class InjuryFlagCreateRequest(BaseModel):
+    body_area: str = Field(default="", max_length=200)
+    description: str = Field(min_length=1, max_length=DAILY_NOTE_MAX_CHARS)
+    severity: InjuryFlagSeverity = "moderate"
+
+    @field_validator("body_area", "description", mode="before")
+    @classmethod
+    def clean_text(cls, value: Any) -> str:
+        return str(value or "").strip()
+
+
+class InjuryFlagUpdateRequest(BaseModel):
+    status: InjuryFlagStatus
+
+
+class InjuryFlagRecord(BaseModel):
+    id: str
+    athlete_id: str
+    plan_id: str | None = None
+    source: str = "checkin"
+    body_area: str = ""
+    description: str
+    severity: InjuryFlagSeverity = "moderate"
+    status: InjuryFlagStatus = "open"
+    resolved_at: str | None = None
+    created_at: str = ""
+    updated_at: str = ""
+
+
+class AdaptationNoteRecord(BaseModel):
+    id: str
+    athlete_id: str
+    plan_id: str | None = None
+    checkin_id: str | None = None
+    session_log_id: str | None = None
+    rule_code: str
+    decision: AdaptationDecisionValue
+    summary: str
+    details: dict[str, Any] = Field(default_factory=dict)
+    created_at: str = ""
+
+
+class ReadinessSummary(BaseModel):
+    state: ReadinessState = "ready"
+    label: str = "Ready"
+    reasons: list[str] = Field(default_factory=list)
+
+
+class DailyCheckinResponse(BaseModel):
+    checkin: DailyCheckinRecord
+    readiness: ReadinessSummary
+    adaptation_notes: list[AdaptationNoteRecord] = Field(default_factory=list)
+    injury_flag: InjuryFlagRecord | None = None
+    admin_review_created: bool = False
+
+
+class SessionLogResponse(BaseModel):
+    log: SessionLogRecord
+    adaptation_notes: list[AdaptationNoteRecord] = Field(default_factory=list)
+    admin_review_created: bool = False
+
+
+class DashboardCompletionStats(BaseModel):
+    logged_sessions_7d: int = 0
+    completed_sessions_7d: int = 0
+    missed_sessions_7d: int = 0
+    checkins_7d: int = 0
+
+
+class AthleteDashboardState(BaseModel):
+    plan: PlanSummary | None = None
+    current_week_index: int | None = None
+    current_week: WeeklySchedule | None = None
+    today: WeeklyDayEntry | None = None
+    next_session: WeeklyDayEntry | None = None
+    readiness: ReadinessSummary
+    latest_checkin: DailyCheckinRecord | None = None
+    checked_in_today: bool = False
+    open_injury_flags: list[InjuryFlagRecord] = Field(default_factory=list)
+    recent_adaptation_notes: list[AdaptationNoteRecord] = Field(default_factory=list)
+    completion: DashboardCompletionStats = Field(default_factory=DashboardCompletionStats)
+
+
+class AdminReviewRecord(BaseModel):
+    id: str
+    athlete_id: str
+    athlete_email: str = ""
+    athlete_name: str = ""
+    adaptation_note_id: str | None = None
+    injury_flag_id: str | None = None
+    reason: str
+    status: AdminReviewStatus = "pending"
+    resolution_notes: str = ""
+    resolved_by: str = ""
+    resolved_at: str | None = None
+    created_at: str = ""
+
+
+class AdminReviewResolveRequest(BaseModel):
+    status: Literal["acknowledged", "resolved"] = "resolved"
+    resolution_notes: str = Field(default="", max_length=DAILY_NOTE_MAX_CHARS)
+
+    @field_validator("resolution_notes", mode="before")
+    @classmethod
+    def clean_notes(cls, value: Any) -> str:
+        return str(value or "").strip()
+
+
+class AdminAthleteDailyStatus(BaseModel):
+    athlete_id: str
+    readiness: ReadinessSummary
+    latest_checkin: DailyCheckinRecord | None = None
+    open_injury_flags: list[InjuryFlagRecord] = Field(default_factory=list)
+    recent_session_logs: list[SessionLogRecord] = Field(default_factory=list)
+    recent_adaptation_notes: list[AdaptationNoteRecord] = Field(default_factory=list)
+    pending_review_count: int = 0

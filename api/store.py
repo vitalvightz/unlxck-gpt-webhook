@@ -375,7 +375,41 @@ class AppStore(Protocol):
 
     def get_admin_athlete(self, athlete_id: str) -> dict[str, Any] | None: ...
 
+    def list_admin_athletes_by_ids(self, athlete_ids: list[str]) -> list[dict[str, Any]]: ...
+
     def clear_onboarding_draft(self, athlete_id: str) -> None: ...
+
+    # --- live athlete daily tracking (api/routes/daily.py) ---
+
+    def upsert_daily_checkin(self, athlete_id: str, fields: dict[str, Any]) -> dict[str, Any]: ...
+
+    def get_daily_checkin(self, athlete_id: str, checkin_date: str) -> dict[str, Any] | None: ...
+
+    def list_daily_checkins(self, athlete_id: str, *, limit: int = 14) -> list[dict[str, Any]]: ...
+
+    def create_session_log(self, athlete_id: str, fields: dict[str, Any]) -> dict[str, Any]: ...
+
+    def list_session_logs(self, athlete_id: str, *, limit: int = 20) -> list[dict[str, Any]]: ...
+
+    def create_injury_flag(self, athlete_id: str, fields: dict[str, Any]) -> dict[str, Any]: ...
+
+    def list_injury_flags(
+        self, athlete_id: str, *, statuses: tuple[str, ...] = ("open", "monitoring"), limit: int = 20
+    ) -> list[dict[str, Any]]: ...
+
+    def update_injury_flag(self, flag_id: str, fields: dict[str, Any]) -> dict[str, Any]: ...
+
+    def create_adaptation_note(self, athlete_id: str, fields: dict[str, Any]) -> dict[str, Any]: ...
+
+    def list_adaptation_notes(self, athlete_id: str, *, limit: int = 10) -> list[dict[str, Any]]: ...
+
+    def create_admin_review(self, athlete_id: str, fields: dict[str, Any]) -> dict[str, Any]: ...
+
+    def list_admin_reviews(self, *, status_filter: str | None = "pending", limit: int = 50) -> list[dict[str, Any]]: ...
+
+    def count_pending_admin_reviews_for_athlete(self, athlete_id: str) -> int: ...
+
+    def resolve_admin_review(self, review_id: str, fields: dict[str, Any]) -> dict[str, Any]: ...
 
 
 def _encode_structured_text(value: Any) -> str | None:
@@ -3475,6 +3509,17 @@ class SupabaseAppStore:
             self.client.table("admin_athlete_rollups").select("*").eq("id", athlete_id)
         )
 
+    def list_admin_athletes_by_ids(self, athlete_ids: list[str]) -> list[dict[str, Any]]:
+        if not athlete_ids:
+            return []
+        response = (
+            self.client.table("admin_athlete_rollups")
+            .select("*")
+            .in_("id", athlete_ids)
+            .execute()
+        )
+        return getattr(response, "data", None) or []
+
     def clear_onboarding_draft(self, athlete_id: str) -> None:
         try:
             logger.info("[store] clear_onboarding_draft:start athlete_id=%s", athlete_id)
@@ -3484,5 +3529,188 @@ class SupabaseAppStore:
             self._raise_operation_http_error(
                 operation=f"clear_onboarding_draft athlete_id={athlete_id}",
                 detail="failed to clear onboarding draft",
+                exc=exc,
+            )
+
+    # ------------------------------------------------------------------
+    # Live athlete daily tracking (api/routes/daily.py)
+    # ------------------------------------------------------------------
+
+    def _insert_row(self, table: str, payload: dict[str, Any], *, operation: str) -> dict[str, Any]:
+        try:
+            response = self.client.table(table).insert(payload).execute()
+            rows = getattr(response, "data", None) or []
+            if not rows:
+                logger.error("[store] %s:no_rows response=%r", operation, response)
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail=f"failed to persist {table} row",
+                )
+            return rows[0]
+        except HTTPException:
+            raise
+        except _STORE_CLIENT_ERRORS as exc:
+            self._raise_operation_http_error(
+                operation=operation,
+                detail=f"failed to persist {table} row",
+                exc=exc,
+            )
+
+    def upsert_daily_checkin(self, athlete_id: str, fields: dict[str, Any]) -> dict[str, Any]:
+        payload = {"athlete_id": athlete_id, **fields}
+        try:
+            response = (
+                self.client.table("daily_checkins")
+                .upsert(payload, on_conflict="athlete_id,checkin_date")
+                .execute()
+            )
+            rows = getattr(response, "data", None) or []
+            if not rows:
+                logger.error("[store] upsert_daily_checkin:no_rows athlete_id=%s", athlete_id)
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail="failed to persist daily check-in",
+                )
+            return rows[0]
+        except HTTPException:
+            raise
+        except _STORE_CLIENT_ERRORS as exc:
+            self._raise_operation_http_error(
+                operation=f"upsert_daily_checkin athlete_id={athlete_id}",
+                detail="failed to persist daily check-in",
+                exc=exc,
+            )
+
+    def get_daily_checkin(self, athlete_id: str, checkin_date: str) -> dict[str, Any] | None:
+        return self._select_first(
+            self.client.table("daily_checkins")
+            .select("*")
+            .eq("athlete_id", athlete_id)
+            .eq("checkin_date", checkin_date)
+        )
+
+    def list_daily_checkins(self, athlete_id: str, *, limit: int = 14) -> list[dict[str, Any]]:
+        response = (
+            self.client.table("daily_checkins")
+            .select("*")
+            .eq("athlete_id", athlete_id)
+            .order("checkin_date", desc=True)
+            .limit(limit)
+            .execute()
+        )
+        return getattr(response, "data", None) or []
+
+    def create_session_log(self, athlete_id: str, fields: dict[str, Any]) -> dict[str, Any]:
+        return self._insert_row(
+            "session_logs",
+            {"athlete_id": athlete_id, **fields},
+            operation=f"create_session_log athlete_id={athlete_id}",
+        )
+
+    def list_session_logs(self, athlete_id: str, *, limit: int = 20) -> list[dict[str, Any]]:
+        response = (
+            self.client.table("session_logs")
+            .select("*")
+            .eq("athlete_id", athlete_id)
+            .order("session_date", desc=True)
+            .order("created_at", desc=True)
+            .limit(limit)
+            .execute()
+        )
+        return getattr(response, "data", None) or []
+
+    def create_injury_flag(self, athlete_id: str, fields: dict[str, Any]) -> dict[str, Any]:
+        return self._insert_row(
+            "injury_flags",
+            {"athlete_id": athlete_id, **fields},
+            operation=f"create_injury_flag athlete_id={athlete_id}",
+        )
+
+    def list_injury_flags(
+        self, athlete_id: str, *, statuses: tuple[str, ...] = ("open", "monitoring"), limit: int = 20
+    ) -> list[dict[str, Any]]:
+        query = (
+            self.client.table("injury_flags")
+            .select("*")
+            .eq("athlete_id", athlete_id)
+        )
+        if statuses:
+            query = query.in_("status", list(statuses))
+        response = query.order("created_at", desc=True).limit(limit).execute()
+        return getattr(response, "data", None) or []
+
+    def update_injury_flag(self, flag_id: str, fields: dict[str, Any]) -> dict[str, Any]:
+        try:
+            response = self.client.table("injury_flags").update(fields).eq("id", flag_id).execute()
+            rows = getattr(response, "data", None) or []
+            if not rows:
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="injury flag not found")
+            return rows[0]
+        except HTTPException:
+            raise
+        except _STORE_CLIENT_ERRORS as exc:
+            self._raise_operation_http_error(
+                operation=f"update_injury_flag flag_id={flag_id}",
+                detail="failed to update injury flag",
+                exc=exc,
+            )
+
+    def create_adaptation_note(self, athlete_id: str, fields: dict[str, Any]) -> dict[str, Any]:
+        return self._insert_row(
+            "adaptation_notes",
+            {"athlete_id": athlete_id, **fields},
+            operation=f"create_adaptation_note athlete_id={athlete_id}",
+        )
+
+    def list_adaptation_notes(self, athlete_id: str, *, limit: int = 10) -> list[dict[str, Any]]:
+        response = (
+            self.client.table("adaptation_notes")
+            .select("*")
+            .eq("athlete_id", athlete_id)
+            .order("created_at", desc=True)
+            .limit(limit)
+            .execute()
+        )
+        return getattr(response, "data", None) or []
+
+    def create_admin_review(self, athlete_id: str, fields: dict[str, Any]) -> dict[str, Any]:
+        return self._insert_row(
+            "admin_reviews",
+            {"athlete_id": athlete_id, **fields},
+            operation=f"create_admin_review athlete_id={athlete_id}",
+        )
+
+    def list_admin_reviews(self, *, status_filter: str | None = "pending", limit: int = 50) -> list[dict[str, Any]]:
+        query = self.client.table("admin_reviews").select("*")
+        if status_filter:
+            query = query.eq("status", status_filter)
+        response = query.order("created_at", desc=True).limit(limit).execute()
+        return getattr(response, "data", None) or []
+
+    def count_pending_admin_reviews_for_athlete(self, athlete_id: str) -> int:
+        response = (
+            self.client.table("admin_reviews")
+            .select("id", count="exact")
+            .eq("athlete_id", athlete_id)
+            .eq("status", "pending")
+            .limit(0)
+            .execute()
+        )
+        count = getattr(response, "count", None)
+        return int(count or 0)
+
+    def resolve_admin_review(self, review_id: str, fields: dict[str, Any]) -> dict[str, Any]:
+        try:
+            response = self.client.table("admin_reviews").update(fields).eq("id", review_id).execute()
+            rows = getattr(response, "data", None) or []
+            if not rows:
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="review not found")
+            return rows[0]
+        except HTTPException:
+            raise
+        except _STORE_CLIENT_ERRORS as exc:
+            self._raise_operation_http_error(
+                operation=f"resolve_admin_review review_id={review_id}",
+                detail="failed to resolve review",
                 exc=exc,
             )
