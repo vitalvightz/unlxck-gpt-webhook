@@ -265,6 +265,19 @@ def _admin_rejected_result(plan_row: dict[str, Any]) -> dict[str, Any]:
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="No saved Stage 2 or draft text is available to keep in review.",
         )
+    validator_report = plan_row.get("stage2_validator_report") if isinstance(plan_row.get("stage2_validator_report"), dict) else {}
+    if not validator_report.get("errors") and not validator_report.get("blocking_warnings"):
+        validator_report = {
+            **validator_report,
+            "warnings": list(validator_report.get("warnings") or []),
+            "blocking_warnings": [
+                {
+                    "code": "admin_review_rejected",
+                    "message": "Admin returned this plan to review.",
+                    "severity": "blocker",
+                }
+            ],
+        }
     return {
         "status": "review_required",
         "plan_text": "",
@@ -272,7 +285,7 @@ def _admin_rejected_result(plan_row: dict[str, Any]) -> dict[str, Any]:
         "final_plan_text": held_text,
         "pdf_url": None,
         "stage2_retry_text": str(plan_row.get("stage2_retry_text") or ""),
-        "stage2_validator_report": plan_row.get("stage2_validator_report") or {},
+        "stage2_validator_report": validator_report,
         "stage2_status": "admin_review_rejected",
         "stage2_attempt_count": int(plan_row.get("stage2_attempt_count") or 0),
     }
@@ -687,9 +700,10 @@ def create_app(
         plan_row = store.get_plan(plan_id)
         if not plan_row:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
-        if not is_effective_admin_profile(profile, store) and str(plan_row["athlete_id"]) != profile.athlete_id:
+        is_admin = is_effective_admin_profile(profile, store)
+        if not is_admin and str(plan_row["athlete_id"]) != profile.athlete_id:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="not allowed")
-        if not is_effective_admin_profile(profile, store) and _is_archived_plan(plan_row):
+        if not is_admin and _is_archived_plan(plan_row):
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
         return plan_row
 

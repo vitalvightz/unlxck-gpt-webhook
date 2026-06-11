@@ -40,8 +40,8 @@ test("app shell and navigation render for an anonymous visitor", async ({ page, 
   const sidebar = page.locator("#app-sidebar");
   await expect(sidebar).toBeVisible();
 
-  // Anonymous visitors get a navigable login link inside the shell.
-  await expect(sidebar.getByRole("link", { name: /log in/i })).toBeVisible();
+  // Anonymous visitors get a navigable login link in the public shell.
+  await expect(page.getByLabel("Account access").getByRole("link", { name: /log in/i })).toBeVisible();
 });
 
 test("protected route redirects unauthenticated users to login", async ({ page, baseURL }) => {

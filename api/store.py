@@ -198,10 +198,13 @@ def _claim_legacy_blank_status_jobs_enabled() -> bool:
 
 
 def is_effective_admin_profile(profile: Any, store: "AppStore") -> bool:
-    return (
-        getattr(profile, "role", None) == "admin"
-        and store.is_admin_email(str(getattr(profile, "email", "") or ""))
-    )
+    if isinstance(profile, dict):
+        role = profile.get("role")
+        email = profile.get("email")
+    else:
+        role = getattr(profile, "role", None)
+        email = getattr(profile, "email", None)
+    return role == "admin" and store.is_admin_email(str(email or ""))
 
 
 def _raise_client_request_payload_mismatch_if_known(job: dict[str, Any], payload_hash: str) -> None:

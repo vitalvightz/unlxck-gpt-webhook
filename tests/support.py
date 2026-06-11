@@ -1456,13 +1456,14 @@ def _presentation_ready_plan(*, heading: str, support_note: str) -> str:
 
 
 def _review_required_result(*, final_plan_text: str, warning_code: str) -> dict:
+    warning = {"code": warning_code, "severity": "blocker"}
     return finalized_result(
         status="review_required",
         plan_text="",
         final_plan_text=final_plan_text,
         stage2_status="stage2_failed",
         stage2_retry_text="repair prompt",
-        stage2_validator_report={"errors": [], "warnings": [{"code": warning_code}]},
+        stage2_validator_report={"errors": [], "warnings": [warning], "blocking_warnings": [warning]},
         stage2_attempt_count=2,
     )
 

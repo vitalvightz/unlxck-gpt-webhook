@@ -314,7 +314,7 @@ def test_admin_can_list_and_open_review_required_plan_for_resolution():
     admin_list = client.get("/api/admin/plans", headers={"Authorization": "Bearer admin-token"})
     assert admin_list.status_code == 200
     listed_plan = next(plan for plan in admin_list.json() if plan["plan_id"] == plan_id)
-    assert listed_plan["status"] == "review_required"
+    assert listed_plan["status"] == "held_for_review"
 
     admin_detail = client.get(f"/api/plans/{plan_id}", headers={"Authorization": "Bearer admin-token"})
     assert admin_detail.status_code == 200
@@ -493,6 +493,13 @@ def test_manual_stage2_submission_generates_retry_prompt_when_output_needs_revis
             plan_text="",
             final_plan_text="",
             planning_brief={
+                "restrictions": [
+                    {
+                        "restriction": "heavy_overhead_pressing",
+                        "strength": "avoid",
+                        "blocked_patterns": ["push press"],
+                    }
+                ],
                 "phase_strategy": {"SPP": {"must_keep": ["rehab"]}},
                 "candidate_pools": {
                     "SPP": {
@@ -518,13 +525,13 @@ def test_manual_stage2_submission_generates_retry_prompt_when_output_needs_revis
         f"/api/admin/plans/{plan['id']}/manual-stage2",
         headers={"Authorization": "Bearer admin-token"},
         json=ManualStage2SubmissionRequest(
-            final_plan_text="## PHASE 2: SPP\n- Air Bike Sprint - 6 x 6 sec"
+            final_plan_text="## PHASE 2: SPP\n- Push Press - 4x3"
         ).model_dump(mode="json"),
     )
 
     assert response.status_code == 200
     body = response.json()
-    assert body["status"] == "review_required"
+    assert body["status"] == "held_for_review"
     assert body["outputs"]["plan_text"] == ""
     assert body["admin_outputs"]["stage2_status"] == "manual_stage2_retry_required"
     assert body["admin_outputs"]["stage2_retry_text"]
@@ -663,7 +670,7 @@ def test_admin_can_reject_approved_plan_back_to_review():
 
     assert response.status_code == 200
     body = response.json()
-    assert body["status"] == "review_required"
+    assert body["status"] == "held_for_review"
     assert body["outputs"]["plan_text"] == ""
     assert body["admin_outputs"]["final_plan_text"] == "# Released Stage 2 Output"
     assert body["admin_outputs"]["stage2_status"] == "admin_review_rejected"
@@ -2271,6 +2278,7 @@ def test_admin_state_integrity_diagnostics_reports_orphans_and_failed_resume_mar
         plan_id="",
         intake_id=str(intake["id"]),
     )
+    store.update_generation_job(orphan_job["id"], status="running")
     store.update_generation_job(orphan_job["id"], status="completed")
 
     response = client.get(
