@@ -214,10 +214,10 @@ def test_from_env_allows_anon_fallback_in_development(monkeypatch):
     monkeypatch.delenv("SUPABASE_SERVICE_ROLE_KEY", raising=False)
     monkeypatch.setenv("SUPABASE_ANON_KEY", "anon-key-value")
     monkeypatch.setenv("ALLOW_SUPABASE_ANON_AUTH_FALLBACK", "true")
-    created_clients: list[tuple[str, str]] = []
+    created_clients: list[tuple[str, str, object]] = []
 
-    def _fake_create_client(url, key):
-        created_clients.append((url, key))
+    def _fake_create_client(url, key, options=None):
+        created_clients.append((url, key, options))
         return MagicMock()
 
     monkeypatch.setattr(auth_module, "create_client", _fake_create_client)
@@ -225,7 +225,8 @@ def test_from_env_allows_anon_fallback_in_development(monkeypatch):
     service = SupabaseAuthService.from_env()
 
     assert service is not None
-    assert created_clients == [("https://example.supabase.co", "anon-key-value")]
+    assert created_clients[0][:2] == ("https://example.supabase.co", "anon-key-value")
+    assert created_clients[0][2] is not None
 
 
 def test_from_env_requires_service_role_without_fallback(monkeypatch):
