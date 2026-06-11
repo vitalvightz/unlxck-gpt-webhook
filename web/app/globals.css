@@ -4922,6 +4922,10 @@ button.mobile-step-rail-item {
   line-height: 1;
 }
 
+.brand-topbar {
+  display: none;
+}
+
 @media (min-width: 961px) {
   .auth-layout > .auth-rail {
     grid-column: 1;
@@ -4962,6 +4966,62 @@ button.mobile-step-rail-item {
 
   html[data-desktop-nav-collapsed="true"] .global-generation-status {
     left: 0;
+  }
+
+  html[data-app-surface="brand"] .app-sidebar {
+    display: none;
+  }
+
+  html[data-app-surface="brand"] .app-main {
+    padding-top: 98px;
+  }
+
+  .brand-topbar {
+    position: fixed;
+    top: 24px;
+    left: 0;
+    right: 0;
+    z-index: 70;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 18px;
+    width: min(calc(100% - 56px), var(--content-width));
+    margin: 0 auto;
+    padding: 10px 12px 10px 18px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 16px;
+    background: rgba(10, 11, 13, 0.88);
+    box-shadow: 0 18px 42px rgba(0, 0, 0, 0.28);
+    backdrop-filter: blur(18px);
+  }
+
+  .brand-topbar-mark {
+    display: inline-grid;
+    gap: 4px;
+    min-width: 0;
+  }
+
+  .brand-topbar-mark span:last-child {
+    color: var(--text-primary);
+    font-size: 20px;
+    line-height: 1;
+    font-weight: 700;
+    letter-spacing: -0.03em;
+  }
+
+  .brand-topbar-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+  }
+
+  .brand-topbar-actions .cta,
+  .brand-topbar-actions .ghost-button {
+    min-height: 40px;
+    padding-right: 16px;
+    padding-left: 16px;
   }
 }
 
@@ -11069,6 +11129,54 @@ html[data-app-surface="workspace"][data-theme="dark"] .desktop-nav-toggle {
 }
 
 @media (max-width: 720px) {
+  .public-hero-panel {
+    gap: 18px;
+  }
+
+  .public-hero-copy {
+    gap: 14px;
+  }
+
+  .public-proof-strip {
+    grid-template-columns: repeat(3, minmax(188px, 1fr));
+    gap: 10px;
+    margin-right: -14px;
+    padding: 2px 14px 4px 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+    scroll-snap-type: x proximity;
+  }
+
+  .public-proof-strip::-webkit-scrollbar {
+    display: none;
+  }
+
+  .public-proof-pill {
+    min-height: 94px;
+    padding: 12px 14px;
+    scroll-snap-align: start;
+  }
+
+  .public-proof-value {
+    font-size: 13px;
+    line-height: 1.35;
+  }
+
+  .public-preview-panel {
+    gap: 12px;
+  }
+
+  .public-preview-window {
+    gap: 12px;
+    padding: 12px;
+    border-radius: 18px;
+  }
+
+  .public-preview-carousel,
+  .public-preview-carousel .public-preview-card {
+    min-height: 190px;
+  }
+
   .public-preview-toolbar-label {
     display: none;
   }
