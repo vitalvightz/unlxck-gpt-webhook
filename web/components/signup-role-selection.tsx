@@ -64,15 +64,14 @@ export function SignupRoleSelection({
 
             return (
               <li key={option.role}>
-                {isActive ? (
-                  <button type="button" className={cardClassName} onClick={onSelectAthlete}>
-                    <RoleCardBody option={option} />
-                  </button>
-                ) : (
-                  <div className={cardClassName} aria-disabled="true">
-                    <RoleCardBody option={option} />
-                  </div>
-                )}
+                <button
+                  type="button"
+                  className={cardClassName}
+                  onClick={isActive ? onSelectAthlete : undefined}
+                  disabled={!isActive}
+                >
+                  <RoleCardBody option={option} />
+                </button>
               </li>
             );
           })}
@@ -102,13 +101,13 @@ export function SignupRoleSelection({
 function RoleCardBody({ option }: { option: RoleOption }) {
   return (
     <>
-      <div className="role-card-header">
+      <span className="role-card-header">
         <span className="role-card-title">{option.title}</span>
         {option.comingSoonNote ? <span className="badge role-card-badge">Coming soon</span> : null}
-      </div>
-      <p className="role-card-description muted">{option.description}</p>
+      </span>
+      <span className="role-card-description muted">{option.description}</span>
       {option.comingSoonNote ? (
-        <p className="role-card-note">{option.comingSoonNote}</p>
+        <span className="role-card-note">{option.comingSoonNote}</span>
       ) : (
         <span className="role-card-cue" aria-hidden="true">
           Continue →

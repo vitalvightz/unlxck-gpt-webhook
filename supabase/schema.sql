@@ -12,9 +12,6 @@ exception
 end
 $$;
 
-alter type public.app_role add value if not exists 'coach';
-alter type public.app_role add value if not exists 'gym_owner';
-
 create or replace function public.set_updated_at()
 returns trigger
 language plpgsql
