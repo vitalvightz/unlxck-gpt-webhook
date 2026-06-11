@@ -23,7 +23,7 @@ from api.models import GenerationJobResponse, PlanRequest, ProfileRecord
 from api.performance_focus import validate_performance_focus_selections
 from api.plan_mappers import _ALLOWED_PLAN_SOURCES
 from api.stage2_automation import Stage2Automator
-from api.store import AppStore, is_startup_stale_generation_job
+from api.store import AppStore, is_effective_admin_profile, is_startup_stale_generation_job
 
 Planner = Callable[[dict[str, Any]], dict[str, Any]]
 ScheduleGenerationJob = Callable[..., Awaitable[dict[str, Any]]]
@@ -64,6 +64,8 @@ async def generate_plan_for_current_user(
     )
     request_payload = request_body.model_dump(mode="json")
     payload_hash = _stable_payload_hash(request_payload)
+    is_admin = is_effective_admin_profile(profile, store)
+    viewer_role = "admin" if is_admin else "athlete"
     existing_job = await asyncio.to_thread(
         store.get_generation_job_by_client_request_id,
         athlete_id=profile.athlete_id,
@@ -94,7 +96,7 @@ async def generate_plan_for_current_user(
             stale_job_checker=_is_stale_job,
             stale_after_seconds=stale_after_seconds,
         )
-        return _job_response(job, store=store, viewer_role=profile.role)
+        return _job_response(job, store=store, viewer_role=viewer_role)
 
     recovered_existing = await asyncio.to_thread(
         _find_existing_terminal_job_for_same_payload,
@@ -103,7 +105,7 @@ async def generate_plan_for_current_user(
         request_payload=request_payload,
     )
     if recovered_existing:
-        return _job_response(recovered_existing, store=store, viewer_role=profile.role)
+        return _job_response(recovered_existing, store=store, viewer_role=viewer_role)
 
     latest_plan = await asyncio.to_thread(store.get_latest_plan, profile.athlete_id)
     if isinstance(latest_plan, dict):
@@ -112,7 +114,7 @@ async def generate_plan_for_current_user(
         latest_intake_id = str(latest_plan.get("intake_id") or "").strip()
         request_intake_id = str(request_body.intake_id or "").strip()
         if (
-            profile.role == "admin"
+            is_admin
             and latest_intake_id
             and request_intake_id
             and latest_intake_id == request_intake_id
@@ -149,7 +151,7 @@ async def generate_plan_for_current_user(
     daily_limit = plan_generate_daily_limit_per_user()
     enforce_daily_limit = (
         daily_limit > 0
-        and profile.role != "admin"
+        and not is_admin
         and not is_exempt_from_daily_generation_cap(profile.email)
     )
 
@@ -191,4 +193,4 @@ async def generate_plan_for_current_user(
         stale_job_checker=_is_stale_job,
         stale_after_seconds=stale_after_seconds,
     )
-    return _job_response(job, store=store, viewer_role=profile.role)
+    return _job_response(job, store=store, viewer_role=viewer_role)

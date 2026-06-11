@@ -2,12 +2,14 @@
 
 ## Why this exists
 
-`UNLXCK_ADMIN_EMAILS` only **seeds** a profile's role the first time that
-profile is created (`api/store.py::_default_role_for`). After first sign-in,
-`profiles.role` is authoritative and the env var has **no further effect**:
+`UNLXCK_ADMIN_EMAILS` **seeds** a profile's role the first time that profile is
+created (`api/store.py::_default_role_for`) and is also checked by the backend
+before any admin-only access decision.
 
-- Adding an email does **not** promote an existing athlete.
-- Removing an email does **not** demote an existing admin.
+- Adding an email does **not** promote an existing athlete unless their
+  `profiles.role` is also changed to `admin`.
+- Removing an email blocks runtime admin access after the backend restarts with
+  the new env var, but it does **not** demote the existing database role.
 
 So admin grants and revocations after first sign-in must go through the backend,
 which updates `profiles.role` and writes an audit row to

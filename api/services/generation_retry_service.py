@@ -19,7 +19,7 @@ from api.errors import generation_already_in_flight_error
 from api.models import GenerationJobResponse, ProfileRecord
 from api.plan_mappers import _ALLOWED_PLAN_SOURCES
 from api.stage2_automation import Stage2Automator
-from api.store import AppStore, is_startup_stale_generation_job
+from api.store import AppStore, is_effective_admin_profile, is_startup_stale_generation_job
 
 Planner = Callable[[dict[str, Any]], dict[str, Any]]
 ScheduleGenerationJob = Callable[..., Awaitable[dict[str, Any]]]
@@ -43,7 +43,8 @@ async def retry_generation_job(
     original = await asyncio.to_thread(store.get_generation_job, job_id)
     if not original:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="generation job not found")
-    is_admin = profile.role == "admin"
+    is_admin = is_effective_admin_profile(profile, store)
+    viewer_role = "admin" if is_admin else "athlete"
     if not is_admin and str(original["athlete_id"]) != profile.athlete_id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="generation job not found")
     stale_after_seconds = _generation_job_stale_after_seconds()
@@ -133,7 +134,7 @@ async def retry_generation_job(
             stale_job_checker=_is_stale_job,
             stale_after_seconds=stale_after_seconds,
         )
-        return _job_response(job, store=store, viewer_role=profile.role)
+        return _job_response(job, store=store, viewer_role=viewer_role)
     blocking_job = await asyncio.to_thread(
         _find_blocking_generation_job_for_athlete,
         store=store,
@@ -191,4 +192,4 @@ async def retry_generation_job(
         stale_job_checker=_is_stale_job,
         stale_after_seconds=stale_after_seconds,
     )
-    return _job_response(job, store=store, viewer_role=profile.role)
+    return _job_response(job, store=store, viewer_role=viewer_role)

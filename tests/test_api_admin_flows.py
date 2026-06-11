@@ -69,7 +69,7 @@ def test_admin_endpoints_require_admin_role():
     assert allowed.status_code == 200
 
 
-def test_admin_routes_use_stored_profile_role_not_env_allowlist():
+def test_admin_routes_require_stored_profile_role_even_when_email_is_allowlisted():
     """Demoting an existing admin in profiles must revoke access even if their
     email still appears in the bootstrap allowlist."""
     store = FakeStore(admin_emails={"former-admin@example.com"})
@@ -123,7 +123,7 @@ def test_ensure_profile_preserves_demoted_existing_role_even_when_email_is_allow
 
 
 def test_admin_routes_deny_email_in_env_allowlist_when_stored_role_is_athlete():
-    """Env allowlist is only bootstrap; stored role is runtime authority."""
+    """Runtime admin access requires both an allowlisted email and stored role."""
     store = FakeStore(admin_emails={"newadmin@example.com"})
     new_admin = AuthenticatedUser(
         user_id="new-admin-1",
@@ -151,6 +151,85 @@ def test_admin_routes_deny_email_in_env_allowlist_when_stored_role_is_athlete():
     )
     assert response.status_code == 403
     assert response.json()["detail"] == "admin access required"
+
+
+def test_admin_routes_deny_stored_admin_role_when_email_removed_from_allowlist():
+    store = FakeStore(admin_emails=set())
+    removed_admin = AuthenticatedUser(
+        user_id="removed-admin-1",
+        email="removed-admin@example.com",
+        full_name="Removed Admin",
+        metadata={},
+    )
+    profile = store.ensure_profile(removed_admin)
+    profile["role"] = "admin"
+    store.profiles[removed_admin.user_id] = profile
+
+    client = TestClient(
+        create_app(
+            store=store,
+            auth_service=FakeAuthService({"removed-admin-token": removed_admin}),
+            planner=_empty_plan_planner,
+            stage2_automator=FakeStage2Automator(result=finalized_result()),
+        )
+    )
+
+    response = client.get(
+        "/api/admin/athletes",
+        headers={"Authorization": "Bearer removed-admin-token"},
+    )
+    assert response.status_code == 403
+    assert response.json()["detail"] == "admin access required"
+
+
+def test_removed_allowlist_admin_cannot_use_role_bypass_on_shared_routes():
+    store = FakeStore(admin_emails=set())
+    athlete = AuthenticatedUser(user_id="athlete-owned-1", email="athlete@example.com", full_name="Athlete", metadata={})
+    removed_admin = AuthenticatedUser(
+        user_id="removed-admin-2",
+        email="removed-admin@example.com",
+        full_name="Removed Admin",
+        metadata={},
+    )
+    store.ensure_profile(athlete)
+    profile = store.ensure_profile(removed_admin)
+    profile["role"] = "admin"
+    store.profiles[removed_admin.user_id] = profile
+    request = _build_request()
+    intake = store.create_intake(athlete.user_id, request)
+    plan = store.create_plan(
+        athlete_id=athlete.user_id,
+        intake_id=str(intake["id"]),
+        request=request,
+        result=finalized_result(),
+    )
+    job = store.create_or_get_generation_job(
+        athlete_id=athlete.user_id,
+        client_request_id="removed-admin-cross-job",
+        source="self_serve",
+        request_payload=request.model_dump(mode="json"),
+    )
+
+    client = TestClient(
+        create_app(
+            store=store,
+            auth_service=FakeAuthService({"removed-admin-token": removed_admin}),
+            planner=_empty_plan_planner,
+            stage2_automator=FakeStage2Automator(result=finalized_result()),
+        )
+    )
+
+    plan_response = client.get(
+        f"/api/plans/{plan['id']}",
+        headers={"Authorization": "Bearer removed-admin-token"},
+    )
+    job_response = client.get(
+        f"/api/generation-jobs/{job['id']}",
+        headers={"Authorization": "Bearer removed-admin-token"},
+    )
+
+    assert plan_response.status_code == 403
+    assert job_response.status_code == 403
 
 
 def test_normal_athlete_denied_from_admin_routes():

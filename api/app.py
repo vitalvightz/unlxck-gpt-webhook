@@ -50,7 +50,7 @@ from .stage2_automation import (
     Stage2Automator,
     build_default_stage2_automator,
 )
-from .store import AppStore, SupabaseAppStore, is_startup_stale_generation_job
+from .store import AppStore, SupabaseAppStore, is_effective_admin_profile, is_startup_stale_generation_job
 from .sentry_config import init_sentry
 from .services.generation_request_service import generate_plan_for_current_user
 from .services.admin_stage2_service import (
@@ -294,12 +294,12 @@ def _admin_archived_result(plan_row: dict[str, Any]) -> dict[str, Any]:
 
 
 def _log_admin_count_on_startup(store: AppStore) -> None:
-    """Log the live admin count at startup so operators can spot drift.
+    """Log the database admin count at startup so operators can spot drift.
 
-    profiles.role is authoritative once seeded, so UNLXCK_ADMIN_EMAILS no longer
-    reflects who actually holds admin. Surfacing the real count (and warning when
-    it is zero) makes an accidental lockout or lingering admin visible in the
-    boot logs. Best-effort: never block startup on this.
+    Runtime admin access also requires UNLXCK_ADMIN_EMAILS membership in
+    require_admin, but profiles.role still needs explicit promotion/revocation.
+    Surfacing the database count makes accidental lockout or lingering roles
+    visible in the boot logs. Best-effort: never block startup on this.
     """
     counter = getattr(store, "count_admin_profiles", None)
     if not callable(counter):
@@ -662,12 +662,15 @@ def create_app(
 
     def require_admin(
         profile: ProfileRecord = Depends(require_profile),
+        store: AppStore = Depends(get_store),
     ) -> ProfileRecord:
-        if profile.role != "admin":
+        email_allowlisted = store.is_admin_email(profile.email)
+        if not is_effective_admin_profile(profile, store):
             logger.warning(
-                "[auth] admin_access_denied athlete_id=%s role=%s",
+                "[auth] admin_access_denied athlete_id=%s role=%s email_allowlisted=%s",
                 profile.athlete_id,
                 profile.role,
+                email_allowlisted,
             )
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="admin access required")
         return profile
@@ -684,9 +687,9 @@ def create_app(
         plan_row = store.get_plan(plan_id)
         if not plan_row:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
-        if profile.role != "admin" and str(plan_row["athlete_id"]) != profile.athlete_id:
+        if not is_effective_admin_profile(profile, store) and str(plan_row["athlete_id"]) != profile.athlete_id:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="not allowed")
-        if profile.role != "admin" and _is_archived_plan(plan_row):
+        if not is_effective_admin_profile(profile, store) and _is_archived_plan(plan_row):
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
         return plan_row
 

@@ -9,7 +9,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 
 from api.generation_job_helpers import _job_response
 from api.models import GenerationJobResponse, ProfileRecord
-from api.store import AppStore
+from api.store import AppStore, is_effective_admin_profile
 
 Planner = Callable[[dict[str, Any]], dict[str, Any]]
 
@@ -46,7 +46,8 @@ def build_generation_jobs_router(
         job = await asyncio.to_thread(store.get_visible_active_generation_job_for_athlete, profile.athlete_id)
         if not job:
             return None
-        return _job_response(job, store=store, viewer_role=profile.role)
+        viewer_role = "admin" if is_effective_admin_profile(profile, store) else "athlete"
+        return _job_response(job, store=store, viewer_role=viewer_role)
 
     @router.get("/api/generation-jobs/latest", response_model=GenerationJobResponse | None)
     async def get_latest_generation_job(
@@ -56,9 +57,10 @@ def build_generation_jobs_router(
         job = await asyncio.to_thread(store.get_latest_generation_job_for_athlete, profile.athlete_id)
         if not job:
             return None
-        if profile.role != "admin" and str(job["athlete_id"]) != profile.athlete_id:
+        is_admin = is_effective_admin_profile(profile, store)
+        if not is_admin and str(job["athlete_id"]) != profile.athlete_id:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="not allowed")
-        return _job_response(job, store=store, viewer_role=profile.role)
+        return _job_response(job, store=store, viewer_role="admin" if is_admin else "athlete")
 
     @router.get("/api/generation-jobs/{job_id}", response_model=GenerationJobResponse)
     async def get_generation_job(
@@ -70,8 +72,9 @@ def build_generation_jobs_router(
         job = await asyncio.to_thread(store.get_generation_job, job_id)
         if not job:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="generation job not found")
-        if profile.role != "admin" and str(job["athlete_id"]) != profile.athlete_id:
+        is_admin = is_effective_admin_profile(profile, store)
+        if not is_admin and str(job["athlete_id"]) != profile.athlete_id:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="not allowed")
-        return _job_response(job, store=store, viewer_role=profile.role)
+        return _job_response(job, store=store, viewer_role="admin" if is_admin else "athlete")
 
     return router
