@@ -1,4 +1,8 @@
-export type UserRole = "athlete" | "admin";
+// Role foundation for the single Unlxck app. `athlete` and `admin` are live in
+// private beta; `coach` and `gym_owner` are reserved for public beta and are not
+// yet selectable at sign-up or assignable to accounts. We use `gym_owner` (not
+// `gym`) because the account represents the person managing the gym organisation.
+export type UserRole = "athlete" | "coach" | "gym_owner" | "admin";
 export type AppearanceMode = "dark" | "light";
 export type SexValue = "male" | "female";
 export type DailyActivityLevel = "low" | "mixed" | "active_job";

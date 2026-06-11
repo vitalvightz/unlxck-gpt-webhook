@@ -1,8 +1,12 @@
 create extension if not exists pgcrypto;
 
+-- Role foundation for the single Unlxck app. `athlete` and `admin` are live in
+-- private beta; `coach` and `gym_owner` are reserved for public beta (not yet
+-- selectable at sign-up). On databases created before these values existed, the
+-- 20260611130000 migration backfills `coach` and `gym_owner` into the enum.
 do $$
 begin
-  create type public.app_role as enum ('athlete', 'admin');
+  create type public.app_role as enum ('athlete', 'coach', 'gym_owner', 'admin');
 exception
   when duplicate_object then null;
 end

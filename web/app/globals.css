@@ -874,6 +874,93 @@ select:focus-visible {
   text-underline-offset: 4px;
 }
 
+.auth-inline-link {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font: inherit;
+}
+
+.auth-selected-role {
+  margin: 6px 0 0;
+  font-size: 13px;
+}
+
+/* Sign-up role selection */
+.role-card-grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 12px;
+}
+
+.role-card {
+  width: 100%;
+  text-align: left;
+  display: grid;
+  gap: 8px;
+  border-radius: var(--radius-card);
+  border: 1px solid var(--border-default);
+  background: linear-gradient(180deg, rgba(22, 24, 29, 0.98), rgba(15, 17, 21, 0.98));
+  padding: 16px;
+  color: var(--text-primary);
+  transition:
+    border-color var(--transition-fast),
+    transform var(--transition-fast);
+}
+
+.role-card-active {
+  cursor: pointer;
+}
+
+.role-card-active:hover {
+  border-color: rgba(255, 255, 255, 0.18);
+  transform: translateY(-1px);
+}
+
+.role-card-disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.role-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.role-card-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.role-card-badge {
+  flex-shrink: 0;
+}
+
+.role-card-description {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.role-card-note {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.role-card-cue {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent, var(--text-primary));
+}
+
 .quick-build-form {
   display: grid;
   gap: 24px;

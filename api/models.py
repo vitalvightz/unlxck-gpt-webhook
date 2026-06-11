@@ -9,7 +9,11 @@ from pydantic import BaseModel, Field, ValidationInfo, field_validator, model_va
 from .json_limits import MAX_CLIENT_JSON_BYTES, MAX_JSON_DEPTH, validate_json_field
 from .state_machine import GenerationJobStatus
 
-UserRole = Literal["athlete", "admin"]
+# Role foundation: `athlete` and `admin` are live in private beta. `coach` and
+# `gym_owner` are reserved for public beta and are not yet selectable at sign-up
+# or assignable to accounts. `gym_owner` (not `gym`) names the person managing a
+# gym organisation, since the user account is distinct from the organisation.
+UserRole = Literal["athlete", "coach", "gym_owner", "admin"]
 GuidedInjurySeverity = Literal["", "low", "moderate", "high"]
 AppearanceMode = Literal["dark", "light"]
 SexValue = Literal["male", "female"]
