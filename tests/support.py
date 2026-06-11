@@ -83,6 +83,8 @@ class FakeStore:
         self.injury_flags: dict[str, list[dict]] = {}
         self.adaptation_notes: dict[str, list[dict]] = {}
         self.admin_reviews: list[dict] = []
+        self.get_admin_athlete_calls = 0
+        self.list_admin_athletes_by_ids_calls = 0
         self.admin_emails: set[str] = {
             email.strip().lower() for email in (admin_emails or set()) if email
         }
@@ -1107,6 +1109,26 @@ class FakeStore:
         return rows[offset:offset + limit]
 
     def get_admin_athlete(self, athlete_id: str) -> dict | None:
+        self.get_admin_athlete_calls += 1
+        profile = self.profiles.get(athlete_id)
+        if not profile:
+            return None
+        plans = self.list_user_plans(athlete_id)
+        return {
+            **profile,
+            "plan_count": len(plans),
+            "latest_plan_created_at": plans[-1]["created_at"] if plans else None,
+        }
+
+    def list_admin_athletes_by_ids(self, athlete_ids: list[str]) -> list[dict]:
+        self.list_admin_athletes_by_ids_calls += 1
+        return [
+            athlete
+            for athlete_id in athlete_ids
+            if (athlete := self.get_admin_athlete_without_counting(athlete_id)) is not None
+        ]
+
+    def get_admin_athlete_without_counting(self, athlete_id: str) -> dict | None:
         profile = self.profiles.get(athlete_id)
         if not profile:
             return None

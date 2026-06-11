@@ -507,8 +507,14 @@ def build_daily_router(*, require_profile, require_admin, get_store) -> APIRoute
     # Admin endpoints
     # ------------------------------------------------------------------
 
-    def _enriched_review(store: AppStore, row: dict[str, Any]) -> AdminReviewRecord:
-        athlete = store.get_admin_athlete(str(row["athlete_id"])) or {}
+    def _review_athletes_by_id(store: AppStore, rows: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
+        athlete_ids = sorted({str(row.get("athlete_id") or "") for row in rows if row.get("athlete_id")})
+        if not athlete_ids:
+            return {}
+        return {str(row["id"]): row for row in store.list_admin_athletes_by_ids(athlete_ids)}
+
+    def _enriched_review(row: dict[str, Any], athletes_by_id: dict[str, dict[str, Any]]) -> AdminReviewRecord:
+        athlete = athletes_by_id.get(str(row["athlete_id"])) or {}
         return _map_admin_review(
             row,
             athlete_email=str(athlete.get("email") or ""),
@@ -526,7 +532,8 @@ def build_daily_router(*, require_profile, require_admin, get_store) -> APIRoute
             raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="invalid status filter")
         status_filter = None if review_status in (None, "all") else review_status
         rows = store.list_admin_reviews(status_filter=status_filter, limit=limit)
-        return [_enriched_review(store, row) for row in rows]
+        athletes_by_id = _review_athletes_by_id(store, rows)
+        return [_enriched_review(row, athletes_by_id) for row in rows]
 
     @router.post("/api/admin/reviews/{review_id}/resolve", response_model=AdminReviewRecord)
     def resolve_admin_review(
@@ -548,7 +555,8 @@ def build_daily_router(*, require_profile, require_admin, get_store) -> APIRoute
                 "resolved_at": datetime.now(timezone.utc).isoformat(),
             },
         )
-        return _enriched_review(store, row)
+        athletes_by_id = _review_athletes_by_id(store, [row])
+        return _enriched_review(row, athletes_by_id)
 
     @router.patch("/api/admin/injury-flags/{flag_id}", response_model=InjuryFlagRecord)
     def update_injury_flag(
@@ -568,7 +576,6 @@ def build_daily_router(*, require_profile, require_admin, get_store) -> APIRoute
         return _map_injury_flag(store.update_injury_flag(flag_id, fields))
 
     @router.get("/api/admin/athletes/{athlete_id}/daily-status", response_model=AdminAthleteDailyStatus)
-    @router.get("/api/admin/athletes/{athlete_id}/daily-status", response_model=AdminAthleteDailyStatus)
     def get_admin_athlete_daily_status(
         athlete_id: str,
         _: ProfileRecord = Depends(require_admin),
@@ -579,6 +586,7 @@ def build_daily_router(*, require_profile, require_admin, get_store) -> APIRoute
         except (ValueError, AttributeError):
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="athlete not found")
         athlete = store.get_admin_athlete(athlete_id)
+        if not athlete:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="athlete not found")
         checkins = store.list_daily_checkins(athlete_id, limit=14)
         session_logs = store.list_session_logs(athlete_id, limit=RECENT_SESSION_LOG_WINDOW)

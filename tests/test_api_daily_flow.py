@@ -279,6 +279,18 @@ class TestAdminReviewQueue:
         assert reviews[0]["athlete_email"] == "ari@example.com"
         assert "knee" in reviews[0]["reason"] or "review" in reviews[0]["reason"].lower()
 
+    def test_admin_reviews_use_batch_athlete_lookup(self):
+        client, store, _ = _build_client()
+        client.post(
+            "/api/checkins",
+            headers=ATHLETE,
+            json=_checkin_payload(injury_note="sharp pain in right knee"),
+        )
+        response = client.get("/api/admin/reviews", headers=ADMIN)
+        assert response.status_code == 200
+        assert store.list_admin_athletes_by_ids_calls == 1
+        assert store.get_admin_athlete_calls == 0
+
     def test_resolve_review_records_admin_and_clears_queue(self):
         client, _, _ = _build_client()
         client.post(
@@ -303,13 +315,43 @@ class TestAdminReviewQueue:
         assert client.get("/api/admin/reviews", headers=ATHLETE).status_code == 403
 
     def test_admin_athlete_daily_status(self):
-        client, _, _ = _build_client()
-        client.post(
-            "/api/checkins", headers=ATHLETE, json=_checkin_payload(fatigue=5)
+        client, store, _ = _build_client()
+        athlete_id = "00000000-0000-0000-0000-000000000001"
+        store.profiles[athlete_id] = {
+            **store.profiles["athlete-1"],
+            "id": athlete_id,
+        }
+        checkin = store.upsert_daily_checkin(
+            athlete_id,
+            {
+                "checkin_date": "2026-06-11",
+                "readiness": 4,
+                "fatigue": 5,
+                "soreness": 2,
+                "sleep_quality": 4,
+                "sleep_hours": 8.0,
+                "readiness_state": "high_fatigue",
+            },
         )
-        client.post("/api/session-logs", headers=ATHLETE, json={"rpe": 9})
+        log = store.create_session_log(
+            athlete_id,
+            {
+                "session_date": "2026-06-11",
+                "rpe": 9,
+            },
+        )
+        store.create_adaptation_note(
+            athlete_id,
+            {
+                "checkin_id": checkin["id"],
+                "session_log_id": log["id"],
+                "rule_code": "high_fatigue_reduce_load",
+                "decision": "reduce_intensity",
+                "summary": "High fatigue signals - reduce today's intensity/volume by one notch",
+            },
+        )
         response = client.get(
-            "/api/admin/athletes/athlete-1/daily-status", headers=ADMIN
+            f"/api/admin/athletes/{athlete_id}/daily-status", headers=ADMIN
         )
         assert response.status_code == 200
         body = response.json()
@@ -318,9 +360,16 @@ class TestAdminReviewQueue:
         assert len(body["recent_session_logs"]) == 1
         assert body["recent_adaptation_notes"]
 
-    def test_admin_athlete_daily_status_unknown_athlete(self):
+    def test_admin_athlete_daily_status_invalid_athlete_id(self):
         client, _, _ = _build_client()
         response = client.get(
-            "/api/admin/athletes/nobody/daily-status", headers=ADMIN
+            "/api/admin/athletes/not-a-uuid/daily-status", headers=ADMIN
+        )
+        assert response.status_code == 404
+
+    def test_admin_athlete_daily_status_unknown_valid_athlete_id(self):
+        client, _, _ = _build_client()
+        response = client.get(
+            "/api/admin/athletes/00000000-0000-0000-0000-000000000099/daily-status", headers=ADMIN
         )
         assert response.status_code == 404

@@ -375,6 +375,8 @@ class AppStore(Protocol):
 
     def get_admin_athlete(self, athlete_id: str) -> dict[str, Any] | None: ...
 
+    def list_admin_athletes_by_ids(self, athlete_ids: list[str]) -> list[dict[str, Any]]: ...
+
     def clear_onboarding_draft(self, athlete_id: str) -> None: ...
 
     # --- live athlete daily tracking (api/routes/daily.py) ---
@@ -3506,6 +3508,17 @@ class SupabaseAppStore:
         return self._select_first(
             self.client.table("admin_athlete_rollups").select("*").eq("id", athlete_id)
         )
+
+    def list_admin_athletes_by_ids(self, athlete_ids: list[str]) -> list[dict[str, Any]]:
+        if not athlete_ids:
+            return []
+        response = (
+            self.client.table("admin_athlete_rollups")
+            .select("*")
+            .in_("id", athlete_ids)
+            .execute()
+        )
+        return getattr(response, "data", None) or []
 
     def clear_onboarding_draft(self, athlete_id: str) -> None:
         try:
