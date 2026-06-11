@@ -12,8 +12,24 @@ import { evaluatePasswordStrength } from "@/lib/password-strength";
 import { ATHLETE_FULL_NAME_MAX } from "@/lib/input-limits";
 import { getSiteOrigin } from "@/lib/site-url";
 import { getSupabaseBrowserClient } from "@/lib/supabase";
+import type { UserRole } from "@/lib/types";
 
-export function AuthForm({ mode }: { mode: "signup" | "login" }) {
+// Roles a user may self-select at sign-up. Admin is intentionally excluded and
+// stays manually assigned only. Coach/gym_owner exist in the type system for the
+// future but are not yet selectable, so the live path is athlete-only.
+const SIGNUP_ROLE_LABELS: Partial<Record<UserRole, string>> = {
+  athlete: "Athlete",
+};
+
+export function AuthForm({
+  mode,
+  role,
+  onChangeRole,
+}: {
+  mode: "signup" | "login";
+  role?: UserRole;
+  onChangeRole?: () => void;
+}) {
   const router = useRouter();
   const { isReady, session, me } = useAppSession();
   const [fullName, setFullName] = useState("");
@@ -57,6 +73,11 @@ export function AuthForm({ mode }: { mode: "signup" | "login" }) {
 
       if (mode === "signup") {
         const siteOrigin = getSiteOrigin();
+        // Only athlete is selectable today; persist the chosen role in user
+        // metadata so the role foundation is explicit. The backend still owns the
+        // authoritative profiles.role (athlete by default, admin only via the
+        // service-role tooling), so this never grants elevated access.
+        const selectedRole: UserRole = role ?? "athlete";
         const { data, error: signUpError } = await client.auth.signUp({
           email,
           password,
@@ -64,6 +85,7 @@ export function AuthForm({ mode }: { mode: "signup" | "login" }) {
             emailRedirectTo: siteOrigin ? `${siteOrigin}/login` : undefined,
             data: {
               full_name: fullName,
+              role: selectedRole,
             },
           },
         });
@@ -136,6 +158,19 @@ export function AuthForm({ mode }: { mode: "signup" | "login" }) {
           <div>
             <p className="kicker">{mode === "signup" ? "Create account" : "Log in"}</p>
             <h2>{mode === "signup" ? "Start the intake" : "Resume your camp"}</h2>
+            {mode === "signup" && role ? (
+              <p className="auth-selected-role muted">
+                Signing up as <strong>{SIGNUP_ROLE_LABELS[role] ?? role}</strong>
+                {onChangeRole ? (
+                  <>
+                    {" · "}
+                    <button type="button" className="auth-text-link auth-inline-link" onClick={onChangeRole}>
+                      Change
+                    </button>
+                  </>
+                ) : null}
+              </p>
+            ) : null}
           </div>
           <span className="badge status-badge-neutral">{mode === "signup" ? "Beta" : "Secure"}</span>
         </div>
