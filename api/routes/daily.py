@@ -568,13 +568,17 @@ def build_daily_router(*, require_profile, require_admin, get_store) -> APIRoute
         return _map_injury_flag(store.update_injury_flag(flag_id, fields))
 
     @router.get("/api/admin/athletes/{athlete_id}/daily-status", response_model=AdminAthleteDailyStatus)
+    @router.get("/api/admin/athletes/{athlete_id}/daily-status", response_model=AdminAthleteDailyStatus)
     def get_admin_athlete_daily_status(
         athlete_id: str,
         _: ProfileRecord = Depends(require_admin),
         store: AppStore = Depends(get_store),
     ) -> AdminAthleteDailyStatus:
+        try:
+            uuid.UUID(athlete_id)
+        except (ValueError, AttributeError):
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="athlete not found")
         athlete = store.get_admin_athlete(athlete_id)
-        if not athlete:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="athlete not found")
         checkins = store.list_daily_checkins(athlete_id, limit=14)
         session_logs = store.list_session_logs(athlete_id, limit=RECENT_SESSION_LOG_WINDOW)
