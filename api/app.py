@@ -88,6 +88,7 @@ from .generation_job_helpers import (
     _triage_plan_has_resume_approval as _triage_plan_has_resume_approval,
 )
 from .routes import (
+    build_daily_router,
     build_generation_jobs_router,
     build_nutrition_router,
     build_plans_router,
@@ -720,6 +721,13 @@ def create_app(
             validate_schedule_consistency=_validate_schedule_consistency,
             validate_session_type_consistency=_validate_session_type_consistency,
             update_profile_with_nutrition_fallback=_update_profile_with_nutrition_fallback,
+        )
+    )
+    app.include_router(
+        build_daily_router(
+            require_profile=require_profile,
+            require_admin=require_admin,
+            get_store=get_store,
         )
     )
 

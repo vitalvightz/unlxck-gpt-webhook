@@ -248,6 +248,7 @@ export function AppNav() {
 
   const signedInLinks = [
     { href: "/", label: "Overview", meta: "Camp status" },
+    { href: "/dashboard", label: "Today", meta: "Check-in and session log" },
     { href: "/onboarding", label: "Advanced Intake", meta: "Profile and camp setup" },
     { href: "/nutrition", label: "Nutrition", meta: "Weight and readiness" },
     { href: "/plans", label: "Plans", meta: "Saved history" },

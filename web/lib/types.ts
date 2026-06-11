@@ -456,3 +456,176 @@ export type AdminGenerationJobDiagnostic = {
   warnings?: string[];
   request_payload_summary: GenerationRequestPayloadSummary;
 };
+
+// ---------------------------------------------------------------------------
+// Live athlete daily tracking (dashboard, check-ins, session logs, injury
+// flags, adaptation notes, admin review queue).
+// ---------------------------------------------------------------------------
+
+export type ReadinessState = "ready" | "caution" | "high_fatigue" | "injury_flag";
+
+export type AdaptationDecisionValue =
+  | "keep_plan"
+  | "reduce_intensity"
+  | "swap_session"
+  | "add_recovery"
+  | "flag_admin_review";
+
+export type InjuryFlagSeverity = "mild" | "moderate" | "severe";
+export type InjuryFlagStatus = "open" | "monitoring" | "resolved";
+export type AdminReviewStatus = "pending" | "acknowledged" | "resolved";
+
+export type DailyCheckinRequest = {
+  checkin_date?: string | null;
+  readiness: number;
+  fatigue: number;
+  soreness: number;
+  sleep_quality: number;
+  sleep_hours?: number | null;
+  injury_note?: string;
+  notes?: string;
+};
+
+export type DailyCheckinRecord = {
+  id: string;
+  athlete_id: string;
+  checkin_date: string;
+  readiness: number;
+  fatigue: number;
+  soreness: number;
+  sleep_quality: number;
+  sleep_hours?: number | null;
+  injury_note: string;
+  notes: string;
+  readiness_state: ReadinessState;
+  created_at: string;
+  updated_at: string;
+};
+
+export type SessionLogRequest = {
+  session_date?: string | null;
+  session_type?: string;
+  completed?: boolean;
+  rpe?: number | null;
+  duration_minutes?: number | null;
+  plan_id?: string | null;
+  notes?: string;
+};
+
+export type SessionLogRecord = {
+  id: string;
+  athlete_id: string;
+  plan_id?: string | null;
+  session_date: string;
+  session_type: string;
+  completed: boolean;
+  rpe?: number | null;
+  duration_minutes?: number | null;
+  notes: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type InjuryFlagCreateRequest = {
+  body_area?: string;
+  description: string;
+  severity?: InjuryFlagSeverity;
+};
+
+export type InjuryFlagRecord = {
+  id: string;
+  athlete_id: string;
+  plan_id?: string | null;
+  source: string;
+  body_area: string;
+  description: string;
+  severity: InjuryFlagSeverity;
+  status: InjuryFlagStatus;
+  resolved_at?: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type AdaptationNoteRecord = {
+  id: string;
+  athlete_id: string;
+  plan_id?: string | null;
+  checkin_id?: string | null;
+  session_log_id?: string | null;
+  rule_code: string;
+  decision: AdaptationDecisionValue;
+  summary: string;
+  details: Record<string, unknown>;
+  created_at: string;
+};
+
+export type ReadinessSummary = {
+  state: ReadinessState;
+  label: string;
+  reasons: string[];
+};
+
+export type DailyCheckinResponse = {
+  checkin: DailyCheckinRecord;
+  readiness: ReadinessSummary;
+  adaptation_notes: AdaptationNoteRecord[];
+  injury_flag?: InjuryFlagRecord | null;
+  admin_review_created: boolean;
+};
+
+export type SessionLogResponse = {
+  log: SessionLogRecord;
+  adaptation_notes: AdaptationNoteRecord[];
+  admin_review_created: boolean;
+};
+
+export type DashboardCompletionStats = {
+  logged_sessions_7d: number;
+  completed_sessions_7d: number;
+  missed_sessions_7d: number;
+  checkins_7d: number;
+};
+
+export type AthleteDashboardState = {
+  plan?: PlanSummary | null;
+  current_week_index?: number | null;
+  current_week?: WeeklySchedule | null;
+  today?: WeeklyDayEntry | null;
+  next_session?: WeeklyDayEntry | null;
+  readiness: ReadinessSummary;
+  latest_checkin?: DailyCheckinRecord | null;
+  checked_in_today: boolean;
+  open_injury_flags: InjuryFlagRecord[];
+  recent_adaptation_notes: AdaptationNoteRecord[];
+  completion: DashboardCompletionStats;
+};
+
+export type AdminReviewRecord = {
+  id: string;
+  athlete_id: string;
+  athlete_email: string;
+  athlete_name: string;
+  adaptation_note_id?: string | null;
+  injury_flag_id?: string | null;
+  reason: string;
+  status: AdminReviewStatus;
+  resolution_notes: string;
+  resolved_by: string;
+  resolved_at?: string | null;
+  created_at: string;
+};
+
+export type AdminReviewResolveRequest = {
+  status: "acknowledged" | "resolved";
+  resolution_notes?: string;
+};
+
+export type AdminAthleteDailyStatus = {
+  athlete_id: string;
+  readiness: ReadinessSummary;
+  latest_checkin?: DailyCheckinRecord | null;
+  open_injury_flags: InjuryFlagRecord[];
+  recent_session_logs: SessionLogRecord[];
+  recent_adaptation_notes: AdaptationNoteRecord[];
+  pending_review_count: number;
+};

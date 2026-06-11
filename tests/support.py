@@ -78,6 +78,11 @@ class FakeStore:
         self.intakes: dict[str, list[dict]] = {}
         self.plans: dict[str, dict] = {}
         self.generation_jobs: dict[str, dict] = {}
+        self.daily_checkins: dict[str, list[dict]] = {}
+        self.session_logs: dict[str, list[dict]] = {}
+        self.injury_flags: dict[str, list[dict]] = {}
+        self.adaptation_notes: dict[str, list[dict]] = {}
+        self.admin_reviews: list[dict] = []
         self.admin_emails: set[str] = {
             email.strip().lower() for email in (admin_emails or set()) if email
         }
@@ -1114,6 +1119,166 @@ class FakeStore:
 
     def clear_onboarding_draft(self, athlete_id: str) -> None:
         self.profiles[athlete_id]["onboarding_draft"] = None
+
+    # ------------------------------------------------------------------
+    # Live athlete daily tracking (api/routes/daily.py)
+    # ------------------------------------------------------------------
+
+    def upsert_daily_checkin(self, athlete_id: str, fields: dict) -> dict:
+        bucket = self.daily_checkins.setdefault(athlete_id, [])
+        for row in bucket:
+            if row["checkin_date"] == fields["checkin_date"]:
+                row.update(fields)
+                row["updated_at"] = _now()
+                return dict(row)
+        row = {
+            "id": str(uuid4()),
+            "athlete_id": athlete_id,
+            "sleep_hours": None,
+            "injury_note": "",
+            "notes": "",
+            "readiness_state": "ready",
+            **fields,
+            "created_at": _now(),
+            "updated_at": _now(),
+        }
+        bucket.append(row)
+        return dict(row)
+
+    def get_daily_checkin(self, athlete_id: str, checkin_date: str) -> dict | None:
+        for row in self.daily_checkins.get(athlete_id, []):
+            if row["checkin_date"] == checkin_date:
+                return dict(row)
+        return None
+
+    def list_daily_checkins(self, athlete_id: str, *, limit: int = 14) -> list[dict]:
+        rows = sorted(
+            self.daily_checkins.get(athlete_id, []),
+            key=lambda row: row["checkin_date"],
+            reverse=True,
+        )
+        return [dict(row) for row in rows[:limit]]
+
+    def create_session_log(self, athlete_id: str, fields: dict) -> dict:
+        row = {
+            "id": str(uuid4()),
+            "athlete_id": athlete_id,
+            "plan_id": None,
+            "session_type": "training",
+            "completed": True,
+            "rpe": None,
+            "duration_minutes": None,
+            "notes": "",
+            **fields,
+            "created_at": _now(),
+            "updated_at": _now(),
+        }
+        self.session_logs.setdefault(athlete_id, []).append(row)
+        return dict(row)
+
+    def list_session_logs(self, athlete_id: str, *, limit: int = 20) -> list[dict]:
+        rows = sorted(
+            self.session_logs.get(athlete_id, []),
+            key=lambda row: (row["session_date"], row["created_at"]),
+            reverse=True,
+        )
+        return [dict(row) for row in rows[:limit]]
+
+    def create_injury_flag(self, athlete_id: str, fields: dict) -> dict:
+        row = {
+            "id": str(uuid4()),
+            "athlete_id": athlete_id,
+            "plan_id": None,
+            "source": "checkin",
+            "body_area": "",
+            "severity": "moderate",
+            "status": "open",
+            "resolved_at": None,
+            **fields,
+            "created_at": _now(),
+            "updated_at": _now(),
+        }
+        self.injury_flags.setdefault(athlete_id, []).append(row)
+        return dict(row)
+
+    def list_injury_flags(
+        self, athlete_id: str, *, statuses: tuple = ("open", "monitoring"), limit: int = 20
+    ) -> list[dict]:
+        rows = [
+            dict(row)
+            for row in self.injury_flags.get(athlete_id, [])
+            if not statuses or row["status"] in statuses
+        ]
+        rows.sort(key=lambda row: row["created_at"], reverse=True)
+        return rows[:limit]
+
+    def update_injury_flag(self, flag_id: str, fields: dict) -> dict:
+        for rows in self.injury_flags.values():
+            for row in rows:
+                if row["id"] == flag_id:
+                    row.update(fields)
+                    row["updated_at"] = _now()
+                    return dict(row)
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="injury flag not found")
+
+    def create_adaptation_note(self, athlete_id: str, fields: dict) -> dict:
+        row = {
+            "id": str(uuid4()),
+            "athlete_id": athlete_id,
+            "plan_id": None,
+            "checkin_id": None,
+            "session_log_id": None,
+            "details": {},
+            **fields,
+            "created_at": _now(),
+        }
+        self.adaptation_notes.setdefault(athlete_id, []).append(row)
+        return dict(row)
+
+    def list_adaptation_notes(self, athlete_id: str, *, limit: int = 10) -> list[dict]:
+        rows = list(reversed(self.adaptation_notes.get(athlete_id, [])))
+        return [dict(row) for row in rows[:limit]]
+
+    def create_admin_review(self, athlete_id: str, fields: dict) -> dict:
+        row = {
+            "id": str(uuid4()),
+            "athlete_id": athlete_id,
+            "adaptation_note_id": None,
+            "injury_flag_id": None,
+            "status": "pending",
+            "resolution_notes": "",
+            "resolved_by": "",
+            "resolved_at": None,
+            **fields,
+            "created_at": _now(),
+            "updated_at": _now(),
+        }
+        self.admin_reviews.append(row)
+        return dict(row)
+
+    def list_admin_reviews(self, *, status_filter: str | None = "pending", limit: int = 50) -> list[dict]:
+        rows = [
+            dict(row)
+            for row in self.admin_reviews
+            if status_filter is None or row["status"] == status_filter
+        ]
+        rows.sort(key=lambda row: row["created_at"], reverse=True)
+        return rows[:limit]
+
+    def count_pending_admin_reviews_for_athlete(self, athlete_id: str) -> int:
+        return sum(
+            1
+            for row in self.admin_reviews
+            if row["athlete_id"] == athlete_id and row["status"] == "pending"
+        )
+
+    def resolve_admin_review(self, review_id: str, fields: dict) -> dict:
+        for row in self.admin_reviews:
+            if row["id"] == review_id:
+                row.update(fields)
+                row["updated_at"] = _now()
+                return dict(row)
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="review not found")
 
 
 @dataclass

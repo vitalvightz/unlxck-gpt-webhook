@@ -11,7 +11,9 @@ import {
   listAdminActiveGenerationJobs,
   listAdminAthletes,
   listAdminPlans,
+  listAdminReviews,
   listAdminTriageGenerationJobs,
+  resolveAdminReview,
 } from "@/lib/api";
 import {
   PROFILE_REFRESH_FAILED_BANNER_BODY,
@@ -22,6 +24,7 @@ import type {
   AdminAthleteRecord,
   AdminGenerationJobDiagnostic,
   AdminPlanSummary,
+  AdminReviewRecord,
 } from "@/lib/types";
 
 function getPlanDisplayName(plan: { plan_name?: string | null; full_name?: string | null; athlete_email: string }) {
@@ -122,6 +125,9 @@ export default function AdminPage() {
   const [plans, setPlans] = useState<AdminPlanSummary[]>([]);
   const [activeJobs, setActiveJobs] = useState<AdminGenerationJobDiagnostic[]>([]);
   const [triageJobs, setTriageJobs] = useState<AdminGenerationJobDiagnostic[]>([]);
+  const [attentionReviews, setAttentionReviews] = useState<AdminReviewRecord[]>([]);
+  const [attentionWarning, setAttentionWarning] = useState<string | null>(null);
+  const [resolvingReviewId, setResolvingReviewId] = useState<string | null>(null);
   const [isDirectoryLoading, setIsDirectoryLoading] = useState(true);
   const [isJobsLoading, setIsJobsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -283,8 +289,9 @@ export default function AdminPage() {
       Promise.allSettled([
         listAdminActiveGenerationJobs(token),
         listAdminTriageGenerationJobs(token),
+        listAdminReviews(token, "pending"),
       ])
-        .then(([activeResult, triageResult]) => {
+        .then(([activeResult, triageResult, reviewsResult]) => {
           if (!active) return;
 
           if (activeResult.status === "fulfilled") {
@@ -303,6 +310,14 @@ export default function AdminPage() {
           } else {
             if (isInitial) setTriageJobs([]);
             setTriageWarning(getErrorMessage(triageResult.reason, "Unable to load suspended triage jobs."));
+          }
+
+          if (reviewsResult.status === "fulfilled") {
+            setAttentionReviews(reviewsResult.value);
+            setAttentionWarning(null);
+          } else {
+            if (isInitial) setAttentionReviews([]);
+            setAttentionWarning(getErrorMessage(reviewsResult.reason, "Unable to load the athlete attention queue."));
           }
 
           setLastCheckedAt(new Date().toISOString());
@@ -333,6 +348,25 @@ export default function AdminPage() {
   const goToPlansPage = useCallback((delta: number) => {
     setPlansOffset((value) => Math.max(0, value + delta * DIRECTORY_PAGE_SIZE));
   }, []);
+
+  async function handleResolveReview(reviewId: string) {
+    if (!session?.access_token || resolvingReviewId) return;
+    setResolvingReviewId(reviewId);
+    setError(null);
+    setMessage(null);
+    try {
+      await resolveAdminReview(session.access_token, reviewId, {
+        status: "resolved",
+        resolution_notes: "reviewed from admin dashboard",
+      });
+      setAttentionReviews((reviews) => reviews.filter((review) => review.id !== reviewId));
+      setMessage("Review resolved.");
+    } catch (resolveError) {
+      setError(resolveError instanceof Error ? resolveError.message : "Failed to resolve review.");
+    } finally {
+      setResolvingReviewId(null);
+    }
+  }
 
   async function handleApproveAndResumeJob(jobId: string) {
     if (!session?.access_token || resumingJobId) return;
@@ -581,6 +615,65 @@ export default function AdminPage() {
                       disabled={resumingJobId !== null}
                     >
                       {resumingJobId === job.job_id ? "Approving..." : "Approve & Resume"}
+                    </button>
+                  </div>
+                </article>
+              ))}
+            </div>
+          )}
+        </article>
+
+        <article className="list-card admin-attention-panel">
+          <div className="form-section-header">
+            <div>
+              <p className="kicker">Athlete attention queue</p>
+              <h2>Needs attention</h2>
+            </div>
+            <span className="badge">{isJobsLoading ? "Checking" : `${attentionReviews.length} open`}</span>
+          </div>
+
+          {isJobsLoading ? (
+            <div className="support-panel">
+              <p className="muted">Loading the attention queue...</p>
+            </div>
+          ) : attentionWarning ? (
+            <div className="support-panel">
+              <p className="error-text">{attentionWarning}</p>
+            </div>
+          ) : attentionReviews.length === 0 ? (
+            <div className="support-panel support-panel-success">
+              <p className="kicker">Clear</p>
+              <h3 className="form-section-title">No athletes are flagged for review.</h3>
+              <p className="muted">
+                Injury reports, sustained high fatigue, and repeated missed sessions land here automatically from daily check-ins and session logs.
+              </p>
+            </div>
+          ) : (
+            <div className="plans-grid admin-queue-grid">
+              {attentionReviews.map((review) => (
+                <article key={review.id} className="plan-card admin-triage-card">
+                  <div className="plan-card-header">
+                    <div>
+                      <h3 className="plan-card-title">{review.athlete_name || review.athlete_email || review.athlete_id}</h3>
+                      <p className="muted">{review.athlete_email || review.athlete_id}</p>
+                    </div>
+                    <span className="badge">{review.injury_flag_id ? "Injury flag" : "Review"}</span>
+                  </div>
+                  <p className="muted">{review.reason}</p>
+                  <div className="admin-job-meta">
+                    <span>Flagged {formatDateTime(review.created_at)}</span>
+                  </div>
+                  <div className="plan-card-actions">
+                    <Link href={`/admin/athletes/${review.athlete_id}`} className="ghost-button">
+                      Open athlete
+                    </Link>
+                    <button
+                      type="button"
+                      className="cta"
+                      onClick={() => void handleResolveReview(review.id)}
+                      disabled={resolvingReviewId !== null}
+                    >
+                      {resolvingReviewId === review.id ? "Resolving..." : "Mark resolved"}
                     </button>
                   </div>
                 </article>

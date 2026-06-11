@@ -1,9 +1,19 @@
 import type {
   ApproveAndResumeGenerationRequest,
+  AdminAthleteDailyStatus,
   AdminAthleteRecord,
   AdminLatestIntakeUpdateRequest,
   AdminGenerationJobDiagnostic,
   AdminPlanSummary,
+  AdminReviewRecord,
+  AdminReviewResolveRequest,
+  AthleteDashboardState,
+  DailyCheckinRecord,
+  DailyCheckinRequest,
+  DailyCheckinResponse,
+  InjuryFlagCreateRequest,
+  InjuryFlagRecord,
+  InjuryFlagStatus,
   ManualStage2SubmissionRequest,
   GenerationJobResponse,
   MeResponse,
@@ -13,6 +23,9 @@ import type {
   PlanRequest,
   PlanSummary,
   ProfileUpdateRequest,
+  SessionLogRecord,
+  SessionLogRequest,
+  SessionLogResponse,
   UsernameChangeRequest,
   WeeklySchedule,
 } from "@/lib/types";
@@ -836,4 +849,116 @@ export function archivePlan(token: string, planId: string): Promise<PlanDetail> 
     method: "POST",
     token,
   });
+}
+
+// ---------------------------------------------------------------------------
+// Live athlete daily flow (dashboard, check-ins, session logs, injury flags,
+// admin review queue).
+// ---------------------------------------------------------------------------
+
+export function getDashboard(token: string): Promise<AthleteDashboardState> {
+  return withTransientRetries(() => readJson<AthleteDashboardState>("/api/dashboard", { token }));
+}
+
+export function submitDailyCheckin(
+  token: string,
+  payload: DailyCheckinRequest,
+): Promise<DailyCheckinResponse> {
+  return readJson<DailyCheckinResponse>("/api/checkins", {
+    method: "POST",
+    token,
+    body: JSON.stringify(payload),
+  });
+}
+
+export function listDailyCheckins(token: string, limit = 14): Promise<DailyCheckinRecord[]> {
+  return withTransientRetries(() =>
+    readJson<DailyCheckinRecord[]>(`/api/checkins?limit=${limit}`, { token }),
+  );
+}
+
+export function submitSessionLog(
+  token: string,
+  payload: SessionLogRequest,
+): Promise<SessionLogResponse> {
+  return readJson<SessionLogResponse>("/api/session-logs", {
+    method: "POST",
+    token,
+    body: JSON.stringify(payload),
+  });
+}
+
+export function listSessionLogs(token: string, limit = 20): Promise<SessionLogRecord[]> {
+  return withTransientRetries(() =>
+    readJson<SessionLogRecord[]>(`/api/session-logs?limit=${limit}`, { token }),
+  );
+}
+
+export function reportInjury(
+  token: string,
+  payload: InjuryFlagCreateRequest,
+): Promise<InjuryFlagRecord> {
+  return readJson<InjuryFlagRecord>("/api/injury-flags", {
+    method: "POST",
+    token,
+    body: JSON.stringify(payload),
+  });
+}
+
+export function listInjuryFlags(token: string, includeResolved = false): Promise<InjuryFlagRecord[]> {
+  return withTransientRetries(() =>
+    readJson<InjuryFlagRecord[]>(`/api/injury-flags?include_resolved=${includeResolved}`, { token }),
+  );
+}
+
+export function listAdminReviews(
+  token: string,
+  status: AdminReviewRecord["status"] | "all" = "pending",
+  limit = 50,
+): Promise<AdminReviewRecord[]> {
+  return withTransientRetries(() =>
+    readJson<AdminReviewRecord[]>(
+      `/api/admin/reviews?status=${encodeURIComponent(status)}&limit=${limit}`,
+      { token },
+    ),
+  );
+}
+
+export function resolveAdminReview(
+  token: string,
+  reviewId: string,
+  payload: AdminReviewResolveRequest,
+): Promise<AdminReviewRecord> {
+  return readJson<AdminReviewRecord>(
+    `/api/admin/reviews/${encodeURIComponent(reviewId)}/resolve`,
+    {
+      method: "POST",
+      token,
+      body: JSON.stringify(payload),
+    },
+  );
+}
+
+export function updateAdminInjuryFlag(
+  token: string,
+  flagId: string,
+  status: InjuryFlagStatus,
+): Promise<InjuryFlagRecord> {
+  return readJson<InjuryFlagRecord>(`/api/admin/injury-flags/${encodeURIComponent(flagId)}`, {
+    method: "PATCH",
+    token,
+    body: JSON.stringify({ status }),
+  });
+}
+
+export function getAdminAthleteDailyStatus(
+  token: string,
+  athleteId: string,
+): Promise<AdminAthleteDailyStatus> {
+  return withTransientRetries(() =>
+    readJson<AdminAthleteDailyStatus>(
+      `/api/admin/athletes/${encodeURIComponent(athleteId)}/daily-status`,
+      { token },
+    ),
+  );
 }

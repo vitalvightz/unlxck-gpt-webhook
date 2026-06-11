@@ -42,6 +42,14 @@ REQUIRED_TABLES: tuple[str, ...] = (
     # Required so the deploy gate catches an environment where the migration has
     # not been applied and admin changes would silently lose their audit record.
     "admin_role_audit",
+    # Live athlete daily tracking (api/routes/daily.py + api/store.py). The
+    # dashboard, check-in, session-log, and admin review-queue endpoints all
+    # read/write these tables, so a missing migration must fail the deploy gate.
+    "daily_checkins",
+    "session_logs",
+    "injury_flags",
+    "adaptation_notes",
+    "admin_reviews",
 )
 
 # ---------------------------------------------------------------------------
@@ -165,12 +173,88 @@ REQUIRED_ADMIN_ROLE_AUDIT_COLUMNS: tuple[str, ...] = (
     "created_at",
 )
 
+REQUIRED_DAILY_CHECKINS_COLUMNS: tuple[str, ...] = (
+    "id",
+    "athlete_id",
+    "checkin_date",
+    "readiness",
+    "fatigue",
+    "soreness",
+    "sleep_quality",
+    "sleep_hours",
+    "injury_note",
+    "notes",
+    "readiness_state",
+    "created_at",
+    "updated_at",
+)
+
+REQUIRED_SESSION_LOGS_COLUMNS: tuple[str, ...] = (
+    "id",
+    "athlete_id",
+    "plan_id",
+    "session_date",
+    "session_type",
+    "completed",
+    "rpe",
+    "duration_minutes",
+    "notes",
+    "created_at",
+    "updated_at",
+)
+
+REQUIRED_INJURY_FLAGS_COLUMNS: tuple[str, ...] = (
+    "id",
+    "athlete_id",
+    "plan_id",
+    "source",
+    "body_area",
+    "description",
+    "severity",
+    "status",
+    "resolved_at",
+    "created_at",
+    "updated_at",
+)
+
+REQUIRED_ADAPTATION_NOTES_COLUMNS: tuple[str, ...] = (
+    "id",
+    "athlete_id",
+    "plan_id",
+    "checkin_id",
+    "session_log_id",
+    "rule_code",
+    "decision",
+    "summary",
+    "details",
+    "created_at",
+)
+
+REQUIRED_ADMIN_REVIEWS_COLUMNS: tuple[str, ...] = (
+    "id",
+    "athlete_id",
+    "adaptation_note_id",
+    "injury_flag_id",
+    "reason",
+    "status",
+    "resolution_notes",
+    "resolved_by",
+    "resolved_at",
+    "created_at",
+    "updated_at",
+)
+
 # Map of table -> required columns, used by the checker.
 REQUIRED_COLUMNS: Mapping[str, tuple[str, ...]] = {
     "plans": REQUIRED_PLANS_COLUMNS,
     "generation_jobs": REQUIRED_GENERATION_JOBS_COLUMNS,
     "profiles": REQUIRED_PROFILES_COLUMNS,
     "admin_role_audit": REQUIRED_ADMIN_ROLE_AUDIT_COLUMNS,
+    "daily_checkins": REQUIRED_DAILY_CHECKINS_COLUMNS,
+    "session_logs": REQUIRED_SESSION_LOGS_COLUMNS,
+    "injury_flags": REQUIRED_INJURY_FLAGS_COLUMNS,
+    "adaptation_notes": REQUIRED_ADAPTATION_NOTES_COLUMNS,
+    "admin_reviews": REQUIRED_ADMIN_REVIEWS_COLUMNS,
 }
 
 # ---------------------------------------------------------------------------
@@ -242,6 +326,12 @@ INDEX_REQUIREMENTS: tuple[IndexRequirement, ...] = (
         label="profiles username uniqueness",
         accepted_names=("profiles_username_key", "profiles_username_idx"),
     ),
+    # One check-in per athlete per day; the store's upsert path
+    # (api/store.py::upsert_daily_checkin) depends on this conflict target.
+    IndexRequirement(
+        label="daily_checkins athlete/date uniqueness",
+        accepted_names=("daily_checkins_athlete_date_key",),
+    ),
 )
 
 # ---------------------------------------------------------------------------
@@ -255,6 +345,11 @@ RLS_REQUIRED_TABLES: tuple[str, ...] = (
     "generation_jobs",
     "plan_generation_rate_limits",
     "admin_role_audit",
+    "daily_checkins",
+    "session_logs",
+    "injury_flags",
+    "adaptation_notes",
+    "admin_reviews",
 )
 
 
