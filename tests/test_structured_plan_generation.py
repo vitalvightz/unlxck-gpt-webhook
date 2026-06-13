@@ -217,3 +217,14 @@ def test_parse_structured_json_recovers_from_prose_wrapper():
 def test_parse_structured_json_returns_none_on_garbage():
     assert parse_structured_json("not json at all") is None
     assert parse_structured_json("") is None
+
+
+def test_parse_structured_json_ignores_trailing_prose_with_braces():
+    # rfind would over-extend to the stray closing brace in the trailing prose.
+    text = 'Plan: {"a": 1} -- done (see notes }below)'
+    assert parse_structured_json(text) == {"a": 1}
+
+
+def test_parse_structured_json_handles_code_fence_and_braces_in_strings():
+    text = '```json\n{"display": "85% {1RM}", "value": 85}\n```'
+    assert parse_structured_json(text) == {"display": "85% {1RM}", "value": 85}

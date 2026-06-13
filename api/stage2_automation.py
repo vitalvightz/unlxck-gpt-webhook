@@ -211,6 +211,35 @@ def _build_stage2_cost(
     }
 
 
+def _merge_stage2_costs(*costs: dict[str, Any] | None) -> dict[str, Any]:
+    """Aggregate token/cost telemetry across multiple Stage 2 model calls.
+
+    Stage 2 normally makes a single model call, but when structured-plan
+    generation is enabled it makes one or two more. Token counts and the
+    estimated USD cost are summed so the persisted cost row reflects *total*
+    Stage 2 spend; metadata (model, response_id, attempt_count, recorded_at) is
+    taken from the last call. ``None``/empty entries are ignored.
+    """
+
+    token_keys = ("stage2_input_tokens", "stage2_output_tokens", "stage2_total_tokens")
+    merged: dict[str, Any] = {}
+    for cost in costs:
+        if not cost:
+            continue
+        # Compute running totals from the prior accumulation *before* adopting the
+        # current call's metadata, so the current call is counted exactly once.
+        running_tokens = {
+            key: (merged.get(key) or 0) + (cost.get(key) or 0) for key in token_keys
+        }
+        running_usd = (merged.get("stage2_estimated_cost_usd") or 0.0) + (
+            cost.get("stage2_estimated_cost_usd") or 0.0
+        )
+        merged = dict(cost)
+        merged.update(running_tokens)
+        merged["stage2_estimated_cost_usd"] = running_usd
+    return merged
+
+
 def _is_quota_or_rate_limit_error(exc: Exception) -> bool:
     message = str(exc or "").lower()
     return (
@@ -594,12 +623,15 @@ class OpenAIStage2Automator:
             # Additive structured-plan attempt. Never blocks the raw plan: any
             # failure degrades to the plan_text fallback (status not_attempted /
             # invalid_fallback_used) and is recorded for admin debug.
-            outcome = await self._attempt_structured_plan(
+            outcome, structured_costs = await self._attempt_structured_plan(
                 final_plan_text=first_pass_text,
                 package=package,
                 source=source,
                 log_context=log_context,
             )
+            # Roll the structured calls' tokens into the persisted cost row so it
+            # reflects total Stage 2 spend, not just the plan-text pass.
+            result["stage2_cost"] = _merge_stage2_costs(first_pass_cost, *structured_costs)
             return _record_structured_outcome(result, outcome)
 
         logger.warning("[stage2] review required after first_pass: automatic retry disabled")
@@ -620,23 +652,33 @@ class OpenAIStage2Automator:
         package: dict[str, Any],
         source: str,
         log_context: dict[str, str] | None = None,
-    ) -> StructuredPlanOutcome:
-        """Best-effort structured-plan generation. Never raises."""
+    ) -> tuple[StructuredPlanOutcome, list[dict[str, Any]]]:
+        """Best-effort structured-plan generation. Never raises.
+
+        Returns the outcome plus the cost telemetry of any structured model
+        calls made, so the caller can fold them into the persisted cost row.
+        """
 
         if not _structured_plan_enabled() or not final_plan_text.strip():
-            return StructuredPlanOutcome(status="not_attempted")
+            return StructuredPlanOutcome(status="not_attempted"), []
+        costs: list[dict[str, Any]] = []
         try:
             return await self._generate_structured_outcome(
                 final_plan_text=final_plan_text,
                 package=package,
                 source=source,
                 log_context=log_context,
+                costs=costs,
             )
         except Exception:  # never block the raw plan on structured failure
             logger.exception("[stage2] structured_plan attempt failed; using raw fallback")
-            return StructuredPlanOutcome(
-                status="not_attempted",
-                errors=["structured generation error (see server logs)"],
+            # Preserve costs from any calls that did complete before the failure.
+            return (
+                StructuredPlanOutcome(
+                    status="not_attempted",
+                    errors=["structured generation error (see server logs)"],
+                ),
+                costs,
             )
 
     async def _generate_structured_outcome(
@@ -646,7 +688,8 @@ class OpenAIStage2Automator:
         package: dict[str, Any],
         source: str,
         log_context: dict[str, str] | None = None,
-    ) -> StructuredPlanOutcome:
+        costs: list[dict[str, Any]],
+    ) -> tuple[StructuredPlanOutcome, list[dict[str, Any]]]:
         planning_brief = package.get("planning_brief") if isinstance(package, dict) else None
         if not isinstance(planning_brief, dict):
             planning_brief = None
@@ -659,22 +702,29 @@ class OpenAIStage2Automator:
             planning_brief=planning_brief,
             event_date=event_date,
         )
-        first_text, _first_cost = await self._generate_text(
+        first_text, first_cost = await self._generate_text(
             first_prompt,
             attempt_label="structured_first",
             source=source,
             log_context=log_context,
         )
+        costs.append(first_cost)
         first_json = parse_structured_json(first_text)
         if first_json is None:
-            return StructuredPlanOutcome(
-                status="invalid_fallback_used",
-                errors=["structured model output was not valid JSON"],
+            return (
+                StructuredPlanOutcome(
+                    status="invalid_fallback_used",
+                    errors=["structured model output was not valid JSON"],
+                ),
+                costs,
             )
 
         probe = safe_parse_structured_plan(first_json, raw_markdown=final_plan_text)
         if probe.ok:
-            return build_structured_plan_outcome(first_json, raw_markdown=final_plan_text)
+            return (
+                build_structured_plan_outcome(first_json, raw_markdown=final_plan_text),
+                costs,
+            )
 
         # Single repair retry: re-prompt with the validation errors and the
         # broken JSON, then let build_structured_plan_outcome score the result.
@@ -685,17 +735,21 @@ class OpenAIStage2Automator:
             repair_errors=probe.errors,
             broken_json=first_text,
         )
-        repaired_text, _repair_cost = await self._generate_text(
+        repaired_text, repair_cost = await self._generate_text(
             repair_prompt,
             attempt_label="structured_repair",
             source=source,
             log_context=log_context,
         )
+        costs.append(repair_cost)
         repaired_json = parse_structured_json(repaired_text)
-        return build_structured_plan_outcome(
-            first_json,
-            raw_markdown=final_plan_text,
-            repair_fn=lambda _data, _errors: repaired_json,
+        return (
+            build_structured_plan_outcome(
+                first_json,
+                raw_markdown=final_plan_text,
+                repair_fn=lambda _data, _errors: repaired_json,
+            ),
+            costs,
         )
 
 

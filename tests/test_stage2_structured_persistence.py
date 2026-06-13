@@ -275,6 +275,42 @@ def test_finalize_keeps_raw_plan_when_structured_invalid_after_repair(
     assert debug["errors"]
 
 
+def test_finalize_accumulates_structured_call_costs(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setenv("UNLXCK_STAGE2_STRUCTURED_PLAN", "1")
+    monkeypatch.setattr(stage2_module, "review_stage2_output", _pass_review)
+    # plan pass (10/5) + structured first (10/5) + structured repair (10/5).
+    client = _FakeClient(
+        [
+            _response("# final plan"),
+            _response(json.dumps({"weeks": []})),  # invalid -> triggers repair
+            _response(json.dumps(_valid_plan())),
+        ]
+    )
+    automator = OpenAIStage2Automator(client=client, model="test-model")
+
+    result = asyncio.run(automator.finalize(stage1_result=_stage1_result()))
+
+    cost = result["stage2_cost"]
+    # 3 calls summed: input 3*10, output 3*5, total 3*15.
+    assert cost["stage2_input_tokens"] == 30
+    assert cost["stage2_output_tokens"] == 15
+    assert cost["stage2_total_tokens"] == 45
+
+
+def test_finalize_cost_unchanged_when_structured_disabled(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.delenv("UNLXCK_STAGE2_STRUCTURED_PLAN", raising=False)
+    monkeypatch.setattr(stage2_module, "review_stage2_output", _pass_review)
+    client = _FakeClient([_response("# final plan")])
+    automator = OpenAIStage2Automator(client=client, model="test-model")
+
+    result = asyncio.run(automator.finalize(stage1_result=_stage1_result()))
+
+    # Single plan-text call only: no double counting of the merge step.
+    assert result["stage2_cost"]["stage2_input_tokens"] == 10
+    assert result["stage2_cost"]["stage2_output_tokens"] == 5
+    assert result["stage2_cost"]["stage2_total_tokens"] == 15
+
+
 def test_finalize_does_not_crash_when_structured_model_errors(
     monkeypatch: pytest.MonkeyPatch,
 ):

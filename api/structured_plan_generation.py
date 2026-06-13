@@ -171,6 +171,42 @@ def build_structured_plan_outcome(
     )
 
 
+def _extract_json_object(text: str) -> str | None:
+    """Return the first balanced top-level ``{...}`` object in ``text``.
+
+    Uses a brace-counting scan so trailing/leading prose — or stray braces in a
+    commentary wrapper or a ```json fence — does not produce a truncated or
+    over-wide span the way ``find``/``rfind`` would. String literals are honoured
+    so braces inside JSON string values are not mistaken for structure. Returns
+    ``None`` when no complete object is present.
+    """
+
+    depth = 0
+    start: int | None = None
+    in_string = False
+    escaped = False
+    for index, char in enumerate(text):
+        if in_string:
+            if escaped:
+                escaped = False
+            elif char == "\\":
+                escaped = True
+            elif char == '"':
+                in_string = False
+            continue
+        if char == '"':
+            in_string = True
+        elif char == "{":
+            if depth == 0:
+                start = index
+            depth += 1
+        elif char == "}" and depth > 0:
+            depth -= 1
+            if depth == 0 and start is not None:
+                return text[start : index + 1]
+    return None
+
+
 def parse_structured_json(text: str) -> Any:
     """Parse model output into JSON, tolerating a leading/trailing prose wrapper.
 
@@ -185,14 +221,13 @@ def parse_structured_json(text: str) -> Any:
         return json.loads(stripped)
     except json.JSONDecodeError:
         pass
-    # Fall back to the outermost ``{...}`` span if the model wrapped the JSON in
-    # commentary despite instructions.
-    start = stripped.find("{")
-    end = stripped.rfind("}")
-    if start == -1 or end == -1 or end <= start:
+    # Fall back to the first balanced ``{...}`` object if the model wrapped the
+    # JSON in commentary or a code fence despite instructions.
+    candidate = _extract_json_object(stripped)
+    if candidate is None:
         return None
     try:
-        return json.loads(stripped[start : end + 1])
+        return json.loads(candidate)
     except json.JSONDecodeError:
         return None
 
