@@ -14,7 +14,6 @@ from .structured_plan_generation import (
     build_structured_plan_prompt,
     parse_structured_json,
 )
-from .structured_plan_models import safe_parse_structured_plan
 
 _APP_STATUS_READY = "ready"
 _APP_STATUS_PUBLISHABLE_WITH_FLAGS = "publishable_with_flags"
@@ -719,12 +718,12 @@ class OpenAIStage2Automator:
                 costs,
             )
 
-        probe = safe_parse_structured_plan(first_json, raw_markdown=final_plan_text)
-        if probe.ok:
-            return (
-                build_structured_plan_outcome(first_json, raw_markdown=final_plan_text),
-                costs,
-            )
+        # build_structured_plan_outcome strips biometrics + conservatively
+        # normalizes before validating, so a near-miss first pass can succeed
+        # without spending a repair call.
+        first_outcome = build_structured_plan_outcome(first_json, raw_markdown=final_plan_text)
+        if first_outcome.status == "valid":
+            return first_outcome, costs
 
         # Single repair retry: re-prompt with the validation errors and the
         # broken JSON, then let build_structured_plan_outcome score the result.
@@ -732,7 +731,7 @@ class OpenAIStage2Automator:
             plan_markdown=final_plan_text,
             planning_brief=planning_brief,
             event_date=event_date,
-            repair_errors=probe.errors,
+            repair_errors=first_outcome.errors,
             broken_json=first_text,
         )
         repaired_text, repair_cost = await self._generate_text(
