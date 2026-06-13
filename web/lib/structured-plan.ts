@@ -83,9 +83,9 @@ export function isTimeLikeReps(reps: unknown): boolean {
   if (typeof reps !== "string") {
     return false;
   }
-  return /\b(s|sec|secs|second|seconds|m|min|mins|minute|minutes|hr|hrs|hour|hours)\b/i.test(
+  return /\b(s|sec|secs|second|seconds|min|mins|minute|minutes|hr|hrs|hour|hours)\b/i.test(
     reps,
-  ) || /\d\s*(s|m)\b/i.test(reps);
+  ) || /\d\s*s\b/i.test(reps);
 }
 
 export type BlockMetric = { label: string; value: string };
