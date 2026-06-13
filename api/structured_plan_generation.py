@@ -209,7 +209,29 @@ _DURATION_UNIT_ALIASES = {
 
 _COUNTDOWN_RE = re.compile(r"^[Dd]\s*([+-]?\d+)$")
 _MEASURED_RE = re.compile(r"^\s*([0-9]+(?:\.[0-9]+)?)\s*([a-zA-Z]+)\s*$")
-_LOAD_PERCENT_RE = re.compile(r"^\s*([0-9]+(?:\.[0-9]+)?)\s*%\s*$")
+# Capture a percentage anywhere in the string plus an optional trailing reference
+# such as "1RM" or "of 1RM" (bank prescriptions read like "3x5 @ 75-85% 1RM").
+# group(2) is optional and may be ``None`` — callers must guard it.
+_LOAD_PERCENT_RE = re.compile(r"([0-9]+(?:\.[0-9]+)?)\s*%\s*(?:of\s+)?([A-Za-z0-9]+)?")
+
+# Distance units are mapped separately from duration units because a bare "m"
+# means metres for a distance field but minutes for a duration field; the field's
+# default_unit selects which alias table applies.
+_DISTANCE_UNIT_ALIASES = {
+    "m": "meters",
+    "meter": "meters",
+    "metre": "meters",
+    "meters": "meters",
+    "metres": "meters",
+    "km": "kilometers",
+    "mi": "miles",
+    "mile": "miles",
+    "miles": "miles",
+    "yd": "yards",
+    "yard": "yards",
+    "yards": "yards",
+}
+_TIME_UNITS = frozenset({"seconds", "minutes", "hours"})
 
 
 def _coerce_str(value: Any) -> str:
@@ -303,32 +325,60 @@ def _normalize_load(value: Any) -> dict[str, Any] | None:
         return {"method": "absolute", "value": float(value), "unit": "kg", "display": str(value)}
     if isinstance(value, str):
         text = value.strip()
-        percent = _LOAD_PERCENT_RE.match(text)
+        if not text:
+            return None
+        percent = _LOAD_PERCENT_RE.search(text)
         if percent:
-            ref = percent.group(2).strip() or None
-            return {
+            load = {
                 "method": "percentage",
                 "value": float(percent.group(1)),
                 "unit": "percent",
-                "ref": ref,
                 "display": text,
             }
-        if text.lower() in {"bodyweight", "bw", "body weight"}:
+            # group(2) is optional, so guard it before use; carry a bank-style
+            # reference (e.g. "1RM") through when present.
+            ref = (percent.group(2) or "").strip()
+            if ref:
+                load["ref"] = ref
+            return load
+        if text.lower() in {"bodyweight", "bw", "body weight", "bodyweight only"}:
             return {"method": "bodyweight", "value": 0, "unit": "bodyweight", "display": "bodyweight"}
     return None
 
 
-def _normalize_measured(value: Any) -> dict[str, Any] | None:
+def _normalize_measured(value: Any, default_unit: str = "seconds") -> dict[str, Any] | None:
+    """Coerce a measured value into ``{"value", "unit"}``.
+
+    ``default_unit`` is used for bare numbers and plain numeric strings so a
+    bank-style ``work_sec``/``rest_sec`` int maps to seconds, ``total_minutes``
+    to minutes, and a distance to meters. A string carrying its own unit is
+    parsed and the unit aliased within the field's dimension (time vs distance).
+    Unparseable values return ``None``.
+    """
+
     if value is None:
         return None
     if isinstance(value, dict):
         return value
     if isinstance(value, (int, float)) and not isinstance(value, bool):
-        return {"value": float(value), "unit": "seconds"}
+        return {"value": float(value), "unit": default_unit}
     if isinstance(value, str):
-        match = _MEASURED_RE.match(value)
+        text = value.strip()
+        if not text:
+            return None
+        try:  # plain numeric string ("90", "2.5") → default unit for the field
+            return {"value": float(text), "unit": default_unit}
+        except ValueError:
+            pass
+        match = _MEASURED_RE.match(text)
         if match:
-            unit = _DURATION_UNIT_ALIASES.get(match.group(2).strip().lower(), match.group(2).strip())
+            raw_unit = match.group(2).strip().lower()
+            if default_unit in _TIME_UNITS:
+                unit = _DURATION_UNIT_ALIASES.get(raw_unit, raw_unit)
+            elif default_unit == "meters":
+                unit = _DISTANCE_UNIT_ALIASES.get(raw_unit, raw_unit)
+            else:
+                unit = raw_unit
             return {"value": float(match.group(1)), "unit": unit}
     return None
 
@@ -356,13 +406,16 @@ def _normalize_block(value: Any) -> dict[str, Any]:
     out["display_name"] = _coerce_str(out.get("display_name"))
     if "load" in out:
         out["load"] = _normalize_load(out.get("load"))
-    for measured_key in ("rest", "work"):
+    # Per-field default units follow the bank conventions: work/rest in seconds
+    # (work_sec/rest_sec), duration in minutes (total_minutes), distance in meters.
+    for measured_key, default_unit in (
+        ("rest", "seconds"),
+        ("work", "seconds"),
+        ("distance", "meters"),
+        ("duration", "minutes"),
+    ):
         if measured_key in out:
-            out[measured_key] = _normalize_measured(out.get(measured_key), "seconds")
-    if "duration" in out:
-        out["duration"] = _normalize_measured(out.get("duration"), "minutes")
-    if "distance" in out:
-        out["distance"] = _normalize_measured(out.get("distance"), "meters")
+            out[measured_key] = _normalize_measured(out.get(measured_key), default_unit)
     return out
 
 
@@ -474,6 +527,15 @@ def _normalize_nutrition(value: Any) -> dict[str, Any]:
         warning["risk_level"] = _enum(warning.get("risk_level"), _RISK_LEVEL_VALUES, "none")
         warning["display_text"] = _coerce_str(warning.get("display_text"))
         out["weight_cut_warning"] = warning
+    elif isinstance(warning, str):
+        # Some conversions return the warning as a plain sentence. Wrap it in the
+        # schema object with a neutral risk level; the text is preserved verbatim.
+        text = warning.strip()
+        out["weight_cut_warning"] = (
+            {"risk_level": "none", "display_text": text, "requires_professional_support": False}
+            if text
+            else None
+        )
     return out
 
 
@@ -535,6 +597,120 @@ def _strip_and_normalize(data: Any) -> Any:
         return normalize_structured_plan_candidate(stripped)
     except Exception:  # normalization must never break the fallback flow
         return stripped
+
+
+# ---------------------------------------------------------------------------
+# Bank → StructuredTrainingPlan adapters
+#
+# These map the project's existing bank conventions (see fightcamp/bank_schema.py
+# and data/*_bank.json) into StructuredTrainingPlan value objects, so the
+# structured renderer can consume bank-derived training metadata without a new
+# naming scheme. They are conservative readers, not generators: they only
+# translate fields already present on a bank entry and never invent content.
+#
+# Bank conventions translated here:
+#   * strength/exercise: ``prescription`` string like "3x5 @ 75-85% 1RM"
+#     (sets x reps @ %load ref), ``method``, ``category``, ``equipment`` (str).
+#   * conditioning: ``work_sec``/``rest_sec`` (int seconds), ``total_minutes``
+#     (minutes), ``rounds`` (int), ``rpe`` (int), ``intensity`` (str),
+#     ``system`` (energy system), ``equipment`` (list).
+# ---------------------------------------------------------------------------
+
+_PRESCRIPTION_SETS_REPS_RE = re.compile(r"([0-9]+)\s*[xX×]\s*([0-9]+(?:\s*[-–]\s*[0-9]+)?)")
+
+
+def parse_bank_prescription(prescription: Any) -> dict[str, Any]:
+    """Parse a bank ``prescription`` string into structured block fields.
+
+    "3x5 @ 75-85% 1RM" → {"sets": 3, "reps": "5", "load": {percentage 85, ref 1RM}}.
+    Returns only the fields it can read; an unparseable input yields ``{}``.
+    """
+
+    if not isinstance(prescription, str) or not prescription.strip():
+        return {}
+    text = prescription.strip()
+    out: dict[str, Any] = {}
+    sets_reps = _PRESCRIPTION_SETS_REPS_RE.search(text)
+    if sets_reps:
+        out["sets"] = int(sets_reps.group(1))
+        out["reps"] = sets_reps.group(2).replace(" ", "")
+    load = _normalize_load(text)
+    if load is not None:
+        out["load"] = load
+    return out
+
+
+def _slug(name: str, fallback: str) -> str:
+    cleaned = re.sub(r"[^a-z0-9]+", "-", str(name or "").strip().lower()).strip("-")
+    return cleaned or fallback
+
+
+def bank_strength_to_block(entry: dict[str, Any]) -> dict[str, Any]:
+    """Adapter: an exercise/strength bank entry → a SessionBlock-shaped dict.
+
+    Reads name/method/category/prescription/notes; the result is passed through
+    :func:`_normalize_block` so it always satisfies the schema.
+    """
+
+    entry = entry if isinstance(entry, dict) else {}
+    name = _coerce_str(entry.get("name"))
+    block: dict[str, Any] = {
+        "block_id": _slug(name, "block"),
+        "block_type": _enum(entry.get("method"), _BLOCK_TYPE_VALUES, "strength", _BLOCK_TYPE_ALIASES),
+        "display_name": name,
+    }
+    category = _coerce_str(entry.get("category"))
+    if category:
+        block["category"] = category
+    notes = _coerce_str(entry.get("notes"))
+    if notes:
+        block["purpose"] = notes
+    impact = _coerce_str(entry.get("impact_cost"))
+    if impact:
+        block["impact_level"] = impact
+    block.update(parse_bank_prescription(entry.get("prescription")))
+    return _normalize_block(block)
+
+
+def bank_conditioning_to_block(entry: dict[str, Any]) -> dict[str, Any]:
+    """Adapter: a conditioning bank entry → a SessionBlock-shaped dict.
+
+    Maps work_sec/rest_sec → work/rest (seconds), total_minutes → duration
+    (minutes), rounds, rpe → effort (RPE), system → energy_system, and intensity.
+    The result is passed through :func:`_normalize_block`.
+    """
+
+    entry = entry if isinstance(entry, dict) else {}
+    name = _coerce_str(entry.get("name"))
+    block: dict[str, Any] = {
+        "block_id": _slug(name, "conditioning"),
+        "block_type": "conditioning",
+        "display_name": name,
+    }
+    if entry.get("work_sec") is not None:
+        block["work"] = entry.get("work_sec")
+    if entry.get("rest_sec") is not None:
+        block["rest"] = entry.get("rest_sec")
+    if entry.get("total_minutes") is not None:
+        block["duration"] = entry.get("total_minutes")
+    if isinstance(entry.get("rounds"), int) and not isinstance(entry.get("rounds"), bool):
+        block["rounds"] = entry.get("rounds")
+    rpe = entry.get("rpe")
+    if isinstance(rpe, (int, float)) and not isinstance(rpe, bool):
+        block["effort"] = {"method": "RPE", "value": rpe, "scale": "1-10"}
+    system = _coerce_str(entry.get("system"))
+    if system:
+        block["energy_system"] = system
+    intensity = _coerce_str(entry.get("intensity"))
+    if intensity:
+        block["intensity"] = intensity
+    notes = _coerce_str(entry.get("notes"))
+    if notes:
+        block["purpose"] = notes
+    impact = _coerce_str(entry.get("impact_cost"))
+    if impact:
+        block["impact_level"] = impact
+    return _normalize_block(block)
 
 
 def build_structured_plan_outcome(

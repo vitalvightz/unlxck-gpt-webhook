@@ -6,20 +6,39 @@ normalizer, and the prompt contract. The actual model call is exercised in
 """
 from __future__ import annotations
 
-import copy
+import json
+from pathlib import Path
 
 from api.structured_plan_generation import (
     BANNED_BIOMETRIC_KEYS,
+    _normalize_load,
+    _normalize_measured,
+    bank_conditioning_to_block,
+    bank_strength_to_block,
     build_structured_plan_outcome,
     build_structured_plan_prompt,
     normalize_structured_plan_candidate,
+    parse_bank_prescription,
     parse_structured_json,
     strip_biometric_fields,
 )
-from api.structured_plan_models import SCHEMA_VERSION, validate_structured_plan
+from api.structured_plan_models import (
+    SCHEMA_VERSION,
+    Nutrition,
+    SessionBlock,
+    validate_structured_plan,
+)
 
 # Reuse the rich valid-plan factory from the schema tests (tests/ is on sys.path).
 from test_structured_plan_models import _valid_plan
+
+_DATA_DIR = Path(__file__).resolve().parents[1] / "data"
+
+
+def _first_bank_entry(filename: str) -> dict:
+    data = json.loads((_DATA_DIR / filename).read_text(encoding="utf-8"))
+    entries = data if isinstance(data, list) else (data.get("items") or data.get("data"))
+    return entries[0]
 
 
 def _invalid_plan():
@@ -476,3 +495,198 @@ def test_normalize_leaves_non_dict_untouched_so_schema_can_reject():
     outcome = build_structured_plan_outcome(["not", "a", "plan"], raw_markdown="# raw")
     assert outcome.status == "invalid_fallback_used"
     assert outcome.structured_plan is None
+
+
+# --- _normalize_measured: per-field default units ----------------------------
+
+
+def test_normalize_measured_uses_default_unit_for_bare_numbers():
+    assert _normalize_measured(90, "seconds") == {"value": 90.0, "unit": "seconds"}
+    assert _normalize_measured(45, "minutes") == {"value": 45.0, "unit": "minutes"}
+    assert _normalize_measured(400, "meters") == {"value": 400.0, "unit": "meters"}
+
+
+def test_normalize_measured_parses_plain_numeric_strings_with_default_unit():
+    assert _normalize_measured("90", "seconds") == {"value": 90.0, "unit": "seconds"}
+    assert _normalize_measured("2.5", "minutes") == {"value": 2.5, "unit": "minutes"}
+
+
+def test_normalize_measured_unit_is_dimension_aware():
+    # "m" is minutes in a time field but meters in a distance field.
+    assert _normalize_measured("5 m", "minutes") == {"value": 5.0, "unit": "minutes"}
+    assert _normalize_measured("5 m", "meters") == {"value": 5.0, "unit": "meters"}
+    assert _normalize_measured("90s", "seconds") == {"value": 90.0, "unit": "seconds"}
+
+
+def test_normalize_measured_unparseable_returns_none():
+    assert _normalize_measured("as long as needed", "seconds") is None
+    assert _normalize_measured("", "seconds") is None
+    assert _normalize_measured(None, "seconds") is None
+
+
+def test_block_measured_defaults_follow_bank_conventions():
+    block = normalize_structured_plan_candidate(
+        {
+            "weeks": [
+                {
+                    "days": [
+                        {
+                            "sessions": [
+                                {
+                                    "blocks": [
+                                        {"work": 30, "rest": 90, "duration": 12, "distance": 400}
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        }
+    )["weeks"][0]["days"][0]["sessions"][0]["blocks"][0]
+    assert block["work"] == {"value": 30.0, "unit": "seconds"}
+    assert block["rest"] == {"value": 90.0, "unit": "seconds"}
+    assert block["duration"] == {"value": 12.0, "unit": "minutes"}
+    assert block["distance"] == {"value": 400.0, "unit": "meters"}
+
+
+# --- _normalize_load: percentage + optional trailing ref ---------------------
+
+
+def test_normalize_load_captures_trailing_ref():
+    assert _normalize_load("85% 1RM") == {
+        "method": "percentage",
+        "value": 85.0,
+        "unit": "percent",
+        "display": "85% 1RM",
+        "ref": "1RM",
+    }
+
+
+def test_normalize_load_captures_of_ref():
+    load = _normalize_load("85% of 1RM")
+    assert load["ref"] == "1RM"
+    assert load["value"] == 85.0
+
+
+def test_normalize_load_range_takes_top_value_with_ref():
+    # Bank prescriptions read like "75-85% 1RM"; take the working top end.
+    load = _normalize_load("75-85% 1RM")
+    assert load["value"] == 85.0
+    assert load["ref"] == "1RM"
+
+
+def test_normalize_load_percent_without_ref_has_no_ref_key():
+    load = _normalize_load("85%")
+    assert load["method"] == "percentage"
+    assert load["value"] == 85.0
+    assert "ref" not in load  # group(2) was None and must not be used
+
+
+def test_normalize_load_bodyweight_and_unparseable():
+    assert _normalize_load("bodyweight")["method"] == "bodyweight"
+    assert _normalize_load("as hard as possible") is None
+
+
+# --- weight_cut_warning as a plain string ------------------------------------
+
+
+def test_normalize_weight_cut_warning_string_is_wrapped():
+    nutrition = normalize_structured_plan_candidate(
+        {"nutrition": {"weight_cut_warning": "Cut 4% under qualified supervision."}}
+    )["nutrition"]
+    warning = nutrition["weight_cut_warning"]
+    assert warning["risk_level"] == "none"
+    assert warning["display_text"] == "Cut 4% under qualified supervision."
+    assert warning["requires_professional_support"] is False
+    # The wrapped object validates as part of the Nutrition schema.
+    Nutrition.model_validate(nutrition)
+
+
+def test_normalize_weight_cut_warning_empty_string_becomes_none():
+    nutrition = normalize_structured_plan_candidate(
+        {"nutrition": {"weight_cut_warning": "   "}}
+    )["nutrition"]
+    assert nutrition["weight_cut_warning"] is None
+
+
+# --- bank -> StructuredTrainingPlan adapters ---------------------------------
+
+
+def test_parse_bank_prescription_extracts_sets_reps_load():
+    parsed = parse_bank_prescription("3x5 @ 75-85% 1RM")
+    assert parsed["sets"] == 3
+    assert parsed["reps"] == "5"
+    assert parsed["load"]["method"] == "percentage"
+    assert parsed["load"]["value"] == 85.0
+    assert parsed["load"]["ref"] == "1RM"
+
+
+def test_parse_bank_prescription_unparseable_is_empty():
+    assert parse_bank_prescription("as needed") == {}
+    assert parse_bank_prescription(None) == {}
+
+
+def test_bank_strength_entry_converts_to_valid_block():
+    entry = {
+        "name": "Barbell Back Squat",
+        "method": "strength",
+        "category": "lower_body",
+        "prescription": "3x5 @ 75-85% 1RM",
+        "notes": "Foundational strength builder.",
+        "impact_cost": "low",
+    }
+    block = bank_strength_to_block(entry)
+    SessionBlock.model_validate(block)  # respects the schema
+    assert block["display_name"] == "Barbell Back Squat"
+    assert block["block_type"] == "strength"
+    assert block["sets"] == 3
+    assert block["load"]["unit"] == "percent"
+    assert block["load"]["ref"] == "1RM"
+
+
+def test_bank_conditioning_entry_converts_to_valid_block():
+    entry = {
+        "name": "Assault Bike Sprint Intervals",
+        "system": "ATP-PCr",
+        "work_sec": 10,
+        "rest_sec": 50,
+        "rounds": 8,
+        "total_minutes": 8,
+        "rpe": 9,
+        "intensity": "max",
+        "notes": "Posterior-chain drive without joint pounding.",
+        "impact_cost": "low",
+    }
+    block = bank_conditioning_to_block(entry)
+    SessionBlock.model_validate(block)
+    assert block["block_type"] == "conditioning"
+    assert block["work"] == {"value": 10.0, "unit": "seconds"}
+    assert block["rest"] == {"value": 50.0, "unit": "seconds"}
+    assert block["duration"] == {"value": 8.0, "unit": "minutes"}
+    assert block["rounds"] == 8
+    assert block["effort"] == {"method": "RPE", "value": 9, "scale": "1-10"}
+    assert block["energy_system"] == "ATP-PCr"
+    assert block["intensity"] == "max"
+
+
+def test_real_bank_entries_convert_to_valid_blocks():
+    # Representative live bank entries must convert without error or invention.
+    strength = bank_strength_to_block(_first_bank_entry("universal_gpp_strength.json"))
+    SessionBlock.model_validate(strength)
+    assert strength["display_name"]
+
+    conditioning = bank_conditioning_to_block(_first_bank_entry("conditioning_bank.json"))
+    SessionBlock.model_validate(conditioning)
+    assert conditioning["block_type"] == "conditioning"
+    # work_sec is seconds in the bank; the adapter must keep it in seconds.
+    if "work" in conditioning:
+        assert conditioning["work"]["unit"] == "seconds"
+
+
+def test_bank_adapters_do_not_invent_content():
+    # An almost-empty entry yields only structural defaults, no fabricated load.
+    block = bank_strength_to_block({"name": "Mystery Lift"})
+    assert block["display_name"] == "Mystery Lift"
+    assert "load" not in block  # no prescription -> no invented load
+    assert "sets" not in block
