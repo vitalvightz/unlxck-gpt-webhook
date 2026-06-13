@@ -296,6 +296,10 @@ def _map_plan_detail(
         row.get("structured_plan"),
         raw_markdown=display_plan_text,
     )
+    report_dict = row.get("stage2_validator_report")
+    report_dict = report_dict if isinstance(report_dict, dict) else {}
+    structured_debug = report_dict.get("structured_plan")
+    structured_debug = structured_debug if isinstance(structured_debug, dict) else {}
     return PlanDetail(
         **summary.model_dump(mode="json"),
         outputs=PlanOutputs(
@@ -321,6 +325,11 @@ def _map_plan_detail(
                 stage2_validator_report=row.get("stage2_validator_report") or {},
                 stage2_status=str(row.get("stage2_status") or "legacy"),
                 stage2_attempt_count=int(row.get("stage2_attempt_count") or 0),
+                structured_plan_status=str(structured_debug.get("status") or "not_attempted"),
+                structured_plan_errors=[str(err) for err in (structured_debug.get("errors") or [])],
+                structured_schema_version=(
+                    structured_schema_version or structured_debug.get("schema_version")
+                ),
             )
             if include_admin
             else None

@@ -153,6 +153,8 @@ create table if not exists public.plans (
   stage2_validator_report jsonb not null default '{}'::jsonb,
   stage2_status text not null default '',
   stage2_attempt_count integer not null default 0,
+  structured_plan jsonb,
+  schema_version text,
   created_at timestamptz not null default timezone('utc', now())
 );
 

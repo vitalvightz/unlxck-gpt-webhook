@@ -309,6 +309,8 @@ class FakeStore:
             "stage2_validator_report": result.get("stage2_validator_report", {}),
             "stage2_status": result.get("stage2_status", ""),
             "stage2_attempt_count": result.get("stage2_attempt_count", 0),
+            "structured_plan": result.get("structured_plan"),
+            "schema_version": result.get("schema_version"),
             "created_at": _now(),
             "full_name": profile["full_name"],
         }
@@ -1071,6 +1073,8 @@ class FakeStore:
             "stage2_payload",
             "parsing_metadata",
             "stage2_handoff_text",
+            "structured_plan",
+            "schema_version",
         ):
             if optional_field in result:
                 row[optional_field] = result.get(optional_field)

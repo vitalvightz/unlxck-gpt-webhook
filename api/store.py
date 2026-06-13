@@ -1510,11 +1510,22 @@ class SupabaseAppStore:
             "stage2_status": result.get("stage2_status", ""),
             "stage2_attempt_count": result.get("stage2_attempt_count", 0),
             "parsing_metadata": result.get("parsing_metadata"),
+            # Structured plan is written only when structured generation produced
+            # a validated object; otherwise it stays NULL and the raw plan_text is
+            # the fallback. schema_version mirrors the stored structured plan.
+            "structured_plan": result.get("structured_plan"),
+            "schema_version": result.get("schema_version"),
         }
 
         _guard_persisted_json(
             payload.get("stage2_payload"),
             field="stage2_payload",
+            max_bytes=MAX_SERVER_JSON_BYTES,
+            context=f"athlete_id={athlete_id} intake_id={intake_id}",
+        )
+        _guard_persisted_json(
+            payload.get("structured_plan"),
+            field="structured_plan",
             max_bytes=MAX_SERVER_JSON_BYTES,
             context=f"athlete_id={athlete_id} intake_id={intake_id}",
         )
@@ -3418,6 +3429,8 @@ class SupabaseAppStore:
             "stage2_payload",
             "parsing_metadata",
             "stage2_handoff_text",
+            "structured_plan",
+            "schema_version",
         ):
             if optional_field in result:
                 value = result.get(optional_field)
@@ -3428,6 +3441,13 @@ class SupabaseAppStore:
             _guard_persisted_json(
                 payload.get("stage2_payload"),
                 field="stage2_payload",
+                max_bytes=MAX_SERVER_JSON_BYTES,
+                context=f"plan_id={plan_id}",
+            )
+        if "structured_plan" in payload:
+            _guard_persisted_json(
+                payload.get("structured_plan"),
+                field="structured_plan",
                 max_bytes=MAX_SERVER_JSON_BYTES,
                 context=f"plan_id={plan_id}",
             )

@@ -70,6 +70,11 @@ PLAN_RUNTIME_REQUIRED_COLUMNS: tuple[str, ...] = (
     "stage2_status",
     "stage2_attempt_count",
     "parsing_metadata",
+    # Schema-first structured plan (additive, nullable). Written beside the raw
+    # plan_text when structured generation succeeds; legacy rows leave them NULL
+    # and the create_plan legacy-schema fallback drops them when absent.
+    "structured_plan",
+    "schema_version",
 )
 
 REQUIRED_PLANS_COLUMNS: tuple[str, ...] = (
