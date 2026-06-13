@@ -8,6 +8,7 @@ from pydantic import BaseModel, Field, ValidationInfo, field_validator, model_va
 
 from .json_limits import MAX_CLIENT_JSON_BYTES, MAX_JSON_DEPTH, validate_json_field
 from .state_machine import GenerationJobStatus
+from .structured_plan_models import StructuredTrainingPlan
 
 # Role foundation: `athlete` and `admin` are live in private beta. `coach` and
 # `gym_owner` are reserved for public beta and are not yet selectable at sign-up
@@ -1298,6 +1299,11 @@ class PlanSummary(BaseModel):
 class PlanOutputs(BaseModel):
     plan_text: str
     pdf_url: str | None = None
+    # Structured plan output (schema-first). Optional so legacy raw-text-only
+    # plans keep working: when absent the frontend renders `plan_text` as the
+    # markdown fallback. Populated once structured generation is available.
+    structured_plan: StructuredTrainingPlan | None = None
+    schema_version: str | None = None
 
 
 class PlanSafetyState(BaseModel):
