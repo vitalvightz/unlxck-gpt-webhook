@@ -438,11 +438,23 @@ def _normalize_phase(value: Any) -> str:
     return "GPP"
 
 
+def _coerce_str_list(value: Any) -> list[str]:
+    """Clean list of non-empty strings; a lone string is wrapped into a list."""
+    if isinstance(value, list):
+        return [text for text in (_coerce_str(entry).strip() for entry in value) if text]
+    text = _coerce_str(value).strip()
+    return [text] if text else []
+
+
 def _normalize_mindset(value: Any) -> dict[str, Any]:
     out = dict(value) if isinstance(value, dict) else {}
     out["intent"] = _coerce_str(out.get("intent"))
     out["focus_cue"] = _coerce_str(out.get("focus_cue"))
     out["reset_cue"] = _coerce_str(out.get("reset_cue"))
+    # Optional anchors: keep when the source provides them, else leave unset (None).
+    for optional_key in ("confidence_anchor", "context"):
+        if out.get(optional_key) is not None:
+            out[optional_key] = _coerce_str(out.get(optional_key))
     return out
 
 
@@ -463,6 +475,12 @@ def _normalize_block(value: Any) -> dict[str, Any]:
     ):
         if measured_key in out:
             out[measured_key] = _normalize_measured(out.get(measured_key), default_unit)
+    # Carry coaching detail through, tolerating a single string instead of a list.
+    for list_key in ("coaching_cues", "regression_options", "substitutions"):
+        if list_key in out:
+            out[list_key] = _coerce_str_list(out.get(list_key))
+    if out.get("progression_rule") is not None:
+        out["progression_rule"] = _coerce_str(out.get("progression_rule"))
     return out
 
 
@@ -927,6 +945,14 @@ The JSON object MUST conform to the StructuredTrainingPlan schema:
   weight_cut_warning. Weight-cut guidance MUST be expressed as a risk requiring
   qualified supervision — NEVER direct acute-cut instructions (no sauna,
   dehydration, water-loading, or sodium-manipulation directives).
+- When the plan states them, carry per-block detail into each block:
+  "coaching_cues" (list), "regression_options"/"substitutions" (lists of safer or
+  alternative exercises the plan offers), and "progression_rule" (how to advance).
+- Carry mental/mindset coaching into mindset_anchor at BOTH the session level and
+  the day level (today_card.mindset_anchor), including "confidence_anchor" and
+  "context" when the plan provides them.
+- Omit any of the above the plan does not state — leave the field out rather than
+  inventing content.
 """
 
 
@@ -950,17 +976,18 @@ EXACT ROOT SKELETON (match this shape; fill values from the plan, keep all keys)
       "days": [
         {{
           "date": "YYYY-MM-DD", "day_type": "high", "countdown_label": "D-15", "phase_label": "SPP",
-          "today_card": {{"headline": "...", "readiness_status": "train_as_planned", "mindset_anchor": {{"intent": "...", "focus_cue": "...", "reset_cue": "..."}}}},
+          "today_card": {{"headline": "...", "readiness_status": "train_as_planned", "mindset_anchor": {{"intent": "...", "focus_cue": "...", "reset_cue": "...", "confidence_anchor": "..."}}}},
           "sessions": [
             {{
               "session_id": "ses-1", "session_type": "strength_power", "title": "...", "objective": "...",
               "completion_status": "not_started",
-              "mindset_anchor": {{"intent": "...", "focus_cue": "...", "reset_cue": "..."}},
+              "mindset_anchor": {{"intent": "...", "focus_cue": "...", "reset_cue": "...", "confidence_anchor": "...", "context": "..."}},
               "blocks": [
                 {{
                   "block_id": "blk-1", "block_type": "strength", "display_name": "...", "sets": 4, "reps": "4-6",
                   "load": {{"method": "percentage", "value": 85, "unit": "percent", "ref": "1RM", "display": "85% 1RM"}},
-                  "rest": {{"value": 180, "unit": "seconds"}}, "duration": {{"value": 45, "unit": "minutes"}}
+                  "rest": {{"value": 180, "unit": "seconds"}}, "duration": {{"value": 45, "unit": "minutes"}},
+                  "coaching_cues": ["..."], "regression_options": ["..."], "substitutions": ["..."], "progression_rule": "..."
                 }}
               ]
             }}

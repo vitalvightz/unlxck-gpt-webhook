@@ -13,6 +13,7 @@ import {
   getDisplayableRedFlags,
   getMindsetLines,
   getSessions,
+  getStringList,
   getWeeks,
   hasNutrition,
   selectBlockMetric,
@@ -62,6 +63,9 @@ export function BlockCard({ block }: { block: StructuredBlock }) {
   const effort = formatEffort(block);
   const purpose = cleanText(block.purpose);
   const cues = getCoachingCues(block);
+  const substitutions = getStringList(block.substitutions);
+  const regressions = getStringList(block.regression_options);
+  const progression = cleanText(block.progression_rule);
 
   return (
     <div className="sp-block">
@@ -111,6 +115,24 @@ export function BlockCard({ block }: { block: StructuredBlock }) {
           ))}
         </ul>
       ) : null}
+      {substitutions.length > 0 ? (
+        <p className="sp-block-aside">
+          <span className="sp-stat-label">Swaps</span>
+          {substitutions.join(", ")}
+        </p>
+      ) : null}
+      {regressions.length > 0 ? (
+        <p className="sp-block-aside">
+          <span className="sp-stat-label">Easier</span>
+          {regressions.join(", ")}
+        </p>
+      ) : null}
+      {progression ? (
+        <p className="sp-block-aside">
+          <span className="sp-stat-label">Progress</span>
+          {progression}
+        </p>
+      ) : null}
     </div>
   );
 }
@@ -153,7 +175,15 @@ export function TodayCard({ day }: { day: StructuredDay }) {
   const warning = cleanText(card?.primary_warning);
   const nutrition = cleanText(card?.nutrition_summary);
   const weightCut = cleanText(card?.weight_cut_warning);
-  if (!headline && !readiness && !warning && !nutrition && !weightCut) {
+  const mindsetLines = getMindsetLines(card?.mindset_anchor);
+  if (
+    !headline &&
+    !readiness &&
+    !warning &&
+    !nutrition &&
+    !weightCut &&
+    mindsetLines.length === 0
+  ) {
     return null;
   }
   return (
@@ -165,6 +195,7 @@ export function TodayCard({ day }: { day: StructuredDay }) {
       {warning ? <p className="sp-warning">{warning}</p> : null}
       {nutrition ? <p className="sp-today-note">{nutrition}</p> : null}
       {weightCut ? <p className="sp-warning">{weightCut}</p> : null}
+      <MindsetAnchorCard anchor={card?.mindset_anchor} />
     </div>
   );
 }
@@ -302,6 +333,8 @@ export function NutritionCard({ plan }: { plan: StructuredPlan }) {
     { label: "Fight week", value: cleanText(nutrition?.fight_week_guidance) },
   ].filter((row) => row.value);
   const weightCut = cleanText(nutrition?.weight_cut_warning?.display_text);
+  const cutRisk = cleanText(nutrition?.weight_cut_warning?.risk_level);
+  const needsSupport = nutrition?.weight_cut_warning?.requires_professional_support === true;
 
   return (
     <section className="sp-card sp-nutrition">
@@ -314,7 +347,15 @@ export function NutritionCard({ plan }: { plan: StructuredPlan }) {
           </li>
         ))}
       </ul>
-      {weightCut ? <p className="sp-warning">{weightCut}</p> : null}
+      {weightCut ? (
+        <p className="sp-warning">
+          {cutRisk && cutRisk !== "none" ? (
+            <span className="sp-tag">{titleize(cutRisk)} risk</span>
+          ) : null}{" "}
+          {weightCut}
+          {needsSupport ? " — qualified supervision required." : ""}
+        </p>
+      ) : null}
     </section>
   );
 }
@@ -345,6 +386,7 @@ export function StructuredPlanRenderer({
   showRawFallback?: boolean;
 }) {
   const weeks = getWeeks(plan);
+  const progressionNotes = cleanText(plan.progression_notes);
   return (
     <div className="sp-root">
       <PlanHeader plan={plan} />
@@ -359,6 +401,12 @@ export function StructuredPlanRenderer({
         ))}
       </div>
       <NutritionCard plan={plan} />
+      {progressionNotes ? (
+        <section className="sp-card sp-progression">
+          <p className="sp-eyebrow sp-accent">Progression notes</p>
+          <p className="sp-block-purpose">{progressionNotes}</p>
+        </section>
+      ) : null}
       {showRawFallback && rawFallback ? <RawFallbackPanel rawText={rawFallback} /> : null}
     </div>
   );

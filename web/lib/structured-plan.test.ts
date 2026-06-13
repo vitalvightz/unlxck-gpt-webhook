@@ -11,6 +11,7 @@ import {
   getDisplayableRedFlags,
   getMindsetLines,
   getSessions,
+  getStringList,
   getWeeks,
   hasNutrition,
   isTimeLikeReps,
@@ -223,4 +224,27 @@ test("surfaces displayable red flags only", () => {
   assert.equal(getDisplayableRedFlags(validPlan()).length, 1);
   assert.equal(getDisplayableRedFlags({ red_flag_rules: [{ rule_id: "x" }] } as never).length, 0);
   assert.equal(getDisplayableRedFlags({} as never).length, 0);
+});
+
+test("getStringList cleans, drops blanks, and tolerates null", () => {
+  assert.deepEqual(getStringList(["Brace hard", "  ", "Knees out"]), ["Brace hard", "Knees out"]);
+  assert.deepEqual(getStringList(null), []);
+  assert.deepEqual(getStringList(undefined), []);
+  assert.deepEqual(getStringList([]), []);
+});
+
+test("getMindsetLines includes confidence_anchor when present", () => {
+  const lines = getMindsetLines({
+    intent: "Move fast",
+    focus_cue: "Drive",
+    reset_cue: "Reset",
+    confidence_anchor: "Banked the work",
+  });
+  assert.deepEqual(
+    lines.map((l) => l.label),
+    ["Intent", "Focus", "Reset", "Anchor"],
+  );
+  // Empty anchor object yields no lines (renderer hides it).
+  assert.deepEqual(getMindsetLines({}), []);
+  assert.deepEqual(getMindsetLines(null), []);
 });

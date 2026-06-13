@@ -164,9 +164,14 @@ export function getBlocks(session: StructuredSession | null | undefined): Struct
 }
 
 export function getCoachingCues(block: StructuredBlock | null | undefined): string[] {
-  return safeArray(block?.coaching_cues)
-    .map((cue) => cleanText(cue))
-    .filter((cue): cue is string => cue !== null);
+  return getStringList(block?.coaching_cues);
+}
+
+/** A clean list of non-empty strings from a possibly-null/non-array value. */
+export function getStringList(value: string[] | null | undefined): string[] {
+  return safeArray(value)
+    .map((item) => cleanText(item))
+    .filter((item): item is string => item !== null);
 }
 
 /** A mindset anchor only if it has at least one usable line. */

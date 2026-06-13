@@ -12626,3 +12626,12 @@ html[data-theme="light"] .loading-operational-item {
     gap: 18px;
   }
 }
+.sp-block-aside {
+  margin: 6px 0 0;
+  color: var(--text-secondary);
+  font-size: 0.82rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: baseline;
+}
