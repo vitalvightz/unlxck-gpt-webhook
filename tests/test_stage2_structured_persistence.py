@@ -18,14 +18,40 @@ from unittest.mock import MagicMock
 
 import pytest
 
+import asyncio
+
 import api.stage2_automation as stage2_module
 from api.plan_mappers import _map_plan_detail
-from api.stage2_automation import OpenAIStage2Automator
+from api.services.admin_stage2_service import approve_review_required_plan
+from api.stage2_automation import (
+    OpenAIStage2Automator,
+    attempt_structured_plan_for_result,
+)
 from api.store import SupabaseAppStore
+from api.structured_plan_generation import StructuredPlanOutcome, build_structured_plan_outcome
 from api.structured_plan_models import SCHEMA_VERSION
 
-from support import _build_request
+from support import FakeStore, _build_request, _now
 from test_structured_plan_models import _valid_plan
+
+
+class _StructuredAutomator:
+    """Minimal automator exposing only the structured conversion hook."""
+
+    def __init__(self, outcome: StructuredPlanOutcome, costs=None):
+        self.outcome = outcome
+        self.costs = costs or []
+        self.calls: list[dict] = []
+
+    async def _attempt_structured_plan(self, *, final_plan_text, planning_brief, source, log_context=None):
+        self.calls.append(
+            {"final_plan_text": final_plan_text, "planning_brief": planning_brief, "source": source}
+        )
+        return self.outcome, list(self.costs)
+
+
+def _valid_outcome(raw_markdown: str = "# final plan") -> StructuredPlanOutcome:
+    return build_structured_plan_outcome(_valid_plan(), raw_markdown=raw_markdown)
 
 
 # ---------------------------------------------------------------------------
@@ -334,3 +360,153 @@ def test_finalize_does_not_crash_when_structured_model_errors(
     assert result["plan_text"] == "# final plan"
     assert result["structured_plan"] is None
     assert result["stage2_validator_report"]["structured_plan"]["status"] == "not_attempted"
+
+
+# ---------------------------------------------------------------------------
+# Centralized trigger: attempt_structured_plan_for_result
+# ---------------------------------------------------------------------------
+
+
+def test_helper_attaches_structured_on_displayable_result(monkeypatch):
+    monkeypatch.setenv("UNLXCK_STAGE2_STRUCTURED_PLAN", "1")
+    automator = _StructuredAutomator(_valid_outcome())
+    result = {"status": "ready", "final_plan_text": "# final plan", "stage2_validator_report": {}}
+
+    out, _costs = asyncio.run(
+        attempt_structured_plan_for_result(
+            result, planning_brief={}, automator=automator, source="admin_stage2"
+        )
+    )
+
+    assert len(automator.calls) == 1
+    assert out["structured_plan"] is not None
+    assert out["schema_version"] == SCHEMA_VERSION
+    assert out["stage2_validator_report"]["structured_plan"]["status"] == "valid"
+
+
+def test_helper_attaches_for_publishable_with_flags(monkeypatch):
+    monkeypatch.setenv("UNLXCK_STAGE2_STRUCTURED_PLAN", "1")
+    automator = _StructuredAutomator(_valid_outcome())
+    result = {
+        "status": "publishable_with_flags",
+        "final_plan_text": "# final plan",
+        "stage2_validator_report": {},
+    }
+    out, _costs = asyncio.run(
+        attempt_structured_plan_for_result(result, planning_brief={}, automator=automator, source="x")
+    )
+    assert len(automator.calls) == 1
+    assert out["structured_plan"] is not None
+
+
+def test_helper_skips_non_displayable_status(monkeypatch):
+    monkeypatch.setenv("UNLXCK_STAGE2_STRUCTURED_PLAN", "1")
+    automator = _StructuredAutomator(_valid_outcome())
+    result = {"status": "review_required", "final_plan_text": "# x", "stage2_validator_report": {}}
+
+    out, _costs = asyncio.run(
+        attempt_structured_plan_for_result(result, planning_brief={}, automator=automator, source="x")
+    )
+
+    assert automator.calls == []  # no model call for a non-displayable plan
+    assert out["structured_plan"] is None
+    assert out["stage2_validator_report"]["structured_plan"]["status"] == "not_attempted"
+
+
+def test_helper_skips_when_env_disabled(monkeypatch):
+    monkeypatch.delenv("UNLXCK_STAGE2_STRUCTURED_PLAN", raising=False)
+    automator = _StructuredAutomator(_valid_outcome())
+    result = {"status": "ready", "final_plan_text": "# x", "stage2_validator_report": {}}
+    out, _costs = asyncio.run(
+        attempt_structured_plan_for_result(result, planning_brief={}, automator=automator, source="x")
+    )
+    assert automator.calls == []
+    assert out["structured_plan"] is None
+
+
+def test_helper_skips_when_automator_has_no_converter(monkeypatch):
+    monkeypatch.setenv("UNLXCK_STAGE2_STRUCTURED_PLAN", "1")
+    result = {"status": "ready", "final_plan_text": "# x", "stage2_validator_report": {}}
+    out, _costs = asyncio.run(
+        attempt_structured_plan_for_result(result, planning_brief={}, automator=object(), source="x")
+    )
+    assert out["structured_plan"] is None
+    assert out["stage2_validator_report"]["structured_plan"]["status"] == "not_attempted"
+
+
+# ---------------------------------------------------------------------------
+# Admin approval path triggers structured conversion
+# ---------------------------------------------------------------------------
+
+
+def _seed_held_plan(store: FakeStore, *, plan_id: str = "plan-1") -> str:
+    store.profiles["athlete-1"] = {"id": "athlete-1", "full_name": "Ari Mensah"}
+    store.plans[plan_id] = {
+        "id": plan_id,
+        "athlete_id": "athlete-1",
+        "full_name": "Ari Mensah",
+        "status": "held_for_review",
+        "plan_text": "",
+        "final_plan_text": "# approved plan",
+        "draft_plan_text": "# draft plan",
+        "planning_brief": None,
+        "stage2_validator_report": {},
+        "stage2_status": "stage2_failed",
+        "stage2_attempt_count": 1,
+        "created_at": _now(),
+    }
+    return plan_id
+
+
+def test_admin_approve_into_ready_triggers_structured_conversion(monkeypatch):
+    monkeypatch.setenv("UNLXCK_STAGE2_STRUCTURED_PLAN", "1")
+    store = FakeStore()
+    plan_id = _seed_held_plan(store)
+    automator = _StructuredAutomator(_valid_outcome("# approved plan"))
+
+    detail = asyncio.run(
+        approve_review_required_plan(plan_id=plan_id, store=store, stage2=automator)
+    )
+
+    assert detail.status == "ready"
+    assert detail.outputs.plan_text == "# approved plan"  # plan_text preserved
+    assert detail.outputs.structured_plan is not None
+    assert detail.outputs.schema_version == SCHEMA_VERSION
+    # Persisted on the row, and the conversion ran exactly once.
+    assert store.plans[plan_id]["structured_plan"] is not None
+    assert len(automator.calls) == 1
+
+
+def test_admin_approve_structured_failure_keeps_plan_text_and_ready(monkeypatch):
+    monkeypatch.setenv("UNLXCK_STAGE2_STRUCTURED_PLAN", "1")
+    store = FakeStore()
+    plan_id = _seed_held_plan(store)
+    failed = StructuredPlanOutcome(status="invalid_fallback_used", errors=["bad shape"])
+    automator = _StructuredAutomator(failed)
+
+    detail = asyncio.run(
+        approve_review_required_plan(plan_id=plan_id, store=store, stage2=automator)
+    )
+
+    # Structured failure must not block the approval or drop plan_text.
+    assert detail.status == "ready"
+    assert detail.outputs.plan_text == "# approved plan"
+    assert detail.outputs.structured_plan is None
+    assert store.plans[plan_id]["structured_plan"] is None
+    debug = store.plans[plan_id]["stage2_validator_report"]["structured_plan"]
+    assert debug["status"] == "invalid_fallback_used"
+
+
+def test_admin_approve_without_env_flag_skips_structured(monkeypatch):
+    monkeypatch.delenv("UNLXCK_STAGE2_STRUCTURED_PLAN", raising=False)
+    store = FakeStore()
+    plan_id = _seed_held_plan(store)
+    automator = _StructuredAutomator(_valid_outcome("# approved plan"))
+
+    detail = asyncio.run(
+        approve_review_required_plan(plan_id=plan_id, store=store, stage2=automator)
+    )
+
+    assert detail.status == "ready"
+    assert detail.outputs.structured_plan is None
+    assert automator.calls == []

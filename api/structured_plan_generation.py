@@ -24,6 +24,7 @@ import re
 from dataclasses import dataclass, field
 from typing import Any, Callable, Literal, get_args
 
+from .state_machine import is_athlete_displayable_plan_status
 from .structured_plan_models import (
     SCHEMA_VERSION,
     BlockType,
@@ -99,6 +100,52 @@ class StructuredPlanOutcome:
             "errors": list(self.errors),
             "schema_version": self.schema_version,
         }
+
+
+def _plan_has_structured_plan(plan: dict[str, Any]) -> bool:
+    value = plan.get("structured_plan")
+    if value is None:
+        return False
+    if isinstance(value, str):
+        return bool(value.strip())
+    if isinstance(value, dict):
+        return bool(value)
+    return True
+
+
+def _approved_plan_text(plan: dict[str, Any]) -> str:
+    """The athlete-facing/final plan text that is the source of truth."""
+    return str(plan.get("final_plan_text") or plan.get("plan_text") or "").strip()
+
+
+def should_attempt_structured_plan(plan: Any, env_enabled: bool) -> bool:
+    """Whether to build a ``structured_plan`` for this plan-like object.
+
+    Centralizes the trigger so it is driven by the canonical state machine
+    (:func:`api.state_machine.is_athlete_displayable_plan_status`), never by
+    hardcoded Stage 2 statuses such as ``stage2_pass``/``admin_review_approved``.
+    Returns ``True`` only when ALL of the following hold:
+
+    1. ``env_enabled`` is set (``UNLXCK_STAGE2_STRUCTURED_PLAN=1``).
+    2. No ``structured_plan`` is stored yet (idempotent — never overwrites).
+    3. An approved/final ``plan_text`` exists to convert (source of truth).
+    4. The plan status is athlete-displayable/publishable (``ready`` /
+       ``publishable_with_flags``). Blocked, held, medical-gated, review-required,
+       and archived states are excluded so nothing is published merely to derive
+       structured output.
+
+    Accepts either a Stage 2 result dict or a persisted plan row.
+    """
+
+    if not env_enabled:
+        return False
+    if not isinstance(plan, dict):
+        return False
+    if _plan_has_structured_plan(plan):
+        return False
+    if not _approved_plan_text(plan):
+        return False
+    return is_athlete_displayable_plan_status(plan.get("status"))
 
 
 def strip_biometric_fields(data: Any) -> tuple[Any, list[str]]:

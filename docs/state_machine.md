@@ -87,6 +87,27 @@ Otherwise the job is downgraded to `failed` to avoid exposing orphaned terminal 
 Unknown plan statuses map to `review_required` for generation-job reporting so
 new safety/review states fail closed to human review instead of worker failure.
 
+### Athlete-displayable / publishable plan statuses
+
+`ATHLETE_DISPLAYABLE_PLAN_STATUSES` (and `is_athlete_displayable_plan_status`) in
+`api/state_machine.py` name the states where a plan is shown to the athlete:
+
+- `ready`
+- `publishable_with_flags`
+
+Downstream, display-oriented work — e.g. building the `structured_plan` rendering
+payload — runs only in these states, regardless of how the plan got there
+(automated Stage 2 pass or admin approval). Blocked, held, medical-gated,
+review-required, and archived plans are excluded so nothing is published merely to
+derive structured output.
+
+`restricted_rehab_only` is intentionally excluded: it is a safety-gated "planning
+paused, clinician clearance required" state, not a normal athlete-facing training
+plan. Add it only if the product decides to render rehab-only plans to athletes.
+
+Use `is_athlete_displayable_plan_status(...)` instead of open-coded
+`status == "ready"` checks.
+
 ## Implementation Rule
 Use:
 

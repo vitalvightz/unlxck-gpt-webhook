@@ -36,6 +36,22 @@ PLAN_STATUSES: tuple[PlanStatus, ...] = (
     "archived",
 )
 
+# Plan statuses at which a plan is athlete-displayable / publishable: the athlete
+# can see the finalized plan. These are the only states where downstream,
+# display-oriented work (e.g. building the structured_plan rendering payload)
+# should run. Blocked, held, medical-gated, review-required, and archived states
+# are deliberately excluded so nothing is published just to derive structured
+# output.
+#
+# ``restricted_rehab_only`` is intentionally NOT included: it is a safety-gated
+# "planning paused, clinician clearance required" state (see
+# api/plan_mappers._map_plan_safety_state), not a normal athlete-facing training
+# plan. Add it here only if the product decides to render rehab-only plans.
+ATHLETE_DISPLAYABLE_PLAN_STATUSES: tuple[PlanStatus, ...] = (
+    "ready",
+    "publishable_with_flags",
+)
+
 _GENERATION_JOB_TRANSITIONS: dict[GenerationJobStatus, frozenset[GenerationJobStatus]] = {
     "queued": frozenset({"queued", "running", "failed"}),
     "running": frozenset({"queued", "running", "completed", "review_required", "failed"}),
@@ -106,6 +122,15 @@ def is_generation_job_status(value: object) -> bool:
 
 def is_plan_status(value: object) -> bool:
     return normalize_status(value) in PLAN_STATUSES
+
+
+def is_athlete_displayable_plan_status(value: object) -> bool:
+    """True when a plan status is athlete-displayable/publishable.
+
+    Canonical replacement for scattered ``status == "ready"`` style checks. See
+    :data:`ATHLETE_DISPLAYABLE_PLAN_STATUSES`.
+    """
+    return normalize_status(value) in ATHLETE_DISPLAYABLE_PLAN_STATUSES
 
 
 def can_transition(kind: Literal["generation_job", "plan"], current: object, next_status: object) -> bool:

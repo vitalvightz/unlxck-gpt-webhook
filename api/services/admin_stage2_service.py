@@ -7,7 +7,37 @@ from fightcamp.stage2_pipeline import build_stage2_retry, review_stage2_output
 
 from ..models import PlanDetail
 from ..plan_mappers import _decode_structured_text, _lookup_plan_source, _map_plan_detail
+import asyncio
+
+from ..stage2_automation import Stage2Automator, attempt_structured_plan_for_result
 from ..store import AppStore
+
+
+async def _attach_structured_plan(
+    result: dict[str, Any],
+    plan_row: dict[str, Any],
+    *,
+    stage2: Stage2Automator | None,
+) -> dict[str, Any]:
+    """Attach a structured_plan to an admin result when it became displayable.
+
+    Uses the same canonical trigger as the automated path
+    (:func:`attempt_structured_plan_for_result`): only ``ready`` /
+    ``publishable_with_flags`` results with final plan_text and the env flag on
+    are converted. A missing automator or any failure leaves plan_text intact and
+    records ``not_attempted`` for admin debug. Never blocks the approval.
+    """
+
+    if stage2 is None:
+        return result
+    planning_brief = _decode_structured_text(plan_row.get("planning_brief")) or {}
+    result, _costs = await attempt_structured_plan_for_result(
+        result,
+        planning_brief=planning_brief,
+        automator=stage2,
+        source="admin_stage2",
+    )
+    return result
 
 
 def _manual_stage2_result(plan_row: dict[str, Any], final_plan_text: str) -> dict[str, Any]:
@@ -72,20 +102,20 @@ def _admin_approved_result(plan_row: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def submit_manual_stage2(
+async def submit_manual_stage2(
     *,
     plan_id: str,
     final_plan_text: str,
     store: AppStore,
+    stage2: Stage2Automator | None = None,
 ) -> PlanDetail:
     plan_row = store.get_plan(plan_id)
     if not plan_row:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
 
-    updated = store.update_plan_stage2(
-        plan_id,
-        _manual_stage2_result(plan_row, final_plan_text),
-    )
+    result = _manual_stage2_result(plan_row, final_plan_text)
+    result = await _attach_structured_plan(result, plan_row, stage2=stage2)
+    updated = store.update_plan_stage2(plan_id, result)
     return _map_plan_detail(
         updated,
         include_admin=True,
@@ -93,19 +123,19 @@ def submit_manual_stage2(
     )
 
 
-def approve_review_required_plan(
+async def approve_review_required_plan(
     *,
     plan_id: str,
     store: AppStore,
+    stage2: Stage2Automator | None = None,
 ) -> PlanDetail:
     plan_row = store.get_plan(plan_id)
     if not plan_row:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
 
-    updated = store.update_plan_stage2(
-        plan_id,
-        _admin_approved_result(plan_row),
-    )
+    result = _admin_approved_result(plan_row)
+    result = await _attach_structured_plan(result, plan_row, stage2=stage2)
+    updated = store.update_plan_stage2(plan_id, result)
     return _map_plan_detail(
         updated,
         include_admin=True,

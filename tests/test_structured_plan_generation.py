@@ -20,6 +20,7 @@ from api.structured_plan_generation import (
     normalize_structured_plan_candidate,
     parse_bank_prescription,
     parse_structured_json,
+    should_attempt_structured_plan,
     strip_biometric_fields,
 )
 from api.structured_plan_models import (
@@ -690,3 +691,56 @@ def test_bank_adapters_do_not_invent_content():
     assert block["display_name"] == "Mystery Lift"
     assert "load" not in block  # no prescription -> no invented load
     assert "sets" not in block
+
+
+# --- should_attempt_structured_plan: canonical state-machine trigger ---------
+
+
+def _displayable_plan(status: str) -> dict:
+    return {"status": status, "final_plan_text": "# final plan", "structured_plan": None}
+
+
+def test_should_attempt_for_ready_and_publishable_with_flags():
+    assert should_attempt_structured_plan(_displayable_plan("ready"), True) is True
+    assert should_attempt_structured_plan(_displayable_plan("publishable_with_flags"), True) is True
+
+
+def test_should_not_attempt_for_non_displayable_statuses():
+    for status in (
+        "generated",
+        "review_required",
+        "held_for_review",
+        "triage_blocked",
+        "medical_hold",
+        "needs_review",
+        "restricted_rehab_only",  # safety-gated, intentionally excluded
+        "archived",
+    ):
+        assert should_attempt_structured_plan(_displayable_plan(status), True) is False, status
+
+
+def test_should_not_attempt_when_env_disabled():
+    assert should_attempt_structured_plan(_displayable_plan("ready"), False) is False
+
+
+def test_should_not_attempt_when_structured_plan_already_present():
+    plan = _displayable_plan("ready")
+    plan["structured_plan"] = {"schema_version": SCHEMA_VERSION}
+    assert should_attempt_structured_plan(plan, True) is False
+
+
+def test_should_not_attempt_without_final_plan_text():
+    plan = _displayable_plan("ready")
+    plan["final_plan_text"] = ""
+    plan["plan_text"] = ""
+    assert should_attempt_structured_plan(plan, True) is False
+
+
+def test_should_attempt_uses_plan_text_when_final_missing():
+    plan = {"status": "ready", "plan_text": "# displayed plan", "structured_plan": None}
+    assert should_attempt_structured_plan(plan, True) is True
+
+
+def test_should_not_attempt_for_non_dict():
+    assert should_attempt_structured_plan(None, True) is False
+    assert should_attempt_structured_plan("ready", True) is False
