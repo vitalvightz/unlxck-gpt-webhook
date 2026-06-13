@@ -167,7 +167,16 @@ def test_first_pass_non_pass_returns_held_for_review_with_one_provider_call(
     assert result["stage2_status"] == "stage2_failed"
     assert result["stage2_attempt_count"] == 1
     assert result["stage2_retry_text"] == ""
-    assert result["stage2_validator_report"] == _review(review_status)["validator_report"]
+    # A held/review-required plan is not athlete-displayable, so structured
+    # conversion is skipped (not_attempted) and never makes a model call. The
+    # debug marker is always recorded; the rest of the report is unchanged.
+    report = dict(result["stage2_validator_report"])
+    assert report.pop("structured_plan") == {
+        "status": "not_attempted",
+        "errors": [],
+        "schema_version": None,
+    }
+    assert report == _review(review_status)["validator_report"]
 
 
 def test_build_stage2_retry_is_not_called_during_automatic_finalization(

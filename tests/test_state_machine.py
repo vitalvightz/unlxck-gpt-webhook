@@ -1,9 +1,11 @@
 import pytest
 
 from api.state_machine import (
+    ATHLETE_DISPLAYABLE_PLAN_STATUSES,
     GENERATION_JOB_STATUSES,
     PLAN_STATUSES,
     can_transition,
+    is_athlete_displayable_plan_status,
     is_generation_job_status,
     is_plan_status,
     job_status_for_plan_status,
@@ -124,3 +126,30 @@ def test_status_classification_does_not_mix_job_and_plan_lifecycles() -> None:
 )
 def test_job_status_for_plan_status(plan_status: str, job_status: str) -> None:
     assert job_status_for_plan_status(plan_status) == job_status
+
+
+def test_athlete_displayable_statuses_are_only_ready_and_publishable() -> None:
+    assert set(ATHLETE_DISPLAYABLE_PLAN_STATUSES) == {"ready", "publishable_with_flags"}
+    # Every displayable status must be a known plan status.
+    assert set(ATHLETE_DISPLAYABLE_PLAN_STATUSES).issubset(set(PLAN_STATUSES))
+
+
+@pytest.mark.parametrize(
+    "status, displayable",
+    [
+        ("ready", True),
+        ("publishable_with_flags", True),
+        ("generated", False),
+        ("review_required", False),
+        ("held_for_review", False),
+        ("triage_blocked", False),
+        ("medical_hold", False),
+        ("restricted_rehab_only", False),
+        ("needs_review", False),
+        ("archived", False),
+        ("READY", True),  # case-insensitive
+        ("unknown", False),
+    ],
+)
+def test_is_athlete_displayable_plan_status(status: str, displayable: bool) -> None:
+    assert is_athlete_displayable_plan_status(status) is displayable

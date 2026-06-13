@@ -13,6 +13,7 @@ from .structured_plan_generation import (
     build_structured_plan_outcome,
     build_structured_plan_prompt,
     parse_structured_json,
+    should_attempt_structured_plan,
 )
 
 _APP_STATUS_READY = "ready"
@@ -285,6 +286,44 @@ def _record_structured_outcome(
     if isinstance(report, dict):
         report["structured_plan"] = outcome.as_debug()
     return result
+
+
+async def attempt_structured_plan_for_result(
+    result: dict[str, Any],
+    *,
+    planning_brief: Any,
+    automator: Any,
+    source: str,
+    log_context: dict[str, str] | None = None,
+) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+    """Centralized structured-plan trigger for any plan result.
+
+    Single entry point used by both the automated Stage 2 path and the admin
+    approval/manual paths, so the decision lives in one place. Gates on the
+    canonical :func:`should_attempt_structured_plan` predicate (env flag +
+    athlete-displayable status + final plan_text + not already converted), then
+    runs the conversion via ``automator`` and records the outcome (and debug)
+    onto ``result``. Always returns ``(result, structured_costs)`` and never
+    raises — a failure leaves the plan_text fallback intact.
+    """
+
+    if not should_attempt_structured_plan(result, _structured_plan_enabled()):
+        _record_structured_outcome(result, StructuredPlanOutcome(status="not_attempted"))
+        return result, []
+    # The automator must expose the conversion method (OpenAIStage2Automator).
+    # A disabled/auxiliary automator simply skips, keeping plan_text the source.
+    converter = getattr(automator, "_attempt_structured_plan", None)
+    if converter is None:
+        _record_structured_outcome(result, StructuredPlanOutcome(status="not_attempted"))
+        return result, []
+    outcome, costs = await converter(
+        final_plan_text=str(result.get("final_plan_text") or result.get("plan_text") or ""),
+        planning_brief=planning_brief,
+        source=source,
+        log_context=log_context,
+    )
+    _record_structured_outcome(result, outcome)
+    return result, costs
 
 
 def _stage2_source(stage1_result: dict[str, Any]) -> str:
@@ -619,52 +658,58 @@ class OpenAIStage2Automator:
                 app_status=app_status,
                 stage2_cost=first_pass_cost,
             )
-            # Additive structured-plan attempt. Never blocks the raw plan: any
-            # failure degrades to the plan_text fallback (status not_attempted /
-            # invalid_fallback_used) and is recorded for admin debug.
-            outcome, structured_costs = await self._attempt_structured_plan(
-                final_plan_text=first_pass_text,
-                package=package,
-                source=source,
-                log_context=log_context,
+        else:
+            logger.warning("[stage2] review required after first_pass: automatic retry disabled")
+            result = _review_required_result(
+                stage1_result,
+                draft_plan_text=draft_plan_text,
+                latest_plan_text=first_pass_text,
+                validator_report=first_review["validator_report"],
+                retry_text="",
+                attempt_count=1,
+                stage2_cost=first_pass_cost,
             )
-            # Roll the structured calls' tokens into the persisted cost row so it
-            # reflects total Stage 2 spend, not just the plan-text pass.
-            result["stage2_cost"] = _merge_stage2_costs(first_pass_cost, *structured_costs)
-            return _record_structured_outcome(result, outcome)
 
-        logger.warning("[stage2] review required after first_pass: automatic retry disabled")
-        return _review_required_result(
-            stage1_result,
-            draft_plan_text=draft_plan_text,
-            latest_plan_text=first_pass_text,
-            validator_report=first_review["validator_report"],
-            retry_text="",
-            attempt_count=1,
-            stage2_cost=first_pass_cost,
+        # Structured-plan conversion is triggered by the canonical state-machine
+        # predicate (athlete-displayable plans only), not a hardcoded Stage 2
+        # status. A PASS yields ready/publishable_with_flags (attempted); a
+        # review-required hold is not displayable (skipped). Any failure degrades
+        # to the plan_text fallback and is recorded for admin debug.
+        result, structured_costs = await attempt_structured_plan_for_result(
+            result,
+            planning_brief=package["planning_brief"],
+            automator=self,
+            source=source,
+            log_context=log_context,
         )
+        # Roll the structured calls' tokens into the persisted cost row so it
+        # reflects total Stage 2 spend, not just the plan-text pass.
+        result["stage2_cost"] = _merge_stage2_costs(first_pass_cost, *structured_costs)
+        return result
 
     async def _attempt_structured_plan(
         self,
         *,
         final_plan_text: str,
-        package: dict[str, Any],
+        planning_brief: Any,
         source: str,
         log_context: dict[str, str] | None = None,
     ) -> tuple[StructuredPlanOutcome, list[dict[str, Any]]]:
         """Best-effort structured-plan generation. Never raises.
 
-        Returns the outcome plus the cost telemetry of any structured model
-        calls made, so the caller can fold them into the persisted cost row.
+        The enable flag and displayable-status gating live in
+        :func:`should_attempt_structured_plan`; this method just runs the
+        conversion (first pass + one repair retry) and returns the outcome plus
+        the cost telemetry of any structured model calls made.
         """
 
-        if not _structured_plan_enabled() or not final_plan_text.strip():
+        if not final_plan_text.strip():
             return StructuredPlanOutcome(status="not_attempted"), []
         costs: list[dict[str, Any]] = []
         try:
             return await self._generate_structured_outcome(
                 final_plan_text=final_plan_text,
-                package=package,
+                planning_brief=planning_brief,
                 source=source,
                 log_context=log_context,
                 costs=costs,
@@ -684,12 +729,11 @@ class OpenAIStage2Automator:
         self,
         *,
         final_plan_text: str,
-        package: dict[str, Any],
+        planning_brief: Any,
         source: str,
         log_context: dict[str, str] | None = None,
         costs: list[dict[str, Any]],
     ) -> tuple[StructuredPlanOutcome, list[dict[str, Any]]]:
-        planning_brief = package.get("planning_brief") if isinstance(package, dict) else None
         if not isinstance(planning_brief, dict):
             planning_brief = None
         event_date = ""

@@ -863,27 +863,31 @@ def create_app(
         ]
 
     @app.post("/api/admin/plans/{plan_id}/manual-stage2", response_model=PlanDetail)
-    def submit_manual_stage2(
+    async def submit_manual_stage2(
         plan_id: str,
         submission: ManualStage2SubmissionRequest,
         _: ProfileRecord = Depends(require_admin),
         store: AppStore = Depends(get_store),
+        stage2: Stage2Automator = Depends(get_stage2_automator),
     ) -> PlanDetail:
-        return submit_manual_stage2_service(
+        return await submit_manual_stage2_service(
             plan_id=plan_id,
             final_plan_text=submission.final_plan_text,
             store=store,
+            stage2=stage2,
         )
 
     @app.post("/api/admin/plans/{plan_id}/approve", response_model=PlanDetail)
-    def approve_review_required_plan(
+    async def approve_review_required_plan(
         plan_id: str,
         _: ProfileRecord = Depends(require_admin),
         store: AppStore = Depends(get_store),
+        stage2: Stage2Automator = Depends(get_stage2_automator),
     ) -> PlanDetail:
-        return approve_review_required_plan_service(
+        return await approve_review_required_plan_service(
             plan_id=plan_id,
             store=store,
+            stage2=stage2,
         )
 
     @app.post("/api/admin/plans/{plan_id}/approve-and-resume-generation", response_model=GenerationJobResponse, status_code=202)
