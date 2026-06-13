@@ -235,7 +235,7 @@ def test_finalize_uses_one_repair_retry(monkeypatch: pytest.MonkeyPatch):
     client = _FakeClient(
         [
             _response("# final plan"),
-            _response(json.dumps({"weeks": []})),  # invalid first structured pass
+            _response(json.dumps(["not", "a", "plan"])),  # invalid first structured pass
             _response(json.dumps(_valid_plan())),  # repaired structured pass
         ]
     )
@@ -260,8 +260,8 @@ def test_finalize_keeps_raw_plan_when_structured_invalid_after_repair(
     client = _FakeClient(
         [
             _response("# final plan"),
-            _response(json.dumps({"weeks": []})),  # invalid
-            _response(json.dumps({"still": "broken"})),  # repair still invalid
+            _response(json.dumps(["not", "a", "plan"])),  # invalid
+            _response(json.dumps(["still", "broken"])),  # repair still invalid
         ]
     )
     automator = OpenAIStage2Automator(client=client, model="test-model")
@@ -282,7 +282,7 @@ def test_finalize_accumulates_structured_call_costs(monkeypatch: pytest.MonkeyPa
     client = _FakeClient(
         [
             _response("# final plan"),
-            _response(json.dumps({"weeks": []})),  # invalid -> triggers repair
+            _response(json.dumps(["not", "a", "plan"])),  # invalid -> triggers repair
             _response(json.dumps(_valid_plan())),
         ]
     )

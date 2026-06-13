@@ -18,12 +18,29 @@ Two concerns live here:
 """
 from __future__ import annotations
 
+import copy
 import json
+import re
 from dataclasses import dataclass, field
-from typing import Any, Callable, Literal
+from typing import Any, Callable, Literal, get_args
 
 from .structured_plan_models import (
     SCHEMA_VERSION,
+    BlockType,
+    CompletionStatus,
+    DayType,
+    EventType,
+    LoadFocusValue,
+    PhaseLabel,
+    PlanStatus,
+    PlanType,
+    ReadinessStatus,
+    RedFlagWhen,
+    RiskLevel,
+    SessionType,
+    Severity,
+    UnitsSystem,
+    WeekType,
     repair_structured_plan_once,
     safe_parse_structured_plan,
 )
@@ -109,6 +126,411 @@ def strip_biometric_fields(data: Any) -> tuple[Any, list[str]]:
     return _walk(data, ""), removed
 
 
+# ---------------------------------------------------------------------------
+# Conservative normalization
+#
+# The structured conversion model occasionally returns the right plan in a
+# slightly-wrong shape (enum aliases, loads/rests as strings, countdown labels as
+# strings, a non-list daily_check_ins, a missing required meta field). These are
+# *formatting* mistakes, not content mistakes. The normalizer below fixes only
+# those, using neutral structural defaults. It NEVER invents training content —
+# no exercises, sessions, blocks, loads, dates, biometrics, or weight-cut
+# instructions — and it never touches raw_markdown_fallback content. If a value
+# cannot be coerced safely it is dropped (e.g. an unparseable load → null), and
+# the strict Pydantic schema still decides validity afterwards.
+# ---------------------------------------------------------------------------
+
+# Allowed enum value sets are derived from the schema's Literal aliases so they
+# can never drift from api/structured_plan_models.py.
+_PLAN_TYPE_VALUES = frozenset(get_args(PlanType))
+_PLAN_STATUS_VALUES = frozenset(get_args(PlanStatus))
+_UNITS_VALUES = frozenset(get_args(UnitsSystem))
+_EVENT_TYPE_VALUES = frozenset(get_args(EventType))
+_SEVERITY_VALUES = frozenset(get_args(Severity))
+_RED_FLAG_WHEN_VALUES = frozenset(get_args(RedFlagWhen))
+_PHASE_VALUES = frozenset(get_args(PhaseLabel))
+_LOAD_FOCUS_VALUES = frozenset(get_args(LoadFocusValue))
+_WEEK_TYPE_VALUES = frozenset(get_args(WeekType))
+_DAY_TYPE_VALUES = frozenset(get_args(DayType))
+_READINESS_VALUES = frozenset(get_args(ReadinessStatus))
+_SESSION_TYPE_VALUES = frozenset(get_args(SessionType))
+_COMPLETION_VALUES = frozenset(get_args(CompletionStatus))
+_BLOCK_TYPE_VALUES = frozenset(get_args(BlockType))
+_RISK_LEVEL_VALUES = frozenset(get_args(RiskLevel))
+
+# Conservative enum aliases for the most common loose values.
+_SESSION_TYPE_ALIASES = {
+    "strength": "strength_power",
+    "power": "strength_power",
+    "strength_and_conditioning": "strength_power",
+    "s&c": "strength_power",
+    "cardio": "conditioning",
+    "technical": "skill",
+    "spar": "sparring",
+    "fight": "fight_or_match",
+    "match": "fight_or_match",
+    "rest": "recovery",
+    "warmup": "primer",
+    "warm-up": "primer",
+}
+_BLOCK_TYPE_ALIASES = {
+    "warmup": "preparation",
+    "warm-up": "preparation",
+    "warm_up": "preparation",
+    "prep": "preparation",
+    "mobility": "mobility_activation",
+    "activation": "mobility_activation",
+    "plyo": "plyometric_power",
+    "plyometrics": "plyometric_power",
+    "power": "plyometric_power",
+    "cooldown": "cooldown_recovery",
+    "cool-down": "cooldown_recovery",
+    "cool_down": "cooldown_recovery",
+    "recovery": "cooldown_recovery",
+}
+
+_DURATION_UNIT_ALIASES = {
+    "s": "seconds",
+    "sec": "seconds",
+    "secs": "seconds",
+    "second": "seconds",
+    "seconds": "seconds",
+    "m": "minutes",
+    "min": "minutes",
+    "mins": "minutes",
+    "minute": "minutes",
+    "minutes": "minutes",
+    "h": "hours",
+    "hr": "hours",
+    "hrs": "hours",
+    "hour": "hours",
+    "hours": "hours",
+}
+
+_COUNTDOWN_RE = re.compile(r"^[Dd]\s*([+-]?\d+)$")
+_MEASURED_RE = re.compile(r"^\s*([0-9]+(?:\.[0-9]+)?)\s*([a-zA-Z]+)\s*$")
+_LOAD_PERCENT_RE = re.compile(r"^\s*([0-9]+(?:\.[0-9]+)?)\s*%\s*$")
+
+
+def _coerce_str(value: Any) -> str:
+    if isinstance(value, str):
+        return value
+    if value is None:
+        return ""
+    if isinstance(value, list):
+        return " ".join(_coerce_str(item) for item in value).strip()
+    if isinstance(value, dict):
+        return ""
+    return str(value)
+
+
+def _coerce_nonempty_str(value: Any, default: str) -> str:
+    text = _coerce_str(value).strip()
+    return text or default
+
+
+def _coerce_int(value: Any, default: int) -> int:
+    if isinstance(value, bool):
+        return default
+    if isinstance(value, int):
+        return value
+    if isinstance(value, float):
+        return int(value)
+    if isinstance(value, str):
+        try:
+            return int(float(value.strip()))
+        except ValueError:
+            return default
+    return default
+
+
+def _enum(value: Any, allowed: frozenset[str], default: str, aliases: dict[str, str] | None = None) -> str:
+    if isinstance(value, str):
+        candidate = value.strip()
+        if candidate in allowed:
+            return candidate
+        lowered = candidate.lower()
+        if lowered in allowed:
+            return lowered
+        if aliases and lowered in aliases:
+            return aliases[lowered]
+    return default
+
+
+def _as_dict_list(value: Any) -> list[dict[str, Any]]:
+    if isinstance(value, list):
+        return [item for item in value if isinstance(item, dict)]
+    if isinstance(value, dict):
+        return [value]
+    return []
+
+
+def _normalize_countdown_label(item: Any) -> dict[str, Any] | None:
+    if isinstance(item, dict):
+        out = dict(item)
+        label = _coerce_str(out.get("label"))
+        out["label"] = label
+        out["date"] = _coerce_str(out.get("date"))
+        out["anchor"] = _coerce_nonempty_str(out.get("anchor"), "event_countdown")
+        if not isinstance(out.get("days_to_event"), int) or isinstance(out.get("days_to_event"), bool):
+            out["days_to_event"] = _days_from_label(label)
+        return out
+    if isinstance(item, str):
+        label = item.strip()
+        return {
+            "date": "",
+            "days_to_event": _days_from_label(label),
+            "label": label,
+            "anchor": "event_countdown",
+        }
+    return None
+
+
+def _days_from_label(label: str) -> int:
+    match = _COUNTDOWN_RE.match(label.strip())
+    if not match:
+        return 0
+    # "D-28" → 28 days remaining; "D0" → 0; "D+1" → -1 (after the event).
+    return -int(match.group(1))
+
+
+def _normalize_load(value: Any) -> dict[str, Any] | None:
+    if value is None:
+        return None
+    if isinstance(value, dict):
+        return value
+    if isinstance(value, (int, float)) and not isinstance(value, bool):
+        return {"method": "absolute", "value": float(value), "unit": "kg", "display": str(value)}
+    if isinstance(value, str):
+        text = value.strip()
+        percent = _LOAD_PERCENT_RE.match(text)
+        if percent:
+            return {
+                "method": "percentage",
+                "value": float(percent.group(1)),
+                "unit": "percent",
+                "display": text,
+            }
+        if text.lower() in {"bodyweight", "bw", "body weight"}:
+            return {"method": "bodyweight", "value": 0, "unit": "bodyweight", "display": "bodyweight"}
+    return None
+
+
+def _normalize_measured(value: Any) -> dict[str, Any] | None:
+    if value is None:
+        return None
+    if isinstance(value, dict):
+        return value
+    if isinstance(value, (int, float)) and not isinstance(value, bool):
+        return {"value": float(value), "unit": "seconds"}
+    if isinstance(value, str):
+        match = _MEASURED_RE.match(value)
+        if match:
+            unit = _DURATION_UNIT_ALIASES.get(match.group(2).strip().lower(), match.group(2).strip())
+            return {"value": float(match.group(1)), "unit": unit}
+    return None
+
+
+def _normalize_phase(value: Any) -> str:
+    if isinstance(value, str):
+        upper = value.strip().upper()
+        if upper in _PHASE_VALUES:
+            return upper
+    return "GPP"
+
+
+def _normalize_mindset(value: Any) -> dict[str, Any]:
+    out = dict(value) if isinstance(value, dict) else {}
+    out["intent"] = _coerce_str(out.get("intent"))
+    out["focus_cue"] = _coerce_str(out.get("focus_cue"))
+    out["reset_cue"] = _coerce_str(out.get("reset_cue"))
+    return out
+
+
+def _normalize_block(value: Any) -> dict[str, Any]:
+    out = dict(value) if isinstance(value, dict) else {}
+    out["block_id"] = _coerce_nonempty_str(out.get("block_id"), "block")
+    out["block_type"] = _enum(out.get("block_type"), _BLOCK_TYPE_VALUES, "accessory", _BLOCK_TYPE_ALIASES)
+    out["display_name"] = _coerce_str(out.get("display_name"))
+    if "load" in out:
+        out["load"] = _normalize_load(out.get("load"))
+    for measured_key in ("rest", "work", "distance", "duration"):
+        if measured_key in out:
+            out[measured_key] = _normalize_measured(out.get(measured_key))
+    return out
+
+
+def _normalize_session(value: Any) -> dict[str, Any]:
+    out = dict(value) if isinstance(value, dict) else {}
+    out["session_id"] = _coerce_nonempty_str(out.get("session_id"), "session")
+    out["session_type"] = _enum(out.get("session_type"), _SESSION_TYPE_VALUES, "mixed", _SESSION_TYPE_ALIASES)
+    out["title"] = _coerce_str(out.get("title"))
+    out["objective"] = _coerce_str(out.get("objective"))
+    out["mindset_anchor"] = _normalize_mindset(out.get("mindset_anchor"))
+    if "completion_status" in out:
+        out["completion_status"] = _enum(out.get("completion_status"), _COMPLETION_VALUES, "not_started")
+    if out.get("planned_duration") is not None:
+        out["planned_duration"] = _normalize_measured(out.get("planned_duration"))
+    out["blocks"] = [_normalize_block(block) for block in _as_dict_list(out.get("blocks"))]
+    return out
+
+
+def _normalize_today_card(value: Any) -> dict[str, Any]:
+    out = dict(value) if isinstance(value, dict) else {}
+    out["headline"] = _coerce_str(out.get("headline"))
+    out["readiness_status"] = _enum(out.get("readiness_status"), _READINESS_VALUES, "train_as_planned")
+    out["mindset_anchor"] = _normalize_mindset(out.get("mindset_anchor"))
+    return out
+
+
+def _normalize_day(value: Any) -> dict[str, Any]:
+    out = dict(value) if isinstance(value, dict) else {}
+    out["date"] = _coerce_str(out.get("date"))
+    out["day_type"] = _enum(out.get("day_type"), _DAY_TYPE_VALUES, "moderate")
+    out["countdown_label"] = _coerce_str(out.get("countdown_label"))
+    out["phase_label"] = _normalize_phase(out.get("phase_label"))
+    out["today_card"] = _normalize_today_card(out.get("today_card"))
+    out["sessions"] = [_normalize_session(session) for session in _as_dict_list(out.get("sessions"))]
+    return out
+
+
+def _normalize_load_focus(value: Any) -> dict[str, Any]:
+    out = dict(value) if isinstance(value, dict) else {}
+    for key in ("volume", "intensity", "specificity", "fatigue_target"):
+        out[key] = _enum(out.get(key), _LOAD_FOCUS_VALUES, "moderate")
+    return out
+
+
+def _normalize_progression(value: Any) -> dict[str, Any]:
+    out = dict(value) if isinstance(value, dict) else {}
+    out["week_type"] = _enum(out.get("week_type"), _WEEK_TYPE_VALUES, "build")
+    out["planned_change_from_previous"] = _coerce_str(out.get("planned_change_from_previous"))
+    return out
+
+
+def _normalize_week(value: Any) -> dict[str, Any]:
+    out = dict(value) if isinstance(value, dict) else {}
+    out["week_id"] = _coerce_nonempty_str(out.get("week_id"), "week")
+    out["week_index"] = _coerce_int(out.get("week_index"), 0)
+    out["phase_label"] = _normalize_phase(out.get("phase_label"))
+    out["week_goal"] = _coerce_str(out.get("week_goal"))
+    out["start_date"] = _coerce_str(out.get("start_date"))
+    out["end_date"] = _coerce_str(out.get("end_date"))
+    out["load_focus"] = _normalize_load_focus(out.get("load_focus"))
+    out["progression"] = _normalize_progression(out.get("progression"))
+    out["days"] = [_normalize_day(day) for day in _as_dict_list(out.get("days"))]
+    return out
+
+
+def _normalize_red_flag(value: Any) -> dict[str, Any]:
+    out = dict(value) if isinstance(value, dict) else {}
+    out["rule_id"] = _coerce_nonempty_str(out.get("rule_id"), "red_flag")
+    out["when"] = _enum(out.get("when"), _RED_FLAG_WHEN_VALUES, "morning_check_in")
+    out["severity"] = _enum(out.get("severity"), _SEVERITY_VALUES, "amber")
+    out["display_text"] = _coerce_str(out.get("display_text"))
+    out["action"] = _coerce_str(out.get("action"))
+    return out
+
+
+def _normalize_plan_metadata(value: Any) -> dict[str, Any]:
+    out = dict(value) if isinstance(value, dict) else {}
+    out["title"] = _coerce_nonempty_str(out.get("title"), "Training Plan")
+    out["sport"] = _coerce_str(out.get("sport"))
+    out["plan_type"] = _enum(out.get("plan_type"), _PLAN_TYPE_VALUES, "general_performance")
+    out["timezone"] = _coerce_nonempty_str(out.get("timezone"), "UTC")
+    out["status"] = _enum(out.get("status"), _PLAN_STATUS_VALUES, "active")
+    out["units"] = _enum(out.get("units"), _UNITS_VALUES, "metric")
+    return out
+
+
+def _normalize_athlete_context(value: Any) -> dict[str, Any]:
+    out = dict(value) if isinstance(value, dict) else {}
+    out["sport_profile"] = _coerce_str(out.get("sport_profile"))
+    return out
+
+
+def _normalize_event_context(value: Any) -> Any:
+    if not isinstance(value, dict):
+        return value
+    out = dict(value)
+    if out.get("event_type") is not None:
+        out["event_type"] = _enum(out.get("event_type"), _EVENT_TYPE_VALUES, "none")
+    return out
+
+
+def _normalize_nutrition(value: Any) -> dict[str, Any]:
+    out = dict(value) if isinstance(value, dict) else {}
+    for key in ("summary", "daily_focus", "training_day_guidance", "fight_week_guidance"):
+        out[key] = _coerce_str(out.get(key))
+    warning = out.get("weight_cut_warning")
+    if isinstance(warning, dict):
+        warning = dict(warning)
+        warning["risk_level"] = _enum(warning.get("risk_level"), _RISK_LEVEL_VALUES, "none")
+        warning["display_text"] = _coerce_str(warning.get("display_text"))
+        out["weight_cut_warning"] = warning
+    return out
+
+
+def normalize_structured_plan_candidate(data: Any) -> Any:
+    """Conservatively coerce a model's near-miss structured JSON into schema shape.
+
+    Only fixes obvious *formatting* mistakes (enum aliases, string loads/rests,
+    string countdown labels, non-list ``daily_check_ins``, non-string
+    ``progression_notes``, and missing required meta fields filled with neutral
+    structural defaults). It never invents training content and never alters
+    ``raw_markdown_fallback`` text. Non-dict input is returned unchanged so the
+    strict schema can reject it. Never raises.
+    """
+
+    if not isinstance(data, dict):
+        return data
+
+    plan = copy.deepcopy(data)
+
+    if not isinstance(plan.get("schema_version"), str) or not plan.get("schema_version"):
+        plan["schema_version"] = SCHEMA_VERSION
+    plan["plan_metadata"] = _normalize_plan_metadata(plan.get("plan_metadata"))
+    plan["athlete_context"] = _normalize_athlete_context(plan.get("athlete_context"))
+    if plan.get("event_context") is not None:
+        plan["event_context"] = _normalize_event_context(plan.get("event_context"))
+    plan["countdown_labels"] = [
+        label
+        for label in (_normalize_countdown_label(item) for item in _as_list(plan.get("countdown_labels")))
+        if label is not None
+    ]
+    plan["red_flag_rules"] = [_normalize_red_flag(rule) for rule in _as_dict_list(plan.get("red_flag_rules"))]
+    plan["weeks"] = [_normalize_week(week) for week in _as_dict_list(plan.get("weeks"))]
+    # daily_check_ins must be a list; a non-list (object/null) becomes [] rather
+    # than being wrapped, matching the observed live failure fix.
+    raw_check_ins = plan.get("daily_check_ins")
+    plan["daily_check_ins"] = (
+        [item for item in raw_check_ins if isinstance(item, dict)]
+        if isinstance(raw_check_ins, list)
+        else []
+    )
+    plan["nutrition"] = _normalize_nutrition(plan.get("nutrition"))
+    plan["progression_notes"] = _coerce_str(plan.get("progression_notes"))
+    plan["raw_markdown_fallback"] = _coerce_str(plan.get("raw_markdown_fallback"))
+    return plan
+
+
+def _as_list(value: Any) -> list[Any]:
+    if isinstance(value, list):
+        return value
+    if value is None:
+        return []
+    return [value]
+
+
+def _strip_and_normalize(data: Any) -> Any:
+    """Strip banned biometric keys then conservatively normalize. Never raises."""
+    stripped, _removed = strip_biometric_fields(data)
+    try:
+        return normalize_structured_plan_candidate(stripped)
+    except Exception:  # normalization must never break the fallback flow
+        return stripped
+
+
 def build_structured_plan_outcome(
     raw_data: Any,
     *,
@@ -134,7 +556,7 @@ def build_structured_plan_outcome(
     if raw_data is None:
         return StructuredPlanOutcome(status="not_attempted")
 
-    cleaned, _removed = strip_biometric_fields(raw_data)
+    cleaned = _strip_and_normalize(raw_data)
 
     first = safe_parse_structured_plan(cleaned, raw_markdown=raw_markdown or None)
     if first.ok and first.plan is not None:
@@ -150,11 +572,10 @@ def build_structured_plan_outcome(
             errors=list(first.errors),
         )
 
-    # Strip biometric keys from anything the repair attempt introduces too.
+    # Strip biometric keys + conservatively normalize anything the repair attempt
+    # introduces too, mirroring the first-pass treatment.
     def _clean_repair(data: Any, errors: list[str]) -> Any:
-        repaired = repair_fn(data, errors)
-        repaired_clean, _ = strip_biometric_fields(repaired)
-        return repaired_clean
+        return _strip_and_normalize(repair_fn(data, errors))
 
     repaired = repair_structured_plan_once(
         cleaned, repair_fn=_clean_repair, raw_markdown=raw_markdown or None
@@ -237,6 +658,11 @@ You are converting an already-written fight-camp training plan into a strict,
 machine-readable JSON object. Output ONLY a single JSON object — no markdown, no
 code fences, no commentary.
 
+The human-readable plan provided below is the SOURCE OF TRUTH. Convert it
+faithfully into structured form. Do NOT invent new training content — no new
+exercises, sessions, blocks, loads, dates, athletes, or biometrics. Only
+restructure what the plan already says.
+
 The root JSON object IS the StructuredTrainingPlan.
 Do NOT wrap it inside a top-level "plan" key. Its top-level keys are exactly:
 
@@ -275,6 +701,52 @@ The JSON object MUST conform to the StructuredTrainingPlan schema:
 """
 
 
+# Compact, valid skeleton showing the exact root shape and every nested object
+# the schema requires. "..." marks free text to fill from the source plan.
+_ROOT_SKELETON = f"""\
+EXACT ROOT SKELETON (match this shape; fill values from the plan, keep all keys):
+{{
+  "schema_version": "{SCHEMA_VERSION}",
+  "plan_metadata": {{"title": "...", "sport": "...", "plan_type": "fight_camp", "timezone": "Europe/London", "status": "active", "units": "metric"}},
+  "athlete_context": {{"sport_profile": "..."}},
+  "event_context": {{"event_type": "fight", "fight_date": "YYYY-MM-DD"}},
+  "countdown_labels": [{{"date": "YYYY-MM-DD", "days_to_event": 28, "label": "D-28", "anchor": "fight"}}],
+  "red_flag_rules": [{{"rule_id": "...", "when": "morning_check_in", "severity": "amber", "display_text": "...", "action": "..."}}],
+  "weeks": [
+    {{
+      "week_id": "wk-1", "week_index": 1, "phase_label": "SPP", "week_goal": "...",
+      "start_date": "YYYY-MM-DD", "end_date": "YYYY-MM-DD",
+      "load_focus": {{"volume": "moderate", "intensity": "high", "specificity": "high", "fatigue_target": "reduced"}},
+      "progression": {{"week_type": "build", "planned_change_from_previous": "..."}},
+      "days": [
+        {{
+          "date": "YYYY-MM-DD", "day_type": "high", "countdown_label": "D-15", "phase_label": "SPP",
+          "today_card": {{"headline": "...", "readiness_status": "train_as_planned", "mindset_anchor": {{"intent": "...", "focus_cue": "...", "reset_cue": "..."}}}},
+          "sessions": [
+            {{
+              "session_id": "ses-1", "session_type": "strength_power", "title": "...", "objective": "...",
+              "completion_status": "not_started",
+              "mindset_anchor": {{"intent": "...", "focus_cue": "...", "reset_cue": "..."}},
+              "blocks": [
+                {{
+                  "block_id": "blk-1", "block_type": "strength", "display_name": "...", "sets": 4, "reps": "4-6",
+                  "load": {{"method": "percentage", "value": 85, "unit": "percent", "ref": "1RM", "display": "85% 1RM"}},
+                  "rest": {{"value": 180, "unit": "seconds"}}, "duration": {{"value": 45, "unit": "minutes"}}
+                }}
+              ]
+            }}
+          ]
+        }}
+      ]
+    }}
+  ],
+  "daily_check_ins": [],
+  "nutrition": {{"summary": "...", "daily_focus": "...", "training_day_guidance": "...", "fight_week_guidance": "...", "weight_cut_warning": {{"risk_level": "amber", "display_text": "...", "requires_professional_support": true}}}},
+  "progression_notes": "...",
+  "raw_markdown_fallback": "<the original plan markdown, verbatim>"
+}}"""
+
+
 def build_structured_plan_prompt(
     *,
     plan_markdown: str,
@@ -289,7 +761,7 @@ def build_structured_plan_prompt(
     to fix a previous invalid attempt (the single repair retry).
     """
 
-    sections: list[str] = [_STRUCTURED_PLAN_RULES]
+    sections: list[str] = [_STRUCTURED_PLAN_RULES, _ROOT_SKELETON]
 
     if event_date:
         sections.append(f"EVENT/FIGHT DATE: {event_date}")
@@ -319,6 +791,12 @@ def build_structured_plan_prompt(
         sections.append(
             "Previous invalid JSON to correct (return a fully valid object):\n"
             + broken_json[:12000]
+        )
+
+    if repair_errors:
+        sections.append(
+            "Fix ONLY the JSON structure/shape so it matches the root skeleton and "
+            "passes the schema. Do NOT change the training content."
         )
 
     sections.append(
