@@ -278,6 +278,163 @@ export type PlanSummary = {
 export type PlanOutputs = {
   plan_text: string;
   pdf_url?: string | null;
+  // Schema-first structured plan (see api/structured_plan_models.py). Optional so
+  // legacy/raw-text-only plans keep working: when absent or malformed the UI
+  // renders `plan_text` as the fallback. Typed permissively because the payload
+  // is best-effort and the renderer must be defensive.
+  structured_plan?: StructuredPlan | null;
+  schema_version?: string | null;
+};
+
+export type MeasuredValue = {
+  value?: number | null;
+  unit?: string | null;
+};
+
+export type LoadPrescription = {
+  method?: string | null;
+  value?: number | null;
+  unit?: string | null;
+  ref?: string | null;
+  display?: string | null;
+};
+
+export type EffortPrescription = {
+  method?: string | null;
+  value?: number | string | null;
+  scale?: string | null;
+};
+
+export type MindsetAnchor = {
+  intent?: string | null;
+  focus_cue?: string | null;
+  reset_cue?: string | null;
+  confidence_anchor?: string | null;
+  context?: string | null;
+};
+
+export type StructuredBlock = {
+  block_id?: string | null;
+  block_type?: string | null;
+  display_name?: string | null;
+  category?: string | null;
+  order_index?: number | null;
+  duration?: MeasuredValue | null;
+  sets?: number | null;
+  reps?: number | string | null;
+  load?: LoadPrescription | null;
+  effort?: EffortPrescription | null;
+  rest?: MeasuredValue | null;
+  work?: MeasuredValue | null;
+  distance?: MeasuredValue | null;
+  rounds?: number | null;
+  intensity?: string | null;
+  energy_system?: string | null;
+  impact_level?: string | null;
+  purpose?: string | null;
+  coaching_cues?: string[] | null;
+  substitutions?: string[] | null;
+};
+
+export type StructuredSession = {
+  session_id?: string | null;
+  session_type?: string | null;
+  title?: string | null;
+  objective?: string | null;
+  planned_duration?: MeasuredValue | null;
+  primary_stressor?: string | null;
+  cns_demand?: string | null;
+  impact_level?: string | null;
+  completion_status?: string | null;
+  mindset_anchor?: MindsetAnchor | null;
+  blocks?: StructuredBlock[] | null;
+};
+
+export type StructuredTodayCard = {
+  headline?: string | null;
+  readiness_status?: string | null;
+  primary_warning?: string | null;
+  nutrition_summary?: string | null;
+  weight_cut_warning?: string | null;
+  mindset_anchor?: MindsetAnchor | null;
+};
+
+export type StructuredDay = {
+  date?: string | null;
+  day_type?: string | null;
+  countdown_label?: string | null;
+  phase_label?: string | null;
+  today_card?: StructuredTodayCard | null;
+  sessions?: StructuredSession[] | null;
+};
+
+export type StructuredWeek = {
+  week_id?: string | null;
+  week_index?: number | null;
+  phase_label?: string | null;
+  week_goal?: string | null;
+  start_date?: string | null;
+  end_date?: string | null;
+  countdown_start?: string | null;
+  countdown_end?: string | null;
+  days?: StructuredDay[] | null;
+};
+
+export type StructuredRedFlagRule = {
+  rule_id?: string | null;
+  severity?: string | null;
+  when?: string | null;
+  display_text?: string | null;
+  action?: string | null;
+};
+
+export type StructuredWeightCutWarning = {
+  risk_level?: string | null;
+  display_text?: string | null;
+  requires_professional_support?: boolean | null;
+};
+
+export type StructuredNutrition = {
+  summary?: string | null;
+  daily_focus?: string | null;
+  training_day_guidance?: string | null;
+  fight_week_guidance?: string | null;
+  weight_cut_warning?: StructuredWeightCutWarning | null;
+};
+
+export type StructuredPlanMetadata = {
+  title?: string | null;
+  sport?: string | null;
+  plan_type?: string | null;
+  status?: string | null;
+  units?: string | null;
+};
+
+export type StructuredAthleteContext = {
+  sport_profile?: string | null;
+  style_profile?: string | null;
+  experience_level?: string | null;
+  weight_class?: string | null;
+};
+
+export type StructuredEventContext = {
+  fight_date?: string | null;
+  match_date?: string | null;
+  weigh_in_date?: string | null;
+  event_type?: string | null;
+  ruleset?: string | null;
+};
+
+export type StructuredPlan = {
+  schema_version?: string | null;
+  plan_metadata?: StructuredPlanMetadata | null;
+  athlete_context?: StructuredAthleteContext | null;
+  event_context?: StructuredEventContext | null;
+  red_flag_rules?: StructuredRedFlagRule[] | null;
+  weeks?: StructuredWeek[] | null;
+  nutrition?: StructuredNutrition | null;
+  progression_notes?: string | null;
+  raw_markdown_fallback?: string | null;
 };
 
 export type PlanAdvisory = {
