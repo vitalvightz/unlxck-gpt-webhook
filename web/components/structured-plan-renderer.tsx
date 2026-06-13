@@ -237,11 +237,8 @@ export function PlanHeader({ plan }: { plan: StructuredPlan }) {
       {profile ? <p className="sp-subtitle">{profile}</p> : null}
       {tags.length > 0 || eventDate ? (
         <div className="sp-header-tags">
-          {tags.map((tag) => (
-            <span key={tag} className="sp-tag">
-              {tag}
-            </span>
-          ))}
+          {tags.map((tag, index) => (
+            <span key={`${tag}-${index}`} className="sp-tag">
           {eventDate ? <span className="sp-tag sp-accent">{eventDate}</span> : null}
         </div>
       ) : null}
