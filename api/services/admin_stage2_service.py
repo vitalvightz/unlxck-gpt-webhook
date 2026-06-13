@@ -7,6 +7,8 @@ from fightcamp.stage2_pipeline import build_stage2_retry, review_stage2_output
 
 from ..models import PlanDetail
 from ..plan_mappers import _decode_structured_text, _lookup_plan_source, _map_plan_detail
+import asyncio
+
 from ..stage2_automation import Stage2Automator, attempt_structured_plan_for_result
 from ..store import AppStore
 
