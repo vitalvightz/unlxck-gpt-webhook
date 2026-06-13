@@ -8,6 +8,14 @@ from typing import Any, Protocol
 
 from fightcamp.stage2_pipeline import build_stage2_package, review_stage2_output
 
+from .structured_plan_generation import (
+    StructuredPlanOutcome,
+    build_structured_plan_outcome,
+    build_structured_plan_prompt,
+    parse_structured_json,
+)
+from .structured_plan_models import safe_parse_structured_plan
+
 _APP_STATUS_READY = "ready"
 _APP_STATUS_PUBLISHABLE_WITH_FLAGS = "publishable_with_flags"
 _APP_STATUS_HELD_FOR_REVIEW = "held_for_review"
@@ -203,6 +211,35 @@ def _build_stage2_cost(
     }
 
 
+def _merge_stage2_costs(*costs: dict[str, Any] | None) -> dict[str, Any]:
+    """Aggregate token/cost telemetry across multiple Stage 2 model calls.
+
+    Stage 2 normally makes a single model call, but when structured-plan
+    generation is enabled it makes one or two more. Token counts and the
+    estimated USD cost are summed so the persisted cost row reflects *total*
+    Stage 2 spend; metadata (model, response_id, attempt_count, recorded_at) is
+    taken from the last call. ``None``/empty entries are ignored.
+    """
+
+    token_keys = ("stage2_input_tokens", "stage2_output_tokens", "stage2_total_tokens")
+    merged: dict[str, Any] = {}
+    for cost in costs:
+        if not cost:
+            continue
+        # Compute running totals from the prior accumulation *before* adopting the
+        # current call's metadata, so the current call is counted exactly once.
+        running_tokens = {
+            key: (merged.get(key) or 0) + (cost.get(key) or 0) for key in token_keys
+        }
+        running_usd = (merged.get("stage2_estimated_cost_usd") or 0.0) + (
+            cost.get("stage2_estimated_cost_usd") or 0.0
+        )
+        merged = dict(cost)
+        merged.update(running_tokens)
+        merged["stage2_estimated_cost_usd"] = running_usd
+    return merged
+
+
 def _is_quota_or_rate_limit_error(exc: Exception) -> bool:
     message = str(exc or "").lower()
     return (
@@ -212,6 +249,43 @@ def _is_quota_or_rate_limit_error(exc: Exception) -> bool:
         or "too many requests" in message
         or "429" in message
     )
+
+
+def _structured_plan_enabled() -> bool:
+    """Whether Stage 2 should also attempt structured-plan generation.
+
+    Off by default: structured generation is a second model call, so it is
+    opt-in (set ``UNLXCK_STAGE2_STRUCTURED_PLAN=1``) to preserve the single-call
+    Stage 2 cost profile until the structured renderer is rolled out. When off,
+    the structured outcome is recorded as ``not_attempted`` and the raw
+    ``plan_text`` flow is unaffected.
+    """
+
+    return os.getenv("UNLXCK_STAGE2_STRUCTURED_PLAN", "").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+def _record_structured_outcome(
+    result: dict[str, Any], outcome: StructuredPlanOutcome
+) -> dict[str, Any]:
+    """Attach a structured-plan outcome to a Stage 2 result dict.
+
+    The validated plan (or ``None``) and its schema version go to dedicated
+    ``structured_plan`` / ``schema_version`` keys that persistence maps to plan
+    columns. The status/errors are nested in the existing validator report under
+    a ``structured_plan`` key so admins can see them without new storage.
+    """
+
+    result["structured_plan"] = outcome.structured_plan
+    result["schema_version"] = outcome.schema_version
+    report = result.get("stage2_validator_report")
+    if isinstance(report, dict):
+        report["structured_plan"] = outcome.as_debug()
+    return result
 
 
 def _stage2_source(stage1_result: dict[str, Any]) -> str:
@@ -323,6 +397,12 @@ def _base_result(
         "stage2_attempt_count": 0,
         "stage2_status": "",
         "final_plan_text": "",
+        # Structured plan output (schema-first). Defaults to absent; populated by
+        # the structured-generation attempt on a passing plan when enabled.
+        # Persistence maps these to the plans.structured_plan / schema_version
+        # columns and drops them gracefully on legacy schemas.
+        "structured_plan": None,
+        "schema_version": None,
         # Token/cost telemetry captured from the Stage 2 model call. Persistence
         # maps this to dedicated generation_jobs columns; it is not the plan body.
         "stage2_cost": stage2_cost or {},
@@ -530,7 +610,7 @@ class OpenAIStage2Automator:
                 if int(first_review["validator_report"].get("review_flag_count") or 0) > 0
                 else _APP_STATUS_READY
             )
-            return _approved_result(
+            result = _approved_result(
                 stage1_result,
                 draft_plan_text=draft_plan_text,
                 final_plan_text=first_pass_text,
@@ -540,6 +620,19 @@ class OpenAIStage2Automator:
                 app_status=app_status,
                 stage2_cost=first_pass_cost,
             )
+            # Additive structured-plan attempt. Never blocks the raw plan: any
+            # failure degrades to the plan_text fallback (status not_attempted /
+            # invalid_fallback_used) and is recorded for admin debug.
+            outcome, structured_costs = await self._attempt_structured_plan(
+                final_plan_text=first_pass_text,
+                package=package,
+                source=source,
+                log_context=log_context,
+            )
+            # Roll the structured calls' tokens into the persisted cost row so it
+            # reflects total Stage 2 spend, not just the plan-text pass.
+            result["stage2_cost"] = _merge_stage2_costs(first_pass_cost, *structured_costs)
+            return _record_structured_outcome(result, outcome)
 
         logger.warning("[stage2] review required after first_pass: automatic retry disabled")
         return _review_required_result(
@@ -550,6 +643,113 @@ class OpenAIStage2Automator:
             retry_text="",
             attempt_count=1,
             stage2_cost=first_pass_cost,
+        )
+
+    async def _attempt_structured_plan(
+        self,
+        *,
+        final_plan_text: str,
+        package: dict[str, Any],
+        source: str,
+        log_context: dict[str, str] | None = None,
+    ) -> tuple[StructuredPlanOutcome, list[dict[str, Any]]]:
+        """Best-effort structured-plan generation. Never raises.
+
+        Returns the outcome plus the cost telemetry of any structured model
+        calls made, so the caller can fold them into the persisted cost row.
+        """
+
+        if not _structured_plan_enabled() or not final_plan_text.strip():
+            return StructuredPlanOutcome(status="not_attempted"), []
+        costs: list[dict[str, Any]] = []
+        try:
+            return await self._generate_structured_outcome(
+                final_plan_text=final_plan_text,
+                package=package,
+                source=source,
+                log_context=log_context,
+                costs=costs,
+            )
+        except Exception:  # never block the raw plan on structured failure
+            logger.exception("[stage2] structured_plan attempt failed; using raw fallback")
+            # Preserve costs from any calls that did complete before the failure.
+            return (
+                StructuredPlanOutcome(
+                    status="not_attempted",
+                    errors=["structured generation error (see server logs)"],
+                ),
+                costs,
+            )
+
+    async def _generate_structured_outcome(
+        self,
+        *,
+        final_plan_text: str,
+        package: dict[str, Any],
+        source: str,
+        log_context: dict[str, str] | None = None,
+        costs: list[dict[str, Any]],
+    ) -> tuple[StructuredPlanOutcome, list[dict[str, Any]]]:
+        planning_brief = package.get("planning_brief") if isinstance(package, dict) else None
+        if not isinstance(planning_brief, dict):
+            planning_brief = None
+        event_date = ""
+        if planning_brief:
+            event_date = str(planning_brief.get("fight_date") or "")
+
+        first_prompt = build_structured_plan_prompt(
+            plan_markdown=final_plan_text,
+            planning_brief=planning_brief,
+            event_date=event_date,
+        )
+        first_text, first_cost = await self._generate_text(
+            first_prompt,
+            attempt_label="structured_first",
+            source=source,
+            log_context=log_context,
+        )
+        costs.append(first_cost)
+        first_json = parse_structured_json(first_text)
+        if first_json is None:
+            return (
+                StructuredPlanOutcome(
+                    status="invalid_fallback_used",
+                    errors=["structured model output was not valid JSON"],
+                ),
+                costs,
+            )
+
+        probe = safe_parse_structured_plan(first_json, raw_markdown=final_plan_text)
+        if probe.ok:
+            return (
+                build_structured_plan_outcome(first_json, raw_markdown=final_plan_text),
+                costs,
+            )
+
+        # Single repair retry: re-prompt with the validation errors and the
+        # broken JSON, then let build_structured_plan_outcome score the result.
+        repair_prompt = build_structured_plan_prompt(
+            plan_markdown=final_plan_text,
+            planning_brief=planning_brief,
+            event_date=event_date,
+            repair_errors=probe.errors,
+            broken_json=first_text,
+        )
+        repaired_text, repair_cost = await self._generate_text(
+            repair_prompt,
+            attempt_label="structured_repair",
+            source=source,
+            log_context=log_context,
+        )
+        costs.append(repair_cost)
+        repaired_json = parse_structured_json(repaired_text)
+        return (
+            build_structured_plan_outcome(
+                first_json,
+                raw_markdown=final_plan_text,
+                repair_fn=lambda _data, _errors: repaired_json,
+            ),
+            costs,
         )
 
 

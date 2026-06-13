@@ -38,6 +38,35 @@ Suggested top-level shape:
 }
 ```
 
+## Structured plan (schema-first, additive)
+
+Beside the raw `plan_text`, Stage 2 can also emit a machine-readable
+`StructuredTrainingPlan` (see `api/structured_plan_models.py`). This runs *next
+to* the legacy flow and never replaces it:
+
+- It is gated by `UNLXCK_STAGE2_STRUCTURED_PLAN` (off by default — structured
+  generation is a second model call). When off, nothing changes.
+- On a passing plan, the finalizer asks the model to convert the markdown plan
+  into a `StructuredTrainingPlan` JSON object (`build_structured_plan_prompt`),
+  then validates it (`validate → one repair retry → raw-markdown fallback`, via
+  `api/structured_plan_generation.py`).
+- A valid (or repaired) plan is saved to `plans.structured_plan` with its
+  `plans.schema_version`. An invalid result is dropped, `plan_text` stays the
+  fallback, and generation is never blocked.
+
+Result fields added to the Stage 2 return contract (all optional):
+
+- `structured_plan` — validated plan object, or `null` when absent/invalid.
+- `schema_version` — schema version of the saved structured plan.
+- `stage2_validator_report.structured_plan` — admin debug:
+  `{ "status", "errors", "schema_version" }` where `status` is one of
+  `not_attempted` / `valid` / `repair_attempted_valid` / `invalid_fallback_used`.
+
+The structured object must use machine-readable load objects (never `"85%"`
+strings), self-report readiness only (no HRV/CNS/WHOOP/strain biometrics), and
+weight-cut guidance expressed as supervised risk, never direct acute-cut
+instructions.
+
 ## `stage2_payload` Shape
 
 ```json

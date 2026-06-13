@@ -1376,6 +1376,13 @@ class AdminPlanOutputs(BaseModel):
     stage2_validator_report: dict[str, Any] = Field(default_factory=dict)
     stage2_status: str = ""
     stage2_attempt_count: int = 0
+    # Structured-plan generation debug visibility. ``structured_plan_status`` is
+    # one of not_attempted / valid / repair_attempted_valid / invalid_fallback_used.
+    # ``structured_plan_errors`` carries validation errors when structured JSON
+    # failed; ``structured_schema_version`` is the saved schema version when valid.
+    structured_plan_status: str = "not_attempted"
+    structured_plan_errors: list[str] = Field(default_factory=list)
+    structured_schema_version: str | None = None
 
 
 class PlanDetail(PlanSummary):

@@ -96,6 +96,28 @@ def test_profiles_table_declares_avatar_url_column():
     assert "avatar_url text," in profiles_definition
 
 
+def test_plans_table_declares_structured_plan_columns():
+    schema = _read_schema()
+    plans_definition = schema.split(
+        "create table if not exists public.plans (", 1
+    )[1].split(");", 1)[0]
+
+    assert "structured_plan jsonb," in plans_definition
+    assert "schema_version text," in plans_definition
+
+
+def test_plans_structured_plan_migration_backfills_columns():
+    migration = (
+        Path(__file__).resolve().parents[1]
+        / "supabase"
+        / "migrations"
+        / "20260613120000_add_structured_plan_columns.sql"
+    ).read_text(encoding="utf-8")
+
+    assert "alter table public.plans add column if not exists structured_plan jsonb;" in migration
+    assert "alter table public.plans add column if not exists schema_version text;" in migration
+
+
 def test_generation_jobs_schema_declares_payload_hash_column():
     schema = _read_schema()
     generation_jobs_definition = schema.split(
