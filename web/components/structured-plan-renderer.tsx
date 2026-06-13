@@ -56,7 +56,8 @@ export function BlockCard({ block }: { block: StructuredBlock }) {
   const title = cleanText(block.display_name) || "Block";
   const blockType = cleanText(block.block_type);
   const load = formatBlockLoad(block.load);
-  const metric = selectBlockMetric(block);
+  const metrics = selectBlockMetric(block);
+  const work = formatMeasured(block.work);
   const rest = shouldShowRest(block.rest) ? formatMeasured(block.rest) : null;
   const effort = formatEffort(block);
   const purpose = cleanText(block.purpose);
@@ -68,12 +69,18 @@ export function BlockCard({ block }: { block: StructuredBlock }) {
         <span className="sp-block-title">{title}</span>
         {blockType ? <span className="sp-tag">{titleize(blockType)}</span> : null}
       </div>
-      {metric || load || rest || effort ? (
+      {metrics.length > 0 || work || load || rest || effort ? (
         <div className="sp-block-stats">
-          {metric ? (
-            <span className="sp-stat">
+          {metrics.map((metric) => (
+            <span key={metric.label} className="sp-stat">
               <span className="sp-stat-label">{metric.label}</span>
               {metric.value}
+            </span>
+          ))}
+          {work ? (
+            <span className="sp-stat">
+              <span className="sp-stat-label">Work</span>
+              {work}
             </span>
           ) : null}
           {load ? (
@@ -195,10 +202,18 @@ export function DaySection({ day }: { day: StructuredDay }) {
 }
 
 export function WeekSection({ week, defaultOpen }: { week: StructuredWeek; defaultOpen?: boolean }) {
+  // Track open state locally and sync via onToggle so a user-opened/collapsed
+  // week is not reset to defaultOpen when the parent re-renders. (A bare
+  // `open={defaultOpen}` would force the native <details> back on every render.)
+  const [open, setOpen] = useState<boolean>(Boolean(defaultOpen));
   const days = getDays(week);
   const phase = cleanText(week.phase_label);
   return (
-    <details className="sp-week" open={defaultOpen}>
+    <details
+      className="sp-week"
+      open={open}
+      onToggle={(event) => setOpen(event.currentTarget.open)}
+    >
       <summary className="sp-week-summary">
         <span className="sp-week-title">{weekLabel(week)}</span>
         {phase ? <span className="sp-tag sp-accent">{phase}</span> : null}
@@ -239,6 +254,9 @@ export function PlanHeader({ plan }: { plan: StructuredPlan }) {
         <div className="sp-header-tags">
           {tags.map((tag, index) => (
             <span key={`${tag}-${index}`} className="sp-tag">
+              {tag}
+            </span>
+          ))}
           {eventDate ? <span className="sp-tag sp-accent">{eventDate}</span> : null}
         </div>
       ) : null}

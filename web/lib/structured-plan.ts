@@ -91,30 +91,43 @@ export function isTimeLikeReps(reps: unknown): boolean {
 export type BlockMetric = { label: string; value: string };
 
 /**
- * The single primary "how much" line for a block.
- * Prefers an explicit duration over reps when reps looks like a time string;
- * otherwise reps (with optional sets), else duration, else null.
+ * The quantitative "how much" lines for a block, in display order.
+ *
+ * Strength blocks use reps (with optional sets); time-based work uses duration;
+ * conditioning blocks may instead (or additionally) use distance and/or rounds.
+ * Prefers an explicit duration over reps when reps looks like a time string.
+ * Returns an empty array when the block carries no usable metric.
  */
-export function selectBlockMetric(block: StructuredBlock | null | undefined): BlockMetric | null {
+export function selectBlockMetric(block: StructuredBlock | null | undefined): BlockMetric[] {
   if (!isObject(block)) {
-    return null;
+    return [];
   }
+  const metrics: BlockMetric[] = [];
+
   const duration = formatMeasured(block.duration);
   const repsRaw = block.reps;
   const repsText =
     typeof repsRaw === "number" ? String(repsRaw) : cleanText(repsRaw as string | null);
 
   if ((!repsText || isTimeLikeReps(repsText)) && duration) {
-    return { label: "Duration", value: duration };
-  }
-  if (repsText) {
+    metrics.push({ label: "Duration", value: duration });
+  } else if (repsText) {
     const sets = typeof block.sets === "number" && block.sets > 0 ? block.sets : null;
-    return { label: "Volume", value: sets ? `${sets} × ${repsText}` : repsText };
+    metrics.push({ label: "Volume", value: sets ? `${sets} × ${repsText}` : repsText });
+  } else if (duration) {
+    metrics.push({ label: "Duration", value: duration });
   }
-  if (duration) {
-    return { label: "Duration", value: duration };
+
+  const distance = formatMeasured(block.distance);
+  if (distance) {
+    metrics.push({ label: "Distance", value: distance });
   }
-  return null;
+
+  if (typeof block.rounds === "number" && block.rounds > 0) {
+    metrics.push({ label: "Rounds", value: String(block.rounds) });
+  }
+
+  return metrics;
 }
 
 /** Effort like "RPE 7" / "intent: max" / null. */

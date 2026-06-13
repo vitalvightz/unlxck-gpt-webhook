@@ -151,12 +151,47 @@ test("prefers duration over reps when reps looks like a time string", () => {
     reps: "5-6 min",
     duration: { value: 6, unit: "minutes" },
   } as never);
-  assert.deepEqual(timeReps, { label: "Duration", value: "6 minutes" });
+  assert.deepEqual(timeReps, [{ label: "Duration", value: "6 minutes" }]);
 
   const realReps = selectBlockMetric({ sets: 4, reps: "4-6" } as never);
-  assert.deepEqual(realReps, { label: "Volume", value: "4 × 4-6" });
+  assert.deepEqual(realReps, [{ label: "Volume", value: "4 × 4-6" }]);
 
-  assert.equal(selectBlockMetric({} as never), null);
+  assert.deepEqual(selectBlockMetric({} as never), []);
+  assert.deepEqual(selectBlockMetric(null), []);
+});
+
+test("isTimeLikeReps treats bare metres as NOT time (metres/minutes ambiguity)", () => {
+  // "5 m" / "5m" reps mean metres, not minutes — must not be coerced to duration.
+  assert.equal(isTimeLikeReps("5 m"), false);
+  assert.equal(isTimeLikeReps("400m"), false);
+  // Unambiguous time units still match.
+  assert.equal(isTimeLikeReps("2 min"), true);
+  assert.equal(isTimeLikeReps("90 seconds"), true);
+});
+
+test("selectBlockMetric renders distance and rounds for conditioning blocks", () => {
+  assert.deepEqual(selectBlockMetric({ distance: { value: 400, unit: "meters" } } as never), [
+    { label: "Distance", value: "400 meters" },
+  ]);
+  assert.deepEqual(selectBlockMetric({ rounds: 8 } as never), [
+    { label: "Rounds", value: "8" },
+  ]);
+  // Zero/negative rounds are hidden.
+  assert.deepEqual(selectBlockMetric({ rounds: 0 } as never), []);
+});
+
+test("selectBlockMetric combines duration, distance, and rounds in order", () => {
+  const metrics = selectBlockMetric({
+    reps: "30s",
+    duration: { value: 5, unit: "minutes" },
+    distance: { value: 400, unit: "meters" },
+    rounds: 8,
+  } as never);
+  assert.deepEqual(metrics, [
+    { label: "Duration", value: "5 minutes" },
+    { label: "Distance", value: "400 meters" },
+    { label: "Rounds", value: "8" },
+  ]);
 });
 
 // --- content presence: blocks / mindset / nutrition / red flags -------------
