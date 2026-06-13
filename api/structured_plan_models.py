@@ -273,7 +273,7 @@ class SessionBlock(BaseModel):
 class Completion(BaseModel):
     """Post-session completion log (Section P)."""
 
-    session_rpe: float | None = None
+    session_rpe: float | None = Field(default=None, ge=0, le=10)
     pain_after_session: int | None = Field(default=None, ge=0, le=10)
     performed_duration: MeasuredValue | None = None
     modification_reason: str | None = None
