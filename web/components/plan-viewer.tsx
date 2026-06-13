@@ -20,8 +20,10 @@ import {
 import { clearCompletedGenerationForDeletedPlan } from "@/lib/completed-generation";
 import { PremiumLoadingScreen } from "@/components/premium-loading-screen";
 import { QuickBuildRefinementBanner } from "@/components/quick-build-refinement-banner";
+import { StructuredPlanRenderer } from "@/components/structured-plan-renderer";
 import { WhyTooltip } from "@/components/why-tooltip";
 import { useGenerationController } from "@/lib/generation-controller";
+import { shouldRenderStructuredPlan } from "@/lib/structured-plan";
 import { explainRiskBand } from "@/lib/sparring-reason-codes";
 import {
   buildBlockedInjuryContextSummary,
@@ -1698,7 +1700,15 @@ export function PlanViewer({
                 ) : null}
               </div>
               <WeeklySparringView planId={plan.plan_id} />
-              <pre className="plan-text-block">{athletePlanText}</pre>
+              {shouldRenderStructuredPlan(plan.outputs) && plan.outputs.structured_plan ? (
+                <StructuredPlanRenderer
+                  plan={plan.outputs.structured_plan}
+                  rawFallback={athletePlanText}
+                  showRawFallback={isAdmin}
+                />
+              ) : (
+                <pre className="plan-text-block">{athletePlanText}</pre>
+              )}
               {rejectMessage ? <div className="success-banner">{rejectMessage}</div> : null}
               {rejectError ? <div className="error-banner">{rejectError}</div> : null}
               {archiveMessage ? <div className="success-banner">{archiveMessage}</div> : null}

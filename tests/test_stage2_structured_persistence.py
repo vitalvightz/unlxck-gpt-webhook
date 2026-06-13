@@ -18,7 +18,6 @@ from unittest.mock import MagicMock
 
 import pytest
 
-import asyncio
 
 import api.stage2_automation as stage2_module
 from api.plan_mappers import _map_plan_detail
