@@ -305,10 +305,12 @@ def _normalize_load(value: Any) -> dict[str, Any] | None:
         text = value.strip()
         percent = _LOAD_PERCENT_RE.match(text)
         if percent:
+            ref = percent.group(2).strip() or None
             return {
                 "method": "percentage",
                 "value": float(percent.group(1)),
                 "unit": "percent",
+                "ref": ref,
                 "display": text,
             }
         if text.lower() in {"bodyweight", "bw", "body weight"}:
