@@ -356,9 +356,13 @@ def _normalize_block(value: Any) -> dict[str, Any]:
     out["display_name"] = _coerce_str(out.get("display_name"))
     if "load" in out:
         out["load"] = _normalize_load(out.get("load"))
-    for measured_key in ("rest", "work", "distance", "duration"):
+    for measured_key in ("rest", "work"):
         if measured_key in out:
-            out[measured_key] = _normalize_measured(out.get(measured_key))
+            out[measured_key] = _normalize_measured(out.get(measured_key), "seconds")
+    if "duration" in out:
+        out["duration"] = _normalize_measured(out.get("duration"), "minutes")
+    if "distance" in out:
+        out["distance"] = _normalize_measured(out.get("distance"), "meters")
     return out
 
 
