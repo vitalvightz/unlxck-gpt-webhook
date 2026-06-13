@@ -344,7 +344,7 @@ def _decode_structured_plan(
     decoded = _decode_structured_text(value)
     # `_decode_structured_text` wraps non-JSON strings as {"raw": ...}; that is
     # not a structured plan, so treat it (and empty values) as "no structured".
-    if not decoded or (set(decoded) == {"raw"}):
+    if not decoded or (len(decoded) == 1 and "raw" in decoded):
         return None, None
     result = safe_parse_structured_plan(decoded, raw_markdown=raw_markdown or None)
     if not result.ok or result.plan is None:
