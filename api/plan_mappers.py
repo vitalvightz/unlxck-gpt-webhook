@@ -26,6 +26,7 @@ from .models import (
     WeeklySchedule,
 )
 from .store import AppStore
+from .structured_plan_models import StructuredTrainingPlan, safe_parse_structured_plan
 
 
 def _build_me_response(profile: ProfileRecord, store: AppStore) -> MeResponse:
@@ -291,11 +292,17 @@ def _map_plan_detail(
         and summary.status == "publishable_with_flags"
     ):
         display_plan_text = str(row.get("final_plan_text") or "")
+    structured_plan, structured_schema_version = _decode_structured_plan(
+        row.get("structured_plan"),
+        raw_markdown=display_plan_text,
+    )
     return PlanDetail(
         **summary.model_dump(mode="json"),
         outputs=PlanOutputs(
             plan_text=display_plan_text,
             pdf_url=row.get("pdf_url"),
+            structured_plan=structured_plan,
+            schema_version=structured_schema_version,
         ),
         safety_state=_map_plan_safety_state(row),
         advisories=build_plan_advisories(planning_brief=planning_brief),
@@ -319,6 +326,30 @@ def _map_plan_detail(
             else None
         ),
     )
+
+
+def _decode_structured_plan(
+    value: Any,
+    *,
+    raw_markdown: str = "",
+) -> tuple[StructuredTrainingPlan | None, str | None]:
+    """Best-effort decode of a stored structured plan column.
+
+    Legacy plans have no structured payload, so this returns ``(None, None)``
+    for missing/blank values. Malformed structured data never breaks the
+    response: it is dropped and the raw markdown fallback still flows through
+    ``plan_text``.
+    """
+
+    decoded = _decode_structured_text(value)
+    # `_decode_structured_text` wraps non-JSON strings as {"raw": ...}; that is
+    # not a structured plan, so treat it (and empty values) as "no structured".
+    if not decoded or (set(decoded) == {"raw"}):
+        return None, None
+    result = safe_parse_structured_plan(decoded, raw_markdown=raw_markdown or None)
+    if not result.ok or result.plan is None:
+        return None, None
+    return result.plan, result.plan.schema_version
 
 
 def _map_weekly_schedule(row: dict[str, Any], *, week_index: int) -> WeeklySchedule:
