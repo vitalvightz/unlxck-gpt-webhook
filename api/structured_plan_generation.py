@@ -237,10 +237,19 @@ You are converting an already-written fight-camp training plan into a strict,
 machine-readable JSON object. Output ONLY a single JSON object — no markdown, no
 code fences, no commentary.
 
+The root JSON object IS the StructuredTrainingPlan.
+Do NOT wrap it inside a top-level "plan" key. Its top-level keys are exactly:
+
+  schema_version, plan_metadata, athlete_context, event_context,
+  countdown_labels, red_flag_rules, weeks, daily_check_ins, nutrition,
+  progression_notes, raw_markdown_fallback.
+
+The nested training hierarchy lives inside the root object as:
+weeks[] -> days[] -> sessions[] -> blocks[].
+
 The JSON object MUST conform to the StructuredTrainingPlan schema:
 
 - It MUST set "schema_version" to "{SCHEMA_VERSION}".
-- It MUST use the hierarchy: plan -> weeks[] -> days[] -> sessions[] -> blocks[].
 - It MUST preserve the original human-readable plan verbatim in
   "raw_markdown_fallback".
 - It MUST use countdown labels (countdown_labels[] and per-day countdown_label,

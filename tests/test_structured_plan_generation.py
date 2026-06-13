@@ -172,6 +172,26 @@ def test_prompt_carries_schema_and_safety_rules():
     assert "weeks[] -> days[] -> sessions[] -> blocks[]" in prompt
     assert '"method": "percentage"' in prompt
     assert 'NEVER a string' in prompt
+    # Root shape must be unambiguous: no top-level "plan" wrapper.
+    assert "Do NOT wrap it inside a top-level" in prompt
+    assert "StructuredTrainingPlan" in prompt
+    assert "plan -> weeks[]" not in prompt
+    assert '"plan": {' not in prompt
+    # Every required top-level key is named so the model emits the real root.
+    for top_level_key in (
+        "schema_version",
+        "plan_metadata",
+        "athlete_context",
+        "event_context",
+        "countdown_labels",
+        "red_flag_rules",
+        "weeks",
+        "daily_check_ins",
+        "nutrition",
+        "progression_notes",
+        "raw_markdown_fallback",
+    ):
+        assert top_level_key in prompt
     # phases
     for phase in ("GPP", "SPP", "TAPER", "FIGHT_WEEK", "REINTEGRATION"):
         assert phase in prompt
