@@ -370,7 +370,7 @@ def _normalize_session(value: Any) -> dict[str, Any]:
     if "completion_status" in out:
         out["completion_status"] = _enum(out.get("completion_status"), _COMPLETION_VALUES, "not_started")
     if out.get("planned_duration") is not None:
-        out["planned_duration"] = _normalize_measured(out.get("planned_duration"))
+        out["planned_duration"] = _normalize_measured(out.get("planned_duration"), "minutes")
     out["blocks"] = [_normalize_block(block) for block in _as_dict_list(out.get("blocks"))]
     return out
 
