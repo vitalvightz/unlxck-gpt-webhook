@@ -45,25 +45,38 @@ _CARD_UNRESCUABLE_ERROR_CODES: frozenset[str] = frozenset(
 )
 
 
-def _stage2_hold_is_card_rescuable(validator_report: dict[str, Any]) -> bool:
+def _stage2_hold_is_card_rescuable(validator_report: Any) -> bool:
     """Whether a would-be hold could be rescued by a clean structured card.
 
     A hold is rescuable only when it is driven entirely by non-safety,
-    recoverable findings: there must be at least one validator error, none of
-    the errors may be a safety/output-integrity code, and there must be no
-    blocking warnings. Safety holds and blocking warnings always stand.
+    recoverable findings. The check is intentionally defensive about a
+    malformed report — anything it cannot positively confirm is non-rescuable,
+    so an odd shape never accidentally publishes a held plan. It returns True
+    only when ALL of the following hold:
+
+    * ``validator_report`` is a dict;
+    * ``errors`` is a non-empty list;
+    * there are no blocking warnings;
+    * every error is a dict carrying a non-empty string ``code``; and
+    * none of those codes is a safety/output-integrity (unrescuable) code.
     """
 
-    errors = validator_report.get("errors") or []
-    if not errors:
+    if not isinstance(validator_report, dict):
+        return False
+    errors = validator_report.get("errors")
+    if not isinstance(errors, list) or not errors:
         return False
     if validator_report.get("blocking_warnings"):
         return False
-    return all(
-        str(error.get("code") or "") not in _CARD_UNRESCUABLE_ERROR_CODES
-        for error in errors
-        if isinstance(error, dict)
-    )
+    for error in errors:
+        if not isinstance(error, dict):
+            return False
+        code = error.get("code")
+        if not isinstance(code, str) or not code.strip():
+            return False
+        if code.strip() in _CARD_UNRESCUABLE_ERROR_CODES:
+            return False
+    return True
 
 
 class Stage2AutomationError(RuntimeError):

@@ -3,7 +3,11 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from api.generation.persistence import _apply_plan_contract_validation, _contract_fight_date
+from api.generation.persistence import (
+    _apply_plan_contract_validation,
+    _contract_fight_date,
+    _contract_report_is_card_rescuable,
+)
 
 
 @dataclass
@@ -201,3 +205,85 @@ def test_existing_why_log_entries_are_preserved():
     )
     assert result["why_log"]["injury_triage"] == {"mode": "clear"}
     assert "plan_contract_validation" in result["why_log"]
+
+
+# ---------------------------------------------------------------------------
+# _contract_report_is_card_rescuable: defensive allowlist predicate
+# ---------------------------------------------------------------------------
+
+
+def _err(code, severity="error"):
+    return {"code": code, "severity": severity, "message": "x"}
+
+
+def test_contract_rescuable_true_for_known_render_findings():
+    assert _contract_report_is_card_rescuable({"violations": [_err("weekly_schedule_blank")]}) is True
+    assert _contract_report_is_card_rescuable({"violations": [_err("fight_day_missing")]}) is True
+    assert _contract_report_is_card_rescuable(
+        {"violations": [_err("calendar_unrenderable"), _err("fight_day_missing")]}
+    ) is True
+
+
+def test_contract_rescuable_false_for_plan_text_empty():
+    assert _contract_report_is_card_rescuable({"violations": [_err("plan_text_empty")]}) is False
+
+
+def test_contract_rescuable_false_for_unknown_code():
+    assert _contract_report_is_card_rescuable({"violations": [_err("brand_new_code")]}) is False
+
+
+def test_contract_rescuable_false_for_mixed_known_and_unrescuable():
+    report = {"violations": [_err("weekly_schedule_blank"), _err("plan_text_empty")]}
+    assert _contract_report_is_card_rescuable(report) is False
+
+
+def test_contract_rescuable_false_when_no_error_level_findings():
+    # Warning-only reports have nothing to rescue.
+    report = {"violations": [_err("weekly_schedule_missing", severity="warning")]}
+    assert _contract_report_is_card_rescuable(report) is False
+    assert _contract_report_is_card_rescuable({"violations": []}) is False
+
+
+def test_contract_rescuable_false_for_malformed_reports():
+    assert _contract_report_is_card_rescuable(None) is False
+    assert _contract_report_is_card_rescuable([]) is False
+    assert _contract_report_is_card_rescuable({"violations": "nope"}) is False
+    assert _contract_report_is_card_rescuable({"violations": [None]}) is False
+    assert _contract_report_is_card_rescuable({"violations": ["bad"]}) is False
+    assert _contract_report_is_card_rescuable({"violations": [{"severity": "error"}]}) is False
+    assert _contract_report_is_card_rescuable(
+        {"violations": [{"severity": "error", "code": ""}]}
+    ) is False
+
+
+def test_contract_unknown_code_with_card_routes_to_review():
+    # End-to-end: an unknown error-level finding is NOT rescued even with a card.
+    emit, events = _emit_collector()
+
+    def _fake_validate(_final_result, *, fight_date=None):
+        return {
+            "ran": True,
+            "ok": False,
+            "has_errors": True,
+            "checks": {},
+            "violations": [{"code": "brand_new_code", "severity": "error", "message": "x"}],
+            "week_count": 1,
+        }
+
+    import api.generation.persistence as persistence_module
+
+    original = persistence_module.validate_plan_contract
+    persistence_module.validate_plan_contract = _fake_validate
+    try:
+        result = _apply_plan_contract_validation(
+            _result("ready", [{"phase": "fight", "countdown_range": [6, 0]}], **_clean_card_fields()),
+            fight_date=FIGHT_DATE,
+            athlete_id="ath-1",
+            job_id="job-1",
+            emit_milestone=emit,
+        )
+    finally:
+        persistence_module.validate_plan_contract = original
+
+    assert result["status"] == "review_required"
+    assert any(code == "plan_contract_review_required" for code, _ in events)
