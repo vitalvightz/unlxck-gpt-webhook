@@ -28,6 +28,16 @@ from .models import (
 from .store import AppStore
 from .structured_plan_models import StructuredTrainingPlan, safe_parse_structured_plan
 
+_HARD_STAGE2_BLOCKER_CODES = {
+    "restriction_violation",
+    "late_fight_hard_sparring_violation",
+    "dangerous_late_fight_strength_or_conditioning",
+    "fight_day_protocol_violation",
+    "calendar_spine_fight_day_protocol_violation",
+    "stage2_output_empty",
+    "stage2_output_truncated",
+}
+
 
 def _build_me_response(profile: ProfileRecord, store: AppStore) -> MeResponse:
     latest_intake = store.get_latest_intake(profile.athlete_id)
@@ -119,11 +129,21 @@ def _map_plan_summary(row: dict[str, Any]) -> PlanSummary:
             normalized_status = "held_for_review"
         else:
             has_errors = bool(report.get("errors"))
-            has_blocking = bool(report.get("blocking_warnings"))
+            blocking_warnings = [
+                warning
+                for warning in list(report.get("blocking_warnings") or [])
+                if isinstance(warning, dict)
+                and str(warning.get("code") or "") in _HARD_STAGE2_BLOCKER_CODES
+            ]
+            has_blocking = bool(blocking_warnings)
             if not has_blocking:
                 warnings = list(report.get("warnings") or [])
-                has_blocking = any(bool(w.get("blocking")) for w in warnings if isinstance(w, dict))
-            normalized_status = "held_for_review" if has_errors or has_blocking else "publishable_with_flags"
+                has_blocking = any(
+                    str(w.get("code") or "") in _HARD_STAGE2_BLOCKER_CODES
+                    for w in warnings
+                    if isinstance(w, dict)
+                )
+            normalized_status = "held_for_review" if has_errors or has_blocking else "ready"
     return PlanSummary(
         plan_id=str(row["id"]),
         plan_name=(str(row["plan_name"]).strip() if row.get("plan_name") is not None else None) or None,
@@ -289,7 +309,7 @@ def _map_plan_detail(
     if (
         not display_plan_text
         and is_legacy_review_required
-        and summary.status == "publishable_with_flags"
+        and summary.status in {"ready", "publishable_with_flags"}
     ):
         display_plan_text = str(row.get("final_plan_text") or "")
     structured_plan, structured_schema_version = _decode_structured_plan(

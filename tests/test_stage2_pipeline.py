@@ -250,6 +250,66 @@ def test_build_stage2_retry_skips_prompt_when_only_review_flags_exist():
     assert retry["repair_prompt"] is None
 
 
+def test_build_stage2_retry_skips_prompt_when_only_soft_blocking_warning_exists():
+    retry = build_stage2_retry(
+        stage1_result=_stage1_result_fixture(),
+        final_plan_text="SPP\n- Landmine Press - 4x5",
+        validator_report={
+            "errors": [],
+            "warnings": [
+                {
+                    "code": "missing_required_element",
+                    "message": "Missing phase-critical element.",
+                    "severity": "blocker",
+                }
+            ],
+        },
+    )
+
+    assert retry["status"] == "PASS"
+    assert retry["needs_retry"] is False
+    assert retry["repair_prompt"] is None
+
+
+def test_build_stage2_retry_prompt_excludes_soft_warnings_for_hard_blocker():
+    retry = build_stage2_retry(
+        stage1_result=_stage1_result_fixture(),
+        final_plan_text="SPP\n- Push Press - 4x3",
+        validator_report={
+            "errors": [{"code": "restriction_violation", "line": "Push Press"}],
+            "warnings": [
+                {
+                    "code": "generic_filler_phrase",
+                    "message": "Low-trust filler.",
+                    "severity": "warning",
+                }
+            ],
+            "blocking_warnings": [
+                {
+                    "code": "missing_required_element",
+                    "message": "Missing phase-critical element.",
+                    "severity": "blocker",
+                }
+            ],
+            "review_flags": [
+                {
+                    "code": "sport_language_leak",
+                    "message": "Cross-sport wording leaked in.",
+                }
+            ],
+            "restricted_hits": [{"restriction": "heavy_overhead_pressing", "line": "Push Press"}],
+        },
+    )
+
+    assert retry["status"] == "FAIL"
+    assert retry["needs_retry"] is True
+    assert retry["repair_prompt"] is not None
+    assert "restriction_violation" in retry["repair_prompt"]
+    assert "generic_filler_phrase" not in retry["repair_prompt"]
+    assert "missing_required_element" not in retry["repair_prompt"]
+    assert "sport_language_leak" not in retry["repair_prompt"]
+
+
 def test_review_stage2_output_keeps_weekly_session_overage_as_review_flag():
     planning_brief = {
         "athlete_model": {"sport": "boxing"},

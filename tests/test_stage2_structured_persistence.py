@@ -287,12 +287,41 @@ def test_finalize_soft_hold_rescued_by_clean_card(monkeypatch: pytest.MonkeyPatc
 
     result = asyncio.run(automator.finalize(stage1_result=_stage1_result()))
 
-    assert result["status"] == "publishable_with_flags"
+    assert result["status"] == "ready"
     assert result["plan_text"] == "# final plan"
     assert isinstance(result["structured_plan"], dict)
     assert result["stage2_validator_report"]["structured_plan"]["status"] == "valid"
     # The original error is still recorded for admin visibility.
     assert result["stage2_validator_report"]["errors"] == [{"code": "true_internal_system_leak"}]
+
+
+def test_finalize_soft_blocking_warning_rescued_by_clean_card(monkeypatch: pytest.MonkeyPatch):
+    def _warn_review(**_):
+        return {
+            "status": "WARN",
+            "needs_retry": True,
+            "validator_report": {
+                "errors": [],
+                "warnings": [{"code": "missing_required_element", "severity": "blocker"}],
+                "blocking_warnings": [{"code": "missing_required_element", "severity": "blocker"}],
+                "review_flag_count": 0,
+            },
+        }
+
+    monkeypatch.setenv("UNLXCK_STAGE2_STRUCTURED_PLAN", "1")
+    monkeypatch.setattr(stage2_module, "review_stage2_output", _warn_review)
+    client = _FakeClient([_response("# final plan"), _response(json.dumps(_valid_plan()))])
+    automator = OpenAIStage2Automator(client=client, model="test-model")
+
+    result = asyncio.run(automator.finalize(stage1_result=_stage1_result()))
+
+    assert result["status"] == "ready"
+    assert result["plan_text"] == "# final plan"
+    assert result["structured_plan"] is not None
+    assert result["stage2_validator_report"]["structured_plan"]["status"] == "valid"
+    assert result["stage2_validator_report"]["blocking_warnings"] == [
+        {"code": "missing_required_element", "severity": "blocker"}
+    ]
 
 
 def test_finalize_soft_hold_reverts_to_hold_when_card_invalid(monkeypatch: pytest.MonkeyPatch):
@@ -314,6 +343,9 @@ def test_finalize_soft_hold_reverts_to_hold_when_card_invalid(monkeypatch: pytes
     assert result["plan_text"] == ""
     assert result["final_plan_text"] == "# final plan"
     assert result["structured_plan"] is None
+    debug = result["stage2_validator_report"]["structured_plan"]
+    assert debug["status"] == "invalid_fallback_used"
+    assert debug["errors"]
 
 
 def test_finalize_safety_hold_is_never_rescued(monkeypatch: pytest.MonkeyPatch):

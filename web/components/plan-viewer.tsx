@@ -128,13 +128,13 @@ const FRACTURE_CATEGORY_SET = new Set([
 type RiskBandTone = "green" | "amber" | "red" | "black";
 
 const BLOCKING_WARNING_CODES = new Set([
-  "missing_required_element",
-  "phase_section_missing",
-  "equipment_incongruent_selection",
-  "unresolved_access_fallback",
-  "missing_week_session_role",
-  "late_camp_session_incomplete",
-  "high_pressure_weight_cut_underaddressed",
+  "restriction_violation",
+  "late_fight_hard_sparring_violation",
+  "dangerous_late_fight_strength_or_conditioning",
+  "fight_day_protocol_violation",
+  "calendar_spine_fight_day_protocol_violation",
+  "stage2_output_empty",
+  "stage2_output_truncated",
 ]);
 const NON_PUBLISHABLE_STAGE2_STATUSES = new Set([
   "triage_blocked",
@@ -664,21 +664,18 @@ function buildReviewIssue(issue: ValidatorIssue, severity: "error" | "warning"):
 function resolveWarningBuckets(report: Record<string, unknown> | null | undefined) {
   const warnings = safeIssueList(report?.warnings);
   const explicitBlockingWarnings = safeIssueList(report?.blocking_warnings);
-  const explicitReviewFlags = safeIssueList(report?.review_flags);
 
-  if (explicitBlockingWarnings.length || explicitReviewFlags.length) {
+  if (explicitBlockingWarnings.length) {
     return {
-      blockingWarnings: explicitBlockingWarnings,
-      reviewFlags: explicitReviewFlags,
+      blockingWarnings: explicitBlockingWarnings.filter((issue) =>
+        BLOCKING_WARNING_CODES.has(String(issue.code || "")),
+      ),
     };
   }
 
   return {
     blockingWarnings: warnings.filter((issue) =>
       BLOCKING_WARNING_CODES.has(String(issue.code || "")),
-    ),
-    reviewFlags: warnings.filter(
-      (issue) => !BLOCKING_WARNING_CODES.has(String(issue.code || "")),
     ),
   };
 }
@@ -728,21 +725,10 @@ export function buildReviewSummary(
 ) {
   const normalizedStage2Status = String(stage2Status || "").trim().toLowerCase();
   const errors = safeIssueList(report?.errors).map((issue) => buildReviewIssue(issue, "error"));
-  const { blockingWarnings, reviewFlags } = resolveWarningBuckets(report);
+  const { blockingWarnings } = resolveWarningBuckets(report);
   const blocking = blockingWarnings.map((issue) => buildReviewIssue(issue, "warning"));
-  const reviewFlagsMapped = reviewFlags.map((issue) => buildReviewIssue(issue, "warning"));
-  const blockingCount =
-    typeof report?.blocking_warning_count === "number"
-      ? report.blocking_warning_count
-      : blocking.length;
-  const reviewFlagCount =
-    typeof report?.review_flag_count === "number"
-      ? report.review_flag_count
-      : reviewFlagsMapped.length;
-  const isPublishableFromReport =
-    typeof report?.is_publishable === "boolean"
-      ? report.is_publishable
-      : errors.length === 0 && blocking.length === 0;
+  const blockingCount = blocking.length;
+  const isPublishableFromReport = errors.length === 0 && blocking.length === 0;
   const isExplicitlyNonPublishableStatus = NON_PUBLISHABLE_STAGE2_STATUSES.has(normalizedStage2Status);
   const isBlockedTriageStub = Boolean(options?.hasBlockedTriageStubText);
   const isPublishable =
@@ -751,13 +737,11 @@ export function buildReviewSummary(
   const summary = {
     errors,
     blocking,
-    reviewFlags: reviewFlagsMapped,
     blockingCount,
-    reviewFlagCount,
     isPublishable,
   };
 
-  if (errors.length + blocking.length + reviewFlagsMapped.length === 0) {
+  if (errors.length + blocking.length === 0) {
     return {
       ...summary,
       hasIssues: false,
@@ -779,20 +763,14 @@ export function buildReviewSummary(
   const summaryParts = [
     errors.length ? pluralize(errors.length, "blocking error") : null,
     blockingCount ? pluralize(blockingCount, "blocking issue") : null,
-    reviewFlagCount ? pluralize(reviewFlagCount, "review flag") : null,
   ].filter((part): part is string => Boolean(part));
 
   if (isPublishable) {
-    const hasReviewFlags = reviewFlagsMapped.length > 0;
     return {
       ...summary,
-      hasIssues: true,
-      headline: hasReviewFlags
-        ? `This plan is publishable. Only non-blocking review flags remain (${summaryParts.join(", ")}).`
-        : "This plan is publishable and clear to release.",
-      guidance: hasReviewFlags
-        ? "You can release this plan now. The remaining flags are cleanup notes, not hold reasons."
-        : "No blockers remain. Approval is now just a release decision.",
+      hasIssues: false,
+      headline: "This plan is ready to release.",
+      guidance: "No hard blockers remain. Approval is now just a release decision.",
     };
   }
 
@@ -804,7 +782,7 @@ export function buildReviewSummary(
       isBlockedTriageStub
         ? "This plan still contains triage placeholder text and cannot be released to the athlete."
         : errors.length > 0
-        ? "Fix the blocking issues first. Review flags are secondary until the blockers are gone."
+        ? "Fix the hard blockers first."
         : "These blockers were found on the latest validation pass. You can retry or approve anyway to release.",
   };
 }
@@ -1647,7 +1625,7 @@ export function PlanViewer({
                       : isProtectedTriageResumePending
                         ? "Blocked / resume pending"
                       : stage2ReviewSummary.isPublishable
-                        ? "Publishable"
+                        ? "Ready"
                         : "Held"}
                   </p>
                 </article>
@@ -1657,12 +1635,6 @@ export function PlanViewer({
                     {isTriageBlocked
                       ? "—"
                       : stage2ReviewSummary.errors.length + stage2ReviewSummary.blockingCount}
-                  </p>
-                </article>
-                <article className="plan-meta-item">
-                  <p className="plan-meta-label">Review flags</p>
-                  <p className="plan-meta-value">
-                    {isTriageBlocked ? "—" : stage2ReviewSummary.reviewFlagCount}
                   </p>
                 </article>
               </div>
@@ -1812,7 +1784,7 @@ export function PlanViewer({
                       <p className="muted">
                         {stage2RetryJustCompleted === "passed"
                           ? "The submitted plan passed validation and has been published to the athlete view."
-                          : "The submitted plan was validated. Blocking issues and review flags below reflect this latest attempt."}
+                          : "The submitted plan was validated. Hard blockers below reflect this latest attempt."}
                       </p>
                     </section>
                   ) : null}
@@ -1845,13 +1817,10 @@ export function PlanViewer({
                             : "issue-badge-error"
                         }`}
                       >
-                        {stage2ReviewSummary.isPublishable ? "Publishable" : "Held"}
+                        {stage2ReviewSummary.isPublishable ? "Ready" : "Held"}
                       </span>
                       <span className="badge issue-badge-error">
                         {stage2ReviewSummary.errors.length + stage2ReviewSummary.blockingCount} blockers
-                      </span>
-                      <span className="badge issue-badge-warning">
-                        {stage2ReviewSummary.reviewFlagCount} review flags
                       </span>
                     </div>
 
@@ -1912,33 +1881,6 @@ export function PlanViewer({
                           </section>
                         ) : null}
 
-                        {stage2ReviewSummary.reviewFlags.length ? (
-                          <section className="review-issue-group">
-                            <div className="review-issue-group-header">
-                              <p className="review-issue-group-title">Review flags</p>
-                              <span className="badge issue-badge-warning">
-                                {stage2ReviewSummary.reviewFlags.length}
-                              </span>
-                            </div>
-                            <div className="review-issue-list">
-                              {stage2ReviewSummary.reviewFlags.map((issue, index) => (
-                                <article key={`${issue.code}-${index}`} className="review-issue-item">
-                                  <div className="review-issue-title-row">
-                                    <p className="review-issue-title">{issue.title}</p>
-                                    <span className="badge issue-badge-warning">Flag</span>
-                                  </div>
-                                  <p className="review-issue-message">{issue.message}</p>
-                                  {issue.context ? (
-                                    <p className="review-issue-context">{issue.context}</p>
-                                  ) : null}
-                                  {issue.snippet ? (
-                                    <p className="review-issue-snippet">Line: {issue.snippet}</p>
-                                  ) : null}
-                                </article>
-                              ))}
-                            </div>
-                          </section>
-                        ) : null}
                       </div>
                     ) : null}
                   </section>

@@ -11,7 +11,7 @@ test("formatPlanLabel maps readiness/decision enums to readable labels", () => {
 });
 
 test("formatPlanLabel maps plan status flags", () => {
-  assert.equal(formatPlanLabel("publishable_with_flags"), "Ready with notes");
+  assert.equal(formatPlanLabel("publishable_with_flags"), "Ready");
 });
 
 test("formatPlanLabel maps phase labels", () => {

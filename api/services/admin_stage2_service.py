@@ -44,9 +44,9 @@ async def _attach_structured_plan(
     """Attach a structured_plan to an admin result when it became displayable.
 
     Uses the same canonical trigger as the automated path
-    (:func:`attempt_structured_plan_for_result`): only ``ready`` /
-    ``publishable_with_flags`` results with final plan_text and the env flag on
-    are converted. A missing automator or any failure leaves plan_text intact and
+    (:func:`attempt_structured_plan_for_result`): athlete-visible results with
+    final plan_text and the env flag on are converted. A missing automator or any
+    failure leaves plan_text intact and
     records ``not_attempted`` for admin debug. Never blocks the approval.
     """
 
