@@ -374,12 +374,12 @@ class AppStore(Protocol):
     def record_stage2_cost(self, job_id: str, metadata: dict[str, Any]) -> None: ...
 
     def update_plan_stage2(self, plan_id: str, result: dict[str, Any]) -> dict[str, Any]: ...
-    def update_plan_structured_output(
+    def update_plan_structured_artifacts(
         self,
         plan_id: str,
         *,
-        structured_plan: Any,
-        schema_version: Any,
+        structured_plan: dict[str, Any] | None,
+        schema_version: str | None,
         stage2_validator_report: dict[str, Any],
     ) -> dict[str, Any]: ...
     def update_plan_triage_approval(self, plan_id: str, *, why_log: dict[str, Any], stage2_status: str) -> dict[str, Any]: ...
@@ -3563,12 +3563,12 @@ class SupabaseAppStore:
                 exc=exc,
             )
 
-    def update_plan_structured_output(
+    def update_plan_structured_artifacts(
         self,
         plan_id: str,
         *,
-        structured_plan: Any,
-        schema_version: Any,
+        structured_plan: dict[str, Any] | None,
+        schema_version: str | None,
         stage2_validator_report: dict[str, Any],
     ) -> dict[str, Any]:
         """Persist only the structured-plan output columns for a plan.
@@ -3597,25 +3597,25 @@ class SupabaseAppStore:
             context=f"plan_id={plan_id}",
         )
         try:
-            logger.info("[store] update_plan_structured_output:start plan_id=%s", plan_id)
+            logger.info("[store] update_plan_structured_artifacts:start plan_id=%s", plan_id)
             self.client.table("plans").update(payload).eq("id", plan_id).execute()
             updated = self.get_plan(plan_id)
             if not updated:
                 logger.warning(
-                    "[store] update_plan_structured_output:plan_missing_after_update plan_id=%s",
+                    "[store] update_plan_structured_artifacts:plan_missing_after_update plan_id=%s",
                     plan_id,
                 )
                 raise HTTPException(
                     status_code=status.HTTP_404_NOT_FOUND,
                     detail="plan not found",
                 )
-            logger.info("[store] update_plan_structured_output:success plan_id=%s", plan_id)
+            logger.info("[store] update_plan_structured_artifacts:success plan_id=%s", plan_id)
             return updated
         except HTTPException:
             raise
         except _STORE_CLIENT_ERRORS as exc:
             self._raise_operation_http_error(
-                operation=f"update_plan_structured_output plan_id={plan_id}",
+                operation=f"update_plan_structured_artifacts plan_id={plan_id}",
                 detail="failed to update plan structured output",
                 exc=exc,
             )

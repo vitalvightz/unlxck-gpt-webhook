@@ -1090,7 +1090,7 @@ class FakeStore:
                 row[optional_field] = result.get(optional_field)
         return row
 
-    def update_plan_structured_output(
+    def update_plan_structured_artifacts(
         self,
         plan_id: str,
         *,

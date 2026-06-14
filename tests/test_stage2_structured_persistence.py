@@ -20,6 +20,7 @@ import pytest
 
 
 import api.stage2_automation as stage2_module
+import api.services.admin_stage2_service as admin_stage2_service
 from api.plan_mappers import _map_plan_detail
 from api.services.admin_stage2_service import (
     _APPROVAL_STRUCTURED_PLAN_BUDGET_SECONDS,
@@ -612,6 +613,29 @@ def test_admin_approve_falls_back_to_text_when_inline_card_times_out(monkeypatch
     assert detail.outputs.plan_text == "# approved plan"
     assert detail.outputs.structured_plan is None
     assert store.plans[plan_id].get("structured_plan") is None
+
+
+def test_admin_stage2_service_wraps_sync_store_calls_in_to_thread(monkeypatch):
+    """Async admin approval must not call sync DB helpers on the event loop."""
+    store = FakeStore()
+    plan_id = _seed_held_plan(store)
+    calls: list[str] = []
+    real_to_thread = asyncio.to_thread
+
+    async def _tracked_to_thread(func, /, *args, **kwargs):
+        calls.append(getattr(func, "__name__", repr(func)))
+        return await real_to_thread(func, *args, **kwargs)
+
+    monkeypatch.setattr(admin_stage2_service.asyncio, "to_thread", _tracked_to_thread)
+
+    detail = asyncio.run(
+        approve_review_required_plan(plan_id=plan_id, store=store, stage2=None)
+    )
+
+    assert detail.status == "ready"
+    assert calls.count("get_plan") >= 2
+    assert "update_plan_stage2" in calls
+    assert "_lookup_plan_source" in calls
 
 
 def test_structured_post_processing_converts_when_inline_was_skipped(monkeypatch):
