@@ -24,6 +24,7 @@ import { StructuredPlanRenderer } from "@/components/structured-plan-renderer";
 import { WhyTooltip } from "@/components/why-tooltip";
 import { useGenerationController } from "@/lib/generation-controller";
 import { shouldRenderStructuredPlan } from "@/lib/structured-plan";
+import { canUseAdminPlanControls } from "@/lib/plan-admin-controls";
 import { explainRiskBand } from "@/lib/sparring-reason-codes";
 import {
   buildBlockedInjuryContextSummary,
@@ -895,7 +896,10 @@ export function PlanViewer({
   onPlanDeleted?: () => Promise<void> | void;
 }) {
   const router = useRouter();
-  const isAdmin = Boolean(plan.admin_outputs);
+  // Admin-only controls (approve, reject approval, archive/admin review) are
+  // gated by role, not just by the presence of admin_outputs, so an athlete in
+  // this shared viewer can never see them.
+  const isAdmin = canUseAdminPlanControls(viewerRole, Boolean(plan.admin_outputs));
   const canManagePlan = viewerRole === "admin" || viewerRole === "athlete";
   const primaryAdvisory = Array.isArray(plan.advisories) ? plan.advisories[0] ?? null : null;
   const technicalStyles =
