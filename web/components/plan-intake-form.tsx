@@ -9,6 +9,7 @@ import { useAppSession } from "@/components/auth-provider";
 import { BodyMap, type BodyMapSide } from "@/components/body-map";
 import { CustomSelect } from "@/components/custom-select";
 import { saveOnboardingDraft } from "@/lib/api";
+import { STANDALONE_NUTRITION_ENABLED } from "@/lib/beta-navigation";
 import { markGenerationIntent } from "@/lib/generation-intent";
 import {
   detectDeviceTimeZone,
@@ -3138,15 +3139,17 @@ export function PlanIntakeForm() {
                 <p className="kicker">Restrictions</p>
                 <p className="muted">Injuries or restrictions: {restrictionSummary}</p>
               </div>
-              <div className="support-panel">
-                <p className="kicker">Nutrition foundation</p>
-                <p className="muted">Weight setup, bodyweight logging, and readiness fields now live in the dedicated nutrition workspace.</p>
-                <div className="plan-summary-actions">
-                  <Link href="/nutrition" className="ghost-button">
-                    Open nutrition workspace
-                  </Link>
+              {STANDALONE_NUTRITION_ENABLED ? (
+                <div className="support-panel">
+                  <p className="kicker">Nutrition foundation</p>
+                  <p className="muted">Weight setup, bodyweight logging, and readiness fields now live in the dedicated nutrition workspace.</p>
+                  <div className="plan-summary-actions">
+                    <Link href="/nutrition" className="ghost-button">
+                      Open nutrition workspace
+                    </Link>
+                  </div>
                 </div>
-              </div>
+              ) : null}
             </aside>
           </div>
         ) : null}
