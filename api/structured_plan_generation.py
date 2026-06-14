@@ -1028,8 +1028,8 @@ def build_structured_plan_prompt(
         # compressed prose. The rest of the brief stays capped (it is broad
         # context, not source-of-truth numbers).
         computed_support = None
-        brief_rest: dict[str, Any] | None = planning_brief
-        if isinstance(planning_brief, dict) and planning_brief.get("computed_support"):
+        brief_rest = planning_brief
+        if isinstance(planning_brief, dict) and "computed_support" in planning_brief:
             computed_support = planning_brief.get("computed_support")
             brief_rest = {
                 key: value
