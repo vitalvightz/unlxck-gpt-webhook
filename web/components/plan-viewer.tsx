@@ -12,6 +12,7 @@ import {
   archivePlan,
   deletePlan,
   getPlan,
+  isRetryableApiFailure,
   permanentlyDeletePlan,
   rejectApprovedPlan,
   renamePlan,
@@ -37,6 +38,59 @@ import { hasTriageResumeApproval, shouldShowTriageBlockedState } from "@/lib/tri
 
 const TRIAGE_RESUME_FETCH_ATTEMPTS = 5;
 const TRIAGE_RESUME_FETCH_DELAY_MS = 800;
+const APPROVE_RECOVERY_FETCH_ATTEMPTS = 3;
+const APPROVE_RECOVERY_FETCH_DELAY_MS = 800;
+
+const ATHLETE_VISIBLE_STATUSES = new Set(["ready", "publishable_with_flags"]);
+
+/**
+ * A plan counts as released to the athlete once it lands in an athlete-visible
+ * status with non-empty plan_text. Used both to render the published state and
+ * to confirm an approval that may have completed server-side after a network
+ * timeout on the approve request.
+ */
+export function isPlanReleasedToAthlete(
+  plan: Pick<PlanDetail, "status" | "outputs">,
+): boolean {
+  const status = (plan.status || "").trim().toLowerCase();
+  return ATHLETE_VISIBLE_STATUSES.has(status) && Boolean(plan.outputs.plan_text.trim());
+}
+
+/**
+ * Recover from a flaky approve request. The backend commits the approval before
+ * any slow post-processing, so a retryable network/timeout error is frequently a
+ * false negative — the plan is already released. For those errors only, re-fetch
+ * the plan a few times and return it once it reads as released to the athlete.
+ * Returns `null` when the error is not retryable or the plan never becomes
+ * released within the recovery window, so the caller surfaces the original error.
+ */
+export async function resolveApprovalAfterError(params: {
+  error: unknown;
+  fetchPlan: () => Promise<PlanDetail>;
+  attempts?: number;
+  wait?: (attempt: number) => Promise<void>;
+}): Promise<PlanDetail | null> {
+  if (!isRetryableApiFailure(params.error)) {
+    return null;
+  }
+  const attempts = params.attempts ?? APPROVE_RECOVERY_FETCH_ATTEMPTS;
+  const wait =
+    params.wait ?? ((attempt: number) => sleep(APPROVE_RECOVERY_FETCH_DELAY_MS * (attempt + 1)));
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    try {
+      const refreshedPlan = await params.fetchPlan();
+      if (isPlanReleasedToAthlete(refreshedPlan)) {
+        return refreshedPlan;
+      }
+    } catch {
+      // Ignore transient fetch failures during the recovery window.
+    }
+    if (attempt < attempts - 1) {
+      await wait(attempt);
+    }
+  }
+  return null;
+}
 
 async function sleep(ms: number): Promise<void> {
   await new Promise((resolve) => globalThis.setTimeout(resolve, ms));
@@ -900,10 +954,7 @@ export function PlanViewer({
     getOptionLabels(TECHNICAL_STYLE_OPTIONS, plan.technical_style).join(", ") || "Not provided";
 
   const athletePlanText = plan.outputs.plan_text.trim();
-  const athleteVisibleStatuses = new Set(["ready", "publishable_with_flags"]);
-  const hasPublishedPlan = athleteVisibleStatuses.has((plan.status || "").trim().toLowerCase())
-    ? Boolean(athletePlanText)
-    : false;
+  const hasPublishedPlan = isPlanReleasedToAthlete(plan);
 
   const injuryTriage = readInjuryTriage(plan);
   const rawTriageMode = readRawTriageMode(plan);
@@ -1175,6 +1226,18 @@ export function PlanViewer({
       onPlanUpdated?.(updatedPlan);
       setApproveMessage("Plan approved and released to the athlete view.");
     } catch (error) {
+      // Approval persists server-side before any slow post-processing, so a
+      // network/timeout failure is often a false negative: the plan may already
+      // be released. Re-fetch a few times and treat a now-ready plan as success.
+      const recoveredPlan = await resolveApprovalAfterError({
+        error,
+        fetchPlan: () => getPlan(accessToken, plan.plan_id),
+      });
+      if (recoveredPlan) {
+        onPlanUpdated?.(recoveredPlan);
+        setApproveMessage("Plan approved and released to the athlete view.");
+        return;
+      }
       setApproveError(
         error instanceof Error ? error.message : "Unable to approve this plan for athlete view.",
       );
@@ -2035,12 +2098,9 @@ export function PlanViewer({
                   </div>
                 ) : null}
 
-                {approveMessage ? <div className="success-banner">{approveMessage}</div> : null}
-                {approveError ? <div className="error-banner">{approveError}</div> : null}
-                {rejectMessage ? <div className="success-banner">{rejectMessage}</div> : null}
-                {rejectError ? <div className="error-banner">{rejectError}</div> : null}
-                {archiveMessage ? <div className="success-banner">{archiveMessage}</div> : null}
-                {archiveError ? <div className="error-banner">{archiveError}</div> : null}
+                {/* Approval/reject/archive feedback is rendered once, in the
+                    primary "Publishing hold" panel above, to avoid showing the
+                    same banner in two approval panels at the same time. */}
 
                 <div className="field">
                   <label htmlFor="manual-stage2-final-plan">Final plan text</label>
