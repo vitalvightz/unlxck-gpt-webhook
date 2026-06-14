@@ -16,6 +16,7 @@ def _round_range(low: float, high: float, weight: float, ndigits: int = 1) -> di
         "min": round(low * weight, ndigits),
         "max": round(high * weight, ndigits),
         "per_kg": [low, high],
+        "note": None,
     }
 
 
