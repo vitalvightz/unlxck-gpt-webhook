@@ -13,6 +13,12 @@ const MEANINGFUL_RISK_BANDS: ReadonlyArray<NonNullable<PlanAdvisory["risk_band"]
   "black",
 ];
 
+// An advisory known to carry a real injury-risk band (narrowed via the guards
+// below) so callers never re-assert risk_band.
+export type InjuryRiskAdvisory = PlanAdvisory & {
+  risk_band: "amber" | "red" | "black";
+};
+
 // Severity order for picking the single most important advisory to surface.
 const RISK_SEVERITY: Record<NonNullable<PlanAdvisory["risk_band"]>, number> = {
   green: 0,
@@ -21,11 +27,18 @@ const RISK_SEVERITY: Record<NonNullable<PlanAdvisory["risk_band"]>, number> = {
   black: 3,
 };
 
-/** Whether a risk band represents a real, surfaceable injury risk. */
+/** Type guard: whether a risk band represents a real, surfaceable injury risk. */
 export function isMeaningfulRiskBand(
   band: PlanAdvisory["risk_band"] | undefined,
-): boolean {
+): band is "amber" | "red" | "black" {
   return band != null && MEANINGFUL_RISK_BANDS.includes(band);
+}
+
+/** Type guard: whether an advisory carries a meaningful injury-risk band. */
+export function hasMeaningfulRiskBand(
+  advisory: PlanAdvisory | null | undefined,
+): advisory is InjuryRiskAdvisory {
+  return advisory != null && isMeaningfulRiskBand(advisory.risk_band);
 }
 
 /**
@@ -35,18 +48,15 @@ export function isMeaningfulRiskBand(
  */
 export function selectInjuryRiskAdvisory(
   advisories: PlanAdvisory[] | null | undefined,
-): PlanAdvisory | null {
+): InjuryRiskAdvisory | null {
   if (!Array.isArray(advisories)) {
     return null;
   }
-  const meaningful = advisories.filter((advisory) => isMeaningfulRiskBand(advisory?.risk_band));
+  const meaningful = advisories.filter(hasMeaningfulRiskBand);
   if (meaningful.length === 0) {
     return null;
   }
   return meaningful.reduce((best, current) =>
-    RISK_SEVERITY[current.risk_band as NonNullable<PlanAdvisory["risk_band"]>] >
-    RISK_SEVERITY[best.risk_band as NonNullable<PlanAdvisory["risk_band"]>]
-      ? current
-      : best,
+    RISK_SEVERITY[current.risk_band] > RISK_SEVERITY[best.risk_band] ? current : best,
   );
 }
