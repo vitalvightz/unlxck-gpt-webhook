@@ -350,8 +350,10 @@ export function NutritionCard({ plan }: { plan: StructuredPlan }) {
       {weightCut ? (
         <p className="sp-warning">
           {cutRisk && cutRisk !== "none" ? (
-            <span className="sp-tag">{titleize(cutRisk)} risk</span>
-          ) : null}{" "}
+            <>
+              <span className="sp-tag">{titleize(cutRisk)} risk</span>{" "}
+            </>
+          ) : null}
           {weightCut}
           {needsSupport ? " — qualified supervision required." : ""}
         </p>

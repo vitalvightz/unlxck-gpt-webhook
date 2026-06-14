@@ -477,7 +477,7 @@ def _normalize_block(value: Any) -> dict[str, Any]:
             out[measured_key] = _normalize_measured(out.get(measured_key), default_unit)
     # Carry coaching detail through, tolerating a single string instead of a list.
     for list_key in ("coaching_cues", "regression_options", "substitutions"):
-        if list_key in out:
+        if out.get(list_key) is not None:
             out[list_key] = _coerce_str_list(out.get(list_key))
     if out.get("progression_rule") is not None:
         out["progression_rule"] = _coerce_str(out.get("progression_rule"))
@@ -976,7 +976,7 @@ EXACT ROOT SKELETON (match this shape; fill values from the plan, keep all keys)
       "days": [
         {{
           "date": "YYYY-MM-DD", "day_type": "high", "countdown_label": "D-15", "phase_label": "SPP",
-          "today_card": {{"headline": "...", "readiness_status": "train_as_planned", "mindset_anchor": {{"intent": "...", "focus_cue": "...", "reset_cue": "...", "confidence_anchor": "..."}}}},
+          "today_card": {{"headline": "...", "readiness_status": "train_as_planned", "mindset_anchor": {{"intent": "...", "focus_cue": "...", "reset_cue": "...", "confidence_anchor": "...", "context": "..."}}}},
           "sessions": [
             {{
               "session_id": "ses-1", "session_type": "strength_power", "title": "...", "objective": "...",

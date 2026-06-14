@@ -233,16 +233,17 @@ test("getStringList cleans, drops blanks, and tolerates null", () => {
   assert.deepEqual(getStringList([]), []);
 });
 
-test("getMindsetLines includes confidence_anchor when present", () => {
+test("getMindsetLines includes confidence_anchor and context when present", () => {
   const lines = getMindsetLines({
     intent: "Move fast",
     focus_cue: "Drive",
     reset_cue: "Reset",
     confidence_anchor: "Banked the work",
+    context: "First hard week",
   });
   assert.deepEqual(
     lines.map((l) => l.label),
-    ["Intent", "Focus", "Reset", "Anchor"],
+    ["Intent", "Focus", "Reset", "Anchor", "Context"],
   );
   // Empty anchor object yields no lines (renderer hides it).
   assert.deepEqual(getMindsetLines({}), []);

@@ -176,7 +176,16 @@ export function getStringList(value: string[] | null | undefined): string[] {
 
 /** A mindset anchor only if it has at least one usable line. */
 export function getMindsetLines(
-  anchor: { intent?: string | null; focus_cue?: string | null; reset_cue?: string | null; confidence_anchor?: string | null } | null | undefined,
+  anchor:
+    | {
+        intent?: string | null;
+        focus_cue?: string | null;
+        reset_cue?: string | null;
+        confidence_anchor?: string | null;
+        context?: string | null;
+      }
+    | null
+    | undefined,
 ): { label: string; value: string }[] {
   if (!isObject(anchor)) {
     return [];
@@ -186,10 +195,12 @@ export function getMindsetLines(
   const focus = cleanText(anchor.focus_cue);
   const reset = cleanText(anchor.reset_cue);
   const confidence = cleanText(anchor.confidence_anchor);
+  const context = cleanText(anchor.context);
   if (intent) lines.push({ label: "Intent", value: intent });
   if (focus) lines.push({ label: "Focus", value: focus });
   if (reset) lines.push({ label: "Reset", value: reset });
   if (confidence) lines.push({ label: "Anchor", value: confidence });
+  if (context) lines.push({ label: "Context", value: context });
   return lines;
 }
 
