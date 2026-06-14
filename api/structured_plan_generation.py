@@ -976,7 +976,8 @@ DETERMINISTIC AUTHORITY (when a "STAGE 1 COMPUTED SUPPORT" section is provided):
 - red_flag_rules MUST contain only stop / modify / report safety rules. Do not
   put general training or nutrition content there.
 - Do NOT duplicate identical mindset anchors at both the day and session level —
-  if a session's anchor would be identical to the day's, vary it or omit it.
+  if a session's anchor would be identical to the day's, vary phrasing while
+  still keeping a valid session-level mindset_anchor.
 - NEVER surface coach_gated content. The "coach_gated" sub-sections of computed
   support (acute weight-cut and supplement dosing) are coach/medical-only and
   MUST NOT appear in any athlete-facing field.

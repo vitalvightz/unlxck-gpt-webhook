@@ -9,7 +9,10 @@ from __future__ import annotations
 
 import copy
 
-from api.structured_plan_generation import build_structured_plan_outcome
+from api.structured_plan_generation import (
+    build_structured_plan_outcome,
+    build_structured_plan_prompt,
+)
 from api.structured_plan_safety import (
     audit_structured_plan,
     detect_coach_gated_leakage,
@@ -97,6 +100,25 @@ def test_no_conflict_when_no_computed_support():
     assert detect_computed_support_conflicts(plan, None) == []
 
 
+def test_per_kg_coefficients_do_not_create_macro_conflict():
+    # "3-6 g/kg" is a per-kg coefficient, NOT a daily total — it must never be
+    # parsed as 3-6 g/day and flagged against the daily-gram computed envelope.
+    support = _support()
+    plan = _plan(nutrition={
+        "summary": "Carbs: 3-6 g/kg around sessions; protein 1.6-2.2 g/kg.",
+        "daily_focus": "Fats 0.8-1.0 g/kg daily intake guidance.",
+    })
+    assert detect_computed_support_conflicts(plan, support) == []
+
+
+def test_explicit_daily_total_still_conflicts():
+    # A genuine per-day total that contradicts the envelope is still flagged.
+    support = _support()
+    plan = _plan(nutrition={"summary": "Carbs: 1500 g/day.", "daily_focus": ""})
+    warnings = detect_computed_support_conflicts(plan, support)
+    assert any("carbs_g_per_day" in w for w in warnings), warnings
+
+
 # --- duplicates -------------------------------------------------------------
 
 
@@ -145,6 +167,15 @@ def test_outcome_surfaces_warnings_without_changing_status():
     debug = outcome.as_debug()
     assert "warnings" in debug
     assert isinstance(debug["warnings"], list)
+
+
+def test_prompt_keeps_valid_session_anchor_instead_of_omitting():
+    # A session anchor must stay valid (schema requires it); the converter varies
+    # phrasing rather than omitting an identical anchor.
+    prompt = build_structured_plan_prompt(plan_markdown="PLAN")
+    assert "vary phrasing while" in prompt
+    assert "keeping a valid session-level mindset_anchor" in prompt
+    assert "vary it or omit it" not in prompt
 
 
 def test_plan_text_fallback_still_works():

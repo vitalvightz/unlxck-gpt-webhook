@@ -230,16 +230,23 @@ def _macro_envelope(computed_support: dict, macro_key: str, unit_key: str = "min
     return lo, hi
 
 
-def _stated_values(text: str, anchor: str, unit: str) -> list[tuple[float, float]]:
-    """Pull ``<a>[-<b>] <unit>`` numbers stated near an anchor word."""
+def _stated_daily(text: str, anchor: str, unit_re: str, *, to_base: float = 1.0) -> list[tuple[float, float]]:
+    """Pull explicit PER-DAY totals stated near an anchor word.
+
+    Only matches daily totals like ``180 g/day`` / ``180 g per day`` /
+    ``180g daily``. A per-kg coefficient such as ``3-6 g/kg`` is deliberately
+    NOT matched (no daily qualifier follows the unit), so dosing coefficients are
+    never mistaken for daily grams.
+    """
     out: list[tuple[float, float]] = []
     pattern = re.compile(
-        rf"{anchor}[^.\n]{{0,40}}?(\d+(?:\.\d+)?)\s*(?:[-–]\s*(\d+(?:\.\d+)?))?\s*{unit}",
+        rf"{anchor}[^.\n]{{0,40}}?(\d+(?:\.\d+)?)\s*(?:[-–]\s*(\d+(?:\.\d+)?))?\s*"
+        rf"(?:{unit_re})\s*(?:/\s*day|/\s*d\b|per\s*day|daily)",
         re.I,
     )
     for match in pattern.finditer(text):
-        lo = float(match.group(1))
-        hi = float(match.group(2)) if match.group(2) else lo
+        lo = float(match.group(1)) * to_base
+        hi = (float(match.group(2)) if match.group(2) else float(match.group(1))) * to_base
         out.append((min(lo, hi), max(lo, hi)))
     return out
 
@@ -296,17 +303,22 @@ def detect_computed_support_conflicts(structured_plan: dict, computed_support: d
         envelope = _macro_envelope(support, macro_key)
         if not envelope:
             continue
-        for stated in _stated_values(nutrition_text, anchor, "g"):
+        for stated in _stated_daily(nutrition_text, anchor, r"g(?:rams?)?"):
             if not _ranges_overlap(stated, envelope):
                 warnings.append(
                     f"{CONFLICT}: {macro_key} stated {stated} contradicts computed_support {envelope}"
                 )
                 break
 
-    # Hydration (ml).
+    # Hydration (ml/day, also accepting litres/day converted to ml).
     hydration_env = _macro_envelope(support, "hydration_ml_per_day")
     if hydration_env:
-        for stated in _stated_values(nutrition_text, r"(?:hydration|fluid|water|drink)", "ml"):
+        hyd_anchor = r"(?:hydration|fluid|water|drink)"
+        stated_hydration = _stated_daily(nutrition_text, hyd_anchor, r"ml|millilit(?:er|re)s?")
+        stated_hydration += _stated_daily(
+            nutrition_text, hyd_anchor, r"l|lit(?:er|re)s?", to_base=1000.0
+        )
+        for stated in stated_hydration:
             if not _ranges_overlap(stated, hydration_env):
                 warnings.append(
                     f"{CONFLICT}: hydration_ml_per_day stated {stated} contradicts computed_support {hydration_env}"
