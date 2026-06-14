@@ -720,6 +720,7 @@ class FakeStore:
                 continue
             if self.fail_profile_enrichment:
                 row["profile_enrichment_failed"] = True
+                row["profiles"] = {"email": "", "full_name": ""}
                 continue
             profile = self.profiles.get(str(row.get(id_key) or ""), {})
             row["profiles"] = {
