@@ -1023,8 +1023,22 @@ def build_structured_plan_prompt(
         sections.append(f"EVENT/FIGHT DATE: {event_date}")
 
     if planning_brief:
+        # Carry Stage 1's own computed nutrition/recovery/mindset numbers
+        # through UNTRUNCATED so the conversion does not re-derive them from
+        # compressed prose. The rest of the brief stays capped (it is broad
+        # context, not source-of-truth numbers).
+        computed_support = None
+        brief_rest = planning_brief
+        if isinstance(planning_brief, dict) and "computed_support" in planning_brief:
+            computed_support = planning_brief.get("computed_support")
+            brief_rest = {
+                key: value
+                for key, value in planning_brief.items()
+                if key != "computed_support"
+            }
+
         try:
-            brief_json = json.dumps(planning_brief, ensure_ascii=False)[:6000]
+            brief_json = json.dumps(brief_rest, ensure_ascii=False)[:6000]
         except (TypeError, ValueError):
             brief_json = ""
         if brief_json:
@@ -1032,6 +1046,22 @@ def build_structured_plan_prompt(
                 "PLANNING BRIEF (context for athlete/event/phases — do not copy "
                 "verbatim):\n" + brief_json
             )
+
+        if computed_support:
+            try:
+                support_json = json.dumps(computed_support, ensure_ascii=False)
+            except (TypeError, ValueError):
+                support_json = ""
+            if support_json:
+                sections.append(
+                    "STAGE 1 COMPUTED SUPPORT (authoritative nutrition/recovery/"
+                    "mindset numbers — use these exact values when the plan "
+                    "covers nutrition, recovery, or mental coaching; do not "
+                    "invent or round differently). The `coach_gated` sub-sections "
+                    "hold acute weight-cut and supplement dosing: keep them for "
+                    "coach/medical use only and NEVER surface them directly to "
+                    "the athlete:\n" + support_json
+                )
 
     sections.append(
         "ORIGINAL PLAN (preserve this exactly in raw_markdown_fallback):\n"

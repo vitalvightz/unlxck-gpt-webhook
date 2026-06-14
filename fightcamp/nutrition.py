@@ -10,6 +10,129 @@ def _is_high_pressure_weight_cut(flags: dict) -> bool:
     )
 
 
+def _round_range(low: float, high: float, weight: float, ndigits: int = 1) -> dict:
+    """A structured ``{min, max}`` g/day range from per-kg coefficients."""
+    return {
+        "min": round(low * weight, ndigits),
+        "max": round(high * weight, ndigits),
+        "per_kg": [low, high],
+        "note": None,
+    }
+
+
+def compute_nutrition_targets(*, flags: dict) -> dict:
+    """Structured Stage 1 nutrition numbers for the planning brief.
+
+    This emits the *same computed numbers* that :func:`generate_nutrition_block`
+    renders as markdown, but as a machine-readable dict so the Stage 1 →
+    structured_plan conversion can carry them through without re-deriving them
+    from prose. Athlete-safe fields (macros, hydration, fuel timing, weight-cut
+    risk band) live at the top level; exact acute weight-cut and supplement
+    dosing live under ``coach_gated`` and must never be surfaced directly to
+    athletes (coach/medical-gated only).
+    """
+    weight = float(flags.get("weight", 70) or 70)
+    phase = str(flags.get("phase", "GPP")).upper()
+    fatigue = str(flags.get("fatigue", "low")).lower()
+    weight_cut_risk = bool(flags.get("weight_cut_risk", False))
+    cut_pct = float(flags.get("weight_cut_pct", 0.0) or 0.0)
+    high_pressure_cut = _is_high_pressure_weight_cut(flags)
+
+    targets: dict = {
+        "phase": phase,
+        "weight_kg": weight,
+        "meal_structure": "3 core meals + 2-3 snacks daily",
+        "protein_g_per_day": _round_range(1.7, 2.2, weight),
+        "hydration_ml_per_day": {
+            "min": round(30 * weight, 0),
+            "max": round(40 * weight, 0),
+            "per_kg_l": [0.03, 0.04],
+        },
+    }
+
+    if phase == "GPP":
+        targets["calorie_adjustment"] = "slight surplus (+5-10%)"
+        targets["carbs_g_per_day"] = _round_range(5, 8, weight)
+        targets["protein_g_per_day"] = _round_range(1.6, 2.0, weight)
+        targets["fats_g_per_day"] = _round_range(0.8, 1.0, weight)
+    elif phase == "SPP":
+        targets["calorie_adjustment"] = "moderate deficit or maintenance"
+        targets["carbs_g_per_day"] = _round_range(3, 6, weight)
+        targets["protein_g_per_day"] = _round_range(1.6, 2.2, weight)
+        targets["fats_g_per_day"] = _round_range(0.7, 1.0, weight)
+    elif phase == "TAPER":
+        targets["calorie_adjustment"] = "reduced volume; freshness + weight making"
+        targets["carbs_g_per_day"] = {
+            "min": None,
+            "max": round(5 * weight, 1),
+            "per_kg": [None, 5],
+            "note": "reduce in days before weigh-in",
+        }
+        targets["protein_g_per_day"] = _round_range(1.8, 2.5, weight)
+        targets["fats_g_per_day"] = {
+            "min": None,
+            "max": None,
+            "per_kg": None,
+            "note": "moderate (~20% calories); reduce fiber 1-2 days out",
+        }
+
+    if phase in ("GPP", "SPP"):
+        targets["fuel_timing"] = {
+            "pre": "1.5-3h before: 1-2 g/kg carbs + ~0.3 g/kg protein",
+            "intra": ">60 min sessions: 30-60 g carbs/hour + hydration",
+            "post": "within 1h: 1-1.2 g/kg carbs + 0.3-0.4 g/kg protein",
+        }
+    elif phase == "TAPER":
+        targets["fuel_timing"] = {
+            "pre": "light easily digestible carbs 30-60 min before",
+            "intra": "water or electrolyte drink only",
+            "post": "gut-friendly carbs + protein; avoid heavy fats/fiber",
+        }
+
+    if fatigue in ("high", "moderate"):
+        targets["fatigue_adjustment"] = fatigue
+
+    targets["weight_cut"] = {
+        "active": weight_cut_risk,
+        "risk_band": _weight_cut_risk_band(weight_cut_risk, cut_pct, high_pressure_cut),
+        "supervision_required": bool(weight_cut_risk and (high_pressure_cut or cut_pct >= 6.0)),
+    }
+
+    # Coach/medical-gated: exact acute-cut + supplement dosing. NEVER render
+    # these directly to athletes — they require qualified supervision.
+    coach_gated: dict = {}
+    if fatigue == "high":
+        coach_gated["high_fatigue_supplements"] = {
+            "GPP": "magnesium glycinate 300 mg + taurine 1.5 g (evening); electrolytes 500-700 mg sodium/serving",
+            "SPP": "magnesium glycinate 300 mg + taurine 1.5 g (evening); electrolytes during/post",
+            "TAPER": "magnesium glycinate 200 mg + taurine 1 g; light electrolytes only",
+        }.get(phase)
+    if weight_cut_risk:
+        coach_gated["acute_cut_protocol"] = {
+            "refeed_carbs_g_per_kg": "8-12 (heavy cut) else 4-7",
+            "refeed_protein_g_per_kg_per_feeding": "0.3-0.4",
+            "rehydration": "initial bolus 0.6-0.9 L + replace 150% fluid lost",
+            "sodium": "20-50+ mmol/L drinks + salted snacks/broths",
+            "bicarbonate_g_per_kg": "~0.3, 90-120 min pre-fight if tolerated",
+            "final_carb_snack": "1-2 g/kg easily digested carbs, 1-2h pre-fight",
+            "cut_pct": cut_pct,
+        }
+    if coach_gated:
+        targets["coach_gated"] = coach_gated
+
+    return targets
+
+
+def _weight_cut_risk_band(active: bool, cut_pct: float, high_pressure: bool) -> str:
+    if not active:
+        return "none"
+    if cut_pct >= 6.0:
+        return "severe"
+    if high_pressure or cut_pct >= 3.0:
+        return "high"
+    return "moderate"
+
+
 def generate_nutrition_block(*, flags: dict) -> str:
     nutrition_block = "\nNutrition Module\n"
 
