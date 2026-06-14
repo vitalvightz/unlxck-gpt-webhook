@@ -15,6 +15,8 @@ async function sleep(ms: number): Promise<void> {
 
 type AppSession = {
   access_token: string;
+  email?: string | null;
+  user_id?: string | null;
 };
 
 
@@ -48,6 +50,7 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
   const [hasTransientMeError, setHasTransientMeError] = useState(false);
   const [appearancePreview, setAppearancePreview] = useState<AppearanceMode | null>(null);
   const handledAccessTokenRef = useRef<string | null>(null);
+  const hydratedAccessTokenRef = useRef<string | null>(null);
   const loadGenerationRef = useRef(0);
   const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -76,12 +79,24 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
         setHasTransientMeError(false);
         setAppearancePreview(null);
         setMe(null);
+        hydratedAccessTokenRef.current = null;
         setIsMeHydrated(true);
         setIsReady(true);
       }
       return;
     }
 
+    setSession(nextSession);
+    setIsReady(true);
+
+    if (hydratedAccessTokenRef.current === nextSession.access_token && me) {
+      setIsMeHydrated(true);
+      return;
+    }
+
+    if (hydratedAccessTokenRef.current !== nextSession.access_token) {
+      setMe(null);
+    }
     setIsMeHydrated(false);
 
     try {
@@ -112,6 +127,7 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
       clearRetryTimer();
       setHasTransientMeError(false);
       setMe(nextMe);
+      hydratedAccessTokenRef.current = nextSession.access_token;
       setSession(nextSession);
     } catch (err) {
       if (loadGenerationRef.current !== currentLoadId) {
@@ -124,7 +140,11 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
           const refreshResult = await client.auth.refreshSession();
           const refreshedAccessToken = refreshResult.data.session?.access_token ?? null;
           if (refreshedAccessToken) {
-            const refreshedSession = { access_token: refreshedAccessToken };
+            const refreshedSession = {
+              access_token: refreshedAccessToken,
+              email: refreshResult.data.session?.user.email ?? nextSession.email ?? null,
+              user_id: refreshResult.data.session?.user.id ?? nextSession.user_id ?? null,
+            };
             handledAccessTokenRef.current = refreshedAccessToken;
             await loadMe(refreshedSession, { allowRefresh: false });
             return;
@@ -138,14 +158,19 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
           const currentSession = await client.auth.getSession();
           const liveAccessToken = currentSession.data.session?.access_token ?? null;
           if (liveAccessToken) {
+            const liveSession = {
+              access_token: liveAccessToken,
+              email: currentSession.data.session?.user.email ?? nextSession.email ?? null,
+              user_id: currentSession.data.session?.user.id ?? nextSession.user_id ?? null,
+            };
             setHasTransientMeError(true);
             setIsMeHydrated(false);
             shouldHoldHydration = true;
-            setSession({ access_token: liveAccessToken });
+            setSession(liveSession);
             clearRetryTimer();
             retryTimerRef.current = setTimeout(() => {
               retryTimerRef.current = null;
-              void loadMe({ access_token: liveAccessToken }, { allowRefresh: false });
+              void loadMe(liveSession, { allowRefresh: false });
             }, ME_RETRY_DELAY_MS);
             return;
           }
@@ -169,6 +194,7 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
         setAppearancePreview(null);
         setSession(null);
         setMe(null);
+        hydratedAccessTokenRef.current = null;
         return;
       }
 
@@ -211,7 +237,13 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
         if (!active) {
           return;
         }
-        const nextSession = data.session ? { access_token: data.session.access_token } : null;
+        const nextSession = data.session
+          ? {
+              access_token: data.session.access_token,
+              email: data.session.user.email ?? null,
+              user_id: data.session.user.id ?? null,
+            }
+          : null;
         handledAccessTokenRef.current = nextSession?.access_token ?? null;
         setSession(nextSession);
         void loadMe(nextSession);
@@ -231,6 +263,7 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
         setAppearancePreview(null);
         setSession(null);
         setMe(null);
+        hydratedAccessTokenRef.current = null;
         setIsMeHydrated(true);
         setIsReady(true);
       });
@@ -239,7 +272,13 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
       if (!active) {
         return;
       }
-      const mappedSession = nextSession ? { access_token: nextSession.access_token } : null;
+      const mappedSession = nextSession
+        ? {
+            access_token: nextSession.access_token,
+            email: nextSession.user.email ?? null,
+            user_id: nextSession.user.id ?? null,
+          }
+        : null;
       const nextToken = mappedSession?.access_token ?? null;
       if (handledAccessTokenRef.current === nextToken) {
         return;
@@ -271,6 +310,7 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
 
   function replaceMe(nextMe: MeResponse | null) {
     setMe(nextMe);
+    hydratedAccessTokenRef.current = nextMe && session?.access_token ? session.access_token : null;
     setIsMeHydrated(true);
   }
 
@@ -281,6 +321,7 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
       // Ignore missing client during sign-out cleanup.
     }
     handledAccessTokenRef.current = null;
+    hydratedAccessTokenRef.current = null;
     clearRetryTimer();
     setHasTransientMeError(false);
     setAppearancePreview(null);
