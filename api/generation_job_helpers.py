@@ -538,6 +538,7 @@ def _admin_generation_job_diagnostic(job: dict[str, Any], *, stale_after_seconds
         stage2_status=stage2_status,
         requires_admin_resume=requires_admin_resume,
         is_stale=is_stale,
+        profile_unavailable=bool(job.get("profile_enrichment_failed")),
         warnings=_job_warnings_from_milestones(job.get("progress_milestones")),
         request_payload_summary=_request_payload_summary(job.get("request_payload")),
     )

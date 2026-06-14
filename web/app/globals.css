@@ -1346,6 +1346,41 @@ select:focus-visible {
   color: var(--text-secondary);
 }
 
+.admin-profile-warning-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 12px 14px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 184, 77, 0.34);
+  background: rgba(255, 184, 77, 0.1);
+  color: var(--text-primary);
+  line-height: 1.45;
+}
+
+.admin-profile-warning-copy {
+  display: grid;
+  gap: 2px;
+}
+
+.admin-profile-warning-copy span {
+  color: var(--text-secondary);
+}
+
+.admin-profile-warning-request {
+  font-size: 0.85em;
+}
+
+.admin-profile-unavailable-note {
+  margin: 2px 0 0;
+  font-size: 0.8em;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: rgba(255, 184, 77, 0.92);
+}
+
 .admin-job-meta,
 .admin-job-summary {
   display: grid;

@@ -837,6 +837,20 @@ def create_app(
             for row in store.list_admin_plans(limit=limit, offset=offset, q=q)
         ]
 
+    @app.get("/api/admin/plans/review", response_model=list[AdminPlanSummary])
+    def list_admin_review_plans(
+        _: ProfileRecord = Depends(require_admin),
+        limit: int = Query(100, ge=1, le=200),
+        store: AppStore = Depends(get_store),
+    ) -> list[AdminPlanSummary]:
+        # Held/blocked plans awaiting an admin decision. Kept separate from the
+        # general plan history so a paused plan stays visible even when profile
+        # enrichment is degraded.
+        return [
+            _map_admin_plan_summary(row)
+            for row in store.list_admin_review_plans(limit=limit)
+        ]
+
     @app.get("/api/admin/generation-jobs/triage", response_model=list[AdminGenerationJobDiagnostic])
     def list_admin_triage_generation_jobs(
         _: ProfileRecord = Depends(require_admin),

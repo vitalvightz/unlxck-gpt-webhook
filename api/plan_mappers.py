@@ -379,6 +379,7 @@ def _map_admin_plan_summary(row: dict[str, Any]) -> AdminPlanSummary:
     return AdminPlanSummary(
         **summary.model_dump(mode="json"),
         athlete_email=str(profile.get("email") or ""),
+        profile_unavailable=bool(row.get("profile_enrichment_failed")),
     )
 
 

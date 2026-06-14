@@ -776,6 +776,15 @@ export function listAdminPlans(
   );
 }
 
+export function listAdminReviewPlans(
+  token: string,
+  limit = 100,
+): Promise<AdminPlanSummary[]> {
+  return withTransientRetries(() =>
+    readJson<AdminPlanSummary[]>(`/api/admin/plans/review?limit=${limit}`, { token }),
+  );
+}
+
 export function submitManualStage2(
   token: string,
   planId: string,

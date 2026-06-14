@@ -11,6 +11,7 @@ import {
   listAdminActiveGenerationJobs,
   listAdminAthletes,
   listAdminPlans,
+  listAdminReviewPlans,
   listAdminReviews,
   listAdminTriageGenerationJobs,
   resolveAdminReview,
@@ -20,6 +21,14 @@ import {
   PROFILE_REFRESH_FAILED_BANNER_TITLE,
   hasProfileRefreshFailedWarning,
 } from "@/lib/profile-refresh-warning";
+import {
+  PROFILE_SERVICE_WARNING_BODY,
+  PROFILE_SERVICE_WARNING_TITLE,
+  PROFILE_UNAVAILABLE_ROW_LABEL,
+  isProfileServiceUnavailableMessage,
+  nonProfileSectionError,
+  summarizeProfileWarning,
+} from "@/lib/admin-profile-warning";
 import type {
   AdminAthleteRecord,
   AdminGenerationJobDiagnostic,
@@ -102,6 +111,13 @@ function countActiveJobStates(jobs: AdminGenerationJobDiagnostic[]) {
   );
 }
 
+function ProfileUnavailableNote({ unavailable }: { unavailable?: boolean }) {
+  if (!unavailable) {
+    return null;
+  }
+  return <p className="muted admin-profile-unavailable-note">{PROFILE_UNAVAILABLE_ROW_LABEL}</p>;
+}
+
 function ProfileRefreshWarningBanner({ job }: { job: AdminGenerationJobDiagnostic }) {
   if (!hasProfileRefreshFailedWarning(job)) {
     return null;
@@ -125,6 +141,8 @@ export default function AdminPage() {
   const [plans, setPlans] = useState<AdminPlanSummary[]>([]);
   const [activeJobs, setActiveJobs] = useState<AdminGenerationJobDiagnostic[]>([]);
   const [triageJobs, setTriageJobs] = useState<AdminGenerationJobDiagnostic[]>([]);
+  const [reviewPlans, setReviewPlans] = useState<AdminPlanSummary[]>([]);
+  const [reviewPlansWarning, setReviewPlansWarning] = useState<string | null>(null);
   const [attentionReviews, setAttentionReviews] = useState<AdminReviewRecord[]>([]);
   const [attentionWarning, setAttentionWarning] = useState<string | null>(null);
   const [resolvingReviewId, setResolvingReviewId] = useState<string | null>(null);
@@ -289,9 +307,10 @@ export default function AdminPage() {
       Promise.allSettled([
         listAdminActiveGenerationJobs(token),
         listAdminTriageGenerationJobs(token),
+        listAdminReviewPlans(token),
         listAdminReviews(token, "pending"),
       ])
-        .then(([activeResult, triageResult, reviewsResult]) => {
+        .then(([activeResult, triageResult, reviewPlansResult, reviewsResult]) => {
           if (!active) return;
 
           if (activeResult.status === "fulfilled") {
@@ -310,6 +329,14 @@ export default function AdminPage() {
           } else {
             if (isInitial) setTriageJobs([]);
             setTriageWarning(getErrorMessage(triageResult.reason, "Unable to load suspended triage jobs."));
+          }
+
+          if (reviewPlansResult.status === "fulfilled") {
+            setReviewPlans(reviewPlansResult.value);
+            setReviewPlansWarning(null);
+          } else {
+            if (isInitial) setReviewPlans([]);
+            setReviewPlansWarning(getErrorMessage(reviewPlansResult.reason, "Unable to load held/review plans."));
           }
 
           if (reviewsResult.status === "fulfilled") {
@@ -388,6 +415,30 @@ export default function AdminPage() {
     }
   }
 
+  // Collapse every profile-service signal across the dashboard into a single
+  // compact banner instead of repeating a giant error block per section. The
+  // queues themselves stay rendered with whatever athlete detail is available.
+  const rowsDegraded =
+    activeJobs.some((job) => job.profile_unavailable) ||
+    triageJobs.some((job) => job.profile_unavailable) ||
+    reviewPlans.some((plan) => plan.profile_unavailable);
+  const profileWarning = summarizeProfileWarning({
+    sectionErrors: [error, activeWarning, triageWarning, reviewPlansWarning, attentionWarning],
+    rowsDegraded,
+  });
+
+  // Hide profile-service errors from per-section blocks (the compact banner
+  // covers them) while still surfacing genuine, unrelated queue failures.
+  const directoryDisplayError = nonProfileSectionError(error);
+  const activeDisplayWarning = nonProfileSectionError(activeWarning);
+  const triageDisplayWarning = nonProfileSectionError(triageWarning);
+  const reviewPlansDisplayWarning = nonProfileSectionError(reviewPlansWarning);
+  const attentionDisplayWarning = nonProfileSectionError(attentionWarning);
+  const activeProfileError = isProfileServiceUnavailableMessage(activeWarning);
+  const triageProfileError = isProfileServiceUnavailableMessage(triageWarning);
+  const reviewPlansProfileError = isProfileServiceUnavailableMessage(reviewPlansWarning);
+  const attentionProfileError = isProfileServiceUnavailableMessage(attentionWarning);
+
   return (
     <RequireAuth adminOnly>
       <section className="panel admin-dashboard-panel">
@@ -425,9 +476,31 @@ export default function AdminPage() {
           </div>
         </div>
 
-        {error ? (
+        {profileWarning.show ? (
+          <div className="warning-banner admin-profile-warning-banner" role="status">
+            <div className="admin-profile-warning-copy">
+              <strong>{PROFILE_SERVICE_WARNING_TITLE}</strong>
+              <span>{PROFILE_SERVICE_WARNING_BODY}</span>
+              {profileWarning.requestId ? (
+                <span className="muted admin-profile-warning-request">
+                  Latest request id: {profileWarning.requestId}
+                </span>
+              ) : null}
+            </div>
+            <button
+              type="button"
+              className="ghost-button"
+              onClick={handleRetry}
+              disabled={isLoading}
+            >
+              {isLoading ? "Retrying..." : "Retry"}
+            </button>
+          </div>
+        ) : null}
+
+        {directoryDisplayError ? (
           <div className="error-banner" role="alert">
-            <span>{error}</span>
+            <span>{directoryDisplayError}</span>
             <button
               type="button"
               className="ghost-button"
@@ -490,10 +563,14 @@ export default function AdminPage() {
             <div className="support-panel">
               <p className="muted">Loading active generation jobs...</p>
             </div>
-          ) : activeWarning ? (
+          ) : activeDisplayWarning ? (
             <div className="support-panel">
-              <p className="error-text">{activeWarning}</p>
+              <p className="error-text">{activeDisplayWarning}</p>
               <p className="muted">Triage, athlete, and plan history can still be reviewed while this feed retries.</p>
+            </div>
+          ) : activeProfileError && activeJobs.length === 0 ? (
+            <div className="support-panel">
+              <p className="muted">Live generation details are limited while the profile service recovers. See the notice above.</p>
             </div>
           ) : activeJobs.length === 0 ? (
             <div className="support-panel support-panel-success">
@@ -516,6 +593,7 @@ export default function AdminPage() {
                     <div>
                       <h3 className="plan-card-title">{getJobDisplayName(job)}</h3>
                       <p className="muted">{job.athlete_email || job.athlete_id || "No athlete email"}</p>
+                      <ProfileUnavailableNote unavailable={job.profile_unavailable} />
                     </div>
                     <span className="badge">{getJobStatusLabel(job)}</span>
                   </div>
@@ -566,10 +644,14 @@ export default function AdminPage() {
             <div className="support-panel">
               <p className="muted">Loading protected triage jobs...</p>
             </div>
-          ) : triageWarning ? (
+          ) : triageDisplayWarning ? (
             <div className="support-panel">
-              <p className="error-text">{triageWarning}</p>
+              <p className="error-text">{triageDisplayWarning}</p>
               <p className="muted">Athlete accounts and plan history can still be reviewed while the queue retries.</p>
+            </div>
+          ) : triageProfileError && triageJobs.length === 0 ? (
+            <div className="support-panel">
+              <p className="muted">Triage details are limited while the profile service recovers. See the notice above.</p>
             </div>
           ) : triageJobs.length === 0 ? (
             <div className="support-panel support-panel-success">
@@ -585,6 +667,7 @@ export default function AdminPage() {
                     <div>
                       <h3 className="plan-card-title">{getJobDisplayName(job)}</h3>
                       <p className="muted">{job.athlete_email || job.athlete_id || "No athlete email"}</p>
+                      <ProfileUnavailableNote unavailable={job.profile_unavailable} />
                     </div>
                     <span className="badge">Needs resume</span>
                   </div>
@@ -623,6 +706,68 @@ export default function AdminPage() {
           )}
         </article>
 
+        <article className="list-card admin-review-plans-panel">
+          <div className="form-section-header">
+            <div>
+              <p className="kicker">Held &amp; review plans</p>
+              <h2>Plans awaiting an admin decision</h2>
+            </div>
+            <span className="badge">{isJobsLoading ? "Checking" : `${reviewPlans.length} held`}</span>
+          </div>
+
+          {isJobsLoading ? (
+            <div className="support-panel">
+              <p className="muted">Loading held and review plans...</p>
+            </div>
+          ) : reviewPlansDisplayWarning ? (
+            <div className="support-panel">
+              <p className="error-text">{reviewPlansDisplayWarning}</p>
+              <p className="muted">Live jobs, triage, and athlete records can still be reviewed while this queue retries.</p>
+            </div>
+          ) : reviewPlansProfileError && reviewPlans.length === 0 ? (
+            <div className="support-panel">
+              <p className="muted">Held plan details are limited while the profile service recovers. See the notice above.</p>
+            </div>
+          ) : reviewPlans.length === 0 ? (
+            <div className="support-panel support-panel-success">
+              <p className="kicker">Clear</p>
+              <h3 className="form-section-title">No plans are held for review.</h3>
+              <p className="muted">Held, blocked, and review-required plans appear here so they stay visible even when athlete details are unavailable.</p>
+            </div>
+          ) : (
+            <div className="plans-grid admin-queue-grid">
+              {reviewPlans.map((plan) => (
+                <article key={plan.plan_id} className="plan-card admin-triage-card">
+                  <div className="plan-card-header">
+                    <div>
+                      <Link href={`/plans/${plan.plan_id}`}>
+                        <h3 className="plan-card-title">{getPlanDisplayName(plan)}</h3>
+                      </Link>
+                      <p className="muted">{plan.athlete_email || plan.athlete_id || "No athlete email"}</p>
+                      <ProfileUnavailableNote unavailable={plan.profile_unavailable} />
+                    </div>
+                    <span className="badge">{plan.status}</span>
+                  </div>
+                  <div className="admin-job-meta">
+                    <span>Created {formatDateTime(plan.created_at)}</span>
+                    <span>Plan {plan.plan_id}</span>
+                  </div>
+                  <div className="plan-card-actions">
+                    {plan.athlete_id ? (
+                      <Link href={`/admin/athletes/${plan.athlete_id}`} className="ghost-button">
+                        Open athlete
+                      </Link>
+                    ) : null}
+                    <Link href={`/plans/${plan.plan_id}`} className="cta">
+                      Review plan
+                    </Link>
+                  </div>
+                </article>
+              ))}
+            </div>
+          )}
+        </article>
+
         <article className="list-card admin-attention-panel">
           <div className="form-section-header">
             <div>
@@ -636,9 +781,13 @@ export default function AdminPage() {
             <div className="support-panel">
               <p className="muted">Loading the attention queue...</p>
             </div>
-          ) : attentionWarning ? (
+          ) : attentionDisplayWarning ? (
             <div className="support-panel">
-              <p className="error-text">{attentionWarning}</p>
+              <p className="error-text">{attentionDisplayWarning}</p>
+            </div>
+          ) : attentionProfileError && attentionReviews.length === 0 ? (
+            <div className="support-panel">
+              <p className="muted">Attention queue details are limited while the profile service recovers. See the notice above.</p>
             </div>
           ) : attentionReviews.length === 0 ? (
             <div className="support-panel support-panel-success">

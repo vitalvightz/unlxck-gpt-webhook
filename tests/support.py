@@ -85,6 +85,9 @@ class FakeStore:
         self.admin_reviews: list[dict] = []
         self.get_admin_athlete_calls = 0
         self.list_admin_athletes_by_ids_calls = 0
+        # When True, admin-queue profile enrichment degrades to id-only rows
+        # tagged with ``profile_enrichment_failed`` (mirrors a profiles outage).
+        self.fail_profile_enrichment = False
         self.admin_emails: set[str] = {
             email.strip().lower() for email in (admin_emails or set()) if email
         }
@@ -705,6 +708,26 @@ class FakeStore:
         rows.sort(key=lambda row: str(row.get("created_at") or ""), reverse=True)
         return rows[:limit]
 
+    def _attach_profile_contacts(self, rows: list[dict], *, id_key: str = "athlete_id") -> list[dict]:
+        """Mirror AppStore._attach_profile_contacts for admin-queue enrichment.
+
+        Honours ``fail_profile_enrichment`` so tests can exercise the degraded
+        path where the queue still renders with id-only rows.
+        """
+        for row in rows:
+            existing = row.get("profiles")
+            if isinstance(existing, dict) and (existing.get("email") or existing.get("full_name")):
+                continue
+            if self.fail_profile_enrichment:
+                row["profile_enrichment_failed"] = True
+                continue
+            profile = self.profiles.get(str(row.get(id_key) or ""), {})
+            row["profiles"] = {
+                "email": profile.get("email", ""),
+                "full_name": profile.get("full_name", ""),
+            }
+        return rows
+
     def list_admin_triage_generation_jobs(self, *, limit: int = 50) -> list[dict]:
         protected_statuses = {"triage_blocked", "needs_review", "restricted_rehab_only", "medical_hold"}
         rows = []
@@ -718,16 +741,9 @@ class FakeStore:
                 continue
             if stage2_status == "triage_resume_approved":
                 continue
-            profile = self.profiles.get(str(job.get("athlete_id") or ""), {})
-            rows.append({
-                **dict(job),
-                "profiles": {
-                    "email": profile.get("email", ""),
-                    "full_name": profile.get("full_name", ""),
-                },
-            })
+            rows.append(dict(job))
         rows.sort(key=lambda row: str(row.get("created_at") or ""), reverse=True)
-        return rows[:limit]
+        return self._attach_profile_contacts(rows[:limit])
 
     def list_admin_active_generation_jobs(self, *, limit: int = 50) -> list[dict]:
         rows = []
@@ -735,16 +751,9 @@ class FakeStore:
             status_value = str(job.get("status") or "").strip().lower()
             if status_value not in {"queued", "running"}:
                 continue
-            profile = self.profiles.get(str(job.get("athlete_id") or ""), {})
-            rows.append({
-                **dict(job),
-                "profiles": {
-                    "email": profile.get("email", ""),
-                    "full_name": profile.get("full_name", ""),
-                },
-            })
+            rows.append(dict(job))
         rows.sort(key=lambda row: str(row.get("created_at") or ""), reverse=True)
-        return rows[:limit]
+        return self._attach_profile_contacts(rows[:limit])
 
     def list_orphaned_terminal_generation_jobs(self, *, limit: int = 500) -> list[dict]:
         rows: list[dict] = []
@@ -1089,13 +1098,28 @@ class FakeStore:
         return row
 
     def list_admin_plans(self, *, limit: int = 50, offset: int = 0, q: str | None = None) -> list[dict]:
-        rows = []
-        for plan in self.plans.values():
-            profile = self.profiles[plan["athlete_id"]]
-            rows.append({**plan, "profiles": {"email": profile["email"], "full_name": profile["full_name"]}})
+        rows = [dict(plan) for plan in self.plans.values()]
         rows.sort(key=lambda row: row["created_at"], reverse=True)
         rows = _filter_admin_rows(rows, q, ("plan_name", "full_name", "status"))
-        return rows[offset:offset + limit]
+        return self._attach_profile_contacts(rows[offset:offset + limit])
+
+    def list_admin_review_plans(self, *, limit: int = 100) -> list[dict]:
+        review_statuses = {
+            "review_required",
+            "held_for_review",
+            "needs_review",
+            "triage_blocked",
+            "medical_hold",
+            "restricted_rehab_only",
+            "publishable_with_flags",
+        }
+        rows = [
+            dict(plan)
+            for plan in self.plans.values()
+            if str(plan.get("status") or "").strip().lower() in review_statuses
+        ]
+        rows.sort(key=lambda row: row["created_at"], reverse=True)
+        return self._attach_profile_contacts(rows[:limit])
 
     def list_admin_athletes(self, *, limit: int = 50, offset: int = 0, q: str | None = None) -> list[dict]:
         rows = []
