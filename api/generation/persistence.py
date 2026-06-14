@@ -18,6 +18,7 @@ from fightcamp.plan_contract_validator import contract_report_requires_review, v
 from ..models import PlanRequest
 from ..state_machine import job_status_for_plan_status
 from ..store import AppStore
+from ..structured_plan_generation import has_clean_structured_card
 from .errors import TriageResumeMissingPlanError
 from .time_utils import utc_now_iso
 from .triage import _compact_generation_job_final_result
@@ -34,6 +35,48 @@ _POST_PERSIST_CLEANUP_TIMEOUT_SECONDS = 8.0
 # already-non-visible status is recorded without changing the status.
 _CONTRACT_VISIBLE_PLAN_STATUSES = {"ready", "publishable_with_flags"}
 _CONTRACT_REVIEW_PLAN_STATUS = "review_required"
+
+# Contract findings a clean structured card CAN vouch for: markdown
+# render/extraction misses where a schema-valid card already proves the plan is
+# well-formed. This is an explicit allowlist — anything not listed here
+# (notably ``plan_text_empty``, which is unrecoverable output integrity, plus
+# any future/unknown contract code) routes to review by default.
+_CONTRACT_CARD_RESCUABLE_ERROR_CODES = {
+    "weekly_schedule_blank",
+    "calendar_unrenderable",
+    "fight_day_missing",
+    "late_fight_session_sequence_empty",
+}
+
+
+def _contract_report_is_card_rescuable(report: Any) -> bool:
+    """Whether every error-level contract finding is a known render/extraction miss.
+
+    Defensive and allowlisted: returns True only when ``report`` is a dict with a
+    well-formed ``violations`` list, there is at least one error-level finding,
+    and every error-level code is in :data:`_CONTRACT_CARD_RESCUABLE_ERROR_CODES`.
+    A malformed report, an unknown code, or an unrescuable code (e.g.
+    ``plan_text_empty``) all return False so the plan routes to review.
+    """
+
+    if not isinstance(report, dict):
+        return False
+    violations = report.get("violations")
+    if not isinstance(violations, list):
+        return False
+    error_codes: list[str] = []
+    for violation in violations:
+        if not isinstance(violation, dict):
+            return False
+        if violation.get("severity") != "error":
+            continue
+        code = violation.get("code")
+        if not isinstance(code, str) or not code.strip():
+            return False
+        error_codes.append(code.strip())
+    if not error_codes:
+        return False
+    return all(code in _CONTRACT_CARD_RESCUABLE_ERROR_CODES for code in error_codes)
 
 
 def _record_stage2_cost_if_available(
@@ -105,6 +148,28 @@ def _apply_plan_contract_validation(
                 job_id,
                 current_status or "unknown",
                 error_codes,
+            )
+            return final_result
+
+        # Structured-card rescue: a plan that produced a schema-valid card is
+        # trusted. The card is the athlete-facing artifact, so render/extraction
+        # contract findings (blank calendar, missing D-0, empty sequence) are
+        # treated as false positives and the plan keeps its visible status. Only
+        # an unrecoverable empty body still forces review.
+        if has_clean_structured_card(final_result) and _contract_report_is_card_rescuable(report):
+            logger.info(
+                "[jobs] generation:plan_contract_rescued_by_structured_card athlete_id=%s job_id=%s status=%s codes=%s",
+                athlete_id,
+                job_id,
+                current_status,
+                error_codes,
+            )
+            emit_milestone(
+                "plan_contract_structured_card_rescue",
+                "Plan kept publishable",
+                "Post-generation contract checks flagged the rendered calendar, but the plan "
+                "has a schema-valid structured card; trusting the card instead of routing to review.",
+                violation_codes=error_codes,
             )
             return final_result
 

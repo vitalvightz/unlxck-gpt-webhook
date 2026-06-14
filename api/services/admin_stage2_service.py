@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import os
 from typing import Any
 
 from fastapi import HTTPException, status
@@ -14,6 +15,24 @@ from ..stage2_automation import Stage2Automator, attempt_structured_plan_for_res
 from ..store import AppStore
 
 logger = logging.getLogger(__name__)
+
+# How long the approval request will wait for the inline structured-card attempt
+# before giving up and shipping the raw-markdown plan (the background task then
+# finishes the card). Kept comfortably under the frontend/proxy request timeout
+# so a slow conversion never surfaces as a false "Connection issue". Tunable via
+# env for ops.
+_APPROVAL_STRUCTURED_PLAN_BUDGET_SECONDS = 20.0
+
+
+def _approval_structured_budget_seconds() -> float:
+    raw = os.getenv("UNLXCK_APPROVAL_STRUCTURED_PLAN_BUDGET_SECONDS", "")
+    try:
+        value = float(raw)
+    except (TypeError, ValueError):
+        return _APPROVAL_STRUCTURED_PLAN_BUDGET_SECONDS
+    # Only a finite, positive budget is usable: inf would make wait_for() block
+    # forever and nan compares False, so both fall back to the default.
+    return value if 0 < value < float("inf") else _APPROVAL_STRUCTURED_PLAN_BUDGET_SECONDS
 
 
 async def _attach_structured_plan(
@@ -41,6 +60,44 @@ async def _attach_structured_plan(
         source="admin_stage2",
     )
     return result
+
+
+async def _attach_structured_plan_within_budget(
+    result: dict[str, Any],
+    plan_row: dict[str, Any],
+    *,
+    stage2: Stage2Automator | None,
+) -> dict[str, Any]:
+    """Attempt the structured card inline, but never let it stall the approval.
+
+    Tries the conversion within a bounded time budget so the admin gets the live
+    card with the approval response whenever it is fast enough. On timeout (or
+    any failure) the raw-markdown ``result`` is returned unchanged and the
+    deferred :func:`run_structured_plan_post_processing` background task finishes
+    the card out-of-band. This is the "card first, fall back to text" contract.
+    """
+
+    if stage2 is None:
+        return result
+    budget = _approval_structured_budget_seconds()
+    try:
+        return await asyncio.wait_for(
+            _attach_structured_plan(result, plan_row, stage2=stage2),
+            timeout=budget,
+        )
+    except asyncio.TimeoutError:
+        logger.warning(
+            "inline structured-plan attempt exceeded %.1fs budget for plan_id=%s; deferring to background",
+            budget,
+            plan_row.get("id"),
+        )
+        return result
+    except Exception:  # noqa: BLE001 - approval must never fail on the inline attempt
+        logger.exception(
+            "inline structured-plan attempt failed for plan_id=%s; deferring to background",
+            plan_row.get("id"),
+        )
+        return result
 
 
 def _manual_stage2_result(plan_row: dict[str, Any], final_plan_text: str) -> dict[str, Any]:
@@ -134,14 +191,16 @@ async def approve_review_required_plan(
 ) -> PlanDetail:
     """Release a held/review-required plan to the athlete view.
 
-    This is intentionally a fast, DB-only action: it builds the approved result,
-    persists it, and returns the mapped :class:`PlanDetail`. Structured-plan
-    conversion can call the model and is therefore slow enough to blow past the
-    frontend/proxy request timeout, which surfaced as a false "Connection issue"
-    even though the plan was eventually approved. The approved plan ships with
-    ``plan_text`` populated, so the athlete view falls back to raw markdown until
-    a structured plan is produced out-of-band by
-    :func:`run_structured_plan_post_processing`.
+    The approved plan is the structured card whenever one can be built in time:
+    the conversion is attempted inline within a bounded budget
+    (:func:`_attach_structured_plan_within_budget`) so the live card ships with
+    the approval response in the common case. If the conversion is too slow or
+    fails, the plan still releases immediately with ``plan_text`` populated (the
+    athlete view falls back to raw markdown) and the deferred
+    :func:`run_structured_plan_post_processing` background task finishes the card
+    out-of-band. The bounded budget keeps the admin click well under the
+    frontend/proxy request timeout that previously surfaced as a false
+    "Connection issue".
     """
 
     plan_row = store.get_plan(plan_id)
@@ -149,6 +208,7 @@ async def approve_review_required_plan(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
 
     result = _admin_approved_result(plan_row)
+    result = await _attach_structured_plan_within_budget(result, plan_row, stage2=stage2)
     updated = store.update_plan_stage2(plan_id, result)
     return _map_plan_detail(
         updated,
@@ -165,11 +225,13 @@ async def run_structured_plan_post_processing(
 ) -> None:
     """Best-effort, non-blocking structured-plan conversion for an approved plan.
 
-    Designed to run after the approval response has been returned (e.g. as a
-    FastAPI background task) so the admin click stays near-instant. Re-reads the
-    freshly approved row, attempts the structured conversion through the
-    canonical trigger, and persists ``structured_plan`` only when one is actually
-    produced. Never raises: any failure leaves the raw markdown fallback intact.
+    The fallback for approval's inline attempt: it runs after the response has
+    been returned (e.g. as a FastAPI background task) and finishes the card for
+    any plan whose inline conversion timed out or failed. Re-reads the freshly
+    approved row, attempts the structured conversion through the canonical
+    trigger (which short-circuits when the row already carries a card), and
+    persists ``structured_plan`` only when one is actually produced. Never
+    raises: any failure leaves the raw markdown fallback intact.
 
     The model conversion can take seconds, during which a concurrent admin action
     (reject, archive, rename, manual Stage 2 edit) may rewrite the plan's status /
@@ -197,6 +259,10 @@ async def run_structured_plan_post_processing(
             "stage2_validator_report": plan_row.get("stage2_validator_report") or {},
             "stage2_status": str(plan_row.get("stage2_status") or ""),
             "stage2_attempt_count": int(plan_row.get("stage2_attempt_count") or 0),
+            # Carry any card the inline approval attempt already produced so the
+            # canonical trigger is idempotent: a plan that is already converted
+            # short-circuits here instead of paying for a redundant model call.
+            "structured_plan": plan_row.get("structured_plan"),
         }
         result = await _attach_structured_plan(result, plan_row, stage2=stage2)
         # Only write when a structured plan was actually produced; a skip/failure
