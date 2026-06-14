@@ -6,11 +6,22 @@ import {
   canRetryResumeGenerationForPlan,
   getAdminReviewHeading,
   hasBlockedTriageStubText,
+  isPlanReleasedToAthlete,
   isProtectedTriageResumePendingState,
   readInjuryTriage,
   readRawTriageMode,
+  resolveApprovalAfterError,
   shouldShowProtectedResumeAdminReview,
 } from "./plan-viewer";
+import { ApiError, RETRYABLE_NETWORK_MESSAGE } from "@/lib/api";
+import type { PlanDetail } from "@/lib/types";
+
+function makePlan(overrides: { status?: string; planText?: string }): PlanDetail {
+  return {
+    status: overrides.status ?? "ready",
+    outputs: { plan_text: overrides.planText ?? "# Plan body" },
+  } as unknown as PlanDetail;
+}
 
 test("triage_resume_approved with empty validator report and restricted rehab stub is not publishable", () => {
   const hasStub = hasBlockedTriageStubText(
@@ -127,6 +138,88 @@ test("needs_review and restricted_rehab_only allow retry resume", () => {
     }),
     true,
   );
+});
+
+test("isPlanReleasedToAthlete requires an athlete-visible status with plan text", () => {
+  assert.equal(isPlanReleasedToAthlete(makePlan({ status: "ready", planText: "# Plan" })), true);
+  assert.equal(
+    isPlanReleasedToAthlete(makePlan({ status: "publishable_with_flags", planText: "x" })),
+    true,
+  );
+  // Ready but empty plan text is not yet releasable.
+  assert.equal(isPlanReleasedToAthlete(makePlan({ status: "ready", planText: "   " })), false);
+  // Non-athlete-visible status is never released, even with plan text.
+  assert.equal(
+    isPlanReleasedToAthlete(makePlan({ status: "review_required", planText: "# Plan" })),
+    false,
+  );
+});
+
+test("resolveApprovalAfterError treats a retryable timeout as approved when getPlan reads ready", async () => {
+  const readyPlan = makePlan({ status: "ready", planText: "# Released" });
+  let calls = 0;
+  const recovered = await resolveApprovalAfterError({
+    error: new Error(RETRYABLE_NETWORK_MESSAGE),
+    fetchPlan: async () => {
+      calls += 1;
+      return readyPlan;
+    },
+    wait: async () => {},
+  });
+
+  assert.equal(recovered, readyPlan);
+  assert.equal(calls, 1);
+});
+
+test("resolveApprovalAfterError ignores non-retryable errors without refetching", async () => {
+  let calls = 0;
+  const recovered = await resolveApprovalAfterError({
+    error: new ApiError("bad request", 400),
+    fetchPlan: async () => {
+      calls += 1;
+      return makePlan({ status: "ready", planText: "# Released" });
+    },
+    wait: async () => {},
+  });
+
+  assert.equal(recovered, null);
+  assert.equal(calls, 0);
+});
+
+test("resolveApprovalAfterError gives up after exhausting attempts when never released", async () => {
+  let calls = 0;
+  const recovered = await resolveApprovalAfterError({
+    error: new Error(RETRYABLE_NETWORK_MESSAGE),
+    attempts: 3,
+    fetchPlan: async () => {
+      calls += 1;
+      return makePlan({ status: "review_required", planText: "" });
+    },
+    wait: async () => {},
+  });
+
+  assert.equal(recovered, null);
+  assert.equal(calls, 3);
+});
+
+test("resolveApprovalAfterError retries past a transient getPlan failure", async () => {
+  const readyPlan = makePlan({ status: "ready", planText: "# Released" });
+  let calls = 0;
+  const recovered = await resolveApprovalAfterError({
+    error: new Error(RETRYABLE_NETWORK_MESSAGE),
+    attempts: 3,
+    fetchPlan: async () => {
+      calls += 1;
+      if (calls === 1) {
+        throw new Error("temporary fetch failure");
+      }
+      return readyPlan;
+    },
+    wait: async () => {},
+  });
+
+  assert.equal(recovered, readyPlan);
+  assert.equal(calls, 2);
 });
 
 test("admin review anchor id format remains stable", () => {

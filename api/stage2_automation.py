@@ -40,7 +40,6 @@ _CARD_UNRESCUABLE_ERROR_CODES: frozenset[str] = frozenset(
         "late_fight_hard_sparring_violation",
         "dangerous_late_fight_strength_or_conditioning",
         "fight_day_protocol_violation",
-        "calendar_spine_fight_day_protocol_violation",
     }
 )
 
@@ -50,30 +49,28 @@ def _stage2_hold_is_card_rescuable(validator_report: Any) -> bool:
 
     A hold is rescuable only when it is driven entirely by non-safety,
     recoverable findings. The check is intentionally defensive about a
-    malformed report - anything it cannot positively confirm is non-rescuable,
+    malformed report — anything it cannot positively confirm is non-rescuable,
     so an odd shape never accidentally publishes a held plan. It returns True
     only when ALL of the following hold:
 
     * ``validator_report`` is a dict;
     * ``errors`` is a non-empty list;
-    * every error/blocking warning is a dict carrying a non-empty string
-      ``code``; and
+    * there are no blocking warnings;
+    * every error is a dict carrying a non-empty string ``code``; and
     * none of those codes is a safety/output-integrity (unrescuable) code.
     """
 
     if not isinstance(validator_report, dict):
         return False
     errors = validator_report.get("errors")
-    blocking_warnings = validator_report.get("blocking_warnings") or []
-    if not isinstance(errors, list) or not isinstance(blocking_warnings, list):
+    if not isinstance(errors, list) or not errors:
         return False
-    findings = [*errors, *blocking_warnings]
-    if not findings:
+    if validator_report.get("blocking_warnings"):
         return False
-    for finding in findings:
-        if not isinstance(finding, dict):
+    for error in errors:
+        if not isinstance(error, dict):
             return False
-        code = finding.get("code")
+        code = error.get("code")
         if not isinstance(code, str) or not code.strip():
             return False
         if code.strip() in _CARD_UNRESCUABLE_ERROR_CODES:
@@ -697,7 +694,7 @@ class OpenAIStage2Automator:
         # A soft hold (non-safety findings only) is tentatively published so the
         # structured-card attempt below can run and vouch for it. If no clean
         # card materialises, it is reverted to a hold further down. Only gated
-        # when structured plans are enabled - otherwise no card can ever rescue
+        # when structured plans are enabled — otherwise no card can ever rescue
         # it and the tentative publish would just flap back to a hold.
         rescue_pending = False
         if first_review["status"] == "PASS":
@@ -725,6 +722,22 @@ class OpenAIStage2Automator:
                 attempt_count=1,
                 stage2_status=_STAGE2_PASS,
                 app_status=_APP_STATUS_READY,
+                stage2_cost=first_pass_cost,
+            )
+        elif _structured_plan_enabled() and _stage2_hold_is_card_rescuable(
+            first_review["validator_report"]
+        ):
+            logger.info(
+                "[stage2] soft hold eligible for structured-card rescue; attempting card before holding"
+            )
+            result = _approved_result(
+                stage1_result,
+                draft_plan_text=draft_plan_text,
+                final_plan_text=first_pass_text,
+                validator_report=first_review["validator_report"],
+                attempt_count=1,
+                stage2_status=_STAGE2_PASS,
+                app_status=_APP_STATUS_PUBLISHABLE_WITH_FLAGS,
                 stage2_cost=first_pass_cost,
             )
             rescue_pending = True
@@ -759,9 +772,6 @@ class OpenAIStage2Automator:
             logger.warning(
                 "[stage2] structured-card rescue failed (no clean card); holding for review"
             )
-            structured_debug = (result.get("stage2_validator_report") or {}).get(
-                "structured_plan"
-            )
             result = _review_required_result(
                 stage1_result,
                 draft_plan_text=draft_plan_text,
@@ -771,10 +781,6 @@ class OpenAIStage2Automator:
                 attempt_count=1,
                 stage2_cost=first_pass_cost,
             )
-            if structured_debug is not None:
-                report = result.get("stage2_validator_report")
-                if isinstance(report, dict):
-                    report["structured_plan"] = structured_debug
 
         # Roll the structured calls' tokens into the persisted cost row so it
         # reflects total Stage 2 spend, not just the plan-text pass.

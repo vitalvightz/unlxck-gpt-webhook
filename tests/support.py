@@ -1090,6 +1090,25 @@ class FakeStore:
                 row[optional_field] = result.get(optional_field)
         return row
 
+    def update_plan_structured_output(
+        self,
+        plan_id: str,
+        *,
+        structured_plan,
+        schema_version,
+        stage2_validator_report: dict,
+    ) -> dict:
+        row = self.plans.get(plan_id)
+        if not row:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
+        # Narrow write: only the structured-plan output fields. Status / plan_text
+        # / stage2 fields are intentionally left untouched so a concurrent admin
+        # action cannot be clobbered by a slow background conversion.
+        row["structured_plan"] = structured_plan
+        row["schema_version"] = schema_version
+        row["stage2_validator_report"] = stage2_validator_report or {}
+        return row
+
     def update_plan_triage_approval(self, plan_id: str, *, why_log: dict, stage2_status: str) -> dict:
         row = self.plans.get(plan_id)
         if not row:

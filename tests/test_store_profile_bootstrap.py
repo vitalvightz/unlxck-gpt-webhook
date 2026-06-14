@@ -490,6 +490,17 @@ def test_validate_runtime_schema_raises_when_required_plan_columns_missing_by_de
     assert str(exc_info.value) == store_module.PLAN_RUNTIME_SCHEMA_ERROR_DETAIL
 
 
+def test_validate_runtime_schema_maps_plan_check_timeout_to_startup_runtime_error():
+    store = _make_store()
+    (
+        store.client.table.return_value.select.return_value.limit.return_value.execute.side_effect
+    ) = httpx.ReadTimeout("The read operation timed out")
+
+    with pytest.raises(RuntimeError) as exc_info:
+        store.validate_runtime_schema()
+
+    assert str(exc_info.value) == "store service temporarily unavailable"
+    store.client.rpc.assert_not_called()
 
 
 def test_validate_runtime_schema_passes_when_generation_job_active_lock_is_valid():

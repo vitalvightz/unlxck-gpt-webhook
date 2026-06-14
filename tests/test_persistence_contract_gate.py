@@ -76,7 +76,7 @@ def _clean_card_fields():
 
 def test_visible_plan_with_blank_week_is_rescued_by_clean_card():
     # A render/extraction contract finding (blank week) is overridden when the
-    # plan carries a schema-valid structured card - trust the card.
+    # plan carries a schema-valid structured card — trust the card.
     emit, events = _emit_collector()
     result = _apply_plan_contract_validation(
         _result("ready", [{"phase": "camp"}], **_clean_card_fields()),

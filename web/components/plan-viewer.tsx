@@ -12,6 +12,7 @@ import {
   archivePlan,
   deletePlan,
   getPlan,
+  isRetryableApiFailure,
   permanentlyDeletePlan,
   rejectApprovedPlan,
   renamePlan,
@@ -25,6 +26,7 @@ import { WhyTooltip } from "@/components/why-tooltip";
 import { useGenerationController } from "@/lib/generation-controller";
 import { canUseAdminPlanControls, isAdminRole } from "@/lib/plan-admin-controls";
 import { shouldRenderStructuredPlan } from "@/lib/structured-plan";
+import { selectInjuryRiskAdvisory } from "@/lib/sparring-advisory";
 import { explainRiskBand } from "@/lib/sparring-reason-codes";
 import {
   buildBlockedInjuryContextSummary,
@@ -36,6 +38,59 @@ import { hasTriageResumeApproval, shouldShowTriageBlockedState } from "@/lib/tri
 
 const TRIAGE_RESUME_FETCH_ATTEMPTS = 5;
 const TRIAGE_RESUME_FETCH_DELAY_MS = 800;
+const APPROVE_RECOVERY_FETCH_ATTEMPTS = 3;
+const APPROVE_RECOVERY_FETCH_DELAY_MS = 800;
+
+const ATHLETE_VISIBLE_STATUSES = new Set(["ready", "publishable_with_flags"]);
+
+/**
+ * A plan counts as released to the athlete once it lands in an athlete-visible
+ * status with non-empty plan_text. Used both to render the published state and
+ * to confirm an approval that may have completed server-side after a network
+ * timeout on the approve request.
+ */
+export function isPlanReleasedToAthlete(
+  plan: Pick<PlanDetail, "status" | "outputs">,
+): boolean {
+  const status = (plan.status || "").trim().toLowerCase();
+  return ATHLETE_VISIBLE_STATUSES.has(status) && Boolean(plan.outputs.plan_text.trim());
+}
+
+/**
+ * Recover from a flaky approve request. The backend commits the approval before
+ * any slow post-processing, so a retryable network/timeout error is frequently a
+ * false negative — the plan is already released. For those errors only, re-fetch
+ * the plan a few times and return it once it reads as released to the athlete.
+ * Returns `null` when the error is not retryable or the plan never becomes
+ * released within the recovery window, so the caller surfaces the original error.
+ */
+export async function resolveApprovalAfterError(params: {
+  error: unknown;
+  fetchPlan: () => Promise<PlanDetail>;
+  attempts?: number;
+  wait?: (attempt: number) => Promise<void>;
+}): Promise<PlanDetail | null> {
+  if (!isRetryableApiFailure(params.error)) {
+    return null;
+  }
+  const attempts = params.attempts ?? APPROVE_RECOVERY_FETCH_ATTEMPTS;
+  const wait =
+    params.wait ?? ((attempt: number) => sleep(APPROVE_RECOVERY_FETCH_DELAY_MS * (attempt + 1)));
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    try {
+      const refreshedPlan = await params.fetchPlan();
+      if (isPlanReleasedToAthlete(refreshedPlan)) {
+        return refreshedPlan;
+      }
+    } catch {
+      // Ignore transient fetch failures during the recovery window.
+    }
+    if (attempt < attempts - 1) {
+      await wait(attempt);
+    }
+  }
+  return null;
+}
 
 async function sleep(ms: number): Promise<void> {
   await new Promise((resolve) => globalThis.setTimeout(resolve, ms));
@@ -156,14 +211,6 @@ function buildArtifactFilename(plan: PlanDetail, suffix: string) {
 
 function getPlanDisplayName(plan: Pick<PlanDetail, "plan_name" | "fight_date">) {
   return plan.plan_name?.trim() || plan.fight_date || "Open plan";
-}
-
-function formatPhaseLabel(phase: string) {
-  const normalized = humanizeStatus(phase || "").trim();
-  if (!normalized) {
-    return "Plan week";
-  }
-  return normalized.charAt(0).toUpperCase() + normalized.slice(1);
 }
 
 function formatRiskBandLabel(riskBand: NonNullable<PlanAdvisory["risk_band"]>) {
@@ -498,10 +545,15 @@ function BlockedPlanDecisionCard({
 }
 
 function SparringAdvisoryCard({ advisory }: { advisory: PlanAdvisory }) {
-  const actionLabel =
-    advisory.action === "convert" ? "Convert hard sparring" : "Deload hard sparring";
-  const daysLabel = advisory.days.join(", ") || "Declared hard sparring";
+  // Surfaced only for advisories carrying a real injury-risk band (see
+  // selectInjuryRiskAdvisory). The directive leads; the verbose, sometimes
+  // boilerplate reasoning is tucked behind a "Why" toggle.
+  const [showWhy, setShowWhy] = useState(false);
+  const directive = (advisory.replacement || advisory.suggestion || "").trim();
+  const daysLabel = (advisory.days || []).join(", ").trim();
   const riskBandLabel = advisory.risk_band ? formatRiskBandLabel(advisory.risk_band) : null;
+  const reason = (advisory.reason || "").trim();
+  const explanation = advisory.risk_band ? explainRiskBand(advisory.risk_band) : null;
 
   return (
     <section
@@ -509,39 +561,35 @@ function SparringAdvisoryCard({ advisory }: { advisory: PlanAdvisory }) {
     >
       <div className="plan-header-row">
         <div>
-          <p className="kicker">{advisory.title}</p>
-          <h3>{actionLabel}</h3>
+          <p className="kicker">Sparring risk</p>
+          {daysLabel ? <h3>{daysLabel}</h3> : <h3>Hard sparring</h3>}
         </div>
-        <div className="sparring-advisory-badges">
-          <span className="badge">{advisory.action}</span>
-          {riskBandLabel ? (
-            <span
-              className={`sparring-risk-chip sparring-risk-${advisory.risk_band}`}
-              aria-label={`Injury risk ${riskBandLabel}`}
-            >
-              <span className="sparring-risk-dot" aria-hidden="true" />
-              <span>Injury risk: {riskBandLabel}</span>
-              {(() => {
-                const explanation = explainRiskBand(advisory.risk_band);
-                return explanation ? (
-                  <WhyTooltip title={explanation.title} body={explanation.body} />
-                ) : null;
-              })()}
-            </span>
-          ) : null}
-        </div>
+        {riskBandLabel ? (
+          <span
+            className={`sparring-risk-chip sparring-risk-${advisory.risk_band}`}
+            aria-label={`Injury risk ${riskBandLabel}`}
+          >
+            <span className="sparring-risk-dot" aria-hidden="true" />
+            <span>Injury risk: {riskBandLabel}</span>
+            {explanation ? <WhyTooltip title={explanation.title} body={explanation.body} /> : null}
+          </span>
+        ) : null}
       </div>
-      <p className="muted sparring-advisory-meta">
-        {formatPhaseLabel(advisory.phase)} | {advisory.week_label} | {daysLabel}
-      </p>
-      <p>{advisory.reason}</p>
-      <p className="sparring-advisory-suggestion">{advisory.suggestion}</p>
-      {advisory.replacement ? (
-        <p className="sparring-advisory-replacement">
-          <strong>Suggested replacement:</strong> {advisory.replacement}
-        </p>
+      {directive ? <p className="sparring-advisory-suggestion">{directive}</p> : null}
+      {reason ? (
+        <>
+          <button
+            type="button"
+            className="sparring-advisory-why-toggle"
+            aria-expanded={showWhy}
+            onClick={() => setShowWhy((prev) => !prev)}
+          >
+            {showWhy ? "Hide why" : "Why this flag"}
+          </button>
+          {showWhy ? <p className="muted sparring-advisory-reason">{reason}</p> : null}
+        </>
       ) : null}
-      <p className="muted">{advisory.disclaimer}</p>
+      <p className="muted sparring-advisory-disclaimer">{advisory.disclaimer}</p>
     </section>
   );
 }
@@ -875,15 +923,14 @@ export function PlanViewer({
   const canUseAdminOutputs = canUseAdminPlanControls(viewerRole, Boolean(plan.admin_outputs));
   const isViewerAdmin = isAdminRole(viewerRole);
   const canManagePlan = viewerRole === "admin" || viewerRole === "athlete";
-  const primaryAdvisory = Array.isArray(plan.advisories) ? plan.advisories[0] ?? null : null;
+  // Only surface an advisory that carries a real injury-risk band; the rest just
+  // restate load tweaks the plan already applied, so they are suppressed.
+  const primaryAdvisory = selectInjuryRiskAdvisory(plan.advisories);
   const technicalStyles =
     getOptionLabels(TECHNICAL_STYLE_OPTIONS, plan.technical_style).join(", ") || "Not provided";
 
   const athletePlanText = plan.outputs.plan_text.trim();
-  const athleteVisibleStatuses = new Set(["ready", "publishable_with_flags"]);
-  const hasPublishedPlan = athleteVisibleStatuses.has((plan.status || "").trim().toLowerCase())
-    ? Boolean(athletePlanText)
-    : false;
+  const hasPublishedPlan = isPlanReleasedToAthlete(plan);
 
   const injuryTriage = readInjuryTriage(plan);
   const rawTriageMode = readRawTriageMode(plan);
@@ -1155,6 +1202,18 @@ export function PlanViewer({
       onPlanUpdated?.(updatedPlan);
       setApproveMessage("Plan approved and released to the athlete view.");
     } catch (error) {
+      // Approval persists server-side before any slow post-processing, so a
+      // network/timeout failure is often a false negative: the plan may already
+      // be released. Re-fetch a few times and treat a now-ready plan as success.
+      const recoveredPlan = await resolveApprovalAfterError({
+        error,
+        fetchPlan: () => getPlan(accessToken, plan.plan_id),
+      });
+      if (recoveredPlan) {
+        onPlanUpdated?.(recoveredPlan);
+        setApproveMessage("Plan approved and released to the athlete view.");
+        return;
+      }
       setApproveError(
         error instanceof Error ? error.message : "Unable to approve this plan for athlete view.",
       );
@@ -1979,12 +2038,9 @@ export function PlanViewer({
                   </div>
                 ) : null}
 
-                {approveMessage ? <div className="success-banner">{approveMessage}</div> : null}
-                {approveError ? <div className="error-banner">{approveError}</div> : null}
-                {rejectMessage ? <div className="success-banner">{rejectMessage}</div> : null}
-                {rejectError ? <div className="error-banner">{rejectError}</div> : null}
-                {archiveMessage ? <div className="success-banner">{archiveMessage}</div> : null}
-                {archiveError ? <div className="error-banner">{archiveError}</div> : null}
+                {/* Approval/reject/archive feedback is rendered once, in the
+                    primary "Publishing hold" panel above, to avoid showing the
+                    same banner in two approval panels at the same time. */}
 
                 <div className="field">
                   <label htmlFor="manual-stage2-final-plan">Final plan text</label>
