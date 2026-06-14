@@ -629,6 +629,7 @@ export type AdminLatestIntakeUpdateRequest = {
 
 export type AdminPlanSummary = PlanSummary & {
   athlete_email: string;
+  profile_unavailable?: boolean;
 };
 
 export type GenerationRequestPayloadSummary = {
@@ -664,6 +665,7 @@ export type AdminGenerationJobDiagnostic = {
   stage2_status?: string | null;
   requires_admin_resume?: boolean;
   is_stale: boolean;
+  profile_unavailable?: boolean;
   warnings?: string[];
   request_payload_summary: GenerationRequestPayloadSummary;
 };

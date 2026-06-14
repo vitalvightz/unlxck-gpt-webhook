@@ -1457,6 +1457,7 @@ class AdminGenerationJobDiagnostic(BaseModel):
     stage2_status: str | None = None
     requires_admin_resume: bool = False
     is_stale: bool = False
+    profile_unavailable: bool = False
     warnings: list[str] = Field(default_factory=list)
     request_payload_summary: GenerationRequestPayloadSummary = Field(default_factory=GenerationRequestPayloadSummary)
 
@@ -1524,6 +1525,7 @@ class AdminLatestIntakeUpdateRequest(BaseModel):
 
 class AdminPlanSummary(PlanSummary):
     athlete_email: str
+    profile_unavailable: bool = False
 
 
 # ---------------------------------------------------------------------------

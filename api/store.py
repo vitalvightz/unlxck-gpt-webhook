@@ -38,6 +38,7 @@ from .schema_requirements import (
     PLAN_RUNTIME_REQUIRED_COLUMNS,
 )
 from .state_machine import (
+    ADMIN_REVIEW_PLAN_STATUSES,
     is_generation_job_status,
     is_plan_status,
     require_generation_job_transition,
@@ -378,6 +379,8 @@ class AppStore(Protocol):
     def list_admin_plans(
         self, *, limit: int = 50, offset: int = 0, q: str | None = None
     ) -> list[dict[str, Any]]: ...
+
+    def list_admin_review_plans(self, *, limit: int = 100) -> list[dict[str, Any]]: ...
 
     def list_admin_athletes(
         self, *, limit: int = 50, offset: int = 0, q: str | None = None
@@ -974,6 +977,81 @@ class SupabaseAppStore:
 
     def _get_profile_by_id(self, athlete_id: str) -> dict[str, Any] | None:
         return self._select_first(self.client.table("profiles").select("*").eq("id", athlete_id))
+
+    def _get_profile_contacts_by_ids(self, athlete_ids: list[str]) -> dict[str, dict[str, Any]]:
+        """Fetch ``{email, full_name}`` for a batch of athlete ids.
+
+        Used only for best-effort admin-queue enrichment, so it selects the two
+        display columns rather than the full profile row. Raises on transient
+        failures so :meth:`_attach_profile_contacts` can degrade gracefully.
+        """
+        if not athlete_ids:
+            return {}
+        response = self._run_with_transient_retry(
+            operation=f"get_profile_contacts_by_ids count={len(athlete_ids)}",
+            fn=lambda: self.client.table("profiles")
+            .select("id, email, full_name")
+            .in_("id", athlete_ids)
+            .execute(),
+        )
+        contacts: dict[str, dict[str, Any]] = {}
+        for row in (response.data or []):
+            if isinstance(row, dict) and row.get("id"):
+                contacts[str(row["id"])] = {
+                    "email": str(row.get("email") or ""),
+                    "full_name": str(row.get("full_name") or ""),
+                }
+        return contacts
+
+    def _attach_profile_contacts(
+        self, rows: list[dict[str, Any]], *, id_key: str = "athlete_id"
+    ) -> list[dict[str, Any]]:
+        """Best-effort attach athlete email/name under ``row['profiles']``.
+
+        Profile enrichment is decoupled from the core admin-queue queries so a
+        transient profiles outage degrades to id-only rows instead of failing the
+        whole queue. When the lookup fails, each unenriched row is tagged with
+        ``profile_enrichment_failed`` so the API/UI can surface a single
+        "Profile unavailable" warning while still rendering review/resume actions.
+        """
+        if not rows:
+            return rows
+        athlete_ids = sorted(
+            {
+                str(row.get(id_key))
+                for row in rows
+                if str(row.get(id_key) or "").strip()
+            }
+        )
+        if not athlete_ids:
+            return rows
+        try:
+            contacts = self._get_profile_contacts_by_ids(athlete_ids)
+        except _STORE_CLIENT_ERRORS as exc:
+            logger.warning(
+                "[store] admin_profile_enrichment:degraded count=%d transient=%s error_type=%s",
+                len(athlete_ids),
+                self._is_transient_store_error(exc),
+                type(exc).__name__,
+            )
+            for row in rows:
+                existing = row.get("profiles")
+                if not isinstance(existing, dict) or not (
+                    existing.get("email") or existing.get("full_name")
+                ):
+                    row["profile_enrichment_failed"] = True
+                    row["profiles"] = {"email": "", "full_name": ""}
+            return rows
+        for row in rows:
+            existing = row.get("profiles")
+            if isinstance(existing, dict) and (
+                existing.get("email") or existing.get("full_name")
+            ):
+                continue
+            row["profiles"] = contacts.get(
+                str(row.get(id_key) or ""), {"email": "", "full_name": ""}
+            )
+        return rows
 
     def _build_profile_payload(
         self,
@@ -2597,14 +2675,15 @@ class SupabaseAppStore:
             response = self._run_with_transient_retry(
                 operation=f"list_admin_triage_generation_jobs limit={limit}",
                 fn=lambda: self.client.table("generation_jobs")
-                .select(f"{GENERATION_JOB_ADMIN_LIST_SELECT}, profiles!generation_jobs_athlete_id_fkey(email, full_name)")
+                .select(GENERATION_JOB_ADMIN_LIST_SELECT)
                 .eq("status", "review_required")
                 .is_("plan_id", "null")
                 .order("created_at", desc=True)
                 .limit(limit)
                 .execute(),
             )
-            return [row for row in (response.data or []) if isinstance(row, dict)]
+            rows = [row for row in (response.data or []) if isinstance(row, dict)]
+            return self._attach_profile_contacts(rows)
         except _STORE_CLIENT_ERRORS as exc:
             if self._is_generation_job_schema_error(exc):
                 raise HTTPException(
@@ -2623,13 +2702,14 @@ class SupabaseAppStore:
             response = self._run_with_transient_retry(
                 operation=f"list_admin_active_generation_jobs limit={limit}",
                 fn=lambda: self.client.table("generation_jobs")
-                .select(f"{GENERATION_JOB_ADMIN_LIST_SELECT}, profiles!generation_jobs_athlete_id_fkey(email, full_name)")
+                .select(GENERATION_JOB_ADMIN_LIST_SELECT)
                 .in_("status", ["queued", "running"])
                 .order("created_at", desc=True)
                 .limit(limit)
                 .execute(),
             )
-            return [row for row in (response.data or []) if isinstance(row, dict)]
+            rows = [row for row in (response.data or []) if isinstance(row, dict)]
+            return self._attach_profile_contacts(rows)
         except _STORE_CLIENT_ERRORS as exc:
             if self._is_generation_job_schema_error(exc):
                 raise HTTPException(
@@ -3506,7 +3586,7 @@ class SupabaseAppStore:
     ) -> list[dict[str, Any]]:
         query = self.client.table("plans").select(
             "id, athlete_id, full_name, fight_date, technical_style, plan_name, status, "
-            "pdf_url, created_at, profiles!plans_athlete_id_fkey(email, full_name)"
+            "stage2_validator_report, pdf_url, created_at"
         )
         clause = _admin_search_clause(("plan_name", "full_name", "status"), q)
         if clause:
@@ -3516,7 +3596,31 @@ class SupabaseAppStore:
             .range(offset, offset + limit - 1)
             .execute()
         )
-        return getattr(response, "data", None) or []
+        rows = [row for row in (getattr(response, "data", None) or []) if isinstance(row, dict)]
+        return self._attach_profile_contacts(rows)
+
+    def list_admin_review_plans(self, *, limit: int = 100) -> list[dict[str, Any]]:
+        """List plans that are held/blocked and awaiting an admin decision.
+
+        Filters on the persisted ``plans.status`` column (the held/review
+        statuses) so a paused plan stays visible in the review queue. Profile
+        enrichment is best-effort: a profiles outage degrades the rows to
+        id-only instead of hiding the held plan.
+        """
+        response = self._run_with_transient_retry(
+            operation=f"list_admin_review_plans limit={limit}",
+            fn=lambda: self.client.table("plans")
+            .select(
+                "id, athlete_id, full_name, fight_date, technical_style, plan_name, status, "
+                "stage2_validator_report, pdf_url, created_at"
+            )
+            .in_("status", list(ADMIN_REVIEW_PLAN_STATUSES))
+            .order("created_at", desc=True)
+            .limit(limit)
+            .execute(),
+        )
+        rows = [row for row in (getattr(response, "data", None) or []) if isinstance(row, dict)]
+        return self._attach_profile_contacts(rows)
 
     def list_admin_athletes(
         self, *, limit: int = 50, offset: int = 0, q: str | None = None

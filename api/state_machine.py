@@ -52,6 +52,26 @@ ATHLETE_DISPLAYABLE_PLAN_STATUSES: tuple[PlanStatus, ...] = (
     "publishable_with_flags",
 )
 
+# Plan statuses that keep a plan in the admin review/resume surface: it is held,
+# blocked, or otherwise awaiting an admin decision. These are the states the
+# support dashboard must surface so a held/paused plan never disappears from the
+# review queue. ``publishable_with_flags`` is included because a flagged plan can
+# still be awaiting admin sign-off before the athlete is notified.
+ADMIN_REVIEW_PLAN_STATUSES: tuple[PlanStatus, ...] = (
+    "review_required",
+    "held_for_review",
+    "needs_review",
+    "triage_blocked",
+    "medical_hold",
+    "restricted_rehab_only",
+    "publishable_with_flags",
+)
+
+
+def is_admin_review_plan_status(value: object) -> bool:
+    """True when a plan status keeps the plan in the admin review/resume queue."""
+    return normalize_status(value) in ADMIN_REVIEW_PLAN_STATUSES
+
 _GENERATION_JOB_TRANSITIONS: dict[GenerationJobStatus, frozenset[GenerationJobStatus]] = {
     "queued": frozenset({"queued", "running", "failed"}),
     "running": frozenset({"queued", "running", "completed", "review_required", "failed"}),

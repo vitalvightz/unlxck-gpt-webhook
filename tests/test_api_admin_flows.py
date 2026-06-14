@@ -2522,3 +2522,145 @@ def test_admin_permanent_delete_unknown_plan_returns_404():
         json={"confirm_plan_name": "Camp Plan"},
     )
     assert malformed.status_code == 404
+
+
+# ---------------------------------------------------------------------------
+# PR-10: keep admin review queues visible when profile service fails.
+# ---------------------------------------------------------------------------
+
+
+def _seed_held_plan(store, *, athlete_id: str, status: str = "held_for_review", plan_name: str = "Held Camp") -> dict:
+    request = _build_request()
+    intake = store.create_intake(athlete_id, request)
+    return store.create_plan(
+        athlete_id=athlete_id,
+        intake_id=str(intake["id"]),
+        request=request,
+        result=finalized_result(status=status, plan_name=plan_name),
+    )
+
+
+def test_admin_review_queue_lists_held_plan_when_profile_lookup_succeeds():
+    client, store, _ = _build_client()
+    plan = _seed_held_plan(store, athlete_id="athlete-1")
+
+    forbidden = client.get(
+        "/api/admin/plans/review", headers={"Authorization": "Bearer athlete-token"}
+    )
+    response = client.get(
+        "/api/admin/plans/review", headers={"Authorization": "Bearer admin-token"}
+    )
+
+    assert forbidden.status_code == 403
+    assert response.status_code == 200
+    body = response.json()
+    plan_ids = {row["plan_id"] for row in body}
+    assert plan["id"] in plan_ids
+    held = next(row for row in body if row["plan_id"] == plan["id"])
+    assert held["athlete_email"] == "ari@example.com"
+    assert held["profile_unavailable"] is False
+
+
+def test_admin_review_queue_renders_when_profile_lookup_fails():
+    client, store, _ = _build_client()
+    plan = _seed_held_plan(store, athlete_id="athlete-1")
+    store.fail_profile_enrichment = True
+
+    response = client.get(
+        "/api/admin/plans/review", headers={"Authorization": "Bearer admin-token"}
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    held = next(row for row in body if row["plan_id"] == plan["id"])
+    # The held plan still renders and stays actionable, with the athlete id as a
+    # fallback identifier and a single profile-unavailable marker.
+    assert held["athlete_id"] == "athlete-1"
+    assert held["athlete_email"] == ""
+    assert held["profile_unavailable"] is True
+
+
+def test_admin_triage_queue_renders_when_profile_lookup_fails():
+    athlete = AuthenticatedUser(user_id="athlete-1", email="ari@example.com", full_name="Ari Mensah", metadata={})
+    admin = AuthenticatedUser(user_id="admin-1", email="ops@unlxck.test", full_name="Ops Admin", metadata={})
+    store = FakeStore()
+    store.ensure_profile(athlete)
+    request = _build_request()
+    intake = store.create_intake(athlete.user_id, request)
+    triage_job = _seed_triage_blocked_job(
+        store, athlete_id=athlete.user_id, intake_id=str(intake["id"]), request=request
+    )
+    store.fail_profile_enrichment = True
+
+    client = TestClient(
+        create_app(
+            store=store,
+            auth_service=FakeAuthService({"admin-token": admin}),
+            planner=lambda payload: stage1_result(),
+            stage2_automator=FakeStage2Automator(result=finalized_result()),
+            enable_in_process_generation=False,
+        )
+    )
+
+    response = client.get(
+        "/api/admin/generation-jobs/triage", headers={"Authorization": "Bearer admin-token"}
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert len(body) == 1
+    job = body[0]
+    # Resume stays available because the job itself is valid; only the athlete
+    # detail is degraded to the id fallback.
+    assert job["job_id"] == triage_job["id"]
+    assert job["athlete_id"] == athlete.user_id
+    assert job["athlete_email"] == ""
+    assert job["requires_admin_resume"] is True
+    assert job["profile_unavailable"] is True
+
+
+def test_admin_active_queue_renders_when_profile_lookup_fails():
+    athlete = AuthenticatedUser(user_id="athlete-1", email="ari@example.com", full_name="Ari Mensah", metadata={})
+    admin = AuthenticatedUser(user_id="admin-1", email="ops@unlxck.test", full_name="Ops Admin", metadata={})
+    store = FakeStore()
+    store.ensure_profile(athlete)
+    request = _build_request()
+    queued_job = store.create_or_get_generation_job(
+        athlete_id=athlete.user_id,
+        client_request_id="active_degraded",
+        source="self_serve",
+        request_payload=request.model_dump(mode="json"),
+    )
+    store.fail_profile_enrichment = True
+
+    client = TestClient(
+        create_app(
+            store=store,
+            auth_service=FakeAuthService({"admin-token": admin}),
+            planner=lambda payload: stage1_result(),
+            stage2_automator=FakeStage2Automator(result=finalized_result()),
+            enable_in_process_generation=False,
+        )
+    )
+
+    response = client.get(
+        "/api/admin/generation-jobs/active", headers={"Authorization": "Bearer admin-token"}
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    job = next(row for row in body if row["job_id"] == queued_job["id"])
+    assert job["athlete_id"] == athlete.user_id
+    assert job["athlete_email"] == ""
+    assert job["profile_unavailable"] is True
+
+
+def test_admin_review_queue_requires_admin_role():
+    client, store, _ = _build_client()
+    _seed_held_plan(store, athlete_id="athlete-1")
+
+    response = client.get(
+        "/api/admin/plans/review", headers={"Authorization": "Bearer athlete-token"}
+    )
+
+    assert response.status_code == 403
