@@ -3507,6 +3507,33 @@ button.mobile-step-rail-item {
   color: var(--text-primary);
 }
 
+.sparring-advisory-why-toggle {
+  align-self: flex-start;
+  margin: 4px 0 0;
+  padding: 0;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.sparring-advisory-why-toggle:hover {
+  color: var(--text-primary);
+}
+
+.sparring-advisory-reason {
+  margin: 6px 0 0;
+}
+
+.sparring-advisory-disclaimer {
+  margin: 8px 0 0;
+  font-size: 0.78rem;
+}
+
 .support-panel-preview {
   padding: 16px 18px;
 }
