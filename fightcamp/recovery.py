@@ -67,6 +67,105 @@ def _is_high_pressure_weight_cut(training_context: dict) -> bool:
     )
 
 
+def compute_recovery_plan(training_context: dict) -> dict:
+    """Structured Stage 1 recovery numbers for the planning brief.
+
+    Mirrors the computed content of :func:`generate_recovery_block` as a
+    machine-readable dict. Athlete-safe fields (core strategies, phase focus,
+    fatigue notes, weight-cut risk band + supervision flag) live at the top
+    level; acute severe-cut manipulation specifics live under ``coach_gated``
+    and must never be surfaced directly to athletes.
+    """
+    phase = str(training_context.get("phase", "GPP")).upper()
+    fatigue = str(training_context.get("fatigue", "low")).lower()
+    age = int(training_context.get("age", 0) or 0)
+    weight_cut_risk = bool(training_context.get("weight_cut_risk", False))
+    cut_pct = float(training_context.get("weight_cut_pct", 0.0) or 0.0)
+    high_pressure_cut = _is_high_pressure_weight_cut(training_context)
+    age_risk = age >= 35 or bool(training_context.get("age_risk", False))
+
+    plan: dict = {
+        "phase": phase,
+        "core_strategies": [
+            "Daily breathwork (5-10 min post-session)",
+            "Optional contrast shower (comfort-based; avoid if it disrupts sleep)",
+            "8-9 h sleep/night + 90-min blue-light cutoff",
+            "Cold exposure 2-3x/week if needed",
+            "Daily mobility / light recovery work",
+        ],
+        "sleep_hours_target": [8, 9],
+    }
+
+    if age_risk:
+        plan["age_adjustments"] = [
+            "72h muscle-group rotation",
+            "Weekly float tank or sauna session",
+            "Collagen + vitamin C pre-training",
+        ]
+
+    if fatigue == "high":
+        plan["fatigue_flags"] = [
+            "Drop 1 session if sleep < 6.5h for 3+ days",
+            "Cut weekly volume by 25-40%",
+            "Replace eccentrics with isometrics if DOMS > 72h",
+            "Monitor appetite/mood dips",
+        ]
+    elif fatigue == "moderate":
+        plan["fatigue_notes"] = [
+            "Add 1 full rest day",
+            "Prioritize post-session nutrition & breathwork",
+        ]
+
+    if phase == "TAPER":
+        plan["phase_focus"] = [
+            "Reduce volume to 30-40% of taper week",
+            "Final hard session Tue/Wed; no soreness-inducing lifts after Wed",
+            "Final 2 days: breathwork, float tank, shadow drills",
+        ]
+    elif phase == "SPP":
+        plan["phase_focus"] = ["Manage CNS/alactic fatigue", "1-2 full recovery days"]
+    elif phase == "GPP":
+        plan["phase_focus"] = ["Tissue prep & joint mobility", "Reset sleep routine"]
+
+    plan["weight_cut"] = {
+        "active": weight_cut_risk,
+        "risk_band": _recovery_weight_cut_band(weight_cut_risk, cut_pct, high_pressure_cut),
+        "supervision_required": bool(weight_cut_risk and (high_pressure_cut or cut_pct >= 6.0)),
+    }
+
+    # Coach/medical-gated: acute weight-cut recovery manipulation. NEVER render
+    # directly to athletes — requires qualified supervision.
+    coach_gated: dict = {}
+    if weight_cut_risk and 3.0 <= cut_pct < 6.0:
+        coach_gated["moderate_cut_recovery"] = [
+            "Avoid >2% dehydration; monitor hydration closely",
+            "Light mobility/stretching; avoid excess heat or hard sessions",
+            "Electrolyte drinks during/post training",
+        ]
+    elif weight_cut_risk and cut_pct >= 6.0:
+        coach_gated["severe_cut_recovery"] = [
+            "Elevated recovery urgency (cut >6%)",
+            "2 float tank or Epsom baths in fight week",
+            "Post-weigh-in refeed: fluids + high-GI carbs",
+            "Monitor mood/sleep/hydration hourly post-weigh-in",
+            "Medical supervision recommended",
+        ]
+    if coach_gated:
+        plan["coach_gated"] = coach_gated
+
+    return plan
+
+
+def _recovery_weight_cut_band(active: bool, cut_pct: float, high_pressure: bool) -> str:
+    if not active:
+        return "none"
+    if cut_pct >= 6.0:
+        return "severe"
+    if high_pressure or cut_pct >= 3.0:
+        return "high"
+    return "moderate"
+
+
 def generate_recovery_block(training_context: dict) -> str:
     phase = training_context["phase"]
     fatigue = training_context["fatigue"]

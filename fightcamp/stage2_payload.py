@@ -68,6 +68,9 @@ from .sparring_dose_planner import (
 )
 from .strength_session_quality import classify_strength_item, infer_strength_sessions
 from .training_context import TrainingContext, allocate_sessions
+from .nutrition import compute_nutrition_targets
+from .recovery import compute_recovery_plan
+from .mindset_module import compute_mindset_plan
 from .weight_cut import (  # noqa: F401  (re-exported for back-compat)
     compute_cut_severity_score,
     cut_severity_bucket,
@@ -2963,6 +2966,42 @@ def _apply_boxing_crowded_week_post_processing(
             _apply_day_identity_governance(role, crowded_week_active=crowded_week_active)
 
 
+def build_computed_support(*, flags: dict, phases: list[str] | None = None) -> dict:
+    """Bundle Stage 1's own computed nutrition/recovery/mindset numbers.
+
+    Carries the deterministic Stage 1 support data into the planning brief as
+    structured (not prose) blocks so the Stage 1 → structured_plan conversion
+    consumes them faithfully instead of re-deriving them from compressed
+    markdown. ``coach_gated`` sub-sections inside nutrition/recovery hold exact
+    acute weight-cut and supplement dosing and must never be surfaced directly
+    to athletes (coach/medical-gated only).
+    """
+    active_phases = [str(p).upper() for p in (phases or ["GPP", "SPP", "TAPER"])]
+    # De-dup while preserving order.
+    seen: set[str] = set()
+    ordered_phases = [p for p in active_phases if not (p in seen or seen.add(p))]
+
+    nutrition_by_phase = {
+        phase: compute_nutrition_targets(flags={**flags, "phase": phase})
+        for phase in ordered_phases
+    }
+    recovery_by_phase = {
+        phase: compute_recovery_plan({**flags, "phase": phase})
+        for phase in ordered_phases
+    }
+    return {
+        "schema_version": "computed_support.v1",
+        "source": "stage1_deterministic",
+        "athlete_facing_note": (
+            "coach_gated sub-sections hold acute weight-cut and supplement "
+            "dosing — never surface them directly to athletes."
+        ),
+        "nutrition": {"by_phase": nutrition_by_phase},
+        "recovery": {"by_phase": recovery_by_phase},
+        "mindset": compute_mindset_plan(flags),
+    }
+
+
 def build_planning_brief(
     *,
     athlete_model: dict,
@@ -2972,6 +3011,7 @@ def build_planning_brief(
     omission_ledger: dict[str, dict],
     rewrite_guidance: dict,
     plan_input: Any | None = None,
+    computed_support: dict | None = None,
 ) -> dict:
     athlete_model = dict(athlete_model)
     # Compute short-camp compression up front so downstream consumers (role
@@ -3013,6 +3053,7 @@ def build_planning_brief(
             "candidate_pools": candidate_pools,
             "omission_ledger": omission_ledger,
             "decision_rules": rewrite_guidance,
+            "computed_support": computed_support or {},
         }
 
     limiter_profile = _build_limiter_profile(athlete_model, restrictions)
@@ -3082,6 +3123,7 @@ def build_planning_brief(
             "candidate_pools": candidate_pools,
             "omission_ledger": omission_ledger,
             "decision_rules": rewrite_guidance,
+            "computed_support": computed_support or {},
         }
 
     fight_week_override = _fight_week_override_payload(days_until_fight)
@@ -3131,6 +3173,7 @@ def build_planning_brief(
         "candidate_pools": candidate_pools,
         "omission_ledger": omission_ledger,
         "decision_rules": rewrite_guidance,
+        "computed_support": computed_support or {},
     }
 
 def _with_selection_evidence(option: dict, item: dict, score_evidence: dict | None = None) -> dict:

@@ -347,3 +347,22 @@ def get_mindset_by_phase(phase: str, flags: dict) -> str:
             lines.append(f"- **{label}:** {cue}")
     return "\n".join(lines) if lines else f"- **Generic:** {phase_bank.get('generic', '')}"
 
+
+def compute_mindset_plan(flags: dict) -> dict:
+    """Structured Stage 1 mindset coaching for the planning brief.
+
+    Returns the classified mental blocks and the per-phase mental cues so the
+    Stage 1 → structured_plan conversion can carry mental coaching at both the
+    day and session level without re-deriving it from prose. All mindset
+    content is athlete-safe.
+    """
+    blocks = _normalize_blocks(flags.get("mental_block"))
+    by_phase = {
+        phase: get_mindset_by_phase(phase, flags) for phase in ("GPP", "SPP", "TAPER")
+    }
+    return {
+        "primary_blocks": blocks,
+        "phase_cues": get_phase_mindset_cues(blocks),
+        "by_phase": by_phase,
+    }
+

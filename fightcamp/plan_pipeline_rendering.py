@@ -20,7 +20,12 @@ from .plan_pipeline_runtime import (
     _apply_muay_thai_filters,
 )
 from .plan_rendering_utils import sanitize_phase_text, sanitize_stage_output
-from .stage2_payload import build_planning_brief, build_stage2_handoff_text, build_stage2_payload
+from .stage2_payload import (
+    build_computed_support,
+    build_planning_brief,
+    build_stage2_handoff_text,
+    build_stage2_payload,
+)
 
 
 def _resolve_fight_weekday(context: PlanRuntimeContext) -> str | None:
@@ -409,6 +414,11 @@ def build_stage2_outputs(
         conditioning_blocks=blocks.conditioning_blocks,
         rehab_blocks=blocks.rehab_blocks,
     )
+    active_phases = [phase for phase in PHASES if context.phase_active(phase)]
+    computed_support = build_computed_support(
+        flags=context.training_context.to_flags(),
+        phases=active_phases or None,
+    )
     planning_brief = build_planning_brief(
         athlete_model=stage2_payload["athlete_model"],
         restrictions=stage2_payload["restrictions"],
@@ -417,6 +427,7 @@ def build_stage2_outputs(
         omission_ledger=stage2_payload["omission_ledger"],
         rewrite_guidance=stage2_payload["rewrite_guidance"],
         plan_input=context.plan_input,
+        computed_support=computed_support,
     )
     stage2_handoff_text = build_stage2_handoff_text(
         stage2_payload=stage2_payload,
