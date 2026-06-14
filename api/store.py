@@ -699,7 +699,28 @@ class SupabaseAppStore:
         # Supabase terminates a multiplexed connection after several streams.
         # HTTP/1.1 uses a simple request-per-connection model that is immune
         # to this class of failure.
-        http_client = httpx.Client(http2=False)
+        #
+        # Explicit timeout + pool limits mirror api/auth.py: httpx's default
+        # 5s read timeout turns ordinary Supabase latency spikes (especially
+        # while the instance is under CPU/memory contention from concurrent
+        # users or a warming process) into false 503 "store service
+        # temporarily unavailable" outages. A 30s read budget tolerates those
+        # spikes, while the bounded pool keeps connection reuse predictable
+        # across concurrent requests.
+        http_client = httpx.Client(
+            http2=False,
+            timeout=httpx.Timeout(
+                connect=5.0,
+                read=30.0,
+                write=5.0,
+                pool=15.0,
+            ),
+            limits=httpx.Limits(
+                max_connections=50,
+                max_keepalive_connections=20,
+                keepalive_expiry=30.0,
+            ),
+        )
         return cls(create_client(url, key, options=ClientOptions(httpx_client=http_client)), admin_emails)
 
     def is_admin_email(self, email: str) -> bool:
