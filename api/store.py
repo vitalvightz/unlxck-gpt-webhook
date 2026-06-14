@@ -902,6 +902,9 @@ class SupabaseAppStore:
             else:
                 logger.exception("[store] validate_runtime_schema:schema_mismatch")
                 raise RuntimeError(PLAN_RUNTIME_SCHEMA_ERROR_DETAIL) from exc
+        except httpx.HTTPError as exc:
+            logger.exception("[store] validate_runtime_schema:plan_schema_check_failed")
+            raise RuntimeError("store service temporarily unavailable") from exc
 
         self._validate_generation_job_active_lock()
         logger.info("[store] validate_runtime_schema:ok")

@@ -463,6 +463,36 @@ def test_runtime_app_fails_loudly_when_plan_schema_is_invalid_and_fallback_disab
         "app": "unlxck-fight-camp-api",
         "detail": "service temporarily unavailable",
     }
+
+
+def test_runtime_app_returns_startup_failure_when_schema_check_times_out(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    class TimeoutStore(FakeStore):
+        def validate_runtime_schema(self) -> None:
+            raise RuntimeError("store service temporarily unavailable")
+
+    monkeypatch.setenv("SUPABASE_URL", "https://example.supabase.co")
+    monkeypatch.setenv("SUPABASE_SERVICE_ROLE_KEY", "test-service-role-key")
+    monkeypatch.setattr(store_module.SupabaseAppStore, "from_env", classmethod(lambda cls: TimeoutStore()))
+    monkeypatch.setattr(
+        auth_module.SupabaseAuthService,
+        "from_env",
+        classmethod(lambda cls: FakeAuthService({})),
+    )
+
+    reloaded = importlib.reload(app_module)
+    client = TestClient(reloaded.app)
+    response = client.get("/health")
+
+    assert response.status_code == 503
+    assert response.json() == {
+        "ok": False,
+        "app": "unlxck-fight-camp-api",
+        "detail": "service temporarily unavailable",
+    }
+
+
 def test_runtime_app_returns_startup_failure_when_store_is_restricted(
     monkeypatch: pytest.MonkeyPatch,
 ):
