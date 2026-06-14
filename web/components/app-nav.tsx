@@ -7,6 +7,7 @@ import { useEffect, useRef, useState, type TransitionEvent } from "react";
 import { useAppSession } from "@/components/auth-provider";
 import { shouldShowAdminPanelLink } from "@/lib/admin-nav-visibility";
 import { isSafeAvatarImageUrl } from "@/lib/avatar-image-url";
+import { SIDE_NAV_ITEMS } from "@/lib/beta-navigation";
 
 type MobileNavState = "closed" | "opening" | "open" | "closing";
 
@@ -246,14 +247,7 @@ export function AppNav() {
     setMobileNavState("closed");
   }
 
-  const signedInLinks = [
-    { href: "/", label: "Overview", meta: "Camp status" },
-    { href: "/dashboard", label: "Today", meta: "Check-in and session log" },
-    { href: "/onboarding", label: "Advanced Intake", meta: "Profile and camp setup" },
-    { href: "/nutrition", label: "Nutrition", meta: "Weight and readiness" },
-    { href: "/plans", label: "Plans", meta: "Saved history" },
-    { href: "/settings", label: "Settings", meta: "Athlete profile" },
-  ];
+  const signedInLinks = SIDE_NAV_ITEMS;
 
   const profile = me?.profile;
   const displayName = profile?.full_name || "Athlete";

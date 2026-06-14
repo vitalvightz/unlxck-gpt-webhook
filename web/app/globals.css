@@ -12670,3 +12670,97 @@ html[data-theme="light"] .loading-operational-item {
   gap: 6px;
   align-items: baseline;
 }
+
+.sp-collapse {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-support);
+  overflow: hidden;
+}
+
+.sp-collapse + .sp-collapse {
+  margin-top: 10px;
+}
+
+.sp-collapse-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.sp-collapse-summary::-webkit-details-marker {
+  display: none;
+}
+
+.sp-collapse-title {
+  font-family: var(--font-display);
+  font-size: 0.92rem;
+  letter-spacing: 0.02em;
+  color: var(--text-primary);
+}
+
+.sp-collapse-summary::after {
+  content: "+";
+  color: var(--text-muted);
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.sp-collapse[open] > .sp-collapse-summary::after {
+  content: "-";
+}
+
+.sp-collapse-body {
+  padding: 0 14px 14px;
+}
+
+.sp-more-toggle {
+  align-self: flex-start;
+  margin-top: 6px;
+  padding: 2px 0;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.sp-more-toggle:hover {
+  color: var(--text-primary);
+}
+
+.sp-redflag-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.sp-redflag-kicker {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--brand-red);
+}
+
+.sp-redflag-badge {
+  flex: none;
+}
+
+@media (max-width: 960px) {
+  .sp-root {
+    scroll-margin-top: var(--mobile-nav-clearance);
+  }
+
+  .sp-header {
+    padding-top: 4px;
+  }
+}
