@@ -714,6 +714,8 @@ def _normalize_checkin_date(item: dict[str, Any], weeks: list[dict[str, Any]]) -
         return None
     resolved: list[str] = []
     for week in weeks:
+        if not isinstance(week, dict):
+            continue
         if _coerce_optional_int(week.get("week_index")) != week_index:
             continue
         days = week.get("days")
