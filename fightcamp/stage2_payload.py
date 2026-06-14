@@ -2978,8 +2978,7 @@ def build_computed_support(*, flags: dict, phases: list[str] | None = None) -> d
     """
     active_phases = [str(p).upper() for p in (phases or ["GPP", "SPP", "TAPER"])]
     # De-dup while preserving order.
-    seen: set[str] = set()
-    ordered_phases = [p for p in active_phases if not (p in seen or seen.add(p))]
+    ordered_phases = list(dict.fromkeys(active_phases))
 
     nutrition_by_phase = {
         phase: compute_nutrition_targets(flags={**flags, "phase": phase})
