@@ -67,8 +67,8 @@ function normalizeToken(value: string): string {
 /** Generic fallback: "mobility_activation" / "FIGHT OR MATCH" → "Mobility Activation". */
 function titleizeLabel(value: string): string {
   return value
-    .trim()
     .replace(/[_\-/]+/g, " ")
+    .trim()
     .replace(/\s+/g, " ")
     .replace(/\b\w/g, (char) => char.toUpperCase());
 }
