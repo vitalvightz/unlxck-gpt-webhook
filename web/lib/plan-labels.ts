@@ -104,7 +104,7 @@ export function isRawEnumLabel(value: unknown): boolean {
   if (!trimmed || /\s/.test(trimmed)) {
     return false;
   }
-  // A single lowercase token (optionally snake_cased) with no spaces — the shape
+  // A single token (optionally snake_cased) with no spaces — the shape
   // backend enums take. "Stop and report." (a sentence) is not raw.
-  return /^[a-z0-9]+(_[a-z0-9]+)*$/.test(trimmed);
+  return /^[a-z0-9]+(_[a-z0-9]+)*$/i.test(trimmed);
 }
