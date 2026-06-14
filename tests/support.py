@@ -1090,7 +1090,27 @@ class FakeStore:
                 row[optional_field] = result.get(optional_field)
         return row
 
-    def update_plan_structured_output(
+    def update_plan_stage2_if_unchanged(self, plan_id: str, result: dict, expected_snapshot: dict) -> dict:
+        row = self.plans.get(plan_id)
+        if not row:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
+        guarded_fields = (
+            "status",
+            "plan_text",
+            "draft_plan_text",
+            "final_plan_text",
+            "stage2_retry_text",
+            "stage2_status",
+            "stage2_attempt_count",
+        )
+        if any(row.get(field) != expected_snapshot.get(field) for field in guarded_fields):
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Plan changed while Stage 2 structured processing was running; reload and try again.",
+            )
+        return self.update_plan_stage2(plan_id, result)
+
+    def update_plan_structured_artifacts(
         self,
         plan_id: str,
         *,

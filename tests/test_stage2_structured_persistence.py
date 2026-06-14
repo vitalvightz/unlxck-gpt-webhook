@@ -20,12 +20,14 @@ import pytest
 
 
 import api.stage2_automation as stage2_module
+import api.services.admin_stage2_service as admin_stage2_service
 from api.plan_mappers import _map_plan_detail
 from api.services.admin_stage2_service import (
     _APPROVAL_STRUCTURED_PLAN_BUDGET_SECONDS,
     _approval_structured_budget_seconds,
     approve_review_required_plan,
     run_structured_plan_post_processing,
+    submit_manual_stage2,
 )
 from api.stage2_automation import (
     OpenAIStage2Automator,
@@ -612,6 +614,90 @@ def test_admin_approve_falls_back_to_text_when_inline_card_times_out(monkeypatch
     assert detail.outputs.plan_text == "# approved plan"
     assert detail.outputs.structured_plan is None
     assert store.plans[plan_id].get("structured_plan") is None
+
+
+def test_admin_stage2_service_wraps_sync_store_calls_in_to_thread(monkeypatch):
+    """Async admin approval must not call sync DB helpers on the event loop."""
+    store = FakeStore()
+    plan_id = _seed_held_plan(store)
+    calls: list[str] = []
+    real_to_thread = asyncio.to_thread
+
+    async def _tracked_to_thread(func, /, *args, **kwargs):
+        calls.append(getattr(func, "__name__", repr(func)))
+        return await real_to_thread(func, *args, **kwargs)
+
+    monkeypatch.setattr(admin_stage2_service.asyncio, "to_thread", _tracked_to_thread)
+
+    detail = asyncio.run(
+        approve_review_required_plan(plan_id=plan_id, store=store, stage2=None)
+    )
+
+    assert detail.status == "ready"
+    assert calls.count("get_plan") >= 1
+    assert "update_plan_stage2_if_unchanged" in calls
+    assert "update_plan_stage2" not in calls
+    assert "_lookup_plan_source" in calls
+
+
+def test_approve_review_required_plan_uses_atomic_stage2_update(monkeypatch):
+    monkeypatch.delenv("UNLXCK_STAGE2_STRUCTURED_PLAN", raising=False)
+    store = FakeStore()
+    plan_id = _seed_held_plan(store)
+    calls = {"atomic": 0}
+    original_atomic = store.update_plan_stage2_if_unchanged
+
+    def _atomic(plan_id_arg, result, expected_snapshot):
+        calls["atomic"] += 1
+        return original_atomic(plan_id_arg, result, expected_snapshot)
+
+    store.update_plan_stage2_if_unchanged = _atomic  # type: ignore[method-assign]
+
+    detail = asyncio.run(approve_review_required_plan(plan_id=plan_id, store=store, stage2=None))
+
+    assert detail.status == "ready"
+    assert calls == {"atomic": 1}
+
+
+def test_submit_manual_stage2_uses_atomic_stage2_update(monkeypatch):
+    monkeypatch.delenv("UNLXCK_STAGE2_STRUCTURED_PLAN", raising=False)
+    store = FakeStore()
+    plan_id = _seed_held_plan(store)
+    calls = {"atomic": 0}
+    original_atomic = store.update_plan_stage2_if_unchanged
+
+    def _atomic(plan_id_arg, result, expected_snapshot):
+        calls["atomic"] += 1
+        return original_atomic(plan_id_arg, result, expected_snapshot)
+
+    store.update_plan_stage2_if_unchanged = _atomic  # type: ignore[method-assign]
+
+    asyncio.run(submit_manual_stage2(plan_id=plan_id, final_plan_text="# manual plan", store=store, stage2=None))
+
+    assert calls == {"atomic": 1}
+
+
+def test_atomic_stage2_update_rejects_edit_between_read_and_write(monkeypatch):
+    monkeypatch.delenv("UNLXCK_STAGE2_STRUCTURED_PLAN", raising=False)
+    store = FakeStore()
+    plan_id = _seed_held_plan(store)
+    original_atomic = store.update_plan_stage2_if_unchanged
+
+    def _racing_atomic(plan_id_arg, result, expected_snapshot):
+        store.plans[plan_id_arg]["status"] = "archived"
+        store.plans[plan_id_arg]["plan_text"] = ""
+        store.plans[plan_id_arg]["stage2_status"] = "admin_rejected"
+        return original_atomic(plan_id_arg, result, expected_snapshot)
+
+    store.update_plan_stage2_if_unchanged = _racing_atomic  # type: ignore[method-assign]
+
+    with pytest.raises(Exception) as exc_info:
+        asyncio.run(approve_review_required_plan(plan_id=plan_id, store=store, stage2=None))
+
+    assert getattr(exc_info.value, "status_code", None) == 409
+    assert store.plans[plan_id]["status"] == "archived"
+    assert store.plans[plan_id]["plan_text"] == ""
+    assert store.plans[plan_id]["stage2_status"] == "admin_rejected"
 
 
 def test_structured_post_processing_converts_when_inline_was_skipped(monkeypatch):

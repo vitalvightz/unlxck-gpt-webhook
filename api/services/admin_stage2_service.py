@@ -169,17 +169,21 @@ async def submit_manual_stage2(
     store: AppStore,
     stage2: Stage2Automator | None = None,
 ) -> PlanDetail:
-    plan_row = store.get_plan(plan_id)
+    plan_row = await asyncio.to_thread(store.get_plan, plan_id)
     if not plan_row:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
+    plan_row = dict(plan_row)
 
     result = _manual_stage2_result(plan_row, final_plan_text)
     result = await _attach_structured_plan(result, plan_row, stage2=stage2)
-    updated = store.update_plan_stage2(plan_id, result)
+    updated = await asyncio.to_thread(
+        store.update_plan_stage2_if_unchanged, plan_id, result, plan_row
+    )
+    plan_source = await asyncio.to_thread(_lookup_plan_source, store, plan_id)
     return _map_plan_detail(
         updated,
         include_admin=True,
-        plan_source=_lookup_plan_source(store, plan_id),
+        plan_source=plan_source,
     )
 
 
@@ -203,17 +207,21 @@ async def approve_review_required_plan(
     "Connection issue".
     """
 
-    plan_row = store.get_plan(plan_id)
+    plan_row = await asyncio.to_thread(store.get_plan, plan_id)
     if not plan_row:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
+    plan_row = dict(plan_row)
 
     result = _admin_approved_result(plan_row)
     result = await _attach_structured_plan_within_budget(result, plan_row, stage2=stage2)
-    updated = store.update_plan_stage2(plan_id, result)
+    updated = await asyncio.to_thread(
+        store.update_plan_stage2_if_unchanged, plan_id, result, plan_row
+    )
+    plan_source = await asyncio.to_thread(_lookup_plan_source, store, plan_id)
     return _map_plan_detail(
         updated,
         include_admin=True,
-        plan_source=_lookup_plan_source(store, plan_id),
+        plan_source=plan_source,
     )
 
 
@@ -237,7 +245,7 @@ async def run_structured_plan_post_processing(
     (reject, archive, rename, manual Stage 2 edit) may rewrite the plan's status /
     plan_text / stage2 fields. To avoid clobbering that newer state with the stale
     snapshot read here, persistence goes through
-    :meth:`AppStore.update_plan_structured_output`, which writes *only* the
+    :meth:`AppStore.update_plan_structured_artifacts`, which writes *only* the
     structured-plan output columns and never the status/text/attempt fields. The
     synchronous store calls run in worker threads so the event loop is never
     blocked while this background task is in flight.
@@ -249,6 +257,7 @@ async def run_structured_plan_post_processing(
         plan_row = await asyncio.to_thread(store.get_plan, plan_id)
         if not plan_row:
             return
+        plan_row = dict(plan_row)
         result = {
             "status": str(plan_row.get("status") or ""),
             "plan_text": str(plan_row.get("plan_text") or ""),
@@ -271,7 +280,7 @@ async def run_structured_plan_post_processing(
         # fields that a concurrent admin action may have changed mid-conversion.
         if result.get("structured_plan") is not None:
             await asyncio.to_thread(
-                store.update_plan_structured_output,
+                store.update_plan_structured_artifacts,
                 plan_id,
                 structured_plan=result.get("structured_plan"),
                 schema_version=result.get("schema_version"),
