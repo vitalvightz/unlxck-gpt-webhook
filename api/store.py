@@ -374,6 +374,14 @@ class AppStore(Protocol):
     def record_stage2_cost(self, job_id: str, metadata: dict[str, Any]) -> None: ...
 
     def update_plan_stage2(self, plan_id: str, result: dict[str, Any]) -> dict[str, Any]: ...
+    def update_plan_structured_output(
+        self,
+        plan_id: str,
+        *,
+        structured_plan: Any,
+        schema_version: Any,
+        stage2_validator_report: dict[str, Any],
+    ) -> dict[str, Any]: ...
     def update_plan_triage_approval(self, plan_id: str, *, why_log: dict[str, Any], stage2_status: str) -> dict[str, Any]: ...
 
     def list_admin_plans(
@@ -3552,6 +3560,63 @@ class SupabaseAppStore:
             self._raise_operation_http_error(
                 operation=f"update_plan_stage2 plan_id={plan_id}",
                 detail="failed to update plan stage 2",
+                exc=exc,
+            )
+
+    def update_plan_structured_output(
+        self,
+        plan_id: str,
+        *,
+        structured_plan: Any,
+        schema_version: Any,
+        stage2_validator_report: dict[str, Any],
+    ) -> dict[str, Any]:
+        """Persist only the structured-plan output columns for a plan.
+
+        Narrow companion to :meth:`update_plan_stage2`. It writes exactly three
+        fields — ``structured_plan``, ``schema_version`` and
+        ``stage2_validator_report`` — and nothing else. This is what makes the
+        best-effort background structured conversion safe: a slow conversion that
+        started from an earlier read of the row can never clobber newer
+        ``status`` / ``plan_text`` / ``draft_plan_text`` / ``final_plan_text`` /
+        ``stage2_retry_text`` / ``stage2_status`` / ``stage2_attempt_count`` state
+        written by a concurrent admin action (reject, archive, rename, manual
+        Stage 2 edit) in the meantime. No status transition is enforced because
+        the plan's lifecycle status is intentionally left untouched.
+        """
+
+        payload = {
+            "structured_plan": structured_plan,
+            "schema_version": schema_version,
+            "stage2_validator_report": stage2_validator_report or {},
+        }
+        _guard_persisted_json(
+            payload.get("structured_plan"),
+            field="structured_plan",
+            max_bytes=MAX_SERVER_JSON_BYTES,
+            context=f"plan_id={plan_id}",
+        )
+        try:
+            logger.info("[store] update_plan_structured_output:start plan_id=%s", plan_id)
+            self.client.table("plans").update(payload).eq("id", plan_id).execute()
+            updated = self.get_plan(plan_id)
+            if not updated:
+                logger.warning(
+                    "[store] update_plan_structured_output:plan_missing_after_update plan_id=%s",
+                    plan_id,
+                )
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="plan not found",
+                )
+            logger.info("[store] update_plan_structured_output:success plan_id=%s", plan_id)
+            return updated
+        except HTTPException:
+            raise
+        except _STORE_CLIENT_ERRORS as exc:
+            self._raise_operation_http_error(
+                operation=f"update_plan_structured_output plan_id={plan_id}",
+                detail="failed to update plan structured output",
                 exc=exc,
             )
 

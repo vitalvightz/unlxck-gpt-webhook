@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import logging
 from typing import Any
 
@@ -169,12 +170,21 @@ async def run_structured_plan_post_processing(
     freshly approved row, attempts the structured conversion through the
     canonical trigger, and persists ``structured_plan`` only when one is actually
     produced. Never raises: any failure leaves the raw markdown fallback intact.
+
+    The model conversion can take seconds, during which a concurrent admin action
+    (reject, archive, rename, manual Stage 2 edit) may rewrite the plan's status /
+    plan_text / stage2 fields. To avoid clobbering that newer state with the stale
+    snapshot read here, persistence goes through
+    :meth:`AppStore.update_plan_structured_output`, which writes *only* the
+    structured-plan output columns and never the status/text/attempt fields. The
+    synchronous store calls run in worker threads so the event loop is never
+    blocked while this background task is in flight.
     """
 
     if stage2 is None:
         return
     try:
-        plan_row = store.get_plan(plan_id)
+        plan_row = await asyncio.to_thread(store.get_plan, plan_id)
         if not plan_row:
             return
         result = {
@@ -190,8 +200,16 @@ async def run_structured_plan_post_processing(
         }
         result = await _attach_structured_plan(result, plan_row, stage2=stage2)
         # Only write when a structured plan was actually produced; a skip/failure
-        # keeps the existing raw markdown row untouched.
+        # keeps the existing raw markdown row untouched. Persist via the narrow
+        # structured-output writer so we never overwrite status/plan_text/stage2
+        # fields that a concurrent admin action may have changed mid-conversion.
         if result.get("structured_plan") is not None:
-            store.update_plan_stage2(plan_id, result)
+            await asyncio.to_thread(
+                store.update_plan_structured_output,
+                plan_id,
+                structured_plan=result.get("structured_plan"),
+                schema_version=result.get("schema_version"),
+                stage2_validator_report=result.get("stage2_validator_report") or {},
+            )
     except Exception:  # noqa: BLE001 - background work must never bubble up
         logger.exception("structured plan post-processing failed for plan_id=%s", plan_id)
