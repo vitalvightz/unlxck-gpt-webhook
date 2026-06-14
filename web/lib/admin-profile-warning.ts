@@ -84,9 +84,36 @@ export function summarizeProfileWarning(input: ProfileWarningInput): ProfileWarn
 }
 
 // A profile-service section error is no longer worth showing as its own block
-// once the compact banner is visible. Returns the section errors that are NOT
-// profile-service related, so genuine queue failures still surface inline.
+// once the compact banner is visible. But section errors can be a concatenation
+// of several failures (the directory fetch joins athlete + plan errors into one
+// string), so we must only strip the *pure* profile-service fragments and keep
+// any unrelated failure text actionable. Returns null only when nothing but
+// profile-service noise remains.
+//
+// Examples:
+//   "profile service temporarily unavailable (request id: x)" -> null
+//   "profile service temporarily unavailable; failed to load review queue"
+//       -> "failed to load review queue"
+//   "failed to load athlete directory" -> unchanged
+const PROFILE_SERVICE_FRAGMENT_PATTERN = new RegExp(
+  // A profile/store-service phrase plus its optional "(request id: ...)" suffix.
+  `(?:${PROFILE_SERVICE_ERROR_SNIPPETS.map((snippet) =>
+    snippet.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"),
+  ).join("|")})(?:\\s*\\(request id:[^)]*\\))?`,
+  "gi",
+);
+
 export function nonProfileSectionError(message: string | null | undefined): string | null {
   if (!message) return null;
-  return isProfileServiceUnavailableMessage(message) ? null : message;
+  // No profile-service fragment present: surface the error untouched.
+  if (!isProfileServiceUnavailableMessage(message)) return message;
+  // Remove every profile-service fragment, then tidy the leftover separators so
+  // a dangling "; " or ". " from the removed fragment is not surfaced on its own.
+  const remainder = message
+    .replace(PROFILE_SERVICE_FRAGMENT_PATTERN, " ")
+    .replace(/\s+/g, " ")
+    .replace(/^[\s;,.]+/, "")
+    .replace(/[\s;,]+$/, "")
+    .trim();
+  return remainder.length > 0 ? remainder : null;
 }
