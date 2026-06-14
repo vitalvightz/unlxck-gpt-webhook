@@ -45,5 +45,5 @@ export const SIDE_NAV_ITEMS: readonly NavItem[] = [
 // True for the standalone Nutrition workspace route and any of its sub-pages
 // (e.g. /nutrition/bodyweight-log). Used to gate the beta redirect.
 export function isStandaloneNutritionPath(path: string): boolean {
-  return path === "/nutrition" || path.startsWith("/nutrition/");
+  return /^\/nutrition(\/|\?|#|$)/.test(path);
 }
