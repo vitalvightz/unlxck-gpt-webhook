@@ -1,8 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { isMeaningfulRiskBand, selectInjuryRiskAdvisory } from "./sparring-advisory";
-import type { PlanAdvisory } from "./types";
+import { isMeaningfulRiskBand, selectInjuryRiskAdvisory } from "./sparring-advisory.ts";
+import type { PlanAdvisory } from "./types.ts";
 
 function advisory(overrides: Partial<PlanAdvisory>): PlanAdvisory {
   return {
