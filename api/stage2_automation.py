@@ -765,7 +765,12 @@ class OpenAIStage2Automator:
         # build_structured_plan_outcome strips biometrics + conservatively
         # normalizes before validating, so a near-miss first pass can succeed
         # without spending a repair call.
-        first_outcome = build_structured_plan_outcome(first_json, raw_markdown=final_plan_text)
+        computed_support = (
+            planning_brief.get("computed_support") if isinstance(planning_brief, dict) else None
+        )
+        first_outcome = build_structured_plan_outcome(
+            first_json, raw_markdown=final_plan_text, computed_support=computed_support
+        )
         if first_outcome.status == "valid":
             return first_outcome, costs
 
@@ -791,6 +796,7 @@ class OpenAIStage2Automator:
                 first_json,
                 raw_markdown=final_plan_text,
                 repair_fn=lambda _data, _errors: repaired_json,
+                computed_support=computed_support,
             ),
             costs,
         )
