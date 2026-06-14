@@ -131,7 +131,7 @@ def _map_plan_summary(row: dict[str, Any]) -> PlanSummary:
             has_errors = bool(report.get("errors"))
             blocking_warnings = [
                 warning
-                for warning in list(report.get("blocking_warnings") or [])
+                for warning in (report.get("blocking_warnings") or [])
                 if isinstance(warning, dict)
                 and str(warning.get("code") or "") in _HARD_STAGE2_BLOCKER_CODES
             ]
