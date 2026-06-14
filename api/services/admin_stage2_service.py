@@ -100,30 +100,6 @@ async def _attach_structured_plan_within_budget(
         return result
 
 
-def _ensure_stage2_row_unchanged(
-    original: dict[str, Any], latest: dict[str, Any] | None
-) -> None:
-    """Prevent a late admin Stage 2 write from clobbering a newer admin edit."""
-
-    if not latest:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
-    guarded_fields = (
-        "status",
-        "plan_text",
-        "draft_plan_text",
-        "final_plan_text",
-        "stage2_retry_text",
-        "stage2_status",
-        "stage2_attempt_count",
-    )
-    for field in guarded_fields:
-        if latest.get(field) != original.get(field):
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail="Plan changed while Stage 2 structured processing was running; reload and try again.",
-            )
-
-
 def _manual_stage2_result(plan_row: dict[str, Any], final_plan_text: str) -> dict[str, Any]:
     planning_brief = _decode_structured_text(plan_row.get("planning_brief")) or {}
     review = review_stage2_output(planning_brief=planning_brief, final_plan_text=final_plan_text)
@@ -200,9 +176,9 @@ async def submit_manual_stage2(
 
     result = _manual_stage2_result(plan_row, final_plan_text)
     result = await _attach_structured_plan(result, plan_row, stage2=stage2)
-    latest = await asyncio.to_thread(store.get_plan, plan_id)
-    _ensure_stage2_row_unchanged(plan_row, latest)
-    updated = await asyncio.to_thread(store.update_plan_stage2, plan_id, result)
+    updated = await asyncio.to_thread(
+        store.update_plan_stage2_if_unchanged, plan_id, result, plan_row
+    )
     plan_source = await asyncio.to_thread(_lookup_plan_source, store, plan_id)
     return _map_plan_detail(
         updated,
@@ -238,9 +214,9 @@ async def approve_review_required_plan(
 
     result = _admin_approved_result(plan_row)
     result = await _attach_structured_plan_within_budget(result, plan_row, stage2=stage2)
-    latest = await asyncio.to_thread(store.get_plan, plan_id)
-    _ensure_stage2_row_unchanged(plan_row, latest)
-    updated = await asyncio.to_thread(store.update_plan_stage2, plan_id, result)
+    updated = await asyncio.to_thread(
+        store.update_plan_stage2_if_unchanged, plan_id, result, plan_row
+    )
     plan_source = await asyncio.to_thread(_lookup_plan_source, store, plan_id)
     return _map_plan_detail(
         updated,
