@@ -4,21 +4,82 @@ import assert from "node:assert/strict";
 import {
   cleanText,
   formatBlockLoad,
+  formatMacroRange,
   formatMeasured,
+  formatWeightCutBand,
   getBlocks,
   getCoachingCues,
   getDays,
+  getDeterministicNutritionPhases,
+  getDeterministicRecoveryPhases,
   getDisplayableRedFlags,
   getMindsetLines,
   getSessions,
   getStringList,
   getWeeks,
+  hasDeterministicNutrition,
+  hasDeterministicRecovery,
   hasNutrition,
   isTimeLikeReps,
+  nutritionPhaseRows,
+  recoveryPhaseView,
   selectBlockMetric,
   shouldRenderStructuredPlan,
   shouldShowRest,
 } from "./structured-plan.ts";
+
+// An athlete-safe deterministic_support projection (as the backend emits it,
+// with coach_gated already stripped).
+function planWithDeterministicSupport() {
+  return {
+    schema_version: "1.0",
+    nutrition: { summary: "Fuel around sessions." },
+    weeks: [{ week_id: "wk-1", week_index: 1, days: [] }],
+    deterministic_support: {
+      schema_version: "athlete_support.v1",
+      nutrition: {
+        by_phase: {
+          TAPER: {
+            phase: "TAPER",
+            meal_structure: "3 core meals + 2-3 snacks daily",
+            protein_g_per_day: { min: 126, max: 175, per_kg: [1.8, 2.5], note: null },
+            carbs_g_per_day: { min: null, max: 350, per_kg: [null, 5], note: "reduce before weigh-in" },
+            fats_g_per_day: { min: null, max: null, per_kg: null, note: "moderate (~20%)" },
+            hydration_ml_per_day: { min: 2100, max: 2800, per_kg_l: [0.03, 0.04] },
+            fuel_timing: { pre: "light carbs", intra: "water only", post: "carbs + protein" },
+            fatigue_adjustment: "high",
+            weight_cut: { active: true, risk_band: "severe", supervision_required: true },
+          },
+          GPP: {
+            phase: "GPP",
+            protein_g_per_day: { min: 112, max: 140, per_kg: [1.6, 2.0], note: null },
+            hydration_ml_per_day: { min: 2100, max: 2800 },
+            weight_cut: { active: false, risk_band: "none", supervision_required: false },
+          },
+        },
+      },
+      recovery: {
+        by_phase: {
+          GPP: {
+            phase: "GPP",
+            core_strategies: ["Daily breathwork", "8-9 h sleep"],
+            sleep_hours_target: [8, 9],
+            phase_focus: ["Tissue prep & joint mobility"],
+            weight_cut: { active: false, risk_band: "none", supervision_required: false },
+          },
+          TAPER: {
+            phase: "TAPER",
+            core_strategies: ["Breathwork"],
+            sleep_hours_target: [8, 9],
+            fatigue_flags: ["Cut weekly volume by 25-40%"],
+            phase_focus: ["Reduce volume to 30-40%"],
+            weight_cut: { active: true, risk_band: "severe", supervision_required: true },
+          },
+        },
+      },
+    },
+  };
+}
 
 function validPlan() {
   return {
@@ -248,4 +309,110 @@ test("getMindsetLines includes confidence_anchor and context when present", () =
   // Empty anchor object yields no lines (renderer hides it).
   assert.deepEqual(getMindsetLines({}), []);
   assert.deepEqual(getMindsetLines(null), []);
+});
+
+// --- deterministic (Stage 1) nutrition + recovery (PR-6) -------------------
+
+test("formatMacroRange handles full / max-only / min-only / empty", () => {
+  assert.equal(formatMacroRange({ min: 112, max: 140 }, "g/day"), "112–140 g/day");
+  assert.equal(formatMacroRange({ min: null, max: 350 }, "g/day"), "up to 350 g/day");
+  assert.equal(formatMacroRange({ min: 30, max: null }, "g/day"), "from 30 g/day");
+  assert.equal(formatMacroRange({ min: null, max: null, note: "x" }, "g/day"), null);
+  assert.equal(formatMacroRange(null, "g/day"), null);
+});
+
+test("NutritionCard renders deterministic macros / hydration / fuel timing", () => {
+  const plan = planWithDeterministicSupport();
+  assert.equal(hasDeterministicNutrition(plan), true);
+  const phases = getDeterministicNutritionPhases(plan);
+  // Phase order is normalised (GPP before TAPER).
+  assert.deepEqual(phases.map((p) => p.phase), ["GPP", "TAPER"]);
+
+  const taper = phases.find((p) => p.phase === "TAPER")!;
+  const rows = nutritionPhaseRows(taper.entry);
+  const byLabel = Object.fromEntries(rows.map((r) => [r.label, r.value]));
+  assert.equal(byLabel["Protein"], "126–175 g/day");
+  assert.equal(byLabel["Carbs"], "up to 350 g/day (reduce before weigh-in)");
+  assert.equal(byLabel["Fats"], "moderate (~20%)"); // note-only macro
+  assert.equal(byLabel["Hydration"], "2100–2800 ml/day");
+  assert.equal(byLabel["Meals"], "3 core meals + 2-3 snacks daily");
+  assert.equal(byLabel["Fuel — pre"], "light carbs");
+  assert.equal(byLabel["Fatigue adjustment"], "high fatigue support");
+  // Athlete-safe weight-cut: risk band + supervision only.
+  assert.deepEqual(formatWeightCutBand(taper.entry.weight_cut), {
+    band: "severe",
+    supervisionRequired: true,
+  });
+  // No active cut -> no weight-cut line.
+  const gpp = phases.find((p) => p.phase === "GPP")!;
+  assert.equal(formatWeightCutBand(gpp.entry.weight_cut), null);
+});
+
+test("NutritionCard falls back to string fields when deterministic data is missing", () => {
+  const plan = { nutrition: { summary: "Fuel around sessions." }, weeks: [] };
+  assert.equal(hasDeterministicNutrition(plan), false);
+  assert.deepEqual(getDeterministicNutritionPhases(plan), []);
+  // Legacy prose still detected so the card still renders via fallback.
+  assert.equal(hasNutrition(plan), true);
+});
+
+test("RecoveryCard renders deterministic sleep / fatigue / phase focus / core actions", () => {
+  const plan = planWithDeterministicSupport();
+  assert.equal(hasDeterministicRecovery(plan), true);
+  const phases = getDeterministicRecoveryPhases(plan);
+  assert.deepEqual(phases.map((p) => p.phase), ["GPP", "TAPER"]);
+
+  const taper = recoveryPhaseView(phases.find((p) => p.phase === "TAPER")!.entry);
+  assert.equal(taper.sleep, "8–9 h/night");
+  assert.deepEqual(taper.coreStrategies, ["Breathwork"]);
+  assert.deepEqual(taper.phaseFocus, ["Reduce volume to 30-40%"]);
+  assert.deepEqual(taper.fatigue, ["Cut weekly volume by 25-40%"]);
+  assert.deepEqual(taper.weightCut, { band: "severe", supervisionRequired: true });
+});
+
+test("RecoveryCard / NutritionCard never surface coach_gated even if present", () => {
+  // The backend strips coach_gated, but the helpers must also only read known
+  // athlete-safe fields — never echo an unexpected coach_gated payload.
+  const entry = {
+    phase: "TAPER",
+    protein_g_per_day: { min: 126, max: 175 },
+    core_strategies: ["Breathwork"],
+    sleep_hours_target: [8, 9],
+    weight_cut: { active: true, risk_band: "severe", supervision_required: true },
+    coach_gated: { acute_cut_protocol: { bicarbonate_g_per_kg: "~0.3 g/kg" } },
+  };
+  const nutritionBlob = JSON.stringify(nutritionPhaseRows(entry));
+  const recoveryBlob = JSON.stringify(recoveryPhaseView(entry));
+  for (const blob of [nutritionBlob, recoveryBlob]) {
+    assert.equal(blob.includes("bicarbonate"), false);
+    assert.equal(blob.includes("coach_gated"), false);
+    assert.equal(blob.includes("g/kg"), false);
+  }
+});
+
+test("hasDeterministicRecovery is true when only age adjustments are present", () => {
+  const plan = {
+    weeks: [],
+    deterministic_support: {
+      recovery: {
+        by_phase: {
+          GPP: { phase: "GPP", age_adjustments: ["72h muscle-group rotation"] },
+        },
+      },
+    },
+  };
+  // A phase with only age adjustments must still surface the RecoveryCard.
+  assert.equal(hasDeterministicRecovery(plan), true);
+  const view = recoveryPhaseView(getDeterministicRecoveryPhases(plan)[0]!.entry);
+  assert.deepEqual(view.ageAdjustments, ["72h muscle-group rotation"]);
+});
+
+test("recovery/nutrition helpers tolerate missing / partial data", () => {
+  assert.deepEqual(getDeterministicNutritionPhases(null), []);
+  assert.deepEqual(getDeterministicRecoveryPhases({}), []);
+  assert.deepEqual(nutritionPhaseRows(null), []);
+  const view = recoveryPhaseView(null);
+  assert.equal(view.sleep, null);
+  assert.deepEqual(view.coreStrategies, []);
+  assert.equal(view.weightCut, null);
 });

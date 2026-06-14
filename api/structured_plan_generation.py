@@ -25,7 +25,7 @@ from dataclasses import dataclass, field
 from typing import Any, Callable, Literal, get_args
 
 from .state_machine import is_athlete_displayable_plan_status
-from .structured_plan_safety import audit_structured_plan
+from .structured_plan_safety import athlete_safe_support, audit_structured_plan
 from .structured_plan_models import (
     SCHEMA_VERSION,
     BlockType,
@@ -781,6 +781,22 @@ def bank_conditioning_to_block(entry: dict[str, Any]) -> dict[str, Any]:
     return _normalize_block(block)
 
 
+def _with_deterministic_support(
+    plan_dict: dict[str, Any], computed_support: dict[str, Any] | None
+) -> dict[str, Any]:
+    """Merge an athlete-safe projection of computed_support into the plan dict.
+
+    Deterministic-first: Stage 1's computed nutrition/recovery numbers are placed
+    onto ``structured_plan.deterministic_support`` so the athlete frontend can
+    render them directly (the raw ``computed_support`` — with ``coach_gated`` —
+    is never exposed). No-op when there is nothing usable to project.
+    """
+    projection = athlete_safe_support(computed_support)
+    if projection:
+        plan_dict["deterministic_support"] = projection
+    return plan_dict
+
+
 def build_structured_plan_outcome(
     raw_data: Any,
     *,
@@ -811,7 +827,7 @@ def build_structured_plan_outcome(
 
     first = safe_parse_structured_plan(cleaned, raw_markdown=raw_markdown or None)
     if first.ok and first.plan is not None:
-        plan_dict = first.plan.model_dump(mode="json")
+        plan_dict = _with_deterministic_support(first.plan.model_dump(mode="json"), computed_support)
         return StructuredPlanOutcome(
             status="valid",
             structured_plan=plan_dict,
@@ -834,7 +850,7 @@ def build_structured_plan_outcome(
         cleaned, repair_fn=_clean_repair, raw_markdown=raw_markdown or None
     )
     if repaired.ok and repaired.plan is not None:
-        plan_dict = repaired.plan.model_dump(mode="json")
+        plan_dict = _with_deterministic_support(repaired.plan.model_dump(mode="json"), computed_support)
         return StructuredPlanOutcome(
             status="repair_attempted_valid",
             structured_plan=plan_dict,

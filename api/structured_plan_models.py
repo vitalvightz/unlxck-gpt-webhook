@@ -475,6 +475,12 @@ class StructuredTrainingPlan(BaseModel):
     daily_check_ins: list[DailyCheckIn] = Field(default_factory=list)
     nutrition: Nutrition
     progression_notes: str = ""
+    # Athlete-safe projection of Stage 1's deterministic computed_support
+    # (macros / hydration / fuel timing / weight-cut risk band per phase, plus
+    # recovery sleep/fatigue/phase-focus per phase). Injected deterministically
+    # during conversion — never model-generated — and ALWAYS coach_gated-free.
+    # Optional so legacy plans and the plan_text fallback keep working.
+    deterministic_support: dict[str, Any] | None = None
     raw_markdown_fallback: str = ""
 
 

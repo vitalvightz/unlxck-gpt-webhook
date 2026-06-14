@@ -38,9 +38,54 @@ _SENTINEL_TOKEN_RES = {
 }
 
 
+ATHLETE_SUPPORT_SCHEMA_VERSION = "athlete_support.v1"
+
+
 def _normalize(text: Any) -> str:
     """Lowercase, collapse whitespace — for substring/equality comparisons."""
     return re.sub(r"\s+", " ", str(text or "")).strip().lower()
+
+
+def strip_coach_gated(node: Any) -> Any:
+    """Return a deep copy of ``node`` with every ``coach_gated`` key removed.
+
+    Recursive and total: no coach/medical-gated dosing can survive into the
+    result, regardless of nesting depth.
+    """
+    if isinstance(node, dict):
+        return {
+            key: strip_coach_gated(value)
+            for key, value in node.items()
+            if key != "coach_gated"
+        }
+    if isinstance(node, list):
+        return [strip_coach_gated(item) for item in node]
+    return node
+
+
+def athlete_safe_support(computed_support: dict | None) -> dict | None:
+    """Project Stage 1 ``computed_support`` to an athlete-safe support object.
+
+    Keeps only athlete-facing nutrition + recovery per phase (macros, hydration,
+    fuel timing, meal structure, fatigue adjustment, weight-cut RISK band +
+    supervision flag, sleep/fatigue/phase-focus/core recovery). ``coach_gated``
+    sub-sections are stripped recursively, and the mindset block is dropped (it
+    is already surfaced via mindset_anchor). Returns ``None`` when there is no
+    usable nutrition/recovery data so callers can fall back cleanly.
+    """
+    support = _as_dict(computed_support)
+    nutrition_by_phase = _as_dict(_as_dict(support.get("nutrition")).get("by_phase"))
+    recovery_by_phase = _as_dict(_as_dict(support.get("recovery")).get("by_phase"))
+    if not nutrition_by_phase and not recovery_by_phase:
+        return None
+
+    projection = {
+        "schema_version": ATHLETE_SUPPORT_SCHEMA_VERSION,
+        "source": "stage1_deterministic",
+        "nutrition": {"by_phase": strip_coach_gated(nutrition_by_phase)},
+        "recovery": {"by_phase": strip_coach_gated(recovery_by_phase)},
+    }
+    return projection
 
 
 def _as_dict(value: Any) -> dict:
