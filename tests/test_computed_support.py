@@ -77,6 +77,49 @@ def test_nutrition_acute_cut_and_supplements_are_coach_gated():
     assert "magnesium" not in top_level_blob
 
 
+def test_coach_gated_dosing_never_leaks_to_athlete_facing_fields():
+    """Exact acute-cut + supplement dosing must live ONLY under coach_gated.
+
+    Decision #2: athletes may see macros, hydration, fuel timing, weight-cut
+    risk band, and the supervision warning — never exact dehydration / sauna /
+    sodium / bicarbonate / supplement dosing. This proves those values do not
+    appear in any athlete-facing field of the computed support.
+    """
+    flags = {
+        "weight": 70, "phase": "TAPER", "fatigue": "high",
+        "weight_cut_risk": True, "weight_cut_pct": 7.0, "age": 38,
+    }
+    nutrition = compute_nutrition_targets(flags=flags)
+    recovery = compute_recovery_plan(flags)
+
+    # Exact acute-cut + supplement dosing that is coach/medical-gated only.
+    # (Generic recovery modalities like a weekly float tank/sauna session are
+    # athlete-safe; only the precise dosing/manipulation numbers are gated.)
+    sensitive = [
+        "bicarbonate", "magnesium", "taurine", "mmol", "150%",
+        "g_per_kg", "refeed",
+    ]
+
+    for block in (nutrition, recovery):
+        assert "coach_gated" in block, "expected gated dosing for this scenario"
+        athlete_facing = {k: v for k, v in block.items() if k != "coach_gated"}
+        blob = json.dumps(athlete_facing).lower()
+        for token in sensitive:
+            assert token.lower() not in blob, f"{token!r} leaked into athlete-facing fields"
+        # The athlete-facing weight-cut summary is risk band + supervision only.
+        assert set(block["weight_cut"]) == {"active", "risk_band", "supervision_required"}
+
+    # And via the full bundle the same holds for every active phase.
+    support = build_computed_support(flags=flags, phases=["GPP", "SPP", "TAPER"])
+    for phase_block in list(support["nutrition"]["by_phase"].values()) + list(
+        support["recovery"]["by_phase"].values()
+    ):
+        athlete_facing = {k: v for k, v in phase_block.items() if k != "coach_gated"}
+        blob = json.dumps(athlete_facing).lower()
+        for token in sensitive:
+            assert token.lower() not in blob, f"{token!r} leaked in bundle"
+
+
 def test_recovery_plan_structure_and_gating():
     plan = compute_recovery_plan({"phase": "TAPER", "fatigue": "high", "age": 38,
                                   "weight_cut_risk": True, "weight_cut_pct": 6.5})
