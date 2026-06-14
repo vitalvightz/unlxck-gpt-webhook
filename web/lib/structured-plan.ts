@@ -365,6 +365,7 @@ export function hasDeterministicRecovery(plan: StructuredPlan | null | undefined
       view.coreStrategies.length > 0 ||
       view.phaseFocus.length > 0 ||
       view.fatigue.length > 0 ||
+      view.ageAdjustments.length > 0 ||
       view.weightCut !== null
     );
   });

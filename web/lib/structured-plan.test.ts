@@ -390,6 +390,23 @@ test("RecoveryCard / NutritionCard never surface coach_gated even if present", (
   }
 });
 
+test("hasDeterministicRecovery is true when only age adjustments are present", () => {
+  const plan = {
+    weeks: [],
+    deterministic_support: {
+      recovery: {
+        by_phase: {
+          GPP: { phase: "GPP", age_adjustments: ["72h muscle-group rotation"] },
+        },
+      },
+    },
+  };
+  // A phase with only age adjustments must still surface the RecoveryCard.
+  assert.equal(hasDeterministicRecovery(plan), true);
+  const view = recoveryPhaseView(getDeterministicRecoveryPhases(plan)[0]!.entry);
+  assert.deepEqual(view.ageAdjustments, ["72h muscle-group rotation"]);
+});
+
 test("recovery/nutrition helpers tolerate missing / partial data", () => {
   assert.deepEqual(getDeterministicNutritionPhases(null), []);
   assert.deepEqual(getDeterministicRecoveryPhases({}), []);
