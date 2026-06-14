@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 
 import {
   cleanText,
@@ -23,10 +23,13 @@ import {
   hasNutrition,
   nutritionPhaseRows,
   recoveryPhaseView,
+  redFlagView,
   selectBlockMetric,
   shouldShowRest,
+  splitMindsetLines,
   weekLabel,
 } from "@/lib/structured-plan";
+import { formatPlanLabel } from "@/lib/plan-labels";
 import type {
   MindsetAnchor,
   StructuredBlock,
@@ -36,26 +39,63 @@ import type {
   StructuredWeek,
 } from "@/lib/types";
 
-function titleize(value: string): string {
-  return value.replace(/[_-]+/g, " ").replace(/\b\w/g, (char) => char.toUpperCase());
+const titleize = formatPlanLabel;
+
+function CollapsibleSection({
+  title,
+  defaultOpen,
+  className,
+  children,
+}: {
+  title: string;
+  defaultOpen?: boolean;
+  className?: string;
+  children: ReactNode;
+}) {
+  const [open, setOpen] = useState<boolean>(Boolean(defaultOpen));
+  return (
+    <details
+      className={`sp-collapse${className ? ` ${className}` : ""}`}
+      open={open}
+      onToggle={(event) => setOpen(event.currentTarget.open)}
+    >
+      <summary className="sp-collapse-summary">
+        <span className="sp-collapse-title">{title}</span>
+      </summary>
+      <div className="sp-collapse-body">{children}</div>
+    </details>
+  );
 }
 
 export function MindsetAnchorCard({ anchor }: { anchor?: MindsetAnchor | null }) {
-  const lines = getMindsetLines(anchor);
-  if (lines.length === 0) {
+  const { primary, secondary } = splitMindsetLines(anchor);
+  const [showMore, setShowMore] = useState(false);
+  if (primary.length === 0 && secondary.length === 0) {
     return null;
   }
+  const renderLine = (line: { label: string; value: string }) => (
+    <li key={line.label}>
+      <span className="sp-mindset-label">{line.label}</span>
+      <span>{line.value}</span>
+    </li>
+  );
   return (
     <div className="sp-mindset">
       <p className="sp-eyebrow sp-accent">Mindset</p>
-      <ul className="sp-mindset-list">
-        {lines.map((line) => (
-          <li key={line.label}>
-            <span className="sp-mindset-label">{line.label}</span>
-            <span>{line.value}</span>
-          </li>
-        ))}
-      </ul>
+      <ul className="sp-mindset-list">{primary.map(renderLine)}</ul>
+      {secondary.length > 0 ? (
+        <>
+          {showMore ? <ul className="sp-mindset-list">{secondary.map(renderLine)}</ul> : null}
+          <button
+            type="button"
+            className="sp-more-toggle"
+            aria-expanded={showMore}
+            onClick={() => setShowMore((prev) => !prev)}
+          >
+            {showMore ? "Less" : "More"}
+          </button>
+        </>
+      ) : null}
     </div>
   );
 }
@@ -312,13 +352,16 @@ export function RedFlagsCard({ plan }: { plan: StructuredPlan }) {
       <p className="sp-eyebrow sp-accent">Red flags — stop &amp; report</p>
       <ul className="sp-redflag-list">
         {rules.map((rule, index) => {
-          const text = cleanText(rule.display_text);
-          const action = cleanText(rule.action);
-          const severity = cleanText(rule.severity);
+          const { text, action, severityLabel } = redFlagView(rule);
           return (
             <li key={cleanText(rule.rule_id) || `flag-${index}`} className="sp-redflag">
-              <span className="sp-redflag-text">{text}</span>
-              {severity ? <span className="sp-tag">{titleize(severity)}</span> : null}
+              <div className="sp-redflag-head">
+                <span className="sp-redflag-kicker">Red flag</span>
+                {severityLabel ? (
+                  <span className="sp-tag sp-redflag-badge">{severityLabel}</span>
+                ) : null}
+              </div>
+              {text ? <span className="sp-redflag-text">{text}</span> : null}
               {action ? <p className="sp-muted">{action}</p> : null}
             </li>
           );
@@ -394,27 +437,34 @@ export function NutritionCard({ plan }: { plan: StructuredPlan }) {
     <section className="sp-card sp-nutrition">
       <p className="sp-eyebrow sp-accent">Nutrition</p>
       {deterministic ? (
-        getDeterministicNutritionPhases(plan).map(({ phase, entry }) => {
-          const rows = nutritionPhaseRows(entry);
-          const weightCut = formatWeightCutBand(entry.weight_cut);
-          if (rows.length === 0 && !weightCut) {
-            return null;
-          }
-          return (
-            <div key={phase} className="sp-nutrition-phase">
-              <p className="sp-eyebrow">{titleize(phase)}</p>
+        getDeterministicNutritionPhases(plan)
+          .map(({ phase, entry }) => {
+            const rows = nutritionPhaseRows(entry);
+            const weightCut = formatWeightCutBand(entry.weight_cut);
+            if (rows.length === 0 && !weightCut) {
+              return null;
+            }
+            return { phase, rows, weightCut };
+          })
+          .filter((item): item is NonNullable<typeof item> => item !== null)
+          .map((item, index) => (
+            <CollapsibleSection
+              key={item.phase}
+              title={titleize(item.phase)}
+              defaultOpen={index === 0}
+              className="sp-nutrition-phase"
+            >
               <ul className="sp-kv-list">
-                {rows.map((row) => (
+                {item.rows.map((row) => (
                   <li key={row.label}>
                     <span className="sp-kv-label">{row.label}</span>
                     <span>{row.value}</span>
                   </li>
                 ))}
               </ul>
-              <DeterministicWeightCutLine weightCut={weightCut} />
-            </div>
-          );
-        })
+              <DeterministicWeightCutLine weightCut={item.weightCut} />
+            </CollapsibleSection>
+          ))
       ) : (
         <NutritionProse plan={plan} />
       )}
@@ -432,38 +482,45 @@ export function RecoveryCard({ plan }: { plan: StructuredPlan }) {
   return (
     <section className="sp-card sp-recovery">
       <p className="sp-eyebrow sp-accent">Recovery</p>
-      {getDeterministicRecoveryPhases(plan).map(({ phase, entry }) => {
-        const view = recoveryPhaseView(entry);
-        const lists: { label: string; items: string[] }[] = [
-          { label: "Core", items: view.coreStrategies },
-          { label: "Phase focus", items: view.phaseFocus },
-          { label: "Fatigue", items: view.fatigue },
-          { label: "Age", items: view.ageAdjustments },
-        ].filter((group) => group.items.length > 0);
-        if (!view.sleep && lists.length === 0 && !view.weightCut) {
-          return null;
-        }
-        return (
-          <div key={phase} className="sp-recovery-phase">
-            <p className="sp-eyebrow">{titleize(phase)}</p>
+      {getDeterministicRecoveryPhases(plan)
+        .map(({ phase, entry }) => {
+          const view = recoveryPhaseView(entry);
+          const lists: { label: string; items: string[] }[] = [
+            { label: "Core", items: view.coreStrategies },
+            { label: "Phase focus", items: view.phaseFocus },
+            { label: "Fatigue", items: view.fatigue },
+            { label: "Age", items: view.ageAdjustments },
+          ].filter((group) => group.items.length > 0);
+          if (!view.sleep && lists.length === 0 && !view.weightCut) {
+            return null;
+          }
+          return { phase, view, lists };
+        })
+        .filter((item): item is NonNullable<typeof item> => item !== null)
+        .map((item, index) => (
+          <CollapsibleSection
+            key={item.phase}
+            title={titleize(item.phase)}
+            defaultOpen={index === 0}
+            className="sp-recovery-phase"
+          >
             <ul className="sp-kv-list">
-              {view.sleep ? (
+              {item.view.sleep ? (
                 <li>
                   <span className="sp-kv-label">Sleep</span>
-                  <span>{view.sleep}</span>
+                  <span>{item.view.sleep}</span>
                 </li>
               ) : null}
-              {lists.map((group) => (
+              {item.lists.map((group) => (
                 <li key={group.label}>
                   <span className="sp-kv-label">{group.label}</span>
                   <span>{group.items.join("; ")}</span>
                 </li>
               ))}
             </ul>
-            <DeterministicWeightCutLine weightCut={view.weightCut} />
-          </div>
-        );
-      })}
+            <DeterministicWeightCutLine weightCut={item.view.weightCut} />
+          </CollapsibleSection>
+        ))}
     </section>
   );
 }

@@ -23,6 +23,7 @@ import { QuickBuildRefinementBanner } from "@/components/quick-build-refinement-
 import { StructuredPlanRenderer } from "@/components/structured-plan-renderer";
 import { WhyTooltip } from "@/components/why-tooltip";
 import { useGenerationController } from "@/lib/generation-controller";
+import { canUseAdminPlanControls, isAdminRole } from "@/lib/plan-admin-controls";
 import { shouldRenderStructuredPlan } from "@/lib/structured-plan";
 import { explainRiskBand } from "@/lib/sparring-reason-codes";
 import {
@@ -895,7 +896,8 @@ export function PlanViewer({
   onPlanDeleted?: () => Promise<void> | void;
 }) {
   const router = useRouter();
-  const isAdmin = Boolean(plan.admin_outputs);
+  const canUseAdminOutputs = canUseAdminPlanControls(viewerRole, Boolean(plan.admin_outputs));
+  const isViewerAdmin = isAdminRole(viewerRole);
   const canManagePlan = viewerRole === "admin" || viewerRole === "athlete";
   const primaryAdvisory = Array.isArray(plan.advisories) ? plan.advisories[0] ?? null : null;
   const technicalStyles =
@@ -983,9 +985,9 @@ export function PlanViewer({
     athletePlanText ||
     "";
   const canApproveForRelease =
-    isAdmin && !hasPublishedPlan && Boolean(approvableText) && !isProtectedTriageResumePending;
+    canUseAdminOutputs && !hasPublishedPlan && Boolean(approvableText) && !isProtectedTriageResumePending;
   const canRetryResumeGeneration = canRetryResumeGenerationForPlan({
-    isAdmin,
+    isAdmin: canUseAdminOutputs,
     isProtectedTriageResumePending,
     injuryTriageMode: injuryTriage?.mode,
     rawTriageMode,
@@ -998,7 +1000,7 @@ export function PlanViewer({
     hasResumeApproval,
   });
   
-  const canRejectApproval = isAdmin;
+  const canRejectApproval = canUseAdminOutputs;
   const blockedInjuryContext = injuryTriage
     ? buildBlockedInjuryContextSummary({
         triage: injuryTriage,
@@ -1518,7 +1520,7 @@ export function PlanViewer({
               </button>
             </>
           ) : null}
-          {isAdmin ? (
+          {isViewerAdmin ? (
             <button
               type="button"
               className="ghost-button danger-button"
@@ -1528,7 +1530,7 @@ export function PlanViewer({
               {planActionPending === "permanent-delete" ? "Deleting..." : "Permanent delete"}
             </button>
           ) : null}
-          {isAdmin && plan.athlete_id ? (
+          {isViewerAdmin && plan.athlete_id ? (
             <Link href={`/admin/athletes/${plan.athlete_id}`} className="ghost-button">
               View athlete profile
             </Link>
@@ -1561,7 +1563,7 @@ export function PlanViewer({
             </div>
           </section>
 
-          {isAdmin ? (
+          {canUseAdminOutputs ? (
             <section className="plan-summary-card">
               <div className="plan-summary-header">
                 <p className="kicker">Stage 2</p>
@@ -1672,7 +1674,7 @@ export function PlanViewer({
             <BlockedPlanDecisionCard
               triage={injuryTriage}
               injuryContext={blockedInjuryContext}
-              isAdmin={isAdmin}
+              isAdmin={canUseAdminOutputs}
             />
           ) : hasPublishedPlan ? (
             <>
@@ -1688,7 +1690,7 @@ export function PlanViewer({
                     {rejectPending ? "Rejecting..." : "Reject approval"}
                   </button>
                 ) : null}
-                {isAdmin ? (
+                {canUseAdminOutputs ? (
                   <button
                     type="button"
                     className="ghost-button"
@@ -1704,7 +1706,7 @@ export function PlanViewer({
                 <StructuredPlanRenderer
                   plan={plan.outputs.structured_plan}
                   rawFallback={athletePlanText}
-                  showRawFallback={isAdmin}
+                  showRawFallback={canUseAdminOutputs}
                 />
               ) : (
                 <pre className="plan-text-block">{athletePlanText}</pre>
@@ -1716,7 +1718,7 @@ export function PlanViewer({
             </>
           ) : (
             <div className="plan-review-stack">
-              {isAdmin ? (
+              {canUseAdminOutputs ? (
                 <>
                   {stage2RetryInProgress ? (
                     <section className="support-panel stage2-retry-banner stage2-retry-in-progress">
@@ -1909,7 +1911,7 @@ export function PlanViewer({
                       >
                         {approvePending ? "Approving..." : approveButtonLabel}
                       </button>
-                      {isAdmin ? (
+                      {canUseAdminOutputs ? (
                         <button
                           type="button"
                           className="ghost-button"
@@ -1919,7 +1921,7 @@ export function PlanViewer({
                           {rejectPending ? "Rejecting..." : "Reject"}
                         </button>
                       ) : null}
-                      {isAdmin ? (
+                      {canUseAdminOutputs ? (
                         <button
                           type="button"
                           className="ghost-button"
@@ -1944,7 +1946,7 @@ export function PlanViewer({
         </section>
       </div>
 
-      {isAdmin ? (
+      {canUseAdminOutputs ? (
         <div id={`admin-review-${plan.plan_id}`} className="admin-review-stack">
           <section className="viewer-panel">
             <div className="form-section-header">
