@@ -11,6 +11,7 @@ from pathlib import Path
 
 from api.structured_plan_generation import (
     BANNED_BIOMETRIC_KEYS,
+    _normalize_daily_check_ins,
     _normalize_load,
     _normalize_measured,
     bank_conditioning_to_block,
@@ -846,3 +847,165 @@ def test_prompt_requires_block_detail_and_day_mindset():
         assert needle in prompt, needle
     # Guardrail wording: omit, do not invent.
     assert "invent" in prompt.lower()
+
+
+# --- malformed daily_check_ins tolerance (PR-7) ------------------------------
+
+
+def _good_check_in() -> dict:
+    return {
+        "date": "2026-05-29",
+        "morning": {"sleep_quality": 4, "overall_readiness": 4, "pain": 2},
+        "decision": "train_as_planned",
+        "rules_triggered": [],
+    }
+
+
+def test_missing_daily_check_ins_keeps_safe_empty_default():
+    # Requirement 1: a missing key stays the model's empty-list default.
+    assert _normalize_daily_check_ins(None) == []
+    assert _normalize_daily_check_ins({"x": 1}) == []
+    assert _normalize_daily_check_ins([]) == []
+
+
+def test_valid_check_in_is_preserved():
+    out = _normalize_daily_check_ins([_good_check_in()])
+    assert len(out) == 1
+    assert out[0]["date"] == "2026-05-29"
+    assert out[0]["morning"]["sleep_quality"] == 4
+    assert out[0]["decision"] == "train_as_planned"
+
+
+def test_malformed_check_in_does_not_cause_invalid_fallback():
+    # Requirement 6: malformed daily_check_ins alone must not sink the plan.
+    plan = _valid_plan()
+    plan["daily_check_ins"] = [
+        {"morning": {"sleep_quality": 4}},  # missing date/decision, partial morning
+        {"date": "2026-05-30", "decision": "definitely_yes"},  # bad decision, no morning
+        _good_check_in(),  # one fully valid entry survives
+    ]
+    outcome = build_structured_plan_outcome(plan, raw_markdown="# raw")
+    assert outcome.status in {"valid", "repair_attempted_valid"}
+    validate_structured_plan(outcome.structured_plan)
+    surviving = outcome.structured_plan["daily_check_ins"]
+    assert len(surviving) == 1
+    assert surviving[0]["date"] == "2026-05-29"
+
+
+def test_entry_missing_date_is_dropped_when_not_inferable():
+    # Requirement 5: no date and no resolvable index -> drop.
+    entry = _good_check_in()
+    entry.pop("date")
+    assert _normalize_daily_check_ins([entry]) == []
+
+
+def test_entry_missing_date_is_inferred_from_unambiguous_index():
+    # Requirement 5: infer from week/day index only when it resolves uniquely.
+    entry = _good_check_in()
+    entry.pop("date")
+    entry["week_index"] = 1
+    entry["day_index"] = 0
+    weeks = [
+        {"week_index": 1, "days": [{"date": "2026-06-01"}, {"date": "2026-06-02"}]},
+    ]
+    out = _normalize_daily_check_ins([entry], weeks)
+    assert len(out) == 1
+    assert out[0]["date"] == "2026-06-01"
+
+
+def test_entry_with_ambiguous_index_is_dropped():
+    entry = _good_check_in()
+    entry.pop("date")
+    entry["week_index"] = 1
+    entry["day_index"] = 0
+    # Two weeks share week_index 1 -> the index does not resolve uniquely.
+    weeks = [
+        {"week_index": 1, "days": [{"date": "2026-06-01"}]},
+        {"week_index": 1, "days": [{"date": "2026-07-01"}]},
+    ]
+    assert _normalize_daily_check_ins([entry], weeks) == []
+
+
+def test_entry_missing_morning_is_dropped_no_fake_biometrics():
+    # Requirement 3: no neutral default exists for self-report scores -> drop.
+    entry = _good_check_in()
+    entry.pop("morning")
+    assert _normalize_daily_check_ins([entry]) == []
+
+
+def test_entry_with_incomplete_morning_is_dropped():
+    entry = _good_check_in()
+    entry["morning"] = {"sleep_quality": 4, "overall_readiness": 3}  # pain missing
+    assert _normalize_daily_check_ins([entry]) == []
+
+
+def test_entry_with_out_of_range_morning_is_dropped():
+    entry = _good_check_in()
+    entry["morning"]["overall_readiness"] = 9  # out of 1-5
+    assert _normalize_daily_check_ins([entry]) == []
+
+
+def test_numeric_string_scores_are_coerced_not_invented():
+    # Coercing "4" -> 4 is a formatting fix, not fabrication.
+    entry = _good_check_in()
+    entry["morning"] = {"sleep_quality": "4", "overall_readiness": "5", "pain": "0"}
+    out = _normalize_daily_check_ins([entry])
+    assert len(out) == 1
+    assert out[0]["morning"] == {"sleep_quality": 4, "overall_readiness": 5, "pain": 0}
+
+
+def test_invalid_decision_is_dropped():
+    # Requirement 4: an unrecognized decision is dropped, never defaulted.
+    entry = _good_check_in()
+    entry["decision"] = "feeling_great"
+    assert _normalize_daily_check_ins([entry]) == []
+
+
+def test_obvious_decision_alias_is_mapped_to_valid_enum():
+    # Requirement 4: only obvious aliases map to a real enum value.
+    for alias, expected in (
+        ("Train_As_Planned", "train_as_planned"),
+        ("modified", "modify"),
+        ("pull back", "pull_back"),
+        ("unavailable", "unavailable"),
+    ):
+        entry = _good_check_in()
+        entry["decision"] = alias
+        out = _normalize_daily_check_ins([entry])
+        assert len(out) == 1, alias
+        assert out[0]["decision"] == expected
+
+
+def test_no_fake_biometric_keys_introduced():
+    # The normalizer never adds biometric/readiness scores beyond self-report.
+    out = _normalize_daily_check_ins([_good_check_in()])
+    morning_keys = set(out[0]["morning"])
+    assert morning_keys <= {"sleep_quality", "overall_readiness", "pain", "location", "injury_specific"}
+    assert not (morning_keys & BANNED_BIOMETRIC_KEYS)
+
+
+def test_plan_with_only_malformed_check_ins_still_valid():
+    # Requirement 2/6: drop everything -> empty list, plan still validates.
+    plan = _valid_plan()
+    plan["daily_check_ins"] = [
+        {"morning": {"sleep_quality": 4}},
+        {"date": "2026-05-30", "decision": "nope"},
+    ]
+    outcome = build_structured_plan_outcome(plan, raw_markdown="# raw")
+    assert outcome.status in {"valid", "repair_attempted_valid"}
+    assert outcome.structured_plan["daily_check_ins"] == []
+    validate_structured_plan(outcome.structured_plan)
+
+
+def test_plan_text_fallback_still_works_for_fully_invalid_structure():
+    # The existing fallback is untouched when the whole structure is invalid.
+    outcome = build_structured_plan_outcome(_invalid_plan(), raw_markdown="# raw")
+    assert outcome.status == "invalid_fallback_used"
+    assert outcome.structured_plan is None
+
+
+def test_prompt_requires_valid_or_omitted_check_ins():
+    prompt = build_structured_plan_prompt(plan_markdown="# plan")
+    assert "daily_check_ins" in prompt
+    assert "fully valid or omitted" in prompt
+    assert "partial check-in" in prompt

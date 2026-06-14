@@ -30,6 +30,7 @@ from .structured_plan_models import (
     SCHEMA_VERSION,
     BlockType,
     CompletionStatus,
+    DailyCheckIn,
     DayType,
     EventType,
     LoadFocusValue,
@@ -314,6 +315,31 @@ def _coerce_int(value: Any, default: int) -> int:
         except ValueError:
             return default
     return default
+
+
+def _coerce_optional_int(value: Any) -> int | None:
+    """Coerce to ``int`` without inventing a value: return ``None`` when not safe.
+
+    Unlike :func:`_coerce_int` this has no default — a missing, non-numeric, or
+    fractional value yields ``None`` so callers can drop the surrounding entry
+    rather than substituting a fabricated score.
+    """
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, int):
+        return value
+    if isinstance(value, float):
+        return int(value) if value.is_integer() else None
+    if isinstance(value, str):
+        text = value.strip()
+        if not text:
+            return None
+        try:
+            number = float(text)
+        except ValueError:
+            return None
+        return int(number) if number.is_integer() else None
+    return None
 
 
 def _enum(value: Any, allowed: frozenset[str], default: str, aliases: dict[str, str] | None = None) -> str:
@@ -607,6 +633,142 @@ def _normalize_nutrition(value: Any) -> dict[str, Any]:
     return out
 
 
+# Decision aliases: only obvious, unambiguous synonyms map onto an established
+# ReadinessStatus value. A readiness decision is self-report, so anything not
+# matched here is dropped — never coerced into a fabricated default.
+_DECISION_ALIASES = {
+    "train": "train_as_planned",
+    "as_planned": "train_as_planned",
+    "train_as_plan": "train_as_planned",
+    "train_normally": "train_as_planned",
+    "modified": "modify",
+    "modify_session": "modify",
+    "pullback": "pull_back",
+    "pull-back": "pull_back",
+    "pull back": "pull_back",
+    "unavailable": "unavailable",
+}
+
+
+def _normalize_checkin_decision(value: Any) -> str | None:
+    """Resolve a check-in decision to a valid ``ReadinessStatus``, or ``None``.
+
+    Accepts an exact enum value, a case-only variant, or one of a few obvious
+    aliases. An unrecognized decision returns ``None`` so the caller drops the
+    whole check-in — a readiness call is never invented.
+    """
+    if not isinstance(value, str):
+        return None
+    candidate = value.strip()
+    if candidate in _READINESS_VALUES:
+        return candidate
+    lowered = candidate.lower()
+    if lowered in _READINESS_VALUES:
+        return lowered
+    return _DECISION_ALIASES.get(lowered)
+
+
+def _normalize_checkin_morning(value: Any) -> dict[str, Any] | None:
+    """Coerce a morning self-report, or ``None`` when it cannot be trusted.
+
+    ``sleep_quality``/``overall_readiness``/``pain`` are required self-report
+    scores with NO neutral default in the schema. A missing or out-of-range score
+    drops the whole check-in rather than fabricating a biometric/readiness value.
+    Numeric strings ("4") are coerced because that is a formatting fix, not
+    invention. Optional self-report context is carried through verbatim.
+    """
+    if not isinstance(value, dict):
+        return None
+    out: dict[str, Any] = {}
+    for key, low, high in (
+        ("sleep_quality", 1, 5),
+        ("overall_readiness", 1, 5),
+        ("pain", 0, 10),
+    ):
+        score = _coerce_optional_int(value.get(key))
+        if score is None or not (low <= score <= high):
+            return None
+        out[key] = score
+    if value.get("location") is not None:
+        out["location"] = _coerce_str(value.get("location"))
+    if isinstance(value.get("injury_specific"), dict):
+        out["injury_specific"] = value.get("injury_specific")
+    return out
+
+
+def _normalize_checkin_date(item: dict[str, Any], weeks: list[dict[str, Any]]) -> str | None:
+    """Resolve a check-in's date, inferring from indices only when unambiguous.
+
+    A present non-empty ``date`` string is used as-is. Otherwise, when the
+    check-in carries integer ``week_index``/``day_index`` that resolve to exactly
+    one dated day in the (already-normalized) ``weeks``, that date is used.
+    Anything ambiguous or unresolved returns ``None`` and the caller drops the
+    check-in — a date is never invented.
+    """
+    date = _coerce_str(item.get("date")).strip()
+    if date:
+        return date
+    week_index = _coerce_optional_int(item.get("week_index"))
+    day_index = _coerce_optional_int(item.get("day_index"))
+    if week_index is None or day_index is None:
+        return None
+    resolved: list[str] = []
+    for week in weeks:
+        if _coerce_optional_int(week.get("week_index")) != week_index:
+            continue
+        days = week.get("days")
+        if not isinstance(days, list) or not (0 <= day_index < len(days)):
+            continue
+        day = days[day_index]
+        if isinstance(day, dict):
+            day_date = _coerce_str(day.get("date")).strip()
+            if day_date:
+                resolved.append(day_date)
+    # Unambiguous only: exactly one matching dated day.
+    if len(resolved) == 1:
+        return resolved[0]
+    return None
+
+
+def _normalize_daily_check_ins(
+    value: Any, weeks: list[dict[str, Any]] | None = None
+) -> list[dict[str, Any]]:
+    """Drop malformed daily check-ins so they cannot fail the whole plan (PR-7).
+
+    A partial or garbled daily check-in must never sink an otherwise-valid
+    structured plan. Each entry is conservatively repaired — numeric-string scores
+    coerced, obvious decision aliases mapped, date inferred only when unambiguous —
+    then validated against :class:`DailyCheckIn`. Anything that cannot be made
+    trustworthy WITHOUT inventing self-report content (sleep, pain, readiness,
+    decision, or date) is dropped. A non-list input, or a list with no salvageable
+    entries, becomes an empty list (the model's own default).
+    """
+    if not isinstance(value, list):
+        return []
+    weeks = weeks if isinstance(weeks, list) else []
+    out: list[dict[str, Any]] = []
+    for item in value:
+        if not isinstance(item, dict):
+            continue
+        date = _normalize_checkin_date(item, weeks)
+        morning = _normalize_checkin_morning(item.get("morning"))
+        decision = _normalize_checkin_decision(item.get("decision"))
+        if date is None or morning is None or decision is None:
+            continue
+        candidate = {
+            "date": date,
+            "morning": morning,
+            "decision": decision,
+            "rules_triggered": _coerce_str_list(item.get("rules_triggered")),
+        }
+        try:  # final guarantee: only schema-valid entries survive
+            DailyCheckIn.model_validate(candidate)
+        except Exception:
+            continue
+        out.append(candidate)
+    return out
+
+
 def normalize_structured_plan_candidate(data: Any) -> Any:
     """Conservatively coerce a model's near-miss structured JSON into schema shape.
 
@@ -636,13 +798,12 @@ def normalize_structured_plan_candidate(data: Any) -> Any:
     ]
     plan["red_flag_rules"] = [_normalize_red_flag(rule) for rule in _as_dict_list(plan.get("red_flag_rules"))]
     plan["weeks"] = [_normalize_week(week) for week in _as_dict_list(plan.get("weeks"))]
-    # daily_check_ins must be a list; a non-list (object/null) becomes [] rather
-    # than being wrapped, matching the observed live failure fix.
-    raw_check_ins = plan.get("daily_check_ins")
-    plan["daily_check_ins"] = (
-        [item for item in raw_check_ins if isinstance(item, dict)]
-        if isinstance(raw_check_ins, list)
-        else []
+    # daily_check_ins must be a list of fully-valid entries; a non-list, or a
+    # partial/garbled entry, must never fail the whole plan. Malformed entries are
+    # dropped conservatively (no fabricated scores/decisions/dates), leaving [] if
+    # none survive — matching the model's empty-list default.
+    plan["daily_check_ins"] = _normalize_daily_check_ins(
+        plan.get("daily_check_ins"), plan.get("weeks")
     )
     plan["nutrition"] = _normalize_nutrition(plan.get("nutrition"))
     plan["progression_notes"] = _coerce_str(plan.get("progression_notes"))
@@ -963,6 +1124,13 @@ The JSON object MUST conform to the StructuredTrainingPlan schema:
   morning check-in only.
 - Each session MUST include completion_status (default "not_started") and a
   session-level mindset_anchor.
+- daily_check_ins are OPTIONAL and must be either fully valid or omitted. Emit a
+  check-in entry ONLY when the plan actually states a dated self-report; each
+  entry MUST then carry "date", a "morning" object with all of "sleep_quality"
+  (1-5), "overall_readiness" (1-5) and "pain" (0-10), and a "decision" of
+  "train_as_planned", "modify", "pull_back" or "unavailable". Never emit a
+  partial check-in and never invent these self-report scores or a date — if you
+  cannot fill every field from the plan, leave daily_check_ins as [].
 - Provide red_flag_rules[] with machine fields (metric/operator/threshold/logic)
   kept separate from a human-readable display_text.
 - Provide nutrition with a summary and, where a weight cut applies, a
