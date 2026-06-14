@@ -23,9 +23,11 @@ import {
   isTimeLikeReps,
   nutritionPhaseRows,
   recoveryPhaseView,
+  redFlagView,
   selectBlockMetric,
   shouldRenderStructuredPlan,
   shouldShowRest,
+  splitMindsetLines,
 } from "./structured-plan.ts";
 
 // An athlete-safe deterministic_support projection (as the backend emits it,
@@ -415,4 +417,68 @@ test("recovery/nutrition helpers tolerate missing / partial data", () => {
   assert.equal(view.sleep, null);
   assert.deepEqual(view.coreStrategies, []);
   assert.equal(view.weightCut, null);
+});
+
+// --- PR-9 polish helpers ----------------------------------------------------
+
+test("redFlagView hides raw action enum but keeps a human action sentence", () => {
+  const rawAction = redFlagView({
+    display_text: "Sharp or progressive triceps pain.",
+    action: "stop_and_report",
+    severity: "red",
+  });
+  assert.equal(rawAction.text, "Sharp or progressive triceps pain.");
+  assert.equal(rawAction.action, null); // raw enum hidden
+  assert.equal(rawAction.severityLabel, "Red");
+
+  const humanAction = redFlagView({
+    display_text: "Sharp or progressive triceps pain.",
+    action: "Stop training and report to medical staff.",
+    severity: "amber",
+  });
+  assert.equal(humanAction.action, "Stop training and report to medical staff.");
+  assert.equal(humanAction.severityLabel, "Amber");
+});
+
+test("redFlagView drops an action that merely repeats the display text", () => {
+  const view = redFlagView({
+    display_text: "Stop and report dizziness.",
+    action: "Stop and report dizziness.",
+    severity: "red",
+  });
+  assert.equal(view.action, null);
+});
+
+test("redFlagView tolerates missing fields", () => {
+  const view = redFlagView({ display_text: "Something" });
+  assert.equal(view.text, "Something");
+  assert.equal(view.action, null);
+  assert.equal(view.severityLabel, null);
+  const empty = redFlagView(null);
+  assert.equal(empty.text, null);
+  assert.equal(empty.severityLabel, null);
+});
+
+test("splitMindsetLines keeps Intent/Focus/Reset primary, Anchor/Context secondary", () => {
+  const { primary, secondary } = splitMindsetLines({
+    intent: "Stay sharp",
+    focus_cue: "Hands up",
+    reset_cue: "Breathe",
+    confidence_anchor: "You've done the rounds",
+    context: "Final hard week",
+  });
+  assert.deepEqual(
+    primary.map((line) => line.label),
+    ["Intent", "Focus", "Reset"],
+  );
+  assert.deepEqual(
+    secondary.map((line) => line.label),
+    ["Anchor", "Context"],
+  );
+});
+
+test("splitMindsetLines returns empty secondary when no anchor/context present", () => {
+  const { primary, secondary } = splitMindsetLines({ intent: "Go" });
+  assert.deepEqual(primary.map((line) => line.label), ["Intent"]);
+  assert.deepEqual(secondary, []);
 });
