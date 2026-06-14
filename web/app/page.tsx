@@ -6,6 +6,7 @@ import { type ReactNode, useEffect, useState } from "react";
 
 import { useAppSession } from "@/components/auth-provider";
 import { EmptyState } from "@/components/empty-state";
+import { PlansFeaturedSkeleton, Skeleton } from "@/components/skeleton";
 import { listPlans } from "@/lib/api";
 import {
   getOptionLabel,
@@ -171,6 +172,32 @@ function OverviewDisclosure({
   );
 }
 
+function WorkspaceOverviewSkeleton() {
+  return (
+    <section className="hero-panel overview-command-shell athlete-motion-slot athlete-motion-header" aria-busy="true">
+      <div className="overview-command-grid">
+        <div className="hero-panel-copy overview-command-copy">
+          <Skeleton variant="text" width={90} height={12} />
+          <Skeleton variant="text" width="68%" height={42} />
+          <Skeleton variant="text" width="82%" height={16} />
+          <div className="overview-operational-strip" aria-label="Workspace status loading">
+            {[0, 1, 2].map((index) => (
+              <div key={index} className="overview-operational-item">
+                <Skeleton variant="text" width={92} height={10} />
+                <Skeleton variant="text" width={136} height={16} />
+              </div>
+            ))}
+          </div>
+        </div>
+        <PlansFeaturedSkeleton />
+      </div>
+      <div className="overview-disclosure-stack athlete-motion-slot athlete-motion-status">
+        <PlansFeaturedSkeleton />
+      </div>
+    </section>
+  );
+}
+
 export default function HomePage() {
   const { isReady, isMeHydrated, hasTransientMeError, session, me, signOut } = useAppSession();
   const router = useRouter();
@@ -218,14 +245,14 @@ export default function HomePage() {
 
     const fallbackPlans = me?.latest_plan ? [me.latest_plan] : [];
 
-    if (!session?.access_token || !me) {
+    if (!session?.access_token) {
       setRecentPlans(fallbackPlans);
       return () => {
         active = false;
       };
     }
 
-    if (me.plan_count <= 1) {
+    if (me && me.plan_count <= 1) {
       setRecentPlans(fallbackPlans);
       return () => {
         active = false;
@@ -251,7 +278,7 @@ export default function HomePage() {
     return () => {
       active = false;
     };
-  }, [me?.latest_plan?.plan_id, me?.plan_count, session?.access_token]);
+  }, [me, session?.access_token]);
 
   if (session && hasTransientMeError) {
     return (
@@ -271,7 +298,7 @@ export default function HomePage() {
     );
   }
 
-  if (!isReady || (session && !isMeHydrated)) {
+  if (!isReady) {
     return (
       <section className="panel loading-card">
         <p className="kicker">Overview</p>
@@ -279,6 +306,10 @@ export default function HomePage() {
         <p className="muted">Checking saved intake and plan history.</p>
       </section>
     );
+  }
+
+  if (session && !isMeHydrated) {
+    return <WorkspaceOverviewSkeleton />;
   }
 
   if (session && isMeHydrated && !me) {

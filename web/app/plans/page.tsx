@@ -863,7 +863,8 @@ export default function PlansPage() {
     router.refresh();
   }
 
-  const isDashboardLoading = isLoading || !isMeHydrated;
+  const isPlanListLoading = isLoading;
+  const isProfileLoading = !isMeHydrated;
 
   return (
     <RequireAuth>
@@ -878,13 +879,10 @@ export default function PlansPage() {
 
         {error ? <div className="error-banner athlete-motion-slot athlete-motion-status">{error}</div> : null}
 
-        {isDashboardLoading ? (
-          <div className="plans-dashboard-stack athlete-motion-slot athlete-motion-main" aria-busy="true">
+        <div className="plans-dashboard-stack athlete-motion-slot athlete-motion-main">
+          {isPlanListLoading ? (
             <PlansFeaturedSkeleton />
-            <PlansFeaturedSkeleton />
-          </div>
-        ) : (
-          <div className="plans-dashboard-stack athlete-motion-slot athlete-motion-main">
+          ) : (
             <LatestPlanCard
               plan={latestPlan}
               intake={intakeSource}
@@ -892,9 +890,9 @@ export default function PlansPage() {
               onPlanDeleted={handlePlanDeleted}
               onPlanRenamed={handlePlanRenamed}
             />
-            <IntakeCard me={me} />
-          </div>
-        )}
+          )}
+          {isProfileLoading ? <PlansFeaturedSkeleton /> : <IntakeCard me={me} />}
+        </div>
 
         {isLoading ? (
           <div className="plans-history-block athlete-motion-slot athlete-motion-main" aria-busy="true">

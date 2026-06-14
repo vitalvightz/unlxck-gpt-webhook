@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type TransitionEvent } from "react";
 
 import { useAppSession } from "@/components/auth-provider";
+import { Skeleton } from "@/components/skeleton";
 import { shouldShowAdminPanelLink } from "@/lib/admin-nav-visibility";
 import { isSafeAvatarImageUrl } from "@/lib/avatar-image-url";
 import { SIDE_NAV_ITEMS } from "@/lib/beta-navigation";
@@ -55,9 +56,9 @@ export function AppNav() {
   const [pendingNavHref, setPendingNavHref] = useState<string | null>(null);
   const closeTimeoutRef = useRef<number | null>(null);
   const desktopNavToggleRef = useRef<HTMLButtonElement | null>(null);
-  const hasHydratedSession = Boolean(session && me);
+  const hasSession = Boolean(session);
   const isSessionResolving = Boolean(session && !isMeHydrated);
-  const shellSurface = getShellSurface(pathname, hasHydratedSession);
+  const shellSurface = getShellSurface(pathname, hasSession);
 
   const isMobileDrawerVisible = mobileNavState !== "closed";
 
@@ -251,6 +252,7 @@ export function AppNav() {
 
   const profile = me?.profile;
   const displayName = profile?.full_name || "Athlete";
+  const displayEmail = profile?.email || session?.email || "Session active";
   const initials = getInitials(displayName);
   const avatarUrl = profile && isSafeAvatarImageUrl(profile.avatar_url) ? profile.avatar_url : null;
   const role = profile?.role ?? null;
@@ -258,7 +260,7 @@ export function AppNav() {
 
   return (
     <>
-      {shellSurface === "brand" && isReady && !isSessionResolving && !hasHydratedSession ? (
+      {shellSurface === "brand" && isReady && !session ? (
         <header className="brand-topbar" aria-label="UNLXCK entry navigation">
           <Link href="/" className="brand-topbar-mark">
             <span className="eyebrow">UNLXCK</span>
@@ -343,7 +345,7 @@ export function AppNav() {
             <p className="sidebar-tagline">Fight-camp workspace.</p>
           </div>
 
-          {(!isReady || isSessionResolving) ? (
+          {!isReady ? (
             <div className="sidebar-nav">
               <p className="sidebar-section-label">Session</p>
               <div className="sidebar-user-card">
@@ -353,7 +355,7 @@ export function AppNav() {
             </div>
           ) : null}
 
-          {isReady && !isSessionResolving && !hasHydratedSession ? (
+          {isReady && !session ? (
             <>
               <div className="sidebar-auth">
                 <p className="sidebar-section-label">Access</p>
@@ -385,7 +387,7 @@ export function AppNav() {
             </>
           ) : null}
 
-          {isReady && hasHydratedSession ? (
+          {isReady && session ? (
             <>
               <nav className="sidebar-nav">
                 <p className="sidebar-section-label">Workspace</p>
@@ -431,7 +433,7 @@ export function AppNav() {
                     </div>
                     <div className="sidebar-user-info">
                       <p className="sidebar-user-name">{displayName}</p>
-                      <p className="sidebar-user-email">{profile?.email}</p>
+                      <p className="sidebar-user-email">{displayEmail}</p>
                       {role ? (
                         <span
                           className={`sidebar-role-badge sidebar-role-${role}`}
@@ -439,6 +441,8 @@ export function AppNav() {
                         >
                           {role === "admin" ? "Admin" : "Athlete"}
                         </span>
+                      ) : isSessionResolving ? (
+                        <Skeleton variant="block" width={74} height={24} style={{ borderRadius: 999 }} />
                       ) : null}
                     </div>
                   </div>

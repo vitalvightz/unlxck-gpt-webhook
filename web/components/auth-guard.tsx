@@ -104,7 +104,7 @@ export function RequireAuth({
   if (!session) {
     return <LoadingCard label="Redirecting to login" />;
   }
-  if (hasTransientMeError && session && !me) {
+  if (adminOnly && hasTransientMeError && session && !me) {
     return (
       <RecoveryCard
         adminOnly={adminOnly}
@@ -114,10 +114,10 @@ export function RequireAuth({
       />
     );
   }
-  if (!isMeHydrated) {
+  if (adminOnly && !isMeHydrated) {
     return <LoadingCard label={adminOnly ? "Restoring admin access" : "Restoring your workspace"} />;
   }
-  if (!me) {
+  if (isMeHydrated && !me) {
     return <LoadingCard label="Redirecting to login" />;
   }
   if (adminOnly && role !== "admin") {

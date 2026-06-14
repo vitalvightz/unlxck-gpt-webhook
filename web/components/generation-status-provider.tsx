@@ -27,6 +27,7 @@ interface GenerationStatusContextValue {
 const GenerationStatusContext = createContext<GenerationStatusContextValue | null>(null);
 const PENDING_GENERATION_PREFIX = "unlxck:pending-generation:";
 const GLOBAL_STATUS_POLL_MS = 15_000;
+const INITIAL_STATUS_CHECK_DELAY_MS = 900;
 
 interface PendingGenerationState {
   clientRequestId: string;
@@ -363,7 +364,9 @@ export function GenerationStatusProvider({ children, token }: GenerationStatusPr
   }, [token, resetGenerationState]);
 
   useEffect(() => {
-    void checkStatus();
+    const initialCheckTimer = window.setTimeout(() => {
+      void checkStatus();
+    }, token ? INITIAL_STATUS_CHECK_DELAY_MS : 0);
 
     const interval = setInterval(() => {
       if (getPendingGeneration()) {
@@ -385,6 +388,7 @@ export function GenerationStatusProvider({ children, token }: GenerationStatusPr
     document.addEventListener("visibilitychange", handleVisibilityChange);
 
     return () => {
+      window.clearTimeout(initialCheckTimer);
       clearInterval(interval);
       window.removeEventListener("storage", handleStorageChange);
       document.removeEventListener("visibilitychange", handleVisibilityChange);

@@ -7,9 +7,9 @@ test("shows Admin panel link for admin role", () => {
   assert.equal(shouldShowAdminPanelLink("admin"), true);
 });
 
-test("shows Admin panel link on admin route while role is missing", () => {
-  assert.equal(shouldShowAdminPanelLink(null, true), true);
-  assert.equal(shouldShowAdminPanelLink(undefined, true), true);
+test("hides Admin panel link on admin route while role is missing", () => {
+  assert.equal(shouldShowAdminPanelLink(null, true), false);
+  assert.equal(shouldShowAdminPanelLink(undefined, true), false);
 });
 
 test("hides Admin panel link for athlete outside admin route", () => {
