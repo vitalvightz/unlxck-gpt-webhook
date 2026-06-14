@@ -52,12 +52,10 @@ function CollapsibleSection({
   className?: string;
   children: ReactNode;
 }) {
-  const [open, setOpen] = useState<boolean>(Boolean(defaultOpen));
   return (
     <details
       className={`sp-collapse${className ? ` ${className}` : ""}`}
-      open={open}
-      onToggle={(event) => setOpen(event.currentTarget.open)}
+      open={defaultOpen ? true : undefined}
     >
       <summary className="sp-collapse-summary">
         <span className="sp-collapse-title">{title}</span>

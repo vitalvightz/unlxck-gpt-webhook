@@ -27,6 +27,11 @@ test("admin without admin_outputs can still use general admin actions", () => {
   assert.equal(isAdminRole("admin"), true);
 });
 
+test("admin without admin_outputs can still use blocked-plan diagnostic visibility", () => {
+  assert.equal(isAdminRole("admin"), true);
+  assert.equal(canUseAdminPlanControls("admin", false), false);
+});
+
 test("athlete cannot see any admin-only controls", () => {
   assert.equal(isAdminRole("athlete"), false);
   assert.equal(canUseAdminPlanControls("athlete", true), false);

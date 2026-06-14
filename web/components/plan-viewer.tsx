@@ -1674,7 +1674,7 @@ export function PlanViewer({
             <BlockedPlanDecisionCard
               triage={injuryTriage}
               injuryContext={blockedInjuryContext}
-              isAdmin={canUseAdminOutputs}
+              isAdmin={isViewerAdmin}
             />
           ) : hasPublishedPlan ? (
             <>
