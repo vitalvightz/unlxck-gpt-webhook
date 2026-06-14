@@ -21,7 +21,10 @@ import pytest
 
 import api.stage2_automation as stage2_module
 from api.plan_mappers import _map_plan_detail
-from api.services.admin_stage2_service import approve_review_required_plan
+from api.services.admin_stage2_service import (
+    approve_review_required_plan,
+    run_structured_plan_post_processing,
+)
 from api.stage2_automation import (
     OpenAIStage2Automator,
     attempt_structured_plan_for_result,
@@ -434,7 +437,7 @@ def test_helper_skips_when_automator_has_no_converter(monkeypatch):
 
 
 # ---------------------------------------------------------------------------
-# Admin approval path triggers structured conversion
+# Admin approval is fast/DB-only; structured conversion is deferred
 # ---------------------------------------------------------------------------
 
 
@@ -457,7 +460,15 @@ def _seed_held_plan(store: FakeStore, *, plan_id: str = "plan-1") -> str:
     return plan_id
 
 
-def test_admin_approve_into_ready_triggers_structured_conversion(monkeypatch):
+def test_admin_approve_is_db_only_and_skips_synchronous_structured(monkeypatch):
+    """Approval must be a fast DB-only release.
+
+    Structured conversion can call the model and is slow enough to trip the
+    frontend/proxy request timeout (the false "Connection issue" bug), so the
+    approval path must not run it synchronously. It still returns a ready plan
+    with plan_text populated; structured conversion is left to the background
+    post-processing step.
+    """
     monkeypatch.setenv("UNLXCK_STAGE2_STRUCTURED_PLAN", "1")
     store = FakeStore()
     plan_id = _seed_held_plan(store)
@@ -469,31 +480,56 @@ def test_admin_approve_into_ready_triggers_structured_conversion(monkeypatch):
 
     assert detail.status == "ready"
     assert detail.outputs.plan_text == "# approved plan"  # plan_text preserved
-    assert detail.outputs.structured_plan is not None
-    assert detail.outputs.schema_version == SCHEMA_VERSION
-    # Persisted on the row, and the conversion ran exactly once.
-    assert store.plans[plan_id]["structured_plan"] is not None
+    # No synchronous conversion: nothing structured on the response or row, and
+    # the converter was never invoked during approval.
+    assert detail.outputs.structured_plan is None
+    assert store.plans[plan_id].get("structured_plan") is None
+    assert automator.calls == []
+
+
+def test_structured_post_processing_converts_after_approval(monkeypatch):
+    """The non-blocking post-processing step performs the deferred conversion."""
+    monkeypatch.setenv("UNLXCK_STAGE2_STRUCTURED_PLAN", "1")
+    store = FakeStore()
+    plan_id = _seed_held_plan(store)
+    automator = _StructuredAutomator(_valid_outcome("# approved plan"))
+
+    asyncio.run(
+        approve_review_required_plan(plan_id=plan_id, store=store, stage2=automator)
+    )
+    assert automator.calls == []  # nothing during the fast approval
+
+    asyncio.run(
+        run_structured_plan_post_processing(plan_id=plan_id, store=store, stage2=automator)
+    )
+
+    # Conversion ran exactly once and is persisted, without disturbing the live
+    # released plan (status/plan_text intact).
     assert len(automator.calls) == 1
+    assert store.plans[plan_id]["structured_plan"] is not None
+    assert store.plans[plan_id]["schema_version"] == SCHEMA_VERSION
+    assert store.plans[plan_id]["status"] == "ready"
+    assert store.plans[plan_id]["plan_text"] == "# approved plan"
 
 
-def test_admin_approve_structured_failure_keeps_plan_text_and_ready(monkeypatch):
+def test_structured_post_processing_failure_keeps_plan_text_and_ready(monkeypatch):
     monkeypatch.setenv("UNLXCK_STAGE2_STRUCTURED_PLAN", "1")
     store = FakeStore()
     plan_id = _seed_held_plan(store)
     failed = StructuredPlanOutcome(status="invalid_fallback_used", errors=["bad shape"])
     automator = _StructuredAutomator(failed)
 
-    detail = asyncio.run(
+    asyncio.run(
         approve_review_required_plan(plan_id=plan_id, store=store, stage2=automator)
     )
+    asyncio.run(
+        run_structured_plan_post_processing(plan_id=plan_id, store=store, stage2=automator)
+    )
 
-    # Structured failure must not block the approval or drop plan_text.
-    assert detail.status == "ready"
-    assert detail.outputs.plan_text == "# approved plan"
-    assert detail.outputs.structured_plan is None
-    assert store.plans[plan_id]["structured_plan"] is None
-    debug = store.plans[plan_id]["stage2_validator_report"]["structured_plan"]
-    assert debug["status"] == "invalid_fallback_used"
+    # A structured failure leaves the released raw markdown plan intact.
+    assert store.plans[plan_id]["status"] == "ready"
+    assert store.plans[plan_id]["plan_text"] == "# approved plan"
+    assert store.plans[plan_id].get("structured_plan") is None
 
 
 def test_admin_approve_without_env_flag_skips_structured(monkeypatch):
@@ -505,7 +541,12 @@ def test_admin_approve_without_env_flag_skips_structured(monkeypatch):
     detail = asyncio.run(
         approve_review_required_plan(plan_id=plan_id, store=store, stage2=automator)
     )
+    # Even the background step is a no-op when the env flag is off.
+    asyncio.run(
+        run_structured_plan_post_processing(plan_id=plan_id, store=store, stage2=automator)
+    )
 
     assert detail.status == "ready"
     assert detail.outputs.structured_plan is None
+    assert store.plans[plan_id].get("structured_plan") is None
     assert automator.calls == []

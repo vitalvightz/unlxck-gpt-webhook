@@ -55,6 +55,7 @@ from .sentry_config import init_sentry
 from .services.generation_request_service import generate_plan_for_current_user
 from .services.admin_stage2_service import (
     approve_review_required_plan as approve_review_required_plan_service,
+    run_structured_plan_post_processing as run_structured_plan_post_processing_service,
     submit_manual_stage2 as submit_manual_stage2_service,
 )
 from .services.generation_retry_service import retry_generation_job as retry_generation_job_service
@@ -894,15 +895,27 @@ def create_app(
     @app.post("/api/admin/plans/{plan_id}/approve", response_model=PlanDetail)
     async def approve_review_required_plan(
         plan_id: str,
+        background_tasks: BackgroundTasks,
         _: ProfileRecord = Depends(require_admin),
         store: AppStore = Depends(get_store),
         stage2: Stage2Automator = Depends(get_stage2_automator),
     ) -> PlanDetail:
-        return await approve_review_required_plan_service(
+        # Approval is a fast DB-only release so the admin click returns well
+        # within the frontend/proxy timeout. Any structured-plan conversion runs
+        # after the response is sent, leaving the raw markdown fallback live in
+        # the meantime.
+        detail = await approve_review_required_plan_service(
             plan_id=plan_id,
             store=store,
             stage2=stage2,
         )
+        background_tasks.add_task(
+            run_structured_plan_post_processing_service,
+            plan_id=plan_id,
+            store=store,
+            stage2=stage2,
+        )
+        return detail
 
     @app.post("/api/admin/plans/{plan_id}/approve-and-resume-generation", response_model=GenerationJobResponse, status_code=202)
     async def approve_and_resume_generation(
