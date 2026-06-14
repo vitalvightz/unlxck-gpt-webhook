@@ -496,7 +496,7 @@ function SparringAdvisoryCard({ advisory }: { advisory: PlanAdvisory }) {
   // boilerplate reasoning is tucked behind a "Why" toggle.
   const [showWhy, setShowWhy] = useState(false);
   const directive = (advisory.replacement || advisory.suggestion || "").trim();
-  const daysLabel = advisory.days.join(", ").trim();
+  const daysLabel = (advisory.days || []).join(", ").trim();
   const riskBandLabel = advisory.risk_band ? formatRiskBandLabel(advisory.risk_band) : null;
   const reason = (advisory.reason || "").trim();
   const explanation = advisory.risk_band ? explainRiskBand(advisory.risk_band) : null;
