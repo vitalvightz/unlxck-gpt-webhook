@@ -18,7 +18,6 @@ from .structured_plan_generation import (
 )
 
 _APP_STATUS_READY = "ready"
-_APP_STATUS_PUBLISHABLE_WITH_FLAGS = "publishable_with_flags"
 _APP_STATUS_HELD_FOR_REVIEW = "held_for_review"
 _APP_STATUS_REVIEW_REQUIRED = "review_required"
 _STAGE2_PASS = "stage2_pass"
@@ -41,6 +40,74 @@ _CARD_UNRESCUABLE_ERROR_CODES: frozenset[str] = frozenset(
         "late_fight_hard_sparring_violation",
         "dangerous_late_fight_strength_or_conditioning",
         "fight_day_protocol_violation",
+        "calendar_spine_fight_day_protocol_violation",
+    }
+)
+
+_CARD_RESCUABLE_SOFT_CODES: frozenset[str] = frozenset(
+    {
+        "anchor_day_identity_overload",
+        "calendar_spine_ambiguous_countdown_window",
+        "calendar_spine_d_day_mismatch",
+        "calendar_spine_post_fight_training_rendered",
+        "calendar_spine_session_role_not_authorized",
+        "calendar_spine_unmapped_weekday_rendered",
+        "coach_owned_sparring_overdetailed",
+        "code_fence_present",
+        "conditional_conditioning_choice",
+        "crowded_week_non_spar_overage",
+        "empty_safety_language",
+        "equipment_incongruent_selection",
+        "generic_filler_phrase",
+        "generic_instruction_opener",
+        "generic_motivation_cliche",
+        "gimmick_name",
+        "hedged_adjustment_without_decision",
+        "high_pressure_weight_cut_underaddressed",
+        "html_markup_present",
+        "internal_phrase_leak",
+        "internal_render_contract_leak",
+        "internal_section_leak",
+        "late_camp_session_incomplete",
+        "late_fight_active_role_overage",
+        "late_fight_alactic_dose_overage",
+        "late_fight_block_overage",
+        "late_fight_conditioning_round_structure_forbidden",
+        "late_fight_countdown_blocked_drill",
+        "late_fight_countdown_fight_day_mislabel",
+        "late_fight_countdown_header_format",
+        "late_fight_d0_protocol_expanded",
+        "late_fight_forbidden_content",
+        "late_fight_hard_sparring_d12_review",
+        "late_fight_hard_sparring_overage",
+        "late_fight_meaningful_stress_overage",
+        "late_fight_missing_countdown_header",
+        "late_fight_neural_power_stacking",
+        "late_fight_technical_round_overage",
+        "late_fight_unapproved_exercise_rendered",
+        "late_fight_window_forbidden_exercise",
+        "late_fight_window_preferred_missing",
+        "missing_injury_lead_summary",
+        "missing_required_element",
+        "missing_week_session_role",
+        "missing_weight_cut_acknowledgement",
+        "missing_weight_cut_lead_summary",
+        "option_overload",
+        "overstyled_drill_name",
+        "phase_section_missing",
+        "sport_language_leak",
+        "stage2_warning",
+        "support_recovery_day_stress_leak",
+        "support_takeover_before_anchor",
+        "taper_option_overload",
+        "template_like_session_render",
+        "too_many_fallbacks",
+        "true_internal_system_leak",
+        "unresolved_access_fallback",
+        "weak_anchor_session",
+        "weekly_rhythm_broken",
+        "weekly_session_overage",
+        "weight_cut_state_contradiction",
     }
 )
 
@@ -50,31 +117,36 @@ def _stage2_hold_is_card_rescuable(validator_report: Any) -> bool:
 
     A hold is rescuable only when it is driven entirely by non-safety,
     recoverable findings. The check is intentionally defensive about a
-    malformed report — anything it cannot positively confirm is non-rescuable,
+    malformed report - anything it cannot positively confirm is non-rescuable,
     so an odd shape never accidentally publishes a held plan. It returns True
     only when ALL of the following hold:
 
     * ``validator_report`` is a dict;
-    * ``errors`` is a non-empty list;
-    * there are no blocking warnings;
-    * every error is a dict carrying a non-empty string ``code``; and
-    * none of those codes is a safety/output-integrity (unrescuable) code.
+    * ``errors`` and ``blocking_warnings`` are lists;
+    * every error/blocking warning is a dict carrying a non-empty string
+      ``code``; and
+    * every code is a known soft code, not a safety/output-integrity code.
     """
 
     if not isinstance(validator_report, dict):
         return False
     errors = validator_report.get("errors")
-    if not isinstance(errors, list) or not errors:
+    blocking_warnings = validator_report.get("blocking_warnings") or []
+    if not isinstance(errors, list) or not isinstance(blocking_warnings, list):
         return False
-    if validator_report.get("blocking_warnings"):
+    findings = [*errors, *blocking_warnings]
+    if not findings:
         return False
-    for error in errors:
-        if not isinstance(error, dict):
+    for finding in findings:
+        if not isinstance(finding, dict):
             return False
-        code = error.get("code")
+        code = finding.get("code")
         if not isinstance(code, str) or not code.strip():
             return False
-        if code.strip() in _CARD_UNRESCUABLE_ERROR_CODES:
+        normalized_code = code.strip()
+        if normalized_code in _CARD_UNRESCUABLE_ERROR_CODES:
+            return False
+        if normalized_code not in _CARD_RESCUABLE_SOFT_CODES:
             return False
     return True
 
@@ -695,15 +767,10 @@ class OpenAIStage2Automator:
         # A soft hold (non-safety findings only) is tentatively published so the
         # structured-card attempt below can run and vouch for it. If no clean
         # card materialises, it is reverted to a hold further down. Only gated
-        # when structured plans are enabled — otherwise no card can ever rescue
+        # when structured plans are enabled - otherwise no card can ever rescue
         # it and the tentative publish would just flap back to a hold.
         rescue_pending = False
         if first_review["status"] == "PASS":
-            app_status = (
-                _APP_STATUS_PUBLISHABLE_WITH_FLAGS
-                if int(first_review["validator_report"].get("review_flag_count") or 0) > 0
-                else _APP_STATUS_READY
-            )
             result = _approved_result(
                 stage1_result,
                 draft_plan_text=draft_plan_text,
@@ -711,7 +778,7 @@ class OpenAIStage2Automator:
                 validator_report=first_review["validator_report"],
                 attempt_count=1,
                 stage2_status=_STAGE2_PASS,
-                app_status=app_status,
+                app_status=_APP_STATUS_READY,
                 stage2_cost=first_pass_cost,
             )
         elif _structured_plan_enabled() and _stage2_hold_is_card_rescuable(
@@ -727,7 +794,7 @@ class OpenAIStage2Automator:
                 validator_report=first_review["validator_report"],
                 attempt_count=1,
                 stage2_status=_STAGE2_PASS,
-                app_status=_APP_STATUS_PUBLISHABLE_WITH_FLAGS,
+                app_status=_APP_STATUS_READY,
                 stage2_cost=first_pass_cost,
             )
             rescue_pending = True
@@ -745,7 +812,7 @@ class OpenAIStage2Automator:
 
         # Structured-plan conversion is triggered by the canonical state-machine
         # predicate (athlete-displayable plans only), not a hardcoded Stage 2
-        # status. A PASS yields ready/publishable_with_flags (attempted); a
+        # status. A PASS yields ready (attempted); a
         # review-required hold is not displayable (skipped). Any failure degrades
         # to the plan_text fallback and is recorded for admin debug.
         result, structured_costs = await attempt_structured_plan_for_result(
@@ -757,10 +824,13 @@ class OpenAIStage2Automator:
         )
 
         # Confirm or roll back the tentative rescue: a clean schema-valid card
-        # keeps the plan publishable; anything else falls back to the hold.
+        # keeps the plan ready; anything else falls back to the hold.
         if rescue_pending and not has_clean_structured_card(result):
             logger.warning(
                 "[stage2] structured-card rescue failed (no clean card); holding for review"
+            )
+            structured_debug = (result.get("stage2_validator_report") or {}).get(
+                "structured_plan"
             )
             result = _review_required_result(
                 stage1_result,
@@ -771,6 +841,10 @@ class OpenAIStage2Automator:
                 attempt_count=1,
                 stage2_cost=first_pass_cost,
             )
+            if structured_debug is not None:
+                report = result.get("stage2_validator_report")
+                if isinstance(report, dict):
+                    report["structured_plan"] = structured_debug
 
         # Roll the structured calls' tokens into the persisted cost row so it
         # reflects total Stage 2 spend, not just the plan-text pass.

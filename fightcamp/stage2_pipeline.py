@@ -11,6 +11,16 @@ _STATUS_PASS = "PASS"
 _STATUS_WARN = "WARN"
 _STATUS_FAIL = "FAIL"
 
+_HARD_REPAIR_BLOCKER_CODES = {
+    "restriction_violation",
+    "late_fight_hard_sparring_violation",
+    "dangerous_late_fight_strength_or_conditioning",
+    "fight_day_protocol_violation",
+    "calendar_spine_fight_day_protocol_violation",
+    "stage2_output_empty",
+    "stage2_output_truncated",
+}
+
 
 
 def _require_dict(value: Any, *, name: str) -> dict:
@@ -42,14 +52,49 @@ def _warning_buckets(validator_report: dict) -> tuple[list[dict], list[dict]]:
     blocking_warnings = [
         warning
         for warning in warnings
-        if str(warning.get("severity") or "").lower() == "blocker"
+        if str(warning.get("code") or "") in _HARD_REPAIR_BLOCKER_CODES
     ]
     review_flags = [
         warning
         for warning in warnings
-        if str(warning.get("severity") or "").lower() != "blocker"
+        if str(warning.get("code") or "") not in _HARD_REPAIR_BLOCKER_CODES
     ]
     return blocking_warnings, review_flags
+
+
+def _hard_blocker_findings(validator_report: dict) -> list[dict]:
+    findings: list[dict] = []
+    for key in ("errors", "blocking_warnings"):
+        for item in validator_report.get(key, []) or []:
+            if not isinstance(item, dict):
+                continue
+            if str(item.get("code") or "") in _HARD_REPAIR_BLOCKER_CODES:
+                findings.append(item)
+    return findings
+
+
+def _repair_prompt_report(validator_report: dict) -> dict:
+    errors = [
+        item
+        for item in validator_report.get("errors", []) or []
+        if isinstance(item, dict) and str(item.get("code") or "") in _HARD_REPAIR_BLOCKER_CODES
+    ]
+    blocking_warnings = [
+        item
+        for item in validator_report.get("blocking_warnings", []) or []
+        if isinstance(item, dict) and str(item.get("code") or "") in _HARD_REPAIR_BLOCKER_CODES
+    ]
+    hard_codes = {str(item.get("code") or "") for item in [*errors, *blocking_warnings]}
+    restricted_hits = (
+        list(validator_report.get("restricted_hits", []) or [])
+        if "restriction_violation" in hard_codes
+        else []
+    )
+    return {
+        "errors": errors,
+        "blocking_warnings": blocking_warnings,
+        "restricted_hits": restricted_hits,
+    }
 
 
 def _enrich_validator_report(validator_report: dict) -> dict:
@@ -164,19 +209,8 @@ def _build_review_summary(validator_report: dict, status: str) -> tuple[str, lis
     if blocking_warnings:
         summary_parts.append(f"{len(blocking_warnings)} blocking warning{'s' if len(blocking_warnings) != 1 else ''}")
         detail_lines.extend(_warning_detail_line(warning) for warning in blocking_warnings)
-    if review_flags:
-        summary_parts.append(f"{len(review_flags)} review flag{'s' if len(review_flags) != 1 else ''}")
-        detail_lines.extend(f"Review flag: {_warning_detail_line(warning)}" for warning in review_flags)
-
     if status == _STATUS_PASS:
-        if review_flags:
-            summary = "PASS: final plan cleared blocking validation but still has non-blocking review flags"
-            if summary_parts:
-                summary += f" ({', '.join(summary_parts)})."
-            else:
-                summary += "."
-        else:
-            summary = "PASS: final plan cleared validation."
+        summary = "PASS: final plan cleared validation."
     elif status == _STATUS_WARN:
         summary = "WARN: final plan still has blocking review issues and needs revision before release"
         if summary_parts:
@@ -254,7 +288,7 @@ def build_stage2_retry(
         status = _review_status(validator_report)
         summary, summary_lines = _build_review_summary(validator_report, status)
 
-    if status == _STATUS_PASS:
+    if status == _STATUS_PASS or not _hard_blocker_findings(validator_report):
         return {
             "status": status,
             "validator_report": validator_report,
@@ -264,10 +298,11 @@ def build_stage2_retry(
             "repair_prompt": None,
         }
 
+    repair_report = _repair_prompt_report(validator_report)
     repair_prompt = build_stage2_repair_prompt(
         planning_brief=planning_brief,
         failed_plan_text=final_plan_text,
-        validator_report=validator_report,
+        validator_report=repair_report,
     )
     return {
         "status": status,
