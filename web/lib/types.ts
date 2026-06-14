@@ -404,6 +404,53 @@ export type StructuredNutrition = {
   weight_cut_warning?: StructuredWeightCutWarning | null;
 };
 
+// Athlete-safe projection of Stage 1's deterministic computed_support. Coach/
+// medical-gated dosing is stripped server-side, so these shapes never carry it.
+export type DeterministicMacroRange = {
+  min?: number | null;
+  max?: number | null;
+  per_kg?: (number | null)[] | null;
+  per_kg_l?: (number | null)[] | null;
+  note?: string | null;
+};
+
+export type DeterministicWeightCut = {
+  active?: boolean | null;
+  risk_band?: string | null;
+  supervision_required?: boolean | null;
+};
+
+export type DeterministicNutritionPhase = {
+  phase?: string | null;
+  meal_structure?: string | null;
+  calorie_adjustment?: string | null;
+  protein_g_per_day?: DeterministicMacroRange | null;
+  carbs_g_per_day?: DeterministicMacroRange | null;
+  fats_g_per_day?: DeterministicMacroRange | null;
+  hydration_ml_per_day?: DeterministicMacroRange | null;
+  fuel_timing?: { pre?: string | null; intra?: string | null; post?: string | null } | null;
+  fatigue_adjustment?: string | null;
+  weight_cut?: DeterministicWeightCut | null;
+};
+
+export type DeterministicRecoveryPhase = {
+  phase?: string | null;
+  core_strategies?: string[] | null;
+  sleep_hours_target?: (number | null)[] | null;
+  age_adjustments?: string[] | null;
+  fatigue_flags?: string[] | null;
+  fatigue_notes?: string[] | null;
+  phase_focus?: string[] | null;
+  weight_cut?: DeterministicWeightCut | null;
+};
+
+export type DeterministicSupport = {
+  schema_version?: string | null;
+  source?: string | null;
+  nutrition?: { by_phase?: Record<string, DeterministicNutritionPhase> | null } | null;
+  recovery?: { by_phase?: Record<string, DeterministicRecoveryPhase> | null } | null;
+};
+
 export type StructuredPlanMetadata = {
   title?: string | null;
   sport?: string | null;
@@ -435,6 +482,7 @@ export type StructuredPlan = {
   red_flag_rules?: StructuredRedFlagRule[] | null;
   weeks?: StructuredWeek[] | null;
   nutrition?: StructuredNutrition | null;
+  deterministic_support?: DeterministicSupport | null;
   progression_notes?: string | null;
   raw_markdown_fallback?: string | null;
 };

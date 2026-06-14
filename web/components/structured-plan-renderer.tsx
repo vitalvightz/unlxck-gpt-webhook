@@ -11,11 +11,18 @@ import {
   getCoachingCues,
   getDays,
   getDisplayableRedFlags,
+  formatWeightCutBand,
+  getDeterministicNutritionPhases,
+  getDeterministicRecoveryPhases,
   getMindsetLines,
   getSessions,
   getStringList,
   getWeeks,
+  hasDeterministicNutrition,
+  hasDeterministicRecovery,
   hasNutrition,
+  nutritionPhaseRows,
+  recoveryPhaseView,
   selectBlockMetric,
   shouldShowRest,
   weekLabel,
@@ -321,10 +328,25 @@ export function RedFlagsCard({ plan }: { plan: StructuredPlan }) {
   );
 }
 
-export function NutritionCard({ plan }: { plan: StructuredPlan }) {
-  if (!hasNutrition(plan)) {
+/** Athlete-safe deterministic weight-cut line: risk band + supervision only. */
+function DeterministicWeightCutLine({
+  weightCut,
+}: {
+  weightCut: { band: string; supervisionRequired: boolean } | null;
+}) {
+  if (!weightCut) {
     return null;
   }
+  return (
+    <p className="sp-warning">
+      <span className="sp-tag">{titleize(weightCut.band)} weight-cut risk</span>
+      {weightCut.supervisionRequired ? " — qualified supervision required." : ""}
+    </p>
+  );
+}
+
+/** Plan nutrition prose (the legacy LLM/string fields) — fallback only. */
+function NutritionProse({ plan }: { plan: StructuredPlan }) {
   const nutrition = plan.nutrition;
   const rows = [
     { label: "Summary", value: cleanText(nutrition?.summary) },
@@ -335,10 +357,8 @@ export function NutritionCard({ plan }: { plan: StructuredPlan }) {
   const weightCut = cleanText(nutrition?.weight_cut_warning?.display_text);
   const cutRisk = cleanText(nutrition?.weight_cut_warning?.risk_level);
   const needsSupport = nutrition?.weight_cut_warning?.requires_professional_support === true;
-
   return (
-    <section className="sp-card sp-nutrition">
-      <p className="sp-eyebrow sp-accent">Nutrition</p>
+    <>
       <ul className="sp-kv-list">
         {rows.map((row) => (
           <li key={row.label}>
@@ -358,6 +378,92 @@ export function NutritionCard({ plan }: { plan: StructuredPlan }) {
           {needsSupport ? " — qualified supervision required." : ""}
         </p>
       ) : null}
+    </>
+  );
+}
+
+// Owns the full nutrition details. Deterministic Stage 1 macros/hydration/fuel
+// timing win when present; the legacy prose fields are the fallback only. Never
+// renders coach_gated (it is stripped server-side before reaching the frontend).
+export function NutritionCard({ plan }: { plan: StructuredPlan }) {
+  const deterministic = hasDeterministicNutrition(plan);
+  if (!deterministic && !hasNutrition(plan)) {
+    return null;
+  }
+  return (
+    <section className="sp-card sp-nutrition">
+      <p className="sp-eyebrow sp-accent">Nutrition</p>
+      {deterministic ? (
+        getDeterministicNutritionPhases(plan).map(({ phase, entry }) => {
+          const rows = nutritionPhaseRows(entry);
+          const weightCut = formatWeightCutBand(entry.weight_cut);
+          if (rows.length === 0 && !weightCut) {
+            return null;
+          }
+          return (
+            <div key={phase} className="sp-nutrition-phase">
+              <p className="sp-eyebrow">{titleize(phase)}</p>
+              <ul className="sp-kv-list">
+                {rows.map((row) => (
+                  <li key={row.label}>
+                    <span className="sp-kv-label">{row.label}</span>
+                    <span>{row.value}</span>
+                  </li>
+                ))}
+              </ul>
+              <DeterministicWeightCutLine weightCut={weightCut} />
+            </div>
+          );
+        })
+      ) : (
+        <NutritionProse plan={plan} />
+      )}
+    </section>
+  );
+}
+
+// Owns recovery detail (sleep / fatigue / phase focus / core actions). Renders
+// deterministic Stage 1 recovery; never coach_gated. Stop/modify/report
+// thresholds stay with RedFlagsCard, so this card does not repeat them.
+export function RecoveryCard({ plan }: { plan: StructuredPlan }) {
+  if (!hasDeterministicRecovery(plan)) {
+    return null;
+  }
+  return (
+    <section className="sp-card sp-recovery">
+      <p className="sp-eyebrow sp-accent">Recovery</p>
+      {getDeterministicRecoveryPhases(plan).map(({ phase, entry }) => {
+        const view = recoveryPhaseView(entry);
+        const lists: { label: string; items: string[] }[] = [
+          { label: "Core", items: view.coreStrategies },
+          { label: "Phase focus", items: view.phaseFocus },
+          { label: "Fatigue", items: view.fatigue },
+          { label: "Age", items: view.ageAdjustments },
+        ].filter((group) => group.items.length > 0);
+        if (!view.sleep && lists.length === 0 && !view.weightCut) {
+          return null;
+        }
+        return (
+          <div key={phase} className="sp-recovery-phase">
+            <p className="sp-eyebrow">{titleize(phase)}</p>
+            <ul className="sp-kv-list">
+              {view.sleep ? (
+                <li>
+                  <span className="sp-kv-label">Sleep</span>
+                  <span>{view.sleep}</span>
+                </li>
+              ) : null}
+              {lists.map((group) => (
+                <li key={group.label}>
+                  <span className="sp-kv-label">{group.label}</span>
+                  <span>{group.items.join("; ")}</span>
+                </li>
+              ))}
+            </ul>
+            <DeterministicWeightCutLine weightCut={view.weightCut} />
+          </div>
+        );
+      })}
     </section>
   );
 }
@@ -403,6 +509,7 @@ export function StructuredPlanRenderer({
         ))}
       </div>
       <NutritionCard plan={plan} />
+      <RecoveryCard plan={plan} />
       {progressionNotes ? (
         <section className="sp-card sp-progression">
           <p className="sp-eyebrow sp-accent">Progression notes</p>

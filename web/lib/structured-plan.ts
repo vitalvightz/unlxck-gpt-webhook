@@ -3,6 +3,10 @@
 // these so the rendering rules stay unit-testable (node:test) and crash-proof
 // against malformed/partial payloads.
 import type {
+  DeterministicMacroRange,
+  DeterministicNutritionPhase,
+  DeterministicRecoveryPhase,
+  DeterministicWeightCut,
   LoadPrescription,
   MeasuredValue,
   PlanOutputs,
@@ -202,6 +206,168 @@ export function getMindsetLines(
   if (confidence) lines.push({ label: "Anchor", value: confidence });
   if (context) lines.push({ label: "Context", value: context });
   return lines;
+}
+
+// --- deterministic (Stage 1) athlete-safe nutrition + recovery --------------
+
+const PHASE_ORDER = ["GPP", "SPP", "TAPER", "FIGHT_WEEK", "REINTEGRATION"];
+
+function orderedPhaseEntries<T>(byPhase: Record<string, T> | null | undefined): {
+  phase: string;
+  entry: T;
+}[] {
+  if (!isObject(byPhase)) {
+    return [];
+  }
+  const keys = Object.keys(byPhase);
+  keys.sort((a, b) => {
+    const ia = PHASE_ORDER.indexOf(a.toUpperCase());
+    const ib = PHASE_ORDER.indexOf(b.toUpperCase());
+    return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
+  });
+  return keys
+    .filter((key) => isObject(byPhase[key]))
+    .map((phase) => ({ phase, entry: byPhase[phase] }));
+}
+
+/** Ordered athlete-safe deterministic nutrition phases (empty when absent). */
+export function getDeterministicNutritionPhases(
+  plan: StructuredPlan | null | undefined,
+): { phase: string; entry: DeterministicNutritionPhase }[] {
+  return orderedPhaseEntries(plan?.deterministic_support?.nutrition?.by_phase);
+}
+
+/** Ordered athlete-safe deterministic recovery phases (empty when absent). */
+export function getDeterministicRecoveryPhases(
+  plan: StructuredPlan | null | undefined,
+): { phase: string; entry: DeterministicRecoveryPhase }[] {
+  return orderedPhaseEntries(plan?.deterministic_support?.recovery?.by_phase);
+}
+
+/** "112–140 g/day" / "up to 350 g/day" / "from 30 g/day" / null. */
+export function formatMacroRange(
+  range: DeterministicMacroRange | null | undefined,
+  unit: string,
+): string | null {
+  if (!isObject(range)) {
+    return null;
+  }
+  const min = typeof range.min === "number" ? range.min : null;
+  const max = typeof range.max === "number" ? range.max : null;
+  if (min != null && max != null) {
+    return `${min}–${max} ${unit}`;
+  }
+  if (max != null) {
+    return `up to ${max} ${unit}`;
+  }
+  if (min != null) {
+    return `from ${min} ${unit}`;
+  }
+  return null;
+}
+
+/** A macro line combining its numeric range and any deterministic note. */
+export function macroLine(
+  range: DeterministicMacroRange | null | undefined,
+  unit: string,
+): string | null {
+  const numeric = formatMacroRange(range, unit);
+  const note = cleanText(range?.note);
+  if (numeric && note) return `${numeric} (${note})`;
+  return numeric || note || null;
+}
+
+/** Athlete-safe weight-cut summary (risk band + supervision) — never dosing. */
+export function formatWeightCutBand(
+  weightCut: DeterministicWeightCut | null | undefined,
+): { band: string; supervisionRequired: boolean } | null {
+  if (!isObject(weightCut)) {
+    return null;
+  }
+  const band = cleanText(weightCut.risk_band);
+  if (!band || band.toLowerCase() === "none") {
+    return null;
+  }
+  return { band, supervisionRequired: weightCut.supervision_required === true };
+}
+
+/** The athlete-safe metric rows for one deterministic nutrition phase. */
+export function nutritionPhaseRows(
+  entry: DeterministicNutritionPhase | null | undefined,
+): { label: string; value: string }[] {
+  if (!isObject(entry)) {
+    return [];
+  }
+  const rows: { label: string; value: string }[] = [];
+  const push = (label: string, value: string | null) => {
+    if (value) rows.push({ label, value });
+  };
+  push("Protein", macroLine(entry.protein_g_per_day, "g/day"));
+  push("Carbs", macroLine(entry.carbs_g_per_day, "g/day"));
+  push("Fats", macroLine(entry.fats_g_per_day, "g/day"));
+  push("Hydration", macroLine(entry.hydration_ml_per_day, "ml/day"));
+  push("Meals", cleanText(entry.meal_structure));
+  const fuel = entry.fuel_timing;
+  if (isObject(fuel)) {
+    push("Fuel — pre", cleanText(fuel.pre));
+    push("Fuel — intra", cleanText(fuel.intra));
+    push("Fuel — post", cleanText(fuel.post));
+  }
+  const fatigue = cleanText(entry.fatigue_adjustment);
+  if (fatigue) push("Fatigue adjustment", `${fatigue} fatigue support`);
+  return rows;
+}
+
+/** The athlete-safe recovery view for one deterministic recovery phase. */
+export function recoveryPhaseView(entry: DeterministicRecoveryPhase | null | undefined): {
+  sleep: string | null;
+  coreStrategies: string[];
+  phaseFocus: string[];
+  fatigue: string[];
+  ageAdjustments: string[];
+  weightCut: { band: string; supervisionRequired: boolean } | null;
+} {
+  const e = isObject(entry) ? entry : {};
+  const sleepRange = safeArray(e.sleep_hours_target).filter(
+    (n): n is number => typeof n === "number",
+  );
+  const sleep =
+    sleepRange.length === 2
+      ? `${sleepRange[0]}–${sleepRange[1]} h/night`
+      : sleepRange.length === 1
+        ? `${sleepRange[0]} h/night`
+        : null;
+  return {
+    sleep,
+    coreStrategies: getStringList(e.core_strategies),
+    phaseFocus: getStringList(e.phase_focus),
+    // fatigue_flags (high) or fatigue_notes (moderate) — whichever is present.
+    fatigue: getStringList(e.fatigue_flags).concat(getStringList(e.fatigue_notes)),
+    ageAdjustments: getStringList(e.age_adjustments),
+    weightCut: formatWeightCutBand(e.weight_cut),
+  };
+}
+
+/** True when the plan carries deterministic athlete-safe nutrition data. */
+export function hasDeterministicNutrition(plan: StructuredPlan | null | undefined): boolean {
+  return getDeterministicNutritionPhases(plan).some(
+    ({ entry }) =>
+      nutritionPhaseRows(entry).length > 0 || formatWeightCutBand(entry.weight_cut) !== null,
+  );
+}
+
+/** True when the plan carries deterministic athlete-safe recovery data. */
+export function hasDeterministicRecovery(plan: StructuredPlan | null | undefined): boolean {
+  return getDeterministicRecoveryPhases(plan).some(({ entry }) => {
+    const view = recoveryPhaseView(entry);
+    return (
+      view.sleep !== null ||
+      view.coreStrategies.length > 0 ||
+      view.phaseFocus.length > 0 ||
+      view.fatigue.length > 0 ||
+      view.weightCut !== null
+    );
+  });
 }
 
 /** True when nutrition carries any displayable text. */
