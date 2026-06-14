@@ -1040,6 +1040,7 @@ class SupabaseAppStore:
                     existing.get("email") or existing.get("full_name")
                 ):
                     row["profile_enrichment_failed"] = True
+                    row["profiles"] = {"email": "", "full_name": ""}
             return rows
         for row in rows:
             existing = row.get("profiles")
