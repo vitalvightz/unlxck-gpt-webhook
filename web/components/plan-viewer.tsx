@@ -25,6 +25,7 @@ import { WhyTooltip } from "@/components/why-tooltip";
 import { useGenerationController } from "@/lib/generation-controller";
 import { canUseAdminPlanControls, isAdminRole } from "@/lib/plan-admin-controls";
 import { shouldRenderStructuredPlan } from "@/lib/structured-plan";
+import { selectInjuryRiskAdvisory } from "@/lib/sparring-advisory";
 import { explainRiskBand } from "@/lib/sparring-reason-codes";
 import {
   buildBlockedInjuryContextSummary,
@@ -156,14 +157,6 @@ function buildArtifactFilename(plan: PlanDetail, suffix: string) {
 
 function getPlanDisplayName(plan: Pick<PlanDetail, "plan_name" | "fight_date">) {
   return plan.plan_name?.trim() || plan.fight_date || "Open plan";
-}
-
-function formatPhaseLabel(phase: string) {
-  const normalized = humanizeStatus(phase || "").trim();
-  if (!normalized) {
-    return "Plan week";
-  }
-  return normalized.charAt(0).toUpperCase() + normalized.slice(1);
 }
 
 function formatRiskBandLabel(riskBand: NonNullable<PlanAdvisory["risk_band"]>) {
@@ -498,10 +491,15 @@ function BlockedPlanDecisionCard({
 }
 
 function SparringAdvisoryCard({ advisory }: { advisory: PlanAdvisory }) {
-  const actionLabel =
-    advisory.action === "convert" ? "Convert hard sparring" : "Deload hard sparring";
-  const daysLabel = advisory.days.join(", ") || "Declared hard sparring";
+  // Surfaced only for advisories carrying a real injury-risk band (see
+  // selectInjuryRiskAdvisory). The directive leads; the verbose, sometimes
+  // boilerplate reasoning is tucked behind a "Why" toggle.
+  const [showWhy, setShowWhy] = useState(false);
+  const directive = (advisory.replacement || advisory.suggestion || "").trim();
+  const daysLabel = (advisory.days || []).join(", ").trim();
   const riskBandLabel = advisory.risk_band ? formatRiskBandLabel(advisory.risk_band) : null;
+  const reason = (advisory.reason || "").trim();
+  const explanation = advisory.risk_band ? explainRiskBand(advisory.risk_band) : null;
 
   return (
     <section
@@ -509,39 +507,35 @@ function SparringAdvisoryCard({ advisory }: { advisory: PlanAdvisory }) {
     >
       <div className="plan-header-row">
         <div>
-          <p className="kicker">{advisory.title}</p>
-          <h3>{actionLabel}</h3>
+          <p className="kicker">Sparring risk</p>
+          {daysLabel ? <h3>{daysLabel}</h3> : <h3>Hard sparring</h3>}
         </div>
-        <div className="sparring-advisory-badges">
-          <span className="badge">{advisory.action}</span>
-          {riskBandLabel ? (
-            <span
-              className={`sparring-risk-chip sparring-risk-${advisory.risk_band}`}
-              aria-label={`Injury risk ${riskBandLabel}`}
-            >
-              <span className="sparring-risk-dot" aria-hidden="true" />
-              <span>Injury risk: {riskBandLabel}</span>
-              {(() => {
-                const explanation = explainRiskBand(advisory.risk_band);
-                return explanation ? (
-                  <WhyTooltip title={explanation.title} body={explanation.body} />
-                ) : null;
-              })()}
-            </span>
-          ) : null}
-        </div>
+        {riskBandLabel ? (
+          <span
+            className={`sparring-risk-chip sparring-risk-${advisory.risk_band}`}
+            aria-label={`Injury risk ${riskBandLabel}`}
+          >
+            <span className="sparring-risk-dot" aria-hidden="true" />
+            <span>Injury risk: {riskBandLabel}</span>
+            {explanation ? <WhyTooltip title={explanation.title} body={explanation.body} /> : null}
+          </span>
+        ) : null}
       </div>
-      <p className="muted sparring-advisory-meta">
-        {formatPhaseLabel(advisory.phase)} | {advisory.week_label} | {daysLabel}
-      </p>
-      <p>{advisory.reason}</p>
-      <p className="sparring-advisory-suggestion">{advisory.suggestion}</p>
-      {advisory.replacement ? (
-        <p className="sparring-advisory-replacement">
-          <strong>Suggested replacement:</strong> {advisory.replacement}
-        </p>
+      {directive ? <p className="sparring-advisory-suggestion">{directive}</p> : null}
+      {reason ? (
+        <>
+          <button
+            type="button"
+            className="sparring-advisory-why-toggle"
+            aria-expanded={showWhy}
+            onClick={() => setShowWhy((prev) => !prev)}
+          >
+            {showWhy ? "Hide why" : "Why this flag"}
+          </button>
+          {showWhy ? <p className="muted sparring-advisory-reason">{reason}</p> : null}
+        </>
       ) : null}
-      <p className="muted">{advisory.disclaimer}</p>
+      <p className="muted sparring-advisory-disclaimer">{advisory.disclaimer}</p>
     </section>
   );
 }
@@ -899,7 +893,9 @@ export function PlanViewer({
   const canUseAdminOutputs = canUseAdminPlanControls(viewerRole, Boolean(plan.admin_outputs));
   const isViewerAdmin = isAdminRole(viewerRole);
   const canManagePlan = viewerRole === "admin" || viewerRole === "athlete";
-  const primaryAdvisory = Array.isArray(plan.advisories) ? plan.advisories[0] ?? null : null;
+  // Only surface an advisory that carries a real injury-risk band; the rest just
+  // restate load tweaks the plan already applied, so they are suppressed.
+  const primaryAdvisory = selectInjuryRiskAdvisory(plan.advisories);
   const technicalStyles =
     getOptionLabels(TECHNICAL_STYLE_OPTIONS, plan.technical_style).join(", ") || "Not provided";
 
