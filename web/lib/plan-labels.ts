@@ -5,7 +5,7 @@ const LABEL_OVERRIDES: Record<string, string> = {
   unavailable: "Unavailable",
   stop_and_report: "Stop and report",
 
-  publishable_with_flags: "Ready with notes",
+  publishable_with_flags: "Ready",
   ready: "Ready",
 
   gpp: "General prep",

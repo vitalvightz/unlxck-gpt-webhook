@@ -35,6 +35,23 @@ test("ready final stage2 status without blocked stub can be publishable", () => 
   assert.equal(summary.isPublishable, true);
 });
 
+test("soft review warnings do not block release summary", () => {
+  const summary = buildReviewSummary(
+    {
+      warnings: [{ code: "generic_filler_phrase", message: "Low-trust filler." }],
+      review_flags: [{ code: "generic_filler_phrase", message: "Low-trust filler." }],
+      review_flag_count: 1,
+      is_publishable: false,
+    },
+    "stage2_pass",
+    { hasBlockedTriageStubText: false },
+  );
+
+  assert.equal(summary.isPublishable, true);
+  assert.equal(summary.hasIssues, false);
+  assert.match(summary.headline, /ready to release/i);
+});
+
 test("triage resume approved state is protected even without explicit stub", () => {
   const protectedState = isProtectedTriageResumePendingState({
     isTriageBlocked: false,

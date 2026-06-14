@@ -140,12 +140,12 @@ def test_first_pass_incomplete_response_fails_the_job(monkeypatch: pytest.Monkey
         asyncio.run(automator.finalize(stage1_result=_stage1_result()))
 
 
-def test_first_pass_pass_with_review_flags_returns_publishable_with_flags(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_first_pass_pass_with_review_flags_returns_ready(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(stage2_module, "review_stage2_output", lambda **_: _review("PASS_WITH_FLAGS"))
     client = FakeClient([_response("# final plan with minor flags")])
     automator = OpenAIStage2Automator(client=client, model="test-model")
     result = asyncio.run(automator.finalize(stage1_result=_stage1_result()))
-    assert result["status"] == "publishable_with_flags"
+    assert result["status"] == "ready"
     assert result["plan_text"] == "# final plan with minor flags"
 
 
@@ -405,3 +405,67 @@ def test_from_env_invalid_timeout_falls_back_to_210(monkeypatch: pytest.MonkeyPa
 
     assert isinstance(automator, OpenAIStage2Automator)
     assert captured_kwargs["timeout"] == 210.0
+
+
+# ---------------------------------------------------------------------------
+# _stage2_hold_is_card_rescuable: defensive predicate
+# ---------------------------------------------------------------------------
+
+_is_rescuable = stage2_module._stage2_hold_is_card_rescuable
+
+
+def test_rescuable_true_for_soft_non_safety_error() -> None:
+    assert _is_rescuable({"errors": [{"code": "true_internal_system_leak"}]}) is True
+
+
+def test_rescuable_false_for_safety_error() -> None:
+    assert _is_rescuable({"errors": [{"code": "restriction_violation"}]}) is False
+
+
+def test_rescuable_false_when_any_error_is_unrescuable() -> None:
+    # A mix of one soft and one safety error must hold (the safety one wins).
+    report = {"errors": [{"code": "true_internal_system_leak"}, {"code": "restriction_violation"}]}
+    assert _is_rescuable(report) is False
+
+
+def test_rescuable_true_when_only_soft_blocking_warnings_present() -> None:
+    report = {
+        "errors": [],
+        "blocking_warnings": [{"code": "missing_required_element"}],
+    }
+    assert _is_rescuable(report) is True
+
+
+def test_rescuable_false_when_hard_blocking_warning_present() -> None:
+    report = {
+        "errors": [],
+        "blocking_warnings": [{"code": "calendar_spine_fight_day_protocol_violation"}],
+    }
+    assert _is_rescuable(report) is False
+
+
+def test_rescuable_false_for_non_dict_report() -> None:
+    assert _is_rescuable(None) is False
+    assert _is_rescuable([]) is False
+    assert _is_rescuable("nope") is False
+
+
+def test_rescuable_false_for_non_list_or_empty_errors() -> None:
+    assert _is_rescuable({}) is False  # missing errors
+    assert _is_rescuable({"errors": []}) is False  # empty
+    assert _is_rescuable({"errors": "boom"}) is False  # not a list
+
+
+def test_rescuable_false_for_malformed_error_entries() -> None:
+    assert _is_rescuable({"errors": [None]}) is False
+    assert _is_rescuable({"errors": ["malformed_error"]}) is False
+    assert _is_rescuable({"errors": [{}]}) is False  # no code
+    assert _is_rescuable({"errors": [{"code": ""}]}) is False  # blank code
+    assert _is_rescuable({"errors": [{"code": "   "}]}) is False  # whitespace-only code
+
+
+def test_rescuable_false_for_mixed_valid_soft_and_malformed_error() -> None:
+    report = {"errors": [{"code": "true_internal_system_leak"}, None]}
+    assert _is_rescuable(report) is False
+    report = {"errors": [{"code": "true_internal_system_leak"}, {}]}
+    assert _is_rescuable(report) is False

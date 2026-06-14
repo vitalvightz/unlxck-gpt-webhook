@@ -21,7 +21,11 @@ import pytest
 
 import api.stage2_automation as stage2_module
 from api.plan_mappers import _map_plan_detail
-from api.services.admin_stage2_service import approve_review_required_plan
+from api.services.admin_stage2_service import (
+    _APPROVAL_STRUCTURED_PLAN_BUDGET_SECONDS,
+    _approval_structured_budget_seconds,
+    approve_review_required_plan,
+)
 from api.stage2_automation import (
     OpenAIStage2Automator,
     attempt_structured_plan_for_result,
@@ -223,6 +227,24 @@ def _pass_review(**_):
     }
 
 
+def _fail_review(*codes: str):
+    error_codes = codes or ("true_internal_system_leak",)
+
+    def _review(**_):
+        return {
+            "status": "FAIL",
+            "needs_retry": True,
+            "validator_report": {
+                "errors": [{"code": code} for code in error_codes],
+                "warnings": [],
+                "blocking_warnings": [],
+                "review_flag_count": 0,
+            },
+        }
+
+    return _review
+
+
 def test_finalize_skips_structured_when_disabled(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.delenv("UNLXCK_STAGE2_STRUCTURED_PLAN", raising=False)
     monkeypatch.setattr(stage2_module, "review_stage2_output", _pass_review)
@@ -252,6 +274,75 @@ def test_finalize_attaches_valid_structured_plan(monkeypatch: pytest.MonkeyPatch
     assert result["schema_version"] == SCHEMA_VERSION
     assert isinstance(result["structured_plan"], dict)
     assert result["stage2_validator_report"]["structured_plan"]["status"] == "valid"
+
+
+def test_finalize_soft_hold_preserves_failed_rescue_debug(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    monkeypatch.setenv("UNLXCK_STAGE2_STRUCTURED_PLAN", "1")
+    monkeypatch.setattr(
+        stage2_module,
+        "review_stage2_output",
+        _fail_review("true_internal_system_leak"),
+    )
+    client = _FakeClient(
+        [
+            _response("# final plan"),
+            _response(json.dumps(["not", "a", "plan"])),
+            _response(json.dumps(["still", "broken"])),
+        ]
+    )
+    automator = OpenAIStage2Automator(client=client, model="test-model")
+
+    result = asyncio.run(automator.finalize(stage1_result=_stage1_result()))
+
+    assert result["status"] == "held_for_review"
+    assert result["plan_text"] == ""
+    assert result["final_plan_text"] == "# final plan"
+    assert result["structured_plan"] is None
+    debug = result["stage2_validator_report"]["structured_plan"]
+    assert debug["status"] == "invalid_fallback_used"
+    assert debug["errors"]
+
+
+def test_finalize_clean_structured_card_publishes_soft_hold(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    monkeypatch.setenv("UNLXCK_STAGE2_STRUCTURED_PLAN", "1")
+    monkeypatch.setattr(
+        stage2_module,
+        "review_stage2_output",
+        _fail_review("true_internal_system_leak"),
+    )
+    client = _FakeClient([_response("# final plan"), _response(json.dumps(_valid_plan()))])
+    automator = OpenAIStage2Automator(client=client, model="test-model")
+
+    result = asyncio.run(automator.finalize(stage1_result=_stage1_result()))
+
+    assert result["status"] == "ready"
+    assert result["plan_text"] == "# final plan"
+    assert result["structured_plan"] is not None
+    assert result["stage2_validator_report"]["structured_plan"]["status"] == "valid"
+
+
+def test_finalize_hard_safety_blocker_holds_even_with_structured_enabled(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    monkeypatch.setenv("UNLXCK_STAGE2_STRUCTURED_PLAN", "1")
+    monkeypatch.setattr(
+        stage2_module,
+        "review_stage2_output",
+        _fail_review("restriction_violation"),
+    )
+    client = _FakeClient([_response("# final plan")])
+    automator = OpenAIStage2Automator(client=client, model="test-model")
+
+    result = asyncio.run(automator.finalize(stage1_result=_stage1_result()))
+
+    assert result["status"] == "held_for_review"
+    assert result["plan_text"] == ""
+    assert result["structured_plan"] is None
+    assert len(client.responses.calls) == 1
 
 
 def test_finalize_uses_one_repair_retry(monkeypatch: pytest.MonkeyPatch):
@@ -457,6 +548,20 @@ def _seed_held_plan(store: FakeStore, *, plan_id: str = "plan-1") -> str:
     return plan_id
 
 
+@pytest.mark.parametrize(
+    "raw",
+    ["", "not-a-number", "0", "-5", "inf", "Infinity", "-inf", "nan"],
+)
+def test_approval_budget_falls_back_to_default_for_unusable_values(monkeypatch, raw):
+    monkeypatch.setenv("UNLXCK_APPROVAL_STRUCTURED_PLAN_BUDGET_SECONDS", raw)
+    assert _approval_structured_budget_seconds() == _APPROVAL_STRUCTURED_PLAN_BUDGET_SECONDS
+
+
+def test_approval_budget_honours_finite_positive_override(monkeypatch):
+    monkeypatch.setenv("UNLXCK_APPROVAL_STRUCTURED_PLAN_BUDGET_SECONDS", "12.5")
+    assert _approval_structured_budget_seconds() == 12.5
+
+
 def test_admin_approve_into_ready_triggers_structured_conversion(monkeypatch):
     monkeypatch.setenv("UNLXCK_STAGE2_STRUCTURED_PLAN", "1")
     store = FakeStore()
@@ -474,6 +579,31 @@ def test_admin_approve_into_ready_triggers_structured_conversion(monkeypatch):
     # Persisted on the row, and the conversion ran exactly once.
     assert store.plans[plan_id]["structured_plan"] is not None
     assert len(automator.calls) == 1
+
+
+def test_admin_approve_falls_back_to_text_when_inline_card_times_out(monkeypatch):
+    monkeypatch.setenv("UNLXCK_STAGE2_STRUCTURED_PLAN", "1")
+    monkeypatch.setenv("UNLXCK_APPROVAL_STRUCTURED_PLAN_BUDGET_SECONDS", "0.01")
+    store = FakeStore()
+    plan_id = _seed_held_plan(store)
+
+    class _SlowAutomator(_StructuredAutomator):
+        async def _attempt_structured_plan(self, **kwargs):
+            await asyncio.sleep(0.2)
+            return await super()._attempt_structured_plan(**kwargs)
+
+    detail = asyncio.run(
+        approve_review_required_plan(
+            plan_id=plan_id,
+            store=store,
+            stage2=_SlowAutomator(_valid_outcome("# approved plan")),
+        )
+    )
+
+    assert detail.status == "ready"
+    assert detail.outputs.plan_text == "# approved plan"
+    assert detail.outputs.structured_plan is None
+    assert store.plans[plan_id].get("structured_plan") is None
 
 
 def test_admin_approve_structured_failure_keeps_plan_text_and_ready(monkeypatch):

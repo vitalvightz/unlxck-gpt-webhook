@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import asyncio
+import logging
+import os
 from typing import Any
 
 from fastapi import HTTPException, status
@@ -10,6 +13,19 @@ from ..plan_mappers import _decode_structured_text, _lookup_plan_source, _map_pl
 
 from ..stage2_automation import Stage2Automator, attempt_structured_plan_for_result
 from ..store import AppStore
+
+logger = logging.getLogger(__name__)
+
+_APPROVAL_STRUCTURED_PLAN_BUDGET_SECONDS = 20.0
+
+
+def _approval_structured_budget_seconds() -> float:
+    raw = os.getenv("UNLXCK_APPROVAL_STRUCTURED_PLAN_BUDGET_SECONDS", "")
+    try:
+        value = float(raw)
+    except (TypeError, ValueError):
+        return _APPROVAL_STRUCTURED_PLAN_BUDGET_SECONDS
+    return value if 0 < value < float("inf") else _APPROVAL_STRUCTURED_PLAN_BUDGET_SECONDS
 
 
 async def _attach_structured_plan(
@@ -37,6 +53,34 @@ async def _attach_structured_plan(
         source="admin_stage2",
     )
     return result
+
+
+async def _attach_structured_plan_within_budget(
+    result: dict[str, Any],
+    plan_row: dict[str, Any],
+    *,
+    stage2: Stage2Automator | None,
+) -> dict[str, Any]:
+    if stage2 is None:
+        return result
+    try:
+        return await asyncio.wait_for(
+            _attach_structured_plan(result, plan_row, stage2=stage2),
+            timeout=_approval_structured_budget_seconds(),
+        )
+    except asyncio.TimeoutError:
+        logger.warning(
+            "inline structured-plan attempt exceeded %.1fs budget for plan_id=%s; deferring",
+            _approval_structured_budget_seconds(),
+            plan_row.get("id"),
+        )
+        return result
+    except Exception:
+        logger.exception(
+            "inline structured-plan attempt failed for plan_id=%s; deferring",
+            plan_row.get("id"),
+        )
+        return result
 
 
 def _manual_stage2_result(plan_row: dict[str, Any], final_plan_text: str) -> dict[str, Any]:
@@ -133,7 +177,7 @@ async def approve_review_required_plan(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
 
     result = _admin_approved_result(plan_row)
-    result = await _attach_structured_plan(result, plan_row, stage2=stage2)
+    result = await _attach_structured_plan_within_budget(result, plan_row, stage2=stage2)
     updated = store.update_plan_stage2(plan_id, result)
     return _map_plan_detail(
         updated,

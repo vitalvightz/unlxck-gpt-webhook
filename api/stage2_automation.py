@@ -12,12 +12,12 @@ from .structured_plan_generation import (
     StructuredPlanOutcome,
     build_structured_plan_outcome,
     build_structured_plan_prompt,
+    has_clean_structured_card,
     parse_structured_json,
     should_attempt_structured_plan,
 )
 
 _APP_STATUS_READY = "ready"
-_APP_STATUS_PUBLISHABLE_WITH_FLAGS = "publishable_with_flags"
 _APP_STATUS_HELD_FOR_REVIEW = "held_for_review"
 _APP_STATUS_REVIEW_REQUIRED = "review_required"
 _STAGE2_PASS = "stage2_pass"
@@ -27,6 +27,58 @@ logger = logging.getLogger(__name__)
 _DEFAULT_FIRST_PASS_CHAR_LIMIT = 180_000
 _DEFAULT_OPENAI_MAX_RETRIES = 0
 _DEFAULT_MAX_OUTPUT_TOKENS = 0
+
+# Validator error codes a clean structured card can NOT vouch for: genuine
+# safety violations plus unrecoverable output integrity. A hold caused by any of
+# these always stands, even when a schema-valid card is produced. Everything
+# else (e.g. internal scaffolding leaks) is a soft hold the card can rescue.
+_CARD_UNRESCUABLE_ERROR_CODES: frozenset[str] = frozenset(
+    {
+        "stage2_output_empty",
+        "stage2_output_truncated",
+        "restriction_violation",
+        "late_fight_hard_sparring_violation",
+        "dangerous_late_fight_strength_or_conditioning",
+        "fight_day_protocol_violation",
+        "calendar_spine_fight_day_protocol_violation",
+    }
+)
+
+
+def _stage2_hold_is_card_rescuable(validator_report: Any) -> bool:
+    """Whether a would-be hold could be rescued by a clean structured card.
+
+    A hold is rescuable only when it is driven entirely by non-safety,
+    recoverable findings. The check is intentionally defensive about a
+    malformed report - anything it cannot positively confirm is non-rescuable,
+    so an odd shape never accidentally publishes a held plan. It returns True
+    only when ALL of the following hold:
+
+    * ``validator_report`` is a dict;
+    * ``errors`` is a non-empty list;
+    * every error/blocking warning is a dict carrying a non-empty string
+      ``code``; and
+    * none of those codes is a safety/output-integrity (unrescuable) code.
+    """
+
+    if not isinstance(validator_report, dict):
+        return False
+    errors = validator_report.get("errors")
+    blocking_warnings = validator_report.get("blocking_warnings") or []
+    if not isinstance(errors, list) or not isinstance(blocking_warnings, list):
+        return False
+    findings = [*errors, *blocking_warnings]
+    if not findings:
+        return False
+    for finding in findings:
+        if not isinstance(finding, dict):
+            return False
+        code = finding.get("code")
+        if not isinstance(code, str) or not code.strip():
+            return False
+        if code.strip() in _CARD_UNRESCUABLE_ERROR_CODES:
+            return False
+    return True
 
 
 class Stage2AutomationError(RuntimeError):
@@ -642,11 +694,28 @@ class OpenAIStage2Automator:
             first_review["needs_retry"],
         )
 
+        # A soft hold (non-safety findings only) is tentatively published so the
+        # structured-card attempt below can run and vouch for it. If no clean
+        # card materialises, it is reverted to a hold further down. Only gated
+        # when structured plans are enabled - otherwise no card can ever rescue
+        # it and the tentative publish would just flap back to a hold.
+        rescue_pending = False
         if first_review["status"] == "PASS":
-            app_status = (
-                _APP_STATUS_PUBLISHABLE_WITH_FLAGS
-                if int(first_review["validator_report"].get("review_flag_count") or 0) > 0
-                else _APP_STATUS_READY
+            result = _approved_result(
+                stage1_result,
+                draft_plan_text=draft_plan_text,
+                final_plan_text=first_pass_text,
+                validator_report=first_review["validator_report"],
+                attempt_count=1,
+                stage2_status=_STAGE2_PASS,
+                app_status=_APP_STATUS_READY,
+                stage2_cost=first_pass_cost,
+            )
+        elif _structured_plan_enabled() and _stage2_hold_is_card_rescuable(
+            first_review["validator_report"]
+        ):
+            logger.info(
+                "[stage2] soft hold eligible for structured-card rescue; attempting card before holding"
             )
             result = _approved_result(
                 stage1_result,
@@ -655,9 +724,10 @@ class OpenAIStage2Automator:
                 validator_report=first_review["validator_report"],
                 attempt_count=1,
                 stage2_status=_STAGE2_PASS,
-                app_status=app_status,
+                app_status=_APP_STATUS_READY,
                 stage2_cost=first_pass_cost,
             )
+            rescue_pending = True
         else:
             logger.warning("[stage2] review required after first_pass: automatic retry disabled")
             result = _review_required_result(
@@ -672,7 +742,7 @@ class OpenAIStage2Automator:
 
         # Structured-plan conversion is triggered by the canonical state-machine
         # predicate (athlete-displayable plans only), not a hardcoded Stage 2
-        # status. A PASS yields ready/publishable_with_flags (attempted); a
+        # status. A PASS yields ready (attempted); a
         # review-required hold is not displayable (skipped). Any failure degrades
         # to the plan_text fallback and is recorded for admin debug.
         result, structured_costs = await attempt_structured_plan_for_result(
@@ -682,6 +752,30 @@ class OpenAIStage2Automator:
             source=source,
             log_context=log_context,
         )
+
+        # Confirm or roll back the tentative rescue: a clean schema-valid card
+        # keeps the plan publishable; anything else falls back to the hold.
+        if rescue_pending and not has_clean_structured_card(result):
+            logger.warning(
+                "[stage2] structured-card rescue failed (no clean card); holding for review"
+            )
+            structured_debug = (result.get("stage2_validator_report") or {}).get(
+                "structured_plan"
+            )
+            result = _review_required_result(
+                stage1_result,
+                draft_plan_text=draft_plan_text,
+                latest_plan_text=first_pass_text,
+                validator_report=first_review["validator_report"],
+                retry_text="",
+                attempt_count=1,
+                stage2_cost=first_pass_cost,
+            )
+            if structured_debug is not None:
+                report = result.get("stage2_validator_report")
+                if isinstance(report, dict):
+                    report["structured_plan"] = structured_debug
+
         # Roll the structured calls' tokens into the persisted cost row so it
         # reflects total Stage 2 spend, not just the plan-text pass.
         result["stage2_cost"] = _merge_stage2_costs(first_pass_cost, *structured_costs)

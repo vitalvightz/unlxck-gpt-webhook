@@ -123,7 +123,7 @@ def _map_plan_summary(row: dict[str, Any]) -> PlanSummary:
             if not has_blocking:
                 warnings = list(report.get("warnings") or [])
                 has_blocking = any(bool(w.get("blocking")) for w in warnings if isinstance(w, dict))
-            normalized_status = "held_for_review" if has_errors or has_blocking else "publishable_with_flags"
+            normalized_status = "held_for_review" if has_errors or has_blocking else "ready"
     return PlanSummary(
         plan_id=str(row["id"]),
         plan_name=(str(row["plan_name"]).strip() if row.get("plan_name") is not None else None) or None,
@@ -289,7 +289,7 @@ def _map_plan_detail(
     if (
         not display_plan_text
         and is_legacy_review_required
-        and summary.status == "publishable_with_flags"
+        and summary.status in {"ready", "publishable_with_flags"}
     ):
         display_plan_text = str(row.get("final_plan_text") or "")
     structured_plan, structured_schema_version = _decode_structured_plan(
