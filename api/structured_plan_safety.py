@@ -225,8 +225,8 @@ def _macro_envelope(computed_support: dict, macro_key: str, unit_key: str = "min
             maxs.append(float(hi))
     if not mins and not maxs:
         return None
-    lo = min(mins) if mins else min(maxs)
-    hi = max(maxs) if maxs else max(mins)
+    lo = min(mins) if mins else 0.0
+    hi = max(maxs) if maxs else float("inf")
     return lo, hi
 
 
