@@ -229,6 +229,66 @@ def test_from_env_allows_anon_fallback_in_development(monkeypatch):
     assert created_clients[0][2] is not None
 
 
+def test_from_env_configures_auth_http_client_for_concurrent_token_checks(monkeypatch):
+    _clear_env_detection_vars(monkeypatch)
+    monkeypatch.setenv("SUPABASE_URL", "https://example.supabase.co")
+    monkeypatch.setenv("SUPABASE_SERVICE_ROLE_KEY", "service-role-key")
+
+    captured: dict[str, object] = {}
+
+    def _fake_timeout(**kwargs):
+        captured["timeout"] = kwargs
+        return kwargs
+
+    def _fake_limits(**kwargs):
+        captured["limits"] = kwargs
+        return kwargs
+
+    def _fake_httpx_client(**kwargs):
+        captured["httpx_client"] = kwargs
+        return kwargs
+
+    def _fake_client_options(**kwargs):
+        captured["client_options"] = kwargs
+        return kwargs
+
+    def _fake_create_client(url, key, options=None):
+        captured["create_client"] = (url, key, options)
+        return MagicMock()
+
+    monkeypatch.setattr(auth_module.httpx, "Timeout", _fake_timeout)
+    monkeypatch.setattr(auth_module.httpx, "Limits", _fake_limits)
+    monkeypatch.setattr(auth_module.httpx, "Client", _fake_httpx_client)
+    monkeypatch.setattr(auth_module, "ClientOptions", _fake_client_options)
+    monkeypatch.setattr(auth_module, "create_client", _fake_create_client)
+
+    service = SupabaseAuthService.from_env()
+
+    assert service is not None
+    assert captured["timeout"] == {
+        "connect": 5.0,
+        "read": 30.0,
+        "write": 5.0,
+        "pool": 15.0,
+    }
+    assert captured["limits"] == {
+        "max_connections": 50,
+        "max_keepalive_connections": 20,
+        "keepalive_expiry": 30.0,
+    }
+    assert captured["httpx_client"] == {
+        "http2": False,
+        "timeout": captured["timeout"],
+        "limits": captured["limits"],
+    }
+    assert captured["client_options"] == {"httpx_client": captured["httpx_client"]}
+    assert captured["create_client"] == (
+        "https://example.supabase.co",
+        "service-role-key",
+        captured["client_options"],
+    )
+
+
 def test_from_env_requires_service_role_without_fallback(monkeypatch):
     _clear_env_detection_vars(monkeypatch)
     monkeypatch.setenv("SUPABASE_URL", "https://example.supabase.co")

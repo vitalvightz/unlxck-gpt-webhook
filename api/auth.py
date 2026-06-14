@@ -103,11 +103,11 @@ class SupabaseAuthService:
                     connect=5.0,
                     read=30.0,
                     write=5.0,
-                    pool=5.0,
+                    pool=15.0,
                 ),
                 limits=httpx.Limits(
-                    max_connections=20,
-                    max_keepalive_connections=10,
+                    max_connections=50,
+                    max_keepalive_connections=20,
                     keepalive_expiry=30.0,
                 ),
             )
