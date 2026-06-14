@@ -2,6 +2,7 @@
 // components in components/structured-plan-renderer.tsx are thin wrappers over
 // these so the rendering rules stay unit-testable (node:test) and crash-proof
 // against malformed/partial payloads.
+import { formatPlanLabel, isRawEnumLabel } from "@/lib/plan-labels";
 import type {
   DeterministicMacroRange,
   DeterministicNutritionPhase,
@@ -16,6 +17,8 @@ import type {
   StructuredSession,
   StructuredWeek,
 } from "@/lib/types";
+
+type MindsetLine = { label: string; value: string };
 
 function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -206,6 +209,43 @@ export function getMindsetLines(
   if (confidence) lines.push({ label: "Anchor", value: confidence });
   if (context) lines.push({ label: "Context", value: context });
   return lines;
+}
+
+// Anchor + Context are the lower-priority mindset lines that PR-9 moves behind a
+// "More" toggle to cut the card's initial vertical load. Intent/Focus/Reset stay
+// visible by default. No data is dropped — only its initial visibility changes.
+const SECONDARY_MINDSET_LABELS = new Set(["Anchor", "Context"]);
+
+/** Split mindset lines into always-visible primary and collapsible secondary. */
+export function splitMindsetLines(
+  anchor: Parameters<typeof getMindsetLines>[0],
+): { primary: MindsetLine[]; secondary: MindsetLine[] } {
+  const lines = getMindsetLines(anchor);
+  return {
+    primary: lines.filter((line) => !SECONDARY_MINDSET_LABELS.has(line.label)),
+    secondary: lines.filter((line) => SECONDARY_MINDSET_LABELS.has(line.label)),
+  };
+}
+
+/**
+ * The clean display view of one red-flag rule.
+ *
+ * ``text`` is the human-readable warning sentence (display_text). ``action`` is
+ * shown only when it is a distinct human sentence — a raw enum (e.g.
+ * "stop_and_report") or an action that just repeats the text is hidden so the
+ * card never shows duplicated/raw machine labels. ``severityLabel`` is the
+ * formatted badge (e.g. "Red").
+ */
+export function redFlagView(
+  rule: { display_text?: string | null; action?: string | null; severity?: string | null } | null | undefined,
+): { text: string | null; action: string | null; severityLabel: string | null } {
+  const text = cleanText(rule?.display_text);
+  const rawAction = cleanText(rule?.action);
+  const action =
+    rawAction && !isRawEnumLabel(rawAction) && rawAction !== text ? rawAction : null;
+  const severity = cleanText(rule?.severity);
+  const severityLabel = severity ? formatPlanLabel(severity) : null;
+  return { text, action, severityLabel };
 }
 
 // --- deterministic (Stage 1) athlete-safe nutrition + recovery --------------
