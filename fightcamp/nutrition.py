@@ -62,9 +62,19 @@ def compute_nutrition_targets(*, flags: dict) -> dict:
         targets["fats_g_per_day"] = _round_range(0.7, 1.0, weight)
     elif phase == "TAPER":
         targets["calorie_adjustment"] = "reduced volume; freshness + weight making"
-        targets["carbs_g_per_day"] = {"max": round(5 * weight, 1), "per_kg": [None, 5], "note": "reduce in days before weigh-in"}
+        targets["carbs_g_per_day"] = {
+            "min": None,
+            "max": round(5 * weight, 1),
+            "per_kg": [None, 5],
+            "note": "reduce in days before weigh-in",
+        }
         targets["protein_g_per_day"] = _round_range(1.8, 2.5, weight)
-        targets["fats_g_per_day"] = {"note": "moderate (~20% calories); reduce fiber 1-2 days out"}
+        targets["fats_g_per_day"] = {
+            "min": None,
+            "max": None,
+            "per_kg": None,
+            "note": "moderate (~20% calories); reduce fiber 1-2 days out",
+        }
 
     if phase in ("GPP", "SPP"):
         targets["fuel_timing"] = {

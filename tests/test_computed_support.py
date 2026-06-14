@@ -22,13 +22,39 @@ from api.structured_plan_generation import build_structured_plan_prompt
 def test_nutrition_targets_match_generator_formulas():
     targets = compute_nutrition_targets(flags={"weight": 80, "phase": "GPP"})
     # 1.6-2.0 g/kg protein in GPP -> exact computed numbers, not invented.
-    assert targets["protein_g_per_day"] == {"min": 128.0, "max": 160.0, "per_kg": [1.6, 2.0]}
+    assert targets["protein_g_per_day"] == {
+        "min": 128.0,
+        "max": 160.0,
+        "per_kg": [1.6, 2.0],
+        "note": None,
+    }
     assert targets["carbs_g_per_day"]["min"] == 400.0  # 5 * 80
     assert targets["hydration_ml_per_day"]["min"] == 2400.0  # 30 * 80
     assert targets["fuel_timing"]["post"].startswith("within 1h")
     assert targets["weight_cut"]["active"] is False
     # No cut / no high fatigue -> nothing coach-gated.
     assert "coach_gated" not in targets
+
+
+def test_taper_macros_use_consistent_schema():
+    # TAPER macros must use the same machine-readable shape as other phases:
+    # every macro carries min/max/per_kg/note (even when some are None).
+    targets = compute_nutrition_targets(flags={"weight": 70, "phase": "TAPER"})
+    expected_keys = {"min", "max", "per_kg", "note"}
+    for macro in ("carbs_g_per_day", "protein_g_per_day", "fats_g_per_day"):
+        assert set(targets[macro]) == expected_keys, macro
+    assert targets["carbs_g_per_day"] == {
+        "min": None,
+        "max": 350.0,  # 5 * 70
+        "per_kg": [None, 5],
+        "note": "reduce in days before weigh-in",
+    }
+    assert targets["fats_g_per_day"] == {
+        "min": None,
+        "max": None,
+        "per_kg": None,
+        "note": "moderate (~20% calories); reduce fiber 1-2 days out",
+    }
 
 
 def test_nutrition_acute_cut_and_supplements_are_coach_gated():
