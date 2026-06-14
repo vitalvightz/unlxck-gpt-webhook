@@ -58,6 +58,8 @@ test("standalone Nutrition is disabled for beta and redirects to Overview", () =
 test("isStandaloneNutritionPath matches the workspace and its sub-pages only", () => {
   assert.equal(isStandaloneNutritionPath("/nutrition"), true);
   assert.equal(isStandaloneNutritionPath("/nutrition/bodyweight-log"), true);
+  assert.equal(isStandaloneNutritionPath("/nutrition?tab=weight"), true);
+  assert.equal(isStandaloneNutritionPath("/nutrition#readiness"), true);
   assert.equal(isStandaloneNutritionPath("/plans"), false);
   assert.equal(isStandaloneNutritionPath("/"), false);
   // Plan-level nutrition lives inside a plan route, not the standalone workspace.
