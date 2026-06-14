@@ -268,7 +268,7 @@ function SettingsSummaryItem({ label, value }: Readonly<{ label: string; value: 
 }
 
 export default function SettingsPage() {
-  const { me, previewAppearanceMode, replaceMe, session, signOut } = useAppSession();
+  const { isMeHydrated, me, previewAppearanceMode, replaceMe, session, signOut } = useAppSession();
 
   const [fullName, setFullName] = useState("");
   const [appearanceMode, setAppearanceMode] = useState<AppearanceMode>("dark");
@@ -1072,6 +1072,18 @@ export default function SettingsPage() {
           <p className="settings-coming-soon">Billing controls will be available after subscriptions launch.</p>
         </article>
       </div>
+    );
+  }
+
+  if (!isMeHydrated || !me) {
+    return (
+      <RequireAuth>
+        <section className="panel loading-card" aria-busy="true">
+          <p className="kicker">Settings</p>
+          <h1>Loading account settings</h1>
+          <p className="muted">Restoring your saved profile.</p>
+        </section>
+      </RequireAuth>
     );
   }
 
