@@ -546,14 +546,12 @@ def _seed_held_plan(store: FakeStore, *, plan_id: str = "plan-1") -> str:
     return plan_id
 
 
-def test_admin_approve_is_db_only_and_skips_synchronous_structured(monkeypatch):
-    """Approval must be a fast DB-only release.
+def test_admin_approve_attaches_structured_card_inline(monkeypatch):
+    """Approval ships the live card when it converts within the time budget.
 
-    Structured conversion can call the model and is slow enough to trip the
-    frontend/proxy request timeout (the false "Connection issue" bug), so the
-    approval path must not run it synchronously. It still returns a ready plan
-    with plan_text populated; structured conversion is left to the background
-    post-processing step.
+    The card is the preferred output: a fast inline conversion is attached to
+    the approval response (and persisted) so the athlete sees the structured
+    card immediately, with plan_text retained as the raw-markdown fallback.
     """
     monkeypatch.setenv("UNLXCK_STAGE2_STRUCTURED_PLAN", "1")
     store = FakeStore()
@@ -565,26 +563,50 @@ def test_admin_approve_is_db_only_and_skips_synchronous_structured(monkeypatch):
     )
 
     assert detail.status == "ready"
-    assert detail.outputs.plan_text == "# approved plan"  # plan_text preserved
-    # No synchronous conversion: nothing structured on the response or row, and
-    # the converter was never invoked during approval.
+    assert detail.outputs.plan_text == "# approved plan"  # raw fallback retained
+    # The inline conversion ran once and the card is on both the response and row.
+    assert len(automator.calls) == 1
+    assert detail.outputs.structured_plan is not None
+    assert store.plans[plan_id]["structured_plan"] is not None
+    assert store.plans[plan_id]["schema_version"] == SCHEMA_VERSION
+
+
+def test_admin_approve_falls_back_to_text_when_inline_card_times_out(monkeypatch):
+    """A slow inline conversion must not stall approval — text releases instantly."""
+    monkeypatch.setenv("UNLXCK_STAGE2_STRUCTURED_PLAN", "1")
+    monkeypatch.setenv("UNLXCK_APPROVAL_STRUCTURED_PLAN_BUDGET_SECONDS", "0.01")
+    store = FakeStore()
+    plan_id = _seed_held_plan(store)
+
+    class _SlowAutomator(_StructuredAutomator):
+        async def _attempt_structured_plan(self, **kwargs):
+            await asyncio.sleep(0.2)  # blow past the tiny budget
+            return await super()._attempt_structured_plan(**kwargs)
+
+    automator = _SlowAutomator(_valid_outcome("# approved plan"))
+
+    detail = asyncio.run(
+        approve_review_required_plan(plan_id=plan_id, store=store, stage2=automator)
+    )
+
+    # Released immediately with text; no card persisted by the inline attempt.
+    assert detail.status == "ready"
+    assert detail.outputs.plan_text == "# approved plan"
     assert detail.outputs.structured_plan is None
     assert store.plans[plan_id].get("structured_plan") is None
-    assert automator.calls == []
 
 
-def test_structured_post_processing_converts_after_approval(monkeypatch):
-    """The non-blocking post-processing step performs the deferred conversion."""
+def test_structured_post_processing_converts_when_inline_was_skipped(monkeypatch):
+    """The background fallback finishes the card when approval did not (stage2=None)."""
     monkeypatch.setenv("UNLXCK_STAGE2_STRUCTURED_PLAN", "1")
     store = FakeStore()
     plan_id = _seed_held_plan(store)
+
+    # Approve without an automator: no inline conversion, plan releases as text.
+    asyncio.run(approve_review_required_plan(plan_id=plan_id, store=store, stage2=None))
+    assert store.plans[plan_id].get("structured_plan") is None
+
     automator = _StructuredAutomator(_valid_outcome("# approved plan"))
-
-    asyncio.run(
-        approve_review_required_plan(plan_id=plan_id, store=store, stage2=automator)
-    )
-    assert automator.calls == []  # nothing during the fast approval
-
     asyncio.run(
         run_structured_plan_post_processing(plan_id=plan_id, store=store, stage2=automator)
     )
@@ -596,6 +618,28 @@ def test_structured_post_processing_converts_after_approval(monkeypatch):
     assert store.plans[plan_id]["schema_version"] == SCHEMA_VERSION
     assert store.plans[plan_id]["status"] == "ready"
     assert store.plans[plan_id]["plan_text"] == "# approved plan"
+
+
+def test_structured_post_processing_skips_when_card_already_present(monkeypatch):
+    """Once a card exists (e.g. from the inline approval), the fallback is a no-op."""
+    monkeypatch.setenv("UNLXCK_STAGE2_STRUCTURED_PLAN", "1")
+    store = FakeStore()
+    plan_id = _seed_held_plan(store)
+
+    # Inline approval produces the card.
+    asyncio.run(
+        approve_review_required_plan(
+            plan_id=plan_id, store=store, stage2=_StructuredAutomator(_valid_outcome("# approved plan"))
+        )
+    )
+    assert store.plans[plan_id]["structured_plan"] is not None
+
+    # The background fallback must not pay for a redundant conversion.
+    fallback = _StructuredAutomator(_valid_outcome("# approved plan"))
+    asyncio.run(
+        run_structured_plan_post_processing(plan_id=plan_id, store=store, stage2=fallback)
+    )
+    assert fallback.calls == []
 
 
 def test_structured_post_processing_failure_keeps_plan_text_and_ready(monkeypatch):
@@ -661,11 +705,9 @@ def test_structured_post_processing_does_not_overwrite_concurrent_manual_edit(mo
     store = FakeStore()
     plan_id = _seed_held_plan(store)
 
-    asyncio.run(
-        approve_review_required_plan(
-            plan_id=plan_id, store=store, stage2=_StructuredAutomator(_valid_outcome("# approved plan"))
-        )
-    )
+    # Skip the inline attempt so the conversion under test happens only in the
+    # background fallback, where the concurrent-mutation race is exercised.
+    asyncio.run(approve_review_required_plan(plan_id=plan_id, store=store, stage2=None))
 
     def _concurrent_manual_edit():
         row = store.plans[plan_id]
@@ -711,11 +753,9 @@ def test_structured_post_processing_does_not_overwrite_concurrent_reject(monkeyp
     store = FakeStore()
     plan_id = _seed_held_plan(store)
 
-    asyncio.run(
-        approve_review_required_plan(
-            plan_id=plan_id, store=store, stage2=_StructuredAutomator(_valid_outcome("# approved plan"))
-        )
-    )
+    # Skip the inline attempt so the conversion under test happens only in the
+    # background fallback, where the concurrent-reject race is exercised.
+    asyncio.run(approve_review_required_plan(plan_id=plan_id, store=store, stage2=None))
 
     def _concurrent_reject():
         row = store.plans[plan_id]
@@ -752,11 +792,9 @@ def test_structured_post_processing_persists_narrow_fields_without_regression(mo
     store = FakeStore()
     plan_id = _seed_held_plan(store)
 
-    asyncio.run(
-        approve_review_required_plan(
-            plan_id=plan_id, store=store, stage2=_StructuredAutomator(_valid_outcome("# approved plan"))
-        )
-    )
+    # Skip the inline attempt so post-processing is the sole structured writer
+    # under test here.
+    asyncio.run(approve_review_required_plan(plan_id=plan_id, store=store, stage2=None))
     # Snapshot the released row immediately after approval.
     approved = dict(store.plans[plan_id])
 
