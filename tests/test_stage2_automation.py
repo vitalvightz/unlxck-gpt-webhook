@@ -174,6 +174,7 @@ def test_first_pass_non_pass_returns_held_for_review_with_one_provider_call(
     assert report.pop("structured_plan") == {
         "status": "not_attempted",
         "errors": [],
+        "warnings": [],
         "schema_version": None,
     }
     assert report == _review(review_status)["validator_report"]

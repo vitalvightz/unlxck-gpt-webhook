@@ -167,11 +167,13 @@ def test_prompt_carries_computed_support_untruncated():
     assert "PLANNING BRIEF" in prompt
 
 
-def test_prompt_without_computed_support_is_unchanged_shape():
+def test_prompt_without_computed_support_omits_the_injected_section():
     brief = {"schema_version": "planning_brief.v1", "fight_demands": {"sport": "mma"}}
     prompt = build_structured_plan_prompt(plan_markdown="PLAN", planning_brief=brief)
     assert "PLANNING BRIEF" in prompt
-    assert "STAGE 1 COMPUTED SUPPORT" not in prompt
+    # No serialized computed_support section is injected when none is present.
+    # (The static authority rules may mention the phrase, so key off the data.)
+    assert "computed_support.v1" not in prompt
 
 
 def test_real_generation_attaches_computed_support_to_planning_brief():

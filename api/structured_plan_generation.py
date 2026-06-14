@@ -25,6 +25,7 @@ from dataclasses import dataclass, field
 from typing import Any, Callable, Literal, get_args
 
 from .state_machine import is_athlete_displayable_plan_status
+from .structured_plan_safety import audit_structured_plan
 from .structured_plan_models import (
     SCHEMA_VERSION,
     BlockType,
@@ -92,12 +93,14 @@ class StructuredPlanOutcome:
     structured_plan: dict[str, Any] | None = None
     schema_version: str | None = None
     errors: list[str] = field(default_factory=list)
+    warnings: list[str] = field(default_factory=list)
 
     def as_debug(self) -> dict[str, Any]:
         """Compact admin/debug view persisted alongside the validator report."""
         return {
             "status": self.status,
             "errors": list(self.errors),
+            "warnings": list(self.warnings),
             "schema_version": self.schema_version,
         }
 
@@ -783,6 +786,7 @@ def build_structured_plan_outcome(
     *,
     raw_markdown: str = "",
     repair_fn: Callable[[Any, list[str]], Any] | None = None,
+    computed_support: dict[str, Any] | None = None,
 ) -> StructuredPlanOutcome:
     """Validate a candidate structured payload into a persistable outcome.
 
@@ -807,10 +811,12 @@ def build_structured_plan_outcome(
 
     first = safe_parse_structured_plan(cleaned, raw_markdown=raw_markdown or None)
     if first.ok and first.plan is not None:
+        plan_dict = first.plan.model_dump(mode="json")
         return StructuredPlanOutcome(
             status="valid",
-            structured_plan=first.plan.model_dump(mode="json"),
+            structured_plan=plan_dict,
             schema_version=first.plan.schema_version,
+            warnings=audit_structured_plan(plan_dict, computed_support),
         )
 
     if repair_fn is None:
@@ -828,10 +834,12 @@ def build_structured_plan_outcome(
         cleaned, repair_fn=_clean_repair, raw_markdown=raw_markdown or None
     )
     if repaired.ok and repaired.plan is not None:
+        plan_dict = repaired.plan.model_dump(mode="json")
         return StructuredPlanOutcome(
             status="repair_attempted_valid",
-            structured_plan=repaired.plan.model_dump(mode="json"),
+            structured_plan=plan_dict,
             schema_version=repaired.plan.schema_version,
+            warnings=audit_structured_plan(plan_dict, computed_support),
         )
     return StructuredPlanOutcome(
         status="invalid_fallback_used",
@@ -953,6 +961,26 @@ The JSON object MUST conform to the StructuredTrainingPlan schema:
   "context" when the plan provides them.
 - Omit any of the above the plan does not state — leave the field out rather than
   inventing content.
+
+DETERMINISTIC AUTHORITY (when a "STAGE 1 COMPUTED SUPPORT" section is provided):
+- Treat STAGE 1 COMPUTED SUPPORT as AUTHORITATIVE for nutrition macros,
+  hydration, fuel timing, and weight-cut risk; for recovery sleep/fatigue rules;
+  and for mindset block classification and phase cues. It is the source of truth
+  for those numbers/classifications — the plan text only supplies wording.
+- Do NOT extract or output macro, hydration, or weight-cut values from the plan
+  text that conflict with computed support when computed support is present; use
+  the computed values and let the plan text contribute phrasing only.
+- Keep today_card brief: a short headline, readiness, and the day's mindset
+  anchor. Do NOT pack full nutrition detail into today_card — the NutritionCard
+  (plan-level "nutrition") owns full nutrition details.
+- red_flag_rules MUST contain only stop / modify / report safety rules. Do not
+  put general training or nutrition content there.
+- Do NOT duplicate identical mindset anchors at both the day and session level —
+  if a session's anchor would be identical to the day's, vary phrasing while
+  still keeping a valid session-level mindset_anchor.
+- NEVER surface coach_gated content. The "coach_gated" sub-sections of computed
+  support (acute weight-cut and supplement dosing) are coach/medical-only and
+  MUST NOT appear in any athlete-facing field.
 """
 
 
