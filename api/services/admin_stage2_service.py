@@ -30,7 +30,9 @@ def _approval_structured_budget_seconds() -> float:
         value = float(raw)
     except (TypeError, ValueError):
         return _APPROVAL_STRUCTURED_PLAN_BUDGET_SECONDS
-    return value if value > 0 else _APPROVAL_STRUCTURED_PLAN_BUDGET_SECONDS
+    # Only a finite, positive budget is usable: inf would make wait_for() block
+    # forever and nan compares False, so both fall back to the default.
+    return value if 0 < value < float("inf") else _APPROVAL_STRUCTURED_PLAN_BUDGET_SECONDS
 
 
 async def _attach_structured_plan(

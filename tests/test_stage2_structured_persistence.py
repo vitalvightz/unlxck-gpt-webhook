@@ -22,6 +22,8 @@ import pytest
 import api.stage2_automation as stage2_module
 from api.plan_mappers import _map_plan_detail
 from api.services.admin_stage2_service import (
+    _APPROVAL_STRUCTURED_PLAN_BUDGET_SECONDS,
+    _approval_structured_budget_seconds,
     approve_review_required_plan,
     run_structured_plan_post_processing,
 )
@@ -544,6 +546,22 @@ def _seed_held_plan(store: FakeStore, *, plan_id: str = "plan-1") -> str:
         "created_at": _now(),
     }
     return plan_id
+
+
+@pytest.mark.parametrize(
+    "raw",
+    ["", "not-a-number", "0", "-5", "inf", "Infinity", "-inf", "nan"],
+)
+def test_approval_budget_falls_back_to_default_for_unusable_values(monkeypatch, raw):
+    # Non-finite / non-positive / unparseable env values must not be used as a
+    # timeout: inf would make wait_for() block forever, nan compares False.
+    monkeypatch.setenv("UNLXCK_APPROVAL_STRUCTURED_PLAN_BUDGET_SECONDS", raw)
+    assert _approval_structured_budget_seconds() == _APPROVAL_STRUCTURED_PLAN_BUDGET_SECONDS
+
+
+def test_approval_budget_honours_finite_positive_override(monkeypatch):
+    monkeypatch.setenv("UNLXCK_APPROVAL_STRUCTURED_PLAN_BUDGET_SECONDS", "12.5")
+    assert _approval_structured_budget_seconds() == 12.5
 
 
 def test_admin_approve_attaches_structured_card_inline(monkeypatch):
