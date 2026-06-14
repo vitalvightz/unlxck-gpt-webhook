@@ -896,9 +896,10 @@ export function PlanViewer({
   onPlanDeleted?: () => Promise<void> | void;
 }) {
   const router = useRouter();
-  // Admin-only controls (approve, reject approval, archive/admin review) are
-  // gated by role, not just by the presence of admin_outputs, so an athlete in
-  // this shared viewer can never see them.
+  const isViewerAdmin = viewerRole === "admin";
+  // Admin-only controls (approve, reject approval, archive/admin review actions) are
+  // gated by role, not just by the presence of admin_outputs in the payload, so
+  // an athlete can never see them even if admin data were ever attached.
   const isAdmin = canUseAdminPlanControls(viewerRole, Boolean(plan.admin_outputs));
   const canManagePlan = viewerRole === "admin" || viewerRole === "athlete";
   const primaryAdvisory = Array.isArray(plan.advisories) ? plan.advisories[0] ?? null : null;
