@@ -333,7 +333,9 @@ export type StructuredBlock = {
   impact_level?: string | null;
   purpose?: string | null;
   coaching_cues?: string[] | null;
+  regression_options?: string[] | null;
   substitutions?: string[] | null;
+  progression_rule?: string | null;
 };
 
 export type StructuredSession = {

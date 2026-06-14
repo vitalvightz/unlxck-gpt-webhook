@@ -744,3 +744,105 @@ def test_should_attempt_uses_plan_text_when_final_missing():
 def test_should_not_attempt_for_non_dict():
     assert should_attempt_structured_plan(None, True) is False
     assert should_attempt_structured_plan("ready", True) is False
+
+
+# --- PR-1: carry-through of already-supported schema fields ------------------
+
+
+def test_normalize_preserves_mindset_optional_anchors():
+    plan = normalize_structured_plan_candidate(
+        {
+            "weeks": [
+                {
+                    "days": [
+                        {
+                            "today_card": {
+                                "mindset_anchor": {
+                                    "intent": "Stay sharp",
+                                    "focus_cue": "Hands up",
+                                    "reset_cue": "Breathe",
+                                    "confidence_anchor": "You've banked the work",
+                                    "context": "First hard week",
+                                }
+                            },
+                            "sessions": [
+                                {
+                                    "mindset_anchor": {
+                                        "intent": "Move fast",
+                                        "focus_cue": "Drive",
+                                        "reset_cue": "Reset stance",
+                                        "confidence_anchor": "Done this load before",
+                                    }
+                                }
+                            ],
+                        }
+                    ]
+                }
+            ]
+        }
+    )
+    day = plan["weeks"][0]["days"][0]
+    assert day["today_card"]["mindset_anchor"]["confidence_anchor"] == "You've banked the work"
+    assert day["today_card"]["mindset_anchor"]["context"] == "First hard week"
+    assert day["sessions"][0]["mindset_anchor"]["confidence_anchor"] == "Done this load before"
+
+
+def test_normalize_block_carries_coaching_detail():
+    block = normalize_structured_plan_candidate(
+        {
+            "weeks": [
+                {
+                    "days": [
+                        {
+                            "sessions": [
+                                {
+                                    "blocks": [
+                                        {
+                                            "display_name": "Back Squat",
+                                            "coaching_cues": ["Brace hard", "  ", "Knees out"],
+                                            "regression_options": ["Goblet squat"],
+                                            "substitutions": "Trap-bar deadlift",
+                                            "progression_rule": "Add 2.5kg when all reps clean",
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        }
+    )["weeks"][0]["days"][0]["sessions"][0]["blocks"][0]
+    assert block["coaching_cues"] == ["Brace hard", "Knees out"]  # blanks dropped
+    assert block["regression_options"] == ["Goblet squat"]
+    assert block["substitutions"] == ["Trap-bar deadlift"]  # lone string wrapped
+    assert block["progression_rule"] == "Add 2.5kg when all reps clean"
+
+
+def test_full_block_and_mindset_detail_round_trips_through_outcome():
+    # _valid_plan already carries coaching_cues/regression_options/substitutions on
+    # its block; add the optional mindset anchors and confirm they survive.
+    plan = _valid_plan()
+    plan["weeks"][0]["days"][0]["sessions"][0]["mindset_anchor"]["confidence_anchor"] = "Anchor X"
+    outcome = build_structured_plan_outcome(plan, raw_markdown="# raw")
+    assert outcome.status == "valid"
+    block = outcome.structured_plan["weeks"][0]["days"][0]["sessions"][0]["blocks"][0]
+    assert block["coaching_cues"]
+    assert block["substitutions"]
+    session = outcome.structured_plan["weeks"][0]["days"][0]["sessions"][0]
+    assert session["mindset_anchor"]["confidence_anchor"] == "Anchor X"
+
+
+def test_prompt_requires_block_detail_and_day_mindset():
+    prompt = build_structured_plan_prompt(plan_markdown="# plan")
+    for needle in (
+        '"coaching_cues"',
+        '"regression_options"',
+        '"substitutions"',
+        '"progression_rule"',
+        "confidence_anchor",
+        "today_card.mindset_anchor",
+    ):
+        assert needle in prompt, needle
+    # Guardrail wording: omit, do not invent.
+    assert "invent" in prompt.lower()
