@@ -152,6 +152,36 @@ def should_attempt_structured_plan(plan: Any, env_enabled: bool) -> bool:
     return is_athlete_displayable_plan_status(plan.get("status"))
 
 
+# Structured-plan attempt statuses that count as a successfully validated card.
+# ``invalid_fallback_used`` / ``not_attempted`` are excluded: they mean the raw
+# plan_text fallback is in play, so there is no schema-valid card to trust.
+_CLEAN_STRUCTURED_PLAN_STATUSES: frozenset[StructuredPlanStatus] = frozenset(
+    {"valid", "repair_attempted_valid"}
+)
+
+
+def has_clean_structured_card(plan: Any) -> bool:
+    """True when ``plan`` carries a schema-valid structured card.
+
+    A clean card is a non-empty ``structured_plan`` dict whose recorded attempt
+    status validated (``valid`` or ``repair_attempted_valid``). It is used as a
+    trust signal: a plan that produced a schema-valid card is treated as
+    publishable rather than held for non-safety findings. Accepts either a
+    Stage 2 result dict or a persisted plan row (the attempt status lives under
+    ``stage2_validator_report.structured_plan.status`` in both).
+    """
+
+    if not isinstance(plan, dict):
+        return False
+    card = plan.get("structured_plan")
+    if not isinstance(card, dict) or not card:
+        return False
+    report = plan.get("stage2_validator_report")
+    debug = report.get("structured_plan") if isinstance(report, dict) else None
+    status = debug.get("status") if isinstance(debug, dict) else None
+    return status in _CLEAN_STRUCTURED_PLAN_STATUSES
+
+
 def strip_biometric_fields(data: Any) -> tuple[Any, list[str]]:
     """Recursively drop banned biometric keys.
 

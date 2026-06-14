@@ -257,6 +257,92 @@ def test_finalize_attaches_valid_structured_plan(monkeypatch: pytest.MonkeyPatch
     assert result["stage2_validator_report"]["structured_plan"]["status"] == "valid"
 
 
+def _fail_review(*codes: str):
+    error_codes = codes or ("true_internal_system_leak",)
+
+    def _review(**_):
+        return {
+            "status": "FAIL",
+            "needs_retry": True,
+            "validator_report": {
+                "errors": [{"code": code} for code in error_codes],
+                "warnings": [],
+                "blocking_warnings": [],
+                "review_flag_count": 0,
+            },
+        }
+
+    return _review
+
+
+def test_finalize_soft_hold_rescued_by_clean_card(monkeypatch: pytest.MonkeyPatch):
+    # A hold whose only error is non-safety (internal scaffolding leak) is
+    # published when a schema-valid structured card vouches for it.
+    monkeypatch.setenv("UNLXCK_STAGE2_STRUCTURED_PLAN", "1")
+    monkeypatch.setattr(stage2_module, "review_stage2_output", _fail_review("true_internal_system_leak"))
+    client = _FakeClient([_response("# final plan"), _response(json.dumps(_valid_plan()))])
+    automator = OpenAIStage2Automator(client=client, model="test-model")
+
+    result = asyncio.run(automator.finalize(stage1_result=_stage1_result()))
+
+    assert result["status"] == "publishable_with_flags"
+    assert result["plan_text"] == "# final plan"
+    assert isinstance(result["structured_plan"], dict)
+    assert result["stage2_validator_report"]["structured_plan"]["status"] == "valid"
+    # The original error is still recorded for admin visibility.
+    assert result["stage2_validator_report"]["errors"] == [{"code": "true_internal_system_leak"}]
+
+
+def test_finalize_soft_hold_reverts_to_hold_when_card_invalid(monkeypatch: pytest.MonkeyPatch):
+    # Same soft hold, but the card never validates -> the plan is held after all.
+    monkeypatch.setenv("UNLXCK_STAGE2_STRUCTURED_PLAN", "1")
+    monkeypatch.setattr(stage2_module, "review_stage2_output", _fail_review("true_internal_system_leak"))
+    client = _FakeClient(
+        [
+            _response("# final plan"),
+            _response(json.dumps(["not", "a", "plan"])),  # invalid first pass
+            _response(json.dumps(["still", "broken"])),  # repair still invalid
+        ]
+    )
+    automator = OpenAIStage2Automator(client=client, model="test-model")
+
+    result = asyncio.run(automator.finalize(stage1_result=_stage1_result()))
+
+    assert result["status"] == "held_for_review"
+    assert result["plan_text"] == ""
+    assert result["final_plan_text"] == "# final plan"
+    assert result["structured_plan"] is None
+
+
+def test_finalize_safety_hold_is_never_rescued(monkeypatch: pytest.MonkeyPatch):
+    # A safety error (restriction violation) holds regardless of the card; the
+    # structured attempt is not even made because the hold is not displayable.
+    monkeypatch.setenv("UNLXCK_STAGE2_STRUCTURED_PLAN", "1")
+    monkeypatch.setattr(stage2_module, "review_stage2_output", _fail_review("restriction_violation"))
+    client = _FakeClient([_response("# final plan")])
+    automator = OpenAIStage2Automator(client=client, model="test-model")
+
+    result = asyncio.run(automator.finalize(stage1_result=_stage1_result()))
+
+    assert result["status"] == "held_for_review"
+    assert len(client.responses.calls) == 1  # no structured call attempted
+    assert result["stage2_validator_report"]["structured_plan"]["status"] == "not_attempted"
+
+
+def test_finalize_soft_hold_held_when_structured_disabled(monkeypatch: pytest.MonkeyPatch):
+    # With structured generation off, a soft hold behaves exactly as before
+    # (held_for_review) — no card can rescue it, so the status never flaps.
+    monkeypatch.delenv("UNLXCK_STAGE2_STRUCTURED_PLAN", raising=False)
+    monkeypatch.setattr(stage2_module, "review_stage2_output", _fail_review("true_internal_system_leak"))
+    client = _FakeClient([_response("# final plan")])
+    automator = OpenAIStage2Automator(client=client, model="test-model")
+
+    result = asyncio.run(automator.finalize(stage1_result=_stage1_result()))
+
+    assert result["status"] == "held_for_review"
+    assert len(client.responses.calls) == 1
+
+
 def test_finalize_uses_one_repair_retry(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setenv("UNLXCK_STAGE2_STRUCTURED_PLAN", "1")
     monkeypatch.setattr(stage2_module, "review_stage2_output", _pass_review)

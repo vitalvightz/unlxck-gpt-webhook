@@ -62,6 +62,52 @@ def test_healthy_visible_plan_keeps_its_status():
     assert events == []
 
 
+def _clean_card_fields():
+    """final_result fields that make has_clean_structured_card() True."""
+    return {
+        "structured_plan": {"plan_metadata": {"ok": True}},
+        "stage2_validator_report": {"structured_plan": {"status": "valid"}},
+    }
+
+
+def test_visible_plan_with_blank_week_is_rescued_by_clean_card():
+    # A render/extraction contract finding (blank week) is overridden when the
+    # plan carries a schema-valid structured card — trust the card.
+    emit, events = _emit_collector()
+    result = _apply_plan_contract_validation(
+        _result("ready", [{"phase": "camp"}], **_clean_card_fields()),
+        fight_date=FIGHT_DATE,
+        athlete_id="ath-1",
+        job_id="job-1",
+        emit_milestone=emit,
+    )
+    assert result["status"] == "ready"
+    report = result["why_log"]["plan_contract_validation"]
+    assert report["has_errors"] is True  # finding still recorded
+    assert any(code == "plan_contract_structured_card_rescue" for code, _ in events)
+    assert not any(code == "plan_contract_review_required" for code, _ in events)
+
+
+def test_empty_plan_text_is_not_rescued_even_with_card():
+    # An empty body is unrecoverable output integrity; the card cannot vouch for
+    # it, so the plan is still routed to review.
+    emit, events = _emit_collector()
+    result = _apply_plan_contract_validation(
+        _result(
+            "ready",
+            [{"phase": "fight", "countdown_range": [6, 0]}],
+            plan_text="",
+            **_clean_card_fields(),
+        ),
+        fight_date=FIGHT_DATE,
+        athlete_id="ath-1",
+        job_id="job-1",
+        emit_milestone=emit,
+    )
+    assert result["status"] == "review_required"
+    assert any(code == "plan_contract_review_required" for code, _ in events)
+
+
 def test_already_non_visible_status_is_not_changed():
     # held_for_review plans are already gated; record the report, change nothing.
     emit, events = _emit_collector()
