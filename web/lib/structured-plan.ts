@@ -181,7 +181,7 @@ export function getStringList(value: string[] | null | undefined): string[] {
     .filter((item): item is string => item !== null);
 }
 
-/** A mindset anchor only if it has at least one usable line. */
+/** A simplified mindset anchor only if it has at least one usable line. */
 export function getMindsetLines(
   anchor:
     | {
@@ -200,26 +200,20 @@ export function getMindsetLines(
   const lines: { label: string; value: string }[] = [];
   const intent = cleanText(anchor.intent);
   const focus = cleanText(anchor.focus_cue);
-  const reset = cleanText(anchor.reset_cue);
-  const confidence = cleanText(anchor.confidence_anchor);
   const context = cleanText(anchor.context);
   if (intent) lines.push({ label: "Intent", value: intent });
   if (focus) lines.push({ label: "Focus", value: focus });
-  if (reset) lines.push({ label: "Reset", value: reset });
-  if (confidence) lines.push({ label: "Anchor", value: confidence });
   if (context) lines.push({ label: "Context", value: context });
   return lines;
 }
-
-const SECONDARY_MINDSET_LABELS = new Set(["Anchor", "Context"]);
 
 export function splitMindsetLines(
   anchor: Parameters<typeof getMindsetLines>[0],
 ): { primary: MindsetLine[]; secondary: MindsetLine[] } {
   const lines = getMindsetLines(anchor);
   return {
-    primary: lines.filter((line) => !SECONDARY_MINDSET_LABELS.has(line.label)),
-    secondary: lines.filter((line) => SECONDARY_MINDSET_LABELS.has(line.label)),
+    primary: lines,
+    secondary: [],
   };
 }
 
