@@ -198,7 +198,6 @@
       "rotational",
       "rate_of_force",
       "mech_cns_high",
-      "mech_upper_press",
       "mech_trunk_rotation",
       "mech_ballistic",
       "mech_trunk_stability"
@@ -214,8 +213,7 @@
       "mech_ballistic",
       "mech_cns_high",
       "mech_trunk_rotation",
-      "mech_trunk_stability",
-      "mech_upper_press"
+      "mech_trunk_stability"
     ],
     "low_impact": true,
     "low_eccentric": true,
@@ -2222,8 +2220,7 @@
     "tags": [
       "core",
       "anti_rotation",
-      "mech_trunk_stability",
-      "mech_upper_press"
+      "mech_trunk_stability"
     ],
     "equipment": "cable",
     "movement_cost": "low",
@@ -2233,8 +2230,7 @@
     "cns_load": "low",
     "soreness_risk": "low",
     "mechanical_risk_tags": [
-      "mech_trunk_stability",
-      "mech_upper_press"
+      "mech_trunk_stability"
     ],
     "low_impact": true,
     "low_eccentric": true,
@@ -2260,7 +2256,6 @@
       "core",
       "anti_rotation",
       "mech_trunk_stability",
-      "mech_upper_press",
       "mech_trunk_rotation"
     ],
     "equipment": "cable",
@@ -2272,8 +2267,7 @@
     "soreness_risk": "low",
     "mechanical_risk_tags": [
       "mech_trunk_rotation",
-      "mech_trunk_stability",
-      "mech_upper_press"
+      "mech_trunk_stability"
     ],
     "low_impact": true,
     "low_eccentric": false,
@@ -9088,8 +9082,7 @@
       "rotational",
       "mech_trunk_stability",
       "stability",
-      "mech_trunk_rotation",
-      "mech_upper_press"
+      "mech_trunk_rotation"
     ],
     "equipment": "cable_machine",
     "movement_cost": "low",
@@ -9100,8 +9093,7 @@
     "soreness_risk": "low",
     "mechanical_risk_tags": [
       "mech_trunk_rotation",
-      "mech_trunk_stability",
-      "mech_upper_press"
+      "mech_trunk_stability"
     ],
     "low_impact": true,
     "low_eccentric": true,

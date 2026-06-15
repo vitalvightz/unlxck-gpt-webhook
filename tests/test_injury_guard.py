@@ -786,3 +786,40 @@ def test_medicine_ball_chest_toss_is_excluded_for_upper_body_injuries():
     for injury in ("shoulder impingement", "elbow tendonitis", "wrist pain", "chest strain", "forearm strain"):
         decision = injury_decision(exercise, [injury], "SPP", "low")
         assert decision.action == "exclude"
+
+
+def test_anti_rotation_core_exercises_are_not_false_positive_shoulder_exclusions():
+    data_paths = [
+        Path(__file__).resolve().parents[1] / "data" / "exercise_bank.json",
+        Path(__file__).resolve().parents[1] / "data" / "universal_gpp_strength.json",
+    ]
+    target_names = {"Cable Pallof Press", "Anti-Rotation Press", "Pallof Press"}
+    found: dict[str, dict] = {}
+    for data_path in data_paths:
+        import json
+
+        for exercise in json.loads(data_path.read_text(encoding="utf-8")):
+            if exercise.get("name") in target_names:
+                found[exercise["name"]] = exercise
+
+    assert target_names <= set(found)
+    for name in target_names:
+        decision = injury_decision(found[name], ["shoulder impingement"], "GPP", "low")
+        assert decision.action != "exclude", f"{name} should not be excluded as an upper press"
+        assert "mech_upper_press" not in found[name].get("tags", [])
+        assert "mech_upper_press" not in found[name].get("mechanical_risk_tags", [])
+
+
+def test_med_ball_scoop_toss_is_not_false_positive_shoulder_press_exclusion():
+    import json
+
+    data_path = Path(__file__).resolve().parents[1] / "data" / "exercise_bank.json"
+    exercise = next(
+        item for item in json.loads(data_path.read_text(encoding="utf-8")) if item.get("name") == "Med Ball Scoop Toss"
+    )
+
+    decision = injury_decision(exercise, ["shoulder impingement"], "GPP", "low")
+
+    assert decision.action != "exclude"
+    assert "mech_upper_press" not in exercise.get("tags", [])
+    assert "mech_upper_press" not in exercise.get("mechanical_risk_tags", [])
