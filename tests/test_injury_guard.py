@@ -822,12 +822,13 @@ def test_anti_rotation_core_exercises_are_not_false_positive_shoulder_exclusions
 
 def test_med_ball_scoop_toss_is_not_false_positive_shoulder_press_exclusion():
     data_path = Path(__file__).resolve().parents[1] / "data" / "exercise_bank.json"
-    exercise = next(
-        item for item in json.loads(data_path.read_text(encoding="utf-8")) if item.get("name") == "Med Ball Scoop Toss"
-    )
+    with data_path.open(encoding="utf-8") as f:
+        exercises = json.load(f)
+    exercise = next((item for item in exercises if item.get("name") == "Med Ball Scoop Toss"), None)
+    assert exercise is not None, "Med Ball Scoop Toss not found in exercise_bank.json"
 
     decision = injury_decision(exercise, ["shoulder impingement"], "GPP", "low")
 
     assert decision.action != "exclude"
-    assert "mech_upper_press" not in exercise.get("tags", [])
-    assert "mech_upper_press" not in exercise.get("mechanical_risk_tags", [])
+    assert "mech_upper_press" not in (exercise.get("tags") or [])
+    assert "mech_upper_press" not in (exercise.get("mechanical_risk_tags") or [])
