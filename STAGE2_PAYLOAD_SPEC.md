@@ -375,6 +375,47 @@ These inputs should influence the pool, not only the prose:
 - `fatigue`
 - `days_until_fight`
 
+## Stage 1 self-parity (making Stage 1 match live)
+
+The Stage 2 LLM is graded by `fightcamp/stage2_validator.py` against the planning
+brief. The closer Stage 1's *own* rendered draft already is to a plan that passes
+that validator, the less structural work the finalizer has to do — and the closer
+we get to skipping the LLM for clean cases.
+
+`fightcamp/stage1_parity.py` makes that measurable. It runs the exact validator
+the finalizer is graded by against Stage 1's own `plan_text` (using Stage 1's own
+`planning_brief`):
+
+- `review_stage1_self_output(stage1_result)` — full review result.
+- `stage1_parity_breakdown(stage1_result)` — code-level counts (errors,
+  blocking warnings, soft review flags).
+- `stage1_can_bypass_llm(stage1_result, require_clean=False)` — the gating
+  primitive. `True` when Stage 1's draft already clears the publish gate (no
+  errors, no hard blockers); with `require_clean=True` it also requires zero
+  soft review flags.
+
+`tests/test_stage1_parity.py` locks in the baseline across representative
+scenarios (standard camp, long pro camp, weight cut, injury, late-fight
+countdown, fight week). Two invariants:
+
+- **Gating precondition** — Stage 1's draft produces zero validator errors and
+  zero hard blocking warnings everywhere. This must never regress.
+- **Bounded soft gap** — every remaining soft review-flag code stays within
+  `BASELINE_REVIEW_FLAG_CODES`. The structural gap to close (the work the LLM
+  currently redoes) is dominated by `missing_week_session_role`,
+  `sport_language_leak`, `late_fight_unapproved_exercise_rendered`,
+  `late_camp_session_incomplete`, `template_like_session_render`, and the
+  `missing_{injury,weight_cut}_lead_summary` codes.
+
+### Deterministic session labels
+
+Stage 1 already knows every session's `role_key`. `fightcamp/role_labels.py` maps
+each `role_key` to a deterministic, validator-recognised `athlete_facing_label`
+(e.g. `primary_strength_day` → "Strength", `alactic_sharpness_day` →
+"Alactic sharpness"), stamped onto every rendered session role in the weekly role
+map. This removes title invention from the LLM (a source of `role_key` leaks) and
+gives the eventual deterministic renderer ready-made titles.
+
 ## Suggested Adoption Path
 
 ### Phase 1
