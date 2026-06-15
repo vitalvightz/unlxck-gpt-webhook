@@ -101,7 +101,7 @@ def humanize_role_key(role_key: str | None) -> str:
     key = key.strip("_")
     if not key:
         return ""
-    return " ".join(part for part in key.split("_") if part).title()
+    return " ".join(part.capitalize() for part in key.split("_") if part)
 
 
 def athlete_facing_label_for(role_key: str | None, *, fallback: str | None = None) -> str:
