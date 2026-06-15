@@ -59,7 +59,7 @@ def _injury_phrase(athlete: dict[str, Any]) -> str:
 def _weight_cut_is_high_pressure(athlete: dict[str, Any], readiness_flags: set[str]) -> bool:
     if "aggressive_weight_cut" in readiness_flags:
         return True
-    fatigue = str(athlete.get("fatigue", "")).strip().lower()
+    fatigue = str(athlete.get("fatigue") or "").strip().lower()
     days_until_fight = athlete.get("days_until_fight")
     return fatigue in {"moderate", "high"} or (
         isinstance(days_until_fight, int) and days_until_fight <= 28
