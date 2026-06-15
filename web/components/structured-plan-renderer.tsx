@@ -287,7 +287,7 @@ export function DaySection({ day }: { day: StructuredDay }) {
             <SessionCard
               key={cleanText(session.session_id) || `session-${index}`}
               session={session}
-              day={day}
+              day={index === 0 ? day : undefined}
             />
           ))}
         </div>
