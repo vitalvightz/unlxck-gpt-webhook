@@ -407,6 +407,32 @@ countdown, fight week). Two invariants:
   `late_camp_session_incomplete`, `template_like_session_render`, and the
   `missing_{injury,weight_cut}_lead_summary` codes.
 
+### Deterministic week-by-week schedule
+
+`fightcamp/weekly_plan_render.py` renders the week->day->session spine
+deterministically from data Stage 1 already owns, so the draft reads like the
+final article instead of a phase-level exercise pool the finalizer must
+restructure:
+
+- each active week becomes `## Week N — PHASE (D-x → D-y)`,
+- each session becomes `### <Weekday> (D-day) — <athlete_facing_label>` placed on
+  the planner's chosen day (with `fill_missing_session_days` assigning any role
+  the planner left dayless to a free declared training day, on the role map
+  itself so the planning brief, the validator's authorised-day set, and the
+  render stay consistent), and
+- each session carries decisive, real work — strength doses via
+  `strength._classify_prescription_type` + `_prescription_templates`,
+  conditioning doses from each drill's own `duration`, coach-owned sparring as a
+  minimal label + one freshness note — anchor-first, with crowded-week
+  `forbidden_secondary_stressors` excluded (no hinge/contrast stacked on an
+  anchor day).
+
+It never invents exercises or doses; it places real selected work onto real
+days. This first increment covers dated normal camps and eliminated the
+`missing_week_session_role` / `late_camp_session_incomplete` gap for them. Late-
+fight countdown weeks keep their existing path (they have their own strict
+allowed-exercise contracts).
+
 ### Deterministic session labels
 
 Stage 1 already knows every session's `role_key`. `fightcamp/role_labels.py` maps
