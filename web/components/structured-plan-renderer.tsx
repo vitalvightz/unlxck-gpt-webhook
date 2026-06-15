@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useId, useState, type ReactNode } from "react";
 
 import {
   cleanText,
@@ -26,7 +26,6 @@ import {
   redFlagView,
   selectBlockMetric,
   shouldShowRest,
-  splitMindsetLines,
   weekLabel,
 } from "@/lib/structured-plan";
 import { formatPlanLabel } from "@/lib/plan-labels";
@@ -66,9 +65,8 @@ function CollapsibleSection({
 }
 
 export function MindsetAnchorCard({ anchor }: { anchor?: MindsetAnchor | null }) {
-  const { primary, secondary } = splitMindsetLines(anchor);
-  const [showMore, setShowMore] = useState(false);
-  if (primary.length === 0 && secondary.length === 0) {
+  const lines = getMindsetLines(anchor);
+  if (lines.length === 0) {
     return null;
   }
   const renderLine = (line: { label: string; value: string }) => (
@@ -80,20 +78,7 @@ export function MindsetAnchorCard({ anchor }: { anchor?: MindsetAnchor | null })
   return (
     <div className="sp-mindset">
       <p className="sp-eyebrow sp-accent">Mindset</p>
-      <ul className="sp-mindset-list">{primary.map(renderLine)}</ul>
-      {secondary.length > 0 ? (
-        <>
-          {showMore ? <ul className="sp-mindset-list">{secondary.map(renderLine)}</ul> : null}
-          <button
-            type="button"
-            className="sp-more-toggle"
-            aria-expanded={showMore}
-            onClick={() => setShowMore((prev) => !prev)}
-          >
-            {showMore ? "Less" : "More"}
-          </button>
-        </>
-      ) : null}
+      <ul className="sp-mindset-list">{lines.map(renderLine)}</ul>
     </div>
   );
 }
@@ -182,32 +167,75 @@ export function BlockCard({ block }: { block: StructuredBlock }) {
   );
 }
 
-export function SessionCard({ session }: { session: StructuredSession }) {
-  const title = cleanText(session.title) || titleize(cleanText(session.session_type) || "Session");
+export function SessionCard({
+  session,
+  day,
+}: {
+  session: StructuredSession;
+  day?: StructuredDay;
+}) {
+  const detailsId = useId();
+  const [showDetails, setShowDetails] = useState(false);
+  const card = day?.today_card;
+  const title =
+    cleanText(session.title) ||
+    cleanText(card?.headline) ||
+    titleize(cleanText(session.session_type) || "Session");
   const sessionType = cleanText(session.session_type);
   const objective = cleanText(session.objective);
   const duration = formatMeasured(session.planned_duration);
+  const date = cleanText(day?.date);
+  const countdown = cleanText(day?.countdown_label);
+  const dayType = cleanText(day?.day_type);
+  const readiness = cleanText(card?.readiness_status);
+  const warning = cleanText(card?.primary_warning);
+  const nutrition = cleanText(card?.nutrition_summary);
+  const weightCut = cleanText(card?.weight_cut_warning);
   const blocks = getBlocks(session);
 
   return (
     <article className="sp-session">
       <header className="sp-session-head">
         <div>
+          {countdown || date ? (
+            <div className="sp-day-labels sp-session-day-labels">
+              {countdown ? <span className="sp-countdown sp-accent">{countdown}</span> : null}
+              {date ? <span className="sp-day-date">{date}</span> : null}
+            </div>
+          ) : null}
           <h4 className="sp-session-title">{title}</h4>
           {objective ? <p className="sp-session-objective">{objective}</p> : null}
         </div>
         <div className="sp-session-meta">
+          {dayType ? <span className="sp-tag">{titleize(dayType)}</span> : null}
+          {readiness ? <span className="sp-tag sp-accent">{titleize(readiness)}</span> : null}
           {sessionType ? <span className="sp-tag sp-accent">{titleize(sessionType)}</span> : null}
           {duration ? <span className="sp-tag">{duration}</span> : null}
         </div>
       </header>
+      {warning ? <p className="sp-warning">{warning}</p> : null}
+      {nutrition ? <p className="sp-today-note">{nutrition}</p> : null}
+      {weightCut ? <p className="sp-warning">{weightCut}</p> : null}
       <MindsetAnchorCard anchor={session.mindset_anchor} />
       {blocks.length > 0 ? (
-        <div className="sp-blocks">
-          {blocks.map((block, index) => (
-            <BlockCard key={cleanText(block.block_id) || `block-${index}`} block={block} />
-          ))}
-        </div>
+        <>
+          <button
+            type="button"
+            className="sp-more-toggle sp-session-toggle"
+            aria-expanded={showDetails}
+            aria-controls={detailsId}
+            onClick={() => setShowDetails((prev) => !prev)}
+          >
+            {showDetails ? "LESS" : "MORE"}
+          </button>
+          {showDetails ? (
+            <div id={detailsId} className="sp-blocks">
+              {blocks.map((block, index) => (
+                <BlockCard key={cleanText(block.block_id) || `block-${index}`} block={block} />
+              ))}
+            </div>
+          ) : null}
+        </>
       ) : null}
     </article>
   );
@@ -253,25 +281,28 @@ export function DaySection({ day }: { day: StructuredDay }) {
 
   return (
     <section className="sp-day">
-      <header className="sp-day-head">
-        <div className="sp-day-labels">
-          {countdown ? <span className="sp-countdown sp-accent">{countdown}</span> : null}
-          {date ? <span className="sp-day-date">{date}</span> : null}
-        </div>
-        {dayType ? <span className="sp-tag">{titleize(dayType)}</span> : null}
-      </header>
-      <TodayCard day={day} />
       {sessions.length > 0 ? (
         <div className="sp-sessions">
           {sessions.map((session, index) => (
             <SessionCard
               key={cleanText(session.session_id) || `session-${index}`}
               session={session}
+              day={day}
             />
           ))}
         </div>
       ) : (
-        <p className="sp-muted">Rest day.</p>
+        <>
+          <header className="sp-day-head">
+            <div className="sp-day-labels">
+              {countdown ? <span className="sp-countdown sp-accent">{countdown}</span> : null}
+              {date ? <span className="sp-day-date">{date}</span> : null}
+            </div>
+            {dayType ? <span className="sp-tag">{titleize(dayType)}</span> : null}
+          </header>
+          <TodayCard day={day} />
+          <p className="sp-muted">Rest day.</p>
+        </>
       )}
     </section>
   );

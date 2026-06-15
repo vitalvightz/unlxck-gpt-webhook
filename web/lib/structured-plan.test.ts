@@ -270,10 +270,10 @@ test("extracts session blocks from a valid plan", () => {
 test("extracts mindset anchor lines", () => {
   const session = getSessions(getDays(getWeeks(validPlan())[0])[0])[0];
   const lines = getMindsetLines(session.mindset_anchor);
-  assert.equal(lines.length, 3);
+  assert.equal(lines.length, 2);
   assert.deepEqual(
     lines.map((line) => line.label),
-    ["Intent", "Focus", "Reset"],
+    ["Intent", "Focus"],
   );
 });
 
@@ -296,7 +296,7 @@ test("getStringList cleans, drops blanks, and tolerates null", () => {
   assert.deepEqual(getStringList([]), []);
 });
 
-test("getMindsetLines includes confidence_anchor and context when present", () => {
+test("getMindsetLines keeps the simplified Intent/Focus/Context structure", () => {
   const lines = getMindsetLines({
     intent: "Move fast",
     focus_cue: "Drive",
@@ -306,7 +306,7 @@ test("getMindsetLines includes confidence_anchor and context when present", () =
   });
   assert.deepEqual(
     lines.map((l) => l.label),
-    ["Intent", "Focus", "Reset", "Anchor", "Context"],
+    ["Intent", "Focus", "Context"],
   );
   // Empty anchor object yields no lines (renderer hides it).
   assert.deepEqual(getMindsetLines({}), []);
@@ -457,7 +457,7 @@ test("redFlagView tolerates missing fields", () => {
   assert.equal(empty.severityLabel, null);
 });
 
-test("splitMindsetLines keeps Intent/Focus/Reset primary, Anchor/Context secondary", () => {
+test("splitMindsetLines keeps all simplified mindset lines primary", () => {
   const { primary, secondary } = splitMindsetLines({
     intent: "Stay sharp",
     focus_cue: "Hands up",
@@ -467,15 +467,12 @@ test("splitMindsetLines keeps Intent/Focus/Reset primary, Anchor/Context seconda
   });
   assert.deepEqual(
     primary.map((line) => line.label),
-    ["Intent", "Focus", "Reset"],
+    ["Intent", "Focus", "Context"],
   );
-  assert.deepEqual(
-    secondary.map((line) => line.label),
-    ["Anchor", "Context"],
-  );
+  assert.deepEqual(secondary, []);
 });
 
-test("splitMindsetLines returns empty secondary when no anchor/context present", () => {
+test("splitMindsetLines returns empty secondary for simplified mindset", () => {
   const { primary, secondary } = splitMindsetLines({ intent: "Go" });
   assert.deepEqual(primary.map((line) => line.label), ["Intent"]);
   assert.deepEqual(secondary, []);
