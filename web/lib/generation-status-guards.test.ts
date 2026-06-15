@@ -53,6 +53,26 @@ test("fresh running job remains active", () => {
   assert.equal(isStaleVisibleGenerationJob(freshJob, NOW_MS), false);
 });
 
+test("recent progress milestone keeps a running job visible even if heartbeat is old", () => {
+  const jobWithRecentPlannerActivity = buildJob({
+    status: "running",
+    created_at: "2026-05-22T23:00:00.000Z",
+    updated_at: "2026-05-22T23:00:00.000Z",
+    started_at: "2026-05-22T23:00:00.000Z",
+    heartbeat_at: "2026-05-22T23:00:00.000Z",
+    progress_milestones: [
+      {
+        code: "stage2_finalizer_drafting",
+        label: "Stage 2 finalizer drafting",
+        detail: "Sending the planning brief to the AI finalizer.",
+        at: "2026-05-22T23:59:12.000Z",
+      },
+    ],
+  });
+
+  assert.equal(isStaleVisibleGenerationJob(jobWithRecentPlannerActivity, NOW_MS), false);
+});
+
 test("generate auto-start is blocked only when payload hash matches completed marker", () => {
   assert.equal(shouldBlockGenerateAutoStartForMatchingPayload("hash_a", "hash_a"), true);
   assert.equal(shouldBlockGenerateAutoStartForMatchingPayload("hash_a", "hash_b"), false);
