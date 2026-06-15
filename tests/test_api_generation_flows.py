@@ -3902,6 +3902,132 @@ def test_stage2_gateway_failure_returns_failed_job_without_persisting_plan():
     assert len(store.plans) == 0
 
 
+def test_stale_running_job_is_failed_before_new_job_is_created():
+    store = FakeStore()
+    old = (datetime.now(timezone.utc) - timedelta(minutes=10)).isoformat()
+    stale = store.create_or_get_generation_job(
+        athlete_id="athlete-1",
+        client_request_id="stale-running",
+        source="self_serve",
+        request_payload=_build_request().model_dump(mode="json"),
+    )
+    store.update_generation_job(
+        stale["id"],
+        status="running",
+        started_at=old,
+        heartbeat_at=old,
+        updated_at=old,
+        progress_milestones=[{"code": "stage2_drafting", "at": old}],
+    )
+
+    fresh = store.create_or_get_generation_job(
+        athlete_id="athlete-1",
+        client_request_id="fresh-after-stale",
+        source="self_serve",
+        request_payload=_build_request({"athlete": {"full_name": "Fresh Athlete"}}).model_dump(mode="json"),
+        stale_after_seconds=90,
+    )
+
+    reaped = store.get_generation_job(stale["id"])
+    assert reaped["status"] == "failed"
+    assert any(m["code"] == "stale_job_reaped" for m in reaped["progress_milestones"])
+    assert fresh["id"] != stale["id"]
+    assert fresh["status"] == "queued"
+
+
+def test_fresh_running_job_is_not_failed_before_new_job_is_created():
+    store = FakeStore()
+    now = datetime.now(timezone.utc).isoformat()
+    active = store.create_or_get_generation_job(
+        athlete_id="athlete-1",
+        client_request_id="fresh-running",
+        source="self_serve",
+        request_payload=_build_request().model_dump(mode="json"),
+    )
+    store.update_generation_job(active["id"], status="running", started_at=now, heartbeat_at=now)
+
+    with pytest.raises(HTTPException) as exc_info:
+        store.create_or_get_generation_job(
+            athlete_id="athlete-1",
+            client_request_id="blocked-by-fresh",
+            source="self_serve",
+            request_payload=_build_request({"athlete": {"full_name": "Blocked Athlete"}}).model_dump(mode="json"),
+            stale_after_seconds=90,
+        )
+
+    assert exc_info.value.status_code == status.HTTP_409_CONFLICT
+    assert store.get_generation_job(active["id"])["status"] == "running"
+
+
+def test_recent_progress_milestone_activity_keeps_job_fresh():
+    store = FakeStore()
+    old = (datetime.now(timezone.utc) - timedelta(minutes=10)).isoformat()
+    recent = datetime.now(timezone.utc).isoformat()
+    active = store.create_or_get_generation_job(
+        athlete_id="athlete-1",
+        client_request_id="recent-milestone",
+        source="self_serve",
+        request_payload=_build_request().model_dump(mode="json"),
+    )
+    store.update_generation_job(
+        active["id"],
+        status="running",
+        started_at=old,
+        heartbeat_at=old,
+        updated_at=old,
+        progress_milestones=[{"code": "stage2_drafting", "at": recent}],
+    )
+
+    with pytest.raises(HTTPException):
+        store.create_or_get_generation_job(
+            athlete_id="athlete-1",
+            client_request_id="blocked-by-recent-milestone",
+            source="self_serve",
+            request_payload=_build_request({"athlete": {"full_name": "Blocked Athlete"}}).model_dump(mode="json"),
+            stale_after_seconds=90,
+        )
+
+    assert store.get_generation_job(active["id"])["status"] == "running"
+
+
+def test_stage2_drafting_old_heartbeat_is_reaped_and_does_not_block_new_job():
+    store = FakeStore()
+    old = (datetime.now(timezone.utc) - timedelta(minutes=20)).isoformat()
+    stuck = store.create_or_get_generation_job(
+        athlete_id="athlete-1",
+        client_request_id="stuck-stage2",
+        source="self_serve",
+        request_payload=_build_request().model_dump(mode="json"),
+    )
+    store.update_generation_job(
+        stuck["id"],
+        status="running",
+        started_at=old,
+        heartbeat_at=old,
+        updated_at=old,
+        progress_milestones=[
+            {
+                "code": "stage2_drafting",
+                "label": "Stage 2 finalizer drafting",
+                "detail": "Sending the planning brief to the AI finalizer.",
+                "at": old,
+            }
+        ],
+    )
+
+    fresh = store.create_or_get_generation_job(
+        athlete_id="athlete-1",
+        client_request_id="new-after-stage2-stuck",
+        source="self_serve",
+        request_payload=_build_request({"athlete": {"full_name": "Fresh Athlete"}}).model_dump(mode="json"),
+        stale_after_seconds=90,
+    )
+
+    assert store.get_generation_job(stuck["id"])["status"] == "failed"
+    assert fresh["status"] == "queued"
+    assert fresh["id"] != stuck["id"]
+
+
 def test_stage2_insufficient_quota_masks_athlete_error_and_preserves_admin_detail():
     client, store, _ = _build_client(
         FakeStage2Automator(

@@ -474,6 +474,11 @@ async def run_generation_job(
                     "Sending the planning brief to the AI finalizer.",
                 )
                 await _touch_heartbeat()
+                _emit_milestone(
+                    "stage2_model_call_started",
+                    "Stage 2 model call started",
+                    "AI finalizer request started.",
+                )
                 stage1_result = {
                     **stage1_result,
                     "_generation_source": str(job.get("source") or ""),
@@ -484,7 +489,22 @@ async def run_generation_job(
                     log_context={"job_id": job_id, "athlete_id": athlete_id},
                 )
                 await _touch_heartbeat()
+                _emit_milestone(
+                    "stage2_model_response_received",
+                    "Stage 2 model response received",
+                    "AI finalizer returned a response.",
+                )
+                _emit_milestone(
+                    "stage2_response_parse_started",
+                    "Stage 2 response parsing started",
+                    "Preparing finalizer output for validation and persistence.",
+                )
                 final_result = {**finalized_result, "full_name": request_body.athlete.full_name}
+                _emit_milestone(
+                    "stage2_response_parsed",
+                    "Stage 2 response parsed",
+                    "Finalizer output was parsed.",
+                )
                 _emit_milestone(
                     "stage2_result_ready",
                     "Stage 2 result ready",
@@ -554,7 +574,15 @@ async def run_generation_job(
             frame.lineno if frame else "",
             frame.name if frame else "",
         )
-        await _fail_claimed_job("Stage 2 finalization timed out. Retry the job or run manual review.")
+        now_iso = utc_now_iso()
+        _emit_milestone(
+            "stage2_finalizer_timeout",
+            "Stage 2 finalizer timed out",
+            "Stage 2 finalizer timed out and the job was failed for recovery.",
+            timestamp=now_iso,
+            failed=True,
+        )
+        await _fail_claimed_job("Stage 2 finalizer timed out.", now_iso=now_iso)
     except Stage2AutomationUnavailableError as exc:
         safe_error, frame = _safe_error_and_frame(exc)
         logger.warning(
