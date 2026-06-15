@@ -38,7 +38,7 @@ _CONTRACT_REVIEW_PLAN_STATUS = "review_required"
 
 # Contract findings a clean structured card CAN vouch for: markdown
 # render/extraction misses where a schema-valid card already proves the plan is
-# well-formed. This is an explicit allowlist — anything not listed here
+# well-formed. This is an explicit allowlist - anything not listed here
 # (notably ``plan_text_empty``, which is unrecoverable output integrity, plus
 # any future/unknown contract code) routes to review by default.
 _CONTRACT_CARD_RESCUABLE_ERROR_CODES = {

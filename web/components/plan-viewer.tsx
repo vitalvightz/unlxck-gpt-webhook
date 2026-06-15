@@ -128,13 +128,13 @@ const FRACTURE_CATEGORY_SET = new Set([
 type RiskBandTone = "green" | "amber" | "red" | "black";
 
 const BLOCKING_WARNING_CODES = new Set([
-  "missing_required_element",
-  "phase_section_missing",
-  "equipment_incongruent_selection",
-  "unresolved_access_fallback",
-  "missing_week_session_role",
-  "late_camp_session_incomplete",
-  "high_pressure_weight_cut_underaddressed",
+  "restriction_violation",
+  "late_fight_hard_sparring_violation",
+  "dangerous_late_fight_strength_or_conditioning",
+  "fight_day_protocol_violation",
+  "calendar_spine_fight_day_protocol_violation",
+  "stage2_output_empty",
+  "stage2_output_truncated",
 ]);
 const NON_PUBLISHABLE_STAGE2_STATUSES = new Set([
   "triage_blocked",
@@ -667,7 +667,9 @@ function resolveWarningBuckets(report: Record<string, unknown> | null | undefine
 
   if (explicitBlockingWarnings.length) {
     return {
-      blockingWarnings: explicitBlockingWarnings,
+      blockingWarnings: explicitBlockingWarnings.filter((issue) =>
+        BLOCKING_WARNING_CODES.has(String(issue.code || "")),
+      ),
     };
   }
 
@@ -1623,7 +1625,7 @@ export function PlanViewer({
                       : isProtectedTriageResumePending
                         ? "Blocked / resume pending"
                       : stage2ReviewSummary.isPublishable
-                        ? "Publishable"
+                        ? "Ready"
                         : "Held"}
                   </p>
                 </article>
@@ -1815,7 +1817,7 @@ export function PlanViewer({
                             : "issue-badge-error"
                         }`}
                       >
-                        {stage2ReviewSummary.isPublishable ? "Publishable" : "Held"}
+                        {stage2ReviewSummary.isPublishable ? "Ready" : "Held"}
                       </span>
                       <span className="badge issue-badge-error">
                         {stage2ReviewSummary.errors.length + stage2ReviewSummary.blockingCount} blockers

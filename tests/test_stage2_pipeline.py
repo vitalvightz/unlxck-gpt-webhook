@@ -266,7 +266,7 @@ def test_build_stage2_retry_skips_prompt_when_only_soft_blocking_warning_exists(
         },
     )
 
-    assert retry["status"] == "WARN"
+    assert retry["status"] == "PASS"
     assert retry["needs_retry"] is False
     assert retry["repair_prompt"] is None
 
@@ -284,6 +284,19 @@ def test_build_stage2_retry_prompt_excludes_soft_warnings_for_hard_blocker():
                     "severity": "warning",
                 }
             ],
+            "blocking_warnings": [
+                {
+                    "code": "missing_required_element",
+                    "message": "Missing phase-critical element.",
+                    "severity": "blocker",
+                }
+            ],
+            "review_flags": [
+                {
+                    "code": "sport_language_leak",
+                    "message": "Cross-sport wording leaked in.",
+                }
+            ],
             "restricted_hits": [{"restriction": "heavy_overhead_pressing", "line": "Push Press"}],
         },
     )
@@ -293,6 +306,8 @@ def test_build_stage2_retry_prompt_excludes_soft_warnings_for_hard_blocker():
     assert retry["repair_prompt"] is not None
     assert "restriction_violation" in retry["repair_prompt"]
     assert "generic_filler_phrase" not in retry["repair_prompt"]
+    assert "missing_required_element" not in retry["repair_prompt"]
+    assert "sport_language_leak" not in retry["repair_prompt"]
 
 
 def test_review_stage2_output_keeps_weekly_session_overage_as_review_flag():

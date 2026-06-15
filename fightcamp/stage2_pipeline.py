@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from .stage2_repair import build_stage2_repair_prompt
+from .stage2_repair import _HARD_REPAIR_BLOCKER_CODES, build_stage2_repair_prompt
 from .stage2_validator import validate_stage2_output
 
 
@@ -10,18 +10,6 @@ _STATUS_READY = "READY"
 _STATUS_PASS = "PASS"
 _STATUS_WARN = "WARN"
 _STATUS_FAIL = "FAIL"
-
-_HARD_REPAIR_BLOCKER_CODES = {
-    "restriction_violation",
-    "late_fight_hard_sparring_violation",
-    "dangerous_late_fight_strength_or_conditioning",
-    "fight_day_protocol_violation",
-    "calendar_spine_fight_day_protocol_violation",
-    "stage2_output_empty",
-    "stage2_output_truncated",
-}
-
-
 
 def _require_dict(value: Any, *, name: str) -> dict:
     if not isinstance(value, dict):
@@ -52,12 +40,12 @@ def _warning_buckets(validator_report: dict) -> tuple[list[dict], list[dict]]:
     blocking_warnings = [
         warning
         for warning in warnings
-        if str(warning.get("severity") or "").lower() == "blocker"
+        if str(warning.get("code") or "") in _HARD_REPAIR_BLOCKER_CODES
     ]
     review_flags = [
         warning
         for warning in warnings
-        if str(warning.get("severity") or "").lower() != "blocker"
+        if str(warning.get("code") or "") not in _HARD_REPAIR_BLOCKER_CODES
     ]
     return blocking_warnings, review_flags
 
@@ -192,7 +180,6 @@ def _warning_detail_line(warning: dict) -> str:
 def _build_review_summary(validator_report: dict, status: str) -> tuple[str, list[str]]:
     errors = list(validator_report.get("errors", []) or [])
     blocking_warnings = list(validator_report.get("blocking_warnings", []) or [])
-    review_flags = list(validator_report.get("review_flags", []) or [])
     summary_parts: list[str] = []
     detail_lines: list[str] = []
 

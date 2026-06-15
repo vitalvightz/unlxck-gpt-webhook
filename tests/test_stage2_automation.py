@@ -428,10 +428,26 @@ def test_rescuable_false_when_any_error_is_unrescuable() -> None:
     assert _is_rescuable(report) is False
 
 
-def test_rescuable_false_when_blocking_warnings_present() -> None:
+def test_rescuable_true_when_only_soft_blocking_warnings_present() -> None:
     report = {
-        "errors": [{"code": "true_internal_system_leak"}],
-        "blocking_warnings": [{"code": "something"}],
+        "errors": [],
+        "blocking_warnings": [{"code": "missing_required_element"}],
+    }
+    assert _is_rescuable(report) is True
+
+
+def test_rescuable_false_when_unknown_blocking_warning_present() -> None:
+    report = {
+        "errors": [],
+        "blocking_warnings": [{"code": "brand_new_warning_code"}],
+    }
+    assert _is_rescuable(report) is False
+
+
+def test_rescuable_false_when_hard_blocking_warning_present() -> None:
+    report = {
+        "errors": [],
+        "blocking_warnings": [{"code": "calendar_spine_fight_day_protocol_violation"}],
     }
     assert _is_rescuable(report) is False
 

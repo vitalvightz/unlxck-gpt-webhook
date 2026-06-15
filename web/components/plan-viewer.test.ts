@@ -63,6 +63,41 @@ test("soft review warnings do not block release summary", () => {
   assert.match(summary.headline, /ready to release/i);
 });
 
+test("legacy soft blocking warnings do not block release summary", () => {
+  const summary = buildReviewSummary(
+    {
+      warnings: [{ code: "missing_required_element", message: "Missing phase element." }],
+      blocking_warnings: [{ code: "missing_required_element", message: "Missing phase element." }],
+      is_publishable: false,
+    },
+    "stage2_pass",
+    { hasBlockedTriageStubText: false },
+  );
+
+  assert.equal(summary.isPublishable, true);
+  assert.equal(summary.blockingCount, 0);
+  assert.equal(summary.hasIssues, false);
+});
+
+test("hard blocking warnings still hold release summary", () => {
+  const summary = buildReviewSummary(
+    {
+      blocking_warnings: [
+        {
+          code: "calendar_spine_fight_day_protocol_violation",
+          message: "Fight day protocol was expanded.",
+        },
+      ],
+    },
+    "stage2_failed",
+    { hasBlockedTriageStubText: false },
+  );
+
+  assert.equal(summary.isPublishable, false);
+  assert.equal(summary.blockingCount, 1);
+  assert.equal(summary.hasIssues, true);
+});
+
 test("triage resume approved state is protected even without explicit stub", () => {
   const protectedState = isProtectedTriageResumePendingState({
     isTriageBlocked: false,
