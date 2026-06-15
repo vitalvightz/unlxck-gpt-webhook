@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-from pathlib import Path
 
 from api import stage2_automation
 from fightcamp import stage2_policy
@@ -68,6 +67,17 @@ def test_prompt_safe_validator_report_omits_restricted_hits_without_restriction_
     }
 
     assert stage2_policy.prompt_safe_validator_report(report)["restricted_hits"] == []
+
+
+def test_prompt_safe_validator_report_keeps_restricted_hits_for_normalized_restriction_code() -> None:
+    report = {
+        "errors": [{"code": " restriction_violation "}],
+        "restricted_hits": [{"restriction": "heavy_overhead_pressing", "line": "Push Press"}],
+    }
+
+    assert stage2_policy.prompt_safe_validator_report(report)["restricted_hits"] == [
+        {"restriction": "heavy_overhead_pressing", "line": "Push Press"}
+    ]
 
 
 def test_stage2_hold_rescue_uses_shared_soft_code_list() -> None:
