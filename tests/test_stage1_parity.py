@@ -34,7 +34,6 @@ from fightcamp.role_labels import (  # noqa: E402
 from fightcamp.stage1_parity import (  # noqa: E402
     parity_breakdown,
     review_stage1_self_output,
-    stage1_can_bypass_llm,
     stage1_parity_breakdown,
 )
 from fightcamp.weekly_plan_render import (  # noqa: E402
@@ -131,7 +130,7 @@ def _run_stage1(overrides: dict) -> dict:
 
 @pytest.mark.parametrize("name,overrides", list(_scenarios().items()))
 def test_stage1_draft_has_no_hard_validator_blockers(name: str, overrides: dict) -> None:
-    """Stage 1's own output never trips errors or hard blockers (gating gate)."""
+    """Stage 1's own output never trips validator errors or hard blockers."""
     result = _run_stage1(overrides)
     breakdown = stage1_parity_breakdown(result)
 
@@ -141,9 +140,7 @@ def test_stage1_draft_has_no_hard_validator_blockers(name: str, overrides: dict)
     assert breakdown["blocking_count"] == 0, (
         f"{name}: Stage 1 draft produced blocking warnings {breakdown['blocking_codes']}"
     )
-    # Publishable == the LLM-bypass precondition holds.
     assert breakdown["is_publishable"] is True
-    assert stage1_can_bypass_llm(result) is True
 
 
 @pytest.mark.parametrize("name,overrides", list(_scenarios().items()))

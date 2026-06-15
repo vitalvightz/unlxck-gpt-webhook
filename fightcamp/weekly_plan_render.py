@@ -16,10 +16,12 @@ Stage 1 already owns:
   ``strength._classify_prescription_type`` + ``strength._prescription_templates``;
   conditioning doses from each drill's own ``duration``).
 
-It never invents exercises or doses — it only places real selected work onto the
-days the planner already chose. The result is a plan that already reads like the
-final article, so the finalizer copies structure through instead of rebuilding
-it.
+It places real selected work onto the days the planner already chose. The only
+exception is when the planner selected no drill for a required energy system: the
+session would otherwise render empty (and be flagged incomplete), so a clearly
+labelled *default* template is emitted for that slot instead. Everything else is
+real selected work, so the result already reads like the final article and the
+finalizer copies structure through instead of rebuilding it.
 
 This first increment covers dated normal camps. Late-fight countdown weeks have
 their own strict allowed-exercise contracts and are left to the existing path.
@@ -30,7 +32,7 @@ from __future__ import annotations
 import re
 from typing import Any
 
-from .normalization import clean_list, dedupe_preserve_order
+from .normalization import clean_list
 from .strength import _classify_prescription_type, _prescription_templates
 
 # Clause in a phase dose that introduces contrast/explosive pairing — a secondary
@@ -40,8 +42,8 @@ _CONTRAST_CLAUSE = re.compile(r"\s*(?:with contrast[^.]*?\.?|\(pair[^)]*\)\.?)",
 
 _WEEKDAY_ORDER = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
 
-# role_key / preferred_system -> conditioning energy system bucket.
-_AEROBIC_HINTS = ("aerobic", "recovery_flush", "flush")
+# role_key / preferred_system -> conditioning energy system bucket. Aerobic is the
+# default bucket in _system_for_role, so only the non-default hints are listed.
 _GLYCOLYTIC_HINTS = ("fight_pace", "repeatability", "glycolytic")
 _ALACTIC_HINTS = ("alactic", "neural_primer", "sharpness", "speed", "primer")
 
@@ -57,13 +59,15 @@ _STRESSOR_TOKEN_SIGNALS = {
     "standalone_glycolytic": ("shuttle", "bag sprint", "intervals"),
 }
 
-# Fallback decisive prescriptions when a phase pool has no drill for a system.
-# These mirror the conditioning phase templates and keep a session from
-# rendering empty (which would itself be flagged as incomplete).
-_SYSTEM_FALLBACK = {
-    "aerobic": "Zone 2 aerobic work (run / bike / row) — 25–35 min easy, nasal-breathing pace.",
-    "glycolytic": "Fight-pace intervals — 4–6 x 2–3 min @ RPE 7–8, work:rest 1:1.",
-    "alactic": "Alactic bursts — 6–8 x 6–10 sec max effort, full rest (60–120 sec).",
+# Default templates used ONLY when the planner selected no drill for a required
+# energy system. These are not selected work — they are clearly labelled defaults
+# so a required session slot does not render empty (which would be flagged
+# incomplete). The "Default" prefix keeps the rendered line honest about its
+# origin.
+_SYSTEM_DEFAULT_TEMPLATE = {
+    "aerobic": "Default aerobic option — Zone 2 (run / bike / row) 25–35 min easy, nasal-breathing pace.",
+    "glycolytic": "Default fight-pace option — 4–6 x 2–3 min @ RPE 7–8, work:rest 1:1.",
+    "alactic": "Default alactic option — 6–8 x 6–10 sec max effort, full rest (60–120 sec).",
 }
 
 
@@ -288,7 +292,8 @@ def _conditioning_session_lines(
         duration = str(drill.get("duration") or "").strip()
         lines.append(f"- {name} — {duration}" if duration else f"- {name}")
     if not lines:
-        lines = [f"- {_SYSTEM_FALLBACK.get(system, _SYSTEM_FALLBACK['aerobic'])}"]
+        default = _SYSTEM_DEFAULT_TEMPLATE.get(system, _SYSTEM_DEFAULT_TEMPLATE["aerobic"])
+        lines = [f"- {default}"]
     return lines
 
 

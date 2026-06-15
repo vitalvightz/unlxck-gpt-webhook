@@ -10,12 +10,14 @@ same validator the finalizer is graded by against Stage 1's own ``plan_text``,
 using Stage 1's own ``planning_brief``. The result tells us, deterministically:
 
 * whether Stage 1's draft would already be *publishable* (no errors, no hard
-  blocking warnings) — the precondition for bypassing the LLM, and
+  blocking warnings), and
 * exactly which validator codes still fire, so each Stage 1 rendering
   improvement can be measured by how many codes it removes.
 
-``stage1_can_bypass_llm`` is the gating primitive the generation pipeline can
-eventually consult to short-circuit (or shrink) the Stage 2 call.
+This module is measurement-only. It deliberately does not expose an
+LLM-bypass/gating helper: while soft review flags still fire, "publishable"
+(no errors, no hard blockers) is not a confident enough signal to skip the
+finalizer, and a premature gate would ship under-reviewed plans.
 """
 
 from __future__ import annotations
@@ -87,24 +89,3 @@ def stage1_parity_breakdown(stage1_result: dict[str, Any]) -> dict[str, Any]:
     """Convenience: ``review_stage1_self_output`` + :func:`parity_breakdown`."""
 
     return parity_breakdown(review_stage1_self_output(stage1_result))
-
-
-def stage1_can_bypass_llm(
-    stage1_result: dict[str, Any],
-    *,
-    require_clean: bool = False,
-) -> bool:
-    """Return ``True`` when Stage 1's own draft already clears validation.
-
-    By default this mirrors the finalizer's publish gate: no validator errors
-    and no hard blocking warnings. With ``require_clean=True`` it additionally
-    requires zero soft review flags — the stronger bar for rendering the plan
-    deterministically with no LLM pass at all.
-    """
-
-    breakdown = stage1_parity_breakdown(stage1_result)
-    if breakdown["error_count"] or breakdown["blocking_count"]:
-        return False
-    if require_clean and breakdown["review_flag_count"]:
-        return False
-    return True
