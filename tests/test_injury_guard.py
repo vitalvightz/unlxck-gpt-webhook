@@ -803,17 +803,18 @@ def test_anti_rotation_core_exercises_are_not_false_positive_shoulder_exclusions
     found_names: set[str] = set()
     checked_count = 0
     for data_path in data_paths:
-        for exercise in json.loads(data_path.read_text(encoding="utf-8")):
-            name = exercise.get("name")
-            if name not in target_names:
-                continue
-            found_names.add(name)
-            checked_count += 1
-            location = f"{name} in {data_path.name}"
-            decision = injury_decision(exercise, ["shoulder impingement"], "GPP", "low")
-            assert decision.action != "exclude", f"{location} should not be excluded as an upper press"
-            assert "mech_upper_press" not in exercise.get("tags", []), f"{location} should not tag upper press"
-            assert "mech_upper_press" not in exercise.get("mechanical_risk_tags", []), f"{location} should not risk-tag upper press"
+        with data_path.open(encoding="utf-8") as f:
+            for exercise in json.load(f):
+                name = exercise.get("name")
+                if name not in target_names:
+                    continue
+                found_names.add(name)
+                checked_count += 1
+                location = f"{name} in {data_path.name}"
+                decision = injury_decision(exercise, ["shoulder impingement"], "GPP", "low")
+                assert decision.action != "exclude", f"{location} should not be excluded as an upper press"
+                assert "mech_upper_press" not in (exercise.get("tags") or []), f"{location} should not tag upper press"
+                assert "mech_upper_press" not in (exercise.get("mechanical_risk_tags") or []), f"{location} should not risk-tag upper press"
 
     assert target_names <= found_names
     assert checked_count == 5
