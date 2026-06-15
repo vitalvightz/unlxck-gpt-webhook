@@ -8,8 +8,7 @@ from fightcamp import stage2_policy
 
 
 def _raw_policy() -> dict:
-    policy_path = Path(__file__).resolve().parents[1] / "shared" / "stage2-policy.json"
-    return json.loads(policy_path.read_text(encoding="utf-8"))
+    return json.loads(stage2_policy._POLICY_PATH.read_text(encoding="utf-8"))
 
 
 def test_hard_stage2_blocker_codes_load_from_shared_json() -> None:
