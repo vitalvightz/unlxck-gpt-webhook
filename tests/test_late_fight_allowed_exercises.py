@@ -164,6 +164,9 @@ def test_late_fight_assignment_is_unsafe_guards_only_d1_loaded_work():
     assert _late_fight_assignment_is_unsafe("D-1", "Iso Deadlift Hold") is True
     assert _late_fight_assignment_is_unsafe("D-1", "Front Squat") is True
     assert _late_fight_assignment_is_unsafe("D-1", "Bag Sprint Repeats") is True
+    # Separator variants of "trap bar" are all caught (hyphen / underscore / space).
+    assert _late_fight_assignment_is_unsafe("D-1", "Trap-Bar Hold") is True
+    assert _late_fight_assignment_is_unsafe("D-1", "trap_bar carry") is True
     # Safe primers / cues stay allowed on D-1.
     assert _late_fight_assignment_is_unsafe("D-1", "Punch-Specific Max Isometric Hold") is False
     assert _late_fight_assignment_is_unsafe("D-1", "Mobility Reset Flow") is False

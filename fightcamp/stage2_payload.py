@@ -2873,6 +2873,11 @@ def _build_late_fight_allowed_exercises_by_day(
         explicit_matches: list[tuple[str, str, dict[str, Any]]] = []
         fallback_matches: list[tuple[str, str, dict[str, Any]]] = []
         for phase, slot_group, slot in _candidate_slots_for_role(candidate_pools, role):
+            # Drop day-unsafe candidates (e.g. loaded work on D-1) before
+            # selection so a safe explicit match or fallback can still be used
+            # instead of leaving the day empty.
+            if _late_fight_assignment_is_unsafe(day_label, _slot_exercise_name(slot)):
+                continue
             slot_id = str(slot.get("slot_id") or f"{phase}:{slot_group}:{_slot_exercise_name(slot)}")
             labels = _slot_countdown_labels(slot)
             if labels:
@@ -2886,10 +2891,6 @@ def _build_late_fight_allowed_exercises_by_day(
         for phase, slot_group, slot in selected_matches:
             name = _slot_exercise_name(slot)
             if not name:
-                continue
-            if _late_fight_assignment_is_unsafe(day_label, name):
-                # Do not place day-unsafe loaded work on D-1; leave the day to
-                # safe primer / mobility / technical cues instead.
                 continue
             slot_id = str(slot.get("slot_id") or f"{phase}:{slot_group}:{name}")
             if not _slot_countdown_labels(slot):
