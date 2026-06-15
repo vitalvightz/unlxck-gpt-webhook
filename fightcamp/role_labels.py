@@ -104,7 +104,7 @@ def humanize_role_key(role_key: str | None) -> str:
     return " ".join(part for part in key.split("_") if part).title()
 
 
-def athlete_facing_label_for(role_key: str, *, fallback: str | None = None) -> str:
+def athlete_facing_label_for(role_key: str | None, *, fallback: str | None = None) -> str:
     """Return the athlete-facing label for ``role_key``.
 
     Resolution order: explicit mapping -> caller fallback -> humanised key.
