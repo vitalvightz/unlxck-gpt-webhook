@@ -1,3 +1,5 @@
+from fightcamp.nutrition import generate_nutrition_block
+from fightcamp.recovery import generate_recovery_block
 from fightcamp.stage2_pipeline import review_stage2_output
 from fightcamp.stage2_validator import validate_stage2_output
 
@@ -1080,6 +1082,24 @@ def test_validate_stage2_output_blocks_option_overload_in_adjustment_context():
     assert overload_warnings[0]["blocking"] is True
 
 
+def test_stage1_recovery_and_nutrition_text_avoid_generic_instruction_openers():
+    stage1_text = "\n".join(
+        [
+            generate_nutrition_block(flags={"phase": "TAPER", "fatigue": "high", "weight": 70}),
+            generate_recovery_block({"phase": "GPP", "fatigue": "low", "age": 28}),
+        ]
+    )
+    report = validate_stage2_output(
+        planning_brief=_planning_brief_fixture(),
+        final_plan_text=stage1_text,
+    )
+
+    warning_codes = [warning["code"] for warning in report["warnings"]]
+    assert "generic_instruction_opener" not in warning_codes
+    assert "Use easily digestible carbs and hydrate well." in stage1_text
+    assert "Prepare tissue and restore joint mobility." in stage1_text
+
+
 def test_validate_stage2_output_does_not_false_positive_clear_coach_language():
     report = validate_stage2_output(
         planning_brief=_planning_brief_fixture(),
@@ -1102,19 +1122,37 @@ def test_validate_stage2_output_does_not_false_positive_clear_coach_language():
 
 
 def test_validate_stage2_output_warns_for_boxing_sport_language_leaks():
+    for leak_line in ("Double-leg sprint entry - 6 x 6 sec", "Single-leg takedown entry - 4 x 10 sec", "Single-leg entry - 4 x 10 sec"):
+        report = validate_stage2_output(
+            planning_brief=_planning_brief_fixture(),
+            final_plan_text=f"""
+            SPP
+            - Landmine Press - 4x5
+            - {leak_line}
+            - Hard Shuttle - 6x20s / 60s
+            - Band External Rotation - 2x15
+            """,
+        )
+
+        warning_codes = [warning["code"] for warning in report["warnings"]]
+        assert "sport_language_leak" in warning_codes
+
+
+def test_validate_stage2_output_allows_boxing_single_leg_strength_names():
     report = validate_stage2_output(
         planning_brief=_planning_brief_fixture(),
         final_plan_text="""
         SPP
-        - Landmine Press - 4x5
-        - Double-leg sprint entry - 6 x 6 sec
+        - Single-Leg Bridge Hold - 3 x 20 sec each side
+        - Single-Leg Forward Hops - 3 x 5 each side
+        - Single-Leg RDL - 3 x 8 each side
         - Hard Shuttle - 6x20s / 60s
         - Band External Rotation - 2x15
         """,
     )
 
     warning_codes = [warning["code"] for warning in report["warnings"]]
-    assert "sport_language_leak" in warning_codes
+    assert "sport_language_leak" not in warning_codes
 
 
 def test_validate_stage2_output_normalizes_warning_shape():
