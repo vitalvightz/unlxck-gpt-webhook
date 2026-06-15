@@ -604,6 +604,7 @@ def test_regression_shoulders_exclusion_allowlist():
         "Ring Dip",
         "Snatch Balance",
         "Jerk Complex",
+        "High Pull",
     ]
     allowed = [
         "Pressure Cooker",
@@ -653,6 +654,7 @@ def test_regression_sentinel_drills_per_region():
                 "Snatch Balance",
                 "Jerk Complex",
                 "Wall Ball Throws",
+                "High Pull",
             ],
             "allowed": [
                 "Pressure Cooker",

@@ -223,7 +223,8 @@ INJURY_RULES = {
             "handstand push-up",
             "handstand push up",
             "hspu",
-            # olympic / ballistic overhead
+            # olympic / ballistic shoulder load
+            "high pull",
             "snatch",
             "power snatch",
             "hang snatch",
