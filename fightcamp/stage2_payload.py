@@ -2833,6 +2833,27 @@ def _candidate_slots_for_role(candidate_pools: dict[str, dict], role: dict[str, 
     return matched
 
 
+# Mirror of the Stage 2 validator's D-1 safety rule
+# (stage2_validator: ``dangerous_late_fight_strength_or_conditioning``). Any
+# loaded strength or conditioning exposure rendered on D-1 is a hard blocker, so
+# the allocator must never assign such an exercise to that day — D-1 stays a
+# breathing / mobility / technical-cue primer only.
+_LATE_FIGHT_D1_UNSAFE_NAME = re.compile(
+    r"\b(strength|conditioning|sprints?|interval|heavy|loaded|deadlift|squat|trap[-_ ]bar|barbell)\b",
+    re.IGNORECASE,
+)
+
+
+def _late_fight_assignment_is_unsafe(day_label: str, name: str) -> bool:
+    """Return True when ``name`` must not be assigned to ``day_label``.
+
+    Today this only guards D-1, matching the validator's D-1 blocker exactly.
+    """
+    if str(day_label or "").strip().upper() != "D-1":
+        return False
+    return bool(_LATE_FIGHT_D1_UNSAFE_NAME.search(str(name or "")))
+
+
 def _build_late_fight_allowed_exercises_by_day(
     *,
     spec: dict[str, Any],
@@ -2852,6 +2873,11 @@ def _build_late_fight_allowed_exercises_by_day(
         explicit_matches: list[tuple[str, str, dict[str, Any]]] = []
         fallback_matches: list[tuple[str, str, dict[str, Any]]] = []
         for phase, slot_group, slot in _candidate_slots_for_role(candidate_pools, role):
+            # Drop day-unsafe candidates (e.g. loaded work on D-1) before
+            # selection so a safe explicit match or fallback can still be used
+            # instead of leaving the day empty.
+            if _late_fight_assignment_is_unsafe(day_label, _slot_exercise_name(slot)):
+                continue
             slot_id = str(slot.get("slot_id") or f"{phase}:{slot_group}:{_slot_exercise_name(slot)}")
             labels = _slot_countdown_labels(slot)
             if labels:
