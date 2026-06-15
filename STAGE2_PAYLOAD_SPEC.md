@@ -446,6 +446,16 @@ each `role_key` to a deterministic, validator-recognised `athlete_facing_label`
 map. This removes title invention from the LLM (a source of `role_key` leaks) and
 gives the eventual deterministic renderer ready-made titles.
 
+### Deterministic injury / weight-cut lead summary
+
+The validator requires active injury or weight-cut context to be summarised
+before the training detail (it scans the first plan lines for injury / weight-cut
+keywords — `missing_injury_lead_summary` / `missing_weight_cut_lead_summary`).
+`fightcamp/lead_summary.py` renders a short `## Readiness & Constraints` block
+straight after the plan title, using the same active-injury / active-cut
+detection the validator reads, so the context leads the plan at the source
+instead of being lifted up by the LLM.
+
 ## Suggested Adoption Path
 
 ### Phase 1
