@@ -34,8 +34,28 @@ from fightcamp.role_labels import (  # noqa: E402
 from fightcamp.stage1_parity import (  # noqa: E402
     parity_breakdown,
     review_stage1_self_output,
-    stage1_can_bypass_llm,
     stage1_parity_breakdown,
+)
+from fightcamp.weekly_plan_render import (  # noqa: E402
+    _sanitize_dose,
+    fill_missing_session_days,
+    render_weekly_schedule_section,
+)
+
+# Scenarios that render a normal dated camp (not a late-fight countdown). Track 1
+# moved the week->day->session spine into Stage 1 for these, so they must no
+# longer leak the "draft has no weeks" structural codes.
+NORMAL_CAMP_SCENARIOS = frozenset(
+    {
+        "standard_amateur_boxing",
+        "long_camp_pro",
+        "weight_cut",
+        "injury_knee",
+        "no_injury_clean",
+    }
+)
+WEEK_STRUCTURE_CODES = frozenset(
+    {"missing_week_session_role", "late_camp_session_incomplete"}
 )
 
 
@@ -110,7 +130,7 @@ def _run_stage1(overrides: dict) -> dict:
 
 @pytest.mark.parametrize("name,overrides", list(_scenarios().items()))
 def test_stage1_draft_has_no_hard_validator_blockers(name: str, overrides: dict) -> None:
-    """Stage 1's own output never trips errors or hard blockers (gating gate)."""
+    """Stage 1's own output never trips validator errors or hard blockers."""
     result = _run_stage1(overrides)
     breakdown = stage1_parity_breakdown(result)
 
@@ -120,9 +140,7 @@ def test_stage1_draft_has_no_hard_validator_blockers(name: str, overrides: dict)
     assert breakdown["blocking_count"] == 0, (
         f"{name}: Stage 1 draft produced blocking warnings {breakdown['blocking_codes']}"
     )
-    # Publishable == the LLM-bypass precondition holds.
     assert breakdown["is_publishable"] is True
-    assert stage1_can_bypass_llm(result) is True
 
 
 @pytest.mark.parametrize("name,overrides", list(_scenarios().items()))
@@ -152,6 +170,24 @@ def test_every_rendered_session_role_has_athlete_facing_label(
             if not label:
                 missing.append(str(role.get("role_key")))
     assert not missing, f"{name}: session roles missing athlete_facing_label: {missing}"
+
+
+@pytest.mark.parametrize(
+    "name,overrides",
+    [(n, ov) for n, ov in _scenarios().items() if n in NORMAL_CAMP_SCENARIOS],
+)
+def test_normal_camps_render_complete_week_spine(name: str, overrides: dict) -> None:
+    """Track 1: normal camps no longer emit week-structure gap codes."""
+    result = _run_stage1(overrides)
+    breakdown = stage1_parity_breakdown(result)
+    leaked = WEEK_STRUCTURE_CODES & set(breakdown["review_flag_codes"])
+    assert not leaked, (
+        f"{name}: Stage 1 draft still leaks week-structure codes {sorted(leaked)}; "
+        "the deterministic weekly schedule should cover every active week."
+    )
+    # The schedule itself must be present in the draft.
+    assert "# Weekly Schedule" in str(result.get("plan_text") or "")
+    assert "## Week 1 —" in str(result.get("plan_text") or "")
 
 
 def test_review_stage1_self_output_rejects_non_success_result() -> None:
@@ -194,6 +230,128 @@ def test_athlete_facing_label_resolution_order() -> None:
     # Unknown key falls back to caller fallback, then humanised key.
     assert athlete_facing_label_for("totally_unknown_day", fallback="Custom") == "Custom"
     assert athlete_facing_label_for("totally_unknown_day") == "Totally Unknown"
+
+
+# --- weekly_plan_render unit coverage -----------------------------------------
+
+
+class _FakeBlocks:
+    def __init__(self, strength_blocks: dict, conditioning_blocks: dict) -> None:
+        self.strength_blocks = strength_blocks
+        self.conditioning_blocks = conditioning_blocks
+
+
+def _synthetic_brief() -> dict:
+    return {
+        "payload_variant": "",
+        "weekly_role_map": {
+            "weeks": [
+                {
+                    "week_index": 1,
+                    "phase": "GPP",
+                    "declared_training_days": ["Monday", "Thursday"],
+                    "calendar_days": [
+                        {"weekday": "monday", "d_day": 56},
+                        {"weekday": "thursday", "d_day": 53},
+                    ],
+                    "session_roles": [
+                        {
+                            "category": "strength",
+                            "role_key": "primary_strength_day",
+                            "athlete_facing_label": "Strength",
+                            "scheduled_day_hint": "Thursday",
+                            "governance": {
+                                "main_job": "anchor",
+                                "forbidden_secondary_stressors": ["hinge_transfer"],
+                            },
+                        },
+                        {
+                            # No scheduled_day_hint -> must be filled with Monday.
+                            "category": "conditioning",
+                            "role_key": "aerobic_base_day",
+                            "athlete_facing_label": "Aerobic support",
+                            "preferred_system": "aerobic",
+                        },
+                    ],
+                },
+                {
+                    "week_index": 2,
+                    "phase": "GPP",
+                    "declared_training_days": ["Monday", "Thursday"],
+                    "calendar_days": [
+                        {"weekday": "monday", "d_day": 49},
+                        {"weekday": "thursday", "d_day": 46},
+                    ],
+                    "session_roles": [
+                        {
+                            "category": "strength",
+                            "role_key": "primary_strength_day",
+                            "athlete_facing_label": "Strength",
+                            "scheduled_day_hint": "Thursday",
+                        }
+                    ],
+                },
+            ]
+        },
+    }
+
+
+def _synthetic_blocks() -> _FakeBlocks:
+    return _FakeBlocks(
+        strength_blocks={
+            "GPP": {
+                "exercises": [
+                    {"name": "Back Squat", "tags": ["squat"], "equipment": "barbell", "anchor_capable": True},
+                    {"name": "Romanian Deadlift (RDL)", "tags": ["hinge"], "equipment": "barbell", "anchor_capable": True},
+                ]
+            }
+        },
+        conditioning_blocks={
+            "GPP": {"grouped_drills": {"aerobic": [{"name": "Easy Bike", "duration": "25 min", "system": "AEROBIC"}]}}
+        },
+    )
+
+
+def test_render_weekly_schedule_section_structure_and_governance() -> None:
+    section = render_weekly_schedule_section(
+        planning_brief=_synthetic_brief(), blocks=_synthetic_blocks()
+    )
+    assert section.startswith("# Weekly Schedule")
+    assert "## Week 1 — GPP (D-56 → D-53)" in section
+    # Real day + D-day + label headings.
+    assert "### Thursday (D-53) — Strength" in section
+    # Dayless conditioning role was placed on the free training day (Monday).
+    assert "### Monday (D-56) — Aerobic support" in section
+    assert "Easy Bike — 25 min" in section
+    # Anchor-day governance: the hinge transfer is excluded, the squat stays.
+    assert "Back Squat" in section
+    assert "Romanian Deadlift" not in section
+
+
+def test_render_weekly_schedule_section_skips_late_fight_variant() -> None:
+    brief = _synthetic_brief()
+    brief["payload_variant"] = "late_fight_stage2_payload"
+    assert render_weekly_schedule_section(planning_brief=brief, blocks=_synthetic_blocks()) == ""
+
+
+def test_fill_missing_session_days_assigns_free_training_day() -> None:
+    weekly_role_map = _synthetic_brief()["weekly_role_map"]
+    fill_missing_session_days(weekly_role_map)
+    roles = weekly_role_map["weeks"][0]["session_roles"]
+    aerobic = next(r for r in roles if r["role_key"] == "aerobic_base_day")
+    assert aerobic["scheduled_day_hint"] == "Monday"
+    # Already-placed role is untouched.
+    strength = next(r for r in roles if r["role_key"] == "primary_strength_day")
+    assert strength["scheduled_day_hint"] == "Thursday"
+
+
+def test_sanitize_dose_strips_contrast_when_forbidden() -> None:
+    spp = "3–5x3–5 @ 85–90% 1RM with contrast training (pair with explosive move)."
+    cleaned = _sanitize_dose(spp, {"contrast_work"})
+    assert "contrast" not in cleaned.lower()
+    assert cleaned.startswith("3–5x3–5 @ 85–90% 1RM")
+    # Without the forbidden token, the dose is preserved verbatim.
+    assert _sanitize_dose(spp, set()) == spp
 
 
 def test_stamp_weekly_role_map_preserves_existing_and_skips_plan_markers() -> None:

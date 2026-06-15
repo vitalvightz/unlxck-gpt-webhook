@@ -389,16 +389,17 @@ the finalizer is graded by against Stage 1's own `plan_text` (using Stage 1's ow
 - `review_stage1_self_output(stage1_result)` — full review result.
 - `stage1_parity_breakdown(stage1_result)` — code-level counts (errors,
   blocking warnings, soft review flags).
-- `stage1_can_bypass_llm(stage1_result, require_clean=False)` — the gating
-  primitive. `True` when Stage 1's draft already clears the publish gate (no
-  errors, no hard blockers); with `require_clean=True` it also requires zero
-  soft review flags.
+
+This module is measurement-only. It deliberately does **not** expose an
+LLM-bypass/gating helper: while soft review flags still fire, "publishable" (no
+errors, no hard blockers) is not a confident enough signal to skip the
+finalizer.
 
 `tests/test_stage1_parity.py` locks in the baseline across representative
 scenarios (standard camp, long pro camp, weight cut, injury, late-fight
 countdown, fight week). Two invariants:
 
-- **Gating precondition** — Stage 1's draft produces zero validator errors and
+- **No hard blockers** — Stage 1's draft produces zero validator errors and
   zero hard blocking warnings everywhere. This must never regress.
 - **Bounded soft gap** — every remaining soft review-flag code stays within
   `BASELINE_REVIEW_FLAG_CODES`. The structural gap to close (the work the LLM
@@ -406,6 +407,35 @@ countdown, fight week). Two invariants:
   `sport_language_leak`, `late_fight_unapproved_exercise_rendered`,
   `late_camp_session_incomplete`, `template_like_session_render`, and the
   `missing_{injury,weight_cut}_lead_summary` codes.
+
+### Deterministic week-by-week schedule
+
+`fightcamp/weekly_plan_render.py` renders the week->day->session spine
+deterministically from data Stage 1 already owns, so the draft reads like the
+final article instead of a phase-level exercise pool the finalizer must
+restructure:
+
+- each active week becomes `## Week N — PHASE (D-x → D-y)`,
+- each session becomes `### <Weekday> (D-day) — <athlete_facing_label>` placed on
+  the planner's chosen day (with `fill_missing_session_days` assigning any role
+  the planner left dayless to a free declared training day, on the role map
+  itself so the planning brief, the validator's authorised-day set, and the
+  render stay consistent), and
+- each session carries decisive, real work — strength doses via
+  `strength._classify_prescription_type` + `_prescription_templates`,
+  conditioning doses from each drill's own `duration`, coach-owned sparring as a
+  minimal label + one freshness note — anchor-first, with crowded-week
+  `forbidden_secondary_stressors` excluded (no hinge/contrast stacked on an
+  anchor day).
+
+It places real selected work onto real days. The only exception: when the planner
+selected no drill for a required energy system, the slot renders a clearly
+labelled `Default ... option` template (instead of an empty, incomplete session)
+— these defaults are the one kind of rendered work that does not come from a
+selected drill. This first increment covers dated normal camps and eliminated the
+`missing_week_session_role` / `late_camp_session_incomplete` gap for them. Late-
+fight countdown weeks keep their existing path (they have their own strict
+allowed-exercise contracts).
 
 ### Deterministic session labels
 
