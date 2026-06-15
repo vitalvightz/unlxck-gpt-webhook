@@ -2839,7 +2839,7 @@ def _candidate_slots_for_role(candidate_pools: dict[str, dict], role: dict[str, 
 # the allocator must never assign such an exercise to that day — D-1 stays a
 # breathing / mobility / technical-cue primer only.
 _LATE_FIGHT_D1_UNSAFE_NAME = re.compile(
-    r"\b(strength|conditioning|sprints?|interval|heavy|loaded|deadlift|squat|trap bar|barbell)\b",
+    r"\b(strength|conditioning|sprints?|interval|heavy|loaded|deadlift|squat|trap[-_ ]bar|barbell)\b",
     re.IGNORECASE,
 )
 
