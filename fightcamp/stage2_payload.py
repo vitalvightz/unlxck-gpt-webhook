@@ -3146,7 +3146,7 @@ def build_planning_brief(
     )
     # Post-processing can append suppressed/omitted roles after the inner
     # builder labelled the map, so stamp once more for full coverage.
-    stamp_weekly_role_map_labels(weekly_role_map)
+    weekly_role_map = stamp_weekly_role_map_labels(weekly_role_map)
     return {
         "schema_version": "planning_brief.v1",
         "generator_mode": "deterministic_planner_plus_ai_finalizer",
