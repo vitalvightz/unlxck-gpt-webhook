@@ -33,11 +33,12 @@ def _validator_report(review: dict[str, Any]) -> dict[str, Any]:
 
 def _codes(entries: Any) -> Counter:
     counter: Counter = Counter()
-    for entry in entries or []:
-        if isinstance(entry, dict):
-            code = str(entry.get("code") or "").strip()
-            if code:
-                counter[code] += 1
+    if isinstance(entries, list):
+        for entry in entries:
+            if isinstance(entry, dict):
+                code = str(entry.get("code") or "").strip()
+                if code:
+                    counter[code] += 1
     return counter
 
 
