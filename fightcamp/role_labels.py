@@ -84,7 +84,7 @@ _NON_SESSION_ROLE_KEYS = frozenset(
 _HUMANISE_SUFFIXES = ("_day", "_protocol", "_override")
 
 
-def humanize_role_key(role_key: str) -> str:
+def humanize_role_key(role_key: str | None) -> str:
     """Best-effort plain label for a role_key with no explicit mapping.
 
     ``"double_stress_day"`` -> ``"Double Stress"``. Deterministic and safe: it
