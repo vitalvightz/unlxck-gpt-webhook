@@ -14,6 +14,7 @@ import {
   shouldShowProtectedResumeAdminReview,
 } from "./plan-viewer";
 import { ApiError, RETRYABLE_NETWORK_MESSAGE } from "@/lib/api";
+import { HARD_STAGE2_BLOCKER_CODES } from "@/lib/stage2-policy";
 import type { PlanDetail } from "@/lib/types";
 
 function makePlan(overrides: { status?: string; planText?: string }): PlanDetail {
@@ -80,12 +81,13 @@ test("legacy soft blocking warnings do not block release summary", () => {
 });
 
 test("hard blocking warnings still hold release summary", () => {
+  const hardBlockerCode = HARD_STAGE2_BLOCKER_CODES[0];
   const summary = buildReviewSummary(
     {
       blocking_warnings: [
         {
-          code: "calendar_spine_fight_day_protocol_violation",
-          message: "Fight day protocol was expanded.",
+          code: hardBlockerCode,
+          message: "Hard blocker present.",
         },
       ],
     },

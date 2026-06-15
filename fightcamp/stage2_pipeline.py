@@ -2,6 +2,11 @@ from __future__ import annotations
 
 from typing import Any
 
+from .stage2_policy import (
+    hard_blocker_findings,
+    is_hard_stage2_blocker,
+    prompt_safe_validator_report,
+)
 from .stage2_repair import build_stage2_repair_prompt
 from .stage2_validator import validate_stage2_output
 
@@ -10,17 +15,6 @@ _STATUS_READY = "READY"
 _STATUS_PASS = "PASS"
 _STATUS_WARN = "WARN"
 _STATUS_FAIL = "FAIL"
-
-_HARD_REPAIR_BLOCKER_CODES = {
-    "restriction_violation",
-    "late_fight_hard_sparring_violation",
-    "dangerous_late_fight_strength_or_conditioning",
-    "fight_day_protocol_violation",
-    "calendar_spine_fight_day_protocol_violation",
-    "stage2_output_empty",
-    "stage2_output_truncated",
-}
-
 
 
 def _require_dict(value: Any, *, name: str) -> dict:
@@ -52,49 +46,14 @@ def _warning_buckets(validator_report: dict) -> tuple[list[dict], list[dict]]:
     blocking_warnings = [
         warning
         for warning in warnings
-        if str(warning.get("code") or "") in _HARD_REPAIR_BLOCKER_CODES
+        if is_hard_stage2_blocker(str(warning.get("code") or ""))
     ]
     review_flags = [
         warning
         for warning in warnings
-        if str(warning.get("code") or "") not in _HARD_REPAIR_BLOCKER_CODES
+        if not is_hard_stage2_blocker(str(warning.get("code") or ""))
     ]
     return blocking_warnings, review_flags
-
-
-def _hard_blocker_findings(validator_report: dict) -> list[dict]:
-    findings: list[dict] = []
-    for key in ("errors", "blocking_warnings"):
-        for item in validator_report.get(key, []) or []:
-            if not isinstance(item, dict):
-                continue
-            if str(item.get("code") or "") in _HARD_REPAIR_BLOCKER_CODES:
-                findings.append(item)
-    return findings
-
-
-def _repair_prompt_report(validator_report: dict) -> dict:
-    errors = [
-        item
-        for item in validator_report.get("errors", []) or []
-        if isinstance(item, dict) and str(item.get("code") or "") in _HARD_REPAIR_BLOCKER_CODES
-    ]
-    blocking_warnings = [
-        item
-        for item in validator_report.get("blocking_warnings", []) or []
-        if isinstance(item, dict) and str(item.get("code") or "") in _HARD_REPAIR_BLOCKER_CODES
-    ]
-    hard_codes = {str(item.get("code") or "") for item in [*errors, *blocking_warnings]}
-    restricted_hits = (
-        list(validator_report.get("restricted_hits", []) or [])
-        if "restriction_violation" in hard_codes
-        else []
-    )
-    return {
-        "errors": errors,
-        "blocking_warnings": blocking_warnings,
-        "restricted_hits": restricted_hits,
-    }
 
 
 def _enrich_validator_report(validator_report: dict) -> dict:
@@ -192,7 +151,6 @@ def _warning_detail_line(warning: dict) -> str:
 def _build_review_summary(validator_report: dict, status: str) -> tuple[str, list[str]]:
     errors = list(validator_report.get("errors", []) or [])
     blocking_warnings = list(validator_report.get("blocking_warnings", []) or [])
-    review_flags = list(validator_report.get("review_flags", []) or [])
     summary_parts: list[str] = []
     detail_lines: list[str] = []
 
@@ -288,7 +246,7 @@ def build_stage2_retry(
         status = _review_status(validator_report)
         summary, summary_lines = _build_review_summary(validator_report, status)
 
-    if status == _STATUS_PASS or not _hard_blocker_findings(validator_report):
+    if status == _STATUS_PASS or not hard_blocker_findings(validator_report):
         return {
             "status": status,
             "validator_report": validator_report,
@@ -298,7 +256,7 @@ def build_stage2_retry(
             "repair_prompt": None,
         }
 
-    repair_report = _repair_prompt_report(validator_report)
+    repair_report = prompt_safe_validator_report(validator_report)
     repair_prompt = build_stage2_repair_prompt(
         planning_brief=planning_brief,
         failed_plan_text=final_plan_text,
