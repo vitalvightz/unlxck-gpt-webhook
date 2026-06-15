@@ -762,11 +762,18 @@ class OpenAIStage2Automator:
             logger.warning(
                 "[stage2] structured-card rescue failed (no clean card); holding for review"
             )
+            # Carry forward the report that the structured attempt annotated
+            # (status/errors recorded by attempt_structured_plan_for_result),
+            # not the pre-rescue snapshot, so the held plan keeps the failure
+            # context admins need to diagnose why the rescue did not succeed.
+            held_validator_report = (
+                result.get("stage2_validator_report") or first_review["validator_report"]
+            )
             result = _review_required_result(
                 stage1_result,
                 draft_plan_text=draft_plan_text,
                 latest_plan_text=first_pass_text,
-                validator_report=first_review["validator_report"],
+                validator_report=held_validator_report,
                 retry_text="",
                 attempt_count=1,
                 stage2_cost=first_pass_cost,

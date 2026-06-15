@@ -314,6 +314,11 @@ def test_finalize_soft_hold_reverts_to_hold_when_card_invalid(monkeypatch: pytes
     assert result["plan_text"] == ""
     assert result["final_plan_text"] == "# final plan"
     assert result["structured_plan"] is None
+    # The failed rescue's debug must survive the rollback so admins can see why
+    # the card did not vouch for the plan, not just that it was held.
+    structured_debug = result["stage2_validator_report"]["structured_plan"]
+    assert structured_debug["status"] == "invalid_fallback_used"
+    assert structured_debug["errors"]
 
 
 def test_finalize_safety_hold_is_never_rescued(monkeypatch: pytest.MonkeyPatch):
