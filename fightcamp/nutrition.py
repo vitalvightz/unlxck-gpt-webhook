@@ -191,7 +191,7 @@ def generate_nutrition_block(*, flags: dict) -> str:
         elif phase == "TAPER":
             nutrition_block += "\n**High Fatigue in Taper:**\n"
             nutrition_block += "- Reduce training volume calories by ~5-10%\n"
-            nutrition_block += "- Focus on easily digestible carbs, hydrate well\n"
+            nutrition_block += "- Use easily digestible carbs and hydrate well.\n"
             nutrition_block += "- Magnesium glycinate 200 mg + taurine 1 g\n"
             nutrition_block += "- Light electrolyte intake only\n"
     elif fatigue == "moderate":

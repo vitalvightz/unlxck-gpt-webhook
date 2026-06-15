@@ -227,7 +227,7 @@ def generate_recovery_block(training_context: dict) -> str:
     elif phase == "GPP":
         recovery_block.append("\n**GPP Recovery Focus:**")
         recovery_block += [
-            "- Focus on tissue prep, joint mobility",
+            "- Prepare tissue and restore joint mobility.",
             "- Reset sleep routine",
         ]
 
