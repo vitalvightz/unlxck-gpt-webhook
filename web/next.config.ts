@@ -1,5 +1,15 @@
+import path from "node:path";
 import type { NextConfig } from "next";
 import { withSentryConfig } from "@sentry/nextjs";
+
+// The Next app lives in `web/` but imports the shared Stage 2 policy from
+// `../shared/stage2-policy.json` (the single source of truth shared with the
+// Python backend). Turbopack otherwise infers the workspace root as `web/` and
+// refuses to resolve modules above it; pinning the root to the repo root lets
+// that cross-package import resolve. `next build` runs with the cwd set to
+// `web/` (CI working-directory and the Vercel project root), so the parent dir
+// is the repo root.
+const WORKSPACE_ROOT = path.resolve(process.cwd(), "..");
 
 const LOCAL_API_BASE_URL = "http://127.0.0.1:8000";
 const MISSING_PRODUCTION_REWRITE_ERROR =
@@ -38,6 +48,9 @@ const SECURITY_HEADERS = [
 ];
 
 const nextConfig: NextConfig = {
+  turbopack: {
+    root: WORKSPACE_ROOT,
+  },
   async rewrites() {
     const backendUrl = resolveBackendUrl();
     if (!backendUrl) {

@@ -40,6 +40,8 @@ from .stage2_payload_late_fight import (  # noqa: F401  (re-exported for tests/b
 )
 from .conditioning import athlete_facing_system_label
 from .fight_day_override import apply_fight_day_override_to_weekly_role_map
+from .role_labels import stamp_weekly_role_map_labels
+from .weekly_plan_render import fill_missing_session_days
 from .late_selector_windows import classify_late_selector_window
 from .normalization import (  # noqa: F401  (phrase_in_text re-exported for back-compat)
     clean_list,
@@ -2831,6 +2833,27 @@ def _candidate_slots_for_role(candidate_pools: dict[str, dict], role: dict[str, 
     return matched
 
 
+# Mirror of the Stage 2 validator's D-1 safety rule
+# (stage2_validator: ``dangerous_late_fight_strength_or_conditioning``). Any
+# loaded strength or conditioning exposure rendered on D-1 is a hard blocker, so
+# the allocator must never assign such an exercise to that day — D-1 stays a
+# breathing / mobility / technical-cue primer only.
+_LATE_FIGHT_D1_UNSAFE_NAME = re.compile(
+    r"\b(strength|conditioning|sprints?|interval|heavy|loaded|deadlift|squat|trap[-_ ]bar|barbell)\b",
+    re.IGNORECASE,
+)
+
+
+def _late_fight_assignment_is_unsafe(day_label: str, name: str) -> bool:
+    """Return True when ``name`` must not be assigned to ``day_label``.
+
+    Today this only guards D-1, matching the validator's D-1 blocker exactly.
+    """
+    if str(day_label or "").strip().upper() != "D-1":
+        return False
+    return bool(_LATE_FIGHT_D1_UNSAFE_NAME.search(str(name or "")))
+
+
 def _build_late_fight_allowed_exercises_by_day(
     *,
     spec: dict[str, Any],
@@ -2850,6 +2873,11 @@ def _build_late_fight_allowed_exercises_by_day(
         explicit_matches: list[tuple[str, str, dict[str, Any]]] = []
         fallback_matches: list[tuple[str, str, dict[str, Any]]] = []
         for phase, slot_group, slot in _candidate_slots_for_role(candidate_pools, role):
+            # Drop day-unsafe candidates (e.g. loaded work on D-1) before
+            # selection so a safe explicit match or fallback can still be used
+            # instead of leaving the day empty.
+            if _late_fight_assignment_is_unsafe(day_label, _slot_exercise_name(slot)):
+                continue
             slot_id = str(slot.get("slot_id") or f"{phase}:{slot_group}:{_slot_exercise_name(slot)}")
             labels = _slot_countdown_labels(slot)
             if labels:
@@ -3081,6 +3109,7 @@ def build_planning_brief(
             phase=late_fight_phase,
         )
         weekly_role_map = apply_fight_day_override_to_weekly_role_map(weekly_role_map, athlete_model)
+        weekly_role_map = stamp_weekly_role_map_labels(weekly_role_map)
         session_sequence = _build_late_fight_session_sequence(days_until_fight, athlete_model)
         late_fight_plan_spec = _with_late_fight_allowed_exercises(
             spec=_build_late_fight_plan_spec(days_until_fight, athlete_model),
@@ -3142,6 +3171,11 @@ def build_planning_brief(
         weekly_role_map,
         athlete_model=athlete_model,
     )
+    # Deterministically place any session role the planner left dayless, then
+    # stamp labels. Post-processing can append suppressed/omitted roles after the
+    # inner builder ran, so do both here for full coverage.
+    fill_missing_session_days(weekly_role_map)
+    weekly_role_map = stamp_weekly_role_map_labels(weekly_role_map)
     return {
         "schema_version": "planning_brief.v1",
         "generator_mode": "deterministic_planner_plus_ai_finalizer",

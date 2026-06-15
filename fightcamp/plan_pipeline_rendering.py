@@ -19,6 +19,7 @@ from .plan_pipeline_runtime import (
     RenderedPlanBundle,
     _apply_muay_thai_filters,
 )
+from .lead_summary import render_lead_summary
 from .plan_rendering_utils import sanitize_phase_text, sanitize_stage_output
 from .stage2_payload import (
     build_computed_support,
@@ -26,6 +27,32 @@ from .stage2_payload import (
     build_stage2_handoff_text,
     build_stage2_payload,
 )
+from .weekly_plan_render import render_weekly_schedule_section
+
+
+def _insert_weekly_schedule(plan_text: str, schedule_section: str) -> str:
+    """Append the weekly schedule at the very end of the plan.
+
+    The schedule's ``## Week N`` headers must be the last week-scoped content in
+    the document: the validator's week parser attributes every line after a week
+    header to that week until the next week header or end-of-text, so any global
+    section rendered after the schedule would be miscounted as extra sessions.
+    Placing the schedule last lets end-of-text terminate the final week cleanly.
+    """
+    return f"{plan_text.rstrip()}\n\n{schedule_section}"
+
+
+def _insert_lead_summary(plan_text: str, lead_summary: str) -> str:
+    """Insert the lead summary immediately after the plan title.
+
+    The validator only scans the first plan lines for injury / weight-cut
+    context, so the summary must sit at the very top (right after the title),
+    before any training detail.
+    """
+    parts = plan_text.split("\n", 1)
+    title = parts[0]
+    rest = parts[1].lstrip("\n") if len(parts) > 1 else ""
+    return f"{title}\n\n{lead_summary}\n\n{rest}".rstrip()
 
 
 def _resolve_fight_weekday(context: PlanRuntimeContext) -> str | None:
@@ -429,6 +456,24 @@ def build_stage2_outputs(
         plan_input=context.plan_input,
         computed_support=computed_support,
     )
+    # Deterministic week-by-week schedule. Stage 1 now places real selected work
+    # onto the days the planner chose, so the draft already carries the
+    # week->day->session spine the finalizer would otherwise have to rebuild.
+    schedule_section = render_weekly_schedule_section(
+        planning_brief=planning_brief,
+        blocks=blocks,
+    )
+    if schedule_section:
+        rendered.fight_plan_text = _insert_weekly_schedule(
+            rendered.fight_plan_text, schedule_section
+        )
+    # Deterministic injury / weight-cut lead summary. The validator scans the
+    # first plan lines for this context, so render it right after the title.
+    lead_summary = render_lead_summary(planning_brief)
+    if lead_summary:
+        rendered.fight_plan_text = _insert_lead_summary(
+            rendered.fight_plan_text, lead_summary
+        )
     stage2_handoff_text = build_stage2_handoff_text(
         stage2_payload=stage2_payload,
         plan_text=rendered.fight_plan_text,

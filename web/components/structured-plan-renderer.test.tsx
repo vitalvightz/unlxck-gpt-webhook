@@ -1,0 +1,67 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import { renderToStaticMarkup } from "react-dom/server";
+
+import { StructuredPlanRenderer } from "./structured-plan-renderer";
+import type { StructuredPlan } from "@/lib/types";
+
+function countOccurrences(text: string, needle: string): number {
+  return text.split(needle).length - 1;
+}
+
+test("structured renderer uses one session card and hides detail blocks until expanded", () => {
+  const plan = {
+    schema_version: "1.0",
+    plan_metadata: { title: "Fight Camp", sport: "boxing", plan_type: "fight_camp" },
+    weeks: [
+      {
+        week_id: "wk-1",
+        week_index: 1,
+        phase_label: "TAPER",
+        days: [
+          {
+            date: "2026-06-15",
+            countdown_label: "D-19",
+            day_type: "moderate",
+            today_card: {
+              headline: "Morning intro duplicate",
+              readiness_status: "train_as_planned",
+              mindset_anchor: {
+                intent: "Duplicate intro intent",
+                focus_cue: "Duplicate intro focus",
+              },
+            },
+            sessions: [
+              {
+                session_id: "ses-1",
+                session_type: "mixed",
+                title: "Freshness Reset",
+                objective: "Restore freshness without adding load.",
+                mindset_anchor: {
+                  intent: "Stay loose",
+                  focus_cue: "Clean rhythm",
+                  reset_cue: "Do not render reset",
+                  confidence_anchor: "Do not render anchor",
+                  context: "Taper freshness day",
+                },
+                blocks: [{ block_id: "blk-1", display_name: "Breathing reset" }],
+              },
+            ],
+          },
+        ],
+      },
+    ],
+  } satisfies StructuredPlan;
+
+  const html = renderToStaticMarkup(<StructuredPlanRenderer plan={plan} />);
+
+  assert.equal(countOccurrences(html, "Freshness Reset"), 1);
+  assert.equal(html.includes("Morning intro duplicate"), false);
+  assert.equal(html.includes("Duplicate intro intent"), false);
+  assert.equal(html.includes("Breathing reset"), false);
+  assert.equal(html.includes("MORE"), true);
+  assert.equal(html.includes("Context"), true);
+  assert.equal(html.includes("Taper freshness day"), true);
+  assert.equal(html.includes("Do not render reset"), false);
+  assert.equal(html.includes("Do not render anchor"), false);
+});

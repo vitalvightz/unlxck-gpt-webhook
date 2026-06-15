@@ -69,8 +69,6 @@ _SPORT_LANGUAGE_LEAKS = {
         "takedown",
         "double-leg",
         "double leg",
-        "single-leg",
-        "single leg",
         "sprawl",
         "thai clinch",
         "clinch knee",

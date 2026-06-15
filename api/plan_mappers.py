@@ -7,6 +7,7 @@ from typing import Any
 
 from fastapi import HTTPException, status
 
+from fightcamp.stage2_policy import is_hard_stage2_blocker
 from fightcamp.sparring_advisories import build_plan_advisories
 from fightcamp.weekly_schedule_view import extract_weekly_schedule
 
@@ -27,16 +28,6 @@ from .models import (
 )
 from .store import AppStore
 from .structured_plan_models import StructuredTrainingPlan, safe_parse_structured_plan
-
-_HARD_STAGE2_BLOCKER_CODES = {
-    "restriction_violation",
-    "late_fight_hard_sparring_violation",
-    "dangerous_late_fight_strength_or_conditioning",
-    "fight_day_protocol_violation",
-    "calendar_spine_fight_day_protocol_violation",
-    "stage2_output_empty",
-    "stage2_output_truncated",
-}
 
 
 def _build_me_response(profile: ProfileRecord, store: AppStore) -> MeResponse:
@@ -133,13 +124,13 @@ def _map_plan_summary(row: dict[str, Any]) -> PlanSummary:
                 warning
                 for warning in (report.get("blocking_warnings") or [])
                 if isinstance(warning, dict)
-                and str(warning.get("code") or "") in _HARD_STAGE2_BLOCKER_CODES
+                and is_hard_stage2_blocker(str(warning.get("code") or ""))
             ]
             has_blocking = bool(blocking_warnings)
             if not has_blocking:
                 warnings = list(report.get("warnings") or [])
                 has_blocking = any(
-                    str(w.get("code") or "") in _HARD_STAGE2_BLOCKER_CODES
+                    is_hard_stage2_blocker(str(w.get("code") or ""))
                     for w in warnings
                     if isinstance(w, dict)
                 )

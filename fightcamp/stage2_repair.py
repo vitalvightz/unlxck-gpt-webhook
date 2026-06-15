@@ -1,18 +1,8 @@
 from __future__ import annotations
 from .normalization import clean_list
+from .stage2_policy import prompt_safe_validator_report
 
 import json
-
-
-_HARD_REPAIR_BLOCKER_CODES = {
-    "restriction_violation",
-    "late_fight_hard_sparring_violation",
-    "dangerous_late_fight_strength_or_conditioning",
-    "fight_day_protocol_violation",
-    "calendar_spine_fight_day_protocol_violation",
-    "stage2_output_empty",
-    "stage2_output_truncated",
-}
 
 
 REPAIR_PROMPT_TEMPLATE = """You are revising a Stage 2 final plan after validation.
@@ -70,30 +60,6 @@ Return only the revised athlete-facing final plan."""
 def _json_block_pretty(value: dict | list) -> str:
     """JSON block with indentation — used in repair prompts for human readability."""
     return "```json\n" + json.dumps(value, indent=2) + "\n```"
-
-
-def _prompt_safe_validator_report(validator_report: dict) -> dict:
-    errors = [
-        item
-        for item in validator_report.get("errors", []) or []
-        if isinstance(item, dict) and str(item.get("code") or "") in _HARD_REPAIR_BLOCKER_CODES
-    ]
-    blocking_warnings = [
-        item
-        for item in validator_report.get("blocking_warnings", []) or []
-        if isinstance(item, dict) and str(item.get("code") or "") in _HARD_REPAIR_BLOCKER_CODES
-    ]
-    hard_codes = {str(item.get("code") or "") for item in [*errors, *blocking_warnings]}
-    restricted_hits = (
-        list(validator_report.get("restricted_hits", []) or [])
-        if "restriction_violation" in hard_codes
-        else []
-    )
-    return {
-        "errors": errors,
-        "blocking_warnings": blocking_warnings,
-        "restricted_hits": restricted_hits,
-    }
 
 
 def _build_revision_priorities(validator_report: dict) -> dict[str, list[dict]]:
@@ -406,7 +372,7 @@ def _build_revision_priorities(validator_report: dict) -> dict[str, list[dict]]:
 
 
 def build_stage2_repair_prompt(*, planning_brief: dict, failed_plan_text: str, validator_report: dict) -> str:
-    validator_report = _prompt_safe_validator_report(validator_report)
+    validator_report = prompt_safe_validator_report(validator_report)
     revision_priorities = _build_revision_priorities(validator_report)
     sections = [
         REPAIR_PROMPT_TEMPLATE.strip(),
