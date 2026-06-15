@@ -7,6 +7,7 @@ from datetime import datetime, timezone
 from typing import Any, Protocol
 
 from fightcamp.stage2_pipeline import build_stage2_package, review_stage2_output
+from fightcamp.stage2_policy import is_card_rescuable_soft_code, is_hard_stage2_blocker
 
 from .structured_plan_generation import (
     StructuredPlanOutcome,
@@ -27,89 +28,6 @@ logger = logging.getLogger(__name__)
 _DEFAULT_FIRST_PASS_CHAR_LIMIT = 180_000
 _DEFAULT_OPENAI_MAX_RETRIES = 0
 _DEFAULT_MAX_OUTPUT_TOKENS = 0
-
-# Validator error codes a clean structured card can NOT vouch for: genuine
-# safety violations plus unrecoverable output integrity. A hold caused by any of
-# these always stands, even when a schema-valid card is produced. Everything
-# else (e.g. internal scaffolding leaks) is a soft hold the card can rescue.
-_CARD_UNRESCUABLE_ERROR_CODES: frozenset[str] = frozenset(
-    {
-        "stage2_output_empty",
-        "stage2_output_truncated",
-        "restriction_violation",
-        "late_fight_hard_sparring_violation",
-        "dangerous_late_fight_strength_or_conditioning",
-        "fight_day_protocol_violation",
-        "calendar_spine_fight_day_protocol_violation",
-    }
-)
-
-_CARD_RESCUABLE_SOFT_CODES: frozenset[str] = frozenset(
-    {
-        "anchor_day_identity_overload",
-        "calendar_spine_ambiguous_countdown_window",
-        "calendar_spine_d_day_mismatch",
-        "calendar_spine_post_fight_training_rendered",
-        "calendar_spine_session_role_not_authorized",
-        "calendar_spine_unmapped_weekday_rendered",
-        "coach_owned_sparring_overdetailed",
-        "code_fence_present",
-        "conditional_conditioning_choice",
-        "crowded_week_non_spar_overage",
-        "empty_safety_language",
-        "equipment_incongruent_selection",
-        "generic_filler_phrase",
-        "generic_instruction_opener",
-        "generic_motivation_cliche",
-        "gimmick_name",
-        "hedged_adjustment_without_decision",
-        "high_pressure_weight_cut_underaddressed",
-        "html_markup_present",
-        "internal_phrase_leak",
-        "internal_render_contract_leak",
-        "internal_section_leak",
-        "late_camp_session_incomplete",
-        "late_fight_active_role_overage",
-        "late_fight_alactic_dose_overage",
-        "late_fight_block_overage",
-        "late_fight_conditioning_round_structure_forbidden",
-        "late_fight_countdown_blocked_drill",
-        "late_fight_countdown_fight_day_mislabel",
-        "late_fight_countdown_header_format",
-        "late_fight_d0_protocol_expanded",
-        "late_fight_forbidden_content",
-        "late_fight_hard_sparring_d12_review",
-        "late_fight_hard_sparring_overage",
-        "late_fight_meaningful_stress_overage",
-        "late_fight_missing_countdown_header",
-        "late_fight_neural_power_stacking",
-        "late_fight_technical_round_overage",
-        "late_fight_unapproved_exercise_rendered",
-        "late_fight_window_forbidden_exercise",
-        "late_fight_window_preferred_missing",
-        "missing_injury_lead_summary",
-        "missing_required_element",
-        "missing_week_session_role",
-        "missing_weight_cut_acknowledgement",
-        "missing_weight_cut_lead_summary",
-        "option_overload",
-        "overstyled_drill_name",
-        "phase_section_missing",
-        "sport_language_leak",
-        "stage2_warning",
-        "support_recovery_day_stress_leak",
-        "support_takeover_before_anchor",
-        "taper_option_overload",
-        "template_like_session_render",
-        "too_many_fallbacks",
-        "true_internal_system_leak",
-        "unresolved_access_fallback",
-        "weak_anchor_session",
-        "weekly_rhythm_broken",
-        "weekly_session_overage",
-        "weight_cut_state_contradiction",
-    }
-)
 
 
 def _stage2_hold_is_card_rescuable(validator_report: Any) -> bool:
@@ -144,9 +62,9 @@ def _stage2_hold_is_card_rescuable(validator_report: Any) -> bool:
         if not isinstance(code, str) or not code.strip():
             return False
         normalized_code = code.strip()
-        if normalized_code in _CARD_UNRESCUABLE_ERROR_CODES:
+        if is_hard_stage2_blocker(normalized_code):
             return False
-        if normalized_code not in _CARD_RESCUABLE_SOFT_CODES:
+        if not is_card_rescuable_soft_code(normalized_code):
             return False
     return True
 

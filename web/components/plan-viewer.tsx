@@ -25,6 +25,7 @@ import { StructuredPlanRenderer } from "@/components/structured-plan-renderer";
 import { WhyTooltip } from "@/components/why-tooltip";
 import { useGenerationController } from "@/lib/generation-controller";
 import { canUseAdminPlanControls, isAdminRole } from "@/lib/plan-admin-controls";
+import { STAGE2_HARD_BLOCKER_CODE_SET } from "@/lib/stage2-policy";
 import { shouldRenderStructuredPlan } from "@/lib/structured-plan";
 import { selectInjuryRiskAdvisory } from "@/lib/sparring-advisory";
 import { explainRiskBand } from "@/lib/sparring-reason-codes";
@@ -127,15 +128,7 @@ const FRACTURE_CATEGORY_SET = new Set([
 
 type RiskBandTone = "green" | "amber" | "red" | "black";
 
-const BLOCKING_WARNING_CODES = new Set([
-  "restriction_violation",
-  "late_fight_hard_sparring_violation",
-  "dangerous_late_fight_strength_or_conditioning",
-  "fight_day_protocol_violation",
-  "calendar_spine_fight_day_protocol_violation",
-  "stage2_output_empty",
-  "stage2_output_truncated",
-]);
+const BLOCKING_WARNING_CODES = STAGE2_HARD_BLOCKER_CODE_SET;
 const NON_PUBLISHABLE_STAGE2_STATUSES = new Set([
   "triage_blocked",
   "triage_resume_approved",
