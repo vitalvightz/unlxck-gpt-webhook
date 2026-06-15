@@ -1122,7 +1122,7 @@ def test_validate_stage2_output_does_not_false_positive_clear_coach_language():
 
 
 def test_validate_stage2_output_warns_for_boxing_sport_language_leaks():
-    for leak_line in ("Double-leg sprint entry - 6 x 6 sec", "Single-leg takedown entry - 4 x 10 sec"):
+    for leak_line in ("Double-leg sprint entry - 6 x 6 sec", "Single-leg takedown entry - 4 x 10 sec", "Single-leg entry - 4 x 10 sec"):
         report = validate_stage2_output(
             planning_brief=_planning_brief_fixture(),
             final_plan_text=f"""
