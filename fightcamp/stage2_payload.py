@@ -3082,7 +3082,7 @@ def build_planning_brief(
             phase=late_fight_phase,
         )
         weekly_role_map = apply_fight_day_override_to_weekly_role_map(weekly_role_map, athlete_model)
-        stamp_weekly_role_map_labels(weekly_role_map)
+        weekly_role_map = stamp_weekly_role_map_labels(weekly_role_map)
         session_sequence = _build_late_fight_session_sequence(days_until_fight, athlete_model)
         late_fight_plan_spec = _with_late_fight_allowed_exercises(
             spec=_build_late_fight_plan_spec(days_until_fight, athlete_model),
