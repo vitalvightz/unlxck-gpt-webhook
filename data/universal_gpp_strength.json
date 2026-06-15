@@ -1208,8 +1208,7 @@
       "stability",
       "low_impact",
       "zero_impact",
-      "mech_trunk_stability",
-      "mech_upper_press"
+      "mech_trunk_stability"
     ],
     "prescription": "3x10-12 each side",
     "notes": "Anti-rotation core strength. Cable or band resistance.",
@@ -1220,8 +1219,7 @@
     "cns_load": "low",
     "soreness_risk": "low",
     "mechanical_risk_tags": [
-      "mech_trunk_stability",
-      "mech_upper_press"
+      "mech_trunk_stability"
     ],
     "low_impact": true,
     "low_eccentric": true,

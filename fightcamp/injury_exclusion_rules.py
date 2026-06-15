@@ -262,7 +262,6 @@ INJURY_RULES = {
             "dynamic_overhead",
             "explosive_upper_push",
             "mech_upper_press",
-            "mech_ballistic",
         ],
     },
     "chest": {
