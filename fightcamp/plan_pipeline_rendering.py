@@ -51,8 +51,8 @@ def _insert_lead_summary(plan_text: str, lead_summary: str) -> str:
     """
     parts = plan_text.split("\n", 1)
     title = parts[0]
-    rest = parts[1] if len(parts) > 1 else ""
-    return f"{title}\n\n{lead_summary}\n\n{rest.lstrip('\n')}".rstrip()
+    rest = parts[1].lstrip("\n") if len(parts) > 1 else ""
+    return f"{title}\n\n{lead_summary}\n\n{rest}".rstrip()
 
 
 def _resolve_fight_weekday(context: PlanRuntimeContext) -> str | None:
