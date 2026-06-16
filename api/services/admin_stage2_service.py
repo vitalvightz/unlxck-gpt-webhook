@@ -279,6 +279,12 @@ async def run_structured_plan_post_processing(
             # short-circuits here instead of paying for a redundant model call.
             "structured_plan": plan_row.get("structured_plan"),
         }
+        # The exact text the card is converted from. The narrow writer rejects
+        # the card if this text no longer matches the row at write time, so a
+        # concurrent edit/reject mid-conversion can never publish a stale card.
+        conversion_source_text = str(
+            result.get("final_plan_text") or result.get("plan_text") or ""
+        )
         result = await _attach_structured_plan(result, plan_row, stage2=stage2)
         # Only write when a structured plan was actually produced; a skip/failure
         # keeps the existing raw markdown row untouched. Persist via the narrow
@@ -291,6 +297,7 @@ async def run_structured_plan_post_processing(
                 structured_plan=result.get("structured_plan"),
                 schema_version=result.get("schema_version"),
                 stage2_validator_report=result.get("stage2_validator_report") or {},
+                expected_final_plan_text=conversion_source_text,
             )
     except Exception:  # noqa: BLE001 - background work must never bubble up
         logger.exception("structured plan post-processing failed for plan_id=%s", plan_id)

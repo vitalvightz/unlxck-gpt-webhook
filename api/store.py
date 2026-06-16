@@ -385,6 +385,7 @@ class AppStore(Protocol):
         structured_plan: dict[str, Any] | None,
         schema_version: str | None,
         stage2_validator_report: dict[str, Any],
+        expected_final_plan_text: str | None = None,
     ) -> dict[str, Any]: ...
     def update_plan_triage_approval(self, plan_id: str, *, why_log: dict[str, Any], stage2_status: str) -> dict[str, Any]: ...
 
@@ -3785,6 +3786,7 @@ class SupabaseAppStore:
         structured_plan: dict[str, Any] | None,
         schema_version: str | None,
         stage2_validator_report: dict[str, Any],
+        expected_final_plan_text: str | None = None,
     ) -> dict[str, Any]:
         """Persist only the structured-plan output columns for a plan.
 
@@ -3798,7 +3800,29 @@ class SupabaseAppStore:
         written by a concurrent admin action (reject, archive, rename, manual
         Stage 2 edit) in the meantime. No status transition is enforced because
         the plan's lifecycle status is intentionally left untouched.
+
+        When ``expected_final_plan_text`` is supplied it is the plan text the
+        structured card was converted from. The card is only persisted if the
+        row's current ``final_plan_text`` (falling back to ``plan_text``) still
+        matches it. If the text changed during the async conversion/backfill the
+        card is now a *stale* projection of superseded text, so the write is
+        skipped and the existing row (raw-markdown fallback) is left intact.
         """
+
+        if expected_final_plan_text is not None:
+            current = self.get_plan(plan_id)
+            if not current:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="plan not found",
+                )
+            current_text = str(current.get("final_plan_text") or current.get("plan_text") or "")
+            if current_text != str(expected_final_plan_text):
+                logger.info(
+                    "[store] update_plan_structured_artifacts:stale_text_skip plan_id=%s",
+                    plan_id,
+                )
+                return current
 
         payload = {
             "structured_plan": structured_plan,

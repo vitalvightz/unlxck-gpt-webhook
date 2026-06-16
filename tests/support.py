@@ -1198,10 +1198,18 @@ class FakeStore:
         structured_plan,
         schema_version,
         stage2_validator_report: dict,
+        expected_final_plan_text: str | None = None,
     ) -> dict:
         row = self.plans.get(plan_id)
         if not row:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
+        # Stale-write guard: when the conversion's source text is supplied, only
+        # persist the card if the row's current text still matches. A concurrent
+        # edit/reject mid-conversion makes the card stale, so the write is skipped.
+        if expected_final_plan_text is not None:
+            current_text = str(row.get("final_plan_text") or row.get("plan_text") or "")
+            if current_text != str(expected_final_plan_text):
+                return row
         # Narrow write: only the structured-plan output fields. Status / plan_text
         # / stage2 fields are intentionally left untouched so a concurrent admin
         # action cannot be clobbered by a slow background conversion.
