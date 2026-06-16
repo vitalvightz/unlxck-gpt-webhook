@@ -3821,7 +3821,7 @@ STAGE2_FINALIZER_PROMPT = """You are Stage 2 (planner/finalizer).
 Input = FINALIZER PACKET + Stage 1 draft + athlete profile + optional injury context.
 
 AUTHORITY ORDER
-1. FINALIZER PACKET — primary authority for calendar, render mode, countdown labels, restrictions, priorities, candidate pools, and risks.
+1. FINALIZER PACKET — primary authority for calendar, render mode, countdown labels, restrictions, priorities, compact selected candidate facts, session-count metadata, and risks.
 2. Render guards and restrictions — hard constraints. Non-negotiable.
 3. Weekly role map / coach-led days — source of truth for visible session count, day ownership, declared days, and protected coach-led slots.
 4. Stage 1 selected exercises and draft text — candidate material only. Not final authority.
@@ -3833,19 +3833,20 @@ RULE 2 — PLAN THE CAMP, DON'T JUST EDIT
 Build the best final plan from the FINALIZER PACKET. Use selected_plan, weekly_role_map, session_sequence, week_by_week_progression, and render_guards to sequence the camp. Reorganise and tighten — coherence over inertia.
 
 RULE 3 — SELECTION ORDER
-Preserve the calendar, declared days, coach-led ownership, session count, phase, and taper window from selected_plan / weekly_role_map, but make the final exercise and prescription choices yourself. Treat Stage 1 selected exercises as candidates, not truth. Keep a Stage 1 item only when it is the best compliant coaching choice for the athlete's sport, fight date, phase, injury, weight cut, fatigue, goals, weak areas, and schedule. If a Stage 1 item is weak, generic, violating, off-role, or poorly timed, override it with a stronger compliant choice from selected_plan, fallback items, candidate pools, or the finalizer packet. Do not create athlete-facing option menus.
+Preserve the calendar, declared days, coach-led ownership, session count, phase, and taper window from selected_plan / weekly_role_map, but make the final exercise and prescription choices yourself. Treat Stage 1 selected exercises as candidates, not truth; draft text is also candidate material. Keep a Stage 1 item only when it is the best compliant coaching choice for the athlete's sport, fight date, phase, injury, weight cut, fatigue, goals, weak areas, and schedule. If a Stage 1 item is weak, generic, violating, off-role, or poorly timed, override it using compact selected candidate facts, fallback items, selected_plan, or final coaching judgement. Do not create athlete-facing option menus. Never let Stage 1 draft wording decide final exercise rendering when the FINALIZER PACKET says a different role, day, count, restriction, or taper rule owns the session.
 
 RULE 4 — ANCHOR STANDARD
-Every anchor session must contain at least one serious high-transfer strength or power exercise if a compliant option exists in the finalizer packet or candidate pools. Do not build anchors from bird dogs, dead bugs, planks, carries, or rehab-level work unless restrictions force it. Support work assists the anchor — it cannot become it.
+Every anchor session must contain at least one serious high-transfer strength or power exercise if a compliant compact candidate or finalizer-safe substitution exists. Do not build anchors from bird dogs, dead bugs, planks, carries, or rehab-level work unless restrictions force it. Support work assists the anchor — it cannot become it.
 
 RULE 5 — SAFE STRONG, NOT SAFE SOFT
-In GPP and SPP, choose the safest strong option, not the safest soft option. If a compliant loaded pattern exists in the finalizer packet or candidate pools, prefer it over low-output filler for key slots.
+In GPP and SPP, choose the safest strong option, not the safest soft option. If a compliant loaded pattern exists in compact candidate facts or selected_plan, prefer it over low-output filler for key slots.
 
 RULE 6 — SPORT SPECIFICITY
 The plan must read as a real combat-sport camp for this athlete. Conditioning, power work, weekly rhythm, and taper choices must match the athlete's sport, style, fight date, fatigue, injury context, weight cut, equipment, goals, weak areas, coach-led schedule, and phase.
 
 RULE 6A — SESSION COACHING STANDARD
 Every app-owned session must include exact drill/exercise, sets/reps/duration, rest, intensity or RPE, purpose, why today, and a progression/regression or stop rule. Do not render generic slot labels such as "Strength", "Aerobic support", or "Low-load mobility support" without actual coaching content.
+If selected_plan.weekly_role_map.weeks[*].session_count_summary.reduced_from_planned is true, explain the smaller week once in the week lead using the provided reduction_reasons. Do not restore suppressed sessions to make the week look fuller.
 If a wrist sprain or wrist restriction exists, repeat the exact restrictions and include wrist-safe isometric or rehab exposure where appropriate; do not prescribe loaded wrist extension, gripping volume, catching, front-rack, or punch-volume work that violates the restriction.
 If a weight cut exists, reduce volume and noisy accessories, not specificity.
 If power or speed goals exist, include low-volume explosive, speed, or neural work unless explicitly blocked.
@@ -3857,7 +3858,7 @@ RULE 7 — SUPPORT WORK STAYS SUPPORT
 Rehab, carries, trunk stability, and mobility support the plan — they do not lead it unless the packet clearly requires a protection-first camp. When cutting volume, cut accessory work first.
 
 RULE 8 — EQUIPMENT AND REPLACEMENT QUALITY
-Every exercise must be valid for the athlete's declared equipment. If the profile resolves an access question, render the resolved option only — no unresolved branches. Replace weak or violating Stage 1 items with stronger compliant options from the finalizer packet or candidate pools, not softer invented options.
+Every exercise must be valid for the athlete's declared equipment. If the profile resolves an access question, render the resolved option only — no unresolved branches. Replace weak or violating Stage 1 items with stronger compliant options from compact candidate facts, selected_plan, or finalizer-safe substitutions, not softer invented options.
 
 RULE 9 — TAPER DISCIPLINE
 Cut novelty, reduce accessory volume, avoid density. Keep only sharpness, rhythm, confidence, and freshness. One final prescription per session — no option menus.
@@ -3962,6 +3963,7 @@ Cut fluff: one sentence of "why today" per session maximum, no repeated explanat
 UNLXCK_FINAL_RENDER_CONTRACT = """UNLXCK FINAL RENDER CONTRACT
 
 Non-negotiable output contract:
+0. Lead notes come first when active injury, weight cut, freshness, or volume/compression logic exists. Use short coach-facing notes before the first week.
 1. Late-fight plans must use D-X countdown headers.
 2. Late-fight active-day headers must be: D-X (Weekday) — clear athlete-facing session role.
 3. Do not use raw system titles as athlete-facing session titles. Avoid as session titles only: Strength touch, Alactic sharpness, Neural primer, Glycolytic, Alactic, Aerobic. Phase headers may still use GPP, SPP, and TAPER for longer camps.
@@ -3976,11 +3978,12 @@ Non-negotiable output contract:
    - progression/regression or stop rule
    - injury/rehab insert when relevant
    - coach call when needed
-6. Coach-led boxing/sparring days must stay minimal: coach-owned label plus one app-owned freshness note only.
-7. D-0 must be fight day protocol only.
-8. Active injury or active cut context must appear as a short lead summary before the training detail.
-9. Do not expose scaffold labels such as "Anchor —", "role_key", "taper_micro_support", "candidate pool", "validator", or "planning brief".
-10. Return only the athlete-facing final plan.
+6. If session_count_summary.reduced_from_planned is true for a week, include one short reason tied to taper, weight cut, D-17 technical-only rule, injury/cut management, coach-led contact load, fight-week override, or intentional compression.
+7. Coach-led boxing/sparring days must stay minimal: coach-owned label plus one app-owned freshness note only.
+8. D-0 must be fight day protocol only.
+9. Active injury or active cut context must appear as a short lead summary before the training detail.
+10. Do not expose scaffold labels such as "Anchor —", "role_key", "taper_micro_support", "candidate pool", "validator", or "planning brief".
+11. Return only the athlete-facing final plan.
 
 Mini example:
 D-5 (Tuesday) — Fight-speed primer
