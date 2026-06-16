@@ -134,18 +134,19 @@ def _source_day_sections(markdown: str) -> dict[int, str]:
     """Map each D-day number to the lowercased source text under its day header."""
     sections: dict[int, list[str]] = {}
     current: int | None = None
+def _source_day_sections(markdown: str) -> dict[int, str]:
+    """Map each D-day number to the lowercased source text under its day header."""
+    sections: dict[int, list[str]] = {}
+    current: int | None = None
     for line in markdown.splitlines():
-        # A line with >=2 D-day numbers is a week/range header (e.g.
-        # "GPP — Week 1 (D-33 to D-27)"): a week boundary, never a training day.
-        # Reset so week-level notes are not misattributed to the previous day.
-        if len(_DDAY_RE.findall(line)) >= 2:
-            current = None
-            continue
-        day = _day_header_dday(line)
-        if day is not None:
-            current = day
+        header = _DAY_HEADER_RE.search(line)
+        is_range = "→" in line or "->" in line
+        if line.lstrip().startswith("#") and header and not is_range:
+            current = _dday_num(header.group(0))
+            if current is not None:
+                sections.setdefault(current, [])
         if current is not None:
-            sections.setdefault(current, []).append(line)
+            sections[current].append(line)
     return {day: "\n".join(lines).lower() for day, lines in sections.items()}
 
 
