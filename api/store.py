@@ -722,6 +722,19 @@ def _generation_startup_max_attempts() -> int:
     return max(1, parsed)
 
 
+def _positive_float_env(name: str, default: float) -> float:
+    raw_value = os.getenv(name)
+    if raw_value is None or not raw_value.strip():
+        return default
+    try:
+        parsed = float(raw_value.strip())
+    except ValueError:
+        return default
+    if parsed <= 0:
+        return default
+    return parsed
+
+
 def _job_loaded_milestone(now_iso: str) -> dict[str, Any]:
     return {
         "code": "job_loaded",
@@ -758,7 +771,25 @@ class SupabaseAppStore:
         # Supabase terminates a multiplexed connection after several streams.
         # HTTP/1.1 uses a simple request-per-connection model that is immune
         # to this class of failure.
-        http_client = httpx.Client(http2=False)
+        #
+        # Explicit timeouts avoid httpx's short default read timeout (5s)
+        # causing false ReadTimeout outages on Supabase reads (e.g.
+        # ensure_profile and generation_jobs polling) during transient
+        # latency spikes. Overridable via env for ops tuning.
+        read_timeout = _positive_float_env("SUPABASE_HTTP_TIMEOUT_SECONDS", 20.0)
+        connect_timeout = _positive_float_env("SUPABASE_HTTP_CONNECT_TIMEOUT_SECONDS", 10.0)
+        http_client = httpx.Client(
+            http2=False,
+            timeout=httpx.Timeout(
+                read_timeout,
+                connect=connect_timeout,
+            ),
+            limits=httpx.Limits(
+                max_connections=50,
+                max_keepalive_connections=20,
+                keepalive_expiry=30.0,
+            ),
+        )
         return cls(create_client(url, key, options=ClientOptions(httpx_client=http_client)), admin_emails)
 
     def is_admin_email(self, email: str) -> bool:
