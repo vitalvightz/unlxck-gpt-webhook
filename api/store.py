@@ -801,7 +801,19 @@ class SupabaseAppStore:
         athlete_id: str,
         *,
         stale_after_seconds: int,
+        exclude_client_request_id: str | None = None,
     ) -> None:
+        try:
+            query = self.client.table("generation_jobs") \
+                .select(GENERATION_JOB_SELECT) \
+                .eq("athlete_id", athlete_id) \
+                .in_("status", ["queued", "running"])
+            if exclude_client_request_id:
+                query = query.neq("client_request_id", exclude_client_request_id)
+            response = self._run_with_transient_retry(
+                operation=f"fail_stale_active_generation_jobs_for_athlete:select athlete_id={athlete_id}",
+                fn=lambda: query.order("created_at", desc=True).limit(25).execute(),
+            )
         try:
             response = self._run_with_transient_retry(
                 operation=f"fail_stale_active_generation_jobs_for_athlete:select athlete_id={athlete_id}",
