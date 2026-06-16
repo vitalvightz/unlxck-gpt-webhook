@@ -276,7 +276,7 @@ export function SessionCard({
       {warning ? <p className="sp-warning">{warning}</p> : null}
       {nutrition ? <p className="sp-today-note">{nutrition}</p> : null}
       {weightCut ? <p className="sp-warning">{weightCut}</p> : null}
-      <MindsetAnchorCard anchor={session.mindset_anchor} />
+      <MindsetAnchorCard anchor={session.mindset_anchor ?? card?.mindset_anchor} />
       {blocks.length > 0 ? (
         <>
           <button

@@ -72,6 +72,48 @@ test("structured renderer uses one session card and hides detail blocks until ex
   assert.equal(html.includes("Do not render anchor"), false);
 });
 
+test("session card falls back to the day card mindset when the session has none", () => {
+  const plan = {
+    schema_version: "1.0",
+    plan_metadata: { title: "Fight Camp", sport: "boxing", plan_type: "fight_camp" },
+    weeks: [
+      {
+        week_id: "wk-1",
+        week_index: 1,
+        phase_label: "SPP",
+        days: [
+          {
+            date: "2026-06-15",
+            countdown_label: "D-19",
+            day_type: "hard_spar",
+            today_card: {
+              readiness_status: "train_as_planned",
+              mindset_anchor: {
+                intent: "Day card mindset intent",
+                focus_cue: "Day card focus cue",
+              },
+            },
+            sessions: [
+              {
+                session_id: "ses-1",
+                session_type: "sparring",
+                title: "Hard sparring",
+                // No session-level mindset_anchor: the day card should fill in.
+                blocks: [{ block_id: "blk-1", display_name: "Live rounds" }],
+              },
+            ],
+          },
+        ],
+      },
+    ],
+  } satisfies StructuredPlan;
+
+  const html = renderToStaticMarkup(<StructuredPlanRenderer plan={plan} />);
+
+  assert.equal(html.includes("Day card mindset intent"), true);
+  assert.equal(html.includes("Day card focus cue"), true);
+});
+
 test("block card surfaces detail tags for expanded session scanning", () => {
   const html = renderToStaticMarkup(
     <BlockCard
