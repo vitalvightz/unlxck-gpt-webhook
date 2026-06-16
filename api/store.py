@@ -2128,6 +2128,7 @@ class SupabaseAppStore:
         self._fail_stale_active_generation_jobs_for_athlete(
             athlete_id,
             stale_after_seconds=stale_after_seconds,
+            exclude_client_request_id=client_request_id,
         )
 
         # Recover stale `running` jobs before the atomic RPC runs. The RPC's
