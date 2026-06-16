@@ -146,6 +146,12 @@ def athlete_facing_strings(structured_plan: dict) -> list[str]:
             if rule.get(key):
                 strings.append(str(rule[key]))
 
+    for note in _as_list(plan.get("plan_notes")):
+        note = _as_dict(note)
+        for key in ("label", "text"):
+            if note.get(key):
+                strings.append(str(note[key]))
+
     for week in _as_list(plan.get("weeks")):
         for day in _as_list(_as_dict(week).get("days")):
             day = _as_dict(day)

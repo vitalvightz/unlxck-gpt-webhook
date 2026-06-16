@@ -35,6 +35,7 @@ from .structured_plan_models import (
     EventType,
     LoadFocusValue,
     PhaseLabel,
+    PlanNoteCategory,
     PlanStatus,
     PlanType,
     ReadinessStatus,
@@ -238,6 +239,7 @@ _SESSION_TYPE_VALUES = frozenset(get_args(SessionType))
 _COMPLETION_VALUES = frozenset(get_args(CompletionStatus))
 _BLOCK_TYPE_VALUES = frozenset(get_args(BlockType))
 _RISK_LEVEL_VALUES = frozenset(get_args(RiskLevel))
+_PLAN_NOTE_CATEGORY_VALUES = frozenset(get_args(PlanNoteCategory))
 
 # Conservative enum aliases for the most common loose values.
 _SESSION_TYPE_ALIASES = {
@@ -605,6 +607,39 @@ def _normalize_week(value: Any) -> dict[str, Any]:
     return out
 
 
+def _normalize_plan_note(value: Any) -> dict[str, Any] | None:
+    """Coerce a plan-level note, or ``None`` when it carries no text.
+
+    Keeps only formatting fixes: the category is aliased onto a valid enum value
+    (defaulting to ``general``), and label/text are coerced to strings. A note
+    with no usable text is dropped rather than fabricated.
+    """
+    if isinstance(value, str):
+        text = value.strip()
+        return {"category": "general", "text": text} if text else None
+    if not isinstance(value, dict):
+        return None
+    text = _coerce_str(value.get("text")).strip()
+    if not text:
+        return None
+    out: dict[str, Any] = {
+        "category": _enum(value.get("category"), _PLAN_NOTE_CATEGORY_VALUES, "general", {"weight cut": "weight_cut", "weight-cut": "weight_cut"}),
+        "text": text,
+    }
+    label = _coerce_str(value.get("label")).strip()
+    if label:
+        out["label"] = label
+    return out
+
+
+def _normalize_plan_notes(value: Any) -> list[dict[str, Any]]:
+    return [
+        note
+        for note in (_normalize_plan_note(item) for item in _as_list(value))
+        if note is not None
+    ]
+
+
 def _normalize_red_flag(value: Any) -> dict[str, Any]:
     out = dict(value) if isinstance(value, dict) else {}
     out["rule_id"] = _coerce_nonempty_str(out.get("rule_id"), "red_flag")
@@ -829,6 +864,7 @@ def normalize_structured_plan_candidate(data: Any) -> Any:
         if label is not None
     ]
     plan["red_flag_rules"] = [_normalize_red_flag(rule) for rule in _as_dict_list(plan.get("red_flag_rules"))]
+    plan["plan_notes"] = _normalize_plan_notes(plan.get("plan_notes"))
     plan["weeks"] = [_normalize_week(week) for week in _as_dict_list(plan.get("weeks"))]
     # daily_check_ins must be a list of fully-valid entries; a non-list, or a
     # partial/garbled entry, must never fail the whole plan. Malformed entries are
@@ -1131,8 +1167,8 @@ The root JSON object IS the StructuredTrainingPlan.
 Do NOT wrap it inside a top-level "plan" key. Its top-level keys are exactly:
 
   schema_version, plan_metadata, athlete_context, event_context,
-  countdown_labels, red_flag_rules, weeks, daily_check_ins, nutrition,
-  progression_notes, raw_markdown_fallback.
+  countdown_labels, red_flag_rules, plan_notes, weeks, daily_check_ins,
+  nutrition, progression_notes, raw_markdown_fallback.
 
 The nested training hierarchy lives inside the root object as:
 weeks[] -> days[] -> sessions[] -> blocks[].
@@ -1156,6 +1192,12 @@ The JSON object MUST conform to the StructuredTrainingPlan schema:
   morning check-in only.
 - Each session MUST include completion_status (default "not_started") and a
   session-level mindset_anchor.
+- Coach-led, sparring, or technical days where the app prescribes NO S&C work
+  (e.g. "Coach-led boxing session", "no app S&C today", "technical only") MUST
+  still be emitted as a day. Leave that day's "sessions" as [] and set a concise
+  today_card.headline naming what it is (e.g. "Coach-led boxing", "Hard
+  sparring", "Technical only") so the day renders as its own card. Do NOT invent
+  S&C blocks for these days and do NOT drop the day.
 - daily_check_ins are OPTIONAL and must be either fully valid or omitted. Emit a
   check-in entry ONLY when the plan actually states a dated self-report; each
   entry MUST then carry "date", a "morning" object with all of "sleep_quality"
@@ -1165,6 +1207,17 @@ The JSON object MUST conform to the StructuredTrainingPlan schema:
   cannot fill every field from the plan, leave daily_check_ins as [].
 - Provide red_flag_rules[] with machine fields (metric/operator/threshold/logic)
   kept separate from a human-readable display_text.
+- Capture short plan-level reminders that live OUTSIDE any week — e.g. a header
+  "Active notes" block and footer "End of plan notes" — in plan_notes[]. Each
+  entry is {{"category": one of weight_cut|injury|nutrition|training|recovery|
+  general, "label": optional short label, "text": the reminder}}. Use plan_notes
+  for the active weight-cut summary, injury/wound handling, nutrition reminders,
+  and general non-negotiables. Keep stop/modify/report SAFETY thresholds in
+  red_flag_rules and full nutrition macros in nutrition — plan_notes is for the
+  brief, always-on context. A weight_cut note MUST express a risk requiring
+  qualified supervision, NEVER acute-cut directives (no sauna, dehydration,
+  water-loading, or sodium manipulation). Omit plan_notes entirely if the plan
+  states none.
 - Provide nutrition with a summary and, where a weight cut applies, a
   weight_cut_warning. Weight-cut guidance MUST be expressed as a risk requiring
   qualified supervision — NEVER direct acute-cut instructions (no sauna,
@@ -1211,6 +1264,7 @@ EXACT ROOT SKELETON (match this shape; fill values from the plan, keep all keys)
   "event_context": {{"event_type": "fight", "fight_date": "YYYY-MM-DD"}},
   "countdown_labels": [{{"date": "YYYY-MM-DD", "days_to_event": 28, "label": "D-28", "anchor": "fight"}}],
   "red_flag_rules": [{{"rule_id": "...", "when": "morning_check_in", "severity": "amber", "display_text": "...", "action": "..."}}],
+  "plan_notes": [{{"category": "weight_cut", "label": "Active weight cut", "text": "..."}}],
   "weeks": [
     {{
       "week_id": "wk-1", "week_index": 1, "phase_label": "SPP", "week_goal": "...",

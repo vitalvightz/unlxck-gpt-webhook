@@ -383,6 +383,26 @@ def test_normalize_fills_missing_plan_metadata_fields():
     assert plan["athlete_context"]["sport_profile"] == ""
 
 
+def test_normalize_plan_notes_coerces_category_and_drops_empty():
+    plan = normalize_structured_plan_candidate(
+        {
+            "plan_notes": [
+                {"category": "Weight_Cut", "label": "Active cut", "text": "~5.7% target."},
+                {"category": "bogus", "text": "Stay disciplined."},  # unknown -> general
+                {"category": "injury", "text": "   "},  # empty text -> dropped
+                "Keep the wound covered.",  # bare string -> general note
+                123,  # non-note -> dropped
+            ]
+        }
+    )
+    notes = plan["plan_notes"]
+    assert [n["category"] for n in notes] == ["weight_cut", "general", "general"]
+    assert notes[0] == {"category": "weight_cut", "label": "Active cut", "text": "~5.7% target."}
+    assert notes[2]["text"] == "Keep the wound covered."
+    # The normalized plan still validates strictly against the schema.
+    validate_structured_plan(normalize_structured_plan_candidate({"plan_notes": notes}))
+
+
 def test_normalize_invalid_event_type_maps_to_none():
     plan = normalize_structured_plan_candidate(
         {"event_context": {"event_type": "boxing_match", "fight_date": "2026-06-13"}}
