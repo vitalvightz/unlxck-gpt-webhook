@@ -614,31 +614,7 @@ export function RecoveryCard({ plan }: { plan: StructuredPlan }) {
   );
 }
 
-export function RawFallbackPanel({ rawText }: { rawText: string }) {
-  const [open, setOpen] = useState(false);
-  const text = rawText.trim();
-  if (!text) {
-    return null;
-  }
-  return (
-    <div className="sp-raw">
-      <button type="button" className="ghost-button" onClick={() => setOpen((prev) => !prev)}>
-        {open ? "Hide original plan text" : "Show original plan text"}
-      </button>
-      {open ? <pre className="plan-text-block">{text}</pre> : null}
-    </div>
-  );
-}
-
-export function StructuredPlanRenderer({
-  plan,
-  rawFallback,
-  showRawFallback = false,
-}: {
-  plan: StructuredPlan;
-  rawFallback?: string;
-  showRawFallback?: boolean;
-}) {
+export function StructuredPlanRenderer({ plan }: { plan: StructuredPlan }) {
   const weeks = getWeeks(plan);
   const progressionNotes = cleanText(plan.progression_notes);
   return (
@@ -663,7 +639,6 @@ export function StructuredPlanRenderer({
           <p className="sp-block-purpose">{progressionNotes}</p>
         </section>
       ) : null}
-      {showRawFallback && rawFallback ? <RawFallbackPanel rawText={rawFallback} /> : null}
     </div>
   );
 }

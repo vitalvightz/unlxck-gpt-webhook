@@ -141,6 +141,11 @@ const TRIAGE_BLOCKED_STUB_MARKERS = [
   "Clinician clearance is required",
 ];
 
+export type PlanTextCard = {
+  title: string;
+  lines: string[];
+};
+
 const ISSUE_TITLES: Record<string, string> = {
   restriction_violation: "Restriction violation",
   missing_required_element: "Missing phase-critical element",
@@ -200,6 +205,174 @@ function buildArtifactFilename(plan: PlanDetail, suffix: string) {
       .replace(/[^a-z0-9]+/g, "-")
       .replace(/^-+|-+$/g, "") || "athlete-plan";
   return `${base}-${suffix}.txt`;
+}
+
+function stripPlanMarkup(value: string): string {
+  return value
+    .replace(/^#{1,6}\s+/, "")
+    .replace(/^[-*]\s+/, "")
+    .replace(/^\d+\.\s+/, "")
+    .replace(/\*\*/g, "")
+    .trim();
+}
+
+function normalizePlanTextForCards(rawText: string): string {
+  return rawText
+    .replace(/\r\n/g, "\n")
+    .replace(/(^|\n)Lead notes\s+[-–—]?\s*/i, "$1Lead notes\n")
+    .replace(/\s+(?=(?:GPP|SPP|TAPER|FIGHT WEEK)\s+[—-]\s+Week\b)/gi, "\n")
+    .replace(/\s+(?=D-\d+\s+\([^)]+\)\s+[—-]\s+)/g, "\n")
+    .replace(/\s+(?=Final notes\b)/gi, "\n")
+    .replace(/(^|\n)Final notes\s+[-–—]?\s*/gi, "$1Final notes\n");
+}
+
+function splitPlanTextHeading(line: string): { title: string; remainder: string | null } | null {
+  const cleanLine = stripPlanMarkup(line);
+
+  if (!cleanLine || /^#+$/.test(cleanLine)) {
+    return null;
+  }
+
+  const noteMatch = cleanLine.match(/^(Lead notes|Final notes)(?:\s+[-–—]?\s*(.+))?$/i);
+  if (noteMatch) {
+    return { title: titleizeToken(noteMatch[1]), remainder: noteMatch[2] ?? null };
+  }
+
+  if (/^(GPP|SPP|TAPER|FIGHT WEEK)\s+[—-]\s+Week\b/i.test(cleanLine)) {
+    return { title: cleanLine, remainder: null };
+  }
+
+  if (/^D-\d+\s+\([^)]+\)\s+[—-]\s+/.test(cleanLine)) {
+    const markerMatch = cleanLine.match(/\s+(Why:|No app S&C|No app S and C)\s*/i);
+    const markerIndex = markerMatch?.index ?? -1;
+    return {
+      title: markerIndex > -1 ? cleanLine.slice(0, markerIndex).trim() : cleanLine,
+      remainder: markerIndex > -1 ? cleanLine.slice(markerIndex).trim() : null,
+    };
+  }
+
+  return null;
+}
+
+export function buildPlanTextCards(rawText: string): PlanTextCard[] {
+  const lines = normalizePlanTextForCards(rawText).split("\n");
+  const cards: PlanTextCard[] = [];
+  let current: PlanTextCard | null = null;
+  let pendingParagraph: string[] = [];
+
+  const pushParagraph = () => {
+    if (!pendingParagraph.length) {
+      return;
+    }
+    if (!current) {
+      current = { title: "Plan output", lines: [] };
+      cards.push(current);
+    }
+    const paragraph = pendingParagraph.join(" ").trim();
+    if (paragraph) {
+      current.lines.push(paragraph);
+    }
+    pendingParagraph = [];
+  };
+
+  const pushHeading = (heading: string) => {
+    pushParagraph();
+    current = { title: stripPlanMarkup(heading) || "Plan section", lines: [] };
+    cards.push(current);
+  };
+
+  for (const rawLine of lines) {
+    const line = rawLine.trim();
+    if (!line) {
+      pushParagraph();
+      continue;
+    }
+    if (/^#+$/.test(line)) {
+      continue;
+    }
+
+    const heading = splitPlanTextHeading(line);
+    if (heading) {
+      pushHeading(heading.title);
+      if (heading.remainder) {
+        current?.lines.push(stripPlanMarkup(heading.remainder));
+      }
+      continue;
+    }
+
+    if (!current) {
+      current = { title: "Plan output", lines: [] };
+      cards.push(current);
+    }
+
+    const listItem = line.match(/^([-*]|\d+\.)\s+(.+)$/);
+    if (listItem) {
+      pushParagraph();
+      current.lines.push(stripPlanMarkup(listItem[2]));
+      continue;
+    }
+
+    pendingParagraph.push(stripPlanMarkup(line));
+  }
+
+  pushParagraph();
+
+  return cards
+    .map((card) => ({
+      title: card.title,
+      lines: card.lines.filter(Boolean),
+    }))
+    .filter((card) => card.title || card.lines.length);
+}
+
+function PlanTextCards({ text }: { text: string }) {
+  const cards = buildPlanTextCards(text);
+
+  if (!cards.length) {
+    return (
+      <section className="sp-root legacy-plan-root">
+        <article className="sp-session legacy-plan-card">
+          <header className="sp-session-head">
+            <div>
+              <p className="sp-eyebrow sp-accent">Saved plan</p>
+              <h4 className="sp-session-title">No plan cards available</h4>
+            </div>
+          </header>
+          <p className="sp-session-objective">This saved plan does not contain athlete-facing plan content.</p>
+        </article>
+      </section>
+    );
+  }
+
+  return (
+    <section className="sp-root legacy-plan-root" aria-label="Saved plan cards">
+      <header className="sp-header legacy-plan-header">
+        <p className="sp-eyebrow sp-accent">Saved plan</p>
+        <h3 className="sp-title">Plan cards</h3>
+      </header>
+      <div className="legacy-plan-card-stack">
+        {cards.map((card, index) => (
+          <article key={`${card.title}-${index}`} className="sp-session legacy-plan-card">
+            <header className="sp-session-head">
+              <div>
+                <h4 className="sp-session-title">{card.title}</h4>
+              </div>
+              <div className="sp-session-meta">
+                <span className="sp-tag sp-accent">Card</span>
+              </div>
+            </header>
+            {card.lines.length ? (
+              <ul className="legacy-plan-lines">
+                {card.lines.map((line, lineIndex) => (
+                  <li key={`${card.title}-${lineIndex}`}>{line}</li>
+                ))}
+              </ul>
+            ) : null}
+          </article>
+        ))}
+      </div>
+    </section>
+  );
 }
 
 function getPlanDisplayName(plan: Pick<PlanDetail, "plan_name" | "fight_date">) {
@@ -1727,13 +1900,9 @@ export function PlanViewer({
               </div>
               <WeeklySparringView planId={plan.plan_id} />
               {shouldRenderStructuredPlan(plan.outputs) && plan.outputs.structured_plan ? (
-                <StructuredPlanRenderer
-                  plan={plan.outputs.structured_plan}
-                  rawFallback={athletePlanText}
-                  showRawFallback={canUseAdminOutputs}
-                />
+                <StructuredPlanRenderer plan={plan.outputs.structured_plan} />
               ) : (
-                <pre className="plan-text-block">{athletePlanText}</pre>
+                <PlanTextCards text={athletePlanText} />
               )}
               {rejectMessage ? <div className="success-banner">{rejectMessage}</div> : null}
               {rejectError ? <div className="error-banner">{rejectError}</div> : null}
