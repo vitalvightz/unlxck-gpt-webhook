@@ -3,6 +3,7 @@
 import { useId, useState, type ReactNode } from "react";
 
 import {
+  classifySessionlessDay,
   cleanText,
   formatBlockLoad,
   formatEffort,
@@ -273,10 +274,53 @@ export function TodayCard({ day }: { day: StructuredDay }) {
   );
 }
 
-export function DaySection({ day }: { day: StructuredDay }) {
+/**
+ * A day with no app sessions. Coach-led / sparring / technical days legitimately
+ * carry no app S&C blocks, so they are rendered as a self-contained card derived
+ * deterministically from the day data (see classifySessionlessDay) instead of
+ * collapsing into "Rest day.". Only a genuine rest day reads as a rest day.
+ */
+export function SessionlessDayCard({ day }: { day: StructuredDay }) {
   const date = cleanText(day.date);
   const countdown = cleanText(day.countdown_label);
   const dayType = cleanText(day.day_type);
+  const card = day.today_card;
+  const warning = cleanText(card?.primary_warning);
+  const nutrition = cleanText(card?.nutrition_summary);
+  const weightCut = cleanText(card?.weight_cut_warning);
+  const { kind, title, tag, coachLed } = classifySessionlessDay(day);
+  const isRest = kind === "rest";
+
+  return (
+    <article className={`sp-session sp-day-card sp-day-card-${kind}`}>
+      <header className="sp-session-head">
+        <div>
+          {countdown || date ? (
+            <div className="sp-day-labels sp-session-day-labels">
+              {countdown ? <span className="sp-countdown sp-accent">{countdown}</span> : null}
+              {date ? <span className="sp-day-date">{date}</span> : null}
+            </div>
+          ) : null}
+          <h4 className="sp-session-title">{title}</h4>
+        </div>
+        <div className="sp-session-meta">
+          {dayType ? <span className="sp-tag">{titleize(dayType)}</span> : null}
+          {tag ? <span className="sp-tag sp-accent">{tag}</span> : null}
+        </div>
+      </header>
+      {coachLed ? (
+        <p className="sp-today-note">No app S&amp;C today — train with your coach and keep freshness priority.</p>
+      ) : null}
+      {warning ? <p className="sp-warning">{warning}</p> : null}
+      {nutrition ? <p className="sp-today-note">{nutrition}</p> : null}
+      {weightCut ? <p className="sp-warning">{weightCut}</p> : null}
+      <MindsetAnchorCard anchor={card?.mindset_anchor} />
+      {isRest ? <p className="sp-muted">Rest day.</p> : null}
+    </article>
+  );
+}
+
+export function DaySection({ day }: { day: StructuredDay }) {
   const sessions = getSessions(day);
 
   return (
@@ -292,17 +336,7 @@ export function DaySection({ day }: { day: StructuredDay }) {
           ))}
         </div>
       ) : (
-        <>
-          <header className="sp-day-head">
-            <div className="sp-day-labels">
-              {countdown ? <span className="sp-countdown sp-accent">{countdown}</span> : null}
-              {date ? <span className="sp-day-date">{date}</span> : null}
-            </div>
-            {dayType ? <span className="sp-tag">{titleize(dayType)}</span> : null}
-          </header>
-          <TodayCard day={day} />
-          <p className="sp-muted">Rest day.</p>
-        </>
+        <SessionlessDayCard day={day} />
       )}
     </section>
   );

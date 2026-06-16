@@ -1156,6 +1156,12 @@ The JSON object MUST conform to the StructuredTrainingPlan schema:
   morning check-in only.
 - Each session MUST include completion_status (default "not_started") and a
   session-level mindset_anchor.
+- Coach-led, sparring, or technical days where the app prescribes NO S&C work
+  (e.g. "Coach-led boxing session", "no app S&C today", "technical only") MUST
+  still be emitted as a day. Leave that day's "sessions" as [] and set a concise
+  today_card.headline naming what it is (e.g. "Coach-led boxing", "Hard
+  sparring", "Technical only") so the day renders as its own card. Do NOT invent
+  S&C blocks for these days and do NOT drop the day.
 - daily_check_ins are OPTIONAL and must be either fully valid or omitted. Emit a
   check-in entry ONLY when the plan actually states a dated self-report; each
   entry MUST then carry "date", a "morning" object with all of "sleep_quality"

@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import {
+  classifySessionlessDay,
   cleanText,
   formatBlockLoad,
   formatMacroRange,
@@ -171,6 +172,41 @@ test("selectors return safe empties on missing/partial fields", () => {
   // A week/day/session with null nested arrays does not throw.
   const week = getWeeks({ structured_plan: validPlan() } as never);
   assert.equal(week.length, 0); // wrong-shaped input -> empty, no crash
+});
+
+// --- session-less day classification ----------------------------------------
+
+test("classifies coach-led / sparring / technical days from the headline", () => {
+  const make = (headline: string, day_type = "moderate") => ({
+    day_type,
+    today_card: { headline },
+  });
+
+  assert.equal(classifySessionlessDay(make("Coach-led boxing session")).kind, "coach_led");
+  assert.equal(classifySessionlessDay(make("Hard sparring")).kind, "sparring");
+  // "technical only / no hard sparring" must read as technical, not sparring.
+  assert.equal(
+    classifySessionlessDay(make("Coach-led boxing — no hard sparring / technical only")).kind,
+    "technical",
+  );
+  // A coach-led/sparring/technical day carries its headline as the card title
+  // and flags the "train with your coach" note.
+  const sparring = classifySessionlessDay(make("Hard sparring"));
+  assert.equal(sparring.title, "Hard sparring");
+  assert.equal(sparring.tag, "Sparring");
+  assert.equal(sparring.coachLed, true);
+});
+
+test("classifies a headline-less or rest day as a true rest day", () => {
+  assert.equal(classifySessionlessDay({ day_type: "rest", today_card: {} }).kind, "rest");
+  assert.equal(classifySessionlessDay({ day_type: "recovery" } as never).kind, "rest");
+  assert.equal(classifySessionlessDay(null).kind, "rest");
+  assert.equal(classifySessionlessDay({} as never).coachLed, false);
+  // A headline with no contact keyword still gets its own card (not "Rest day").
+  const scheduled = classifySessionlessDay({ today_card: { headline: "Active recovery flush" } });
+  assert.equal(scheduled.kind, "scheduled");
+  assert.equal(scheduled.title, "Active recovery flush");
+  assert.equal(scheduled.tag, null);
 });
 
 // --- field display rules ----------------------------------------------------

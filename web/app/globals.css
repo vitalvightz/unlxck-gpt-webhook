@@ -12580,6 +12580,14 @@ html[data-theme="light"] .loading-operational-item {
   font-size: 1rem;
   color: var(--text-primary);
 }
+/* Coach-led / sparring / technical days have no app blocks but still render as
+   their own card. A subtle left accent distinguishes them from full S&C
+   sessions; a genuine rest day stays unaccented. */
+.sp-day-card-coach_led,
+.sp-day-card-sparring,
+.sp-day-card-technical {
+  border-left: 3px solid var(--brand-red);
+}
 .sp-session-objective {
   margin: 4px 0 0;
   color: var(--text-secondary);
