@@ -483,6 +483,15 @@ def _parse_datetime(value: Any) -> datetime | None:
     return None
 
 
+def _parse_datetime_utc(value: Any) -> datetime | None:
+    parsed = _parse_datetime(value)
+    if parsed is None:
+        return None
+    if parsed.tzinfo is None:
+        return parsed.replace(tzinfo=timezone.utc)
+    return parsed.astimezone(timezone.utc)
+
+
 def _status_transition_error(detail: str) -> HTTPException:
     return HTTPException(status_code=status.HTTP_409_CONFLICT, detail=detail)
 
@@ -501,13 +510,13 @@ def _has_milestone_code(milestones: list[Any], code: str) -> bool:
 def _latest_generation_job_activity_at(job: dict[str, Any]) -> datetime | None:
     latest: datetime | None = None
     for field in ("heartbeat_at", "updated_at", "started_at", "created_at"):
-        parsed = _parse_datetime(job.get(field))
+        parsed = _parse_datetime_utc(job.get(field))
         if parsed is not None and (latest is None or parsed > latest):
             latest = parsed
     for entry in _progress_milestones(job.get("progress_milestones")):
         if not isinstance(entry, dict):
             continue
-        parsed = _parse_datetime(entry.get("at"))
+        parsed = _parse_datetime_utc(entry.get("at"))
         if parsed is not None and (latest is None or parsed > latest):
             latest = parsed
     return latest
