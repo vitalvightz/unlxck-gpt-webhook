@@ -20,6 +20,7 @@ from api.generation_runtime import run_generation_job, schedule_generation_job_i
 from api.models import ProfileUpdateRequest
 from api.stage2_automation import Stage2AutomationError, Stage2AutomationUnavailableError
 from api.store import (
+    _latest_generation_job_activity_at,
     is_job_loaded_stalled_generation_job,
     is_stage1_planner_stalled_generation_job,
     is_worker_start_stale_generation_job,
@@ -3988,6 +3989,22 @@ def test_recent_progress_milestone_activity_keeps_job_fresh():
         )
 
     assert store.get_generation_job(active["id"])["status"] == "running"
+
+
+def test_latest_activity_handles_mixed_naive_and_aware_datetimes():
+    old_aware = (datetime.now(timezone.utc) - timedelta(minutes=10)).isoformat()
+    recent_naive = datetime.now().replace(tzinfo=None)
+
+    latest = _latest_generation_job_activity_at(
+        {
+            "started_at": old_aware,
+            "heartbeat_at": old_aware,
+            "updated_at": recent_naive,
+            "progress_milestones": [{"code": "stage2_drafting", "at": old_aware}],
+        }
+    )
+
+    assert latest == recent_naive.replace(tzinfo=timezone.utc)
 
 
 def test_stage2_drafting_old_heartbeat_is_reaped_and_does_not_block_new_job():
