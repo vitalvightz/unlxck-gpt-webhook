@@ -483,6 +483,15 @@ def _parse_datetime(value: Any) -> datetime | None:
     return None
 
 
+def _parse_datetime_utc(value: Any) -> datetime | None:
+    parsed = _parse_datetime(value)
+    if parsed is None:
+        return None
+    if parsed.tzinfo is None:
+        return parsed.replace(tzinfo=timezone.utc)
+    return parsed.astimezone(timezone.utc)
+
+
 def _status_transition_error(detail: str) -> HTTPException:
     return HTTPException(status_code=status.HTTP_409_CONFLICT, detail=detail)
 
@@ -496,6 +505,53 @@ def _has_milestone_code(milestones: list[Any], code: str) -> bool:
         if isinstance(entry, dict) and str(entry.get("code") or "") == code:
             return True
     return False
+
+
+def _latest_generation_job_activity_at(job: dict[str, Any]) -> datetime | None:
+    latest: datetime | None = None
+    for field in ("heartbeat_at", "updated_at", "started_at", "created_at"):
+        parsed = _parse_datetime_utc(job.get(field))
+        if parsed is not None and (latest is None or parsed > latest):
+            latest = parsed
+    for entry in _progress_milestones(job.get("progress_milestones")):
+        if not isinstance(entry, dict):
+            continue
+        parsed = _parse_datetime_utc(entry.get("at"))
+        if parsed is not None and (latest is None or parsed > latest):
+            latest = parsed
+    return latest
+
+
+def _is_active_generation_job_stale_by_latest_activity(
+    job: dict[str, Any],
+    *,
+    stale_after_seconds: int,
+) -> bool:
+    if str(job.get("status") or "") not in {"queued", "running"}:
+        return False
+    latest = _latest_generation_job_activity_at(job)
+    if latest is None:
+        return False
+    if latest.tzinfo is None:
+        latest = latest.replace(tzinfo=timezone.utc)
+    else:
+        latest = latest.astimezone(timezone.utc)
+    return (datetime.now(timezone.utc) - latest).total_seconds() >= max(1, stale_after_seconds)
+
+
+def _stale_job_reaped_milestones(job: dict[str, Any], *, now_iso: str) -> list[Any]:
+    milestones = list(_progress_milestones(job.get("progress_milestones")))
+    if not _has_milestone_code(milestones, "stale_job_reaped"):
+        milestones.append(
+            {
+                "code": "stale_job_reaped",
+                "label": "Stale job reaped",
+                "detail": "Job activity timed out and was failed so a new generation can start.",
+                "meta": {},
+                "at": now_iso,
+            }
+        )
+    return milestones
 
 
 def _should_recover_stalled_job(job: dict[str, Any]) -> bool:
@@ -739,6 +795,76 @@ class SupabaseAppStore:
         if (datetime.now(timezone.utc) - reference_time).total_seconds() < max(1, stale_after_seconds):
             return "fresh"
         return "mid_pipeline_stale"
+
+    def _fail_stale_active_generation_jobs_for_athlete(
+        self,
+        athlete_id: str,
+        *,
+        stale_after_seconds: int,
+        exclude_client_request_id: str | None = None,
+    ) -> None:
+        try:
+            query = self.client.table("generation_jobs") \
+                .select(GENERATION_JOB_SELECT) \
+                .eq("athlete_id", athlete_id) \
+                .in_("status", ["queued", "running"])
+            if exclude_client_request_id:
+                query = query.neq("client_request_id", exclude_client_request_id)
+            response = self._run_with_transient_retry(
+                operation=f"fail_stale_active_generation_jobs_for_athlete:select athlete_id={athlete_id}",
+                fn=lambda: query.order("created_at", desc=True).limit(25).execute(),
+            )
+        try:
+            response = self._run_with_transient_retry(
+                operation=f"fail_stale_active_generation_jobs_for_athlete:select athlete_id={athlete_id}",
+                fn=lambda: self.client.table("generation_jobs")
+                .select(GENERATION_JOB_SELECT)
+                .eq("athlete_id", athlete_id)
+                .in_("status", ["queued", "running"])
+                .order("created_at", desc=True)
+                .limit(25)
+                .execute(),
+            )
+            rows = [row for row in (getattr(response, "data", None) or []) if isinstance(row, dict)]
+            for row in rows:
+                if not _is_active_generation_job_stale_by_latest_activity(
+                    row,
+                    stale_after_seconds=stale_after_seconds,
+                ):
+                    continue
+                now_iso = _utc_now_iso()
+                self._run_with_transient_retry(
+                    operation="fail_stale_active_generation_jobs_for_athlete:update",
+                    fn=lambda row=row, now_iso=now_iso: self.client.table("generation_jobs")
+                    .update(
+                        {
+                            "status": "failed",
+                            "error": "Generation job stalled. Please try again.",
+                            "completed_at": now_iso,
+                            "failed_at": now_iso,
+                            "heartbeat_at": now_iso,
+                            "progress_milestones": _stale_job_reaped_milestones(row, now_iso=now_iso),
+                        }
+                    )
+                    .eq("id", str(row.get("id") or ""))
+                    .in_("status", ["queued", "running"])
+                    .execute(),
+                )
+        except _STORE_CLIENT_ERRORS as exc:
+            if self._is_transient_store_error(exc):
+                raise HTTPException(
+                    status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                    detail=GENERATION_JOB_UNAVAILABLE_DETAIL,
+                ) from exc
+            if self._is_generation_job_schema_error(exc):
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail=GENERATION_JOB_SCHEMA_DETAIL,
+                ) from exc
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="failed to reap stale generation jobs",
+            ) from exc
 
     def _log_profile_event(self, *, operation: str, user: AuthenticatedUser, **fields: Any) -> None:
         details = " ".join(f"{key}=%r" % value for key, value in sorted(fields.items()))
@@ -1788,6 +1914,11 @@ class SupabaseAppStore:
             context=f"athlete_id={athlete_id} client_request_id={client_request_id}",
         )
         payload_hash = _stable_payload_hash(request_payload)
+        self._fail_stale_active_generation_jobs_for_athlete(
+            athlete_id,
+            stale_after_seconds=stale_after_seconds,
+            exclude_client_request_id=client_request_id,
+        )
 
         try:
             existing = self._run_with_transient_retry(
@@ -1821,7 +1952,6 @@ class SupabaseAppStore:
             last_error = exc
             existing = None
         if existing:
-            _raise_client_request_payload_mismatch_if_known(existing, payload_hash)
             if is_startup_stale_generation_job(existing, stale_after_seconds=stale_after_seconds):
                 reset_payload = {
                     "status": "queued",
@@ -1857,6 +1987,7 @@ class SupabaseAppStore:
                 refreshed = self.get_generation_job(str(existing["id"]))
                 if refreshed:
                     return refreshed
+            _raise_client_request_payload_mismatch_if_known(existing, payload_hash)
             return existing
         active_job = self.get_active_generation_job_for_athlete(
             athlete_id,
@@ -1994,6 +2125,11 @@ class SupabaseAppStore:
             context=f"athlete_id={athlete_id} client_request_id={client_request_id}",
         )
         payload_hash = _stable_payload_hash(request_payload)
+        self._fail_stale_active_generation_jobs_for_athlete(
+            athlete_id,
+            stale_after_seconds=stale_after_seconds,
+            exclude_client_request_id=client_request_id,
+        )
 
         # Recover stale `running` jobs before the atomic RPC runs. The RPC's
         # in-flight guard checks `status in ('queued', 'running')` purely at the

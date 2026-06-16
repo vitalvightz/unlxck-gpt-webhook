@@ -294,7 +294,7 @@ def test_admin_generate_resets_stale_existing_job_to_admin_latest_intake_linkage
 
 def test_admin_generation_does_not_consume_self_serve_daily_limit(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setenv("APP_PLAN_GENERATE_DAILY_LIMIT_PER_USER", "1")
-    client, _, _ = _build_client()
+    client, _, _ = _build_client(enable_in_process_generation=False)
 
     first = client.post(
         "/api/plans/generate",
@@ -325,7 +325,7 @@ def test_admin_generation_does_not_consume_self_serve_daily_limit(monkeypatch: p
 
 
 def test_self_serve_generation_rejects_new_job_when_another_job_is_active():
-    client, _, _ = _build_client()
+    client, _, _ = _build_client(enable_in_process_generation=False)
     first = client.post(
         "/api/plans/generate",
         headers={"Authorization": "Bearer athlete-token", "X-Client-Request-Id": "active-1"},

@@ -41,6 +41,35 @@ def _now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
+def _parse_iso(value: object) -> datetime | None:
+    if not value:
+        return None
+    if isinstance(value, datetime):
+        return value if value.tzinfo else value.replace(tzinfo=timezone.utc)
+    if isinstance(value, str):
+        try:
+            parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+            return parsed if parsed.tzinfo else parsed.replace(tzinfo=timezone.utc)
+        except ValueError:
+            return None
+    return None
+
+
+def _latest_job_activity_at(job: dict) -> datetime | None:
+    latest: datetime | None = None
+    for field in ("heartbeat_at", "updated_at", "started_at", "created_at"):
+        parsed = _parse_iso(job.get(field))
+        if parsed is not None and (latest is None or parsed > latest):
+            latest = parsed
+    for milestone in job.get("progress_milestones") or []:
+        if not isinstance(milestone, dict):
+            continue
+        parsed = _parse_iso(milestone.get("at"))
+        if parsed is not None and (latest is None or parsed > latest):
+            latest = parsed
+    return latest
+
+
 def _status_transition_error(detail: str) -> HTTPException:
     return HTTPException(status_code=status.HTTP_409_CONFLICT, detail=detail)
 
@@ -150,11 +179,7 @@ class FakeStore:
             return "startup_stale"
         if is_stage1_planner_stalled_generation_job(job, stale_after_seconds=stage1_stale_after_seconds):
             return "stage1_planner_stalled"
-        heartbeat_raw = job.get("heartbeat_at")
-        started_raw = job.get("started_at")
-        heartbeat = datetime.fromisoformat(str(heartbeat_raw).replace("Z", "+00:00")) if heartbeat_raw else None
-        started_at = datetime.fromisoformat(str(started_raw).replace("Z", "+00:00")) if started_raw else None
-        reference = heartbeat or started_at
+        reference = _latest_job_activity_at(job)
         if reference is None:
             return "fresh"
         age = (datetime.now(timezone.utc) - reference).total_seconds()
@@ -394,11 +419,12 @@ class FakeStore:
         stale_after_seconds: int = 90,
     ) -> dict:
         payload_hash = _stable_payload_hash(request_payload)
+        self._fail_stale_active_generation_jobs_for_athlete(
+            athlete_id,
+            stale_after_seconds=stale_after_seconds,
+        )
         for job in self.generation_jobs.values():
             if job["athlete_id"] == athlete_id and job["client_request_id"] == client_request_id:
-                existing_hash = job.get("payload_hash")
-                if existing_hash and str(existing_hash) != payload_hash:
-                    raise client_request_id_payload_mismatch_error()
                 if is_startup_stale_generation_job(job, stale_after_seconds=stale_after_seconds):
                     now = _now()
                     reset_changes = {
@@ -424,6 +450,9 @@ class FakeStore:
                         reset_changes["intake_id"] = intake_id
 
                     job.update(reset_changes)
+                existing_hash = job.get("payload_hash")
+                if existing_hash and str(existing_hash) != payload_hash:
+                    raise client_request_id_payload_mismatch_error()
                 return dict(job)
         active = self.get_active_generation_job_for_athlete(athlete_id, stale_after_seconds=stale_after_seconds)
         # Mirror SupabaseAppStore.create_or_get_generation_job: only a job that is
@@ -469,6 +498,60 @@ class FakeStore:
         }
         self.generation_jobs[job_id] = job
         return dict(job)
+
+    def _fail_stale_active_generation_jobs_for_athlete(
+        self,
+        athlete_id: str,
+        *,
+        stale_after_seconds: int,
+        exclude_client_request_id: str | None = None,
+    ) -> None:
+        cutoff_seconds = max(1, stale_after_seconds)
+        now_dt = datetime.now(timezone.utc)
+        now = _now()
+        for job in self.generation_jobs.values():
+            if str(job.get("athlete_id") or "") != athlete_id:
+                continue
+            if exclude_client_request_id and str(job.get("client_request_id") or "") == exclude_client_request_id:
+                continue
+            if str(job.get("status") or "") not in {"queued", "running"}:
+                continue
+        cutoff_seconds = max(1, stale_after_seconds)
+        now_dt = datetime.now(timezone.utc)
+        now = _now()
+        for job in self.generation_jobs.values():
+            if str(job.get("athlete_id") or "") != athlete_id:
+                continue
+            if str(job.get("status") or "") not in {"queued", "running"}:
+                continue
+            latest = _latest_job_activity_at(job)
+            if latest is None:
+                continue
+            latest = latest.astimezone(timezone.utc)
+            if (now_dt - latest).total_seconds() < cutoff_seconds:
+                continue
+            milestones = list(job.get("progress_milestones") or [])
+            if not any(isinstance(item, dict) and item.get("code") == "stale_job_reaped" for item in milestones):
+                milestones.append(
+                    {
+                        "code": "stale_job_reaped",
+                        "label": "Stale job reaped",
+                        "detail": "Job activity timed out and was failed so a new generation can start.",
+                        "meta": {},
+                        "at": now,
+                    }
+                )
+            job.update(
+                {
+                    "status": "failed",
+                    "error": "Generation job stalled. Please try again.",
+                    "completed_at": now,
+                    "failed_at": now,
+                    "heartbeat_at": now,
+                    "progress_milestones": milestones,
+                    "updated_at": now,
+                }
+            )
 
     def create_or_get_generation_job_with_daily_limit(
         self,

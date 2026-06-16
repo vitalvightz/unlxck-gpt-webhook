@@ -74,6 +74,10 @@ def _spawn_planner_returns_large_result(payload):
     return {"status": "ok", "blob": blob, "value": payload["value"]}
 
 
+def _spawn_planner_returns_ready_plan(payload):
+    return {"status": "ready", "plan_text": "draft"}
+
+
 def _clear_environment_markers(monkeypatch):
     for var in _ENVIRONMENT_VARS:
         monkeypatch.delenv(var, raising=False)
@@ -375,6 +379,42 @@ def test_stage2_finalize_timeout_respects_valid_override(monkeypatch):
 def test_stage2_finalize_timeout_enforces_minimum_of_1(monkeypatch):
     monkeypatch.setenv("APP_STAGE2_FINALIZE_TIMEOUT_SECONDS", "0.5")
     assert _stage2_finalize_timeout_seconds() == 1.0
+
+
+def test_stage2_timeout_fails_generation_job(monkeypatch):
+    class HangingStage2:
+        async def finalize(self, *, stage1_result: dict, log_context: dict | None = None) -> dict:
+            await asyncio.sleep(1)
+            return finalized_result()
+
+    monkeypatch.setenv("APP_STAGE2_FINALIZE_TIMEOUT_SECONDS", "0.01")
+    store = FakeStore()
+    seed_default_profiles(store)
+    job = store.create_or_get_generation_job(
+        athlete_id="athlete-1",
+        client_request_id="stage2-timeout",
+        source="self_serve",
+        request_payload=_build_request().model_dump(mode="json"),
+    )
+
+    asyncio.run(
+        generation_runtime.run_generation_job(
+            job_id=job["id"],
+            store=store,
+            planner_fn=_spawn_planner_returns_ready_plan,
+            stage2=HangingStage2(),
+            active_tasks=set(),
+        )
+    )
+
+    saved = store.get_generation_job(job["id"])
+    assert saved["status"] == "failed"
+    assert saved["error"] == "Stage 2 finalizer timed out."
+    codes = [milestone["code"] for milestone in saved["progress_milestones"]]
+    assert "stage2_drafting" in codes
+    assert "stage2_model_call_started" in codes
+    assert "stage2_finalizer_timeout" in codes
+    assert not store.plans
 
 
 def test_invoke_planner_passes_progress_callback_when_supported():
