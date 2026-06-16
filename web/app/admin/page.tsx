@@ -22,8 +22,6 @@ import {
   hasProfileRefreshFailedWarning,
 } from "@/lib/profile-refresh-warning";
 import {
-  PROFILE_SERVICE_WARNING_BODY,
-  PROFILE_SERVICE_WARNING_TITLE,
   PROFILE_UNAVAILABLE_ROW_LABEL,
   isProfileServiceUnavailableMessage,
   nonProfileSectionError,
@@ -479,8 +477,8 @@ export default function AdminPage() {
         {profileWarning.show ? (
           <div className="warning-banner admin-profile-warning-banner" role="status">
             <div className="admin-profile-warning-copy">
-              <strong>{PROFILE_SERVICE_WARNING_TITLE}</strong>
-              <span>{PROFILE_SERVICE_WARNING_BODY}</span>
+              <strong>{profileWarning.title}</strong>
+              <span>{profileWarning.body}</span>
               {profileWarning.requestId ? (
                 <span className="muted admin-profile-warning-request">
                   Latest request id: {profileWarning.requestId}

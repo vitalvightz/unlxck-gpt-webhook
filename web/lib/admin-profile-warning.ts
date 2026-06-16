@@ -10,6 +10,9 @@
 export const PROFILE_SERVICE_WARNING_TITLE = "Profile service temporarily unavailable.";
 export const PROFILE_SERVICE_WARNING_BODY =
   "Queues are shown with limited athlete details.";
+export const ADMIN_SERVICE_WARNING_TITLE = "Support data temporarily unavailable.";
+export const ADMIN_SERVICE_WARNING_BODY =
+  "Dashboard sections are shown with the latest available details.";
 export const PROFILE_UNAVAILABLE_ROW_LABEL = "Profile unavailable";
 
 // Lower-cased fragments of the transient profile/store errors surfaced by the
@@ -22,10 +25,25 @@ const PROFILE_SERVICE_ERROR_SNIPPETS = [
   "failed to ensure profile",
 ];
 
+const ADMIN_SERVICE_ERROR_SNIPPETS = [
+  "authentication service temporarily unavailable",
+  "the plan service is temporarily unavailable",
+  "the plan service is taking longer than expected",
+  "request failed: 502",
+  "request failed: 503",
+  "request failed: 504",
+];
+
 export function isProfileServiceUnavailableMessage(message: string | null | undefined): boolean {
   if (!message) return false;
   const normalized = message.toLowerCase();
   return PROFILE_SERVICE_ERROR_SNIPPETS.some((snippet) => normalized.includes(snippet));
+}
+
+export function isAdminServiceUnavailableMessage(message: string | null | undefined): boolean {
+  if (!message) return false;
+  const normalized = message.toLowerCase();
+  return ADMIN_SERVICE_ERROR_SNIPPETS.some((snippet) => normalized.includes(snippet));
 }
 
 // Error messages carry the request id inline as "(request id: <id>)" — see
@@ -57,6 +75,8 @@ export type ProfileWarningInput = {
 export type ProfileWarningSummary = {
   show: boolean;
   requestId: string | null;
+  title: string;
+  body: string;
 };
 
 // Collapse every profile-service signal across the page into one banner. The
@@ -68,11 +88,12 @@ export function summarizeProfileWarning(input: ProfileWarningInput): ProfileWarn
     (message): message is string => typeof message === "string" && message.length > 0,
   );
   const profileSectionErrors = sectionErrors.filter(isProfileServiceUnavailableMessage);
-  const show = input.rowsDegraded === true || profileSectionErrors.length > 0;
+  const adminSectionErrors = sectionErrors.filter(isAdminServiceUnavailableMessage);
+  const show = input.rowsDegraded === true || profileSectionErrors.length > 0 || adminSectionErrors.length > 0;
 
   let requestId = input.requestId?.trim() || null;
   if (!requestId) {
-    for (const message of profileSectionErrors) {
+    for (const message of [...profileSectionErrors, ...adminSectionErrors]) {
       const candidate = extractRequestId(message);
       if (candidate) {
         requestId = candidate;
@@ -80,7 +101,13 @@ export function summarizeProfileWarning(input: ProfileWarningInput): ProfileWarn
     }
   }
 
-  return { show, requestId };
+  const hasOnlyAdminServiceErrors = profileSectionErrors.length === 0 && adminSectionErrors.length > 0;
+  return {
+    show,
+    requestId,
+    title: hasOnlyAdminServiceErrors ? ADMIN_SERVICE_WARNING_TITLE : PROFILE_SERVICE_WARNING_TITLE,
+    body: hasOnlyAdminServiceErrors ? ADMIN_SERVICE_WARNING_BODY : PROFILE_SERVICE_WARNING_BODY,
+  };
 }
 
 // A profile-service section error is no longer worth showing as its own block
@@ -96,8 +123,8 @@ export function summarizeProfileWarning(input: ProfileWarningInput): ProfileWarn
 //       -> "failed to load review queue"
 //   "failed to load athlete directory" -> unchanged
 const PROFILE_SERVICE_FRAGMENT_PATTERN = new RegExp(
-  // A profile/store-service phrase plus its optional "(request id: ...)" suffix.
-  `(?:${PROFILE_SERVICE_ERROR_SNIPPETS.map((snippet) =>
+  // A transient service phrase plus its optional "(request id: ...)" suffix.
+  `(?:${[...PROFILE_SERVICE_ERROR_SNIPPETS, ...ADMIN_SERVICE_ERROR_SNIPPETS].map((snippet) =>
     snippet.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"),
   ).join("|")})(?:\\s*\\(request id:[^)]*\\))?`,
   "gi",
@@ -105,8 +132,8 @@ const PROFILE_SERVICE_FRAGMENT_PATTERN = new RegExp(
 
 export function nonProfileSectionError(message: string | null | undefined): string | null {
   if (!message) return null;
-  // No profile-service fragment present: surface the error untouched.
-  if (!isProfileServiceUnavailableMessage(message)) return message;
+  // No transient service fragment present: surface the error untouched.
+  if (!isProfileServiceUnavailableMessage(message) && !isAdminServiceUnavailableMessage(message)) return message;
   // Remove every profile-service fragment, then tidy the leftover separators so
   // a dangling "; " or ". " from the removed fragment is not surfaced on its own.
   const remainder = message

@@ -3,6 +3,9 @@ import assert from "node:assert/strict";
 
 import {
   extractRequestId,
+  ADMIN_SERVICE_WARNING_TITLE,
+  PROFILE_SERVICE_WARNING_TITLE,
+  isAdminServiceUnavailableMessage,
   isProfileServiceUnavailableMessage,
   nonProfileSectionError,
   summarizeProfileWarning,
@@ -124,4 +127,42 @@ test("profile banner still shows for mixed errors and keeps the request id", () 
   });
   assert.equal(summary.show, true);
   assert.equal(summary.requestId, "req-7");
+});
+
+test("detects admin-service unavailable messages", () => {
+  assert.equal(
+    isAdminServiceUnavailableMessage("authentication service temporarily unavailable (request id: abc)"),
+    true,
+  );
+  assert.equal(isAdminServiceUnavailableMessage("Request failed: 502 Request failed: 502"), true);
+  assert.equal(isAdminServiceUnavailableMessage("Unable to load active generation jobs."), false);
+});
+
+test("shows support-data banner for authentication and gateway failures", () => {
+  const summary = summarizeProfileWarning({
+    sectionErrors: [
+      "authentication service temporarily unavailable (request id: old)",
+      "authentication service temporarily unavailable (request id: latest)",
+    ],
+  });
+  assert.equal(summary.show, true);
+  assert.equal(summary.title, ADMIN_SERVICE_WARNING_TITLE);
+  assert.equal(summary.requestId, "latest");
+});
+
+test("keeps profile banner title for profile-service failures", () => {
+  const summary = summarizeProfileWarning({
+    sectionErrors: ["profile service temporarily unavailable (request id: req-1)"],
+  });
+  assert.equal(summary.title, PROFILE_SERVICE_WARNING_TITLE);
+});
+
+test("nonProfileSectionError suppresses pure admin-service failures", () => {
+  assert.equal(
+    nonProfileSectionError(
+      "authentication service temporarily unavailable (request id: a) authentication service temporarily unavailable (request id: b)",
+    ),
+    null,
+  );
+  assert.equal(nonProfileSectionError("Request failed: 502 Request failed: 502"), null);
 });
