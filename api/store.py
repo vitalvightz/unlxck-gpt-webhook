@@ -3726,12 +3726,17 @@ class SupabaseAppStore:
         if not expected_snapshot:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
         payload = self._build_plan_stage2_payload(expected_snapshot, result)
+        # Guard only on lightweight state markers, never on the multi-KB text
+        # bodies. PostgREST serializes `.eq()` filters into the request URL, so
+        # filtering on plan_text/draft_plan_text/final_plan_text/stage2_retry_text
+        # pushes the entire plan into the query string and trips PostgREST's URL
+        # length limit, which returns a bare "400 Bad Request" (plain text, not
+        # JSON) and surfaces as an opaque APIError. Every write that mutates plan
+        # text also advances one of these markers (status transition,
+        # stage2_status, or stage2_attempt_count), so a concurrent change is still
+        # detected without inflating the URL.
         guarded_fields = (
             "status",
-            "plan_text",
-            "draft_plan_text",
-            "final_plan_text",
-            "stage2_retry_text",
             "stage2_status",
             "stage2_attempt_count",
         )
