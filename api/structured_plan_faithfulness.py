@@ -126,8 +126,11 @@ def _present_in_source(tok: str, source_tokens: set[str]) -> bool:
 
 def _dday_num(label: Any) -> int | None:
     """Parse the integer countdown distance from a label like ``D-15`` / ``D0``."""
-    match = re.search(r"D\s*-?\s*(\d+)", str(label or ""), re.I)
-    return int(match.group(1)) if match else None
+    match = _DDAY_RE.search(str(label or ""))
+    if not match:
+        return None
+    sign, num = match.groups()
+    return -int(num) if sign == "-" else int(num)
 
 
 def _source_day_sections(markdown: str) -> dict[int, str]:
