@@ -922,9 +922,12 @@ def test_structured_post_processing_does_not_overwrite_concurrent_manual_edit(mo
     assert row["stage2_status"] == "manual_stage2_pass"
     assert row["stage2_retry_text"] == "tweak the taper"
     assert row["stage2_attempt_count"] == 2
-    # The structured output is still persisted via the narrow writer only.
-    assert row["structured_plan"] is not None
-    assert row["schema_version"] == SCHEMA_VERSION
+    # The card was converted from the pre-edit text, so it is now a stale
+    # projection of superseded text: the narrow writer rejects it rather than
+    # publishing a card that contradicts the manually edited plan_text.
+    assert row.get("structured_plan") is None
+    assert row.get("schema_version") is None
+    # The full Stage 2 writer was never used either.
     assert stage2_calls["calls"] == 0
 
 
@@ -967,6 +970,9 @@ def test_structured_post_processing_does_not_overwrite_concurrent_reject(monkeyp
     assert row["final_plan_text"] == ""
     assert row["stage2_status"] == "admin_rejected"
     assert row["stage2_retry_text"] == "rejected by reviewer"
+    # The card was converted from the pre-reject text; the stale-write guard
+    # rejects it so an archived plan is never re-released with a structured card.
+    assert row.get("structured_plan") is None
     # The full Stage 2 writer was never used (it would have failed the
     # archived->ready transition or otherwise clobbered the row).
     assert stage2_calls["calls"] == 0
@@ -1089,3 +1095,49 @@ def test_backfill_is_noop_without_automator():
     asyncio.run(backfill_structured_plans(store=store, stage2=None, plan_ids=["needs-card"]))
 
     assert store.plans["needs-card"]["structured_plan"] is None
+
+
+# ---------------------------------------------------------------------------
+# Stale-write guard: a card converted from now-superseded text is not written
+# ---------------------------------------------------------------------------
+
+
+def test_structured_artifacts_write_skipped_when_text_changed():
+    """The narrow writer rejects a card whose source text no longer matches.
+
+    Models an async conversion/backfill that read the plan text, produced a card,
+    and tried to persist it after a concurrent edit changed final_plan_text. The
+    card is now a stale projection of superseded text, so the write is skipped and
+    the row keeps its raw-markdown fallback.
+    """
+    store = FakeStore()
+    plan_id = _seed_held_plan(store)
+    store.plans[plan_id]["final_plan_text"] = "# edited after conversion started"
+
+    returned = store.update_plan_structured_artifacts(
+        plan_id,
+        structured_plan={"schema_version": SCHEMA_VERSION},
+        schema_version=SCHEMA_VERSION,
+        stage2_validator_report={},
+        expected_final_plan_text="# approved plan",  # the pre-edit text
+    )
+
+    assert returned.get("structured_plan") is None
+    assert store.plans[plan_id].get("structured_plan") is None
+
+
+def test_structured_artifacts_write_proceeds_when_text_unchanged():
+    """The card is persisted when the source text still matches at write time."""
+    store = FakeStore()
+    plan_id = _seed_held_plan(store)  # final_plan_text == "# approved plan"
+
+    store.update_plan_structured_artifacts(
+        plan_id,
+        structured_plan={"schema_version": SCHEMA_VERSION},
+        schema_version=SCHEMA_VERSION,
+        stage2_validator_report={},
+        expected_final_plan_text="# approved plan",
+    )
+
+    assert store.plans[plan_id]["structured_plan"] == {"schema_version": SCHEMA_VERSION}
+    assert store.plans[plan_id]["schema_version"] == SCHEMA_VERSION

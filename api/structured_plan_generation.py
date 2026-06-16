@@ -25,6 +25,7 @@ from dataclasses import dataclass, field
 from typing import Any, Callable, Literal, get_args
 
 from .state_machine import is_athlete_displayable_plan_status
+from .structured_plan_faithfulness import check_structured_faithfulness
 from .structured_plan_safety import athlete_safe_support, audit_structured_plan
 from .structured_plan_models import (
     SCHEMA_VERSION,
@@ -1057,6 +1058,12 @@ def build_structured_plan_outcome(
     first = safe_parse_structured_plan(cleaned, raw_markdown=raw_markdown or None)
     if first.ok and first.plan is not None:
         plan_dict = _with_deterministic_support(first.plan.model_dump(mode="json"), computed_support)
+        unfaithful = check_structured_faithfulness(plan_dict, raw_markdown)
+        if unfaithful:
+            return StructuredPlanOutcome(
+                status="invalid_fallback_used",
+                errors=[f"faithfulness: {issue}" for issue in unfaithful],
+            )
         return StructuredPlanOutcome(
             status="valid",
             structured_plan=plan_dict,
@@ -1080,6 +1087,12 @@ def build_structured_plan_outcome(
     )
     if repaired.ok and repaired.plan is not None:
         plan_dict = _with_deterministic_support(repaired.plan.model_dump(mode="json"), computed_support)
+        unfaithful = check_structured_faithfulness(plan_dict, raw_markdown)
+        if unfaithful:
+            return StructuredPlanOutcome(
+                status="invalid_fallback_used",
+                errors=[f"faithfulness: {issue}" for issue in unfaithful],
+            )
         return StructuredPlanOutcome(
             status="repair_attempted_valid",
             structured_plan=plan_dict,
