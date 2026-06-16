@@ -1242,6 +1242,17 @@ class FakeStore:
         rows.sort(key=lambda row: row["created_at"], reverse=True)
         return self._attach_profile_contacts(rows[:limit])
 
+    def list_plans_missing_structured_plan(self, *, limit: int = 50) -> list[dict]:
+        displayable = {"ready", "publishable_with_flags"}
+        rows = [
+            dict(plan)
+            for plan in self.plans.values()
+            if str(plan.get("status") or "").strip().lower() in displayable
+            and plan.get("structured_plan") is None
+        ]
+        rows.sort(key=lambda row: row.get("created_at") or "", reverse=True)
+        return rows[:limit]
+
     def list_admin_athletes(self, *, limit: int = 50, offset: int = 0, q: str | None = None) -> list[dict]:
         rows = []
         for profile in self.profiles.values():

@@ -55,6 +55,8 @@ from .sentry_config import init_sentry
 from .services.generation_request_service import generate_plan_for_current_user
 from .services.admin_stage2_service import (
     approve_review_required_plan as approve_review_required_plan_service,
+    backfill_structured_plans as backfill_structured_plans_service,
+    list_structured_plan_backfill_candidates as list_structured_plan_backfill_candidates_service,
     run_structured_plan_post_processing as run_structured_plan_post_processing_service,
     submit_manual_stage2 as submit_manual_stage2_service,
 )
@@ -916,6 +918,27 @@ def create_app(
             stage2=stage2,
         )
         return detail
+
+    @app.post("/api/admin/plans/structured-plan/backfill", status_code=202)
+    async def backfill_structured_plans(
+        background_tasks: BackgroundTasks,
+        _: ProfileRecord = Depends(require_admin),
+        store: AppStore = Depends(get_store),
+        stage2: Stage2Automator = Depends(get_stage2_automator),
+        limit: int = Query(default=25, ge=1, le=200),
+    ) -> dict[str, Any]:
+        # Find displayable plans with no structured card, then convert them in the
+        # background (one model call each) so the admin request returns immediately
+        # — the same fast-response/background-conversion contract as approval. Cards
+        # appear on the affected plans as each conversion lands.
+        plan_ids = await list_structured_plan_backfill_candidates_service(store=store, limit=limit)
+        background_tasks.add_task(
+            backfill_structured_plans_service,
+            store=store,
+            stage2=stage2,
+            plan_ids=plan_ids,
+        )
+        return {"queued": len(plan_ids), "plan_ids": plan_ids}
 
     @app.post("/api/admin/plans/{plan_id}/approve-and-resume-generation", response_model=GenerationJobResponse, status_code=202)
     async def approve_and_resume_generation(

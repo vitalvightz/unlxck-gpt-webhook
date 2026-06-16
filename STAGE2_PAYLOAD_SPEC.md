@@ -44,8 +44,9 @@ Beside the raw `plan_text`, Stage 2 can also emit a machine-readable
 `StructuredTrainingPlan` (see `api/structured_plan_models.py`). This runs *next
 to* the legacy flow and never replaces it:
 
-- It is gated by `UNLXCK_STAGE2_STRUCTURED_PLAN` (off by default — structured
-  generation is a second model call). When off, nothing changes.
+- It is gated by `UNLXCK_STAGE2_STRUCTURED_PLAN` (**on by default** — structured
+  generation is a second model call). Set it to a falsey value (`0`/`false`/
+  `no`/`off`/empty) to disable it; the raw `plan_text` flow is then the fallback.
 - On a passing plan, the finalizer asks the model to convert the markdown plan
   into a `StructuredTrainingPlan` JSON object (`build_structured_plan_prompt`),
   then validates it (`validate → one repair retry → raw-markdown fallback`, via
