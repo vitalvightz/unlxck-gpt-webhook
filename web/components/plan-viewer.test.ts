@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import {
+  buildPlanTextCards,
   buildReviewSummary,
   canRetryResumeGenerationForPlan,
   getAdminReviewHeading,
@@ -263,4 +264,47 @@ test("admin review anchor id format remains stable", () => {
   const planId = "plan_123";
   const anchorId = `admin-review-${planId}`;
   assert.equal(anchorId, "admin-review-plan_123");
+});
+
+test("legacy plan text is split into renderable cards instead of one raw block", () => {
+  const cards = buildPlanTextCards(
+    [
+      "Lead notes",
+      "- Injury: keep cut covered.",
+      "",
+      "## GPP — Week 1",
+      "Why: build the base.",
+      "- Assault Bike: 25 min Zone 2.",
+      "- Rehab: Neutral-grip holds.",
+      "",
+      "## Final notes",
+      "Stop on dizziness.",
+    ].join("\n"),
+  );
+
+  assert.deepEqual(cards, [
+    {
+      title: "Lead notes",
+      lines: ["Injury: keep cut covered."],
+    },
+    {
+      title: "GPP — Week 1",
+      lines: ["Why: build the base.", "Assault Bike: 25 min Zone 2.", "Rehab: Neutral-grip holds."],
+    },
+    {
+      title: "Final notes",
+      lines: ["Stop on dizziness."],
+    },
+  ]);
+});
+
+test("recent generated plan headings become separate cards", () => {
+  const cards = buildPlanTextCards(
+    "Lead notes - Injury: cover the cut. GPP — Week 1 (D-33 to D-27) — Build aerobic base D-32 (Wednesday) — Aerobic support Why: restore repeatability. - Easy Assault Bike: 25 min. Final notes - Stop on dizziness.",
+  );
+
+  assert.deepEqual(
+    cards.map((card) => card.title),
+    ["Lead notes", "GPP — Week 1 (D-33 to D-27) — Build aerobic base", "D-32 (Wednesday) — Aerobic support", "Final notes"],
+  );
 });

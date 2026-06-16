@@ -12568,6 +12568,28 @@ html[data-theme="light"] .loading-operational-item {
   border-radius: var(--radius-support);
   padding: 14px;
 }
+.legacy-plan-card-stack,
+.legacy-plan-lines {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.legacy-plan-card {
+  border-left: 3px solid var(--brand-red);
+}
+
+.legacy-plan-lines {
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.legacy-plan-lines li {
+  color: var(--text-secondary);
+  font-size: 0.88rem;
+  line-height: 1.55;
+}
 .sp-session-head {
   display: flex;
   flex-wrap: wrap;
@@ -12720,9 +12742,6 @@ html[data-theme="light"] .loading-operational-item {
 .sp-redflag-text {
   color: var(--text-primary);
   font-size: 0.9rem;
-}
-.sp-raw {
-  margin-top: 8px;
 }
 @media (min-width: 720px) {
   .sp-block-stats {
