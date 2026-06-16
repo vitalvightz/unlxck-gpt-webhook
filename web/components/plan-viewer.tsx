@@ -238,11 +238,11 @@ function splitPlanTextHeading(line: string): { title: string; remainder: string 
     return { title: titleizeToken(noteMatch[1]), remainder: noteMatch[2] ?? null };
   }
 
-  if (/^(GPP|SPP|TAPER|FIGHT WEEK)\s+[—-]\s+Week\b/i.test(cleanLine)) {
+  if (/^(GPP|SPP|TAPER|FIGHT WEEK)\s+[-–—]\s+Week\b/i.test(cleanLine)) {
     return { title: cleanLine, remainder: null };
   }
 
-  if (/^D-\d+\s+\([^)]+\)\s+[—-]\s+/.test(cleanLine)) {
+  if (/^D-\d+\s+\([^)]+\)\s+[-–—]\s+/.test(cleanLine)) {
     const markerMatch = cleanLine.match(/\s+(Why:|No app S&C|No app S and C)\s*/i);
     const markerIndex = markerMatch?.index ?? -1;
     return {
