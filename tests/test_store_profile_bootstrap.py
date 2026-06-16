@@ -396,9 +396,13 @@ def test_create_or_get_generation_job_returns_existing_row_after_unique_conflict
             "details": "Key (athlete_id, client_request_id)=(athlete-1, client-1) already exists.",
         }
     )
+    stale_scan_response = MagicMock()
+    stale_scan_response.data = []
     active_response = MagicMock()
     active_response.data = []
-    store._run_with_transient_retry = MagicMock(side_effect=[None, active_response, duplicate_error, existing_job])
+    store._run_with_transient_retry = MagicMock(
+        side_effect=[stale_scan_response, None, active_response, duplicate_error, existing_job]
+    )
 
     result = store.create_or_get_generation_job(
         athlete_id="athlete-1",

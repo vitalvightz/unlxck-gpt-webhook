@@ -74,6 +74,10 @@ def _spawn_planner_returns_large_result(payload):
     return {"status": "ok", "blob": blob, "value": payload["value"]}
 
 
+def _spawn_planner_returns_ready_plan(payload):
+    return {"status": "ready", "plan_text": "draft"}
+
+
 def _clear_environment_markers(monkeypatch):
     for var in _ENVIRONMENT_VARS:
         monkeypatch.delenv(var, raising=False)
@@ -397,7 +401,7 @@ def test_stage2_timeout_fails_generation_job(monkeypatch):
         generation_runtime.run_generation_job(
             job_id=job["id"],
             store=store,
-            planner_fn=lambda payload: {"status": "ready", "plan_text": "draft"},
+            planner_fn=_spawn_planner_returns_ready_plan,
             stage2=HangingStage2(),
             active_tasks=set(),
         )

@@ -425,9 +425,6 @@ class FakeStore:
         )
         for job in self.generation_jobs.values():
             if job["athlete_id"] == athlete_id and job["client_request_id"] == client_request_id:
-                existing_hash = job.get("payload_hash")
-                if existing_hash and str(existing_hash) != payload_hash:
-                    raise client_request_id_payload_mismatch_error()
                 if is_startup_stale_generation_job(job, stale_after_seconds=stale_after_seconds):
                     now = _now()
                     reset_changes = {
@@ -453,6 +450,9 @@ class FakeStore:
                         reset_changes["intake_id"] = intake_id
 
                     job.update(reset_changes)
+                existing_hash = job.get("payload_hash")
+                if existing_hash and str(existing_hash) != payload_hash:
+                    raise client_request_id_payload_mismatch_error()
                 return dict(job)
         active = self.get_active_generation_job_for_athlete(athlete_id, stale_after_seconds=stale_after_seconds)
         # Mirror SupabaseAppStore.create_or_get_generation_job: only a job that is

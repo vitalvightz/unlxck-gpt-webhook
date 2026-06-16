@@ -1939,7 +1939,6 @@ class SupabaseAppStore:
             last_error = exc
             existing = None
         if existing:
-            _raise_client_request_payload_mismatch_if_known(existing, payload_hash)
             if is_startup_stale_generation_job(existing, stale_after_seconds=stale_after_seconds):
                 reset_payload = {
                     "status": "queued",
@@ -1975,6 +1974,7 @@ class SupabaseAppStore:
                 refreshed = self.get_generation_job(str(existing["id"]))
                 if refreshed:
                     return refreshed
+            _raise_client_request_payload_mismatch_if_known(existing, payload_hash)
             return existing
         active_job = self.get_active_generation_job_for_athlete(
             athlete_id,

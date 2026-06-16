@@ -1307,8 +1307,12 @@ def test_create_generation_job_allows_new_request_after_mid_pipeline_stale_is_fa
         status="running",
         started_at=old_iso,
         heartbeat_at=old_iso,
+        created_at=old_iso,
+        updated_at=old_iso,
         stage1_result=stage1_result(),
     )
+    store.generation_jobs[old["id"]]["created_at"] = old_iso
+    store.generation_jobs[old["id"]]["updated_at"] = old_iso
     new_job = store.create_or_get_generation_job(
         athlete_id="athlete-1",
         client_request_id="new-request",
