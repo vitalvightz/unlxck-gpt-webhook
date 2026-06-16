@@ -504,7 +504,18 @@ class FakeStore:
         athlete_id: str,
         *,
         stale_after_seconds: int,
+        exclude_client_request_id: str | None = None,
     ) -> None:
+        cutoff_seconds = max(1, stale_after_seconds)
+        now_dt = datetime.now(timezone.utc)
+        now = _now()
+        for job in self.generation_jobs.values():
+            if str(job.get("athlete_id") or "") != athlete_id:
+                continue
+            if exclude_client_request_id and str(job.get("client_request_id") or "") == exclude_client_request_id:
+                continue
+            if str(job.get("status") or "") not in {"queued", "running"}:
+                continue
         cutoff_seconds = max(1, stale_after_seconds)
         now_dt = datetime.now(timezone.utc)
         now = _now()
