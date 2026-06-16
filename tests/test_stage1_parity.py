@@ -42,9 +42,9 @@ from fightcamp.weekly_plan_render import (  # noqa: E402
     render_weekly_schedule_section,
 )
 
-# Scenarios that render a normal dated camp (not a late-fight countdown). Track 1
-# moved the week->day->session spine into Stage 1 for these, so they must no
-# longer leak the "draft has no weeks" structural codes.
+# Scenarios that render a normal dated camp (not a late-fight countdown). Stage 1
+# still owns the role-map structure for these, but must not render final
+# week/day/exercise sessions into the draft.
 NORMAL_CAMP_SCENARIOS = frozenset(
     {
         "standard_amateur_boxing",
@@ -160,7 +160,7 @@ def test_stage1_soft_review_flags_stay_within_baseline(name: str, overrides: dic
 def test_every_rendered_session_role_has_athlete_facing_label(
     name: str, overrides: dict
 ) -> None:
-    """Track 2: Stage 1 owns the session title for every rendered role."""
+    """Stage 1 keeps deterministic labels for every planned role."""
     result = _run_stage1(overrides)
     weekly_role_map = (result["planning_brief"].get("weekly_role_map") or {})
     missing: list[str] = []
@@ -176,18 +176,19 @@ def test_every_rendered_session_role_has_athlete_facing_label(
     "name,overrides",
     [(n, ov) for n, ov in _scenarios().items() if n in NORMAL_CAMP_SCENARIOS],
 )
-def test_normal_camps_render_complete_week_spine(name: str, overrides: dict) -> None:
-    """Track 1: normal camps no longer emit week-structure gap codes."""
+def test_normal_camps_do_not_render_final_weekly_schedule(name: str, overrides: dict) -> None:
+    """Stage 1 must not inject final weekly session content into the draft."""
     result = _run_stage1(overrides)
+    plan_text = str(result.get("plan_text") or "")
+    assert "# Weekly Schedule" not in plan_text
+    assert "## Week 1 —" not in plan_text
+
     breakdown = stage1_parity_breakdown(result)
     leaked = WEEK_STRUCTURE_CODES & set(breakdown["review_flag_codes"])
-    assert not leaked, (
-        f"{name}: Stage 1 draft still leaks week-structure codes {sorted(leaked)}; "
-        "the deterministic weekly schedule should cover every active week."
+    assert leaked, (
+        f"{name}: expected Stage 1 parity to keep measuring missing week/session "
+        "structure now that final session rendering is owned by Stage 2."
     )
-    # The schedule itself must be present in the draft.
-    assert "# Weekly Schedule" in str(result.get("plan_text") or "")
-    assert "## Week 1 —" in str(result.get("plan_text") or "")
 
 
 def test_review_stage1_self_output_rejects_non_success_result() -> None:

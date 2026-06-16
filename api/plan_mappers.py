@@ -7,7 +7,10 @@ from typing import Any
 
 from fastapi import HTTPException, status
 
-from fightcamp.stage2_policy import is_hard_stage2_blocker
+from fightcamp.stage2_policy import (
+    is_hard_stage2_blocker,
+    publish_blocking_review_findings,
+)
 from fightcamp.sparring_advisories import build_plan_advisories
 from fightcamp.weekly_schedule_view import extract_weekly_schedule
 
@@ -126,7 +129,9 @@ def _map_plan_summary(row: dict[str, Any]) -> PlanSummary:
                 if isinstance(warning, dict)
                 and is_hard_stage2_blocker(str(warning.get("code") or ""))
             ]
-            has_blocking = bool(blocking_warnings)
+            has_blocking = bool(blocking_warnings) or bool(
+                publish_blocking_review_findings(report)
+            )
             if not has_blocking:
                 warnings = list(report.get("warnings") or [])
                 has_blocking = any(
@@ -134,7 +139,13 @@ def _map_plan_summary(row: dict[str, Any]) -> PlanSummary:
                     for w in warnings
                     if isinstance(w, dict)
                 )
-            normalized_status = "held_for_review" if has_errors or has_blocking else "ready"
+            has_review_flags = bool(report.get("warnings") or report.get("review_flags"))
+            if has_errors or has_blocking:
+                normalized_status = "held_for_review"
+            elif has_review_flags:
+                normalized_status = "publishable_with_flags"
+            else:
+                normalized_status = "ready"
     return PlanSummary(
         plan_id=str(row["id"]),
         plan_name=(str(row["plan_name"]).strip() if row.get("plan_name") is not None else None) or None,

@@ -27,19 +27,6 @@ from .stage2_payload import (
     build_stage2_handoff_text,
     build_stage2_payload,
 )
-from .weekly_plan_render import render_weekly_schedule_section
-
-
-def _insert_weekly_schedule(plan_text: str, schedule_section: str) -> str:
-    """Append the weekly schedule at the very end of the plan.
-
-    The schedule's ``## Week N`` headers must be the last week-scoped content in
-    the document: the validator's week parser attributes every line after a week
-    header to that week until the next week header or end-of-text, so any global
-    section rendered after the schedule would be miscounted as extra sessions.
-    Placing the schedule last lets end-of-text terminate the final week cleanly.
-    """
-    return f"{plan_text.rstrip()}\n\n{schedule_section}"
 
 
 def _insert_lead_summary(plan_text: str, lead_summary: str) -> str:
@@ -456,17 +443,6 @@ def build_stage2_outputs(
         plan_input=context.plan_input,
         computed_support=computed_support,
     )
-    # Deterministic week-by-week schedule. Stage 1 now places real selected work
-    # onto the days the planner chose, so the draft already carries the
-    # week->day->session spine the finalizer would otherwise have to rebuild.
-    schedule_section = render_weekly_schedule_section(
-        planning_brief=planning_brief,
-        blocks=blocks,
-    )
-    if schedule_section:
-        rendered.fight_plan_text = _insert_weekly_schedule(
-            rendered.fight_plan_text, schedule_section
-        )
     # Deterministic injury / weight-cut lead summary. The validator scans the
     # first plan lines for this context, so render it right after the title.
     lead_summary = render_lead_summary(planning_brief)

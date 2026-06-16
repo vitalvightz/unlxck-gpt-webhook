@@ -364,7 +364,7 @@ def generate_plan_sync(
         progress_callback,
         "plan_drafted",
         "Plan drafted",
-        "Stage 1 plan rendered with weekly structure and coach notes.",
+        "Stage 1 planning draft rendered with coach notes.",
     )
 
     # Build Stage 2 outputs immediately after rendering so the structured

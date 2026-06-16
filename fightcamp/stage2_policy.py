@@ -8,6 +8,13 @@ from typing import Any
 
 _DEFAULT_POLICY_PATH = Path(__file__).resolve().parents[1] / "shared" / "stage2-policy.json"
 _POLICY_PATH = Path(os.getenv("STAGE2_POLICY_PATH", str(_DEFAULT_POLICY_PATH)))
+_REPAIR_PROMPT_EXCLUDED_CODES = frozenset(
+    {
+        "generic_filler_phrase",
+        "sport_language_leak",
+        "true_internal_system_leak",
+    }
+)
 
 
 @lru_cache(maxsize=1)
@@ -34,12 +41,15 @@ def _code_set(key: str) -> frozenset[str]:
 
 
 HARD_STAGE2_BLOCKER_CODES: frozenset[str]
+PUBLISH_BLOCKING_REVIEW_FLAG_CODES: frozenset[str]
 CARD_RESCUABLE_SOFT_CODES: frozenset[str]
 
 
 def __getattr__(name: str) -> Any:
     if name == "HARD_STAGE2_BLOCKER_CODES":
         return _code_set("hard_stage2_blocker_codes")
+    if name == "PUBLISH_BLOCKING_REVIEW_FLAG_CODES":
+        return _code_set("publish_blocking_review_flag_codes")
     if name == "CARD_RESCUABLE_SOFT_CODES":
         return _code_set("card_rescuable_soft_codes")
     raise AttributeError(f"module {__name__} has no attribute {name}")
@@ -51,6 +61,74 @@ def is_hard_stage2_blocker(code: str) -> bool:
 
 def is_card_rescuable_soft_code(code: str) -> bool:
     return str(code or "").strip() in _code_set("card_rescuable_soft_codes")
+
+
+def is_publish_blocking_review_flag(code: str) -> bool:
+    return str(code or "").strip() in _code_set("publish_blocking_review_flag_codes")
+
+
+def _finding_identity(item: dict) -> tuple:
+    return (
+        str(item.get("code") or "").strip(),
+        str(item.get("phase") or "").strip(),
+        str(item.get("week_index") or "").strip(),
+        str(item.get("session_index") or "").strip(),
+        str(item.get("requirement") or "").strip(),
+        str(item.get("line") or "").strip(),
+    )
+
+
+def _dedupe_findings(findings: list[dict]) -> list[dict]:
+    deduped: list[dict] = []
+    seen: set[tuple] = set()
+    for item in findings:
+        key = _finding_identity(item)
+        if key in seen:
+            continue
+        seen.add(key)
+        deduped.append(item)
+    return deduped
+
+
+def publish_blocking_review_findings(validator_report: dict) -> list[dict]:
+    findings: list[dict] = []
+    for key in ("blocking_warnings", "review_flags", "warnings"):
+        for item in validator_report.get(key, []) or []:
+            if not isinstance(item, dict):
+                continue
+            if is_publish_blocking_review_flag(str(item.get("code") or "")):
+                findings.append(dict(item))
+    return _dedupe_findings(findings)
+
+
+def apply_publish_blocking_review_gate(validator_report: dict) -> dict:
+    findings = publish_blocking_review_findings(validator_report)
+    if not findings:
+        return validator_report
+    existing_blocking = [
+        dict(item)
+        for item in validator_report.get("blocking_warnings", []) or []
+        if isinstance(item, dict)
+    ]
+    enriched = {
+        **validator_report,
+        "blocking_warnings": _dedupe_findings([*existing_blocking, *findings]),
+        "publish_blocking_review_flags": findings,
+        "publish_blocking_review_flag_count": len(findings),
+        "is_publishable": False,
+    }
+    return enriched
+
+
+def _is_repair_prompt_code(code: str) -> bool:
+    normalized = str(code or "").strip()
+    if not normalized or normalized in _REPAIR_PROMPT_EXCLUDED_CODES:
+        return False
+    return (
+        is_hard_stage2_blocker(normalized)
+        or is_publish_blocking_review_flag(normalized)
+        or is_card_rescuable_soft_code(normalized)
+    )
 
 
 def hard_blocker_findings(validator_report: dict) -> list[dict]:
@@ -66,15 +144,25 @@ def hard_blocker_findings(validator_report: dict) -> list[dict]:
 
 def prompt_safe_validator_report(validator_report: dict) -> dict:
     errors = [
-        item
+        dict(item)
         for item in validator_report.get("errors", []) or []
-        if isinstance(item, dict) and is_hard_stage2_blocker(str(item.get("code") or ""))
+        if isinstance(item, dict) and _is_repair_prompt_code(str(item.get("code") or ""))
     ]
     blocking_warnings = [
-        item
+        dict(item)
         for item in validator_report.get("blocking_warnings", []) or []
         if isinstance(item, dict) and is_hard_stage2_blocker(str(item.get("code") or ""))
     ]
+    publish_blocking_findings = publish_blocking_review_findings(validator_report)
+    repair_warnings = _dedupe_findings(
+        [
+            dict(item)
+            for item in validator_report.get("warnings", []) or []
+            if isinstance(item, dict)
+            and _is_repair_prompt_code(str(item.get("code") or ""))
+        ]
+        + publish_blocking_findings
+    )
     hard_codes = {str(item.get("code") or "").strip() for item in [*errors, *blocking_warnings]}
     restricted_hits = (
         list(validator_report.get("restricted_hits", []) or [])
@@ -83,6 +171,8 @@ def prompt_safe_validator_report(validator_report: dict) -> dict:
     )
     return {
         "errors": errors,
-        "blocking_warnings": blocking_warnings,
+        "warnings": repair_warnings,
+        "blocking_warnings": _dedupe_findings([*blocking_warnings, *publish_blocking_findings]),
+        "missing_required_elements": list(validator_report.get("missing_required_elements", []) or []),
         "restricted_hits": restricted_hits,
     }

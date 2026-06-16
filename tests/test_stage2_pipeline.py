@@ -250,7 +250,7 @@ def test_build_stage2_retry_skips_prompt_when_only_review_flags_exist():
     assert retry["repair_prompt"] is None
 
 
-def test_build_stage2_retry_skips_prompt_when_only_soft_blocking_warning_exists():
+def test_build_stage2_retry_skips_prompt_when_only_card_rescuable_blocking_warning_exists():
     retry = build_stage2_retry(
         stage1_result=_stage1_result_fixture(),
         final_plan_text="SPP\n- Landmine Press - 4x5",
@@ -258,8 +258,8 @@ def test_build_stage2_retry_skips_prompt_when_only_soft_blocking_warning_exists(
             "errors": [],
             "warnings": [
                 {
-                    "code": "missing_required_element",
-                    "message": "Missing phase-critical element.",
+                    "code": "generic_filler_phrase",
+                    "message": "Low-trust filler.",
                     "severity": "blocker",
                 }
             ],
@@ -271,7 +271,7 @@ def test_build_stage2_retry_skips_prompt_when_only_soft_blocking_warning_exists(
     assert retry["repair_prompt"] is None
 
 
-def test_build_stage2_retry_prompt_excludes_soft_warnings_for_hard_blocker():
+def test_build_stage2_retry_prompt_includes_publish_blocking_warnings_for_hard_blocker():
     retry = build_stage2_retry(
         stage1_result=_stage1_result_fixture(),
         final_plan_text="SPP\n- Push Press - 4x3",
@@ -306,8 +306,48 @@ def test_build_stage2_retry_prompt_excludes_soft_warnings_for_hard_blocker():
     assert retry["repair_prompt"] is not None
     assert "restriction_violation" in retry["repair_prompt"]
     assert "generic_filler_phrase" not in retry["repair_prompt"]
-    assert "missing_required_element" not in retry["repair_prompt"]
+    assert "missing_required_element" in retry["repair_prompt"]
     assert "sport_language_leak" not in retry["repair_prompt"]
+
+
+def test_build_stage2_retry_prompts_for_publish_blocking_review_flag():
+    retry = build_stage2_retry(
+        stage1_result=_stage1_result_fixture(),
+        final_plan_text="SPP\n- Landmine Press - 4x5",
+        validator_report={
+            "errors": [],
+            "warnings": [
+                {
+                    "code": "missing_required_element",
+                    "message": "Missing phase-critical element.",
+                    "phase": "SPP",
+                    "requirement": "alactic",
+                    "candidate_names": ["Air Bike Sprint"],
+                }
+            ],
+            "review_flags": [
+                {
+                    "code": "missing_required_element",
+                    "phase": "SPP",
+                    "requirement": "alactic",
+                    "candidate_names": ["Air Bike Sprint"],
+                }
+            ],
+            "missing_required_elements": [
+                {
+                    "phase": "SPP",
+                    "requirement": "alactic",
+                    "candidate_names": ["Air Bike Sprint"],
+                }
+            ],
+        },
+    )
+
+    assert retry["status"] == "WARN"
+    assert retry["needs_retry"] is True
+    assert retry["repair_prompt"] is not None
+    assert "restore_phase_critical_element" in retry["repair_prompt"]
+    assert "Air Bike Sprint" in retry["repair_prompt"]
 
 
 def test_review_stage2_output_keeps_weekly_session_overage_as_review_flag():
