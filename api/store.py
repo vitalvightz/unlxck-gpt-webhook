@@ -722,6 +722,20 @@ def _generation_startup_max_attempts() -> int:
     return max(1, parsed)
 
 
+def _positive_float_env(name: str, default: float) -> float:
+    raw_value = os.getenv(name)
+    if raw_value is None or not raw_value.strip():
+        return default
+    try:
+        parsed = float(raw_value.strip())
+    except ValueError:
+        return default
+    import math
+    if not math.isfinite(parsed) or parsed <= 0:
+        return default
+    return parsed
+
+
 def _job_loaded_milestone(now_iso: str) -> dict[str, Any]:
     return {
         "code": "job_loaded",
@@ -758,7 +772,25 @@ class SupabaseAppStore:
         # Supabase terminates a multiplexed connection after several streams.
         # HTTP/1.1 uses a simple request-per-connection model that is immune
         # to this class of failure.
-        http_client = httpx.Client(http2=False)
+        #
+        # Explicit timeouts avoid httpx's short default read timeout (5s)
+        # causing false ReadTimeout outages on Supabase reads (e.g.
+        # ensure_profile and generation_jobs polling) during transient
+        # latency spikes. Overridable via env for ops tuning.
+        read_timeout = _positive_float_env("SUPABASE_HTTP_TIMEOUT_SECONDS", 20.0)
+        connect_timeout = _positive_float_env("SUPABASE_HTTP_CONNECT_TIMEOUT_SECONDS", 10.0)
+        http_client = httpx.Client(
+            http2=False,
+            timeout=httpx.Timeout(
+                read_timeout,
+                connect=connect_timeout,
+            ),
+            limits=httpx.Limits(
+                max_connections=50,
+                max_keepalive_connections=20,
+                keepalive_expiry=30.0,
+            ),
+        )
         return cls(create_client(url, key, options=ClientOptions(httpx_client=http_client)), admin_emails)
 
     def is_admin_email(self, email: str) -> bool:
@@ -3695,12 +3727,17 @@ class SupabaseAppStore:
         if not expected_snapshot:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
         payload = self._build_plan_stage2_payload(expected_snapshot, result)
+        # Guard only on lightweight state markers, never on the multi-KB text
+        # bodies. PostgREST serializes `.eq()` filters into the request URL, so
+        # filtering on plan_text/draft_plan_text/final_plan_text/stage2_retry_text
+        # pushes the entire plan into the query string and trips PostgREST's URL
+        # length limit, which returns a bare "400 Bad Request" (plain text, not
+        # JSON) and surfaces as an opaque APIError. Every write that mutates plan
+        # text also advances one of these markers (status transition,
+        # stage2_status, or stage2_attempt_count), so a concurrent change is still
+        # detected without inflating the URL.
         guarded_fields = (
             "status",
-            "plan_text",
-            "draft_plan_text",
-            "final_plan_text",
-            "stage2_retry_text",
             "stage2_status",
             "stage2_attempt_count",
         )

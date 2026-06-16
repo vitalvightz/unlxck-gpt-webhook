@@ -1177,12 +1177,10 @@ class FakeStore:
         row = self.plans.get(plan_id)
         if not row:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
+        # Mirror the production guard: lightweight state markers only, never the
+        # large text bodies (which PostgREST would push into the request URL).
         guarded_fields = (
             "status",
-            "plan_text",
-            "draft_plan_text",
-            "final_plan_text",
-            "stage2_retry_text",
             "stage2_status",
             "stage2_attempt_count",
         )
