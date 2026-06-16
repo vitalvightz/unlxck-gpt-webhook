@@ -730,7 +730,8 @@ def _positive_float_env(name: str, default: float) -> float:
         parsed = float(raw_value.strip())
     except ValueError:
         return default
-    if parsed <= 0:
+    import math
+    if not math.isfinite(parsed) or parsed <= 0:
         return default
     return parsed
 
