@@ -438,7 +438,7 @@ export function getPlanNotes(plan: StructuredPlan | null | undefined): PlanNoteV
       if (!text) {
         return null;
       }
-      const category = cleanText(note.category)?.toLowerCase() ?? "general";
+      const category = cleanText(note.category)?.toLowerCase().replace(/[-\s]+/g, "_") ?? "general";
       return { category, label: cleanText(note.label), text } satisfies PlanNoteView;
     })
     .filter((note): note is PlanNoteView => note !== null);
