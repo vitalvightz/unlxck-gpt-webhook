@@ -39,6 +39,7 @@ from .schema_requirements import (
 )
 from .state_machine import (
     ADMIN_REVIEW_PLAN_STATUSES,
+    ATHLETE_DISPLAYABLE_PLAN_STATUSES,
     is_generation_job_status,
     is_plan_status,
     require_generation_job_transition,
@@ -392,6 +393,8 @@ class AppStore(Protocol):
     ) -> list[dict[str, Any]]: ...
 
     def list_admin_review_plans(self, *, limit: int = 100) -> list[dict[str, Any]]: ...
+
+    def list_plans_missing_structured_plan(self, *, limit: int = 50) -> list[dict[str, Any]]: ...
 
     def list_admin_athletes(
         self, *, limit: int = 50, offset: int = 0, q: str | None = None
@@ -3901,6 +3904,27 @@ class SupabaseAppStore:
         )
         rows = [row for row in (getattr(response, "data", None) or []) if isinstance(row, dict)]
         return self._attach_profile_contacts(rows)
+
+    def list_plans_missing_structured_plan(self, *, limit: int = 50) -> list[dict[str, Any]]:
+        """Athlete-displayable plans that have no structured card yet (backfill).
+
+        Selects ``ready``/``publishable_with_flags`` rows where ``structured_plan``
+        is NULL so the structured-plan backfill can re-attempt conversion for plans
+        generated/approved before structured generation was enabled. ``plan_text``
+        presence is enforced downstream by the conversion trigger, so a row with no
+        approved text simply short-circuits there.
+        """
+        response = self._run_with_transient_retry(
+            operation=f"list_plans_missing_structured_plan limit={limit}",
+            fn=lambda: self.client.table("plans")
+            .select("id, status, created_at")
+            .in_("status", list(ATHLETE_DISPLAYABLE_PLAN_STATUSES))
+            .is_("structured_plan", "null")
+            .order("created_at", desc=True)
+            .limit(limit)
+            .execute(),
+        )
+        return [row for row in (getattr(response, "data", None) or []) if isinstance(row, dict)]
 
     def list_admin_athletes(
         self, *, limit: int = 50, offset: int = 0, q: str | None = None

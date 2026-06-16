@@ -26,6 +26,8 @@ from api.services.admin_stage2_service import (
     _APPROVAL_STRUCTURED_PLAN_BUDGET_SECONDS,
     _approval_structured_budget_seconds,
     approve_review_required_plan,
+    backfill_structured_plans,
+    list_structured_plan_backfill_candidates,
     run_structured_plan_post_processing,
     submit_manual_stage2,
 )
@@ -1026,3 +1028,64 @@ def test_admin_approve_without_env_flag_skips_structured(monkeypatch):
     assert detail.outputs.structured_plan is None
     assert store.plans[plan_id].get("structured_plan") is None
     assert automator.calls == []
+
+
+def _seed_released_plan(
+    store: FakeStore,
+    *,
+    plan_id: str,
+    structured: dict | None = None,
+    status: str = "ready",
+) -> str:
+    store.profiles["athlete-1"] = {"id": "athlete-1", "full_name": "Ari Mensah"}
+    store.plans[plan_id] = {
+        "id": plan_id,
+        "athlete_id": "athlete-1",
+        "full_name": "Ari Mensah",
+        "status": status,
+        "plan_text": "# released plan",
+        "final_plan_text": "# released plan",
+        "draft_plan_text": "# draft plan",
+        "planning_brief": None,
+        "stage2_validator_report": {},
+        "stage2_status": "stage2_pass",
+        "stage2_attempt_count": 1,
+        "structured_plan": structured,
+        "created_at": _now(),
+    }
+    return plan_id
+
+
+def test_backfill_candidates_only_displayable_plans_without_a_card(monkeypatch):
+    monkeypatch.setenv("UNLXCK_STAGE2_STRUCTURED_PLAN", "1")
+    store = FakeStore()
+    _seed_released_plan(store, plan_id="needs-card")  # ready, no card -> candidate
+    _seed_released_plan(store, plan_id="has-card", structured={"weeks": []})  # carded -> skip
+    _seed_held_plan(store, plan_id="held")  # not displayable -> skip
+
+    candidates = asyncio.run(list_structured_plan_backfill_candidates(store=store, limit=25))
+
+    assert candidates == ["needs-card"]
+
+
+def test_backfill_converts_released_plans_missing_a_card(monkeypatch):
+    monkeypatch.setenv("UNLXCK_STAGE2_STRUCTURED_PLAN", "1")
+    store = FakeStore()
+    _seed_released_plan(store, plan_id="needs-card")
+    automator = _StructuredAutomator(_valid_outcome("# released plan"))
+
+    candidates = asyncio.run(list_structured_plan_backfill_candidates(store=store, limit=25))
+    asyncio.run(backfill_structured_plans(store=store, stage2=automator, plan_ids=candidates))
+
+    assert len(automator.calls) == 1
+    assert store.plans["needs-card"]["structured_plan"] is not None
+    assert store.plans["needs-card"]["schema_version"] == SCHEMA_VERSION
+
+
+def test_backfill_is_noop_without_automator():
+    store = FakeStore()
+    _seed_released_plan(store, plan_id="needs-card")
+
+    asyncio.run(backfill_structured_plans(store=store, stage2=None, plan_ids=["needs-card"]))
+
+    assert store.plans["needs-card"]["structured_plan"] is None
