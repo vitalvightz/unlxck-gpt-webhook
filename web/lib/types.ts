@@ -474,12 +474,22 @@ export type StructuredEventContext = {
   ruleset?: string | null;
 };
 
+// A short, plan-level "active note" / non-negotiable reminder (weight cut,
+// injury, nutrition, general). Surfaced as a standalone Active Notes card so
+// header/footer plan context is not lost in the structured view.
+export type StructuredPlanNote = {
+  category?: string | null;
+  label?: string | null;
+  text?: string | null;
+};
+
 export type StructuredPlan = {
   schema_version?: string | null;
   plan_metadata?: StructuredPlanMetadata | null;
   athlete_context?: StructuredAthleteContext | null;
   event_context?: StructuredEventContext | null;
   red_flag_rules?: StructuredRedFlagRule[] | null;
+  plan_notes?: StructuredPlanNote[] | null;
   weeks?: StructuredWeek[] | null;
   nutrition?: StructuredNutrition | null;
   deterministic_support?: DeterministicSupport | null;

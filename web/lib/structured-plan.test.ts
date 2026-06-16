@@ -15,6 +15,8 @@ import {
   getDeterministicRecoveryPhases,
   getDisplayableRedFlags,
   getMindsetLines,
+  getPlanNotes,
+  planNoteLabel,
   getSessions,
   getStringList,
   getWeeks,
@@ -172,6 +174,41 @@ test("selectors return safe empties on missing/partial fields", () => {
   // A week/day/session with null nested arrays does not throw.
   const week = getWeeks({ structured_plan: validPlan() } as never);
   assert.equal(week.length, 0); // wrong-shaped input -> empty, no crash
+});
+
+// --- plan-level active notes ------------------------------------------------
+
+test("getPlanNotes keeps notes with text, drops empties, lowercases category", () => {
+  const notes = getPlanNotes({
+    plan_notes: [
+      { category: "Weight_Cut", label: "Active weight cut", text: "~5.7% target." },
+      { category: "injury", text: "Keep the wound covered and dry." },
+      { category: "nutrition", text: "   " },
+      { text: "Stay disciplined." },
+      "not an object" as never,
+    ],
+  } as never);
+  assert.equal(notes.length, 3);
+  assert.deepEqual(notes[0], {
+    category: "weight_cut",
+    label: "Active weight cut",
+    text: "~5.7% target.",
+  });
+  assert.equal(notes[1].category, "injury");
+  assert.equal(notes[2].category, "general");
+  assert.equal(notes[2].label, null);
+});
+
+test("getPlanNotes is safe on missing / malformed plan_notes", () => {
+  assert.deepEqual(getPlanNotes(null), []);
+  assert.deepEqual(getPlanNotes({} as never), []);
+  assert.deepEqual(getPlanNotes({ plan_notes: "nope" } as never), []);
+});
+
+test("planNoteLabel prefers an explicit label, else a category title", () => {
+  assert.equal(planNoteLabel({ category: "weight_cut", label: "Cut", text: "x" }), "Cut");
+  assert.equal(planNoteLabel({ category: "injury", label: null, text: "x" }), "Injury");
+  assert.equal(planNoteLabel({ category: "unknown", label: null, text: "x" }), "Note");
 });
 
 // --- session-less day classification ----------------------------------------

@@ -410,6 +410,40 @@ export function hasNutrition(plan: StructuredPlan | null | undefined): boolean {
   );
 }
 
+export type PlanNoteView = { category: string; label: string | null; text: string };
+
+const PLAN_NOTE_CATEGORY_LABELS: Record<string, string> = {
+  weight_cut: "Weight cut",
+  injury: "Injury",
+  nutrition: "Nutrition",
+  training: "Training",
+  recovery: "Recovery",
+  general: "Note",
+};
+
+/** Short title for a plan note: its own label, else a category fallback. */
+export function planNoteLabel(note: PlanNoteView): string {
+  if (note.label) {
+    return note.label;
+  }
+  return PLAN_NOTE_CATEGORY_LABELS[note.category] ?? PLAN_NOTE_CATEGORY_LABELS.general;
+}
+
+/** Plan-level "active notes" that carry displayable text (empty when absent). */
+export function getPlanNotes(plan: StructuredPlan | null | undefined): PlanNoteView[] {
+  return safeArray(plan?.plan_notes)
+    .filter(isObject)
+    .map((note) => {
+      const text = cleanText(note.text);
+      if (!text) {
+        return null;
+      }
+      const category = cleanText(note.category)?.toLowerCase() ?? "general";
+      return { category, label: cleanText(note.label), text } satisfies PlanNoteView;
+    })
+    .filter((note): note is PlanNoteView => note !== null);
+}
+
 /** Red-flag rules that have something to display. */
 export function getDisplayableRedFlags(plan: StructuredPlan | null | undefined) {
   return safeArray(plan?.red_flag_rules)

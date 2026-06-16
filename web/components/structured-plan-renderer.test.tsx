@@ -105,3 +105,31 @@ test("renders a coach-led / sparring day with no app blocks as its own card", ()
   // The genuine rest day still reads as a rest day exactly once.
   assert.equal(countOccurrences(html, "Rest day."), 1);
 });
+
+test("renders plan-level active notes as a standalone card", () => {
+  const plan = {
+    schema_version: "1.0",
+    plan_metadata: { title: "Fight Camp", sport: "boxing", plan_type: "fight_camp" },
+    plan_notes: [
+      { category: "weight_cut", label: "Active weight cut", text: "~5.7% target — protect freshness." },
+      { category: "injury", text: "Small cut above the elbow — keep covered and dry." },
+    ],
+    weeks: [
+      {
+        week_id: "wk-1",
+        week_index: 1,
+        phase_label: "GPP",
+        days: [],
+      },
+    ],
+  } satisfies StructuredPlan;
+
+  const html = renderToStaticMarkup(<StructuredPlanRenderer plan={plan} />);
+
+  assert.equal(html.includes("Active notes"), true);
+  assert.equal(html.includes("~5.7% target — protect freshness."), true);
+  assert.equal(html.includes("Small cut above the elbow — keep covered and dry."), true);
+  // Weight-cut / injury notes get the accent class.
+  assert.equal(html.includes("sp-note-weight_cut"), true);
+  assert.equal(html.includes("sp-note-injury"), true);
+});

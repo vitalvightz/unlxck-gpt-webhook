@@ -12,6 +12,8 @@ import {
   getCoachingCues,
   getDays,
   getDisplayableRedFlags,
+  getPlanNotes,
+  planNoteLabel,
   formatWeightCutBand,
   getDeterministicNutritionPhases,
   getDeterministicRecoveryPhases,
@@ -405,6 +407,30 @@ export function PlanHeader({ plan }: { plan: StructuredPlan }) {
   );
 }
 
+// Plan-level "active notes": the short, always-on reminders (weight cut,
+// injury, nutrition, general non-negotiables) that live outside any week. Kept
+// as a standalone card near the top so this context is not lost in the
+// structured view the way it would be if it only existed in the raw text.
+export function ActiveNotesCard({ plan }: { plan: StructuredPlan }) {
+  const notes = getPlanNotes(plan);
+  if (notes.length === 0) {
+    return null;
+  }
+  return (
+    <section className="sp-card sp-active-notes">
+      <p className="sp-eyebrow sp-accent">Active notes</p>
+      <ul className="sp-note-list">
+        {notes.map((note, index) => (
+          <li key={`${note.category}-${index}`} className={`sp-note sp-note-${note.category}`}>
+            <span className="sp-note-label">{planNoteLabel(note)}</span>
+            <span className="sp-note-text">{note.text}</span>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
 export function RedFlagsCard({ plan }: { plan: StructuredPlan }) {
   const rules = getDisplayableRedFlags(plan);
   if (rules.length === 0) {
@@ -618,6 +644,7 @@ export function StructuredPlanRenderer({
   return (
     <div className="sp-root">
       <PlanHeader plan={plan} />
+      <ActiveNotesCard plan={plan} />
       <RedFlagsCard plan={plan} />
       <div className="sp-weeks">
         {weeks.map((week, index) => (

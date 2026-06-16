@@ -12677,6 +12677,36 @@ html[data-theme="light"] .loading-operational-item {
 .sp-redflags {
   border-color: var(--border-active);
 }
+.sp-note-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.sp-note {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 0 8px 10px;
+  border-left: 3px solid var(--border-subtle);
+}
+/* Weight-cut and injury notes are the non-negotiables — accent them. */
+.sp-note-weight_cut,
+.sp-note-injury {
+  border-left-color: var(--brand-red);
+}
+.sp-note-label {
+  font-size: 0.68rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.sp-note-text {
+  color: var(--text-primary);
+  font-size: 0.9rem;
+}
 .sp-redflag {
   display: flex;
   flex-direction: column;
