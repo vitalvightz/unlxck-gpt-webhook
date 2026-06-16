@@ -260,7 +260,7 @@ def _session_count_summary(week: dict[str, Any], athlete_model: dict[str, Any]) 
     app_owned_count = max(0, len(roles) - coach_owned_count)
     planned_count = _planned_weekly_count(week, athlete_model)
     rendered_total = len(roles)
-    reduced = planned_count > 0 and (rendered_total < planned_count or app_owned_count < planned_count)
+    reduced = planned_count > 0 and rendered_total < planned_count
     reason_codes = _collect_reason_codes(week)
     compression = week.get("intentional_compression")
 
