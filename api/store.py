@@ -814,17 +814,6 @@ class SupabaseAppStore:
                 operation=f"fail_stale_active_generation_jobs_for_athlete:select athlete_id={athlete_id}",
                 fn=lambda: query.order("created_at", desc=True).limit(25).execute(),
             )
-        try:
-            response = self._run_with_transient_retry(
-                operation=f"fail_stale_active_generation_jobs_for_athlete:select athlete_id={athlete_id}",
-                fn=lambda: self.client.table("generation_jobs")
-                .select(GENERATION_JOB_SELECT)
-                .eq("athlete_id", athlete_id)
-                .in_("status", ["queued", "running"])
-                .order("created_at", desc=True)
-                .limit(25)
-                .execute(),
-            )
             rows = [row for row in (getattr(response, "data", None) or []) if isinstance(row, dict)]
             for row in rows:
                 if not _is_active_generation_job_stale_by_latest_activity(
