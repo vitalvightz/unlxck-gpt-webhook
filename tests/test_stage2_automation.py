@@ -10,6 +10,18 @@ import api.stage2_automation as stage2_module
 from api.stage2_automation import OpenAIStage2Automator, Stage2AutomationError
 
 
+@pytest.fixture(autouse=True)
+def _structured_plan_off(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Pin structured-plan generation OFF for this module.
+
+    These tests exercise the single-call plan-text finalize/retry flow and
+    assert exact provider call counts. Structured generation is on by default
+    now (a second conversion call), so disable it here; the structured path has
+    dedicated coverage in test_stage2_structured_persistence.py.
+    """
+    monkeypatch.setenv("UNLXCK_STAGE2_STRUCTURED_PLAN", "0")
+
+
 class FakeResponses:
     def __init__(self, outputs: list[object]) -> None:
         self.outputs = list(outputs)

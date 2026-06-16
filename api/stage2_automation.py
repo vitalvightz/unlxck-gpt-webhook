@@ -302,19 +302,17 @@ def _is_quota_or_rate_limit_error(exc: Exception) -> bool:
 def _structured_plan_enabled() -> bool:
     """Whether Stage 2 should also attempt structured-plan generation.
 
-    Off by default: structured generation is a second model call, so it is
-    opt-in (set ``UNLXCK_STAGE2_STRUCTURED_PLAN=1``) to preserve the single-call
-    Stage 2 cost profile until the structured renderer is rolled out. When off,
-    the structured outcome is recorded as ``not_attempted`` and the raw
-    ``plan_text`` flow is unaffected.
+    On by default: the structured card is the athlete-facing plan view, so the
+    second conversion call is part of the standard Stage 2 flow. Set
+    ``UNLXCK_STAGE2_STRUCTURED_PLAN`` to a falsey value (``0``/``false``/``no``/
+    ``off``/empty) to disable it; the structured outcome is then recorded as
+    ``not_attempted`` and the raw ``plan_text`` flow is the fallback.
     """
 
-    return os.getenv("UNLXCK_STAGE2_STRUCTURED_PLAN", "").strip().lower() in {
-        "1",
-        "true",
-        "yes",
-        "on",
-    }
+    raw = os.getenv("UNLXCK_STAGE2_STRUCTURED_PLAN")
+    if raw is None:
+        return True  # unset → default on
+    return raw.strip().lower() in {"1", "true", "yes", "on"}
 
 
 def _record_structured_outcome(
