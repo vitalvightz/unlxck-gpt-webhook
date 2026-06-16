@@ -183,8 +183,11 @@ def test_stage2_handoff_gives_finalizer_exercise_selection_authority():
     assert "Stage 1 selected exercises and draft text — candidate material only" in handoff
     assert "Treat Stage 1 selected exercises as candidates, not truth" in handoff
     assert "make the final exercise and prescription choices yourself" in handoff
+    assert "Never let Stage 1 draft wording decide final exercise rendering" in handoff
     assert "Every app-owned session must include exact drill/exercise" in handoff
     assert "sets/reps/duration, rest, intensity or RPE, purpose, why today" in handoff
+    assert "session_count_summary.reduced_from_planned" in handoff
+    assert "Lead notes come first" in handoff
     assert "Taper means reduce volume, not remove sharpness" in handoff
     assert "Use selected_plan inside FINALIZER PACKET as the session source of truth" not in handoff
 

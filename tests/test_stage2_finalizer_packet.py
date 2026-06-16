@@ -183,3 +183,92 @@ def test_finalizer_packet_preserves_hard_sparring_role_dose_fields():
     assert suppressed["downgraded_from_role_key"] == "hard_sparring_day"
     assert suppressed["hard_sparring_status"] == "convert_to_technical_suggested"
     assert suppressed["hard_sparring_reason_codes"] == ["d17_hard_sparring_ban"]
+
+
+def test_finalizer_packet_explains_reduced_count_for_bad_boxing_profile():
+    stage2_payload = {
+        "athlete_model": {
+            "sport": "boxing",
+            "status": "amateur",
+            "training_frequency": 4,
+            "training_days": ["Monday", "Tuesday", "Thursday", "Saturday"],
+            "hard_sparring_days": ["Tuesday", "Saturday"],
+            "technical_skill_days": ["Monday"],
+            "fatigue": "moderate",
+            "weight_cut_risk": True,
+            "weight_cut_pct": 3.4,
+            "readiness_flags": ["moderate_fatigue", "active_weight_cut", "injury_management"],
+            "has_active_injury": True,
+            "injuries_raw_text": "mild left shoulder irritation",
+            "parsed_injuries": [{"area": "left shoulder", "injury_type": "irritation"}],
+            "key_goals": ["power", "conditioning"],
+            "weaknesses": ["gas_tank"],
+        },
+        "weekly_role_map": {
+            "weeks": [
+                {
+                    "week_index": 3,
+                    "phase": "TAPER",
+                    "declared_training_days": ["Monday", "Tuesday", "Thursday", "Saturday"],
+                    "declared_hard_sparring_days": ["Tuesday", "Saturday"],
+                    "session_roles": [
+                        {
+                            "session_index": 1,
+                            "category": "strength",
+                            "role_key": "neural_primer_day",
+                            "scheduled_day_hint": "Monday",
+                        },
+                        {
+                            "session_index": 2,
+                            "category": "sparring",
+                            "role_key": "hard_sparring_day",
+                            "scheduled_day_hint": "Tuesday",
+                            "coach_owned": True,
+                        },
+                    ],
+                    "suppressed_roles": [
+                        {
+                            "category": "conditioning",
+                            "role_key": "light_fight_pace_touch_day",
+                            "compression_reason_codes": ["active_weight_cut", "injury_management"],
+                        },
+                        {
+                            "category": "sparring",
+                            "role_key": "hard_sparring_day",
+                            "scheduled_day_hint": "Saturday",
+                            "hard_sparring_reason_codes": ["d17_hard_sparring_ban"],
+                        },
+                    ],
+                    "hard_sparring_plan": [
+                        {"day": "Tuesday", "status": "hard_as_planned", "reason_codes": []},
+                        {
+                            "day": "Saturday",
+                            "status": "suppressed",
+                            "reason_codes": ["d17_hard_sparring_ban"],
+                        },
+                    ],
+                    "intentional_compression": {
+                        "active": True,
+                        "reason_codes": ["active_weight_cut", "injury_management"],
+                        "summary": "Compression protects freshness around the cut and shoulder irritation.",
+                    },
+                }
+            ]
+        },
+    }
+
+    packet = build_stage2_finalizer_packet(stage2_payload=stage2_payload, planning_brief={})
+    summary = packet["selected_plan"]["weekly_role_map"]["weeks"][0]["session_count_summary"]
+
+    assert summary["planned_weekly_count"] == 4
+    assert summary["rendered_total_count"] == 2
+    assert summary["rendered_app_owned_count"] == 1
+    assert summary["coach_owned_count"] == 1
+    assert summary["reduced_from_planned"] is True
+    joined_reasons = " ".join(summary["reduction_reasons"]).lower()
+    assert "taper" in joined_reasons
+    assert "target-weight" in joined_reasons
+    assert "d-17" in joined_reasons
+    assert "injury" in joined_reasons
+    assert "coach-led contact" in joined_reasons
+    assert "intentional compression" in joined_reasons

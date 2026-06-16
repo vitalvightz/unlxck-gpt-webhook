@@ -233,6 +233,13 @@ def test_athlete_facing_label_resolution_order() -> None:
     assert athlete_facing_label_for("totally_unknown_day") == "Totally Unknown"
 
 
+def test_taper_role_labels_preserve_performance_language() -> None:
+    assert athlete_facing_label_for("aerobic_flush_day") == "Rhythm flush"
+    assert athlete_facing_label_for("neural_primer_day") == "Neural speed touch"
+    assert athlete_facing_label_for("alactic_sharpness_day") == "Freshness primer"
+    assert athlete_facing_label_for("fight_week_freshness_day") == "Fight-week freshness"
+
+
 # --- weekly_plan_render unit coverage -----------------------------------------
 
 
