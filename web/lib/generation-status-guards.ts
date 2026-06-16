@@ -29,12 +29,22 @@ export function isStaleVisibleGenerationJob(job: GenerationJobResponse, nowMs = 
     return false;
   }
 
-  const lastActivityMs = Date.parse(job.heartbeat_at || "") || Date.parse(job.started_at || "") || Date.parse(job.created_at || "");
+  const milestones = Array.isArray(job.progress_milestones) ? job.progress_milestones : [];
+  const activityTimes = [
+    job.heartbeat_at,
+    job.updated_at,
+    job.started_at,
+    job.created_at,
+    ...milestones.map((entry) => entry?.at),
+  ]
+    .map((timestamp) => Date.parse(timestamp || ""))
+    .filter(Number.isFinite);
+  const lastActivityMs = activityTimes.length ? Math.max(...activityTimes) : NaN;
+
   if (!Number.isFinite(lastActivityMs)) {
     return true;
   }
 
-  const milestones = Array.isArray(job.progress_milestones) ? job.progress_milestones : [];
   const stage1Invoked = milestones.find((entry) => entry?.code === "stage1_planner_invoked");
   const stage1Finished = milestones.find((entry) => entry?.code === "stage1_planner_finished");
   if (stage1Invoked && !stage1Finished) {
