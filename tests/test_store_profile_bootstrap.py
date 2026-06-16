@@ -41,6 +41,17 @@ def _configure_profile_reads(store: SupabaseAppStore, *rows: dict | None) -> Non
     ).side_effect = responses
 
 
+def _transient_postgrest_error() -> APIError:
+    return APIError(
+        {
+            "message": "upstream connect error or disconnect/reset before headers. retried and the latest reset reason: connection timeout",
+            "code": "503",
+            "hint": None,
+            "details": None,
+        }
+    )
+
+
 # ---------------------------------------------------------------------------
 # _default_role_for tests
 # ---------------------------------------------------------------------------
@@ -225,6 +236,43 @@ def test_ensure_profile_falls_back_to_read_after_transient_upsert_failure():
     assert result == recovered_profile
 
 
+def test_ensure_profile_retries_transient_postgrest_read_errors(monkeypatch):
+    monkeypatch.setattr(store_module.time, "sleep", lambda _seconds: None)
+    store = _make_store(admin_emails=set())
+    user = _user("existing@example.com")
+    existing = {
+        "id": user.user_id,
+        "email": user.email,
+        "role": "athlete",
+        "full_name": user.full_name,
+    }
+    response = MagicMock()
+    response.data = [existing]
+    (
+        store.client.table.return_value.select.return_value.eq.return_value.limit.return_value.execute
+    ).side_effect = [_transient_postgrest_error(), _transient_postgrest_error(), response]
+
+    result = store.ensure_profile(user)
+
+    assert result == existing
+    assert store.client.table.return_value.upsert.call_count == 0
+
+
+def test_ensure_profile_exhausted_transient_postgrest_read_returns_503(monkeypatch):
+    monkeypatch.setattr(store_module.time, "sleep", lambda _seconds: None)
+    store = _make_store(admin_emails=set())
+    user = _user("outage@example.com")
+    (
+        store.client.table.return_value.select.return_value.eq.return_value.limit.return_value.execute
+    ).side_effect = _transient_postgrest_error()
+
+    with pytest.raises(HTTPException) as exc_info:
+        store.ensure_profile(user)
+
+    assert exc_info.value.status_code == status.HTTP_503_SERVICE_UNAVAILABLE
+    assert exc_info.value.detail == "profile service temporarily unavailable"
+
+
 def test_create_or_get_generation_job_returns_503_when_store_is_transiently_unavailable():
     store = _make_store()
     store._run_with_transient_retry = MagicMock(side_effect=httpx.ConnectError("Server disconnected"))
@@ -287,14 +335,7 @@ def test_get_latest_plan_returns_503_when_store_is_transiently_unavailable():
 
 def test_transient_store_error_detects_postgrest_gateway_failures():
     store = _make_store()
-    error = APIError(
-        {
-            "message": "upstream connect error or disconnect/reset before headers. retried and the latest reset reason: connection timeout",
-            "code": "503",
-            "hint": None,
-            "details": None,
-        }
-    )
+    error = _transient_postgrest_error()
 
     assert store._is_transient_store_error(error) is True
 
