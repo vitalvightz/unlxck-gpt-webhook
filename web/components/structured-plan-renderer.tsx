@@ -40,6 +40,46 @@ import type {
 
 const titleize = formatPlanLabel;
 
+function uniqueLabels(values: (string | null)[]): string[] {
+  const seen = new Set<string>();
+  const labels: string[] = [];
+  values.forEach((value) => {
+    if (!value) {
+      return;
+    }
+    const key = value.toLowerCase();
+    if (seen.has(key)) {
+      return;
+    }
+    seen.add(key);
+    labels.push(value);
+  });
+  return labels;
+}
+
+function blockDetailTags(block: StructuredBlock): string[] {
+  return uniqueLabels([
+    cleanText(block.block_type),
+    cleanText(block.category),
+    cleanText(block.intensity),
+    cleanText(block.energy_system),
+    cleanText(block.impact_level),
+  ]);
+}
+
+function sessionHighlights(session: StructuredSession): { label: string; value: string }[] {
+  return [
+    { label: "Stressor", value: cleanText(session.primary_stressor) },
+    { label: "CNS", value: cleanText(session.cns_demand) },
+    { label: "Impact", value: cleanText(session.impact_level) },
+    { label: "Status", value: cleanText(session.completion_status) },
+  ].filter((row): row is { label: string; value: string } => Boolean(row.value));
+}
+
+function blockCountLabel(count: number): string {
+  return `${count} block${count === 1 ? "" : "s"}`;
+}
+
 function CollapsibleSection({
   title,
   defaultOpen,
@@ -85,7 +125,7 @@ export function MindsetAnchorCard({ anchor }: { anchor?: MindsetAnchor | null })
 
 export function BlockCard({ block }: { block: StructuredBlock }) {
   const title = cleanText(block.display_name) || "Block";
-  const blockType = cleanText(block.block_type);
+  const tags = blockDetailTags(block);
   const load = formatBlockLoad(block.load);
   const metrics = selectBlockMetric(block);
   const work = formatMeasured(block.work);
@@ -101,7 +141,15 @@ export function BlockCard({ block }: { block: StructuredBlock }) {
     <div className="sp-block">
       <div className="sp-block-head">
         <span className="sp-block-title">{title}</span>
-        {blockType ? <span className="sp-tag">{titleize(blockType)}</span> : null}
+        {tags.length > 0 ? (
+          <div className="sp-block-tags">
+            {tags.map((tag) => (
+              <span key={tag} className="sp-tag">
+                {titleize(tag)}
+              </span>
+            ))}
+          </div>
+        ) : null}
       </div>
       {metrics.length > 0 || work || load || rest || effort ? (
         <div className="sp-block-stats">
@@ -192,6 +240,8 @@ export function SessionCard({
   const nutrition = cleanText(card?.nutrition_summary);
   const weightCut = cleanText(card?.weight_cut_warning);
   const blocks = getBlocks(session);
+  const highlights = sessionHighlights(session);
+  const blocksLabel = blockCountLabel(blocks.length);
 
   return (
     <article className="sp-session">
@@ -213,6 +263,16 @@ export function SessionCard({
           {duration ? <span className="sp-tag">{duration}</span> : null}
         </div>
       </header>
+      {highlights.length > 0 ? (
+        <dl className="sp-session-quick">
+          {highlights.map((item) => (
+            <div key={item.label} className="sp-session-quick-item">
+              <dt>{item.label}</dt>
+              <dd>{titleize(item.value)}</dd>
+            </div>
+          ))}
+        </dl>
+      ) : null}
       {warning ? <p className="sp-warning">{warning}</p> : null}
       {nutrition ? <p className="sp-today-note">{nutrition}</p> : null}
       {weightCut ? <p className="sp-warning">{weightCut}</p> : null}
@@ -224,9 +284,13 @@ export function SessionCard({
             className="sp-more-toggle sp-session-toggle"
             aria-expanded={showDetails}
             aria-controls={detailsId}
+            aria-label={showDetails ? `Hide ${blocksLabel}` : `Show ${blocksLabel}`}
             onClick={() => setShowDetails((prev) => !prev)}
           >
-            {showDetails ? "LESS" : "MORE"}
+            <span>{showDetails ? "Hide blocks" : `Show ${blocksLabel}`}</span>
+            <span className="sp-session-toggle-icon" aria-hidden="true">
+              {showDetails ? "-" : "+"}
+            </span>
           </button>
           {showDetails ? (
             <div id={detailsId} className="sp-blocks">

@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { renderToStaticMarkup } from "react-dom/server";
 
-import { StructuredPlanRenderer } from "./structured-plan-renderer";
+import { BlockCard, StructuredPlanRenderer } from "./structured-plan-renderer";
 import type { StructuredPlan } from "@/lib/types";
 
 function countOccurrences(text: string, needle: string): number {
@@ -37,6 +37,9 @@ test("structured renderer uses one session card and hides detail blocks until ex
                 session_type: "mixed",
                 title: "Freshness Reset",
                 objective: "Restore freshness without adding load.",
+                primary_stressor: "skill_priority",
+                cns_demand: "low",
+                impact_level: "low",
                 mindset_anchor: {
                   intent: "Stay loose",
                   focus_cue: "Clean rhythm",
@@ -59,9 +62,35 @@ test("structured renderer uses one session card and hides detail blocks until ex
   assert.equal(html.includes("Morning intro duplicate"), false);
   assert.equal(html.includes("Duplicate intro intent"), false);
   assert.equal(html.includes("Breathing reset"), false);
-  assert.equal(html.includes("MORE"), true);
+  assert.equal(html.includes("Stressor"), true);
+  assert.equal(html.includes("Skill Priority"), true);
+  assert.equal(html.includes("CNS"), true);
+  assert.equal(html.includes("Show 1 block"), true);
   assert.equal(html.includes("Context"), true);
   assert.equal(html.includes("Taper freshness day"), true);
   assert.equal(html.includes("Do not render reset"), false);
   assert.equal(html.includes("Do not render anchor"), false);
+});
+
+test("block card surfaces detail tags for expanded session scanning", () => {
+  const html = renderToStaticMarkup(
+    <BlockCard
+      block={{
+        block_id: "blk-2",
+        display_name: "Medicine ball wall shot",
+        block_type: "strength",
+        category: "power",
+        intensity: "fight rhythm",
+        energy_system: "alactic",
+        impact_level: "low",
+      }}
+    />,
+  );
+
+  assert.equal(html.includes("Medicine ball wall shot"), true);
+  assert.equal(html.includes("Strength"), true);
+  assert.equal(html.includes("Power"), true);
+  assert.equal(html.includes("Fight Rhythm"), true);
+  assert.equal(html.includes("Alactic"), true);
+  assert.equal(html.includes("Low"), true);
 });
