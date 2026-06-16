@@ -1,4 +1,4 @@
-# UNLXCK Fight Camp Builder
+## UNLXCK Fight Camp Builder
 
 Athlete-first fight camp planning. Backend in Python (FastAPI), frontend in Next.js. Deployed on Render + Vercel.
 
