@@ -54,7 +54,7 @@ def _incomplete_response() -> SimpleNamespace:
 
 def _review(status_value: str) -> dict:
     errors = [{"code": "restriction_violation"}] if status_value == "FAIL" else []
-    warnings = [{"code": "missing_required_element", "blocking": True}] if status_value == "WARN" else []
+    warnings = [{"code": "generic_filler_phrase", "blocking": True}] if status_value == "WARN" else []
     review_flags = [{"code": "generic_filler_phrase"}] if status_value == "PASS_WITH_FLAGS" else []
     return {
         "status": "PASS" if status_value == "PASS_WITH_FLAGS" else status_value,
@@ -147,6 +147,35 @@ def test_first_pass_pass_with_review_flags_returns_ready(monkeypatch: pytest.Mon
     result = asyncio.run(automator.finalize(stage1_result=_stage1_result()))
     assert result["status"] == "ready"
     assert result["plan_text"] == "# final plan with minor flags"
+
+
+def test_first_pass_publish_blocking_review_flags_hold_plan(monkeypatch: pytest.MonkeyPatch) -> None:
+    def _quality_blocked_review(**_: object) -> dict:
+        finding = {"code": "missing_required_element", "phase": "SPP"}
+        return {
+            "status": "PASS",
+            "needs_retry": False,
+            "validator_report": {
+                "errors": [],
+                "warnings": [finding],
+                "review_flags": [finding],
+                "review_flag_count": 1,
+            },
+        }
+
+    monkeypatch.setattr(stage2_module, "review_stage2_output", _quality_blocked_review)
+    client = FakeClient([_response("# final plan missing required work")])
+    automator = OpenAIStage2Automator(client=client, model="test-model")
+
+    result = asyncio.run(automator.finalize(stage1_result=_stage1_result()))
+
+    assert len(client.responses.calls) == 1
+    assert result["status"] == "held_for_review"
+    assert result["plan_text"] == ""
+    assert result["final_plan_text"] == "# final plan missing required work"
+    assert result["stage2_validator_report"]["publish_blocking_review_flags"] == [
+        {"code": "missing_required_element", "phase": "SPP"}
+    ]
 
 
 @pytest.mark.parametrize("review_status", ["FAIL", "WARN"])
@@ -428,12 +457,20 @@ def test_rescuable_false_when_any_error_is_unrescuable() -> None:
     assert _is_rescuable(report) is False
 
 
-def test_rescuable_true_when_only_soft_blocking_warnings_present() -> None:
+def test_rescuable_true_when_only_card_rescuable_blocking_warnings_present() -> None:
+    report = {
+        "errors": [],
+        "blocking_warnings": [{"code": "generic_filler_phrase"}],
+    }
+    assert _is_rescuable(report) is True
+
+
+def test_rescuable_false_when_publish_blocking_warning_present() -> None:
     report = {
         "errors": [],
         "blocking_warnings": [{"code": "missing_required_element"}],
     }
-    assert _is_rescuable(report) is True
+    assert _is_rescuable(report) is False
 
 
 def test_rescuable_false_when_unknown_blocking_warning_present() -> None:

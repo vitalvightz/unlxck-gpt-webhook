@@ -315,15 +315,15 @@ def test_finalize_soft_hold_rescued_by_clean_card(monkeypatch: pytest.MonkeyPatc
     assert result["stage2_validator_report"]["errors"] == [{"code": "true_internal_system_leak"}]
 
 
-def test_finalize_soft_blocking_warning_rescued_by_clean_card(monkeypatch: pytest.MonkeyPatch):
+def test_finalize_card_rescuable_blocking_warning_rescued_by_clean_card(monkeypatch: pytest.MonkeyPatch):
     def _warn_review(**_):
         return {
             "status": "WARN",
             "needs_retry": True,
             "validator_report": {
                 "errors": [],
-                "warnings": [{"code": "missing_required_element", "severity": "blocker"}],
-                "blocking_warnings": [{"code": "missing_required_element", "severity": "blocker"}],
+                "warnings": [{"code": "generic_filler_phrase", "severity": "blocker"}],
+                "blocking_warnings": [{"code": "generic_filler_phrase", "severity": "blocker"}],
                 "review_flag_count": 0,
             },
         }
@@ -340,6 +340,36 @@ def test_finalize_soft_blocking_warning_rescued_by_clean_card(monkeypatch: pytes
     assert result["structured_plan"] is not None
     assert result["stage2_validator_report"]["structured_plan"]["status"] == "valid"
     assert result["stage2_validator_report"]["blocking_warnings"] == [
+        {"code": "generic_filler_phrase", "severity": "blocker"}
+    ]
+
+
+def test_finalize_publish_blocking_warning_not_rescued_by_clean_card(monkeypatch: pytest.MonkeyPatch):
+    def _warn_review(**_):
+        return {
+            "status": "WARN",
+            "needs_retry": True,
+            "validator_report": {
+                "errors": [],
+                "warnings": [{"code": "missing_required_element", "severity": "blocker"}],
+                "blocking_warnings": [{"code": "missing_required_element", "severity": "blocker"}],
+                "review_flag_count": 0,
+            },
+        }
+
+    monkeypatch.setenv("UNLXCK_STAGE2_STRUCTURED_PLAN", "1")
+    monkeypatch.setattr(stage2_module, "review_stage2_output", _warn_review)
+    client = _FakeClient([_response("# final plan")])
+    automator = OpenAIStage2Automator(client=client, model="test-model")
+
+    result = asyncio.run(automator.finalize(stage1_result=_stage1_result()))
+
+    assert len(client.responses.calls) == 1
+    assert result["status"] == "held_for_review"
+    assert result["plan_text"] == ""
+    assert result["structured_plan"] is None
+    assert result["stage2_validator_report"]["structured_plan"]["status"] == "not_attempted"
+    assert result["stage2_validator_report"]["publish_blocking_review_flags"] == [
         {"code": "missing_required_element", "severity": "blocker"}
     ]
 

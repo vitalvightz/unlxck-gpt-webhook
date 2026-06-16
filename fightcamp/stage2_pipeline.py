@@ -3,8 +3,10 @@ from __future__ import annotations
 from typing import Any
 
 from .stage2_policy import (
+    apply_publish_blocking_review_gate,
     hard_blocker_findings,
     is_hard_stage2_blocker,
+    publish_blocking_review_findings,
     prompt_safe_validator_report,
 )
 from .stage2_repair import build_stage2_repair_prompt
@@ -236,16 +238,23 @@ def build_stage2_retry(
 
     if validator_report is None:
         review = review_stage2_output(planning_brief=planning_brief, final_plan_text=final_plan_text)
-        validator_report = review["validator_report"]
+        validator_report = apply_publish_blocking_review_gate(review["validator_report"])
         status = review["status"]
         summary = review["summary"]
         summary_lines = review["summary_lines"]
     else:
-        validator_report = _enrich_validator_report(_require_dict(validator_report, name="validator_report"))
+        validator_report = apply_publish_blocking_review_gate(
+            _enrich_validator_report(_require_dict(validator_report, name="validator_report"))
+        )
         status = _review_status(validator_report)
         summary, summary_lines = _build_review_summary(validator_report, status)
 
-    if status == _STATUS_PASS or not hard_blocker_findings(validator_report):
+    publish_blockers = publish_blocking_review_findings(validator_report)
+    if publish_blockers and status == _STATUS_PASS:
+        status = _STATUS_WARN
+        summary = "WARN: final plan has publish-blocking coaching quality issues and needs revision before release"
+        summary_lines = [_warning_detail_line(warning) for warning in publish_blockers]
+    if not publish_blockers and (status == _STATUS_PASS or not hard_blocker_findings(validator_report)):
         return {
             "status": status,
             "validator_report": validator_report,

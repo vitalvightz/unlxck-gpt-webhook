@@ -7,7 +7,12 @@ from datetime import datetime, timezone
 from typing import Any, Protocol
 
 from fightcamp.stage2_pipeline import build_stage2_package, review_stage2_output
-from fightcamp.stage2_policy import is_card_rescuable_soft_code, is_hard_stage2_blocker
+from fightcamp.stage2_policy import (
+    apply_publish_blocking_review_gate,
+    is_card_rescuable_soft_code,
+    is_hard_stage2_blocker,
+    publish_blocking_review_findings,
+)
 
 from .structured_plan_generation import (
     StructuredPlanOutcome,
@@ -33,8 +38,8 @@ _DEFAULT_MAX_OUTPUT_TOKENS = 0
 def _stage2_hold_is_card_rescuable(validator_report: Any) -> bool:
     """Whether a would-be hold could be rescued by a clean structured card.
 
-    A hold is rescuable only when it is driven entirely by non-safety,
-    recoverable findings. The check is intentionally defensive about a
+    A hold is rescuable only when it is driven entirely by card-recoverable
+    render/format findings. The check is intentionally defensive about a
     malformed report - anything it cannot positively confirm is non-rescuable,
     so an odd shape never accidentally publishes a held plan. It returns True
     only when ALL of the following hold:
@@ -43,10 +48,13 @@ def _stage2_hold_is_card_rescuable(validator_report: Any) -> bool:
     * ``errors`` and ``blocking_warnings`` are lists;
     * every error/blocking warning is a dict carrying a non-empty string
       ``code``; and
-    * every code is a known soft code, not a safety/output-integrity code.
+    * every code is a known card-rescuable code, not safety/output-integrity or
+      publish-blocking coaching quality.
     """
 
     if not isinstance(validator_report, dict):
+        return False
+    if publish_blocking_review_findings(validator_report):
         return False
     errors = validator_report.get("errors")
     blocking_warnings = validator_report.get("blocking_warnings") or []
@@ -676,19 +684,30 @@ class OpenAIStage2Automator:
             planning_brief=package["planning_brief"],
             final_plan_text=first_pass_text,
         )
+        first_review = {
+            **first_review,
+            "validator_report": apply_publish_blocking_review_gate(
+                first_review["validator_report"]
+            ),
+        }
+        publish_blocking_findings = publish_blocking_review_findings(
+            first_review["validator_report"]
+        )
         logger.info(
-            "[stage2] first_pass review status=%s needs_retry=%s",
+            "[stage2] first_pass review status=%s needs_retry=%s publish_blockers=%s",
             first_review["status"],
             first_review["needs_retry"],
+            len(publish_blocking_findings),
         )
 
-        # A soft hold (non-safety findings only) is tentatively published so the
-        # structured-card attempt below can run and vouch for it. If no clean
-        # card materialises, it is reverted to a hold further down. Only gated
-        # when structured plans are enabled - otherwise no card can ever rescue
-        # it and the tentative publish would just flap back to a hold.
+        # A card-rescuable hold is tentatively published so the structured-card
+        # attempt below can run and vouch for it. Coaching-content gaps are not
+        # eligible for this path. If no clean card materialises, it is reverted
+        # to a hold further down. Only gated when structured plans are enabled -
+        # otherwise no card can ever rescue it and the tentative publish would
+        # just flap back to a hold.
         rescue_pending = False
-        if first_review["status"] == "PASS":
+        if first_review["status"] == "PASS" and not publish_blocking_findings:
             result = _approved_result(
                 stage1_result,
                 draft_plan_text=draft_plan_text,
@@ -717,7 +736,16 @@ class OpenAIStage2Automator:
             )
             rescue_pending = True
         else:
-            logger.warning("[stage2] review required after first_pass: automatic retry disabled")
+            if publish_blocking_findings:
+                logger.warning(
+                    "[stage2] review required after first_pass: publish-blocking quality findings=%s",
+                    ",".join(
+                        str(finding.get("code") or "")
+                        for finding in publish_blocking_findings
+                    ),
+                )
+            else:
+                logger.warning("[stage2] review required after first_pass: automatic retry disabled")
             result = _review_required_result(
                 stage1_result,
                 draft_plan_text=draft_plan_text,

@@ -7,6 +7,10 @@ from typing import Any
 
 from fastapi import HTTPException, status
 from fightcamp.stage2_pipeline import build_stage2_retry, review_stage2_output
+from fightcamp.stage2_policy import (
+    apply_publish_blocking_review_gate,
+    publish_blocking_review_findings,
+)
 
 from ..models import PlanDetail
 from ..plan_mappers import _decode_structured_text, _lookup_plan_source, _map_plan_detail
@@ -103,10 +107,12 @@ async def _attach_structured_plan_within_budget(
 def _manual_stage2_result(plan_row: dict[str, Any], final_plan_text: str) -> dict[str, Any]:
     planning_brief = _decode_structured_text(plan_row.get("planning_brief")) or {}
     review = review_stage2_output(planning_brief=planning_brief, final_plan_text=final_plan_text)
+    validator_report = apply_publish_blocking_review_gate(review["validator_report"])
+    publish_blocking_findings = publish_blocking_review_findings(validator_report)
     next_attempt_count = int(plan_row.get("stage2_attempt_count") or 0) + 1
     had_retry_prompt = bool(str(plan_row.get("stage2_retry_text") or "").strip())
 
-    if review["status"] == "PASS":
+    if review["status"] == "PASS" and not publish_blocking_findings:
         return {
             "status": "ready",
             "plan_text": final_plan_text,
@@ -114,7 +120,7 @@ def _manual_stage2_result(plan_row: dict[str, Any], final_plan_text: str) -> dic
             "final_plan_text": final_plan_text,
             "pdf_url": None,
             "stage2_retry_text": "",
-            "stage2_validator_report": review["validator_report"],
+            "stage2_validator_report": validator_report,
             "stage2_status": "manual_stage2_retry_pass" if had_retry_prompt else "manual_stage2_pass",
             "stage2_attempt_count": next_attempt_count,
         }
@@ -122,7 +128,7 @@ def _manual_stage2_result(plan_row: dict[str, Any], final_plan_text: str) -> dic
     retry = build_stage2_retry(
         stage1_result={"planning_brief": planning_brief},
         final_plan_text=final_plan_text,
-        validator_report=review["validator_report"],
+        validator_report=validator_report,
     )
     return {
         "status": "review_required",
@@ -131,7 +137,7 @@ def _manual_stage2_result(plan_row: dict[str, Any], final_plan_text: str) -> dic
         "final_plan_text": final_plan_text,
         "pdf_url": None,
         "stage2_retry_text": str(retry.get("repair_prompt") or ""),
-        "stage2_validator_report": review["validator_report"],
+        "stage2_validator_report": validator_report,
         "stage2_status": "manual_stage2_retry_required",
         "stage2_attempt_count": next_attempt_count,
     }

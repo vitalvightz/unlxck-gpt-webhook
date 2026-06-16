@@ -580,6 +580,65 @@ def test_manual_stage2_submission_publishes_when_only_non_blocking_review_flags_
     assert body["admin_outputs"]["stage2_validator_report"]["review_flag_count"] >= 1
 
 
+def test_manual_stage2_submission_holds_publish_blocking_quality_flags():
+    client, store, _ = _build_client()
+    athlete = AuthenticatedUser(
+        user_id="athlete-1",
+        email="ari@example.com",
+        full_name="Ari Mensah",
+        metadata={},
+    )
+    store.ensure_profile(athlete)
+    plan = store.create_plan(
+        athlete_id="athlete-1",
+        intake_id="intake_x",
+        request=_build_request(),
+        result=finalized_result(
+            status="review_required",
+            plan_text="",
+            final_plan_text="",
+            planning_brief={
+                "athlete_model": {"sport": "boxing"},
+                "phase_strategy": {"SPP": {"must_keep": ["alactic"]}},
+                "candidate_pools": {
+                    "SPP": {
+                        "strength_slots": [],
+                        "conditioning_slots": [
+                            {
+                                "role": "alactic",
+                                "selected": {"name": "Air Bike Sprint"},
+                                "alternates": [],
+                            }
+                        ],
+                        "rehab_slots": [],
+                    }
+                },
+            },
+            stage2_status="stage2_failed",
+            stage2_retry_text="",
+            stage2_attempt_count=2,
+        ),
+    )
+
+    response = client.post(
+        f"/api/admin/plans/{plan['id']}/manual-stage2",
+        headers={"Authorization": "Bearer admin-token"},
+        json=ManualStage2SubmissionRequest(
+            final_plan_text="## PHASE 2: SPP\n- Landmine Press - 4x5"
+        ).model_dump(mode="json"),
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["status"] == "held_for_review"
+    assert body["outputs"]["plan_text"] == ""
+    assert body["admin_outputs"]["stage2_status"] == "manual_stage2_retry_required"
+    assert body["admin_outputs"]["stage2_retry_text"]
+    assert body["admin_outputs"]["stage2_validator_report"]["publish_blocking_review_flags"][
+        0
+    ]["code"] == "missing_required_element"
+
+
 def test_manual_stage2_submission_requires_admin_role():
     client, store, _ = _build_client()
     athlete = AuthenticatedUser(

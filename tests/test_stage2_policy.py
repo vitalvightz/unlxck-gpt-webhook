@@ -16,6 +16,12 @@ def test_hard_stage2_blocker_codes_load_from_shared_json() -> None:
     )
 
 
+def test_publish_blocking_review_flag_codes_load_from_shared_json() -> None:
+    assert stage2_policy.PUBLISH_BLOCKING_REVIEW_FLAG_CODES == frozenset(
+        _raw_policy()["publish_blocking_review_flag_codes"]
+    )
+
+
 def test_hard_blocker_findings_returns_only_hard_blockers() -> None:
     report = {
         "errors": [
@@ -53,7 +59,12 @@ def test_prompt_safe_validator_report_excludes_soft_findings_and_review_flags() 
 
     assert stage2_policy.prompt_safe_validator_report(report) == {
         "errors": [{"code": "restriction_violation", "line": "Push Press"}],
-        "blocking_warnings": [{"code": "stage2_output_truncated"}],
+        "warnings": [{"code": "missing_required_element"}],
+        "blocking_warnings": [
+            {"code": "stage2_output_truncated"},
+            {"code": "missing_required_element"},
+        ],
+        "missing_required_elements": [],
         "restricted_hits": [
             {"restriction": "heavy_overhead_pressing", "line": "Push Press"}
         ],
@@ -89,3 +100,15 @@ def test_stage2_hold_rescue_uses_shared_soft_code_list() -> None:
     assert not stage2_automation._stage2_hold_is_card_rescuable(
         {"errors": [{"code": "unknown_future_soft_code"}], "blocking_warnings": []}
     )
+
+
+def test_publish_blocking_review_findings_dedupes_warning_sources() -> None:
+    report = {
+        "warnings": [{"code": "missing_required_element", "phase": "SPP"}],
+        "review_flags": [{"code": "missing_required_element", "phase": "SPP"}],
+        "blocking_warnings": [{"code": "generic_filler_phrase"}],
+    }
+
+    assert stage2_policy.publish_blocking_review_findings(report) == [
+        {"code": "missing_required_element", "phase": "SPP"}
+    ]
