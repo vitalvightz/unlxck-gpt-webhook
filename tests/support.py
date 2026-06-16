@@ -179,11 +179,7 @@ class FakeStore:
             return "startup_stale"
         if is_stage1_planner_stalled_generation_job(job, stale_after_seconds=stage1_stale_after_seconds):
             return "stage1_planner_stalled"
-        heartbeat_raw = job.get("heartbeat_at")
-        started_raw = job.get("started_at")
-        heartbeat = datetime.fromisoformat(str(heartbeat_raw).replace("Z", "+00:00")) if heartbeat_raw else None
-        started_at = datetime.fromisoformat(str(started_raw).replace("Z", "+00:00")) if started_raw else None
-        reference = heartbeat or started_at
+        reference = _latest_job_activity_at(job)
         if reference is None:
             return "fresh"
         age = (datetime.now(timezone.utc) - reference).total_seconds()
