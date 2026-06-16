@@ -81,10 +81,20 @@ def test_reworded_exercise_passes():
     assert check_structured_faithfulness(plan, SOURCE) == []
 
 
-def test_no_basis_to_judge_returns_clean():
-    # Source without any D-day marker is not evaluated (the schema gate is the
-    # only authority), so a stub markdown can never trip the faithfulness gate.
-    assert check_structured_faithfulness(_FAITHFUL, "# raw") == []
+def test_card_with_countdown_against_sourceless_text_is_unverifiable():
+    # Card-first hard gate: a card that claims a countdown structure cannot be
+    # proven faithful against source text with no D-day marker, so it is rejected
+    # as unverifiable rather than skipped.
+    violations = check_structured_faithfulness(_FAITHFUL, "# raw")
+    assert violations
+    assert any(v.startswith("COUNTDOWN") for v in violations)
+
+
+def test_no_countdown_claim_and_no_source_returns_clean():
+    # A degenerate card making no countdown claim has nothing to project, so the
+    # schema gate remains the only authority and the faithfulness gate stays out
+    # of it. An empty plan likewise has no basis to judge.
+    assert check_structured_faithfulness({"weeks": []}, "# raw") == []
     assert check_structured_faithfulness({}, SOURCE) == []
 
 

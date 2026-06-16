@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import logging
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
@@ -31,6 +32,8 @@ from .models import (
 )
 from .store import AppStore
 from .structured_plan_models import StructuredTrainingPlan, safe_parse_structured_plan
+
+logger = logging.getLogger(__name__)
 
 
 def _build_me_response(profile: ProfileRecord, store: AppStore) -> MeResponse:
@@ -379,6 +382,13 @@ def _decode_structured_plan(
         return None, None
     result = safe_parse_structured_plan(decoded, raw_markdown=raw_markdown or None)
     if not result.ok or result.plan is None:
+        # The column carried a structured payload that no longer parses against
+        # the schema. Surface it instead of silently dropping to the markdown
+        # fallback, so a stored-card regression is visible rather than invisible.
+        logger.warning(
+            "structured_plan column failed to parse; falling back to markdown (errors=%s)",
+            "; ".join(result.errors) if getattr(result, "errors", None) else "unknown",
+        )
         return None, None
     return result.plan, result.plan.schema_version
 

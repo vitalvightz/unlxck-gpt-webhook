@@ -58,8 +58,48 @@ class _StructuredAutomator:
         return self.outcome, list(self.costs)
 
 
-def _valid_outcome(raw_markdown: str = "# final plan") -> StructuredPlanOutcome:
-    return build_structured_plan_outcome(_valid_plan(), raw_markdown=raw_markdown)
+def _faithful_source(plan: dict) -> str:
+    """Markdown faithful to ``plan`` so the faithfulness gate returns a clean card.
+
+    The faithfulness gate rejects a countdown-claiming card whose source text has
+    no D-day marker, so a placeholder like ``# final plan`` would degrade the
+    outcome to ``invalid_fallback_used``. Derive a real countdown source from the
+    plan: each week's bounds plus, per day, a D-day header with its exercise names.
+    """
+    lines = ["# FIGHT CAMP PLAN", ""]
+    for week in plan.get("weeks") or []:
+        lines.append(
+            f"## Week — SPP ({week.get('countdown_start')} to {week.get('countdown_end')})"
+        )
+        lines.append("")
+        for day in week.get("days") or []:
+            lines.append(f"### Day ({day.get('countdown_label') or ''}) — Session")
+            for session in day.get("sessions") or []:
+                for block in session.get("blocks") or []:
+                    name = block.get("display_name")
+                    if name:
+                        lines.append(f"- {name}")
+            lines.append("")
+    return "\n".join(lines)
+
+
+def _valid_outcome(raw_markdown: str = "") -> StructuredPlanOutcome:
+    # The card must be a faithful projection of its source for
+    # build_structured_plan_outcome to return a clean (valid) card, so derive the
+    # source from the plan itself. A caller-supplied label is kept as a leading
+    # heading purely for readability of which flow built the outcome.
+    plan = _valid_plan()
+    source = _faithful_source(plan)
+    if raw_markdown.strip():
+        source = f"{raw_markdown}\n\n{source}"
+    return build_structured_plan_outcome(plan, raw_markdown=source)
+
+
+# A Stage 2 first-pass markdown faithful to ``_valid_plan()`` so the structured
+# conversion's faithfulness gate returns a clean card (the card-first publish gate
+# then keeps the plan ready). Used by finalize tests that expect a valid card.
+# Stripped because the automator trims model output before persisting plan_text.
+_FAITHFUL_FINAL_PLAN = _faithful_source(_valid_plan()).strip()
 
 
 # ---------------------------------------------------------------------------
@@ -269,13 +309,13 @@ def test_finalize_skips_structured_when_disabled(monkeypatch: pytest.MonkeyPatch
 def test_finalize_attaches_valid_structured_plan(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setenv("UNLXCK_STAGE2_STRUCTURED_PLAN", "1")
     monkeypatch.setattr(stage2_module, "review_stage2_output", _pass_review)
-    client = _FakeClient([_response("# final plan"), _response(json.dumps(_valid_plan()))])
+    client = _FakeClient([_response(_FAITHFUL_FINAL_PLAN), _response(json.dumps(_valid_plan()))])
     automator = OpenAIStage2Automator(client=client, model="test-model")
 
     result = asyncio.run(automator.finalize(stage1_result=_stage1_result()))
 
     assert len(client.responses.calls) == 2  # plan + structured first pass
-    assert result["plan_text"] == "# final plan"  # raw fallback untouched
+    assert result["plan_text"] == _FAITHFUL_FINAL_PLAN  # raw fallback untouched
     assert result["schema_version"] == SCHEMA_VERSION
     assert isinstance(result["structured_plan"], dict)
     assert result["stage2_validator_report"]["structured_plan"]["status"] == "valid"
@@ -304,13 +344,13 @@ def test_finalize_soft_hold_rescued_by_clean_card(monkeypatch: pytest.MonkeyPatc
     # published when a schema-valid structured card vouches for it.
     monkeypatch.setenv("UNLXCK_STAGE2_STRUCTURED_PLAN", "1")
     monkeypatch.setattr(stage2_module, "review_stage2_output", _fail_review("true_internal_system_leak"))
-    client = _FakeClient([_response("# final plan"), _response(json.dumps(_valid_plan()))])
+    client = _FakeClient([_response(_FAITHFUL_FINAL_PLAN), _response(json.dumps(_valid_plan()))])
     automator = OpenAIStage2Automator(client=client, model="test-model")
 
     result = asyncio.run(automator.finalize(stage1_result=_stage1_result()))
 
     assert result["status"] == "ready"
-    assert result["plan_text"] == "# final plan"
+    assert result["plan_text"] == _FAITHFUL_FINAL_PLAN
     assert isinstance(result["structured_plan"], dict)
     assert result["stage2_validator_report"]["structured_plan"]["status"] == "valid"
     # The original error is still recorded for admin visibility.
@@ -332,13 +372,13 @@ def test_finalize_card_rescuable_blocking_warning_rescued_by_clean_card(monkeypa
 
     monkeypatch.setenv("UNLXCK_STAGE2_STRUCTURED_PLAN", "1")
     monkeypatch.setattr(stage2_module, "review_stage2_output", _warn_review)
-    client = _FakeClient([_response("# final plan"), _response(json.dumps(_valid_plan()))])
+    client = _FakeClient([_response(_FAITHFUL_FINAL_PLAN), _response(json.dumps(_valid_plan()))])
     automator = OpenAIStage2Automator(client=client, model="test-model")
 
     result = asyncio.run(automator.finalize(stage1_result=_stage1_result()))
 
     assert result["status"] == "ready"
-    assert result["plan_text"] == "# final plan"
+    assert result["plan_text"] == _FAITHFUL_FINAL_PLAN
     assert result["structured_plan"] is not None
     assert result["stage2_validator_report"]["structured_plan"]["status"] == "valid"
     assert result["stage2_validator_report"]["blocking_warnings"] == [
@@ -434,7 +474,7 @@ def test_finalize_uses_one_repair_retry(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setattr(stage2_module, "review_stage2_output", _pass_review)
     client = _FakeClient(
         [
-            _response("# final plan"),
+            _response(_FAITHFUL_FINAL_PLAN),
             _response(json.dumps(["not", "a", "plan"])),  # invalid first structured pass
             _response(json.dumps(_valid_plan())),  # repaired structured pass
         ]
@@ -468,7 +508,12 @@ def test_finalize_keeps_raw_plan_when_structured_invalid_after_repair(
 
     result = asyncio.run(automator.finalize(stage1_result=_stage1_result()))
 
-    assert result["plan_text"] == "# final plan"  # user still gets the raw plan
+    # Card-first gate: with no clean card the plan is held for review rather than
+    # silently published as raw text. The markdown is retained on final_plan_text
+    # (admin-visible) while the athlete-facing plan_text is gated to empty.
+    assert result["status"] == "held_for_review"
+    assert result["plan_text"] == ""
+    assert result["final_plan_text"] == "# final plan"
     assert result["structured_plan"] is None  # invalid never persisted
     debug = result["stage2_validator_report"]["structured_plan"]
     assert debug["status"] == "invalid_fallback_used"
@@ -531,7 +576,11 @@ def test_finalize_does_not_crash_when_structured_model_errors(
 
     result = asyncio.run(automator.finalize(stage1_result=_stage1_result()))
 
-    assert result["plan_text"] == "# final plan"
+    # The raw plan must survive the structured crash, but with no clean card the
+    # card-first gate holds it for review rather than publishing text-only.
+    assert result["status"] == "held_for_review"
+    assert result["plan_text"] == ""
+    assert result["final_plan_text"] == "# final plan"
     assert result["structured_plan"] is None
     assert result["stage2_validator_report"]["structured_plan"]["status"] == "not_attempted"
 

@@ -53,6 +53,34 @@ def _invalid_plan():
     return ["not", "a", "structured", "plan"]
 
 
+def _faithful_source(plan: dict) -> str:
+    """Markdown faithful to ``plan`` so the faithfulness gate passes.
+
+    The faithfulness gate (part of ``build_structured_plan_outcome``) rejects a
+    countdown-claiming card whose source text has no D-day marker. Tests that
+    exercise the *outcome machinery* (validation, repair, load normalization,
+    biometric stripping, check-in tolerance) still need a faithful source, so
+    derive one from the plan: emit each week's countdown bounds and, per day, a
+    D-day header followed by every exercise block's display name.
+    """
+    lines = ["# FIGHT CAMP PLAN", ""]
+    for week in plan.get("weeks") or []:
+        lines.append(
+            f"## Week — SPP ({week.get('countdown_start')} to {week.get('countdown_end')})"
+        )
+        lines.append("")
+        for day in week.get("days") or []:
+            label = day.get("countdown_label") or ""
+            lines.append(f"### Day ({label}) — Session")
+            for session in day.get("sessions") or []:
+                for block in session.get("blocks") or []:
+                    name = block.get("display_name")
+                    if name:
+                        lines.append(f"- {name}")
+            lines.append("")
+    return "\n".join(lines)
+
+
 # --- build_structured_plan_outcome statuses --------------------------------
 
 
@@ -64,7 +92,8 @@ def test_none_input_is_not_attempted():
 
 
 def test_valid_plan_outcome_is_valid_and_carries_schema_version():
-    outcome = build_structured_plan_outcome(_valid_plan(), raw_markdown="# raw")
+    plan = _valid_plan()
+    outcome = build_structured_plan_outcome(plan, raw_markdown=_faithful_source(plan))
     assert outcome.status == "valid"
     assert outcome.schema_version == SCHEMA_VERSION
     assert isinstance(outcome.structured_plan, dict)
@@ -91,7 +120,9 @@ def test_repair_retry_succeeds():
         return repaired_payload
 
     outcome = build_structured_plan_outcome(
-        _invalid_plan(), raw_markdown="# raw", repair_fn=repair_fn
+        _invalid_plan(),
+        raw_markdown=_faithful_source(repaired_payload),
+        repair_fn=repair_fn,
     )
     assert len(calls) == 1  # exactly one repair attempt
     assert outcome.status == "repair_attempted_valid"
@@ -115,7 +146,10 @@ def test_repair_not_called_when_first_attempt_is_valid():
     def repair_fn(_broken, _errors):  # pragma: no cover - must not run
         raise AssertionError("repair must not run when first attempt is valid")
 
-    outcome = build_structured_plan_outcome(_valid_plan(), repair_fn=repair_fn)
+    plan = _valid_plan()
+    outcome = build_structured_plan_outcome(
+        plan, raw_markdown=_faithful_source(plan), repair_fn=repair_fn
+    )
     assert outcome.status == "valid"
 
 
@@ -125,7 +159,7 @@ def test_repair_not_called_when_first_attempt_is_valid():
 def test_string_only_load_is_normalized_to_object():
     plan = _valid_plan()
     plan["weeks"][0]["days"][0]["sessions"][0]["blocks"][0]["load"] = "85%"
-    outcome = build_structured_plan_outcome(plan, raw_markdown="# raw")
+    outcome = build_structured_plan_outcome(plan, raw_markdown=_faithful_source(plan))
     assert outcome.status == "valid"
     load = outcome.structured_plan["weeks"][0]["days"][0]["sessions"][0]["blocks"][0]["load"]
     assert load["method"] == "percentage"
@@ -136,7 +170,7 @@ def test_string_only_load_is_normalized_to_object():
 def test_unparseable_string_load_becomes_null():
     plan = _valid_plan()
     plan["weeks"][0]["days"][0]["sessions"][0]["blocks"][0]["load"] = "as hard as possible"
-    outcome = build_structured_plan_outcome(plan, raw_markdown="# raw")
+    outcome = build_structured_plan_outcome(plan, raw_markdown=_faithful_source(plan))
     assert outcome.status == "valid"
     assert (
         outcome.structured_plan["weeks"][0]["days"][0]["sessions"][0]["blocks"][0]["load"]
@@ -153,7 +187,7 @@ def test_machine_readable_load_is_accepted():
         "ref": "1RM",
         "display": "85% 1RM",
     }
-    outcome = build_structured_plan_outcome(good, raw_markdown="# raw")
+    outcome = build_structured_plan_outcome(good, raw_markdown=_faithful_source(good))
     assert outcome.status == "valid"
 
 
@@ -168,7 +202,7 @@ def test_biometric_fields_are_stripped_before_validation():
     plan["weeks"][0]["days"][0]["cns_recovery_percent"] = 40
     plan["strain_score"] = 14.2
 
-    outcome = build_structured_plan_outcome(plan, raw_markdown="# raw")
+    outcome = build_structured_plan_outcome(plan, raw_markdown=_faithful_source(plan))
     assert outcome.status == "valid"
     dumped = repr(outcome.structured_plan)
     for banned in ("hrv_score", "whoop_recovery_score", "cns_recovery_percent", "strain_score"):
@@ -845,7 +879,7 @@ def test_full_block_and_mindset_detail_round_trips_through_outcome():
     # its block; add the optional mindset anchors and confirm they survive.
     plan = _valid_plan()
     plan["weeks"][0]["days"][0]["sessions"][0]["mindset_anchor"]["confidence_anchor"] = "Anchor X"
-    outcome = build_structured_plan_outcome(plan, raw_markdown="# raw")
+    outcome = build_structured_plan_outcome(plan, raw_markdown=_faithful_source(plan))
     assert outcome.status == "valid"
     block = outcome.structured_plan["weeks"][0]["days"][0]["sessions"][0]["blocks"][0]
     assert block["coaching_cues"]
@@ -904,7 +938,7 @@ def test_malformed_check_in_does_not_cause_invalid_fallback():
         {"date": "2026-05-30", "decision": "definitely_yes"},  # bad decision, no morning
         _good_check_in(),  # one fully valid entry survives
     ]
-    outcome = build_structured_plan_outcome(plan, raw_markdown="# raw")
+    outcome = build_structured_plan_outcome(plan, raw_markdown=_faithful_source(plan))
     assert outcome.status in {"valid", "repair_attempted_valid"}
     validate_structured_plan(outcome.structured_plan)
     surviving = outcome.structured_plan["daily_check_ins"]
@@ -1011,7 +1045,7 @@ def test_plan_with_only_malformed_check_ins_still_valid():
         {"morning": {"sleep_quality": 4}},
         {"date": "2026-05-30", "decision": "nope"},
     ]
-    outcome = build_structured_plan_outcome(plan, raw_markdown="# raw")
+    outcome = build_structured_plan_outcome(plan, raw_markdown=_faithful_source(plan))
     assert outcome.status in {"valid", "repair_attempted_valid"}
     assert outcome.structured_plan["daily_check_ins"] == []
     validate_structured_plan(outcome.structured_plan)
