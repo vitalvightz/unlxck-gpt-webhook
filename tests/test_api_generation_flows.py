@@ -3918,8 +3918,10 @@ def test_stale_running_job_is_failed_before_new_job_is_created():
         started_at=old,
         heartbeat_at=old,
         updated_at=old,
+        created_at=old,
         progress_milestones=[{"code": "stage2_drafting", "at": old}],
     )
+    store.generation_jobs[stale["id"]]["updated_at"] = old
 
     fresh = store.create_or_get_generation_job(
         athlete_id="athlete-1",
@@ -4022,6 +4024,7 @@ def test_stage2_drafting_old_heartbeat_is_reaped_and_does_not_block_new_job():
         started_at=old,
         heartbeat_at=old,
         updated_at=old,
+        created_at=old,
         progress_milestones=[
             {
                 "code": "stage2_drafting",
@@ -4031,6 +4034,7 @@ def test_stage2_drafting_old_heartbeat_is_reaped_and_does_not_block_new_job():
             }
         ],
     )
+    store.generation_jobs[stuck["id"]]["updated_at"] = old
 
     fresh = store.create_or_get_generation_job(
         athlete_id="athlete-1",
