@@ -531,7 +531,7 @@ def _is_active_generation_job_stale_by_latest_activity(
 
 
 def _stale_job_reaped_milestones(job: dict[str, Any], *, now_iso: str) -> list[Any]:
-    milestones = _progress_milestones(job.get("progress_milestones"))
+    milestones = list(_progress_milestones(job.get("progress_milestones")))
     if not _has_milestone_code(milestones, "stale_job_reaped"):
         milestones.append(
             {
