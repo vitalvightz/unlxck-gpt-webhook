@@ -220,8 +220,8 @@ function normalizePlanTextForCards(rawText: string): string {
   return rawText
     .replace(/\r\n/g, "\n")
     .replace(/(^|\n)Lead notes\s+[-–—]?\s*/i, "$1Lead notes\n")
-    .replace(/\s+(?=(?:GPP|SPP|TAPER|FIGHT WEEK)\s+[—-]\s+Week\b)/gi, "\n")
-    .replace(/\s+(?=D-\d+\s+\([^)]+\)\s+[—-]\s+)/g, "\n")
+    .replace(/\s+(?=(?:GPP|SPP|TAPER|FIGHT WEEK)\s+[-–—]\s+Week\b)/gi, "\n")
+    .replace(/\s+(?=D-\d+\s+\([^)]+\)\s+[-–—]\s+)/g, "\n")
     .replace(/\s+(?=Final notes\b)/gi, "\n")
     .replace(/(^|\n)Final notes\s+[-–—]?\s*/gi, "$1Final notes\n");
 }
