@@ -1143,24 +1143,10 @@ class SupabaseAppStore:
     def ensure_profile(self, user: AuthenticatedUser) -> dict[str, Any]:
         try:
             self._log_profile_event(operation="ensure_start", user=user)
-            existing = None
-            _last_read_exc: Exception | None = None
-            for _attempt in range(2):
-                try:
-                    existing = self._get_profile_by_id(user.user_id)
-                    _last_read_exc = None
-                    break
-                except _TRANSIENT_SUPABASE_ERRORS as exc:
-                    _last_read_exc = exc
-                    logger.warning(
-                        "[store] ensure_profile:transient_read_error attempt=%d athlete_id=%s error_type=%s",
-                        _attempt,
-                        user.user_id,
-                        type(exc).__name__,
-                    )
-                    time.sleep(0.5)
-            if _last_read_exc is not None:
-                raise _last_read_exc
+            existing = self._run_with_transient_retry(
+                operation=f"ensure_profile:read athlete_id={user.user_id}",
+                fn=lambda: self._get_profile_by_id(user.user_id),
+            )
             if existing:
                 self._log_profile_event(
                     operation="ensure_existing",
@@ -1185,7 +1171,10 @@ class SupabaseAppStore:
                         "error_code": "profile_ensure_upsert_exception",
                     },
                 )
-                fallback = self._get_profile_by_id(user.user_id)
+                fallback = self._run_with_transient_retry(
+                    operation=f"ensure_profile:fallback_read athlete_id={user.user_id}",
+                    fn=lambda: self._get_profile_by_id(user.user_id),
+                )
                 if fallback:
                     self._log_profile_event(operation="ensure_fallback_read_success", user=user)
                     return fallback
@@ -1196,7 +1185,10 @@ class SupabaseAppStore:
                     ) from exc
                 raise
 
-            profile = self._require_profile(user.user_id)
+            profile = self._run_with_transient_retry(
+                operation=f"ensure_profile:post_upsert_read athlete_id={user.user_id}",
+                fn=lambda: self._require_profile(user.user_id),
+            )
             self._log_profile_event(operation="ensure_created", user=user, role=profile.get("role"))
             return profile
         except HTTPException:
@@ -1214,7 +1206,7 @@ class SupabaseAppStore:
                     "error_code": "ensure_profile_exception",
                 },
             )
-            if isinstance(exc, _TRANSIENT_SUPABASE_ERRORS):
+            if self._is_transient_profile_error(exc):
                 raise HTTPException(
                     status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                     detail="profile service temporarily unavailable",
