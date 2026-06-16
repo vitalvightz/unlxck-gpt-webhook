@@ -623,7 +623,7 @@ def _normalize_plan_note(value: Any) -> dict[str, Any] | None:
     if not text:
         return None
     out: dict[str, Any] = {
-        "category": _enum(value.get("category"), _PLAN_NOTE_CATEGORY_VALUES, "general"),
+        "category": _enum(value.get("category"), _PLAN_NOTE_CATEGORY_VALUES, "general", {"weight cut": "weight_cut", "weight-cut": "weight_cut"}),
         "text": text,
     }
     label = _coerce_str(value.get("label")).strip()
