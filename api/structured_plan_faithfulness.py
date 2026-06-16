@@ -26,8 +26,9 @@ Design rules (mirrors ``structured_plan_safety`` conventions):
   (it carries at least one ``D-N`` day marker). Stubs / degenerate text are not
   evaluated, so the gate can never reject a card it has no basis to judge.
 * Read-only: never mutates the plan. Returns prefixed violation strings.
-* Never raises: any internal error returns "no violations" so the gate can not
-  break generation — the schema gate still applies.
+* Fail-closed: the public entry point never propagates an exception, but an
+  internal crash is reported as an INTERNAL violation so an unverifiable card is
+  rejected (the raw-markdown fallback ships) rather than passed through.
 """
 from __future__ import annotations
 
@@ -38,6 +39,9 @@ from typing import Any
 INTRODUCED = "INTRODUCED"
 MISPLACED = "MISPLACED"
 COUNTDOWN = "COUNTDOWN"
+# Raised internally by the checker -> treated as a violation so a crash rejects
+# the card (fail-closed) rather than letting an unverified card through.
+INTERNAL = "INTERNAL"
 
 # ``block_type`` values that name a specific, app-owned exercise we can hold to
 # the source text. Generic/contextual block types are deliberately excluded.
@@ -63,11 +67,35 @@ _GENERIC_TOKENS = {
 }
 
 _TOKEN_RE = re.compile(r"[a-z]+")
-# A day header carries a single "(D-N)" marker, e.g. "### Mon (D-18) — Power".
-# Week-range headers ("(D-18 -> D-16)") never match because the digits are not
-# immediately followed by ")".
-_DAY_HEADER_RE = re.compile(r"\(D-?(\d+)\)", re.I)
+_DDAY_RE = re.compile(r"D-(\d+)", re.I)
 _ANY_DDAY_RE = re.compile(r"D-\s*\d+", re.I)
+# A day header that leads with the countdown, optionally behind markdown hashes
+# and/or a weekday, e.g. "D-32 (Wednesday) — Aerobic support" or "### D-30 ...".
+_LEADING_DDAY_RE = re.compile(r"^\s*(?:#{1,6}\s*)?(?:[A-Za-z]{3,9}\s+)?D-\d+\b", re.I)
+# A "(D-N)" marker anywhere, e.g. "### Mon (D-30) — Strength".
+_PAREN_DDAY_RE = re.compile(r"\(D-\d+\)", re.I)
+
+
+def _day_header_dday(line: str) -> int | None:
+    """Return the single D-day a line declares as a training-day header, else None.
+
+    Supports both generated formats — countdown-leading
+    (``D-32 (Wednesday) — Aerobic support``) and markdown headings carrying a
+    parenthetical marker (``### Mon (D-30) — Strength``). A line with two or more
+    D-day numbers is a week/range header (``GPP — Week 1 (D-33 to D-27)``) and is
+    never a day section; lines naming "week" are excluded for the same reason.
+    """
+    nums = _DDAY_RE.findall(line)
+    if len(nums) != 1 or "week" in line.lower():
+        return None
+    is_header = (
+        line.lstrip().startswith("#")
+        or "—" in line
+        or "–" in line
+        or bool(_PAREN_DDAY_RE.search(line))
+        or bool(_LEADING_DDAY_RE.match(line))
+    )
+    return int(nums[0]) if is_header else None
 
 
 def _tokens(text: str) -> set[str]:
@@ -107,13 +135,17 @@ def _source_day_sections(markdown: str) -> dict[int, str]:
     sections: dict[int, list[str]] = {}
     current: int | None = None
     for line in markdown.splitlines():
-        header = _DAY_HEADER_RE.search(line)
-        is_range = "→" in line or "->" in line
-        if header and not is_range:
-            current = int(header.group(1))
-            sections.setdefault(current, [])
+        # A line with >=2 D-day numbers is a week/range header (e.g.
+        # "GPP — Week 1 (D-33 to D-27)"): a week boundary, never a training day.
+        # Reset so week-level notes are not misattributed to the previous day.
+        if len(_DDAY_RE.findall(line)) >= 2:
+            current = None
+            continue
+        day = _day_header_dday(line)
+        if day is not None:
+            current = day
         if current is not None:
-            sections[current].append(line)
+            sections.setdefault(current, []).append(line)
     return {day: "\n".join(lines).lower() for day, lines in sections.items()}
 
 
@@ -130,12 +162,14 @@ def check_structured_faithfulness(structured_plan: Any, source_markdown: str) ->
     """Return violation strings proving the card drifted from the source text.
 
     Empty list means the card is a faithful projection (or there is no basis to
-    judge, in which case the schema gate is the only authority). Never raises.
+    judge — no countdown markers in the source — in which case the schema gate is
+    the only authority). Fail-closed: if the check itself crashes it returns a
+    violation so the card is rejected rather than shipped unverified.
     """
     try:
         return _check(structured_plan, source_markdown)
-    except Exception:  # auditing must never break generation
-        return []
+    except Exception:  # fail-closed: an unverifiable card must not ship
+        return [f"{INTERNAL}: faithfulness check raised; rejecting card"]
 
 
 def _check(structured_plan: Any, source_markdown: str) -> list[str]:

@@ -8,6 +8,7 @@ a card that reflects the validated text, otherwise the raw text fallback.
 """
 from __future__ import annotations
 
+import api.structured_plan_faithfulness as faithfulness
 from api.structured_plan_faithfulness import check_structured_faithfulness
 from api.structured_plan_generation import build_structured_plan_outcome
 
@@ -172,3 +173,100 @@ def test_new_countdown_marker_is_rejected():
     )
     violations = check_structured_faithfulness(plan, SOURCE)
     assert any(v.startswith("COUNTDOWN") for v in violations), violations
+
+
+# --- real generated plan formats -------------------------------------------
+
+# The actual Stage 2 output leads with the countdown ("D-32 (Wednesday) — ...")
+# and also nests it inside markdown headings ("### Mon (D-30) — ..."). Week
+# headers ("GPP — Week 1 (D-33 to D-27)") must not be read as training days.
+REAL_SOURCE = """GPP — Week 1 (D-33 to D-27)
+
+D-32 (Wednesday) — Aerobic support
+- Zone 2 bike ride, 40 minutes easy aerobic flush.
+
+D-30 (Friday) — Strength
+- Barbell Back Squat 4x5 at 80 percent.
+- Pallof Press 3x10 each side anti-rotation.
+"""
+
+REAL_SOURCE_HEADINGS = """## GPP — Week 1 (D-33 to D-27)
+
+### Wed (D-32) — Aerobic support
+- Zone 2 bike ride, 40 minutes easy aerobic flush.
+
+### Fri (D-30) — Strength
+- Barbell Back Squat 4x5 at 80 percent.
+- Pallof Press 3x10 each side anti-rotation.
+"""
+
+
+def test_real_leading_dday_format_pallof_misplaced_is_rejected():
+    # Source assigns Pallof to D-30; the card placing it on D-32 must be MISPLACED
+    # even though the day headers use the leading "D-32 (Wednesday) —" format.
+    plan = _plan(
+        [
+            ("D-32", [("accessory", "Pallof Press")]),
+            ("D-30", [("strength", "Barbell Back Squat")]),
+        ]
+    )
+    violations = check_structured_faithfulness(plan, REAL_SOURCE)
+    assert any(v.startswith("MISPLACED") for v in violations), violations
+
+
+def test_real_markdown_heading_format_pallof_misplaced_is_rejected():
+    plan = _plan(
+        [
+            ("D-32", [("accessory", "Pallof Press")]),
+            ("D-30", [("strength", "Barbell Back Squat")]),
+        ]
+    )
+    violations = check_structured_faithfulness(plan, REAL_SOURCE_HEADINGS)
+    assert any(v.startswith("MISPLACED") for v in violations), violations
+
+
+def test_real_format_faithful_card_passes():
+    # Pallof kept on its source day (D-30) — no misplacement, no fabrication.
+    plan = _plan(
+        [
+            ("D-32", [("conditioning", "Zone 2 Bike Ride")]),
+            ("D-30", [("strength", "Barbell Back Squat"), ("accessory", "Pallof Press")]),
+        ]
+    )
+    assert check_structured_faithfulness(plan, REAL_SOURCE) == []
+
+
+def test_week_header_is_not_parsed_as_a_training_day():
+    # "GPP — Week 1 (D-33 to D-27)" must not create a D-33/D-27 section that
+    # captures the following day's exercises. Pallof belongs to D-30 only, so the
+    # source token index must map it to {30}, making the misplacement check fire.
+    sections = faithfulness._source_day_sections(REAL_SOURCE)
+    assert set(sections) == {32, 30}
+    token_days = faithfulness._source_token_days(sections)
+    assert token_days.get("pallof") == {30}
+
+
+# --- fail-closed on internal error -----------------------------------------
+
+
+def test_internal_error_fails_closed(monkeypatch):
+    # If the checker itself crashes it must reject the card (return a violation),
+    # never silently allow an unverified card through.
+    def _boom(*_args, **_kwargs):
+        raise RuntimeError("kaboom")
+
+    monkeypatch.setattr(faithfulness, "_check", _boom)
+    violations = check_structured_faithfulness(_FAITHFUL, SOURCE)
+    assert violations and violations[0].startswith("INTERNAL")
+
+
+def test_internal_error_falls_back_via_outcome(monkeypatch):
+    from test_structured_plan_models import _valid_plan
+
+    monkeypatch.setattr(
+        "api.structured_plan_generation.check_structured_faithfulness",
+        lambda *_a, **_k: ["INTERNAL: boom"],
+    )
+    outcome = build_structured_plan_outcome(_valid_plan(), raw_markdown="### Mon (D-15) — x")
+    assert outcome.status == "invalid_fallback_used"
+    assert outcome.structured_plan is None
