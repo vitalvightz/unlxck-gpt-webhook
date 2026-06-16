@@ -193,8 +193,10 @@ def _check(structured_plan: Any, source_markdown: str) -> list[str]:
 
     # Every D-day the source actually mentions (day headers + any inline D-N).
     source_ddays: set[int] = set(sections)
-    for match in re.finditer(r"D-\s*(\d+)", source, re.I):
-        source_ddays.add(int(match.group(1)))
+    for match in _DDAY_RE.finditer(source):
+        num = _dday_num(match.group(0))
+        if num is not None:
+            source_ddays.add(num)
 
     violations: list[str] = []
 
