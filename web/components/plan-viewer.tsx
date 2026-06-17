@@ -252,6 +252,10 @@ function normalizePlanTextForCards(rawText: string): string {
     .replace(/(^|\n)(Lead notes|Active notes)\s+[-–—]?\s*/gi, "$1$2\n")
     .replace(/\s+(?=(?:GPP|SPP|TAPER|FIGHT[ _]WEEK|REINTEGRATION)\s*[—–\-:]\s*Week\b)/gi, "\n")
     .replace(/\s+(?=D-\d+\s*\([^)]+\)\s*[—–\-:]\s*\S)/g, "\n")
+    .replace(
+      /\s+(?=(?:mon(?:day)?|tue(?:s(?:day)?)?|wed(?:nesday)?|thu(?:r(?:sday)?)?|fri(?:day)?|sat(?:urday)?|sun(?:day)?)\b[^()]*\(\s*D-\d+\s*\)\s*[—–\-:]\s*\S)/gi,
+      "\n",
+    )
     .replace(/\s+(?=(?:Final notes|End of plan notes)\b)/gi, "\n")
     .replace(/(^|\n)(Final notes|End of plan notes)\s+[-–—]?\s*/gi, "$1$2\n");
 }
@@ -362,6 +366,23 @@ function normalizePhaseToken(value: string): string {
   return value.replace(/_/g, " ").toUpperCase();
 }
 
+// On a run-on plan_text line the session metadata (the "Why:" objective, a
+// labelled note, or a coach-led freshness note) can sit inline after the
+// heading. Split it off the title so it is parsed as body instead of being
+// buried in (or lost from) the title. Markers require a colon or a distinctive
+// coach phrase, so ordinary title words ("Stop-and-go", a leading "Coach-led
+// boxing session") are never split.
+const SESSION_TITLE_BODY_MARKER =
+  /\s(?=(?:Why|Purpose|Progress\/regress\/stop|Progress\/regress|Progression|Progress|Regress|Stop rule|Stop|Easier|Swaps?|Rest|Note)\s*:|No app S|Coach owns this session|Train with your coach)/i;
+
+function splitSessionTitle(title: string): { title: string; remainder: string | null } {
+  const markerIndex = title.search(SESSION_TITLE_BODY_MARKER);
+  if (markerIndex > -1) {
+    return { title: title.slice(0, markerIndex).trim(), remainder: title.slice(markerIndex).trim() || null };
+  }
+  return { title, remainder: null };
+}
+
 function classifyPlanTextHeading(line: string): PlanTextHeading | null {
   const isMarkdownHeader = /^\s*#{1,6}\s+/.test(line);
   const clean = stripPlanMarkup(line);
@@ -388,22 +409,24 @@ function classifyPlanTextHeading(line: string): PlanTextHeading | null {
 
   const session = clean.match(SESSION_COUNTDOWN_FIRST_RE);
   if (session) {
+    const split = splitSessionTitle(session[3].trim());
     return {
       kind: "session",
       countdown: `D-${session[1]}`,
       weekday: session[2].trim() || null,
-      title: session[3].trim(),
-      remainder: null,
+      title: split.title,
+      remainder: split.remainder,
     };
   }
   const weekdaySession = clean.match(SESSION_WEEKDAY_FIRST_RE);
   if (weekdaySession) {
+    const split = splitSessionTitle(weekdaySession[3].trim());
     return {
       kind: "session",
       countdown: `D-${weekdaySession[2]}`,
       weekday: titleizeToken(weekdaySession[1].trim()),
-      title: weekdaySession[3].trim(),
-      remainder: null,
+      title: split.title,
+      remainder: split.remainder,
     };
   }
 
@@ -466,17 +489,18 @@ export function parsePlanText(rawText: string): PlanTextGroup[] {
         if (block) {
           block.details.push(segment);
         } else {
-          session.notes.push(segment.text);
+          session.notes.push(`${segment.label}: ${segment.text}`);
         }
         continue;
       }
       // Unlabelled: an exercise heading (Name — dose), or a bulleted exercise,
-      // otherwise loose detail attached to the current block / session.
+      // otherwise loose detail attached to the current block / session. The
+      // matched separator is always exactly " - " / " — " (3 chars).
       const dashIndex = segment.text.search(/\s[-–—]\s/);
       if (dashIndex > -1) {
         session.blocks.push({
           name: segment.text.slice(0, dashIndex).trim(),
-          dose: segment.text.slice(dashIndex).replace(/^\s[-–—]\s/, "").trim() || null,
+          dose: segment.text.slice(dashIndex + 3).trim() || null,
           details: [],
         });
       } else if (wasListItem && !block) {
@@ -526,6 +550,10 @@ export function parsePlanText(rawText: string): PlanTextGroup[] {
         notes: [],
       };
       pushSession(currentSession);
+      // Inline metadata split off a run-on heading line is parsed as body.
+      if (heading.remainder) {
+        addBodyLine(heading.remainder);
+      }
       continue;
     }
 

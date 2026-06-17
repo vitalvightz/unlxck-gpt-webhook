@@ -358,6 +358,31 @@ test("session headers parse in both countdown-first and weekday-first forms with
   );
 });
 
+test("inline Why/coach metadata on a run-on session heading is split into body, not the title", () => {
+  const groups = parsePlanText(
+    "GPP — Week 1 (D-33 to D-27) — Build base D-33 (Wednesday) — Aerobic support Why: restore repeatability. D-32 (Thursday) — Coach-led boxing session No app S&C today. Keep freshness.",
+  );
+
+  const week = groups[0];
+  assert.ok(week.kind === "week");
+  const [aerobic, coach] = week.sessions;
+  assert.equal(aerobic.title, "Aerobic support");
+  assert.equal(aerobic.objective, "restore repeatability.");
+  assert.equal(coach.title, "Coach-led boxing session");
+  assert.match(coach.coachNote ?? "", /No app S&C today/);
+  assert.equal(coach.blocks.length, 0);
+});
+
+test("labeled session-level notes keep their label", () => {
+  const groups = parsePlanText(
+    ["D-20 (Tuesday) — Conditioning", "Note: keep it light today."].join("\n"),
+  );
+
+  const session = groups[0];
+  assert.ok(session.kind === "session");
+  assert.deepEqual(session.notes, ["Note: keep it light today."]);
+});
+
 test("markdown section headers (## Nutrition) become their own context cards", () => {
   const groups = parsePlanText(["## Nutrition", "Eat to support training.", "## Recovery", "Sleep 8h."].join("\n"));
 
