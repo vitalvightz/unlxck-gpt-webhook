@@ -980,7 +980,7 @@ def normalize_structured_plan_candidate(data: Any) -> Any:
     # repeated athlete-facing warnings. Both are formatting-only and never touch
     # raw_markdown_fallback or drop a safety rule outright.
     plan = _fix_label_typos(plan)
-    _dedupe_plan_safety_text(plan)
+    plan = _dedupe_plan_safety_text(plan)
     return plan
 
 
