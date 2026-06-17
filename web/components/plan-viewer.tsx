@@ -249,11 +249,11 @@ function stripPlanMarkup(value: string): string {
 function normalizePlanTextForCards(rawText: string): string {
   return rawText
     .replace(/\r\n/g, "\n")
-    .replace(/(^|\n)Lead notes\s+[-–—]?\s*/i, "$1Lead notes\n")
-    .replace(/\s+(?=(?:GPP|SPP|TAPER|FIGHT WEEK)\s+[-–—]\s+Week\b)/gi, "\n")
-    .replace(/\s+(?=D-\d+\s+\([^)]+\)\s+[-–—]\s+)/g, "\n")
-    .replace(/\s+(?=Final notes\b)/gi, "\n")
-    .replace(/(^|\n)Final notes\s+[-–—]?\s*/gi, "$1Final notes\n");
+    .replace(/(^|\n)(Lead notes|Active notes)\s+[-–—]?\s*/gi, "$1$2\n")
+    .replace(/\s+(?=(?:GPP|SPP|TAPER|FIGHT[ _]WEEK|REINTEGRATION)\s*[—–\-:]\s*Week\b)/gi, "\n")
+    .replace(/\s+(?=D-\d+\s*\([^)]+\)\s*[—–\-:]\s*\S)/g, "\n")
+    .replace(/\s+(?=(?:Final notes|End of plan notes)\b)/gi, "\n")
+    .replace(/(^|\n)(Final notes|End of plan notes)\s+[-–—]?\s*/gi, "$1$2\n");
 }
 
 // Labelled sub-lines that fall *inside* a session block. The plan text packs a
@@ -330,28 +330,63 @@ type PlanTextHeading =
   | { kind: "week"; title: string; phase: string | null }
   | { kind: "session"; countdown: string; weekday: string | null; title: string; remainder: string | null };
 
+// Deterministic plan_text contract (mirrors fightcamp/weekly_plan_render.py +
+// the stage2 validator's countdown-header rule). Phase labels are the canonical
+// camp phases; the header separator is em-dash, en-dash, hyphen, or colon.
+const PHASE_TOKEN = "GPP|SPP|TAPER|FIGHT[ _]WEEK|REINTEGRATION";
+const WEEKDAY_TOKEN =
+  "mon(?:day)?|tue(?:s(?:day)?)?|wed(?:nesday)?|thu(?:r(?:sday)?)?|fri(?:day)?|sat(?:urday)?|sun(?:day)?";
+const HEADER_SEP = "[—–\\-:]";
+const PHASE_FIRST_WEEK_RE = new RegExp(`^(${PHASE_TOKEN})\\s*${HEADER_SEP}\\s*(Week\\s+\\d+.*)$`, "i");
+const BARE_WEEK_RE = /^Week\s+\d+\b/i;
+const PHASE_ANYWHERE_RE = new RegExp(`\\b(${PHASE_TOKEN})\\b`, "i");
+// "D-33 (Wednesday) — Aerobic support" (final/validated countdown-first form).
+const SESSION_COUNTDOWN_FIRST_RE = new RegExp(
+  `^D-(\\d+)\\s*\\(([^)]+)\\)\\s*${HEADER_SEP}\\s*(.+)$`,
+  "i",
+);
+// "Wednesday (D-33) — Aerobic support" (Stage 1 deterministic weekday-first form).
+const SESSION_WEEKDAY_FIRST_RE = new RegExp(
+  `^(${WEEKDAY_TOKEN})[^()]*\\(\\s*D-(\\d+)\\s*\\)\\s*${HEADER_SEP}\\s*(.+)$`,
+  "i",
+);
+// Plan-level context sections that live outside any week. Only the always-on
+// note labels live here (recognised with or without a leading "#"); generic
+// markdown sections like "## Nutrition" are handled by the markdown-header
+// branch so a session body line such as "Recovery: light spin" is never
+// mistaken for a new section.
+const NOTE_SECTION_RE =
+  /^(Lead notes|Final notes|Active notes|End of plan notes)(?:\s*[—–\-:]\s*(.+))?$/i;
+
+function normalizePhaseToken(value: string): string {
+  return value.replace(/_/g, " ").toUpperCase();
+}
+
 function classifyPlanTextHeading(line: string): PlanTextHeading | null {
+  const isMarkdownHeader = /^\s*#{1,6}\s+/.test(line);
   const clean = stripPlanMarkup(line);
   if (!clean || /^#+$/.test(clean)) {
     return null;
   }
 
-  const noteMatch = clean.match(/^(Lead notes|Final notes)(?:\s+[-–—]?\s*(.+))?$/i);
+  const noteMatch = clean.match(NOTE_SECTION_RE);
   if (noteMatch) {
-    return { kind: "notes", title: titleizeToken(noteMatch[1]), remainder: noteMatch[2]?.trim() || null };
+    return { kind: "notes", title: titleizeToken(noteMatch[1].trim()), remainder: noteMatch[2]?.trim() || null };
   }
 
-  // Phase-prefixed week ("GPP — Week 1 (D-33 to D-27) — Build base") or a bare
-  // "Week N — …" header. The phase token renders as a tag, the rest as title.
-  const phaseWeek = clean.match(/^(GPP|SPP|TAPER|FIGHT WEEK)\s+[-–—]\s+(Week\b.*)$/i);
+  // Phase-prefixed week ("GPP — Week 1 (D-33 to D-27) — Build base"), or a bare
+  // "Week N — …" header that may carry its phase token mid-line. Phase renders
+  // as a tag, the rest as the title.
+  const phaseWeek = clean.match(PHASE_FIRST_WEEK_RE);
   if (phaseWeek) {
-    return { kind: "week", title: phaseWeek[2].trim(), phase: phaseWeek[1].toUpperCase() };
+    return { kind: "week", title: phaseWeek[2].trim(), phase: normalizePhaseToken(phaseWeek[1]) };
   }
-  if (/^Week\s+\d+\b/i.test(clean)) {
-    return { kind: "week", title: clean, phase: null };
+  if (BARE_WEEK_RE.test(clean)) {
+    const phase = clean.match(PHASE_ANYWHERE_RE);
+    return { kind: "week", title: clean, phase: phase ? normalizePhaseToken(phase[1]) : null };
   }
 
-  const session = clean.match(/^D-(\d+)\s+\(([^)]+)\)\s+[-–—]\s+(.+)$/);
+  const session = clean.match(SESSION_COUNTDOWN_FIRST_RE);
   if (session) {
     return {
       kind: "session",
@@ -360,6 +395,22 @@ function classifyPlanTextHeading(line: string): PlanTextHeading | null {
       title: session[3].trim(),
       remainder: null,
     };
+  }
+  const weekdaySession = clean.match(SESSION_WEEKDAY_FIRST_RE);
+  if (weekdaySession) {
+    return {
+      kind: "session",
+      countdown: `D-${weekdaySession[2]}`,
+      weekday: titleizeToken(weekdaySession[1].trim()),
+      title: weekdaySession[3].trim(),
+      remainder: null,
+    };
+  }
+
+  // Any other markdown header (## Nutrition, ## Progression, …) opens its own
+  // context card rather than being swallowed into the previous session.
+  if (isMarkdownHeader) {
+    return { kind: "notes", title: clean, remainder: null };
   }
 
   return null;

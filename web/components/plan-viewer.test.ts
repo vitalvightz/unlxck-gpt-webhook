@@ -332,6 +332,44 @@ test("legacy plan text parses into notes, week and session groups", () => {
   ]);
 });
 
+test("session headers parse in both countdown-first and weekday-first forms with any separator", () => {
+  const groups = parsePlanText(
+    [
+      "GPP — Week 1 (D-33 to D-27) — Build aerobic base",
+      "D-33 (Wednesday) — Aerobic support",
+      "Why: easy day.",
+      "Wednesday (D-32) - Strength",
+      "Why: build force.",
+      "D-0 (Saturday): Fight day",
+      "Why: compete.",
+    ].join("\n"),
+  );
+
+  const week = groups[0];
+  assert.ok(week.kind === "week");
+  assert.equal(week.phase, "GPP");
+  assert.deepEqual(
+    week.sessions.map((session) => [session.countdown, session.weekday, session.title]),
+    [
+      ["D-33", "Wednesday", "Aerobic support"],
+      ["D-32", "Wednesday", "Strength"],
+      ["D-0", "Saturday", "Fight day"],
+    ],
+  );
+});
+
+test("markdown section headers (## Nutrition) become their own context cards", () => {
+  const groups = parsePlanText(["## Nutrition", "Eat to support training.", "## Recovery", "Sleep 8h."].join("\n"));
+
+  assert.deepEqual(
+    groups.map((group) => [group.kind, group.kind === "notes" ? group.title : null]),
+    [
+      ["notes", "Nutrition"],
+      ["notes", "Recovery"],
+    ],
+  );
+});
+
 test("coach-led session keeps its freshness note instead of a block", () => {
   const groups = parsePlanText(
     [
