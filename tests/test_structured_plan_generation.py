@@ -608,13 +608,13 @@ def test_normalize_pre_fix_does_not_touch_ordinary_words_or_years():
         {
             "plan_notes": [
                 {"text": "COMPRESSED PRE-FIGHT WEEK begins now."},
-                {"text": "Methodology updated pre 2024 stays as written."},
+                {"text": "Methodology updated PRE 2024 stays as written."},
             ],
         }
     )
     texts = [n["text"] for n in plan["plan_notes"]]
     assert "COMPRESSED PRE-FIGHT WEEK begins now." in texts
-    assert "Methodology updated pre 2024 stays as written." in texts
+    assert "Methodology updated PRE 2024 stays as written." in texts
 
 
 def test_normalize_pre_fix_never_rewrites_raw_markdown_fallback():
