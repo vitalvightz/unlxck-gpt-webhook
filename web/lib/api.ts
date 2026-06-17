@@ -860,6 +860,32 @@ export function archivePlan(token: string, planId: string): Promise<PlanDetail> 
   });
 }
 
+export type StructuredPlanBackfillResult = {
+  queued: number;
+  plan_ids: string[];
+};
+
+/**
+ * Trigger a background backfill that re-runs structured-plan conversion for
+ * athlete-displayable plans that have no structured card yet (legacy plans
+ * generated before structured generation existed). Returns immediately with the
+ * queued plan ids; cards appear on each plan as its conversion lands.
+ */
+export function backfillStructuredPlans(
+  token: string,
+  options?: { limit?: number },
+): Promise<StructuredPlanBackfillResult> {
+  const query =
+    typeof options?.limit === "number" ? `?limit=${encodeURIComponent(options.limit)}` : "";
+  return readJson<StructuredPlanBackfillResult>(
+    `/api/admin/plans/structured-plan/backfill${query}`,
+    {
+      method: "POST",
+      token,
+    },
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Live athlete daily flow (dashboard, check-ins, session logs, injury flags,
 // admin review queue).

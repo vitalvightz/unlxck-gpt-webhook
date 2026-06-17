@@ -8,6 +8,7 @@ import { useAppSession } from "@/components/auth-provider";
 import { EmptyState } from "@/components/empty-state";
 import {
   approveAndResumeGenerationFromJob,
+  backfillStructuredPlans,
   listAdminActiveGenerationJobs,
   listAdminAthletes,
   listAdminPlans,
@@ -159,6 +160,7 @@ export default function AdminPage() {
   const [plansHasMore, setPlansHasMore] = useState(false);
   const [resumingJobId, setResumingJobId] = useState<string | null>(null);
   const [lastCheckedAt, setLastCheckedAt] = useState<string | null>(null);
+  const [backfillPending, setBackfillPending] = useState(false);
 
   const token = session?.access_token;
   const isAdminReady =
@@ -393,6 +395,29 @@ export default function AdminPage() {
     }
   }
 
+  async function handleBackfillStructuredPlans() {
+    if (!session?.access_token || backfillPending) return;
+    setBackfillPending(true);
+    setError(null);
+    setMessage(null);
+    try {
+      const result = await backfillStructuredPlans(session.access_token);
+      setMessage(
+        result.queued > 0
+          ? `Queued ${result.queued} plan${result.queued === 1 ? "" : "s"} for structured-card backfill. Cards appear as each conversion finishes.`
+          : "No plans need a structured-card backfill — every displayable plan already has one.",
+      );
+    } catch (backfillError) {
+      setError(
+        backfillError instanceof Error
+          ? backfillError.message
+          : "Failed to queue the structured-card backfill.",
+      );
+    } finally {
+      setBackfillPending(false);
+    }
+  }
+
   async function handleApproveAndResumeJob(jobId: string) {
     if (!session?.access_token || resumingJobId) return;
     setResumingJobId(jobId);
@@ -530,6 +555,15 @@ export default function AdminPage() {
             disabled={isLoading}
           >
             {isLoading ? "Refreshing..." : "Refresh"}
+          </button>
+          <button
+            type="button"
+            className="ghost-button admin-backfill-button"
+            onClick={() => void handleBackfillStructuredPlans()}
+            disabled={backfillPending}
+            title="Re-run structured-card conversion for legacy plans that still fall back to plain text"
+          >
+            {backfillPending ? "Backfilling..." : "Backfill structured cards"}
           </button>
         </div>
 
