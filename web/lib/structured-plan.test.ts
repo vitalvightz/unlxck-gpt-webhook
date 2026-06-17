@@ -1,587 +1,552 @@
-// Pure, defensive helpers that decide how a structured_plan renders. The React
-// components in components/structured-plan-renderer.tsx are thin wrappers over
-// these so the rendering rules stay unit-testable (node:test) and crash-proof
-// against malformed/partial payloads.
-import { formatPlanLabel, isRawEnumLabel } from "./plan-labels.ts";
-import type {
-  DeterministicMacroRange,
-  DeterministicNutritionPhase,
-  DeterministicRecoveryPhase,
-  DeterministicWeightCut,
-  LoadPrescription,
-  MeasuredValue,
-  PlanOutputs,
-  StructuredBlock,
-  StructuredDay,
-  StructuredPlan,
-  StructuredSession,
-  StructuredWeek,
-} from "@/lib/types";
+import test from "node:test";
+import assert from "node:assert/strict";
 
-type MindsetLine = { label: string; value: string };
+import {
+  classifySessionlessDay,
+  cleanText,
+  formatBlockLoad,
+  formatMacroRange,
+  formatMeasured,
+  formatWeightCutBand,
+  getBlocks,
+  getCoachingCues,
+  getDays,
+  getDeterministicNutritionPhases,
+  getDeterministicRecoveryPhases,
+  getDisplayableRedFlags,
+  getMindsetLines,
+  getPlanNotes,
+  planNoteLabel,
+  getSessions,
+  getStringList,
+  getWeeks,
+  hasDeterministicNutrition,
+  hasDeterministicRecovery,
+  hasNutrition,
+  isTimeLikeReps,
+  nutritionPhaseRows,
+  recoveryPhaseView,
+  redFlagView,
+  selectBlockMetric,
+  shouldRenderStructuredPlan,
+  shouldShowRest,
+  splitMindsetLines,
+} from "./structured-plan.ts";
 
-function isObject(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-/** Trimmed non-empty string, or null. Hides null/blank/whitespace fields. */
-export function cleanText(value: unknown): string | null {
-  if (typeof value !== "string") {
-    return null;
-  }
-  const trimmed = value.trim();
-  return trimmed ? trimmed : null;
-}
-
-/** A safe array (never throws on null/non-array); empty arrays stay empty. */
-export function safeArray<T>(value: T[] | null | undefined): T[] {
-  return Array.isArray(value) ? value.filter((item) => item != null) : [];
-}
-
-/**
- * Whether to render the structured UI instead of the plan_text fallback.
- * True only when structured_plan is an object with at least one week. Malformed
- * or empty structures fall back to plan_text.
- */
-export function shouldRenderStructuredPlan(
-  outputs: Pick<PlanOutputs, "structured_plan"> | null | undefined,
-): boolean {
-  const plan = outputs?.structured_plan;
-  if (!isObject(plan)) {
-    return false;
-  }
-  const weeks = (plan as StructuredPlan).weeks;
-  return Array.isArray(weeks) && weeks.some((week) => isObject(week));
-}
-
-const MEANINGLESS_LOAD = new Set(["", "n/a", "na", "none", "null", "-", "0", "tbd"]);
-
-/**
- * Athlete-facing load string, or null when it should be hidden.
- * Prefers ``load.display``; hides empty/null/meaningless values.
- */
-export function formatBlockLoad(load: LoadPrescription | null | undefined): string | null {
-  if (!isObject(load)) {
-    return null;
-  }
-  const display = cleanText(load.display);
-  if (display && !MEANINGLESS_LOAD.has(display.toLowerCase())) {
-    return display;
-  }
-  return null;
-}
-
-/** Rest is shown only when it carries a positive value. Hides 0-second rest. */
-export function shouldShowRest(rest: MeasuredValue | null | undefined): boolean {
-  return isObject(rest) && typeof rest.value === "number" && rest.value > 0;
-}
-
-/** "180 seconds" / "45 minutes" / null. */
-export function formatMeasured(measured: MeasuredValue | null | undefined): string | null {
-  if (!isObject(measured) || typeof measured.value !== "number") {
-    return null;
-  }
-  const unit = cleanText(measured.unit);
-  return unit ? `${measured.value} ${unit}` : `${measured.value}`;
-}
-
-/** A reps value that is really a duration string, e.g. "5-6 min", "30s", "2 min". */
-export function isTimeLikeReps(reps: unknown): boolean {
-  if (typeof reps !== "string") {
-    return false;
-  }
-  return /\b(s|sec|secs|second|seconds|min|mins|minute|minutes|hr|hrs|hour|hours)\b/i.test(
-    reps,
-  ) || /\d\s*s\b/i.test(reps);
-}
-
-export type BlockMetric = { label: string; value: string };
-
-/**
- * The quantitative "how much" lines for a block, in display order.
- *
- * Strength blocks use reps (with optional sets); time-based work uses duration;
- * conditioning blocks may instead (or additionally) use distance and/or rounds.
- * Prefers an explicit duration over reps when reps looks like a time string.
- * Returns an empty array when the block carries no usable metric.
- */
-export function selectBlockMetric(block: StructuredBlock | null | undefined): BlockMetric[] {
-  if (!isObject(block)) {
-    return [];
-  }
-  const metrics: BlockMetric[] = [];
-
-  const duration = formatMeasured(block.duration);
-  const repsRaw = block.reps;
-  const repsText =
-    typeof repsRaw === "number" ? String(repsRaw) : cleanText(repsRaw as string | null);
-
-  if ((!repsText || isTimeLikeReps(repsText)) && duration) {
-    metrics.push({ label: "Duration", value: duration });
-  } else if (repsText) {
-    const sets = typeof block.sets === "number" && block.sets > 0 ? block.sets : null;
-    metrics.push({ label: "Volume", value: sets ? `${sets} × ${repsText}` : repsText });
-  } else if (duration) {
-    metrics.push({ label: "Duration", value: duration });
-  }
-
-  const distance = formatMeasured(block.distance);
-  if (distance) {
-    metrics.push({ label: "Distance", value: distance });
-  }
-
-  if (typeof block.rounds === "number" && block.rounds > 0) {
-    metrics.push({ label: "Rounds", value: String(block.rounds) });
-  }
-
-  return metrics;
-}
-
-/** Effort like "RPE 7" / "intent: max" / null. */
-export function formatEffort(block: StructuredBlock | null | undefined): string | null {
-  const effort = block?.effort;
-  if (!isObject(effort)) {
-    return null;
-  }
-  const method = cleanText(effort.method);
-  const value =
-    typeof effort.value === "number" ? String(effort.value) : cleanText(effort.value as string);
-  if (method && value) {
-    return `${method} ${value}`;
-  }
-  return method || value || null;
-}
-
-// --- safe structural selectors (never throw on partial data) ----------------
-
-export function getWeeks(plan: StructuredPlan | null | undefined): StructuredWeek[] {
-  return safeArray(plan?.weeks).filter(isObject);
-}
-
-export function getDays(week: StructuredWeek | null | undefined): StructuredDay[] {
-  return safeArray(week?.days).filter(isObject);
-}
-
-export function getSessions(day: StructuredDay | null | undefined): StructuredSession[] {
-  return safeArray(day?.sessions).filter(isObject);
-}
-
-export function getBlocks(session: StructuredSession | null | undefined): StructuredBlock[] {
-  return safeArray(session?.blocks).filter(isObject);
-}
-
-const REHAB_BLOCK_RE = /\b(rehab|prehab|mobility|mobil(?:ity|isation|ization)|isometric|opener)\b/i;
-
-/** Rehab/mobility blocks get a compact always-visible summary on session cards. */
-export function isRehabOrMobilityBlock(block: StructuredBlock | null | undefined): boolean {
-  if (!isObject(block)) {
-    return false;
-  }
-  return [block.block_type, block.category, block.display_name]
-    .map((value) => cleanText(value))
-    .some((value) => Boolean(value && REHAB_BLOCK_RE.test(value)));
-}
-
-/** Ordered rehab/mobility blocks for a session, empty when absent. */
-export function getRehabOrMobilityBlocks(
-  session: StructuredSession | null | undefined,
-): StructuredBlock[] {
-  return getBlocks(session).filter(isRehabOrMobilityBlock);
-}
-
-export function getCoachingCues(block: StructuredBlock | null | undefined): string[] {
-  return getStringList(block?.coaching_cues);
-}
-
-/** A clean list of non-empty strings from a possibly-null/non-array value. */
-export function getStringList(value: string[] | null | undefined): string[] {
-  return safeArray(value)
-    .map((item) => cleanText(item))
-    .filter((item): item is string => item !== null);
-}
-
-/** A simplified mindset anchor only if it has at least one usable line. */
-export function getMindsetLines(
-  anchor:
-    | {
-        intent?: string | null;
-        focus_cue?: string | null;
-        reset_cue?: string | null;
-        confidence_anchor?: string | null;
-        context?: string | null;
-      }
-    | null
-    | undefined,
-): { label: string; value: string }[] {
-  if (!isObject(anchor)) {
-    return [];
-  }
-  const lines: { label: string; value: string }[] = [];
-  const intent = cleanText(anchor.intent);
-  const focus = cleanText(anchor.focus_cue);
-  const context = cleanText(anchor.context);
-  if (intent) lines.push({ label: "Intent", value: intent });
-  if (focus) lines.push({ label: "Focus", value: focus });
-  if (context) lines.push({ label: "Context", value: context });
-  return lines;
-}
-
-export function splitMindsetLines(
-  anchor: Parameters<typeof getMindsetLines>[0],
-): { primary: MindsetLine[]; secondary: MindsetLine[] } {
-  const lines = getMindsetLines(anchor);
+// An athlete-safe deterministic_support projection (as the backend emits it,
+// with coach_gated already stripped).
+function planWithDeterministicSupport() {
   return {
-    primary: lines,
-    secondary: [],
+    schema_version: "1.0",
+    nutrition: { summary: "Fuel around sessions." },
+    weeks: [{ week_id: "wk-1", week_index: 1, days: [] }],
+    deterministic_support: {
+      schema_version: "athlete_support.v1",
+      nutrition: {
+        by_phase: {
+          TAPER: {
+            phase: "TAPER",
+            meal_structure: "3 core meals + 2-3 snacks daily",
+            protein_g_per_day: { min: 126, max: 175, per_kg: [1.8, 2.5], note: null },
+            carbs_g_per_day: { min: null, max: 350, per_kg: [null, 5], note: "reduce before weigh-in" },
+            fats_g_per_day: { min: null, max: null, per_kg: null, note: "moderate (~20%)" },
+            hydration_ml_per_day: { min: 2100, max: 2800, per_kg_l: [0.03, 0.04] },
+            fuel_timing: { pre: "light carbs", intra: "water only", post: "carbs + protein" },
+            fatigue_adjustment: "high",
+            weight_cut: { active: true, risk_band: "severe", supervision_required: true },
+          },
+          GPP: {
+            phase: "GPP",
+            protein_g_per_day: { min: 112, max: 140, per_kg: [1.6, 2.0], note: null },
+            hydration_ml_per_day: { min: 2100, max: 2800 },
+            weight_cut: { active: false, risk_band: "none", supervision_required: false },
+          },
+        },
+      },
+      recovery: {
+        by_phase: {
+          GPP: {
+            phase: "GPP",
+            core_strategies: ["Daily breathwork", "8-9 h sleep"],
+            sleep_hours_target: [8, 9],
+            phase_focus: ["Tissue prep & joint mobility"],
+            weight_cut: { active: false, risk_band: "none", supervision_required: false },
+          },
+          TAPER: {
+            phase: "TAPER",
+            core_strategies: ["Breathwork"],
+            sleep_hours_target: [8, 9],
+            fatigue_flags: ["Cut weekly volume by 25-40%"],
+            phase_focus: ["Reduce volume to 30-40%"],
+            weight_cut: { active: true, risk_band: "severe", supervision_required: true },
+          },
+        },
+      },
+    },
   };
 }
 
-export function redFlagView(
-  rule:
-    | { display_text?: string | null; action?: string | null; severity?: string | null }
-    | null
-    | undefined,
-): { text: string | null; action: string | null; severityLabel: string | null } {
-  const text = cleanText(rule?.display_text);
-  const rawAction = cleanText(rule?.action);
-  const action =
-    rawAction && !isRawEnumLabel(rawAction) && rawAction !== text ? rawAction : null;
-  const severity = cleanText(rule?.severity);
-  const severityLabel = severity ? formatPlanLabel(severity) : null;
-  return { text, action, severityLabel };
-}
-
-// --- deterministic (Stage 1) athlete-safe nutrition + recovery --------------
-
-const PHASE_ORDER = ["GPP", "SPP", "TAPER", "FIGHT_WEEK", "REINTEGRATION"];
-
-/** Stable key used to attach deterministic support to matching week phases. */
-export function normalizeSupportPhaseKey(value: unknown): string | null {
-  const token = cleanText(value)
-    ?.toLowerCase()
-    .replace(/[\s\-/]+/g, "_")
-    .replace(/_+/g, "_")
-    .replace(/^_|_$/g, "");
-  if (!token) {
-    return null;
-  }
-  if (token === "gpp" || token.includes("general_prep") || token.includes("general_preparation")) {
-    return "gpp";
-  }
-  if (token === "spp" || token.includes("specific_prep") || token.includes("specific_preparation")) {
-    return "spp";
-  }
-  if (token === "taper" || token.includes("fight_week") || token.includes("fight_week_taper")) {
-    return "taper";
-  }
-  if (token.includes("reintegration")) {
-    return "reintegration";
-  }
-  return token;
-}
-
-function orderedPhaseEntries<T>(byPhase: Record<string, T> | null | undefined): {
-  phase: string;
-  entry: T;
-}[] {
-  if (!isObject(byPhase)) {
-    return [];
-  }
-  const keys = Object.keys(byPhase);
-  keys.sort((a, b) => {
-    const ia = PHASE_ORDER.indexOf(a.toUpperCase());
-    const ib = PHASE_ORDER.indexOf(b.toUpperCase());
-    return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
-  });
-  return keys
-    .filter((key) => isObject(byPhase[key]))
-    .map((phase) => ({ phase, entry: byPhase[phase] }));
-}
-
-/** Ordered athlete-safe deterministic nutrition phases (empty when absent). */
-export function getDeterministicNutritionPhases(
-  plan: StructuredPlan | null | undefined,
-): { phase: string; entry: DeterministicNutritionPhase }[] {
-  return orderedPhaseEntries(plan?.deterministic_support?.nutrition?.by_phase);
-}
-
-/** Ordered athlete-safe deterministic recovery phases (empty when absent). */
-export function getDeterministicRecoveryPhases(
-  plan: StructuredPlan | null | undefined,
-): { phase: string; entry: DeterministicRecoveryPhase }[] {
-  return orderedPhaseEntries(plan?.deterministic_support?.recovery?.by_phase);
-}
-
-/** "112–140 g/day" / "up to 350 g/day" / "from 30 g/day" / null. */
-export function formatMacroRange(
-  range: DeterministicMacroRange | null | undefined,
-  unit: string,
-): string | null {
-  if (!isObject(range)) {
-    return null;
-  }
-  const min = typeof range.min === "number" ? range.min : null;
-  const max = typeof range.max === "number" ? range.max : null;
-  if (min != null && max != null) {
-    return `${min}–${max} ${unit}`;
-  }
-  if (max != null) {
-    return `up to ${max} ${unit}`;
-  }
-  if (min != null) {
-    return `from ${min} ${unit}`;
-  }
-  return null;
-}
-
-/** A macro line combining its numeric range and any deterministic note. */
-export function macroLine(
-  range: DeterministicMacroRange | null | undefined,
-  unit: string,
-): string | null {
-  const numeric = formatMacroRange(range, unit);
-  const note = cleanText(range?.note);
-  if (numeric && note) return `${numeric} (${note})`;
-  return numeric || note || null;
-}
-
-/** Athlete-safe weight-cut summary (risk band + supervision) — never dosing. */
-export function formatWeightCutBand(
-  weightCut: DeterministicWeightCut | null | undefined,
-): { band: string; supervisionRequired: boolean } | null {
-  if (!isObject(weightCut)) {
-    return null;
-  }
-  const band = cleanText(weightCut.risk_band);
-  if (!band || band.toLowerCase() === "none") {
-    return null;
-  }
-  return { band, supervisionRequired: weightCut.supervision_required === true };
-}
-
-/** The athlete-safe metric rows for one deterministic nutrition phase. */
-export function nutritionPhaseRows(
-  entry: DeterministicNutritionPhase | null | undefined,
-): { label: string; value: string }[] {
-  if (!isObject(entry)) {
-    return [];
-  }
-  const rows: { label: string; value: string }[] = [];
-  const push = (label: string, value: string | null) => {
-    if (value) rows.push({ label, value });
-  };
-  push("Protein", macroLine(entry.protein_g_per_day, "g/day"));
-  push("Carbs", macroLine(entry.carbs_g_per_day, "g/day"));
-  push("Fats", macroLine(entry.fats_g_per_day, "g/day"));
-  push("Hydration", macroLine(entry.hydration_ml_per_day, "ml/day"));
-  push("Meals", cleanText(entry.meal_structure));
-  const fuel = entry.fuel_timing;
-  if (isObject(fuel)) {
-    push("Fuel — pre", cleanText(fuel.pre));
-    push("Fuel — intra", cleanText(fuel.intra));
-    push("Fuel — post", cleanText(fuel.post));
-  }
-  const fatigue = cleanText(entry.fatigue_adjustment);
-  if (fatigue) push("Fatigue adjustment", `${fatigue} fatigue support`);
-  return rows;
-}
-
-/** The athlete-safe recovery view for one deterministic recovery phase. */
-export function recoveryPhaseView(entry: DeterministicRecoveryPhase | null | undefined): {
-  sleep: string | null;
-  coreStrategies: string[];
-  phaseFocus: string[];
-  fatigue: string[];
-  ageAdjustments: string[];
-  weightCut: { band: string; supervisionRequired: boolean } | null;
-} {
-  const e = isObject(entry) ? entry : {};
-  const sleepRange = safeArray(e.sleep_hours_target).filter(
-    (n): n is number => typeof n === "number",
-  );
-  const sleep =
-    sleepRange.length === 2
-      ? `${sleepRange[0]}–${sleepRange[1]} h/night`
-      : sleepRange.length === 1
-        ? `${sleepRange[0]} h/night`
-        : null;
+function validPlan() {
   return {
-    sleep,
-    coreStrategies: getStringList(e.core_strategies),
-    phaseFocus: getStringList(e.phase_focus),
-    // fatigue_flags (high) or fatigue_notes (moderate) — whichever is present.
-    fatigue: getStringList(e.fatigue_flags).concat(getStringList(e.fatigue_notes)),
-    ageAdjustments: getStringList(e.age_adjustments),
-    weightCut: formatWeightCutBand(e.weight_cut),
+    schema_version: "1.0",
+    plan_metadata: { title: "Fight Camp", sport: "boxing", plan_type: "fight_camp" },
+    athlete_context: { sport_profile: "amateur boxer" },
+    red_flag_rules: [
+      { rule_id: "r1", severity: "red", display_text: "Sharp pain — stop and report.", action: "Notify coach." },
+    ],
+    nutrition: { summary: "Fuel around sessions.", daily_focus: "Protein + carbs." },
+    weeks: [
+      {
+        week_id: "wk-1",
+        week_index: 1,
+        phase_label: "SPP",
+        week_goal: "Power",
+        days: [
+          {
+            date: "2026-05-29",
+            day_type: "high",
+            countdown_label: "D-15",
+            today_card: {
+              headline: "Power day",
+              readiness_status: "train_as_planned",
+              mindset_anchor: { intent: "Move fast", focus_cue: "Drive the floor", reset_cue: "Breathe out" },
+            },
+            sessions: [
+              {
+                session_id: "ses-1",
+                session_type: "strength_power",
+                title: "Power Transfer",
+                objective: "Raise punch speed.",
+                mindset_anchor: { intent: "Snap", focus_cue: "Fast hands", reset_cue: "Reset stance" },
+                blocks: [
+                  {
+                    block_id: "blk-1",
+                    block_type: "strength",
+                    display_name: "Back Squat",
+                    sets: 4,
+                    reps: "4-6",
+                    load: { method: "percentage", value: 85, unit: "percent", display: "85% 1RM" },
+                    rest: { value: 180, unit: "seconds" },
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+    ],
+    raw_markdown_fallback: "# Fight Camp\n...",
   };
 }
 
-/** True when the plan carries deterministic athlete-safe nutrition data. */
-export function hasDeterministicNutrition(plan: StructuredPlan | null | undefined): boolean {
-  return getDeterministicNutritionPhases(plan).some(
-    ({ entry }) =>
-      nutritionPhaseRows(entry).length > 0 || formatWeightCutBand(entry.weight_cut) !== null,
-  );
-}
+// --- render decision: structured vs plan_text fallback ----------------------
 
-/** True when the plan carries deterministic athlete-safe recovery data. */
-export function hasDeterministicRecovery(plan: StructuredPlan | null | undefined): boolean {
-  return getDeterministicRecoveryPhases(plan).some(({ entry }) => {
-    const view = recoveryPhaseView(entry);
-    return (
-      view.sleep !== null ||
-      view.coreStrategies.length > 0 ||
-      view.phaseFocus.length > 0 ||
-      view.fatigue.length > 0 ||
-      view.ageAdjustments.length > 0 ||
-      view.weightCut !== null
-    );
+test("renders plan_text (no structured) when structured_plan is null", () => {
+  assert.equal(shouldRenderStructuredPlan({ structured_plan: null }), false);
+  assert.equal(shouldRenderStructuredPlan({ structured_plan: undefined }), false);
+  assert.equal(shouldRenderStructuredPlan(null), false);
+  assert.equal(shouldRenderStructuredPlan(undefined), false);
+});
+
+test("renders structured_plan when present with weeks", () => {
+  assert.equal(shouldRenderStructuredPlan({ structured_plan: validPlan() }), true);
+});
+
+test("falls back to plan_text when structured_plan is malformed", () => {
+  // Wrong types / no usable weeks must not render the structured UI.
+  assert.equal(shouldRenderStructuredPlan({ structured_plan: {} as never }), false);
+  assert.equal(shouldRenderStructuredPlan({ structured_plan: { weeks: [] } as never }), false);
+  assert.equal(shouldRenderStructuredPlan({ structured_plan: { weeks: "nope" } as never }), false);
+  assert.equal(shouldRenderStructuredPlan({ structured_plan: "raw text" as never }), false);
+  assert.equal(shouldRenderStructuredPlan({ structured_plan: [] as never }), false);
+});
+
+// --- defensive selectors: never crash on partial data -----------------------
+
+test("selectors return safe empties on missing/partial fields", () => {
+  assert.deepEqual(getWeeks(null), []);
+  assert.deepEqual(getWeeks({} as never), []);
+  assert.deepEqual(getDays(undefined), []);
+  assert.deepEqual(getSessions({ sessions: null } as never), []);
+  assert.deepEqual(getBlocks({} as never), []);
+  assert.deepEqual(getCoachingCues({} as never), []);
+  assert.deepEqual(getMindsetLines(undefined), []);
+  // A week/day/session with null nested arrays does not throw.
+  const week = getWeeks({ structured_plan: validPlan() } as never);
+  assert.equal(week.length, 0); // wrong-shaped input -> empty, no crash
+});
+
+// --- plan-level active notes ------------------------------------------------
+
+test("getPlanNotes keeps notes with text, drops empties, lowercases category", () => {
+  const notes = getPlanNotes({
+    plan_notes: [
+      { category: "Weight_Cut", label: "Active weight cut", text: "~5.7% target." },
+      { category: "injury", text: "Keep the wound covered and dry." },
+      { category: "nutrition", text: "   " },
+      { text: "Stay disciplined." },
+      "not an object" as never,
+    ],
+  } as never);
+  assert.equal(notes.length, 3);
+  assert.deepEqual(notes[0], {
+    category: "weight_cut",
+    label: "Active weight cut",
+    text: "~5.7% target.",
   });
-}
+  assert.equal(notes[1].category, "injury");
+  assert.equal(notes[2].category, "general");
+  assert.equal(notes[2].label, null);
+});
 
-/** True when nutrition carries any displayable text. */
-export function hasNutrition(plan: StructuredPlan | null | undefined): boolean {
-  const nutrition = plan?.nutrition;
-  if (!isObject(nutrition)) {
-    return false;
-  }
-  return Boolean(
-    cleanText(nutrition.summary) ||
-      cleanText(nutrition.daily_focus) ||
-      cleanText(nutrition.training_day_guidance) ||
-      cleanText(nutrition.fight_week_guidance) ||
-      cleanText(nutrition.weight_cut_warning?.display_text),
-  );
-}
+test("getPlanNotes is safe on missing / malformed plan_notes", () => {
+  assert.deepEqual(getPlanNotes(null), []);
+  assert.deepEqual(getPlanNotes({} as never), []);
+  assert.deepEqual(getPlanNotes({ plan_notes: "nope" } as never), []);
+});
 
-export type PlanNoteView = { category: string; label: string | null; text: string };
-
-const PLAN_NOTE_CATEGORY_LABELS: Record<string, string> = {
-  weight_cut: "Weight cut",
-  injury: "Injury",
-  nutrition: "Nutrition",
-  training: "Training",
-  recovery: "Recovery",
-  general: "Note",
-};
-
-/** Short title for a plan note: its own label, else a category fallback. */
-export function planNoteLabel(note: PlanNoteView): string {
-  if (note.label) {
-    return note.label;
-  }
-  return PLAN_NOTE_CATEGORY_LABELS[note.category] ?? PLAN_NOTE_CATEGORY_LABELS.general;
-}
-
-/** Plan-level "active notes" that carry displayable text (empty when absent). */
-export function getPlanNotes(plan: StructuredPlan | null | undefined): PlanNoteView[] {
-  return safeArray(plan?.plan_notes)
-    .filter(isObject)
-    .map((note) => {
-      const text = cleanText(note.text);
-      if (!text) {
-        return null;
-      }
-      const category = cleanText(note.category)?.toLowerCase().replace(/[-\s]+/g, "_") ?? "general";
-      return { category, label: cleanText(note.label), text } satisfies PlanNoteView;
-    })
-    .filter((note): note is PlanNoteView => note !== null);
-}
-
-/** Fallback safety lines from active notes when explicit red-flag rules are absent. */
-export function getFallbackSafetyNotes(plan: StructuredPlan | null | undefined): PlanNoteView[] {
-  const safetyCategories = new Set(["injury", "weight_cut", "recovery"]);
-  return getPlanNotes(plan).filter((note) => {
-    if (safetyCategories.has(note.category)) {
-      return true;
-    }
-    return /\b(stop|report|medical|coach|bleed|pain|dehydrat|wound)\b/i.test(note.text);
-  });
-}
-
-/** Red-flag rules that have something to display. */
-export function getDisplayableRedFlags(plan: StructuredPlan | null | undefined) {
-  return safeArray(plan?.red_flag_rules)
-    .filter(isObject)
-    .filter((rule) => cleanText(rule.display_text));
-}
-
-export function weekLabel(week: StructuredWeek | null | undefined): string {
-  const goal = cleanText(week?.week_goal);
-  const index = typeof week?.week_index === "number" ? week.week_index : null;
-  const base = index != null ? `Week ${index}` : "Week";
-  return goal ? `${base} — ${goal}` : base;
-}
+test("planNoteLabel prefers an explicit label, else a category title", () => {
+  assert.equal(planNoteLabel({ category: "weight_cut", label: "Cut", text: "x" }), "Cut");
+  assert.equal(planNoteLabel({ category: "injury", label: null, text: "x" }), "Injury");
+  assert.equal(planNoteLabel({ category: "unknown", label: null, text: "x" }), "Note");
+});
 
 // --- session-less day classification ----------------------------------------
-//
-// A coach-led / sparring / technical day legitimately carries no app S&C
-// blocks (the contact load is owned by the coach), so the converter emits it as
-// a day with an empty `sessions` array. Rather than relying on the LLM to build
-// a session object for these — which wastes tokens and is a frequent source of
-// dropped days — we deterministically derive a self-contained card from the
-// day's own `today_card.headline` + `day_type`. Only a genuine rest/recovery
-// day (or a truly empty day) falls through to "Rest day.".
 
-const REST_DAY_TYPES = new Set(["rest", "recovery"]);
-// `technical` is checked before `sparring` so a "technical only / no hard
-// sparring" headline is not mislabelled as a sparring day by the stray
-// "sparring" token, and `coach_led` is the catch-all for coach-owned contact.
-const TECHNICAL_RE = /\b(technical|skill|drill|pad\s?work|pads|mitts?|footwork|shadow)/i;
-const SPARRING_RE = /\bspar(?:r(?:ing|ed)|s)?\b/i;
-const COACH_LED_RE = /\bcoach/i;
+test("classifies coach-led / sparring / technical days from the headline", () => {
+  const make = (headline: string, day_type = "moderate") => ({
+    day_type,
+    today_card: { headline },
+  });
 
-export type SessionlessDayKind = "coach_led" | "sparring" | "technical" | "scheduled" | "rest";
+  assert.equal(classifySessionlessDay(make("Coach-led boxing session")).kind, "coach_led");
+  assert.equal(classifySessionlessDay(make("Hard sparring")).kind, "sparring");
+  // "technical only / no hard sparring" must read as technical, not sparring.
+  assert.equal(
+    classifySessionlessDay(make("Coach-led boxing — no hard sparring / technical only")).kind,
+    "technical",
+  );
+  // A coach-led/sparring/technical day carries its headline as the card title
+  // and flags the "train with your coach" note.
+  const sparring = classifySessionlessDay(make("Hard sparring"));
+  assert.equal(sparring.title, "Hard sparring");
+  assert.equal(sparring.tag, "Sparring");
+  assert.equal(sparring.coachLed, true);
+});
 
-export type SessionlessDayView = {
-  kind: SessionlessDayKind;
-  title: string;
-  /** Short tag for the day kind, or null when no kind tag should show. */
-  tag: string | null;
-  /** Whether to surface the "no app S&C — train with your coach" note. */
-  coachLed: boolean;
-};
+test("classifies a headline-less or rest day as a true rest day", () => {
+  assert.equal(classifySessionlessDay({ day_type: "rest", today_card: {} }).kind, "rest");
+  assert.equal(classifySessionlessDay({ day_type: "recovery" } as never).kind, "rest");
+  assert.equal(classifySessionlessDay(null).kind, "rest");
+  assert.equal(classifySessionlessDay({} as never).coachLed, false);
+  // A headline with no contact keyword still gets its own card (not "Rest day").
+  const scheduled = classifySessionlessDay({ today_card: { headline: "Active recovery flush" } });
+  assert.equal(scheduled.kind, "scheduled");
+  assert.equal(scheduled.title, "Active recovery flush");
+  assert.equal(scheduled.tag, null);
+});
 
-const SESSIONLESS_DAY_TAGS: Record<SessionlessDayKind, string | null> = {
-  coach_led: "Coach-led",
-  sparring: "Sparring",
-  technical: "Technical",
-  scheduled: null,
-  rest: null,
-};
+// --- field display rules ----------------------------------------------------
 
-/**
- * Deterministically resolve how a day with no app sessions should render.
- *
- * Coach-led/sparring/technical days get their own card titled from the day
- * headline so a mostly-coach-led camp does not collapse into a wall of
- * "Rest day.". A headline-less rest/recovery day (or an otherwise empty day)
- * is the only case that renders as a rest day.
- */
-export function classifySessionlessDay(
-  day: StructuredDay | null | undefined,
-): SessionlessDayView {
-  const headline = cleanText(day?.today_card?.headline);
+test("hides 0-second rest, shows positive rest", () => {
+  assert.equal(shouldShowRest({ value: 0, unit: "seconds" }), false);
+  assert.equal(shouldShowRest({ value: 180, unit: "seconds" }), true);
+  assert.equal(shouldShowRest(null), false);
+  assert.equal(shouldShowRest({} as never), false);
+});
 
-  if (headline) {
-    let kind: SessionlessDayKind = "scheduled";
-    if (TECHNICAL_RE.test(headline)) {
-      kind = "technical";
-    } else if (SPARRING_RE.test(headline)) {
-      kind = "sparring";
-    } else if (COACH_LED_RE.test(headline)) {
-      kind = "coach_led";
-    }
-    return {
-      kind,
-      title: headline,
-      tag: SESSIONLESS_DAY_TAGS[kind],
-      coachLed: kind === "coach_led" || kind === "sparring" || kind === "technical",
-    };
+test("hides null / empty / meaningless loads, keeps real display", () => {
+  assert.equal(formatBlockLoad(null), null);
+  assert.equal(formatBlockLoad({} as never), null);
+  assert.equal(formatBlockLoad({ display: "" }), null);
+  assert.equal(formatBlockLoad({ display: "   " }), null);
+  assert.equal(formatBlockLoad({ display: "n/a" }), null);
+  assert.equal(formatBlockLoad({ display: "0" }), null);
+  assert.equal(formatBlockLoad({ method: "percentage", value: 85, unit: "percent", display: "85% 1RM" }), "85% 1RM");
+});
+
+test("cleanText hides blank values", () => {
+  assert.equal(cleanText(null), null);
+  assert.equal(cleanText("  "), null);
+  assert.equal(cleanText(42 as never), null);
+  assert.equal(cleanText(" squat "), "squat");
+});
+
+test("formatMeasured renders value + unit, or null", () => {
+  assert.equal(formatMeasured({ value: 45, unit: "minutes" }), "45 minutes");
+  assert.equal(formatMeasured({ value: 30, unit: null }), "30");
+  assert.equal(formatMeasured(null), null);
+  assert.equal(formatMeasured({ unit: "minutes" } as never), null);
+});
+
+test("prefers duration over reps when reps looks like a time string", () => {
+  assert.equal(isTimeLikeReps("5-6 min"), true);
+  assert.equal(isTimeLikeReps("30s"), true);
+  assert.equal(isTimeLikeReps("4-6"), false);
+
+  const timeReps = selectBlockMetric({
+    reps: "5-6 min",
+    duration: { value: 6, unit: "minutes" },
+  } as never);
+  assert.deepEqual(timeReps, [{ label: "Duration", value: "6 minutes" }]);
+
+  const realReps = selectBlockMetric({ sets: 4, reps: "4-6" } as never);
+  assert.deepEqual(realReps, [{ label: "Volume", value: "4 × 4-6" }]);
+
+  assert.deepEqual(selectBlockMetric({} as never), []);
+  assert.deepEqual(selectBlockMetric(null), []);
+});
+
+test("isTimeLikeReps treats bare metres as NOT time (metres/minutes ambiguity)", () => {
+  // "5 m" / "5m" reps mean metres, not minutes — must not be coerced to duration.
+  assert.equal(isTimeLikeReps("5 m"), false);
+  assert.equal(isTimeLikeReps("400m"), false);
+  // Unambiguous time units still match.
+  assert.equal(isTimeLikeReps("2 min"), true);
+  assert.equal(isTimeLikeReps("90 seconds"), true);
+});
+
+test("selectBlockMetric renders distance and rounds for conditioning blocks", () => {
+  assert.deepEqual(selectBlockMetric({ distance: { value: 400, unit: "meters" } } as never), [
+    { label: "Distance", value: "400 meters" },
+  ]);
+  assert.deepEqual(selectBlockMetric({ rounds: 8 } as never), [
+    { label: "Rounds", value: "8" },
+  ]);
+  // Zero/negative rounds are hidden.
+  assert.deepEqual(selectBlockMetric({ rounds: 0 } as never), []);
+});
+
+test("selectBlockMetric combines duration, distance, and rounds in order", () => {
+  const metrics = selectBlockMetric({
+    reps: "30s",
+    duration: { value: 5, unit: "minutes" },
+    distance: { value: 400, unit: "meters" },
+    rounds: 8,
+  } as never);
+  assert.deepEqual(metrics, [
+    { label: "Duration", value: "5 minutes" },
+    { label: "Distance", value: "400 meters" },
+    { label: "Rounds", value: "8" },
+  ]);
+});
+
+// --- content presence: blocks / mindset / nutrition / red flags -------------
+
+test("extracts session blocks from a valid plan", () => {
+  const plan = validPlan();
+  const blocks = getBlocks(getSessions(getDays(getWeeks(plan)[0])[0])[0]);
+  assert.equal(blocks.length, 1);
+  assert.equal(blocks[0].display_name, "Back Squat");
+});
+
+test("extracts mindset anchor lines", () => {
+  const session = getSessions(getDays(getWeeks(validPlan())[0])[0])[0];
+  const lines = getMindsetLines(session.mindset_anchor);
+  assert.equal(lines.length, 2);
+  assert.deepEqual(
+    lines.map((line) => line.label),
+    ["Intent", "Focus"],
+  );
+});
+
+test("detects nutrition when present, absent when empty", () => {
+  assert.equal(hasNutrition(validPlan()), true);
+  assert.equal(hasNutrition({ nutrition: {} } as never), false);
+  assert.equal(hasNutrition({} as never), false);
+});
+
+test("surfaces displayable red flags only", () => {
+  assert.equal(getDisplayableRedFlags(validPlan()).length, 1);
+  assert.equal(getDisplayableRedFlags({ red_flag_rules: [{ rule_id: "x" }] } as never).length, 0);
+  assert.equal(getDisplayableRedFlags({} as never).length, 0);
+});
+
+test("getStringList cleans, drops blanks, and tolerates null", () => {
+  assert.deepEqual(getStringList(["Brace hard", "  ", "Knees out"]), ["Brace hard", "Knees out"]);
+  assert.deepEqual(getStringList(null), []);
+  assert.deepEqual(getStringList(undefined), []);
+  assert.deepEqual(getStringList([]), []);
+});
+
+test("getMindsetLines keeps the simplified Intent/Focus/Context structure", () => {
+  const lines = getMindsetLines({
+    intent: "Move fast",
+    focus_cue: "Drive",
+    reset_cue: "Reset",
+    confidence_anchor: "Banked the work",
+    context: "First hard week",
+  });
+  assert.deepEqual(
+    lines.map((l) => l.label),
+    ["Intent", "Focus", "Context"],
+  );
+  // Empty anchor object yields no lines (renderer hides it).
+  assert.deepEqual(getMindsetLines({}), []);
+  assert.deepEqual(getMindsetLines(null), []);
+});
+
+// --- deterministic (Stage 1) nutrition + recovery (PR-6) -------------------
+
+test("formatMacroRange handles full / max-only / min-only / empty", () => {
+  assert.equal(formatMacroRange({ min: 112, max: 140 }, "g/day"), "112–140 g/day");
+  assert.equal(formatMacroRange({ min: null, max: 350 }, "g/day"), "up to 350 g/day");
+  assert.equal(formatMacroRange({ min: 30, max: null }, "g/day"), "from 30 g/day");
+  assert.equal(formatMacroRange({ min: null, max: null, note: "x" }, "g/day"), null);
+  assert.equal(formatMacroRange(null, "g/day"), null);
+});
+
+test("NutritionCard renders deterministic macros / hydration / fuel timing", () => {
+  const plan = planWithDeterministicSupport();
+  assert.equal(hasDeterministicNutrition(plan), true);
+  const phases = getDeterministicNutritionPhases(plan);
+  // Phase order is normalised (GPP before TAPER).
+  assert.deepEqual(phases.map((p) => p.phase), ["GPP", "TAPER"]);
+
+  const taper = phases.find((p) => p.phase === "TAPER")!;
+  const rows = nutritionPhaseRows(taper.entry);
+  const byLabel = Object.fromEntries(rows.map((r) => [r.label, r.value]));
+  assert.equal(byLabel["Protein"], "126–175 g/day");
+  assert.equal(byLabel["Carbs"], "up to 350 g/day (reduce before weigh-in)");
+  assert.equal(byLabel["Fats"], "moderate (~20%)"); // note-only macro
+  assert.equal(byLabel["Hydration"], "2100–2800 ml/day");
+  assert.equal(byLabel["Meals"], "3 core meals + 2-3 snacks daily");
+  assert.equal(byLabel["Fuel — pre"], "light carbs");
+  assert.equal(byLabel["Fatigue adjustment"], "high fatigue support");
+  // Athlete-safe weight-cut: risk band + supervision only.
+  assert.deepEqual(formatWeightCutBand(taper.entry.weight_cut), {
+    band: "severe",
+    supervisionRequired: true,
+  });
+  // No active cut -> no weight-cut line.
+  const gpp = phases.find((p) => p.phase === "GPP")!;
+  assert.equal(formatWeightCutBand(gpp.entry.weight_cut), null);
+});
+
+test("NutritionCard falls back to string fields when deterministic data is missing", () => {
+  const plan = { nutrition: { summary: "Fuel around sessions." }, weeks: [] };
+  assert.equal(hasDeterministicNutrition(plan), false);
+  assert.deepEqual(getDeterministicNutritionPhases(plan), []);
+  // Legacy prose still detected so the card still renders via fallback.
+  assert.equal(hasNutrition(plan), true);
+});
+
+test("RecoveryCard renders deterministic sleep / fatigue / phase focus / core actions", () => {
+  const plan = planWithDeterministicSupport();
+  assert.equal(hasDeterministicRecovery(plan), true);
+  const phases = getDeterministicRecoveryPhases(plan);
+  assert.deepEqual(phases.map((p) => p.phase), ["GPP", "TAPER"]);
+
+  const taper = recoveryPhaseView(phases.find((p) => p.phase === "TAPER")!.entry);
+  assert.equal(taper.sleep, "8–9 h/night");
+  assert.deepEqual(taper.coreStrategies, ["Breathwork"]);
+  assert.deepEqual(taper.phaseFocus, ["Reduce volume to 30-40%"]);
+  assert.deepEqual(taper.fatigue, ["Cut weekly volume by 25-40%"]);
+  assert.deepEqual(taper.weightCut, { band: "severe", supervisionRequired: true });
+});
+
+test("RecoveryCard / NutritionCard never surface coach_gated even if present", () => {
+  // The backend strips coach_gated, but the helpers must also only read known
+  // athlete-safe fields — never echo an unexpected coach_gated payload.
+  const entry = {
+    phase: "TAPER",
+    protein_g_per_day: { min: 126, max: 175 },
+    core_strategies: ["Breathwork"],
+    sleep_hours_target: [8, 9],
+    weight_cut: { active: true, risk_band: "severe", supervision_required: true },
+    coach_gated: { acute_cut_protocol: { bicarbonate_g_per_kg: "~0.3 g/kg" } },
+  };
+  const nutritionBlob = JSON.stringify(nutritionPhaseRows(entry));
+  const recoveryBlob = JSON.stringify(recoveryPhaseView(entry));
+  for (const blob of [nutritionBlob, recoveryBlob]) {
+    assert.equal(blob.includes("bicarbonate"), false);
+    assert.equal(blob.includes("coach_gated"), false);
+    assert.equal(blob.includes("g/kg"), false);
   }
+});
 
-  // No headline to classify from: fall back to a plain rest day. The converter
-  // is instructed to always headline a coach-led/sparring/technical day, so a
-  // headline-less session-less day is treated as genuine rest.
-  return { kind: "rest", title: "Rest day", tag: null, coachLed: false };
-}
+test("hasDeterministicRecovery is true when only age adjustments are present", () => {
+  const plan = {
+    weeks: [],
+    deterministic_support: {
+      recovery: {
+        by_phase: {
+          GPP: { phase: "GPP", age_adjustments: ["72h muscle-group rotation"] },
+        },
+      },
+    },
+  };
+  // A phase with only age adjustments must still surface the RecoveryCard.
+  assert.equal(hasDeterministicRecovery(plan), true);
+  const view = recoveryPhaseView(getDeterministicRecoveryPhases(plan)[0]!.entry);
+  assert.deepEqual(view.ageAdjustments, ["72h muscle-group rotation"]);
+});
+
+test("recovery/nutrition helpers tolerate missing / partial data", () => {
+  assert.deepEqual(getDeterministicNutritionPhases(null), []);
+  assert.deepEqual(getDeterministicRecoveryPhases({}), []);
+  assert.deepEqual(nutritionPhaseRows(null), []);
+  const view = recoveryPhaseView(null);
+  assert.equal(view.sleep, null);
+  assert.deepEqual(view.coreStrategies, []);
+  assert.equal(view.weightCut, null);
+});
+
+test("redFlagView hides raw action enum but keeps a human action sentence", () => {
+  const rawAction = redFlagView({
+    display_text: "Sharp or progressive triceps pain.",
+    action: "stop_and_report",
+    severity: "red",
+  });
+  assert.equal(rawAction.text, "Sharp or progressive triceps pain.");
+  assert.equal(rawAction.action, null);
+  assert.equal(rawAction.severityLabel, "Red");
+
+  const humanAction = redFlagView({
+    display_text: "Sharp or progressive triceps pain.",
+    action: "Stop training and report to medical staff.",
+    severity: "amber",
+  });
+  assert.equal(humanAction.action, "Stop training and report to medical staff.");
+  assert.equal(humanAction.severityLabel, "Amber");
+});
+
+test("redFlagView drops an action that merely repeats the display text", () => {
+  const view = redFlagView({
+    display_text: "Stop and report dizziness.",
+    action: "Stop and report dizziness.",
+    severity: "red",
+  });
+  assert.equal(view.action, null);
+});
+
+test("redFlagView tolerates missing fields", () => {
+  const view = redFlagView({ display_text: "Something" });
+  assert.equal(view.text, "Something");
+  assert.equal(view.action, null);
+  assert.equal(view.severityLabel, null);
+  const empty = redFlagView(null);
+  assert.equal(empty.text, null);
+  assert.equal(empty.severityLabel, null);
+});
+
+test("splitMindsetLines keeps all simplified mindset lines primary", () => {
+  const { primary, secondary } = splitMindsetLines({
+    intent: "Stay sharp",
+    focus_cue: "Hands up",
+    reset_cue: "Breathe",
+    confidence_anchor: "You've done the rounds",
+    context: "Final hard week",
+  });
+  assert.deepEqual(
+    primary.map((line) => line.label),
+    ["Intent", "Focus", "Context"],
+  );
+  assert.deepEqual(secondary, []);
+});
+
+test("splitMindsetLines returns empty secondary for simplified mindset", () => {
+  const { primary, secondary } = splitMindsetLines({ intent: "Go" });
+  assert.deepEqual(primary.map((line) => line.label), ["Intent"]);
+  assert.deepEqual(secondary, []);
+});

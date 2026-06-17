@@ -12,9 +12,7 @@ import {
   getCoachingCues,
   getDays,
   getDisplayableRedFlags,
-  getFallbackSafetyNotes,
   getPlanNotes,
-  getRehabOrMobilityBlocks,
   planNoteLabel,
   formatWeightCutBand,
   getDeterministicNutritionPhases,
@@ -23,8 +21,9 @@ import {
   getSessions,
   getStringList,
   getWeeks,
+  hasDeterministicNutrition,
+  hasDeterministicRecovery,
   hasNutrition,
-  normalizeSupportPhaseKey,
   nutritionPhaseRows,
   recoveryPhaseView,
   redFlagView,
@@ -34,8 +33,6 @@ import {
 } from "@/lib/structured-plan";
 import { formatPlanLabel } from "@/lib/plan-labels";
 import type {
-  DeterministicNutritionPhase,
-  DeterministicRecoveryPhase,
   MindsetAnchor,
   StructuredBlock,
   StructuredDay,
@@ -46,39 +43,24 @@ import type {
 
 const titleize = formatPlanLabel;
 
-function blockCountLabel(count: number): string {
-  return `${count} block${count === 1 ? "" : "s"}`;
-}
-
-function blockSummaryMetric(block: StructuredBlock): string | null {
-  const metric = selectBlockMetric(block)[0]?.value;
-  return metric || formatBlockLoad(block.load) || formatMeasured(block.duration);
-}
-
 function CollapsibleSection({
   title,
-  detailLabel,
   defaultOpen,
   className,
   children,
 }: {
   title: string;
-  detailLabel?: string;
   defaultOpen?: boolean;
   className?: string;
   children: ReactNode;
 }) {
-  const [open, setOpen] = useState<boolean>(Boolean(defaultOpen));
-  const actionTarget = detailLabel || title;
   return (
     <details
       className={`sp-collapse${className ? ` ${className}` : ""}`}
-      open={open}
-      onToggle={(event) => setOpen(event.currentTarget.open)}
+      open={defaultOpen ? true : undefined}
     >
       <summary className="sp-collapse-summary">
         <span className="sp-collapse-title">{title}</span>
-        <span className="sp-collapse-action">{open ? "Hide" : "Show"} {actionTarget}</span>
       </summary>
       <div className="sp-collapse-body">{children}</div>
     </details>
@@ -188,29 +170,6 @@ export function BlockCard({ block }: { block: StructuredBlock }) {
   );
 }
 
-function RehabSummary({ blocks }: { blocks: StructuredBlock[] }) {
-  if (blocks.length === 0) {
-    return null;
-  }
-  return (
-    <div className="sp-rehab-summary">
-      <p className="sp-eyebrow sp-accent">Rehab / Mobility</p>
-      <ul className="sp-rehab-list">
-        {blocks.map((block, index) => {
-          const title = cleanText(block.display_name) || "Rehab block";
-          const metric = blockSummaryMetric(block);
-          return (
-            <li key={cleanText(block.block_id) || `${title}-${index}`}>
-              <span className="sp-rehab-title">{title}</span>
-              {metric ? <span className="sp-rehab-metric">{metric}</span> : null}
-            </li>
-          );
-        })}
-      </ul>
-    </div>
-  );
-}
-
 export function SessionCard({
   session,
   day,
@@ -236,8 +195,6 @@ export function SessionCard({
   const nutrition = cleanText(card?.nutrition_summary);
   const weightCut = cleanText(card?.weight_cut_warning);
   const blocks = getBlocks(session);
-  const rehabBlocks = getRehabOrMobilityBlocks(session);
-  const blocksLabel = blockCountLabel(blocks.length);
 
   return (
     <article className="sp-session">
@@ -263,7 +220,6 @@ export function SessionCard({
       {nutrition ? <p className="sp-today-note">{nutrition}</p> : null}
       {weightCut ? <p className="sp-warning">{weightCut}</p> : null}
       <MindsetAnchorCard anchor={session.mindset_anchor} />
-      <RehabSummary blocks={rehabBlocks} />
       {blocks.length > 0 ? (
         <>
           <button
@@ -271,10 +227,9 @@ export function SessionCard({
             className="sp-more-toggle sp-session-toggle"
             aria-expanded={showDetails}
             aria-controls={detailsId}
-            aria-label={showDetails ? "Show less session detail" : `Show more session detail: ${blocksLabel}`}
             onClick={() => setShowDetails((prev) => !prev)}
           >
-            {showDetails ? "Show less" : `Show more (${blocksLabel})`}
+            {showDetails ? "LESS" : "MORE"}
           </button>
           {showDetails ? (
             <div id={detailsId} className="sp-blocks">
@@ -478,23 +433,19 @@ export function ActiveNotesCard({ plan }: { plan: StructuredPlan }) {
 
 export function RedFlagsCard({ plan }: { plan: StructuredPlan }) {
   const rules = getDisplayableRedFlags(plan);
-  const fallbackNotes = rules.length === 0 ? getFallbackSafetyNotes(plan) : [];
-  if (rules.length === 0 && fallbackNotes.length === 0) {
+  if (rules.length === 0) {
     return null;
   }
   return (
-    <section className="sp-card sp-redflags" aria-label="Red flags and safety actions">
-      <div className="sp-redflags-head">
-        <p className="sp-eyebrow sp-accent">Safety priority</p>
-        <h4 className="sp-redflags-title">Red flags - stop &amp; report</h4>
-      </div>
+    <section className="sp-card sp-redflags">
+      <p className="sp-eyebrow sp-accent">Red flags — stop &amp; report</p>
       <ul className="sp-redflag-list">
-        {rules.length > 0 ? rules.map((rule, index) => {
+        {rules.map((rule, index) => {
           const { text, action, severityLabel } = redFlagView(rule);
           return (
             <li key={cleanText(rule.rule_id) || `flag-${index}`} className="sp-redflag">
               <div className="sp-redflag-head">
-                <span className="sp-redflag-kicker">Stop signal</span>
+                <span className="sp-redflag-kicker">Red flag</span>
                 {severityLabel ? (
                   <span className="sp-tag sp-redflag-badge">{severityLabel}</span>
                 ) : null}
@@ -503,15 +454,7 @@ export function RedFlagsCard({ plan }: { plan: StructuredPlan }) {
               {action ? <p className="sp-muted">{action}</p> : null}
             </li>
           );
-        }) : fallbackNotes.map((note, index) => (
-          <li key={`${note.category}-${index}`} className="sp-redflag">
-            <div className="sp-redflag-head">
-              <span className="sp-redflag-kicker">Safety note</span>
-              <span className="sp-tag sp-redflag-badge">{planNoteLabel(note)}</span>
-            </div>
-            <span className="sp-redflag-text">{note.text}</span>
-          </li>
-        ))}
+        })}
       </ul>
     </section>
   );
@@ -571,186 +514,50 @@ function NutritionProse({ plan }: { plan: StructuredPlan }) {
   );
 }
 
-type NutritionPhaseItem = {
-  phase: string;
-  phaseKey: string | null;
-  rows: { label: string; value: string }[];
-  weightCut: { band: string; supervisionRequired: boolean } | null;
-};
-
-type RecoveryPhaseItem = {
-  phase: string;
-  phaseKey: string | null;
-  view: ReturnType<typeof recoveryPhaseView>;
-  lists: { label: string; items: string[] }[];
-};
-
-function getNutritionPhaseItems(plan: StructuredPlan): NutritionPhaseItem[] {
-  return getDeterministicNutritionPhases(plan)
-    .map(({ phase, entry }: { phase: string; entry: DeterministicNutritionPhase }) => {
-      const rows = nutritionPhaseRows(entry);
-      const weightCut = formatWeightCutBand(entry.weight_cut);
-      if (rows.length === 0 && !weightCut) {
-        return null;
-      }
-      return { phase, phaseKey: normalizeSupportPhaseKey(phase), rows, weightCut };
-    })
-    .filter((item): item is NutritionPhaseItem => item !== null);
-}
-
-function getRecoveryPhaseItems(plan: StructuredPlan): RecoveryPhaseItem[] {
-  return getDeterministicRecoveryPhases(plan)
-    .map(({ phase, entry }: { phase: string; entry: DeterministicRecoveryPhase }) => {
-      const view = recoveryPhaseView(entry);
-      const lists: { label: string; items: string[] }[] = [
-        { label: "Core", items: view.coreStrategies },
-        { label: "Phase focus", items: view.phaseFocus },
-        { label: "Fatigue", items: view.fatigue },
-        { label: "Age", items: view.ageAdjustments },
-      ].filter((group) => group.items.length > 0);
-      if (!view.sleep && lists.length === 0 && !view.weightCut) {
-        return null;
-      }
-      return { phase, phaseKey: normalizeSupportPhaseKey(phase), view, lists };
-    })
-    .filter((item): item is RecoveryPhaseItem => item !== null);
-}
-
-function NutritionPhaseCard({
-  item,
-  defaultOpen,
-}: {
-  item: NutritionPhaseItem;
-  defaultOpen?: boolean;
-}) {
-  const phaseLabel = titleize(item.phase);
-  return (
-    <section className="sp-card sp-support-card sp-nutrition">
-      <div className="sp-support-head">
-        <p className="sp-eyebrow sp-accent">Nutrition</p>
-        <span className="sp-tag">{phaseLabel}</span>
-      </div>
-      <CollapsibleSection
-        title={phaseLabel}
-        detailLabel={`${phaseLabel} nutrition`}
-        defaultOpen={defaultOpen}
-        className="sp-nutrition-phase"
-      >
-        <ul className="sp-kv-list">
-          {item.rows.map((row) => (
-            <li key={row.label}>
-              <span className="sp-kv-label">{row.label}</span>
-              <span>{row.value}</span>
-            </li>
-          ))}
-        </ul>
-        <DeterministicWeightCutLine weightCut={item.weightCut} />
-      </CollapsibleSection>
-    </section>
-  );
-}
-
-function RecoveryPhaseCard({
-  item,
-  defaultOpen,
-}: {
-  item: RecoveryPhaseItem;
-  defaultOpen?: boolean;
-}) {
-  const phaseLabel = titleize(item.phase);
-  return (
-    <section className="sp-card sp-support-card sp-recovery">
-      <div className="sp-support-head">
-        <p className="sp-eyebrow sp-accent">Recovery</p>
-        <span className="sp-tag">{phaseLabel}</span>
-      </div>
-      <CollapsibleSection
-        title={phaseLabel}
-        detailLabel={`${phaseLabel} recovery`}
-        defaultOpen={defaultOpen}
-        className="sp-recovery-phase"
-      >
-        <ul className="sp-kv-list">
-          {item.view.sleep ? (
-            <li>
-              <span className="sp-kv-label">Sleep</span>
-              <span>{item.view.sleep}</span>
-            </li>
-          ) : null}
-          {item.lists.map((group) => (
-            <li key={group.label}>
-              <span className="sp-kv-label">{group.label}</span>
-              <span>{group.items.join("; ")}</span>
-            </li>
-          ))}
-        </ul>
-        <DeterministicWeightCutLine weightCut={item.view.weightCut} />
-      </CollapsibleSection>
-    </section>
-  );
-}
-
-function PhaseSupportCards({
-  phaseKey,
-  nutritionItems,
-  recoveryItems,
-}: {
-  phaseKey: string;
-  nutritionItems: NutritionPhaseItem[];
-  recoveryItems: RecoveryPhaseItem[];
-}) {
-  const nutrition = nutritionItems.filter((item) => item.phaseKey === phaseKey);
-  const recovery = recoveryItems.filter((item) => item.phaseKey === phaseKey);
-  if (nutrition.length === 0 && recovery.length === 0) {
-    return null;
-  }
-  return (
-    <div className="sp-phase-support" aria-label={`${titleize(phaseKey)} support`}>
-      <div className="sp-phase-support-grid">
-        {nutrition.map((item) => (
-          <NutritionPhaseCard key={`nutrition-${item.phase}`} item={item} defaultOpen />
-        ))}
-        {recovery.map((item) => (
-          <RecoveryPhaseCard key={`recovery-${item.phase}`} item={item} defaultOpen />
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function phaseHasSupport(
-  phaseKey: string,
-  nutritionItems: NutritionPhaseItem[],
-  recoveryItems: RecoveryPhaseItem[],
-): boolean {
-  return (
-    nutritionItems.some((item) => item.phaseKey === phaseKey) ||
-    recoveryItems.some((item) => item.phaseKey === phaseKey)
-  );
-}
-
 // Owns the full nutrition details. Deterministic Stage 1 macros/hydration/fuel
 // timing win when present; the legacy prose fields are the fallback only. Never
 // renders coach_gated (it is stripped server-side before reaching the frontend).
 export function NutritionCard({ plan }: { plan: StructuredPlan }) {
-  const items = getNutritionPhaseItems(plan);
-  if (items.length === 0 && !hasNutrition(plan)) {
+  const deterministic = hasDeterministicNutrition(plan);
+  if (!deterministic && !hasNutrition(plan)) {
     return null;
   }
-  if (items.length === 0) {
-    return (
-      <section className="sp-card sp-nutrition">
-        <p className="sp-eyebrow sp-accent">Nutrition</p>
-        <NutritionProse plan={plan} />
-      </section>
-    );
-  }
   return (
-    <div className="sp-phase-support-grid">
-      {items.map((item, index) => (
-        <NutritionPhaseCard key={item.phase} item={item} defaultOpen={index === 0} />
-      ))}
-    </div>
+    <section className="sp-card sp-nutrition">
+      <p className="sp-eyebrow sp-accent">Nutrition</p>
+      {deterministic ? (
+        getDeterministicNutritionPhases(plan)
+          .map(({ phase, entry }) => {
+            const rows = nutritionPhaseRows(entry);
+            const weightCut = formatWeightCutBand(entry.weight_cut);
+            if (rows.length === 0 && !weightCut) {
+              return null;
+            }
+            return { phase, rows, weightCut };
+          })
+          .filter((item): item is NonNullable<typeof item> => item !== null)
+          .map((item, index) => (
+            <CollapsibleSection
+              key={item.phase}
+              title={titleize(item.phase)}
+              defaultOpen={index === 0}
+              className="sp-nutrition-phase"
+            >
+              <ul className="sp-kv-list">
+                {item.rows.map((row) => (
+                  <li key={row.label}>
+                    <span className="sp-kv-label">{row.label}</span>
+                    <span>{row.value}</span>
+                  </li>
+                ))}
+              </ul>
+              <DeterministicWeightCutLine weightCut={item.weightCut} />
+            </CollapsibleSection>
+          ))
+      ) : (
+        <NutritionProse plan={plan} />
+      )}
+    </section>
   );
 }
 
@@ -758,74 +565,74 @@ export function NutritionCard({ plan }: { plan: StructuredPlan }) {
 // deterministic Stage 1 recovery; never coach_gated. Stop/modify/report
 // thresholds stay with RedFlagsCard, so this card does not repeat them.
 export function RecoveryCard({ plan }: { plan: StructuredPlan }) {
-  const items = getRecoveryPhaseItems(plan);
-  if (items.length === 0) {
+  if (!hasDeterministicRecovery(plan)) {
     return null;
   }
   return (
-    <div className="sp-phase-support-grid">
-      {items.map((item, index) => (
-        <RecoveryPhaseCard key={item.phase} item={item} defaultOpen={index === 0} />
-      ))}
-    </div>
+    <section className="sp-card sp-recovery">
+      <p className="sp-eyebrow sp-accent">Recovery</p>
+      {getDeterministicRecoveryPhases(plan)
+        .map(({ phase, entry }) => {
+          const view = recoveryPhaseView(entry);
+          const lists: { label: string; items: string[] }[] = [
+            { label: "Core", items: view.coreStrategies },
+            { label: "Phase focus", items: view.phaseFocus },
+            { label: "Fatigue", items: view.fatigue },
+            { label: "Age", items: view.ageAdjustments },
+          ].filter((group) => group.items.length > 0);
+          if (!view.sleep && lists.length === 0 && !view.weightCut) {
+            return null;
+          }
+          return { phase, view, lists };
+        })
+        .filter((item): item is NonNullable<typeof item> => item !== null)
+        .map((item, index) => (
+          <CollapsibleSection
+            key={item.phase}
+            title={titleize(item.phase)}
+            defaultOpen={index === 0}
+            className="sp-recovery-phase"
+          >
+            <ul className="sp-kv-list">
+              {item.view.sleep ? (
+                <li>
+                  <span className="sp-kv-label">Sleep</span>
+                  <span>{item.view.sleep}</span>
+                </li>
+              ) : null}
+              {item.lists.map((group) => (
+                <li key={group.label}>
+                  <span className="sp-kv-label">{group.label}</span>
+                  <span>{group.items.join("; ")}</span>
+                </li>
+              ))}
+            </ul>
+            <DeterministicWeightCutLine weightCut={item.view.weightCut} />
+          </CollapsibleSection>
+        ))}
+    </section>
   );
 }
 
 export function StructuredPlanRenderer({ plan }: { plan: StructuredPlan }) {
   const weeks = getWeeks(plan);
   const progressionNotes = cleanText(plan.progression_notes);
-  const nutritionItems = getNutritionPhaseItems(plan);
-  const recoveryItems = getRecoveryPhaseItems(plan);
-  const hasDeterministicSupport = nutritionItems.length > 0 || recoveryItems.length > 0;
-  const attachedSupportKeys = new Set<string>();
-  const weekEntries = weeks.map((week, index) => {
-    const phaseKey = normalizeSupportPhaseKey(week.phase_label);
-    const nextPhaseKey = normalizeSupportPhaseKey(weeks[index + 1]?.phase_label);
-    const supportKey =
-      phaseKey && phaseKey !== nextPhaseKey && phaseHasSupport(phaseKey, nutritionItems, recoveryItems)
-        ? phaseKey
-        : null;
-    if (supportKey) {
-      attachedSupportKeys.add(supportKey);
-    }
-    return { week, index, supportKey };
-  });
-  const remainingSupportKeys = Array.from(
-    new Set(
-      [...nutritionItems, ...recoveryItems]
-        .map((item) => item.phaseKey)
-        .filter((phaseKey): phaseKey is string => Boolean(phaseKey)),
-    ),
-  ).filter((phaseKey) => !attachedSupportKeys.has(phaseKey));
-
   return (
     <div className="sp-root">
       <PlanHeader plan={plan} />
       <ActiveNotesCard plan={plan} />
       <RedFlagsCard plan={plan} />
       <div className="sp-weeks">
-        {weekEntries.map(({ week, index, supportKey }) => (
-          <div key={cleanText(week.week_id) || `week-${index}`} className="sp-week-group">
-            <WeekSection week={week} defaultOpen={index === 0} />
-            {supportKey ? (
-              <PhaseSupportCards
-                phaseKey={supportKey}
-                nutritionItems={nutritionItems}
-                recoveryItems={recoveryItems}
-              />
-            ) : null}
-          </div>
+        {weeks.map((week, index) => (
+          <WeekSection
+            key={cleanText(week.week_id) || `week-${index}`}
+            week={week}
+            defaultOpen={index === 0}
+          />
         ))}
       </div>
-      {remainingSupportKeys.map((phaseKey) => (
-        <PhaseSupportCards
-          key={`support-${phaseKey}`}
-          phaseKey={phaseKey}
-          nutritionItems={nutritionItems}
-          recoveryItems={recoveryItems}
-        />
-      ))}
-      {!hasDeterministicSupport ? <NutritionCard plan={plan} /> : null}
+      <NutritionCard plan={plan} />
+      <RecoveryCard plan={plan} />
       {progressionNotes ? (
         <section className="sp-card sp-progression">
           <p className="sp-eyebrow sp-accent">Progression notes</p>
