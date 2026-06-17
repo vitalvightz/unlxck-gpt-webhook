@@ -837,15 +837,114 @@ def _normalize_daily_check_ins(
     return out
 
 
+# Intensity-label typo fix. Coaches read effort as ``RPE`` (rate of perceived
+# exertion); models occasionally emit ``PRE`` instead. Only an all-caps ``PRE``
+# immediately preceding a value on the RPE scale (1-10, optionally a range like
+# ``7–8``) is corrected, so ordinary words (``pre-fight``, ``PRE-FIGHT WEEK``)
+# and unrelated numbers (``PRE 2024``) are never touched.
+_RPE_LABEL_TYPO_RE = re.compile(r"\bPRE\b(?=\s*(?:10|[1-9])\b)")
+
+# Keys whose verbatim text must never be rewritten by cosmetic label fixes.
+_LABEL_FIX_SKIP_KEYS = frozenset({"raw_markdown_fallback"})
+
+
+def _fix_label_typos(node: Any) -> Any:
+    """Recursively correct intensity-label typos (``PRE`` → ``RPE``) in text.
+
+    A pure formatting fix applied to every string leaf except the verbatim
+    ``raw_markdown_fallback``. The regex is deliberately narrow so it only
+    rewrites the effort label, never coaching content.
+    """
+    if isinstance(node, dict):
+        return {
+            key: value if key in _LABEL_FIX_SKIP_KEYS else _fix_label_typos(value)
+            for key, value in node.items()
+        }
+    if isinstance(node, list):
+        return [_fix_label_typos(item) for item in node]
+    if isinstance(node, str):
+        return _RPE_LABEL_TYPO_RE.sub("RPE", node)
+    return node
+
+
+def _normalize_safety_text(text: Any) -> str:
+    """Lowercase, collapse whitespace, drop trailing punctuation — for dedup."""
+    cleaned = re.sub(r"\s+", " ", str(text or "")).strip().lower()
+    return cleaned.rstrip(".!;: ").strip()
+
+
+def _dedupe_plan_safety_text(plan: dict[str, Any]) -> dict[str, Any]:
+    """Drop repeated athlete-facing warning/constraint text (PR-QC).
+
+    Stop/warning language tends to echo across active notes, red flags, and
+    final notes. The authoritative place for a stop rule is the red-flag rule,
+    so this keeps the strongest copy there and removes only exact duplicates:
+
+    * collapses red-flag rules that are byte-for-byte identical (same text,
+      action, severity, and trigger) — never distinct or session-specific rules;
+    * drops a plan note whose text repeats an earlier plan note or an existing
+      red-flag ``display_text``.
+
+    Mutates and returns ``plan``. No safety rule is ever removed outright — the
+    warning always survives in at least one place.
+    """
+    rules = plan.get("red_flag_rules")
+    if isinstance(rules, list):
+        seen_rules: set[tuple] = set()
+        deduped_rules: list[Any] = []
+        for rule in rules:
+            if not isinstance(rule, dict):
+                deduped_rules.append(rule)
+                continue
+            display = _normalize_safety_text(rule.get("display_text"))
+            key = (
+                display,
+                _normalize_safety_text(rule.get("action")),
+                rule.get("severity"),
+                rule.get("when"),
+            )
+            if display and key in seen_rules:
+                continue
+            seen_rules.add(key)
+            deduped_rules.append(rule)
+        plan["red_flag_rules"] = deduped_rules
+        rules = deduped_rules
+
+    red_flag_texts = {
+        _normalize_safety_text(rule.get("display_text"))
+        for rule in (rules or [])
+        if isinstance(rule, dict) and _normalize_safety_text(rule.get("display_text"))
+    }
+
+    notes = plan.get("plan_notes")
+    if isinstance(notes, list):
+        seen_notes: set[str] = set()
+        deduped_notes: list[Any] = []
+        for note in notes:
+            if not isinstance(note, dict):
+                deduped_notes.append(note)
+                continue
+            norm = _normalize_safety_text(note.get("text"))
+            if norm and (norm in seen_notes or norm in red_flag_texts):
+                continue
+            if norm:
+                seen_notes.add(norm)
+            deduped_notes.append(note)
+        plan["plan_notes"] = deduped_notes
+
+    return plan
+
+
 def normalize_structured_plan_candidate(data: Any) -> Any:
     """Conservatively coerce a model's near-miss structured JSON into schema shape.
 
     Only fixes obvious *formatting* mistakes (enum aliases, string loads/rests,
     string countdown labels, non-list ``daily_check_ins``, non-string
-    ``progression_notes``, and missing required meta fields filled with neutral
-    structural defaults). It never invents training content and never alters
-    ``raw_markdown_fallback`` text. Non-dict input is returned unchanged so the
-    strict schema can reject it. Never raises.
+    ``progression_notes``, missing required meta fields filled with neutral
+    structural defaults, intensity-label typos, and duplicated warning text). It
+    never invents training content and never alters ``raw_markdown_fallback``
+    text. Non-dict input is returned unchanged so the strict schema can reject
+    it. Never raises.
     """
 
     if not isinstance(data, dict):
@@ -877,6 +976,11 @@ def normalize_structured_plan_candidate(data: Any) -> Any:
     plan["nutrition"] = _normalize_nutrition(plan.get("nutrition"))
     plan["progression_notes"] = _coerce_str(plan.get("progression_notes"))
     plan["raw_markdown_fallback"] = _coerce_str(plan.get("raw_markdown_fallback"))
+    # Cosmetic label fix first (so dedup compares corrected text), then collapse
+    # repeated athlete-facing warnings. Both are formatting-only and never touch
+    # raw_markdown_fallback or drop a safety rule outright.
+    plan = _fix_label_typos(plan)
+    plan = _dedupe_plan_safety_text(plan)
     return plan
 
 

@@ -553,6 +553,151 @@ def test_normalize_leaves_non_dict_untouched_so_schema_can_reject():
     assert outcome.structured_plan is None
 
 
+# --- label-typo fix: PRE -> RPE ----------------------------------------------
+
+
+def _plan_strings(node) -> list[str]:
+    """Every string leaf in a normalized plan (for greppable assertions)."""
+    out: list[str] = []
+    if isinstance(node, str):
+        out.append(node)
+    elif isinstance(node, dict):
+        for value in node.values():
+            out.extend(_plan_strings(value))
+    elif isinstance(node, list):
+        for item in node:
+            out.extend(_plan_strings(item))
+    return out
+
+
+def test_normalize_fixes_pre_intensity_label_to_rpe():
+    plan = normalize_structured_plan_candidate(
+        {
+            "plan_notes": [{"text": "Hold conditioning at PRE 7–8 all week."}],
+            "weeks": [
+                {
+                    "days": [
+                        {
+                            "sessions": [
+                                {
+                                    "blocks": [
+                                        {
+                                            "progression_rule": "Build from PRE 6 to PRE 8.",
+                                            "coaching_cues": ["Keep efforts at PRE 9-10."],
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ],
+        }
+    )
+    blob = " || ".join(_plan_strings(plan))
+    # No athlete-facing string carries the PRE-for-RPE typo any more.
+    assert "PRE 7" not in blob and "PRE 6" not in blob and "PRE 8" not in blob
+    assert "PRE 9" not in blob
+    assert "RPE 7–8" in blob
+    assert "RPE 6" in blob and "RPE 8" in blob
+    assert "RPE 9-10" in blob
+
+
+def test_normalize_pre_fix_does_not_touch_ordinary_words_or_years():
+    plan = normalize_structured_plan_candidate(
+        {
+            "plan_notes": [
+                {"text": "COMPRESSED PRE-FIGHT WEEK begins now."},
+                {"text": "Methodology updated PRE 2024 stays as written."},
+            ],
+        }
+    )
+    texts = [n["text"] for n in plan["plan_notes"]]
+    assert "COMPRESSED PRE-FIGHT WEEK begins now." in texts
+    assert "Methodology updated PRE 2024 stays as written." in texts
+
+
+def test_normalize_pre_fix_never_rewrites_raw_markdown_fallback():
+    plan = normalize_structured_plan_candidate(
+        {"raw_markdown_fallback": "Conditioning @ PRE 7–8 (verbatim source)."}
+    )
+    assert plan["raw_markdown_fallback"] == "Conditioning @ PRE 7–8 (verbatim source)."
+
+
+# --- duplicate safety-warning dedup ------------------------------------------
+
+
+def test_normalize_drops_plan_note_that_duplicates_a_red_flag():
+    plan = normalize_structured_plan_candidate(
+        {
+            "red_flag_rules": [
+                {"display_text": "Stop and report sharp knee pain.", "severity": "red"}
+            ],
+            "plan_notes": [
+                {"category": "injury", "text": "Stop and report sharp knee pain."},
+                {"category": "training", "text": "Stay disciplined with sleep."},
+            ],
+        }
+    )
+    note_texts = [n["text"] for n in plan["plan_notes"]]
+    # The active-note echo of the red flag is dropped; the red flag is the
+    # authoritative stop rule and is preserved untouched.
+    assert "Stop and report sharp knee pain." not in note_texts
+    assert "Stay disciplined with sleep." in note_texts
+    assert len(plan["red_flag_rules"]) == 1
+    assert plan["red_flag_rules"][0]["display_text"] == "Stop and report sharp knee pain."
+
+
+def test_normalize_dedupes_repeated_plan_notes_keeping_first():
+    plan = normalize_structured_plan_candidate(
+        {
+            "plan_notes": [
+                {"category": "general", "text": "Do not train through dizziness."},
+                {"category": "training", "text": "Do not train through dizziness."},
+                {"category": "general", "text": "Do not train through dizziness."},
+            ]
+        }
+    )
+    assert len(plan["plan_notes"]) == 1
+    assert plan["plan_notes"][0]["category"] == "general"
+
+
+def test_normalize_collapses_identical_red_flag_rules_but_keeps_distinct_ones():
+    plan = normalize_structured_plan_candidate(
+        {
+            "red_flag_rules": [
+                {"display_text": "Stop if vision blurs.", "action": "End session.", "severity": "red", "when": "during_session"},
+                {"display_text": "Stop if vision blurs.", "action": "End session.", "severity": "red", "when": "during_session"},
+                {"display_text": "Pull back if pain exceeds 6/10.", "action": "Reduce load.", "severity": "amber", "when": "during_session"},
+            ]
+        }
+    )
+    texts = [r["display_text"] for r in plan["red_flag_rules"]]
+    # Byte-for-byte duplicate collapses; the distinct stop rule survives.
+    assert texts.count("Stop if vision blurs.") == 1
+    assert "Pull back if pain exceeds 6/10." in texts
+
+
+def test_normalize_keeps_safety_warning_in_at_least_one_place():
+    # Even when a warning appears only as an active note (no red flag), it is
+    # never removed — dedup only collapses true repeats.
+    plan = normalize_structured_plan_candidate(
+        {"plan_notes": [{"category": "injury", "text": "Stop and report numbness."}]}
+    )
+    assert [n["text"] for n in plan["plan_notes"]] == ["Stop and report numbness."]
+
+
+def test_normalize_dedup_output_still_validates():
+    plan_in = _valid_plan()
+    plan_in["plan_notes"] = [
+        {"category": "general", "label": "Active", "text": "Train as planned."},
+        {"category": "general", "text": "Train as planned."},
+    ]
+    plan_out = normalize_structured_plan_candidate(plan_in)
+    assert len(plan_out["plan_notes"]) == 1
+    validate_structured_plan(plan_out)
+
+
 # --- _normalize_measured: per-field default units ----------------------------
 
 
