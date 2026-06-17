@@ -438,13 +438,13 @@ function severityToneClass(label: string | null): string {
     return "";
   }
   const l = label.toLowerCase();
-  if (/red|high|critical|severe/.test(l)) {
+  if (/\b(red|high|critical|severe)\b/.test(l)) {
     return "sp-sev-red";
   }
-  if (/amber|orange|moderate|medium|elevated/.test(l)) {
+  if (/\b(amber|orange|moderate|medium|elevated)\b/.test(l)) {
     return "sp-sev-amber";
   }
-  if (/green|low|mild|minor/.test(l)) {
+  if (/\b(green|low|mild|minor)\b/.test(l)) {
     return "sp-sev-green";
   }
   return "";
