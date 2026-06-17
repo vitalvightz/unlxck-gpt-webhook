@@ -2,7 +2,8 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import {
-  buildPlanTextCards,
+  parsePlanText,
+  splitLabeledSegments,
   buildReviewSummary,
   canRetryResumeGenerationForPlan,
   getAdminReviewHeading,
@@ -266,45 +267,147 @@ test("admin review anchor id format remains stable", () => {
   assert.equal(anchorId, "admin-review-plan_123");
 });
 
-test("legacy plan text is split into renderable cards instead of one raw block", () => {
-  const cards = buildPlanTextCards(
+test("splitLabeledSegments breaks a packed body line into labelled details", () => {
+  const segments = splitLabeledSegments(
+    "Purpose: raise the base. Progress/regress: add 5 min. Stop rule: stop if dizzy.",
+  );
+
+  assert.deepEqual(segments, [
+    { label: "Purpose", text: "raise the base." },
+    { label: "Progress", text: "add 5 min." },
+    { label: "Stop", text: "stop if dizzy." },
+  ]);
+});
+
+test("splitLabeledSegments returns one unlabelled segment when no labels are present", () => {
+  assert.deepEqual(splitLabeledSegments("Easy Assault Bike — 25 min Zone 2."), [
+    { label: null, text: "Easy Assault Bike — 25 min Zone 2." },
+  ]);
+});
+
+test("legacy plan text parses into notes, week and session groups", () => {
+  const groups = parsePlanText(
     [
       "Lead notes",
       "- Injury: keep cut covered.",
       "",
-      "## GPP — Week 1",
-      "Why: build the base.",
-      "- Assault Bike: 25 min Zone 2.",
-      "- Rehab: Neutral-grip holds.",
+      "GPP — Week 1 (D-33 to D-27) — Build aerobic base",
+      "D-33 (Wednesday) — Aerobic support",
+      "Why: restore repeatability.",
+      "Easy Assault Bike — 25 min Zone 2. Keep nasal breathing.",
+      "Purpose: raise the base. Progress/regress: add 5 min. Stop rule: stop if dizzy.",
       "",
-      "## Final notes",
+      "Final notes",
       "Stop on dizziness.",
     ].join("\n"),
   );
 
-  assert.deepEqual(cards, [
-    {
-      title: "Lead notes",
-      lines: ["Injury: keep cut covered."],
-    },
-    {
-      title: "GPP — Week 1",
-      lines: ["Why: build the base.", "Assault Bike: 25 min Zone 2.", "Rehab: Neutral-grip holds."],
-    },
-    {
-      title: "Final notes",
-      lines: ["Stop on dizziness."],
-    },
+  assert.deepEqual(
+    groups.map((group) => group.kind),
+    ["notes", "week", "notes"],
+  );
+
+  const [lead, week, final] = groups;
+  assert.equal(lead.kind === "notes" && lead.title, "Lead notes");
+  assert.deepEqual(lead.kind === "notes" ? lead.lines : null, ["Injury: keep cut covered."]);
+  assert.equal(final.kind === "notes" && final.title, "Final notes");
+
+  assert.ok(week.kind === "week");
+  assert.equal(week.phase, "GPP");
+  assert.equal(week.title, "Week 1 (D-33 to D-27) — Build aerobic base");
+  assert.equal(week.sessions.length, 1);
+
+  const session = week.sessions[0];
+  assert.equal(session.countdown, "D-33");
+  assert.equal(session.weekday, "Wednesday");
+  assert.equal(session.title, "Aerobic support");
+  assert.equal(session.objective, "restore repeatability.");
+  assert.equal(session.blocks.length, 1);
+  assert.equal(session.blocks[0].name, "Easy Assault Bike");
+  assert.equal(session.blocks[0].dose, "25 min Zone 2. Keep nasal breathing.");
+  assert.deepEqual(session.blocks[0].details, [
+    { label: "Purpose", text: "raise the base." },
+    { label: "Progress", text: "add 5 min." },
+    { label: "Stop", text: "stop if dizzy." },
   ]);
 });
 
-test("recent generated plan headings become separate cards", () => {
-  const cards = buildPlanTextCards(
-    "Lead notes - Injury: cover the cut. GPP — Week 1 (D-33 to D-27) — Build aerobic base D-32 (Wednesday) — Aerobic support Why: restore repeatability. - Easy Assault Bike: 25 min. Final notes - Stop on dizziness.",
+test("session headers parse in both countdown-first and weekday-first forms with any separator", () => {
+  const groups = parsePlanText(
+    [
+      "GPP — Week 1 (D-33 to D-27) — Build aerobic base",
+      "D-33 (Wednesday) — Aerobic support",
+      "Why: easy day.",
+      "Wednesday (D-32) - Strength",
+      "Why: build force.",
+      "D-0 (Saturday): Fight day",
+      "Why: compete.",
+    ].join("\n"),
   );
 
+  const week = groups[0];
+  assert.ok(week.kind === "week");
+  assert.equal(week.phase, "GPP");
   assert.deepEqual(
-    cards.map((card) => card.title),
-    ["Lead notes", "GPP — Week 1 (D-33 to D-27) — Build aerobic base", "D-32 (Wednesday) — Aerobic support", "Final notes"],
+    week.sessions.map((session) => [session.countdown, session.weekday, session.title]),
+    [
+      ["D-33", "Wednesday", "Aerobic support"],
+      ["D-32", "Wednesday", "Strength"],
+      ["D-0", "Saturday", "Fight day"],
+    ],
   );
+});
+
+test("inline Why/coach metadata on a run-on session heading is split into body, not the title", () => {
+  const groups = parsePlanText(
+    "GPP — Week 1 (D-33 to D-27) — Build base D-33 (Wednesday) — Aerobic support Why: restore repeatability. D-32 (Thursday) — Coach-led boxing session No app S&C today. Keep freshness.",
+  );
+
+  const week = groups[0];
+  assert.ok(week.kind === "week");
+  const [aerobic, coach] = week.sessions;
+  assert.equal(aerobic.title, "Aerobic support");
+  assert.equal(aerobic.objective, "restore repeatability.");
+  assert.equal(coach.title, "Coach-led boxing session");
+  assert.match(coach.coachNote ?? "", /No app S&C today/);
+  assert.equal(coach.blocks.length, 0);
+});
+
+test("labeled session-level notes keep their label", () => {
+  const groups = parsePlanText(
+    ["D-20 (Tuesday) — Conditioning", "Note: keep it light today."].join("\n"),
+  );
+
+  const session = groups[0];
+  assert.ok(session.kind === "session");
+  assert.deepEqual(session.notes, ["Note: keep it light today."]);
+});
+
+test("markdown section headers (## Nutrition) become their own context cards", () => {
+  const groups = parsePlanText(["## Nutrition", "Eat to support training.", "## Recovery", "Sleep 8h."].join("\n"));
+
+  assert.deepEqual(
+    groups.map((group) => [group.kind, group.kind === "notes" ? group.title : null]),
+    [
+      ["notes", "Nutrition"],
+      ["notes", "Recovery"],
+    ],
+  );
+});
+
+test("coach-led session keeps its freshness note instead of a block", () => {
+  const groups = parsePlanText(
+    [
+      "GPP — Week 1 (D-33 to D-27) — Build aerobic base",
+      "D-32 (Thursday) — Coach-led boxing session",
+      "Coach-led boxing session No app S&C today. Keep freshness priority.",
+    ].join("\n"),
+  );
+
+  const week = groups[0];
+  assert.ok(week.kind === "week");
+  const session = week.sessions[0];
+  assert.equal(session.title, "Coach-led boxing session");
+  assert.equal(session.blocks.length, 0);
+  assert.match(session.coachNote ?? "", /No app S&C today/);
 });
