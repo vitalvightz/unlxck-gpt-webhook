@@ -154,7 +154,8 @@ def _card_claims_countdown(plan: dict[str, Any]) -> bool:
             return True
         if _dday_num(week.get("countdown_end")) is not None:
             return True
-        for day in week.get("days") or []:
+        days = week.get("days") if isinstance(week.get("days"), list) else []
+        for day in days:
             if isinstance(day, dict) and _dday_num(day.get("countdown_label")) is not None:
                 return True
     return False
