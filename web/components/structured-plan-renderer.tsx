@@ -431,6 +431,25 @@ export function ActiveNotesCard({ plan }: { plan: StructuredPlan }) {
   );
 }
 
+/** Map a severity label ("Red", "Amber", "High", "Low"…) to a tone class so the
+ *  badge colour carries the meaning. Unknown severities stay neutral. */
+function severityToneClass(label: string | null): string {
+  if (!label) {
+    return "";
+  }
+  const l = label.toLowerCase();
+  if (/\b(red|high|critical|severe)\b/.test(l)) {
+    return "sp-sev-red";
+  }
+  if (/\b(amber|orange|moderate|medium|elevated)\b/.test(l)) {
+    return "sp-sev-amber";
+  }
+  if (/\b(green|low|mild|minor)\b/.test(l)) {
+    return "sp-sev-green";
+  }
+  return "";
+}
+
 export function RedFlagsCard({ plan }: { plan: StructuredPlan }) {
   const rules = getDisplayableRedFlags(plan);
   if (rules.length === 0) {
@@ -447,7 +466,11 @@ export function RedFlagsCard({ plan }: { plan: StructuredPlan }) {
               <div className="sp-redflag-head">
                 <span className="sp-redflag-kicker">Red flag</span>
                 {severityLabel ? (
-                  <span className="sp-tag sp-redflag-badge">{severityLabel}</span>
+                  <span
+                    className={`sp-tag sp-redflag-badge ${severityToneClass(severityLabel)}`.trim()}
+                  >
+                    {severityLabel}
+                  </span>
                 ) : null}
               </div>
               {text ? <span className="sp-redflag-text">{text}</span> : null}

@@ -12671,7 +12671,7 @@ html[data-theme="light"] .loading-operational-item {
   font-size: 0.68rem;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: var(--text-muted);
+  color: var(--text-secondary);
 }
 .sp-block {
   background: var(--bg-stat);
@@ -12758,7 +12758,7 @@ html[data-theme="light"] .loading-operational-item {
   font-size: 0.68rem;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: var(--text-muted);
+  color: var(--text-secondary);
 }
 .sp-note-text {
   color: var(--text-primary);
@@ -12901,6 +12901,26 @@ html[data-theme="light"] .loading-operational-item {
 
 .sp-redflag-badge {
   flex: none;
+}
+
+/* Severity badges carry meaning by colour — a "red"/"amber" label rendered as
+   a neutral grey pill wastes the signal. Red gets the full brand treatment;
+   amber/green tint the fill + border while keeping text high-contrast on both
+   the dark and light themes. */
+.sp-redflag-badge.sp-sev-red {
+  background: var(--brand-red-soft);
+  border-color: var(--border-active);
+  color: var(--brand-red);
+}
+.sp-redflag-badge.sp-sev-amber {
+  background: rgba(214, 138, 43, 0.18);
+  border-color: rgba(214, 138, 43, 0.5);
+  color: var(--text-secondary);
+}
+.sp-redflag-badge.sp-sev-green {
+  background: rgba(46, 143, 80, 0.16);
+  border-color: rgba(46, 143, 80, 0.5);
+  color: var(--text-secondary);
 }
 
 @media (max-width: 960px) {
