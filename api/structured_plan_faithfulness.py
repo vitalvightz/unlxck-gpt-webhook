@@ -125,29 +125,56 @@ def _present_in_source(tok: str, source_tokens: set[str]) -> bool:
 
 
 def _dday_num(label: Any) -> int | None:
-    """Parse the integer countdown distance from a label like ``D-15`` / ``D0``."""
+    """Parse the countdown distance from a label like ``D-15`` (-> ``15``).
+
+    Returns the magnitude after ``D-`` so it lines up with
+    :func:`_day_header_dday` (which keys day sections by the same positive value);
+    both must agree for the MISPLACED/COUNTDOWN comparisons to hold.
+    """
     match = _DDAY_RE.search(str(label or ""))
     if not match:
         return None
-    sign, num = match.groups()
-    return -int(num) if sign == "-" else int(num)
+    return int(match.group(1))
+
+
+def _card_claims_countdown(plan: dict[str, Any]) -> bool:
+    """True when the card asserts a countdown structure we would need to verify.
+
+    A real athlete-facing card carries week countdown bounds and/or per-day
+    countdown labels. When it does, the source text must carry at least one D-day
+    marker for the card to be provable; otherwise the card's countdown claims are
+    unverifiable. An empty/degenerate card makes no countdown claim, so there is
+    nothing to project and the schema gate is the only authority.
+    """
+    weeks = plan.get("weeks") if isinstance(plan.get("weeks"), list) else []
+    for week in weeks:
+        if not isinstance(week, dict):
+            continue
+        if _dday_num(week.get("countdown_start")) is not None:
+            return True
+        if _dday_num(week.get("countdown_end")) is not None:
+            return True
+        days = week.get("days") if isinstance(week.get("days"), list) else []
+        for day in days:
+            if isinstance(day, dict) and _dday_num(day.get("countdown_label")) is not None:
+                return True
+    return False
 
 
 def _source_day_sections(markdown: str) -> dict[int, str]:
-    """Map each D-day number to the lowercased source text under its day header."""
-    sections: dict[int, list[str]] = {}
-    current: int | None = None
-def _source_day_sections(markdown: str) -> dict[int, str]:
-    """Map each D-day number to the lowercased source text under its day header."""
+    """Map each D-day number to the lowercased source text under its day header.
+
+    Uses :func:`_day_header_dday` (which understands both the countdown-leading and
+    parenthetical heading formats and excludes week/range headers) to find where
+    each day section starts; lines accumulate under the most recent day.
+    """
     sections: dict[int, list[str]] = {}
     current: int | None = None
     for line in markdown.splitlines():
-        header = _DAY_HEADER_RE.search(line)
-        is_range = "→" in line or "->" in line
-        if line.lstrip().startswith("#") and header and not is_range:
-            current = _dday_num(header.group(0))
-            if current is not None:
-                sections.setdefault(current, [])
+        day = _day_header_dday(line)
+        if day is not None:
+            current = day
+            sections.setdefault(current, [])
         if current is not None:
             sections[current].append(line)
     return {day: "\n".join(lines).lower() for day, lines in sections.items()}
@@ -179,9 +206,19 @@ def check_structured_faithfulness(structured_plan: Any, source_markdown: str) ->
 def _check(structured_plan: Any, source_markdown: str) -> list[str]:
     plan = structured_plan if isinstance(structured_plan, dict) else {}
     source = str(source_markdown or "")
-    # Only evaluate real countdown plans. Stubs / degenerate text without any
-    # D-day marker are not judged, so the gate can never reject without a basis.
-    if not plan or not _ANY_DDAY_RE.search(source):
+    if not plan:
+        return []
+    if not _ANY_DDAY_RE.search(source):
+        # Card-first hard gate: a card that claims a countdown structure cannot be
+        # proven faithful against source text carrying no D-day marker at all, so
+        # it is unverifiable and must not ship as the athlete-facing artifact
+        # (the raw plan_text fallback / review hold takes over). A card that makes
+        # no countdown claim has nothing to project, so the schema gate stands.
+        if _card_claims_countdown(plan):
+            return [
+                f"{COUNTDOWN}: source text carries no D-day marker; "
+                "card countdown is unverifiable"
+            ]
         return []
 
     source_tokens = _meaningful(_tokens(source))

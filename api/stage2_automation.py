@@ -14,6 +14,7 @@ from fightcamp.stage2_policy import (
     publish_blocking_review_findings,
 )
 
+from .state_machine import is_athlete_displayable_plan_status
 from .structured_plan_generation import (
     StructuredPlanOutcome,
     build_structured_plan_outcome,
@@ -700,11 +701,10 @@ class OpenAIStage2Automator:
 
         # A card-rescuable hold is tentatively published so the structured-card
         # attempt below can run and vouch for it. Coaching-content gaps are not
-        # eligible for this path. If no clean card materialises, it is reverted
-        # to a hold further down. Only gated when structured plans are enabled -
-        # otherwise no card can ever rescue it and the tentative publish would
-        # just flap back to a hold.
-        rescue_pending = False
+        # eligible for this path. If no clean card materialises, the card-first
+        # gate further down reverts it to a hold. Only gated when structured
+        # plans are enabled - otherwise no card can ever rescue it and the
+        # tentative publish would just flap back to a hold.
         if first_review["status"] == "PASS" and not publish_blocking_findings:
             result = _approved_result(
                 stage1_result,
@@ -732,7 +732,6 @@ class OpenAIStage2Automator:
                 app_status=_APP_STATUS_READY,
                 stage2_cost=first_pass_cost,
             )
-            rescue_pending = True
         else:
             if publish_blocking_findings:
                 logger.warning(
@@ -767,11 +766,20 @@ class OpenAIStage2Automator:
             log_context=log_context,
         )
 
-        # Confirm or roll back the tentative rescue: a clean schema-valid card
-        # keeps the plan ready; anything else falls back to the hold.
-        if rescue_pending and not has_clean_structured_card(result):
+        # Card-first publish gate: the structured card is the athlete-facing
+        # artifact, so a plan may only stay athlete-displayable when it carries a
+        # clean schema-valid card. This subsumes the old "rescue_pending" rollback
+        # — a clean PASS that fails to produce a card is held just like a soft
+        # hold that fails its rescue. Only enforced when structured plans are
+        # enabled; with the flag off no card can ever exist and the raw plan_text
+        # flow is the intended fallback, so the markdown-publish behaviour stands.
+        if (
+            _structured_plan_enabled()
+            and is_athlete_displayable_plan_status(result.get("status"))
+            and not has_clean_structured_card(result)
+        ):
             logger.warning(
-                "[stage2] structured-card rescue failed (no clean card); holding for review"
+                "[stage2] no clean structured card; holding for review (card-first gate)"
             )
             report = result.get("stage2_validator_report")
             structured_debug = report.get("structured_plan") if isinstance(report, dict) else None
