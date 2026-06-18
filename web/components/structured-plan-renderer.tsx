@@ -848,7 +848,7 @@ export function StructuredPlanRenderer({ plan }: { plan: StructuredPlan }) {
           recoveryItems={recoveryItems}
         />
       ))}
-      {!hasDeterministicSupport ? <NutritionCard plan={plan} /> : null}
+      {nutritionItems.length === 0 ? <NutritionCard plan={plan} /> : null}
       {progressionNotes ? (
         <section className="sp-card sp-progression">
           <p className="sp-eyebrow sp-accent">Progression notes</p>
