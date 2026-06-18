@@ -271,8 +271,11 @@ export function normalizeSupportPhaseKey(value: unknown): string | null {
   if (token === "spp" || token.includes("specific_prep") || token.includes("specific_preparation")) {
     return "spp";
   }
-  if (token === "taper" || token.includes("fight_week") || token.includes("fight_week_taper")) {
+  if (token === "taper") {
     return "taper";
+  }
+  if (token.includes("fight_week") || token.includes("fight_week_taper")) {
+    return "fight_week";
   }
   if (token.includes("reintegration")) {
     return "reintegration";
