@@ -168,8 +168,8 @@ def _plan_identity(plan: Mapping[str, Any] | None) -> dict[str, Any]:
     return identity
 
 
-def _quick_actions(has_active_plan: bool) -> list[QuickAction]:
-    if not has_active_plan:
+def _quick_actions(active_plan_id: str | None) -> list[QuickAction]:
+    if not active_plan_id:
         return [
             QuickAction(
                 id="complete_intake",
@@ -179,9 +179,8 @@ def _quick_actions(has_active_plan: bool) -> list[QuickAction]:
         ]
     return [
         QuickAction(id="open_today", label="Open Today", route="/today"),
-        QuickAction(id="view_plan", label="View Plan", route="/plan"),
+        QuickAction(id="view_plan", label="View Plan", route=f"/plans/{active_plan_id}"),
     ]
-
 
 def _as_iso(day: date | str) -> str:
     if hasattr(day, "date"):
@@ -229,5 +228,5 @@ def build_command_view(
         today=today,
         risk_watch=sort_risk_watch(risks or []),
         week_summary=dict(week_summary) if week_summary else {},
-        quick_actions=_quick_actions(has_active_plan),
+        quick_actions=_quick_actions(str(active_plan.get("id") or "") or None),
     )

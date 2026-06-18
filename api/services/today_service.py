@@ -32,6 +32,7 @@ from api.contracts.completion import (
 from api.contracts.landing import LandingDecision, resolve_landing
 from api.contracts.training_day import resolve_training_day_str
 from api.store import AppStore
+from api.services.active_plan import resolve_active_plan
 
 
 def _plan_schedule_helpers():
@@ -316,7 +317,7 @@ def build_today_command_view(
     ) = _plan_schedule_helpers()
 
     training_day = resolve_training_day(athlete_timezone, now=now)
-    plan_row = _latest_visible_plan_row(store, athlete_id)
+    plan_row = resolve_active_plan(store, athlete_id).plan
 
     if not plan_row:
         return build_command_view(current_training_day=training_day, plan=None)
@@ -374,7 +375,7 @@ def resolve_today_landing(
     ) = _plan_schedule_helpers()
 
     training_day = resolve_training_day(athlete_timezone, now=now)
-    plan_row = _latest_visible_plan_row(store, athlete_id)
+    plan_row = resolve_active_plan(store, athlete_id).plan
     has_active_plan = bool(plan_row)
 
     session_state = "none"
