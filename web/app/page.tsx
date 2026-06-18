@@ -346,7 +346,7 @@ export default function HomePage() {
 
     const activePlan = commandState?.active_plan ?? {};
     const hasActivePlan = Boolean(activePlan.id);
-    const sessionPreview = (commandState?.today.next_session ?? {}) as Record<string, unknown>;
+    const sessionPreview = (commandState?.today.next_session ?? {}) as Record<string, any>;
     const risks = commandState?.risk_watch ?? [];
     const visibleRisks = risks.slice(0, 2);
     const riskOverflow = Math.max(0, risks.length - visibleRisks.length);
