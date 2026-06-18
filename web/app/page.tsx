@@ -392,7 +392,7 @@ export default function HomePage() {
             <article className="status-card">
               <p className="status-label">Next session</p>
               <h2 className="plan-summary-title">{String(sessionPreview.title || sessionPreview.weekday || "No session found")}</h2>
-              <p className="muted">{String(sessionPreview["focus"] || sessionPreview["emphasis"] || sessionPreview.status || "Open Today for details.")}</p>
+              <p className="muted">{String(sessionPreview.focus || sessionPreview.emphasis || sessionPreview.status || "Open Today for details.")}</p>
               <div className="plan-card-actions overview-card-actions"><Link href="/today" className="secondary-button">Open Today</Link></div>
             </article>
             <article className="status-card">
