@@ -837,7 +837,8 @@ export default function PlansPage() {
     return [...sourcePlans].sort((left, right) => new Date(right.created_at).getTime() - new Date(left.created_at).getTime());
   }, [localPlans, plans]);
   const latestEligiblePlan = visiblePlans.find(canSetActive) ?? null;
-  const activePlan = activePlanId ? visiblePlans.find((plan) => plan.plan_id === activePlanId) ?? null : latestEligiblePlan;
+  const explicitActivePlan = activePlanId ? visiblePlans.find((plan) => plan.plan_id === activePlanId) ?? null : null;
+  const activePlan = explicitActivePlan && canSetActive(explicitActivePlan) ? explicitActivePlan : latestEligiblePlan;
   const intakeSource = getIntakeSource(me);
   const archivedPlans = getArchivedPlans(visiblePlans);
   const otherSavedPlans = visiblePlans.filter((plan) => plan.plan_id !== activePlan?.plan_id && plan.status?.trim().toLowerCase() !== "archived");
