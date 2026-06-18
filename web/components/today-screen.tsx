@@ -14,6 +14,7 @@ import {
   canCompleteTodaySession,
   completionRequiresModificationReason,
   completionRequiresReviewFields,
+  formatSessionValue,
   getCompletionLabel,
   getRecommendationCopy,
   getSessionTitle,
@@ -88,10 +89,14 @@ function formatTrainingDay(value: string | null | undefined): string {
 }
 
 function formatSessionDate(session: TodaySession): string {
+  const dayText = session.weekday_with_label || session.weekday;
+  const countdown =
+    typeof session.d_day === "number" ? `D-${Math.abs(session.d_day)}` : session.day_label;
+  const hasCountdownInDayText = Boolean(dayText && countdown && dayText.includes(countdown));
   const parts = [
-    session.weekday_with_label || session.weekday,
+    dayText,
     session.calendar_date ? formatTrainingDay(session.calendar_date) : null,
-    typeof session.d_day === "number" ? `D-${Math.abs(session.d_day)}` : session.day_label,
+    hasCountdownInDayText ? null : countdown,
   ].filter(Boolean);
   return parts.length ? parts.join(" / ") : "Athlete-local training day";
 }
@@ -100,7 +105,7 @@ function getSessionFocus(session: TodaySession): string {
   return (
     session.primary_focus?.trim() ||
     session.emphasis?.trim() ||
-    session.effective_load?.trim() ||
+    formatSessionValue(session.effective_load) ||
     session.reason?.trim() ||
     session.coach_note?.trim() ||
     "Follow the current plan guidance."
@@ -124,6 +129,25 @@ function getSessionDuration(session: TodaySession): string | null {
     return `${session.planned_duration.value} ${session.planned_duration.unit || "min"}`;
   }
   return null;
+}
+
+function getSessionRelationCopy(session: TodaySession): {
+  kicker: string;
+  status: string;
+  helper: string;
+} {
+  if (session.session_relation === "next") {
+    return {
+      kicker: "Next scheduled session",
+      status: "Preview",
+      helper: "Today has no matched training card, so this shows the next available plan day.",
+    };
+  }
+  return {
+    kicker: "Today's session",
+    status: "Live today",
+    helper: "Matched from the active plan by the athlete-local training day.",
+  };
 }
 
 function SegmentGroup<T extends string>({
@@ -195,7 +219,7 @@ function RiskWatch({ risks }: { risks: TodayCommandView["risk_watch"] }) {
       {visible.map((risk) => (
         <article key={`${risk.category}-${risk.label}`} className="today-risk-item" data-tone={risk.tone}>
           <span className="today-risk-icon" aria-hidden="true">
-            {risk.icon.replace(/-/g, " ").slice(0, 4).toUpperCase()}
+            !
           </span>
           <div>
             <p className="today-risk-label">{risk.label}</p>
@@ -211,12 +235,10 @@ function RiskWatch({ risks }: { risks: TodayCommandView["risk_watch"] }) {
 function RecommendationCard({ state }: { state: TodayCommandView }) {
   const copy = getRecommendationCopy(state.today.recommendation_state);
   const session = state.today.next_session;
+  const hasSession = hasTodaySession(session);
   return (
     <section className="today-card today-recommendation-card" data-tone={copy.tone} aria-labelledby="today-recommendation-heading">
       <div className="today-card-head">
-        <span className="today-card-icon" aria-hidden="true">
-          {copy.icon}
-        </span>
         <div>
           <p className="kicker">Recommendation</p>
           <h2 id="today-recommendation-heading">{copy.label}</h2>
@@ -227,16 +249,22 @@ function RecommendationCard({ state }: { state: TodayCommandView }) {
       </p>
       <div className="today-meta-strip">
         <span>{formatTrainingDay(state.today.training_day)}</span>
-        <span>{getSessionTitle(session)}</span>
+        <span>{hasSession ? getSessionTitle(session) : "No matched session"}</span>
       </div>
       {state.today.recommendation_state === "pull_back" ? (
         <p className="today-safety-note">
           If pain escalates or red flags appear, stop the session and use recovery work.
         </p>
       ) : null}
-      <a href="#today-session" className="secondary-button today-session-jump">
-        Go to session
-      </a>
+      {hasSession ? (
+        <a href="#today-session" className="secondary-button today-session-jump">
+          Go to session
+        </a>
+      ) : state.active_plan.id ? (
+        <Link href={`/plans/${state.active_plan.id}`} className="secondary-button today-session-jump">
+          View plan
+        </Link>
+      ) : null}
     </section>
   );
 }
@@ -297,9 +325,6 @@ function CheckinModule({
   return (
     <section className="today-card today-checkin-card" aria-labelledby="today-checkin-heading">
       <div className="today-card-head">
-        <span className="today-card-icon" aria-hidden="true">
-          CHK
-        </span>
         <div>
           <p className="kicker">Fast check-in</p>
           <h2 id="today-checkin-heading">Set today&apos;s recommendation</h2>
@@ -466,7 +491,9 @@ function SessionCard({
   const status = state.today.completion_status;
   const duration = getSessionDuration(session);
   const hasSession = hasTodaySession(session);
-  const canCompleteSession = canCompleteTodaySession(session);
+  const relationCopy = getSessionRelationCopy(session);
+  const isNextSessionPreview = session.session_relation === "next";
+  const canCompleteSession = canCompleteTodaySession(session) && !isNextSessionPreview;
 
   async function saveCompletion(
     nextStatus: TodayCompletionStatus,
@@ -505,15 +532,12 @@ function SessionCard({
     return (
       <section id="today-session" className="today-card today-session-card" aria-labelledby="today-session-heading">
         <div className="today-card-head">
-          <span className="today-card-icon" aria-hidden="true">
-            OFF
-          </span>
           <div>
-            <p className="kicker">Session</p>
+            <p className="kicker">Today&apos;s session</p>
             <h2 id="today-session-heading">No session scheduled today</h2>
           </div>
         </div>
-        <p className="muted">Keep recovery work available and review the full plan when you need the next training target.</p>
+        <p className="muted">No active plan card matched today. Review the plan for the next training target.</p>
         <div className="today-action-row">
           <Link href={`/plans/${state.active_plan?.id}`} className="secondary-button">
             View full plan
@@ -526,11 +550,8 @@ function SessionCard({
   return (
     <section id="today-session" className="today-card today-session-card" aria-labelledby="today-session-heading">
       <div className="today-card-head">
-        <span className="today-card-icon" aria-hidden="true">
-          SES
-        </span>
         <div>
-          <p className="kicker">Session</p>
+          <p className="kicker">{relationCopy.kicker}</p>
           <h2 id="today-session-heading">{getSessionTitle(session)}</h2>
         </div>
       </div>
@@ -551,13 +572,15 @@ function SessionCard({
         ) : null}
         <div>
           <p className="today-detail-label">Status</p>
-          <p>{getCompletionLabel(status)}</p>
+          <p>{isNextSessionPreview ? relationCopy.status : getCompletionLabel(status)}</p>
         </div>
       </div>
 
       {!canCompleteSession ? (
         <p className="today-terminal-status">
-          Session details available, but completion is unavailable for this entry.
+          {isNextSessionPreview
+            ? `${relationCopy.helper} Completion opens on the matched training day.`
+            : "Session details available, but completion is unavailable for this entry."}
         </p>
       ) : null}
 
@@ -699,13 +722,13 @@ export function TodayScreen() {
       </section>
 
       <div className="today-grid">
+        <SessionCard state={state} token={token ?? ""} onRefresh={loadToday} />
         <div className="today-stack">
           {showCheckin ? (
             <CheckinModule plan={activePlan} token={token ?? ""} onRefresh={loadToday} />
           ) : null}
           <RecommendationCard state={state} />
         </div>
-        <SessionCard state={state} token={token ?? ""} onRefresh={loadToday} />
       </div>
     </div>
   );

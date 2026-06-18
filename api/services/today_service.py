@@ -253,19 +253,35 @@ def _session_id_for_entry(entry: Any) -> str | None:
     """
     if entry is None:
         return None
-    calendar_date = getattr(entry, "calendar_date", None)
+    if isinstance(entry, Mapping):
+        calendar_date = entry.get("calendar_date")
+        weekday = entry.get("weekday", "")
+    else:
+        calendar_date = getattr(entry, "calendar_date", None)
+        weekday = getattr(entry, "weekday", "")
     if calendar_date:
         return str(calendar_date)
-    weekday = getattr(entry, "weekday", "")
     return str(weekday) or None
 
 
-def _next_session_payload(entry: Any, session_id: str | None) -> dict[str, Any]:
+def _entry_has_training(entry: Any) -> bool:
+    if entry is None:
+        return False
+    if isinstance(entry, Mapping):
+        value = entry.get("effective_load")
+    else:
+        value = getattr(entry, "effective_load", None)
+    return str(value or "").strip().lower() != "none"
+
+
+def _next_session_payload(entry: Any, session_id: str | None, *, relation: str | None = None) -> dict[str, Any]:
     if entry is None:
         return {}
     data = entry.model_dump() if hasattr(entry, "model_dump") else dict(entry)
     if session_id:
         data["session_id"] = session_id
+    if relation:
+        data["session_relation"] = relation
     return data
 
 
@@ -340,11 +356,16 @@ def build_today_command_view(
             # Malformed plan data must never crash Overview.
             today_entry = next_entry = None
 
-    target_entry = today_entry or next_entry
+    target_entry = today_entry if _entry_has_training(today_entry) else next_entry
+    session_relation = (
+        "today"
+        if target_entry is not None and target_entry is today_entry
+        else ("next" if target_entry is not None else None)
+    )
     session_id = _session_id_for_entry(target_entry)
     completion = (
         store.get_session_completion(athlete_id, session_id, training_day)
-        if session_id
+        if session_id and session_relation == "today"
         else None
     )
 
@@ -353,7 +374,7 @@ def build_today_command_view(
         plan=_plan_with_resolved_phase(plan_row, week),
         recommendation=recommendation,
         completion=completion,
-        next_session=_next_session_payload(target_entry, session_id),
+        next_session=_next_session_payload(target_entry, session_id, relation=session_relation),
         risks=_risks_from_checkin(today_checkin),
     )
 

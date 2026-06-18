@@ -109,6 +109,35 @@ export function getCompletionActions(status: TodayCompletionStatus): string[] {
   return ["Session skipped"];
 }
 
+const SESSION_VALUE_LABELS: Record<string, string> = {
+  hard_as_planned: "Hard sparring",
+  convert_to_technical_suggested: "Technical sparring",
+  deload_suggested: "Reduced sparring",
+  technical_skill: "Technical skill",
+  no_hard_sparring_day: "No hard sparring",
+  missing_effective_sparring_plan: "Plan detail unavailable",
+  hard: "Hard session",
+  technical: "Technical work",
+  reduced: "Reduced work",
+  none: "No training load",
+};
+
+export function formatSessionValue(value: string | null | undefined): string {
+  const raw = value?.trim();
+  if (!raw) {
+    return "";
+  }
+  const normalized = raw.toLowerCase();
+  if (SESSION_VALUE_LABELS[normalized]) {
+    return SESSION_VALUE_LABELS[normalized];
+  }
+  return raw
+    .replace(/[_-]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/\b\w/g, (match) => match.toUpperCase());
+}
+
 export function completionRequiresReviewFields(status: TodayCompletionStatus): boolean {
   return status === "done" || status === "modified";
 }
@@ -145,8 +174,8 @@ export function getSessionTitle(session: TodaySession): string {
   return (
     session.title?.trim() ||
     session.label?.trim() ||
-    session.status?.trim() ||
-    session.effective_load?.trim() ||
+    formatSessionValue(session.status) ||
+    formatSessionValue(session.effective_load) ||
     "Today's session"
   );
 }

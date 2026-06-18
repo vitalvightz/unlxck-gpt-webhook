@@ -884,6 +884,7 @@ export type TodayActivePlan = {
 
 export type TodaySession = {
   session_id?: string;
+  session_relation?: "today" | "next" | string;
   title?: string;
   label?: string;
   weekday?: string;
