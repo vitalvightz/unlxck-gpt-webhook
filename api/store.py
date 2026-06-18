@@ -258,6 +258,12 @@ class AppStore(Protocol):
 
     def get_latest_plan(self, athlete_id: str) -> dict[str, Any] | None: ...
 
+    def get_active_plan_id(self, athlete_id: str) -> str | None: ...
+
+    def set_active_plan_id(self, athlete_id: str, plan_id: str) -> None: ...
+
+    def clear_active_plan_id(self, athlete_id: str) -> None: ...
+
     def rename_plan(self, plan_id: str, plan_name: str) -> dict[str, Any]: ...
 
     def rename_plan_for_athlete(self, plan_id: str, athlete_id: str, plan_name: str) -> dict[str, Any]: ...
@@ -1930,6 +1936,64 @@ class SupabaseAppStore:
             self._raise_operation_http_error(
                 operation=f"get_latest_plan athlete_id={athlete_id}",
                 detail="failed to read latest plan",
+                exc=exc,
+            )
+
+    def get_active_plan_id(self, athlete_id: str) -> str | None:
+        """Read the athlete's explicit active-plan pointer (``None`` if unset)."""
+        try:
+            row = self._run_with_transient_retry(
+                operation=f"get_active_plan_id athlete_id={athlete_id}",
+                fn=lambda: self._select_first(
+                    self.client.table("profiles").select("active_plan_id").eq("id", athlete_id)
+                ),
+            )
+        except _STORE_CLIENT_ERRORS as exc:
+            self._raise_operation_http_error(
+                operation=f"get_active_plan_id athlete_id={athlete_id}",
+                detail="failed to read active plan",
+                exc=exc,
+            )
+        if not isinstance(row, dict):
+            return None
+        value = row.get("active_plan_id")
+        return str(value) if value else None
+
+    def set_active_plan_id(self, athlete_id: str, plan_id: str) -> None:
+        """Persist the athlete's explicit active-plan choice.
+
+        Eligibility/ownership are enforced by the caller (api/routes/plans.py)
+        before this write; the store only persists the validated pointer.
+        """
+        try:
+            self._run_with_transient_retry(
+                operation=f"set_active_plan_id athlete_id={athlete_id} plan_id={plan_id}",
+                fn=lambda: self.client.table("profiles")
+                .update({"active_plan_id": plan_id})
+                .eq("id", athlete_id)
+                .execute(),
+            )
+        except _STORE_CLIENT_ERRORS as exc:
+            self._raise_operation_http_error(
+                operation=f"set_active_plan_id athlete_id={athlete_id} plan_id={plan_id}",
+                detail="failed to set active plan",
+                exc=exc,
+            )
+
+    def clear_active_plan_id(self, athlete_id: str) -> None:
+        """Clear the explicit active-plan pointer (e.g. when it is archived)."""
+        try:
+            self._run_with_transient_retry(
+                operation=f"clear_active_plan_id athlete_id={athlete_id}",
+                fn=lambda: self.client.table("profiles")
+                .update({"active_plan_id": None})
+                .eq("id", athlete_id)
+                .execute(),
+            )
+        except _STORE_CLIENT_ERRORS as exc:
+            self._raise_operation_http_error(
+                operation=f"clear_active_plan_id athlete_id={athlete_id}",
+                detail="failed to clear active plan",
                 exc=exc,
             )
 

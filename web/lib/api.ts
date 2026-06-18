@@ -1,4 +1,5 @@
 import type {
+  ActivePlanResponse,
   ApproveAndResumeGenerationRequest,
   AdminAthleteDailyStatus,
   AdminAthleteRecord,
@@ -587,6 +588,19 @@ export function getPlan(token: string, planId: string): Promise<PlanDetail> {
   return withTransientRetries(() =>
     readJson<PlanDetail>(`/api/plans/${encodeURIComponent(planId)}`, { token }),
   );
+}
+
+// Block 4 active-plan model (PR #1800): the single plan that controls
+// Overview/Today. Resolved server-side via the central resolver.
+export function getActivePlan(token: string): Promise<ActivePlanResponse> {
+  return withTransientRetries(() => readJson<ActivePlanResponse>("/api/plans/active", { token }));
+}
+
+export function setActivePlan(token: string, planId: string): Promise<ActivePlanResponse> {
+  return readJson<ActivePlanResponse>(`/api/plans/${encodeURIComponent(planId)}/active`, {
+    method: "POST",
+    token,
+  });
 }
 
 export async function fetchWeeklySchedule(

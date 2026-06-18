@@ -1306,6 +1306,18 @@ class PlanSummary(BaseModel):
     pdf_url: str | None = None
 
 
+class ActivePlanResponse(BaseModel):
+    """The athlete's single active plan (Block 4 / PR #1800).
+
+    ``active_plan`` is ``None`` when no eligible plan exists. ``source`` reports
+    how it was selected: ``explicit`` (athlete's saved choice) or
+    ``auto_selected`` (latest eligible fallback).
+    """
+
+    active_plan: PlanSummary | None = None
+    source: Literal["explicit", "auto_selected"] | None = None
+
+
 class PlanOutputs(BaseModel):
     plan_text: str
     pdf_url: str | None = None

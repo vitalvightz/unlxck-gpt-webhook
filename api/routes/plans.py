@@ -5,7 +5,15 @@ import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 
-from api.models import PlanDetail, PlanRenameRequest, PlanSummary, ProfileRecord, WeeklySchedule
+from api.active_plan import plan_is_eligible_for_active, resolve_active_plan
+from api.models import (
+    ActivePlanResponse,
+    PlanDetail,
+    PlanRenameRequest,
+    PlanSummary,
+    ProfileRecord,
+    WeeklySchedule,
+)
 from api.plan_mappers import (
     _is_archived_plan,
     _lookup_plan_source,
@@ -61,6 +69,50 @@ def build_plans_router(*, require_profile, require_plan_row, get_store) -> APIRo
         if not is_effective_admin_profile(profile, store):
             rows = _visible_plans_for_athlete(rows)
         return [_map_plan_summary(row) for row in rows]
+
+    @router.get("/api/plans/active", response_model=ActivePlanResponse)
+    def get_active_plan(
+        profile: ProfileRecord = Depends(require_profile),
+        store: AppStore = Depends(get_store),
+    ) -> ActivePlanResponse:
+        """The athlete's single active plan, via the central resolver.
+
+        Same resolution Overview and Today use — see api/active_plan.py.
+        """
+        resolution = resolve_active_plan(store, profile.athlete_id)
+        if not resolution.plan_row:
+            return ActivePlanResponse(active_plan=None, source=None)
+        return ActivePlanResponse(
+            active_plan=_map_plan_summary(resolution.plan_row),
+            source=resolution.source,
+        )
+
+    @router.post("/api/plans/{plan_id}/active", response_model=ActivePlanResponse)
+    def set_active_plan(
+        plan_id: str,
+        profile: ProfileRecord = Depends(require_profile),
+        store: AppStore = Depends(get_store),
+    ) -> ActivePlanResponse:
+        """Make ``plan_id`` the athlete's explicit active plan.
+
+        Rejects unknown/unowned plans (404) and archived/non-displayable plans
+        (422). Only ``ready``/``publishable_with_flags`` plans may become active.
+        """
+        try:
+            uuid.UUID(plan_id)
+        except (ValueError, AttributeError):
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
+        # Ownership: the athlete-scoped read returns None for someone else's plan.
+        plan_row = store.get_plan_for_athlete(plan_id, profile.athlete_id)
+        if not plan_row:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
+        if not plan_is_eligible_for_active(plan_row):
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="Only a ready plan can be set active. Archived or in-review plans cannot.",
+            )
+        store.set_active_plan_id(profile.athlete_id, plan_id)
+        return ActivePlanResponse(active_plan=_map_plan_summary(plan_row), source="explicit")
 
     @router.get("/api/plans/{plan_id}", response_model=PlanDetail)
     def get_plan(
@@ -143,6 +195,12 @@ def build_plans_router(*, require_profile, require_plan_row, get_store) -> APIRo
             store.archive_plan(plan_id)
         else:
             store.archive_plan_for_athlete(plan_id, profile.athlete_id)
+        # An archived plan can never be active: clear the owner's explicit
+        # pointer so Overview/Today fall back to the next eligible plan rather
+        # than dereferencing an archived one.
+        owner_id = str(plan_row.get("athlete_id") or "") or profile.athlete_id
+        if store.get_active_plan_id(owner_id) == plan_id:
+            store.clear_active_plan_id(owner_id)
         return Response(status_code=status.HTTP_204_NO_CONTENT)
 
     return router

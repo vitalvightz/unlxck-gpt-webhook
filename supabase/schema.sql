@@ -240,6 +240,11 @@ alter table public.profiles add column if not exists avatar_url text;
 alter table public.profiles add column if not exists nutrition_profile jsonb not null default '{}'::jsonb;
 alter table public.profiles add column if not exists username text;
 alter table public.profiles add column if not exists username_change_history jsonb not null default '[]'::jsonb;
+-- Explicit Block 4 active-plan pointer (PR #1800). ON DELETE SET NULL so a
+-- hard-deleted plan never leaves a dangling active pointer.
+alter table public.profiles add column if not exists active_plan_id uuid
+  references public.plans(id) on delete set null;
+create index if not exists profiles_active_plan_id_idx on public.profiles (active_plan_id);
 
 do $$
 begin

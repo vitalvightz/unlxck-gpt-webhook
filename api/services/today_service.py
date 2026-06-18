@@ -29,6 +29,7 @@ from api.contracts.completion import (
     completion_landing_state,
     completion_status_of,
 )
+from api.active_plan import resolve_active_plan_row
 from api.contracts.landing import LandingDecision, resolve_landing
 from api.contracts.training_day import resolve_training_day_str
 from api.store import AppStore
@@ -42,16 +43,18 @@ def _plan_schedule_helpers():
     By the time these helpers are needed at call time, ``api.routes.daily`` is
     fully loaded. Reusing them keeps "today's session" a single derivation from
     the persisted plan rather than a second implementation.
+
+    Note: the *active plan* is resolved centrally via
+    ``api.active_plan.resolve_active_plan_row`` — not "latest visible plan" — so
+    Overview, Today, and the active-plan API always agree on one plan.
     """
     from api.routes.daily import (
-        _latest_visible_plan_row,
         _parse_iso_date,
         _resolve_current_week,
         _resolve_today_and_next,
     )
 
     return (
-        _latest_visible_plan_row,
         _parse_iso_date,
         _resolve_current_week,
         _resolve_today_and_next,
@@ -309,14 +312,13 @@ def build_today_command_view(
     missing/unparseable structured plan → empty ``next_session`` (no crash).
     """
     (
-        _latest_visible_plan_row,
         _parse_iso_date,
         _resolve_current_week,
         _resolve_today_and_next,
     ) = _plan_schedule_helpers()
 
     training_day = resolve_training_day(athlete_timezone, now=now)
-    plan_row = _latest_visible_plan_row(store, athlete_id)
+    plan_row = resolve_active_plan_row(store, athlete_id)
 
     if not plan_row:
         return build_command_view(current_training_day=training_day, plan=None)
@@ -367,14 +369,13 @@ def resolve_today_landing(
 ) -> LandingDecision:
     """Resolve the landing decision from persisted state (see ``resolve_landing``)."""
     (
-        _latest_visible_plan_row,
         _parse_iso_date,
         _resolve_current_week,
         _resolve_today_and_next,
     ) = _plan_schedule_helpers()
 
     training_day = resolve_training_day(athlete_timezone, now=now)
-    plan_row = _latest_visible_plan_row(store, athlete_id)
+    plan_row = resolve_active_plan_row(store, athlete_id)
     has_active_plan = bool(plan_row)
 
     session_state = "none"

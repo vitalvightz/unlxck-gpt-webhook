@@ -9,6 +9,7 @@ import {
   completionRequiresModificationReason,
   completionRequiresReviewFields,
   canCompleteTodaySession,
+  getActivePlanHref,
   getCompletionActions,
   getRecommendationCopy,
   getVisibleRiskWatch,
@@ -57,6 +58,17 @@ test("no active plan state uses intake copy and no plan identity", () => {
   assert.equal(TODAY_EMPTY_TITLE, "No active plan yet");
   assert.equal(TODAY_EMPTY_TEXT, "Complete intake to generate your training plan.");
   assert.equal(hasActivePlan({}), false);
+});
+
+test("view full plan routes to the active plan detail, never generic /plans", () => {
+  assert.equal(
+    getActivePlanHref(BASE_STATE.active_plan),
+    "/plans/11111111-1111-1111-1111-111111111111",
+  );
+  // No active plan id -> the /plan alias (which itself resolves to the active
+  // plan), still never the generic /plans manager.
+  assert.equal(getActivePlanHref({}), "/plan");
+  assert.equal(getActivePlanHref(null), "/plan");
 });
 
 test("active plan without check-in shows the check-in module rule", () => {

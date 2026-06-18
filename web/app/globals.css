@@ -1557,6 +1557,51 @@ select:focus-visible {
   gap: 14px;
 }
 
+/* Block 4 Overview command centre (PR #1800): read-only camp status cards. */
+.overview-command-stack {
+  display: grid;
+  gap: 16px;
+}
+
+.overview-command-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+  gap: 16px;
+}
+
+@media (max-width: 860px) {
+  .overview-command-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.overview-command-card {
+  display: grid;
+  gap: 12px;
+  align-content: start;
+  padding: 20px 22px;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: linear-gradient(180deg, rgba(18, 20, 24, 0.96), rgba(13, 15, 18, 0.98));
+  box-shadow: var(--shadow-support);
+}
+
+.overview-today-state[data-tone="red"] {
+  border-color: rgba(255, 99, 99, 0.4);
+}
+
+.overview-today-state[data-tone="amber"] {
+  border-color: rgba(255, 196, 87, 0.36);
+}
+
+.overview-today-state[data-tone="green"] {
+  border-color: rgba(120, 220, 150, 0.32);
+}
+
+.overview-risk-watch {
+  gap: 10px;
+}
+
 .overview-disclosure {
   border-radius: 18px;
   border: 1px solid rgba(255, 255, 255, 0.06);
@@ -5382,6 +5427,19 @@ button.mobile-step-rail-item {
 .plan-history-row-card:hover {
   background: rgba(255, 255, 255, 0.025);
   transform: translateX(2px);
+}
+
+/* Active-plan emphasis in the plan workspace (Block 4 / PR #1800). */
+.plan-history-row-active {
+  border-left: 3px solid rgba(120, 220, 150, 0.55);
+  background: rgba(120, 220, 150, 0.05);
+}
+
+.plan-card-badge-row {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
 }
 
 .plans-history-actions {

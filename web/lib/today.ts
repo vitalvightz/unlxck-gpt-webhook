@@ -28,6 +28,13 @@ export function hasActivePlan(plan: TodayActivePlan | null | undefined): boolean
   return Boolean(plan?.id);
 }
 
+// Block 4 / PR #1800: "View full plan" opens the specific active plan, never the
+// generic /plans manager. Falls back to the /plan alias (which itself resolves
+// to the active plan) when the id is unavailable.
+export function getActivePlanHref(plan: TodayActivePlan | null | undefined): string {
+  return plan?.id ? `/plans/${plan.id}` : "/plan";
+}
+
 export function shouldShowTodayCheckin(state: TodayCommandView): boolean {
   return hasActivePlan(state.active_plan) && state.today.recommendation_state === "not_checked_in";
 }

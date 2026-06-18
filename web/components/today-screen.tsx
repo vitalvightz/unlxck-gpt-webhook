@@ -14,6 +14,7 @@ import {
   canCompleteTodaySession,
   completionRequiresModificationReason,
   completionRequiresReviewFields,
+  getActivePlanHref,
   getCompletionLabel,
   getRecommendationCopy,
   getSessionTitle,
@@ -515,7 +516,7 @@ function SessionCard({
         </div>
         <p className="muted">Keep recovery work available and review the full plan when you need the next training target.</p>
         <div className="today-action-row">
-          <Link href="/plan" className="secondary-button">
+          <Link href={getActivePlanHref(state.active_plan)} className="secondary-button">
             View full plan
           </Link>
         </div>
@@ -687,7 +688,7 @@ export function TodayScreen() {
             </p>
           </div>
           <div className="today-hero-actions">
-            <Link href="/plan" className="secondary-button">
+            <Link href={getActivePlanHref(activePlan)} className="secondary-button">
               View full plan
             </Link>
             <Link href="/" className="ghost-button">

@@ -168,7 +168,7 @@ def _plan_identity(plan: Mapping[str, Any] | None) -> dict[str, Any]:
     return identity
 
 
-def _quick_actions(has_active_plan: bool) -> list[QuickAction]:
+def _quick_actions(has_active_plan: bool, *, active_plan_id: str | None = None) -> list[QuickAction]:
     if not has_active_plan:
         return [
             QuickAction(
@@ -177,9 +177,13 @@ def _quick_actions(has_active_plan: bool) -> list[QuickAction]:
                 route="/intake",
             )
         ]
+    # "View active plan" routes to the specific active plan detail, never the
+    # generic /plans manager (Block 4 / PR #1800). When the id is unavailable we
+    # fall back to the /plan alias, which itself resolves to the active plan.
+    view_plan_route = f"/plans/{active_plan_id}" if active_plan_id else "/plan"
     return [
         QuickAction(id="open_today", label="Open Today", route="/today"),
-        QuickAction(id="view_plan", label="View Plan", route="/plan"),
+        QuickAction(id="view_plan", label="View active plan", route=view_plan_route),
     ]
 
 
@@ -211,6 +215,7 @@ def build_command_view(
     training_day = _as_iso(current_training_day)
     active_plan = _plan_identity(plan)
     has_active_plan = bool(active_plan)
+    active_plan_id = str(active_plan.get("id") or "") or None
 
     rec_view = resolve_recommendation_state(
         recommendation, current_training_day=training_day
@@ -229,5 +234,5 @@ def build_command_view(
         today=today,
         risk_watch=sort_risk_watch(risks or []),
         week_summary=dict(week_summary) if week_summary else {},
-        quick_actions=_quick_actions(has_active_plan),
+        quick_actions=_quick_actions(has_active_plan, active_plan_id=active_plan_id),
     )

@@ -9,7 +9,7 @@ import { RequireAuth } from "@/components/auth-guard";
 import { useAppSession } from "@/components/auth-provider";
 import { PlanHistoryRowSkeleton, PlansFeaturedSkeleton } from "@/components/skeleton";
 import { useToast } from "@/components/toast-provider";
-import { deletePlan, listPlans, renamePlan } from "@/lib/api";
+import { deletePlan, getActivePlan, listPlans, renamePlan, setActivePlan } from "@/lib/api";
 import { markGenerationIntent } from "@/lib/generation-intent";
 import {
   EQUIPMENT_ACCESS_OPTIONS,
@@ -33,6 +33,15 @@ type SummaryLine = {
   label: string;
   value: string;
 };
+
+// Only athlete-displayable plans may become active (Block 4 / PR #1800). Mirrors
+// api.active_plan.ELIGIBLE_ACTIVE_STATUSES so the UI never offers "Set active"
+// for archived/in-review plans.
+const ELIGIBLE_ACTIVE_STATUSES = new Set(["ready", "publishable_with_flags"]);
+
+function canSetPlanActive(plan: PlanSummary): boolean {
+  return ELIGIBLE_ACTIVE_STATUSES.has(plan.status);
+}
 
 function getRenameDraftValue(plan: PlanSummary): string {
   return plan.plan_name?.trim() || plan.fight_date || "";
@@ -159,16 +168,20 @@ function summarizeIntake(me: MeResponse | null): SummaryLine[] {
 function PlanCard({
   plan,
   accessToken,
+  isActive,
+  onSetActive,
   onPlanDeleted,
   onPlanRenamed,
 }: {
   plan: PlanSummary;
   accessToken: string | null;
+  isActive: boolean;
+  onSetActive: (planId: string) => Promise<void>;
   onPlanDeleted: (planId: string) => void;
   onPlanRenamed: (updatedPlan: PlanSummary) => void;
 }) {
   const { showToast } = useToast();
-  const [pendingAction, setPendingAction] = useState<"rename" | "delete" | null>(null);
+  const [pendingAction, setPendingAction] = useState<"rename" | "delete" | "activate" | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isRenaming, setIsRenaming] = useState(false);
@@ -307,6 +320,27 @@ function PlanCard({
     }
   }
 
+  async function handleSetActive() {
+    if (!accessToken) {
+      setError("Session expired. Sign in again.");
+      return;
+    }
+    setPendingAction("activate");
+    setError(null);
+    setMessage(null);
+    try {
+      await onSetActive(plan.plan_id);
+      showToast(`${getPlanDisplayName(plan)} is now your active plan.`, { tone: "success" });
+    } catch (activateError) {
+      const errorMessage = activateError instanceof Error ? activateError.message : "Unable to set this plan active.";
+      setError(errorMessage);
+    } finally {
+      setPendingAction(null);
+    }
+  }
+
+  const canActivate = canSetPlanActive(plan) && !isActive;
+
   const inlineRenameForm = isRenaming ? (
     <form className="plan-inline-rename" onSubmit={handleRenameSubmit}>
       <label className="plan-inline-rename-label" htmlFor={renameInputId}>
@@ -371,7 +405,7 @@ function PlanCard({
 
   return (
     <>
-      <article className="plan-history-row plan-history-row-card">
+      <article className={`plan-history-row plan-history-row-card${isActive ? " plan-history-row-active" : ""}`}>
         <div className="plan-history-copy">
           <p className="label">{fightDateLabel}</p>
           <Link href={`/plans/${plan.plan_id}`}>
@@ -384,11 +418,19 @@ function PlanCard({
           </div>
         </div>
         <div className="plan-history-meta">
-          <span className="badge">{statusLabel}</span>
+          <span className="plan-card-badge-row">
+            {isActive ? <span className="badge status-badge-success">Active</span> : null}
+            <span className="badge">{statusLabel}</span>
+          </span>
           <div className="plan-card-actions plans-history-actions">
             <Link href={`/plans/${plan.plan_id}`} className="ghost-button">
               Open
             </Link>
+            {canActivate ? (
+              <button type="button" className="ghost-button" onClick={handleSetActive} disabled={isActionPending || isRenaming}>
+                {pendingAction === "activate" ? "Setting..." : "Set active"}
+              </button>
+            ) : null}
             <button type="button" className="ghost-button" onClick={handleRenameStart} disabled={isActionPending || isRenaming}>
               {pendingAction === "rename" ? "Saving..." : isRenaming ? "Editing name" : "Rename"}
             </button>
@@ -441,17 +483,21 @@ function LatestPlanCard({
   plan,
   intake,
   accessToken,
+  isActive,
+  onSetActive,
   onPlanDeleted,
   onPlanRenamed,
 }: {
   plan: PlanSummary | null;
   intake: PlanRequest | null;
   accessToken: string | null;
+  isActive: boolean;
+  onSetActive: (planId: string) => Promise<void>;
   onPlanDeleted: (planId: string) => void;
   onPlanRenamed: (updatedPlan: PlanSummary) => void;
 }) {
   const { showToast } = useToast();
-  const [pendingAction, setPendingAction] = useState<"rename" | "delete" | null>(null);
+  const [pendingAction, setPendingAction] = useState<"rename" | "delete" | "activate" | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isRenaming, setIsRenaming] = useState(false);
   const [renameDraft, setRenameDraft] = useState(() => (plan ? getRenameDraftValue(plan) : ""));
@@ -609,6 +655,28 @@ function LatestPlanCard({
     }
   }
 
+  async function handleSetActive() {
+    if (!plan) {
+      return;
+    }
+    if (!accessToken) {
+      setError("Session expired. Sign in again.");
+      return;
+    }
+    setPendingAction("activate");
+    setError(null);
+    try {
+      await onSetActive(plan.plan_id);
+      showToast(`${getPlanDisplayName(plan)} is now your active plan.`, { tone: "success" });
+    } catch (activateError) {
+      setError(activateError instanceof Error ? activateError.message : "Unable to set this plan active.");
+    } finally {
+      setPendingAction(null);
+    }
+  }
+
+  const canActivate = Boolean(plan) && canSetPlanActive(plan as PlanSummary) && !isActive;
+
   const inlineRenameForm = plan && isRenaming ? (
     <form className="plan-inline-rename" onSubmit={handleRenameSubmit}>
       <label className="plan-inline-rename-label" htmlFor={renameInputId}>
@@ -694,7 +762,12 @@ function LatestPlanCard({
               </div>
             ) : null}
           </div>
-          {plan?.status ? <span className="badge">{formatPlanStatus(plan.status)}</span> : null}
+          {plan?.status ? (
+            <span className="plan-card-badge-row">
+              {isActive ? <span className="badge status-badge-success">Active</span> : null}
+              <span className="badge">{formatPlanStatus(plan.status)}</span>
+            </span>
+          ) : null}
         </div>
 
         <DashboardSummary
@@ -735,6 +808,11 @@ function LatestPlanCard({
 
         {plan ? (
           <div className="plan-card-actions plans-dashboard-management-actions" aria-label="Manage latest plan">
+            {canActivate ? (
+              <button type="button" className="ghost-button" onClick={handleSetActive} disabled={isActionPending || isRenaming}>
+                {pendingAction === "activate" ? "Setting..." : "Set active"}
+              </button>
+            ) : null}
             <button type="button" className="ghost-button" onClick={handleRenameStart} disabled={isActionPending || isRenaming}>
               {pendingAction === "rename" ? "Saving..." : isRenaming ? "Editing name" : "Rename"}
             </button>
@@ -809,6 +887,9 @@ export default function PlansPage() {
   const [error, setError] = useState<string | null>(null);
   const [localPlans, setLocalPlans] = useState<PlanSummary[] | null>(null);
   const [isArchiveOpen, setIsArchiveOpen] = useState(false);
+  // The single plan that controls Overview/Today (Block 4 / PR #1800). Resolved
+  // server-side; the workspace only surfaces it and lets the athlete switch it.
+  const [activePlanId, setActivePlanId] = useState<string | null>(null);
 
   const visiblePlans = useMemo(() => {
     const sourcePlans = localPlans ?? plans;
@@ -842,12 +923,47 @@ export default function PlansPage() {
   }, [session?.access_token]);
 
   useEffect(() => {
+    if (!session?.access_token) {
+      return;
+    }
+    let active = true;
+    getActivePlan(session.access_token)
+      .then((response) => {
+        if (active) {
+          setActivePlanId(response.active_plan?.plan_id ?? null);
+        }
+      })
+      .catch(() => {
+        if (active) {
+          setActivePlanId(null);
+        }
+      });
+    return () => {
+      active = false;
+    };
+  }, [session?.access_token]);
+
+  useEffect(() => {
     if (!archivedPlans.length) {
       setIsArchiveOpen(false);
     }
   }, [archivedPlans.length]);
 
+  async function handleSetActive(planId: string) {
+    if (!session?.access_token) {
+      throw new Error("Session expired. Sign in again.");
+    }
+    const response = await setActivePlan(session.access_token, planId);
+    setActivePlanId(response.active_plan?.plan_id ?? planId);
+    router.refresh();
+  }
+
   function handlePlanDeleted(planId: string) {
+    if (planId === activePlanId) {
+      // Archiving the active plan clears the server-side pointer; reflect that
+      // locally so the badge/Set-active state stays in sync without a refetch.
+      setActivePlanId(null);
+    }
     setLocalPlans((current) => {
       const source = current ?? plans;
       return source.filter((currentPlan) => currentPlan.plan_id !== planId);
@@ -887,6 +1003,8 @@ export default function PlansPage() {
               plan={latestPlan}
               intake={intakeSource}
               accessToken={session?.access_token ?? null}
+              isActive={Boolean(latestPlan && latestPlan.plan_id === activePlanId)}
+              onSetActive={handleSetActive}
               onPlanDeleted={handlePlanDeleted}
               onPlanRenamed={handlePlanRenamed}
             />
@@ -941,6 +1059,8 @@ export default function PlansPage() {
                       key={plan.plan_id}
                       plan={plan}
                       accessToken={session?.access_token ?? null}
+                      isActive={plan.plan_id === activePlanId}
+                      onSetActive={handleSetActive}
                       onPlanDeleted={handlePlanDeleted}
                       onPlanRenamed={handlePlanRenamed}
                     />

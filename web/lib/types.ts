@@ -275,6 +275,13 @@ export type PlanSummary = {
   pdf_url?: string | null;
 };
 
+// Block 4 active-plan model (PR #1800). `active_plan` is null when no eligible
+// plan exists; `source` reports how it was selected.
+export type ActivePlanResponse = {
+  active_plan: PlanSummary | null;
+  source: "explicit" | "auto_selected" | null;
+};
+
 export type PlanOutputs = {
   plan_text: string;
   pdf_url?: string | null;

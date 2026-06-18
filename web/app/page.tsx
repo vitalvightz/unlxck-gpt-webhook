@@ -2,21 +2,21 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { type ReactNode, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 
 import { useAppSession } from "@/components/auth-provider";
-import { EmptyState } from "@/components/empty-state";
 import { PlansFeaturedSkeleton, Skeleton } from "@/components/skeleton";
-import { listPlans } from "@/lib/api";
+import { getToday } from "@/lib/api";
+import { formatPlanFightDate } from "@/lib/plan-format";
 import {
-  getOptionLabel,
-  PROFESSIONAL_STATUS_OPTIONS,
-  STANCE_OPTIONS,
-  TACTICAL_STYLE_OPTIONS,
-  TECHNICAL_STYLE_OPTIONS,
-} from "@/lib/intake-options";
-import { formatPlanFightDate, formatPlanTimestamp, getPlanDisplayName } from "@/lib/plan-format";
-import type { PlanSummary } from "@/lib/types";
+  getActivePlanHref,
+  getCompletionLabel,
+  getRecommendationCopy,
+  getSessionTitle,
+  getVisibleRiskWatch,
+  hasActivePlan,
+} from "@/lib/today";
+import type { TodayCommandView } from "@/lib/types";
 
 const landingPreviewStages = [
   {
@@ -75,125 +75,205 @@ const landingWorkflowSteps = [
   },
 ] as const;
 
-function formatPlanCount(value: number): string {
-  return `${value} saved plan${value === 1 ? "" : "s"}`;
+function formatTrainingDay(value: string | null | undefined): string {
+  if (!value) {
+    return "Today";
+  }
+  const date = new Date(`${value}T12:00:00`);
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+  return new Intl.DateTimeFormat("en-GB", {
+    weekday: "short",
+    day: "2-digit",
+    month: "short",
+  }).format(date);
 }
 
-function OverviewDetailList({
-  items,
-}: {
-  items: Array<{
-    label: string;
-    value: string;
-    highlight?: boolean;
-    badgeText?: string;
-    helperText?: string;
-    progressValue?: number;
-  }>;
-}) {
+function formatSessionDayLabel(session: TodayCommandView["today"]["next_session"]): string {
+  const parts = [
+    session.weekday_with_label || session.weekday,
+    session.calendar_date ? formatTrainingDay(session.calendar_date) : null,
+    typeof session.d_day === "number" ? `D-${Math.abs(session.d_day)}` : session.day_label,
+  ].filter(Boolean);
+  return parts.length ? parts.join(" · ") : "Scheduled session";
+}
+
+function hasNextSession(session: TodayCommandView["today"]["next_session"]): boolean {
+  return Boolean(session.session_id || session.title || session.weekday || session.status);
+}
+
+// Overview command-centre risk watch: top 1-2 risks + "+N more". Read-only,
+// mirrors Today; meaning never relies on colour alone (icon + label + text).
+function OverviewRiskWatch({ risks }: { risks: TodayCommandView["risk_watch"] }) {
+  if (!risks.length) {
+    return null;
+  }
+  const { visible, overflow } = getVisibleRiskWatch(risks);
   return (
-    <div className="review-detail-list overview-detail-list">
-      {items.map((item) => (
-        <div
-          key={`${item.label}-${item.value}`}
-          className={item.highlight ? "review-detail-row overview-detail-row-highlight" : "review-detail-row"}
-        >
-          <div className={item.highlight ? "overview-detail-heading overview-detail-heading-highlight" : "overview-detail-heading"}>
-            <p className="review-detail-label">{item.label}</p>
-            {item.badgeText ? <span className="overview-inline-badge">{item.badgeText}</span> : null}
-          </div>
-          <p className={item.highlight ? "review-detail-value overview-detail-value-strong" : "review-detail-value"}>{item.value}</p>
-          {typeof item.progressValue === "number" ? (
-            <div className="overview-progress-track" role="presentation" aria-hidden="true">
-              <span
-                className="overview-progress-fill"
-                style={{ width: `${Math.max(0, Math.min(100, item.progressValue))}%` }}
-              />
+    <section className="overview-command-card overview-risk-watch" aria-label="Risk watch">
+      <p className="kicker">Risk watch</p>
+      <div className="today-risk-watch">
+        {visible.map((risk) => (
+          <article key={`${risk.category}-${risk.label}`} className="today-risk-item" data-tone={risk.tone}>
+            <span className="today-risk-icon" aria-hidden="true">
+              {risk.icon.replace(/-/g, " ").slice(0, 4).toUpperCase()}
+            </span>
+            <div>
+              <p className="today-risk-label">{risk.label}</p>
+              <p className="today-risk-text">{risk.text || "Monitor this before training."}</p>
             </div>
-          ) : null}
-          {item.helperText ? <p className="overview-progress-helper">{item.helperText}</p> : null}
-        </div>
-      ))}
-    </div>
+          </article>
+        ))}
+        {overflow > 0 ? <span className="today-risk-more">+{overflow} more</span> : null}
+      </div>
+    </section>
   );
 }
 
-function OverviewDetailGrid({
-  items,
-}: {
-  items: Array<{
-    label: string;
-    value: string;
-    highlight?: boolean;
-    badgeText?: string;
-    helperText?: string;
-    progressValue?: number;
-  }>;
-}) {
-  const midpoint = Math.ceil(items.length / 2);
-  const columns = [items.slice(0, midpoint), items.slice(midpoint)].filter((column) => column.length);
-
-  return (
-    <div className="overview-detail-grid">
-      {columns.map((column, index) => (
-        <div key={`column-${index + 1}`} className="overview-detail-column">
-          <OverviewDetailList items={column} />
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function OverviewDisclosure({
-  title,
-  summary,
-  badge,
-  children,
-}: {
-  title: string;
-  summary: string;
-  badge?: string;
-  children: ReactNode;
-}) {
-  return (
-    <details className="overview-disclosure">
-      <summary className="overview-disclosure-summary">
-        <div className="overview-disclosure-copy">
-          <p className="kicker">{title}</p>
-          <p className="overview-disclosure-title">{summary}</p>
-        </div>
-        <div className="overview-disclosure-meta">
-          {badge ? <span className="overview-inline-badge">{badge}</span> : null}
-          <span className="overview-disclosure-chevron" aria-hidden="true" />
-        </div>
-      </summary>
-      <div className="overview-disclosure-body">{children}</div>
-    </details>
-  );
-}
-
-function WorkspaceOverviewSkeleton() {
+function CommandCentreSkeleton() {
   return (
     <section className="hero-panel overview-command-shell athlete-motion-slot athlete-motion-header" aria-busy="true">
       <div className="overview-command-grid">
         <div className="hero-panel-copy overview-command-copy">
-          <Skeleton variant="text" width={90} height={12} />
+          <Skeleton variant="text" width={120} height={12} />
           <Skeleton variant="text" width="68%" height={42} />
           <Skeleton variant="text" width="82%" height={16} />
-          <div className="overview-operational-strip" aria-label="Workspace status loading">
-            {[0, 1, 2].map((index) => (
-              <div key={index} className="overview-operational-item">
-                <Skeleton variant="text" width={92} height={10} />
-                <Skeleton variant="text" width={136} height={16} />
+        </div>
+        <PlansFeaturedSkeleton />
+      </div>
+    </section>
+  );
+}
+
+// The Block 4 Overview command centre. Read-only: it mirrors the active-plan
+// command view (no check-in form, no completion buttons, no raw structured_plan)
+// and routes the athlete to Today / the active plan.
+function CommandCentre({ state }: { state: TodayCommandView }) {
+  const activePlan = state.active_plan;
+  const planActive = hasActivePlan(activePlan);
+  const recommendation = getRecommendationCopy(state.today.recommendation_state);
+  const session = state.today.next_session;
+  const notCheckedIn = state.today.recommendation_state === "not_checked_in";
+
+  if (!planActive) {
+    return (
+      <section className="hero-panel overview-command-shell athlete-motion-slot athlete-motion-header">
+        <div className="hero-panel-copy overview-command-copy">
+          <p className="eyebrow">Camp command centre</p>
+          <h1 className="hero-title">No active plan yet.</h1>
+          <p className="overview-command-summary">
+            Complete intake to generate the plan that drives Today and this command centre.
+          </p>
+          <div className="hero-actions">
+            <Link href="/onboarding" className="cta">
+              Complete Intake
+            </Link>
+            <Link href="/quick-build" className="ghost-button">
+              Quick Build — 2 min
+            </Link>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  const headerItems = [
+    { label: "Phase", value: activePlan.phase || "Current phase" },
+    { label: "Training day", value: formatTrainingDay(state.today.training_day) },
+    { label: "Fight date", value: formatPlanFightDate(activePlan.fight_date ?? null) },
+  ];
+
+  const primaryCtaLabel = notCheckedIn ? "Open Today / Check in" : "Open Today";
+
+  return (
+    <section className="overview-command-stack">
+      <header className="hero-panel overview-command-shell athlete-motion-slot athlete-motion-header">
+        <div className="hero-panel-copy overview-command-copy">
+          <p className="eyebrow">Camp command centre</p>
+          <h1 className="hero-title">{activePlan.name?.trim() || "Active fight camp"}</h1>
+          <div className="overview-operational-strip" aria-label="Camp status">
+            {headerItems.map((item) => (
+              <div key={item.label} className="overview-operational-item">
+                <span className="overview-operational-label">{item.label}</span>
+                <span className="overview-operational-value">{item.value}</span>
               </div>
             ))}
           </div>
         </div>
-        <PlansFeaturedSkeleton />
+      </header>
+
+      <div className="overview-command-row">
+        <section
+          className="overview-command-card overview-today-state"
+          data-tone={recommendation.tone}
+          aria-labelledby="overview-today-state-heading"
+        >
+          <p className="kicker">Today&apos;s state</p>
+          <h2 id="overview-today-state-heading" className="plan-summary-title">
+            {recommendation.label}
+          </h2>
+          <p className="muted">{state.today.recommendation_reason || recommendation.actionText}</p>
+          <div className="plan-summary-actions">
+            <Link href="/dashboard" className="cta overview-primary-action">
+              {primaryCtaLabel}
+            </Link>
+            <Link href={getActivePlanHref(activePlan)} className="secondary-button">
+              View active plan
+            </Link>
+          </div>
+        </section>
+
+        <section className="overview-command-card overview-next-session" aria-labelledby="overview-next-session-heading">
+          <p className="kicker">Next session</p>
+          {hasNextSession(session) ? (
+            <>
+              <h2 id="overview-next-session-heading" className="plan-summary-title">
+                {getSessionTitle(session)}
+              </h2>
+              <div className="overview-decision-strip" aria-label="Next session details">
+                <div className="overview-decision-item">
+                  <span className="overview-operational-label">When</span>
+                  <span className="overview-operational-value">{formatSessionDayLabel(session)}</span>
+                </div>
+                {session.primary_focus || session.emphasis ? (
+                  <div className="overview-decision-item">
+                    <span className="overview-operational-label">Focus</span>
+                    <span className="overview-operational-value">
+                      {session.primary_focus || session.emphasis}
+                    </span>
+                  </div>
+                ) : null}
+                <div className="overview-decision-item">
+                  <span className="overview-operational-label">Status</span>
+                  <span className="overview-operational-value">
+                    {getCompletionLabel(state.today.completion_status)}
+                  </span>
+                </div>
+              </div>
+              <div className="plan-summary-actions">
+                <Link href="/dashboard" className="secondary-button">
+                  Open Today
+                </Link>
+              </div>
+            </>
+          ) : (
+            <>
+              <h2 id="overview-next-session-heading" className="plan-summary-title">
+                No session scheduled
+              </h2>
+              <p className="muted">Keep recovery work available and check Today for the next training target.</p>
+              <div className="plan-summary-actions">
+                <Link href="/dashboard" className="secondary-button">
+                  Open Today
+                </Link>
+              </div>
+            </>
+          )}
+        </section>
       </div>
-      <div className="overview-disclosure-stack athlete-motion-slot athlete-motion-status">
-        <PlansFeaturedSkeleton />
-      </div>
+
+      <OverviewRiskWatch risks={state.risk_watch} />
     </section>
   );
 }
@@ -201,9 +281,10 @@ function WorkspaceOverviewSkeleton() {
 export default function HomePage() {
   const { isReady, isMeHydrated, hasTransientMeError, session, me, signOut } = useAppSession();
   const router = useRouter();
-  const [recentPlans, setRecentPlans] = useState<PlanSummary[]>([]);
   const [activePreviewIndex, setActivePreviewIndex] = useState(0);
   const [previewPausedUntil, setPreviewPausedUntil] = useState(0);
+  const [commandView, setCommandView] = useState<TodayCommandView | null>(null);
+  const [commandStatus, setCommandStatus] = useState<"loading" | "ready" | "error">("loading");
 
   function setPreviewIndex(nextIndex: number) {
     const totalStages = landingPreviewStages.length;
@@ -240,41 +321,29 @@ export default function HomePage() {
     }
   }, [isReady, isMeHydrated, me, router, session]);
 
+  // Overview is a read-only mirror of the active-plan command view. It never
+  // parses structured_plan, never computes readiness, and never mutates state.
   useEffect(() => {
+    const token = session?.access_token;
+    if (!token || !me) {
+      return;
+    }
     let active = true;
-
-    const fallbackPlans = me?.latest_plan ? [me.latest_plan] : [];
-
-    if (!session?.access_token) {
-      setRecentPlans(fallbackPlans);
-      return () => {
-        active = false;
-      };
-    }
-
-    if (me && me.plan_count <= 1) {
-      setRecentPlans(fallbackPlans);
-      return () => {
-        active = false;
-      };
-    }
-
-    setRecentPlans(fallbackPlans);
-
-    void listPlans(session.access_token)
-      .then((plans) => {
+    setCommandStatus("loading");
+    void getToday(token)
+      .then((view) => {
         if (!active) {
           return;
         }
-        setRecentPlans(plans.slice(0, 2));
+        setCommandView(view);
+        setCommandStatus("ready");
       })
       .catch(() => {
         if (!active) {
           return;
         }
-        setRecentPlans(fallbackPlans);
+        setCommandStatus("error");
       });
-
     return () => {
       active = false;
     };
@@ -302,14 +371,14 @@ export default function HomePage() {
     return (
       <section className="panel loading-card">
         <p className="kicker">Overview</p>
-        <h1>Loading your athlete workspace</h1>
-        <p className="muted">Checking saved intake and plan history.</p>
+        <h1>Loading your camp command centre</h1>
+        <p className="muted">Checking your active plan and today&apos;s state.</p>
       </section>
     );
   }
 
   if (session && !isMeHydrated) {
-    return <WorkspaceOverviewSkeleton />;
+    return <CommandCentreSkeleton />;
   }
 
   if (session && isMeHydrated && !me) {
@@ -360,165 +429,33 @@ export default function HomePage() {
       );
     }
 
-    const nextStepNumber = Number.isFinite(Number(draft?.current_step ?? 0)) ? Number(draft?.current_step ?? 0) + 1 : 1;
-    const totalOnboardingSteps = 6;
-    const remainingSteps = draft ? Math.max(totalOnboardingSteps - nextStepNumber, 0) : totalOnboardingSteps;
-    const progressValue = draft ? (nextStepNumber / totalOnboardingSteps) * 100 : 0;
-    const displayedPlans = recentPlans.length ? recentPlans : latestPlan ? [latestPlan] : [];
-    const fightDate = latestIntake?.fight_date || latestPlan?.fight_date || null;
-    const primaryStyle = getOptionLabel(TECHNICAL_STYLE_OPTIONS, me.profile.technical_style[0] ?? "") || "Not provided";
-    const tacticalStyle = getOptionLabel(TACTICAL_STYLE_OPTIONS, me.profile.tactical_style[0] ?? "") || "Not provided";
-    const stance = getOptionLabel(STANCE_OPTIONS, me.profile.stance ?? "") || "Not provided";
-    const status = getOptionLabel(PROFESSIONAL_STATUS_OPTIONS, me.profile.professional_status ?? "") || "Not provided";
-    const readinessBadge = draft ? "In progress" : "Ready to start";
-    const nextActionSummary = latestPlan
-      ? `Latest plan saved ${formatPlanTimestamp(latestPlan.created_at)}.`
-      : draft
-        ? `Draft is parked on step ${nextStepNumber} of 6.`
-        : "Profile is ready for the first intake.";
-    const primaryActionHref = latestPlan ? `/plans/${latestPlan.plan_id}` : "/onboarding";
-    const primaryActionLabel = latestPlan ? "Open latest plan" : draft ? "Resume intake" : "Start intake";
-    const primaryActionTitle = latestPlan ? "Open current plan" : draft ? "Finish intake" : "Start intake";
-    const operationalItems = [
-      { label: "Latest update", value: latestPlan ? formatPlanTimestamp(latestPlan.created_at) : formatPlanTimestamp(me.profile.updated_at) },
-      { label: "Fight date", value: formatPlanFightDate(fightDate) },
-      { label: "Primary style", value: primaryStyle },
-    ];
-    const decisionItems = [
-      {
-        label: "Advanced Intake",
-        value: draft ? `Step ${nextStepNumber} of ${totalOnboardingSteps}` : "Not started",
-      },
-      { label: "Saved plans", value: formatPlanCount(me.plan_count) },
-      { label: "Fight date", value: formatPlanFightDate(fightDate) },
-    ];
-    const profileStateItems = [
-      { label: "Full name", value: me.profile.full_name || "Not provided" },
-      { label: "Technical style", value: primaryStyle },
-      { label: "Tactical style", value: tacticalStyle },
-      { label: "Stance", value: stance },
-      { label: "Status", value: status },
-      { label: "Record", value: me.profile.record || "Not provided" },
-      {
-        label: "Intake progress",
-        value: draft ? `Step ${nextStepNumber} of ${totalOnboardingSteps}` : "Not started",
-        highlight: true,
-        badgeText: readinessBadge,
-        helperText: draft
-          ? remainingSteps === 0
-            ? "All intake steps are complete."
-            : `${remainingSteps} step${remainingSteps === 1 ? "" : "s"} remaining before plan generation.`
-          : "Start Advanced Intake to unlock guided plan generation.",
-        progressValue,
-      },
-    ];
+    if (commandStatus === "loading" && !commandView) {
+      return <CommandCentreSkeleton />;
+    }
 
-    return (
-      <>
-        <section className="hero-panel overview-command-shell athlete-motion-slot athlete-motion-header">
-          <div className="overview-command-grid">
-            <div className="hero-panel-copy overview-command-copy">
-              <p className="eyebrow">Overview</p>
-              <h1 className="hero-title">One workspace, one clear next step.</h1>
-              <p className="overview-command-summary">Pick up the latest camp action first, then open profile detail and history only when you need them.</p>
-              <div className="overview-operational-strip" aria-label="Workspace status">
-                {operationalItems.map((item) => (
-                  <div key={item.label} className="overview-operational-item">
-                    <span className="overview-operational-label">{item.label}</span>
-                    <span className="overview-operational-value">{item.value}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-            <div className="status-card overview-next-action overview-decision-card">
-              <p className="status-label">Next action</p>
-              <h2 className="plan-summary-title">{primaryActionTitle}</h2>
-              <div className="overview-next-action-state">
-                <span className={latestPlan ? "badge" : "badge status-badge-neutral"}>{latestPlan ? latestPlan.status : "Intake"}</span>
-                <p className="muted">{nextActionSummary}</p>
-              </div>
-              <div className="overview-decision-strip" aria-label="Next step details">
-                {decisionItems.map((item) => (
-                  <div key={item.label} className="overview-decision-item">
-                    <span className="overview-operational-label">{item.label}</span>
-                    <span className="overview-operational-value">{item.value}</span>
-                  </div>
-                ))}
-              </div>
-              <div className="plan-summary-actions">
-                <Link href={primaryActionHref} className="cta overview-primary-action">
-                  {primaryActionLabel}
-                </Link>
-                <Link href="/quick-build" className="ghost-button">
-                  Quick Build - 2 min
-                </Link>
-              </div>
-            </div>
-          </div>
-
-          <div className="overview-disclosure-stack athlete-motion-slot athlete-motion-status">
-            <OverviewDisclosure
-              title="Profile snapshot"
-              summary={draft ? `Advanced Intake is ${remainingSteps === 0 ? "ready for review" : `still ${remainingSteps} step${remainingSteps === 1 ? "" : "s"} away`}.` : "Profile fields currently saved for the next plan."}
-              badge={readinessBadge}
-            >
-              <OverviewDetailGrid items={profileStateItems} />
-              <div className="plan-card-actions overview-card-actions">
-                <Link href="/onboarding" className="secondary-button">
-                  {draft ? "Resume intake" : "Start Advanced Intake"}
-                </Link>
-                <Link href="/quick-build" className="ghost-button">
-                  Quick Build - 2 min
-                </Link>
-                <Link href="/settings" className="ghost-button">
-                  Update settings
-                </Link>
-              </div>
-            </OverviewDisclosure>
-
-            <OverviewDisclosure
-              title="Recent plans"
-              summary={displayedPlans.length ? `${displayedPlans.length === 1 ? "1 saved plan is ready to reopen." : `${displayedPlans.length} recent plans are ready to reopen.`}` : "No plans yet. Start with Quick Build or complete Advanced Intake."}
-              badge={formatPlanCount(me.plan_count)}
-            >
-              {displayedPlans.length ? (
-                <div className="plan-history-list">
-                  {displayedPlans.map((plan, index) => (
-                    <article key={plan.plan_id} className="plan-history-row overview-history-row">
-                      <div className="plan-history-copy">
-                        <p className="label">{index === 0 ? "Latest saved plan" : "Recent saved plan"}</p>
-                        <h3 className="plan-card-title">{getPlanDisplayName(plan)}</h3>
-                        <p className="overview-history-meta-line">Created {formatPlanTimestamp(plan.created_at)}</p>
-                      </div>
-                      <div className="plan-history-meta">
-                        <span className="badge">{plan.status}</span>
-                        <Link href={`/plans/${plan.plan_id}`} className="ghost-button overview-history-action">
-                          Open plan
-                        </Link>
-                      </div>
-                    </article>
-                  ))}
-                  <div className="plan-card-actions overview-card-actions">
-                    <Link href="/plans" className="ghost-button">
-                      View full history
-                    </Link>
-                  </div>
-                </div>
-              ) : (
-                <EmptyState
-                  eyebrow="Plan history"
-                  title="No camp plans yet."
-                  description="Complete Advanced Intake to generate your first training plan."
-                  example="Your generated camps will list here with fight date, status, and a one-tap reopen."
-                  primaryAction={{ label: "Start Advanced Intake", href: "/onboarding" }}
-                  secondaryAction={{ label: "Use Quick Build", href: "/quick-build" }}
-                />
-              )}
-            </OverviewDisclosure>
+    if (commandStatus === "error" && !commandView) {
+      return (
+        <section className="panel loading-card">
+          <p className="kicker">Camp command centre</p>
+          <h1>Overview did not load</h1>
+          <p className="muted" role="alert">Could not load your camp status. Try again in a moment.</p>
+          <div className="hero-actions">
+            <Link href="/dashboard" className="cta">
+              Open Today
+            </Link>
+            <Link href="/plans" className="secondary-button">
+              Plan workspace
+            </Link>
           </div>
         </section>
-      </>
-    );
+      );
+    }
+
+    if (commandView) {
+      return <CommandCentre state={commandView} />;
+    }
+
+    return <CommandCentreSkeleton />;
   }
 
   const activePreviewStage = landingPreviewStages[activePreviewIndex];

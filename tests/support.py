@@ -364,6 +364,19 @@ class FakeStore:
         plans = self.list_user_plans(athlete_id)
         return plans[0] if plans else None
 
+    def get_active_plan_id(self, athlete_id: str) -> str | None:
+        value = (self.profiles.get(athlete_id) or {}).get("active_plan_id")
+        return str(value) if value else None
+
+    def set_active_plan_id(self, athlete_id: str, plan_id: str) -> None:
+        profile = self.profiles.setdefault(athlete_id, {"id": athlete_id})
+        profile["active_plan_id"] = plan_id
+
+    def clear_active_plan_id(self, athlete_id: str) -> None:
+        profile = self.profiles.get(athlete_id)
+        if profile is not None:
+            profile["active_plan_id"] = None
+
     def rename_plan(self, plan_id: str, plan_name: str) -> dict:
         row = self.plans.get(plan_id)
         if not row:
