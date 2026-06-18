@@ -155,6 +155,10 @@ export function hasTodaySession(session: TodaySession): boolean {
   return Boolean(session.session_id || session.weekday || session.status || session.title);
 }
 
+export function canCompleteTodaySession(session: TodaySession): boolean {
+  return Boolean(session.session_id);
+}
+
 export function getVisibleRiskWatch(risks: TodayCommandView["risk_watch"]): {
   visible: TodayCommandView["risk_watch"];
   overflow: number;

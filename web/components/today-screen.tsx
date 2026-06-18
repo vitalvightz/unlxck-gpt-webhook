@@ -11,6 +11,7 @@ import {
   TODAY_EMPTY_TEXT,
   TODAY_EMPTY_TITLE,
   buildTodayCheckinPayload,
+  canCompleteTodaySession,
   completionRequiresModificationReason,
   completionRequiresReviewFields,
   getCompletionLabel,
@@ -465,6 +466,7 @@ function SessionCard({
   const status = state.today.completion_status;
   const duration = getSessionDuration(session);
   const hasSession = hasTodaySession(session);
+  const canCompleteSession = canCompleteTodaySession(session);
 
   async function saveCompletion(
     nextStatus: TodayCompletionStatus,
@@ -553,7 +555,13 @@ function SessionCard({
         </div>
       </div>
 
-      {status === "not_started" ? (
+      {!canCompleteSession ? (
+        <p className="today-terminal-status">
+          Session details available, but completion is unavailable for this entry.
+        </p>
+      ) : null}
+
+      {canCompleteSession && status === "not_started" ? (
         <div className="today-action-row today-sticky-actions">
           <button type="button" className="cta" onClick={() => void saveCompletion("started")} disabled={isSubmitting}>
             Start session
@@ -564,7 +572,7 @@ function SessionCard({
         </div>
       ) : null}
 
-      {status === "started" ? (
+      {canCompleteSession && status === "started" ? (
         <div className="today-action-row today-sticky-actions">
           <button
             type="button"
@@ -586,23 +594,25 @@ function SessionCard({
         </div>
       ) : null}
 
-      {status === "done" || status === "modified" || status === "skipped" ? (
+      {canCompleteSession && (status === "done" || status === "modified" || status === "skipped") ? (
         <p className="today-terminal-status">{getCompletionLabel(status)}</p>
       ) : null}
 
-      <CompletionForm
-        intent={intent}
-        isSubmitting={isSubmitting}
-        onCancel={() => setIntent(null)}
-        onSubmit={(details) =>
-          saveCompletion(intent ?? "skipped", {
-            sessionRpe: details.sessionRpe,
-            painAfter: details.painAfter,
-            modificationReason: details.modificationReason,
-            notes: details.notes,
-          })
-        }
-      />
+      {canCompleteSession ? (
+        <CompletionForm
+          intent={intent}
+          isSubmitting={isSubmitting}
+          onCancel={() => setIntent(null)}
+          onSubmit={(details) =>
+            saveCompletion(intent ?? "skipped", {
+              sessionRpe: details.sessionRpe,
+              painAfter: details.painAfter,
+              modificationReason: details.modificationReason,
+              notes: details.notes,
+            })
+          }
+        />
+      ) : null}
     </section>
   );
 }

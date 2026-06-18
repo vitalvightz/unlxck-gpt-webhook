@@ -8,6 +8,7 @@ import {
   buildTodayCheckinPayload,
   completionRequiresModificationReason,
   completionRequiresReviewFields,
+  canCompleteTodaySession,
   getCompletionActions,
   getRecommendationCopy,
   getVisibleRiskWatch,
@@ -150,6 +151,13 @@ test("session empty and completion action states are mapped", () => {
   assert.equal(hasTodaySession({}), false);
   assert.deepEqual(getCompletionActions("not_started"), ["Start session", "Mark skipped"]);
   assert.deepEqual(getCompletionActions("started"), ["Resume session", "Mark done", "Mark modified", "Mark skipped"]);
+});
+
+test("session details without session_id are visible but not completable", () => {
+  const session = { weekday: "Thu", status: "Hard day" };
+  assert.equal(hasTodaySession(session), true);
+  assert.equal(canCompleteTodaySession(session), false);
+  assert.equal(canCompleteTodaySession({ ...session, session_id: "sess-1" }), true);
 });
 
 test("modified requires a reason and done/modified require review fields", () => {

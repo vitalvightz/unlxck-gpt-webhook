@@ -4769,6 +4769,11 @@ button.mobile-step-rail-item {
   flex-wrap: wrap;
 }
 
+.today-hero-actions {
+  display: flex;
+  align-items: center;
+}
+
 .today-grid {
   display: grid;
   grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
