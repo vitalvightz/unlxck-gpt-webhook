@@ -170,6 +170,25 @@ export function getBlocks(session: StructuredSession | null | undefined): Struct
   return safeArray(session?.blocks).filter(isObject);
 }
 
+const REHAB_BLOCK_RE = /\b(rehab|prehab|mobility|mobil(?:ity|isation|ization)|isometric|opener)\b/i;
+
+/** Rehab/mobility blocks get a compact always-visible summary on session cards. */
+export function isRehabOrMobilityBlock(block: StructuredBlock | null | undefined): boolean {
+  if (!isObject(block)) {
+    return false;
+  }
+  return [block.block_type, block.category, block.display_name]
+    .map((value) => cleanText(value))
+    .some((value) => Boolean(value && REHAB_BLOCK_RE.test(value)));
+}
+
+/** Ordered rehab/mobility blocks for a session, empty when absent. */
+export function getRehabOrMobilityBlocks(
+  session: StructuredSession | null | undefined,
+): StructuredBlock[] {
+  return getBlocks(session).filter(isRehabOrMobilityBlock);
+}
+
 export function getCoachingCues(block: StructuredBlock | null | undefined): string[] {
   return getStringList(block?.coaching_cues);
 }
@@ -235,6 +254,31 @@ export function redFlagView(
 // --- deterministic (Stage 1) athlete-safe nutrition + recovery --------------
 
 const PHASE_ORDER = ["GPP", "SPP", "TAPER", "FIGHT_WEEK", "REINTEGRATION"];
+
+/** Stable key used to attach deterministic support to matching week phases. */
+export function normalizeSupportPhaseKey(value: unknown): string | null {
+  const token = cleanText(value)
+    ?.toLowerCase()
+    .replace(/[\s\-/]+/g, "_")
+    .replace(/_+/g, "_")
+    .replace(/^_|_$/g, "");
+  if (!token) {
+    return null;
+  }
+  if (token === "gpp" || token.includes("general_prep") || token.includes("general_preparation")) {
+    return "gpp";
+  }
+  if (token === "spp" || token.includes("specific_prep") || token.includes("specific_preparation")) {
+    return "spp";
+  }
+  if (token === "taper" || token.includes("fight_week") || token.includes("fight_week_taper")) {
+    return "taper";
+  }
+  if (token.includes("reintegration")) {
+    return "reintegration";
+  }
+  return token;
+}
 
 function orderedPhaseEntries<T>(byPhase: Record<string, T> | null | undefined): {
   phase: string;
@@ -442,6 +486,17 @@ export function getPlanNotes(plan: StructuredPlan | null | undefined): PlanNoteV
       return { category, label: cleanText(note.label), text } satisfies PlanNoteView;
     })
     .filter((note): note is PlanNoteView => note !== null);
+}
+
+/** Fallback safety lines from active notes when explicit red-flag rules are absent. */
+export function getFallbackSafetyNotes(plan: StructuredPlan | null | undefined): PlanNoteView[] {
+  const safetyCategories = new Set(["injury", "weight_cut", "recovery"]);
+  return getPlanNotes(plan).filter((note) => {
+    if (safetyCategories.has(note.category)) {
+      return true;
+    }
+    return /\b(stop|report|medical|coach|bleed|pain|dehydrat|wound)\b/i.test(note.text);
+  });
 }
 
 /** Red-flag rules that have something to display. */

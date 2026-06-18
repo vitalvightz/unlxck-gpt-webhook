@@ -12476,6 +12476,11 @@ html[data-theme="light"] .loading-operational-item {
   flex-direction: column;
   gap: 12px;
 }
+.sp-week-group {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
 .sp-week {
   background: var(--bg-panel);
   border: 1px solid var(--border-default);
@@ -12650,6 +12655,7 @@ html[data-theme="light"] .loading-operational-item {
 .sp-mindset-list,
 .sp-kv-list,
 .sp-cues,
+.sp-rehab-list,
 .sp-redflag-list {
   list-style: none;
   margin: 0;
@@ -12701,6 +12707,33 @@ html[data-theme="light"] .loading-operational-item {
   color: var(--text-secondary);
   font-size: 0.85rem;
 }
+.sp-rehab-summary {
+  margin: 10px 0;
+  padding: 10px 12px;
+  background: var(--bg-support);
+  border: 1px solid var(--border-subtle);
+  border-left: 3px solid var(--brand-red);
+  border-radius: var(--radius-stat);
+}
+.sp-rehab-list {
+  gap: 8px;
+}
+.sp-rehab-list li {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--text-primary);
+  font-size: 0.86rem;
+}
+.sp-rehab-title {
+  font-weight: 600;
+}
+.sp-rehab-metric {
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 0.76rem;
+}
 .sp-cues {
   margin-top: 8px;
 }
@@ -12726,6 +12759,7 @@ html[data-theme="light"] .loading-operational-item {
    the uniform card treatment with a red left accent and a faint red wash so
    they read as a warning, not just another section. */
 .sp-redflags {
+  background: var(--bg-panel);
   border-color: var(--border-active);
   border-left: 3px solid var(--brand-red);
   background: linear-gradient(
@@ -12733,6 +12767,15 @@ html[data-theme="light"] .loading-operational-item {
     var(--brand-red-soft) 0%,
     var(--bg-surface) 40%
   );
+}
+.sp-redflags-head {
+  margin-bottom: 12px;
+}
+.sp-redflags-title {
+  margin: 0;
+  color: var(--text-primary);
+  font-family: var(--font-display);
+  font-size: 1rem;
 }
 .sp-note-list {
   list-style: none;
@@ -12768,15 +12811,18 @@ html[data-theme="light"] .loading-operational-item {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  padding: 8px 0;
-  border-bottom: 1px solid var(--border-subtle);
+  padding: 10px 12px;
+  background: var(--bg-surface-alt);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-stat);
 }
 .sp-redflag:last-child {
-  border-bottom: none;
+  border-bottom: 1px solid var(--border-subtle);
 }
 .sp-redflag-text {
   color: var(--text-primary);
   font-size: 0.9rem;
+  line-height: 1.5;
 }
 @media (min-width: 720px) {
   .sp-block-stats {
@@ -12826,18 +12872,26 @@ html[data-theme="light"] .loading-operational-item {
 }
 
 .sp-collapse-summary::after {
-  content: "+";
-  color: var(--text-muted);
-  font-size: 1rem;
-  line-height: 1;
+  content: none;
 }
 
 .sp-collapse[open] > .sp-collapse-summary::after {
-  content: "-";
+  content: none;
 }
 
 .sp-collapse-body {
   padding: 0 14px 14px;
+}
+.sp-collapse-action {
+  flex: none;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-pill);
+  padding: 4px 9px;
+  color: var(--text-muted);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
 .sp-more-toggle {
@@ -12846,15 +12900,15 @@ html[data-theme="light"] .loading-operational-item {
   gap: 6px;
   align-self: flex-start;
   margin-top: 8px;
-  padding: 4px 10px;
-  background: var(--bg-surface);
+  padding: 6px 10px;
+  background: var(--bg-support);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-pill);
-  color: var(--text-muted);
-  font-size: 0.72rem;
+  color: var(--text-secondary);
+  font-size: 0.76rem;
   font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  letter-spacing: 0;
+  text-transform: none;
   cursor: pointer;
   transition: color 0.15s ease, border-color 0.15s ease;
 }
@@ -12901,6 +12955,38 @@ html[data-theme="light"] .loading-operational-item {
 
 .sp-redflag-badge {
   flex: none;
+  background: var(--danger-soft);
+  border-color: var(--border-active);
+  color: var(--danger-ink);
+}
+
+.sp-phase-support {
+  margin-top: -2px;
+}
+
+.sp-phase-support-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+
+.sp-support-card {
+  background: var(--bg-surface);
+  border-color: var(--border-subtle);
+}
+
+.sp-support-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+@media (min-width: 820px) {
+  .sp-phase-support-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 /* Severity badges carry meaning by colour — a "red"/"amber" label rendered as
@@ -12930,5 +13016,15 @@ html[data-theme="light"] .loading-operational-item {
 
   .sp-header {
     padding-top: 4px;
+  }
+
+  .sp-collapse-summary,
+  .sp-support-head {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .sp-collapse-action {
+    white-space: normal;
   }
 }

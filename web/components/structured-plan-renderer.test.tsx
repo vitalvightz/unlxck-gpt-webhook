@@ -59,11 +59,145 @@ test("structured renderer uses one session card and hides detail blocks until ex
   assert.equal(html.includes("Morning intro duplicate"), false);
   assert.equal(html.includes("Duplicate intro intent"), false);
   assert.equal(html.includes("Breathing reset"), false);
-  assert.equal(html.includes("MORE"), true);
+  assert.equal(html.includes("MORE"), false);
+  assert.equal(html.includes("LESS"), false);
+  assert.equal(html.includes("Show more (1 block)"), true);
   assert.equal(html.includes("Context"), true);
   assert.equal(html.includes("Taper freshness day"), true);
   assert.equal(html.includes("Do not render reset"), false);
   assert.equal(html.includes("Do not render anchor"), false);
+});
+
+test("surfaces rehab summary while keeping full rehab details collapsed", () => {
+  const plan = {
+    schema_version: "1.0",
+    plan_metadata: { title: "Fight Camp", sport: "boxing", plan_type: "fight_camp" },
+    weeks: [
+      {
+        week_id: "wk-1",
+        week_index: 1,
+        phase_label: "GPP",
+        days: [
+          {
+            date: "2026-06-17",
+            countdown_label: "D-34",
+            day_type: "low",
+            sessions: [
+              {
+                session_id: "ses-1",
+                session_type: "conditioning",
+                title: "Assault Bike aerobic steady state + rehab",
+                blocks: [
+                  { block_id: "bike", block_type: "conditioning", display_name: "Easy Assault Bike" },
+                  {
+                    block_id: "rehab",
+                    block_type: "rehab",
+                    display_name: "Neutral-Grip Isometric Holds",
+                    sets: 2,
+                    reps: "12-15 s",
+                    coaching_cues: ["Full rest between holds"],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+    ],
+  } satisfies StructuredPlan;
+
+  const html = renderToStaticMarkup(<StructuredPlanRenderer plan={plan} />);
+
+  assert.equal(html.includes("Rehab / Mobility"), true);
+  assert.equal(html.includes("Neutral-Grip Isometric Holds"), true);
+  assert.equal(html.includes("Full rest between holds"), false);
+  assert.equal(html.includes("Easy Assault Bike"), false);
+  assert.equal(html.includes("Show more (2 blocks)"), true);
+});
+
+test("renders fallback safety card from active notes when red flag rules are absent", () => {
+  const plan = {
+    schema_version: "1.0",
+    plan_metadata: { title: "Fight Camp", sport: "boxing", plan_type: "fight_camp" },
+    plan_notes: [
+      {
+        category: "injury",
+        label: "Elbow cut",
+        text: "Stop immediately and report if the wound reopens or sharp pain increases.",
+      },
+    ],
+    weeks: [
+      {
+        week_id: "wk-1",
+        week_index: 1,
+        phase_label: "GPP",
+        days: [],
+      },
+    ],
+  } satisfies StructuredPlan;
+
+  const html = renderToStaticMarkup(<StructuredPlanRenderer plan={plan} />);
+
+  assert.equal(html.includes("Safety priority"), true);
+  assert.equal(html.includes("Red flags - stop"), true);
+  assert.equal(html.includes("Safety note"), true);
+  assert.equal(html.includes("Stop immediately and report"), true);
+});
+
+test("attaches deterministic nutrition and recovery to matching week phases", () => {
+  const plan = {
+    schema_version: "1.0",
+    plan_metadata: { title: "Fight Camp", sport: "boxing", plan_type: "fight_camp" },
+    weeks: [
+      {
+        week_id: "wk-1",
+        week_index: 1,
+        phase_label: "GPP",
+        days: [],
+      },
+      {
+        week_id: "wk-2",
+        week_index: 2,
+        phase_label: "SPP",
+        days: [],
+      },
+    ],
+    deterministic_support: {
+      nutrition: {
+        by_phase: {
+          GPP: {
+            protein_g_per_day: { min: 168, max: 210 },
+            hydration_ml_per_day: { min: 3150, max: 4200 },
+            meal_structure: "3 core meals",
+          },
+          SPP: {
+            carbs_g_per_day: { min: 315, max: 630 },
+          },
+        },
+      },
+      recovery: {
+        by_phase: {
+          GPP: {
+            sleep_hours_target: [8, 9],
+            phase_focus: ["Reset sleep routine"],
+          },
+        },
+      },
+    },
+  } satisfies StructuredPlan;
+
+  const html = renderToStaticMarkup(<StructuredPlanRenderer plan={plan} />);
+  const week1Index = html.indexOf("Week 1");
+  const nutritionIndex = html.indexOf("Nutrition");
+  const week2Index = html.indexOf("Week 2");
+
+  assert.equal(week1Index >= 0, true);
+  assert.equal(nutritionIndex > week1Index, true);
+  assert.equal(nutritionIndex < week2Index, true);
+  assert.equal(html.includes("Hide General prep nutrition"), true);
+  assert.equal(html.includes("Hide General prep recovery"), true);
+  assert.equal(html.includes("Hide Specific prep nutrition"), true);
+  assert.equal(html.includes("General prep +"), false);
 });
 
 test("renders a coach-led / sparring day with no app blocks as its own card", () => {
