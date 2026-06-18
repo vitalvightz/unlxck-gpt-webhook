@@ -241,6 +241,7 @@ class AppStore(Protocol):
         technical_style: list[str],
     ) -> dict[str, Any]: ...
 
+
     def create_plan(
         self,
         *,
@@ -258,6 +259,10 @@ class AppStore(Protocol):
 
     def get_latest_plan(self, athlete_id: str) -> dict[str, Any] | None: ...
 
+    def get_active_plan_id(self, athlete_id: str) -> str | None: ...
+
+    def set_active_plan_id(self, athlete_id: str, plan_id: str) -> None: ...
+
     def rename_plan(self, plan_id: str, plan_name: str) -> dict[str, Any]: ...
 
     def rename_plan_for_athlete(self, plan_id: str, athlete_id: str, plan_name: str) -> dict[str, Any]: ...
@@ -269,6 +274,7 @@ class AppStore(Protocol):
     def delete_plan(self, plan_id: str) -> None: ...
 
     def delete_plan_for_athlete(self, plan_id: str, athlete_id: str) -> None: ...
+
 
     def create_or_get_generation_job(
         self,
@@ -1932,6 +1938,36 @@ class SupabaseAppStore:
                 detail="failed to read latest plan",
                 exc=exc,
             )
+
+    def get_active_plan_id(self, athlete_id: str) -> str | None:
+        try:
+            row = self._run_with_transient_retry(
+                operation=f"get_active_plan_id athlete_id={athlete_id}",
+                fn=lambda: self._select_first(
+                    self.client.table("profiles").select("active_plan_id").eq("id", athlete_id)
+                ),
+            )
+            return (str(row.get("active_plan_id") or "").strip() or None) if row else None
+        except _STORE_CLIENT_ERRORS as exc:
+            self._raise_operation_http_error(
+                operation=f"get_active_plan_id athlete_id={athlete_id}",
+                detail="failed to read active plan",
+                exc=exc,
+            )
+
+    def set_active_plan_id(self, athlete_id: str, plan_id: str) -> None:
+        try:
+            self._run_with_transient_retry(
+                operation=f"set_active_plan_id athlete_id={athlete_id}",
+                fn=lambda: self.client.table("profiles").update({"active_plan_id": plan_id}).eq("id", athlete_id).execute(),
+            )
+        except _STORE_CLIENT_ERRORS as exc:
+            self._raise_operation_http_error(
+                operation=f"set_active_plan_id athlete_id={athlete_id}",
+                detail="failed to set active plan",
+                exc=exc,
+            )
+
 
     def create_or_get_generation_job(
         self,

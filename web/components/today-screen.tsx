@@ -687,7 +687,7 @@ export function TodayScreen() {
             </p>
           </div>
           <div className="today-hero-actions">
-            <Link href="/plan" className="secondary-button">
+            <Link href={`/plans/${activePlan.id}`} className="secondary-button">
               View full plan
             </Link>
             <Link href="/" className="ghost-button">
