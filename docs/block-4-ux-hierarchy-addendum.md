@@ -29,14 +29,18 @@ It extends — and where noted, refines — `docs/live-athlete-flow.md`.
 The app landing target depends on user state. The landing resolver is the
 single source of truth for "where does the athlete go when they open the app".
 
-| User state                                   | Landing target                                                        |
-| -------------------------------------------- | --------------------------------------------------------------------- |
-| No active plan                               | Intake / Create Plan empty state                                      |
-| New / cold user **with** an active plan      | Overview                                                              |
-| Returning user, **no** check-in today        | Overview with one dominant **"Check in / Open Today"** CTA            |
-| Returning user, **already checked in** today | Today                                                                 |
-| Session **started but unfinished**           | Resume session (Today, resuming the in-progress session)             |
-| Session **completed today**                  | Keep normal navigation / last tab                                     |
+The table is ordered from most-specific to most-generic state. The resolver
+evaluates rows **top-to-bottom and the first matching row wins**, so specific
+session states must sit above the broader check-in states.
+
+| # | User state                                   | Landing target                                                        |
+| - | -------------------------------------------- | --------------------------------------------------------------------- |
+| 1 | No active plan                               | Intake / Create Plan empty state                                      |
+| 2 | New / cold user **with** an active plan      | Overview                                                              |
+| 3 | Session **started but unfinished**           | Resume session (Today, resuming the in-progress session)             |
+| 4 | Session **completed today**                  | Keep normal navigation / last tab                                     |
+| 5 | Returning user, **already checked in** today | Today                                                                 |
+| 6 | Returning user, **no** check-in today        | Overview with one dominant **"Check in / Open Today"** CTA            |
 
 Rules:
 
@@ -47,8 +51,13 @@ Rules:
   first); a returning user is routed toward the next decision.
 - Exactly **one** dominant CTA is allowed in the "no check-in today" state. Do
   not present competing primary actions.
-- The resolver evaluates states top-to-bottom; the first matching row wins.
-  Resume (unfinished session) takes precedence over the check-in CTA.
+- **Precedence is unambiguous — first matching row wins:**
+  - the **session-resume** state (row 3) beats any check-in state (rows 5–6);
+  - the **completed-session** state (row 4) beats the generic checked-in state
+    (row 5);
+  - because session states (rows 3–4) sit above check-in states (rows 5–6), a
+    returning user who has already checked in today never shadows an unfinished
+    or completed session for today.
 
 ---
 
