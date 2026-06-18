@@ -76,7 +76,6 @@ create table if not exists public.profiles (
   record_summary text not null default '',
   athlete_timezone text not null default '',
   athlete_locale text not null default '',
-  active_plan_id uuid references public.plans(id) on delete set null,
   appearance_mode text not null default 'dark',
   avatar_url text,
   onboarding_draft jsonb,
@@ -158,6 +157,9 @@ create table if not exists public.plans (
   schema_version text,
   created_at timestamptz not null default timezone('utc', now())
 );
+
+alter table public.profiles
+add column if not exists active_plan_id uuid references public.plans(id) on delete set null;
 
 create table if not exists public.generation_jobs (
   id uuid primary key default gen_random_uuid(),
