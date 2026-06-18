@@ -103,8 +103,12 @@ def completion_landing_state(status: str | None) -> LandingSessionState:
     return "none"
 
 
-def completion_key(completion: Mapping[str, Any]) -> tuple[str, str, str]:
-    """The ``(user_id, session_id, training_day)`` key for a completion mapping."""
+def completion_key(
+    completion: SessionCompletionRecord | Mapping[str, Any],
+) -> tuple[str, str, str]:
+    """The ``(user_id, session_id, training_day)`` key for a record or mapping."""
+    if isinstance(completion, SessionCompletionRecord):
+        return completion.key
     return (
         str(completion.get("user_id") or ""),
         str(completion.get("session_id") or ""),

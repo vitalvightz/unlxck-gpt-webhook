@@ -100,3 +100,20 @@ class TestHelpers:
         assert found is not None and found["status"] == "started"
         missing = find_completion(records, user_id="u1", session_id="s9", training_day="2026-06-18")
         assert missing is None
+
+    def test_find_completion_accepts_model_instances(self):
+        records = [
+            _record(session_id="s1"),
+            _record(session_id="s2", status="started", started_at="2026-06-18T10:00:00Z"),
+        ]
+        found = find_completion(
+            records,
+            user_id="u1",
+            session_id="s2",
+            training_day="2026-06-18",
+        )
+        assert found is not None
+        assert found.status == "started"
+
+    def test_completion_key_accepts_model_instances(self):
+        assert completion_key(_record(session_id="s2")) == ("u1", "s2", "2026-06-18")
