@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { type ReactNode, useEffect, useMemo, useState } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 
 import { useAppSession } from "@/components/auth-provider";
 import { EmptyState } from "@/components/empty-state";
@@ -198,29 +198,24 @@ function WorkspaceOverviewSkeleton() {
   );
 }
 
-function activePlanFromLatestPlan(plan: PlanSummary | null | undefined): TodayActivePlan {
-  if (!plan) {
-    return {};
-  }
-  return {
-    id: plan.plan_id,
-    name: getPlanDisplayName(plan),
-    status: plan.status,
-    fight_date: plan.fight_date,
-  };
-}
-
-function mergeActivePlan(
+function enrichConfirmedActivePlan(
   commandPlan: TodayActivePlan | null | undefined,
-  fallbackPlan: TodayActivePlan,
+  latestPlan: PlanSummary | null | undefined,
 ): TodayActivePlan {
+  if (!commandPlan?.id) {
+    return commandPlan ?? {};
+  }
+
+  const canUseLatestPlanFields = latestPlan?.plan_id === commandPlan.id;
+  if (!canUseLatestPlanFields) {
+    return commandPlan;
+  }
+
   return {
-    ...fallbackPlan,
-    ...(commandPlan ?? {}),
-    id: commandPlan?.id || fallbackPlan.id,
-    name: commandPlan?.name || fallbackPlan.name,
-    status: commandPlan?.status || fallbackPlan.status,
-    fight_date: commandPlan?.fight_date || fallbackPlan.fight_date,
+    ...commandPlan,
+    name: commandPlan.name || getPlanDisplayName(latestPlan),
+    status: commandPlan.status || latestPlan.status,
+    fight_date: commandPlan.fight_date || latestPlan.fight_date,
   };
 }
 
@@ -231,7 +226,6 @@ export default function HomePage() {
   const [commandError, setCommandError] = useState<string | null>(null);
   const [activePreviewIndex, setActivePreviewIndex] = useState(0);
   const [previewPausedUntil, setPreviewPausedUntil] = useState(0);
-  const latestPlanFallback = useMemo(() => activePlanFromLatestPlan(me?.latest_plan ?? null), [me?.latest_plan]);
 
   function setPreviewIndex(nextIndex: number) {
     const totalStages = landingPreviewStages.length;
@@ -371,7 +365,29 @@ export default function HomePage() {
       );
     }
 
-    const activePlan = mergeActivePlan(commandState?.active_plan, latestPlanFallback);
+    if (!commandState && !commandError) {
+      return <WorkspaceOverviewSkeleton />;
+    }
+
+    if (!commandState && commandError) {
+      return (
+        <section className="panel loading-card">
+          <p className="kicker">Overview</p>
+          <h1>Camp command view unavailable</h1>
+          <p className="muted">{commandError}</p>
+          <div className="hero-actions">
+            <button type="button" className="cta" onClick={() => window.location.reload()}>
+              Retry
+            </button>
+            <Link href="/plans" className="secondary-button">
+              View plans
+            </Link>
+          </div>
+        </section>
+      );
+    }
+
+    const activePlan = enrichConfirmedActivePlan(commandState?.active_plan, latestPlan);
     const hasActivePlan = Boolean(activePlan.id);
     const sessionPreview = (commandState?.today?.next_session ?? {}) as Record<string, unknown>;
     const risks = commandState?.risk_watch ?? [];
