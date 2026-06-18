@@ -72,7 +72,7 @@ class SessionCompletionRecord(BaseModel):
         return (self.user_id, self.session_id, self.training_day)
 
 
-def completion_status_of(completion: Mapping[str, Any] | None) -> CompletionStatus:
+def completion_status_of(completion: SessionCompletionRecord | Mapping[str, Any] | None) -> CompletionStatus:
     """Read a completion ``status`` from a record/mapping, degrading gracefully.
 
     A missing record, missing field, or unknown value resolves to
@@ -80,7 +80,10 @@ def completion_status_of(completion: Mapping[str, Any] | None) -> CompletionStat
     """
     if not completion:
         return "not_started"
-    raw = str(completion.get("status") or "").strip()
+    if isinstance(completion, SessionCompletionRecord):
+        raw = str(completion.status or "").strip()
+    else:
+        raw = str(completion.get("status") or "").strip()
     if raw in COMPLETION_STATUSES:
         return raw  # type: ignore[return-value]
     return "not_started"
