@@ -68,7 +68,8 @@ def resolve_landing(
     * ``checked_in_today`` — whether a valid recommendation exists for the
       current training day.
     """
-    # Row 1 — no active plan.
+    # Guard: session_state must already be mapped to a landing state (via
+    # completion_landing_state()); reject raw completion statuses early.
     if session_state not in ("none", "resume", "completed"):
         raise ValueError(
             f"Invalid session_state {session_state!r}. Expected 'none', 'resume', or 'completed'. "
@@ -77,6 +78,7 @@ def resolve_landing(
 
     # Row 1 — no active plan.
     if not has_active_plan:
+        return LandingDecision(
             target="intake",
             cta="create_plan",
             row=1,
