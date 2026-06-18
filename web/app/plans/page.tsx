@@ -400,7 +400,7 @@ function PlanCard({
           </Link>
           {inlineRenameForm}
           <div className="plan-card-meta">
-            <span className="muted">Fight {fightDateLabel}</span>
+            {plan.fight_date ? <span className="muted">Fight {fightDateLabel}</span> : null}
             <span className="muted">{styleSummary}</span>
             <span className="muted">Built {createdLabel}</span>
           </div>
