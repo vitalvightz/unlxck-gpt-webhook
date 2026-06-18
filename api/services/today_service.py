@@ -253,17 +253,25 @@ def _session_id_for_entry(entry: Any) -> str | None:
     """
     if entry is None:
         return None
-    calendar_date = getattr(entry, "calendar_date", None)
+    if isinstance(entry, Mapping):
+        calendar_date = entry.get("calendar_date")
+        weekday = entry.get("weekday", "")
+    else:
+        calendar_date = getattr(entry, "calendar_date", None)
+        weekday = getattr(entry, "weekday", "")
     if calendar_date:
         return str(calendar_date)
-    weekday = getattr(entry, "weekday", "")
     return str(weekday) or None
 
 
 def _entry_has_training(entry: Any) -> bool:
     if entry is None:
         return False
-    return str(getattr(entry, "effective_load", "") or "").strip().lower() != "none"
+    if isinstance(entry, Mapping):
+        value = entry.get("effective_load")
+    else:
+        value = getattr(entry, "effective_load", None)
+    return str(value or "").strip().lower() != "none"
 
 
 def _next_session_payload(entry: Any, session_id: str | None, *, relation: str | None = None) -> dict[str, Any]:
