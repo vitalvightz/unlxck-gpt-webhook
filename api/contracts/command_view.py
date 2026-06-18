@@ -152,18 +152,24 @@ class CommandView(BaseModel):
     quick_actions: list[QuickAction] = Field(default_factory=list)
 
 
-_PLAN_IDENTITY_FIELDS = ("id", "name", "status", "phase", "fight_date", "camp_type")
+_PLAN_IDENTITY_FIELDS = ("status", "phase", "fight_date", "camp_type")
 
 
 def _plan_identity(plan: Mapping[str, Any] | None) -> dict[str, Any]:
     """Minimal plan identity/summary — never the full structured plan."""
     if not plan:
         return {}
-    identity = {
+    identity: dict[str, Any] = {
         field: plan[field]
         for field in _PLAN_IDENTITY_FIELDS
         if plan.get(field) not in (None, "")
     }
+    plan_id = str(plan.get("id") or plan.get("plan_id") or "").strip()
+    if plan_id:
+        identity["id"] = plan_id
+    plan_name = str(plan.get("name") or plan.get("plan_name") or "").strip()
+    if plan_name:
+        identity["name"] = plan_name
     # A plan with no recognisable identity fields is treated as "no plan".
     return identity
 

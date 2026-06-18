@@ -16,7 +16,7 @@ import {
   TECHNICAL_STYLE_OPTIONS,
 } from "@/lib/intake-options";
 import { formatPlanFightDate, formatPlanTimestamp, getPlanDisplayName } from "@/lib/plan-format";
-import type { TodayCommandView } from "@/lib/types";
+import type { PlanSummary, TodayActivePlan, TodayCommandView } from "@/lib/types";
 
 const landingPreviewStages = [
   {
@@ -198,6 +198,27 @@ function WorkspaceOverviewSkeleton() {
   );
 }
 
+function enrichConfirmedActivePlan(
+  commandPlan: TodayActivePlan | null | undefined,
+  latestPlan: PlanSummary | null | undefined,
+): TodayActivePlan {
+  if (!commandPlan?.id) {
+    return commandPlan ?? {};
+  }
+
+  const canUseLatestPlanFields = latestPlan?.plan_id === commandPlan.id;
+  if (!canUseLatestPlanFields) {
+    return commandPlan;
+  }
+
+  return {
+    ...commandPlan,
+    name: commandPlan.name || getPlanDisplayName(latestPlan),
+    status: commandPlan.status || latestPlan.status,
+    fight_date: commandPlan.fight_date || latestPlan.fight_date,
+  };
+}
+
 export default function HomePage() {
   const { isReady, isMeHydrated, hasTransientMeError, session, me, signOut } = useAppSession();
   const router = useRouter();
@@ -344,7 +365,29 @@ export default function HomePage() {
       );
     }
 
-    const activePlan = commandState?.active_plan ?? {};
+    if (!commandState && !commandError) {
+      return <WorkspaceOverviewSkeleton />;
+    }
+
+    if (!commandState && commandError) {
+      return (
+        <section className="panel loading-card">
+          <p className="kicker">Overview</p>
+          <h1>Camp command view unavailable</h1>
+          <p className="muted">{commandError}</p>
+          <div className="hero-actions">
+            <button type="button" className="cta" onClick={() => window.location.reload()}>
+              Retry
+            </button>
+            <Link href="/plans" className="secondary-button">
+              View plans
+            </Link>
+          </div>
+        </section>
+      );
+    }
+
+    const activePlan = enrichConfirmedActivePlan(commandState?.active_plan, latestPlan);
     const hasActivePlan = Boolean(activePlan.id);
     const sessionPreview = (commandState?.today?.next_session ?? {}) as Record<string, unknown>;
     const risks = commandState?.risk_watch ?? [];
@@ -368,7 +411,7 @@ export default function HomePage() {
             <div className="hero-panel-copy overview-command-copy">
               <p className="eyebrow">Overview</p>
               <h1 className="hero-title">Camp command centre</h1>
-              <p className="overview-command-summary">Read-only camp status. Overview and Today use the same active plan.</p>
+              <p className="overview-command-summary">Current camp status, today&apos;s decision, and the next training target from the active plan.</p>
               <div className="overview-operational-strip" aria-label="Camp status">
                 <div className="overview-operational-item"><span className="overview-operational-label">Active plan</span><span className="overview-operational-value">{String(activePlan.name || "No active plan")}</span></div>
                 <div className="overview-operational-item"><span className="overview-operational-label">Phase</span><span className="overview-operational-value">{String(activePlan.phase || "Not set")}</span></div>
@@ -393,7 +436,7 @@ export default function HomePage() {
               <p className="status-label">Next session</p>
               <h2 className="plan-summary-title">{String(sessionPreview.title || sessionPreview.weekday || "No session found")}</h2>
               <p className="muted">{String(sessionPreview["focus"] || sessionPreview["emphasis"] || sessionPreview.status || "Open Today for details.")}</p>
-              <div className="plan-card-actions overview-card-actions"><Link href="/today" className="secondary-button">Open Today</Link></div>
+              <div className="plan-card-actions overview-card-actions"><Link href={hasActivePlan ? "/today" : "/quick-build"} className="secondary-button">{hasActivePlan ? "Open Today" : "Quick Build"}</Link></div>
             </article>
             <article className="status-card">
               <p className="status-label">Risk watch</p>
@@ -404,6 +447,28 @@ export default function HomePage() {
                 </div>
               )) : <p className="muted">No risk flags from today&apos;s command view.</p>}
               {riskOverflow ? <span className="badge status-badge-neutral">+{riskOverflow} more</span> : null}
+            </article>
+            <article className="status-card">
+              <p className="status-label">Command actions</p>
+              <h2 className="plan-summary-title">{hasActivePlan ? "Manage active camp" : "Start camp setup"}</h2>
+              <p className="muted">
+                {hasActivePlan
+                  ? "Jump to the live day, review the saved plan, or update the intake before generating again."
+                  : "Create a profile and generate the first camp plan."}
+              </p>
+              <div className="plan-card-actions overview-card-actions">
+                <Link href={hasActivePlan ? "/today" : "/quick-build"} className="secondary-button">
+                  {hasActivePlan ? "Open Today" : "Quick Build"}
+                </Link>
+                {hasActivePlan ? (
+                  <Link href={`/plans/${activePlan.id}`} className="ghost-button">
+                    View plan
+                  </Link>
+                ) : null}
+                <Link href="/onboarding" className="ghost-button">
+                  {hasActivePlan ? "Review intake" : "Advanced Intake"}
+                </Link>
+              </div>
             </article>
           </div>
         </section>
