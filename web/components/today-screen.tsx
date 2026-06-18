@@ -515,7 +515,7 @@ function SessionCard({
         </div>
         <p className="muted">Keep recovery work available and review the full plan when you need the next training target.</p>
         <div className="today-action-row">
-          <Link href={`/plans/${state.active_plan.id}`} className="secondary-button">
+          <Link href={`/plans/${state.active_plan?.id}`} className="secondary-button">
             View full plan
           </Link>
         </div>
