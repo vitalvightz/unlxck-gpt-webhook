@@ -107,6 +107,11 @@ def submit_today_checkin(
     if not plan_id:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="plan_id is required")
 
+    # Writes are service-role (RLS does not gate them here), so the backend must
+    # prove the plan belongs to the caller before persisting anything.
+    if store.get_plan_for_athlete(plan_id, athlete_id) is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
+
     training_day = resolve_training_day(athlete_timezone, now=now)
     decision = evaluate_checkin(_checkin_inputs_from(payload))
 
@@ -157,6 +162,10 @@ def upsert_session_completion(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="plan_id and session_id are required",
         )
+
+    # Service-role write: enforce plan ownership at the backend (RLS won't here).
+    if store.get_plan_for_athlete(plan_id, athlete_id) is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
 
     training_day = resolve_training_day(athlete_timezone, now=now)
     now_iso = (now or datetime.now(timezone.utc)).astimezone(timezone.utc).isoformat()

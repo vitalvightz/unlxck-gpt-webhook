@@ -58,6 +58,39 @@ class TestTodayCheckin:
         assert resp.json()["recommendation_state"] == "pull_back"
 
 
+class TestPlanOwnership:
+    def test_checkin_rejected_for_unowned_plan(self):
+        client, store, _ = _build_client()
+        # Plan belongs to a different athlete.
+        store.plans["plan-x"] = {
+            "id": "plan-x",
+            "athlete_id": "someone-else",
+            "status": "ready",
+            "plan_name": "Other",
+            "created_at": "2026-06-01T00:00:00+00:00",
+        }
+        resp = client.post("/api/today/checkin", headers=ATHLETE, json=_checkin_body(plan_id="plan-x"))
+        assert resp.status_code == 404
+        assert not store.today_checkins.get("athlete-1")
+
+    def test_completion_rejected_for_unowned_plan(self):
+        client, store, _ = _build_client()
+        store.plans["plan-x"] = {
+            "id": "plan-x",
+            "athlete_id": "someone-else",
+            "status": "ready",
+            "plan_name": "Other",
+            "created_at": "2026-06-01T00:00:00+00:00",
+        }
+        resp = client.post(
+            "/api/today/session-completion",
+            headers=ATHLETE,
+            json={"plan_id": "plan-x", "session_id": "s1", "status": "started"},
+        )
+        assert resp.status_code == 404
+        assert not store.session_completions.get("athlete-1")
+
+
 class TestSessionCompletion:
     def _post(self, client, **overrides):
         base = {"plan_id": PLAN_ID, "session_id": "s1", "status": "started"}

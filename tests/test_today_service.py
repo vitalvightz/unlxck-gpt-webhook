@@ -111,6 +111,46 @@ class TestCheckinSubmit:
         assert row["recommendation_state"] == "pull_back"
 
 
+class TestPlanOwnership:
+    def test_checkin_rejected_when_plan_not_owned(self):
+        store = _store_with_plan()
+        store.plans["plan-other"] = {
+            "id": "plan-other",
+            "athlete_id": "someone-else",
+            "status": "ready",
+            "plan_name": "Other",
+            "created_at": "2026-06-01T00:00:00+00:00",
+        }
+        with pytest.raises(HTTPException) as exc:
+            submit_today_checkin(
+                store,
+                athlete_id=ATHLETE,
+                athlete_timezone="",
+                payload=_checkin_payload(plan_id="plan-other"),
+            )
+        assert exc.value.status_code == 404
+        assert not store.today_checkins.get(ATHLETE)
+
+    def test_completion_rejected_when_plan_not_owned(self):
+        store = _store_with_plan()
+        store.plans["plan-other"] = {
+            "id": "plan-other",
+            "athlete_id": "someone-else",
+            "status": "ready",
+            "plan_name": "Other",
+            "created_at": "2026-06-01T00:00:00+00:00",
+        }
+        with pytest.raises(HTTPException) as exc:
+            upsert_session_completion(
+                store,
+                athlete_id=ATHLETE,
+                athlete_timezone="",
+                payload={"plan_id": "plan-other", "session_id": "s1", "status": "started"},
+            )
+        assert exc.value.status_code == 404
+        assert not store.session_completions.get(ATHLETE)
+
+
 class TestRecommendationValidity:
     def test_same_training_day_recommendation_is_live(self):
         store = _store_with_plan()
