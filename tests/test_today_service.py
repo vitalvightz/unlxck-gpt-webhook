@@ -37,6 +37,19 @@ def _store_with_plan(plan_id: str = PLAN, athlete_id: str = ATHLETE) -> FakeStor
     return store
 
 
+def _taper_planning_brief() -> dict:
+    return {
+        "weekly_role_map": {
+            "weeks": [
+                {
+                    "phase": "TAPER",
+                    "hard_sparring_plan": [],
+                }
+            ]
+        }
+    }
+
+
 def _checkin_payload(**overrides) -> dict:
     base = {
         "plan_id": PLAN,
@@ -225,6 +238,20 @@ class TestCommandView:
         view = build_today_command_view(store, athlete_id=ATHLETE, athlete_timezone="")
         assert view.today.next_session == {}
         assert view.today.completion_status == "not_started"
+
+    def test_active_plan_phase_comes_from_resolved_current_week(self):
+        store = _store_with_plan()
+        # Simulate a legacy/minimal row with no top-level phase. Today must use
+        # the current resolved week phase so the frontend cannot downgrade TAPER
+        # decisions to GPP when it submits the check-in.
+        store.plans[PLAN]["planning_brief"] = _taper_planning_brief()
+        view = build_today_command_view(
+            store,
+            athlete_id=ATHLETE,
+            athlete_timezone="",
+            now=datetime(2026, 6, 18, 12, 0, tzinfo=timezone.utc),
+        )
+        assert view.active_plan.get("phase") == "TAPER"
 
 
 class TestSessionCompletion:

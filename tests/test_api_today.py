@@ -23,6 +23,19 @@ def _seed_plan(store, plan_id: str = PLAN_ID, athlete_id: str = "athlete-1") -> 
     return plan_id
 
 
+def _taper_planning_brief() -> dict:
+    return {
+        "weekly_role_map": {
+            "weeks": [
+                {
+                    "phase": "TAPER",
+                    "hard_sparring_plan": [],
+                }
+            ]
+        }
+    }
+
+
 def _checkin_body(**overrides) -> dict:
     base = {"plan_id": PLAN_ID, "sleep": "good", "body": "normal", "pain": "none", "phase": "GPP"}
     return {**base, **overrides}
@@ -164,6 +177,13 @@ class TestTodayState:
         body = client.get("/api/today", headers=ATHLETE).json()
         assert body["today"]["recommendation_state"] == "modify"
         assert body["today"]["recommendation_reason"]
+
+    def test_active_plan_phase_is_serialized_from_current_week(self):
+        client, store, _ = _build_client()
+        _seed_plan(store)
+        store.plans[PLAN_ID]["planning_brief"] = _taper_planning_brief()
+        body = client.get("/api/today", headers=ATHLETE).json()
+        assert body["active_plan"]["phase"] == "TAPER"
 
 
 class TestLanding:

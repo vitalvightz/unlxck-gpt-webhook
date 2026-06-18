@@ -852,3 +852,116 @@ export type AdminAthleteDailyStatus = {
   recent_adaptation_notes: AdaptationNoteRecord[];
   pending_review_count: number;
 };
+
+// ---------------------------------------------------------------------------
+// Block 4 Today command view. This mirrors the normalized backend read model
+// from /api/today; the UI must not parse raw structured_plan for this screen.
+// ---------------------------------------------------------------------------
+
+export type TodayRecommendationState =
+  | "not_checked_in"
+  | "train_as_planned"
+  | "modify"
+  | "pull_back";
+
+export type TodayCompletionStatus = "not_started" | "started" | "done" | "modified" | "skipped";
+
+export type TodayCheckinSleep = "poor" | "okay" | "good";
+export type TodayCheckinBody = "flat" | "normal" | "sharp";
+export type TodayCheckinPain = "none" | "manageable" | "high";
+export type TodayCheckinPhase = "GPP" | "SPP" | "TAPER" | "REINTEGRATION";
+export type TodayActiveInjury = "none" | "stable" | "worse";
+export type TodayPreviousSession = "none" | "normal" | "very_hard";
+
+export type TodayActivePlan = {
+  id?: string;
+  name?: string;
+  status?: string;
+  phase?: string;
+  fight_date?: string;
+  camp_type?: string;
+};
+
+export type TodaySession = {
+  session_id?: string;
+  title?: string;
+  label?: string;
+  weekday?: string;
+  weekday_with_label?: string;
+  calendar_date?: string | null;
+  d_day?: number | null;
+  day_label?: string;
+  status?: string;
+  reason?: string;
+  coach_note?: string;
+  effective_load?: string;
+  primary_focus?: string;
+  emphasis?: string;
+  estimated_duration?: string | number | null;
+  duration_minutes?: number | null;
+  planned_duration?: { value?: number | null; unit?: string | null; display?: string | null } | null;
+};
+
+export type TodayCommandView = {
+  active_plan: TodayActivePlan;
+  today: {
+    training_day: string;
+    recommendation_state: TodayRecommendationState;
+    recommendation_reason?: string | null;
+    next_session: TodaySession;
+    completion_status: TodayCompletionStatus;
+  };
+  risk_watch: Array<{
+    category: string;
+    priority: number;
+    icon: string;
+    label: string;
+    text: string;
+    tone: string;
+  }>;
+  week_summary: Record<string, unknown>;
+  quick_actions: Array<{
+    id: string;
+    label: string;
+    route: string;
+  }>;
+};
+
+export type TodayCheckinRequest = {
+  plan_id: string;
+  sleep: TodayCheckinSleep;
+  body: TodayCheckinBody;
+  pain: TodayCheckinPain;
+  phase: TodayCheckinPhase;
+  active_injury?: TodayActiveInjury;
+  previous_session?: TodayPreviousSession;
+  sharp_pain?: boolean;
+  instability?: boolean;
+  swelling?: boolean;
+  neurological_symptoms?: boolean;
+  illness_symptoms?: boolean;
+  cannot_warm_into_movement?: boolean;
+  worse_next_day_pain?: boolean;
+};
+
+export type TodayCheckinResponse = {
+  training_day: string;
+  recommendation_state: TodayRecommendationState;
+  recommendation_reason: string;
+  triggers: string[];
+};
+
+export type TodaySessionCompletionRequest = {
+  plan_id: string;
+  session_id: string;
+  status: TodayCompletionStatus;
+  session_rpe?: number | null;
+  pain_after?: number | null;
+  modification_reason?: string;
+  notes?: string;
+};
+
+export type TodaySessionCompletionResponse = {
+  completion_status: TodayCompletionStatus;
+  landing_session_state: "none" | "resume" | "completed";
+};
