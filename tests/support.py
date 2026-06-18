@@ -57,8 +57,8 @@ def _parse_iso(value: object) -> datetime | None:
 
 def _latest_job_activity_at(job: dict) -> datetime | None:
     latest: datetime | None = None
-    for field in ("heartbeat_at", "updated_at", "started_at", "created_at"):
-        parsed = _parse_iso(job.get(field))
+    for field_name in ("heartbeat_at", "updated_at", "started_at", "created_at"):
+        parsed = _parse_iso(job.get(field_name))
         if parsed is not None and (latest is None or parsed > latest):
             latest = parsed
     for milestone in job.get("progress_milestones") or []:
