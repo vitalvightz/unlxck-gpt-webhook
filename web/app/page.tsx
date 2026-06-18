@@ -372,7 +372,7 @@ export default function HomePage() {
               <div className="overview-operational-strip" aria-label="Camp status">
                 <div className="overview-operational-item"><span className="overview-operational-label">Active plan</span><span className="overview-operational-value">{String(activePlan.name || "No active plan")}</span></div>
                 <div className="overview-operational-item"><span className="overview-operational-label">Phase</span><span className="overview-operational-value">{String(activePlan.phase || "Not set")}</span></div>
-                <div className="overview-operational-item"><span className="overview-operational-label">Training day</span><span className="overview-operational-value">{commandState?.today.training_day || "Not set"}</span></div>
+                <div className="overview-operational-item"><span className="overview-operational-label">Training day</span><span className="overview-operational-value">{commandState?.today?.training_day || "Not set"}</span></div>
                 <div className="overview-operational-item"><span className="overview-operational-label">Fight date</span><span className="overview-operational-value">{formatPlanFightDate(String(activePlan.fight_date || ""))}</span></div>
               </div>
               {commandError ? <p className="error-banner" role="alert">{commandError}</p> : null}
