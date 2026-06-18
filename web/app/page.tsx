@@ -444,7 +444,7 @@ export default function HomePage() {
                 <Link href={hasActivePlan ? "/today" : "/quick-build"} className="secondary-button">
                   {hasActivePlan ? "Open Today" : "Quick Build"}
                 </Link>
-                {hasActivePlan && activePlan.id ? (
+                {hasActivePlan ? (
                   <Link href={`/plans/${activePlan.id}`} className="ghost-button">
                     View plan
                   </Link>
