@@ -228,5 +228,5 @@ def build_command_view(
         today=today,
         risk_watch=sort_risk_watch(risks or []),
         week_summary=dict(week_summary) if week_summary else {},
-        quick_actions=_quick_actions(str(active_plan.get("id") or "") or None),
+        quick_actions=_quick_actions(active_plan.get("id")),
     )
