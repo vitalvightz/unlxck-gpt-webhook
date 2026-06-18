@@ -126,6 +126,8 @@ def test_index_requirement_satisfied_by_constraint_alias():
         "plan_generation_rate_limits_athlete_created_idx",
         "profiles_username_idx",
         "daily_checkins_athlete_date_key",
+        "today_checkins_athlete_plan_day_key",
+        "session_completions_athlete_session_day_key",
     }
     assert find_missing_index_constraints(present) == []
 

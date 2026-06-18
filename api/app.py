@@ -96,6 +96,7 @@ from .routes import (
     build_nutrition_router,
     build_plans_router,
     build_profile_router,
+    build_today_router,
 )
 
 Planner = Callable[[dict[str, Any]], dict[str, Any]]
@@ -747,6 +748,12 @@ def create_app(
         build_daily_router(
             require_profile=require_profile,
             require_admin=require_admin,
+            get_store=get_store,
+        )
+    )
+    app.include_router(
+        build_today_router(
+            require_profile=require_profile,
             get_store=get_store,
         )
     )

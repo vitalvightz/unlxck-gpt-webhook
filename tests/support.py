@@ -109,6 +109,8 @@ class FakeStore:
         self.generation_jobs: dict[str, dict] = {}
         self.daily_checkins: dict[str, list[dict]] = {}
         self.session_logs: dict[str, list[dict]] = {}
+        self.today_checkins: dict[str, list[dict]] = {}
+        self.session_completions: dict[str, list[dict]] = {}
         self.injury_flags: dict[str, list[dict]] = {}
         self.adaptation_notes: dict[str, list[dict]] = {}
         self.admin_reviews: list[dict] = []
@@ -1348,6 +1350,63 @@ class FakeStore:
             reverse=True,
         )
         return [dict(row) for row in rows[:limit]]
+
+    def upsert_today_checkin(self, athlete_id: str, fields: dict) -> dict:
+        bucket = self.today_checkins.setdefault(athlete_id, [])
+        for row in bucket:
+            if row["plan_id"] == fields["plan_id"] and row["training_day"] == fields["training_day"]:
+                row.update(fields)
+                row["updated_at"] = _now()
+                return dict(row)
+        row = {
+            "id": str(uuid4()),
+            "athlete_id": athlete_id,
+            "athlete_timezone": "",
+            "active_injury": "none",
+            "previous_session": "none",
+            "recommendation_reason": "",
+            "recommendation_triggers": [],
+            **fields,
+            "created_at": _now(),
+            "updated_at": _now(),
+        }
+        bucket.append(row)
+        return dict(row)
+
+    def get_today_checkin(self, athlete_id: str, plan_id: str, training_day: str) -> dict | None:
+        for row in self.today_checkins.get(athlete_id, []):
+            if row["plan_id"] == plan_id and row["training_day"] == training_day:
+                return dict(row)
+        return None
+
+    def upsert_session_completion(self, athlete_id: str, fields: dict) -> dict:
+        bucket = self.session_completions.setdefault(athlete_id, [])
+        for row in bucket:
+            if row["session_id"] == fields["session_id"] and row["training_day"] == fields["training_day"]:
+                row.update(fields)
+                row["updated_at"] = _now()
+                return dict(row)
+        row = {
+            "id": str(uuid4()),
+            "athlete_id": athlete_id,
+            "session_rpe": None,
+            "pain_after": None,
+            "modification_reason": "",
+            "notes": "",
+            "started_at": None,
+            "completed_at": None,
+            **fields,
+            "created_at": _now(),
+            "updated_at": _now(),
+        }
+        bucket.append(row)
+        return dict(row)
+
+    def get_session_completion(self, athlete_id: str, session_id: str, training_day: str) -> dict | None:
+        for row in self.session_completions.get(athlete_id, []):
+            if row["session_id"] == session_id and row["training_day"] == training_day:
+                return dict(row)
+        return None
 
     def create_session_log(self, athlete_id: str, fields: dict) -> dict:
         row = {

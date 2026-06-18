@@ -6,6 +6,16 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, Field, ValidationInfo, field_validator, model_validator
 
+from .contracts.checkin_decision import (
+    ActiveInjury as CheckinActiveInjury,
+    Body as CheckinBody,
+    CheckinDecisionValue,
+    Pain as CheckinPain,
+    Phase as CheckinPhase,
+    PreviousSession as CheckinPreviousSession,
+    Sleep as CheckinSleep,
+)
+from .contracts.completion import CompletionStatus, LandingSessionState
 from .json_limits import MAX_CLIENT_JSON_BYTES, MAX_JSON_DEPTH, validate_json_field
 from .state_machine import GenerationJobStatus
 from .structured_plan_models import StructuredTrainingPlan
@@ -1753,3 +1763,108 @@ class AdminAthleteDailyStatus(BaseModel):
     recent_session_logs: list[SessionLogRecord] = Field(default_factory=list)
     recent_adaptation_notes: list[AdaptationNoteRecord] = Field(default_factory=list)
     pending_review_count: int = 0
+
+
+# ---------------------------------------------------------------------------
+# Block 4 Today/Overview persistence (api/routes/today.py,
+# api/services/today_service.py). The categorical Today check-in carries the
+# six structured inputs + red-flag safety toggles; the recommendation is always
+# computed server-side via api.contracts.checkin_decision.evaluate_checkin().
+# Any client-supplied recommendation field is ignored (extra inputs dropped).
+# ---------------------------------------------------------------------------
+
+
+class TodayCheckinRequest(BaseModel):
+    plan_id: str = Field(min_length=1)
+    sleep: CheckinSleep
+    body: CheckinBody
+    pain: CheckinPain
+    phase: CheckinPhase
+    active_injury: CheckinActiveInjury = "none"
+    previous_session: CheckinPreviousSession = "none"
+    sharp_pain: bool = False
+    instability: bool = False
+    swelling: bool = False
+    neurological_symptoms: bool = False
+    illness_symptoms: bool = False
+    cannot_warm_into_movement: bool = False
+    worse_next_day_pain: bool = False
+
+
+class TodayCheckinRecord(BaseModel):
+    id: str
+    athlete_id: str
+    plan_id: str
+    training_day: str
+    athlete_timezone: str = ""
+    sleep: CheckinSleep
+    body: CheckinBody
+    pain: CheckinPain
+    phase: CheckinPhase
+    active_injury: CheckinActiveInjury = "none"
+    previous_session: CheckinPreviousSession = "none"
+    sharp_pain: bool = False
+    instability: bool = False
+    swelling: bool = False
+    neurological_symptoms: bool = False
+    illness_symptoms: bool = False
+    cannot_warm_into_movement: bool = False
+    worse_next_day_pain: bool = False
+    recommendation_state: CheckinDecisionValue
+    recommendation_reason: str = ""
+    recommendation_triggers: list[str] = Field(default_factory=list)
+    created_at: str = ""
+    updated_at: str = ""
+
+
+class TodayCheckinResponse(BaseModel):
+    checkin: TodayCheckinRecord
+    training_day: str
+    recommendation_state: CheckinDecisionValue
+    recommendation_reason: str = ""
+    triggers: list[str] = Field(default_factory=list)
+
+
+class SessionCompletionRequest(BaseModel):
+    plan_id: str = Field(min_length=1)
+    session_id: str = Field(min_length=1)
+    status: CompletionStatus
+    session_rpe: int | None = Field(default=None, ge=1, le=10)
+    pain_after: int | None = Field(default=None, ge=0, le=10)
+    modification_reason: str = Field(default="", max_length=DAILY_NOTE_MAX_CHARS)
+    notes: str = Field(default="", max_length=DAILY_NOTE_MAX_CHARS)
+
+    @field_validator("modification_reason", "notes", mode="before")
+    @classmethod
+    def clean_text(cls, value: Any) -> str:
+        return str(value or "").strip()
+
+
+class SessionCompletionRecordResponse(BaseModel):
+    id: str
+    athlete_id: str
+    plan_id: str
+    session_id: str
+    training_day: str
+    status: CompletionStatus = "not_started"
+    session_rpe: int | None = None
+    pain_after: int | None = None
+    modification_reason: str = ""
+    notes: str = ""
+    started_at: str | None = None
+    completed_at: str | None = None
+    created_at: str = ""
+    updated_at: str = ""
+
+
+class SessionCompletionResponse(BaseModel):
+    completion: SessionCompletionRecordResponse
+    completion_status: CompletionStatus
+    landing_session_state: LandingSessionState
+
+
+class LandingResponse(BaseModel):
+    target: str
+    cta: str
+    row: int
+    reason: str
