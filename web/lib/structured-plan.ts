@@ -498,7 +498,7 @@ export function getFallbackSafetyNotes(plan: StructuredPlan | null | undefined):
     if (safetyCategories.has(note.category)) {
       return true;
     }
-    return /\b(stop|report|medical|coach|bleed|pain|dehydrat|wound)\b/i.test(note.text);
+    return /\b(stop|report|medical|coach|bleed|pain|dehydrat(?:ed|ion|e)?|wound)\b/i.test(note.text);
   });
 }
 
