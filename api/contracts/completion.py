@@ -113,12 +113,12 @@ def completion_key(completion: Mapping[str, Any]) -> tuple[str, str, str]:
 
 
 def find_completion(
-    completions: Sequence[Mapping[str, Any]],
+    completions: Sequence[SessionCompletionRecord | Mapping[str, Any]],
     *,
     user_id: str,
     session_id: str,
     training_day: str,
-) -> Mapping[str, Any] | None:
+) -> SessionCompletionRecord | Mapping[str, Any] | None:
     """Return the completion record matching the uniqueness key, or ``None``."""
     target = (user_id, session_id, training_day)
     for record in completions:
