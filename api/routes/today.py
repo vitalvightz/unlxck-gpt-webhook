@@ -84,7 +84,8 @@ def build_today_router(*, require_profile, get_store) -> APIRouter:
         store: AppStore = Depends(get_store),
     ) -> LandingResponse:
         # A returning athlete has at least one persisted plan; cold users do not.
-        has_interacted = bool(store.list_user_plans(profile.athlete_id))
+        # get_latest_plan is a limit(1) lookup — cheaper than fetching all plans.
+        has_interacted = store.get_latest_plan(profile.athlete_id) is not None
         decision = resolve_today_landing(
             store,
             athlete_id=profile.athlete_id,
