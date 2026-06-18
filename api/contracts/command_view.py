@@ -184,6 +184,8 @@ def _quick_actions(has_active_plan: bool) -> list[QuickAction]:
 
 
 def _as_iso(day: date | str) -> str:
+    if hasattr(day, "date"):
+        return day.date().isoformat()  # type: ignore[union-attr]
     if isinstance(day, date):
         return day.isoformat()
     return str(day or "").strip()
