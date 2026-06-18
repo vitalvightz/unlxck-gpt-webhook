@@ -380,7 +380,7 @@ export default function HomePage() {
             <div className="status-card overview-next-action overview-decision-card">
               <p className="status-label">Today&apos;s state</p>
               <h2 className="plan-summary-title">{todayStateLabel}</h2>
-              <p className="muted">{commandState?.today.recommendation_reason || "Open Today for the current decision and session log."}</p>
+              <p className="muted">{commandState?.today?.recommendation_reason || "Open Today for the current decision and session log."}</p>
               <div className="plan-summary-actions">
                 <Link href={primaryHref} className="cta overview-primary-action">{primaryLabel}</Link>
                 {hasActivePlan ? <Link href={`/plans/${activePlan.id}`} className="secondary-button">View active plan</Link> : null}
