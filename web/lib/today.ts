@@ -32,8 +32,11 @@ export function shouldShowTodayCheckin(state: TodayCommandView): boolean {
   return hasActivePlan(state.active_plan) && state.today.recommendation_state === "not_checked_in";
 }
 
-export function normalizeTodayPhase(phase: string | null | undefined): TodayCheckinPhase {
-  return phase === "SPP" || phase === "TAPER" || phase === "REINTEGRATION" ? phase : "GPP";
+export function normalizeTodayPhase(phase: string | null | undefined): TodayCheckinPhase | null {
+  if (phase === "GPP" || phase === "SPP" || phase === "TAPER" || phase === "REINTEGRATION") {
+    return phase;
+  }
+  return null;
 }
 
 export function getRecommendationCopy(state: TodayRecommendationState): {
@@ -122,12 +125,16 @@ export function buildTodayCheckinPayload(params: {
   pain: TodayCheckinPain;
   safetyFlags: TodaySafetyFlags;
 }): TodayCheckinRequest {
+  const phase = normalizeTodayPhase(params.phase);
+  if (!phase) {
+    throw new Error("Today phase is unavailable. Refresh Today before checking in.");
+  }
   return {
     plan_id: params.planId,
     sleep: params.sleep,
     body: params.body,
     pain: params.pain,
-    phase: normalizeTodayPhase(params.phase),
+    phase,
     active_injury: "none",
     previous_session: "none",
     ...params.safetyFlags,

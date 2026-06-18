@@ -91,6 +91,54 @@ test("check-in payload does not include a frontend recommendation", () => {
   assert.equal("recommendation_state" in payload, false);
 });
 
+test("active plan in TAPER sends TAPER in the check-in payload", () => {
+  const state: TodayCommandView = {
+    ...BASE_STATE,
+    active_plan: { ...BASE_STATE.active_plan, phase: "TAPER" },
+  };
+  const payload = buildTodayCheckinPayload({
+    planId: state.active_plan.id ?? "",
+    phase: state.active_plan.phase,
+    sleep: "poor",
+    body: "flat",
+    pain: "manageable",
+    safetyFlags: {
+      sharp_pain: false,
+      instability: false,
+      swelling: false,
+      neurological_symptoms: false,
+      illness_symptoms: false,
+      cannot_warm_into_movement: false,
+      worse_next_day_pain: false,
+    },
+  });
+
+  assert.equal(payload.phase, "TAPER");
+});
+
+test("missing phase does not silently default an active plan check-in to GPP", () => {
+  assert.throws(
+    () =>
+      buildTodayCheckinPayload({
+        planId: "11111111-1111-1111-1111-111111111111",
+        phase: undefined,
+        sleep: "poor",
+        body: "flat",
+        pain: "manageable",
+        safetyFlags: {
+          sharp_pain: false,
+          instability: false,
+          swelling: false,
+          neurological_symptoms: false,
+          illness_symptoms: false,
+          cannot_warm_into_movement: false,
+          worse_next_day_pain: false,
+        },
+      }),
+    /phase is unavailable/,
+  );
+});
+
 test("recommendation copy maps valid backend states", () => {
   assert.equal(getRecommendationCopy("train_as_planned").label, "Train as planned");
   assert.equal(getRecommendationCopy("modify").label, "Modify");

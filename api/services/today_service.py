@@ -287,6 +287,15 @@ def _risks_from_checkin(checkin: Mapping[str, Any] | None):
     return risks
 
 
+def _plan_with_resolved_phase(plan_row: Mapping[str, Any], week: Any) -> dict[str, Any]:
+    """Use the current schedule week as the command-view phase authority."""
+    plan = dict(plan_row)
+    resolved_phase = str(getattr(week, "phase", "") or "").strip()
+    if resolved_phase:
+        plan["phase"] = resolved_phase
+    return plan
+
+
 def build_today_command_view(
     store: AppStore,
     *,
@@ -320,6 +329,7 @@ def build_today_command_view(
 
     # Derive today's/next session from the persisted plan's weekly schedule.
     today_entry = next_entry = None
+    week = None
     training_date = _parse_iso_date(training_day)
     if training_date is not None:
         try:
@@ -339,7 +349,7 @@ def build_today_command_view(
 
     return build_command_view(
         current_training_day=training_day,
-        plan=plan_row,
+        plan=_plan_with_resolved_phase(plan_row, week),
         recommendation=recommendation,
         completion=completion,
         next_session=_next_session_payload(target_entry, session_id),
