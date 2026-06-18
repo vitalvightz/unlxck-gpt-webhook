@@ -16,10 +16,12 @@ import {
   permanentlyDeletePlan,
   rejectApprovedPlan,
   renamePlan,
+  setActivePlan,
   submitManualStage2,
 } from "@/lib/api";
 import { clearCompletedGenerationForDeletedPlan } from "@/lib/completed-generation";
 import { PremiumLoadingScreen } from "@/components/premium-loading-screen";
+import { PlanCampMap } from "@/components/plan-camp-map";
 import { QuickBuildRefinementBanner } from "@/components/quick-build-refinement-banner";
 import { StructuredPlanRenderer } from "@/components/structured-plan-renderer";
 import { WhyTooltip } from "@/components/why-tooltip";
@@ -43,6 +45,11 @@ const APPROVE_RECOVERY_FETCH_ATTEMPTS = 3;
 const APPROVE_RECOVERY_FETCH_DELAY_MS = 800;
 
 const ATHLETE_VISIBLE_STATUSES = new Set(["ready", "publishable_with_flags"]);
+
+function canSetPlanActive(plan: Pick<PlanDetail, "status">): boolean {
+  const status = (plan.status || "").trim().toLowerCase();
+  return ATHLETE_VISIBLE_STATUSES.has(status);
+}
 
 /**
  * A plan counts as released to the athlete once it lands in an athlete-visible
@@ -1430,12 +1437,18 @@ export function PlanViewer({
   viewerRole,
   onPlanUpdated,
   onPlanDeleted,
+  activePlanId,
+  activePlanError,
+  onActivePlanChanged,
 }: {
   plan: PlanDetail;
   accessToken: string | null;
   viewerRole: UserRole;
   onPlanUpdated?: (plan: PlanDetail) => void;
   onPlanDeleted?: () => Promise<void> | void;
+  activePlanId?: string | null;
+  activePlanError?: string | null;
+  onActivePlanChanged?: (planId: string | null) => void;
 }) {
   const router = useRouter();
   const canUseAdminOutputs = canUseAdminPlanControls(viewerRole, Boolean(plan.admin_outputs));
@@ -1585,6 +1598,9 @@ export function PlanViewer({
   >(null);
   const [planActionMessage, setPlanActionMessage] = useState<string | null>(null);
   const [planActionError, setPlanActionError] = useState<string | null>(null);
+  const [setActivePending, setSetActivePending] = useState(false);
+  const [setActiveMessage, setSetActiveMessage] = useState<string | null>(null);
+  const [setActiveError, setSetActiveError] = useState<string | null>(null);
   const [stage2RetryInProgress, setStage2RetryInProgress] = useState(false);
   const [stage2RetryJustCompleted, setStage2RetryJustCompleted] = useState<"passed" | "failed" | null>(
     null,
@@ -1876,6 +1892,32 @@ export function PlanViewer({
     }
   }
 
+  async function handleSetActivePlan() {
+    if (!accessToken) {
+      setSetActiveError("Session expired. Sign in again.");
+      return;
+    }
+    if (!canSetPlanActive(plan)) {
+      setSetActiveError("This plan is not eligible to become active.");
+      return;
+    }
+
+    setSetActivePending(true);
+    setSetActiveError(null);
+    setSetActiveMessage(null);
+
+    try {
+      const active = await setActivePlan(accessToken, plan.plan_id);
+      onActivePlanChanged?.(active.plan_id);
+      setSetActiveMessage("Active plan updated.");
+      router.refresh();
+    } catch (error) {
+      setSetActiveError(error instanceof Error ? error.message : "Unable to set active plan.");
+    } finally {
+      setSetActivePending(false);
+    }
+  }
+
   async function handleArchiveOwnPlan() {
     if (!accessToken) {
       setPlanActionError("Session expired. Sign in again.");
@@ -2027,9 +2069,45 @@ export function PlanViewer({
       text: payloadText,
     },
   ];
+  const normalizedPlanStatus = (plan.status || "").trim().toLowerCase();
+  const isArchivedPlan = normalizedPlanStatus === "archived";
+  const isCurrentActivePlan = Boolean(activePlanId && activePlanId === plan.plan_id);
+  const canActivateThisPlan = canSetPlanActive(plan) && !isCurrentActivePlan && !isArchivedPlan;
+  const structuredPlan = shouldRenderStructuredPlan(plan.outputs)
+    ? plan.outputs.structured_plan ?? null
+    : null;
+  const shouldShowCampMap = (hasPublishedPlan || isArchivedPlan) && Boolean(athletePlanText);
 
   return (
     <div className="page">
+      {shouldShowCampMap ? (
+        <>
+          <QuickBuildRefinementBanner planId={plan.plan_id} planSource={plan.plan_source ?? null} />
+          <PlanCampMap
+            plan={plan}
+            structuredPlan={structuredPlan}
+            rawText={athletePlanText}
+            isActive={isCurrentActivePlan}
+            isArchived={isArchivedPlan}
+            canSetActive={canActivateThisPlan}
+            setActivePending={setActivePending}
+            activePlanError={activePlanError}
+            planActionPending={planActionPending}
+            canManagePlan={canManagePlan}
+            canPermanentlyDelete={isViewerAdmin}
+            primaryAdvisory={primaryAdvisory}
+            onSetActive={handleSetActivePlan}
+            onRename={handleRenamePlan}
+            onArchive={handleArchiveOwnPlan}
+            onPermanentDelete={handlePermanentDelete}
+          />
+          {setActiveMessage ? <div className="success-banner">{setActiveMessage}</div> : null}
+          {setActiveError ? <div className="error-banner">{setActiveError}</div> : null}
+          {planActionMessage ? <div className="success-banner">{planActionMessage}</div> : null}
+          {planActionError ? <div className="error-banner">{planActionError}</div> : null}
+        </>
+      ) : (
+        <>
       <section className="panel">
         <QuickBuildRefinementBanner planId={plan.plan_id} planSource={plan.plan_source ?? null} />
         <div className="section-heading">
@@ -2458,6 +2536,8 @@ export function PlanViewer({
           )}
         </section>
       </div>
+        </>
+      )}
 
       {canUseAdminOutputs ? (
         <div id={`admin-review-${plan.plan_id}`} className="admin-review-stack">

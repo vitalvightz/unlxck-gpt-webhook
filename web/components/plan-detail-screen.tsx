@@ -6,7 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { RequireAuth } from "@/components/auth-guard";
 import { useAppSession } from "@/components/auth-provider";
 import { PlanViewer } from "@/components/plan-viewer";
-import { ApiError, getPlan } from "@/lib/api";
+import { ApiError, getActivePlan, getPlan } from "@/lib/api";
 import type { PlanDetail } from "@/lib/types";
 
 // Right after generation completes the app redirects straight to
@@ -92,6 +92,8 @@ export function PlanDetailScreen({ planId }: { planId: string }) {
 
   const [plan, setPlan] = useState<PlanDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [activePlanId, setActivePlanId] = useState<string | null>(null);
+  const [activePlanError, setActivePlanError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!session?.access_token) {
@@ -99,6 +101,8 @@ export function PlanDetailScreen({ planId }: { planId: string }) {
     }
 
     setError(null);
+    setActivePlanId(null);
+    setActivePlanError(null);
 
     let cancelled = false;
     const token = session.access_token;
@@ -107,8 +111,18 @@ export function PlanDetailScreen({ planId }: { planId: string }) {
       for (let attempt = 1; attempt <= PLAN_LOAD_MAX_ATTEMPTS; attempt += 1) {
         try {
           const loaded = await getPlan(token, planId);
+          let resolvedActivePlanId: string | null = null;
+          try {
+            const activePlan = await getActivePlan(token);
+            resolvedActivePlanId = activePlan.plan_id;
+          } catch (activeError) {
+            if (!cancelled && !(activeError instanceof ApiError && activeError.status === 404)) {
+              setActivePlanError("Unable to confirm which saved plan is active.");
+            }
+          }
           if (!cancelled) {
             setPlan(loaded);
+            setActivePlanId(resolvedActivePlanId);
           }
           return;
         } catch (planError) {
@@ -190,6 +204,9 @@ export function PlanDetailScreen({ planId }: { planId: string }) {
           viewerRole={me?.profile.role ?? "athlete"}
           onPlanUpdated={setPlan}
           onPlanDeleted={refreshMe}
+          activePlanId={activePlanId}
+          activePlanError={activePlanError}
+          onActivePlanChanged={setActivePlanId}
         />
       ) : (
         <PlanDetailStateCard
