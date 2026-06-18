@@ -21,7 +21,8 @@ from tests.support import FakeStore
 
 NY = "America/New_York"
 ATHLETE = "athlete-1"
-PLAN = "plan-1"
+PLAN = "11111111-1111-1111-1111-111111111111"
+OTHER_PLAN = "22222222-2222-2222-2222-222222222222"
 
 
 def _store_with_plan(plan_id: str = PLAN, athlete_id: str = ATHLETE) -> FakeStore:
@@ -112,42 +113,65 @@ class TestCheckinSubmit:
 
 
 class TestPlanOwnership:
-    def test_checkin_rejected_when_plan_not_owned(self):
-        store = _store_with_plan()
-        store.plans["plan-other"] = {
-            "id": "plan-other",
+    def _seed_other(self, store):
+        store.plans[OTHER_PLAN] = {
+            "id": OTHER_PLAN,
             "athlete_id": "someone-else",
             "status": "ready",
             "plan_name": "Other",
             "created_at": "2026-06-01T00:00:00+00:00",
         }
+
+    def test_checkin_rejected_when_plan_not_owned(self):
+        store = _store_with_plan()
+        self._seed_other(store)
         with pytest.raises(HTTPException) as exc:
             submit_today_checkin(
                 store,
                 athlete_id=ATHLETE,
                 athlete_timezone="",
-                payload=_checkin_payload(plan_id="plan-other"),
+                payload=_checkin_payload(plan_id=OTHER_PLAN),
             )
         assert exc.value.status_code == 404
         assert not store.today_checkins.get(ATHLETE)
 
     def test_completion_rejected_when_plan_not_owned(self):
         store = _store_with_plan()
-        store.plans["plan-other"] = {
-            "id": "plan-other",
-            "athlete_id": "someone-else",
-            "status": "ready",
-            "plan_name": "Other",
-            "created_at": "2026-06-01T00:00:00+00:00",
-        }
+        self._seed_other(store)
         with pytest.raises(HTTPException) as exc:
             upsert_session_completion(
                 store,
                 athlete_id=ATHLETE,
                 athlete_timezone="",
-                payload={"plan_id": "plan-other", "session_id": "s1", "status": "started"},
+                payload={"plan_id": OTHER_PLAN, "session_id": "s1", "status": "started"},
             )
         assert exc.value.status_code == 404
+        assert not store.session_completions.get(ATHLETE)
+
+
+class TestPlanIdValidation:
+    def test_checkin_rejects_malformed_plan_id(self):
+        store = _store_with_plan()
+        with pytest.raises(HTTPException) as exc:
+            submit_today_checkin(
+                store,
+                athlete_id=ATHLETE,
+                athlete_timezone="",
+                payload=_checkin_payload(plan_id="not-a-uuid"),
+            )
+        assert exc.value.status_code == 422
+        assert not store.today_checkins.get(ATHLETE)
+
+    def test_completion_rejects_malformed_plan_id(self):
+        store = _store_with_plan()
+        with pytest.raises(HTTPException) as exc:
+            upsert_session_completion(
+                store,
+                athlete_id=ATHLETE,
+                athlete_timezone="",
+                payload={"plan_id": "not-a-uuid", "session_id": "s1", "status": "started"},
+            )
+        assert exc.value.status_code == 422
         assert not store.session_completions.get(ATHLETE)
 
 
@@ -265,3 +289,49 @@ class TestSessionCompletion:
         )
         assert len(store.session_completions[ATHLETE]) == 1
         assert store.session_completions[ATHLETE][0]["status"] == "done"
+
+    def test_completed_at_preserved_on_idempotent_resave(self):
+        store = _store_with_plan()
+        first = upsert_session_completion(
+            store,
+            athlete_id=ATHLETE,
+            athlete_timezone="",
+            payload=self._payload(status="done"),
+            now=datetime(2026, 6, 18, 10, 0, tzinfo=timezone.utc),
+        )
+        resave = upsert_session_completion(
+            store,
+            athlete_id=ATHLETE,
+            athlete_timezone="",
+            payload=self._payload(status="done", session_rpe=7),
+            now=datetime(2026, 6, 18, 18, 0, tzinfo=timezone.utc),
+        )
+        # completed_at is not overwritten by the later save.
+        assert resave["completed_at"] == first["completed_at"]
+        assert resave["session_rpe"] == 7
+
+    def test_backward_transition_clears_completed_at(self):
+        store = _store_with_plan()
+        now = datetime(2026, 6, 18, 10, 0, tzinfo=timezone.utc)
+        upsert_session_completion(
+            store, athlete_id=ATHLETE, athlete_timezone="", payload=self._payload(status="done"), now=now
+        )
+        back = upsert_session_completion(
+            store, athlete_id=ATHLETE, athlete_timezone="", payload=self._payload(status="started"), now=now
+        )
+        # Moving back to started keeps started_at but clears completed_at.
+        assert back["status"] == "started"
+        assert back["started_at"]
+        assert back["completed_at"] is None
+
+    def test_reset_to_not_started_clears_both_timestamps(self):
+        store = _store_with_plan()
+        now = datetime(2026, 6, 18, 10, 0, tzinfo=timezone.utc)
+        upsert_session_completion(
+            store, athlete_id=ATHLETE, athlete_timezone="", payload=self._payload(status="done"), now=now
+        )
+        reset = upsert_session_completion(
+            store, athlete_id=ATHLETE, athlete_timezone="", payload=self._payload(status="not_started"), now=now
+        )
+        assert reset["started_at"] is None
+        assert reset["completed_at"] is None

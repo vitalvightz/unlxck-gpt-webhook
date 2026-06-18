@@ -8,7 +8,8 @@ in-process FakeStore via the shared test client.
 from tests.support import _build_client
 
 ATHLETE = {"Authorization": "Bearer athlete-token"}
-PLAN_ID = "plan-1"
+PLAN_ID = "11111111-1111-1111-1111-111111111111"
+OTHER_PLAN = "22222222-2222-2222-2222-222222222222"
 
 
 def _seed_plan(store, plan_id: str = PLAN_ID, athlete_id: str = "athlete-1") -> str:
@@ -59,36 +60,39 @@ class TestTodayCheckin:
 
 
 class TestPlanOwnership:
-    def test_checkin_rejected_for_unowned_plan(self):
-        client, store, _ = _build_client()
+    def _seed_other(self, store):
         # Plan belongs to a different athlete.
-        store.plans["plan-x"] = {
-            "id": "plan-x",
+        store.plans[OTHER_PLAN] = {
+            "id": OTHER_PLAN,
             "athlete_id": "someone-else",
             "status": "ready",
             "plan_name": "Other",
             "created_at": "2026-06-01T00:00:00+00:00",
         }
-        resp = client.post("/api/today/checkin", headers=ATHLETE, json=_checkin_body(plan_id="plan-x"))
+
+    def test_checkin_rejected_for_unowned_plan(self):
+        client, store, _ = _build_client()
+        self._seed_other(store)
+        resp = client.post("/api/today/checkin", headers=ATHLETE, json=_checkin_body(plan_id=OTHER_PLAN))
         assert resp.status_code == 404
         assert not store.today_checkins.get("athlete-1")
 
     def test_completion_rejected_for_unowned_plan(self):
         client, store, _ = _build_client()
-        store.plans["plan-x"] = {
-            "id": "plan-x",
-            "athlete_id": "someone-else",
-            "status": "ready",
-            "plan_name": "Other",
-            "created_at": "2026-06-01T00:00:00+00:00",
-        }
+        self._seed_other(store)
         resp = client.post(
             "/api/today/session-completion",
             headers=ATHLETE,
-            json={"plan_id": "plan-x", "session_id": "s1", "status": "started"},
+            json={"plan_id": OTHER_PLAN, "session_id": "s1", "status": "started"},
         )
         assert resp.status_code == 404
         assert not store.session_completions.get("athlete-1")
+
+    def test_checkin_rejects_malformed_plan_id(self):
+        client, store, _ = _build_client()
+        resp = client.post("/api/today/checkin", headers=ATHLETE, json=_checkin_body(plan_id="not-a-uuid"))
+        assert resp.status_code == 422
+        assert not store.today_checkins.get("athlete-1")
 
 
 class TestSessionCompletion:

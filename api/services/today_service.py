@@ -15,6 +15,7 @@ come straight from the deterministic evaluator.
 
 from __future__ import annotations
 
+import uuid
 from datetime import datetime, timezone
 from typing import Any, Mapping
 
@@ -77,6 +78,17 @@ def _utc_now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
+def _require_valid_plan_id(plan_id: str) -> None:
+    """422 on a malformed plan_id so it never reaches the DB as a uuid syntax error."""
+    try:
+        uuid.UUID(plan_id)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="plan_id must be a valid UUID",
+        ) from exc
+
+
 def resolve_training_day(athlete_timezone: str | None, *, now: datetime | None = None) -> str:
     """Athlete-local training day (``YYYY-MM-DD``) — the canonical key."""
     return resolve_training_day_str(
@@ -106,6 +118,7 @@ def submit_today_checkin(
     plan_id = str(payload.get("plan_id") or "").strip()
     if not plan_id:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="plan_id is required")
+    _require_valid_plan_id(plan_id)
 
     # Writes are service-role (RLS does not gate them here), so the backend must
     # prove the plan belongs to the caller before persisting anything.
@@ -162,6 +175,7 @@ def upsert_session_completion(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="plan_id and session_id are required",
         )
+    _require_valid_plan_id(plan_id)
 
     # Service-role write: enforce plan ownership at the backend (RLS won't here).
     if store.get_plan_for_athlete(plan_id, athlete_id) is None:
@@ -173,14 +187,22 @@ def upsert_session_completion(
 
     existing = store.get_session_completion(athlete_id, session_id, training_day) or {}
 
-    # Stamp timestamps from the transition: started (and beyond) carry started_at;
-    # done/modified carry completed_at.
-    started_at = existing.get("started_at")
-    if status_value in {"started", "done", "modified"} and not started_at:
-        started_at = now_iso
-    completed_at = existing.get("completed_at")
+    # Stamp timestamps from the transition. started/done/modified carry
+    # started_at; done/modified carry completed_at. Both are preserved once set
+    # (idempotent re-saves keep the original time) and cleared when the status
+    # moves back to a state that should not have them.
+    existing_started_at = existing.get("started_at")
+    existing_completed_at = existing.get("completed_at")
+
+    if status_value in {"started", "done", "modified"}:
+        started_at = existing_started_at or now_iso
+    else:
+        started_at = None
+
     if status_value in {"done", "modified"}:
-        completed_at = now_iso
+        completed_at = existing_completed_at or now_iso
+    else:
+        completed_at = None
 
     modification_reason = str(payload.get("modification_reason") or "")
     notes = str(payload.get("notes") or "")
@@ -291,9 +313,10 @@ def build_today_command_view(
         return build_command_view(current_training_day=training_day, plan=None)
 
     plan_id = str(plan_row.get("id") or "")
-    recommendation = _recommendation_mapping(
-        store.get_today_checkin(athlete_id, plan_id, training_day)
-    )
+    # Fetch the check-in once and reuse it for both the recommendation and the
+    # risk watch (avoids a redundant DB roundtrip).
+    today_checkin = store.get_today_checkin(athlete_id, plan_id, training_day)
+    recommendation = _recommendation_mapping(today_checkin)
 
     # Derive today's/next session from the persisted plan's weekly schedule.
     today_entry = next_entry = None
@@ -320,7 +343,7 @@ def build_today_command_view(
         recommendation=recommendation,
         completion=completion,
         next_session=_next_session_payload(target_entry, session_id),
-        risks=_risks_from_checkin(store.get_today_checkin(athlete_id, plan_id, training_day)),
+        risks=_risks_from_checkin(today_checkin),
     )
 
 
