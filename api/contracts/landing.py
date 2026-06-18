@@ -69,8 +69,14 @@ def resolve_landing(
       current training day.
     """
     # Row 1 — no active plan.
+    if session_state not in ("none", "resume", "completed"):
+        raise ValueError(
+            f"Invalid session_state {session_state!r}. Expected 'none', 'resume', or 'completed'. "
+            "Did you forget to map the raw completion status using completion_landing_state()?"
+        )
+
+    # Row 1 — no active plan.
     if not has_active_plan:
-        return LandingDecision(
             target="intake",
             cta="create_plan",
             row=1,
