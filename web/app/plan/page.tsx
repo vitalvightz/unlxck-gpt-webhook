@@ -12,14 +12,22 @@ export default function PlanAliasPage() {
 
   useEffect(() => {
     if (!isReady) return;
+    let active = true;
     const token = session?.access_token;
     if (!token) {
       router.replace("/plans");
       return;
     }
     void getActivePlan(token)
-      .then((plan) => router.replace(`/plans/${plan.plan_id}`))
-      .catch(() => router.replace("/plans"));
+      .then((plan) => {
+        if (active) router.replace(`/plans/${plan.plan_id}`);
+      })
+      .catch(() => {
+        if (active) router.replace("/plans");
+      });
+    return () => {
+      active = false;
+    };
   }, [isReady, router, session?.access_token]);
 
   return (
