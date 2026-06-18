@@ -209,7 +209,6 @@ def build_command_view(
     """
     training_day = _as_iso(current_training_day)
     active_plan = _plan_identity(plan)
-    has_active_plan = bool(active_plan)
 
     rec_view = resolve_recommendation_state(
         recommendation, current_training_day=training_day
