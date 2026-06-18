@@ -346,11 +346,11 @@ export default function HomePage() {
 
     const activePlan = commandState?.active_plan ?? {};
     const hasActivePlan = Boolean(activePlan.id);
-    const sessionPreview = (commandState?.today.next_session ?? {}) as Record<string, unknown>;
+    const sessionPreview = (commandState?.today?.next_session ?? {}) as Record<string, unknown>;
     const risks = commandState?.risk_watch ?? [];
     const visibleRisks = risks.slice(0, 2);
     const riskOverflow = Math.max(0, risks.length - visibleRisks.length);
-    const recommendation = commandState?.today.recommendation_state ?? "not_checked_in";
+    const recommendation = commandState?.today?.recommendation_state ?? "not_checked_in";
     const todayStateLabel = recommendation === "train_as_planned"
       ? "Train as planned"
       : recommendation === "modify"
