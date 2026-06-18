@@ -26,6 +26,11 @@ import type {
   SessionLogRecord,
   SessionLogRequest,
   SessionLogResponse,
+  TodayCheckinRequest,
+  TodayCheckinResponse,
+  TodayCommandView,
+  TodaySessionCompletionRequest,
+  TodaySessionCompletionResponse,
   UsernameChangeRequest,
   WeeklySchedule,
 } from "@/lib/types";
@@ -996,4 +1001,30 @@ export function getAdminAthleteDailyStatus(
       { token },
     ),
   );
+}
+
+export function getToday(token: string): Promise<TodayCommandView> {
+  return withTransientRetries(() => readJson<TodayCommandView>("/api/today", { token }));
+}
+
+export function submitTodayCheckin(
+  token: string,
+  payload: TodayCheckinRequest,
+): Promise<TodayCheckinResponse> {
+  return readJson<TodayCheckinResponse>("/api/today/checkin", {
+    method: "POST",
+    token,
+    body: JSON.stringify(payload),
+  });
+}
+
+export function submitTodaySessionCompletion(
+  token: string,
+  payload: TodaySessionCompletionRequest,
+): Promise<TodaySessionCompletionResponse> {
+  return readJson<TodaySessionCompletionResponse>("/api/today/session-completion", {
+    method: "POST",
+    token,
+    body: JSON.stringify(payload),
+  });
 }
