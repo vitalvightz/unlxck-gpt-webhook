@@ -96,6 +96,13 @@ def test_plan_runtime_columns_are_subset_of_required_plan_columns():
         assert column in REQUIRED_COLUMNS["plans"]
 
 
+def test_profiles_active_plan_id_is_required_runtime_column():
+    assert "active_plan_id" in REQUIRED_COLUMNS["profiles"]
+    columns = {table: list(cols) for table, cols in REQUIRED_COLUMNS.items()}
+    columns["profiles"] = [c for c in columns["profiles"] if c != "active_plan_id"]
+    assert "profiles.active_plan_id" in find_missing_columns(columns)
+
+
 # --- function checks -------------------------------------------------------
 
 
@@ -125,6 +132,7 @@ def test_index_requirement_satisfied_by_constraint_alias():
         "generation_jobs_athlete_client_request_key",  # constraint form
         "plan_generation_rate_limits_athlete_created_idx",
         "profiles_username_idx",
+        "profiles_active_plan_id_idx",
         "daily_checkins_athlete_date_key",
         "today_checkins_athlete_plan_day_key",
         "session_completions_athlete_session_day_key",
@@ -137,6 +145,12 @@ def test_find_missing_index_constraints_reports_label():
     present.discard("plan_generation_rate_limits_athlete_created_idx")
     missing = find_missing_index_constraints(present)
     assert missing == ["plan_generation_rate_limits athlete/created index"]
+
+
+def test_profiles_active_plan_id_index_is_required():
+    present = set(_all_required_index_names())
+    present.discard("profiles_active_plan_id_idx")
+    assert "profiles active_plan_id index" in find_missing_index_constraints(present)
 
 
 # --- RLS checks ------------------------------------------------------------

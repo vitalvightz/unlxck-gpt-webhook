@@ -15,6 +15,7 @@ from api.plan_mappers import (
     _visible_plans_for_athlete,
 )
 from api.store import AppStore, is_effective_admin_profile
+from api.services.active_plan import resolve_active_plan, set_active_plan
 
 
 def build_plans_router(*, require_profile, require_plan_row, get_store) -> APIRouter:
@@ -25,10 +26,7 @@ def build_plans_router(*, require_profile, require_plan_row, get_store) -> APIRo
         profile: ProfileRecord = Depends(require_profile),
         store: AppStore = Depends(get_store),
     ) -> PlanDetail:
-        plan_row = next(
-            iter(_visible_plans_for_athlete(store.list_user_plans(profile.athlete_id))),
-            None,
-        )
+        plan_row = resolve_active_plan(store, profile.athlete_id).plan
         if not plan_row:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
         is_admin = is_effective_admin_profile(profile, store)
@@ -44,13 +42,20 @@ def build_plans_router(*, require_profile, require_plan_row, get_store) -> APIRo
         profile: ProfileRecord = Depends(require_profile),
         store: AppStore = Depends(get_store),
     ) -> WeeklySchedule:
-        plan_row = next(
-            iter(_visible_plans_for_athlete(store.list_user_plans(profile.athlete_id))),
-            None,
-        )
+        plan_row = resolve_active_plan(store, profile.athlete_id).plan
         if not plan_row:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
         return _map_weekly_schedule(plan_row, week_index=week_index)
+
+    @router.get("/api/plans/active", response_model=PlanSummary)
+    def get_active_plan(
+        profile: ProfileRecord = Depends(require_profile),
+        store: AppStore = Depends(get_store),
+    ) -> PlanSummary:
+        plan_row = resolve_active_plan(store, profile.athlete_id).plan
+        if not plan_row:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
+        return _map_plan_summary(plan_row)
 
     @router.get("/api/plans", response_model=list[PlanSummary])
     def list_plans(
@@ -81,6 +86,19 @@ def build_plans_router(*, require_profile, require_plan_row, get_store) -> APIRo
         plan_row: dict[str, Any] = Depends(require_plan_row),
     ) -> WeeklySchedule:
         return _map_weekly_schedule(plan_row, week_index=week_index)
+
+    @router.post("/api/plans/{plan_id}/set-active", response_model=PlanSummary)
+    def set_active_user_plan(
+        plan_id: str,
+        profile: ProfileRecord = Depends(require_profile),
+        store: AppStore = Depends(get_store),
+    ) -> PlanSummary:
+        try:
+            uuid.UUID(plan_id)
+        except (ValueError, AttributeError):
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
+        plan_row = set_active_plan(store, profile.athlete_id, plan_id)
+        return _map_plan_summary(plan_row)
 
     @router.patch("/api/plans/{plan_id}", response_model=PlanDetail)
     @router.patch("/api/plans/{plan_id}/name", response_model=PlanDetail)
