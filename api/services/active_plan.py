@@ -84,7 +84,7 @@ def resolve_active_plan(store: ActivePlanStore, athlete_id: str) -> ActivePlanRe
     eligible = [row for row in store.list_user_plans(athlete_id) if is_active_plan_eligible(row)]
     if not eligible:
         return ActivePlanResolution(plan=None, source="none")
-    return ActivePlanResolution(plan=sorted(eligible, key=_created_sort_key, reverse=True)[0], source="auto_latest_eligible")
+    return ActivePlanResolution(plan=max(eligible, key=_created_sort_key), source="auto_latest_eligible")
 
 
 def set_active_plan(store: ActivePlanStore, athlete_id: str, plan_id: str) -> dict[str, Any]:
