@@ -38,6 +38,17 @@ class TestRecommendationMirror:
         assert view.today.recommendation_reason is None
         assert {a.id for a in view.quick_actions} == {"open_today", "view_plan"}
 
+    def test_active_plan_accepts_persisted_plan_field_names(self):
+        view = build_command_view(
+            current_training_day=TODAY,
+            plan={"plan_id": "plan-2", "plan_name": "Fight camp", "status": "ready"},
+            recommendation=None,
+        )
+        assert view.active_plan.get("id") == "plan-2"
+        assert view.active_plan.get("name") == "Fight camp"
+        assert {a.id for a in view.quick_actions} == {"open_today", "view_plan"}
+        assert any(a.route == "/plans/plan-2" for a in view.quick_actions)
+
     def test_valid_recommendation_is_mirrored(self):
         view = build_command_view(
             current_training_day=TODAY, plan=PLAN, recommendation=_rec(decision="pull_back")

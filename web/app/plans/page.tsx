@@ -79,6 +79,13 @@ function summarizeEquipment(equipmentAccess: string[] | undefined): string | nul
   return remaining > 0 ? `${visible.join(", ")} +${remaining} more` : visible.join(", ");
 }
 
+function getPlanVersionLabel(plan: PlanSummary): string {
+  if (plan.plan_name?.trim()) {
+    return "Named plan";
+  }
+  return plan.fight_date ? "Fight camp" : "Open camp";
+}
+
 function getPrimaryFocus(intake: PlanRequest | null | undefined): string | null {
   if (!intake) {
     return null;
@@ -191,6 +198,7 @@ function PlanCard({
   const createdLabel = formatPlanTimestamp(plan.created_at);
   const styleSummary = getPlanStyleSummary(plan);
   const statusLabel = formatPlanStatus(plan.status);
+  const versionLabel = getPlanVersionLabel(plan);
   const isActionPending = pendingAction !== null || isSettingActive;
   const renameInputId = `rename-plan-${plan.plan_id}`;
   const active = isActivePlan(plan, activePlanId);
@@ -386,14 +394,15 @@ function PlanCard({
     <>
       <article className="plan-history-row plan-history-row-card">
         <div className="plan-history-copy">
-          <p className="label">{fightDateLabel}</p>
+          <p className="label">{versionLabel}</p>
           <Link href={`/plans/${plan.plan_id}`}>
             <h2 className="plan-card-title">{planTitle}</h2>
           </Link>
           {inlineRenameForm}
           <div className="plan-card-meta">
+            <span className="muted">Fight {fightDateLabel}</span>
             <span className="muted">{styleSummary}</span>
-            <span className="muted">Created {createdLabel}</span>
+            <span className="muted">Built {createdLabel}</span>
           </div>
         </div>
         <div className="plan-history-meta">
@@ -401,7 +410,7 @@ function PlanCard({
           {!active && !eligibleForActive ? <span className="muted">Cannot be active</span> : null}
           <div className="plan-card-actions plans-history-actions">
             <Link href={`/plans/${plan.plan_id}`} className="ghost-button">
-              Open
+              Review
             </Link>
             {!active && eligibleForActive ? (
               <button type="button" className="secondary-button" onClick={() => void onSetActive(plan)} disabled={isActionPending || isRenaming}>
@@ -735,7 +744,7 @@ function LatestPlanCard({
             </Link>
           )}
           <Link href="/onboarding" className="ghost-button">
-            {plan ? "Refine intake" : "Edit Advanced Intake"}
+            {plan ? "Review intake" : "Edit intake"}
           </Link>
           {plan ? (
             <Link
@@ -747,7 +756,7 @@ function LatestPlanCard({
                 }
               }}
             >
-              Generate updated plan
+              Generate from current intake
             </Link>
           ) : null}
         </div>
@@ -787,7 +796,7 @@ function IntakeCard({
           <p className="kicker">Current Athlete Profile / Intake</p>
           <h2>{profileLines[0]?.value || "Athlete profile"}</h2>
           <p className="muted">
-            Review the saved intake before generating again so the next camp reflects the current profile, volume, and equipment setup.
+            This is the source for your next generated camp. Review it before starting another build.
           </p>
         </div>
         <span className={`badge ${hasIntake ? "status-badge-success" : "status-badge-neutral"}`}>
@@ -810,11 +819,13 @@ function IntakeCard({
 
       <div className="plan-card-actions plans-dashboard-actions">
         <Link href={hasIntake ? "/onboarding" : "/quick-build"} className="cta">
-          {hasIntake ? "Resume Advanced Intake" : "Quick Build New Plan"}
+          {hasIntake ? "Review saved intake" : "Quick Build New Plan"}
         </Link>
-        <Link href="/onboarding" className="ghost-button">
-          Edit Advanced Intake
-        </Link>
+        {hasIntake ? (
+          <Link href="/onboarding?mode=edit" className="ghost-button">
+            Edit details
+          </Link>
+        ) : null}
       </div>
     </article>
   );
@@ -926,7 +937,7 @@ export default function PlansPage() {
           <div className="athlete-motion-slot athlete-motion-header">
             <p className="kicker">Plan Dashboard</p>
             <h1>Your plan workspace</h1>
-            <p className="muted">Reopen the latest camp fast, adjust the saved intake, and keep older plan versions in the archive below.</p>
+            <p className="muted">Open the active camp, review the intake behind it, or generate a new version from the current profile.</p>
           </div>
         </div>
 
@@ -962,7 +973,7 @@ export default function PlansPage() {
               <div className="plans-history-header-copy">
                 <p className="kicker">Plan Manager</p>
                 <h2>Other saved plans</h2>
-                <p className="muted">Open saved versions or set an eligible ready plan active. Archived plans stay view-only.</p>
+                <p className="muted">Compare previous versions by fight date, build time, and status before making one active.</p>
               </div>
               {archivedPlans.length ? (
                 <button

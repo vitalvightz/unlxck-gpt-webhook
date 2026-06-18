@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { type ReactNode, useEffect, useState } from "react";
+import { type ReactNode, useEffect, useMemo, useState } from "react";
 
 import { useAppSession } from "@/components/auth-provider";
 import { EmptyState } from "@/components/empty-state";
@@ -16,7 +16,7 @@ import {
   TECHNICAL_STYLE_OPTIONS,
 } from "@/lib/intake-options";
 import { formatPlanFightDate, formatPlanTimestamp, getPlanDisplayName } from "@/lib/plan-format";
-import type { TodayCommandView } from "@/lib/types";
+import type { PlanSummary, TodayActivePlan, TodayCommandView } from "@/lib/types";
 
 const landingPreviewStages = [
   {
@@ -198,6 +198,32 @@ function WorkspaceOverviewSkeleton() {
   );
 }
 
+function activePlanFromLatestPlan(plan: PlanSummary | null | undefined): TodayActivePlan {
+  if (!plan) {
+    return {};
+  }
+  return {
+    id: plan.plan_id,
+    name: getPlanDisplayName(plan),
+    status: plan.status,
+    fight_date: plan.fight_date,
+  };
+}
+
+function mergeActivePlan(
+  commandPlan: TodayActivePlan | null | undefined,
+  fallbackPlan: TodayActivePlan,
+): TodayActivePlan {
+  return {
+    ...fallbackPlan,
+    ...(commandPlan ?? {}),
+    id: commandPlan?.id || fallbackPlan.id,
+    name: commandPlan?.name || fallbackPlan.name,
+    status: commandPlan?.status || fallbackPlan.status,
+    fight_date: commandPlan?.fight_date || fallbackPlan.fight_date,
+  };
+}
+
 export default function HomePage() {
   const { isReady, isMeHydrated, hasTransientMeError, session, me, signOut } = useAppSession();
   const router = useRouter();
@@ -205,6 +231,7 @@ export default function HomePage() {
   const [commandError, setCommandError] = useState<string | null>(null);
   const [activePreviewIndex, setActivePreviewIndex] = useState(0);
   const [previewPausedUntil, setPreviewPausedUntil] = useState(0);
+  const latestPlanFallback = useMemo(() => activePlanFromLatestPlan(me?.latest_plan ?? null), [me?.latest_plan]);
 
   function setPreviewIndex(nextIndex: number) {
     const totalStages = landingPreviewStages.length;
@@ -344,7 +371,7 @@ export default function HomePage() {
       );
     }
 
-    const activePlan = commandState?.active_plan ?? {};
+    const activePlan = mergeActivePlan(commandState?.active_plan, latestPlanFallback);
     const hasActivePlan = Boolean(activePlan.id);
     const sessionPreview = (commandState?.today?.next_session ?? {}) as Record<string, unknown>;
     const risks = commandState?.risk_watch ?? [];
@@ -368,7 +395,7 @@ export default function HomePage() {
             <div className="hero-panel-copy overview-command-copy">
               <p className="eyebrow">Overview</p>
               <h1 className="hero-title">Camp command centre</h1>
-              <p className="overview-command-summary">Read-only camp status. Overview and Today use the same active plan.</p>
+              <p className="overview-command-summary">Current camp status, today&apos;s decision, and the next training target from the active plan.</p>
               <div className="overview-operational-strip" aria-label="Camp status">
                 <div className="overview-operational-item"><span className="overview-operational-label">Active plan</span><span className="overview-operational-value">{String(activePlan.name || "No active plan")}</span></div>
                 <div className="overview-operational-item"><span className="overview-operational-label">Phase</span><span className="overview-operational-value">{String(activePlan.phase || "Not set")}</span></div>
@@ -393,7 +420,7 @@ export default function HomePage() {
               <p className="status-label">Next session</p>
               <h2 className="plan-summary-title">{String(sessionPreview.title || sessionPreview.weekday || "No session found")}</h2>
               <p className="muted">{String(sessionPreview["focus"] || sessionPreview["emphasis"] || sessionPreview.status || "Open Today for details.")}</p>
-              <div className="plan-card-actions overview-card-actions"><Link href="/today" className="secondary-button">Open Today</Link></div>
+              <div className="plan-card-actions overview-card-actions"><Link href={hasActivePlan ? "/today" : "/quick-build"} className="secondary-button">{hasActivePlan ? "Open Today" : "Quick Build"}</Link></div>
             </article>
             <article className="status-card">
               <p className="status-label">Risk watch</p>
@@ -404,6 +431,28 @@ export default function HomePage() {
                 </div>
               )) : <p className="muted">No risk flags from today&apos;s command view.</p>}
               {riskOverflow ? <span className="badge status-badge-neutral">+{riskOverflow} more</span> : null}
+            </article>
+            <article className="status-card">
+              <p className="status-label">Command actions</p>
+              <h2 className="plan-summary-title">{hasActivePlan ? "Manage active camp" : "Start camp setup"}</h2>
+              <p className="muted">
+                {hasActivePlan
+                  ? "Jump to the live day, review the saved plan, or update the intake before generating again."
+                  : "Create a profile and generate the first camp plan."}
+              </p>
+              <div className="plan-card-actions overview-card-actions">
+                <Link href={hasActivePlan ? "/today" : "/quick-build"} className="secondary-button">
+                  {hasActivePlan ? "Open Today" : "Quick Build"}
+                </Link>
+                {hasActivePlan && activePlan.id ? (
+                  <Link href={`/plans/${activePlan.id}`} className="ghost-button">
+                    View plan
+                  </Link>
+                ) : null}
+                <Link href="/onboarding" className="ghost-button">
+                  {hasActivePlan ? "Review intake" : "Advanced Intake"}
+                </Link>
+              </div>
             </article>
           </div>
         </section>
