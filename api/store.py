@@ -419,6 +419,20 @@ class AppStore(Protocol):
 
     def list_session_logs(self, athlete_id: str, *, limit: int = 20) -> list[dict[str, Any]]: ...
 
+    # --- Block 4 Today/Overview persistence (api/routes/today.py) ---
+
+    def upsert_today_checkin(self, athlete_id: str, fields: dict[str, Any]) -> dict[str, Any]: ...
+
+    def get_today_checkin(
+        self, athlete_id: str, plan_id: str, training_day: str
+    ) -> dict[str, Any] | None: ...
+
+    def upsert_session_completion(self, athlete_id: str, fields: dict[str, Any]) -> dict[str, Any]: ...
+
+    def get_session_completion(
+        self, athlete_id: str, session_id: str, training_day: str
+    ) -> dict[str, Any] | None: ...
+
     def create_injury_flag(self, athlete_id: str, fields: dict[str, Any]) -> dict[str, Any]: ...
 
     def list_injury_flags(
@@ -4080,6 +4094,78 @@ class SupabaseAppStore:
             .execute()
         )
         return getattr(response, "data", None) or []
+
+    def upsert_today_checkin(self, athlete_id: str, fields: dict[str, Any]) -> dict[str, Any]:
+        payload = {"athlete_id": athlete_id, **fields}
+        try:
+            response = (
+                self.client.table("today_checkins")
+                .upsert(payload, on_conflict="athlete_id,plan_id,training_day")
+                .execute()
+            )
+            rows = getattr(response, "data", None) or []
+            if not rows:
+                logger.error("[store] upsert_today_checkin:no_rows athlete_id=%s", athlete_id)
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail="failed to persist Today check-in",
+                )
+            return rows[0]
+        except HTTPException:
+            raise
+        except _STORE_CLIENT_ERRORS as exc:
+            self._raise_operation_http_error(
+                operation=f"upsert_today_checkin athlete_id={athlete_id}",
+                detail="failed to persist Today check-in",
+                exc=exc,
+            )
+
+    def get_today_checkin(
+        self, athlete_id: str, plan_id: str, training_day: str
+    ) -> dict[str, Any] | None:
+        return self._select_first(
+            self.client.table("today_checkins")
+            .select("*")
+            .eq("athlete_id", athlete_id)
+            .eq("plan_id", plan_id)
+            .eq("training_day", training_day)
+        )
+
+    def upsert_session_completion(self, athlete_id: str, fields: dict[str, Any]) -> dict[str, Any]:
+        payload = {"athlete_id": athlete_id, **fields}
+        try:
+            response = (
+                self.client.table("session_completions")
+                .upsert(payload, on_conflict="athlete_id,session_id,training_day")
+                .execute()
+            )
+            rows = getattr(response, "data", None) or []
+            if not rows:
+                logger.error("[store] upsert_session_completion:no_rows athlete_id=%s", athlete_id)
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail="failed to persist session completion",
+                )
+            return rows[0]
+        except HTTPException:
+            raise
+        except _STORE_CLIENT_ERRORS as exc:
+            self._raise_operation_http_error(
+                operation=f"upsert_session_completion athlete_id={athlete_id}",
+                detail="failed to persist session completion",
+                exc=exc,
+            )
+
+    def get_session_completion(
+        self, athlete_id: str, session_id: str, training_day: str
+    ) -> dict[str, Any] | None:
+        return self._select_first(
+            self.client.table("session_completions")
+            .select("*")
+            .eq("athlete_id", athlete_id)
+            .eq("session_id", session_id)
+            .eq("training_day", training_day)
+        )
 
     def create_injury_flag(self, athlete_id: str, fields: dict[str, Any]) -> dict[str, Any]:
         return self._insert_row(
