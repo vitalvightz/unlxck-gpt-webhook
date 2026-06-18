@@ -583,6 +583,16 @@ export function listPlans(token: string): Promise<PlanSummary[]> {
   return withTransientRetries(() => readJson<PlanSummary[]>("/api/plans", { token }));
 }
 
+export function getActivePlan(token: string): Promise<PlanSummary> {
+  return withTransientRetries(() => readJson<PlanSummary>("/api/plans/active", { token }));
+}
+
+export function setActivePlan(token: string, planId: string): Promise<PlanSummary> {
+  return withTransientRetries(() =>
+    readJson<PlanSummary>(`/api/plans/${encodeURIComponent(planId)}/set-active`, { method: "POST", token }),
+  );
+}
+
 export function getPlan(token: string, planId: string): Promise<PlanDetail> {
   return withTransientRetries(() =>
     readJson<PlanDetail>(`/api/plans/${encodeURIComponent(planId)}`, { token }),

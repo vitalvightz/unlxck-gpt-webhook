@@ -9,7 +9,7 @@ import { RequireAuth } from "@/components/auth-guard";
 import { useAppSession } from "@/components/auth-provider";
 import { PlanHistoryRowSkeleton, PlansFeaturedSkeleton } from "@/components/skeleton";
 import { useToast } from "@/components/toast-provider";
-import { deletePlan, listPlans, renamePlan } from "@/lib/api";
+import { ApiError, deletePlan, getActivePlan, listPlans, renamePlan, setActivePlan } from "@/lib/api";
 import { markGenerationIntent } from "@/lib/generation-intent";
 import {
   EQUIPMENT_ACCESS_OPTIONS,
@@ -38,12 +38,17 @@ function getRenameDraftValue(plan: PlanSummary): string {
   return plan.plan_name?.trim() || plan.fight_date || "";
 }
 
-function getLatestPlan(plans: PlanSummary[]): PlanSummary | null {
-  return plans[0] ?? null;
+function getArchivedPlans(plans: PlanSummary[]): PlanSummary[] {
+  return plans.filter((plan) => plan.status?.trim().toLowerCase() === "archived");
 }
 
-function getArchivedPlans(plans: PlanSummary[]): PlanSummary[] {
-  return plans.slice(1);
+function canSetActive(plan: PlanSummary): boolean {
+  const status = plan.status?.trim().toLowerCase();
+  return status === "ready" || status === "publishable_with_flags";
+}
+
+function isActivePlan(plan: PlanSummary, activePlanId: string | null): boolean {
+  return Boolean(activePlanId && plan.plan_id === activePlanId);
 }
 
 function formatCompactList(values: string[], fallback: string): string {
@@ -161,11 +166,17 @@ function PlanCard({
   accessToken,
   onPlanDeleted,
   onPlanRenamed,
+  activePlanId,
+  onSetActive,
+  isSettingActive,
 }: {
   plan: PlanSummary;
   accessToken: string | null;
   onPlanDeleted: (planId: string) => void;
   onPlanRenamed: (updatedPlan: PlanSummary) => void;
+  activePlanId: string | null;
+  onSetActive: (plan: PlanSummary) => Promise<void>;
+  isSettingActive: boolean;
 }) {
   const { showToast } = useToast();
   const [pendingAction, setPendingAction] = useState<"rename" | "delete" | null>(null);
@@ -180,8 +191,10 @@ function PlanCard({
   const createdLabel = formatPlanTimestamp(plan.created_at);
   const styleSummary = getPlanStyleSummary(plan);
   const statusLabel = formatPlanStatus(plan.status);
-  const isActionPending = pendingAction !== null;
+  const isActionPending = pendingAction !== null || isSettingActive;
   const renameInputId = `rename-plan-${plan.plan_id}`;
+  const active = isActivePlan(plan, activePlanId);
+  const eligibleForActive = canSetActive(plan);
 
   useEffect(() => {
     if (!isRenaming) {
@@ -384,11 +397,17 @@ function PlanCard({
           </div>
         </div>
         <div className="plan-history-meta">
-          <span className="badge">{statusLabel}</span>
+          <span className="badge">{active ? "ACTIVE" : statusLabel}</span>
+          {!active && !eligibleForActive ? <span className="muted">Cannot be active</span> : null}
           <div className="plan-card-actions plans-history-actions">
             <Link href={`/plans/${plan.plan_id}`} className="ghost-button">
               Open
             </Link>
+            {!active && eligibleForActive ? (
+              <button type="button" className="secondary-button" onClick={() => void onSetActive(plan)} disabled={isActionPending || isRenaming}>
+                {isSettingActive ? "Setting..." : "Set active"}
+              </button>
+            ) : null}
             <button type="button" className="ghost-button" onClick={handleRenameStart} disabled={isActionPending || isRenaming}>
               {pendingAction === "rename" ? "Saving..." : isRenaming ? "Editing name" : "Rename"}
             </button>
@@ -676,31 +695,31 @@ function LatestPlanCard({
       <article className="list-card plans-dashboard-card plans-dashboard-primary-card">
         <div className="plans-dashboard-card-header">
           <div className="plans-dashboard-card-copy">
-            <p className="kicker">Latest Plan</p>
-            <h2>{plan ? getPlanDisplayName(plan) : "No camp plans yet."}</h2>
+            <p className="kicker">Active Plan</p>
+            <h2>{plan ? getPlanDisplayName(plan) : "No active plan"}</h2>
             <p className="muted">
               {plan
-                ? "Open the current camp, tighten the intake, or route straight into a fresh generation."
+                ? "This plan controls Overview and Today."
                 : hasSavedIntake
-                  ? "Your detailed intake is already saved. Reopen it before starting a new plan so those constraints stay in place."
-                  : "Start fast with Quick Build, or use Advanced Intake when you want every detail set first."}
+                  ? "No active plan is selected. Generate or set one active from saved plans."
+                  : "Complete Intake or Quick Build to create your first active plan."}
             </p>
             {!plan ? (
               <div className="empty-state-example plans-dashboard-empty-example">
                 <p className="label">What appears here next</p>
                 <p className="empty-state-example-body">
-                  Once generated, your latest camp opens here with fight date, status, and rename or delete actions.
+                  Once a plan is active, it opens here with fight date, status, and management actions.
                 </p>
               </div>
             ) : null}
           </div>
-          {plan?.status ? <span className="badge">{formatPlanStatus(plan.status)}</span> : null}
+          {plan?.status ? <span className="badge">ACTIVE</span> : null}
         </div>
 
         <DashboardSummary
           title="Current snapshot"
           lines={latestPlanLines}
-          emptyLabel="No latest plan metadata yet."
+          emptyLabel="No active plan metadata yet."
         />
 
         {inlineRenameForm}
@@ -803,20 +822,25 @@ function IntakeCard({
 
 export default function PlansPage() {
   const router = useRouter();
+  const { showToast } = useToast();
   const { isMeHydrated, me, session } = useAppSession();
   const [plans, setPlans] = useState<PlanSummary[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [localPlans, setLocalPlans] = useState<PlanSummary[] | null>(null);
+  const [activePlanId, setActivePlanId] = useState<string | null>(null);
+  const [isSettingActivePlanId, setIsSettingActivePlanId] = useState<string | null>(null);
   const [isArchiveOpen, setIsArchiveOpen] = useState(false);
 
   const visiblePlans = useMemo(() => {
     const sourcePlans = localPlans ?? plans;
     return [...sourcePlans].sort((left, right) => new Date(right.created_at).getTime() - new Date(left.created_at).getTime());
   }, [localPlans, plans]);
-  const latestPlan = getLatestPlan(visiblePlans);
+  const latestEligiblePlan = visiblePlans.find(canSetActive) ?? null;
+  const activePlan = activePlanId ? visiblePlans.find((plan) => plan.plan_id === activePlanId) ?? null : latestEligiblePlan;
   const intakeSource = getIntakeSource(me);
   const archivedPlans = getArchivedPlans(visiblePlans);
+  const otherSavedPlans = visiblePlans.filter((plan) => plan.plan_id !== activePlan?.plan_id && plan.status?.trim().toLowerCase() !== "archived");
   const archiveCountLabel = archivedPlans.length === 1 ? "1 plan" : `${archivedPlans.length} plans`;
   const hasPlans = visiblePlans.length > 0;
 
@@ -826,9 +850,18 @@ export default function PlansPage() {
     }
     setIsLoading(true);
     setError(null);
-    listPlans(session.access_token)
-      .then((nextPlans) => {
+    Promise.all([
+      listPlans(session.access_token),
+      getActivePlan(session.access_token).catch((activeError) => {
+        if (activeError instanceof ApiError && activeError.status === 404) {
+          return null;
+        }
+        throw activeError;
+      }),
+    ])
+      .then(([nextPlans, active]) => {
         setPlans(nextPlans);
+        setActivePlanId(active?.plan_id ?? null);
       })
       .catch((plansError) => {
         const message = plansError instanceof Error ? plansError.message : "";
@@ -863,6 +896,25 @@ export default function PlansPage() {
     router.refresh();
   }
 
+  async function handleSetActive(plan: PlanSummary): Promise<void> {
+    const token = session?.access_token;
+    if (!token || !canSetActive(plan)) {
+      return;
+    }
+    setIsSettingActivePlanId(plan.plan_id);
+    try {
+      const active = await setActivePlan(token, plan.plan_id);
+      setActivePlanId(active.plan_id);
+      showToast("Active plan updated.", { tone: "success" });
+      router.refresh();
+    } catch (activeError) {
+      const message = activeError instanceof Error ? activeError.message : "Unable to set active plan.";
+      showToast(message, { tone: "error" });
+    } finally {
+      setIsSettingActivePlanId(null);
+    }
+  }
+
   const isPlanListLoading = isLoading;
   const isProfileLoading = !isMeHydrated;
 
@@ -884,7 +936,7 @@ export default function PlansPage() {
             <PlansFeaturedSkeleton />
           ) : (
             <LatestPlanCard
-              plan={latestPlan}
+              plan={activePlan}
               intake={intakeSource}
               accessToken={session?.access_token ?? null}
               onPlanDeleted={handlePlanDeleted}
@@ -907,9 +959,9 @@ export default function PlansPage() {
           <div className="plans-history-block athlete-motion-slot athlete-motion-main">
             <div className="plans-history-header">
               <div className="plans-history-header-copy">
-                <p className="kicker">Plan Archive</p>
-                <h2>Older saved plans</h2>
-                <p className="muted">Keep the current plan up top. Reopen, rename, delete, or export older versions here.</p>
+                <p className="kicker">Plan Manager</p>
+                <h2>Other saved plans</h2>
+                <p className="muted">Open saved versions or set an eligible ready plan active. Archived plans stay view-only.</p>
               </div>
               {archivedPlans.length ? (
                 <button
@@ -933,6 +985,26 @@ export default function PlansPage() {
               )}
             </div>
 
+
+            {otherSavedPlans.length > 0 ? (
+              <div className="plan-history-list plans-history-list">
+                {otherSavedPlans.map((plan) => (
+                  <PlanCard
+                    key={plan.plan_id}
+                    plan={plan}
+                    accessToken={session?.access_token ?? null}
+                    onPlanDeleted={handlePlanDeleted}
+                    onPlanRenamed={handlePlanRenamed}
+                    activePlanId={activePlanId}
+                    onSetActive={handleSetActive}
+                    isSettingActive={isSettingActivePlanId === plan.plan_id}
+                  />
+                ))}
+              </div>
+            ) : (
+              <p className="muted">No other saved plans.</p>
+            )}
+
             {archivedPlans.length > 0 && isArchiveOpen ? (
               <div id="plans-history-dropdown" className="plans-history-dropdown" role="region" aria-label="Older saved plans">
                 <div className="plan-history-list plans-history-list">
@@ -943,6 +1015,9 @@ export default function PlansPage() {
                       accessToken={session?.access_token ?? null}
                       onPlanDeleted={handlePlanDeleted}
                       onPlanRenamed={handlePlanRenamed}
+                      activePlanId={activePlanId}
+                      onSetActive={handleSetActive}
+                      isSettingActive={isSettingActivePlanId === plan.plan_id}
                     />
                   ))}
                 </div>
