@@ -1,5 +1,12 @@
-import { redirect } from "next/navigation";
+"use client";
 
-export default function TodayAliasPage() {
-  redirect("/dashboard");
+import { RequireAuth } from "@/components/auth-guard";
+import { TodayScreen } from "@/components/today-screen";
+
+export default function TodayPage() {
+  return (
+    <RequireAuth>
+      <TodayScreen />
+    </RequireAuth>
+  );
 }

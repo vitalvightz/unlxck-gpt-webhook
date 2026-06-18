@@ -5,7 +5,7 @@ an injected ``now``, so training-day boundaries and recommendation validity are
 deterministic without a live clock or database.
 """
 
-from datetime import datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 
 import pytest
@@ -47,6 +47,45 @@ def _taper_planning_brief() -> dict:
                 }
             ]
         }
+    }
+
+
+def _calendar_training_brief(*, active_offsets: list[int]) -> dict:
+    today = date(2026, 6, 18)
+    monday = today - timedelta(days=today.weekday())
+    calendar_days = [
+        {
+            "weekday": (monday + timedelta(days=offset)).strftime("%A"),
+            "calendar_date": (monday + timedelta(days=offset)).isoformat(),
+            "d_day": 30 - offset,
+        }
+        for offset in range(7)
+    ]
+    hard_sparring_plan = []
+    for offset in active_offsets:
+        training_date = today + timedelta(days=offset)
+        hard_sparring_plan.append(
+            {
+                "day": training_date.strftime("%A"),
+                "hard_day_class": "managed_hard",
+                "effective_load": "technical",
+                "status": "technical_skill",
+                "reason": "Plan card for the matched training day.",
+                "coach_note": "Keep it sharp and clean.",
+                "reason_codes": [],
+            }
+        )
+    return {
+        "fight_date": "2026-07-18",
+        "weekly_role_map": {
+            "weeks": [
+                {
+                    "phase": "SPP",
+                    "calendar_days": calendar_days,
+                    "hard_sparring_plan": hard_sparring_plan,
+                }
+            ]
+        },
     }
 
 
@@ -252,6 +291,34 @@ class TestCommandView:
             now=datetime(2026, 6, 18, 12, 0, tzinfo=timezone.utc),
         )
         assert view.active_plan.get("phase") == "TAPER"
+
+    def test_today_session_uses_current_plan_day(self):
+        store = _store_with_plan()
+        store.plans[PLAN]["planning_brief"] = _calendar_training_brief(active_offsets=[0])
+        view = build_today_command_view(
+            store,
+            athlete_id=ATHLETE,
+            athlete_timezone="",
+            now=datetime(2026, 6, 18, 12, 0, tzinfo=timezone.utc),
+        )
+        assert view.today.next_session["calendar_date"] == "2026-06-18"
+        assert view.today.next_session["session_id"] == "2026-06-18"
+        assert view.today.next_session["session_relation"] == "today"
+        assert view.today.next_session["effective_load"] == "technical"
+
+    def test_today_session_falls_forward_to_next_training_day(self):
+        store = _store_with_plan()
+        store.plans[PLAN]["planning_brief"] = _calendar_training_brief(active_offsets=[1])
+        view = build_today_command_view(
+            store,
+            athlete_id=ATHLETE,
+            athlete_timezone="",
+            now=datetime(2026, 6, 18, 12, 0, tzinfo=timezone.utc),
+        )
+        assert view.today.next_session["calendar_date"] == "2026-06-19"
+        assert view.today.next_session["session_id"] == "2026-06-19"
+        assert view.today.next_session["session_relation"] == "next"
+        assert view.today.completion_status == "not_started"
 
 
 class TestSessionCompletion:
