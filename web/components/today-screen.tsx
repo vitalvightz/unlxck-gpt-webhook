@@ -673,7 +673,7 @@ export function TodayScreen() {
             <p className="kicker">Today</p>
             <h1>{planTitle}</h1>
             <p className="muted">
-              {trainingDayLabel} / {activePlan.phase || "Current phase"} / action-first training control.
+              {trainingDayLabel} / {activePlan.phase || "Current phase"} / Today&apos;s training decision and session control.
             </p>
           </div>
           <div className="today-hero-actions">
