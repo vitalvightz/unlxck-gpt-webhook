@@ -1,4 +1,5 @@
 import type {
+  TodayActiveInjury,
   TodayActivePlan,
   TodayCheckinBody,
   TodayCheckinPain,
@@ -7,6 +8,7 @@ import type {
   TodayCheckinSleep,
   TodayCommandView,
   TodayCompletionStatus,
+  TodayPreviousSession,
   TodayRecommendationState,
   TodaySession,
 } from "@/lib/types";
@@ -152,6 +154,8 @@ export function buildTodayCheckinPayload(params: {
   sleep: TodayCheckinSleep;
   body: TodayCheckinBody;
   pain: TodayCheckinPain;
+  activeInjury?: TodayActiveInjury;
+  previousSession?: TodayPreviousSession;
   safetyFlags: TodaySafetyFlags;
 }): TodayCheckinRequest {
   const phase = normalizeTodayPhase(params.phase);
@@ -164,8 +168,11 @@ export function buildTodayCheckinPayload(params: {
     body: params.body,
     pain: params.pain,
     phase,
-    active_injury: "none",
-    previous_session: "none",
+    // Carry the athlete-reported injury/session truth so the backend safety
+    // evaluator can pull back for a worsening injury or modify after a very hard
+    // prior session. Defaults stay conservative-neutral when not collected.
+    active_injury: params.activeInjury ?? "none",
+    previous_session: params.previousSession ?? "none",
     ...params.safetyFlags,
   };
 }
@@ -185,7 +192,13 @@ export function hasTodaySession(session: TodaySession): boolean {
 }
 
 export function canCompleteTodaySession(session: TodaySession): boolean {
-  return Boolean(session.session_id);
+  if (!session.session_id) {
+    return false;
+  }
+  // An off/rest day carries a session_id (keyed on the calendar date) but no
+  // real load. Never let it be started/completed — that would persist a false
+  // session state. Missing load is allowed (older payloads omit the field).
+  return session.effective_load?.trim().toLowerCase() !== "none";
 }
 
 export function getVisibleRiskWatch(risks: TodayCommandView["risk_watch"]): {

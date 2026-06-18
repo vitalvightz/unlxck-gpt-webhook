@@ -24,12 +24,14 @@ import {
   shouldShowTodayCheckin,
 } from "@/lib/today";
 import type {
+  TodayActiveInjury,
   TodayActivePlan,
   TodayCheckinBody,
   TodayCheckinPain,
   TodayCheckinSleep,
   TodayCommandView,
   TodayCompletionStatus,
+  TodayPreviousSession,
   TodaySession,
 } from "@/lib/types";
 
@@ -49,6 +51,18 @@ const PAIN_OPTIONS: Array<{ value: TodayCheckinPain; label: string }> = [
   { value: "none", label: "None" },
   { value: "manageable", label: "Manageable" },
   { value: "high", label: "High" },
+];
+
+const ACTIVE_INJURY_OPTIONS: Array<{ value: TodayActiveInjury; label: string }> = [
+  { value: "none", label: "None" },
+  { value: "stable", label: "Stable" },
+  { value: "worse", label: "Worse" },
+];
+
+const PREVIOUS_SESSION_OPTIONS: Array<{ value: TodayPreviousSession; label: string }> = [
+  { value: "none", label: "N/A" },
+  { value: "normal", label: "Normal" },
+  { value: "very_hard", label: "Very hard" },
 ];
 
 const SAFETY_FLAGS: Array<{ key: keyof TodaySafetyFlags; label: string }> = [
@@ -282,6 +296,8 @@ function CheckinModule({
   const [sleep, setSleep] = useState<TodayCheckinSleep>("good");
   const [body, setBody] = useState<TodayCheckinBody>("normal");
   const [pain, setPain] = useState<TodayCheckinPain>("none");
+  const [activeInjury, setActiveInjury] = useState<TodayActiveInjury>("none");
+  const [previousSession, setPreviousSession] = useState<TodayPreviousSession>("none");
   const [safetyFlags, setSafetyFlags] = useState<TodaySafetyFlags>({
     sharp_pain: false,
     instability: false,
@@ -308,6 +324,8 @@ function CheckinModule({
           sleep,
           body,
           pain,
+          activeInjury,
+          previousSession,
           safetyFlags,
         }),
       );
@@ -334,6 +352,18 @@ function CheckinModule({
         <SegmentGroup label="Sleep" value={sleep} options={SLEEP_OPTIONS} onChange={setSleep} />
         <SegmentGroup label="Body" value={body} options={BODY_OPTIONS} onChange={setBody} />
         <SegmentGroup label="Pain" value={pain} options={PAIN_OPTIONS} onChange={setPain} />
+        <SegmentGroup
+          label="Active injury"
+          value={activeInjury}
+          options={ACTIVE_INJURY_OPTIONS}
+          onChange={setActiveInjury}
+        />
+        <SegmentGroup
+          label="Previous session"
+          value={previousSession}
+          options={PREVIOUS_SESSION_OPTIONS}
+          onChange={setPreviousSession}
+        />
 
         <details className="today-red-flags">
           <summary>Any red flags?</summary>

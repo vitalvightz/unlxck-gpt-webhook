@@ -160,6 +160,60 @@ test("session details without session_id are visible but not completable", () =>
   assert.equal(canCompleteTodaySession({ ...session, session_id: "sess-1" }), true);
 });
 
+test("off-day entries with no load are not completable even with a session_id", () => {
+  const offDay = { session_id: "2026-06-18", weekday: "Thu", effective_load: "none" };
+  assert.equal(hasTodaySession(offDay), true);
+  assert.equal(canCompleteTodaySession(offDay), false);
+  // A real training load keeps the session completable.
+  assert.equal(canCompleteTodaySession({ ...offDay, effective_load: "hard" }), true);
+});
+
+test("check-in payload carries reported injury and previous-session truth", () => {
+  const payload = buildTodayCheckinPayload({
+    planId: "11111111-1111-1111-1111-111111111111",
+    phase: "SPP",
+    sleep: "good",
+    body: "normal",
+    pain: "none",
+    activeInjury: "worse",
+    previousSession: "very_hard",
+    safetyFlags: {
+      sharp_pain: false,
+      instability: false,
+      swelling: false,
+      neurological_symptoms: false,
+      illness_symptoms: false,
+      cannot_warm_into_movement: false,
+      worse_next_day_pain: false,
+    },
+  });
+
+  assert.equal(payload.active_injury, "worse");
+  assert.equal(payload.previous_session, "very_hard");
+});
+
+test("check-in payload defaults injury and previous-session to none", () => {
+  const payload = buildTodayCheckinPayload({
+    planId: "11111111-1111-1111-1111-111111111111",
+    phase: "GPP",
+    sleep: "good",
+    body: "normal",
+    pain: "none",
+    safetyFlags: {
+      sharp_pain: false,
+      instability: false,
+      swelling: false,
+      neurological_symptoms: false,
+      illness_symptoms: false,
+      cannot_warm_into_movement: false,
+      worse_next_day_pain: false,
+    },
+  });
+
+  assert.equal(payload.active_injury, "none");
+  assert.equal(payload.previous_session, "none");
+});
+
 test("modified requires a reason and done/modified require review fields", () => {
   assert.equal(completionRequiresModificationReason("modified"), true);
   assert.equal(completionRequiresModificationReason("done"), false);
