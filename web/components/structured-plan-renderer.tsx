@@ -387,7 +387,8 @@ function weekdayLabel(date: string | null): string | null {
   if (Number.isNaN(parsed.getTime())) {
     return null;
   }
-  return parsed.toLocaleDateString(undefined, { weekday: "short" });
+  const weekdays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  return weekdays[parsed.getDay()];
 }
 
 function CompletionTag({ completion }: { completion: Completion }) {
