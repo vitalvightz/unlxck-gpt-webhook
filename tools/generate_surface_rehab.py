@@ -12,8 +12,8 @@ Run once to (re)generate the surface block:
 
     python tools/generate_surface_rehab.py
 
-It is idempotent: existing surface-type entries are dropped and rebuilt, all
-non-surface entries are preserved in order.
+It is not idempotent: the script will raise an error if surface-type
+entries are already present in the bank to protect existing curated entries.
 """
 
 from __future__ import annotations
