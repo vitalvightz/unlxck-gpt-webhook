@@ -107,7 +107,7 @@ export function MindsetAnchorCard({ anchor }: { anchor?: MindsetAnchor | null })
   );
   return (
     <div className="sp-mindset">
-      <p className="sp-eyebrow sp-accent">Mindset</p>
+      <p className="sp-eyebrow">Mindset</p>
       <ul className="sp-mindset-list">{lines.map(renderLine)}</ul>
     </div>
   );
@@ -203,7 +203,7 @@ function RehabSummary({ blocks }: { blocks: StructuredBlock[] }) {
   }
   return (
     <div className="sp-rehab-summary">
-      <p className="sp-eyebrow sp-accent">Rehab / Mobility</p>
+      <p className="sp-eyebrow">Rehab / Mobility</p>
       <ul className="sp-rehab-list">
         {blocks.map((block, index) => {
           const title = cleanText(block.display_name) || "Rehab block";
@@ -265,8 +265,8 @@ export function SessionCard({
         </div>
         <div className="sp-session-meta">
           {dayType ? <span className="sp-tag">{titleize(dayType)}</span> : null}
-          {readiness ? <span className="sp-tag sp-accent">{titleize(readiness)}</span> : null}
-          {sessionType ? <span className="sp-tag sp-accent">{titleize(sessionType)}</span> : null}
+          {readiness ? <span className="sp-tag">{titleize(readiness)}</span> : null}
+          {sessionType ? <span className="sp-tag">{titleize(sessionType)}</span> : null}
           {duration ? <span className="sp-tag">{duration}</span> : null}
         </div>
       </header>
@@ -322,7 +322,7 @@ export function TodayCard({ day }: { day: StructuredDay }) {
     <div className="sp-today">
       {headline ? <p className="sp-today-headline">{headline}</p> : null}
       {readiness ? (
-        <span className="sp-tag sp-accent">{titleize(readiness)}</span>
+        <span className="sp-tag">{titleize(readiness)}</span>
       ) : null}
       {warning ? <p className="sp-warning">{warning}</p> : null}
       {nutrition ? <p className="sp-today-note">{nutrition}</p> : null}
@@ -396,8 +396,10 @@ function CompletionTag({ completion }: { completion: Completion }) {
     return null;
   }
   const done = completion.done >= completion.total && completion.total > 0;
+  // "Done" is a positive, completed state — give it a calm success tone rather
+  // than the brand red, which we keep reserved for current action / risk.
   return (
-    <span className={`sp-tag${done ? " sp-accent" : ""}`}>
+    <span className={`sp-tag${done ? " sp-done" : ""}`}>
       {completion.done}/{completion.total} done
     </span>
   );
@@ -444,9 +446,11 @@ export function CampDayCard({
         <span className="cm-day-meta">
           {isCurrent ? <span className="sp-tag sp-accent">Today</span> : null}
           {dayType ? <span className="sp-tag">{titleize(dayType)}</span> : null}
-          <span className="sp-tag">
-            {sessionCount} session{sessionCount === 1 ? "" : "s"}
-          </span>
+          {sessionCount > 0 ? (
+            <span className="sp-tag">
+              {sessionCount} session{sessionCount === 1 ? "" : "s"}
+            </span>
+          ) : null}
           <CompletionTag completion={completion} />
         </span>
       </summary>
@@ -486,8 +490,8 @@ export function PlanHeader({ plan }: { plan: StructuredPlan }) {
     .filter((tag): tag is string => Boolean(tag));
 
   return (
-    <header className="sp-header">
-      <p className="sp-eyebrow sp-accent">Structured plan</p>
+    <header className="sp-header cm-command">
+      <p className="sp-eyebrow">Camp map</p>
       <h3 className="sp-title">{title}</h3>
       {profile ? <p className="sp-subtitle">{profile}</p> : null}
       {tags.length > 0 || eventDate ? (
@@ -515,7 +519,7 @@ export function ActiveNotesCard({ plan }: { plan: StructuredPlan }) {
   }
   return (
     <section className="sp-card sp-active-notes">
-      <p className="sp-eyebrow sp-accent">Active notes</p>
+      <p className="sp-eyebrow">Active notes</p>
       <ul className="sp-note-list">
         {notes.map((note, index) => (
           <li key={`${note.category}-${index}`} className={`sp-note sp-note-${note.category}`}>
@@ -556,7 +560,7 @@ export function RedFlagsCard({ plan }: { plan: StructuredPlan }) {
   return (
     <section className="sp-card sp-redflags" aria-label="Red flags and safety actions">
       <div className="sp-redflags-head">
-        <p className="sp-eyebrow sp-accent">Safety priority</p>
+        <p className="sp-eyebrow">Safety priority</p>
         <h4 className="sp-redflags-title">Red flags - stop &amp; report</h4>
       </div>
       <ul className="sp-redflag-list">
@@ -702,7 +706,7 @@ function NutritionPhaseCard({
   return (
     <section className="sp-card sp-support-card sp-nutrition">
       <div className="sp-support-head">
-        <p className="sp-eyebrow sp-accent">Nutrition</p>
+        <p className="sp-eyebrow">Nutrition</p>
         <span className="sp-tag">{phaseLabel}</span>
       </div>
       <CollapsibleSection
@@ -736,7 +740,7 @@ function RecoveryPhaseCard({
   return (
     <section className="sp-card sp-support-card sp-recovery">
       <div className="sp-support-head">
-        <p className="sp-eyebrow sp-accent">Recovery</p>
+        <p className="sp-eyebrow">Recovery</p>
         <span className="sp-tag">{phaseLabel}</span>
       </div>
       <CollapsibleSection
@@ -776,7 +780,7 @@ export function NutritionCard({ plan }: { plan: StructuredPlan }) {
   if (items.length === 0) {
     return (
       <section className="sp-card sp-nutrition">
-        <p className="sp-eyebrow sp-accent">Nutrition</p>
+        <p className="sp-eyebrow">Nutrition</p>
         <NutritionProse plan={plan} />
       </section>
     );
@@ -962,7 +966,7 @@ function WeekOverview({ week }: { week: StructuredWeek }) {
   return (
     <section className="sp-card cm-week-overview">
       <div className="cm-week-overview-head">
-        <p className="sp-eyebrow sp-accent">This week</p>
+        <p className="sp-eyebrow">This week</p>
         <h4 className="sp-redflags-title">{weekLabel(week)}</h4>
       </div>
       {goal ? <p className="sp-block-purpose">{goal}</p> : null}
@@ -1049,7 +1053,7 @@ export function StructuredPlanRenderer({
 
       {hasRecoverySupport || hasNutritionSupport ? (
         <section className="sp-card cm-support" aria-label="Support">
-          <p className="sp-eyebrow sp-accent">Support</p>
+          <p className="sp-eyebrow">Support</p>
           {hasRecoverySupport ? (
             <CollapsibleSection title="Recovery" detailLabel="recovery">
               <RecoveryCard plan={plan} />
@@ -1065,7 +1069,7 @@ export function StructuredPlanRenderer({
 
       {progressionNotes ? (
         <section className="sp-card sp-progression">
-          <p className="sp-eyebrow sp-accent">Progression notes</p>
+          <p className="sp-eyebrow">Progression notes</p>
           <p className="sp-block-purpose">{progressionNotes}</p>
         </section>
       ) : null}

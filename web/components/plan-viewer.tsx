@@ -586,7 +586,7 @@ export function parsePlanText(rawText: string): PlanTextGroup[] {
 function PlanTextNotesCard({ notes }: { notes: PlanTextNotes }) {
   return (
     <section className="sp-card sp-active-notes legacy-plan-notes">
-      <p className="sp-eyebrow sp-accent">{notes.title}</p>
+      <p className="sp-eyebrow">{notes.title}</p>
       {notes.lines.map((line, index) => (
         <p key={`${notes.title}-${index}`} className="sp-block-purpose">
           {line}
@@ -690,7 +690,7 @@ function PlanTextCards({ text }: { text: string }) {
         <article className="sp-session legacy-plan-card">
           <header className="sp-session-head">
             <div>
-              <p className="sp-eyebrow sp-accent">Saved plan</p>
+              <p className="sp-eyebrow">Saved plan</p>
               <h4 className="sp-session-title">No plan cards available</h4>
             </div>
           </header>
@@ -704,7 +704,7 @@ function PlanTextCards({ text }: { text: string }) {
   return (
     <section className="sp-root legacy-plan-root" aria-label="Saved plan cards">
       <header className="sp-header legacy-plan-header">
-        <p className="sp-eyebrow sp-accent">Saved plan</p>
+        <p className="sp-eyebrow">Saved plan</p>
         <h3 className="sp-title">Training plan</h3>
       </header>
       <div className="legacy-plan-card-stack">
