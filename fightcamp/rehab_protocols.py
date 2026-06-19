@@ -430,10 +430,11 @@ def _collect_surface_drills(
     pairs with the phase-appropriate note already selected.
     """
     phase = current_phase.upper()
+    injury_type_lower = str(injury_type or "").strip().lower()
     matches = [
         entry
         for entry in get_rehab_bank()
-        if entry.get("type") == injury_type
+        if entry.get("type") == injury_type_lower
         and (entry.get("location") in loc_candidates or entry.get("location") == "unspecified")
         and phase in _entry_phases(entry)
     ]
