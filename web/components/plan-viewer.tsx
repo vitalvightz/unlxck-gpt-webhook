@@ -4,8 +4,6 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
-import { getOptionLabels, TECHNICAL_STYLE_OPTIONS } from "@/lib/intake-options";
-import { WeeklySparringView } from "@/components/weekly-sparring-view";
 import {
   approveAndResumeGeneration,
   approvePlanForRelease,
@@ -1447,8 +1445,6 @@ export function PlanViewer({
   // Only surface an advisory that carries a real injury-risk band; the rest just
   // restate load tweaks the plan already applied, so they are suppressed.
   const primaryAdvisory = selectInjuryRiskAdvisory(plan.advisories);
-  const technicalStyles =
-    getOptionLabels(TECHNICAL_STYLE_OPTIONS, plan.technical_style).join(", ") || "Not provided";
 
   const athletePlanText = plan.outputs.plan_text.trim();
   const hasPublishedPlan = isPlanReleasedToAthlete(plan);
@@ -2171,30 +2167,9 @@ export function PlanViewer({
         {setActiveError ? <div className="error-banner">{setActiveError}</div> : null}
       </section>
 
-      <div className="plan-detail-layout">
-        <aside className="plan-summary-stack">
-          <section className="plan-summary-card">
-            <div className="plan-summary-header">
-              <p className="kicker">Summary</p>
-              <h2 className="plan-summary-title">Camp context</h2>
-            </div>
-            <div className="plan-meta-grid">
-              <article className="plan-meta-item">
-                <p className="plan-meta-label">Fight date</p>
-                <p className="plan-meta-value">{plan.fight_date || "Not provided"}</p>
-              </article>
-              <article className="plan-meta-item">
-                <p className="plan-meta-label">Technical Style</p>
-                <p className="plan-meta-value">{technicalStyles}</p>
-              </article>
-              <article className="plan-meta-item">
-                <p className="plan-meta-label">Created</p>
-                <p className="plan-meta-value">{new Date(plan.created_at).toLocaleDateString()}</p>
-              </article>
-            </div>
-          </section>
-
-          {canUseAdminOutputs ? (
+      <div className={`plan-detail-layout${canUseAdminOutputs ? "" : " plan-detail-layout-single"}`}>
+        {canUseAdminOutputs ? (
+          <aside className="plan-summary-stack">
             <section className="plan-summary-card">
               <div className="plan-summary-header">
                 <p className="kicker">Stage 2</p>
@@ -2255,43 +2230,48 @@ export function PlanViewer({
                 </>
               ) : null}
             </section>
-          ) : null}
-        </aside>
+          </aside>
+        ) : null}
 
         <section className="plan-text-panel">
-          <div className="plan-header-row">
-            <div>
-              <p className="kicker">Athlete Plan</p>
-              <h2>
+          {/* The validation status/badge is operational metadata. Athletes go
+              straight into the camp map (which carries its own header); admins
+              and any not-yet-published/triage state still see the status. */}
+          {canUseAdminOutputs || !hasPublishedPlan || isTriageBlocked ? (
+            <div className="plan-header-row">
+              <div>
+                <p className="kicker">{canUseAdminOutputs ? "Athlete Plan" : "Your plan"}</p>
+                <h2>
+                  {isTriageBlocked
+                    ? blockedTitle
+                    : plan.admin_outputs?.stage2_status === "triage_resume_approved"
+                      ? "Resume approved — regeneration pending"
+                    : hasPublishedPlan
+                      ? "Validated final plan"
+                      : "Pending finalization"}
+                </h2>
+              </div>
+              <span
+                className={`badge ${
+                  isTriageBlocked
+                    ? injuryTriage?.mode === "medical_hold"
+                      ? "issue-badge-error"
+                      : ""
+                    : hasPublishedPlan
+                      ? "status-badge-success"
+                      : "status-badge-neutral"
+                }`}
+              >
                 {isTriageBlocked
                   ? blockedTitle
                   : plan.admin_outputs?.stage2_status === "triage_resume_approved"
-                    ? "Resume approved — regeneration pending"
+                    ? "Resume pending"
                   : hasPublishedPlan
-                    ? "Validated final plan"
-                    : "Pending finalization"}
-              </h2>
+                    ? "Validated"
+                    : "Review required"}
+              </span>
             </div>
-            <span
-              className={`badge ${
-                isTriageBlocked
-                  ? injuryTriage?.mode === "medical_hold"
-                    ? "issue-badge-error"
-                    : ""
-                  : hasPublishedPlan
-                    ? "status-badge-success"
-                    : "status-badge-neutral"
-              }`}
-            >
-              {isTriageBlocked
-                ? blockedTitle
-                : plan.admin_outputs?.stage2_status === "triage_resume_approved"
-                  ? "Resume pending"
-                : hasPublishedPlan
-                  ? "Validated"
-                  : "Review required"}
-            </span>
-          </div>
+          ) : null}
 
           {primaryAdvisory ? <SparringAdvisoryCard advisory={primaryAdvisory} /> : null}
 
@@ -2326,7 +2306,6 @@ export function PlanViewer({
                   </button>
                 ) : null}
               </div>
-              <WeeklySparringView planId={plan.plan_id} />
               {shouldRenderStructuredPlan(plan.outputs) && plan.outputs.structured_plan ? (
                 <StructuredPlanRenderer plan={plan.outputs.structured_plan} />
               ) : (

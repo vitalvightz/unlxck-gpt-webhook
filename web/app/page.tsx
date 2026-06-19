@@ -448,7 +448,7 @@ export default function HomePage() {
               <p className="status-label">Risk watch</p>
               {visibleRisks.length ? visibleRisks.map((risk) => (
                 <div key={`${risk.category}-${risk.label}`} className="overview-operational-item">
-                  <span className="overview-operational-label">{risk.icon} {risk.label}</span>
+                  <span className="overview-operational-label">{risk.label}</span>
                   <span className="overview-operational-value">{risk.text || "Monitor before training."}</span>
                 </div>
               )) : <p className="muted">No risk flags from today&apos;s command view.</p>}

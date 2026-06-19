@@ -3240,6 +3240,11 @@ button.mobile-step-rail-item {
   grid-template-columns: minmax(260px, 320px) minmax(0, 1fr);
 }
 
+/* Athlete view has no operational sidebar — the plan spans the full width. */
+.plan-detail-layout-single {
+  grid-template-columns: minmax(0, 1fr);
+}
+
 .auth-layout {
   grid-template-columns: minmax(280px, 0.88fr) minmax(360px, 1.05fr);
 }
@@ -13533,46 +13538,6 @@ html[data-theme="light"] .loading-operational-item {
 }
 
 /* Readiness / risk strip */
-.cm-readiness {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: var(--space-2);
-}
-
-.cm-readiness-card {
-  display: grid;
-  gap: 4px;
-  padding: 12px 14px;
-  border-radius: var(--radius-stat);
-  border: 1px solid var(--border-default);
-  background: var(--bg-stat);
-}
-
-.cm-readiness-risk {
-  border-color: rgba(181, 18, 43, 0.4);
-  background: var(--danger-soft);
-}
-
-.cm-readiness-label {
-  margin: 0;
-  font-family: var(--font-mono), monospace;
-  font-size: 11px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--text-muted);
-}
-
-.cm-readiness-risk .cm-readiness-label {
-  color: var(--danger-ink);
-}
-
-.cm-readiness-value {
-  margin: 0;
-  font-size: 14px;
-  line-height: 1.35;
-  color: var(--text-primary);
-}
-
 /* Week strip */
 .cm-week-strip {
   display: flex;
@@ -13719,10 +13684,6 @@ html[data-theme="light"] .loading-operational-item {
 }
 
 @media (max-width: 720px) {
-  .cm-readiness {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
   .cm-week-pill {
     min-width: 84px;
   }
