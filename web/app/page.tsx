@@ -442,7 +442,7 @@ export default function HomePage() {
             <article className="status-card">
               <p className="status-label">Next session</p>
               <h2 className="plan-summary-title">{String(sessionPreview.title || sessionPreview.weekday || "No session found")}</h2>
-              <p className="muted">{String(sessionPreview["focus"] || sessionPreview["emphasis"] || sessionPreview.status || (hasActivePlan ? "Open Today for the matched session." : "Generate a plan to see your next session."))}</p>
+              <p className="muted">{String(sessionPreview["focus"] || sessionPreview["emphasis"] || sessionPreview["status"] || (hasActivePlan ? "Open Today for the matched session." : "Generate a plan to see your next session."))}</p>
             </article>
             <article className="status-card">
               <p className="status-label">Risk watch</p>
