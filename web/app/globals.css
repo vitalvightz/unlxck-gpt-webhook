@@ -4772,10 +4772,20 @@ button.mobile-step-rail-item {
 
 .today-hero-grid,
 .today-card-head,
-.today-action-row,
-.today-meta-strip {
+.today-action-row {
   display: flex;
   align-items: center;
+}
+
+.today-hero-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0;
+  font-family: var(--font-mono), monospace;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
 .today-hero-grid {
@@ -4805,18 +4815,6 @@ button.mobile-step-rail-item {
 .today-hero-actions {
   display: flex;
   align-items: center;
-}
-
-.today-grid {
-  display: grid;
-  grid-template-columns: minmax(0, 1.16fr) minmax(320px, 0.84fr);
-  gap: 16px;
-  align-items: start;
-}
-
-.today-stack {
-  display: grid;
-  gap: 16px;
 }
 
 .today-card {
@@ -4885,6 +4883,14 @@ button.mobile-step-rail-item {
   line-height: 1.35;
 }
 
+.today-decision-safety {
+  margin: 2px 0 0;
+  color: var(--text-secondary, rgba(255, 255, 255, 0.72));
+  font-size: 12.5px;
+  line-height: 1.35;
+  opacity: 0.85;
+}
+
 /* Today's resolved session blocks reuse the structured-plan (camp map) cards so
    they stay visually identical to Plan Detail, scoped to today's day only. */
 .today-blocks {
@@ -4907,7 +4913,6 @@ button.mobile-step-rail-item {
   letter-spacing: -0.025em;
 }
 
-.today-card-icon,
 .today-risk-icon {
   display: inline-flex;
   align-items: center;
@@ -4922,29 +4927,6 @@ button.mobile-step-rail-item {
   letter-spacing: 0.08em;
 }
 
-.today-card-icon {
-  width: 32px;
-  height: 32px;
-  border-radius: 999px;
-}
-
-.today-recommendation-card[data-tone="red"] .today-card-icon {
-  border-color: rgba(219, 47, 64, 0.5);
-  color: #ff6b75;
-}
-
-.today-recommendation-card[data-tone="amber"] .today-card-icon {
-  border-color: rgba(217, 161, 59, 0.5);
-  color: #f1bd61;
-}
-
-.today-recommendation-card[data-tone="green"] .today-card-icon {
-  border-color: rgba(65, 157, 99, 0.5);
-  color: #76d393;
-}
-
-.today-recommendation-reason,
-.today-safety-note,
 .today-terminal-status,
 .today-risk-text,
 .today-session-summary p,
@@ -4952,25 +4934,12 @@ button.mobile-step-rail-item {
   margin: 0;
 }
 
-.today-recommendation-reason {
-  color: var(--text-primary);
-  font-size: 16px;
-  line-height: 1.45;
-}
-
-.today-safety-note,
 .today-terminal-status {
   border-left: 3px solid rgba(219, 47, 64, 0.72);
   padding-left: 12px;
   color: var(--text-secondary);
 }
 
-.today-meta-strip {
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.today-meta-strip span,
 .today-risk-more {
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 999px;
@@ -4979,10 +4948,6 @@ button.mobile-step-rail-item {
   font-family: var(--font-mono), monospace;
   font-size: 11px;
   letter-spacing: 0.08em;
-}
-
-.today-session-jump {
-  width: fit-content;
 }
 
 .today-checkin-form,
@@ -5167,7 +5132,6 @@ button.mobile-step-rail-item {
     width: 100%;
   }
 
-  .today-grid,
   .today-session-summary,
   .today-completion-fields,
   .today-flag-grid {
