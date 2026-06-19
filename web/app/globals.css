@@ -12915,13 +12915,9 @@ html[data-theme="light"] .loading-operational-item {
   color: var(--success-ink);
 }
 /* Reserve red for risk and the current marker. Section eyebrows are structural
-   labels, not warnings, so they stay muted even when tagged sp-accent — only
-   the safety/red-flag eyebrow keeps the red emphasis. */
-.sp-eyebrow.sp-accent {
-  color: var(--text-muted);
-}
-.sp-redflags .sp-eyebrow,
-.sp-redflags .sp-eyebrow.sp-accent {
+   labels, so .sp-eyebrow is muted by default (above); only the safety/red-flag
+   eyebrow turns red, scoped to its card so the colour matches the meaning. */
+.sp-redflags .sp-eyebrow {
   color: var(--brand-red);
 }
 .sp-weeks {
