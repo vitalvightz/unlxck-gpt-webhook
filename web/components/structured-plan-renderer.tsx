@@ -34,8 +34,6 @@ import {
 } from "@/lib/structured-plan";
 import {
   dayCompletion,
-  findDayByISO,
-  getReadinessStrip,
   resolvePlanProgress,
   weekCompletion,
   weekLoadProxy,
@@ -243,7 +241,6 @@ export function SessionCard({
   const date = cleanText(day?.date);
   const countdown = cleanText(day?.countdown_label);
   const dayType = cleanText(day?.day_type);
-  const readiness = cleanText(card?.readiness_status);
   const warning = cleanText(card?.primary_warning);
   const nutrition = cleanText(card?.nutrition_summary);
   const weightCut = cleanText(card?.weight_cut_warning);
@@ -266,7 +263,6 @@ export function SessionCard({
         </div>
         <div className="sp-session-meta">
           {dayType ? <span className="sp-tag">{titleize(dayType)}</span> : null}
-          {readiness ? <span className="sp-tag">{titleize(readiness)}</span> : null}
           {sessionType ? <span className="sp-tag">{titleize(sessionType)}</span> : null}
           {duration ? <span className="sp-tag">{duration}</span> : null}
         </div>
@@ -852,40 +848,6 @@ function CampStatusLine({
 }
 
 /** Compact readiness/risk strip — only cards that have data; no fake metrics. */
-function ReadinessStripCards({
-  plan,
-  currentDay,
-  focusWeek,
-}: {
-  plan: StructuredPlan;
-  currentDay: StructuredDay | null;
-  focusWeek?: StructuredWeek;
-}) {
-  const strip = getReadinessStrip(plan, currentDay, focusWeek);
-  const cards = [
-    { label: "Today call", value: strip.todayCall, risk: false },
-    { label: "Focus", value: strip.focus, risk: false },
-    { label: "Injury watch", value: strip.risk, risk: true },
-    { label: "Load", value: strip.load, risk: false },
-  ].filter((card): card is { label: string; value: string; risk: boolean } => Boolean(card.value));
-  if (cards.length === 0) {
-    return null;
-  }
-  return (
-    <section className="cm-readiness" aria-label="Readiness">
-      {cards.map((card) => (
-        <article
-          key={card.label}
-          className={`cm-readiness-card${card.risk ? " cm-readiness-risk" : ""}`}
-        >
-          <p className="cm-readiness-label">{card.label}</p>
-          <p className="cm-readiness-value">{card.value}</p>
-        </article>
-      ))}
-    </section>
-  );
-}
-
 /** Horizontal, mobile-scrollable strip of week pills used to pick the week. */
 function WeekStrip({
   weeks,
@@ -1001,7 +963,6 @@ export function StructuredPlanRenderer({
   const mountedDay = useTrainingDay();
   const now = today ?? mountedDay;
   const progress = resolvePlanProgress(plan, now);
-  const currentDay = findDayByISO(plan, progress.currentDayDate);
   // The selected week is user-controllable; default to the current week (or the
   // first week when today falls outside the camp). `selectedPos` stays null until
   // the user picks a week so that, once the client-mounted current week resolves,
@@ -1022,7 +983,6 @@ export function StructuredPlanRenderer({
   const safePos = effectivePos >= 0 && effectivePos < weeks.length ? effectivePos : 0;
   const selectedWeek = weeks[safePos];
   const phaseWeek = weeks[progress.currentWeekPos ?? safePos] ?? selectedWeek;
-  const focusWeek = currentDay ? weeks[progress.currentWeekPos ?? 0] : selectedWeek;
 
   const progressionNotes = cleanText(plan.progression_notes);
   const rawFallback = cleanText(plan.raw_markdown_fallback);
@@ -1034,7 +994,6 @@ export function StructuredPlanRenderer({
     <div className="sp-root cm-root">
       <PlanHeader plan={plan} />
       <CampStatusLine plan={plan} progress={progress} phaseWeek={phaseWeek} />
-      <ReadinessStripCards plan={plan} currentDay={currentDay} focusWeek={focusWeek} />
       <ActiveNotesCard plan={plan} />
       <RedFlagsCard plan={plan} />
 

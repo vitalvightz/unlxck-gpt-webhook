@@ -240,7 +240,7 @@ test("renders a coach-led / sparring day with no app blocks as its own card", ()
   assert.equal(countOccurrences(html, "Rest day."), 1);
 });
 
-test("marks the current day and surfaces the readiness strip + camp status", () => {
+test("marks the current day and surfaces the camp status + week focus", () => {
   const plan = {
     schema_version: "1.0",
     plan_metadata: { title: "Fight Camp", sport: "boxing", plan_type: "fight_camp" },
@@ -274,10 +274,12 @@ test("marks the current day and surfaces the readiness strip + camp status", () 
   // Camp status chips and countdown.
   assert.equal(html.includes("Week 1 of 1"), true);
   assert.equal(html.includes("D-28"), true);
-  // Readiness strip cards (today call from the day, focus from the week goal).
-  assert.equal(html.includes("Today call"), true);
+  // Week focus still surfaces via the week overview (the separate readiness
+  // cube strip was removed as bloat — the camp map header carries status now).
   assert.equal(html.includes("Convert strength into speed."), true);
-  assert.equal(html.includes("Injury watch"), true);
+  // The standalone "Today call" / "Injury watch" cubes are gone.
+  assert.equal(html.includes("Today call"), false);
+  assert.equal(html.includes("Injury watch"), false);
   // Current day is flagged.
   assert.equal(html.includes("cm-day-current"), true);
   assert.equal(html.includes("1/1 done"), true);
@@ -311,7 +313,7 @@ test("uses an athlete-readable camp-map command header, not internal wording", (
   assert.equal(html.includes("Structured plan"), false);
 });
 
-test("does not leak raw enum tokens for day type, session type or readiness", () => {
+test("does not leak raw enum tokens for day type or session type", () => {
   const plan = {
     schema_version: "1.0",
     plan_metadata: { title: "Fight Camp", sport: "boxing", plan_type: "fight_camp" },
@@ -343,9 +345,11 @@ test("does not leak raw enum tokens for day type, session type or readiness", ()
   const html = renderToStaticMarkup(<StructuredPlanRenderer plan={plan} today={new Date(2026, 5, 19)} />);
 
   assert.equal(html.includes("strength_power"), false);
-  assert.equal(html.includes("train_as_planned"), false);
   assert.equal(html.includes("Strength &amp; power"), true);
-  assert.equal(html.includes("Train as planned"), true);
+  // The readiness/"train as planned" tag was removed as bloat — the app owns
+  // that decision (it surfaces on Today), so it must not appear in the map at all.
+  assert.equal(html.includes("train_as_planned"), false);
+  assert.equal(html.includes("Train as planned"), false);
 });
 
 test("a session-less rest day does not render an awkward '0 sessions' tag", () => {

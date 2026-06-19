@@ -32,7 +32,6 @@ import type {
   TodaySessionCompletionRequest,
   TodaySessionCompletionResponse,
   UsernameChangeRequest,
-  WeeklySchedule,
 } from "@/lib/types";
 
 const EXPLICIT_API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") ?? null;
@@ -597,24 +596,6 @@ export function getPlan(token: string, planId: string): Promise<PlanDetail> {
   return withTransientRetries(() =>
     readJson<PlanDetail>(`/api/plans/${encodeURIComponent(planId)}`, { token }),
   );
-}
-
-export async function fetchWeeklySchedule(
-  planId: string,
-  weekIndex = 0,
-  token?: string | null,
-): Promise<WeeklySchedule | null> {
-  try {
-    return await readJson<WeeklySchedule>(
-      `/api/plans/${encodeURIComponent(planId)}/weekly-schedule?week_index=${weekIndex}`,
-      { token },
-    );
-  } catch (error) {
-    if (error instanceof ApiError && error.status === 404) {
-      return null;
-    }
-    throw error;
-  }
 }
 
 export function renamePlan(token: string, planId: string, planName: string): Promise<PlanDetail> {
