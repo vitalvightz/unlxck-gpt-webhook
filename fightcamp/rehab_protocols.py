@@ -4,6 +4,7 @@ from typing import Iterable
 
 from .injury_formatting import format_injury_summary, parse_injury_entry
 from .injury_guard import INJURY_TYPE_SEVERITY, normalize_severity
+from .injury_registry import SURFACE_TISSUE_TYPES
 from .injury_taxonomy import derive_red_flag_types, derive_urgent_injury_tokens
 from .injury_synonyms import parse_injury_phrase, split_injury_text
 from .injury_location import canonicalize_location, get_injury_location
@@ -398,6 +399,22 @@ BFR_SAFETY_GATE = (
     "stop if numbness/tingling occurs."
 )
 
+# Surface/skin injuries (cut, abrasion, laceration, graze, blister) are
+# integumentary, not musculoskeletal. Loading-style rehab (isometrics,
+# eccentrics, tendon/balance work) does nothing for skin healing and can
+# reopen the wound or invite infection, so we never assign rehab drills to
+# them. The correct prescription is wound care, surfaced as a single note.
+SURFACE_WOUND_CARE_NOTE = (
+    "Skin/surface injury — no loading rehab needed. Keep it clean and covered, "
+    "avoid friction or contact that could reopen it, and monitor for infection "
+    "(spreading redness, heat, swelling, pus, or fever). Return to full contact "
+    "once the wound has closed."
+)
+
+
+def _is_surface_type(injury_type: str | None) -> bool:
+    return str(injury_type or "").strip().lower() in SURFACE_TISSUE_TYPES
+
 # ---------------------------------------------------------------------------
 # Surgical Rehab Integration – function classification and formatting
 # ---------------------------------------------------------------------------
@@ -739,6 +756,12 @@ def generate_rehab_protocols(
     lines = []
 
     for itype, loc, group_key in unique_entries:
+        if _is_surface_type(itype):
+            merged = merged_by_key.get(group_key) if group_key else None
+            loc_title = _render_location_heading(loc, merged)
+            type_title = itype.title() if itype else "Surface"
+            lines.append(f"- {loc_title} ({type_title}): {SURFACE_WOUND_CARE_NOTE}")
+            continue
         loc_candidates = normalize_rehab_location(loc)
         matches = [
             entry
@@ -1178,6 +1201,11 @@ def build_coach_review_entries(
 
 
 def _rehab_drills_for_phase(itype: str, loc: str | None, phase: str, limit: int = 4) -> list[str]:
+    # Surface/skin injuries never get loading rehab drills (see
+    # SURFACE_WOUND_CARE_NOTE). Without this guard they fall through to the
+    # location's "unspecified" bank entries and pick up musculoskeletal drills.
+    if _is_surface_type(itype):
+        return []
     phase = phase.upper()
     drills: list[str] = []
 
@@ -1310,7 +1338,9 @@ def format_injury_guardrails(
                     "display_location": entry.get("display_location"),
                 }
             )
-            if drills:
+            if _is_surface_type(itype):
+                lines.append(f"- {summary}: {SURFACE_WOUND_CARE_NOTE}")
+            elif drills:
                 lines.append(f"- {summary}:")
                 lines.extend([f"  - {d}" for d in drills[:4]])
             else:
