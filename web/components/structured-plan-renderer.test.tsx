@@ -144,7 +144,7 @@ test("renders fallback safety card from active notes when red flag rules are abs
   assert.equal(html.includes("Stop immediately and report"), true);
 });
 
-test("attaches deterministic nutrition and recovery to matching week phases", () => {
+test("collapses deterministic nutrition and recovery into a support section at the bottom", () => {
   const plan = {
     schema_version: "1.0",
     plan_metadata: { title: "Fight Camp", sport: "boxing", plan_type: "fight_camp" },
@@ -186,18 +186,18 @@ test("attaches deterministic nutrition and recovery to matching week phases", ()
     },
   } satisfies StructuredPlan;
 
-  const html = renderToStaticMarkup(<StructuredPlanRenderer plan={plan} />);
-  const week1Index = html.indexOf("Week 1");
-  const nutritionIndex = html.indexOf("Nutrition");
-  const week2Index = html.indexOf("Week 2");
+  const html = renderToStaticMarkup(<StructuredPlanRenderer plan={plan} today={new Date(2030, 0, 1)} />);
 
-  assert.equal(week1Index >= 0, true);
-  assert.equal(nutritionIndex > week1Index, true);
-  assert.equal(nutritionIndex < week2Index, true);
-  assert.equal(html.includes("Hide General prep nutrition"), true);
-  assert.equal(html.includes("Hide General prep recovery"), true);
-  assert.equal(html.includes("Hide Specific prep nutrition"), true);
-  assert.equal(html.includes("General prep +"), false);
+  // The week strip exposes both weeks as pills.
+  assert.equal(html.includes("W1"), true);
+  assert.equal(html.includes("W2"), true);
+  // Support sits in its own collapsed section near the bottom (after the weeks).
+  const supportIndex = html.indexOf("Support");
+  assert.equal(supportIndex > html.indexOf("W2"), true);
+  assert.equal(html.includes("Show recovery"), true);
+  assert.equal(html.includes("Show nutrition"), true);
+  // Deterministic per-phase content still renders inside the support section.
+  assert.equal(html.includes("General prep"), true);
 });
 
 test("renders a coach-led / sparring day with no app blocks as its own card", () => {
@@ -238,6 +238,64 @@ test("renders a coach-led / sparring day with no app blocks as its own card", ()
   assert.equal(html.includes("sp-day-card-technical"), true);
   // The genuine rest day still reads as a rest day exactly once.
   assert.equal(countOccurrences(html, "Rest day."), 1);
+});
+
+test("marks the current day and surfaces the readiness strip + camp status", () => {
+  const plan = {
+    schema_version: "1.0",
+    plan_metadata: { title: "Fight Camp", sport: "boxing", plan_type: "fight_camp" },
+    event_context: { fight_date: "2026-07-17" },
+    red_flag_rules: [
+      { rule_id: "rf-1", severity: "red", display_text: "Stop if Achilles pain is high." },
+    ],
+    weeks: [
+      {
+        week_id: "wk-1",
+        week_index: 4,
+        phase_label: "SPP",
+        week_goal: "Convert strength into speed.",
+        days: [
+          {
+            date: "2026-06-19",
+            day_type: "high",
+            countdown_label: "D-28",
+            today_card: { headline: "Train as planned" },
+            sessions: [
+              { session_id: "s1", title: "Lower power", completion_status: "done", blocks: [] },
+            ],
+          },
+        ],
+      },
+    ],
+  } satisfies StructuredPlan;
+
+  const html = renderToStaticMarkup(<StructuredPlanRenderer plan={plan} today={new Date(2026, 5, 19)} />);
+
+  // Camp status chips and countdown.
+  assert.equal(html.includes("Week 1 of 1"), true);
+  assert.equal(html.includes("D-28"), true);
+  // Readiness strip cards (today call from the day, focus from the week goal).
+  assert.equal(html.includes("Today call"), true);
+  assert.equal(html.includes("Convert strength into speed."), true);
+  assert.equal(html.includes("Injury watch"), true);
+  // Current day is flagged.
+  assert.equal(html.includes("cm-day-current"), true);
+  assert.equal(html.includes("1/1 done"), true);
+});
+
+test("renders the raw markdown fallback collapsed at the bottom", () => {
+  const plan = {
+    schema_version: "1.0",
+    plan_metadata: { title: "Fight Camp", sport: "boxing", plan_type: "fight_camp" },
+    weeks: [{ week_id: "wk-1", week_index: 1, phase_label: "GPP", days: [] }],
+    raw_markdown_fallback: "## Original plan\nLegacy text body.",
+  } satisfies StructuredPlan;
+
+  const html = renderToStaticMarkup(<StructuredPlanRenderer plan={plan} today={new Date(2030, 0, 1)} />);
+
+  assert.equal(html.includes("Original plan text"), true);
+  assert.equal(html.includes("Legacy text body."), true);
+  assert.equal(html.includes("cm-raw-fallback"), true);
 });
 
 test("renders plan-level active notes as a standalone card", () => {

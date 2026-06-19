@@ -11,13 +11,16 @@ import {
   approvePlanForRelease,
   archivePlan,
   deletePlan,
+  getActivePlan,
   getPlan,
   isRetryableApiFailure,
   permanentlyDeletePlan,
   rejectApprovedPlan,
   renamePlan,
+  setActivePlan,
   submitManualStage2,
 } from "@/lib/api";
+import { canSetActivePlan } from "@/lib/plan-active";
 import { clearCompletedGenerationForDeletedPlan } from "@/lib/completed-generation";
 import { PremiumLoadingScreen } from "@/components/premium-loading-screen";
 import { QuickBuildRefinementBanner } from "@/components/quick-build-refinement-banner";
@@ -1580,6 +1583,9 @@ export function PlanViewer({
   const [archivePending, setArchivePending] = useState(false);
   const [archiveMessage, setArchiveMessage] = useState<string | null>(null);
   const [archiveError, setArchiveError] = useState<string | null>(null);
+  const [activePlanId, setActivePlanId] = useState<string | null>(null);
+  const [setActivePending, setSetActivePending] = useState(false);
+  const [setActiveError, setSetActiveError] = useState<string | null>(null);
   const [planActionPending, setPlanActionPending] = useState<
     "rename" | "archive" | "permanent-delete" | null
   >(null);
@@ -1647,6 +1653,30 @@ export function PlanViewer({
   useEffect(() => {
     setManualPlanText(plan.admin_outputs?.final_plan_text || "");
   }, [plan.plan_id, plan.admin_outputs?.final_plan_text]);
+
+  // Resolve which plan is the athlete's active one so this page can show the
+  // ACTIVE badge / Set active control without duplicating Today's job. A missing
+  // active plan is a normal state (no plan set yet), so failures stay silent.
+  useEffect(() => {
+    if (!accessToken || !canManagePlan) {
+      return;
+    }
+    let cancelled = false;
+    getActivePlan(accessToken)
+      .then((active) => {
+        if (!cancelled) {
+          setActivePlanId(active?.plan_id ?? null);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setActivePlanId(null);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [accessToken, canManagePlan, plan.plan_id]);
 
   useEffect(() => {
     setOpenAdminSection(
@@ -1804,6 +1834,27 @@ export function PlanViewer({
       setRejectError(error instanceof Error ? error.message : "Unable to reject this plan.");
     } finally {
       setRejectPending(false);
+    }
+  }
+
+  async function handleSetActive() {
+    if (!accessToken) {
+      setSetActiveError("Session expired. Sign in again.");
+      return;
+    }
+    if (!canSetActivePlan(plan.status)) {
+      setSetActiveError("This plan cannot be set active from its current state.");
+      return;
+    }
+    setSetActivePending(true);
+    setSetActiveError(null);
+    try {
+      const active = await setActivePlan(accessToken, plan.plan_id);
+      setActivePlanId(active.plan_id);
+    } catch (error) {
+      setSetActiveError(error instanceof Error ? error.message : "Unable to set this plan active.");
+    } finally {
+      setSetActivePending(false);
     }
   }
 
@@ -2040,7 +2091,12 @@ export function PlanViewer({
           </div>
           <div className="status-card">
             <p className="status-label">Status</p>
-            <h2 className="plan-summary-title">{statusLabel}</h2>
+            <h2 className="plan-summary-title">
+              {statusLabel}
+              {activePlanId === plan.plan_id ? (
+                <span className="badge status-badge-success cm-active-badge">ACTIVE</span>
+              ) : null}
+            </h2>
             <p className="muted">
               {isTriageBlocked
                 ? "Stage 2 was skipped intentionally."
@@ -2049,10 +2105,31 @@ export function PlanViewer({
           </div>
         </div>
 
+        {(plan.status || "").trim().toLowerCase() === "archived" ? (
+          <div className="quick-build-refine-banner cm-archived-banner" role="status">
+            This plan is archived — view only. Restore it from plan history to set it active again.
+          </div>
+        ) : null}
+
         <div className="plan-summary-actions">
           <Link href="/plans" className="ghost-button">
             Back to plans
           </Link>
+          {canManagePlan && activePlanId === plan.plan_id ? (
+            <Link href="/today" className="cta">
+              Open Today
+            </Link>
+          ) : null}
+          {canManagePlan && activePlanId !== plan.plan_id && canSetActivePlan(plan.status) ? (
+            <button
+              type="button"
+              className="cta"
+              onClick={handleSetActive}
+              disabled={setActivePending}
+            >
+              {setActivePending ? "Setting active..." : "Set active"}
+            </button>
+          ) : null}
           {canManagePlan ? (
             <>
               <button
@@ -2091,6 +2168,7 @@ export function PlanViewer({
         </div>
         {planActionMessage ? <div className="success-banner">{planActionMessage}</div> : null}
         {planActionError ? <div className="error-banner">{planActionError}</div> : null}
+        {setActiveError ? <div className="error-banner">{setActiveError}</div> : null}
       </section>
 
       <div className="plan-detail-layout">

@@ -32,6 +32,15 @@ import {
   shouldShowRest,
   weekLabel,
 } from "@/lib/structured-plan";
+import {
+  dayCompletion,
+  findDayByISO,
+  getReadinessStrip,
+  resolvePlanProgress,
+  weekCompletion,
+  weekLoadProxy,
+  type Completion,
+} from "@/lib/camp-map";
 import { formatPlanLabel } from "@/lib/plan-labels";
 import type {
   DeterministicNutritionPhase,
@@ -214,12 +223,14 @@ function RehabSummary({ blocks }: { blocks: StructuredBlock[] }) {
 export function SessionCard({
   session,
   day,
+  defaultOpenBlocks,
 }: {
   session: StructuredSession;
   day?: StructuredDay;
+  defaultOpenBlocks?: boolean;
 }) {
   const detailsId = useId();
-  const [showDetails, setShowDetails] = useState(false);
+  const [showDetails, setShowDetails] = useState(Boolean(defaultOpenBlocks));
   const card = day?.today_card;
   const title =
     cleanText(session.title) ||
@@ -367,52 +378,93 @@ export function SessionlessDayCard({ day }: { day: StructuredDay }) {
   );
 }
 
-export function DaySection({ day }: { day: StructuredDay }) {
-  const sessions = getSessions(day);
+/** Short weekday name from an ISO date string ("2026-06-19" -> "Fri"), or null. */
+function weekdayLabel(date: string | null): string | null {
+  if (!date) {
+    return null;
+  }
+  const parsed = new Date(`${date.slice(0, 10)}T00:00:00`);
+  if (Number.isNaN(parsed.getTime())) {
+    return null;
+  }
+  const weekdays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  return weekdays[parsed.getDay()];
+}
 
+function CompletionTag({ completion }: { completion: Completion }) {
+  if (completion.total === 0) {
+    return null;
+  }
+  const done = completion.done >= completion.total && completion.total > 0;
   return (
-    <section className="sp-day">
-      {sessions.length > 0 ? (
-        <div className="sp-sessions">
-          {sessions.map((session, index) => (
-            <SessionCard
-              key={cleanText(session.session_id) || `session-${index}`}
-              session={session}
-              day={index === 0 ? day : undefined}
-            />
-          ))}
-        </div>
-      ) : (
-        <SessionlessDayCard day={day} />
-      )}
-    </section>
+    <span className={`sp-tag${done ? " sp-accent" : ""}`}>
+      {completion.done}/{completion.total} done
+    </span>
   );
 }
 
-export function WeekSection({ week, defaultOpen }: { week: StructuredWeek; defaultOpen?: boolean }) {
-  // Track open state locally and sync via onToggle so a user-opened/collapsed
-  // week is not reset to defaultOpen when the parent re-renders. (A bare
-  // `open={defaultOpen}` would force the native <details> back on every render.)
+/**
+ * One day of the selected week, as a collapsible card. Collapsed by default
+ * except the current/selected day so the athlete lands on what matters today;
+ * the current day's session blocks are expanded too. Session-less days reuse the
+ * deterministic coach-led / rest classification.
+ */
+export function CampDayCard({
+  day,
+  isCurrent,
+  defaultOpen,
+}: {
+  day: StructuredDay;
+  isCurrent?: boolean;
+  defaultOpen?: boolean;
+}) {
+  // Local open state synced via onToggle so a user toggle is not reset on
+  // re-render (a bare open={defaultOpen} would force <details> back each render).
   const [open, setOpen] = useState<boolean>(Boolean(defaultOpen));
-  const days = getDays(week);
-  const phase = cleanText(week.phase_label);
+  const sessions = getSessions(day);
+  const date = cleanText(day.date);
+  const weekday = weekdayLabel(date);
+  const countdown = cleanText(day.countdown_label);
+  const dayType = cleanText(day.day_type);
+  const warning = cleanText(day.today_card?.primary_warning);
+  const completion = dayCompletion(day);
+  const sessionCount = sessions.length;
+
   return (
     <details
-      className="sp-week"
+      className={`sp-week cm-day${isCurrent ? " cm-day-current" : ""}`}
       open={open}
       onToggle={(event) => setOpen(event.currentTarget.open)}
     >
-      <summary className="sp-week-summary">
-        <span className="sp-week-title">{weekLabel(week)}</span>
-        {phase ? <span className="sp-tag sp-accent">{phase}</span> : null}
+      <summary className="sp-week-summary cm-day-summary">
+        <span className="cm-day-head">
+          {countdown ? <span className="sp-countdown sp-accent">{countdown}</span> : null}
+          <span className="sp-week-title">{weekday || date || "Day"}</span>
+        </span>
+        <span className="cm-day-meta">
+          {isCurrent ? <span className="sp-tag sp-accent">Today</span> : null}
+          {dayType ? <span className="sp-tag">{titleize(dayType)}</span> : null}
+          <span className="sp-tag">
+            {sessionCount} session{sessionCount === 1 ? "" : "s"}
+          </span>
+          <CompletionTag completion={completion} />
+        </span>
       </summary>
       <div className="sp-week-body">
-        {days.length > 0 ? (
-          days.map((day, index) => (
-            <DaySection key={cleanText(day.date) || `day-${index}`} day={day} />
-          ))
+        {warning ? <p className="sp-warning">{warning}</p> : null}
+        {sessions.length > 0 ? (
+          <div className="sp-sessions">
+            {sessions.map((session, index) => (
+              <SessionCard
+                key={cleanText(session.session_id) || `session-${index}`}
+                session={session}
+                day={index === 0 ? day : undefined}
+                defaultOpenBlocks={isCurrent}
+              />
+            ))}
+          </div>
         ) : (
-          <p className="sp-muted">No days scheduled.</p>
+          <SessionlessDayCard day={day} />
         )}
       </div>
     </details>
@@ -713,45 +765,6 @@ function RecoveryPhaseCard({
   );
 }
 
-function PhaseSupportCards({
-  phaseKey,
-  nutritionItems,
-  recoveryItems,
-}: {
-  phaseKey: string;
-  nutritionItems: NutritionPhaseItem[];
-  recoveryItems: RecoveryPhaseItem[];
-}) {
-  const nutrition = nutritionItems.filter((item) => item.phaseKey === phaseKey);
-  const recovery = recoveryItems.filter((item) => item.phaseKey === phaseKey);
-  if (nutrition.length === 0 && recovery.length === 0) {
-    return null;
-  }
-  return (
-    <div className="sp-phase-support" aria-label={`${titleize(phaseKey)} support`}>
-      <div className="sp-phase-support-grid">
-        {nutrition.map((item) => (
-          <NutritionPhaseCard key={`nutrition-${item.phase}`} item={item} defaultOpen />
-        ))}
-        {recovery.map((item) => (
-          <RecoveryPhaseCard key={`recovery-${item.phase}`} item={item} defaultOpen />
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function phaseHasSupport(
-  phaseKey: string,
-  nutritionItems: NutritionPhaseItem[],
-  recoveryItems: RecoveryPhaseItem[],
-): boolean {
-  return (
-    nutritionItems.some((item) => item.phaseKey === phaseKey) ||
-    recoveryItems.some((item) => item.phaseKey === phaseKey)
-  );
-}
-
 // Owns the full nutrition details. Deterministic Stage 1 macros/hydration/fuel
 // timing win when present; the legacy prose fields are the fallback only. Never
 // renders coach_gated (it is stripped server-side before reaching the frontend).
@@ -794,66 +807,279 @@ export function RecoveryCard({ plan }: { plan: StructuredPlan }) {
   );
 }
 
-export function StructuredPlanRenderer({ plan }: { plan: StructuredPlan }) {
-  const weeks = getWeeks(plan);
-  const progressionNotes = cleanText(plan.progression_notes);
-  const nutritionItems = getNutritionPhaseItems(plan);
-  const recoveryItems = getRecoveryPhaseItems(plan);
-  const hasDeterministicSupport = nutritionItems.length > 0 || recoveryItems.length > 0;
-  const attachedSupportKeys = new Set<string>();
-  const weekEntries = weeks.map((week, index) => {
-    const phaseKey = normalizeSupportPhaseKey(week.phase_label);
-    const nextPhaseKey = normalizeSupportPhaseKey(weeks[index + 1]?.phase_label);
-    const supportKey =
-      phaseKey && phaseKey !== nextPhaseKey && phaseHasSupport(phaseKey, nutritionItems, recoveryItems)
-        ? phaseKey
+/** Compact camp-status chips: phase, "Week X of Y", D-label, event date. */
+function CampStatusLine({
+  plan,
+  progress,
+  phaseWeek,
+}: {
+  plan: StructuredPlan;
+  progress: ReturnType<typeof resolvePlanProgress>;
+  phaseWeek?: StructuredWeek;
+}) {
+  const phase = cleanText(phaseWeek?.phase_label);
+  const eventDate =
+    cleanText(plan.event_context?.fight_date) || cleanText(plan.event_context?.match_date);
+  const weekPosLabel =
+    progress.currentWeekPos != null
+      ? `Week ${progress.currentWeekPos + 1} of ${progress.weekCount}`
+      : progress.weekCount > 0
+        ? `${progress.weekCount} week camp`
         : null;
-    if (supportKey) {
-      attachedSupportKeys.add(supportKey);
-    }
-    return { week, index, supportKey };
-  });
-  const remainingSupportKeys = Array.from(
-    new Set(
-      [...nutritionItems, ...recoveryItems]
-        .map((item) => item.phaseKey)
-        .filter((phaseKey): phaseKey is string => Boolean(phaseKey)),
-    ),
-  ).filter((phaseKey) => !attachedSupportKeys.has(phaseKey));
+  const chips = [
+    phase ? titleize(phase) : null,
+    weekPosLabel,
+    progress.dLabel,
+    eventDate ? `Fight ${eventDate}` : null,
+  ].filter((chip): chip is string => Boolean(chip));
+  if (chips.length === 0) {
+    return null;
+  }
+  return (
+    <div className="cm-status-line" aria-label="Camp status">
+      {chips.map((chip, index) => (
+        <span key={`${chip}-${index}`} className="cm-status-chip">
+          {chip}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+/** Compact readiness/risk strip — only cards that have data; no fake metrics. */
+function ReadinessStripCards({
+  plan,
+  currentDay,
+  focusWeek,
+}: {
+  plan: StructuredPlan;
+  currentDay: StructuredDay | null;
+  focusWeek?: StructuredWeek;
+}) {
+  const strip = getReadinessStrip(plan, currentDay, focusWeek);
+  const cards = [
+    { label: "Today call", value: strip.todayCall, risk: false },
+    { label: "Focus", value: strip.focus, risk: false },
+    { label: "Injury watch", value: strip.risk, risk: true },
+    { label: "Load", value: strip.load, risk: false },
+  ].filter((card): card is { label: string; value: string; risk: boolean } => Boolean(card.value));
+  if (cards.length === 0) {
+    return null;
+  }
+  return (
+    <section className="cm-readiness" aria-label="Readiness">
+      {cards.map((card) => (
+        <article
+          key={card.label}
+          className={`cm-readiness-card${card.risk ? " cm-readiness-risk" : ""}`}
+        >
+          <p className="cm-readiness-label">{card.label}</p>
+          <p className="cm-readiness-value">{card.value}</p>
+        </article>
+      ))}
+    </section>
+  );
+}
+
+/** Horizontal, mobile-scrollable strip of week pills used to pick the week. */
+function WeekStrip({
+  weeks,
+  selectedPos,
+  currentPos,
+  onSelect,
+}: {
+  weeks: StructuredWeek[];
+  selectedPos: number;
+  currentPos: number | null;
+  onSelect: (pos: number) => void;
+}) {
+  return (
+    <nav className="cm-week-strip" aria-label="Camp weeks">
+      {weeks.map((week, pos) => {
+        const completion = weekCompletion(week);
+        const phase = cleanText(week.phase_label);
+        const index = typeof week.week_index === "number" ? week.week_index : pos + 1;
+        const selected = pos === selectedPos;
+        const current = pos === currentPos;
+        return (
+          <button
+            key={cleanText(week.week_id) || `week-${pos}`}
+            type="button"
+            className={`cm-week-pill${selected ? " cm-week-pill-selected" : ""}${
+              current ? " cm-week-pill-current" : ""
+            }`}
+            aria-current={current ? "step" : undefined}
+            aria-pressed={selected}
+            onClick={() => onSelect(pos)}
+          >
+            <span className="cm-week-pill-index">W{index}</span>
+            {phase ? <span className="cm-week-pill-phase">{titleize(phase)}</span> : null}
+            {completion.total > 0 ? (
+              <span className="cm-week-pill-completion">
+                {completion.done}/{completion.total}
+              </span>
+            ) : null}
+            {current ? <span className="cm-week-pill-now">Now</span> : null}
+          </button>
+        );
+      })}
+    </nav>
+  );
+}
+
+/** The selected week's purpose, phase, countdown/dates, load proxy, completion. */
+function WeekOverview({ week }: { week: StructuredWeek }) {
+  const phase = cleanText(week.phase_label);
+  const goal = cleanText(week.week_goal);
+  const load = weekLoadProxy(week);
+  const completion = weekCompletion(week);
+  const days = getDays(week);
+  const countdownStart = cleanText(week.countdown_start);
+  const countdownEnd = cleanText(week.countdown_end);
+  const countdownRange =
+    countdownStart && countdownEnd
+      ? `${countdownStart} → ${countdownEnd}`
+      : countdownStart || countdownEnd;
+  const startDate = cleanText(week.start_date);
+  const endDate = cleanText(week.end_date);
+  const dateRange =
+    startDate && endDate ? `${startDate} → ${endDate}` : startDate || endDate;
+  const warning = days
+    .map((day) => cleanText(day.today_card?.primary_warning))
+    .find((value): value is string => Boolean(value));
+  const rows = [
+    { label: "Phase", value: phase ? titleize(phase) : null },
+    { label: "Countdown", value: countdownRange },
+    { label: "Dates", value: dateRange },
+    { label: "Load", value: load },
+    { label: "Days", value: days.length > 0 ? `${days.length}` : null },
+    {
+      label: "Completed",
+      value: completion.total > 0 ? `${completion.done}/${completion.total}` : null,
+    },
+  ].filter((row): row is { label: string; value: string } => Boolean(row.value));
 
   return (
-    <div className="sp-root">
+    <section className="sp-card cm-week-overview">
+      <div className="cm-week-overview-head">
+        <p className="sp-eyebrow sp-accent">This week</p>
+        <h4 className="sp-redflags-title">{weekLabel(week)}</h4>
+      </div>
+      {goal ? <p className="sp-block-purpose">{goal}</p> : null}
+      {rows.length > 0 ? (
+        <div className="sp-block-stats cm-week-overview-stats">
+          {rows.map((row) => (
+            <span key={row.label} className="sp-stat">
+              <span className="sp-stat-label">{row.label}</span>
+              {row.value}
+            </span>
+          ))}
+        </div>
+      ) : null}
+      {warning ? <p className="sp-warning">{warning}</p> : null}
+    </section>
+  );
+}
+
+export function StructuredPlanRenderer({
+  plan,
+  today,
+}: {
+  plan: StructuredPlan;
+  today?: Date;
+}) {
+  const weeks = getWeeks(plan);
+  const now = today ?? new Date();
+  const progress = resolvePlanProgress(plan, now);
+  const currentDay = findDayByISO(plan, progress.currentDayDate);
+  const initialPos = progress.currentWeekPos ?? 0;
+  // The selected week is user-controllable; default to the current week (or the
+  // first week when today falls outside the camp). Clamp against weeks length so
+  // a stale index can never index past the array.
+  const [selectedPos, setSelectedPos] = useState<number>(initialPos);
+  const safePos = selectedPos >= 0 && selectedPos < weeks.length ? selectedPos : 0;
+  const selectedWeek = weeks[safePos];
+  const phaseWeek = weeks[progress.currentWeekPos ?? safePos] ?? selectedWeek;
+  const focusWeek = currentDay ? weeks[progress.currentWeekPos ?? 0] : selectedWeek;
+
+  const progressionNotes = cleanText(plan.progression_notes);
+  const rawFallback = cleanText(plan.raw_markdown_fallback);
+  const hasNutritionSupport = getNutritionPhaseItems(plan).length > 0 || hasNutrition(plan);
+  const hasRecoverySupport = getRecoveryPhaseItems(plan).length > 0;
+  const dayList = getDays(selectedWeek);
+
+  return (
+    <div className="sp-root cm-root">
       <PlanHeader plan={plan} />
+      <CampStatusLine plan={plan} progress={progress} phaseWeek={phaseWeek} />
+      <ReadinessStripCards plan={plan} currentDay={currentDay} focusWeek={focusWeek} />
       <ActiveNotesCard plan={plan} />
       <RedFlagsCard plan={plan} />
-      <div className="sp-weeks">
-        {weekEntries.map(({ week, index, supportKey }) => (
-          <div key={cleanText(week.week_id) || `week-${index}`} className="sp-week-group">
-            <WeekSection week={week} defaultOpen={index === 0} />
-            {supportKey ? (
-              <PhaseSupportCards
-                phaseKey={supportKey}
-                nutritionItems={nutritionItems}
-                recoveryItems={recoveryItems}
-              />
-            ) : null}
+
+      {weeks.length > 0 ? (
+        <>
+          <WeekStrip
+            weeks={weeks}
+            selectedPos={safePos}
+            currentPos={progress.currentWeekPos}
+            onSelect={setSelectedPos}
+          />
+          {selectedWeek ? <WeekOverview week={selectedWeek} /> : null}
+          <div className="sp-weeks cm-days">
+            {dayList.length > 0 ? (
+              dayList.map((day, index) => {
+                const isCurrent =
+                  progress.currentDayDate != null &&
+                  cleanText(day.date)?.slice(0, 10) === progress.currentDayDate;
+                return (
+                  <CampDayCard
+                    key={cleanText(day.date) || `day-${index}`}
+                    day={day}
+                    isCurrent={isCurrent}
+                    defaultOpen={isCurrent || (progress.currentWeekPos == null && index === 0)}
+                  />
+                );
+              })
+            ) : (
+              <p className="sp-muted">No days scheduled this week.</p>
+            )}
           </div>
-        ))}
-      </div>
-      {remainingSupportKeys.map((phaseKey) => (
-        <PhaseSupportCards
-          key={`support-${phaseKey}`}
-          phaseKey={phaseKey}
-          nutritionItems={nutritionItems}
-          recoveryItems={recoveryItems}
-        />
-      ))}
-      {nutritionItems.length === 0 ? <NutritionCard plan={plan} /> : null}
+        </>
+      ) : null}
+
+      {hasRecoverySupport || hasNutritionSupport ? (
+        <section className="sp-card cm-support" aria-label="Support">
+          <p className="sp-eyebrow sp-accent">Support</p>
+          {hasRecoverySupport ? (
+            <CollapsibleSection title="Recovery" detailLabel="recovery">
+              <RecoveryCard plan={plan} />
+            </CollapsibleSection>
+          ) : null}
+          {hasNutritionSupport ? (
+            <CollapsibleSection title="Nutrition" detailLabel="nutrition">
+              <NutritionCard plan={plan} />
+            </CollapsibleSection>
+          ) : null}
+        </section>
+      ) : null}
+
       {progressionNotes ? (
         <section className="sp-card sp-progression">
           <p className="sp-eyebrow sp-accent">Progression notes</p>
           <p className="sp-block-purpose">{progressionNotes}</p>
         </section>
+      ) : null}
+
+      {rawFallback ? (
+        <details className="sp-collapse cm-raw-fallback">
+          <summary className="sp-collapse-summary">
+            <span className="sp-collapse-title">Original plan text</span>
+            <span className="sp-collapse-action">Show original</span>
+          </summary>
+          <div className="sp-collapse-body">
+            <pre className="cm-raw-pre">{rawFallback}</pre>
+          </div>
+        </details>
       ) : null}
     </div>
   );
