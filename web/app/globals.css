@@ -13464,3 +13464,224 @@ html[data-theme="light"] .loading-operational-item {
     white-space: normal;
   }
 }
+
+/* ── Camp map (Plan detail) ──────────────────────────────────────────────
+   Layered on top of the .sp-* structured-plan styles. Mobile-first; the brand
+   red is reserved for the current marker, risk, and primary actions. */
+.cm-root {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.cm-status-line {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.cm-status-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0 12px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border-default);
+  background: var(--bg-surface);
+  color: var(--text-secondary);
+  font-family: var(--font-mono), monospace;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+}
+
+.cm-active-badge {
+  margin-left: 10px;
+  vertical-align: middle;
+}
+
+.cm-archived-banner {
+  color: var(--text-secondary);
+}
+
+/* Readiness / risk strip */
+.cm-readiness {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: var(--space-2);
+}
+
+.cm-readiness-card {
+  display: grid;
+  gap: 4px;
+  padding: 12px 14px;
+  border-radius: var(--radius-stat);
+  border: 1px solid var(--border-default);
+  background: var(--bg-stat);
+}
+
+.cm-readiness-risk {
+  border-color: rgba(181, 18, 43, 0.4);
+  background: var(--danger-soft);
+}
+
+.cm-readiness-label {
+  margin: 0;
+  font-family: var(--font-mono), monospace;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.cm-readiness-risk .cm-readiness-label {
+  color: var(--danger-ink);
+}
+
+.cm-readiness-value {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.35;
+  color: var(--text-primary);
+}
+
+/* Week strip */
+.cm-week-strip {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  padding: 2px 2px 8px;
+  scrollbar-width: thin;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+}
+
+.cm-week-pill {
+  display: grid;
+  gap: 4px;
+  align-content: start;
+  flex: 0 0 auto;
+  min-width: 92px;
+  min-height: 64px;
+  padding: 10px 12px;
+  border-radius: var(--radius-stat);
+  border: 1px solid var(--border-default);
+  background: var(--bg-surface);
+  color: var(--text-secondary);
+  cursor: pointer;
+  text-align: left;
+  scroll-snap-align: start;
+  transition: transform var(--transition-fast), border-color var(--transition-fast);
+}
+
+.cm-week-pill:hover {
+  transform: translateY(-1px);
+  border-color: var(--border-strong);
+}
+
+.cm-week-pill-index {
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.cm-week-pill-phase {
+  font-size: 11px;
+  letter-spacing: 0.02em;
+}
+
+.cm-week-pill-completion {
+  font-family: var(--font-mono), monospace;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.cm-week-pill-now {
+  justify-self: start;
+  margin-top: 2px;
+  padding: 1px 8px;
+  border-radius: var(--radius-pill);
+  background: var(--brand-red-soft);
+  color: #ffd5db;
+  font-family: var(--font-mono), monospace;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.cm-week-pill-selected {
+  border-color: var(--border-active);
+  background: var(--bg-surface-alt);
+}
+
+.cm-week-pill-current {
+  box-shadow: inset 0 0 0 1px rgba(181, 18, 43, 0.5);
+}
+
+/* Selected-week overview */
+.cm-week-overview-head {
+  display: grid;
+  gap: 2px;
+  margin-bottom: 8px;
+}
+
+.cm-week-overview-stats {
+  margin-top: 4px;
+}
+
+/* Day cards */
+.cm-days {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.cm-day-summary {
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.cm-day-head {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.cm-day-meta {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.cm-day-current {
+  border-color: var(--border-active);
+}
+
+/* Support + raw fallback */
+.cm-support {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.cm-raw-fallback {
+  margin-top: 4px;
+}
+
+.cm-raw-pre {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-family: var(--font-mono), monospace;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+
+@media (max-width: 720px) {
+  .cm-readiness {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .cm-week-pill {
+    min-width: 84px;
+  }
+}
