@@ -298,6 +298,111 @@ test("renders the raw markdown fallback collapsed at the bottom", () => {
   assert.equal(html.includes("cm-raw-fallback"), true);
 });
 
+test("uses an athlete-readable camp-map command header, not internal wording", () => {
+  const plan = {
+    schema_version: "1.0",
+    plan_metadata: { title: "Fight Camp", sport: "boxing", plan_type: "fight_camp" },
+    weeks: [{ week_id: "wk-1", week_index: 1, phase_label: "GPP", days: [] }],
+  } satisfies StructuredPlan;
+
+  const html = renderToStaticMarkup(<StructuredPlanRenderer plan={plan} />);
+
+  assert.equal(html.includes("Camp map"), true);
+  assert.equal(html.includes("Structured plan"), false);
+});
+
+test("does not leak raw enum tokens for day type, session type or readiness", () => {
+  const plan = {
+    schema_version: "1.0",
+    plan_metadata: { title: "Fight Camp", sport: "boxing", plan_type: "fight_camp" },
+    weeks: [
+      {
+        week_id: "wk-1",
+        week_index: 1,
+        phase_label: "SPP",
+        days: [
+          {
+            date: "2026-06-19",
+            day_type: "high",
+            countdown_label: "D-28",
+            today_card: { readiness_status: "train_as_planned" },
+            sessions: [
+              {
+                session_id: "s1",
+                session_type: "strength_power",
+                title: "Lower power",
+                blocks: [],
+              },
+            ],
+          },
+        ],
+      },
+    ],
+  } satisfies StructuredPlan;
+
+  const html = renderToStaticMarkup(<StructuredPlanRenderer plan={plan} today={new Date(2026, 5, 19)} />);
+
+  assert.equal(html.includes("strength_power"), false);
+  assert.equal(html.includes("train_as_planned"), false);
+  assert.equal(html.includes("Strength &amp; power"), true);
+  assert.equal(html.includes("Train as planned"), true);
+});
+
+test("a session-less rest day does not render an awkward '0 sessions' tag", () => {
+  const plan = {
+    schema_version: "1.0",
+    plan_metadata: { title: "Fight Camp", sport: "boxing", plan_type: "fight_camp" },
+    weeks: [
+      {
+        week_id: "wk-1",
+        week_index: 1,
+        phase_label: "GPP",
+        days: [
+          {
+            date: "2026-06-21",
+            day_type: "rest",
+            today_card: {},
+            sessions: [],
+          },
+        ],
+      },
+    ],
+  } satisfies StructuredPlan;
+
+  const html = renderToStaticMarkup(<StructuredPlanRenderer plan={plan} today={new Date(2026, 5, 21)} />);
+
+  assert.equal(html.includes("0 session"), false);
+});
+
+test("completed work is tagged with the calm success tone, never the brand red accent", () => {
+  const plan = {
+    schema_version: "1.0",
+    plan_metadata: { title: "Fight Camp", sport: "boxing", plan_type: "fight_camp" },
+    weeks: [
+      {
+        week_id: "wk-1",
+        week_index: 1,
+        phase_label: "SPP",
+        days: [
+          {
+            date: "2026-06-19",
+            day_type: "high",
+            sessions: [
+              { session_id: "s1", title: "Lower power", completion_status: "done", blocks: [] },
+            ],
+          },
+        ],
+      },
+    ],
+  } satisfies StructuredPlan;
+
+  const html = renderToStaticMarkup(<StructuredPlanRenderer plan={plan} today={new Date(2026, 5, 19)} />);
+
+  assert.equal(html.includes("sp-done"), true);
+  // The "done" completion tag must not borrow the red accent class.
+  assert.equal(/class="sp-tag sp-accent"[^>]*>\s*1\/1 done/.test(html), false);
+});
+
 test("renders plan-level active notes as a standalone card", () => {
   const plan = {
     schema_version: "1.0",

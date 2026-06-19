@@ -265,8 +265,8 @@ export function SessionCard({
         </div>
         <div className="sp-session-meta">
           {dayType ? <span className="sp-tag">{titleize(dayType)}</span> : null}
-          {readiness ? <span className="sp-tag sp-accent">{titleize(readiness)}</span> : null}
-          {sessionType ? <span className="sp-tag sp-accent">{titleize(sessionType)}</span> : null}
+          {readiness ? <span className="sp-tag">{titleize(readiness)}</span> : null}
+          {sessionType ? <span className="sp-tag">{titleize(sessionType)}</span> : null}
           {duration ? <span className="sp-tag">{duration}</span> : null}
         </div>
       </header>
@@ -322,7 +322,7 @@ export function TodayCard({ day }: { day: StructuredDay }) {
     <div className="sp-today">
       {headline ? <p className="sp-today-headline">{headline}</p> : null}
       {readiness ? (
-        <span className="sp-tag sp-accent">{titleize(readiness)}</span>
+        <span className="sp-tag">{titleize(readiness)}</span>
       ) : null}
       {warning ? <p className="sp-warning">{warning}</p> : null}
       {nutrition ? <p className="sp-today-note">{nutrition}</p> : null}
@@ -396,8 +396,10 @@ function CompletionTag({ completion }: { completion: Completion }) {
     return null;
   }
   const done = completion.done >= completion.total && completion.total > 0;
+  // "Done" is a positive, completed state — give it a calm success tone rather
+  // than the brand red, which we keep reserved for current action / risk.
   return (
-    <span className={`sp-tag${done ? " sp-accent" : ""}`}>
+    <span className={`sp-tag${done ? " sp-done" : ""}`}>
       {completion.done}/{completion.total} done
     </span>
   );
@@ -444,9 +446,11 @@ export function CampDayCard({
         <span className="cm-day-meta">
           {isCurrent ? <span className="sp-tag sp-accent">Today</span> : null}
           {dayType ? <span className="sp-tag">{titleize(dayType)}</span> : null}
-          <span className="sp-tag">
-            {sessionCount} session{sessionCount === 1 ? "" : "s"}
-          </span>
+          {sessionCount > 0 ? (
+            <span className="sp-tag">
+              {sessionCount} session{sessionCount === 1 ? "" : "s"}
+            </span>
+          ) : null}
           <CompletionTag completion={completion} />
         </span>
       </summary>
@@ -486,8 +490,8 @@ export function PlanHeader({ plan }: { plan: StructuredPlan }) {
     .filter((tag): tag is string => Boolean(tag));
 
   return (
-    <header className="sp-header">
-      <p className="sp-eyebrow sp-accent">Structured plan</p>
+    <header className="sp-header cm-command">
+      <p className="sp-eyebrow">Camp map</p>
       <h3 className="sp-title">{title}</h3>
       {profile ? <p className="sp-subtitle">{profile}</p> : null}
       {tags.length > 0 || eventDate ? (

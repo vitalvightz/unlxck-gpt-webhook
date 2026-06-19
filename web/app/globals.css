@@ -12907,6 +12907,23 @@ html[data-theme="light"] .loading-operational-item {
   border-color: var(--border-active);
   color: var(--brand-red);
 }
+/* Completed work reads as a calm success, never the brand red (which is kept
+   for current action and risk only). */
+.sp-tag.sp-done {
+  background: var(--success-soft);
+  border-color: rgba(39, 174, 96, 0.4);
+  color: var(--success-ink);
+}
+/* Reserve red for risk and the current marker. Section eyebrows are structural
+   labels, not warnings, so they stay muted even when tagged sp-accent — only
+   the safety/red-flag eyebrow keeps the red emphasis. */
+.sp-eyebrow.sp-accent {
+  color: var(--text-muted);
+}
+.sp-redflags .sp-eyebrow,
+.sp-redflags .sp-eyebrow.sp-accent {
+  color: var(--brand-red);
+}
 .sp-weeks {
   display: flex;
   flex-direction: column;
@@ -13608,12 +13625,16 @@ html[data-theme="light"] .loading-operational-item {
   text-transform: uppercase;
 }
 
+/* Selected (the week you're viewing) gets a neutral strong outline; the brand
+   red is held back for the current "now" week so the two states stay distinct
+   and red never floods the strip. */
 .cm-week-pill-selected {
-  border-color: var(--border-active);
+  border-color: var(--border-strong);
   background: var(--bg-surface-alt);
 }
 
 .cm-week-pill-current {
+  border-color: var(--border-active);
   box-shadow: inset 0 0 0 1px rgba(181, 18, 43, 0.5);
 }
 
@@ -13652,8 +13673,16 @@ html[data-theme="light"] .loading-operational-item {
   gap: 6px;
 }
 
+/* The current day is the athlete's anchor in the week — give it the red border
+   plus a faint wash and left accent on its header so it reads at a glance even
+   while collapsed, without tinting the whole card. */
 .cm-day-current {
   border-color: var(--border-active);
+}
+
+.cm-day-current > .cm-day-summary {
+  box-shadow: inset 3px 0 0 var(--brand-red);
+  background: var(--brand-red-soft);
 }
 
 /* Support + raw fallback */
