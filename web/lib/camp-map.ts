@@ -83,15 +83,17 @@ export type PlanProgress = {
  */
 export function resolvePlanProgress(
   plan: StructuredPlan | null | undefined,
-  today: Date,
+  today: Date | null,
 ): PlanProgress {
   const weeks = getWeeks(plan);
-  const todayIso = toISODate(today);
+  const todayIso = today ? toISODate(today) : null;
   let currentWeekPos: number | null = null;
   let currentDayDate: string | null = null;
 
+  // A null `today` (e.g. before client mount) resolves to "no current day" so
+  // the server and first client render agree — never match days on a null date.
   weeks.forEach((week, weekPos) => {
-    if (getDays(week).some((day) => dayISO(day) === todayIso)) {
+    if (todayIso && getDays(week).some((day) => dayISO(day) === todayIso)) {
       currentWeekPos = weekPos;
       currentDayDate = todayIso;
     }
@@ -106,8 +108,11 @@ export function resolvePlanProgress(
 /** "D-28" derived from the event date minus today, or null when unavailable. */
 export function deriveCountdownLabel(
   plan: StructuredPlan | null | undefined,
-  today: Date,
+  today: Date | null,
 ): string | null {
+  if (!today) {
+    return null;
+  }
   const eventIso =
     cleanText(plan?.event_context?.fight_date) || cleanText(plan?.event_context?.match_date);
   if (!eventIso) {
@@ -189,8 +194,9 @@ export function findDayByISO(
 }
 
 export type CurrentDayResolution = {
-  /** The athlete-local training-day ISO date used for the match. */
-  trainingDayISO: string;
+  /** The athlete-local training-day ISO date used for the match (null until the
+   * client has mounted and resolved the current day). */
+  trainingDayISO: string | null;
   /** Array index of the matched week, or null when today is out of camp range. */
   weekPos: number | null;
   /** Array index of the matched day within its week, or null when out of range. */
@@ -214,11 +220,11 @@ export type CurrentDayResolution = {
  */
 export function resolveCurrentDay(
   plan: StructuredPlan | null | undefined,
-  today: Date,
+  today: Date | null,
 ): CurrentDayResolution {
-  const trainingDayISO = toISODate(today);
+  const trainingDayISO = today ? toISODate(today) : null;
   const weeks = getWeeks(plan);
-  for (let weekPos = 0; weekPos < weeks.length; weekPos += 1) {
+  for (let weekPos = 0; trainingDayISO && weekPos < weeks.length; weekPos += 1) {
     const days = getDays(weeks[weekPos]);
     for (let dayPos = 0; dayPos < days.length; dayPos += 1) {
       const day = days[dayPos];

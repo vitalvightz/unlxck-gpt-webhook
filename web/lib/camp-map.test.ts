@@ -189,6 +189,24 @@ test("resolveCurrentDay agrees with resolvePlanProgress on the current day", () 
   assert.equal(current.dLabel, progress.dLabel);
 });
 
+test("resolveCurrentDay treats a null today as no current day (SSR-safe)", () => {
+  // Before the client mounts the training day is null; this must resolve to
+  // "no current day" rather than matching a day with a missing date.
+  const current = resolveCurrentDay(campPlan(), null);
+  assert.equal(current.inRange, false);
+  assert.equal(current.trainingDayISO, null);
+  assert.equal(current.weekPos, null);
+  assert.equal(current.sessions.length, 0);
+  assert.equal(current.dLabel, null);
+});
+
+test("resolvePlanProgress treats a null today as out of range (SSR-safe)", () => {
+  const progress = resolvePlanProgress(campPlan(), null);
+  assert.equal(progress.currentWeekPos, null);
+  assert.equal(progress.currentDayDate, null);
+  assert.equal(progress.dLabel, null);
+});
+
 test("sessionIdentity prefers plan + day + session_id", () => {
   const plan = campPlan();
   const day = plan.weeks![0]!.days![1]!;

@@ -13,10 +13,10 @@ import { useToast } from "@/components/toast-provider";
 import { getPlan, getToday, submitTodayCheckin, submitTodaySessionCompletion } from "@/lib/api";
 import {
   resolveCurrentDay,
-  resolveTrainingDay,
   sessionIdentity,
   type CurrentDayResolution,
 } from "@/lib/camp-map";
+import { useTrainingDay } from "@/lib/use-training-day";
 import {
   TODAY_EMPTY_TEXT,
   TODAY_EMPTY_TITLE,
@@ -611,11 +611,12 @@ function SessionCard({
   const canCompleteSession = canCompleteTodaySession(session) && !isNextSessionPreview;
   // Resolve today's day/session from the structured plan through the shared
   // 04:00 rollover, exactly as Plan Detail does. These blocks — not the backend
-  // session summary — are the "what exact blocks apply today" answer.
-  const current = useMemo(
-    () => resolveCurrentDay(structuredPlan, resolveTrainingDay(new Date())),
-    [structuredPlan],
-  );
+  // session summary — are the "what exact blocks apply today" answer. The
+  // training day comes from the client-mounted hook (SSR-safe, null until mount)
+  // and is resolved on every render so a long-lived tab follows the rollover
+  // instead of sticking on a memoized day.
+  const trainingDay = useTrainingDay();
+  const current = resolveCurrentDay(structuredPlan, trainingDay);
   const showStructuredBlocks = current.inRange && Boolean(current.day);
   const recommendationState = state.today.recommendation_state;
 

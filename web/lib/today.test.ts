@@ -320,11 +320,11 @@ test("submit completion calls the Today completion endpoint", async () => {
 test("Today resolves today's blocks from the shared current-day resolver", () => {
   // Today renders today's exact blocks from the active plan's structured_plan,
   // resolved through the SAME shared resolver Plan Detail uses (resolveCurrentDay
-  // + the 04:00 resolveTrainingDay rollover) so the two screens can never
+  // + the client-mounted 04:00 training-day hook) so the two screens can never
   // disagree on the current day/session.
   const source = readFileSync(new URL("../components/today-screen.tsx", import.meta.url), "utf8");
   assert.equal(source.includes("resolveCurrentDay"), true);
-  assert.equal(source.includes("resolveTrainingDay"), true);
+  assert.equal(source.includes("useTrainingDay"), true);
 });
 
 test("Today renders only today's session, never the full camp map", () => {
