@@ -2328,7 +2328,7 @@ export function PlanViewer({
               </div>
               <WeeklySparringView planId={plan.plan_id} />
               {shouldRenderStructuredPlan(plan.outputs) && plan.outputs.structured_plan ? (
-                <StructuredPlanRenderer plan={plan.outputs.structured_plan} today={new Date()} />
+                <StructuredPlanRenderer plan={plan.outputs.structured_plan} />
               ) : (
                 <PlanTextCards text={athletePlanText} />
               )}
