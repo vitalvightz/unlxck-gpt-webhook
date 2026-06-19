@@ -4,6 +4,7 @@ from typing import Iterable
 
 from .injury_formatting import format_injury_summary, parse_injury_entry
 from .injury_guard import INJURY_TYPE_SEVERITY, normalize_severity
+from .injury_registry import SURFACE_TISSUE_TYPES
 from .injury_taxonomy import derive_red_flag_types, derive_urgent_injury_tokens
 from .injury_synonyms import parse_injury_phrase, split_injury_text
 from .injury_location import canonicalize_location, get_injury_location
@@ -398,6 +399,66 @@ BFR_SAFETY_GATE = (
     "stop if numbness/tingling occurs."
 )
 
+# Surface/skin injuries (cut, abrasion, laceration, graze, blister) are
+# integumentary, not musculoskeletal. Loading-style rehab (isometrics,
+# eccentrics, tendon/balance work) does nothing for skin healing and can
+# reopen the wound or invite infection, so we never assign rehab drills to
+# them. The correct prescription is wound care, surfaced as a single note.
+SURFACE_WOUND_CARE_NOTE = (
+    "Skin/surface injury — no loading rehab needed. Keep it clean and covered, "
+    "avoid friction or contact that could reopen it, and monitor for infection "
+    "(spreading redness, heat, swelling, pus, or fever). Return to full contact "
+    "once the wound has closed."
+)
+
+
+def _is_surface_type(injury_type: str | None) -> bool:
+    return str(injury_type or "").strip().lower() in SURFACE_TISSUE_TYPES
+
+
+def _collect_surface_drills(
+    injury_type: str | None,
+    loc_candidates: list[str],
+    current_phase: str,
+) -> list[tuple[str, str]]:
+    """Return wound-care drills for a surface injury at the given location.
+
+    Surface injuries match ONLY their own surface-type bank entries — never the
+    location's ``unspecified`` entries, which hold musculoskeletal loading
+    drills that have no place on a skin wound. Location-specific entries are
+    preferred over ``unspecified``-location fallbacks. Returns ``(name, notes)``
+    pairs with the phase-appropriate note already selected.
+    """
+    phase = current_phase.upper()
+    injury_type_lower = str(injury_type or "").strip().lower()
+    matches = [
+        entry
+        for entry in get_rehab_bank()
+        if entry.get("type") == injury_type_lower
+        and (entry.get("location") in loc_candidates or entry.get("location") == "unspecified")
+        and phase in _entry_phases(entry)
+    ]
+    # Prefer specific-location entries over the unspecified fallback.
+    matches.sort(key=lambda e: e.get("location") == "unspecified")
+
+    drills: list[tuple[str, str]] = []
+    seen: set[str] = set()
+    for entry in matches:
+        for drill in entry.get("drills", []):
+            name = drill.get("name")
+            if not name or name in seen:
+                continue
+            notes = drill.get("notes", "")
+            parsed = _split_notes_by_phase(notes)
+            text = notes
+            if parsed:
+                text = next((desc for label, desc in parsed if label == phase), "")
+                if not text:
+                    continue
+            seen.add(name)
+            drills.append((name, text))
+    return drills
+
 # ---------------------------------------------------------------------------
 # Surgical Rehab Integration – function classification and formatting
 # ---------------------------------------------------------------------------
@@ -739,6 +800,24 @@ def generate_rehab_protocols(
     lines = []
 
     for itype, loc, group_key in unique_entries:
+        if _is_surface_type(itype):
+            merged = merged_by_key.get(group_key) if group_key else None
+            loc_title = _render_location_heading(loc, merged)
+            type_title = itype.title() if itype else "Surface"
+            loc_candidates = normalize_rehab_location(loc)
+            surface_drills = _collect_surface_drills(itype, loc_candidates, current_phase)[:drill_limit]
+            if surface_drills:
+                lines.append(f"- {loc_title} ({type_title}):")
+                for name, notes in surface_drills:
+                    headline = f"{name} – {notes}" if notes else name
+                    lines.append(f"  • {headline}")
+                    lines.append(
+                        "    [Wound care] Manage the skin injury — keep it clean, "
+                        "covered, and friction-free; this is not loading rehab."
+                    )
+            else:
+                lines.append(f"- {loc_title} ({type_title}): {SURFACE_WOUND_CARE_NOTE}")
+            continue
         loc_candidates = normalize_rehab_location(loc)
         matches = [
             entry
@@ -1178,6 +1257,13 @@ def build_coach_review_entries(
 
 
 def _rehab_drills_for_phase(itype: str, loc: str | None, phase: str, limit: int = 4) -> list[str]:
+    # Surface/skin injuries pull ONLY their own wound-care entries, never the
+    # location's "unspecified" musculoskeletal loading drills.
+    if _is_surface_type(itype):
+        loc_candidates = normalize_rehab_location(loc)
+        surface_drills = _collect_surface_drills(itype, loc_candidates, phase)
+        rendered = [f"{name} – {notes}" if notes else name for name, notes in surface_drills]
+        return rendered[:limit]
     phase = phase.upper()
     drills: list[str] = []
 
@@ -1310,7 +1396,13 @@ def format_injury_guardrails(
                     "display_location": entry.get("display_location"),
                 }
             )
-            if drills:
+            if _is_surface_type(itype):
+                if drills:
+                    lines.append(f"- {summary}:")
+                    lines.extend([f"  - {d}" for d in drills[:4]])
+                else:
+                    lines.append(f"- {summary}: {SURFACE_WOUND_CARE_NOTE}")
+            elif drills:
                 lines.append(f"- {summary}:")
                 lines.extend([f"  - {d}" for d in drills[:4]])
             else:
