@@ -6,7 +6,10 @@ import {
   deriveCountdownLabel,
   findDayByISO,
   getReadinessStrip,
+  resolveCurrentDay,
   resolvePlanProgress,
+  resolveTrainingDay,
+  sessionIdentity,
   toISODate,
   weekCompletion,
   weekLoadProxy,
@@ -131,4 +134,120 @@ test("getReadinessStrip degrades gracefully with no current day", () => {
   assert.equal(strip.focus, "Sharpen and freshen.");
   assert.equal(strip.risk, "Stop if Achilles pain ≥ 6/10.");
   assert.equal(strip.load, null);
+});
+
+test("resolveTrainingDay applies the 04:00 athlete-local rollover", () => {
+  // Before 04:00 the training day has not advanced yet — it is still yesterday.
+  assert.equal(toISODate(resolveTrainingDay(new Date(2026, 5, 19, 2, 30))), "2026-06-18");
+  // At/after 04:00 the training day is today.
+  assert.equal(toISODate(resolveTrainingDay(new Date(2026, 5, 19, 4, 0))), "2026-06-19");
+  assert.equal(toISODate(resolveTrainingDay(new Date(2026, 5, 19, 23, 59))), "2026-06-19");
+});
+
+test("resolveTrainingDay returns local midnight of the resolved day", () => {
+  const resolved = resolveTrainingDay(new Date(2026, 5, 19, 15, 42, 13));
+  assert.equal(resolved.getHours(), 0);
+  assert.equal(resolved.getMinutes(), 0);
+  assert.equal(resolved.getSeconds(), 0);
+});
+
+test("resolveCurrentDay locates today's week, day, sessions and countdown", () => {
+  const current = resolveCurrentDay(campPlan(), new Date(2026, 5, 19));
+  assert.equal(current.inRange, true);
+  assert.equal(current.weekPos, 0);
+  assert.equal(current.dayPos, 1);
+  assert.equal(current.sessions.length, 1);
+  assert.equal(current.sessions[0]?.title, "Upper strength");
+  assert.equal(current.dLabel, "D-28");
+});
+
+test("resolveCurrentDay reports an in-range off day with no sessions", () => {
+  const current = resolveCurrentDay(campPlan(), new Date(2026, 5, 25));
+  assert.equal(current.inRange, true);
+  assert.equal(current.weekPos, 1);
+  assert.equal(current.dayPos, 0);
+  assert.equal(current.sessions.length, 0);
+});
+
+test("resolveCurrentDay is out of range when today maps to no day", () => {
+  const current = resolveCurrentDay(campPlan(), new Date(2026, 5, 1));
+  assert.equal(current.inRange, false);
+  assert.equal(current.weekPos, null);
+  assert.equal(current.dayPos, null);
+  assert.equal(current.sessions.length, 0);
+  // Still derives a countdown from the event date when out of range.
+  assert.equal(current.dLabel, "D-46");
+});
+
+test("resolveCurrentDay agrees with resolvePlanProgress on the current day", () => {
+  const plan = campPlan();
+  const today = new Date(2026, 5, 19);
+  const progress = resolvePlanProgress(plan, today);
+  const current = resolveCurrentDay(plan, today);
+  assert.equal(current.weekPos, progress.currentWeekPos);
+  assert.equal(current.trainingDayISO, progress.currentDayDate);
+  assert.equal(current.dLabel, progress.dLabel);
+});
+
+test("resolveCurrentDay treats a null today as no current day (SSR-safe)", () => {
+  // Before the client mounts the training day is null; this must resolve to
+  // "no current day" rather than matching a day with a missing date.
+  const current = resolveCurrentDay(campPlan(), null);
+  assert.equal(current.inRange, false);
+  assert.equal(current.trainingDayISO, null);
+  assert.equal(current.weekPos, null);
+  assert.equal(current.sessions.length, 0);
+  assert.equal(current.dLabel, null);
+});
+
+test("resolvePlanProgress treats a null today as out of range (SSR-safe)", () => {
+  const progress = resolvePlanProgress(campPlan(), null);
+  assert.equal(progress.currentWeekPos, null);
+  assert.equal(progress.currentDayDate, null);
+  assert.equal(progress.dLabel, null);
+});
+
+test("sessionIdentity prefers plan + day + session_id", () => {
+  const plan = campPlan();
+  const day = plan.weeks![0]!.days![1]!;
+  const session = day.sessions![0]!;
+  assert.equal(
+    sessionIdentity({ planId: "plan-1", weekPos: 0, dayPos: 1, sessionPos: 0, day, session }),
+    "plan-1|2026-06-19|s3",
+  );
+});
+
+test("sessionIdentity falls back to plan + week/day/session indices", () => {
+  // No session_id and no day date -> stable index-based identity.
+  assert.equal(
+    sessionIdentity({
+      planId: "plan-1",
+      weekPos: 2,
+      dayPos: 3,
+      sessionPos: 1,
+      day: { sessions: [] },
+      session: {},
+    }),
+    "plan-1|w2|d3|s1",
+  );
+});
+
+test("sessionIdentity keys the day portion on the parent day's date", () => {
+  // The parent day owns the date; identity must not key on anything else.
+  const day = { date: "2026-06-19", sessions: [] };
+  assert.equal(
+    sessionIdentity({ planId: "plan-1", weekPos: 0, dayPos: 0, sessionPos: 0, day, session: {} }),
+    "plan-1|w0|d0|s0",
+  );
+  assert.equal(
+    sessionIdentity({
+      planId: "plan-1",
+      weekPos: 0,
+      dayPos: 0,
+      sessionPos: 0,
+      day,
+      session: { session_id: "abc" },
+    }),
+    "plan-1|2026-06-19|abc",
+  );
 });

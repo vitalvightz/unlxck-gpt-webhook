@@ -79,6 +79,59 @@ export function getRecommendationCopy(state: TodayRecommendationState): {
   };
 }
 
+export type TodayDecisionBanner = {
+  state: TodayRecommendationState;
+  /** Short command headline, e.g. "PULL BACK TODAY". */
+  title: string;
+  /** One command-like line. Prefers the backend reason when present. */
+  detail: string;
+  tone: string;
+};
+
+const DECISION_BANNERS: Record<
+  Exclude<TodayRecommendationState, "not_checked_in">,
+  { title: string; detail: string; tone: string }
+> = {
+  train_as_planned: {
+    title: "TRAIN AS PLANNED",
+    detail: "Readiness is acceptable. Complete today's prescribed session.",
+    tone: "green",
+  },
+  modify: {
+    title: "MODIFY SESSION",
+    detail: "Use the safer version today. Remove high-impact work and keep output controlled.",
+    tone: "amber",
+  },
+  pull_back: {
+    title: "PULL BACK TODAY",
+    detail: "Reduce load and intensity. Keep the session technical. Stop if pain rises.",
+    tone: "red",
+  },
+};
+
+/**
+ * The compact decision banner shown above today's session blocks once the
+ * athlete has checked in. Returns null before check-in (no decision yet). The
+ * banner title is fixed and command-like; the detail prefers the backend
+ * readiness reason and falls back to the canned command copy. This does not
+ * mutate the plan — it only frames the original blocks as train/modify/pull-back.
+ */
+export function getTodayDecisionBanner(
+  state: TodayRecommendationState,
+  reason?: string | null,
+): TodayDecisionBanner | null {
+  if (state === "not_checked_in") {
+    return null;
+  }
+  const banner = DECISION_BANNERS[state];
+  return {
+    state,
+    title: banner.title,
+    detail: reason?.trim() || banner.detail,
+    tone: banner.tone,
+  };
+}
+
 export function getCompletionLabel(status: TodayCompletionStatus): string {
   if (status === "not_started") {
     return "Not started";

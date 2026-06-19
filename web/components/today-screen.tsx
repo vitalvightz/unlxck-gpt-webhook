@@ -5,8 +5,18 @@ import { type FormEvent, useCallback, useEffect, useMemo, useState } from "react
 
 import { useAppSession } from "@/components/auth-provider";
 import { Skeleton } from "@/components/skeleton";
+import {
+  SessionCard as StructuredSessionCard,
+  SessionlessDayCard,
+} from "@/components/structured-plan-renderer";
 import { useToast } from "@/components/toast-provider";
-import { getToday, submitTodayCheckin, submitTodaySessionCompletion } from "@/lib/api";
+import { getPlan, getToday, submitTodayCheckin, submitTodaySessionCompletion } from "@/lib/api";
+import {
+  resolveCurrentDay,
+  sessionIdentity,
+  type CurrentDayResolution,
+} from "@/lib/camp-map";
+import { useTrainingDay } from "@/lib/use-training-day";
 import {
   TODAY_EMPTY_TEXT,
   TODAY_EMPTY_TITLE,
@@ -18,12 +28,14 @@ import {
   getCompletionLabel,
   getRecommendationCopy,
   getSessionTitle,
+  getTodayDecisionBanner,
   getVisibleRiskWatch,
   hasActivePlan,
   hasTodaySession,
   shouldShowTodayCheckin,
 } from "@/lib/today";
 import type {
+  StructuredPlan,
   TodayActiveInjury,
   TodayActivePlan,
   TodayCheckinBody,
@@ -32,6 +44,7 @@ import type {
   TodayCommandView,
   TodayCompletionStatus,
   TodayPreviousSession,
+  TodayRecommendationState,
   TodaySession,
 } from "@/lib/types";
 
@@ -505,12 +518,84 @@ function CompletionForm({
   );
 }
 
+/**
+ * Compact train/modify/pull-back banner shown above today's blocks once the
+ * athlete has checked in. Returns null before check-in. It frames the original
+ * blocks — it never mutates the saved plan.
+ */
+function DecisionBanner({
+  state,
+  reason,
+}: {
+  state: TodayRecommendationState;
+  reason?: string | null;
+}) {
+  const banner = getTodayDecisionBanner(state, reason);
+  if (!banner) {
+    return null;
+  }
+  return (
+    <div className="today-decision-banner" data-tone={banner.tone} role="status">
+      <p className="today-decision-title">{banner.title}</p>
+      <p className="today-decision-detail">{banner.detail}</p>
+    </div>
+  );
+}
+
+/**
+ * Today's exact blocks, resolved from the active plan's structured_plan via the
+ * same shared resolver and the same SessionCard component Plan Detail renders.
+ * This guarantees Today and Plan Detail agree on the current day, its sessions
+ * and their counts — Today simply scopes the view to today's day only (no week
+ * strip, no other days, no full camp map).
+ */
+function TodaySessionBlocks({
+  planId,
+  current,
+}: {
+  planId?: string;
+  current: CurrentDayResolution;
+}) {
+  if (!current.inRange || !current.day) {
+    return null;
+  }
+  if (current.sessions.length === 0) {
+    return (
+      <div className="today-blocks">
+        <SessionlessDayCard day={current.day} />
+      </div>
+    );
+  }
+  return (
+    <div className="today-blocks">
+      {current.sessions.map((session, index) => (
+        <StructuredSessionCard
+          key={sessionIdentity({
+            planId,
+            weekPos: current.weekPos ?? 0,
+            dayPos: current.dayPos ?? 0,
+            sessionPos: index,
+            week: current.week,
+            day: current.day,
+            session,
+          })}
+          session={session}
+          day={index === 0 ? current.day ?? undefined : undefined}
+          defaultOpenBlocks
+        />
+      ))}
+    </div>
+  );
+}
+
 function SessionCard({
   state,
+  structuredPlan,
   token,
   onRefresh,
 }: {
   state: TodayCommandView;
+  structuredPlan: StructuredPlan | null;
   token: string;
   onRefresh: () => Promise<void>;
 }) {
@@ -524,6 +609,16 @@ function SessionCard({
   const relationCopy = getSessionRelationCopy(session);
   const isNextSessionPreview = session.session_relation === "next";
   const canCompleteSession = canCompleteTodaySession(session) && !isNextSessionPreview;
+  // Resolve today's day/session from the structured plan through the shared
+  // 04:00 rollover, exactly as Plan Detail does. These blocks — not the backend
+  // session summary — are the "what exact blocks apply today" answer. The
+  // training day comes from the client-mounted hook (SSR-safe, null until mount)
+  // and is resolved on every render so a long-lived tab follows the rollover
+  // instead of sticking on a memoized day.
+  const trainingDay = useTrainingDay();
+  const current = resolveCurrentDay(structuredPlan, trainingDay);
+  const showStructuredBlocks = current.inRange && Boolean(current.day);
+  const recommendationState = state.today.recommendation_state;
 
   async function saveCompletion(
     nextStatus: TodayCompletionStatus,
@@ -564,10 +659,19 @@ function SessionCard({
         <div className="today-card-head">
           <div>
             <p className="kicker">Today&apos;s session</p>
-            <h2 id="today-session-heading">No session scheduled today</h2>
+            <h2 id="today-session-heading">
+              {showStructuredBlocks && current.sessions.length > 0
+                ? "Today's session"
+                : "No session scheduled today"}
+            </h2>
           </div>
         </div>
-        <p className="muted">No active plan card matched today. Review the plan for the next training target.</p>
+        <DecisionBanner state={recommendationState} reason={state.today.recommendation_reason} />
+        {showStructuredBlocks ? (
+          <TodaySessionBlocks planId={state.active_plan?.id} current={current} />
+        ) : (
+          <p className="muted">No active plan card matched today. Review the plan for the next training target.</p>
+        )}
         <div className="today-action-row">
           <Link href={`/plans/${state.active_plan?.id}`} className="secondary-button">
             View full plan
@@ -585,26 +689,31 @@ function SessionCard({
           <h2 id="today-session-heading">{getSessionTitle(session)}</h2>
         </div>
       </div>
-      <div className="today-session-summary">
-        <div>
-          <p className="today-detail-label">Day</p>
-          <p>{formatSessionDate(session)}</p>
-        </div>
-        <div>
-          <p className="today-detail-label">Focus</p>
-          <p>{getSessionFocus(session)}</p>
-        </div>
-        {duration ? (
+      <DecisionBanner state={recommendationState} reason={state.today.recommendation_reason} />
+      {showStructuredBlocks ? (
+        <TodaySessionBlocks planId={state.active_plan?.id} current={current} />
+      ) : (
+        <div className="today-session-summary">
           <div>
-            <p className="today-detail-label">Duration</p>
-            <p>{duration}</p>
+            <p className="today-detail-label">Day</p>
+            <p>{formatSessionDate(session)}</p>
           </div>
-        ) : null}
-        <div>
-          <p className="today-detail-label">Status</p>
-          <p>{isNextSessionPreview ? relationCopy.status : getCompletionLabel(status)}</p>
+          <div>
+            <p className="today-detail-label">Focus</p>
+            <p>{getSessionFocus(session)}</p>
+          </div>
+          {duration ? (
+            <div>
+              <p className="today-detail-label">Duration</p>
+              <p>{duration}</p>
+            </div>
+          ) : null}
+          <div>
+            <p className="today-detail-label">Status</p>
+            <p>{isNextSessionPreview ? relationCopy.status : getCompletionLabel(status)}</p>
+          </div>
         </div>
-      </div>
+      )}
 
       {!canCompleteSession ? (
         <p className="today-terminal-status">
@@ -674,6 +783,7 @@ export function TodayScreen() {
   const { session } = useAppSession();
   const token = session?.access_token ?? null;
   const [state, setState] = useState<TodayCommandView | null>(null);
+  const [structuredPlan, setStructuredPlan] = useState<StructuredPlan | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -695,6 +805,33 @@ export function TodayScreen() {
   useEffect(() => {
     void loadToday();
   }, [loadToday]);
+
+  // Pull the active plan's structured_plan so Today can render today's exact
+  // session blocks from the same data Plan Detail uses. This is read-only and
+  // best-effort: if it fails, Today still works from the backend command view
+  // (it just falls back to the session summary instead of full blocks).
+  const activePlanId = state?.active_plan?.id;
+  useEffect(() => {
+    if (!token || !activePlanId) {
+      setStructuredPlan(null);
+      return;
+    }
+    let cancelled = false;
+    getPlan(token, activePlanId)
+      .then((detail) => {
+        if (!cancelled) {
+          setStructuredPlan(detail.outputs?.structured_plan ?? null);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setStructuredPlan(null);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [token, activePlanId]);
 
   const activePlan = state?.active_plan ?? {};
   const planTitle = activePlan.name?.trim() || "Active fight camp";
@@ -752,7 +889,12 @@ export function TodayScreen() {
       </section>
 
       <div className="today-grid">
-        <SessionCard state={state} token={token ?? ""} onRefresh={loadToday} />
+        <SessionCard
+          state={state}
+          structuredPlan={structuredPlan}
+          token={token ?? ""}
+          onRefresh={loadToday}
+        />
         <div className="today-stack">
           {showCheckin ? (
             <CheckinModule plan={activePlan} token={token ?? ""} onRefresh={loadToday} />

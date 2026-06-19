@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useState, type ReactNode } from "react";
+import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 
 import {
   classifySessionlessDay,
@@ -41,6 +41,7 @@ import {
   weekLoadProxy,
   type Completion,
 } from "@/lib/camp-map";
+import { useTrainingDay } from "@/lib/use-training-day";
 import { formatPlanLabel } from "@/lib/plan-labels";
 import type {
   DeterministicNutritionPhase,
@@ -993,15 +994,32 @@ export function StructuredPlanRenderer({
   today?: Date;
 }) {
   const weeks = getWeeks(plan);
-  const now = today ?? new Date();
+  // Resolve "today" through the shared 04:00 training-day rollover so Plan Detail
+  // and the Today tab can never disagree on the current day. The hook is null
+  // until the client mounts (SSR-safe: no hydration mismatch) and advances
+  // across the rollover on long-lived tabs. Tests pass an explicit `today`.
+  const mountedDay = useTrainingDay();
+  const now = today ?? mountedDay;
   const progress = resolvePlanProgress(plan, now);
   const currentDay = findDayByISO(plan, progress.currentDayDate);
-  const initialPos = progress.currentWeekPos ?? 0;
   // The selected week is user-controllable; default to the current week (or the
-  // first week when today falls outside the camp). Clamp against weeks length so
-  // a stale index can never index past the array.
-  const [selectedPos, setSelectedPos] = useState<number>(initialPos);
-  const safePos = selectedPos >= 0 && selectedPos < weeks.length ? selectedPos : 0;
+  // first week when today falls outside the camp). `selectedPos` stays null until
+  // the user picks a week so that, once the client-mounted current week resolves,
+  // the view follows it instead of being stuck on the first-render default.
+  const [selectedPos, setSelectedPos] = useState<number | null>(null);
+  const userSelectedWeek = useRef(false);
+  useEffect(() => {
+    if (!userSelectedWeek.current && progress.currentWeekPos != null) {
+      setSelectedPos(progress.currentWeekPos);
+    }
+  }, [progress.currentWeekPos]);
+  const handleSelectWeek = (pos: number) => {
+    userSelectedWeek.current = true;
+    setSelectedPos(pos);
+  };
+  const effectivePos = selectedPos ?? progress.currentWeekPos ?? 0;
+  // Clamp against weeks length so a stale index can never index past the array.
+  const safePos = effectivePos >= 0 && effectivePos < weeks.length ? effectivePos : 0;
   const selectedWeek = weeks[safePos];
   const phaseWeek = weeks[progress.currentWeekPos ?? safePos] ?? selectedWeek;
   const focusWeek = currentDay ? weeks[progress.currentWeekPos ?? 0] : selectedWeek;
@@ -1026,7 +1044,7 @@ export function StructuredPlanRenderer({
             weeks={weeks}
             selectedPos={safePos}
             currentPos={progress.currentWeekPos}
-            onSelect={setSelectedPos}
+            onSelect={handleSelectWeek}
           />
           {selectedWeek ? <WeekOverview week={selectedWeek} /> : null}
           <div className="sp-weeks cm-days">

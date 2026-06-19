@@ -4841,6 +4841,59 @@ button.mobile-step-rail-item {
   border-color: rgba(65, 157, 99, 0.3);
 }
 
+/* Compact train/modify/pull-back decision banner shown above today's blocks. */
+.today-decision-banner {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0 0 14px;
+  padding: 12px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-left-width: 3px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.today-decision-banner[data-tone="red"] {
+  border-left-color: #ff6b75;
+  background: rgba(219, 47, 64, 0.08);
+}
+
+.today-decision-banner[data-tone="amber"] {
+  border-left-color: #f1bd61;
+  background: rgba(217, 161, 59, 0.08);
+}
+
+.today-decision-banner[data-tone="green"] {
+  border-left-color: #76d393;
+  background: rgba(65, 157, 99, 0.08);
+}
+
+.today-decision-title {
+  margin: 0;
+  font-family: var(--font-mono), monospace;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--text-primary);
+}
+
+.today-decision-detail {
+  margin: 0;
+  color: var(--text-secondary, rgba(255, 255, 255, 0.72));
+  font-size: 14px;
+  line-height: 1.35;
+}
+
+/* Today's resolved session blocks reuse the structured-plan (camp map) cards so
+   they stay visually identical to Plan Detail, scoped to today's day only. */
+.today-blocks {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 0 0 14px;
+}
+
 .today-card-head {
   gap: 10px;
   align-items: flex-start;
