@@ -259,43 +259,6 @@ function RiskWatch({ risks }: { risks: TodayCommandView["risk_watch"] }) {
   );
 }
 
-function RecommendationCard({ state }: { state: TodayCommandView }) {
-  const copy = getRecommendationCopy(state.today.recommendation_state);
-  const session = state.today.next_session;
-  const hasSession = hasTodaySession(session);
-  return (
-    <section className="today-card today-recommendation-card" data-tone={copy.tone} aria-labelledby="today-recommendation-heading">
-      <div className="today-card-head">
-        <div>
-          <p className="kicker">Recommendation</p>
-          <h2 id="today-recommendation-heading">{copy.label}</h2>
-        </div>
-      </div>
-      <p className="today-recommendation-reason">
-        {state.today.recommendation_reason || copy.actionText}
-      </p>
-      <div className="today-meta-strip">
-        <span>{formatTrainingDay(state.today.training_day)}</span>
-        <span>{hasSession ? getSessionTitle(session) : "No matched session"}</span>
-      </div>
-      {state.today.recommendation_state === "pull_back" ? (
-        <p className="today-safety-note">
-          If pain escalates or red flags appear, stop the session and use recovery work.
-        </p>
-      ) : null}
-      {hasSession ? (
-        <a href="#today-session" className="secondary-button today-session-jump">
-          Go to session
-        </a>
-      ) : state.active_plan.id ? (
-        <Link href={`/plans/${state.active_plan.id}`} className="secondary-button today-session-jump">
-          View plan
-        </Link>
-      ) : null}
-    </section>
-  );
-}
-
 function CheckinModule({
   plan,
   token,
@@ -538,6 +501,11 @@ function DecisionBanner({
     <div className="today-decision-banner" data-tone={banner.tone} role="status">
       <p className="today-decision-title">{banner.title}</p>
       <p className="today-decision-detail">{banner.detail}</p>
+      {state === "pull_back" ? (
+        <p className="today-decision-safety">
+          If pain escalates or red flags appear, stop and switch to recovery work.
+        </p>
+      ) : null}
     </div>
   );
 }
@@ -670,13 +638,8 @@ function SessionCard({
         {showStructuredBlocks ? (
           <TodaySessionBlocks planId={state.active_plan?.id} current={current} />
         ) : (
-          <p className="muted">No active plan card matched today. Review the plan for the next training target.</p>
+          <p className="muted">No active plan card matched today. Use View full plan to find the next training target.</p>
         )}
-        <div className="today-action-row">
-          <Link href={`/plans/${state.active_plan?.id}`} className="secondary-button">
-            View full plan
-          </Link>
-        </div>
       </section>
     );
   }
@@ -872,8 +835,10 @@ export function TodayScreen() {
           <div className="today-hero-copy">
             <p className="kicker">Today</p>
             <h1>{planTitle}</h1>
-            <p className="muted">
-              {trainingDayLabel} / {activePlan.phase || "Current phase"} / Today&apos;s training decision and session control.
+            <p className="muted today-hero-meta">
+              {trainingDayLabel}
+              {activePlan.phase ? <span aria-hidden="true"> · </span> : null}
+              {activePlan.phase || null}
             </p>
           </div>
           <div className="today-hero-actions">
@@ -881,27 +846,23 @@ export function TodayScreen() {
               View full plan
             </Link>
             <Link href="/" className="ghost-button">
-              Back to Overview
+              Overview
             </Link>
           </div>
         </div>
         <RiskWatch risks={state.risk_watch} />
       </section>
 
-      <div className="today-grid">
-        <SessionCard
-          state={state}
-          structuredPlan={structuredPlan}
-          token={token ?? ""}
-          onRefresh={loadToday}
-        />
-        <div className="today-stack">
-          {showCheckin ? (
-            <CheckinModule plan={activePlan} token={token ?? ""} onRefresh={loadToday} />
-          ) : null}
-          <RecommendationCard state={state} />
-        </div>
-      </div>
+      {showCheckin ? (
+        <CheckinModule plan={activePlan} token={token ?? ""} onRefresh={loadToday} />
+      ) : null}
+
+      <SessionCard
+        state={state}
+        structuredPlan={structuredPlan}
+        token={token ?? ""}
+        onRefresh={loadToday}
+      />
     </div>
   );
 }

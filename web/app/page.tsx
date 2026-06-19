@@ -426,7 +426,14 @@ export default function HomePage() {
               <p className="muted">{commandState?.today?.recommendation_reason || "Open Today for the current decision and session log."}</p>
               <div className="plan-summary-actions">
                 <Link href={primaryHref} className="cta overview-primary-action">{primaryLabel}</Link>
-                {hasActivePlan ? <Link href={`/plans/${activePlan.id}`} className="secondary-button">View active plan</Link> : null}
+                {hasActivePlan ? (
+                  <>
+                    <Link href={`/plans/${activePlan.id}`} className="secondary-button">View full plan</Link>
+                    <Link href="/onboarding" className="ghost-button">Review intake</Link>
+                  </>
+                ) : (
+                  <Link href="/quick-build" className="secondary-button">Quick Build</Link>
+                )}
               </div>
             </div>
           </div>
@@ -435,8 +442,7 @@ export default function HomePage() {
             <article className="status-card">
               <p className="status-label">Next session</p>
               <h2 className="plan-summary-title">{String(sessionPreview.title || sessionPreview.weekday || "No session found")}</h2>
-              <p className="muted">{String(sessionPreview["focus"] || sessionPreview["emphasis"] || sessionPreview.status || "Open Today for details.")}</p>
-              <div className="plan-card-actions overview-card-actions"><Link href={hasActivePlan ? "/today" : "/quick-build"} className="secondary-button">{hasActivePlan ? "Open Today" : "Quick Build"}</Link></div>
+              <p className="muted">{String(sessionPreview["focus"] || sessionPreview["emphasis"] || sessionPreview["status"] || (hasActivePlan ? "Open Today for the matched session." : "Generate a plan to see your next session."))}</p>
             </article>
             <article className="status-card">
               <p className="status-label">Risk watch</p>
@@ -447,28 +453,6 @@ export default function HomePage() {
                 </div>
               )) : <p className="muted">No risk flags from today&apos;s command view.</p>}
               {riskOverflow ? <span className="badge status-badge-neutral">+{riskOverflow} more</span> : null}
-            </article>
-            <article className="status-card">
-              <p className="status-label">Command actions</p>
-              <h2 className="plan-summary-title">{hasActivePlan ? "Manage active camp" : "Start camp setup"}</h2>
-              <p className="muted">
-                {hasActivePlan
-                  ? "Jump to the live day, review the saved plan, or update the intake before generating again."
-                  : "Create a profile and generate the first camp plan."}
-              </p>
-              <div className="plan-card-actions overview-card-actions">
-                <Link href={hasActivePlan ? "/today" : "/quick-build"} className="secondary-button">
-                  {hasActivePlan ? "Open Today" : "Quick Build"}
-                </Link>
-                {hasActivePlan ? (
-                  <Link href={`/plans/${activePlan.id}`} className="ghost-button">
-                    View plan
-                  </Link>
-                ) : null}
-                <Link href="/onboarding" className="ghost-button">
-                  {hasActivePlan ? "Review intake" : "Advanced Intake"}
-                </Link>
-              </div>
             </article>
           </div>
         </section>
