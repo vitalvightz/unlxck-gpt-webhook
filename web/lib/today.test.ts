@@ -11,6 +11,7 @@ import {
   canCompleteTodaySession,
   getCompletionActions,
   getRecommendationCopy,
+  getTodayDecisionBanner,
   getVisibleRiskWatch,
   hasActivePlan,
   hasTodaySession,
@@ -68,6 +69,38 @@ test("active plan without check-in shows the check-in module rule", () => {
     }),
     false,
   );
+});
+
+test("decision banner is hidden before check-in", () => {
+  assert.equal(getTodayDecisionBanner("not_checked_in"), null);
+});
+
+test("decision banner gives command-like copy for each checked-in state", () => {
+  assert.deepEqual(getTodayDecisionBanner("train_as_planned"), {
+    state: "train_as_planned",
+    title: "TRAIN AS PLANNED",
+    detail: "Readiness is acceptable. Complete today's prescribed session.",
+    tone: "green",
+  });
+  assert.deepEqual(getTodayDecisionBanner("modify"), {
+    state: "modify",
+    title: "MODIFY SESSION",
+    detail: "Use the safer version today. Remove high-impact work and keep output controlled.",
+    tone: "amber",
+  });
+  assert.deepEqual(getTodayDecisionBanner("pull_back"), {
+    state: "pull_back",
+    title: "PULL BACK TODAY",
+    detail: "Reduce load and intensity. Keep the session technical. Stop if pain rises.",
+    tone: "red",
+  });
+});
+
+test("decision banner prefers the backend readiness reason when present", () => {
+  const banner = getTodayDecisionBanner("pull_back", "Sleep was poor and pain is high today.");
+  assert.equal(banner?.title, "PULL BACK TODAY");
+  assert.equal(banner?.detail, "Sleep was poor and pain is high today.");
+  assert.equal(banner?.tone, "red");
 });
 
 test("check-in payload does not include a frontend recommendation", () => {
@@ -284,7 +317,26 @@ test("submit completion calls the Today completion endpoint", async () => {
   }
 });
 
-test("Today component does not read raw structured plan data", () => {
+test("Today resolves today's blocks from the shared current-day resolver", () => {
+  // Today renders today's exact blocks from the active plan's structured_plan,
+  // resolved through the SAME shared resolver Plan Detail uses (resolveCurrentDay
+  // + the 04:00 resolveTrainingDay rollover) so the two screens can never
+  // disagree on the current day/session.
   const source = readFileSync(new URL("../components/today-screen.tsx", import.meta.url), "utf8");
-  assert.equal(source.includes("structured_plan"), false);
+  assert.equal(source.includes("resolveCurrentDay"), true);
+  assert.equal(source.includes("resolveTrainingDay"), true);
+});
+
+test("Today renders only today's session, never the full camp map", () => {
+  // Today must scope to today's day only. It reuses the per-session camp-map
+  // cards but must NOT mount the full StructuredPlanRenderer (command header,
+  // week strip, every day) — that belongs to Plan Detail (/plans/[planId]).
+  const source = readFileSync(new URL("../components/today-screen.tsx", import.meta.url), "utf8");
+  assert.equal(source.includes("StructuredPlanRenderer"), false);
+  assert.equal(source.includes("WeekStrip"), false);
+});
+
+test("Today's View full plan action routes to the plan detail camp map", () => {
+  const source = readFileSync(new URL("../components/today-screen.tsx", import.meta.url), "utf8");
+  assert.equal(source.includes("/plans/${activePlan.id}"), true);
 });

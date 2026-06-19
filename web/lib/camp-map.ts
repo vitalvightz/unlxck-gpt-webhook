@@ -16,6 +16,7 @@ import {
 import type {
   StructuredDay,
   StructuredPlan,
+  StructuredSession,
   StructuredWeek,
 } from "@/lib/types";
 
@@ -25,6 +26,33 @@ export function toISODate(date: Date): string {
   const month = `${date.getMonth() + 1}`.padStart(2, "0");
   const day = `${date.getDate()}`.padStart(2, "0");
   return `${year}-${month}-${day}`;
+}
+
+/**
+ * The athlete-local training-day rollover hour. The training day does not
+ * advance until 04:00 local time, so a 01:00 session still belongs to the
+ * previous calendar day. This mirrors the backend `/api/today` training-day
+ * concept so Today and Plan Detail resolve the same current day.
+ */
+export const TRAINING_DAY_ROLLOVER_HOUR = 4;
+
+/**
+ * The athlete-local training-day `Date` for `now`, applying the 04:00 rollover.
+ * Returns a Date at local midnight of the resolved training day so it can be fed
+ * straight into `resolvePlanProgress` / `resolveCurrentDay` / `toISODate`. This
+ * is the single shared entry point both Today and Plan Detail use to decide
+ * "what day is it" — avoid resolving the current day from a bare `new Date()`.
+ */
+export function resolveTrainingDay(
+  now: Date,
+  rolloverHour: number = TRAINING_DAY_ROLLOVER_HOUR,
+): Date {
+  const resolved = new Date(now.getTime());
+  if (now.getHours() < rolloverHour) {
+    resolved.setDate(resolved.getDate() - 1);
+  }
+  resolved.setHours(0, 0, 0, 0);
+  return resolved;
 }
 
 /** The plain date portion of a possibly-datetime day.date string, or null. */
@@ -158,6 +186,92 @@ export function findDayByISO(
     }
   }
   return null;
+}
+
+export type CurrentDayResolution = {
+  /** The athlete-local training-day ISO date used for the match. */
+  trainingDayISO: string;
+  /** Array index of the matched week, or null when today is out of camp range. */
+  weekPos: number | null;
+  /** Array index of the matched day within its week, or null when out of range. */
+  dayPos: number | null;
+  week: StructuredWeek | null;
+  day: StructuredDay | null;
+  /** The matched day's sessions (empty for off/rest days or when out of range). */
+  sessions: StructuredSession[];
+  /** "D-28" style countdown for today, or null. */
+  dLabel: string | null;
+  /** True when today maps to a scheduled day in the plan. */
+  inRange: boolean;
+};
+
+/**
+ * The single shared resolver for "which day/session is today" against a
+ * structured plan. Both Today and Plan Detail call this with
+ * `resolveTrainingDay(new Date())` so they can never disagree on the current
+ * day. The matched day is the source of truth for its sessions — a session's own
+ * date is never used to override the parent day (parent day wins).
+ */
+export function resolveCurrentDay(
+  plan: StructuredPlan | null | undefined,
+  today: Date,
+): CurrentDayResolution {
+  const trainingDayISO = toISODate(today);
+  const weeks = getWeeks(plan);
+  for (let weekPos = 0; weekPos < weeks.length; weekPos += 1) {
+    const days = getDays(weeks[weekPos]);
+    for (let dayPos = 0; dayPos < days.length; dayPos += 1) {
+      const day = days[dayPos];
+      if (dayISO(day) === trainingDayISO) {
+        return {
+          trainingDayISO,
+          weekPos,
+          dayPos,
+          week: weeks[weekPos],
+          day,
+          sessions: getSessions(day),
+          dLabel: cleanText(day.countdown_label) || deriveCountdownLabel(plan, today),
+          inRange: true,
+        };
+      }
+    }
+  }
+  return {
+    trainingDayISO,
+    weekPos: null,
+    dayPos: null,
+    week: null,
+    day: null,
+    sessions: [],
+    dLabel: deriveCountdownLabel(plan, today),
+    inRange: false,
+  };
+}
+
+/**
+ * The strongest stable identity for a session, used for completion/display keys
+ * so they never drift or duplicate on title/date alone. Prefers
+ * plan_id + day + session_id; falls back to plan_id + week/day/session indices
+ * when stable ids are missing. The parent day owns the date, so the day's date
+ * (not any per-session date) is used for the day portion.
+ */
+export function sessionIdentity(params: {
+  planId?: string | null;
+  weekPos: number;
+  dayPos: number;
+  sessionPos: number;
+  week?: StructuredWeek | null;
+  day?: StructuredDay | null;
+  session?: StructuredSession | null;
+}): string {
+  const planKey = cleanText(params.planId) || "plan";
+  const dayDate = cleanText(params.day?.date)?.slice(0, 10);
+  const dayKey = dayDate || `d${params.dayPos}`;
+  const sessionId = cleanText(params.session?.session_id);
+  if (sessionId) {
+    return `${planKey}|${dayKey}|${sessionId}`;
+  }
+  return `${planKey}|w${params.weekPos}|d${params.dayPos}|s${params.sessionPos}`;
 }
 
 export type ReadinessStrip = {

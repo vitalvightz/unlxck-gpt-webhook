@@ -37,6 +37,7 @@ import {
   findDayByISO,
   getReadinessStrip,
   resolvePlanProgress,
+  resolveTrainingDay,
   weekCompletion,
   weekLoadProxy,
   type Completion,
@@ -993,7 +994,10 @@ export function StructuredPlanRenderer({
   today?: Date;
 }) {
   const weeks = getWeeks(plan);
-  const now = today ?? new Date();
+  // Resolve "today" through the shared 04:00 training-day rollover so Plan Detail
+  // and the Today tab can never disagree on the current day. Tests pass an
+  // explicit `today` and bypass the rollover.
+  const now = today ?? resolveTrainingDay(new Date());
   const progress = resolvePlanProgress(plan, now);
   const currentDay = findDayByISO(plan, progress.currentDayDate);
   const initialPos = progress.currentWeekPos ?? 0;
