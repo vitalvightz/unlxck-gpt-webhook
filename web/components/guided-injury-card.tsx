@@ -373,7 +373,7 @@ function stripTaggedNotes(notes: string, prefixes: string[]): string {
 // plus structured safety flags such as "[red_flags:none]". These helpers keep
 // the two apart so the visible "Extra detail" box only ever shows real prose.
 
-const NOTE_TAG_PATTERN = /\s*\[[a-z_]+:[^\]]*\]/gi;
+const NOTE_TAG_PATTERN = /\s?\[[a-z_]+:[^\]]*\]/gi;
 
 // Returns the athlete-typed prose with the structured flags removed. Internal
 // spacing is preserved so the value can drive a controlled textarea faithfully.
