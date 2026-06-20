@@ -89,6 +89,56 @@ def _calendar_training_brief(*, active_offsets: list[int]) -> dict:
     }
 
 
+def _multi_week_taper_brief() -> dict:
+    """A two-week taper where each week has a single training day.
+
+    Week 0 trains on Mon (2026-06-15); week 1 trains on Wed (2026-06-24). Every
+    other day is rest, mirroring real taper/late-camp weeks. Used to prove the
+    "Next session" lookup crosses the week boundary instead of stopping at the
+    end of the current week.
+    """
+    week0_monday = date(2026, 6, 15)
+
+    def _calendar_days(monday: date, d_day_for_monday: int) -> list[dict]:
+        return [
+            {
+                "weekday": (monday + timedelta(days=offset)).strftime("%A"),
+                "calendar_date": (monday + timedelta(days=offset)).isoformat(),
+                "d_day": d_day_for_monday - offset,
+            }
+            for offset in range(7)
+        ]
+
+    def _training_day(weekday: str) -> dict:
+        return {
+            "day": weekday,
+            "hard_day_class": "managed_hard",
+            "effective_load": "technical",
+            "status": "technical_skill",
+            "reason": "Plan card for the matched training day.",
+            "coach_note": "Keep it sharp and clean.",
+            "reason_codes": [],
+        }
+
+    return {
+        "fight_date": "2026-07-11",
+        "weekly_role_map": {
+            "weeks": [
+                {
+                    "phase": "TAPER",
+                    "calendar_days": _calendar_days(week0_monday, 26),
+                    "hard_sparring_plan": [_training_day("Monday")],
+                },
+                {
+                    "phase": "TAPER",
+                    "calendar_days": _calendar_days(week0_monday + timedelta(days=7), 19),
+                    "hard_sparring_plan": [_training_day("Wednesday")],
+                },
+            ]
+        },
+    }
+
+
 def _checkin_payload(**overrides) -> dict:
     base = {
         "plan_id": PLAN,
@@ -319,6 +369,37 @@ class TestCommandView:
         assert view.today.next_session["session_id"] == "2026-06-19"
         assert view.today.next_session["session_relation"] == "next"
         assert view.today.completion_status == "not_started"
+
+    def test_next_session_crosses_into_following_week(self):
+        # Week 0 trains only on Mon; the rest of the week is rest. On a later
+        # day with no remaining training this week the next session lives in
+        # week 1 (Wed). It must surface rather than reporting "No session found".
+        store = _store_with_plan()
+        store.plans[PLAN]["planning_brief"] = _multi_week_taper_brief()
+        for now in (
+            datetime(2026, 6, 18, 12, 0, tzinfo=timezone.utc),  # Thu, week 0
+            datetime(2026, 6, 20, 12, 0, tzinfo=timezone.utc),  # Sat, week 0
+            datetime(2026, 6, 21, 12, 0, tzinfo=timezone.utc),  # Sun, week 0
+        ):
+            view = build_today_command_view(
+                store, athlete_id=ATHLETE, athlete_timezone="", now=now
+            )
+            assert view.today.next_session["calendar_date"] == "2026-06-24"
+            assert view.today.next_session["session_relation"] == "next"
+
+    def test_next_session_prefers_todays_training_day(self):
+        # When today itself is the training day, the card shows today's session
+        # and never jumps ahead to a later week.
+        store = _store_with_plan()
+        store.plans[PLAN]["planning_brief"] = _multi_week_taper_brief()
+        view = build_today_command_view(
+            store,
+            athlete_id=ATHLETE,
+            athlete_timezone="",
+            now=datetime(2026, 6, 15, 12, 0, tzinfo=timezone.utc),  # Mon, week 0
+        )
+        assert view.today.next_session["calendar_date"] == "2026-06-15"
+        assert view.today.next_session["session_relation"] == "today"
 
 
 class TestSessionCompletion:
