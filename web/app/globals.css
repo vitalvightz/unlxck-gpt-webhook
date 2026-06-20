@@ -4767,7 +4767,23 @@ button.mobile-step-rail-item {
 }
 
 .today-shell {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
   gap: 16px;
+  border-color: rgba(181, 18, 43, 0.16);
+  background: linear-gradient(180deg, rgba(22, 16, 19, 0.96), rgba(13, 14, 18, 0.96));
+}
+
+.today-shell::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background:
+    radial-gradient(circle at top left, rgba(181, 18, 43, 0.2), transparent 38%),
+    radial-gradient(circle at 88% -10%, rgba(214, 175, 106, 0.08), transparent 34%);
+  pointer-events: none;
 }
 
 .today-empty-state {
@@ -4832,44 +4848,115 @@ button.mobile-step-rail-item {
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.035);
 }
 
+.today-card[data-tone] {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.today-card[data-tone]::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+}
+
 .today-card[data-tone="red"] {
-  border-color: rgba(219, 47, 64, 0.38);
+  border-color: rgba(219, 47, 64, 0.4);
+  box-shadow: inset 3px 0 0 #e23a4c, inset 0 1px 0 rgba(255, 255, 255, 0.035);
+}
+
+.today-card[data-tone="red"]::before {
+  background: radial-gradient(circle at top left, rgba(219, 47, 64, 0.14), transparent 46%);
 }
 
 .today-card[data-tone="amber"] {
-  border-color: rgba(217, 161, 59, 0.32);
+  border-color: rgba(214, 175, 106, 0.34);
+  box-shadow: inset 3px 0 0 #d6af6a, inset 0 1px 0 rgba(255, 255, 255, 0.035);
+}
+
+.today-card[data-tone="amber"]::before {
+  background: radial-gradient(circle at top left, rgba(214, 175, 106, 0.14), transparent 46%);
 }
 
 .today-card[data-tone="green"] {
-  border-color: rgba(65, 157, 99, 0.3);
+  border-color: rgba(39, 174, 96, 0.34);
+  box-shadow: inset 3px 0 0 #2bb56e, inset 0 1px 0 rgba(255, 255, 255, 0.035);
+}
+
+.today-card[data-tone="green"]::before {
+  background: radial-gradient(circle at top left, rgba(39, 174, 96, 0.13), transparent 46%);
 }
 
 /* Compact train/modify/pull-back decision banner shown above today's blocks. */
 .today-decision-banner {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
   margin: 0 0 14px;
   padding: 12px 14px;
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-left-width: 3px;
-  border-radius: 10px;
+  border-radius: 12px;
   background: rgba(255, 255, 255, 0.03);
+}
+
+.today-decision-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.today-decision-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  align-self: start;
+  flex: 0 0 auto;
+  min-width: 44px;
+  height: 28px;
+  padding: 0 8px;
+  border-radius: 999px;
+  font-family: var(--font-mono), monospace;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.08);
 }
 
 .today-decision-banner[data-tone="red"] {
   border-left-color: #ff6b75;
-  background: rgba(219, 47, 64, 0.08);
+  background: linear-gradient(135deg, rgba(219, 47, 64, 0.14), rgba(219, 47, 64, 0.05));
+}
+
+.today-decision-banner[data-tone="red"] .today-decision-icon {
+  background: linear-gradient(180deg, #e23a4c, #b5122b);
+  box-shadow: 0 4px 14px rgba(202, 24, 52, 0.4);
 }
 
 .today-decision-banner[data-tone="amber"] {
   border-left-color: #f1bd61;
-  background: rgba(217, 161, 59, 0.08);
+  background: linear-gradient(135deg, rgba(214, 175, 106, 0.16), rgba(214, 175, 106, 0.05));
+}
+
+.today-decision-banner[data-tone="amber"] .today-decision-icon {
+  background: linear-gradient(180deg, #e6c27d, #c79a45);
+  color: #2a2007;
+  box-shadow: 0 4px 14px rgba(214, 175, 106, 0.32);
 }
 
 .today-decision-banner[data-tone="green"] {
   border-left-color: #76d393;
-  background: rgba(65, 157, 99, 0.08);
+  background: linear-gradient(135deg, rgba(39, 174, 96, 0.16), rgba(39, 174, 96, 0.05));
+}
+
+.today-decision-banner[data-tone="green"] .today-decision-icon {
+  background: linear-gradient(180deg, #4cc47e, #1f9d5a);
+  box-shadow: 0 4px 14px rgba(39, 174, 96, 0.32);
 }
 
 .today-decision-title {
@@ -5044,32 +5131,83 @@ button.mobile-step-rail-item {
 .today-risk-item {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
-  gap: 10px;
-  align-items: start;
+  gap: 12px;
+  align-items: center;
   min-width: min(100%, 260px);
   flex: 1 1 260px;
   border: 1px solid rgba(255, 255, 255, 0.08);
+  border-left-width: 3px;
   border-radius: 14px;
-  padding: 12px;
+  padding: 12px 14px;
   background: rgba(255, 255, 255, 0.035);
+}
+
+/* The "!" badge is a filled, branded chip — meaning never rests on colour alone
+   (the label + text still carry it), but each tone now reads instantly. */
+.today-risk-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  border-color: transparent;
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: 0;
+  color: #fff;
 }
 
 .today-risk-item[data-tone="stop"],
 .today-risk-item[data-tone="warning"] {
-  border-color: rgba(219, 47, 64, 0.28);
+  border-color: rgba(219, 47, 64, 0.45);
+  border-left-color: #e23a4c;
+  background: linear-gradient(135deg, rgba(219, 47, 64, 0.12), rgba(219, 47, 64, 0.03));
 }
 
-.today-risk-icon {
-  width: 30px;
-  height: 30px;
-  border-radius: 999px;
-  color: rgba(255, 255, 255, 0.78);
+.today-risk-item[data-tone="stop"] .today-risk-icon,
+.today-risk-item[data-tone="warning"] .today-risk-icon {
+  background: linear-gradient(180deg, #e23a4c, #b5122b);
+  box-shadow: 0 4px 14px rgba(202, 24, 52, 0.42);
+}
+
+.today-risk-item[data-tone="caution"] {
+  border-color: rgba(214, 175, 106, 0.42);
+  border-left-color: #d6af6a;
+  background: linear-gradient(135deg, rgba(214, 175, 106, 0.14), rgba(214, 175, 106, 0.03));
+}
+
+.today-risk-item[data-tone="caution"] .today-risk-icon {
+  background: linear-gradient(180deg, #e6c27d, #c79a45);
+  color: #2a2007;
+  box-shadow: 0 4px 14px rgba(214, 175, 106, 0.34);
+}
+
+.today-risk-item[data-tone="info"] {
+  border-color: rgba(120, 168, 224, 0.36);
+  border-left-color: #78a8e0;
+  background: linear-gradient(135deg, rgba(120, 168, 224, 0.12), rgba(120, 168, 224, 0.03));
+}
+
+.today-risk-item[data-tone="info"] .today-risk-icon {
+  background: linear-gradient(180deg, #6ea2e0, #3f6fb0);
+  box-shadow: 0 4px 14px rgba(63, 111, 176, 0.34);
 }
 
 .today-risk-text {
   color: var(--text-secondary);
   font-size: 14px;
   line-height: 1.4;
+}
+
+.today-risk-item[data-tone="caution"] .today-risk-label {
+  color: #e6c27d;
+}
+
+.today-risk-item[data-tone="stop"] .today-risk-label,
+.today-risk-item[data-tone="warning"] .today-risk-label {
+  color: #ff8d9a;
+}
+
+.today-risk-item[data-tone="info"] .today-risk-label {
+  color: #a9c8ef;
 }
 
 .today-risk-more {
