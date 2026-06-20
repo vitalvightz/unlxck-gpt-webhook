@@ -19,6 +19,7 @@ from .guided_injury_display import (
 )
 from .guided_injury_resolver import resolve_guided_injury_entry
 from .injury_guard import INJURY_TYPE_SEVERITY, SEVERITY_RANK, normalize_severity
+from .injury_registry import SURFACE_TISSUE_TYPES
 from .injury_formatting import parse_injuries_and_restrictions, parse_injury_entry
 from .normalization import normalize_injury_marker as _normalize_injury_marker
 from .normalization import normalize_label as _normalize_label
@@ -562,7 +563,22 @@ def _parse_guided_injury(guided_injury: GuidedInjury) -> tuple[list[dict[str, st
                 injury_entry["original_phrase"] = f"{guided_injury.area}. Notes: {guided_injury.notes}"
         injuries.append(injury_entry)
 
-    if guided_injury.avoid:
+    # A surface/skin injury's "avoid" is wound-care guidance (e.g. "avoid
+    # friction on the wound"), not a training-load restriction. Promoting it to
+    # a hard restriction makes the Stage-2 validator flag the plan's own
+    # wound-care references as violations and falsely hold the plan, so we keep
+    # it as injury guidance (already stored on injury_entry["avoid"]) instead.
+    is_surface_injury = (
+        str(guided_injury.injury_type or "").strip().lower() == "surface_injury"
+        or bool(str(guided_injury.surface_type or "").strip())
+        or any(
+            str(entry.get("injury_type") or "").strip().lower() in SURFACE_TISSUE_TYPES
+            or str(entry.get("rehab_type") or "").strip().lower() in SURFACE_TISSUE_TYPES
+            for entry in injuries
+        )
+    )
+
+    if guided_injury.avoid and not is_surface_injury:
         restriction_phrase = guided_injury.avoid
         if not _GUIDED_TRIGGER_PREFIX.match(restriction_phrase):
             restriction_phrase = f"avoid {restriction_phrase}"

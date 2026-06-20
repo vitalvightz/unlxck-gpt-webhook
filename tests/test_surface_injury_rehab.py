@@ -109,6 +109,53 @@ def test_unknown_surface_location_falls_back_to_note():
     assert SURFACE_WOUND_CARE_NOTE in block or "[Wound care]" in block
 
 
+def test_surface_avoid_does_not_create_blocking_restriction():
+    # A surface injury's "avoid" is wound-care guidance, not a training-load
+    # restriction. Promoting it to a restriction lets the Stage-2 validator
+    # flag the plan's own wound-care references and falsely hold the plan.
+    from fightcamp.input_parsing import GuidedInjury, _parse_guided_injury
+
+    guided = GuidedInjury(
+        area="knee",
+        injury_type="surface_injury",
+        surface_type="laceration",
+        avoid="friction on the wound",
+    )
+    _injuries, restrictions = _parse_guided_injury(guided)
+    assert restrictions == []
+
+
+def test_non_surface_avoid_still_creates_restriction():
+    from fightcamp.input_parsing import GuidedInjury, _parse_guided_injury
+
+    guided = GuidedInjury(area="knee", avoid="deep squats")
+    _injuries, restrictions = _parse_guided_injury(guided)
+    assert any(r.get("restriction") for r in restrictions)
+
+
+def test_surface_rehab_is_not_promoted_to_stage2_slots():
+    # Wound-care guidance must not become a prescriptive Stage-2 rehab slot
+    # (which the finalizer would expand into plan content that collides with
+    # friction/contact restrictions).
+    from fightcamp.stage2_payload import _build_rehab_slots
+
+    block, _ = generate_rehab_protocols(
+        injury_string="knee laceration",
+        exercise_data=[],
+        current_phase="GPP",
+        parsed_entries=[_surface_entry("laceration", severity="moderate")],
+    )
+    assert _build_rehab_slots(block, "GPP") == []
+    # A real (non-surface) injury still produces rehab slots.
+    sprain_block, _ = generate_rehab_protocols(
+        injury_string="knee sprain",
+        exercise_data=[],
+        current_phase="GPP",
+        parsed_entries=[_surface_entry("sprain", severity="moderate")],
+    )
+    assert _build_rehab_slots(sprain_block, "GPP")
+
+
 def test_mixed_location_keeps_loading_rehab_for_structural_injury():
     # A sprain at the same region must still receive normal loading rehab; the
     # surface path only applies when the injury is purely surface.
