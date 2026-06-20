@@ -369,6 +369,26 @@ function stripTaggedNotes(notes: string, prefixes: string[]): string {
     .trim();
 }
 
+// The notes field is overloaded: it holds the athlete's free-text extra detail
+// plus structured safety flags such as "[red_flags:none]". These helpers keep
+// the two apart so the visible "Extra detail" box only ever shows real prose.
+
+const NOTE_TAG_PATTERN = /\s?\[[a-z_]+:[^\]]*\]/gi;
+
+// Returns the athlete-typed prose with the structured flags removed. Internal
+// spacing is preserved so the value can drive a controlled textarea faithfully.
+function getNotesFreeText(notes: string): string {
+  return notes.replace(NOTE_TAG_PATTERN, "");
+}
+
+// Rewrites the free-text portion while keeping any structured flags appended.
+function setNotesFreeText(notes: string, freeText: string): string {
+  const tags = notes.match(/\[[a-z_]+:[^\]]*\]/gi) ?? [];
+  if (!tags.length) return freeText;
+  if (!freeText.trim()) return tags.join(" ");
+  return `${freeText} ${tags.join(" ")}`;
+}
+
 function clearTypeSpecificFields(onUpdate: <K extends keyof GuidedInjuryState>(key: K, value: GuidedInjuryState[K]) => void) {
   onUpdate("surface_type", "");
   onUpdate("timeframe", "");
@@ -926,7 +946,10 @@ export function GuidedInjuryCard({
   onUpdate,
   onRemove,
 }: GuidedInjuryCardProps) {
-  const [notesOpen, setNotesOpen] = useState(Boolean(injury.notes.trim()));
+  const notesFreeText = getNotesFreeText(injury.notes);
+  const hasExtraDetail = Boolean(notesFreeText.trim());
+  const [notesOpen, setNotesOpen] = useState(hasExtraDetail);
+  const [staleNote, setStaleNote] = useState(false);
   const [draftFamily, setDraftFamily] = useState<InjuryFamily | "">("");
   const [familyExpanded, setFamilyExpanded] = useState(true);
   const [subtypeExpanded, setSubtypeExpanded] = useState(true);
@@ -989,6 +1012,11 @@ function handleTypeSelect(opt: InjuryTypeOption | null) {
   }
 
   const currentType = injury.injury_type;
+  // The injury is being rewritten as a different type. Free-text extra detail
+  // written for the old injury may no longer apply — flag it for the athlete.
+  if (currentType && getNotesFreeText(injury.notes).trim()) {
+    setStaleNote(true);
+  }
   clearTypeSpecificFields(onUpdate);
   onUpdate("injury_type", opt.value);
   onUpdate("surface_type", opt.surface_type ?? "");
@@ -1037,7 +1065,19 @@ function handleTypeSelect(opt: InjuryTypeOption | null) {
           ) : (
             <p className="injury-card-live-summary">{liveSummary}</p>
           )}
-          {!isActive ? <span className="injury-card-status-pill">{collapsedStatus}</span> : null}
+          {!isActive ? (
+            <div className="injury-card-pills">
+              <span className="injury-card-status-pill">{collapsedStatus}</span>
+              {hasExtraDetail ? (
+                <span className="injury-card-note-pill" title={notesFreeText}>
+                  <svg width="11" height="11" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+                    <path d="M2.5 2.5h9M2.5 5.5h9M2.5 8.5h6" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+                  </svg>
+                  Note
+                </span>
+              ) : null}
+            </div>
+          ) : null}
         </div>
         <div className="injury-card-badges">
           {injury.severity ? (
@@ -1234,13 +1274,32 @@ function handleTypeSelect(opt: InjuryTypeOption | null) {
           ) : null}
 
           {/* Collapsed notes */}
+          {staleNote && hasExtraDetail ? (
+            <div className="gi-stale-note" role="status">
+              <span>Extra detail was written for the previous injury and may no longer apply.</span>
+              <button
+                type="button"
+                className="gi-stale-note-clear"
+                onClick={() => {
+                  onUpdate("notes", setNotesFreeText(injury.notes, ""));
+                  setStaleNote(false);
+                  setNotesOpen(false);
+                }}
+              >
+                Clear
+              </button>
+            </div>
+          ) : null}
           {notesOpen ? (
             <div className="gi-field">
               <label htmlFor={`gi-notes-${index}`} className="gi-label">Extra detail</label>
               <textarea
                 id={`gi-notes-${index}`}
-                value={injury.notes}
-                onChange={(e) => onUpdate("notes", e.target.value)}
+                value={notesFreeText}
+                onChange={(e) => {
+                  onUpdate("notes", setNotesFreeText(injury.notes, e.target.value));
+                  setStaleNote(false);
+                }}
                 maxLength={GUIDED_INJURY_NOTES_MAX}
                 placeholder="What happened, what irritates it, anything else the planner should know"
                 rows={2}
