@@ -569,8 +569,8 @@ def _parse_guided_injury(guided_injury: GuidedInjury) -> tuple[list[dict[str, st
     # wound-care references as violations and falsely hold the plan, so we keep
     # it as injury guidance (already stored on injury_entry["avoid"]) instead.
     is_surface_injury = (
-        guided_injury.injury_type.strip().lower() == "surface_injury"
-        or bool(guided_injury.surface_type.strip())
+        str(guided_injury.injury_type or "").strip().lower() == "surface_injury"
+        or bool(str(guided_injury.surface_type or "").strip())
         or any(
             str(entry.get("injury_type") or "").strip().lower() in SURFACE_TISSUE_TYPES
             or str(entry.get("rehab_type") or "").strip().lower() in SURFACE_TISSUE_TYPES
