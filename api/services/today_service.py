@@ -49,6 +49,7 @@ def _plan_schedule_helpers():
         _parse_iso_date,
         _resolve_current_week,
         _resolve_today_and_next,
+        _weekly_schedule_or_none,
     )
 
     return (
@@ -56,6 +57,7 @@ def _plan_schedule_helpers():
         _parse_iso_date,
         _resolve_current_week,
         _resolve_today_and_next,
+        _weekly_schedule_or_none,
     )
 
 _CHECKIN_INPUT_FIELDS = (
@@ -274,6 +276,47 @@ def _entry_has_training(entry: Any) -> bool:
     return str(value or "").strip().lower() != "none"
 
 
+def _scan_forward_for_next_training(
+    plan_row: Mapping[str, Any],
+    *,
+    week: Any,
+    week_index: int,
+    training_date: Any,
+    weekly_schedule_or_none,
+    parse_iso_date,
+) -> Any:
+    """Find the next training day in a later schedule week.
+
+    The within-week resolver (``_resolve_today_and_next``) only looks at the
+    remaining days of the *current* week. Taper and late-camp weeks frequently
+    carry just one or two training days, so on every non-training day the rest of
+    the week is empty and the genuine next session sits in a future week. Without
+    crossing the week boundary the Overview "Next session" card reports
+    "No session found" even though training is still scheduled. This scan walks
+    subsequent weeks (in order) and returns the first day that carries training,
+    so the card always reflects the next real session while one exists.
+    """
+    if week is None:
+        return None
+    week_count = int(getattr(week, "week_count", 0) or 0)
+    for index in range(week_index + 1, week_count):
+        later_week = weekly_schedule_or_none(plan_row, week_index=index)
+        if later_week is None:
+            continue
+        for entry in getattr(later_week, "days", []) or []:
+            if not _entry_has_training(entry):
+                continue
+            calendar_date = getattr(entry, "calendar_date", None)
+            entry_date = parse_iso_date(calendar_date) if calendar_date else None
+            # Dated plans: never surface a session on/before today. Undated plans
+            # (weekday-only fallback) can't be compared, so any later-week
+            # training day is the next session.
+            if entry_date is not None and training_date is not None and entry_date <= training_date:
+                continue
+            return entry
+    return None
+
+
 def _next_session_payload(entry: Any, session_id: str | None, *, relation: str | None = None) -> dict[str, Any]:
     if entry is None:
         return {}
@@ -330,6 +373,7 @@ def build_today_command_view(
         _parse_iso_date,
         _resolve_current_week,
         _resolve_today_and_next,
+        _weekly_schedule_or_none,
     ) = _plan_schedule_helpers()
 
     training_day = resolve_training_day(athlete_timezone, now=now)
@@ -347,16 +391,32 @@ def build_today_command_view(
     # Derive today's/next session from the persisted plan's weekly schedule.
     today_entry = next_entry = None
     week = None
+    week_index = 0
     training_date = _parse_iso_date(training_day)
     if training_date is not None:
         try:
-            _week_index, week = _resolve_current_week(plan_row, today=training_date)
+            week_index, week = _resolve_current_week(plan_row, today=training_date)
             today_entry, next_entry = _resolve_today_and_next(week, today=training_date)
         except Exception:
             # Malformed plan data must never crash Overview.
             today_entry = next_entry = None
+            week = None
 
     target_entry = today_entry if _entry_has_training(today_entry) else next_entry
+    if target_entry is None and week is not None:
+        # No training left in the current week — look ahead so the "Next session"
+        # card surfaces the upcoming session instead of "No session found".
+        try:
+            target_entry = _scan_forward_for_next_training(
+                plan_row,
+                week=week,
+                week_index=week_index,
+                training_date=training_date,
+                weekly_schedule_or_none=_weekly_schedule_or_none,
+                parse_iso_date=_parse_iso_date,
+            )
+        except Exception:
+            target_entry = None
     session_relation = (
         "today"
         if target_entry is not None and target_entry is today_entry
@@ -393,6 +453,7 @@ def resolve_today_landing(
         _parse_iso_date,
         _resolve_current_week,
         _resolve_today_and_next,
+        _weekly_schedule_or_none,
     ) = _plan_schedule_helpers()
 
     training_day = resolve_training_day(athlete_timezone, now=now)
