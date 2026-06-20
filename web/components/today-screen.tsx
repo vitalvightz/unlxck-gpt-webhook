@@ -16,6 +16,7 @@ import {
   sessionIdentity,
   type CurrentDayResolution,
 } from "@/lib/camp-map";
+import { humanizeIfRawEnum } from "@/lib/plan-labels";
 import { useTrainingDay } from "@/lib/use-training-day";
 import {
   TODAY_EMPTY_TEXT,
@@ -24,9 +25,9 @@ import {
   canCompleteTodaySession,
   completionRequiresModificationReason,
   completionRequiresReviewFields,
-  formatSessionValue,
   getCompletionLabel,
   getRecommendationCopy,
+  getSessionFocus,
   getSessionTitle,
   getTodayDecisionBanner,
   getVisibleRiskWatch,
@@ -126,17 +127,6 @@ function formatSessionDate(session: TodaySession): string {
     hasCountdownInDayText ? null : countdown,
   ].filter(Boolean);
   return parts.length ? parts.join(" / ") : "Athlete-local training day";
-}
-
-function getSessionFocus(session: TodaySession): string {
-  return (
-    session.primary_focus?.trim() ||
-    session.emphasis?.trim() ||
-    formatSessionValue(session.effective_load) ||
-    session.reason?.trim() ||
-    session.coach_note?.trim() ||
-    "Follow the current plan guidance."
-  );
 }
 
 function getSessionDuration(session: TodaySession): string | null {
@@ -872,7 +862,7 @@ export function TodayScreen() {
             <p className="muted today-hero-meta">
               {trainingDayLabel}
               {activePlan.phase ? <span aria-hidden="true"> · </span> : null}
-              {activePlan.phase || null}
+              {activePlan.phase ? humanizeIfRawEnum(activePlan.phase) : null}
             </p>
           </div>
           <div className="today-hero-actions">

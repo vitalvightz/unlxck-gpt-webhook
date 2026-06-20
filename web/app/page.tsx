@@ -15,8 +15,15 @@ import {
   TACTICAL_STYLE_OPTIONS,
   TECHNICAL_STYLE_OPTIONS,
 } from "@/lib/intake-options";
+import { humanizeIfRawEnum } from "@/lib/plan-labels";
 import { formatPlanFightDate, formatPlanTimestamp, getPlanDisplayName } from "@/lib/plan-format";
-import type { PlanSummary, TodayActivePlan, TodayCommandView } from "@/lib/types";
+import {
+  getSessionDayLabel,
+  getSessionFocus,
+  getSessionTitle,
+  hasTodaySession,
+} from "@/lib/today";
+import type { PlanSummary, TodayActivePlan, TodayCommandView, TodaySession } from "@/lib/types";
 
 const landingPreviewStages = [
   {
@@ -389,7 +396,15 @@ export default function HomePage() {
 
     const activePlan = enrichConfirmedActivePlan(commandState?.active_plan, latestPlan);
     const hasActivePlan = Boolean(activePlan.id);
-    const sessionPreview = (commandState?.today?.next_session ?? {}) as Record<string, unknown>;
+    const sessionPreview = (commandState?.today?.next_session ?? {}) as TodaySession;
+    const hasNextSession = hasTodaySession(sessionPreview);
+    const nextSessionTitle = hasNextSession ? getSessionTitle(sessionPreview) : "No upcoming session";
+    const nextSessionDay = hasNextSession ? getSessionDayLabel(sessionPreview) : "";
+    const nextSessionFocus = hasNextSession
+      ? getSessionFocus(sessionPreview)
+      : hasActivePlan
+        ? "Open Today for the matched session."
+        : "Generate a plan to see your next session.";
     const risks = commandState?.risk_watch ?? [];
     const visibleRisks = risks.slice(0, 2);
     const riskOverflow = Math.max(0, risks.length - visibleRisks.length);
@@ -401,6 +416,15 @@ export default function HomePage() {
         : recommendation === "pull_back"
           ? "Pull back today"
           : "Check in required";
+    // Decision tone drives the colour accents on the command cards (matches Today).
+    const decisionTone =
+      recommendation === "train_as_planned"
+        ? "green"
+        : recommendation === "modify"
+          ? "amber"
+          : recommendation === "pull_back"
+            ? "red"
+            : undefined;
     const primaryHref = hasActivePlan ? "/today" : "/onboarding";
     const primaryLabel = hasActivePlan ? (recommendation === "not_checked_in" ? "Open Today / Check in" : "Open Today") : "Complete Intake";
 
@@ -414,13 +438,13 @@ export default function HomePage() {
               <p className="overview-command-summary">Current camp status, today&apos;s decision, and the next training target from the active plan.</p>
               <div className="overview-operational-strip" aria-label="Camp status">
                 <div className="overview-operational-item"><span className="overview-operational-label">Active plan</span><span className="overview-operational-value">{String(activePlan.name || "No active plan")}</span></div>
-                <div className="overview-operational-item"><span className="overview-operational-label">Phase</span><span className="overview-operational-value">{String(activePlan.phase || "Not set")}</span></div>
+                <div className="overview-operational-item"><span className="overview-operational-label">Phase</span><span className="overview-operational-value">{humanizeIfRawEnum(activePlan.phase) || "Not set"}</span></div>
                 <div className="overview-operational-item"><span className="overview-operational-label">Training day</span><span className="overview-operational-value">{commandState?.today?.training_day || "Not set"}</span></div>
                 <div className="overview-operational-item"><span className="overview-operational-label">Fight date</span><span className="overview-operational-value">{formatPlanFightDate(String(activePlan.fight_date || ""))}</span></div>
               </div>
               {commandError ? <p className="error-banner" role="alert">{commandError}</p> : null}
             </div>
-            <div className="status-card overview-next-action overview-decision-card">
+            <div className="status-card overview-next-action overview-decision-card overview-command-card" data-tone={decisionTone}>
               <p className="status-label">Today&apos;s state</p>
               <h2 className="plan-summary-title">{todayStateLabel}</h2>
               <p className="muted">{commandState?.today?.recommendation_reason || "Open Today for the current decision and session log."}</p>
@@ -439,17 +463,18 @@ export default function HomePage() {
           </div>
 
           <div className="overview-disclosure-stack athlete-motion-slot athlete-motion-status">
-            <article className="status-card">
+            <article className="status-card overview-command-card overview-next-session-card" data-tone={decisionTone}>
               <p className="status-label">Next session</p>
-              <h2 className="plan-summary-title">{String(sessionPreview.title || sessionPreview.weekday || "No session found")}</h2>
-              <p className="muted">{String(sessionPreview["focus"] || sessionPreview["emphasis"] || sessionPreview["status"] || (hasActivePlan ? "Open Today for the matched session." : "Generate a plan to see your next session."))}</p>
+              <h2 className="plan-summary-title">{nextSessionTitle}</h2>
+              {nextSessionDay ? <p className="overview-next-session-day">{nextSessionDay}</p> : null}
+              <p className="muted">{nextSessionFocus}</p>
             </article>
-            <article className="status-card">
+            <article className="status-card overview-command-card overview-risk-card">
               <p className="status-label">Risk watch</p>
               {visibleRisks.length ? visibleRisks.map((risk) => (
-                <div key={`${risk.category}-${risk.label}`} className="overview-operational-item">
-                  <span className="overview-operational-label">{risk.label}</span>
-                  <span className="overview-operational-value">{risk.text || "Monitor before training."}</span>
+                <div key={`${risk.category}-${risk.label}`} className="overview-risk-row" data-tone={risk.tone}>
+                  <span className="overview-risk-row-label">{humanizeIfRawEnum(risk.label) || risk.label}</span>
+                  <span className="overview-risk-row-text">{risk.text || "Monitor before training."}</span>
                 </div>
               )) : <p className="muted">No risk flags from today&apos;s command view.</p>}
               {riskOverflow ? <span className="badge status-badge-neutral">+{riskOverflow} more</span> : null}

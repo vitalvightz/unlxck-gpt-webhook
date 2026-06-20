@@ -168,10 +168,10 @@ function GenerationDiagnosticCard({
         <div className="admin-diagnostic-summary-grid">
           <DiagnosticMetaItem label="Athlete" value={summary.athlete_name} />
           <DiagnosticMetaItem label="Fight date" value={summary.fight_date} />
-          <DiagnosticMetaItem label="Phase" value={summary.phase} />
-          <DiagnosticMetaItem label="Format" value={summary.fight_format} />
-          <DiagnosticMetaItem label="Fatigue" value={summary.fatigue_level} />
-          <DiagnosticMetaItem label="Availability" value={summary.training_availability} />
+          <DiagnosticMetaItem label="Phase" value={humanizeEnumValue(summary.phase, "-")} />
+          <DiagnosticMetaItem label="Format" value={humanizeEnumValue(summary.fight_format, "-")} />
+          <DiagnosticMetaItem label="Fatigue" value={humanizeEnumValue(summary.fatigue_level, "-")} />
+          <DiagnosticMetaItem label="Availability" value={humanizeEnumValue(summary.training_availability, "-")} />
         </div>
       </div>
 

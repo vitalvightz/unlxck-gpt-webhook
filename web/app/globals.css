@@ -1514,6 +1514,120 @@ select:focus-visible {
   isolation: isolate;
 }
 
+/* Overview command cards (Today's state / Next session / Risk watch) share the
+   Today screen's tone-driven accent so the page reads at a glance and matches. */
+.overview-command-card {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.overview-command-card[data-tone]::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+}
+
+.overview-command-card[data-tone="green"] {
+  border-color: rgba(39, 174, 96, 0.34);
+  box-shadow: inset 3px 0 0 #2bb56e, var(--shadow-support);
+}
+
+.overview-command-card[data-tone="green"]::before {
+  background: radial-gradient(circle at top left, rgba(39, 174, 96, 0.13), transparent 48%);
+}
+
+.overview-command-card[data-tone="amber"] {
+  border-color: rgba(214, 175, 106, 0.34);
+  box-shadow: inset 3px 0 0 #d6af6a, var(--shadow-support);
+}
+
+.overview-command-card[data-tone="amber"]::before {
+  background: radial-gradient(circle at top left, rgba(214, 175, 106, 0.14), transparent 48%);
+}
+
+.overview-command-card[data-tone="red"] {
+  border-color: rgba(219, 47, 64, 0.4);
+  box-shadow: inset 3px 0 0 #e23a4c, var(--shadow-support);
+}
+
+.overview-command-card[data-tone="red"]::before {
+  background: radial-gradient(circle at top left, rgba(219, 47, 64, 0.14), transparent 48%);
+}
+
+.overview-next-session-day {
+  margin: 0;
+  color: var(--text-muted);
+  font-family: var(--font-mono), monospace;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.overview-risk-card {
+  display: grid;
+  gap: 10px;
+  align-content: start;
+}
+
+/* Coloured risk rows — meaning never rests on colour alone (label + text carry
+   it), but each tone now reads instantly instead of a flat grey list. */
+.overview-risk-row {
+  display: grid;
+  gap: 3px;
+  padding: 8px 10px 8px 12px;
+  border-radius: 10px;
+  border-left: 3px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.overview-risk-row[data-tone="stop"],
+.overview-risk-row[data-tone="warning"] {
+  border-left-color: #e23a4c;
+  background: linear-gradient(135deg, rgba(219, 47, 64, 0.12), rgba(219, 47, 64, 0.02));
+}
+
+.overview-risk-row[data-tone="caution"] {
+  border-left-color: #d6af6a;
+  background: linear-gradient(135deg, rgba(214, 175, 106, 0.13), rgba(214, 175, 106, 0.02));
+}
+
+.overview-risk-row[data-tone="info"] {
+  border-left-color: #6ea2e0;
+  background: linear-gradient(135deg, rgba(120, 168, 224, 0.12), rgba(120, 168, 224, 0.02));
+}
+
+.overview-risk-row-label {
+  color: var(--text-muted);
+  font-family: var(--font-mono), monospace;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.overview-risk-row[data-tone="stop"] .overview-risk-row-label,
+.overview-risk-row[data-tone="warning"] .overview-risk-row-label {
+  color: #ff8d9a;
+}
+
+.overview-risk-row[data-tone="caution"] .overview-risk-row-label {
+  color: #e6c27d;
+}
+
+.overview-risk-row[data-tone="info"] .overview-risk-row-label {
+  color: #a9c8ef;
+}
+
+.overview-risk-row-text {
+  color: var(--text-secondary);
+  font-size: 14px;
+  line-height: 1.4;
+}
+
 .overview-primary-action::after {
   content: "";
   position: absolute;
