@@ -306,7 +306,11 @@ def _scan_forward_for_next_training(
         for entry in getattr(later_week, "days", []) or []:
             if not _entry_has_training(entry):
                 continue
-            calendar_date = getattr(entry, "calendar_date", None)
+            calendar_date = (
+                entry.get("calendar_date")
+                if isinstance(entry, Mapping)
+                else getattr(entry, "calendar_date", None)
+            )
             entry_date = parse_iso_date(calendar_date) if calendar_date else None
             # Dated plans: never surface a session on/before today. Undated plans
             # (weekday-only fallback) can't be compared, so any later-week

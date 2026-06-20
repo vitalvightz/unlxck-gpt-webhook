@@ -6,6 +6,7 @@ deterministic without a live clock or database.
 """
 
 from datetime import date, datetime, timedelta, timezone
+from types import SimpleNamespace
 from zoneinfo import ZoneInfo
 
 import pytest
@@ -13,6 +14,7 @@ from fastapi import HTTPException
 
 from api.contracts.completion import completion_landing_state, completion_status_of
 from api.services.today_service import (
+    _scan_forward_for_next_training,
     build_today_command_view,
     submit_today_checkin,
     upsert_session_completion,
@@ -510,3 +512,55 @@ class TestSessionCompletion:
         )
         assert reset["started_at"] is None
         assert reset["completed_at"] is None
+
+
+class TestScanForwardForNextTraining:
+    """Direct coverage for the cross-week scan, including dict-shaped entries.
+
+    In production the schedule resolver yields ``WeeklyDayEntry`` objects, but
+    the rest of the service treats schedule entries as either objects or plain
+    dicts. These assert the scan reads ``calendar_date`` correctly for dict
+    entries so it never mistakes a past dated session for the next one.
+    """
+
+    @staticmethod
+    def _week(days):
+        return SimpleNamespace(week_count=2, days=days)
+
+    @staticmethod
+    def _parse(value):
+        try:
+            return date.fromisoformat(str(value))
+        except (TypeError, ValueError):
+            return None
+
+    def _scan(self, current_days, later_days, training_date):
+        current = self._week(current_days)
+        later = self._week(later_days)
+        return _scan_forward_for_next_training(
+            {"id": PLAN},
+            week=current,
+            week_index=0,
+            training_date=training_date,
+            weekly_schedule_or_none=lambda _row, *, week_index: later if week_index == 1 else None,
+            parse_iso_date=self._parse,
+        )
+
+    def test_dict_entry_skips_past_dated_session(self):
+        # A later week whose only training day is dated on/before today must be
+        # skipped rather than surfaced as the "next" session.
+        past = {"weekday": "Mon", "calendar_date": "2026-06-15", "effective_load": "technical"}
+        result = self._scan([], [past], training_date=date(2026, 6, 20))
+        assert result is None
+
+    def test_dict_entry_returns_future_dated_session(self):
+        future = {"weekday": "Wed", "calendar_date": "2026-06-24", "effective_load": "technical"}
+        result = self._scan([], [future], training_date=date(2026, 6, 20))
+        assert result is future
+
+    def test_dict_entry_without_date_is_returned(self):
+        # Undated (weekday-only) plans can't be compared, so any later-week
+        # training day qualifies as the next session.
+        entry = {"weekday": "Wed", "calendar_date": None, "effective_load": "hard"}
+        result = self._scan([], [entry], training_date=date(2026, 6, 20))
+        assert result is entry
