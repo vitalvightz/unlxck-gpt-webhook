@@ -1968,20 +1968,33 @@ export function PlanViewer({
     }
 
     const planName = plan.plan_name?.trim() ?? "";
-    if (!planName) {
-      setPlanActionError("This plan has no name. Rename it before permanent deletion.");
-      return;
-    }
+    const isArchived = (plan.status || "").trim().toLowerCase() === "archived";
 
-    const typed = window.prompt(
-      `Permanent delete cannot be undone.\n\nType the plan name to confirm:\n${planName}`,
-    );
-    if (typed == null) {
-      return;
-    }
-    if (typed.trim() !== planName) {
-      setPlanActionError("Confirmation did not match the plan name. Nothing was deleted.");
-      return;
+    // Archived plans are already retired, so skip the type-the-name confirmation
+    // and use a single confirm. Live plans still require typing the name.
+    if (isArchived) {
+      const confirmed = window.confirm(
+        `Permanently delete "${getPlanDisplayName(plan)}"? This cannot be undone.`,
+      );
+      if (!confirmed) {
+        return;
+      }
+    } else {
+      if (!planName) {
+        setPlanActionError("This plan has no name. Rename it before permanent deletion.");
+        return;
+      }
+
+      const typed = window.prompt(
+        `Permanent delete cannot be undone.\n\nType the plan name to confirm:\n${planName}`,
+      );
+      if (typed == null) {
+        return;
+      }
+      if (typed.trim() !== planName) {
+        setPlanActionError("Confirmation did not match the plan name. Nothing was deleted.");
+        return;
+      }
     }
 
     setPlanActionPending("permanent-delete");
@@ -1989,7 +2002,7 @@ export function PlanViewer({
     setPlanActionMessage(null);
 
     try {
-      await permanentlyDeletePlan(accessToken, plan.plan_id, planName);
+      await permanentlyDeletePlan(accessToken, plan.plan_id, isArchived ? undefined : planName);
       clearCompletedGenerationForDeletedPlan(plan.plan_id);
       await onPlanDeleted?.();
       router.push("/admin");

@@ -619,16 +619,38 @@ export async function deletePlan(token: string, planId: string): Promise<void> {
   );
 }
 
-// Admin-only hard delete. Requires the exact plan name as typed confirmation.
+// Admin-only hard delete. Non-archived plans require the exact plan name as
+// typed confirmation; archived plans can be deleted without it (pass no name).
 export async function permanentlyDeletePlan(
   token: string,
   planId: string,
-  confirmPlanName: string,
+  confirmPlanName?: string,
 ): Promise<void> {
+  const trimmedName = confirmPlanName?.trim();
   return requestVoid(`/api/admin/plans/${encodeURIComponent(planId)}/permanent`, {
     method: "DELETE",
     token,
-    body: JSON.stringify({ confirm_plan_name: confirmPlanName }),
+    body: trimmedName ? JSON.stringify({ confirm_plan_name: trimmedName }) : undefined,
+  });
+}
+
+export type BulkPermanentDeleteResult = {
+  deleted: string[];
+  skipped: { plan_id: string; reason: string }[];
+  deleted_count: number;
+  skipped_count: number;
+};
+
+// Admin-only bulk hard delete. Only already-archived plans are removed; any
+// non-archived ids are reported back in `skipped`.
+export async function bulkPermanentlyDeletePlans(
+  token: string,
+  planIds: string[],
+): Promise<BulkPermanentDeleteResult> {
+  return readJson<BulkPermanentDeleteResult>("/api/admin/plans/bulk-permanent-delete", {
+    method: "POST",
+    token,
+    body: JSON.stringify({ plan_ids: planIds }),
   });
 }
 
