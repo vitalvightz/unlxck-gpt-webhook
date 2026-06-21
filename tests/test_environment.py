@@ -14,10 +14,18 @@ def test_apply_production_environment_defaults_sets_backend_markers(monkeypatch)
     monkeypatch.delenv("UNLXCK_ENV", raising=False)
 
     apply_production_environment_defaults()
-
-    assert is_production_environment() is True
-    assert os.environ["APP_ENV"] == "production"
-    assert os.environ["UNLXCK_ENV"] == "production"
+    try:
+        assert is_production_environment() is True
+        assert os.environ["APP_ENV"] == "production"
+        assert os.environ["UNLXCK_ENV"] == "production"
+    finally:
+        # apply_production_environment_defaults writes directly to os.environ.
+        # monkeypatch.delenv records no undo for vars that were absent, so it
+        # cannot revert these writes — scrub them explicitly to avoid leaking
+        # production markers into later tests (e.g. create_app's production
+        # CORS validation would refuse to boot with localhost origins).
+        os.environ.pop("APP_ENV", None)
+        os.environ.pop("UNLXCK_ENV", None)
 
 
 def test_apply_production_environment_defaults_preserves_explicit_values(monkeypatch):
