@@ -1020,7 +1020,8 @@ def test_full_plan_response_does_not_include_blocked_output(monkeypatch):
 
     result = generate_plan_sync(payload)
 
-    assert result["status"] != "triage_blocked"
+    # A successful (non-blocked) plan omits the "status" key entirely.
+    assert result.get("status") != "triage_blocked"
     assert "blocked_output" not in result
 
 
