@@ -139,6 +139,15 @@ LATE_STRENGTH_SAFE_TAGS = {
     "maximal_strength_maintenance",
 }
 LATE_STRENGTH_TIGHT_WINDOWS = {D7, D6_TO_D5, D4_TO_D2, D1}
+# Safety-critical hard blocks apply across every active late window where their
+# condition fires (e.g. D13-D8), not just the tight windows. They must not be
+# dropped by the tight-window block filter.
+LATE_STRENGTH_SAFETY_CRITICAL_BLOCKS = frozenset(
+    {
+        "late_strength_block_high_cut_balance_risk",
+        "late_strength_block_familiarity_required_late",
+    }
+)
 LATE_STRENGTH_TRUE_CLUSTER_BAND = 0.05
 # Bias applied to posterior-chain-specific late-touches when posterior_chain is a
 # stated weakness, so they win the posterior-chain slot ahead of quad-dominant
@@ -699,7 +708,12 @@ def _evaluate_strength_late_window(
     if window == D1 and "medicine_ball" in set(normalize_equipment_list(exercise.get("equipment", []))) and not explicit_late_metadata:
         blocks.append("late_strength_block_nonexplicit_ballistic_med_ball")
 
-    block_codes = sorted(set(blocks)) if window in LATE_STRENGTH_TIGHT_WINDOWS else []
+    if window in LATE_STRENGTH_TIGHT_WINDOWS:
+        block_codes = sorted(set(blocks))
+    else:
+        # Outside the tight windows (e.g. D13-D8) only safety-critical hard blocks
+        # survive; the window-specific noise/diversity blocks are dropped.
+        block_codes = sorted(b for b in set(blocks) if b in LATE_STRENGTH_SAFETY_CRITICAL_BLOCKS)
     if window in LATE_STRENGTH_TIGHT_WINDOWS and high_cut_window:
         if profile["loaded_lower"] and (
             profile["heavy_loaded_pattern"]

@@ -389,6 +389,41 @@
       ],
       "blocked": [
         {
+          "name": "Eye-head dissociation drill",
+          "score": -1.75,
+          "reason_codes": [
+            "late_strength_block_familiarity_required_late"
+          ]
+        },
+        {
+          "name": "Four-way manual neck isometric",
+          "score": -1.75,
+          "reason_codes": [
+            "late_strength_block_familiarity_required_late"
+          ]
+        },
+        {
+          "name": "Standing hip CAR lite",
+          "score": -1.75,
+          "reason_codes": [
+            "late_strength_block_familiarity_required_late"
+          ]
+        },
+        {
+          "name": "Supported hip airplane micro-range",
+          "score": -1.75,
+          "reason_codes": [
+            "late_strength_block_familiarity_required_late"
+          ]
+        },
+        {
+          "name": "Towel-assisted lateral neck isometric",
+          "score": -1.75,
+          "reason_codes": [
+            "late_strength_block_familiarity_required_late"
+          ]
+        },
+        {
           "name": "Trap Bar Jump (Light)",
           "score": 2.05,
           "reason_codes": [
