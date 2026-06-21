@@ -1236,6 +1236,9 @@ class PlanPermanentDeleteRequest(BaseModel):
         return normalized or None
 
 
+PLAN_BULK_PERMANENT_DELETE_MAX = 100
+
+
 class PlanBulkPermanentDeleteRequest(BaseModel):
     plan_ids: list[str]
 
@@ -1252,6 +1255,12 @@ class PlanBulkPermanentDeleteRequest(BaseModel):
             normalized.append(plan_id)
         if not normalized:
             raise ValueError("plan_ids is required")
+        # Cap the batch on the deduplicated list so a single request can never
+        # fan out into an unbounded number of deletes.
+        if len(normalized) > PLAN_BULK_PERMANENT_DELETE_MAX:
+            raise ValueError(
+                f"plan_ids cannot exceed {PLAN_BULK_PERMANENT_DELETE_MAX} unique ids per request"
+            )
         return normalized
 
 
