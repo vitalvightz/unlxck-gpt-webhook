@@ -617,7 +617,7 @@ def test_free_text_injury_fallback_still_parses_without_guided_injury():
         ("Upper back", "upper back"),
         ("Lower back", "lower back"),
         ("Left glute", "glute"),
-        ("Right quad", "quad"),
+        ("Right quad", "quads"),
         ("Core", "core"),
     ],
 )

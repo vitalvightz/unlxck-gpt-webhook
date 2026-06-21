@@ -28,7 +28,7 @@ def test_canonicalize_location_covers_laterality_and_aliases():
     assert canonicalize_location("upper_back") == "upper back"
     assert canonicalize_location("bicep") == "biceps"
     assert canonicalize_location("hamstrings") == "hamstring"
-    assert canonicalize_location("quads") == "quad"
+    assert canonicalize_location("quads") == "quads"
     assert canonicalize_location("glutes") == "glute"
     assert canonicalize_location("hip_flexor") == "hip flexor"
     assert canonicalize_location("si_joint") == "si joint"

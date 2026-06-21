@@ -253,6 +253,16 @@ def _build_rehab_injury_string(context: PlanRuntimeContext) -> str:
     if not parsed_entries:
         return context.injuries_only_text
 
+    # An explicit guided-card injury type (e.g. "instability / giving way") is a
+    # user selection and outranks a type re-derived from the free-text phrase.
+    context_guided_type = ""
+    guided_source = getattr(context.plan_input, "guided_injury", None)
+    if guided_source is None:
+        guided_list = getattr(context.plan_input, "guided_injuries", None) or []
+        guided_source = guided_list[0] if guided_list else None
+    if guided_source is not None:
+        context_guided_type = _normalize_guided_injury_type(getattr(guided_source, "injury_type", None))
+
     phrases: list[str] = []
     for entry in parsed_entries:
         canonical_location = str(entry.get("canonical_location") or "").strip().lower()
@@ -290,6 +300,8 @@ def _build_rehab_injury_string(context: PlanRuntimeContext) -> str:
 
         injury_type = _normalize_guided_injury_type(entry.get("injury_type"))
         guided_type = _normalize_guided_injury_type(entry.get("guided_source_injury_type") or entry.get("guided_injury_type"))
+        if not guided_type:
+            guided_type = context_guided_type
         if guided_type and injury_type in {"", "sprain", "unspecified", "pain", "soreness", "tightness", "stiffness"}:
             injury_type = guided_type
         if is_knee and knee_movement_language and injury_type in {"", "sprain", "unspecified", "pain", "soreness", "tightness", "stiffness"}:
