@@ -700,10 +700,13 @@ def _apply_urgent_flags(
 ) -> None:
     if "urgent_fracture" in urgent_flags:
         matched_categories.add("fracture")
+        # Surface the emergency in the clinician-facing red flags too.
+        red_flags.add("fracture")
         routing_reasons.add("urgent_flag:urgent_fracture")
 
     if "urgent_dislocation" in urgent_flags:
         matched_categories.add("dislocation")
+        red_flags.add("dislocation")
         routing_reasons.add("urgent_flag:urgent_dislocation")
 
     if "urgent_nerve" in urgent_flags:
