@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { getPlanReviewReason, isHeldForAdminReviewPlan } from "./plan-review.ts";
+import { getPlanReviewReason, isHeldForAdminReviewPlan } from "./plan-review";
 
 test("held and legacy review-required statuses are admin-review holds", () => {
   assert.equal(isHeldForAdminReviewPlan({ status: "held_for_review" }), true);
