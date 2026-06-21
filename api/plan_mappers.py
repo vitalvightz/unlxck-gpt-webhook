@@ -35,6 +35,15 @@ from .structured_plan_models import StructuredTrainingPlan, safe_parse_structure
 
 logger = logging.getLogger(__name__)
 
+_REVIEW_CODE_LABELS = {
+    "calendar_spine_fight_day_protocol_violation": "fight-day protocol timing needs review",
+    "equipment_incongruent_selection": "selected equipment does not match the programmed work",
+    "late_camp_session_incomplete": "late-camp session detail is incomplete",
+    "missing_required_element": "required plan elements are missing",
+    "restriction_violation": "training restrictions were violated",
+    "true_internal_system_leak": "blocked release content was detected",
+}
+
 
 def _build_me_response(profile: ProfileRecord, store: AppStore) -> MeResponse:
     latest_intake = store.get_latest_intake(profile.athlete_id)
@@ -116,11 +125,68 @@ def _username_rate_limit_info(history: list[str]) -> UsernameRateLimitInfo:
     )
 
 
+def _review_finding_label(item: Any) -> str | None:
+    if not isinstance(item, dict):
+        return None
+    code = str(item.get("code") or "").strip()
+    if not code:
+        return None
+    return _REVIEW_CODE_LABELS.get(code) or code.replace("_", " ")
+
+
+def _review_finding_labels(items: Any) -> list[str]:
+    if not isinstance(items, list):
+        return []
+    labels: list[str] = []
+    seen: set[str] = set()
+    for item in items:
+        label = _review_finding_label(item)
+        if not label or label in seen:
+            continue
+        seen.add(label)
+        labels.append(label)
+    return labels
+
+
+def _finding_list(items: Any) -> list[dict[str, Any]]:
+    if not isinstance(items, list):
+        return []
+    return [item for item in items if isinstance(item, dict)]
+
+
+def _format_review_reason(report: dict[str, Any], *, normalized_status: str) -> str | None:
+    if normalized_status != "held_for_review":
+        return None
+    if not report:
+        return (
+            "Admin review is required before release because validation did not "
+            "return a publishable report."
+        )
+
+    error_labels = _review_finding_labels(report.get("errors"))
+    if error_labels:
+        return (
+            "Admin review is required before release because Stage 2 validation "
+            f"found errors: {', '.join(error_labels[:3])}."
+        )
+
+    blocking_labels = _review_finding_labels(
+        [*_finding_list(report.get("blocking_warnings")), *publish_blocking_review_findings(report)]
+    )
+    if blocking_labels:
+        return (
+            "Admin review is required before release because Stage 2 validation "
+            f"found blocking issues: {', '.join(blocking_labels[:3])}."
+        )
+
+    return "Admin review is required before this plan can be released to the athlete."
+
+
 def _map_plan_summary(row: dict[str, Any]) -> PlanSummary:
     raw_status = str(row.get("status") or "generated")
     normalized_status = raw_status
+    report = row.get("stage2_validator_report") if isinstance(row.get("stage2_validator_report"), dict) else {}
     if raw_status == "review_required":
-        report = row.get("stage2_validator_report") if isinstance(row.get("stage2_validator_report"), dict) else {}
         report_exists = bool(report)
         if not report_exists:
             normalized_status = "held_for_review"
@@ -159,6 +225,7 @@ def _map_plan_summary(row: dict[str, Any]) -> PlanSummary:
         created_at=str(row.get("created_at") or ""),
         status=normalized_status,
         pdf_url=row.get("pdf_url"),
+        review_reason=_format_review_reason(report, normalized_status=normalized_status),
     )
 
 

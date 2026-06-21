@@ -273,6 +273,7 @@ export type PlanSummary = {
   created_at: string;
   status: string;
   pdf_url?: string | null;
+  review_reason?: string | null;
 };
 
 export type PlanOutputs = {

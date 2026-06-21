@@ -328,6 +328,37 @@ def test_legacy_review_required_without_validator_report_stays_held_and_hidden()
     assert body["outputs"]["plan_text"] == ""
 
 
+def test_plan_summary_explains_held_for_review_reason():
+    client, store, _ = _build_client()
+    athlete = AuthenticatedUser(user_id="athlete-1", email="ari@example.com", full_name="Ari Mensah", metadata={})
+    store.ensure_profile(athlete)
+    plan = store.create_plan(
+        athlete_id="athlete-1",
+        intake_id="intake_x",
+        request=_build_request(),
+        result=finalized_result(
+            status="review_required",
+            plan_text="",
+            final_plan_text="# Held final plan",
+            stage2_validator_report={
+                "errors": [],
+                "warnings": [{"code": "missing_required_element", "severity": "blocker"}],
+                "blocking_warnings": [{"code": "missing_required_element", "severity": "blocker"}],
+            },
+        ),
+    )
+
+    response = client.get("/api/plans", headers={"Authorization": "Bearer athlete-token"})
+
+    assert response.status_code == 200
+    listed_plan = next(item for item in response.json() if item["plan_id"] == plan["id"])
+    assert listed_plan["status"] == "held_for_review"
+    assert listed_plan["review_reason"] == (
+        "Admin review is required before release because Stage 2 validation "
+        "found blocking issues: required plan elements are missing."
+    )
+
+
 def test_legacy_rows_with_only_plan_text_remain_readable():
     client, store, _ = _build_client()
     athlete = AuthenticatedUser(

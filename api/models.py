@@ -1341,6 +1341,7 @@ class PlanSummary(BaseModel):
     created_at: str
     status: str = "generated"
     pdf_url: str | None = None
+    review_reason: str | None = None
 
 
 class PlanOutputs(BaseModel):
