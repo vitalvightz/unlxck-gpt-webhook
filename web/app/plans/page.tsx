@@ -27,6 +27,7 @@ import {
   getPlanDisplayName,
   getPlanStyleSummary,
 } from "@/lib/plan-format";
+import { getPlanReviewReason, isHeldForAdminReviewPlan } from "@/lib/plan-review";
 import type { MeResponse, PlanRequest, PlanSummary, ProfileRecord } from "@/lib/types";
 
 type SummaryLine = {
@@ -168,6 +169,51 @@ function summarizeIntake(me: MeResponse | null): SummaryLine[] {
   return lines;
 }
 
+function HeldPlansReviewNotice({ plans }: { plans: PlanSummary[] }) {
+  const visibleHeldPlans = plans.slice(0, 3);
+  const remainingCount = Math.max(0, plans.length - visibleHeldPlans.length);
+
+  return (
+    <article className="list-card plans-dashboard-card athlete-motion-slot athlete-motion-status">
+      <div className="plans-dashboard-card-header">
+        <div className="plans-dashboard-card-copy">
+          <p className="kicker">Admin review hold</p>
+          <h2>{plans.length === 1 ? "A plan is held for review" : `${plans.length} plans are held for review`}</h2>
+          <p className="muted">
+            These plans are saved, but they are not released to Overview or Today until admin approval clears the hold.
+          </p>
+        </div>
+        <span className="badge">HELD</span>
+      </div>
+
+      <div className="plan-history-list plans-history-list">
+        {visibleHeldPlans.map((plan) => (
+          <div key={plan.plan_id} className="plan-history-row">
+            <div className="plan-history-copy">
+              <p className="label">{formatPlanStatus(plan.status)}</p>
+              <Link href={`/plans/${plan.plan_id}`}>
+                <h3 className="plan-card-title">{getPlanDisplayName(plan)}</h3>
+              </Link>
+              <p className="muted">{getPlanReviewReason(plan)}</p>
+            </div>
+            <div className="plan-history-meta">
+              <Link href={`/plans/${plan.plan_id}?review_required=1`} className="ghost-button">
+                Review hold
+              </Link>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {remainingCount > 0 ? (
+        <p className="muted">
+          {remainingCount} more held plan{remainingCount === 1 ? "" : "s"} shown in saved plan history.
+        </p>
+      ) : null}
+    </article>
+  );
+}
+
 function PlanCard({
   plan,
   accessToken,
@@ -203,6 +249,7 @@ function PlanCard({
   const renameInputId = `rename-plan-${plan.plan_id}`;
   const active = isActivePlan(plan, activePlanId);
   const eligibleForActive = canSetActive(plan);
+  const reviewReason = getPlanReviewReason(plan);
 
   useEffect(() => {
     if (!isRenaming) {
@@ -404,6 +451,7 @@ function PlanCard({
             <span className="muted">{styleSummary}</span>
             <span className="muted">Built {createdLabel}</span>
           </div>
+          {reviewReason ? <p className="muted">{reviewReason}</p> : null}
         </div>
         <div className="plan-history-meta">
           <span className="badge">{active ? "ACTIVE" : statusLabel}</span>
@@ -851,6 +899,7 @@ export default function PlansPage() {
   const explicitActivePlan = activePlanId ? visiblePlans.find((plan) => plan.plan_id === activePlanId) ?? null : null;
   const activePlan = explicitActivePlan && canSetActive(explicitActivePlan) ? explicitActivePlan : latestEligiblePlan;
   const intakeSource = getIntakeSource(me);
+  const heldForReviewPlans = visiblePlans.filter(isHeldForAdminReviewPlan);
   const archivedPlans = getArchivedPlans(visiblePlans);
   const otherSavedPlans = visiblePlans.filter((plan) => plan.plan_id !== activePlan?.plan_id && plan.status?.trim().toLowerCase() !== "archived");
   const archiveCountLabel = archivedPlans.length === 1 ? "1 plan" : `${archivedPlans.length} plans`;
@@ -942,6 +991,10 @@ export default function PlansPage() {
         </div>
 
         {error ? <div className="error-banner athlete-motion-slot athlete-motion-status">{error}</div> : null}
+
+        {!isLoading && heldForReviewPlans.length > 0 ? (
+          <HeldPlansReviewNotice plans={heldForReviewPlans} />
+        ) : null}
 
         <div className="plans-dashboard-stack athlete-motion-slot athlete-motion-main">
           {isPlanListLoading ? (
