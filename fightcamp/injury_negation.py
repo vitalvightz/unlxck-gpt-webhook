@@ -135,12 +135,16 @@ def _strip_leading_negation_chunks(text: str) -> str:
     normalized = re.sub(r"[()]", " ", normalized)
     normalized = re.sub(r"\b(and|but|also|however|except)\b,?", ". ", normalized)
     normalized = _normalize_injury_text_separators(normalized)
+    chunks = [
+        cleaned
+        for chunk in re.split(r"\.\s*", normalized)
+        if (cleaned := _strip_surrounding_punct(chunk))
+    ]
     kept: list[str] = []
-    for chunk in re.split(r"\.\s*", normalized):
-        cleaned = _strip_surrounding_punct(chunk)
-        if not cleaned:
-            continue
-        words = cleaned.split()
+    for cleaned in chunks:
+        # Ignore a leading field label ("notes: no fracture ...") so the cue is
+        # still seen at the start of the clause.
+        words = re.sub(r"^\w+:\s*", "", cleaned).split()
         # Drop a clause only when its negation scopes the clause itself: it
         # begins with a cue ("no shoulder pain") or explicitly rules an injury
         # out ("ruled out fracture"). Trailing negations such as "shoulder
@@ -150,6 +154,11 @@ def _strip_leading_negation_chunks(text: str) -> str:
         if re.search(r"\bruled\s+out\b", cleaned):
             continue
         kept.append(cleaned)
+    # If nothing was negated, return the text untouched so we never reflow
+    # punctuation/casing for callers that rely on the original structure (e.g.
+    # swelling-context severity escalation).
+    if len(kept) == len(chunks):
+        return text
     return ". ".join(kept).strip()
 
 
