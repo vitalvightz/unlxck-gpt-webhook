@@ -211,6 +211,12 @@ TIGHTNESS_HINTS = {
 TENDONITIS_REQUIRED_HINTS = {
     "tendonitis", "tendinosis", "tendinopathy", "overuse", "repetitive",
     "chronic", "recurring", "flare", "flare up", "activity pain", "use pain",
+    # Specific tendon/patellar references are themselves strong tendinopathy
+    # signals (unlike generic "pain"/"sore"), so they satisfy the gate that
+    # otherwise guards against over-calling tendonitis on vague complaints.
+    "tendon pain", "tendon ache", "tendon sore", "tendon hurt",
+    "patellar tendon", "patellar tendinopathy",
+    "jumper's knee", "jumpers knee", "jumper knee",
 }
 
 IMPINGEMENT_GATE_HINTS = {
