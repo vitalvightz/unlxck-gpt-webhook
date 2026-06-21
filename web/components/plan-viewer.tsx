@@ -1784,7 +1784,7 @@ export function PlanViewer({
     const intervalId = window.setInterval(pollForStructuredPlan, STRUCTURED_PLAN_POLL_INTERVAL_MS);
     const timeoutId = window.setTimeout(() => {
       if (!cancelled) {
-        setStructuredPlanWaitState({ planId: plan.plan_id, fallbackUnlocked: true });
+        setUnlockedPlans((prev) => ({ ...prev, [plan.plan_id]: true }));
       }
     }, STRUCTURED_PLAN_FALLBACK_DELAY_MS);
 
