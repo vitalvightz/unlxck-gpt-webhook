@@ -374,7 +374,13 @@ def detect_structural_red_flags(text: str) -> list[str]:
         for flag in structural_flags:
             if flag not in flags:
                 flags.append(flag)
-    return flags
+    if not flags:
+        return []
+    # Always surface the generic structural_red_flag tag alongside the specific
+    # signals, and return a deterministic sorted list so callers (and the
+    # composed score path) see a stable, complete set.
+    flags.append("structural_red_flag")
+    return sorted(set(flags))
 
 
 def detect_triage_category(text: str) -> str:
