@@ -5312,16 +5312,16 @@ button.mobile-step-rail-item {
 }
 
 .today-risk-item[data-tone="caution"] .today-risk-label {
-  color: #e6c27d;
+  color: var(--progress-gold, #96713b);
 }
 
 .today-risk-item[data-tone="stop"] .today-risk-label,
 .today-risk-item[data-tone="warning"] .today-risk-label {
-  color: #ff8d9a;
+  color: var(--danger-ink, #8e2d2f);
 }
 
 .today-risk-item[data-tone="info"] .today-risk-label {
-  color: #a9c8ef;
+  color: #2b5c8f;
 }
 
 .today-risk-more {
