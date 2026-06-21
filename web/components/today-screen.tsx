@@ -659,6 +659,7 @@ function SessionCard({
   // no real name and falls back to the generic title that already matches the
   // kicker, headline the training day instead so the eyebrow and heading differ.
   const headline =
+    sessionTitle.trim().toLowerCase() === "today's session" ||
     sessionTitle.trim().toLowerCase() === relationCopy.kicker.trim().toLowerCase()
       ? formatSessionDate(session)
       : sessionTitle;
