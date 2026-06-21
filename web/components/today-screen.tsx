@@ -628,7 +628,6 @@ function SessionCard({
   }
 
   if (!hasSession) {
-    const hasBlocks = showStructuredBlocks && current.sessions.length > 0;
     return (
       <section
         id="today-session"
@@ -639,8 +638,11 @@ function SessionCard({
         <div className="today-card-head">
           <div>
             <p className="kicker">Today&apos;s session</p>
+            {/* training_day is always present in the initial payload, so headline
+                it unconditionally — gating on the async-loaded structuredPlan
+                caused a flash from "No session scheduled" to the date on load. */}
             <h2 id="today-session-heading">
-              {hasBlocks ? formatTrainingDay(state.today.training_day) : "No session scheduled today"}
+              {formatTrainingDay(state.today.training_day)}
             </h2>
           </div>
         </div>
