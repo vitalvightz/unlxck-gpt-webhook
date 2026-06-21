@@ -6,6 +6,7 @@
 import { formatPlanLabel } from "./plan-labels.ts";
 import {
   cleanText,
+  classifySessionlessDay,
   getDays,
   getDisplayableRedFlags,
   getPlanNotes,
@@ -151,6 +152,48 @@ export function dayCompletion(day: StructuredDay | null | undefined): Completion
     (session) => cleanText(session.completion_status)?.toLowerCase() === "done",
   ).length;
   return { done, total: sessions.length };
+}
+
+export type WeekSessionSummary = {
+  /** Days with athlete work in the app or a coach-led/contact session. */
+  trainingDays: number;
+  /** App-prescribed sessions with blocks/details owned by Unlxck. */
+  appSessions: number;
+  /** Session-less contact days owned by the athlete's coach. */
+  coachLedSessions: number;
+};
+
+/**
+ * Athlete-facing week counters. App sessions and coach-led days are deliberately
+ * split so coach-owned contact does not look like missing app completion.
+ */
+export function weekSessionSummary(
+  week: StructuredWeek | null | undefined,
+): WeekSessionSummary {
+  return getDays(week).reduce<WeekSessionSummary>(
+    (acc, day) => {
+      const appSessions = getSessions(day).length;
+      if (appSessions > 0) {
+        return {
+          trainingDays: acc.trainingDays + 1,
+          appSessions: acc.appSessions + appSessions,
+          coachLedSessions: acc.coachLedSessions,
+        };
+      }
+
+      const sessionless = classifySessionlessDay(day);
+      if (sessionless.coachLed) {
+        return {
+          trainingDays: acc.trainingDays + 1,
+          appSessions: acc.appSessions,
+          coachLedSessions: acc.coachLedSessions + 1,
+        };
+      }
+
+      return acc;
+    },
+    { trainingDays: 0, appSessions: 0, coachLedSessions: 0 },
+  );
 }
 
 const LOAD_PRIORITY = ["high", "moderate", "low", "recovery", "rest", "off"];
