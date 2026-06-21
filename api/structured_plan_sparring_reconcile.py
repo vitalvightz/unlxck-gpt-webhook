@@ -342,9 +342,13 @@ def _reconcile(structured_plan: Any, planning_brief: Any) -> list[str]:
         "SPP",
     )
     for contact in contact_days:
+        # Either identity matching the day already in the plan means "present" —
+        # the converter commonly keys a day by D-day countdown_label only (no
+        # date), so a contact day that carries a date must still defer to a D-day
+        # match or it would be inserted as a duplicate of the existing card.
         if contact.date and contact.date in present_dates:
             continue
-        if contact.date is None and contact.d_day is not None and contact.d_day in present_ddays:
+        if contact.d_day is not None and contact.d_day in present_ddays:
             continue
         # Primary: the authoritative home week from the role map (week_index). This
         # is exact and immune to the boundary case where a dropped day sits outside

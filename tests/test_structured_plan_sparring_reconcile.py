@@ -72,6 +72,26 @@ def _multi_week_brief() -> dict:
     }
 
 
+def _dated_brief() -> dict:
+    """Single week whose schedule days carry BOTH a calendar_date and a d_day.
+
+    Thursday is D-31 with a concrete date, so the role-map contact day has both
+    identities — the case where the structured plan may already contain the day by
+    D-day only.
+    """
+    weekdays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+    dates = ["2026-07-20", "2026-07-21", "2026-07-22", "2026-07-23", "2026-07-24", "2026-07-25", "2026-07-26"]
+    calendar_days = [
+        {"weekday": weekdays[offset], "d_day": 28 + (7 - 1 - offset), "calendar_date": dates[offset]}
+        for offset in range(7)
+    ]
+    return {
+        "weekly_role_map": {
+            "weeks": [{"phase": "SPP", "calendar_days": calendar_days, "hard_sparring_plan": _hard_thursday()}]
+        }
+    }
+
+
 def _day(countdown: str, *, headline: str = "", sessions: list | None = None) -> dict:
     return {
         "date": "",
@@ -233,6 +253,19 @@ def test_targets_correct_week_by_index_in_multi_week_plan():
     wk2 = [d["countdown_label"] for d in plan["weeks"][1]["days"]]
     assert "D-31" in wk1 and "D-31" not in wk2
     assert "D-24" in wk2 and "D-24" not in wk1
+
+
+def test_no_duplicate_when_present_by_dday_only_but_contact_has_date():
+    # The role-map contact day carries both a date and a D-day; the converter kept
+    # the day keyed by countdown_label (D-31) only, with no date. The D-day match
+    # must win so the day is not inserted a second time — it is only stamped.
+    plan = _structured_plan([_day("D-31", headline="Recovery")])  # date is ""
+    notes = reconcile_coach_led_sparring_days(plan, _dated_brief())
+
+    days = plan["weeks"][0]["days"]
+    assert len(days) == 1
+    assert days[0]["today_card"]["headline"] == "Coach-led sparring"
+    assert not any("inserted" in note for note in notes)
 
 
 def test_span_fallback_inserts_when_week_index_does_not_match():
