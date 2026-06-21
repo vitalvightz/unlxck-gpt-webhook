@@ -1755,7 +1755,7 @@ export function PlanViewer({
   }, [plan.plan_id, handoffText, retryText, plan.admin_outputs?.final_plan_text]);
 
   useEffect(() => {
-    if (!hasPublishedPlan || hasStructuredAthletePlan || isTriageBlocked) {
+    if (!accessToken || !hasPublishedPlan || hasStructuredAthletePlan || isTriageBlocked) {
       return;
     }
 
