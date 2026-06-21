@@ -1755,7 +1755,13 @@ export function PlanViewer({
   }, [plan.plan_id, handoffText, retryText, plan.admin_outputs?.final_plan_text]);
 
   useEffect(() => {
-    if (!accessToken || !hasPublishedPlan || hasStructuredAthletePlan || isTriageBlocked) {
+    if (
+      !accessToken ||
+      !hasPublishedPlan ||
+      hasStructuredAthletePlan ||
+      isTriageBlocked ||
+      structuredPlanFallbackUnlocked
+    ) {
       return;
     }
 
@@ -1795,6 +1801,7 @@ export function PlanViewer({
     isTriageBlocked,
     onPlanUpdated,
     plan.plan_id,
+    structuredPlanFallbackUnlocked,
   ]);
 
   async function handleManualStage2Submit() {
