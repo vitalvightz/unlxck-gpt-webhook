@@ -69,11 +69,25 @@ def _has_negated_injury(text: str) -> bool:
         return False
     if re.search(r"\bruled\s+out\s+\w+", lowered):
         return True
+    # A negation cue at the start of a phrase negates the whole phrase even when
+    # no generic injury word ("injury"/"issue") follows it. This catches
+    # symptom-level negations like "no shoulder pain" or "no shin splints" that
+    # the entity-based Negex pass misses because the symptom is not a named
+    # entity. Only leading cues fire, so mid-phrase mentions such as "knee pain
+    # without brace" are left intact.
+    leading = lowered.strip().split()
+    if leading and leading[0] in {
+        "no", "not", "never", "without", "neither", "deny", "denies", "denied"
+    }:
+        return True
+    # Negation scopes forward: only treat a generic target word as negated when a
+    # cue actually precedes it. This keeps "knee pain without brace" intact (the
+    # cue follows the symptom) while still catching "never had knee issues".
+    cue_alt = r"\b(?:no|not|never|without|neither|deny|denies|denied|ruled\s+out)\b"
     for term in _NEGATION_TARGETS:
         if len(term) < 3:
             continue
-        pattern = rf"(?:^|\b){re.escape(term)}(?:\b|$)"
-        if re.search(pattern, lowered):
+        if re.search(cue_alt + r"[\w\s,'\"-]*?\b" + re.escape(term) + r"\b", lowered):
             return True
     return False
 
@@ -102,8 +116,41 @@ def remove_negated_phrases(text: str) -> str:
         if any(tok._.negex for tok in doc):
             tokens = [tok.text for tok in doc if not tok._.negex]
             return " ".join(tokens).strip()
-        return text
+        # Negex only marks named entities, so symptom-level negations such as
+        # "no shoulder pain" slip through. Drop only chunks that *begin* with a
+        # negation cue (clinical forward-scope) instead of returning the text
+        # untouched. Embedded negations like "shoulder clicking no pain" are
+        # left for Negex so we never discard the non-negated half of a chunk.
+        return _strip_leading_negation_chunks(text)
     return _strip_negated_chunks_fallback(text)
+
+
+_LEADING_NEGATION_CUES = {
+    "no", "not", "never", "without", "neither", "deny", "denies", "denied",
+}
+
+
+def _strip_leading_negation_chunks(text: str) -> str:
+    normalized = text.lower()
+    normalized = re.sub(r"[()]", " ", normalized)
+    normalized = re.sub(r"\b(and|but|also|however|except)\b,?", ". ", normalized)
+    normalized = _normalize_injury_text_separators(normalized)
+    kept: list[str] = []
+    for chunk in re.split(r"\.\s*", normalized):
+        cleaned = _strip_surrounding_punct(chunk)
+        if not cleaned:
+            continue
+        words = cleaned.split()
+        # Drop a clause only when its negation scopes the clause itself: it
+        # begins with a cue ("no shoulder pain") or explicitly rules an injury
+        # out ("ruled out fracture"). Trailing negations such as "shoulder
+        # clicking no pain" keep the non-negated injury content.
+        if words and words[0] in _LEADING_NEGATION_CUES:
+            continue
+        if re.search(r"\bruled\s+out\b", cleaned):
+            continue
+        kept.append(cleaned)
+    return ". ".join(kept).strip()
 
 
 def _strip_negated_chunks_fallback(text: str) -> str:
