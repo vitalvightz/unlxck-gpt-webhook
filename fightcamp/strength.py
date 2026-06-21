@@ -531,9 +531,13 @@ def _evaluate_strength_late_window(
     )
     # The band-work lockout targets loaded/dense band strength work in the final
     # week. Low-dose late-safe primers (neural primers, explicit late-strength
-    # touches, ballistic low-volume work) are exactly what a taper keeps, so they
-    # are exempt — only dense/loaded band work should be locked out.
-    late_safe_band_primer = neural_primer or explicit_late_touch or ballistic_low_volume
+    # touches, ballistic low-volume work) are kept through the earlier final-week
+    # windows, but D1 is the strictest day: no band work survives there, so the
+    # primer exemption does not apply on D1.
+    late_safe_band_primer = (
+        window != D1
+        and (neural_primer or explicit_late_touch or ballistic_low_volume)
+    )
     if (
         late_band_lockout_window
         and "bands" in equipment

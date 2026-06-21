@@ -925,9 +925,12 @@ def test_strength_d1_blocks_trap_bar_jump_and_aggressive_med_ball_slam(monkeypat
     blocked = result["candidate_reservoir"]["__late_window__"]["blocked"]
     blocked_by_name = {entry["name"]: entry["reason_codes"] for entry in blocked}
 
-    assert [entry["name"] for entry in result["why_log"]] == ["Band Snap Punch"]
+    # D1 is the strictest window: aggressive work and band primers are all locked
+    # out, so nothing from this bank survives.
+    assert [entry["name"] for entry in result["why_log"]] == []
     assert "late_strength_block_trap_bar_jump" in blocked_by_name["Trap Bar Jump (Light)"]
     assert "late_strength_block_aggressive_med_ball_slam" in blocked_by_name["Anti-Rotation Med Ball Slam"]
+    assert "late_strength_block_band_work_lockout" in blocked_by_name["Band Snap Punch"]
 
 
 def test_actual_bank_d21_surfaces_multiple_late_strength_touch_families():
