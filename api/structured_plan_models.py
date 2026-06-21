@@ -137,6 +137,14 @@ EffortMethod = Literal[
     "max_effort_percent",
 ]
 RiskLevel = Literal["none", "green", "amber", "red"]
+PlanNoteCategory = Literal[
+    "weight_cut",
+    "injury",
+    "nutrition",
+    "training",
+    "recovery",
+    "general",
+]
 
 
 # ---------------------------------------------------------------------------
@@ -222,6 +230,21 @@ class RedFlagRule(BaseModel):
     replacement_session_type: SessionType | None = None
     affected_blocks: list[str] | None = None
     needs_human_review: bool = False
+
+
+class PlanNote(BaseModel):
+    """A short, plan-level "active note" / non-negotiable reminder.
+
+    Carries the header ``Active notes`` and footer reminders (weight cut,
+    injury, nutrition, general) that live outside any week so they are not lost
+    in the structured view. Weight-cut notes follow the same safety rule as
+    :class:`WeightCutWarning`: a risk requiring qualified supervision, never
+    direct acute-cut instructions.
+    """
+
+    category: PlanNoteCategory = "general"
+    label: str | None = None
+    text: str
 
 
 class CountdownLabel(BaseModel):
@@ -471,6 +494,10 @@ class StructuredTrainingPlan(BaseModel):
     event_context: EventContext | None = None
     countdown_labels: list[CountdownLabel] = Field(default_factory=list)
     red_flag_rules: list[RedFlagRule] = Field(default_factory=list)
+    # Short plan-level reminders from the header "Active notes" / footer notes
+    # (weight cut, injury, nutrition, general). Optional so legacy plans and the
+    # plan_text fallback keep working.
+    plan_notes: list[PlanNote] = Field(default_factory=list)
     weeks: list[Week] = Field(default_factory=list)
     daily_check_ins: list[DailyCheckIn] = Field(default_factory=list)
     nutrition: Nutrition

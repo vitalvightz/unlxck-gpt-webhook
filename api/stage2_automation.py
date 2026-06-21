@@ -14,6 +14,7 @@ from fightcamp.stage2_policy import (
     publish_blocking_review_findings,
 )
 
+from .state_machine import is_athlete_displayable_plan_status
 from .structured_plan_generation import (
     StructuredPlanOutcome,
     build_structured_plan_outcome,
@@ -22,6 +23,7 @@ from .structured_plan_generation import (
     parse_structured_json,
     should_attempt_structured_plan,
 )
+from .structured_plan_sparring_reconcile import reconcile_coach_led_sparring_days
 
 _APP_STATUS_READY = "ready"
 _APP_STATUS_HELD_FOR_REVIEW = "held_for_review"
@@ -302,19 +304,17 @@ def _is_quota_or_rate_limit_error(exc: Exception) -> bool:
 def _structured_plan_enabled() -> bool:
     """Whether Stage 2 should also attempt structured-plan generation.
 
-    Off by default: structured generation is a second model call, so it is
-    opt-in (set ``UNLXCK_STAGE2_STRUCTURED_PLAN=1``) to preserve the single-call
-    Stage 2 cost profile until the structured renderer is rolled out. When off,
-    the structured outcome is recorded as ``not_attempted`` and the raw
-    ``plan_text`` flow is unaffected.
+    On by default: the structured card is the athlete-facing plan view, so the
+    second conversion call is part of the standard Stage 2 flow. Set
+    ``UNLXCK_STAGE2_STRUCTURED_PLAN`` to a falsey value (``0``/``false``/``no``/
+    ``off``/empty) to disable it; the structured outcome is then recorded as
+    ``not_attempted`` and the raw ``plan_text`` flow is the fallback.
     """
 
-    return os.getenv("UNLXCK_STAGE2_STRUCTURED_PLAN", "").strip().lower() in {
-        "1",
-        "true",
-        "yes",
-        "on",
-    }
+    raw = os.getenv("UNLXCK_STAGE2_STRUCTURED_PLAN")
+    if raw is None:
+        return True  # unset → default on
+    return raw.strip().lower() in {"1", "true", "yes", "on"}
 
 
 def _record_structured_outcome(
@@ -702,11 +702,10 @@ class OpenAIStage2Automator:
 
         # A card-rescuable hold is tentatively published so the structured-card
         # attempt below can run and vouch for it. Coaching-content gaps are not
-        # eligible for this path. If no clean card materialises, it is reverted
-        # to a hold further down. Only gated when structured plans are enabled -
-        # otherwise no card can ever rescue it and the tentative publish would
-        # just flap back to a hold.
-        rescue_pending = False
+        # eligible for this path. If no clean card materialises, the card-first
+        # gate further down reverts it to a hold. Only gated when structured
+        # plans are enabled - otherwise no card can ever rescue it and the
+        # tentative publish would just flap back to a hold.
         if first_review["status"] == "PASS" and not publish_blocking_findings:
             result = _approved_result(
                 stage1_result,
@@ -734,7 +733,6 @@ class OpenAIStage2Automator:
                 app_status=_APP_STATUS_READY,
                 stage2_cost=first_pass_cost,
             )
-            rescue_pending = True
         else:
             if publish_blocking_findings:
                 logger.warning(
@@ -769,11 +767,20 @@ class OpenAIStage2Automator:
             log_context=log_context,
         )
 
-        # Confirm or roll back the tentative rescue: a clean schema-valid card
-        # keeps the plan ready; anything else falls back to the hold.
-        if rescue_pending and not has_clean_structured_card(result):
+        # Card-first publish gate: the structured card is the athlete-facing
+        # artifact, so a plan may only stay athlete-displayable when it carries a
+        # clean schema-valid card. This subsumes the old "rescue_pending" rollback
+        # — a clean PASS that fails to produce a card is held just like a soft
+        # hold that fails its rescue. Only enforced when structured plans are
+        # enabled; with the flag off no card can ever exist and the raw plan_text
+        # flow is the intended fallback, so the markdown-publish behaviour stands.
+        if (
+            _structured_plan_enabled()
+            and is_athlete_displayable_plan_status(result.get("status"))
+            and not has_clean_structured_card(result)
+        ):
             logger.warning(
-                "[stage2] structured-card rescue failed (no clean card); holding for review"
+                "[stage2] no clean structured card; holding for review (card-first gate)"
             )
             report = result.get("stage2_validator_report")
             structured_debug = report.get("structured_plan") if isinstance(report, dict) else None
@@ -834,6 +841,24 @@ class OpenAIStage2Automator:
                 costs,
             )
 
+    @staticmethod
+    def _reconcile_coach_led(outcome: StructuredPlanOutcome, planning_brief: Any) -> StructuredPlanOutcome:
+        """Guarantee declared sparring/coach-led days render as cards.
+
+        The converted card derives a day's coach-led status from the LLM headline
+        alone, so a dropped or mislabelled day silently becomes "Rest day.". The
+        deterministic role map already knows every sparring day, so stamp/insert
+        those cards from it. No-op unless the outcome actually carries a plan.
+        """
+        if outcome.structured_plan is None:
+            return outcome
+        notes = reconcile_coach_led_sparring_days(outcome.structured_plan, planning_brief)
+        if notes:
+            outcome.warnings = list(outcome.warnings) + [
+                f"coach_led_reconcile: {note}" for note in notes
+            ]
+        return outcome
+
     async def _generate_structured_outcome(
         self,
         *,
@@ -881,7 +906,7 @@ class OpenAIStage2Automator:
             first_json, raw_markdown=final_plan_text, computed_support=computed_support
         )
         if first_outcome.status == "valid":
-            return first_outcome, costs
+            return self._reconcile_coach_led(first_outcome, planning_brief), costs
 
         # Single repair retry: re-prompt with the validation errors and the
         # broken JSON, then let build_structured_plan_outcome score the result.
@@ -900,15 +925,13 @@ class OpenAIStage2Automator:
         )
         costs.append(repair_cost)
         repaired_json = parse_structured_json(repaired_text)
-        return (
-            build_structured_plan_outcome(
-                first_json,
-                raw_markdown=final_plan_text,
-                repair_fn=lambda _data, _errors: repaired_json,
-                computed_support=computed_support,
-            ),
-            costs,
+        repaired_outcome = build_structured_plan_outcome(
+            first_json,
+            raw_markdown=final_plan_text,
+            repair_fn=lambda _data, _errors: repaired_json,
+            computed_support=computed_support,
         )
+        return self._reconcile_coach_led(repaired_outcome, planning_brief), costs
 
 
 def build_default_stage2_automator() -> Stage2Automator:

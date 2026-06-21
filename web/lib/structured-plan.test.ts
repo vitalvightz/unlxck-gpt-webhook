@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import {
+  classifySessionlessDay,
   cleanText,
   formatBlockLoad,
   formatMacroRange,
@@ -14,6 +15,8 @@ import {
   getDeterministicRecoveryPhases,
   getDisplayableRedFlags,
   getMindsetLines,
+  getPlanNotes,
+  planNoteLabel,
   getSessions,
   getStringList,
   getWeeks,
@@ -171,6 +174,76 @@ test("selectors return safe empties on missing/partial fields", () => {
   // A week/day/session with null nested arrays does not throw.
   const week = getWeeks({ structured_plan: validPlan() } as never);
   assert.equal(week.length, 0); // wrong-shaped input -> empty, no crash
+});
+
+// --- plan-level active notes ------------------------------------------------
+
+test("getPlanNotes keeps notes with text, drops empties, lowercases category", () => {
+  const notes = getPlanNotes({
+    plan_notes: [
+      { category: "Weight_Cut", label: "Active weight cut", text: "~5.7% target." },
+      { category: "injury", text: "Keep the wound covered and dry." },
+      { category: "nutrition", text: "   " },
+      { text: "Stay disciplined." },
+      "not an object" as never,
+    ],
+  } as never);
+  assert.equal(notes.length, 3);
+  assert.deepEqual(notes[0], {
+    category: "weight_cut",
+    label: "Active weight cut",
+    text: "~5.7% target.",
+  });
+  assert.equal(notes[1].category, "injury");
+  assert.equal(notes[2].category, "general");
+  assert.equal(notes[2].label, null);
+});
+
+test("getPlanNotes is safe on missing / malformed plan_notes", () => {
+  assert.deepEqual(getPlanNotes(null), []);
+  assert.deepEqual(getPlanNotes({} as never), []);
+  assert.deepEqual(getPlanNotes({ plan_notes: "nope" } as never), []);
+});
+
+test("planNoteLabel prefers an explicit label, else a category title", () => {
+  assert.equal(planNoteLabel({ category: "weight_cut", label: "Cut", text: "x" }), "Cut");
+  assert.equal(planNoteLabel({ category: "injury", label: null, text: "x" }), "Injury");
+  assert.equal(planNoteLabel({ category: "unknown", label: null, text: "x" }), "Note");
+});
+
+// --- session-less day classification ----------------------------------------
+
+test("classifies coach-led / sparring / technical days from the headline", () => {
+  const make = (headline: string, day_type = "moderate") => ({
+    day_type,
+    today_card: { headline },
+  });
+
+  assert.equal(classifySessionlessDay(make("Coach-led boxing session")).kind, "coach_led");
+  assert.equal(classifySessionlessDay(make("Hard sparring")).kind, "sparring");
+  // "technical only / no hard sparring" must read as technical, not sparring.
+  assert.equal(
+    classifySessionlessDay(make("Coach-led boxing — no hard sparring / technical only")).kind,
+    "technical",
+  );
+  // A coach-led/sparring/technical day carries its headline as the card title
+  // and flags the "train with your coach" note.
+  const sparring = classifySessionlessDay(make("Hard sparring"));
+  assert.equal(sparring.title, "Hard sparring");
+  assert.equal(sparring.tag, "Sparring");
+  assert.equal(sparring.coachLed, true);
+});
+
+test("classifies a headline-less or rest day as a true rest day", () => {
+  assert.equal(classifySessionlessDay({ day_type: "rest", today_card: {} }).kind, "rest");
+  assert.equal(classifySessionlessDay({ day_type: "recovery" } as never).kind, "rest");
+  assert.equal(classifySessionlessDay(null).kind, "rest");
+  assert.equal(classifySessionlessDay({} as never).coachLed, false);
+  // A headline with no contact keyword still gets its own card (not "Rest day").
+  const scheduled = classifySessionlessDay({ today_card: { headline: "Active recovery flush" } });
+  assert.equal(scheduled.kind, "scheduled");
+  assert.equal(scheduled.title, "Active recovery flush");
+  assert.equal(scheduled.tag, null);
 });
 
 // --- field display rules ----------------------------------------------------

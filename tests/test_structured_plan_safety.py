@@ -35,6 +35,30 @@ def _support(**flags) -> dict:
     return build_computed_support(flags=base, phases=["GPP", "SPP", "TAPER"])
 
 
+def _faithful_source(plan: dict) -> str:
+    """Markdown faithful to ``plan`` so the faithfulness gate returns a clean card.
+
+    The gate rejects a countdown-claiming card whose source carries no D-day
+    marker, so a placeholder like ``# raw`` would degrade a valid plan to
+    ``invalid_fallback_used``. Derive a real countdown source from the plan.
+    """
+    lines = ["# FIGHT CAMP PLAN", ""]
+    for week in plan.get("weeks") or []:
+        lines.append(
+            f"## Week — SPP ({week.get('countdown_start')} to {week.get('countdown_end')})"
+        )
+        lines.append("")
+        for day in week.get("days") or []:
+            lines.append(f"### Day ({day.get('countdown_label') or ''}) — Session")
+            for session in day.get("sessions") or []:
+                for block in session.get("blocks") or []:
+                    name = block.get("display_name")
+                    if name:
+                        lines.append(f"- {name}")
+            lines.append("")
+    return "\n".join(lines)
+
+
 def _plan(nutrition=None, weeks=None) -> dict:
     return {
         "nutrition": nutrition or {"summary": "Eat well.", "daily_focus": "", "weight_cut_warning": None},
@@ -165,8 +189,9 @@ def test_audit_does_not_mutate_inputs():
 def test_outcome_surfaces_warnings_without_changing_status():
     # A schema-valid plan still validates; the audit only adds debug warnings.
     support = _support()
+    plan = _valid_plan()
     outcome = build_structured_plan_outcome(
-        _valid_plan(), raw_markdown="# raw", computed_support=support
+        plan, raw_markdown=_faithful_source(plan), computed_support=support
     )
     assert outcome.status == "valid"
     debug = outcome.as_debug()
@@ -237,8 +262,9 @@ def test_athlete_safe_support_falls_back_to_none_when_empty():
 
 def test_outcome_injects_deterministic_support_without_leaking_coach_gated():
     support = _support(weight_cut_risk=True, weight_cut_pct=7.0, fatigue="high")
+    source_plan = _valid_plan()
     outcome = build_structured_plan_outcome(
-        _valid_plan(), raw_markdown="# raw", computed_support=support
+        source_plan, raw_markdown=_faithful_source(source_plan), computed_support=support
     )
     assert outcome.status == "valid"
     plan = outcome.structured_plan
@@ -253,8 +279,9 @@ def test_deterministic_support_survives_schema_revalidation():
     # plan_mappers re-validates the stored structured_plan on read, so the
     # projection must be a real schema field that round-trips.
     support = _support()
+    source_plan = _valid_plan()
     outcome = build_structured_plan_outcome(
-        _valid_plan(), raw_markdown="# raw", computed_support=support
+        source_plan, raw_markdown=_faithful_source(source_plan), computed_support=support
     )
     reparsed = safe_parse_structured_plan(outcome.structured_plan, raw_markdown="# raw")
     assert reparsed.ok and reparsed.plan is not None
@@ -263,6 +290,7 @@ def test_deterministic_support_survives_schema_revalidation():
 
 
 def test_outcome_without_computed_support_has_no_deterministic_support():
-    outcome = build_structured_plan_outcome(_valid_plan(), raw_markdown="# raw")
+    plan = _valid_plan()
+    outcome = build_structured_plan_outcome(plan, raw_markdown=_faithful_source(plan))
     assert outcome.status == "valid"
     assert outcome.structured_plan.get("deterministic_support") is None

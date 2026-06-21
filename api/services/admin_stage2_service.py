@@ -279,6 +279,12 @@ async def run_structured_plan_post_processing(
             # short-circuits here instead of paying for a redundant model call.
             "structured_plan": plan_row.get("structured_plan"),
         }
+        # The exact text the card is converted from. The narrow writer rejects
+        # the card if this text no longer matches the row at write time, so a
+        # concurrent edit/reject mid-conversion can never publish a stale card.
+        conversion_source_text = str(
+            result.get("final_plan_text") or result.get("plan_text") or ""
+        )
         result = await _attach_structured_plan(result, plan_row, stage2=stage2)
         # Only write when a structured plan was actually produced; a skip/failure
         # keeps the existing raw markdown row untouched. Persist via the narrow
@@ -291,6 +297,50 @@ async def run_structured_plan_post_processing(
                 structured_plan=result.get("structured_plan"),
                 schema_version=result.get("schema_version"),
                 stage2_validator_report=result.get("stage2_validator_report") or {},
+                expected_final_plan_text=conversion_source_text,
             )
     except Exception:  # noqa: BLE001 - background work must never bubble up
         logger.exception("structured plan post-processing failed for plan_id=%s", plan_id)
+
+
+async def list_structured_plan_backfill_candidates(
+    *,
+    store: AppStore,
+    limit: int = 25,
+) -> list[str]:
+    """Plan ids that are athlete-displayable but still have no structured card.
+
+    A fast, DB-only lookup the admin backfill endpoint runs before scheduling the
+    (slow, model-bound) conversion work, so the request can return immediately
+    with the set of plans that will be processed.
+    """
+    rows = await asyncio.to_thread(store.list_plans_missing_structured_plan, limit=limit)
+    return [
+        plan_id
+        for row in rows
+        if isinstance(row, dict) and (plan_id := str(row.get("id") or "").strip())
+    ]
+
+
+async def backfill_structured_plans(
+    *,
+    store: AppStore,
+    stage2: Stage2Automator | None,
+    plan_ids: list[str],
+) -> None:
+    """Convert a batch of already-released plans that have no structured card.
+
+    Reuses :func:`run_structured_plan_post_processing` per plan, so each attempt is
+    idempotent (short-circuits a plan that already has a card or is no longer
+    displayable) and persists only through the narrow structured-output writer.
+    Designed to run as a background task: never raises, and a single plan's failure
+    does not stop the rest of the batch.
+    """
+
+    if stage2 is None:
+        return
+    for plan_id in plan_ids:
+        try:
+            await run_structured_plan_post_processing(plan_id=plan_id, store=store, stage2=stage2)
+        except Exception:  # noqa: BLE001 - one bad plan must not abort the backfill
+            logger.exception("structured plan backfill failed for plan_id=%s", plan_id)

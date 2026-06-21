@@ -37,16 +37,16 @@ ROLE_LABELS: dict[str, str] = {
     "structural_strength_day": "Strength",
     "transfer_strength_day": "Strength",
     "neural_plus_strength_day": "Strength",
-    "strength_touch_day": "Power touch",
-    "small_strength_touch_day": "Power touch",
-    "neural_primer_day": "Neural primer",
+    "strength_touch_day": "Neural speed touch",
+    "small_strength_touch_day": "Neural speed touch",
+    "neural_primer_day": "Neural speed touch",
     # --- Aerobic / base conditioning -------------------------------------
     "aerobic_base_day": "Aerobic support",
     "aerobic_support_day": "Aerobic support",
-    "aerobic_flush_day": "Aerobic support",
+    "aerobic_flush_day": "Rhythm flush",
     "aerobic_coordination_day": "Aerobic support",
     # --- Alactic / speed --------------------------------------------------
-    "alactic_sharpness_day": "Alactic sharpness",
+    "alactic_sharpness_day": "Freshness primer",
     "alactic_speed_day": "Alactic sharpness",
     "alactic_support_day": "Alactic sharpness",
     "alactic_coordination_day": "Alactic sharpness",
@@ -55,7 +55,7 @@ ROLE_LABELS: dict[str, str] = {
     "main_fight_pace_day": "Fight-pace conditioning",
     "highest_glycolytic_day": "Fight-pace conditioning",
     "controlled_repeatability_day": "Fight-pace conditioning",
-    "light_fight_pace_touch_day": "Fight-pace conditioning",
+    "light_fight_pace_touch_day": "Rhythm flush",
     "repeatability_support_day": "Conditioning",
     # --- Recovery / tissue / mobility ------------------------------------
     "recovery_reset_day": "Recovery",
@@ -64,7 +64,7 @@ ROLE_LABELS: dict[str, str] = {
     # --- Skill / technical -----------------------------------------------
     "technical_touch_day": "Technical touch",
     # --- Taper / fight week ----------------------------------------------
-    "fight_week_freshness_day": "Freshness session",
+    "fight_week_freshness_day": "Fight-week freshness",
     "fight_day_protocol": "Fight-day warm-up",
     # --- Coach-owned ------------------------------------------------------
     "hard_sparring_day": "Coach-led sparring",

@@ -39,6 +39,7 @@ from .schema_requirements import (
 )
 from .state_machine import (
     ADMIN_REVIEW_PLAN_STATUSES,
+    ATHLETE_DISPLAYABLE_PLAN_STATUSES,
     is_generation_job_status,
     is_plan_status,
     require_generation_job_transition,
@@ -154,6 +155,9 @@ _GENERATION_JOB_TERMINAL_MISSING_SNIPPETS = (
 PLAN_RUNTIME_SCHEMA_ERROR_DETAIL = (
     "plans table is missing required runtime columns; apply latest Supabase schema and redeploy"
 )
+PROFILES_ACTIVE_PLAN_SCHEMA_ERROR_DETAIL = (
+    "profiles table is missing active_plan_id; apply latest Supabase schema and redeploy"
+)
 GENERATION_JOB_ACTIVE_LOCK_ERROR_DETAIL = (
     "generation job active lock is missing; apply latest Supabase migrations and redeploy"
 )
@@ -240,6 +244,7 @@ class AppStore(Protocol):
         technical_style: list[str],
     ) -> dict[str, Any]: ...
 
+
     def create_plan(
         self,
         *,
@@ -257,6 +262,10 @@ class AppStore(Protocol):
 
     def get_latest_plan(self, athlete_id: str) -> dict[str, Any] | None: ...
 
+    def get_active_plan_id(self, athlete_id: str) -> str | None: ...
+
+    def set_active_plan_id(self, athlete_id: str, plan_id: str) -> None: ...
+
     def rename_plan(self, plan_id: str, plan_name: str) -> dict[str, Any]: ...
 
     def rename_plan_for_athlete(self, plan_id: str, athlete_id: str, plan_name: str) -> dict[str, Any]: ...
@@ -268,6 +277,7 @@ class AppStore(Protocol):
     def delete_plan(self, plan_id: str) -> None: ...
 
     def delete_plan_for_athlete(self, plan_id: str, athlete_id: str) -> None: ...
+
 
     def create_or_get_generation_job(
         self,
@@ -384,6 +394,7 @@ class AppStore(Protocol):
         structured_plan: dict[str, Any] | None,
         schema_version: str | None,
         stage2_validator_report: dict[str, Any],
+        expected_final_plan_text: str | None = None,
     ) -> dict[str, Any]: ...
     def update_plan_triage_approval(self, plan_id: str, *, why_log: dict[str, Any], stage2_status: str) -> dict[str, Any]: ...
 
@@ -392,6 +403,8 @@ class AppStore(Protocol):
     ) -> list[dict[str, Any]]: ...
 
     def list_admin_review_plans(self, *, limit: int = 100) -> list[dict[str, Any]]: ...
+
+    def list_plans_missing_structured_plan(self, *, limit: int = 50) -> list[dict[str, Any]]: ...
 
     def list_admin_athletes(
         self, *, limit: int = 50, offset: int = 0, q: str | None = None
@@ -414,6 +427,20 @@ class AppStore(Protocol):
     def create_session_log(self, athlete_id: str, fields: dict[str, Any]) -> dict[str, Any]: ...
 
     def list_session_logs(self, athlete_id: str, *, limit: int = 20) -> list[dict[str, Any]]: ...
+
+    # --- Block 4 Today/Overview persistence (api/routes/today.py) ---
+
+    def upsert_today_checkin(self, athlete_id: str, fields: dict[str, Any]) -> dict[str, Any]: ...
+
+    def get_today_checkin(
+        self, athlete_id: str, plan_id: str, training_day: str
+    ) -> dict[str, Any] | None: ...
+
+    def upsert_session_completion(self, athlete_id: str, fields: dict[str, Any]) -> dict[str, Any]: ...
+
+    def get_session_completion(
+        self, athlete_id: str, session_id: str, training_day: str
+    ) -> dict[str, Any] | None: ...
 
     def create_injury_flag(self, athlete_id: str, fields: dict[str, Any]) -> dict[str, Any]: ...
 
@@ -958,6 +985,21 @@ class SupabaseAppStore:
             if part
         ).lower()
         return any(snippet in text for snippet in _GENERATION_JOB_TERMINAL_MISSING_SNIPPETS)
+
+
+    def _is_profiles_active_plan_schema_error(self, exc: Exception) -> bool:
+        if not isinstance(exc, PostgrestAPIError):
+            return False
+        text = " ".join(
+            str(part)
+            for part in (exc.code, exc.message, exc.hint, exc.details)
+            if part
+        ).lower()
+        return (
+            "profiles" in text
+            and "active_plan_id" in text
+            and any(snippet in text for snippet in _PLAN_RUNTIME_SCHEMA_ERROR_SNIPPETS)
+        )
 
     def _is_plan_schema_column_error(self, exc: Exception) -> bool:
         if not isinstance(exc, PostgrestAPIError):
@@ -1914,6 +1956,48 @@ class SupabaseAppStore:
                 detail="failed to read latest plan",
                 exc=exc,
             )
+
+    def get_active_plan_id(self, athlete_id: str) -> str | None:
+        try:
+            row = self._run_with_transient_retry(
+                operation=f"get_active_plan_id athlete_id={athlete_id}",
+                fn=lambda: self._select_first(
+                    self.client.table("profiles").select("active_plan_id").eq("id", athlete_id)
+                ),
+            )
+            return (str(row.get("active_plan_id") or "").strip() or None) if row else None
+        except _STORE_CLIENT_ERRORS as exc:
+            if self._is_profiles_active_plan_schema_error(exc):
+                logger.exception("[store] get_active_plan_id:schema_mismatch athlete_id=%s", athlete_id)
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail=PROFILES_ACTIVE_PLAN_SCHEMA_ERROR_DETAIL,
+                ) from exc
+            self._raise_operation_http_error(
+                operation=f"get_active_plan_id athlete_id={athlete_id}",
+                detail="failed to read active plan",
+                exc=exc,
+            )
+
+    def set_active_plan_id(self, athlete_id: str, plan_id: str) -> None:
+        try:
+            self._run_with_transient_retry(
+                operation=f"set_active_plan_id athlete_id={athlete_id}",
+                fn=lambda: self.client.table("profiles").update({"active_plan_id": plan_id}).eq("id", athlete_id).execute(),
+            )
+        except _STORE_CLIENT_ERRORS as exc:
+            if self._is_profiles_active_plan_schema_error(exc):
+                logger.exception("[store] set_active_plan_id:schema_mismatch athlete_id=%s", athlete_id)
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail=PROFILES_ACTIVE_PLAN_SCHEMA_ERROR_DETAIL,
+                ) from exc
+            self._raise_operation_http_error(
+                operation=f"set_active_plan_id athlete_id={athlete_id}",
+                detail="failed to set active plan",
+                exc=exc,
+            )
+
 
     def create_or_get_generation_job(
         self,
@@ -3782,6 +3866,7 @@ class SupabaseAppStore:
         structured_plan: dict[str, Any] | None,
         schema_version: str | None,
         stage2_validator_report: dict[str, Any],
+        expected_final_plan_text: str | None = None,
     ) -> dict[str, Any]:
         """Persist only the structured-plan output columns for a plan.
 
@@ -3795,7 +3880,29 @@ class SupabaseAppStore:
         written by a concurrent admin action (reject, archive, rename, manual
         Stage 2 edit) in the meantime. No status transition is enforced because
         the plan's lifecycle status is intentionally left untouched.
+
+        When ``expected_final_plan_text`` is supplied it is the plan text the
+        structured card was converted from. The card is only persisted if the
+        row's current ``final_plan_text`` (falling back to ``plan_text``) still
+        matches it. If the text changed during the async conversion/backfill the
+        card is now a *stale* projection of superseded text, so the write is
+        skipped and the existing row (raw-markdown fallback) is left intact.
         """
+
+        if expected_final_plan_text is not None:
+            current = self.get_plan(plan_id)
+            if not current:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="plan not found",
+                )
+            current_text = str(current.get("final_plan_text") or current.get("plan_text") or "")
+            if current_text != str(expected_final_plan_text):
+                logger.info(
+                    "[store] update_plan_structured_artifacts:stale_text_skip plan_id=%s",
+                    plan_id,
+                )
+                return current
 
         payload = {
             "structured_plan": structured_plan,
@@ -3901,6 +4008,27 @@ class SupabaseAppStore:
         )
         rows = [row for row in (getattr(response, "data", None) or []) if isinstance(row, dict)]
         return self._attach_profile_contacts(rows)
+
+    def list_plans_missing_structured_plan(self, *, limit: int = 50) -> list[dict[str, Any]]:
+        """Athlete-displayable plans that have no structured card yet (backfill).
+
+        Selects ``ready``/``publishable_with_flags`` rows where ``structured_plan``
+        is NULL so the structured-plan backfill can re-attempt conversion for plans
+        generated/approved before structured generation was enabled. ``plan_text``
+        presence is enforced downstream by the conversion trigger, so a row with no
+        approved text simply short-circuits there.
+        """
+        response = self._run_with_transient_retry(
+            operation=f"list_plans_missing_structured_plan limit={limit}",
+            fn=lambda: self.client.table("plans")
+            .select("id, status, created_at")
+            .in_("status", list(ATHLETE_DISPLAYABLE_PLAN_STATUSES))
+            .is_("structured_plan", "null")
+            .order("created_at", desc=True)
+            .limit(limit)
+            .execute(),
+        )
+        return [row for row in (getattr(response, "data", None) or []) if isinstance(row, dict)]
 
     def list_admin_athletes(
         self, *, limit: int = 50, offset: int = 0, q: str | None = None
@@ -4032,6 +4160,78 @@ class SupabaseAppStore:
             .execute()
         )
         return getattr(response, "data", None) or []
+
+    def upsert_today_checkin(self, athlete_id: str, fields: dict[str, Any]) -> dict[str, Any]:
+        payload = {"athlete_id": athlete_id, **fields}
+        try:
+            response = (
+                self.client.table("today_checkins")
+                .upsert(payload, on_conflict="athlete_id,plan_id,training_day")
+                .execute()
+            )
+            rows = getattr(response, "data", None) or []
+            if not rows:
+                logger.error("[store] upsert_today_checkin:no_rows athlete_id=%s", athlete_id)
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail="failed to persist Today check-in",
+                )
+            return rows[0]
+        except HTTPException:
+            raise
+        except _STORE_CLIENT_ERRORS as exc:
+            self._raise_operation_http_error(
+                operation=f"upsert_today_checkin athlete_id={athlete_id}",
+                detail="failed to persist Today check-in",
+                exc=exc,
+            )
+
+    def get_today_checkin(
+        self, athlete_id: str, plan_id: str, training_day: str
+    ) -> dict[str, Any] | None:
+        return self._select_first(
+            self.client.table("today_checkins")
+            .select("*")
+            .eq("athlete_id", athlete_id)
+            .eq("plan_id", plan_id)
+            .eq("training_day", training_day)
+        )
+
+    def upsert_session_completion(self, athlete_id: str, fields: dict[str, Any]) -> dict[str, Any]:
+        payload = {"athlete_id": athlete_id, **fields}
+        try:
+            response = (
+                self.client.table("session_completions")
+                .upsert(payload, on_conflict="athlete_id,session_id,training_day")
+                .execute()
+            )
+            rows = getattr(response, "data", None) or []
+            if not rows:
+                logger.error("[store] upsert_session_completion:no_rows athlete_id=%s", athlete_id)
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail="failed to persist session completion",
+                )
+            return rows[0]
+        except HTTPException:
+            raise
+        except _STORE_CLIENT_ERRORS as exc:
+            self._raise_operation_http_error(
+                operation=f"upsert_session_completion athlete_id={athlete_id}",
+                detail="failed to persist session completion",
+                exc=exc,
+            )
+
+    def get_session_completion(
+        self, athlete_id: str, session_id: str, training_day: str
+    ) -> dict[str, Any] | None:
+        return self._select_first(
+            self.client.table("session_completions")
+            .select("*")
+            .eq("athlete_id", athlete_id)
+            .eq("session_id", session_id)
+            .eq("training_day", training_day)
+        )
 
     def create_injury_flag(self, athlete_id: str, fields: dict[str, Any]) -> dict[str, Any]:
         return self._insert_row(

@@ -25,6 +25,7 @@ from dataclasses import dataclass, field
 from typing import Any, Callable, Literal, get_args
 
 from .state_machine import is_athlete_displayable_plan_status
+from .structured_plan_faithfulness import check_structured_faithfulness
 from .structured_plan_safety import athlete_safe_support, audit_structured_plan
 from .structured_plan_models import (
     SCHEMA_VERSION,
@@ -35,6 +36,7 @@ from .structured_plan_models import (
     EventType,
     LoadFocusValue,
     PhaseLabel,
+    PlanNoteCategory,
     PlanStatus,
     PlanType,
     ReadinessStatus,
@@ -238,6 +240,7 @@ _SESSION_TYPE_VALUES = frozenset(get_args(SessionType))
 _COMPLETION_VALUES = frozenset(get_args(CompletionStatus))
 _BLOCK_TYPE_VALUES = frozenset(get_args(BlockType))
 _RISK_LEVEL_VALUES = frozenset(get_args(RiskLevel))
+_PLAN_NOTE_CATEGORY_VALUES = frozenset(get_args(PlanNoteCategory))
 
 # Conservative enum aliases for the most common loose values.
 _SESSION_TYPE_ALIASES = {
@@ -605,6 +608,39 @@ def _normalize_week(value: Any) -> dict[str, Any]:
     return out
 
 
+def _normalize_plan_note(value: Any) -> dict[str, Any] | None:
+    """Coerce a plan-level note, or ``None`` when it carries no text.
+
+    Keeps only formatting fixes: the category is aliased onto a valid enum value
+    (defaulting to ``general``), and label/text are coerced to strings. A note
+    with no usable text is dropped rather than fabricated.
+    """
+    if isinstance(value, str):
+        text = value.strip()
+        return {"category": "general", "text": text} if text else None
+    if not isinstance(value, dict):
+        return None
+    text = _coerce_str(value.get("text")).strip()
+    if not text:
+        return None
+    out: dict[str, Any] = {
+        "category": _enum(value.get("category"), _PLAN_NOTE_CATEGORY_VALUES, "general", {"weight cut": "weight_cut", "weight-cut": "weight_cut"}),
+        "text": text,
+    }
+    label = _coerce_str(value.get("label")).strip()
+    if label:
+        out["label"] = label
+    return out
+
+
+def _normalize_plan_notes(value: Any) -> list[dict[str, Any]]:
+    return [
+        note
+        for note in (_normalize_plan_note(item) for item in _as_list(value))
+        if note is not None
+    ]
+
+
 def _normalize_red_flag(value: Any) -> dict[str, Any]:
     out = dict(value) if isinstance(value, dict) else {}
     out["rule_id"] = _coerce_nonempty_str(out.get("rule_id"), "red_flag")
@@ -801,15 +837,114 @@ def _normalize_daily_check_ins(
     return out
 
 
+# Intensity-label typo fix. Coaches read effort as ``RPE`` (rate of perceived
+# exertion); models occasionally emit ``PRE`` instead. Only an all-caps ``PRE``
+# immediately preceding a value on the RPE scale (1-10, optionally a range like
+# ``7–8``) is corrected, so ordinary words (``pre-fight``, ``PRE-FIGHT WEEK``)
+# and unrelated numbers (``PRE 2024``) are never touched.
+_RPE_LABEL_TYPO_RE = re.compile(r"\bPRE\b(?=\s*(?:10|[1-9])\b)")
+
+# Keys whose verbatim text must never be rewritten by cosmetic label fixes.
+_LABEL_FIX_SKIP_KEYS = frozenset({"raw_markdown_fallback"})
+
+
+def _fix_label_typos(node: Any) -> Any:
+    """Recursively correct intensity-label typos (``PRE`` → ``RPE``) in text.
+
+    A pure formatting fix applied to every string leaf except the verbatim
+    ``raw_markdown_fallback``. The regex is deliberately narrow so it only
+    rewrites the effort label, never coaching content.
+    """
+    if isinstance(node, dict):
+        return {
+            key: value if key in _LABEL_FIX_SKIP_KEYS else _fix_label_typos(value)
+            for key, value in node.items()
+        }
+    if isinstance(node, list):
+        return [_fix_label_typos(item) for item in node]
+    if isinstance(node, str):
+        return _RPE_LABEL_TYPO_RE.sub("RPE", node)
+    return node
+
+
+def _normalize_safety_text(text: Any) -> str:
+    """Lowercase, collapse whitespace, drop trailing punctuation — for dedup."""
+    cleaned = re.sub(r"\s+", " ", str(text or "")).strip().lower()
+    return cleaned.rstrip(".!;: ").strip()
+
+
+def _dedupe_plan_safety_text(plan: dict[str, Any]) -> dict[str, Any]:
+    """Drop repeated athlete-facing warning/constraint text (PR-QC).
+
+    Stop/warning language tends to echo across active notes, red flags, and
+    final notes. The authoritative place for a stop rule is the red-flag rule,
+    so this keeps the strongest copy there and removes only exact duplicates:
+
+    * collapses red-flag rules that are byte-for-byte identical (same text,
+      action, severity, and trigger) — never distinct or session-specific rules;
+    * drops a plan note whose text repeats an earlier plan note or an existing
+      red-flag ``display_text``.
+
+    Mutates and returns ``plan``. No safety rule is ever removed outright — the
+    warning always survives in at least one place.
+    """
+    rules = plan.get("red_flag_rules")
+    if isinstance(rules, list):
+        seen_rules: set[tuple] = set()
+        deduped_rules: list[Any] = []
+        for rule in rules:
+            if not isinstance(rule, dict):
+                deduped_rules.append(rule)
+                continue
+            display = _normalize_safety_text(rule.get("display_text"))
+            key = (
+                display,
+                _normalize_safety_text(rule.get("action")),
+                rule.get("severity"),
+                rule.get("when"),
+            )
+            if display and key in seen_rules:
+                continue
+            seen_rules.add(key)
+            deduped_rules.append(rule)
+        plan["red_flag_rules"] = deduped_rules
+        rules = deduped_rules
+
+    red_flag_texts = {
+        _normalize_safety_text(rule.get("display_text"))
+        for rule in (rules or [])
+        if isinstance(rule, dict) and _normalize_safety_text(rule.get("display_text"))
+    }
+
+    notes = plan.get("plan_notes")
+    if isinstance(notes, list):
+        seen_notes: set[str] = set()
+        deduped_notes: list[Any] = []
+        for note in notes:
+            if not isinstance(note, dict):
+                deduped_notes.append(note)
+                continue
+            norm = _normalize_safety_text(note.get("text"))
+            if norm and (norm in seen_notes or norm in red_flag_texts):
+                continue
+            if norm:
+                seen_notes.add(norm)
+            deduped_notes.append(note)
+        plan["plan_notes"] = deduped_notes
+
+    return plan
+
+
 def normalize_structured_plan_candidate(data: Any) -> Any:
     """Conservatively coerce a model's near-miss structured JSON into schema shape.
 
     Only fixes obvious *formatting* mistakes (enum aliases, string loads/rests,
     string countdown labels, non-list ``daily_check_ins``, non-string
-    ``progression_notes``, and missing required meta fields filled with neutral
-    structural defaults). It never invents training content and never alters
-    ``raw_markdown_fallback`` text. Non-dict input is returned unchanged so the
-    strict schema can reject it. Never raises.
+    ``progression_notes``, missing required meta fields filled with neutral
+    structural defaults, intensity-label typos, and duplicated warning text). It
+    never invents training content and never alters ``raw_markdown_fallback``
+    text. Non-dict input is returned unchanged so the strict schema can reject
+    it. Never raises.
     """
 
     if not isinstance(data, dict):
@@ -829,6 +964,7 @@ def normalize_structured_plan_candidate(data: Any) -> Any:
         if label is not None
     ]
     plan["red_flag_rules"] = [_normalize_red_flag(rule) for rule in _as_dict_list(plan.get("red_flag_rules"))]
+    plan["plan_notes"] = _normalize_plan_notes(plan.get("plan_notes"))
     plan["weeks"] = [_normalize_week(week) for week in _as_dict_list(plan.get("weeks"))]
     # daily_check_ins must be a list of fully-valid entries; a non-list, or a
     # partial/garbled entry, must never fail the whole plan. Malformed entries are
@@ -840,6 +976,11 @@ def normalize_structured_plan_candidate(data: Any) -> Any:
     plan["nutrition"] = _normalize_nutrition(plan.get("nutrition"))
     plan["progression_notes"] = _coerce_str(plan.get("progression_notes"))
     plan["raw_markdown_fallback"] = _coerce_str(plan.get("raw_markdown_fallback"))
+    # Cosmetic label fix first (so dedup compares corrected text), then collapse
+    # repeated athlete-facing warnings. Both are formatting-only and never touch
+    # raw_markdown_fallback or drop a safety rule outright.
+    plan = _fix_label_typos(plan)
+    plan = _dedupe_plan_safety_text(plan)
     return plan
 
 
@@ -1021,6 +1162,12 @@ def build_structured_plan_outcome(
     first = safe_parse_structured_plan(cleaned, raw_markdown=raw_markdown or None)
     if first.ok and first.plan is not None:
         plan_dict = _with_deterministic_support(first.plan.model_dump(mode="json"), computed_support)
+        unfaithful = check_structured_faithfulness(plan_dict, raw_markdown)
+        if unfaithful:
+            return StructuredPlanOutcome(
+                status="invalid_fallback_used",
+                errors=[f"faithfulness: {issue}" for issue in unfaithful],
+            )
         return StructuredPlanOutcome(
             status="valid",
             structured_plan=plan_dict,
@@ -1044,6 +1191,12 @@ def build_structured_plan_outcome(
     )
     if repaired.ok and repaired.plan is not None:
         plan_dict = _with_deterministic_support(repaired.plan.model_dump(mode="json"), computed_support)
+        unfaithful = check_structured_faithfulness(plan_dict, raw_markdown)
+        if unfaithful:
+            return StructuredPlanOutcome(
+                status="invalid_fallback_used",
+                errors=[f"faithfulness: {issue}" for issue in unfaithful],
+            )
         return StructuredPlanOutcome(
             status="repair_attempted_valid",
             structured_plan=plan_dict,
@@ -1131,8 +1284,8 @@ The root JSON object IS the StructuredTrainingPlan.
 Do NOT wrap it inside a top-level "plan" key. Its top-level keys are exactly:
 
   schema_version, plan_metadata, athlete_context, event_context,
-  countdown_labels, red_flag_rules, weeks, daily_check_ins, nutrition,
-  progression_notes, raw_markdown_fallback.
+  countdown_labels, red_flag_rules, plan_notes, weeks, daily_check_ins,
+  nutrition, progression_notes, raw_markdown_fallback.
 
 The nested training hierarchy lives inside the root object as:
 weeks[] -> days[] -> sessions[] -> blocks[].
@@ -1156,6 +1309,12 @@ The JSON object MUST conform to the StructuredTrainingPlan schema:
   morning check-in only.
 - Each session MUST include completion_status (default "not_started") and a
   session-level mindset_anchor.
+- Coach-led, sparring, or technical days where the app prescribes NO S&C work
+  (e.g. "Coach-led boxing session", "no app S&C today", "technical only") MUST
+  still be emitted as a day. Leave that day's "sessions" as [] and set a concise
+  today_card.headline naming what it is (e.g. "Coach-led boxing", "Hard
+  sparring", "Technical only") so the day renders as its own card. Do NOT invent
+  S&C blocks for these days and do NOT drop the day.
 - daily_check_ins are OPTIONAL and must be either fully valid or omitted. Emit a
   check-in entry ONLY when the plan actually states a dated self-report; each
   entry MUST then carry "date", a "morning" object with all of "sleep_quality"
@@ -1165,6 +1324,17 @@ The JSON object MUST conform to the StructuredTrainingPlan schema:
   cannot fill every field from the plan, leave daily_check_ins as [].
 - Provide red_flag_rules[] with machine fields (metric/operator/threshold/logic)
   kept separate from a human-readable display_text.
+- Capture short plan-level reminders that live OUTSIDE any week — e.g. a header
+  "Active notes" block and footer "End of plan notes" — in plan_notes[]. Each
+  entry is {{"category": one of weight_cut|injury|nutrition|training|recovery|
+  general, "label": optional short label, "text": the reminder}}. Use plan_notes
+  for the active weight-cut summary, injury/wound handling, nutrition reminders,
+  and general non-negotiables. Keep stop/modify/report SAFETY thresholds in
+  red_flag_rules and full nutrition macros in nutrition — plan_notes is for the
+  brief, always-on context. A weight_cut note MUST express a risk requiring
+  qualified supervision, NEVER acute-cut directives (no sauna, dehydration,
+  water-loading, or sodium manipulation). Omit plan_notes entirely if the plan
+  states none.
 - Provide nutrition with a summary and, where a weight cut applies, a
   weight_cut_warning. Weight-cut guidance MUST be expressed as a risk requiring
   qualified supervision — NEVER direct acute-cut instructions (no sauna,
@@ -1211,6 +1381,7 @@ EXACT ROOT SKELETON (match this shape; fill values from the plan, keep all keys)
   "event_context": {{"event_type": "fight", "fight_date": "YYYY-MM-DD"}},
   "countdown_labels": [{{"date": "YYYY-MM-DD", "days_to_event": 28, "label": "D-28", "anchor": "fight"}}],
   "red_flag_rules": [{{"rule_id": "...", "when": "morning_check_in", "severity": "amber", "display_text": "...", "action": "..."}}],
+  "plan_notes": [{{"category": "weight_cut", "label": "Active weight cut", "text": "..."}}],
   "weeks": [
     {{
       "week_id": "wk-1", "week_index": 1, "phase_label": "SPP", "week_goal": "...",

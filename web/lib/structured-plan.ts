@@ -170,6 +170,25 @@ export function getBlocks(session: StructuredSession | null | undefined): Struct
   return safeArray(session?.blocks).filter(isObject);
 }
 
+const REHAB_BLOCK_RE = /\b(rehab|prehab|mobility|mobil(?:ity|isation|ization)|isometric|opener)\b/i;
+
+/** Rehab/mobility blocks get a compact always-visible summary on session cards. */
+export function isRehabOrMobilityBlock(block: StructuredBlock | null | undefined): boolean {
+  if (!isObject(block)) {
+    return false;
+  }
+  return [block.block_type, block.category, block.display_name]
+    .map((value) => cleanText(value))
+    .some((value) => Boolean(value && REHAB_BLOCK_RE.test(value)));
+}
+
+/** Ordered rehab/mobility blocks for a session, empty when absent. */
+export function getRehabOrMobilityBlocks(
+  session: StructuredSession | null | undefined,
+): StructuredBlock[] {
+  return getBlocks(session).filter(isRehabOrMobilityBlock);
+}
+
 export function getCoachingCues(block: StructuredBlock | null | undefined): string[] {
   return getStringList(block?.coaching_cues);
 }
@@ -235,6 +254,34 @@ export function redFlagView(
 // --- deterministic (Stage 1) athlete-safe nutrition + recovery --------------
 
 const PHASE_ORDER = ["GPP", "SPP", "TAPER", "FIGHT_WEEK", "REINTEGRATION"];
+
+/** Stable key used to attach deterministic support to matching week phases. */
+export function normalizeSupportPhaseKey(value: unknown): string | null {
+  const token = cleanText(value)
+    ?.toLowerCase()
+    .replace(/[\s\-/]+/g, "_")
+    .replace(/_+/g, "_")
+    .replace(/^_|_$/g, "");
+  if (!token) {
+    return null;
+  }
+  if (token === "gpp" || token.includes("general_prep") || token.includes("general_preparation")) {
+    return "gpp";
+  }
+  if (token === "spp" || token.includes("specific_prep") || token.includes("specific_preparation")) {
+    return "spp";
+  }
+  if (token === "taper") {
+    return "taper";
+  }
+  if (token.includes("fight_week") || token.includes("fight_week_taper")) {
+    return "fight_week";
+  }
+  if (token.includes("reintegration")) {
+    return "reintegration";
+  }
+  return token;
+}
 
 function orderedPhaseEntries<T>(byPhase: Record<string, T> | null | undefined): {
   phase: string;
@@ -410,6 +457,51 @@ export function hasNutrition(plan: StructuredPlan | null | undefined): boolean {
   );
 }
 
+export type PlanNoteView = { category: string; label: string | null; text: string };
+
+const PLAN_NOTE_CATEGORY_LABELS: Record<string, string> = {
+  weight_cut: "Weight cut",
+  injury: "Injury",
+  nutrition: "Nutrition",
+  training: "Training",
+  recovery: "Recovery",
+  general: "Note",
+};
+
+/** Short title for a plan note: its own label, else a category fallback. */
+export function planNoteLabel(note: PlanNoteView): string {
+  if (note.label) {
+    return note.label;
+  }
+  return PLAN_NOTE_CATEGORY_LABELS[note.category] ?? PLAN_NOTE_CATEGORY_LABELS.general;
+}
+
+/** Plan-level "active notes" that carry displayable text (empty when absent). */
+export function getPlanNotes(plan: StructuredPlan | null | undefined): PlanNoteView[] {
+  return safeArray(plan?.plan_notes)
+    .filter(isObject)
+    .map((note) => {
+      const text = cleanText(note.text);
+      if (!text) {
+        return null;
+      }
+      const category = cleanText(note.category)?.toLowerCase().replace(/[-\s]+/g, "_") ?? "general";
+      return { category, label: cleanText(note.label), text } satisfies PlanNoteView;
+    })
+    .filter((note): note is PlanNoteView => note !== null);
+}
+
+/** Fallback safety lines from active notes when explicit red-flag rules are absent. */
+export function getFallbackSafetyNotes(plan: StructuredPlan | null | undefined): PlanNoteView[] {
+  const safetyCategories = new Set(["injury", "weight_cut", "recovery"]);
+  return getPlanNotes(plan).filter((note) => {
+    if (safetyCategories.has(note.category)) {
+      return true;
+    }
+    return /\b(stop|report|medical|coach|bleed|pain|dehydrat(?:ed|ion|e)?|wound)\b/i.test(note.text);
+  });
+}
+
 /** Red-flag rules that have something to display. */
 export function getDisplayableRedFlags(plan: StructuredPlan | null | undefined) {
   return safeArray(plan?.red_flag_rules)
@@ -422,4 +514,77 @@ export function weekLabel(week: StructuredWeek | null | undefined): string {
   const index = typeof week?.week_index === "number" ? week.week_index : null;
   const base = index != null ? `Week ${index}` : "Week";
   return goal ? `${base} — ${goal}` : base;
+}
+
+// --- session-less day classification ----------------------------------------
+//
+// A coach-led / sparring / technical day legitimately carries no app S&C
+// blocks (the contact load is owned by the coach), so the converter emits it as
+// a day with an empty `sessions` array. Rather than relying on the LLM to build
+// a session object for these — which wastes tokens and is a frequent source of
+// dropped days — we deterministically derive a self-contained card from the
+// day's own `today_card.headline` + `day_type`. Only a genuine rest/recovery
+// day (or a truly empty day) falls through to "Rest day.".
+
+const REST_DAY_TYPES = new Set(["rest", "recovery"]);
+// `technical` is checked before `sparring` so a "technical only / no hard
+// sparring" headline is not mislabelled as a sparring day by the stray
+// "sparring" token, and `coach_led` is the catch-all for coach-owned contact.
+const TECHNICAL_RE = /\b(technical|skill|drill|pad\s?work|pads|mitts?|footwork|shadow)/i;
+const SPARRING_RE = /\bspar(?:r(?:ing|ed)|s)?\b/i;
+const COACH_LED_RE = /\bcoach/i;
+
+export type SessionlessDayKind = "coach_led" | "sparring" | "technical" | "scheduled" | "rest";
+
+export type SessionlessDayView = {
+  kind: SessionlessDayKind;
+  title: string;
+  /** Short tag for the day kind, or null when no kind tag should show. */
+  tag: string | null;
+  /** Whether to surface the "no app S&C — train with your coach" note. */
+  coachLed: boolean;
+};
+
+const SESSIONLESS_DAY_TAGS: Record<SessionlessDayKind, string | null> = {
+  coach_led: "Coach-led",
+  sparring: "Sparring",
+  technical: "Technical",
+  scheduled: null,
+  rest: null,
+};
+
+/**
+ * Deterministically resolve how a day with no app sessions should render.
+ *
+ * Coach-led/sparring/technical days get their own card titled from the day
+ * headline so a mostly-coach-led camp does not collapse into a wall of
+ * "Rest day.". A headline-less rest/recovery day (or an otherwise empty day)
+ * is the only case that renders as a rest day.
+ */
+export function classifySessionlessDay(
+  day: StructuredDay | null | undefined,
+): SessionlessDayView {
+  const headline = cleanText(day?.today_card?.headline);
+
+  if (headline) {
+    let kind: SessionlessDayKind = "scheduled";
+    if (TECHNICAL_RE.test(headline)) {
+      kind = "technical";
+    } else if (SPARRING_RE.test(headline)) {
+      kind = "sparring";
+    } else if (COACH_LED_RE.test(headline)) {
+      kind = "coach_led";
+    }
+    return {
+      kind,
+      title: headline,
+      tag: SESSIONLESS_DAY_TAGS[kind],
+      coachLed: kind === "coach_led" || kind === "sparring" || kind === "technical",
+    };
+  }
+
+  // No headline to classify from: fall back to a plain rest day. The converter
+  // is instructed to always headline a coach-led/sparring/technical day, so a
+  // headline-less session-less day is treated as genuine rest.
+  return { kind: "rest", title: "Rest day", tag: null, coachLed: false };
 }

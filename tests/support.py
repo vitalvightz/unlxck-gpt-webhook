@@ -57,8 +57,8 @@ def _parse_iso(value: object) -> datetime | None:
 
 def _latest_job_activity_at(job: dict) -> datetime | None:
     latest: datetime | None = None
-    for field in ("heartbeat_at", "updated_at", "started_at", "created_at"):
-        parsed = _parse_iso(job.get(field))
+    for field_name in ("heartbeat_at", "updated_at", "started_at", "created_at"):
+        parsed = _parse_iso(job.get(field_name))
         if parsed is not None and (latest is None or parsed > latest):
             latest = parsed
     for milestone in job.get("progress_milestones") or []:
@@ -109,6 +109,8 @@ class FakeStore:
         self.generation_jobs: dict[str, dict] = {}
         self.daily_checkins: dict[str, list[dict]] = {}
         self.session_logs: dict[str, list[dict]] = {}
+        self.today_checkins: dict[str, list[dict]] = {}
+        self.session_completions: dict[str, list[dict]] = {}
         self.injury_flags: dict[str, list[dict]] = {}
         self.adaptation_notes: dict[str, list[dict]] = {}
         self.admin_reviews: list[dict] = []
@@ -1198,10 +1200,18 @@ class FakeStore:
         structured_plan,
         schema_version,
         stage2_validator_report: dict,
+        expected_final_plan_text: str | None = None,
     ) -> dict:
         row = self.plans.get(plan_id)
         if not row:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
+        # Stale-write guard: when the conversion's source text is supplied, only
+        # persist the card if the row's current text still matches. A concurrent
+        # edit/reject mid-conversion makes the card stale, so the write is skipped.
+        if expected_final_plan_text is not None:
+            current_text = str(row.get("final_plan_text") or row.get("plan_text") or "")
+            if current_text != str(expected_final_plan_text):
+                return row
         # Narrow write: only the structured-plan output fields. Status / plan_text
         # / stage2 fields are intentionally left untouched so a concurrent admin
         # action cannot be clobbered by a slow background conversion.
@@ -1241,6 +1251,17 @@ class FakeStore:
         ]
         rows.sort(key=lambda row: row["created_at"], reverse=True)
         return self._attach_profile_contacts(rows[:limit])
+
+    def list_plans_missing_structured_plan(self, *, limit: int = 50) -> list[dict]:
+        displayable = {"ready", "publishable_with_flags"}
+        rows = [
+            dict(plan)
+            for plan in self.plans.values()
+            if str(plan.get("status") or "").strip().lower() in displayable
+            and plan.get("structured_plan") is None
+        ]
+        rows.sort(key=lambda row: row.get("created_at") or "", reverse=True)
+        return rows[:limit]
 
     def list_admin_athletes(self, *, limit: int = 50, offset: int = 0, q: str | None = None) -> list[dict]:
         rows = []
@@ -1329,6 +1350,63 @@ class FakeStore:
             reverse=True,
         )
         return [dict(row) for row in rows[:limit]]
+
+    def upsert_today_checkin(self, athlete_id: str, fields: dict) -> dict:
+        bucket = self.today_checkins.setdefault(athlete_id, [])
+        for row in bucket:
+            if row["plan_id"] == fields["plan_id"] and row["training_day"] == fields["training_day"]:
+                row.update(fields)
+                row["updated_at"] = _now()
+                return dict(row)
+        row = {
+            "id": str(uuid4()),
+            "athlete_id": athlete_id,
+            "athlete_timezone": "",
+            "active_injury": "none",
+            "previous_session": "none",
+            "recommendation_reason": "",
+            "recommendation_triggers": [],
+            **fields,
+            "created_at": _now(),
+            "updated_at": _now(),
+        }
+        bucket.append(row)
+        return dict(row)
+
+    def get_today_checkin(self, athlete_id: str, plan_id: str, training_day: str) -> dict | None:
+        for row in self.today_checkins.get(athlete_id, []):
+            if row["plan_id"] == plan_id and row["training_day"] == training_day:
+                return dict(row)
+        return None
+
+    def upsert_session_completion(self, athlete_id: str, fields: dict) -> dict:
+        bucket = self.session_completions.setdefault(athlete_id, [])
+        for row in bucket:
+            if row["session_id"] == fields["session_id"] and row["training_day"] == fields["training_day"]:
+                row.update(fields)
+                row["updated_at"] = _now()
+                return dict(row)
+        row = {
+            "id": str(uuid4()),
+            "athlete_id": athlete_id,
+            "session_rpe": None,
+            "pain_after": None,
+            "modification_reason": "",
+            "notes": "",
+            "started_at": None,
+            "completed_at": None,
+            **fields,
+            "created_at": _now(),
+            "updated_at": _now(),
+        }
+        bucket.append(row)
+        return dict(row)
+
+    def get_session_completion(self, athlete_id: str, session_id: str, training_day: str) -> dict | None:
+        for row in self.session_completions.get(athlete_id, []):
+            if row["session_id"] == session_id and row["training_day"] == training_day:
+                return dict(row)
+        return None
 
     def create_session_log(self, athlete_id: str, fields: dict) -> dict:
         row = {

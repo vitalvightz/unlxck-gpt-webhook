@@ -26,8 +26,12 @@ import type {
   SessionLogRecord,
   SessionLogRequest,
   SessionLogResponse,
+  TodayCheckinRequest,
+  TodayCheckinResponse,
+  TodayCommandView,
+  TodaySessionCompletionRequest,
+  TodaySessionCompletionResponse,
   UsernameChangeRequest,
-  WeeklySchedule,
 } from "@/lib/types";
 
 const EXPLICIT_API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") ?? null;
@@ -578,28 +582,20 @@ export function listPlans(token: string): Promise<PlanSummary[]> {
   return withTransientRetries(() => readJson<PlanSummary[]>("/api/plans", { token }));
 }
 
+export function getActivePlan(token: string): Promise<PlanSummary> {
+  return withTransientRetries(() => readJson<PlanSummary>("/api/plans/active", { token }));
+}
+
+export function setActivePlan(token: string, planId: string): Promise<PlanSummary> {
+  return withTransientRetries(() =>
+    readJson<PlanSummary>(`/api/plans/${encodeURIComponent(planId)}/set-active`, { method: "POST", token }),
+  );
+}
+
 export function getPlan(token: string, planId: string): Promise<PlanDetail> {
   return withTransientRetries(() =>
     readJson<PlanDetail>(`/api/plans/${encodeURIComponent(planId)}`, { token }),
   );
-}
-
-export async function fetchWeeklySchedule(
-  planId: string,
-  weekIndex = 0,
-  token?: string | null,
-): Promise<WeeklySchedule | null> {
-  try {
-    return await readJson<WeeklySchedule>(
-      `/api/plans/${encodeURIComponent(planId)}/weekly-schedule?week_index=${weekIndex}`,
-      { token },
-    );
-  } catch (error) {
-    if (error instanceof ApiError && error.status === 404) {
-      return null;
-    }
-    throw error;
-  }
 }
 
 export function renamePlan(token: string, planId: string, planName: string): Promise<PlanDetail> {
@@ -860,6 +856,32 @@ export function archivePlan(token: string, planId: string): Promise<PlanDetail> 
   });
 }
 
+export type StructuredPlanBackfillResult = {
+  queued: number;
+  plan_ids: string[];
+};
+
+/**
+ * Trigger a background backfill that re-runs structured-plan conversion for
+ * athlete-displayable plans that have no structured card yet (legacy plans
+ * generated before structured generation existed). Returns immediately with the
+ * queued plan ids; cards appear on each plan as its conversion lands.
+ */
+export function backfillStructuredPlans(
+  token: string,
+  options?: { limit?: number },
+): Promise<StructuredPlanBackfillResult> {
+  const query =
+    typeof options?.limit === "number" ? `?limit=${encodeURIComponent(options.limit)}` : "";
+  return readJson<StructuredPlanBackfillResult>(
+    `/api/admin/plans/structured-plan/backfill${query}`,
+    {
+      method: "POST",
+      token,
+    },
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Live athlete daily flow (dashboard, check-ins, session logs, injury flags,
 // admin review queue).
@@ -970,4 +992,30 @@ export function getAdminAthleteDailyStatus(
       { token },
     ),
   );
+}
+
+export function getToday(token: string): Promise<TodayCommandView> {
+  return withTransientRetries(() => readJson<TodayCommandView>("/api/today", { token }));
+}
+
+export function submitTodayCheckin(
+  token: string,
+  payload: TodayCheckinRequest,
+): Promise<TodayCheckinResponse> {
+  return readJson<TodayCheckinResponse>("/api/today/checkin", {
+    method: "POST",
+    token,
+    body: JSON.stringify(payload),
+  });
+}
+
+export function submitTodaySessionCompletion(
+  token: string,
+  payload: TodaySessionCompletionRequest,
+): Promise<TodaySessionCompletionResponse> {
+  return readJson<TodaySessionCompletionResponse>("/api/today/session-completion", {
+    method: "POST",
+    token,
+    body: JSON.stringify(payload),
+  });
 }

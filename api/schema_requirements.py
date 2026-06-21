@@ -50,6 +50,12 @@ REQUIRED_TABLES: tuple[str, ...] = (
     "injury_flags",
     "adaptation_notes",
     "admin_reviews",
+    # Block 4 Today/Overview persistence (api/routes/today.py + api/store.py):
+    # athlete-local categorical check-ins with the server-evaluated
+    # recommendation, and per-session completion records. A missing migration
+    # must fail the deploy gate just like the daily-tracking tables above.
+    "today_checkins",
+    "session_completions",
 )
 
 # ---------------------------------------------------------------------------
@@ -163,6 +169,7 @@ REQUIRED_PROFILES_COLUMNS: tuple[str, ...] = (
     "record_summary",
     "athlete_timezone",
     "athlete_locale",
+    "active_plan_id",
     "appearance_mode",
 )
 
@@ -249,6 +256,52 @@ REQUIRED_ADMIN_REVIEWS_COLUMNS: tuple[str, ...] = (
     "updated_at",
 )
 
+# Block 4 Today check-in: athlete-local categorical inputs + safety flags plus
+# the server-evaluated recommendation persisted on the same row (the
+# recommendation is 1:1 with the check-in, so source_checkin_id is this row id).
+REQUIRED_TODAY_CHECKINS_COLUMNS: tuple[str, ...] = (
+    "id",
+    "athlete_id",
+    "plan_id",
+    "training_day",
+    "athlete_timezone",
+    "sleep",
+    "body",
+    "pain",
+    "phase",
+    "active_injury",
+    "previous_session",
+    "sharp_pain",
+    "instability",
+    "swelling",
+    "neurological_symptoms",
+    "illness_symptoms",
+    "cannot_warm_into_movement",
+    "worse_next_day_pain",
+    "recommendation_state",
+    "recommendation_reason",
+    "recommendation_triggers",
+    "created_at",
+    "updated_at",
+)
+
+REQUIRED_SESSION_COMPLETIONS_COLUMNS: tuple[str, ...] = (
+    "id",
+    "athlete_id",
+    "plan_id",
+    "session_id",
+    "training_day",
+    "status",
+    "session_rpe",
+    "pain_after",
+    "modification_reason",
+    "notes",
+    "started_at",
+    "completed_at",
+    "created_at",
+    "updated_at",
+)
+
 # Map of table -> required columns, used by the checker.
 REQUIRED_COLUMNS: Mapping[str, tuple[str, ...]] = {
     "plans": REQUIRED_PLANS_COLUMNS,
@@ -260,6 +313,8 @@ REQUIRED_COLUMNS: Mapping[str, tuple[str, ...]] = {
     "injury_flags": REQUIRED_INJURY_FLAGS_COLUMNS,
     "adaptation_notes": REQUIRED_ADAPTATION_NOTES_COLUMNS,
     "admin_reviews": REQUIRED_ADMIN_REVIEWS_COLUMNS,
+    "today_checkins": REQUIRED_TODAY_CHECKINS_COLUMNS,
+    "session_completions": REQUIRED_SESSION_COMPLETIONS_COLUMNS,
 }
 
 # ---------------------------------------------------------------------------
@@ -331,11 +386,27 @@ INDEX_REQUIREMENTS: tuple[IndexRequirement, ...] = (
         label="profiles username uniqueness",
         accepted_names=("profiles_username_key", "profiles_username_idx"),
     ),
+    IndexRequirement(
+        label="profiles active_plan_id index",
+        accepted_names=("profiles_active_plan_id_idx",),
+    ),
     # One check-in per athlete per day; the store's upsert path
     # (api/store.py::upsert_daily_checkin) depends on this conflict target.
     IndexRequirement(
         label="daily_checkins athlete/date uniqueness",
         accepted_names=("daily_checkins_athlete_date_key",),
+    ),
+    # One Today check-in per athlete/plan/training-day; the store's upsert path
+    # (api/store.py::upsert_today_checkin) depends on this conflict target.
+    IndexRequirement(
+        label="today_checkins athlete/plan/training-day uniqueness",
+        accepted_names=("today_checkins_athlete_plan_day_key",),
+    ),
+    # One completion per athlete/session/training-day; the store's upsert path
+    # (api/store.py::upsert_session_completion) depends on this conflict target.
+    IndexRequirement(
+        label="session_completions athlete/session/training-day uniqueness",
+        accepted_names=("session_completions_athlete_session_day_key",),
     ),
 )
 
@@ -355,6 +426,8 @@ RLS_REQUIRED_TABLES: tuple[str, ...] = (
     "injury_flags",
     "adaptation_notes",
     "admin_reviews",
+    "today_checkins",
+    "session_completions",
 )
 
 

@@ -1,8 +1,5 @@
 import Link from "next/link";
 
-import { StructuredPlanRenderer } from "@/components/structured-plan-renderer";
-import type { StructuredPlan } from "@/lib/types";
-
 const demoMeta = [
   { label: "Athlete", value: "Sample Fighter" },
   { label: "Discipline", value: "MMA / Muay Thai" },
@@ -12,172 +9,50 @@ const demoMeta = [
   { label: "Sessions per week", value: "5" },
 ];
 
-const demoStructuredPlan = {
-  schema_version: "1.0",
-  plan_metadata: {
-    title: "Sample Fighter - 8 Week Fight Camp",
-    sport: "MMA / Muay Thai",
-    plan_type: "fight_camp",
+const demoWeek = [
+  {
+    weekday: "Mon",
+    focus: "Hard sparring",
+    summary: "Primary hard day. Live sparring + technical clean-up.",
+    block: "Skill",
   },
-  athlete_context: {
-    sport_profile: "MMA / Muay Thai",
-    style_profile: "Pressure striker with clinch emphasis",
+  {
+    weekday: "Tue",
+    focus: "Strength",
+    summary: "Max strength lower / upper push. Short conditioning finisher.",
+    block: "S&C",
   },
-  event_context: {
-    fight_date: "8 weeks out",
-    event_type: "fight_or_match",
+  {
+    weekday: "Wed",
+    focus: "Recovery",
+    summary: "Mobility, light pads, breathwork. No high-intent work.",
+    block: "Recovery",
   },
-  red_flag_rules: [
-    {
-      rule_id: "demo-stop-report",
-      severity: "red",
-      display_text: "Stop and report sharp pain, dizziness, or symptoms that worsen during sparring.",
-      action: "Pause the session and get coach or clinician review before resuming.",
-    },
-  ],
-  weeks: [
-    {
-      week_id: "demo-week-4",
-      week_index: 4,
-      phase_label: "SPP",
-      week_goal: "Round-specific pressure and repeat power",
-      days: [
-        {
-          date: "Mon",
-          countdown_label: "D-32",
-          day_type: "hard_spar",
-          today_card: {
-            headline: "Primary hard day. Keep the first rounds technical before raising intent.",
-            readiness_status: "train_as_planned",
-            nutrition_summary: "Fuel early and keep fluids steady before live rounds.",
-            mindset_anchor: {
-              intent: "Win position before volume.",
-              focus_cue: "Exit clean after every exchange.",
-              context: "Highest skill-intensity day of the week.",
-            },
-          },
-          sessions: [
-            {
-              session_id: "demo-session-spar",
-              session_type: "sparring",
-              title: "Hard sparring + tactical cleanup",
-              objective: "Build fight-speed decision making without turning every round into a war.",
-              planned_duration: { value: 90, unit: "minutes" },
-              primary_stressor: "sparring",
-              cns_demand: "high",
-              impact_level: "high",
-              blocks: [
-                {
-                  block_id: "demo-block-rounds",
-                  block_type: "skill",
-                  category: "sparring",
-                  display_name: "Live rounds",
-                  rounds: 5,
-                  duration: { value: 5, unit: "minutes" },
-                  rest: { value: 60, unit: "seconds" },
-                  intensity: "fight rhythm",
-                  impact_level: "high",
-                  purpose: "Match the fight format while preserving coach control over intensity.",
-                  coaching_cues: ["Win the first grip", "Leave on angles", "Reset before chasing volume"],
-                },
-              ],
-            },
-          ],
-        },
-        {
-          date: "Tue",
-          countdown_label: "D-31",
-          day_type: "strength",
-          sessions: [
-            {
-              session_id: "demo-session-strength",
-              session_type: "strength_power",
-              title: "Max strength + alactic finisher",
-              objective: "Keep force output high while avoiding fatigue that bleeds into skill work.",
-              planned_duration: { value: 60, unit: "minutes" },
-              primary_stressor: "strength",
-              cns_demand: "moderate",
-              impact_level: "low",
-              blocks: [
-                {
-                  block_id: "demo-block-trap",
-                  block_type: "strength",
-                  category: "strength",
-                  display_name: "Trap bar deadlift",
-                  sets: 4,
-                  reps: "3",
-                  load: { display: "Heavy, crisp reps" },
-                  effort: { method: "RPE", value: 8 },
-                  rest: { value: 150, unit: "seconds" },
-                  purpose: "Bank force production without grinding.",
-                  coaching_cues: ["Fast bar, clean brace", "Stop before form slows"],
-                },
-                {
-                  block_id: "demo-block-sled",
-                  block_type: "conditioning",
-                  category: "power",
-                  display_name: "Sled push sprint",
-                  sets: 6,
-                  reps: "10 seconds",
-                  rest: { value: 70, unit: "seconds" },
-                  energy_system: "alactic",
-                  intensity: "explosive",
-                  impact_level: "low",
-                  purpose: "Repeat explosive drive without extra joint impact.",
-                },
-              ],
-            },
-          ],
-        },
-        {
-          date: "Wed",
-          countdown_label: "D-30",
-          day_type: "recovery",
-          today_card: {
-            headline: "Unload the system. No high-intent contact.",
-            readiness_status: "pull_back",
-            primary_warning: "If soreness is rising, keep this strictly recovery.",
-            mindset_anchor: {
-              intent: "Leave fresher than you arrived.",
-              focus_cue: "Smooth breath, loose shoulders.",
-            },
-          },
-          sessions: [],
-        },
-      ],
-    },
-  ],
-  deterministic_support: {
-    schema_version: "1.0",
-    source: "demo",
-    nutrition: {
-      by_phase: {
-        SPP: {
-          meal_structure: "Protein each meal, carbs around hard sessions, lighter evening intake on recovery days.",
-          protein_g_per_day: { min: 150, max: 175 },
-          carbs_g_per_day: { min: 260, max: 340, note: "Bias higher around sparring and conditioning." },
-          hydration_ml_per_day: { min: 3000, max: 3800 },
-          fuel_timing: {
-            pre: "Carb-led meal 2-3 hours before hard work.",
-            post: "Protein plus carbs inside the first recovery window.",
-          },
-        },
-      },
-    },
-    recovery: {
-      by_phase: {
-        SPP: {
-          sleep_hours_target: [8, 9],
-          core_strategies: ["Downshift after hard sparring", "Keep recovery sessions honest"],
-          phase_focus: ["Absorb high-intensity work", "Protect Thursday technical quality"],
-          fatigue_notes: ["If morning readiness drops twice, trim accessory volume first"],
-        },
-      },
-    },
+  {
+    weekday: "Thu",
+    focus: "Technical sparring",
+    summary: "Controlled sparring at 60-70%. Tactical drills.",
+    block: "Skill",
   },
-  progression_notes:
-    "Hard days stay hard, recovery days stay clean, and support work never steals quality from sparring.",
-} satisfies StructuredPlan;
+  {
+    weekday: "Fri",
+    focus: "Conditioning",
+    summary: "Round-specific intervals matched to rounds format.",
+    block: "S&C",
+  },
+  {
+    weekday: "Sat",
+    focus: "Hard sparring",
+    summary: "Secondary hard day. Match-shape rounds + transitions.",
+    block: "Skill",
+  },
+  {
+    weekday: "Sun",
+    focus: "Off",
+    summary: "Full rest. Plan the next week and review notes.",
+    block: "Off",
+  },
+] as const;
 
 const demoCoachNotes = [
   "Hard days are spaced so the nervous system has 48h to recover before another high-intent session.",
@@ -193,7 +68,7 @@ export default function DemoPlanPage() {
           <p className="eyebrow">Demo plan</p>
           <h1 className="hero-title">This is what a generated camp looks like.</h1>
           <p className="overview-command-summary">
-            A static sample from the same structured renderer used for athlete plans. No data is generated and nothing is saved.
+            A static sample of one week from a structured camp. No data is generated and nothing is saved.
           </p>
           <p className="muted welcome-context">
             When you build your own, the planner uses your fight date, training days, restrictions, and goals to shape every week.
@@ -233,13 +108,23 @@ export default function DemoPlanPage() {
         </div>
       </section>
 
-      <section className="demo-structured-plan-section">
+      <section className="support-panel">
         <div className="form-section-header">
-          <p className="kicker">Athlete view</p>
-          <h2 className="form-section-title">Structured card renderer</h2>
-          <p className="muted">Weeks open cleanly, session cards stay scannable, and detail blocks expand only when needed.</p>
+          <p className="kicker">Week 4 of 8 - SPP</p>
+          <h2 className="form-section-title">Sample weekly structure</h2>
         </div>
-        <StructuredPlanRenderer plan={demoStructuredPlan} />
+        <div className="demo-week-grid">
+          {demoWeek.map((day) => (
+            <article key={day.weekday} className="metric-card demo-week-card">
+              <div className="demo-week-card-header">
+                <span className="label">{day.weekday}</span>
+                <span className="badge status-badge-neutral">{day.block}</span>
+              </div>
+              <p className="plan-card-title">{day.focus}</p>
+              <p className="muted">{day.summary}</p>
+            </article>
+          ))}
+        </div>
       </section>
 
       <section className="support-panel">

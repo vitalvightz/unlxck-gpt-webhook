@@ -79,3 +79,16 @@ export function isRawEnumLabel(value: unknown): boolean {
   }
   return /^[a-z0-9]+(_[a-z0-9]+)*$/i.test(trimmed);
 }
+
+/**
+ * Humanize a value only when it looks like a raw backend enum (a single
+ * snake/kebab token). Already-human strings like "High pain" are returned
+ * untouched so we never re-titlecase prose. Safe to apply defensively at render
+ * sites where a field might be either human copy or a leaked enum.
+ */
+export function humanizeIfRawEnum(value: unknown): string {
+  if (typeof value !== "string") {
+    return "";
+  }
+  return isRawEnumLabel(value) ? formatPlanLabel(value) : value;
+}

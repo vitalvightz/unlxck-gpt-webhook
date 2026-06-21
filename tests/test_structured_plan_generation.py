@@ -53,6 +53,34 @@ def _invalid_plan():
     return ["not", "a", "structured", "plan"]
 
 
+def _faithful_source(plan: dict) -> str:
+    """Markdown faithful to ``plan`` so the faithfulness gate passes.
+
+    The faithfulness gate (part of ``build_structured_plan_outcome``) rejects a
+    countdown-claiming card whose source text has no D-day marker. Tests that
+    exercise the *outcome machinery* (validation, repair, load normalization,
+    biometric stripping, check-in tolerance) still need a faithful source, so
+    derive one from the plan: emit each week's countdown bounds and, per day, a
+    D-day header followed by every exercise block's display name.
+    """
+    lines = ["# FIGHT CAMP PLAN", ""]
+    for week in plan.get("weeks") or []:
+        lines.append(
+            f"## Week — SPP ({week.get('countdown_start')} to {week.get('countdown_end')})"
+        )
+        lines.append("")
+        for day in week.get("days") or []:
+            label = day.get("countdown_label") or ""
+            lines.append(f"### Day ({label}) — Session")
+            for session in day.get("sessions") or []:
+                for block in session.get("blocks") or []:
+                    name = block.get("display_name")
+                    if name:
+                        lines.append(f"- {name}")
+            lines.append("")
+    return "\n".join(lines)
+
+
 # --- build_structured_plan_outcome statuses --------------------------------
 
 
@@ -64,7 +92,8 @@ def test_none_input_is_not_attempted():
 
 
 def test_valid_plan_outcome_is_valid_and_carries_schema_version():
-    outcome = build_structured_plan_outcome(_valid_plan(), raw_markdown="# raw")
+    plan = _valid_plan()
+    outcome = build_structured_plan_outcome(plan, raw_markdown=_faithful_source(plan))
     assert outcome.status == "valid"
     assert outcome.schema_version == SCHEMA_VERSION
     assert isinstance(outcome.structured_plan, dict)
@@ -91,7 +120,9 @@ def test_repair_retry_succeeds():
         return repaired_payload
 
     outcome = build_structured_plan_outcome(
-        _invalid_plan(), raw_markdown="# raw", repair_fn=repair_fn
+        _invalid_plan(),
+        raw_markdown=_faithful_source(repaired_payload),
+        repair_fn=repair_fn,
     )
     assert len(calls) == 1  # exactly one repair attempt
     assert outcome.status == "repair_attempted_valid"
@@ -115,7 +146,10 @@ def test_repair_not_called_when_first_attempt_is_valid():
     def repair_fn(_broken, _errors):  # pragma: no cover - must not run
         raise AssertionError("repair must not run when first attempt is valid")
 
-    outcome = build_structured_plan_outcome(_valid_plan(), repair_fn=repair_fn)
+    plan = _valid_plan()
+    outcome = build_structured_plan_outcome(
+        plan, raw_markdown=_faithful_source(plan), repair_fn=repair_fn
+    )
     assert outcome.status == "valid"
 
 
@@ -125,7 +159,7 @@ def test_repair_not_called_when_first_attempt_is_valid():
 def test_string_only_load_is_normalized_to_object():
     plan = _valid_plan()
     plan["weeks"][0]["days"][0]["sessions"][0]["blocks"][0]["load"] = "85%"
-    outcome = build_structured_plan_outcome(plan, raw_markdown="# raw")
+    outcome = build_structured_plan_outcome(plan, raw_markdown=_faithful_source(plan))
     assert outcome.status == "valid"
     load = outcome.structured_plan["weeks"][0]["days"][0]["sessions"][0]["blocks"][0]["load"]
     assert load["method"] == "percentage"
@@ -136,7 +170,7 @@ def test_string_only_load_is_normalized_to_object():
 def test_unparseable_string_load_becomes_null():
     plan = _valid_plan()
     plan["weeks"][0]["days"][0]["sessions"][0]["blocks"][0]["load"] = "as hard as possible"
-    outcome = build_structured_plan_outcome(plan, raw_markdown="# raw")
+    outcome = build_structured_plan_outcome(plan, raw_markdown=_faithful_source(plan))
     assert outcome.status == "valid"
     assert (
         outcome.structured_plan["weeks"][0]["days"][0]["sessions"][0]["blocks"][0]["load"]
@@ -153,7 +187,7 @@ def test_machine_readable_load_is_accepted():
         "ref": "1RM",
         "display": "85% 1RM",
     }
-    outcome = build_structured_plan_outcome(good, raw_markdown="# raw")
+    outcome = build_structured_plan_outcome(good, raw_markdown=_faithful_source(good))
     assert outcome.status == "valid"
 
 
@@ -168,7 +202,7 @@ def test_biometric_fields_are_stripped_before_validation():
     plan["weeks"][0]["days"][0]["cns_recovery_percent"] = 40
     plan["strain_score"] = 14.2
 
-    outcome = build_structured_plan_outcome(plan, raw_markdown="# raw")
+    outcome = build_structured_plan_outcome(plan, raw_markdown=_faithful_source(plan))
     assert outcome.status == "valid"
     dumped = repr(outcome.structured_plan)
     for banned in ("hrv_score", "whoop_recovery_score", "cns_recovery_percent", "strain_score"):
@@ -383,6 +417,26 @@ def test_normalize_fills_missing_plan_metadata_fields():
     assert plan["athlete_context"]["sport_profile"] == ""
 
 
+def test_normalize_plan_notes_coerces_category_and_drops_empty():
+    plan = normalize_structured_plan_candidate(
+        {
+            "plan_notes": [
+                {"category": "Weight_Cut", "label": "Active cut", "text": "~5.7% target."},
+                {"category": "bogus", "text": "Stay disciplined."},  # unknown -> general
+                {"category": "injury", "text": "   "},  # empty text -> dropped
+                "Keep the wound covered.",  # bare string -> general note
+                123,  # non-note -> dropped
+            ]
+        }
+    )
+    notes = plan["plan_notes"]
+    assert [n["category"] for n in notes] == ["weight_cut", "general", "general"]
+    assert notes[0] == {"category": "weight_cut", "label": "Active cut", "text": "~5.7% target."}
+    assert notes[2]["text"] == "Keep the wound covered."
+    # The normalized plan still validates strictly against the schema.
+    validate_structured_plan(normalize_structured_plan_candidate({"plan_notes": notes}))
+
+
 def test_normalize_invalid_event_type_maps_to_none():
     plan = normalize_structured_plan_candidate(
         {"event_context": {"event_type": "boxing_match", "fight_date": "2026-06-13"}}
@@ -497,6 +551,151 @@ def test_normalize_leaves_non_dict_untouched_so_schema_can_reject():
     outcome = build_structured_plan_outcome(["not", "a", "plan"], raw_markdown="# raw")
     assert outcome.status == "invalid_fallback_used"
     assert outcome.structured_plan is None
+
+
+# --- label-typo fix: PRE -> RPE ----------------------------------------------
+
+
+def _plan_strings(node) -> list[str]:
+    """Every string leaf in a normalized plan (for greppable assertions)."""
+    out: list[str] = []
+    if isinstance(node, str):
+        out.append(node)
+    elif isinstance(node, dict):
+        for value in node.values():
+            out.extend(_plan_strings(value))
+    elif isinstance(node, list):
+        for item in node:
+            out.extend(_plan_strings(item))
+    return out
+
+
+def test_normalize_fixes_pre_intensity_label_to_rpe():
+    plan = normalize_structured_plan_candidate(
+        {
+            "plan_notes": [{"text": "Hold conditioning at PRE 7–8 all week."}],
+            "weeks": [
+                {
+                    "days": [
+                        {
+                            "sessions": [
+                                {
+                                    "blocks": [
+                                        {
+                                            "progression_rule": "Build from PRE 6 to PRE 8.",
+                                            "coaching_cues": ["Keep efforts at PRE 9-10."],
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ],
+        }
+    )
+    blob = " || ".join(_plan_strings(plan))
+    # No athlete-facing string carries the PRE-for-RPE typo any more.
+    assert "PRE 7" not in blob and "PRE 6" not in blob and "PRE 8" not in blob
+    assert "PRE 9" not in blob
+    assert "RPE 7–8" in blob
+    assert "RPE 6" in blob and "RPE 8" in blob
+    assert "RPE 9-10" in blob
+
+
+def test_normalize_pre_fix_does_not_touch_ordinary_words_or_years():
+    plan = normalize_structured_plan_candidate(
+        {
+            "plan_notes": [
+                {"text": "COMPRESSED PRE-FIGHT WEEK begins now."},
+                {"text": "Methodology updated PRE 2024 stays as written."},
+            ],
+        }
+    )
+    texts = [n["text"] for n in plan["plan_notes"]]
+    assert "COMPRESSED PRE-FIGHT WEEK begins now." in texts
+    assert "Methodology updated PRE 2024 stays as written." in texts
+
+
+def test_normalize_pre_fix_never_rewrites_raw_markdown_fallback():
+    plan = normalize_structured_plan_candidate(
+        {"raw_markdown_fallback": "Conditioning @ PRE 7–8 (verbatim source)."}
+    )
+    assert plan["raw_markdown_fallback"] == "Conditioning @ PRE 7–8 (verbatim source)."
+
+
+# --- duplicate safety-warning dedup ------------------------------------------
+
+
+def test_normalize_drops_plan_note_that_duplicates_a_red_flag():
+    plan = normalize_structured_plan_candidate(
+        {
+            "red_flag_rules": [
+                {"display_text": "Stop and report sharp knee pain.", "severity": "red"}
+            ],
+            "plan_notes": [
+                {"category": "injury", "text": "Stop and report sharp knee pain."},
+                {"category": "training", "text": "Stay disciplined with sleep."},
+            ],
+        }
+    )
+    note_texts = [n["text"] for n in plan["plan_notes"]]
+    # The active-note echo of the red flag is dropped; the red flag is the
+    # authoritative stop rule and is preserved untouched.
+    assert "Stop and report sharp knee pain." not in note_texts
+    assert "Stay disciplined with sleep." in note_texts
+    assert len(plan["red_flag_rules"]) == 1
+    assert plan["red_flag_rules"][0]["display_text"] == "Stop and report sharp knee pain."
+
+
+def test_normalize_dedupes_repeated_plan_notes_keeping_first():
+    plan = normalize_structured_plan_candidate(
+        {
+            "plan_notes": [
+                {"category": "general", "text": "Do not train through dizziness."},
+                {"category": "training", "text": "Do not train through dizziness."},
+                {"category": "general", "text": "Do not train through dizziness."},
+            ]
+        }
+    )
+    assert len(plan["plan_notes"]) == 1
+    assert plan["plan_notes"][0]["category"] == "general"
+
+
+def test_normalize_collapses_identical_red_flag_rules_but_keeps_distinct_ones():
+    plan = normalize_structured_plan_candidate(
+        {
+            "red_flag_rules": [
+                {"display_text": "Stop if vision blurs.", "action": "End session.", "severity": "red", "when": "during_session"},
+                {"display_text": "Stop if vision blurs.", "action": "End session.", "severity": "red", "when": "during_session"},
+                {"display_text": "Pull back if pain exceeds 6/10.", "action": "Reduce load.", "severity": "amber", "when": "during_session"},
+            ]
+        }
+    )
+    texts = [r["display_text"] for r in plan["red_flag_rules"]]
+    # Byte-for-byte duplicate collapses; the distinct stop rule survives.
+    assert texts.count("Stop if vision blurs.") == 1
+    assert "Pull back if pain exceeds 6/10." in texts
+
+
+def test_normalize_keeps_safety_warning_in_at_least_one_place():
+    # Even when a warning appears only as an active note (no red flag), it is
+    # never removed — dedup only collapses true repeats.
+    plan = normalize_structured_plan_candidate(
+        {"plan_notes": [{"category": "injury", "text": "Stop and report numbness."}]}
+    )
+    assert [n["text"] for n in plan["plan_notes"]] == ["Stop and report numbness."]
+
+
+def test_normalize_dedup_output_still_validates():
+    plan_in = _valid_plan()
+    plan_in["plan_notes"] = [
+        {"category": "general", "label": "Active", "text": "Train as planned."},
+        {"category": "general", "text": "Train as planned."},
+    ]
+    plan_out = normalize_structured_plan_candidate(plan_in)
+    assert len(plan_out["plan_notes"]) == 1
+    validate_structured_plan(plan_out)
 
 
 # --- _normalize_measured: per-field default units ----------------------------
@@ -825,7 +1024,7 @@ def test_full_block_and_mindset_detail_round_trips_through_outcome():
     # its block; add the optional mindset anchors and confirm they survive.
     plan = _valid_plan()
     plan["weeks"][0]["days"][0]["sessions"][0]["mindset_anchor"]["confidence_anchor"] = "Anchor X"
-    outcome = build_structured_plan_outcome(plan, raw_markdown="# raw")
+    outcome = build_structured_plan_outcome(plan, raw_markdown=_faithful_source(plan))
     assert outcome.status == "valid"
     block = outcome.structured_plan["weeks"][0]["days"][0]["sessions"][0]["blocks"][0]
     assert block["coaching_cues"]
@@ -884,7 +1083,7 @@ def test_malformed_check_in_does_not_cause_invalid_fallback():
         {"date": "2026-05-30", "decision": "definitely_yes"},  # bad decision, no morning
         _good_check_in(),  # one fully valid entry survives
     ]
-    outcome = build_structured_plan_outcome(plan, raw_markdown="# raw")
+    outcome = build_structured_plan_outcome(plan, raw_markdown=_faithful_source(plan))
     assert outcome.status in {"valid", "repair_attempted_valid"}
     validate_structured_plan(outcome.structured_plan)
     surviving = outcome.structured_plan["daily_check_ins"]
@@ -991,7 +1190,7 @@ def test_plan_with_only_malformed_check_ins_still_valid():
         {"morning": {"sleep_quality": 4}},
         {"date": "2026-05-30", "decision": "nope"},
     ]
-    outcome = build_structured_plan_outcome(plan, raw_markdown="# raw")
+    outcome = build_structured_plan_outcome(plan, raw_markdown=_faithful_source(plan))
     assert outcome.status in {"valid", "repair_attempted_valid"}
     assert outcome.structured_plan["daily_check_ins"] == []
     validate_structured_plan(outcome.structured_plan)

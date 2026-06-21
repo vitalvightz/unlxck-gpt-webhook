@@ -31,6 +31,9 @@ def test_apply_production_environment_defaults_preserves_explicit_values(monkeyp
 
 
 def test_should_default_to_production_when_supabase_runtime_config_exists(monkeypatch):
+    # The pytest guard in should_default_to_production short-circuits to False
+    # under test; drop it so the real runtime-config detection is exercised.
+    monkeypatch.delenv("PYTEST_CURRENT_TEST", raising=False)
     monkeypatch.delenv("SUPABASE_URL", raising=False)
     monkeypatch.delenv("SUPABASE_SERVICE_ROLE_KEY", raising=False)
 
@@ -42,6 +45,7 @@ def test_should_default_to_production_when_supabase_runtime_config_exists(monkey
 
 
 def test_should_default_to_production_when_only_service_role_key_exists(monkeypatch):
+    monkeypatch.delenv("PYTEST_CURRENT_TEST", raising=False)
     monkeypatch.delenv("SUPABASE_URL", raising=False)
     monkeypatch.setenv("SUPABASE_SERVICE_ROLE_KEY", "service-role")
 

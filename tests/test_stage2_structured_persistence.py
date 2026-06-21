@@ -26,6 +26,8 @@ from api.services.admin_stage2_service import (
     _APPROVAL_STRUCTURED_PLAN_BUDGET_SECONDS,
     _approval_structured_budget_seconds,
     approve_review_required_plan,
+    backfill_structured_plans,
+    list_structured_plan_backfill_candidates,
     run_structured_plan_post_processing,
     submit_manual_stage2,
 )
@@ -56,8 +58,48 @@ class _StructuredAutomator:
         return self.outcome, list(self.costs)
 
 
-def _valid_outcome(raw_markdown: str = "# final plan") -> StructuredPlanOutcome:
-    return build_structured_plan_outcome(_valid_plan(), raw_markdown=raw_markdown)
+def _faithful_source(plan: dict) -> str:
+    """Markdown faithful to ``plan`` so the faithfulness gate returns a clean card.
+
+    The faithfulness gate rejects a countdown-claiming card whose source text has
+    no D-day marker, so a placeholder like ``# final plan`` would degrade the
+    outcome to ``invalid_fallback_used``. Derive a real countdown source from the
+    plan: each week's bounds plus, per day, a D-day header with its exercise names.
+    """
+    lines = ["# FIGHT CAMP PLAN", ""]
+    for week in plan.get("weeks") or []:
+        lines.append(
+            f"## Week — SPP ({week.get('countdown_start')} to {week.get('countdown_end')})"
+        )
+        lines.append("")
+        for day in week.get("days") or []:
+            lines.append(f"### Day ({day.get('countdown_label') or ''}) — Session")
+            for session in day.get("sessions") or []:
+                for block in session.get("blocks") or []:
+                    name = block.get("display_name")
+                    if name:
+                        lines.append(f"- {name}")
+            lines.append("")
+    return "\n".join(lines)
+
+
+def _valid_outcome(raw_markdown: str = "") -> StructuredPlanOutcome:
+    # The card must be a faithful projection of its source for
+    # build_structured_plan_outcome to return a clean (valid) card, so derive the
+    # source from the plan itself. A caller-supplied label is kept as a leading
+    # heading purely for readability of which flow built the outcome.
+    plan = _valid_plan()
+    source = _faithful_source(plan)
+    if raw_markdown.strip():
+        source = f"{raw_markdown}\n\n{source}"
+    return build_structured_plan_outcome(plan, raw_markdown=source)
+
+
+# A Stage 2 first-pass markdown faithful to ``_valid_plan()`` so the structured
+# conversion's faithfulness gate returns a clean card (the card-first publish gate
+# then keeps the plan ready). Used by finalize tests that expect a valid card.
+# Stripped because the automator trims model output before persisting plan_text.
+_FAITHFUL_FINAL_PLAN = _faithful_source(_valid_plan()).strip()
 
 
 # ---------------------------------------------------------------------------
@@ -249,7 +291,7 @@ def _fail_review(*codes: str):
 
 
 def test_finalize_skips_structured_when_disabled(monkeypatch: pytest.MonkeyPatch):
-    monkeypatch.delenv("UNLXCK_STAGE2_STRUCTURED_PLAN", raising=False)
+    monkeypatch.setenv("UNLXCK_STAGE2_STRUCTURED_PLAN", "0")
     monkeypatch.setattr(stage2_module, "review_stage2_output", _pass_review)
     client = _FakeClient([_response("# final plan")])
     automator = OpenAIStage2Automator(client=client, model="test-model")
@@ -267,13 +309,13 @@ def test_finalize_skips_structured_when_disabled(monkeypatch: pytest.MonkeyPatch
 def test_finalize_attaches_valid_structured_plan(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setenv("UNLXCK_STAGE2_STRUCTURED_PLAN", "1")
     monkeypatch.setattr(stage2_module, "review_stage2_output", _pass_review)
-    client = _FakeClient([_response("# final plan"), _response(json.dumps(_valid_plan()))])
+    client = _FakeClient([_response(_FAITHFUL_FINAL_PLAN), _response(json.dumps(_valid_plan()))])
     automator = OpenAIStage2Automator(client=client, model="test-model")
 
     result = asyncio.run(automator.finalize(stage1_result=_stage1_result()))
 
     assert len(client.responses.calls) == 2  # plan + structured first pass
-    assert result["plan_text"] == "# final plan"  # raw fallback untouched
+    assert result["plan_text"] == _FAITHFUL_FINAL_PLAN  # raw fallback untouched
     assert result["schema_version"] == SCHEMA_VERSION
     assert isinstance(result["structured_plan"], dict)
     assert result["stage2_validator_report"]["structured_plan"]["status"] == "valid"
@@ -302,13 +344,13 @@ def test_finalize_soft_hold_rescued_by_clean_card(monkeypatch: pytest.MonkeyPatc
     # published when a schema-valid structured card vouches for it.
     monkeypatch.setenv("UNLXCK_STAGE2_STRUCTURED_PLAN", "1")
     monkeypatch.setattr(stage2_module, "review_stage2_output", _fail_review("true_internal_system_leak"))
-    client = _FakeClient([_response("# final plan"), _response(json.dumps(_valid_plan()))])
+    client = _FakeClient([_response(_FAITHFUL_FINAL_PLAN), _response(json.dumps(_valid_plan()))])
     automator = OpenAIStage2Automator(client=client, model="test-model")
 
     result = asyncio.run(automator.finalize(stage1_result=_stage1_result()))
 
     assert result["status"] == "ready"
-    assert result["plan_text"] == "# final plan"
+    assert result["plan_text"] == _FAITHFUL_FINAL_PLAN
     assert isinstance(result["structured_plan"], dict)
     assert result["stage2_validator_report"]["structured_plan"]["status"] == "valid"
     # The original error is still recorded for admin visibility.
@@ -330,13 +372,13 @@ def test_finalize_card_rescuable_blocking_warning_rescued_by_clean_card(monkeypa
 
     monkeypatch.setenv("UNLXCK_STAGE2_STRUCTURED_PLAN", "1")
     monkeypatch.setattr(stage2_module, "review_stage2_output", _warn_review)
-    client = _FakeClient([_response("# final plan"), _response(json.dumps(_valid_plan()))])
+    client = _FakeClient([_response(_FAITHFUL_FINAL_PLAN), _response(json.dumps(_valid_plan()))])
     automator = OpenAIStage2Automator(client=client, model="test-model")
 
     result = asyncio.run(automator.finalize(stage1_result=_stage1_result()))
 
     assert result["status"] == "ready"
-    assert result["plan_text"] == "# final plan"
+    assert result["plan_text"] == _FAITHFUL_FINAL_PLAN
     assert result["structured_plan"] is not None
     assert result["stage2_validator_report"]["structured_plan"]["status"] == "valid"
     assert result["stage2_validator_report"]["blocking_warnings"] == [
@@ -416,7 +458,7 @@ def test_finalize_safety_hold_is_never_rescued(monkeypatch: pytest.MonkeyPatch):
 def test_finalize_soft_hold_held_when_structured_disabled(monkeypatch: pytest.MonkeyPatch):
     # With structured generation off, a soft hold behaves exactly as before
     # (held_for_review) — no card can rescue it, so the status never flaps.
-    monkeypatch.delenv("UNLXCK_STAGE2_STRUCTURED_PLAN", raising=False)
+    monkeypatch.setenv("UNLXCK_STAGE2_STRUCTURED_PLAN", "0")
     monkeypatch.setattr(stage2_module, "review_stage2_output", _fail_review("true_internal_system_leak"))
     client = _FakeClient([_response("# final plan")])
     automator = OpenAIStage2Automator(client=client, model="test-model")
@@ -432,7 +474,7 @@ def test_finalize_uses_one_repair_retry(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setattr(stage2_module, "review_stage2_output", _pass_review)
     client = _FakeClient(
         [
-            _response("# final plan"),
+            _response(_FAITHFUL_FINAL_PLAN),
             _response(json.dumps(["not", "a", "plan"])),  # invalid first structured pass
             _response(json.dumps(_valid_plan())),  # repaired structured pass
         ]
@@ -466,7 +508,12 @@ def test_finalize_keeps_raw_plan_when_structured_invalid_after_repair(
 
     result = asyncio.run(automator.finalize(stage1_result=_stage1_result()))
 
-    assert result["plan_text"] == "# final plan"  # user still gets the raw plan
+    # Card-first gate: with no clean card the plan is held for review rather than
+    # silently published as raw text. The markdown is retained on final_plan_text
+    # (admin-visible) while the athlete-facing plan_text is gated to empty.
+    assert result["status"] == "held_for_review"
+    assert result["plan_text"] == ""
+    assert result["final_plan_text"] == "# final plan"
     assert result["structured_plan"] is None  # invalid never persisted
     debug = result["stage2_validator_report"]["structured_plan"]
     assert debug["status"] == "invalid_fallback_used"
@@ -496,7 +543,7 @@ def test_finalize_accumulates_structured_call_costs(monkeypatch: pytest.MonkeyPa
 
 
 def test_finalize_cost_unchanged_when_structured_disabled(monkeypatch: pytest.MonkeyPatch):
-    monkeypatch.delenv("UNLXCK_STAGE2_STRUCTURED_PLAN", raising=False)
+    monkeypatch.setenv("UNLXCK_STAGE2_STRUCTURED_PLAN", "0")
     monkeypatch.setattr(stage2_module, "review_stage2_output", _pass_review)
     client = _FakeClient([_response("# final plan")])
     automator = OpenAIStage2Automator(client=client, model="test-model")
@@ -529,7 +576,11 @@ def test_finalize_does_not_crash_when_structured_model_errors(
 
     result = asyncio.run(automator.finalize(stage1_result=_stage1_result()))
 
-    assert result["plan_text"] == "# final plan"
+    # The raw plan must survive the structured crash, but with no clean card the
+    # card-first gate holds it for review rather than publishing text-only.
+    assert result["status"] == "held_for_review"
+    assert result["plan_text"] == ""
+    assert result["final_plan_text"] == "# final plan"
     assert result["structured_plan"] is None
     assert result["stage2_validator_report"]["structured_plan"]["status"] == "not_attempted"
 
@@ -586,7 +637,7 @@ def test_helper_skips_non_displayable_status(monkeypatch):
 
 
 def test_helper_skips_when_env_disabled(monkeypatch):
-    monkeypatch.delenv("UNLXCK_STAGE2_STRUCTURED_PLAN", raising=False)
+    monkeypatch.setenv("UNLXCK_STAGE2_STRUCTURED_PLAN", "0")
     automator = _StructuredAutomator(_valid_outcome())
     result = {"status": "ready", "final_plan_text": "# x", "stage2_validator_report": {}}
     out, _costs = asyncio.run(
@@ -721,7 +772,7 @@ def test_admin_stage2_service_wraps_sync_store_calls_in_to_thread(monkeypatch):
 
 
 def test_approve_review_required_plan_uses_atomic_stage2_update(monkeypatch):
-    monkeypatch.delenv("UNLXCK_STAGE2_STRUCTURED_PLAN", raising=False)
+    monkeypatch.setenv("UNLXCK_STAGE2_STRUCTURED_PLAN", "0")
     store = FakeStore()
     plan_id = _seed_held_plan(store)
     calls = {"atomic": 0}
@@ -740,7 +791,7 @@ def test_approve_review_required_plan_uses_atomic_stage2_update(monkeypatch):
 
 
 def test_submit_manual_stage2_uses_atomic_stage2_update(monkeypatch):
-    monkeypatch.delenv("UNLXCK_STAGE2_STRUCTURED_PLAN", raising=False)
+    monkeypatch.setenv("UNLXCK_STAGE2_STRUCTURED_PLAN", "0")
     store = FakeStore()
     plan_id = _seed_held_plan(store)
     calls = {"atomic": 0}
@@ -758,7 +809,7 @@ def test_submit_manual_stage2_uses_atomic_stage2_update(monkeypatch):
 
 
 def test_atomic_stage2_update_rejects_edit_between_read_and_write(monkeypatch):
-    monkeypatch.delenv("UNLXCK_STAGE2_STRUCTURED_PLAN", raising=False)
+    monkeypatch.setenv("UNLXCK_STAGE2_STRUCTURED_PLAN", "0")
     store = FakeStore()
     plan_id = _seed_held_plan(store)
     original_atomic = store.update_plan_stage2_if_unchanged
@@ -920,9 +971,12 @@ def test_structured_post_processing_does_not_overwrite_concurrent_manual_edit(mo
     assert row["stage2_status"] == "manual_stage2_pass"
     assert row["stage2_retry_text"] == "tweak the taper"
     assert row["stage2_attempt_count"] == 2
-    # The structured output is still persisted via the narrow writer only.
-    assert row["structured_plan"] is not None
-    assert row["schema_version"] == SCHEMA_VERSION
+    # The card was converted from the pre-edit text, so it is now a stale
+    # projection of superseded text: the narrow writer rejects it rather than
+    # publishing a card that contradicts the manually edited plan_text.
+    assert row.get("structured_plan") is None
+    assert row.get("schema_version") is None
+    # The full Stage 2 writer was never used either.
     assert stage2_calls["calls"] == 0
 
 
@@ -965,6 +1019,9 @@ def test_structured_post_processing_does_not_overwrite_concurrent_reject(monkeyp
     assert row["final_plan_text"] == ""
     assert row["stage2_status"] == "admin_rejected"
     assert row["stage2_retry_text"] == "rejected by reviewer"
+    # The card was converted from the pre-reject text; the stale-write guard
+    # rejects it so an archived plan is never re-released with a structured card.
+    assert row.get("structured_plan") is None
     # The full Stage 2 writer was never used (it would have failed the
     # archived->ready transition or otherwise clobbered the row).
     assert stage2_calls["calls"] == 0
@@ -1009,7 +1066,7 @@ def test_structured_post_processing_persists_narrow_fields_without_regression(mo
 
 
 def test_admin_approve_without_env_flag_skips_structured(monkeypatch):
-    monkeypatch.delenv("UNLXCK_STAGE2_STRUCTURED_PLAN", raising=False)
+    monkeypatch.setenv("UNLXCK_STAGE2_STRUCTURED_PLAN", "0")
     store = FakeStore()
     plan_id = _seed_held_plan(store)
     automator = _StructuredAutomator(_valid_outcome("# approved plan"))
@@ -1026,3 +1083,110 @@ def test_admin_approve_without_env_flag_skips_structured(monkeypatch):
     assert detail.outputs.structured_plan is None
     assert store.plans[plan_id].get("structured_plan") is None
     assert automator.calls == []
+
+
+def _seed_released_plan(
+    store: FakeStore,
+    *,
+    plan_id: str,
+    structured: dict | None = None,
+    status: str = "ready",
+) -> str:
+    store.profiles["athlete-1"] = {"id": "athlete-1", "full_name": "Ari Mensah"}
+    store.plans[plan_id] = {
+        "id": plan_id,
+        "athlete_id": "athlete-1",
+        "full_name": "Ari Mensah",
+        "status": status,
+        "plan_text": "# released plan",
+        "final_plan_text": "# released plan",
+        "draft_plan_text": "# draft plan",
+        "planning_brief": None,
+        "stage2_validator_report": {},
+        "stage2_status": "stage2_pass",
+        "stage2_attempt_count": 1,
+        "structured_plan": structured,
+        "created_at": _now(),
+    }
+    return plan_id
+
+
+def test_backfill_candidates_only_displayable_plans_without_a_card(monkeypatch):
+    monkeypatch.setenv("UNLXCK_STAGE2_STRUCTURED_PLAN", "1")
+    store = FakeStore()
+    _seed_released_plan(store, plan_id="needs-card")  # ready, no card -> candidate
+    _seed_released_plan(store, plan_id="has-card", structured={"weeks": []})  # carded -> skip
+    _seed_held_plan(store, plan_id="held")  # not displayable -> skip
+
+    candidates = asyncio.run(list_structured_plan_backfill_candidates(store=store, limit=25))
+
+    assert candidates == ["needs-card"]
+
+
+def test_backfill_converts_released_plans_missing_a_card(monkeypatch):
+    monkeypatch.setenv("UNLXCK_STAGE2_STRUCTURED_PLAN", "1")
+    store = FakeStore()
+    _seed_released_plan(store, plan_id="needs-card")
+    automator = _StructuredAutomator(_valid_outcome("# released plan"))
+
+    candidates = asyncio.run(list_structured_plan_backfill_candidates(store=store, limit=25))
+    asyncio.run(backfill_structured_plans(store=store, stage2=automator, plan_ids=candidates))
+
+    assert len(automator.calls) == 1
+    assert store.plans["needs-card"]["structured_plan"] is not None
+    assert store.plans["needs-card"]["schema_version"] == SCHEMA_VERSION
+
+
+def test_backfill_is_noop_without_automator():
+    store = FakeStore()
+    _seed_released_plan(store, plan_id="needs-card")
+
+    asyncio.run(backfill_structured_plans(store=store, stage2=None, plan_ids=["needs-card"]))
+
+    assert store.plans["needs-card"]["structured_plan"] is None
+
+
+# ---------------------------------------------------------------------------
+# Stale-write guard: a card converted from now-superseded text is not written
+# ---------------------------------------------------------------------------
+
+
+def test_structured_artifacts_write_skipped_when_text_changed():
+    """The narrow writer rejects a card whose source text no longer matches.
+
+    Models an async conversion/backfill that read the plan text, produced a card,
+    and tried to persist it after a concurrent edit changed final_plan_text. The
+    card is now a stale projection of superseded text, so the write is skipped and
+    the row keeps its raw-markdown fallback.
+    """
+    store = FakeStore()
+    plan_id = _seed_held_plan(store)
+    store.plans[plan_id]["final_plan_text"] = "# edited after conversion started"
+
+    returned = store.update_plan_structured_artifacts(
+        plan_id,
+        structured_plan={"schema_version": SCHEMA_VERSION},
+        schema_version=SCHEMA_VERSION,
+        stage2_validator_report={},
+        expected_final_plan_text="# approved plan",  # the pre-edit text
+    )
+
+    assert returned.get("structured_plan") is None
+    assert store.plans[plan_id].get("structured_plan") is None
+
+
+def test_structured_artifacts_write_proceeds_when_text_unchanged():
+    """The card is persisted when the source text still matches at write time."""
+    store = FakeStore()
+    plan_id = _seed_held_plan(store)  # final_plan_text == "# approved plan"
+
+    store.update_plan_structured_artifacts(
+        plan_id,
+        structured_plan={"schema_version": SCHEMA_VERSION},
+        schema_version=SCHEMA_VERSION,
+        stage2_validator_report={},
+        expected_final_plan_text="# approved plan",
+    )
+
+    assert store.plans[plan_id]["structured_plan"] == {"schema_version": SCHEMA_VERSION}
+    assert store.plans[plan_id]["schema_version"] == SCHEMA_VERSION

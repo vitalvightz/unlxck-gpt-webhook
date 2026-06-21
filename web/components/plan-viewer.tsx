@@ -4,20 +4,21 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
-import { getOptionLabels, TECHNICAL_STYLE_OPTIONS } from "@/lib/intake-options";
-import { WeeklySparringView } from "@/components/weekly-sparring-view";
 import {
   approveAndResumeGeneration,
   approvePlanForRelease,
   archivePlan,
   deletePlan,
+  getActivePlan,
   getPlan,
   isRetryableApiFailure,
   permanentlyDeletePlan,
   rejectApprovedPlan,
   renamePlan,
+  setActivePlan,
   submitManualStage2,
 } from "@/lib/api";
+import { canSetActivePlan } from "@/lib/plan-active";
 import { clearCompletedGenerationForDeletedPlan } from "@/lib/completed-generation";
 import { PremiumLoadingScreen } from "@/components/premium-loading-screen";
 import { QuickBuildRefinementBanner } from "@/components/quick-build-refinement-banner";
@@ -141,6 +142,41 @@ const TRIAGE_BLOCKED_STUB_MARKERS = [
   "Clinician clearance is required",
 ];
 
+/** One labelled line inside a session block ("Purpose", "Progress", …). */
+export type PlanTextDetail = { label: string | null; text: string };
+
+/** A single exercise/prescription inside a session card. */
+export type PlanTextBlock = {
+  name: string;
+  dose: string | null;
+  details: PlanTextDetail[];
+};
+
+/** A dated training day rendered as a session card. */
+export type PlanTextSession = {
+  kind: "session";
+  countdown: string | null;
+  weekday: string | null;
+  title: string;
+  objective: string | null;
+  coachNote: string | null;
+  blocks: PlanTextBlock[];
+  notes: string[];
+};
+
+/** Lead/Final notes, rendered as a context card. */
+export type PlanTextNotes = { kind: "notes"; title: string; lines: string[] };
+
+/** A phase/week header that owns the session cards rendered beneath it. */
+export type PlanTextWeek = {
+  kind: "week";
+  title: string;
+  phase: string | null;
+  sessions: PlanTextSession[];
+};
+
+export type PlanTextGroup = PlanTextNotes | PlanTextWeek | PlanTextSession;
+
 const ISSUE_TITLES: Record<string, string> = {
   restriction_violation: "Restriction violation",
   missing_required_element: "Missing phase-critical element",
@@ -200,6 +236,494 @@ function buildArtifactFilename(plan: PlanDetail, suffix: string) {
       .replace(/[^a-z0-9]+/g, "-")
       .replace(/^-+|-+$/g, "") || "athlete-plan";
   return `${base}-${suffix}.txt`;
+}
+
+function stripPlanMarkup(value: string): string {
+  return value
+    .replace(/^#{1,6}\s+/, "")
+    .replace(/^[-*]\s+/, "")
+    .replace(/^\d+\.\s+/, "")
+    .replace(/\*\*/g, "")
+    .trim();
+}
+
+function normalizePlanTextForCards(rawText: string): string {
+  return rawText
+    .replace(/\r\n/g, "\n")
+    .replace(/(^|\n)(Lead notes|Active notes)\s+[-–—]?\s*/gi, "$1$2\n")
+    .replace(/\s+(?=(?:GPP|SPP|TAPER|FIGHT[ _]WEEK|REINTEGRATION)\s*[—–\-:]\s*Week\b)/gi, "\n")
+    .replace(/\s+(?=D-\d+\s*\([^)]+\)\s*[—–\-:]\s*\S)/g, "\n")
+    .replace(
+      /\s+(?=(?:mon(?:day)?|tue(?:s(?:day)?)?|wed(?:nesday)?|thu(?:r(?:sday)?)?|fri(?:day)?|sat(?:urday)?|sun(?:day)?)\b[^()]*\(\s*D-\d+\s*\)\s*[—–\-:]\s*\S)/gi,
+      "\n",
+    )
+    .replace(/\s+(?=(?:Final notes|End of plan notes)\b)/gi, "\n")
+    .replace(/(^|\n)(Final notes|End of plan notes)\s+[-–—]?\s*/gi, "$1$2\n");
+}
+
+// Labelled sub-lines that fall *inside* a session block. The plan text packs a
+// lot of structure behind these prefixes ("Purpose: …", "Progress/regress: …",
+// "Stop rule: …"), so we surface each as its own kicker+text line instead of
+// flattening them into one wall of prose. Longest variants must come first so
+// "Progress/regress/stop" wins over "Progress".
+const SESSION_DETAIL_LABELS: { match: RegExp; label: string }[] = [
+  { match: /^purpose$/i, label: "Purpose" },
+  { match: /^why today$/i, label: "Why" },
+  { match: /^why$/i, label: "Why" },
+  { match: /^progress\/regress\/stop$/i, label: "Progress" },
+  { match: /^progress\/regress$/i, label: "Progress" },
+  { match: /^progression$/i, label: "Progress" },
+  { match: /^progress$/i, label: "Progress" },
+  { match: /^regress$/i, label: "Regress" },
+  { match: /^stop rule$/i, label: "Stop" },
+  { match: /^stop$/i, label: "Stop" },
+  { match: /^easier$/i, label: "Easier" },
+  { match: /^swaps?$/i, label: "Swaps" },
+  { match: /^rest$/i, label: "Rest" },
+  { match: /^note$/i, label: "Note" },
+];
+
+const SESSION_LABEL_SPLIT_RE =
+  /\b(Purpose|Why today|Why|Progress\/regress\/stop|Progress\/regress|Progression|Progress|Regress|Stop rule|Stop|Easier|Swaps?|Rest|Note)\s*:/gi;
+
+function normalizeSessionLabel(raw: string): string {
+  const trimmed = raw.trim();
+  for (const { match, label } of SESSION_DETAIL_LABELS) {
+    if (match.test(trimmed)) {
+      return label;
+    }
+  }
+  return titleizeToken(trimmed);
+}
+
+/**
+ * Split a body line into its labelled segments. "Purpose: raise the base.
+ * Progress/regress: add 5 min. Stop rule: stop if dizzy." becomes three
+ * labelled details; an unlabelled line returns a single `label: null` segment.
+ */
+export function splitLabeledSegments(text: string): PlanTextDetail[] {
+  const clean = text.trim();
+  if (!clean) {
+    return [];
+  }
+  const matches = [...clean.matchAll(SESSION_LABEL_SPLIT_RE)];
+  if (!matches.length) {
+    return [{ label: null, text: clean }];
+  }
+  const segments: PlanTextDetail[] = [];
+  const lead = clean.slice(0, matches[0].index ?? 0).trim();
+  if (lead) {
+    segments.push({ label: null, text: lead });
+  }
+  for (let i = 0; i < matches.length; i += 1) {
+    const match = matches[i];
+    const start = (match.index ?? 0) + match[0].length;
+    const end = i + 1 < matches.length ? matches[i + 1].index ?? clean.length : clean.length;
+    const body = clean
+      .slice(start, end)
+      .trim()
+      .replace(/^[-–—]\s*/, "");
+    if (body) {
+      segments.push({ label: normalizeSessionLabel(match[1]), text: body });
+    }
+  }
+  return segments.length ? segments : [{ label: null, text: clean }];
+}
+
+type PlanTextHeading =
+  | { kind: "notes"; title: string; remainder: string | null }
+  | { kind: "week"; title: string; phase: string | null }
+  | { kind: "session"; countdown: string; weekday: string | null; title: string; remainder: string | null };
+
+// Deterministic plan_text contract (mirrors fightcamp/weekly_plan_render.py +
+// the stage2 validator's countdown-header rule). Phase labels are the canonical
+// camp phases; the header separator is em-dash, en-dash, hyphen, or colon.
+const PHASE_TOKEN = "GPP|SPP|TAPER|FIGHT[ _]WEEK|REINTEGRATION";
+const WEEKDAY_TOKEN =
+  "mon(?:day)?|tue(?:s(?:day)?)?|wed(?:nesday)?|thu(?:r(?:sday)?)?|fri(?:day)?|sat(?:urday)?|sun(?:day)?";
+const HEADER_SEP = "[—–\\-:]";
+const PHASE_FIRST_WEEK_RE = new RegExp(`^(${PHASE_TOKEN})\\s*${HEADER_SEP}\\s*(Week\\s+\\d+.*)$`, "i");
+const BARE_WEEK_RE = /^Week\s+\d+\b/i;
+const PHASE_ANYWHERE_RE = new RegExp(`\\b(${PHASE_TOKEN})\\b`, "i");
+// "D-33 (Wednesday) — Aerobic support" (final/validated countdown-first form).
+const SESSION_COUNTDOWN_FIRST_RE = new RegExp(
+  `^D-(\\d+)\\s*\\(([^)]+)\\)\\s*${HEADER_SEP}\\s*(.+)$`,
+  "i",
+);
+// "Wednesday (D-33) — Aerobic support" (Stage 1 deterministic weekday-first form).
+const SESSION_WEEKDAY_FIRST_RE = new RegExp(
+  `^(${WEEKDAY_TOKEN})[^()]*\\(\\s*D-(\\d+)\\s*\\)\\s*${HEADER_SEP}\\s*(.+)$`,
+  "i",
+);
+// Plan-level context sections that live outside any week. Only the always-on
+// note labels live here (recognised with or without a leading "#"); generic
+// markdown sections like "## Nutrition" are handled by the markdown-header
+// branch so a session body line such as "Recovery: light spin" is never
+// mistaken for a new section.
+const NOTE_SECTION_RE =
+  /^(Lead notes|Final notes|Active notes|End of plan notes)(?:\s*[—–\-:]\s*(.+))?$/i;
+
+function normalizePhaseToken(value: string): string {
+  return value.replace(/_/g, " ").toUpperCase();
+}
+
+// On a run-on plan_text line the session metadata (the "Why:" objective, a
+// labelled note, or a coach-led freshness note) can sit inline after the
+// heading. Split it off the title so it is parsed as body instead of being
+// buried in (or lost from) the title. Markers require a colon or a distinctive
+// coach phrase, so ordinary title words ("Stop-and-go", a leading "Coach-led
+// boxing session") are never split.
+const SESSION_TITLE_BODY_MARKER =
+  /\s(?=(?:Why|Purpose|Progress\/regress\/stop|Progress\/regress|Progression|Progress|Regress|Stop rule|Stop|Easier|Swaps?|Rest|Note)\s*:|No app S|Coach owns this session|Train with your coach)/i;
+
+function splitSessionTitle(title: string): { title: string; remainder: string | null } {
+  const markerIndex = title.search(SESSION_TITLE_BODY_MARKER);
+  if (markerIndex > -1) {
+    return { title: title.slice(0, markerIndex).trim(), remainder: title.slice(markerIndex).trim() || null };
+  }
+  return { title, remainder: null };
+}
+
+function classifyPlanTextHeading(line: string): PlanTextHeading | null {
+  const isMarkdownHeader = /^\s*#{1,6}\s+/.test(line);
+  const clean = stripPlanMarkup(line);
+  if (!clean || /^#+$/.test(clean)) {
+    return null;
+  }
+
+  const noteMatch = clean.match(NOTE_SECTION_RE);
+  if (noteMatch) {
+    return { kind: "notes", title: titleizeToken(noteMatch[1].trim()), remainder: noteMatch[2]?.trim() || null };
+  }
+
+  // Phase-prefixed week ("GPP — Week 1 (D-33 to D-27) — Build base"), or a bare
+  // "Week N — …" header that may carry its phase token mid-line. Phase renders
+  // as a tag, the rest as the title.
+  const phaseWeek = clean.match(PHASE_FIRST_WEEK_RE);
+  if (phaseWeek) {
+    return { kind: "week", title: phaseWeek[2].trim(), phase: normalizePhaseToken(phaseWeek[1]) };
+  }
+  if (BARE_WEEK_RE.test(clean)) {
+    const phase = clean.match(PHASE_ANYWHERE_RE);
+    return { kind: "week", title: clean, phase: phase ? normalizePhaseToken(phase[1]) : null };
+  }
+
+  const session = clean.match(SESSION_COUNTDOWN_FIRST_RE);
+  if (session) {
+    const split = splitSessionTitle(session[3].trim());
+    return {
+      kind: "session",
+      countdown: `D-${session[1]}`,
+      weekday: session[2].trim() || null,
+      title: split.title,
+      remainder: split.remainder,
+    };
+  }
+  const weekdaySession = clean.match(SESSION_WEEKDAY_FIRST_RE);
+  if (weekdaySession) {
+    const split = splitSessionTitle(weekdaySession[3].trim());
+    return {
+      kind: "session",
+      countdown: `D-${weekdaySession[2]}`,
+      weekday: titleizeToken(weekdaySession[1].trim()),
+      title: split.title,
+      remainder: split.remainder,
+    };
+  }
+
+  // Any other markdown header (## Nutrition, ## Progression, …) opens its own
+  // context card rather than being swallowed into the previous session.
+  if (isMarkdownHeader) {
+    return { kind: "notes", title: clean, remainder: null };
+  }
+
+  return null;
+}
+
+const COACH_LED_RE = /no app s\s?&?\s?c|coach owns this session|train with your coach/i;
+
+/**
+ * Parse athlete plan_text into structured groups (context notes, week sections,
+ * and the session cards beneath them). This is the fallback used when no
+ * machine-readable structured_plan is present, so it re-derives the same card
+ * shape the structured renderer shows — weeks, dated sessions, the session
+ * objective, and each exercise with its Purpose / Progress / Stop detail —
+ * instead of dumping every line into one undifferentiated block.
+ */
+export function parsePlanText(rawText: string): PlanTextGroup[] {
+  const lines = normalizePlanTextForCards(rawText).split("\n");
+  const groups: PlanTextGroup[] = [];
+  let currentWeek: PlanTextWeek | null = null;
+  let currentSession: PlanTextSession | null = null;
+  let currentNotes: PlanTextNotes | null = null;
+
+  const pushSession = (session: PlanTextSession) => {
+    if (currentWeek) {
+      currentWeek.sessions.push(session);
+    } else {
+      groups.push(session);
+    }
+  };
+
+  const addBodyLine = (line: string) => {
+    if (!currentSession) {
+      return;
+    }
+    const session = currentSession;
+    const listItem = line.match(/^([-*]|\d+\.)\s+(.+)$/);
+    const wasListItem = Boolean(listItem);
+    const content = stripPlanMarkup(listItem ? listItem[2] : line);
+    if (!content) {
+      return;
+    }
+    if (COACH_LED_RE.test(content) && !content.includes(" — ")) {
+      session.coachNote = content;
+      return;
+    }
+    for (const segment of splitLabeledSegments(content)) {
+      const block = session.blocks[session.blocks.length - 1];
+      if (segment.label === "Why" && !block && !session.objective) {
+        session.objective = segment.text;
+        continue;
+      }
+      if (segment.label) {
+        if (block) {
+          block.details.push(segment);
+        } else {
+          session.notes.push(`${segment.label}: ${segment.text}`);
+        }
+        continue;
+      }
+      // Unlabelled: an exercise heading (Name — dose), or a bulleted exercise,
+      // otherwise loose detail attached to the current block / session. The
+      // matched separator is always exactly " - " / " — " (3 chars).
+      const dashIndex = segment.text.search(/\s[-–—]\s/);
+      if (dashIndex > -1) {
+        session.blocks.push({
+          name: segment.text.slice(0, dashIndex).trim(),
+          dose: segment.text.slice(dashIndex + 3).trim() || null,
+          details: [],
+        });
+      } else if (wasListItem && !block) {
+        session.blocks.push({ name: segment.text, dose: null, details: [] });
+      } else if (block) {
+        block.details.push({ label: null, text: segment.text });
+      } else {
+        session.notes.push(segment.text);
+      }
+    }
+  };
+
+  for (const rawLine of lines) {
+    const line = rawLine.trim();
+    if (!line || /^#+$/.test(line)) {
+      continue;
+    }
+
+    const heading = classifyPlanTextHeading(line);
+    if (heading?.kind === "notes") {
+      currentSession = null;
+      currentWeek = null;
+      currentNotes = { kind: "notes", title: heading.title, lines: [] };
+      groups.push(currentNotes);
+      if (heading.remainder) {
+        currentNotes.lines.push(stripPlanMarkup(heading.remainder));
+      }
+      continue;
+    }
+    if (heading?.kind === "week") {
+      currentSession = null;
+      currentNotes = null;
+      currentWeek = { kind: "week", title: heading.title, phase: heading.phase, sessions: [] };
+      groups.push(currentWeek);
+      continue;
+    }
+    if (heading?.kind === "session") {
+      currentNotes = null;
+      currentSession = {
+        kind: "session",
+        countdown: heading.countdown,
+        weekday: heading.weekday,
+        title: heading.title,
+        objective: null,
+        coachNote: null,
+        blocks: [],
+        notes: [],
+      };
+      pushSession(currentSession);
+      // Inline metadata split off a run-on heading line is parsed as body.
+      if (heading.remainder) {
+        addBodyLine(heading.remainder);
+      }
+      continue;
+    }
+
+    if (currentSession) {
+      addBodyLine(line);
+      continue;
+    }
+    if (currentNotes) {
+      const content = stripPlanMarkup(line.replace(/^([-*]|\d+\.)\s+/, ""));
+      if (content) {
+        currentNotes.lines.push(content);
+      }
+      continue;
+    }
+
+    // Loose preamble before any heading: keep it in an intro notes card.
+    const content = stripPlanMarkup(line.replace(/^([-*]|\d+\.)\s+/, ""));
+    if (content) {
+      currentNotes = { kind: "notes", title: "Plan", lines: [content] };
+      groups.push(currentNotes);
+    }
+  }
+
+  return groups;
+}
+
+function PlanTextNotesCard({ notes }: { notes: PlanTextNotes }) {
+  return (
+    <section className="sp-card sp-active-notes legacy-plan-notes">
+      <p className="sp-eyebrow">{notes.title}</p>
+      {notes.lines.map((line, index) => (
+        <p key={`${notes.title}-${index}`} className="sp-block-purpose">
+          {line}
+        </p>
+      ))}
+    </section>
+  );
+}
+
+function PlanTextBlockCard({ block }: { block: PlanTextBlock }) {
+  return (
+    <div className="sp-block">
+      <div className="sp-block-head">
+        <span className="sp-block-title">{block.name}</span>
+      </div>
+      {block.dose ? (
+        <div className="sp-block-stats">
+          <span className="sp-stat">
+            <span className="sp-stat-label">Dose</span>
+            {block.dose}
+          </span>
+        </div>
+      ) : null}
+      {block.details.map((detail, index) =>
+        detail.label ? (
+          <p key={`${block.name}-${index}`} className="sp-block-aside">
+            <span className="sp-stat-label">{detail.label}</span>
+            {detail.text}
+          </p>
+        ) : (
+          <p key={`${block.name}-${index}`} className="sp-block-purpose">
+            {detail.text}
+          </p>
+        ),
+      )}
+    </div>
+  );
+}
+
+function PlanTextSessionCard({ session }: { session: PlanTextSession }) {
+  return (
+    <article className="sp-session legacy-plan-card">
+      <header className="sp-session-head">
+        <div>
+          {session.countdown || session.weekday ? (
+            <div className="sp-day-labels sp-session-day-labels">
+              {session.countdown ? (
+                <span className="sp-countdown sp-accent">{session.countdown}</span>
+              ) : null}
+              {session.weekday ? <span className="sp-day-date">{session.weekday}</span> : null}
+            </div>
+          ) : null}
+          <h4 className="sp-session-title">{session.title}</h4>
+          {session.objective ? <p className="sp-session-objective">{session.objective}</p> : null}
+        </div>
+      </header>
+      {session.coachNote ? <p className="sp-today-note">{session.coachNote}</p> : null}
+      {session.blocks.length ? (
+        <div className="sp-blocks">
+          {session.blocks.map((block, index) => (
+            <PlanTextBlockCard key={`${block.name}-${index}`} block={block} />
+          ))}
+        </div>
+      ) : null}
+      {session.notes.map((note, index) => (
+        <p key={`note-${index}`} className="sp-block-purpose">
+          {note}
+        </p>
+      ))}
+    </article>
+  );
+}
+
+function PlanTextWeekSection({ week, defaultOpen }: { week: PlanTextWeek; defaultOpen: boolean }) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <details className="sp-week" open={open} onToggle={(event) => setOpen(event.currentTarget.open)}>
+      <summary className="sp-week-summary">
+        <span className="sp-week-title">{week.title}</span>
+        {week.phase ? <span className="sp-tag sp-accent">{week.phase}</span> : null}
+      </summary>
+      <div className="sp-week-body">
+        {week.sessions.length ? (
+          week.sessions.map((session, index) => (
+            <PlanTextSessionCard key={`${session.countdown}-${index}`} session={session} />
+          ))
+        ) : (
+          <p className="sp-muted">No sessions scheduled.</p>
+        )}
+      </div>
+    </details>
+  );
+}
+
+function PlanTextCards({ text }: { text: string }) {
+  const groups = parsePlanText(text);
+
+  if (!groups.length) {
+    return (
+      <section className="sp-root legacy-plan-root">
+        <article className="sp-session legacy-plan-card">
+          <header className="sp-session-head">
+            <div>
+              <p className="sp-eyebrow">Saved plan</p>
+              <h4 className="sp-session-title">No plan cards available</h4>
+            </div>
+          </header>
+          <p className="sp-session-objective">This saved plan does not contain athlete-facing plan content.</p>
+        </article>
+      </section>
+    );
+  }
+
+  const firstWeekIndex = groups.findIndex((group) => group.kind === "week");
+  return (
+    <section className="sp-root legacy-plan-root" aria-label="Saved plan cards">
+      <header className="sp-header legacy-plan-header">
+        <p className="sp-eyebrow">Saved plan</p>
+        <h3 className="sp-title">Training plan</h3>
+      </header>
+      <div className="legacy-plan-card-stack">
+        {groups.map((group, index) => {
+          if (group.kind === "notes") {
+            return <PlanTextNotesCard key={`notes-${index}`} notes={group} />;
+          }
+          if (group.kind === "week") {
+            return (
+              <PlanTextWeekSection
+                key={`week-${index}`}
+                week={group}
+                defaultOpen={index === firstWeekIndex}
+              />
+            );
+          }
+          return <PlanTextSessionCard key={`session-${index}`} session={group} />;
+        })}
+      </div>
+    </section>
+  );
 }
 
 function getPlanDisplayName(plan: Pick<PlanDetail, "plan_name" | "fight_date">) {
@@ -921,8 +1445,6 @@ export function PlanViewer({
   // Only surface an advisory that carries a real injury-risk band; the rest just
   // restate load tweaks the plan already applied, so they are suppressed.
   const primaryAdvisory = selectInjuryRiskAdvisory(plan.advisories);
-  const technicalStyles =
-    getOptionLabels(TECHNICAL_STYLE_OPTIONS, plan.technical_style).join(", ") || "Not provided";
 
   const athletePlanText = plan.outputs.plan_text.trim();
   const hasPublishedPlan = isPlanReleasedToAthlete(plan);
@@ -1057,6 +1579,9 @@ export function PlanViewer({
   const [archivePending, setArchivePending] = useState(false);
   const [archiveMessage, setArchiveMessage] = useState<string | null>(null);
   const [archiveError, setArchiveError] = useState<string | null>(null);
+  const [activePlanId, setActivePlanId] = useState<string | null>(null);
+  const [setActivePending, setSetActivePending] = useState(false);
+  const [setActiveError, setSetActiveError] = useState<string | null>(null);
   const [planActionPending, setPlanActionPending] = useState<
     "rename" | "archive" | "permanent-delete" | null
   >(null);
@@ -1124,6 +1649,30 @@ export function PlanViewer({
   useEffect(() => {
     setManualPlanText(plan.admin_outputs?.final_plan_text || "");
   }, [plan.plan_id, plan.admin_outputs?.final_plan_text]);
+
+  // Resolve which plan is the athlete's active one so this page can show the
+  // ACTIVE badge / Set active control without duplicating Today's job. A missing
+  // active plan is a normal state (no plan set yet), so failures stay silent.
+  useEffect(() => {
+    if (!accessToken || !canManagePlan) {
+      return;
+    }
+    let cancelled = false;
+    getActivePlan(accessToken)
+      .then((active) => {
+        if (!cancelled) {
+          setActivePlanId(active?.plan_id ?? null);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setActivePlanId(null);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [accessToken, canManagePlan, plan.plan_id]);
 
   useEffect(() => {
     setOpenAdminSection(
@@ -1281,6 +1830,27 @@ export function PlanViewer({
       setRejectError(error instanceof Error ? error.message : "Unable to reject this plan.");
     } finally {
       setRejectPending(false);
+    }
+  }
+
+  async function handleSetActive() {
+    if (!accessToken) {
+      setSetActiveError("Session expired. Sign in again.");
+      return;
+    }
+    if (!canSetActivePlan(plan.status)) {
+      setSetActiveError("This plan cannot be set active from its current state.");
+      return;
+    }
+    setSetActivePending(true);
+    setSetActiveError(null);
+    try {
+      const active = await setActivePlan(accessToken, plan.plan_id);
+      setActivePlanId(active.plan_id);
+    } catch (error) {
+      setSetActiveError(error instanceof Error ? error.message : "Unable to set this plan active.");
+    } finally {
+      setSetActivePending(false);
     }
   }
 
@@ -1517,7 +2087,12 @@ export function PlanViewer({
           </div>
           <div className="status-card">
             <p className="status-label">Status</p>
-            <h2 className="plan-summary-title">{statusLabel}</h2>
+            <h2 className="plan-summary-title">
+              {statusLabel}
+              {activePlanId === plan.plan_id ? (
+                <span className="badge status-badge-success cm-active-badge">ACTIVE</span>
+              ) : null}
+            </h2>
             <p className="muted">
               {isTriageBlocked
                 ? "Stage 2 was skipped intentionally."
@@ -1526,10 +2101,31 @@ export function PlanViewer({
           </div>
         </div>
 
+        {(plan.status || "").trim().toLowerCase() === "archived" ? (
+          <div className="quick-build-refine-banner cm-archived-banner" role="status">
+            This plan is archived — view only. Restore it from plan history to set it active again.
+          </div>
+        ) : null}
+
         <div className="plan-summary-actions">
           <Link href="/plans" className="ghost-button">
             Back to plans
           </Link>
+          {canManagePlan && activePlanId === plan.plan_id ? (
+            <Link href="/today" className="cta">
+              Open Today
+            </Link>
+          ) : null}
+          {canManagePlan && activePlanId !== plan.plan_id && canSetActivePlan(plan.status) ? (
+            <button
+              type="button"
+              className="cta"
+              onClick={handleSetActive}
+              disabled={setActivePending}
+            >
+              {setActivePending ? "Setting active..." : "Set active"}
+            </button>
+          ) : null}
           {canManagePlan ? (
             <>
               <button
@@ -1568,32 +2164,12 @@ export function PlanViewer({
         </div>
         {planActionMessage ? <div className="success-banner">{planActionMessage}</div> : null}
         {planActionError ? <div className="error-banner">{planActionError}</div> : null}
+        {setActiveError ? <div className="error-banner">{setActiveError}</div> : null}
       </section>
 
-      <div className="plan-detail-layout">
-        <aside className="plan-summary-stack">
-          <section className="plan-summary-card">
-            <div className="plan-summary-header">
-              <p className="kicker">Summary</p>
-              <h2 className="plan-summary-title">Camp context</h2>
-            </div>
-            <div className="plan-meta-grid">
-              <article className="plan-meta-item">
-                <p className="plan-meta-label">Fight date</p>
-                <p className="plan-meta-value">{plan.fight_date || "Not provided"}</p>
-              </article>
-              <article className="plan-meta-item">
-                <p className="plan-meta-label">Technical Style</p>
-                <p className="plan-meta-value">{technicalStyles}</p>
-              </article>
-              <article className="plan-meta-item">
-                <p className="plan-meta-label">Created</p>
-                <p className="plan-meta-value">{new Date(plan.created_at).toLocaleDateString()}</p>
-              </article>
-            </div>
-          </section>
-
-          {canUseAdminOutputs ? (
+      <div className={`plan-detail-layout${canUseAdminOutputs ? "" : " plan-detail-layout-single"}`}>
+        {canUseAdminOutputs ? (
+          <aside className="plan-summary-stack">
             <section className="plan-summary-card">
               <div className="plan-summary-header">
                 <p className="kicker">Stage 2</p>
@@ -1654,43 +2230,48 @@ export function PlanViewer({
                 </>
               ) : null}
             </section>
-          ) : null}
-        </aside>
+          </aside>
+        ) : null}
 
         <section className="plan-text-panel">
-          <div className="plan-header-row">
-            <div>
-              <p className="kicker">Athlete Plan</p>
-              <h2>
+          {/* The validation status/badge is operational metadata. Athletes go
+              straight into the camp map (which carries its own header); admins
+              and any not-yet-published/triage state still see the status. */}
+          {canUseAdminOutputs || !hasPublishedPlan || isTriageBlocked ? (
+            <div className="plan-header-row">
+              <div>
+                <p className="kicker">{canUseAdminOutputs ? "Athlete Plan" : "Your plan"}</p>
+                <h2>
+                  {isTriageBlocked
+                    ? blockedTitle
+                    : plan.admin_outputs?.stage2_status === "triage_resume_approved"
+                      ? "Resume approved — regeneration pending"
+                    : hasPublishedPlan
+                      ? "Validated final plan"
+                      : "Pending finalization"}
+                </h2>
+              </div>
+              <span
+                className={`badge ${
+                  isTriageBlocked
+                    ? injuryTriage?.mode === "medical_hold"
+                      ? "issue-badge-error"
+                      : ""
+                    : hasPublishedPlan
+                      ? "status-badge-success"
+                      : "status-badge-neutral"
+                }`}
+              >
                 {isTriageBlocked
                   ? blockedTitle
                   : plan.admin_outputs?.stage2_status === "triage_resume_approved"
-                    ? "Resume approved — regeneration pending"
+                    ? "Resume pending"
                   : hasPublishedPlan
-                    ? "Validated final plan"
-                    : "Pending finalization"}
-              </h2>
+                    ? "Validated"
+                    : "Review required"}
+              </span>
             </div>
-            <span
-              className={`badge ${
-                isTriageBlocked
-                  ? injuryTriage?.mode === "medical_hold"
-                    ? "issue-badge-error"
-                    : ""
-                  : hasPublishedPlan
-                    ? "status-badge-success"
-                    : "status-badge-neutral"
-              }`}
-            >
-              {isTriageBlocked
-                ? blockedTitle
-                : plan.admin_outputs?.stage2_status === "triage_resume_approved"
-                  ? "Resume pending"
-                : hasPublishedPlan
-                  ? "Validated"
-                  : "Review required"}
-            </span>
-          </div>
+          ) : null}
 
           {primaryAdvisory ? <SparringAdvisoryCard advisory={primaryAdvisory} /> : null}
 
@@ -1725,15 +2306,10 @@ export function PlanViewer({
                   </button>
                 ) : null}
               </div>
-              <WeeklySparringView planId={plan.plan_id} />
               {shouldRenderStructuredPlan(plan.outputs) && plan.outputs.structured_plan ? (
-                <StructuredPlanRenderer
-                  plan={plan.outputs.structured_plan}
-                  rawFallback={athletePlanText}
-                  showRawFallback={canUseAdminOutputs}
-                />
+                <StructuredPlanRenderer plan={plan.outputs.structured_plan} />
               ) : (
-                <pre className="plan-text-block">{athletePlanText}</pre>
+                <PlanTextCards text={athletePlanText} />
               )}
               {rejectMessage ? <div className="success-banner">{rejectMessage}</div> : null}
               {rejectError ? <div className="error-banner">{rejectError}</div> : null}

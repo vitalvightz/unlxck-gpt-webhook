@@ -4,7 +4,7 @@ import logging
 import re
 from typing import Mapping
 
-from .injury_negation import contains_negated_injury, negation_detection_available, remove_negated_phrases
+from .injury_negation import contains_negated_injury, remove_negated_phrases
 from .injury_synonyms import split_injury_text
 from .injury_scoring import score_injury_phrase
 from .normalization import normalize_lower_text, strip_surrounding_punctuation as _strip_surrounding_punct
@@ -113,7 +113,10 @@ def parse_injury_entry(phrase: str) -> dict[str, str | None | list[str]] | None:
         return None
 
     phrase_to_parse = original_phrase
-    if contains_negated_injury(original_phrase) and not negation_detection_available():
+    if contains_negated_injury(original_phrase):
+        # Always strip negated content. The entity-based Negex pass only marks
+        # named entities, so symptom-level negations ("never had knee issues")
+        # slip past it; remove_negated_phrases now reliably drops them.
         phrase_to_parse = remove_negated_phrases(original_phrase)
         if not phrase_to_parse:
             return None
