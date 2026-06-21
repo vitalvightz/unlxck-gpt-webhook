@@ -4885,8 +4885,8 @@ button.mobile-step-rail-item {
   overflow: hidden;
   isolation: isolate;
   gap: 16px;
-  border-color: rgba(181, 18, 43, 0.16);
-  background: linear-gradient(180deg, rgba(22, 16, 19, 0.96), rgba(13, 14, 18, 0.96));
+  border-color: rgba(181, 18, 43, 0.16) !important;
+  background: linear-gradient(180deg, rgba(22, 16, 19, 0.96), rgba(13, 14, 18, 0.96)) !important;
 }
 
 .today-shell::before {
