@@ -85,7 +85,7 @@ def _has_negated_injury(text: str) -> bool:
     # cue follows the symptom) while still catching "never had knee issues".
     cue_alt = r"\b(?:no|not|never|without|neither|deny|denies|denied|ruled\s+out)\b"
     for term in _NEGATION_TARGETS:
-        if len(term) < 3:
+        if len(term) < 3 or term not in lowered:
             continue
         if re.search(cue_alt + r"[\w\s,'\"-]*?\b" + re.escape(term) + r"\b", lowered):
             return True
