@@ -42,6 +42,8 @@ const TRIAGE_RESUME_FETCH_ATTEMPTS = 5;
 const TRIAGE_RESUME_FETCH_DELAY_MS = 800;
 const APPROVE_RECOVERY_FETCH_ATTEMPTS = 3;
 const APPROVE_RECOVERY_FETCH_DELAY_MS = 800;
+const STRUCTURED_PLAN_POLL_INTERVAL_MS = 2500;
+const STRUCTURED_PLAN_FALLBACK_DELAY_MS = 120_000;
 
 const ATHLETE_VISIBLE_STATUSES = new Set(["ready", "publishable_with_flags"]);
 
@@ -56,6 +58,26 @@ export function isPlanReleasedToAthlete(
 ): boolean {
   const status = (plan.status || "").trim().toLowerCase();
   return ATHLETE_VISIBLE_STATUSES.has(status) && Boolean(plan.outputs.plan_text.trim());
+}
+
+export function shouldHoldPlanTextFallbackForStructuredPlan(params: {
+  hasPublishedPlan: boolean;
+  hasStructuredPlan: boolean;
+  fallbackUnlocked: boolean;
+  isTriageBlocked?: boolean;
+}): boolean {
+  return (
+    params.hasPublishedPlan &&
+    !params.hasStructuredPlan &&
+    !params.fallbackUnlocked &&
+    params.isTriageBlocked !== true
+  );
+}
+
+function getApprovalSuccessMessage(plan: Pick<PlanDetail, "outputs">): string {
+  return shouldRenderStructuredPlan(plan.outputs)
+    ? "Plan approved and released to the athlete view."
+    : "Plan approved. Finalising athlete card before showing it to the athlete.";
 }
 
 /**
@@ -723,6 +745,38 @@ function PlanTextCards({ text }: { text: string }) {
         })}
       </div>
     </section>
+  );
+}
+
+function StructuredPlanFinalizingCard() {
+  return (
+    <section className="panel loading-card loading-shell loading-phase-finalizing athlete-motion-slot athlete-motion-status" role="status" aria-busy="true">
+      <article className="status-card loading-context-panel loading-context-panel-compact">
+        <p className="loading-eyebrow">Finalising athlete card</p>
+        <h3 className="loading-title">Building the structured fight-camp view</h3>
+        <p className="muted loading-copy">
+          Approval is saved. The athlete card is being formatted before it is shown.
+        </p>
+        <div className="loading-scan-rail" aria-hidden="true">
+          <span className="loading-scan-line" />
+        </div>
+        <div className="loading-status-strip">Checking for the structured card every few seconds.</div>
+      </article>
+    </section>
+  );
+}
+
+function StructuredPlanFallbackNotice() {
+  return (
+    <div className="quick-build-refine-banner" role="status">
+      <div className="quick-build-refine-banner__body">
+        <p className="quick-build-refine-banner__kicker">Structured card unavailable</p>
+        <h2 className="quick-build-refine-banner__title">Showing safe text version</h2>
+        <p className="quick-build-refine-banner__copy">
+          Structured card could not be built inside the wait window. The saved athlete-safe text plan is shown below.
+        </p>
+      </div>
+    </div>
   );
 }
 
@@ -1448,6 +1502,8 @@ export function PlanViewer({
 
   const athletePlanText = plan.outputs.plan_text.trim();
   const hasPublishedPlan = isPlanReleasedToAthlete(plan);
+  const hasStructuredAthletePlan =
+    shouldRenderStructuredPlan(plan.outputs) && Boolean(plan.outputs.structured_plan);
 
   const injuryTriage = readInjuryTriage(plan);
   const rawTriageMode = readRawTriageMode(plan);
@@ -1587,6 +1643,10 @@ export function PlanViewer({
   >(null);
   const [planActionMessage, setPlanActionMessage] = useState<string | null>(null);
   const [planActionError, setPlanActionError] = useState<string | null>(null);
+  const [structuredPlanWaitState, setStructuredPlanWaitState] = useState<{
+    planId: string | null;
+    fallbackUnlocked: boolean;
+  }>({ planId: null, fallbackUnlocked: false });
   const [stage2RetryInProgress, setStage2RetryInProgress] = useState(false);
   const [stage2RetryJustCompleted, setStage2RetryJustCompleted] = useState<"passed" | "failed" | null>(
     null,
@@ -1645,6 +1705,14 @@ export function PlanViewer({
       router.refresh();
     },
   });
+  const structuredPlanFallbackUnlocked =
+    structuredPlanWaitState.planId === plan.plan_id && structuredPlanWaitState.fallbackUnlocked;
+  const shouldHoldPlanTextFallback = shouldHoldPlanTextFallbackForStructuredPlan({
+    hasPublishedPlan,
+    hasStructuredPlan: hasStructuredAthletePlan,
+    fallbackUnlocked: structuredPlanFallbackUnlocked,
+    isTriageBlocked,
+  });
 
   useEffect(() => {
     setManualPlanText(plan.admin_outputs?.final_plan_text || "");
@@ -1685,6 +1753,49 @@ export function PlanViewer({
             : "draft",
     );
   }, [plan.plan_id, handoffText, retryText, plan.admin_outputs?.final_plan_text]);
+
+  useEffect(() => {
+    if (!hasPublishedPlan || hasStructuredAthletePlan || isTriageBlocked) {
+      return;
+    }
+
+    let cancelled = false;
+
+    const pollForStructuredPlan = async () => {
+      if (!accessToken) {
+        return;
+      }
+      try {
+        const refreshedPlan = await getPlan(accessToken, plan.plan_id);
+        if (!cancelled && shouldRenderStructuredPlan(refreshedPlan.outputs)) {
+          onPlanUpdated?.(refreshedPlan);
+        }
+      } catch {
+        // Keep the athlete-facing hold in place until the timeout unlocks the
+        // safe text fallback.
+      }
+    };
+
+    const intervalId = window.setInterval(pollForStructuredPlan, STRUCTURED_PLAN_POLL_INTERVAL_MS);
+    const timeoutId = window.setTimeout(() => {
+      if (!cancelled) {
+        setStructuredPlanWaitState({ planId: plan.plan_id, fallbackUnlocked: true });
+      }
+    }, STRUCTURED_PLAN_FALLBACK_DELAY_MS);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(intervalId);
+      window.clearTimeout(timeoutId);
+    };
+  }, [
+    accessToken,
+    hasPublishedPlan,
+    hasStructuredAthletePlan,
+    isTriageBlocked,
+    onPlanUpdated,
+    plan.plan_id,
+  ]);
 
   async function handleManualStage2Submit() {
     if (!accessToken) {
@@ -1744,7 +1855,7 @@ export function PlanViewer({
     try {
       const updatedPlan = await approvePlanForRelease(accessToken, plan.plan_id);
       onPlanUpdated?.(updatedPlan);
-      setApproveMessage("Plan approved and released to the athlete view.");
+      setApproveMessage(getApprovalSuccessMessage(updatedPlan));
     } catch (error) {
       // Approval persists server-side before any slow post-processing, so a
       // network/timeout failure is often a false negative: the plan may already
@@ -1755,7 +1866,7 @@ export function PlanViewer({
       });
       if (recoveredPlan) {
         onPlanUpdated?.(recoveredPlan);
-        setApproveMessage("Plan approved and released to the athlete view.");
+        setApproveMessage(getApprovalSuccessMessage(recoveredPlan));
         return;
       }
       setApproveError(
@@ -2297,7 +2408,9 @@ export function PlanViewer({
           ) : hasPublishedPlan ? (
             <>
               <div className="plan-summary-actions">
-                <QuickCopyButton text={athletePlanText} artifactKey="athlete-plan" />
+                {!shouldHoldPlanTextFallback ? (
+                  <QuickCopyButton text={athletePlanText} artifactKey="athlete-plan" />
+                ) : null}
                 {canRejectApproval ? (
                   <button
                     type="button"
@@ -2319,10 +2432,15 @@ export function PlanViewer({
                   </button>
                 ) : null}
               </div>
-              {shouldRenderStructuredPlan(plan.outputs) && plan.outputs.structured_plan ? (
+              {shouldHoldPlanTextFallback ? (
+                <StructuredPlanFinalizingCard />
+              ) : hasStructuredAthletePlan && plan.outputs.structured_plan ? (
                 <StructuredPlanRenderer plan={plan.outputs.structured_plan} />
               ) : (
-                <PlanTextCards text={athletePlanText} />
+                <>
+                  <StructuredPlanFallbackNotice />
+                  <PlanTextCards text={athletePlanText} />
+                </>
               )}
               {rejectMessage ? <div className="success-banner">{rejectMessage}</div> : null}
               {rejectError ? <div className="error-banner">{rejectError}</div> : null}

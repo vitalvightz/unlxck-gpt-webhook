@@ -13,6 +13,7 @@ import {
   readInjuryTriage,
   readRawTriageMode,
   resolveApprovalAfterError,
+  shouldHoldPlanTextFallbackForStructuredPlan,
   shouldShowProtectedResumeAdminReview,
 } from "./plan-viewer";
 import { ApiError, RETRYABLE_NETWORK_MESSAGE } from "@/lib/api";
@@ -190,6 +191,48 @@ test("isPlanReleasedToAthlete requires an athlete-visible status with plan text"
   // Non-athlete-visible status is never released, even with plan text.
   assert.equal(
     isPlanReleasedToAthlete(makePlan({ status: "review_required", planText: "# Plan" })),
+    false,
+  );
+});
+
+test("published plan without structured card holds the text fallback", () => {
+  assert.equal(
+    shouldHoldPlanTextFallbackForStructuredPlan({
+      hasPublishedPlan: true,
+      hasStructuredPlan: false,
+      fallbackUnlocked: false,
+    }),
+    true,
+  );
+});
+
+test("structured card or timeout unlocks the published plan view", () => {
+  assert.equal(
+    shouldHoldPlanTextFallbackForStructuredPlan({
+      hasPublishedPlan: true,
+      hasStructuredPlan: true,
+      fallbackUnlocked: false,
+    }),
+    false,
+  );
+  assert.equal(
+    shouldHoldPlanTextFallbackForStructuredPlan({
+      hasPublishedPlan: true,
+      hasStructuredPlan: false,
+      fallbackUnlocked: true,
+    }),
+    false,
+  );
+});
+
+test("triage blocked plans do not enter the structured-card hold", () => {
+  assert.equal(
+    shouldHoldPlanTextFallbackForStructuredPlan({
+      hasPublishedPlan: true,
+      hasStructuredPlan: false,
+      fallbackUnlocked: false,
+      isTriageBlocked: true,
+    }),
     false,
   );
 });
