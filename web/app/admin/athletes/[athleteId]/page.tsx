@@ -140,7 +140,7 @@ function AthletePlanAccessCard({
     try {
       const result = await bulkPermanentlyDeletePlans(accessToken, selectedArchivedIds);
       onPlansDeleted(result.deleted);
-      setSelectedIds([]);
+      setSelectedIds((current) => current.filter((id) => !result.deleted.includes(id)));
       setMessage(
         `Deleted ${result.deleted_count} plan${result.deleted_count === 1 ? "" : "s"}.` +
           (result.skipped_count ? ` ${result.skipped_count} skipped.` : ""),
