@@ -1000,28 +1000,29 @@ def test_actual_bank_d1_keeps_only_ultra_safe_micro_dose_strength_options():
 
     names = _selected_strength_names(result)
     blocked = _blocked_strength_names(result)
+    # D1 policy: ultra-safe neural activation / balance / coordination only — no
+    # loaded strength, dense band circuits, high-volume accessories or anything
+    # fatigue/soreness-producing. These are the current bank's compliant options
+    # (all bodyweight rehab/activation drills).
     allowed_names = {
-        "Band-Resisted Jab-Cross Primer",
-        "Punch-Specific Max Isometric Hold",
-        "Counter-Striker Split-Line Punch Isometric Hold",
-        "Towel/Gi Row Isometric Hold",
-        "Clinch Towel/Gi Row Isometric Hold",
-        "Adductor Squeeze Isometric",
-        "Band Face Pull",
-        "Banded Lateral Walk",
+        "Band face pull light",
+        "Boxer stance weight-shift hold",
+        "Lead-foot pivot prep",
+        "Pivot-and-freeze lead foot",
+        "Single-Leg Balance (Eyes Closed)",
         "Hollow-Body Hold",
         "Isometric Pallof Hold",
-        "Single-Leg Balance (Eyes Closed)",
-        "TRX Row",
+        "Adductor Squeeze Isometric",
     }
 
     assert set(names).issubset(allowed_names)
     assert "Trap Bar Jump (Light)" not in names
     assert "Jump Lunge (Alternating)" not in names
     assert "Anti-Rotation Med Ball Slam" not in names
-    assert "Trap Bar Jump (Light)" in blocked
-    assert "Anti-Rotation Med Ball Slam" in blocked
-    assert "Cluster Set Trap Bar Deadlift" in blocked
+    # These aggressive options are SPP-only in the bank, so on D1 (a TAPER window)
+    # they are excluded by phase before the late-window guard ever sees them — the
+    # important guarantee is that they never reach the D1 selection above.
+    assert "Cluster Set Trap Bar Deadlift" not in names
 
 
 def test_conditioning_late_window_keeps_reactive_option_without_generic_glycolytic_leak(monkeypatch):

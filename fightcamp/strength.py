@@ -140,6 +140,10 @@ LATE_STRENGTH_SAFE_TAGS = {
 }
 LATE_STRENGTH_TIGHT_WINDOWS = {D7, D6_TO_D5, D4_TO_D2, D1}
 LATE_STRENGTH_TRUE_CLUSTER_BAND = 0.05
+# Bias applied to posterior-chain-specific late-touches when posterior_chain is a
+# stated weakness, so they win the posterior-chain slot ahead of quad-dominant
+# isometrics that merely also carry the posterior_chain tag.
+POSTERIOR_CHAIN_LATE_TOUCH_BIAS = 1.0
 LATE_SAFE_STRENGTH_FIELDS = {
     "late_strength_touch",
     "low_eccentric",
@@ -870,6 +874,20 @@ def score_exercise(
     score += priority_bonus
     reasons["weakness_hits"] = weakness_matches
     reasons["goal_hits"] = goal_matches
+    # A stated posterior-chain weakness should surface a posterior-chain-specific
+    # late-touch (e.g. Isometric Mid-Thigh Pull / Trap-Bar Pin Pull Isometric)
+    # rather than letting a quad-dominant isometric stand in as the posterior-chain
+    # answer. Bias the specific options up so at least one is preferred where it is
+    # safe and available; mixed quad/posterior options stay valid but no longer win
+    # the posterior-chain slot by default.
+    if (
+        "posterior_chain" in weakness_tags
+        and "late_strength_touch" in exercise_tags
+        and "posterior_chain" in exercise_tags
+        and "quad_dominant" not in exercise_tags
+    ):
+        score += POSTERIOR_CHAIN_LATE_TOUCH_BIAS
+        reasons["reason_codes"].append("priority_posterior_chain_late_touch_bias")
     if derived_clarification_tags:
         matched_clarification_tags = sorted(set(exercise_tags) & set(derived_clarification_tags))
         clarification_bonus = min(
