@@ -247,6 +247,12 @@ export function SessionCard({
   const blocks = getBlocks(session);
   const rehabBlocks = getRehabOrMobilityBlocks(session);
   const blocksLabel = blockCountLabel(blocks.length);
+  // Prefer the session mindset only when it actually has displayable lines; an
+  // empty/blank session.mindset_anchor should still fall back to the day card.
+  const sessionMindset =
+    getMindsetLines(session.mindset_anchor).length > 0
+      ? session.mindset_anchor
+      : card?.mindset_anchor;
 
   return (
     <article className="sp-session">
@@ -270,7 +276,7 @@ export function SessionCard({
       {warning ? <p className="sp-warning">{warning}</p> : null}
       {nutrition ? <p className="sp-today-note">{nutrition}</p> : null}
       {weightCut ? <p className="sp-warning">{weightCut}</p> : null}
-      <MindsetAnchorCard anchor={session.mindset_anchor} />
+      <MindsetAnchorCard anchor={sessionMindset} />
       <RehabSummary blocks={rehabBlocks} />
       {blocks.length > 0 ? (
         <>

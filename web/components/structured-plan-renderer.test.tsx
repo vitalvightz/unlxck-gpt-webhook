@@ -68,6 +68,99 @@ test("structured renderer uses one session card and hides detail blocks until ex
   assert.equal(html.includes("Do not render anchor"), false);
 });
 
+// Builds a single-session day where the session-level and day-card mindsets can
+// be varied independently, exercising the SessionCard mindset fallback.
+function mindsetPlan({
+  sessionMindset,
+  dayCardMindset,
+}: {
+  sessionMindset?: unknown;
+  dayCardMindset?: unknown;
+}): StructuredPlan {
+  return {
+    schema_version: "1.0",
+    plan_metadata: { title: "Fight Camp", sport: "boxing", plan_type: "fight_camp" },
+    weeks: [
+      {
+        week_id: "wk-1",
+        week_index: 1,
+        phase_label: "SPP",
+        days: [
+          {
+            date: "2026-06-15",
+            countdown_label: "D-19",
+            day_type: "hard_spar",
+            today_card: {
+              readiness_status: "train_as_planned",
+              ...(dayCardMindset !== undefined ? { mindset_anchor: dayCardMindset } : {}),
+            },
+            sessions: [
+              {
+                session_id: "ses-1",
+                session_type: "sparring",
+                title: "Hard sparring",
+                ...(sessionMindset !== undefined ? { mindset_anchor: sessionMindset } : {}),
+                blocks: [{ block_id: "blk-1", display_name: "Live rounds" }],
+              },
+            ],
+          },
+        ],
+      },
+    ],
+  } as StructuredPlan;
+}
+
+test("session card falls back to the day card mindset when the session has none", () => {
+  const html = renderToStaticMarkup(
+    <StructuredPlanRenderer
+      plan={mindsetPlan({
+        dayCardMindset: { intent: "Day card mindset intent", focus_cue: "Day card focus cue" },
+      })}
+    />,
+  );
+
+  assert.equal(html.includes("Day card mindset intent"), true);
+  assert.equal(html.includes("Day card focus cue"), true);
+});
+
+test("session card falls back when the session mindset has no displayable content", () => {
+  const html = renderToStaticMarkup(
+    <StructuredPlanRenderer
+      plan={mindsetPlan({
+        sessionMindset: {},
+        dayCardMindset: { intent: "Day card mindset intent", focus_cue: "Day card focus cue" },
+      })}
+    />,
+  );
+
+  assert.equal(html.includes("Day card mindset intent"), true);
+  assert.equal(html.includes("Day card focus cue"), true);
+});
+
+test("session card prefers its own mindset when it has displayable content", () => {
+  const html = renderToStaticMarkup(
+    <StructuredPlanRenderer
+      plan={mindsetPlan({
+        sessionMindset: { intent: "Session mindset intent", focus_cue: "Session focus cue" },
+        dayCardMindset: { intent: "Day card mindset intent", focus_cue: "Day card focus cue" },
+      })}
+    />,
+  );
+
+  assert.equal(html.includes("Session mindset intent"), true);
+  assert.equal(html.includes("Session focus cue"), true);
+  assert.equal(html.includes("Day card mindset intent"), false);
+  assert.equal(html.includes("Day card focus cue"), false);
+});
+
+test("session card renders no mindset block when both mindsets are blank", () => {
+  const html = renderToStaticMarkup(
+    <StructuredPlanRenderer plan={mindsetPlan({ sessionMindset: {}, dayCardMindset: {} })} />,
+  );
+
+  assert.equal(html.includes("Mindset"), false);
+});
+
 test("surfaces rehab summary while keeping full rehab details collapsed", () => {
   const plan = {
     schema_version: "1.0",
