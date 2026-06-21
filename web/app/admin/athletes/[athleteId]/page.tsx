@@ -12,6 +12,7 @@ import { RequireAuth } from "@/components/auth-guard";
 import { useAppSession } from "@/components/auth-provider";
 import {
   approveAndResumeGenerationFromJob,
+  bulkPermanentlyDeletePlans,
   getAdminAthleteGenerationJobs,
   generateAdminAthletePlanFromLatestIntake,
   getAdminAthlete,
@@ -81,13 +82,76 @@ function toNutritionUpdateRequest(workspace: NutritionWorkspaceState): Nutrition
   };
 }
 
+function isArchivedPlan(plan: AdminPlanSummary): boolean {
+  return (plan.status || "").trim().toLowerCase() === "archived";
+}
+
 function AthletePlanAccessCard({
   plans,
   warning,
+  accessToken,
+  onPlansDeleted,
 }: {
   plans: AdminPlanSummary[];
   warning: string | null;
+  accessToken: string | null;
+  onPlansDeleted: (deletedPlanIds: string[]) => void;
 }) {
+  const archivedIds = plans.filter(isArchivedPlan).map((plan) => plan.plan_id);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
+
+  // Ignore any selections whose plans have left the list (after deletes/reloads)
+  // by deriving the effective set from the archived plans currently on screen.
+  const archivedIdSet = new Set(archivedIds);
+  const selectedArchivedIds = selectedIds.filter((id) => archivedIdSet.has(id));
+  const selectedCount = selectedArchivedIds.length;
+  const allArchivedSelected = archivedIds.length > 0 && selectedCount === archivedIds.length;
+
+  function toggleSelected(planId: string) {
+    setMessage(null);
+    setError(null);
+    setSelectedIds((current) =>
+      current.includes(planId) ? current.filter((id) => id !== planId) : [...current, planId],
+    );
+  }
+
+  function toggleSelectAll() {
+    setMessage(null);
+    setError(null);
+    setSelectedIds(allArchivedSelected ? [] : [...archivedIds]);
+  }
+
+  async function handleBulkDelete() {
+    if (!accessToken || selectedCount === 0 || isDeleting) {
+      return;
+    }
+    const confirmed = window.confirm(
+      `Permanently delete ${selectedCount} archived plan${selectedCount === 1 ? "" : "s"}? This cannot be undone.`,
+    );
+    if (!confirmed) {
+      return;
+    }
+    setIsDeleting(true);
+    setError(null);
+    setMessage(null);
+    try {
+      const result = await bulkPermanentlyDeletePlans(accessToken, selectedArchivedIds);
+      onPlansDeleted(result.deleted);
+      setSelectedIds([]);
+      setMessage(
+        `Deleted ${result.deleted_count} plan${result.deleted_count === 1 ? "" : "s"}.` +
+          (result.skipped_count ? ` ${result.skipped_count} skipped.` : ""),
+      );
+    } catch (deleteError) {
+      setError(deleteError instanceof Error ? deleteError.message : "Unable to delete the selected plans.");
+    } finally {
+      setIsDeleting(false);
+    }
+  }
+
   return (
     <article className="step-card admin-athlete-plan-access">
       <div className="form-section-header">
@@ -98,19 +162,62 @@ function AthletePlanAccessCard({
         <span className="badge">{plans.length} plan{plans.length === 1 ? "" : "s"}</span>
       </div>
       {warning ? <p className="error-text">{warning}</p> : null}
+      {archivedIds.length ? (
+        <div className="admin-athlete-plan-bulkbar">
+          <label className="admin-athlete-plan-select">
+            <input
+              type="checkbox"
+              checked={allArchivedSelected}
+              onChange={toggleSelectAll}
+              disabled={isDeleting}
+              aria-label="Select all archived plans"
+            />
+            <span className="muted">
+              {selectedCount > 0 ? `${selectedCount} selected` : `Select archived (${archivedIds.length})`}
+            </span>
+          </label>
+          <button
+            type="button"
+            className="ghost-button danger-button"
+            onClick={() => void handleBulkDelete()}
+            disabled={selectedCount === 0 || isDeleting || !accessToken}
+          >
+            {isDeleting ? "Deleting..." : `Delete selected${selectedCount ? ` (${selectedCount})` : ""}`}
+          </button>
+        </div>
+      ) : null}
+      {error ? <p className="error-text">{error}</p> : null}
+      {message ? <p className="success-banner">{message}</p> : null}
       {plans.length === 0 ? (
         <p className="muted">No saved plans were found for this athlete.</p>
       ) : (
         <div className="admin-athlete-plan-list">
-          {plans.map((plan) => (
-            <Link key={plan.plan_id} href={`/plans/${plan.plan_id}`} className="admin-athlete-plan-row">
-              <span>
-                <strong>{getPlanDisplayName(plan)}</strong>
-                <small>{formatDateTime(plan.created_at)} - fight date {plan.fight_date || "not set"}</small>
-              </span>
-              <span className="badge">{statusLabel(plan.status)}</span>
-            </Link>
-          ))}
+          {plans.map((plan) => {
+            const archived = isArchivedPlan(plan);
+            return (
+              <div key={plan.plan_id} className="admin-athlete-plan-item">
+                {archived ? (
+                  <label className="admin-athlete-plan-select" aria-label={`Select ${getPlanDisplayName(plan)}`}>
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.includes(plan.plan_id)}
+                      onChange={() => toggleSelected(plan.plan_id)}
+                      disabled={isDeleting}
+                    />
+                  </label>
+                ) : (
+                  <span className="admin-athlete-plan-select-spacer" aria-hidden="true" />
+                )}
+                <Link href={`/plans/${plan.plan_id}`} className="admin-athlete-plan-row">
+                  <span>
+                    <strong>{getPlanDisplayName(plan)}</strong>
+                    <small>{formatDateTime(plan.created_at)} - fight date {plan.fight_date || "not set"}</small>
+                  </span>
+                  <span className="badge">{statusLabel(plan.status)}</span>
+                </Link>
+              </div>
+            );
+          })}
         </div>
       )}
     </article>
@@ -264,6 +371,13 @@ export default function AdminAthletePage() {
   const handleRetry = useCallback(() => {
     setLoadError(null);
     setReloadKey((value) => value + 1);
+  }, []);
+  const handlePlansDeleted = useCallback((deletedPlanIds: string[]) => {
+    if (!deletedPlanIds.length) {
+      return;
+    }
+    const removed = new Set(deletedPlanIds);
+    setAthletePlans((current) => current.filter((plan) => !removed.has(plan.plan_id)));
   }, []);
   const latestIntakeFocusValidation = athlete?.latest_intake
     ? validatePerformanceFocusSelections(
@@ -542,7 +656,12 @@ export default function AdminAthletePage() {
           ) : null}
 
           <AthleteProfileOverviewCard athlete={athlete} />
-          <AthletePlanAccessCard plans={athletePlans} warning={plansLoadWarning} />
+          <AthletePlanAccessCard
+            plans={athletePlans}
+            warning={plansLoadWarning}
+            accessToken={session?.access_token ?? null}
+            onPlansDeleted={handlePlansDeleted}
+          />
           <article className="step-card">
             <div className="form-section-header">
               <div>
