@@ -96,14 +96,27 @@ def _resolve_fight_date(planning_brief: dict[str, Any]) -> Any:
 class _ContactDay:
     """A deterministic coach-led/sparring day to guarantee in the structured plan."""
 
-    __slots__ = ("date", "d_day", "headline", "day_type", "phase")
+    __slots__ = ("date", "d_day", "headline", "day_type", "phase", "week_index")
 
-    def __init__(self, *, date: str | None, d_day: int | None, headline: str, day_type: str, phase: str):
+    def __init__(
+        self,
+        *,
+        date: str | None,
+        d_day: int | None,
+        headline: str,
+        day_type: str,
+        phase: str,
+        week_index: int,
+    ):
         self.date = date
         self.d_day = d_day
         self.headline = headline
         self.day_type = day_type
         self.phase = phase
+        # 1-based week number, matching the structured plan's ``week_index``. This
+        # is the authoritative home week for the day and is what insertion targets
+        # first, so a dropped day at a week boundary still lands in the right week.
+        self.week_index = week_index
 
 
 def _deterministic_contact_days(planning_brief: dict[str, Any]) -> list[_ContactDay]:
@@ -125,7 +138,10 @@ def _deterministic_contact_days(planning_brief: dict[str, Any]) -> list[_Contact
         if not isinstance(schedule, dict):
             continue
         phase = str(schedule.get("phase") or "").strip().upper()
-        for day in schedule.get("days") or []:
+        days = schedule.get("days")
+        if not isinstance(days, list):
+            continue
+        for day in days:
             if not isinstance(day, dict):
                 continue
             load = str(day.get("effective_load") or "").strip().lower()
@@ -148,6 +164,7 @@ def _deterministic_contact_days(planning_brief: dict[str, Any]) -> list[_Contact
                     headline=_HEADLINE_BY_LOAD.get(load, _HEADLINE_BY_LOAD["technical"]),
                     day_type=_DAY_TYPE_BY_LOAD.get(load, "moderate"),
                     phase=phase,
+                    week_index=week_index + 1,
                 )
             )
     return contact_days
@@ -193,17 +210,24 @@ def _week_day_keys(week: dict[str, Any]) -> tuple[set[str], set[int]]:
 def _week_covers(week: dict[str, Any], contact: _ContactDay) -> bool:
     """True when this structured week is the home for a contact day.
 
-    Prefers the week's declared date span, then its countdown (D-day) span derived
-    from the days it already carries — whichever can be resolved.
+    Fallback for when ``week_index`` matching fails (e.g. the converter misnumbered
+    a week). Uses the week's *full declared span* — date range and countdown
+    (``countdown_start``/``countdown_end``) bounds — before falling back to the
+    span of the days actually present. Anchoring on the declared span (not just the
+    remaining days) is what keeps a dropped day at a week boundary in scope.
     """
     start = str(week.get("start_date") or "").strip()
     end = str(week.get("end_date") or "").strip()
-    if contact.date and start and end:
-        if start <= contact.date <= end:
-            return True
-        # A definite date that sits outside this week's span rules the week out.
-        return False
+    if contact.date and start and end and start <= contact.date <= end:
+        return True
     if contact.d_day is not None:
+        cd_start = _parse_dday(week.get("countdown_start"))
+        cd_end = _parse_dday(week.get("countdown_end"))
+        if cd_start is not None and cd_end is not None:
+            lo, hi = min(cd_start, cd_end), max(cd_start, cd_end)
+            if lo <= contact.d_day <= hi:
+                return True
+        # Last resort: the span of the days the converter actually emitted.
         _, ddays = _week_day_keys(week)
         if ddays and min(ddays) <= contact.d_day <= max(ddays):
             return True
@@ -270,7 +294,10 @@ def _reconcile(structured_plan: Any, planning_brief: Any) -> list[str]:
     for week in weeks:
         if not isinstance(week, dict):
             continue
-        for day in week.get("days") or []:
+        days = week.get("days")
+        if not isinstance(days, list):
+            continue
+        for day in days:
             if not isinstance(day, dict):
                 continue
             date = str(day.get("date") or "").strip()
@@ -319,10 +346,24 @@ def _reconcile(structured_plan: Any, planning_brief: Any) -> list[str]:
             continue
         if contact.date is None and contact.d_day is not None and contact.d_day in present_ddays:
             continue
+        # Primary: the authoritative home week from the role map (week_index). This
+        # is exact and immune to the boundary case where a dropped day sits outside
+        # the span of the days the converter happened to keep. Fall back to span
+        # coverage only when no week carries the matching index (e.g. a misnumbered
+        # converter week).
         target_week = next(
-            (week for week in weeks if isinstance(week, dict) and _week_covers(week, contact)),
+            (
+                week
+                for week in weeks
+                if isinstance(week, dict) and week.get("week_index") == contact.week_index
+            ),
             None,
         )
+        if target_week is None:
+            target_week = next(
+                (week for week in weeks if isinstance(week, dict) and _week_covers(week, contact)),
+                None,
+            )
         if target_week is None:
             continue
         new_day = _build_coach_led_day(contact, phase_fallback=default_phase)

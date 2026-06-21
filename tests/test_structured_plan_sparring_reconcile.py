@@ -52,6 +52,26 @@ def _planning_brief(hard_plan: list[dict], *, span_days: int = 7, end_d: int = 2
     }
 
 
+def _week_calendar(span_days: int, end_d: int) -> list[dict]:
+    weekdays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+    return [
+        {"weekday": weekdays[offset % 7], "d_day": end_d + (span_days - 1 - offset)}
+        for offset in range(span_days)
+    ]
+
+
+def _multi_week_brief() -> dict:
+    # Week 1 Thursday -> D-31, week 2 Thursday -> D-24.
+    return {
+        "weekly_role_map": {
+            "weeks": [
+                {"phase": "SPP", "calendar_days": _week_calendar(7, 28), "hard_sparring_plan": _hard_thursday()},
+                {"phase": "SPP", "calendar_days": _week_calendar(7, 21), "hard_sparring_plan": _hard_thursday()},
+            ]
+        }
+    }
+
+
 def _day(countdown: str, *, headline: str = "", sessions: list | None = None) -> dict:
     return {
         "date": "",
@@ -62,19 +82,17 @@ def _day(countdown: str, *, headline: str = "", sessions: list | None = None) ->
     }
 
 
-def _structured_plan(days: list[dict]) -> dict:
-    return {
-        "weeks": [
-            {
-                "week_id": "wk-1",
-                "week_index": 1,
-                "phase_label": "SPP",
-                "start_date": "",
-                "end_date": "",
-                "days": days,
-            }
-        ]
+def _structured_plan(days: list[dict], *, week_index: int = 1, **week_extra) -> dict:
+    week = {
+        "week_id": f"wk-{week_index}",
+        "week_index": week_index,
+        "phase_label": "SPP",
+        "start_date": "",
+        "end_date": "",
+        "days": days,
     }
+    week.update(week_extra)
+    return {"weeks": [week]}
 
 
 def _hard_thursday() -> list[dict]:
@@ -182,3 +200,47 @@ def test_does_not_double_insert_when_day_present_with_sessions():
     plan = _structured_plan([_day("D-31", headline="Lower strength", sessions=real_session)])
     reconcile_coach_led_sparring_days(plan, _planning_brief(_hard_thursday()))
     assert len(plan["weeks"][0]["days"]) == 1
+
+
+def test_inserts_dropped_boundary_sparring_day():
+    # Thursday is D-31. The converter dropped it AND only kept later days (D-30,
+    # D-29), so D-31 sits *outside* the span of the remaining days. The role-map
+    # week_index must still anchor it into the right week at the front.
+    plan = _structured_plan([_day("D-30", headline="Strength"), _day("D-29", headline="Aerobic")])
+    notes = reconcile_coach_led_sparring_days(plan, _planning_brief(_hard_thursday()))
+
+    days = plan["weeks"][0]["days"]
+    assert [d["countdown_label"] for d in days] == ["D-31", "D-30", "D-29"]
+    assert days[0]["today_card"]["headline"] == "Coach-led sparring"
+    assert any("inserted" in note for note in notes)
+
+
+def test_targets_correct_week_by_index_in_multi_week_plan():
+    # Two weeks each with a Thursday hard day (wk1 -> D-31, wk2 -> D-24). Each
+    # dropped day must land in its own week, never bleed across the boundary.
+    brief = _multi_week_brief()
+    plan = {
+        "weeks": [
+            {"week_id": "wk-1", "week_index": 1, "phase_label": "SPP", "start_date": "", "end_date": "",
+             "days": [_day("D-33", headline="Strength")]},
+            {"week_id": "wk-2", "week_index": 2, "phase_label": "SPP", "start_date": "", "end_date": "",
+             "days": [_day("D-26", headline="Strength")]},
+        ]
+    }
+    reconcile_coach_led_sparring_days(plan, brief)
+
+    wk1 = [d["countdown_label"] for d in plan["weeks"][0]["days"]]
+    wk2 = [d["countdown_label"] for d in plan["weeks"][1]["days"]]
+    assert "D-31" in wk1 and "D-31" not in wk2
+    assert "D-24" in wk2 and "D-24" not in wk1
+
+
+def test_span_fallback_inserts_when_week_index_does_not_match():
+    # The converter misnumbered the week (week_index 99), so exact matching fails;
+    # the span fallback (present-day D-day range covers D-31) still inserts it.
+    plan = _structured_plan(
+        [_day("D-33", headline="Strength"), _day("D-30", headline="Aerobic")],
+        week_index=99,
+    )
+    reconcile_coach_led_sparring_days(plan, _planning_brief(_hard_thursday()))
+    assert [d["countdown_label"] for d in plan["weeks"][0]["days"]] == ["D-33", "D-31", "D-30"]
