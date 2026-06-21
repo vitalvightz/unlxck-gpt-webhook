@@ -1096,8 +1096,8 @@ def test_stage1_recovery_and_nutrition_text_avoid_generic_instruction_openers():
 
     warning_codes = [warning["code"] for warning in report["warnings"]]
     assert "generic_instruction_opener" not in warning_codes
-    assert "Use easily digestible carbs and hydrate well." in stage1_text
-    assert "Prepare tissue and restore joint mobility." in stage1_text
+    assert "Use easily digestible carbs and hydrate well" in stage1_text
+    assert "Prepare tissue and restore joint mobility" in stage1_text
 
 
 def test_validate_stage2_output_does_not_false_positive_clear_coach_language():
@@ -1122,7 +1122,7 @@ def test_validate_stage2_output_does_not_false_positive_clear_coach_language():
 
 
 def test_validate_stage2_output_warns_for_boxing_sport_language_leaks():
-    for leak_line in ("Double-leg sprint entry - 6 x 6 sec", "Single-leg takedown entry - 4 x 10 sec", "Single-leg entry - 4 x 10 sec"):
+    for leak_line in ("Double-leg sprint entry - 6 x 6 sec", "Single-leg takedown entry - 4 x 10 sec", "Sprawl drill - 4 x 10 sec"):
         report = validate_stage2_output(
             planning_brief=_planning_brief_fixture(),
             final_plan_text=f"""

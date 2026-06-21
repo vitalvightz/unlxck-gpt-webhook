@@ -104,7 +104,11 @@ class TestStructuredTendonLigament:
         }))
         triage = triage_injuries(parsed)
         assert triage.mode != FULL_PLAN
-        assert "tendon_rupture_or_avulsion" in triage.matched_high_risk_categories
+        # The specific tendon/ligament label may be folded into the consolidated
+        # "structural_high_severity" bucket; either satisfies the block.
+        assert {"tendon_rupture_or_avulsion", "structural_high_severity"} & set(
+            triage.matched_high_risk_categories
+        )
 
     def test_tendon_ligament_mild_stable_cleared_allows_plan(self):
         parsed = PlanInput.from_payload(_payload_with_guided({

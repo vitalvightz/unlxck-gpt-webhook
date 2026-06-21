@@ -643,13 +643,27 @@ def _attach_severity_provenance(
             injury["severity_evidence"] = [f"guided severity: {guided_severity}"]
             continue
 
+        default_type_severity = _GUIDED_SEVERITY_MAP.get(INJURY_TYPE_SEVERITY.get(injury_type, ""))
+        # "unspecified" (and empty) injury types carry no real severity signal,
+        # so they must fall through to the explicit fallback default rather than
+        # borrowing a default-type severity.
+        if injury_type in ("", "unspecified"):
+            default_type_severity = None
+
         if text_has_signal:
+            # Benign qualifiers like "minor"/"slight" escalate nothing and must
+            # not pull a recognised injury type below its default floor: "minor
+            # swelling" stays at the swelling default (moderate), not low.
+            if default_type_severity and _severity_rank(text_severity) < _severity_rank(default_type_severity):
+                injury["severity"] = default_type_severity
+                injury["severity_source"] = "injury_type_default"
+                injury["severity_evidence"] = [f"injury type default: {injury_type}"]
+                continue
             injury["severity"] = text_severity
             injury["severity_source"] = "text_detected"
             injury["severity_evidence"] = [f"text severity: {text_severity}", *text_hits]
             continue
 
-        default_type_severity = _GUIDED_SEVERITY_MAP.get(INJURY_TYPE_SEVERITY.get(injury_type, ""))
         if default_type_severity:
             injury["severity"] = default_type_severity
             injury["severity_source"] = "injury_type_default"

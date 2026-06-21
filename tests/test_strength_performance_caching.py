@@ -72,15 +72,20 @@ def test_strength_reservoir_cap_logs_degrade(monkeypatch, caplog):
 
 def test_knee_instability_payload_reaches_conditioning_without_timeout():
     pytest.importorskip("fastapi")
-    from tests.support import make_training_payload
-    from fightcamp.api_generation import generate_plan
+    from fightcamp.main import generate_plan_sync
+    from support import _build_request
 
-    payload = make_training_payload(
-        injuries=["Right knee is wobbly (low, stable). Type: instability"],
-        days_until_fight=21,
+    payload = _build_request(
+        {"injuries": "Right knee is wobbly (low, stable). Type: instability"}
+    ).to_payload()
+
+    codes: list[str] = []
+    result = generate_plan_sync(
+        payload,
+        progress_callback=lambda code, *_args: codes.append(code),
     )
-    response = generate_plan(payload)
-    codes = [m.get("code") for m in response.get("milestones", [])]
+
+    assert result.get("status") != "invalid_input", result
     assert "stage1_strength_phase_gpp_finished" in codes
     assert "stage1_strength_phase_spp_finished" in codes
     assert "stage1_strength_block_finished" in codes
