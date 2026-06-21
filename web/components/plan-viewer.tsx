@@ -1705,8 +1705,7 @@ export function PlanViewer({
       router.refresh();
     },
   });
-  const structuredPlanFallbackUnlocked =
-    structuredPlanWaitState.planId === plan.plan_id && structuredPlanWaitState.fallbackUnlocked;
+  const structuredPlanFallbackUnlocked = Boolean(unlockedPlans[plan.plan_id]);
   const shouldHoldPlanTextFallback = shouldHoldPlanTextFallbackForStructuredPlan({
     hasPublishedPlan,
     hasStructuredPlan: hasStructuredAthletePlan,
