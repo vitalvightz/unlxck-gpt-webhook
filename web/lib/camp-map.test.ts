@@ -13,6 +13,7 @@ import {
   toISODate,
   weekCompletion,
   weekLoadProxy,
+  weekSessionSummary,
 } from "./camp-map.ts";
 import type { StructuredPlan } from "@/lib/types";
 
@@ -101,6 +102,42 @@ test("weekCompletion and dayCompletion count done sessions", () => {
   assert.deepEqual(weekCompletion(week1), { done: 2, total: 3 });
   assert.deepEqual(dayCompletion(week1.days![0]!), { done: 1, total: 2 });
   assert.deepEqual(dayCompletion(week1.days![1]!), { done: 1, total: 1 });
+});
+
+test("weekSessionSummary separates app sessions from coach-led days", () => {
+  const week = {
+    days: [
+      {
+        date: "2026-06-18",
+        sessions: [{ session_id: "s1", title: "Lower strength", blocks: [] }],
+      },
+      {
+        date: "2026-06-19",
+        sessions: [{ session_id: "s2", title: "Conditioning", blocks: [] }],
+      },
+      {
+        date: "2026-06-20",
+        today_card: { headline: "Coach-led boxing session" },
+        sessions: [],
+      },
+      {
+        date: "2026-06-21",
+        today_card: { headline: "Coach-led sparring" },
+        sessions: [],
+      },
+      {
+        date: "2026-06-22",
+        day_type: "rest",
+        sessions: [],
+      },
+    ],
+  };
+
+  assert.deepEqual(weekSessionSummary(week), {
+    trainingDays: 4,
+    appSessions: 2,
+    coachLedSessions: 2,
+  });
 });
 
 test("weekLoadProxy returns the most demanding day type, titleized", () => {

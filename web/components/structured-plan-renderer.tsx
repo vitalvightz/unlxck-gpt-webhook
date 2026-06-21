@@ -37,6 +37,7 @@ import {
   resolvePlanProgress,
   weekCompletion,
   weekLoadProxy,
+  weekSessionSummary,
   type Completion,
 } from "@/lib/camp-map";
 import { useTrainingDay } from "@/lib/use-training-day";
@@ -906,6 +907,7 @@ function WeekOverview({ week }: { week: StructuredWeek }) {
   const goal = cleanText(week.week_goal);
   const load = weekLoadProxy(week);
   const completion = weekCompletion(week);
+  const sessionSummary = weekSessionSummary(week);
   const days = getDays(week);
   const countdownStart = cleanText(week.countdown_start);
   const countdownEnd = cleanText(week.countdown_end);
@@ -925,9 +927,20 @@ function WeekOverview({ week }: { week: StructuredWeek }) {
     { label: "Countdown", value: countdownRange },
     { label: "Dates", value: dateRange },
     { label: "Load", value: load },
-    { label: "Days", value: days.length > 0 ? `${days.length}` : null },
     {
-      label: "Completed",
+      label: "Training days",
+      value: sessionSummary.trainingDays > 0 ? `${sessionSummary.trainingDays}` : null,
+    },
+    {
+      label: "App sessions",
+      value: sessionSummary.appSessions > 0 ? `${sessionSummary.appSessions}` : null,
+    },
+    {
+      label: "Coach-led sessions",
+      value: sessionSummary.coachLedSessions > 0 ? `${sessionSummary.coachLedSessions}` : null,
+    },
+    {
+      label: "App completion",
       value: completion.total > 0 ? `${completion.done}/${completion.total}` : null,
     },
   ].filter((row): row is { label: string; value: string } => Boolean(row.value));
