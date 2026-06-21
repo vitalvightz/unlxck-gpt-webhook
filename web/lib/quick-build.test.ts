@@ -82,6 +82,19 @@ test("quickBuildToPlanRequest drops hard sparring days that are not training day
   assert.deepEqual(plan.hard_sparring_days, ["Monday"]);
 });
 
+test("quickBuildToPlanRequest promotes first quick build focus values to primary", () => {
+  const input = buildValidInput();
+  input.key_goals = ["power", "conditioning"];
+  input.weak_areas = ["mobility", "coordination"];
+
+  const plan = quickBuildToPlanRequest(input);
+
+  assert.deepEqual(plan.key_goals, ["power", "conditioning"]);
+  assert.equal(plan.primary_goal, "power");
+  assert.deepEqual(plan.weak_areas, ["mobility", "coordination"]);
+  assert.equal(plan.primary_weak_area, "mobility");
+});
+
 test("planRequestToQuickBuildInput pulls advanced onboarding fields", () => {
   const plan = emptyPlanRequest("Athlete");
   plan.athlete.technical_style = ["boxing"];

@@ -53,6 +53,7 @@ import {
   matchesEquipmentPreset,
   matchesFocusPreset,
   matchesTrainingPreset,
+  resolveFocusPresetSelections,
   type EquipmentPreset,
   type EquipmentPresetKey,
   type FocusPreset,
@@ -87,18 +88,34 @@ const QUICK_BUILD_STARTERS: QuickBuildStarter[] = [
   {
     key: "power",
     label: "Power build",
-    description: "5 days, full gym, explosive power",
+    description: "5 days, full gym, power",
     trainingPreset: "five_days",
     equipmentPreset: "full_gym",
     focusPreset: "explosive_power",
   },
   {
-    key: "home",
-    label: "Home camp",
-    description: "3 days, home kit, recovery",
+    key: "speed",
+    label: "Speed camp",
+    description: "4 days, basic gym, speed",
+    trainingPreset: "four_days",
+    equipmentPreset: "basic_gym",
+    focusPreset: "speed_footwork",
+  },
+  {
+    key: "cut_support",
+    label: "Cut support",
+    description: "5 days, basic gym, weight cut",
+    trainingPreset: "five_days",
+    equipmentPreset: "basic_gym",
+    focusPreset: "weight_cut_support",
+  },
+  {
+    key: "home_control",
+    label: "Home control",
+    description: "3 days, home kit, mobility",
     trainingPreset: "three_days",
     equipmentPreset: "home",
-    focusPreset: "mobility_recovery",
+    focusPreset: "mobility_control",
   },
 ];
 
@@ -226,7 +243,7 @@ type LabelledPreset = {
 
 function presetToOption(preset: LabelledPreset): IntakeOption {
   return {
-    label: `${preset.label} — ${preset.description}`,
+    label: `${preset.label} - ${preset.description}`,
     value: preset.key,
   };
 }
@@ -293,6 +310,15 @@ function QuickBuildFormInner() {
   const sharedFocusCap = focusValidation?.cap?.maxSelections ?? null;
   const sharedFocusCount = input.key_goals.length + input.weak_areas.length;
   const sharedFocusCapReached = sharedFocusCap !== null && sharedFocusCount >= sharedFocusCap;
+  const focusPresetLimits = useMemo(
+    () => ({
+      goalLimit: QUICK_BUILD_KEY_GOAL_CAP,
+      weakAreaLimit: QUICK_BUILD_WEAK_AREA_CAP,
+      sharedLimit: sharedFocusCap,
+      daysOutCtx,
+    }),
+    [daysOutCtx, sharedFocusCap],
+  );
   const unavailableGoalValues = useMemo(
     () => KEY_GOAL_OPTIONS
       .filter((option) => !getPerformanceFocusOptionAvailability(daysOutCtx, "key_goals", option.value).available)
@@ -315,16 +341,16 @@ function QuickBuildFormInner() {
     [input.training_availability, input.weekly_training_frequency],
   );
   const activeFocusPreset = useMemo(
-    () => matchesFocusPreset(input.key_goals, input.weak_areas),
-    [input.key_goals, input.weak_areas],
+    () => matchesFocusPreset(input.key_goals, input.weak_areas, focusPresetLimits),
+    [focusPresetLimits, input.key_goals, input.weak_areas],
   );
   const availableFocusPresets = useMemo(
     () => getAvailableFocusPresets({
       fightDate: input.fight_date,
       noScheduledFight: input.no_scheduled_fight,
-      timeZone: typeof Intl !== "undefined" ? Intl.DateTimeFormat().resolvedOptions().timeZone : null,
+      limits: focusPresetLimits,
     }),
-    [input.fight_date, input.no_scheduled_fight],
+    [focusPresetLimits, input.fight_date, input.no_scheduled_fight],
   );
   const maxWeeklySessions = input.training_availability.length;
   const sessionsSelectDisabled = maxWeeklySessions === 0;
@@ -503,6 +529,7 @@ function QuickBuildFormInner() {
       return;
     }
     setSubmitError(null);
+    const focusSelections = resolveFocusPresetSelections(focusEntry.preset, focusPresetLimits);
     setInput((currentInput) => ({
       ...currentInput,
       training_availability: [...trainingPreset.training_availability],
@@ -511,8 +538,8 @@ function QuickBuildFormInner() {
         trainingPreset.training_availability.includes(day),
       ),
       equipment_access: [...equipmentPreset.equipment_access],
-      key_goals: [...focusEntry.preset.key_goals],
-      weak_areas: [...focusEntry.preset.weak_areas],
+      key_goals: focusSelections.key_goals,
+      weak_areas: focusSelections.weak_areas,
     }));
   }
 
@@ -578,10 +605,11 @@ function QuickBuildFormInner() {
       setMessage(null);
     }
     setSubmitError(null);
+    const focusSelections = resolveFocusPresetSelections(preset, focusPresetLimits);
     setInput((currentInput) => ({
       ...currentInput,
-      key_goals: [...preset.key_goals],
-      weak_areas: [...preset.weak_areas],
+      key_goals: focusSelections.key_goals,
+      weak_areas: focusSelections.weak_areas,
     }));
   }
 
@@ -662,7 +690,7 @@ function QuickBuildFormInner() {
           planRequest.training_availability,
           planRequest.weekly_training_frequency ?? 0,
         );
-        const focusPresetMatch = matchesFocusPreset(planRequest.key_goals, planRequest.weak_areas);
+        const focusPresetMatch = matchesFocusPreset(planRequest.key_goals, planRequest.weak_areas, focusPresetLimits);
         const draft = {
           ...planRequest,
           current_step: 0,
