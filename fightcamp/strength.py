@@ -139,7 +139,20 @@ LATE_STRENGTH_SAFE_TAGS = {
     "maximal_strength_maintenance",
 }
 LATE_STRENGTH_TIGHT_WINDOWS = {D7, D6_TO_D5, D4_TO_D2, D1}
+# Safety-critical hard blocks apply across every active late window where their
+# condition fires (e.g. D13-D8), not just the tight windows. They must not be
+# dropped by the tight-window block filter.
+LATE_STRENGTH_SAFETY_CRITICAL_BLOCKS = frozenset(
+    {
+        "late_strength_block_high_cut_balance_risk",
+        "late_strength_block_familiarity_required_late",
+    }
+)
 LATE_STRENGTH_TRUE_CLUSTER_BAND = 0.05
+# Bias applied to posterior-chain-specific late-touches when posterior_chain is a
+# stated weakness, so they win the posterior-chain slot ahead of quad-dominant
+# isometrics that merely also carry the posterior_chain tag.
+POSTERIOR_CHAIN_LATE_TOUCH_BIAS = 1.0
 LATE_SAFE_STRENGTH_FIELDS = {
     "late_strength_touch",
     "low_eccentric",
@@ -529,7 +542,21 @@ def _evaluate_strength_late_window(
             "injury_prevention",
         }
     )
-    if late_band_lockout_window and "bands" in equipment and not rehab_mobility_band_ok:
+    # The band-work lockout targets loaded/dense band strength work in the final
+    # week. Low-dose late-safe primers (neural primers, explicit late-strength
+    # touches, ballistic low-volume work) are kept through the earlier final-week
+    # windows, but D1 is the strictest day: no band work survives there, so the
+    # primer exemption does not apply on D1.
+    late_safe_band_primer = (
+        window != D1
+        and (neural_primer or explicit_late_touch or ballistic_low_volume)
+    )
+    if (
+        late_band_lockout_window
+        and "bands" in equipment
+        and not rehab_mobility_band_ok
+        and not late_safe_band_primer
+    ):
         blocks.append("late_strength_block_band_work_lockout")
         reason_codes.append("late_strength_penalty_band_work_lockout")
 
@@ -546,6 +573,12 @@ def _evaluate_strength_late_window(
     }:
         adjustment -= 0.45 * (1.0 + cut_multiplier)
         reason_codes.append("late_strength_penalty_high_cut_sensitive_tags")
+    # Balance is materially compromised during a hard weight cut, so balance-risk
+    # work is hard-blocked (not just penalised) in the late window.
+    if cut_bucket in LATE_STRENGTH_HIGH_CUT_BUCKETS and tags & {
+        "single_leg", "vestibular_sensitive", "balance_challenge"
+    }:
+        blocks.append("late_strength_block_high_cut_balance_risk")
 
     if late_windows:
         if window in late_windows:
@@ -675,7 +708,12 @@ def _evaluate_strength_late_window(
     if window == D1 and "medicine_ball" in set(normalize_equipment_list(exercise.get("equipment", []))) and not explicit_late_metadata:
         blocks.append("late_strength_block_nonexplicit_ballistic_med_ball")
 
-    block_codes = sorted(set(blocks)) if window in LATE_STRENGTH_TIGHT_WINDOWS else []
+    if window in LATE_STRENGTH_TIGHT_WINDOWS:
+        block_codes = sorted(set(blocks))
+    else:
+        # Outside the tight windows (e.g. D13-D8) only safety-critical hard blocks
+        # survive; the window-specific noise/diversity blocks are dropped.
+        block_codes = sorted(b for b in set(blocks) if b in LATE_STRENGTH_SAFETY_CRITICAL_BLOCKS)
     if window in LATE_STRENGTH_TIGHT_WINDOWS and high_cut_window:
         if profile["loaded_lower"] and (
             profile["heavy_loaded_pattern"]
@@ -850,6 +888,20 @@ def score_exercise(
     score += priority_bonus
     reasons["weakness_hits"] = weakness_matches
     reasons["goal_hits"] = goal_matches
+    # A stated posterior-chain weakness should surface a posterior-chain-specific
+    # late-touch (e.g. Isometric Mid-Thigh Pull / Trap-Bar Pin Pull Isometric)
+    # rather than letting a quad-dominant isometric stand in as the posterior-chain
+    # answer. Bias the specific options up so at least one is preferred where it is
+    # safe and available; mixed quad/posterior options stay valid but no longer win
+    # the posterior-chain slot by default.
+    if (
+        "posterior_chain" in weakness_tags
+        and "late_strength_touch" in exercise_tags
+        and "posterior_chain" in exercise_tags
+        and "quad_dominant" not in exercise_tags
+    ):
+        score += POSTERIOR_CHAIN_LATE_TOUCH_BIAS
+        reasons["reason_codes"].append("priority_posterior_chain_late_touch_bias")
     if derived_clarification_tags:
         matched_clarification_tags = sorted(set(exercise_tags) & set(derived_clarification_tags))
         clarification_bonus = min(
