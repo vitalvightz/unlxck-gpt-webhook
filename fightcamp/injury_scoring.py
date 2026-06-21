@@ -248,6 +248,14 @@ def score_injury_phrase(t_clean: str, synonym_map: Dict[str, List[str]] | None =
     if rehab_type != "unspecified" and injury_type not in CANONICAL_TYPES:
         rehab_type = "unspecified"
 
+    # Severe structural injuries are routed by triage_category + flags, never by
+    # a soft rehab type. Mirror parse_injury_phrase: structural red flags force
+    # both injury and rehab type to "unspecified" so dislocations, ruptures and
+    # fractures never land in ordinary rehab buckets.
+    if structural_hit:
+        injury_type = "unspecified"
+        rehab_type = "unspecified"
+
     # E) Location detection (deterministic)
     location = _first_location_hit(t_clean)
 
