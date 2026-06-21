@@ -560,6 +560,12 @@ def _evaluate_strength_late_window(
     }:
         adjustment -= 0.45 * (1.0 + cut_multiplier)
         reason_codes.append("late_strength_penalty_high_cut_sensitive_tags")
+    # Balance is materially compromised during a hard weight cut, so balance-risk
+    # work is hard-blocked (not just penalised) in the late window.
+    if cut_bucket in LATE_STRENGTH_HIGH_CUT_BUCKETS and tags & {
+        "single_leg", "vestibular_sensitive", "balance_challenge"
+    }:
+        blocks.append("late_strength_block_high_cut_balance_risk")
 
     if late_windows:
         if window in late_windows:
