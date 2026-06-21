@@ -13,7 +13,7 @@ import re
 from typing import Any
 
 from .normalization import clean_list, dedupe_preserve_order, normalize_text
-from .stage2_payload_late_fight import _uses_late_fight_stage2_payload
+from .stage2_payload_late_fight import _coerce_days, _uses_late_fight_stage2_payload
 from .stage2_payload_open_ongoing import _uses_open_ongoing_payload
 from .training_context import TrainingContext
 
@@ -78,7 +78,12 @@ def _render_guard_flags(
         }
         or _uses_late_fight_stage2_payload(days_until_fight)
     )
-    open_ongoing_mode = _uses_open_ongoing_payload(athlete_model)
+    # A scheduled fight (a coercible days_until_fight) means the athlete is on a
+    # countdown, not an open-ended system. Honour the explicit parameter so the
+    # open-ongoing fallback only fires when no fight is scheduled, even if the
+    # athlete_model dict itself omits days_until_fight.
+    scheduled_fight = _coerce_days(days_until_fight) is not None
+    open_ongoing_mode = (not scheduled_fight) and _uses_open_ongoing_payload(athlete_model)
     has_active_injury = _has_active_injury_from_athlete_model(athlete_model)
     render_mode = "open_ongoing_system" if open_ongoing_mode else ("late_fight_countdown_only" if late_fight_countdown else "camp_plan")
     return {
