@@ -134,12 +134,16 @@ def test_active_weight_cut_blocks_explicitly_incompatible_strength_item():
 
 
 def test_d7_and_under_blocks_non_rehab_band_strength_work():
+    # Loaded, non-rehab band strength work (no late-safe primer markers) is locked
+    # out in the final week. Low-dose neural primers are exempt and covered by the
+    # late-camp selector tests.
     result = strength._evaluate_strength_late_window(
         {
-            "name": "Band-Resisted Jab-Cross Primer",
+            "name": "Band-Resisted Heavy Row",
             "phases": ["TAPER"],
-            "movement": "horizontal_push",
-            "tags": ["speed", "explosive", "neural_primer"],
+            "movement": "horizontal_pull",
+            "method": "strength",
+            "tags": ["strength", "loaded", "compound"],
             "equipment": "bands",
         },
         window=D7,

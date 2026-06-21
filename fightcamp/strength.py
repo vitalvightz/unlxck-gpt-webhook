@@ -529,7 +529,17 @@ def _evaluate_strength_late_window(
             "injury_prevention",
         }
     )
-    if late_band_lockout_window and "bands" in equipment and not rehab_mobility_band_ok:
+    # The band-work lockout targets loaded/dense band strength work in the final
+    # week. Low-dose late-safe primers (neural primers, explicit late-strength
+    # touches, ballistic low-volume work) are exactly what a taper keeps, so they
+    # are exempt — only dense/loaded band work should be locked out.
+    late_safe_band_primer = neural_primer or explicit_late_touch or ballistic_low_volume
+    if (
+        late_band_lockout_window
+        and "bands" in equipment
+        and not rehab_mobility_band_ok
+        and not late_safe_band_primer
+    ):
         blocks.append("late_strength_block_band_work_lockout")
         reason_codes.append("late_strength_penalty_band_work_lockout")
 
