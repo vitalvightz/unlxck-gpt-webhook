@@ -1391,7 +1391,11 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
     prev_exercises = flags.get("prev_exercises", [])
     recent_movements = set(flags.get("recent_exercises", []))
     cornerstone_terms = {"squat", "deadlift", "bench", "pull-up", "pullup"}
-    exercise_bank = get_exercise_bank()
+    # Bracket the candidate-pool source fetch with substep milestones so a
+    # failure loading the strength bank stays visible (the "*_started" event is
+    # emitted before the fetch) and the warm/cold prime paths report the same
+    # substep.
+    exercise_bank = _run_substep("candidate_pool", get_exercise_bank)
     style_exercises = get_style_exercises()
     universal_strength_names = get_universal_strength_names()
 
@@ -1587,7 +1591,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
             -order_idx,
         )
 
-    for ex in _run_substep("candidate_pool", lambda: exercise_bank):
+    for ex in exercise_bank:
         tags = ex.get("tags", [])
         tags_lower = set(normalize_tags(tags))
         if _exercise_late_windows(ex) and not active_late_window:

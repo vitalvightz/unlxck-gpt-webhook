@@ -287,7 +287,19 @@ def generate_plan_sync(
         return _validate_stage1_result(blocked)
 
     timer_start = perf_counter()
-    prime_plan_banks(logger=logger)
+    try:
+        prime_plan_banks(logger=logger, progress_callback=progress_callback)
+    except Exception as exc:  # noqa: BLE001 - degrade gracefully rather than 500
+        # Bank priming loads and normalizes the strength/conditioning/rehab
+        # libraries. A failure here (e.g. an exhausted strength candidate pool)
+        # has already emitted the corresponding "*_started" milestone, so the
+        # caller can see where generation stopped; degrade to invalid_input
+        # rather than propagating the exception.
+        _record_timing("prime_banks", timer_start)
+        logger.exception("stage1 bank priming failed: %s", exc)
+        return _validate_stage1_result(
+            _invalid_result("plan generation failed while priming exercise banks")
+        )
     _record_timing("prime_banks", timer_start)
     _safe_emit(
         progress_callback,
@@ -344,12 +356,23 @@ def generate_plan_sync(
         "Stage 1 blocks generation started",
         "Building strength, conditioning, recovery, mobility, rehab, and weekly training blocks.",
     )
-    blocks = generate_plan_blocks(
-        context=context,
-        record_timing=_record_timing,
-        logger=logger,
-        progress_callback=progress_callback,
-    )
+    try:
+        blocks = generate_plan_blocks(
+            context=context,
+            record_timing=_record_timing,
+            logger=logger,
+            progress_callback=progress_callback,
+        )
+    except Exception as exc:  # noqa: BLE001 - degrade gracefully rather than 500
+        # A substep failure (e.g. an exhausted candidate pool or a hung
+        # module) should not crash the whole request. The corresponding
+        # "*_started" milestone has already been emitted, so the caller can
+        # still see where generation stopped; surface an invalid_input result
+        # instead of propagating the exception.
+        logger.exception("stage1 block generation failed: %s", exc)
+        return _validate_stage1_result(
+            _invalid_result("plan generation failed while building Stage 1 blocks")
+        )
     _safe_emit(
         progress_callback,
         "stage1_blocks_generation_finished",
