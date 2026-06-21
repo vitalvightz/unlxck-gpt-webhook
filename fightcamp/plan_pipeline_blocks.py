@@ -254,14 +254,18 @@ def _build_rehab_injury_string(context: PlanRuntimeContext) -> str:
         return context.injuries_only_text
 
     # An explicit guided-card injury type (e.g. "instability / giving way") is a
-    # user selection and outranks a type re-derived from the free-text phrase.
+    # user selection and outranks a type re-derived from the free-text phrase —
+    # but only for the entry the card actually describes (matched by area), so a
+    # first card's type is not smeared across unrelated injuries.
     context_guided_type = ""
+    context_guided_area = ""
     guided_source = getattr(context.plan_input, "guided_injury", None)
     if guided_source is None:
         guided_list = getattr(context.plan_input, "guided_injuries", None) or []
         guided_source = guided_list[0] if guided_list else None
     if guided_source is not None:
         context_guided_type = _normalize_guided_injury_type(getattr(guided_source, "injury_type", None))
+        context_guided_area = str(getattr(guided_source, "area", "") or "").strip().lower()
 
     phrases: list[str] = []
     for entry in parsed_entries:
@@ -300,7 +304,7 @@ def _build_rehab_injury_string(context: PlanRuntimeContext) -> str:
 
         injury_type = _normalize_guided_injury_type(entry.get("injury_type"))
         guided_type = _normalize_guided_injury_type(entry.get("guided_source_injury_type") or entry.get("guided_injury_type"))
-        if not guided_type:
+        if not guided_type and context_guided_type and canonical_location and canonical_location in context_guided_area:
             guided_type = context_guided_type
         if guided_type and injury_type in {"", "sprain", "unspecified", "pain", "soreness", "tightness", "stiffness"}:
             injury_type = guided_type
