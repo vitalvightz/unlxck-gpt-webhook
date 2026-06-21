@@ -16,6 +16,7 @@ import {
   sessionIdentity,
   type CurrentDayResolution,
 } from "@/lib/camp-map";
+import { humanizeIfRawEnum } from "@/lib/plan-labels";
 import { useTrainingDay } from "@/lib/use-training-day";
 import {
   TODAY_EMPTY_TEXT,
@@ -24,9 +25,9 @@ import {
   canCompleteTodaySession,
   completionRequiresModificationReason,
   completionRequiresReviewFields,
-  formatSessionValue,
   getCompletionLabel,
   getRecommendationCopy,
+  getSessionFocus,
   getSessionTitle,
   getTodayDecisionBanner,
   getVisibleRiskWatch,
@@ -126,17 +127,6 @@ function formatSessionDate(session: TodaySession): string {
     hasCountdownInDayText ? null : countdown,
   ].filter(Boolean);
   return parts.length ? parts.join(" / ") : "Athlete-local training day";
-}
-
-function getSessionFocus(session: TodaySession): string {
-  return (
-    session.primary_focus?.trim() ||
-    session.emphasis?.trim() ||
-    formatSessionValue(session.effective_load) ||
-    session.reason?.trim() ||
-    session.coach_note?.trim() ||
-    "Follow the current plan guidance."
-  );
 }
 
 function getSessionDuration(session: TodaySession): string | null {
@@ -497,15 +487,21 @@ function DecisionBanner({
   if (!banner) {
     return null;
   }
+  const icon = getRecommendationCopy(state).icon;
   return (
     <div className="today-decision-banner" data-tone={banner.tone} role="status">
-      <p className="today-decision-title">{banner.title}</p>
-      <p className="today-decision-detail">{banner.detail}</p>
-      {state === "pull_back" ? (
-        <p className="today-decision-safety">
-          If pain escalates or red flags appear, stop and switch to recovery work.
-        </p>
-      ) : null}
+      <span className="today-decision-icon" aria-hidden="true">
+        {icon}
+      </span>
+      <div className="today-decision-body">
+        <p className="today-decision-title">{banner.title}</p>
+        <p className="today-decision-detail">{banner.detail}</p>
+        {state === "pull_back" ? (
+          <p className="today-decision-safety">
+            If pain escalates or red flags appear, stop and switch to recovery work.
+          </p>
+        ) : null}
+      </div>
     </div>
   );
 }
@@ -587,6 +583,16 @@ function SessionCard({
   const current = resolveCurrentDay(structuredPlan, trainingDay);
   const showStructuredBlocks = current.inRange && Boolean(current.day);
   const recommendationState = state.today.recommendation_state;
+  // Tint the session card to match today's decision (green/amber/red) so the page
+  // reads at a glance instead of being a wall of identical dark cards. Neutral
+  // (not-checked-in) carries no tone — the card stays default until check-in.
+  const recommendationTone = getRecommendationCopy(recommendationState).tone;
+  const cardTone =
+    recommendationTone === "green" ||
+    recommendationTone === "amber" ||
+    recommendationTone === "red"
+      ? recommendationTone
+      : undefined;
 
   async function saveCompletion(
     nextStatus: TodayCompletionStatus,
@@ -623,14 +629,20 @@ function SessionCard({
 
   if (!hasSession) {
     return (
-      <section id="today-session" className="today-card today-session-card" aria-labelledby="today-session-heading">
+      <section
+        id="today-session"
+        className="today-card today-session-card"
+        data-tone={cardTone}
+        aria-labelledby="today-session-heading"
+      >
         <div className="today-card-head">
           <div>
             <p className="kicker">Today&apos;s session</p>
+            {/* training_day is always present in the initial payload, so headline
+                it unconditionally — gating on the async-loaded structuredPlan
+                caused a flash from "No session scheduled" to the date on load. */}
             <h2 id="today-session-heading">
-              {showStructuredBlocks && current.sessions.length > 0
-                ? "Today's session"
-                : "No session scheduled today"}
+              {formatTrainingDay(state.today.training_day)}
             </h2>
           </div>
         </div>
@@ -644,12 +656,27 @@ function SessionCard({
     );
   }
 
+  const sessionTitle = getSessionTitle(session);
+  // Avoid the "Today's session / Today's session" stutter: when the session has
+  // no real name and falls back to the generic title that already matches the
+  // kicker, headline the training day instead so the eyebrow and heading differ.
+  const headline =
+    sessionTitle.trim().toLowerCase() === "today's session" ||
+    sessionTitle.trim().toLowerCase() === relationCopy.kicker.trim().toLowerCase()
+      ? formatSessionDate(session)
+      : sessionTitle;
+
   return (
-    <section id="today-session" className="today-card today-session-card" aria-labelledby="today-session-heading">
+    <section
+      id="today-session"
+      className="today-card today-session-card"
+      data-tone={cardTone}
+      aria-labelledby="today-session-heading"
+    >
       <div className="today-card-head">
         <div>
           <p className="kicker">{relationCopy.kicker}</p>
-          <h2 id="today-session-heading">{getSessionTitle(session)}</h2>
+          <h2 id="today-session-heading">{headline}</h2>
         </div>
       </div>
       <DecisionBanner state={recommendationState} reason={state.today.recommendation_reason} />
@@ -838,7 +865,7 @@ export function TodayScreen() {
             <p className="muted today-hero-meta">
               {trainingDayLabel}
               {activePlan.phase ? <span aria-hidden="true"> · </span> : null}
-              {activePlan.phase || null}
+              {activePlan.phase ? humanizeIfRawEnum(activePlan.phase) : null}
             </p>
           </div>
           <div className="today-hero-actions">

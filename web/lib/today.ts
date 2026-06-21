@@ -240,6 +240,35 @@ export function getSessionTitle(session: TodaySession): string {
   );
 }
 
+/**
+ * Human-readable focus line for a session — never a raw backend enum. Prefers
+ * the plain-language focus/emphasis fields and only falls back to the humanized
+ * load value, then coach copy. Shared by Today and Overview so both agree.
+ */
+export function getSessionFocus(session: TodaySession): string {
+  return (
+    session.primary_focus?.trim() ||
+    session.emphasis?.trim() ||
+    formatSessionValue(session.effective_load) ||
+    session.reason?.trim() ||
+    session.coach_note?.trim() ||
+    "Follow the current plan guidance."
+  );
+}
+
+/**
+ * Short supporting day line, e.g. "Thu · D-17". Keeps the weekday/countdown
+ * visible as a sub-label so the session type can headline the card instead.
+ */
+export function getSessionDayLabel(session: TodaySession): string {
+  const dayText = (session.weekday_with_label || session.weekday || "").trim();
+  const countdown =
+    typeof session.d_day === "number" ? `D-${Math.abs(session.d_day)}` : (session.day_label || "").trim();
+  const hasCountdownInDayText = Boolean(dayText && countdown && dayText.includes(countdown));
+  const parts = [dayText, hasCountdownInDayText ? "" : countdown].filter(Boolean);
+  return parts.join(" · ");
+}
+
 export function hasTodaySession(session: TodaySession): boolean {
   return Boolean(session.session_id || session.weekday || session.status || session.title);
 }
