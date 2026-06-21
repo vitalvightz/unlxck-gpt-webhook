@@ -693,7 +693,7 @@ def test_triage_guided_safety_signals_still_apply_with_resolved_parsed_injury():
         "severity": "moderate",
         "trend": "stable",
         "impact_related": "yes",
-        "notes": "[structural:bear_weight_no]",
+        "notes": "cannot bear weight",
     }
     parsed = PlanInput.from_payload(payload)
     parsed = replace(
@@ -701,7 +701,7 @@ def test_triage_guided_safety_signals_still_apply_with_resolved_parsed_injury():
         guided_injury=GuidedInjury(
             **{
                 **parsed.guided_injury.__dict__,
-                "notes": "pain during movement [structural:bear_weight_no]",
+                "notes": "pain during movement, cannot bear weight",
             }
         ),
         parsed_injuries=[

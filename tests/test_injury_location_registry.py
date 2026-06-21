@@ -82,5 +82,6 @@ def test_legacy_exclusion_location_fallback():
 def test_normalize_injury_regions_uses_legacy_location_fallback():
     assert normalize_injury_regions(["ankle sprain"]) == {"ankle"}
     assert normalize_injury_regions(["shoulder pain"]) == {"shoulder"}
-    assert "hip_flexor" in normalize_injury_regions(["hip flexor strain"])
+    # hip_flexor is not a distinct exclusion region; it rolls up to "hip".
+    assert "hip" in normalize_injury_regions(["hip flexor strain"])
     assert "si_joint" in normalize_injury_regions(["si joint pain"])

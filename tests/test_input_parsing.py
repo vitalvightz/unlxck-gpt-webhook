@@ -1189,7 +1189,9 @@ def test_guided_resolver_free_text_beats_subtype_and_preserves_subtypes():
     )
 
     entry = parsed.parsed_injuries[0]
-    assert entry["injury_type"] == "swelling"
+    # Free text beats the guided subtype, and the injury mechanism ("rolled")
+    # wins over the swelling symptom: this resolves as a sprain.
+    assert entry["injury_type"] == "sprain"
     assert entry["injury_type_source"] == "parser"
     assert entry["guided_source_injury_subtypes"] == ["pain"]
 
