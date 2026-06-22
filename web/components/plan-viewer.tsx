@@ -1222,13 +1222,11 @@ function BlockedPlanDecisionCard({
 
 function SparringAdvisoryCard({ advisory }: { advisory: PlanAdvisory }) {
   // Surfaced only for advisories carrying a real injury-risk band (see
-  // selectInjuryRiskAdvisory). The directive leads; the verbose, sometimes
-  // boilerplate reasoning is tucked behind a "Why" toggle.
-  const [showWhy, setShowWhy] = useState(false);
+  // selectInjuryRiskAdvisory). The directive leads; generated rationale is
+  // intentionally omitted because it is too noisy for the athlete view.
   const directive = (advisory.replacement || advisory.suggestion || "").trim();
   const daysLabel = (advisory.days || []).join(", ").trim();
   const riskBandLabel = advisory.risk_band ? formatRiskBandLabel(advisory.risk_band) : null;
-  const reason = (advisory.reason || "").trim();
   const explanation = advisory.risk_band ? explainRiskBand(advisory.risk_band) : null;
 
   return (
@@ -1252,19 +1250,6 @@ function SparringAdvisoryCard({ advisory }: { advisory: PlanAdvisory }) {
         ) : null}
       </div>
       {directive ? <p className="sparring-advisory-suggestion">{directive}</p> : null}
-      {reason ? (
-        <>
-          <button
-            type="button"
-            className="sparring-advisory-why-toggle"
-            aria-expanded={showWhy}
-            onClick={() => setShowWhy((prev) => !prev)}
-          >
-            {showWhy ? "Hide why" : "Why this flag"}
-          </button>
-          {showWhy ? <p className="muted sparring-advisory-reason">{reason}</p> : null}
-        </>
-      ) : null}
       <p className="muted sparring-advisory-disclaimer">{advisory.disclaimer}</p>
     </section>
   );
