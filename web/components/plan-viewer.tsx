@@ -43,7 +43,11 @@ const TRIAGE_RESUME_FETCH_DELAY_MS = 800;
 const APPROVE_RECOVERY_FETCH_ATTEMPTS = 3;
 const APPROVE_RECOVERY_FETCH_DELAY_MS = 800;
 const STRUCTURED_PLAN_POLL_INTERVAL_MS = 2500;
-const STRUCTURED_PLAN_FALLBACK_DELAY_MS = 120_000;
+// Background structuring usually lands within a few seconds; cap the athlete-facing
+// "finalising" spinner at 30s so a plan whose structured card was legitimately
+// skipped/declined (raw plan_text is the intended final output) falls back to the
+// ready text plan quickly instead of holding for two minutes.
+const STRUCTURED_PLAN_FALLBACK_DELAY_MS = 30_000;
 const STRUCTURED_PLAN_RECENT_PLAN_THRESHOLD_MS = 5 * 60_000;
 
 const ATHLETE_VISIBLE_STATUSES = new Set(["ready", "publishable_with_flags"]);
