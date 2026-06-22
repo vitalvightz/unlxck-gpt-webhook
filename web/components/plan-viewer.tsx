@@ -115,6 +115,35 @@ export function isRecentlyCreatedPlan(
   return now - createdAt <= STRUCTURED_PLAN_RECENT_PLAN_THRESHOLD_MS;
 }
 
+/**
+ * Whether the background upgrade poll should run for this plan.
+ *
+ * Unlike the visible "enhancing" hint (shouldAwaitStructuredPlanUpgrade), this is
+ * deliberately NOT gated on plan recency. A published plan that is still missing
+ * its structured card should keep trying to pick one up whenever its view is
+ * open — including an older plan whose card was only built later (e.g. after a
+ * held blocker cleared or a backfill ran), which the 5-minute recency gate would
+ * otherwise leave stuck on the template card until a manual reload. The
+ * mount-scoped poll window (pollWindowExpired) still bounds the cost so we never
+ * poll a legacy cardless plan forever, and the swap happens silently for
+ * non-recent plans (no misleading hint).
+ */
+export function shouldPollForStructuredPlanUpgrade(params: {
+  hasPublishedPlan: boolean;
+  hasStructuredPlan: boolean;
+  pollWindowExpired: boolean;
+  hasAccessToken: boolean;
+  isTriageBlocked?: boolean;
+}): boolean {
+  return (
+    params.hasPublishedPlan &&
+    !params.hasStructuredPlan &&
+    !params.pollWindowExpired &&
+    params.hasAccessToken &&
+    params.isTriageBlocked !== true
+  );
+}
+
 function getApprovalSuccessMessage(plan: Pick<PlanDetail, "outputs">): string {
   return shouldRenderStructuredPlan(plan.outputs)
     ? "Plan approved and released to the athlete view."
@@ -1843,15 +1872,18 @@ export function PlanViewer({
   // Background upgrade poll: the template card is already on screen, so this just
   // watches for the richer structured card to finish building server-side and
   // swaps it in. It never blocks the view; when the poll window elapses we simply
-  // stop and leave the template card in place.
+  // stop and leave the template card in place. Runs for any open published plan
+  // still missing its card (not only recent ones) so an older plan whose card
+  // lands later upgrades without a manual reload; the window below bounds the cost.
   useEffect(() => {
     if (
-      !accessToken ||
-      !hasPublishedPlan ||
-      hasStructuredAthletePlan ||
-      isTriageBlocked ||
-      structuredPlanPollExpired ||
-      !isRecentPlan
+      !shouldPollForStructuredPlanUpgrade({
+        hasPublishedPlan,
+        hasStructuredPlan: hasStructuredAthletePlan,
+        pollWindowExpired: structuredPlanPollExpired,
+        hasAccessToken: Boolean(accessToken),
+        isTriageBlocked,
+      })
     ) {
       return;
     }
@@ -1897,7 +1929,6 @@ export function PlanViewer({
     hasPublishedPlan,
     hasStructuredAthletePlan,
     isTriageBlocked,
-    isRecentPlan,
     onPlanUpdated,
     plan.plan_id,
     structuredPlanPollExpired,

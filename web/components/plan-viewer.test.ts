@@ -16,6 +16,7 @@ import {
   readRawTriageMode,
   resolveApprovalAfterError,
   shouldAwaitStructuredPlanUpgrade,
+  shouldPollForStructuredPlanUpgrade,
   shouldShowProtectedResumeAdminReview,
 } from "./plan-viewer";
 import { ApiError, RETRYABLE_NETWORK_MESSAGE } from "@/lib/api";
@@ -276,6 +277,51 @@ test("plans without an access token cannot await a structured upgrade", () => {
       pollWindowExpired: false,
       hasAccessToken: false,
       isRecentPlan: true,
+    }),
+    false,
+  );
+});
+
+test("the upgrade poll keeps running for an older published plan still missing its card", () => {
+  // The key fix: a plan whose card lands after the 5-minute recency window (e.g.
+  // approved several minutes after generation) must still auto-swap on an open
+  // view. The poll is NOT recency-gated, unlike the visible hint.
+  assert.equal(
+    shouldPollForStructuredPlanUpgrade({
+      hasPublishedPlan: true,
+      hasStructuredPlan: false,
+      pollWindowExpired: false,
+      hasAccessToken: true,
+    }),
+    true,
+  );
+  // But it stops once the card exists, the mount-scoped window elapses, the plan
+  // isn't published, the token is missing, or the plan is triage-blocked.
+  assert.equal(
+    shouldPollForStructuredPlanUpgrade({
+      hasPublishedPlan: true,
+      hasStructuredPlan: true,
+      pollWindowExpired: false,
+      hasAccessToken: true,
+    }),
+    false,
+  );
+  assert.equal(
+    shouldPollForStructuredPlanUpgrade({
+      hasPublishedPlan: true,
+      hasStructuredPlan: false,
+      pollWindowExpired: true,
+      hasAccessToken: true,
+    }),
+    false,
+  );
+  assert.equal(
+    shouldPollForStructuredPlanUpgrade({
+      hasPublishedPlan: true,
+      hasStructuredPlan: false,
+      pollWindowExpired: false,
+      hasAccessToken: true,
+      isTriageBlocked: true,
     }),
     false,
   );
