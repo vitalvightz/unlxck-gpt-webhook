@@ -15,7 +15,7 @@ import {
   readInjuryTriage,
   readRawTriageMode,
   resolveApprovalAfterError,
-  shouldHoldPlanTextFallbackForStructuredPlan,
+  shouldAwaitStructuredPlanUpgrade,
   shouldShowProtectedResumeAdminReview,
 } from "./plan-viewer";
 import { ApiError, RETRYABLE_NETWORK_MESSAGE } from "@/lib/api";
@@ -205,12 +205,12 @@ test("isPlanReleasedToAthlete requires an athlete-visible status with plan text"
   );
 });
 
-test("recent published plan without structured card holds the text fallback", () => {
+test("recent published plan without structured card awaits the background upgrade", () => {
   assert.equal(
-    shouldHoldPlanTextFallbackForStructuredPlan({
+    shouldAwaitStructuredPlanUpgrade({
       hasPublishedPlan: true,
       hasStructuredPlan: false,
-      fallbackUnlocked: false,
+      pollWindowExpired: false,
       hasAccessToken: true,
       isRecentPlan: true,
     }),
@@ -218,22 +218,22 @@ test("recent published plan without structured card holds the text fallback", ()
   );
 });
 
-test("structured card or timeout unlocks the published plan view", () => {
+test("structured card or an elapsed poll window stops awaiting the upgrade", () => {
   assert.equal(
-    shouldHoldPlanTextFallbackForStructuredPlan({
+    shouldAwaitStructuredPlanUpgrade({
       hasPublishedPlan: true,
       hasStructuredPlan: true,
-      fallbackUnlocked: false,
+      pollWindowExpired: false,
       hasAccessToken: true,
       isRecentPlan: true,
     }),
     false,
   );
   assert.equal(
-    shouldHoldPlanTextFallbackForStructuredPlan({
+    shouldAwaitStructuredPlanUpgrade({
       hasPublishedPlan: true,
       hasStructuredPlan: false,
-      fallbackUnlocked: true,
+      pollWindowExpired: true,
       hasAccessToken: true,
       isRecentPlan: true,
     }),
@@ -241,12 +241,12 @@ test("structured card or timeout unlocks the published plan view", () => {
   );
 });
 
-test("triage blocked plans do not enter the structured-card hold", () => {
+test("triage blocked plans do not await a structured-card upgrade", () => {
   assert.equal(
-    shouldHoldPlanTextFallbackForStructuredPlan({
+    shouldAwaitStructuredPlanUpgrade({
       hasPublishedPlan: true,
       hasStructuredPlan: false,
-      fallbackUnlocked: false,
+      pollWindowExpired: false,
       hasAccessToken: true,
       isRecentPlan: true,
       isTriageBlocked: true,
@@ -255,12 +255,12 @@ test("triage blocked plans do not enter the structured-card hold", () => {
   );
 });
 
-test("legacy plans without a structured card do not enter the hold", () => {
+test("legacy plans without a structured card do not await an upgrade", () => {
   assert.equal(
-    shouldHoldPlanTextFallbackForStructuredPlan({
+    shouldAwaitStructuredPlanUpgrade({
       hasPublishedPlan: true,
       hasStructuredPlan: false,
-      fallbackUnlocked: false,
+      pollWindowExpired: false,
       hasAccessToken: true,
       isRecentPlan: false,
     }),
@@ -268,12 +268,12 @@ test("legacy plans without a structured card do not enter the hold", () => {
   );
 });
 
-test("plans without an access token cannot be held for structuring", () => {
+test("plans without an access token cannot await a structured upgrade", () => {
   assert.equal(
-    shouldHoldPlanTextFallbackForStructuredPlan({
+    shouldAwaitStructuredPlanUpgrade({
       hasPublishedPlan: true,
       hasStructuredPlan: false,
-      fallbackUnlocked: false,
+      pollWindowExpired: false,
       hasAccessToken: false,
       isRecentPlan: true,
     }),
