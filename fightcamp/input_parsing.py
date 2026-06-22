@@ -604,6 +604,17 @@ def _parse_guided_injuries(
     return parsed_injuries, parsed_restrictions
 
 
+def _phrase_present(haystack: str, needle: str) -> bool:
+    """Whether *needle* appears in *haystack* as a whole phrase.
+
+    Word-boundary aware so a short term like "hip"/"arm"/"ear" is not matched
+    inside an unrelated word ("chipped", "warm", "forearm").
+    """
+    if not needle:
+        return False
+    return re.search(rf"(?<!\w){re.escape(needle)}(?!\w)", haystack) is not None
+
+
 def _attach_severity_provenance(
     parsed_injuries: list[dict[str, str | None | list[str]]],
 ) -> list[dict[str, str | None | list[str]]]:
@@ -615,12 +626,14 @@ def _attach_severity_provenance(
         ]
         # Dedupe parts: guided formatting often folds the notes into
         # original_phrase, so adding notes again double-counts the text (and can
-        # split a negated phrase apart). Skip any part already contained earlier.
+        # split a negated phrase apart). Skip a part only when it already appears
+        # as a whole phrase earlier — a word-boundary check so a short term like
+        # "hip" is not treated as a duplicate because it sits inside "chipped".
         kept: list[str] = []
         accumulated = ""
         for part in parts:
             cleaned = part.strip()
-            if cleaned and cleaned.lower() not in accumulated.lower():
+            if cleaned and not _phrase_present(accumulated.lower(), cleaned.lower()):
                 kept.append(cleaned)
                 accumulated = f"{accumulated} {cleaned}"
         joined = " ".join(kept)
