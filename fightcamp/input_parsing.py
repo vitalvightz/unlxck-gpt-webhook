@@ -633,9 +633,13 @@ def _attach_severity_provenance(
         accumulated = ""
         for part in parts:
             cleaned = part.strip()
-            if cleaned and not _phrase_present(accumulated.lower(), cleaned.lower()):
-                kept.append(cleaned)
-                accumulated = f"{accumulated} {cleaned}"
+            if cleaned:
+                # Use word boundaries to prevent false-positive substring matches
+                # (e.g., "hip" matching inside "chipped", or "arm" inside "warm").
+                pattern = rf"\b{re.escape(cleaned.lower())}\b"
+                if not re.search(pattern, accumulated.lower()):
+                    kept.append(cleaned)
+                    accumulated = f"{accumulated} {cleaned}"
         joined = " ".join(kept)
         # Strip negated content so denials ("no fracture") never escalate
         # severity off the negated structural noun.
