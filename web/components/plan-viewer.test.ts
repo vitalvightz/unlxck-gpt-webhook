@@ -14,6 +14,7 @@ import {
   isRecentlyCreatedPlan,
   readInjuryTriage,
   readRawTriageMode,
+  readStructuredCardDebug,
   resolveApprovalAfterError,
   shouldAwaitStructuredPlanUpgrade,
   shouldPollForStructuredPlanUpgrade,
@@ -325,6 +326,25 @@ test("the upgrade poll keeps running for an older published plan still missing i
     }),
     false,
   );
+});
+
+test("readStructuredCardDebug surfaces a rejected card's reason and hides a clean one", () => {
+  const make = (structured: unknown) =>
+    ({ admin_outputs: { stage2_validator_report: { structured_plan: structured } } }) as never;
+
+  // A rejected conversion is the case we want visible to admins.
+  assert.deepEqual(
+    readStructuredCardDebug(
+      make({ status: "invalid_fallback_used", errors: ["faithfulness: exercise 'X' not present in source text"] }),
+    ),
+    { status: "invalid_fallback_used", errors: ["faithfulness: exercise 'X' not present in source text"] },
+  );
+  // A clean card already renders, so there is nothing to explain.
+  assert.equal(readStructuredCardDebug(make({ status: "valid", errors: [] })), null);
+  assert.equal(readStructuredCardDebug(make({ status: "repair_attempted_valid", errors: [] })), null);
+  // Nothing recorded → nothing to show.
+  assert.equal(readStructuredCardDebug(make(undefined)), null);
+  assert.equal(readStructuredCardDebug({ admin_outputs: null } as never), null);
 });
 
 test("isRecentlyCreatedPlan honours the recent-plan threshold", () => {

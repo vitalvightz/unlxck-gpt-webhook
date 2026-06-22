@@ -905,6 +905,68 @@ function StructuredPlanUpgradingNotice() {
   );
 }
 
+export type StructuredCardDebug = { status: string; errors: string[] };
+
+/**
+ * The structured-card conversion outcome recorded on the plan's validator report
+ * ({status, errors}; see api/stage2_automation._record_structured_outcome). Used
+ * only to explain, in the admin view, WHY a published plan is showing the
+ * plan_text fallback instead of the structured card: an `invalid_fallback_used`
+ * status means the converted card was rejected (faithfulness/schema drift) so no
+ * card was persisted and the plan stays on the fallback even after approval.
+ * Returns null when there is nothing actionable to show — no debug recorded, or a
+ * clean/`valid` card that already renders.
+ */
+export function readStructuredCardDebug(
+  plan: Pick<PlanDetail, "admin_outputs">,
+): StructuredCardDebug | null {
+  const report = plan.admin_outputs?.stage2_validator_report;
+  const debug =
+    report && typeof report === "object"
+      ? (report as Record<string, unknown>).structured_plan
+      : null;
+  if (!debug || typeof debug !== "object") {
+    return null;
+  }
+  const record = debug as Record<string, unknown>;
+  const status = typeof record.status === "string" ? record.status : "";
+  if (!status || status === "valid" || status === "repair_attempted_valid") {
+    return null;
+  }
+  const errors = Array.isArray(record.errors)
+    ? record.errors.map((entry) => String(entry)).filter(Boolean)
+    : [];
+  return { status, errors };
+}
+
+/**
+ * Admin-only explainer shown over the plan_text fallback when no structured card
+ * was built, so the rejection reason is visible instead of the card silently
+ * disappearing. Turns "why is it stuck on the fallback?" into a concrete answer.
+ */
+function StructuredCardDiagnostic({ debug }: { debug: StructuredCardDebug }) {
+  return (
+    <section className="support-panel" role="status">
+      <div className="form-section-header">
+        <p className="kicker">Admin diagnostic</p>
+        <h3>Structured card not built — {humanizeStatus(debug.status)}</h3>
+      </div>
+      <p className="muted">
+        The athlete is seeing the text fallback because the converted structured card was
+        rejected, so no card was saved. Approving the plan does not rebuild it; the reasons below
+        show how the card drifted from the saved plan text.
+      </p>
+      {debug.errors.length ? (
+        <ul className="summary-list">
+          {debug.errors.map((reason, index) => (
+            <li key={`${reason}-${index}`}>{reason}</li>
+          ))}
+        </ul>
+      ) : null}
+    </section>
+  );
+}
+
 function getPlanDisplayName(plan: Pick<PlanDetail, "plan_name" | "fight_date">) {
   return plan.plan_name?.trim() || plan.fight_date || "Open plan";
 }
@@ -1828,6 +1890,10 @@ export function PlanViewer({
     isRecentPlan,
     isTriageBlocked,
   });
+  // Admin-only: why this published plan is still on the plan_text fallback. Only
+  // shown once we are no longer expecting a live upgrade, so a card that is still
+  // building does not flash a stale rejection reason.
+  const structuredCardDebug = isAwaitingStructuredUpgrade ? null : readStructuredCardDebug(plan);
 
   useEffect(() => {
     setManualPlanText(plan.admin_outputs?.final_plan_text || "");
@@ -2572,6 +2638,9 @@ export function PlanViewer({
               ) : (
                 <>
                   {isAwaitingStructuredUpgrade ? <StructuredPlanUpgradingNotice /> : null}
+                  {canUseAdminOutputs && structuredCardDebug ? (
+                    <StructuredCardDiagnostic debug={structuredCardDebug} />
+                  ) : null}
                   <PlanTextCards text={athletePlanText} />
                 </>
               )}
