@@ -2767,7 +2767,8 @@ def validate_stage2_output(*, planning_brief: dict, final_plan_text: str) -> dic
     )
 
     def _is_fight_day_protocol_line(line: str) -> bool:
-        normalized = _normalize_render_line(line)
+        cleaned = _BULLET_PREFIX.sub("", line).strip()
+        normalized = _normalize_render_line(cleaned)
         if not normalized:
             return False
         return normalized in {protocol_full, protocol_body} or normalized in protocol_full
