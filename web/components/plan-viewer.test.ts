@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 
 import {
   parsePlanText,
@@ -21,6 +22,8 @@ import { ApiError, RETRYABLE_NETWORK_MESSAGE } from "@/lib/api";
 import { HARD_STAGE2_BLOCKER_CODES } from "@/lib/stage2-policy";
 import type { PlanDetail } from "@/lib/types";
 
+const PLAN_VIEWER_SOURCE = readFileSync(new URL("./plan-viewer.tsx", import.meta.url), "utf8");
+
 function makePlan(overrides: { status?: string; planText?: string }): PlanDetail {
   return {
     status: overrides.status ?? "ready",
@@ -41,6 +44,12 @@ test("triage_resume_approved with empty validator report and restricted rehab st
 
   assert.equal(summary.isPublishable, false);
   assert.match(summary.headline, /Resume approved — regeneration pending/i);
+});
+
+test("sparring advisory omits generated why rationale", () => {
+  assert.equal(PLAN_VIEWER_SOURCE.includes("Why this flag"), false);
+  assert.equal(PLAN_VIEWER_SOURCE.includes("sparring-advisory-why-toggle"), false);
+  assert.equal(PLAN_VIEWER_SOURCE.includes("sparring-advisory-reason"), false);
 });
 
 test("ready final stage2 status without blocked stub can be publishable", () => {
