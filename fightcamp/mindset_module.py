@@ -362,7 +362,7 @@ def compute_mindset_plan(flags: dict) -> dict:
     by_phase = {
         phase: get_mindset_by_phase(phase, flags) for phase in ("GPP", "SPP", "TAPER")
     }
-    athlete_note = str(flags.get("mental_block_raw") or "").strip()
+    athlete_note = (flags.get("mental_block_raw") or "").strip()
     return {
         "primary_blocks": blocks,
         "phase_cues": get_phase_mindset_cues(blocks),
