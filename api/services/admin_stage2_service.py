@@ -216,6 +216,12 @@ async def prewarm_structured_plan(
         if not plan_row:
             return
         plan_row = dict(plan_row)
+        # Re-check status against the *fresh* row: the plan may have been
+        # approved, rejected, or archived between the queue load that scheduled
+        # this task and now. Bail before spending an LLM call on a plan that is no
+        # longer an approvable held plan.
+        if not should_prewarm_review_plan_row(plan_row):
+            return
         if plan_row.get("structured_plan"):
             return  # already converted (or pre-warmed) — nothing to do
         source_text = str(

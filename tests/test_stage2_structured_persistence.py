@@ -761,6 +761,21 @@ def test_prewarm_skips_when_no_text_to_convert(monkeypatch):
     assert store.plans[plan_id].get("structured_plan") is None
 
 
+def test_prewarm_skips_when_status_no_longer_prewarmable(monkeypatch):
+    """A plan approved/rejected/archived before the task runs wastes no LLM call."""
+    monkeypatch.setenv("UNLXCK_STAGE2_STRUCTURED_PLAN", "1")
+    store = FakeStore()
+    plan_id = _seed_held_plan(store)
+    # The plan left the review queue (e.g. it was approved) after the queue load
+    # scheduled this pre-warm but before the background task ran.
+    store.plans[plan_id]["status"] = "ready"
+
+    automator = _StructuredAutomator(_valid_outcome("# approved plan"))
+    asyncio.run(prewarm_structured_plan(plan_id=plan_id, store=store, stage2=automator))
+
+    assert automator.calls == []  # no conversion for a plan that left the queue
+
+
 def test_approval_reuses_prewarmed_card_without_a_model_call(monkeypatch):
     """The slow win: once pre-warmed, approval ships the card with no conversion."""
     monkeypatch.setenv("UNLXCK_STAGE2_STRUCTURED_PLAN", "1")
