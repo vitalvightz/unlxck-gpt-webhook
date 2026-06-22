@@ -213,6 +213,8 @@ export type PlanTextBlock = {
   name: string;
   dose: string | null;
   details: PlanTextDetail[];
+  /** Block-group label (Rehab, Mobility, Activation…) shown as a tag, mirroring the structured card. */
+  tag: string | null;
 };
 
 /** A dated training day rendered as a session card. */
@@ -301,10 +303,15 @@ function buildArtifactFilename(plan: PlanDetail, suffix: string) {
   return `${base}-${suffix}.txt`;
 }
 
+// Leading list/bullet markers stripped off a line before it is parsed. Includes
+// the unicode bullets the rehab renderer emits ("• [Drill] — [Dose]", see
+// fightcamp/stage2_payload.py) so the glyph never leaks into an exercise title.
+const LEADING_BULLET_RE = /^[-*•‣▪◦·]\s+/;
+
 function stripPlanMarkup(value: string): string {
   return value
     .replace(/^#{1,6}\s+/, "")
-    .replace(/^[-*]\s+/, "")
+    .replace(LEADING_BULLET_RE, "")
     .replace(/^\d+\.\s+/, "")
     .replace(/\*\*/g, "")
     .trim();
@@ -505,6 +512,41 @@ function classifyPlanTextHeading(line: string): PlanTextHeading | null {
 
 const COACH_LED_RE = /no app s\s?&?\s?c|coach owns this session|train with your coach/i;
 
+// Standalone session sub-headings the rehab/accessory renderer emits before a
+// group of bulleted items (RULE 12 and its suppressed-heading alternatives in
+// fightcamp/stage2_payload.py). On their own line these are a block-group label,
+// not an exercise, so we surface them as a tag on the grouped blocks — mirroring
+// the structured card's block_type chip — instead of leaking the bare word
+// (e.g. "Rehab") as a stray note on the previous block.
+const BLOCK_GROUP_LABELS = [
+  "Rehab",
+  "Prehab",
+  "Activation",
+  "Movement prep",
+  "Mobility",
+  "Warm-up",
+  "Warmup",
+  "Cool-down",
+  "Cooldown",
+  "Reset",
+  "Recovery",
+  "Strength",
+  "Power",
+  "Conditioning",
+  "Skill",
+  "Accessory",
+] as const;
+const BLOCK_GROUP_LABEL_RE = new RegExp(`^(?:${BLOCK_GROUP_LABELS.join("|")})\\s*:?\\s*$`, "i");
+
+/** A line that is *only* a block-group label → its canonical tag, else null. */
+function matchBlockGroupLabel(line: string): string | null {
+  const clean = stripPlanMarkup(line);
+  if (!BLOCK_GROUP_LABEL_RE.test(clean)) {
+    return null;
+  }
+  return titleizeToken(clean.replace(/:\s*$/, ""));
+}
+
 /**
  * Parse athlete plan_text into structured groups (context notes, week sections,
  * and the session cards beneath them). This is the fallback used when no
@@ -519,6 +561,10 @@ export function parsePlanText(rawText: string): PlanTextGroup[] {
   let currentWeek: PlanTextWeek | null = null;
   let currentSession: PlanTextSession | null = null;
   let currentNotes: PlanTextNotes | null = null;
+  // The block-group label (Rehab, Mobility…) currently in effect within a
+  // session, applied as a tag to the blocks beneath it until the next group
+  // header or the next session.
+  let currentBlockTag: string | null = null;
 
   const pushSession = (session: PlanTextSession) => {
     if (currentWeek) {
@@ -533,7 +579,7 @@ export function parsePlanText(rawText: string): PlanTextGroup[] {
       return;
     }
     const session = currentSession;
-    const listItem = line.match(/^([-*]|\d+\.)\s+(.+)$/);
+    const listItem = line.match(/^([-*•‣▪◦·]|\d+\.)\s+(.+)$/);
     const wasListItem = Boolean(listItem);
     const content = stripPlanMarkup(listItem ? listItem[2] : line);
     if (!content) {
@@ -566,9 +612,13 @@ export function parsePlanText(rawText: string): PlanTextGroup[] {
           name: segment.text.slice(0, dashIndex).trim(),
           dose: segment.text.slice(dashIndex + 3).trim() || null,
           details: [],
+          tag: currentBlockTag,
         });
-      } else if (wasListItem && !block) {
-        session.blocks.push({ name: segment.text, dose: null, details: [] });
+      } else if (wasListItem) {
+        // A bulleted line is its own exercise heading (e.g. a rehab drill whose
+        // dose sits on the next line), so it always opens a new block rather than
+        // folding into the previous one.
+        session.blocks.push({ name: segment.text, dose: null, details: [], tag: currentBlockTag });
       } else if (block) {
         block.details.push({ label: null, text: segment.text });
       } else {
@@ -603,6 +653,7 @@ export function parsePlanText(rawText: string): PlanTextGroup[] {
     }
     if (heading?.kind === "session") {
       currentNotes = null;
+      currentBlockTag = null;
       currentSession = {
         kind: "session",
         countdown: heading.countdown,
@@ -622,6 +673,13 @@ export function parsePlanText(rawText: string): PlanTextGroup[] {
     }
 
     if (currentSession) {
+      // A standalone block-group header (e.g. "Rehab") tags the blocks beneath
+      // it rather than rendering as a loose note.
+      const blockGroup = matchBlockGroupLabel(line);
+      if (blockGroup) {
+        currentBlockTag = blockGroup;
+        continue;
+      }
       addBodyLine(line);
       continue;
     }
@@ -662,6 +720,7 @@ function PlanTextBlockCard({ block }: { block: PlanTextBlock }) {
     <div className="sp-block">
       <div className="sp-block-head">
         <span className="sp-block-title">{block.name}</span>
+        {block.tag ? <span className="sp-tag">{block.tag}</span> : null}
       </div>
       {block.dose ? (
         <div className="sp-block-stats">

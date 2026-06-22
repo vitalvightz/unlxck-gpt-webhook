@@ -511,3 +511,54 @@ test("coach-led session keeps its freshness note instead of a block", () => {
   assert.equal(session.blocks.length, 0);
   assert.match(session.coachNote ?? "", /No app S&C today/);
 });
+
+test("rehab bullet items parse into clean blocks tagged by their sub-heading", () => {
+  const groups = parsePlanText(
+    [
+      "D-44 (Friday) — Soft work",
+      "Rehab",
+      "• Soft-tissue ball on anterior/lateral deltoid — 2 x 60s (gentle)",
+      "Purpose: local tissue desensitisation for the bruise area.",
+      "• Banded IR/ER light pulses — 2 x 10 each side, very light band",
+      "Purpose: reintroduce gentle rotator control with minimal load.",
+    ].join("\n"),
+  );
+
+  const session = groups[0];
+  assert.ok(session.kind === "session");
+  // The bare "Rehab" sub-heading becomes a block tag, never a stray note.
+  assert.ok(!session.notes.includes("Rehab"));
+  assert.deepEqual(
+    session.blocks.map((block) => [block.name, block.dose, block.tag]),
+    [
+      ["Soft-tissue ball on anterior/lateral deltoid", "2 x 60s (gentle)", "Rehab"],
+      ["Banded IR/ER light pulses", "2 x 10 each side, very light band", "Rehab"],
+    ],
+  );
+  // The "•" glyph never leaks into an exercise title.
+  assert.ok(session.blocks.every((block) => !block.name.includes("•")));
+  // Labelled detail still attaches to its block.
+  assert.deepEqual(session.blocks[0].details, [
+    { label: "Purpose", text: "local tissue desensitisation for the bruise area." },
+  ]);
+});
+
+test("a block-group sub-heading tags only its own session and does not bleed into the next", () => {
+  const groups = parsePlanText(
+    [
+      "D-43 (Saturday) — Easy day",
+      "Mobility",
+      "• Thoracic opener — 2 x 8",
+      "D-42 (Sunday) — Bike",
+      "Easy Assault Bike — 20 min Zone 2",
+    ].join("\n"),
+  );
+
+  const [first, second] = groups;
+  assert.ok(first.kind === "session" && second.kind === "session");
+  assert.equal(first.blocks[0].name, "Thoracic opener");
+  assert.equal(first.blocks[0].tag, "Mobility");
+  // The next session starts with no inherited tag.
+  assert.equal(second.blocks[0].name, "Easy Assault Bike");
+  assert.equal(second.blocks[0].tag, null);
+});
