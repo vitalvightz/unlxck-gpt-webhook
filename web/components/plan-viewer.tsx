@@ -115,6 +115,35 @@ export function isRecentlyCreatedPlan(
   return now - createdAt <= STRUCTURED_PLAN_RECENT_PLAN_THRESHOLD_MS;
 }
 
+/**
+ * Whether the background upgrade poll should run for this plan.
+ *
+ * Unlike the visible "enhancing" hint (shouldAwaitStructuredPlanUpgrade), this is
+ * deliberately NOT gated on plan recency. A published plan that is still missing
+ * its structured card should keep trying to pick one up whenever its view is
+ * open — including an older plan whose card was only built later (e.g. after a
+ * held blocker cleared or a backfill ran), which the 5-minute recency gate would
+ * otherwise leave stuck on the template card until a manual reload. The
+ * mount-scoped poll window (pollWindowExpired) still bounds the cost so we never
+ * poll a legacy cardless plan forever, and the swap happens silently for
+ * non-recent plans (no misleading hint).
+ */
+export function shouldPollForStructuredPlanUpgrade(params: {
+  hasPublishedPlan: boolean;
+  hasStructuredPlan: boolean;
+  pollWindowExpired: boolean;
+  hasAccessToken: boolean;
+  isTriageBlocked?: boolean;
+}): boolean {
+  return (
+    params.hasPublishedPlan &&
+    !params.hasStructuredPlan &&
+    !params.pollWindowExpired &&
+    params.hasAccessToken &&
+    params.isTriageBlocked !== true
+  );
+}
+
 function getApprovalSuccessMessage(plan: Pick<PlanDetail, "outputs">): string {
   return shouldRenderStructuredPlan(plan.outputs)
     ? "Plan approved and released to the athlete view."
@@ -873,6 +902,82 @@ function StructuredPlanUpgradingNotice() {
         </p>
       </div>
     </div>
+  );
+}
+
+export type StructuredCardDebug = { status: string; errors: string[] };
+
+/**
+ * The structured-card conversion outcome recorded on the plan's validator report
+ * ({status, errors}; see api/stage2_automation._record_structured_outcome).
+ *
+ * Returned for ANY recorded status because the only place this is shown is over
+ * the plan_text fallback (card not rendering), where each status is diagnostic:
+ *  - `invalid_fallback_used` → the converted card was rejected (faithfulness /
+ *    schema drift) so no card was persisted,
+ *  - `valid` / `repair_attempted_valid` → a card WAS built and validated but is
+ *    not the one showing, i.e. it was lost on a later write or no longer decodes
+ *    at read time (the "card built then lost" signal),
+ *  - `not_attempted` → structured generation never ran for this plan.
+ * Returns null only when there is no recorded outcome at all.
+ */
+export function readStructuredCardDebug(
+  plan: Pick<PlanDetail, "admin_outputs">,
+): StructuredCardDebug | null {
+  const report = plan.admin_outputs?.stage2_validator_report;
+  const debug =
+    report && typeof report === "object"
+      ? (report as Record<string, unknown>).structured_plan
+      : null;
+  if (!debug || typeof debug !== "object") {
+    return null;
+  }
+  const record = debug as Record<string, unknown>;
+  const status = typeof record.status === "string" ? record.status.trim() : "";
+  if (!status) {
+    return null;
+  }
+  // Coerce defensively: a null/undefined entry must not surface as the literal
+  // strings "null"/"undefined", and whitespace-only reasons are dropped.
+  const errors = Array.isArray(record.errors)
+    ? record.errors.map((entry) => (entry != null ? String(entry).trim() : "")).filter(Boolean)
+    : [];
+  return { status, errors };
+}
+
+/**
+ * Admin-only explainer shown over the plan_text fallback so the reason a
+ * structured card is missing is visible instead of the card silently
+ * disappearing. Messaging differs by recorded status: a rejected conversion
+ * lists the drift reasons; a `valid` status here means the card was built but
+ * lost (the athlete is still on the fallback).
+ */
+function StructuredCardDiagnostic({ debug }: { debug: StructuredCardDebug }) {
+  const wasBuilt = debug.status === "valid" || debug.status === "repair_attempted_valid";
+  const notAttempted = debug.status === "not_attempted";
+  const heading = wasBuilt ? "Structured card built but not shown" : "Structured card not built";
+  const copy = wasBuilt
+    ? "A structured card was built and validated for this plan, but it is not the card showing — it was most likely overwritten on a later write or no longer decodes at read time, so the athlete is on the text fallback."
+    : notAttempted
+      ? "Structured generation never ran for this plan, so the athlete is on the text fallback."
+      : "The athlete is seeing the text fallback because the converted structured card was rejected, so no card was saved. Approving the plan does not rebuild it; the reasons below show how the card drifted from the saved plan text.";
+  return (
+    <section className="support-panel" role="status">
+      <div className="form-section-header">
+        <p className="kicker">Admin diagnostic</p>
+        <h3>
+          {heading} — {humanizeStatus(debug.status)}
+        </h3>
+      </div>
+      <p className="muted">{copy}</p>
+      {debug.errors.length ? (
+        <ul className="summary-list">
+          {debug.errors.map((reason, index) => (
+            <li key={`${reason}-${index}`}>{reason}</li>
+          ))}
+        </ul>
+      ) : null}
+    </section>
   );
 }
 
@@ -1799,6 +1904,10 @@ export function PlanViewer({
     isRecentPlan,
     isTriageBlocked,
   });
+  // Admin-only: why this published plan is still on the plan_text fallback. Only
+  // shown once we are no longer expecting a live upgrade, so a card that is still
+  // building does not flash a stale rejection reason.
+  const structuredCardDebug = isAwaitingStructuredUpgrade ? null : readStructuredCardDebug(plan);
 
   useEffect(() => {
     setManualPlanText(plan.admin_outputs?.final_plan_text || "");
@@ -1843,15 +1952,18 @@ export function PlanViewer({
   // Background upgrade poll: the template card is already on screen, so this just
   // watches for the richer structured card to finish building server-side and
   // swaps it in. It never blocks the view; when the poll window elapses we simply
-  // stop and leave the template card in place.
+  // stop and leave the template card in place. Runs for any open published plan
+  // still missing its card (not only recent ones) so an older plan whose card
+  // lands later upgrades without a manual reload; the window below bounds the cost.
   useEffect(() => {
     if (
-      !accessToken ||
-      !hasPublishedPlan ||
-      hasStructuredAthletePlan ||
-      isTriageBlocked ||
-      structuredPlanPollExpired ||
-      !isRecentPlan
+      !shouldPollForStructuredPlanUpgrade({
+        hasPublishedPlan,
+        hasStructuredPlan: hasStructuredAthletePlan,
+        pollWindowExpired: structuredPlanPollExpired,
+        hasAccessToken: Boolean(accessToken),
+        isTriageBlocked,
+      })
     ) {
       return;
     }
@@ -1897,7 +2009,6 @@ export function PlanViewer({
     hasPublishedPlan,
     hasStructuredAthletePlan,
     isTriageBlocked,
-    isRecentPlan,
     onPlanUpdated,
     plan.plan_id,
     structuredPlanPollExpired,
@@ -2541,6 +2652,9 @@ export function PlanViewer({
               ) : (
                 <>
                   {isAwaitingStructuredUpgrade ? <StructuredPlanUpgradingNotice /> : null}
+                  {canUseAdminOutputs && structuredCardDebug ? (
+                    <StructuredCardDiagnostic debug={structuredCardDebug} />
+                  ) : null}
                   <PlanTextCards text={athletePlanText} />
                 </>
               )}

@@ -14,8 +14,10 @@ import {
   isRecentlyCreatedPlan,
   readInjuryTriage,
   readRawTriageMode,
+  readStructuredCardDebug,
   resolveApprovalAfterError,
   shouldAwaitStructuredPlanUpgrade,
+  shouldPollForStructuredPlanUpgrade,
   shouldShowProtectedResumeAdminReview,
 } from "./plan-viewer";
 import { ApiError, RETRYABLE_NETWORK_MESSAGE } from "@/lib/api";
@@ -279,6 +281,85 @@ test("plans without an access token cannot await a structured upgrade", () => {
     }),
     false,
   );
+});
+
+test("the upgrade poll keeps running for an older published plan still missing its card", () => {
+  // The key fix: a plan whose card lands after the 5-minute recency window (e.g.
+  // approved several minutes after generation) must still auto-swap on an open
+  // view. The poll is NOT recency-gated, unlike the visible hint.
+  assert.equal(
+    shouldPollForStructuredPlanUpgrade({
+      hasPublishedPlan: true,
+      hasStructuredPlan: false,
+      pollWindowExpired: false,
+      hasAccessToken: true,
+    }),
+    true,
+  );
+  // But it stops once the card exists, the mount-scoped window elapses, the plan
+  // isn't published, the token is missing, or the plan is triage-blocked.
+  assert.equal(
+    shouldPollForStructuredPlanUpgrade({
+      hasPublishedPlan: true,
+      hasStructuredPlan: true,
+      pollWindowExpired: false,
+      hasAccessToken: true,
+    }),
+    false,
+  );
+  assert.equal(
+    shouldPollForStructuredPlanUpgrade({
+      hasPublishedPlan: true,
+      hasStructuredPlan: false,
+      pollWindowExpired: true,
+      hasAccessToken: true,
+    }),
+    false,
+  );
+  assert.equal(
+    shouldPollForStructuredPlanUpgrade({
+      hasPublishedPlan: true,
+      hasStructuredPlan: false,
+      pollWindowExpired: false,
+      hasAccessToken: true,
+      isTriageBlocked: true,
+    }),
+    false,
+  );
+});
+
+test("readStructuredCardDebug surfaces every recorded outcome and sanitises reasons", () => {
+  const make = (structured: unknown) =>
+    ({ admin_outputs: { stage2_validator_report: { structured_plan: structured } } }) as never;
+
+  // A rejected conversion is shown with its drift reasons.
+  assert.deepEqual(
+    readStructuredCardDebug(
+      make({ status: "invalid_fallback_used", errors: ["faithfulness: exercise 'X' not present in source text"] }),
+    ),
+    { status: "invalid_fallback_used", errors: ["faithfulness: exercise 'X' not present in source text"] },
+  );
+  // A `valid`/`repair_attempted_valid` status on the fallback IS the signal we
+  // want (card built then lost), so it must surface — not be hidden.
+  assert.deepEqual(readStructuredCardDebug(make({ status: "valid", errors: [] })), {
+    status: "valid",
+    errors: [],
+  });
+  assert.deepEqual(readStructuredCardDebug(make({ status: "repair_attempted_valid" })), {
+    status: "repair_attempted_valid",
+    errors: [],
+  });
+  // null/undefined/whitespace-only reasons are dropped, never shown as rubbish.
+  assert.deepEqual(
+    readStructuredCardDebug(
+      make({ status: "invalid_fallback_used", errors: [null, undefined, "   ", "real reason"] }),
+    ),
+    { status: "invalid_fallback_used", errors: ["real reason"] },
+  );
+  // Nothing recorded (no debug, blank status, or no admin outputs) → nothing to show.
+  assert.equal(readStructuredCardDebug(make(undefined)), null);
+  assert.equal(readStructuredCardDebug(make({ status: "   " })), null);
+  assert.equal(readStructuredCardDebug({ admin_outputs: null } as never), null);
 });
 
 test("isRecentlyCreatedPlan honours the recent-plan threshold", () => {
