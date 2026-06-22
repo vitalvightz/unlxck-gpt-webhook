@@ -58,6 +58,10 @@ def should_prewarm_review_plan_row(row: Any) -> bool:
         return False
     if not str(row.get("id") or "").strip():
         return False
+    # Avoid scheduling redundant background tasks if the structured plan has already been attempted or generated
+    report = row.get("stage2_validator_report")
+    if isinstance(report, dict) and "structured_plan" in report:
+        return False
     return str(row.get("status") or "").strip().lower() in _PREWARMABLE_REVIEW_STATUSES
 
 
