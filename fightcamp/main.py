@@ -289,12 +289,13 @@ def generate_plan_sync(
     timer_start = perf_counter()
     try:
         prime_plan_banks(logger=logger, progress_callback=progress_callback)
-    except Exception as exc:  # noqa: BLE001 - degrade gracefully rather than 500
+    except (RuntimeError, TimeoutError) as exc:
         # Bank priming loads and normalizes the strength/conditioning/rehab
-        # libraries. A failure here (e.g. an exhausted strength candidate pool)
-        # has already emitted the corresponding "*_started" milestone, so the
-        # caller can see where generation stopped; degrade to invalid_input
-        # rather than propagating the exception.
+        # libraries. Degrade only on operational failures — an exhausted
+        # candidate pool (RuntimeError) or a hung loader (TimeoutError) — so the
+        # caller sees the already-emitted "*_started" milestone instead of a 500.
+        # Programming errors (KeyError, AttributeError, ...) deliberately
+        # propagate rather than masquerading as invalid input.
         _record_timing("prime_banks", timer_start)
         logger.exception("stage1 bank priming failed: %s", exc)
         return _validate_stage1_result(
@@ -363,12 +364,13 @@ def generate_plan_sync(
             logger=logger,
             progress_callback=progress_callback,
         )
-    except Exception as exc:  # noqa: BLE001 - degrade gracefully rather than 500
-        # A substep failure (e.g. an exhausted candidate pool or a hung
-        # module) should not crash the whole request. The corresponding
-        # "*_started" milestone has already been emitted, so the caller can
-        # still see where generation stopped; surface an invalid_input result
-        # instead of propagating the exception.
+    except (RuntimeError, TimeoutError) as exc:
+        # A substep operational failure — an exhausted candidate pool
+        # (RuntimeError) or a hung module (TimeoutError) — should not crash the
+        # whole request. The corresponding "*_started" milestone has already
+        # been emitted, so the caller can still see where generation stopped;
+        # surface an invalid_input result instead of propagating. Programming
+        # errors propagate unchanged so real bugs are not hidden as user input.
         logger.exception("stage1 block generation failed: %s", exc)
         return _validate_stage1_result(
             _invalid_result("plan generation failed while building Stage 1 blocks")
