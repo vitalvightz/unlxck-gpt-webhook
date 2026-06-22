@@ -44,6 +44,7 @@ const APPROVE_RECOVERY_FETCH_ATTEMPTS = 3;
 const APPROVE_RECOVERY_FETCH_DELAY_MS = 800;
 const STRUCTURED_PLAN_POLL_INTERVAL_MS = 2500;
 const STRUCTURED_PLAN_FALLBACK_DELAY_MS = 120_000;
+const STRUCTURED_PLAN_RECENT_PLAN_THRESHOLD_MS = 5 * 60_000;
 
 const ATHLETE_VISIBLE_STATUSES = new Set(["ready", "publishable_with_flags"]);
 
@@ -60,18 +61,49 @@ export function isPlanReleasedToAthlete(
   return ATHLETE_VISIBLE_STATUSES.has(status) && Boolean(plan.outputs.plan_text.trim());
 }
 
+/**
+ * Decide whether to hold the athlete-facing plan_text fallback while we wait for
+ * the structured card to land after approval. We only hold for freshly published
+ * plans that can still be polled. We never hold for:
+ *  - legacy/old plans (created outside the recent-plan window), which may simply
+ *    never have a structured_plan,
+ *  - plans without an access token (we cannot poll for the structured card),
+ *  - triage-blocked plans,
+ *  - plans the athlete already fallback-unlocked,
+ *  - plans that already have a structured_plan.
+ */
 export function shouldHoldPlanTextFallbackForStructuredPlan(params: {
   hasPublishedPlan: boolean;
   hasStructuredPlan: boolean;
   fallbackUnlocked: boolean;
+  hasAccessToken: boolean;
+  isRecentPlan: boolean;
   isTriageBlocked?: boolean;
 }): boolean {
   return (
     params.hasPublishedPlan &&
     !params.hasStructuredPlan &&
     !params.fallbackUnlocked &&
+    params.hasAccessToken &&
+    params.isRecentPlan &&
     params.isTriageBlocked !== true
   );
+}
+
+/**
+ * A plan is "recent" if it was created within the recent-plan window. Used to
+ * avoid holding the structured-card finalising state for legacy plans that were
+ * created long before structured plans existed (or never produced one).
+ */
+export function isRecentlyCreatedPlan(
+  plan: Pick<PlanDetail, "created_at">,
+  now: number = Date.now(),
+): boolean {
+  const createdAt = Date.parse(plan.created_at || "");
+  if (Number.isNaN(createdAt)) {
+    return false;
+  }
+  return now - createdAt <= STRUCTURED_PLAN_RECENT_PLAN_THRESHOLD_MS;
 }
 
 function getApprovalSuccessMessage(plan: Pick<PlanDetail, "outputs">): string {
@@ -1643,10 +1675,7 @@ export function PlanViewer({
   >(null);
   const [planActionMessage, setPlanActionMessage] = useState<string | null>(null);
   const [planActionError, setPlanActionError] = useState<string | null>(null);
-  const [structuredPlanWaitState, setStructuredPlanWaitState] = useState<{
-    planId: string | null;
-    fallbackUnlocked: boolean;
-  }>({ planId: null, fallbackUnlocked: false });
+  const [unlockedPlans, setUnlockedPlans] = useState<Record<string, boolean>>({});
   const [stage2RetryInProgress, setStage2RetryInProgress] = useState(false);
   const [stage2RetryJustCompleted, setStage2RetryJustCompleted] = useState<"passed" | "failed" | null>(
     null,
@@ -1706,10 +1735,13 @@ export function PlanViewer({
     },
   });
   const structuredPlanFallbackUnlocked = Boolean(unlockedPlans[plan.plan_id]);
+  const isRecentPlan = isRecentlyCreatedPlan(plan);
   const shouldHoldPlanTextFallback = shouldHoldPlanTextFallbackForStructuredPlan({
     hasPublishedPlan,
     hasStructuredPlan: hasStructuredAthletePlan,
     fallbackUnlocked: structuredPlanFallbackUnlocked,
+    hasAccessToken: Boolean(accessToken),
+    isRecentPlan,
     isTriageBlocked,
   });
 
@@ -1759,7 +1791,8 @@ export function PlanViewer({
       !hasPublishedPlan ||
       hasStructuredAthletePlan ||
       isTriageBlocked ||
-      structuredPlanFallbackUnlocked
+      structuredPlanFallbackUnlocked ||
+      !isRecentPlan
     ) {
       return;
     }
@@ -1798,6 +1831,7 @@ export function PlanViewer({
     hasPublishedPlan,
     hasStructuredAthletePlan,
     isTriageBlocked,
+    isRecentPlan,
     onPlanUpdated,
     plan.plan_id,
     structuredPlanFallbackUnlocked,
