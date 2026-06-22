@@ -671,7 +671,9 @@ function SessionCard({
     );
   }
 
-  const sessionTitle = getStructuredTodaySessionTitle(current) || getSessionTitle(session);
+  const sessionTitle = hasStructuredTodaySession
+    ? getStructuredTodaySessionTitle(current) || getSessionTitle(session)
+    : getSessionTitle(session);
   // Avoid the "Today's session / Today's session" stutter: when the session has
   // no real name and falls back to the generic title that already matches the
   // kicker, headline the training day instead so the eyebrow and heading differ.
