@@ -2521,7 +2521,7 @@ export function PlanIntakeForm() {
                   <label htmlFor="fatigueLevel">Fatigue level</label>
                   <CustomSelect
                     id="fatigueLevel"
-                    value={form.fatigue_level ?? "low"}
+                    value={form.fatigue_level || "low"}
                     options={FATIGUE_LEVEL_OPTIONS}
                     placeholder="Select fatigue level"
                     onChange={(value) => updateField("fatigue_level", value)}
