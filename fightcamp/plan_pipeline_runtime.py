@@ -381,6 +381,7 @@ def build_runtime_context(
         ],
         training_preference=plan_input.training_preference.strip().lower() if plan_input.training_preference else "",
         mental_block=mental_block_class,
+        mental_block_raw=(plan_input.mental_block or "").strip(),
         age=parse_int_or_none(plan_input.age),
         weight=parse_float_or_none(weight),
         prev_exercises=[],
