@@ -92,6 +92,18 @@ class TestGracefulDegradation:
             current_training_day=TODAY, plan=PLAN, next_session={"weekday": "Thu", "load": "hard"}
         )
         assert view.today.next_session == {"weekday": "Thu", "load": "hard"}
+        assert view.today.session_scope == "next"
+        assert view.today.session_label == "Next session"
+
+    def test_today_session_label_when_scoped_to_today(self):
+        view = build_command_view(
+            current_training_day=TODAY,
+            plan=PLAN,
+            next_session={"weekday": "Thu", "load": "hard"},
+            session_scope="today",
+        )
+        assert view.today.session_scope == "today"
+        assert view.today.session_label == "Today's session"
 
 
 class TestRiskWatch:
@@ -149,6 +161,8 @@ class TestShape:
             "recommendation_state",
             "recommendation_reason",
             "next_session",
+            "session_scope",
+            "session_label",
             "completion_status",
         }
         assert dumped["today"]["training_day"] == TODAY

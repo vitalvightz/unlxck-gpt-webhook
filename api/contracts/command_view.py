@@ -141,6 +141,8 @@ class CommandViewToday(BaseModel):
     recommendation_state: RecommendationState = "not_checked_in"
     recommendation_reason: str | None = None
     next_session: dict[str, Any] = Field(default_factory=dict)
+    session_scope: Literal["today", "next", "none"] = "none"
+    session_label: str = ""
     completion_status: CompletionStatus = "not_started"
 
 
@@ -203,6 +205,7 @@ def build_command_view(
     recommendation: Mapping[str, Any] | None = None,
     completion: Mapping[str, Any] | None = None,
     next_session: Mapping[str, Any] | None = None,
+    session_scope: Literal["today", "next", "none"] | None = None,
     risks: Sequence[RiskWatchItem | Mapping[str, Any]] | None = None,
     week_summary: Mapping[str, Any] | None = None,
 ) -> CommandView:
@@ -219,12 +222,22 @@ def build_command_view(
     rec_view = resolve_recommendation_state(
         recommendation, current_training_day=training_day
     )
+    resolved_session_scope: Literal["today", "next", "none"] = (
+        session_scope if session_scope is not None else ("next" if next_session else "none")
+    )
+    session_label = {
+        "today": "Today's session",
+        "next": "Next session",
+        "none": "",
+    }[resolved_session_scope]
 
     today = CommandViewToday(
         training_day=training_day,
         recommendation_state=rec_view.state,
         recommendation_reason=rec_view.reason,
         next_session=dict(next_session) if next_session else {},
+        session_scope=resolved_session_scope,
+        session_label=session_label,
         completion_status=completion_status_of(completion),
     )
 

@@ -25,6 +25,7 @@ from pydantic import ValidationError
 from api.contracts.checkin_decision import CheckinInputs, evaluate_checkin
 from api.contracts.command_view import CommandView, build_command_view, make_risk
 from api.contracts.completion import (
+    TERMINAL_COMPLETION_STATUSES,
     SessionCompletionRecord,
     completion_landing_state,
     completion_status_of,
@@ -266,14 +267,24 @@ def _session_id_for_entry(entry: Any) -> str | None:
     return str(weekday) or None
 
 
-def _entry_has_training(entry: Any) -> bool:
+def _has_scheduled_day_content(entry: Any) -> bool:
     if entry is None:
         return False
     if isinstance(entry, Mapping):
-        value = entry.get("effective_load")
+        status = entry.get("status")
+        coach_note = entry.get("coach_note")
+        effective_load = entry.get("effective_load")
     else:
-        value = getattr(entry, "effective_load", None)
-    return str(value or "").strip().lower() != "none"
+        status = getattr(entry, "status", None)
+        coach_note = getattr(entry, "coach_note", None)
+        effective_load = getattr(entry, "effective_load", None)
+    if isinstance(effective_load, str):
+        effective_load = effective_load.strip().lower()
+    return bool(status or coach_note or effective_load not in (None, "", "none"))
+
+
+def _entry_has_training(entry: Any) -> bool:
+    return _has_scheduled_day_content(entry)
 
 
 def _scan_forward_for_next_training(
@@ -406,7 +417,15 @@ def build_today_command_view(
             today_entry = next_entry = None
             week = None
 
-    target_entry = today_entry if _entry_has_training(today_entry) else next_entry
+    has_today_session = _has_scheduled_day_content(today_entry)
+    today_session_id = _session_id_for_entry(today_entry) if has_today_session else None
+    today_completion = (
+        store.get_session_completion(athlete_id, today_session_id, training_day)
+        if today_session_id
+        else None
+    )
+    today_is_complete = completion_status_of(today_completion) in TERMINAL_COMPLETION_STATUSES
+    target_entry = today_entry if has_today_session and not today_is_complete else next_entry
     if target_entry is None and week is not None:
         # No training left in the current week — look ahead so the "Next session"
         # card surfaces the upcoming session instead of "No session found".
@@ -427,18 +446,14 @@ def build_today_command_view(
         else ("next" if target_entry is not None else None)
     )
     session_id = _session_id_for_entry(target_entry)
-    completion = (
-        store.get_session_completion(athlete_id, session_id, training_day)
-        if session_id and session_relation == "today"
-        else None
-    )
 
     return build_command_view(
         current_training_day=training_day,
         plan=_plan_with_resolved_phase(plan_row, week),
         recommendation=recommendation,
-        completion=completion,
+        completion=today_completion,
         next_session=_next_session_payload(target_entry, session_id, relation=session_relation),
+        session_scope=session_relation or "none",
         risks=_risks_from_checkin(today_checkin),
     )
 

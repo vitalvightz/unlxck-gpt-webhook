@@ -29,6 +29,8 @@ const BASE_STATE: TodayCommandView = {
     recommendation_state: "not_checked_in",
     recommendation_reason: null,
     next_session: { session_id: "sess-1", weekday: "Thu", status: "Hard day" },
+    session_scope: "today",
+    session_label: "Today's session",
     completion_status: "not_started",
   },
   risk_watch: [],

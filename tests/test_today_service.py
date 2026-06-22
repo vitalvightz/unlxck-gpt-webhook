@@ -91,6 +91,40 @@ def _calendar_training_brief(*, active_offsets: list[int]) -> dict:
     }
 
 
+def _monday_rest_tuesday_training_brief() -> dict:
+    monday = date(2026, 6, 22)
+    calendar_days = [
+        {
+            "weekday": (monday + timedelta(days=offset)).strftime("%A"),
+            "calendar_date": (monday + timedelta(days=offset)).isoformat(),
+            "d_day": 25 - offset,
+        }
+        for offset in range(7)
+    ]
+    return {
+        "fight_date": "2026-07-17",
+        "weekly_role_map": {
+            "weeks": [
+                {
+                    "phase": "GPP",
+                    "calendar_days": calendar_days,
+                    "hard_sparring_plan": [
+                        {
+                            "day": "Tuesday",
+                            "hard_day_class": "primary_hard",
+                            "effective_load": "hard",
+                            "status": "hard_as_planned",
+                            "reason": "Tuesday is the next real session.",
+                            "coach_note": "Hard sparring.",
+                            "reason_codes": [],
+                        }
+                    ],
+                }
+            ]
+        },
+    }
+
+
 def _multi_week_taper_brief() -> dict:
     """A two-week taper where each week has a single training day.
 
@@ -371,6 +405,57 @@ class TestCommandView:
         assert view.today.next_session["session_id"] == "2026-06-19"
         assert view.today.next_session["session_relation"] == "next"
         assert view.today.completion_status == "not_started"
+        assert view.today.session_scope == "next"
+
+    def test_completed_today_session_falls_forward_to_next_training_day(self):
+        store = _store_with_plan()
+        store.plans[PLAN]["planning_brief"] = _calendar_training_brief(active_offsets=[0, 1])
+        now = datetime(2026, 6, 18, 12, 0, tzinfo=timezone.utc)
+
+        active_view = build_today_command_view(
+            store,
+            athlete_id=ATHLETE,
+            athlete_timezone="",
+            now=now,
+        )
+        assert active_view.today.session_scope == "today"
+        assert active_view.today.session_label == "Today's session"
+        assert active_view.today.next_session["calendar_date"] == "2026-06-18"
+
+        upsert_session_completion(
+            store,
+            athlete_id=ATHLETE,
+            athlete_timezone="",
+            payload={"plan_id": PLAN, "session_id": "2026-06-18", "status": "done"},
+            now=now,
+        )
+
+        completed_view = build_today_command_view(
+            store,
+            athlete_id=ATHLETE,
+            athlete_timezone="",
+            now=now,
+        )
+        assert completed_view.today.completion_status == "done"
+        assert completed_view.today.session_scope == "next"
+        assert completed_view.today.session_label == "Next session"
+        assert completed_view.today.next_session["calendar_date"] == "2026-06-19"
+        assert completed_view.today.next_session["session_relation"] == "next"
+
+    def test_calendar_rest_day_falls_forward_to_next_real_session(self):
+        store = _store_with_plan()
+        store.plans[PLAN]["planning_brief"] = _monday_rest_tuesday_training_brief()
+        view = build_today_command_view(
+            store,
+            athlete_id=ATHLETE,
+            athlete_timezone="",
+            now=datetime(2026, 6, 22, 12, 0, tzinfo=timezone.utc),
+        )
+        assert view.today.session_scope == "next"
+        assert view.today.session_label == "Next session"
+        assert view.today.next_session["calendar_date"] == "2026-06-23"
+        assert view.today.next_session["session_relation"] == "next"
+        assert view.today.next_session["effective_load"] == "hard"
 
     def test_next_session_crosses_into_following_week(self):
         # Week 0 trains only on Mon; the rest of the week is rest. On a later

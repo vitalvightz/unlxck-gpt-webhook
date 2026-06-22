@@ -911,6 +911,8 @@ export type TodayCommandView = {
     recommendation_state: TodayRecommendationState;
     recommendation_reason?: string | null;
     next_session: TodaySession;
+    session_scope: "today" | "next" | "none";
+    session_label: string;
     completion_status: TodayCompletionStatus;
   };
   risk_watch: Array<{
