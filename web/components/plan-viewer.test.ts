@@ -328,22 +328,37 @@ test("the upgrade poll keeps running for an older published plan still missing i
   );
 });
 
-test("readStructuredCardDebug surfaces a rejected card's reason and hides a clean one", () => {
+test("readStructuredCardDebug surfaces every recorded outcome and sanitises reasons", () => {
   const make = (structured: unknown) =>
     ({ admin_outputs: { stage2_validator_report: { structured_plan: structured } } }) as never;
 
-  // A rejected conversion is the case we want visible to admins.
+  // A rejected conversion is shown with its drift reasons.
   assert.deepEqual(
     readStructuredCardDebug(
       make({ status: "invalid_fallback_used", errors: ["faithfulness: exercise 'X' not present in source text"] }),
     ),
     { status: "invalid_fallback_used", errors: ["faithfulness: exercise 'X' not present in source text"] },
   );
-  // A clean card already renders, so there is nothing to explain.
-  assert.equal(readStructuredCardDebug(make({ status: "valid", errors: [] })), null);
-  assert.equal(readStructuredCardDebug(make({ status: "repair_attempted_valid", errors: [] })), null);
-  // Nothing recorded → nothing to show.
+  // A `valid`/`repair_attempted_valid` status on the fallback IS the signal we
+  // want (card built then lost), so it must surface — not be hidden.
+  assert.deepEqual(readStructuredCardDebug(make({ status: "valid", errors: [] })), {
+    status: "valid",
+    errors: [],
+  });
+  assert.deepEqual(readStructuredCardDebug(make({ status: "repair_attempted_valid" })), {
+    status: "repair_attempted_valid",
+    errors: [],
+  });
+  // null/undefined/whitespace-only reasons are dropped, never shown as rubbish.
+  assert.deepEqual(
+    readStructuredCardDebug(
+      make({ status: "invalid_fallback_used", errors: [null, undefined, "   ", "real reason"] }),
+    ),
+    { status: "invalid_fallback_used", errors: ["real reason"] },
+  );
+  // Nothing recorded (no debug, blank status, or no admin outputs) → nothing to show.
   assert.equal(readStructuredCardDebug(make(undefined)), null);
+  assert.equal(readStructuredCardDebug(make({ status: "   " })), null);
   assert.equal(readStructuredCardDebug({ admin_outputs: null } as never), null);
 });
 

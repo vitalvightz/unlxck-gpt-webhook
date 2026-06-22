@@ -909,13 +909,17 @@ export type StructuredCardDebug = { status: string; errors: string[] };
 
 /**
  * The structured-card conversion outcome recorded on the plan's validator report
- * ({status, errors}; see api/stage2_automation._record_structured_outcome). Used
- * only to explain, in the admin view, WHY a published plan is showing the
- * plan_text fallback instead of the structured card: an `invalid_fallback_used`
- * status means the converted card was rejected (faithfulness/schema drift) so no
- * card was persisted and the plan stays on the fallback even after approval.
- * Returns null when there is nothing actionable to show — no debug recorded, or a
- * clean/`valid` card that already renders.
+ * ({status, errors}; see api/stage2_automation._record_structured_outcome).
+ *
+ * Returned for ANY recorded status because the only place this is shown is over
+ * the plan_text fallback (card not rendering), where each status is diagnostic:
+ *  - `invalid_fallback_used` → the converted card was rejected (faithfulness /
+ *    schema drift) so no card was persisted,
+ *  - `valid` / `repair_attempted_valid` → a card WAS built and validated but is
+ *    not the one showing, i.e. it was lost on a later write or no longer decodes
+ *    at read time (the "card built then lost" signal),
+ *  - `not_attempted` → structured generation never ran for this plan.
+ * Returns null only when there is no recorded outcome at all.
  */
 export function readStructuredCardDebug(
   plan: Pick<PlanDetail, "admin_outputs">,
@@ -929,33 +933,43 @@ export function readStructuredCardDebug(
     return null;
   }
   const record = debug as Record<string, unknown>;
-  const status = typeof record.status === "string" ? record.status : "";
-  if (!status || status === "valid" || status === "repair_attempted_valid") {
+  const status = typeof record.status === "string" ? record.status.trim() : "";
+  if (!status) {
     return null;
   }
+  // Coerce defensively: a null/undefined entry must not surface as the literal
+  // strings "null"/"undefined", and whitespace-only reasons are dropped.
   const errors = Array.isArray(record.errors)
-    ? record.errors.map((entry) => String(entry)).filter(Boolean)
+    ? record.errors.map((entry) => (entry != null ? String(entry).trim() : "")).filter(Boolean)
     : [];
   return { status, errors };
 }
 
 /**
- * Admin-only explainer shown over the plan_text fallback when no structured card
- * was built, so the rejection reason is visible instead of the card silently
- * disappearing. Turns "why is it stuck on the fallback?" into a concrete answer.
+ * Admin-only explainer shown over the plan_text fallback so the reason a
+ * structured card is missing is visible instead of the card silently
+ * disappearing. Messaging differs by recorded status: a rejected conversion
+ * lists the drift reasons; a `valid` status here means the card was built but
+ * lost (the athlete is still on the fallback).
  */
 function StructuredCardDiagnostic({ debug }: { debug: StructuredCardDebug }) {
+  const wasBuilt = debug.status === "valid" || debug.status === "repair_attempted_valid";
+  const notAttempted = debug.status === "not_attempted";
+  const heading = wasBuilt ? "Structured card built but not shown" : "Structured card not built";
+  const copy = wasBuilt
+    ? "A structured card was built and validated for this plan, but it is not the card showing — it was most likely overwritten on a later write or no longer decodes at read time, so the athlete is on the text fallback."
+    : notAttempted
+      ? "Structured generation never ran for this plan, so the athlete is on the text fallback."
+      : "The athlete is seeing the text fallback because the converted structured card was rejected, so no card was saved. Approving the plan does not rebuild it; the reasons below show how the card drifted from the saved plan text.";
   return (
     <section className="support-panel" role="status">
       <div className="form-section-header">
         <p className="kicker">Admin diagnostic</p>
-        <h3>Structured card not built — {humanizeStatus(debug.status)}</h3>
+        <h3>
+          {heading} — {humanizeStatus(debug.status)}
+        </h3>
       </div>
-      <p className="muted">
-        The athlete is seeing the text fallback because the converted structured card was
-        rejected, so no card was saved. Approving the plan does not rebuild it; the reasons below
-        show how the card drifted from the saved plan text.
-      </p>
+      <p className="muted">{copy}</p>
       {debug.errors.length ? (
         <ul className="summary-list">
           {debug.errors.map((reason, index) => (
