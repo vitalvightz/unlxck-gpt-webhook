@@ -990,43 +990,51 @@ export function GuidedInjuryCard({
       ? "Step 2 of 3 · Choose injury type"
       : "Step 3 of 3 · Safety details";
 
-function handleTypeSelect(opt: InjuryTypeOption | null) {
-  if (!opt) {
-    onUpdate("injury_type", "");
-    onUpdate("injury_subtypes", []);
-    clearTypeSpecificFields(onUpdate);
-    onUpdate("notes", stripTaggedNotes(injury.notes, ["red_flags", "dislocation", "nerve_symptoms", "chest_symptoms"]));
-    return;
-  }
-
-  const isSame =
-    injury.injury_type === opt.value &&
-    (opt.value !== "surface_injury" ||
-      injury.surface_type === (opt.surface_type ?? ""));
-
-  if (isSame) {
-    onUpdate("injury_type", "");
-    clearTypeSpecificFields(onUpdate);
-    onUpdate("notes", stripTaggedNotes(injury.notes, ["red_flags", "dislocation", "nerve_symptoms", "chest_symptoms"]));
-    return;
-  }
-
-  const currentType = injury.injury_type;
-  // The injury is being rewritten as a different type. Free-text extra detail
-  // written for the old injury may no longer apply — flag it for the athlete.
-  if (currentType && getNotesFreeText(injury.notes).trim()) {
+  function flagStaleExtraDetail() {
+    if (!getNotesFreeText(injury.notes).trim()) {
+      return;
+    }
     setStaleNote(true);
+    setNotesOpen(true);
   }
-  clearTypeSpecificFields(onUpdate);
-  onUpdate("injury_type", opt.value);
-  onUpdate("surface_type", opt.surface_type ?? "");
-  const stripPrefixes: string[] = [];
-  if (currentType === "head_impact" && opt.value !== "head_impact") stripPrefixes.push("red_flags");
-  if (currentType === "dislocation" && opt.value !== "dislocation") stripPrefixes.push("dislocation");
-  if (currentType === "nerve_symptoms" && opt.value !== "nerve_symptoms") stripPrefixes.push("nerve_symptoms");
-  if (currentType === "chest_breathing" && opt.value !== "chest_breathing") stripPrefixes.push("chest_symptoms");
-  if (stripPrefixes.length) onUpdate("notes", stripTaggedNotes(injury.notes, stripPrefixes));
-}
+
+  function handleTypeSelect(opt: InjuryTypeOption | null) {
+    if (!opt) {
+      onUpdate("injury_type", "");
+      onUpdate("injury_subtypes", []);
+      clearTypeSpecificFields(onUpdate);
+      onUpdate("notes", stripTaggedNotes(injury.notes, ["red_flags", "dislocation", "nerve_symptoms", "chest_symptoms"]));
+      return;
+    }
+
+    const isSame =
+      injury.injury_type === opt.value &&
+      (opt.value !== "surface_injury" ||
+        injury.surface_type === (opt.surface_type ?? ""));
+
+    if (isSame) {
+      onUpdate("injury_type", "");
+      clearTypeSpecificFields(onUpdate);
+      onUpdate("notes", stripTaggedNotes(injury.notes, ["red_flags", "dislocation", "nerve_symptoms", "chest_symptoms"]));
+      return;
+    }
+
+    const currentType = injury.injury_type;
+    // The injury is being rewritten as a different type. Free-text extra detail
+    // written for the old injury may no longer apply - flag it for the athlete.
+    if (currentType && getNotesFreeText(injury.notes).trim()) {
+      flagStaleExtraDetail();
+    }
+    clearTypeSpecificFields(onUpdate);
+    onUpdate("injury_type", opt.value);
+    onUpdate("surface_type", opt.surface_type ?? "");
+    const stripPrefixes: string[] = [];
+    if (currentType === "head_impact" && opt.value !== "head_impact") stripPrefixes.push("red_flags");
+    if (currentType === "dislocation" && opt.value !== "dislocation") stripPrefixes.push("dislocation");
+    if (currentType === "nerve_symptoms" && opt.value !== "nerve_symptoms") stripPrefixes.push("nerve_symptoms");
+    if (currentType === "chest_breathing" && opt.value !== "chest_breathing") stripPrefixes.push("chest_symptoms");
+    if (stripPrefixes.length) onUpdate("notes", stripTaggedNotes(injury.notes, stripPrefixes));
+  }
 
   function handleFamilySelect(family: InjuryFamily) {
     setDraftFamily(family);
@@ -1135,6 +1143,26 @@ function handleTypeSelect(opt: InjuryTypeOption | null) {
               ))}
             </div>
           </div>
+
+          {staleNote && hasExtraDetail ? (
+            <div className="gi-stale-note gi-stale-note-flash" role="alert">
+              <div>
+                <strong>Old extra detail is still attached.</strong>
+                <span> Review it now or clear it before continuing.</span>
+              </div>
+              <button
+                type="button"
+                className="gi-stale-note-clear"
+                onClick={() => {
+                  onUpdate("notes", setNotesFreeText(injury.notes, ""));
+                  setStaleNote(false);
+                  setNotesOpen(false);
+                }}
+              >
+                Clear old detail
+              </button>
+            </div>
+          ) : null}
 
           {/* Injury family + stepped selector */}
           <div className="gi-field">
@@ -1274,22 +1302,6 @@ function handleTypeSelect(opt: InjuryTypeOption | null) {
           ) : null}
 
           {/* Collapsed notes */}
-          {staleNote && hasExtraDetail ? (
-            <div className="gi-stale-note" role="status">
-              <span>Extra detail was written for the previous injury and may no longer apply.</span>
-              <button
-                type="button"
-                className="gi-stale-note-clear"
-                onClick={() => {
-                  onUpdate("notes", setNotesFreeText(injury.notes, ""));
-                  setStaleNote(false);
-                  setNotesOpen(false);
-                }}
-              >
-                Clear
-              </button>
-            </div>
-          ) : null}
           {notesOpen ? (
             <div className="gi-field">
               <label htmlFor={`gi-notes-${index}`} className="gi-label">Extra detail</label>

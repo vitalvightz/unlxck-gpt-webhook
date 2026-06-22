@@ -251,17 +251,22 @@ def upsert_session_completion(
 def _session_id_for_entry(entry: Any) -> str | None:
     """A stable session id for a derived weekly-schedule day entry.
 
-    Prefers the calendar date; falls back to the weekday label. Returns ``None``
-    when there is nothing to key on so completion lookup is simply skipped.
+    Prefers an explicit session id, then the calendar date, then the weekday
+    label. Returns ``None`` when there is nothing to key on so completion lookup
+    is simply skipped.
     """
     if entry is None:
         return None
     if isinstance(entry, Mapping):
+        explicit_session_id = entry.get("session_id")
         calendar_date = entry.get("calendar_date")
         weekday = entry.get("weekday", "")
     else:
+        explicit_session_id = getattr(entry, "session_id", None)
         calendar_date = getattr(entry, "calendar_date", None)
         weekday = getattr(entry, "weekday", "")
+    if explicit_session_id:
+        return str(explicit_session_id)
     if calendar_date:
         return str(calendar_date)
     return str(weekday) or None
@@ -285,6 +290,70 @@ def _has_scheduled_day_content(entry: Any) -> bool:
 
 def _entry_has_training(entry: Any) -> bool:
     return _has_scheduled_day_content(entry)
+
+
+def _iter_mapping_items(value: Any) -> list[Mapping[str, Any]]:
+    if not isinstance(value, list):
+        return []
+    return [item for item in value if isinstance(item, Mapping)]
+
+
+def _clean_text(value: Any) -> str:
+    return str(value or "").strip()
+
+
+def _structured_effective_load(day_type: Any) -> str:
+    normalized = _clean_text(day_type).lower()
+    if normalized in {"hard", "high"}:
+        return "hard"
+    if normalized in {"reduced", "low", "recovery"}:
+        return "reduced"
+    if normalized in {"rest", "off", "none"}:
+        return "none"
+    return "technical"
+
+
+def _structured_today_session_entry(plan_row: Mapping[str, Any], training_day: str) -> dict[str, Any] | None:
+    structured_plan = plan_row.get("structured_plan")
+    if not isinstance(structured_plan, Mapping):
+        return None
+
+    for week in _iter_mapping_items(structured_plan.get("weeks")):
+        for day in _iter_mapping_items(week.get("days")):
+            day_date = _clean_text(day.get("date"))[:10]
+            if day_date != training_day:
+                continue
+            sessions = _iter_mapping_items(day.get("sessions"))
+            if not sessions:
+                return None
+
+            session = dict(sessions[0])
+            today_card = day.get("today_card") if isinstance(day.get("today_card"), Mapping) else {}
+            title = (
+                _clean_text(session.get("title"))
+                or _clean_text(today_card.get("headline"))
+                or _clean_text(session.get("session_type"))
+                or "Today's session"
+            )
+            objective = _clean_text(session.get("objective")) or _clean_text(today_card.get("headline"))
+            session_id = _clean_text(session.get("session_id")) or day_date
+            weekday = ""
+            try:
+                weekday = datetime.strptime(day_date, "%Y-%m-%d").strftime("%A")
+            except ValueError:
+                weekday = ""
+
+            return {
+                **session,
+                "calendar_date": day_date,
+                "weekday": weekday,
+                "title": title,
+                "status": _clean_text(session.get("session_type")) or "scheduled_session",
+                "coach_note": objective,
+                "effective_load": _structured_effective_load(day.get("day_type")),
+                "session_id": session_id,
+            }
+    return None
 
 
 def _scan_forward_for_next_training(
@@ -417,15 +486,17 @@ def build_today_command_view(
             today_entry = next_entry = None
             week = None
 
-    has_today_session = _has_scheduled_day_content(today_entry)
-    today_session_id = _session_id_for_entry(today_entry) if has_today_session else None
+    structured_today_entry = _structured_today_session_entry(plan_row, training_day)
+    today_session_entry = structured_today_entry or today_entry
+    has_today_session = _has_scheduled_day_content(today_session_entry)
+    today_session_id = _session_id_for_entry(today_session_entry) if has_today_session else None
     today_completion = (
         store.get_session_completion(athlete_id, today_session_id, training_day)
         if today_session_id
         else None
     )
     today_is_complete = completion_status_of(today_completion) in TERMINAL_COMPLETION_STATUSES
-    target_entry = today_entry if has_today_session and not today_is_complete else next_entry
+    target_entry = today_session_entry if has_today_session and not today_is_complete else next_entry
     if target_entry is None and week is not None:
         # No training left in the current week — look ahead so the "Next session"
         # card surfaces the upcoming session instead of "No session found".
@@ -442,7 +513,7 @@ def build_today_command_view(
             target_entry = None
     session_relation = (
         "today"
-        if target_entry is not None and target_entry is today_entry
+        if target_entry is not None and target_entry is today_session_entry
         else ("next" if target_entry is not None else None)
     )
     session_id = _session_id_for_entry(target_entry)
