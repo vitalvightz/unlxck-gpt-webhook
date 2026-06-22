@@ -10,9 +10,11 @@ import {
   hasBlockedTriageStubText,
   isPlanReleasedToAthlete,
   isProtectedTriageResumePendingState,
+  isRecentlyCreatedPlan,
   readInjuryTriage,
   readRawTriageMode,
   resolveApprovalAfterError,
+  shouldHoldPlanTextFallbackForStructuredPlan,
   shouldShowProtectedResumeAdminReview,
 } from "./plan-viewer";
 import { ApiError, RETRYABLE_NETWORK_MESSAGE } from "@/lib/api";
@@ -192,6 +194,95 @@ test("isPlanReleasedToAthlete requires an athlete-visible status with plan text"
     isPlanReleasedToAthlete(makePlan({ status: "review_required", planText: "# Plan" })),
     false,
   );
+});
+
+test("recent published plan without structured card holds the text fallback", () => {
+  assert.equal(
+    shouldHoldPlanTextFallbackForStructuredPlan({
+      hasPublishedPlan: true,
+      hasStructuredPlan: false,
+      fallbackUnlocked: false,
+      hasAccessToken: true,
+      isRecentPlan: true,
+    }),
+    true,
+  );
+});
+
+test("structured card or timeout unlocks the published plan view", () => {
+  assert.equal(
+    shouldHoldPlanTextFallbackForStructuredPlan({
+      hasPublishedPlan: true,
+      hasStructuredPlan: true,
+      fallbackUnlocked: false,
+      hasAccessToken: true,
+      isRecentPlan: true,
+    }),
+    false,
+  );
+  assert.equal(
+    shouldHoldPlanTextFallbackForStructuredPlan({
+      hasPublishedPlan: true,
+      hasStructuredPlan: false,
+      fallbackUnlocked: true,
+      hasAccessToken: true,
+      isRecentPlan: true,
+    }),
+    false,
+  );
+});
+
+test("triage blocked plans do not enter the structured-card hold", () => {
+  assert.equal(
+    shouldHoldPlanTextFallbackForStructuredPlan({
+      hasPublishedPlan: true,
+      hasStructuredPlan: false,
+      fallbackUnlocked: false,
+      hasAccessToken: true,
+      isRecentPlan: true,
+      isTriageBlocked: true,
+    }),
+    false,
+  );
+});
+
+test("legacy plans without a structured card do not enter the hold", () => {
+  assert.equal(
+    shouldHoldPlanTextFallbackForStructuredPlan({
+      hasPublishedPlan: true,
+      hasStructuredPlan: false,
+      fallbackUnlocked: false,
+      hasAccessToken: true,
+      isRecentPlan: false,
+    }),
+    false,
+  );
+});
+
+test("plans without an access token cannot be held for structuring", () => {
+  assert.equal(
+    shouldHoldPlanTextFallbackForStructuredPlan({
+      hasPublishedPlan: true,
+      hasStructuredPlan: false,
+      fallbackUnlocked: false,
+      hasAccessToken: false,
+      isRecentPlan: true,
+    }),
+    false,
+  );
+});
+
+test("isRecentlyCreatedPlan honours the recent-plan threshold", () => {
+  const now = Date.parse("2026-06-22T12:00:00.000Z");
+  assert.equal(
+    isRecentlyCreatedPlan({ created_at: "2026-06-22T11:58:00.000Z" }, now),
+    true,
+  );
+  assert.equal(
+    isRecentlyCreatedPlan({ created_at: "2026-06-22T11:50:00.000Z" }, now),
+    false,
+  );
+  assert.equal(isRecentlyCreatedPlan({ created_at: "" }, now), false);
 });
 
 test("resolveApprovalAfterError treats a retryable timeout as approved when getPlan reads ready", async () => {
