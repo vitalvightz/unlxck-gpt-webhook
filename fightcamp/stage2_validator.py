@@ -1968,6 +1968,9 @@ def _late_fight_countdown_blocks_by_day(final_plan_text: str) -> dict[int, list[
             current_day = int(match.group(2))
             blocks.setdefault(current_day, []).append(cleaned)
             continue
+        if _is_countdown_block_boundary(cleaned):
+            current_day = None
+            continue
         if current_day is not None:
             blocks.setdefault(current_day, []).append(cleaned)
     return blocks
@@ -2641,6 +2644,23 @@ def _stage2_output_incomplete_errors(final_plan_text: str) -> list[dict[str, Any
     return []
 
 
+def _is_countdown_block_boundary(line: str) -> bool:
+    """Return True when a line ends the current countdown day's body.
+
+    Countdown days (``D-X ...``) render as a header line followed by their own
+    bullet/why body. Everything *after* the last countdown day — ``## Nutrition``,
+    ``## Recovery``, ``## Selection Rationale``, ``## Athlete Profile`` and the
+    like — is a separate top-level section, not part of that day. Those sections
+    routinely mention "strength", "conditioning", etc. in prose, so if they get
+    absorbed into the final (often D-0) block they trip the day-level training
+    guards as a false positive. A markdown section header is a reliable boundary
+    because countdown days themselves are never sub-sectioned with headers.
+    """
+    if _COUNTDOWN_LABEL_LINE.match(line):
+        return False
+    return bool(_MARKDOWN_HEADER.match(line))
+
+
 def _countdown_blocks(final_plan_text: str) -> list[dict[str, Any]]:
     blocks: list[dict[str, Any]] = []
     current: dict[str, Any] | None = None
@@ -2653,6 +2673,11 @@ def _countdown_blocks(final_plan_text: str) -> list[dict[str, Any]]:
             if current:
                 blocks.append(current)
             current = {"day": int(match.group(2)), "header": line, "lines": []}
+            continue
+        if _is_countdown_block_boundary(line):
+            if current:
+                blocks.append(current)
+            current = None
             continue
         if current:
             current["lines"].append(line)
@@ -2732,10 +2757,29 @@ def validate_stage2_output(*, planning_brief: dict, final_plan_text: str) -> dic
                 errors.append(_issue(code="true_internal_system_leak", message=f"Internal system term leaked: {leaked}.", severity="blocker", confidence="high", line=line))
                 break
     d1_risk_pattern = re.compile(r"\b(strength|conditioning|sprints?|interval|heavy|loaded|deadlift|squat|trap bar|barbell)\b", re.IGNORECASE)
-    d0_extra_pattern = re.compile(r"\b(?:extra|plus|add|conditioning|strength|finisher|circuit|sprint|lift)\b", re.IGNORECASE)
+    # Only concrete app-prescribed training modalities should block fight day.
+    # Generic prose words ("extra", "plus", "add") live in coach notes/rationale
+    # and caused false fight_day_protocol_violation flags.
+    d0_extra_pattern = re.compile(r"\b(?:conditioning|strength|finisher|circuit|sprint|lift|deadlift|squat|barbell)\b", re.IGNORECASE)
+    protocol_full = _normalize_render_line(FIGHT_DAY_PROTOCOL_TEXT)
+    protocol_body = _normalize_render_line(
+        re.sub(r"^fight day protocol\s*[—:-]\s*", "", FIGHT_DAY_PROTOCOL_TEXT, flags=re.IGNORECASE)
+    )
+
+    def _is_fight_day_protocol_line(line: str) -> bool:
+        cleaned = _BULLET_PREFIX.sub("", line).strip()
+        normalized = _normalize_render_line(cleaned)
+        if not normalized:
+            return False
+        return normalized in {protocol_full, protocol_body} or normalized in protocol_full
+
     for block in countdown_blocks:
         day = int(block["day"])
-        safe_lines = [line for line in block["lines"] if not _line_is_instruction_only(line)]
+        safe_lines = [
+            line
+            for line in block["lines"]
+            if not _line_is_instruction_only(line) and not _is_fight_day_protocol_line(line)
+        ]
         joined = " ".join(safe_lines)
         has_blocking_hard_sparring = _has_blocking_hard_sparring(block["header"]) or _has_blocking_hard_sparring(joined)
         if day == 12 and has_blocking_hard_sparring:

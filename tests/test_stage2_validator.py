@@ -2439,6 +2439,48 @@ def test_validate_stage2_output_ignores_negated_safety_lines_in_d1_and_d0():
     assert "fight_day_protocol_violation" not in error_codes
 
 
+def test_validate_stage2_output_does_not_absorb_trailing_sections_into_d0():
+    """Sections rendered after the final D-0 day (nutrition, recovery, rationale)
+    must not be vacuumed into the D-0 countdown block and trip the fight-day
+    protocol guard with their prose mentions of strength/conditioning."""
+    report = validate_stage2_output(
+        planning_brief=_late_fight_planning_brief("D-0"),
+        final_plan_text="""
+        ## Countdown Sessions
+
+        D-0 (Sunday) — Fight day protocol — follow coach warm-up and fight protocol; no additional app S&C.
+
+        ## Nutrition
+        - Standard fight-day fueling.
+
+        ## Recovery
+        - Light mobility and breathing.
+
+        ## Selection Rationale
+        Strength and conditioning were tapered earlier; we added recovery focus.
+        """,
+    )
+    error_codes = {error["code"] for error in report["errors"]}
+    assert "fight_day_protocol_violation" not in error_codes
+
+
+def test_validate_stage2_output_still_blocks_real_training_on_d0():
+    """Genuine app-prescribed training on the fight day must still block."""
+    report = validate_stage2_output(
+        planning_brief=_late_fight_planning_brief("D-0"),
+        final_plan_text="""
+        D-0 (Sunday) — Fight day protocol
+        - Back squat 5x5 heavy
+        - Conditioning circuit 4 rounds
+
+        ## Recovery
+        - Breathing.
+        """,
+    )
+    error_codes = {error["code"] for error in report["errors"]}
+    assert "fight_day_protocol_violation" in error_codes
+
+
 def test_validate_stage2_output_blocks_hard_sparring_from_d11_to_d0():
     report = validate_stage2_output(
         planning_brief=_planning_brief_fixture(),
