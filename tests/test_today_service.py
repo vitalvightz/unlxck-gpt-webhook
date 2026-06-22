@@ -37,6 +37,43 @@ def _store_with_plan(plan_id: str = PLAN, athlete_id: str = ATHLETE) -> FakeStor
     return store
 
 
+def _store_with_monday_tuesday_schedule() -> FakeStore:
+    store = _store_with_plan()
+    store.plans[PLAN].update(
+        {
+            "fight_date": "2026-07-17",
+            "planning_brief": {
+                "weekly_role_map": {
+                    "weeks": [
+                        {
+                            "phase": "GPP",
+                            "calendar_days": [
+                                {"weekday": "Monday", "d_day": 25, "calendar_date": "2026-06-22"},
+                                {"weekday": "Tuesday", "d_day": 24, "calendar_date": "2026-06-23"},
+                            ],
+                            "hard_sparring_plan": [
+                                {
+                                    "day": "Monday",
+                                    "effective_load": "technical",
+                                    "status": "technical_session",
+                                    "coach_note": "Today session.",
+                                },
+                                {
+                                    "day": "Tuesday",
+                                    "effective_load": "hard",
+                                    "status": "hard_as_planned",
+                                    "coach_note": "Hard sparring.",
+                                },
+                            ],
+                        }
+                    ]
+                }
+            },
+        }
+    )
+    return store
+
+
 def _checkin_payload(**overrides) -> dict:
     base = {
         "plan_id": PLAN,
@@ -225,6 +262,33 @@ class TestCommandView:
         view = build_today_command_view(store, athlete_id=ATHLETE, athlete_timezone="")
         assert view.today.next_session == {}
         assert view.today.completion_status == "not_started"
+
+    def test_today_session_stays_primary_until_completed(self):
+        now = datetime(2026, 6, 22, 12, 0, tzinfo=timezone.utc)
+        store = _store_with_monday_tuesday_schedule()
+
+        active_view = build_today_command_view(
+            store, athlete_id=ATHLETE, athlete_timezone="", now=now
+        )
+        assert active_view.today.session_scope == "today"
+        assert active_view.today.session_label == "Today's session"
+        assert active_view.today.next_session["calendar_date"] == "2026-06-22"
+
+        upsert_session_completion(
+            store,
+            athlete_id=ATHLETE,
+            athlete_timezone="",
+            payload={"plan_id": PLAN, "session_id": "2026-06-22", "status": "done"},
+            now=now,
+        )
+
+        completed_view = build_today_command_view(
+            store, athlete_id=ATHLETE, athlete_timezone="", now=now
+        )
+        assert completed_view.today.completion_status == "done"
+        assert completed_view.today.session_scope == "next"
+        assert completed_view.today.session_label == "Next session"
+        assert completed_view.today.next_session["calendar_date"] == "2026-06-23"
 
 
 class TestSessionCompletion:

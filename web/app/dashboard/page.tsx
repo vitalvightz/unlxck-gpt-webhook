@@ -48,6 +48,17 @@ function describeDay(entry: WeeklyDayEntry | null | undefined): string {
   return parts.length ? parts.join(" — ") : "Rest / no scheduled load.";
 }
 
+function hasScheduledDayContent(entry: WeeklyDayEntry | null | undefined): boolean {
+  if (!entry) {
+    return false;
+  }
+  return Boolean(
+    entry.status ||
+      (entry.effective_load && entry.effective_load !== "none") ||
+      entry.coach_note,
+  );
+}
+
 function ScaleField({
   label,
   hint,
@@ -221,6 +232,7 @@ function DashboardScreen() {
   if (!state) {
     return null;
   }
+  const shouldShowNextSession = Boolean(state.next_session && !hasScheduledDayContent(state.today));
 
   return (
     <div style={{ display: "grid", gap: "var(--space-3, 20px)" }}>
@@ -277,7 +289,7 @@ function DashboardScreen() {
             <span>Today&apos;s session</span>
             <span>{describeDay(state.today)}</span>
           </div>
-          {state.next_session && (
+          {shouldShowNextSession && state.next_session && (
             <div className="review-detail-row">
               <span>Next session</span>
               <span>

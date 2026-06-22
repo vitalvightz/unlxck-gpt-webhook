@@ -25,6 +25,7 @@ from pydantic import ValidationError
 from api.contracts.checkin_decision import CheckinInputs, evaluate_checkin
 from api.contracts.command_view import CommandView, build_command_view, make_risk
 from api.contracts.completion import (
+    TERMINAL_COMPLETION_STATUSES,
     SessionCompletionRecord,
     completion_landing_state,
     completion_status_of,
@@ -329,20 +330,29 @@ def build_today_command_view(
             # Malformed plan data must never crash Overview.
             today_entry = next_entry = None
 
-    target_entry = today_entry or next_entry
-    session_id = _session_id_for_entry(target_entry)
-    completion = (
-        store.get_session_completion(athlete_id, session_id, training_day)
-        if session_id
+    today_session_id = _session_id_for_entry(today_entry)
+    today_completion = (
+        store.get_session_completion(athlete_id, today_session_id, training_day)
+        if today_session_id
         else None
     )
+    today_is_complete = completion_status_of(today_completion) in TERMINAL_COMPLETION_STATUSES
+
+    if today_entry is not None and not today_is_complete:
+        target_entry = today_entry
+        session_scope = "today"
+    else:
+        target_entry = next_entry
+        session_scope = "next" if next_entry is not None else "none"
+    session_id = _session_id_for_entry(target_entry)
 
     return build_command_view(
         current_training_day=training_day,
         plan=plan_row,
         recommendation=recommendation,
-        completion=completion,
+        completion=today_completion,
         next_session=_next_session_payload(target_entry, session_id),
+        session_scope=session_scope,
         risks=_risks_from_checkin(today_checkin),
     )
 
