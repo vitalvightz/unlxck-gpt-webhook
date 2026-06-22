@@ -1809,7 +1809,14 @@ export function PlanViewer({
       }
       try {
         const refreshedPlan = await getPlan(accessToken, plan.plan_id);
-        if (!cancelled && shouldRenderStructuredPlan(refreshedPlan.outputs)) {
+        // Only swap the view once the actual structured card exists — mirror the
+        // exact gate the renderer uses (hasStructuredAthletePlan) so we never call
+        // onPlanUpdated for a refresh that would still fall back to plan_text.
+        if (
+          !cancelled &&
+          shouldRenderStructuredPlan(refreshedPlan.outputs) &&
+          Boolean(refreshedPlan.outputs.structured_plan)
+        ) {
           onPlanUpdated?.(refreshedPlan);
         }
       } catch {
