@@ -8,7 +8,7 @@ import uuid
 from contextlib import asynccontextmanager
 from typing import Any, Callable
 
-from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException, Query, Request, status
+from fastapi import BackgroundTasks, Body, Depends, FastAPI, HTTPException, Query, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, Response
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -34,6 +34,8 @@ from .models import (
     GenerationJobResponse,
     ManualStage2SubmissionRequest,
     NutritionWorkspaceUpdateRequest,
+    PlanBulkPermanentDeleteRequest,
+    PlanBulkPermanentDeleteResult,
     PlanDetail,
     PlanPermanentDeleteRequest,
     PlanRequest,
@@ -1053,7 +1055,7 @@ def create_app(
     )
     def permanent_delete_plan(
         plan_id: str,
-        request_body: PlanPermanentDeleteRequest,
+        request_body: PlanPermanentDeleteRequest | None = Body(default=None),
         _: ProfileRecord = Depends(require_admin),
         store: AppStore = Depends(get_store),
     ) -> Response:
@@ -1069,19 +1071,63 @@ def create_app(
                 status_code=status.HTTP_409_CONFLICT,
                 detail="Plan has an active generation job. Cancel or wait before deleting.",
             )
-        expected = str(plan_row.get("plan_name") or "").strip()
-        if not expected:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Plan has no name. Rename it before permanent deletion.",
-            )
-        if request_body.confirm_plan_name != expected:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Confirmation does not match the plan name.",
-            )
+        # Archived plans are already retired from the athlete's view, so they can
+        # be permanently deleted without retyping the plan name. Live plans still
+        # require the typed confirmation to guard against accidental deletion.
+        if not _is_archived_plan(plan_row):
+            expected = str(plan_row.get("plan_name") or "").strip()
+            if not expected:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Plan has no name. Rename it before permanent deletion.",
+                )
+            confirm = request_body.confirm_plan_name if request_body else None
+            if confirm != expected:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Confirmation does not match the plan name.",
+                )
         store.delete_plan(plan_id)
         return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+    @app.post(
+        "/api/admin/plans/bulk-permanent-delete",
+        response_model=PlanBulkPermanentDeleteResult,
+    )
+    def bulk_permanent_delete_plans(
+        request_body: PlanBulkPermanentDeleteRequest,
+        _: ProfileRecord = Depends(require_admin),
+        store: AppStore = Depends(get_store),
+    ) -> PlanBulkPermanentDeleteResult:
+        # Bulk deletion is intentionally restricted to already-archived plans so a
+        # single confirmation never wipes a live plan. Non-archived ids are
+        # reported back as skipped rather than failing the whole batch.
+        deleted: list[str] = []
+        skipped: list[dict[str, str]] = []
+        for plan_id in request_body.plan_ids:
+            try:
+                uuid.UUID(plan_id)
+            except (ValueError, AttributeError):
+                skipped.append({"plan_id": plan_id, "reason": "not_found"})
+                continue
+            plan_row = store.get_plan(plan_id)
+            if not plan_row:
+                skipped.append({"plan_id": plan_id, "reason": "not_found"})
+                continue
+            if not _is_archived_plan(plan_row):
+                skipped.append({"plan_id": plan_id, "reason": "not_archived"})
+                continue
+            if store.has_active_generation_job_for_plan(plan_id):
+                skipped.append({"plan_id": plan_id, "reason": "active_generation_job"})
+                continue
+            store.delete_plan(plan_id)
+            deleted.append(plan_id)
+        return PlanBulkPermanentDeleteResult(
+            deleted=deleted,
+            skipped=skipped,
+            deleted_count=len(deleted),
+            skipped_count=len(skipped),
+        )
 
     @app.get("/api/admin/athletes", response_model=list[AdminAthleteRecord])
     def list_admin_athletes(
@@ -1349,6 +1395,10 @@ def _build_runtime_app() -> FastAPI:
         bool(os.getenv("SUPABASE_SERVICE_ROLE_KEY")),
         enable_in_process_generation,
     )
+
+    if not (os.getenv("SUPABASE_URL", "").strip() and os.getenv("SUPABASE_SERVICE_ROLE_KEY", "").strip()):
+        logger.warning("[app] build_runtime_app:missing_supabase_config")
+        return _build_startup_failure_app("missing supabase configuration")
     logger.info("[app] build_runtime_app:using_supabase_mode")
     store = SupabaseAppStore.from_env()
     store.validate_runtime_schema()
@@ -1360,7 +1410,7 @@ def _build_runtime_app() -> FastAPI:
     )
 
 
-def _build_startup_failure_app() -> FastAPI:
+def _build_startup_failure_app(detail: str = "service temporarily unavailable") -> FastAPI:
     app = FastAPI(title="UNLXCK Fight Camp API", version="0.2.0")
 
     def _failure_response() -> JSONResponse:
@@ -1369,7 +1419,7 @@ def _build_startup_failure_app() -> FastAPI:
             content={
                 "ok": False,
                 "app": "unlxck-fight-camp-api",
-                "detail": "service temporarily unavailable",
+                "detail": detail,
             },
         )
 
@@ -1390,14 +1440,16 @@ def _build_startup_failure_app() -> FastAPI:
 
 try:
     app = _build_runtime_app()
-except RuntimeError as exc:
-    logger.exception("[app] runtime_app_build_failed")
-    del exc
-    app = _build_startup_failure_app()
-except PostgrestAPIError as exc:
-    logger.exception("[app] runtime_app_build_failed")
-    del exc
-    app = _build_startup_failure_app()
 except ValueError:
+    # Invalid runtime configuration (e.g. malformed CORS origins).
+    logger.exception("[app] runtime_app_build_failed:invalid_config")
+    app = _build_startup_failure_app("application startup failed")
+except PostgrestAPIError:
+    # Backend/database connectivity or quota failure during startup. Listed
+    # before the broad ``except Exception`` below — PostgrestAPIError subclasses
+    # Exception, so a later clause would never be reached.
+    logger.exception("[app] runtime_app_build_failed:postgrest")
+    app = _build_startup_failure_app("service temporarily unavailable")
+except Exception:
     logger.exception("[app] runtime_app_build_failed")
-    app = _build_startup_failure_app()
+    app = _build_startup_failure_app("service temporarily unavailable")

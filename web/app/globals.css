@@ -1514,6 +1514,120 @@ select:focus-visible {
   isolation: isolate;
 }
 
+/* Overview command cards (Today's state / Next session / Risk watch) share the
+   Today screen's tone-driven accent so the page reads at a glance and matches. */
+.overview-command-card {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.overview-command-card[data-tone]::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+}
+
+.overview-command-card[data-tone="green"] {
+  border-color: rgba(39, 174, 96, 0.34);
+  box-shadow: inset 3px 0 0 #2bb56e, var(--shadow-support);
+}
+
+.overview-command-card[data-tone="green"]::before {
+  background: radial-gradient(circle at top left, rgba(39, 174, 96, 0.13), transparent 48%);
+}
+
+.overview-command-card[data-tone="amber"] {
+  border-color: rgba(214, 175, 106, 0.34);
+  box-shadow: inset 3px 0 0 #d6af6a, var(--shadow-support);
+}
+
+.overview-command-card[data-tone="amber"]::before {
+  background: radial-gradient(circle at top left, rgba(214, 175, 106, 0.14), transparent 48%);
+}
+
+.overview-command-card[data-tone="red"] {
+  border-color: rgba(219, 47, 64, 0.4);
+  box-shadow: inset 3px 0 0 #e23a4c, var(--shadow-support);
+}
+
+.overview-command-card[data-tone="red"]::before {
+  background: radial-gradient(circle at top left, rgba(219, 47, 64, 0.14), transparent 48%);
+}
+
+.overview-next-session-day {
+  margin: 0;
+  color: var(--text-muted);
+  font-family: var(--font-mono), monospace;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.overview-risk-card {
+  display: grid;
+  gap: 10px;
+  align-content: start;
+}
+
+/* Coloured risk rows — meaning never rests on colour alone (label + text carry
+   it), but each tone now reads instantly instead of a flat grey list. */
+.overview-risk-row {
+  display: grid;
+  gap: 3px;
+  padding: 8px 10px 8px 12px;
+  border-radius: 10px;
+  border-left: 3px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.overview-risk-row[data-tone="stop"],
+.overview-risk-row[data-tone="warning"] {
+  border-left-color: #e23a4c;
+  background: linear-gradient(135deg, rgba(219, 47, 64, 0.12), rgba(219, 47, 64, 0.02));
+}
+
+.overview-risk-row[data-tone="caution"] {
+  border-left-color: #d6af6a;
+  background: linear-gradient(135deg, rgba(214, 175, 106, 0.13), rgba(214, 175, 106, 0.02));
+}
+
+.overview-risk-row[data-tone="info"] {
+  border-left-color: #6ea2e0;
+  background: linear-gradient(135deg, rgba(120, 168, 224, 0.12), rgba(120, 168, 224, 0.02));
+}
+
+.overview-risk-row-label {
+  color: var(--text-muted);
+  font-family: var(--font-mono), monospace;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.overview-risk-row[data-tone="stop"] .overview-risk-row-label,
+.overview-risk-row[data-tone="warning"] .overview-risk-row-label {
+  color: #ff8d9a;
+}
+
+.overview-risk-row[data-tone="caution"] .overview-risk-row-label {
+  color: #e6c27d;
+}
+
+.overview-risk-row[data-tone="info"] .overview-risk-row-label {
+  color: #a9c8ef;
+}
+
+.overview-risk-row-text {
+  color: var(--text-secondary);
+  font-size: 14px;
+  line-height: 1.4;
+}
+
 .overview-primary-action::after {
   content: "";
   position: absolute;
@@ -3240,6 +3354,11 @@ button.mobile-step-rail-item {
   grid-template-columns: minmax(260px, 320px) minmax(0, 1fr);
 }
 
+/* Athlete view has no operational sidebar — the plan spans the full width. */
+.plan-detail-layout-single {
+  grid-template-columns: minmax(0, 1fr);
+}
+
 .auth-layout {
   grid-template-columns: minmax(280px, 0.88fr) minmax(360px, 1.05fr);
 }
@@ -4192,6 +4311,39 @@ button.mobile-step-rail-item {
   transform: translateY(-1px);
 }
 
+.settings-section-save {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 36px;
+  padding: 8px 18px;
+  border: 1px solid rgba(181, 18, 43, 0.62);
+  border-radius: 14px;
+  background: linear-gradient(135deg, #e01438, #9f1026);
+  color: #fff;
+  font-family: var(--font-display), var(--font-sans), sans-serif;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  box-shadow: 0 14px 30px rgba(181, 18, 43, 0.24);
+  transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
+}
+
+.settings-section-save:hover,
+.settings-section-save:focus-visible {
+  outline: none;
+  transform: translateY(-1px);
+  box-shadow: 0 18px 38px rgba(181, 18, 43, 0.32);
+}
+
+.settings-section-save:disabled {
+  cursor: progress;
+  opacity: 0.72;
+  transform: none;
+}
+
 .settings-stack {
   display: grid;
   gap: 24px;
@@ -4723,6 +4875,545 @@ button.mobile-step-rail-item {
   padding-inline: 13px;
 }
 
+.today-page {
+  display: grid;
+  gap: 16px;
+}
+
+.today-shell {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  gap: 16px;
+  border-color: rgba(181, 18, 43, 0.16) !important;
+  background: linear-gradient(180deg, rgba(22, 16, 19, 0.96), rgba(13, 14, 18, 0.96)) !important;
+}
+
+.today-shell::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background:
+    radial-gradient(circle at top left, rgba(181, 18, 43, 0.2), transparent 38%),
+    radial-gradient(circle at 88% -10%, rgba(214, 175, 106, 0.08), transparent 34%);
+  pointer-events: none;
+}
+
+.today-empty-state {
+  min-height: min(520px, calc(100vh - 180px));
+  align-content: center;
+}
+
+.today-hero-grid,
+.today-card-head,
+.today-action-row {
+  display: flex;
+  align-items: center;
+}
+
+.today-hero-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0;
+  font-family: var(--font-mono), monospace;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.today-hero-grid {
+  justify-content: space-between;
+  gap: 18px;
+  flex-wrap: wrap;
+}
+
+.today-hero-copy {
+  display: grid;
+  gap: 7px;
+  max-width: 760px;
+}
+
+.today-hero-copy h1 {
+  font-size: clamp(32px, 4.7vw, 54px);
+  line-height: 0.98;
+  letter-spacing: -0.04em;
+}
+
+.today-hero-actions,
+.today-action-row {
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.today-hero-actions {
+  display: flex;
+  align-items: center;
+}
+
+.today-card {
+  display: grid;
+  gap: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  padding: 16px;
+  background: rgba(12, 13, 16, 0.86);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.035);
+}
+
+.today-card[data-tone] {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.today-card[data-tone]::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+}
+
+.today-card[data-tone="red"] {
+  border-color: rgba(219, 47, 64, 0.4);
+  box-shadow: inset 3px 0 0 #e23a4c, inset 0 1px 0 rgba(255, 255, 255, 0.035);
+}
+
+.today-card[data-tone="red"]::before {
+  background: radial-gradient(circle at top left, rgba(219, 47, 64, 0.14), transparent 46%);
+}
+
+.today-card[data-tone="amber"] {
+  border-color: rgba(214, 175, 106, 0.34);
+  box-shadow: inset 3px 0 0 #d6af6a, inset 0 1px 0 rgba(255, 255, 255, 0.035);
+}
+
+.today-card[data-tone="amber"]::before {
+  background: radial-gradient(circle at top left, rgba(214, 175, 106, 0.14), transparent 46%);
+}
+
+.today-card[data-tone="green"] {
+  border-color: rgba(39, 174, 96, 0.34);
+  box-shadow: inset 3px 0 0 #2bb56e, inset 0 1px 0 rgba(255, 255, 255, 0.035);
+}
+
+.today-card[data-tone="green"]::before {
+  background: radial-gradient(circle at top left, rgba(39, 174, 96, 0.13), transparent 46%);
+}
+
+/* Compact train/modify/pull-back decision banner shown above today's blocks. */
+.today-decision-banner {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  margin: 0 0 14px;
+  padding: 12px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-left-width: 3px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.today-decision-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.today-decision-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  align-self: start;
+  flex: 0 0 auto;
+  min-width: 44px;
+  height: 28px;
+  padding: 0 8px;
+  border-radius: 999px;
+  font-family: var(--font-mono), monospace;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.today-decision-banner[data-tone="red"] {
+  border-left-color: #ff6b75;
+  background: linear-gradient(135deg, rgba(219, 47, 64, 0.14), rgba(219, 47, 64, 0.05));
+}
+
+.today-decision-banner[data-tone="red"] .today-decision-icon {
+  background: linear-gradient(180deg, #e23a4c, #b5122b);
+  box-shadow: 0 4px 14px rgba(202, 24, 52, 0.4);
+}
+
+.today-decision-banner[data-tone="amber"] {
+  border-left-color: #f1bd61;
+  background: linear-gradient(135deg, rgba(214, 175, 106, 0.16), rgba(214, 175, 106, 0.05));
+}
+
+.today-decision-banner[data-tone="amber"] .today-decision-icon {
+  background: linear-gradient(180deg, #e6c27d, #c79a45);
+  color: #2a2007;
+  box-shadow: 0 4px 14px rgba(214, 175, 106, 0.32);
+}
+
+.today-decision-banner[data-tone="green"] {
+  border-left-color: #76d393;
+  background: linear-gradient(135deg, rgba(39, 174, 96, 0.16), rgba(39, 174, 96, 0.05));
+}
+
+.today-decision-banner[data-tone="green"] .today-decision-icon {
+  background: linear-gradient(180deg, #4cc47e, #1f9d5a);
+  box-shadow: 0 4px 14px rgba(39, 174, 96, 0.32);
+}
+
+.today-decision-title {
+  margin: 0;
+  font-family: var(--font-mono), monospace;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--text-primary);
+}
+
+.today-decision-detail {
+  margin: 0;
+  color: var(--text-secondary, rgba(255, 255, 255, 0.72));
+  font-size: 14px;
+  line-height: 1.35;
+}
+
+.today-decision-safety {
+  margin: 2px 0 0;
+  color: var(--text-secondary, rgba(255, 255, 255, 0.72));
+  font-size: 12.5px;
+  line-height: 1.35;
+  opacity: 0.85;
+}
+
+/* Today's resolved session blocks reuse the structured-plan (camp map) cards so
+   they stay visually identical to Plan Detail, scoped to today's day only. */
+.today-blocks {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 0 0 14px;
+}
+
+.today-card-head {
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.today-card-head h2 {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: clamp(21px, 2.2vw, 28px);
+  line-height: 1.08;
+  letter-spacing: -0.025em;
+}
+
+.today-risk-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-primary);
+  font-family: var(--font-mono), monospace;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.today-terminal-status,
+.today-risk-text,
+.today-session-summary p,
+.today-field-label {
+  margin: 0;
+}
+
+.today-terminal-status {
+  border-left: 3px solid rgba(219, 47, 64, 0.72);
+  padding-left: 12px;
+  color: var(--text-secondary);
+}
+
+.today-risk-more {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 999px;
+  padding: 6px 10px;
+  color: var(--text-secondary);
+  font-family: var(--font-mono), monospace;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+}
+
+.today-checkin-form,
+.today-completion-form,
+.today-completion-fields,
+.today-session-summary {
+  display: grid;
+  gap: 12px;
+}
+
+.today-field-group {
+  display: grid;
+  gap: 8px;
+}
+
+.today-field-label,
+.today-detail-label,
+.today-risk-label {
+  color: var(--text-muted);
+  font-family: var(--font-mono), monospace;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.today-segment-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.today-segment {
+  min-height: 42px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.035);
+  color: var(--text-secondary);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.today-segment-active {
+  border-color: rgba(255, 255, 255, 0.22);
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-primary);
+}
+
+.today-red-flags {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.today-red-flags summary {
+  color: var(--text-primary);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.today-flag-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 12px;
+  padding-top: 12px;
+}
+
+.today-flag-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+
+.today-primary-action {
+  min-height: 48px;
+}
+
+.today-risk-watch {
+  display: flex;
+  align-items: stretch;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.today-risk-item {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+  min-width: min(100%, 260px);
+  flex: 1 1 260px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-left-width: 3px;
+  border-radius: 14px;
+  padding: 12px 14px;
+  background: rgba(255, 255, 255, 0.035);
+}
+
+/* The "!" badge is a filled, branded chip — meaning never rests on colour alone
+   (the label + text still carry it), but each tone now reads instantly. */
+.today-risk-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  border-color: transparent;
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: 0;
+  color: #fff;
+}
+
+.today-risk-item[data-tone="stop"],
+.today-risk-item[data-tone="warning"] {
+  border-color: rgba(219, 47, 64, 0.45);
+  border-left-color: #e23a4c;
+  background: linear-gradient(135deg, rgba(219, 47, 64, 0.12), rgba(219, 47, 64, 0.03));
+}
+
+.today-risk-item[data-tone="stop"] .today-risk-icon,
+.today-risk-item[data-tone="warning"] .today-risk-icon {
+  background: linear-gradient(180deg, #e23a4c, #b5122b);
+  box-shadow: 0 4px 14px rgba(202, 24, 52, 0.42);
+}
+
+.today-risk-item[data-tone="caution"] {
+  border-color: rgba(214, 175, 106, 0.42);
+  border-left-color: #d6af6a;
+  background: linear-gradient(135deg, rgba(214, 175, 106, 0.14), rgba(214, 175, 106, 0.03));
+}
+
+.today-risk-item[data-tone="caution"] .today-risk-icon {
+  background: linear-gradient(180deg, #e6c27d, #c79a45);
+  color: #2a2007;
+  box-shadow: 0 4px 14px rgba(214, 175, 106, 0.34);
+}
+
+.today-risk-item[data-tone="info"] {
+  border-color: rgba(120, 168, 224, 0.36);
+  border-left-color: #78a8e0;
+  background: linear-gradient(135deg, rgba(120, 168, 224, 0.12), rgba(120, 168, 224, 0.03));
+}
+
+.today-risk-item[data-tone="info"] .today-risk-icon {
+  background: linear-gradient(180deg, #6ea2e0, #3f6fb0);
+  box-shadow: 0 4px 14px rgba(63, 111, 176, 0.34);
+}
+
+.today-risk-text {
+  color: var(--text-secondary);
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.today-risk-item[data-tone="caution"] .today-risk-label {
+  color: var(--progress-gold, #96713b);
+}
+
+.today-risk-item[data-tone="stop"] .today-risk-label,
+.today-risk-item[data-tone="warning"] .today-risk-label {
+  color: var(--danger-ink, #8e2d2f);
+}
+
+.today-risk-item[data-tone="info"] .today-risk-label {
+  color: #2b5c8f;
+}
+
+.today-risk-more {
+  align-self: center;
+}
+
+.today-session-summary {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  padding: 2px 0;
+}
+
+.today-session-summary > div {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  padding-top: 10px;
+}
+
+.today-session-summary p:not(.today-detail-label) {
+  color: var(--text-primary);
+  line-height: 1.45;
+}
+
+.today-sticky-actions {
+  position: sticky;
+  bottom: calc(16px + env(safe-area-inset-bottom));
+  z-index: 2;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 8px;
+  background: rgba(10, 11, 13, 0.92);
+  backdrop-filter: blur(12px);
+}
+
+.today-completion-fields {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.today-inline-error {
+  margin: 0;
+  color: #ff8d9a;
+  font-size: 14px;
+}
+
+@media (max-width: 720px) {
+  .today-page {
+    gap: 14px;
+  }
+
+  .today-shell,
+  .today-card {
+    padding: 16px;
+  }
+
+  .today-hero-copy h1 {
+    font-size: 34px;
+  }
+
+  .today-hero-actions,
+  .today-action-row,
+  .today-action-row .cta,
+  .today-action-row .secondary-button,
+  .today-action-row .ghost-button {
+    width: 100%;
+  }
+
+  .today-session-summary,
+  .today-completion-fields,
+  .today-flag-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .today-card-head h2 {
+    font-size: 22px;
+  }
+
+  .today-segment-row {
+    gap: 6px;
+  }
+
+  .today-segment {
+    min-height: 44px;
+    padding-inline: 8px;
+    font-size: 14px;
+  }
+
+  .today-sticky-actions {
+    margin-inline: -6px;
+  }
+}
+
 .plans-featured-card {
   position: relative;
   overflow: hidden;
@@ -4998,6 +5689,20 @@ button.mobile-step-rail-item {
 .plan-history-row-card:hover {
   background: rgba(255, 255, 255, 0.025);
   transform: translateX(2px);
+}
+
+.plan-history-row-card .plan-card-meta {
+  gap: 8px 14px;
+}
+
+.plan-history-row-card .plan-card-meta .muted {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.035);
+  color: var(--text-secondary);
 }
 
 .plans-history-actions {
@@ -5783,6 +6488,11 @@ button.mobile-step-rail-item {
   .plans-history-toggle {
     width: 100%;
     justify-content: space-between;
+  }
+
+  .settings-section-save {
+    width: 100%;
+    margin-left: 0;
   }
 
   .onboarding-panel {
@@ -7646,6 +8356,45 @@ html[data-theme="light"] .global-generation-status-dismiss:hover {
   gap: 12px;
 }
 
+.admin-athlete-plan-bulkbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.admin-athlete-plan-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.admin-athlete-plan-item .admin-athlete-plan-row {
+  flex: 1;
+  min-width: 0;
+}
+
+.admin-athlete-plan-select {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex: none;
+}
+
+.admin-athlete-plan-select-spacer {
+  display: inline-flex;
+  width: 18px;
+  flex: none;
+}
+
+.admin-athlete-plan-select input {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: #b5122b;
+}
+
 .admin-athlete-plan-row {
   display: flex;
   align-items: center;
@@ -7961,6 +8710,35 @@ html[data-theme="light"] .global-generation-status-dismiss:hover {
   font-size: 0.74rem;
   font-weight: 600;
   color: var(--text-secondary);
+}
+
+.injury-card-pills {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.injury-card-note-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  width: fit-content;
+  min-height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.injury-card-note-pill svg {
+  opacity: 0.7;
+}
+
+html[data-theme="light"] .injury-card-note-pill {
+  border-color: rgba(98, 77, 69, 0.18);
 }
 
 .injury-card-controls {
@@ -8892,6 +9670,48 @@ html[data-theme="light"] .injury-card-remove-btn:hover {
 .gi-notes-toggle:hover {
   border-color: rgba(255, 255, 255, 0.22);
   color: var(--text-primary);
+}
+
+.gi-stale-note {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(133, 79, 11, 0.32);
+  background: rgba(133, 79, 11, 0.12);
+  color: var(--text-secondary);
+  font-size: 0.82rem;
+  line-height: 1.4;
+}
+
+.gi-stale-note-clear {
+  flex-shrink: 0;
+  min-height: 32px;
+  padding: 0 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-primary);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.gi-stale-note-clear:hover {
+  border-color: rgba(255, 255, 255, 0.32);
+}
+
+html[data-theme="light"] .gi-stale-note {
+  border-color: rgba(133, 79, 11, 0.28);
+  background: rgba(250, 238, 218, 0.7);
+  color: #6b4a12;
+}
+
+html[data-theme="light"] .gi-stale-note-clear {
+  border-color: rgba(98, 77, 69, 0.2);
+  background: rgba(255, 255, 255, 0.7);
 }
 
 /* ── Light theme overrides ─────────────────────────────────────────── */
@@ -12471,6 +13291,19 @@ html[data-theme="light"] .loading-operational-item {
   border-color: var(--border-active);
   color: var(--brand-red);
 }
+/* Completed work reads as a calm success, never the brand red (which is kept
+   for current action and risk only). */
+.sp-tag.sp-done {
+  background: var(--success-soft);
+  border-color: rgba(39, 174, 96, 0.4);
+  color: var(--success-ink);
+}
+/* Reserve red for risk and the current marker. Section eyebrows are structural
+   labels, so .sp-eyebrow is muted by default (above); only the safety/red-flag
+   eyebrow turns red, scoped to its card so the colour matches the meaning. */
+.sp-redflags .sp-eyebrow {
+  color: var(--brand-red);
+}
 .sp-weeks {
   display: flex;
   flex-direction: column;
@@ -13026,5 +13859,194 @@ html[data-theme="light"] .loading-operational-item {
 
   .sp-collapse-action {
     white-space: normal;
+  }
+}
+
+/* ── Camp map (Plan detail) ──────────────────────────────────────────────
+   Layered on top of the .sp-* structured-plan styles. Mobile-first; the brand
+   red is reserved for the current marker, risk, and primary actions. */
+.cm-root {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.cm-status-line {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.cm-status-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0 12px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border-default);
+  background: var(--bg-surface);
+  color: var(--text-secondary);
+  font-family: var(--font-mono), monospace;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+}
+
+.cm-active-badge {
+  margin-left: 10px;
+  vertical-align: middle;
+}
+
+.cm-archived-banner {
+  color: var(--text-secondary);
+}
+
+/* Readiness / risk strip */
+/* Week strip */
+.cm-week-strip {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  padding: 2px 2px 8px;
+  scrollbar-width: thin;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+}
+
+.cm-week-pill {
+  display: grid;
+  gap: 4px;
+  align-content: start;
+  flex: 0 0 auto;
+  min-width: 92px;
+  min-height: 64px;
+  padding: 10px 12px;
+  border-radius: var(--radius-stat);
+  border: 1px solid var(--border-default);
+  background: var(--bg-surface);
+  color: var(--text-secondary);
+  cursor: pointer;
+  text-align: left;
+  scroll-snap-align: start;
+  transition: transform var(--transition-fast), border-color var(--transition-fast);
+}
+
+.cm-week-pill:hover {
+  transform: translateY(-1px);
+  border-color: var(--border-strong);
+}
+
+.cm-week-pill-index {
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.cm-week-pill-phase {
+  font-size: 11px;
+  letter-spacing: 0.02em;
+}
+
+.cm-week-pill-completion {
+  font-family: var(--font-mono), monospace;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.cm-week-pill-now {
+  justify-self: start;
+  margin-top: 2px;
+  padding: 1px 8px;
+  border-radius: var(--radius-pill);
+  background: var(--brand-red-soft);
+  color: #ffd5db;
+  font-family: var(--font-mono), monospace;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* Selected (the week you're viewing) gets a neutral strong outline; the brand
+   red is held back for the current "now" week so the two states stay distinct
+   and red never floods the strip. */
+.cm-week-pill-selected {
+  border-color: var(--border-strong);
+  background: var(--bg-surface-alt);
+}
+
+.cm-week-pill-current {
+  border-color: var(--border-active);
+  box-shadow: inset 0 0 0 1px rgba(181, 18, 43, 0.5);
+}
+
+/* Selected-week overview */
+.cm-week-overview-head {
+  display: grid;
+  gap: 2px;
+  margin-bottom: 8px;
+}
+
+.cm-week-overview-stats {
+  margin-top: 4px;
+}
+
+/* Day cards */
+.cm-days {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.cm-day-summary {
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.cm-day-head {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.cm-day-meta {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+/* The current day is the athlete's anchor in the week — give it the red border
+   plus a faint wash and left accent on its header so it reads at a glance even
+   while collapsed, without tinting the whole card. */
+.cm-day-current {
+  border-color: var(--border-active);
+}
+
+.cm-day-current > .cm-day-summary {
+  box-shadow: inset 3px 0 0 var(--brand-red);
+  background: var(--brand-red-soft);
+}
+
+/* Support + raw fallback */
+.cm-support {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.cm-raw-fallback {
+  margin-top: 4px;
+}
+
+.cm-raw-pre {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-family: var(--font-mono), monospace;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+
+@media (max-width: 720px) {
+  .cm-week-pill {
+    min-width: 84px;
   }
 }

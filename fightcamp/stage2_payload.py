@@ -51,7 +51,7 @@ from .normalization import (  # noqa: F401  (phrase_in_text re-exported for back
     phrase_in_text,
     slugify,
 )
-from .rehab_protocols import _rehab_drills_for_phase, classify_drill_function, _FUNCTION_LABELS
+from .rehab_protocols import _rehab_drills_for_phase, _is_surface_type, classify_drill_function, _FUNCTION_LABELS
 from .restriction_parsing import CANONICAL_RESTRICTIONS  # noqa: F401  (re-exported for back-compat)
 from .priority_profile import build_priority_profile, describe_priority_focus
 from .selection_metadata import build_score_evidence, normalize_selection_metadata
@@ -3506,6 +3506,13 @@ def _build_rehab_slots(rehab_block: str, phase: str) -> list[dict]:
     for group in _parse_rehab_groups(rehab_block):
         location = group.get("location", "Unspecified")
         injury_type = group.get("injury_type", "unspecified")
+        # Surface/skin injuries are wound-care guidance, not prescriptive
+        # loading slots. Promoting them to rehab slots makes the finalizer
+        # render wound-care "stop rules" as plan content, which then collides
+        # with any friction/contact restriction the athlete set on that same
+        # wound and falsely holds the plan. Keep them advisory only.
+        if _is_surface_type(injury_type):
+            continue
         role = f"rehab_{slugify(location)}_{slugify(injury_type)}"
         selected_lines = [line for line in group.get("drills", []) if line]
         if phase.upper() == "TAPER":

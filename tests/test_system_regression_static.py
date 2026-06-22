@@ -85,6 +85,8 @@ def test_schema_contains_required_role_and_username_security_triggers():
 
     assert "username text unique" in schema
     assert "username_change_history jsonb not null default '[]'::jsonb" in schema
+    assert "active_plan_id uuid references public.plans(id) on delete set null" in schema
+    assert "profiles_active_plan_id_idx" in schema
     assert "profiles_username_key" in schema
     assert "profiles_username_length" in schema
     assert "profiles_username_lowercase" in schema

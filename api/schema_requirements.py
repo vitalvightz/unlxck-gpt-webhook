@@ -169,6 +169,7 @@ REQUIRED_PROFILES_COLUMNS: tuple[str, ...] = (
     "record_summary",
     "athlete_timezone",
     "athlete_locale",
+    "active_plan_id",
     "appearance_mode",
 )
 
@@ -384,6 +385,10 @@ INDEX_REQUIREMENTS: tuple[IndexRequirement, ...] = (
     IndexRequirement(
         label="profiles username uniqueness",
         accepted_names=("profiles_username_key", "profiles_username_idx"),
+    ),
+    IndexRequirement(
+        label="profiles active_plan_id index",
+        accepted_names=("profiles_active_plan_id_idx",),
     ),
     # One check-in per athlete per day; the store's upsert path
     # (api/store.py::upsert_daily_checkin) depends on this conflict target.

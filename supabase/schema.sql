@@ -158,6 +158,9 @@ create table if not exists public.plans (
   created_at timestamptz not null default timezone('utc', now())
 );
 
+alter table public.profiles
+add column if not exists active_plan_id uuid references public.plans(id) on delete set null;
+
 create table if not exists public.generation_jobs (
   id uuid primary key default gen_random_uuid(),
   athlete_id uuid not null references public.profiles(id) on delete cascade,
@@ -373,6 +376,7 @@ alter table public.athlete_intakes add column if not exists updated_at timestamp
 
 create index if not exists profiles_email_idx on public.profiles (email);
 create index if not exists profiles_username_idx on public.profiles (username);
+create index if not exists profiles_active_plan_id_idx on public.profiles(active_plan_id);
 create index if not exists athlete_intakes_athlete_id_created_at_idx on public.athlete_intakes (athlete_id, created_at desc);
 create index if not exists plans_athlete_id_created_at_idx on public.plans (athlete_id, created_at desc);
 create index if not exists generation_jobs_athlete_id_created_at_idx on public.generation_jobs (athlete_id, created_at desc);

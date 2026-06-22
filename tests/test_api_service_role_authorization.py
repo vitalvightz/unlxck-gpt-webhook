@@ -83,7 +83,12 @@ def test_nutrition_update_remains_scoped_to_current_profile():
     )
 
     assert response.status_code == 200
-    # Verify the update was applied to the correct profile
-    assert store.profiles["athlete-1"]["nutrition_profile"] == workspace["nutrition_profile"]
+    # Verify the update was applied to the correct profile. Persistence strips
+    # None-valued keys via model_dump(exclude_none=True) (matching the real
+    # store), so the round-trip is semantically lossless rather than byte-equal.
+    expected_profile = {
+        key: value for key, value in workspace["nutrition_profile"].items() if value is not None
+    }
+    assert store.profiles["athlete-1"]["nutrition_profile"] == expected_profile
     # Verify it did not leak to the other profile
     assert store.profiles["athlete-2"] == profile_b_before

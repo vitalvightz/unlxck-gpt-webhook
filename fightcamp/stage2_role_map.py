@@ -2308,8 +2308,15 @@ def _build_weekly_role_map(
         span = max(0, int(progression_weeks[idx].get("span_days") or 0))
         week_span_days[idx] = span
         running_days += span
-        projected_days_until_fight_start[idx] = running_days
-        projected_days_until_fight_end[idx] = max(0, running_days - span + 1) if span > 0 else 0
+        # Anchor the camp so its final week ends ON the fight day (D-0), not the
+        # day before it. ``running_days`` counts days from this week's start up to
+        # and including the fight; the latest (smallest-d_day) day of the week is
+        # therefore ``running_days - span`` and the earliest is ``running_days - 1``.
+        # The previous ``+1`` offset ended the camp at D-1, which pushed the fight
+        # weekday to D-7 in the final week and left no D-0 calendar day for the
+        # fight-day override to clamp.
+        projected_days_until_fight_start[idx] = max(0, running_days - 1)
+        projected_days_until_fight_end[idx] = max(0, running_days - span) if span > 0 else 0
         fight_weekday = compute_fight_weekday(athlete_model)
 
     for week_idx, week_entry in enumerate(progression_weeks):

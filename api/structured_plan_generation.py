@@ -1344,7 +1344,13 @@ The JSON object MUST conform to the StructuredTrainingPlan schema:
   alternative exercises the plan offers), and "progression_rule" (how to advance).
 - Carry mental/mindset coaching into mindset_anchor at BOTH the session level and
   the day level (today_card.mindset_anchor), including "confidence_anchor" and
-  "context" when the plan provides them.
+  "context" when the plan provides them. When STAGE 1 COMPUTED SUPPORT includes a
+  mindset.athlete_note (the athlete's own words about their mental/confidence
+  issue), personalise the mindset_anchor to that note — reflect their specific
+  concern in "intent"/"focus_cue"/"confidence_anchor"/"context" rather than
+  emitting only the generic phase cue. Keep it athlete-safe and supportive; never
+  quote the note verbatim if it is distressing, and never invent clinical or
+  mental-health diagnoses or treatment.
 - Omit any of the above the plan does not state — leave the field out rather than
   inventing content.
 

@@ -506,8 +506,8 @@ export function GlobalGenerationStatus() {
     if (latestJob.status === "review_required" && latestJob.plan_id) {
       return (
         <div className="global-generation-status global-generation-status-completed">
-          <Link href={`/plans/${latestJob.plan_id}?review_required=1`} className="global-generation-status-main">
-            <div className="global-generation-status-message">Your plan is ready for review</div>
+          <Link href={`/plans/${latestJob.plan_id}`} className="global-generation-status-main">
+            <div className="global-generation-status-message">Review saved plan</div>
             <span className="global-generation-status-cta-label">Open plan</span>
           </Link>
 

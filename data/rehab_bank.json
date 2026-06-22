@@ -10875,5 +10875,785 @@
         "notes": "GPP: Potential osteogenic stimulus → SPP: Reduce frequency"
       }
     ]
+  },
+  {
+    "location": "unspecified",
+    "type": "cut",
+    "phase_progression": "GPP → SPP → TAPER",
+    "drills": [
+      {
+        "name": "Clean & Approximate Edges",
+        "notes": "GPP: Irrigate the wound, then close with steri-strips or skin glue; get stitches if it is deep, gaping, or over a joint → SPP: Re-support the edges with tape after each session so the wound does not gap open → TAPER: Confirm the wound is fully sealed and dry before competition week"
+      },
+      {
+        "name": "No-Reopen Protection",
+        "notes": "GPP: Avoid stretching, friction, or contact directly over the wound → SPP: Tape or pad the site before sparring and skip live contact if it can split open → TAPER: Avoid any contact that could reopen the wound before weigh-in and fight night"
+      }
+    ]
+  },
+  {
+    "location": "face",
+    "type": "cut",
+    "phase_progression": "GPP → SPP → TAPER",
+    "drills": [
+      {
+        "name": "Facial Wound Protection",
+        "notes": "GPP: Butterfly-close the wound, keep it clean, and sleep on the opposite side → SPP: Wear headgear and control sparring; avoid head contact that could split it → TAPER: Seal a well-healed cut and make sure there is no open wound at weigh-in"
+      },
+      {
+        "name": "Clean & Approximate Edges",
+        "notes": "GPP: Irrigate the wound, then close with steri-strips or skin glue; get stitches if it is deep, gaping, or over a joint → SPP: Re-support the edges with tape after each session so the wound does not gap open → TAPER: Confirm the wound is fully sealed and dry before competition week"
+      }
+    ]
+  },
+  {
+    "location": "jaw",
+    "type": "cut",
+    "phase_progression": "GPP → SPP → TAPER",
+    "drills": [
+      {
+        "name": "Facial Wound Protection",
+        "notes": "GPP: Butterfly-close the wound, keep it clean, and sleep on the opposite side → SPP: Wear headgear and control sparring; avoid head contact that could split it → TAPER: Seal a well-healed cut and make sure there is no open wound at weigh-in"
+      },
+      {
+        "name": "Waterproof Occlusive Dressing",
+        "notes": "GPP: Cover with a waterproof dressing; change it daily and whenever it gets sweaty → SPP: Re-dress before every session and protect the edges from sweat softening → TAPER: Switch to a light protective cover once the wound has closed"
+      }
+    ]
+  },
+  {
+    "location": "eye",
+    "type": "cut",
+    "phase_progression": "GPP → SPP → TAPER",
+    "drills": [
+      {
+        "name": "Brow & Orbital Cut Care",
+        "notes": "GPP: Close and dress the brow cut and avoid rubbing the eye area → SPP: Protect the brow in sparring and avoid head clashes → TAPER: Confirm the brow is fully closed before competition"
+      },
+      {
+        "name": "No-Reopen Protection",
+        "notes": "GPP: Avoid stretching, friction, or contact directly over the wound → SPP: Tape or pad the site before sparring and skip live contact if it can split open → TAPER: Avoid any contact that could reopen the wound before weigh-in and fight night"
+      }
+    ]
+  },
+  {
+    "location": "hand",
+    "type": "cut",
+    "phase_progression": "GPP → SPP → TAPER",
+    "drills": [
+      {
+        "name": "Knuckle Cut Wrapping",
+        "notes": "GPP: Clean and close the knuckle split and stay off the bag → SPP: Add knuckle padding under wraps and avoid bag work until it closes → TAPER: Confirm it is sealed before gloving up"
+      },
+      {
+        "name": "Daily Infection Check",
+        "notes": "GPP: Watch for spreading redness, warmth, swelling, pus, or fever and get it reviewed if any appear → SPP: Check the site daily and pause training if infection signs develop → TAPER: Confirm the area is clean and closed before competition"
+      }
+    ]
+  },
+  {
+    "location": "fingers",
+    "type": "cut",
+    "phase_progression": "GPP → SPP → TAPER",
+    "drills": [
+      {
+        "name": "Knuckle Cut Wrapping",
+        "notes": "GPP: Clean and close the knuckle split and stay off the bag → SPP: Add knuckle padding under wraps and avoid bag work until it closes → TAPER: Confirm it is sealed before gloving up"
+      },
+      {
+        "name": "Waterproof Occlusive Dressing",
+        "notes": "GPP: Cover with a waterproof dressing; change it daily and whenever it gets sweaty → SPP: Re-dress before every session and protect the edges from sweat softening → TAPER: Switch to a light protective cover once the wound has closed"
+      }
+    ]
+  },
+  {
+    "location": "forearm",
+    "type": "cut",
+    "phase_progression": "GPP → SPP → TAPER",
+    "drills": [
+      {
+        "name": "Waterproof Occlusive Dressing",
+        "notes": "GPP: Cover with a waterproof dressing; change it daily and whenever it gets sweaty → SPP: Re-dress before every session and protect the edges from sweat softening → TAPER: Switch to a light protective cover once the wound has closed"
+      },
+      {
+        "name": "No-Reopen Protection",
+        "notes": "GPP: Avoid stretching, friction, or contact directly over the wound → SPP: Tape or pad the site before sparring and skip live contact if it can split open → TAPER: Avoid any contact that could reopen the wound before weigh-in and fight night"
+      }
+    ]
+  },
+  {
+    "location": "elbow",
+    "type": "cut",
+    "phase_progression": "GPP → SPP → TAPER",
+    "drills": [
+      {
+        "name": "No-Reopen Protection",
+        "notes": "GPP: Avoid stretching, friction, or contact directly over the wound → SPP: Tape or pad the site before sparring and skip live contact if it can split open → TAPER: Avoid any contact that could reopen the wound before weigh-in and fight night"
+      },
+      {
+        "name": "Daily Infection Check",
+        "notes": "GPP: Watch for spreading redness, warmth, swelling, pus, or fever and get it reviewed if any appear → SPP: Check the site daily and pause training if infection signs develop → TAPER: Confirm the area is clean and closed before competition"
+      }
+    ]
+  },
+  {
+    "location": "knee",
+    "type": "cut",
+    "phase_progression": "GPP → SPP → TAPER",
+    "drills": [
+      {
+        "name": "No-Reopen Protection",
+        "notes": "GPP: Avoid stretching, friction, or contact directly over the wound → SPP: Tape or pad the site before sparring and skip live contact if it can split open → TAPER: Avoid any contact that could reopen the wound before weigh-in and fight night"
+      },
+      {
+        "name": "Scar Mobility Once Closed",
+        "notes": "GPP: Leave the wound alone while it is still open → SPP: Once fully closed, use gentle scar massage to keep the skin supple → TAPER: Keep the scar moisturised and mobile so it tolerates contact"
+      }
+    ]
+  },
+  {
+    "location": "shin",
+    "type": "cut",
+    "phase_progression": "GPP → SPP → TAPER",
+    "drills": [
+      {
+        "name": "Waterproof Occlusive Dressing",
+        "notes": "GPP: Cover with a waterproof dressing; change it daily and whenever it gets sweaty → SPP: Re-dress before every session and protect the edges from sweat softening → TAPER: Switch to a light protective cover once the wound has closed"
+      },
+      {
+        "name": "Daily Infection Check",
+        "notes": "GPP: Watch for spreading redness, warmth, swelling, pus, or fever and get it reviewed if any appear → SPP: Check the site daily and pause training if infection signs develop → TAPER: Confirm the area is clean and closed before competition"
+      }
+    ]
+  },
+  {
+    "location": "neck",
+    "type": "cut",
+    "phase_progression": "GPP → SPP → TAPER",
+    "drills": [
+      {
+        "name": "Clean & Approximate Edges",
+        "notes": "GPP: Irrigate the wound, then close with steri-strips or skin glue; get stitches if it is deep, gaping, or over a joint → SPP: Re-support the edges with tape after each session so the wound does not gap open → TAPER: Confirm the wound is fully sealed and dry before competition week"
+      },
+      {
+        "name": "No-Reopen Protection",
+        "notes": "GPP: Avoid stretching, friction, or contact directly over the wound → SPP: Tape or pad the site before sparring and skip live contact if it can split open → TAPER: Avoid any contact that could reopen the wound before weigh-in and fight night"
+      }
+    ]
+  },
+  {
+    "location": "foot",
+    "type": "cut",
+    "phase_progression": "GPP → SPP → TAPER",
+    "drills": [
+      {
+        "name": "Waterproof Occlusive Dressing",
+        "notes": "GPP: Cover with a waterproof dressing; change it daily and whenever it gets sweaty → SPP: Re-dress before every session and protect the edges from sweat softening → TAPER: Switch to a light protective cover once the wound has closed"
+      },
+      {
+        "name": "Daily Infection Check",
+        "notes": "GPP: Watch for spreading redness, warmth, swelling, pus, or fever and get it reviewed if any appear → SPP: Check the site daily and pause training if infection signs develop → TAPER: Confirm the area is clean and closed before competition"
+      }
+    ]
+  },
+  {
+    "location": "unspecified",
+    "type": "laceration",
+    "phase_progression": "GPP → SPP → TAPER",
+    "drills": [
+      {
+        "name": "Clean & Approximate Edges",
+        "notes": "GPP: Irrigate the wound, then close with steri-strips or skin glue; get stitches if it is deep, gaping, or over a joint → SPP: Re-support the edges with tape after each session so the wound does not gap open → TAPER: Confirm the wound is fully sealed and dry before competition week"
+      },
+      {
+        "name": "Daily Infection Check",
+        "notes": "GPP: Watch for spreading redness, warmth, swelling, pus, or fever and get it reviewed if any appear → SPP: Check the site daily and pause training if infection signs develop → TAPER: Confirm the area is clean and closed before competition"
+      }
+    ]
+  },
+  {
+    "location": "face",
+    "type": "laceration",
+    "phase_progression": "GPP → SPP → TAPER",
+    "drills": [
+      {
+        "name": "Facial Wound Protection",
+        "notes": "GPP: Butterfly-close the wound, keep it clean, and sleep on the opposite side → SPP: Wear headgear and control sparring; avoid head contact that could split it → TAPER: Seal a well-healed cut and make sure there is no open wound at weigh-in"
+      },
+      {
+        "name": "Clean & Approximate Edges",
+        "notes": "GPP: Irrigate the wound, then close with steri-strips or skin glue; get stitches if it is deep, gaping, or over a joint → SPP: Re-support the edges with tape after each session so the wound does not gap open → TAPER: Confirm the wound is fully sealed and dry before competition week"
+      }
+    ]
+  },
+  {
+    "location": "eye",
+    "type": "laceration",
+    "phase_progression": "GPP → SPP → TAPER",
+    "drills": [
+      {
+        "name": "Brow & Orbital Cut Care",
+        "notes": "GPP: Close and dress the brow cut and avoid rubbing the eye area → SPP: Protect the brow in sparring and avoid head clashes → TAPER: Confirm the brow is fully closed before competition"
+      },
+      {
+        "name": "Clean & Approximate Edges",
+        "notes": "GPP: Irrigate the wound, then close with steri-strips or skin glue; get stitches if it is deep, gaping, or over a joint → SPP: Re-support the edges with tape after each session so the wound does not gap open → TAPER: Confirm the wound is fully sealed and dry before competition week"
+      }
+    ]
+  },
+  {
+    "location": "jaw",
+    "type": "laceration",
+    "phase_progression": "GPP → SPP → TAPER",
+    "drills": [
+      {
+        "name": "Facial Wound Protection",
+        "notes": "GPP: Butterfly-close the wound, keep it clean, and sleep on the opposite side → SPP: Wear headgear and control sparring; avoid head contact that could split it → TAPER: Seal a well-healed cut and make sure there is no open wound at weigh-in"
+      },
+      {
+        "name": "No-Reopen Protection",
+        "notes": "GPP: Avoid stretching, friction, or contact directly over the wound → SPP: Tape or pad the site before sparring and skip live contact if it can split open → TAPER: Avoid any contact that could reopen the wound before weigh-in and fight night"
+      }
+    ]
+  },
+  {
+    "location": "hand",
+    "type": "laceration",
+    "phase_progression": "GPP → SPP → TAPER",
+    "drills": [
+      {
+        "name": "Knuckle Cut Wrapping",
+        "notes": "GPP: Clean and close the knuckle split and stay off the bag → SPP: Add knuckle padding under wraps and avoid bag work until it closes → TAPER: Confirm it is sealed before gloving up"
+      },
+      {
+        "name": "Clean & Approximate Edges",
+        "notes": "GPP: Irrigate the wound, then close with steri-strips or skin glue; get stitches if it is deep, gaping, or over a joint → SPP: Re-support the edges with tape after each session so the wound does not gap open → TAPER: Confirm the wound is fully sealed and dry before competition week"
+      }
+    ]
+  },
+  {
+    "location": "forearm",
+    "type": "laceration",
+    "phase_progression": "GPP → SPP → TAPER",
+    "drills": [
+      {
+        "name": "Clean & Approximate Edges",
+        "notes": "GPP: Irrigate the wound, then close with steri-strips or skin glue; get stitches if it is deep, gaping, or over a joint → SPP: Re-support the edges with tape after each session so the wound does not gap open → TAPER: Confirm the wound is fully sealed and dry before competition week"
+      },
+      {
+        "name": "No-Reopen Protection",
+        "notes": "GPP: Avoid stretching, friction, or contact directly over the wound → SPP: Tape or pad the site before sparring and skip live contact if it can split open → TAPER: Avoid any contact that could reopen the wound before weigh-in and fight night"
+      }
+    ]
+  },
+  {
+    "location": "elbow",
+    "type": "laceration",
+    "phase_progression": "GPP → SPP → TAPER",
+    "drills": [
+      {
+        "name": "No-Reopen Protection",
+        "notes": "GPP: Avoid stretching, friction, or contact directly over the wound → SPP: Tape or pad the site before sparring and skip live contact if it can split open → TAPER: Avoid any contact that could reopen the wound before weigh-in and fight night"
+      },
+      {
+        "name": "Scar Mobility Once Closed",
+        "notes": "GPP: Leave the wound alone while it is still open → SPP: Once fully closed, use gentle scar massage to keep the skin supple → TAPER: Keep the scar moisturised and mobile so it tolerates contact"
+      }
+    ]
+  },
+  {
+    "location": "knee",
+    "type": "laceration",
+    "phase_progression": "GPP → SPP → TAPER",
+    "drills": [
+      {
+        "name": "No-Reopen Protection",
+        "notes": "GPP: Avoid stretching, friction, or contact directly over the wound → SPP: Tape or pad the site before sparring and skip live contact if it can split open → TAPER: Avoid any contact that could reopen the wound before weigh-in and fight night"
+      },
+      {
+        "name": "Daily Infection Check",
+        "notes": "GPP: Watch for spreading redness, warmth, swelling, pus, or fever and get it reviewed if any appear → SPP: Check the site daily and pause training if infection signs develop → TAPER: Confirm the area is clean and closed before competition"
+      }
+    ]
+  },
+  {
+    "location": "shin",
+    "type": "laceration",
+    "phase_progression": "GPP → SPP → TAPER",
+    "drills": [
+      {
+        "name": "Clean & Approximate Edges",
+        "notes": "GPP: Irrigate the wound, then close with steri-strips or skin glue; get stitches if it is deep, gaping, or over a joint → SPP: Re-support the edges with tape after each session so the wound does not gap open → TAPER: Confirm the wound is fully sealed and dry before competition week"
+      },
+      {
+        "name": "Waterproof Occlusive Dressing",
+        "notes": "GPP: Cover with a waterproof dressing; change it daily and whenever it gets sweaty → SPP: Re-dress before every session and protect the edges from sweat softening → TAPER: Switch to a light protective cover once the wound has closed"
+      }
+    ]
+  },
+  {
+    "location": "neck",
+    "type": "laceration",
+    "phase_progression": "GPP → SPP → TAPER",
+    "drills": [
+      {
+        "name": "Clean & Approximate Edges",
+        "notes": "GPP: Irrigate the wound, then close with steri-strips or skin glue; get stitches if it is deep, gaping, or over a joint → SPP: Re-support the edges with tape after each session so the wound does not gap open → TAPER: Confirm the wound is fully sealed and dry before competition week"
+      },
+      {
+        "name": "No-Reopen Protection",
+        "notes": "GPP: Avoid stretching, friction, or contact directly over the wound → SPP: Tape or pad the site before sparring and skip live contact if it can split open → TAPER: Avoid any contact that could reopen the wound before weigh-in and fight night"
+      }
+    ]
+  },
+  {
+    "location": "unspecified",
+    "type": "abrasion",
+    "phase_progression": "GPP → SPP → TAPER",
+    "drills": [
+      {
+        "name": "Debride & Clean Thoroughly",
+        "notes": "GPP: Rinse out all grit and debris with saline and clean the raw skin → SPP: Re-clean after sweaty sessions to keep the surface free of contamination → TAPER: Keep the healing surface clean and intact"
+      },
+      {
+        "name": "Moist-Healing Dressing",
+        "notes": "GPP: Cover with a non-stick dressing or hydrocolloid to keep it moist and protected → SPP: Re-dress before training to cut down friction over the raw skin → TAPER: Use a minimal protective cover once new skin has formed"
+      }
+    ]
+  },
+  {
+    "location": "face",
+    "type": "abrasion",
+    "phase_progression": "GPP → SPP → TAPER",
+    "drills": [
+      {
+        "name": "Facial Wound Protection",
+        "notes": "GPP: Butterfly-close the wound, keep it clean, and sleep on the opposite side → SPP: Wear headgear and control sparring; avoid head contact that could split it → TAPER: Seal a well-healed cut and make sure there is no open wound at weigh-in"
+      },
+      {
+        "name": "Debride & Clean Thoroughly",
+        "notes": "GPP: Rinse out all grit and debris with saline and clean the raw skin → SPP: Re-clean after sweaty sessions to keep the surface free of contamination → TAPER: Keep the healing surface clean and intact"
+      }
+    ]
+  },
+  {
+    "location": "neck",
+    "type": "abrasion",
+    "phase_progression": "GPP → SPP → TAPER",
+    "drills": [
+      {
+        "name": "Debride & Clean Thoroughly",
+        "notes": "GPP: Rinse out all grit and debris with saline and clean the raw skin → SPP: Re-clean after sweaty sessions to keep the surface free of contamination → TAPER: Keep the healing surface clean and intact"
+      },
+      {
+        "name": "Friction Offloading",
+        "notes": "GPP: Pad the area and keep mat, glove, or gi friction off the raw skin → SPP: Tape or pad the site before grappling or bag work → TAPER: Protect the area from re-scraping in the final week"
+      }
+    ]
+  },
+  {
+    "location": "shoulder",
+    "type": "abrasion",
+    "phase_progression": "GPP → SPP → TAPER",
+    "drills": [
+      {
+        "name": "Friction Offloading",
+        "notes": "GPP: Pad the area and keep mat, glove, or gi friction off the raw skin → SPP: Tape or pad the site before grappling or bag work → TAPER: Protect the area from re-scraping in the final week"
+      },
+      {
+        "name": "Moist-Healing Dressing",
+        "notes": "GPP: Cover with a non-stick dressing or hydrocolloid to keep it moist and protected → SPP: Re-dress before training to cut down friction over the raw skin → TAPER: Use a minimal protective cover once new skin has formed"
+      }
+    ]
+  },
+  {
+    "location": "chest",
+    "type": "abrasion",
+    "phase_progression": "GPP → SPP → TAPER",
+    "drills": [
+      {
+        "name": "Friction Offloading",
+        "notes": "GPP: Pad the area and keep mat, glove, or gi friction off the raw skin → SPP: Tape or pad the site before grappling or bag work → TAPER: Protect the area from re-scraping in the final week"
+      },
+      {
+        "name": "Skin Barrier Ointment",
+        "notes": "GPP: Apply an antiseptic barrier ointment to keep it moist and stop the scab cracking → SPP: Reapply after showering and before bed → TAPER: Keep the skin supple so it does not crack under contact"
+      }
+    ]
+  },
+  {
+    "location": "elbow",
+    "type": "abrasion",
+    "phase_progression": "GPP → SPP → TAPER",
+    "drills": [
+      {
+        "name": "Joint Pad Protection",
+        "notes": "GPP: Dress the mat burn and use a knee or elbow pad for grappling → SPP: Keep the pad on for live rolls to protect the raw skin → TAPER: Protect the joint skin from friction pre-fight"
+      },
+      {
+        "name": "Debride & Clean Thoroughly",
+        "notes": "GPP: Rinse out all grit and debris with saline and clean the raw skin → SPP: Re-clean after sweaty sessions to keep the surface free of contamination → TAPER: Keep the healing surface clean and intact"
+      }
+    ]
+  },
+  {
+    "location": "forearm",
+    "type": "abrasion",
+    "phase_progression": "GPP → SPP → TAPER",
+    "drills": [
+      {
+        "name": "Moist-Healing Dressing",
+        "notes": "GPP: Cover with a non-stick dressing or hydrocolloid to keep it moist and protected → SPP: Re-dress before training to cut down friction over the raw skin → TAPER: Use a minimal protective cover once new skin has formed"
+      },
+      {
+        "name": "Friction Offloading",
+        "notes": "GPP: Pad the area and keep mat, glove, or gi friction off the raw skin → SPP: Tape or pad the site before grappling or bag work → TAPER: Protect the area from re-scraping in the final week"
+      }
+    ]
+  },
+  {
+    "location": "hip",
+    "type": "abrasion",
+    "phase_progression": "GPP → SPP → TAPER",
+    "drills": [
+      {
+        "name": "Friction Offloading",
+        "notes": "GPP: Pad the area and keep mat, glove, or gi friction off the raw skin → SPP: Tape or pad the site before grappling or bag work → TAPER: Protect the area from re-scraping in the final week"
+      },
+      {
+        "name": "Skin Barrier Ointment",
+        "notes": "GPP: Apply an antiseptic barrier ointment to keep it moist and stop the scab cracking → SPP: Reapply after showering and before bed → TAPER: Keep the skin supple so it does not crack under contact"
+      }
+    ]
+  },
+  {
+    "location": "knee",
+    "type": "abrasion",
+    "phase_progression": "GPP → SPP → TAPER",
+    "drills": [
+      {
+        "name": "Joint Pad Protection",
+        "notes": "GPP: Dress the mat burn and use a knee or elbow pad for grappling → SPP: Keep the pad on for live rolls to protect the raw skin → TAPER: Protect the joint skin from friction pre-fight"
+      },
+      {
+        "name": "Moist-Healing Dressing",
+        "notes": "GPP: Cover with a non-stick dressing or hydrocolloid to keep it moist and protected → SPP: Re-dress before training to cut down friction over the raw skin → TAPER: Use a minimal protective cover once new skin has formed"
+      }
+    ]
+  },
+  {
+    "location": "shin",
+    "type": "abrasion",
+    "phase_progression": "GPP → SPP → TAPER",
+    "drills": [
+      {
+        "name": "Shin Sleeve Protection",
+        "notes": "GPP: Cover the mat burn with a non-stick dressing and a shin sleeve → SPP: Wear a sleeve under the guard to stop re-scraping → TAPER: Protect the shin from re-abrasion before the fight"
+      },
+      {
+        "name": "Debride & Clean Thoroughly",
+        "notes": "GPP: Rinse out all grit and debris with saline and clean the raw skin → SPP: Re-clean after sweaty sessions to keep the surface free of contamination → TAPER: Keep the healing surface clean and intact"
+      }
+    ]
+  },
+  {
+    "location": "hand",
+    "type": "abrasion",
+    "phase_progression": "GPP → SPP → TAPER",
+    "drills": [
+      {
+        "name": "Friction Offloading",
+        "notes": "GPP: Pad the area and keep mat, glove, or gi friction off the raw skin → SPP: Tape or pad the site before grappling or bag work → TAPER: Protect the area from re-scraping in the final week"
+      },
+      {
+        "name": "Daily Infection Check",
+        "notes": "GPP: Watch for spreading redness, warmth, swelling, pus, or fever and get it reviewed if any appear → SPP: Check the site daily and pause training if infection signs develop → TAPER: Confirm the area is clean and closed before competition"
+      }
+    ]
+  },
+  {
+    "location": "upper_back",
+    "type": "abrasion",
+    "phase_progression": "GPP → SPP → TAPER",
+    "drills": [
+      {
+        "name": "Friction Offloading",
+        "notes": "GPP: Pad the area and keep mat, glove, or gi friction off the raw skin → SPP: Tape or pad the site before grappling or bag work → TAPER: Protect the area from re-scraping in the final week"
+      },
+      {
+        "name": "Moist-Healing Dressing",
+        "notes": "GPP: Cover with a non-stick dressing or hydrocolloid to keep it moist and protected → SPP: Re-dress before training to cut down friction over the raw skin → TAPER: Use a minimal protective cover once new skin has formed"
+      }
+    ]
+  },
+  {
+    "location": "unspecified",
+    "type": "graze",
+    "phase_progression": "GPP → SPP → TAPER",
+    "drills": [
+      {
+        "name": "Debride & Clean Thoroughly",
+        "notes": "GPP: Rinse out all grit and debris with saline and clean the raw skin → SPP: Re-clean after sweaty sessions to keep the surface free of contamination → TAPER: Keep the healing surface clean and intact"
+      },
+      {
+        "name": "Skin Barrier Ointment",
+        "notes": "GPP: Apply an antiseptic barrier ointment to keep it moist and stop the scab cracking → SPP: Reapply after showering and before bed → TAPER: Keep the skin supple so it does not crack under contact"
+      }
+    ]
+  },
+  {
+    "location": "face",
+    "type": "graze",
+    "phase_progression": "GPP → SPP → TAPER",
+    "drills": [
+      {
+        "name": "Facial Wound Protection",
+        "notes": "GPP: Butterfly-close the wound, keep it clean, and sleep on the opposite side → SPP: Wear headgear and control sparring; avoid head contact that could split it → TAPER: Seal a well-healed cut and make sure there is no open wound at weigh-in"
+      },
+      {
+        "name": "Skin Barrier Ointment",
+        "notes": "GPP: Apply an antiseptic barrier ointment to keep it moist and stop the scab cracking → SPP: Reapply after showering and before bed → TAPER: Keep the skin supple so it does not crack under contact"
+      }
+    ]
+  },
+  {
+    "location": "elbow",
+    "type": "graze",
+    "phase_progression": "GPP → SPP → TAPER",
+    "drills": [
+      {
+        "name": "Joint Pad Protection",
+        "notes": "GPP: Dress the mat burn and use a knee or elbow pad for grappling → SPP: Keep the pad on for live rolls to protect the raw skin → TAPER: Protect the joint skin from friction pre-fight"
+      },
+      {
+        "name": "Skin Barrier Ointment",
+        "notes": "GPP: Apply an antiseptic barrier ointment to keep it moist and stop the scab cracking → SPP: Reapply after showering and before bed → TAPER: Keep the skin supple so it does not crack under contact"
+      }
+    ]
+  },
+  {
+    "location": "forearm",
+    "type": "graze",
+    "phase_progression": "GPP → SPP → TAPER",
+    "drills": [
+      {
+        "name": "Moist-Healing Dressing",
+        "notes": "GPP: Cover with a non-stick dressing or hydrocolloid to keep it moist and protected → SPP: Re-dress before training to cut down friction over the raw skin → TAPER: Use a minimal protective cover once new skin has formed"
+      },
+      {
+        "name": "Friction Offloading",
+        "notes": "GPP: Pad the area and keep mat, glove, or gi friction off the raw skin → SPP: Tape or pad the site before grappling or bag work → TAPER: Protect the area from re-scraping in the final week"
+      }
+    ]
+  },
+  {
+    "location": "hand",
+    "type": "graze",
+    "phase_progression": "GPP → SPP → TAPER",
+    "drills": [
+      {
+        "name": "Friction Offloading",
+        "notes": "GPP: Pad the area and keep mat, glove, or gi friction off the raw skin → SPP: Tape or pad the site before grappling or bag work → TAPER: Protect the area from re-scraping in the final week"
+      },
+      {
+        "name": "Skin Barrier Ointment",
+        "notes": "GPP: Apply an antiseptic barrier ointment to keep it moist and stop the scab cracking → SPP: Reapply after showering and before bed → TAPER: Keep the skin supple so it does not crack under contact"
+      }
+    ]
+  },
+  {
+    "location": "hip",
+    "type": "graze",
+    "phase_progression": "GPP → SPP → TAPER",
+    "drills": [
+      {
+        "name": "Friction Offloading",
+        "notes": "GPP: Pad the area and keep mat, glove, or gi friction off the raw skin → SPP: Tape or pad the site before grappling or bag work → TAPER: Protect the area from re-scraping in the final week"
+      },
+      {
+        "name": "Moist-Healing Dressing",
+        "notes": "GPP: Cover with a non-stick dressing or hydrocolloid to keep it moist and protected → SPP: Re-dress before training to cut down friction over the raw skin → TAPER: Use a minimal protective cover once new skin has formed"
+      }
+    ]
+  },
+  {
+    "location": "knee",
+    "type": "graze",
+    "phase_progression": "GPP → SPP → TAPER",
+    "drills": [
+      {
+        "name": "Joint Pad Protection",
+        "notes": "GPP: Dress the mat burn and use a knee or elbow pad for grappling → SPP: Keep the pad on for live rolls to protect the raw skin → TAPER: Protect the joint skin from friction pre-fight"
+      },
+      {
+        "name": "Skin Barrier Ointment",
+        "notes": "GPP: Apply an antiseptic barrier ointment to keep it moist and stop the scab cracking → SPP: Reapply after showering and before bed → TAPER: Keep the skin supple so it does not crack under contact"
+      }
+    ]
+  },
+  {
+    "location": "shin",
+    "type": "graze",
+    "phase_progression": "GPP → SPP → TAPER",
+    "drills": [
+      {
+        "name": "Shin Sleeve Protection",
+        "notes": "GPP: Cover the mat burn with a non-stick dressing and a shin sleeve → SPP: Wear a sleeve under the guard to stop re-scraping → TAPER: Protect the shin from re-abrasion before the fight"
+      },
+      {
+        "name": "Skin Barrier Ointment",
+        "notes": "GPP: Apply an antiseptic barrier ointment to keep it moist and stop the scab cracking → SPP: Reapply after showering and before bed → TAPER: Keep the skin supple so it does not crack under contact"
+      }
+    ]
+  },
+  {
+    "location": "neck",
+    "type": "graze",
+    "phase_progression": "GPP → SPP → TAPER",
+    "drills": [
+      {
+        "name": "Debride & Clean Thoroughly",
+        "notes": "GPP: Rinse out all grit and debris with saline and clean the raw skin → SPP: Re-clean after sweaty sessions to keep the surface free of contamination → TAPER: Keep the healing surface clean and intact"
+      },
+      {
+        "name": "Skin Barrier Ointment",
+        "notes": "GPP: Apply an antiseptic barrier ointment to keep it moist and stop the scab cracking → SPP: Reapply after showering and before bed → TAPER: Keep the skin supple so it does not crack under contact"
+      }
+    ]
+  },
+  {
+    "location": "foot",
+    "type": "graze",
+    "phase_progression": "GPP → SPP → TAPER",
+    "drills": [
+      {
+        "name": "Friction Offloading",
+        "notes": "GPP: Pad the area and keep mat, glove, or gi friction off the raw skin → SPP: Tape or pad the site before grappling or bag work → TAPER: Protect the area from re-scraping in the final week"
+      },
+      {
+        "name": "Skin Barrier Ointment",
+        "notes": "GPP: Apply an antiseptic barrier ointment to keep it moist and stop the scab cracking → SPP: Reapply after showering and before bed → TAPER: Keep the skin supple so it does not crack under contact"
+      }
+    ]
+  },
+  {
+    "location": "unspecified",
+    "type": "blister",
+    "phase_progression": "GPP → SPP → TAPER",
+    "drills": [
+      {
+        "name": "Protect the Intact Blister",
+        "notes": "GPP: Do not pop an intact blister; cover it with a donut pad or hydrocolloid → SPP: Pad the blister before sessions to take pressure off it → TAPER: Keep it protected and avoid any new friction"
+      },
+      {
+        "name": "Fix the Friction Source",
+        "notes": "GPP: Find the cause — footwear, wraps, or grip — and change socks, wraps, or taping → SPP: Pre-tape hot spots and use lubricant or powder to cut friction → TAPER: Lock in proven gear and add no new footwear or wraps on fight week"
+      }
+    ]
+  },
+  {
+    "location": "foot",
+    "type": "blister",
+    "phase_progression": "GPP → SPP → TAPER",
+    "drills": [
+      {
+        "name": "Footwear & Sock Strategy",
+        "notes": "GPP: Switch to moisture-wicking socks and well-fitted mat shoes and tape known hot spots → SPP: Pre-tape and powder the foot before sessions → TAPER: Use only proven, broken-in footwear in fight week"
+      },
+      {
+        "name": "Protect the Intact Blister",
+        "notes": "GPP: Do not pop an intact blister; cover it with a donut pad or hydrocolloid → SPP: Pad the blister before sessions to take pressure off it → TAPER: Keep it protected and avoid any new friction"
+      }
+    ]
+  },
+  {
+    "location": "heel",
+    "type": "blister",
+    "phase_progression": "GPP → SPP → TAPER",
+    "drills": [
+      {
+        "name": "Footwear & Sock Strategy",
+        "notes": "GPP: Switch to moisture-wicking socks and well-fitted mat shoes and tape known hot spots → SPP: Pre-tape and powder the foot before sessions → TAPER: Use only proven, broken-in footwear in fight week"
+      },
+      {
+        "name": "Sterile Drainage If Tense",
+        "notes": "GPP: If it is large and painful, drain at the edge with a sterile needle, leave the roof on, and dress it → SPP: Keep it clean and re-dressed and do not peel the roof off → TAPER: Make sure it is dry and closed before competition"
+      }
+    ]
+  },
+  {
+    "location": "toe",
+    "type": "blister",
+    "phase_progression": "GPP → SPP → TAPER",
+    "drills": [
+      {
+        "name": "Footwear & Sock Strategy",
+        "notes": "GPP: Switch to moisture-wicking socks and well-fitted mat shoes and tape known hot spots → SPP: Pre-tape and powder the foot before sessions → TAPER: Use only proven, broken-in footwear in fight week"
+      },
+      {
+        "name": "Offload & Substitute",
+        "notes": "GPP: Reduce volume on the irritated tissue while it settles → SPP: Swap in low-friction conditioning so the blister can heal → TAPER: Keep only protected, pain-free work going into the fight"
+      }
+    ]
+  },
+  {
+    "location": "hand",
+    "type": "blister",
+    "phase_progression": "GPP → SPP → TAPER",
+    "drills": [
+      {
+        "name": "Grip Friction Strategy",
+        "notes": "GPP: Use chalk, grips, or tape and trim torn calluses flat → SPP: Tape the palm hot spots and manage pulling volume → TAPER: Keep the grip protected and avoid new high-friction work"
+      },
+      {
+        "name": "Protect the Intact Blister",
+        "notes": "GPP: Do not pop an intact blister; cover it with a donut pad or hydrocolloid → SPP: Pad the blister before sessions to take pressure off it → TAPER: Keep it protected and avoid any new friction"
+      }
+    ]
+  },
+  {
+    "location": "fingers",
+    "type": "blister",
+    "phase_progression": "GPP → SPP → TAPER",
+    "drills": [
+      {
+        "name": "Grip Friction Strategy",
+        "notes": "GPP: Use chalk, grips, or tape and trim torn calluses flat → SPP: Tape the palm hot spots and manage pulling volume → TAPER: Keep the grip protected and avoid new high-friction work"
+      },
+      {
+        "name": "Deroof & Infection Watch",
+        "notes": "GPP: Watch for the roof tearing off, redness, or pus → SPP: Pause friction work if the raw base is exposed → TAPER: Confirm it is healed or fully protected before fight night"
+      }
+    ]
+  },
+  {
+    "location": "shin",
+    "type": "blister",
+    "phase_progression": "GPP → SPP → TAPER",
+    "drills": [
+      {
+        "name": "Shin Sleeve Protection",
+        "notes": "GPP: Cover the mat burn with a non-stick dressing and a shin sleeve → SPP: Wear a sleeve under the guard to stop re-scraping → TAPER: Protect the shin from re-abrasion before the fight"
+      },
+      {
+        "name": "Fix the Friction Source",
+        "notes": "GPP: Find the cause — footwear, wraps, or grip — and change socks, wraps, or taping → SPP: Pre-tape hot spots and use lubricant or powder to cut friction → TAPER: Lock in proven gear and add no new footwear or wraps on fight week"
+      }
+    ]
+  },
+  {
+    "location": "ankle",
+    "type": "blister",
+    "phase_progression": "GPP → SPP → TAPER",
+    "drills": [
+      {
+        "name": "Footwear & Sock Strategy",
+        "notes": "GPP: Switch to moisture-wicking socks and well-fitted mat shoes and tape known hot spots → SPP: Pre-tape and powder the foot before sessions → TAPER: Use only proven, broken-in footwear in fight week"
+      },
+      {
+        "name": "Protect the Intact Blister",
+        "notes": "GPP: Do not pop an intact blister; cover it with a donut pad or hydrocolloid → SPP: Pad the blister before sessions to take pressure off it → TAPER: Keep it protected and avoid any new friction"
+      }
+    ]
   }
 ]

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib
+from uuid import uuid4
 
 import pytest
 from postgrest.exceptions import APIError as PostgrestAPIError
@@ -793,3 +794,100 @@ def test_request_logs_omit_personal_request_body_fields(caplog):
     assert "private@example.com" not in caplog.text
     assert "full_name" not in caplog.text
     assert "authentication_required" in caplog.text
+
+
+# ---------------------------------------------------------------------------
+# Bulk permanent delete: archived-only deletion with a hard batch-size cap.
+# ---------------------------------------------------------------------------
+
+
+def _seed_archived_plans(store, count: int) -> list[str]:
+    """Create ``count`` archived plans for athlete-1 and return their ids."""
+    plan_ids: list[str] = []
+    for _ in range(count):
+        plan = store.create_plan(
+            athlete_id="athlete-1",
+            intake_id="intake_x",
+            request=_build_request(),
+            result=finalized_result(),
+        )
+        store.archive_plan(plan["id"])
+        plan_ids.append(plan["id"])
+    return plan_ids
+
+
+def test_bulk_permanent_delete_accepts_100_unique_archived_ids():
+    client, store, _ = _build_client()
+    plan_ids = _seed_archived_plans(store, 100)
+
+    response = client.post(
+        "/api/admin/plans/bulk-permanent-delete",
+        headers={"Authorization": "Bearer admin-token"},
+        json={"plan_ids": plan_ids},
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["deleted_count"] == 100
+    assert body["skipped_count"] == 0
+    assert sorted(body["deleted"]) == sorted(plan_ids)
+    assert all(store.get_plan(plan_id) is None for plan_id in plan_ids)
+
+
+def test_bulk_permanent_delete_rejects_101_unique_ids_with_422():
+    client, _, _ = _build_client()
+    plan_ids = [str(uuid4()) for _ in range(101)]
+
+    response = client.post(
+        "/api/admin/plans/bulk-permanent-delete",
+        headers={"Authorization": "Bearer admin-token"},
+        json={"plan_ids": plan_ids},
+    )
+
+    assert response.status_code == 422
+
+
+def test_bulk_permanent_delete_dedupes_ids_before_limit_check():
+    client, store, _ = _build_client()
+    # 100 unique archived ids, but submitted with a duplicate so the raw list is
+    # 101 entries. Dedup must run first so the unique count (100) stays within
+    # the cap and the request is accepted rather than rejected as 422.
+    plan_ids = _seed_archived_plans(store, 100)
+    payload_ids = [*plan_ids, plan_ids[0]]
+    assert len(payload_ids) == 101
+
+    response = client.post(
+        "/api/admin/plans/bulk-permanent-delete",
+        headers={"Authorization": "Bearer admin-token"},
+        json={"plan_ids": payload_ids},
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["deleted_count"] == 100
+    assert sorted(body["deleted"]) == sorted(plan_ids)
+    assert all(store.get_plan(plan_id) is None for plan_id in plan_ids)
+
+
+def test_bulk_permanent_delete_deletes_archived_and_skips_live():
+    client, store, _ = _build_client()
+    archived = _seed_archived_plans(store, 1)[0]
+    live = store.create_plan(
+        athlete_id="athlete-1",
+        intake_id="intake_x",
+        request=_build_request(),
+        result=finalized_result(),
+    )
+
+    response = client.post(
+        "/api/admin/plans/bulk-permanent-delete",
+        headers={"Authorization": "Bearer admin-token"},
+        json={"plan_ids": [archived, live["id"]]},
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["deleted"] == [archived]
+    assert body["skipped"] == [{"plan_id": live["id"], "reason": "not_archived"}]
+    assert store.get_plan(archived) is None
+    assert store.get_plan(live["id"]) is not None

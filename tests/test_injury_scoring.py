@@ -15,7 +15,8 @@ def test_score_injury_phrase_detects_side_location_and_type():
 
 def test_score_injury_phrase_detects_urgent_flags_without_overriding():
     result = score_injury_phrase("Right ankle fracture with swelling.")
-    assert result["injury_type"] == "fracture"
+    assert result["injury_type"] == "unspecified"
+    assert result["triage_category"] == "fracture"
     assert result["location"] == "ankle"
     assert "urgent" in result["flags"]
     assert "urgent_fracture" in result["flags"]
@@ -49,7 +50,8 @@ def test_score_injury_phrase_preserves_medical_map_identities():
 
 def test_score_injury_phrase_medical_match_order_does_not_override_first_hit():
     result = score_injury_phrase("fracture and shoulder bursitis")
-    assert result["injury_type"] == "fracture"
+    assert result["injury_type"] == "unspecified"
+    assert result["triage_category"] == "fracture"
     assert "urgent_fracture" in result["flags"]
     assert "bursitis_variant" in result["flags"]
 
@@ -99,7 +101,10 @@ def test_score_injury_phrase_preserves_structural_severity_flags():
     assert "urgent" in tendon["flags"]
 
     dislocation = score_injury_phrase("shoulder dislocation")
-    assert dislocation["injury_type"] == "dislocation"
+    # Severe structural injuries are typed as unspecified; the specific label is
+    # carried by triage_category so they never enter soft rehab buckets.
+    assert dislocation["injury_type"] == "unspecified"
+    assert dislocation["triage_category"] == "dislocation"
     assert dislocation["location"] == "shoulder"
     assert "structural_red_flag" in dislocation["flags"]
     assert "suspected_dislocation" in dislocation["flags"]

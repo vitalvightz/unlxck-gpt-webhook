@@ -33,6 +33,7 @@ from api.contracts.completion import (
 from api.contracts.landing import LandingDecision, resolve_landing
 from api.contracts.training_day import resolve_training_day_str
 from api.store import AppStore
+from api.services.active_plan import resolve_active_plan
 
 
 def _plan_schedule_helpers():
@@ -49,6 +50,7 @@ def _plan_schedule_helpers():
         _parse_iso_date,
         _resolve_current_week,
         _resolve_today_and_next,
+        _weekly_schedule_or_none,
     )
 
     return (
@@ -56,6 +58,7 @@ def _plan_schedule_helpers():
         _parse_iso_date,
         _resolve_current_week,
         _resolve_today_and_next,
+        _weekly_schedule_or_none,
     )
 
 _CHECKIN_INPUT_FIELDS = (
@@ -253,19 +256,90 @@ def _session_id_for_entry(entry: Any) -> str | None:
     """
     if entry is None:
         return None
-    calendar_date = getattr(entry, "calendar_date", None)
+    if isinstance(entry, Mapping):
+        calendar_date = entry.get("calendar_date")
+        weekday = entry.get("weekday", "")
+    else:
+        calendar_date = getattr(entry, "calendar_date", None)
+        weekday = getattr(entry, "weekday", "")
     if calendar_date:
         return str(calendar_date)
-    weekday = getattr(entry, "weekday", "")
     return str(weekday) or None
 
 
-def _next_session_payload(entry: Any, session_id: str | None) -> dict[str, Any]:
+def _has_scheduled_day_content(entry: Any) -> bool:
+    if entry is None:
+        return False
+    if isinstance(entry, Mapping):
+        status = entry.get("status")
+        coach_note = entry.get("coach_note")
+        effective_load = entry.get("effective_load")
+    else:
+        status = getattr(entry, "status", None)
+        coach_note = getattr(entry, "coach_note", None)
+        effective_load = getattr(entry, "effective_load", None)
+    if isinstance(effective_load, str):
+        effective_load = effective_load.strip().lower()
+    return bool(status or coach_note or effective_load not in (None, "", "none"))
+
+
+def _entry_has_training(entry: Any) -> bool:
+    return _has_scheduled_day_content(entry)
+
+
+def _scan_forward_for_next_training(
+    plan_row: Mapping[str, Any],
+    *,
+    week: Any,
+    week_index: int,
+    training_date: Any,
+    weekly_schedule_or_none,
+    parse_iso_date,
+) -> Any:
+    """Find the next training day in a later schedule week.
+
+    The within-week resolver (``_resolve_today_and_next``) only looks at the
+    remaining days of the *current* week. Taper and late-camp weeks frequently
+    carry just one or two training days, so on every non-training day the rest of
+    the week is empty and the genuine next session sits in a future week. Without
+    crossing the week boundary the Overview "Next session" card reports
+    "No session found" even though training is still scheduled. This scan walks
+    subsequent weeks (in order) and returns the first day that carries training,
+    so the card always reflects the next real session while one exists.
+    """
+    if week is None:
+        return None
+    week_count = int(getattr(week, "week_count", 0) or 0)
+    for index in range(week_index + 1, week_count):
+        later_week = weekly_schedule_or_none(plan_row, week_index=index)
+        if later_week is None:
+            continue
+        for entry in getattr(later_week, "days", []) or []:
+            if not _entry_has_training(entry):
+                continue
+            calendar_date = (
+                entry.get("calendar_date")
+                if isinstance(entry, Mapping)
+                else getattr(entry, "calendar_date", None)
+            )
+            entry_date = parse_iso_date(calendar_date) if calendar_date else None
+            # Dated plans: never surface a session on/before today. Undated plans
+            # (weekday-only fallback) can't be compared, so any later-week
+            # training day is the next session.
+            if entry_date is not None and training_date is not None and entry_date <= training_date:
+                continue
+            return entry
+    return None
+
+
+def _next_session_payload(entry: Any, session_id: str | None, *, relation: str | None = None) -> dict[str, Any]:
     if entry is None:
         return {}
     data = entry.model_dump() if hasattr(entry, "model_dump") else dict(entry)
     if session_id:
         data["session_id"] = session_id
+    if relation:
+        data["session_relation"] = relation
     return data
 
 
@@ -288,6 +362,15 @@ def _risks_from_checkin(checkin: Mapping[str, Any] | None):
     return risks
 
 
+def _plan_with_resolved_phase(plan_row: Mapping[str, Any], week: Any) -> dict[str, Any]:
+    """Use the current schedule week as the command-view phase authority."""
+    plan = dict(plan_row)
+    resolved_phase = str(getattr(week, "phase", "") or "").strip()
+    if resolved_phase:
+        plan["phase"] = resolved_phase
+    return plan
+
+
 def build_today_command_view(
     store: AppStore,
     *,
@@ -305,10 +388,11 @@ def build_today_command_view(
         _parse_iso_date,
         _resolve_current_week,
         _resolve_today_and_next,
+        _weekly_schedule_or_none,
     ) = _plan_schedule_helpers()
 
     training_day = resolve_training_day(athlete_timezone, now=now)
-    plan_row = _latest_visible_plan_row(store, athlete_id)
+    plan_row = resolve_active_plan(store, athlete_id).plan
 
     if not plan_row:
         return build_command_view(current_training_day=training_day, plan=None)
@@ -321,38 +405,55 @@ def build_today_command_view(
 
     # Derive today's/next session from the persisted plan's weekly schedule.
     today_entry = next_entry = None
+    week = None
+    week_index = 0
     training_date = _parse_iso_date(training_day)
     if training_date is not None:
         try:
-            _week_index, week = _resolve_current_week(plan_row, today=training_date)
+            week_index, week = _resolve_current_week(plan_row, today=training_date)
             today_entry, next_entry = _resolve_today_and_next(week, today=training_date)
         except Exception:
             # Malformed plan data must never crash Overview.
             today_entry = next_entry = None
+            week = None
 
-    today_session_id = _session_id_for_entry(today_entry)
+    has_today_session = _has_scheduled_day_content(today_entry)
+    today_session_id = _session_id_for_entry(today_entry) if has_today_session else None
     today_completion = (
         store.get_session_completion(athlete_id, today_session_id, training_day)
         if today_session_id
         else None
     )
     today_is_complete = completion_status_of(today_completion) in TERMINAL_COMPLETION_STATUSES
-
-    if today_entry is not None and not today_is_complete:
-        target_entry = today_entry
-        session_scope = "today"
-    else:
-        target_entry = next_entry
-        session_scope = "next" if next_entry is not None else "none"
+    target_entry = today_entry if has_today_session and not today_is_complete else next_entry
+    if target_entry is None and week is not None:
+        # No training left in the current week — look ahead so the "Next session"
+        # card surfaces the upcoming session instead of "No session found".
+        try:
+            target_entry = _scan_forward_for_next_training(
+                plan_row,
+                week=week,
+                week_index=week_index,
+                training_date=training_date,
+                weekly_schedule_or_none=_weekly_schedule_or_none,
+                parse_iso_date=_parse_iso_date,
+            )
+        except Exception:
+            target_entry = None
+    session_relation = (
+        "today"
+        if target_entry is not None and target_entry is today_entry
+        else ("next" if target_entry is not None else None)
+    )
     session_id = _session_id_for_entry(target_entry)
 
     return build_command_view(
         current_training_day=training_day,
-        plan=plan_row,
+        plan=_plan_with_resolved_phase(plan_row, week),
         recommendation=recommendation,
         completion=today_completion,
-        next_session=_next_session_payload(target_entry, session_id),
-        session_scope=session_scope,
+        next_session=_next_session_payload(target_entry, session_id, relation=session_relation),
+        session_scope=session_relation or "none",
         risks=_risks_from_checkin(today_checkin),
     )
 
@@ -371,10 +472,11 @@ def resolve_today_landing(
         _parse_iso_date,
         _resolve_current_week,
         _resolve_today_and_next,
+        _weekly_schedule_or_none,
     ) = _plan_schedule_helpers()
 
     training_day = resolve_training_day(athlete_timezone, now=now)
-    plan_row = _latest_visible_plan_row(store, athlete_id)
+    plan_row = resolve_active_plan(store, athlete_id).plan
     has_active_plan = bool(plan_row)
 
     session_state = "none"

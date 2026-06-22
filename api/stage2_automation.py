@@ -23,6 +23,7 @@ from .structured_plan_generation import (
     parse_structured_json,
     should_attempt_structured_plan,
 )
+from .structured_plan_sparring_reconcile import reconcile_coach_led_sparring_days
 
 _APP_STATUS_READY = "ready"
 _APP_STATUS_HELD_FOR_REVIEW = "held_for_review"
@@ -840,6 +841,24 @@ class OpenAIStage2Automator:
                 costs,
             )
 
+    @staticmethod
+    def _reconcile_coach_led(outcome: StructuredPlanOutcome, planning_brief: Any) -> StructuredPlanOutcome:
+        """Guarantee declared sparring/coach-led days render as cards.
+
+        The converted card derives a day's coach-led status from the LLM headline
+        alone, so a dropped or mislabelled day silently becomes "Rest day.". The
+        deterministic role map already knows every sparring day, so stamp/insert
+        those cards from it. No-op unless the outcome actually carries a plan.
+        """
+        if outcome.structured_plan is None:
+            return outcome
+        notes = reconcile_coach_led_sparring_days(outcome.structured_plan, planning_brief)
+        if notes:
+            outcome.warnings = list(outcome.warnings) + [
+                f"coach_led_reconcile: {note}" for note in notes
+            ]
+        return outcome
+
     async def _generate_structured_outcome(
         self,
         *,
@@ -887,7 +906,7 @@ class OpenAIStage2Automator:
             first_json, raw_markdown=final_plan_text, computed_support=computed_support
         )
         if first_outcome.status == "valid":
-            return first_outcome, costs
+            return self._reconcile_coach_led(first_outcome, planning_brief), costs
 
         # Single repair retry: re-prompt with the validation errors and the
         # broken JSON, then let build_structured_plan_outcome score the result.
@@ -906,15 +925,13 @@ class OpenAIStage2Automator:
         )
         costs.append(repair_cost)
         repaired_json = parse_structured_json(repaired_text)
-        return (
-            build_structured_plan_outcome(
-                first_json,
-                raw_markdown=final_plan_text,
-                repair_fn=lambda _data, _errors: repaired_json,
-                computed_support=computed_support,
-            ),
-            costs,
+        repaired_outcome = build_structured_plan_outcome(
+            first_json,
+            raw_markdown=final_plan_text,
+            repair_fn=lambda _data, _errors: repaired_json,
+            computed_support=computed_support,
         )
+        return self._reconcile_coach_led(repaired_outcome, planning_brief), costs
 
 
 def build_default_stage2_automator() -> Stage2Automator:

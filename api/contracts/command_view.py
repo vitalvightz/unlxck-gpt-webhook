@@ -154,24 +154,30 @@ class CommandView(BaseModel):
     quick_actions: list[QuickAction] = Field(default_factory=list)
 
 
-_PLAN_IDENTITY_FIELDS = ("id", "name", "status", "phase", "fight_date", "camp_type")
+_PLAN_IDENTITY_FIELDS = ("status", "phase", "fight_date", "camp_type")
 
 
 def _plan_identity(plan: Mapping[str, Any] | None) -> dict[str, Any]:
     """Minimal plan identity/summary — never the full structured plan."""
     if not plan:
         return {}
-    identity = {
+    identity: dict[str, Any] = {
         field: plan[field]
         for field in _PLAN_IDENTITY_FIELDS
         if plan.get(field) not in (None, "")
     }
+    plan_id = str(plan.get("id") or plan.get("plan_id") or "").strip()
+    if plan_id:
+        identity["id"] = plan_id
+    plan_name = str(plan.get("name") or plan.get("plan_name") or "").strip()
+    if plan_name:
+        identity["name"] = plan_name
     # A plan with no recognisable identity fields is treated as "no plan".
     return identity
 
 
-def _quick_actions(has_active_plan: bool) -> list[QuickAction]:
-    if not has_active_plan:
+def _quick_actions(active_plan_id: str | None) -> list[QuickAction]:
+    if not active_plan_id:
         return [
             QuickAction(
                 id="complete_intake",
@@ -181,9 +187,8 @@ def _quick_actions(has_active_plan: bool) -> list[QuickAction]:
         ]
     return [
         QuickAction(id="open_today", label="Open Today", route="/today"),
-        QuickAction(id="view_plan", label="View Plan", route="/plan"),
+        QuickAction(id="view_plan", label="View Plan", route=f"/plans/{active_plan_id}"),
     ]
-
 
 def _as_iso(day: date | str) -> str:
     if hasattr(day, "date"):
@@ -213,7 +218,6 @@ def build_command_view(
     """
     training_day = _as_iso(current_training_day)
     active_plan = _plan_identity(plan)
-    has_active_plan = bool(active_plan)
 
     rec_view = resolve_recommendation_state(
         recommendation, current_training_day=training_day
@@ -242,5 +246,5 @@ def build_command_view(
         today=today,
         risk_watch=sort_risk_watch(risks or []),
         week_summary=dict(week_summary) if week_summary else {},
-        quick_actions=_quick_actions(has_active_plan),
+        quick_actions=_quick_actions(active_plan.get("id")),
     )

@@ -86,7 +86,10 @@ def _guard_persisted_json(
         ) from None
 
 
-PLAN_SUMMARY_SELECT = "id, athlete_id, full_name, fight_date, technical_style, plan_name, status, pdf_url, created_at"
+PLAN_SUMMARY_SELECT = (
+    "id, athlete_id, full_name, fight_date, technical_style, plan_name, status, "
+    "stage2_validator_report, pdf_url, created_at"
+)
 GENERATION_JOB_SELECT = "*"
 # Admin job-list endpoints render diagnostics that need request_payload and
 # final_result but never read stage1_result (the largest intermediate blob,
@@ -154,6 +157,9 @@ _GENERATION_JOB_TERMINAL_MISSING_SNIPPETS = (
 )
 PLAN_RUNTIME_SCHEMA_ERROR_DETAIL = (
     "plans table is missing required runtime columns; apply latest Supabase schema and redeploy"
+)
+PROFILES_ACTIVE_PLAN_SCHEMA_ERROR_DETAIL = (
+    "profiles table is missing active_plan_id; apply latest Supabase schema and redeploy"
 )
 GENERATION_JOB_ACTIVE_LOCK_ERROR_DETAIL = (
     "generation job active lock is missing; apply latest Supabase migrations and redeploy"
@@ -241,6 +247,7 @@ class AppStore(Protocol):
         technical_style: list[str],
     ) -> dict[str, Any]: ...
 
+
     def create_plan(
         self,
         *,
@@ -258,6 +265,10 @@ class AppStore(Protocol):
 
     def get_latest_plan(self, athlete_id: str) -> dict[str, Any] | None: ...
 
+    def get_active_plan_id(self, athlete_id: str) -> str | None: ...
+
+    def set_active_plan_id(self, athlete_id: str, plan_id: str) -> None: ...
+
     def rename_plan(self, plan_id: str, plan_name: str) -> dict[str, Any]: ...
 
     def rename_plan_for_athlete(self, plan_id: str, athlete_id: str, plan_name: str) -> dict[str, Any]: ...
@@ -269,6 +280,7 @@ class AppStore(Protocol):
     def delete_plan(self, plan_id: str) -> None: ...
 
     def delete_plan_for_athlete(self, plan_id: str, athlete_id: str) -> None: ...
+
 
     def create_or_get_generation_job(
         self,
@@ -976,6 +988,21 @@ class SupabaseAppStore:
             if part
         ).lower()
         return any(snippet in text for snippet in _GENERATION_JOB_TERMINAL_MISSING_SNIPPETS)
+
+
+    def _is_profiles_active_plan_schema_error(self, exc: Exception) -> bool:
+        if not isinstance(exc, PostgrestAPIError):
+            return False
+        text = " ".join(
+            str(part)
+            for part in (exc.code, exc.message, exc.hint, exc.details)
+            if part
+        ).lower()
+        return (
+            "profiles" in text
+            and "active_plan_id" in text
+            and any(snippet in text for snippet in _PLAN_RUNTIME_SCHEMA_ERROR_SNIPPETS)
+        )
 
     def _is_plan_schema_column_error(self, exc: Exception) -> bool:
         if not isinstance(exc, PostgrestAPIError):
@@ -1932,6 +1959,48 @@ class SupabaseAppStore:
                 detail="failed to read latest plan",
                 exc=exc,
             )
+
+    def get_active_plan_id(self, athlete_id: str) -> str | None:
+        try:
+            row = self._run_with_transient_retry(
+                operation=f"get_active_plan_id athlete_id={athlete_id}",
+                fn=lambda: self._select_first(
+                    self.client.table("profiles").select("active_plan_id").eq("id", athlete_id)
+                ),
+            )
+            return (str(row.get("active_plan_id") or "").strip() or None) if row else None
+        except _STORE_CLIENT_ERRORS as exc:
+            if self._is_profiles_active_plan_schema_error(exc):
+                logger.exception("[store] get_active_plan_id:schema_mismatch athlete_id=%s", athlete_id)
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail=PROFILES_ACTIVE_PLAN_SCHEMA_ERROR_DETAIL,
+                ) from exc
+            self._raise_operation_http_error(
+                operation=f"get_active_plan_id athlete_id={athlete_id}",
+                detail="failed to read active plan",
+                exc=exc,
+            )
+
+    def set_active_plan_id(self, athlete_id: str, plan_id: str) -> None:
+        try:
+            self._run_with_transient_retry(
+                operation=f"set_active_plan_id athlete_id={athlete_id}",
+                fn=lambda: self.client.table("profiles").update({"active_plan_id": plan_id}).eq("id", athlete_id).execute(),
+            )
+        except _STORE_CLIENT_ERRORS as exc:
+            if self._is_profiles_active_plan_schema_error(exc):
+                logger.exception("[store] set_active_plan_id:schema_mismatch athlete_id=%s", athlete_id)
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail=PROFILES_ACTIVE_PLAN_SCHEMA_ERROR_DETAIL,
+                ) from exc
+            self._raise_operation_http_error(
+                operation=f"set_active_plan_id athlete_id={athlete_id}",
+                detail="failed to set active plan",
+                exc=exc,
+            )
+
 
     def create_or_get_generation_job(
         self,

@@ -4,20 +4,21 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
-import { getOptionLabels, TECHNICAL_STYLE_OPTIONS } from "@/lib/intake-options";
-import { WeeklySparringView } from "@/components/weekly-sparring-view";
 import {
   approveAndResumeGeneration,
   approvePlanForRelease,
   archivePlan,
   deletePlan,
+  getActivePlan,
   getPlan,
   isRetryableApiFailure,
   permanentlyDeletePlan,
   rejectApprovedPlan,
   renamePlan,
+  setActivePlan,
   submitManualStage2,
 } from "@/lib/api";
+import { canSetActivePlan } from "@/lib/plan-active";
 import { clearCompletedGenerationForDeletedPlan } from "@/lib/completed-generation";
 import { PremiumLoadingScreen } from "@/components/premium-loading-screen";
 import { QuickBuildRefinementBanner } from "@/components/quick-build-refinement-banner";
@@ -583,7 +584,7 @@ export function parsePlanText(rawText: string): PlanTextGroup[] {
 function PlanTextNotesCard({ notes }: { notes: PlanTextNotes }) {
   return (
     <section className="sp-card sp-active-notes legacy-plan-notes">
-      <p className="sp-eyebrow sp-accent">{notes.title}</p>
+      <p className="sp-eyebrow">{notes.title}</p>
       {notes.lines.map((line, index) => (
         <p key={`${notes.title}-${index}`} className="sp-block-purpose">
           {line}
@@ -687,7 +688,7 @@ function PlanTextCards({ text }: { text: string }) {
         <article className="sp-session legacy-plan-card">
           <header className="sp-session-head">
             <div>
-              <p className="sp-eyebrow sp-accent">Saved plan</p>
+              <p className="sp-eyebrow">Saved plan</p>
               <h4 className="sp-session-title">No plan cards available</h4>
             </div>
           </header>
@@ -701,7 +702,7 @@ function PlanTextCards({ text }: { text: string }) {
   return (
     <section className="sp-root legacy-plan-root" aria-label="Saved plan cards">
       <header className="sp-header legacy-plan-header">
-        <p className="sp-eyebrow sp-accent">Saved plan</p>
+        <p className="sp-eyebrow">Saved plan</p>
         <h3 className="sp-title">Training plan</h3>
       </header>
       <div className="legacy-plan-card-stack">
@@ -1444,8 +1445,6 @@ export function PlanViewer({
   // Only surface an advisory that carries a real injury-risk band; the rest just
   // restate load tweaks the plan already applied, so they are suppressed.
   const primaryAdvisory = selectInjuryRiskAdvisory(plan.advisories);
-  const technicalStyles =
-    getOptionLabels(TECHNICAL_STYLE_OPTIONS, plan.technical_style).join(", ") || "Not provided";
 
   const athletePlanText = plan.outputs.plan_text.trim();
   const hasPublishedPlan = isPlanReleasedToAthlete(plan);
@@ -1580,6 +1579,9 @@ export function PlanViewer({
   const [archivePending, setArchivePending] = useState(false);
   const [archiveMessage, setArchiveMessage] = useState<string | null>(null);
   const [archiveError, setArchiveError] = useState<string | null>(null);
+  const [activePlanId, setActivePlanId] = useState<string | null>(null);
+  const [setActivePending, setSetActivePending] = useState(false);
+  const [setActiveError, setSetActiveError] = useState<string | null>(null);
   const [planActionPending, setPlanActionPending] = useState<
     "rename" | "archive" | "permanent-delete" | null
   >(null);
@@ -1647,6 +1649,30 @@ export function PlanViewer({
   useEffect(() => {
     setManualPlanText(plan.admin_outputs?.final_plan_text || "");
   }, [plan.plan_id, plan.admin_outputs?.final_plan_text]);
+
+  // Resolve which plan is the athlete's active one so this page can show the
+  // ACTIVE badge / Set active control without duplicating Today's job. A missing
+  // active plan is a normal state (no plan set yet), so failures stay silent.
+  useEffect(() => {
+    if (!accessToken || !canManagePlan) {
+      return;
+    }
+    let cancelled = false;
+    getActivePlan(accessToken)
+      .then((active) => {
+        if (!cancelled) {
+          setActivePlanId(active?.plan_id ?? null);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setActivePlanId(null);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [accessToken, canManagePlan, plan.plan_id]);
 
   useEffect(() => {
     setOpenAdminSection(
@@ -1807,6 +1833,27 @@ export function PlanViewer({
     }
   }
 
+  async function handleSetActive() {
+    if (!accessToken) {
+      setSetActiveError("Session expired. Sign in again.");
+      return;
+    }
+    if (!canSetActivePlan(plan.status)) {
+      setSetActiveError("This plan cannot be set active from its current state.");
+      return;
+    }
+    setSetActivePending(true);
+    setSetActiveError(null);
+    try {
+      const active = await setActivePlan(accessToken, plan.plan_id);
+      setActivePlanId(active.plan_id);
+    } catch (error) {
+      setSetActiveError(error instanceof Error ? error.message : "Unable to set this plan active.");
+    } finally {
+      setSetActivePending(false);
+    }
+  }
+
   async function handleArchivePlan() {
     if (!accessToken) {
       setArchiveError("Admin session missing. Please sign in again.");
@@ -1921,20 +1968,33 @@ export function PlanViewer({
     }
 
     const planName = plan.plan_name?.trim() ?? "";
-    if (!planName) {
-      setPlanActionError("This plan has no name. Rename it before permanent deletion.");
-      return;
-    }
+    const isArchived = (plan.status || "").trim().toLowerCase() === "archived";
 
-    const typed = window.prompt(
-      `Permanent delete cannot be undone.\n\nType the plan name to confirm:\n${planName}`,
-    );
-    if (typed == null) {
-      return;
-    }
-    if (typed.trim() !== planName) {
-      setPlanActionError("Confirmation did not match the plan name. Nothing was deleted.");
-      return;
+    // Archived plans are already retired, so skip the type-the-name confirmation
+    // and use a single confirm. Live plans still require typing the name.
+    if (isArchived) {
+      const confirmed = window.confirm(
+        `Permanently delete "${getPlanDisplayName(plan)}"? This cannot be undone.`,
+      );
+      if (!confirmed) {
+        return;
+      }
+    } else {
+      if (!planName) {
+        setPlanActionError("This plan has no name. Rename it before permanent deletion.");
+        return;
+      }
+
+      const typed = window.prompt(
+        `Permanent delete cannot be undone.\n\nType the plan name to confirm:\n${planName}`,
+      );
+      if (typed == null) {
+        return;
+      }
+      if (typed.trim() !== planName) {
+        setPlanActionError("Confirmation did not match the plan name. Nothing was deleted.");
+        return;
+      }
     }
 
     setPlanActionPending("permanent-delete");
@@ -1942,7 +2002,7 @@ export function PlanViewer({
     setPlanActionMessage(null);
 
     try {
-      await permanentlyDeletePlan(accessToken, plan.plan_id, planName);
+      await permanentlyDeletePlan(accessToken, plan.plan_id, isArchived ? undefined : planName);
       clearCompletedGenerationForDeletedPlan(plan.plan_id);
       await onPlanDeleted?.();
       router.push("/admin");
@@ -2040,7 +2100,12 @@ export function PlanViewer({
           </div>
           <div className="status-card">
             <p className="status-label">Status</p>
-            <h2 className="plan-summary-title">{statusLabel}</h2>
+            <h2 className="plan-summary-title">
+              {statusLabel}
+              {activePlanId === plan.plan_id ? (
+                <span className="badge status-badge-success cm-active-badge">ACTIVE</span>
+              ) : null}
+            </h2>
             <p className="muted">
               {isTriageBlocked
                 ? "Stage 2 was skipped intentionally."
@@ -2049,10 +2114,31 @@ export function PlanViewer({
           </div>
         </div>
 
+        {(plan.status || "").trim().toLowerCase() === "archived" ? (
+          <div className="quick-build-refine-banner cm-archived-banner" role="status">
+            This plan is archived — view only. Restore it from plan history to set it active again.
+          </div>
+        ) : null}
+
         <div className="plan-summary-actions">
           <Link href="/plans" className="ghost-button">
             Back to plans
           </Link>
+          {canManagePlan && activePlanId === plan.plan_id ? (
+            <Link href="/today" className="cta">
+              Open Today
+            </Link>
+          ) : null}
+          {canManagePlan && activePlanId !== plan.plan_id && canSetActivePlan(plan.status) ? (
+            <button
+              type="button"
+              className="cta"
+              onClick={handleSetActive}
+              disabled={setActivePending}
+            >
+              {setActivePending ? "Setting active..." : "Set active"}
+            </button>
+          ) : null}
           {canManagePlan ? (
             <>
               <button
@@ -2091,32 +2177,12 @@ export function PlanViewer({
         </div>
         {planActionMessage ? <div className="success-banner">{planActionMessage}</div> : null}
         {planActionError ? <div className="error-banner">{planActionError}</div> : null}
+        {setActiveError ? <div className="error-banner">{setActiveError}</div> : null}
       </section>
 
-      <div className="plan-detail-layout">
-        <aside className="plan-summary-stack">
-          <section className="plan-summary-card">
-            <div className="plan-summary-header">
-              <p className="kicker">Summary</p>
-              <h2 className="plan-summary-title">Camp context</h2>
-            </div>
-            <div className="plan-meta-grid">
-              <article className="plan-meta-item">
-                <p className="plan-meta-label">Fight date</p>
-                <p className="plan-meta-value">{plan.fight_date || "Not provided"}</p>
-              </article>
-              <article className="plan-meta-item">
-                <p className="plan-meta-label">Technical Style</p>
-                <p className="plan-meta-value">{technicalStyles}</p>
-              </article>
-              <article className="plan-meta-item">
-                <p className="plan-meta-label">Created</p>
-                <p className="plan-meta-value">{new Date(plan.created_at).toLocaleDateString()}</p>
-              </article>
-            </div>
-          </section>
-
-          {canUseAdminOutputs ? (
+      <div className={`plan-detail-layout${canUseAdminOutputs ? "" : " plan-detail-layout-single"}`}>
+        {canUseAdminOutputs ? (
+          <aside className="plan-summary-stack">
             <section className="plan-summary-card">
               <div className="plan-summary-header">
                 <p className="kicker">Stage 2</p>
@@ -2177,43 +2243,48 @@ export function PlanViewer({
                 </>
               ) : null}
             </section>
-          ) : null}
-        </aside>
+          </aside>
+        ) : null}
 
         <section className="plan-text-panel">
-          <div className="plan-header-row">
-            <div>
-              <p className="kicker">Athlete Plan</p>
-              <h2>
+          {/* The validation status/badge is operational metadata. Athletes go
+              straight into the camp map (which carries its own header); admins
+              and any not-yet-published/triage state still see the status. */}
+          {canUseAdminOutputs || !hasPublishedPlan || isTriageBlocked ? (
+            <div className="plan-header-row">
+              <div>
+                <p className="kicker">{canUseAdminOutputs ? "Athlete Plan" : "Your plan"}</p>
+                <h2>
+                  {isTriageBlocked
+                    ? blockedTitle
+                    : plan.admin_outputs?.stage2_status === "triage_resume_approved"
+                      ? "Resume approved — regeneration pending"
+                    : hasPublishedPlan
+                      ? "Validated final plan"
+                      : "Pending finalization"}
+                </h2>
+              </div>
+              <span
+                className={`badge ${
+                  isTriageBlocked
+                    ? injuryTriage?.mode === "medical_hold"
+                      ? "issue-badge-error"
+                      : ""
+                    : hasPublishedPlan
+                      ? "status-badge-success"
+                      : "status-badge-neutral"
+                }`}
+              >
                 {isTriageBlocked
                   ? blockedTitle
                   : plan.admin_outputs?.stage2_status === "triage_resume_approved"
-                    ? "Resume approved — regeneration pending"
+                    ? "Resume pending"
                   : hasPublishedPlan
-                    ? "Validated final plan"
-                    : "Pending finalization"}
-              </h2>
+                    ? "Validated"
+                    : "Review required"}
+              </span>
             </div>
-            <span
-              className={`badge ${
-                isTriageBlocked
-                  ? injuryTriage?.mode === "medical_hold"
-                    ? "issue-badge-error"
-                    : ""
-                  : hasPublishedPlan
-                    ? "status-badge-success"
-                    : "status-badge-neutral"
-              }`}
-            >
-              {isTriageBlocked
-                ? blockedTitle
-                : plan.admin_outputs?.stage2_status === "triage_resume_approved"
-                  ? "Resume pending"
-                : hasPublishedPlan
-                  ? "Validated"
-                  : "Review required"}
-            </span>
-          </div>
+          ) : null}
 
           {primaryAdvisory ? <SparringAdvisoryCard advisory={primaryAdvisory} /> : null}
 
@@ -2248,7 +2319,6 @@ export function PlanViewer({
                   </button>
                 ) : null}
               </div>
-              <WeeklySparringView planId={plan.plan_id} />
               {shouldRenderStructuredPlan(plan.outputs) && plan.outputs.structured_plan ? (
                 <StructuredPlanRenderer plan={plan.outputs.structured_plan} />
               ) : (

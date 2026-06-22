@@ -1223,15 +1223,52 @@ class PlanRenameRequest(BaseModel):
 
 
 class PlanPermanentDeleteRequest(BaseModel):
-    confirm_plan_name: str
+    # Optional: archived plans are deleted without typed confirmation. The name
+    # is only required when permanently deleting a plan that is not archived.
+    confirm_plan_name: str | None = None
 
     @field_validator("confirm_plan_name")
     @classmethod
-    def validate_confirm_plan_name(cls, value: str) -> str:
-        normalized = str(value or "").strip()
+    def validate_confirm_plan_name(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        normalized = str(value).strip()
+        return normalized or None
+
+
+PLAN_BULK_PERMANENT_DELETE_MAX = 100
+
+
+class PlanBulkPermanentDeleteRequest(BaseModel):
+    plan_ids: list[str]
+
+    @field_validator("plan_ids")
+    @classmethod
+    def validate_plan_ids(cls, value: list[str]) -> list[str]:
+        seen: set[str] = set()
+        normalized: list[str] = []
+        for raw in value or []:
+            plan_id = str(raw or "").strip()
+            if not plan_id or plan_id in seen:
+                continue
+            seen.add(plan_id)
+            normalized.append(plan_id)
         if not normalized:
-            raise ValueError("confirm_plan_name is required")
+            raise ValueError("plan_ids is required")
+        # Cap the batch on the deduplicated list so a single request can never
+        # fan out into an unbounded number of deletes.
+        if len(normalized) > PLAN_BULK_PERMANENT_DELETE_MAX:
+            raise ValueError(
+                f"plan_ids cannot exceed {PLAN_BULK_PERMANENT_DELETE_MAX} unique ids per request"
+            )
         return normalized
+
+
+class PlanBulkPermanentDeleteResult(BaseModel):
+    deleted: list[str]
+    skipped: list[dict[str, str]]
+    deleted_count: int
+    skipped_count: int
 
 
 USERNAME_MAX_CHANGES_PER_WINDOW = 4
@@ -1304,6 +1341,7 @@ class PlanSummary(BaseModel):
     created_at: str
     status: str = "generated"
     pdf_url: str | None = None
+    review_reason: str | None = None
 
 
 class PlanOutputs(BaseModel):

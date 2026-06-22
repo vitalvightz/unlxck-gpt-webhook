@@ -121,6 +121,11 @@ class TrainingContext:
     athlete_timezone: str = ""
     next_fight_date: str = ""
     injuries_raw_text: str = ""
+    # The athlete's verbatim mental/mindset note from Stage 1, preserved
+    # alongside the classified ``mental_block`` buckets so Stage 2 can
+    # personalise the mindset_anchor from the athlete's own words (mirrors
+    # ``injuries_raw_text``).
+    mental_block_raw: str = ""
     parsed_injuries: list[dict[str, Any]] = field(default_factory=list)
     guided_injury: dict[str, Any] | None = None
     guided_injuries: list[dict[str, Any]] = field(default_factory=list)

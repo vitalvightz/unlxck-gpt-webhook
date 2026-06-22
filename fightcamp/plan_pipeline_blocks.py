@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 import logging
+import re
 from time import perf_counter
 from typing import Any, Callable
 
 from .coach_review import run_coach_review
 from .conditioning import generate_conditioning_block
+from .injury_location import canonicalize_location
 from .mindset_module import get_mindset_by_phase, get_phase_mindset_cues
 from .nutrition import generate_nutrition_block
 from .plan_pipeline_runtime import (
@@ -248,10 +250,45 @@ def _normalize_guided_injury_type(value: str | None) -> str:
     return normalized
 
 
+def _guided_area_matches_location(area: str, canonical_location: str) -> bool:
+    """Whether a guided card's free-text *area* refers to *canonical_location*.
+
+    Synonym- and token-aware: it canonicalizes the whole area and each word/2-word
+    span ("hip flexor strain" -> "hip_flexor"/"hip") rather than doing a raw
+    substring test, so "hip" matches the area "left hip" but never matches inside
+    an unrelated word like "whiplash".
+    """
+    if not area or not canonical_location:
+        return False
+    if canonicalize_location(area) == canonical_location:
+        return True
+    tokens = re.findall(r"[a-z]+", area.lower())
+    for span in (1, 2):
+        for start in range(len(tokens) - span + 1):
+            phrase = " ".join(tokens[start : start + span])
+            if canonicalize_location(phrase) == canonical_location:
+                return True
+    return False
+
+
 def _build_rehab_injury_string(context: PlanRuntimeContext) -> str:
     parsed_entries = context.plan_input.parsed_injuries or []
     if not parsed_entries:
         return context.injuries_only_text
+
+    # An explicit guided-card injury type (e.g. "instability / giving way") is a
+    # user selection and outranks a type re-derived from the free-text phrase —
+    # but only for the entry the card actually describes (matched by area), so a
+    # first card's type is not smeared across unrelated injuries.
+    context_guided_type = ""
+    context_guided_area = ""
+    guided_source = getattr(context.plan_input, "guided_injury", None)
+    if guided_source is None:
+        guided_list = getattr(context.plan_input, "guided_injuries", None) or []
+        guided_source = guided_list[0] if guided_list else None
+    if guided_source is not None:
+        context_guided_type = _normalize_guided_injury_type(getattr(guided_source, "injury_type", None))
+        context_guided_area = str(getattr(guided_source, "area", "") or "").strip().lower()
 
     phrases: list[str] = []
     for entry in parsed_entries:
@@ -290,6 +327,13 @@ def _build_rehab_injury_string(context: PlanRuntimeContext) -> str:
 
         injury_type = _normalize_guided_injury_type(entry.get("injury_type"))
         guided_type = _normalize_guided_injury_type(entry.get("guided_source_injury_type") or entry.get("guided_injury_type"))
+        if (
+            not guided_type
+            and context_guided_type
+            and canonical_location
+            and _guided_area_matches_location(context_guided_area, canonical_location)
+        ):
+            guided_type = context_guided_type
         if guided_type and injury_type in {"", "sprain", "unspecified", "pain", "soreness", "tightness", "stiffness"}:
             injury_type = guided_type
         if is_knee and knee_movement_language and injury_type in {"", "sprain", "unspecified", "pain", "soreness", "tightness", "stiffness"}:

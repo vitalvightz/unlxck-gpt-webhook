@@ -16,7 +16,7 @@ const TAB_ICONS: Record<string, ReactNode> = {
       <path d="M3 10.5L10 4l7 6.5V16a1 1 0 0 1-1 1h-3v-4H8v4H4a1 1 0 0 1-1-1v-5.5z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
     </svg>
   ),
-  "/dashboard": (
+  "/today": (
     <svg viewBox="0 0 20 20" width="20" height="20" fill="none" aria-hidden="true">
       <rect x="3" y="4" width="14" height="13" rx="2" stroke="currentColor" strokeWidth="1.5" />
       <path d="M3 8h14M7 2v3M13 2v3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
