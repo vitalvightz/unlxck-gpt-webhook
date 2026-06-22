@@ -59,7 +59,9 @@ from .services.admin_stage2_service import (
     approve_review_required_plan as approve_review_required_plan_service,
     backfill_structured_plans as backfill_structured_plans_service,
     list_structured_plan_backfill_candidates as list_structured_plan_backfill_candidates_service,
+    prewarm_structured_plan as prewarm_structured_plan_service,
     run_structured_plan_post_processing as run_structured_plan_post_processing_service,
+    should_prewarm_review_plan_row,
     submit_manual_stage2 as submit_manual_stage2_service,
 )
 from .services.generation_retry_service import retry_generation_job as retry_generation_job_service
@@ -850,18 +852,31 @@ def create_app(
         ]
 
     @app.get("/api/admin/plans/review", response_model=list[AdminPlanSummary])
-    def list_admin_review_plans(
+    async def list_admin_review_plans(
+        background_tasks: BackgroundTasks,
         _: ProfileRecord = Depends(require_admin),
         limit: int = Query(100, ge=1, le=200),
         store: AppStore = Depends(get_store),
+        stage2: Stage2Automator = Depends(get_stage2_automator),
     ) -> list[AdminPlanSummary]:
         # Held/blocked plans awaiting an admin decision. Kept separate from the
         # general plan history so a paused plan stays visible even when profile
         # enrichment is degraded.
-        return [
-            _map_admin_plan_summary(row)
-            for row in store.list_admin_review_plans(limit=limit)
-        ]
+        rows = store.list_admin_review_plans(limit=limit)
+        # Pre-warm the structured card for the approvable held plans in the queue.
+        # The admin almost always approves, and the card conversion is the slow
+        # step at approval, so building it now (while they review) lets the
+        # approval ship the live card immediately. Best-effort and deduped — see
+        # prewarm_structured_plan.
+        for row in rows:
+            if should_prewarm_review_plan_row(row):
+                background_tasks.add_task(
+                    prewarm_structured_plan_service,
+                    plan_id=str(row.get("id") or ""),
+                    store=store,
+                    stage2=stage2,
+                )
+        return [_map_admin_plan_summary(row) for row in rows]
 
     @app.get("/api/admin/generation-jobs/triage", response_model=list[AdminGenerationJobDiagnostic])
     def list_admin_triage_generation_jobs(

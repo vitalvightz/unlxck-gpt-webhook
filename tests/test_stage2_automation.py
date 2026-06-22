@@ -526,3 +526,67 @@ def test_rescuable_false_for_mixed_valid_soft_and_malformed_error() -> None:
     assert _is_rescuable(report) is False
     report = {"errors": [{"code": "true_internal_system_leak"}, {}]}
     assert _is_rescuable(report) is False
+
+
+def test_structured_repair_disabled_skips_second_model_call(monkeypatch: pytest.MonkeyPatch) -> None:
+    """With the repair lever off, an invalid first pass is not retried.
+
+    The repair retry is the second sequential structured model call. When
+    ``UNLXCK_STAGE2_STRUCTURED_REPAIR`` is disabled, a first pass that parses but
+    fails validation returns the first-pass outcome as-is — no second call — so
+    worst-case latency is halved.
+    """
+    import json
+
+    monkeypatch.setenv("UNLXCK_STAGE2_STRUCTURED_REPAIR", "0")
+    automator = OpenAIStage2Automator(client=FakeClient([]), model="test-model")
+
+    labels: list[str] = []
+
+    async def _fake_generate_text(prompt, *, attempt_label, source, log_context=None):
+        labels.append(attempt_label)
+        # Valid JSON that is not a schema-valid plan: parses, then fails
+        # validation so the repair gate is reached (but skipped while disabled).
+        return json.dumps([1, 2, 3]), {}
+
+    monkeypatch.setattr(automator, "_generate_text", _fake_generate_text)
+
+    outcome, costs = asyncio.run(
+        automator._generate_structured_outcome(
+            final_plan_text="# plan",
+            planning_brief={},
+            source="test",
+            costs=[],
+        )
+    )
+
+    assert labels == ["structured_first"]  # repair call was skipped
+    assert len(costs) == 1
+    assert outcome.structured_plan is None
+
+
+def test_structured_repair_enabled_makes_second_model_call(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Default behaviour: an invalid first pass triggers exactly one repair retry."""
+    import json
+
+    monkeypatch.delenv("UNLXCK_STAGE2_STRUCTURED_REPAIR", raising=False)
+    automator = OpenAIStage2Automator(client=FakeClient([]), model="test-model")
+
+    labels: list[str] = []
+
+    async def _fake_generate_text(prompt, *, attempt_label, source, log_context=None):
+        labels.append(attempt_label)
+        return json.dumps([1, 2, 3]), {}
+
+    monkeypatch.setattr(automator, "_generate_text", _fake_generate_text)
+
+    asyncio.run(
+        automator._generate_structured_outcome(
+            final_plan_text="# plan",
+            planning_brief={},
+            source="test",
+            costs=[],
+        )
+    )
+
+    assert labels == ["structured_first", "structured_repair"]

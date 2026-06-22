@@ -43,22 +43,14 @@ const TRIAGE_RESUME_FETCH_DELAY_MS = 800;
 const APPROVE_RECOVERY_FETCH_ATTEMPTS = 3;
 const APPROVE_RECOVERY_FETCH_DELAY_MS = 800;
 const STRUCTURED_PLAN_POLL_INTERVAL_MS = 2500;
-// Background structuring can take up to ~2 minutes for a full camp. Hold the
-// athlete-facing "finalising" card until then (with a small buffer) so the
-// structured card has time to land; only unlock the safe text fallback if
-// structuring genuinely never completes. The card stays interactive while it
-// waits (see StructuredPlanFinalizingCard) so the wait does not feel stalled.
-const STRUCTURED_PLAN_FALLBACK_DELAY_MS = 150_000;
+// Background structuring can take up to ~2 minutes for a full camp. We never make
+// the athlete wait for it: the template card (parsed from plan_text) is shown
+// immediately, and we poll quietly in the background to swap in the richer
+// structured card the moment it lands. The poll window covers the backend Stage 2
+// conversion timeout (UNLXCK_STAGE2_TIMEOUT_SECONDS, default 210s) plus a small
+// buffer; once it elapses we simply stop polling and the template card stays.
+const STRUCTURED_PLAN_UPGRADE_POLL_WINDOW_MS = 220_000;
 const STRUCTURED_PLAN_RECENT_PLAN_THRESHOLD_MS = 5 * 60_000;
-// Athlete-facing "what we're doing now" steps cycled in the finalising card.
-const STRUCTURED_PLAN_FINALIZING_STEPS = [
-  "Formatting your weekly camp structure…",
-  "Laying out each session and block…",
-  "Adding loads, efforts and rest targets…",
-  "Pulling in nutrition and recovery guidance…",
-  "Running final safety checks…",
-] as const;
-const STRUCTURED_PLAN_FINALIZING_STEP_INTERVAL_MS = 4000;
 
 const ATHLETE_VISIBLE_STATUSES = new Set(["ready", "publishable_with_flags"]);
 
@@ -76,20 +68,23 @@ export function isPlanReleasedToAthlete(
 }
 
 /**
- * Decide whether to hold the athlete-facing plan_text fallback while we wait for
- * the structured card to land after approval. We only hold for freshly published
- * plans that can still be polled. We never hold for:
+ * Decide whether a freshly published plan is still expecting its richer
+ * structured card to land in the background. When true, the athlete is shown the
+ * template card (parsed from plan_text) right away while we poll quietly and swap
+ * in the structured card once it arrives — there is no waiting screen and no
+ * "fallback" notice. We only await an upgrade for plans that can still produce
+ * one. We never await for:
  *  - legacy/old plans (created outside the recent-plan window), which may simply
  *    never have a structured_plan,
  *  - plans without an access token (we cannot poll for the structured card),
  *  - triage-blocked plans,
- *  - plans the athlete already fallback-unlocked,
+ *  - plans whose background poll window has already elapsed,
  *  - plans that already have a structured_plan.
  */
-export function shouldHoldPlanTextFallbackForStructuredPlan(params: {
+export function shouldAwaitStructuredPlanUpgrade(params: {
   hasPublishedPlan: boolean;
   hasStructuredPlan: boolean;
-  fallbackUnlocked: boolean;
+  pollWindowExpired: boolean;
   hasAccessToken: boolean;
   isRecentPlan: boolean;
   isTriageBlocked?: boolean;
@@ -97,7 +92,7 @@ export function shouldHoldPlanTextFallbackForStructuredPlan(params: {
   return (
     params.hasPublishedPlan &&
     !params.hasStructuredPlan &&
-    !params.fallbackUnlocked &&
+    !params.pollWindowExpired &&
     params.hasAccessToken &&
     params.isRecentPlan &&
     params.isTriageBlocked !== true
@@ -123,7 +118,7 @@ export function isRecentlyCreatedPlan(
 function getApprovalSuccessMessage(plan: Pick<PlanDetail, "outputs">): string {
   return shouldRenderStructuredPlan(plan.outputs)
     ? "Plan approved and released to the athlete view."
-    : "Plan approved. Finalising athlete card before showing it to the athlete.";
+    : "Plan approved and released. The athlete sees their plan now; the full card view follows automatically once it finishes building.";
 }
 
 /**
@@ -794,91 +789,28 @@ function PlanTextCards({ text }: { text: string }) {
   );
 }
 
-function formatFinalizingElapsed(ms: number): string {
-  const totalSeconds = Math.max(0, Math.floor(ms / 1000));
-  const minutes = Math.floor(totalSeconds / 60);
-  const seconds = totalSeconds % 60;
-  if (minutes === 0) {
-    return `${seconds}s`;
-  }
-  return `${minutes}m ${String(seconds).padStart(2, "0")}s`;
-}
-
-function StructuredPlanFinalizingCard() {
-  const [startedAt] = useState(() => Date.now());
-  const [now, setNow] = useState(() => Date.now());
-  const [stepIndex, setStepIndex] = useState(0);
-
-  useEffect(() => {
-    const tick = window.setInterval(() => setNow(Date.now()), 1000);
-    const cycle = window.setInterval(() => {
-      setStepIndex((prev) => (prev + 1) % STRUCTURED_PLAN_FINALIZING_STEPS.length);
-    }, STRUCTURED_PLAN_FINALIZING_STEP_INTERVAL_MS);
-    return () => {
-      window.clearInterval(tick);
-      window.clearInterval(cycle);
-    };
-  }, []);
-
-  const elapsedLabel = formatFinalizingElapsed(now - startedAt);
-  const activeStep = STRUCTURED_PLAN_FINALIZING_STEPS[stepIndex];
-
+// Shown above the template card while the richer structured card is still being
+// built in the background. It is intentionally a light, positive hint — the plan
+// is already usable below, and the view upgrades itself the moment the card
+// lands. This is NOT a fallback/error state, so it never blocks or replaces the
+// plan content.
+function StructuredPlanUpgradingNotice() {
   return (
-    <section
-      className="panel loading-card loading-shell loading-phase-finalizing athlete-motion-slot athlete-motion-status"
-      role="status"
-      aria-busy="true"
-    >
-      <article className="status-card loading-context-panel loading-context-panel-compact">
-        <p className="loading-eyebrow">Finalising athlete card</p>
-        <h3 className="loading-title">
-          Building the structured fight-camp view
+    <div className="quick-build-refine-banner" role="status" aria-live="polite">
+      <div className="quick-build-refine-banner__body">
+        <p className="quick-build-refine-banner__kicker">
+          Enhancing your plan view
           <span className="loading-title-dots" aria-hidden="true">
             <span />
             <span />
             <span />
           </span>
-        </h3>
-        <p className="muted loading-copy">
-          Approval is saved. The athlete card is being formatted before it is shown — this can take
-          up to a couple of minutes for a full camp.
         </p>
-        <div className="loading-operational-strip" aria-label="Finalising status">
-          <div className="loading-operational-item">
-            <span className="loading-operational-label">Step</span>
-            <span className="loading-operational-value" aria-live="polite">
-              {activeStep}
-            </span>
-          </div>
-          <div className="loading-operational-item">
-            <span className="loading-operational-label">Elapsed</span>
-            <span
-              className="loading-operational-value loading-operational-value-mono"
-              aria-live="polite"
-            >
-              {elapsedLabel}
-            </span>
-          </div>
-        </div>
-        <div className="loading-scan-rail" aria-hidden="true">
-          <span className="loading-scan-line" />
-        </div>
-        <div className="loading-status-strip">
-          Checking for the structured card every few seconds — safe to stay on this page.
-        </div>
-      </article>
-    </section>
-  );
-}
-
-function StructuredPlanFallbackNotice() {
-  return (
-    <div className="quick-build-refine-banner" role="status">
-      <div className="quick-build-refine-banner__body">
-        <p className="quick-build-refine-banner__kicker">Structured card unavailable</p>
-        <h2 className="quick-build-refine-banner__title">Showing safe text version</h2>
+        <h2 className="quick-build-refine-banner__title">Your plan is ready below</h2>
         <p className="quick-build-refine-banner__copy">
-          Structured card could not be built inside the wait window. The saved athlete-safe text plan is shown below.
+          We&apos;re building the full structured card in the background. Your plan is shown below
+          now and this view will upgrade to the richer card automatically — no need to wait or
+          refresh.
         </p>
       </div>
     </div>
@@ -1733,7 +1665,10 @@ export function PlanViewer({
   >(null);
   const [planActionMessage, setPlanActionMessage] = useState<string | null>(null);
   const [planActionError, setPlanActionError] = useState<string | null>(null);
-  const [unlockedPlans, setUnlockedPlans] = useState<Record<string, boolean>>({});
+  // Plans whose background structured-card poll window has elapsed. We stop
+  // polling for these and drop the "enhancing" hint; the template card stays as
+  // the final view (no fallback/error notice).
+  const [pollExpiredPlans, setPollExpiredPlans] = useState<Record<string, boolean>>({});
   const [stage2RetryInProgress, setStage2RetryInProgress] = useState(false);
   const [stage2RetryJustCompleted, setStage2RetryJustCompleted] = useState<"passed" | "failed" | null>(
     null,
@@ -1792,12 +1727,15 @@ export function PlanViewer({
       router.refresh();
     },
   });
-  const structuredPlanFallbackUnlocked = Boolean(unlockedPlans[plan.plan_id]);
+  const structuredPlanPollExpired = Boolean(pollExpiredPlans[plan.plan_id]);
   const isRecentPlan = isRecentlyCreatedPlan(plan);
-  const shouldHoldPlanTextFallback = shouldHoldPlanTextFallbackForStructuredPlan({
+  // True while the template card is up and we're still polling for the richer
+  // structured card to land. Drives the lightweight "enhancing" hint and the
+  // background poll; never holds back the plan content.
+  const isAwaitingStructuredUpgrade = shouldAwaitStructuredPlanUpgrade({
     hasPublishedPlan,
     hasStructuredPlan: hasStructuredAthletePlan,
-    fallbackUnlocked: structuredPlanFallbackUnlocked,
+    pollWindowExpired: structuredPlanPollExpired,
     hasAccessToken: Boolean(accessToken),
     isRecentPlan,
     isTriageBlocked,
@@ -1843,13 +1781,17 @@ export function PlanViewer({
     );
   }, [plan.plan_id, handoffText, retryText, plan.admin_outputs?.final_plan_text]);
 
+  // Background upgrade poll: the template card is already on screen, so this just
+  // watches for the richer structured card to finish building server-side and
+  // swaps it in. It never blocks the view; when the poll window elapses we simply
+  // stop and leave the template card in place.
   useEffect(() => {
     if (
       !accessToken ||
       !hasPublishedPlan ||
       hasStructuredAthletePlan ||
       isTriageBlocked ||
-      structuredPlanFallbackUnlocked ||
+      structuredPlanPollExpired ||
       !isRecentPlan
     ) {
       return;
@@ -1874,17 +1816,17 @@ export function PlanViewer({
           onPlanUpdated?.(refreshedPlan);
         }
       } catch {
-        // Keep the athlete-facing hold in place until the timeout unlocks the
-        // safe text fallback.
+        // Transient fetch failure — the template card stays up and the next tick
+        // retries until the structured card lands or the poll window elapses.
       }
     };
 
     const intervalId = window.setInterval(pollForStructuredPlan, STRUCTURED_PLAN_POLL_INTERVAL_MS);
     const timeoutId = window.setTimeout(() => {
       if (!cancelled) {
-        setUnlockedPlans((prev) => ({ ...prev, [plan.plan_id]: true }));
+        setPollExpiredPlans((prev) => ({ ...prev, [plan.plan_id]: true }));
       }
-    }, STRUCTURED_PLAN_FALLBACK_DELAY_MS);
+    }, STRUCTURED_PLAN_UPGRADE_POLL_WINDOW_MS);
 
     return () => {
       cancelled = true;
@@ -1899,7 +1841,7 @@ export function PlanViewer({
     isRecentPlan,
     onPlanUpdated,
     plan.plan_id,
-    structuredPlanFallbackUnlocked,
+    structuredPlanPollExpired,
   ]);
 
   async function handleManualStage2Submit() {
@@ -2513,9 +2455,7 @@ export function PlanViewer({
           ) : hasPublishedPlan ? (
             <>
               <div className="plan-summary-actions">
-                {!shouldHoldPlanTextFallback ? (
-                  <QuickCopyButton text={athletePlanText} artifactKey="athlete-plan" />
-                ) : null}
+                <QuickCopyButton text={athletePlanText} artifactKey="athlete-plan" />
                 {canRejectApproval ? (
                   <button
                     type="button"
@@ -2537,13 +2477,11 @@ export function PlanViewer({
                   </button>
                 ) : null}
               </div>
-              {shouldHoldPlanTextFallback ? (
-                <StructuredPlanFinalizingCard />
-              ) : hasStructuredAthletePlan && plan.outputs.structured_plan ? (
+              {hasStructuredAthletePlan && plan.outputs.structured_plan ? (
                 <StructuredPlanRenderer plan={plan.outputs.structured_plan} />
               ) : (
                 <>
-                  <StructuredPlanFallbackNotice />
+                  {isAwaitingStructuredUpgrade ? <StructuredPlanUpgradingNotice /> : null}
                   <PlanTextCards text={athletePlanText} />
                 </>
               )}
