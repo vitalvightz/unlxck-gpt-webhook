@@ -513,6 +513,7 @@ class TestCommandView:
         assert view.today.session_label == "Today's session"
         assert view.today.next_session["session_relation"] == "today"
         assert view.today.next_session["session_id"] == "2026-06-22-strength"
+        assert view.today.next_session["weekday"] == "Monday"
         assert view.today.next_session["title"] == "Posterior chain strength + control"
         assert view.today.next_session["title"] != "Hard sparring"
 

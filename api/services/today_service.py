@@ -339,7 +339,7 @@ def _structured_today_session_entry(plan_row: Mapping[str, Any], training_day: s
             session_id = _clean_text(session.get("session_id")) or day_date
             weekday = ""
             try:
-                weekday = datetime.fromisoformat(day_date).strftime("%A")
+                weekday = datetime.strptime(day_date, "%Y-%m-%d").strftime("%A")
             except ValueError:
                 weekday = ""
 

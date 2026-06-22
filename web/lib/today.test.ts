@@ -329,6 +329,38 @@ test("Today resolves today's blocks from the shared current-day resolver", () =>
   assert.equal(source.includes("useTrainingDay"), true);
 });
 
+test("Today uses structured titles only for actual structured today sessions", () => {
+  const source = readFileSync(new URL("../components/today-screen.tsx", import.meta.url), "utf8");
+  assert.equal(
+    source.includes("const sessionTitle = hasStructuredTodaySession"),
+    true,
+  );
+  assert.equal(
+    source.includes(": getSessionTitle(session);"),
+    true,
+  );
+});
+
+test("injury extra detail is stale only when rewriting to a different type", () => {
+  const source = readFileSync(new URL("../components/guided-injury-card.tsx", import.meta.url), "utf8");
+  const nullBranch = source.slice(
+    source.indexOf("if (!opt) {"),
+    source.indexOf("const isSame ="),
+  );
+  const sameBranch = source.slice(
+    source.indexOf("if (isSame) {"),
+    source.indexOf("const currentType = injury.injury_type;"),
+  );
+  const rewriteBranch = source.slice(
+    source.indexOf("const currentType = injury.injury_type;"),
+    source.indexOf("clearTypeSpecificFields(onUpdate);", source.indexOf("const currentType = injury.injury_type;")),
+  );
+
+  assert.equal(nullBranch.includes("flagStaleExtraDetail()"), false);
+  assert.equal(sameBranch.includes("flagStaleExtraDetail()"), false);
+  assert.equal(rewriteBranch.includes("flagStaleExtraDetail()"), true);
+});
+
 test("Today renders only today's session, never the full camp map", () => {
   // Today must scope to today's day only. It reuses the per-session camp-map
   // cards but must NOT mount the full StructuredPlanRenderer (command header,

@@ -1000,7 +1000,6 @@ export function GuidedInjuryCard({
 
   function handleTypeSelect(opt: InjuryTypeOption | null) {
     if (!opt) {
-      flagStaleExtraDetail();
       onUpdate("injury_type", "");
       onUpdate("injury_subtypes", []);
       clearTypeSpecificFields(onUpdate);
@@ -1014,7 +1013,6 @@ export function GuidedInjuryCard({
         injury.surface_type === (opt.surface_type ?? ""));
 
     if (isSame) {
-      flagStaleExtraDetail();
       onUpdate("injury_type", "");
       clearTypeSpecificFields(onUpdate);
       onUpdate("notes", stripTaggedNotes(injury.notes, ["red_flags", "dislocation", "nerve_symptoms", "chest_symptoms"]));
