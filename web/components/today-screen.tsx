@@ -148,12 +148,26 @@ function getSessionDuration(session: TodaySession): string | null {
   return null;
 }
 
-function getSessionRelationCopy(session: TodaySession): {
+function textValue(value: string | null | undefined): string {
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function getStructuredTodaySessionTitle(current: CurrentDayResolution): string {
+  const session = current.sessions[0];
+  const card = current.day?.today_card;
+  return (
+    textValue(session?.title) ||
+    textValue(card?.headline) ||
+    humanizeIfRawEnum(textValue(session?.session_type))
+  );
+}
+
+function getSessionRelationCopy(session: TodaySession, hasStructuredTodaySession = false): {
   kicker: string;
   status: string;
   helper: string;
 } {
-  if (session.session_relation === "next") {
+  if (!hasStructuredTodaySession && session.session_relation === "next") {
     return {
       kicker: "Next scheduled session",
       status: "Preview",
@@ -570,9 +584,6 @@ function SessionCard({
   const status = state.today.completion_status;
   const duration = getSessionDuration(session);
   const hasSession = hasTodaySession(session);
-  const relationCopy = getSessionRelationCopy(session);
-  const isNextSessionPreview = session.session_relation === "next";
-  const canCompleteSession = canCompleteTodaySession(session) && !isNextSessionPreview;
   // Resolve today's day/session from the structured plan through the shared
   // 04:00 rollover, exactly as Plan Detail does. These blocks — not the backend
   // session summary — are the "what exact blocks apply today" answer. The
@@ -582,6 +593,10 @@ function SessionCard({
   const trainingDay = useTrainingDay();
   const current = resolveCurrentDay(structuredPlan, trainingDay);
   const showStructuredBlocks = current.inRange && Boolean(current.day);
+  const hasStructuredTodaySession = current.inRange && current.sessions.length > 0;
+  const relationCopy = getSessionRelationCopy(session, hasStructuredTodaySession);
+  const isNextSessionPreview = !hasStructuredTodaySession && session.session_relation === "next";
+  const canCompleteSession = canCompleteTodaySession(session) && session.session_relation !== "next";
   const recommendationState = state.today.recommendation_state;
   // Tint the session card to match today's decision (green/amber/red) so the page
   // reads at a glance instead of being a wall of identical dark cards. Neutral
@@ -656,7 +671,7 @@ function SessionCard({
     );
   }
 
-  const sessionTitle = getSessionTitle(session);
+  const sessionTitle = getStructuredTodaySessionTitle(current) || getSessionTitle(session);
   // Avoid the "Today's session / Today's session" stutter: when the session has
   // no real name and falls back to the generic title that already matches the
   // kicker, headline the training day instead so the eyebrow and heading differ.
