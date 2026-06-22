@@ -1916,13 +1916,13 @@ export function PlanIntakeForm() {
   const mindsetChallengesText = (form.mindset_challenges || "").trim();
   const notesText = (form.notes || "").trim();
   const sparringCollisionRisk = formatSparringCollisionRisk({
-    fatigueLevel: form.fatigue_level || "moderate",
+    fatigueLevel: form.fatigue_level || "low",
     injuries: form.injuries || "",
     sessionsPerWeek: form.weekly_training_frequency,
     technicalStyle: form.athlete.technical_style[0] ?? "",
     hardSparringDays: selectedHardSparringLabels,
   });
-  const highFatigueFlag = (form.fatigue_level || "moderate") === "high" ? "High fatigue already reported" : null;
+  const highFatigueFlag = (form.fatigue_level || "low") === "high" ? "High fatigue already reported" : null;
   const hasExtraPerformanceNotes = Boolean(mindsetChallengesText || notesText);
   const hasTrainingPreference = Boolean(trainingPreferenceText);
   const restrictionSummary = formatRestrictionSummary(form.injuries);
@@ -1946,7 +1946,7 @@ export function PlanIntakeForm() {
     { label: "Fight date", value: formatValue(form.fight_date) },
     { label: "Rounds", value: formatValue(form.rounds_format) },
     { label: "Planned sessions per week", value: formatValue(form.weekly_training_frequency) },
-    { label: "Fatigue level", value: formatValue(form.fatigue_level || "moderate") },
+    { label: "Fatigue level", value: formatValue(form.fatigue_level || "low") },
   ];
   const trainingReviewItems = [
     { label: "Training availability", value: selectedTrainingAvailability },
@@ -2515,13 +2515,13 @@ export function PlanIntakeForm() {
 
               <OptionalDetails
                 title="Adjust fatigue level"
-                hint="Defaults to Moderate. Open if you're noticeably fresh or run down right now."
+                hint="Defaults to Low. Open if you're carrying normal fatigue or noticeably run down right now."
               >
                 <div className="field">
                   <label htmlFor="fatigueLevel">Fatigue level</label>
                   <CustomSelect
                     id="fatigueLevel"
-                    value={form.fatigue_level ?? "moderate"}
+                    value={form.fatigue_level ?? "low"}
                     options={FATIGUE_LEVEL_OPTIONS}
                     placeholder="Select fatigue level"
                     onChange={(value) => updateField("fatigue_level", value)}
@@ -2541,7 +2541,7 @@ export function PlanIntakeForm() {
                   <li>Fight date: {formatValue(form.fight_date)}</li>
                   <li>Rounds: {formatValue(form.rounds_format)}</li>
                   <li>Planned sessions per week: {formatValue(form.weekly_training_frequency)}</li>
-                  <li>Fatigue level: {formatValue(form.fatigue_level || "moderate")}</li>
+                  <li>Fatigue level: {formatValue(form.fatigue_level || "low")}</li>
                 </ul>
               </div>
               <div className="support-panel">

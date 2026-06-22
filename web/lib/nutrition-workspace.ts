@@ -65,7 +65,7 @@ export function emptyUpdateRequest(profile?: NutritionProfileInput): NutritionWo
       target_weight_kg: null,
       target_weight_range_kg: null,
       phase_override: null,
-      fatigue_level: "moderate",
+      fatigue_level: "low",
       weekly_training_frequency: null,
       training_availability: [],
       hard_sparring_days: [],

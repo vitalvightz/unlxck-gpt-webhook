@@ -224,7 +224,7 @@ export function quickBuildToPlanRequest(input: QuickBuildInput): PlanRequest {
     no_scheduled_fight: input.no_scheduled_fight,
     rounds_format: input.rounds_format || "3 x 3",
     weekly_training_frequency: input.weekly_training_frequency,
-    fatigue_level: "moderate",
+    fatigue_level: "low",
     training_availability: retainKnownOptionValues(input.training_availability, TRAINING_AVAILABILITY_OPTIONS),
     hard_sparring_days: retainKnownOptionValues(input.hard_sparring_days, TRAINING_AVAILABILITY_OPTIONS)
       .filter((day) => input.training_availability.includes(day))
