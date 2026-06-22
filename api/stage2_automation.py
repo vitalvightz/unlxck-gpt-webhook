@@ -317,6 +317,24 @@ def _structured_plan_enabled() -> bool:
     return raw.strip().lower() in {"1", "true", "yes", "on"}
 
 
+def _structured_repair_enabled() -> bool:
+    """Whether a failed first structured pass gets one repair retry.
+
+    On by default. The repair retry is the second sequential model call and so is
+    the main lever on worst-case structured-card latency. The
+    ``[stage2] structured_repair`` telemetry logged in
+    :meth:`_generate_structured_outcome` records how often it actually rescues a
+    card; if the data shows it rarely helps, set
+    ``UNLXCK_STAGE2_STRUCTURED_REPAIR`` to a falsey value to drop it (halving the
+    worst case) without a code change. The first-pass outcome then stands as-is.
+    """
+
+    raw = os.getenv("UNLXCK_STAGE2_STRUCTURED_REPAIR")
+    if raw is None:
+        return True  # unset → default on
+    return raw.strip().lower() in {"1", "true", "yes", "on"}
+
+
 def _record_structured_outcome(
     result: dict[str, Any], outcome: StructuredPlanOutcome
 ) -> dict[str, Any]:
@@ -908,6 +926,16 @@ class OpenAIStage2Automator:
         if first_outcome.status == "valid":
             return self._reconcile_coach_led(first_outcome, planning_brief), costs
 
+        # The repair retry is the second sequential model call (the dominant cost
+        # on worst-case latency). It is gated so it can be dropped via env once
+        # telemetry shows how rarely it rescues a card.
+        if not _structured_repair_enabled():
+            logger.info(
+                "[stage2] structured_repair skipped (disabled) first_status=%s",
+                first_outcome.status,
+            )
+            return self._reconcile_coach_led(first_outcome, planning_brief), costs
+
         # Single repair retry: re-prompt with the validation errors and the
         # broken JSON, then let build_structured_plan_outcome score the result.
         repair_prompt = build_structured_plan_prompt(
@@ -930,6 +958,15 @@ class OpenAIStage2Automator:
             raw_markdown=final_plan_text,
             repair_fn=lambda _data, _errors: repaired_json,
             computed_support=computed_support,
+        )
+        # Telemetry for the repair lever: did the second call actually rescue a
+        # card the first pass could not produce? Aggregated over time this tells
+        # us whether the retry is worth its latency (see _structured_repair_enabled).
+        logger.info(
+            "[stage2] structured_repair first_status=%s repaired_status=%s rescued=%s",
+            first_outcome.status,
+            repaired_outcome.status,
+            repaired_outcome.status in {"valid", "repair_attempted_valid"},
         )
         return self._reconcile_coach_led(repaired_outcome, planning_brief), costs
 

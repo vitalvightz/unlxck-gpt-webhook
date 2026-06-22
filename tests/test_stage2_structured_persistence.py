@@ -28,7 +28,9 @@ from api.services.admin_stage2_service import (
     approve_review_required_plan,
     backfill_structured_plans,
     list_structured_plan_backfill_candidates,
+    prewarm_structured_plan,
     run_structured_plan_post_processing,
+    should_prewarm_review_plan_row,
     submit_manual_stage2,
 )
 from api.stage2_automation import (
@@ -695,6 +697,130 @@ def test_approval_budget_falls_back_to_default_for_unusable_values(monkeypatch, 
 def test_approval_budget_honours_finite_positive_override(monkeypatch):
     monkeypatch.setenv("UNLXCK_APPROVAL_STRUCTURED_PLAN_BUDGET_SECONDS", "12.5")
     assert _approval_structured_budget_seconds() == 12.5
+
+
+# ---------------------------------------------------------------------------
+# Pre-warm: build the held plan's card before approval so approval is instant
+# ---------------------------------------------------------------------------
+
+
+def test_prewarm_builds_and_persists_card_for_held_plan(monkeypatch):
+    """A held plan with no card gets one built and persisted ahead of approval."""
+    monkeypatch.setenv("UNLXCK_STAGE2_STRUCTURED_PLAN", "1")
+    store = FakeStore()
+    plan_id = _seed_held_plan(store)
+    automator = _StructuredAutomator(_valid_outcome("# approved plan"))
+
+    asyncio.run(prewarm_structured_plan(plan_id=plan_id, store=store, stage2=automator))
+
+    row = store.plans[plan_id]
+    assert row["structured_plan"] is not None
+    assert row["schema_version"] == SCHEMA_VERSION
+    # The plan is still held — pre-warming the card must not release it.
+    assert row["status"] == "held_for_review"
+    # The card was converted from the approved/final text.
+    assert automator.calls[0]["final_plan_text"] == "# approved plan"
+    assert automator.calls[0]["source"] == "admin_prewarm"
+
+
+def test_prewarm_is_noop_when_card_already_present(monkeypatch):
+    monkeypatch.setenv("UNLXCK_STAGE2_STRUCTURED_PLAN", "1")
+    store = FakeStore()
+    plan_id = _seed_held_plan(store)
+    store.plans[plan_id]["structured_plan"] = _valid_plan()
+
+    automator = _StructuredAutomator(_valid_outcome("# approved plan"))
+    asyncio.run(prewarm_structured_plan(plan_id=plan_id, store=store, stage2=automator))
+
+    assert automator.calls == []  # no redundant model call
+
+
+def test_prewarm_is_noop_without_env_flag(monkeypatch):
+    monkeypatch.setenv("UNLXCK_STAGE2_STRUCTURED_PLAN", "0")
+    store = FakeStore()
+    plan_id = _seed_held_plan(store)
+
+    automator = _StructuredAutomator(_valid_outcome("# approved plan"))
+    asyncio.run(prewarm_structured_plan(plan_id=plan_id, store=store, stage2=automator))
+
+    assert automator.calls == []
+    assert store.plans[plan_id].get("structured_plan") is None
+
+
+def test_prewarm_skips_when_no_text_to_convert(monkeypatch):
+    monkeypatch.setenv("UNLXCK_STAGE2_STRUCTURED_PLAN", "1")
+    store = FakeStore()
+    plan_id = _seed_held_plan(store)
+    store.plans[plan_id]["final_plan_text"] = ""
+    store.plans[plan_id]["plan_text"] = ""
+
+    automator = _StructuredAutomator(_valid_outcome("# approved plan"))
+    asyncio.run(prewarm_structured_plan(plan_id=plan_id, store=store, stage2=automator))
+
+    assert automator.calls == []
+    assert store.plans[plan_id].get("structured_plan") is None
+
+
+def test_approval_reuses_prewarmed_card_without_a_model_call(monkeypatch):
+    """The slow win: once pre-warmed, approval ships the card with no conversion."""
+    monkeypatch.setenv("UNLXCK_STAGE2_STRUCTURED_PLAN", "1")
+    store = FakeStore()
+    plan_id = _seed_held_plan(store)
+
+    # Pre-warm builds and persists the card while the plan is still held.
+    prewarm_automator = _StructuredAutomator(_valid_outcome("# approved plan"))
+    asyncio.run(prewarm_structured_plan(plan_id=plan_id, store=store, stage2=prewarm_automator))
+    assert store.plans[plan_id]["structured_plan"] is not None
+
+    # Approval must reuse that card rather than paying for a second conversion.
+    approve_automator = _StructuredAutomator(_valid_outcome("# approved plan"))
+    detail = asyncio.run(
+        approve_review_required_plan(plan_id=plan_id, store=store, stage2=approve_automator)
+    )
+
+    assert detail.status == "ready"
+    assert detail.outputs.structured_plan is not None
+    assert approve_automator.calls == []  # no inline conversion — the card was reused
+
+
+def test_approval_does_not_reuse_card_built_from_different_text(monkeypatch):
+    """Reuse is refused when the approved text isn't what the card was built from.
+
+    Guards the text-match contract: if the text being approved differs from the
+    text the row's card was converted from, the card is a stale projection and a
+    fresh conversion must run instead of shipping it.
+    """
+    monkeypatch.setenv("UNLXCK_STAGE2_STRUCTURED_PLAN", "1")
+    store = FakeStore()
+    plan_id = _seed_held_plan(store)
+    row = store.plans[plan_id]
+    # Approval will approve the draft text, but the card on the row was built from
+    # a different plan_text, so the two no longer correspond.
+    row["final_plan_text"] = ""
+    row["draft_plan_text"] = "# draft text being approved"
+    row["plan_text"] = "# different text the card came from"
+    row["structured_plan"] = _valid_plan()
+    row["stage2_validator_report"] = {"structured_plan": {"status": "valid"}}
+
+    approve_automator = _StructuredAutomator(_valid_outcome("# draft text being approved"))
+    asyncio.run(
+        approve_review_required_plan(plan_id=plan_id, store=store, stage2=approve_automator)
+    )
+
+    # Reuse is refused (text mismatch) so a fresh conversion runs.
+    assert approve_automator.calls != []
+
+
+def test_should_prewarm_review_plan_row_gates_on_approvable_held_status():
+    assert should_prewarm_review_plan_row({"id": "p1", "status": "review_required"}) is True
+    assert should_prewarm_review_plan_row({"id": "p1", "status": "held_for_review"}) is True
+    assert should_prewarm_review_plan_row({"id": "p1", "status": "needs_review"}) is True
+    # Safety-gated and already-displayable states are never pre-warmed.
+    assert should_prewarm_review_plan_row({"id": "p1", "status": "triage_blocked"}) is False
+    assert should_prewarm_review_plan_row({"id": "p1", "status": "medical_hold"}) is False
+    assert should_prewarm_review_plan_row({"id": "p1", "status": "publishable_with_flags"}) is False
+    # A row with no id can't be scheduled.
+    assert should_prewarm_review_plan_row({"status": "review_required"}) is False
 
 
 def test_admin_approve_attaches_structured_card_inline(monkeypatch):

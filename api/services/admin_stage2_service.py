@@ -15,7 +15,12 @@ from fightcamp.stage2_policy import (
 from ..models import PlanDetail
 from ..plan_mappers import _decode_structured_text, _lookup_plan_source, _map_plan_detail
 
-from ..stage2_automation import Stage2Automator, attempt_structured_plan_for_result
+from ..stage2_automation import (
+    Stage2Automator,
+    _structured_plan_enabled,
+    attempt_structured_plan_for_result,
+)
+from ..structured_plan_generation import has_clean_structured_card
 from ..store import AppStore
 
 logger = logging.getLogger(__name__)
@@ -24,8 +29,36 @@ logger = logging.getLogger(__name__)
 # before giving up and shipping the raw-markdown plan (the background task then
 # finishes the card). Kept comfortably under the frontend/proxy request timeout
 # so a slow conversion never surfaces as a false "Connection issue". Tunable via
-# env for ops.
-_APPROVAL_STRUCTURED_PLAN_BUDGET_SECONDS = 20.0
+# env for ops. Pre-warming (see prewarm_structured_plan) usually means the card is
+# already built by approval time, so this budget is mostly a safety net for plans
+# approved before their pre-warm finished.
+_APPROVAL_STRUCTURED_PLAN_BUDGET_SECONDS = 40.0
+
+# Held statuses whose card we pre-warm while the admin reviews the plan. These are
+# the plans an admin can approve into the athlete view; safety-gated states
+# (triage_blocked / medical_hold / restricted_rehab_only) and already-displayable
+# states are deliberately excluded.
+_PREWARMABLE_REVIEW_STATUSES = frozenset({"review_required", "held_for_review", "needs_review"})
+
+# Plan ids whose pre-warm conversion is in flight, so repeated admin views of the
+# review queue / a held plan never spawn duplicate model calls for the same plan.
+_PREWARM_IN_FLIGHT: set[str] = set()
+
+
+def should_prewarm_review_plan_row(row: Any) -> bool:
+    """Whether a review-queue row is a candidate for structured-card pre-warm.
+
+    A light, list-row-level gate (the row carries ``status`` but not the
+    ``structured_plan``/``final_plan_text`` columns): it only filters by approvable
+    held status and a present id. :func:`prewarm_structured_plan` re-reads the full
+    row and enforces the real conditions (env on, text present, no card yet).
+    """
+
+    if not isinstance(row, dict):
+        return False
+    if not str(row.get("id") or "").strip():
+        return False
+    return str(row.get("status") or "").strip().lower() in _PREWARMABLE_REVIEW_STATUSES
 
 
 def _approval_structured_budget_seconds() -> float:
@@ -83,6 +116,14 @@ async def _attach_structured_plan_within_budget(
 
     if stage2 is None:
         return result
+    # Fast path: a card pre-warmed while the plan was held for review is reused
+    # as-is (no model call), so the approval ships the live card instantly. Only
+    # when the card was built from the exact text being approved — otherwise it is
+    # a stale projection and we fall through to a fresh conversion.
+    reused = _reuse_prewarmed_structured_card(result, plan_row)
+    if reused is not None:
+        logger.info("inline structured-plan reused pre-warmed card for plan_id=%s", plan_row.get("id"))
+        return reused
     budget = _approval_structured_budget_seconds()
     try:
         return await asyncio.wait_for(
@@ -102,6 +143,105 @@ async def _attach_structured_plan_within_budget(
             plan_row.get("id"),
         )
         return result
+
+
+def _reuse_prewarmed_structured_card(
+    result: dict[str, Any], plan_row: dict[str, Any]
+) -> dict[str, Any] | None:
+    """Carry a pre-warmed card from the row onto the approval result, or None.
+
+    Returns an updated ``result`` (card + schema version + structured debug
+    attached) when the row already holds a clean structured card built from the
+    exact text being approved, so the approval can ship it with no model call.
+    Returns ``None`` when there is no reusable card (none present, not clean, or
+    built from superseded text) so the caller runs a fresh conversion.
+    """
+
+    if not _structured_plan_enabled():
+        return None
+    if not has_clean_structured_card(plan_row):
+        return None
+    approved_text = str(result.get("final_plan_text") or result.get("plan_text") or "").strip()
+    card_source_text = str(
+        plan_row.get("final_plan_text") or plan_row.get("plan_text") or ""
+    ).strip()
+    if not approved_text or approved_text != card_source_text:
+        return None
+
+    result["structured_plan"] = plan_row.get("structured_plan")
+    result["schema_version"] = plan_row.get("schema_version")
+    row_report = plan_row.get("stage2_validator_report")
+    row_debug = row_report.get("structured_plan") if isinstance(row_report, dict) else None
+    report = result.get("stage2_validator_report")
+    if isinstance(report, dict) and isinstance(row_debug, dict):
+        report["structured_plan"] = row_debug
+    return result
+
+
+async def prewarm_structured_plan(
+    *,
+    plan_id: str,
+    store: AppStore,
+    stage2: Stage2Automator | None = None,
+) -> None:
+    """Build a held plan's structured card ahead of approval (best-effort).
+
+    Admins approve held plans almost every time, and the structured-card
+    conversion is the slow step at approval. Running it now — while the plan still
+    sits in the review queue — means the card is usually already on the row by the
+    time the admin clicks Approve, so :func:`_reuse_prewarmed_structured_card`
+    ships it instantly instead of deferring to the post-approval background task.
+
+    Idempotent and safe: short-circuits when structured plans are disabled, when a
+    card already exists, when there is no text to convert, or when an identical
+    pre-warm is already in flight. Persists only through the narrow structured
+    writer keyed to the source text, so a concurrent edit/reject mid-conversion
+    can never publish a stale card or clobber newer state. Never raises.
+    """
+
+    if stage2 is None or not _structured_plan_enabled():
+        return
+    if plan_id in _PREWARM_IN_FLIGHT:
+        return
+    converter = getattr(stage2, "_attempt_structured_plan", None)
+    if converter is None:
+        return
+    _PREWARM_IN_FLIGHT.add(plan_id)
+    try:
+        plan_row = await asyncio.to_thread(store.get_plan, plan_id)
+        if not plan_row:
+            return
+        plan_row = dict(plan_row)
+        if plan_row.get("structured_plan"):
+            return  # already converted (or pre-warmed) — nothing to do
+        source_text = str(
+            plan_row.get("final_plan_text") or plan_row.get("plan_text") or ""
+        ).strip()
+        if not source_text:
+            return
+        planning_brief = _decode_structured_text(plan_row.get("planning_brief")) or {}
+        outcome, _costs = await converter(
+            final_plan_text=source_text,
+            planning_brief=planning_brief,
+            source="admin_prewarm",
+        )
+        if outcome.structured_plan is None:
+            return
+        report = plan_row.get("stage2_validator_report")
+        report = dict(report) if isinstance(report, dict) else {}
+        report["structured_plan"] = outcome.as_debug()
+        await asyncio.to_thread(
+            store.update_plan_structured_artifacts,
+            plan_id,
+            structured_plan=outcome.structured_plan,
+            schema_version=outcome.schema_version,
+            stage2_validator_report=report,
+            expected_final_plan_text=source_text,
+        )
+    except Exception:  # noqa: BLE001 - pre-warm is best-effort and must never bubble up
+        logger.exception("structured plan pre-warm failed for plan_id=%s", plan_id)
+    finally:
+        _PREWARM_IN_FLIGHT.discard(plan_id)
 
 
 def _manual_stage2_result(plan_row: dict[str, Any], final_plan_text: str) -> dict[str, Any]:
