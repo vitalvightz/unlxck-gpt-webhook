@@ -8,6 +8,7 @@ from fightcamp.injury_filtering import normalize_injury_regions
 from fightcamp.injury_formatting import parse_injury_entry, parse_injuries_and_restrictions
 import fightcamp.injury_synonyms as injury_synonyms
 from fightcamp.injury_negation import (
+    contains_negated_injury,
     negation_detection_available,
     remove_negated_phrases,
 )
@@ -145,6 +146,59 @@ def test_negation_regressions_preserve_behaviour():
     assert "suspected_concussion" not in no_concussion["flags"]
     assert "urgent" not in no_concussion["flags"]
 
+
+
+@pytest.mark.parametrize(
+    "phrase",
+    [
+        "no shoulder pain",
+        "no shin splints",
+        "never had knee issues",
+        "denies knee pain",
+        "not injured",
+    ],
+)
+def test_strong_negation_cues_strip_injury(phrase):
+    # Strong cues (no/never/denies/denied/deny) and the adjacent soft-cue form
+    # "not injured" negate the whole clause: they are flagged and removed.
+    assert contains_negated_injury(phrase) is True
+    assert remove_negated_phrases(phrase) == ""
+    assert parse_injury_entry(phrase) is None
+
+
+@pytest.mark.parametrize(
+    ("phrase", "preserved"),
+    [
+        # Uncertainty, severity and progression qualifiers — "not"/"without" here
+        # describe the qualifier, not an absent injury, so the symptom survives.
+        ("not sure if my knee pain is from football", "knee pain"),
+        ("not severe ankle swelling", "ankle swelling"),
+        ("not improving Achilles pain", "achilles pain"),
+        # Timing and equipment — the Achilles/knee injury is real and stays.
+        ("without warning my Achilles popped", "achilles"),
+        ("without brace knee pain continues", "knee pain"),
+        # Trailing soft cue (equipment) never strips the leading injury.
+        ("knee pain without brace", "knee pain"),
+    ],
+)
+def test_soft_negation_cues_preserve_real_injuries(phrase, preserved):
+    # "not"/"without" must not be treated as injury negation just because they
+    # lead the phrase: they are not flagged, and the injury text is preserved.
+    assert contains_negated_injury(phrase) is False
+    assert preserved in remove_negated_phrases(phrase).lower()
+
+
+@pytest.mark.parametrize(
+    ("phrase", "preserved"),
+    [
+        ("no shoulder pain but knee swelling", "knee swelling"),
+        ("denies shin splints, reports Achilles pain", "achilles pain"),
+        ("shoulder clicking no pain", "shoulder clicking"),
+        ("knee pain without brace", "knee pain"),
+    ],
+)
+def test_negation_keeps_non_negated_injury_half(phrase, preserved):
+    assert preserved in remove_negated_phrases(phrase).lower()
 
 
 def test_parse_injury_entry_checks_negation_availability_at_parse_time(monkeypatch):

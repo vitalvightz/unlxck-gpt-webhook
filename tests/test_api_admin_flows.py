@@ -2583,6 +2583,97 @@ def test_admin_permanent_delete_unknown_plan_returns_404():
     assert malformed.status_code == 404
 
 
+def _archive_plan(client, plan_id: str) -> None:
+    response = client.post(
+        f"/api/admin/plans/{plan_id}/archive",
+        headers={"Authorization": "Bearer admin-token"},
+    )
+    assert response.status_code == 200
+
+
+def test_admin_permanent_delete_archived_plan_skips_name_confirmation():
+    client, store, _ = _build_client()
+    plan = _seed_named_plan(store, name="Camp Plan")
+    _archive_plan(client, plan["id"])
+
+    # No confirmation body is required once a plan is archived.
+    response = client.request(
+        "DELETE",
+        f"/api/admin/plans/{plan['id']}/permanent",
+        headers={"Authorization": "Bearer admin-token"},
+    )
+
+    assert response.status_code == 204
+    assert store.get_plan(plan["id"]) is None
+
+
+def test_admin_bulk_permanent_delete_removes_archived_and_skips_others():
+    client, store, _ = _build_client()
+    archived = _seed_named_plan(store, name="Archived Camp")
+    live = _seed_named_plan(store, name="Live Camp")
+    _archive_plan(client, archived["id"])
+
+    response = client.post(
+        "/api/admin/plans/bulk-permanent-delete",
+        headers={"Authorization": "Bearer admin-token"},
+        json={"plan_ids": [archived["id"], live["id"]]},
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["deleted"] == [archived["id"]]
+    assert body["deleted_count"] == 1
+    assert body["skipped_count"] == 1
+    assert body["skipped"] == [{"plan_id": live["id"], "reason": "not_archived"}]
+    assert store.get_plan(archived["id"]) is None
+    assert store.get_plan(live["id"]) is not None
+
+
+def test_admin_bulk_permanent_delete_requires_admin_role():
+    client, store, _ = _build_client()
+    archived = _seed_named_plan(store, name="Archived Camp")
+    _archive_plan(client, archived["id"])
+
+    response = client.post(
+        "/api/admin/plans/bulk-permanent-delete",
+        headers={"Authorization": "Bearer athlete-token"},
+        json={"plan_ids": [archived["id"]]},
+    )
+
+    assert response.status_code == 403
+    assert store.get_plan(archived["id"]) is not None
+
+
+def test_admin_bulk_permanent_delete_empty_list_returns_422():
+    client, _, _ = _build_client()
+
+    response = client.post(
+        "/api/admin/plans/bulk-permanent-delete",
+        headers={"Authorization": "Bearer admin-token"},
+        json={"plan_ids": []},
+    )
+
+    assert response.status_code == 422
+
+
+def test_admin_bulk_permanent_delete_reports_unknown_ids_as_skipped():
+    client, store, _ = _build_client()
+    archived = _seed_named_plan(store, name="Archived Camp")
+    _archive_plan(client, archived["id"])
+
+    response = client.post(
+        "/api/admin/plans/bulk-permanent-delete",
+        headers={"Authorization": "Bearer admin-token"},
+        json={"plan_ids": [archived["id"], "not-a-uuid"]},
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["deleted"] == [archived["id"]]
+    assert body["skipped"] == [{"plan_id": "not-a-uuid", "reason": "not_found"}]
+    assert store.get_plan(archived["id"]) is None
+
+
 # ---------------------------------------------------------------------------
 # PR-10: keep admin review queues visible when profile service fails.
 # ---------------------------------------------------------------------------

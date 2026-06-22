@@ -5,16 +5,23 @@ import {
   WEAK_AREA_OPTIONS,
   type IntakeOption,
 } from "@/lib/intake-options";
-import { getPerformanceFocusCap } from "@/lib/performance-focus-cap";
+import {
+  getPerformanceFocusOptionAvailability,
+  type DaysOutContext,
+  type PerformanceFocusGroup,
+} from "@/lib/days-out-policy";
 
 export type EquipmentPresetKey = "home" | "basic_gym" | "full_gym";
 export type TrainingPresetKey = "three_days" | "four_days" | "five_days";
 export type FocusPresetKey =
   | "explosive_power"
-  | "gas_tank"
   | "strength_base"
-  | "mobility_recovery"
-  | "fight_sharpness";
+  | "gas_tank"
+  | "speed_footwork"
+  | "mobility_control"
+  | "weight_cut_support"
+  | "return_from_injury"
+  | "technical_sharpness";
 
 export type EquipmentPreset = {
   key: EquipmentPresetKey;
@@ -35,12 +42,20 @@ export type FocusPreset = {
   key: FocusPresetKey;
   label: string;
   description: string;
+  goals: string[];
+  weak_areas: string[];
+};
+
+export type FocusPresetSelectionLimits = {
+  goalLimit: number;
+  weakAreaLimit: number;
+  sharedLimit: number | null;
+  daysOutCtx: DaysOutContext;
+};
+
+export type FocusPresetSelections = {
   key_goals: string[];
   weak_areas: string[];
-  allowNoScheduledFight: boolean;
-  // Boundaries on daysUntilFight. Inclusive on both sides. `null` = unbounded.
-  minDaysUntilFight: number | null;
-  maxDaysUntilFight: number | null;
 };
 
 export const EQUIPMENT_PRESETS: EquipmentPreset[] = [
@@ -74,60 +89,62 @@ export const EQUIPMENT_PRESETS: EquipmentPreset[] = [
   },
 ];
 
-// Fight-window thresholds align with the performance-focus-cap window boundaries (7/21/42 days)
-// so the same fight-camp mental model drives both filtering and cap counting.
 export const FOCUS_PRESETS: FocusPreset[] = [
-  {
-    key: "strength_base",
-    label: "Strength base",
-    description: "Strength",
-    key_goals: ["strength"],
-    weak_areas: ["strength"],
-    allowNoScheduledFight: true,
-    minDaysUntilFight: 43,
-    maxDaysUntilFight: null,
-  },
   {
     key: "explosive_power",
     label: "Explosive power",
-    description: "Power",
-    key_goals: ["power"],
-    weak_areas: ["power"],
-    allowNoScheduledFight: true,
-    minDaysUntilFight: 21,
-    maxDaysUntilFight: null,
+    description: "Power, speed, strength",
+    goals: ["power", "speed", "strength", "skill_refinement"],
+    weak_areas: ["power", "trunk_strength", "coordination", "speed"],
+  },
+  {
+    key: "strength_base",
+    label: "Strength base",
+    description: "Strength, power, recovery",
+    goals: ["strength", "power", "recovery"],
+    weak_areas: ["strength", "trunk_strength", "balance", "mobility"],
   },
   {
     key: "gas_tank",
     label: "Gas tank",
-    description: "Conditioning",
-    key_goals: ["conditioning"],
-    weak_areas: ["gas_tank"],
-    allowNoScheduledFight: true,
-    minDaysUntilFight: 21,
-    maxDaysUntilFight: null,
+    description: "Conditioning, recovery",
+    goals: ["conditioning", "recovery", "skill_refinement"],
+    weak_areas: ["gas_tank", "mobility", "coordination"],
   },
   {
-    key: "fight_sharpness",
-    label: "Fight sharpness",
-    description: "Speed",
-    key_goals: ["speed"],
-    weak_areas: ["speed"],
-    allowNoScheduledFight: false,
-    minDaysUntilFight: 0,
-    maxDaysUntilFight: 42,
+    key: "speed_footwork",
+    label: "Speed & footwork",
+    description: "Speed, footwork, balance",
+    goals: ["speed", "skill_refinement", "power"],
+    weak_areas: ["footwork", "coordination", "balance", "speed"],
   },
   {
-    key: "mobility_recovery",
-    label: "Mobility & recovery",
-    description: "Recovery, mobility focus",
-    // For injury accommodation, the planner reads the Injuries field — this preset
-    // only nudges goal emphasis. Naming intentionally avoids any "injury-safe" claim.
-    key_goals: ["recovery", "mobility"],
-    weak_areas: [],
-    allowNoScheduledFight: true,
-    minDaysUntilFight: null,
-    maxDaysUntilFight: null,
+    key: "mobility_control",
+    label: "Mobility & control",
+    description: "Mobility, balance, trunk",
+    goals: ["mobility", "recovery", "strength"],
+    weak_areas: ["mobility", "balance", "coordination", "trunk_strength"],
+  },
+  {
+    key: "weight_cut_support",
+    label: "Weight cut support",
+    description: "Cut support, recovery",
+    goals: ["weight_cut", "recovery", "skill_refinement", "conditioning"],
+    weak_areas: ["gas_tank", "mobility", "balance", "coordination"],
+  },
+  {
+    key: "return_from_injury",
+    label: "Return from injury",
+    description: "Recovery, mobility, strength",
+    goals: ["recovery", "mobility", "strength", "skill_refinement"],
+    weak_areas: ["mobility", "balance", "trunk_strength", "coordination"],
+  },
+  {
+    key: "technical_sharpness",
+    label: "Technical sharpness",
+    description: "Skill, speed, timing",
+    goals: ["skill_refinement", "speed", "power"],
+    weak_areas: ["coordination", "footwork", "balance", "speed"],
   },
 ];
 
@@ -188,14 +205,68 @@ export function matchesTrainingPreset(
   return null;
 }
 
+function hasSharedFocusSpace(selections: FocusPresetSelections, sharedLimit: number | null): boolean {
+  return sharedLimit === null || selections.key_goals.length + selections.weak_areas.length < sharedLimit;
+}
+
+function canAddFocusValue(
+  selections: FocusPresetSelections,
+  group: PerformanceFocusGroup,
+  limits: FocusPresetSelectionLimits,
+): boolean {
+  if (!hasSharedFocusSpace(selections, limits.sharedLimit)) return false;
+  return group === "key_goals"
+    ? selections.key_goals.length < limits.goalLimit
+    : selections.weak_areas.length < limits.weakAreaLimit;
+}
+
+function focusValueAvailable(group: PerformanceFocusGroup, value: string, daysOutCtx: DaysOutContext): boolean {
+  return getPerformanceFocusOptionAvailability(daysOutCtx, group, value).available;
+}
+
+export function resolveFocusPresetSelections(
+  preset: FocusPreset,
+  limits: FocusPresetSelectionLimits,
+): FocusPresetSelections {
+  const selections: FocusPresetSelections = {
+    key_goals: [],
+    weak_areas: [],
+  };
+  const rankCount = Math.max(preset.goals.length, preset.weak_areas.length);
+
+  for (let rank = 0; rank < rankCount && hasSharedFocusSpace(selections, limits.sharedLimit); rank += 1) {
+    const goal = preset.goals[rank];
+    if (
+      goal
+      && canAddFocusValue(selections, "key_goals", limits)
+      && focusValueAvailable("key_goals", goal, limits.daysOutCtx)
+    ) {
+      selections.key_goals.push(goal);
+    }
+
+    const weakArea = preset.weak_areas[rank];
+    if (
+      weakArea
+      && canAddFocusValue(selections, "weak_areas", limits)
+      && focusValueAvailable("weak_areas", weakArea, limits.daysOutCtx)
+    ) {
+      selections.weak_areas.push(weakArea);
+    }
+  }
+
+  return selections;
+}
+
 export function matchesFocusPreset(
   keyGoals: string[],
   weakAreas: string[],
+  limits: FocusPresetSelectionLimits,
 ): FocusPresetKey | null {
   for (const preset of FOCUS_PRESETS) {
+    const selections = resolveFocusPresetSelections(preset, limits);
     if (
-      sameStringSet(preset.key_goals, keyGoals)
-      && sameStringSet(preset.weak_areas, weakAreas)
+      sameStringSet(selections.key_goals, keyGoals)
+      && sameStringSet(selections.weak_areas, weakAreas)
     ) {
       return preset.key;
     }
@@ -205,43 +276,20 @@ export function matchesFocusPreset(
 
 export type FocusPresetAvailability = {
   preset: FocusPreset;
-  // If non-null, the preset is shown but disabled, with this string as the reason.
-  // Presets that don't fit the fight window are filtered out entirely instead.
   disabledReason: string | null;
 };
 
 export function getAvailableFocusPresets(input: {
   fightDate: string;
   noScheduledFight: boolean;
-  now?: Date;
-  timeZone?: string | null;
+  limits: FocusPresetSelectionLimits;
 }): FocusPresetAvailability[] {
-  const cap = !input.noScheduledFight && input.fightDate
-    ? getPerformanceFocusCap(input.fightDate, { now: input.now, timeZone: input.timeZone })
-    : null;
-  const daysUntilFight = cap?.daysUntilFight ?? null;
-  const isOpenCamp = input.noScheduledFight || daysUntilFight === null;
-
-  return FOCUS_PRESETS.flatMap((preset) => {
-    if (isOpenCamp) {
-      if (!preset.allowNoScheduledFight) return [];
-    } else {
-      if (preset.minDaysUntilFight !== null && (daysUntilFight ?? 0) < preset.minDaysUntilFight) return [];
-      if (preset.maxDaysUntilFight !== null && (daysUntilFight ?? 0) > preset.maxDaysUntilFight) return [];
-    }
-
-    // Defensive cap check. With current preset shapes (≤2 selections) and minimum cap 2,
-    // this branch should not trigger — but we keep it so a future cap rule change can't
-    // silently produce a preset that exceeds it.
-    let disabledReason: string | null = null;
-    if (cap) {
-      const totalSelections = preset.key_goals.length + preset.weak_areas.length;
-      if (totalSelections > cap.maxSelections) {
-        disabledReason = "Too broad for this fight window.";
-      }
-    }
-
-    return [{ preset, disabledReason }];
+  return FOCUS_PRESETS.map((preset) => {
+    const selections = resolveFocusPresetSelections(preset, input.limits);
+    return {
+      preset,
+      disabledReason: selections.key_goals.length === 0 ? "No goal available for this window." : null,
+    };
   });
 }
 
@@ -264,8 +312,6 @@ function assertValuesKnown(values: string[], options: IntakeOption[], label: str
   }
 }
 
-// Module-load invariants. Catch typos at import time rather than letting `retainKnownOptionValues`
-// silently drop them and produce an empty selection downstream.
 for (const preset of EQUIPMENT_PRESETS) {
   assertValuesKnown(preset.equipment_access, EQUIPMENT_ACCESS_OPTIONS, "equipment");
 }
@@ -279,10 +325,9 @@ for (const preset of TRAINING_PRESETS) {
   }
 }
 for (const preset of FOCUS_PRESETS) {
-  assertValuesKnown(preset.key_goals, KEY_GOAL_OPTIONS, "key goal");
+  assertValuesKnown(preset.goals, KEY_GOAL_OPTIONS, "key goal");
   assertValuesKnown(preset.weak_areas, WEAK_AREA_OPTIONS, "weak area");
-  const totalSelections = preset.key_goals.length + preset.weak_areas.length;
-  if (totalSelections < 1) {
-    throw new Error(`recommended-setup: focus preset "${preset.key}" must have at least one selection`);
+  if (preset.goals.length < 1) {
+    throw new Error(`recommended-setup: focus preset "${preset.key}" must have at least one goal`);
   }
 }

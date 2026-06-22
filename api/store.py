@@ -86,7 +86,10 @@ def _guard_persisted_json(
         ) from None
 
 
-PLAN_SUMMARY_SELECT = "id, athlete_id, full_name, fight_date, technical_style, plan_name, status, pdf_url, created_at"
+PLAN_SUMMARY_SELECT = (
+    "id, athlete_id, full_name, fight_date, technical_style, plan_name, status, "
+    "stage2_validator_report, pdf_url, created_at"
+)
 GENERATION_JOB_SELECT = "*"
 # Admin job-list endpoints render diagnostics that need request_payload and
 # final_result but never read stage1_result (the largest intermediate blob,

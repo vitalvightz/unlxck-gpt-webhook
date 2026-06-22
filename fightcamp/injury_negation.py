@@ -63,27 +63,117 @@ def _normalize_injury_text_separators(text: str) -> str:
     return normalized
 
 
+# Strong injury-negation cues. When one of these opens a clause it negates the
+# whole clause on its own ("no shoulder pain", "denies knee pain", "never had
+# knee issues") — these words carry no benign clinical reading.
+_STRONG_LEADING_CUES = {"no", "never", "neither", "deny", "denies", "denied"}
+
+# Soft cues. "not" and "without" frequently describe uncertainty ("not sure"),
+# severity ("not severe"), progression ("not improving"), equipment ("without
+# brace") or timing ("without warning") rather than negating an injury. They
+# only strip a clause when they sit directly in front of a symptom/injury word.
+_SOFT_LEADING_CUES = {"not", "without"}
+
+# Determiners/connectors that may sit between a soft cue and the symptom it
+# negates ("not any swelling", "without a torn ligament") — skipped when we look
+# for the first content token after the cue.
+_NEGATION_DETERMINERS = {
+    "a", "an", "any", "the", "my", "his", "her", "their", "your", "our", "of",
+}
+
+# Symptom/injury head-words. A soft cue ("not"/"without") only negates when the
+# first content token after it names a symptom or injury; otherwise the cue is
+# qualifying something benign and the clause is kept.
+_INJURY_SYMPTOM_TOKENS = {
+    "pain", "painful", "pains", "ache", "aches", "aching", "achy",
+    "sore", "soreness", "swelling", "swollen", "swell",
+    "stiff", "stiffness", "tight", "tightness",
+    "sprain", "sprained", "strain", "strained",
+    "tear", "torn", "tears", "tearing",
+    "tendonitis", "tendinitis", "tendinopathy", "tendinosis",
+    "fracture", "fractured", "fractures", "break", "broken", "breaking",
+    "dislocation", "dislocated", "dislocate", "dislocates",
+    "rupture", "ruptured", "ruptures",
+    "injury", "injured", "injuries", "issue", "issues", "problem", "problems",
+    "numb", "numbness", "tingling", "tingle", "spasm", "spasms",
+    "cramp", "cramps", "cramping", "weak", "weakness",
+    "tender", "tenderness", "inflammation", "inflamed",
+    "bruise", "bruised", "bruising", "contusion",
+    "splint", "splints", "instability", "unstable", "wobbly",
+    "click", "clicking", "pop", "popping", "lock", "locking",
+    "concussion", "nerve", "hyperextension", "hyperextended",
+}
+
+
+def _is_injury_symptom_token(token: str) -> bool:
+    return token.strip("().,;:'\"-") in _INJURY_SYMPTOM_TOKENS
+
+
+def _soft_cue_negates(rest_words: list[str]) -> bool:
+    """Whether a leading soft cue ("not"/"without") negates an injury.
+
+    The cue only negates when its first content token (skipping determiners)
+    is itself a symptom/injury word. This keeps benign uses intact: "not severe
+    ankle swelling", "not sure ...", "not improving Achilles pain", "without
+    warning ...", "without brace ..." all describe severity/uncertainty/
+    progression/equipment/timing, not an absent injury.
+    """
+    for word in rest_words:
+        token = word.strip("().,;:'\"-")
+        if not token:
+            continue
+        if token in _NEGATION_DETERMINERS:
+            continue
+        return _is_injury_symptom_token(token)
+    return False
+
+
+def _clause_negates_injury(clause: str) -> bool:
+    """Whether a single clause should be dropped as a negated injury.
+
+    Forward-scoped: only a cue that *opens* the clause (or an explicit "ruled
+    out") negates it, so trailing negations like "shoulder clicking no pain" and
+    "knee pain without brace" keep their non-negated injury content.
+    """
+    cleaned = clause.strip()
+    if not cleaned:
+        return False
+    if re.search(r"\bruled\s+out\b", cleaned):
+        return True
+    words = cleaned.lower().split()
+    if not words:
+        return False
+    first = words[0].strip("().,;:'\"-")
+    if first in _STRONG_LEADING_CUES:
+        return True
+    if first in _SOFT_LEADING_CUES:
+        return _soft_cue_negates(words[1:])
+    return False
+
+
 def _has_negated_injury(text: str) -> bool:
     lowered = text.lower()
     if not _NEGATION_CUE_PATTERN.search(lowered):
         return False
     if re.search(r"\bruled\s+out\s+\w+", lowered):
         return True
-    # A negation cue at the start of a phrase negates the whole phrase even when
-    # no generic injury word ("injury"/"issue") follows it. This catches
-    # symptom-level negations like "no shoulder pain" or "no shin splints" that
-    # the entity-based Negex pass misses because the symptom is not a named
-    # entity. Only leading cues fire, so mid-phrase mentions such as "knee pain
-    # without brace" are left intact.
-    leading = lowered.strip().split()
-    if leading and leading[0] in {
-        "no", "not", "never", "without", "neither", "deny", "denies", "denied"
-    }:
+    # A negation cue at the start of a phrase negates it even when no generic
+    # injury word ("injury"/"issue") follows. This catches symptom-level
+    # negations like "no shoulder pain" or "no shin splints" that the
+    # entity-based Negex pass misses. Strong cues fire unconditionally; "not"/
+    # "without" only fire when they sit in front of a symptom, so "not severe
+    # ankle swelling" or "without warning my Achilles popped" stay intact.
+    if _clause_negates_injury(lowered):
         return True
     # Negation scopes forward: only treat a generic target word as negated when a
     # cue actually precedes it. This keeps "knee pain without brace" intact (the
     # cue follows the symptom) while still catching "never had knee issues".
-    cue_alt = r"\b(?:no|not|never|without|neither|deny|denies|denied|ruled\s+out)\b"
+    # Only strong cues scope across intervening words here; "not"/"without" are
+    # deliberately excluded so "not severe ankle swelling" or "without warning my
+    # Achilles popped" are not falsely flagged when a registered symptom word
+    # ("swelling") appears later in the clause. Those soft cues only negate via
+    # the adjacency check in _clause_negates_injury.
+    cue_alt = r"\b(?:no|never|neither|deny|denies|denied|ruled\s+out)\b"
     for term in _NEGATION_TARGETS:
         if len(term) < 3 or term not in lowered:
             continue
@@ -125,11 +215,6 @@ def remove_negated_phrases(text: str) -> str:
     return _strip_negated_chunks_fallback(text)
 
 
-_LEADING_NEGATION_CUES = {
-    "no", "not", "never", "without", "neither", "deny", "denies", "denied",
-}
-
-
 def _strip_leading_negation_chunks(text: str) -> str:
     normalized = text.lower()
     normalized = re.sub(r"[()]", " ", normalized)
@@ -144,14 +229,13 @@ def _strip_leading_negation_chunks(text: str) -> str:
     for cleaned in chunks:
         # Ignore a leading field label ("notes: no fracture ...") so the cue is
         # still seen at the start of the clause.
-        words = re.sub(r"^\w+:\s*", "", cleaned).split()
+        label_stripped = re.sub(r"^\w+:\s*", "", cleaned)
         # Drop a clause only when its negation scopes the clause itself: it
         # begins with a cue ("no shoulder pain") or explicitly rules an injury
         # out ("ruled out fracture"). Trailing negations such as "shoulder
-        # clicking no pain" keep the non-negated injury content.
-        if words and words[0] in _LEADING_NEGATION_CUES:
-            continue
-        if re.search(r"\bruled\s+out\b", cleaned):
+        # clicking no pain" keep their non-negated injury content, and soft cues
+        # that merely qualify ("not severe ankle swelling") are preserved.
+        if _clause_negates_injury(label_stripped):
             continue
         kept.append(cleaned)
     # If nothing was negated, return the text untouched so we never reflow

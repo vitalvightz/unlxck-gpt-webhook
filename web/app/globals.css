@@ -8356,6 +8356,45 @@ html[data-theme="light"] .global-generation-status-dismiss:hover {
   gap: 12px;
 }
 
+.admin-athlete-plan-bulkbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.admin-athlete-plan-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.admin-athlete-plan-item .admin-athlete-plan-row {
+  flex: 1;
+  min-width: 0;
+}
+
+.admin-athlete-plan-select {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex: none;
+}
+
+.admin-athlete-plan-select-spacer {
+  display: inline-flex;
+  width: 18px;
+  flex: none;
+}
+
+.admin-athlete-plan-select input {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: #b5122b;
+}
+
 .admin-athlete-plan-row {
   display: flex;
   align-items: center;

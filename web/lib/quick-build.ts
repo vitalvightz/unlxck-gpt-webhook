@@ -209,6 +209,8 @@ export function validateQuickBuildInput(
 export function quickBuildToPlanRequest(input: QuickBuildInput): PlanRequest {
   const trimmedName = input.full_name.trim();
   const base = emptyPlanRequest(trimmedName);
+  const keyGoals = retainKnownOptionValues(input.key_goals, KEY_GOAL_OPTIONS);
+  const weakAreas = retainKnownOptionValues(input.weak_areas, WEAK_AREA_OPTIONS);
   const plan: PlanRequest = {
     ...base,
     athlete: {
@@ -230,10 +232,10 @@ export function quickBuildToPlanRequest(input: QuickBuildInput): PlanRequest {
     support_work_days: [],
     equipment_access: retainKnownOptionValues(input.equipment_access, EQUIPMENT_ACCESS_OPTIONS),
     injuries: input.injuries.trim(),
-    key_goals: retainKnownOptionValues(input.key_goals, KEY_GOAL_OPTIONS),
-    primary_goal: "",
-    weak_areas: retainKnownOptionValues(input.weak_areas, WEAK_AREA_OPTIONS),
-    primary_weak_area: "",
+    key_goals: keyGoals,
+    primary_goal: keyGoals[0] ?? "",
+    weak_areas: weakAreas,
+    primary_weak_area: weakAreas[0] ?? "",
     goal_weakness_collision_detail: "",
     goal_weakness_collision_tags: [],
     goal_weakness_collision_details: [],
