@@ -149,6 +149,22 @@ def test_multiselect_value_maps_when_option_ids_are_strings():
     assert parsed.training_days == ["Mon", "Fri"]
 
 
+@pytest.mark.parametrize(
+    "haystack, needle, expected",
+    [
+        # Short location terms must not be matched inside unrelated words.
+        ("chipped tooth", "hip", False),
+        ("warm up shoulders", "arm", False),
+        ("forearm strain", "ear", False),
+        # Genuine whole-phrase duplicates are still skipped.
+        ("knee swelling", "swelling", True),
+        ("left hip pain", "hip", True),
+    ],
+)
+def test_phrase_present_is_word_boundary_safe(haystack, needle, expected):
+    assert input_parsing._phrase_present(haystack, needle) is expected
+
+
 def test_guided_severity_wins_when_text_is_not_more_severe():
     payload = _payload(
         [
@@ -617,7 +633,7 @@ def test_free_text_injury_fallback_still_parses_without_guided_injury():
         ("Upper back", "upper back"),
         ("Lower back", "lower back"),
         ("Left glute", "glute"),
-        ("Right quad", "quad"),
+        ("Right quad", "quads"),
         ("Core", "core"),
     ],
 )
@@ -1189,7 +1205,9 @@ def test_guided_resolver_free_text_beats_subtype_and_preserves_subtypes():
     )
 
     entry = parsed.parsed_injuries[0]
-    assert entry["injury_type"] == "swelling"
+    # Free text beats the guided subtype, and the injury mechanism ("rolled")
+    # wins over the swelling symptom: this resolves as a sprain.
+    assert entry["injury_type"] == "sprain"
     assert entry["injury_type_source"] == "parser"
     assert entry["guided_source_injury_subtypes"] == ["pain"]
 

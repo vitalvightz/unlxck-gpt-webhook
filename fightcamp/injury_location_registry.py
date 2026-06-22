@@ -40,7 +40,7 @@ LOCATION_REGISTRY: dict[str, dict[str, Any]] = {
         "region_group": "lower_leg_foot",
         "sensitive_contact_area": False,
     },
-    "quad": {
+    "quads": {
         "synonyms": ["quad", "quads"],
         "exclusion_region": "quad",
         "secondary_exclusion_regions": ["knee"],

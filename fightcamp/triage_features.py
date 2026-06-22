@@ -524,7 +524,11 @@ def _guided_injury_text_chunks(
         return []
 
     chunks = [
-        str(guided.area or "").strip(),
+        # When a parsed injury supersedes the guided card (diagnosis fields
+        # excluded), the resolved injury owns the location, so the raw guided
+        # area must not drive red flags on its own (e.g. an area of "chest pain"
+        # must not raise the chest_pain emergency once resolved to benign pain).
+        str(guided.area or "").strip() if include_diagnosis_fields else "",
         str(guided.severity or "").strip(),
         str(guided.trend or "").strip(),
         str(guided.avoid or "").strip(),
@@ -614,7 +618,11 @@ def _parsed_injury_chunks(parsed_injuries: list[dict[str, Any]] | None) -> list[
         avoid = str(item.get("avoid") or "").strip()
         notes = str(item.get("notes") or "").strip()
 
-        normalized = " ".join(part for part in (canonical_location, injury_type) if part)
+        # Join location and type with a sentence break so this structured
+        # re-serialization cannot masquerade as a free-text emergency phrase
+        # (e.g. location "chest" + type "pain" must not read as "chest pain").
+        # Individual words are still scanned for danger terms.
+        normalized = ". ".join(part for part in (canonical_location, injury_type) if part)
         if normalized:
             chunks.append(normalized)
 
@@ -816,7 +824,10 @@ def build_triage_features(
             continue
 
         parsed_type, parsed_location = parse_injury_phrase(cleaned_chunk)
-        canonical_chunk = " ".join(
+        # Break location/type so the re-serialized canonical form cannot form a
+        # free-text emergency phrase (e.g. "chest" + "pain" must not read as the
+        # "chest pain" cardiac red flag); danger terms are still scanned per word.
+        canonical_chunk = ". ".join(
             piece
             for piece in (
                 str(parsed_location or "").strip(),

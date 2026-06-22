@@ -670,12 +670,14 @@ def test_black_toenail_does_not_become_generic_contusion(monkeypatch):
     assert injury_type != "contusion"
 
 
-def test_ankle_pop_still_resolves_as_sprain(monkeypatch):
+def test_ankle_pop_does_not_resolve_as_soft_sprain(monkeypatch):
     monkeypatch.setattr(injury_synonyms, "get_nlp", lambda: None)
 
     injury_type, location = parse_injury_phrase("ankle pop")
 
-    assert injury_type == "sprain"
+    # A "pop" can be ligament/bone, so it is not auto-classified as a soft sprain;
+    # it stays unspecified for structural-aware routing.
+    assert injury_type != "sprain"
     assert location == "ankle"
 
 

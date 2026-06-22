@@ -6,7 +6,8 @@
     "fight_day_protocol_violation",
     "calendar_spine_fight_day_protocol_violation",
     "stage2_output_empty",
-    "stage2_output_truncated"
+    "stage2_output_truncated",
+    "admin_review_rejected"
   ],
   "publish_blocking_review_flag_codes": [
     "anchor_day_identity_overload",

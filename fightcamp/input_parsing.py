@@ -19,6 +19,7 @@ from .guided_injury_display import (
 )
 from .guided_injury_resolver import resolve_guided_injury_entry
 from .injury_guard import INJURY_TYPE_SEVERITY, SEVERITY_RANK, normalize_severity
+from .injury_negation import remove_negated_phrases
 from .injury_registry import SURFACE_TISSUE_TYPES
 from .injury_formatting import parse_injuries_and_restrictions, parse_injury_entry
 from .normalization import normalize_injury_marker as _normalize_injury_marker
@@ -603,6 +604,17 @@ def _parse_guided_injuries(
     return parsed_injuries, parsed_restrictions
 
 
+def _phrase_present(haystack: str, needle: str) -> bool:
+    """Whether *needle* appears in *haystack* as a whole phrase.
+
+    Word-boundary aware so a short term like "hip"/"arm"/"ear" is not matched
+    inside an unrelated word ("chipped", "warm", "forearm").
+    """
+    if not needle:
+        return False
+    return re.search(rf"(?<!\w){re.escape(needle)}(?!\w)", haystack) is not None
+
+
 def _attach_severity_provenance(
     parsed_injuries: list[dict[str, str | None | list[str]]],
 ) -> list[dict[str, str | None | list[str]]]:
@@ -612,7 +624,26 @@ def _attach_severity_provenance(
             str(injury.get("notes") or ""),
             str(injury.get("avoid") or ""),
         ]
-        return " ".join(part.strip() for part in parts if str(part).strip())
+        # Dedupe parts: guided formatting often folds the notes into
+        # original_phrase, so adding notes again double-counts the text (and can
+        # split a negated phrase apart). Skip a part only when it already appears
+        # as a whole phrase earlier — a word-boundary check so a short term like
+        # "hip" is not treated as a duplicate because it sits inside "chipped".
+        kept: list[str] = []
+        accumulated = ""
+        for part in parts:
+            cleaned = part.strip()
+            if cleaned:
+                # Use word boundaries to prevent false-positive substring matches
+                # (e.g., "hip" matching inside "chipped", or "arm" inside "warm").
+                pattern = rf"\b{re.escape(cleaned.lower())}\b"
+                if not re.search(pattern, accumulated.lower()):
+                    kept.append(cleaned)
+                    accumulated = f"{accumulated} {cleaned}"
+        joined = " ".join(kept)
+        # Strip negated content so denials ("no fracture") never escalate
+        # severity off the negated structural noun.
+        return remove_negated_phrases(joined) if joined else joined
 
     def _severity_rank(value: str) -> int:
         return SEVERITY_RANK.get(value, SEVERITY_RANK["moderate"])

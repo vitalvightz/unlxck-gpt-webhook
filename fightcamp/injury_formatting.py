@@ -297,7 +297,13 @@ def format_injury_summary(injury_obj: Mapping[str, str | None]) -> str:
         location_label = f"{_title_case(laterality)} {location_label}"
 
     injury_label = _title_case(injury_type) if injury_type else "Unspecified"
-    severity_label = _title_case(severity) if severity else "Unspecified"
+    # Only surface a severity the athlete actually stated. Defaulted/inferred
+    # severities (no explicit signal) display as "Unspecified".
+    severity_source = str(injury_obj.get("severity_source") or "")
+    if severity and severity_source not in ("fallback_default", "injury_type_default"):
+        severity_label = _title_case(severity)
+    else:
+        severity_label = "Unspecified"
 
     return f"{location_label} — {injury_label} (Severity: {severity_label})"
 

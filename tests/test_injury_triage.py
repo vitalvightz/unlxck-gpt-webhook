@@ -693,7 +693,7 @@ def test_triage_guided_safety_signals_still_apply_with_resolved_parsed_injury():
         "severity": "moderate",
         "trend": "stable",
         "impact_related": "yes",
-        "notes": "[structural:bear_weight_no]",
+        "notes": "cannot bear weight",
     }
     parsed = PlanInput.from_payload(payload)
     parsed = replace(
@@ -701,7 +701,7 @@ def test_triage_guided_safety_signals_still_apply_with_resolved_parsed_injury():
         guided_injury=GuidedInjury(
             **{
                 **parsed.guided_injury.__dict__,
-                "notes": "pain during movement [structural:bear_weight_no]",
+                "notes": "pain during movement, cannot bear weight",
             }
         ),
         parsed_injuries=[
@@ -1026,7 +1026,7 @@ def test_full_plan_response_does_not_include_blocked_output(monkeypatch):
 
 
 def _stub_normal_pipeline(monkeypatch):
-    monkeypatch.setattr("fightcamp.main.prime_plan_banks", lambda logger: None)
+    monkeypatch.setattr("fightcamp.main.prime_plan_banks", lambda **kwargs: None)
     monkeypatch.setattr("fightcamp.main.build_runtime_context", lambda **kwargs: object())
     monkeypatch.setattr("fightcamp.main.generate_plan_blocks", lambda **kwargs: {})
     monkeypatch.setattr(

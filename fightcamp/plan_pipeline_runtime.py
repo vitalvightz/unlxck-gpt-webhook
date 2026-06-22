@@ -96,7 +96,29 @@ TimingRecorder = Callable[[str, float], None]
 _BANKS_WARM: bool = False
 
 
-def prime_plan_banks(*, logger: logging.Logger | None = None) -> None:
+ProgressCallback = Callable[[str, str, str, dict[str, Any]], None]
+
+
+def _emit_progress(
+    callback: ProgressCallback | None,
+    code: str,
+    label: str,
+    detail: str = "",
+    **meta: Any,
+) -> None:
+    if callback is None:
+        return
+    try:
+        callback(code, label, detail, dict(meta))
+    except Exception:
+        logging.getLogger(__name__).exception("[progress] callback_failed code=%s", code)
+
+
+def prime_plan_banks(
+    *,
+    logger: logging.Logger | None = None,
+    progress_callback: ProgressCallback | None = None,
+) -> None:
     """Prime all plan banks, loading JSON data into memory the first time.
 
     On the first call (cold path) all three bank modules are primed and a
@@ -105,7 +127,10 @@ def prime_plan_banks(*, logger: logging.Logger | None = None) -> None:
     each bank's load function.
 
     Passing *logger* routes messages through the caller's logger; when omitted
-    a module-level logger is used instead.
+    a module-level logger is used instead. The strength prime step loads and
+    normalizes the strength exercise bank — the candidate pool later draws from
+    — so it brackets that work with ``stage1_strength_candidate_pool`` progress
+    milestones, mirroring the substep the candidate-pool selection emits.
     """
     global _BANKS_WARM
     _log = logger or logging.getLogger(__name__)
@@ -113,7 +138,17 @@ def prime_plan_banks(*, logger: logging.Logger | None = None) -> None:
         _log.debug("[bank-prime] path=warm (all caches populated, skipping)")
         return
     _t = perf_counter()
+    _emit_progress(
+        progress_callback,
+        "stage1_strength_candidate_pool_started",
+        "Stage 1 strength candidate_pool started",
+    )
     prime_strength_banks()
+    _emit_progress(
+        progress_callback,
+        "stage1_strength_candidate_pool_finished",
+        "Stage 1 strength candidate_pool finished",
+    )
     prime_conditioning_banks()
     prime_rehab_bank()
     _BANKS_WARM = True

@@ -1,7 +1,11 @@
 from types import SimpleNamespace
 
 from fightcamp.coach_review import run_coach_review
-from fightcamp.plan_pipeline_blocks import _build_phase_support_block, _build_rehab_injury_string
+from fightcamp.plan_pipeline_blocks import (
+    _build_phase_support_block,
+    _build_rehab_injury_string,
+    _guided_area_matches_location,
+)
 from fightcamp.plan_pipeline_rendering import _build_coach_notes, _sparring_adjustment_lines, _sparring_nutrition_lines
 
 
@@ -168,3 +172,65 @@ def test_rehab_injury_string_does_not_apply_first_card_instability_to_other_entr
 
     assert "right ankle sprain mild improving" in injury_string
     assert "right ankle instability" not in injury_string
+
+
+def test_guided_area_matches_location_is_token_and_synonym_aware():
+    # Genuine matches (whole token / left-right prefix / synonym) hold.
+    assert _guided_area_matches_location("left hip", "hip") is True
+    assert _guided_area_matches_location("knee", "knee") is True
+    assert _guided_area_matches_location("hip flexor strain", "hip") is True
+    # A short location must never match inside an unrelated word.
+    assert _guided_area_matches_location("whiplash", "hip") is False
+    assert _guided_area_matches_location("neck", "shoulder") is False
+
+
+def test_rehab_injury_string_does_not_apply_guided_type_when_area_only_substring_matches():
+    # Guided card describes a neck "whiplash" injury; the parsed entry is the hip.
+    # "hip" is a substring of "whiplash" but not a real location match, so the
+    # guided instability type must NOT smear onto the hip entry.
+    context = SimpleNamespace(
+        plan_input=SimpleNamespace(
+            parsed_injuries=[
+                {
+                    "display_location": "hip",
+                    "canonical_location": "hip",
+                    "laterality": "left",
+                    "injury_type": "pain",
+                    "severity": "mild",
+                    "trend": "stable",
+                },
+            ],
+            guided_injury=SimpleNamespace(injury_type="instability", area="whiplash"),
+        ),
+        injuries_only_text="left hip",
+    )
+
+    injury_string = _build_rehab_injury_string(context)
+
+    assert "instability" not in injury_string
+    assert "hip" in injury_string
+
+
+def test_rehab_injury_string_applies_guided_type_when_area_genuinely_matches():
+    # Guided card area genuinely refers to the knee, so its instability type is
+    # applied to the generic-typed knee entry.
+    context = SimpleNamespace(
+        plan_input=SimpleNamespace(
+            parsed_injuries=[
+                {
+                    "display_location": "knee",
+                    "canonical_location": "knee",
+                    "laterality": "left",
+                    "injury_type": "pain",
+                    "severity": "moderate",
+                    "trend": "stable",
+                },
+            ],
+            guided_injury=SimpleNamespace(injury_type="instability", area="left knee"),
+        ),
+        injuries_only_text="left knee",
+    )
+
+    injury_string = _build_rehab_injury_string(context)
+
+    assert "instability" in injury_string
