@@ -43,12 +43,22 @@ const TRIAGE_RESUME_FETCH_DELAY_MS = 800;
 const APPROVE_RECOVERY_FETCH_ATTEMPTS = 3;
 const APPROVE_RECOVERY_FETCH_DELAY_MS = 800;
 const STRUCTURED_PLAN_POLL_INTERVAL_MS = 2500;
-// Background structuring usually lands within a few seconds; cap the athlete-facing
-// "finalising" spinner at 30s so a plan whose structured card was legitimately
-// skipped/declined (raw plan_text is the intended final output) falls back to the
-// ready text plan quickly instead of holding for two minutes.
-const STRUCTURED_PLAN_FALLBACK_DELAY_MS = 30_000;
+// Background structuring can take up to ~2 minutes for a full camp. Hold the
+// athlete-facing "finalising" card until then (with a small buffer) so the
+// structured card has time to land; only unlock the safe text fallback if
+// structuring genuinely never completes. The card stays interactive while it
+// waits (see StructuredPlanFinalizingCard) so the wait does not feel stalled.
+const STRUCTURED_PLAN_FALLBACK_DELAY_MS = 150_000;
 const STRUCTURED_PLAN_RECENT_PLAN_THRESHOLD_MS = 5 * 60_000;
+// Athlete-facing "what we're doing now" steps cycled in the finalising card.
+const STRUCTURED_PLAN_FINALIZING_STEPS = [
+  "Formatting your weekly camp structure…",
+  "Laying out each session and block…",
+  "Adding loads, efforts and rest targets…",
+  "Pulling in nutrition and recovery guidance…",
+  "Running final safety checks…",
+] as const;
+const STRUCTURED_PLAN_FINALIZING_STEP_INTERVAL_MS = 4000;
 
 const ATHLETE_VISIBLE_STATUSES = new Set(["ready", "publishable_with_flags"]);
 
@@ -784,19 +794,78 @@ function PlanTextCards({ text }: { text: string }) {
   );
 }
 
+function formatFinalizingElapsed(ms: number): string {
+  const totalSeconds = Math.max(0, Math.floor(ms / 1000));
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  if (minutes === 0) {
+    return `${seconds}s`;
+  }
+  return `${minutes}m ${String(seconds).padStart(2, "0")}s`;
+}
+
 function StructuredPlanFinalizingCard() {
+  const [startedAt] = useState(() => Date.now());
+  const [now, setNow] = useState(() => Date.now());
+  const [stepIndex, setStepIndex] = useState(0);
+
+  useEffect(() => {
+    const tick = window.setInterval(() => setNow(Date.now()), 1000);
+    const cycle = window.setInterval(() => {
+      setStepIndex((prev) => (prev + 1) % STRUCTURED_PLAN_FINALIZING_STEPS.length);
+    }, STRUCTURED_PLAN_FINALIZING_STEP_INTERVAL_MS);
+    return () => {
+      window.clearInterval(tick);
+      window.clearInterval(cycle);
+    };
+  }, []);
+
+  const elapsedLabel = formatFinalizingElapsed(now - startedAt);
+  const activeStep = STRUCTURED_PLAN_FINALIZING_STEPS[stepIndex];
+
   return (
-    <section className="panel loading-card loading-shell loading-phase-finalizing athlete-motion-slot athlete-motion-status" role="status" aria-busy="true">
+    <section
+      className="panel loading-card loading-shell loading-phase-finalizing athlete-motion-slot athlete-motion-status"
+      role="status"
+      aria-busy="true"
+    >
       <article className="status-card loading-context-panel loading-context-panel-compact">
         <p className="loading-eyebrow">Finalising athlete card</p>
-        <h3 className="loading-title">Building the structured fight-camp view</h3>
+        <h3 className="loading-title">
+          Building the structured fight-camp view
+          <span className="loading-title-dots" aria-hidden="true">
+            <span />
+            <span />
+            <span />
+          </span>
+        </h3>
         <p className="muted loading-copy">
-          Approval is saved. The athlete card is being formatted before it is shown.
+          Approval is saved. The athlete card is being formatted before it is shown — this can take
+          up to a couple of minutes for a full camp.
         </p>
+        <div className="loading-operational-strip" aria-label="Finalising status">
+          <div className="loading-operational-item">
+            <span className="loading-operational-label">Step</span>
+            <span className="loading-operational-value" aria-live="polite">
+              {activeStep}
+            </span>
+          </div>
+          <div className="loading-operational-item">
+            <span className="loading-operational-label">Elapsed</span>
+            <span
+              className="loading-operational-value loading-operational-value-mono"
+              aria-live="polite"
+            >
+              {elapsedLabel}
+            </span>
+          </div>
+        </div>
         <div className="loading-scan-rail" aria-hidden="true">
           <span className="loading-scan-line" />
         </div>
-        <div className="loading-status-strip">Checking for the structured card every few seconds.</div>
+        <div className="loading-status-strip">
+          Checking for the structured card every few seconds — safe to stay on this page.
+        </div>
       </article>
     </section>
   );
