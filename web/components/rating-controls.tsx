@@ -290,6 +290,7 @@ export function LevelSlider({
         return (
           <button
             key={option.value}
+            id={`${controlId}-level-${index}`}
             type="button"
             role="radio"
             aria-checked={selected}
