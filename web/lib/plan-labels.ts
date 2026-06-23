@@ -5,8 +5,13 @@ const LABEL_OVERRIDES: Record<string, string> = {
   unavailable: "Unavailable",
   stop_and_report: "Stop and report",
 
-  publishable_with_flags: "Ready",
+  generated: "Processing",
+  publishable_with_flags: "Ready — review notes included",
   ready: "Ready",
+  review_required: "Awaiting review",
+  held_for_review: "Awaiting review",
+  triage_blocked: "Paused for safety review",
+  archived: "Archived",
 
   gpp: "General prep",
   spp: "Specific prep",
