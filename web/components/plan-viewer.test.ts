@@ -73,6 +73,18 @@ test("stage2 failed without validator reasons or blockers is still releasable", 
   assert.match(summary.headline, /ready to release/i);
 });
 
+test("blocked triage stub without validator reasons still explains the hold", () => {
+  const summary = buildReviewSummary({}, "stage2_failed", {
+    hasBlockedTriageStubText: true,
+  });
+
+  assert.equal(summary.isPublishable, false);
+  assert.equal(summary.hasIssues, true);
+  assert.equal(summary.blockingCount, 0);
+  assert.match(summary.headline, /Triage placeholder text/i);
+  assert.match(summary.guidance, /cannot be released/i);
+});
+
 test("soft review warnings do not block release summary", () => {
   const summary = buildReviewSummary(
     {

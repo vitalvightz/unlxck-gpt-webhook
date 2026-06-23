@@ -1509,6 +1509,15 @@ export function buildReviewSummary(
   }
 
   if (errors.length + blocking.length === 0) {
+    if (isBlockedTriageStub && normalizedStage2Status !== "triage_resume_approved") {
+      return {
+        ...summary,
+        hasIssues: true,
+        headline: "Triage placeholder text is currently holding this Stage 2 plan.",
+        guidance: "This plan still contains triage placeholder text and cannot be released to the athlete.",
+      };
+    }
+
     return {
       ...summary,
       hasIssues: false,
