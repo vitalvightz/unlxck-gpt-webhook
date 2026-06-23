@@ -2558,8 +2558,8 @@ export function PlanIntakeForm() {
               </article>
 
               <OptionalDetails
-                title="Adjust fatigue level"
-                hint="Defaults to Low. Open if you're carrying normal fatigue or noticeably run down right now."
+                title="Fatigue"
+                hint="Defaults to Low. Change it only if you feel tired today."
               >
                 <div className="field">
                   <label htmlFor="fatigueLevel">Fatigue level</label>
@@ -2569,7 +2569,7 @@ export function PlanIntakeForm() {
                     value={(form.fatigue_level ?? "low") as LevelValue}
                     onChange={(value) => updateField("fatigue_level", value)}
                   />
-                  <p className="muted">Low = fresh, Moderate = carrying normal fatigue, High = noticeably run down.</p>
+                  <p className="muted">Low = fresh. Moderate = tired. High = very run down.</p>
                 </div>
               </OptionalDetails>
             </div>
