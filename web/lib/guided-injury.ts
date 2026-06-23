@@ -19,6 +19,7 @@ function normalizeSeverityToken(token: string): "low" | "moderate" | "high" | ""
 
 export const EMPTY_GUIDED_INJURY: GuidedInjuryState = {
   area: "",
+  zone: "",
   severity: "",
   trend: "",
   avoid: "",
@@ -48,6 +49,7 @@ export function coerceGuidedInjuryEditState(
 ): GuidedInjuryState {
   return {
     area: toGuidedTextValue(value?.area),
+    zone: toGuidedTextValue(value?.zone),
     severity: normalizeSeverityToken(value?.severity ?? ""),
     trend: toGuidedTextValue(value?.trend),
     avoid: toGuidedTextValue(value?.avoid),
@@ -93,6 +95,7 @@ export function normalizeGuidedInjuryState(
   }
   return {
     area: draft.area.trim(),
+    zone: draft.zone.trim(),
     severity: draft.severity,
     trend: draft.trend.trim(),
     avoid: draft.avoid.trim(),

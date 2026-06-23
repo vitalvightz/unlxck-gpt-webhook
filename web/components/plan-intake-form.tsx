@@ -1273,29 +1273,58 @@ export function PlanIntakeForm() {
     setActiveGuidedInjuryIndex(null);
   }
 
-  function handleBodyMapZoneSelect(label: string) {
-    const existingIndex = guidedInjuries.findIndex((injury) => injury.area.toLowerCase() === label.toLowerCase());
+  function handleBodyMapZoneSelect(zoneKey: string, label: string) {
+    // Match by the stable zone key first; fall back to a legacy injury whose
+    // typed area still equals the zone label and has no zone key yet.
+    const existingIndex = guidedInjuries.findIndex(
+      (injury) =>
+        (injury.zone && injury.zone === zoneKey) ||
+        (!injury.zone && injury.area.trim().toLowerCase() === label.toLowerCase()),
+    );
     if (existingIndex >= 0) {
-      const existing = guidedInjuries[existingIndex];
-      if (hasGuidedInjuryContent({ ...existing, area: "" })) {
-        // Has filled-in detail beyond just the area — confirm before removing.
-        setPendingInjuryRemovalIndex(existingIndex);
-        return;
+      // The zone is already marked — open that card rather than removing it or
+      // creating a duplicate. Backfill the zone key on legacy matches so the
+      // zone stays lit even after the athlete rewrites the free-text area.
+      if (!guidedInjuries[existingIndex].zone) {
+        const nextGuidedInjuries = [...guidedInjuries];
+        nextGuidedInjuries[existingIndex] = coerceGuidedInjuryEditState({
+          ...nextGuidedInjuries[existingIndex],
+          zone: zoneKey,
+        });
+        syncGuidedInjuryFields(nextGuidedInjuries, false);
       }
-      handleRemoveGuidedInjury(existingIndex);
+      setActiveGuidedInjuryIndex(existingIndex);
       return;
     }
 
-    const emptyIndex = guidedInjuries.findIndex((injury) => !injury.area.trim());
+    const emptyIndex = guidedInjuries.findIndex((injury) => !injury.area.trim() && !injury.zone);
     if (emptyIndex >= 0) {
-      updateGuidedInjury(emptyIndex, "area", label);
+      const nextGuidedInjuries = [...guidedInjuries];
+      nextGuidedInjuries[emptyIndex] = coerceGuidedInjuryEditState({
+        ...nextGuidedInjuries[emptyIndex],
+        area: label,
+        zone: zoneKey,
+      });
+      syncGuidedInjuryFields(nextGuidedInjuries, false);
       setActiveGuidedInjuryIndex(emptyIndex);
       return;
     }
 
-    const nextGuidedInjuries = [...guidedInjuries, { ...EMPTY_GUIDED_INJURY, area: label }];
+    const nextGuidedInjuries = [...guidedInjuries, { ...EMPTY_GUIDED_INJURY, area: label, zone: zoneKey }];
     syncGuidedInjuryFields(nextGuidedInjuries, false);
     setActiveGuidedInjuryIndex(nextGuidedInjuries.length - 1);
+  }
+
+  // Removal now only happens from a card's × button. Guard it with the existing
+  // confirm panel when the injury carries detail beyond its area/zone, so a
+  // single tap can't silently discard filled-in safety answers.
+  function handleRequestRemoveGuidedInjury(index: number) {
+    const injury = guidedInjuries[index];
+    if (injury && hasGuidedInjuryContent({ ...injury, area: "", zone: "" })) {
+      setPendingInjuryRemovalIndex(index);
+      return;
+    }
+    handleRemoveGuidedInjury(index);
   }
 
   function handleConfirmRemovePendingInjury() {
@@ -2814,8 +2843,9 @@ export function PlanIntakeForm() {
                         <BodyMap
                           side={bodyMapSide}
                           selections={guidedInjuries
-                            .filter((injury) => injury.area.trim())
+                            .filter((injury) => injury.area.trim() || injury.zone)
                             .map((injury) => ({
+                              zone: injury.zone || undefined,
                               label: injury.area,
                               severity: normalizeGuidedInjurySeverity(injury.severity) || undefined,
                             }))}
@@ -2849,7 +2879,7 @@ export function PlanIntakeForm() {
                                     }
                                   }}
                                   onUpdate={(key, value) => updateGuidedInjury(index, key, value)}
-                                  onRemove={() => handleRemoveGuidedInjury(index)}
+                                  onRemove={() => handleRequestRemoveGuidedInjury(index)}
                                 />
                                 {isInvalidCard && error ? (
                                   <p id={`${cardId}-error`} className="error-text" role="alert">{error}</p>

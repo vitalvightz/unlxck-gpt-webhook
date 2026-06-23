@@ -36,6 +36,20 @@ test("buildAthleteInjuryTexts joins athlete words across injuries and skips empt
   assert.equal(text, "Left shoulder is bruised. Right knee ache");
 });
 
+test("guided injury state carries the body-map zone key through coerce, normalize, and hydrate", () => {
+  assert.equal(coerceGuidedInjuryEditState({ zone: "l_shoulder" }).zone, "l_shoulder");
+  assert.equal(normalizeGuidedInjuryState({ area: " left delt ", zone: " l_shoulder " }).zone, "l_shoulder");
+
+  const hydrated = hydrateGuidedInjuryStates({
+    guided_injuries: [{ area: "left delt, sharp when pressing", zone: "l_shoulder" }],
+  });
+  assert.equal(hydrated[0]?.zone, "l_shoulder");
+  // The zone is internal metadata, so it must not leak into the planner-facing
+  // summary or the athlete's own-words reconstruction.
+  assert.ok(!buildGuidedInjurySummaries(hydrated).includes("l_shoulder"));
+  assert.ok(!buildAthleteInjuryTexts(hydrated).includes("l_shoulder"));
+});
+
 test("coerceGuidedInjuryEditState preserves spaces while typing free-text fields", () => {
   assert.deepStrictEqual(
     coerceGuidedInjuryEditState({
