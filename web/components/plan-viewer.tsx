@@ -11,6 +11,7 @@ import {
   deletePlan,
   getActivePlan,
   getPlan,
+  getToday,
   isRetryableApiFailure,
   permanentlyDeletePlan,
   rejectApprovedPlan,
@@ -1822,6 +1823,11 @@ export function PlanViewer({
   const [archiveMessage, setArchiveMessage] = useState<string | null>(null);
   const [archiveError, setArchiveError] = useState<string | null>(null);
   const [activePlanId, setActivePlanId] = useState<string | null>(null);
+  // When THIS plan is the athlete's active plan and today's session is already
+  // logged, the command view advances `next_session` to the next scheduled day.
+  // We mirror that here so the camp map highlights the next session instead of
+  // keeping the finished day under the "Today" badge (matching Overview/Today).
+  const [nextSessionFocusDate, setNextSessionFocusDate] = useState<Date | undefined>(undefined);
   const [setActivePending, setSetActivePending] = useState(false);
   const [setActiveError, setSetActiveError] = useState<string | null>(null);
   const [planActionPending, setPlanActionPending] = useState<
@@ -1930,6 +1936,41 @@ export function PlanViewer({
       .catch(() => {
         if (!cancelled) {
           setActivePlanId(null);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [accessToken, canManagePlan, plan.plan_id]);
+
+  // Resolve the next-session focus for the camp map. The command view is the
+  // viewer's own (server-scoped to their athlete id), so we only apply it when it
+  // is reporting on THIS plan as the active one — admins viewing another athlete's
+  // plan get no override and the calendar "Today" highlight as before.
+  useEffect(() => {
+    if (!accessToken || !canManagePlan) {
+      return;
+    }
+    let cancelled = false;
+    getToday(accessToken)
+      .then((state) => {
+        if (cancelled) {
+          return;
+        }
+        const next = state.today?.next_session;
+        const isThisActivePlan = state.active_plan?.id === plan.plan_id;
+        const iso =
+          isThisActivePlan && next?.session_relation === "next"
+            ? (next.calendar_date || "").slice(0, 10)
+            : "";
+        // Parse at local noon to dodge any timezone date-shift; an unusable date
+        // (undated plans) leaves the calendar "Today" highlight untouched.
+        const parsed = iso ? new Date(`${iso}T12:00:00`) : null;
+        setNextSessionFocusDate(parsed && !Number.isNaN(parsed.getTime()) ? parsed : undefined);
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setNextSessionFocusDate(undefined);
         }
       });
     return () => {
@@ -2648,7 +2689,11 @@ export function PlanViewer({
                 ) : null}
               </div>
               {hasStructuredAthletePlan && plan.outputs.structured_plan ? (
-                <StructuredPlanRenderer plan={plan.outputs.structured_plan} />
+                <StructuredPlanRenderer
+                  plan={plan.outputs.structured_plan}
+                  focusDay={nextSessionFocusDate}
+                  currentDayLabel={nextSessionFocusDate ? "Next session" : "Today"}
+                />
               ) : (
                 <>
                   {isAwaitingStructuredUpgrade ? <StructuredPlanUpgradingNotice /> : null}

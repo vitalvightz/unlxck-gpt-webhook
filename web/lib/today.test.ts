@@ -332,7 +332,7 @@ test("Today resolves today's blocks from the shared current-day resolver", () =>
 test("Today uses structured titles only for actual structured today sessions", () => {
   const source = readFileSync(new URL("../components/today-screen.tsx", import.meta.url), "utf8");
   assert.equal(
-    source.includes("const sessionTitle = hasStructuredTodaySession"),
+    source.includes("const sessionTitle = hasResolvedDaySessions"),
     true,
   );
   assert.equal(

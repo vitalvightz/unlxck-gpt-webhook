@@ -418,10 +418,14 @@ function CompletionTag({ completion }: { completion: Completion }) {
 export function CampDayCard({
   day,
   isCurrent,
+  currentLabel = "Today",
   defaultOpen,
 }: {
   day: StructuredDay;
   isCurrent?: boolean;
+  /** Badge text for the highlighted day — "Today" normally, "Next session" once
+   * the view has advanced past a logged today's session. */
+  currentLabel?: string;
   defaultOpen?: boolean;
 }) {
   // Local open state synced via onToggle so a user toggle is not reset on
@@ -448,7 +452,7 @@ export function CampDayCard({
           <span className="sp-week-title">{weekday || date || "Day"}</span>
         </span>
         <span className="cm-day-meta">
-          {isCurrent ? <span className="sp-tag sp-accent">Today</span> : null}
+          {isCurrent ? <span className="sp-tag sp-accent">{currentLabel}</span> : null}
           {dayType ? <span className="sp-tag">{titleize(dayType)}</span> : null}
           {sessionCount > 0 ? (
             <span className="sp-tag">
@@ -970,9 +974,19 @@ function WeekOverview({ week }: { week: StructuredWeek }) {
 export function StructuredPlanRenderer({
   plan,
   today,
+  focusDay,
+  currentDayLabel = "Today",
 }: {
   plan: StructuredPlan;
   today?: Date;
+  /** Optional advance target: the next scheduled session's day, passed once
+   * today is already logged. It moves ONLY the opened week + day highlight, never
+   * the truthful "current week" marker or the camp-status countdown (those stay
+   * on the real `today`). Omit it for the normal calendar view. */
+  focusDay?: Date;
+  /** Badge text for the highlighted day. Callers pass "Next session" alongside
+   * `focusDay` so the advanced day is not mislabelled "Today". */
+  currentDayLabel?: string;
 }) {
   const weeks = getWeeks(plan);
   // Resolve "today" through the shared 04:00 training-day rollover so Plan Detail
@@ -980,28 +994,35 @@ export function StructuredPlanRenderer({
   // until the client mounts (SSR-safe: no hydration mismatch) and advances
   // across the rollover on long-lived tabs. Tests pass an explicit `today`.
   const mountedDay = useTrainingDay();
-  const now = today ?? mountedDay;
-  const progress = resolvePlanProgress(plan, now);
-  // The selected week is user-controllable; default to the current week (or the
-  // first week when today falls outside the camp). `selectedPos` stays null until
-  // the user picks a week so that, once the client-mounted current week resolves,
-  // the view follows it instead of being stuck on the first-render default.
+  // The real calendar training day is the authority for the truthful "current
+  // week" marker and the camp-status countdown. `focusDay` (next session, once
+  // today is logged) only advances the opened week + day highlight below, so the
+  // view never lies about which week is actually current. With no `focusDay` the
+  // two progressions collapse to the same value (normal calendar behaviour).
+  const calendarProgress = resolvePlanProgress(plan, today ?? mountedDay);
+  const focusProgress = focusDay ? resolvePlanProgress(plan, focusDay) : calendarProgress;
+  // The selected week is user-controllable; default to the focused week (current
+  // week, or the next session's week when advanced; first week when today falls
+  // outside the camp). `selectedPos` stays null until the user picks a week so
+  // that, once the client-mounted focus week resolves, the view follows it
+  // instead of being stuck on the first-render default.
   const [selectedPos, setSelectedPos] = useState<number | null>(null);
   const userSelectedWeek = useRef(false);
   useEffect(() => {
-    if (!userSelectedWeek.current && progress.currentWeekPos != null) {
-      setSelectedPos(progress.currentWeekPos);
+    if (!userSelectedWeek.current && focusProgress.currentWeekPos != null) {
+      setSelectedPos(focusProgress.currentWeekPos);
     }
-  }, [progress.currentWeekPos]);
+  }, [focusProgress.currentWeekPos]);
   const handleSelectWeek = (pos: number) => {
     userSelectedWeek.current = true;
     setSelectedPos(pos);
   };
-  const effectivePos = selectedPos ?? progress.currentWeekPos ?? 0;
+  const effectivePos = selectedPos ?? focusProgress.currentWeekPos ?? 0;
   // Clamp against weeks length so a stale index can never index past the array.
   const safePos = effectivePos >= 0 && effectivePos < weeks.length ? effectivePos : 0;
   const selectedWeek = weeks[safePos];
-  const phaseWeek = weeks[progress.currentWeekPos ?? safePos] ?? selectedWeek;
+  // Phase/status follows the real current week, not the advanced focus week.
+  const phaseWeek = weeks[calendarProgress.currentWeekPos ?? safePos] ?? selectedWeek;
 
   const progressionNotes = cleanText(plan.progression_notes);
   const rawFallback = cleanText(plan.raw_markdown_fallback);
@@ -1012,7 +1033,7 @@ export function StructuredPlanRenderer({
   return (
     <div className="sp-root cm-root">
       <PlanHeader plan={plan} />
-      <CampStatusLine plan={plan} progress={progress} phaseWeek={phaseWeek} />
+      <CampStatusLine plan={plan} progress={calendarProgress} phaseWeek={phaseWeek} />
       <ActiveNotesCard plan={plan} />
       <RedFlagsCard plan={plan} />
 
@@ -1021,7 +1042,7 @@ export function StructuredPlanRenderer({
           <WeekStrip
             weeks={weeks}
             selectedPos={safePos}
-            currentPos={progress.currentWeekPos}
+            currentPos={calendarProgress.currentWeekPos}
             onSelect={handleSelectWeek}
           />
           {selectedWeek ? <WeekOverview week={selectedWeek} /> : null}
@@ -1029,14 +1050,15 @@ export function StructuredPlanRenderer({
             {dayList.length > 0 ? (
               dayList.map((day, index) => {
                 const isCurrent =
-                  progress.currentDayDate != null &&
-                  cleanText(day.date)?.slice(0, 10) === progress.currentDayDate;
+                  focusProgress.currentDayDate != null &&
+                  cleanText(day.date)?.slice(0, 10) === focusProgress.currentDayDate;
                 return (
                   <CampDayCard
                     key={cleanText(day.date) || `day-${index}`}
                     day={day}
                     isCurrent={isCurrent}
-                    defaultOpen={isCurrent || (progress.currentWeekPos == null && index === 0)}
+                    currentLabel={currentDayLabel}
+                    defaultOpen={isCurrent || (focusProgress.currentWeekPos == null && index === 0)}
                   />
                 );
               })
