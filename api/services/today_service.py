@@ -665,7 +665,7 @@ def build_today_command_view(
             )
         except Exception:
             target_entry = None
-    if target_entry is not today_session_entry:
+    if target_entry is not today_session_entry or today_session_entry is None:
         target_entry = _prefer_earlier_structured_next_entry(
             target_entry,
             _structured_next_session_entry(plan_row, training_day),
