@@ -197,7 +197,10 @@ _WEEKDAY_NAMES = ("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
 
 
 def _has_scheduled_day_content(entry: WeeklyDayEntry) -> bool:
-    return str(entry.effective_load or "").strip().lower() not in {"", "none", "off", "rest"}
+    effective_load = str(entry.effective_load or "").strip().lower()
+    if effective_load in {"none", "off", "rest"}:
+        return False
+    return bool(effective_load != "" or entry.status or entry.coach_note)
 
 
 def _resolve_today_and_next(week: WeeklySchedule | None, *, today: date) -> tuple[WeeklyDayEntry | None, WeeklyDayEntry | None]:
