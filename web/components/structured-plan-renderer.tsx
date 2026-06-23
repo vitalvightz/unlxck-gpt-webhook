@@ -418,10 +418,14 @@ function CompletionTag({ completion }: { completion: Completion }) {
 export function CampDayCard({
   day,
   isCurrent,
+  currentLabel = "Today",
   defaultOpen,
 }: {
   day: StructuredDay;
   isCurrent?: boolean;
+  /** Badge text for the highlighted day — "Today" normally, "Next session" once
+   * the view has advanced past a logged today's session. */
+  currentLabel?: string;
   defaultOpen?: boolean;
 }) {
   // Local open state synced via onToggle so a user toggle is not reset on
@@ -448,7 +452,7 @@ export function CampDayCard({
           <span className="sp-week-title">{weekday || date || "Day"}</span>
         </span>
         <span className="cm-day-meta">
-          {isCurrent ? <span className="sp-tag sp-accent">Today</span> : null}
+          {isCurrent ? <span className="sp-tag sp-accent">{currentLabel}</span> : null}
           {dayType ? <span className="sp-tag">{titleize(dayType)}</span> : null}
           {sessionCount > 0 ? (
             <span className="sp-tag">
@@ -970,9 +974,14 @@ function WeekOverview({ week }: { week: StructuredWeek }) {
 export function StructuredPlanRenderer({
   plan,
   today,
+  currentDayLabel = "Today",
 }: {
   plan: StructuredPlan;
   today?: Date;
+  /** Badge text for the resolved current day. Callers pass "Next session" when
+   * `today` is overridden to the next scheduled session (today already logged) so
+   * the advanced day is not mislabelled "Today". */
+  currentDayLabel?: string;
 }) {
   const weeks = getWeeks(plan);
   // Resolve "today" through the shared 04:00 training-day rollover so Plan Detail
@@ -1036,6 +1045,7 @@ export function StructuredPlanRenderer({
                     key={cleanText(day.date) || `day-${index}`}
                     day={day}
                     isCurrent={isCurrent}
+                    currentLabel={currentDayLabel}
                     defaultOpen={isCurrent || (progress.currentWeekPos == null && index === 0)}
                   />
                 );

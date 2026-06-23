@@ -33,6 +33,7 @@ import {
   getVisibleRiskWatch,
   hasActivePlan,
   hasTodaySession,
+  resolveSessionFocusDate,
   shouldShowTodayCheckin,
 } from "@/lib/today";
 import type {
@@ -162,16 +163,28 @@ function getStructuredTodaySessionTitle(current: CurrentDayResolution): string {
   );
 }
 
-function getSessionRelationCopy(session: TodaySession, hasStructuredTodaySession = false): {
+function getSessionRelationCopy(
+  session: TodaySession,
+  completionStatus: TodayCompletionStatus,
+): {
   kicker: string;
   status: string;
   helper: string;
 } {
-  if (!hasStructuredTodaySession && session.session_relation === "next") {
+  // The backend owns "today vs next" via session_relation, so trust it rather
+  // than re-deriving it from the structured plan — that mismatch is what left the
+  // card stuck on the completed day while the header already read "Next session".
+  if (session.session_relation === "next") {
+    const loggedToday =
+      completionStatus === "done" ||
+      completionStatus === "modified" ||
+      completionStatus === "skipped";
     return {
       kicker: "Next scheduled session",
       status: "Preview",
-      helper: "Today has no matched training card, so this shows the next available plan day.",
+      helper: loggedToday
+        ? "Today's session is logged, so this shows your next scheduled session."
+        : "Today has no matched training card, so this shows the next available plan day.",
     };
   }
   return {
@@ -591,12 +604,19 @@ function SessionCard({
   // and is resolved on every render so a long-lived tab follows the rollover
   // instead of sticking on a memoized day.
   const trainingDay = useTrainingDay();
-  const current = resolveCurrentDay(structuredPlan, trainingDay);
+  // Center the structured blocks on whatever the backend command view targets:
+  // today's day in the normal case, or the NEXT scheduled session's day once
+  // today is logged / carries no app card (session_relation === "next"). Resolving
+  // by that target day — not the bare calendar day — stops the card from sticking
+  // on the finished session while the header has already advanced to "Next
+  // scheduled session", which is exactly how Overview already behaves.
+  const focusDate = resolveSessionFocusDate(trainingDay, session);
+  const current = resolveCurrentDay(structuredPlan, focusDate);
   const showStructuredBlocks = current.inRange && Boolean(current.day);
-  const hasStructuredTodaySession = current.inRange && current.sessions.length > 0;
-  const relationCopy = getSessionRelationCopy(session, hasStructuredTodaySession);
-  const isNextSessionPreview = !hasStructuredTodaySession && session.session_relation === "next";
-  const canCompleteSession = canCompleteTodaySession(session) && session.session_relation !== "next";
+  const hasResolvedDaySessions = current.inRange && current.sessions.length > 0;
+  const isNextSessionPreview = session.session_relation === "next";
+  const relationCopy = getSessionRelationCopy(session, status);
+  const canCompleteSession = canCompleteTodaySession(session) && !isNextSessionPreview;
   const recommendationState = state.today.recommendation_state;
   // Tint the session card to match today's decision (green/amber/red) so the page
   // reads at a glance instead of being a wall of identical dark cards. Neutral
@@ -671,7 +691,7 @@ function SessionCard({
     );
   }
 
-  const sessionTitle = hasStructuredTodaySession
+  const sessionTitle = hasResolvedDaySessions
     ? getStructuredTodaySessionTitle(current) || getSessionTitle(session)
     : getSessionTitle(session);
   // Avoid the "Today's session / Today's session" stutter: when the session has

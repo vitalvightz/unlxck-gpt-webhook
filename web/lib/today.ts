@@ -273,6 +273,35 @@ export function hasTodaySession(session: TodaySession): boolean {
   return Boolean(session.session_id || session.weekday || session.status || session.title);
 }
 
+/**
+ * The calendar day the structured-plan view (Today's blocks, Plan's "Today"
+ * highlight) should center on. Normally the athlete-local `trainingDay`, but once
+ * the backend command view has advanced past today's session — today logged as
+ * done/modified/skipped, or a coach-led / rest day that carries no app card — the
+ * `next_session` it returns carries `session_relation: "next"` plus the next
+ * scheduled session's `calendar_date`. Centering the structured resolver on that
+ * day keeps Today and Plan aligned with Overview's "Next session" instead of
+ * sticking on the completed/empty current day (the original bug: the header
+ * advanced to "Next scheduled session" while the card body kept the finished
+ * day). Falls back to `trainingDay` whenever the next session has no usable
+ * calendar date (e.g. weekday-only undated plans).
+ */
+export function resolveSessionFocusDate(
+  trainingDay: Date | null,
+  session: TodaySession | null | undefined,
+): Date | null {
+  if (session?.session_relation === "next") {
+    const iso = (session.calendar_date || "").slice(0, 10);
+    if (iso) {
+      const focus = new Date(`${iso}T12:00:00`);
+      if (!Number.isNaN(focus.getTime())) {
+        return focus;
+      }
+    }
+  }
+  return trainingDay;
+}
+
 export function canCompleteTodaySession(session: TodaySession): boolean {
   if (!session.session_id) {
     return false;
