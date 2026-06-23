@@ -1499,6 +1499,15 @@ export function buildReviewSummary(
     isPublishable,
   };
 
+  if (isPublishable) {
+    return {
+      ...summary,
+      hasIssues: false,
+      headline: "This plan is ready to release.",
+      guidance: "No hard blockers remain. Approval is now just a release decision.",
+    };
+  }
+
   if (errors.length + blocking.length === 0) {
     return {
       ...summary,
@@ -1506,13 +1515,13 @@ export function buildReviewSummary(
       headline:
         normalizedStage2Status === "triage_resume_approved"
           ? "Resume approved — regeneration pending. A regenerated final result is required before release."
-          : stage2Status === "stage2_failed"
+          : normalizedStage2Status === "stage2_failed"
           ? "Stage 2 held this plan, but no detailed validator reasons were saved in the report."
           : "No validator issues were saved for this plan.",
       guidance:
         normalizedStage2Status === "triage_resume_approved"
           ? "Keep this plan blocked until Stage 2 regeneration completes and a real final result replaces the triage stub."
-          : stage2Status === "stage2_failed"
+          : normalizedStage2Status === "stage2_failed"
           ? "Open the latest model output and retry prompt below to see what still needs work."
           : "This usually means the plan is held for workflow reasons rather than a specific validator issue.",
     };
@@ -1522,15 +1531,6 @@ export function buildReviewSummary(
     errors.length ? pluralize(errors.length, "blocking error") : null,
     blockingCount ? pluralize(blockingCount, "blocking issue") : null,
   ].filter((part): part is string => Boolean(part));
-
-  if (isPublishable) {
-    return {
-      ...summary,
-      hasIssues: false,
-      headline: "This plan is ready to release.",
-      guidance: "No hard blockers remain. Approval is now just a release decision.",
-    };
-  }
 
   return {
     ...summary,

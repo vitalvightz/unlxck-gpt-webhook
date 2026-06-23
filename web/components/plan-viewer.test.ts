@@ -62,6 +62,17 @@ test("ready final stage2 status without blocked stub can be publishable", () => 
   assert.equal(summary.isPublishable, true);
 });
 
+test("stage2 failed without validator reasons or blockers is still releasable", () => {
+  const summary = buildReviewSummary({}, "stage2_failed", {
+    hasBlockedTriageStubText: false,
+  });
+
+  assert.equal(summary.isPublishable, true);
+  assert.equal(summary.hasIssues, false);
+  assert.equal(summary.blockingCount, 0);
+  assert.match(summary.headline, /ready to release/i);
+});
+
 test("soft review warnings do not block release summary", () => {
   const summary = buildReviewSummary(
     {
