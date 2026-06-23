@@ -77,6 +77,11 @@ _CHECKIN_INPUT_FIELDS = (
     "worse_next_day_pain",
 )
 
+OTHER_PLAN_CHECKIN_WARNING = (
+    "You already submitted a check-in for another plan today. "
+    "This check-in is saved to the selected active plan only."
+)
+
 
 def _utc_now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
@@ -105,6 +110,21 @@ def _checkin_inputs_from(payload: Mapping[str, Any]) -> CheckinInputs:
     return CheckinInputs(**{field: payload[field] for field in _CHECKIN_INPUT_FIELDS})
 
 
+def _same_day_other_plan_warnings(
+    store: AppStore,
+    *,
+    athlete_id: str,
+    plan_id: str,
+    training_day: str,
+) -> list[str]:
+    lister = getattr(store, "list_today_checkins_for_day", None)
+    if not callable(lister):
+        return []
+    rows = lister(athlete_id, training_day)
+    has_other_plan_checkin = any(str(row.get("plan_id") or "") != plan_id for row in rows)
+    return [OTHER_PLAN_CHECKIN_WARNING] if has_other_plan_checkin else []
+
+
 def submit_today_checkin(
     store: AppStore,
     *,
@@ -130,6 +150,12 @@ def submit_today_checkin(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
 
     training_day = resolve_training_day(athlete_timezone, now=now)
+    warnings = _same_day_other_plan_warnings(
+        store,
+        athlete_id=athlete_id,
+        plan_id=plan_id,
+        training_day=training_day,
+    )
     decision = evaluate_checkin(_checkin_inputs_from(payload))
 
     fields: dict[str, Any] = {
@@ -144,7 +170,9 @@ def submit_today_checkin(
     for field in _CHECKIN_INPUT_FIELDS:
         fields[field] = payload[field]
 
-    return store.upsert_today_checkin(athlete_id, fields)
+    row = store.upsert_today_checkin(athlete_id, fields)
+    row["warnings"] = warnings
+    return row
 
 
 def _recommendation_mapping(checkin: Mapping[str, Any] | None) -> dict[str, Any] | None:
@@ -285,7 +313,9 @@ def _has_scheduled_day_content(entry: Any) -> bool:
         effective_load = getattr(entry, "effective_load", None)
     if isinstance(effective_load, str):
         effective_load = effective_load.strip().lower()
-    return bool(status or coach_note or effective_load not in (None, "", "none"))
+    if effective_load in {"none", "off", "rest"}:
+        return False
+    return bool(effective_load not in (None, "") or status or coach_note)
 
 
 def _entry_has_training(entry: Any) -> bool:
@@ -313,46 +343,96 @@ def _structured_effective_load(day_type: Any) -> str:
     return "technical"
 
 
-def _structured_today_session_entry(plan_row: Mapping[str, Any], training_day: str) -> dict[str, Any] | None:
+def _structured_plan_weeks(plan_row: Mapping[str, Any]) -> list[Mapping[str, Any]]:
     structured_plan = plan_row.get("structured_plan")
     if not isinstance(structured_plan, Mapping):
-        return None
+        return []
+    return _iter_mapping_items(structured_plan.get("weeks"))
 
-    for week in _iter_mapping_items(structured_plan.get("weeks")):
+
+def _normalized_structured_phase(value: Any) -> str:
+    phase = _clean_text(value).upper().replace(" ", "_")
+    if phase in {"GPP", "SPP", "TAPER", "REINTEGRATION"}:
+        return phase
+    for candidate in ("REINTEGRATION", "TAPER", "SPP", "GPP"):
+        if candidate in phase:
+            return candidate
+    return ""
+
+
+def _structured_phase_for_day(plan_row: Mapping[str, Any], training_day: str) -> str:
+    for week in _structured_plan_weeks(plan_row):
         for day in _iter_mapping_items(week.get("days")):
             day_date = _clean_text(day.get("date"))[:10]
-            if day_date != training_day:
+            if day_date == training_day:
+                return _normalized_structured_phase(day.get("phase_label")) or _normalized_structured_phase(
+                    week.get("phase_label")
+                )
+    return ""
+
+
+def _structured_session_entry_for_day(
+    day: Mapping[str, Any],
+    *,
+    week: Mapping[str, Any],
+) -> dict[str, Any] | None:
+    day_date = _clean_text(day.get("date"))[:10]
+    if not day_date:
+        return None
+    sessions = _iter_mapping_items(day.get("sessions"))
+    if not sessions:
+        return None
+
+    session = dict(sessions[0])
+    today_card = day.get("today_card") if isinstance(day.get("today_card"), Mapping) else {}
+    title = (
+        _clean_text(session.get("title"))
+        or _clean_text(today_card.get("headline"))
+        or _clean_text(session.get("session_type"))
+        or "Today's session"
+    )
+    objective = _clean_text(session.get("objective")) or _clean_text(today_card.get("headline"))
+    session_id = _clean_text(session.get("session_id")) or day_date
+    weekday = ""
+    try:
+        weekday = datetime.strptime(day_date, "%Y-%m-%d").strftime("%A")
+    except ValueError:
+        weekday = ""
+
+    return {
+        **session,
+        "calendar_date": day_date,
+        "weekday": weekday,
+        "weekday_with_label": _clean_text(day.get("countdown_label")) or weekday,
+        "day_label": _clean_text(day.get("countdown_label")),
+        "title": title,
+        "status": _clean_text(session.get("session_type")) or "scheduled_session",
+        "coach_note": objective,
+        "effective_load": _structured_effective_load(day.get("day_type")),
+        "phase": _normalized_structured_phase(day.get("phase_label"))
+        or _normalized_structured_phase(week.get("phase_label")),
+        "session_id": session_id,
+    }
+
+
+def _structured_today_session_entry(plan_row: Mapping[str, Any], training_day: str) -> dict[str, Any] | None:
+    for week in _structured_plan_weeks(plan_row):
+        for day in _iter_mapping_items(week.get("days")):
+            if _clean_text(day.get("date"))[:10] != training_day:
                 continue
-            sessions = _iter_mapping_items(day.get("sessions"))
-            if not sessions:
-                return None
+            return _structured_session_entry_for_day(day, week=week)
+    return None
 
-            session = dict(sessions[0])
-            today_card = day.get("today_card") if isinstance(day.get("today_card"), Mapping) else {}
-            title = (
-                _clean_text(session.get("title"))
-                or _clean_text(today_card.get("headline"))
-                or _clean_text(session.get("session_type"))
-                or "Today's session"
-            )
-            objective = _clean_text(session.get("objective")) or _clean_text(today_card.get("headline"))
-            session_id = _clean_text(session.get("session_id")) or day_date
-            weekday = ""
-            try:
-                weekday = datetime.strptime(day_date, "%Y-%m-%d").strftime("%A")
-            except ValueError:
-                weekday = ""
 
-            return {
-                **session,
-                "calendar_date": day_date,
-                "weekday": weekday,
-                "title": title,
-                "status": _clean_text(session.get("session_type")) or "scheduled_session",
-                "coach_note": objective,
-                "effective_load": _structured_effective_load(day.get("day_type")),
-                "session_id": session_id,
-            }
+def _structured_next_session_entry(plan_row: Mapping[str, Any], training_day: str) -> dict[str, Any] | None:
+    for week in _structured_plan_weeks(plan_row):
+        for day in _iter_mapping_items(week.get("days")):
+            day_date = _clean_text(day.get("date"))[:10]
+            if not day_date or day_date <= training_day:
+                continue
+            entry = _structured_session_entry_for_day(day, week=week)
+            if entry and _has_scheduled_day_content(entry):
+                return entry
     return None
 
 
@@ -431,10 +511,15 @@ def _risks_from_checkin(checkin: Mapping[str, Any] | None):
     return risks
 
 
-def _plan_with_resolved_phase(plan_row: Mapping[str, Any], week: Any) -> dict[str, Any]:
+def _plan_with_resolved_phase(
+    plan_row: Mapping[str, Any],
+    week: Any,
+    *,
+    structured_phase: str = "",
+) -> dict[str, Any]:
     """Use the current schedule week as the command-view phase authority."""
     plan = dict(plan_row)
-    resolved_phase = str(getattr(week, "phase", "") or "").strip()
+    resolved_phase = structured_phase or str(getattr(week, "phase", "") or "").strip()
     if resolved_phase:
         plan["phase"] = resolved_phase
     return plan
@@ -467,10 +552,22 @@ def build_today_command_view(
         return build_command_view(current_training_day=training_day, plan=None)
 
     plan_id = str(plan_row.get("id") or "")
+    plan_reader = getattr(store, "get_plan_for_athlete", None)
+    if plan_id and callable(plan_reader):
+        full_plan_row = plan_reader(plan_id, athlete_id)
+        if full_plan_row:
+            plan_row = full_plan_row
+
     # Fetch the check-in once and reuse it for both the recommendation and the
     # risk watch (avoids a redundant DB roundtrip).
     today_checkin = store.get_today_checkin(athlete_id, plan_id, training_day)
     recommendation = _recommendation_mapping(today_checkin)
+    warnings = _same_day_other_plan_warnings(
+        store,
+        athlete_id=athlete_id,
+        plan_id=plan_id,
+        training_day=training_day,
+    )
 
     # Derive today's/next session from the persisted plan's weekly schedule.
     today_entry = next_entry = None
@@ -511,6 +608,8 @@ def build_today_command_view(
             )
         except Exception:
             target_entry = None
+    if target_entry is None:
+        target_entry = _structured_next_session_entry(plan_row, training_day)
     session_relation = (
         "today"
         if target_entry is not None and target_entry is today_session_entry
@@ -520,11 +619,16 @@ def build_today_command_view(
 
     return build_command_view(
         current_training_day=training_day,
-        plan=_plan_with_resolved_phase(plan_row, week),
+        plan=_plan_with_resolved_phase(
+            plan_row,
+            week,
+            structured_phase=_structured_phase_for_day(plan_row, training_day),
+        ),
         recommendation=recommendation,
         completion=today_completion,
         next_session=_next_session_payload(target_entry, session_id, relation=session_relation),
         session_scope=session_relation or "none",
+        warnings=warnings,
         risks=_risks_from_checkin(today_checkin),
     )
 

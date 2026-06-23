@@ -1866,6 +1866,7 @@ class TodayCheckinResponse(BaseModel):
     recommendation_state: CheckinDecisionValue
     recommendation_reason: str = ""
     triggers: list[str] = Field(default_factory=list)
+    warnings: list[str] = Field(default_factory=list)
 
 
 class SessionCompletionRequest(BaseModel):

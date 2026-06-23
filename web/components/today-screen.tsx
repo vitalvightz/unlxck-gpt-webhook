@@ -280,10 +280,12 @@ function RiskWatch({ risks }: { risks: TodayCommandView["risk_watch"] }) {
 function CheckinModule({
   plan,
   token,
+  warnings,
   onRefresh,
 }: {
   plan: TodayActivePlan;
   token: string;
+  warnings?: string[];
   onRefresh: () => Promise<void>;
 }) {
   const { showToast } = useToast();
@@ -326,6 +328,9 @@ function CheckinModule({
       showToast(`Recommendation: ${getRecommendationCopy(response.recommendation_state).label}.`, {
         tone: response.recommendation_state === "pull_back" ? "info" : "success",
       });
+      if (response.warnings?.length) {
+        showToast(response.warnings[0], { tone: "info" });
+      }
       await onRefresh();
     } catch (error) {
       showToast(error instanceof Error ? error.message : "Check-in failed.", { tone: "error" });
@@ -358,6 +363,9 @@ function CheckinModule({
           options={PREVIOUS_SESSION_OPTIONS}
           onChange={setPreviousSession}
         />
+        {warnings?.length ? (
+          <p className="today-inline-warning" role="status">{warnings[0]}</p>
+        ) : null}
 
         <details className="today-red-flags">
           <summary>Any red flags?</summary>
@@ -908,7 +916,12 @@ export function TodayScreen() {
       </section>
 
       {showCheckin ? (
-        <CheckinModule plan={activePlan} token={token ?? ""} onRefresh={loadToday} />
+        <CheckinModule
+          plan={activePlan}
+          token={token ?? ""}
+          warnings={state.today.warnings}
+          onRefresh={loadToday}
+        />
       ) : null}
 
       <SessionCard

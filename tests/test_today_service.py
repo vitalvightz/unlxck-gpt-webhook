@@ -167,6 +167,21 @@ def _monday_strength_structured_plan() -> dict:
     }
 
 
+class SummaryActiveStore(FakeStore):
+    """Mirror production auto-active selection, where list_user_plans is summary-only."""
+
+    def list_user_plans(self, athlete_id: str) -> list[dict]:
+        rows = super().list_user_plans(athlete_id)
+        return [
+            {
+                key: value
+                for key, value in row.items()
+                if key not in {"structured_plan", "planning_brief", "stage2_payload"}
+            }
+            for row in rows
+        ]
+
+
 def _multi_week_taper_brief() -> dict:
     """A two-week taper where each week has a single training day.
 
@@ -290,6 +305,37 @@ class TestCheckinSubmit:
         payload = _checkin_payload(pain="high", recommendation_state="train_as_planned")
         row = submit_today_checkin(store, athlete_id=ATHLETE, athlete_timezone="", payload=payload)
         assert row["recommendation_state"] == "pull_back"
+
+    def test_same_day_other_plan_checkin_is_allowed_with_warning(self):
+        store = _store_with_plan()
+        store.plans[OTHER_PLAN] = {
+            "id": OTHER_PLAN,
+            "athlete_id": ATHLETE,
+            "status": "ready",
+            "plan_name": "Camp B",
+            "created_at": "2026-06-02T00:00:00+00:00",
+        }
+        now = datetime(2026, 6, 18, 12, 0, tzinfo=timezone.utc)
+
+        submit_today_checkin(
+            store,
+            athlete_id=ATHLETE,
+            athlete_timezone="",
+            payload=_checkin_payload(plan_id=OTHER_PLAN),
+            now=now,
+        )
+        row = submit_today_checkin(
+            store,
+            athlete_id=ATHLETE,
+            athlete_timezone="",
+            payload=_checkin_payload(plan_id=PLAN),
+            now=now,
+        )
+
+        assert len(store.today_checkins[ATHLETE]) == 2
+        assert row["warnings"] == [
+            "You already submitted a check-in for another plan today. This check-in is saved to the selected active plan only."
+        ]
 
 
 class TestPlanOwnership:
@@ -516,6 +562,54 @@ class TestCommandView:
         assert view.today.next_session["weekday"] == "Monday"
         assert view.today.next_session["title"] == "Posterior chain strength + control"
         assert view.today.next_session["title"] != "Hard sparring"
+
+    def test_auto_active_summary_row_rehydrates_structured_today_session_and_phase(self):
+        store = SummaryActiveStore()
+        store.plans[PLAN] = {
+            "id": PLAN,
+            "athlete_id": ATHLETE,
+            "status": "ready",
+            "plan_name": "Camp A",
+            "created_at": "2026-06-01T00:00:00+00:00",
+            "structured_plan": _monday_strength_structured_plan(),
+        }
+
+        view = build_today_command_view(
+            store,
+            athlete_id=ATHLETE,
+            athlete_timezone="",
+            now=datetime(2026, 6, 23, 12, 0, tzinfo=timezone.utc),
+        )
+
+        assert view.active_plan.get("phase") == "GPP"
+        assert view.today.session_scope == "today"
+        assert view.today.next_session["calendar_date"] == "2026-06-23"
+        assert view.today.next_session["title"] == "Hard sparring"
+
+    def test_other_plan_checkin_warning_surfaces_in_command_view_without_blocking(self):
+        store = _store_with_plan()
+        store.plans[OTHER_PLAN] = {
+            "id": OTHER_PLAN,
+            "athlete_id": ATHLETE,
+            "status": "ready",
+            "plan_name": "Camp B",
+            "created_at": "2026-05-31T00:00:00+00:00",
+        }
+        now = datetime(2026, 6, 18, 12, 0, tzinfo=timezone.utc)
+        submit_today_checkin(
+            store,
+            athlete_id=ATHLETE,
+            athlete_timezone="",
+            payload=_checkin_payload(plan_id=OTHER_PLAN),
+            now=now,
+        )
+
+        view = build_today_command_view(store, athlete_id=ATHLETE, athlete_timezone="", now=now)
+
+        assert view.today.recommendation_state == "not_checked_in"
+        assert view.today.warnings == [
+            "You already submitted a check-in for another plan today. This check-in is saved to the selected active plan only."
+        ]
 
     def test_next_session_crosses_into_following_week(self):
         # Week 0 trains only on Mon; the rest of the week is rest. On a later

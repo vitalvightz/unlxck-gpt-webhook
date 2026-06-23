@@ -65,6 +65,7 @@ def build_today_router(*, require_profile, get_store) -> APIRouter:
             recommendation_state=record.recommendation_state,
             recommendation_reason=record.recommendation_reason,
             triggers=record.recommendation_triggers,
+            warnings=[str(warning) for warning in row.get("warnings", [])],
         )
 
     @router.get("/api/today", response_model=CommandView)
