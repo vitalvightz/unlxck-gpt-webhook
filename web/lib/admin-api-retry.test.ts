@@ -7,7 +7,7 @@ import test, { afterEach, beforeEach } from "node:test";
 import {
   ApiError,
   RETRYABLE_NETWORK_MESSAGE,
-  deletePlan,
+  archivePlan,
   getAdminAthlete,
   getAdminAthleteNutritionCurrent,
   isRetryableApiFailure,
@@ -199,7 +199,7 @@ test("listAdminPlans gives up after configured attempts on persistent 503", asyn
   assert.equal(attempts, 3, "withTransientRetries defaults to 3 attempts");
 });
 
-test("deletePlan resolves on 204 No Content via the shared request pipeline", async () => {
+test("archivePlan resolves on 204 No Content via the shared request pipeline", async () => {
   const calls: { url: string; method: string; auth: string | null }[] = [];
   globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
     const headers = new Headers(init?.headers ?? {});
@@ -211,7 +211,7 @@ test("deletePlan resolves on 204 No Content via the shared request pipeline", as
     return new Response(null, { status: 204 });
   }) as typeof fetch;
 
-  await deletePlan("delete-token", "plan-42");
+  await archivePlan("delete-token", "plan-42");
 
   assert.equal(calls.length, 1);
   assert.equal(calls[0]?.method, "DELETE");
@@ -219,7 +219,7 @@ test("deletePlan resolves on 204 No Content via the shared request pipeline", as
   assert.match(calls[0]?.url ?? "", /\/api\/plans\/plan-42$/);
 });
 
-test("deletePlan retries the idempotent DELETE on 503 then succeeds", async () => {
+test("archivePlan retries the idempotent DELETE on 503 then succeeds", async () => {
   let attempts = 0;
   globalThis.fetch = (async () => {
     attempts += 1;
@@ -229,11 +229,11 @@ test("deletePlan retries the idempotent DELETE on 503 then succeeds", async () =
     return new Response(null, { status: 204 });
   }) as typeof fetch;
 
-  await deletePlan("token", "plan-1");
+  await archivePlan("token", "plan-1");
   assert.equal(attempts, 2);
 });
 
-test("deletePlan surfaces a 404 ApiError without retrying", async () => {
+test("archivePlan surfaces a 404 ApiError without retrying", async () => {
   let attempts = 0;
   globalThis.fetch = (async () => {
     attempts += 1;
@@ -241,7 +241,7 @@ test("deletePlan surfaces a 404 ApiError without retrying", async () => {
   }) as typeof fetch;
 
   await assert.rejects(
-    deletePlan("token", "missing-plan"),
+    archivePlan("token", "missing-plan"),
     (raised: unknown) => raised instanceof ApiError && raised.status === 404,
   );
   assert.equal(attempts, 1);
