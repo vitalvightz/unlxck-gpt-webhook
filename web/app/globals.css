@@ -9649,31 +9649,38 @@ html[data-theme="light"] .injury-card-remove-btn:hover {
   flex-wrap: wrap;
 }
 
+/* Remove-injury confirm: a quieter, more compact variant of the clear-confirm
+   panel so it sits unobtrusively above the cards rather than reading as an
+   amber alert. */
+.gi-remove-confirm-panel {
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border-color: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.03);
+  gap: 6px;
+}
+
+.gi-remove-confirm-panel .gi-clear-confirm-title {
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.gi-remove-confirm-panel .muted {
+  font-size: 0.8rem;
+}
+
+.gi-remove-confirm-panel .secondary-button,
+.gi-remove-confirm-panel .danger-button {
+  min-height: 36px;
+  padding: 0 14px;
+  font-size: 0.85rem;
+}
+
 .gi-review-warning-icon {
   flex-shrink: 0;
   margin-top: 2px;
   color: #ffcb6b;
-}
-
-/* Step-level review banner: a full-width, squared-off, red-tinted variant of
-   the in-card pill, prominent enough to read as a safety notice above the map. */
-.gi-review-warning-step {
-  border-radius: 14px;
-  margin: 0 0 16px;
-  padding: 14px 16px;
-  border-color: rgba(255, 107, 107, 0.32);
-  background: rgba(255, 107, 107, 0.08);
-  color: #ff9d9d;
-}
-
-.gi-review-warning-step .gi-review-warning-icon {
-  color: #ff9d9d;
-}
-
-.gi-review-warning-step strong {
-  display: block;
-  margin-bottom: 2px;
-  color: #ffd5d5;
 }
 
 .gi-no-restrictions-btn {
@@ -9823,20 +9830,6 @@ html[data-theme="light"] .gi-review-warning {
 
 html[data-theme="light"] .gi-review-warning-icon {
   color: #854f0b;
-}
-
-html[data-theme="light"] .gi-review-warning-step {
-  border-color: rgba(163, 45, 45, 0.2);
-  background: rgba(163, 45, 45, 0.05);
-  color: #a32d2d;
-}
-
-html[data-theme="light"] .gi-review-warning-step .gi-review-warning-icon {
-  color: #a32d2d;
-}
-
-html[data-theme="light"] .gi-review-warning-step strong {
-  color: #8a2525;
 }
 
 html[data-theme="light"] .gi-notes-toggle {

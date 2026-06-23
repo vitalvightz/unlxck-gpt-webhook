@@ -36,7 +36,6 @@ import {
   EMPTY_GUIDED_INJURY,
   hasGuidedInjuryContent,
   hasGuidedInjuryDescriptorWithoutArea,
-  hasGuidedInjuryReviewRisk,
   hydrateGuidedInjuryStates,
   type GuidedInjuryState,
 } from "@/lib/guided-injury";
@@ -869,10 +868,8 @@ export function PlanIntakeForm() {
   const [validationFocusRequest, setValidationFocusRequest] = useState<{ fieldId: string; nonce: number } | null>(null);
   const lastSavedSnapshotRef = useRef<string>("");
   const issueRedirectConsumedRef = useRef(false);
+  const pendingRemovalRef = useRef<HTMLDivElement | null>(null);
   const recordHasError = !isValidRecordFormat(form.athlete.record ?? "");
-  // Count injuries carrying a serious type or medical-safety flag so the
-  // restrictions step can surface a single banner above the cards.
-  const reviewRiskInjuryCount = guidedInjuries.filter((injury) => hasGuidedInjuryReviewRisk(injury)).length;
 
   // ── Days-out policy: compute field visibility/disablement ───────────
   const daysUntilFight = computeDaysUntilFight(form.fight_date);
@@ -920,6 +917,21 @@ export function PlanIntakeForm() {
     // scroll-to-top whenever a validation focus completes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentStep]);
+
+  useEffect(() => {
+    // When a removal is requested the confirm panel mounts above the map, which
+    // can be off-screen on mobile. Bring it into view so the athlete sees the
+    // confirm action instead of just the card's × turning red.
+    if (pendingInjuryRemovalIndex === null) {
+      return;
+    }
+    const node = pendingRemovalRef.current;
+    if (!node) {
+      return;
+    }
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    node.scrollIntoView({ behavior: reducedMotion ? "instant" : "smooth", block: "center" });
+  }, [pendingInjuryRemovalIndex]);
 
   useEffect(() => {
     if (!invalidFieldId) {
@@ -2822,22 +2834,6 @@ export function PlanIntakeForm() {
                   </div>
                 ) : (
                   <>
-                    {reviewRiskInjuryCount > 0 ? (
-                      <div className="gi-review-warning gi-review-warning-step" role="status">
-                        <svg className="gi-review-warning-icon" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-                          <path d="M8 1.5L1 14h14L8 1.5z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round" />
-                          <path d="M8 6v3.5M8 11.5v.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
-                        </svg>
-                        <div>
-                          <strong>
-                            {reviewRiskInjuryCount === 1
-                              ? "1 injury is flagged for coach review"
-                              : `${reviewRiskInjuryCount} injuries are flagged for coach review`}
-                          </strong>
-                          <span> Serious or medical-safety flags (head impact, heavy bleeding, eye injuries, fractures) may pause planning until a coach signs off. You can still finish — the plan is built around them.</span>
-                        </div>
-                      </div>
-                    ) : null}
                     {showClearInjuriesConfirm ? (
                       <div className="gi-clear-confirm-panel" role="alertdialog" aria-live="polite">
                         <p className="gi-clear-confirm-title">Clear injury cards?</p>
@@ -2849,14 +2845,12 @@ export function PlanIntakeForm() {
                       </div>
                     ) : null}
                     {pendingInjuryRemovalIndex !== null ? (
-                      <div className="gi-clear-confirm-panel" role="alertdialog" aria-live="polite">
-                        <p className="gi-clear-confirm-title">
-                          Remove {guidedInjuries[pendingInjuryRemovalIndex]?.area || "this injury"}?
-                        </p>
+                      <div ref={pendingRemovalRef} className="gi-clear-confirm-panel gi-remove-confirm-panel" role="alertdialog" aria-live="polite">
+                        <p className="gi-clear-confirm-title">Remove injury?</p>
                         <p className="muted">This injury has details filled in. Removing will delete them.</p>
                         <div className="gi-clear-confirm-actions">
                           <button type="button" className="secondary-button" onClick={handleCancelRemovePendingInjury}>Keep injury</button>
-                          <button type="button" className="danger-button" onClick={handleConfirmRemovePendingInjury}>Remove anyway</button>
+                          <button type="button" className="danger-button" onClick={handleConfirmRemovePendingInjury}>Remove injury</button>
                         </div>
                       </div>
                     ) : null}

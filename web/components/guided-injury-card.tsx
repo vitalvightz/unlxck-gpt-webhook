@@ -1106,7 +1106,7 @@ export function GuidedInjuryCard({
             type="button"
             className="injury-card-remove-btn"
             onClick={(e) => { e.stopPropagation(); onRemove(); }}
-            aria-label={`Remove ${injuryLabel}`}
+            aria-label="Remove injury"
           >
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
             <path d="M3 3l8 8M11 3l-8 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
