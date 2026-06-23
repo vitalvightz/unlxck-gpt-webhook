@@ -140,6 +140,7 @@ class CommandViewToday(BaseModel):
     training_day: str
     recommendation_state: RecommendationState = "not_checked_in"
     recommendation_reason: str | None = None
+    warnings: list[str] = Field(default_factory=list)
     next_session: dict[str, Any] = Field(default_factory=dict)
     session_scope: Literal["today", "next", "none"] = "none"
     session_label: str = ""
@@ -206,6 +207,7 @@ def build_command_view(
     completion: Mapping[str, Any] | None = None,
     next_session: Mapping[str, Any] | None = None,
     session_scope: Literal["today", "next", "none"] | None = None,
+    warnings: Sequence[str] | None = None,
     risks: Sequence[RiskWatchItem | Mapping[str, Any]] | None = None,
     week_summary: Mapping[str, Any] | None = None,
 ) -> CommandView:
@@ -235,6 +237,7 @@ def build_command_view(
         training_day=training_day,
         recommendation_state=rec_view.state,
         recommendation_reason=rec_view.reason,
+        warnings=[str(warning) for warning in (warnings or []) if str(warning).strip()],
         next_session=dict(next_session) if next_session else {},
         session_scope=resolved_session_scope,
         session_label=session_label,

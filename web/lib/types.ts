@@ -914,6 +914,7 @@ export type TodayCommandView = {
     training_day: string;
     recommendation_state: TodayRecommendationState;
     recommendation_reason?: string | null;
+    warnings?: string[];
     next_session: TodaySession;
     session_scope: "today" | "next" | "none";
     session_label: string;
@@ -957,6 +958,7 @@ export type TodayCheckinResponse = {
   recommendation_state: TodayRecommendationState;
   recommendation_reason: string;
   triggers: string[];
+  warnings?: string[];
 };
 
 export type TodaySessionCompletionRequest = {

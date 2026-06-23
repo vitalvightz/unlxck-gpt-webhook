@@ -3,6 +3,7 @@
 import {
   useId,
   type KeyboardEvent,
+  type PointerEvent,
 } from "react";
 
 /* ------------------------------------------------------------------ *
@@ -240,35 +241,48 @@ export function LevelSlider({
   ariaLabel?: string;
   id?: string;
 }) {
-  const controlId = useId();
   const selectedIndex = LEVEL_OPTIONS.findIndex((option) => option.value === value);
+  const currentIndex = selectedIndex === -1 ? 1 : selectedIndex;
+  const activeLabel = selectedIndex === -1 ? "Not set" : LEVEL_OPTIONS[selectedIndex].label;
 
-  function move(delta: number) {
-    const base = selectedIndex === -1 ? (delta > 0 ? -1 : LEVEL_OPTIONS.length) : selectedIndex;
-    const next = Math.min(LEVEL_OPTIONS.length - 1, Math.max(0, base + delta));
-    onChange(LEVEL_OPTIONS[next].value);
-  }
-
-  function handleKeyDown(event: KeyboardEvent<HTMLDivElement>) {
-    if (event.key === "ArrowRight" || event.key === "ArrowUp") {
-      event.preventDefault();
-      move(1);
-    } else if (event.key === "ArrowLeft" || event.key === "ArrowDown") {
-      event.preventDefault();
-      move(-1);
+  function selectLevelFromPointer(event: PointerEvent<HTMLInputElement>) {
+    if (selectedIndex !== -1) {
+      return;
     }
+    const rect = event.currentTarget.getBoundingClientRect();
+    if (rect.width <= 0) {
+      onChange(LEVEL_OPTIONS[currentIndex].value);
+      return;
+    }
+    const percent = (event.clientX - rect.left) / rect.width;
+    const nextIndex = Math.min(
+      LEVEL_OPTIONS.length - 1,
+      Math.max(0, Math.floor(percent * LEVEL_OPTIONS.length)),
+    );
+    onChange(LEVEL_OPTIONS[nextIndex].value);
   }
 
   return (
     <div
       className="level-slider"
+      data-empty={selectedIndex === -1 ? "true" : undefined}
       id={id}
-      role="radiogroup"
-      aria-label={ariaLabel}
-      tabIndex={0}
-      aria-activedescendant={selectedIndex !== -1 ? `${controlId}-level-${selectedIndex}` : undefined}
-      onKeyDown={handleKeyDown}
     >
+      <input
+        className="level-slider-input"
+        type="range"
+        min={0}
+        max={LEVEL_OPTIONS.length - 1}
+        step={1}
+        value={currentIndex}
+        aria-label={ariaLabel}
+        aria-valuetext={activeLabel}
+        onChange={(event) => {
+          const nextIndex = Number.parseInt(event.target.value, 10);
+          onChange(LEVEL_OPTIONS[nextIndex].value);
+        }}
+        onPointerDown={selectLevelFromPointer}
+      />
       {selectedIndex !== -1 ? (
         <span
           className="level-slider-indicator"
@@ -282,19 +296,14 @@ export function LevelSlider({
       {LEVEL_OPTIONS.map((option, index) => {
         const selected = index === selectedIndex;
         return (
-          <button
+          <span
             key={option.value}
-            id={`${controlId}-level-${index}`}
-            type="button"
-            role="radio"
-            aria-checked={selected}
-            tabIndex={-1}
             className="level-slider-segment"
             data-selected={selected ? "true" : undefined}
-            onClick={() => onChange(option.value)}
+            aria-hidden="true"
           >
             {option.label}
-          </button>
+          </span>
         );
       })}
     </div>

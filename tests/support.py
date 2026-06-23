@@ -1379,6 +1379,13 @@ class FakeStore:
                 return dict(row)
         return None
 
+    def list_today_checkins_for_day(self, athlete_id: str, training_day: str) -> list[dict]:
+        return [
+            dict(row)
+            for row in self.today_checkins.get(athlete_id, [])
+            if row["training_day"] == training_day
+        ]
+
     def upsert_session_completion(self, athlete_id: str, fields: dict) -> dict:
         bucket = self.session_completions.setdefault(athlete_id, [])
         for row in bucket:

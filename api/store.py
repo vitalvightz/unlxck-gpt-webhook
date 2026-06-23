@@ -439,6 +439,10 @@ class AppStore(Protocol):
         self, athlete_id: str, plan_id: str, training_day: str
     ) -> dict[str, Any] | None: ...
 
+    def list_today_checkins_for_day(
+        self, athlete_id: str, training_day: str
+    ) -> list[dict[str, Any]]: ...
+
     def upsert_session_completion(self, athlete_id: str, fields: dict[str, Any]) -> dict[str, Any]: ...
 
     def get_session_completion(
@@ -4199,6 +4203,19 @@ class SupabaseAppStore:
             .eq("plan_id", plan_id)
             .eq("training_day", training_day)
         )
+
+    def list_today_checkins_for_day(
+        self, athlete_id: str, training_day: str
+    ) -> list[dict[str, Any]]:
+        response = (
+            self.client.table("today_checkins")
+            .select("*")
+            .eq("athlete_id", athlete_id)
+            .eq("training_day", training_day)
+            .order("updated_at", desc=True)
+            .execute()
+        )
+        return getattr(response, "data", None) or []
 
     def upsert_session_completion(self, athlete_id: str, fields: dict[str, Any]) -> dict[str, Any]:
         payload = {"athlete_id": athlete_id, **fields}
