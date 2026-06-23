@@ -863,8 +863,8 @@ function IntakeCard({
       </div>
 
       <div className="plan-card-actions plans-dashboard-actions">
-        <Link href={hasIntake ? "/onboarding" : "/quick-build"} className="cta">
-          {hasIntake ? "Review & edit intake" : "Quick Build New Plan"}
+        <Link href="/onboarding" className="cta">
+          {hasIntake ? "Review & edit intake" : "Complete Advanced Intake"}
         </Link>
       </div>
     </article>
