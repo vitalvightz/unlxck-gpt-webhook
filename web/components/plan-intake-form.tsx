@@ -41,6 +41,7 @@ import {
   type GuidedInjuryState,
 } from "@/lib/guided-injury";
 import { GuidedInjuryCard } from "@/components/guided-injury-card";
+import { LevelSlider, type LevelValue } from "@/components/rating-controls";
 import { applyNoScheduledFightSnapshot, emptyPlanRequest, hydratePlanRequest, mergePlanRequestDraft } from "@/lib/onboarding";
 import { buildRoundsFormat, parseRoundsFormat, ROUND_COUNT_OPTIONS, ROUND_DURATION_OPTIONS } from "@/lib/rounds-format";
 import { FOCUS_CAP_DISABLED_REASON, getPerformanceFocusCap, validatePerformanceFocusSelections } from "@/lib/performance-focus-cap";
@@ -99,11 +100,6 @@ function resolveFieldStep(fieldId: string): number | undefined {
 const SEX_OPTIONS: IntakeOption[] = [
   { label: "Male", value: "male" },
   { label: "Female", value: "female" },
-];
-const FATIGUE_LEVEL_OPTIONS = [
-  { label: "Low", value: "low" },
-  { label: "Moderate", value: "moderate" },
-  { label: "High", value: "high" },
 ];
 
 type PriorityOverlap = {
@@ -2555,11 +2551,9 @@ export function PlanIntakeForm() {
               >
                 <div className="field">
                   <label htmlFor="fatigueLevel">Fatigue level</label>
-                  <CustomSelect
-                    id="fatigueLevel"
-                    value={form.fatigue_level || "low"}
-                    options={FATIGUE_LEVEL_OPTIONS}
-                    placeholder="Select fatigue level"
+                  <LevelSlider
+                    ariaLabel="Fatigue level"
+                    value={(form.fatigue_level ?? "low") as LevelValue}
                     onChange={(value) => updateField("fatigue_level", value)}
                   />
                   <p className="muted">Low = fresh, Moderate = carrying normal fatigue, High = noticeably run down.</p>

@@ -10,6 +10,7 @@ import { NutritionSubnav } from "@/components/nutrition-subnav";
 import { NutritionWorkspaceHeader } from "@/components/nutrition-workspace-header";
 import { NutritionWorkspaceSkeleton } from "@/components/skeleton";
 import { useToast } from "@/components/toast-provider";
+import { LevelSlider, type LevelValue } from "@/components/rating-controls";
 import { getNutritionCurrent, updateNutritionCurrent } from "@/lib/api";
 import {
   formatBodyweightDate,
@@ -44,12 +45,6 @@ const WEIGH_IN_OPTIONS = [
   { value: "same_day", label: "Same day" },
   { value: "day_before", label: "Day before" },
   { value: "informal", label: "Informal / none" },
-];
-const FATIGUE_OPTIONS = [
-  { value: "", label: "Select" },
-  { value: "low", label: "Low" },
-  { value: "moderate", label: "Moderate" },
-  { value: "high", label: "High" },
 ];
 const SLEEP_OPTIONS = [
   { value: "", label: "Select" },
@@ -488,14 +483,11 @@ export function NutritionWorkspaceScreen() {
                     </div>
                     <div className="field">
                       <label>Fatigue level</label>
-                      <select
-                        value={form.shared_camp_context.fatigue_level ?? ""}
-                        onChange={(event) => setSharedField("fatigue_level", event.target.value || null)}
-                      >
-                        {FATIGUE_OPTIONS.map((option) => (
-                          <option key={option.value || "empty"} value={option.value}>{option.label}</option>
-                        ))}
-                      </select>
+                      <LevelSlider
+                        ariaLabel="Fatigue level"
+                        value={(form.shared_camp_context.fatigue_level as LevelValue | null) ?? null}
+                        onChange={(value) => setSharedField("fatigue_level", value)}
+                      />
                     </div>
                     <div className="field">
                       <label>Sleep quality</label>

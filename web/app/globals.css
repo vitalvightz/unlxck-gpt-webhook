@@ -5360,7 +5360,237 @@ button.mobile-step-rail-item {
 }
 
 .today-completion-fields {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: 1fr;
+  gap: 20px;
+}
+
+/* ------------------------------------------------------------------ *
+ * Rating controls — effort slider (RPE), pain face scale, level slider
+ * (fatigue). Theme-token driven so they sit inside the dark UI.
+ * ------------------------------------------------------------------ */
+
+/* Effort slider (Session RPE) — 1-9, no numerals shown. */
+.effort-slider {
+  display: grid;
+  gap: 10px;
+}
+
+.effort-slider-readout {
+  min-height: 18px;
+}
+
+.effort-slider-descriptor {
+  font-family: var(--font-mono), monospace;
+  font-size: 13px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--brand-red);
+}
+
+.effort-slider[data-empty="true"] .effort-slider-descriptor {
+  color: var(--text-muted);
+}
+
+.effort-slider-track-wrap {
+  position: relative;
+  padding: 4px 0;
+}
+
+.effort-slider-input {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 10px;
+  border-radius: var(--radius-pill);
+  background: linear-gradient(
+    to right,
+    var(--brand-red) 0%,
+    var(--brand-red) var(--effort-fill, 0%),
+    rgba(255, 255, 255, 0.08) var(--effort-fill, 0%),
+    rgba(255, 255, 255, 0.08) 100%
+  );
+  outline: none;
+  cursor: pointer;
+}
+
+.effort-slider[data-empty="true"] .effort-slider-input {
+  background: linear-gradient(
+    to right,
+    rgba(181, 18, 43, 0.35) 0%,
+    rgba(181, 18, 43, 0.35) var(--effort-fill, 0%),
+    rgba(255, 255, 255, 0.08) var(--effort-fill, 0%),
+    rgba(255, 255, 255, 0.08) 100%
+  );
+}
+
+.effort-slider-input::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #ffffff;
+  border: 3px solid var(--brand-red);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
+  cursor: grab;
+  transition: transform 120ms ease;
+}
+
+.effort-slider-input::-webkit-slider-thumb:active {
+  cursor: grabbing;
+  transform: scale(1.12);
+}
+
+.effort-slider-input::-moz-range-thumb {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #ffffff;
+  border: 3px solid var(--brand-red);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
+  cursor: grab;
+}
+
+.effort-slider[data-empty="true"] .effort-slider-input::-webkit-slider-thumb {
+  border-color: rgba(181, 18, 43, 0.5);
+  background: #d7d9de;
+}
+
+.effort-slider[data-empty="true"] .effort-slider-input::-moz-range-thumb {
+  border-color: rgba(181, 18, 43, 0.5);
+  background: #d7d9de;
+}
+
+.effort-slider-input:focus-visible {
+  box-shadow: 0 0 0 4px rgba(181, 18, 43, 0.18);
+}
+
+.effort-slider-anchors {
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--font-mono), monospace;
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+/* Pain face scale — row of five outline faces. */
+.face-scale-row {
+  display: flex;
+  gap: 8px;
+  border-radius: var(--radius-input);
+  outline: none;
+}
+
+.face-scale-row:focus-visible {
+  box-shadow: 0 0 0 3px rgba(181, 18, 43, 0.18);
+}
+
+.face-scale-face {
+  flex: 1;
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  padding: 12px 4px;
+  border-radius: 14px;
+  border: 1px solid var(--border-default);
+  background: linear-gradient(180deg, rgba(20, 22, 27, 0.98), rgba(15, 17, 21, 0.98));
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: transform 120ms ease, border-color 120ms ease, color 120ms ease,
+    background 120ms ease, box-shadow 120ms ease;
+}
+
+.face-scale-face:hover {
+  color: var(--text-secondary);
+  border-color: var(--border-strong);
+  transform: translateY(-1px);
+}
+
+.face-scale-face[data-selected="true"] {
+  color: var(--brand-red);
+  border-color: rgba(181, 18, 43, 0.65);
+  background: linear-gradient(180deg, rgba(40, 18, 24, 0.95), rgba(24, 14, 18, 0.95));
+  box-shadow: 0 0 0 1px rgba(181, 18, 43, 0.4), 0 0 18px rgba(181, 18, 43, 0.22);
+  transform: translateY(-2px);
+}
+
+.face-scale-svg {
+  display: block;
+}
+
+.face-scale-caption {
+  font-family: var(--font-mono), monospace;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* Level slider (fatigue) — three-position segmented control. */
+.level-slider {
+  position: relative;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  padding: 4px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border-default);
+  background: rgba(15, 17, 21, 0.92);
+  outline: none;
+  isolation: isolate;
+}
+
+.level-slider:focus-visible {
+  box-shadow: 0 0 0 3px rgba(181, 18, 43, 0.18);
+}
+
+.level-slider-indicator {
+  position: absolute;
+  z-index: -1;
+  top: 4px;
+  bottom: 4px;
+  left: 4px;
+  width: calc((100% - 8px) / var(--level-count));
+  border-radius: var(--radius-pill);
+  background: linear-gradient(180deg, var(--brand-red), var(--brand-red-hover));
+  box-shadow: 0 2px 12px rgba(181, 18, 43, 0.4);
+  transform: translateX(calc(100% * var(--level-index)));
+  transition: transform 200ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.level-slider-segment {
+  position: relative;
+  z-index: 1;
+  border: none;
+  background: transparent;
+  padding: 11px 8px;
+  border-radius: var(--radius-pill);
+  font-family: var(--font-mono), monospace;
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: color 160ms ease;
+}
+
+.level-slider-segment:hover {
+  color: var(--text-secondary);
+}
+
+.level-slider-segment[data-selected="true"] {
+  color: #ffffff;
+}
+
+@media (max-width: 720px) {
+  .face-scale-face {
+    padding: 10px 2px;
+  }
+
+  .face-scale-caption {
+    font-size: 9px;
+  }
 }
 
 .today-inline-error {
