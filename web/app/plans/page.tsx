@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createPortal } from "react-dom";
-import { type FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import { type FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { RequireAuth } from "@/components/auth-guard";
 import { useAppSession } from "@/components/auth-provider";
@@ -905,35 +905,38 @@ export default function PlansPage() {
   const archiveCountLabel = archivedPlans.length === 1 ? "1 plan" : `${archivedPlans.length} plans`;
   const hasPlans = visiblePlans.length > 0;
 
-  useEffect(() => {
-    if (!session?.access_token) {
+  const loadPlans = useCallback(async () => {
+    const token = session?.access_token;
+    if (!token) {
       return;
     }
     setIsLoading(true);
     setError(null);
-    Promise.all([
-      listPlans(session.access_token),
-      getActivePlan(session.access_token).catch((activeError) => {
-        if (activeError instanceof ApiError && activeError.status === 404) {
-          return null;
-        }
-        throw activeError;
-      }),
-    ])
-      .then(([nextPlans, active]) => {
-        setPlans(nextPlans);
-        setActivePlanId(active?.plan_id ?? null);
-      })
-      .catch((plansError) => {
-        const message = plansError instanceof Error ? plansError.message : "";
-        setError(message.includes("401") || message.toLowerCase().includes("session")
-          ? "Session expired. Sign in again."
-          : "Connection issue. Try again in a minute.");
-      })
-      .finally(() => {
-        setIsLoading(false);
-      });
+    try {
+      const [nextPlans, active] = await Promise.all([
+        listPlans(token),
+        getActivePlan(token).catch((activeError) => {
+          if (activeError instanceof ApiError && activeError.status === 404) {
+            return null;
+          }
+          throw activeError;
+        }),
+      ]);
+      setPlans(nextPlans);
+      setActivePlanId(active?.plan_id ?? null);
+    } catch (plansError) {
+      const message = plansError instanceof Error ? plansError.message : "";
+      setError(message.includes("401") || message.toLowerCase().includes("session")
+        ? "Session expired. Sign in again."
+        : "Connection issue. Try again in a minute.");
+    } finally {
+      setIsLoading(false);
+    }
   }, [session?.access_token]);
+
+  useEffect(() => {
+    void loadPlans();
+  }, [loadPlans]);
 
   useEffect(() => {
     if (!archivedPlans.length) {
@@ -990,7 +993,21 @@ export default function PlansPage() {
           </div>
         </div>
 
-        {error ? <div className="error-banner athlete-motion-slot athlete-motion-status">{error}</div> : null}
+        {error ? (
+          <div className="error-banner athlete-motion-slot athlete-motion-status" role="alert">
+            <span>{error}</span>
+            {error.includes("Session expired") ? null : (
+              <button
+                type="button"
+                className="error-banner-retry"
+                onClick={() => void loadPlans()}
+                disabled={isLoading}
+              >
+                {isLoading ? "Retrying..." : "Retry"}
+              </button>
+            )}
+          </div>
+        ) : null}
 
         {!isLoading && heldForReviewPlans.length > 0 ? (
           <HeldPlansReviewNotice plans={heldForReviewPlans} />

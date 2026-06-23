@@ -2957,6 +2957,30 @@ select:focus-visible {
   color: var(--danger-ink);
 }
 
+.error-banner:has(.error-banner-retry) {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.error-banner-retry {
+  flex: none;
+  padding: 6px 14px;
+  border-radius: 10px;
+  border: 1px solid currentColor;
+  background: transparent;
+  color: inherit;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.error-banner-retry:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
 .quick-build-refine-banner {
   display: grid;
   gap: 12px;

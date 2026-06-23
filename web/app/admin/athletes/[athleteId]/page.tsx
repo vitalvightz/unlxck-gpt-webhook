@@ -414,7 +414,7 @@ export default function AdminAthletePage() {
     storageKey: athleteId ? `unlxck:pending-generation:admin:${athleteId}` : null,
     createJob: async (clientRequestId) => {
       if (!session?.access_token || !athleteId) {
-        throw new Error("Session or athlete context is missing.");
+        throw new Error("Your session has expired. Please sign in again.");
       }
       return generateAdminAthletePlanFromLatestIntake(session.access_token, athleteId, clientRequestId);
     },
