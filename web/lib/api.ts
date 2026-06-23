@@ -608,9 +608,9 @@ export function renamePlan(token: string, planId: string, planName: string): Pro
   );
 }
 
-// Archives the plan (soft delete). The server-side DELETE route is archive-only;
-// the plan stays recoverable in the athlete's archived list.
-export async function deletePlan(token: string, planId: string): Promise<void> {
+// Archives the plan. The server-side DELETE route is archive-only; the plan
+// stays recoverable in the athlete's archived list.
+export async function archivePlan(token: string, planId: string): Promise<void> {
   return withTransientRetries(() =>
     requestVoid(`/api/plans/${encodeURIComponent(planId)}`, {
       method: "DELETE",
@@ -621,7 +621,7 @@ export async function deletePlan(token: string, planId: string): Promise<void> {
 
 // Admin-only hard delete. Non-archived plans require the exact plan name as
 // typed confirmation; archived plans can be deleted without it (pass no name).
-export async function permanentlyDeletePlan(
+export async function adminPermanentlyDeletePlan(
   token: string,
   planId: string,
   confirmPlanName?: string,
@@ -643,7 +643,7 @@ export type BulkPermanentDeleteResult = {
 
 // Admin-only bulk hard delete. Only already-archived plans are removed; any
 // non-archived ids are reported back in `skipped`.
-export async function bulkPermanentlyDeletePlans(
+export async function bulkPermanentlyDeleteArchivedPlans(
   token: string,
   planIds: string[],
 ): Promise<BulkPermanentDeleteResult> {
@@ -871,7 +871,7 @@ export function rejectApprovedPlan(token: string, planId: string): Promise<PlanD
   });
 }
 
-export function archivePlan(token: string, planId: string): Promise<PlanDetail> {
+export function adminArchivePlan(token: string, planId: string): Promise<PlanDetail> {
   return readJson<PlanDetail>(`/api/admin/plans/${encodeURIComponent(planId)}/archive`, {
     method: "POST",
     token,
