@@ -19,6 +19,7 @@ function normalizeSeverityToken(token: string): "low" | "moderate" | "high" | ""
 
 export const EMPTY_GUIDED_INJURY: GuidedInjuryState = {
   area: "",
+  zone: "",
   severity: "",
   trend: "",
   avoid: "",
@@ -48,6 +49,7 @@ export function coerceGuidedInjuryEditState(
 ): GuidedInjuryState {
   return {
     area: toGuidedTextValue(value?.area),
+    zone: toGuidedTextValue(value?.zone),
     severity: normalizeSeverityToken(value?.severity ?? ""),
     trend: toGuidedTextValue(value?.trend),
     avoid: toGuidedTextValue(value?.avoid),
@@ -93,6 +95,7 @@ export function normalizeGuidedInjuryState(
   }
   return {
     area: draft.area.trim(),
+    zone: draft.zone.trim(),
     severity: draft.severity,
     trend: draft.trend.trim(),
     avoid: draft.avoid.trim(),
@@ -360,6 +363,36 @@ export function buildGuidedInjurySummaries(
   return normalizeGuidedInjuryStates(values)
     .filter((value) => hasGuidedInjuryContent(value))
     .map((value) => buildGuidedInjurySummary(value))
+    .filter(Boolean)
+    .join(". ")
+    .trim();
+}
+
+// The notes field is overloaded: it carries the athlete's free-text extra
+// detail plus structured safety flags such as "[red_flags:none]". This strips
+// the structured flags so only the athlete-typed prose remains.
+const GUIDED_INJURY_NOTE_TAG_PATTERN = /\s?\[[a-z_]+:[^\]]*\]/gi;
+
+/** Returns only what the athlete actually typed for one injury: the free-text
+ * "what happened" description plus any free-text extra detail. It deliberately
+ * omits the derived comprehension (severity, trend, type, surface, impact,
+ * etc.) and the internal safety flags, so a round-trip shows the athlete their
+ * own words rather than the planner's structured read of them. */
+export function buildAthleteInjuryText(
+  value: Partial<GuidedInjuryState> | null | undefined,
+): string {
+  const details = normalizeGuidedInjuryState(value);
+  const freeNote = details.notes.replace(GUIDED_INJURY_NOTE_TAG_PATTERN, "").trim();
+  return [details.area, freeNote].filter(Boolean).join(". ").trim();
+}
+
+/** Joins the athlete-typed text across every injury with content. */
+export function buildAthleteInjuryTexts(
+  values: Array<Partial<GuidedInjuryState> | null | undefined> | null | undefined,
+): string {
+  return normalizeGuidedInjuryStates(values)
+    .filter((value) => hasGuidedInjuryContent(value))
+    .map((value) => buildAthleteInjuryText(value))
     .filter(Boolean)
     .join(". ")
     .trim();

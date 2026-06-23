@@ -951,8 +951,17 @@ export function GuidedInjuryCard({
   const [notesOpen, setNotesOpen] = useState(hasExtraDetail);
   const [staleNote, setStaleNote] = useState(false);
   const [draftFamily, setDraftFamily] = useState<InjuryFamily | "">("");
-  const [familyExpanded, setFamilyExpanded] = useState(true);
-  const [subtypeExpanded, setSubtypeExpanded] = useState(true);
+  // One progressive "Injury type" picker (family → subtype) replaces the old
+  // pair of always-expanded blocks. Start collapsed when a type is already set
+  // (e.g. a hydrated or revisited injury) so the card stays compact.
+  const [isEditingType, setIsEditingType] = useState(
+    !(injury.injury_type && (injury.injury_type !== "surface_injury" || injury.surface_type)),
+  );
+  const [prevInjury, setPrevInjury] = useState(injury);
+  if (injury !== prevInjury) {
+    setPrevInjury(injury);
+    setIsEditingType(!(injury.injury_type && (injury.injury_type !== "surface_injury" || injury.surface_type)));
+  }
   const injuryLabel = truncateForHeader(injury.area) || `Injury ${index + 1}`;
   const compactSummary = truncateForHeader(buildCompactSummary(injury), 80);
   const showWarning = shouldShowReviewWarning(injury);
@@ -1038,16 +1047,25 @@ export function GuidedInjuryCard({
 
   function handleFamilySelect(family: InjuryFamily) {
     setDraftFamily(family);
-    setFamilyExpanded(false);
-    setSubtypeExpanded(true);
     const currentFamily = getFamilyForInjury(injury);
     if (family === "not_sure") {
+      // "Not sure" resolves straight to a type, so collapse the picker.
       handleTypeSelect({ label: "Not sure", value: "unspecified" });
+      setIsEditingType(false);
       return;
     }
     if (currentFamily && currentFamily !== family) {
       handleTypeSelect(null);
     }
+    // Stay in edit mode; the picker advances to the subtype step now that a
+    // family is selected.
+  }
+
+  // Return to the family step, discarding the current type/subtype selection.
+  function handleChangeCategory() {
+    setDraftFamily("");
+    handleTypeSelect(null);
+    setIsEditingType(true);
   }
 
   return (
@@ -1164,52 +1182,43 @@ export function GuidedInjuryCard({
             </div>
           ) : null}
 
-          {/* Injury family + stepped selector */}
+          {/* Injury type — one progressive picker: family → subtype, collapsing
+              to a single summary once a type is chosen. */}
           <div className="gi-field">
-            <label className="gi-label">Closest category, if known</label>
-            <p className="gi-selection-helper">Used as a fallback if the description is unclear.</p>
-            {activeFamily && !familyExpanded ? (
+            <label className="gi-label">Injury type</label>
+            <p className="gi-selection-helper">Pick the closest match so we can flag safety risks. Used as a fallback if the description is unclear.</p>
+
+            {typeComplete && !isEditingType ? (
               <div className="gi-selection-summary">
-                <div>
-                  <p className="gi-selection-title">{selectedFamilyOption?.label}</p>
-                  <p className="gi-selection-helper">{selectedFamilyOption?.helper}</p>
-                </div>
-                <button type="button" className="gi-change-btn" onClick={() => setFamilyExpanded(true)} aria-expanded={familyExpanded}>Change</button>
+                <p className="gi-selection-title">
+                  {selectedSubtypeLabels.length
+                    ? `${selectedFamilyOption ? `${selectedFamilyOption.label} · ` : ""}${selectedSubtypeLabels.join(", ")}`
+                    : getInjuryTypeLabel(injury)}
+                </p>
+                <button type="button" className="gi-change-btn" onClick={() => setIsEditingType(true)} aria-expanded={isEditingType}>Change</button>
               </div>
-            ) : null}
-            {familyExpanded || !activeFamily ? (
+            ) : !activeFamily ? (
               <div className="gi-family-grid" role="radiogroup" aria-label="Injury family">
-              {INJURY_FAMILIES.map((family) => {
-                const selected = activeFamily === family.family;
-                return (
+                {INJURY_FAMILIES.map((family) => (
                   <button
                     key={family.family}
                     type="button"
                     role="radio"
-                    aria-checked={selected}
-                    className={`gi-family-card ${selected ? "gi-family-card-selected" : ""}`.trim()}
+                    aria-checked={false}
+                    className="gi-family-card"
                     onClick={() => handleFamilySelect(family.family)}
                   >
                     <span>{family.label}</span>
                     <small>{family.helper}</small>
                   </button>
-                );
-              })}
+                ))}
               </div>
-            ) : null}
-          </div>
-
-          {activeFamily ? (
-            <div className="gi-field">
-              <label className="gi-label">Injury type and extra subtypes</label>
-              <p className="gi-selection-helper">Pick the closest type first. Add more if several apply.</p>
-              {selectedSubtypeLabels.length > 0 && !subtypeExpanded ? (
+            ) : (
+              <>
                 <div className="gi-selection-summary">
-                  <p className="gi-selection-title">{selectedSubtypeLabels.join(", ")}</p>
-                  <button type="button" className="gi-change-btn" onClick={() => setSubtypeExpanded(true)} aria-expanded={subtypeExpanded}>Change</button>
+                  <p className="gi-selection-title">{selectedFamilyOption?.label}</p>
+                  <button type="button" className="gi-change-btn" onClick={handleChangeCategory}>Change category</button>
                 </div>
-              ) : null}
-              {subtypeExpanded || selectedSubtypeLabels.length === 0 ? (
                 <div className="gi-subtype-grid" role="group" aria-label="Injury subtype">
                   {getOptionsForFamily(activeFamily).map((opt) => {
                     if (opt.value === "unspecified") return null;
@@ -1242,9 +1251,12 @@ export function GuidedInjuryCard({
                     );
                   })}
                 </div>
-              ) : null}
-            </div>
-          ) : null}
+                {typeComplete ? (
+                  <button type="button" className="gi-notes-toggle" onClick={() => setIsEditingType(false)}>Done</button>
+                ) : null}
+              </>
+            )}
+          </div>
 
           {/* Default visible: Severity + Trend */}
           <div className="form-grid">

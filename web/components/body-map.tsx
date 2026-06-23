@@ -6,6 +6,10 @@ export type BodyMapSide = "front" | "back";
 export type BodyMapSeverity = "low" | "moderate" | "high";
 
 export type BodyMapSelection = {
+  // Stable zone key (e.g. "l_shoulder") used to keep the zone lit even after the
+  // athlete edits the free-text area. Optional so legacy/manually-typed injuries
+  // still match by label.
+  zone?: string;
   label: string;
   severity?: BodyMapSeverity | "";
 };
@@ -81,10 +85,18 @@ const SEVERITY_LABELS: Record<BodyMapSeverity, string> = {
 
 function findSelectionForZone(
   selections: BodyMapSelection[],
+  zoneKey: string,
   zoneLabel: string,
 ): BodyMapSelection | undefined {
+  // Prefer the stable zone key so the zone stays lit even after the athlete
+  // rewrites the free-text area. Fall back to a label match for legacy or
+  // manually-typed injuries that have no zone key yet.
+  const byZone = selections.find((entry) => entry.zone && entry.zone === zoneKey);
+  if (byZone) {
+    return byZone;
+  }
   const target = zoneLabel.toLowerCase();
-  return selections.find((entry) => entry.label.trim().toLowerCase() === target);
+  return selections.find((entry) => !entry.zone && entry.label.trim().toLowerCase() === target);
 }
 
 function severityClass(severity: BodyMapSeverity | "" | undefined): string {
@@ -103,9 +115,9 @@ function buildZoneAriaLabel(
   }
   const severity = selection.severity ? SEVERITY_LABELS[selection.severity] : null;
   if (severity) {
-    return `${zoneLabel}, marked at ${severity}. Press Enter to remove this injury.`;
+    return `${zoneLabel}, marked at ${severity}. Press Enter to open this injury.`;
   }
-  return `${zoneLabel}, marked. Press Enter to remove this injury.`;
+  return `${zoneLabel}, marked. Press Enter to open this injury.`;
 }
 
 function BodySvg({
@@ -117,7 +129,7 @@ function BodySvg({
 }: {
   side: BodyMapSide;
   selections: BodyMapSelection[];
-  onZoneSelect: (label: string) => void;
+  onZoneSelect: (zone: string, label: string) => void;
   hoverKey: string | null;
   setHoverKey: (key: string | null) => void;
 }) {
@@ -150,7 +162,7 @@ function BodySvg({
           <path d={SILHOUETTE_PATH} />
         </g>
         {Object.entries(zones).map(([key, zone]) => {
-          const selection = findSelectionForZone(selections, zone.label);
+          const selection = findSelectionForZone(selections, key, zone.label);
           const isUsed = Boolean(selection);
           const isHover = hoverKey === key;
           const ariaLabel = buildZoneAriaLabel(zone.label, selection);
@@ -158,7 +170,7 @@ function BodySvg({
           const handleKey = (event: KeyboardEvent<SVGGElement>) => {
             if (event.key === "Enter" || event.key === " ") {
               event.preventDefault();
-              onZoneSelect(zone.label);
+              onZoneSelect(key, zone.label);
             }
           };
 
@@ -180,7 +192,7 @@ function BodySvg({
               onMouseLeave={() => setHoverKey(null)}
               onFocus={() => setHoverKey(key)}
               onBlur={() => setHoverKey(null)}
-              onClick={() => onZoneSelect(zone.label)}
+              onClick={() => onZoneSelect(key, zone.label)}
               onKeyDown={handleKey}
             >
               <circle
@@ -208,7 +220,7 @@ function BodySvg({
 interface BodyMapProps {
   side: BodyMapSide;
   selections: BodyMapSelection[];
-  onZoneSelect: (label: string) => void;
+  onZoneSelect: (zone: string, label: string) => void;
   onSideChange: (side: BodyMapSide) => void;
 }
 

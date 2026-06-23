@@ -16,6 +16,7 @@ import {
 } from "@/lib/days-out-policy";
 import { validatePerformanceFocusSelections } from "@/lib/performance-focus-cap";
 import { HARD_SPARRING_DAY_CAP } from "@/lib/training-schedule";
+import { buildAthleteInjuryTexts } from "@/lib/guided-injury";
 import type { PlanRequest } from "@/lib/types";
 
 export const QUICK_BUILD_KEY_GOAL_CAP = 3;
@@ -100,7 +101,12 @@ export function planRequestToQuickBuildInput(plan: PlanRequest): QuickBuildInput
       0,
       QUICK_BUILD_WEAK_AREA_CAP,
     ),
-    injuries: (plan.injuries ?? "").trim(),
+    // When the athlete completed the advanced intake, plan.injuries holds the
+    // planner's structured comprehension ("Left shoulder is bruised (low,
+    // stable). Type: surface_injury. Surface: bruise..."), not their own words.
+    // Show what they actually typed; fall back to the free-text field only when
+    // there are no structured guided injuries to draw from.
+    injuries: buildAthleteInjuryTexts(plan.guided_injuries) || (plan.injuries ?? "").trim(),
   };
 }
 

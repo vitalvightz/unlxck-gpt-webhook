@@ -292,6 +292,10 @@ class GuidedInjuryInput(BaseModel):
     # UI submissions (selections/free-text top out well under these) and present
     # only to bound abuse, complementing the global json_limits guards.
     area: str = Field(default="", max_length=200)
+    # UI-only body-map zone key (e.g. "l_shoulder"). Lets the web map stay lit
+    # after the athlete rewrites the free-text area; not a planning signal, so it
+    # is intentionally omitted from the Stage 1 prompt serialization below.
+    zone: str = Field(default="", max_length=64)
     severity: GuidedInjurySeverity = ""
     trend: str = Field(default="", max_length=50)
     avoid: str = Field(default="", max_length=2000)
@@ -309,6 +313,7 @@ class GuidedInjuryInput(BaseModel):
 
     @field_validator(
         "area",
+        "zone",
         "trend",
         "avoid",
         "notes",

@@ -140,6 +140,37 @@ test("planRequestToQuickBuildInput drops hard sparring days outside availability
   assert.deepEqual(input.hard_sparring_days, ["Monday"]);
 });
 
+test("planRequestToQuickBuildInput shows the athlete's own words, not the structured comprehension", () => {
+  const plan = emptyPlanRequest("Athlete");
+  // plan.injuries holds the planner's derived comprehension after advanced intake.
+  plan.injuries =
+    "Left shoulder is bruised (low, stable). Type: surface_injury. Surface: bruise. Impact related: yes";
+  plan.guided_injuries = [
+    {
+      area: "Left shoulder is bruised",
+      severity: "low",
+      trend: "stable",
+      injury_type: "surface_injury",
+      surface_type: "bruise",
+      impact_related: "yes",
+      notes: "knocked it sparring [chest_symptoms:none]",
+    },
+  ];
+
+  const input = planRequestToQuickBuildInput(plan);
+  // The athlete sees what they typed (area + free-text note), with the derived
+  // fields and internal [tag:...] flags stripped — not the comprehension blob.
+  assert.equal(input.injuries, "Left shoulder is bruised. knocked it sparring");
+});
+
+test("planRequestToQuickBuildInput keeps free-text injuries when there are no guided injuries", () => {
+  const plan = emptyPlanRequest("Athlete");
+  plan.injuries = "Left knee tightness.";
+  plan.guided_injuries = [];
+  const input = planRequestToQuickBuildInput(plan);
+  assert.equal(input.injuries, "Left knee tightness.");
+});
+
 test("planRequestToQuickBuildInput clears fight_date when no_scheduled_fight is true", () => {
   const plan = emptyPlanRequest("Athlete");
   plan.fight_date = "2026-12-01";

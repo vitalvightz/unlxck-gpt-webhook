@@ -42,6 +42,10 @@ export type AthleteProfileInput = {
 
 export type GuidedInjuryInput = {
   area?: string;
+  // Stable body-map zone key (e.g. "l_shoulder") when the area was picked from
+  // the map. Lets the map stay lit even after the athlete edits the free-text
+  // area, and prevents duplicate cards when the same zone is tapped again.
+  zone?: string;
   severity?: string;
   trend?: string;
   avoid?: string;
