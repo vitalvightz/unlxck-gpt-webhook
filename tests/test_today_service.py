@@ -6,7 +6,7 @@ deterministic without a live clock or database.
 """
 
 from datetime import date, datetime, timedelta, timezone
-from types import SimpleNamespace
+from types import MappingProxyType, SimpleNamespace
 from zoneinfo import ZoneInfo
 
 import pytest
@@ -182,6 +182,11 @@ class SummaryActiveStore(FakeStore):
         ]
 
 
+class NullCheckinListStore(FakeStore):
+    def list_today_checkins_for_day(self, athlete_id: str, training_day: str):
+        return None
+
+
 def _multi_week_taper_brief() -> dict:
     """A two-week taper where each week has a single training day.
 
@@ -336,6 +341,33 @@ class TestCheckinSubmit:
         assert row["warnings"] == [
             "You already submitted a check-in for another plan today. This check-in is saved to the selected active plan only."
         ]
+
+    def test_same_day_warning_handles_null_lister_and_immutable_row(self):
+        store = NullCheckinListStore()
+        store.plans[PLAN] = {
+            "id": PLAN,
+            "athlete_id": ATHLETE,
+            "status": "ready",
+            "plan_name": "Camp A",
+            "created_at": "2026-06-01T00:00:00+00:00",
+        }
+        original_upsert = store.upsert_today_checkin
+
+        def immutable_upsert(athlete_id: str, fields: dict) -> MappingProxyType:
+            return MappingProxyType(original_upsert(athlete_id, fields))
+
+        store.upsert_today_checkin = immutable_upsert  # type: ignore[method-assign]
+
+        row = submit_today_checkin(
+            store,
+            athlete_id=ATHLETE,
+            athlete_timezone="",
+            payload=_checkin_payload(),
+            now=datetime(2026, 6, 18, 12, 0, tzinfo=timezone.utc),
+        )
+
+        assert row["warnings"] == []
+        assert row["plan_id"] == PLAN
 
 
 class TestPlanOwnership:
@@ -585,6 +617,33 @@ class TestCommandView:
         assert view.today.session_scope == "today"
         assert view.today.next_session["calendar_date"] == "2026-06-23"
         assert view.today.next_session["title"] == "Hard sparring"
+
+    def test_malformed_structured_session_degrades_without_crashing(self):
+        store = _store_with_plan()
+        store.plans[PLAN]["structured_plan"] = {
+            "weeks": [
+                {
+                    "phase_label": "GPP",
+                    "days": [
+                        {
+                            "date": "2026-06-23",
+                            "day_type": "high",
+                            "sessions": ["bad-session"],
+                        }
+                    ],
+                }
+            ]
+        }
+
+        view = build_today_command_view(
+            store,
+            athlete_id=ATHLETE,
+            athlete_timezone="",
+            now=datetime(2026, 6, 23, 12, 0, tzinfo=timezone.utc),
+        )
+
+        assert view.active_plan.get("phase") == "GPP"
+        assert view.today.next_session == {}
 
     def test_other_plan_checkin_warning_surfaces_in_command_view_without_blocking(self):
         store = _store_with_plan()

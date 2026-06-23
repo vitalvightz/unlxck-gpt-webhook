@@ -120,7 +120,7 @@ def _same_day_other_plan_warnings(
     lister = getattr(store, "list_today_checkins_for_day", None)
     if not callable(lister):
         return []
-    rows = lister(athlete_id, training_day)
+    rows = lister(athlete_id, training_day) or []
     has_other_plan_checkin = any(str(row.get("plan_id") or "") != plan_id for row in rows)
     return [OTHER_PLAN_CHECKIN_WARNING] if has_other_plan_checkin else []
 
@@ -362,7 +362,11 @@ def _normalized_structured_phase(value: Any) -> str:
 
 def _structured_phase_for_day(plan_row: Mapping[str, Any], training_day: str) -> str:
     for week in _structured_plan_weeks(plan_row):
+        if not isinstance(week, Mapping):
+            continue
         for day in _iter_mapping_items(week.get("days")):
+            if not isinstance(day, Mapping):
+                continue
             day_date = _clean_text(day.get("date"))[:10]
             if day_date == training_day:
                 return _normalized_structured_phase(day.get("phase_label")) or _normalized_structured_phase(
@@ -383,7 +387,10 @@ def _structured_session_entry_for_day(
     if not sessions:
         return None
 
-    session = dict(sessions[0])
+    first_session = sessions[0]
+    if not isinstance(first_session, Mapping):
+        return None
+    session = dict(first_session)
     today_card = day.get("today_card") if isinstance(day.get("today_card"), Mapping) else {}
     title = (
         _clean_text(session.get("title"))

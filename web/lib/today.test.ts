@@ -379,4 +379,5 @@ test("fatigue level control is backed by a range input for drag interaction", ()
   const source = readFileSync(new URL("../components/rating-controls.tsx", import.meta.url), "utf8");
   assert.equal(source.includes('className="level-slider-input"'), true);
   assert.equal(source.includes('type="range"'), true);
+  assert.equal(source.includes("onPointerDown={selectLevelFromPointer}"), true);
 });

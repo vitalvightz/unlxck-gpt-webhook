@@ -3,6 +3,7 @@
 import {
   useId,
   type KeyboardEvent,
+  type PointerEvent,
 } from "react";
 
 /* ------------------------------------------------------------------ *
@@ -244,6 +245,23 @@ export function LevelSlider({
   const currentIndex = selectedIndex === -1 ? 1 : selectedIndex;
   const activeLabel = selectedIndex === -1 ? "Not set" : LEVEL_OPTIONS[selectedIndex].label;
 
+  function selectLevelFromPointer(event: PointerEvent<HTMLInputElement>) {
+    if (selectedIndex !== -1) {
+      return;
+    }
+    const rect = event.currentTarget.getBoundingClientRect();
+    if (rect.width <= 0) {
+      onChange(LEVEL_OPTIONS[currentIndex].value);
+      return;
+    }
+    const percent = (event.clientX - rect.left) / rect.width;
+    const nextIndex = Math.min(
+      LEVEL_OPTIONS.length - 1,
+      Math.max(0, Math.floor(percent * LEVEL_OPTIONS.length)),
+    );
+    onChange(LEVEL_OPTIONS[nextIndex].value);
+  }
+
   return (
     <div
       className="level-slider"
@@ -263,6 +281,7 @@ export function LevelSlider({
           const nextIndex = Number.parseInt(event.target.value, 10);
           onChange(LEVEL_OPTIONS[nextIndex].value);
         }}
+        onPointerDown={selectLevelFromPointer}
       />
       {selectedIndex !== -1 ? (
         <span
