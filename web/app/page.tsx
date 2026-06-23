@@ -270,6 +270,11 @@ export default function HomePage() {
   }, [isReady, isMeHydrated, me, router, session]);
 
   const [isReloadingCommand, setIsReloadingCommand] = useState(false);
+  const latestTokenRef = useRef(session?.access_token);
+
+  useEffect(() => {
+    latestTokenRef.current = session?.access_token;
+  }, [session?.access_token]);
 
   const loadCommandState = useCallback(async () => {
     const token = session?.access_token;
@@ -281,12 +286,21 @@ export default function HomePage() {
     setCommandError(null);
     try {
       const state = await getToday(token);
+      // Ignore results from a request the current session has moved past.
+      if (latestTokenRef.current !== token) {
+        return;
+      }
       setCommandState(state);
       setCommandError(null);
     } catch {
+      if (latestTokenRef.current !== token) {
+        return;
+      }
       setCommandError("We couldn't load your camp status. Please try again.");
     } finally {
-      setIsReloadingCommand(false);
+      if (latestTokenRef.current === token) {
+        setIsReloadingCommand(false);
+      }
     }
   }, [session?.access_token]);
 
