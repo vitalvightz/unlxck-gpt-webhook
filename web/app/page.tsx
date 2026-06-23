@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { type ReactNode, useEffect, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useRef, useState } from "react";
 
 import { useAppSession } from "@/components/auth-provider";
 import { EmptyState } from "@/components/empty-state";
@@ -227,7 +227,7 @@ function enrichConfirmedActivePlan(
 }
 
 export default function HomePage() {
-  const { isReady, isMeHydrated, hasTransientMeError, session, me, signOut } = useAppSession();
+  const { isReady, isMeHydrated, hasTransientMeError, session, me, signOut, refreshMe } = useAppSession();
   const router = useRouter();
   const [commandState, setCommandState] = useState<TodayCommandView | null>(null);
   const [commandError, setCommandError] = useState<string | null>(null);
@@ -269,6 +269,41 @@ export default function HomePage() {
     }
   }, [isReady, isMeHydrated, me, router, session]);
 
+  const [isReloadingCommand, setIsReloadingCommand] = useState(false);
+  const latestTokenRef = useRef(session?.access_token);
+
+  useEffect(() => {
+    latestTokenRef.current = session?.access_token;
+  }, [session?.access_token]);
+
+  const loadCommandState = useCallback(async () => {
+    const token = session?.access_token;
+    if (!token) {
+      setCommandState(null);
+      return;
+    }
+    setIsReloadingCommand(true);
+    setCommandError(null);
+    try {
+      const state = await getToday(token);
+      // Ignore results from a request the current session has moved past.
+      if (latestTokenRef.current !== token) {
+        return;
+      }
+      setCommandState(state);
+      setCommandError(null);
+    } catch {
+      if (latestTokenRef.current !== token) {
+        return;
+      }
+      setCommandError("We couldn't load your camp status. Please try again.");
+    } finally {
+      if (latestTokenRef.current === token) {
+        setIsReloadingCommand(false);
+      }
+    }
+  }, [session?.access_token]);
+
   useEffect(() => {
     let active = true;
     if (!session?.access_token) {
@@ -283,9 +318,9 @@ export default function HomePage() {
         setCommandState(state);
         setCommandError(null);
       })
-      .catch((error) => {
+      .catch(() => {
         if (!active) return;
-        setCommandError(error instanceof Error ? error.message : "Overview failed to load.");
+        setCommandError("We couldn't load your camp status. Please try again.");
       });
     return () => {
       active = false;
@@ -297,9 +332,9 @@ export default function HomePage() {
       <section className="panel loading-card">
         <p className="kicker">Overview</p>
         <h1>Workspace temporarily unavailable</h1>
-        <p className="muted">Your session exists, but the app could not load your athlete profile.</p>
+        <p className="muted">We couldn&apos;t load your athlete profile. Please try again.</p>
         <div className="hero-actions">
-          <button type="button" className="cta" onClick={() => window.location.reload()}>
+          <button type="button" className="cta" onClick={() => void refreshMe()}>
             Retry
           </button>
           <button type="button" className="secondary-button" onClick={() => void signOut()}>
@@ -442,7 +477,19 @@ export default function HomePage() {
                 <div className="overview-operational-item"><span className="overview-operational-label">Training day</span><span className="overview-operational-value">{commandState?.today?.training_day || "Not set"}</span></div>
                 <div className="overview-operational-item"><span className="overview-operational-label">Fight date</span><span className="overview-operational-value">{formatPlanFightDate(String(activePlan.fight_date || ""))}</span></div>
               </div>
-              {commandError ? <p className="error-banner" role="alert">{commandError}</p> : null}
+              {commandError ? (
+                <div className="error-banner" role="alert">
+                  <span>{commandError}</span>
+                  <button
+                    type="button"
+                    className="error-banner-retry"
+                    onClick={() => void loadCommandState()}
+                    disabled={isReloadingCommand}
+                  >
+                    {isReloadingCommand ? "Retrying..." : "Retry"}
+                  </button>
+                </div>
+              ) : null}
             </div>
             <div className="status-card overview-next-action overview-decision-card overview-command-card" data-tone={decisionTone}>
               <p className="status-label">Today&apos;s state</p>

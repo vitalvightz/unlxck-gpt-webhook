@@ -65,7 +65,7 @@ export default function GeneratePage() {
     storageKey: STORAGE_KEY,
     createJob: async (clientRequestId) => {
       if (!session?.access_token || !payload) {
-        throw new Error("Session or intake payload is missing.");
+        throw new Error("We couldn't start generation. Please reload the page and try again.");
       }
       return createGenerationJob(session.access_token, payload, clientRequestId, resolvePlanSource(me));
     },
