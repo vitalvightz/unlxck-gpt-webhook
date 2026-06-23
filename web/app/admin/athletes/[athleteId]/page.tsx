@@ -12,7 +12,7 @@ import { RequireAuth } from "@/components/auth-guard";
 import { useAppSession } from "@/components/auth-provider";
 import {
   approveAndResumeGenerationFromJob,
-  bulkPermanentlyDeletePlans,
+  bulkPermanentlyDeleteArchivedPlans,
   getAdminAthleteGenerationJobs,
   generateAdminAthletePlanFromLatestIntake,
   getAdminAthlete,
@@ -138,7 +138,7 @@ function AthletePlanAccessCard({
     setError(null);
     setMessage(null);
     try {
-      const result = await bulkPermanentlyDeletePlans(accessToken, selectedArchivedIds);
+      const result = await bulkPermanentlyDeleteArchivedPlans(accessToken, selectedArchivedIds);
       onPlansDeleted(result.deleted);
       setSelectedIds((current) => current.filter((id) => !result.deleted.includes(id)));
       setMessage(
