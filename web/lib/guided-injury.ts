@@ -147,6 +147,37 @@ export function hasGuidedInjuryDescriptorWithoutArea(
   return !details.area && Boolean(details.severity || details.trend);
 }
 
+// Injury types that always warrant a coach/admin look before release.
+const SERIOUS_INJURY_TYPES = new Set([
+  "fracture",
+  "dislocation",
+  "tendon_ligament",
+  "post_surgery",
+  "head_impact",
+  "nerve_symptoms",
+  "chest_breathing",
+]);
+
+/** True when an injury carries a serious type or a medical-safety flag (open
+ * wound, won't-stop bleeding, infection signs, eye involvement) that should be
+ * surfaced for review before the plan is released. Shared by the injury card's
+ * inline warning and the restrictions step-level banner so they never drift. */
+export function hasGuidedInjuryReviewRisk(
+  value: Partial<GuidedInjuryState> | null | undefined,
+): boolean {
+  const injury = normalizeGuidedInjuryState(value);
+  if (SERIOUS_INJURY_TYPES.has(injury.injury_type)) {
+    return true;
+  }
+  if (injury.injury_type === "surface_injury") {
+    if (injury.open_wound === "yes") return true;
+    if (injury.bleeding_status === "wont_stop") return true;
+    if (injury.infection_signs.some((sign) => ["pus", "fever", "spreading"].includes(sign))) return true;
+    if (injury.sensitive_area === "eye") return true;
+  }
+  return false;
+}
+
 function normalizeGuidedText(value: string): string {
   return value.replace(/\s+/g, " ").trim();
 }

@@ -115,9 +115,9 @@ function buildZoneAriaLabel(
   }
   const severity = selection.severity ? SEVERITY_LABELS[selection.severity] : null;
   if (severity) {
-    return `${zoneLabel}, marked at ${severity}. Press Enter to open this injury.`;
+    return `${zoneLabel}, marked at ${severity}. Press Enter to change severity.`;
   }
-  return `${zoneLabel}, marked. Press Enter to open this injury.`;
+  return `${zoneLabel}, marked. Press Enter to set severity.`;
 }
 
 function BodySvg({
@@ -275,7 +275,10 @@ export function BodyMap({
         </button>
       </div>
       <p className="body-map-hint" aria-live="polite">
-        {hoverLabel || "Tap a zone, or type the area manually in a card."}
+        {hoverLabel ||
+          (hasAnyMarked
+            ? "Tap a zone to add it. Tap a marked zone to set its severity."
+            : "Tap a zone, or type the area manually in a card.")}
       </p>
       {hasAnyMarked ? (
         <ul className="body-map-legend" aria-label="Severity colour key">
