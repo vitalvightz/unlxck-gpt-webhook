@@ -239,6 +239,7 @@ export function LevelSlider({
   onChange: (value: LevelValue) => void;
   ariaLabel?: string;
 }) {
+  const controlId = useId();
   const selectedIndex = LEVEL_OPTIONS.findIndex((option) => option.value === value);
 
   function move(delta: number) {
