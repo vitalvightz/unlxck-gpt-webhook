@@ -478,7 +478,7 @@ def _prefer_earlier_structured_next_entry(target_entry: Any, structured_next_ent
     structured_date = _entry_calendar_date(structured_next_entry)
     if structured_date is None:
         return target_entry
-    if target_date is None or structured_date < target_date:
+    if target_date is None or structured_date <= target_date:
         return structured_next_entry
     return target_entry
 
