@@ -1,4 +1,5 @@
 import { getOptionLabels, TECHNICAL_STYLE_OPTIONS } from "@/lib/intake-options";
+import { formatPlanLabel } from "@/lib/plan-labels";
 
 type PlanDisplayFields = {
   fight_date?: string | null;
@@ -81,7 +82,5 @@ export function formatPlanStatus(value?: string | null): string {
     return "Pending";
   }
 
-  return normalized
-    .replace(/[_-]+/g, " ")
-    .replace(/\b\w/g, (character) => character.toUpperCase());
+  return formatPlanLabel(normalized);
 }
