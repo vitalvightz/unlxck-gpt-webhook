@@ -133,6 +133,7 @@ export function deriveCountdownLabel(
 }
 
 export type Completion = { done: number; total: number };
+const TERMINAL_SESSION_COMPLETION_STATUSES = new Set(["done", "modified", "skipped"]);
 
 /** Sessions marked done over total sessions across all of a week's days. */
 export function weekCompletion(week: StructuredWeek | null | undefined): Completion {
@@ -152,6 +153,60 @@ export function dayCompletion(day: StructuredDay | null | undefined): Completion
     (session) => cleanText(session.completion_status)?.toLowerCase() === "done",
   ).length;
   return { done, total: sessions.length };
+}
+
+function isSessionTerminal(session: StructuredSession | null | undefined): boolean {
+  return TERMINAL_SESSION_COMPLETION_STATUSES.has(
+    cleanText(session?.completion_status)?.toLowerCase() ?? "",
+  );
+}
+
+function dateFromDay(day: StructuredDay | null | undefined): Date | null {
+  const iso = dayISO(day);
+  if (!iso) {
+    return null;
+  }
+  const parsed = new Date(`${iso}T12:00:00`);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+/**
+ * Correct a backend-provided "next session" focus against the card order the
+ * athlete can actually see. Once Today is logged, Plan Detail should advance to
+ * the first future unfinished app-session card in rendered order; only when
+ * there is no such app card do coach-led/sessionless days get the marker.
+ */
+export function resolveNextPlanFocusDay(
+  plan: StructuredPlan | null | undefined,
+  trainingDay: Date | null,
+  fallbackFocusDay: Date | null | undefined,
+): Date | undefined {
+  if (!trainingDay || !fallbackFocusDay) {
+    return fallbackFocusDay ?? undefined;
+  }
+  const current = resolveCurrentDay(plan, trainingDay);
+  if (current.weekPos == null || current.dayPos == null) {
+    return fallbackFocusDay;
+  }
+
+  const weeks = getWeeks(plan);
+  const futureDays: StructuredDay[] = [];
+  for (let weekPos = current.weekPos; weekPos < weeks.length; weekPos += 1) {
+    const days = getDays(weeks[weekPos]);
+    const startDayPos = weekPos === current.weekPos ? current.dayPos + 1 : 0;
+    for (let dayPos = startDayPos; dayPos < days.length; dayPos += 1) {
+      futureDays.push(days[dayPos]!);
+    }
+  }
+
+  const nextAppDay = futureDays.find((day) => {
+    const sessions = getSessions(day);
+    return sessions.length > 0 && sessions.some((session) => !isSessionTerminal(session));
+  });
+  const nextCoachLedDay = futureDays.find((day) => {
+    return getSessions(day).length === 0 && classifySessionlessDay(day).coachLed;
+  });
+  return dateFromDay(nextAppDay ?? nextCoachLedDay) ?? fallbackFocusDay;
 }
 
 export type WeekSessionSummary = {

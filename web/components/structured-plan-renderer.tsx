@@ -34,6 +34,7 @@ import {
 } from "@/lib/structured-plan";
 import {
   dayCompletion,
+  resolveNextPlanFocusDay,
   resolvePlanProgress,
   weekCompletion,
   weekLoadProxy,
@@ -1000,7 +1001,10 @@ export function StructuredPlanRenderer({
   // view never lies about which week is actually current. With no `focusDay` the
   // two progressions collapse to the same value (normal calendar behaviour).
   const calendarProgress = resolvePlanProgress(plan, today ?? mountedDay);
-  const focusProgress = focusDay ? resolvePlanProgress(plan, focusDay) : calendarProgress;
+  const resolvedFocusDay = focusDay
+    ? resolveNextPlanFocusDay(plan, today ?? mountedDay, focusDay)
+    : undefined;
+  const focusProgress = resolvedFocusDay ? resolvePlanProgress(plan, resolvedFocusDay) : calendarProgress;
   // The selected week is user-controllable; default to the focused week (current
   // week, or the next session's week when advanced; first week when today falls
   // outside the camp). `selectedPos` stays null until the user picks a week so
