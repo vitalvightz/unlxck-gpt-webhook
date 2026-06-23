@@ -5,15 +5,15 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 import {
+  adminArchivePlan,
+  adminPermanentlyDeletePlan,
   approveAndResumeGeneration,
   approvePlanForRelease,
   archivePlan,
-  deletePlan,
   getActivePlan,
   getPlan,
   getToday,
   isRetryableApiFailure,
-  permanentlyDeletePlan,
   rejectApprovedPlan,
   renamePlan,
   setActivePlan,
@@ -31,6 +31,7 @@ import { STAGE2_HARD_BLOCKER_CODE_SET } from "@/lib/stage2-policy";
 import { shouldRenderStructuredPlan } from "@/lib/structured-plan";
 import { selectInjuryRiskAdvisory } from "@/lib/sparring-advisory";
 import { explainRiskBand } from "@/lib/sparring-reason-codes";
+import { formatPlanStatus } from "@/lib/plan-format";
 import {
   buildBlockedInjuryContextSummary,
   buildBlockedWhy,
@@ -1718,7 +1719,7 @@ export function PlanViewer({
 
   const statusLabel = isTriageBlocked
     ? blockedTitle
-    : titleizeToken(plan.status || "generated");
+    : formatPlanStatus(plan.status || "generated");
 
   const stage2Status = isTriageBlocked
     ? "Stage 2 skipped intentionally"
@@ -2248,7 +2249,7 @@ export function PlanViewer({
     setArchiveMessage(null);
 
     try {
-      const updatedPlan = await archivePlan(accessToken, plan.plan_id);
+      const updatedPlan = await adminArchivePlan(accessToken, plan.plan_id);
       onPlanUpdated?.(updatedPlan);
       setArchiveMessage("Plan archived.");
     } catch (error) {
@@ -2317,7 +2318,7 @@ export function PlanViewer({
     setPlanActionMessage(null);
 
     try {
-      await deletePlan(accessToken, plan.plan_id);
+      await archivePlan(accessToken, plan.plan_id);
       clearCompletedGenerationForDeletedPlan(plan.plan_id);
       await onPlanDeleted?.();
       router.push(viewerRole === "admin" ? "/admin" : "/plans");
@@ -2380,7 +2381,7 @@ export function PlanViewer({
     setPlanActionMessage(null);
 
     try {
-      await permanentlyDeletePlan(accessToken, plan.plan_id, isArchived ? undefined : planName);
+      await adminPermanentlyDeletePlan(accessToken, plan.plan_id, isArchived ? undefined : planName);
       clearCompletedGenerationForDeletedPlan(plan.plan_id);
       await onPlanDeleted?.();
       router.push("/admin");
