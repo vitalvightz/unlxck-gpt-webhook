@@ -12,6 +12,8 @@ from zoneinfo import ZoneInfo
 import pytest
 from fastapi import HTTPException
 
+from api.models import WeeklyDayEntry, WeeklySchedule
+from api.routes.daily import _resolve_today_and_next
 from api.contracts.completion import completion_landing_state, completion_status_of
 from api.services.today_service import (
     _scan_forward_for_next_training,
@@ -167,6 +169,57 @@ def _monday_strength_structured_plan() -> dict:
     }
 
 
+def _out_of_order_countdown_structured_plan() -> dict:
+    return {
+        "weeks": [
+            {
+                "phase_label": "TAPER",
+                "days": [
+                    {
+                        "date": "2026-06-23",
+                        "countdown_label": "D-9",
+                        "day_type": "high",
+                        "sessions": [
+                            {
+                                "session_id": "2026-06-23-app",
+                                "session_type": "strength",
+                                "title": "Tuesday app session",
+                                "blocks": [],
+                            }
+                        ],
+                    },
+                    {
+                        "date": "2026-06-27",
+                        "countdown_label": "D-5",
+                        "day_type": "high",
+                        "sessions": [
+                            {
+                                "session_id": "2026-06-27-sparring",
+                                "session_type": "sparring",
+                                "title": "Saturday technical sparring",
+                                "blocks": [],
+                            }
+                        ],
+                    },
+                    {
+                        "date": "2026-06-26",
+                        "countdown_label": "D-6",
+                        "day_type": "high",
+                        "sessions": [
+                            {
+                                "session_id": "2026-06-26-app",
+                                "session_type": "app_session",
+                                "title": "Friday app session",
+                                "blocks": [],
+                            }
+                        ],
+                    },
+                ],
+            }
+        ]
+    }
+
+
 class SummaryActiveStore(FakeStore):
     """Mirror production auto-active selection, where list_user_plans is summary-only."""
 
@@ -185,6 +238,43 @@ class SummaryActiveStore(FakeStore):
 class NullCheckinListStore(FakeStore):
     def list_today_checkins_for_day(self, athlete_id: str, training_day: str):
         return None
+
+
+class TestDailyScheduleResolver:
+    def test_next_session_uses_earliest_future_calendar_date(self):
+        week = WeeklySchedule(
+            plan_id=PLAN,
+            week_index=0,
+            week_count=1,
+            days=[
+                WeeklyDayEntry(
+                    weekday="Tue",
+                    calendar_date="2026-06-23",
+                    effective_load="hard",
+                    status="app_session",
+                ),
+                WeeklyDayEntry(
+                    weekday="Sat",
+                    calendar_date="2026-06-27",
+                    effective_load="technical",
+                    status="technical_sparring",
+                ),
+                WeeklyDayEntry(
+                    weekday="Fri",
+                    calendar_date="2026-06-26",
+                    effective_load="reduced",
+                    status="app_session",
+                ),
+            ],
+        )
+
+        today_entry, next_entry = _resolve_today_and_next(week, today=date(2026, 6, 23))
+
+        assert today_entry is not None
+        assert today_entry.calendar_date == "2026-06-23"
+        assert next_entry is not None
+        assert next_entry.weekday == "Fri"
+        assert next_entry.calendar_date == "2026-06-26"
 
 
 def _multi_week_taper_brief() -> dict:
@@ -562,6 +652,33 @@ class TestCommandView:
         assert completed_view.today.next_session["calendar_date"] == "2026-06-19"
         assert completed_view.today.next_session["session_relation"] == "next"
 
+    def test_completed_today_structured_fallback_uses_earliest_future_date(self):
+        store = _store_with_plan()
+        store.plans[PLAN]["structured_plan"] = _out_of_order_countdown_structured_plan()
+        now = datetime(2026, 6, 23, 12, 0, tzinfo=timezone.utc)
+
+        upsert_session_completion(
+            store,
+            athlete_id=ATHLETE,
+            athlete_timezone="",
+            payload={"plan_id": PLAN, "session_id": "2026-06-23-app", "status": "done"},
+            now=now,
+        )
+
+        view = build_today_command_view(
+            store,
+            athlete_id=ATHLETE,
+            athlete_timezone="",
+            now=now,
+        )
+
+        assert view.today.completion_status == "done"
+        assert view.today.session_scope == "next"
+        assert view.today.next_session["calendar_date"] == "2026-06-26"
+        assert view.today.next_session["weekday"] == "Friday"
+        assert view.today.next_session["title"] == "Friday app session"
+        assert view.today.next_session["title"] != "Saturday technical sparring"
+
     def test_calendar_rest_day_falls_forward_to_next_real_session(self):
         store = _store_with_plan()
         store.plans[PLAN]["planning_brief"] = _monday_rest_tuesday_training_brief()
@@ -855,6 +972,12 @@ class TestScanForwardForNextTraining:
         future = {"weekday": "Wed", "calendar_date": "2026-06-24", "effective_load": "technical"}
         result = self._scan([], [future], training_date=date(2026, 6, 20))
         assert result is future
+
+    def test_dict_entry_returns_earliest_future_dated_session(self):
+        saturday = {"weekday": "Sat", "calendar_date": "2026-06-27", "effective_load": "technical"}
+        friday = {"weekday": "Fri", "calendar_date": "2026-06-26", "effective_load": "reduced"}
+        result = self._scan([], [saturday, friday], training_date=date(2026, 6, 23))
+        assert result is friday
 
     def test_dict_entry_without_date_is_returned(self):
         # Undated (weekday-only) plans can't be compared, so any later-week

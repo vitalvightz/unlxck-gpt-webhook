@@ -16,7 +16,7 @@ come straight from the deterministic evaluator.
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from typing import Any, Mapping
 
 from fastapi import HTTPException, status
@@ -332,6 +332,13 @@ def _clean_text(value: Any) -> str:
     return str(value or "").strip()
 
 
+def _parse_structured_date(value: Any) -> date | None:
+    try:
+        return date.fromisoformat(_clean_text(value)[:10])
+    except ValueError:
+        return None
+
+
 def _structured_effective_load(day_type: Any) -> str:
     normalized = _clean_text(day_type).lower()
     if normalized in {"hard", "high"}:
@@ -432,15 +439,23 @@ def _structured_today_session_entry(plan_row: Mapping[str, Any], training_day: s
 
 
 def _structured_next_session_entry(plan_row: Mapping[str, Any], training_day: str) -> dict[str, Any] | None:
+    training_date = _parse_structured_date(training_day)
+    if training_date is None:
+        return None
+    candidates: list[tuple[date, dict[str, Any]]] = []
     for week in _structured_plan_weeks(plan_row):
         for day in _iter_mapping_items(week.get("days")):
             day_date = _clean_text(day.get("date"))[:10]
-            if not day_date or day_date <= training_day:
+            parsed_day_date = _parse_structured_date(day_date)
+            if parsed_day_date is None or parsed_day_date <= training_date:
                 continue
             entry = _structured_session_entry_for_day(day, week=week)
             if entry and _has_scheduled_day_content(entry):
-                return entry
-    return None
+                candidates.append((parsed_day_date, entry))
+    if not candidates:
+        return None
+    candidates.sort(key=lambda item: item[0])
+    return candidates[0][1]
 
 
 def _scan_forward_for_next_training(
@@ -470,6 +485,8 @@ def _scan_forward_for_next_training(
         later_week = weekly_schedule_or_none(plan_row, week_index=index)
         if later_week is None:
             continue
+        dated_candidates = []
+        undated_candidates = []
         for entry in getattr(later_week, "days", []) or []:
             if not _entry_has_training(entry):
                 continue
@@ -484,7 +501,15 @@ def _scan_forward_for_next_training(
             # training day is the next session.
             if entry_date is not None and training_date is not None and entry_date <= training_date:
                 continue
-            return entry
+            if entry_date is not None:
+                dated_candidates.append((entry_date, entry))
+            else:
+                undated_candidates.append(entry)
+        if dated_candidates:
+            dated_candidates.sort(key=lambda item: item[0])
+            return dated_candidates[0][1]
+        if undated_candidates:
+            return undated_candidates[0]
     return None
 
 
