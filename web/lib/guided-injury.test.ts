@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  buildAthleteInjuryText,
+  buildAthleteInjuryTexts,
   buildGuidedInjuryFields,
   buildGuidedInjurySummaries,
   coerceGuidedInjuryEditState,
@@ -11,6 +13,28 @@ import {
   normalizeGuidedInjuryState,
   parseGuidedInjuryState,
 } from "./guided-injury.ts";
+
+test("buildAthleteInjuryText returns only the athlete-typed area and free-text note", () => {
+  const text = buildAthleteInjuryText({
+    area: "Left shoulder is bruised",
+    severity: "low",
+    trend: "stable",
+    injury_type: "surface_injury",
+    surface_type: "bruise",
+    impact_related: "yes",
+    notes: "knocked it sparring [chest_symptoms:none]",
+  });
+  assert.equal(text, "Left shoulder is bruised. knocked it sparring");
+});
+
+test("buildAthleteInjuryTexts joins athlete words across injuries and skips empties", () => {
+  const text = buildAthleteInjuryTexts([
+    { area: "Left shoulder is bruised", severity: "low" },
+    null,
+    { area: "Right knee ache", notes: "[red_flags:none]" },
+  ]);
+  assert.equal(text, "Left shoulder is bruised. Right knee ache");
+});
 
 test("coerceGuidedInjuryEditState preserves spaces while typing free-text fields", () => {
   assert.deepStrictEqual(

@@ -365,6 +365,36 @@ export function buildGuidedInjurySummaries(
     .trim();
 }
 
+// The notes field is overloaded: it carries the athlete's free-text extra
+// detail plus structured safety flags such as "[red_flags:none]". This strips
+// the structured flags so only the athlete-typed prose remains.
+const GUIDED_INJURY_NOTE_TAG_PATTERN = /\s?\[[a-z_]+:[^\]]*\]/gi;
+
+/** Returns only what the athlete actually typed for one injury: the free-text
+ * "what happened" description plus any free-text extra detail. It deliberately
+ * omits the derived comprehension (severity, trend, type, surface, impact,
+ * etc.) and the internal safety flags, so a round-trip shows the athlete their
+ * own words rather than the planner's structured read of them. */
+export function buildAthleteInjuryText(
+  value: Partial<GuidedInjuryState> | null | undefined,
+): string {
+  const details = normalizeGuidedInjuryState(value);
+  const freeNote = details.notes.replace(GUIDED_INJURY_NOTE_TAG_PATTERN, "").trim();
+  return [details.area, freeNote].filter(Boolean).join(". ").trim();
+}
+
+/** Joins the athlete-typed text across every injury with content. */
+export function buildAthleteInjuryTexts(
+  values: Array<Partial<GuidedInjuryState> | null | undefined> | null | undefined,
+): string {
+  return normalizeGuidedInjuryStates(values)
+    .filter((value) => hasGuidedInjuryContent(value))
+    .map((value) => buildAthleteInjuryText(value))
+    .filter(Boolean)
+    .join(". ")
+    .trim();
+}
+
 export function hydrateGuidedInjuryStates(source: GuidedInjuryHydrationSource): GuidedInjuryState[] {
   const nextGuidedInjuries = normalizeGuidedInjuryStates(source.guided_injuries).filter((value) =>
     hasGuidedInjuryContent(value),
