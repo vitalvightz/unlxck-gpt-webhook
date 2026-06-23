@@ -1915,19 +1915,6 @@ export function PlanViewer({
   // building does not flash a stale rejection reason.
   const structuredCardDebug = isAwaitingStructuredUpgrade ? null : readStructuredCardDebug(plan);
 
-  // The next scheduled session's day, once today is logged (see
-  // nextSessionFocusISO). Passed as the camp map's `focusDay`: undefined keeps the
-  // calendar "Today" highlight; a valid date advances the highlight + auto-open to
-  // the next session (badge "Next session") while the current-week marker and
-  // countdown stay on the real today.
-  const nextSessionFocusDate = (() => {
-    if (!nextSessionFocusISO) {
-      return undefined;
-    }
-    const parsed = new Date(`${nextSessionFocusISO}T12:00:00`);
-    return Number.isNaN(parsed.getTime()) ? undefined : parsed;
-  })();
-
   useEffect(() => {
     setManualPlanText(plan.admin_outputs?.final_plan_text || "");
   }, [plan.plan_id, plan.admin_outputs?.final_plan_text]);
@@ -1974,13 +1961,16 @@ export function PlanViewer({
         const isThisActivePlan = state.active_plan?.id === plan.plan_id;
         const iso =
           isThisActivePlan && next?.session_relation === "next"
-            ? (next.calendar_date || "").slice(0, 10) || null
-            : null;
-        setNextSessionFocusISO(iso);
+            ? (next.calendar_date || "").slice(0, 10)
+            : "";
+        // Parse at local noon to dodge any timezone date-shift; an unusable date
+        // (undated plans) leaves the calendar "Today" highlight untouched.
+        const parsed = iso ? new Date(`${iso}T12:00:00`) : null;
+        setNextSessionFocusDate(parsed && !Number.isNaN(parsed.getTime()) ? parsed : undefined);
       })
       .catch(() => {
         if (!cancelled) {
-          setNextSessionFocusISO(null);
+          setNextSessionFocusDate(undefined);
         }
       });
     return () => {
