@@ -10,6 +10,7 @@ import {
   SessionlessDayCard,
 } from "@/components/structured-plan-renderer";
 import { useToast } from "@/components/toast-provider";
+import { EffortSlider, FaceScale } from "@/components/rating-controls";
 import { getPlan, getToday, submitTodayCheckin, submitTodaySessionCompletion } from "@/lib/api";
 import {
   resolveCurrentDay,
@@ -403,8 +404,8 @@ function CompletionForm({
     notes: string;
   }) => Promise<void>;
 }) {
-  const [sessionRpe, setSessionRpe] = useState("");
-  const [painAfter, setPainAfter] = useState("");
+  const [sessionRpe, setSessionRpe] = useState<number | null>(null);
+  const [painAfter, setPainAfter] = useState<number | null>(null);
   const [modificationReason, setModificationReason] = useState("");
   const [notes, setNotes] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -423,13 +424,13 @@ function CompletionForm({
       setError("Modified sessions need a reason.");
       return;
     }
-    if (needsReviewFields && (!sessionRpe || !painAfter)) {
+    if (needsReviewFields && (sessionRpe === null || painAfter === null)) {
       setError("Add session RPE and pain-after before saving.");
       return;
     }
     await onSubmit({
-      sessionRpe: sessionRpe ? Number.parseInt(sessionRpe, 10) : null,
-      painAfter: painAfter ? Number.parseInt(painAfter, 10) : null,
+      sessionRpe,
+      painAfter,
       modificationReason: modificationReason.trim(),
       notes: notes.trim(),
     });
@@ -439,30 +440,19 @@ function CompletionForm({
     <form className="today-completion-form" onSubmit={handleSubmit}>
       {needsReviewFields ? (
         <div className="today-completion-fields">
-          <label className="field" htmlFor="today-session-rpe">
-            <span>Session RPE</span>
-            <input
+          <div className="field">
+            <span>Session effort</span>
+            <EffortSlider
               id="today-session-rpe"
-              type="number"
-              inputMode="numeric"
-              min={1}
-              max={10}
+              ariaLabel="Session effort"
               value={sessionRpe}
-              onChange={(event) => setSessionRpe(event.target.value)}
+              onChange={setSessionRpe}
             />
-          </label>
-          <label className="field" htmlFor="today-pain-after">
+          </div>
+          <div className="field">
             <span>Pain after</span>
-            <input
-              id="today-pain-after"
-              type="number"
-              inputMode="numeric"
-              min={0}
-              max={10}
-              value={painAfter}
-              onChange={(event) => setPainAfter(event.target.value)}
-            />
-          </label>
+            <FaceScale value={painAfter} onChange={setPainAfter} />
+          </div>
         </div>
       ) : null}
       {completionRequiresModificationReason(activeIntent) ? (
