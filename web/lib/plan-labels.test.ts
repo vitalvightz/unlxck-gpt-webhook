@@ -64,4 +64,3 @@ test("isRawEnumLabel detects machine tokens but not human sentences", () => {
   assert.equal(isRawEnumLabel(""), false);
   assert.equal(isRawEnumLabel(null), false);
 });
-
