@@ -1827,7 +1827,7 @@ export function PlanViewer({
   // logged, the command view advances `next_session` to the next scheduled day.
   // We mirror that here so the camp map highlights the next session instead of
   // keeping the finished day under the "Today" badge (matching Overview/Today).
-  const [nextSessionFocusISO, setNextSessionFocusISO] = useState<string | null>(null);
+  const [nextSessionFocusDate, setNextSessionFocusDate] = useState<Date | undefined>(undefined);
   const [setActivePending, setSetActivePending] = useState(false);
   const [setActiveError, setSetActiveError] = useState<string | null>(null);
   const [planActionPending, setPlanActionPending] = useState<
