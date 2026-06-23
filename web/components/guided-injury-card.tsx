@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { GUIDED_INJURY_AREA_MAX, GUIDED_INJURY_NOTES_MAX } from "@/lib/input-limits";
-import type { GuidedInjuryState } from "@/lib/guided-injury";
+import { hasGuidedInjuryReviewRisk, type GuidedInjuryState } from "@/lib/guided-injury";
 import {
   GUIDED_INJURY_SEVERITY_OPTIONS,
   type IntakeOption,
@@ -177,13 +177,6 @@ const HEAD_RED_FLAGS = [
   { label: "Confusion", value: "confusion" },
 ];
 
-// ── Serious-type set (triggers review warning) ───────────────────────
-
-const SERIOUS_TYPES = new Set([
-  "fracture", "dislocation", "tendon_ligament", "post_surgery",
-  "head_impact", "nerve_symptoms", "chest_breathing",
-]);
-
 // ── Trend options ────────────────────────────────────────────────────
 
 const INJURY_TREND_OPTIONS: IntakeOption[] = [
@@ -288,17 +281,6 @@ function isSafetyComplete(injury: GuidedInjuryState, family: InjuryFamily | ""):
     return false;
   }
   return true;
-}
-
-function shouldShowReviewWarning(injury: GuidedInjuryState): boolean {
-  if (SERIOUS_TYPES.has(injury.injury_type)) return true;
-  if (injury.injury_type === "surface_injury") {
-    if (injury.open_wound === "yes") return true;
-    if (injury.bleeding_status === "wont_stop") return true;
-    if (injury.infection_signs.some((s) => ["pus", "fever", "spreading"].includes(s))) return true;
-    if (injury.sensitive_area === "eye") return true;
-  }
-  return false;
 }
 
 function getAvoidChipsForInjury(injury: GuidedInjuryState): string[] {
@@ -964,7 +946,7 @@ export function GuidedInjuryCard({
   }
   const injuryLabel = truncateForHeader(injury.area) || `Injury ${index + 1}`;
   const compactSummary = truncateForHeader(buildCompactSummary(injury), 80);
-  const showWarning = shouldShowReviewWarning(injury);
+  const showWarning = hasGuidedInjuryReviewRisk(injury);
   const hasFollowUp = injury.injury_type !== "";
   const derivedFamily = getFamilyForInjury(injury);
   const activeFamily = derivedFamily || draftFamily;

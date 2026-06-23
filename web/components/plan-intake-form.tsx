@@ -36,6 +36,7 @@ import {
   EMPTY_GUIDED_INJURY,
   hasGuidedInjuryContent,
   hasGuidedInjuryDescriptorWithoutArea,
+  hasGuidedInjuryReviewRisk,
   hydrateGuidedInjuryStates,
   type GuidedInjuryState,
 } from "@/lib/guided-injury";
@@ -869,6 +870,9 @@ export function PlanIntakeForm() {
   const lastSavedSnapshotRef = useRef<string>("");
   const issueRedirectConsumedRef = useRef(false);
   const recordHasError = !isValidRecordFormat(form.athlete.record ?? "");
+  // Count injuries carrying a serious type or medical-safety flag so the
+  // restrictions step can surface a single banner above the cards.
+  const reviewRiskInjuryCount = guidedInjuries.filter((injury) => hasGuidedInjuryReviewRisk(injury)).length;
 
   // ── Days-out policy: compute field visibility/disablement ───────────
   const daysUntilFight = computeDaysUntilFight(form.fight_date);
@@ -2806,19 +2810,34 @@ export function PlanIntakeForm() {
                   <p className="kicker">Restrictions</p>
                   <h2 className="form-section-title">Injuries or restrictions</h2>
                 </div>
-                <label className={`inline-warning-ack inline-warning-ack-compact ${noRestrictions ? "inline-warning-ack-checked" : ""}`.trim()}>
-                  <input
-                    type="checkbox"
-                    checked={noRestrictions}
-                    onChange={(event) => handleNoRestrictionsChange(event.target.checked)}
-                  />
-                  <span className="inline-warning-ack-stack">
-                    <span className="inline-warning-ack-copy">No current injuries or restrictions</span>
-                    <span className="muted">Leave this checked when the athlete has nothing the planner needs to work around.</span>
-                  </span>
-                </label>
-                {!noRestrictions ? (
+                {noRestrictions ? (
+                  // Empty state — a single inline CTA reveals the body map and a
+                  // first card, instead of asking the athlete to untick a box first.
+                  <div className="support-panel gi-empty-state compact-gap">
+                    <p className="kicker">Anything to train around?</p>
+                    <p className="muted">Add any injuries, pain, or movement limits the planner should respect. Leave this empty if there&apos;s nothing to work around.</p>
+                    <button type="button" className="injury-card-add-btn" onClick={() => handleNoRestrictionsChange(false)}>
+                      <span aria-hidden="true">+</span> Add an injury or restriction
+                    </button>
+                  </div>
+                ) : (
                   <>
+                    {reviewRiskInjuryCount > 0 ? (
+                      <div className="gi-review-warning gi-review-warning-step" role="status">
+                        <svg className="gi-review-warning-icon" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                          <path d="M8 1.5L1 14h14L8 1.5z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round" />
+                          <path d="M8 6v3.5M8 11.5v.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+                        </svg>
+                        <div>
+                          <strong>
+                            {reviewRiskInjuryCount === 1
+                              ? "1 injury is flagged for coach review"
+                              : `${reviewRiskInjuryCount} injuries are flagged for coach review`}
+                          </strong>
+                          <span> Serious or medical-safety flags (head impact, heavy bleeding, eye injuries, fractures) may pause planning until a coach signs off. You can still finish — the plan is built around them.</span>
+                        </div>
+                      </div>
+                    ) : null}
                     {showClearInjuriesConfirm ? (
                       <div className="gi-clear-confirm-panel" role="alertdialog" aria-live="polite">
                         <p className="gi-clear-confirm-title">Clear injury cards?</p>
@@ -2899,13 +2918,10 @@ export function PlanIntakeForm() {
                         </div>
                       </div>
                     </div>
+                    <button type="button" className="gi-notes-toggle gi-no-restrictions-btn" onClick={() => handleNoRestrictionsChange(true)}>
+                      No current injuries or restrictions
+                    </button>
                   </>
-                ) : (
-                  <div className="support-panel gi-empty-state compact-gap">
-                    <p className="kicker">No current injuries selected</p>
-                    <p className="muted">The planner will not add injury restrictions unless you add one.</p>
-                    <button type="button" className="injury-card-add-btn" onClick={() => handleNoRestrictionsChange(false)}>Add injury or restriction</button>
-                  </div>
                 )}
               </article>
             </div>

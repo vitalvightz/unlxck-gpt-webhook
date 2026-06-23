@@ -8,6 +8,7 @@ import {
   buildGuidedInjurySummaries,
   coerceGuidedInjuryEditState,
   getInjuryMismatchContextKey,
+  hasGuidedInjuryReviewRisk,
   hasMeaningfulInjuryMismatch,
   hydrateGuidedInjuryStates,
   normalizeGuidedInjuryState,
@@ -34,6 +35,29 @@ test("buildAthleteInjuryTexts joins athlete words across injuries and skips empt
     { area: "Right knee ache", notes: "[red_flags:none]" },
   ]);
   assert.equal(text, "Left shoulder is bruised. Right knee ache");
+});
+
+test("hasGuidedInjuryReviewRisk flags serious types and surface medical-safety signals", () => {
+  assert.equal(hasGuidedInjuryReviewRisk({ area: "knee", injury_type: "fracture" }), true);
+  assert.equal(hasGuidedInjuryReviewRisk({ area: "head", injury_type: "head_impact" }), true);
+  assert.equal(
+    hasGuidedInjuryReviewRisk({ injury_type: "surface_injury", surface_type: "cut", bleeding_status: "wont_stop" }),
+    true,
+  );
+  assert.equal(
+    hasGuidedInjuryReviewRisk({ injury_type: "surface_injury", surface_type: "cut", sensitive_area: "eye" }),
+    true,
+  );
+  assert.equal(
+    hasGuidedInjuryReviewRisk({ injury_type: "surface_injury", surface_type: "bruise", infection_signs: ["pus"] }),
+    true,
+  );
+  // Routine injuries and benign surface answers should not trip the banner.
+  assert.equal(hasGuidedInjuryReviewRisk({ area: "calf", injury_type: "tightness", severity: "low" }), false);
+  assert.equal(
+    hasGuidedInjuryReviewRisk({ injury_type: "surface_injury", surface_type: "bruise", impact_related: "yes", infection_signs: ["none"] }),
+    false,
+  );
 });
 
 test("guided injury state carries the body-map zone key through coerce, normalize, and hydrate", () => {
