@@ -220,6 +220,50 @@ def _out_of_order_countdown_structured_plan() -> dict:
     }
 
 
+def _tuesday_today_saturday_technical_brief() -> dict:
+    tuesday = date(2026, 6, 23)
+    monday = tuesday - timedelta(days=tuesday.weekday())
+    calendar_days = [
+        {
+            "weekday": (monday + timedelta(days=offset)).strftime("%A"),
+            "calendar_date": (monday + timedelta(days=offset)).isoformat(),
+            "d_day": 9 - offset,
+        }
+        for offset in range(7)
+    ]
+    return {
+        "fight_date": "2026-07-02",
+        "weekly_role_map": {
+            "weeks": [
+                {
+                    "phase": "SPP",
+                    "calendar_days": calendar_days,
+                    "hard_sparring_plan": [
+                        {
+                            "day": "Tuesday",
+                            "hard_day_class": "managed_hard",
+                            "effective_load": "reduced",
+                            "status": "technical_skill",
+                            "reason": "Tuesday app session.",
+                            "coach_note": "Light power and balance.",
+                            "reason_codes": [],
+                        },
+                        {
+                            "day": "Saturday",
+                            "hard_day_class": "technical",
+                            "effective_load": "technical",
+                            "status": "convert_to_technical_suggested",
+                            "reason": "Saturday technical only.",
+                            "coach_note": "Technical work.",
+                            "reason_codes": [],
+                        },
+                    ],
+                }
+            ]
+        },
+    }
+
+
 class SummaryActiveStore(FakeStore):
     """Mirror production auto-active selection, where list_user_plans is summary-only."""
 
@@ -678,6 +722,34 @@ class TestCommandView:
         assert view.today.next_session["weekday"] == "Friday"
         assert view.today.next_session["title"] == "Friday app session"
         assert view.today.next_session["title"] != "Saturday technical sparring"
+
+    def test_completed_today_prefers_earlier_structured_app_card_over_later_weekly_technical(self):
+        store = _store_with_plan()
+        store.plans[PLAN]["planning_brief"] = _tuesday_today_saturday_technical_brief()
+        store.plans[PLAN]["structured_plan"] = _out_of_order_countdown_structured_plan()
+        now = datetime(2026, 6, 23, 12, 0, tzinfo=timezone.utc)
+
+        upsert_session_completion(
+            store,
+            athlete_id=ATHLETE,
+            athlete_timezone="",
+            payload={"plan_id": PLAN, "session_id": "2026-06-23-app", "status": "done"},
+            now=now,
+        )
+
+        view = build_today_command_view(
+            store,
+            athlete_id=ATHLETE,
+            athlete_timezone="",
+            now=now,
+        )
+
+        assert view.today.completion_status == "done"
+        assert view.today.session_scope == "next"
+        assert view.today.next_session["calendar_date"] == "2026-06-26"
+        assert view.today.next_session["weekday"] == "Friday"
+        assert view.today.next_session["title"] == "Friday app session"
+        assert view.today.next_session["title"] != "Technical sparring"
 
     def test_calendar_rest_day_falls_forward_to_next_real_session(self):
         store = _store_with_plan()
