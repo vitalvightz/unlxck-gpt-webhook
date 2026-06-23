@@ -930,7 +930,7 @@ export function PlanIntakeForm() {
       return;
     }
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    node.scrollIntoView({ behavior: reducedMotion ? "instant" : "smooth", block: "center" });
+    node.scrollIntoView({ behavior: reducedMotion ? "auto" : "smooth", block: "center" });
   }, [pendingInjuryRemovalIndex]);
 
   useEffect(() => {
