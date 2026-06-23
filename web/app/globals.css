@@ -9837,6 +9837,11 @@ html[data-theme="light"] .gi-remove-confirm-panel {
   background: rgba(248, 242, 235, 0.58);
 }
 
+html[data-theme="light"] .gi-remove-confirm-panel {
+  border-color: rgba(0, 0, 0, 0.08);
+  background: rgba(0, 0, 0, 0.02);
+}
+
 html[data-theme="light"] .gi-notes-toggle {
   border-color: rgba(98, 77, 69, 0.12);
 }
