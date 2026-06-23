@@ -272,8 +272,8 @@ export function LevelSlider({
       role="radiogroup"
       aria-label={ariaLabel}
       tabIndex={0}
+      aria-activedescendant={selectedIndex !== -1 ? `${controlId}-level-${selectedIndex}` : undefined}
       onKeyDown={handleKeyDown}
-      onPointerDown={handlePointerDown}
     >
       {selectedIndex !== -1 ? (
         <span
