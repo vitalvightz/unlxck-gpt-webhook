@@ -9,7 +9,7 @@ import { RequireAuth } from "@/components/auth-guard";
 import { useAppSession } from "@/components/auth-provider";
 import { PlanHistoryRowSkeleton, PlansFeaturedSkeleton } from "@/components/skeleton";
 import { useToast } from "@/components/toast-provider";
-import { ApiError, deletePlan, getActivePlan, listPlans, renamePlan, setActivePlan } from "@/lib/api";
+import { ApiError, archivePlan, getActivePlan, listPlans, renamePlan, setActivePlan } from "@/lib/api";
 import { markGenerationIntent } from "@/lib/generation-intent";
 import {
   EQUIPMENT_ACCESS_OPTIONS,
@@ -359,7 +359,7 @@ function PlanCard({
     setError(null);
     setMessage(null);
     try {
-      await deletePlan(accessToken, plan.plan_id);
+      await archivePlan(accessToken, plan.plan_id);
       setIsDeleteConfirmOpen(false);
       onPlanDeleted(plan.plan_id);
       showToast(`Archived ${getPlanDisplayName(plan)}.`, { tone: "success" });
@@ -669,7 +669,7 @@ function LatestPlanCard({
     setPendingAction("delete");
     setError(null);
     try {
-      await deletePlan(accessToken, plan.plan_id);
+      await archivePlan(accessToken, plan.plan_id);
       setIsDeleteConfirmOpen(false);
       onPlanDeleted(plan.plan_id);
       showToast(`Archived ${getPlanDisplayName(plan)}.`, { tone: "success" });
