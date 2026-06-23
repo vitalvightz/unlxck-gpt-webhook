@@ -150,6 +150,7 @@ export function FaceScale({
           return (
             <button
               key={level.value}
+              id={`${controlId}-pain-${index}`}
               type="button"
               role="radio"
               aria-checked={selected}
