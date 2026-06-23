@@ -7,6 +7,7 @@ import {
   findDayByISO,
   getReadinessStrip,
   resolveCurrentDay,
+  resolveNextPlanFocusDay,
   resolvePlanProgress,
   resolveTrainingDay,
   sessionIdentity,
@@ -235,6 +236,65 @@ test("resolveCurrentDay treats a null today as no current day (SSR-safe)", () =>
   assert.equal(current.weekPos, null);
   assert.equal(current.sessions.length, 0);
   assert.equal(current.dLabel, null);
+});
+
+test("resolveNextPlanFocusDay prefers the next unfinished app card before a later coach-led day", () => {
+  const plan = {
+    weeks: [
+      {
+        days: [
+          {
+            date: "2026-06-23",
+            countdown_label: "D-9",
+            sessions: [{ session_id: "tue", title: "Single-leg power", completion_status: "done" }],
+          },
+          {
+            date: "2026-06-26",
+            countdown_label: "D-6",
+            sessions: [{ session_id: "fri", title: "Friday app session", completion_status: "not_started" }],
+          },
+          {
+            date: "2026-06-27",
+            countdown_label: "D-5",
+            today_card: { headline: "Technical work" },
+            sessions: [],
+          },
+        ],
+      },
+    ],
+  } as StructuredPlan;
+
+  const focus = resolveNextPlanFocusDay(plan, new Date(2026, 5, 23), new Date(2026, 5, 27));
+
+  assert.equal(focus && toISODate(focus), "2026-06-26");
+});
+
+test("resolveNextPlanFocusDay falls through to coach-led day after app cards are terminal", () => {
+  const plan = {
+    weeks: [
+      {
+        days: [
+          {
+            date: "2026-06-23",
+            sessions: [{ session_id: "tue", completion_status: "done" }],
+          },
+          {
+            date: "2026-06-26",
+            sessions: [{ session_id: "fri", completion_status: "skipped" }],
+          },
+          {
+            date: "2026-06-27",
+            today_card: { headline: "Technical work" },
+            sessions: [],
+          },
+        ],
+      },
+    ],
+  } as StructuredPlan;
+
+  const focus = resolveNextPlanFocusDay(plan, new Date(2026, 5, 23), new Date(2026, 5, 27));
+
+  assert.equal(focus && toISODate(focus), "2026-06-27");
 });
 
 test("resolvePlanProgress treats a null today as out of range (SSR-safe)", () => {
