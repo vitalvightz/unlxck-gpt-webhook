@@ -108,6 +108,7 @@ export function FaceScale({
   value: number | null;
   onChange: (value: number) => void;
 }) {
+  const controlId = useId();
   const selectedIndex = PAIN_LEVELS.findIndex((level) => level.value === value);
 
   function move(delta: number) {
