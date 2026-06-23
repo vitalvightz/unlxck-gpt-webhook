@@ -25,6 +25,15 @@ export function normalizeGuidedInjurySeverity(value: string | null | undefined):
   return GUIDED_INJURY_SEVERITY_ALIASES[normalized] ?? "";
 }
 
+// Advances severity one step for the body-map tap-to-set interaction:
+// unset/unknown → low → moderate → high → low. Always lands on a concrete
+// severity so a marked zone is never left without a colour against the legend.
+export function cycleGuidedInjurySeverity(value: string | null | undefined): GuidedInjurySeverity {
+  const current = normalizeGuidedInjurySeverity(value);
+  const index = current ? GUIDED_INJURY_SEVERITY_VALUES.indexOf(current) : -1;
+  return GUIDED_INJURY_SEVERITY_VALUES[(index + 1) % GUIDED_INJURY_SEVERITY_VALUES.length];
+}
+
 export const TECHNICAL_STYLE_OPTIONS: IntakeOption[] = [
   { label: "Boxing", value: "boxing" },
   { label: "Kickboxing", value: "kickboxing" },

@@ -17,6 +17,7 @@ import {
   getOptionLabels,
   isValidRecordFormat,
   KEY_GOAL_OPTIONS,
+  cycleGuidedInjurySeverity,
   normalizeGuidedInjurySeverity,
   PROFESSIONAL_STATUS_OPTIONS,
   retainKnownOptionValues,
@@ -1282,17 +1283,19 @@ export function PlanIntakeForm() {
         (!injury.zone && injury.area.trim().toLowerCase() === label.toLowerCase()),
     );
     if (existingIndex >= 0) {
-      // The zone is already marked — open that card rather than removing it or
+      // The zone is already marked — cycle its severity (low → moderate → high)
+      // so the legend is usable straight from the map, never removing it or
       // creating a duplicate. Backfill the zone key on legacy matches so the
       // zone stays lit even after the athlete rewrites the free-text area.
-      if (!guidedInjuries[existingIndex].zone) {
-        const nextGuidedInjuries = [...guidedInjuries];
-        nextGuidedInjuries[existingIndex] = coerceGuidedInjuryEditState({
-          ...nextGuidedInjuries[existingIndex],
-          zone: zoneKey,
-        });
-        syncGuidedInjuryFields(nextGuidedInjuries, false);
-      }
+      const existing = guidedInjuries[existingIndex];
+      const nextGuidedInjuries = [...guidedInjuries];
+      nextGuidedInjuries[existingIndex] = coerceGuidedInjuryEditState({
+        ...existing,
+        severity: cycleGuidedInjurySeverity(existing.severity),
+        zone: existing.zone || zoneKey,
+      });
+      syncGuidedInjuryFields(nextGuidedInjuries, false);
+      // Surface the affected card so its severity chips track the change.
       setActiveGuidedInjuryIndex(existingIndex);
       return;
     }
