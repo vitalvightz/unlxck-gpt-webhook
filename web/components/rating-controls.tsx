@@ -142,6 +142,7 @@ export function FaceScale({
         role="radiogroup"
         aria-label="Pain after session"
         tabIndex={0}
+        aria-activedescendant={selectedIndex !== -1 ? `${controlId}-pain-${selectedIndex}` : undefined}
         onKeyDown={handleKeyDown}
       >
         {PAIN_LEVELS.map((level, index) => {
