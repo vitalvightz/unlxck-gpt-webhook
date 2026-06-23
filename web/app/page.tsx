@@ -451,10 +451,7 @@ export default function HomePage() {
               <div className="plan-summary-actions">
                 <Link href={primaryHref} className="cta overview-primary-action">{primaryLabel}</Link>
                 {hasActivePlan ? (
-                  <>
-                    <Link href={`/plans/${activePlan.id}`} className="secondary-button">View full plan</Link>
-                    <Link href="/onboarding" className="ghost-button">Review intake</Link>
-                  </>
+                  <Link href={`/plans/${activePlan.id}`} className="secondary-button">View full plan</Link>
                 ) : (
                   <Link href="/quick-build" className="secondary-button">Quick Build</Link>
                 )}

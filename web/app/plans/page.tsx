@@ -783,30 +783,27 @@ function LatestPlanCard({
 
         <div className="plan-card-actions plans-dashboard-actions">
           {plan ? (
-            <Link href={`/plans/${plan.plan_id}`} className="cta">
-              Open plan
-            </Link>
+            <>
+              <Link href={`/plans/${plan.plan_id}`} className="cta">
+                Open plan
+              </Link>
+              <Link
+                href={intake ? "/generate" : "/onboarding"}
+                className="ghost-button"
+                onClick={() => {
+                  if (intake) {
+                    markGenerationIntent();
+                  }
+                }}
+              >
+                Generate new version
+              </Link>
+            </>
           ) : (
             <Link href={hasSavedIntake ? "/onboarding" : "/quick-build"} className="cta">
               {hasSavedIntake ? "Resume Advanced Intake" : "Quick Build New Plan"}
             </Link>
           )}
-          <Link href="/onboarding" className="ghost-button">
-            {plan ? "Review intake" : "Edit intake"}
-          </Link>
-          {plan ? (
-            <Link
-              href={intake ? "/generate" : "/onboarding"}
-              className="ghost-button"
-              onClick={() => {
-                if (intake) {
-                  markGenerationIntent();
-                }
-              }}
-            >
-              Generate from current intake
-            </Link>
-          ) : null}
         </div>
 
         {plan ? (
@@ -867,13 +864,8 @@ function IntakeCard({
 
       <div className="plan-card-actions plans-dashboard-actions">
         <Link href={hasIntake ? "/onboarding" : "/quick-build"} className="cta">
-          {hasIntake ? "Review saved intake" : "Quick Build New Plan"}
+          {hasIntake ? "Review & edit intake" : "Quick Build New Plan"}
         </Link>
-        {hasIntake ? (
-          <Link href="/onboarding?mode=edit" className="ghost-button">
-            Edit details
-          </Link>
-        ) : null}
       </div>
     </article>
   );
