@@ -170,7 +170,7 @@ def submit_today_checkin(
     for field in _CHECKIN_INPUT_FIELDS:
         fields[field] = payload[field]
 
-    row = store.upsert_today_checkin(athlete_id, fields)
+    row = dict(store.upsert_today_checkin(athlete_id, fields))
     row["warnings"] = warnings
     return row
 
