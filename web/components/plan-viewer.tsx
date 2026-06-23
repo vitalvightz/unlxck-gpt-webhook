@@ -1915,10 +1915,11 @@ export function PlanViewer({
   // building does not flash a stale rejection reason.
   const structuredCardDebug = isAwaitingStructuredUpgrade ? null : readStructuredCardDebug(plan);
 
-  // Override the camp-map's current day with the next scheduled session once
-  // today is logged (see nextSessionFocusISO). Undefined keeps the calendar
-  // "Today" highlight; a valid date advances the highlight + auto-open to the
-  // next session and relabels its badge "Next session".
+  // The next scheduled session's day, once today is logged (see
+  // nextSessionFocusISO). Passed as the camp map's `focusDay`: undefined keeps the
+  // calendar "Today" highlight; a valid date advances the highlight + auto-open to
+  // the next session (badge "Next session") while the current-week marker and
+  // countdown stay on the real today.
   const nextSessionFocusDate = (() => {
     if (!nextSessionFocusISO) {
       return undefined;
@@ -2700,7 +2701,7 @@ export function PlanViewer({
               {hasStructuredAthletePlan && plan.outputs.structured_plan ? (
                 <StructuredPlanRenderer
                   plan={plan.outputs.structured_plan}
-                  today={nextSessionFocusDate}
+                  focusDay={nextSessionFocusDate}
                   currentDayLabel={nextSessionFocusDate ? "Next session" : "Today"}
                 />
               ) : (
