@@ -5583,6 +5583,31 @@ button.mobile-step-rail-item {
   color: #ffffff;
 }
 
+/* Label row with an optional inline "Clear" affordance (nutrition fatigue). */
+.level-field-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.level-slider-clear {
+  border: none;
+  background: none;
+  padding: 0;
+  font-family: var(--font-mono), monospace;
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: color 140ms ease;
+}
+
+.level-slider-clear:hover {
+  color: var(--brand-red);
+}
+
 @media (max-width: 720px) {
   .face-scale-face {
     padding: 10px 2px;

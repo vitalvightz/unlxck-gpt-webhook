@@ -3,7 +3,6 @@
 import {
   useId,
   type KeyboardEvent,
-  type PointerEvent as ReactPointerEvent,
 } from "react";
 
 /* ------------------------------------------------------------------ *
@@ -234,10 +233,12 @@ export function LevelSlider({
   value,
   onChange,
   ariaLabel = "Fatigue level",
+  id,
 }: {
   value: LevelValue | null;
   onChange: (value: LevelValue) => void;
   ariaLabel?: string;
+  id?: string;
 }) {
   const controlId = useId();
   const selectedIndex = LEVEL_OPTIONS.findIndex((option) => option.value === value);
@@ -258,17 +259,10 @@ export function LevelSlider({
     }
   }
 
-  // Let a tap anywhere on the track jump to the nearest segment.
-  function handlePointerDown(event: ReactPointerEvent<HTMLDivElement>) {
-    const rect = event.currentTarget.getBoundingClientRect();
-    const ratio = (event.clientX - rect.left) / rect.width;
-    const index = Math.min(LEVEL_OPTIONS.length - 1, Math.max(0, Math.round(ratio * (LEVEL_OPTIONS.length - 1))));
-    onChange(LEVEL_OPTIONS[index].value);
-  }
-
   return (
     <div
       className="level-slider"
+      id={id}
       role="radiogroup"
       aria-label={ariaLabel}
       tabIndex={0}

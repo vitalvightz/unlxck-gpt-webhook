@@ -482,8 +482,20 @@ export function NutritionWorkspaceScreen() {
                       />
                     </div>
                     <div className="field">
-                      <label>Fatigue level</label>
+                      <div className="level-field-header">
+                        <label htmlFor="nutritionFatigueLevel">Fatigue level</label>
+                        {form.shared_camp_context.fatigue_level ? (
+                          <button
+                            type="button"
+                            className="level-slider-clear"
+                            onClick={() => setSharedField("fatigue_level", null)}
+                          >
+                            Clear
+                          </button>
+                        ) : null}
+                      </div>
                       <LevelSlider
+                        id="nutritionFatigueLevel"
                         ariaLabel="Fatigue level"
                         value={(form.shared_camp_context.fatigue_level as LevelValue | null) ?? null}
                         onChange={(value) => setSharedField("fatigue_level", value)}

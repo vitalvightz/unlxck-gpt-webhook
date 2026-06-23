@@ -2552,6 +2552,7 @@ export function PlanIntakeForm() {
                 <div className="field">
                   <label htmlFor="fatigueLevel">Fatigue level</label>
                   <LevelSlider
+                    id="fatigueLevel"
                     ariaLabel="Fatigue level"
                     value={(form.fatigue_level ?? "low") as LevelValue}
                     onChange={(value) => updateField("fatigue_level", value)}
