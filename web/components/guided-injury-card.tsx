@@ -957,6 +957,11 @@ export function GuidedInjuryCard({
   const [isEditingType, setIsEditingType] = useState(
     !(injury.injury_type && (injury.injury_type !== "surface_injury" || injury.surface_type)),
   );
+  const [prevInjury, setPrevInjury] = useState(injury);
+  if (injury !== prevInjury) {
+    setPrevInjury(injury);
+    setIsEditingType(!(injury.injury_type && (injury.injury_type !== "surface_injury" || injury.surface_type)));
+  }
   const injuryLabel = truncateForHeader(injury.area) || `Injury ${index + 1}`;
   const compactSummary = truncateForHeader(buildCompactSummary(injury), 80);
   const showWarning = shouldShowReviewWarning(injury);
