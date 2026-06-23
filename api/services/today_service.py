@@ -458,6 +458,31 @@ def _structured_next_session_entry(plan_row: Mapping[str, Any], training_day: st
     return candidates[0][1]
 
 
+def _entry_calendar_date(entry: Any) -> date | None:
+    if entry is None:
+        return None
+    calendar_date = (
+        entry.get("calendar_date")
+        if isinstance(entry, Mapping)
+        else getattr(entry, "calendar_date", None)
+    )
+    return _parse_structured_date(calendar_date)
+
+
+def _prefer_earlier_structured_next_entry(target_entry: Any, structured_next_entry: dict[str, Any] | None) -> Any:
+    if structured_next_entry is None:
+        return target_entry
+    if target_entry is None:
+        return structured_next_entry
+    target_date = _entry_calendar_date(target_entry)
+    structured_date = _entry_calendar_date(structured_next_entry)
+    if structured_date is None:
+        return target_entry
+    if target_date is None or structured_date < target_date:
+        return structured_next_entry
+    return target_entry
+
+
 def _scan_forward_for_next_training(
     plan_row: Mapping[str, Any],
     *,
@@ -640,8 +665,11 @@ def build_today_command_view(
             )
         except Exception:
             target_entry = None
-    if target_entry is None:
-        target_entry = _structured_next_session_entry(plan_row, training_day)
+    if target_entry is not today_session_entry:
+        target_entry = _prefer_earlier_structured_next_entry(
+            target_entry,
+            _structured_next_session_entry(plan_row, training_day),
+        )
     session_relation = (
         "today"
         if target_entry is not None and target_entry is today_session_entry
