@@ -890,6 +890,11 @@ export default function PlansPage() {
   const [activePlanId, setActivePlanId] = useState<string | null>(null);
   const [isSettingActivePlanId, setIsSettingActivePlanId] = useState<string | null>(null);
   const [isArchiveOpen, setIsArchiveOpen] = useState(false);
+  const latestTokenRef = useRef(session?.access_token);
+
+  useEffect(() => {
+    latestTokenRef.current = session?.access_token;
+  }, [session?.access_token]);
 
   const visiblePlans = useMemo(() => {
     const sourcePlans = localPlans ?? plans;
@@ -922,15 +927,24 @@ export default function PlansPage() {
           throw activeError;
         }),
       ]);
+      // Ignore results from a request that the current session has moved past.
+      if (latestTokenRef.current !== token) {
+        return;
+      }
       setPlans(nextPlans);
       setActivePlanId(active?.plan_id ?? null);
     } catch (plansError) {
+      if (latestTokenRef.current !== token) {
+        return;
+      }
       const message = plansError instanceof Error ? plansError.message : "";
       setError(message.includes("401") || message.toLowerCase().includes("session")
         ? "Session expired. Sign in again."
         : "Connection issue. Try again in a minute.");
     } finally {
-      setIsLoading(false);
+      if (latestTokenRef.current === token) {
+        setIsLoading(false);
+      }
     }
   }, [session?.access_token]);
 

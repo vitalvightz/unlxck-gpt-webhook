@@ -413,8 +413,11 @@ export default function AdminAthletePage() {
     token: session?.access_token ?? null,
     storageKey: athleteId ? `unlxck:pending-generation:admin:${athleteId}` : null,
     createJob: async (clientRequestId) => {
-      if (!session?.access_token || !athleteId) {
+      if (!session?.access_token) {
         throw new Error("Your session has expired. Please sign in again.");
+      }
+      if (!athleteId) {
+        throw new Error("We couldn't identify this athlete. Go back and try again.");
       }
       return generateAdminAthletePlanFromLatestIntake(session.access_token, athleteId, clientRequestId);
     },
