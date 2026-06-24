@@ -341,6 +341,7 @@ test("marks the current day and surfaces the camp status + week focus", () => {
     red_flag_rules: [
       { rule_id: "rf-1", severity: "red", display_text: "Stop if Achilles pain is high." },
     ],
+    plan_notes: [{ category: "injury", label: "Achilles", text: "Watch Achilles load." }],
     weeks: [
       {
         week_id: "wk-1",
@@ -370,17 +371,79 @@ test("marks the current day and surfaces the camp status + week focus", () => {
   // Week focus still surfaces via the week overview.
   assert.equal(html.includes("Convert strength into speed."), true);
   // The lighter camp-readiness strip leads the plan page with focus, injury
-  // watch, weekly load and phase cards — but never the exact train/modify/pull
-  // back call, which stays on Today. The day's readiness_status must not leak.
+  // watch and weekly load — but never the exact train/modify/pull back call,
+  // which stays on Today. The day's readiness_status must not leak. Injury watch
+  // is a short cue (watch area + pointer), not the full red-flag sentence.
   assert.equal(html.includes("sp-readiness"), true);
   assert.equal(html.includes("Speed conversion"), true);
   assert.equal(html.includes("Injury watch"), true);
+  assert.equal(html.includes("Achilles — see red flags"), true);
   assert.equal(html.includes("Weekly load"), true);
   assert.equal(html.includes("Train as planned"), false);
   assert.equal(html.includes("train_as_planned"), false);
   // Current day is flagged.
   assert.equal(html.includes("cm-day-current"), true);
   assert.equal(html.includes("1/1 done"), true);
+});
+
+test("compresses the plan: dedupes safety, folds the disclaimer, trims the week overview", () => {
+  const plan = {
+    schema_version: "1.0",
+    plan_metadata: { title: "Fight Camp", sport: "boxing", plan_type: "fight_camp" },
+    red_flag_rules: [
+      {
+        rule_id: "rf-1",
+        severity: "red",
+        display_text:
+          "If weight-cut symptoms worsen (lightheadedness), stop non-essential activity and escalate to coach/medical staff.",
+      },
+    ],
+    plan_notes: [
+      // A paraphrase of the red flag (minus the parenthetical) — dropped from Active notes.
+      {
+        category: "weight_cut",
+        label: "Weight cut",
+        text: "If weight-cut symptoms worsen, stop non-essential activity and escalate to coach/medical staff.",
+      },
+      // Genuine context that only shares a phrase with the flag — kept.
+      {
+        category: "injury",
+        label: "Left shoulder contusion",
+        text: "Avoid direct contact; rehab drills included each session.",
+      },
+    ],
+    weeks: [
+      {
+        week_id: "wk-1",
+        week_index: 1,
+        phase_label: "SPP",
+        week_goal: "Build single-leg drive.",
+        days: [
+          {
+            date: "2026-06-19",
+            day_type: "moderate",
+            sessions: [{ session_id: "s1", title: "Lower", blocks: [] }],
+          },
+        ],
+      },
+    ],
+  } satisfies StructuredPlan;
+
+  const html = renderToStaticMarkup(<StructuredPlanRenderer plan={plan} today={new Date(2026, 5, 19)} />);
+  const count = (needle: string) => html.split(needle).length - 1;
+
+  // The medical disclaimer is folded into the Red Flags card — exactly one
+  // safety-note block, no standalone banner duplicate.
+  assert.equal(count('class="safety-note '), 1);
+  // The Active note that just restated the red flag is dropped; the contextual
+  // injury note stays, and the escalation sentence renders once (in Red Flags).
+  assert.equal(html.includes("rehab drills included each session"), true);
+  assert.equal(count("stop non-essential activity and escalate"), 1);
+  // The week overview no longer prints a Phase stat row (phase lives in the
+  // status chips and the week pill).
+  assert.equal(html.includes(">Phase</span>"), false);
+  // The week goal shows once — in the overview heading, not repeated as a body line.
+  assert.equal(count("Build single-leg drive."), 1);
 });
 
 test("renders the raw markdown fallback collapsed at the bottom", () => {

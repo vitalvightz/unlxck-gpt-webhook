@@ -9,9 +9,10 @@ import {
   classifySessionlessDay,
   getDays,
   getDisplayableRedFlags,
+  getPlanNotes,
   getSessions,
   getWeeks,
-  redFlagView,
+  planNoteLabel,
 } from "./structured-plan.ts";
 import type {
   StructuredDay,
@@ -398,7 +399,9 @@ export type ReadinessStrip = {
  * rest is derived so the strip is useful even before generation emits a
  * snapshot:
  *   - Focus:        snapshot.focus → today_card.headline → first session objective.
- *   - Injury watch: snapshot.injury_watch → today_card.primary_warning → top red flag.
+ *   - Injury watch: snapshot.injury_watch → a SHORT cue from the injury /
+ *                   weight-cut note labels (never the full stop/report sentence,
+ *                   which stays in the Red Flags card).
  *   - Weekly load:  snapshot.weekly_load → weekLoadProxy(focusWeek).
  *
  * Every field is nullable so callers render only the cards with data — no
@@ -418,10 +421,24 @@ export function getReadinessStrip(
     focus = cleanText(firstSession?.objective) || cleanText(firstSession?.title);
   }
 
-  let risk = cleanText(snapshot?.injury_watch) || cleanText(card?.primary_warning);
+  // Injury watch is a SHORT cue — the watch areas only, never the full
+  // stop/report sentence. Those live canonically in the Red Flags card right
+  // below the strip, so repeating the whole sentence here was pure duplication.
+  // Derived from the plan's injury / weight-cut note labels, with a pointer to
+  // the Red Flags card when stop/report rules exist.
+  let risk = cleanText(snapshot?.injury_watch);
   if (!risk) {
-    const topFlag = getDisplayableRedFlags(plan)[0];
-    risk = topFlag ? redFlagView(topFlag).text : null;
+    const watchAreas = Array.from(
+      new Set(
+        getPlanNotes(plan)
+          .filter((note) => note.category === "injury" || note.category === "weight_cut")
+          .map((note) => planNoteLabel(note))
+      )
+    );
+    if (watchAreas.length > 0) {
+      const cue = watchAreas.join(" · ");
+      risk = getDisplayableRedFlags(plan).length > 0 ? `${cue} — see red flags` : cue;
+    }
   }
 
   const load = cleanText(snapshot?.weekly_load) || weekLoadProxy(focusWeek);

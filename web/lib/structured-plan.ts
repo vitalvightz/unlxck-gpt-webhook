@@ -509,6 +509,46 @@ export function getDisplayableRedFlags(plan: StructuredPlan | null | undefined) 
     .filter((rule) => cleanText(rule.display_text));
 }
 
+/** Loose normalization for de-duplicating a note against a red-flag rule:
+ *  lowercased, parentheticals dropped, all punctuation/whitespace collapsed to
+ *  single spaces. Lets "…worsen, stop…" match "…worsen (lightheadedness), stop…". */
+function normalizeForDup(text: string): string {
+  return text
+    .toLowerCase()
+    .replace(/\([^)]*\)/g, " ")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+/**
+ * Active notes with any note that merely restates a red-flag rule removed, so
+ * the Red Flags card stays the single home for stop/report rules. A note counts
+ * as a duplicate when its normalized text contains, or is contained by, a red
+ * flag's normalized display_text — this catches the common case where the note
+ * is a slightly shorter paraphrase of the flag (e.g. the same escalation rule
+ * minus a parenthetical). Notes shorter than the guard length are always kept.
+ */
+export function getActiveNotesExcludingRedFlags(
+  plan: StructuredPlan | null | undefined,
+): PlanNoteView[] {
+  const notes = getPlanNotes(plan);
+  const flagTexts = getDisplayableRedFlags(plan)
+    .map((rule) => cleanText(rule.display_text))
+    .filter((text): text is string => text !== null)
+    .map(normalizeForDup)
+    .filter((text) => text.length >= 12);
+  if (flagTexts.length === 0) {
+    return notes;
+  }
+  return notes.filter((note) => {
+    const noteNorm = normalizeForDup(note.text);
+    if (noteNorm.length < 12) {
+      return true;
+    }
+    return !flagTexts.some((flag) => flag === noteNorm);
+  });
+}
+
 export function weekLabel(week: StructuredWeek | null | undefined): string {
   const goal = cleanText(week?.week_goal);
   const index = typeof week?.week_index === "number" ? week.week_index : null;
