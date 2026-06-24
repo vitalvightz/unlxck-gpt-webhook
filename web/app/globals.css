@@ -6934,13 +6934,14 @@ button.mobile-step-rail-item {
   }
 
   /* The primary CTA takes its own full-width row so longer labels like
-     "Generate plan" never wrap onto two lines. */
+     "Generate plan" render on one line under normal conditions. It can still
+     wrap gracefully as a fallback on extremely narrow screens or with long
+     localized strings, avoiding overflow. */
   .onboarding-action-primary {
     flex: 1 1 100%;
     min-width: 0;
     min-height: 44px;
     padding-inline: 8px;
-    white-space: nowrap;
   }
 
   .field textarea {
