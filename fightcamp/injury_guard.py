@@ -121,12 +121,6 @@ SEVERITY_SYNONYMS = {
         "inflamed",
         "hot",
         "heat",
-        "bruise",
-        "bruised",
-        "bruising",
-        "black and blue",
-        "hematoma",
-        "discoloration",
         "limp",
         "limping",
         "cannot walk",
@@ -242,6 +236,21 @@ SEVERITY_SYNONYMS = {
         "4/10",
     ],
     "low": [
+        # Contusion/bruise family: a bruise is a surface-level impact injury.
+        # It should penalize exercises that directly load/impact the bruised
+        # region, not auto-escalate to high severity (which forces broad
+        # exclusions across the region). Matches contusion's taxonomy
+        # default_severity of "low". Genuine danger signs (severe, swelling +
+        # impact, cannot bear weight, etc.) still escalate via their own terms.
+        "bruise",
+        "bruised",
+        "bruising",
+        "black and blue",
+        "hematoma",
+        "discoloration",
+        "discolored",
+        "contusion",
+        "contusions",
         "niggle",
         "niggling",
         "twinge",
