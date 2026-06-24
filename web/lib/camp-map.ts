@@ -428,9 +428,13 @@ export function getReadinessStrip(
   // the Red Flags card when stop/report rules exist.
   let risk = cleanText(snapshot?.injury_watch);
   if (!risk) {
-    const watchAreas = getPlanNotes(plan)
-      .filter((note) => note.category === "injury" || note.category === "weight_cut")
-      .map((note) => planNoteLabel(note));
+    const watchAreas = Array.from(
+      new Set(
+        getPlanNotes(plan)
+          .filter((note) => note.category === "injury" || note.category === "weight_cut")
+          .map((note) => planNoteLabel(note))
+      )
+    );
     if (watchAreas.length > 0) {
       const cue = watchAreas.join(" · ");
       risk = getDisplayableRedFlags(plan).length > 0 ? `${cue} — see red flags` : cue;
