@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 
+import { formatAppDate, formatAppDateTime } from "@/lib/date-format";
 import {
   EQUIPMENT_ACCESS_OPTIONS,
   KEY_GOAL_OPTIONS,
@@ -53,7 +54,7 @@ function formatOptionalValue(value: string | number | null | undefined): string 
   return normalized ? normalized : null;
 }
 
-function formatDate(value: string | null | undefined, opts?: Intl.DateTimeFormatOptions): string {
+function formatTimestamp(value: string | null | undefined): string {
   if (!value) {
     return "Not available";
   }
@@ -61,7 +62,18 @@ function formatDate(value: string | null | undefined, opts?: Intl.DateTimeFormat
   if (Number.isNaN(date.getTime())) {
     return "Not available";
   }
-  return date.toLocaleString(undefined, opts);
+  return formatAppDateTime(value);
+}
+
+function formatDateOnly(value: string | null | undefined): string {
+  if (!value) {
+    return "Not available";
+  }
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return "Not available";
+  }
+  return formatAppDate(value);
 }
 
 function formatMeasurement(value: number | null | undefined, unit: string): string | null {
@@ -142,8 +154,8 @@ function buildOverviewSections(athlete: AdminAthleteRecord): OverviewSection[] {
     { label: "Role", value: athlete.role === "admin" ? "Admin" : "Athlete" },
     { label: "Timezone", value: formatValue(athlete.athlete_timezone) },
     { label: "Locale", value: formatValue(athlete.athlete_locale) },
-    { label: "Member since", value: formatDate(athlete.created_at, { dateStyle: "medium" }) },
-    { label: "Last updated", value: formatDate(athlete.updated_at, { dateStyle: "medium" }) },
+    { label: "Member since", value: formatTimestamp(athlete.created_at) },
+    { label: "Last updated", value: formatTimestamp(athlete.updated_at) },
   ];
 
   const profileItems: OverviewItem[] = [
@@ -194,7 +206,7 @@ function buildOverviewSections(athlete: AdminAthleteRecord): OverviewSection[] {
         },
         {
           label: "Latest plan activity",
-          value: athlete.latest_plan_created_at ? formatDate(athlete.latest_plan_created_at, { dateStyle: "medium" }) : "Not available",
+          value: athlete.latest_plan_created_at ? formatTimestamp(athlete.latest_plan_created_at) : "Not available",
         },
       ],
     });
@@ -207,7 +219,7 @@ function buildOverviewSections(athlete: AdminAthleteRecord): OverviewSection[] {
     title: "Latest camp setup",
     wide: true,
     items: [
-      { label: "Fight date", value: formatDate(intake.fight_date, { dateStyle: "medium" }), emphasize: true },
+      { label: "Fight date", value: formatDateOnly(intake.fight_date), emphasize: true },
       { label: "Rounds format", value: formatValue(intake.rounds_format), emphasize: true },
       {
         label: "Planned sessions / week",
@@ -291,7 +303,7 @@ export function AthleteProfileHero({ athlete }: { athlete: AdminAthleteRecord })
         <article className="athlete-profile-metric athlete-profile-metric-accent">
           <p className="plan-meta-label">Latest activity</p>
           <p className="athlete-profile-metric-value athlete-profile-metric-value-small">
-            {formatDate(athlete.latest_plan_created_at || athlete.updated_at, { dateStyle: "medium" })}
+            {formatTimestamp(athlete.latest_plan_created_at || athlete.updated_at)}
           </p>
         </article>
         <article className="athlete-profile-metric">

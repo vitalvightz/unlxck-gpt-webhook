@@ -16,6 +16,7 @@ import {
   TECHNICAL_STYLE_OPTIONS,
 } from "@/lib/intake-options";
 import { humanizeIfRawEnum } from "@/lib/plan-labels";
+import { formatAppDate } from "@/lib/date-format";
 import { formatPlanFightDate, formatPlanTimestamp, getPlanDisplayName } from "@/lib/plan-format";
 import {
   getSessionDayLabel,
@@ -474,7 +475,7 @@ export default function HomePage() {
               <div className="overview-operational-strip" aria-label="Camp status">
                 <div className="overview-operational-item"><span className="overview-operational-label">Active plan</span><span className="overview-operational-value">{String(activePlan.name || "No active plan")}</span></div>
                 <div className="overview-operational-item"><span className="overview-operational-label">Phase</span><span className="overview-operational-value">{humanizeIfRawEnum(activePlan.phase) || "Not set"}</span></div>
-                <div className="overview-operational-item"><span className="overview-operational-label">Training day</span><span className="overview-operational-value">{commandState?.today?.training_day || "Not set"}</span></div>
+                <div className="overview-operational-item"><span className="overview-operational-label">Training day</span><span className="overview-operational-value">{commandState?.today?.training_day ? formatAppDate(commandState.today.training_day) : "Not set"}</span></div>
                 <div className="overview-operational-item"><span className="overview-operational-label">Fight date</span><span className="overview-operational-value">{formatPlanFightDate(String(activePlan.fight_date || ""))}</span></div>
               </div>
               {commandError ? (

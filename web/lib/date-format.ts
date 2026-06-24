@@ -1,0 +1,62 @@
+// Canonical user-facing date formatting for the whole app.
+//
+// One format everywhere: `EEE DD MMM YYYY` -> "Thu 02 Jul 2026".
+// Locale is pinned to "en-GB" so month/day naming is stable, and the string is
+// assembled from parts so the punctuation is exactly "Thu 02 Jul 2026"
+// (no locale-inserted comma after the weekday) regardless of the viewer.
+
+const DATE_ONLY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+
+/**
+ * Parse a date-only ISO string (`YYYY-MM-DD`) or a full timestamp.
+ *
+ * Date-only values are anchored at noon UTC so the rendered weekday/day never
+ * shifts backward across a timezone boundary (the off-by-one trap). Full
+ * timestamps are parsed as-is and rendered in the viewer's local timezone.
+ */
+function parseAppDate(value: string): { date: Date; dateOnly: boolean } | null {
+  const normalized = value.trim();
+  if (!normalized) {
+    return null;
+  }
+  const dateOnly = DATE_ONLY_PATTERN.test(normalized);
+  const date = new Date(dateOnly ? `${normalized}T12:00:00Z` : normalized);
+  if (Number.isNaN(date.getTime())) {
+    return null;
+  }
+  return { date, dateOnly };
+}
+
+function render(value: string | null | undefined, withTime: boolean): string {
+  const raw = String(value ?? "");
+  const parsed = parseAppDate(raw);
+  if (!parsed) {
+    return raw;
+  }
+  const formatter = new Intl.DateTimeFormat("en-GB", {
+    weekday: "short",
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    ...(withTime ? { hour: "2-digit", minute: "2-digit", hour12: false } : {}),
+    ...(parsed.dateOnly ? { timeZone: "UTC" } : {}),
+  });
+  const parts = formatter.formatToParts(parsed.date);
+  const get = (type: Intl.DateTimeFormatPartTypes) =>
+    parts.find((part) => part.type === type)?.value ?? "";
+  const base = `${get("weekday")} ${get("day")} ${get("month")} ${get("year")}`;
+  if (!withTime) {
+    return base;
+  }
+  return `${base}, ${get("hour")}:${get("minute")}`;
+}
+
+/** "Thu 02 Jul 2026". Returns the raw input if it can't be parsed. */
+export function formatAppDate(value: string | null | undefined): string {
+  return render(value, false);
+}
+
+/** "Thu 02 Jul 2026, 14:30". Returns the raw input if it can't be parsed. */
+export function formatAppDateTime(value: string | null | undefined): string {
+  return render(value, true);
+}

@@ -23,6 +23,7 @@ import {
   updateAdminAthleteLatestIntake,
 } from "@/lib/api";
 import { loadAdminAthleteProfileData } from "@/lib/admin-athlete-profile-loader";
+import { formatAppDate, formatAppDateTime } from "@/lib/date-format";
 import { useGenerationController } from "@/lib/generation-controller";
 import { validatePerformanceFocusSelections } from "@/lib/performance-focus-cap";
 import {
@@ -53,7 +54,7 @@ function formatDateTime(value: string | null | undefined): string {
     return "Not recorded";
   }
   const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? "Not recorded" : date.toLocaleString();
+  return Number.isNaN(date.getTime()) ? "Not recorded" : formatAppDateTime(value);
 }
 
 function formatListOrDash(values: string[] | null | undefined): string {
@@ -211,7 +212,7 @@ function AthletePlanAccessCard({
                 <Link href={`/plans/${plan.plan_id}`} className="admin-athlete-plan-row">
                   <span>
                     <strong>{getPlanDisplayName(plan)}</strong>
-                    <small>{formatDateTime(plan.created_at)} - fight date {plan.fight_date || "not set"}</small>
+                    <small>{formatDateTime(plan.created_at)} - fight date {plan.fight_date ? formatAppDate(plan.fight_date) : "not set"}</small>
                   </span>
                   <span className="badge">{statusLabel(plan.status)}</span>
                 </Link>
@@ -274,7 +275,7 @@ function GenerationDiagnosticCard({
         <p className="admin-diagnostic-section-title">Request summary</p>
         <div className="admin-diagnostic-summary-grid">
           <DiagnosticMetaItem label="Athlete" value={summary.athlete_name} />
-          <DiagnosticMetaItem label="Fight date" value={summary.fight_date} />
+          <DiagnosticMetaItem label="Fight date" value={summary.fight_date ? formatAppDate(summary.fight_date) : summary.fight_date} />
           <DiagnosticMetaItem label="Phase" value={humanizeEnumValue(summary.phase, "-")} />
           <DiagnosticMetaItem label="Format" value={humanizeEnumValue(summary.fight_format, "-")} />
           <DiagnosticMetaItem label="Fatigue" value={humanizeEnumValue(summary.fatigue_level, "-")} />

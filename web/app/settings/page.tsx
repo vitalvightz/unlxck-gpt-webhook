@@ -8,6 +8,7 @@ import { useAppSession } from "@/components/auth-provider";
 import { PasswordStrengthMeter } from "@/components/password-strength-meter";
 import { ApiError, changeUsername, updateMe } from "@/lib/api";
 import { isSafeAvatarImageUrl } from "@/lib/avatar-image-url";
+import { formatAppDate, formatAppDateTime } from "@/lib/date-format";
 import {
   EQUIPMENT_ACCESS_OPTIONS,
   KEY_GOAL_OPTIONS,
@@ -153,18 +154,14 @@ function formatNextAvailable(iso: string | null | undefined): string | null {
   if (!iso) return null;
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return null;
-  return date.toLocaleDateString(undefined, {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
+  return formatAppDate(iso);
 }
 
 function formatDateTime(iso: string | null | undefined): string {
   if (!iso) return "Not saved yet";
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return "Not saved yet";
-  return date.toLocaleString();
+  return formatAppDateTime(iso);
 }
 
 function formatList(values: string[], fallback = "Not set", maxItems = 3): string {

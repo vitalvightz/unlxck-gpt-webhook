@@ -31,6 +31,7 @@ import {
   sessionIdentity,
   type CurrentDayResolution,
 } from "@/lib/camp-map";
+import { formatAppDate } from "@/lib/date-format";
 import { normalizeInjuryLabel } from "@/lib/injury-display";
 import { humanizeIfRawEnum } from "@/lib/plan-labels";
 import { useTrainingDay } from "@/lib/use-training-day";
@@ -126,27 +127,18 @@ function formatTrainingDay(value: string | null | undefined): string {
   if (!value) {
     return "Today";
   }
-  const date = new Date(`${value}T12:00:00`);
-  if (Number.isNaN(date.getTime())) {
-    return value;
-  }
-  return new Intl.DateTimeFormat("en-GB", {
-    weekday: "short",
-    day: "2-digit",
-    month: "short",
-  }).format(date);
+  return formatAppDate(value);
 }
 
 function formatSessionDate(session: TodaySession): string {
   const dayText = session.weekday_with_label || session.weekday;
   const countdown =
     typeof session.d_day === "number" ? `D-${Math.abs(session.d_day)}` : session.day_label;
-  const hasCountdownInDayText = Boolean(dayText && countdown && dayText.includes(countdown));
-  const parts = [
-    dayText,
-    session.calendar_date ? formatTrainingDay(session.calendar_date) : null,
-    hasCountdownInDayText ? null : countdown,
-  ].filter(Boolean);
+  // The canonical date already carries the short weekday, so only fall back to
+  // the raw weekday token when there's no calendar date to format.
+  const dayPart = session.calendar_date ? formatTrainingDay(session.calendar_date) : dayText;
+  const hasCountdownInDayPart = Boolean(dayPart && countdown && dayPart.includes(countdown));
+  const parts = [dayPart, hasCountdownInDayPart ? null : countdown].filter(Boolean);
   return parts.length ? parts.join(" / ") : "Athlete-local training day";
 }
 

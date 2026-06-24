@@ -9,6 +9,7 @@ import { useAppSession } from "@/components/auth-provider";
 import { BodyMap, type BodyMapSide } from "@/components/body-map";
 import { CustomSelect } from "@/components/custom-select";
 import { saveOnboardingDraft } from "@/lib/api";
+import { formatAppDate } from "@/lib/date-format";
 import { markGenerationIntent } from "@/lib/generation-intent";
 import {
   detectDeviceTimeZone,
@@ -281,6 +282,13 @@ function formatValue(value: string | number | null | undefined): string {
     return "Not provided";
   }
   return String(value);
+}
+
+function formatFightDateValue(value: string | null | undefined): string {
+  if (value === null || value === undefined || value === "") {
+    return "Not provided";
+  }
+  return formatAppDate(value);
 }
 
 function hasValue(value: string | number | null | undefined): boolean {
@@ -1989,7 +1997,7 @@ export function PlanIntakeForm() {
     { label: "Record", value: formatValue(form.athlete.record) },
   ];
   const campSetupReviewItems = [
-    { label: "Fight date", value: formatValue(form.fight_date) },
+    { label: "Fight date", value: formatFightDateValue(form.fight_date) },
     { label: "Rounds", value: formatValue(form.rounds_format) },
     { label: "Planned sessions per week", value: formatValue(form.weekly_training_frequency) },
     { label: "Fatigue level", value: formatValue(form.fatigue_level || "low") },
@@ -2583,7 +2591,7 @@ export function PlanIntakeForm() {
                   <h2 className="form-section-title">Current camp setup</h2>
                 </div>
                 <ul className="summary-list">
-                  <li>Fight date: {formatValue(form.fight_date)}</li>
+                  <li>Fight date: {formatFightDateValue(form.fight_date)}</li>
                   <li>Rounds: {formatValue(form.rounds_format)}</li>
                   <li>Planned sessions per week: {formatValue(form.weekly_training_frequency)}</li>
                   <li>Fatigue level: {formatValue(form.fatigue_level || "low")}</li>
