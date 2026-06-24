@@ -1076,6 +1076,13 @@ export function StructuredPlanRenderer({
         </>
       ) : null}
 
+            {progressionNotes ? (
+        <section className="sp-card sp-progression">
+          <p className="sp-eyebrow">Progression notes</p>
+          <p className="sp-block-purpose">{progressionNotes}</p>
+        </section>
+      ) : null}
+
       {hasRecoverySupport ? (
         <CollapsibleSection
           title="Recovery"
@@ -1094,13 +1101,6 @@ export function StructuredPlanRenderer({
         >
           <NutritionCard plan={plan} />
         </CollapsibleSection>
-      ) : null}
-
-      {progressionNotes ? (
-        <section className="sp-card sp-progression">
-          <p className="sp-eyebrow">Progression notes</p>
-          <p className="sp-block-purpose">{progressionNotes}</p>
-        </section>
       ) : null}
 
       <ActiveNotesCard plan={plan} />
