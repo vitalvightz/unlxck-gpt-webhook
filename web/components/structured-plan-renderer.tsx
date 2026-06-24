@@ -1074,22 +1074,14 @@ export function StructuredPlanRenderer({
   today,
   focusDay,
   currentDayLabel = "Today",
-  createdAt,
-  planStatus,
 }: {
   plan: StructuredPlan;
   today?: Date;
-  /** ISO date/timestamp the plan was generated (plan record `created_at`), shown
-   * in the command header as "Generated <date>". Optional — omitted in contexts
-   * with no record. */
   createdAt?: string | null;
-  /** The saved plan record's authoritative lifecycle status, shown as a header
-   * pill. This wins; plan_metadata.status is only a record-less fallback. */
   planStatus?: string | null;
   /** Optional advance target: the next scheduled session's day, passed once
    * today is already logged. It moves ONLY the opened week + day highlight, never
-   * the truthful "current week" marker or the camp-status countdown (those stay
-   * on the real `today`). Omit it for the normal calendar view. */
+   * the truthful current week marker. Omit it for the normal calendar view. */
   focusDay?: Date;
   /** Badge text for the highlighted day. Callers pass "Next session" alongside
    * `focusDay` so the advanced day is not mislabelled "Today". */
@@ -1140,8 +1132,6 @@ export function StructuredPlanRenderer({
 
   return (
     <div className="sp-root cm-root">
-      <PlanHeader plan={plan} createdAt={createdAt} planStatus={planStatus} />
-      {/* Camp status chips and readiness strip removed per request (boxing tag remains in header) */}
       <ActiveNotesCard plan={plan} />
       <RedFlagsCard plan={plan} />
 
