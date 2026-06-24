@@ -536,95 +536,6 @@ export function CampDayCard({
   );
 }
 
-const MONTH_ABBR = [
-  "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
-];
-
-/**
- * Format an ISO date/timestamp's date portion as "11 Jun 2026", or null.
- * Parses the YYYY-MM-DD prefix directly (no Date) so the output is timezone- and
- * locale-stable — renderToStaticMarkup must produce the same string everywhere.
- */
-function formatGeneratedDate(value: string | null | undefined): string | null {
-  const iso = cleanText(value)?.slice(0, 10);
-  const match = iso ? /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso) : null;
-  if (!match) {
-    return null;
-  }
-  const [, year, month, day] = match;
-  const monthName = MONTH_ABBR[Number(month) - 1];
-  if (!monthName) {
-    return null;
-  }
-  return `${Number(day)} ${monthName} ${year}`;
-}
-
-// Statuses that mean a saved plan is genuinely publishable/ready get the calm
-// success tone; every other lifecycle state (awaiting review, safety hold,
-// archived, still processing) stays a neutral pill so an unsafe or in-progress
-// plan never reads as "good to go".
-const SUCCESS_STATUS_TOKENS = new Set(["ready", "publishable_with_flags"]);
-
-function statusTagClass(status: string): string {
-  const token = status.toLowerCase().replace(/[\s-]+/g, "_");
-  return SUCCESS_STATUS_TOKENS.has(token) ? "sp-tag sp-done" : "sp-tag";
-}
-
-export function PlanHeader({
-  plan,
-  createdAt,
-  planStatus,
-}: {
-  plan: StructuredPlan;
-  /** ISO date/timestamp the plan was generated (from the plan record), shown as
-   * "Generated <date>". Omitted in contexts without a record (e.g. previews). */
-  createdAt?: string | null;
-  /** The saved plan record's authoritative lifecycle status. This wins; the
-   * structured plan_metadata.status is only a fallback for preview/test contexts
-   * that have no record, because it uses a different vocabulary
-   * (draft/active/completed/archived) that must not override the record's
-   * ready/held_for_review/publishable_with_flags states. */
-  planStatus?: string | null;
-}) {
-  const meta = plan.plan_metadata;
-  const title = cleanText(meta?.title) || "Training Plan";
-  const sport = cleanText(meta?.sport);
-  const planType = cleanText(meta?.plan_type);
-  const athlete = plan.athlete_context;
-  const profile = cleanText(athlete?.sport_profile) || cleanText(athlete?.style_profile);
-  const event = plan.event_context;
-  const eventType = cleanText(event?.event_type);
-  const eventDate = cleanText(event?.fight_date) || cleanText(event?.match_date);
-  // The saved-plan record status is authoritative; plan_metadata.status is only a
-  // fallback for record-less preview/test contexts.
-  const status = cleanText(planStatus) || cleanText(meta?.status);
-  const generatedOn = formatGeneratedDate(createdAt);
-
-  const tags = [sport, planType ? titleize(planType) : null, eventType ? titleize(eventType) : null]
-    .filter((tag): tag is string => Boolean(tag));
-
-  return (
-    <header className="sp-header cm-command">
-      <p className="sp-eyebrow">Camp map</p>
-      <h3 className="sp-title">{title}</h3>
-      {profile ? <p className="sp-subtitle">{profile}</p> : null}
-      {tags.length > 0 || eventDate || status ? (
-        <div className="sp-header-tags">
-          {status ? <span className={statusTagClass(status)}>{titleize(status)}</span> : null}
-          {tags.map((tag, index) => (
-            <span key={`${tag}-${index}`} className="sp-tag">
-              {tag}
-            </span>
-          ))}
-          {eventDate ? <span className="sp-tag sp-accent">{eventDate}</span> : null}
-        </div>
-      ) : null}
-      {generatedOn ? <p className="sp-header-meta">Generated {generatedOn}</p> : null}
-    </header>
-  );
-}
-
 // Plan-level "active notes": the short, always-on reminders (weight cut,
 // injury, nutrition, general non-negotiables) that live outside any week. Kept
 // as a standalone card near the top so this context is not lost in the
@@ -1165,25 +1076,24 @@ export function StructuredPlanRenderer({
         </>
       ) : null}
 
-      <ActiveNotesCard plan={plan} />
-      <RedFlagsCard plan={plan} />
+      {hasRecoverySupport ? (
+        <CollapsibleSection
+          title="Recovery"
+          detailLabel="recovery"
+          className="cm-support-section"
+        >
+          <RecoveryCard plan={plan} />
+        </CollapsibleSection>
+      ) : null}
 
-      {hasRecoverySupport || hasNutritionSupport ? (
-        <section className="sp-card cm-support" aria-label="Support">
-          <p className="sp-eyebrow">Support</p>
-
-          {hasRecoverySupport ? (
-            <CollapsibleSection title="Recovery" detailLabel="recovery">
-              <RecoveryCard plan={plan} />
-            </CollapsibleSection>
-          ) : null}
-
-          {hasNutritionSupport ? (
-            <CollapsibleSection title="Nutrition" detailLabel="nutrition">
-              <NutritionCard plan={plan} />
-            </CollapsibleSection>
-          ) : null}
-        </section>
+      {hasNutritionSupport ? (
+        <CollapsibleSection
+          title="Nutrition"
+          detailLabel="nutrition"
+          className="cm-support-section"
+        >
+          <NutritionCard plan={plan} />
+        </CollapsibleSection>
       ) : null}
 
       {progressionNotes ? (
@@ -1192,6 +1102,9 @@ export function StructuredPlanRenderer({
           <p className="sp-block-purpose">{progressionNotes}</p>
         </section>
       ) : null}
+
+      <ActiveNotesCard plan={plan} />
+      <RedFlagsCard plan={plan} />
 
       {rawFallback ? (
         <details className="sp-collapse cm-raw-fallback">
