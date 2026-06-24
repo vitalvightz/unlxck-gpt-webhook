@@ -14542,3 +14542,17 @@ html[data-theme="light"] .loading-operational-item {
   color: var(--text-muted);
   text-align: center;
 }
+
+.app-safety-footer-tight {
+  display: none;
+}
+
+@media (max-width: 720px) {
+  .app-safety-footer-wide {
+    display: none;
+  }
+
+  .app-safety-footer-tight {
+    display: inline;
+  }
+}

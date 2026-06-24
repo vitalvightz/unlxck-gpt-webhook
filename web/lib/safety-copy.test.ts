@@ -5,6 +5,7 @@ import {
   INJURY_INTAKE_SAFETY,
   PLAN_SAFETY_NOTE,
   SAFETY_DISCLAIMER_SHORT,
+  SAFETY_DISCLAIMER_TIGHT,
   SAFETY_NOT_MEDICAL_ADVICE,
   SAFETY_RED_FLAGS,
   TODAY_RED_FLAG_SAFETY,
@@ -14,6 +15,7 @@ import {
 const ALL_COPY: ReadonlyArray<[string, string]> = [
   ["SAFETY_NOT_MEDICAL_ADVICE", SAFETY_NOT_MEDICAL_ADVICE],
   ["SAFETY_DISCLAIMER_SHORT", SAFETY_DISCLAIMER_SHORT],
+  ["SAFETY_DISCLAIMER_TIGHT", SAFETY_DISCLAIMER_TIGHT],
   ["INJURY_INTAKE_SAFETY", INJURY_INTAKE_SAFETY],
   ["TODAY_RED_FLAG_SAFETY", TODAY_RED_FLAG_SAFETY],
   ["PLAN_SAFETY_NOTE", PLAN_SAFETY_NOTE],
@@ -24,6 +26,7 @@ const ALL_COPY: ReadonlyArray<[string, string]> = [
 test("core disclaimers state Unlxck is not medical advice", () => {
   assert.match(SAFETY_NOT_MEDICAL_ADVICE, /not medical advice/i);
   assert.match(SAFETY_DISCLAIMER_SHORT, /not medical advice/i);
+  assert.match(SAFETY_DISCLAIMER_TIGHT, /not medical advice/i);
   assert.match(INJURY_INTAKE_SAFETY, /does not diagnose|medical clearance/i);
   assert.match(WEIGHT_CUT_SAFETY, /not medical advice|qualified professional/i);
 });
@@ -67,4 +70,11 @@ test("no copy makes an unsafe positive medical claim", () => {
       );
     }
   }
+});
+
+test("tight disclaimer uses exact mobile copy", () => {
+  assert.equal(
+    SAFETY_DISCLAIMER_TIGHT,
+    "Unlxck is not medical advice. Stop if symptoms worsen, seek help for red flags, and follow your coach or clinician.",
+  );
 });
