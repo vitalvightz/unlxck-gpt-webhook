@@ -22,7 +22,8 @@ test("formatPlanLabel maps plan status flags", () => {
 test("formatPlanLabel maps phase labels", () => {
   assert.equal(formatPlanLabel("SPP"), "Specific prep");
   assert.equal(formatPlanLabel("GPP"), "General prep");
-  assert.equal(formatPlanLabel("TAPER"), "Fight week taper");
+  assert.equal(formatPlanLabel("TAPER"), "Taper");
+  assert.equal(formatPlanLabel("FIGHT_WEEK"), "Fight week");
 });
 
 test("formatPlanLabel maps session/block types including spaced raw forms", () => {
