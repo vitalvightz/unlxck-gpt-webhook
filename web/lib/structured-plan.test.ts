@@ -8,6 +8,7 @@ import {
   formatMacroRange,
   formatMeasured,
   formatWeightCutBand,
+  getActiveNotesExcludingRedFlags,
   getBlocks,
   getCoachingCues,
   getDays,
@@ -203,6 +204,56 @@ test("getPlanNotes is safe on missing / malformed plan_notes", () => {
   assert.deepEqual(getPlanNotes(null), []);
   assert.deepEqual(getPlanNotes({} as never), []);
   assert.deepEqual(getPlanNotes({ plan_notes: "nope" } as never), []);
+});
+
+test("getActiveNotesExcludingRedFlags drops notes that restate a red flag", () => {
+  const plan = {
+    red_flag_rules: [
+      {
+        rule_id: "rf-1",
+        display_text:
+          "If weight-cut symptoms worsen (lightheadedness, excessive weakness), stop non-essential activity and escalate to coach/medical staff.",
+      },
+    ],
+    plan_notes: [
+      // A shorter paraphrase of the red flag (missing the parenthetical) — dropped.
+      {
+        category: "weight_cut",
+        label: "Note",
+        text: "If weight-cut symptoms worsen, stop non-essential activity and escalate to coach/medical staff.",
+      },
+      // Richer context that merely shares a phrase with the flag — kept.
+      {
+        category: "injury",
+        label: "Left shoulder contusion",
+        text: "High-severity bruise, stable. Avoid direct contact; stop any drill on sharp pain or new swelling. Rehab drills included each session.",
+      },
+      // Unrelated context — kept.
+      { category: "weight_cut", label: "Active weight cut", text: "Cut ~3.5%; recovery tolerance reduced." },
+    ],
+  } as never;
+
+  const notes = getActiveNotesExcludingRedFlags(plan);
+  assert.equal(notes.length, 2);
+  assert.equal(
+    notes.some((note) => note.label === "Note"),
+    false,
+  );
+  assert.equal(
+    notes.some((note) => note.label === "Left shoulder contusion"),
+    true,
+  );
+  assert.equal(
+    notes.some((note) => note.label === "Active weight cut"),
+    true,
+  );
+});
+
+test("getActiveNotesExcludingRedFlags returns all notes when there are no red flags", () => {
+  const plan = {
+    plan_notes: [{ category: "general", text: "Stay disciplined." }],
+  } as never;
+  assert.equal(getActiveNotesExcludingRedFlags(plan).length, 1);
 });
 
 test("planNoteLabel prefers an explicit label, else a category title", () => {

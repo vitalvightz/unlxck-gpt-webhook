@@ -26,6 +26,14 @@ function campPlan(): StructuredPlan {
     red_flag_rules: [
       { rule_id: "rf-1", severity: "red", display_text: "Stop if Achilles pain ≥ 6/10." },
     ],
+    plan_notes: [
+      { category: "weight_cut", label: "Active weight cut", text: "Cut ~3.5%; recovery tolerance reduced." },
+      {
+        category: "injury",
+        label: "Left shoulder contusion",
+        text: "Avoid contact; stop on sharp pain or new swelling.",
+      },
+    ],
     weeks: [
       {
         week_id: "wk-1",
@@ -163,11 +171,13 @@ test("getReadinessStrip surfaces focus, risk and load (never the today call)", (
   const plan = campPlan();
   const currentDay = findDayByISO(plan, "2026-06-19");
   const strip = getReadinessStrip(plan, currentDay, plan.weeks![0]);
-  // Focus falls back to the day's headline; risk to its primary_warning; load to
-  // the week proxy. The exact "train / modify / pull back" call is owned by Today
-  // and never surfaces here; phase is left to the CampStatusLine.
+  // Focus falls back to the day's headline; injury watch is a SHORT cue built
+  // from the injury / weight-cut note labels (never the full stop sentence — that
+  // lives in the Red Flags card), with a pointer to it; load is the week proxy.
+  // The exact "train / modify / pull back" call is owned by Today; phase is left
+  // to the CampStatusLine.
   assert.equal(strip.focus, "Speed conversion");
-  assert.equal(strip.risk, "Achilles still tender — keep contacts short.");
+  assert.equal(strip.risk, "Active weight cut · Left shoulder contusion — see red flags");
   assert.equal(strip.load, "High");
   assert.equal("todayCall" in strip, false);
   assert.equal("phase" in strip, false);
@@ -194,12 +204,19 @@ test("getReadinessStrip prefers an explicit readiness_snapshot over derived valu
 
 test("getReadinessStrip degrades gracefully with no current day", () => {
   const plan = campPlan();
-  // No current day: focus has nothing to derive from, risk falls back to the top
-  // red flag, and load comes from the passed week proxy.
+  // No current day: focus has nothing to derive from. Injury watch is plan-level
+  // (the note labels), so it still resolves; load comes from the passed week proxy.
   const strip = getReadinessStrip(plan, null, plan.weeks![1]);
   assert.equal(strip.focus, null);
-  assert.equal(strip.risk, "Stop if Achilles pain ≥ 6/10.");
+  assert.equal(strip.risk, "Active weight cut · Left shoulder contusion — see red flags");
   assert.equal(strip.load, "Low");
+});
+
+test("getReadinessStrip injury cue omits the red-flag pointer when there are no flags", () => {
+  const plan: StructuredPlan = { ...campPlan(), red_flag_rules: [] };
+  const currentDay = findDayByISO(plan, "2026-06-19");
+  const strip = getReadinessStrip(plan, currentDay, plan.weeks![0]);
+  assert.equal(strip.risk, "Active weight cut · Left shoulder contusion");
 });
 
 test("resolveTrainingDay applies the 04:00 athlete-local rollover", () => {

@@ -10,10 +10,10 @@ import {
   formatMeasured,
   getBlocks,
   getCoachingCues,
+  getActiveNotesExcludingRedFlags,
   getDays,
   getDisplayableRedFlags,
   getFallbackSafetyNotes,
-  getPlanNotes,
   getRehabOrMobilityBlocks,
   planNoteLabel,
   formatWeightCutBand,
@@ -582,7 +582,9 @@ export function PlanHeader({
 // as a standalone card near the top so this context is not lost in the
 // structured view the way it would be if it only existed in the raw text.
 export function ActiveNotesCard({ plan }: { plan: StructuredPlan }) {
-  const notes = getPlanNotes(plan);
+  // Drop any note that just restates a red-flag rule — the Red Flags card is the
+  // single home for stop/report rules, so Active Notes stays context-only.
+  const notes = getActiveNotesExcludingRedFlags(plan);
   if (notes.length === 0) {
     return null;
   }
@@ -623,15 +625,17 @@ function severityToneClass(label: string | null): string {
 export function RedFlagsCard({ plan }: { plan: StructuredPlan }) {
   const rules = getDisplayableRedFlags(plan);
   const fallbackNotes = rules.length === 0 ? getFallbackSafetyNotes(plan) : [];
-  if (rules.length === 0 && fallbackNotes.length === 0) {
-    return null;
-  }
+  const hasStopRules = rules.length > 0 || fallbackNotes.length > 0;
+  // The safety/medical disclaimer is folded in here (it used to be a separate
+  // banner) so safety lives in one block. The card therefore always renders the
+  // disclaimer, with the stop/report rules above it when present.
   return (
     <section className="sp-card sp-redflags" aria-label="Red flags and safety actions">
       <div className="sp-redflags-head">
         <p className="sp-eyebrow">Safety priority</p>
         <h4 className="sp-redflags-title">Red flags - stop &amp; report</h4>
       </div>
+      {hasStopRules ? (
       <ul className="sp-redflag-list">
         {rules.length > 0 ? rules.map((rule, index) => {
           const { text, action, severityLabel } = redFlagView(rule);
@@ -661,6 +665,8 @@ export function RedFlagsCard({ plan }: { plan: StructuredPlan }) {
           </li>
         ))}
       </ul>
+      ) : null}
+      <SafetyNote tone="warning" showRedFlags>{PLAN_SAFETY_NOTE}</SafetyNote>
     </section>
   );
 }
@@ -1009,10 +1015,10 @@ function WeekStrip({
   );
 }
 
-/** The selected week's purpose, phase, countdown/dates, load proxy, completion. */
+/** The selected week's countdown/dates, load proxy and completion. The week goal
+ *  and phase are intentionally not repeated here: the goal is already in the
+ *  heading (weekLabel) and the phase is shown in the status chips and week pill. */
 function WeekOverview({ week }: { week: StructuredWeek }) {
-  const phase = cleanText(week.phase_label);
-  const goal = cleanText(week.week_goal);
   const load = weekLoadProxy(week);
   const completion = weekCompletion(week);
   const sessionSummary = weekSessionSummary(week);
@@ -1031,7 +1037,6 @@ function WeekOverview({ week }: { week: StructuredWeek }) {
     .map((day) => cleanText(day.today_card?.primary_warning))
     .find((value): value is string => Boolean(value));
   const rows = [
-    { label: "Phase", value: phase ? titleize(phase) : null },
     { label: "Countdown", value: countdownRange },
     { label: "Dates", value: dateRange },
     { label: "Load", value: load },
@@ -1059,7 +1064,6 @@ function WeekOverview({ week }: { week: StructuredWeek }) {
         <p className="sp-eyebrow">This week</p>
         <h4 className="sp-redflags-title">{weekLabel(week)}</h4>
       </div>
-      {goal ? <p className="sp-block-purpose">{goal}</p> : null}
       {rows.length > 0 ? (
         <div className="sp-block-stats cm-week-overview-stats">
           {rows.map((row) => (
@@ -1157,7 +1161,6 @@ export function StructuredPlanRenderer({
       <ReadinessStrip plan={plan} currentDay={currentDay} focusWeek={phaseWeek} />
       <ActiveNotesCard plan={plan} />
       <RedFlagsCard plan={plan} />
-      <SafetyNote tone="warning" showRedFlags>{PLAN_SAFETY_NOTE}</SafetyNote>
 
       {weeks.length > 0 ? (
         <>
