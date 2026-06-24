@@ -21,10 +21,18 @@ type Zone = {
   r: number;
 };
 
-// Anatomical "Left"/"Right" refer to the figure's own side. To match the mirror
-// the athlete instinctively expects (clicking the right-hand side of the image
-// marks their right), zones labelled "Left" render at higher cx (visual right)
-// and "Right" labels render at lower cx (visual left), on both views.
+// Anatomical "Left"/"Right" refer to the figure's own side. Screen position must
+// differ per view because the two views are not mirror images of each other:
+//
+//   * FRONT view faces the athlete, so it reads like a mirror — the athlete's
+//     left side appears on the viewer's right (higher cx) and vice versa. So
+//     "Left" zones render at higher cx, "Right" zones at lower cx.
+//   * BACK view looks at the athlete from behind, so screen and anatomy line up —
+//     the athlete's left is on the viewer's left (lower cx). So "Left" zones
+//     render at lower cx, "Right" zones at higher cx (see BACK_ZONES below).
+//
+// This keeps "tap the side you feel it on" intuitive while the label stays
+// anatomically correct on both views.
 const FRONT_ZONES: Record<string, Zone> = {
   head: { label: "Head / Neck", cx: 90, cy: 28, r: 16 },
   l_shoulder: { label: "Left shoulder", cx: 124, cy: 68, r: 13 },
@@ -47,26 +55,29 @@ const FRONT_ZONES: Record<string, Zone> = {
   r_ankle: { label: "Right ankle", cx: 72, cy: 282, r: 9 },
 };
 
+// Back view is NOT a mirror: the athlete's left sits on the viewer's left. So
+// every "Left" zone takes the lower cx and every "Right" zone the higher cx —
+// the opposite of FRONT_ZONES — while the anatomical labels stay the same.
 const BACK_ZONES: Record<string, Zone> = {
   head: { label: "Head / Neck", cx: 90, cy: 28, r: 16 },
-  l_shoulder: { label: "Left shoulder", cx: 124, cy: 68, r: 13 },
-  r_shoulder: { label: "Right shoulder", cx: 56, cy: 68, r: 13 },
+  l_shoulder: { label: "Left shoulder", cx: 56, cy: 68, r: 13 },
+  r_shoulder: { label: "Right shoulder", cx: 124, cy: 68, r: 13 },
   upper_back: { label: "Upper back", cx: 90, cy: 88, r: 14 },
-  l_elbow: { label: "Left elbow", cx: 142, cy: 118, r: 10 },
-  r_elbow: { label: "Right elbow", cx: 38, cy: 118, r: 10 },
+  l_elbow: { label: "Left elbow", cx: 38, cy: 118, r: 10 },
+  r_elbow: { label: "Right elbow", cx: 142, cy: 118, r: 10 },
   lower_back: { label: "Lower back", cx: 90, cy: 125, r: 14 },
-  l_wrist: { label: "Left wrist", cx: 156, cy: 155, r: 9 },
-  r_wrist: { label: "Right wrist", cx: 24, cy: 155, r: 9 },
-  l_glute: { label: "Left glute", cx: 110, cy: 155, r: 12 },
-  r_glute: { label: "Right glute", cx: 70, cy: 155, r: 12 },
-  l_ham: { label: "Left hamstring", cx: 108, cy: 190, r: 12 },
-  r_ham: { label: "Right hamstring", cx: 72, cy: 190, r: 12 },
-  l_knee: { label: "Left knee", cx: 106, cy: 220, r: 10 },
-  r_knee: { label: "Right knee", cx: 74, cy: 220, r: 10 },
-  l_calf: { label: "Left calf", cx: 106, cy: 252, r: 10 },
-  r_calf: { label: "Right calf", cx: 74, cy: 252, r: 10 },
-  l_ankle: { label: "Left ankle", cx: 108, cy: 282, r: 9 },
-  r_ankle: { label: "Right ankle", cx: 72, cy: 282, r: 9 },
+  l_wrist: { label: "Left wrist", cx: 24, cy: 155, r: 9 },
+  r_wrist: { label: "Right wrist", cx: 156, cy: 155, r: 9 },
+  l_glute: { label: "Left glute", cx: 70, cy: 155, r: 12 },
+  r_glute: { label: "Right glute", cx: 110, cy: 155, r: 12 },
+  l_ham: { label: "Left hamstring", cx: 72, cy: 190, r: 12 },
+  r_ham: { label: "Right hamstring", cx: 108, cy: 190, r: 12 },
+  l_knee: { label: "Left knee", cx: 74, cy: 220, r: 10 },
+  r_knee: { label: "Right knee", cx: 106, cy: 220, r: 10 },
+  l_calf: { label: "Left calf", cx: 74, cy: 252, r: 10 },
+  r_calf: { label: "Right calf", cx: 106, cy: 252, r: 10 },
+  l_ankle: { label: "Left ankle", cx: 72, cy: 282, r: 9 },
+  r_ankle: { label: "Right ankle", cx: 108, cy: 282, r: 9 },
 };
 
 const SILHOUETTE_PATH = [
