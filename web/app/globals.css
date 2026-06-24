@@ -11968,22 +11968,22 @@ html[data-theme="light"] .today-inline-warning {
 html[data-theme="light"] .today-decision-banner[data-tone="red"],
 html[data-theme="light"] .today-risk-item[data-tone="stop"],
 html[data-theme="light"] .today-risk-item[data-tone="warning"] {
-  border-color: rgba(146, 43, 45, 0.24);
+  border-color: color-mix(in srgb, var(--brand-red) 24%, transparent);
   border-left-color: var(--brand-red);
-  background: linear-gradient(135deg, rgba(146, 43, 45, 0.08), rgba(255, 255, 255, 0.62));
+  background: linear-gradient(135deg, color-mix(in srgb, var(--brand-red) 8%, transparent), rgba(255, 255, 255, 0.62));
 }
 
 html[data-theme="light"] .today-decision-banner[data-tone="amber"],
 html[data-theme="light"] .today-risk-item[data-tone="caution"] {
-  border-color: rgba(150, 113, 59, 0.24);
+  border-color: color-mix(in srgb, var(--progress-gold) 24%, transparent);
   border-left-color: var(--progress-gold);
-  background: linear-gradient(135deg, rgba(150, 113, 59, 0.09), rgba(255, 255, 255, 0.62));
+  background: linear-gradient(135deg, color-mix(in srgb, var(--progress-gold) 9%, transparent), rgba(255, 255, 255, 0.62));
 }
 
 html[data-theme="light"] .today-decision-banner[data-tone="green"] {
-  border-color: rgba(37, 131, 82, 0.2);
+  border-color: color-mix(in srgb, var(--success-ink) 20%, transparent);
   border-left-color: var(--success-ink);
-  background: linear-gradient(135deg, rgba(37, 131, 82, 0.08), rgba(255, 255, 255, 0.62));
+  background: linear-gradient(135deg, color-mix(in srgb, var(--success-ink) 8%, transparent), rgba(255, 255, 255, 0.62));
 }
 
 html[data-theme="light"] .today-risk-item[data-tone="info"] {
