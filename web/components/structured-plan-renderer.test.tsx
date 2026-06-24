@@ -411,6 +411,90 @@ test("uses an athlete-readable camp-map command header, not internal wording", (
   assert.equal(html.includes("Structured plan"), false);
 });
 
+test("command header prefers the record status over plan_metadata.status", () => {
+  const plan = {
+    schema_version: "1.0",
+    plan_metadata: {
+      title: "Fight Camp",
+      sport: "boxing",
+      plan_type: "fight_camp",
+      status: "active",
+    },
+    weeks: [{ week_id: "wk-1", week_index: 1, phase_label: "GPP", days: [] }],
+  } satisfies StructuredPlan;
+
+  const html = renderToStaticMarkup(
+    <StructuredPlanRenderer
+      plan={plan}
+      createdAt="2026-06-11T09:30:00Z"
+      planStatus="held_for_review"
+    />,
+  );
+
+  // The authoritative saved-plan record status wins over the structured-plan
+  // vocabulary, so the review state shows and "Active" does not.
+  assert.equal(html.includes("Awaiting review"), true);
+  assert.equal(html.includes("Active"), false);
+  // A review/hold status must never render with the success tone.
+  assert.equal(html.includes("sp-done"), false);
+  // The generation date is formatted deterministically (timezone-stable, no
+  // Date parsing) so SSR output is identical everywhere.
+  assert.equal(html.includes("Generated 11 Jun 2026"), true);
+});
+
+test("command header tones publishable statuses as success and unsafe ones neutrally", () => {
+  const plan = {
+    schema_version: "1.0",
+    plan_metadata: { title: "Fight Camp", sport: "boxing", plan_type: "fight_camp" },
+    weeks: [{ week_id: "wk-1", week_index: 1, phase_label: "GPP", days: [] }],
+  } satisfies StructuredPlan;
+
+  const ready = renderToStaticMarkup(<StructuredPlanRenderer plan={plan} planStatus="ready" />);
+  assert.equal(ready.includes("Ready"), true);
+  assert.equal(ready.includes("sp-tag sp-done"), true);
+  // No createdAt prop, so the "Generated …" line is omitted entirely.
+  assert.equal(ready.includes("Generated"), false);
+
+  const flagged = renderToStaticMarkup(
+    <StructuredPlanRenderer plan={plan} planStatus="publishable_with_flags" />,
+  );
+  assert.equal(flagged.includes("sp-tag sp-done"), true);
+
+  // Review / safety-hold / archived states must stay neutral — never success.
+  for (const status of [
+    "review_required",
+    "held_for_review",
+    "needs_review",
+    "triage_blocked",
+    "medical_hold",
+    "restricted_rehab_only",
+    "archived",
+    "generated",
+  ]) {
+    const html = renderToStaticMarkup(<StructuredPlanRenderer plan={plan} planStatus={status} />);
+    assert.equal(html.includes("sp-done"), false);
+  }
+});
+
+test("command header falls back to plan_metadata.status only without a record status", () => {
+  const plan = {
+    schema_version: "1.0",
+    plan_metadata: {
+      title: "Fight Camp",
+      sport: "boxing",
+      plan_type: "fight_camp",
+      status: "active",
+    },
+    weeks: [{ week_id: "wk-1", week_index: 1, phase_label: "GPP", days: [] }],
+  } satisfies StructuredPlan;
+
+  // No planStatus prop (preview/test context): the structured status is used,
+  // and structured-vocabulary states stay neutral (not success-toned).
+  const html = renderToStaticMarkup(<StructuredPlanRenderer plan={plan} />);
+  assert.equal(html.includes("Active"), true);
+  assert.equal(html.includes("sp-done"), false);
+});
+
 test("does not leak raw enum tokens for day type or session type", () => {
   const plan = {
     schema_version: "1.0",
