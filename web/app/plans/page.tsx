@@ -13,12 +13,9 @@ import { ApiError, archivePlan, getActivePlan, listPlans, renamePlan, setActiveP
 import { markGenerationIntent } from "@/lib/generation-intent";
 import {
   EQUIPMENT_ACCESS_OPTIONS,
-  getOptionLabel,
   getOptionLabels,
-  KEY_GOAL_OPTIONS,
   TACTICAL_STYLE_OPTIONS,
   TECHNICAL_STYLE_OPTIONS,
-  WEAK_AREA_OPTIONS,
 } from "@/lib/intake-options";
 import {
   formatPlanFightDate,
@@ -85,21 +82,6 @@ function getPlanVersionLabel(plan: PlanSummary): string {
     return "Named plan";
   }
   return plan.fight_date ? "Fight camp" : "Open camp";
-}
-
-function getPrimaryFocus(intake: PlanRequest | null | undefined): string | null {
-  if (!intake) {
-    return null;
-  }
-  const goal = intake.primary_goal ? getOptionLabel(KEY_GOAL_OPTIONS, intake.primary_goal) : "";
-  if (goal) {
-    return goal;
-  }
-  const weakArea = intake.primary_weak_area ? getOptionLabel(WEAK_AREA_OPTIONS, intake.primary_weak_area) : "";
-  if (weakArea) {
-    return weakArea;
-  }
-  return null;
 }
 
 function getProfileSource(me: MeResponse | null): ProfileRecord | null {
@@ -533,8 +515,7 @@ function LatestPlanCard({
   const [renameDraft, setRenameDraft] = useState(() => (plan ? getRenameDraftValue(plan) : ""));
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
   const renameInputRef = useRef<HTMLInputElement | null>(null);
-  const primaryFocus = getPrimaryFocus(intake);
-  const fightDate = plan?.fight_date || intake?.fight_date || "";
+  const fightDate = plan?.fight_date || "";
   const hasSavedIntake = Boolean(intake);
   const latestPlanLines: SummaryLine[] = [];
   const renameInputId = plan ? `rename-latest-plan-${plan.plan_id}` : "rename-latest-plan";
@@ -547,9 +528,6 @@ function LatestPlanCard({
     }
     if (plan.status?.trim()) {
       latestPlanLines.push({ label: "Status", value: formatPlanStatus(plan.status) });
-    }
-    if (primaryFocus) {
-      latestPlanLines.push({ label: "Primary focus", value: primaryFocus });
     }
   }
 
@@ -995,7 +973,7 @@ export default function PlansPage() {
           <div className="athlete-motion-slot athlete-motion-header">
             <p className="kicker">Plan Dashboard</p>
             <h1>Your plan workspace</h1>
-            <p className="muted">Open the active camp, review the intake behind it, or generate a new version from the current profile.</p>
+            <p className="muted">Open the active camp, review your current intake, or generate a new version from the current profile.</p>
           </div>
         </div>
 
