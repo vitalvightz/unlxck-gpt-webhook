@@ -1296,7 +1296,7 @@ create table if not exists public.injury_flags (
   athlete_id uuid not null references public.profiles(id) on delete cascade,
   plan_id uuid references public.plans(id) on delete set null,
   source text not null default 'checkin'
-    check (source in ('checkin', 'session_log', 'manual', 'admin')),
+    check (source in ('checkin', 'session_log', 'manual', 'admin', 'intake')),
   body_area text not null default '',
   description text not null,
   severity text not null default 'moderate'
