@@ -23,10 +23,10 @@ export function SafetyNote({
   showRedFlags?: boolean;
 }>) {
   return (
-    <aside className={`safety-note safety-note-${tone}`} role="note">
+    <div className={`safety-note safety-note-${tone}`}>
       <p className="safety-note-body">{children}</p>
       {showRedFlags ? <SafetyRedFlags /> : null}
-    </aside>
+    </div>
   );
 }
 
