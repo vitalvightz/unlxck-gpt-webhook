@@ -77,13 +77,13 @@
       ],
       "after_winners": [
         "Easy Assault Bike",
-        "Bridge Tempo Touch: 2-3 x 90 sec Technical Tempo",
-        "Band-Resisted Straight Punch Release"
+        "Band-Resisted Straight Punch Release",
+        "Bridge Tempo Touch: 2-3 x 90 sec Technical Tempo"
       ],
       "added_winners": [
         "Easy Assault Bike",
-        "Bridge Tempo Touch: 2-3 x 90 sec Technical Tempo",
-        "Band-Resisted Straight Punch Release"
+        "Band-Resisted Straight Punch Release",
+        "Bridge Tempo Touch: 2-3 x 90 sec Technical Tempo"
       ],
       "removed_winners": [
         "Easy Bike",
@@ -235,6 +235,8 @@
       "newly_blocked": [
         "Agility Ladder (Recovery)",
         "Assault Bike Rhythm Primer",
+        "Band-Resisted Straight Punch Release",
+        "Band-Resisted Vertical Jump",
         "Cooldown Flow (Striking + Mobility)",
         "Defensive Rhythm Flow",
         "Easy Continuous Swimming",
@@ -252,7 +254,17 @@
       ],
       "no_longer_blocked": []
     },
-    "ambiguous_tag_gaps_added": [],
+    "ambiguous_tag_gaps_added": [
+      {
+        "selector": "conditioning",
+        "name": "Low Box Jump (Fast Reset)",
+        "issue": "late_safe_intent_not_explicit",
+        "signals": [
+          "mech_reactive",
+          "plyometric"
+        ]
+      }
+    ],
     "ambiguous_tag_gaps_removed": []
   },
   "d6_to_d5": {
@@ -319,6 +331,8 @@
       "newly_blocked": [
         "Agility Ladder (Recovery)",
         "Assault Bike Rhythm Primer",
+        "Band-Resisted Straight Punch Release",
+        "Band-Resisted Vertical Jump",
         "Cooldown Flow (Striking + Mobility)",
         "Defensive Rhythm Flow",
         "Easy Continuous Swimming",
@@ -336,7 +350,17 @@
       ],
       "no_longer_blocked": []
     },
-    "ambiguous_tag_gaps_added": [],
+    "ambiguous_tag_gaps_added": [
+      {
+        "selector": "conditioning",
+        "name": "Low Box Jump (Fast Reset)",
+        "issue": "late_safe_intent_not_explicit",
+        "signals": [
+          "mech_reactive",
+          "plyometric"
+        ]
+      }
+    ],
     "ambiguous_tag_gaps_removed": []
   },
   "d4_to_d2": {
@@ -411,6 +435,8 @@
       "newly_blocked": [
         "Agility Ladder (Recovery)",
         "Assault Bike Rhythm Primer",
+        "Band-Resisted Straight Punch Release",
+        "Band-Resisted Vertical Jump",
         "Cooldown Flow (Striking + Mobility)",
         "Defensive Rhythm Flow",
         "Easy Bike",
@@ -430,7 +456,17 @@
       ],
       "no_longer_blocked": []
     },
-    "ambiguous_tag_gaps_added": [],
+    "ambiguous_tag_gaps_added": [
+      {
+        "selector": "conditioning",
+        "name": "Low Box Jump (Fast Reset)",
+        "issue": "late_safe_intent_not_explicit",
+        "signals": [
+          "mech_reactive",
+          "plyometric"
+        ]
+      }
+    ],
     "ambiguous_tag_gaps_removed": []
   },
   "d1": {

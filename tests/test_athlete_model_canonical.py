@@ -161,3 +161,25 @@ def test_legacy_imports_still_work():
     assert payload_readiness is brief_readiness is athlete_model._derive_readiness_flags
     assert payload_high_pressure is brief_high_pressure is athlete_model._is_high_pressure_weight_cut
     assert payload_parse_record is brief_parse_record is athlete_model._parse_record
+
+
+def test_high_pressure_weight_cut_low_fatigue_boundary():
+    """Low-fatigue, non-aggressive active cut is only high-pressure inside D-14."""
+    def cut(days):
+        return {
+            "weight_cut_risk": True,
+            "weight_cut_pct": 3.5,
+            "fatigue": "low",
+            "days_until_fight": days,
+            "readiness_flags": ["active_weight_cut"],
+        }
+
+    assert not athlete_model._is_high_pressure_weight_cut(athlete_model=cut(28))
+    assert not athlete_model._is_high_pressure_weight_cut(athlete_model=cut(21))
+    assert not athlete_model._is_high_pressure_weight_cut(athlete_model=cut(15))
+    assert athlete_model._is_high_pressure_weight_cut(athlete_model=cut(14))
+    # Moderate+ fatigue and aggressive cuts stay high-pressure at any distance.
+    moderate = {**cut(21), "fatigue": "moderate", "readiness_flags": ["active_weight_cut", "moderate_fatigue"]}
+    assert athlete_model._is_high_pressure_weight_cut(athlete_model=moderate)
+    aggressive = {**cut(21), "readiness_flags": ["active_weight_cut", "aggressive_weight_cut"]}
+    assert athlete_model._is_high_pressure_weight_cut(athlete_model=aggressive)

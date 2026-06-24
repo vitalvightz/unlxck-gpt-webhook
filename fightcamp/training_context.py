@@ -164,12 +164,16 @@ def allocate_sessions(training_frequency: int, phase: str = "GPP") -> dict:
         5: {
             "GPP": {"strength": 2, "conditioning": 2, "recovery": 1},
             "SPP": {"strength": 2, "conditioning": 2, "recovery": 1},
-            "TAPER": {"strength": 1, "conditioning": 1, "recovery": 3},
+            # Reallocate one recovery slot to conditioning: taper conditioning
+            # already carries TAPER-suitable (low-noise) tags, so a recovery-heavy
+            # 1/1/3 split left the week under-dosed. Total still sums to 5.
+            "TAPER": {"strength": 1, "conditioning": 2, "recovery": 2},
         },
         6: {
             "GPP": {"strength": 2, "conditioning": 3, "recovery": 1},
             "SPP": {"strength": 2, "conditioning": 3, "recovery": 1},
-            "TAPER": {"strength": 1, "conditioning": 1, "recovery": 4},
+            # As above: one recovery slot becomes conditioning. Total still sums to 6.
+            "TAPER": {"strength": 1, "conditioning": 2, "recovery": 3},
         },
     }
 

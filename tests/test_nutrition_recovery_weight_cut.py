@@ -13,8 +13,16 @@ def test_nutrition_high_pressure_weight_cut_detects_multiple_triggers():
     assert nutrition_high_pressure_cut(
         {"weight_cut_risk": True, "weight_cut_pct": 2.0, "fatigue": "moderate", "days_until_fight": 40}
     )
-    assert nutrition_high_pressure_cut(
+    # A low-fatigue, non-aggressive active cut is only high-pressure inside the final
+    # two weeks (<=14) — a routine cut at D-21 is not.
+    assert not nutrition_high_pressure_cut(
         {"weight_cut_risk": True, "weight_cut_pct": 2.0, "fatigue": "low", "days_until_fight": 21}
+    )
+    assert not nutrition_high_pressure_cut(
+        {"weight_cut_risk": True, "weight_cut_pct": 2.0, "fatigue": "low", "days_until_fight": 15}
+    )
+    assert nutrition_high_pressure_cut(
+        {"weight_cut_risk": True, "weight_cut_pct": 2.0, "fatigue": "low", "days_until_fight": 14}
     )
 
 
