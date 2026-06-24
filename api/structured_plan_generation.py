@@ -1523,6 +1523,20 @@ The JSON object MUST conform to the StructuredTrainingPlan schema:
 - Omit any of the above the plan does not state — leave the field out rather than
   inventing content.
 
+VOICE & CONCISENESS (athlete-facing text — week_goal, today_card.headline,
+session title/objective, plan_notes, mindset_anchor, nutrition prose):
+- week_goal MUST be a SHORT label of AT MOST 6 words — a phrase, not a sentence.
+  No semicolons, no "while …" tails, no second clause. Compress the source goal
+  to its single most important driver (e.g. "Build single-leg drive and balance",
+  "Sharpen punch speed, stay fresh"). Do NOT add content — only shorten.
+- Keep every athlete-facing string tight: prefer short phrases over full
+  sentences, drop filler and hedging, and never repeat the same point across two
+  fields.
+- Do NOT refer to "the app", "this app", "the platform", or "app sessions" in any
+  athlete-facing text. The athlete is reading their own plan, so name the work
+  directly ("S&C and rehab inserts on the listed D-days", "your sessions") rather
+  than attributing it to "the app".
+
 DETERMINISTIC AUTHORITY (when a "STAGE 1 COMPUTED SUPPORT" section is provided):
 - Treat STAGE 1 COMPUTED SUPPORT as AUTHORITATIVE for nutrition macros,
   hydration, fuel timing, and weight-cut risk; for recovery sleep/fatigue rules;
@@ -1559,7 +1573,7 @@ EXACT ROOT SKELETON (match this shape; fill values from the plan, keep all keys)
   "plan_notes": [{{"category": "weight_cut", "label": "Active weight cut", "text": "..."}}],
   "weeks": [
     {{
-      "week_id": "wk-1", "week_index": 1, "phase_label": "SPP", "week_goal": "...",
+      "week_id": "wk-1", "week_index": 1, "phase_label": "SPP", "week_goal": "<short label, max 6 words>",
       "start_date": "YYYY-MM-DD", "end_date": "YYYY-MM-DD",
       "load_focus": {{"volume": "moderate", "intensity": "high", "specificity": "high", "fatigue_target": "reduced"}},
       "progression": {{"week_type": "build", "planned_change_from_previous": "..."}},

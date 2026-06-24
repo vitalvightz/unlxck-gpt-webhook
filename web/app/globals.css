@@ -14433,6 +14433,28 @@ html[data-theme="light"] .loading-operational-item {
   text-transform: uppercase;
 }
 
+/* Active notes & Safety priority are collapsible cards. Two-class selectors keep
+   their accents (the red safety gradient/border) winning over the plain
+   .sp-collapse surface, which is defined later in the file. */
+.sp-collapse.sp-redflags {
+  border-left: 3px solid var(--brand-red);
+  background: linear-gradient(
+    90deg,
+    var(--brand-red-soft) 0%,
+    var(--bg-surface) 40%
+  );
+}
+.sp-redflags-summary-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+/* The safety eyebrow keeps its accent tone inside the summary. */
+.sp-collapse.sp-redflags .sp-eyebrow {
+  margin: 0;
+}
+
 .sp-more-toggle {
   display: inline-flex;
   align-items: center;

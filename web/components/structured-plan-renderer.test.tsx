@@ -668,9 +668,12 @@ test("week overview separates training days, app sessions, and coach-led session
   const html = renderToStaticMarkup(<StructuredPlanRenderer plan={plan} today={new Date(2026, 5, 18)} />);
 
   assert.equal(html.includes("Training days"), true);
-  assert.equal(html.includes("App sessions"), true);
-  assert.equal(html.includes("Coach-led sessions"), true);
-  assert.equal(html.includes("App completion"), true);
+  // The week-overview stats no longer say "app" — the athlete just sees their work.
+  assert.equal(html.includes("Sessions</span>"), true);
+  assert.equal(html.includes("Coach-led</span>"), true);
+  assert.equal(html.includes("Completion</span>"), true);
+  assert.equal(html.includes("App sessions"), false);
+  assert.equal(html.includes("App completion"), false);
   assert.equal(html.includes("Days</span>"), false);
   assert.equal(html.includes("Completed</span>"), false);
 });
