@@ -1,0 +1,38 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+
+import { normalizeInjuryLabel } from "./injury-display.ts";
+
+test("normalizes a literal bruise sentence into a short label", () => {
+  assert.equal(normalizeInjuryLabel("Left shoulder is bruised"), "Left shoulder bruise");
+});
+
+test("maps 'pulled' to a strain and keeps laterality", () => {
+  assert.equal(normalizeInjuryLabel("pulled right hamstring"), "Right hamstring strain");
+});
+
+test("maps contusion to bruise", () => {
+  assert.equal(normalizeInjuryLabel("right quad contusion"), "Right quad bruise");
+});
+
+test("normalizes sprain phrasing", () => {
+  assert.equal(normalizeInjuryLabel("Left ankle sprained"), "Left ankle sprain");
+});
+
+test("collapses soreness phrasing with filler words", () => {
+  assert.equal(normalizeInjuryLabel("my lower back feels sore"), "Lower back soreness");
+});
+
+test("leaves clean location-only labels untouched", () => {
+  assert.equal(normalizeInjuryLabel("Left hamstring"), "Left hamstring");
+});
+
+test("returns empty string for blank input", () => {
+  assert.equal(normalizeInjuryLabel(""), "");
+  assert.equal(normalizeInjuryLabel(null), "");
+  assert.equal(normalizeInjuryLabel(undefined), "");
+});
+
+test("falls back to the condition alone when no location remains", () => {
+  assert.equal(normalizeInjuryLabel("it is bruised"), "Bruise");
+});

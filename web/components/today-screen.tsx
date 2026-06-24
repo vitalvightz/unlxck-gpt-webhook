@@ -31,6 +31,7 @@ import {
   sessionIdentity,
   type CurrentDayResolution,
 } from "@/lib/camp-map";
+import { normalizeInjuryLabel } from "@/lib/injury-display";
 import { humanizeIfRawEnum } from "@/lib/plan-labels";
 import { useTrainingDay } from "@/lib/use-training-day";
 import {
@@ -474,7 +475,8 @@ function cycleInjuryFlagSeverity(severity: InjuryFlagSeverity): InjuryFlagSeveri
 }
 
 function getInjuryLabel(injury: InjuryFlagRecord): string {
-  return injury.body_area?.trim() || injury.description?.trim() || "Injury";
+  const raw = injury.body_area?.trim() || injury.description?.trim();
+  return normalizeInjuryLabel(raw) || "Injury";
 }
 
 /**
