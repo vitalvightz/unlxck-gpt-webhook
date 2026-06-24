@@ -173,6 +173,28 @@ LATE_STRENGTH_CUT_BUCKET_MULTIPLIER = {
     "extreme": 1.4,
 }
 
+# Trap-bar-vs-back-squat anchor preference.
+# When any risk condition fires (a flare in a joint loaded by the squat bar
+# position, an active weight cut, moderate/high fatigue, a compressed camp, or
+# poor squat tolerance) the trap-bar deadlift is preferred over a barbell
+# back-squat-pattern anchor: barbell squat anchors are penalised and the
+# trap-bar hinge anchor is boosted. The magnitudes express a *preference* — a
+# strong goal/weakness fit can still override it — rather than a hard block.
+# Joints loaded by the back-/front-rack bar position that a trap-bar deadlift
+# spares; a flare in any of them biases selection toward the trap-bar hinge.
+SQUAT_BAR_POSITION_INJURY_REGIONS = ("wrist", "shoulder", "elbow", "neck")
+# Weight-cut buckets treated as an "active cut" for the preference rule.
+TRAP_BAR_PREFERENCE_ACTIVE_CUT_BUCKETS = {"moderate", "high", "critical", "extreme"}
+# Total camp days at or below this are treated as a compressed camp when no
+# explicit ``camp_compressed`` flag is supplied (matches the short-notice
+# compressed band in ``camp_phases``).
+COMPRESSED_CAMP_DAYS_THRESHOLD = 13
+# Squat-tolerance levels that count as "poor" when no explicit
+# ``poor_squat_tolerance`` boolean is supplied.
+POOR_SQUAT_TOLERANCE_LEVELS = {"poor", "low", "limited", "bad"}
+TRAP_BAR_PREFERENCE_SQUAT_PENALTY = -0.6
+TRAP_BAR_PREFERENCE_HINGE_BOOST = 0.4
+
 
 def _exercise_fatigue_cost(exercise: dict, quality_profile: dict) -> float:
     """Return a small recovery-cost proxy for near-equal Rule 2 ordering.
@@ -297,6 +319,105 @@ def _resolved_cut_severity_bucket(flags: dict) -> str:
             flags.get("days_until_fight"),
         )
     )
+
+
+def _camp_is_compressed(flags: dict) -> bool:
+    """Return True when the camp is compressed.
+
+    Prefers an explicit ``camp_compressed`` flag; otherwise falls back to the
+    total camp length recorded in ``phase_weeks['days']`` and treats a camp at
+    or below ``COMPRESSED_CAMP_DAYS_THRESHOLD`` days as compressed. ``days_until_fight``
+    is deliberately not used as a proxy — it shrinks for every athlete during the
+    taper, compressed camp or not.
+    """
+    explicit = flags.get("camp_compressed")
+    if explicit is not None:
+        return bool(explicit)
+    phase_weeks = flags.get("phase_weeks")
+    if not isinstance(phase_weeks, dict):
+        return False
+    days = phase_weeks.get("days")
+    if not isinstance(days, dict) or not days:
+        return False
+    total_days = sum(v for v in days.values() if isinstance(v, (int, float)))
+    return 0 < total_days <= COMPRESSED_CAMP_DAYS_THRESHOLD
+
+
+def _squat_tolerance_is_poor(flags: dict) -> bool:
+    """Return True when the athlete has poor squat tolerance.
+
+    Optional signal that degrades gracefully: an explicit ``poor_squat_tolerance``
+    boolean wins; otherwise a ``squat_tolerance`` level string is read and treated
+    as poor when it names a low tier. Absent both keys, returns False.
+    """
+    explicit = flags.get("poor_squat_tolerance")
+    if explicit is not None:
+        return bool(explicit)
+    level = str(flags.get("squat_tolerance") or "").strip().lower()
+    return level in POOR_SQUAT_TOLERANCE_LEVELS
+
+
+def _trap_bar_preference_context(flags: dict, *, cut_bucket: str) -> tuple[bool, list[str]]:
+    """Resolve whether the trap-bar-over-back-squat preference should fire.
+
+    Returns ``(active, reason_codes)`` where ``reason_codes`` names which
+    condition(s) triggered it. Computed once per strength block since it depends
+    only on the athlete's flags, not the candidate exercise.
+    """
+    reasons: list[str] = []
+
+    injuries = flags.get("injuries") or []
+    injury_blob = " ".join(str(injury) for injury in injuries).lower()
+    hit_regions = [
+        region
+        for region in SQUAT_BAR_POSITION_INJURY_REGIONS
+        if region in injury_blob
+    ]
+    if hit_regions:
+        reasons.append("trap_bar_pref_injury:" + "/".join(hit_regions))
+
+    if cut_bucket in TRAP_BAR_PREFERENCE_ACTIVE_CUT_BUCKETS or bool(flags.get("weight_cut_risk")):
+        reasons.append("trap_bar_pref_active_cut")
+
+    if str(flags.get("fatigue", "")).strip().lower() in {"moderate", "high"}:
+        reasons.append("trap_bar_pref_fatigue")
+
+    if _camp_is_compressed(flags):
+        reasons.append("trap_bar_pref_compressed_camp")
+
+    if _squat_tolerance_is_poor(flags):
+        reasons.append("trap_bar_pref_poor_squat_tolerance")
+
+    return bool(reasons), reasons
+
+
+def _trap_bar_anchor_preference_adjustment(
+    exercise: dict,
+    *,
+    active: bool,
+    context_reasons: list[str],
+) -> tuple[float, list[str]]:
+    """Bias a candidate toward the trap-bar deadlift over a barbell squat anchor.
+
+    Only fires when the preference is ``active``. Penalises barbell
+    back-/front-rack squat-pattern anchors (which load the spared joints and
+    carry more axial/recovery cost) and boosts the trap-bar hinge anchor. Other
+    movements — including bodyweight/dumbbell squats and trap-bar jump squats —
+    are left untouched.
+    """
+    if not active:
+        return 0.0, []
+    equipment = set(normalize_equipment_list(exercise.get("equipment", [])))
+    movement = normalize_exercise_movement(exercise)
+    if movement == "squat" and "barbell" in equipment and "trap_bar" not in equipment:
+        return TRAP_BAR_PREFERENCE_SQUAT_PENALTY, context_reasons + [
+            "trap_bar_pref_squat_anchor_penalty"
+        ]
+    if movement == "hinge" and "trap_bar" in equipment:
+        return TRAP_BAR_PREFERENCE_HINGE_BOOST, context_reasons + [
+            "trap_bar_pref_trap_bar_anchor_boost"
+        ]
+    return 0.0, []
 
 
 def _strength_is_lower_body(exercise: dict, tags: set[str]) -> bool:
@@ -1430,6 +1551,9 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
     late_window = classify_late_selector_window(days_until_fight, include_control=True)
     active_late_window = is_active_late_selector_window(late_window)
     cut_bucket = _resolved_cut_severity_bucket(flags)
+    trap_bar_pref_active, trap_bar_pref_reasons = _trap_bar_preference_context(
+        flags, cut_bucket=cut_bucket
+    )
     high_pressure_late_cut = active_late_window and cut_bucket in LATE_STRENGTH_HIGH_CUT_BUCKETS
     must_have_bonus_multiplier = (
         LATE_MUST_HAVE_BONUS_MULTIPLIER if high_pressure_late_cut else 1.0
@@ -1704,6 +1828,18 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
         if metadata_reason_codes:
             breakdown["reason_codes"] = list(
                 dict.fromkeys(list(breakdown.get("reason_codes", [])) + list(metadata_reason_codes))
+            )
+        trap_bar_adjustment, trap_bar_reason_codes = _trap_bar_anchor_preference_adjustment(
+            ex,
+            active=trap_bar_pref_active,
+            context_reasons=trap_bar_pref_reasons,
+        )
+        if trap_bar_adjustment:
+            score += trap_bar_adjustment
+            breakdown["trap_bar_preference_adjustment"] = trap_bar_adjustment
+        if trap_bar_reason_codes:
+            breakdown["reason_codes"] = list(
+                dict.fromkeys(list(breakdown.get("reason_codes", [])) + list(trap_bar_reason_codes))
             )
         if not ignore_restrictions and restriction_penalty:
             score += restriction_penalty
