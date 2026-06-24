@@ -328,12 +328,36 @@ def _conditioning_slot_priority(phase: str, system: str, idx: int) -> str:
     return base if idx == 1 else _downgrade_priority(base)
 
 
+def _conditioning_priority_without_strength_power(training_context: TrainingContext) -> bool:
+    goals = _normalize_limiter_tokens(clean_list(training_context.key_goals))
+    weaknesses = _normalize_limiter_tokens(clean_list(training_context.weaknesses))
+    selected = goals | weaknesses
+    conditioning_tokens = {"conditioning", "conditioning_endurance", "endurance", "gas_tank", "work_capacity", "aerobic"}
+    strength_power_tokens = {"strength", "power", "explosive", "explosive_power", "speed", "strength_power", "s&c", "s_c"}
+    return bool(selected & conditioning_tokens) and not bool(selected & strength_power_tokens)
+
+
+def _apply_conditioning_priority_session_shift(session_counts: dict, training_context: TrainingContext) -> dict:
+    adjusted = dict(session_counts)
+    if not _conditioning_priority_without_strength_power(training_context):
+        return adjusted
+    if int(adjusted.get("strength", 0) or 0) < 2:
+        return adjusted
+
+    adjusted["strength"] = int(adjusted.get("strength", 0) or 0) - 1
+    adjusted["conditioning"] = int(adjusted.get("conditioning", 0) or 0) + 1
+    return adjusted
+
+
 def _build_phase_briefs(training_context: TrainingContext, phase_weeks: dict) -> dict[str, dict]:
     briefs: dict[str, dict] = {}
     for phase in ("GPP", "SPP", "TAPER"):
         if phase_weeks.get(phase, 0) <= 0 and phase_weeks.get("days", {}).get(phase, 0) < 1:
             continue
-        session_counts = allocate_sessions(training_context.training_frequency, phase)
+        session_counts = _apply_conditioning_priority_session_shift(
+            allocate_sessions(training_context.training_frequency, phase),
+            training_context,
+        )
         risk_flags: list[str] = []
         if training_context.injuries:
             risk_flags.append("respect injury guardrails")
@@ -470,7 +494,7 @@ _LIMITER_PROFILES = {
         "sparring_collision_rule": "Never pair hard glycolytic conditioning with hard sparring; let sparring own the fight-pace slot when it is already hard.",
         "conditioning_sequence": {
             "GPP": ["aerobic", "glycolytic", "alactic"],
-            "SPP": ["aerobic", "glycolytic", "alactic"],
+            "SPP": ["glycolytic", "alactic", "aerobic"],
             "TAPER": ["aerobic", "alactic", "glycolytic"],
         },
     },

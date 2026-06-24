@@ -38,14 +38,14 @@ def _mobility_athlete(**overrides):
 # ---------------------------------------------------------------------------
 
 
-def test_cap_none_low_cut_allows_two_low_aerobic_in_gpp_and_spp():
+def test_cap_none_low_cut_allows_one_low_aerobic_support_touch_in_gpp_and_spp():
     week = {"phase": "GPP", "calendar_days": [{"weekday": "tuesday", "d_day": 36}]}
     athlete = _gas_tank_athlete(cut_severity_bucket="none")
-    assert _low_aerobic_support_cap_for_week(week, athlete, []) == 2
+    assert _low_aerobic_support_cap_for_week(week, athlete, []) == 1
 
     week = {"phase": "SPP", "calendar_days": [{"weekday": "thursday", "d_day": 27}]}
     athlete = _gas_tank_athlete(cut_severity_bucket="low")
-    assert _low_aerobic_support_cap_for_week(week, athlete, []) == 2
+    assert _low_aerobic_support_cap_for_week(week, athlete, []) == 1
 
 
 def test_cap_none_low_cut_caps_taper_at_one():
@@ -92,13 +92,13 @@ def test_cap_moderate_cut_drops_gpp_to_one_with_high_fatigue_or_three_hard_spar(
     )
 
 
-def test_cap_moderate_cut_allows_two_in_gpp_when_fresh_and_low_hard_spar():
+def test_cap_moderate_cut_stays_one_in_gpp_when_fresh_and_low_hard_spar():
     gpp = {"phase": "GPP", "calendar_days": [{"weekday": "monday", "d_day": 40}]}
     athlete = _gas_tank_athlete(cut_severity_bucket="moderate")
     plan = [{"day": "tuesday", "status": "hard_as_planned"}]
     assert (
         _low_aerobic_support_cap_for_week(gpp, athlete, [], hard_sparring_plan=plan)
-        == 2
+        == 1
     )
 
 

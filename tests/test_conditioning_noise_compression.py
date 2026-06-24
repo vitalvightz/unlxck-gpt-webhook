@@ -22,7 +22,7 @@ def _role(role_key, category, system, day):
     return {"role_key": role_key, "category": category, "preferred_system": system, "scheduled_day_hint": day}
 
 
-def test_bridge_keeps_one_low_noise_conditioning_when_limiter_and_safe():
+def test_bridge_keeps_fight_pace_conditioning_when_limiter_and_safe():
     week = {"phase": "SPP", "resolved_rule_state": {}, "must_keep": []}
     roles = [
         _role("neural_plus_strength_day", "strength", "", "monday"),
@@ -31,12 +31,12 @@ def test_bridge_keeps_one_low_noise_conditioning_when_limiter_and_safe():
     ]
     kept, _ = _apply_high_fatigue_week_compression(week, roles, [], _base_athlete(days_until_fight=16))
     systems = {r.get("preferred_system") for r in kept if r.get("category") == "conditioning"}
-    assert "aerobic" in systems
-    assert "glycolytic" not in systems
+    assert "glycolytic" in systems
+    assert "aerobic" not in systems
 
 
 
-def test_key_goals_activates_low_noise_preservation_with_goals_fallback_shape():
+def test_key_goals_activates_fight_pace_priority_with_goals_fallback_shape():
     week = {"phase": "SPP", "resolved_rule_state": {}, "must_keep": []}
     roles = [
         _role("neural_plus_strength_day", "strength", "", "monday"),
@@ -46,8 +46,8 @@ def test_key_goals_activates_low_noise_preservation_with_goals_fallback_shape():
     athlete = _base_athlete(goals=[], key_goals=["conditioning"], weaknesses=["gas_tank"], days_until_fight=16)
     kept, _ = _apply_high_fatigue_week_compression(week, roles, [], athlete)
     systems = {r.get("preferred_system") for r in kept if r.get("category") == "conditioning"}
-    assert "aerobic" in systems
-    assert "glycolytic" not in systems
+    assert "glycolytic" in systems
+    assert "aerobic" not in systems
 
 
 def test_realistic_app_shape_preserves_one_low_noise_without_extra_sessions():
