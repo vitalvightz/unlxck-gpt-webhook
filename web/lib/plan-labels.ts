@@ -15,7 +15,7 @@ const LABEL_OVERRIDES: Record<string, string> = {
 
   gpp: "General prep",
   spp: "Specific prep",
-  taper: "Fight week taper",
+  taper: "Taper",
   fight_week: "Fight week",
   reintegration: "Reintegration",
 
