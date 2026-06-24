@@ -12,6 +12,7 @@ from pathlib import Path
 from api.structured_plan_generation import (
     BANNED_BIOMETRIC_KEYS,
     _normalize_daily_check_ins,
+    _normalize_day,
     _normalize_load,
     _normalize_measured,
     bank_conditioning_to_block,
@@ -453,6 +454,117 @@ def test_normalize_countdown_label_strings_become_objects():
     assert labels[0] == {"date": "", "days_to_event": 28, "label": "D-28", "anchor": "event_countdown"}
     assert labels[1]["days_to_event"] == 0
     assert labels[2]["days_to_event"] == -1
+
+
+# --- day_type intensity classification ---------------------------------------
+
+
+def _day(day_type, sessions, *, countdown_label=""):
+    return {
+        "date": "2026-06-13",
+        "day_type": day_type,
+        "countdown_label": countdown_label,
+        "today_card": {"headline": "Go"},
+        "sessions": sessions,
+    }
+
+
+def _session(session_type, blocks):
+    return {"session_type": session_type, "blocks": blocks}
+
+
+def test_day_type_d1_light_primer_reads_low_not_moderate():
+    # The reported bug: a genuinely light D-1 primer (bodyweight rhythm, RPE 3-4,
+    # low-tension Pallof, no heavy work) must not surface as "moderate".
+    day = _day(
+        "moderate",  # the model's (wrong) guess
+        [
+            _session(
+                "primer",
+                [
+                    {"block_type": "plyometric_power", "display_name": "Bodyweight rhythm",
+                     "effort": {"method": "RPE", "value": 3}},
+                    {"block_type": "accessory", "display_name": "Low-tension Pallof",
+                     "effort": {"method": "RPE", "value": 4}},
+                ],
+            )
+        ],
+        countdown_label="D-1",
+    )
+    assert _normalize_day(day)["day_type"] == "low"
+
+
+def test_day_type_unknown_model_value_never_silently_moderate():
+    # "primer" is not a valid day_type enum; the old normalizer defaulted it to
+    # "moderate". With light content it must read "low".
+    day = _day(
+        "primer",
+        [_session("primer", [{"block_type": "accessory", "intensity": "light",
+                               "display_name": "Mobility flow"}])],
+    )
+    assert _normalize_day(day)["day_type"] == "low"
+
+
+def test_day_type_heavy_strength_reads_high():
+    day = _day(
+        "moderate",
+        [_session("strength_power", [
+            {"block_type": "strength", "display_name": "Back squat",
+             "load": {"method": "percentage", "value": 88}},
+        ])],
+    )
+    assert _normalize_day(day)["day_type"] == "high"
+
+
+def test_day_type_mid_rpe_reads_moderate():
+    day = _day(
+        "low",
+        [_session("conditioning", [
+            {"block_type": "conditioning", "display_name": "Intervals",
+             "effort": {"method": "RPE", "value": 7}},
+        ])],
+    )
+    assert _normalize_day(day)["day_type"] == "moderate"
+
+
+def test_day_type_hardest_block_sets_the_day():
+    day = _day(
+        "low",
+        [_session("mixed", [
+            {"block_type": "mobility_activation", "display_name": "Warmup",
+             "effort": {"method": "RPE", "value": 3}},
+            {"block_type": "strength", "display_name": "Power clean",
+             "load": {"method": "percentage", "value": 90}},
+        ])],
+    )
+    assert _normalize_day(day)["day_type"] == "high"
+
+
+def test_day_type_fight_day_is_competition():
+    by_countdown = _day("high", [_session("primer", [{"block_type": "preparation",
+                                                      "display_name": "Activation"}])],
+                        countdown_label="D0")
+    assert _normalize_day(by_countdown)["day_type"] == "competition"
+    by_session = _day("high", [_session("fight_or_match", [])])
+    assert _normalize_day(by_session)["day_type"] == "competition"
+
+
+def test_day_type_empty_and_recovery_days_are_categorical():
+    assert _normalize_day(_day("moderate", []))["day_type"] == "rest"
+    recovery = _day("moderate", [_session("recovery", [])])
+    assert _normalize_day(recovery)["day_type"] == "recovery"
+
+
+def test_day_type_plyo_without_numbers_reads_high_but_light_plyo_reads_low():
+    # No effort/load number: a true power block implies a hard day.
+    blind = _day("moderate", [_session("strength_power", [
+        {"block_type": "plyometric_power", "display_name": "Depth jumps"}])])
+    assert _normalize_day(blind)["day_type"] == "high"
+    # An explicit light RPE overrides the block type.
+    light = _day("moderate", [_session("primer", [
+        {"block_type": "plyometric_power", "display_name": "Pogos",
+         "effort": {"method": "RPE", "value": 4}}])])
+    assert _normalize_day(light)["day_type"] == "low"
 
 
 def test_normalize_red_flag_rules_get_required_fields():

@@ -273,6 +273,34 @@ _BLOCK_TYPE_ALIASES = {
     "recovery": "cooldown_recovery",
 }
 
+# --- day_type (intensity badge) classification -----------------------------
+#
+# day_type is the athlete-facing intensity badge (high / moderate / low / ...).
+# The conversion model guesses it from prose and lands on the wrong bucket often;
+# worse, the old normalizer silently defaulted *every* unrecognized value (e.g.
+# "primer", "light", "easy") to "moderate", which reads as risky one day before a
+# fight even when the session is a light primer. Instead we derive the badge
+# deterministically from the day's actual content — session types and per-block
+# effort (RPE), load (%1RM), and intensity tags — and a day is rated as hard as
+# its hardest *real* work block. Categorical days (competition, rest, recovery,
+# travel, reintegration) are detected first and never collapsed into an intensity
+# bucket. The model's value is only consulted as a last-resort fallback, and even
+# then an unreadable day falls to "low" rather than silently "moderate".
+
+# Block intensity tags that read as hard / easy regardless of the numbers.
+_HIGH_INTENSITY_WORDS = frozenset(
+    {"max", "maximal", "near_max", "very_high", "high", "explosive"}
+)
+_LOW_INTENSITY_WORDS = frozenset(
+    {"none", "very_low", "low", "easy", "light", "primer", "recovery"}
+)
+# Max-output block types: when a block carries no readable effort/load number,
+# their presence still implies a high-CNS day (true power/speed work).
+_HIGH_OUTPUT_BLOCK_TYPES = frozenset({"plyometric_power", "speed", "strength_speed"})
+# Session types that are intrinsically light when they carry no measurable block.
+_LOW_SESSION_TYPES = frozenset({"primer", "recovery", "rehab"})
+_INTENSITY_RANK = {"low": 1, "moderate": 2, "high": 3}
+
 _DURATION_UNIT_ALIASES = {
     "s": "seconds",
     "sec": "seconds",
@@ -372,6 +400,27 @@ def _coerce_optional_int(value: Any) -> int | None:
         except ValueError:
             return None
         return int(number) if number.is_integer() else None
+    return None
+
+
+def _coerce_float(value: Any) -> float | None:
+    """Best-effort float, pulling the first number out of a string ("RPE 7-8" → 7).
+
+    Ranges resolve to their lower bound, which keeps the intensity read
+    conservative (a "7-8" block is treated as 7, not 8). Returns ``None`` when no
+    number is present so callers can tell "no signal" from a real zero.
+    """
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, (int, float)):
+        return float(value)
+    if isinstance(value, str):
+        match = re.search(r"\d+(?:\.\d+)?", value)
+        if match:
+            try:
+                return float(match.group())
+            except ValueError:
+                return None
     return None
 
 
@@ -569,14 +618,126 @@ def _normalize_today_card(value: Any) -> dict[str, Any]:
     return out
 
 
+def _block_intensity(block: Any) -> str | None:
+    """Rate a single block "high" / "moderate" / "low", or ``None`` when silent.
+
+    Reads, in priority order, the explicit intensity tag, the RPE effort, the
+    %1RM load, and finally the block type. Explicit effort/load always wins over
+    block type, so a light primer plyo (RPE 3–4) reads "low" rather than being
+    flagged "high" just for being plyometric.
+    """
+    if not isinstance(block, dict):
+        return None
+    tag = _coerce_str(block.get("intensity")).strip().lower()
+    effort = block.get("effort")
+    rpe = None
+    if isinstance(effort, dict) and str(effort.get("method") or "").upper() == "RPE":
+        rpe = _coerce_float(effort.get("value"))
+    if rpe is None and "rpe" in tag:  # an RPE buried in the tag ("rpe 3-4")
+        rpe = _coerce_float(tag)
+    pct = None
+    load = block.get("load")
+    if isinstance(load, dict) and str(load.get("method") or "") == "percentage":
+        pct = _coerce_float(load.get("value"))
+
+    # Explicit hard signals.
+    if tag in _HIGH_INTENSITY_WORDS:
+        return "high"
+    if rpe is not None and rpe >= 8:
+        return "high"
+    if pct is not None and pct >= 85:
+        return "high"
+    # Explicit easy signals.
+    if tag in _LOW_INTENSITY_WORDS:
+        return "low"
+    if rpe is not None and rpe <= 5:
+        return "low"
+    if pct is not None and pct < 70:
+        return "low"
+    # A readable mid signal.
+    if rpe is not None or pct is not None or tag in {"moderate", "medium"}:
+        return "moderate"
+    # No effort/load number at all: a true power/speed block implies a hard day.
+    if str(block.get("block_type") or "") in _HIGH_OUTPUT_BLOCK_TYPES:
+        return "high"
+    return None
+
+
+def _session_intensity(session: Any) -> str | None:
+    """Rate a session by its hardest block, falling back to the session type."""
+    if not isinstance(session, dict):
+        return None
+    levels = [lvl for lvl in (_block_intensity(b) for b in _as_list(session.get("blocks"))) if lvl]
+    if levels:
+        return max(levels, key=_INTENSITY_RANK.__getitem__)
+    stype = str(session.get("session_type") or "")
+    if stype in _LOW_SESSION_TYPES:
+        return "low"
+    if stype == "sparring":
+        return "high"
+    return None
+
+
+def _classify_day_type(day: dict[str, Any], fallback: str) -> str:
+    """Derive the day's intensity badge from its content (overrides the model).
+
+    ``fallback`` is the model's own value already coerced onto a valid enum (or
+    ``""`` when it was missing/unrecognized). It is consulted only when the day
+    carries no readable intensity signal at all.
+    """
+    sessions = [s for s in _as_list(day.get("sessions")) if isinstance(s, dict)]
+    session_types = {str(s.get("session_type") or "") for s in sessions}
+
+    # Competition / fight day is categorical, anchored on the countdown or a
+    # fight session — never an intensity bucket.
+    if _countdown_distance(day.get("countdown_label")) == 0 or "fight_or_match" in session_types:
+        return "competition"
+    # travel / reintegration are model-only states content cannot contradict.
+    if fallback in {"travel", "reintegration"}:
+        return fallback
+
+    has_blocks = any(_as_list(s.get("blocks")) for s in sessions)
+    if not sessions or not has_blocks:
+        # No real work: recovery-only days read "recovery", otherwise "rest".
+        if session_types & {"recovery", "rehab"}:
+            return "recovery"
+        if fallback in {"rest", "recovery"}:
+            return fallback
+        return "rest"
+
+    # The day is as hard as its hardest real work block.
+    levels = [lvl for lvl in (_session_intensity(s) for s in sessions) if lvl]
+    if levels:
+        return max(levels, key=_INTENSITY_RANK.__getitem__)
+
+    # Work scheduled but no readable intensity: keep a valid model intensity
+    # guess, otherwise default low (never silently "moderate").
+    if fallback in {"high", "moderate", "low", "recovery"}:
+        return fallback
+    return "low"
+
+
+def _countdown_distance(label: Any) -> int | None:
+    """Parse the days-to-event from a countdown label (``D-1`` → 1, ``D0`` → 0)."""
+    match = _COUNTDOWN_RE.match(_coerce_str(label).strip())
+    if not match:
+        return None
+    try:
+        return abs(int(match.group(1)))
+    except ValueError:
+        return None
+
+
 def _normalize_day(value: Any) -> dict[str, Any]:
     out = dict(value) if isinstance(value, dict) else {}
     out["date"] = _coerce_str(out.get("date"))
-    out["day_type"] = _enum(out.get("day_type"), _DAY_TYPE_VALUES, "moderate")
     out["countdown_label"] = _coerce_str(out.get("countdown_label"))
     out["phase_label"] = _normalize_phase(out.get("phase_label"))
     out["today_card"] = _normalize_today_card(out.get("today_card"))
     out["sessions"] = [_normalize_session(session) for session in _as_dict_list(out.get("sessions"))]
+    # Derive the intensity badge from the now-normalized content; the model's own
+    # value is only a last-resort fallback (see _classify_day_type).
+    out["day_type"] = _classify_day_type(out, _enum(out.get("day_type"), _DAY_TYPE_VALUES, ""))
     return out
 
 
