@@ -60,7 +60,7 @@ MAX_INJURY_GUARD_SHORTLIST = 500
 # Version string for injury rules (increment when rules change to invalidate cache)
 # Format: YYYYMMDD.N (date + sequence number)
 # Update this whenever INJURY_RULES, INJURY_REGION_KEYWORDS, or scoring weights change
-INJURY_RULES_VERSION = "20260615.1"
+INJURY_RULES_VERSION = "20260624.1"
 
 
 def trim_to_injury_guard_shortlist(items: list) -> list:
