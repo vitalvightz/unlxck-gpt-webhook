@@ -34,6 +34,8 @@ import {
 } from "@/lib/structured-plan";
 import {
   dayCompletion,
+  findDayByISO,
+  getReadinessStrip,
   resolveNextPlanFocusDay,
   resolvePlanProgress,
   weekCompletion,
@@ -861,7 +863,50 @@ function CampStatusLine({
   );
 }
 
-/** Compact readiness/risk strip — only cards that have data; no fake metrics. */
+/**
+ * The plan page's lighter camp-readiness strip: focus, injury watch, weekly load
+ * and phase/camp status. Values come from getReadinessStrip (explicit
+ * plan.readiness_snapshot first, then derived from the current day / week).
+ *
+ * It intentionally does NOT show the exact "train / modify / pull back" call —
+ * that decision belongs to the Today surface (Today = execution, plan page =
+ * camp map), so the strip gives risk context without becoming a second Today
+ * page. Empty cards are dropped and the whole strip is hidden when nothing
+ * resolves, so no fake metrics are ever shown.
+ */
+function ReadinessStrip({
+  plan,
+  currentDay,
+  focusWeek,
+}: {
+  plan: StructuredPlan;
+  currentDay: StructuredDay | null;
+  focusWeek?: StructuredWeek;
+}) {
+  const strip = getReadinessStrip(plan, currentDay, focusWeek);
+  const cards: { label: string; value: string; risk?: boolean }[] = [];
+  if (strip.focus) cards.push({ label: "Focus", value: strip.focus });
+  if (strip.risk) cards.push({ label: "Injury watch", value: strip.risk, risk: true });
+  if (strip.load) cards.push({ label: "Weekly load", value: strip.load });
+  if (strip.phase) cards.push({ label: "Phase", value: strip.phase });
+  if (cards.length === 0) {
+    return null;
+  }
+  return (
+    <section className="sp-card sp-readiness" aria-label="Camp readiness and risk">
+      <p className="sp-eyebrow">Camp readiness</p>
+      <div className="sp-block-stats">
+        {cards.map((card) => (
+          <span key={card.label} className="sp-stat">
+            <span className="sp-stat-label">{card.label}</span>
+            {card.risk ? <span className="sp-warning">{card.value}</span> : card.value}
+          </span>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 /** Horizontal, mobile-scrollable strip of week pills used to pick the week. */
 function WeekStrip({
   weeks,
@@ -1030,6 +1075,10 @@ export function StructuredPlanRenderer({
   // Phase/status follows the real current week, not the advanced focus week.
   const phaseWeek = weeks[calendarProgress.currentWeekPos ?? safePos] ?? selectedWeek;
 
+  // The truthful current day (real calendar today, not the advanced focus day)
+  // feeds the readiness strip so it always reflects "right now", even when the
+  // opened week/day has advanced to the next scheduled session.
+  const currentDay = findDayByISO(plan, calendarProgress.currentDayDate);
   const progressionNotes = cleanText(plan.progression_notes);
   const rawFallback = cleanText(plan.raw_markdown_fallback);
   const hasNutritionSupport = getNutritionPhaseItems(plan).length > 0 || hasNutrition(plan);
@@ -1040,6 +1089,7 @@ export function StructuredPlanRenderer({
     <div className="sp-root cm-root">
       <PlanHeader plan={plan} />
       <CampStatusLine plan={plan} progress={calendarProgress} phaseWeek={phaseWeek} />
+      <ReadinessStrip plan={plan} currentDay={currentDay} focusWeek={phaseWeek} />
       <ActiveNotesCard plan={plan} />
       <RedFlagsCard plan={plan} />
       <SafetyNote tone="warning" showRedFlags>{PLAN_SAFETY_NOTE}</SafetyNote>
