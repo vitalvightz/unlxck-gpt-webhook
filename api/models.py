@@ -1924,7 +1924,7 @@ class TodayInjuryDeclaration(BaseModel):
     flag_id: str | None = None
     body_area: str = Field(default="", max_length=200)
     description: str = Field(default="", max_length=DAILY_NOTE_MAX_CHARS)
-    severity: InjuryFlagSeverity = "moderate"
+    severity: InjuryFlagSeverity | None = None
     status: Literal["ongoing", "improving", "worse", "resolved"] = "ongoing"
 
     @field_validator("flag_id", mode="before")

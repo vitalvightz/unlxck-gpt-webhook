@@ -19,13 +19,14 @@ def _declare(**kwargs) -> DeclaredInjury:
 
 def test_new_injury_opens_a_flag():
     plan = reconcile_injury_checkin(
-        declared=[_declare(body_area="left knee", severity="moderate", status="ongoing")],
+        declared=[_declare(body_area="left knee", status="ongoing")],
         open_flag_ids=[],
     )
     assert len(plan.creates) == 1
     assert plan.updates == []
     create = plan.creates[0]
     assert create["status"] == "open"
+    assert create["severity"] == "moderate"
     assert create["body_area"] == "left knee"
     assert create["description"] == "left knee"  # falls back to body area
     assert create["source"] == "checkin"
@@ -56,6 +57,14 @@ def test_existing_flag_worse_keeps_open_and_updates_severity():
         open_flag_ids=["f1"],
     )
     assert plan.updates[0].fields == {"status": "open", "severity": "severe"}
+
+
+def test_existing_flag_status_update_does_not_default_severity():
+    plan = reconcile_injury_checkin(
+        declared=[_declare(flag_id="f1", status="ongoing")],
+        open_flag_ids=["f1"],
+    )
+    assert plan.updates[0].fields == {"status": "open"}
 
 
 def test_unknown_flag_id_is_treated_as_new_not_a_foreign_update():

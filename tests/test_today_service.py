@@ -718,6 +718,23 @@ class TestCommandView:
         injury_categories = {"active_injury_worse", "reminder"}
         assert not (injury_categories & {risk.category for risk in view.risk_watch})
 
+    def test_injury_checkin_status_update_preserves_existing_severity(self):
+        store = _store_with_plan()
+        opened = submit_today_injury_checkin(
+            store,
+            athlete_id=ATHLETE,
+            payload={"injuries": [{"body_area": "shoulder", "severity": "severe", "status": "worse"}]},
+        )
+        flag_id = opened["open_injuries"][0]["id"]
+
+        updated = submit_today_injury_checkin(
+            store,
+            athlete_id=ATHLETE,
+            payload={"injuries": [{"flag_id": flag_id, "status": "ongoing"}]},
+        )
+
+        assert updated["open_injuries"][0]["severity"] == "severe"
+
     def test_severe_open_injury_is_a_stop_level_risk(self):
         store = _store_with_plan()
         submit_today_injury_checkin(

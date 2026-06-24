@@ -54,7 +54,7 @@ class DeclaredInjury(BaseModel):
     flag_id: str | None = None
     body_area: str = ""
     description: str = ""
-    severity: InjuryFlagSeverity = "moderate"
+    severity: InjuryFlagSeverity | None = None
     status: InjuryCheckinStatus = "ongoing"
 
     @model_validator(mode="after")
@@ -99,7 +99,9 @@ def reconcile_injury_checkin(
     for injury in declared:
         flag_status = _FLAG_STATUS_BY_REPORT[injury.status]
         if injury.flag_id and injury.flag_id in known:
-            fields: dict[str, object] = {"status": flag_status, "severity": injury.severity}
+            fields: dict[str, object] = {"status": flag_status}
+            if injury.severity is not None:
+                fields["severity"] = injury.severity
             if injury.body_area.strip():
                 fields["body_area"] = injury.body_area.strip()
             if injury.description.strip():
@@ -119,7 +121,7 @@ def reconcile_injury_checkin(
                 "source": "checkin",
                 "body_area": injury.body_area.strip(),
                 "description": description,
-                "severity": injury.severity,
+                "severity": injury.severity or "moderate",
                 "status": flag_status,
             }
         )
