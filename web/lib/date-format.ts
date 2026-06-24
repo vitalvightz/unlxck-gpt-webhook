@@ -20,7 +20,7 @@ function parseAppDate(value: string): { date: Date; dateOnly: boolean } | null {
     return null;
   }
   const dateOnly = DATE_ONLY_PATTERN.test(normalized);
-  const date = new Date(dateOnly ? `${normalized}T12:00:00Z` : normalized);
+  const date = new Date(dateOnly ? `${normalized}T12:00:00Z` : normalized.replace(" ", "T"));
   if (Number.isNaN(date.getTime())) {
     return null;
   }
