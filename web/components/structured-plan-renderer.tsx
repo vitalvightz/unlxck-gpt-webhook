@@ -962,38 +962,6 @@ export function RecoveryCard({ plan }: { plan: StructuredPlan }) {
   );
 }
 
-function ReadinessStrip({
-  plan,
-  currentDay,
-  focusWeek,
-}: {
-  plan: StructuredPlan;
-  currentDay: StructuredDay | null;
-  focusWeek?: StructuredWeek;
-}) {
-  const strip = getReadinessStrip(plan, currentDay, focusWeek);
-  const cards: { label: string; value: string; risk?: boolean }[] = [];
-  if (strip.focus) cards.push({ label: "Focus", value: strip.focus });
-  if (strip.risk) cards.push({ label: "Injury watch", value: strip.risk, risk: true });
-  if (strip.load) cards.push({ label: "Weekly load", value: strip.load });
-  if (cards.length === 0) {
-    return null;
-  }
-  return (
-    <section className="sp-card sp-readiness" aria-label="Camp readiness and risk">
-      <p className="sp-eyebrow">Camp readiness</p>
-      <div className="sp-block-stats">
-        {cards.map((card) => (
-          <span key={card.label} className="sp-stat">
-            <span className="sp-stat-label">{card.label}</span>
-            {card.risk ? <span className="sp-warning">{card.value}</span> : card.value}
-          </span>
-        ))}
-      </div>
-    </section>
-  );
-}
-
 /** Horizontal, mobile-scrollable strip of week pills used to pick the week. */
 function WeekStrip({
   weeks,
