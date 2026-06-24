@@ -11929,17 +11929,17 @@ html[data-theme="light"] .today-card {
 }
 
 html[data-theme="light"] .today-card[data-tone="red"] {
-  border-color: rgba(146, 43, 45, 0.26);
+  border-color: color-mix(in srgb, var(--brand-red) 26%, transparent);
   box-shadow: inset 3px 0 0 var(--brand-red), 0 12px 28px rgba(79, 60, 52, 0.05);
 }
 
 html[data-theme="light"] .today-card[data-tone="amber"] {
-  border-color: rgba(150, 113, 59, 0.26);
+  border-color: color-mix(in srgb, var(--progress-gold) 26%, transparent);
   box-shadow: inset 3px 0 0 var(--progress-gold), 0 12px 28px rgba(79, 60, 52, 0.05);
 }
 
 html[data-theme="light"] .today-card[data-tone="green"] {
-  border-color: rgba(37, 131, 82, 0.24);
+  border-color: color-mix(in srgb, var(--success-ink) 24%, transparent);
   box-shadow: inset 3px 0 0 var(--success-ink), 0 12px 28px rgba(79, 60, 52, 0.05);
 }
 
