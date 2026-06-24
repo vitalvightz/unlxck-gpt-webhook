@@ -352,7 +352,7 @@ test("marks the current day and surfaces the camp status + week focus", () => {
             date: "2026-06-19",
             day_type: "high",
             countdown_label: "D-28",
-            today_card: { headline: "Train as planned" },
+            today_card: { headline: "Speed conversion", readiness_status: "train_as_planned" },
             sessions: [
               { session_id: "s1", title: "Lower power", completion_status: "done", blocks: [] },
             ],
@@ -367,12 +367,17 @@ test("marks the current day and surfaces the camp status + week focus", () => {
   // Camp status chips and countdown.
   assert.equal(html.includes("Week 1 of 1"), true);
   assert.equal(html.includes("D-28"), true);
-  // Week focus still surfaces via the week overview (the separate readiness
-  // cube strip was removed as bloat — the camp map header carries status now).
+  // Week focus still surfaces via the week overview.
   assert.equal(html.includes("Convert strength into speed."), true);
-  // The standalone "Today call" / "Injury watch" cubes are gone.
-  assert.equal(html.includes("Today call"), false);
-  assert.equal(html.includes("Injury watch"), false);
+  // The lighter camp-readiness strip leads the plan page with focus, injury
+  // watch, weekly load and phase cards — but never the exact train/modify/pull
+  // back call, which stays on Today. The day's readiness_status must not leak.
+  assert.equal(html.includes("sp-readiness"), true);
+  assert.equal(html.includes("Speed conversion"), true);
+  assert.equal(html.includes("Injury watch"), true);
+  assert.equal(html.includes("Weekly load"), true);
+  assert.equal(html.includes("Train as planned"), false);
+  assert.equal(html.includes("train_as_planned"), false);
   // Current day is flagged.
   assert.equal(html.includes("cm-day-current"), true);
   assert.equal(html.includes("1/1 done"), true);

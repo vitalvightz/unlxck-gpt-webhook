@@ -9,7 +9,6 @@ import {
   classifySessionlessDay,
   getDays,
   getDisplayableRedFlags,
-  getPlanNotes,
   getSessions,
   getWeeks,
   redFlagView,
@@ -379,17 +378,30 @@ export function sessionIdentity(params: {
 }
 
 export type ReadinessStrip = {
-  todayCall: string | null;
   focus: string | null;
   risk: string | null;
   load: string | null;
 };
 
 /**
- * The compact readiness/risk strip. Today's call comes from the current day's
- * today_card; focus prefers the current/selected week goal; risk is the top
- * displayable red flag (else an injury active-note); load is the current day's
- * type. Everything is nullable so callers render only the cards with data — no
+ * The plan page's lighter "camp readiness" strip: focus, injury watch and weekly
+ * load.
+ *
+ * It deliberately does NOT carry the exact "train as planned / modify / pull
+ * back" call. This app has a split architecture — Today owns execution and the
+ * exact readiness decision; the plan page is the camp map. So the strip surfaces
+ * risk *context* without turning the plan page into a second Today screen.
+ * Phase/camp status is intentionally left out here too — the CampStatusLine
+ * already carries it, so the strip stays focused on readiness context only.
+ *
+ * An explicit `plan.readiness_snapshot` always wins when a field is present; the
+ * rest is derived so the strip is useful even before generation emits a
+ * snapshot:
+ *   - Focus:        snapshot.focus → today_card.headline → first session objective.
+ *   - Injury watch: snapshot.injury_watch → today_card.primary_warning → top red flag.
+ *   - Weekly load:  snapshot.weekly_load → weekLoadProxy(focusWeek).
+ *
+ * Every field is nullable so callers render only the cards with data — no
  * invented HRV/recovery scores.
  */
 export function getReadinessStrip(
@@ -397,29 +409,22 @@ export function getReadinessStrip(
   currentDay: StructuredDay | null | undefined,
   focusWeek: StructuredWeek | null | undefined,
 ): ReadinessStrip {
+  const snapshot = plan?.readiness_snapshot;
   const card = currentDay?.today_card;
-  const todayCall = cleanText(card?.headline) || formatReadinessStatus(card?.readiness_status);
 
-  let focus = cleanText(focusWeek?.week_goal);
+  let focus = cleanText(snapshot?.focus) || cleanText(card?.headline);
   if (!focus) {
     const firstSession = getSessions(currentDay)[0];
-    focus = cleanText(firstSession?.title) || cleanText(firstSession?.objective);
+    focus = cleanText(firstSession?.objective) || cleanText(firstSession?.title);
   }
 
-  const topFlag = getDisplayableRedFlags(plan)[0];
-  let risk = topFlag ? redFlagView(topFlag).text : null;
+  let risk = cleanText(snapshot?.injury_watch) || cleanText(card?.primary_warning);
   if (!risk) {
-    const injuryNote = getPlanNotes(plan).find((note) => note.category === "injury");
-    risk = injuryNote?.text ?? null;
+    const topFlag = getDisplayableRedFlags(plan)[0];
+    risk = topFlag ? redFlagView(topFlag).text : null;
   }
 
-  const load = formatPlanLabel(cleanText(currentDay?.day_type) ?? "") || null;
+  const load = cleanText(snapshot?.weekly_load) || weekLoadProxy(focusWeek);
 
-  return { todayCall, focus, risk, load };
-}
-
-/** Titleize a readiness_status enum ("train_as_planned" -> "Train as planned"). */
-function formatReadinessStatus(value: unknown): string | null {
-  const clean = cleanText(value);
-  return clean ? formatPlanLabel(clean) : null;
+  return { focus, risk, load };
 }

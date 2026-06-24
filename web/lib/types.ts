@@ -488,11 +488,26 @@ export type StructuredPlanNote = {
   text?: string | null;
 };
 
+// An optional, plan-level readiness summary. `focus` / `injury_watch` /
+// `weekly_load` feed the plan page's lighter camp-readiness strip (see
+// getReadinessStrip); when absent the strip derives them from the current day /
+// week. `today_call` is reserved for the Today surface — the exact "train /
+// modify / pull back" decision belongs there and is intentionally NOT rendered
+// on the plan page. Every field is nullable. Purely additive — generation does
+// not emit it yet.
+export type StructuredReadinessSnapshot = {
+  today_call?: string | null;
+  focus?: string | null;
+  injury_watch?: string | null;
+  weekly_load?: string | null;
+};
+
 export type StructuredPlan = {
   schema_version?: string | null;
   plan_metadata?: StructuredPlanMetadata | null;
   athlete_context?: StructuredAthleteContext | null;
   event_context?: StructuredEventContext | null;
+  readiness_snapshot?: StructuredReadinessSnapshot | null;
   red_flag_rules?: StructuredRedFlagRule[] | null;
   plan_notes?: StructuredPlanNote[] | null;
   weeks?: StructuredWeek[] | null;
