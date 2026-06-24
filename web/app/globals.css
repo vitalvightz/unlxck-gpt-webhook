@@ -5127,6 +5127,10 @@ button.mobile-step-rail-item {
   letter-spacing: -0.025em;
 }
 
+.today-risk-overflow {
+  display: contents;
+}
+
 .today-risk-icon {
   display: inline-flex;
   align-items: center;

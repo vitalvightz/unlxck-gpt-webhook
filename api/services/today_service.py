@@ -764,6 +764,12 @@ def _flag_status_from_guided_injury(injury: Mapping[str, Any]) -> str:
     return "monitoring" if str(injury.get("trend") or "").strip().lower() == "improving" else "open"
 
 
+def _details_already_include_body_area(body_area: str, details: str) -> bool:
+    body_key = _normalized_injury_key(body_area)
+    details_key = _normalized_injury_key(details)
+    return bool(body_key and (details_key == body_key or details_key.startswith(f"{body_key} ")))
+
+
 def _format_guided_injury_description(body_area: str, injury: Mapping[str, Any]) -> str:
     parts: list[str] = []
     for field in ("surface_type", "injury_type", "timeframe"):
@@ -778,6 +784,8 @@ def _format_guided_injury_description(body_area: str, injury: Mapping[str, Any])
         if value:
             parts.append(value)
     details = ". ".join(dict.fromkeys(parts))
+    if body_area and details and _details_already_include_body_area(body_area, details):
+        return details
     if body_area and details:
         return f"{body_area}: {details}"
     return body_area or details

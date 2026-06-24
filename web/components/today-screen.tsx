@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { type FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { type FormEvent, useCallback, useEffect, useId, useMemo, useState } from "react";
 
 import { useAppSession } from "@/components/auth-provider";
 import {
@@ -274,14 +274,15 @@ function NoActivePlanState() {
 
 function RiskWatch({ risks }: { risks: TodayCommandView["risk_watch"] }) {
   const [isExpanded, setIsExpanded] = useState(false);
+  const overflowId = useId();
   if (!risks.length) {
     return null;
   }
   const { visible, overflow } = getVisibleRiskWatch(risks);
-  const shownRisks = isExpanded ? risks : visible;
+  const overflowRisks = risks.slice(visible.length);
   return (
     <section className="today-risk-watch" aria-label="Risk watch">
-      {shownRisks.map((risk) => (
+      {visible.map((risk) => (
         <article key={`${risk.category}-${risk.label}`} className="today-risk-item" data-tone={risk.tone}>
           <span className="today-risk-icon" aria-hidden="true">
             !
@@ -292,11 +293,28 @@ function RiskWatch({ risks }: { risks: TodayCommandView["risk_watch"] }) {
           </div>
         </article>
       ))}
+      {isExpanded ? (
+        <div id={overflowId} className="today-risk-overflow">
+          {overflowRisks.map((risk) => (
+            <article key={`${risk.category}-${risk.label}`} className="today-risk-item" data-tone={risk.tone}>
+              <span className="today-risk-icon" aria-hidden="true">
+                !
+              </span>
+              <div>
+                <p className="today-risk-label">{risk.label}</p>
+                <p className="today-risk-text">{risk.text || "Monitor this before training."}</p>
+              </div>
+            </article>
+          ))}
+        </div>
+      ) : null}
       {overflow > 0 ? (
         <button
           type="button"
           className="today-risk-more"
+          aria-controls={overflowId}
           aria-expanded={isExpanded}
+          data-expanded={isExpanded ? "true" : "false"}
           onClick={() => setIsExpanded((current) => !current)}
         >
           {isExpanded ? "Show less" : `+${overflow} more`}

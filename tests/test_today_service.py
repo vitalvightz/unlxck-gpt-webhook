@@ -667,6 +667,27 @@ class TestCommandView:
         assert seeded["status"] == "open"
         assert "bruise" in seeded["description"]
 
+    def test_guided_intake_description_does_not_repeat_body_area(self):
+        store = _store_with_plan()
+        _attach_intake(
+            store,
+            {
+                "guided_injuries": [
+                    {
+                        "area": "Left shoulder",
+                        "zone": "l_shoulder",
+                        "severity": "moderate",
+                        "trend": "same",
+                        "notes": "Left shoulder bruise",
+                    }
+                ]
+            },
+        )
+
+        view = build_today_command_view(store, athlete_id=ATHLETE, athlete_timezone="")
+
+        assert view.open_injuries[0]["description"] == "Left shoulder bruise"
+
     def test_guided_intake_injury_bootstrap_is_idempotent(self):
         store = _store_with_plan()
         _attach_intake(
