@@ -549,11 +549,31 @@ export function getActiveNotesExcludingRedFlags(
   });
 }
 
+// The week heading must read as a glanceable label, not a paragraph. The LLM is
+// told to keep week_goal to ~6 words, but plans (and older saved plans) can still
+// carry a full multi-clause sentence, so we shorten deterministically: keep the
+// first clause (up to the first ; or .) when that already fits in 6 words, else
+// hard-cap at 6 words with an ellipsis. Goals already short are returned verbatim
+// so their punctuation (e.g. a trailing period) is preserved.
+const WEEK_GOAL_MAX_WORDS = 6;
+function shortenWeekGoal(goal: string): string {
+  const words = goal.split(/\s+/).filter(Boolean);
+  if (words.length <= WEEK_GOAL_MAX_WORDS) {
+    return goal;
+  }
+  const firstClause = goal.split(/[;.]/)[0].trim();
+  const clauseWords = firstClause.split(/\s+/).filter(Boolean);
+  if (clauseWords.length > 0 && clauseWords.length <= WEEK_GOAL_MAX_WORDS) {
+    return firstClause;
+  }
+  return `${words.slice(0, WEEK_GOAL_MAX_WORDS).join(" ")}…`;
+}
+
 export function weekLabel(week: StructuredWeek | null | undefined): string {
   const goal = cleanText(week?.week_goal);
   const index = typeof week?.week_index === "number" ? week.week_index : null;
   const base = index != null ? `Week ${index}` : "Week";
-  return goal ? `${base} — ${goal}` : base;
+  return goal ? `${base} — ${shortenWeekGoal(goal)}` : base;
 }
 
 // --- session-less day classification ----------------------------------------

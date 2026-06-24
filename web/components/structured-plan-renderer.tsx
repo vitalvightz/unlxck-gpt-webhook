@@ -585,21 +585,35 @@ export function ActiveNotesCard({ plan }: { plan: StructuredPlan }) {
   // Drop any note that just restates a red-flag rule — the Red Flags card is the
   // single home for stop/report rules, so Active Notes stays context-only.
   const notes = getActiveNotesExcludingRedFlags(plan);
+  // Collapsed by default so the plan opens short: the title + count stay visible
+  // and the detail is one tap away.
+  const [open, setOpen] = useState(false);
   if (notes.length === 0) {
     return null;
   }
   return (
-    <section className="sp-card sp-active-notes">
-      <p className="sp-eyebrow">Active notes</p>
-      <ul className="sp-note-list">
-        {notes.map((note, index) => (
-          <li key={`${note.category}-${index}`} className={`sp-note sp-note-${note.category}`}>
-            <span className="sp-note-label">{planNoteLabel(note)}</span>
-            <span className="sp-note-text">{note.text}</span>
-          </li>
-        ))}
-      </ul>
-    </section>
+    <details
+      className="sp-collapse sp-active-notes"
+      open={open}
+      onToggle={(event) => setOpen(event.currentTarget.open)}
+    >
+      <summary className="sp-collapse-summary">
+        <span className="sp-collapse-title">Active notes</span>
+        <span className="sp-collapse-action">
+          {open ? "Hide" : "Show"} ({notes.length})
+        </span>
+      </summary>
+      <div className="sp-collapse-body">
+        <ul className="sp-note-list">
+          {notes.map((note, index) => (
+            <li key={`${note.category}-${index}`} className={`sp-note sp-note-${note.category}`}>
+              <span className="sp-note-label">{planNoteLabel(note)}</span>
+              <span className="sp-note-text">{note.text}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </details>
   );
 }
 
@@ -626,15 +640,27 @@ export function RedFlagsCard({ plan }: { plan: StructuredPlan }) {
   const rules = getDisplayableRedFlags(plan);
   const fallbackNotes = rules.length === 0 ? getFallbackSafetyNotes(plan) : [];
   const hasStopRules = rules.length > 0 || fallbackNotes.length > 0;
+  // Collapsed by default to keep the plan short; the "stop & report" title stays
+  // on screen so the rules are always one tap away.
+  const [open, setOpen] = useState(false);
   // The safety/medical disclaimer is folded in here (it used to be a separate
-  // banner) so safety lives in one block. The card therefore always renders the
+  // banner) so safety lives in one block. The body therefore always renders the
   // disclaimer, with the stop/report rules above it when present.
   return (
-    <section className="sp-card sp-redflags" aria-label="Red flags and safety actions">
-      <div className="sp-redflags-head">
-        <p className="sp-eyebrow">Safety priority</p>
-        <h4 className="sp-redflags-title">Red flags - stop &amp; report</h4>
-      </div>
+    <details
+      className="sp-collapse sp-redflags"
+      aria-label="Red flags and safety actions"
+      open={open}
+      onToggle={(event) => setOpen(event.currentTarget.open)}
+    >
+      <summary className="sp-collapse-summary sp-redflags-summary">
+        <span className="sp-redflags-summary-text">
+          <span className="sp-eyebrow">Safety priority</span>
+          <span className="sp-collapse-title">Red flags - stop &amp; report</span>
+        </span>
+        <span className="sp-collapse-action">{open ? "Hide" : "Show"}</span>
+      </summary>
+      <div className="sp-collapse-body">
       {hasStopRules ? (
       <ul className="sp-redflag-list">
         {rules.length > 0 ? rules.map((rule, index) => {
@@ -667,7 +693,8 @@ export function RedFlagsCard({ plan }: { plan: StructuredPlan }) {
       </ul>
       ) : null}
       <SafetyNote tone="warning" showRedFlags>{PLAN_SAFETY_NOTE}</SafetyNote>
-    </section>
+      </div>
+    </details>
   );
 }
 
@@ -1045,15 +1072,15 @@ function WeekOverview({ week }: { week: StructuredWeek }) {
       value: sessionSummary.trainingDays > 0 ? `${sessionSummary.trainingDays}` : null,
     },
     {
-      label: "App sessions",
+      label: "Sessions",
       value: sessionSummary.appSessions > 0 ? `${sessionSummary.appSessions}` : null,
     },
     {
-      label: "Coach-led sessions",
+      label: "Coach-led",
       value: sessionSummary.coachLedSessions > 0 ? `${sessionSummary.coachLedSessions}` : null,
     },
     {
-      label: "App completion",
+      label: "Completion",
       value: completion.total > 0 ? `${completion.done}/${completion.total}` : null,
     },
   ].filter((row): row is { label: string; value: string } => Boolean(row.value));
