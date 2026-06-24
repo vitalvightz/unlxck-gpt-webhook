@@ -3,6 +3,7 @@ import logging
 from .normalization import clean_list, dedupe_preserve_order, normalize_fatigue_level, ordered_weekdays as _ordered_weekdays
 from .fight_date_utils import resolve_fight_weekday
 from .sparring_dose_planner import compute_hard_sparring_plan, effective_hard_days
+from .performance_bias import PERFORMANCE_BIAS_BRIDGE_DAY_RANGE, performance_bias_active
 
 from itertools import combinations, permutations
 from typing import Any
@@ -1012,6 +1013,7 @@ def compute_bridge_rules(
     hours_to_recovery_after_weigh_in: float | None = None,
     force_unsafe_weight_cut: bool = False,
     permissive_mode: bool = False,
+    performance_bias: bool = False,
 ) -> dict[str, Any]:
     """Evidence-based bridge / late-taper / normal-camp cap set.
 
@@ -1103,7 +1105,70 @@ def compute_bridge_rules(
         if rules["plan_mode"] not in {"restricted_rehab_only", "medical_hold"}:
             rules["strength_touch_max"] = 0
 
+    rules["performance_bias_active"] = _bridge_apply_performance_bias(
+        rules,
+        baseline,
+        performance_bias=performance_bias,
+        unsafe=unsafe,
+        fatigue=fatigue_norm,
+        bucket=bucket_norm,
+        injury_mode=injury_norm,
+        days=days,
+    )
+
     return rules
+
+
+def _bridge_apply_performance_bias(
+    rules: dict[str, Any],
+    baseline: dict[str, Any],
+    *,
+    performance_bias: bool,
+    unsafe: bool,
+    fatigue: str,
+    bucket: str,
+    injury_mode: str,
+    days: int | None,
+) -> bool:
+    """Opt-in: preserve one extra low-risk performance exposure in D-21..D-18.
+
+    Returns whether the bias actually changed anything. Hard sparring and
+    glycolytic caps are never touched here — the extra exposure is filled by
+    low-risk work (alactic power / low-volume strength touch / low-noise
+    aerobic) precisely because those harder caps stay where safety left them.
+
+    Internal guards re-check every safety precondition so the bias can never
+    raise caps for an unsafe combination, even if a caller passes
+    ``performance_bias=True`` without the eligibility gate.
+    """
+    low, high = PERFORMANCE_BIAS_BRIDGE_DAY_RANGE
+    if not (
+        performance_bias
+        and not rules.get("block_full_plan")
+        and not unsafe
+        and rules.get("timing_state") == TIMING_STATE_BRIDGE
+        and injury_mode == "full_plan"
+        and fatigue in {"none", "low"}
+        and bucket in {"none", "low", "moderate"}
+        and isinstance(days, int)
+        and low <= days <= high
+    ):
+        return False
+
+    extra_active = min(baseline["max_active_roles"], rules["max_active_roles"] + 1)
+    extra_stress = min(
+        baseline["max_meaningful_stress_exposures"],
+        rules["max_meaningful_stress_exposures"] + 1,
+    )
+    if extra_active <= rules["max_active_roles"] and extra_stress <= rules["max_meaningful_stress_exposures"]:
+        # Already at the phase ceiling (e.g. clean athlete) — nothing throttled
+        # to give back, so the bias is a no-op.
+        return False
+
+    rules["max_active_roles"] = extra_active
+    rules["max_meaningful_stress_exposures"] = extra_stress
+    rules["reason_codes"].append("performance_bias_extra_low_risk_exposure")
+    return True
 
 
 def _late_fight_cost_class(role_key: str) -> str:
@@ -1715,9 +1780,11 @@ def _late_fight_permissions(days_until_fight: Any, athlete_model: dict) -> dict:
             hard_sparring_days_declared=len(
                 clean_list(athlete_model.get("hard_sparring_days", []))
             ),
+            performance_bias=performance_bias_active(athlete_model),
         )
         return {
             "mode": mode,
+            "performance_bias_active": bridge_rules.get("performance_bias_active", False),
             "allow_full_weekly_structure": False,
             "allow_compressed_weekly_structure": True,
             "allow_normal_session_roles": True,

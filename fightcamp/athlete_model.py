@@ -167,6 +167,10 @@ def _build_athlete_model(
         "mental_blocks": clean_list(training_context.mental_block),
         "equipment": training_context.equipment,
         "training_frequency": training_context.training_frequency,
+        # Opt-in performance-bias layer (default off). Only activates for
+        # low-risk profiles and never weakens safety defaults; see
+        # fightcamp/performance_bias.py.
+        "performance_bias": bool(getattr(training_context, "performance_bias", False)),
         "training_days": training_context.training_days,
         "hard_sparring_days": training_context.hard_sparring_days,
         "support_work_days": support_work_days,
