@@ -1,20 +1,21 @@
-"""Opt-in performance-bias layer.
+"""Low-risk bridge profile (the planner's single "is this athlete safe to keep
+one more low-risk performance exposure?" gate).
 
-The planner's default behaviour is deliberately conservative: weight-cut,
-head-impact, and injury safety rules stack to protect the athlete, and those
-defaults are intentionally left untouched (see
+The planner's load caps are deliberately conservative, and the genuine safety
+rules — weight-cut + head-impact suppression in the bridge window, injury
+gating — are intentionally left untouched (see
 ``docs/conservative_rules_assessment.md``).
 
-This module adds a *purely opt-in* performance bias that only activates for
-demonstrably low-risk profiles. When active it lets the bridge window
-(D-21 to D-18) preserve **one extra low-risk performance exposure** — e.g.
-alactic power, a low-volume strength touch, or low-noise aerobic conditioning.
-It never restores hard sparring or hard glycolytic work, and it never fires
-when any safety signal is present.
+This module isolates the one *load-shape* decision that is tunable rather than
+safety-critical: in the D-21..D-18 bridge window, a demonstrably low-risk
+athlete may keep **one extra low-risk performance exposure** (alactic power, a
+low-volume strength touch, or low-noise aerobic) instead of being throttled to
+the minimal taper-on-ramp shape. This raises the active-role count by one; it
+never restores hard sparring or hard glycolytic work, which stay where the
+safety rules left them.
 
-Eligibility is the gate. Performance bias is active only when:
+``bridge_low_risk_profile`` is the gate. It returns True only when **all** of:
 
-* the athlete (or intake) opted in via the ``performance_bias`` flag, AND
 * fatigue is low/none, AND
 * there is no red-flag injury and no medical-hold / restricted-rehab /
   needs-review injury mode, AND
@@ -22,6 +23,10 @@ Eligibility is the gate. Performance bias is active only when:
   most mild severity, AND
 * the weight-cut bucket is none / low / moderate (never high+), AND
 * the fight is not D-7 or closer.
+
+It is applied as a **default** (no opt-in flag): a clean or mildly-managed
+athlete gets the unified cap automatically; any safety signal drops them back to
+the conservative baseline.
 """
 
 from __future__ import annotations
@@ -32,9 +37,6 @@ from .normalization import clean_list
 from .sparring_dose_planner import _injury_assessment
 from .weight_cut import compute_cut_severity_score, cut_severity_bucket
 
-#: athlete_model / intake key used to opt in to the performance bias layer.
-PERFORMANCE_BIAS_FLAG = "performance_bias"
-
 _LOW_RISK_FATIGUE = {"", "none", "low"}
 _LOW_RISK_CUT_BUCKETS = {"", "none", "low", "moderate"}
 _BLOCKED_INJURY_MODES = {"medical_hold", "restricted_rehab_only", "needs_review"}
@@ -42,12 +44,7 @@ _RED_FLAG_READINESS = {"severe_injury", "red_flag_injury"}
 _MODERATE_PLUS_SEVERITY = {"moderate", "high"}
 
 #: Bridge sub-window (inclusive day range) that may receive the extra exposure.
-PERFORMANCE_BIAS_BRIDGE_DAY_RANGE = (18, 21)
-
-
-def performance_bias_requested(athlete_model: dict[str, Any]) -> bool:
-    """True when the athlete/intake opted in to the performance bias layer."""
-    return bool(athlete_model.get(PERFORMANCE_BIAS_FLAG))
+BRIDGE_EXTRA_EXPOSURE_DAY_RANGE = (18, 21)
 
 
 def _resolved_cut_bucket(athlete_model: dict[str, Any]) -> str:
@@ -64,11 +61,11 @@ def _resolved_cut_bucket(athlete_model: dict[str, Any]) -> str:
     return str(cut_severity_bucket(score) or "").strip().lower()
 
 
-def performance_bias_eligibility(athlete_model: dict[str, Any]) -> tuple[bool, list[str]]:
-    """Return ``(eligible, disqualifier_reason_codes)``.
+def low_risk_profile_blockers(athlete_model: dict[str, Any]) -> list[str]:
+    """Return the reason codes (if any) that disqualify the low-risk profile.
 
-    ``eligible`` is True only when *no* disqualifier fired. The reason codes are
-    surfaced so the caller can explain exactly why the bias stayed off.
+    An empty list means the athlete qualifies as low-risk. Surfacing the reasons
+    lets callers explain exactly why the conservative baseline stayed in force.
     """
     reasons: list[str] = []
 
@@ -106,12 +103,9 @@ def performance_bias_eligibility(athlete_model: dict[str, Any]) -> tuple[bool, l
     if isinstance(days, int) and 0 <= days <= 7:
         reasons.append("inside_fight_week")
 
-    return (not reasons), reasons
+    return reasons
 
 
-def performance_bias_active(athlete_model: dict[str, Any]) -> bool:
-    """True only when opted in *and* the low-risk eligibility gate passes."""
-    if not performance_bias_requested(athlete_model):
-        return False
-    eligible, _ = performance_bias_eligibility(athlete_model)
-    return eligible
+def bridge_low_risk_profile(athlete_model: dict[str, Any]) -> bool:
+    """True when the athlete qualifies for the unified low-risk bridge cap."""
+    return not low_risk_profile_blockers(athlete_model)

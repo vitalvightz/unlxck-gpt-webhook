@@ -8,8 +8,14 @@ It exists because a review flagged the planner as "too conservative" for a reali
 low-risk athlete (D-21, 3.5% cut, low fatigue, mild stable quad pain, primary goal
 Power, weak area Mobility). Investigation showed that most of the stacked
 conservatism is **deliberate, evidence-based, and test-protected** — not accidental.
-Rather than weaken those safety rules, we added an **opt-in performance-bias layer**
-(`fightcamp/performance_bias.py`) that only changes eligible low-risk cases.
+Those safety rules (weight-cut + head-impact suppression, injury gating) are left
+unchanged.
+
+One genuine bug *was* found and fixed: a conflicting active-role cap (the bridge
+baseline said 3, the binding late-fight role budget said 2). It is now unified into a
+single source of truth (`_bridge_active_role_cap`) with a low-risk profile gate
+(`fightcamp/performance_bias.py`), applied as the **default** for clean / mildly-
+managed athletes.
 
 ## Summary
 
@@ -21,18 +27,28 @@ Rather than weaken those safety rules, we added an **opt-in performance-bias lay
 | 4 | Generic readiness compression counts *any* injury (incl. mild) | Deliberate | `stage2_role_map.py:_active_injury_is_moderate_plus`, `stage2_payload.py:_active_injury_affects_generic_compression` |
 | 5 | Boxing crowded-week compression is severity-aware (mild excluded) | Deliberate (already nuanced) | `stage2_payload.py:_active_injury_is_moderate_plus` (line ~1946) |
 | 6 | `mobility/stiffness` weakness → `tissue_state` limiter | Deliberate | `stage2_payload.py` / `stage2_planning_brief.py:_primary_limiter_key` |
-| 7 | Bridge active-role target drops to 2 under any non-clean signal | **Tunable** | `stage2_payload_late_fight.py:_bridge_target_active_roles` |
+| 7 | **Conflicting** D-14..D-21 active-role cap (baseline 3 vs budget 2) | **Fixed (unified)** | `stage2_payload_late_fight.py:_bridge_active_role_cap` |
 
-## Tunable knob (implemented)
+## Unified active-role cap (implemented)
 
-**`fightcamp/performance_bias.py`** — opt-in via the `performance_bias` flag on the
-athlete model (default **off**). When opted in *and* the low-risk eligibility gate
-passes, the bridge window (D-21..D-18) preserves **one extra low-risk performance
-exposure** (alactic power, low-volume strength touch, or low-noise aerobic). It does
-**not** restore hard sparring or hard glycolytic work, and it is a no-op for any
-unsafe profile.
+There were two sources of truth for the D-14..D-21 active-role cap:
 
-Eligibility requires **all** of:
+- `compute_bridge_rules` baseline / `_bridge_target_active_roles` → **3**
+  (render guidance), and
+- `_late_fight_role_budget` → `_late_fight_max_active_roles` → **2**
+  (the *binding* cap that actually limits role selection at allocation time).
+
+The binding 2 silently overrode the bridge baseline of 3, shrinking plans for clean /
+mildly-managed athletes even when fatigue was low and any injury was mild/stable.
+
+**Fix:** one source of truth — `_bridge_active_role_cap(days, athlete_model)` — used by
+the binding `_late_fight_role_budget`, with `compute_bridge_rules` guidance aligned to
+match. In the D-21..D-18 window a **low-risk** athlete keeps **one extra low-risk
+active role** (3 instead of 2); any safety signal drops back to 2. Applied as the
+**default** (no opt-in flag).
+
+Low-risk profile (`fightcamp/performance_bias.py:bridge_low_risk_profile`) requires
+**all** of:
 
 - fatigue low/none
 - weight-cut bucket none/low/moderate (never high+)
@@ -42,16 +58,16 @@ Eligibility requires **all** of:
   symptoms, not high-risk (reuses `sparring_dose_planner._injury_assessment`)
 - fight not D-7 or closer
 
-The knob only touches `_bridge_target_active_roles` headroom
-(`_bridge_apply_performance_bias`), bumping `max_active_roles` and
-`max_meaningful_stress_exposures` by **one each**, bounded by the bridge baseline.
-Internal guards in `compute_bridge_rules` re-check every safety precondition, so the
-bias can never raise caps for an unsafe combination even if a caller passes
-`performance_bias=True` incorrectly.
+The extra exposure is filled by low-risk work (alactic power / low-volume strength
+touch / low-noise aerobic) **because the hard sparring and glycolytic caps are never
+touched** by this rule — they stay exactly where the weight-cut / head-impact safety
+rules left them.
 
-Tests: `tests/test_performance_bias.py` (eligibility gate, defaults unchanged,
-active-only-for-eligible, never overrides safety). Existing safety tests in
-`tests/test_bridge_rules.py` remain unchanged and passing.
+Tests: `tests/test_performance_bias.py` — low-risk gate, binding-cap source of truth,
+`compute_bridge_rules` guidance agreement, and an end-to-end allocation test proving
+clean/mild athletes get the 3rd app-owned session while moderate-fatigue / moderate-
+injury stay at 2. Existing safety tests in `tests/test_bridge_rules.py` and
+`tests/test_late_fight_calendar_regression.py` remain unchanged and passing.
 
 ---
 
@@ -132,14 +148,26 @@ mobility/stiffness/knee/shoulder/neck, before the goal fallback.
   the stiffness test and was therefore left out of the agreed opt-in scope. Flagged
   here as a candidate for a future, separately-gated limiter knob if desired.
 
-### 7. Bridge active-role target drops to 2 — Tunable (this change)
+### 7. Conflicting D-14..D-21 active-role cap — Fixed (unified)
 
-`_bridge_target_active_roles` returns 3 only for a *clean* athlete
-(`fatigue in {none,low}` and `cut in {none,low}`); any moderate cut (or other
-non-clean signal) drops it to 2 — removing one low-risk exposure even when fatigue is
-low and the injury is mild/stable. This is the single lever the opt-in performance
-bias relaxes, by exactly one exposure, for eligible low-risk athletes in D-21..D-18.
+Two sources of truth disagreed (3 vs 2); the binding budget of 2 won and shrank
+clean/mildly-managed plans. Now unified into `_bridge_active_role_cap` with a low-risk
+gate, default 3-for-low-risk / 2-otherwise in D-21..D-18. See "Unified active-role
+cap" above.
 
-- Code: `stage2_payload_late_fight.py:_bridge_target_active_roles`,
-  `_bridge_apply_performance_bias`.
-- **Verdict:** tunable; relaxed only behind the opt-in eligibility gate.
+- Code: `stage2_payload_late_fight.py:_bridge_active_role_cap`,
+  `_late_fight_role_budget`, `_bridge_target_active_roles`.
+- **Verdict:** genuine conflict, resolved; conservative for every safety signal.
+
+---
+
+## Additional causes reviewed (from the second review pass)
+
+| Cause | Verdict | Notes |
+|-------|---------|-------|
+| 1. `active_weight_cut` / `_is_high_pressure_weight_cut` fires within 28 days | Deliberate, **tunable-future** | `weight_cut_risk=True` adds `active_weight_cut`; `_is_high_pressure_weight_cut` treats it as high-pressure if fatigue moderate+ **or** ≤28 days. The ≤28-day arm is intentionally sensitive. Not changed here (it drives freshness/density language, not the active-role count). Candidate for a separate gated knob. `athlete_model.py:_is_high_pressure_weight_cut`. |
+| 2. Bridge cap conflict (3 vs 2) | **Fixed** | This change. |
+| 3. Late-fight bans "development" wording | Deliberate, keep | Render-guidance flags (`allow_development_language=False`, etc.) keep the language honest about a taper-on-ramp. Cosmetic, not a load cap. `stage2_payload_late_fight.py` payload-mode dicts. |
+| 4. Downgraded hard sparring still "crowds" the week | **Already handled** | `_late_fight_active_role_count` excludes coach-owned `hard_sparring_day` from the app's active-role budget, so a downgraded/technical-touch sparring day does **not** consume an app S&C slot. Test: `test_late_fight_calendar_regression.py::test_active_role_count_excludes_coach_owned_sparring`. |
+| 5. Taper allocation is recovery-heavy (e.g. 1 strength / 1 cond / 3 recovery) | Deliberate, **tunable-future** | This is the role-map taper allocator (>21-day camps), outside the D-21..D-18 scope agreed for this change. Intentional taper shape; candidate for a future gated knob. |
+| 6. Finalizer cannot restore suppressed roles | Deliberate (safety), keep | Correct by design — the finalizer must not silently re-inflate what upstream safety logic suppressed. The right lever is the upstream cap (fixed in #2), not the finalizer. |
