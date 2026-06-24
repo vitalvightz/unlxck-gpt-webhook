@@ -1184,8 +1184,7 @@ export function StructuredPlanRenderer({
   return (
     <div className="sp-root cm-root">
       <PlanHeader plan={plan} createdAt={createdAt} planStatus={planStatus} />
-      <CampStatusLine plan={plan} progress={calendarProgress} phaseWeek={phaseWeek} />
-      <ReadinessStrip plan={plan} currentDay={currentDay} focusWeek={phaseWeek} />
+      {/* Camp status chips and readiness strip removed per request (boxing tag remains in header) */}
       <ActiveNotesCard plan={plan} />
       <RedFlagsCard plan={plan} />
 
