@@ -27,20 +27,36 @@ function parseAppDate(value: string): { date: Date; dateOnly: boolean } | null {
   return { date, dateOnly };
 }
 
+// Intl.DateTimeFormat instantiation is expensive, so cache one instance per
+// distinct option combination. There are only ~4 combinations of
+// (withTime, dateOnly), so the cache stays tiny and is reused across every
+// render — important when formatting long lists of plans/athletes.
+const formatterCache = new Map<string, Intl.DateTimeFormat>();
+
+function getFormatter(withTime: boolean, dateOnly: boolean): Intl.DateTimeFormat {
+  const key = `${withTime}-${dateOnly}`;
+  let formatter = formatterCache.get(key);
+  if (!formatter) {
+    formatter = new Intl.DateTimeFormat("en-GB", {
+      weekday: "short",
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+      ...(withTime ? { hour: "2-digit", minute: "2-digit", hour12: false } : {}),
+      ...(dateOnly ? { timeZone: "UTC" } : {}),
+    });
+    formatterCache.set(key, formatter);
+  }
+  return formatter;
+}
+
 function render(value: string | null | undefined, withTime: boolean): string {
   const raw = String(value ?? "");
   const parsed = parseAppDate(raw);
   if (!parsed) {
     return raw;
   }
-  const formatter = new Intl.DateTimeFormat("en-GB", {
-    weekday: "short",
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-    ...(withTime ? { hour: "2-digit", minute: "2-digit", hour12: false } : {}),
-    ...(parsed.dateOnly ? { timeZone: "UTC" } : {}),
-  });
+  const formatter = getFormatter(withTime, parsed.dateOnly);
   const parts = formatter.formatToParts(parsed.date);
   const get = (type: Intl.DateTimeFormatPartTypes) =>
     parts.find((part) => part.type === type)?.value ?? "";
