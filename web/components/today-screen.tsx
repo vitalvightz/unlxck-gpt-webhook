@@ -11,6 +11,8 @@ import {
 } from "@/components/structured-plan-renderer";
 import { useToast } from "@/components/toast-provider";
 import { EffortSlider, FaceScale } from "@/components/rating-controls";
+import { SafetyNote } from "@/components/safety-note";
+import { TODAY_RED_FLAG_SAFETY } from "@/lib/safety-copy";
 import { getPlan, getToday, submitTodayCheckin, submitTodaySessionCompletion } from "@/lib/api";
 import {
   resolveCurrentDay,
@@ -369,6 +371,7 @@ function CheckinModule({
 
         <details className="today-red-flags">
           <summary>Any red flags?</summary>
+          <SafetyNote tone="warning">{TODAY_RED_FLAG_SAFETY}</SafetyNote>
           <div className="today-flag-grid">
             {SAFETY_FLAGS.map((flag) => (
               <label key={flag.key} className="today-flag-option">

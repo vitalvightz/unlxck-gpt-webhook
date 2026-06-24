@@ -29,7 +29,7 @@ def test_daily_limit_create_recovers_stale_running_job_before_rpc():
         return None
 
     store._fail_stale_active_generation_jobs_for_athlete = _fake_fail_stale
-    store.get_active_generation_job_for_athlete = _fake_recover
+    store.reconcile_active_generation_job_for_athlete = _fake_recover
 
     created_job = {"id": "job-1", "status": "queued", "client_request_id": "req-1"}
 

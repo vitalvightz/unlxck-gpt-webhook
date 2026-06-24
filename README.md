@@ -139,19 +139,35 @@ OPENAI_API_KEY=
 APP_PLAN_GENERATE_DAILY_LIMIT_PER_USER=5
 ```
 
-`UNLXCK_ADMIN_EMAILS` is the **bootstrap allowlist** for admin roles, not the
-runtime source of truth. When a profile is first created, an email in this list
-seeds the profile with `role = admin`; thereafter the stored `profiles.role`
-column is authoritative and is what every admin-gated route checks. This means:
+Admin access uses a **dual gate**: a request is treated as admin only when
+**both** conditions hold —
 
-- Adding an email here grants admin only on first profile creation. To promote
-  an existing user, update their `profiles.role` in the database.
-- Removing an email here does **not** demote an existing admin. To revoke
-  access, set that user's `profiles.role` back to `athlete` in the database.
+1. the stored `profiles.role` is `admin`, **and**
+2. the user's email is present in `UNLXCK_ADMIN_EMAILS`.
 
-This is enforced by `tests/test_api_admin_flows.py`
-(`test_admin_routes_use_stored_profile_role_not_env_allowlist`). Use a
-comma-separated list:
+Neither condition alone is sufficient (enforced in `require_admin` /
+`is_effective_admin_profile` in `api/store.py` and `api/app.py`). On first
+profile creation an allowlisted email also seeds `profiles.role = admin`, but
+that seed is only a convenience — it is not what authorizes a request. This
+means:
+
+- **Adding** an email to the env var does **not** promote an existing user
+  unless their `profiles.role` is also `admin`.
+- **Setting** `profiles.role = admin` does **not** grant access unless the
+  email is also allowlisted in `UNLXCK_ADMIN_EMAILS`.
+- **Removing** an email from the env var **immediately blocks** runtime admin
+  access (after the backend restarts with the new value), even if the database
+  role is still `admin`.
+- For a **permanent** revocation, also demote the role in the database via
+  `tools/manage_admin.py revoke ...` (see `docs/admin-role-management.md`).
+  Removing the email is the fast kill-switch; the DB demotion is the durable
+  cleanup.
+
+This matrix is enforced by `tests/test_api_admin_flows.py` (see
+`test_admin_endpoints_require_admin_role`,
+`test_admin_routes_deny_email_in_env_allowlist_when_stored_role_is_athlete`, and
+`test_admin_routes_deny_stored_admin_role_when_email_removed_from_allowlist`).
+Use a comma-separated list:
 `UNLXCK_ADMIN_EMAILS=email1@example.com,email2@example.com`.
 
 ### Frontend

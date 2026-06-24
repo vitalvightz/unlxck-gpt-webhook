@@ -626,6 +626,68 @@ def test_recover_generation_job_if_stale_is_noop_for_non_running_jobs():
     assert store.recover_generation_job_if_stale(None) is None
 
 
+def _make_stale_running_job(store, *, client_request_id: str):
+    created = store.create_or_get_generation_job(
+        athlete_id="athlete-1",
+        client_request_id=client_request_id,
+        source="self_serve",
+        request_payload=_build_request().model_dump(mode="json"),
+    )
+    old_iso = "2026-01-01T00:00:00+00:00"
+    store.update_generation_job(
+        created["id"],
+        status="running",
+        attempt_count=1,
+        started_at=old_iso,
+        heartbeat_at=old_iso,
+        progress_milestones=[{"code": "job_loaded", "label": "Generation job loaded", "detail": "", "at": old_iso}],
+    )
+    return created
+
+
+def test_get_active_endpoint_does_not_mutate_stale_running_job():
+    # Polling GET /api/generation-jobs/active must be side-effect free even when
+    # the active job is a stale `running` row. Recovery is owned by the explicit
+    # reconcile/worker write paths, never by reads.
+    client, store, _ = _build_client(enable_in_process_generation=False)
+    created = _make_stale_running_job(store, client_request_id="active-stale-pure-read")
+
+    response = client.get("/api/generation-jobs/active", headers={"Authorization": "Bearer athlete-token"})
+    assert response.status_code == 200
+    assert response.json()["status"] == "running"
+    # The stale running job is untouched by the read.
+    assert store.get_generation_job(created["id"])["status"] == "running"
+    # A second poll still sees running — no hidden state change accumulated.
+    second = client.get("/api/generation-jobs/active", headers={"Authorization": "Bearer athlete-token"})
+    assert second.json()["status"] == "running"
+    assert store.get_generation_job(created["id"])["status"] == "running"
+
+
+def test_get_job_by_id_endpoint_does_not_mutate_stale_running_job():
+    client, store, _ = _build_client(enable_in_process_generation=False)
+    created = _make_stale_running_job(store, client_request_id="byid-stale-pure-read")
+
+    response = client.get(
+        f"/api/generation-jobs/{created['id']}", headers={"Authorization": "Bearer athlete-token"}
+    )
+    assert response.status_code == 200
+    assert response.json()["status"] == "running"
+    assert store.get_generation_job(created["id"])["status"] == "running"
+
+
+def test_reconcile_active_generation_job_mutates_stale_running_job():
+    # The explicit reconciliation write path DOES recover a stale running job so
+    # stuck jobs cannot remain active forever.
+    _client, store, _ = _build_client(enable_in_process_generation=False)
+    created = _make_stale_running_job(store, client_request_id="active-stale-reconcile")
+
+    recovered = store.reconcile_active_generation_job_for_athlete("athlete-1")
+    assert recovered is not None
+    # job_loaded_stalled with attempts remaining is requeued out of `running`.
+    assert recovered["status"] == "queued"
+    assert store.get_generation_job(created["id"])["status"] == "queued"
+
+
 def test_get_generation_job_keeps_running_when_heartbeat_is_fresh():
     client, store, _ = _build_client()
     created = store.create_or_get_generation_job(

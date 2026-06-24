@@ -43,6 +43,8 @@ import {
 } from "@/lib/camp-map";
 import { useTrainingDay } from "@/lib/use-training-day";
 import { formatPlanLabel } from "@/lib/plan-labels";
+import { SafetyNote } from "@/components/safety-note";
+import { PLAN_SAFETY_NOTE } from "@/lib/safety-copy";
 import type {
   DeterministicNutritionPhase,
   DeterministicRecoveryPhase,
@@ -1040,6 +1042,7 @@ export function StructuredPlanRenderer({
       <CampStatusLine plan={plan} progress={calendarProgress} phaseWeek={phaseWeek} />
       <ActiveNotesCard plan={plan} />
       <RedFlagsCard plan={plan} />
+      <SafetyNote tone="warning" showRedFlags>{PLAN_SAFETY_NOTE}</SafetyNote>
 
       {weeks.length > 0 ? (
         <>

@@ -456,9 +456,9 @@ class FakeStore:
                 if existing_hash and str(existing_hash) != payload_hash:
                     raise client_request_id_payload_mismatch_error()
                 return dict(job)
-        active = self.get_active_generation_job_for_athlete(athlete_id, stale_after_seconds=stale_after_seconds)
+        active = self.reconcile_active_generation_job_for_athlete(athlete_id, stale_after_seconds=stale_after_seconds)
         # Mirror SupabaseAppStore.create_or_get_generation_job: only a job that is
-        # still queued/running blocks a new request. get_active_generation_job_for_athlete
+        # still queued/running blocks a new request. reconcile_active_generation_job_for_athlete
         # recovers a stale running job to a terminal status (e.g. failed) and returns
         # it; such a job must not be treated as in-flight, otherwise a mid-pipeline
         # stale job would wrongly 409 a new request instead of being superseded.
@@ -659,7 +659,7 @@ class FakeStore:
         rows.sort(key=lambda row: str(row.get("created_at") or ""), reverse=True)
         return rows[0] if rows else None
 
-    def get_active_generation_job_for_athlete(
+    def reconcile_active_generation_job_for_athlete(
         self,
         athlete_id: str,
         *,

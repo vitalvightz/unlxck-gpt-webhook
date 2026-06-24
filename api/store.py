@@ -326,7 +326,7 @@ class AppStore(Protocol):
     def recover_generation_job_if_stale(self, job: dict[str, Any] | None) -> dict[str, Any] | None: ...
     def get_generation_job_by_client_request_id(self, *, athlete_id: str, client_request_id: str) -> dict[str, Any] | None: ...
     def get_visible_active_generation_job_for_athlete(self, athlete_id: str) -> dict[str, Any] | None: ...
-    def get_active_generation_job_for_athlete(
+    def reconcile_active_generation_job_for_athlete(
         self,
         athlete_id: str,
         *,
@@ -2101,7 +2101,7 @@ class SupabaseAppStore:
                     return refreshed
             _raise_client_request_payload_mismatch_if_known(existing, payload_hash)
             return existing
-        active_job = self.get_active_generation_job_for_athlete(
+        active_job = self.reconcile_active_generation_job_for_athlete(
             athlete_id,
             stale_after_seconds=stale_after_seconds,
         )
@@ -2185,7 +2185,7 @@ class SupabaseAppStore:
         if existing:
             _raise_client_request_payload_mismatch_if_known(existing, payload_hash)
             return existing
-        active_job = self.get_active_generation_job_for_athlete(
+        active_job = self.reconcile_active_generation_job_for_athlete(
             athlete_id,
             stale_after_seconds=stale_after_seconds,
         )
@@ -2249,9 +2249,9 @@ class SupabaseAppStore:
         # `running` row left by a crashed worker would raise
         # `generation_job_in_flight` and permanently block new generation
         # requests. This mirrors the recovery that create_or_get_generation_job
-        # performs via get_active_generation_job_for_athlete; the requeue/fail
+        # performs via reconcile_active_generation_job_for_athlete; the requeue/fail
         # mutations land before the RPC re-checks in-flight state atomically.
-        self.get_active_generation_job_for_athlete(
+        self.reconcile_active_generation_job_for_athlete(
             athlete_id,
             stale_after_seconds=stale_after_seconds,
         )
@@ -2631,17 +2631,27 @@ class SupabaseAppStore:
                 detail="failed to load generation job",
             ) from exc
 
-    def get_active_generation_job_for_athlete(
+    def reconcile_active_generation_job_for_athlete(
         self,
         athlete_id: str,
         *,
         stale_after_seconds: int | None = None,
     ) -> dict[str, Any] | None:
+        """Reconcile (requeue/fail/recover) the athlete's stale ``running`` jobs.
+
+        This is an explicit **write/control** path — it mutates job state — and
+        must only be called from write/reconciliation flows (job creation,
+        retry, daily-limit create). Polling/read endpoints must use
+        :meth:`get_visible_active_generation_job_for_athlete` or
+        :meth:`get_generation_job`, which never mutate. It returns the active
+        queued/running job (after recovery) or a job recovered to a terminal
+        state so callers can decide whether a new request is in flight.
+        """
         if stale_after_seconds is None:
             stale_after_seconds = generation_job_stale_after_seconds()
         try:
             response = self._run_with_transient_retry(
-                operation=f"get_active_generation_job_for_athlete athlete_id={athlete_id}",
+                operation=f"reconcile_active_generation_job_for_athlete athlete_id={athlete_id}",
                 fn=lambda: self.client.table("generation_jobs")
                 .select(GENERATION_JOB_SELECT)
                 .eq("athlete_id", athlete_id)
@@ -2665,7 +2675,7 @@ class SupabaseAppStore:
                     return row
                 if staleness == "startup_stale":
                     self._run_with_transient_retry(
-                        operation="get_active_generation_job_for_athlete:reset_startup_stale",
+                        operation="reconcile_active_generation_job_for_athlete:reset_startup_stale",
                         fn=lambda: self.client.table("generation_jobs")
                         .update(
                             {
@@ -2698,7 +2708,7 @@ class SupabaseAppStore:
                             }
                         )
                         self._run_with_transient_retry(
-                            operation="get_active_generation_job_for_athlete:requeue_job_loaded_stalled",
+                            operation="reconcile_active_generation_job_for_athlete:requeue_job_loaded_stalled",
                             fn=lambda: self.client.table("generation_jobs")
                             .update(
                                 {
@@ -2725,7 +2735,7 @@ class SupabaseAppStore:
                             }
                         )
                         self._run_with_transient_retry(
-                            operation="get_active_generation_job_for_athlete:fail_job_loaded_stalled",
+                            operation="reconcile_active_generation_job_for_athlete:fail_job_loaded_stalled",
                             fn=lambda: self.client.table("generation_jobs")
                             .update(
                                 {
@@ -2766,7 +2776,7 @@ class SupabaseAppStore:
                             }
                         )
                     self._run_with_transient_retry(
-                        operation="get_active_generation_job_for_athlete:resolve_stage1_stalled",
+                        operation="reconcile_active_generation_job_for_athlete:resolve_stage1_stalled",
                         fn=lambda: self.client.table("generation_jobs")
                         .update(
                             {
@@ -2798,7 +2808,7 @@ class SupabaseAppStore:
                             }
                         )
                     self._run_with_transient_retry(
-                        operation="get_active_generation_job_for_athlete:resolve_mid_pipeline_stale",
+                        operation="reconcile_active_generation_job_for_athlete:resolve_mid_pipeline_stale",
                         fn=lambda: self.client.table("generation_jobs")
                         .update(
                             {

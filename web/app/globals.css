@@ -14415,3 +14415,63 @@ html[data-theme="light"] .loading-operational-item {
     min-width: 84px;
   }
 }
+
+/* ── Safety notes (medical / injury / weight-cut boundaries) ───────────── */
+.safety-note {
+  display: block;
+  margin: var(--space-2) 0;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--border-default);
+  border-left: 3px solid var(--progress-gold);
+  border-radius: var(--radius-support);
+  background: var(--progress-gold-soft);
+}
+
+.safety-note-warning {
+  border-left-color: var(--danger-ink);
+  background: var(--danger-soft);
+}
+
+.safety-note-body {
+  margin: 0;
+  font-size: 0.85rem;
+  line-height: 1.45;
+  color: var(--text-secondary);
+}
+
+.safety-note-redflags {
+  margin-top: var(--space-1);
+}
+
+.safety-note-redflags > summary {
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.safety-note-redflags ul {
+  margin: var(--space-1) 0 0;
+  padding-left: 1.1rem;
+  font-size: 0.8rem;
+  line-height: 1.45;
+  color: var(--text-secondary);
+}
+
+.safety-note-redflag-action {
+  margin: var(--space-1) 0 0;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--danger-ink);
+}
+
+.app-safety-footer {
+  margin: var(--space-5) auto 0;
+  max-width: var(--content-width);
+  padding: var(--space-3) var(--space-4) var(--space-5);
+  border-top: 1px solid var(--border-subtle);
+  font-size: 0.75rem;
+  line-height: 1.5;
+  color: var(--text-muted);
+  text-align: center;
+}

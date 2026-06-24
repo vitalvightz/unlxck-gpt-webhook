@@ -9,7 +9,9 @@ import { useAppSession } from "@/components/auth-provider";
 import { NutritionSubnav } from "@/components/nutrition-subnav";
 import { NutritionWorkspaceHeader } from "@/components/nutrition-workspace-header";
 import { NutritionWorkspaceSkeleton } from "@/components/skeleton";
+import { SafetyNote } from "@/components/safety-note";
 import { useToast } from "@/components/toast-provider";
+import { WEIGHT_CUT_SAFETY } from "@/lib/safety-copy";
 import { LevelSlider, type LevelValue } from "@/components/rating-controls";
 import { getNutritionCurrent, updateNutritionCurrent } from "@/lib/api";
 import {
@@ -274,6 +276,7 @@ export function NutritionWorkspaceScreen() {
           description="Keep camp setup, readiness, and nutrition parameters here. Restrictions stay anchored to Advanced Intake, and the dedicated bodyweight log now lives on its own fight-lab screen."
         />
         <NutritionSubnav />
+        <SafetyNote tone="warning">{WEIGHT_CUT_SAFETY}</SafetyNote>
 
         {!workspace ? (
           <NutritionWorkspaceSkeleton />

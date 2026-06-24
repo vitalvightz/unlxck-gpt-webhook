@@ -1206,7 +1206,7 @@ def test_claim_generation_job_returns_claimed_row_with_worker_ownership(monkeypa
     assert payload["p_progress_milestones"][0]["code"] == "job_loaded"
 
 
-def test_get_active_generation_job_for_athlete_uses_app_stale_timeout_by_default(monkeypatch):
+def test_reconcile_active_generation_job_for_athlete_uses_app_stale_timeout_by_default(monkeypatch):
     monkeypatch.setenv("APP_GENERATION_JOB_STALE_AFTER_SECONDS", "300")
     store = _make_store()
     now = datetime.now(timezone.utc)
@@ -1222,7 +1222,7 @@ def test_get_active_generation_job_for_athlete_uses_app_stale_timeout_by_default
     response.data = [running]
     store._run_with_transient_retry = lambda *, operation, fn, attempts=3, backoff_seconds=0.25: response
 
-    result = store.get_active_generation_job_for_athlete("athlete-1")
+    result = store.reconcile_active_generation_job_for_athlete("athlete-1")
 
     assert result is not None
     assert result["id"] == "job-1"

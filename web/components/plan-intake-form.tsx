@@ -40,6 +40,8 @@ import {
   type GuidedInjuryState,
 } from "@/lib/guided-injury";
 import { GuidedInjuryCard } from "@/components/guided-injury-card";
+import { SafetyNote } from "@/components/safety-note";
+import { INJURY_INTAKE_SAFETY } from "@/lib/safety-copy";
 import { LevelSlider, type LevelValue } from "@/components/rating-controls";
 import { applyNoScheduledFightSnapshot, emptyPlanRequest, hydratePlanRequest, mergePlanRequestDraft } from "@/lib/onboarding";
 import { buildRoundsFormat, parseRoundsFormat, ROUND_COUNT_OPTIONS, ROUND_DURATION_OPTIONS } from "@/lib/rounds-format";
@@ -2817,6 +2819,7 @@ export function PlanIntakeForm() {
                   <p className="kicker">Restrictions</p>
                   <h2 className="form-section-title">Injuries or restrictions</h2>
                 </div>
+                <SafetyNote showRedFlags>{INJURY_INTAKE_SAFETY}</SafetyNote>
                 {noRestrictions ? (
                   // Empty state — a single inline CTA reveals the body map and a
                   // first card, instead of asking the athlete to untick a box first.
