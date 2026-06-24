@@ -15,9 +15,14 @@ export const SAFETY_COACH_OVERRIDE =
   "Advice from your coach or clinician always overrides the app.";
 
 // One-line disclaimer for persistent / low-emphasis areas (footer, settings).
+// Keep this longer version for wider screens.
 export const SAFETY_DISCLAIMER_SHORT =
   "Unlxck is not medical advice and does not diagnose injuries or provide medical clearance. " +
   "Reduce or stop if symptoms worsen, seek medical help for red flags, and follow your coach or clinician.";
+
+// Shorter disclaimer for mobile or otherwise tight layouts.
+export const SAFETY_DISCLAIMER_TIGHT =
+  "Unlxck is not medical advice. Stop if symptoms worsen, seek help for red flags, and follow your coach or clinician.";
 
 // Red-flag symptoms that should prompt stopping and seeking help. Kept as a list
 // so callers can render it compactly (expandable detail) without restating it.

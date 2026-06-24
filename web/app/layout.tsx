@@ -6,7 +6,7 @@ import { AppNav } from "@/components/app-nav";
 import { AuthProvider } from "@/components/auth-provider";
 import { GenerationStatusShell } from "@/components/generation-status-shell";
 import { ToastProvider } from "@/components/toast-provider";
-import { SAFETY_DISCLAIMER_SHORT } from "@/lib/safety-copy";
+import { SAFETY_DISCLAIMER_SHORT, SAFETY_DISCLAIMER_TIGHT } from "@/lib/safety-copy";
 import "./globals.css";
 
 export const dynamic = "force-dynamic";
@@ -44,7 +44,8 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
                     <div className="page">{children}</div>
                   </main>
                   <footer className="app-safety-footer" role="contentinfo">
-                    {SAFETY_DISCLAIMER_SHORT}
+                    <span className="app-safety-footer-wide">{SAFETY_DISCLAIMER_SHORT}</span>
+                    <span className="app-safety-footer-tight">{SAFETY_DISCLAIMER_TIGHT}</span>
                   </footer>
                 </div>
               </div>
