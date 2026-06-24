@@ -629,7 +629,7 @@ function InjuryCheckinCard({
                     <button
                       type="button"
                       className="today-injury-confirm-yes"
-                      disabled={pendingFlagId === injury.id}
+                      disabled={pendingFlagId !== null}
                       onClick={() => void confirmClear(injury.id)}
                     >
                       {pendingFlagId === injury.id ? "Clearing..." : "Yes, clear"}
@@ -637,7 +637,7 @@ function InjuryCheckinCard({
                     <button
                       type="button"
                       className="today-injury-confirm-cancel"
-                      disabled={pendingFlagId === injury.id}
+                      disabled={pendingFlagId !== null}
                       onClick={() => setConfirmingClearId(null)}
                     >
                       Cancel
