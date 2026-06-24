@@ -497,6 +497,9 @@ function InjuryCheckinCard({
 }) {
   const { showToast } = useToast();
   const [pendingFlagId, setPendingFlagId] = useState<string | null>(null);
+  // Clearing an injury removes it from tracking, so it asks for an explicit
+  // confirmation first; this holds the flag id awaiting that "are you sure?".
+  const [confirmingClearId, setConfirmingClearId] = useState<string | null>(null);
   const [isAdding, setIsAdding] = useState(false);
   const [newArea, setNewArea] = useState("");
   const [newSeverity, setNewSeverity] = useState<InjuryFlagSeverity>("moderate");
@@ -532,6 +535,21 @@ function InjuryCheckinCard({
     } finally {
       setPendingFlagId(null);
     }
+  }
+
+  // "Easing" / "Same" / "Worse" apply straight away; "Cleared" routes through an
+  // inline confirmation because it removes the injury from tracking.
+  function handleInjuryAction(flagId: string, status: TodayInjuryCheckinStatus) {
+    if (status === "resolved") {
+      setConfirmingClearId(flagId);
+      return;
+    }
+    void updateInjury(flagId, status);
+  }
+
+  async function confirmClear(flagId: string) {
+    await updateInjury(flagId, "resolved");
+    setConfirmingClearId(null);
   }
 
   async function addInjury(event: FormEvent<HTMLFormElement>) {
@@ -585,14 +603,48 @@ function InjuryCheckinCard({
                   <button
                     key={action.value}
                     type="button"
-                    className="today-segment"
+                    className={`today-segment${
+                      action.value === "resolved" && confirmingClearId === injury.id
+                        ? " today-segment-active"
+                        : ""
+                    }`}
                     disabled={pendingFlagId === injury.id}
-                    onClick={() => void updateInjury(injury.id, action.value)}
+                    aria-pressed={action.value === "resolved" ? confirmingClearId === injury.id : undefined}
+                    onClick={() => handleInjuryAction(injury.id, action.value)}
                   >
                     {action.label}
                   </button>
                 ))}
               </div>
+              {confirmingClearId === injury.id ? (
+                <div
+                  className="today-injury-confirm"
+                  role="alertdialog"
+                  aria-label={`Clear ${getInjuryLabel(injury)}?`}
+                >
+                  <span className="today-injury-confirm-text">
+                    Clear this injury? It will be removed from today&apos;s tracking.
+                  </span>
+                  <div className="today-injury-confirm-actions">
+                    <button
+                      type="button"
+                      className="today-injury-confirm-yes"
+                      disabled={pendingFlagId !== null}
+                      onClick={() => void confirmClear(injury.id)}
+                    >
+                      {pendingFlagId === injury.id ? "Clearing..." : "Yes, clear"}
+                    </button>
+                    <button
+                      type="button"
+                      className="today-injury-confirm-cancel"
+                      disabled={pendingFlagId !== null}
+                      onClick={() => setConfirmingClearId(null)}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              ) : null}
             </li>
           ))}
         </ul>
