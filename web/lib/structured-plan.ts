@@ -561,7 +561,7 @@ function shortenWeekGoal(goal: string): string {
   if (words.length <= WEEK_GOAL_MAX_WORDS) {
     return goal;
   }
-  const firstClause = goal.split(/[;.]/)[0].trim();
+  const firstClause = goal.split(/[;.](?=\\s|$)/)[0].trim();
   const clauseWords = firstClause.split(/\s+/).filter(Boolean);
   if (clauseWords.length > 0 && clauseWords.length <= WEEK_GOAL_MAX_WORDS) {
     return firstClause;
