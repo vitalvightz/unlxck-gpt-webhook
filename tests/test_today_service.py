@@ -19,6 +19,7 @@ from api.services.today_service import (
     _scan_forward_for_next_training,
     build_today_command_view,
     submit_today_checkin,
+    submit_today_injury_checkin,
     upsert_session_completion,
 )
 from tests.support import FakeStore
@@ -617,6 +618,132 @@ class TestCommandView:
         view = build_today_command_view(store, athlete_id=ATHLETE, athlete_timezone="")
         assert view.today.next_session == {}
         assert view.today.completion_status == "not_started"
+
+    def test_logged_session_pain_surfaces_without_a_checkin(self):
+        # The badge must reflect training reality even with no check-in today:
+        # a high logged post-session pain reading drives a risk-watch item.
+        store = _store_with_plan()
+        store.session_completions[ATHLETE] = [
+            {
+                "id": "c1",
+                "athlete_id": ATHLETE,
+                "plan_id": PLAN,
+                "session_id": "s1",
+                "training_day": "2026-06-18",
+                "status": "done",
+                "pain_after": 8,
+            }
+        ]
+        view = build_today_command_view(
+            store,
+            athlete_id=ATHLETE,
+            athlete_timezone="",
+            now=datetime(2026, 6, 18, 12, 0, tzinfo=timezone.utc),
+        )
+        assert view.today.recommendation_state == "not_checked_in"
+        assert "high_pain" in [risk.category for risk in view.risk_watch]
+
+    def test_recent_symptom_keeps_a_decaying_reminder(self):
+        # A symptom two days ago, clean since, no check-in today: the badge stays
+        # live with a decaying reminder rather than reverting to a blank green.
+        store = _store_with_plan()
+        store.session_completions[ATHLETE] = [
+            {
+                "id": "c1",
+                "athlete_id": ATHLETE,
+                "plan_id": PLAN,
+                "session_id": "s1",
+                "training_day": "2026-06-16",
+                "status": "done",
+                "pain_after": 5,
+            }
+        ]
+        view = build_today_command_view(
+            store,
+            athlete_id=ATHLETE,
+            athlete_timezone="",
+            now=datetime(2026, 6, 18, 12, 0, tzinfo=timezone.utc),
+        )
+        assert "reminder" in [risk.category for risk in view.risk_watch]
+
+    def test_injury_checkin_opens_flag_and_surfaces_it(self):
+        store = _store_with_plan()
+        result = submit_today_injury_checkin(
+            store,
+            athlete_id=ATHLETE,
+            payload={"injuries": [{"body_area": "left knee", "status": "ongoing"}]},
+        )
+        assert len(result["open_injuries"]) == 1
+        flag = result["open_injuries"][0]
+        assert flag["status"] == "open"
+        assert flag["plan_id"] == PLAN  # attached to the active plan
+
+        view = build_today_command_view(store, athlete_id=ATHLETE, athlete_timezone="")
+        assert len(view.open_injuries) == 1
+        assert "reminder" in [risk.category for risk in view.risk_watch]
+
+    def test_injury_checkin_rejects_stale_flag_id_without_identity(self):
+        store = _store_with_plan()
+        with pytest.raises(HTTPException) as exc_info:
+            submit_today_injury_checkin(
+                store,
+                athlete_id=ATHLETE,
+                payload={"injuries": [{"flag_id": "ghost", "status": "ongoing"}]},
+            )
+
+        assert exc_info.value.status_code == 422
+        assert "body_area or description" in str(exc_info.value.detail)
+        assert store.injury_flags.get(ATHLETE, []) == []
+
+    def test_injury_checkin_resolves_an_open_flag(self):
+        store = _store_with_plan()
+        opened = submit_today_injury_checkin(
+            store,
+            athlete_id=ATHLETE,
+            payload={"injuries": [{"body_area": "calf", "status": "ongoing"}]},
+        )
+        flag_id = opened["open_injuries"][0]["id"]
+
+        now = datetime(2026, 6, 18, 12, 0, tzinfo=timezone.utc)
+        resolved = submit_today_injury_checkin(
+            store,
+            athlete_id=ATHLETE,
+            payload={"injuries": [{"flag_id": flag_id, "status": "resolved"}]},
+            now=now,
+        )
+        assert resolved["open_injuries"] == []  # no longer open/monitoring
+
+        view = build_today_command_view(store, athlete_id=ATHLETE, athlete_timezone="")
+        assert view.open_injuries == []
+        injury_categories = {"active_injury_worse", "reminder"}
+        assert not (injury_categories & {risk.category for risk in view.risk_watch})
+
+    def test_injury_checkin_status_update_preserves_existing_severity(self):
+        store = _store_with_plan()
+        opened = submit_today_injury_checkin(
+            store,
+            athlete_id=ATHLETE,
+            payload={"injuries": [{"body_area": "shoulder", "severity": "severe", "status": "worse"}]},
+        )
+        flag_id = opened["open_injuries"][0]["id"]
+
+        updated = submit_today_injury_checkin(
+            store,
+            athlete_id=ATHLETE,
+            payload={"injuries": [{"flag_id": flag_id, "status": "ongoing"}]},
+        )
+
+        assert updated["open_injuries"][0]["severity"] == "severe"
+
+    def test_severe_open_injury_is_a_stop_level_risk(self):
+        store = _store_with_plan()
+        submit_today_injury_checkin(
+            store,
+            athlete_id=ATHLETE,
+            payload={"injuries": [{"body_area": "shoulder", "severity": "severe", "status": "worse"}]},
+        )
+        view = build_today_command_view(store, athlete_id=ATHLETE, athlete_timezone="")
+        assert "active_injury_worse" in [risk.category for risk in view.risk_watch]
 
     def test_active_plan_phase_comes_from_resolved_current_week(self):
         store = _store_with_plan()

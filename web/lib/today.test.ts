@@ -34,6 +34,7 @@ const BASE_STATE: TodayCommandView = {
     completion_status: "not_started",
   },
   risk_watch: [],
+  open_injuries: [],
   week_summary: {},
   quick_actions: [],
 };

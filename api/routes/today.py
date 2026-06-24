@@ -13,6 +13,7 @@ from typing import Any
 from fastapi import APIRouter, Depends, status
 
 from api.models import (
+    InjuryFlagRecord,
     LandingResponse,
     ProfileRecord,
     SessionCompletionRequest,
@@ -20,6 +21,8 @@ from api.models import (
     TodayCheckinRecord,
     TodayCheckinRequest,
     TodayCheckinResponse,
+    TodayInjuryCheckinRequest,
+    TodayInjuryCheckinResponse,
 )
 from api.contracts.command_view import CommandView
 from api.contracts.completion import completion_landing_state, completion_status_of
@@ -27,6 +30,7 @@ from api.services.today_service import (
     build_today_command_view,
     resolve_today_landing,
     submit_today_checkin,
+    submit_today_injury_checkin,
     upsert_session_completion,
 )
 from api.store import AppStore
@@ -66,6 +70,25 @@ def build_today_router(*, require_profile, get_store) -> APIRouter:
             recommendation_reason=record.recommendation_reason,
             triggers=record.recommendation_triggers,
             warnings=[str(warning) for warning in row.get("warnings", [])],
+        )
+
+    @router.post(
+        "/api/today/injury-checkin",
+        response_model=TodayInjuryCheckinResponse,
+        status_code=status.HTTP_201_CREATED,
+    )
+    def submit_injury_checkin(
+        request_body: TodayInjuryCheckinRequest,
+        profile: ProfileRecord = Depends(require_profile),
+        store: AppStore = Depends(get_store),
+    ) -> TodayInjuryCheckinResponse:
+        result = submit_today_injury_checkin(
+            store,
+            athlete_id=profile.athlete_id,
+            payload=request_body.model_dump(),
+        )
+        return TodayInjuryCheckinResponse(
+            open_injuries=[InjuryFlagRecord(**row) for row in result.get("open_injuries", [])],
         )
 
     @router.get("/api/today", response_model=CommandView)

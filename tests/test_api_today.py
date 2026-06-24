@@ -201,6 +201,85 @@ class TestTodayState:
         assert body["active_plan"]["phase"] == "TAPER"
 
 
+class TestInjuryCheckin:
+    def test_injury_checkin_opens_flag_and_lists_it_on_command_view(self):
+        client, store, _ = _build_client()
+        _seed_plan(store)
+        resp = client.post(
+            "/api/today/injury-checkin",
+            headers=ATHLETE,
+            json={"injuries": [{"body_area": "left knee", "status": "ongoing"}]},
+        )
+        assert resp.status_code == 201
+        open_injuries = resp.json()["open_injuries"]
+        assert len(open_injuries) == 1
+        assert open_injuries[0]["status"] == "open"
+
+        command = client.get("/api/today", headers=ATHLETE).json()
+        assert len(command["open_injuries"]) == 1
+        categories = [risk["category"] for risk in command["risk_watch"]]
+        assert "reminder" in categories
+
+    def test_injury_checkin_resolve_clears_open_injuries(self):
+        client, store, _ = _build_client()
+        _seed_plan(store)
+        opened = client.post(
+            "/api/today/injury-checkin",
+            headers=ATHLETE,
+            json={"injuries": [{"body_area": "calf", "status": "ongoing"}]},
+        ).json()
+        flag_id = opened["open_injuries"][0]["id"]
+
+        resolved = client.post(
+            "/api/today/injury-checkin",
+            headers=ATHLETE,
+            json={"injuries": [{"flag_id": flag_id, "status": "resolved"}]},
+        )
+        assert resolved.status_code == 201
+        assert resolved.json()["open_injuries"] == []
+
+    def test_injury_checkin_status_update_preserves_existing_severity(self):
+        client, store, _ = _build_client()
+        _seed_plan(store)
+        opened = client.post(
+            "/api/today/injury-checkin",
+            headers=ATHLETE,
+            json={"injuries": [{"body_area": "shoulder", "severity": "severe", "status": "worse"}]},
+        ).json()
+        flag_id = opened["open_injuries"][0]["id"]
+
+        updated = client.post(
+            "/api/today/injury-checkin",
+            headers=ATHLETE,
+            json={"injuries": [{"flag_id": flag_id, "status": "ongoing"}]},
+        )
+
+        assert updated.status_code == 201
+        assert updated.json()["open_injuries"][0]["severity"] == "severe"
+
+    def test_new_injury_without_identity_is_rejected(self):
+        client, store, _ = _build_client()
+        _seed_plan(store)
+        resp = client.post(
+            "/api/today/injury-checkin",
+            headers=ATHLETE,
+            json={"injuries": [{"status": "ongoing"}]},
+        )
+        assert resp.status_code == 422
+
+    def test_stale_flag_id_without_identity_is_rejected(self):
+        client, store, _ = _build_client()
+        _seed_plan(store)
+        resp = client.post(
+            "/api/today/injury-checkin",
+            headers=ATHLETE,
+            json={"injuries": [{"flag_id": "ghost", "status": "ongoing"}]},
+        )
+        assert resp.status_code == 422
+        assert "body_area or description" in resp.json()["detail"]
+        assert store.injury_flags.get("athlete-1", []) == []
+
+
 class TestLanding:
     def test_no_plan_routes_to_intake(self):
         client, _store, _ = _build_client()

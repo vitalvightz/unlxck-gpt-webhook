@@ -5243,6 +5243,50 @@ button.mobile-step-rail-item {
   min-height: 48px;
 }
 
+.today-injury-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.today-injury-item {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.025);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.today-injury-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.today-injury-name {
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.today-injury-item .today-segment-row {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.today-injury-add {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
 .today-risk-watch {
   display: flex;
   align-items: stretch;
@@ -5700,6 +5744,10 @@ button.mobile-step-rail-item {
 
   .today-segment-row {
     gap: 6px;
+  }
+
+  .today-injury-item .today-segment-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .today-segment {

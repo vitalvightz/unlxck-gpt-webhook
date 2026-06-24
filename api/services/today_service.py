@@ -23,13 +23,19 @@ from fastapi import HTTPException, status
 from pydantic import ValidationError
 
 from api.contracts.checkin_decision import CheckinInputs, evaluate_checkin
-from api.contracts.command_view import CommandView, build_command_view, make_risk
+from api.contracts.command_view import CommandView, RiskWatchItem, build_command_view, make_risk
 from api.contracts.completion import (
     TERMINAL_COMPLETION_STATUSES,
     SessionCompletionRecord,
     completion_landing_state,
     completion_status_of,
 )
+from api.contracts.injury_checkin import (
+    DeclaredInjury,
+    open_injury_flag_risks,
+    reconcile_injury_checkin,
+)
+from api.contracts.injury_signal import derive_injury_signal
 from api.contracts.landing import LandingDecision, resolve_landing
 from api.contracts.training_day import resolve_training_day_str
 from api.store import AppStore
@@ -274,6 +280,59 @@ def upsert_session_completion(
         "completed_at": completed_at,
     }
     return store.upsert_session_completion(athlete_id, fields)
+
+
+def submit_today_injury_checkin(
+    store: AppStore,
+    *,
+    athlete_id: str,
+    payload: Mapping[str, Any],
+    now: datetime | None = None,
+) -> dict[str, Any]:
+    """Reconcile a day's declared injuries against the athlete's open flags.
+
+    Validates each declaration via the ``DeclaredInjury`` contract, then applies
+    the deterministic create/update plan: new injuries open a flag, easing ones
+    move to ``monitoring``, resolved ones close (stamping ``resolved_at``), and a
+    reopened flag clears its ``resolved_at``. Foreign/stale ``flag_id``s can't be
+    updated — only ids in the athlete's own open set are honoured. Returns the
+    refreshed open-injury list.
+    """
+    raw_injuries = payload.get("injuries") or []
+    try:
+        declared = [DeclaredInjury(**dict(item)) for item in raw_injuries]
+    except ValidationError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"invalid injury check-in: {exc.errors()[0]['msg']}",
+        ) from exc
+
+    open_flags = list(store.list_injury_flags(athlete_id, statuses=("open", "monitoring")) or [])
+    open_flag_ids = [str(flag.get("id")) for flag in open_flags if flag.get("id")]
+    try:
+        plan = reconcile_injury_checkin(declared=declared, open_flag_ids=open_flag_ids)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"invalid injury check-in: {str(exc)}",
+        ) from exc
+
+    now_iso = (now or datetime.now(timezone.utc)).astimezone(timezone.utc).isoformat()
+    active_plan_row = resolve_active_plan(store, athlete_id).plan
+    plan_id = str(active_plan_row.get("id")) if active_plan_row else None
+
+    for fields in plan.creates:
+        store.create_injury_flag(athlete_id, {**fields, "plan_id": plan_id})
+
+    for update in plan.updates:
+        fields = dict(update.fields)
+        # Stamp resolution time on close; clear it when a flag is reopened so a
+        # later "it came back" report doesn't keep a stale resolved_at.
+        fields["resolved_at"] = now_iso if fields.get("status") == "resolved" else None
+        store.update_injury_flag(update.flag_id, fields)
+
+    open_after = list(store.list_injury_flags(athlete_id, statuses=("open", "monitoring")) or [])
+    return {"open_injuries": open_after}
 
 
 def _session_id_for_entry(entry: Any) -> str | None:
@@ -568,6 +627,66 @@ def _risks_from_checkin(checkin: Mapping[str, Any] | None):
     return risks
 
 
+def _history_injury_risks(
+    store: AppStore,
+    *,
+    athlete_id: str,
+    training_day: str,
+) -> list[RiskWatchItem]:
+    """Derive an injury-risk item from logged pain/symptom history.
+
+    Defensive about the store surface: the history readers are optional on
+    minimal test doubles, and a transient read failure must never crash Overview
+    — in either case the derived signal is simply skipped.
+    """
+    list_completions = getattr(store, "list_session_completions", None)
+    list_checkins = getattr(store, "list_today_checkins", None)
+    if not callable(list_completions) or not callable(list_checkins):
+        return []
+    try:
+        completions = list_completions(athlete_id) or []
+        checkins = list_checkins(athlete_id) or []
+    except Exception:
+        return []
+    return derive_injury_signal(
+        completions=completions,
+        checkins=checkins,
+        current_training_day=training_day,
+    )
+
+
+def _open_injury_flags(store: AppStore, athlete_id: str) -> list[dict[str, Any]]:
+    """Open/monitoring injury flags for this athlete, defensively.
+
+    Optional on minimal test doubles and resilient to a read failure — Overview
+    must never crash because the injury list could not be loaded.
+    """
+    lister = getattr(store, "list_injury_flags", None)
+    if not callable(lister):
+        return []
+    try:
+        return [dict(flag) for flag in (lister(athlete_id, statuses=("open", "monitoring")) or [])]
+    except Exception:
+        return []
+
+
+def _merge_risks(*risk_lists: list[RiskWatchItem]) -> list[RiskWatchItem]:
+    """Concatenate risk lists, keeping the first item seen per category.
+
+    Same-day check-in risks are passed first, so they win over a derived signal
+    in the same category (the fresh self-report beats the logged-history echo).
+    """
+    seen: set[str] = set()
+    merged: list[RiskWatchItem] = []
+    for risk_list in risk_lists:
+        for risk in risk_list:
+            if risk.category in seen:
+                continue
+            seen.add(risk.category)
+            merged.append(risk)
+    return merged
+
+
 def _plan_with_resolved_phase(
     plan_row: Mapping[str, Any],
     week: Any,
@@ -677,6 +796,8 @@ def build_today_command_view(
     )
     session_id = _session_id_for_entry(target_entry)
 
+    open_injuries = _open_injury_flags(store, athlete_id)
+
     return build_command_view(
         current_training_day=training_day,
         plan=_plan_with_resolved_phase(
@@ -689,7 +810,20 @@ def build_today_command_view(
         next_session=_next_session_payload(target_entry, session_id, relation=session_relation),
         session_scope=session_relation or "none",
         warnings=warnings,
-        risks=_risks_from_checkin(today_checkin),
+        # Risk precedence per category, freshest signal first: today's check-in,
+        # then tracked open injuries, then the derived post-session pain history.
+        # Together they keep the badge live whether the athlete reported today,
+        # is carrying an open injury, or just logged painful sessions.
+        risks=_merge_risks(
+            _risks_from_checkin(today_checkin),
+            open_injury_flag_risks(open_injuries),
+            _history_injury_risks(
+                store,
+                athlete_id=athlete_id,
+                training_day=training_day,
+            ),
+        ),
+        open_injuries=open_injuries,
     )
 
 

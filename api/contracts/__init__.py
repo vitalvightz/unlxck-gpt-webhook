@@ -10,6 +10,8 @@ Modules:
 * ``checkin_decision`` — deterministic check-in decision evaluator (§4).
 * ``completion`` — thin session-completion contract + landing mapping (§5).
 * ``command_view`` — normalized command-view read model + risk watch (§6, §7).
+* ``injury_checkin`` — daily per-injury check-in reconciliation + flag risks (§6).
+* ``injury_signal`` — derived injury-risk signal from logged pain history (§6).
 * ``landing`` — state-dependent landing resolver (§1).
 """
 
@@ -42,6 +44,15 @@ from .completion import (
     completion_landing_state,
     completion_status_of,
     find_completion,
+)
+from .injury_checkin import (
+    DeclaredInjury,
+    ReconciliationPlan,
+    open_injury_flag_risks,
+    reconcile_injury_checkin,
+)
+from .injury_signal import (
+    derive_injury_signal,
 )
 from .landing import (
     LandingCTA,
@@ -102,6 +113,13 @@ __all__ = [
     "make_risk",
     "sort_risk_watch",
     "visible_risk_watch",
+    # injury_checkin
+    "DeclaredInjury",
+    "ReconciliationPlan",
+    "open_injury_flag_risks",
+    "reconcile_injury_checkin",
+    # injury_signal
+    "derive_injury_signal",
     # landing
     "LandingCTA",
     "LandingDecision",
