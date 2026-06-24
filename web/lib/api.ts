@@ -29,6 +29,8 @@ import type {
   TodayCheckinRequest,
   TodayCheckinResponse,
   TodayCommandView,
+  TodayInjuryCheckinRequest,
+  TodayInjuryCheckinResponse,
   TodaySessionCompletionRequest,
   TodaySessionCompletionResponse,
   UsernameChangeRequest,
@@ -1036,6 +1038,17 @@ export function submitTodaySessionCompletion(
   payload: TodaySessionCompletionRequest,
 ): Promise<TodaySessionCompletionResponse> {
   return readJson<TodaySessionCompletionResponse>("/api/today/session-completion", {
+    method: "POST",
+    token,
+    body: JSON.stringify(payload),
+  });
+}
+
+export function submitTodayInjuryCheckin(
+  token: string,
+  payload: TodayInjuryCheckinRequest,
+): Promise<TodayInjuryCheckinResponse> {
+  return readJson<TodayInjuryCheckinResponse>("/api/today/injury-checkin", {
     method: "POST",
     token,
     body: JSON.stringify(payload),

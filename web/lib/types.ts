@@ -928,6 +928,7 @@ export type TodayCommandView = {
     text: string;
     tone: string;
   }>;
+  open_injuries: InjuryFlagRecord[];
   week_summary: Record<string, unknown>;
   quick_actions: Array<{
     id: string;
@@ -974,4 +975,22 @@ export type TodaySessionCompletionRequest = {
 export type TodaySessionCompletionResponse = {
   completion_status: TodayCompletionStatus;
   landing_session_state: "none" | "resume" | "completed";
+};
+
+export type TodayInjuryCheckinStatus = "ongoing" | "improving" | "worse" | "resolved";
+
+export type TodayInjuryDeclaration = {
+  flag_id?: string | null;
+  body_area?: string;
+  description?: string;
+  severity?: InjuryFlagSeverity;
+  status?: TodayInjuryCheckinStatus;
+};
+
+export type TodayInjuryCheckinRequest = {
+  injuries: TodayInjuryDeclaration[];
+};
+
+export type TodayInjuryCheckinResponse = {
+  open_injuries: InjuryFlagRecord[];
 };

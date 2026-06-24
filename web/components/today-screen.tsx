@@ -13,7 +13,13 @@ import { useToast } from "@/components/toast-provider";
 import { EffortSlider, FaceScale } from "@/components/rating-controls";
 import { SafetyNote } from "@/components/safety-note";
 import { TODAY_RED_FLAG_SAFETY } from "@/lib/safety-copy";
-import { getPlan, getToday, submitTodayCheckin, submitTodaySessionCompletion } from "@/lib/api";
+import {
+  getPlan,
+  getToday,
+  submitTodayCheckin,
+  submitTodayInjuryCheckin,
+  submitTodaySessionCompletion,
+} from "@/lib/api";
 import {
   resolveCurrentDay,
   sessionIdentity,
@@ -40,6 +46,8 @@ import {
   shouldShowTodayCheckin,
 } from "@/lib/today";
 import type {
+  InjuryFlagRecord,
+  InjuryFlagSeverity,
   StructuredPlan,
   TodayActiveInjury,
   TodayActivePlan,
@@ -48,6 +56,8 @@ import type {
   TodayCheckinSleep,
   TodayCommandView,
   TodayCompletionStatus,
+  TodayInjuryCheckinStatus,
+  TodayInjuryDeclaration,
   TodayPreviousSession,
   TodayRecommendationState,
   TodaySession,
@@ -393,6 +403,152 @@ function CheckinModule({
 
         <button type="submit" className="cta today-primary-action" disabled={isSubmitting}>
           {isSubmitting ? "Submitting..." : "Submit check-in"}
+        </button>
+      </form>
+    </section>
+  );
+}
+
+const INJURY_STATUS_ACTIONS: Array<{ value: TodayInjuryCheckinStatus; label: string }> = [
+  { value: "improving", label: "Easing" },
+  { value: "ongoing", label: "Same" },
+  { value: "worse", label: "Worse" },
+  { value: "resolved", label: "Resolved" },
+];
+
+const INJURY_SEVERITY_OPTIONS: Array<{ value: InjuryFlagSeverity; label: string }> = [
+  { value: "mild", label: "Mild" },
+  { value: "moderate", label: "Moderate" },
+  { value: "severe", label: "Severe" },
+];
+
+function getInjuryLabel(injury: InjuryFlagRecord): string {
+  return injury.body_area?.trim() || injury.description?.trim() || "Injury";
+}
+
+/**
+ * Daily injury check-in. Each open injury can be marked easing / same / worse /
+ * resolved (a per-injury update), and new injuries can be added. Writes reconcile
+ * the athlete's injury_flags server-side so a resolved injury clears and a new one
+ * is tracked — the data the dynamic plan engine will later read. It also feeds the
+ * risk watch, so the badge stays live while any injury is open.
+ */
+function InjuryCheckinCard({
+  openInjuries,
+  token,
+  onRefresh,
+}: {
+  openInjuries: InjuryFlagRecord[];
+  token: string;
+  onRefresh: () => Promise<void>;
+}) {
+  const { showToast } = useToast();
+  const [pendingFlagId, setPendingFlagId] = useState<string | null>(null);
+  const [isAdding, setIsAdding] = useState(false);
+  const [newArea, setNewArea] = useState("");
+  const [newSeverity, setNewSeverity] = useState<InjuryFlagSeverity>("moderate");
+
+  async function submit(injuries: TodayInjuryDeclaration[]) {
+    await submitTodayInjuryCheckin(token, { injuries });
+    await onRefresh();
+  }
+
+  async function updateInjury(flagId: string, status: TodayInjuryCheckinStatus) {
+    if (pendingFlagId) {
+      return;
+    }
+    setPendingFlagId(flagId);
+    try {
+      await submit([{ flag_id: flagId, status }]);
+      showToast(status === "resolved" ? "Injury marked resolved." : "Injury updated.", {
+        tone: "success",
+      });
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : "Injury update failed.", { tone: "error" });
+    } finally {
+      setPendingFlagId(null);
+    }
+  }
+
+  async function addInjury(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const area = newArea.trim();
+    if (!area || isAdding) {
+      return;
+    }
+    setIsAdding(true);
+    try {
+      await submit([{ body_area: area, severity: newSeverity, status: "ongoing" }]);
+      setNewArea("");
+      setNewSeverity("moderate");
+      showToast("Injury added.", { tone: "success" });
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : "Could not add injury.", { tone: "error" });
+    } finally {
+      setIsAdding(false);
+    }
+  }
+
+  return (
+    <section className="today-card today-injury-card" aria-labelledby="today-injury-heading">
+      <div className="today-card-head">
+        <div>
+          <p className="kicker">Injury check-in</p>
+          <h2 id="today-injury-heading">Track today&apos;s injuries</h2>
+        </div>
+      </div>
+      {openInjuries.length ? (
+        <ul className="today-injury-list">
+          {openInjuries.map((injury) => (
+            <li key={injury.id} className="today-injury-item">
+              <div className="today-injury-meta">
+                <span className="today-injury-name">{getInjuryLabel(injury)}</span>
+                <span className="badge status-badge-neutral">{injury.severity}</span>
+                {injury.status === "monitoring" ? <span className="badge">Monitoring</span> : null}
+              </div>
+              <div className="today-segment-row" role="group" aria-label={`Update ${getInjuryLabel(injury)}`}>
+                {INJURY_STATUS_ACTIONS.map((action) => (
+                  <button
+                    key={action.value}
+                    type="button"
+                    className="today-segment"
+                    disabled={pendingFlagId === injury.id}
+                    onClick={() => void updateInjury(injury.id, action.value)}
+                  >
+                    {action.label}
+                  </button>
+                ))}
+              </div>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="muted">No injuries are being tracked. Add one below if something is bothering you.</p>
+      )}
+
+      <form className="today-injury-add" onSubmit={addInjury}>
+        <label className="field" htmlFor="today-injury-area">
+          <span>Add injury</span>
+          <input
+            id="today-injury-area"
+            value={newArea}
+            maxLength={200}
+            placeholder="e.g. left knee"
+            onChange={(event) => setNewArea(event.target.value)}
+          />
+        </label>
+        <SegmentGroup
+          label="Severity"
+          value={newSeverity}
+          options={INJURY_SEVERITY_OPTIONS}
+          onChange={setNewSeverity}
+        />
+        <button
+          type="submit"
+          className="secondary-button"
+          disabled={isAdding || !newArea.trim()}
+        >
+          {isAdding ? "Adding..." : "Add injury"}
         </button>
       </form>
     </section>
@@ -926,6 +1082,12 @@ export function TodayScreen() {
           onRefresh={loadToday}
         />
       ) : null}
+
+      <InjuryCheckinCard
+        openInjuries={state.open_injuries ?? []}
+        token={token ?? ""}
+        onRefresh={loadToday}
+      />
 
       <SessionCard
         state={state}

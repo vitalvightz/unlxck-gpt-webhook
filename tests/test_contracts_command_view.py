@@ -153,6 +153,7 @@ class TestShape:
             "active_plan",
             "today",
             "risk_watch",
+            "open_injuries",
             "week_summary",
             "quick_actions",
         }

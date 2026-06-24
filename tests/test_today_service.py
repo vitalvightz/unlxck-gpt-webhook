@@ -19,6 +19,7 @@ from api.services.today_service import (
     _scan_forward_for_next_training,
     build_today_command_view,
     submit_today_checkin,
+    submit_today_injury_checkin,
     upsert_session_completion,
 )
 from tests.support import FakeStore
@@ -664,6 +665,55 @@ class TestCommandView:
             now=datetime(2026, 6, 18, 12, 0, tzinfo=timezone.utc),
         )
         assert "reminder" in [risk.category for risk in view.risk_watch]
+
+    def test_injury_checkin_opens_flag_and_surfaces_it(self):
+        store = _store_with_plan()
+        result = submit_today_injury_checkin(
+            store,
+            athlete_id=ATHLETE,
+            payload={"injuries": [{"body_area": "left knee", "status": "ongoing"}]},
+        )
+        assert len(result["open_injuries"]) == 1
+        flag = result["open_injuries"][0]
+        assert flag["status"] == "open"
+        assert flag["plan_id"] == PLAN  # attached to the active plan
+
+        view = build_today_command_view(store, athlete_id=ATHLETE, athlete_timezone="")
+        assert len(view.open_injuries) == 1
+        assert "reminder" in [risk.category for risk in view.risk_watch]
+
+    def test_injury_checkin_resolves_an_open_flag(self):
+        store = _store_with_plan()
+        opened = submit_today_injury_checkin(
+            store,
+            athlete_id=ATHLETE,
+            payload={"injuries": [{"body_area": "calf", "status": "ongoing"}]},
+        )
+        flag_id = opened["open_injuries"][0]["id"]
+
+        now = datetime(2026, 6, 18, 12, 0, tzinfo=timezone.utc)
+        resolved = submit_today_injury_checkin(
+            store,
+            athlete_id=ATHLETE,
+            payload={"injuries": [{"flag_id": flag_id, "status": "resolved"}]},
+            now=now,
+        )
+        assert resolved["open_injuries"] == []  # no longer open/monitoring
+
+        view = build_today_command_view(store, athlete_id=ATHLETE, athlete_timezone="")
+        assert view.open_injuries == []
+        injury_categories = {"active_injury_worse", "reminder"}
+        assert not (injury_categories & {risk.category for risk in view.risk_watch})
+
+    def test_severe_open_injury_is_a_stop_level_risk(self):
+        store = _store_with_plan()
+        submit_today_injury_checkin(
+            store,
+            athlete_id=ATHLETE,
+            payload={"injuries": [{"body_area": "shoulder", "severity": "severe", "status": "worse"}]},
+        )
+        view = build_today_command_view(store, athlete_id=ATHLETE, athlete_timezone="")
+        assert "active_injury_worse" in [risk.category for risk in view.risk_watch]
 
     def test_active_plan_phase_comes_from_resolved_current_week(self):
         store = _store_with_plan()

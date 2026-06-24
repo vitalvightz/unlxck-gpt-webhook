@@ -151,6 +151,9 @@ class CommandView(BaseModel):
     active_plan: dict[str, Any] = Field(default_factory=dict)
     today: CommandViewToday
     risk_watch: list[RiskWatchItem] = Field(default_factory=list)
+    # Open/monitoring injury_flags, normalized for the Today injury check-in to
+    # prefill against (never the raw plan). Empty when nothing is being tracked.
+    open_injuries: list[dict[str, Any]] = Field(default_factory=list)
     week_summary: dict[str, Any] = Field(default_factory=dict)
     quick_actions: list[QuickAction] = Field(default_factory=list)
 
@@ -209,6 +212,7 @@ def build_command_view(
     session_scope: Literal["today", "next", "none"] | None = None,
     warnings: Sequence[str] | None = None,
     risks: Sequence[RiskWatchItem | Mapping[str, Any]] | None = None,
+    open_injuries: Sequence[Mapping[str, Any]] | None = None,
     week_summary: Mapping[str, Any] | None = None,
 ) -> CommandView:
     """Assemble the normalized command view from derived inputs.
@@ -248,6 +252,7 @@ def build_command_view(
         active_plan=active_plan,
         today=today,
         risk_watch=sort_risk_watch(risks or []),
+        open_injuries=[dict(injury) for injury in (open_injuries or [])],
         week_summary=dict(week_summary) if week_summary else {},
         quick_actions=_quick_actions(active_plan.get("id")),
     )

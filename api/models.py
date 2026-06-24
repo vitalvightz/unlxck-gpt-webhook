@@ -1912,3 +1912,36 @@ class LandingResponse(BaseModel):
     cta: str
     row: int
     reason: str
+
+
+class TodayInjuryDeclaration(BaseModel):
+    """One injury as reported on the Today daily injury check-in.
+
+    ``flag_id`` targets an existing open flag to update; without it the report is
+    a new injury and needs a ``body_area`` or ``description``.
+    """
+
+    flag_id: str | None = None
+    body_area: str = Field(default="", max_length=200)
+    description: str = Field(default="", max_length=DAILY_NOTE_MAX_CHARS)
+    severity: InjuryFlagSeverity = "moderate"
+    status: Literal["ongoing", "improving", "worse", "resolved"] = "ongoing"
+
+    @field_validator("flag_id", mode="before")
+    @classmethod
+    def clean_flag_id(cls, value: Any) -> str | None:
+        text = str(value or "").strip()
+        return text or None
+
+    @field_validator("body_area", "description", mode="before")
+    @classmethod
+    def clean_text(cls, value: Any) -> str:
+        return str(value or "").strip()
+
+
+class TodayInjuryCheckinRequest(BaseModel):
+    injuries: list[TodayInjuryDeclaration] = Field(default_factory=list, max_length=20)
+
+
+class TodayInjuryCheckinResponse(BaseModel):
+    open_injuries: list[InjuryFlagRecord] = Field(default_factory=list)
