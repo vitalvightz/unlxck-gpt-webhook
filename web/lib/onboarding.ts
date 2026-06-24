@@ -39,7 +39,14 @@ function mergeIntakeLayers(base: PlanRequest, top: PlanRequest): PlanRequest {
   // so the hydrated payload always satisfies the backend's containment rule.
   if (!isEmptyValue(top.training_availability)) {
     for (const field of AVAILABILITY_BOUND_DAY_FIELDS) {
-      merged[field] = top[field] ?? [];
+      // Only override when the draft explicitly carries the field. A cleared
+      // field is present as an empty array (and must win); a field the draft
+      // never saved is `undefined`, so leave the backfilled `base` value in
+      // place rather than clobbering it with `[]`.
+      const draftValue = (top as Partial<PlanRequest>)[field];
+      if (draftValue !== undefined) {
+        merged[field] = draftValue;
+      }
     }
   }
   const availability = new Set((merged.training_availability as string[] | undefined) ?? []);

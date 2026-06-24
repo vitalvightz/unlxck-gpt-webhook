@@ -126,6 +126,41 @@ test("hydratePlanRequest prunes coupled day fields to draft availability", () =>
   assert.deepEqual(hydrated.support_work_days, ["tuesday"]);
 });
 
+test("hydratePlanRequest backfills coupled day fields a partial draft never saved", () => {
+  // The draft set availability but never reached the sparring step, so its
+  // day fields are absent (undefined). Hydration must keep the previous
+  // intake's value (pruned to the new availability), not clobber it with [].
+  const latest = {
+    ...emptyPlanRequest("Athlete"),
+    training_availability: ["monday", "tuesday", "wednesday"],
+    hard_sparring_days: ["monday"],
+    support_work_days: ["wednesday"],
+  };
+
+  const me = {
+    profile: {
+      full_name: "Athlete",
+      technical_style: [],
+      tactical_style: [],
+      stance: "",
+      professional_status: "",
+      record: "",
+      athlete_timezone: "UTC",
+      nutrition_profile: null,
+      onboarding_draft: {
+        training_availability: ["monday", "tuesday"],
+      },
+    },
+    latest_intake: latest,
+  } as any;
+
+  const hydrated = hydratePlanRequest(me);
+  assert.deepEqual(hydrated.training_availability, ["monday", "tuesday"]);
+  // monday is still available -> retained; wednesday dropped from availability -> pruned.
+  assert.deepEqual(hydrated.hard_sparring_days, ["monday"]);
+  assert.deepEqual(hydrated.support_work_days, []);
+});
+
 test("hydratePlanRequest uses quick build draft as source of truth", () => {
   const latest = {
     ...emptyPlanRequest("Athlete"),
