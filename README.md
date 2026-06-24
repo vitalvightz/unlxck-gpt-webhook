@@ -23,7 +23,15 @@ Plan generation runs in two stages:
 The Python planner (`fightcamp/`) reads the athlete's intake profile and builds a full draft plan. It scores exercises and conditioning drills by weakness tags, goal tags, style tags, phase, and equipment availability. The injury guard removes anything that violates active restrictions and selects safe replacements. Output includes the draft plan text, candidate pools, coach review notes, and the Stage 2 handoff package.
 
 **Stage 2 — AI finalization**
-The handoff package is sent to OpenAI. Stage 2 currently makes one automated finalizer call. The validator then reviews that output. If validation fails, the plan is marked `review_required` and the validator report plus repair guidance are saved for manual review. Automatic retry is currently disabled unless future code changes explicitly enable it.
+The handoff package is sent to OpenAI. Stage 2 currently makes one automated finalizer call. The validator then reviews that output. If validation fails, the **plan** is marked `held_for_review` (its generation **job** surfaces as `review_required`) and the validator report plus repair guidance are saved for manual review. Automatic retry is currently disabled unless future code changes explicitly enable it.
+
+> Plan status and generation-job status are **separate** vocabularies that must
+> not be used interchangeably. `held_for_review` is a *plan* status; the worker
+> reports it as the *job* status `review_required` via
+> `job_status_for_plan_status`. The single source of truth for every status
+> string, transition, and the plan→job mapping is
+> [`docs/state_machine.md`](docs/state_machine.md) (executable contract in
+> `api/state_machine.py`).
 
 Generated plans are saved and displayed in-app as structured text, HTML, and JSON artifacts. New plans are not exported as PDFs, and no PDF renderer or system binary is required to run the app.
 

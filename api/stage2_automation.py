@@ -25,9 +25,13 @@ from .structured_plan_generation import (
 )
 from .structured_plan_sparring_reconcile import reconcile_coach_led_sparring_days
 
+# Plan statuses this module writes. NOTE: a failed Stage 2 validation produces
+# the plan status `held_for_review`, NOT `review_required`. The plan-level
+# `review_required` status is produced by admin actions elsewhere, never here.
+# The worker maps `held_for_review` to the *job* status `review_required` via
+# api/state_machine.job_status_for_plan_status. See docs/state_machine.md.
 _APP_STATUS_READY = "ready"
 _APP_STATUS_HELD_FOR_REVIEW = "held_for_review"
-_APP_STATUS_REVIEW_REQUIRED = "review_required"
 _STAGE2_PASS = "stage2_pass"
 _STAGE2_FAILED = "stage2_failed"
 
@@ -547,6 +551,10 @@ def _review_required_result(
     attempt_count: int,
     stage2_cost: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
+    # NOTE: despite the name, this sets the PLAN status to `held_for_review`
+    # (which the worker reports as the JOB status `review_required`). The name
+    # refers to that downstream job status, not the plan status. See
+    # docs/state_machine.md > "Stage 2 outcomes".
     return {
         **_base_result(stage1_result, draft_plan_text=draft_plan_text, stage2_cost=stage2_cost),
         "status": _APP_STATUS_HELD_FOR_REVIEW,
