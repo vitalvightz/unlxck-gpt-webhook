@@ -56,6 +56,76 @@ test("applyNoScheduledFightSnapshot(false) preserves fight_date and clears open 
   assert.equal(next.fight_date, "2026-10-10");
 });
 
+test("hydratePlanRequest respects a draft that clears support_work_days", () => {
+  // The previous intake locked in Wednesday as a support-work day. The athlete
+  // then removed it in the draft, so hydration must NOT resurrect it from
+  // latest_intake — otherwise the cleared day silently comes back and the
+  // backend rejects generation (support_work_days ⊄ training_availability).
+  const latest = {
+    ...emptyPlanRequest("Athlete"),
+    training_availability: ["monday", "tuesday", "wednesday"],
+    support_work_days: ["wednesday"],
+  };
+
+  const me = {
+    profile: {
+      full_name: "Athlete",
+      technical_style: [],
+      tactical_style: [],
+      stance: "",
+      professional_status: "",
+      record: "",
+      athlete_timezone: "UTC",
+      nutrition_profile: null,
+      onboarding_draft: {
+        training_availability: ["monday", "tuesday"],
+        support_work_days: [],
+      },
+    },
+    latest_intake: latest,
+  } as any;
+
+  const hydrated = hydratePlanRequest(me);
+  assert.deepEqual(hydrated.training_availability, ["monday", "tuesday"]);
+  assert.deepEqual(hydrated.support_work_days, []);
+});
+
+test("hydratePlanRequest prunes coupled day fields to draft availability", () => {
+  // Availability shrank in the draft but the coupled day picks still reference a
+  // dropped day. Hydration must prune them so the payload can never reach the
+  // backend with a day outside training_availability.
+  const latest = {
+    ...emptyPlanRequest("Athlete"),
+    training_availability: ["monday", "tuesday", "wednesday"],
+    hard_sparring_days: ["wednesday"],
+    support_work_days: ["tuesday"],
+  };
+
+  const me = {
+    profile: {
+      full_name: "Athlete",
+      technical_style: [],
+      tactical_style: [],
+      stance: "",
+      professional_status: "",
+      record: "",
+      athlete_timezone: "UTC",
+      nutrition_profile: null,
+      onboarding_draft: {
+        training_availability: ["monday", "tuesday"],
+        hard_sparring_days: ["wednesday"],
+        support_work_days: ["tuesday"],
+      },
+    },
+    latest_intake: latest,
+  } as any;
+
+  const hydrated = hydratePlanRequest(me);
+  assert.deepEqual(hydrated.training_availability, ["monday", "tuesday"]);
+  assert.deepEqual(hydrated.hard_sparring_days, []);
+  assert.deepEqual(hydrated.support_work_days, ["tuesday"]);
+});
+
 test("hydratePlanRequest uses quick build draft as source of truth", () => {
   const latest = {
     ...emptyPlanRequest("Athlete"),

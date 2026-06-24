@@ -16,6 +16,12 @@ function isQuickBuildDraft(draft: PlanRequest | null): draft is DraftWithSource 
 }
 
 
+// `hard_sparring_days` and `support_work_days` are subordinate to
+// `training_availability`: the backend rejects any day in them that is not also
+// an available training day. They must track the resolved availability, never
+// get resurrected independently from a stale layer.
+const AVAILABILITY_BOUND_DAY_FIELDS = ["hard_sparring_days", "support_work_days"] as const;
+
 // Layer `top` on `base` field-by-field, preferring `top` only when it carries a non-empty value.
 // Lets a partial onboarding_draft pull untouched fields from latest_intake instead of clobbering them.
 function mergeIntakeLayers(base: PlanRequest, top: PlanRequest): PlanRequest {
@@ -24,6 +30,22 @@ function mergeIntakeLayers(base: PlanRequest, top: PlanRequest): PlanRequest {
     if (key === "athlete") continue;
     const topValue = top[key];
     merged[key] = isEmptyValue(topValue) ? base[key] : topValue;
+  }
+  // The day-list fields above use "non-empty wins", which means clearing them in
+  // the draft (e.g. removing a support-work day) would otherwise be silently
+  // overwritten by the previous intake's value — and even an untouched value can
+  // fall out of sync once availability changes. Take them straight from the
+  // draft whenever it sets availability, then prune to the resolved availability
+  // so the hydrated payload always satisfies the backend's containment rule.
+  if (!isEmptyValue(top.training_availability)) {
+    for (const field of AVAILABILITY_BOUND_DAY_FIELDS) {
+      merged[field] = top[field] ?? [];
+    }
+  }
+  const availability = new Set((merged.training_availability as string[] | undefined) ?? []);
+  for (const field of AVAILABILITY_BOUND_DAY_FIELDS) {
+    const days = (merged[field] as string[] | undefined) ?? [];
+    merged[field] = days.filter((day) => availability.has(day));
   }
   if (top.no_scheduled_fight === true) {
     merged.fight_date = "";
