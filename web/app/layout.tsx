@@ -41,10 +41,10 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
                 <AppNav />
                 <main className="app-main">
                   <div className="page">{children}</div>
-                  <footer className="app-safety-footer" role="contentinfo">
-                    {SAFETY_DISCLAIMER_SHORT}
-                  </footer>
                 </main>
+                <footer className="app-safety-footer" role="contentinfo">
+                  {SAFETY_DISCLAIMER_SHORT}
+                </footer>
               </div>
             </GenerationStatusShell>
           </ToastProvider>
