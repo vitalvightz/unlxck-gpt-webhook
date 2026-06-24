@@ -654,15 +654,15 @@ def _block_intensity(block: Any) -> str | None:
         return "high"
     if pct is not None and pct >= 85:
         return "high"
-    # Explicit easy signals.
+
+    # Explicit easy/moderate signals in priority order.
     if tag in _LOW_INTENSITY_WORDS:
         return "low"
-    if rpe is not None and rpe <= 5:
-        return "low"
-    if pct is not None and pct < 70:
-        return "low"
-    # A readable mid signal.
-    if rpe is not None or pct is not None or tag in {"moderate", "medium"}:
+    if rpe is not None:
+        return "low" if rpe <= 5 else "moderate"
+    if pct is not None:
+        return "low" if pct < 70 else "moderate"
+    if tag in {"moderate", "medium"}:
         return "moderate"
     # No effort/load number at all: a true power/speed block implies a hard day.
     if str(block.get("block_type") or "") in _HIGH_OUTPUT_BLOCK_TYPES:
