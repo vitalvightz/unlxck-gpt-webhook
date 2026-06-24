@@ -339,7 +339,7 @@ def _camp_is_compressed(flags: dict) -> bool:
     days = phase_weeks.get("days")
     if not isinstance(days, dict) or not days:
         return False
-    total_days = sum(int(v) for v in days.values() if isinstance(v, (int, float)))
+    total_days = sum(v for v in days.values() if isinstance(v, (int, float)))
     return 0 < total_days <= COMPRESSED_CAMP_DAYS_THRESHOLD
 
 
