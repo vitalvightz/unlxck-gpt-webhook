@@ -45,6 +45,23 @@ function capitalizeFirst(value: string): string {
   return value.charAt(0).toUpperCase() + value.slice(1);
 }
 
+// Collapse repeated words, keeping the first occurrence. Parser debris can leave
+// a body word duplicated ("left shoulder left" after stripping "(bruise, left)"),
+// and a body location never legitimately repeats a word, so deduping is safe.
+function dedupeWords(value: string): string {
+  const seen = new Set<string>();
+  return value
+    .split(" ")
+    .filter((word) => {
+      if (!word || seen.has(word)) {
+        return false;
+      }
+      seen.add(word);
+      return true;
+    })
+    .join(" ");
+}
+
 /**
  * Normalize a raw injury description into a short athlete-facing label.
  *
@@ -59,11 +76,9 @@ export function normalizeInjuryLabel(raw: string | null | undefined): string {
   }
 
   let condition: string | null = null;
-  let remainder = trimmed;
   for (const [pattern, noun] of CONDITION_NOUNS) {
     if (pattern.test(trimmed)) {
       condition = noun;
-      remainder = trimmed.replace(pattern, " ");
       break;
     }
   }
@@ -74,9 +89,19 @@ export function normalizeInjuryLabel(raw: string | null | undefined): string {
     return capitalizeFirst(trimmed);
   }
 
-  const location = collapseWhitespace(
-    remainder.replace(FILLER_WORDS, " ").replace(/[^a-zA-Z\s/-]/g, " "),
-  ).toLowerCase();
+  // Strip EVERY condition word from the remainder, not just the first match.
+  // Parser strings often restate the condition ("contusion (bruise, left)"), so
+  // removing only the matched token leaves debris like "...bruise left bruise".
+  let remainder = trimmed;
+  for (const [pattern] of CONDITION_NOUNS) {
+    remainder = remainder.replace(new RegExp(pattern.source, "gi"), " ");
+  }
+
+  const location = dedupeWords(
+    collapseWhitespace(
+      remainder.replace(FILLER_WORDS, " ").replace(/[^a-zA-Z\s/-]/g, " "),
+    ).toLowerCase(),
+  );
 
   return capitalizeFirst(location ? `${location} ${condition}` : condition);
 }

@@ -36,3 +36,14 @@ test("returns empty string for blank input", () => {
 test("falls back to the condition alone when no location remains", () => {
   assert.equal(normalizeInjuryLabel("it is bruised"), "Bruise");
 });
+
+test("strips duplicated condition debris from messy parser strings", () => {
+  assert.equal(
+    normalizeInjuryLabel("Left shoulder contusion (bruise, left)"),
+    "Left shoulder bruise",
+  );
+});
+
+test("normalizes a leading condition with trailing location", () => {
+  assert.equal(normalizeInjuryLabel("bruise, left shoulder"), "Left shoulder bruise");
+});
