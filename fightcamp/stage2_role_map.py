@@ -523,17 +523,15 @@ def _low_aerobic_support_cap_for_week(
             return 0 if (high_fatigue or red_flag) else 1
         if phase == "TAPER":
             return 1
-        return 2
+        return 1
 
     if bucket == "moderate":
         if is_fight_week:
             return 0 if (high_fatigue or red_flag) else 1
         if phase == "TAPER":
             return 1
-        # GPP / SPP — drop to 1 if high fatigue or large hard-sparring load.
-        if high_fatigue or hard_count >= 3:
-            return 1
-        return 2
+        # GPP / SPP: keep gas-tank support to one easy touch.
+        return 1
 
     # high / critical / extreme: never reopen volume on high fatigue or red flag.
     if high_fatigue or red_flag:
@@ -1945,12 +1943,14 @@ def _non_spar_role_priority_rank(
         # With demote_glycolytic: fight_pace demoted to first-cut (rank 1), recovery promoted to rank 2
         if role_key == "neural_plus_strength_day":
             return 4
+        if role_key == "fight_pace_repeatability_day" or (category == "conditioning" and preferred_system == "glycolytic"):
+            return 1 if demote_glycolytic else 4
+        if category == "conditioning" and preferred_system == "alactic":
+            return 3
         if role_key == "repeatability_support_day" or (category == "conditioning" and preferred_system == "aerobic"):
-            if category == "conditioning" and preserve_low_noise and _is_low_noise_conditioning_role(role, athlete_model):
+            if demote_glycolytic and category == "conditioning" and preserve_low_noise and _is_low_noise_conditioning_role(role, athlete_model):
                 return 4
             return 3
-        if role_key == "fight_pace_repeatability_day" or (category == "conditioning" and preferred_system == "glycolytic"):
-            return 1 if demote_glycolytic else 2
         if category == "recovery":
             return 2 if demote_glycolytic else 1
         if category == "strength":

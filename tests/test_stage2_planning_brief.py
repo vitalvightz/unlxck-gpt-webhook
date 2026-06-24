@@ -230,6 +230,76 @@ def test_stage2_payload_plan_creation_weekday_uses_athlete_local_day(monkeypatch
     assert athlete_model["injury_restrictions"] == []
 
 
+def test_conditioning_priority_without_strength_power_shifts_secondary_strength_to_conditioning():
+    training_context = TrainingContext(
+        fatigue="low",
+        training_frequency=5,
+        days_available=5,
+        training_days=["Mon", "Tue", "Wed", "Thu", "Sat"],
+        injuries=[],
+        style_technical=["boxing"],
+        style_tactical=["pressure_fighter"],
+        weaknesses=["gas_tank"],
+        equipment=["heavy_bag"],
+        weight_cut_risk=False,
+        weight_cut_pct=0.0,
+        fight_format="boxing",
+        status="amateur",
+        key_goals=["conditioning"],
+        training_preference="balanced",
+        mental_block=[],
+        age=25,
+        weight=70.0,
+        prev_exercises=[],
+        recent_exercises=[],
+        phase_weeks={"GPP": 1, "SPP": 1, "TAPER": 0, "days": {"GPP": 0, "SPP": 0, "TAPER": 0}},
+        days_until_fight=42,
+    )
+
+    briefs = stage2_planning_brief_module._build_phase_briefs(
+        training_context,
+        training_context.phase_weeks,
+    )
+
+    assert briefs["GPP"]["session_counts"] == {"strength": 1, "conditioning": 3, "recovery": 1}
+    assert briefs["SPP"]["session_counts"] == {"strength": 1, "conditioning": 3, "recovery": 1}
+
+
+def test_strength_or_power_priority_blocks_conditioning_ratio_shift():
+    training_context = TrainingContext(
+        fatigue="low",
+        training_frequency=5,
+        days_available=5,
+        training_days=["Mon", "Tue", "Wed", "Thu", "Sat"],
+        injuries=[],
+        style_technical=["boxing"],
+        style_tactical=["pressure_fighter"],
+        weaknesses=["gas_tank"],
+        equipment=["heavy_bag"],
+        weight_cut_risk=False,
+        weight_cut_pct=0.0,
+        fight_format="boxing",
+        status="amateur",
+        key_goals=["conditioning", "power"],
+        training_preference="balanced",
+        mental_block=[],
+        age=25,
+        weight=70.0,
+        prev_exercises=[],
+        recent_exercises=[],
+        phase_weeks={"GPP": 1, "SPP": 1, "TAPER": 0, "days": {"GPP": 0, "SPP": 0, "TAPER": 0}},
+        days_until_fight=42,
+    )
+
+    briefs = stage2_planning_brief_module._build_phase_briefs(
+        training_context,
+        training_context.phase_weeks,
+    )
+
+    assert briefs["GPP"]["session_counts"] == {"strength": 2, "conditioning": 2, "recovery": 1}
+    assert briefs["SPP"]["session_counts"] == {"strength": 2, "conditioning": 2, "recovery": 1}
+
+
 def test_stage2_payload_injury_context_carries_rich_injury_fields():
     training_context = TrainingContext(
         fatigue="moderate",
@@ -965,6 +1035,54 @@ def _build_progression_brief(athlete_model: dict, phase_briefs: dict[str, dict])
         omission_ledger={},
         rewrite_guidance={},
     )
+
+
+def test_spp_conditioning_limiter_prioritizes_fight_pace_before_aerobic_support():
+    brief = _build_progression_brief(
+        {
+            "sport": "boxing",
+            "status": "amateur",
+            "rounds_format": "3x3",
+            "camp_length_weeks": 5,
+            "days_until_fight": 33,
+            "short_notice": False,
+            "fatigue": "low",
+            "training_preference": "balanced",
+            "technical_styles": ["boxing"],
+            "tactical_styles": ["pressure_fighter"],
+            "key_goals": ["conditioning"],
+            "weaknesses": ["gas_tank"],
+            "equipment": ["heavy_bag"],
+            "injuries": [],
+            "weight_cut_risk": False,
+            "weight_cut_pct": 0.0,
+            "readiness_flags": [],
+            "training_days": ["Monday", "Tuesday", "Wednesday", "Thursday", "Saturday"],
+            "hard_sparring_days": [],
+        },
+        {
+            "SPP": {
+                "objective": "increase fight-specific repeatability",
+                "emphasize": ["fight-pace repeatability"],
+                "deprioritize": ["extra lifting"],
+                "risk_flags": [],
+                "session_counts": {"strength": 1, "conditioning": 3, "recovery": 1},
+                "selection_guardrails": {
+                    "must_keep_if_present": ["glycolytic", "alactic"],
+                    "conditioning_drop_order_if_thin": ["aerobic"],
+                },
+                "weeks": 1,
+                "days": 7,
+            },
+        },
+    )
+
+    week = brief["weekly_role_map"]["weeks"][0]
+    conditioning_roles = [role for role in week["session_roles"] if role["category"] == "conditioning"]
+
+    assert brief["weekly_stress_map"]["SPP"]["conditioning_sequence"] == ["glycolytic", "alactic", "aerobic"]
+    assert {role["preferred_system"] for role in conditioning_roles} == {"glycolytic", "alactic", "aerobic"}
+    assert any(role["role_key"] == "fight_pace_repeatability_day" for role in conditioning_roles)
 
 
 
