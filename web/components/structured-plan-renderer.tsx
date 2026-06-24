@@ -512,6 +512,17 @@ function formatGeneratedDate(value: string | null | undefined): string | null {
   return `${Number(day)} ${monthName} ${year}`;
 }
 
+// Statuses that mean a saved plan is genuinely publishable/ready get the calm
+// success tone; every other lifecycle state (awaiting review, safety hold,
+// archived, still processing) stays a neutral pill so an unsafe or in-progress
+// plan never reads as "good to go".
+const SUCCESS_STATUS_TOKENS = new Set(["ready", "publishable_with_flags"]);
+
+function statusTagClass(status: string): string {
+  const token = status.toLowerCase().replace(/[\s-]+/g, "_");
+  return SUCCESS_STATUS_TOKENS.has(token) ? "sp-tag sp-done" : "sp-tag";
+}
+
 export function PlanHeader({
   plan,
   createdAt,
@@ -521,8 +532,11 @@ export function PlanHeader({
   /** ISO date/timestamp the plan was generated (from the plan record), shown as
    * "Generated <date>". Omitted in contexts without a record (e.g. previews). */
   createdAt?: string | null;
-  /** The plan's lifecycle status from the record; the structured
-   * plan_metadata.status wins when present. */
+  /** The saved plan record's authoritative lifecycle status. This wins; the
+   * structured plan_metadata.status is only a fallback for preview/test contexts
+   * that have no record, because it uses a different vocabulary
+   * (draft/active/completed/archived) that must not override the record's
+   * ready/held_for_review/publishable_with_flags states. */
   planStatus?: string | null;
 }) {
   const meta = plan.plan_metadata;
@@ -534,7 +548,9 @@ export function PlanHeader({
   const event = plan.event_context;
   const eventType = cleanText(event?.event_type);
   const eventDate = cleanText(event?.fight_date) || cleanText(event?.match_date);
-  const status = cleanText(meta?.status) || cleanText(planStatus);
+  // The saved-plan record status is authoritative; plan_metadata.status is only a
+  // fallback for record-less preview/test contexts.
+  const status = cleanText(planStatus) || cleanText(meta?.status);
   const generatedOn = formatGeneratedDate(createdAt);
 
   const tags = [sport, planType ? titleize(planType) : null, eventType ? titleize(eventType) : null]
@@ -547,7 +563,7 @@ export function PlanHeader({
       {profile ? <p className="sp-subtitle">{profile}</p> : null}
       {tags.length > 0 || eventDate || status ? (
         <div className="sp-header-tags">
-          {status ? <span className="sp-tag sp-done">{titleize(status)}</span> : null}
+          {status ? <span className={statusTagClass(status)}>{titleize(status)}</span> : null}
           {tags.map((tag, index) => (
             <span key={`${tag}-${index}`} className="sp-tag">
               {tag}
@@ -1073,8 +1089,8 @@ export function StructuredPlanRenderer({
    * in the command header as "Generated <date>". Optional — omitted in contexts
    * with no record. */
   createdAt?: string | null;
-  /** The plan's lifecycle status from the record, shown as a header pill (the
-   * structured plan_metadata.status wins when present). */
+  /** The saved plan record's authoritative lifecycle status, shown as a header
+   * pill. This wins; plan_metadata.status is only a record-less fallback. */
   planStatus?: string | null;
   /** Optional advance target: the next scheduled session's day, passed once
    * today is already logged. It moves ONLY the opened week + day highlight, never
