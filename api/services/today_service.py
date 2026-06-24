@@ -15,6 +15,7 @@ come straight from the deterministic evaluator.
 
 from __future__ import annotations
 
+import re
 import uuid
 from datetime import date, datetime, timezone
 from typing import Any, Mapping
@@ -87,6 +88,45 @@ OTHER_PLAN_CHECKIN_WARNING = (
     "You already submitted a check-in for another plan today. "
     "This check-in is saved to the selected active plan only."
 )
+
+INTAKE_INJURY_SOURCE = "intake"
+INTAKE_CLEARED_VALUES = frozenset({"1", "true", "yes", "y", "cleared", "clear", "resolved", "done"})
+GUIDED_INJURY_SEVERITY_MAP = {
+    "low": "mild",
+    "mild": "mild",
+    "moderate": "moderate",
+    "high": "severe",
+    "severe": "severe",
+}
+BODY_MAP_ZONE_LABELS = {
+    "head": "Head / Neck",
+    "l_shoulder": "Left shoulder",
+    "r_shoulder": "Right shoulder",
+    "chest": "Chest",
+    "upper_back": "Upper back",
+    "lower_back": "Lower back",
+    "core": "Core",
+    "l_elbow": "Left elbow",
+    "r_elbow": "Right elbow",
+    "l_wrist": "Left wrist",
+    "r_wrist": "Right wrist",
+    "l_hip": "Left hip",
+    "r_hip": "Right hip",
+    "l_glute": "Left glute",
+    "r_glute": "Right glute",
+    "l_quad": "Left quad",
+    "r_quad": "Right quad",
+    "l_ham": "Left hamstring",
+    "r_ham": "Right hamstring",
+    "l_knee": "Left knee",
+    "r_knee": "Right knee",
+    "l_shin": "Left shin",
+    "r_shin": "Right shin",
+    "l_calf": "Left calf",
+    "r_calf": "Right calf",
+    "l_ankle": "Left ankle",
+    "r_ankle": "Right ankle",
+}
 
 
 def _utc_now_iso() -> str:
@@ -670,6 +710,215 @@ def _open_injury_flags(store: AppStore, athlete_id: str) -> list[dict[str, Any]]
         return []
 
 
+def _normalized_injury_key(value: object) -> str:
+    text = " ".join(str(value or "").strip().lower().split())
+    return re.sub(r"[^a-z0-9]+", " ", text).strip()
+
+
+def _injury_dedupe_keys(flag: Mapping[str, Any]) -> set[str]:
+    return {
+        key
+        for key in (
+            _normalized_injury_key(flag.get("body_area")),
+            _normalized_injury_key(flag.get("description")),
+        )
+        if key
+    }
+
+
+def _is_truthy_cleared(value: object) -> bool:
+    if isinstance(value, bool):
+        return value
+    return str(value or "").strip().lower() in INTAKE_CLEARED_VALUES
+
+
+def _guided_injury_has_content(injury: Mapping[str, Any]) -> bool:
+    return any(
+        str(injury.get(field) or "").strip()
+        for field in (
+            "area",
+            "zone",
+            "notes",
+            "avoid",
+            "injury_type",
+            "surface_type",
+            "timeframe",
+        )
+    )
+
+
+def _body_area_from_guided_injury(injury: Mapping[str, Any]) -> str:
+    area = str(injury.get("area") or "").strip()
+    if area:
+        return area
+    zone = str(injury.get("zone") or "").strip()
+    return BODY_MAP_ZONE_LABELS.get(zone, zone.replace("_", " ").strip())
+
+
+def _flag_severity_from_guided_injury(injury: Mapping[str, Any]) -> str:
+    raw = str(injury.get("severity") or "").strip().lower()
+    return GUIDED_INJURY_SEVERITY_MAP.get(raw, "moderate")
+
+
+def _flag_status_from_guided_injury(injury: Mapping[str, Any]) -> str:
+    return "monitoring" if str(injury.get("trend") or "").strip().lower() == "improving" else "open"
+
+
+def _format_guided_injury_description(body_area: str, injury: Mapping[str, Any]) -> str:
+    parts: list[str] = []
+    for field in ("surface_type", "injury_type", "timeframe"):
+        value = str(injury.get(field) or "").strip()
+        if value:
+            parts.append(value.replace("_", " "))
+    subtypes = injury.get("injury_subtypes")
+    if isinstance(subtypes, list):
+        parts.extend(str(item).replace("_", " ").strip() for item in subtypes if str(item or "").strip())
+    for field in ("notes", "avoid"):
+        value = str(injury.get(field) or "").strip()
+        if value:
+            parts.append(value)
+    details = ". ".join(dict.fromkeys(parts))
+    if body_area and details:
+        return f"{body_area}: {details}"
+    return body_area or details
+
+
+def _guided_intake_injury_candidate(
+    injury: Mapping[str, Any],
+    *,
+    plan_id: str,
+) -> dict[str, object] | None:
+    if _is_truthy_cleared(injury.get("cleared")):
+        return None
+    body_area = _body_area_from_guided_injury(injury)
+    description = _format_guided_injury_description(body_area, injury)
+    if not (body_area or description):
+        return None
+    return {
+        "source": INTAKE_INJURY_SOURCE,
+        "plan_id": plan_id,
+        "body_area": body_area,
+        "description": description or body_area,
+        "severity": _flag_severity_from_guided_injury(injury),
+        "status": _flag_status_from_guided_injury(injury),
+    }
+
+
+def _legacy_intake_injury_candidate(injuries_text: object, *, plan_id: str) -> dict[str, object] | None:
+    text = str(injuries_text or "").strip()
+    if not text or text.lower() in {"none", "n/a", "na", "no", "no injuries"}:
+        return None
+    return {
+        "source": INTAKE_INJURY_SOURCE,
+        "plan_id": plan_id,
+        "body_area": text[:120],
+        "description": text,
+        "severity": "moderate",
+        "status": "open",
+    }
+
+
+def _intake_payload_from_row(row: Mapping[str, Any] | None) -> Mapping[str, Any]:
+    if not row:
+        return {}
+    payload = row.get("intake")
+    return payload if isinstance(payload, Mapping) else row
+
+
+def _intake_row_for_plan(
+    store: AppStore,
+    *,
+    athlete_id: str,
+    plan_row: Mapping[str, Any],
+) -> Mapping[str, Any] | None:
+    intake_id = str(plan_row.get("intake_id") or "").strip()
+    if intake_id:
+        reader = getattr(store, "get_intake", None)
+        if callable(reader):
+            row = reader(intake_id)
+            if row:
+                return row
+    latest_reader = getattr(store, "get_latest_intake", None)
+    if callable(latest_reader):
+        return latest_reader(athlete_id)
+    return None
+
+
+def _intake_injury_candidates(
+    intake_payload: Mapping[str, Any],
+    *,
+    plan_id: str,
+) -> list[dict[str, object]]:
+    guided_injuries = intake_payload.get("guided_injuries")
+    if isinstance(guided_injuries, list):
+        guided_items = [
+            injury
+            for injury in guided_injuries
+            if isinstance(injury, Mapping) and _guided_injury_has_content(injury)
+        ]
+        guided_candidates = [
+            _guided_intake_injury_candidate(injury, plan_id=plan_id)
+            for injury in guided_items
+        ]
+        if guided_items:
+            return [candidate for candidate in guided_candidates if candidate is not None]
+
+    guided_injury = intake_payload.get("guided_injury")
+    if isinstance(guided_injury, Mapping) and _guided_injury_has_content(guided_injury):
+        candidate = _guided_intake_injury_candidate(guided_injury, plan_id=plan_id)
+        return [candidate] if candidate else []
+
+    legacy = _legacy_intake_injury_candidate(intake_payload.get("injuries"), plan_id=plan_id)
+    return [legacy] if legacy else []
+
+
+def _ensure_intake_injury_flags(
+    store: AppStore,
+    *,
+    athlete_id: str,
+    plan_row: Mapping[str, Any],
+    open_flags: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """Seed real injury flags from active-plan intake once, then return open flags."""
+    plan_id = str(plan_row.get("id") or "").strip()
+    if not plan_id:
+        return open_flags
+    intake_payload = _intake_payload_from_row(
+        _intake_row_for_plan(store, athlete_id=athlete_id, plan_row=plan_row)
+    )
+    if not intake_payload:
+        return open_flags
+
+    create_flag = getattr(store, "create_injury_flag", None)
+    if not callable(create_flag):
+        return open_flags
+
+    dedupe_flags = list(open_flags)
+    lister = getattr(store, "list_injury_flags", None)
+    if callable(lister):
+        try:
+            dedupe_flags = [
+                dict(flag)
+                for flag in (lister(athlete_id, statuses=("open", "monitoring"), limit=500) or [])
+            ]
+        except Exception:
+            dedupe_flags = list(open_flags)
+
+    seen_keys: set[str] = set()
+    for flag in dedupe_flags:
+        seen_keys.update(_injury_dedupe_keys(flag))
+
+    seeded = list(open_flags)
+    for candidate in _intake_injury_candidates(intake_payload, plan_id=plan_id):
+        candidate_keys = _injury_dedupe_keys(candidate)
+        if not candidate_keys or candidate_keys & seen_keys:
+            continue
+        created = dict(create_flag(athlete_id, candidate))
+        seeded.insert(0, created)
+        seen_keys.update(candidate_keys)
+    return seeded
+
+
 def _merge_risks(*risk_lists: list[RiskWatchItem]) -> list[RiskWatchItem]:
     """Concatenate risk lists, keeping the first item seen per category.
 
@@ -796,7 +1045,12 @@ def build_today_command_view(
     )
     session_id = _session_id_for_entry(target_entry)
 
-    open_injuries = _open_injury_flags(store, athlete_id)
+    open_injuries = _ensure_intake_injury_flags(
+        store,
+        athlete_id=athlete_id,
+        plan_row=plan_row,
+        open_flags=_open_injury_flags(store, athlete_id),
+    )
 
     return build_command_view(
         current_training_day=training_day,

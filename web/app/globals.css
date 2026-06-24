@@ -5158,10 +5158,20 @@ button.mobile-step-rail-item {
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 999px;
   padding: 6px 10px;
+  background: rgba(255, 255, 255, 0.035);
   color: var(--text-secondary);
   font-family: var(--font-mono), monospace;
   font-size: 11px;
   letter-spacing: 0.08em;
+  cursor: pointer;
+  transition: border-color 160ms ease, color 160ms ease, background 160ms ease;
+}
+
+.today-risk-more:hover,
+.today-risk-more:focus-visible {
+  border-color: rgba(255, 255, 255, 0.24);
+  background: rgba(255, 255, 255, 0.07);
+  color: var(--text-primary);
 }
 
 .today-checkin-form,

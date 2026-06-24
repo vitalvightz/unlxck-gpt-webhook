@@ -42,6 +42,25 @@ def _store_with_plan(plan_id: str = PLAN, athlete_id: str = ATHLETE) -> FakeStor
     return store
 
 
+def _attach_intake(
+    store: FakeStore,
+    intake: dict,
+    *,
+    plan_id: str = PLAN,
+    athlete_id: str = ATHLETE,
+    intake_id: str = "intake-1",
+) -> None:
+    store.intakes.setdefault(athlete_id, []).append(
+        {
+            "id": intake_id,
+            "athlete_id": athlete_id,
+            "intake": intake,
+            "created_at": "2026-06-01T00:00:00+00:00",
+        }
+    )
+    store.plans[plan_id]["intake_id"] = intake_id
+
+
 def _taper_planning_brief() -> dict:
     return {
         "weekly_role_map": {
@@ -618,6 +637,195 @@ class TestCommandView:
         view = build_today_command_view(store, athlete_id=ATHLETE, athlete_timezone="")
         assert view.today.next_session == {}
         assert view.today.completion_status == "not_started"
+
+    def test_guided_intake_injury_seeds_open_injury_flag(self):
+        store = _store_with_plan()
+        _attach_intake(
+            store,
+            {
+                "guided_injuries": [
+                    {
+                        "area": "Left shoulder",
+                        "zone": "l_shoulder",
+                        "severity": "high",
+                        "trend": "same",
+                        "surface_type": "bruise",
+                        "cleared": "",
+                    }
+                ]
+            },
+        )
+
+        view = build_today_command_view(store, athlete_id=ATHLETE, athlete_timezone="")
+
+        assert len(view.open_injuries) == 1
+        seeded = view.open_injuries[0]
+        assert seeded["source"] == "intake"
+        assert seeded["plan_id"] == PLAN
+        assert seeded["body_area"] == "Left shoulder"
+        assert seeded["severity"] == "severe"
+        assert seeded["status"] == "open"
+        assert "bruise" in seeded["description"]
+
+    def test_guided_intake_injury_bootstrap_is_idempotent(self):
+        store = _store_with_plan()
+        _attach_intake(
+            store,
+            {
+                "guided_injuries": [
+                    {
+                        "area": "Left shoulder",
+                        "zone": "l_shoulder",
+                        "severity": "moderate",
+                        "trend": "same",
+                    }
+                ]
+            },
+        )
+
+        build_today_command_view(store, athlete_id=ATHLETE, athlete_timezone="")
+        build_today_command_view(store, athlete_id=ATHLETE, athlete_timezone="")
+
+        assert len(store.injury_flags[ATHLETE]) == 1
+
+    def test_cleared_guided_intake_injury_is_not_seeded(self):
+        store = _store_with_plan()
+        _attach_intake(
+            store,
+            {
+                "guided_injuries": [
+                    {
+                        "area": "Left shoulder",
+                        "zone": "l_shoulder",
+                        "severity": "high",
+                        "trend": "improving",
+                        "cleared": "yes",
+                    }
+                ],
+                "injuries": "left shoulder bruise",
+            },
+        )
+
+        view = build_today_command_view(store, athlete_id=ATHLETE, athlete_timezone="")
+
+        assert view.open_injuries == []
+        assert store.injury_flags.get(ATHLETE, []) == []
+
+    @pytest.mark.parametrize(
+        ("guided_severity", "flag_severity"),
+        [("low", "mild"), ("moderate", "moderate"), ("high", "severe"), ("", "moderate")],
+    )
+    def test_guided_intake_severity_maps_to_flag_severity(
+        self,
+        guided_severity: str,
+        flag_severity: str,
+    ):
+        store = _store_with_plan()
+        _attach_intake(
+            store,
+            {
+                "guided_injury": {
+                    "area": "Left knee",
+                    "zone": "l_knee",
+                    "severity": guided_severity,
+                    "trend": "improving",
+                }
+            },
+        )
+
+        view = build_today_command_view(store, athlete_id=ATHLETE, athlete_timezone="")
+
+        assert view.open_injuries[0]["severity"] == flag_severity
+        assert view.open_injuries[0]["status"] == "monitoring"
+
+    def test_legacy_intake_injury_text_seeds_conservative_flag(self):
+        store = _store_with_plan()
+        _attach_intake(store, {"injuries": "Shoulder bruise after sparring"})
+
+        view = build_today_command_view(store, athlete_id=ATHLETE, athlete_timezone="")
+
+        assert len(view.open_injuries) == 1
+        seeded = view.open_injuries[0]
+        assert seeded["source"] == "intake"
+        assert seeded["severity"] == "moderate"
+        assert seeded["status"] == "open"
+        assert seeded["description"] == "Shoulder bruise after sparring"
+
+    def test_intake_injury_dedupes_against_existing_open_flag(self):
+        store = _store_with_plan()
+        store.create_injury_flag(
+            ATHLETE,
+            {
+                "source": "manual",
+                "plan_id": PLAN,
+                "body_area": "Left shoulder",
+                "description": "Left shoulder soreness",
+                "severity": "mild",
+                "status": "open",
+            },
+        )
+        _attach_intake(
+            store,
+            {
+                "guided_injuries": [
+                    {
+                        "area": "Left shoulder",
+                        "zone": "l_shoulder",
+                        "severity": "high",
+                        "trend": "same",
+                    }
+                ]
+            },
+        )
+
+        view = build_today_command_view(store, athlete_id=ATHLETE, athlete_timezone="")
+
+        assert len(view.open_injuries) == 1
+        assert view.open_injuries[0]["source"] == "manual"
+
+    def test_intake_injury_dedupe_checks_beyond_display_limit(self):
+        store = _store_with_plan()
+        store.create_injury_flag(
+            ATHLETE,
+            {
+                "source": "manual",
+                "plan_id": PLAN,
+                "body_area": "Left shoulder",
+                "description": "Left shoulder soreness",
+                "severity": "mild",
+                "status": "open",
+            },
+        )
+        for index in range(20):
+            store.create_injury_flag(
+                ATHLETE,
+                {
+                    "source": "checkin",
+                    "plan_id": PLAN,
+                    "body_area": f"Area {index}",
+                    "description": f"Area {index}",
+                    "severity": "mild",
+                    "status": "open",
+                },
+            )
+        _attach_intake(
+            store,
+            {
+                "guided_injuries": [
+                    {
+                        "area": "Left shoulder",
+                        "zone": "l_shoulder",
+                        "severity": "high",
+                        "trend": "same",
+                    }
+                ]
+            },
+        )
+
+        build_today_command_view(store, athlete_id=ATHLETE, athlete_timezone="")
+
+        assert len(store.injury_flags[ATHLETE]) == 21
+        assert not [flag for flag in store.injury_flags[ATHLETE] if flag["source"] == "intake"]
 
     def test_logged_session_pain_surfaces_without_a_checkin(self):
         # The badge must reflect training reality even with no check-in today:

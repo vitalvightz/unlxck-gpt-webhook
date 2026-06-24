@@ -4,6 +4,12 @@ import Link from "next/link";
 import { type FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 
 import { useAppSession } from "@/components/auth-provider";
+import {
+  BodyMap,
+  type BodyMapSelection,
+  type BodyMapSeverity,
+  type BodyMapSide,
+} from "@/components/body-map";
 import { Skeleton } from "@/components/skeleton";
 import {
   SessionCard as StructuredSessionCard,
@@ -267,13 +273,15 @@ function NoActivePlanState() {
 }
 
 function RiskWatch({ risks }: { risks: TodayCommandView["risk_watch"] }) {
+  const [isExpanded, setIsExpanded] = useState(false);
   if (!risks.length) {
     return null;
   }
   const { visible, overflow } = getVisibleRiskWatch(risks);
+  const shownRisks = isExpanded ? risks : visible;
   return (
     <section className="today-risk-watch" aria-label="Risk watch">
-      {visible.map((risk) => (
+      {shownRisks.map((risk) => (
         <article key={`${risk.category}-${risk.label}`} className="today-risk-item" data-tone={risk.tone}>
           <span className="today-risk-icon" aria-hidden="true">
             !
@@ -284,7 +292,16 @@ function RiskWatch({ risks }: { risks: TodayCommandView["risk_watch"] }) {
           </div>
         </article>
       ))}
-      {overflow > 0 ? <span className="today-risk-more">+{overflow} more</span> : null}
+      {overflow > 0 ? (
+        <button
+          type="button"
+          className="today-risk-more"
+          aria-expanded={isExpanded}
+          onClick={() => setIsExpanded((current) => !current)}
+        >
+          {isExpanded ? "Show less" : `+${overflow} more`}
+        </button>
+      ) : null}
     </section>
   );
 }
@@ -413,7 +430,7 @@ const INJURY_STATUS_ACTIONS: Array<{ value: TodayInjuryCheckinStatus; label: str
   { value: "improving", label: "Easing" },
   { value: "ongoing", label: "Same" },
   { value: "worse", label: "Worse" },
-  { value: "resolved", label: "Resolved" },
+  { value: "resolved", label: "Cleared" },
 ];
 
 const INJURY_SEVERITY_OPTIONS: Array<{ value: InjuryFlagSeverity; label: string }> = [
@@ -421,6 +438,22 @@ const INJURY_SEVERITY_OPTIONS: Array<{ value: InjuryFlagSeverity; label: string 
   { value: "moderate", label: "Moderate" },
   { value: "severe", label: "Severe" },
 ];
+
+const BODY_MAP_SEVERITY_BY_FLAG: Record<InjuryFlagSeverity, BodyMapSeverity> = {
+  mild: "low",
+  moderate: "moderate",
+  severe: "high",
+};
+
+function cycleInjuryFlagSeverity(severity: InjuryFlagSeverity): InjuryFlagSeverity {
+  if (severity === "mild") {
+    return "moderate";
+  }
+  if (severity === "moderate") {
+    return "severe";
+  }
+  return "mild";
+}
 
 function getInjuryLabel(injury: InjuryFlagRecord): string {
   return injury.body_area?.trim() || injury.description?.trim() || "Injury";
@@ -447,6 +480,17 @@ function InjuryCheckinCard({
   const [isAdding, setIsAdding] = useState(false);
   const [newArea, setNewArea] = useState("");
   const [newSeverity, setNewSeverity] = useState<InjuryFlagSeverity>("moderate");
+  const [newZone, setNewZone] = useState("");
+  const [bodyMapSide, setBodyMapSide] = useState<BodyMapSide>("front");
+  const newInjurySelections: BodyMapSelection[] = newArea.trim()
+    ? [
+        {
+          zone: newZone || undefined,
+          label: newArea.trim(),
+          severity: BODY_MAP_SEVERITY_BY_FLAG[newSeverity],
+        },
+      ]
+    : [];
 
   async function submit(injuries: TodayInjuryDeclaration[]) {
     await submitTodayInjuryCheckin(token, { injuries });
@@ -460,7 +504,7 @@ function InjuryCheckinCard({
     setPendingFlagId(flagId);
     try {
       await submit([{ flag_id: flagId, status }]);
-      showToast(status === "resolved" ? "Injury marked resolved." : "Injury updated.", {
+      showToast(status === "resolved" ? "Injury cleared." : "Injury updated.", {
         tone: "success",
       });
     } catch (error) {
@@ -481,12 +525,22 @@ function InjuryCheckinCard({
       await submit([{ body_area: area, severity: newSeverity, status: "ongoing" }]);
       setNewArea("");
       setNewSeverity("moderate");
+      setNewZone("");
       showToast("Injury added.", { tone: "success" });
     } catch (error) {
       showToast(error instanceof Error ? error.message : "Could not add injury.", { tone: "error" });
     } finally {
       setIsAdding(false);
     }
+  }
+
+  function selectBodyMapZone(zone: string, label: string) {
+    const sameZone = newZone === zone;
+    setNewZone(zone);
+    if (!sameZone || !newArea.trim()) {
+      setNewArea(label);
+    }
+    setNewSeverity((current) => (sameZone ? cycleInjuryFlagSeverity(current) : "mild"));
   }
 
   return (
@@ -527,14 +581,26 @@ function InjuryCheckinCard({
       )}
 
       <form className="today-injury-add" onSubmit={addInjury}>
+        <BodyMap
+          side={bodyMapSide}
+          selections={newInjurySelections}
+          onZoneSelect={selectBodyMapZone}
+          onSideChange={setBodyMapSide}
+        />
         <label className="field" htmlFor="today-injury-area">
           <span>Add injury</span>
           <input
             id="today-injury-area"
             value={newArea}
             maxLength={200}
-            placeholder="e.g. left knee"
-            onChange={(event) => setNewArea(event.target.value)}
+            placeholder="e.g. left shoulder bruise"
+            onChange={(event) => {
+              const value = event.target.value;
+              setNewArea(value);
+              if (!value.trim()) {
+                setNewZone("");
+              }
+            }}
           />
         </label>
         <SegmentGroup
