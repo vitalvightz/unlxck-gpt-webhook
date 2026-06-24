@@ -1241,7 +1241,7 @@ def _late_fight_permission_policy(days_until_fight: Any, athlete_model: dict[str
 
     allowed_role_keys: list[str] = []
     if mode in {"bridge_compression_payload", "pre_fight_compressed_payload"}:
-        allowed_role_keys = ["hard_sparring_day", "strength_touch_day", "light_fight_pace_touch_day", "technical_touch_day", "fight_week_freshness_day"]
+        allowed_role_keys = ["hard_sparring_day", "strength_touch_day", "light_fight_pace_touch_day", "alactic_sharpness_day", "technical_touch_day", "fight_week_freshness_day"]
     elif mode == "late_fight_week_payload":
         allowed_role_keys = ["hard_sparring_day", "neural_primer_day", "alactic_sharpness_day", "technical_touch_day", "fight_week_freshness_day"]
     elif mode == "late_fight_transition_payload":
@@ -1297,13 +1297,25 @@ def _bridge_active_role_cap(days_until_fight: Any, athlete_model: dict[str, Any]
     fatigue, moderate+ injury, aggressive cut, restricted injury mode — drops
     them back to the conservative baseline. Hard sparring and glycolytic caps
     are untouched, so the extra role is filled by low-risk work only.
+
+    From D-17 the bridge converts all declared hard sparring to technical/rhythm.
+    Coach-owned sparring is excluded from the app's active-role budget, so when it
+    leaves the week the app plan would otherwise shrink. For a low-risk athlete who
+    *declared* hard sparring, reallocate that freed slot: keep the extra low-risk
+    active role through D-17..D-14 too. Athletes who never declared sparring (no
+    freed slot) stay at the conservative baseline.
     """
     base = _late_fight_max_active_roles(days_until_fight)
     if base is None:
         return None
     days = _coerce_days(days_until_fight)
+    if not (isinstance(days, int) and bridge_low_risk_profile(athlete_model)):
+        return base
     low, high = BRIDGE_EXTRA_EXPOSURE_DAY_RANGE
-    if isinstance(days, int) and low <= days <= high and bridge_low_risk_profile(athlete_model):
+    if low <= days <= high:
+        return max(base, 3)
+    declared_hard_sparring = bool(clean_list(athlete_model.get("hard_sparring_days", [])))
+    if 14 <= days < low and declared_hard_sparring:
         return max(base, 3)
     return base
 
@@ -1739,6 +1751,11 @@ def _late_fight_permissions(days_until_fight: Any, athlete_model: dict) -> dict:
                 clean_list(athlete_model.get("hard_sparring_days", []))
             ),
         )
+        # One source of truth: the binding allocation cap (_bridge_active_role_cap)
+        # is athlete-aware (injury severity, declared-sparring freed slot) where the
+        # scalar bridge guidance is not. Align the surfaced guidance to it so the
+        # bridge policy never under-reports the plan it will actually allocate.
+        bridge_rules["max_active_roles"] = _bridge_active_role_cap(days_until_fight, athlete_model)
         return {
             "mode": mode,
             "allow_full_weekly_structure": False,
@@ -2363,6 +2380,30 @@ def _late_fight_candidate_roles(
                     selection_rule="D-21 to D-19 only: one short specific-interval touch is allowed when sparring is not owning the window.",
                     placement_rule="Keep it light. Do not describe it as a conditioning build and do not place between hard days.",
                     selection_priority=96 if has_downgraded_hard_days else 100,
+                    legal_countdown_labels=legal_countdown_labels,
+                )
+            )
+        elif (
+            days is not None
+            and days <= 17
+            and has_downgraded_hard_days
+            and bridge_low_risk_profile(athlete_model)
+        ):
+            # From D-17 declared hard sparring is converted to technical, freeing a
+            # coach-owned slot. For a low-risk athlete, reallocate it to one
+            # taper-appropriate alactic sharpness touch (low metabolic fatigue,
+            # freshness-preserving) so the week is not under-dosed once sparring
+            # drops out. Non-glycolytic, so it respects the bridge glycolytic
+            # suppression; the active-role cap (_bridge_active_role_cap) admits it.
+            candidates.append(
+                _late_fight_role_entry(
+                    category="conditioning",
+                    role_key="alactic_sharpness_day",
+                    preferred_pool="conditioning_slots",
+                    preferred_system="alactic",
+                    selection_rule="One short alactic sharpness touch only, replacing the removed hard sparring stimulus. Keep it crisp and non-fatiguing.",
+                    placement_rule="Keep this brief and very low volume; never describe it as a conditioning build and never place it on the freshness day.",
+                    selection_priority=96,
                     legal_countdown_labels=legal_countdown_labels,
                 )
             )

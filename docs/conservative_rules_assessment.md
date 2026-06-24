@@ -165,9 +165,52 @@ cap" above.
 
 | Cause | Verdict | Notes |
 |-------|---------|-------|
-| 1. `active_weight_cut` / `_is_high_pressure_weight_cut` fires within 28 days | Deliberate, **tunable-future** | `weight_cut_risk=True` adds `active_weight_cut`; `_is_high_pressure_weight_cut` treats it as high-pressure if fatigue moderate+ **or** ≤28 days. The ≤28-day arm is intentionally sensitive. Not changed here (it drives freshness/density language, not the active-role count). Candidate for a separate gated knob. `athlete_model.py:_is_high_pressure_weight_cut`. |
-| 2. Bridge cap conflict (3 vs 2) | **Fixed** | This change. |
+| 1. `active_weight_cut` / `_is_high_pressure_weight_cut` fires within 28 days | **Fixed (softened)** | The `<=28`-day arm now `<=14` for the low-fatigue path, so a routine ~3.5% cut at D-21 with low fatigue is no longer "high-pressure". Aggressive cuts (≥5%) and moderate+ fatigue stay high-pressure at any distance. See "High-pressure cut sensitivity" below. |
+| 2. Bridge cap conflict (3 vs 2) | **Fixed** | Unified active-role cap. |
 | 3. Late-fight bans "development" wording | Deliberate, keep | Render-guidance flags (`allow_development_language=False`, etc.) keep the language honest about a taper-on-ramp. Cosmetic, not a load cap. `stage2_payload_late_fight.py` payload-mode dicts. |
-| 4. Downgraded hard sparring still "crowds" the week | **Already handled** | `_late_fight_active_role_count` excludes coach-owned `hard_sparring_day` from the app's active-role budget, so a downgraded/technical-touch sparring day does **not** consume an app S&C slot. Test: `test_late_fight_calendar_regression.py::test_active_role_count_excludes_coach_owned_sparring`. |
-| 5. Taper allocation is recovery-heavy (e.g. 1 strength / 1 cond / 3 recovery) | Deliberate, **tunable-future** | This is the role-map taper allocator (>21-day camps), outside the D-21..D-18 scope agreed for this change. Intentional taper shape; candidate for a future gated knob. |
-| 6. Finalizer cannot restore suppressed roles | Deliberate (safety), keep | Correct by design — the finalizer must not silently re-inflate what upstream safety logic suppressed. The right lever is the upstream cap (fixed in #2), not the finalizer. |
+| 4. Downgraded hard sparring still "crowds" the week | **Handled + freed-slot reallocation** | `_late_fight_active_role_count` already excludes coach-owned `hard_sparring_day` from the app budget. New: once sparring converts to technical from D-17, the freed slot is reallocated to one taper-appropriate alactic touch for low-risk athletes. See "D-17 freed-slot reallocation" below. |
+| 5. Taper allocation is recovery-heavy (e.g. 1 strength / 1 cond / 3 recovery) | **Fixed (rebalanced)** | freq-5 TAPER `{1,1,3}`→`{1,2,2}`, freq-6 `{1,1,4}`→`{1,2,3}` in `training_context.allocate_sessions`. One recovery slot becomes conditioning (taper conditioning already carries TAPER-suitable tags). |
+| 6. Finalizer cannot restore suppressed roles | Deliberate (safety), keep | Correct by design — the finalizer must not silently re-inflate what upstream safety logic suppressed. The right lever is the upstream cap, not the finalizer. |
+
+---
+
+## Third review pass — implemented
+
+### D-17 freed-slot reallocation (cause #4 extension)
+
+From D-17 the bridge converts all declared hard sparring to technical/rhythm, freeing
+a coach-owned slot that the app budget excludes. For a **low-risk** athlete who
+declared hard sparring, `_bridge_active_role_cap` now keeps the active-role cap at 3
+through D-17..D-14, and `_late_fight_candidate_roles` adds **one `alactic_sharpness_day`**
+(alactic = low metabolic fatigue, freshness-preserving) so the week is not under-dosed
+once sparring drops out. Non-glycolytic, so it respects the bridge glycolytic
+suppression. Athletes who never declared sparring (no freed slot) or who carry any
+safety signal stay at the conservative 2.
+
+- Code: `stage2_payload_late_fight.py:_bridge_active_role_cap`,
+  `_late_fight_candidate_roles` (bridge block), bridge `allowed_role_keys`.
+- Tests: `tests/test_performance_bias.py` (D-17..D-14 with/without declared sparring,
+  end-to-end app-owned count).
+
+### High-pressure cut sensitivity (cause #1)
+
+`_is_high_pressure_weight_cut` (three lockstep copies: `athlete_model.py`,
+`recovery.py`, `nutrition.py`) changed the low-fatigue days arm from `<=28` to `<=14`.
+Aggressive cuts and moderate+ fatigue are unchanged. This stops a routine cut at
+D-21 from over-triggering "protect freshness / remove optional fatigue / reduce
+density / accessory volume" language.
+
+- Tests: `tests/test_nutrition_recovery_weight_cut.py`,
+  `tests/test_athlete_model_canonical.py::test_high_pressure_weight_cut_low_fatigue_boundary`.
+
+### Taper reallocation (cause #5)
+
+`allocate_sessions` freq-5/6 TAPER rows shift one recovery slot to conditioning
+(totals unchanged). The late-camp selector audit golden (`tests/golden_snapshots/
+late_camp_selector_audit/`) was regenerated to reflect the extra taper conditioning
+session; `control_d28` stays stable. Note: the extra alactic taper conditioning
+surfaces an `ambiguous_tag_gaps` entry for "Low Box Jump (Fast Reset)" in the audit —
+a bank-tagging data-quality gap (not a safety issue) worth an explicit late-safe-intent
+tag as a future follow-up.
+
+- Tests: `tests/test_training_context.py::TestTaperAllocationReallocatedTowardConditioning`.

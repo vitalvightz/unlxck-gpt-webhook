@@ -1,6 +1,8 @@
 from dataclasses import fields
 
-from fightcamp.training_context import TrainingContext
+import pytest
+
+from fightcamp.training_context import TrainingContext, allocate_sessions
 
 
 def test_training_context_has_single_declared_support_day_fields():
@@ -10,3 +12,28 @@ def test_training_context_has_single_declared_support_day_fields():
     assert field_names.count("hard_sparring_days") == 1
     assert field_names.count("support_work_days") == 1
     assert field_names.count("technical_skill_days") == 1
+
+
+class TestTaperAllocationReallocatedTowardConditioning:
+    """Taper used to be recovery-heavy; one recovery slot is now conditioning."""
+
+    def test_freq5_taper_split(self):
+        assert allocate_sessions(5, "TAPER") == {"strength": 1, "conditioning": 2, "recovery": 2}
+
+    def test_freq6_taper_split(self):
+        assert allocate_sessions(6, "TAPER") == {"strength": 1, "conditioning": 2, "recovery": 3}
+
+    @pytest.mark.parametrize("freq", [1, 2, 3, 4, 5, 6])
+    def test_taper_totals_still_sum_to_frequency(self, freq):
+        assert sum(allocate_sessions(freq, "TAPER").values()) == freq
+
+    @pytest.mark.parametrize("freq", [1, 2, 3, 4])
+    def test_low_frequency_taper_unchanged(self, freq):
+        # Only freq-5 and freq-6 were rebalanced.
+        expected = {
+            1: {"strength": 0, "conditioning": 1, "recovery": 0},
+            2: {"strength": 0, "conditioning": 1, "recovery": 1},
+            3: {"strength": 1, "conditioning": 1, "recovery": 1},
+            4: {"strength": 1, "conditioning": 1, "recovery": 2},
+        }[freq]
+        assert allocate_sessions(freq, "TAPER") == expected

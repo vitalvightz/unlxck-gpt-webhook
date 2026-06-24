@@ -45,13 +45,13 @@ def _low_risk_model(**overrides):
     return base
 
 
-def _boxer(fatigue, *, cut_pct=0.0, injuries=None, days=20):
+def _boxer(fatigue, *, cut_pct=0.0, injuries=None, days=20, hard_sparring_days=None):
     return {
         "sport": "boxing",
         "status": "professional",
         "rounds_format": "3x3",
         "training_days": ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday"],
-        "hard_sparring_days": [],
+        "hard_sparring_days": hard_sparring_days or [],
         "fatigue": fatigue,
         "weight_cut_pct": cut_pct,
         "weight_cut_risk": cut_pct > 0,
@@ -119,9 +119,24 @@ class TestBindingActiveRoleCap:
         assert _bridge_active_role_cap(20, _low_risk_model(**overrides)) == 2
 
     @pytest.mark.parametrize("days", [17, 16, 15, 14])
-    def test_outside_window_unchanged(self, days):
-        # D-17..D-14 keep the conservative 2 even for a low-risk athlete.
-        assert _bridge_active_role_cap(days, _low_risk_model(days_until_fight=days)) == 2
+    def test_d17_to_d14_no_declared_sparring_stays_two(self, days):
+        # No declared hard sparring => no freed slot to reallocate.
+        model = _low_risk_model(days_until_fight=days, hard_sparring_days=[])
+        assert _bridge_active_role_cap(days, model) == 2
+
+    @pytest.mark.parametrize("days", [17, 16, 15, 14])
+    def test_d17_to_d14_with_declared_sparring_reallocates_freed_slot(self, days):
+        # Hard sparring converts to technical from D-17; the freed coach-owned slot
+        # is reallocated to one low-risk app role for a low-risk athlete.
+        model = _low_risk_model(days_until_fight=days, hard_sparring_days=["monday", "thursday"])
+        assert _bridge_active_role_cap(days, model) == 3
+
+    @pytest.mark.parametrize("days", [17, 15, 14])
+    def test_d17_to_d14_safety_signal_blocks_reallocation(self, days):
+        model = _low_risk_model(
+            days_until_fight=days, hard_sparring_days=["monday"], fatigue="moderate"
+        )
+        assert _bridge_active_role_cap(days, model) == 2
 
     def test_late_taper_budget_unchanged(self):
         # D-8..D-13 keeps its own (higher) flat budget; the rule only touches 18..21.
@@ -187,3 +202,17 @@ class TestEndToEndAllocation:
     def test_app_owned_active_role_count(self, athlete, expected):
         roles = _late_fight_allocation_plan(20, athlete).get("session_roles", [])
         assert _late_fight_active_role_count(roles) == expected
+
+    @pytest.mark.parametrize("days", [16, 15])
+    def test_d17_to_d14_declared_sparring_gets_three_app_sessions(self, days):
+        # Once hard sparring converts to technical (D-17 on), the freed slot is
+        # reallocated to a 3rd low-risk app session for a low-risk athlete.
+        athlete = _boxer("low", days=days, hard_sparring_days=["tuesday", "thursday"])
+        roles = _late_fight_allocation_plan(days, athlete).get("session_roles", [])
+        assert _late_fight_active_role_count(roles) == 3
+
+    @pytest.mark.parametrize("days", [16, 15])
+    def test_d17_to_d14_no_declared_sparring_stays_two(self, days):
+        athlete = _boxer("low", days=days, hard_sparring_days=[])
+        roles = _late_fight_allocation_plan(days, athlete).get("session_roles", [])
+        assert _late_fight_active_role_count(roles) == 2
