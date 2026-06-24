@@ -6,6 +6,7 @@ import Link from "next/link";
 import { RequireAuth } from "@/components/auth-guard";
 import { useAppSession } from "@/components/auth-provider";
 import { EmptyState } from "@/components/empty-state";
+import { formatAppDate, formatAppDateTime } from "@/lib/date-format";
 import {
   approveAndResumeGenerationFromJob,
   backfillStructuredPlans,
@@ -48,7 +49,7 @@ function formatDateTime(value: string | null | undefined): string {
     return "Not recorded";
   }
   const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? "Not recorded" : date.toLocaleString();
+  return Number.isNaN(date.getTime()) ? "Not recorded" : formatAppDateTime(value);
 }
 
 function normalizeForSearch(...parts: unknown[]): string {
@@ -641,7 +642,7 @@ export default function AdminPage() {
                   <div className="admin-job-summary">
                     <ProfileRefreshWarningBanner job={job} />
                     {job.is_stale ? <p className="error-text">{job.stale_reason || "This generation has stopped heartbeating."}</p> : null}
-                    <p className="muted">Fight date: {job.request_payload_summary?.fight_date || "Not set"}</p>
+                    <p className="muted">Fight date: {job.request_payload_summary?.fight_date ? formatAppDate(job.request_payload_summary.fight_date) : "Not set"}</p>
                     <p className="muted">Format: {job.request_payload_summary?.fight_format || "Not set"}</p>
                     <p className="muted">Goals: {joinOrDash(job.request_payload_summary?.goals)}</p>
                   </div>
@@ -713,7 +714,7 @@ export default function AdminPage() {
                   </div>
                   <div className="admin-job-summary">
                     <ProfileRefreshWarningBanner job={job} />
-                    <p className="muted">Fight date: {job.request_payload_summary.fight_date || "Not set"}</p>
+                    <p className="muted">Fight date: {job.request_payload_summary.fight_date ? formatAppDate(job.request_payload_summary.fight_date) : "Not set"}</p>
                     <p className="muted">Goals: {joinOrDash(job.request_payload_summary.goals)}</p>
                     <p className="muted">Injuries: {joinOrDash(job.request_payload_summary.injuries)}</p>
                   </div>
