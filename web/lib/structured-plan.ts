@@ -545,7 +545,7 @@ export function getActiveNotesExcludingRedFlags(
     if (noteNorm.length < 12) {
       return true;
     }
-    return !flagTexts.some((flag) => flag.includes(noteNorm) || noteNorm.includes(flag));
+    return !flagTexts.some((flag) => flag === noteNorm);
   });
 }
 
