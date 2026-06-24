@@ -37,6 +37,11 @@ test("falls back to the condition alone when no location remains", () => {
   assert.equal(normalizeInjuryLabel("it is bruised"), "Bruise");
 });
 
+test("preserves numbers and acronyms in the location", () => {
+  assert.equal(normalizeInjuryLabel("L5-S1 stiffness"), "L5-S1 stiffness");
+  assert.equal(normalizeInjuryLabel("ACL grade 2 tear"), "ACL grade 2 tear");
+});
+
 test("strips duplicated condition debris from messy parser strings", () => {
   assert.equal(
     normalizeInjuryLabel("Left shoulder contusion (bruise, left)"),
