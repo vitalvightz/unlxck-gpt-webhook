@@ -1083,11 +1083,13 @@ export function TodayScreen() {
         />
       ) : null}
 
-      <InjuryCheckinCard
-        openInjuries={state.open_injuries ?? []}
-        token={token ?? ""}
-        onRefresh={loadToday}
-      />
+      {token ? (
+        <InjuryCheckinCard
+          openInjuries={state.open_injuries ?? []}
+          token={token}
+          onRefresh={loadToday}
+        />
+      ) : null}
 
       <SessionCard
         state={state}
