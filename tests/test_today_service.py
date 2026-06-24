@@ -758,6 +758,41 @@ class TestCommandView:
         assert view.open_injuries == []
         assert store.injury_flags.get(ATHLETE, []) == []
 
+    def test_cleared_intake_seeded_injury_stays_cleared(self):
+        """Clearing an intake-seeded injury must not re-seed it on the next load."""
+        store = _store_with_plan()
+        _attach_intake(
+            store,
+            {
+                "guided_injuries": [
+                    {
+                        "area": "Left shoulder",
+                        "zone": "l_shoulder",
+                        "severity": "high",
+                        "trend": "same",
+                    }
+                ]
+            },
+        )
+
+        # First load seeds the open flag from intake.
+        view = build_today_command_view(store, athlete_id=ATHLETE, athlete_timezone="")
+        assert len(view.open_injuries) == 1
+        flag_id = view.open_injuries[0]["id"]
+
+        # Athlete presses "Cleared" on the daily check-in.
+        result = submit_today_injury_checkin(
+            store,
+            athlete_id=ATHLETE,
+            payload={"injuries": [{"flag_id": flag_id, "status": "resolved"}]},
+        )
+        assert result["open_injuries"] == []
+
+        # The injury must not come back the next time Today loads, even though the
+        # intake payload still lists it.
+        view_after = build_today_command_view(store, athlete_id=ATHLETE, athlete_timezone="")
+        assert view_after.open_injuries == []
+
     @pytest.mark.parametrize(
         ("guided_severity", "flag_severity"),
         [("low", "mild"), ("moderate", "moderate"), ("high", "severe"), ("", "moderate")],

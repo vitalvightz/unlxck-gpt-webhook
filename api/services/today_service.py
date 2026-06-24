@@ -901,13 +901,21 @@ def _ensure_intake_injury_flags(
     if not callable(create_flag):
         return open_flags
 
+    # Dedupe against resolved flags too, not just open/monitoring ones. When an
+    # athlete clears an intake-seeded injury its flag moves to ``resolved``; if we
+    # only looked at the still-open set the next Today load would re-create the
+    # flag from the unchanged intake payload and the cleared injury would
+    # reappear. Including ``resolved`` keeps a cleared injury cleared.
     dedupe_flags = list(open_flags)
     lister = getattr(store, "list_injury_flags", None)
     if callable(lister):
         try:
             dedupe_flags = [
                 dict(flag)
-                for flag in (lister(athlete_id, statuses=("open", "monitoring"), limit=500) or [])
+                for flag in (
+                    lister(athlete_id, statuses=("open", "monitoring", "resolved"), limit=500)
+                    or []
+                )
             ]
         except Exception:
             dedupe_flags = list(open_flags)
