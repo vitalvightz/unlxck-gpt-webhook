@@ -913,7 +913,12 @@ def _ensure_intake_injury_flags(
         candidate_keys = _injury_dedupe_keys(candidate)
         if not candidate_keys or candidate_keys & seen_keys:
             continue
-        created = dict(create_flag(athlete_id, candidate))
+        try:
+            created = dict(create_flag(athlete_id, candidate))
+        except Exception:
+            # Today should still load if the best-effort intake bootstrap write
+            # hits a transient store/schema issue.
+            continue
         seeded.insert(0, created)
         seen_keys.update(candidate_keys)
     return seeded

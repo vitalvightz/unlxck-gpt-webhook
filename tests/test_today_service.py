@@ -688,6 +688,32 @@ class TestCommandView:
 
         assert len(store.injury_flags[ATHLETE]) == 1
 
+    def test_intake_bootstrap_write_failure_does_not_break_today(self):
+        class FailingBootstrapStore(FakeStore):
+            def create_injury_flag(self, athlete_id: str, fields: dict) -> dict:
+                raise RuntimeError("temporary write failure")
+
+        store = FailingBootstrapStore()
+        store.plans[PLAN] = _store_with_plan().plans[PLAN]
+        _attach_intake(
+            store,
+            {
+                "guided_injuries": [
+                    {
+                        "area": "Left shoulder",
+                        "zone": "l_shoulder",
+                        "severity": "high",
+                        "trend": "same",
+                    }
+                ]
+            },
+        )
+
+        view = build_today_command_view(store, athlete_id=ATHLETE, athlete_timezone="")
+
+        assert view.active_plan.get("id") == PLAN
+        assert view.open_injuries == []
+
     def test_cleared_guided_intake_injury_is_not_seeded(self):
         store = _store_with_plan()
         _attach_intake(
