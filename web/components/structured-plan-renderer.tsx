@@ -488,7 +488,43 @@ export function CampDayCard({
   );
 }
 
-export function PlanHeader({ plan }: { plan: StructuredPlan }) {
+const MONTH_ABBR = [
+  "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+];
+
+/**
+ * Format an ISO date/timestamp's date portion as "11 Jun 2026", or null.
+ * Parses the YYYY-MM-DD prefix directly (no Date) so the output is timezone- and
+ * locale-stable — renderToStaticMarkup must produce the same string everywhere.
+ */
+function formatGeneratedDate(value: string | null | undefined): string | null {
+  const iso = cleanText(value)?.slice(0, 10);
+  const match = iso ? /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso) : null;
+  if (!match) {
+    return null;
+  }
+  const [, year, month, day] = match;
+  const monthName = MONTH_ABBR[Number(month) - 1];
+  if (!monthName) {
+    return null;
+  }
+  return `${Number(day)} ${monthName} ${year}`;
+}
+
+export function PlanHeader({
+  plan,
+  createdAt,
+  planStatus,
+}: {
+  plan: StructuredPlan;
+  /** ISO date/timestamp the plan was generated (from the plan record), shown as
+   * "Generated <date>". Omitted in contexts without a record (e.g. previews). */
+  createdAt?: string | null;
+  /** The plan's lifecycle status from the record; the structured
+   * plan_metadata.status wins when present. */
+  planStatus?: string | null;
+}) {
   const meta = plan.plan_metadata;
   const title = cleanText(meta?.title) || "Training Plan";
   const sport = cleanText(meta?.sport);
@@ -498,6 +534,8 @@ export function PlanHeader({ plan }: { plan: StructuredPlan }) {
   const event = plan.event_context;
   const eventType = cleanText(event?.event_type);
   const eventDate = cleanText(event?.fight_date) || cleanText(event?.match_date);
+  const status = cleanText(meta?.status) || cleanText(planStatus);
+  const generatedOn = formatGeneratedDate(createdAt);
 
   const tags = [sport, planType ? titleize(planType) : null, eventType ? titleize(eventType) : null]
     .filter((tag): tag is string => Boolean(tag));
@@ -507,8 +545,9 @@ export function PlanHeader({ plan }: { plan: StructuredPlan }) {
       <p className="sp-eyebrow">Camp map</p>
       <h3 className="sp-title">{title}</h3>
       {profile ? <p className="sp-subtitle">{profile}</p> : null}
-      {tags.length > 0 || eventDate ? (
+      {tags.length > 0 || eventDate || status ? (
         <div className="sp-header-tags">
+          {status ? <span className="sp-tag sp-done">{titleize(status)}</span> : null}
           {tags.map((tag, index) => (
             <span key={`${tag}-${index}`} className="sp-tag">
               {tag}
@@ -517,6 +556,7 @@ export function PlanHeader({ plan }: { plan: StructuredPlan }) {
           {eventDate ? <span className="sp-tag sp-accent">{eventDate}</span> : null}
         </div>
       ) : null}
+      {generatedOn ? <p className="sp-header-meta">Generated {generatedOn}</p> : null}
     </header>
   );
 }
@@ -1024,9 +1064,18 @@ export function StructuredPlanRenderer({
   today,
   focusDay,
   currentDayLabel = "Today",
+  createdAt,
+  planStatus,
 }: {
   plan: StructuredPlan;
   today?: Date;
+  /** ISO date/timestamp the plan was generated (plan record `created_at`), shown
+   * in the command header as "Generated <date>". Optional — omitted in contexts
+   * with no record. */
+  createdAt?: string | null;
+  /** The plan's lifecycle status from the record, shown as a header pill (the
+   * structured plan_metadata.status wins when present). */
+  planStatus?: string | null;
   /** Optional advance target: the next scheduled session's day, passed once
    * today is already logged. It moves ONLY the opened week + day highlight, never
    * the truthful "current week" marker or the camp-status countdown (those stay
@@ -1087,7 +1136,7 @@ export function StructuredPlanRenderer({
 
   return (
     <div className="sp-root cm-root">
-      <PlanHeader plan={plan} />
+      <PlanHeader plan={plan} createdAt={createdAt} planStatus={planStatus} />
       <CampStatusLine plan={plan} progress={calendarProgress} phaseWeek={phaseWeek} />
       <ReadinessStrip plan={plan} currentDay={currentDay} focusWeek={phaseWeek} />
       <ActiveNotesCard plan={plan} />

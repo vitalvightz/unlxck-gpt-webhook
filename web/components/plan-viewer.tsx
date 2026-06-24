@@ -2703,6 +2703,8 @@ export function PlanViewer({
                   plan={plan.outputs.structured_plan}
                   focusDay={nextSessionFocusDate}
                   currentDayLabel={nextSessionFocusDate ? "Next session" : "Today"}
+                  createdAt={plan.created_at}
+                  planStatus={plan.status}
                 />
               ) : (
                 <>

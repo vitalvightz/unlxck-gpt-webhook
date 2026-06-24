@@ -13904,6 +13904,12 @@ html[data-theme="light"] .loading-operational-item {
   color: var(--text-secondary);
   font-size: 0.9rem;
 }
+.sp-header-meta {
+  margin: 10px 0 0;
+  color: var(--text-muted);
+  font-size: 0.76rem;
+  font-family: var(--font-mono);
+}
 .sp-header-tags,
 .sp-block-stats,
 .sp-session-meta {

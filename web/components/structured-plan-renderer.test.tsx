@@ -411,6 +411,49 @@ test("uses an athlete-readable camp-map command header, not internal wording", (
   assert.equal(html.includes("Structured plan"), false);
 });
 
+test("command header shows plan status and a formatted generation date", () => {
+  const plan = {
+    schema_version: "1.0",
+    plan_metadata: {
+      title: "Fight Camp",
+      sport: "boxing",
+      plan_type: "fight_camp",
+      status: "active",
+    },
+    weeks: [{ week_id: "wk-1", week_index: 1, phase_label: "GPP", days: [] }],
+  } satisfies StructuredPlan;
+
+  const html = renderToStaticMarkup(
+    <StructuredPlanRenderer
+      plan={plan}
+      createdAt="2026-06-11T09:30:00Z"
+      planStatus="held_for_review"
+    />,
+  );
+
+  // The structured plan_metadata.status wins over the record status prop.
+  assert.equal(html.includes("Active"), true);
+  assert.equal(html.includes("Awaiting review"), false);
+  // The generation date is formatted deterministically (timezone-stable, no
+  // Date parsing) so SSR output is identical everywhere.
+  assert.equal(html.includes("Generated 11 Jun 2026"), true);
+});
+
+test("command header falls back to the record status and omits the date when absent", () => {
+  const plan = {
+    schema_version: "1.0",
+    plan_metadata: { title: "Fight Camp", sport: "boxing", plan_type: "fight_camp" },
+    weeks: [{ week_id: "wk-1", week_index: 1, phase_label: "GPP", days: [] }],
+  } satisfies StructuredPlan;
+
+  const html = renderToStaticMarkup(<StructuredPlanRenderer plan={plan} planStatus="ready" />);
+
+  // No plan_metadata.status, so the record status prop is used.
+  assert.equal(html.includes("Ready"), true);
+  // No createdAt prop, so the "Generated …" line is omitted entirely.
+  assert.equal(html.includes("Generated"), false);
+});
+
 test("does not leak raw enum tokens for day type or session type", () => {
   const plan = {
     schema_version: "1.0",
