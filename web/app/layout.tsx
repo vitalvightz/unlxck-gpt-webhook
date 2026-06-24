@@ -39,12 +39,14 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
             <GenerationStatusShell>
               <div className="app-shell">
                 <AppNav />
-                <main className="app-main">
-                  <div className="page">{children}</div>
-                </main>
-                <footer className="app-safety-footer" role="contentinfo">
-                  {SAFETY_DISCLAIMER_SHORT}
-                </footer>
+                <div className="app-content">
+                  <main className="app-main">
+                    <div className="page">{children}</div>
+                  </main>
+                  <footer className="app-safety-footer" role="contentinfo">
+                    {SAFETY_DISCLAIMER_SHORT}
+                  </footer>
+                </div>
               </div>
             </GenerationStatusShell>
           </ToastProvider>

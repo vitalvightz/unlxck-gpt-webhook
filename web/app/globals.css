@@ -674,9 +674,15 @@ select:focus-visible {
   border-radius: 8px;
 }
 
-.app-main {
+.app-content {
   flex: 1;
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.app-main {
+  flex: 1;
   padding: 28px 28px 40px;
 }
 
@@ -12652,9 +12658,9 @@ html[data-app-surface="workspace"][data-theme="dark"] .desktop-nav-toggle {
     bottom: var(--mobile-tab-bar-clearance);
   }
 
-  /* Add bottom padding to main content so the tab bar doesn't cover it */
-  html[data-mobile-tab-bar="active"] .app-main,
-  html[data-mobile-tab-bar="stacked"] .app-main {
+  /* Add bottom padding to app content so the tab bar doesn't cover the footer */
+  html[data-mobile-tab-bar="active"] .app-content,
+  html[data-mobile-tab-bar="stacked"] .app-content {
     padding-bottom: calc(36px + var(--mobile-tab-bar-clearance));
   }
 }
