@@ -333,7 +333,7 @@ def _conditioning_priority_without_strength_power(training_context: TrainingCont
     weaknesses = _normalize_limiter_tokens(clean_list(training_context.weaknesses))
     selected = goals | weaknesses
     conditioning_tokens = {"conditioning", "conditioning_endurance", "endurance", "gas_tank", "work_capacity", "aerobic"}
-    strength_power_tokens = {"strength", "power", "explosive", "explosive_power", "speed", "strength_power", "s&c", "s_c"}
+    strength_power_tokens = {"strength", "power", "explosive", "explosive_power", "speed", "strength_power", "s_c"}
     return bool(selected & conditioning_tokens) and not bool(selected & strength_power_tokens)
 
 
