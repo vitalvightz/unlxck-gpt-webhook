@@ -612,13 +612,17 @@ export function renamePlan(token: string, planId: string, planName: string): Pro
 
 // Archives the plan. The server-side DELETE route is archive-only; the plan
 // stays recoverable in the athlete's archived list.
-export async function archivePlan(token: string, planId: string): Promise<void> {
+export async function deletePlan(token: string, planId: string): Promise<void> {
   return withTransientRetries(() =>
     requestVoid(`/api/plans/${encodeURIComponent(planId)}`, {
       method: "DELETE",
       token,
     }),
   );
+}
+
+export async function archivePlan(token: string, planId: string): Promise<void> {
+  return deletePlan(token, planId);
 }
 
 // Admin-only hard delete. Non-archived plans require the exact plan name as
