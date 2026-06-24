@@ -309,7 +309,13 @@ def submit_today_injury_checkin(
 
     open_flags = list(store.list_injury_flags(athlete_id, statuses=("open", "monitoring")) or [])
     open_flag_ids = [str(flag.get("id")) for flag in open_flags if flag.get("id")]
-    plan = reconcile_injury_checkin(declared=declared, open_flag_ids=open_flag_ids)
+    try:
+        plan = reconcile_injury_checkin(declared=declared, open_flag_ids=open_flag_ids)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"invalid injury check-in: {str(exc)}",
+        ) from exc
 
     now_iso = (now or datetime.now(timezone.utc)).astimezone(timezone.utc).isoformat()
     active_plan_row = resolve_active_plan(store, athlete_id).plan

@@ -134,3 +134,10 @@ def test_malformed_current_day_is_safe():
 def test_out_of_range_and_bool_pain_values_ignored():
     assert _derive(completions=[_completion(TODAY, pain_after=99)]) == []
     assert _derive(completions=[_completion(TODAY, pain_after=True)]) == []
+
+
+def test_float_string_pain_values_are_coerced():
+    risks = _derive(completions=[_completion(TODAY, pain_after=" 7.5 ")])
+    assert len(risks) == 1
+    assert risks[0].category == "high_pain"
+    assert "7/10" in risks[0].text

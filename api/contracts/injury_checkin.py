@@ -111,6 +111,8 @@ def reconcile_injury_checkin(
         # nothing to track. Otherwise open (or monitor) a fresh flag.
         if flag_status == "resolved":
             continue
+        if not (injury.body_area.strip() or injury.description.strip()):
+            raise ValueError("a new injury needs a body_area or description")
         description = injury.description.strip() or injury.body_area.strip()
         creates.append(
             {

@@ -56,11 +56,9 @@ def _coerce_pain(value: Any) -> int | None:
     """Read a 0-10 ``pain_after`` integer, ignoring junk/out-of-range values."""
     if isinstance(value, bool):  # bool is an int subclass — never a pain score
         return None
-    if isinstance(value, (int, float)):
-        score = int(value)
-    elif isinstance(value, str) and value.strip().lstrip("-").isdigit():
-        score = int(value.strip())
-    else:
+    try:
+        score = int(float(value))
+    except (TypeError, ValueError, OverflowError):
         return None
     return score if 0 <= score <= 10 else None
 

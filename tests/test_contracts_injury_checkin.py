@@ -69,6 +69,14 @@ def test_unknown_flag_id_is_treated_as_new_not_a_foreign_update():
     assert plan.creates[0]["body_area"] == "wrist"
 
 
+def test_unknown_flag_id_without_identity_is_rejected_before_create():
+    with pytest.raises(ValueError, match="body_area or description"):
+        reconcile_injury_checkin(
+            declared=[_declare(flag_id="ghost", status="ongoing")],
+            open_flag_ids=["f1"],
+        )
+
+
 def test_new_injury_reported_already_resolved_is_a_noop():
     plan = reconcile_injury_checkin(
         declared=[_declare(body_area="ankle", status="resolved")],

@@ -248,6 +248,18 @@ class TestInjuryCheckin:
         )
         assert resp.status_code == 422
 
+    def test_stale_flag_id_without_identity_is_rejected(self):
+        client, store, _ = _build_client()
+        _seed_plan(store)
+        resp = client.post(
+            "/api/today/injury-checkin",
+            headers=ATHLETE,
+            json={"injuries": [{"flag_id": "ghost", "status": "ongoing"}]},
+        )
+        assert resp.status_code == 422
+        assert "body_area or description" in resp.json()["detail"]
+        assert store.injury_flags.get("athlete-1", []) == []
+
 
 class TestLanding:
     def test_no_plan_routes_to_intake(self):

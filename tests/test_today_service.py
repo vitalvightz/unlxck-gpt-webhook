@@ -682,6 +682,19 @@ class TestCommandView:
         assert len(view.open_injuries) == 1
         assert "reminder" in [risk.category for risk in view.risk_watch]
 
+    def test_injury_checkin_rejects_stale_flag_id_without_identity(self):
+        store = _store_with_plan()
+        with pytest.raises(HTTPException) as exc_info:
+            submit_today_injury_checkin(
+                store,
+                athlete_id=ATHLETE,
+                payload={"injuries": [{"flag_id": "ghost", "status": "ongoing"}]},
+            )
+
+        assert exc_info.value.status_code == 422
+        assert "body_area or description" in str(exc_info.value.detail)
+        assert store.injury_flags.get(ATHLETE, []) == []
+
     def test_injury_checkin_resolves_an_open_flag(self):
         store = _store_with_plan()
         opened = submit_today_injury_checkin(
