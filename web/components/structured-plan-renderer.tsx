@@ -469,8 +469,7 @@ export function CampDayCard({
   const warning = cleanText(card?.primary_warning);
   const nutrition = cleanText(card?.nutrition_summary);
   const weightCut = cleanText(card?.weight_cut_warning);
-  const hasMindset = getMindsetLines(card?.mindset_anchor).length > 0;
-  const hasDayContext = Boolean(warning || nutrition || weightCut || hasMindset);
+  const hasDayContext = Boolean(warning || nutrition || weightCut);
   const completion = dayCompletion(day);
   const sessionCount = sessions.length;
 
@@ -495,6 +494,7 @@ export function CampDayCard({
           {countdown ? <span className="sp-countdown sp-accent">{countdown}</span> : null}
           <span className="sp-week-title">{weekday || date || "Day"}</span>
         </span>
+
         <span className="cm-day-meta">
           {isCurrent ? <span className="sp-tag sp-accent">{currentLabel}</span> : null}
           {dayType ? <span className="sp-tag">{titleize(dayType)}</span> : null}
@@ -513,7 +513,6 @@ export function CampDayCard({
             {warning ? <p className="sp-warning">{warning}</p> : null}
             {nutrition ? <p className="sp-today-note">{nutrition}</p> : null}
             {weightCut ? <p className="sp-warning">{weightCut}</p> : null}
-            <MindsetAnchorCard anchor={card?.mindset_anchor} />
           </div>
         ) : null}
 
@@ -1008,9 +1007,9 @@ function WeekStrip({
   );
 }
 
-/** The selected week's countdown/dates, load proxy and completion. The week goal
- *  and phase are intentionally not repeated here: the goal is already in the
- *  heading (weekLabel) and the phase is shown in the status chips and week pill. */
+/** The selected week's countdown/dates, load proxy and completion.
+ *  The week goal is already shown in the heading via weekLabel, and the phase is
+ *  already visible in the week pill, so this overview avoids repeating it. */
 function WeekOverview({ week }: { week: StructuredWeek }) {
   const load = weekLoadProxy(week);
   const completion = weekCompletion(week);
@@ -1051,7 +1050,7 @@ function WeekOverview({ week }: { week: StructuredWeek }) {
   return (
     <section className="sp-card cm-week-overview">
       <div className="cm-week-overview-head">
-        <p className="sp-eyebrow">This week</p>
+        <p className="sp-eyebrow">Week overview</p>
         <h4 className="sp-redflags-title">{weekLabel(week)}</h4>
       </div>
 
@@ -1077,7 +1076,9 @@ export function StructuredPlanRenderer({
 }: {
   plan: StructuredPlan;
   today?: Date;
+  /** Accepted for compatibility with callers, but not rendered on this plan view. */
   createdAt?: string | null;
+  /** Accepted for compatibility with callers, but not rendered on this plan view. */
   planStatus?: string | null;
   /** Optional advance target: the next scheduled session's day, passed once
    * today is already logged. It moves ONLY the opened week + day highlight, never
@@ -1088,39 +1089,36 @@ export function StructuredPlanRenderer({
   currentDayLabel?: string;
 }) {
   const weeks = getWeeks(plan);
+
   // Resolve "today" through the shared 04:00 training-day rollover so Plan Detail
-  // and the Today tab can never disagree on the current day. The hook is null
-  // until the client mounts (SSR-safe: no hydration mismatch) and advances
-  // across the rollover on long-lived tabs. Tests pass an explicit `today`.
+  // and the Today tab can never disagree on the current day.
   const mountedDay = useTrainingDay();
-  // The real calendar training day is the authority for the truthful "current
-  // week" marker and the camp-status countdown. `focusDay` (next session, once
-  // today is logged) only advances the opened week + day highlight below, so the
-  // view never lies about which week is actually current. With no `focusDay` the
-  // two progressions collapse to the same value (normal calendar behaviour).
+
+  // The real calendar training day owns the truthful current week marker.
+  // `focusDay` only advances the opened week/day highlight.
   const calendarProgress = resolvePlanProgress(plan, today ?? mountedDay);
   const resolvedFocusDay = focusDay
     ? resolveNextPlanFocusDay(plan, today ?? mountedDay, focusDay)
     : undefined;
-  const focusProgress = resolvedFocusDay ? resolvePlanProgress(plan, resolvedFocusDay) : calendarProgress;
-  // The selected week is user-controllable; default to the focused week (current
-  // week, or the next session's week when advanced; first week when today falls
-  // outside the camp). `selectedPos` stays null until the user picks a week so
-  // that, once the client-mounted focus week resolves, the view follows it
-  // instead of being stuck on the first-render default.
+  const focusProgress = resolvedFocusDay
+    ? resolvePlanProgress(plan, resolvedFocusDay)
+    : calendarProgress;
+
   const [selectedPos, setSelectedPos] = useState<number | null>(null);
   const userSelectedWeek = useRef(false);
+
   useEffect(() => {
     if (!userSelectedWeek.current && focusProgress.currentWeekPos != null) {
       setSelectedPos(focusProgress.currentWeekPos);
     }
   }, [focusProgress.currentWeekPos]);
+
   const handleSelectWeek = (pos: number) => {
     userSelectedWeek.current = true;
     setSelectedPos(pos);
   };
+
   const effectivePos = selectedPos ?? focusProgress.currentWeekPos ?? 0;
-  // Clamp against weeks length so a stale index can never index past the array.
   const safePos = effectivePos >= 0 && effectivePos < weeks.length ? effectivePos : 0;
   const selectedWeek = weeks[safePos];
 
@@ -1132,9 +1130,6 @@ export function StructuredPlanRenderer({
 
   return (
     <div className="sp-root cm-root">
-      <ActiveNotesCard plan={plan} />
-      <RedFlagsCard plan={plan} />
-
       {weeks.length > 0 ? (
         <>
           <WeekStrip
@@ -1143,13 +1138,16 @@ export function StructuredPlanRenderer({
             currentPos={calendarProgress.currentWeekPos}
             onSelect={handleSelectWeek}
           />
+
           {selectedWeek ? <WeekOverview week={selectedWeek} /> : null}
+
           <div className="sp-weeks cm-days">
             {dayList.length > 0 ? (
               dayList.map((day, index) => {
                 const isCurrent =
                   focusProgress.currentDayDate != null &&
                   cleanText(day.date)?.slice(0, 10) === focusProgress.currentDayDate;
+
                 return (
                   <CampDayCard
                     key={cleanText(day.date) || `day-${index}`}
@@ -1167,14 +1165,19 @@ export function StructuredPlanRenderer({
         </>
       ) : null}
 
+      <ActiveNotesCard plan={plan} />
+      <RedFlagsCard plan={plan} />
+
       {hasRecoverySupport || hasNutritionSupport ? (
         <section className="sp-card cm-support" aria-label="Support">
           <p className="sp-eyebrow">Support</p>
+
           {hasRecoverySupport ? (
             <CollapsibleSection title="Recovery" detailLabel="recovery">
               <RecoveryCard plan={plan} />
             </CollapsibleSection>
           ) : null}
+
           {hasNutritionSupport ? (
             <CollapsibleSection title="Nutrition" detailLabel="nutrition">
               <NutritionCard plan={plan} />
