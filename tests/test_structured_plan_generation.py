@@ -567,6 +567,34 @@ def test_day_type_plyo_without_numbers_reads_high_but_light_plyo_reads_low():
     assert _normalize_day(light)["day_type"] == "low"
 
 
+def test_day_type_empty_sparring_reads_high_not_rest():
+    day = _day("moderate", [_session("sparring", [])])
+    assert _normalize_day(day)["day_type"] == "high"
+
+
+def test_recovery_with_recovery_blocks_stays_recovery():
+    day = _day("moderate", [_session("recovery", [
+        {"block_type": "cooldown_recovery", "intensity": "low"}
+    ])])
+    assert _normalize_day(day)["day_type"] == "recovery"
+
+
+def test_rpe_range_7_8_reads_high():
+    day = _day("moderate", [_session("conditioning", [
+        {"block_type": "conditioning", "effort": {"method": "RPE", "value": "7-8"}}
+    ])])
+    assert _normalize_day(day)["day_type"] == "high"
+
+
+def test_day_type_explosive_primer_is_not_auto_high():
+    # "explosive" sharp/low-volume primer work at RPE 4 is light, not a hard day.
+    day = _day("moderate", [_session("primer", [
+        {"block_type": "plyometric_power", "intensity": "explosive",
+         "effort": {"method": "RPE", "value": 4}}
+    ])])
+    assert _normalize_day(day)["day_type"] == "low"
+
+
 def test_normalize_red_flag_rules_get_required_fields():
     plan = normalize_structured_plan_candidate(
         {"red_flag_rules": [{"display_text": "Stop if dizzy"}]}

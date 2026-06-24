@@ -288,8 +288,11 @@ _BLOCK_TYPE_ALIASES = {
 # then an unreadable day falls to "low" rather than silently "moderate".
 
 # Block intensity tags that read as hard / easy regardless of the numbers.
+# "explosive" is deliberately excluded: taper/primer work is often "explosive"
+# but low-volume, high-intent and light, so it must not auto-flag a hard day —
+# the block's RPE/load decides.
 _HIGH_INTENSITY_WORDS = frozenset(
-    {"max", "maximal", "near_max", "very_high", "high", "explosive"}
+    {"max", "maximal", "near_max", "very_high", "high"}
 )
 _LOW_INTENSITY_WORDS = frozenset(
     {"none", "very_low", "low", "easy", "light", "primer", "recovery"}
@@ -321,6 +324,9 @@ _DURATION_UNIT_ALIASES = {
 
 _COUNTDOWN_RE = re.compile(r"^[Dd]\s*([+-]?\d+)$")
 _MEASURED_RE = re.compile(r"^\s*([0-9]+(?:\.[0-9]+)?)\s*([a-zA-Z]+)\s*$")
+# First number or numeric range in a string. group(2) is the upper bound of a
+# range ("7-8" → 8) and is ``None`` for a lone number ("7" → group(1) = 7).
+_NUMBER_RANGE_RE = re.compile(r"(\d+(?:\.\d+)?)(?:\s*[-–—]\s*(\d+(?:\.\d+)?))?")
 # Capture a percentage anywhere in the string plus an optional trailing reference
 # such as "1RM" or "of 1RM" (bank prescriptions read like "3x5 @ 75-85% 1RM").
 # group(2) is optional and may be ``None`` — callers must guard it.
@@ -404,21 +410,22 @@ def _coerce_optional_int(value: Any) -> int | None:
 
 
 def _coerce_float(value: Any) -> float | None:
-    """Best-effort float, pulling the first number out of a string ("RPE 7-8" → 7).
+    """Best-effort float, reading the *upper* bound of the first range in a string.
 
-    Ranges resolve to their lower bound, which keeps the intensity read
-    conservative (a "7-8" block is treated as 7, not 8). Returns ``None`` when no
-    number is present so callers can tell "no signal" from a real zero.
+    "RPE 7-8" → 8, "3-4" → 4, "85% 1RM" → 85. Ranges resolve to their upper bound
+    because an athlete given a 7-8 block may actually work at 8, so the intensity
+    badge should reflect the harder end. Returns ``None`` when no number is
+    present so callers can tell "no signal" from a real zero.
     """
     if isinstance(value, bool):
         return None
     if isinstance(value, (int, float)):
         return float(value)
     if isinstance(value, str):
-        match = re.search(r"\d+(?:\.\d+)?", value)
+        match = _NUMBER_RANGE_RE.search(value)
         if match:
             try:
-                return float(match.group())
+                return float(match.group(2) or match.group(1))
             except ValueError:
                 return None
     return None
@@ -695,24 +702,25 @@ def _classify_day_type(day: dict[str, Any], fallback: str) -> str:
     # travel / reintegration are model-only states content cannot contradict.
     if fallback in {"travel", "reintegration"}:
         return fallback
+    # A purely recovery day stays "recovery" even when its mobility/breathing/
+    # cooldown work is broken into blocks — it is categorical, not an intensity.
+    if session_types and session_types <= {"recovery"}:
+        return "recovery"
 
-    has_blocks = any(_as_list(s.get("blocks")) for s in sessions)
-    if not sessions or not has_blocks:
-        # No real work: recovery-only days read "recovery", otherwise "rest".
-        if session_types & {"recovery", "rehab"}:
-            return "recovery"
-        if fallback in {"rest", "recovery"}:
-            return fallback
-        return "rest"
-
-    # The day is as hard as its hardest real work block.
+    # The day is as hard as its hardest session. _session_intensity reads each
+    # session by its hardest block and, for a session with no readable block,
+    # falls back to its type (e.g. an empty coach-led sparring day is still
+    # "high", never "rest").
     levels = [lvl for lvl in (_session_intensity(s) for s in sessions) if lvl]
     if levels:
         return max(levels, key=_INTENSITY_RANK.__getitem__)
 
-    # Work scheduled but no readable intensity: keep a valid model intensity
-    # guess, otherwise default low (never silently "moderate").
-    if fallback in {"high", "moderate", "low", "recovery"}:
+    # No sessions / no readable signal at all: an empty day is "rest", otherwise
+    # keep a valid model intensity guess, else default low (never silently
+    # "moderate").
+    if not sessions:
+        return fallback if fallback in {"rest", "recovery"} else "rest"
+    if fallback in {"high", "moderate", "low", "recovery", "rest"}:
         return fallback
     return "low"
 
