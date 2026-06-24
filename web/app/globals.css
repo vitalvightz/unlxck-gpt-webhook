@@ -6916,19 +6916,31 @@ button.mobile-step-rail-item {
   }
 
   .onboarding-action-buttons {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    display: flex;
+    flex-wrap: wrap;
     gap: 8px;
     width: 100%;
     margin-left: 0;
   }
 
-  .onboarding-action-primary,
+  /* Secondary actions (Save draft / Back) share a single row and split it
+     evenly. Using flex-basis: 0 means they always spread symmetrically
+     whether one or both are present — no leftover empty column. */
   .onboarding-action-secondary {
-    width: 100%;
+    flex: 1 1 0;
     min-width: 0;
     min-height: 44px;
     padding-inline: 8px;
+  }
+
+  /* The primary CTA takes its own full-width row so longer labels like
+     "Generate plan" never wrap onto two lines. */
+  .onboarding-action-primary {
+    flex: 1 1 100%;
+    min-width: 0;
+    min-height: 44px;
+    padding-inline: 8px;
+    white-space: nowrap;
   }
 
   .field textarea {
