@@ -381,17 +381,18 @@ export type ReadinessStrip = {
   focus: string | null;
   risk: string | null;
   load: string | null;
-  phase: string | null;
 };
 
 /**
- * The plan page's lighter "camp readiness" strip: focus, injury watch, weekly
- * load and phase/camp status.
+ * The plan page's lighter "camp readiness" strip: focus, injury watch and weekly
+ * load.
  *
  * It deliberately does NOT carry the exact "train as planned / modify / pull
  * back" call. This app has a split architecture — Today owns execution and the
  * exact readiness decision; the plan page is the camp map. So the strip surfaces
  * risk *context* without turning the plan page into a second Today screen.
+ * Phase/camp status is intentionally left out here too — the CampStatusLine
+ * already carries it, so the strip stays focused on readiness context only.
  *
  * An explicit `plan.readiness_snapshot` always wins when a field is present; the
  * rest is derived so the strip is useful even before generation emits a
@@ -399,7 +400,6 @@ export type ReadinessStrip = {
  *   - Focus:        snapshot.focus → today_card.headline → first session objective.
  *   - Injury watch: snapshot.injury_watch → today_card.primary_warning → top red flag.
  *   - Weekly load:  snapshot.weekly_load → weekLoadProxy(focusWeek).
- *   - Phase:        the focus week's phase_label (camp/phase status), titleized.
  *
  * Every field is nullable so callers render only the cards with data — no
  * invented HRV/recovery scores.
@@ -426,8 +426,5 @@ export function getReadinessStrip(
 
   const load = cleanText(snapshot?.weekly_load) || weekLoadProxy(focusWeek);
 
-  const phaseLabel = cleanText(focusWeek?.phase_label);
-  const phase = phaseLabel ? formatPlanLabel(phaseLabel) : null;
-
-  return { focus, risk, load, phase };
+  return { focus, risk, load };
 }

@@ -864,14 +864,15 @@ function CampStatusLine({
 }
 
 /**
- * The plan page's lighter camp-readiness strip: focus, injury watch, weekly load
- * and phase/camp status. Values come from getReadinessStrip (explicit
- * plan.readiness_snapshot first, then derived from the current day / week).
+ * The plan page's lighter camp-readiness strip: focus, injury watch and weekly
+ * load. Values come from getReadinessStrip (explicit plan.readiness_snapshot
+ * first, then derived from the current day / week).
  *
  * It intentionally does NOT show the exact "train / modify / pull back" call —
  * that decision belongs to the Today surface (Today = execution, plan page =
  * camp map), so the strip gives risk context without becoming a second Today
- * page. Empty cards are dropped and the whole strip is hidden when nothing
+ * page. Phase/camp status is omitted too: the CampStatusLine above already shows
+ * it. Empty cards are dropped and the whole strip is hidden when nothing
  * resolves, so no fake metrics are ever shown.
  */
 function ReadinessStrip({
@@ -888,7 +889,6 @@ function ReadinessStrip({
   if (strip.focus) cards.push({ label: "Focus", value: strip.focus });
   if (strip.risk) cards.push({ label: "Injury watch", value: strip.risk, risk: true });
   if (strip.load) cards.push({ label: "Weekly load", value: strip.load });
-  if (strip.phase) cards.push({ label: "Phase", value: strip.phase });
   if (cards.length === 0) {
     return null;
   }

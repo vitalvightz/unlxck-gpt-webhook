@@ -159,18 +159,18 @@ test("findDayByISO returns the matching day or null", () => {
   assert.equal(findDayByISO(plan, null), null);
 });
 
-test("getReadinessStrip surfaces focus, risk, load and phase (never the today call)", () => {
+test("getReadinessStrip surfaces focus, risk and load (never the today call)", () => {
   const plan = campPlan();
   const currentDay = findDayByISO(plan, "2026-06-19");
   const strip = getReadinessStrip(plan, currentDay, plan.weeks![0]);
   // Focus falls back to the day's headline; risk to its primary_warning; load to
-  // the week proxy; phase to the week's titleized phase_label. The exact "train /
-  // modify / pull back" call is owned by Today and never surfaces here.
+  // the week proxy. The exact "train / modify / pull back" call is owned by Today
+  // and never surfaces here; phase is left to the CampStatusLine.
   assert.equal(strip.focus, "Speed conversion");
   assert.equal(strip.risk, "Achilles still tender — keep contacts short.");
   assert.equal(strip.load, "High");
-  assert.equal(strip.phase, "Specific prep");
   assert.equal("todayCall" in strip, false);
+  assert.equal("phase" in strip, false);
 });
 
 test("getReadinessStrip prefers an explicit readiness_snapshot over derived values", () => {
@@ -190,18 +190,16 @@ test("getReadinessStrip prefers an explicit readiness_snapshot over derived valu
   assert.equal(strip.focus, "Tendon capacity");
   assert.equal(strip.risk, "Achilles flaring — cap plyo volume.");
   assert.equal(strip.load, "Moderate-high");
-  assert.equal(strip.phase, "Specific prep");
 });
 
 test("getReadinessStrip degrades gracefully with no current day", () => {
   const plan = campPlan();
   // No current day: focus has nothing to derive from, risk falls back to the top
-  // red flag, and load + phase come from the passed week.
+  // red flag, and load comes from the passed week proxy.
   const strip = getReadinessStrip(plan, null, plan.weeks![1]);
   assert.equal(strip.focus, null);
   assert.equal(strip.risk, "Stop if Achilles pain ≥ 6/10.");
   assert.equal(strip.load, "Low");
-  assert.equal(strip.phase, "Fight week taper");
 });
 
 test("resolveTrainingDay applies the 04:00 athlete-local rollover", () => {
