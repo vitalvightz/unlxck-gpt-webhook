@@ -11888,8 +11888,8 @@ html[data-theme="light"] .settings-toggle-row input[type="checkbox"]::after {
 }
 
 html[data-theme="light"] .settings-toggle-row input[type="checkbox"]:checked {
-  border-color: rgba(146, 43, 45, 0.34);
-  background: rgba(146, 43, 45, 0.18);
+  border-color: color-mix(in srgb, var(--brand-red) 34%, transparent);
+  background: color-mix(in srgb, var(--brand-red) 18%, transparent);
 }
 
 html[data-theme="light"] .settings-toggle-row input[type="checkbox"]:checked::after {
