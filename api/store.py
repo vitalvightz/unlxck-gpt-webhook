@@ -449,6 +449,14 @@ class AppStore(Protocol):
         self, athlete_id: str, session_id: str, training_day: str
     ) -> dict[str, Any] | None: ...
 
+    def list_session_completions(
+        self, athlete_id: str, *, limit: int = 30
+    ) -> list[dict[str, Any]]: ...
+
+    def list_today_checkins(
+        self, athlete_id: str, *, limit: int = 14
+    ) -> list[dict[str, Any]]: ...
+
     def create_injury_flag(self, athlete_id: str, fields: dict[str, Any]) -> dict[str, Any]: ...
 
     def list_injury_flags(
@@ -4262,6 +4270,34 @@ class SupabaseAppStore:
             .eq("session_id", session_id)
             .eq("training_day", training_day)
         )
+
+    def list_session_completions(
+        self, athlete_id: str, *, limit: int = 30
+    ) -> list[dict[str, Any]]:
+        """Recent completions (newest training day first) for the derived signal."""
+        response = (
+            self.client.table("session_completions")
+            .select("*")
+            .eq("athlete_id", athlete_id)
+            .order("training_day", desc=True)
+            .limit(limit)
+            .execute()
+        )
+        return getattr(response, "data", None) or []
+
+    def list_today_checkins(
+        self, athlete_id: str, *, limit: int = 14
+    ) -> list[dict[str, Any]]:
+        """Recent check-ins (newest training day first) for the derived signal."""
+        response = (
+            self.client.table("today_checkins")
+            .select("*")
+            .eq("athlete_id", athlete_id)
+            .order("training_day", desc=True)
+            .limit(limit)
+            .execute()
+        )
+        return getattr(response, "data", None) or []
 
     def create_injury_flag(self, athlete_id: str, fields: dict[str, Any]) -> dict[str, Any]:
         return self._insert_row(

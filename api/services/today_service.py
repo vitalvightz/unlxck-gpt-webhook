@@ -23,13 +23,14 @@ from fastapi import HTTPException, status
 from pydantic import ValidationError
 
 from api.contracts.checkin_decision import CheckinInputs, evaluate_checkin
-from api.contracts.command_view import CommandView, build_command_view, make_risk
+from api.contracts.command_view import CommandView, RiskWatchItem, build_command_view, make_risk
 from api.contracts.completion import (
     TERMINAL_COMPLETION_STATUSES,
     SessionCompletionRecord,
     completion_landing_state,
     completion_status_of,
 )
+from api.contracts.injury_signal import derive_injury_signal
 from api.contracts.landing import LandingDecision, resolve_landing
 from api.contracts.training_day import resolve_training_day_str
 from api.store import AppStore
@@ -568,6 +569,51 @@ def _risks_from_checkin(checkin: Mapping[str, Any] | None):
     return risks
 
 
+def _history_injury_risks(
+    store: AppStore,
+    *,
+    athlete_id: str,
+    training_day: str,
+) -> list[RiskWatchItem]:
+    """Derive an injury-risk item from logged pain/symptom history.
+
+    Defensive about the store surface: the history readers are optional on
+    minimal test doubles, and a transient read failure must never crash Overview
+    — in either case the derived signal is simply skipped.
+    """
+    list_completions = getattr(store, "list_session_completions", None)
+    list_checkins = getattr(store, "list_today_checkins", None)
+    if not callable(list_completions) or not callable(list_checkins):
+        return []
+    try:
+        completions = list_completions(athlete_id) or []
+        checkins = list_checkins(athlete_id) or []
+    except Exception:
+        return []
+    return derive_injury_signal(
+        completions=completions,
+        checkins=checkins,
+        current_training_day=training_day,
+    )
+
+
+def _merge_risks(*risk_lists: list[RiskWatchItem]) -> list[RiskWatchItem]:
+    """Concatenate risk lists, keeping the first item seen per category.
+
+    Same-day check-in risks are passed first, so they win over a derived signal
+    in the same category (the fresh self-report beats the logged-history echo).
+    """
+    seen: set[str] = set()
+    merged: list[RiskWatchItem] = []
+    for risk_list in risk_lists:
+        for risk in risk_list:
+            if risk.category in seen:
+                continue
+            seen.add(risk.category)
+            merged.append(risk)
+    return merged
+
+
 def _plan_with_resolved_phase(
     plan_row: Mapping[str, Any],
     week: Any,
@@ -689,7 +735,17 @@ def build_today_command_view(
         next_session=_next_session_payload(target_entry, session_id, relation=session_relation),
         session_scope=session_relation or "none",
         warnings=warnings,
-        risks=_risks_from_checkin(today_checkin),
+        # Same-day check-in risks first so they win per-category over the derived
+        # signal; the derived signal keeps the badge live when there is no
+        # check-in today by reading logged post-session pain / symptom history.
+        risks=_merge_risks(
+            _risks_from_checkin(today_checkin),
+            _history_injury_risks(
+                store,
+                athlete_id=athlete_id,
+                training_day=training_day,
+            ),
+        ),
     )
 
 

@@ -1415,6 +1415,22 @@ class FakeStore:
                 return dict(row)
         return None
 
+    def list_session_completions(self, athlete_id: str, *, limit: int = 30) -> list[dict]:
+        rows = sorted(
+            self.session_completions.get(athlete_id, []),
+            key=lambda row: row["training_day"],
+            reverse=True,
+        )
+        return [dict(row) for row in rows[:limit]]
+
+    def list_today_checkins(self, athlete_id: str, *, limit: int = 14) -> list[dict]:
+        rows = sorted(
+            self.today_checkins.get(athlete_id, []),
+            key=lambda row: row["training_day"],
+            reverse=True,
+        )
+        return [dict(row) for row in rows[:limit]]
+
     def create_session_log(self, athlete_id: str, fields: dict) -> dict:
         row = {
             "id": str(uuid4()),

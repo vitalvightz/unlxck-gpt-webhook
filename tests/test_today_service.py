@@ -618,6 +618,53 @@ class TestCommandView:
         assert view.today.next_session == {}
         assert view.today.completion_status == "not_started"
 
+    def test_logged_session_pain_surfaces_without_a_checkin(self):
+        # The badge must reflect training reality even with no check-in today:
+        # a high logged post-session pain reading drives a risk-watch item.
+        store = _store_with_plan()
+        store.session_completions[ATHLETE] = [
+            {
+                "id": "c1",
+                "athlete_id": ATHLETE,
+                "plan_id": PLAN,
+                "session_id": "s1",
+                "training_day": "2026-06-18",
+                "status": "done",
+                "pain_after": 8,
+            }
+        ]
+        view = build_today_command_view(
+            store,
+            athlete_id=ATHLETE,
+            athlete_timezone="",
+            now=datetime(2026, 6, 18, 12, 0, tzinfo=timezone.utc),
+        )
+        assert view.today.recommendation_state == "not_checked_in"
+        assert "high_pain" in [risk.category for risk in view.risk_watch]
+
+    def test_recent_symptom_keeps_a_decaying_reminder(self):
+        # A symptom two days ago, clean since, no check-in today: the badge stays
+        # live with a decaying reminder rather than reverting to a blank green.
+        store = _store_with_plan()
+        store.session_completions[ATHLETE] = [
+            {
+                "id": "c1",
+                "athlete_id": ATHLETE,
+                "plan_id": PLAN,
+                "session_id": "s1",
+                "training_day": "2026-06-16",
+                "status": "done",
+                "pain_after": 5,
+            }
+        ]
+        view = build_today_command_view(
+            store,
+            athlete_id=ATHLETE,
+            athlete_timezone="",
+            now=datetime(2026, 6, 18, 12, 0, tzinfo=timezone.utc),
+        )
+        assert "reminder" in [risk.category for risk in view.risk_watch]
+
     def test_active_plan_phase_comes_from_resolved_current_week(self):
         store = _store_with_plan()
         # Simulate a legacy/minimal row with no top-level phase. Today must use

@@ -160,6 +160,7 @@ class TestShape:
             "training_day",
             "recommendation_state",
             "recommendation_reason",
+            "warnings",
             "next_session",
             "session_scope",
             "session_label",
