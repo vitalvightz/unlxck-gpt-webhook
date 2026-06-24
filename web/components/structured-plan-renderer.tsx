@@ -34,8 +34,6 @@ import {
 } from "@/lib/structured-plan";
 import {
   dayCompletion,
-  findDayByISO,
-  getReadinessStrip,
   resolveNextPlanFocusDay,
   resolvePlanProgress,
   weekCompletion,
@@ -229,13 +227,26 @@ export function SessionCard({
   session,
   day,
   defaultOpenBlocks,
+  showDayContext = true,
 }: {
   session: StructuredSession;
   day?: StructuredDay;
   defaultOpenBlocks?: boolean;
+  /** When false, day-level context like warnings/nutrition/mindset is rendered by
+   * the parent day card instead, so the same information does not repeat inside
+   * every session. */
+  showDayContext?: boolean;
 }) {
   const detailsId = useId();
   const [showDetails, setShowDetails] = useState(Boolean(defaultOpenBlocks));
+  const userToggledDetails = useRef(false);
+
+  useEffect(() => {
+    if (!userToggledDetails.current) {
+      setShowDetails(Boolean(defaultOpenBlocks));
+    }
+  }, [defaultOpenBlocks]);
+
   const card = day?.today_card;
   const title =
     cleanText(session.title) ||
@@ -247,18 +258,18 @@ export function SessionCard({
   const date = cleanText(day?.date);
   const countdown = cleanText(day?.countdown_label);
   const dayType = cleanText(day?.day_type);
-  const warning = cleanText(card?.primary_warning);
-  const nutrition = cleanText(card?.nutrition_summary);
-  const weightCut = cleanText(card?.weight_cut_warning);
+  const warning = showDayContext ? cleanText(card?.primary_warning) : null;
+  const nutrition = showDayContext ? cleanText(card?.nutrition_summary) : null;
+  const weightCut = showDayContext ? cleanText(card?.weight_cut_warning) : null;
   const blocks = getBlocks(session);
   const rehabBlocks = getRehabOrMobilityBlocks(session);
   const blocksLabel = blockCountLabel(blocks.length);
-  // Prefer the session mindset only when it actually has displayable lines; an
-  // empty/blank session.mindset_anchor should still fall back to the day card.
   const sessionMindset =
     getMindsetLines(session.mindset_anchor).length > 0
       ? session.mindset_anchor
-      : card?.mindset_anchor;
+      : showDayContext
+        ? card?.mindset_anchor
+        : undefined;
 
   return (
     <article className="sp-session">
@@ -279,11 +290,14 @@ export function SessionCard({
           {duration ? <span className="sp-tag">{duration}</span> : null}
         </div>
       </header>
+
       {warning ? <p className="sp-warning">{warning}</p> : null}
       {nutrition ? <p className="sp-today-note">{nutrition}</p> : null}
       {weightCut ? <p className="sp-warning">{weightCut}</p> : null}
+
       <MindsetAnchorCard anchor={sessionMindset} />
       <RehabSummary blocks={rehabBlocks} />
+
       {blocks.length > 0 ? (
         <>
           <button
@@ -292,10 +306,14 @@ export function SessionCard({
             aria-expanded={showDetails}
             aria-controls={detailsId}
             aria-label={showDetails ? "Show less session detail" : `Show more session detail: ${blocksLabel}`}
-            onClick={() => setShowDetails((prev) => !prev)}
+            onClick={() => {
+              userToggledDetails.current = true;
+              setShowDetails((prev) => !prev);
+            }}
           >
             {showDetails ? "Show less" : `Show more (${blocksLabel})`}
           </button>
+
           {showDetails ? (
             <div id={detailsId} className="sp-blocks">
               {blocks.map((block, index) => (
@@ -433,15 +451,26 @@ export function CampDayCard({
   currentLabel?: string;
   defaultOpen?: boolean;
 }) {
-  // Local open state synced via onToggle so a user toggle is not reset on
-  // re-render (a bare open={defaultOpen} would force <details> back each render).
   const [open, setOpen] = useState<boolean>(Boolean(defaultOpen));
+  const userToggledOpen = useRef(false);
+
+  useEffect(() => {
+    if (!userToggledOpen.current) {
+      setOpen(Boolean(defaultOpen));
+    }
+  }, [defaultOpen]);
+
   const sessions = getSessions(day);
   const date = cleanText(day.date);
   const weekday = weekdayLabel(date);
   const countdown = cleanText(day.countdown_label);
   const dayType = cleanText(day.day_type);
-  const warning = cleanText(day.today_card?.primary_warning);
+  const card = day.today_card;
+  const warning = cleanText(card?.primary_warning);
+  const nutrition = cleanText(card?.nutrition_summary);
+  const weightCut = cleanText(card?.weight_cut_warning);
+  const hasMindset = getMindsetLines(card?.mindset_anchor).length > 0;
+  const hasDayContext = Boolean(warning || nutrition || weightCut || hasMindset);
   const completion = dayCompletion(day);
   const sessionCount = sessions.length;
 
@@ -451,7 +480,17 @@ export function CampDayCard({
       open={open}
       onToggle={(event) => setOpen(event.currentTarget.open)}
     >
-      <summary className="sp-week-summary cm-day-summary">
+      <summary
+        className="sp-week-summary cm-day-summary"
+        onClick={() => {
+          userToggledOpen.current = true;
+        }}
+        onKeyDown={(event) => {
+          if (event.key === "Enter" || event.key === " ") {
+            userToggledOpen.current = true;
+          }
+        }}
+      >
         <span className="cm-day-head">
           {countdown ? <span className="sp-countdown sp-accent">{countdown}</span> : null}
           <span className="sp-week-title">{weekday || date || "Day"}</span>
@@ -467,8 +506,17 @@ export function CampDayCard({
           <CompletionTag completion={completion} />
         </span>
       </summary>
+
       <div className="sp-week-body">
-        {warning ? <p className="sp-warning">{warning}</p> : null}
+        {sessions.length > 0 && hasDayContext ? (
+          <div className="cm-day-context">
+            {warning ? <p className="sp-warning">{warning}</p> : null}
+            {nutrition ? <p className="sp-today-note">{nutrition}</p> : null}
+            {weightCut ? <p className="sp-warning">{weightCut}</p> : null}
+            <MindsetAnchorCard anchor={card?.mindset_anchor} />
+          </div>
+        ) : null}
+
         {sessions.length > 0 ? (
           <div className="sp-sessions">
             {sessions.map((session, index) => (
@@ -477,6 +525,7 @@ export function CampDayCard({
                 session={session}
                 day={index === 0 ? day : undefined}
                 defaultOpenBlocks={isCurrent}
+                showDayContext={false}
               />
             ))}
           </div>
@@ -913,57 +962,6 @@ export function RecoveryCard({ plan }: { plan: StructuredPlan }) {
   );
 }
 
-/** Compact camp-status chips: phase, "Week X of Y", D-label, event date. */
-function CampStatusLine({
-  plan,
-  progress,
-  phaseWeek,
-}: {
-  plan: StructuredPlan;
-  progress: ReturnType<typeof resolvePlanProgress>;
-  phaseWeek?: StructuredWeek;
-}) {
-  const phase = cleanText(phaseWeek?.phase_label);
-  const eventDate =
-    cleanText(plan.event_context?.fight_date) || cleanText(plan.event_context?.match_date);
-  const weekPosLabel =
-    progress.currentWeekPos != null
-      ? `Week ${progress.currentWeekPos + 1} of ${progress.weekCount}`
-      : progress.weekCount > 0
-        ? `${progress.weekCount} week camp`
-        : null;
-  const chips = [
-    phase ? titleize(phase) : null,
-    weekPosLabel,
-    progress.dLabel,
-    eventDate ? `Fight ${eventDate}` : null,
-  ].filter((chip): chip is string => Boolean(chip));
-  if (chips.length === 0) {
-    return null;
-  }
-  return (
-    <div className="cm-status-line" aria-label="Camp status">
-      {chips.map((chip, index) => (
-        <span key={`${chip}-${index}`} className="cm-status-chip">
-          {chip}
-        </span>
-      ))}
-    </div>
-  );
-}
-
-/**
- * The plan page's lighter camp-readiness strip: focus, injury watch and weekly
- * load. Values come from getReadinessStrip (explicit plan.readiness_snapshot
- * first, then derived from the current day / week).
- *
- * It intentionally does NOT show the exact "train / modify / pull back" call —
- * that decision belongs to the Today surface (Today = execution, plan page =
- * camp map), so the strip gives risk context without becoming a second Today
- * page. Phase/camp status is omitted too: the CampStatusLine above already shows
- * it. Empty cards are dropped and the whole strip is hidden when nothing
- * resolves, so no fake metrics are ever shown.
- */
 function ReadinessStrip({
   plan,
   currentDay,
@@ -1049,7 +1047,6 @@ function WeekOverview({ week }: { week: StructuredWeek }) {
   const load = weekLoadProxy(week);
   const completion = weekCompletion(week);
   const sessionSummary = weekSessionSummary(week);
-  const days = getDays(week);
   const countdownStart = cleanText(week.countdown_start);
   const countdownEnd = cleanText(week.countdown_end);
   const countdownRange =
@@ -1060,9 +1057,7 @@ function WeekOverview({ week }: { week: StructuredWeek }) {
   const endDate = cleanText(week.end_date);
   const dateRange =
     startDate && endDate ? `${startDate} → ${endDate}` : startDate || endDate;
-  const warning = days
-    .map((day) => cleanText(day.today_card?.primary_warning))
-    .find((value): value is string => Boolean(value));
+
   const rows = [
     { label: "Countdown", value: countdownRange },
     { label: "Dates", value: dateRange },
@@ -1091,6 +1086,7 @@ function WeekOverview({ week }: { week: StructuredWeek }) {
         <p className="sp-eyebrow">This week</p>
         <h4 className="sp-redflags-title">{weekLabel(week)}</h4>
       </div>
+
       {rows.length > 0 ? (
         <div className="sp-block-stats cm-week-overview-stats">
           {rows.map((row) => (
@@ -1101,7 +1097,6 @@ function WeekOverview({ week }: { week: StructuredWeek }) {
           ))}
         </div>
       ) : null}
-      {warning ? <p className="sp-warning">{warning}</p> : null}
     </section>
   );
 }
@@ -1168,18 +1163,12 @@ export function StructuredPlanRenderer({
   // Clamp against weeks length so a stale index can never index past the array.
   const safePos = effectivePos >= 0 && effectivePos < weeks.length ? effectivePos : 0;
   const selectedWeek = weeks[safePos];
-  // Phase/status follows the real current week, not the advanced focus week.
-  const phaseWeek = weeks[calendarProgress.currentWeekPos ?? safePos] ?? selectedWeek;
 
-  // The truthful current day (real calendar today, not the advanced focus day)
-  // feeds the readiness strip so it always reflects "right now", even when the
-  // opened week/day has advanced to the next scheduled session.
-  const currentDay = findDayByISO(plan, calendarProgress.currentDayDate);
   const progressionNotes = cleanText(plan.progression_notes);
   const rawFallback = cleanText(plan.raw_markdown_fallback);
   const hasNutritionSupport = getNutritionPhaseItems(plan).length > 0 || hasNutrition(plan);
   const hasRecoverySupport = getRecoveryPhaseItems(plan).length > 0;
-  const dayList = getDays(selectedWeek);
+  const dayList = selectedWeek ? getDays(selectedWeek) : [];
 
   return (
     <div className="sp-root cm-root">
