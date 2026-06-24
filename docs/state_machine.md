@@ -16,7 +16,7 @@ status is also a job status.
 |---|---|---|---|
 | **Generation job status** | `generation_jobs.status` | `queued`, `running`, `completed`, `review_required`, `failed` | `GENERATION_JOB_STATUSES` |
 | **Plan status** | `plans.status` | `generated`, `ready`, `review_required`, `held_for_review`, `publishable_with_flags`, `triage_blocked`, `medical_hold`, `restricted_rehab_only`, `needs_review`, `archived` | `PLAN_STATUSES` |
-| **`stage2_status`** | plan `admin_outputs.stage2_status` (audit only) | `stage2_pass`, `stage2_failed`, `admin_review_approved`, `admin_review_rejected`, `admin_archived`, `triage_resume_approved`, `""` (not run) | `api/stage2_automation.py`, admin services |
+| **`stage2_status`** | plan `admin_outputs.stage2_status` (audit only) | `stage2_pass`, `stage2_failed`, `admin_review_approved`, `admin_review_rejected`, `admin_archived`, `triage_resume_approved`, `manual_stage2_pass`, `manual_stage2_retry_pass`, `manual_stage2_retry_required`, `""` (not run) | `api/stage2_automation.py`, admin services |
 
 Key trap that prompted this section: **`review_required` exists as both a job
 status and a plan status, and `held_for_review` exists only as a plan status.**
