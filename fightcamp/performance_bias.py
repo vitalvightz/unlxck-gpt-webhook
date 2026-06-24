@@ -83,7 +83,7 @@ def low_risk_profile_blockers(athlete_model: dict[str, Any]) -> list[str]:
     if injury_mode in _BLOCKED_INJURY_MODES:
         reasons.append("injury_mode_restricted")
 
-    readiness = {str(flag).strip().lower() for flag in clean_list(athlete_model.get("readiness_flags", []))}
+    readiness = {str(flag).strip().lower() for flag in clean_list(athlete_model.get("readiness_flags") or [])}
     if readiness & _RED_FLAG_READINESS:
         reasons.append("red_flag_injury")
 
