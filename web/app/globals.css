@@ -11870,6 +11870,199 @@ html[data-theme="light"] .appearance-mode-state {
   color: var(--brand-red);
 }
 
+html[data-theme="light"] .settings-subsection,
+html[data-theme="light"] .settings-toggle-row,
+html[data-theme="light"] .settings-segmented-control,
+html[data-theme="light"] .settings-coming-soon {
+  border-color: rgba(98, 77, 69, 0.1);
+  background: rgba(255, 255, 255, 0.66);
+}
+
+html[data-theme="light"] .settings-toggle-row input[type="checkbox"] {
+  border-color: rgba(98, 77, 69, 0.18);
+  background: rgba(98, 77, 69, 0.1);
+}
+
+html[data-theme="light"] .settings-toggle-row input[type="checkbox"]::after {
+  background: rgba(98, 77, 69, 0.58);
+}
+
+html[data-theme="light"] .settings-toggle-row input[type="checkbox"]:checked {
+  border-color: color-mix(in srgb, var(--brand-red) 34%, transparent);
+  background: color-mix(in srgb, var(--brand-red) 18%, transparent);
+}
+
+html[data-theme="light"] .settings-toggle-row input[type="checkbox"]:checked::after {
+  background: var(--brand-red);
+}
+
+html[data-theme="light"] .settings-segmented-control button:hover,
+html[data-theme="light"] .settings-segmented-control button:focus-visible,
+html[data-theme="light"] .settings-segmented-control .settings-segment-active {
+  border-color: rgba(146, 43, 45, 0.2);
+  background: rgba(146, 43, 45, 0.08);
+}
+
+html[data-theme="light"] .settings-mobile-save {
+  border-color: rgba(98, 77, 69, 0.12);
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 18px 36px rgba(79, 60, 52, 0.12);
+}
+
+/* Today uses custom dark cards; keep light mode explicit so it cannot regress. */
+html[data-theme="light"] .today-shell {
+  border-color: rgba(146, 43, 45, 0.12) !important;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.995), rgba(250, 245, 238, 0.985)) !important;
+  box-shadow: 0 18px 40px rgba(79, 60, 52, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.72);
+}
+
+html[data-theme="light"] .today-shell::before {
+  background:
+    radial-gradient(circle at top left, rgba(146, 43, 45, 0.08), transparent 34%),
+    radial-gradient(circle at 88% -10%, rgba(150, 113, 59, 0.06), transparent 32%);
+}
+
+html[data-theme="light"] .today-card {
+  border-color: rgba(98, 77, 69, 0.1);
+  background: rgba(255, 255, 255, 0.78);
+  box-shadow: 0 12px 28px rgba(79, 60, 52, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.64);
+}
+
+html[data-theme="light"] .today-card[data-tone="red"] {
+  border-color: color-mix(in srgb, var(--brand-red) 26%, transparent);
+  box-shadow: inset 3px 0 0 var(--brand-red), 0 12px 28px rgba(79, 60, 52, 0.05);
+}
+
+html[data-theme="light"] .today-card[data-tone="amber"] {
+  border-color: color-mix(in srgb, var(--progress-gold) 26%, transparent);
+  box-shadow: inset 3px 0 0 var(--progress-gold), 0 12px 28px rgba(79, 60, 52, 0.05);
+}
+
+html[data-theme="light"] .today-card[data-tone="green"] {
+  border-color: color-mix(in srgb, var(--success-ink) 24%, transparent);
+  box-shadow: inset 3px 0 0 var(--success-ink), 0 12px 28px rgba(79, 60, 52, 0.05);
+}
+
+html[data-theme="light"] .today-card[data-tone="red"]::before {
+  background: radial-gradient(circle at top left, rgba(146, 43, 45, 0.08), transparent 46%);
+}
+
+html[data-theme="light"] .today-card[data-tone="amber"]::before {
+  background: radial-gradient(circle at top left, rgba(150, 113, 59, 0.09), transparent 46%);
+}
+
+html[data-theme="light"] .today-card[data-tone="green"]::before {
+  background: radial-gradient(circle at top left, rgba(37, 131, 82, 0.08), transparent 46%);
+}
+
+html[data-theme="light"] .today-decision-banner,
+html[data-theme="light"] .today-red-flags,
+html[data-theme="light"] .today-injury-item,
+html[data-theme="light"] .today-risk-item,
+html[data-theme="light"] .today-sticky-actions,
+html[data-theme="light"] .today-inline-warning {
+  border-color: rgba(98, 77, 69, 0.1);
+  background: rgba(255, 255, 255, 0.58);
+}
+
+html[data-theme="light"] .today-decision-banner[data-tone="red"],
+html[data-theme="light"] .today-risk-item[data-tone="stop"],
+html[data-theme="light"] .today-risk-item[data-tone="warning"] {
+  border-color: color-mix(in srgb, var(--brand-red) 24%, transparent);
+  border-left-color: var(--brand-red);
+  background: linear-gradient(135deg, color-mix(in srgb, var(--brand-red) 8%, transparent), rgba(255, 255, 255, 0.62));
+}
+
+html[data-theme="light"] .today-decision-banner[data-tone="amber"],
+html[data-theme="light"] .today-risk-item[data-tone="caution"] {
+  border-color: color-mix(in srgb, var(--progress-gold) 24%, transparent);
+  border-left-color: var(--progress-gold);
+  background: linear-gradient(135deg, color-mix(in srgb, var(--progress-gold) 9%, transparent), rgba(255, 255, 255, 0.62));
+}
+
+html[data-theme="light"] .today-decision-banner[data-tone="green"] {
+  border-color: color-mix(in srgb, var(--success-ink) 20%, transparent);
+  border-left-color: var(--success-ink);
+  background: linear-gradient(135deg, color-mix(in srgb, var(--success-ink) 8%, transparent), rgba(255, 255, 255, 0.62));
+}
+
+html[data-theme="light"] .today-risk-item[data-tone="info"] {
+  border-color: rgba(73, 105, 141, 0.18);
+  border-left-color: #49698d;
+  background: linear-gradient(135deg, rgba(73, 105, 141, 0.07), rgba(255, 255, 255, 0.62));
+}
+
+html[data-theme="light"] .today-segment,
+html[data-theme="light"] .today-risk-more {
+  border-color: rgba(98, 77, 69, 0.12);
+  background: rgba(255, 255, 255, 0.74);
+}
+
+html[data-theme="light"] .today-segment:hover,
+html[data-theme="light"] .today-risk-more:hover,
+html[data-theme="light"] .today-risk-more:focus-visible {
+  border-color: rgba(146, 43, 45, 0.16);
+  background: rgba(255, 255, 255, 0.92);
+}
+
+html[data-theme="light"] .today-segment-active {
+  border-color: rgba(146, 43, 45, 0.22);
+  background: rgba(146, 43, 45, 0.08);
+}
+
+html[data-theme="light"] .today-session-summary > div,
+html[data-theme="light"] .today-injury-add {
+  border-color: rgba(98, 77, 69, 0.1);
+}
+
+html[data-theme="light"] .today-inline-error {
+  color: var(--danger-ink);
+}
+
+html[data-theme="light"] .effort-slider-input {
+  background: linear-gradient(
+    to right,
+    var(--brand-red) 0%,
+    var(--brand-red) var(--effort-fill, 0%),
+    rgba(98, 77, 69, 0.12) var(--effort-fill, 0%),
+    rgba(98, 77, 69, 0.12) 100%
+  );
+}
+
+html[data-theme="light"] .effort-slider[data-empty="true"] .effort-slider-input {
+  background: linear-gradient(
+    to right,
+    rgba(146, 43, 45, 0.3) 0%,
+    rgba(146, 43, 45, 0.3) var(--effort-fill, 0%),
+    rgba(98, 77, 69, 0.12) var(--effort-fill, 0%),
+    rgba(98, 77, 69, 0.12) 100%
+  );
+}
+
+html[data-theme="light"] .effort-slider-input::-webkit-slider-thumb {
+  border-color: var(--brand-red);
+  background: #ffffff;
+  box-shadow: 0 2px 8px rgba(79, 60, 52, 0.16);
+}
+
+html[data-theme="light"] .face-scale-face,
+html[data-theme="light"] .level-slider {
+  border-color: rgba(98, 77, 69, 0.12);
+  background: rgba(255, 255, 255, 0.74);
+}
+
+html[data-theme="light"] .effort-slider-input::-moz-range-thumb {
+  border-color: var(--brand-red);
+  background: #ffffff;
+  box-shadow: 0 2px 8px rgba(79, 60, 52, 0.16);
+}
+
+html[data-theme="light"] .face-scale-face[data-selected="true"] {
+  border-color: rgba(146, 43, 45, 0.28);
+  background: rgba(146, 43, 45, 0.08);
+  box-shadow: inset 0 0 0 1px rgba(146, 43, 45, 0.1);
+}
+
 .nutrition-page-grid,
 .nutrition-admin-split {
   display: grid;
