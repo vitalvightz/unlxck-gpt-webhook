@@ -9,7 +9,9 @@ import { useAppSession } from "@/components/auth-provider";
 import { EmptyState } from "@/components/empty-state";
 import { NutritionSubnav } from "@/components/nutrition-subnav";
 import { NutritionWorkspaceHeader } from "@/components/nutrition-workspace-header";
+import { SafetyNote } from "@/components/safety-note";
 import { getNutritionCurrent, updateNutritionCurrent } from "@/lib/api";
+import { WEIGHT_CUT_SAFETY } from "@/lib/safety-copy";
 import {
   type BodyweightRange,
   createBodyweightEntryKey,
@@ -240,6 +242,7 @@ export function BodyweightLogScreen() {
           description="A dedicated fight-lab surface for daily weigh-ins, fasted context, disciplined trend review, and explicit history edits."
         />
         <NutritionSubnav />
+        <SafetyNote tone="warning">{WEIGHT_CUT_SAFETY}</SafetyNote>
 
         {!workspace ? (
           <section className="support-panel loading-card"><p className="muted">Loading bodyweight log.</p></section>
