@@ -14837,7 +14837,7 @@ html[data-theme="light"] .loading-operational-item {
   border: none;
   background: none;
   color: var(--text-secondary);
-  font-size: 12.5px;
+  font-size: 0.8rem;
   letter-spacing: 0.01em;
 }
 .cm-root .cm-status-chip:not(:last-child)::after {
