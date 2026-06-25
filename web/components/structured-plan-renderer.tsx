@@ -30,7 +30,6 @@ import {
   redFlagView,
   selectBlockMetric,
   shouldShowRest,
-  weekLabel,
 } from "@/lib/structured-plan";
 import {
   dayCompletion,
@@ -542,36 +541,31 @@ export function PlanHeader({
   const meta = plan.plan_metadata;
   const title = cleanText(meta?.title) || "Training Plan";
   const sport = cleanText(meta?.sport);
-  const planType = cleanText(meta?.plan_type);
   const athlete = plan.athlete_context;
   const profile = cleanText(athlete?.sport_profile) || cleanText(athlete?.style_profile);
-  const event = plan.event_context;
-  const eventType = cleanText(event?.event_type);
-  const eventDate = cleanText(event?.fight_date) || cleanText(event?.match_date);
+  // Sport stands in as the subtitle when there's no richer athlete profile, so the
+  // discipline still reads in the header without a separate pill. The plan type,
+  // event type and event date are intentionally dropped here — the camp-status
+  // line below already carries phase, week, D-label and fight date, so repeating
+  // them as a row of pills was pure duplication.
+  const subtitle = profile || (sport ? titleize(sport) : null);
   // The saved-plan record status is authoritative; plan_metadata.status is only a
   // fallback for record-less preview/test contexts.
   const status = cleanText(planStatus) || cleanText(meta?.status);
   const generatedOn = formatGeneratedDate(createdAt);
 
-  const tags = [sport, planType ? titleize(planType) : null, eventType ? titleize(eventType) : null]
-    .filter((tag): tag is string => Boolean(tag));
-
   return (
     <header className="sp-header cm-command">
-      <p className="sp-eyebrow">Camp map</p>
-      <h3 className="sp-title">{title}</h3>
-      {profile ? <p className="sp-subtitle">{profile}</p> : null}
-      {tags.length > 0 || eventDate || status ? (
-        <div className="sp-header-tags">
-          {status ? <span className={statusTagClass(status)}>{titleize(status)}</span> : null}
-          {tags.map((tag, index) => (
-            <span key={`${tag}-${index}`} className="sp-tag">
-              {tag}
-            </span>
-          ))}
-          {eventDate ? <span className="sp-tag sp-accent">{eventDate}</span> : null}
+      <div className="cm-command-row">
+        <div className="cm-command-id">
+          <p className="sp-eyebrow">Camp map</p>
+          <h3 className="sp-title">{title}</h3>
         </div>
-      ) : null}
+        {status ? (
+          <span className={`${statusTagClass(status)} cm-command-status`}>{titleize(status)}</span>
+        ) : null}
+      </div>
+      {subtitle ? <p className="sp-subtitle">{subtitle}</p> : null}
       {generatedOn ? <p className="sp-header-meta">Generated {generatedOn}</p> : null}
     </header>
   );
@@ -1042,10 +1036,17 @@ function WeekStrip({
   );
 }
 
-/** The selected week's countdown/dates, load proxy and completion. The week goal
- *  and phase are intentionally not repeated here: the goal is already in the
- *  heading (weekLabel) and the phase is shown in the status chips and week pill. */
+/** The selected week's countdown/dates, load proxy and completion. The phase is
+ *  intentionally not repeated here: it is shown in the status chips and the week
+ *  pill. The week goal renders once, as the descriptive subtitle under the short
+ *  "Week N" heading. */
 function WeekOverview({ week }: { week: StructuredWeek }) {
+  // Keep the main heading short ("Week N"); the AI-written goal is a descriptive
+  // subtitle below, not the title, so it wraps in full instead of being truncated
+  // to a dangling "…".
+  const weekIndex = typeof week.week_index === "number" ? week.week_index : null;
+  const weekTitle = weekIndex != null ? `Week ${weekIndex}` : "Week";
+  const weekGoal = cleanText(week.week_goal);
   const load = weekLoadProxy(week);
   const completion = weekCompletion(week);
   const sessionSummary = weekSessionSummary(week);
@@ -1089,7 +1090,8 @@ function WeekOverview({ week }: { week: StructuredWeek }) {
     <section className="sp-card cm-week-overview">
       <div className="cm-week-overview-head">
         <p className="sp-eyebrow">This week</p>
-        <h4 className="sp-redflags-title">{weekLabel(week)}</h4>
+        <h4 className="sp-redflags-title">{weekTitle}</h4>
+        {weekGoal ? <p className="cm-week-goal">{weekGoal}</p> : null}
       </div>
       {rows.length > 0 ? (
         <div className="sp-block-stats cm-week-overview-stats">

@@ -14779,6 +14779,229 @@ html[data-theme="light"] .loading-operational-item {
   }
 }
 
+/* ── Camp map v2: premium declutter ──────────────────────────────────────────
+   The first cut treated every piece of information as its own bordered card, so
+   the page read box → box → box with weak hierarchy. This layer keeps the data
+   but collapses the chrome: only the command header, readiness and session/day
+   surfaces stay cards; status, week selection and the week overview become quiet
+   text / tabs / dividers. Everything is scoped to .cm-root (and placed after the
+   base rules so equal-specificity selectors win) so the Today surface and other
+   .sp-* consumers are untouched. Colour stays on theme variables, so both the
+   dark and light palettes follow along. */
+
+/* Command header — the hero. Title and status share the top row; sport drops to
+   the subtitle and the plan-type/event pills are gone (the status line carries
+   that). Stronger title, a little more air, one soft shadow to lift it. */
+.cm-command {
+  padding: 20px;
+  border-radius: 18px;
+  box-shadow: var(--shadow-support);
+}
+.cm-command-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+}
+.cm-command-id {
+  min-width: 0;
+}
+.cm-command .sp-title {
+  margin-top: 2px;
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 1.15;
+}
+.cm-command-status {
+  flex: none;
+  align-self: center;
+}
+.cm-command .sp-subtitle {
+  margin-top: 5px;
+  text-transform: capitalize;
+}
+.cm-command .sp-header-meta {
+  margin-top: 8px;
+}
+
+/* Camp status — dotted meta text, not a row of bordered pills. */
+.cm-root .cm-status-line {
+  gap: 0;
+  row-gap: 4px;
+  margin-top: -2px;
+}
+.cm-root .cm-status-chip {
+  min-height: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--text-secondary);
+  font-size: 12.5px;
+  letter-spacing: 0.01em;
+}
+.cm-root .cm-status-chip:not(:last-child)::after {
+  content: "·";
+  margin: 0 8px;
+  color: var(--text-muted);
+}
+
+/* Readiness — label / value rows split by hairlines instead of a stat-pill grid,
+   so it scans like a spec sheet. Red stays on the risk value only. */
+.cm-root .sp-readiness {
+  border-radius: 16px;
+  padding: 16px 18px;
+}
+.cm-root .sp-readiness .sp-block-stats {
+  flex-direction: column;
+  gap: 0;
+  margin-top: 10px;
+}
+.cm-root .sp-readiness .sp-stat {
+  flex-direction: row;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 9px 0;
+  border-top: 1px solid var(--border-subtle);
+  font-size: 0.9rem;
+}
+.cm-root .sp-readiness .sp-stat:first-child {
+  border-top: none;
+}
+.cm-root .sp-readiness .sp-stat-label {
+  flex: none;
+  color: var(--text-muted);
+}
+.cm-root .sp-readiness .sp-stat > .sp-warning {
+  margin: 0;
+  text-align: right;
+}
+
+/* Active notes & Safety — slim rows, not chunky cards. Safety keeps its red
+   left-accent + wash (defined above) so it still reads as an alert. */
+.cm-root .sp-collapse {
+  border-radius: 14px;
+}
+.cm-root .sp-collapse-summary {
+  padding: 13px 16px;
+}
+.cm-root .sp-collapse-body {
+  padding: 0 16px 14px;
+}
+
+/* Week selector — a segmented tab strip. The selected tab gets a neutral
+   underline; the current ("now") week gets the brand-red underline. The old
+   floating "Now" pill is dropped; the red underline carries that meaning. */
+.cm-week-strip {
+  gap: 4px;
+  padding: 2px 0 0;
+  border-bottom: 1px solid var(--border-subtle);
+}
+.cm-week-pill {
+  min-width: 0;
+  min-height: 0;
+  gap: 2px;
+  padding: 9px 14px;
+  border: none;
+  border-bottom: 2px solid transparent;
+  border-radius: 10px 10px 0 0;
+  background: transparent;
+}
+.cm-week-pill:hover {
+  transform: none;
+  border-color: transparent;
+  background: var(--bg-surface-alt);
+}
+.cm-week-pill-selected {
+  background: transparent;
+  border-bottom-color: var(--text-primary);
+}
+.cm-week-pill-current,
+.cm-week-pill-current.cm-week-pill-selected {
+  box-shadow: none;
+  border-bottom-color: var(--brand-red);
+}
+.cm-week-pill-now {
+  display: none;
+}
+@media (max-width: 720px) {
+  .cm-week-pill {
+    min-width: 0;
+  }
+}
+
+/* This-week overview — a light section header + meta, not another heavy card. */
+.cm-root .cm-week-overview {
+  padding: 4px 2px 0;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+}
+.cm-week-overview-head .sp-redflags-title {
+  font-size: 1.05rem;
+  line-height: 1.3;
+}
+.cm-week-goal {
+  margin: 5px 0 0;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+.cm-week-overview-stats {
+  gap: 14px;
+}
+.cm-week-overview-stats .sp-stat {
+  font-size: 0.82rem;
+}
+
+/* Day cards — the session surface. Tighter, less rounded; sessions inside a day
+   are flat rows split by hairlines, not cards-within-cards. */
+.cm-day {
+  border-radius: 14px;
+}
+.cm-day-summary {
+  padding: 14px 16px;
+}
+.cm-day .sp-week-body {
+  gap: 0;
+  padding: 0 16px 14px;
+}
+.cm-day .sp-sessions {
+  gap: 0;
+}
+.cm-day .sp-session {
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  padding: 14px 0 0;
+}
+.cm-day .sp-sessions > .sp-session + .sp-session {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border-subtle);
+}
+/* Preserve the coach-led / sparring / technical left accent after flattening. */
+.cm-day .sp-session.sp-day-card-coach_led,
+.cm-day .sp-session.sp-day-card-sparring,
+.cm-day .sp-session.sp-day-card-technical {
+  border-left: 2px solid var(--brand-red);
+  padding-left: 12px;
+}
+
+/* Metadata tags read as quiet labels, not loud uppercase pills. The current
+   marker (sp-accent) and done (sp-done) states keep their meaningful colour. */
+.cm-day-meta .sp-tag:not(.sp-accent):not(.sp-done),
+.cm-root .sp-session-meta .sp-tag {
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: 0.72rem;
+  padding: 2px 8px;
+  background: transparent;
+  border-color: var(--border-subtle);
+  color: var(--text-muted);
+}
+
 /* ── Safety notes (medical / injury / weight-cut boundaries) ───────────── */
 .safety-note {
   display: block;
