@@ -1376,6 +1376,31 @@ def _late_fight_d0_protocol_warnings(
         }
     ]
 
+def _late_fight_missing_terminal_d0_warnings(
+    planning_brief: dict,
+    final_plan_text: str,
+) -> list[dict]:
+    spec = _late_fight_plan_spec(planning_brief)
+    if not spec:
+        return []
+
+    payload_mode = str(spec.get("payload_mode") or "")
+    if payload_mode in {"", "camp_payload"}:
+        return []
+
+    day_blocks = _late_fight_countdown_blocks_by_day(final_plan_text)
+    if 0 in day_blocks:
+        return []
+
+    return [
+        {
+            "code": "late_fight_missing_terminal_d0_protocol",
+            "message": "Late-fight output must include a terminal D-0 fight-day protocol block.",
+            "payload_mode": payload_mode,
+            "days_out_bucket": spec.get("days_out_bucket"),
+            "blocking": True,
+        }
+    ]
 
 def _internal_render_contract_leak_warnings(plan_lines: list[str]) -> list[dict]:
     warnings: list[dict] = []
@@ -1896,8 +1921,19 @@ def _countdown_sections(final_plan_text: str) -> list[dict[str, Any]]:
 
 def _late_fight_session_blocks(final_plan_text: str) -> list[list[str]]:
     blocks = _phase_session_blocks(_extract_plan_lines(final_plan_text))
-    return [block for block in blocks if block]
+    active_blocks: list[list[str]] = []
 
+    for block in blocks:
+        if not block:
+            continue
+
+        header_match = _COUNTDOWN_LABEL_LINE.match(block[0])
+        if header_match and int(header_match.group(2)) == 0:
+            continue
+
+        active_blocks.append(block)
+
+    return active_blocks
 
 def _late_fight_block_body(block: list[str]) -> list[str]:
     if len(block) <= 1:
@@ -2803,7 +2839,11 @@ def validate_stage2_output(*, planning_brief: dict, final_plan_text: str) -> dic
     weight_cut_acknowledgement_warnings = _weight_cut_acknowledgement_warnings(planning_brief, final_plan_text)
     weight_cut_contradiction_warnings = _weight_cut_contradiction_warnings(planning_brief, final_plan_text)
     late_fight_header_contract_warnings = _late_fight_header_contract_warnings(planning_brief, plan_lines)
-    late_fight_d0_protocol_warnings = _late_fight_d0_protocol_warnings(planning_brief, final_plan_text, plan_lines)
+        late_fight_d0_protocol_warnings = _late_fight_d0_protocol_warnings(planning_brief, final_plan_text, plan_lines)
+    late_fight_missing_terminal_d0_warnings = _late_fight_missing_terminal_d0_warnings(
+        planning_brief,
+        final_plan_text,
+    )
     internal_render_contract_leak_warnings = _internal_render_contract_leak_warnings(plan_lines)
     coach_owned_sparring_detail_warnings = _coach_owned_sparring_detail_warnings(final_plan_text)
     lead_summary_contract_warnings = _lead_summary_contract_warnings(planning_brief, plan_lines)
@@ -2846,6 +2886,7 @@ def validate_stage2_output(*, planning_brief: dict, final_plan_text: str) -> dic
     warnings.extend(_normalize_warning(item) for item in weight_cut_contradiction_warnings)
     warnings.extend(_normalize_warning(item) for item in late_fight_header_contract_warnings)
     warnings.extend(_normalize_warning(item) for item in late_fight_d0_protocol_warnings)
+        warnings.extend(_normalize_warning(item) for item in late_fight_missing_terminal_d0_warnings)
     warnings.extend(_normalize_warning(item) for item in internal_render_contract_leak_warnings)
     warnings.extend(_normalize_warning(item) for item in coach_owned_sparring_detail_warnings)
     warnings.extend(_normalize_warning(item) for item in lead_summary_contract_warnings)
