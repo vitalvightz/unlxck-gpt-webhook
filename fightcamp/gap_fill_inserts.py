@@ -386,7 +386,8 @@ def apply_gap_fill_inserts(session_sequence: list[dict[str, Any]], athlete_model
             days_until_fight = max(offsets)
     else:
         days_until_fight = max(offsets)
-    countdown_map = _countdown_weekday_map(athlete_model.get("plan_creation_weekday"), days_until_fight)
+    creation_weekday = _resolve_plan_creation_weekday(days_until_fight, athlete_model)
+    countdown_map = _countdown_weekday_map(creation_weekday, days_until_fight)
     hard_sparring_days = set(ordered_weekdays(clean_list(athlete_model.get("hard_sparring_days", []))))
 
     existing_offsets = set(offsets)
