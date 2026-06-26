@@ -4410,6 +4410,8 @@
     "type": "unilateral",
     "tags": [
       "balance",
+      "speed",
+      "footwork",
       "endurance",
       "mech_systemic_fatigue",
       "mech_trunk_stability"
@@ -5296,6 +5298,8 @@
     "movement": "sprint",
     "type": "bilateral",
     "tags": [
+      "speed",
+      "acceleration",
       "explosive",
       "high_cns",
       "mech_cns_high",
@@ -6467,6 +6471,7 @@
     "type": "unilateral",
     "tags": [
       "balance",
+      "reactive",
       "rehab_friendly",
       "cns_freshness",
       "mech_trunk_stability"
@@ -12172,6 +12177,7 @@
     "tags": [
       "pivot_readiness",
       "boxer_footwork",
+      "footwork",
       "boxer_stance",
       "d1_if_familiar",
       "low_soreness",
@@ -12238,6 +12244,7 @@
     "type": "bilateral",
     "tags": [
       "boxer_stance",
+      "footwork",
       "d1_ok",
       "balance_static",
       "low_soreness",
@@ -12372,6 +12379,7 @@
     "tags": [
       "hip_lock",
       "boxer_stance",
+      "footwork",
       "d1_if_familiar",
       "low_soreness",
       "rehab_friendly",
@@ -12701,6 +12709,7 @@
     "tags": [
       "ankle_mobility",
       "boxer_stance",
+      "footwork",
       "low_soreness",
       "taper_micro_support",
       "no_d1",
@@ -13468,6 +13477,7 @@
       "no_d4_to_d1",
       "no_high_cut",
       "boxer_footwork",
+      "footwork",
       "rehab_friendly",
       "taper_micro_support",
       "mobility"
@@ -13533,6 +13543,7 @@
       "lateral_reset",
       "no_d4_to_d1",
       "boxer_footwork",
+      "footwork",
       "rehab_friendly",
       "taper_micro_support",
       "mobility"
@@ -13595,6 +13606,7 @@
     "type": "bilateral",
     "tags": [
       "single_leg",
+      "footwork",
       "no_high_cut",
       "no_d1",
       "balance_static",
@@ -13661,6 +13673,7 @@
     "type": "bilateral",
     "tags": [
       "single_leg",
+      "footwork",
       "no_high_cut",
       "no_d1",
       "balance_static",
@@ -13728,6 +13741,7 @@
     "tags": [
       "pivot_readiness",
       "boxer_stance",
+      "footwork",
       "d1_if_familiar",
       "no_high_cut",
       "rehab_friendly",
@@ -13794,6 +13808,7 @@
     "type": "bilateral",
     "tags": [
       "pivot_readiness",
+      "footwork",
       "no_d4_to_d1",
       "no_high_cut",
       "rehab_friendly",
