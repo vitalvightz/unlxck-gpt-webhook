@@ -19,11 +19,12 @@ def _checkin(day: str, *, pain: str = "none", active_injury: str = "none") -> di
     return {"training_day": day, "pain": pain, "active_injury": active_injury}
 
 
-def _derive(completions=None, checkins=None, current=TODAY):
+def _derive(completions=None, checkins=None, current=TODAY, current_phase=None):
     return derive_injury_signal(
         completions=completions or [],
         checkins=checkins or [],
         current_training_day=current,
+        current_phase=current_phase,
     )
 
 
@@ -41,6 +42,18 @@ def test_high_last_reading_escalates():
     assert len(risks) == 1
     assert risks[0].category == "high_pain"
     assert "7/10" in risks[0].text
+    assert "Ease into load and reassess." in risks[0].text
+
+
+def test_taper_high_last_reading_uses_freshness_wording():
+    risks = _derive(
+        completions=[_completion(TODAY, pain_after=HIGH_PAIN_AFTER)],
+        current_phase="TAPER",
+    )
+    assert len(risks) == 1
+    assert risks[0].category == "high_pain"
+    assert "Keep today minimal, protect freshness, and reassess." in risks[0].text
+    assert "Ease into load" not in risks[0].text
 
 
 def test_rising_trend_flags_pain_delta():
@@ -87,6 +100,14 @@ def test_recent_symptom_decays_with_reminder():
     assert len(risks) == 1
     assert risks[0].category == "reminder"
     assert "2 days since" in risks[0].text
+
+
+def test_recent_symptom_decay_reminder_is_suppressed_in_taper():
+    risks = _derive(
+        completions=[_completion("2026-06-16", pain_after=5)],
+        current_phase="TAPER",
+    )
+    assert risks == []
 
 
 def test_symptom_one_day_ago_uses_singular_day():

@@ -257,7 +257,6 @@ export function SessionCard({
   const duration = formatMeasured(session.planned_duration);
   const date = cleanText(day?.date);
   const countdown = cleanText(day?.countdown_label);
-  const dayType = cleanText(day?.day_type);
   const warning = showDayContext ? cleanText(card?.primary_warning) : null;
   const nutrition = showDayContext ? cleanText(card?.nutrition_summary) : null;
   const weightCut = showDayContext ? cleanText(card?.weight_cut_warning) : null;
@@ -285,7 +284,6 @@ export function SessionCard({
           {objective ? <p className="sp-session-objective">{objective}</p> : null}
         </div>
         <div className="sp-session-meta">
-          {dayType ? <span className="sp-tag">{titleize(dayType)}</span> : null}
           {sessionType ? <span className="sp-tag">{titleize(sessionType)}</span> : null}
           {duration ? <span className="sp-tag">{duration}</span> : null}
         </div>
@@ -368,7 +366,6 @@ export function TodayCard({ day }: { day: StructuredDay }) {
 export function SessionlessDayCard({ day }: { day: StructuredDay }) {
   const date = cleanText(day.date);
   const countdown = cleanText(day.countdown_label);
-  const dayType = cleanText(day.day_type);
   const card = day.today_card;
   const warning = cleanText(card?.primary_warning);
   const nutrition = cleanText(card?.nutrition_summary);
@@ -389,7 +386,6 @@ export function SessionlessDayCard({ day }: { day: StructuredDay }) {
           <h4 className="sp-session-title">{title}</h4>
         </div>
         <div className="sp-session-meta">
-          {dayType ? <span className="sp-tag">{titleize(dayType)}</span> : null}
           {tag ? <span className="sp-tag sp-accent">{tag}</span> : null}
         </div>
       </header>
@@ -464,7 +460,6 @@ export function CampDayCard({
   const date = cleanText(day.date);
   const weekday = weekdayLabel(date);
   const countdown = cleanText(day.countdown_label);
-  const dayType = cleanText(day.day_type);
   const card = day.today_card;
   const warning = cleanText(card?.primary_warning);
   const nutrition = cleanText(card?.nutrition_summary);
@@ -497,7 +492,6 @@ export function CampDayCard({
 
         <span className="cm-day-meta">
           {isCurrent ? <span className="sp-tag sp-accent">{currentLabel}</span> : null}
-          {dayType ? <span className="sp-tag">{titleize(dayType)}</span> : null}
           {sessionCount > 0 ? (
             <span className="sp-tag">
               {sessionCount} session{sessionCount === 1 ? "" : "s"}

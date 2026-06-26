@@ -362,6 +362,75 @@ export function formatWeightCutBand(
   return { band, supervisionRequired: weightCut.supervision_required === true };
 }
 
+const WEIGHT_CUT_RISK_RANK: Record<string, number> = {
+  none: 0,
+  inactive: 0,
+  low: 1,
+  mild: 1,
+  moderate: 2,
+  medium: 2,
+  amber: 2,
+  elevated: 2,
+  high: 3,
+  severe: 3,
+  red: 3,
+  critical: 4,
+  extreme: 4,
+  aggressive: 4,
+};
+
+function weightCutRiskRank(value: unknown): number {
+  const token = cleanText(value)?.toLowerCase().replace(/[\s-]+/g, "_");
+  if (!token) {
+    return 0;
+  }
+  if (WEIGHT_CUT_RISK_RANK[token] != null) {
+    return WEIGHT_CUT_RISK_RANK[token];
+  }
+  return Math.max(
+    ...Object.entries(WEIGHT_CUT_RISK_RANK)
+      .filter(([key]) => token.includes(key))
+      .map(([, rank]) => rank),
+    0,
+  );
+}
+
+function maxWeightCutRiskRank(plan: StructuredPlan | null | undefined): number {
+  const ranks = [weightCutRiskRank(plan?.nutrition?.weight_cut_warning?.risk_level)];
+  for (const { entry } of getDeterministicNutritionPhases(plan)) {
+    ranks.push(weightCutRiskRank(entry.weight_cut?.risk_band));
+  }
+  for (const { entry } of getDeterministicRecoveryPhases(plan)) {
+    ranks.push(weightCutRiskRank(entry.weight_cut?.risk_band));
+  }
+  return Math.max(...ranks, 0);
+}
+
+function hasWeightCutRiskAboveModerate(plan: StructuredPlan | null | undefined): boolean {
+  return maxWeightCutRiskRank(plan) > WEIGHT_CUT_RISK_RANK.moderate;
+}
+
+function isWeightCutSymptomEscalationText(text: string): boolean {
+  const normalized = text.toLowerCase();
+  return (
+    /\bweight[-\s]?cut\b/.test(normalized) &&
+    (
+      /\bsymptoms?\s+worsen\b/.test(normalized) ||
+      /\bworsen(?:s|ed|ing)?\b/.test(normalized) ||
+      /\blightheaded(?:ness)?\b/.test(normalized) ||
+      /\bdizz(?:y|iness)\b/.test(normalized) ||
+      /\bdehydrat(?:ed|ion|e)?\b/.test(normalized)
+    )
+  );
+}
+
+function shouldSuppressWeightCutSymptomEscalation(
+  plan: StructuredPlan | null | undefined,
+  text: string,
+): boolean {
+  return isWeightCutSymptomEscalationText(text) && !hasWeightCutRiskAboveModerate(plan);
+}
+
 /** The athlete-safe metric rows for one deterministic nutrition phase. */
 export function nutritionPhaseRows(
   entry: DeterministicNutritionPhase | null | undefined,
@@ -495,6 +564,9 @@ export function getPlanNotes(plan: StructuredPlan | null | undefined): PlanNoteV
 export function getFallbackSafetyNotes(plan: StructuredPlan | null | undefined): PlanNoteView[] {
   const safetyCategories = new Set(["injury", "weight_cut", "recovery"]);
   return getPlanNotes(plan).filter((note) => {
+    if (shouldSuppressWeightCutSymptomEscalation(plan, note.text)) {
+      return false;
+    }
     if (safetyCategories.has(note.category)) {
       return true;
     }
@@ -506,7 +578,10 @@ export function getFallbackSafetyNotes(plan: StructuredPlan | null | undefined):
 export function getDisplayableRedFlags(plan: StructuredPlan | null | undefined) {
   return safeArray(plan?.red_flag_rules)
     .filter(isObject)
-    .filter((rule) => cleanText(rule.display_text));
+    .filter((rule) => {
+      const text = cleanText(rule.display_text);
+      return Boolean(text && !shouldSuppressWeightCutSymptomEscalation(plan, text));
+    });
 }
 
 /** Loose normalization for de-duplicating a note against a red-flag rule:
@@ -531,7 +606,9 @@ function normalizeForDup(text: string): string {
 export function getActiveNotesExcludingRedFlags(
   plan: StructuredPlan | null | undefined,
 ): PlanNoteView[] {
-  const notes = getPlanNotes(plan);
+  const notes = getPlanNotes(plan).filter(
+    (note) => !shouldSuppressWeightCutSymptomEscalation(plan, note.text),
+  );
   const flagTexts = getDisplayableRedFlags(plan)
     .map((rule) => cleanText(rule.display_text))
     .filter((text): text is string => text !== null)

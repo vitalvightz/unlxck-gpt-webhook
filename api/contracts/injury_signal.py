@@ -125,6 +125,7 @@ def derive_injury_signal(
     completions: Sequence[Mapping[str, Any]],
     checkins: Sequence[Mapping[str, Any]],
     current_training_day: str,
+    current_phase: str | None = None,
 ) -> list[RiskWatchItem]:
     """Derive at most one risk-watch item from logged pain/symptom history.
 
@@ -137,6 +138,7 @@ def derive_injury_signal(
     current = _parse_day(current_training_day)
     if current is None:
         return []
+    phase = str(current_phase or "").strip().upper()
 
     series = _pain_series(completions, current)
 
@@ -144,12 +146,17 @@ def derive_injury_signal(
     if series:
         last_day, last_pain = series[-1]
         if last_pain >= HIGH_PAIN_AFTER:
+            action = (
+                "Keep today minimal, protect freshness, and reassess."
+                if phase == "TAPER"
+                else "Ease into load and reassess."
+            )
             return [
                 make_risk(
                     "high_pain",
                     text=(
                         f"Last logged session pain was high ({last_pain}/10). "
-                        "Ease into load and reassess."
+                        f"{action}"
                     ),
                 )
             ]
@@ -170,7 +177,7 @@ def derive_injury_signal(
             ]
 
     # C. Decay — a recent symptom that should ramp back gradually over clean days.
-    last_symptom = _last_symptom_day(completions, checkins, current)
+    last_symptom = None if phase == "TAPER" else _last_symptom_day(completions, checkins, current)
     if last_symptom is not None:
         days_since = (current - last_symptom).days
         if 1 <= days_since <= SYMPTOM_DECAY_DAYS:

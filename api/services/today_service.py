@@ -672,6 +672,7 @@ def _history_injury_risks(
     *,
     athlete_id: str,
     training_day: str,
+    current_phase: str | None = None,
 ) -> list[RiskWatchItem]:
     """Derive an injury-risk item from logged pain/symptom history.
 
@@ -692,6 +693,7 @@ def _history_injury_risks(
         completions=completions,
         checkins=checkins,
         current_training_day=training_day,
+        current_phase=current_phase,
     )
 
 
@@ -1066,6 +1068,13 @@ def build_today_command_view(
     )
     session_id = _session_id_for_entry(target_entry)
 
+    structured_phase = _structured_phase_for_day(plan_row, training_day)
+    resolved_plan = _plan_with_resolved_phase(
+        plan_row,
+        week,
+        structured_phase=structured_phase,
+    )
+
     open_injuries = _ensure_intake_injury_flags(
         store,
         athlete_id=athlete_id,
@@ -1075,11 +1084,7 @@ def build_today_command_view(
 
     return build_command_view(
         current_training_day=training_day,
-        plan=_plan_with_resolved_phase(
-            plan_row,
-            week,
-            structured_phase=_structured_phase_for_day(plan_row, training_day),
-        ),
+        plan=resolved_plan,
         recommendation=recommendation,
         completion=today_completion,
         next_session=_next_session_payload(target_entry, session_id, relation=session_relation),
@@ -1096,6 +1101,7 @@ def build_today_command_view(
                 store,
                 athlete_id=athlete_id,
                 training_day=training_day,
+                current_phase=str(resolved_plan.get("phase") or ""),
             ),
         ),
         open_injuries=open_injuries,
