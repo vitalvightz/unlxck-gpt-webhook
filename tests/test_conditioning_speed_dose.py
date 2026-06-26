@@ -188,6 +188,60 @@ def test_lower_limb_injury_downgrades_away_from_acceleration_speed(monkeypatch):
     assert any(drill.get("name") == "Rhythm Footwork Pop" for drill in grouped.get("alactic", []))
 
 
+def test_wrist_hand_injury_preserves_footwork_speed_while_avoiding_punching_contact(monkeypatch):
+    bank = [
+        {
+            "name": "Punching Contact Speed Burst",
+            "phases": ["SPP"],
+            "system": "alactic",
+            "tags": ["speed", "boxing", "striking", "mech_upper_press"],
+            "equipment": [],
+            "duration": "4 x 6 sec, 90 sec rest",
+            "notes": "Short hard punch burst.",
+            "work_sec": 6,
+            "rest_sec": 90,
+            "rounds": 4,
+            "rpe": 7,
+            "lactate_load": "low",
+            "impact_cost": "low",
+            "movement_cost": "low",
+        },
+        {
+            "name": "Reactive Footwork Speed",
+            "phases": ["SPP"],
+            "system": "alactic",
+            "tags": ["speed", "footwork", "reactive", "low_impact"],
+            "equipment": [],
+            "duration": "4 x 6 sec, 90 sec rest",
+            "notes": "Short full-rest footwork speed. Stop before fatigue.",
+            "work_sec": 6,
+            "rest_sec": 90,
+            "rounds": 4,
+            "rpe": 7,
+            "lactate_load": "low",
+            "impact_cost": "low",
+            "movement_cost": "low",
+        },
+        *_small_conditioning_bank()[:2],
+    ]
+    monkeypatch.setattr(conditioning, "get_conditioning_bank", lambda: bank)
+    monkeypatch.setattr(conditioning, "get_style_conditioning_bank", lambda: [])
+    monkeypatch.setattr(conditioning, "get_coordination_bank", lambda: [])
+    monkeypatch.setattr(conditioning, "allocate_sessions", lambda *_args, **_kwargs: {"conditioning": 3})
+    monkeypatch.setattr(conditioning, "calculate_exercise_numbers", lambda *_args, **_kwargs: {"conditioning": 3})
+    monkeypatch.setattr(conditioning, "get_format_weights", lambda: {"boxing": {"SPP": {"glycolytic": 1.0, "alactic": 1.0}}})
+
+    _output, names, _why_log, grouped, _missing, _reservoir = conditioning.generate_conditioning_block(
+        _base_flags(key_goals=["speed"], injuries=["wrist pain"])
+    )
+
+    assert "Punching Contact Speed Burst" not in names
+    assert any(drill.get("name") == "Reactive Footwork Speed" for drill in grouped.get("alactic", []))
+    for drill in grouped.get("alactic", []):
+        tags = set(drill.get("tags", []))
+        assert not ({"boxing", "striking", "contact"} & tags and "mech_upper_press" in tags)
+
+
 def test_speed_tagging_regression_entries_are_additive():
     root = Path(__file__).resolve().parents[1]
     conditioning_bank = json.loads((root / "data" / "conditioning_bank.json").read_text(encoding="utf-8"))
@@ -195,9 +249,19 @@ def test_speed_tagging_regression_entries_are_additive():
 
     conditioning_by_name = {item["name"]: set(item.get("tags", [])) for item in conditioning_bank}
     exercise_by_name = {item["name"]: set(item.get("tags", [])) for item in exercise_bank}
+    conditioning_by_name_full = {item["name"]: item for item in conditioning_bank}
 
     assert {"speed", "footwork", "reactive"} <= conditioning_by_name["Mini Hurdle Quick Steps"]
     assert {"speed", "footwork", "reactive"} <= conditioning_by_name["Reactive Shuffle Repeats"]
+    for name in ("Mini Hurdle Quick Steps", "Quick Lateral Hop Tap", "Split Stance Hop Switch"):
+        drill = conditioning_by_name_full[name]
+        tags = conditioning_by_name[name]
+        risk_tags = set(drill.get("mechanical_risk_tags", []))
+        assert "footwork" in tags
+        assert "reactive" in tags
+        assert float(drill.get("work_sec", 999)) <= 10
+        assert str(drill.get("lactate_load", "")).lower() == "low"
+        assert risk_tags & {"mech_landing_impact", "mech_lower_jump"}
     assert {"speed", "acceleration"} <= exercise_by_name["Sprint Acceleration (10-20m)"]
     assert "reactive" in exercise_by_name["Reactive Band Taps (Partner)"]
     assert "footwork" in exercise_by_name["Pivot-and-freeze lead foot"]
