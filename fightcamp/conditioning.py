@@ -1189,10 +1189,12 @@ def _resolve_conditioning_sessions(
         explicit_primaries = [d for d in drills if not d.get("render_as_fallback")]
         primary_raws = explicit_primaries[:primary_cap]
         if len(primary_raws) < primary_cap:
+            primary_raw_ids = {id(primary) for primary in primary_raws}
             for drill in drills:
-                if id(drill) in {id(primary) for primary in primary_raws} or drill.get("render_as_fallback"):
+                if id(drill) in primary_raw_ids or drill.get("render_as_fallback"):
                     continue
                 primary_raws.append(drill)
+                primary_raw_ids.add(id(drill))
                 if len(primary_raws) >= primary_cap:
                     break
         if not primary_raws:
