@@ -183,6 +183,8 @@ def _allowed_inserts(
 
     if insert_offset == 1:
         allowed &= ZERO_COST_INSERTS | {"recovery_reset"}
+    elif insert_offset <= 3:
+        allowed -= PHYSICAL_INSERTS
 
     if _has_high_fatigue(athlete_model):
         allowed &= ZERO_COST_INSERTS | {"recovery_reset"}
@@ -195,6 +197,11 @@ def _allowed_inserts(
         allowed &= ZERO_COST_INSERTS | {"recovery_reset", "mobility_rehab"}
     elif injury_state == "mild_stable":
         allowed |= {"mobility_rehab"}
+
+    if insert_offset <= 4:
+        allowed -= PHYSICAL_INSERTS
+    elif "mobility_rehab" in allowed and not (_has_mobility_need(athlete_model) or injury_state == "mild_stable"):
+        allowed.remove("mobility_rehab")
 
     if on_hard_sparring_day:
         allowed -= PHYSICAL_INSERTS
@@ -311,16 +318,20 @@ def select_gap_fill_insert(
         role_key = _first_allowed(["tactical_watch", "neural_visualization", "recovery_reset", "self_review"], allowed)
     elif high_fatigue:
         role_key = _first_allowed(["recovery_reset", "neural_visualization", "tactical_watch"], allowed)
+    elif active_cut and injury_state == "mild_stable" and insert_offset > 4:
+        role_key = _first_allowed(["mobility_rehab", "tactical_watch"], allowed)
+    elif active_cut and insert_offset <= 10:
+        role_key = _first_allowed(["tactical_watch", "neural_visualization", "recovery_reset"], allowed)
     elif active_cut and mobility_need and insert_offset > 3:
         role_key = _first_allowed(["mobility_rehab", "tactical_watch"], allowed)
     elif active_cut:
         role_key = _first_allowed(["tactical_watch"], allowed)
+    elif insert_offset <= 10:
+        role_key = _first_allowed(["tactical_watch", "neural_visualization", "recovery_reset"], allowed)
     elif mobility_need and insert_offset > 3:
         role_key = _first_allowed(["mobility_rehab"], allowed)
     elif _has_power_speed_goal(athlete_model) and not active_cut and not has_injury and insert_offset > 3:
         role_key = _first_allowed(["neural_visualization", "technical_shadow_rhythm"], allowed)
-    elif insert_offset <= 10:
-        role_key = _first_allowed(["tactical_watch", "neural_visualization", "recovery_reset"], allowed)
     elif not active_cut and not has_injury:
         role_key = _first_allowed(["tactical_watch", "self_review"], allowed)
 

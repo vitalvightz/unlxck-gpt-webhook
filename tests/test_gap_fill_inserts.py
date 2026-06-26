@@ -73,6 +73,36 @@ def test_mobility_weakness_chooses_mobility_rehab_when_not_too_close():
     assert close_insert["role_key"] != "mobility_rehab"
 
 
+def test_active_cut_mobility_weakness_d8_does_not_auto_choose_mobility_rehab():
+    insert = select_gap_fill_insert(
+        _athlete(
+            weight_cut_risk=True,
+            readiness_flags=["active_weight_cut"],
+            weaknesses=["mobility"],
+        ),
+        8,
+    )
+
+    assert insert is not None
+    assert insert["role_key"] in {"tactical_watch", "neural_visualization", "recovery_reset"}
+    assert insert["role_key"] != "mobility_rehab"
+
+
+def test_active_cut_d8_mild_stable_injury_can_choose_mobility_rehab():
+    insert = select_gap_fill_insert(
+        _athlete(
+            weight_cut_risk=True,
+            readiness_flags=["active_weight_cut"],
+            weaknesses=["mobility"],
+            parsed_injuries=[{"area": "ankle", "severity": "mild", "trend": "stable"}],
+        ),
+        8,
+    )
+
+    assert insert is not None
+    assert insert["role_key"] == "mobility_rehab"
+
+
 def test_power_speed_low_risk_gap_chooses_neural_support():
     insert = select_gap_fill_insert(
         _athlete(key_goals=["power"], fatigue="low", fatigue_level="low"),
@@ -98,6 +128,15 @@ def test_d1_blocks_physical_load():
 
     assert allowed == {"tactical_watch", "self_review", "neural_visualization", "recovery_reset"}
     assert not (allowed & {"mobility_rehab", "movement_quality", "technical_shadow_rhythm"})
+
+
+def test_d3_blocks_physical_load():
+    allowed = _allowed_inserts(_athlete(weaknesses=["mobility"]), 3)
+    insert = select_gap_fill_insert(_athlete(weaknesses=["mobility"]), 3)
+
+    assert not (allowed & {"mobility_rehab", "movement_quality", "technical_shadow_rhythm"})
+    assert insert is not None
+    assert insert["role_key"] not in {"mobility_rehab", "movement_quality", "technical_shadow_rhythm"}
 
 
 def test_insert_does_not_increase_meaningful_stress_count():
