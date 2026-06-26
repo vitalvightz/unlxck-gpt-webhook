@@ -8,7 +8,7 @@ import {
   WEAK_AREA_OPTIONS,
   retainKnownOptionValues,
 } from "@/lib/intake-options";
-import { applyNoScheduledFightSnapshot, emptyPlanRequest } from "@/lib/onboarding";
+import { applyNoScheduledFightSnapshot, canonicalizePerformanceFocus, emptyPlanRequest } from "@/lib/onboarding";
 import {
   buildDaysOutContext,
   computeDaysUntilFight,
@@ -249,5 +249,5 @@ export function quickBuildToPlanRequest(input: QuickBuildInput): PlanRequest {
     mindset_challenges: "",
     notes: "",
   };
-  return applyNoScheduledFightSnapshot(plan, input.no_scheduled_fight);
+  return canonicalizePerformanceFocus(applyNoScheduledFightSnapshot(plan, input.no_scheduled_fight));
 }

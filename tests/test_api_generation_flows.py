@@ -37,6 +37,7 @@ from support import (
     _planner,
     _start_generation,
     finalized_result,
+    seed_default_profiles,
     stage1_result,
 )
 
@@ -74,6 +75,25 @@ def _under_threshold_stage1_planner_for_test(payload: dict, *, progress_callback
     return stage1_result()
 
 
+def _payload_fields_by_label(payload: dict) -> dict[str, Any]:
+    return {
+        str(field.get("label")): field.get("value")
+        for field in payload.get("data", {}).get("fields", [])
+        if isinstance(field, dict)
+    }
+
+
+def _assert_strength_request_planner_for_test(payload: dict, *, progress_callback=None) -> dict:
+    fields = _payload_fields_by_label(payload)
+    assert fields["What are your key performance goals?"] == ["strength", "mobility"]
+    assert fields["Primary goal"] == "strength"
+    assert fields["Where do you feel weakest right now?"] == ["footwork"]
+    assert fields["Primary weak area"] == "footwork"
+    assert fields["Fatigue Level"] == "low"
+    assert fields["Professional Status"] == "amateur"
+    return stage1_result()
+
+
 def test_generate_plan_persists_validated_final_plan_and_history():
     client, store, stage2 = _build_client()
     payload = _build_request().model_dump(mode="json")
@@ -103,6 +123,69 @@ def test_generate_plan_persists_validated_final_plan_and_history():
     assert saved["stage2_status"] == "stage2_pass"
     assert saved["pdf_url"] is None
     assert stage2.calls[0]["stage2_handoff_text"] == "handoff"
+
+
+def test_generate_plan_uses_submitted_request_over_stale_latest_intake():
+    athlete = AuthenticatedUser(
+        user_id="athlete-1",
+        email="ari@example.com",
+        full_name="Ari Mensah",
+        metadata={},
+    )
+    store = FakeStore()
+    seed_default_profiles(store)
+    stage2 = FakeStage2Automator(result=finalized_result())
+    client = TestClient(
+        create_app(
+            store=store,
+            auth_service=FakeAuthService({"athlete-token": athlete}),
+            planner=_assert_strength_request_planner_for_test,
+            stage2_automator=stage2,
+            enable_in_process_generation=True,
+        )
+    )
+    stale_request = _build_request(
+        {
+            "athlete": {"professional_status": "professional"},
+            "key_goals": ["speed"],
+            "primary_goal": "speed",
+            "weak_areas": ["conditioning"],
+            "primary_weak_area": "conditioning",
+            "fatigue_level": "moderate",
+        }
+    )
+    store.create_intake("athlete-1", stale_request)
+
+    submitted_request = _build_request(
+        {
+            "athlete": {"professional_status": "amateur"},
+            "key_goals": ["strength", "mobility"],
+            "primary_goal": "strength",
+            "weak_areas": ["footwork"],
+            "primary_weak_area": "footwork",
+            "fatigue_level": "low",
+            "equipment_access": ["barbell", "heavy_bag", "dumbbell"],
+        }
+    )
+
+    _, job = _start_generation(client, submitted_request)
+
+    assert job["status"] == "completed"
+    stored_job = store.get_generation_job(job["job_id"])
+    assert stored_job["request_payload"]["key_goals"] == ["strength", "mobility"]
+    assert stored_job["request_payload"]["primary_goal"] == "strength"
+    assert stored_job["request_payload"]["weak_areas"] == ["footwork"]
+    assert stored_job["request_payload"]["primary_weak_area"] == "footwork"
+    assert stored_job["request_payload"]["fatigue_level"] == "low"
+    assert stored_job["request_payload"]["athlete"]["professional_status"] == "amateur"
+
+    created_intake = store.get_latest_intake("athlete-1")["intake"]
+    assert created_intake["key_goals"] == ["strength", "mobility"]
+    assert created_intake["primary_goal"] == "strength"
+    assert created_intake["weak_areas"] == ["footwork"]
+    assert created_intake["primary_weak_area"] == "footwork"
+    assert created_intake["fatigue_level"] == "low"
+    assert created_intake["athlete"]["professional_status"] == "amateur"
 
 
 def test_generate_plan_reuses_existing_terminal_job_for_same_payload():

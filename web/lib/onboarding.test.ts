@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { applyNoScheduledFightSnapshot, emptyPlanRequest, hydratePlanRequest } from "@/lib/onboarding";
+import { applyNoScheduledFightSnapshot, canonicalizePerformanceFocus, emptyPlanRequest, hydratePlanRequest } from "@/lib/onboarding";
 
 test("hydratePlanRequest clears fight_date when partial draft marks open camp", () => {
   const latest = {
@@ -253,4 +253,81 @@ test("hydratePlanRequest treats empty draft fields as intentional clears", () =>
   assert.deepEqual(hydrated.athlete.tactical_style, []);
   assert.equal(hydrated.athlete.stance, "");
   assert.equal(hydrated.athlete.record, "");
+});
+
+test("hydratePlanRequest lets current draft override stale latest intake focus fields", () => {
+  const latest = {
+    ...emptyPlanRequest("Athlete"),
+    key_goals: ["speed"],
+    primary_goal: "speed",
+    fatigue_level: "moderate",
+    weak_areas: ["conditioning"],
+    primary_weak_area: "conditioning",
+    athlete: {
+      ...emptyPlanRequest("Athlete").athlete,
+      professional_status: "professional",
+    },
+  };
+
+  const me = {
+    profile: {
+      full_name: "Athlete",
+      technical_style: [],
+      tactical_style: [],
+      stance: "",
+      professional_status: "professional",
+      record: "",
+      athlete_timezone: "UTC",
+      nutrition_profile: null,
+      onboarding_draft: {
+        key_goals: ["strength", "mobility"],
+        primary_goal: "strength",
+        fatigue_level: "low",
+        weak_areas: ["footwork"],
+        primary_weak_area: "footwork",
+        athlete: {
+          professional_status: "amateur",
+        },
+      },
+    },
+    latest_intake: latest,
+  } as any;
+
+  const hydrated = hydratePlanRequest(me);
+  assert.deepEqual(hydrated.key_goals, ["strength", "mobility"]);
+  assert.equal(hydrated.primary_goal, "strength");
+  assert.equal(hydrated.fatigue_level, "low");
+  assert.equal(hydrated.athlete.professional_status, "amateur");
+  assert.deepEqual(hydrated.weak_areas, ["footwork"]);
+  assert.equal(hydrated.primary_weak_area, "footwork");
+});
+
+test("canonicalizePerformanceFocus sets the only selected goal as primary", () => {
+  const canonical = canonicalizePerformanceFocus({
+    ...emptyPlanRequest("Athlete"),
+    key_goals: ["strength"],
+    primary_goal: "speed",
+  });
+
+  assert.equal(canonical.primary_goal, "strength");
+});
+
+test("canonicalizePerformanceFocus preserves a valid primary among multiple goals", () => {
+  const canonical = canonicalizePerformanceFocus({
+    ...emptyPlanRequest("Athlete"),
+    key_goals: ["strength", "mobility"],
+    primary_goal: "mobility",
+  });
+
+  assert.equal(canonical.primary_goal, "mobility");
+});
+
+test("canonicalizePerformanceFocus corrects invalid primary weak area", () => {
+  const canonical = canonicalizePerformanceFocus({
+    ...emptyPlanRequest("Athlete"),
+    weak_areas: ["footwork"],
+    primary_weak_area: "conditioning",
+  });
+
+  assert.equal(canonical.primary_weak_area, "footwork");
 });
