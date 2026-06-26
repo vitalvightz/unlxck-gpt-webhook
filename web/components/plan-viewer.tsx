@@ -358,8 +358,8 @@ function normalizePlanTextForCards(rawText: string): string {
       /\s+(?=(?:mon(?:day)?|tue(?:s(?:day)?)?|wed(?:nesday)?|thu(?:r(?:sday)?)?|fri(?:day)?|sat(?:urday)?|sun(?:day)?)\b[^()]*\(\s*D-\d+\s*\)\s*[—–\-:]\s*\S)/gi,
       "\n",
     )
-    .replace(/\s+(?=(?:Final notes|End of plan notes)\b)/gi, "\n")
-    .replace(/(^|\n)(Final notes|End of plan notes)\s+[-–—]?\s*/gi, "$1$2\n");
+    .replace(/\s+(?=(?:Coach note|Coach notes|Final coach notes|Final notes|End of plan notes)\b)/gi, "\n")
+    .replace(/(^|\n)(Coach note|Coach notes|Final coach notes|Final notes|End of plan notes)\s+[-–—]?\s*/gi, "$1$2\n");
 }
 
 // Labelled sub-lines that fall *inside* a session block. The plan text packs a
@@ -462,7 +462,7 @@ const SESSION_WEEKDAY_FIRST_RE = new RegExp(
 // branch so a session body line such as "Recovery: light spin" is never
 // mistaken for a new section.
 const NOTE_SECTION_RE =
-  /^(Lead notes|Final notes|Active notes|End of plan notes)(?:\s*[—–\-:]\s*(.+))?$/i;
+  /^(Lead notes|Coach note|Coach notes|Final coach notes|Final notes|Active notes|End of plan notes)(?:\s*[—–\-:]\s*(.+))?$/i;
 
 function normalizePhaseToken(value: string): string {
   return value.replace(/_/g, " ").toUpperCase();

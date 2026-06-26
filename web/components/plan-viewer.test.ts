@@ -536,6 +536,22 @@ test("legacy plan text parses into notes, week and session groups", () => {
   ]);
 });
 
+test("legacy plan text treats final coach notes as a notes section", () => {
+  const groups = parsePlanText(
+    [
+      "D-0 (Sunday) - Fight day protocol",
+      "Fight day protocol - follow coach warm-up and fight protocol; no additional app S&C.",
+      "",
+      "Final coach notes",
+      "Stay loose.",
+    ].join("\n"),
+  );
+
+  const final = groups[groups.length - 1];
+  assert.equal(final.kind === "notes" && final.title, "Final coach notes");
+  assert.deepEqual(final.kind === "notes" ? final.lines : null, ["Stay loose."]);
+});
+
 test("session headers parse in both countdown-first and weekday-first forms with any separator", () => {
   const groups = parsePlanText(
     [
