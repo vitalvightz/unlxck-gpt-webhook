@@ -181,41 +181,59 @@ def _deterministic_contact_days(planning_brief: dict[str, Any]) -> list[_Contact
     fight_date = _resolve_fight_date(planning_brief)
     contact_days: list[_ContactDay] = []
     seen: set[tuple[str | None, int | None]] = set()
+
     for week_index in range(len(weeks)):
         week = weeks[week_index]
         if not isinstance(week, dict):
             continue
+
         schedule = extract_weekly_schedule(
-            planning_brief, week_index=week_index, fight_date=fight_date
+            planning_brief,
+            week_index=week_index,
+            fight_date=fight_date,
         )
         if not isinstance(schedule, dict):
             continue
+
         phase = str(schedule.get("phase") or "").strip().upper()
         days = schedule.get("days")
         if not isinstance(days, list):
             continue
+
         schedule_days_by_weekday: dict[str, dict[str, Any]] = {}
         hard_contact_weekdays: set[str] = set()
+
         for day in days:
             if not isinstance(day, dict):
                 continue
+
             weekday = _normalize_weekday(day.get("weekday"))
             if weekday:
                 schedule_days_by_weekday[weekday] = day
+
             load = str(day.get("effective_load") or "").strip().lower()
             sparring_class = str(day.get("sparring_day_class") or "").strip().lower()
+
             if load not in _CONTACT_EFFECTIVE_LOADS or sparring_class in {"", "none"}:
                 continue
+
             if weekday:
                 hard_contact_weekdays.add(weekday)
+
             cal = str(day.get("calendar_date") or "").strip() or None
             raw_dday = day.get("d_day")
             d_day = raw_dday if isinstance(raw_dday, int) and raw_dday >= 0 else None
+
+            if d_day == 0:
+                continue
+
             if cal is None and d_day is None:
                 continue
+
             key = (cal, d_day)
             if key in seen:
                 continue
+
             seen.add(key)
             contact_days.append(
                 _ContactDay(
@@ -228,24 +246,29 @@ def _deterministic_contact_days(planning_brief: dict[str, Any]) -> list[_Contact
                     contact_kind="sparring",
                 )
             )
+
         for weekday in _declared_light_combat_weekdays(week):
             if weekday in hard_contact_weekdays:
                 continue
+
             day = schedule_days_by_weekday.get(weekday)
             if not isinstance(day, dict):
                 continue
+
             cal = str(day.get("calendar_date") or "").strip() or None
-                        raw_dday = day.get("d_day")
+            raw_dday = day.get("d_day")
             d_day = raw_dday if isinstance(raw_dday, int) and raw_dday >= 0 else None
+
             if d_day == 0:
                 continue
+
             if cal is None and d_day is None:
                 continue
-            if cal is None and d_day is None:
-                continue
+
             key = (cal, d_day)
             if key in seen:
                 continue
+
             seen.add(key)
             contact_days.append(
                 _ContactDay(
@@ -258,6 +281,7 @@ def _deterministic_contact_days(planning_brief: dict[str, Any]) -> list[_Contact
                     contact_kind="light_combat",
                 )
             )
+
     return contact_days
 
 
@@ -410,7 +434,7 @@ def _reconcile(structured_plan: Any, planning_brief: Any) -> list[str]:
             if day.get("sessions"):
                 if contact.contact_kind == "light_combat":
                     notes.append(
-                        f"skipped coach-led light combat card for "
+                        f"skipped light technical combat card for "
                         f"{date or f'D-{dday}'} because app sessions already exist"
                     )
                 continue
@@ -426,7 +450,7 @@ def _reconcile(structured_plan: Any, planning_brief: Any) -> list[str]:
                 continue
             card["headline"] = contact.headline
             notes.append(
-                f"stamped coach-led headline on {date or f'D-{dday}'} "
+                f"stamped contact headline on {date or f'D-{dday}'} "
                 f"({contact.headline!r})"
             )
 
@@ -473,7 +497,7 @@ def _reconcile(structured_plan: Any, planning_brief: Any) -> list[str]:
         if contact.d_day is not None:
             present_ddays.add(contact.d_day)
         notes.append(
-            f"inserted coach-led card for "
+            f"inserted contact card for "
             f"{contact.date or f'D-{contact.d_day}'} ({contact.headline!r})"
         )
 
