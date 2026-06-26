@@ -390,7 +390,7 @@ export function SessionlessDayCard({ day }: { day: StructuredDay }) {
         </div>
       </header>
       {kind === "light_combat" ? (
-        <p className="sp-today-note">No hard sparring here — keep this as light technical/support work and protect freshness.</p>
+        <p className="sp-today-note">Light technical combat tag — no hard sparring here. Low-noise support work can stay if prescribed.</p>
       ) : coachLed ? (
         <p className="sp-today-note">No app S&amp;C today — train with your coach and keep freshness priority.</p>
       ) : null}
