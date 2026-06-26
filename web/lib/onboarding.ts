@@ -24,40 +24,33 @@ const AVAILABILITY_BOUND_DAY_FIELDS = ["hard_sparring_days", "support_work_days"
 
 // Layer `top` on `base` field-by-field, preferring `top` only when it carries a non-empty value.
 // Lets a partial onboarding_draft pull untouched fields from latest_intake instead of clobbering them.
-function mergeIntakeLayers(base: PlanRequest, top: PlanRequest): PlanRequest {
+function mergeIntakeLayers(base: PlanRequest, top: Partial<PlanRequest>): PlanRequest {
   const merged: Record<string, unknown> = { ...base };
+
   for (const key of Object.keys(top) as (keyof PlanRequest)[]) {
     if (key === "athlete") continue;
+
     const topValue = top[key];
-    merged[key] = isEmptyValue(topValue) ? base[key] : topValue;
-  }
-  // The day-list fields above use "non-empty wins", which means clearing them in
-  // the draft (e.g. removing a support-work day) would otherwise be silently
-  // overwritten by the previous intake's value — and even an untouched value can
-  // fall out of sync once availability changes. Take them straight from the
-  // draft whenever it sets availability, then prune to the resolved availability
-  // so the hydrated payload always satisfies the backend's containment rule.
-  if (!isEmptyValue(top.training_availability)) {
-    for (const field of AVAILABILITY_BOUND_DAY_FIELDS) {
-      // Only override when the draft explicitly carries the field. A cleared
-      // field is present as an empty array (and must win); a field the draft
-      // never saved is `undefined`, so leave the backfilled `base` value in
-      // place rather than clobbering it with `[]`.
-      const draftValue = (top as Partial<PlanRequest>)[field];
-      if (draftValue !== undefined) {
-        merged[field] = draftValue;
-      }
+
+    // Undefined means "draft never saved this field".
+    // Empty string / empty array means "athlete intentionally cleared this field".
+    if (topValue !== undefined) {
+      merged[key] = topValue;
     }
   }
+
   const availability = new Set((merged.training_availability as string[] | undefined) ?? []);
+
   for (const field of AVAILABILITY_BOUND_DAY_FIELDS) {
     const days = (merged[field] as string[] | undefined) ?? [];
     merged[field] = days.filter((day) => availability.has(day));
   }
+
   if (top.no_scheduled_fight === true) {
     merged.fight_date = "";
     merged.no_scheduled_fight = true;
   }
+
   return merged as PlanRequest;
 }
 
@@ -78,13 +71,25 @@ export function applyNoScheduledFightSnapshot(form: PlanRequest, noScheduledFigh
 function mergeAthleteLayers(
   base: PlanRequest["athlete"],
   top?: Partial<PlanRequest["athlete"]> | null,
+  mode: "non_empty" | "explicit" = "non_empty",
 ): PlanRequest["athlete"] {
   if (!top) return base;
+
   const merged: Record<string, unknown> = { ...base };
+
   for (const key of Object.keys(top) as (keyof PlanRequest["athlete"])[]) {
     const topValue = top[key];
+
+    if (mode === "explicit") {
+      if (topValue !== undefined) {
+        merged[key] = topValue;
+      }
+      continue;
+    }
+
     merged[key] = isEmptyValue(topValue) ? base[key] : topValue;
   }
+
   return merged as PlanRequest["athlete"];
 }
 
@@ -169,7 +174,7 @@ export function hydratePlanRequest(me: MeResponse | null): PlanRequest {
 
   const withProfile = mergeAthleteLayers(fallback.athlete, profileAthlete);
   const withIntake = mergeAthleteLayers(withProfile, base.athlete);
-  const finalAthlete = mergeAthleteLayers(withIntake, normalizedDraft?.athlete);
+  const finalAthlete = mergeAthleteLayers(withIntake, normalizedDraft?.athlete, "explicit");
 
   return {
     ...fallback,
