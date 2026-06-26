@@ -378,9 +378,13 @@ def apply_gap_fill_inserts(session_sequence: list[dict[str, Any]], athlete_model
     if not offsets:
         return ordered
 
-    try:
-        days_until_fight = int(athlete_model.get("days_until_fight") or max(offsets))
-    except (TypeError, ValueError):
+    raw_days = athlete_model.get("days_until_fight")
+    if raw_days is not None and str(raw_days).strip() != "":
+        try:
+            days_until_fight = int(raw_days)
+        except (TypeError, ValueError):
+            days_until_fight = max(offsets)
+    else:
         days_until_fight = max(offsets)
     countdown_map = _countdown_weekday_map(athlete_model.get("plan_creation_weekday"), days_until_fight)
     hard_sparring_days = set(ordered_weekdays(clean_list(athlete_model.get("hard_sparring_days", []))))
