@@ -728,7 +728,6 @@ export function classifySessionlessDay(
       tag: SESSIONLESS_DAY_TAGS[kind],
       coachLed:
         kind === "coach_led" ||
-        kind === "light_combat" ||
         kind === "sparring" ||
         kind === "technical",
     };
