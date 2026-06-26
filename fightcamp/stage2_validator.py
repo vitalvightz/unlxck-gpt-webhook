@@ -2839,7 +2839,7 @@ def validate_stage2_output(*, planning_brief: dict, final_plan_text: str) -> dic
     weight_cut_acknowledgement_warnings = _weight_cut_acknowledgement_warnings(planning_brief, final_plan_text)
     weight_cut_contradiction_warnings = _weight_cut_contradiction_warnings(planning_brief, final_plan_text)
     late_fight_header_contract_warnings = _late_fight_header_contract_warnings(planning_brief, plan_lines)
-        late_fight_d0_protocol_warnings = _late_fight_d0_protocol_warnings(planning_brief, final_plan_text, plan_lines)
+    late_fight_d0_protocol_warnings = _late_fight_d0_protocol_warnings(planning_brief, final_plan_text, plan_lines)
     late_fight_missing_terminal_d0_warnings = _late_fight_missing_terminal_d0_warnings(
         planning_brief,
         final_plan_text,
@@ -2886,7 +2886,7 @@ def validate_stage2_output(*, planning_brief: dict, final_plan_text: str) -> dic
     warnings.extend(_normalize_warning(item) for item in weight_cut_contradiction_warnings)
     warnings.extend(_normalize_warning(item) for item in late_fight_header_contract_warnings)
     warnings.extend(_normalize_warning(item) for item in late_fight_d0_protocol_warnings)
-        warnings.extend(_normalize_warning(item) for item in late_fight_missing_terminal_d0_warnings)
+    warnings.extend(_normalize_warning(item) for item in late_fight_missing_terminal_d0_warnings)
     warnings.extend(_normalize_warning(item) for item in internal_render_contract_leak_warnings)
     warnings.extend(_normalize_warning(item) for item in coach_owned_sparring_detail_warnings)
     warnings.extend(_normalize_warning(item) for item in lead_summary_contract_warnings)
@@ -2914,6 +2914,7 @@ def validate_stage2_output(*, planning_brief: dict, final_plan_text: str) -> dic
         "weight_cut_contradiction_warnings": weight_cut_contradiction_warnings,
         "late_fight_header_contract_warnings": late_fight_header_contract_warnings,
         "late_fight_d0_protocol_warnings": late_fight_d0_protocol_warnings,
+        "late_fight_missing_terminal_d0_warnings": late_fight_missing_terminal_d0_warnings,
         "internal_render_contract_leak_warnings": internal_render_contract_leak_warnings,
         "coach_owned_sparring_detail_warnings": coach_owned_sparring_detail_warnings,
         "lead_summary_contract_warnings": lead_summary_contract_warnings,
