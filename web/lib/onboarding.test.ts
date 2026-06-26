@@ -195,3 +195,62 @@ test("hydratePlanRequest uses quick build draft as source of truth", () => {
   assert.deepEqual(hydrated.key_goals, ["speed"]);
   assert.deepEqual(hydrated.training_availability, ["tuesday", "thursday"]);
 });
+
+test("hydratePlanRequest treats empty draft fields as intentional clears", () => {
+  const latest = {
+    ...emptyPlanRequest("Athlete"),
+    equipment_access: ["barbell", "heavy_bag"],
+    key_goals: ["conditioning", "speed"],
+    weak_areas: ["gas_tank"],
+    injuries: "Old shoulder issue",
+    training_preference: "Old preference",
+    athlete: {
+      ...emptyPlanRequest("Athlete").athlete,
+      tactical_style: ["pressure_fighter"],
+      stance: "orthodox",
+      record: "5-1",
+    },
+  };
+
+  const me = {
+    profile: {
+      full_name: "Athlete",
+      technical_style: ["boxing"],
+      tactical_style: ["pressure_fighter"],
+      stance: "orthodox",
+      professional_status: "amateur",
+      record: "5-1",
+      athlete_timezone: "UTC",
+      nutrition_profile: null,
+      onboarding_draft: {
+        ...emptyPlanRequest("Athlete"),
+        equipment_access: [],
+        key_goals: ["speed"],
+        weak_areas: [],
+        injuries: "",
+        training_preference: "",
+        athlete: {
+          ...emptyPlanRequest("Athlete").athlete,
+          full_name: "Athlete",
+          technical_style: ["boxing"],
+          tactical_style: [],
+          stance: "",
+          record: "",
+          athlete_timezone: "UTC",
+        },
+      },
+    },
+    latest_intake: latest,
+  } as any;
+
+  const hydrated = hydratePlanRequest(me);
+
+  assert.deepEqual(hydrated.equipment_access, []);
+  assert.deepEqual(hydrated.key_goals, ["speed"]);
+  assert.deepEqual(hydrated.weak_areas, []);
+  assert.equal(hydrated.injuries, "");
+  assert.equal(hydrated.training_preference, "");
+  assert.deepEqual(hydrated.athlete.tactical_style, []);
+  assert.equal(hydrated.athlete.stance, "");
+  assert.equal(hydrated.athlete.record, "");
+});
