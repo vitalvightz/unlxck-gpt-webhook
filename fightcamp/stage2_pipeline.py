@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import re
 from typing import Any
 
+from .fight_day_override import FIGHT_DAY_PROTOCOL_TEXT
 from .stage2_policy import (
     apply_publish_blocking_review_gate,
     hard_blocker_findings,
@@ -17,6 +19,36 @@ _STATUS_READY = "READY"
 _STATUS_PASS = "PASS"
 _STATUS_WARN = "WARN"
 _STATUS_FAIL = "FAIL"
+_D0_WEEKDAY_PATTERN = (
+    r"mon(?:day)?|tue(?:s(?:day)?)?|wed(?:nesday)?|thu(?:r(?:sday)?)?|"
+    r"fri(?:day)?|sat(?:urday)?|sun(?:day)?"
+)
+_D0_HEADING_PATTERN = re.compile(
+    rf"^[ \t]*(?:#{{1,6}}[ \t]*)?(?:[-*][ \t]*)?(?:\*\*)?"
+    rf"D-0[ \t]*\([ \t]*(?P<weekday>{_D0_WEEKDAY_PATTERN})[ \t]*\)"
+    rf"(?:[ \t]*(?:\u2014|--|-|:)[ \t]*.*)?[ \t]*$",
+    re.IGNORECASE | re.MULTILINE,
+)
+
+
+def canonicalize_terminal_d0_protocol(plan_text: str) -> str:
+    """Force the final D-0 block to be the terminal fight-day protocol."""
+
+    text = str(plan_text or "")
+    matches = list(_D0_HEADING_PATTERN.finditer(text))
+    if not matches:
+        return text
+
+    final_d0 = matches[-1]
+    weekday = final_d0.group("weekday").strip()
+    canonical_d0 = (
+        f"D-0 ({weekday}) \u2014 Fight day protocol\n"
+        f"{FIGHT_DAY_PROTOCOL_TEXT}"
+    )
+    prefix = text[: final_d0.start()].rstrip()
+    if not prefix:
+        return canonical_d0
+    return f"{prefix}\n\n{canonical_d0}"
 
 def _require_dict(value: Any, *, name: str) -> dict:
     if not isinstance(value, dict):

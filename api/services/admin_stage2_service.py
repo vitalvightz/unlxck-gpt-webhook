@@ -6,7 +6,11 @@ import os
 from typing import Any
 
 from fastapi import HTTPException, status
-from fightcamp.stage2_pipeline import build_stage2_retry, review_stage2_output
+from fightcamp.stage2_pipeline import (
+    build_stage2_retry,
+    canonicalize_terminal_d0_protocol,
+    review_stage2_output,
+)
 from fightcamp.stage2_policy import (
     apply_publish_blocking_review_gate,
     publish_blocking_review_findings,
@@ -255,6 +259,7 @@ async def prewarm_structured_plan(
 
 
 def _manual_stage2_result(plan_row: dict[str, Any], final_plan_text: str) -> dict[str, Any]:
+    final_plan_text = canonicalize_terminal_d0_protocol(final_plan_text)
     planning_brief = _decode_structured_text(plan_row.get("planning_brief")) or {}
     review = review_stage2_output(planning_brief=planning_brief, final_plan_text=final_plan_text)
     validator_report = apply_publish_blocking_review_gate(review["validator_report"])
@@ -295,6 +300,7 @@ def _manual_stage2_result(plan_row: dict[str, Any], final_plan_text: str) -> dic
 
 def _admin_approved_result(plan_row: dict[str, Any]) -> dict[str, Any]:
     approved_text = str(plan_row.get("final_plan_text") or plan_row.get("draft_plan_text") or plan_row.get("plan_text") or "").strip()
+    approved_text = canonicalize_terminal_d0_protocol(approved_text)
     if not approved_text:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
