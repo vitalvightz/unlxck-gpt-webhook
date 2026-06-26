@@ -368,3 +368,49 @@ def test_light_combat_does_not_overwrite_existing_app_session_and_records_note()
     assert day["sessions"] == real_session
     assert len(plan["weeks"][0]["days"]) == 1
     assert any("skipped coach-led light combat" in note for note in notes)
+
+
+def test_role_map_locked_light_combat_inserts_without_occupied_session_skip():
+    from fightcamp.stage2_role_map import _build_weekly_role_map
+
+    athlete_model = {
+        "sport": "boxing",
+        "status": "amateur",
+        "rounds_format": "3x3",
+        "training_days": ["monday", "tuesday", "wednesday", "thursday", "friday"],
+        "hard_sparring_days": [],
+        "support_work_days": ["friday"],
+        "technical_skill_days": [],
+        "fatigue": "low",
+        "weight_cut_pct": 0.0,
+        "weight_cut_risk": False,
+        "readiness_flags": [],
+        "injuries": [],
+        "fight_date": "2026-07-31",
+        "days_until_fight": 14,
+    }
+    progression = {
+        "weeks": [
+            {"week_index": 1, "phase": "GPP", "stage_key": "general_capacity",
+             "phase_week_index": 1, "phase_week_total": 1, "span_days": 7,
+             "session_counts": {"strength": 1, "conditioning": 1, "recovery": 1}},
+            {"week_index": 2, "phase": "TAPER", "stage_key": "taper_sharpen",
+             "phase_week_index": 1, "phase_week_total": 1, "span_days": 7,
+             "session_counts": {"strength": 1, "conditioning": 1, "recovery": 1}},
+        ]
+    }
+    role_map = _build_weekly_role_map(athlete_model, progression, {"key": "general_fight_readiness"})
+    week = role_map["weeks"][0]
+    light_role = next(role for role in week["session_roles"] if role.get("role_key") == "light_combat_day")
+    light_countdown = light_role["countdown_label"]
+
+    plan = _structured_plan([_day("D-13", headline="Strength"), _day("D-11", headline="Aerobic")])
+    notes = reconcile_coach_led_sparring_days(plan, {"weekly_role_map": role_map})
+
+    inserted = [
+        day for day in plan["weeks"][0]["days"]
+        if day.get("countdown_label") == light_countdown
+    ]
+    assert len(inserted) == 1
+    assert inserted[0]["today_card"]["headline"] == "Coach-led light combat"
+    assert not any("skipped coach-led light combat" in note for note in notes)

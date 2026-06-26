@@ -1013,7 +1013,8 @@ def _declared_day_sets(athlete_model: dict) -> tuple[list[str], set[str], set[st
     support_work = {
         day
         for day in _ordered_weekdays(
-            clean_list(athlete_model.get("support_work_days") or athlete_model.get("technical_skill_days") or [])
+            clean_list(athlete_model.get("support_work_days"))
+            + clean_list(athlete_model.get("technical_skill_days"))
         )
         if day in training_days
     }
@@ -1157,6 +1158,62 @@ def _hard_sparring_role(week_entry: dict, day: str, plan_entry: dict[str, Any] |
     return role
 
 
+def _is_coach_owned_role(role: dict[str, Any]) -> bool:
+    return str(role.get("role_key") or "").strip() in {"hard_sparring_day", "light_combat_day"}
+
+
+def _declared_light_combat_days(week_entry: dict, athlete_model: dict) -> list[str]:
+    training_days = set(_ordered_weekdays(clean_list(athlete_model.get("training_days", []))))
+    hard_days = set(
+        _ordered_weekdays(
+            clean_list(week_entry.get("declared_hard_sparring_days") or athlete_model.get("hard_sparring_days", []))
+        )
+    )
+    declared_values = (
+        clean_list(week_entry.get("declared_support_work_days"))
+        + clean_list(athlete_model.get("support_work_days"))
+        + clean_list(week_entry.get("declared_technical_skill_days"))
+        + clean_list(athlete_model.get("technical_skill_days"))
+    )
+    declared = _ordered_weekdays(declared_values)
+    return [day for day in declared if day in training_days and day not in hard_days]
+
+
+def _light_combat_role(week_entry: dict, day: str) -> dict[str, Any]:
+    return {
+        "category": "sparring",
+        "role_key": "light_combat_day",
+        "preferred_pool": "declared_support_work_days",
+        "selection_rule": "Keep the declared Light Combat slot fixed. No app S&C should consume this day.",
+        "anchor": "highest_collision_sport_load",
+        "placement_rule": "Keep this declared Light Combat slot fixed on the athlete's stated day.",
+        "governance": {
+            "authority": "declared_schedule_lock",
+            "execution_only": False,
+            "governed_by": [entry["driver"] for entry in PLANNING_DECISION_HIERARCHY],
+            "cannot_override": [
+                "declared_support_work_days",
+                "declared_technical_skill_days",
+                "weekly_role_map",
+                "session_counts",
+                "resequence",
+                "compression",
+                "repair",
+            ],
+            "resolved_authority": {
+                "protect_first_driver": (week_entry.get("resolved_rule_state") or {}).get("protect_first_driver"),
+                "cut_first_driver": (week_entry.get("resolved_rule_state") or {}).get("cut_first_driver"),
+                "conditioning_sequence_driver": (week_entry.get("resolved_rule_state") or {}).get("conditioning_sequence_driver"),
+            },
+            "suppression_rules": ["Declared Light Combat days are immutable weekly role locks."],
+            "hard_suppression_reasons": [],
+            "locked_day": day,
+        },
+        "scheduled_day_hint": day,
+        "day_assignment_reason": "Declared Light Combat day is fixed in the weekly role map.",
+    }
+
+
 def _make_hard_sparring_lock_suppression(role: dict, day: str) -> dict[str, Any]:
     return {
         "category": role.get("category"),
@@ -1166,6 +1223,18 @@ def _make_hard_sparring_lock_suppression(role: dict, day: str) -> dict[str, Any]
         "governance": dict(role.get("governance", {})),
         "locked_day": day,
         "replacement_role_key": "hard_sparring_day",
+    }
+
+
+def _make_light_combat_lock_suppression(role: dict, day: str) -> dict[str, Any]:
+    return {
+        "category": role.get("category"),
+        "role_key": role.get("role_key"),
+        "preferred_system": role.get("preferred_system", ""),
+        "reasons": [f"Declared Light Combat locks {day} as light_combat_day in the weekly role map."],
+        "governance": dict(role.get("governance", {})),
+        "locked_day": day,
+        "replacement_role_key": "light_combat_day",
     }
 
 
@@ -1283,6 +1352,59 @@ def _lock_declared_hard_sparring_roles(
     return updated_roles, updated_suppressed
 
 
+def _lock_declared_light_combat_roles(
+    week_entry: dict,
+    session_roles: list[dict],
+    suppressed_roles: list[dict],
+    athlete_model: dict,
+) -> tuple[list[dict], list[dict]]:
+    declared_light_days = _declared_light_combat_days(week_entry, athlete_model)
+    if not declared_light_days:
+        return session_roles, suppressed_roles
+
+    updated_roles = list(session_roles)
+    updated_suppressed = list(suppressed_roles)
+    used_indices: set[int] = set()
+
+    for day in declared_light_days:
+        replacement = _light_combat_role(week_entry, day)
+        existing_idx = next(
+            (
+                idx for idx, role in enumerate(updated_roles)
+                if role.get("role_key") == "light_combat_day"
+                and str(role.get("scheduled_day_hint") or "").strip() == day
+            ),
+            None,
+        )
+        if existing_idx is not None:
+            updated_roles[existing_idx] = replacement
+            used_indices.add(existing_idx)
+            continue
+
+        same_day_idx = next(
+            (
+                idx
+                for idx, role in enumerate(updated_roles)
+                if idx not in used_indices
+                and not _is_coach_owned_role(role)
+                and str(role.get("scheduled_day_hint") or "").strip().lower() == day.lower()
+            ),
+            None,
+        )
+        if same_day_idx is not None:
+            updated_suppressed.append(_make_light_combat_lock_suppression(updated_roles[same_day_idx], day))
+            updated_roles[same_day_idx] = replacement
+            used_indices.add(same_day_idx)
+            continue
+
+        updated_roles.append(replacement)
+        used_indices.add(len(updated_roles) - 1)
+
+    for idx, role in enumerate(updated_roles, start=1):
+        role["session_index"] = idx
+    return updated_roles, updated_suppressed
+
+
 def _assign_declared_day_hints(
     ordered: list[dict],
     athlete_model: dict,
@@ -1300,16 +1422,18 @@ def _assign_declared_day_hints(
     used_days: set[str] = set()
     effective_hard_days_set = set(effective_hard_days(hard_sparring_plan or [])) or set(hard_sparring_days)
     sandwiched_days = set(sandwiched_training_days(training_days, effective_hard_days_set))
+    light_combat_days = support_work_days - hard_sparring_days
+    blocked_coach_days = hard_sparring_days | light_combat_days
 
     # Preserve explicit scheduled days for locked roles.
-    # Hard sparring days are coach-owned anchors and must never move.
+    # Hard sparring and Light Combat days are coach-owned anchors and must never move.
     # Generated low-aerobic recovery touches are also emitted with explicit
     # day hints after compression and should survive this assignment pass.
     for idx, role in enumerate(ordered):
         locked_day = str(role.get("scheduled_day_hint") or "").strip()
         if not locked_day or locked_day not in training_days:
             continue
-        if role.get("role_key") == "hard_sparring_day":
+        if _is_coach_owned_role(role):
             if locked_day in used_days:
                 continue
             day_assignments[idx] = locked_day
@@ -1359,15 +1483,13 @@ def _assign_declared_day_hints(
         for idx in range(len(training_days) - 1):
             recovery_day = training_days[idx]
             primary_day = training_days[idx + 1]
-            if primary_day in hard_sparring_days:
+            if primary_day in blocked_coach_days:
                 continue
-            if recovery_day in hard_sparring_days:
+            if recovery_day in blocked_coach_days:
                 continue
             score = 100
             if primary_day in sandwiched_days:
                 score -= 50
-            if recovery_day in support_work_days:
-                score += 4
             if recovery_day in sandwiched_days:
                 score += 5
             score -= abs((idx + 1) - middle)
@@ -1393,7 +1515,7 @@ def _assign_declared_day_hints(
                 (
                     day
                     for day in training_days
-                    if day not in hard_sparring_days
+                    if day not in blocked_coach_days
                     and day not in used_days
                     and day not in sandwiched_days
                 ),
@@ -1404,7 +1526,7 @@ def _assign_declared_day_hints(
                     (
                         day
                         for day in training_days
-                        if day not in hard_sparring_days and day not in used_days
+                        if day not in blocked_coach_days and day not in used_days
                     ),
                     None,
                 )
@@ -1417,17 +1539,18 @@ def _assign_declared_day_hints(
 
     if glycolytic_idx is not None:
         preferred_glycolytic_day = next(
-            (day for day in reversed(training_days) if day not in hard_sparring_days and day not in used_days),
+            (day for day in reversed(training_days) if day not in blocked_coach_days and day not in used_days),
             None,
         )
-        if not preferred_glycolytic_day:
-            preferred_glycolytic_day = next((day for day in reversed(training_days) if day not in used_days), None)
         if preferred_glycolytic_day:
             day_assignments[glycolytic_idx] = preferred_glycolytic_day
             used_days.add(preferred_glycolytic_day)
 
     if aerobic_idx is not None:
-        preferred_aerobic_day = next((day for day in training_days if day in support_work_days and day not in used_days), None)
+        preferred_aerobic_day = next(
+            (day for day in training_days if day not in blocked_coach_days and day not in used_days),
+            None,
+        )
         if preferred_aerobic_day:
             day_assignments[aerobic_idx] = preferred_aerobic_day
             used_days.add(preferred_aerobic_day)
@@ -1437,14 +1560,14 @@ def _assign_declared_day_hints(
         reason = ""
         if role.get("role_key") == "hard_sparring_day":
             reason = "Declared hard sparring days stay locked in the weekly role map; only the sparring dose may deload."
+        elif role.get("role_key") == "light_combat_day":
+            reason = "Declared Light Combat day is fixed in the weekly role map."
         elif idx == primary_idx:
             reason = "Keep the main neural-strength slot away from declared hard sparring and immediately after the recovery day when possible."
         elif idx == recovery_idx:
             reason = "Use the lowest-load day immediately before the primary strength anchor when possible."
         elif idx == glycolytic_idx and day in hard_sparring_days:
             reason = "Let declared hard sparring own the main collision-heavy combat load when it already exists."
-        elif idx == aerobic_idx and day in support_work_days:
-            reason = "Use declared Support Work Days (Light Combat days / S&C-compatible slots) for lower-noise support work when possible."
         _append_day_hint(role, day, reason)
     
     for idx, role in enumerate(ordered):
@@ -1461,11 +1584,15 @@ def _assign_declared_day_hints(
         )
 
         if is_recovery_compatible:
-            fallback_day = next((day for day in training_days if day in sandwiched_days and day not in used_days), None)
+            fallback_day = next(
+                (
+                    day for day in training_days
+                    if day in sandwiched_days and day not in used_days and day not in blocked_coach_days
+                ),
+                None,
+            )
             if fallback_day is None:
-                fallback_day = next((day for day in training_days if day not in used_days and day not in hard_sparring_days), None)
-            if fallback_day is None:
-                fallback_day = next((day for day in training_days if day not in used_days), None)
+                fallback_day = next((day for day in training_days if day not in used_days and day not in blocked_coach_days), None)
             if fallback_day:
                 day_assignments[idx] = fallback_day
                 used_days.add(fallback_day)
@@ -1480,14 +1607,12 @@ def _assign_declared_day_hints(
             (
                 day
                 for day in training_days
-                if day not in used_days and day not in hard_sparring_days and day not in sandwiched_days
+                if day not in used_days and day not in blocked_coach_days and day not in sandwiched_days
             ),
             None,
         )
         if fallback_day is None:
-            fallback_day = next((day for day in training_days if day not in used_days and day not in hard_sparring_days), None)
-        if fallback_day is None:
-            fallback_day = next((day for day in training_days if day not in used_days), None)
+            fallback_day = next((day for day in training_days if day not in used_days and day not in blocked_coach_days), None)
         if fallback_day:
             day_assignments[idx] = fallback_day
             used_days.add(fallback_day)
@@ -2053,13 +2178,18 @@ def _apply_high_fatigue_week_compression(
                     _kept.append(_role)
             session_roles = _kept
 
-    # Step 1: Count sparring against the weekly cap
+    # Step 1: Count coach-owned contact days against the weekly cap
     hard_sparring_days_set = set(_ordered_weekdays(clean_list(athlete_model.get("hard_sparring_days", []))))
     sessions_per_week = int(athlete_model.get("training_frequency") or len(training_days))
     weekly_cap = min(sessions_per_week, len(training_days))
     locked_spar_days = {day for day in training_days if day in hard_sparring_days_set}
-    spar_count = len(locked_spar_days)
-    non_spar_cap = max(0, weekly_cap - spar_count)
+    locked_coach_days = {
+        str(role.get("scheduled_day_hint") or "").strip()
+        for role in session_roles
+        if _is_coach_owned_role(role) and str(role.get("scheduled_day_hint") or "").strip()
+    } | locked_spar_days
+    coach_owned_count = len(locked_coach_days)
+    non_spar_cap = max(0, weekly_cap - coach_owned_count)
 
     # Step 2: Compute readiness compression score (applied to non-sparring slots only)
     fatigue = str(athlete_model.get("fatigue", "")).strip().lower()
@@ -2080,9 +2210,9 @@ def _apply_high_fatigue_week_compression(
     # Never exceed the available non-spar capacity
     non_spar_target = min(non_spar_target, non_spar_cap)
 
-    # Separate sparring and non-sparring roles
-    spar_roles = [r for r in session_roles if r.get("role_key") == "hard_sparring_day"]
-    non_spar_roles = [r for r in session_roles if r.get("role_key") != "hard_sparring_day"]
+    # Separate coach-owned and app-owned roles.
+    coach_owned_roles = [r for r in session_roles if _is_coach_owned_role(r)]
+    non_spar_roles = [r for r in session_roles if not _is_coach_owned_role(r)]
     conditioning_roles = [r for r in non_spar_roles if r.get("category") == "conditioning"]
 
     # Guardrail: if conditioning is a goal/weakness, keep space for it inside non-spar allocation.
@@ -2124,7 +2254,7 @@ def _apply_high_fatigue_week_compression(
         reason_codes = ["spar_first_cap"]
     summary = _compression_summary(reason_codes)
 
-    kept_roles = spar_roles + kept_non_spar
+    kept_roles = coach_owned_roles + kept_non_spar
     updated_suppressed = list(suppressed_roles)
     # Budget-driven suppressions record the reason but do not mark the
     # entry as ``intentional_compression``; that flag is reserved for
@@ -2509,6 +2639,12 @@ def _build_weekly_role_map(
             athlete_model,
             hard_sparring_plan=hard_sparring_plan,
         )
+        session_roles, suppressed_roles = _lock_declared_light_combat_roles(
+            week_entry,
+            session_roles,
+            suppressed_roles,
+            athlete_model,
+        )
 
         session_roles, suppressed_roles = _apply_high_fatigue_week_compression(
             week_entry,
@@ -2542,6 +2678,12 @@ def _build_weekly_role_map(
             suppressed_roles,
             athlete_model,
             hard_sparring_plan=hard_sparring_plan,
+        )
+        session_roles, suppressed_roles = _lock_declared_light_combat_roles(
+            week_entry,
+            session_roles,
+            suppressed_roles,
+            athlete_model,
         )
         
         session_roles = _resequence_session_roles(

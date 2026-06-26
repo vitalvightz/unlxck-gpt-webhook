@@ -305,6 +305,10 @@ def _sparring_session_lines() -> list[str]:
     return ["- Coach owns this session (hard sparring). No app S&C today — keep freshness the priority."]
 
 
+def _light_combat_session_lines() -> list[str]:
+    return ["- Coach owns this Light Combat session. No app S&C today - keep freshness the priority."]
+
+
 def _technical_session_lines() -> list[str]:
     return ["- Technical rhythm and shadow work. Stay sharp at low fatigue; no hard contact."]
 
@@ -318,6 +322,9 @@ def _session_body(
     is_primary_strength: bool,
 ) -> list[str]:
     category = str(role.get("category") or "").strip().lower()
+    role_key = str(role.get("role_key") or "").strip()
+    if role_key == "light_combat_day":
+        return _light_combat_session_lines()
     if category == "sparring":
         return _sparring_session_lines()
     if category == "recovery":

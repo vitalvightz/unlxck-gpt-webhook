@@ -267,6 +267,84 @@ def test_normal_camp_12_week_attaches_calendar_to_every_week():
     assert all(entry["effective_load"] != "hard" for entry in final_plan)
 
 
+def _light_combat_role_map(*, hard_days=None):
+    from fightcamp.stage2_role_map import _build_weekly_role_map
+
+    athlete_model = {
+        "sport": "boxing",
+        "status": "amateur",
+        "rounds_format": "3x3",
+        "training_days": ["monday", "tuesday", "wednesday", "thursday", "friday"],
+        "hard_sparring_days": hard_days or [],
+        "support_work_days": ["friday"],
+        "technical_skill_days": [],
+        "fatigue": "low",
+        "weight_cut_pct": 0.0,
+        "weight_cut_risk": False,
+        "readiness_flags": [],
+        "injuries": [],
+        "fight_date": "2026-08-21",
+        "days_until_fight": 28,
+    }
+    progression = {
+        "weeks": [
+            {"week_index": 1, "phase": "GPP", "stage_key": "general_capacity",
+             "phase_week_index": 1, "phase_week_total": 1, "span_days": 7,
+             "session_counts": {"strength": 1, "conditioning": 1, "recovery": 1}},
+            {"week_index": 2, "phase": "SPP", "stage_key": "specific_density_build",
+             "phase_week_index": 1, "phase_week_total": 2, "span_days": 7,
+             "session_counts": {"strength": 1, "conditioning": 1, "recovery": 1}},
+            {"week_index": 3, "phase": "SPP", "stage_key": "specific_density_build",
+             "phase_week_index": 2, "phase_week_total": 2, "span_days": 7,
+             "session_counts": {"strength": 1, "conditioning": 1, "recovery": 1}},
+            {"week_index": 4, "phase": "TAPER", "stage_key": "taper_sharpen",
+             "phase_week_index": 1, "phase_week_total": 1, "span_days": 7,
+             "session_counts": {"strength": 1, "conditioning": 1, "recovery": 1}},
+        ]
+    }
+    return _build_weekly_role_map(athlete_model, progression, {"key": "general_fight_readiness"})
+
+
+def test_declared_support_work_day_creates_light_combat_role():
+    role_map = _light_combat_role_map()
+    week = role_map["weeks"][0]
+
+    light_roles = [role for role in week["session_roles"] if role.get("role_key") == "light_combat_day"]
+    assert len(light_roles) == 1
+    light_role = light_roles[0]
+    assert light_role["category"] == "sparring"
+    assert light_role["preferred_pool"] == "declared_support_work_days"
+    assert light_role["scheduled_day_hint"] == "friday"
+    assert light_role["governance"]["authority"] == "declared_schedule_lock"
+    assert light_role["day_assignment_reason"] == "Declared Light Combat day is fixed in the weekly role map."
+
+
+def test_app_roles_do_not_consume_declared_light_combat_day():
+    role_map = _light_combat_role_map()
+    week = role_map["weeks"][0]
+
+    app_roles_on_friday = [
+        role for role in week["session_roles"]
+        if role.get("role_key") != "light_combat_day"
+        and role.get("scheduled_day_hint") == "friday"
+        and role.get("category") in {"strength", "conditioning", "recovery"}
+    ]
+    assert app_roles_on_friday == []
+
+
+def test_hard_sparring_overlap_wins_over_light_combat_lock():
+    role_map = _light_combat_role_map(hard_days=["friday"])
+    week = role_map["weeks"][0]
+    role_keys_on_friday = [
+        role.get("role_key")
+        for role in week["session_roles"]
+        if role.get("scheduled_day_hint") == "friday"
+    ]
+
+    assert "hard_sparring_day" in role_keys_on_friday
+    assert "light_combat_day" not in role_keys_on_friday
+
+
 def test_late_fight_preserves_safe_conditioning_and_exposes_real_day_labels():
     from fightcamp.stage2_role_map import _build_weekly_role_map
     from fightcamp.weekly_schedule_view import extract_weekly_schedule
