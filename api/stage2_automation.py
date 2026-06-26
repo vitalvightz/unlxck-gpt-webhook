@@ -54,7 +54,11 @@ def _stage2_report_blocks_release(validator_report: Any) -> bool:
     errors = validator_report.get("errors") or []
     blocking_warnings = validator_report.get("blocking_warnings") or []
     warnings = validator_report.get("warnings") or []
-    if not isinstance(errors, list) or not isinstance(blocking_warnings, list):
+    if (
+        not isinstance(errors, list)
+        or not isinstance(blocking_warnings, list)
+        or not isinstance(warnings, list)
+    ):
         return True
 
     if errors:

@@ -268,6 +268,26 @@ def test_first_pass_non_pass_without_release_blockers_returns_ready(
     assert result["stage2_retry_text"] == ""
 
 
+def test_stage2_report_blocks_release_when_warnings_is_not_a_list() -> None:
+    report = {
+        "errors": [],
+        "blocking_warnings": [],
+        "warnings": {"code": "generic_filler_phrase"},
+    }
+
+    assert stage2_module._stage2_report_blocks_release(report) is True
+
+
+def test_stage2_report_allows_non_blocking_warning_array() -> None:
+    report = {
+        "errors": [],
+        "blocking_warnings": [],
+        "warnings": [{"code": "generic_filler_phrase"}],
+    }
+
+    assert stage2_module._stage2_report_blocks_release(report) is False
+
+
 def test_build_stage2_retry_is_not_called_during_automatic_finalization(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
