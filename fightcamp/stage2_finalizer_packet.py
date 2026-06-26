@@ -520,7 +520,6 @@ def build_stage2_finalizer_packet(
             "If a weekday is not present in calendar_days, do not render it.",
             "Do not render any session after D-0 unless a post-fight recovery mode is explicitly active.",
             "D-0 always renders as fight-day protocol only.",
-            "If D-0 appears, it must be the final athlete-facing block. Do not append Coach note, Final coach notes, summary, nutrition, recovery, or any footer after D-0. Put summary notes in Lead notes before the first week or omit them.",
             f"Fight-day protocol text: {FIGHT_DAY_PROTOCOL_TEXT}",
             "Coach-owned days override app S&C unless coach-led work is light or cancelled.",
             "For late_fight_plan_spec.allowed_exercises_by_day, each countdown day may render only those listed exercise names plus generic breathing, mobility/reset, shadowboxing/technical cues, coach-led session labels, and rehab/prehab band resets.",

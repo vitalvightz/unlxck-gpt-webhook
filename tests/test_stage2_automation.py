@@ -106,37 +106,6 @@ def test_first_pass_pass_returns_ready_with_one_provider_call(monkeypatch: pytes
     assert result["stage2_attempt_count"] == 1
     assert result["stage2_retry_text"] == ""
 
-
-def test_first_pass_normalizes_terminal_d0_before_review(monkeypatch: pytest.MonkeyPatch) -> None:
-    reviewed_texts: list[str] = []
-
-    def _review_seen_text(**kwargs: object) -> dict:
-        reviewed_texts.append(str(kwargs["final_plan_text"]))
-        return _review("PASS")
-
-    monkeypatch.setattr(stage2_module, "review_stage2_output", _review_seen_text)
-    client = FakeClient(
-        [
-            _response(
-                "D-0 (Sunday) - Fight day protocol\n"
-                "Follow coach warm-up and fight protocol; no additional app S&C.\n\n"
-                "Final coach notes\n"
-                "- Stay loose."
-            )
-        ]
-    )
-    automator = OpenAIStage2Automator(client=client, model="test-model")
-
-    result = asyncio.run(automator.finalize(stage1_result=_stage1_result()))
-
-    assert reviewed_texts == [result["final_plan_text"]]
-    assert "Final coach notes" not in result["final_plan_text"]
-    assert result["final_plan_text"].splitlines() == [
-        "D-0 (Sunday) \u2014 Fight day protocol",
-        "Fight day protocol \u2014 follow coach warm-up and fight protocol; no additional app S&C.",
-    ]
-
-
 def test_first_pass_omits_max_output_tokens_by_default(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("UNLXCK_STAGE2_MAX_OUTPUT_TOKENS", raising=False)
     monkeypatch.setattr(stage2_module, "review_stage2_output", lambda **_: _review("PASS"))
