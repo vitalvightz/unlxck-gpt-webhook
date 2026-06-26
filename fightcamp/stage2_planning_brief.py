@@ -164,7 +164,8 @@ def _compress_short_camp_priorities(athlete_model: dict) -> dict:
 
     weakness_tokens = _normalize_limiter_tokens(clean_list(athlete_model.get("weaknesses", [])))
     goal_tokens = _normalize_limiter_tokens(clean_list(athlete_model.get("key_goals", [])))
-    primary_goal_tokens = _normalize_limiter_tokens(clean_list(athlete_model.get("primary_goal", "")))
+    primary_goal = athlete_model.get("primary_goal", "")
+    primary_goal_tokens = _normalize_limiter_tokens([primary_goal] if primary_goal else [])
     readiness_flags = set(clean_list(athlete_model.get("readiness_flags", [])))
     short_window = isinstance(timeline_days, int) and timeline_days <= 7
     ultra_short_window = isinstance(timeline_days, int) and timeline_days <= 5
