@@ -92,6 +92,28 @@ def _dated_brief() -> dict:
     }
 
 
+def _light_support_friday_brief(*, hard_plan: list[dict] | None = None) -> dict:
+    weekdays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+    dates = ["2026-07-20", "2026-07-21", "2026-07-22", "2026-07-23", "2026-07-24", "2026-07-25", "2026-07-26"]
+    calendar_days = [
+        {"weekday": weekdays[offset], "d_day": 28 + (7 - 1 - offset), "calendar_date": dates[offset]}
+        for offset in range(7)
+    ]
+    return {
+        "weekly_role_map": {
+            "weeks": [
+                {
+                    "phase": "SPP",
+                    "calendar_days": calendar_days,
+                    "declared_support_work_days": ["Friday"],
+                    "declared_technical_skill_days": [],
+                    "hard_sparring_plan": hard_plan or [],
+                }
+            ]
+        }
+    }
+
+
 def _day(countdown: str, *, headline: str = "", sessions: list | None = None) -> dict:
     return {
         "date": "",
@@ -120,6 +142,17 @@ def _hard_thursday() -> list[dict]:
     return [
         {
             "day": "Thursday",
+            "hard_day_class": "primary_hard",
+            "effective_load": "hard",
+            "status": "hard_as_planned",
+        }
+    ]
+
+
+def _hard_friday() -> list[dict]:
+    return [
+        {
+            "day": "Friday",
             "hard_day_class": "primary_hard",
             "effective_load": "hard",
             "status": "hard_as_planned",
@@ -277,3 +310,61 @@ def test_span_fallback_inserts_when_week_index_does_not_match():
     )
     reconcile_coach_led_sparring_days(plan, _planning_brief(_hard_thursday()))
     assert [d["countdown_label"] for d in plan["weeks"][0]["days"]] == ["D-33", "D-31", "D-30"]
+
+
+def test_inserts_dropped_light_combat_day_from_declared_support_work():
+    plan = _structured_plan([_day("D-31", headline="Strength"), _day("D-29", headline="Aerobic")])
+    notes = reconcile_coach_led_sparring_days(plan, _light_support_friday_brief())
+
+    days = plan["weeks"][0]["days"]
+    assert [d["countdown_label"] for d in days] == ["D-31", "D-30", "D-29"]
+    inserted = days[1]
+    assert inserted["date"] == "2026-07-24"
+    assert inserted["countdown_label"] == "D-30"
+    assert inserted["day_type"] == "moderate"
+    assert inserted["today_card"]["headline"] == "Coach-led light combat"
+    assert inserted["sessions"] == []
+    assert any("inserted" in note and "light combat" in note for note in notes)
+
+
+def test_stamps_empty_declared_support_work_day_as_light_combat():
+    friday = _day("D-30", headline="Mobility support")
+    plan = _structured_plan([friday])
+    notes = reconcile_coach_led_sparring_days(plan, _light_support_friday_brief())
+
+    assert friday["today_card"]["headline"] == "Coach-led light combat"
+    assert any("stamped" in note and "light combat" in note for note in notes)
+
+
+def test_hard_sparring_wins_when_support_work_overlaps_same_day():
+    plan = _structured_plan([_day("D-31", headline="Strength"), _day("D-29", headline="Aerobic")])
+    reconcile_coach_led_sparring_days(
+        plan,
+        _light_support_friday_brief(hard_plan=_hard_friday()),
+    )
+
+    days = plan["weeks"][0]["days"]
+    inserted = [day for day in days if day["countdown_label"] == "D-30"]
+    assert len(inserted) == 1
+    assert inserted[0]["today_card"]["headline"] == "Coach-led sparring"
+
+
+def test_malformed_support_work_brief_is_noop():
+    plan = _structured_plan([_day("D-30", headline="Recovery")])
+    malformed_brief = {"weekly_role_map": {"weeks": [{"declared_support_work_days": "Friday"}]}}
+    before = plan["weeks"][0]["days"][0]["today_card"]["headline"]
+
+    assert reconcile_coach_led_sparring_days(plan, malformed_brief) == []
+    assert plan["weeks"][0]["days"][0]["today_card"]["headline"] == before
+
+
+def test_light_combat_does_not_overwrite_existing_app_session_and_records_note():
+    real_session = [{"title": "Mobility support", "blocks": []}]
+    plan = _structured_plan([_day("D-30", headline="Mobility support", sessions=real_session)])
+    notes = reconcile_coach_led_sparring_days(plan, _light_support_friday_brief())
+
+    day = plan["weeks"][0]["days"][0]
+    assert day["today_card"]["headline"] == "Mobility support"
+    assert day["sessions"] == real_session
+    assert len(plan["weeks"][0]["days"]) == 1
+    assert any("skipped coach-led light combat" in note for note in notes)

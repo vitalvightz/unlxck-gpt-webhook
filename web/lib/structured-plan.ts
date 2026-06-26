@@ -667,11 +667,18 @@ const REST_DAY_TYPES = new Set(["rest", "recovery"]);
 // `technical` is checked before `sparring` so a "technical only / no hard
 // sparring" headline is not mislabelled as a sparring day by the stray
 // "sparring" token, and `coach_led` is the catch-all for coach-owned contact.
+const LIGHT_COMBAT_RE = /\b(light\s+combat|support\s+work)\b/i;
 const TECHNICAL_RE = /\b(technical|skill|drill|pad\s?work|pads|mitts?|footwork|shadow)/i;
 const SPARRING_RE = /\bspar(?:r(?:ing|ed)|s)?\b/i;
 const COACH_LED_RE = /\bcoach/i;
 
-export type SessionlessDayKind = "coach_led" | "sparring" | "technical" | "scheduled" | "rest";
+export type SessionlessDayKind =
+  | "coach_led"
+  | "light_combat"
+  | "sparring"
+  | "technical"
+  | "scheduled"
+  | "rest";
 
 export type SessionlessDayView = {
   kind: SessionlessDayKind;
@@ -684,6 +691,7 @@ export type SessionlessDayView = {
 
 const SESSIONLESS_DAY_TAGS: Record<SessionlessDayKind, string | null> = {
   coach_led: "Coach-led",
+  light_combat: "Light combat",
   sparring: "Sparring",
   technical: "Technical",
   scheduled: null,
@@ -705,7 +713,9 @@ export function classifySessionlessDay(
 
   if (headline) {
     let kind: SessionlessDayKind = "scheduled";
-    if (TECHNICAL_RE.test(headline)) {
+    if (LIGHT_COMBAT_RE.test(headline)) {
+      kind = "light_combat";
+    } else if (TECHNICAL_RE.test(headline)) {
       kind = "technical";
     } else if (SPARRING_RE.test(headline)) {
       kind = "sparring";
@@ -716,7 +726,11 @@ export function classifySessionlessDay(
       kind,
       title: headline,
       tag: SESSIONLESS_DAY_TAGS[kind],
-      coachLed: kind === "coach_led" || kind === "sparring" || kind === "technical",
+      coachLed:
+        kind === "coach_led" ||
+        kind === "light_combat" ||
+        kind === "sparring" ||
+        kind === "technical",
     };
   }
 
