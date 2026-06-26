@@ -1,3 +1,4 @@
+```ts
 import type { PlanRequest } from "@/lib/types";
 
 import { stableStringify } from "@/lib/stable-stringify";
@@ -20,6 +21,7 @@ function getSessionStorage(): Storage | null {
   if (typeof window === "undefined") {
     return null;
   }
+
   try {
     return window.sessionStorage;
   } catch {
@@ -31,7 +33,9 @@ function isPlanRequestLike(value: unknown): value is PlanRequest {
   if (!value || typeof value !== "object") {
     return false;
   }
+
   const candidate = value as Partial<PlanRequest>;
+
   return Boolean(
     candidate.athlete
       && typeof candidate.athlete === "object"
@@ -45,10 +49,12 @@ function isPlanRequestLike(value: unknown): value is PlanRequest {
 export function buildPlanRequestPayloadHash(payload: PlanRequest): string {
   const serialized = stableStringify(payload);
   let hash = 0x811c9dc5;
+
   for (let index = 0; index < serialized.length; index += 1) {
     hash ^= serialized.charCodeAt(index);
     hash = Math.imul(hash, 0x01000193);
   }
+
   return `fnv1a32:${(hash >>> 0).toString(16).padStart(8, "0")}`;
 }
 
@@ -97,11 +103,13 @@ export function readPendingGenerationPayload(): PendingGenerationPayload | null 
   }
 
   let parsed: unknown;
+
   try {
     const raw = storage.getItem(PENDING_GENERATION_PAYLOAD_KEY);
     if (!raw) {
       return null;
     }
+
     parsed = JSON.parse(raw);
   } catch {
     storage.removeItem(PENDING_GENERATION_PAYLOAD_KEY);
@@ -109,11 +117,17 @@ export function readPendingGenerationPayload(): PendingGenerationPayload | null 
   }
 
   const stored = parsed as Partial<StoredPendingGenerationPayload>;
-  const ageMs = Date.now() - Number(stored.createdAtMs ?? 0);
+  const createdAtMs = stored.createdAtMs;
+  const ageMs = typeof createdAtMs === "number" ? Date.now() - createdAtMs : Number.NaN;
+
   if (
     stored.version !== 1
+    || typeof createdAtMs !== "number"
+    || !Number.isFinite(createdAtMs)
     || !isPlanRequestLike(stored.payload)
     || typeof stored.planSource !== "string"
+    || !stored.planSource.trim()
+    || !Number.isFinite(ageMs)
     || ageMs < 0
     || ageMs > PENDING_GENERATION_MAX_AGE_MS
   ) {
@@ -127,7 +141,7 @@ export function readPendingGenerationPayload(): PendingGenerationPayload | null 
       ? stored.payloadHash
       : buildPlanRequestPayloadHash(stored.payload),
     planSource: stored.planSource,
-    createdAtMs: Number(stored.createdAtMs),
+    createdAtMs,
   };
 }
 
