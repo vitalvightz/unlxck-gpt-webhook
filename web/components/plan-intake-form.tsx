@@ -842,6 +842,21 @@ function syncDeviceFields(current: PlanRequest): PlanRequest {
   };
 }
 
+const WEEKDAY_FROM_ISO_DATE = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+
+function getWeekdayFromIsoDate(dateValue: string): string | null {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateValue);
+  if (!match) return null;
+
+  const year = Number(match[1]);
+  const monthIndex = Number(match[2]) - 1;
+  const day = Number(match[3]);
+  const parsed = new Date(Date.UTC(year, monthIndex, day));
+
+  if (Number.isNaN(parsed.getTime())) return null;
+  return WEEKDAY_FROM_ISO_DATE[parsed.getUTCDay()] ?? null;
+}
+
 type TrainingGateAction = "save_draft" | "next" | "step_select" | "generate";
 
 type TrainingGateDecision =
@@ -881,6 +896,7 @@ export function PlanIntakeForm() {
   // ── Days-out policy: compute field visibility/disablement ───────────
   const daysUntilFight = computeDaysUntilFight(form.fight_date);
   const daysOutCtx: DaysOutContext = buildDaysOutContext(daysUntilFight);
+  const fightDateWeekday = noScheduledFight ? null : getWeekdayFromIsoDate(form.fight_date);
 
   useEffect(() => {
     if (!me || hydrated) {
@@ -2653,11 +2669,10 @@ export function PlanIntakeForm() {
               <article className="step-card">
                 <div className="form-section-header">
                   <p className="kicker">Combat load</p>
-                  <h2 className="form-section-title">Sparring and Light Combat day tags</h2>
+                  <h2 className="form-section-title">Combat load tags</h2>
                 </div>
                 <p className="muted">
-                  These selections do not add extra sessions. They just show which available days are hard-contact days versus
-                  Light Combat work inside the same weekly total.
+                  These selections do not add extra sessions. They mark which available days carry hard contact versus lighter technical combat work inside the same weekly total.
                 </p>
                 {shouldHideField(daysOutCtx, "hard_sparring_days") ? (
                   <div className="field">
@@ -2674,13 +2689,15 @@ export function PlanIntakeForm() {
                   getOptionDisabledReason={(option, checked) =>
                     checked
                       ? null
-                      : !form.training_availability.includes(option.value)
-                        ? "Add to availability first"
-                        : form.support_work_days.includes(option.value)
-                          ? "Already tagged as Light Combat"
-                          : form.hard_sparring_days.length >= HARD_SPARRING_DAY_CAP
-                            ? `Hard sparring cap (${HARD_SPARRING_DAY_CAP}) reached`
-                            : null
+                      : fightDateWeekday === option.value
+                        ? "Fight day is locked"
+                        : !form.training_availability.includes(option.value)
+                          ? "Add to availability first"
+                          : form.support_work_days.includes(option.value)
+                            ? "Already tagged as Light Combat"
+                            : form.hard_sparring_days.length >= HARD_SPARRING_DAY_CAP
+                              ? `Hard sparring cap (${HARD_SPARRING_DAY_CAP}) reached`
+                              : null
                   }
                 />
                 <div className="field">
@@ -2726,7 +2743,7 @@ export function PlanIntakeForm() {
                 ) : (
                 <>
                 <CheckboxGroup
-                  label="Light Combat days"
+                  label="Light / technical combat days"
                   options={TRAINING_AVAILABILITY_OPTIONS}
                   selectedValues={form.support_work_days}
                   onToggle={(value) => toggleFieldValue("support_work_days", value)}
@@ -2734,19 +2751,21 @@ export function PlanIntakeForm() {
                   getOptionDisabledReason={(option, checked) =>
                     checked
                       ? null
-                      : !form.training_availability.includes(option.value)
-                        ? "Add to availability first"
-                        : form.hard_sparring_days.includes(option.value)
-                          ? "Already tagged as hard sparring"
-                          : null
+                      : fightDateWeekday === option.value
+                        ? "Fight day is locked"
+                        : !form.training_availability.includes(option.value)
+                          ? "Add to availability first"
+                          : form.hard_sparring_days.includes(option.value)
+                            ? "Already tagged as hard sparring"
+                            : null
                   }
                 />
                 <div className="field">
                   <p className="muted">
                     {getFieldHelperText(daysOutCtx, "support_work_days") ||
-                      "Select days available for lighter work, recovery, technical practice, or S&C. Do not include hard sparring days here."}
+                      "Select days for light technical combat only: pads, drills, shadowboxing, movement, or non-hard contact. Do not include hard sparring or fight day."
                   </p>
-                  <p className="muted">Available Light Combat tags: {formatJoinedLabels(remainingSupportWorkDays, "No days left")}</p>
+                  <p className="muted">Available light / technical tags: {formatJoinedLabels(remainingSupportWorkDays, "No days left")}</p>
                 </div>
                 </>
                 )}
