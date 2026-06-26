@@ -37,7 +37,7 @@ from fightcamp.weekly_schedule_view import extract_weekly_schedule
 # effective_load values from the deterministic schedule that mean coach-owned
 # contact work the athlete must see as its own card.
 _CONTACT_EFFECTIVE_LOADS = {"hard", "technical", "reduced"}
-_LIGHT_COMBAT_HEADLINE = "Coach-led light combat"
+_LIGHT_COMBAT_HEADLINE = "Light technical combat"
 _LIGHT_COMBAT_DAY_TYPE = "moderate"
 _WEEKDAY_ALIASES = {
     "mon": "monday",
@@ -235,8 +235,12 @@ def _deterministic_contact_days(planning_brief: dict[str, Any]) -> list[_Contact
             if not isinstance(day, dict):
                 continue
             cal = str(day.get("calendar_date") or "").strip() or None
-            raw_dday = day.get("d_day")
+                        raw_dday = day.get("d_day")
             d_day = raw_dday if isinstance(raw_dday, int) and raw_dday >= 0 else None
+            if d_day == 0:
+                continue
+            if cal is None and d_day is None:
+                continue
             if cal is None and d_day is None:
                 continue
             key = (cal, d_day)
