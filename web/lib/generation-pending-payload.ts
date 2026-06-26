@@ -1,4 +1,3 @@
-```ts
 import type { PlanRequest } from "@/lib/types";
 
 import { stableStringify } from "@/lib/stable-stringify";
