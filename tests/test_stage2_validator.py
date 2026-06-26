@@ -2581,3 +2581,57 @@ def test_validate_stage2_output_blocks_controlled_hard_sparring():
         """,
     )
     assert any(error["code"] == "late_fight_hard_sparring_violation" for error in report["errors"])
+
+
+def test_late_fight_requires_terminal_d0_protocol():
+    planning_brief = {
+        "athlete_model": {"sport": "boxing"},
+        "late_fight_plan_spec": {
+            "payload_mode": "bridge_compression_payload",
+            "days_out_bucket": "D-21",
+        },
+    }
+
+    final_plan_text = """
+D-21 (Friday) — Power Transfer Touch
+- Fast technical work.
+
+D-1 (Thursday) — Freshness
+- Mobility only.
+"""
+
+    report = validate_stage2_output(
+        planning_brief=planning_brief,
+        final_plan_text=final_plan_text,
+    )
+
+    codes = {warning["code"] for warning in report["warnings"]}
+    assert "late_fight_missing_terminal_d0_protocol" in codes
+
+
+def test_late_fight_accepts_terminal_d0_protocol_without_counting_it_as_active_role():
+    planning_brief = {
+        "athlete_model": {"sport": "boxing"},
+        "late_fight_plan_spec": {
+            "payload_mode": "bridge_compression_payload",
+            "days_out_bucket": "D-21",
+            "max_active_roles": 1,
+        },
+    }
+
+    final_plan_text = """
+D-21 (Friday) — Power Transfer Touch
+- Fast technical work.
+
+D-0 (Friday) — Fight day protocol
+Fight day protocol — follow coach warm-up and fight protocol; no additional app S&C.
+"""
+
+    report = validate_stage2_output(
+        planning_brief=planning_brief,
+        final_plan_text=final_plan_text,
+    )
+
+    codes = {warning["code"] for warning in report["warnings"]}
+    assert "late_fight_missing_terminal_d0_protocol" not in codes
+    assert "late_fight_active_role_overage" not in codes
