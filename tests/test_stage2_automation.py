@@ -221,12 +221,10 @@ def test_first_pass_publish_blocking_review_flags_hold_plan(monkeypatch: pytest.
     ]
 
 
-@pytest.mark.parametrize("review_status", ["FAIL", "WARN"])
-def test_first_pass_non_pass_returns_held_for_review_with_one_provider_call(
+def test_first_pass_hard_failure_returns_held_for_review_with_one_provider_call(
     monkeypatch: pytest.MonkeyPatch,
-    review_status: str,
 ) -> None:
-    monkeypatch.setattr(stage2_module, "review_stage2_output", lambda **_: _review(review_status))
+    monkeypatch.setattr(stage2_module, "review_stage2_output", lambda **_: _review("FAIL"))
     client = FakeClient([_response("# first pass needs review")])
     automator = OpenAIStage2Automator(client=client, model="test-model")
 
@@ -249,7 +247,25 @@ def test_first_pass_non_pass_returns_held_for_review_with_one_provider_call(
         "warnings": [],
         "schema_version": None,
     }
-    assert report == _review(review_status)["validator_report"]
+    assert report == _review("FAIL")["validator_report"]
+
+
+def test_first_pass_non_pass_without_release_blockers_returns_ready(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(stage2_module, "review_stage2_output", lambda **_: _review("WARN"))
+    client = FakeClient([_response("# first pass clean enough to release")])
+    automator = OpenAIStage2Automator(client=client, model="test-model")
+
+    result = asyncio.run(automator.finalize(stage1_result=_stage1_result()))
+
+    assert len(client.responses.calls) == 1
+    assert result["status"] == "ready"
+    assert result["plan_text"] == "# first pass clean enough to release"
+    assert result["final_plan_text"] == "# first pass clean enough to release"
+    assert result["stage2_status"] == "stage2_pass"
+    assert result["stage2_attempt_count"] == 1
+    assert result["stage2_retry_text"] == ""
 
 
 def test_build_stage2_retry_is_not_called_during_automatic_finalization(
