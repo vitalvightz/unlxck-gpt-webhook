@@ -42,6 +42,18 @@ def test_high_last_reading_escalates():
     assert len(risks) == 1
     assert risks[0].category == "high_pain"
     assert "7/10" in risks[0].text
+    assert "Ease into load and reassess." in risks[0].text
+
+
+def test_taper_high_last_reading_uses_freshness_wording():
+    risks = _derive(
+        completions=[_completion(TODAY, pain_after=HIGH_PAIN_AFTER)],
+        current_phase="TAPER",
+    )
+    assert len(risks) == 1
+    assert risks[0].category == "high_pain"
+    assert "Keep today minimal, protect freshness, and reassess." in risks[0].text
+    assert "Ease into load" not in risks[0].text
 
 
 def test_rising_trend_flags_pain_delta():

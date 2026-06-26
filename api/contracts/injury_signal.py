@@ -146,12 +146,17 @@ def derive_injury_signal(
     if series:
         last_day, last_pain = series[-1]
         if last_pain >= HIGH_PAIN_AFTER:
+            action = (
+                "Keep today minimal, protect freshness, and reassess."
+                if phase == "TAPER"
+                else "Ease into load and reassess."
+            )
             return [
                 make_risk(
                     "high_pain",
                     text=(
                         f"Last logged session pain was high ({last_pain}/10). "
-                        "Ease into load and reassess."
+                        f"{action}"
                     ),
                 )
             ]
