@@ -153,10 +153,60 @@ test("weekSessionSummary separates app sessions from coach-led days", () => {
   });
 });
 
-test("weekLoadProxy returns the most demanding day type, titleized", () => {
+test("weekLoadProxy scores weekly burden instead of the hardest single day", () => {
+  const week = {
+    days: [
+      {
+        date: "2026-07-10",
+        day_type: "high",
+        sessions: [{ session_id: "s1", title: "Power touch", blocks: [] }],
+      },
+      {
+        date: "2026-07-12",
+        day_type: "low",
+        sessions: [{ session_id: "s2", title: "Mobility and speed reset", blocks: [] }],
+      },
+      {
+        date: "2026-07-14",
+        day_type: "high",
+        today_card: { headline: "Technical rhythm only — no hard sparring" },
+        sessions: [],
+      },
+    ],
+  };
+
+  assert.equal(weekLoadProxy(week), "Moderate");
+});
+
+test("weekLoadProxy still returns High for repeated hard weekly stress", () => {
+  const week = {
+    days: [
+      {
+        date: "2026-06-18",
+        day_type: "high",
+        sessions: [{ session_id: "s1", title: "Hard conditioning", blocks: [] }],
+      },
+      {
+        date: "2026-06-20",
+        day_type: "high",
+        sessions: [{ session_id: "s2", title: "Power and sprint session", blocks: [] }],
+      },
+      {
+        date: "2026-06-22",
+        today_card: { headline: "Coach-led sparring" },
+        sessions: [],
+      },
+    ],
+  };
+
+  assert.equal(weekLoadProxy(week), "High");
+});
+
+test("weekLoadProxy handles low, rest and empty weeks", () => {
   const plan = campPlan();
-  assert.equal(weekLoadProxy(plan.weeks![0]!), "High");
+
   assert.equal(weekLoadProxy(plan.weeks![1]!), "Low");
+  assert.equal(weekLoadProxy({ days: [{ day_type: "rest", sessions: [] }] }), "Rest");
   assert.equal(weekLoadProxy({ days: [] }), null);
 });
 
