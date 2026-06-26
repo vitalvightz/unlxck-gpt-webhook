@@ -68,7 +68,7 @@ ROLE_LABELS: dict[str, str] = {
     "fight_day_protocol": "Fight-day warm-up",
     # --- Coach-owned ------------------------------------------------------
     "hard_sparring_day": "Coach-led sparring",
-    "light_combat_day": "Coach-led light combat",
+    "light_combat_day": "Light technical combat",
 }
 
 
