@@ -38,6 +38,7 @@ from .stage2_payload_late_fight import (  # noqa: F401  (re-exported for tests/b
     _resolve_late_fight_phase,
     _uses_late_fight_stage2_payload,
 )
+from .gap_fill_inserts import apply_gap_fill_inserts
 from .conditioning import athlete_facing_system_label
 from .fight_day_override import apply_fight_day_override_to_weekly_role_map
 from .role_labels import stamp_weekly_role_map_labels
@@ -3110,7 +3111,10 @@ def build_planning_brief(
         )
         weekly_role_map = apply_fight_day_override_to_weekly_role_map(weekly_role_map, athlete_model)
         weekly_role_map = stamp_weekly_role_map_labels(weekly_role_map)
-        session_sequence = _build_late_fight_session_sequence(days_until_fight, athlete_model)
+        session_sequence = apply_gap_fill_inserts(
+            _build_late_fight_session_sequence(days_until_fight, athlete_model),
+            athlete_model,
+        )
         late_fight_plan_spec = _with_late_fight_allowed_exercises(
             spec=_build_late_fight_plan_spec(days_until_fight, athlete_model),
             candidate_pools=candidate_pools,
@@ -3795,11 +3799,14 @@ def build_stage2_payload(
             # ``late_fight_session_sequence`` is what the athlete actually
             # does, so drop coach-owned hard_sparring placeholders/context
             # entries kept in the full ``session_sequence`` for tracking.
-            "late_fight_session_sequence": [
-                role
-                for role in (late_fight_plan_spec.get("session_sequence") or [])
-                if _is_app_owned_visible_role(role.get("role_key"))
-            ],
+            "late_fight_session_sequence": apply_gap_fill_inserts(
+                [
+                    role
+                    for role in (late_fight_plan_spec.get("session_sequence") or [])
+                    if _is_app_owned_visible_role(role.get("role_key"))
+                ],
+                athlete_model,
+            ),
             "rendering_rules": days_out_payload.get("rendering_rules", {}),
             "late_fight_permissions": days_out_payload.get("late_fight_permissions", {}),
             "athlete_model": athlete_model,
