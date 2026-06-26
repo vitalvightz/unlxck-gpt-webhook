@@ -504,8 +504,8 @@ export function saveOnboardingDraft(
     ProfileUpdateRequest,
     "onboarding_draft" | "full_name" | "technical_style" | "tactical_style" | "stance" | "professional_status" | "record" | "athlete_timezone"
   >,
-): Promise<{ ok: boolean; updated_at: string }> {
-  return readJson<{ ok: boolean; updated_at: string }>("/api/onboarding/draft", {
+): Promise<MeResponse> {
+  return readJson<MeResponse>("/api/onboarding/draft", {
     method: "PATCH",
     token,
     body: JSON.stringify(payload),
