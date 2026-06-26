@@ -1721,7 +1721,7 @@ export function PlanIntakeForm() {
         current_step: step,
         no_scheduled_fight: noScheduledFight,
       };
-      await saveOnboardingDraft(session.access_token, {
+      const updatedMe = await saveOnboardingDraft(session.access_token, {
         full_name: nextForm.athlete.full_name,
         technical_style: nextForm.athlete.technical_style,
         tactical_style: nextForm.athlete.tactical_style,
@@ -1731,15 +1731,8 @@ export function PlanIntakeForm() {
         athlete_timezone: nextForm.athlete.athlete_timezone,
         onboarding_draft: nextDraft,
       });
-      if (me) {
-        replaceMe({
-          ...me,
-          profile: {
-            ...me.profile,
-            onboarding_draft: nextDraft,
-          },
-        });
-      }
+      
+      replaceMe(updatedMe);
       lastSavedSnapshotRef.current = JSON.stringify(nextForm);
       setSaveStatus("saved");
       setLastSavedAt(Date.now());
