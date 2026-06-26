@@ -44,7 +44,8 @@ import { GuidedInjuryCard } from "@/components/guided-injury-card";
 import { SafetyNote } from "@/components/safety-note";
 import { INJURY_INTAKE_SAFETY } from "@/lib/safety-copy";
 import { LevelSlider, type LevelValue } from "@/components/rating-controls";
-import { applyNoScheduledFightSnapshot, emptyPlanRequest, hydratePlanRequest, mergePlanRequestDraft } from "@/lib/onboarding";
+import { applyNoScheduledFightSnapshot, canonicalizePerformanceFocus, emptyPlanRequest, hydratePlanRequest, mergePlanRequestDraft } from "@/lib/onboarding";
+import { writePendingGenerationPayload } from "@/lib/generation-pending-payload";
 import { buildRoundsFormat, parseRoundsFormat, ROUND_COUNT_OPTIONS, ROUND_DURATION_OPTIONS } from "@/lib/rounds-format";
 import { FOCUS_CAP_DISABLED_REASON, getPerformanceFocusCap, validatePerformanceFocusSelections } from "@/lib/performance-focus-cap";
 import { canSelectWizardStep } from "@/lib/step-navigation";
@@ -1202,7 +1203,7 @@ export function PlanIntakeForm() {
         ...nextGuidedInjuryFields,
       }),
     };
-    return syncDeviceFields(applyNoScheduledFightSnapshot(withGuidedAndCollision, noScheduledFight));
+    return canonicalizePerformanceFocus(syncDeviceFields(applyNoScheduledFightSnapshot(withGuidedAndCollision, noScheduledFight)));
   }
 
   function syncGuidedInjuryFields(nextGuidedInjuries: GuidedInjuryState[], nextNoRestrictions: boolean) {
@@ -1707,11 +1708,11 @@ export function PlanIntakeForm() {
     return true;
   }
 
-  async function persistDraft(step = currentStep) {
+  async function persistDraft(step = currentStep, snapshot?: PlanRequest) {
     if (!session?.access_token) {
       return;
     }
-    const nextForm = buildFormSnapshot();
+    const nextForm = snapshot ?? buildFormSnapshot();
     setForm(nextForm);
     setSaveStatus("saving");
     try {
@@ -1847,8 +1848,16 @@ export function PlanIntakeForm() {
       if (!validateForGeneration(nextForm)) {
         return;
       }
+      if (!session?.access_token) {
+        setError("You must be signed in to generate a plan.");
+        return;
+      }
       try {
-        await persistDraft(steps.length - 1);
+        await persistDraft(steps.length - 1, nextForm);
+        if (!writePendingGenerationPayload(nextForm, "self_serve")) {
+          setError("Unable to prepare the generation payload. Reload and try again.");
+          return;
+        }
         markGenerationIntent();
         router.push("/generate");
       } catch (draftError) {

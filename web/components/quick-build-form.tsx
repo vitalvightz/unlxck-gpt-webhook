@@ -8,6 +8,7 @@ import { RequireAuth } from "@/components/auth-guard";
 import { useAppSession } from "@/components/auth-provider";
 import { CustomSelect } from "@/components/custom-select";
 import { saveOnboardingDraft } from "@/lib/api";
+import { writePendingGenerationPayload } from "@/lib/generation-pending-payload";
 import { markGenerationIntent } from "@/lib/generation-intent";
 import { hydratePlanRequest } from "@/lib/onboarding";
 import {
@@ -716,6 +717,10 @@ function QuickBuildFormInner() {
         });
         
         replaceMe(updatedMe);
+        if (!writePendingGenerationPayload(planRequest, "quick_build")) {
+          setSubmitError("Unable to prepare the generation payload. Reload and try again.");
+          return;
+        }
         markGenerationIntent();
         router.push("/generate");
       } catch (err) {

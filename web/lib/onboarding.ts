@@ -68,6 +68,34 @@ export function applyNoScheduledFightSnapshot(form: PlanRequest, noScheduledFigh
   };
 }
 
+function canonicalizePrimaryFocusValue(
+  selectedValues: string[],
+  primaryValue: string | null | undefined,
+): string {
+  if (selectedValues.length === 1) {
+    return selectedValues[0] ?? "";
+  }
+  if (primaryValue && selectedValues.includes(primaryValue)) {
+    return primaryValue;
+  }
+  return "";
+}
+
+export function canonicalizePerformanceFocus(form: PlanRequest): PlanRequest {
+  const primaryGoal = canonicalizePrimaryFocusValue(form.key_goals ?? [], form.primary_goal);
+  const primaryWeakArea = canonicalizePrimaryFocusValue(form.weak_areas ?? [], form.primary_weak_area);
+
+  if (form.primary_goal === primaryGoal && form.primary_weak_area === primaryWeakArea) {
+    return form;
+  }
+
+  return {
+    ...form,
+    primary_goal: primaryGoal,
+    primary_weak_area: primaryWeakArea,
+  };
+}
+
 function mergeAthleteLayers(
   base: PlanRequest["athlete"],
   top?: Partial<PlanRequest["athlete"]> | null,
@@ -176,11 +204,11 @@ export function hydratePlanRequest(me: MeResponse | null): PlanRequest {
   const withIntake = mergeAthleteLayers(withProfile, base.athlete);
   const finalAthlete = mergeAthleteLayers(withIntake, normalizedDraft?.athlete, "explicit");
 
-  return {
+  return canonicalizePerformanceFocus({
     ...fallback,
     ...layered,
     athlete: finalAthlete,
-  };
+  });
 }
 
 export function mergePlanRequestDraft(
