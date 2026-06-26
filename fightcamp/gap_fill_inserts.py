@@ -311,8 +311,6 @@ def select_gap_fill_insert(
         role_key = _first_allowed(["tactical_watch", "neural_visualization", "recovery_reset", "self_review"], allowed)
     elif high_fatigue:
         role_key = _first_allowed(["recovery_reset", "neural_visualization", "tactical_watch"], allowed)
-    elif insert_offset <= 10:
-        role_key = _first_allowed(["tactical_watch", "neural_visualization", "recovery_reset"], allowed)
     elif active_cut and mobility_need and insert_offset > 3:
         role_key = _first_allowed(["mobility_rehab", "tactical_watch"], allowed)
     elif active_cut:
@@ -321,6 +319,8 @@ def select_gap_fill_insert(
         role_key = _first_allowed(["mobility_rehab"], allowed)
     elif _has_power_speed_goal(athlete_model) and not active_cut and not has_injury and insert_offset > 3:
         role_key = _first_allowed(["neural_visualization", "technical_shadow_rhythm"], allowed)
+    elif insert_offset <= 10:
+        role_key = _first_allowed(["tactical_watch", "neural_visualization", "recovery_reset"], allowed)
     elif not active_cut and not has_injury:
         role_key = _first_allowed(["tactical_watch", "self_review"], allowed)
 
