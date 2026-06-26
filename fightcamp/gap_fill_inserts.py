@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Any, Literal
 
 from .normalization import clean_list, normalize_fatigue_level, ordered_weekdays
-from .stage2_payload_late_fight import _countdown_offset, _countdown_weekday_map
+from .stage2_payload_late_fight import _countdown_offset, _countdown_weekday_map, _resolve_plan_creation_weekday
 
 
 ZERO_COST_INSERTS = {
