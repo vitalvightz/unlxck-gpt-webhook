@@ -704,7 +704,7 @@ function QuickBuildFormInner() {
           training_preset: trainingPresetMatch,
           focus_preset: focusPresetMatch,
         };
-        await saveOnboardingDraft(session.access_token, {
+        const updatedMe = await saveOnboardingDraft(session.access_token, {
           full_name: planRequest.athlete.full_name,
           technical_style: planRequest.athlete.technical_style,
           tactical_style: planRequest.athlete.tactical_style,
@@ -714,19 +714,8 @@ function QuickBuildFormInner() {
           athlete_timezone: planRequest.athlete.athlete_timezone ?? "",
           onboarding_draft: draft,
         });
-        if (me) {
-          replaceMe({
-            ...me,
-            profile: {
-              ...me.profile,
-              full_name: planRequest.athlete.full_name,
-              technical_style: planRequest.athlete.technical_style,
-              tactical_style: planRequest.athlete.tactical_style,
-              athlete_timezone: planRequest.athlete.athlete_timezone ?? me.profile.athlete_timezone,
-              onboarding_draft: draft,
-            },
-          });
-        }
+        
+        replaceMe(updatedMe);
         markGenerationIntent();
         router.push("/generate");
       } catch (err) {
