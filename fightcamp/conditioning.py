@@ -75,6 +75,14 @@ CONDITIONING_SECONDARY_COLLISION_BONUS = 1.5
 CONDITIONING_CLARIFICATION_TAG_BONUS = 0.75
 CONDITIONING_MAX_CLARIFICATION_TAG_BONUS = 2.0
 
+_RAW_SPEED_GOAL_TOKENS = {
+    "speed",
+    "footwork",
+    "reactive",
+    "reaction",
+    "acceleration",
+}
+
 
 def _conditioning_goal_priority_bonus(tags: list[str], priority_profile) -> float:
     unique_tags = list(dict.fromkeys(tags))
@@ -497,6 +505,7 @@ def _normalize_focus_tokens(values: Iterable[str]) -> set[str]:
     return normalized
 
 
+_SPEED_GOAL_TOKENS = _normalize_focus_tokens(_RAW_SPEED_GOAL_TOKENS)
 _GAS_TANK_NORMALIZED_SIGNAL_TERMS = _normalize_focus_tokens(_GAS_TANK_SIGNAL_TERMS)
 
 def _conditioning_dense_pattern(text: str) -> bool:
@@ -1154,14 +1163,16 @@ def _resolve_conditioning_sessions(
     *,
     phase: str,
     num_sessions: int,
+    alactic_primary_cap: int = 1,
 ) -> list[dict]:
     """Distribute already-selected conditioning drills into sessions.
 
     Per system: the first non-fallback drill becomes the primary, and at most one
     additional drill can render as a fallback — only when ``_conditioning_fallback_allowed``
     permits it (i.e. availability contingency reason is present and the phase is
-    not TAPER). Extra drills beyond that are dropped silently. Across all systems
-    inside a single session, at most one fallback is surfaced.
+    not TAPER). Extra drills beyond that are dropped silently unless the caller
+    explicitly allows a second alactic primary. Across all systems inside a
+    single session, at most one fallback is surfaced.
     """
 
     ordered_keys = ["aerobic", "glycolytic", "alactic"]
@@ -1174,16 +1185,33 @@ def _resolve_conditioning_sessions(
         if not drills:
             continue
 
+        primary_cap = max(1, int(alactic_primary_cap or 1)) if system == "alactic" else 1
         explicit_primaries = [d for d in drills if not d.get("render_as_fallback")]
+        primary_raws = explicit_primaries[:primary_cap]
+        if len(primary_raws) < primary_cap:
+            for drill in drills:
+                if id(drill) in {id(primary) for primary in primary_raws} or drill.get("render_as_fallback"):
+                    continue
+                primary_raws.append(drill)
+                if len(primary_raws) >= primary_cap:
+                    break
+        if not primary_raws:
+            primary_raws = drills[:1]
 
-        primary_raw = explicit_primaries[0] if explicit_primaries else drills[0]
-        primary_decorated = _decorate_conditioning_drill(
-            primary_raw,
-            system=system,
-            phase=phase,
-            session_index=0,
-            is_fallback=False,
-        )
+        primary_entries = [
+            {
+                "system": system,
+                "primary": _decorate_conditioning_drill(
+                    primary_raw,
+                    system=system,
+                    phase=phase,
+                    session_index=0,
+                    is_fallback=False,
+                ),
+                "fallback": None,
+            }
+            for primary_raw in primary_raws
+        ]
 
         # Fallback candidates must exclude the primary itself, otherwise an
         # all-fallback-marked drill list (or any list where the only candidate
@@ -1191,7 +1219,8 @@ def _resolve_conditioning_sessions(
         # primary, once as fallback. The fallback pool is therefore drawn from
         # the remaining drills only, with explicitly fallback-marked entries
         # preferred over implicit ones.
-        remaining_drills = [d for d in drills if d is not primary_raw]
+        primary_raw_ids = {id(primary_raw) for primary_raw in primary_raws}
+        remaining_drills = [d for d in drills if id(d) not in primary_raw_ids]
         candidate_fallback_raw = None
         candidate_is_explicit = False
         if remaining_drills:
@@ -1207,7 +1236,7 @@ def _resolve_conditioning_sessions(
         fallback_decorated = None
         if candidate_fallback_raw is not None:
             allowed = candidate_is_explicit or _conditioning_fallback_allowed(
-                primary_raw, candidate_fallback_raw, phase=phase
+                primary_raws[0], candidate_fallback_raw, phase=phase
             )
             if allowed and str(phase or "").upper() != "TAPER":
                 fallback_decorated = _decorate_conditioning_drill(
@@ -1218,13 +1247,9 @@ def _resolve_conditioning_sessions(
                     is_fallback=True,
                 )
 
-        system_entries.append(
-            {
-                "system": system,
-                "primary": primary_decorated,
-                "fallback": fallback_decorated,
-            }
-        )
+        if primary_entries:
+            primary_entries[0]["fallback"] = fallback_decorated
+            system_entries.extend(primary_entries)
 
     if not system_entries:
         return []
@@ -1541,6 +1566,10 @@ def render_conditioning_block(
         output_lines.append(f"\n#### {title}")
         output_lines.append(f"**Intent:** {phase_intent.get(phase, 'Match phase intent.')}")
         output_lines.append(f"**Dosage Template:** {dosage_template.get(phase, 'Match system goals.')}")
+        if diagnostic_context.get("speed_dose_allowed"):
+            output_lines.append(
+                "**Speed Dose:** 1-2 exposures/week; 4-6 reps x 4-8 sec; full rest 60-120 sec; RPE 7-8; stop before fatigue."
+            )
         if phase != "TAPER":
             output_lines.append(f"**Weekly Progression:** {weekly_progression.get(phase, 'Progress weekly.')}")
             output_lines.append(f"**If Time Short:** {time_short.get(phase, 'Keep top 2 drills.')}")
@@ -1846,6 +1875,15 @@ def generate_conditioning_block(flags):
     goal_list = [g.lower() for g in goals]
     weak_list = [w.lower() for w in weaknesses]
     weak_tags = expand_tags(weaknesses, WEAKNESS_TAG_MAP)
+    speed_focus_tokens = _normalize_focus_tokens([*goal_list, *weak_list, *goal_tags, *weak_tags])
+    speed_goal_requested = bool(speed_focus_tokens & _SPEED_GOAL_TOKENS)
+    speed_dose_allowed = (
+        speed_goal_requested
+        and fatigue != "high"
+        and not active_late_window
+        and phase.upper() != "TAPER"
+    )
+    alactic_primary_cap = 2 if speed_dose_allowed else 1
     derived_clarification_tags = _conditioning_resolve_derived_clarification_tags(flags)
     preferred_exercise_names = {
         str(name).strip().lower()
@@ -2483,6 +2521,10 @@ def generate_conditioning_block(flags):
         k: max(1 if v > 0 else 0, round(total_drills * v))
         for k, v in PHASE_SYSTEM_RATIOS.get(phase.upper(), {}).items()
     }
+    visible_drill_cap = total_drills
+    if speed_dose_allowed:
+        system_quota["alactic"] = min(system_quota.get("alactic", 0) + 1, 2)
+        visible_drill_cap = total_drills + 1
 
     final_drills = []
     taper_selected = 0
@@ -2552,7 +2594,7 @@ def generate_conditioning_block(flags):
 
     style_target = round(total_drills * STYLE_CONDITIONING_RATIO.get(phase.upper(), 0))
     style_remaining = min(style_target, sum(len(v) for v in style_system_drills.values()))
-    general_remaining = total_drills - style_remaining
+    general_remaining = visible_drill_cap - style_remaining
 
     allow_glycolytic = False
     aerobic_maintenance_signal = _has_aerobic_maintenance_signal(goals, weaknesses)
@@ -3199,8 +3241,8 @@ def generate_conditioning_block(flags):
     # Trim any extras beyond the recommended count
     def _trim_extra_drills() -> None:
         nonlocal final_drills, selected_drill_names
-        if len(selected_drill_names) > total_drills:
-            extra = len(selected_drill_names) - total_drills
+        if len(selected_drill_names) > visible_drill_cap:
+            extra = len(selected_drill_names) - visible_drill_cap
             final_drills = final_drills[:-extra]
             selected_drill_names = selected_drill_names[:-extra]
     _run_conditioning_poststep("trim_extras", _trim_extra_drills)
@@ -3333,6 +3375,45 @@ def generate_conditioning_block(flags):
 
     _run_conditioning_poststep("injury_safe_finalize", _finalize_injury_safe_drills_step)
 
+    def _record_speed_dose_trace() -> None:
+        if not speed_goal_requested:
+            return
+        alactic_drills = grouped_drills.get("alactic") or []
+        if not alactic_drills:
+            return
+        trace_drill = alactic_drills[1] if speed_dose_allowed and len(alactic_drills) > 1 else alactic_drills[0]
+        trace_name = trace_drill.get("name")
+        if not isinstance(trace_name, str) or not trace_name.strip():
+            return
+        reasons = reason_lookup.setdefault(
+            trace_name,
+            {
+                "goal_hits": 0,
+                "weakness_hits": 0,
+                "style_hits": 0,
+                "phase_hits": 1,
+                "load_adjustments": 0,
+                "equipment_boost": 0,
+                "penalties": 0,
+                "final_score": 0,
+            },
+        )
+        reason_codes = reasons.setdefault("reason_codes", [])
+        if speed_dose_allowed and len(alactic_drills) > 1:
+            reason_code = "speed_goal_alactic_microdose"
+        else:
+            reason_code = "speed_goal_alactic_microdose_suppressed"
+        if reason_code not in reason_codes:
+            reason_codes.append(reason_code)
+        reasons["speed_goal_requested"] = speed_goal_requested
+        reasons["speed_dose_allowed"] = speed_dose_allowed
+        reasons["alactic_primary_cap"] = alactic_primary_cap
+        reasons["speed_dose_reason"] = (
+            "speed goal adds one small full-rest alactic exposure"
+            if speed_dose_allowed
+            else "speed goal did not add a second alactic exposure because safety caps applied"
+        )
+
     _is_late_fight_taper = active_late_window
     bridge_allows_glycolytic_touch = bool(
         active_late_window
@@ -3426,10 +3507,12 @@ def generate_conditioning_block(flags):
             else:
                 _log_exclusion(f"conditioning:{phase.upper()}:alactic_maintenance_fallback", fallback, decision)
     _run_conditioning_poststep("energy_system_fallbacks", _insert_energy_system_fallbacks)
+    _run_conditioning_poststep("speed_dose_trace", _record_speed_dose_trace)
     resolved_sessions = _resolve_conditioning_sessions(
         grouped_drills,
         phase=phase,
         num_sessions=num_conditioning_sessions,
+        alactic_primary_cap=alactic_primary_cap,
     )
     grouped_drills = _resolved_grouped_drills(resolved_sessions)
     selected_drill_names = _resolved_conditioning_names(resolved_sessions)
@@ -3461,6 +3544,9 @@ def generate_conditioning_block(flags):
         "fatigue_level": fatigue,
         "injuries": injuries,
         "fight_format": fight_format,
+        "speed_goal_requested": speed_goal_requested,
+        "speed_dose_allowed": speed_dose_allowed,
+        "alactic_primary_cap": alactic_primary_cap,
     }
     def _format_conditioning_output():
         return render_conditioning_block(
