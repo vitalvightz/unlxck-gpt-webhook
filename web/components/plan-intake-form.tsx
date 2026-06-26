@@ -893,10 +893,40 @@ export function PlanIntakeForm() {
   const pendingRemovalRef = useRef<HTMLDivElement | null>(null);
   const recordHasError = !isValidRecordFormat(form.athlete.record ?? "");
 
-  // ── Days-out policy: compute field visibility/disablement ───────────
+    // ── Days-out policy: compute field visibility/disablement ───────────
   const daysUntilFight = computeDaysUntilFight(form.fight_date);
   const daysOutCtx: DaysOutContext = buildDaysOutContext(daysUntilFight);
   const fightDateWeekday = noScheduledFight ? null : getWeekdayFromIsoDate(form.fight_date);
+
+  useEffect(() => {
+    if (!fightDateWeekday) {
+      return;
+    }
+
+    const lockedDay = fightDateWeekday.trim().toLowerCase();
+
+    setForm((current) => {
+      const hardSparringDays = current.hard_sparring_days.filter(
+        (day) => day.trim().toLowerCase() !== lockedDay,
+      );
+      const supportWorkDays = current.support_work_days.filter(
+        (day) => day.trim().toLowerCase() !== lockedDay,
+      );
+
+      if (
+        hardSparringDays.length === current.hard_sparring_days.length &&
+        supportWorkDays.length === current.support_work_days.length
+      ) {
+        return current;
+      }
+
+      return {
+        ...current,
+        hard_sparring_days: hardSparringDays,
+        support_work_days: supportWorkDays,
+      };
+    });
+  }, [fightDateWeekday]);
 
   useEffect(() => {
     if (!me || hydrated) {
