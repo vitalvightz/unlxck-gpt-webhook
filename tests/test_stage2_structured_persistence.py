@@ -510,11 +510,10 @@ def test_finalize_keeps_raw_plan_when_structured_invalid_after_repair(
 
     result = asyncio.run(automator.finalize(stage1_result=_stage1_result()))
 
-    # Card-first gate: with no clean card the plan is held for review rather than
-    # silently published as raw text. The markdown is retained on final_plan_text
-    # (admin-visible) while the athlete-facing plan_text is gated to empty.
-    assert result["status"] == "held_for_review"
-    assert result["plan_text"] == ""
+    # Structured-card failure alone should not create admin review work. With no
+    # release blockers, the raw Stage 2 plan remains athlete-visible.
+    assert result["status"] == "ready"
+    assert result["plan_text"] == "# final plan"
     assert result["final_plan_text"] == "# final plan"
     assert result["structured_plan"] is None  # invalid never persisted
     debug = result["stage2_validator_report"]["structured_plan"]
@@ -578,10 +577,10 @@ def test_finalize_does_not_crash_when_structured_model_errors(
 
     result = asyncio.run(automator.finalize(stage1_result=_stage1_result()))
 
-    # The raw plan must survive the structured crash, but with no clean card the
-    # card-first gate holds it for review rather than publishing text-only.
-    assert result["status"] == "held_for_review"
-    assert result["plan_text"] == ""
+    # The raw plan must survive the structured crash and remain athlete-visible
+    # when Stage 2 validation found no release blockers.
+    assert result["status"] == "ready"
+    assert result["plan_text"] == "# final plan"
     assert result["final_plan_text"] == "# final plan"
     assert result["structured_plan"] is None
     assert result["stage2_validator_report"]["structured_plan"]["status"] == "not_attempted"
