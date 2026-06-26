@@ -7,7 +7,6 @@ from fastapi.testclient import TestClient
 from api.app import create_app
 from api.auth import AuthenticatedUser
 from api.models import ManualStage2SubmissionRequest
-from fightcamp.fight_day_override import FIGHT_DAY_PROTOCOL_TEXT
 from support import (
     FakeAuthService,
     FakeStore,
@@ -474,60 +473,6 @@ def test_manual_stage2_submission_publishes_validated_admin_result():
     saved = store.get_plan(plan["id"])
     assert saved["plan_text"] == "# Manual GPT Final"
     assert saved["stage2_retry_text"] == ""
-
-
-def test_manual_stage2_submission_stores_normalized_terminal_d0_text():
-    client, store, _ = _build_client()
-    athlete = AuthenticatedUser(
-        user_id="athlete-1",
-        email="ari@example.com",
-        full_name="Ari Mensah",
-        metadata={},
-    )
-    store.ensure_profile(athlete)
-    plan = store.create_plan(
-        athlete_id="athlete-1",
-        intake_id="intake_x",
-        request=_build_request(),
-        result=finalized_result(
-            status="review_required",
-            plan_text="",
-            final_plan_text="",
-            planning_brief={
-                "athlete_model": {"sport": "boxing"},
-                "late_fight_plan_spec": {
-                    "days_out_bucket": "D-0",
-                    "payload_mode": "late_fight_countdown_only",
-                },
-            },
-            stage2_status="stage2_failed",
-            stage2_retry_text="repair prompt",
-            stage2_attempt_count=2,
-        ),
-    )
-
-    response = client.post(
-        f"/api/admin/plans/{plan['id']}/manual-stage2",
-        headers={"Authorization": "Bearer admin-token"},
-        json=ManualStage2SubmissionRequest(
-            final_plan_text=(
-                "D-0 (Sunday) - Fight day protocol\n"
-                "Follow coach warm-up and fight protocol; no additional app S&C.\n\n"
-                "Final coach notes\n"
-                "- Stay loose."
-            )
-        ).model_dump(mode="json"),
-    )
-
-    assert response.status_code == 200
-    saved = store.get_plan(plan["id"])
-    expected = (
-        "D-0 (Sunday) \u2014 Fight day protocol\n"
-        f"{FIGHT_DAY_PROTOCOL_TEXT}"
-    )
-    assert saved["final_plan_text"] == expected
-    assert saved["plan_text"] == expected
-    assert "Final coach notes" not in response.json()["outputs"]["plan_text"]
 
 
 def test_manual_stage2_submission_generates_retry_prompt_when_output_needs_revision():

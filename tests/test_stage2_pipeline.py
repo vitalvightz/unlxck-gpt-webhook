@@ -1,10 +1,4 @@
-from fightcamp.fight_day_override import FIGHT_DAY_PROTOCOL_TEXT
-from fightcamp.stage2_pipeline import (
-    build_stage2_package,
-    build_stage2_retry,
-    canonicalize_terminal_d0_protocol,
-    review_stage2_output,
-)
+from fightcamp.stage2_pipeline import build_stage2_package, build_stage2_retry, review_stage2_output
 
 
 def _stage1_result_fixture() -> dict:
@@ -61,19 +55,6 @@ def _stage1_result_fixture() -> dict:
         "stage2_handoff_text": "handoff text",
         "plan_text": "draft plan",
         "coach_notes": "notes",
-    }
-
-
-def _late_fight_planning_brief(days_out_bucket: str = "D-0") -> dict:
-    return {
-        "athlete_model": {"sport": "boxing"},
-        "restrictions": [],
-        "phase_strategy": {},
-        "candidate_pools": {},
-        "late_fight_plan_spec": {
-            "days_out_bucket": days_out_bucket,
-            "payload_mode": "late_fight_countdown_only",
-        },
     }
 
 
@@ -214,70 +195,6 @@ def test_review_stage2_output_treats_late_fight_unapproved_exercise_as_non_block
 
     assert review["status"] == "PASS"
     assert review["needs_retry"] is False
-
-
-def test_canonicalize_terminal_d0_protocol_removes_final_coach_notes_after_d0():
-    normalized = canonicalize_terminal_d0_protocol(
-        "Lead notes\n"
-        "- Keep the final week calm.\n"
-        "\n"
-        "D-1 (Saturday) - Freshness\n"
-        "- Mobility reset.\n"
-        "\n"
-        "D-0 (Sunday) - Fight day protocol\n"
-        "Fight day protocol - follow coach warm-up and fight protocol; no additional app S&C.\n"
-        "\n"
-        "Final coach notes\n"
-        "- Stay relaxed."
-    )
-
-    assert normalized == (
-        "Lead notes\n"
-        "- Keep the final week calm.\n"
-        "\n"
-        "D-1 (Saturday) - Freshness\n"
-        "- Mobility reset.\n"
-        "\n"
-        "D-0 (Sunday) \u2014 Fight day protocol\n"
-        f"{FIGHT_DAY_PROTOCOL_TEXT}"
-    )
-    assert "Final coach notes" not in normalized
-    assert normalized.endswith(FIGHT_DAY_PROTOCOL_TEXT)
-
-
-def test_canonicalize_terminal_d0_protocol_rewrites_body_to_fight_day_text():
-    normalized = canonicalize_terminal_d0_protocol(
-        "D-0 (Friday) - Fight day protocol\n"
-        "Follow coach warm-up and fight protocol; no additional app S&C."
-    )
-
-    assert normalized == (
-        "D-0 (Friday) \u2014 Fight day protocol\n"
-        f"{FIGHT_DAY_PROTOCOL_TEXT}"
-    )
-
-
-def test_review_stage2_output_accepts_normalized_terminal_d0_protocol():
-    normalized = canonicalize_terminal_d0_protocol(
-        """
-        D-0 (Sunday) - Fight day protocol
-        Follow coach warm-up and fight protocol; no additional app S&C.
-
-        Coach note (one line)
-        Stay loose.
-        """
-    )
-    review = review_stage2_output(
-        planning_brief=_late_fight_planning_brief("D-0"),
-        final_plan_text=normalized,
-    )
-
-    blocking_codes = {
-        warning["code"]
-        for warning in review["validator_report"]["warnings"]
-        if warning.get("blocking")
-    }
-    assert "late_fight_d0_protocol_expanded" not in blocking_codes
 
 
 def test_build_stage2_retry_returns_repair_prompt_when_needed():

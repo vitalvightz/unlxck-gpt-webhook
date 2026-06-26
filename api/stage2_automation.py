@@ -6,11 +6,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any, Protocol
 
-from fightcamp.stage2_pipeline import (
-    build_stage2_package,
-    canonicalize_terminal_d0_protocol,
-    review_stage2_output,
-)
+from fightcamp.stage2_pipeline import build_stage2_package, review_stage2_output
 from fightcamp.stage2_policy import (
     apply_publish_blocking_review_gate,
     is_card_rescuable_soft_code,
@@ -739,7 +735,6 @@ class OpenAIStage2Automator:
         first_pass_text, first_pass_cost = await self._generate_text(
             handoff_text, attempt_label="first_pass", source=source, log_context=log_context
         )
-        first_pass_text = canonicalize_terminal_d0_protocol(first_pass_text)
         first_review = review_stage2_output(
             planning_brief=package["planning_brief"],
             final_plan_text=first_pass_text,
