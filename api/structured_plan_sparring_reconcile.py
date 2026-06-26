@@ -37,6 +37,28 @@ from fightcamp.weekly_schedule_view import extract_weekly_schedule
 # effective_load values from the deterministic schedule that mean coach-owned
 # contact work the athlete must see as its own card.
 _CONTACT_EFFECTIVE_LOADS = {"hard", "technical", "reduced"}
+_LIGHT_COMBAT_HEADLINE = "Coach-led light combat"
+_LIGHT_COMBAT_DAY_TYPE = "moderate"
+_WEEKDAY_ALIASES = {
+    "mon": "monday",
+    "monday": "monday",
+    "tue": "tuesday",
+    "tues": "tuesday",
+    "tuesday": "tuesday",
+    "wed": "wednesday",
+    "weds": "wednesday",
+    "wednesday": "wednesday",
+    "thu": "thursday",
+    "thur": "thursday",
+    "thurs": "thursday",
+    "thursday": "thursday",
+    "fri": "friday",
+    "friday": "friday",
+    "sat": "saturday",
+    "saturday": "saturday",
+    "sun": "sunday",
+    "sunday": "sunday",
+}
 
 # Canonical headlines chosen so the web classifier reliably tags the day:
 #   "spar"      -> SPARRING_RE  -> kind "sparring"  (coachLed = true)
@@ -96,7 +118,15 @@ def _resolve_fight_date(planning_brief: dict[str, Any]) -> Any:
 class _ContactDay:
     """A deterministic coach-led/sparring day to guarantee in the structured plan."""
 
-    __slots__ = ("date", "d_day", "headline", "day_type", "phase", "week_index")
+    __slots__ = (
+        "date",
+        "d_day",
+        "headline",
+        "day_type",
+        "phase",
+        "week_index",
+        "contact_kind",
+    )
 
     def __init__(
         self,
@@ -107,6 +137,7 @@ class _ContactDay:
         day_type: str,
         phase: str,
         week_index: int,
+        contact_kind: str,
     ):
         self.date = date
         self.d_day = d_day
@@ -117,6 +148,25 @@ class _ContactDay:
         # is the authoritative home week for the day and is what insertion targets
         # first, so a dropped day at a week boundary still lands in the right week.
         self.week_index = week_index
+        self.contact_kind = contact_kind
+
+
+def _normalize_weekday(value: Any) -> str | None:
+    normalized = str(value or "").strip().lower().rstrip(".")
+    return _WEEKDAY_ALIASES.get(normalized) if normalized else None
+
+
+def _declared_light_combat_weekdays(week: dict[str, Any]) -> set[str]:
+    declared: set[str] = set()
+    for key in ("declared_support_work_days", "declared_technical_skill_days"):
+        values = week.get(key)
+        if not isinstance(values, list):
+            continue
+        for value in values:
+            weekday = _normalize_weekday(value)
+            if weekday:
+                declared.add(weekday)
+    return declared
 
 
 def _deterministic_contact_days(planning_brief: dict[str, Any]) -> list[_ContactDay]:
@@ -132,6 +182,9 @@ def _deterministic_contact_days(planning_brief: dict[str, Any]) -> list[_Contact
     contact_days: list[_ContactDay] = []
     seen: set[tuple[str | None, int | None]] = set()
     for week_index in range(len(weeks)):
+        week = weeks[week_index]
+        if not isinstance(week, dict):
+            continue
         schedule = extract_weekly_schedule(
             planning_brief, week_index=week_index, fight_date=fight_date
         )
@@ -141,13 +194,20 @@ def _deterministic_contact_days(planning_brief: dict[str, Any]) -> list[_Contact
         days = schedule.get("days")
         if not isinstance(days, list):
             continue
+        schedule_days_by_weekday: dict[str, dict[str, Any]] = {}
+        hard_contact_weekdays: set[str] = set()
         for day in days:
             if not isinstance(day, dict):
                 continue
+            weekday = _normalize_weekday(day.get("weekday"))
+            if weekday:
+                schedule_days_by_weekday[weekday] = day
             load = str(day.get("effective_load") or "").strip().lower()
             sparring_class = str(day.get("sparring_day_class") or "").strip().lower()
             if load not in _CONTACT_EFFECTIVE_LOADS or sparring_class in {"", "none"}:
                 continue
+            if weekday:
+                hard_contact_weekdays.add(weekday)
             cal = str(day.get("calendar_date") or "").strip() or None
             raw_dday = day.get("d_day")
             d_day = raw_dday if isinstance(raw_dday, int) and raw_dday >= 0 else None
@@ -165,6 +225,33 @@ def _deterministic_contact_days(planning_brief: dict[str, Any]) -> list[_Contact
                     day_type=_DAY_TYPE_BY_LOAD.get(load, "moderate"),
                     phase=phase,
                     week_index=week_index + 1,
+                    contact_kind="sparring",
+                )
+            )
+        for weekday in _declared_light_combat_weekdays(week):
+            if weekday in hard_contact_weekdays:
+                continue
+            day = schedule_days_by_weekday.get(weekday)
+            if not isinstance(day, dict):
+                continue
+            cal = str(day.get("calendar_date") or "").strip() or None
+            raw_dday = day.get("d_day")
+            d_day = raw_dday if isinstance(raw_dday, int) and raw_dday >= 0 else None
+            if cal is None and d_day is None:
+                continue
+            key = (cal, d_day)
+            if key in seen:
+                continue
+            seen.add(key)
+            contact_days.append(
+                _ContactDay(
+                    date=cal,
+                    d_day=d_day,
+                    headline=_LIGHT_COMBAT_HEADLINE,
+                    day_type=_LIGHT_COMBAT_DAY_TYPE,
+                    phase=phase,
+                    week_index=week_index + 1,
+                    contact_kind="light_combat",
                 )
             )
     return contact_days
@@ -286,8 +373,8 @@ def _reconcile(structured_plan: Any, planning_brief: Any) -> list[str]:
     notes: list[str] = []
     present_dates: set[str] = set()
     present_ddays: set[int] = set()
-    headline_by_date = {c.date: c.headline for c in contact_days if c.date}
-    headline_by_dday = {c.d_day: c.headline for c in contact_days if c.d_day is not None}
+    contact_by_date = {c.date: c for c in contact_days if c.date}
+    contact_by_dday = {c.d_day: c for c in contact_days if c.d_day is not None}
 
     # Pass 1 — record every day the converter produced and stamp the sessionless
     # contact days whose headline would not classify as coach-led.
@@ -307,16 +394,21 @@ def _reconcile(structured_plan: Any, planning_brief: Any) -> list[str]:
             if dday is not None:
                 present_ddays.add(dday)
 
-            headline_target = None
-            if date and date in headline_by_date:
-                headline_target = headline_by_date[date]
-            elif dday is not None and dday in headline_by_dday:
-                headline_target = headline_by_dday[dday]
-            if headline_target is None:
+            contact = None
+            if date and date in contact_by_date:
+                contact = contact_by_date[date]
+            elif dday is not None and dday in contact_by_dday:
+                contact = contact_by_dday[dday]
+            if contact is None:
                 continue
             # A day the converter gave real app work already renders as a session
             # card — never hide that behind a coach-led note.
             if day.get("sessions"):
+                if contact.contact_kind == "light_combat":
+                    notes.append(
+                        f"skipped coach-led light combat card for "
+                        f"{date or f'D-{dday}'} because app sessions already exist"
+                    )
                 continue
             card = day.get("today_card")
             if not isinstance(card, dict):
@@ -328,10 +420,10 @@ def _reconcile(structured_plan: Any, planning_brief: Any) -> list[str]:
             current = str(card.get("headline") or "").strip()
             if current and _already_coach_led(current):
                 continue
-            card["headline"] = headline_target
+            card["headline"] = contact.headline
             notes.append(
                 f"stamped coach-led headline on {date or f'D-{dday}'} "
-                f"({headline_target!r})"
+                f"({contact.headline!r})"
             )
 
     # Pass 2 — insert declared contact days the converter dropped entirely.
