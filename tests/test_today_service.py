@@ -956,6 +956,28 @@ class TestCommandView:
         )
         assert "reminder" in [risk.category for risk in view.risk_watch]
 
+    def test_recent_symptom_decay_reminder_is_suppressed_in_taper(self):
+        store = _store_with_plan()
+        store.plans[PLAN]["planning_brief"] = _taper_planning_brief()
+        store.session_completions[ATHLETE] = [
+            {
+                "id": "c1",
+                "athlete_id": ATHLETE,
+                "plan_id": PLAN,
+                "session_id": "s1",
+                "training_day": "2026-06-16",
+                "status": "done",
+                "pain_after": 5,
+            }
+        ]
+        view = build_today_command_view(
+            store,
+            athlete_id=ATHLETE,
+            athlete_timezone="",
+            now=datetime(2026, 6, 18, 12, 0, tzinfo=timezone.utc),
+        )
+        assert "reminder" not in [risk.category for risk in view.risk_watch]
+
     def test_injury_checkin_opens_flag_and_surfaces_it(self):
         store = _store_with_plan()
         result = submit_today_injury_checkin(

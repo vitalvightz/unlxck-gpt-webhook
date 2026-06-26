@@ -19,11 +19,12 @@ def _checkin(day: str, *, pain: str = "none", active_injury: str = "none") -> di
     return {"training_day": day, "pain": pain, "active_injury": active_injury}
 
 
-def _derive(completions=None, checkins=None, current=TODAY):
+def _derive(completions=None, checkins=None, current=TODAY, current_phase=None):
     return derive_injury_signal(
         completions=completions or [],
         checkins=checkins or [],
         current_training_day=current,
+        current_phase=current_phase,
     )
 
 
@@ -87,6 +88,14 @@ def test_recent_symptom_decays_with_reminder():
     assert len(risks) == 1
     assert risks[0].category == "reminder"
     assert "2 days since" in risks[0].text
+
+
+def test_recent_symptom_decay_reminder_is_suppressed_in_taper():
+    risks = _derive(
+        completions=[_completion("2026-06-16", pain_after=5)],
+        current_phase="TAPER",
+    )
+    assert risks == []
 
 
 def test_symptom_one_day_ago_uses_singular_day():
