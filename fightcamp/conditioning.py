@@ -91,6 +91,7 @@ _RAW_FOOTWORK_GOAL_TOKENS = {
     "pivot",
     "stance",
     "stance_reset",
+    "angle_exit",
 }
 
 def _conditioning_goal_priority_bonus(tags: list[str], priority_profile) -> float:
@@ -515,6 +516,7 @@ def _normalize_focus_tokens(values: Iterable[str]) -> set[str]:
 
 
 _SPEED_GOAL_TOKENS = _normalize_focus_tokens(_RAW_SPEED_GOAL_TOKENS)
+_FOOTWORK_GOAL_TOKENS = _normalize_focus_tokens(_RAW_FOOTWORK_GOAL_TOKENS)
 _GAS_TANK_NORMALIZED_SIGNAL_TERMS = _normalize_focus_tokens(_GAS_TANK_SIGNAL_TERMS)
 
 def _conditioning_dense_pattern(text: str) -> bool:
@@ -1886,15 +1888,25 @@ def generate_conditioning_block(flags):
     goal_list = [g.lower() for g in goals]
     weak_list = [w.lower() for w in weaknesses]
     weak_tags = expand_tags(weaknesses, WEAKNESS_TAG_MAP)
-    speed_focus_tokens = _normalize_focus_tokens([*goal_list, *weak_list, *goal_tags, *weak_tags])
-    speed_goal_requested = bool(speed_focus_tokens & _SPEED_GOAL_TOKENS)
-    speed_dose_allowed = (
-        speed_goal_requested
-        and fatigue != "high"
-        and not active_late_window
-        and phase.upper() != "TAPER"
-    )
-    alactic_primary_cap = 2 if speed_dose_allowed else 1
+    raw_goal_tokens = _normalize_focus_tokens(goal_list)
+raw_weak_tokens = _normalize_focus_tokens(weak_list)
+goal_tag_tokens = _normalize_focus_tokens(goal_tags)
+
+speed_goal_requested = bool(
+    (raw_goal_tokens | raw_weak_tokens | goal_tag_tokens) & _SPEED_GOAL_TOKENS
+)
+
+footwork_requested = bool(
+    (raw_goal_tokens | raw_weak_tokens) & _FOOTWORK_GOAL_TOKENS
+)
+
+speed_dose_allowed = (
+    speed_goal_requested
+    and fatigue != "high"
+    and not active_late_window
+    and phase.upper() != "TAPER"
+)
+alactic_primary_cap = 2 if speed_dose_allowed else 1
     derived_clarification_tags = _conditioning_resolve_derived_clarification_tags(flags)
     preferred_exercise_names = {
         str(name).strip().lower()
