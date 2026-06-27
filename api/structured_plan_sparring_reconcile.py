@@ -81,6 +81,18 @@ _TECHNICAL_RE = re.compile(
 )
 _SPARRING_RE = re.compile(r"\bspar(?:r(?:ing|ed)|s)?\b", re.I)
 _COACH_LED_RE = re.compile(r"\bcoach", re.I)
+_SAFE_SUPPORT_RE = re.compile(
+    r"\b(mobility|breath(?:ing)?|rehab|prehab|activation|activate|footwork|technical|recovery|reset|flush|primer)\b",
+    re.I,
+)
+_UNSAFE_SUPPORT_RE = re.compile(
+    r"\b(strength|conditioning|glycolytic|plyo(?:metric)?|sprint|high[-_\s]?cns|power|fatigue[-_\s]?chasing|interval)\b",
+    re.I,
+)
+_SAFE_SESSION_TYPES = {"recovery", "rehab", "primer", "skill"}
+_UNSAFE_SESSION_TYPES = {"strength_power", "conditioning", "sparring", "fight_or_match"}
+_SAFE_BLOCK_TYPES = {"preparation", "mobility_activation", "skill", "cooldown_recovery", "rehab", "mindset"}
+_UNSAFE_BLOCK_TYPES = {"plyometric_power", "speed", "strength", "strength_speed", "conditioning", "sparring"}
 
 _DDAY_RE = re.compile(r"D-\s*(\d+)", re.I)
 
@@ -304,7 +316,111 @@ def _build_coach_led_day(contact: _ContactDay, *, phase_fallback: str) -> dict[s
             "mindset_anchor": {"intent": "", "focus_cue": "", "reset_cue": ""},
         },
         "sessions": [],
+        "optional_support_blocks": [],
     }
+
+
+def _session_text(session: dict[str, Any]) -> str:
+    parts = [
+        str(session.get("session_type") or ""),
+        str(session.get("title") or ""),
+        str(session.get("objective") or ""),
+    ]
+    for block in session.get("blocks") or []:
+        if not isinstance(block, dict):
+            continue
+        parts.extend(
+            [
+                str(block.get("block_type") or ""),
+                str(block.get("display_name") or ""),
+                str(block.get("category") or ""),
+                str(block.get("purpose") or ""),
+                str(block.get("energy_system") or ""),
+                str(block.get("impact_level") or ""),
+            ]
+        )
+    return " ".join(parts)
+
+
+def _is_safe_optional_support_session(session: Any) -> bool:
+    if not isinstance(session, dict):
+        return False
+    session_type = str(session.get("session_type") or "").strip()
+    if session_type in _UNSAFE_SESSION_TYPES:
+        return False
+    text = _session_text(session)
+    if _UNSAFE_SUPPORT_RE.search(text):
+        return False
+    blocks = [block for block in session.get("blocks") or [] if isinstance(block, dict)]
+    block_types = {str(block.get("block_type") or "").strip() for block in blocks}
+    if block_types & _UNSAFE_BLOCK_TYPES:
+        return False
+    if session_type in _SAFE_SESSION_TYPES:
+        return True
+    if block_types and block_types <= _SAFE_BLOCK_TYPES:
+        return True
+    return bool(_SAFE_SUPPORT_RE.search(text))
+
+
+def _mark_optional_support_session(session: dict[str, Any], contact: _ContactDay) -> dict[str, Any]:
+    addon = dict(session)
+    addon["allowed_on_coach_day"] = True
+    addon["add_on_to_coach_owned_card"] = True
+    addon["app_prescription"] = "optional_support_only"
+    addon["render_as_secondary_addon"] = True
+    addon["parent_countdown_label"] = f"D-{contact.d_day}" if contact.d_day is not None else ""
+    addon["parent_role_key"] = "light_combat_day" if contact.contact_kind == "light_combat" else "hard_sparring_day"
+    return addon
+
+
+def _ensure_contact_card(day: dict[str, Any], contact: _ContactDay, notes: list[str]) -> None:
+    card = day.get("today_card")
+    if not isinstance(card, dict):
+        card = {
+            "readiness_status": "train_as_planned",
+            "mindset_anchor": {"intent": "", "focus_cue": "", "reset_cue": ""},
+        }
+        day["today_card"] = card
+
+    current = str(card.get("headline") or "").strip()
+    must_stamp = (
+        not current
+        or not _already_coach_led(current)
+        or contact.contact_kind == "light_combat"
+        or contact.headline == _HEADLINE_BY_LOAD["technical"]
+    )
+    if must_stamp and current != contact.headline:
+        card["headline"] = contact.headline
+        notes.append(
+            f"stamped contact headline on {day.get('date') or f'D-{contact.d_day}'} "
+            f"({contact.headline!r})"
+        )
+
+    day["day_type"] = contact.day_type
+    sessions = [session for session in day.get("sessions") or [] if isinstance(session, dict)]
+    if not sessions:
+        day.setdefault("optional_support_blocks", [])
+        return
+
+    safe_sessions = [
+        _mark_optional_support_session(session, contact)
+        for session in sessions
+        if _is_safe_optional_support_session(session)
+    ]
+    unsafe_count = len(sessions) - len(safe_sessions)
+    existing = [item for item in day.get("optional_support_blocks") or [] if isinstance(item, dict)]
+    day["optional_support_blocks"] = existing + safe_sessions
+    day["sessions"] = []
+    if safe_sessions:
+        notes.append(
+            f"moved {len(safe_sessions)} safe support session(s) under coach-owned card on "
+            f"{day.get('date') or f'D-{contact.d_day}'}"
+        )
+    if unsafe_count:
+        notes.append(
+            f"suppressed {unsafe_count} unsafe same-day session(s) from coach-owned card on "
+            f"{day.get('date') or f'D-{contact.d_day}'}"
+        )
 
 
 def _week_day_keys(week: dict[str, Any]) -> tuple[set[str], set[int]]:
@@ -429,6 +545,7 @@ def _reconcile(structured_plan: Any, planning_brief: Any) -> list[str]:
                 contact = contact_by_dday[dday]
             if contact is None:
                 continue
+            _ensure_contact_card(day, contact, notes)
             # A day the converter gave real app work already renders as a session
             # card — never hide that behind a coach-led note.
             if day.get("sessions"):

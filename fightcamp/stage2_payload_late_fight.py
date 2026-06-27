@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 
 CANONICAL_HARD_SPARRING_LABEL = "Coach-led boxing session"
-CANONICAL_HARD_SPARRING_BAN_LABEL = "Coach-led boxing — no hard sparring / technical only"
+CANONICAL_HARD_SPARRING_BAN_LABEL = "Coach-led boxing — technical only"
 CANONICAL_HARD_SPARRING_NOTE = "No app S&C today. Keep freshness priority."
 
 
@@ -2199,11 +2199,21 @@ def _coach_owned_context_session_sequence(session_sequence: list[dict[str, Any]]
         if str(session.get("scheduled_day_hint") or "").strip():
             session_copy = dict(session)
             if role_key == "hard_sparring_day":
-                session_copy["athlete_facing_label"] = CANONICAL_HARD_SPARRING_LABEL
+                offset = session_copy.get("countdown_offset")
+                if isinstance(offset, int) and offset <= 17:
+                    session_copy["athlete_facing_label"] = CANONICAL_HARD_SPARRING_BAN_LABEL
+                    session_copy["downgraded_to_role_key"] = "technical_touch_day"
+                    session_copy["downgrade_reason_code"] = "d17_hard_sparring_ban"
+                else:
+                    session_copy["athlete_facing_label"] = CANONICAL_HARD_SPARRING_LABEL
                 session_copy["display_text"] = CANONICAL_HARD_SPARRING_NOTE
+                session_copy["coach_owned"] = True
+                session_copy["app_prescription"] = False
             elif downgraded_from == "hard_sparring_day":
                 session_copy["athlete_facing_label"] = CANONICAL_HARD_SPARRING_BAN_LABEL
                 session_copy["display_text"] = CANONICAL_HARD_SPARRING_NOTE
+                session_copy["coach_owned"] = True
+                session_copy["app_prescription"] = False
             coach_owned.append(session_copy)
     return coach_owned
 
@@ -3578,7 +3588,113 @@ def _labels_in_week_span(week: dict[str, Any], days_until_fight: Any) -> list[st
     return [f"D-{offset}" for offset in range(start_day, end_day - 1, -1) if 0 <= offset <= limit]
 
 
-def _move_meaningful_app_roles_off_coach_days(
+def _coach_owned_role_for_label(weeks: list[dict[str, Any]], label: str) -> dict[str, Any] | None:
+    candidates: list[dict[str, Any]] = []
+    for week in weeks:
+        for role in week.get("session_roles", []) or []:
+            if not isinstance(role, dict):
+                continue
+            role_label = str(role.get("scheduled_countdown_label") or role.get("countdown_label") or "").strip()
+            if role_label != label:
+                continue
+            if role.get("coach_owned") or role.get("role_key") in {"hard_sparring_day", "light_combat_day"}:
+                candidates.append(role)
+    if not candidates:
+        return None
+    candidates.sort(
+        key=lambda role: 0 if str(role.get("role_key") or "") == "hard_sparring_day" else 1
+    )
+    return candidates[0]
+
+
+def _role_fulfilment_values(role: dict[str, Any]) -> list[str]:
+    values = clean_list(role.get("fulfilment_categories", []))
+    category = str(role.get("category") or "").strip()
+    support_kind = str(role.get("support_kind") or "").strip()
+    if category:
+        values.append(category)
+    if support_kind:
+        values.append(support_kind)
+    values.extend(clean_list(role.get("preferred_tags", [])))
+    return dedupe_preserve_order([str(value).strip() for value in values if str(value).strip()])
+
+
+def _is_safe_coach_day_addon(role: dict[str, Any]) -> bool:
+    role_key = str(role.get("role_key") or "").strip()
+    category = str(role.get("category") or "").strip()
+    support_kind = str(role.get("support_kind") or "").strip()
+    stress_class = str(role.get("stress_class") or "").strip()
+    system = str(role.get("preferred_system") or "").strip()
+    values = {value.lower() for value in _role_fulfilment_values(role)}
+    preferred_tags = {str(tag).strip().lower() for tag in clean_list(role.get("preferred_tags", []))}
+
+    if category in {"strength", "conditioning"} or stress_class == "meaningful_stress":
+        return False
+    if system in {"glycolytic", "alactic"}:
+        return False
+    if preferred_tags & {"strength", "conditioning", "glycolytic", "plyometric", "high_cns", "fatigue_chasing"}:
+        return False
+    if role_key in {
+        "strength_touch_day",
+        "neural_primer_day",
+        "alactic_sharpness_day",
+        "light_fight_pace_touch_day",
+        "recovery_aerobic_gas_tank_day",
+    }:
+        return False
+    if category in {"recovery", "rehab", "technical"}:
+        return True
+    if support_kind in {"mobility", "breathing", "rehab", "activation", "footwork", "technical"}:
+        return True
+    return bool(values & {"mobility", "breathing", "rehab", "activation", "footwork", "skill_striking", "recovery"})
+
+
+def _coach_day_addon_payload(role: dict[str, Any], parent: dict[str, Any], label: str) -> dict[str, Any]:
+    parent_role_key = str(parent.get("role_key") or "").strip()
+    addon = {
+        "role_key": role.get("role_key"),
+        "athlete_facing_label": role.get("athlete_facing_label"),
+        "category": role.get("category"),
+        "support_kind": role.get("support_kind"),
+        "preferred_exercise_names": clean_list(role.get("preferred_exercise_names", [])),
+        "preferred_tags": clean_list(role.get("preferred_tags", [])),
+        "selection_rule": role.get("selection_rule"),
+        "allowed_on_coach_day": True,
+        "add_on_to_coach_owned_card": True,
+        "app_prescription": "optional_support_only",
+        "render_as_secondary_addon": True,
+        "parent_countdown_label": label,
+        "parent_role_key": parent_role_key,
+    }
+    return {key: value for key, value in addon.items() if value not in (None, "", [])}
+
+
+def _attach_optional_addon_to_coach_role(parent: dict[str, Any], role: dict[str, Any], label: str) -> None:
+    parent_role_key = str(parent.get("role_key") or "").strip()
+    annotated_role = dict(role)
+    annotated_role.update(
+        {
+            "allowed_on_coach_day": True,
+            "add_on_to_coach_owned_card": True,
+            "app_prescription": "optional_support_only",
+            "render_as_secondary_addon": True,
+            "parent_countdown_label": label,
+            "parent_role_key": parent_role_key,
+        }
+    )
+    addon = _coach_day_addon_payload(annotated_role, parent, label)
+    existing_blocks = list(parent.get("optional_support_blocks", []) or [])
+    existing_addons = list(parent.get("secondary_addons", []) or [])
+    existing_blocks.append(addon)
+    existing_addons.append(addon)
+    parent["optional_support_blocks"] = existing_blocks
+    parent["secondary_addons"] = existing_addons
+    parent["fulfilment_categories"] = dedupe_preserve_order(
+        clean_list(parent.get("fulfilment_categories", [])) + _role_fulfilment_values(role)
+    )
+
+
+def _handle_roles_on_coach_owned_days(
     weeks: list[dict[str, Any]],
     *,
     days_until_fight: Any,
@@ -3602,18 +3718,27 @@ def _move_meaningful_app_roles_off_coach_days(
             if not isinstance(role, dict):
                 continue
             if role.get("coach_owned") or role.get("role_key") in {"hard_sparring_day", "light_combat_day"}:
+                if role.get("role_key") == "hard_sparring_day":
+                    role["coach_owned"] = True
+                    role["app_prescription"] = False
+                    offset = role.get("countdown_offset")
+                    if isinstance(offset, int) and offset <= 17:
+                        role["athlete_facing_label"] = CANONICAL_HARD_SPARRING_BAN_LABEL
+                        role["downgraded_to_role_key"] = "technical_touch_day"
+                        role["downgrade_reason_code"] = "d17_hard_sparring_ban"
+                elif role.get("role_key") == "light_combat_day":
+                    role["coach_owned"] = True
+                    role["sessionless"] = True
+                    role["app_prescription"] = False
                 updated_roles.append(role)
                 continue
             current_label = str(role.get("scheduled_countdown_label") or role.get("countdown_label") or "").strip()
             if current_label not in coach_labels:
                 updated_roles.append(role)
                 continue
-            is_meaningful = (
-                role.get("category") in {"strength", "conditioning"}
-                or str(role.get("stress_class") or "") == "meaningful_stress"
-            )
-            if not is_meaningful:
-                updated_roles.append(role)
+            parent = _coach_owned_role_for_label(weeks, current_label)
+            if parent is not None and _is_safe_coach_day_addon(role):
+                _attach_optional_addon_to_coach_role(parent, role, current_label)
                 continue
             candidate_labels = dedupe_preserve_order(
                 clean_list(role.get("legal_countdown_labels", [])) + _labels_in_week_span(week, days_until_fight)
@@ -3640,7 +3765,7 @@ def _move_meaningful_app_roles_off_coach_days(
                 continue
             suppressed = dict(role)
             suppressed["reasons"] = [
-                "Coach-owned contact day lock suppressed this meaningful app-owned role because no clean same-window training day was available."
+                "Coach-owned contact day suppressed this non-add-on role because no clean same-window training day was available."
             ]
             suppressed["suppressed_by"] = "goal_weakness_fulfilment_contract"
             suppressed_roles.append(suppressed)
@@ -3945,11 +4070,11 @@ def _apply_late_fulfilment_role_contracts(
     athlete_model: dict[str, Any],
 ) -> None:
     _append_support_and_footwork_roles(weeks, days_until_fight=days_until_fight, athlete_model=athlete_model)
-    _move_meaningful_app_roles_off_coach_days(weeks, days_until_fight=days_until_fight, athlete_model=athlete_model)
     _append_active_late_fulfilment_roles(weeks, days_until_fight=days_until_fight, athlete_model=athlete_model)
     _annotate_strength_fulfilment(weeks, athlete_model)
     _mark_mobility_fulfilment(weeks, athlete_model)
     _append_fight_day_terminal_role(weeks, athlete_model)
+    _handle_roles_on_coach_owned_days(weeks, days_until_fight=days_until_fight, athlete_model=athlete_model)
     _sort_and_reindex_late_roles(weeks)
 
 
@@ -4406,6 +4531,7 @@ def _append_declared_hard_spar_context(
                 "session_index": len(session_roles) + len(new_entries) + 1,
                 "category": "sparring",
                 "role_key": "hard_sparring_day",
+                "athlete_facing_label": CANONICAL_HARD_SPARRING_BAN_LABEL,
                 "preferred_pool": "declared_hard_sparring_days",
                 "selection_rule": (
                     "Coach-owned boxing day downgraded to technical/rhythm only "
@@ -4431,6 +4557,7 @@ def _append_declared_hard_spar_context(
                 "countdown_offset": offset,
                 "declared_day_locked": True,
                 "coach_owned": True,
+                "app_prescription": False,
                 "downgraded": True,
                 "downgraded_to_role_key": "technical_touch_day",
                 "downgrade_reason_code": "d17_hard_sparring_ban",
