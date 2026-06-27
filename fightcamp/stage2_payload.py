@@ -222,6 +222,19 @@ def _compress_short_camp_priorities(athlete_model: dict) -> dict:
         bucket.append(stage2_planning_brief_module._priority_bucket(label, kind))
         used_labels.add(label)
 
+        speed_signal = bool(
+        weakness_tokens & {"speed", "reactive", "reaction", "acceleration", "speed_reaction"}
+        or goal_tokens & {"speed", "reactive", "reaction", "acceleration", "speed_reaction"}
+    )
+
+    if speed_signal:
+        add_unique(
+            primary,
+            "speed / reaction sharpness",
+            "speed_reaction_sharpness",
+            "Use a short full-rest alactic speed dose for neural speed and reaction, not conditioning volume.",
+        )
+
     footwork_signal = bool(
         weakness_tokens & {"footwork", "lateral_movement", "ringcraft", "angles", "pivot", "stance", "stance_reset", "angle_exit"}
         or goal_tokens & {"footwork", "lateral_movement", "ringcraft", "angles", "pivot", "stance", "stance_reset", "angle_exit"}
@@ -248,12 +261,12 @@ def _compress_short_camp_priorities(athlete_model: dict) -> dict:
             "Collapse timing, rhythm, boxing quality, and skill refinement into one practical fight-week target.",
         )
 
-    if goal_tokens & {"power", "speed", "explosive_power"} or weakness_tokens & {"sharpness", "speed", "speed_reaction", "reaction", "cns_fatigue"}:
+    if goal_tokens & {"power", "explosive_power"} or weakness_tokens & {"sharpness", "cns_fatigue"}:
         add_unique(
             primary,
             "power expression",
             "power_expression",
-            "Keep neural speed and power output as one sharpness-oriented target.",
+            "Keep neural power output as one sharpness-oriented target.",
         )
 
     if readiness_flags & {"fight_week", "high_fatigue", "active_weight_cut", "aggressive_weight_cut"} or athlete_model.get("injuries"):
@@ -470,6 +483,10 @@ def _primary_limiter_key(athlete_model: dict, restrictions: list[dict]) -> str:
         _priority_bucket_labels(compressed.get("primary_targets", []))
         + _priority_bucket_labels(compressed.get("maintenance_targets", []))
     ).lower()
+    if "speed / reaction sharpness" in compressed_labels:
+        return "sharpness_under_fatigue"
+    if "footwork / ring-movement quality" in compressed_labels:
+        return "boxing_quality_under_load"
     if "technical sharpness" in compressed_labels or "footwork" in compressed_labels:
         return "boxing_quality_under_load"
     if "power expression" in compressed_labels:
