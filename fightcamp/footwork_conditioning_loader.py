@@ -79,3 +79,9 @@ def install() -> None:
 
     conditioning_module.get_conditioning_bank = get_conditioning_bank
     conditioning_module._FOOTWORK_CONDITIONING_BANK_INSTALLED = True
+
+
+def get_footwork_conditioning_bank() -> list[dict[str, Any]]:
+    from . import conditioning as conditioning_module
+
+    return list(_load_footwork_bank(conditioning_module))

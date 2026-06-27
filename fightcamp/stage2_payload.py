@@ -216,7 +216,7 @@ def _compress_short_camp_priorities(athlete_model: dict) -> dict:
     deferred: list[dict] = []
     used_labels: set[str] = set()
 
-        def add_unique(bucket: list[dict], label: str, kind: str, reason: str) -> None:
+    def add_unique(bucket: list[dict], label: str, kind: str, reason: str) -> None:
         if label in used_labels:
             return
         bucket.append(stage2_planning_brief_module._priority_bucket(label, kind))
@@ -230,7 +230,7 @@ def _compress_short_camp_priorities(athlete_model: dict) -> dict:
     if speed_signal:
         add_unique(
             primary,
-            "speed / reaction sharpness",
+            "speed / footwork sharpness",
             "speed_reaction_sharpness",
             "Use a short full-rest alactic speed dose for neural speed and reaction, not conditioning volume.",
         )
@@ -243,7 +243,7 @@ def _compress_short_camp_priorities(athlete_model: dict) -> dict:
     if footwork_signal:
         add_unique(
             primary,
-            "footwork / ring-movement quality",
+            "footwork / technical sharpness",
             "footwork_ring_movement_quality",
             "Use named footwork, stance reset, pivot, angle-exit, and ring-movement work without treating it as pure speed.",
         )
@@ -286,8 +286,16 @@ def _compress_short_camp_priorities(athlete_model: dict) -> dict:
         )
 
     while len(primary) > 2:
-        moved = primary.pop()
-        destination = embedded if moved["kind"] == "freshness_protection" else maintenance
+        overflow_idx = next(
+            (
+                idx for idx, entry in enumerate(primary)
+                if entry.get("kind") == "technical_sharpness"
+                and any(item.get("kind") == "power_expression" for item in primary)
+            ),
+            len(primary) - 1,
+        )
+        moved = primary.pop(overflow_idx)
+        destination = embedded if moved["kind"] in {"freshness_protection", "technical_sharpness"} else maintenance
         destination.append(
             stage2_planning_brief_module._priority_bucket(moved["label"], moved["kind"])
         )
@@ -483,7 +491,7 @@ def _primary_limiter_key(athlete_model: dict, restrictions: list[dict]) -> str:
         _priority_bucket_labels(compressed.get("primary_targets", []))
         + _priority_bucket_labels(compressed.get("maintenance_targets", []))
     ).lower()
-    if "speed / reaction sharpness" in compressed_labels:
+    if "speed / reaction sharpness" in compressed_labels or "speed / footwork sharpness" in compressed_labels:
         return "sharpness_under_fatigue"
     if "footwork / ring-movement quality" in compressed_labels:
         return "boxing_quality_under_load"
@@ -3762,6 +3770,7 @@ def build_stage2_payload(
             "If weekly_role_map or week_by_week_progression marks intentional_compression.active, keep that smaller week on purpose and do not restore the suppressed standalone role.",
             "If weekly_role_map.intentional_compression.policy is boxing_crowded_week, keep hard sparring as the week owner, then one anchor, then at most one low-load support day.",
             "In boxing crowded weeks, do not turn anchor days or recovery/support days into multi-stressor sessions by adding glycolytic, transfer, or extra sharpness work.",
+            "If weekly_role_map.fulfilment_contract exists, every requested goal or weakness in it must be visibly satisfied, safely downgraded, or explicitly suppressed with the listed reason; never silently drop a contract item.",
             "In camps with 7 days or less to fight, only the compressed week-level priorities may drive standalone session purposes; keep all other selections as support, maintenance, or deferred notes only.",
             "When fight_week_override.active is true, treat it as mandatory. For 0-1 days, output readiness protocol notes only with no training week. For 2-3 days, output micro-taper only (one short primer max + one light recovery session). For 4-6 days, output mini taper only (freshness-first, minimal volume).",
             "If a target-weight constraint is present, explicitly acknowledge that it changes recovery and training tolerance in the athlete-facing plan.",
@@ -3879,6 +3888,8 @@ Build the best final plan from the FINALIZER PACKET. Use selected_plan, weekly_r
 
 RULE 3 — SELECTION ORDER
 Preserve the calendar, declared days, coach-led ownership, session count, phase, and taper window from selected_plan / weekly_role_map, but make the final exercise and prescription choices yourself. Treat Stage 1 selected exercises as candidates, not truth; draft text is also candidate material. Keep a Stage 1 item only when it is the best compliant coaching choice for the athlete's sport, fight date, phase, injury, weight cut, fatigue, goals, weak areas, and schedule. If a Stage 1 item is weak, generic, violating, off-role, or poorly timed, override it using compact selected candidate facts, fallback items, selected_plan, or final coaching judgement. Do not create athlete-facing option menus. Never let Stage 1 draft wording decide final exercise rendering when the FINALIZER PACKET says a different role, day, count, restriction, or taper rule owns the session.
+
+If selected_plan.weekly_role_map.fulfilment_contract exists, treat it as binding: every requested goal or weakness must be visibly satisfied, safely downgraded, or explicitly suppressed with the contract reason.
 
 RULE 4 — ANCHOR STANDARD
 Every anchor session must contain at least one serious high-transfer strength or power exercise if a compliant compact candidate or finalizer-safe substitution exists. Do not build anchors from bird dogs, dead bugs, planks, carries, or rehab-level work unless restrictions force it. Support work assists the anchor — it cannot become it.

@@ -15,6 +15,7 @@ from fightcamp.stage2_payload import (
     build_planning_brief,
     build_stage2_payload,
 )
+from fightcamp.stage2_payload_late_fight import _append_active_late_fulfilment_roles
 from fightcamp.nutrition import generate_nutrition_block
 from fightcamp.recovery import generate_recovery_block
 from fightcamp.training_context import TrainingContext
@@ -3408,3 +3409,353 @@ def test_weekly_role_map_rotates_to_first_available_training_day_after_generatio
         {"key": "general_fight_readiness"},
     )
     assert role_map["weeks"][0]["declared_training_days"] == ["friday", "monday"]
+
+
+def test_late_fight_goal_weakness_fulfilment_contract_preserves_boxing_profile():
+    athlete_model = {
+        "sport": "boxing",
+        "status": "amateur",
+        "rounds_format": "3x3",
+        "camp_length_weeks": 3,
+        "days_until_fight": 21,
+        "short_notice": False,
+        "fatigue": "low",
+        "training_preference": "balanced",
+        "technical_styles": ["orthodox"],
+        "tactical_styles": ["counter_striker"],
+        "key_goals": ["Strength", "Mobility"],
+        "primary_goal": "Strength",
+        "weaknesses": ["Footwork"],
+        "weak_areas": ["Footwork"],
+        "primary_weak_area": "Footwork",
+        "equipment": ["barbell", "trap_bar", "sled", "med_ball", "dumbbells", "kettlebells", "bands"],
+        "training_days": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
+        "training_frequency": 5,
+        "hard_sparring_days": ["Tuesday"],
+        "support_work_days": ["Friday"],
+        "technical_skill_days": [],
+        "injuries": [],
+        "weight_cut_risk": True,
+        "weight_cut_pct": 3.5,
+        "readiness_flags": [],
+        "fight_weekday": "Friday",
+        "plan_creation_weekday": "Friday",
+    }
+    phase_briefs = {
+        "SPP": {
+            "objective": "specific density without flattening sharpness",
+            "emphasize": ["specific transfer"],
+            "deprioritize": ["unnecessary fatigue"],
+            "risk_flags": [],
+            "session_counts": {"strength": 2, "conditioning": 2, "recovery": 1},
+            "selection_guardrails": {"must_keep_if_present": ["primary_strength"]},
+            "weeks": 2,
+            "days": 14,
+        },
+        "TAPER": {
+            "objective": "freshness and rhythm",
+            "emphasize": ["freshness"],
+            "deprioritize": ["lactate-heavy density"],
+            "risk_flags": [],
+            "session_counts": {"strength": 1, "conditioning": 1, "recovery": 1},
+            "selection_guardrails": {"must_keep_if_present": ["primary_strength"]},
+            "weeks": 1,
+            "days": 7,
+        },
+    }
+
+    brief = build_planning_brief(
+        athlete_model=athlete_model,
+        restrictions=[],
+        phase_briefs=phase_briefs,
+        candidate_pools={
+            "SPP": {"strength_slots": [], "conditioning_slots": [], "rehab_slots": []},
+            "TAPER": {"strength_slots": [], "conditioning_slots": [], "rehab_slots": []},
+        },
+        omission_ledger={},
+        rewrite_guidance={},
+    )
+
+    weeks = brief["weekly_role_map"]["weeks"]
+    roles = [role for week in weeks for role in week["session_roles"]]
+
+    tuesday_coach_cards = [
+        role for role in roles
+        if role.get("role_key") == "hard_sparring_day"
+        and role.get("scheduled_day_hint") == "tuesday"
+    ]
+    assert [role["countdown_label"] for role in tuesday_coach_cards] == ["D-17", "D-10", "D-3"]
+    assert all(role.get("downgraded_to_role_key") == "technical_touch_day" for role in tuesday_coach_cards)
+
+    friday_light_combat = [
+        role for role in roles
+        if role.get("role_key") == "light_combat_day"
+        and role.get("scheduled_day_hint") == "friday"
+    ]
+    assert [role["countdown_label"] for role in friday_light_combat] == ["D-21", "D-14", "D-7"]
+    assert all(role.get("coach_owned") is True for role in friday_light_combat)
+
+    strength_roles = [
+        role for role in roles
+        if "strength" in role.get("fulfilment_categories", [])
+        and isinstance(role.get("countdown_offset"), int)
+        and 10 <= role["countdown_offset"] <= 21
+    ]
+    assert any(
+        role.get("real_strength_fulfilment")
+        and any("Trap Bar" in name or "Sled Push" in name for name in role.get("preferred_exercise_names", []))
+        for role in strength_roles
+    )
+
+    footwork_roles = [role for role in roles if "footwork" in role.get("fulfilment_categories", [])]
+    assert len(footwork_roles) >= 3
+    assert all(role.get("source_bank") == "footwork_conditioning_bank.json" for role in footwork_roles)
+    assert {
+        "Step-Back Pivot Reset",
+        "Lateral Exit to Re-Enter",
+        "Stance Reset Line Drill",
+    }.issubset({name for role in footwork_roles for name in role.get("preferred_exercise_names", [])})
+    forbidden = {"speed", "reactive", "high_cns", "plyometric", "glycolytic"}
+    assert all(not (forbidden & set(role.get("preferred_tags", []))) for role in footwork_roles)
+
+    assert any("mobility" in role.get("fulfilment_categories", []) for role in roles)
+    assert roles[-1]["role_key"] == "fight_day_protocol"
+    assert roles[-1]["countdown_label"] == "D-0"
+
+    coach_labels = {
+        role.get("countdown_label")
+        for role in roles
+        if role.get("coach_owned") or role.get("role_key") in {"hard_sparring_day", "light_combat_day"}
+    }
+    high_load_app_roles_on_coach_days = [
+        role for role in roles
+        if role.get("countdown_label") in coach_labels
+        and not role.get("coach_owned")
+        and role.get("category") in {"strength", "conditioning"}
+    ]
+    assert high_load_app_roles_on_coach_days == []
+
+    fulfilment_contract = brief["weekly_role_map"]["fulfilment_contract"]
+    assert {entry["category"] for entry in fulfilment_contract} >= {"strength", "mobility", "footwork"}
+    assert all(
+        entry["fulfilment_type"] != "suppressed" or entry.get("suppression_reason")
+        for entry in fulfilment_contract
+    )
+
+
+def _late_fight_fulfilment_test_brief(
+    *,
+    primary_goal: str = "",
+    weak_area: str = "",
+    days_until_fight: int = 17,
+    support_work_days: list[str] | None = None,
+) -> dict:
+    athlete_model = {
+        "sport": "boxing",
+        "status": "amateur",
+        "rounds_format": "3x3",
+        "camp_length_weeks": 3,
+        "days_until_fight": days_until_fight,
+        "short_notice": False,
+        "fatigue": "low",
+        "training_preference": "balanced",
+        "technical_styles": ["orthodox"],
+        "tactical_styles": ["counter_striker"],
+        "key_goals": [primary_goal] if primary_goal else [],
+        "primary_goal": primary_goal,
+        "weaknesses": [weak_area] if weak_area else [],
+        "weak_areas": [weak_area] if weak_area else [],
+        "primary_weak_area": weak_area,
+        "equipment": ["barbell", "trap_bar", "sled", "med_ball", "dumbbells", "kettlebells", "bands"],
+        "training_days": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
+        "training_frequency": 5,
+        "hard_sparring_days": [],
+        "support_work_days": support_work_days or [],
+        "technical_skill_days": [],
+        "injuries": [],
+        "weight_cut_risk": False,
+        "weight_cut_pct": 0,
+        "readiness_flags": [],
+        "fight_weekday": "Friday",
+        "plan_creation_weekday": "Friday" if days_until_fight == 21 else "Monday",
+    }
+    phase_briefs = {
+        "SPP": {
+            "objective": "specific density without flattening sharpness",
+            "emphasize": ["specific transfer"],
+            "deprioritize": ["unnecessary fatigue"],
+            "risk_flags": [],
+            "session_counts": {"strength": 1, "conditioning": 1, "recovery": 1},
+            "selection_guardrails": {"must_keep_if_present": []},
+            "weeks": 2,
+            "days": 14,
+        },
+        "TAPER": {
+            "objective": "freshness and rhythm",
+            "emphasize": ["freshness"],
+            "deprioritize": ["lactate-heavy density"],
+            "risk_flags": [],
+            "session_counts": {"strength": 1, "conditioning": 1, "recovery": 1},
+            "selection_guardrails": {"must_keep_if_present": []},
+            "weeks": 1,
+            "days": 7,
+        },
+    }
+    return build_planning_brief(
+        athlete_model=athlete_model,
+        restrictions=[],
+        phase_briefs=phase_briefs,
+        candidate_pools={
+            "SPP": {"strength_slots": [], "conditioning_slots": [], "rehab_slots": []},
+            "TAPER": {"strength_slots": [], "conditioning_slots": [], "rehab_slots": []},
+        },
+        omission_ledger={},
+        rewrite_guidance={},
+    )
+
+
+def _late_fight_roles(brief: dict) -> list[dict]:
+    return [
+        role
+        for week in brief["weekly_role_map"]["weeks"]
+        for role in week.get("session_roles", [])
+    ]
+
+
+def _fulfilment_entry(brief: dict, category: str) -> dict:
+    return next(
+        entry
+        for entry in brief["weekly_role_map"]["fulfilment_contract"]
+        if entry.get("category") == category
+    )
+
+
+def test_late_fight_strength_goal_creates_real_maintenance_when_no_strength_survives_d21_to_d10():
+    weeks = [
+        {
+            "week_index": 1,
+            "stage_key": "d21_to_d14",
+            "countdown_span": {"start_day": 21, "end_day": 10},
+            "session_roles": [],
+            "suppressed_roles": [],
+        }
+    ]
+    athlete_model = {
+        "sport": "boxing",
+        "days_until_fight": 21,
+        "primary_goal": "Strength",
+        "key_goals": ["Strength"],
+        "training_days": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
+        "training_frequency": 5,
+        "fatigue": "low",
+        "injuries": [],
+        "readiness_flags": [],
+        "weight_cut_risk": False,
+        "weight_cut_pct": 0,
+        "fight_weekday": "Friday",
+        "plan_creation_weekday": "Friday",
+    }
+
+    _append_active_late_fulfilment_roles(
+        weeks,
+        days_until_fight=21,
+        athlete_model=athlete_model,
+    )
+
+    strength_roles = [
+        role for role in weeks[0]["session_roles"]
+        if "strength" in role.get("fulfilment_categories", [])
+    ]
+    assert len(strength_roles) == 1
+    role = strength_roles[0]
+    assert role["role_key"] == "strength_touch_day"
+    assert role["real_strength_fulfilment"] is True
+    assert 10 <= role["countdown_offset"] <= 21
+    assert any("Trap Bar" in name or "Sled Push" in name for name in role["preferred_exercise_names"])
+    assert role.get("governance", {}).get("low_risk_only") is True
+
+
+def test_late_fight_primary_power_creates_active_fulfilment_role():
+    brief = _late_fight_fulfilment_test_brief(primary_goal="Power")
+    roles = _late_fight_roles(brief)
+
+    power_roles = [
+        role for role in roles
+        if "power" in role.get("fulfilment_categories", [])
+        and role.get("placement_source") == "goal_weakness_fulfilment_contract"
+    ]
+
+    assert power_roles
+    assert all(role.get("coach_owned") is not True for role in power_roles)
+    assert all(role.get("preferred_system") == "alactic" for role in power_roles)
+    assert any(
+        any("Med Ball" in name or "Pogo" in name for name in role.get("preferred_exercise_names", []))
+        for role in power_roles
+    )
+    assert _fulfilment_entry(brief, "power")["fulfilment_type"] == "full"
+
+
+def test_late_fight_primary_speed_creates_active_fulfilment_role():
+    brief = _late_fight_fulfilment_test_brief(primary_goal="Speed")
+    roles = _late_fight_roles(brief)
+
+    speed_roles = [
+        role for role in roles
+        if "speed_reaction" in role.get("fulfilment_categories", [])
+        and role.get("placement_source") == "goal_weakness_fulfilment_contract"
+    ]
+
+    assert speed_roles
+    assert all(role.get("coach_owned") is not True for role in speed_roles)
+    assert all(role.get("preferred_system") == "alactic" for role in speed_roles)
+    assert any(
+        any("Reaction" in name for name in role.get("preferred_exercise_names", []))
+        for role in speed_roles
+    )
+    assert _fulfilment_entry(brief, "speed_reaction")["fulfilment_type"] == "full"
+
+
+def test_late_fight_weak_gas_tank_creates_active_conditioning_fulfilment_role():
+    brief = _late_fight_fulfilment_test_brief(weak_area="Gas Tank")
+    roles = _late_fight_roles(brief)
+
+    gas_tank_roles = [
+        role for role in roles
+        if "conditioning" in role.get("fulfilment_categories", [])
+        and role.get("support_kind") == "gas_tank"
+        and role.get("placement_source") == "goal_weakness_fulfilment_contract"
+    ]
+
+    assert gas_tank_roles
+    assert all(role.get("coach_owned") is not True for role in gas_tank_roles)
+    assert all(role.get("role_key") == "recovery_aerobic_gas_tank_day" for role in gas_tank_roles)
+    assert all(role.get("preferred_system") == "aerobic" for role in gas_tank_roles)
+    assert all("glycolytic" in role.get("blocked_tags", []) for role in gas_tank_roles)
+    assert _fulfilment_entry(brief, "conditioning")["fulfilment_type"] == "full"
+
+
+def test_light_combat_footwork_fulfilment_remains_coach_owned_sessionless():
+    brief = _late_fight_fulfilment_test_brief(
+        weak_area="Footwork",
+        days_until_fight=21,
+        support_work_days=["Friday"],
+    )
+    roles = _late_fight_roles(brief)
+
+    light_combat_roles = [
+        role for role in roles
+        if role.get("role_key") == "light_combat_day"
+        and "footwork" in role.get("fulfilment_categories", [])
+    ]
+
+    assert light_combat_roles
+    assert all(role.get("coach_owned") is True for role in light_combat_roles)
+    assert all(role.get("sessionless") is True for role in light_combat_roles)
+    assert all(role.get("app_prescription") is False for role in light_combat_roles)
+    assert all(role.get("category") == "technical" for role in light_combat_roles)
+    assert all(role.get("stress_class") == "support" for role in light_combat_roles)
+    assert all(
+        role.get("preferred_exercise_name_context") == "optional_coach_technical_focus"
+        for role in light_combat_roles
+    )
+    assert all(role.get("coach_technical_focus_names") for role in light_combat_roles)
