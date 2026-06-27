@@ -1889,24 +1889,24 @@ def generate_conditioning_block(flags):
     weak_list = [w.lower() for w in weaknesses]
     weak_tags = expand_tags(weaknesses, WEAKNESS_TAG_MAP)
     raw_goal_tokens = _normalize_focus_tokens(goal_list)
-raw_weak_tokens = _normalize_focus_tokens(weak_list)
-goal_tag_tokens = _normalize_focus_tokens(goal_tags)
-
-speed_goal_requested = bool(
-    (raw_goal_tokens | raw_weak_tokens | goal_tag_tokens) & _SPEED_GOAL_TOKENS
-)
-
-footwork_requested = bool(
-    (raw_goal_tokens | raw_weak_tokens) & _FOOTWORK_GOAL_TOKENS
-)
-
-speed_dose_allowed = (
-    speed_goal_requested
-    and fatigue != "high"
-    and not active_late_window
-    and phase.upper() != "TAPER"
-)
-alactic_primary_cap = 2 if speed_dose_allowed else 1
+    raw_weak_tokens = _normalize_focus_tokens(weak_list)
+    goal_tag_tokens = _normalize_focus_tokens(goal_tags)
+    
+    speed_goal_requested = bool(
+        (raw_goal_tokens | raw_weak_tokens | goal_tag_tokens) & _SPEED_GOAL_TOKENS
+    )
+    
+    footwork_requested = bool(
+        (raw_goal_tokens | raw_weak_tokens) & _FOOTWORK_GOAL_TOKENS
+    )
+    
+    speed_dose_allowed = (
+        speed_goal_requested
+        and fatigue != "high"
+        and not active_late_window
+        and phase.upper() != "TAPER"
+    )
+    alactic_primary_cap = 2 if speed_dose_allowed else 1
     derived_clarification_tags = _conditioning_resolve_derived_clarification_tags(flags)
     preferred_exercise_names = {
         str(name).strip().lower()
