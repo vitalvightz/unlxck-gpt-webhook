@@ -38,7 +38,6 @@ TACTICAL_STYLE_TAGS = {
     "clinch_fighter",
     "counter_striker",
     "distance_striker",
-    "distance_fighter",
     "submission_hunter",
     "kicker",
     "scrambler",
@@ -105,7 +104,9 @@ def test_footwork_drills_do_not_default_to_speed_or_reactive_work():
         tags = _tags(item)
         leaked = tags & FORBIDDEN_FOOTWORK_DEFAULT_TAGS
 
-        assert not leaked, f"{item['name']} has speed/reactive leakage: {sorted(leaked)}"
+        assert not leaked, (
+            f"{item['name']} has speed/reactive leakage: {sorted(leaked)}"
+        )
 
 
 def test_footwork_bank_is_low_noise_and_not_glycolytic_density():
@@ -116,3 +117,15 @@ def test_footwork_bank_is_low_noise_and_not_glycolytic_density():
         assert item.get("movement_cost") == "low"
         assert item.get("rpe", 0) <= 6
         assert item.get("rounds", 0) <= 2
+
+
+def test_footwork_bank_is_loaded_into_conditioning_runtime():
+    from fightcamp.conditioning import get_conditioning_bank
+
+    names = {item.get("name") for item in get_conditioning_bank()}
+
+    assert {
+        "Step-Back Pivot Reset",
+        "Lateral Exit to Re-Enter",
+        "Corner Escape L-Step",
+    }.issubset(names)
