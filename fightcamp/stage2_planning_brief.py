@@ -197,13 +197,13 @@ def _compress_short_camp_priorities(athlete_model: dict) -> dict:
     deferred: list[dict] = []
     used_labels: set[str] = set()
 
-    def add_unique(bucket: list[dict], label: str, kind: str, reason: str) -> None:
+        def add_unique(bucket: list[dict], label: str, kind: str, reason: str) -> None:
         if label in used_labels:
             return
         bucket.append(_priority_bucket(label, kind))
         used_labels.add(label)
 
-        speed_goal_signal = bool(goal_tokens & _SPEED_SHARPNESS_TOKENS)
+    speed_goal_signal = bool(goal_tokens & _SPEED_SHARPNESS_TOKENS)
     speed_weakness_signal = bool(weakness_tokens & _SPEED_SHARPNESS_TOKENS)
     footwork_goal_signal = bool(goal_tokens & _FOOTWORK_QUALITY_TOKENS)
     footwork_weakness_signal = bool(weakness_tokens & _FOOTWORK_QUALITY_TOKENS)
