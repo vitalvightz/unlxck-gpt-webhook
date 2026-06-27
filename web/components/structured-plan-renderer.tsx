@@ -445,7 +445,7 @@ function OptionalSupportBlocks({ day }: { day: StructuredDay }) {
           const title = cleanText(session.title) || cleanText(session.objective) || "Low-noise support";
           const objective = cleanText(session.objective);
           return (
-            <li key={cleanText(session.session_id) || `support-${index}`} className="sp-note">
+            <li key={cleanText(session.session_id) ? cleanText(session.session_id) + '-' + index : 'support-' + index} className="sp-note">
               <span className="sp-note-label">{title}</span>
               {objective && objective !== title ? (
                 <span className="sp-note-text">{objective}</span>
