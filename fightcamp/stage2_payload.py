@@ -222,16 +222,17 @@ def _compress_short_camp_priorities(athlete_model: dict) -> dict:
         bucket.append(stage2_planning_brief_module._priority_bucket(label, kind))
         used_labels.add(label)
 
-    immediate_performance_limiter = (
-        weakness_tokens & {"footwork", "coordination", "coordination_proprioception", "proprioception", "balance", "timing", "rhythm", "boxing"}
+    technical_sharpness_signal = (
+        weakness_tokens & {"coordination", "coordination_proprioception", "proprioception", "balance", "timing", "rhythm", "boxing"}
         or goal_tokens & {"skill_refinement", "striking"}
     )
-    if immediate_performance_limiter:
+
+    if technical_sharpness_signal:
         add_unique(
             primary,
-            "footwork / technical sharpness",
+            "technical sharpness",
             "technical_sharpness",
-            "Collapse footwork, timing, boxing quality, and skill refinement into one practical fight-week target.",
+            "Collapse timing, rhythm, boxing quality, and skill refinement into one practical fight-week target.",
         )
 
     if goal_tokens & {"power", "speed", "explosive_power"} or weakness_tokens & {"sharpness", "speed", "speed_reaction", "reaction", "cns_fatigue"}:
@@ -523,7 +524,7 @@ def _primary_limiter_key(athlete_model: dict, restrictions: list[dict]) -> str:
         return "aerobic_repeatability"
     if weakness_tokens & {"sharpness", "speed_reaction", "cns_fatigue", "speed", "reaction"}:
         return "sharpness_under_fatigue"
-    if weakness_tokens & {"boxing", "striking", "skill_refinement"}:
+    if weakness_tokens & {"footwork", "boxing", "striking", "skill_refinement"}:
         return "boxing_quality_under_load"
     if weakness_tokens & {"shoulder", "shoulders", "knee", "knees", "neck", "mobility", "stiffness"}:
         return "tissue_state"
