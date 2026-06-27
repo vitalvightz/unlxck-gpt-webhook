@@ -77,12 +77,21 @@ CONDITIONING_MAX_CLARIFICATION_TAG_BONUS = 2.0
 
 _RAW_SPEED_GOAL_TOKENS = {
     "speed",
-    "footwork",
     "reactive",
     "reaction",
     "acceleration",
 }
 
+_RAW_FOOTWORK_GOAL_TOKENS = {
+    "footwork",
+    "lateral_movement",
+    "lateral movement",
+    "ringcraft",
+    "angles",
+    "pivot",
+    "stance",
+    "stance_reset",
+}
 
 def _conditioning_goal_priority_bonus(tags: list[str], priority_profile) -> float:
     unique_tags = list(dict.fromkeys(tags))
