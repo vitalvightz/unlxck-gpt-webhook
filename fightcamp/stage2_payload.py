@@ -216,26 +216,13 @@ def _compress_short_camp_priorities(athlete_model: dict) -> dict:
     deferred: list[dict] = []
     used_labels: set[str] = set()
 
-    def add_unique(bucket: list[dict], label: str, kind: str, reason: str) -> None:
+        def add_unique(bucket: list[dict], label: str, kind: str, reason: str) -> None:
         if label in used_labels:
             return
         bucket.append(stage2_planning_brief_module._priority_bucket(label, kind))
         used_labels.add(label)
 
-        footwork_signal = bool(
-        weakness_tokens & {"footwork", "lateral_movement", "ringcraft", "angles", "pivot", "stance", "stance_reset", "angle_exit"}
-        or goal_tokens & {"footwork", "lateral_movement", "ringcraft", "angles", "pivot", "stance", "stance_reset", "angle_exit"}
-    )
-
-    if footwork_signal:
-        add_unique(
-            primary,
-            "footwork / ring-movement quality",
-            "footwork_ring_movement_quality",
-            "Use named footwork, stance reset, pivot, angle-exit, and ring-movement work without treating it as pure speed.",
-        )
-
-        footwork_signal = bool(
+    footwork_signal = bool(
         weakness_tokens & {"footwork", "lateral_movement", "ringcraft", "angles", "pivot", "stance", "stance_reset", "angle_exit"}
         or goal_tokens & {"footwork", "lateral_movement", "ringcraft", "angles", "pivot", "stance", "stance_reset", "angle_exit"}
     )
