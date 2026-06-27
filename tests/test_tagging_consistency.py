@@ -24,6 +24,7 @@ def test_normalize_tags_maps_legacy_drill_tags_to_scoring_vocab():
 
     assert normalized == ["boxing", "recovery", "skill", "coordination"]
 
+
 def test_normalize_item_tags_mutates_item_with_canonical_tags():
     item = {"tags": ["skill refinement", "counter striker", "counter_striker"]}
 
@@ -79,7 +80,19 @@ def test_current_ui_performance_values_resolve_to_scoring_tags():
         "strength": {"posterior_chain", "quad_dominant", "upper_body", "core"},
         "power": {"explosive", "rate_of_force", "plyometric"},
         "speed": {"speed", "reaction", "reactive", "coordination"},
-        "footwork": {"footwork", "speed", "reactive", "coordination"},
+        "footwork": {
+            "footwork",
+            "lateral",
+            "lateral_movement",
+            "ringcraft",
+            "angles",
+            "pivot",
+            "stance",
+            "stance_reset",
+            "angle_exit",
+            "movement_quality",
+            "coordination",
+        },
         "balance": {"balance", "stability", "unilateral"},
         "mobility": {"mobility", "hip_dominant", "movement_quality", "range"},
         "coordination": {"coordination", "balance", "reactive"},
@@ -95,6 +108,12 @@ def test_current_ui_performance_values_resolve_to_scoring_tags():
         assert canonical_entries
         resolved_tags = {tag for canonical in canonical_entries for tag in WEAKNESS_TAG_MAP[canonical]}
         assert required_tags.issubset(resolved_tags)
+
+
+def test_footwork_does_not_leak_into_speed_tags():
+    assert "footwork" not in GOAL_TAG_MAP["speed"]
+    assert "speed" not in WEAKNESS_TAG_MAP["footwork"]
+    assert "reactive" not in WEAKNESS_TAG_MAP["footwork"]
 
 
 def test_goal_tag_aliases_use_copied_scoring_routes():
