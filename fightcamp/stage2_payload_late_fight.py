@@ -3632,7 +3632,7 @@ def _is_safe_coach_day_addon(role: dict[str, Any]) -> bool:
         return False
     if system in {"glycolytic", "alactic"}:
         return False
-    if preferred_tags & {"strength", "conditioning", "glycolytic", "plyometric", "high_cns", "fatigue_chasing"}:
+    if preferred_tags & {"strength", "conditioning", "glycolytic", "plyometric", "high_cns", "high-cns", "fatigue_chasing", "fatigue-chasing"}:
         return False
     if role_key in {
         "strength_touch_day",
