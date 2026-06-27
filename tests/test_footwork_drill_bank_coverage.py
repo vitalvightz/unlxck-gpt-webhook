@@ -57,8 +57,11 @@ FORBIDDEN_FOOTWORK_DEFAULT_TAGS = {
 }
 
 
+_ITEMS = json.loads(FOOTWORK_BANK.read_text(encoding="utf-8"))
+
+
 def _items() -> list[dict]:
-    return json.loads(FOOTWORK_BANK.read_text(encoding="utf-8"))
+    return _ITEMS
 
 
 def _tags(item: dict) -> set[str]:
