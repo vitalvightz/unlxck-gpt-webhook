@@ -3203,6 +3203,15 @@ def _strength_requested(athlete_model: dict[str, Any]) -> bool:
     )
 
 
+def _primary_strength_requested(athlete_model: dict[str, Any]) -> bool:
+    return normalize_fulfilment_token(athlete_model.get("primary_goal")) in {
+        "strength",
+        "maximal_strength",
+        "maximal_strength_maintenance",
+        "strength_maintenance",
+    }
+
+
 def _power_requested(athlete_model: dict[str, Any]) -> bool:
     return _profile_requests(
         athlete_model,
@@ -3222,6 +3231,174 @@ def _conditioning_requested(athlete_model: dict[str, Any]) -> bool:
         athlete_model,
         {"conditioning", "gas_tank", "aerobic_base", "work_capacity", "endurance", "conditioning_endurance"},
     )
+
+
+_REAL_STRENGTH_LOAD_TYPES = {
+    "loaded",
+    "sled",
+    "carry",
+    "cable",
+    "heavy_isometric",
+    "machine",
+    "barbell",
+    "dumbbell",
+    "kettlebell",
+}
+
+_REAL_STRENGTH_MOVEMENT_BUCKETS = {
+    "hinge",
+    "squat",
+    "split_squat",
+    "upper_push",
+    "upper_pull",
+    "carry",
+    "sled_push_drag",
+    "heavy_isometric_strength_hold",
+    "anti_rotation_trunk_strength",
+}
+
+_NON_STRENGTH_FULFILMENT_EQUIPMENT = {"band", "bands", "bodyweight", "body_weight", "none", "no_equipment"}
+
+
+def _canonical_equipment_token(value: Any) -> str:
+    token = normalize_fulfilment_token(value)
+    aliases = {
+        "trap_bar": "trap_bar",
+        "trapbar": "trap_bar",
+        "barbell": "barbell",
+        "bb": "barbell",
+        "sled": "sled",
+        "push_sled": "sled",
+        "dumbbell": "dumbbells",
+        "dumbbells": "dumbbells",
+        "db": "dumbbells",
+        "dbs": "dumbbells",
+        "kettlebell": "kettlebells",
+        "kettlebells": "kettlebells",
+        "kb": "kettlebells",
+        "kbs": "kettlebells",
+        "cable": "cable",
+        "cables": "cable",
+        "cable_machine": "cable",
+        "machine": "machine",
+        "machines": "machine",
+        "resistance_band": "bands",
+        "resistance_bands": "bands",
+        "mini_band": "bands",
+        "bands": "bands",
+        "band": "bands",
+        "bodyweight": "bodyweight",
+        "body_weight": "bodyweight",
+    }
+    return aliases.get(token, token)
+
+
+def _available_equipment_tokens(athlete_model: dict[str, Any]) -> set[str]:
+    values: list[Any] = []
+    for key in ("equipment", "available_equipment", "equipment_available", "home_equipment", "gym_equipment"):
+        values.extend(clean_list(athlete_model.get(key, [])))
+    return {_canonical_equipment_token(value) for value in values if str(value).strip()}
+
+
+def _select_strength_maintenance_pattern(athlete_model: dict[str, Any]) -> dict[str, Any] | None:
+    equipment = _available_equipment_tokens(athlete_model)
+    if "trap_bar" in equipment:
+        return {
+            "movement_bucket": "hinge",
+            "equipment_used": ["trap_bar"],
+            "load_type": "barbell",
+            "preferred_exercise_names": ["Low-volume loaded hinge"],
+        }
+    if "barbell" in equipment:
+        return {
+            "movement_bucket": "squat",
+            "equipment_used": ["barbell"],
+            "load_type": "barbell",
+            "preferred_exercise_names": ["Low-volume loaded squat or hinge"],
+        }
+    if "sled" in equipment:
+        return {
+            "movement_bucket": "sled_push_drag",
+            "equipment_used": ["sled"],
+            "load_type": "sled",
+            "preferred_exercise_names": ["Low-volume sled push or drag"],
+        }
+    if "dumbbells" in equipment:
+        return {
+            "movement_bucket": "carry",
+            "equipment_used": ["dumbbells"],
+            "load_type": "dumbbell",
+            "preferred_exercise_names": ["Low-volume loaded carry or split squat"],
+        }
+    if "kettlebells" in equipment:
+        return {
+            "movement_bucket": "carry",
+            "equipment_used": ["kettlebells"],
+            "load_type": "kettlebell",
+            "preferred_exercise_names": ["Low-volume loaded carry or hinge"],
+        }
+    if "cable" in equipment:
+        return {
+            "movement_bucket": "anti_rotation_trunk_strength",
+            "equipment_used": ["cable"],
+            "load_type": "cable",
+            "preferred_exercise_names": ["Low-volume cable anti-rotation or row"],
+        }
+    if "machine" in equipment:
+        return {
+            "movement_bucket": "upper_pull",
+            "equipment_used": ["machine"],
+            "load_type": "machine",
+            "preferred_exercise_names": ["Low-volume machine row or press"],
+        }
+    return None
+
+
+def _role_equipment_intersects_athlete(role: dict[str, Any], athlete_model: dict[str, Any] | None) -> bool:
+    role_equipment = {_canonical_equipment_token(value) for value in clean_list(role.get("equipment_used", []))}
+    if not role_equipment or role_equipment <= _NON_STRENGTH_FULFILMENT_EQUIPMENT:
+        return False
+    if athlete_model is None:
+        return True
+    athlete_equipment = _available_equipment_tokens(athlete_model)
+    return bool(role_equipment & athlete_equipment)
+
+
+def _is_real_strength_maintenance_role(role: dict[str, Any], athlete_model: dict[str, Any] | None = None) -> bool:
+    categories = {normalize_fulfilment_token(value) for value in clean_list(role.get("fulfilment_categories", []))}
+    novelty = normalize_fulfilment_token(role.get("novelty"))
+    return (
+        "strength" in categories
+        and role.get("strength_fulfilment_type") == "real_strength_maintenance"
+        and role.get("must_render") is True
+        and _role_equipment_intersects_athlete(role, athlete_model)
+        and normalize_fulfilment_token(role.get("load_type")) in _REAL_STRENGTH_LOAD_TYPES
+        and normalize_fulfilment_token(role.get("movement_bucket")) in _REAL_STRENGTH_MOVEMENT_BUCKETS
+        and normalize_fulfilment_token(role.get("volume_class")) == "low"
+        and normalize_fulfilment_token(role.get("soreness_risk")) == "low"
+        and (novelty in {"", "familiar", "not_new"} or role.get("not_new") is True)
+    )
+
+
+def _has_real_strength_maintenance_fulfilment(
+    weeks: list[dict[str, Any]],
+    athlete_model: dict[str, Any] | None = None,
+    *,
+    min_offset: int = 10,
+    max_offset: int = 21,
+) -> bool:
+    for week in weeks:
+        for role in week.get("session_roles", []) or []:
+            if not isinstance(role, dict):
+                continue
+            offset = role.get("countdown_offset")
+            if not isinstance(offset, int):
+                offset = _countdown_offset(role.get("countdown_label"))
+            if not isinstance(offset, int) or not (min_offset <= offset <= max_offset):
+                continue
+            if _is_real_strength_maintenance_role(role, athlete_model):
+                return True
+    return False
 
 
 def _mobility_requested(athlete_model: dict[str, Any]) -> bool:
@@ -3413,6 +3590,7 @@ def _make_late_strength_maintenance_role(
     *,
     label: str,
     weekday: str,
+    pattern: dict[str, Any],
 ) -> dict[str, Any]:
     offset = _countdown_offset(label)
     return {
@@ -3442,12 +3620,16 @@ def _make_late_strength_maintenance_role(
         "support_kind": "strength_maintenance",
         "fulfilment_categories": ["strength"],
         "real_strength_fulfilment": True,
-        "preferred_exercise_names": [
-            "Trap Bar Deadlift 3x3 @ RPE 6-7",
-            "Sled Push 4x10-15m",
-            "Med Ball Rotational Throw 4x3/side",
-            "Heavy Carry 3x20m",
-        ],
+        "must_render": True,
+        "fulfilment_contract_required": True,
+        "strength_fulfilment_type": "real_strength_maintenance",
+        "movement_bucket": pattern["movement_bucket"],
+        "equipment_used": pattern["equipment_used"],
+        "load_type": pattern["load_type"],
+        "volume_class": "low",
+        "soreness_risk": "low",
+        "novelty": "familiar",
+        "preferred_exercise_names": clean_list(pattern.get("preferred_exercise_names", [])),
         "preferred_tags": ["strength_maintenance", "low_volume", "low_soreness", "taper_safe"],
         "blocked_tags": ["max_effort", "hypertrophy", "high_volume", "new_exercise"],
         "day_assignment_reason": "Goal fulfilment contract added a safe real strength-maintenance touch.",
@@ -3774,25 +3956,66 @@ def _handle_roles_on_coach_owned_days(
         week["suppressed_roles"] = suppressed_roles
 
 
+def _append_strength_equipment_downgrade(
+    weeks: list[dict[str, Any]],
+    *,
+    reason: str,
+) -> None:
+    if not weeks:
+        return
+    target_week = next((week for week in weeks if isinstance(week, dict)), None)
+    if target_week is None:
+        return
+    target_week.setdefault("suppressed_roles", []).append(
+        {
+            "category": "strength",
+            "role_key": "strength_touch_day",
+            "athlete_facing_label": "Strength maintenance touch",
+            "placement_source": "goal_weakness_fulfilment_contract",
+            "fulfilment_categories": ["strength"],
+            "fulfilment_contract_required": True,
+            "strength_fulfilment_type": "downgraded_equipment_limited",
+            "suppressed_by": "goal_weakness_fulfilment_contract",
+            "reasons": [reason],
+        }
+    )
+
+
 def _annotate_strength_fulfilment(weeks: list[dict[str, Any]], athlete_model: dict[str, Any]) -> None:
     if not _strength_requested(athlete_model):
         return
-    examples = [
-        "Trap Bar Deadlift 3x3 @ RPE 6-7",
-        "Sled Push 4x10-15m",
-        "Med Ball Rotational Throw 4x3/side",
-        "Heavy Carry 3x20m",
-    ]
+    if _has_real_strength_maintenance_fulfilment(weeks, athlete_model, min_offset=8, max_offset=21):
+        return
+    pattern = _select_strength_maintenance_pattern(athlete_model)
+    if pattern is None:
+        return
     for week in weeks:
         for role in week.get("session_roles", []) or []:
-            if not isinstance(role, dict) or role.get("category") != "strength":
+            if not isinstance(role, dict):
+                continue
+            if role.get("role_key") != "strength_touch_day" or role.get("category") != "strength":
                 continue
             offset = role.get("countdown_offset")
             if isinstance(offset, int) and offset <= 7:
                 continue
             role["fulfilment_categories"] = dedupe_preserve_order(clean_list(role.get("fulfilment_categories", [])) + ["strength"])
             role["real_strength_fulfilment"] = True
-            role["preferred_exercise_names"] = examples
+            role["must_render"] = True
+            role["fulfilment_contract_required"] = True
+            role["strength_fulfilment_type"] = "real_strength_maintenance"
+            role["movement_bucket"] = pattern["movement_bucket"]
+            role["equipment_used"] = pattern["equipment_used"]
+            role["load_type"] = pattern["load_type"]
+            role["volume_class"] = "low"
+            role["soreness_risk"] = "low"
+            role["novelty"] = "familiar"
+            role["preferred_exercise_names"] = clean_list(pattern.get("preferred_exercise_names", []))
+            role["preferred_tags"] = dedupe_preserve_order(
+                clean_list(role.get("preferred_tags", [])) + ["strength_maintenance", "low_volume", "low_soreness", "taper_safe"]
+            )
+            role["blocked_tags"] = dedupe_preserve_order(
+                clean_list(role.get("blocked_tags", [])) + ["max_effort", "hypertrophy", "high_volume", "new_exercise"]
+            )
             role["selection_rule"] = (
                 str(role.get("selection_rule") or "").strip()
                 + " Strength fulfilment must be a real low-volume strength-maintenance exposure; bands, shadowboxing, mobility, or freshness-only isometrics do not satisfy it unless safety downgrades the goal."
@@ -3904,15 +4127,31 @@ def _append_active_late_fulfilment_roles(
                 return slots.pop(index)
         return None
 
-    if _strength_requested(athlete_model) and bridge_low_risk_profile(athlete_model):
-        has_strength_d21_to_d10 = _has_visible_fulfilment_role(weeks, "strength", min_offset=10, max_offset=21)
+    if _primary_strength_requested(athlete_model) and bridge_low_risk_profile(athlete_model):
+        has_strength_d21_to_d10 = _has_real_strength_maintenance_fulfilment(
+            weeks,
+            athlete_model,
+            min_offset=10,
+            max_offset=21,
+        )
         if not has_strength_d21_to_d10:
-            slot = pop_slot(min_offset=10, max_offset=21)
-            if slot is not None:
-                label, weekday, week = slot
-                week.setdefault("session_roles", []).append(
-                    _make_late_strength_maintenance_role(label=label, weekday=weekday)
+            pattern = _select_strength_maintenance_pattern(athlete_model)
+            if pattern is None:
+                _append_strength_equipment_downgrade(
+                    weeks,
+                    reason=(
+                        "Primary Strength was downgraded because available equipment does not support "
+                        "a real low-volume loaded, sled, carry, cable, machine, or heavy-isometric "
+                        "strength-maintenance exposure."
+                    ),
                 )
+            else:
+                slot = pop_slot(min_offset=10, max_offset=21)
+                if slot is not None:
+                    label, weekday, week = slot
+                    week.setdefault("session_roles", []).append(
+                        _make_late_strength_maintenance_role(label=label, weekday=weekday, pattern=pattern)
+                    )
 
     neural_categories: list[str] = []
     if _power_requested(athlete_model) and not _has_visible_fulfilment_role(weeks, "power", min_offset=10, max_offset=21):
