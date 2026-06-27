@@ -161,14 +161,21 @@ def _role_fulfilment_categories(role: dict[str, Any]) -> list[str]:
     return dedupe_preserve_order([value for value in categories if value])
 
 
+def _coerce_optional_int(value: Any) -> int | None:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
 def _safety_outcome(athlete_model: dict[str, Any], category: str) -> tuple[str, str]:
-    days = athlete_model.get("days_until_fight")
+    days = _coerce_optional_int(athlete_model.get("days_until_fight"))
     fatigue = normalize_fulfilment_token(athlete_model.get("fatigue"))
     flags = {normalize_fulfilment_token(flag) for flag in clean_list(athlete_model.get("readiness_flags", []))}
     injury_mode = normalize_fulfilment_token(athlete_model.get("injury_mode"))
     injuries = clean_list(athlete_model.get("injuries", []))
 
-    if isinstance(days, int) and days <= 0:
+    if days is not None and days <= 0:
         return "blocked", "D-0 fight-day protocol blocks additional training fulfilment."
     if fatigue == "high" or "high_fatigue" in flags:
         return "downgrade", "High fatigue forces minimum-dose or recovery-only fulfilment."
@@ -190,8 +197,8 @@ def apply_goal_weakness_fulfilment_contract(
 
     obligations = _requested_obligations(athlete_model)
     weeks = [week for week in weekly_role_map.get("weeks", []) or [] if isinstance(week, dict)]
-    rendered_roles: list[tuple[dict[str, Any], dict[str, Any]]] = []
-    suppressed_roles: list[tuple[dict[str, Any], dict[str, Any]]] = []
+    rendered_roles: list[tuple[dict[str, Any], dict[str, Any], list[str]]] = []
+    suppressed_roles: list[tuple[dict[str, Any], dict[str, Any], list[str]]] = []
 
     for week in weeks:
         for role in week.get("session_roles", []) or []:
@@ -200,10 +207,13 @@ def apply_goal_weakness_fulfilment_contract(
             categories = _role_fulfilment_categories(role)
             if categories:
                 role["fulfilment_categories"] = categories
-            rendered_roles.append((week, role))
+            rendered_roles.append((week, role, categories))
         for role in week.get("suppressed_roles", []) or []:
             if isinstance(role, dict):
-                suppressed_roles.append((week, role))
+                categories = _role_fulfilment_categories(role)
+                if categories:
+                    role["fulfilment_categories"] = categories
+                suppressed_roles.append((week, role, categories))
 
     contract: list[dict[str, Any]] = []
     for obligation in obligations:
@@ -212,16 +222,16 @@ def apply_goal_weakness_fulfilment_contract(
         match = next(
             (
                 (week, role)
-                for week, role in rendered_roles
-                if category in _role_fulfilment_categories(role)
+                for week, role, categories in rendered_roles
+                if category in categories
             ),
             None,
         )
         suppressed_match = next(
             (
                 (week, role)
-                for week, role in suppressed_roles
-                if category in _role_fulfilment_categories(role)
+                for week, role, categories in suppressed_roles
+                if category in categories
             ),
             None,
         )

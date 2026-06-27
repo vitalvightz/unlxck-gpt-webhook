@@ -3415,7 +3415,9 @@ def _labels_in_week_span(week: dict[str, Any], days_until_fight: Any) -> list[st
     end_day = span.get("end_day")
     if not isinstance(start_day, int) or not isinstance(end_day, int):
         return []
-    return [f"D-{offset}" for offset in range(start_day, end_day - 1, -1) if 0 <= offset <= int(days_until_fight or start_day)]
+    coerced = _coerce_days(days_until_fight)
+    limit = coerced if coerced is not None else start_day
+    return [f"D-{offset}" for offset in range(start_day, end_day - 1, -1) if 0 <= offset <= limit]
 
 
 def _move_meaningful_app_roles_off_coach_days(
@@ -3584,7 +3586,8 @@ def _append_support_and_footwork_roles(
         if isinstance(role, dict)
         and str(role.get("scheduled_countdown_label") or role.get("countdown_label") or "").strip()
     }
-    for offset in range(int(days_until_fight or 0), 1, -1):
+    coerced_days = _coerce_days(days_until_fight, 0) or 0
+    for offset in range(coerced_days, 1, -1):
         if _footwork_count() >= 3:
             break
         label = f"D-{offset}"
