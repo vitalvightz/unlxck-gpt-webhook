@@ -222,7 +222,7 @@ def _compress_short_camp_priorities(athlete_model: dict) -> dict:
         bucket.append(stage2_planning_brief_module._priority_bucket(label, kind))
         used_labels.add(label)
 
-        speed_signal = bool(
+    speed_signal = bool(
         weakness_tokens & {"speed", "reactive", "reaction", "acceleration", "speed_reaction"}
         or goal_tokens & {"speed", "reactive", "reaction", "acceleration", "speed_reaction"}
     )
