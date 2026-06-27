@@ -21,21 +21,21 @@ def _as_list(bank: Any) -> list[dict[str, Any]]:
     return []
 
 
+def _bank_key(item: dict[str, Any]) -> tuple[str, str]:
+    name = str(item.get("name", "")).strip().lower()
+    modality = str(item.get("modality", "")).strip().lower()
+    return name, modality
+
+
 def _merge_unique(
     base: list[dict[str, Any]],
     extras: list[dict[str, Any]],
 ) -> list[dict[str, Any]]:
     merged = list(base)
-    seen = {
-        (str(item.get("name", "")).strip().lower(), str(item.get("modality", "")).strip().lower())
-        for item in merged
-    }
+    seen = {_bank_key(item) for item in merged}
 
     for item in extras:
-        key = (
-            str(item.get("name", "")).strip().lower(),
-            str(item.get("modality", "")).strip().lower(),
-        )
+        key = _bank_key(item)
         if key in seen:
             continue
         merged.append(item)
