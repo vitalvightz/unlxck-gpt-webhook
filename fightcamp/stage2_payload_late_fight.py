@@ -4,6 +4,8 @@ from .normalization import clean_list, dedupe_preserve_order, normalize_fatigue_
 from .fight_date_utils import resolve_fight_weekday
 from .sparring_dose_planner import compute_hard_sparring_plan, effective_hard_days
 from .performance_bias import BRIDGE_EXTRA_EXPOSURE_DAY_RANGE, bridge_low_risk_profile
+from .footwork_conditioning_loader import get_footwork_conditioning_bank
+from .fulfilment_contract import apply_goal_weakness_fulfilment_contract, normalize_fulfilment_token
 
 from itertools import combinations, permutations
 from typing import Any
@@ -3151,6 +3153,499 @@ def _assign_role_to_countdown_label(
     return role_copy
 
 
+def _profile_tokens(athlete_model: dict[str, Any]) -> set[str]:
+    values: list[Any] = []
+    for key in (
+        "primary_goal",
+        "primary_weak_area",
+        "key_goals",
+        "goals",
+        "weaknesses",
+        "weak_areas",
+    ):
+        values.extend(clean_list(athlete_model.get(key, [])))
+    return {normalize_fulfilment_token(value) for value in values if str(value).strip()}
+
+
+def _profile_requests(athlete_model: dict[str, Any], aliases: set[str]) -> bool:
+    return bool(_profile_tokens(athlete_model) & aliases)
+
+
+def _footwork_requested(athlete_model: dict[str, Any]) -> bool:
+    return _profile_requests(
+        athlete_model,
+        {
+            "footwork",
+            "lateral_movement",
+            "ringcraft",
+            "angles",
+            "pivot",
+            "stance_reset",
+            "angle_exit",
+        },
+    )
+
+
+def _strength_requested(athlete_model: dict[str, Any]) -> bool:
+    return _profile_requests(
+        athlete_model,
+        {"strength", "maximal_strength", "maximal_strength_maintenance", "strength_maintenance"},
+    )
+
+
+def _mobility_requested(athlete_model: dict[str, Any]) -> bool:
+    return _profile_requests(
+        athlete_model,
+        {"mobility", "stiffness", "movement_quality", "range", "range_of_motion"},
+    )
+
+
+def _footwork_bank_drill_names(limit: int = 6) -> list[str]:
+    names: list[str] = []
+    for item in get_footwork_conditioning_bank():
+        name = str(item.get("name") or "").strip()
+        if name and name not in names:
+            names.append(name)
+        if len(names) >= limit:
+            break
+    return names
+
+
+def _countdown_labels_for_weekday(
+    *,
+    days_until_fight: Any,
+    athlete_model: dict[str, Any],
+    weekday: str,
+) -> list[str]:
+    target = str(weekday or "").strip().lower()
+    if not target:
+        return []
+    countdown_map = _full_countdown_weekday_map(days_until_fight, athlete_model)
+    labels = [
+        label
+        for label, mapped_weekday in countdown_map.items()
+        if str(mapped_weekday or "").strip().lower() == target
+        and (_countdown_offset(label) or 0) > 0
+    ]
+    return sorted(labels, key=lambda label: int(_countdown_offset(label) or 0), reverse=True)
+
+
+def _week_for_countdown_label(weeks: list[dict[str, Any]], label: str) -> dict[str, Any] | None:
+    offset = _countdown_offset(label)
+    if offset is None:
+        return None
+    for week in weeks:
+        span = week.get("countdown_span") or {}
+        start_day = span.get("start_day")
+        end_day = span.get("end_day")
+        if isinstance(start_day, int) and isinstance(end_day, int) and end_day <= offset <= start_day:
+            return week
+    return None
+
+
+def _role_sort_key(role: dict[str, Any]) -> tuple[int, int, int]:
+    offset = role.get("countdown_offset")
+    offset_value = int(offset) if isinstance(offset, int) else int(_countdown_offset(role.get("countdown_label")) or 0)
+    coach_first = 0 if role.get("coach_owned") or role.get("role_key") in {"hard_sparring_day", "light_combat_day"} else 1
+    return (-offset_value, coach_first, int(role.get("session_index") or 0))
+
+
+def _sort_and_reindex_late_roles(weeks: list[dict[str, Any]]) -> None:
+    for week in weeks:
+        roles = [role for role in week.get("session_roles", []) or [] if isinstance(role, dict)]
+        roles.sort(key=_role_sort_key)
+        for index, role in enumerate(roles, start=1):
+            role["session_index"] = index
+        week["session_roles"] = roles
+
+
+def _coach_owned_countdown_labels(weeks: list[dict[str, Any]]) -> set[str]:
+    labels: set[str] = set()
+    for week in weeks:
+        for role in week.get("session_roles", []) or []:
+            if not isinstance(role, dict):
+                continue
+            if role.get("coach_owned") or role.get("role_key") in {"hard_sparring_day", "light_combat_day"}:
+                label = str(role.get("scheduled_countdown_label") or role.get("countdown_label") or "").strip()
+                if label:
+                    labels.add(label)
+    return labels
+
+
+def _make_late_light_combat_role(
+    *,
+    label: str,
+    weekday: str,
+    drill_name: str,
+) -> dict[str, Any]:
+    offset = _countdown_offset(label)
+    preferred_names = [drill_name] if drill_name else []
+    return {
+        "session_index": 0,
+        "category": "technical",
+        "role_key": "light_combat_day",
+        "athlete_facing_label": "Light technical combat",
+        "preferred_pool": "declared_support_work_days",
+        "selection_rule": (
+            "Coach-owned light technical combat day. Keep it technical, low-noise, "
+            "and RPE <= 6; no hard sparring and no app-owned S&C prescription."
+        ),
+        "anchor": "coach_owned_technical_day",
+        "placement_rule": "Keep this declared support/light-combat day fixed on the athlete's stated weekday.",
+        "cost_class": "low",
+        "stress_class": "support",
+        "placement_source": "declared_support_work_day_lock",
+        "legal_countdown_labels": [label],
+        "governance": {"late_fight_payload": True, "coach_owned": True},
+        "locked_day": weekday,
+        "scheduled_day_hint": weekday,
+        "real_weekday": weekday,
+        "scheduled_countdown_label": label,
+        "countdown_label": label,
+        "countdown_offset": offset,
+        "countdown_display_label": _countdown_display_label(label, weekday),
+        "countdown_weekday": weekday,
+        "declared_day_locked": True,
+        "coach_owned": True,
+        "support_kind": "footwork" if preferred_names else "technical",
+        "fulfilment_categories": ["footwork", "skill_striking"] if preferred_names else ["skill_striking"],
+        "preferred_exercise_names": preferred_names,
+        "preferred_tags": [
+            "footwork",
+            "ringcraft",
+            "angles",
+            "pivot",
+            "low_impact",
+            "low_lactate",
+            "low_cns",
+        ] if preferred_names else ["technical", "low_cns"],
+        "source_bank": "footwork_conditioning_bank.json" if preferred_names else "",
+        "blocked_tags": ["speed", "reactive", "high_cns", "plyometric", "glycolytic"],
+        "day_assignment_reason": "Declared support/light-combat day is fixed and coach-owned.",
+    }
+
+
+def _make_late_footwork_role(
+    *,
+    label: str,
+    weekday: str,
+    drill_name: str,
+) -> dict[str, Any]:
+    offset = _countdown_offset(label)
+    return {
+        "session_index": 0,
+        "category": "technical",
+        "role_key": "technical_touch_day",
+        "athlete_facing_label": "Technical touch",
+        "preferred_pool": "footwork_conditioning_bank",
+        "selection_rule": "Use a named footwork-bank drill only: RPE <= 6, low impact, low lactate, no speed/reactive leakage.",
+        "anchor": "support_day",
+        "placement_rule": "Place as a low-noise footwork microdose away from coach-owned contact days.",
+        "cost_class": "low",
+        "stress_class": "support",
+        "placement_source": "goal_weakness_fulfilment_contract",
+        "legal_countdown_labels": [label],
+        "governance": {"late_fight_payload": True, "fulfilment_contract": True},
+        "scheduled_day_hint": weekday,
+        "real_weekday": weekday,
+        "scheduled_countdown_label": label,
+        "countdown_label": label,
+        "countdown_offset": offset,
+        "countdown_display_label": _countdown_display_label(label, weekday),
+        "countdown_weekday": weekday,
+        "support_kind": "footwork",
+        "fulfilment_categories": ["footwork", "skill_striking"],
+        "preferred_exercise_names": [drill_name],
+        "preferred_tags": [
+            "footwork",
+            "ringcraft",
+            "angles",
+            "pivot",
+            "stance_reset",
+            "angle_exit",
+            "low_impact",
+            "low_lactate",
+            "low_cns",
+        ],
+        "source_bank": "footwork_conditioning_bank.json",
+        "blocked_tags": ["speed", "reactive", "high_cns", "plyometric", "glycolytic"],
+        "day_assignment_reason": "Goal/weakness fulfilment contract added direct low-noise footwork.",
+    }
+
+
+def _make_fight_day_protocol_role(athlete_model: dict[str, Any]) -> dict[str, Any]:
+    weekday = str(_full_countdown_weekday_map(0, {**athlete_model, "days_until_fight": 0}).get("D-0") or "").strip()
+    if not weekday:
+        weekday = str(
+            athlete_model.get("fight_weekday")
+            or resolve_fight_weekday(
+                fight_date=athlete_model.get("fight_date") or athlete_model.get("next_fight_date"),
+                plan_creation_weekday=athlete_model.get("plan_creation_weekday"),
+                days_until_fight=athlete_model.get("days_until_fight"),
+            )
+            or ""
+        ).strip().lower()
+    return {
+        "session_index": 0,
+        "category": "protocol",
+        "role_key": "fight_day_protocol",
+        "athlete_facing_label": "Fight-day warm-up",
+        "selection_rule": "Fight day protocol only; no additional app S&C.",
+        "anchor": "fight_day",
+        "placement_rule": "D-0 is terminal and must remain last.",
+        "cost_class": "none",
+        "stress_class": "none",
+        "placement_source": "fight_day_override",
+        "legal_countdown_labels": ["D-0"],
+        "governance": {"late_fight_payload": True, "fight_day_protocol_only": True},
+        "scheduled_countdown_label": "D-0",
+        "countdown_label": "D-0",
+        "countdown_offset": 0,
+        "countdown_display_label": _countdown_display_label("D-0", weekday),
+        "scheduled_day_hint": weekday,
+        "real_weekday": weekday,
+        "display_text": "Follow coach warm-up and fight protocol; no additional app S&C.",
+        "terminal_fight_block": True,
+    }
+
+
+def _labels_in_week_span(week: dict[str, Any], days_until_fight: Any) -> list[str]:
+    span = week.get("countdown_span") or {}
+    start_day = span.get("start_day")
+    end_day = span.get("end_day")
+    if not isinstance(start_day, int) or not isinstance(end_day, int):
+        return []
+    return [f"D-{offset}" for offset in range(start_day, end_day - 1, -1) if 0 <= offset <= int(days_until_fight or start_day)]
+
+
+def _move_meaningful_app_roles_off_coach_days(
+    weeks: list[dict[str, Any]],
+    *,
+    days_until_fight: Any,
+    athlete_model: dict[str, Any],
+) -> None:
+    label_to_weekday = _full_countdown_weekday_map(days_until_fight, athlete_model)
+    training_days = {str(day).strip().lower() for day in clean_list(athlete_model.get("training_days", []))}
+    coach_labels = _coach_owned_countdown_labels(weeks)
+    occupied = {
+        str(role.get("scheduled_countdown_label") or role.get("countdown_label") or "").strip()
+        for week in weeks
+        for role in week.get("session_roles", []) or []
+        if isinstance(role, dict)
+        and str(role.get("scheduled_countdown_label") or role.get("countdown_label") or "").strip()
+    }
+
+    for week in weeks:
+        updated_roles: list[dict[str, Any]] = []
+        suppressed_roles = list(week.get("suppressed_roles", []) or [])
+        for role in list(week.get("session_roles", []) or []):
+            if not isinstance(role, dict):
+                continue
+            if role.get("coach_owned") or role.get("role_key") in {"hard_sparring_day", "light_combat_day"}:
+                updated_roles.append(role)
+                continue
+            current_label = str(role.get("scheduled_countdown_label") or role.get("countdown_label") or "").strip()
+            if current_label not in coach_labels:
+                updated_roles.append(role)
+                continue
+            is_meaningful = (
+                role.get("category") in {"strength", "conditioning"}
+                or str(role.get("stress_class") or "") == "meaningful_stress"
+            )
+            if not is_meaningful:
+                updated_roles.append(role)
+                continue
+            candidate_labels = dedupe_preserve_order(
+                clean_list(role.get("legal_countdown_labels", [])) + _labels_in_week_span(week, days_until_fight)
+            )
+            reassigned_role: dict[str, Any] | None = None
+            for candidate_label in candidate_labels:
+                if candidate_label == current_label or candidate_label in coach_labels:
+                    continue
+                weekday = str(label_to_weekday.get(candidate_label) or "").strip().lower()
+                if training_days and weekday not in training_days:
+                    continue
+                if candidate_label in occupied:
+                    continue
+                reassigned = _assign_role_to_countdown_label(role, candidate_label, label_to_weekday)
+                reassigned["day_assignment_reason"] = (
+                    "Moved off a coach-owned contact day to preserve the declared support/sparring card."
+                )
+                reassigned_role = reassigned
+                occupied.discard(current_label)
+                occupied.add(candidate_label)
+                break
+            if reassigned_role is not None:
+                updated_roles.append(reassigned_role)
+                continue
+            suppressed = dict(role)
+            suppressed["reasons"] = [
+                "Coach-owned contact day lock suppressed this meaningful app-owned role because no clean same-window training day was available."
+            ]
+            suppressed["suppressed_by"] = "goal_weakness_fulfilment_contract"
+            suppressed_roles.append(suppressed)
+            occupied.discard(current_label)
+        week["session_roles"] = updated_roles
+        week["suppressed_roles"] = suppressed_roles
+
+
+def _annotate_strength_fulfilment(weeks: list[dict[str, Any]], athlete_model: dict[str, Any]) -> None:
+    if not _strength_requested(athlete_model):
+        return
+    examples = [
+        "Trap Bar Deadlift 3x3 @ RPE 6-7",
+        "Sled Push 4x10-15m",
+        "Med Ball Rotational Throw 4x3/side",
+        "Heavy Carry 3x20m",
+    ]
+    for week in weeks:
+        for role in week.get("session_roles", []) or []:
+            if not isinstance(role, dict) or role.get("category") != "strength":
+                continue
+            offset = role.get("countdown_offset")
+            if isinstance(offset, int) and offset <= 7:
+                continue
+            role["fulfilment_categories"] = dedupe_preserve_order(clean_list(role.get("fulfilment_categories", [])) + ["strength"])
+            role["real_strength_fulfilment"] = True
+            role["preferred_exercise_names"] = examples
+            role["selection_rule"] = (
+                str(role.get("selection_rule") or "").strip()
+                + " Strength fulfilment must be a real low-volume strength-maintenance exposure; bands, shadowboxing, mobility, or freshness-only isometrics do not satisfy it unless safety downgrades the goal."
+            ).strip()
+            return
+
+
+def _append_support_and_footwork_roles(
+    weeks: list[dict[str, Any]],
+    *,
+    days_until_fight: Any,
+    athlete_model: dict[str, Any],
+) -> None:
+    footwork_requested = _footwork_requested(athlete_model)
+    drill_names = _footwork_bank_drill_names(6) if footwork_requested else []
+    drill_idx = 0
+    support_days = _ordered_weekdays(
+        clean_list(athlete_model.get("support_work_days") or athlete_model.get("technical_skill_days") or [])
+    )
+    hard_days = {str(day).strip().lower() for day in clean_list(athlete_model.get("hard_sparring_days", []))}
+
+    existing = {
+        (
+            str(role.get("role_key") or ""),
+            str(role.get("scheduled_countdown_label") or role.get("countdown_label") or ""),
+        )
+        for week in weeks
+        for role in week.get("session_roles", []) or []
+        if isinstance(role, dict)
+    }
+
+    for support_day in support_days:
+        day_key = str(support_day).strip().lower()
+        if day_key in hard_days:
+            continue
+        for label in _countdown_labels_for_weekday(
+            days_until_fight=days_until_fight,
+            athlete_model=athlete_model,
+            weekday=day_key,
+        ):
+            if label == "D-0":
+                continue
+            week = _week_for_countdown_label(weeks, label)
+            if week is None or ("light_combat_day", label) in existing:
+                continue
+            drill = drill_names[drill_idx % len(drill_names)] if drill_names else ""
+            drill_idx += 1 if drill else 0
+            week.setdefault("session_roles", []).append(
+                _make_late_light_combat_role(label=label, weekday=day_key, drill_name=drill)
+            )
+            existing.add(("light_combat_day", label))
+
+    if not footwork_requested:
+        return
+
+    def _footwork_count() -> int:
+        count = 0
+        for week in weeks:
+            for role in week.get("session_roles", []) or []:
+                if "footwork" in clean_list(role.get("fulfilment_categories", [])):
+                    count += 1
+        return count
+
+    if _footwork_count() >= 3:
+        return
+
+    label_to_weekday = _full_countdown_weekday_map(days_until_fight, athlete_model)
+    training_days = {str(day).strip().lower() for day in clean_list(athlete_model.get("training_days", []))}
+    coach_labels = _coach_owned_countdown_labels(weeks)
+    occupied = {
+        str(role.get("scheduled_countdown_label") or role.get("countdown_label") or "").strip()
+        for week in weeks
+        for role in week.get("session_roles", []) or []
+        if isinstance(role, dict)
+        and str(role.get("scheduled_countdown_label") or role.get("countdown_label") or "").strip()
+    }
+    for offset in range(int(days_until_fight or 0), 1, -1):
+        if _footwork_count() >= 3:
+            break
+        label = f"D-{offset}"
+        weekday = str(label_to_weekday.get(label) or "").strip().lower()
+        if training_days and weekday not in training_days:
+            continue
+        if label in coach_labels or label in occupied:
+            continue
+        week = _week_for_countdown_label(weeks, label)
+        if week is None:
+            continue
+        drill = drill_names[drill_idx % len(drill_names)] if drill_names else ""
+        if not drill:
+            break
+        drill_idx += 1
+        week.setdefault("session_roles", []).append(
+            _make_late_footwork_role(label=label, weekday=weekday, drill_name=drill)
+        )
+        occupied.add(label)
+
+
+def _mark_mobility_fulfilment(weeks: list[dict[str, Any]], athlete_model: dict[str, Any]) -> None:
+    if not _mobility_requested(athlete_model):
+        return
+    for week in weeks:
+        for role in week.get("session_roles", []) or []:
+            if not isinstance(role, dict):
+                continue
+            if role.get("category") == "recovery" or role.get("role_key") == "fight_week_freshness_day":
+                role["fulfilment_categories"] = dedupe_preserve_order(
+                    clean_list(role.get("fulfilment_categories", [])) + ["mobility"]
+                )
+                role["preferred_tags"] = dedupe_preserve_order(
+                    clean_list(role.get("preferred_tags", [])) + ["mobility", "movement_quality", "recovery"]
+                )
+                return
+
+
+def _append_fight_day_terminal_role(weeks: list[dict[str, Any]], athlete_model: dict[str, Any]) -> None:
+    d0_week = next((week for week in weeks if str(week.get("stage_key") or "") == "d0"), None)
+    if d0_week is None:
+        return
+    if any(role.get("role_key") == "fight_day_protocol" for role in d0_week.get("session_roles", []) or []):
+        return
+    d0_week.setdefault("session_roles", []).append(_make_fight_day_protocol_role(athlete_model))
+
+
+def _apply_late_fulfilment_role_contracts(
+    weeks: list[dict[str, Any]],
+    *,
+    days_until_fight: Any,
+    athlete_model: dict[str, Any],
+) -> None:
+    _append_support_and_footwork_roles(weeks, days_until_fight=days_until_fight, athlete_model=athlete_model)
+    _move_meaningful_app_roles_off_coach_days(weeks, days_until_fight=days_until_fight, athlete_model=athlete_model)
+    _annotate_strength_fulfilment(weeks, athlete_model)
+    _mark_mobility_fulfilment(weeks, athlete_model)
+    _append_fight_day_terminal_role(weeks, athlete_model)
+    _sort_and_reindex_late_roles(weeks)
+
+
 def _composite_role_selection_priority(role: dict[str, Any]) -> int:
     return int(
         role.get("_selection_priority")
@@ -3981,12 +4476,18 @@ def _build_late_fight_weekly_role_map(
                 "role_budget": allocation.get("role_budget", {}),
             }
         ]
-    return {
+    _apply_late_fulfilment_role_contracts(
+        weeks,
+        days_until_fight=days_until_fight,
+        athlete_model=athlete_model,
+    )
+    weekly_role_map = {
         "model": "late_fight_role_overlay.v1",
         "source_of_truth": [
             "Late-fight Stage 2 payload bypasses the normal camp-week payload path for 13 days and less.",
             "Use the late-fight role map as a compressed execution guide, not as a normal weekly build.",
             "Keep the output aligned to the time window first, then the athlete profile.",
+            "Goal and weakness fulfilment is explicit: each requested goal/weakness is satisfied, downgraded, or suppressed with a reason.",
         ],
         "payload_variant": "late_fight_stage2_payload",
         "payload_mode": mode,
@@ -3996,6 +4497,7 @@ def _build_late_fight_weekly_role_map(
         "role_budget": allocation.get("role_budget", {}),
         "weeks": weeks,
     }
+    return apply_goal_weakness_fulfilment_contract(weekly_role_map, athlete_model)
 
 
 def _build_late_fight_plan_spec(days_until_fight: Any, athlete_model: dict) -> dict[str, Any]:
