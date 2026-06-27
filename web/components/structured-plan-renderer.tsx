@@ -20,6 +20,7 @@ import {
   getDeterministicNutritionPhases,
   getDeterministicRecoveryPhases,
   getMindsetLines,
+  getOptionalSupportBlocks,
   getSessions,
   getStringList,
   getWeeks,
@@ -397,6 +398,7 @@ export function SessionlessDayCard({ day }: { day: StructuredDay }) {
       {warning ? <p className="sp-warning">{warning}</p> : null}
       {nutrition ? <p className="sp-today-note">{nutrition}</p> : null}
       {weightCut ? <p className="sp-warning">{weightCut}</p> : null}
+      <OptionalSupportBlocks day={day} />
       <MindsetAnchorCard anchor={card?.mindset_anchor} />
       {isRest ? <p className="sp-muted">Rest day.</p> : null}
     </article>
@@ -427,6 +429,32 @@ function CompletionTag({ completion }: { completion: Completion }) {
     <span className={`sp-tag${done ? " sp-done" : ""}`}>
       {completion.done}/{completion.total} done
     </span>
+  );
+}
+
+function OptionalSupportBlocks({ day }: { day: StructuredDay }) {
+  const support = getOptionalSupportBlocks(day);
+  if (support.length === 0) {
+    return null;
+  }
+  return (
+    <div className="sp-optional-support">
+      <p className="sp-today-note">Optional support</p>
+      <ul className="sp-note-list">
+        {support.map((session, index) => {
+          const title = cleanText(session.title) || cleanText(session.objective) || "Low-noise support";
+          const objective = cleanText(session.objective);
+          return (
+            <li key={cleanText(session.session_id) ? cleanText(session.session_id) + '-' + index : 'support-' + index} className="sp-note">
+              <span className="sp-note-label">{title}</span>
+              {objective && objective !== title ? (
+                <span className="sp-note-text">{objective}</span>
+              ) : null}
+            </li>
+          );
+        })}
+      </ul>
+    </div>
   );
 }
 

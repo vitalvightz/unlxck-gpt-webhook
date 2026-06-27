@@ -319,6 +319,12 @@ class Session(BaseModel):
     mindset_anchor: MindsetAnchor
     blocks: list[SessionBlock] = Field(default_factory=list)
     completion: Completion | None = None
+    allowed_on_coach_day: bool | None = None
+    add_on_to_coach_owned_card: bool | None = None
+    app_prescription: str | bool | None = None
+    render_as_secondary_addon: bool | None = None
+    parent_countdown_label: str | None = None
+    parent_role_key: str | None = None
 
 
 class TodayCard(BaseModel):
@@ -344,6 +350,7 @@ class Day(BaseModel):
     phase_label: PhaseLabel
     today_card: TodayCard
     sessions: list[Session] = Field(default_factory=list)
+    optional_support_blocks: list[Session] = Field(default_factory=list)
 
 
 class LoadFocus(BaseModel):

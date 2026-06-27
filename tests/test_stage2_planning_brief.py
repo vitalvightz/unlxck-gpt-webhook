@@ -15,7 +15,10 @@ from fightcamp.stage2_payload import (
     build_planning_brief,
     build_stage2_payload,
 )
-from fightcamp.stage2_payload_late_fight import _append_active_late_fulfilment_roles
+from fightcamp.stage2_payload_late_fight import (
+    _append_active_late_fulfilment_roles,
+    _handle_roles_on_coach_owned_days,
+)
 from fightcamp.nutrition import generate_nutrition_block
 from fightcamp.recovery import generate_recovery_block
 from fightcamp.training_context import TrainingContext
@@ -3628,6 +3631,81 @@ def _fulfilment_entry(brief: dict, category: str) -> dict:
         for entry in brief["weekly_role_map"]["fulfilment_contract"]
         if entry.get("category") == category
     )
+
+
+def test_coach_owned_d3_hard_sparring_keeps_primary_card_and_nests_safe_support():
+    weeks = [
+        {
+            "week_index": 1,
+            "stage_key": "d3",
+            "countdown_span": {"start_day": 3, "end_day": 3},
+            "session_roles": [
+                {
+                    "category": "sparring",
+                    "role_key": "hard_sparring_day",
+                    "athlete_facing_label": "Coach-led boxing session",
+                    "scheduled_day_hint": "tuesday",
+                    "countdown_label": "D-3",
+                    "scheduled_countdown_label": "D-3",
+                    "countdown_offset": 3,
+                    "coach_owned": True,
+                },
+                {
+                    "category": "recovery",
+                    "role_key": "fight_week_freshness_day",
+                    "athlete_facing_label": "Mobility, breathing & lateral reset",
+                    "scheduled_day_hint": "tuesday",
+                    "countdown_label": "D-3",
+                    "scheduled_countdown_label": "D-3",
+                    "countdown_offset": 3,
+                    "stress_class": "support",
+                    "support_kind": "mobility",
+                    "fulfilment_categories": ["mobility"],
+                    "preferred_tags": ["mobility", "breathing", "recovery"],
+                    "preferred_exercise_names": ["90/90 breathing", "Hip opener flow"],
+                },
+                {
+                    "category": "strength",
+                    "role_key": "strength_touch_day",
+                    "athlete_facing_label": "Strength maintenance touch",
+                    "scheduled_day_hint": "tuesday",
+                    "countdown_label": "D-3",
+                    "scheduled_countdown_label": "D-3",
+                    "countdown_offset": 3,
+                    "stress_class": "meaningful_stress",
+                    "legal_countdown_labels": ["D-3"],
+                },
+            ],
+            "suppressed_roles": [],
+        }
+    ]
+    athlete_model = {
+        "days_until_fight": 3,
+        "training_days": ["Tuesday"],
+        "hard_sparring_days": ["Tuesday"],
+        "plan_creation_weekday": "Tuesday",
+        "fight_weekday": "Friday",
+    }
+
+    _handle_roles_on_coach_owned_days(
+        weeks,
+        days_until_fight=3,
+        athlete_model=athlete_model,
+    )
+
+    roles = weeks[0]["session_roles"]
+    assert [role["role_key"] for role in roles] == ["hard_sparring_day"]
+    coach_card = roles[0]
+    assert coach_card["athlete_facing_label"] == "Coach-led boxing — technical only"
+    assert coach_card["downgraded_to_role_key"] == "technical_touch_day"
+    assert coach_card["coach_owned"] is True
+    assert coach_card["app_prescription"] is False
+    assert coach_card["optional_support_blocks"][0]["athlete_facing_label"] == "Mobility, breathing & lateral reset"
+    assert coach_card["optional_support_blocks"][0]["render_as_secondary_addon"] is True
+    assert coach_card["optional_support_blocks"][0]["parent_role_key"] == "hard_sparring_day"
+    assert coach_card["secondary_addons"][0]["app_prescription"] == "optional_support_only"
+    assert "mobility" in coach_card["fulfilment_categories"]
+    assert weeks[0]["suppressed_roles"][0]["role_key"] == "strength_touch_day"
 
 
 def test_late_fight_strength_goal_creates_real_maintenance_when_no_strength_survives_d21_to_d10():
