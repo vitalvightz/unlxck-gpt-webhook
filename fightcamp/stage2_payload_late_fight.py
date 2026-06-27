@@ -3193,6 +3193,27 @@ def _strength_requested(athlete_model: dict[str, Any]) -> bool:
     )
 
 
+def _power_requested(athlete_model: dict[str, Any]) -> bool:
+    return _profile_requests(
+        athlete_model,
+        {"power", "explosive", "explosive_power", "power_development"},
+    )
+
+
+def _speed_reaction_requested(athlete_model: dict[str, Any]) -> bool:
+    return _profile_requests(
+        athlete_model,
+        {"speed", "reaction", "reactive", "acceleration", "speed_reaction"},
+    )
+
+
+def _conditioning_requested(athlete_model: dict[str, Any]) -> bool:
+    return _profile_requests(
+        athlete_model,
+        {"conditioning", "gas_tank", "aerobic_base", "work_capacity", "endurance", "conditioning_endurance"},
+    )
+
+
 def _mobility_requested(athlete_model: dict[str, Any]) -> bool:
     return _profile_requests(
         athlete_model,
@@ -3307,6 +3328,11 @@ def _make_late_light_combat_role(
         "countdown_weekday": weekday,
         "declared_day_locked": True,
         "coach_owned": True,
+        "sessionless": True,
+        "app_prescription": False,
+        "preferred_exercise_name_context": "optional_coach_technical_focus",
+        "preferred_exercise_name_label": "Optional coach technical focus",
+        "coach_technical_focus_names": preferred_names,
         "support_kind": "footwork" if preferred_names else "technical",
         "fulfilment_categories": ["footwork", "skill_striking"] if preferred_names else ["skill_striking"],
         "preferred_exercise_names": preferred_names,
@@ -3370,6 +3396,138 @@ def _make_late_footwork_role(
         "source_bank": "footwork_conditioning_bank.json",
         "blocked_tags": ["speed", "reactive", "high_cns", "plyometric", "glycolytic"],
         "day_assignment_reason": "Goal/weakness fulfilment contract added direct low-noise footwork.",
+    }
+
+
+def _make_late_strength_maintenance_role(
+    *,
+    label: str,
+    weekday: str,
+) -> dict[str, Any]:
+    offset = _countdown_offset(label)
+    return {
+        "session_index": 0,
+        "category": "strength",
+        "role_key": "strength_touch_day",
+        "athlete_facing_label": "Strength maintenance touch",
+        "preferred_pool": "goal_weakness_fulfilment_contract",
+        "selection_rule": (
+            "Low-risk D-21..D-10 strength fulfilment: one real low-volume strength-maintenance touch only. "
+            "No maxing, soreness-heavy volume, or new lifts."
+        ),
+        "anchor": "highest_neural_day",
+        "placement_rule": "Place on an open non-coach training day inside D-21..D-10.",
+        "cost_class": "medium",
+        "stress_class": "meaningful_stress",
+        "placement_source": "goal_weakness_fulfilment_contract",
+        "legal_countdown_labels": [label],
+        "governance": {"late_fight_payload": True, "fulfilment_contract": True, "low_risk_only": True},
+        "scheduled_day_hint": weekday,
+        "real_weekday": weekday,
+        "scheduled_countdown_label": label,
+        "countdown_label": label,
+        "countdown_offset": offset,
+        "countdown_display_label": _countdown_display_label(label, weekday),
+        "countdown_weekday": weekday,
+        "support_kind": "strength_maintenance",
+        "fulfilment_categories": ["strength"],
+        "real_strength_fulfilment": True,
+        "preferred_exercise_names": [
+            "Trap Bar Deadlift 3x3 @ RPE 6-7",
+            "Sled Push 4x10-15m",
+            "Med Ball Rotational Throw 4x3/side",
+            "Heavy Carry 3x20m",
+        ],
+        "preferred_tags": ["strength_maintenance", "low_volume", "low_soreness", "taper_safe"],
+        "blocked_tags": ["max_effort", "hypertrophy", "high_volume", "new_exercise"],
+        "day_assignment_reason": "Goal fulfilment contract added a safe real strength-maintenance touch.",
+    }
+
+
+def _make_late_neural_fulfilment_role(
+    *,
+    label: str,
+    weekday: str,
+    categories: list[str],
+) -> dict[str, Any]:
+    offset = _countdown_offset(label)
+    fulfilment_categories = dedupe_preserve_order(categories)
+    names: list[str] = []
+    if "power" in fulfilment_categories:
+        names.extend(["Med Ball Rotational Pop 4x2/side", "Low-Amplitude Pogo 3x5"])
+    if "speed_reaction" in fulfilment_categories:
+        names.extend(["Mirror Step Reaction 4x5s", "First-Step Feint Reaction 4x3/side"])
+    return {
+        "session_index": 0,
+        "category": "conditioning",
+        "role_key": "alactic_sharpness_day",
+        "athlete_facing_label": "Alactic sharpness touch",
+        "preferred_pool": "goal_weakness_fulfilment_contract",
+        "preferred_system": "alactic",
+        "selection_rule": (
+            "Goal fulfilment alactic touch: fast, crisp, full-rest reps only. "
+            "Stop before fatigue; this is neural sharpness, not conditioning density."
+        ),
+        "anchor": "highest_neural_day",
+        "placement_rule": "Place on an open non-coach training day and keep it away from freshness-only days.",
+        "cost_class": "medium",
+        "stress_class": "meaningful_stress",
+        "placement_source": "goal_weakness_fulfilment_contract",
+        "legal_countdown_labels": [label],
+        "governance": {"late_fight_payload": True, "fulfilment_contract": True},
+        "scheduled_day_hint": weekday,
+        "real_weekday": weekday,
+        "scheduled_countdown_label": label,
+        "countdown_label": label,
+        "countdown_offset": offset,
+        "countdown_display_label": _countdown_display_label(label, weekday),
+        "countdown_weekday": weekday,
+        "support_kind": "alactic_sharpness",
+        "fulfilment_categories": fulfilment_categories,
+        "preferred_exercise_names": dedupe_preserve_order(names),
+        "preferred_tags": ["alactic", "full_rest", "low_lactate", "low_volume", "taper_safe"],
+        "blocked_tags": ["glycolytic", "density", "fatigue_chasing", "high_volume"],
+        "day_assignment_reason": "Goal fulfilment contract added a low-volume alactic sharpness touch.",
+    }
+
+
+def _make_late_gas_tank_fulfilment_role(
+    *,
+    label: str,
+    weekday: str,
+) -> dict[str, Any]:
+    offset = _countdown_offset(label)
+    return {
+        "session_index": 0,
+        "category": "conditioning",
+        "role_key": "recovery_aerobic_gas_tank_day",
+        "athlete_facing_label": "Gas-tank maintenance touch",
+        "preferred_pool": "goal_weakness_fulfilment_contract",
+        "preferred_system": "aerobic",
+        "selection_rule": (
+            "Gas-tank fulfilment is low-aerobic repeatability only: nasal-breathing pace, "
+            "no glycolytic intervals, no fatigue chase."
+        ),
+        "anchor": "support_day",
+        "placement_rule": "Place on an open non-coach training day as a low-noise maintenance touch.",
+        "cost_class": "low",
+        "stress_class": "support",
+        "placement_source": "goal_weakness_fulfilment_contract",
+        "legal_countdown_labels": [label],
+        "governance": {"late_fight_payload": True, "fulfilment_contract": True},
+        "scheduled_day_hint": weekday,
+        "real_weekday": weekday,
+        "scheduled_countdown_label": label,
+        "countdown_label": label,
+        "countdown_offset": offset,
+        "countdown_display_label": _countdown_display_label(label, weekday),
+        "countdown_weekday": weekday,
+        "support_kind": "gas_tank",
+        "fulfilment_categories": ["conditioning"],
+        "preferred_exercise_names": ["Zone 2 Shadowbox Flow 2x6min", "Easy Bike Flush 12-18min"],
+        "preferred_tags": ["gas_tank", "aerobic", "low_lactate", "low_cns", "taper_safe"],
+        "blocked_tags": ["glycolytic", "sprint", "fatigue_chasing", "high_cns"],
+        "day_assignment_reason": "Weakness fulfilment contract added low-noise gas-tank maintenance.",
     }
 
 
@@ -3517,6 +3675,151 @@ def _annotate_strength_fulfilment(weeks: list[dict[str, Any]], athlete_model: di
             return
 
 
+def _role_has_fulfilment_category(role: dict[str, Any], category: str) -> bool:
+    categories = set(clean_list(role.get("fulfilment_categories", [])))
+    role_key = str(role.get("role_key") or "").strip()
+    role_category = str(role.get("category") or "").strip()
+    system = str(role.get("preferred_system") or "").strip()
+    support_kind = str(role.get("support_kind") or "").strip()
+    if category in categories:
+        return True
+    if category == "strength":
+        return role_category == "strength" or role_key in {"strength_touch_day", "neural_plus_strength_day"}
+    if category in {"power", "speed_reaction"}:
+        return system == "alactic" or role_key in {"neural_primer_day", "alactic_sharpness_day", "alactic_speed_day"}
+    if category == "conditioning":
+        return (
+            system in {"aerobic", "glycolytic"}
+            or support_kind == "gas_tank"
+            or role_key in {"light_fight_pace_touch_day", "recovery_aerobic_gas_tank_day"}
+        )
+    return False
+
+
+def _has_visible_fulfilment_role(
+    weeks: list[dict[str, Any]],
+    category: str,
+    *,
+    min_offset: int = 1,
+    max_offset: int = 21,
+) -> bool:
+    for week in weeks:
+        for role in week.get("session_roles", []) or []:
+            if not isinstance(role, dict):
+                continue
+            offset = role.get("countdown_offset")
+            if not isinstance(offset, int):
+                offset = _countdown_offset(role.get("countdown_label"))
+            if not isinstance(offset, int) or not (min_offset <= offset <= max_offset):
+                continue
+            if _role_has_fulfilment_category(role, category):
+                return True
+    return False
+
+
+def _open_late_fulfilment_slots(
+    weeks: list[dict[str, Any]],
+    *,
+    days_until_fight: Any,
+    athlete_model: dict[str, Any],
+    min_offset: int,
+    max_offset: int,
+) -> list[tuple[str, str, dict[str, Any]]]:
+    days = _coerce_days(days_until_fight, 0) or 0
+    upper = min(days, max_offset)
+    if upper < min_offset:
+        return []
+    label_to_weekday = _full_countdown_weekday_map(days_until_fight, athlete_model)
+    training_days = {str(day).strip().lower() for day in clean_list(athlete_model.get("training_days", []))}
+    coach_labels = _coach_owned_countdown_labels(weeks)
+    occupied = {
+        str(role.get("scheduled_countdown_label") or role.get("countdown_label") or "").strip()
+        for week in weeks
+        for role in week.get("session_roles", []) or []
+        if isinstance(role, dict)
+        and str(role.get("scheduled_countdown_label") or role.get("countdown_label") or "").strip()
+    }
+    slots: list[tuple[str, str, dict[str, Any]]] = []
+    for offset in range(upper, min_offset - 1, -1):
+        label = f"D-{offset}"
+        if label in coach_labels or label in occupied:
+            continue
+        weekday = str(label_to_weekday.get(label) or "").strip().lower()
+        if training_days and weekday not in training_days:
+            continue
+        week = _week_for_countdown_label(weeks, label)
+        if week is None:
+            continue
+        slots.append((label, weekday, week))
+    return slots
+
+
+def _append_active_late_fulfilment_roles(
+    weeks: list[dict[str, Any]],
+    *,
+    days_until_fight: Any,
+    athlete_model: dict[str, Any],
+) -> None:
+    slots = _open_late_fulfilment_slots(
+        weeks,
+        days_until_fight=days_until_fight,
+        athlete_model=athlete_model,
+        min_offset=2,
+        max_offset=21,
+    )
+
+    def pop_slot(
+        *,
+        min_offset: int = 2,
+        max_offset: int = 21,
+    ) -> tuple[str, str, dict[str, Any]] | None:
+        for index, (label, weekday, week) in enumerate(slots):
+            offset = _countdown_offset(label)
+            if isinstance(offset, int) and min_offset <= offset <= max_offset:
+                return slots.pop(index)
+        return None
+
+    if _strength_requested(athlete_model) and bridge_low_risk_profile(athlete_model):
+        has_strength_d21_to_d10 = _has_visible_fulfilment_role(weeks, "strength", min_offset=10, max_offset=21)
+        if not has_strength_d21_to_d10:
+            slot = pop_slot(min_offset=10, max_offset=21)
+            if slot is not None:
+                label, weekday, week = slot
+                week.setdefault("session_roles", []).append(
+                    _make_late_strength_maintenance_role(label=label, weekday=weekday)
+                )
+
+    neural_categories: list[str] = []
+    if _power_requested(athlete_model) and not _has_visible_fulfilment_role(weeks, "power", min_offset=10, max_offset=21):
+        neural_categories.append("power")
+    if _speed_reaction_requested(athlete_model) and not _has_visible_fulfilment_role(
+        weeks,
+        "speed_reaction",
+        min_offset=10,
+        max_offset=21,
+    ):
+        neural_categories.append("speed_reaction")
+    if neural_categories:
+        slot = pop_slot()
+        if slot is not None:
+            label, weekday, week = slot
+            week.setdefault("session_roles", []).append(
+                _make_late_neural_fulfilment_role(
+                    label=label,
+                    weekday=weekday,
+                    categories=neural_categories,
+                )
+            )
+
+    if _conditioning_requested(athlete_model) and not _has_visible_fulfilment_role(weeks, "conditioning"):
+        slot = pop_slot()
+        if slot is not None:
+            label, weekday, week = slot
+            week.setdefault("session_roles", []).append(
+                _make_late_gas_tank_fulfilment_role(label=label, weekday=weekday)
+            )
+
+
 def _append_support_and_footwork_roles(
     weeks: list[dict[str, Any]],
     *,
@@ -3643,6 +3946,7 @@ def _apply_late_fulfilment_role_contracts(
 ) -> None:
     _append_support_and_footwork_roles(weeks, days_until_fight=days_until_fight, athlete_model=athlete_model)
     _move_meaningful_app_roles_off_coach_days(weeks, days_until_fight=days_until_fight, athlete_model=athlete_model)
+    _append_active_late_fulfilment_roles(weeks, days_until_fight=days_until_fight, athlete_model=athlete_model)
     _annotate_strength_fulfilment(weeks, athlete_model)
     _mark_mobility_fulfilment(weeks, athlete_model)
     _append_fight_day_terminal_role(weeks, athlete_model)
