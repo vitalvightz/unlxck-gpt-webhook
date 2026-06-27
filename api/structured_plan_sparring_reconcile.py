@@ -351,7 +351,8 @@ def _is_safe_optional_support_session(session: Any) -> bool:
     text = _session_text(session)
     if _UNSAFE_SUPPORT_RE.search(text):
         return False
-    blocks = [block for block in session.get("blocks") or [] if isinstance(block, dict)]
+    raw_blocks = session.get("blocks")
+    blocks = [block for block in raw_blocks if isinstance(block, dict)] if isinstance(raw_blocks, list) else []
     block_types = {str(block.get("block_type") or "").strip() for block in blocks}
     if block_types & _UNSAFE_BLOCK_TYPES:
         return False
