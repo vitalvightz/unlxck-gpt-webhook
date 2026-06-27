@@ -97,13 +97,23 @@ PHASE_SELECTION_GUARDRAILS = {
 
 _SPEED_SHARPNESS_TOKENS = {
     "speed",
-    "footwork",
     "reactive",
     "reaction",
     "acceleration",
     "speed_reaction",
 }
 
+_FOOTWORK_QUALITY_TOKENS = {
+    "footwork",
+    "lateral_movement",
+    "lateral movement",
+    "ringcraft",
+    "angles",
+    "pivot",
+    "stance",
+    "stance_reset",
+    "angle_exit",
+}
 
 PLANNING_DECISION_HIERARCHY = [
     {
@@ -194,15 +204,27 @@ def _compress_short_camp_priorities(athlete_model: dict) -> dict:
         used_labels.add(label)
 
     speed_goal_signal = bool(goal_tokens & _SPEED_SHARPNESS_TOKENS)
-    speed_weakness_signal = bool(weakness_tokens & _SPEED_SHARPNESS_TOKENS)
-    if speed_goal_signal or speed_weakness_signal:
-        speed_bucket = primary if (speed_goal_signal or primary_goal_tokens & _SPEED_SHARPNESS_TOKENS) else embedded
-        add_unique(
-            speed_bucket,
-            "speed / footwork sharpness",
-            "speed_footwork_sharpness",
-            "Use a short full-rest alactic speed dose for footwork sharpness and neural speed, not conditioning volume.",
-        )
+speed_weakness_signal = bool(weakness_tokens & _SPEED_SHARPNESS_TOKENS)
+footwork_goal_signal = bool(goal_tokens & _FOOTWORK_QUALITY_TOKENS)
+footwork_weakness_signal = bool(weakness_tokens & _FOOTWORK_QUALITY_TOKENS)
+
+if speed_goal_signal or speed_weakness_signal:
+    speed_bucket = primary if (speed_goal_signal or primary_goal_tokens & _SPEED_SHARPNESS_TOKENS) else embedded
+    add_unique(
+        speed_bucket,
+        "speed / reaction sharpness",
+        "speed_reaction_sharpness",
+        "Use a short full-rest alactic speed dose for neural speed and reaction, not conditioning volume.",
+    )
+
+if footwork_goal_signal or footwork_weakness_signal:
+    footwork_bucket = primary if (footwork_goal_signal or primary_goal_tokens & _FOOTWORK_QUALITY_TOKENS) else embedded
+    add_unique(
+        footwork_bucket,
+        "footwork / ring-movement quality",
+        "footwork_ring_movement_quality",
+        "Use named footwork, stance reset, pivot, angle-exit, and ring-movement work without treating it as pure speed.",
+    )
 
     immediate_performance_limiter = (
         weakness_tokens & {"footwork", "coordination", "coordination_proprioception", "proprioception", "balance", "timing", "rhythm", "boxing"}
@@ -613,10 +635,12 @@ def _primary_limiter_key(athlete_model: dict, restrictions: list[dict]) -> str:
         _priority_bucket_labels(compressed.get("primary_targets", []))
         + _priority_bucket_labels(compressed.get("maintenance_targets", []))
     ).lower()
-    if "speed / footwork sharpness" in compressed_labels:
-        return "sharpness_under_fatigue"
-    if "technical sharpness" in compressed_labels or "footwork" in compressed_labels:
+    if "speed / reaction sharpness" in compressed_labels:
+    return "sharpness_under_fatigue"
+    if "footwork / ring-movement quality" in compressed_labels:
         return "boxing_quality_under_load"
+    if "technical sharpness" in compressed_labels or "footwork" in compressed_labels:
+    return "boxing_quality_under_load"
     if "power expression" in compressed_labels:
         return "sharpness_under_fatigue"
     if "freshness protection" in compressed_labels or "fight-readiness and sharpness" in compressed_labels:
