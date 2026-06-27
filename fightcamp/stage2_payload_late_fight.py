@@ -3388,6 +3388,8 @@ def _has_real_strength_maintenance_fulfilment(
     max_offset: int = 21,
 ) -> bool:
     for week in weeks:
+        if not isinstance(week, dict):
+            continue
         for role in week.get("session_roles", []) or []:
             if not isinstance(role, dict):
                 continue
