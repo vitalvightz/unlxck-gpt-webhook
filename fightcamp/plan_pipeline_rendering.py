@@ -415,7 +415,7 @@ def build_stage2_outputs(
     blocks: PlanBlocksBundle,
     rendered: RenderedPlanBundle,
 ) -> tuple[dict, dict, str]:
-        stage1_selection_summary = {
+    stage1_selection_summary = {
         "strength_names": blocks.strength_names,
         "conditioning_names": blocks.conditioning_names,
         "strength_reason_log": blocks.strength_reason_log,
@@ -444,7 +444,7 @@ def build_stage2_outputs(
         flags=context.training_context.to_flags(),
         phases=active_phases or None,
     )
-        planning_brief = build_planning_brief(
+    planning_brief = build_planning_brief(
         athlete_model=stage2_payload["athlete_model"],
         restrictions=stage2_payload["restrictions"],
         phase_briefs=stage2_payload["phase_briefs"],
