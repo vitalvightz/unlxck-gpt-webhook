@@ -3812,13 +3812,42 @@ def build_stage2_payload(
             "rewrite_guidance": rewrite_guidance,
         }
 
-    if _uses_late_fight_stage2_payload(days_until_fight):
+        if _uses_late_fight_stage2_payload(days_until_fight):
         days_out_payload = _days_out_payload_block(days_until_fight, athlete_model)
+
+        base_late_fight_plan_spec = _build_late_fight_plan_spec(
+            days_until_fight,
+            athlete_model,
+        )
+
+        visible_session_sequence = apply_gap_fill_inserts(
+            [
+                role
+                for role in (
+                    base_late_fight_plan_spec.get("visible_session_sequence")
+                    or base_late_fight_plan_spec.get("session_sequence")
+                    or []
+                )
+                if _is_app_owned_visible_role(role.get("role_key"))
+            ],
+            athlete_model,
+        )
+
         late_fight_plan_spec = _with_late_fight_allowed_exercises(
-            spec=_build_late_fight_plan_spec(days_until_fight, athlete_model),
+            spec={
+                **base_late_fight_plan_spec,
+                "visible_session_sequence": visible_session_sequence,
+                "visible_session_cap": len(visible_session_sequence),
+                "visible_session_roles": [
+                    role.get("role_key")
+                    for role in visible_session_sequence
+                    if isinstance(role, dict)
+                ],
+            },
             candidate_pools=candidate_pools,
             days_until_fight=days_until_fight,
         )
+
         return {
             "schema_version": "stage2_payload.v1",
             "generator_mode": "restriction_aware_candidate_generator_late_fight",
@@ -3827,17 +3856,7 @@ def build_stage2_payload(
             "effective_stage2_mode": days_out_payload.get("payload_mode"),
             "days_out_payload": days_out_payload,
             "late_fight_plan_spec": late_fight_plan_spec,
-            # ``late_fight_session_sequence`` is what the athlete actually
-            # does, so drop coach-owned hard_sparring placeholders/context
-            # entries kept in the full ``session_sequence`` for tracking.
-            "late_fight_session_sequence": apply_gap_fill_inserts(
-                [
-                    role
-                    for role in (late_fight_plan_spec.get("session_sequence") or [])
-                    if _is_app_owned_visible_role(role.get("role_key"))
-                ],
-                athlete_model,
-            ),
+            "late_fight_session_sequence": visible_session_sequence,
             "rendering_rules": days_out_payload.get("rendering_rules", {}),
             "late_fight_permissions": days_out_payload.get("late_fight_permissions", {}),
             "athlete_model": athlete_model,
