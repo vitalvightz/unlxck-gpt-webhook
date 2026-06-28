@@ -169,6 +169,10 @@ export default function AdminPage() {
   const [cancellingJobId, setCancellingJobId] = useState<string | null>(null);
   const [selectedArchivedPlanIds, setSelectedArchivedPlanIds] = useState<string[]>([]);
   const [bulkDeletingPlans, setBulkDeletingPlans] = useState(false);
+
+  useEffect(() => {
+    setSelectedArchivedPlanIds([]);
+  }, [plansOffset, searchNeedle]);
   const [lastCheckedAt, setLastCheckedAt] = useState<string | null>(null);
   const [backfillPending, setBackfillPending] = useState(false);
 
