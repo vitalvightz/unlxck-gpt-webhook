@@ -311,9 +311,10 @@ def _has_strength_maintenance_intent(*, goals, weaknesses, flags: dict) -> bool:
             raw_values.append(str(value))
 
     normalized_values = {normalize_tag(value) for value in raw_values if str(value).strip()}
+    normalized_values.discard(None)
     if normalized_values & STRENGTH_MAINTENANCE_INTENT_TAGS:
         return True
-    return any("strength" in value for value in normalized_values)
+    return any('strength' in value for value in normalized_values)
 
 
 def _strength_maintenance_match_tags(exercise: dict) -> set[str]:
