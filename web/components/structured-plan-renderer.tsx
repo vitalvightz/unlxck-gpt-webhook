@@ -531,7 +531,7 @@ export function CampDayCard({
           <div className="cm-day-context">
             {lightTechnicalContext ? (
               <LightTechnicalDayContext title={sessionlessDay.title} tag={sessionlessDay.tag} />
-        ) : null}
+                    ) : null}
             {warning ? <p className="sp-warning">{warning}</p> : null}
             {nutrition ? <p className="sp-today-note">{nutrition}</p> : null}
             {weightCut ? <p className="sp-warning">{weightCut}</p> : null}
