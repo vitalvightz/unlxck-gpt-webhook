@@ -3218,7 +3218,6 @@
       "core",
       "mech_ballistic",
       "mech_trunk_stability",
-      "late_strength_touch",
       "maximal_strength_maintenance",
       "familiarity_required"
     ],
