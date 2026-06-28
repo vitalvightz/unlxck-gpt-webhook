@@ -6,6 +6,7 @@
     "late_fight_unapproved_exercise_rendered",
     "late_fight_window_forbidden_exercise",
     "dangerous_late_fight_strength_or_conditioning",
+    "late_fight_missing_required_countdown_session",
     "fight_day_protocol_violation",
     "calendar_spine_fight_day_protocol_violation",
     "stage2_output_empty",
