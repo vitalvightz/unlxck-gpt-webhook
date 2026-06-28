@@ -70,7 +70,7 @@ def _taper_bank_late_window_records() -> tuple[dict[str, Any], ...]:
     try:
         with (DATA_DIR / "exercise_bank.json").open(encoding="utf-8") as handle:
             items = json.load(handle)
-    except (FileNotFoundError, json.JSONDecodeError):
+    except (OSError, json.JSONDecodeError):
         return ()
 
     records: list[dict[str, Any]] = []
