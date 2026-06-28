@@ -3445,6 +3445,8 @@ def _week_for_countdown_label(weeks: list[dict[str, Any]], label: str) -> dict[s
     if offset is None:
         return None
     for week in weeks:
+        if not isinstance(week, dict):
+            continue
         span = week.get("countdown_span") or {}
         start_day = span.get("start_day")
         end_day = span.get("end_day")
@@ -3462,6 +3464,8 @@ def _role_sort_key(role: dict[str, Any]) -> tuple[int, int, int]:
 
 def _sort_and_reindex_late_roles(weeks: list[dict[str, Any]]) -> None:
     for week in weeks:
+        if not isinstance(week, dict):
+            continue
         roles = [role for role in week.get("session_roles", []) or [] if isinstance(role, dict)]
         roles.sort(key=_role_sort_key)
         for index, role in enumerate(roles, start=1):
@@ -3472,6 +3476,8 @@ def _sort_and_reindex_late_roles(weeks: list[dict[str, Any]]) -> None:
 def _coach_owned_countdown_labels(weeks: list[dict[str, Any]]) -> set[str]:
     labels: set[str] = set()
     for week in weeks:
+        if not isinstance(week, dict):
+            continue
         for role in week.get("session_roles", []) or []:
             if not isinstance(role, dict):
                 continue
@@ -3968,7 +3974,11 @@ def _append_strength_equipment_downgrade(
     target_week = next((week for week in weeks if isinstance(week, dict)), None)
     if target_week is None:
         return
-    target_week.setdefault("suppressed_roles", []).append(
+    suppressed_roles = target_week.get("suppressed_roles")
+    if not isinstance(suppressed_roles, list):
+        suppressed_roles = []
+        target_week["suppressed_roles"] = suppressed_roles
+    suppressed_roles.append(
         {
             "category": "strength",
             "role_key": "strength_touch_day",
@@ -4054,6 +4064,8 @@ def _has_visible_fulfilment_role(
     max_offset: int = 21,
 ) -> bool:
     for week in weeks:
+        if not isinstance(week, dict):
+            continue
         for role in week.get("session_roles", []) or []:
             if not isinstance(role, dict):
                 continue
@@ -4085,6 +4097,7 @@ def _open_late_fulfilment_slots(
     occupied = {
         str(role.get("scheduled_countdown_label") or role.get("countdown_label") or "").strip()
         for week in weeks
+        if isinstance(week, dict)
         for role in week.get("session_roles", []) or []
         if isinstance(role, dict)
         and str(role.get("scheduled_countdown_label") or role.get("countdown_label") or "").strip()
@@ -4151,7 +4164,11 @@ def _append_active_late_fulfilment_roles(
                 slot = pop_slot(min_offset=10, max_offset=21)
                 if slot is not None:
                     label, weekday, week = slot
-                    week.setdefault("session_roles", []).append(
+                    session_roles = week.get("session_roles")
+                    if not isinstance(session_roles, list):
+                        session_roles = []
+                        week["session_roles"] = session_roles
+                    session_roles.append(
                         _make_late_strength_maintenance_role(label=label, weekday=weekday, pattern=pattern)
                     )
 

@@ -99,6 +99,39 @@ def normalize_fulfilment_token(value: Any) -> str:
     )
 
 
+def _canonical_equipment_token(value: Any) -> str:
+    token = normalize_fulfilment_token(value)
+    aliases = {
+        "trap_bar": "trap_bar",
+        "trapbar": "trap_bar",
+        "barbell": "barbell",
+        "bb": "barbell",
+        "sled": "sled",
+        "push_sled": "sled",
+        "dumbbell": "dumbbells",
+        "dumbbells": "dumbbells",
+        "db": "dumbbells",
+        "dbs": "dumbbells",
+        "kettlebell": "kettlebells",
+        "kettlebells": "kettlebells",
+        "kb": "kettlebells",
+        "kbs": "kettlebells",
+        "cable": "cable",
+        "cables": "cable",
+        "cable_machine": "cable",
+        "machine": "machine",
+        "machines": "machine",
+        "resistance_band": "bands",
+        "resistance_bands": "bands",
+        "mini_band": "bands",
+        "bands": "bands",
+        "band": "bands",
+        "bodyweight": "bodyweight",
+        "body_weight": "bodyweight",
+    }
+    return aliases.get(token, token)
+
+
 def _category_for_token(token: str) -> str:
     for category, aliases in _CATEGORY_ALIASES.items():
         if token in aliases:
@@ -117,7 +150,7 @@ def _is_late_fight_strength_contract_role(role: dict[str, Any]) -> bool:
 
 
 def _is_real_strength_contract_role(role: dict[str, Any]) -> bool:
-    equipment = {normalize_fulfilment_token(value) for value in clean_list(role.get("equipment_used", []))}
+    equipment = {_canonical_equipment_token(value) for value in clean_list(role.get("equipment_used", []))}
     novelty = normalize_fulfilment_token(role.get("novelty"))
     return (
         role.get("strength_fulfilment_type") == "real_strength_maintenance"
