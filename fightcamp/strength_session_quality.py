@@ -10,11 +10,11 @@ ANCHOR_CAPABLE_CLASSES = {"anchor_loaded", "anchor_power", "anchor_force_isometr
 SUPPORT_ONLY_CLASSES = {"support_isometric", "support_accessory", "rehab_support"}
 
 STRENGTH_QUALITY_WEIGHTS = {
-    "anchor_loaded": {"GPP": 1.0, "SPP": 1.0, "TAPER": 0.45},
-    "anchor_power": {"GPP": 0.7, "SPP": 0.9, "TAPER": 0.5},
-    "anchor_force_isometric": {"GPP": 0.45, "SPP": 0.35, "TAPER": 0.15},
-    "support_only_penalty": {"GPP": -0.7, "SPP": -0.8, "TAPER": -0.25},
-    "rehab_support_penalty": {"GPP": -0.9, "SPP": -1.0, "TAPER": -0.35},
+    "anchor_loaded": {"GPP": 1.0, "SPP": 1.0, "TAPER": 0.75},
+    "anchor_power": {"GPP": 0.7, "SPP": 0.9, "TAPER": 0.6},
+    "anchor_force_isometric": {"GPP": 0.45, "SPP": 0.35, "TAPER": 0.75},
+    "support_only_penalty": {"GPP": -0.7, "SPP": -0.8, "TAPER": -0.45},
+    "rehab_support_penalty": {"GPP": -0.9, "SPP": -1.0, "TAPER": -0.5},
     "duplicate_support_penalty": {"GPP": -0.35, "SPP": -0.4, "TAPER": -0.2},
 }
 
