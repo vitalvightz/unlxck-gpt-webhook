@@ -29,6 +29,7 @@ _FINAL_RESULT_PERSIST_TIMEOUT_SECONDS = 40.0
 _FINAL_RESULT_PERSIST_TIMEOUT_ERROR = "Stage 2 result persistence timed out before final_result was saved."
 _PLAN_PERSIST_VERIFICATION_ERROR = "Plan persistence verification failed after create_plan."
 _POST_PERSIST_CLEANUP_TIMEOUT_SECONDS = 8.0
+_ADMIN_CANCELLED_JOB_ERROR = "Generation cancelled by admin."
 
 # Statuses that surface the plan to the athlete. A contract violation on one of
 # these is routed to review_required (an admin sees it first); a violation on an
@@ -91,6 +92,22 @@ def _record_stage2_cost_if_available(
     cost = final_result.get("stage2_cost") if isinstance(final_result, dict) else None
     if isinstance(cost, dict) and cost:
         store.record_stage2_cost(job_id, cost)
+
+
+def _job_cancelled_before_plan_persist(store: AppStore, job_id: str) -> bool:
+    """Return true when an admin has cancelled the job before plan persistence."""
+
+    current_job = store.get_generation_job(job_id)
+    if not current_job:
+        return True
+    current_status = str(current_job.get("status") or "").strip().lower()
+    if current_status == "running":
+        return False
+    current_error = str(current_job.get("error") or "").strip()
+    if current_status == "failed" and current_error == _ADMIN_CANCELLED_JOB_ERROR:
+        logger.info("[jobs] generation:cancelled_before_plan_persist job_id=%s", job_id)
+        return True
+    return current_status not in {"queued", "running"}
 
 
 def _contract_fight_date(request_body: Any) -> Any:
@@ -356,6 +373,14 @@ async def persist_plan_and_finalize(
         "Saving plan row",
         "Creating or updating the saved plan from the Stage 2 result.",
     )
+    if await asyncio.to_thread(_job_cancelled_before_plan_persist, store, job_id):
+        emit_milestone(
+            "generation_cancelled_before_plan_persist",
+            "Generation cancelled",
+            "Admin cancelled the generation before a plan row was saved.",
+            failed=True,
+        )
+        return
     if job_source == "admin_triage_resume":
         plan_row = admin_resume_plan_row
     else:

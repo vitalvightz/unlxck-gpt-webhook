@@ -791,6 +791,19 @@ export function listAdminActiveGenerationJobs(
   );
 }
 
+export function cancelAdminGenerationJob(
+  token: string,
+  jobId: string,
+): Promise<GenerationJobResponse> {
+  return readJson<GenerationJobResponse>(
+    `/api/admin/generation-jobs/${encodeURIComponent(jobId)}`,
+    {
+      method: "DELETE",
+      token,
+    },
+  );
+}
+
 export function listAdminPlans(
   token: string,
   query?: AdminListQuery,
