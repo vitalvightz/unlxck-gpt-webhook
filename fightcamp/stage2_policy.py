@@ -15,6 +15,11 @@ _REPAIR_PROMPT_EXCLUDED_CODES = frozenset(
         "true_internal_system_leak",
     }
 )
+_LOCAL_HARD_STAGE2_BLOCKER_CODES = frozenset(
+    {
+        "late_fight_missing_required_countdown_session",
+    }
+)
 
 
 @lru_cache(maxsize=1)
@@ -47,7 +52,7 @@ CARD_RESCUABLE_SOFT_CODES: frozenset[str]
 
 def __getattr__(name: str) -> Any:
     if name == "HARD_STAGE2_BLOCKER_CODES":
-        return _code_set("hard_stage2_blocker_codes")
+        return _code_set("hard_stage2_blocker_codes") | _LOCAL_HARD_STAGE2_BLOCKER_CODES
     if name == "PUBLISH_BLOCKING_REVIEW_FLAG_CODES":
         return _code_set("publish_blocking_review_flag_codes")
     if name == "CARD_RESCUABLE_SOFT_CODES":
@@ -56,7 +61,8 @@ def __getattr__(name: str) -> Any:
 
 
 def is_hard_stage2_blocker(code: str) -> bool:
-    return str(code or "").strip() in _code_set("hard_stage2_blocker_codes")
+    normalized = str(code or "").strip()
+    return normalized in _LOCAL_HARD_STAGE2_BLOCKER_CODES or normalized in _code_set("hard_stage2_blocker_codes")
 
 
 def is_card_rescuable_soft_code(code: str) -> bool:
