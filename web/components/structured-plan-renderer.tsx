@@ -483,7 +483,8 @@ export function CampDayCard({
   const warning = cleanText(card?.primary_warning);
   const nutrition = cleanText(card?.nutrition_summary);
   const weightCut = cleanText(card?.weight_cut_warning);
-  const lightTechnicalContext = classifySessionlessDay(day).kind === "light_combat";
+  const sessionlessDay = classifySessionlessDay(day);
+  const lightTechnicalContext = sessionlessDay.kind === "light_combat";
   const hasDayContext = Boolean(warning || nutrition || weightCut || lightTechnicalContext);
   const completion = dayCompletion(day);
   const sessionCount = sessions.length;
