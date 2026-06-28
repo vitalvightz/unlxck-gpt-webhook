@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from typing import Any
 
 from .stage2_policy import (
@@ -18,6 +19,11 @@ _STATUS_PASS = "PASS"
 _STATUS_WARN = "WARN"
 _STATUS_FAIL = "FAIL"
 
+_COUNTDOWN_HEADER_RE = re.compile(
+    r"^\s*(?:#{1,6}\s*)?D-(\d{1,2})\b",
+    re.IGNORECASE | re.MULTILINE,
+)
+
 
 def _require_dict(value: Any, *, name: str) -> dict:
     if not isinstance(value, dict):
@@ -25,12 +31,10 @@ def _require_dict(value: Any, *, name: str) -> dict:
     return value
 
 
-
 def _require_stage1_field(stage1_result: dict, field: str) -> Any:
     if field not in stage1_result:
         raise KeyError(f"stage1_result missing required field: {field}")
     return stage1_result[field]
-
 
 
 def _count_candidate_slots(planning_brief: dict) -> int:
@@ -41,6 +45,164 @@ def _count_candidate_slots(planning_brief: dict) -> int:
         total += len(phase_pool.get("rehab_slots", []) or [])
     return total
 
+
+def _normalise_countdown_label(value: Any) -> str:
+    match = re.search(r"\bD-(\d{1,2})\b", str(value or ""), re.IGNORECASE)
+    if not match:
+        return ""
+    return f"D-{int(match.group(1))}"
+
+
+def _rendered_countdown_labels(final_plan_text: str) -> set[str]:
+    return {
+        f"D-{int(match.group(1))}"
+        for match in _COUNTDOWN_HEADER_RE.finditer(final_plan_text or "")
+    }
+
+
+def _is_hidden_context_role(role: dict[str, Any]) -> bool:
+    role_key = str(role.get("role_key") or "").strip().lower()
+    category = str(role.get("category") or "").strip().lower()
+
+    if role_key == "hard_sparring_day":
+        return True
+    if category == "sparring" and bool(role.get("coach_owned")):
+        return True
+
+    return False
+
+
+def _sequence_from_value(value: Any) -> list[dict[str, Any]]:
+    if not isinstance(value, list):
+        return []
+    return [entry for entry in value if isinstance(entry, dict)]
+
+
+def _selected_countdown_sequence(planning_brief: dict) -> list[dict[str, Any]]:
+    # Prefer the top-level athlete-visible sequence when present because it is
+    # the post-gap-fill sequence used for what the athlete actually does.
+    for key in (
+        "late_fight_session_sequence",
+        "session_sequence",
+        "countdown_sessions",
+    ):
+        sequence = _sequence_from_value(planning_brief.get(key))
+        if sequence:
+            return sequence
+
+    spec = planning_brief.get("late_fight_plan_spec") or {}
+    if isinstance(spec, dict):
+        for key in (
+            "visible_session_sequence",
+            "session_sequence",
+            "countdown_sessions",
+            "sessions",
+        ):
+            sequence = _sequence_from_value(spec.get(key))
+            if sequence:
+                return sequence
+
+    return []
+
+
+def _role_countdown_label(role: dict[str, Any]) -> str:
+    return (
+        _normalise_countdown_label(role.get("scheduled_countdown_label"))
+        or _normalise_countdown_label(role.get("countdown_label"))
+        or _normalise_countdown_label(role.get("countdown_display_label"))
+    )
+
+
+def _role_display_label(role: dict[str, Any], countdown_label: str) -> str:
+    display = str(role.get("countdown_display_label") or "").strip()
+    if display:
+        return display
+
+    weekday = str(
+        role.get("real_weekday")
+        or role.get("countdown_weekday")
+        or role.get("scheduled_day_hint")
+        or ""
+    ).strip()
+
+    if weekday:
+        return f"{countdown_label} ({weekday.title()})"
+
+    return countdown_label
+
+
+def _required_countdown_session_warnings(
+    *,
+    planning_brief: dict,
+    final_plan_text: str,
+) -> list[dict[str, Any]]:
+    sequence = _selected_countdown_sequence(planning_brief)
+    if not sequence:
+        return []
+
+    rendered_labels = _rendered_countdown_labels(final_plan_text)
+    warnings: list[dict[str, Any]] = []
+    seen: set[tuple[str, str]] = set()
+
+    for role in sequence:
+        if _is_hidden_context_role(role):
+            continue
+        if role.get("render_mandatory") is False:
+            continue
+
+        countdown_label = _role_countdown_label(role)
+        if not countdown_label or countdown_label == "D-0":
+            continue
+
+        role_key = str(role.get("role_key") or "").strip()
+        identity = (countdown_label, role_key)
+        if identity in seen:
+            continue
+        seen.add(identity)
+
+        if countdown_label in rendered_labels:
+            continue
+
+        display_label = _role_display_label(role, countdown_label)
+        warnings.append(
+            {
+                "code": "late_fight_missing_required_countdown_session",
+                "message": "Selected countdown session is missing from the final rendered plan.",
+                "expected_countdown_label": countdown_label,
+                "expected_display_label": display_label,
+                "role_key": role_key,
+                "category": role.get("category"),
+                "stress_class": role.get("stress_class"),
+                "scheduled_day_hint": role.get("scheduled_day_hint"),
+                "rewrite_hint": f"Restore the selected countdown card: {display_label}.",
+            }
+        )
+
+    return warnings
+
+
+def _validator_report_with_required_countdown_sessions(
+    *,
+    planning_brief: dict,
+    final_plan_text: str,
+) -> dict:
+    validator_report = validate_stage2_output(
+        planning_brief=planning_brief,
+        final_plan_text=final_plan_text,
+    )
+
+    warnings = list(validator_report.get("warnings", []) or [])
+    warnings.extend(
+        _required_countdown_session_warnings(
+            planning_brief=planning_brief,
+            final_plan_text=final_plan_text,
+        )
+    )
+
+    return {
+        **validator_report,
+        "warnings": warnings,
+    }
 
 
 def _warning_buckets(validator_report: dict) -> tuple[list[dict], list[dict]]:
@@ -76,7 +238,6 @@ def _review_status(validator_report: dict) -> str:
     if validator_report.get("blocking_warnings"):
         return _STATUS_WARN
     return _STATUS_PASS
-
 
 
 def _warning_detail_line(warning: dict) -> str:
@@ -128,6 +289,13 @@ def _warning_detail_line(warning: dict) -> str:
         return "Rewrite hedged adjustment language into one clear coaching call with a short why."
     if warning.get("code") == "empty_safety_language":
         return "Replace empty safety lines with operational guardrails that change what the athlete does next."
+    if warning.get("code") == "late_fight_missing_required_countdown_session":
+        display_label = str(
+            warning.get("expected_display_label")
+            or warning.get("expected_countdown_label")
+            or "the selected countdown card"
+        ).strip()
+        return f"Restore the selected countdown card: {display_label}."
     if warning.get("code") == "late_fight_missing_countdown_header":
         return "Restore D-X countdown headers for every active late-fight day."
     if warning.get("code") == "late_fight_countdown_header_format":
@@ -169,6 +337,7 @@ def _build_review_summary(validator_report: dict, status: str) -> tuple[str, lis
     if blocking_warnings:
         summary_parts.append(f"{len(blocking_warnings)} blocking warning{'s' if len(blocking_warnings) != 1 else ''}")
         detail_lines.extend(_warning_detail_line(warning) for warning in blocking_warnings)
+
     if status == _STATUS_PASS:
         summary = "PASS: final plan cleared validation."
     elif status == _STATUS_WARN:
@@ -185,7 +354,6 @@ def _build_review_summary(validator_report: dict, status: str) -> tuple[str, lis
             summary += "."
 
     return summary, detail_lines
-
 
 
 def build_stage2_package(*, stage1_result: dict) -> dict:
@@ -209,13 +377,14 @@ def build_stage2_package(*, stage1_result: dict) -> dict:
     }
 
 
-
 def review_stage2_output(*, planning_brief: dict, final_plan_text: str) -> dict:
     planning_brief = _require_dict(planning_brief, name="planning_brief")
-    validator_report = _enrich_validator_report(validate_stage2_output(
-        planning_brief=planning_brief,
-        final_plan_text=final_plan_text,
-    ))
+    validator_report = _enrich_validator_report(
+        _validator_report_with_required_countdown_sessions(
+            planning_brief=planning_brief,
+            final_plan_text=final_plan_text,
+        )
+    )
     status = _review_status(validator_report)
     summary, summary_lines = _build_review_summary(validator_report, status)
     return {
@@ -225,7 +394,6 @@ def review_stage2_output(*, planning_brief: dict, final_plan_text: str) -> dict:
         "summary_lines": summary_lines,
         "needs_retry": status != _STATUS_PASS,
     }
-
 
 
 def build_stage2_retry(
@@ -255,6 +423,7 @@ def build_stage2_retry(
         status = _STATUS_WARN
         summary = "WARN: final plan has publish-blocking coaching quality issues and needs revision before release"
         summary_lines = [_warning_detail_line(warning) for warning in publish_blockers]
+
     if not publish_blockers and (status == _STATUS_PASS or not hard_blocker_findings(validator_report)):
         return {
             "status": status,
