@@ -58,6 +58,9 @@ import type {
 
 const titleize = formatPlanLabel;
 
+const LIGHT_TECHNICAL_NOTE =
+  "Light technical combat tag — no hard sparring here. Low-noise app work can stay on this day if prescribed.";
+
 function blockCountLabel(count: number): string {
   return `${count} block${count === 1 ? "" : "s"}`;
 }
@@ -390,7 +393,7 @@ export function SessionlessDayCard({ day }: { day: StructuredDay }) {
         </div>
       </header>
       {kind === "light_combat" ? (
-        <p className="sp-today-note">Light technical combat tag — no hard sparring here. Low-noise support work can stay if prescribed.</p>
+        <p className="sp-today-note">{LIGHT_TECHNICAL_NOTE}</p>
       ) : coachLed ? (
         <p className="sp-today-note">No app S&amp;C today — train with your coach and keep freshness priority.</p>
       ) : null}
@@ -403,19 +406,20 @@ export function SessionlessDayCard({ day }: { day: StructuredDay }) {
   );
 }
 
-function LightTechnicalDayContext({ day }: { day: StructuredDay }) {
-  const { kind, title, tag } = classifySessionlessDay(day);
-  if (kind !== "light_combat") {
-    return null;
-  }
-
+function LightTechnicalDayContext({
+  title,
+  tag,
+}: {
+  title: string;
+  tag: string | null;
+}) {
   return (
     <div className="cm-light-technical">
       <div className="cm-light-technical-head">
         {tag ? <span className="sp-tag sp-accent">{tag}</span> : null}
         <p className="sp-today-headline">{title}</p>
       </div>
-      <p className="sp-today-note">Light technical combat tag — no hard sparring here. Low-noise app work can stay on this day if prescribed.</p>
+      <p className="sp-today-note">{LIGHT_TECHNICAL_NOTE}</p>
     </div>
   );
 }
@@ -525,7 +529,9 @@ export function CampDayCard({
       <div className="sp-week-body">
         {sessions.length > 0 && hasDayContext ? (
           <div className="cm-day-context">
-            {lightTechnicalContext ? <LightTechnicalDayContext day={day} /> : null}
+            {lightTechnicalContext ? (
+              <LightTechnicalDayContext title={sessionlessDay.title} tag={sessionlessDay.tag} />
+        ) : null}
             {warning ? <p className="sp-warning">{warning}</p> : null}
             {nutrition ? <p className="sp-today-note">{nutrition}</p> : null}
             {weightCut ? <p className="sp-warning">{weightCut}</p> : null}
