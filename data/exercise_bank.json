@@ -4,7 +4,8 @@
     "category": "lower_body",
     "phases": [
       "GPP",
-      "SPP"
+      "SPP",
+      "TAPER"
     ],
     "method": "strength",
     "movement": "hinge",
@@ -14,9 +15,16 @@
       "compound",
       "mech_trunk_stability",
       "mech_grip_support",
-      "mech_lower_hip_hinge"
+      "mech_lower_hip_hinge",
+      "late_strength_touch",
+      "maximal_strength_maintenance",
+      "familiarity_required"
     ],
     "equipment": "trap_bar",
+    "phase_role": "late_strength_touch",
+    "late_windows": [
+      "d21_to_d14"
+    ],
     "movement_cost": "moderate",
     "impact_cost": "low",
     "eccentric_cost": "moderate",
@@ -34,7 +42,8 @@
     "cut_buckets_allowed": [
       "none",
       "low"
-    ]
+    ],
+    "notes": "2-3 sets x 2-3 reps @ RPE 6-7 only. No grinders. No soreness target."
   },
   {
     "name": "Back Squat",
@@ -1726,7 +1735,8 @@
     "name": "Bent-Over Row",
     "category": "upper_body",
     "phases": [
-      "GPP"
+      "GPP",
+      "TAPER"
     ],
     "method": "strength",
     "movement": "pull",
@@ -1735,9 +1745,18 @@
       "pull",
       "posterior_chain",
       "mech_grip_support",
-      "mech_upper_pull"
+      "mech_upper_pull",
+      "late_strength_touch",
+      "maximal_strength_maintenance",
+      "low_impact",
+      "low_eccentric"
     ],
     "equipment": "barbell",
+    "phase_role": "late_strength_touch",
+    "late_windows": [
+      "d21_to_d14",
+      "d13_to_d8"
+    ],
     "movement_cost": "low",
     "impact_cost": "low",
     "eccentric_cost": "low",
@@ -3191,7 +3210,8 @@
     "name": "Sandbag Shouldering",
     "category": "combat",
     "phases": [
-      "SPP"
+      "SPP",
+      "TAPER"
     ],
     "method": "power",
     "movement": "compound",
@@ -3200,9 +3220,16 @@
       "explosive",
       "core",
       "mech_ballistic",
-      "mech_trunk_stability"
+      "mech_trunk_stability",
+      "late_strength_touch",
+      "maximal_strength_maintenance",
+      "familiarity_required"
     ],
     "equipment": "sandbag",
+    "phase_role": "late_strength_touch",
+    "late_windows": [
+      "d21_to_d14"
+    ],
     "movement_cost": "moderate",
     "impact_cost": "low",
     "eccentric_cost": "moderate",
@@ -3218,8 +3245,7 @@
     "cns_freshness": false,
     "cut_buckets_allowed": [
       "none",
-      "low",
-      "moderate"
+      "low"
     ]
   },
   {
@@ -8073,10 +8099,11 @@
     ]
   },
   {
-    "name": "Sled Push Isometric (130% max push @ start position)",
+    "name": "Sled Push Isometric Hold",
     "category": "lower_body",
     "phases": [
-      "SPP"
+      "SPP",
+      "TAPER"
     ],
     "method": "strength",
     "movement": "isometric",
@@ -8087,15 +8114,24 @@
       "work_capacity",
       "mech_systemic_fatigue",
       "mech_trunk_stability",
-      "mech_lower_hip_hinge"
+      "mech_lower_hip_hinge",
+      "late_strength_touch",
+      "maximal_strength_maintenance",
+      "low_impact",
+      "low_eccentric"
     ],
     "equipment": "sled",
-    "movement_cost": "high",
+    "phase_role": "late_strength_touch",
+    "late_windows": [
+      "d21_to_d14",
+      "d13_to_d8"
+    ],
+    "movement_cost": "moderate",
     "impact_cost": "low",
     "eccentric_cost": "low",
     "landing_cost": "none",
     "cns_load": "moderate",
-    "soreness_risk": "moderate",
+    "soreness_risk": "low",
     "mechanical_risk_tags": [
       "mech_lower_hip_hinge",
       "mech_systemic_fatigue",
@@ -9042,7 +9078,8 @@
     "name": "Pallof Press Iso (Against Resistance)",
     "category": "core",
     "phases": [
-      "GPP"
+      "GPP",
+      "TAPER"
     ],
     "method": "strength",
     "movement": "isometric",
@@ -9053,9 +9090,19 @@
       "core",
       "mech_trunk_stability",
       "rotational",
-      "mech_trunk_rotation"
+      "mech_trunk_rotation",
+      "late_strength_touch",
+      "maximal_strength_maintenance",
+      "low_impact",
+      "low_eccentric",
+      "cns_freshness"
     ],
-    "equipment": "cable_machine",
+    "equipment": "cable",
+    "phase_role": "late_strength_touch",
+    "late_windows": [
+      "d21_to_d14",
+      "d13_to_d8"
+    ],
     "movement_cost": "low",
     "impact_cost": "low",
     "eccentric_cost": "low",
@@ -10468,7 +10515,8 @@
     "name": "Suitcase Carry Holds",
     "category": "core",
     "phases": [
-      "GPP"
+      "GPP",
+      "TAPER"
     ],
     "method": "strength",
     "movement": "isometric",
@@ -10480,9 +10528,68 @@
       "stability",
       "mech_grip_support",
       "mech_trunk_stability",
-      "mech_upper_carry"
+      "mech_upper_carry",
+      "late_strength_touch",
+      "maximal_strength_maintenance",
+      "low_impact",
+      "low_eccentric",
+      "cns_freshness"
     ],
     "equipment": "dumbbells",
+    "phase_role": "late_strength_touch",
+    "late_windows": [
+      "d21_to_d14",
+      "d13_to_d8"
+    ],
+    "movement_cost": "low",
+    "impact_cost": "low",
+    "eccentric_cost": "low",
+    "landing_cost": "none",
+    "cns_load": "low",
+    "soreness_risk": "low",
+    "mechanical_risk_tags": [
+      "mech_grip_support",
+      "mech_trunk_stability",
+      "mech_upper_carry"
+    ],
+    "low_impact": true,
+    "low_eccentric": true,
+    "cns_freshness": true,
+    "cut_buckets_allowed": [
+      "none",
+      "low",
+      "moderate",
+      "high",
+      "critical"
+    ]
+  },
+  {
+    "name": "Kettlebell Suitcase Carry Hold",
+    "category": "core",
+    "phases": [
+      "GPP",
+      "TAPER"
+    ],
+    "method": "strength",
+    "movement": "isometric",
+    "type": "unilateral",
+    "tags": [
+      "isometric",
+      "late_strength_touch",
+      "maximal_strength_maintenance",
+      "grip",
+      "core",
+      "anti_rotation",
+      "low_impact",
+      "low_eccentric",
+      "cns_freshness"
+    ],
+    "equipment": "kettlebell",
+    "phase_role": "late_strength_touch",
+    "late_windows": [
+      "d21_to_d14",
+      "d13_to_d8"
+    ],
     "movement_cost": "low",
     "impact_cost": "low",
     "eccentric_cost": "low",
@@ -10792,6 +10899,9 @@
       "d13_to_d8"
     ],
     "cut_buckets_allowed": [
+      "none",
+      "low",
+      "moderate",
       "high",
       "critical",
       "extreme"
@@ -10958,6 +11068,9 @@
       "d4_to_d2"
     ],
     "cut_buckets_allowed": [
+      "none",
+      "low",
+      "moderate",
       "high",
       "critical"
     ],
@@ -11039,6 +11152,9 @@
       "d6_to_d5"
     ],
     "cut_buckets_allowed": [
+      "none",
+      "low",
+      "moderate",
       "high",
       "critical",
       "extreme"
@@ -11496,6 +11612,9 @@
       "d13_to_d8"
     ],
     "cut_buckets_allowed": [
+      "none",
+      "low",
+      "moderate",
       "high",
       "critical"
     ],

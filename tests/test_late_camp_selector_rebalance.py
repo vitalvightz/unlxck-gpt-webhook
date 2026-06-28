@@ -23,6 +23,18 @@ NEW_LATE_STRENGTH_FAMILY_NAMES = {
 }
 
 
+def _reset_selector_bank_caches() -> None:
+    strength._style_exercises_cache = None
+    strength._exercise_bank_cache = None
+    strength._universal_strength_cache = None
+    strength._universal_strength_names_cache = None
+    conditioning._conditioning_bank_cache = None
+    conditioning._style_conditioning_bank_cache = None
+    conditioning._format_weights_cache = None
+    conditioning._coordination_bank_cache = None
+    conditioning.coordination_bank = None
+
+
 def _strength_flags(days_until_fight: int, **overrides) -> dict:
     base = {
         "phase": "TAPER",
@@ -1145,11 +1157,13 @@ def test_conditioning_bridge_phase_activates_late_window_without_taper_label(mon
 
 
 def test_audit_snapshot_matches_golden():
+    _reset_selector_bank_caches()
     expected = json.loads((SNAPSHOT_DIR / "after.json").read_text(encoding="utf-8"))
     assert build_snapshot() == expected
 
 
 def test_audit_diff_matches_golden_and_keeps_control_window_stable():
+    _reset_selector_bank_caches()
     before = json.loads((SNAPSHOT_DIR / "before.json").read_text(encoding="utf-8"))
     after = json.loads((SNAPSHOT_DIR / "after.json").read_text(encoding="utf-8"))
     expected_diff = json.loads((SNAPSHOT_DIR / "diff.json").read_text(encoding="utf-8"))

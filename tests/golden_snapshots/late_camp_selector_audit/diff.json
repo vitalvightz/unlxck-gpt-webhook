@@ -19,11 +19,11 @@
     "conditioning": {
       "before_winners": [
         "Easy Bike",
-        "Explosive Boxing Burst Intervals"
+        "Reactive Shuffle Repeats"
       ],
       "after_winners": [
         "Easy Bike",
-        "Explosive Boxing Burst Intervals"
+        "Reactive Shuffle Repeats"
       ],
       "added_winners": [],
       "removed_winners": [],
@@ -47,7 +47,13 @@
         "Band Row Speed Focus",
         "Staggered-Stance Medicine-Ball Punch Throw",
         "Overcoming Split-Squat Isometric",
-        "Med Ball Scoop Toss"
+        "Trap Bar Deadlift",
+        "Med Ball Scoop Toss",
+        "Cluster Set Trap Bar Deadlift",
+        "Pivot-and-Strike (Rotation Focus)",
+        "Lateral Bound-to-Slip",
+        "Burpee-to-Punch (Tabata)",
+        "Jump-in-Place (Max Frequency)"
       ],
       "added_winners": [
         "Band-Resisted Jab-Cross Primer",
@@ -55,7 +61,13 @@
         "Band Row Speed Focus",
         "Staggered-Stance Medicine-Ball Punch Throw",
         "Overcoming Split-Squat Isometric",
-        "Med Ball Scoop Toss"
+        "Trap Bar Deadlift",
+        "Med Ball Scoop Toss",
+        "Cluster Set Trap Bar Deadlift",
+        "Pivot-and-Strike (Rotation Focus)",
+        "Lateral Bound-to-Slip",
+        "Burpee-to-Punch (Tabata)",
+        "Jump-in-Place (Max Frequency)"
       ],
       "removed_winners": [
         "Band-Resisted Push Press",
@@ -77,13 +89,13 @@
       ],
       "after_winners": [
         "Easy Assault Bike",
-        "Band-Resisted Straight Punch Release",
-        "Bridge Tempo Touch: 2-3 x 90 sec Technical Tempo"
+        "Bridge Tempo Touch: 2-3 x 90 sec Technical Tempo",
+        "Band-Resisted Straight Punch Release"
       ],
       "added_winners": [
         "Easy Assault Bike",
-        "Band-Resisted Straight Punch Release",
-        "Bridge Tempo Touch: 2-3 x 90 sec Technical Tempo"
+        "Bridge Tempo Touch: 2-3 x 90 sec Technical Tempo",
+        "Band-Resisted Straight Punch Release"
       ],
       "removed_winners": [
         "Easy Bike",
@@ -124,7 +136,13 @@
         "Counter-Striker Split-Line Punch Isometric Hold",
         "Band Row Speed Focus",
         "Overcoming Split-Squat Isometric",
-        "Med Ball Scoop Toss"
+        "Med Ball Scoop Toss",
+        "Pivot-and-Strike (Rotation Focus)",
+        "Cluster Set Trap Bar Deadlift",
+        "Jump-in-Place (Max Frequency)",
+        "Lateral Bound-to-Slip",
+        "Cossack Squat (Dynamic)",
+        "Drop-Step Lateral Bound"
       ],
       "added_winners": [
         "Staggered-Stance Medicine-Ball Punch Throw",
@@ -132,7 +150,13 @@
         "Counter-Striker Split-Line Punch Isometric Hold",
         "Band Row Speed Focus",
         "Overcoming Split-Squat Isometric",
-        "Med Ball Scoop Toss"
+        "Med Ball Scoop Toss",
+        "Pivot-and-Strike (Rotation Focus)",
+        "Cluster Set Trap Bar Deadlift",
+        "Jump-in-Place (Max Frequency)",
+        "Lateral Bound-to-Slip",
+        "Cossack Squat (Dynamic)",
+        "Drop-Step Lateral Bound"
       ],
       "removed_winners": [
         "Band-Resisted Push Press",
@@ -146,6 +170,7 @@
         "Standing hip CAR lite",
         "Supported hip airplane micro-range",
         "Towel-assisted lateral neck isometric",
+        "Trap Bar Deadlift",
         "Trap Bar Jump (Light)",
         "Trap Bar Jump Squat"
       ],
@@ -159,11 +184,14 @@
       ],
       "after_winners": [
         "Easy Bike",
-        "Explosive Boxing Burst Intervals"
+        "Reactive Shuffle Repeats"
       ],
-      "added_winners": [],
+      "added_winners": [
+        "Reactive Shuffle Repeats"
+      ],
       "removed_winners": [
-        "Shadowboxing Intervals"
+        "Shadowboxing Intervals",
+        "Explosive Boxing Burst Intervals"
       ],
       "newly_blocked": [],
       "no_longer_blocked": []
@@ -211,7 +239,8 @@
         "Staggered-Stance Medicine-Ball Punch Throw",
         "Standing hip CAR lite",
         "Supported hip airplane micro-range",
-        "Towel-assisted lateral neck isometric"
+        "Towel-assisted lateral neck isometric",
+        "Trap Bar Deadlift"
       ],
       "no_longer_blocked": []
     },
@@ -223,10 +252,10 @@
       ],
       "after_winners": [
         "Easy Bike",
-        "Explosive Boxing Burst Intervals"
+        "Reactive Shuffle Repeats"
       ],
       "added_winners": [
-        "Explosive Boxing Burst Intervals"
+        "Reactive Shuffle Repeats"
       ],
       "removed_winners": [
         "Fight-Pace Rounds: 6-10 x (2-3 min on / 1 min off)",
@@ -237,17 +266,24 @@
         "Assault Bike Rhythm Primer",
         "Band-Resisted Straight Punch Release",
         "Band-Resisted Vertical Jump",
+        "Check-Hook Pivot Out Shadow Drill",
         "Cooldown Flow (Striking + Mobility)",
+        "Corner Escape L-Step",
         "Defensive Rhythm Flow",
         "Easy Continuous Swimming",
         "Foam Rolling Mobility Circuit",
+        "Lateral Exit to Re-Enter",
         "Mini Hurdle Quick Steps",
         "Mobility Reset: Breathing + T-Spine + Ankle Flow",
         "Nasal Walk with Boxing Posture",
+        "Pressure Step-Cut Reset",
         "Recovery Cycling (Nasal Breathing)",
+        "Ring Cut-Off Walkdown",
         "Rogue Echo Bike Recovery Spin",
         "Shadowboxing (Light Pace)",
         "Speed Bag Precision Drill",
+        "Stance Reset Line Drill",
+        "Step-Back Pivot Reset",
         "Striking Combos @ 20% Effort",
         "Tempo Shadowboxing",
         "Yoga Flow (Dynamic)"
@@ -307,7 +343,8 @@
         "Staggered-Stance Medicine-Ball Punch Throw",
         "Standing hip CAR lite",
         "Supported hip airplane micro-range",
-        "Towel-assisted lateral neck isometric"
+        "Towel-assisted lateral neck isometric",
+        "Trap Bar Deadlift"
       ],
       "no_longer_blocked": []
     },
@@ -319,10 +356,10 @@
       ],
       "after_winners": [
         "Easy Bike",
-        "Explosive Boxing Burst Intervals"
+        "Reactive Shuffle Repeats"
       ],
       "added_winners": [
-        "Explosive Boxing Burst Intervals"
+        "Reactive Shuffle Repeats"
       ],
       "removed_winners": [
         "Fight-Pace Rounds: 6-10 x (2-3 min on / 1 min off)",
@@ -333,17 +370,24 @@
         "Assault Bike Rhythm Primer",
         "Band-Resisted Straight Punch Release",
         "Band-Resisted Vertical Jump",
+        "Check-Hook Pivot Out Shadow Drill",
         "Cooldown Flow (Striking + Mobility)",
+        "Corner Escape L-Step",
         "Defensive Rhythm Flow",
         "Easy Continuous Swimming",
         "Foam Rolling Mobility Circuit",
+        "Lateral Exit to Re-Enter",
         "Mini Hurdle Quick Steps",
         "Mobility Reset: Breathing + T-Spine + Ankle Flow",
         "Nasal Walk with Boxing Posture",
+        "Pressure Step-Cut Reset",
         "Recovery Cycling (Nasal Breathing)",
+        "Ring Cut-Off Walkdown",
         "Rogue Echo Bike Recovery Spin",
         "Shadowboxing (Light Pace)",
         "Speed Bag Precision Drill",
+        "Stance Reset Line Drill",
+        "Step-Back Pivot Reset",
         "Striking Combos @ 20% Effort",
         "Tempo Shadowboxing",
         "Yoga Flow (Dynamic)"
@@ -411,6 +455,7 @@
         "Supported hip airplane micro-range",
         "Towel-assisted lateral neck isometric",
         "Towel/Gi Row Isometric Hold",
+        "Trap Bar Deadlift",
         "Wall scap push-up plus"
       ],
       "no_longer_blocked": []
@@ -437,19 +482,26 @@
         "Assault Bike Rhythm Primer",
         "Band-Resisted Straight Punch Release",
         "Band-Resisted Vertical Jump",
+        "Check-Hook Pivot Out Shadow Drill",
         "Cooldown Flow (Striking + Mobility)",
+        "Corner Escape L-Step",
         "Defensive Rhythm Flow",
         "Easy Bike",
         "Easy Continuous Swimming",
         "Foam Rolling Mobility Circuit",
+        "Lateral Exit to Re-Enter",
         "Mini Hurdle Quick Steps",
         "Mobility Reset: Breathing + T-Spine + Ankle Flow",
         "Nasal Walk with Boxing Posture",
+        "Pressure Step-Cut Reset",
         "Reactive Shuffle Repeats",
         "Recovery Cycling (Nasal Breathing)",
+        "Ring Cut-Off Walkdown",
         "Rogue Echo Bike Recovery Spin",
         "Shadowboxing (Light Pace)",
         "Speed Bag Precision Drill",
+        "Stance Reset Line Drill",
+        "Step-Back Pivot Reset",
         "Striking Combos @ 20% Effort",
         "Tempo Shadowboxing",
         "Yoga Flow (Dynamic)"
@@ -539,6 +591,7 @@
         "Technical Shadowboxing Tempo",
         "Towel-assisted lateral neck isometric",
         "Towel/Gi Row Isometric Hold",
+        "Trap Bar Deadlift",
         "Wall ISO Deadbug",
         "Wall angel partial range",
         "Wall scap push-up plus"
@@ -568,22 +621,29 @@
         "Band-Resisted Straight Punch Release",
         "Band-Resisted Vertical Jump",
         "Breath Control Drills",
+        "Check-Hook Pivot Out Shadow Drill",
         "Cooldown Flow (Striking + Mobility)",
+        "Corner Escape L-Step",
         "Defensive Rhythm Flow",
         "Easy Assault Bike",
         "Easy Bike",
         "Easy Continuous Swimming",
         "Explosive Boxing Burst Intervals",
         "Foam Rolling Mobility Circuit",
+        "Lateral Exit to Re-Enter",
         "Mini Hurdle Quick Steps",
         "Mobility Reset: Breathing + T-Spine + Ankle Flow",
         "Nasal Walk with Boxing Posture",
+        "Pressure Step-Cut Reset",
         "Reactive Shuffle Repeats",
         "Recovery Cycling (Nasal Breathing)",
+        "Ring Cut-Off Walkdown",
         "Rogue Echo Bike Recovery Spin",
         "Shadowboxing (Light Pace)",
         "Shadowboxing Technical Rhythm",
         "Speed Bag Precision Drill",
+        "Stance Reset Line Drill",
+        "Step-Back Pivot Reset",
         "Striking Combos @ 20% Effort",
         "Tempo Shadowboxing",
         "Yoga Flow (Dynamic)"
