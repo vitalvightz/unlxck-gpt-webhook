@@ -140,6 +140,34 @@ LATE_STRENGTH_SAFE_TAGS = {
     "maximal_strength_maintenance",
 }
 LATE_STRENGTH_TIGHT_WINDOWS = {D7, D6_TO_D5, D4_TO_D2, D1}
+EARLY_TAPER_STRENGTH_WINDOWS = {D21_TO_D14, D13_TO_D8}
+STRENGTH_MAINTENANCE_INTENT_TAGS = {
+    "strength",
+    "maximal_strength",
+    "maximal_strength_maintenance",
+}
+STRENGTH_MAINTENANCE_MATCH_TAGS = {
+    "late_strength_touch",
+    "maximal_strength_maintenance",
+}
+PRIMER_ONLY_STRENGTH_TOUCH_TAGS = {
+    "neural_primer",
+    "speed",
+    "reactive",
+    "mobility",
+    "rehab_support",
+    "support_accessory",
+}
+STRENGTH_MAINTENANCE_QUALITY_CLASSES = {
+    "anchor_loaded",
+    "anchor_force_isometric",
+    "anchor_power",
+}
+STRENGTH_MAINTENANCE_SUPPORT_TAGS = {
+    "low_eccentric",
+    "cns_freshness",
+    "low_impact",
+}
 # Safety-critical hard blocks apply across every active late window where their
 # condition fires (e.g. D13-D8), not just the tight windows. They must not be
 # dropped by the tight-window block filter.
@@ -257,12 +285,87 @@ def _exercise_late_windows(exercise: dict) -> set[str]:
     return set(_normalized_metadata_list(exercise.get("late_windows")))
 
 
+def _exercise_phase_role(exercise: dict) -> str:
+    return normalize_tag(str(exercise.get("phase_role") or ""))
+
+
 def _exercise_cut_buckets_allowed(exercise: dict) -> set[str]:
     return {
         bucket
         for bucket in _normalized_metadata_list(exercise.get("cut_buckets_allowed"))
         if bucket in VALID_CUT_BUCKETS
     }
+
+
+def _has_strength_maintenance_intent(*, goals, weaknesses, flags: dict) -> bool:
+    raw_values: list[str] = []
+    for value in goals or []:
+        raw_values.append(str(value))
+    for value in weaknesses or []:
+        raw_values.append(str(value))
+    for value in flags.get("weaknesses") or []:
+        raw_values.append(str(value))
+    for field in ("primary_goal", "primary_weak_area"):
+        value = flags.get(field)
+        if value:
+            raw_values.append(str(value))
+
+    normalized_values = {normalize_tag(value) for value in raw_values if str(value).strip()}
+    if normalized_values & STRENGTH_MAINTENANCE_INTENT_TAGS:
+        return True
+    return any("strength" in value for value in normalized_values)
+
+
+def _strength_maintenance_match_tags(exercise: dict) -> set[str]:
+    tags = set(normalize_tags(exercise.get("tags", [])))
+    matches = set(tags & STRENGTH_MAINTENANCE_MATCH_TAGS)
+    phase_role = _exercise_phase_role(exercise)
+    if phase_role in STRENGTH_MAINTENANCE_MATCH_TAGS:
+        matches.add(phase_role)
+    for field in STRENGTH_MAINTENANCE_MATCH_TAGS:
+        if exercise.get(field) is True:
+            matches.add(field)
+    return matches
+
+
+def _is_primer_only_strength_touch(exercise: dict, profile: dict) -> bool:
+    tags = set(normalize_tags(exercise.get("tags", [])))
+    if "maximal_strength_maintenance" in _strength_maintenance_match_tags(exercise):
+        return False
+    method = normalize_tag(str(exercise.get("method") or ""))
+    quality_class = str(profile.get("quality_class") or "")
+    has_primer_signal = bool(tags & PRIMER_ONLY_STRENGTH_TOUCH_TAGS)
+    has_strength_method = method == "strength"
+    has_real_anchor = quality_class in STRENGTH_MAINTENANCE_QUALITY_CLASSES
+    return has_primer_signal and not has_strength_method and not (
+        has_real_anchor and "late_strength_touch" in tags and "strength" in tags
+    )
+
+
+def _is_real_strength_maintenance_touch(exercise: dict, profile: dict) -> bool:
+    if not _strength_maintenance_match_tags(exercise):
+        return False
+    if _is_primer_only_strength_touch(exercise, profile):
+        return False
+    if "maximal_strength_maintenance" in _strength_maintenance_match_tags(exercise):
+        return True
+    method = normalize_tag(str(exercise.get("method") or ""))
+    return method == "strength" or profile.get("quality_class") in STRENGTH_MAINTENANCE_QUALITY_CLASSES
+
+
+def _strength_maintenance_support_score(exercise: dict, profile: dict, *, window: str | None) -> int:
+    tags = set(normalize_tags(exercise.get("tags", [])))
+    support = len(tags & STRENGTH_MAINTENANCE_SUPPORT_TAGS)
+    late_windows = _exercise_late_windows(exercise)
+    if window and (window in late_windows or "all" in late_windows):
+        support += 1
+    if profile.get("quality_class") in STRENGTH_MAINTENANCE_QUALITY_CLASSES:
+        support += 1
+    if _exercise_phase_role(exercise) == "late_strength_touch":
+        support += 1
+    if "maximal_strength_maintenance" in _strength_maintenance_match_tags(exercise):
+        support += 1
+    return support
 
 
 def _exercise_profile_flag(exercise: dict, tags: set[str], field_name: str, *, tag_name: str | None = None) -> bool:
@@ -695,13 +798,13 @@ def _evaluate_strength_late_window(
     )
     if (
         late_band_lockout_window
-        and _strength_band_signal(exercise, profile, equipment)
+        and _strength_band_signal(exercise, equipment)
         and (window == D1 or not rehab_mobility_band_ok)
         and not late_safe_band_primer
     ):
         blocks.append("late_strength_block_band_work_lockout")
         reason_codes.append("late_strength_penalty_band_work_lockout")
-    if exact_days_until_fight == 3 and _strength_throw_signal(exercise, profile, equipment):
+    if exact_days_until_fight == 3 and _strength_throw_signal(exercise, equipment):
         blocks.append("late_strength_block_d3_throw_lockout")
         reason_codes.append("late_strength_penalty_d3_throw_lockout")
 
@@ -2412,6 +2515,75 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
                 updated[first_position], updated[anchor_position] = updated[anchor_position], updated[first_position]
         return updated
 
+    strength_maintenance_intent = _has_strength_maintenance_intent(
+        goals=goals,
+        weaknesses=weaknesses,
+        flags=flags,
+    )
+
+    def _ensure_early_taper_strength_maintenance_touch(exercises: list[dict]) -> list[dict]:
+        if not (
+            phase == "TAPER"
+            and late_window in EARLY_TAPER_STRENGTH_WINDOWS
+            and strength_maintenance_intent
+            and exercises
+        ):
+            return exercises
+        if any(
+            _is_real_strength_maintenance_touch(exercise, _cached_classify(exercise))
+            for exercise in exercises
+        ):
+            return exercises
+
+        selected_names = _selected_names(exercises)
+        replacement_entry = _best_candidate(
+            lambda cand, _score, _reasons, profile: _is_real_strength_maintenance_touch(cand, profile)
+            and _cached_guarded_decision(cand).action != "exclude",
+            exclude_names=selected_names,
+        )
+        if not replacement_entry:
+            return exercises
+
+        replacement, replacement_score, replacement_reasons, _replacement_profile, _late_safe_profile = replacement_entry
+        replacement_name = replacement.get("name")
+        if not replacement_name:
+            return exercises
+
+        updated = list(exercises)
+        primer_only_indices = [
+            idx
+            for idx, exercise in enumerate(updated)
+            if _is_primer_only_strength_touch(exercise, _cached_classify(exercise))
+        ]
+        candidate_indices = primer_only_indices or list(range(len(updated)))
+        replace_index = min(
+            candidate_indices,
+            key=lambda idx: (
+                score_lookup.get(updated[idx].get("name"), 0.0),
+                -_strength_maintenance_support_score(
+                    updated[idx],
+                    _cached_classify(updated[idx]),
+                    window=late_window,
+                ),
+                -idx,
+            ),
+        )
+        replacement_reasons.setdefault("reason_codes", [])
+        replacement_reasons["reason_codes"] = list(
+            dict.fromkeys(
+                list(replacement_reasons.get("reason_codes", []))
+                + ["early_taper_strength_maintenance_selected"]
+            )
+        )
+        _replace_exercise(
+            updated,
+            index=replace_index,
+            replacement=replacement,
+            replacement_score=replacement_score,
+            replacement_reasons=replacement_reasons,
+        )
+        return updated
+
     candidate_metadata: dict[str, dict[str, object]] = {}
     for ex, score, reasons in weighted_exercises:
         name = ex.get("name")
@@ -2845,6 +3017,10 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
     base_exercises = _run_real_poststep("movement_caps_final", lambda: _apply_movement_caps(base_exercises))
     base_exercises = _run_real_poststep("injury_safe_finalize_2", lambda: _finalize_injury_safe_exercises(base_exercises))
     base_exercises = _run_real_poststep("keyword_guard", lambda: _final_keyword_guard(base_exercises))
+    base_exercises = _run_real_poststep(
+        "early_taper_strength_maintenance_final",
+        lambda: _ensure_early_taper_strength_maintenance_touch(base_exercises),
+    )
 
     _run_real_poststep("movement_normalization", lambda: [_cached_movement(ex) for ex in base_exercises])
 

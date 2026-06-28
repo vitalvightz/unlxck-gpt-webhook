@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 
 from fightcamp import strength
-from fightcamp.late_selector_windows import D1, D4_TO_D2, D7, D13_TO_D8
+from fightcamp.late_selector_windows import D1, D4_TO_D2, D7, D13_TO_D8, D21_TO_D14
 
 
 def _flags(**overrides) -> dict:
@@ -61,6 +61,174 @@ def _patch_minimal_strength_runtime(monkeypatch, exercise_bank: list[dict], scor
             {"final_score": score_map[kwargs["exercise_tags"][0]], "reason_codes": []},
         ),
     )
+
+
+def _primer_touch(name: str, *, windows: list[str] | None = None) -> dict:
+    return {
+        "name": name,
+        "phases": ["TAPER"],
+        "method": "power",
+        "movement": "horizontal_push",
+        "type": "bilateral",
+        "tags": [
+            f"{name.lower().replace(' ', '_').replace('-', '_')}_score",
+            "late_strength_touch",
+            "neural_primer",
+            "speed",
+            "low_impact",
+            "low_eccentric",
+            "cns_freshness",
+        ],
+        "equipment": "bands",
+        "late_windows": windows or [D21_TO_D14, D13_TO_D8],
+        "phase_role": "late_strength_touch",
+        "impact_cost": "low",
+        "eccentric_cost": "low",
+        "landing_cost": "none",
+        "soreness_risk": "low",
+        "cns_load": "low",
+    }
+
+
+def _maintenance_touch(
+    name: str = "Tagged Maintenance Touch",
+    *,
+    windows: list[str] | None = None,
+    extra_tags: list[str] | None = None,
+) -> dict:
+    return {
+        "name": name,
+        "phases": ["TAPER"],
+        "method": "strength",
+        "movement": "isometric",
+        "type": "bilateral",
+        "tags": [
+            f"{name.lower().replace(' ', '_').replace('-', '_')}_score",
+            "late_strength_touch",
+            "maximal_strength_maintenance",
+            "isometric",
+            "low_impact",
+            "low_eccentric",
+            "cns_freshness",
+            *(extra_tags or []),
+        ],
+        "equipment": "bodyweight",
+        "late_windows": windows or [D21_TO_D14, D13_TO_D8],
+        "phase_role": "late_strength_touch",
+        "impact_cost": "low",
+        "eccentric_cost": "low",
+        "landing_cost": "none",
+        "soreness_risk": "low",
+        "cns_load": "low",
+    }
+
+
+def test_strength_intent_selects_real_early_taper_maintenance_touch(monkeypatch):
+    primer = _primer_touch("High Score Primer")
+    maintenance = _maintenance_touch("Lower Score Maintenance")
+    _patch_minimal_strength_runtime(
+        monkeypatch,
+        [primer, maintenance],
+        {
+            primer["tags"][0]: 10.0,
+            maintenance["tags"][0]: 8.0,
+        },
+    )
+
+    result = strength.generate_strength_block(
+        flags=_flags(
+            days_until_fight=19,
+            key_goals=["strength"],
+        )
+    )
+
+    selected = result["exercises"][0]
+    assert set(selected["tags"]) & {"late_strength_touch", "maximal_strength_maintenance"}
+    assert "maximal_strength_maintenance" in selected["tags"]
+    assert result["why_log"][0]["name"] == "Lower Score Maintenance"
+    assert "early_taper_strength_maintenance_selected" in result["why_log"][0]["reasons"]["reason_codes"]
+
+
+def test_band_resisted_jab_cross_primer_does_not_satisfy_strength_maintenance_when_real_candidate_exists(monkeypatch):
+    primer = _primer_touch("Band-Resisted Jab-Cross Primer")
+    maintenance = _maintenance_touch("Metadata Tagged Strength Hold")
+    _patch_minimal_strength_runtime(
+        monkeypatch,
+        [primer, maintenance],
+        {
+            primer["tags"][0]: 10.0,
+            maintenance["tags"][0]: 7.5,
+        },
+    )
+
+    result = strength.generate_strength_block(
+        flags=_flags(days_until_fight=14, key_goals=["Maximal Strength"])
+    )
+
+    assert result["why_log"][0]["name"] == "Metadata Tagged Strength Hold"
+
+
+def test_band_row_speed_focus_does_not_satisfy_strength_maintenance_when_real_candidate_exists(monkeypatch):
+    primer = _primer_touch("Band Row Speed Focus")
+    maintenance = _maintenance_touch("Metadata Tagged Pull Strength Hold")
+    _patch_minimal_strength_runtime(
+        monkeypatch,
+        [primer, maintenance],
+        {
+            primer["tags"][0]: 10.0,
+            maintenance["tags"][0]: 7.5,
+        },
+    )
+
+    result = strength.generate_strength_block(
+        flags=_flags(days_until_fight=13, weaknesses=["strength"])
+    )
+
+    assert result["why_log"][0]["name"] == "Metadata Tagged Pull Strength Hold"
+
+
+def test_early_taper_strength_maintenance_does_not_force_unsafe_candidate(monkeypatch):
+    primer = _primer_touch("Safe Primer")
+    unsafe_maintenance = _maintenance_touch(
+        "Unsafe Maintenance Touch",
+        windows=[D21_TO_D14],
+        extra_tags=["familiarity_required"],
+    )
+    _patch_minimal_strength_runtime(
+        monkeypatch,
+        [primer, unsafe_maintenance],
+        {
+            primer["tags"][0]: 8.0,
+            unsafe_maintenance["tags"][0]: 7.5,
+        },
+    )
+
+    result = strength.generate_strength_block(
+        flags=_flags(days_until_fight=13, key_goals=["strength"])
+    )
+
+    assert result["why_log"][0]["name"] == "Safe Primer"
+    assert "early_taper_strength_maintenance_selected" not in result["why_log"][0]["reasons"].get("reason_codes", [])
+
+
+def test_final_week_windows_do_not_force_strength_maintenance_touch(monkeypatch):
+    primer = _primer_touch("D7 Primer", windows=[D7])
+    maintenance = _maintenance_touch("Early Only Maintenance", windows=[D21_TO_D14, D13_TO_D8])
+    _patch_minimal_strength_runtime(
+        monkeypatch,
+        [primer, maintenance],
+        {
+            primer["tags"][0]: 8.0,
+            maintenance["tags"][0]: 7.5,
+        },
+    )
+
+    result = strength.generate_strength_block(
+        flags=_flags(days_until_fight=7, key_goals=["strength"])
+    )
+
+    assert result["why_log"][0]["name"] == "D7 Primer"
+    assert "early_taper_strength_maintenance_selected" not in result["why_log"][0]["reasons"].get("reason_codes", [])
 
 
 def test_late_strength_selection_prefers_explicit_low_cost_metadata(monkeypatch):
