@@ -112,7 +112,6 @@ BASELINE_REVIEW_FLAG_CODES = frozenset(
         "late_fight_block_overage",
         "late_fight_meaningful_stress_overage",
         "late_fight_forbidden_content",
-        "late_fight_unapproved_exercise_rendered",
         "late_fight_hard_sparring_overage",
         "late_fight_neural_power_stacking",
     }

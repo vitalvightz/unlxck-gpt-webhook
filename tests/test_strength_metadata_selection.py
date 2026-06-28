@@ -315,9 +315,9 @@ def test_good_taper_readiness_options_remain_available():
     expected_windows = {
         "Band-Resisted Jab-Cross Primer": {"d21_to_d14", "d13_to_d8"},
         "Technical Shadowboxing Tempo": {"d1", "d4_to_d2"},
-        "Band Row Speed Focus": {"d1", "d4_to_d2"},
+        "Band Row Speed Focus": {"d4_to_d2"},
         "Mobility Reset Flow": {"d1", "d4_to_d2"},
-        "Band Face Pull": {"d1", "d4_to_d2"},
+        "Band Face Pull": {"d4_to_d2"},
         "Staggered-Stance Medicine-Ball Punch Throw": {"d4_to_d2"},
         "Scapular Pull-Up Hold": {"d4_to_d2"},
         "Light Heavy-Bag Technical Tempo": {"d4_to_d2"},
@@ -360,6 +360,26 @@ def test_late_window_blocking_is_respected_for_real_strength_bank_item():
         assert "late_strength_boost_window_fit" in d4_result["reason_codes"]
         assert d1_result["blocked"] is True
         assert "late_strength_block_window_mismatch" in d1_result["block_codes"]
+
+
+def test_d3_blocks_med_ball_punch_throw_even_inside_d4_to_d2_window():
+    item = _exercise_named("Staggered-Stance Medicine-Ball Punch Throw")
+
+    d4_result = strength._evaluate_strength_late_window(item, window=D4_TO_D2, days_until_fight=4)
+    d3_result = strength._evaluate_strength_late_window(item, window=D4_TO_D2, days_until_fight=3)
+
+    assert d4_result["blocked"] is False
+    assert d3_result["blocked"] is True
+    assert "late_strength_block_d3_throw_lockout" in d3_result["block_codes"]
+
+
+def test_d1_blocks_band_strength_work_even_with_rehab_metadata():
+    item = _exercise_named("Band Face Pull")
+
+    d1_result = strength._evaluate_strength_late_window(item, window=D1, days_until_fight=1)
+
+    assert d1_result["blocked"] is True
+    assert "late_strength_block_band_work_lockout" in d1_result["block_codes"]
 
 
 def test_split_squat_iso_variants_have_correct_late_window_intent():

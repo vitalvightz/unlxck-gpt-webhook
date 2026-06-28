@@ -1889,20 +1889,6 @@
     "strength": {
       "winners": [
         {
-          "name": "Band face pull light",
-          "score": 2.3025,
-          "reason_codes": [
-            "late_strength_boost_window_fit",
-            "late_strength_boost_cut_survivable",
-            "late_strength_boost_explicit_late_touch",
-            "late_strength_boost_low_eccentric",
-            "late_strength_boost_low_impact",
-            "late_strength_boost_cns_freshness",
-            "late_strength_boost_low_soreness",
-            "late_strength_boost_rehab_friendly"
-          ]
-        },
-        {
           "name": "Boxer stance weight-shift hold",
           "score": 2.3025,
           "reason_codes": [
@@ -1943,6 +1929,20 @@
             "late_strength_boost_low_soreness",
             "late_strength_boost_rehab_friendly"
           ]
+        },
+        {
+          "name": "Serratus wall slide",
+          "score": 2.3025,
+          "reason_codes": [
+            "late_strength_boost_window_fit",
+            "late_strength_boost_cut_survivable",
+            "late_strength_boost_explicit_late_touch",
+            "late_strength_boost_low_eccentric",
+            "late_strength_boost_low_impact",
+            "late_strength_boost_cns_freshness",
+            "late_strength_boost_low_soreness",
+            "late_strength_boost_rehab_friendly"
+          ]
         }
       ],
       "blocked": [
@@ -1966,20 +1966,34 @@
           "name": "Band Face Pull",
           "score": -0.85,
           "reason_codes": [
-            "late_strength_block_d1_requires_d1_tags"
+            "late_strength_block_band_work_lockout",
+            "late_strength_block_d1_requires_d1_tags",
+            "late_strength_block_window_mismatch"
           ]
         },
         {
           "name": "Band Row Speed Focus",
           "score": 3.65,
           "reason_codes": [
-            "late_strength_block_d1_requires_d1_tags"
+            "late_strength_block_band_work_lockout",
+            "late_strength_block_d1_requires_d1_tags",
+            "late_strength_block_window_mismatch"
+          ]
+        },
+        {
+          "name": "Band face pull light",
+          "score": -0.85,
+          "reason_codes": [
+            "late_strength_block_band_work_lockout",
+            "late_strength_block_d1_requires_d1_tags",
+            "late_strength_block_window_mismatch"
           ]
         },
         {
           "name": "Band pull-apart low volume",
           "score": -0.85,
           "reason_codes": [
+            "late_strength_block_band_work_lockout",
             "late_strength_block_d1_requires_d1_tags",
             "late_strength_block_window_mismatch"
           ]
@@ -2015,14 +2029,18 @@
           "name": "Banded Hip Flexor Stretch",
           "score": -0.85,
           "reason_codes": [
-            "late_strength_block_d1_requires_d1_tags"
+            "late_strength_block_band_work_lockout",
+            "late_strength_block_d1_requires_d1_tags",
+            "late_strength_block_window_mismatch"
           ]
         },
         {
           "name": "Banded Lateral Walk",
           "score": -0.5,
           "reason_codes": [
-            "late_strength_block_d1_requires_d1_tags"
+            "late_strength_block_band_work_lockout",
+            "late_strength_block_d1_requires_d1_tags",
+            "late_strength_block_window_mismatch"
           ]
         },
         {
@@ -2060,6 +2078,7 @@
           "name": "Deadbug (Band-Resisted)",
           "score": -0.55,
           "reason_codes": [
+            "late_strength_block_band_work_lockout",
             "late_strength_block_d1_requires_d1_tags"
           ]
         },
