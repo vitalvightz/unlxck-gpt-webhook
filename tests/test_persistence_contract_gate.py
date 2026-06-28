@@ -7,6 +7,7 @@ from api.generation.persistence import (
     _apply_plan_contract_validation,
     _contract_fight_date,
     _contract_report_is_card_rescuable,
+    _result_has_plan_text,
 )
 
 
@@ -32,12 +33,13 @@ def _result(status, weeks, **extra):
         "status": status,
         "plan_text": "plan",
         "planning_brief": {"fight_date": FIGHT_DATE, "weekly_role_map": {"weeks": weeks}},
+        "stage2_validator_report": {"errors": [], "warnings": [], "blocking_warnings": []},
     }
     payload.update(extra)
     return payload
 
 
-def test_visible_plan_with_blank_week_is_routed_to_review():
+def test_visible_plan_with_blank_week_and_clean_stage2_stays_ready():
     emit, events = _emit_collector()
     result = _apply_plan_contract_validation(
         _result("ready", [{"phase": "camp"}]),  # blank week => drift
@@ -46,9 +48,31 @@ def test_visible_plan_with_blank_week_is_routed_to_review():
         job_id="job-1",
         emit_milestone=emit,
     )
-    assert result["status"] == "review_required"
+    assert result["status"] == "ready"
     report = result["why_log"]["plan_contract_validation"]
     assert report["has_errors"] is True
+    assert any(code == "plan_contract_clean_stage2_release" for code, _ in events)
+    assert not any(code == "plan_contract_review_required" for code, _ in events)
+
+
+def test_visible_plan_with_blank_week_and_stage2_blocker_routes_to_review():
+    emit, events = _emit_collector()
+    result = _apply_plan_contract_validation(
+        _result(
+            "ready",
+            [{"phase": "camp"}],
+            stage2_validator_report={
+                "errors": [],
+                "warnings": [{"code": "missing_required_element"}],
+                "blocking_warnings": [{"code": "missing_required_element"}],
+            },
+        ),
+        fight_date=FIGHT_DATE,
+        athlete_id="ath-1",
+        job_id="job-1",
+        emit_milestone=emit,
+    )
+    assert result["status"] == "review_required"
     assert any(code == "plan_contract_review_required" for code, _ in events)
 
 
@@ -64,6 +88,13 @@ def test_healthy_visible_plan_keeps_its_status():
     assert result["status"] == "ready"
     assert result["why_log"]["plan_contract_validation"]["has_errors"] is False
     assert events == []
+
+
+def test_result_has_plan_text_requires_non_empty_string():
+    assert _result_has_plan_text({"plan_text": "# Plan"}) is True
+    assert _result_has_plan_text({"plan_text": "", "final_plan_text": "  # Final "}) is True
+    assert _result_has_plan_text({"plan_text": None, "final_plan_text": None, "draft_plan_text": None}) is False
+    assert _result_has_plan_text({"plan_text": 123, "final_plan_text": ["# Plan"]}) is False
 
 
 def _clean_card_fields():
@@ -163,7 +194,7 @@ def test_open_camp_with_stale_fight_date_does_not_require_d0():
 
 def test_gate_never_raises_when_emit_milestone_throws():
     # A throwing milestone callback must not crash the persistence flow; the
-    # plan is still returned with the review downgrade applied beforehand.
+    # plan is still returned with the clean-Stage-2 release decision intact.
     def boom(*_args, **_kwargs):
         raise RuntimeError("milestone sink exploded")
 
@@ -174,7 +205,7 @@ def test_gate_never_raises_when_emit_milestone_throws():
         job_id="job-1",
         emit_milestone=boom,
     )
-    assert result["status"] == "review_required"
+    assert result["status"] == "ready"
 
 
 def test_gate_never_raises_on_garbage_final_result():
@@ -256,8 +287,9 @@ def test_contract_rescuable_false_for_malformed_reports():
     ) is False
 
 
-def test_contract_unknown_code_with_card_routes_to_review():
-    # End-to-end: an unknown error-level finding is NOT rescued even with a card.
+def test_contract_unknown_code_with_clean_stage2_stays_ready():
+    # End-to-end: contract findings alone do not route clean Stage 2 output into
+    # admin review. The finding is recorded for visibility.
     emit, events = _emit_collector()
 
     def _fake_validate(_final_result, *, fight_date=None):
@@ -285,5 +317,6 @@ def test_contract_unknown_code_with_card_routes_to_review():
     finally:
         persistence_module.validate_plan_contract = original
 
-    assert result["status"] == "review_required"
-    assert any(code == "plan_contract_review_required" for code, _ in events)
+    assert result["status"] == "ready"
+    assert any(code == "plan_contract_clean_stage2_release" for code, _ in events)
+    assert not any(code == "plan_contract_review_required" for code, _ in events)

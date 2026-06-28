@@ -2462,6 +2462,35 @@ def test_generate_plan_returns_review_required_when_stage2_needs_manual_review()
     assert saved["stage2_status"] == "stage2_failed"
 
 
+def test_generate_plan_keeps_clean_stage2_ready_when_contract_flags_calendar():
+    client, store, _ = _build_client(
+        FakeStage2Automator(
+            result=finalized_result(
+                status="ready",
+                plan_text="# Clean Stage 2 Output",
+                final_plan_text="# Clean Stage 2 Output",
+                stage2_status="stage2_pass",
+                stage2_validator_report={"errors": [], "warnings": [], "blocking_warnings": []},
+                planning_brief={
+                    "fight_date": "2026-07-01",
+                    "weekly_role_map": {"weeks": [{"phase": "camp"}]},
+                },
+            )
+        )
+    )
+
+    _, job = _start_generation(client)
+
+    assert job["status"] == "completed"
+    saved = next(iter(store.plans.values()))
+    assert saved["status"] == "ready"
+    assert saved["plan_text"] == "# Clean Stage 2 Output"
+    assert saved["why_log"]["plan_contract_validation"]["has_errors"] is True
+    milestone_codes = {milestone["code"] for milestone in job["progress_milestones"]}
+    assert "plan_contract_clean_stage2_release" in milestone_codes
+    assert "plan_contract_review_required" not in milestone_codes
+
+
 def test_generation_fails_when_stage2_final_result_persistence_fails(monkeypatch: pytest.MonkeyPatch):
     stage2_result = finalized_result(
         status="review_required",
