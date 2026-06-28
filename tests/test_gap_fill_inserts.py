@@ -238,6 +238,29 @@ def test_active_cut_mild_stable_injury_can_choose_mobility_rehab():
     assert insert["role_key"] in {"mobility_rehab", "joint_prep"}
 
 
+def test_mild_stable_injury_d1_does_not_readd_physical_inserts():
+    allowed = _allowed_inserts(
+        _athlete(parsed_injuries=[{"area": "ankle", "severity": "mild", "trend": "stable"}]),
+        1,
+    )
+
+    assert not (allowed & PHYSICAL_INSERTS)
+
+
+def test_high_fatigue_mild_stable_injury_does_not_readd_physical_inserts():
+    allowed = _allowed_inserts(
+        _athlete(
+            fatigue="",
+            fatigue_level="",
+            readiness_flags=["high_fatigue"],
+            parsed_injuries=[{"area": "ankle", "severity": "mild", "trend": "stable"}],
+        ),
+        8,
+    )
+
+    assert not (allowed & PHYSICAL_INSERTS)
+
+
 def test_power_speed_low_risk_gap_chooses_neural_or_technical_support():
     insert = select_gap_fill_insert(
         _athlete(key_goals=["power"], fatigue="low", fatigue_level="low"),

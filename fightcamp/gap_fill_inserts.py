@@ -225,8 +225,7 @@ def _is_fight_sport(athlete_model: dict[str, Any]) -> bool:
             "fighter",
             "mma",
             "muay",
-            "kickboxing",
-            "kickboxer",
+            "kickbox",
             "grappling",
             "wrestling",
             "jiu",
@@ -306,19 +305,13 @@ def _allowed_inserts(
         return set()
 
     allowed = set(_ALL_INSERTS)
-
-    if insert_offset == 1:
-        allowed &= ZERO_COST_INSERTS | LOW_COST_RECOVERY_INSERTS
-
-    if _has_high_fatigue(athlete_model):
-        allowed &= ZERO_COST_INSERTS | LOW_COST_RECOVERY_INSERTS
+    injury_state = classify_injury_state(athlete_model)
 
     if _has_active_weight_cut(athlete_model):
         allowed -= {"walk_flush"}
-        if classify_injury_state(athlete_model) == "none":
+        if injury_state in {"none", "mild_stable"}:
             allowed -= {"technical_shadow_rhythm", "footwork_walkthrough", "movement_quality"}
 
-    injury_state = classify_injury_state(athlete_model)
     if injury_state == "moderate_plus":
         allowed &= ZERO_COST_INSERTS | LOW_COST_RECOVERY_INSERTS | {"mobility_rehab", "joint_prep"}
     elif injury_state == "mild_stable":
@@ -328,6 +321,9 @@ def _allowed_inserts(
         _has_mobility_need(athlete_model) or injury_state in {"mild_stable", "moderate_plus"}
     ):
         allowed.remove("mobility_rehab")
+
+    if insert_offset == 1 or _has_high_fatigue(athlete_model):
+        allowed &= ZERO_COST_INSERTS | LOW_COST_RECOVERY_INSERTS
 
     if on_hard_sparring_day:
         allowed -= PHYSICAL_INSERTS
@@ -447,7 +443,8 @@ def _record_insert_usage(ledger: dict[str, Any], role_key: str, offset: int | No
     category = _insert_category(role_key)
     ledger.setdefault("used_role_keys", set()).add(role_key)
     ledger.setdefault("used_categories", set()).add(category)
-    ledger.setdefault("category_counts", {})[category] = int(ledger.setdefault("category_counts", {}).get(category, 0)) + 1
+    category_counts = ledger.setdefault("category_counts", {})
+    category_counts[category] = int(category_counts.get(category, 0)) + 1
     if offset is not None:
         ledger.setdefault("role_key_offsets", {}).setdefault(role_key, []).append(offset)
 
@@ -577,6 +574,7 @@ def _select_role_key(
         role_key: index
         for index, role_key in enumerate(_time_band_preferences(insert_offset))
     }
+    all_inserts_index = {role_key: index for index, role_key in enumerate(sorted(_ALL_INSERTS))}
     return max(
         sorted(candidates),
         key=lambda role_key: (
@@ -588,7 +586,7 @@ def _select_role_key(
                 gap_span=gap_span,
             ),
             -preference_rank.get(role_key, 99),
-            -sorted(_ALL_INSERTS).index(role_key),
+            -all_inserts_index.get(role_key, 99),
         ),
     )
 
