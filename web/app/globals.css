@@ -1329,6 +1329,22 @@ select:focus-visible {
   grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
 }
 
+.admin-plan-cleanup-bar,
+.admin-plan-title-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.admin-plan-cleanup-bar {
+  justify-content: space-between;
+  flex-wrap: wrap;
+  padding: 10px;
+  border-radius: var(--radius-support);
+  border: 1px solid rgba(181, 18, 43, 0.18);
+  background: rgba(181, 18, 43, 0.08);
+}
+
 .admin-triage-card {
   padding: 14px;
   border-radius: var(--radius-support);

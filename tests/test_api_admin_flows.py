@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+import asyncio
 from datetime import datetime, timedelta, timezone
 
 from fastapi.testclient import TestClient
 
 from api.app import create_app
 from api.auth import AuthenticatedUser
+from api.generation.persistence import persist_plan_and_finalize
 from api.models import ManualStage2SubmissionRequest
 from support import (
     FakeAuthService,
@@ -2561,6 +2563,92 @@ def test_admin_permanent_delete_blocked_by_active_generation_job():
 
     assert response.status_code == 409
     assert store.get_plan(plan["id"]) is not None
+
+
+def test_admin_can_cancel_active_generation_job_to_unblock_plan_cleanup():
+    client, store, _ = _build_client()
+    plan = _seed_named_plan(store, name="Camp Plan")
+    job = store.create_or_get_generation_job(
+        athlete_id="athlete-1",
+        client_request_id="active-cancel-cleanup",
+        source="web_intake",
+        request_payload=_build_request().model_dump(mode="json"),
+        plan_id=plan["id"],
+        intake_id="intake_x",
+    )
+    store.update_generation_job(job["id"], status="running", started_at="2026-01-01T00:00:00+00:00")
+    client.app.state.active_generation_tasks.add(job["id"])
+
+    response = client.delete(
+        f"/api/admin/generation-jobs/{job['id']}",
+        headers={"Authorization": "Bearer admin-token"},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["status"] == "failed"
+    saved = store.get_generation_job(job["id"])
+    assert saved["status"] == "failed"
+    assert saved["error"] == "Generation cancelled by admin."
+    assert job["id"] not in client.app.state.active_generation_tasks
+    assert store.has_active_generation_job_for_plan(plan["id"]) is False
+
+
+def test_admin_cancel_generation_job_requires_admin_role():
+    client, store, _ = _build_client()
+    job = store.create_or_get_generation_job(
+        athlete_id="athlete-1",
+        client_request_id="active-cancel-denied",
+        source="web_intake",
+        request_payload=_build_request().model_dump(mode="json"),
+    )
+    store.update_generation_job(job["id"], status="running", started_at="2026-01-01T00:00:00+00:00")
+
+    response = client.delete(
+        f"/api/admin/generation-jobs/{job['id']}",
+        headers={"Authorization": "Bearer athlete-token"},
+    )
+
+    assert response.status_code == 403
+    assert store.get_generation_job(job["id"])["status"] == "running"
+
+
+def test_cancelled_generation_job_does_not_persist_plan_after_stage2_finishes():
+    _, store, _ = _build_client()
+    request = _build_request()
+    job = store.create_or_get_generation_job(
+        athlete_id="athlete-1",
+        client_request_id="cancel-before-persist",
+        source="web_intake",
+        request_payload=request.model_dump(mode="json"),
+    )
+    running_job = store.update_generation_job(job["id"], status="running", started_at="2026-01-01T00:00:00+00:00")
+    store.update_generation_job(job["id"], status="failed", error="Generation cancelled by admin.")
+    milestones: list[str] = []
+
+    async def direct_thread_call(fn, *args, **kwargs):
+        return fn(*args, **kwargs)
+
+    asyncio.run(
+        persist_plan_and_finalize(
+            job=running_job,
+            job_id=job["id"],
+            athlete_id="athlete-1",
+            plan_id=None,
+            intake_id=None,
+            job_source="web_intake",
+            resume_from_job_only=False,
+            admin_resume_plan_row=None,
+            final_result=finalized_result(),
+            request_body=request,
+            store=store,
+            emit_milestone=lambda code, *_args, **_kwargs: milestones.append(code),
+            to_thread_with_heartbeat=direct_thread_call,
+            t_start=0.0,
+        )
+    )
+
+    assert store.plans == {}
+    assert "generation_cancelled_before_plan_persist" in milestones
 
 
 def test_admin_permanent_delete_unknown_plan_returns_404():

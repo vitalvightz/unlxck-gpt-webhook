@@ -13,6 +13,7 @@ import { useAppSession } from "@/components/auth-provider";
 import {
   approveAndResumeGenerationFromJob,
   bulkPermanentlyDeleteArchivedPlans,
+  cancelAdminGenerationJob,
   getAdminAthleteGenerationJobs,
   generateAdminAthletePlanFromLatestIntake,
   getAdminAthlete,
@@ -236,19 +237,24 @@ function DiagnosticMetaItem({ label, value }: { label: string; value: string | n
 
 function GenerationDiagnosticCard({
   job,
+  cancellingJobId,
   retryingJobId,
   resumingJobId,
+  onCancel,
   onRetry,
   onApproveAndResume,
 }: {
   job: AdminGenerationJobDiagnostic;
+  cancellingJobId: string | null;
   retryingJobId: string | null;
   resumingJobId: string | null;
+  onCancel: (job: AdminGenerationJobDiagnostic) => void;
   onRetry: (jobId: string) => void;
   onApproveAndResume: (jobId: string) => void;
 }) {
   const summary = job.request_payload_summary ?? {};
   const showProfileRefreshWarning = hasProfileRefreshFailedWarning(job);
+  const canCancel = job.status === "queued" || job.status === "running";
 
   return (
     <article className="admin-diagnostic-card">
@@ -330,6 +336,16 @@ function GenerationDiagnosticCard({
             {retryingJobId === job.job_id ? "Retrying..." : "Retry job"}
           </button>
         ) : null}
+        {canCancel ? (
+          <button
+            type="button"
+            className="ghost-button danger-button"
+            onClick={() => onCancel(job)}
+            disabled={cancellingJobId !== null}
+          >
+            {cancellingJobId === job.job_id ? "Cancelling..." : "Cancel generation"}
+          </button>
+        ) : null}
         {job.requires_admin_resume && !job.plan_id ? (
           <button
             type="button"
@@ -360,6 +376,7 @@ export default function AdminAthletePage() {
   const [jobs, setJobs] = useState<AdminGenerationJobDiagnostic[]>([]);
   const [athletePlans, setAthletePlans] = useState<AdminPlanSummary[]>([]);
   const [retryingJobId, setRetryingJobId] = useState<string | null>(null);
+  const [cancellingJobId, setCancellingJobId] = useState<string | null>(null);
   const [nutritionLoadWarning, setNutritionLoadWarning] = useState<string | null>(null);
   const [jobsLoadWarning, setJobsLoadWarning] = useState<string | null>(null);
   const [plansLoadWarning, setPlansLoadWarning] = useState<string | null>(null);
@@ -500,6 +517,37 @@ export default function AdminAthletePage() {
       handleRetry();
     } finally {
       setRetryingJobId(null);
+    }
+  }
+
+  async function handleCancelGenerationJob(job: AdminGenerationJobDiagnostic) {
+    if (!session?.access_token || cancellingJobId) return;
+    const confirmed = window.confirm(
+      `Cancel generation for ${job.athlete_full_name || job.athlete_email || job.athlete_id || "this athlete"}?`,
+    );
+    if (!confirmed) return;
+    setCancellingJobId(job.job_id);
+    setError(null);
+    setMessage(null);
+    try {
+      await cancelAdminGenerationJob(session.access_token, job.job_id);
+      setJobs((current) =>
+        current.map((item) =>
+          item.job_id === job.job_id
+            ? {
+              ...item,
+              status: "failed",
+              error: "Generation cancelled by admin.",
+              is_stale: false,
+            }
+            : item,
+        ),
+      );
+      setMessage("Generation cancelled. Archived plan cleanup is now available.");
+    } catch (cancelError) {
+      setError(cancelError instanceof Error ? cancelError.message : "Unable to cancel generation.");
+    } finally {
+      setCancellingJobId(null);
     }
   }
 
@@ -684,8 +732,10 @@ export default function AdminAthletePage() {
                   <GenerationDiagnosticCard
                     key={job.job_id}
                     job={job}
+                    cancellingJobId={cancellingJobId}
                     retryingJobId={retryingJobId}
                     resumingJobId={resumingJobId}
+                    onCancel={(selectedJob) => void handleCancelGenerationJob(selectedJob)}
                     onRetry={(jobId) => void handleRetryJob(jobId)}
                     onApproveAndResume={(jobId) => void handleApproveAndResumeJob(jobId)}
                   />
