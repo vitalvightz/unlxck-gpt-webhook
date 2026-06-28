@@ -403,6 +403,23 @@ export function SessionlessDayCard({ day }: { day: StructuredDay }) {
   );
 }
 
+function LightTechnicalDayContext({ day }: { day: StructuredDay }) {
+  const { kind, title, tag } = classifySessionlessDay(day);
+  if (kind !== "light_combat") {
+    return null;
+  }
+
+  return (
+    <div className="cm-light-technical">
+      <div className="cm-light-technical-head">
+        {tag ? <span className="sp-tag sp-accent">{tag}</span> : null}
+        <p className="sp-today-headline">{title}</p>
+      </div>
+      <p className="sp-today-note">Light technical combat tag — no hard sparring here. Low-noise app work can stay on this day if prescribed.</p>
+    </div>
+  );
+}
+
 /** Short weekday name from an ISO date string ("2026-06-19" -> "Fri"), or null. */
 function weekdayLabel(date: string | null): string | null {
   if (!date) {
@@ -466,7 +483,9 @@ export function CampDayCard({
   const warning = cleanText(card?.primary_warning);
   const nutrition = cleanText(card?.nutrition_summary);
   const weightCut = cleanText(card?.weight_cut_warning);
-  const hasDayContext = Boolean(warning || nutrition || weightCut);
+  const sessionlessDay = classifySessionlessDay(day);
+  const lightTechnicalContext = sessionlessDay.kind === "light_combat";
+  const hasDayContext = Boolean(warning || nutrition || weightCut || lightTechnicalContext);
   const completion = dayCompletion(day);
   const sessionCount = sessions.length;
 
@@ -506,6 +525,7 @@ export function CampDayCard({
       <div className="sp-week-body">
         {sessions.length > 0 && hasDayContext ? (
           <div className="cm-day-context">
+            {lightTechnicalContext ? <LightTechnicalDayContext day={day} /> : null}
             {warning ? <p className="sp-warning">{warning}</p> : null}
             {nutrition ? <p className="sp-today-note">{nutrition}</p> : null}
             {weightCut ? <p className="sp-warning">{weightCut}</p> : null}
