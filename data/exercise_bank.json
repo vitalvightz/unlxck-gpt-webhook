@@ -3208,7 +3208,7 @@
     "name": "Sandbag Shouldering",
     "category": "combat",
     "phases": [
-      "SPP",
+      "SPP"
     ],
     "method": "power",
     "movement": "compound",
