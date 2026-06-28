@@ -11,12 +11,14 @@ from .stage2_policy import (
 )
 from .stage2_repair import build_stage2_repair_prompt
 from .stage2_validator import validate_stage2_output
+from .stage2_late_window_guard import late_window_exercise_warnings
 
 
 _STATUS_READY = "READY"
 _STATUS_PASS = "PASS"
 _STATUS_WARN = "WARN"
 _STATUS_FAIL = "FAIL"
+
 
 def _require_dict(value: Any, *, name: str) -> dict:
     if not isinstance(value, dict):
@@ -66,6 +68,26 @@ def _enrich_validator_report(validator_report: dict) -> dict:
         "blocking_warning_count": len(blocking_warnings),
         "review_flag_count": len(review_flags),
         "is_publishable": not validator_report.get("errors") and not blocking_warnings,
+    }
+
+
+def _validator_report_with_late_window_guard(*, planning_brief: dict, final_plan_text: str) -> dict:
+    validator_report = validate_stage2_output(
+        planning_brief=planning_brief,
+        final_plan_text=final_plan_text,
+    )
+    guard_warnings = late_window_exercise_warnings(
+        planning_brief=planning_brief,
+        final_plan_text=final_plan_text,
+    )
+    if not guard_warnings:
+        return validator_report
+    return {
+        **validator_report,
+        "warnings": [
+            *list(validator_report.get("warnings", []) or []),
+            *guard_warnings,
+        ],
     }
 
 
@@ -211,7 +233,7 @@ def build_stage2_package(*, stage1_result: dict) -> dict:
 
 def review_stage2_output(*, planning_brief: dict, final_plan_text: str) -> dict:
     planning_brief = _require_dict(planning_brief, name="planning_brief")
-    validator_report = _enrich_validator_report(validate_stage2_output(
+    validator_report = _enrich_validator_report(_validator_report_with_late_window_guard(
         planning_brief=planning_brief,
         final_plan_text=final_plan_text,
     ))

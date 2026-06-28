@@ -149,6 +149,7 @@ GOAL_TAG_MAP = {
     "strength": [
         "posterior_chain", "quad_dominant", "upper_body", "core", "pull", "hamstring",
         "hip_dominant", "eccentric", "deadlift", "compound", "manual_resistance", "isometric",
+        "late_strength_touch", "maximal_strength_maintenance", "low_eccentric", "cns_freshness",
     ],
     "maximal_strength_maintenance": [
         "maximal_strength_maintenance",
@@ -206,9 +207,11 @@ GOAL_TAG_MAP["reactive"] = list(GOAL_TAG_MAP["speed"])
 
 WEAKNESS_TAG_MAP = {
     "core stability": ["core", "anti_rotation"],
+    "cns_freshness": ["cns_freshness", "parasympathetic"],
     "cns fatigue": ["cns_freshness", "parasympathetic"],
     "cns_fatigue": ["cns_freshness", "parasympathetic"],
     "speed / reaction": ["speed", "reaction", "reactive", "coordination"],
+    "lateral": ["lateral", "lateral_movement", "balance", "movement_quality"],
     "lateral movement": ["lateral", "lateral_movement", "balance", "movement_quality"],
     "conditioning": ["aerobic", "glycolytic", "work_capacity"],
     "gas_tank": ["aerobic", "glycolytic", "conditioning", "work_capacity"],
@@ -238,13 +241,17 @@ WEAKNESS_TAG_MAP = {
     "shoulders": ["shoulders", "upper_body"],
     "shoulder": ["shoulders", "upper_body"],
     "hip mobility": ["hip_dominant", "mobility"],
+    "grip": ["grip", "pull"],
     "grip strength": ["grip", "pull"],
     "grip_strength": ["grip", "pull"],
+    "posterior_chain": ["posterior_chain", "hip_dominant"],
     "posterior chain": ["posterior_chain", "hip_dominant"],
+    "quad_dominant": ["quad_dominant", "eccentric"],
     "knees": ["quad_dominant", "eccentric"],
     "coordination / proprioception": ["coordination"],
     "coordination/proprioception": ["coordination"],
     "coordination_proprioception": ["coordination", "balance"],
+    "adductors": ["adductors", "balance", "lateral_power"],
     "adductor groin": ["adductors", "balance", "lateral_power"],
     "adductor_groin": ["adductors", "balance", "lateral_power"],
 }
