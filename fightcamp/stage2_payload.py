@@ -3142,15 +3142,38 @@ def build_planning_brief(
         )
         weekly_role_map = apply_fight_day_override_to_weekly_role_map(weekly_role_map, athlete_model)
         weekly_role_map = stamp_weekly_role_map_labels(weekly_role_map)
-        session_sequence = apply_gap_fill_inserts(
-            _build_late_fight_session_sequence(days_until_fight, athlete_model),
+                base_late_fight_plan_spec = _build_late_fight_plan_spec(
+            days_until_fight,
             athlete_model,
         )
+
+        session_sequence = apply_gap_fill_inserts(
+            [
+                role
+                for role in (
+                    base_late_fight_plan_spec.get("visible_session_sequence")
+                    or _build_late_fight_session_sequence(days_until_fight, athlete_model)
+                )
+                if _is_app_owned_visible_role(role.get("role_key"))
+            ],
+            athlete_model,
+        )
+
         late_fight_plan_spec = _with_late_fight_allowed_exercises(
-            spec=_build_late_fight_plan_spec(days_until_fight, athlete_model),
+            spec={
+                **base_late_fight_plan_spec,
+                "visible_session_sequence": session_sequence,
+                "visible_session_cap": len(session_sequence),
+                "visible_session_roles": [
+                    role.get("role_key")
+                    for role in session_sequence
+                    if isinstance(role, dict)
+                ],
+            },
             candidate_pools=candidate_pools,
             days_until_fight=days_until_fight,
         )
+
         return {
             "schema_version": "planning_brief.v1",
             "generator_mode": "deterministic_late_fight_planner_plus_ai_finalizer",
