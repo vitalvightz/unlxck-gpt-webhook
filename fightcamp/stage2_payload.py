@@ -3012,13 +3012,37 @@ def _apply_boxing_crowded_week_post_processing(
 
         policy_state = _boxing_crowded_week_policy_state(week_entry, athlete_model)
         crowded_week_active = bool(policy_state["active"])
-        if crowded_week_active:
+        existing_compression = week_entry.get("intentional_compression")
+        already_compressed = (
+            isinstance(existing_compression, dict)
+            and existing_compression.get("policy") == "boxing_crowded_week"
+        )
+
+        # stage2_role_map now owns boxing crowded-week compression, hard-sparring
+        # locks, unused-day upgrades, and recovery-flush preservation. Do not
+        # compress the same week twice here, or low-load support roles such as
+        # converted_recovery_flush_day can be dropped after the role map already
+        # kept them correctly. Keep this pass as governance decoration only when
+        # the role map has already compressed the week.
+        if crowded_week_active and not already_compressed:
             session_roles, suppressed_roles = _apply_boxing_crowded_week_compression(
                 week_entry,
                 session_roles,
                 suppressed_roles,
                 athlete_model,
             )
+
+            # Compression creates intentionally_unused_days. Re-run the role-map
+            # unused-day upgrade so active recovery/cut pressure can become a
+            # concrete converted_recovery_flush_day instead of staying as an
+            # invisible unused-day note.
+            session_roles = stage2_role_map_module._upgrade_unused_days_to_low_load_support(
+                week_entry,
+                session_roles,
+                athlete_model,
+                hard_sparring_plan=week_entry.get("hard_sparring_plan"),
+            )
+
             week_entry["session_roles"] = session_roles
             week_entry["suppressed_roles"] = suppressed_roles
 
@@ -3142,7 +3166,7 @@ def build_planning_brief(
         )
         weekly_role_map = apply_fight_day_override_to_weekly_role_map(weekly_role_map, athlete_model)
         weekly_role_map = stamp_weekly_role_map_labels(weekly_role_map)
-                base_late_fight_plan_spec = _build_late_fight_plan_spec(
+        base_late_fight_plan_spec = _build_late_fight_plan_spec(
             days_until_fight,
             athlete_model,
         )
@@ -3164,6 +3188,7 @@ def build_planning_brief(
                 **base_late_fight_plan_spec,
                 "visible_session_sequence": session_sequence,
                 "visible_session_cap": len(session_sequence),
+                "max_active_roles": len(session_sequence),
                 "visible_session_roles": [
                     role.get("role_key")
                     for role in session_sequence
@@ -3835,7 +3860,7 @@ def build_stage2_payload(
             "rewrite_guidance": rewrite_guidance,
         }
 
-        if _uses_late_fight_stage2_payload(days_until_fight):
+    if _uses_late_fight_stage2_payload(days_until_fight):
         days_out_payload = _days_out_payload_block(days_until_fight, athlete_model)
 
         base_late_fight_plan_spec = _build_late_fight_plan_spec(
@@ -3861,6 +3886,7 @@ def build_stage2_payload(
                 **base_late_fight_plan_spec,
                 "visible_session_sequence": visible_session_sequence,
                 "visible_session_cap": len(visible_session_sequence),
+                "max_active_roles": len(visible_session_sequence),
                 "visible_session_roles": [
                     role.get("role_key")
                     for role in visible_session_sequence
