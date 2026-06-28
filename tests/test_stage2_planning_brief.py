@@ -18,7 +18,9 @@ from fightcamp.stage2_payload import (
 from fightcamp.stage2_payload_late_fight import (
     _append_active_late_fulfilment_roles,
     _handle_roles_on_coach_owned_days,
+    _has_real_strength_maintenance_fulfilment,
 )
+from fightcamp.fulfilment_contract import apply_goal_weakness_fulfilment_contract
 from fightcamp.nutrition import generate_nutrition_block
 from fightcamp.recovery import generate_recovery_block
 from fightcamp.training_context import TrainingContext
@@ -3505,8 +3507,13 @@ def test_late_fight_goal_weakness_fulfilment_contract_preserves_boxing_profile()
         and 10 <= role["countdown_offset"] <= 21
     ]
     assert any(
-        role.get("real_strength_fulfilment")
-        and any("Trap Bar" in name or "Sled Push" in name for name in role.get("preferred_exercise_names", []))
+        role.get("strength_fulfilment_type") == "real_strength_maintenance"
+        and role.get("must_render") is True
+        and role.get("volume_class") == "low"
+        and role.get("soreness_risk") == "low"
+        and role.get("equipment_used")
+        and set(role.get("equipment_used", []))
+        & {"barbell", "trap_bar", "sled", "dumbbells", "kettlebells", "cable", "machine"}
         for role in strength_roles
     )
 
@@ -3552,6 +3559,7 @@ def _late_fight_fulfilment_test_brief(
     weak_area: str = "",
     days_until_fight: int = 17,
     support_work_days: list[str] | None = None,
+    equipment: list[str] | None = None,
 ) -> dict:
     athlete_model = {
         "sport": "boxing",
@@ -3569,7 +3577,7 @@ def _late_fight_fulfilment_test_brief(
         "weaknesses": [weak_area] if weak_area else [],
         "weak_areas": [weak_area] if weak_area else [],
         "primary_weak_area": weak_area,
-        "equipment": ["barbell", "trap_bar", "sled", "med_ball", "dumbbells", "kettlebells", "bands"],
+        "equipment": equipment or ["barbell", "trap_bar", "sled", "med_ball", "dumbbells", "kettlebells", "bands"],
         "training_days": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
         "training_frequency": 5,
         "hard_sparring_days": [],
@@ -3730,6 +3738,7 @@ def test_late_fight_strength_goal_creates_real_maintenance_when_no_strength_surv
         "readiness_flags": [],
         "weight_cut_risk": False,
         "weight_cut_pct": 0,
+        "equipment": ["dumbbells", "bands"],
         "fight_weekday": "Friday",
         "plan_creation_weekday": "Friday",
     }
@@ -3748,9 +3757,206 @@ def test_late_fight_strength_goal_creates_real_maintenance_when_no_strength_surv
     role = strength_roles[0]
     assert role["role_key"] == "strength_touch_day"
     assert role["real_strength_fulfilment"] is True
+    assert role["must_render"] is True
+    assert role["fulfilment_contract_required"] is True
+    assert role["strength_fulfilment_type"] == "real_strength_maintenance"
+    assert set(role["equipment_used"]) & {"dumbbells", "bands"}
+    assert role["equipment_used"] == ["dumbbells"]
+    assert role["load_type"] == "dumbbell"
+    assert role["movement_bucket"] in {"hinge", "squat", "split_squat", "upper_push", "upper_pull", "carry", "sled_push_drag", "heavy_isometric_strength_hold", "anti_rotation_trunk_strength"}
+    assert role["volume_class"] == "low"
+    assert role["soreness_risk"] == "low"
+    assert role["novelty"] in {"familiar", "not_new"}
     assert 10 <= role["countdown_offset"] <= 21
-    assert any("Trap Bar" in name or "Sled Push" in name for name in role["preferred_exercise_names"])
+    assert _has_real_strength_maintenance_fulfilment(weeks, athlete_model)
     assert role.get("governance", {}).get("low_risk_only") is True
+
+
+def test_late_fight_strength_goal_does_not_count_soft_strengthish_work():
+    weeks = [
+        {
+            "week_index": 1,
+            "stage_key": "d21_to_d10",
+            "countdown_span": {"start_day": 21, "end_day": 10},
+            "session_roles": [
+                {
+                    "category": "strength",
+                    "role_key": "small_strength_touch_day",
+                    "athlete_facing_label": "Band primer",
+                    "countdown_label": "D-18",
+                    "countdown_offset": 18,
+                    "fulfilment_categories": ["strength"],
+                    "equipment_used": ["bands"],
+                    "load_type": "loaded",
+                    "volume_class": "low",
+                    "soreness_risk": "low",
+                    "novelty": "familiar",
+                },
+                {
+                    "category": "recovery",
+                    "role_key": "fight_week_freshness_day",
+                    "athlete_facing_label": "Mobility reset",
+                    "countdown_label": "D-17",
+                    "countdown_offset": 17,
+                    "fulfilment_categories": ["strength", "mobility"],
+                    "support_kind": "mobility",
+                },
+                {
+                    "category": "technical",
+                    "role_key": "technical_touch_day",
+                    "athlete_facing_label": "Shadowboxing rhythm",
+                    "countdown_label": "D-16",
+                    "countdown_offset": 16,
+                    "fulfilment_categories": ["strength", "skill_striking"],
+                    "preferred_tags": ["shadowboxing", "technical"],
+                },
+                {
+                    "category": "conditioning",
+                    "role_key": "neural_primer_day",
+                    "athlete_facing_label": "Generic neural primer",
+                    "countdown_label": "D-15",
+                    "countdown_offset": 15,
+                    "fulfilment_categories": ["strength"],
+                    "preferred_tags": ["neural_primer", "freshness"],
+                },
+            ],
+            "suppressed_roles": [],
+        }
+    ]
+    athlete_model = {"equipment": ["dumbbells", "bands"]}
+
+    assert _has_real_strength_maintenance_fulfilment(weeks, athlete_model) is False
+
+
+def test_late_fight_strength_goal_with_bands_only_downgrades_with_reason():
+    brief = _late_fight_fulfilment_test_brief(
+        primary_goal="Strength",
+        days_until_fight=21,
+        equipment=["bands", "bodyweight"],
+    )
+    weeks = brief["weekly_role_map"]["weeks"]
+
+    assert _has_real_strength_maintenance_fulfilment(
+        weeks,
+        {"equipment": ["bands", "bodyweight"]},
+    ) is False
+    strength_entry = _fulfilment_entry(brief, "strength")
+    assert strength_entry["fulfilment_type"] == "suppressed"
+    assert "equipment" in strength_entry["suppression_reason"].lower()
+
+
+def test_late_fight_strength_contract_filters_band_equipment_aliases():
+    weekly_role_map = {
+        "weeks": [
+            {
+                "week_index": 1,
+                "stage_key": "d21_to_d10",
+                "session_roles": [
+                    {
+                        "category": "strength",
+                        "role_key": "strength_touch_day",
+                        "athlete_facing_label": "Band strength primer",
+                        "countdown_label": "D-18",
+                        "countdown_offset": 18,
+                        "fulfilment_categories": ["strength"],
+                        "strength_fulfilment_type": "real_strength_maintenance",
+                        "must_render": True,
+                        "equipment_used": ["mini_band"],
+                        "load_type": "loaded",
+                        "movement_bucket": "carry",
+                        "volume_class": "low",
+                        "soreness_risk": "low",
+                        "novelty": "familiar",
+                    }
+                ],
+                "suppressed_roles": [],
+            }
+        ]
+    }
+
+    result = apply_goal_weakness_fulfilment_contract(
+        weekly_role_map,
+        {"primary_goal": "Strength", "days_until_fight": 21, "equipment": ["mini_band"]},
+    )
+
+    strength_entry = next(
+        entry for entry in result["fulfilment_contract"] if entry.get("category") == "strength"
+    )
+    assert strength_entry["fulfilment_type"] == "suppressed"
+    assert strength_entry["rendered_session"] is None
+
+
+def test_late_fight_strength_append_handles_non_dict_weeks_and_null_role_lists():
+    weeks = [
+        "bad week",
+        {
+            "week_index": 1,
+            "stage_key": "d21_to_d10",
+            "countdown_span": {"start_day": 21, "end_day": 10},
+            "session_roles": None,
+            "suppressed_roles": None,
+        },
+    ]
+    athlete_model = {
+        "days_until_fight": 21,
+        "primary_goal": "Strength",
+        "key_goals": ["Strength"],
+        "training_days": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
+        "training_frequency": 5,
+        "fatigue": "low",
+        "injuries": [],
+        "readiness_flags": [],
+        "weight_cut_risk": False,
+        "weight_cut_pct": 0,
+        "equipment": ["bands"],
+        "fight_weekday": "Friday",
+        "plan_creation_weekday": "Friday",
+    }
+
+    _append_active_late_fulfilment_roles(
+        weeks,
+        days_until_fight=21,
+        athlete_model=athlete_model,
+    )
+
+    assert isinstance(weeks[1]["suppressed_roles"], list)
+    assert weeks[1]["suppressed_roles"][0]["strength_fulfilment_type"] == "downgraded_equipment_limited"
+
+
+def test_late_fight_strength_append_handles_null_session_roles_when_creating_touch():
+    weeks = [
+        {
+            "week_index": 1,
+            "stage_key": "d21_to_d10",
+            "countdown_span": {"start_day": 21, "end_day": 10},
+            "session_roles": None,
+            "suppressed_roles": [],
+        }
+    ]
+    athlete_model = {
+        "days_until_fight": 21,
+        "primary_goal": "Strength",
+        "key_goals": ["Strength"],
+        "training_days": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
+        "training_frequency": 5,
+        "fatigue": "low",
+        "injuries": [],
+        "readiness_flags": [],
+        "weight_cut_risk": False,
+        "weight_cut_pct": 0,
+        "equipment": ["dumbbells"],
+        "fight_weekday": "Friday",
+        "plan_creation_weekday": "Friday",
+    }
+
+    _append_active_late_fulfilment_roles(
+        weeks,
+        days_until_fight=21,
+        athlete_model=athlete_model,
+    )
+
+    assert isinstance(weeks[0]["session_roles"], list)
+    assert weeks[0]["session_roles"][0]["strength_fulfilment_type"] == "real_strength_maintenance"
 
 
 def test_late_fight_primary_power_creates_active_fulfilment_role():

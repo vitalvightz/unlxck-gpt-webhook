@@ -61,6 +61,32 @@ _CATEGORY_ALIASES = {
     },
 }
 
+_REAL_STRENGTH_LOAD_TYPES = {
+    "loaded",
+    "sled",
+    "carry",
+    "cable",
+    "heavy_isometric",
+    "machine",
+    "barbell",
+    "dumbbell",
+    "kettlebell",
+}
+
+_REAL_STRENGTH_MOVEMENT_BUCKETS = {
+    "hinge",
+    "squat",
+    "split_squat",
+    "upper_push",
+    "upper_pull",
+    "carry",
+    "sled_push_drag",
+    "heavy_isometric_strength_hold",
+    "anti_rotation_trunk_strength",
+}
+
+_NON_STRENGTH_FULFILMENT_EQUIPMENT = {"band", "bands", "bodyweight", "body_weight", "none", "no_equipment"}
+
 
 def normalize_fulfilment_token(value: Any) -> str:
     return (
@@ -73,11 +99,77 @@ def normalize_fulfilment_token(value: Any) -> str:
     )
 
 
+def _canonical_equipment_token(value: Any) -> str:
+    token = normalize_fulfilment_token(value)
+    aliases = {
+        "trap_bar": "trap_bar",
+        "trapbar": "trap_bar",
+        "barbell": "barbell",
+        "bb": "barbell",
+        "sled": "sled",
+        "push_sled": "sled",
+        "dumbbell": "dumbbells",
+        "dumbbells": "dumbbells",
+        "db": "dumbbells",
+        "dbs": "dumbbells",
+        "kettlebell": "kettlebells",
+        "kettlebells": "kettlebells",
+        "kb": "kettlebells",
+        "kbs": "kettlebells",
+        "cable": "cable",
+        "cables": "cable",
+        "cable_machine": "cable",
+        "machine": "machine",
+        "machines": "machine",
+        "resistance_band": "bands",
+        "resistance_bands": "bands",
+        "mini_band": "bands",
+        "bands": "bands",
+        "band": "bands",
+        "bodyweight": "bodyweight",
+        "body_weight": "bodyweight",
+    }
+    return aliases.get(token, token)
+
+
 def _category_for_token(token: str) -> str:
     for category, aliases in _CATEGORY_ALIASES.items():
         if token in aliases:
             return category
     return token
+
+
+def _is_late_fight_strength_contract_role(role: dict[str, Any]) -> bool:
+    offset = _coerce_optional_int(role.get("countdown_offset"))
+    governance = role.get("governance") if isinstance(role.get("governance"), dict) else {}
+    return (
+        role.get("fulfilment_contract_required") is True
+        or bool(governance.get("late_fight_payload"))
+        or (offset is not None and offset <= 21)
+    )
+
+
+def _is_real_strength_contract_role(role: dict[str, Any]) -> bool:
+    equipment = {_canonical_equipment_token(value) for value in clean_list(role.get("equipment_used", []))}
+    novelty = normalize_fulfilment_token(role.get("novelty"))
+    return (
+        role.get("strength_fulfilment_type") == "real_strength_maintenance"
+        and role.get("must_render") is True
+        and bool(equipment)
+        and not equipment <= _NON_STRENGTH_FULFILMENT_EQUIPMENT
+        and normalize_fulfilment_token(role.get("load_type")) in _REAL_STRENGTH_LOAD_TYPES
+        and normalize_fulfilment_token(role.get("movement_bucket")) in _REAL_STRENGTH_MOVEMENT_BUCKETS
+        and normalize_fulfilment_token(role.get("volume_class")) == "low"
+        and normalize_fulfilment_token(role.get("soreness_risk")) == "low"
+        and (novelty in {"", "familiar", "not_new"} or role.get("not_new") is True)
+    )
+
+
+def _is_strength_contract_downgrade(role: dict[str, Any]) -> bool:
+    return (
+        role.get("strength_fulfilment_type") == "downgraded_equipment_limited"
+        and bool(clean_list(role.get("reasons", [])))
+    )
 
 
 def _requested_obligations(athlete_model: dict[str, Any]) -> list[dict[str, Any]]:
@@ -127,13 +219,26 @@ def _role_fulfilment_categories(role: dict[str, Any]) -> list[str]:
     support_kind = normalize_fulfilment_token(role.get("support_kind"))
     tags = {normalize_fulfilment_token(tag) for tag in clean_list(role.get("preferred_tags", []))}
     names = " ".join(clean_list(role.get("preferred_exercise_names", []))).lower()
+    explicit = clean_list(role.get("fulfilment_categories", []))
+    explicit_categories = [normalize_fulfilment_token(value) for value in explicit]
+    strength_like = (
+        (category == "strength" and role_key not in {"neural_primer_day", "small_strength_touch_day"})
+        or role_key
+        in {
+            "primary_strength_day",
+            "structural_strength_day",
+            "neural_plus_strength_day",
+            "strength_touch_day",
+        }
+        or "strength" in explicit_categories
+    )
+    late_fight_strength_contract = strength_like and _is_late_fight_strength_contract_role(role)
 
-    if (category == "strength" and role_key not in {"neural_primer_day", "small_strength_touch_day"}) or role_key in {
-        "primary_strength_day",
-        "structural_strength_day",
-        "neural_plus_strength_day",
-        "strength_touch_day",
-    }:
+    if strength_like and (
+        not late_fight_strength_contract
+        or _is_real_strength_contract_role(role)
+        or _is_strength_contract_downgrade(role)
+    ):
         categories.append("strength")
     if role_key in {"neural_primer_day", "alactic_sharpness_day", "alactic_speed_day"} or system == "alactic":
         categories.extend(["speed_reaction", "power"])
@@ -156,8 +261,14 @@ def _role_fulfilment_categories(role: dict[str, Any]) -> list[str]:
     if role_key in {"technical_touch_day", "light_combat_day"}:
         categories.append("skill_striking")
 
-    explicit = clean_list(role.get("fulfilment_categories", []))
-    categories.extend(normalize_fulfilment_token(value) for value in explicit)
+    categories.extend(
+        value
+        for value in explicit_categories
+        if value != "strength"
+        or not late_fight_strength_contract
+        or _is_real_strength_contract_role(role)
+        or _is_strength_contract_downgrade(role)
+    )
     return dedupe_preserve_order([value for value in categories if value])
 
 
