@@ -28,8 +28,8 @@
           "reason_codes": []
         },
         {
-          "name": "Explosive Boxing Burst Intervals",
-          "score": 1.95,
+          "name": "Reactive Shuffle Repeats",
+          "score": 2.7,
           "reason_codes": []
         }
       ],
@@ -97,10 +97,11 @@
         },
         {
           "name": "Staggered-Stance Medicine-Ball Punch Throw",
-          "score": 7.005,
+          "score": 7.205,
           "reason_codes": [
             "priority_secondary_goal_match:skill_refinement",
             "late_strength_penalty_outside_window",
+            "late_strength_boost_cut_survivable",
             "late_strength_boost_explicit_late_touch",
             "late_strength_boost_low_eccentric",
             "late_strength_boost_low_impact",
@@ -128,6 +129,18 @@
           ]
         },
         {
+          "name": "Trap Bar Deadlift",
+          "score": 4.22,
+          "reason_codes": [
+            "priority_secondary_goal_match:maximal_strength_maintenance",
+            "late_strength_boost_window_fit",
+            "late_strength_boost_cut_survivable",
+            "late_strength_boost_explicit_late_touch",
+            "late_strength_boost_low_impact",
+            "late_strength_penalty_compound_eccentric"
+          ]
+        },
+        {
           "name": "Med Ball Scoop Toss",
           "score": 3.355,
           "reason_codes": [
@@ -136,6 +149,53 @@
             "late_strength_boost_low_impact",
             "late_strength_boost_low_soreness",
             "late_strength_boost_neural_primer"
+          ]
+        },
+        {
+          "name": "Cluster Set Trap Bar Deadlift",
+          "score": 2.3875,
+          "reason_codes": [
+            "late_strength_boost_cut_survivable",
+            "late_strength_boost_low_impact",
+            "late_strength_boost_neural_primer",
+            "late_strength_penalty_loaded_lower_fatigue"
+          ]
+        },
+        {
+          "name": "Pivot-and-Strike (Rotation Focus)",
+          "score": 2.3,
+          "reason_codes": [
+            "late_strength_boost_cut_survivable",
+            "late_strength_boost_low_impact",
+            "late_strength_boost_low_soreness"
+          ]
+        },
+        {
+          "name": "Lateral Bound-to-Slip",
+          "score": 2.2,
+          "reason_codes": [
+            "late_strength_boost_cut_survivable",
+            "late_strength_boost_low_soreness",
+            "late_strength_penalty_landing_unilateral_power"
+          ]
+        },
+        {
+          "name": "Burpee-to-Punch (Tabata)",
+          "score": 2.195,
+          "reason_codes": [
+            "late_strength_boost_cut_survivable",
+            "late_strength_boost_low_eccentric",
+            "late_strength_boost_low_impact",
+            "late_strength_penalty_conditioning_impostor"
+          ]
+        },
+        {
+          "name": "Jump-in-Place (Max Frequency)",
+          "score": 2.15,
+          "reason_codes": [
+            "late_strength_boost_cut_survivable",
+            "late_strength_boost_low_eccentric",
+            "late_strength_boost_low_soreness"
           ]
         }
       ],
@@ -168,22 +228,22 @@
           ]
         },
         {
-          "name": "Band-Resisted Straight Punch Release",
-          "score": 1.8825,
-          "reason_codes": [
-            "taper_plyometric_guarantee",
-            "late_conditioning_boost_alactic_sharpness",
-            "late_conditioning_boost_structured_freshness",
-            "late_conditioning_boost_window_fit"
-          ]
-        },
-        {
           "name": "Bridge Tempo Touch: 2-3 x 90 sec Technical Tempo",
           "score": 0.9875,
           "reason_codes": [
             "bridge_glycolytic_touch_fallback",
             "late_conditioning_boost_freshness",
             "late_conditioning_penalty_fight_pace_leak",
+            "late_conditioning_boost_structured_freshness",
+            "late_conditioning_boost_window_fit"
+          ]
+        },
+        {
+          "name": "Band-Resisted Straight Punch Release",
+          "score": 1.8825,
+          "reason_codes": [
+            "taper_plyometric_guarantee",
+            "late_conditioning_boost_alactic_sharpness",
             "late_conditioning_boost_structured_freshness",
             "late_conditioning_boost_window_fit"
           ]
@@ -234,7 +294,7 @@
         },
         {
           "name": "Reactive Shuffle Repeats",
-          "score": 1.95,
+          "score": 2.7,
           "reason_codes": [
             "late_conditioning_block_window_mismatch"
           ]
@@ -290,10 +350,11 @@
       "winners": [
         {
           "name": "Staggered-Stance Medicine-Ball Punch Throw",
-          "score": 8.8,
+          "score": 9.0,
           "reason_codes": [
             "priority_secondary_goal_match:skill_refinement",
             "late_strength_boost_window_fit",
+            "late_strength_boost_cut_survivable",
             "late_strength_boost_explicit_late_touch",
             "late_strength_boost_low_eccentric",
             "late_strength_boost_low_impact",
@@ -385,6 +446,60 @@
             "late_strength_boost_low_soreness",
             "late_strength_boost_neural_primer"
           ]
+        },
+        {
+          "name": "Pivot-and-Strike (Rotation Focus)",
+          "score": 2.3,
+          "reason_codes": [
+            "late_strength_boost_cut_survivable",
+            "late_strength_boost_low_impact",
+            "late_strength_boost_low_soreness"
+          ]
+        },
+        {
+          "name": "Cluster Set Trap Bar Deadlift",
+          "score": 2.2,
+          "reason_codes": [
+            "late_strength_boost_cut_survivable",
+            "late_strength_boost_low_impact",
+            "late_strength_boost_neural_primer",
+            "late_strength_penalty_loaded_lower_fatigue"
+          ]
+        },
+        {
+          "name": "Jump-in-Place (Max Frequency)",
+          "score": 2.15,
+          "reason_codes": [
+            "late_strength_boost_cut_survivable",
+            "late_strength_boost_low_eccentric",
+            "late_strength_boost_low_soreness"
+          ]
+        },
+        {
+          "name": "Lateral Bound-to-Slip",
+          "score": 1.95,
+          "reason_codes": [
+            "late_strength_boost_cut_survivable",
+            "late_strength_boost_low_soreness",
+            "late_strength_penalty_landing_unilateral_power"
+          ]
+        },
+        {
+          "name": "Cossack Squat (Dynamic)",
+          "score": 1.9,
+          "reason_codes": [
+            "late_strength_boost_cut_survivable",
+            "late_strength_boost_low_impact",
+            "late_strength_boost_low_soreness"
+          ]
+        },
+        {
+          "name": "Drop-Step Lateral Bound",
+          "score": 1.85,
+          "reason_codes": [
+            "late_strength_boost_cut_survivable",
+            "late_strength_boost_low_soreness"
+          ]
         }
       ],
       "blocked": [
@@ -424,6 +539,13 @@
           ]
         },
         {
+          "name": "Trap Bar Deadlift",
+          "score": 2.85,
+          "reason_codes": [
+            "late_strength_block_familiarity_required_late"
+          ]
+        },
+        {
           "name": "Trap Bar Jump (Light)",
           "score": 2.05,
           "reason_codes": [
@@ -451,8 +573,8 @@
           ]
         },
         {
-          "name": "Explosive Boxing Burst Intervals",
-          "score": 3.885,
+          "name": "Reactive Shuffle Repeats",
+          "score": 4.635,
           "reason_codes": [
             "late_conditioning_boost_alactic_sharpness",
             "late_conditioning_boost_structured_freshness",
@@ -642,6 +764,15 @@
             "late_strength_block_familiarity_required_late",
             "late_strength_block_window_mismatch"
           ]
+        },
+        {
+          "name": "Trap Bar Deadlift",
+          "score": 1.6,
+          "reason_codes": [
+            "late_strength_block_eccentric_lower",
+            "late_strength_block_familiarity_required_late",
+            "late_strength_block_window_mismatch"
+          ]
         }
       ]
     },
@@ -657,8 +788,8 @@
           ]
         },
         {
-          "name": "Explosive Boxing Burst Intervals",
-          "score": 3.9075,
+          "name": "Reactive Shuffle Repeats",
+          "score": 4.6575,
           "reason_codes": [
             "late_conditioning_boost_alactic_sharpness",
             "late_conditioning_boost_structured_freshness",
@@ -696,8 +827,22 @@
           ]
         },
         {
+          "name": "Check-Hook Pivot Out Shadow Drill",
+          "score": 4.1075,
+          "reason_codes": [
+            "late_taper_safe_whitelist"
+          ]
+        },
+        {
           "name": "Cooldown Flow (Striking + Mobility)",
           "score": 3.2575,
+          "reason_codes": [
+            "late_taper_safe_whitelist"
+          ]
+        },
+        {
+          "name": "Corner Escape L-Step",
+          "score": 4.1075,
           "reason_codes": [
             "late_taper_safe_whitelist"
           ]
@@ -724,8 +869,15 @@
           ]
         },
         {
+          "name": "Lateral Exit to Re-Enter",
+          "score": 4.1075,
+          "reason_codes": [
+            "late_taper_safe_whitelist"
+          ]
+        },
+        {
           "name": "Mini Hurdle Quick Steps",
-          "score": 2.15,
+          "score": 2.9,
           "reason_codes": [
             "late_taper_safe_whitelist"
           ]
@@ -745,8 +897,22 @@
           ]
         },
         {
+          "name": "Pressure Step-Cut Reset",
+          "score": 3.3575,
+          "reason_codes": [
+            "late_taper_safe_whitelist"
+          ]
+        },
+        {
           "name": "Recovery Cycling (Nasal Breathing)",
           "score": 3.8575,
+          "reason_codes": [
+            "late_taper_safe_whitelist"
+          ]
+        },
+        {
+          "name": "Ring Cut-Off Walkdown",
+          "score": 3.3575,
           "reason_codes": [
             "late_taper_safe_whitelist"
           ]
@@ -772,6 +938,20 @@
             "late_conditioning_block_dense_multi_round",
             "late_conditioning_block_density_leakage",
             "late_conditioning_block_structured_glycolytic_density"
+          ]
+        },
+        {
+          "name": "Stance Reset Line Drill",
+          "score": 4.8575,
+          "reason_codes": [
+            "late_taper_safe_whitelist"
+          ]
+        },
+        {
+          "name": "Step-Back Pivot Reset",
+          "score": 4.1075,
+          "reason_codes": [
+            "late_taper_safe_whitelist"
           ]
         },
         {
@@ -987,6 +1167,15 @@
             "late_strength_block_familiarity_required_late",
             "late_strength_block_window_mismatch"
           ]
+        },
+        {
+          "name": "Trap Bar Deadlift",
+          "score": 1.6,
+          "reason_codes": [
+            "late_strength_block_eccentric_lower",
+            "late_strength_block_familiarity_required_late",
+            "late_strength_block_window_mismatch"
+          ]
         }
       ]
     },
@@ -1002,8 +1191,8 @@
           ]
         },
         {
-          "name": "Explosive Boxing Burst Intervals",
-          "score": 3.9225,
+          "name": "Reactive Shuffle Repeats",
+          "score": 4.6725,
           "reason_codes": [
             "late_conditioning_boost_alactic_sharpness",
             "late_conditioning_boost_structured_freshness",
@@ -1041,8 +1230,22 @@
           ]
         },
         {
+          "name": "Check-Hook Pivot Out Shadow Drill",
+          "score": 4.1225,
+          "reason_codes": [
+            "late_taper_safe_whitelist"
+          ]
+        },
+        {
           "name": "Cooldown Flow (Striking + Mobility)",
           "score": 3.2725,
+          "reason_codes": [
+            "late_taper_safe_whitelist"
+          ]
+        },
+        {
+          "name": "Corner Escape L-Step",
+          "score": 4.1225,
           "reason_codes": [
             "late_taper_safe_whitelist"
           ]
@@ -1069,8 +1272,15 @@
           ]
         },
         {
+          "name": "Lateral Exit to Re-Enter",
+          "score": 4.1225,
+          "reason_codes": [
+            "late_taper_safe_whitelist"
+          ]
+        },
+        {
           "name": "Mini Hurdle Quick Steps",
-          "score": 2.15,
+          "score": 2.9,
           "reason_codes": [
             "late_taper_safe_whitelist"
           ]
@@ -1090,8 +1300,22 @@
           ]
         },
         {
+          "name": "Pressure Step-Cut Reset",
+          "score": 3.3725,
+          "reason_codes": [
+            "late_taper_safe_whitelist"
+          ]
+        },
+        {
           "name": "Recovery Cycling (Nasal Breathing)",
           "score": 3.8725,
+          "reason_codes": [
+            "late_taper_safe_whitelist"
+          ]
+        },
+        {
+          "name": "Ring Cut-Off Walkdown",
+          "score": 3.3725,
           "reason_codes": [
             "late_taper_safe_whitelist"
           ]
@@ -1117,6 +1341,20 @@
             "late_conditioning_block_dense_multi_round",
             "late_conditioning_block_density_leakage",
             "late_conditioning_block_structured_glycolytic_density"
+          ]
+        },
+        {
+          "name": "Stance Reset Line Drill",
+          "score": 4.8725,
+          "reason_codes": [
+            "late_taper_safe_whitelist"
+          ]
+        },
+        {
+          "name": "Step-Back Pivot Reset",
+          "score": 4.1225,
+          "reason_codes": [
+            "late_taper_safe_whitelist"
           ]
         },
         {
@@ -1159,10 +1397,11 @@
       "winners": [
         {
           "name": "Staggered-Stance Medicine-Ball Punch Throw",
-          "score": 9.2625,
+          "score": 9.4625,
           "reason_codes": [
             "priority_secondary_goal_match:skill_refinement",
             "late_strength_boost_window_fit",
+            "late_strength_boost_cut_survivable",
             "late_strength_boost_explicit_late_touch",
             "late_strength_boost_low_eccentric",
             "late_strength_boost_low_impact",
@@ -1400,6 +1639,15 @@
           ]
         },
         {
+          "name": "Trap Bar Deadlift",
+          "score": 1.6,
+          "reason_codes": [
+            "late_strength_block_eccentric_lower",
+            "late_strength_block_familiarity_required_late",
+            "late_strength_block_window_mismatch"
+          ]
+        },
+        {
           "name": "Wall scap push-up plus",
           "score": -0.85,
           "reason_codes": [
@@ -1460,8 +1708,22 @@
           ]
         },
         {
+          "name": "Check-Hook Pivot Out Shadow Drill",
+          "score": 4.1375,
+          "reason_codes": [
+            "late_taper_safe_whitelist"
+          ]
+        },
+        {
           "name": "Cooldown Flow (Striking + Mobility)",
           "score": 3.2875,
+          "reason_codes": [
+            "late_taper_safe_whitelist"
+          ]
+        },
+        {
+          "name": "Corner Escape L-Step",
+          "score": 4.1375,
           "reason_codes": [
             "late_taper_safe_whitelist"
           ]
@@ -1495,8 +1757,15 @@
           ]
         },
         {
+          "name": "Lateral Exit to Re-Enter",
+          "score": 4.1375,
+          "reason_codes": [
+            "late_taper_safe_whitelist"
+          ]
+        },
+        {
           "name": "Mini Hurdle Quick Steps",
-          "score": 2.15,
+          "score": 2.9,
           "reason_codes": [
             "late_taper_safe_whitelist"
           ]
@@ -1516,8 +1785,15 @@
           ]
         },
         {
+          "name": "Pressure Step-Cut Reset",
+          "score": 3.3875,
+          "reason_codes": [
+            "late_taper_safe_whitelist"
+          ]
+        },
+        {
           "name": "Reactive Shuffle Repeats",
-          "score": 1.95,
+          "score": 2.7,
           "reason_codes": [
             "late_conditioning_block_window_mismatch"
           ]
@@ -1527,6 +1803,13 @@
           "score": 2.15,
           "reason_codes": [
             "late_conditioning_block_window_mismatch"
+          ]
+        },
+        {
+          "name": "Ring Cut-Off Walkdown",
+          "score": 3.3875,
+          "reason_codes": [
+            "late_taper_safe_whitelist"
           ]
         },
         {
@@ -1551,6 +1834,20 @@
             "late_conditioning_block_density_leakage",
             "late_conditioning_block_structured_glycolytic_density",
             "late_conditioning_block_window_mismatch"
+          ]
+        },
+        {
+          "name": "Stance Reset Line Drill",
+          "score": 4.8875,
+          "reason_codes": [
+            "late_taper_safe_whitelist"
+          ]
+        },
+        {
+          "name": "Step-Back Pivot Reset",
+          "score": 4.1375,
+          "reason_codes": [
+            "late_taper_safe_whitelist"
           ]
         },
         {
@@ -1993,6 +2290,16 @@
           ]
         },
         {
+          "name": "Trap Bar Deadlift",
+          "score": 1.6,
+          "reason_codes": [
+            "late_strength_block_d1_requires_d1_tags",
+            "late_strength_block_eccentric_lower",
+            "late_strength_block_familiarity_required_late",
+            "late_strength_block_window_mismatch"
+          ]
+        },
+        {
           "name": "Wall ISO Deadbug",
           "score": -0.55,
           "reason_codes": [
@@ -2075,8 +2382,22 @@
           ]
         },
         {
+          "name": "Check-Hook Pivot Out Shadow Drill",
+          "score": 2.4,
+          "reason_codes": [
+            "late_conditioning_block_window_mismatch"
+          ]
+        },
+        {
           "name": "Cooldown Flow (Striking + Mobility)",
           "score": 1.55,
+          "reason_codes": [
+            "late_conditioning_block_window_mismatch"
+          ]
+        },
+        {
+          "name": "Corner Escape L-Step",
+          "score": 2.4,
           "reason_codes": [
             "late_conditioning_block_window_mismatch"
           ]
@@ -2124,8 +2445,15 @@
           ]
         },
         {
+          "name": "Lateral Exit to Re-Enter",
+          "score": 2.4,
+          "reason_codes": [
+            "late_conditioning_block_window_mismatch"
+          ]
+        },
+        {
           "name": "Mini Hurdle Quick Steps",
-          "score": 2.15,
+          "score": 2.9,
           "reason_codes": [
             "late_taper_safe_whitelist"
           ]
@@ -2145,8 +2473,15 @@
           ]
         },
         {
+          "name": "Pressure Step-Cut Reset",
+          "score": 1.65,
+          "reason_codes": [
+            "late_conditioning_block_window_mismatch"
+          ]
+        },
+        {
           "name": "Reactive Shuffle Repeats",
-          "score": 1.95,
+          "score": 2.7,
           "reason_codes": [
             "late_conditioning_block_window_mismatch"
           ]
@@ -2154,6 +2489,13 @@
         {
           "name": "Recovery Cycling (Nasal Breathing)",
           "score": 2.15,
+          "reason_codes": [
+            "late_conditioning_block_window_mismatch"
+          ]
+        },
+        {
+          "name": "Ring Cut-Off Walkdown",
+          "score": 1.65,
           "reason_codes": [
             "late_conditioning_block_window_mismatch"
           ]
@@ -2186,6 +2528,20 @@
             "late_conditioning_block_dense_multi_round",
             "late_conditioning_block_density_leakage",
             "late_conditioning_block_structured_glycolytic_density",
+            "late_conditioning_block_window_mismatch"
+          ]
+        },
+        {
+          "name": "Stance Reset Line Drill",
+          "score": 3.15,
+          "reason_codes": [
+            "late_conditioning_block_window_mismatch"
+          ]
+        },
+        {
+          "name": "Step-Back Pivot Reset",
+          "score": 2.4,
+          "reason_codes": [
             "late_conditioning_block_window_mismatch"
           ]
         },

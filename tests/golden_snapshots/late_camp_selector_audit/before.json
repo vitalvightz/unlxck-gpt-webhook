@@ -28,9 +28,11 @@
           "reason_codes": []
         },
         {
-          "name": "Explosive Boxing Burst Intervals",
-          "score": 1.95,
-          "reason_codes": []
+          "name": "Reactive Shuffle Repeats",
+          "score": 1.65,
+          "reason_codes": [
+            "conditioning_boost_late_taper_low_risk"
+          ]
         }
       ],
       "blocked": []

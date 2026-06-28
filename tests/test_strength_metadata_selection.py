@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 
 from fightcamp import strength
-from fightcamp.late_selector_windows import D1, D4_TO_D2, D7
+from fightcamp.late_selector_windows import D1, D4_TO_D2, D7, D13_TO_D8
 
 
 def _flags(**overrides) -> dict:
@@ -271,6 +271,17 @@ def test_loaded_strength_touches_are_blocked_from_tight_late_windows():
         assert d1_result["blocked"] is True
         assert "late_strength_block_window_mismatch" in d7_result["block_codes"]
         assert "late_strength_block_window_mismatch" in d1_result["block_codes"]
+
+
+def test_d21_only_loaded_strength_touches_do_not_leak_to_d13():
+    for name in ("Trap Bar Deadlift", "Sandbag Shouldering"):
+        item = _exercise_named(name)
+
+        d13_result = strength._evaluate_strength_late_window(item, window=D13_TO_D8)
+
+        assert item["late_windows"] == ["d21_to_d14"]
+        assert d13_result["blocked"] is True
+        assert "late_strength_block_familiarity_required_late" in d13_result["block_codes"]
 
 
 def test_d1_explicit_taper_windows_exclude_loaded_sprint_jump_and_eccentric_drills():
