@@ -1041,8 +1041,7 @@
       "d13_to_d8",
       "d7",
       "d6_to_d5",
-      "d4_to_d2",
-      "d1"
+      "d4_to_d2"
     ]
   },
   {
@@ -2039,8 +2038,7 @@
       "d13_to_d8",
       "d7",
       "d6_to_d5",
-      "d4_to_d2",
-      "d1"
+      "d4_to_d2"
     ]
   },
   {
@@ -3928,8 +3926,7 @@
       "d13_to_d8",
       "d7",
       "d6_to_d5",
-      "d4_to_d2",
-      "d1"
+      "d4_to_d2"
     ]
   },
   {
@@ -11824,8 +11821,7 @@
       "d13_to_d8",
       "d7",
       "d6_to_d5",
-      "d4_to_d2",
-      "d1"
+      "d4_to_d2"
     ],
     "cut_buckets_allowed": [
       "none",
@@ -12764,7 +12760,6 @@
     "tags": [
       "scap_retraction",
       "light_band",
-      "d1_ok",
       "shoulder_readiness",
       "low_soreness",
       "rehab_friendly",
@@ -12780,8 +12775,7 @@
       "d13_to_d8",
       "d7",
       "d6_to_d5",
-      "d4_to_d2",
-      "d1"
+      "d4_to_d2"
     ],
     "cut_buckets_allowed": [
       "none",

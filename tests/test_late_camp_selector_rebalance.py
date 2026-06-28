@@ -1012,14 +1012,14 @@ def test_actual_bank_d1_keeps_only_ultra_safe_micro_dose_strength_options():
 
     names = _selected_strength_names(result)
     # D1 policy: ultra-safe neural activation / balance / coordination only — no
-    # loaded strength, dense band circuits, high-volume accessories or anything
+    # loaded strength, band work, high-volume accessories or anything
     # fatigue/soreness-producing. These are the current bank's compliant options
     # (all bodyweight rehab/activation drills).
     allowed_names = {
-        "Band face pull light",
         "Boxer stance weight-shift hold",
         "Lead-foot pivot prep",
         "Pivot-and-freeze lead foot",
+        "Serratus wall slide",
         "Single-Leg Balance (Eyes Closed)",
         "Hollow-Body Hold",
         "Isometric Pallof Hold",

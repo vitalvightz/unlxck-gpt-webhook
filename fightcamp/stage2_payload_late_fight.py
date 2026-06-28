@@ -1425,6 +1425,8 @@ def _late_fight_countdown_exercise_rules(days_until_fight: Any) -> list[dict[str
                         "Staggered-Stance Medicine-Ball Punch Throw",
                         "medicine ball",
                         "med-ball",
+                        "band",
+                        "banded",
                         "Band-Resisted Sprint Start",
                         "Band-Resisted Sprint Starts (ATP-PCr)",
                         "Jump Reset",
@@ -1436,12 +1438,11 @@ def _late_fight_countdown_exercise_rules(days_until_fight: Any) -> list[dict[str
                         "loaded strength",
                     ],
                     "preferred_drills": [
-                        "Band Face Pull",
                         "Technical Shadowboxing Tempo",
                         "Mobility Reset Flow",
                         "Breathing Reset",
                     ],
-                    "reason": "D-1 is a boring readiness day: no med-ball, jumps, sprint starts, pull-up holds, heavy bag, or loaded strength.",
+                    "reason": "D-1 is a boring readiness day: no med-ball, bands, jumps, sprint starts, pull-up holds, heavy bag, or loaded strength.",
                 }
             )
     return rules

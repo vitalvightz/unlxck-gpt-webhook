@@ -530,16 +530,16 @@
         "Band Face Pull"
       ],
       "after_winners": [
-        "Band face pull light",
         "Boxer stance weight-shift hold",
         "Lead-foot pivot prep",
-        "Pivot-and-freeze lead foot"
+        "Pivot-and-freeze lead foot",
+        "Serratus wall slide"
       ],
       "added_winners": [
-        "Band face pull light",
         "Boxer stance weight-shift hold",
         "Lead-foot pivot prep",
-        "Pivot-and-freeze lead foot"
+        "Pivot-and-freeze lead foot",
+        "Serratus wall slide"
       ],
       "removed_winners": [
         "Band-Resisted Push Press",
@@ -552,6 +552,7 @@
         "Adductor rock-back",
         "Band Face Pull",
         "Band Row Speed Focus",
+        "Band face pull light",
         "Band pull-apart low volume",
         "Band-Resisted Jab-Cross Primer",
         "Band-Resisted Punch",

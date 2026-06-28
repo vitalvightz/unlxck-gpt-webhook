@@ -53,6 +53,27 @@ def test_d7_and_under_blocks_non_rehab_band_conditioning_work():
     assert "late_conditioning_block_band_work_lockout" in result["block_codes"]
 
 
+def test_d1_blocks_rehab_band_conditioning_work():
+    result = conditioning._evaluate_conditioning_late_window(
+        {
+            "name": "Band External Rotation Mobility",
+            "phases": ["TAPER"],
+            "system": "aerobic",
+            "tags": ["mobility", "rehab_friendly", "recovery"],
+            "equipment": "bands",
+            "work_sec": 20,
+            "rest_sec": 40,
+            "rounds": 2,
+        },
+        system="aerobic",
+        window=D1,
+        bridge_rules={},
+    )
+
+    assert result["blocked"] is True
+    assert "late_conditioning_block_band_work_lockout" in result["block_codes"]
+
+
 
 def test_late_window_blocks_non_taper_phased_conditioning_in_d13_to_d8():
     result = conditioning._evaluate_conditioning_late_window(

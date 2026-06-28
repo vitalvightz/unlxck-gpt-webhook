@@ -46,6 +46,7 @@ from .late_selector_windows import (
     D6_TO_D5,
     D7,
     classify_late_selector_window,
+    coerce_days_until_fight,
     is_active_late_selector_window,
 )
 from .normalization import normalize_fight_format as _normalize_fight_format
@@ -541,6 +542,24 @@ def _strength_contextual_risk_patterns(exercise: dict) -> tuple[list[str], list[
     }
 
 
+def _strength_throw_signal(exercise: dict, equipment: set[str]) -> bool:
+    profile = exercise.get("profile") or {}
+    text = str(profile.get("text") or _strength_text_blob(exercise)).lower()
+    if re.search(r"\b(?:throw|throws|throwing|toss|tosses|tossing)\b", text):
+        return True
+    if "medicine_ball" in equipment and re.search(r"\b(?:pass|passes|passing)\b", text):
+        return True
+    return False
+
+
+def _strength_band_signal(exercise: dict, equipment: set[str]) -> bool:
+    if "bands" in equipment:
+        return True
+    profile = exercise.get("profile") or {}
+    text = str(profile.get("text") or _strength_text_blob(exercise)).lower()
+    return bool(re.search(r"\b(?:band|bands|banded)\b", text))
+
+
 def _strength_metadata_score_adjustment(
     exercise: dict,
     *,
@@ -605,6 +624,7 @@ def _evaluate_strength_late_window(
     exercise: dict,
     *,
     window: str | None,
+    days_until_fight=None,
     cut_bucket: str = "none",
 ) -> dict:
     if not is_active_late_selector_window(window):
@@ -649,6 +669,7 @@ def _evaluate_strength_late_window(
     severity = _strength_late_window_severity(window)
     reason_codes: list[str] = []
     adjustment = 0.0
+    exact_days_until_fight = coerce_days_until_fight(days_until_fight)
     cut_multiplier = LATE_STRENGTH_CUT_BUCKET_MULTIPLIER.get(cut_bucket, 0.0)
     high_cut_window = window in {D13_TO_D8, D7, D6_TO_D5, D4_TO_D2, D1} and cut_bucket in LATE_STRENGTH_HIGH_CUT_BUCKETS
     late_band_lockout_window = window in {D7, D6_TO_D5, D4_TO_D2, D1}
@@ -674,12 +695,15 @@ def _evaluate_strength_late_window(
     )
     if (
         late_band_lockout_window
-        and "bands" in equipment
-        and not rehab_mobility_band_ok
+        and _strength_band_signal(exercise, profile, equipment)
+        and (window == D1 or not rehab_mobility_band_ok)
         and not late_safe_band_primer
     ):
         blocks.append("late_strength_block_band_work_lockout")
         reason_codes.append("late_strength_penalty_band_work_lockout")
+    if exact_days_until_fight == 3 and _strength_throw_signal(exercise, profile, equipment):
+        blocks.append("late_strength_block_d3_throw_lockout")
+        reason_codes.append("late_strength_penalty_d3_throw_lockout")
 
     if window == D1 and not ("d1_ok" in tags or "d1_if_familiar" in tags):
         blocks.append("late_strength_block_d1_requires_d1_tags")
@@ -1627,6 +1651,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
             late_eval = _evaluate_strength_late_window(
                 exercise,
                 window=late_window,
+                days_until_fight=days_until_fight,
                 cut_bucket=cut_bucket,
             )
             post_score_late_eval_cache[cache_key] = late_eval
@@ -1845,7 +1870,12 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
             score += restriction_penalty
             breakdown["penalties"] = round(breakdown.get("penalties", 0.0) + restriction_penalty, 2)
             breakdown["restriction_hits"] = len(matched_restrictions)
-        late_eval = _evaluate_strength_late_window(ex, window=late_window, cut_bucket=cut_bucket)
+        late_eval = _evaluate_strength_late_window(
+            ex,
+            window=late_window,
+            days_until_fight=days_until_fight,
+            cut_bucket=cut_bucket,
+        )
         _record_ambiguous_gap(late_eval.get("ambiguous_gap"))
         if late_eval["blocked"]:
             _record_late_block(ex, score, late_eval["block_codes"])
@@ -1952,7 +1982,12 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
                     continue
                 if not any(t in taper_allowed for t in tags_lower):
                     continue
-            late_eval = _evaluate_strength_late_window(ex, window=late_window, cut_bucket=cut_bucket)
+            late_eval = _evaluate_strength_late_window(
+                ex,
+                window=late_window,
+                days_until_fight=days_until_fight,
+                cut_bucket=cut_bucket,
+            )
             _record_ambiguous_gap(late_eval.get("ambiguous_gap"))
             if late_eval["blocked"]:
                 _record_late_block(ex, 0.0, late_eval["block_codes"])
@@ -2513,7 +2548,12 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
             style_reasons["reason_codes"] = list(
                 dict.fromkeys(list(style_reasons.get("reason_codes", [])) + list(metadata_reason_codes))
             )
-        late_eval = _evaluate_strength_late_window(ex, window=late_window, cut_bucket=cut_bucket)
+        late_eval = _evaluate_strength_late_window(
+            ex,
+            window=late_window,
+            days_until_fight=days_until_fight,
+            cut_bucket=cut_bucket,
+        )
         _record_ambiguous_gap(late_eval.get("ambiguous_gap"))
         if late_eval["blocked"]:
             _record_late_block(ex, style_score, late_eval["block_codes"])
