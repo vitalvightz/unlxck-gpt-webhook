@@ -743,10 +743,6 @@ def _normalize_day(value: Any) -> dict[str, Any]:
     out["phase_label"] = _normalize_phase(out.get("phase_label"))
     out["today_card"] = _normalize_today_card(out.get("today_card"))
     out["sessions"] = [_normalize_session(session) for session in _as_dict_list(out.get("sessions"))]
-    out["optional_support_blocks"] = [
-        _normalize_session(session)
-        for session in _as_dict_list(out.get("optional_support_blocks"))
-    ]
     # Derive the intensity badge from the now-normalized content; the model's own
     # value is only a last-resort fallback (see _classify_day_type).
     out["day_type"] = _classify_day_type(out, _enum(out.get("day_type"), _DAY_TYPE_VALUES, ""))

@@ -1895,7 +1895,7 @@ def generate_conditioning_block(flags):
     speed_goal_requested = bool(
         (raw_goal_tokens | raw_weak_tokens | goal_tag_tokens) & _SPEED_GOAL_TOKENS
     )
-    
+
     speed_dose_allowed = (
         speed_goal_requested
         and fatigue != "high"

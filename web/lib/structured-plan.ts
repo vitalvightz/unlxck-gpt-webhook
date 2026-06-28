@@ -166,10 +166,6 @@ export function getSessions(day: StructuredDay | null | undefined): StructuredSe
   return safeArray(day?.sessions).filter(isObject);
 }
 
-export function getOptionalSupportBlocks(day: StructuredDay | null | undefined): StructuredSession[] {
-  return safeArray(day?.optional_support_blocks).filter(isObject);
-}
-
 export function getBlocks(session: StructuredSession | null | undefined): StructuredBlock[] {
   return safeArray(session?.blocks).filter(isObject);
 }
@@ -732,7 +728,6 @@ export function classifySessionlessDay(
       tag: SESSIONLESS_DAY_TAGS[kind],
       coachLed:
         kind === "coach_led" ||
-        kind === "light_combat" ||
         kind === "sparring" ||
         kind === "technical",
     };

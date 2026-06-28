@@ -137,7 +137,7 @@ class TrainingContext:
 
 def allocate_sessions(training_frequency: int, phase: str = "GPP") -> dict:
     """Return weekly session counts based on frequency and phase."""
-    freq = max(1, min(int(training_frequency), 6))
+    freq = max(1, min(int(training_frequency) + 1, 6))
     phase = phase.upper()
 
     plan = {
