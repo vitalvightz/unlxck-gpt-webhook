@@ -355,12 +355,6 @@ export type StructuredSession = {
   completion_status?: string | null;
   mindset_anchor?: MindsetAnchor | null;
   blocks?: StructuredBlock[] | null;
-  allowed_on_coach_day?: boolean | null;
-  add_on_to_coach_owned_card?: boolean | null;
-  app_prescription?: string | boolean | null;
-  render_as_secondary_addon?: boolean | null;
-  parent_countdown_label?: string | null;
-  parent_role_key?: string | null;
 };
 
 export type StructuredTodayCard = {
@@ -379,7 +373,6 @@ export type StructuredDay = {
   phase_label?: string | null;
   today_card?: StructuredTodayCard | null;
   sessions?: StructuredSession[] | null;
-  optional_support_blocks?: StructuredSession[] | null;
 };
 
 export type StructuredWeek = {

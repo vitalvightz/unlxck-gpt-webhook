@@ -2794,6 +2794,7 @@ export function PlanIntakeForm() {
                   <p className="muted">
                     {getFieldHelperText(daysOutCtx, "support_work_days") ||
                       "Select days that can carry light technical combat: pads, drills, shadowboxing, movement, or non-hard contact. The app may still place low-noise support work here if it fits. Do not include hard sparring or fight day."
+                    }
                   </p>
                   <p className="muted">Available light / technical tags: {formatJoinedLabels(remainingSupportWorkDays, "No days left")}</p>
                 </div>

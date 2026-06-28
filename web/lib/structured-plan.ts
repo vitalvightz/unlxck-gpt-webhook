@@ -166,10 +166,6 @@ export function getSessions(day: StructuredDay | null | undefined): StructuredSe
   return safeArray(day?.sessions).filter(isObject);
 }
 
-export function getOptionalSupportBlocks(day: StructuredDay | null | undefined): StructuredSession[] {
-  return safeArray(day?.optional_support_blocks).filter(isObject);
-}
-
 export function getBlocks(session: StructuredSession | null | undefined): StructuredBlock[] {
   return safeArray(session?.blocks).filter(isObject);
 }
@@ -671,7 +667,7 @@ const REST_DAY_TYPES = new Set(["rest", "recovery"]);
 // `technical` is checked before `sparring` so a "technical only / no hard
 // sparring" headline is not mislabelled as a sparring day by the stray
 // "sparring" token, and `coach_led` is the catch-all for coach-owned contact.
-const LIGHT_COMBAT_RE = /\b(light(?:[\s-]+technical)?[\s-]+combat|support[\s-]+work)\b/i;
+const LIGHT_COMBAT_RE = /\b(light[\s-]+combat|support[\s-]+work)\b/i;
 const TECHNICAL_RE = /\b(technical|skill|drill|pad\s?work|pads|mitts?|footwork|shadow)/i;
 const SPARRING_RE = /\bspar(?:r(?:ing|ed)|s)?\b/i;
 const COACH_LED_RE = /\bcoach/i;
@@ -732,7 +728,6 @@ export function classifySessionlessDay(
       tag: SESSIONLESS_DAY_TAGS[kind],
       coachLed:
         kind === "coach_led" ||
-        kind === "light_combat" ||
         kind === "sparring" ||
         kind === "technical",
     };

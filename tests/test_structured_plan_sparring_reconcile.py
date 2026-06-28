@@ -193,7 +193,7 @@ def test_inserts_dropped_sparring_day_into_covering_week():
     assert any("inserted" in note for note in notes)
 
 
-def test_contact_day_with_unsafe_app_session_keeps_coach_card_and_suppresses_session():
+def test_never_overwrites_a_day_with_real_app_sessions():
     # A declared sparring day the converter gave actual S&C work already renders
     # as a session card — leave its headline and sessions untouched.
     real_session = [{"title": "Lower strength", "blocks": []}]
@@ -201,10 +201,9 @@ def test_contact_day_with_unsafe_app_session_keeps_coach_card_and_suppresses_ses
     notes = reconcile_coach_led_sparring_days(plan, _planning_brief(_hard_thursday()))
 
     day = plan["weeks"][0]["days"][0]
-    assert day["today_card"]["headline"] == "Coach-led sparring"
-    assert day["sessions"] == []
-    assert day["optional_support_blocks"] == []
-    assert any("suppressed 1 unsafe" in note for note in notes)
+    assert day["today_card"]["headline"] == "Lower strength"
+    assert day["sessions"] == real_session
+    assert notes == []
 
 
 def test_leaves_already_coach_led_headline_alone():
@@ -323,9 +322,9 @@ def test_inserts_dropped_light_combat_day_from_declared_support_work():
     assert inserted["date"] == "2026-07-24"
     assert inserted["countdown_label"] == "D-30"
     assert inserted["day_type"] == "moderate"
-    assert inserted["today_card"]["headline"] == "Light technical combat"
+    assert inserted["today_card"]["headline"] == "Coach-led light combat"
     assert inserted["sessions"] == []
-    assert any("inserted" in note and "Light technical combat" in note for note in notes)
+    assert any("inserted" in note and "light combat" in note for note in notes)
 
 
 def test_stamps_empty_declared_support_work_day_as_light_combat():
@@ -333,8 +332,8 @@ def test_stamps_empty_declared_support_work_day_as_light_combat():
     plan = _structured_plan([friday])
     notes = reconcile_coach_led_sparring_days(plan, _light_support_friday_brief())
 
-    assert friday["today_card"]["headline"] == "Light technical combat"
-    assert any("stamped" in note and "Light technical combat" in note for note in notes)
+    assert friday["today_card"]["headline"] == "Coach-led light combat"
+    assert any("stamped" in note and "light combat" in note for note in notes)
 
 
 def test_hard_sparring_wins_when_support_work_overlaps_same_day():
@@ -359,54 +358,13 @@ def test_malformed_support_work_brief_is_noop():
     assert plan["weeks"][0]["days"][0]["today_card"]["headline"] == before
 
 
-def test_light_combat_moves_safe_existing_session_to_optional_support():
-    real_session = [{
-        "session_id": "mobility",
-        "session_type": "recovery",
-        "title": "Mobility, breathing & lateral reset",
-        "objective": "Low-noise mobility and breathing only",
-        "blocks": [],
-    }]
+def test_light_combat_does_not_overwrite_existing_app_session_and_records_note():
+    real_session = [{"title": "Mobility support", "blocks": []}]
     plan = _structured_plan([_day("D-30", headline="Mobility support", sessions=real_session)])
     notes = reconcile_coach_led_sparring_days(plan, _light_support_friday_brief())
 
     day = plan["weeks"][0]["days"][0]
-    assert day["today_card"]["headline"] == "Light technical combat"
-    assert day["sessions"] == []
-    assert day["optional_support_blocks"][0]["title"] == "Mobility, breathing & lateral reset"
-    assert day["optional_support_blocks"][0]["render_as_secondary_addon"] is True
-    assert day["optional_support_blocks"][0]["parent_role_key"] == "light_combat_day"
+    assert day["today_card"]["headline"] == "Mobility support"
+    assert day["sessions"] == real_session
     assert len(plan["weeks"][0]["days"]) == 1
-    assert any("moved 1 safe support" in note for note in notes)
-
-
-def test_d3_contact_day_with_mobility_session_keeps_technical_only_primary_card():
-    real_session = [{
-        "session_id": "mobility",
-        "session_type": "recovery",
-        "title": "Mobility, breathing & lateral reset",
-        "objective": "Breathe, open hips, and reset stance",
-        "blocks": [],
-    }]
-    plan = _structured_plan([_day("D-3", headline="Mobility, breathing & lateral reset", sessions=real_session)])
-    brief = _planning_brief(
-        [
-            {
-                "day": "Thursday",
-                "effective_load": "technical",
-                "status": "convert_to_technical_suggested",
-                "hard_day_class": "technical",
-            }
-        ],
-        span_days=7,
-        end_d=0,
-    )
-
-    reconcile_coach_led_sparring_days(plan, brief)
-
-    day = plan["weeks"][0]["days"][0]
-    assert day["today_card"]["headline"] == "Coach-led boxing — technical only"
-    assert day["today_card"]["headline"] != "Mobility, breathing & lateral reset"
-    assert day["sessions"] == []
-    assert day["optional_support_blocks"][0]["title"] == "Mobility, breathing & lateral reset"
-    assert day["optional_support_blocks"][0]["app_prescription"] == "optional_support_only"
+    assert any("skipped coach-led light combat" in note for note in notes)

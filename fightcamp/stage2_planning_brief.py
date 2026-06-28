@@ -212,7 +212,7 @@ def _compress_short_camp_priorities(athlete_model: dict) -> dict:
         speed_bucket = primary if (speed_goal_signal or primary_goal_tokens & _SPEED_SHARPNESS_TOKENS) else embedded
         add_unique(
             speed_bucket,
-            "speed / footwork sharpness",
+            "speed / reaction sharpness",
             "speed_reaction_sharpness",
             "Use a short full-rest alactic speed dose for neural speed and reaction, not conditioning volume.",
         )
@@ -221,7 +221,7 @@ def _compress_short_camp_priorities(athlete_model: dict) -> dict:
         footwork_bucket = primary if (footwork_goal_signal or primary_goal_tokens & _FOOTWORK_QUALITY_TOKENS) else embedded
         add_unique(
             footwork_bucket,
-            "footwork / technical sharpness",
+            "footwork / ring-movement quality",
             "footwork_ring_movement_quality",
             "Use named footwork, stance reset, pivot, angle-exit, and ring-movement work without treating it as pure speed.",
         )
@@ -264,16 +264,8 @@ def _compress_short_camp_priorities(athlete_model: dict) -> dict:
         )
 
     while len(primary) > 2:
-        overflow_idx = next(
-            (
-                idx for idx, entry in enumerate(primary)
-                if entry.get("kind") == "technical_sharpness"
-                and any(item.get("kind") == "power_expression" for item in primary)
-            ),
-            len(primary) - 1,
-        )
-        moved = primary.pop(overflow_idx)
-        destination = embedded if moved["kind"] in {"freshness_protection", "technical_sharpness"} else maintenance
+        moved = primary.pop()
+        destination = embedded if moved["kind"] == "freshness_protection" else maintenance
         destination.append(
             _priority_bucket(moved["label"], moved["kind"])
         )
@@ -647,7 +639,7 @@ def _primary_limiter_key(athlete_model: dict, restrictions: list[dict]) -> str:
         _priority_bucket_labels(compressed.get("primary_targets", []))
         + _priority_bucket_labels(compressed.get("maintenance_targets", []))
     ).lower()
-    if "speed / reaction sharpness" in compressed_labels or "speed / footwork sharpness" in compressed_labels:
+    if "speed / reaction sharpness" in compressed_labels:
         return "sharpness_under_fatigue"
     if "footwork / ring-movement quality" in compressed_labels:
         return "boxing_quality_under_load"

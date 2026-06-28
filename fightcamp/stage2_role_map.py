@@ -28,7 +28,6 @@ from .stage2_planning_brief import (
 from .weight_cut import compute_cut_severity_score, cut_severity_bucket
 from .fight_day_override import apply_fight_day_override_to_weekly_role_map, compute_fight_weekday
 from .fight_date_utils import build_calendar_days
-from .fulfilment_contract import apply_goal_weakness_fulfilment_contract
 from .role_labels import stamp_weekly_role_map_labels
 
 
@@ -516,6 +515,8 @@ def _low_aerobic_support_cap_for_week(
         readiness_flags
         & {"severe_injury", "red_flag_injury", "medical_hold"}
     )
+
+    hard_count = effective_hard_day_count(hard_sparring_plan or [])
 
     if bucket in {"none", "low"}:
         if is_fight_week:
@@ -2671,7 +2672,6 @@ def _build_weekly_role_map(
         "weeks": weeks,
     }
     weekly_role_map = apply_fight_day_override_to_weekly_role_map(weekly_role_map, athlete_model)
-    weekly_role_map = apply_goal_weakness_fulfilment_contract(weekly_role_map, athlete_model)
     # Stamp deterministic athlete-facing labels so Stage 1 owns the session
     # titles instead of leaving them for the Stage 2 LLM to invent. Run last so
     # roles injected by the fight-day override are labelled too.
