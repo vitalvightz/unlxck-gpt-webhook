@@ -39,8 +39,10 @@ STYLE_CONDITIONING_RATIO = {
     TAPER: 0.00,
 }
 
-STRENGTH_PER_DAY = {GPP: 7, SPP: 6, TAPER: 4}
-CONDITIONING_PER_DAY = {GPP: 4, SPP: 3, TAPER: 3}
+# Stage 1 should surface a surplus candidate menu for Stage 2 to choose from.
+# These are candidate-output counts, not final prescribed session counts.
+STRENGTH_PER_DAY = {GPP: 9, SPP: 8, TAPER: 6}
+CONDITIONING_PER_DAY = {GPP: 6, SPP: 5, TAPER: 5}
 
 # Central data directory path - used by multiple modules to access JSON data files
 DATA_DIR = Path(__file__).resolve().parents[1] / "data"
