@@ -37,7 +37,12 @@ def _is_instruction_only(line: str) -> bool:
 def _is_countdown_block_boundary(line: str) -> bool:
     if _COUNTDOWN_LABEL_LINE.match(line):
         return False
-    return bool(_MARKDOWN_HEADER.match(line))
+    match = _MARKDOWN_HEADER.match(line)
+    if match:
+        # Only terminate the block on top-level headers (H1 or H2)
+        # Sub-headers (H3+) are allowed within a day's block
+        return len(match.group(1)) <= 2
+    return False
 
 
 def _countdown_blocks_by_day(final_plan_text: str) -> dict[int, list[str]]:
