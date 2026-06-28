@@ -10582,7 +10582,10 @@
       "anti_rotation",
       "low_impact",
       "low_eccentric",
-      "cns_freshness"
+      "cns_freshness",
+      "mech_grip_support",
+      "mech_trunk_stability",
+      "mech_upper_carry"
     ],
     "equipment": "kettlebell",
     "phase_role": "late_strength_touch",
