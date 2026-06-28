@@ -17,6 +17,7 @@ from fightcamp.plan_contract_validator import contract_report_requires_review, v
 
 from ..models import PlanRequest
 from ..state_machine import job_status_for_plan_status
+from ..stage2_automation import _stage2_report_blocks_release
 from ..store import AppStore
 from ..structured_plan_generation import has_clean_structured_card
 from .errors import TriageResumeMissingPlanError
@@ -30,9 +31,9 @@ _FINAL_RESULT_PERSIST_TIMEOUT_ERROR = "Stage 2 result persistence timed out befo
 _PLAN_PERSIST_VERIFICATION_ERROR = "Plan persistence verification failed after create_plan."
 _POST_PERSIST_CLEANUP_TIMEOUT_SECONDS = 8.0
 
-# Statuses that surface the plan to the athlete. A contract violation on one of
-# these is routed to review_required (an admin sees it first); a violation on an
-# already-non-visible status is recorded without changing the status.
+# Statuses that surface the plan to the athlete. Contract violations on these
+# are recorded, but only no-text output or Stage 2 release blockers route them
+# to review_required; a clean Stage 2 report keeps the plan visible.
 _CONTRACT_VISIBLE_PLAN_STATUSES = {"ready", "publishable_with_flags"}
 _CONTRACT_REVIEW_PLAN_STATUS = "review_required"
 
@@ -47,6 +48,30 @@ _CONTRACT_CARD_RESCUABLE_ERROR_CODES = {
     "fight_day_missing",
     "late_fight_session_sequence_empty",
 }
+
+
+def _result_has_plan_text(final_result: Any) -> bool:
+    if not isinstance(final_result, dict):
+        return False
+    for key in ("plan_text", "final_plan_text", "draft_plan_text"):
+        value = final_result.get(key)
+        if isinstance(value, str) and value.strip():
+            return True
+    return False
+
+
+def _contract_report_has_empty_text_error(report: Any) -> bool:
+    if not isinstance(report, dict):
+        return False
+    violations = report.get("violations")
+    if not isinstance(violations, list):
+        return False
+    return any(
+        isinstance(violation, dict)
+        and violation.get("severity") == "error"
+        and str(violation.get("code") or "").strip() == "plan_text_empty"
+        for violation in violations
+    )
 
 
 def _contract_report_is_card_rescuable(report: Any) -> bool:
@@ -117,10 +142,12 @@ def _apply_plan_contract_validation(
 
     Runs the post-generation contract validator, attaches its report to
     ``why_log`` for visibility, and — when a would-be-visible plan has
-    error-severity findings — downgrades the status to ``review_required`` so an
-    admin reviews the plan before the athlete sees it. Returns the (possibly
-    updated) final_result. Never raises: a validator failure leaves the plan
-    untouched so generation is never blocked by a defect in this layer.
+    error-severity findings. No-text output and Stage 2 release blockers still
+    downgrade the status to ``review_required``; otherwise a clean Stage 2 report
+    keeps the plan visible and records the contract report for diagnostics.
+    Returns the (possibly updated) final_result. Never raises: a validator
+    failure leaves the plan untouched so generation is never blocked by a defect
+    in this layer.
     """
     try:
         report = validate_plan_contract(final_result, fight_date=fight_date)
@@ -169,6 +196,28 @@ def _apply_plan_contract_validation(
                 "Plan kept publishable",
                 "Post-generation contract checks flagged the rendered calendar, but the plan "
                 "has a schema-valid structured card; trusting the card instead of routing to review.",
+                violation_codes=error_codes,
+            )
+            return final_result
+
+        stage2_report = final_result.get("stage2_validator_report")
+        if (
+            _result_has_plan_text(final_result)
+            and not _contract_report_has_empty_text_error(report)
+            and not _stage2_report_blocks_release(stage2_report)
+        ):
+            logger.info(
+                "[jobs] generation:plan_contract_released_by_clean_stage2 athlete_id=%s job_id=%s status=%s codes=%s",
+                athlete_id,
+                job_id,
+                current_status,
+                error_codes,
+            )
+            emit_milestone(
+                "plan_contract_clean_stage2_release",
+                "Plan kept publishable",
+                "Post-generation contract checks flagged the rendered calendar, but Stage 2 "
+                "reported no release blockers and plan text is present; releasing without admin review.",
                 violation_codes=error_codes,
             )
             return final_result
@@ -372,9 +421,8 @@ async def persist_plan_and_finalize(
                 plan_id = str(latest_plan.get("id") or "")
 
     # Post-generation contract/invariant gate: validate the finalized plan
-    # before it is written. Hard violations (blank calendar week, missing D-0,
-    # empty late-fight sequence) downgrade a would-be-visible plan to
-    # review_required so an admin sees it before the athlete does.
+    # before it is written. Findings are recorded for diagnostics, but clean
+    # Stage 2 output stays athlete-visible instead of creating admin review work.
     #
     # Open camps (no_scheduled_fight) have no fight day even when fight_date
     # carries a stale value; mirror PlanRequest.to_payload and pass None so the
