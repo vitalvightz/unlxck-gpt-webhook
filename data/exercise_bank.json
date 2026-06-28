@@ -3209,7 +3209,6 @@
     "category": "combat",
     "phases": [
       "SPP",
-      "TAPER"
     ],
     "method": "power",
     "movement": "compound",
