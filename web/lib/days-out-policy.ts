@@ -1,10 +1,15 @@
 export type DaysOutContext = {
   daysOut: number | null;
+  hasHardSparring: boolean;
   bucket: string;
   label: string;
   uiHints: {
     fight_proximity_banner: string | null;
   };
+};
+
+export type BuildDaysOutContextOptions = {
+  hasHardSparring?: boolean;
 };
 
 export type PerformanceFocusGroup = "key_goals" | "weak_areas";
@@ -13,6 +18,12 @@ export type PerformanceFocusOptionAvailability = {
   available: boolean;
   reason?: string;
 };
+
+export const HARD_SPARRING_STRENGTH_BLOCK_REASON =
+  "Strength is blocked this close to fight day because hard sparring is selected. The plan will preserve freshness and use primers/support work instead.";
+
+export const HARD_SPARRING_STRENGTH_REMOVAL_MESSAGE =
+  "Strength was removed because hard sparring is selected this close to fight day. The plan will preserve freshness and use primers/support work instead.";
 
 export function computeDaysUntilFight(
   fightDate: string | null | undefined,
@@ -85,6 +96,13 @@ export function getPerformanceFocusOptionAvailability(
   }
 
   const normalizedValue = value.trim().toLowerCase();
+  if (normalizedValue === "strength" && ctx.hasHardSparring && ctx.daysOut <= 20) {
+    return {
+      available: false,
+      reason: HARD_SPARRING_STRENGTH_BLOCK_REASON,
+    };
+  }
+
   if (!getBlockedPerformanceFocusValues(group, ctx.daysOut).has(normalizedValue)) {
     return { available: true };
   }
@@ -104,9 +122,13 @@ export function filterAvailablePerformanceFocusValues(
   return values.filter((value) => getPerformanceFocusOptionAvailability(ctx, group, value).available);
 }
 
-export function buildDaysOutContext(daysUntilFight: number | null | undefined): DaysOutContext {
+export function buildDaysOutContext(
+  daysUntilFight: number | null | undefined,
+  options: BuildDaysOutContextOptions = {},
+): DaysOutContext {
   return {
     daysOut: daysUntilFight ?? null,
+    hasHardSparring: Boolean(options.hasHardSparring),
     bucket: "CAMP",
     label: "Camp",
     uiHints: {
