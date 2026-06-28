@@ -591,7 +591,7 @@
       "winners": [
         {
           "name": "Band Row Speed Focus",
-          "score": 8.55,
+          "score": 9.4,
           "reason_codes": [
             "priority_secondary_goal_match:skill_refinement",
             "late_strength_boost_window_fit",
@@ -609,8 +609,42 @@
           ]
         },
         {
+          "name": "Technical Shadowboxing Tempo",
+          "score": 7.3,
+          "reason_codes": [
+            "priority_secondary_goal_match:skill_refinement",
+            "late_strength_boost_window_fit",
+            "late_strength_boost_cut_survivable",
+            "late_strength_boost_explicit_late_touch",
+            "late_strength_boost_low_eccentric",
+            "late_strength_boost_low_impact",
+            "late_strength_boost_cns_freshness",
+            "late_strength_boost_sport_specific",
+            "late_strength_boost_low_soreness",
+            "late_strength_boost_neural_primer",
+            "late_strength_boost_speed",
+            "late_strength_boost_freshness"
+          ]
+        },
+        {
+          "name": "Towel/Gi Row Isometric Hold",
+          "score": 6.25,
+          "reason_codes": [
+            "priority_secondary_goal_match:maximal_strength_maintenance",
+            "late_strength_boost_window_fit",
+            "late_strength_boost_cut_survivable",
+            "late_strength_boost_explicit_late_touch",
+            "late_strength_boost_low_eccentric",
+            "late_strength_boost_low_impact",
+            "late_strength_boost_cns_freshness",
+            "late_strength_boost_sport_specific",
+            "late_strength_boost_low_soreness",
+            "late_strength_boost_freshness"
+          ]
+        },
+        {
           "name": "Counter-Striker Split-Line Punch Isometric Hold",
-          "score": 7.65,
+          "score": 9.75,
           "reason_codes": [
             "priority_secondary_goal_match:maximal_strength_maintenance",
             "priority_secondary_goal_match:skill_refinement",
@@ -625,74 +659,40 @@
             "late_strength_boost_speed",
             "late_strength_boost_freshness"
           ]
-        },
-        {
-          "name": "Technical Shadowboxing Tempo",
-          "score": 6.75,
-          "reason_codes": [
-            "priority_secondary_goal_match:skill_refinement",
-            "late_strength_boost_window_fit",
-            "late_strength_boost_cut_survivable",
-            "late_strength_boost_explicit_late_touch",
-            "late_strength_boost_low_eccentric",
-            "late_strength_boost_low_impact",
-            "late_strength_boost_cns_freshness",
-            "late_strength_boost_sport_specific",
-            "late_strength_boost_low_soreness",
-            "late_strength_boost_neural_primer",
-            "late_strength_boost_speed",
-            "late_strength_boost_freshness"
-          ]
-        },
-        {
-          "name": "Light Heavy-Bag Technical Tempo",
-          "score": 4.55,
-          "reason_codes": [
-            "priority_secondary_goal_match:skill_refinement",
-            "late_strength_boost_window_fit",
-            "late_strength_boost_cut_survivable",
-            "late_strength_boost_explicit_late_touch",
-            "late_strength_boost_low_eccentric",
-            "late_strength_boost_low_impact",
-            "late_strength_boost_cns_freshness",
-            "late_strength_boost_sport_specific",
-            "late_strength_boost_low_soreness",
-            "late_strength_boost_freshness"
-          ]
         }
       ],
       "blocked": [
         {
           "name": "Adductor rock-back",
-          "score": -0.85,
+          "score": -1.0,
           "reason_codes": [
             "late_strength_block_window_mismatch"
           ]
         },
         {
           "name": "Band-Resisted Jab-Cross Primer",
-          "score": 4.5,
+          "score": 5.0,
           "reason_codes": [
             "late_strength_block_window_mismatch"
           ]
         },
         {
           "name": "Band-Resisted Punch",
-          "score": 1.4,
+          "score": 1.15,
           "reason_codes": [
             "late_strength_block_band_work_lockout"
           ]
         },
         {
           "name": "Band-Resisted Straight Punch",
-          "score": 1.4,
+          "score": 1.15,
           "reason_codes": [
             "late_strength_block_band_work_lockout"
           ]
         },
         {
           "name": "Eye-head dissociation drill",
-          "score": -0.85,
+          "score": -1.0,
           "reason_codes": [
             "late_strength_block_familiarity_required_late",
             "late_strength_block_window_mismatch"
@@ -700,7 +700,7 @@
         },
         {
           "name": "Four-way manual neck isometric",
-          "score": -0.85,
+          "score": -1.0,
           "reason_codes": [
             "late_strength_block_familiarity_required_late",
             "late_strength_block_window_mismatch"
@@ -708,49 +708,49 @@
         },
         {
           "name": "Isometric Mid-Thigh Pull",
-          "score": 2.05,
+          "score": 4.15,
           "reason_codes": [
             "late_strength_block_window_mismatch"
           ]
         },
         {
           "name": "Overcoming Split-Squat Isometric",
-          "score": 2.1,
+          "score": 4.2,
           "reason_codes": [
             "late_strength_block_window_mismatch"
           ]
         },
         {
           "name": "Punch-Specific Max Isometric Hold",
-          "score": 4.35,
+          "score": 6.45,
           "reason_codes": [
             "late_strength_block_window_mismatch"
           ]
         },
         {
           "name": "Seated Medicine-Ball Punch Throw",
-          "score": 3.25,
+          "score": 4.1,
           "reason_codes": [
             "late_strength_block_window_mismatch"
           ]
         },
         {
           "name": "Staggered-Stance Medicine-Ball Punch Throw",
-          "score": 4.5,
+          "score": 5.0,
           "reason_codes": [
             "late_strength_block_window_mismatch"
           ]
         },
         {
           "name": "Standing hip CAR lite",
-          "score": -0.85,
+          "score": -1.0,
           "reason_codes": [
             "late_strength_block_familiarity_required_late"
           ]
         },
         {
           "name": "Supported hip airplane micro-range",
-          "score": -0.85,
+          "score": -1.0,
           "reason_codes": [
             "late_strength_block_familiarity_required_late",
             "late_strength_block_no_d7_to_d1",
@@ -759,7 +759,7 @@
         },
         {
           "name": "Towel-assisted lateral neck isometric",
-          "score": -0.85,
+          "score": -1.0,
           "reason_codes": [
             "late_strength_block_familiarity_required_late",
             "late_strength_block_window_mismatch"
@@ -767,7 +767,7 @@
         },
         {
           "name": "Trap Bar Deadlift",
-          "score": 1.6,
+          "score": 3.4,
           "reason_codes": [
             "late_strength_block_eccentric_lower",
             "late_strength_block_familiarity_required_late",
@@ -994,7 +994,7 @@
       "winners": [
         {
           "name": "Band Row Speed Focus",
-          "score": 8.5875,
+          "score": 9.4375,
           "reason_codes": [
             "priority_secondary_goal_match:skill_refinement",
             "late_strength_boost_window_fit",
@@ -1012,8 +1012,42 @@
           ]
         },
         {
+          "name": "Technical Shadowboxing Tempo",
+          "score": 7.3375,
+          "reason_codes": [
+            "priority_secondary_goal_match:skill_refinement",
+            "late_strength_boost_window_fit",
+            "late_strength_boost_cut_survivable",
+            "late_strength_boost_explicit_late_touch",
+            "late_strength_boost_low_eccentric",
+            "late_strength_boost_low_impact",
+            "late_strength_boost_cns_freshness",
+            "late_strength_boost_sport_specific",
+            "late_strength_boost_low_soreness",
+            "late_strength_boost_neural_primer",
+            "late_strength_boost_speed",
+            "late_strength_boost_freshness"
+          ]
+        },
+        {
+          "name": "Towel/Gi Row Isometric Hold",
+          "score": 6.2725,
+          "reason_codes": [
+            "priority_secondary_goal_match:maximal_strength_maintenance",
+            "late_strength_boost_window_fit",
+            "late_strength_boost_cut_survivable",
+            "late_strength_boost_explicit_late_touch",
+            "late_strength_boost_low_eccentric",
+            "late_strength_boost_low_impact",
+            "late_strength_boost_cns_freshness",
+            "late_strength_boost_sport_specific",
+            "late_strength_boost_low_soreness",
+            "late_strength_boost_freshness"
+          ]
+        },
+        {
           "name": "Counter-Striker Split-Line Punch Isometric Hold",
-          "score": 7.6875,
+          "score": 9.7875,
           "reason_codes": [
             "priority_secondary_goal_match:maximal_strength_maintenance",
             "priority_secondary_goal_match:skill_refinement",
@@ -1028,74 +1062,40 @@
             "late_strength_boost_speed",
             "late_strength_boost_freshness"
           ]
-        },
-        {
-          "name": "Technical Shadowboxing Tempo",
-          "score": 6.7875,
-          "reason_codes": [
-            "priority_secondary_goal_match:skill_refinement",
-            "late_strength_boost_window_fit",
-            "late_strength_boost_cut_survivable",
-            "late_strength_boost_explicit_late_touch",
-            "late_strength_boost_low_eccentric",
-            "late_strength_boost_low_impact",
-            "late_strength_boost_cns_freshness",
-            "late_strength_boost_sport_specific",
-            "late_strength_boost_low_soreness",
-            "late_strength_boost_neural_primer",
-            "late_strength_boost_speed",
-            "late_strength_boost_freshness"
-          ]
-        },
-        {
-          "name": "Light Heavy-Bag Technical Tempo",
-          "score": 4.5725,
-          "reason_codes": [
-            "priority_secondary_goal_match:skill_refinement",
-            "late_strength_boost_window_fit",
-            "late_strength_boost_cut_survivable",
-            "late_strength_boost_explicit_late_touch",
-            "late_strength_boost_low_eccentric",
-            "late_strength_boost_low_impact",
-            "late_strength_boost_cns_freshness",
-            "late_strength_boost_sport_specific",
-            "late_strength_boost_low_soreness",
-            "late_strength_boost_freshness"
-          ]
         }
       ],
       "blocked": [
         {
           "name": "Adductor rock-back",
-          "score": -0.85,
+          "score": -1.0,
           "reason_codes": [
             "late_strength_block_window_mismatch"
           ]
         },
         {
           "name": "Band-Resisted Jab-Cross Primer",
-          "score": 4.5,
+          "score": 5.0,
           "reason_codes": [
             "late_strength_block_window_mismatch"
           ]
         },
         {
           "name": "Band-Resisted Punch",
-          "score": 1.4,
+          "score": 1.15,
           "reason_codes": [
             "late_strength_block_band_work_lockout"
           ]
         },
         {
           "name": "Band-Resisted Straight Punch",
-          "score": 1.4,
+          "score": 1.15,
           "reason_codes": [
             "late_strength_block_band_work_lockout"
           ]
         },
         {
           "name": "Eye-head dissociation drill",
-          "score": -0.85,
+          "score": -1.0,
           "reason_codes": [
             "late_strength_block_familiarity_required_late",
             "late_strength_block_window_mismatch"
@@ -1103,7 +1103,7 @@
         },
         {
           "name": "Four-way manual neck isometric",
-          "score": -0.85,
+          "score": -1.0,
           "reason_codes": [
             "late_strength_block_familiarity_required_late",
             "late_strength_block_window_mismatch"
@@ -1111,49 +1111,49 @@
         },
         {
           "name": "Isometric Mid-Thigh Pull",
-          "score": 2.05,
+          "score": 4.15,
           "reason_codes": [
             "late_strength_block_window_mismatch"
           ]
         },
         {
           "name": "Overcoming Split-Squat Isometric",
-          "score": 2.1,
+          "score": 4.2,
           "reason_codes": [
             "late_strength_block_window_mismatch"
           ]
         },
         {
           "name": "Punch-Specific Max Isometric Hold",
-          "score": 4.35,
+          "score": 6.45,
           "reason_codes": [
             "late_strength_block_window_mismatch"
           ]
         },
         {
           "name": "Seated Medicine-Ball Punch Throw",
-          "score": 3.25,
+          "score": 4.1,
           "reason_codes": [
             "late_strength_block_window_mismatch"
           ]
         },
         {
           "name": "Staggered-Stance Medicine-Ball Punch Throw",
-          "score": 4.5,
+          "score": 5.0,
           "reason_codes": [
             "late_strength_block_window_mismatch"
           ]
         },
         {
           "name": "Standing hip CAR lite",
-          "score": -0.85,
+          "score": -1.0,
           "reason_codes": [
             "late_strength_block_familiarity_required_late"
           ]
         },
         {
           "name": "Supported hip airplane micro-range",
-          "score": -0.85,
+          "score": -1.0,
           "reason_codes": [
             "late_strength_block_familiarity_required_late",
             "late_strength_block_no_d7_to_d1",
@@ -1162,7 +1162,7 @@
         },
         {
           "name": "Towel-assisted lateral neck isometric",
-          "score": -0.85,
+          "score": -1.0,
           "reason_codes": [
             "late_strength_block_familiarity_required_late",
             "late_strength_block_window_mismatch"
@@ -1170,7 +1170,7 @@
         },
         {
           "name": "Trap Bar Deadlift",
-          "score": 1.6,
+          "score": 3.4,
           "reason_codes": [
             "late_strength_block_eccentric_lower",
             "late_strength_block_familiarity_required_late",
@@ -1397,7 +1397,7 @@
       "winners": [
         {
           "name": "Staggered-Stance Medicine-Ball Punch Throw",
-          "score": 9.4625,
+          "score": 9.9625,
           "reason_codes": [
             "priority_secondary_goal_match:skill_refinement",
             "late_strength_boost_window_fit",
@@ -1417,7 +1417,7 @@
         },
         {
           "name": "Band Row Speed Focus",
-          "score": 8.6125,
+          "score": 9.4625,
           "reason_codes": [
             "priority_secondary_goal_match:skill_refinement",
             "late_strength_boost_window_fit",
@@ -1435,12 +1435,12 @@
           ]
         },
         {
-          "name": "Counter-Striker Split-Line Punch Isometric Hold",
-          "score": 7.7125,
+          "name": "Technical Shadowboxing Tempo",
+          "score": 7.3625,
           "reason_codes": [
-            "priority_secondary_goal_match:maximal_strength_maintenance",
             "priority_secondary_goal_match:skill_refinement",
             "late_strength_boost_window_fit",
+            "late_strength_boost_cut_survivable",
             "late_strength_boost_explicit_late_touch",
             "late_strength_boost_low_eccentric",
             "late_strength_boost_low_impact",
@@ -1453,12 +1453,12 @@
           ]
         },
         {
-          "name": "Technical Shadowboxing Tempo",
-          "score": 6.8125,
+          "name": "Counter-Striker Split-Line Punch Isometric Hold",
+          "score": 9.8125,
           "reason_codes": [
+            "priority_secondary_goal_match:maximal_strength_maintenance",
             "priority_secondary_goal_match:skill_refinement",
             "late_strength_boost_window_fit",
-            "late_strength_boost_cut_survivable",
             "late_strength_boost_explicit_late_touch",
             "late_strength_boost_low_eccentric",
             "late_strength_boost_low_impact",
@@ -1474,14 +1474,14 @@
       "blocked": [
         {
           "name": "90/90 hip switches",
-          "score": -0.85,
+          "score": -1.0,
           "reason_codes": [
             "late_strength_block_window_mismatch"
           ]
         },
         {
           "name": "Adductor rock-back",
-          "score": -0.85,
+          "score": -1.0,
           "reason_codes": [
             "late_strength_block_no_d4_to_d1",
             "late_strength_block_window_mismatch"
@@ -1489,14 +1489,14 @@
         },
         {
           "name": "Band-Resisted Jab-Cross Primer",
-          "score": 4.5,
+          "score": 5.0,
           "reason_codes": [
             "late_strength_block_window_mismatch"
           ]
         },
         {
           "name": "Band-Resisted Punch",
-          "score": 1.4,
+          "score": 1.15,
           "reason_codes": [
             "late_strength_block_band_work_lockout",
             "late_strength_block_window_mismatch"
@@ -1504,7 +1504,7 @@
         },
         {
           "name": "Band-Resisted Straight Punch",
-          "score": 1.4,
+          "score": 1.15,
           "reason_codes": [
             "late_strength_block_band_work_lockout",
             "late_strength_block_window_mismatch"
@@ -1512,7 +1512,7 @@
         },
         {
           "name": "Chin tuck nod",
-          "score": -0.85,
+          "score": -1.0,
           "reason_codes": [
             "late_strength_block_no_d4_to_d1",
             "late_strength_block_window_mismatch"
@@ -1520,7 +1520,7 @@
         },
         {
           "name": "Eye-head dissociation drill",
-          "score": -0.85,
+          "score": -1.0,
           "reason_codes": [
             "late_strength_block_familiarity_required_late",
             "late_strength_block_no_d4_to_d1",
@@ -1529,7 +1529,7 @@
         },
         {
           "name": "Four-way manual neck isometric",
-          "score": -0.85,
+          "score": -1.0,
           "reason_codes": [
             "late_strength_block_familiarity_required_late",
             "late_strength_block_no_d4_to_d1",
@@ -1538,14 +1538,14 @@
         },
         {
           "name": "Isometric Mid-Thigh Pull",
-          "score": 2.05,
+          "score": 4.15,
           "reason_codes": [
             "late_strength_block_window_mismatch"
           ]
         },
         {
           "name": "Lateral step-and-stick boxer reset",
-          "score": -0.85,
+          "score": -1.0,
           "reason_codes": [
             "late_strength_block_no_d4_to_d1",
             "late_strength_block_window_mismatch"
@@ -1553,7 +1553,7 @@
         },
         {
           "name": "Line step-and-stick forward/back",
-          "score": -0.85,
+          "score": -1.0,
           "reason_codes": [
             "late_strength_block_no_d4_to_d1",
             "late_strength_block_window_mismatch"
@@ -1561,14 +1561,14 @@
         },
         {
           "name": "Overcoming Split-Squat Isometric",
-          "score": 2.1,
+          "score": 4.2,
           "reason_codes": [
             "late_strength_block_window_mismatch"
           ]
         },
         {
           "name": "Pivot-and-freeze rear foot",
-          "score": -0.85,
+          "score": -1.0,
           "reason_codes": [
             "late_strength_block_no_d4_to_d1",
             "late_strength_block_window_mismatch"
@@ -1576,14 +1576,14 @@
         },
         {
           "name": "Punch-Specific Max Isometric Hold",
-          "score": 4.35,
+          "score": 6.45,
           "reason_codes": [
             "late_strength_block_window_mismatch"
           ]
         },
         {
           "name": "Quadruped thread-the-needle",
-          "score": -0.85,
+          "score": -1.0,
           "reason_codes": [
             "late_strength_block_no_d4_to_d1",
             "late_strength_block_window_mismatch"
@@ -1591,14 +1591,14 @@
         },
         {
           "name": "Seated Medicine-Ball Punch Throw",
-          "score": 3.25,
+          "score": 4.1,
           "reason_codes": [
             "late_strength_block_window_mismatch"
           ]
         },
         {
           "name": "Small-range cervical CARs",
-          "score": -0.85,
+          "score": -1.0,
           "reason_codes": [
             "late_strength_block_no_d4_to_d1",
             "late_strength_block_window_mismatch"
@@ -1606,7 +1606,7 @@
         },
         {
           "name": "Standing hip CAR lite",
-          "score": -0.85,
+          "score": -1.0,
           "reason_codes": [
             "late_strength_block_familiarity_required_late",
             "late_strength_block_no_d4_to_d1",
@@ -1615,7 +1615,7 @@
         },
         {
           "name": "Supported hip airplane micro-range",
-          "score": -0.85,
+          "score": -1.0,
           "reason_codes": [
             "late_strength_block_familiarity_required_late",
             "late_strength_block_no_d7_to_d1",
@@ -1624,7 +1624,7 @@
         },
         {
           "name": "Towel-assisted lateral neck isometric",
-          "score": -0.85,
+          "score": -1.0,
           "reason_codes": [
             "late_strength_block_familiarity_required_late",
             "late_strength_block_no_d4_to_d1",
@@ -1633,14 +1633,14 @@
         },
         {
           "name": "Towel/Gi Row Isometric Hold",
-          "score": 1.0,
+          "score": 3.1,
           "reason_codes": [
             "late_strength_block_window_mismatch"
           ]
         },
         {
           "name": "Trap Bar Deadlift",
-          "score": 1.6,
+          "score": 3.4,
           "reason_codes": [
             "late_strength_block_eccentric_lower",
             "late_strength_block_familiarity_required_late",
@@ -1649,7 +1649,7 @@
         },
         {
           "name": "Wall scap push-up plus",
-          "score": -0.85,
+          "score": -1.0,
           "reason_codes": [
             "late_strength_block_no_d4_to_d1",
             "late_strength_block_window_mismatch"
@@ -1890,7 +1890,7 @@
       "winners": [
         {
           "name": "Boxer stance weight-shift hold",
-          "score": 2.3025,
+          "score": 2.1525,
           "reason_codes": [
             "late_strength_boost_window_fit",
             "late_strength_boost_cut_survivable",
@@ -1904,7 +1904,7 @@
         },
         {
           "name": "Lead-foot pivot prep",
-          "score": 2.3025,
+          "score": 2.1525,
           "reason_codes": [
             "late_strength_boost_window_fit",
             "late_strength_boost_cut_survivable",
@@ -1918,7 +1918,7 @@
         },
         {
           "name": "Pivot-and-freeze lead foot",
-          "score": 2.3025,
+          "score": 2.1525,
           "reason_codes": [
             "late_strength_boost_window_fit",
             "late_strength_boost_cut_survivable",
@@ -1932,7 +1932,7 @@
         },
         {
           "name": "Serratus wall slide",
-          "score": 2.3025,
+          "score": 2.1525,
           "reason_codes": [
             "late_strength_boost_window_fit",
             "late_strength_boost_cut_survivable",
@@ -1948,7 +1948,7 @@
       "blocked": [
         {
           "name": "90/90 hip switches",
-          "score": -0.85,
+          "score": -1.0,
           "reason_codes": [
             "late_strength_block_d1_requires_d1_tags",
             "late_strength_block_window_mismatch"
@@ -1956,7 +1956,7 @@
         },
         {
           "name": "Adductor rock-back",
-          "score": -0.85,
+          "score": -1.0,
           "reason_codes": [
             "late_strength_block_d1_requires_d1_tags",
             "late_strength_block_window_mismatch"
@@ -1964,7 +1964,7 @@
         },
         {
           "name": "Band Face Pull",
-          "score": -0.85,
+          "score": -1.0,
           "reason_codes": [
             "late_strength_block_band_work_lockout",
             "late_strength_block_d1_requires_d1_tags",
@@ -1973,7 +1973,7 @@
         },
         {
           "name": "Band Row Speed Focus",
-          "score": 3.65,
+          "score": 4.5,
           "reason_codes": [
             "late_strength_block_band_work_lockout",
             "late_strength_block_d1_requires_d1_tags",
@@ -1982,7 +1982,7 @@
         },
         {
           "name": "Band face pull light",
-          "score": -0.85,
+          "score": -1.0,
           "reason_codes": [
             "late_strength_block_band_work_lockout",
             "late_strength_block_d1_requires_d1_tags",
@@ -1991,7 +1991,7 @@
         },
         {
           "name": "Band pull-apart low volume",
-          "score": -0.85,
+          "score": -1.0,
           "reason_codes": [
             "late_strength_block_band_work_lockout",
             "late_strength_block_d1_requires_d1_tags",
@@ -2000,7 +2000,7 @@
         },
         {
           "name": "Band-Resisted Jab-Cross Primer",
-          "score": 4.5,
+          "score": 5.0,
           "reason_codes": [
             "late_strength_block_band_work_lockout",
             "late_strength_block_d1_requires_d1_tags",
@@ -2009,7 +2009,7 @@
         },
         {
           "name": "Band-Resisted Punch",
-          "score": 1.4,
+          "score": 1.15,
           "reason_codes": [
             "late_strength_block_band_work_lockout",
             "late_strength_block_d1_requires_d1_tags",
@@ -2018,7 +2018,7 @@
         },
         {
           "name": "Band-Resisted Straight Punch",
-          "score": 1.4,
+          "score": 1.15,
           "reason_codes": [
             "late_strength_block_band_work_lockout",
             "late_strength_block_d1_requires_d1_tags",
@@ -2027,7 +2027,7 @@
         },
         {
           "name": "Banded Hip Flexor Stretch",
-          "score": -0.85,
+          "score": -1.0,
           "reason_codes": [
             "late_strength_block_band_work_lockout",
             "late_strength_block_d1_requires_d1_tags",
@@ -2036,7 +2036,7 @@
         },
         {
           "name": "Banded Lateral Walk",
-          "score": -0.5,
+          "score": -0.65,
           "reason_codes": [
             "late_strength_block_band_work_lockout",
             "late_strength_block_d1_requires_d1_tags",
@@ -2045,7 +2045,7 @@
         },
         {
           "name": "Chin tuck nod",
-          "score": -0.85,
+          "score": -1.0,
           "reason_codes": [
             "late_strength_block_d1_requires_d1_tags",
             "late_strength_block_window_mismatch"
@@ -2053,14 +2053,14 @@
         },
         {
           "name": "Controlled Bird-Dog",
-          "score": -0.35,
+          "score": -0.5,
           "reason_codes": [
             "late_strength_block_d1_requires_d1_tags"
           ]
         },
         {
           "name": "Counter-Striker Split-Line Punch Isometric Hold",
-          "score": 3.45,
+          "score": 5.55,
           "reason_codes": [
             "late_strength_block_band_work_lockout",
             "late_strength_block_d1_requires_d1_tags"
@@ -2068,7 +2068,7 @@
         },
         {
           "name": "Dead-bug breathing",
-          "score": -0.85,
+          "score": -1.0,
           "reason_codes": [
             "late_strength_block_d1_requires_d1_tags",
             "late_strength_block_window_mismatch"
@@ -2076,7 +2076,7 @@
         },
         {
           "name": "Deadbug (Band-Resisted)",
-          "score": -0.55,
+          "score": -0.7,
           "reason_codes": [
             "late_strength_block_band_work_lockout",
             "late_strength_block_d1_requires_d1_tags"
@@ -2084,14 +2084,14 @@
         },
         {
           "name": "Diaphragmatic Breathing Drills",
-          "score": -0.35,
+          "score": -0.5,
           "reason_codes": [
             "late_strength_block_d1_requires_d1_tags"
           ]
         },
         {
           "name": "Eye-head dissociation drill",
-          "score": -0.85,
+          "score": -1.0,
           "reason_codes": [
             "late_strength_block_d1_requires_d1_tags",
             "late_strength_block_familiarity_required_late",
@@ -2100,7 +2100,7 @@
         },
         {
           "name": "Four-way manual neck isometric",
-          "score": -0.85,
+          "score": -1.0,
           "reason_codes": [
             "late_strength_block_d1_requires_d1_tags",
             "late_strength_block_familiarity_required_late",
@@ -2109,14 +2109,14 @@
         },
         {
           "name": "Hollow-Body Hold",
-          "score": 0.3,
+          "score": 0.1,
           "reason_codes": [
             "late_strength_block_d1_requires_d1_tags"
           ]
         },
         {
           "name": "Isometric Mid-Thigh Pull",
-          "score": 2.05,
+          "score": 4.15,
           "reason_codes": [
             "late_strength_block_d1_requires_d1_tags",
             "late_strength_block_window_mismatch"
@@ -2124,7 +2124,7 @@
         },
         {
           "name": "Lateral step-and-stick boxer reset",
-          "score": -0.85,
+          "score": -1.0,
           "reason_codes": [
             "late_strength_block_d1_requires_d1_tags",
             "late_strength_block_window_mismatch"
@@ -2132,7 +2132,7 @@
         },
         {
           "name": "Lead-leg single-leg stance with guard",
-          "score": -0.85,
+          "score": -1.0,
           "reason_codes": [
             "late_strength_block_d1_requires_d1_tags",
             "late_strength_block_window_mismatch"
@@ -2140,7 +2140,7 @@
         },
         {
           "name": "Light Heavy-Bag Technical Tempo",
-          "score": 1.4,
+          "score": 1.95,
           "reason_codes": [
             "late_strength_block_d1_requires_d1_tags",
             "late_strength_block_window_mismatch"
@@ -2148,7 +2148,7 @@
         },
         {
           "name": "Line step-and-stick forward/back",
-          "score": -0.85,
+          "score": -1.0,
           "reason_codes": [
             "late_strength_block_d1_requires_d1_tags",
             "late_strength_block_window_mismatch"
@@ -2156,14 +2156,14 @@
         },
         {
           "name": "Mobility Reset Flow",
-          "score": -0.85,
+          "score": -1.0,
           "reason_codes": [
             "late_strength_block_d1_requires_d1_tags"
           ]
         },
         {
           "name": "Open-book reset",
-          "score": -0.85,
+          "score": -1.0,
           "reason_codes": [
             "late_strength_block_d1_requires_d1_tags",
             "late_strength_block_window_mismatch"
@@ -2171,7 +2171,7 @@
         },
         {
           "name": "Overcoming Split-Squat Isometric",
-          "score": 2.1,
+          "score": 4.2,
           "reason_codes": [
             "late_strength_block_band_work_lockout",
             "late_strength_block_d1_requires_d1_tags",
@@ -2180,7 +2180,7 @@
         },
         {
           "name": "Pivot-and-freeze rear foot",
-          "score": -0.85,
+          "score": -1.0,
           "reason_codes": [
             "late_strength_block_d1_requires_d1_tags",
             "late_strength_block_window_mismatch"
@@ -2188,7 +2188,7 @@
         },
         {
           "name": "Punch-Specific Max Isometric Hold",
-          "score": 4.35,
+          "score": 6.45,
           "reason_codes": [
             "late_strength_block_band_work_lockout",
             "late_strength_block_d1_requires_d1_tags",
@@ -2197,7 +2197,7 @@
         },
         {
           "name": "Quadruped thread-the-needle",
-          "score": -0.85,
+          "score": -1.0,
           "reason_codes": [
             "late_strength_block_d1_requires_d1_tags",
             "late_strength_block_window_mismatch"
@@ -2205,7 +2205,7 @@
         },
         {
           "name": "Rear-leg single-leg stance with guard",
-          "score": -0.85,
+          "score": -1.0,
           "reason_codes": [
             "late_strength_block_d1_requires_d1_tags",
             "late_strength_block_window_mismatch"
@@ -2213,7 +2213,7 @@
         },
         {
           "name": "Scapular Pull-Up Hold",
-          "score": 0.6,
+          "score": 1.95,
           "reason_codes": [
             "late_strength_block_d1_requires_d1_tags",
             "late_strength_block_window_mismatch"
@@ -2221,7 +2221,7 @@
         },
         {
           "name": "Seated Medicine-Ball Punch Throw",
-          "score": 3.25,
+          "score": 4.1,
           "reason_codes": [
             "late_strength_block_d1_requires_d1_tags",
             "late_strength_block_window_mismatch"
@@ -2229,14 +2229,14 @@
         },
         {
           "name": "Single-Leg Balance (Eyes Closed)",
-          "score": -0.55,
+          "score": -0.7,
           "reason_codes": [
             "late_strength_block_d1_requires_d1_tags"
           ]
         },
         {
           "name": "Small-range cervical CARs",
-          "score": -0.85,
+          "score": -1.0,
           "reason_codes": [
             "late_strength_block_d1_requires_d1_tags",
             "late_strength_block_window_mismatch"
@@ -2244,7 +2244,7 @@
         },
         {
           "name": "Split-stance ankle rocker",
-          "score": -0.85,
+          "score": -1.0,
           "reason_codes": [
             "late_strength_block_d1_requires_d1_tags",
             "late_strength_block_window_mismatch"
@@ -2252,14 +2252,14 @@
         },
         {
           "name": "Split-stance hip lock hold",
-          "score": -0.85,
+          "score": -1.0,
           "reason_codes": [
             "late_strength_block_window_mismatch"
           ]
         },
         {
           "name": "Staggered-Stance Medicine-Ball Punch Throw",
-          "score": 4.5,
+          "score": 5.0,
           "reason_codes": [
             "late_strength_block_d1_requires_d1_tags",
             "late_strength_block_window_mismatch"
@@ -2267,7 +2267,7 @@
         },
         {
           "name": "Standing hip CAR lite",
-          "score": -0.85,
+          "score": -1.0,
           "reason_codes": [
             "late_strength_block_d1_requires_d1_tags",
             "late_strength_block_familiarity_required_late",
@@ -2276,7 +2276,7 @@
         },
         {
           "name": "Supported hip airplane micro-range",
-          "score": -0.85,
+          "score": -1.0,
           "reason_codes": [
             "late_strength_block_d1_requires_d1_tags",
             "late_strength_block_familiarity_required_late",
@@ -2286,14 +2286,14 @@
         },
         {
           "name": "Technical Shadowboxing Tempo",
-          "score": 2.35,
+          "score": 2.9,
           "reason_codes": [
             "late_strength_block_d1_requires_d1_tags"
           ]
         },
         {
           "name": "Towel-assisted lateral neck isometric",
-          "score": -0.85,
+          "score": -1.0,
           "reason_codes": [
             "late_strength_block_d1_requires_d1_tags",
             "late_strength_block_familiarity_required_late",
@@ -2302,7 +2302,7 @@
         },
         {
           "name": "Towel/Gi Row Isometric Hold",
-          "score": 1.0,
+          "score": 3.1,
           "reason_codes": [
             "late_strength_block_d1_requires_d1_tags",
             "late_strength_block_window_mismatch"
@@ -2310,7 +2310,7 @@
         },
         {
           "name": "Trap Bar Deadlift",
-          "score": 1.6,
+          "score": 3.4,
           "reason_codes": [
             "late_strength_block_d1_requires_d1_tags",
             "late_strength_block_eccentric_lower",
@@ -2320,14 +2320,14 @@
         },
         {
           "name": "Wall ISO Deadbug",
-          "score": -0.55,
+          "score": -0.7,
           "reason_codes": [
             "late_strength_block_d1_requires_d1_tags"
           ]
         },
         {
           "name": "Wall angel partial range",
-          "score": -0.85,
+          "score": -1.0,
           "reason_codes": [
             "late_strength_block_d1_requires_d1_tags",
             "late_strength_block_window_mismatch"
@@ -2335,7 +2335,7 @@
         },
         {
           "name": "Wall scap push-up plus",
-          "score": -0.85,
+          "score": -1.0,
           "reason_codes": [
             "late_strength_block_d1_requires_d1_tags",
             "late_strength_block_window_mismatch"
