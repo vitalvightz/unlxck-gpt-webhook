@@ -516,8 +516,6 @@ def _low_aerobic_support_cap_for_week(
         & {"severe_injury", "red_flag_injury", "medical_hold"}
     )
 
-    hard_count = effective_hard_day_count(hard_sparring_plan or [])
-
     if bucket in {"none", "low"}:
         if is_fight_week:
             return 0 if (high_fatigue or red_flag) else 1

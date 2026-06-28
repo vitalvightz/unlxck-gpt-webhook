@@ -18,22 +18,33 @@ class TestTaperAllocationReallocatedTowardConditioning:
     """Taper used to be recovery-heavy; one recovery slot is now conditioning."""
 
     def test_freq5_taper_split(self):
-        assert allocate_sessions(5, "TAPER") == {"strength": 1, "conditioning": 2, "recovery": 2}
+        assert allocate_sessions(5, "TAPER") == {"strength": 1, "conditioning": 2, "recovery": 3}
 
     def test_freq6_taper_split(self):
         assert allocate_sessions(6, "TAPER") == {"strength": 1, "conditioning": 2, "recovery": 3}
 
     @pytest.mark.parametrize("freq", [1, 2, 3, 4, 5, 6])
-    def test_taper_totals_still_sum_to_frequency(self, freq):
-        assert sum(allocate_sessions(freq, "TAPER").values()) == freq
+    def test_taper_totals_add_one_extra_app_session(self, freq):
+        assert sum(allocate_sessions(freq, "TAPER").values()) == min(freq + 1, 6)
 
     @pytest.mark.parametrize("freq", [1, 2, 3, 4])
-    def test_low_frequency_taper_unchanged(self, freq):
-        # Only freq-5 and freq-6 were rebalanced.
+    def test_low_frequency_taper_gets_extra_slot(self, freq):
         expected = {
-            1: {"strength": 0, "conditioning": 1, "recovery": 0},
-            2: {"strength": 0, "conditioning": 1, "recovery": 1},
-            3: {"strength": 1, "conditioning": 1, "recovery": 1},
-            4: {"strength": 1, "conditioning": 1, "recovery": 2},
+            1: {"strength": 0, "conditioning": 1, "recovery": 1},
+            2: {"strength": 1, "conditioning": 1, "recovery": 1},
+            3: {"strength": 1, "conditioning": 1, "recovery": 2},
+            4: {"strength": 1, "conditioning": 2, "recovery": 2},
         }[freq]
         assert allocate_sessions(freq, "TAPER") == expected
+
+    @pytest.mark.parametrize(
+        ("freq", "phase", "total"),
+        [
+            (1, "GPP", 2),
+            (4, "GPP", 5),
+            (1, "SPP", 2),
+            (4, "SPP", 5),
+        ],
+    )
+    def test_all_phases_get_one_extra_app_session(self, freq, phase, total):
+        assert sum(allocate_sessions(freq, phase).values()) == total

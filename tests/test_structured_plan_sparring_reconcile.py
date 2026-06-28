@@ -312,28 +312,22 @@ def test_span_fallback_inserts_when_week_index_does_not_match():
     assert [d["countdown_label"] for d in plan["weeks"][0]["days"]] == ["D-33", "D-31", "D-30"]
 
 
-def test_inserts_dropped_light_combat_day_from_declared_support_work():
+def test_declared_support_work_day_does_not_insert_light_combat_card():
     plan = _structured_plan([_day("D-31", headline="Strength"), _day("D-29", headline="Aerobic")])
     notes = reconcile_coach_led_sparring_days(plan, _light_support_friday_brief())
 
     days = plan["weeks"][0]["days"]
-    assert [d["countdown_label"] for d in days] == ["D-31", "D-30", "D-29"]
-    inserted = days[1]
-    assert inserted["date"] == "2026-07-24"
-    assert inserted["countdown_label"] == "D-30"
-    assert inserted["day_type"] == "moderate"
-    assert inserted["today_card"]["headline"] == "Coach-led light combat"
-    assert inserted["sessions"] == []
-    assert any("inserted" in note and "light combat" in note for note in notes)
+    assert [d["countdown_label"] for d in days] == ["D-31", "D-29"]
+    assert notes == []
 
 
-def test_stamps_empty_declared_support_work_day_as_light_combat():
+def test_declared_support_work_day_does_not_stamp_light_combat_card():
     friday = _day("D-30", headline="Mobility support")
     plan = _structured_plan([friday])
     notes = reconcile_coach_led_sparring_days(plan, _light_support_friday_brief())
 
-    assert friday["today_card"]["headline"] == "Coach-led light combat"
-    assert any("stamped" in note and "light combat" in note for note in notes)
+    assert friday["today_card"]["headline"] == "Mobility support"
+    assert notes == []
 
 
 def test_hard_sparring_wins_when_support_work_overlaps_same_day():
@@ -358,7 +352,7 @@ def test_malformed_support_work_brief_is_noop():
     assert plan["weeks"][0]["days"][0]["today_card"]["headline"] == before
 
 
-def test_light_combat_does_not_overwrite_existing_app_session_and_records_note():
+def test_support_work_day_keeps_existing_app_session_without_contact_note():
     real_session = [{"title": "Mobility support", "blocks": []}]
     plan = _structured_plan([_day("D-30", headline="Mobility support", sessions=real_session)])
     notes = reconcile_coach_led_sparring_days(plan, _light_support_friday_brief())
@@ -367,4 +361,4 @@ def test_light_combat_does_not_overwrite_existing_app_session_and_records_note()
     assert day["today_card"]["headline"] == "Mobility support"
     assert day["sessions"] == real_session
     assert len(plan["weeks"][0]["days"]) == 1
-    assert any("skipped coach-led light combat" in note for note in notes)
+    assert notes == []
