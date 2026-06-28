@@ -68,3 +68,18 @@ def test_review_stage2_output_allows_staggered_med_ball_throw_on_d3():
     )
 
     assert "late_fight_window_forbidden_exercise" not in _blocking_warning_codes(review)
+
+
+def test_review_stage2_output_blocks_sandbag_shouldering_under_subheader_on_d3():
+    review = review_stage2_output(
+        planning_brief=_late_fight_brief("D-3"),
+        final_plan_text="""
+        D-3 (Wednesday) — Fight-week freshness
+        ### Core Work
+        - Sandbag Shouldering — 4 x 4–6 reps each side
+        - Mobility reset — 4 min
+        """,
+    )
+
+    assert "late_fight_window_forbidden_exercise" in _blocking_warning_codes(review)
+    assert review["needs_retry"] is True
