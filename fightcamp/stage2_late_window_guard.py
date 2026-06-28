@@ -110,9 +110,11 @@ def _matching_late_window_records(line: str) -> list[dict[str, Any]]:
 
 
 def late_window_exercise_warnings(*, planning_brief: dict, final_plan_text: str) -> list[dict[str, Any]]:
-    spec = planning_brief.get("late_fight_plan_spec") or {}
+    spec = planning_brief.get("late_fight_plan_spec")
+    if not isinstance(spec, dict):
+        return []
     payload_mode = str(spec.get("payload_mode") or "")
-    if not isinstance(spec, dict) or payload_mode in {"", "camp_payload"}:
+    if payload_mode in {"", "camp_payload"}:
         return []
 
     day_blocks = _countdown_blocks_by_day(final_plan_text)
