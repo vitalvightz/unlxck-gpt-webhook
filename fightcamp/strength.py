@@ -542,7 +542,8 @@ def _strength_contextual_risk_patterns(exercise: dict) -> tuple[list[str], list[
     }
 
 
-def _strength_throw_signal(exercise: dict, profile: dict, equipment: set[str]) -> bool:
+def _strength_throw_signal(exercise: dict, equipment: set[str]) -> bool:
+    profile = exercise.get("profile") or {}
     text = str(profile.get("text") or _strength_text_blob(exercise)).lower()
     if re.search(r"\b(?:throw|throws|throwing|toss|tosses|tossing)\b", text):
         return True
@@ -551,9 +552,10 @@ def _strength_throw_signal(exercise: dict, profile: dict, equipment: set[str]) -
     return False
 
 
-def _strength_band_signal(exercise: dict, profile: dict, equipment: set[str]) -> bool:
+def _strength_band_signal(exercise: dict, equipment: set[str]) -> bool:
     if "bands" in equipment:
         return True
+    profile = exercise.get("profile") or {}
     text = str(profile.get("text") or _strength_text_blob(exercise)).lower()
     return bool(re.search(r"\b(?:band|bands|banded)\b", text))
 

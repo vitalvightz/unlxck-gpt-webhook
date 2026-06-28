@@ -752,7 +752,7 @@ def _evaluate_conditioning_late_window(
         }
     )
     block_codes: list[str] = []
-    if late_band_lockout_window and "bands" in equipment and (window == D1 or not rehab_mobility_band_ok):
+    if late_band_lockout_window and "bands" in equipment and (window == "d1" or not rehab_mobility_band_ok):
         block_codes.append("late_conditioning_block_band_work_lockout")
         reason_codes.append("late_conditioning_penalty_band_work_lockout")
 
