@@ -10,6 +10,7 @@ from .stage2_policy import (
     prompt_safe_validator_report,
 )
 from .stage2_repair import build_stage2_repair_prompt
+from .stage2_required_countdown import required_countdown_session_warnings
 from .stage2_validator import validate_stage2_output
 
 
@@ -40,6 +41,31 @@ def _count_candidate_slots(planning_brief: dict) -> int:
         total += len(phase_pool.get("conditioning_slots", []) or [])
         total += len(phase_pool.get("rehab_slots", []) or [])
     return total
+
+
+def _validator_report_with_required_countdown_sessions(
+    *,
+    planning_brief: dict,
+    final_plan_text: str,
+) -> dict:
+    validator_report = validate_stage2_output(
+        planning_brief=planning_brief,
+        final_plan_text=final_plan_text,
+    )
+    missing_countdown_warnings = required_countdown_session_warnings(
+        planning_brief,
+        final_plan_text,
+    )
+    if not missing_countdown_warnings:
+        return validator_report
+    return {
+        **validator_report,
+        "warnings": [
+            *(validator_report.get("warnings", []) or []),
+            *missing_countdown_warnings,
+        ],
+        "late_fight_required_countdown_warnings": missing_countdown_warnings,
+    }
 
 
 
@@ -130,6 +156,9 @@ def _warning_detail_line(warning: dict) -> str:
         return "Replace empty safety lines with operational guardrails that change what the athlete does next."
     if warning.get("code") == "late_fight_missing_countdown_header":
         return "Restore D-X countdown headers for every active late-fight day."
+    if warning.get("code") == "late_fight_missing_required_countdown_session":
+        expected = str(warning.get("expected_display_label") or warning.get("days_out_bucket") or "the missing countdown day")
+        return f"Restore the selected countdown card: {expected}."
     if warning.get("code") == "late_fight_countdown_header_format":
         return "Rewrite countdown headers as D-X (Weekday) — session role."
     if warning.get("code") == "late_fight_d0_protocol_expanded":
@@ -212,7 +241,7 @@ def build_stage2_package(*, stage1_result: dict) -> dict:
 
 def review_stage2_output(*, planning_brief: dict, final_plan_text: str) -> dict:
     planning_brief = _require_dict(planning_brief, name="planning_brief")
-    validator_report = _enrich_validator_report(validate_stage2_output(
+    validator_report = _enrich_validator_report(_validator_report_with_required_countdown_sessions(
         planning_brief=planning_brief,
         final_plan_text=final_plan_text,
     ))
