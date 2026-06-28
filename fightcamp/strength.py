@@ -1536,7 +1536,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
     must_have_by_phase = {
         "GPP": ["compound", "posterior_chain", "unilateral", "push", "pull"],
         "SPP": ["compound", "posterior_chain", "unilateral", "explosive", "rate_of_force"],
-        "TAPER": ["reactive", "neural_primer", "speed", "explosive"],
+        "TAPER": ["late_strength_touch", "maximal_strength_maintenance", "neural_primer", "speed"],
     }
     must_have_tags = must_have_by_phase.get(phase, [])
     phase_dict = PHASE_TAG_BOOST.get(phase, {})
