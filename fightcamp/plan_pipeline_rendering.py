@@ -46,6 +46,10 @@ def _render_late_fight_stage1_countdown(planning_brief: dict) -> str | None:
     spec = planning_brief.get("late_fight_plan_spec") if isinstance(planning_brief, dict) else None
     if not isinstance(spec, dict):
         return None
+    payload_mode = str(spec.get("payload_mode") or "").strip()
+    if payload_mode == "bridge_compression_payload":
+        return None
+
     sequence = (
         planning_brief.get("late_fight_session_sequence")
         or planning_brief.get("session_sequence")
