@@ -384,7 +384,7 @@ def validate_bank(path: Path, tag_vocab: set[str]) -> tuple[bool, int, set[str],
         tags = _tags_for_entry(entry)
         all_tags.update(tags)
         for tag in tags:
-            if tag_vocab and tag not in tag_vocab:
+            if tag not in tag_vocab:
                 _add_issue(issues, "tags not in tag_vocabulary", path, label, tag)
 
         phases = entry.get("phases")
