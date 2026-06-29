@@ -60,6 +60,7 @@ import {
   computeDaysUntilFight,
   filterAvailablePerformanceFocusValues,
   getPerformanceFocusOptionAvailability,
+  HARD_SPARRING_STRENGTH_REMOVAL_MESSAGE,
   shouldHideField,
   shouldDisableField,
   shouldDeEmphasizeField,
@@ -895,7 +896,8 @@ export function PlanIntakeForm() {
 
     // ── Days-out policy: compute field visibility/disablement ───────────
   const daysUntilFight = computeDaysUntilFight(form.fight_date);
-  const daysOutCtx: DaysOutContext = buildDaysOutContext(daysUntilFight);
+  const hasHardSparring = form.hard_sparring_days.length > 0;
+  const daysOutCtx: DaysOutContext = buildDaysOutContext(daysUntilFight, { hasHardSparring });
   const fightDateWeekday = noScheduledFight ? null : getWeekdayFromIsoDate(form.fight_date);
 
   useEffect(() => {
@@ -1129,21 +1131,41 @@ export function PlanIntakeForm() {
       return;
     }
 
-    const currentDaysOutCtx = buildDaysOutContext(daysUntilFight);
+    const currentDaysOutCtx = buildDaysOutContext(daysUntilFight, { hasHardSparring });
     const nextKeyGoals = filterAvailablePerformanceFocusValues(currentDaysOutCtx, "key_goals", form.key_goals);
     const nextWeakAreas = filterAvailablePerformanceFocusValues(currentDaysOutCtx, "weak_areas", form.weak_areas);
     if (nextKeyGoals.length === form.key_goals.length && nextWeakAreas.length === form.weak_areas.length) {
       return;
     }
 
-    setForm((current) => ({
-      ...current,
-      key_goals: filterAvailablePerformanceFocusValues(currentDaysOutCtx, "key_goals", current.key_goals),
-      weak_areas: filterAvailablePerformanceFocusValues(currentDaysOutCtx, "weak_areas", current.weak_areas),
-    }));
-    setMessage("Some picks were removed because they are not available this close to fight day.");
+    const removedStrengthForHardSparring =
+      currentDaysOutCtx.hasHardSparring &&
+      currentDaysOutCtx.daysOut !== null &&
+      currentDaysOutCtx.daysOut <= 20 &&
+      (form.key_goals.includes("strength") || form.weak_areas.includes("strength"));
+
+    setForm((current) => {
+      const nextDaysOutCtx = buildDaysOutContext(daysUntilFight, {
+        hasHardSparring: current.hard_sparring_days.length > 0,
+      });
+      const filteredKeyGoals = filterAvailablePerformanceFocusValues(nextDaysOutCtx, "key_goals", current.key_goals);
+      const filteredWeakAreas = filterAvailablePerformanceFocusValues(nextDaysOutCtx, "weak_areas", current.weak_areas);
+
+      return {
+        ...current,
+        key_goals: filteredKeyGoals,
+        primary_goal: current.primary_goal && !filteredKeyGoals.includes(current.primary_goal) ? "" : current.primary_goal,
+        weak_areas: filteredWeakAreas,
+        primary_weak_area: current.primary_weak_area && !filteredWeakAreas.includes(current.primary_weak_area) ? "" : current.primary_weak_area,
+      };
+    });
+    setMessage(
+      removedStrengthForHardSparring
+        ? HARD_SPARRING_STRENGTH_REMOVAL_MESSAGE
+        : "Some picks were removed because they are not available this close to fight day.",
+    );
     setError(null);
-  }, [daysUntilFight, form.key_goals, form.weak_areas, hydrated]);
+  }, [daysUntilFight, form.key_goals, form.weak_areas, hasHardSparring, hydrated]);
 
   useEffect(() => {
     if (!hydrated) return;
@@ -1445,7 +1467,9 @@ export function PlanIntakeForm() {
         ? getPerformanceFocusCap(current.fight_date, { timeZone: current.athlete.athlete_timezone })
         : null;
       const totalSelectedPerformanceFocus = current.key_goals.length + current.weak_areas.length;
-      const currentDaysOutCtx = buildDaysOutContext(computeDaysUntilFight(current.fight_date));
+      const currentDaysOutCtx = buildDaysOutContext(computeDaysUntilFight(current.fight_date), {
+        hasHardSparring: current.hard_sparring_days.length > 0,
+      });
 
       if (
         performanceFocusGroup

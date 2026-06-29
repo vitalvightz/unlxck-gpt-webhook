@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+from datetime import datetime, timedelta, timezone
 
 import pytest
 from pydantic import ValidationError
@@ -177,6 +178,104 @@ def test_plan_request_rejects_overlap_between_hard_sparring_and_support_work_day
             hard_sparring_days=["Tuesday"],
             support_work_days=["Tuesday"],
         )
+
+
+def test_plan_request_removes_strength_focus_with_hard_sparring_at_d20():
+    fight_date = (datetime.now(timezone.utc).date() + timedelta(days=20)).isoformat()
+
+    request = PlanRequest(
+        athlete={
+            "full_name": "Ari Mensah",
+            "technical_style": ["boxing"],
+        },
+        fight_date=fight_date,
+        training_availability=["Monday", "Tuesday"],
+        hard_sparring_days=["Tuesday"],
+        key_goals=["strength", "mobility"],
+        primary_goal="strength",
+        weak_areas=["strength", "footwork"],
+        primary_weak_area="strength",
+    )
+
+    assert request.key_goals == ["mobility"]
+    assert request.primary_goal == ""
+    assert request.weak_areas == ["footwork"]
+    assert request.primary_weak_area == ""
+
+
+def test_plan_request_keeps_strength_focus_for_open_camp_with_hard_sparring():
+    request = PlanRequest(
+        athlete={
+            "full_name": "Ari Mensah",
+            "technical_style": ["boxing"],
+        },
+        fight_date=(datetime.now(timezone.utc).date() + timedelta(days=20)).isoformat(),
+        no_scheduled_fight=True,
+        training_availability=["Monday", "Tuesday"],
+        hard_sparring_days=["Tuesday"],
+        key_goals=["strength", "mobility"],
+        primary_goal="strength",
+        weak_areas=["strength", "footwork"],
+        primary_weak_area="strength",
+    )
+
+    assert request.key_goals == ["strength", "mobility"]
+    assert request.primary_goal == "strength"
+    assert request.weak_areas == ["strength", "footwork"]
+    assert request.primary_weak_area == "strength"
+
+
+def test_plan_input_removes_strength_focus_with_hard_sparring_at_d20_for_direct_payloads():
+    fight_date = (datetime.now(timezone.utc).date() + timedelta(days=20)).isoformat()
+
+    parsed = PlanInput.from_payload(
+        {
+            "data": {
+                "fields": [
+                    {"label": "Full name", "value": "Ari Mensah"},
+                    {"label": "When is your next fight?", "value": fight_date},
+                    {"label": "Athlete Time Zone", "value": "UTC"},
+                    {"label": "Training Availability", "value": "Monday, Tuesday"},
+                    {"label": "Hard Sparring Days", "value": "Tuesday"},
+                    {"label": "What are your key performance goals?", "value": "strength, mobility"},
+                    {"label": "Primary goal", "value": "strength"},
+                    {"label": "Where do you feel weakest right now?", "value": "strength, footwork"},
+                    {"label": "Primary weak area", "value": "strength"},
+                ],
+            },
+            "no_scheduled_fight": False,
+        }
+    )
+
+    assert parsed.key_goals == "mobility"
+    assert parsed.primary_goal == ""
+    assert parsed.weak_areas == "footwork"
+    assert parsed.primary_weak_area == ""
+
+
+def test_plan_input_keeps_strength_focus_for_direct_open_camp_payloads_with_hard_sparring():
+    parsed = PlanInput.from_payload(
+        {
+            "data": {
+                "fields": [
+                    {"label": "Full name", "value": "Ari Mensah"},
+                    {"label": "When is your next fight?", "value": ""},
+                    {"label": "Training Availability", "value": "Monday, Tuesday"},
+                    {"label": "Hard Sparring Days", "value": "Tuesday"},
+                    {"label": "What are your key performance goals?", "value": "strength, mobility"},
+                    {"label": "Primary goal", "value": "strength"},
+                    {"label": "Where do you feel weakest right now?", "value": "strength, footwork"},
+                    {"label": "Primary weak area", "value": "strength"},
+                ],
+            },
+            "no_scheduled_fight": True,
+        }
+    )
+
+    assert parsed.key_goals == "strength, mobility"
+    assert parsed.primary_goal == "strength"
+    assert parsed.weak_areas == "strength, footwork"
+    assert parsed.primary_weak_area == "strength"
 
 
 def test_plan_request_migrates_legacy_technical_skill_days_to_support_work_days():
