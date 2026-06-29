@@ -81,6 +81,7 @@ HIGH_DOSE_REASONS = {
     "high_lactate_load",
     "high_movement_cost",
 }
+_PATTERN_CACHE: dict[tuple[str, ...], re.Pattern[str]] = {}
 
 
 def _source_filename(source: str | None) -> str:
@@ -93,7 +94,11 @@ def is_style_conditioning_source(source: str | None) -> bool:
 
 
 def _has_value(value: Any) -> bool:
-    return value is not None and value != "" and value != [] and value != {}
+    if value is None:
+        return False
+    if isinstance(value, (str, list, dict, set, tuple)) and not value:
+        return False
+    return True
 
 
 def _number(value: Any) -> float | None:
@@ -108,16 +113,17 @@ def _number(value: Any) -> float | None:
 
 
 def _normalized_value(value: Any) -> str:
-    return str(value or "").strip().lower().replace("-", "_")
+    return str(value or "").strip().lower().replace("-", "_").replace(" ", "_")
 
 
 def _contains_term(text: str, terms: tuple[str, ...]) -> bool:
-    normalized = text.casefold()
-    for term in terms:
-        pattern = r"(?<![a-z0-9])" + re.escape(term.casefold()) + r"(?![a-z0-9])"
-        if re.search(pattern, normalized):
-            return True
-    return False
+    if terms not in _PATTERN_CACHE:
+        union_pattern = "|".join(re.escape(term.casefold()) for term in terms)
+        _PATTERN_CACHE[terms] = re.compile(
+            r"(?<![a-z0-9])(" + union_pattern + r")(?![a-z0-9])",
+            re.IGNORECASE,
+        )
+    return bool(_PATTERN_CACHE[terms].search(text))
 
 
 def _joined_note_text(entry: dict[str, Any]) -> str:
@@ -143,10 +149,10 @@ def _recommended_action(reason_codes: list[str], *, overstyled_name: bool, aggre
         return "delete_candidate"
     if aggressive_notes:
         return "manual_review"
-    if overstyled_name:
-        return "rename"
     if reason_set & HIGH_DOSE_REASONS:
         return "redose"
+    if overstyled_name and reason_set == {"overstyled_name"}:
+        return "rename"
     if reason_set:
         return "quarantine_from_late_fight"
     return "keep"
