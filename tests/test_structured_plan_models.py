@@ -207,6 +207,18 @@ def test_valid_fight_camp_plan_validates():
     assert plan.schema_version == SCHEMA_VERSION
 
 
+# A2. coach_led_contact on today_card survives validation (it carries the
+# coach-owned label for a sparring day that also has an app session).
+def test_today_card_coach_led_contact_survives_validation():
+    data = _valid_plan()
+    data["weeks"][0]["days"][0]["today_card"]["coach_led_contact"] = (
+        "Coach-led boxing — technical only"
+    )
+    plan = validate_structured_plan(data)
+    today_card = plan.weeks[0].days[0].today_card
+    assert today_card.coach_led_contact == "Coach-led boxing — technical only"
+
+
 # B. Multi-week plan validates: weeks[] -> days[] -> sessions[] -> blocks[].
 def test_multi_week_plan_validates():
     data = _valid_plan()
