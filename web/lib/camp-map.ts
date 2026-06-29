@@ -251,26 +251,138 @@ export function weekSessionSummary(
   );
 }
 
-const LOAD_PRIORITY = ["high", "moderate", "low", "recovery", "rest", "off"];
+const DAY_LOAD_POINTS: Record<string, number> = {
+  off: 0,
+  rest: 0,
+  recovery: 0.5,
+  low: 1,
+  technical: 1.5,
+  moderate: 2,
+  medium: 2,
+  high: 3,
+  hard: 3,
+  hard_spar: 3,
+  sparring: 3,
+};
+
+function normalizedLoadToken(value: unknown): string | null {
+  return cleanText(value)?.toLowerCase().replace(/[\s-]+/g, "_") ?? null;
+}
+
+function dayTypeLoadPoints(day: StructuredDay | null | undefined): number {
+  const token = normalizedLoadToken(day?.day_type);
+  return token ? DAY_LOAD_POINTS[token] ?? 0 : 0;
+}
+
+function sessionLoadPoints(session: StructuredSession | null | undefined): number {
+  const text = [
+    session?.session_type,
+    session?.title,
+    session?.objective,
+    session?.primary_stressor,
+    session?.cns_demand,
+    session?.impact_level,
+  ]
+    .map((value) => cleanText(value)?.toLowerCase())
+    .filter(Boolean)
+    .join(" ");
+
+  if (/\b(hard|spar|sprint|speed|power|max|explosive|hiit|anaerobic)\b/.test(text)) {
+    return 3;
+  }
+
+  if (/\b(strength|conditioning|tempo|moderate|repeat)\b/.test(text)) {
+    return 2;
+  }
+
+  if (/\b(rehab|prehab|mobility|recovery|easy|low)\b/.test(text)) {
+    return 1;
+  }
+
+  return 1.5;
+}
+
+function appDayLoadPoints(day: StructuredDay): number {
+  const sessions = getSessions(day);
+  if (sessions.length === 0) {
+    return 0;
+  }
+
+  const sessionMax = sessions.reduce(
+    (max, session) => Math.max(max, sessionLoadPoints(session)),
+    0,
+  );
+
+  // Extra sessions add volume, but cap the day so one stacked day does not
+  // automatically mislabel the whole week as High.
+  const extraSessionVolume = Math.max(0, sessions.length - 1) * 0.75;
+
+  return Math.min(4, Math.max(dayTypeLoadPoints(day), sessionMax, 1) + extraSessionVolume);
+}
+
+function coachLedDayLoadPoints(day: StructuredDay): number {
+  const sessionless = classifySessionlessDay(day);
+
+  if (!sessionless.coachLed) {
+    return 0;
+  }
+
+  if (sessionless.kind === "sparring") {
+    return 3;
+  }
+
+  if (sessionless.kind === "technical") {
+    return 1.5;
+  }
+
+  return 2;
+}
 
 /**
- * A short load label for a week, derived from its days' `day_type` values (the
- * payload carries no explicit week load focus). Returns the most demanding
- * non-empty day type present, titleized, or null when no day types exist.
+ * Athlete-facing weekly load label.
+ *
+ * This is a weekly burden proxy, not the hardest single day. One high/intense
+ * touch inside a low-volume taper week should not make the whole week read High.
  */
 export function weekLoadProxy(week: StructuredWeek | null | undefined): string | null {
-  const types = getDays(week)
-    .map((day) => cleanText(day.day_type)?.toLowerCase())
-    .filter((type): type is string => Boolean(type));
-  if (types.length === 0) {
+  const days = getDays(week);
+  if (days.length === 0) {
     return null;
   }
-  for (const candidate of LOAD_PRIORITY) {
-    if (types.includes(candidate)) {
-      return formatPlanLabel(candidate);
-    }
+
+  const trainingScores = days
+    .map((day) => {
+      const appScore = appDayLoadPoints(day);
+      if (appScore > 0) {
+        return appScore;
+      }
+
+      const coachScore = coachLedDayLoadPoints(day);
+      if (coachScore > 0) {
+        return coachScore;
+      }
+
+      return dayTypeLoadPoints(day);
+    })
+    .filter((score) => score > 0);
+
+  if (trainingScores.length === 0) {
+    return "Rest";
   }
-  return formatPlanLabel(types[0]);
+
+  const total = trainingScores.reduce((sum, score) => sum + score, 0);
+  const highDays = trainingScores.filter((score) => score >= 3).length;
+  const trainingDays = trainingScores.length;
+
+  if (total >= 8 || highDays >= 2 || trainingDays >= 5) {
+    return "High";
+  }
+
+  if (total >= 4 || trainingDays >= 3) {
+    return "Moderate";
+  }
+
+  return "Low";
 }
 
 /** Find the day in a plan matching an ISO date, or null. */

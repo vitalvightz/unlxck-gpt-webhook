@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 
 from fightcamp import strength
-from fightcamp.late_selector_windows import D1, D4_TO_D2, D7
+from fightcamp.late_selector_windows import D1, D4_TO_D2, D7, D13_TO_D8, D21_TO_D14
 
 
 def _flags(**overrides) -> dict:
@@ -61,6 +61,209 @@ def _patch_minimal_strength_runtime(monkeypatch, exercise_bank: list[dict], scor
             {"final_score": score_map[kwargs["exercise_tags"][0]], "reason_codes": []},
         ),
     )
+
+
+def _primer_touch(name: str, *, windows: list[str] | None = None) -> dict:
+    return {
+        "name": name,
+        "phases": ["TAPER"],
+        "method": "power",
+        "movement": "horizontal_push",
+        "type": "bilateral",
+        "tags": [
+            f"{name.lower().replace(' ', '_').replace('-', '_')}_score",
+            "late_strength_touch",
+            "neural_primer",
+            "speed",
+            "low_impact",
+            "low_eccentric",
+            "cns_freshness",
+        ],
+        "equipment": "bands",
+        "late_windows": windows or [D21_TO_D14, D13_TO_D8],
+        "phase_role": "late_strength_touch",
+        "impact_cost": "low",
+        "eccentric_cost": "low",
+        "landing_cost": "none",
+        "soreness_risk": "low",
+        "cns_load": "low",
+    }
+
+
+def _maintenance_touch(
+    name: str = "Tagged Maintenance Touch",
+    *,
+    windows: list[str] | None = None,
+    extra_tags: list[str] | None = None,
+) -> dict:
+    return {
+        "name": name,
+        "phases": ["TAPER"],
+        "method": "strength",
+        "movement": "isometric",
+        "type": "bilateral",
+        "tags": [
+            f"{name.lower().replace(' ', '_').replace('-', '_')}_score",
+            "late_strength_touch",
+            "maximal_strength_maintenance",
+            "isometric",
+            "low_impact",
+            "low_eccentric",
+            "cns_freshness",
+            *(extra_tags or []),
+        ],
+        "equipment": "bodyweight",
+        "late_windows": windows or [D21_TO_D14, D13_TO_D8],
+        "phase_role": "late_strength_touch",
+        "impact_cost": "low",
+        "eccentric_cost": "low",
+        "landing_cost": "none",
+        "soreness_risk": "low",
+        "cns_load": "low",
+    }
+
+
+def test_strength_intent_selects_real_early_taper_maintenance_touch(monkeypatch):
+    primer = _primer_touch("High Score Primer")
+    maintenance = _maintenance_touch("Lower Score Maintenance")
+    _patch_minimal_strength_runtime(
+        monkeypatch,
+        [primer, maintenance],
+        {
+            primer["tags"][0]: 10.0,
+            maintenance["tags"][0]: 8.0,
+        },
+    )
+
+    result = strength.generate_strength_block(
+        flags=_flags(
+            days_until_fight=19,
+            key_goals=["strength"],
+        )
+    )
+
+    selected = result["exercises"][0]
+    assert set(selected["tags"]) & {"late_strength_touch", "maximal_strength_maintenance"}
+    assert "maximal_strength_maintenance" in selected["tags"]
+    assert result["why_log"][0]["name"] == "Lower Score Maintenance"
+    assert "early_taper_strength_maintenance_selected" in result["why_log"][0]["reasons"]["reason_codes"]
+
+
+def test_band_resisted_jab_cross_primer_does_not_satisfy_strength_maintenance_when_real_candidate_exists(monkeypatch):
+    primer = _primer_touch("Band-Resisted Jab-Cross Primer")
+    maintenance = _maintenance_touch("Metadata Tagged Strength Hold")
+    _patch_minimal_strength_runtime(
+        monkeypatch,
+        [primer, maintenance],
+        {
+            primer["tags"][0]: 10.0,
+            maintenance["tags"][0]: 7.5,
+        },
+    )
+
+    result = strength.generate_strength_block(
+        flags=_flags(days_until_fight=14, key_goals=["Maximal Strength"])
+    )
+
+    assert result["why_log"][0]["name"] == "Metadata Tagged Strength Hold"
+
+
+def test_band_row_speed_focus_does_not_satisfy_strength_maintenance_when_real_candidate_exists(monkeypatch):
+    primer = _primer_touch("Band Row Speed Focus")
+    maintenance = _maintenance_touch("Metadata Tagged Pull Strength Hold")
+    _patch_minimal_strength_runtime(
+        monkeypatch,
+        [primer, maintenance],
+        {
+            primer["tags"][0]: 10.0,
+            maintenance["tags"][0]: 7.5,
+        },
+    )
+
+    result = strength.generate_strength_block(
+        flags=_flags(days_until_fight=13, weaknesses=["strength"])
+    )
+
+    assert result["why_log"][0]["name"] == "Metadata Tagged Pull Strength Hold"
+
+
+def test_style_specific_technical_primer_does_not_satisfy_strength_maintenance(monkeypatch):
+    technical_primer = _primer_touch("Style-Specific Technical Primer")
+    technical_primer.update(
+        {
+            "_schema_source": "style_specific_exercises.json",
+            "category": "striking",
+            "method": "power",
+            "movement_cost": "low",
+            "stress_class": "support",
+            "cost_class": "low",
+            "support_only": True,
+            "meaningful_stress": False,
+            "real_strength_maintenance": False,
+        }
+    )
+    technical_primer["tags"].append("counter_striker")
+    maintenance = _maintenance_touch("Style-Agnostic Strength Maintenance")
+    _patch_minimal_strength_runtime(
+        monkeypatch,
+        [maintenance],
+        {
+            technical_primer["tags"][0]: 20.0,
+            maintenance["tags"][0]: 7.5,
+        },
+    )
+    monkeypatch.setattr(strength, "get_style_exercises", lambda: [technical_primer])
+
+    result = strength.generate_strength_block(
+        flags=_flags(days_until_fight=13, key_goals=["strength"], style_tactical=["counter_striker"])
+    )
+
+    assert result["why_log"][0]["name"] == "Style-Agnostic Strength Maintenance"
+    assert "early_taper_strength_maintenance_selected" in result["why_log"][0]["reasons"]["reason_codes"]
+
+
+def test_early_taper_strength_maintenance_does_not_force_unsafe_candidate(monkeypatch):
+    primer = _primer_touch("Safe Primer")
+    unsafe_maintenance = _maintenance_touch(
+        "Unsafe Maintenance Touch",
+        windows=[D21_TO_D14],
+        extra_tags=["familiarity_required"],
+    )
+    _patch_minimal_strength_runtime(
+        monkeypatch,
+        [primer, unsafe_maintenance],
+        {
+            primer["tags"][0]: 8.0,
+            unsafe_maintenance["tags"][0]: 7.5,
+        },
+    )
+
+    result = strength.generate_strength_block(
+        flags=_flags(days_until_fight=13, key_goals=["strength"])
+    )
+
+    assert result["why_log"][0]["name"] == "Safe Primer"
+    assert "early_taper_strength_maintenance_selected" not in result["why_log"][0]["reasons"].get("reason_codes", [])
+
+
+def test_final_week_windows_do_not_force_strength_maintenance_touch(monkeypatch):
+    primer = _primer_touch("D7 Primer", windows=[D7])
+    maintenance = _maintenance_touch("Early Only Maintenance", windows=[D21_TO_D14, D13_TO_D8])
+    _patch_minimal_strength_runtime(
+        monkeypatch,
+        [primer, maintenance],
+        {
+            primer["tags"][0]: 8.0,
+            maintenance["tags"][0]: 7.5,
+        },
+    )
+
+    result = strength.generate_strength_block(
+        flags=_flags(days_until_fight=7, key_goals=["strength"])
+    )
+
+    assert result["why_log"][0]["name"] == "D7 Primer"
+    assert "early_taper_strength_maintenance_selected" not in result["why_log"][0]["reasons"].get("reason_codes", [])
 
 
 def test_late_strength_selection_prefers_explicit_low_cost_metadata(monkeypatch):
@@ -273,6 +476,17 @@ def test_loaded_strength_touches_are_blocked_from_tight_late_windows():
         assert "late_strength_block_window_mismatch" in d1_result["block_codes"]
 
 
+def test_d21_only_loaded_strength_touches_do_not_leak_to_d13():
+    for name in ("Trap Bar Deadlift", "Sandbag Shouldering"):
+        item = _exercise_named(name)
+
+        d13_result = strength._evaluate_strength_late_window(item, window=D13_TO_D8)
+
+        assert item["late_windows"] == ["d21_to_d14"]
+        assert d13_result["blocked"] is True
+        assert "late_strength_block_familiarity_required_late" in d13_result["block_codes"]
+
+
 def test_d1_explicit_taper_windows_exclude_loaded_sprint_jump_and_eccentric_drills():
     risky_equipment = {"barbell", "trap_bar"}
     risky_tags = {"eccentric", "mech_lower_jump", "mech_landing_impact"}
@@ -304,9 +518,9 @@ def test_good_taper_readiness_options_remain_available():
     expected_windows = {
         "Band-Resisted Jab-Cross Primer": {"d21_to_d14", "d13_to_d8"},
         "Technical Shadowboxing Tempo": {"d1", "d4_to_d2"},
-        "Band Row Speed Focus": {"d1", "d4_to_d2"},
+        "Band Row Speed Focus": {"d4_to_d2"},
         "Mobility Reset Flow": {"d1", "d4_to_d2"},
-        "Band Face Pull": {"d1", "d4_to_d2"},
+        "Band Face Pull": {"d4_to_d2"},
         "Staggered-Stance Medicine-Ball Punch Throw": {"d4_to_d2"},
         "Scapular Pull-Up Hold": {"d4_to_d2"},
         "Light Heavy-Bag Technical Tempo": {"d4_to_d2"},
@@ -349,6 +563,26 @@ def test_late_window_blocking_is_respected_for_real_strength_bank_item():
         assert "late_strength_boost_window_fit" in d4_result["reason_codes"]
         assert d1_result["blocked"] is True
         assert "late_strength_block_window_mismatch" in d1_result["block_codes"]
+
+
+def test_d3_blocks_med_ball_punch_throw_even_inside_d4_to_d2_window():
+    item = _exercise_named("Staggered-Stance Medicine-Ball Punch Throw")
+
+    d4_result = strength._evaluate_strength_late_window(item, window=D4_TO_D2, days_until_fight=4)
+    d3_result = strength._evaluate_strength_late_window(item, window=D4_TO_D2, days_until_fight=3)
+
+    assert d4_result["blocked"] is False
+    assert d3_result["blocked"] is True
+    assert "late_strength_block_d3_throw_lockout" in d3_result["block_codes"]
+
+
+def test_d1_blocks_band_strength_work_even_with_rehab_metadata():
+    item = _exercise_named("Band Face Pull")
+
+    d1_result = strength._evaluate_strength_late_window(item, window=D1, days_until_fight=1)
+
+    assert d1_result["blocked"] is True
+    assert "late_strength_block_band_work_lockout" in d1_result["block_codes"]
 
 
 def test_split_squat_iso_variants_have_correct_late_window_intent():

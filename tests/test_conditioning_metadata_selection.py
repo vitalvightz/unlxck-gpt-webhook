@@ -53,6 +53,27 @@ def test_d7_and_under_blocks_non_rehab_band_conditioning_work():
     assert "late_conditioning_block_band_work_lockout" in result["block_codes"]
 
 
+def test_d1_blocks_rehab_band_conditioning_work():
+    result = conditioning._evaluate_conditioning_late_window(
+        {
+            "name": "Band External Rotation Mobility",
+            "phases": ["TAPER"],
+            "system": "aerobic",
+            "tags": ["mobility", "rehab_friendly", "recovery"],
+            "equipment": "bands",
+            "work_sec": 20,
+            "rest_sec": 40,
+            "rounds": 2,
+        },
+        system="aerobic",
+        window=D1,
+        bridge_rules={},
+    )
+
+    assert result["blocked"] is True
+    assert "late_conditioning_block_band_work_lockout" in result["block_codes"]
+
+
 
 def test_late_window_blocks_non_taper_phased_conditioning_in_d13_to_d8():
     result = conditioning._evaluate_conditioning_late_window(
@@ -460,6 +481,12 @@ def test_band_resisted_sprint_starts_are_spp_only_across_conditioning_banks():
         assert "TAPER" not in item.get("phases", [])
 
 
+def test_late_support_fallback_uses_window_appropriate_names():
+    assert conditioning._late_support_fallback(D1)["name"] == "Final Readiness Cue Reset"
+    assert conditioning._late_support_fallback(D21_TO_D14)["name"] == "Late-Camp Readiness Cue Reset"
+    assert conditioning._late_support_fallback(D7)["name"] == "Late-Camp Readiness Cue Reset"
+
+
 def test_boxing_jump_reset_is_not_taper_metadata_and_d6_prefers_low_impact_bursts():
     data = json.loads(Path("data/conditioning_bank.json").read_text(encoding="utf-8"))
     by_name = {item["name"]: item for item in data}
@@ -510,17 +537,73 @@ def test_generated_boxing_d6_taper_uses_low_impact_alactic_not_jump_or_sprint_st
     )
 
     plan_text, selected_names, *_rest, candidate_reservoir = result
-    assert any(
-        name in selected_names
-        for name in {"Explosive Boxing Burst Intervals", "Reactive Shuffle Repeats"}
-    )
-    assert "Reactive Shuffle Repeats" in [
-        entry["drill"]["name"]
-        for entry in candidate_reservoir["alactic"]
-    ]
+    blocked: dict[str, set[str]] = {}
+    for entry in candidate_reservoir["__late_window__"]["blocked"]:
+        blocked.setdefault(entry["name"], set()).update(entry["reason_codes"])
+    penalized = {
+        entry["name"]: set(entry["penalty_codes"])
+        for entry in candidate_reservoir["__late_window__"]["penalized"]
+    }
+
+    assert "Explosive Boxing Burst Intervals" not in selected_names
+    assert "Reactive Shuffle Repeats" in selected_names
+    assert "late_penalty_missing_governance_metadata" in penalized["Explosive Boxing Burst Intervals"]
+    assert "late_penalty_missing_governance_metadata" in penalized["Reactive Shuffle Repeats"]
     assert "Band-Assisted Jump Reset" not in plan_text
     assert "Band-Resisted Sprint Start" not in plan_text
     assert "Band-Resisted Sprint Starts (ATP-PCr)" not in plan_text
+
+
+def test_final_week_taper_caps_keep_primers_submaximal():
+    d6 = conditioning._late_fight_dosage_caps(6)
+    d1 = conditioning._late_fight_dosage_caps(1)
+
+    assert "RPE 8" not in d6
+    assert "RPE 8" not in d1
+    assert "3-4 bursts max (6 sec @ RPE 6-7" in d6
+    assert "RPE 3-5" in d1
+
+
+def test_late_fight_generation_keeps_safe_support_available_across_windows():
+    base_flags = {
+        "phase": "TAPER",
+        "fatigue": "moderate",
+        "style_technical": ["boxing"],
+        "style_tactical": ["out-boxer"],
+        "sport": "boxing",
+        "key_goals": ["conditioning", "sharpness"],
+        "weaknesses": ["footwork", "sharpness"],
+        "injuries": [],
+        "restrictions": [],
+        "equipment": ["bodyweight"],
+        "training_frequency": 4,
+        "days_available": 4,
+        "weight_cut_pct": 5.0,
+    }
+
+    for days_until_fight in (18, 10, 6, 3, 1):
+        result = conditioning.generate_conditioning_block(
+            {
+                **base_flags,
+                "days_until_fight": days_until_fight,
+                "time_to_fight_days": days_until_fight,
+            }
+        )
+        _plan_text, selected_names, why_log, grouped_drills, _missing_systems, _candidate_reservoir = result
+
+        assert selected_names, f"D-{days_until_fight} collapsed to no safe support"
+        if days_until_fight == 1:
+            selected_drills = [drill for drills in grouped_drills.values() for drill in drills]
+            assert selected_drills
+            for drill in selected_drills:
+                tags = set(conditioning.normalize_tags(drill.get("tags", [])))
+                assert tags & {"breathing", "visualization", "tactical", "readiness_check"}
+                assert not drill.get("equipment")
+                assert float(drill.get("rpe_max", drill.get("rpe", 0)) or 0) <= 3
+            assert any(
+                "late_support_fallback" in entry.get("reasons", {}).get("reason_codes", [])
+                for entry in why_log
+            )
 
 
 def test_equipment_aliases_normalize_machine_variants():
@@ -552,10 +635,21 @@ def test_taper_d19_gas_tank_signal_keeps_one_low_noise_aerobic_machine_dose():
     )
     _text, selected_names, _why_log, grouped_drills, _missing, _reservoir = result
     selected_aerobic = [d.get("name", "") for d in grouped_drills.get("aerobic", [])]
-    assert selected_aerobic
-    assert len(selected_aerobic) >= 1
-    lower_blob = " ".join(selected_aerobic).lower()
-    assert any(term in lower_blob for term in ("rower", "bike", "shadowbox"))
+    blocked = {
+        entry["name"]: set(entry["reason_codes"])
+        for entry in _reservoir["__late_window__"]["blocked"]
+    }
+    penalized = {
+        entry["name"]: set(entry["penalty_codes"])
+        for entry in _reservoir["__late_window__"]["penalized"]
+    }
+    assert selected_aerobic == ["Easy Assault Bike"]
+    assert not any(
+        "late_block_missing_cost_metadata" in reason_codes
+        for name, reason_codes in blocked.items()
+        if any(term in name.lower() for term in ("rower", "bike"))
+    )
+    assert "late_penalty_missing_governance_metadata" in penalized["Easy Assault Bike"]
 
 
 def test_machine_biased_gas_tank_helper_detects_bike_and_rower():

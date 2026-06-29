@@ -3,8 +3,10 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "prebuild": "node scripts/patch-plan-intake-form.mjs",
     "build": "next build",
     "start": "next start",
+    "pretypecheck": "node scripts/patch-plan-intake-form.mjs",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "test:e2e": "playwright test",
@@ -30,6 +32,6 @@
     "typescript": "5.9.3"
   },
   "engines": {
-    "node": "20.x"
+    "node": "24.x"
   }
 }

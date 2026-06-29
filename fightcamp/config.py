@@ -15,7 +15,13 @@ PHASE_EQUIPMENT_BOOST = {
 PHASE_TAG_BOOST = {
     GPP: {"triphasic": 1, "tempo": 1, "eccentric": 1},
     SPP: {"contrast": 1.5, "explosive": 1.5},
-    TAPER: {"neural_primer": 2, "cluster": 2, "speed": 2},
+    TAPER: {
+        "late_strength_touch": 2,
+        "maximal_strength_maintenance": 2,
+        "neural_primer": 1.5,
+        "speed": 1.25,
+        "cluster": 1,
+    },
 }
 
 PHASE_SYSTEM_RATIOS = {
@@ -33,8 +39,10 @@ STYLE_CONDITIONING_RATIO = {
     TAPER: 0.00,
 }
 
-STRENGTH_PER_DAY = {GPP: 7, SPP: 6, TAPER: 4}
-CONDITIONING_PER_DAY = {GPP: 4, SPP: 3, TAPER: 3}
+# Stage 1 should surface a surplus candidate menu for Stage 2 to choose from.
+# These are candidate-output counts, not final prescribed session counts.
+STRENGTH_PER_DAY = {GPP: 9, SPP: 8, TAPER: 6}
+CONDITIONING_PER_DAY = {GPP: 6, SPP: 5, TAPER: 5}
 
 # Central data directory path - used by multiple modules to access JSON data files
 DATA_DIR = Path(__file__).resolve().parents[1] / "data"
@@ -66,14 +74,14 @@ INJURY_RULES_VERSION = "20260624.1"
 def trim_to_injury_guard_shortlist(items: list) -> list:
     """
     Refactored: Utility to trim a list to the injury guard shortlist size.
-    
+
     This replaces duplicate implementations of _trim_drills in conditioning.py
     and ensures consistent shortlist sizing across modules.
-    
+
     Args:
         items: List of items (exercises, drills, or tuples) to trim
-        
+
     Returns:
-        Trimmed list limited to INJURY_GUARD_SHORTLIST items
+        Trimmed list limited to INJURY_GUARD_SHORTLIST
     """
     return items[:INJURY_GUARD_SHORTLIST]

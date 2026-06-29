@@ -1,79 +1,110 @@
 #!/usr/bin/env python3
-"""
-Robust and deterministic JSON bank validator for all non-rehab/non-coordination banks.
+"""Audit and strictly validate training-bank metadata without mutating banks."""
 
-This tool validates all *.json bank files in /data (excluding rehab*, coordination*, 
-and tag_vocabulary.json) for:
-- Schema consistency (supports both root list and object with items/data arrays)
-- Required keys (name, tags)
-- Tag types (tags must be a list of strings)
-- Tag vocabulary presence
-- Injury exclusion rule coverage (prints safe/blocked counts by ban_tags)
+from __future__ import annotations
 
-Exit codes:
-- 0: All validations passed
-- 1: One or more validation failures detected
-
-Usage:
-    python tools/validate_banks.py
-
-Example output:
-    Discovering banks in /data...
-    Found 8 banks to validate.
-    
-    Loading tag vocabulary from /data/tag_vocabulary.json...
-    Tag vocabulary loaded: 190 tags
-    
-    Loading INJURY_RULES from fightcamp.injury_exclusion_rules...
-    INJURY_RULES loaded: 28 regions
-    
-    ========================================
-    Validating: exercise_bank.json
-    ========================================
-    Schema: root list with 47 entries
-    
-    Required key validation:
-      ✓ All entries have 'name'
-      ✓ All entries have 'tags'
-      ✓ All 'tags' are lists
-      ✓ All tag values are strings
-    
-    Ban tag coverage for 'head':
-      Safe: 47 | Blocked: 0
-    Ban tag coverage for 'neck':
-      Safe: 47 | Blocked: 0
-    ...
-    
-    ========================================
-    Ban tags diagnostics:
-    ========================================
-    
-    Ban tags missing from tag_vocabulary:
-      - contact (regions: head)
-      - sparring (regions: head)
-    
-    Ban tags unused in any bank:
-      - some_unused_tag (regions: knee, ankle)
-    
-    ========================================
-    VALIDATION SUMMARY
-    ========================================
-    Total banks validated: 8
-    Total entries validated: 1234
-    ✓ All validations passed
-"""
-
+import argparse
 import json
 import sys
+from collections import Counter, defaultdict
+from dataclasses import dataclass
 from pathlib import Path
-from collections import defaultdict
-from typing import Dict, List, Any, Tuple, Set
+from typing import Any, Iterable
 
 
-# Paths
 REPO_ROOT = Path(__file__).parent.parent
 DATA_DIR = REPO_ROOT / "data"
 TAG_VOCAB_FILE = DATA_DIR / "tag_vocabulary.json"
+
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
+from fightcamp.bank_schema import KNOWN_SYSTEMS, SYSTEM_ALIASES  # noqa: E402
+from fightcamp.tagging import normalize_tag  # noqa: E402
+
+
+VALIDATION_MODES = {"audit", "strict", "runtime"}
+OLD_VALIDATOR_SKIPPED = {
+    "coordination_bank.json",
+    "injury_exclusion_map.json",
+    "rehab_bank.json",
+    "tag_vocabulary.json",
+}
+NON_BANK_JSON = {
+    "bank_inferred_tags.json",
+    "regex_patterns.json",
+}
+CONFIG_TARGETS = {
+    "injury_exclusion_map.json",
+    "tag_vocabulary.json",
+}
+AUDIT_GROUP_ORDER = [
+    "missing names",
+    "missing tags",
+    "missing phases",
+    "missing/empty late_windows",
+    "missing cost fields",
+    "missing rpe/rpe_max",
+    "missing stress_class/cost_class/support_only/meaningful_stress",
+    "high intensity marked late-safe",
+    "unknown conditioning system",
+    "alias-only conditioning system",
+    "entries skipped by the old validator",
+    "duplicate names",
+    "tags not in tag_vocabulary",
+    "config schema issues",
+]
+STRICT_ERROR_GROUPS = {
+    "missing names",
+    "missing tags",
+    "missing phases",
+    "missing/empty late_windows",
+    "missing cost fields",
+    "missing rpe/rpe_max",
+    "missing stress_class/cost_class/support_only/meaningful_stress",
+    "unknown conditioning system",
+    "tags not in tag_vocabulary",
+    "config schema issues",
+}
+CONDITIONING_BANK_NAMES = {
+    "conditioning_bank.json",
+    "coordination_bank.json",
+    "footwork_conditioning_bank.json",
+    "style_conditioning_bank.json",
+    "style_taper_conditioning.json",
+    "universal_gpp_conditioning.json",
+}
+EXERCISE_BANK_NAMES = {
+    "exercise_bank.json",
+    "universal_gpp_strength.json",
+}
+CONDITIONING_COST_FIELDS = ("impact_cost", "movement_cost", "lactate_load")
+EXERCISE_COST_FIELDS = (
+    "impact_cost",
+    "movement_cost",
+    "cns_load",
+    "eccentric_cost",
+    "landing_cost",
+    "soreness_risk",
+)
+LATE_GOVERNANCE_FIELDS = ("stress_class", "cost_class", "support_only", "meaningful_stress")
+HIGH_LEVELS = {"high", "very_high", "max"}
+HIGH_INTENSITY_TAGS = {
+    "glycolytic",
+    "high_impact",
+    "mech_cns_high",
+    "mech_landing_impact",
+    "work_capacity",
+}
+
+
+@dataclass(frozen=True)
+class BankIssue:
+    group: str
+    file: str
+    entry: str
+    detail: str
+    severity: str = "error"
 
 
 def configure_utf8_output() -> None:
@@ -83,48 +114,101 @@ def configure_utf8_output() -> None:
             stream.reconfigure(encoding="utf-8")
 
 
-def discover_banks() -> List[Path]:
-    """
-    Discover all *.json bank files in /data except those containing:
-    - rehab
-    - coordination
-    - tag_vocabulary.json
-    - bank_inferred_tags.json (metadata file)
-    - format_* (configuration files)
-    - injury_exclusion_map.json (configuration file)
-    - regex_patterns.json (parser config, not a training bank)
-    """
-    print(f"Discovering banks in {DATA_DIR}...")
-    
-    banks = []
-    for file_path in sorted(DATA_DIR.glob("*.json")):
+def _is_non_bank_json(filename: str) -> bool:
+    return filename in NON_BANK_JSON or filename.startswith("format_")
+
+
+def discover_banks(data_dir: Path = DATA_DIR) -> list[Path]:
+    """Return raw training-bank JSON targets, including rehab and coordination banks."""
+    banks: list[Path] = []
+    for file_path in sorted(data_dir.glob("*.json")):
         filename = file_path.name.lower()
-        
-        # Skip excluded files
-        if (
-            "rehab" in filename 
-            or "coordination" in filename 
-            or filename == "tag_vocabulary.json"
-            or filename == "bank_inferred_tags.json"
-            or filename.startswith("format_")
-            or filename == "injury_exclusion_map.json"
-            or filename == "regex_patterns.json"
-        ):
+        if _is_non_bank_json(filename) or filename in CONFIG_TARGETS:
             continue
-        
         banks.append(file_path)
-    
-    print(f"Found {len(banks)} banks to validate.\n")
     return banks
 
 
-def duplicate_name_counts(entries: List[Dict]) -> Dict[str, int]:
-    """Return duplicate item names with occurrence counts."""
-    counts: dict[str, int] = defaultdict(int)
+def discover_validation_targets(data_dir: Path = DATA_DIR) -> list[Path]:
+    """Return all validator targets, including config files that shape bank safety."""
+    targets = discover_banks(data_dir)
+    for filename in sorted(CONFIG_TARGETS):
+        path = data_dir / filename
+        if path.exists():
+            targets.append(path)
+    return sorted(targets, key=lambda path: path.name)
+
+
+def _load_json(path: Path) -> Any:
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def _clean_tag(value: Any) -> str | None:
+    return normalize_tag(str(value)) if isinstance(value, str) else None
+
+
+def load_tag_vocabulary(data_dir: Path = DATA_DIR, *, emit=print) -> set[str]:
+    """Load normalized tag vocabulary from tag_vocabulary.json."""
+    path = data_dir / "tag_vocabulary.json"
+    emit(f"Loading tag vocabulary from {path}...")
+    data = _load_json(path)
+    if isinstance(data, list):
+        tags = {_clean_tag(tag) for tag in data}
+        normalized = {tag for tag in tags if tag}
+        emit(f"Tag vocabulary loaded: {len(normalized)} tags (list schema)\n")
+        return normalized
+    if isinstance(data, dict):
+        for key in ("items", "data"):
+            if isinstance(data.get(key), list):
+                tags = {_clean_tag(tag) for tag in data[key]}
+                normalized = {tag for tag in tags if tag}
+                emit(f"Tag vocabulary loaded: {len(normalized)} tags (object schema with '{key}')\n")
+                return normalized
+    raise ValueError(f"Unrecognized tag vocabulary schema in {path}")
+
+
+def load_injury_rules() -> dict[str, dict[str, list[str]]]:
+    """Load runtime injury exclusion rules for compatibility with older callers."""
+    from fightcamp.injury_exclusion_rules import INJURY_RULES
+
+    return INJURY_RULES
+
+
+def parse_bank_schema(data: Any) -> tuple[list[dict], str]:
+    """Parse common bank schemas into a flat entry list."""
+    if isinstance(data, list):
+        return data, f"root list with {len(data)} entries"
+    if isinstance(data, dict):
+        for key in ("items", "data"):
+            if isinstance(data.get(key), list):
+                entries = data[key]
+                return entries, f"object with '{key}' array containing {len(entries)} entries"
+        flattened: list[dict] = []
+        list_keys = 0
+        for value in data.values():
+            if isinstance(value, list):
+                list_keys += 1
+                flattened.extend(value)
+        if list_keys:
+            return flattened, f"object with {list_keys} list groups containing {len(flattened)} entries"
+    raise ValueError("Unrecognized bank schema structure. Expected list or object with list values.")
+
+
+def _rehab_drill_entries(entries: list[Any]) -> list[Any]:
+    """Extract drills from rehab grouping records without treating groups as drills."""
+    rehab_entries: list[Any] = []
+    for entry in entries:
+        if isinstance(entry, dict) and isinstance(entry.get("drills"), list):
+            rehab_entries.extend(entry["drills"])
+        else:
+            rehab_entries.append(entry)
+    return rehab_entries
+
+
+def duplicate_name_counts(entries: list[dict]) -> dict[str, int]:
+    counts: Counter[str] = Counter()
     display_names: dict[str, str] = {}
     for entry in entries:
-        if not isinstance(entry, dict):
-            continue
         raw_name = entry.get("name")
         if not raw_name:
             continue
@@ -140,299 +224,383 @@ def duplicate_name_counts(entries: List[Dict]) -> Dict[str, int]:
     }
 
 
-def load_tag_vocabulary() -> Set[str]:
-    """
-    Load tag vocabulary from /data/tag_vocabulary.json.
-    Handles both list and object (items/data array) schemas.
-    """
-    print(f"Loading tag vocabulary from {TAG_VOCAB_FILE}...")
-    
-    with open(TAG_VOCAB_FILE, 'r', encoding='utf-8') as f:
-        data = json.load(f)
-    
-    # Handle list schema
-    if isinstance(data, list):
-        tags = set(data)
-        print(f"Tag vocabulary loaded: {len(tags)} tags (list schema)\n")
-        return tags
-    
-    # Handle object schema with items or data array
-    if isinstance(data, dict):
-        if "items" in data:
-            tags = set(data["items"])
-            print(f"Tag vocabulary loaded: {len(tags)} tags (object schema with 'items')\n")
-            return tags
-        elif "data" in data:
-            tags = set(data["data"])
-            print(f"Tag vocabulary loaded: {len(tags)} tags (object schema with 'data')\n")
-            return tags
-    
-    raise ValueError(f"Unrecognized tag vocabulary schema in {TAG_VOCAB_FILE}")
+def _entry_label(entry: dict, index: int) -> str:
+    name = str(entry.get("name") or "").strip()
+    if name:
+        return name
+    location = str(entry.get("location") or "").strip()
+    injury_type = str(entry.get("type") or "").strip()
+    if location or injury_type:
+        return ":".join(part for part in (location, injury_type) if part)
+    return f"index {index}"
 
 
-def load_injury_rules() -> Dict[str, Dict[str, List[str]]]:
-    """
-    Load INJURY_RULES from fightcamp.injury_exclusion_rules.
-    """
-    print("Loading INJURY_RULES from fightcamp.injury_exclusion_rules...")
-    
-    # Add parent directory to path to import fightcamp
-    sys.path.insert(0, str(REPO_ROOT))
-    
-    from fightcamp.injury_exclusion_rules import INJURY_RULES
-    
-    print(f"INJURY_RULES loaded: {len(INJURY_RULES)} regions\n")
-    return INJURY_RULES
+def _tags_for_entry(entry: dict) -> list[str]:
+    tags = entry.get("tags")
+    if not isinstance(tags, list):
+        return []
+    normalized: list[str] = []
+    for tag in tags:
+        cleaned = _clean_tag(tag)
+        if cleaned:
+            normalized.append(cleaned)
+    return normalized
 
 
-def parse_bank_schema(data: Any) -> Tuple[List[Dict], str]:
-    """
-    Parse bank data and return list of entries with schema description.
-    
-    Supports:
-    - Root list: [{"name": ..., "tags": ...}, ...]
-    - Object with "items": {"items": [...]}
-    - Object with "data": {"data": [...]}
-    
-    Returns:
-        (entries, schema_description)
-    """
-    if isinstance(data, list):
-        return data, f"root list with {len(data)} entries"
-    
-    if isinstance(data, dict):
-        if "items" in data and isinstance(data["items"], list):
-            entries = data["items"]
-            return entries, f"object with 'items' array containing {len(entries)} entries"
-        elif "data" in data and isinstance(data["data"], list):
-            entries = data["data"]
-            return entries, f"object with 'data' array containing {len(entries)} entries"
-    
-    raise ValueError("Unrecognized bank schema structure. Expected list or object with items/data array.")
+def _system_issue(raw_system: Any) -> tuple[str, str] | None:
+    system = str(raw_system or "").strip().lower()
+    if not system:
+        return ("unknown", "missing")
+    normalized = SYSTEM_ALIASES.get(system, system)
+    if normalized in KNOWN_SYSTEMS:
+        if system != normalized:
+            return ("alias", f"{system} -> {normalized}")
+        return None
+    return ("unknown", f"{system} -> {normalized}")
 
 
-def validate_bank(bank_path: Path, tag_vocab: Set[str], injury_rules: Dict) -> Tuple[bool, int, Set[str]]:
-    """
-    Validate a single bank file.
-    
-    Returns:
-        (success, entry_count, all_tags_in_bank)
-    """
-    print("=" * 40)
-    print(f"Validating: {bank_path.name}")
-    print("=" * 40)
-    
-    # Load bank data
-    with open(bank_path, 'r', encoding='utf-8') as f:
-        data = json.load(f)
-    
-    # Parse schema
+def _has_late_windows(entry: dict) -> bool:
+    late_windows = entry.get("late_windows")
+    return isinstance(late_windows, list) and bool(late_windows)
+
+
+def _is_missing_value(value: Any) -> bool:
+    return value is None or value == "" or value == []
+
+
+def _missing_fields(entry: dict, fields: Iterable[str]) -> list[str]:
+    return [field for field in fields if field not in entry or _is_missing_value(entry.get(field))]
+
+
+def _number(value: Any) -> float | None:
+    if value is None or value == "" or isinstance(value, bool):
+        return None
+    if isinstance(value, (int, float)):
+        return float(value)
     try:
-        entries, schema_desc = parse_bank_schema(data)
-        print(f"Schema: {schema_desc}\n")
-    except ValueError as e:
-        print(f"❌ ERROR: {e}\n")
-        return False, 0, set()
-    
-    # Validation flags
-    has_errors = False
-    all_tags_in_bank = set()
-    
-    # Validate required keys and types
-    print("Required key validation:")
-    
-    # Check 'name' key
-    missing_name = [i for i, entry in enumerate(entries) if not isinstance(entry, dict) or "name" not in entry]
-    if missing_name:
-        print(f"  ❌ Missing 'name' key at indices: {missing_name[:10]}{'...' if len(missing_name) > 10 else ''}")
-        has_errors = True
-    else:
-        print("  ✓ All entries have 'name'")
-    
-    # Check 'tags' key
-    missing_tags = [i for i, entry in enumerate(entries) if not isinstance(entry, dict) or "tags" not in entry]
-    if missing_tags:
-        print(f"  ❌ Missing 'tags' key at indices: {missing_tags[:10]}{'...' if len(missing_tags) > 10 else ''}")
-        has_errors = True
-    else:
-        print("  ✓ All entries have 'tags'")
-    
-    # Check 'tags' is a list
-    non_list_tags = [i for i, entry in enumerate(entries) if isinstance(entry, dict) and "tags" in entry and not isinstance(entry["tags"], list)]
-    if non_list_tags:
-        print(f"  ❌ 'tags' is not a list at indices: {non_list_tags[:10]}{'...' if len(non_list_tags) > 10 else ''}")
-        has_errors = True
-    else:
-        print("  ✓ All 'tags' are lists")
-    
-    # Check all tag values are strings
-    non_string_tags = []
-    for i, entry in enumerate(entries):
-        if isinstance(entry, dict) and "tags" in entry and isinstance(entry["tags"], list):
-            for tag in entry["tags"]:
-                if not isinstance(tag, str):
-                    non_string_tags.append(i)
-                    break
-                all_tags_in_bank.add(tag)
-    
-    if non_string_tags:
-        print(f"  ❌ Non-string tag values at indices: {non_string_tags[:10]}{'...' if len(non_string_tags) > 10 else ''}")
-        has_errors = True
-    else:
-        print("  ✓ All tag values are strings")
-    
-    print()
-    
-    duplicates = duplicate_name_counts(entries)
-    print("Duplicate name report:")
-    if duplicates:
-        print("  WARNING: duplicate names detected; disambiguate in bank metadata or naming when selectors depend on name keys.")
-        for name, count in duplicates.items():
-            print(f"    - {name} ({count} entries)")
-    else:
-        print("  OK: no duplicate names")
-
-    print()
-
-    # Count safe/blocked by ban_tags for each injury region
-    if not has_errors:
-        print("Ban tag coverage by injury region:")
-        for region, rules in sorted(injury_rules.items()):
-            ban_tags = rules.get("ban_tags", [])
-            if not ban_tags:
-                continue
-            
-            blocked_count = 0
-            safe_count = 0
-            
-            for entry in entries:
-                if not isinstance(entry, dict) or "tags" not in entry:
-                    continue
-                
-                entry_tags = set(entry.get("tags", []))
-                if any(ban_tag in entry_tags for ban_tag in ban_tags):
-                    blocked_count += 1
-                else:
-                    safe_count += 1
-            
-            print(f"  {region}: Safe={safe_count} | Blocked={blocked_count}")
-        
-        print()
-    
-    if has_errors:
-        print(f"❌ Validation FAILED for {bank_path.name}\n")
-        return False, len(entries), all_tags_in_bank
-    
-    print(f"✓ Validation PASSED for {bank_path.name}\n")
-    return True, len(entries), all_tags_in_bank
+        return float(str(value).strip())
+    except (TypeError, ValueError):
+        return None
 
 
-def main():
-    """Main validation routine."""
-    configure_utf8_output()
+def _high_intensity_late_safe(entry: dict, tags: list[str]) -> bool:
+    if not _has_late_windows(entry):
+        return False
+    if HIGH_INTENSITY_TAGS.intersection(tags):
+        return True
+    system = str(entry.get("system") or "").strip().lower()
+    if SYSTEM_ALIASES.get(system, system) == "glycolytic":
+        return True
+    if str(entry.get("intensity") or "").strip().lower() in HIGH_LEVELS:
+        return True
+    for field in (*CONDITIONING_COST_FIELDS, *EXERCISE_COST_FIELDS):
+        if str(entry.get(field) or "").strip().lower() in HIGH_LEVELS:
+            return True
+    rpe = _number(entry.get("rpe"))
+    rpe_max = _number(entry.get("rpe_max"))
+    return bool((rpe is not None and rpe >= 8) or (rpe_max is not None and rpe_max >= 8))
 
-    # Discover banks
-    banks = discover_banks()
-    
-    if not banks:
-        print("No banks found to validate.")
+
+def _add_issue(
+    issues: list[BankIssue],
+    group: str,
+    path: Path,
+    entry: str,
+    detail: str,
+    *,
+    severity: str | None = None,
+) -> None:
+    issues.append(
+        BankIssue(
+            group=group,
+            file=path.name,
+            entry=entry,
+            detail=detail,
+            severity=severity or ("error" if group in STRICT_ERROR_GROUPS else "warning"),
+        )
+    )
+
+
+def validate_config_target(path: Path) -> list[BankIssue]:
+    issues: list[BankIssue] = []
+    data = _load_json(path)
+    if path.name in OLD_VALIDATOR_SKIPPED:
+        _add_issue(
+            issues,
+            "entries skipped by the old validator",
+            path,
+            path.name,
+            "config target is now included in audit coverage",
+            severity="info",
+        )
+    if path.name == "tag_vocabulary.json":
+        if isinstance(data, list):
+            vocab_items = data
+        elif isinstance(data, dict) and isinstance(data.get("items"), list):
+            vocab_items = data["items"]
+        elif isinstance(data, dict) and isinstance(data.get("data"), list):
+            vocab_items = data["data"]
+        else:
+            vocab_items = None
+        if vocab_items is None or not vocab_items or any(not isinstance(tag, str) or not tag.strip() for tag in vocab_items):
+            _add_issue(issues, "config schema issues", path, path.name, "expected a non-empty list of tag strings")
+    elif path.name == "injury_exclusion_map.json":
+        if not isinstance(data, dict):
+            _add_issue(issues, "config schema issues", path, path.name, "expected an object keyed by injury region")
+        else:
+            for region, references in data.items():
+                if not isinstance(references, list) or any(not isinstance(ref, str) for ref in references):
+                    _add_issue(
+                        issues,
+                        "config schema issues",
+                        path,
+                        str(region),
+                        "expected each region to map to a list of bank entry references",
+                    )
+    return issues
+
+
+def validate_bank(path: Path, tag_vocab: set[str]) -> tuple[bool, int, set[str], list[BankIssue]]:
+    """Validate one raw training bank and return compatibility summary data."""
+    issues: list[BankIssue] = []
+    all_tags: set[str] = set()
+    data = _load_json(path)
+    entries, _schema_desc = parse_bank_schema(data)
+    bank_name = path.name.lower()
+    if bank_name == "rehab_bank.json":
+        entries = _rehab_drill_entries(entries)
+
+    if path.name in OLD_VALIDATOR_SKIPPED:
+        _add_issue(
+            issues,
+            "entries skipped by the old validator",
+            path,
+            path.name,
+            f"{len(entries)} entries are now included in audit coverage",
+            severity="info",
+        )
+
+    name_counter: Counter[str] = Counter()
+    display_names: dict[str, str] = {}
+    is_conditioning = bank_name in CONDITIONING_BANK_NAMES
+    is_exercise = bank_name in EXERCISE_BANK_NAMES
+    requires_tags_phases_late = is_conditioning or is_exercise
+    cost_fields: tuple[str, ...] = ()
+    if is_conditioning:
+        cost_fields = CONDITIONING_COST_FIELDS
+    elif is_exercise:
+        cost_fields = EXERCISE_COST_FIELDS
+    requires_conditioning_system = is_conditioning
+    requires_rpe = is_conditioning
+    requires_governance = is_conditioning or is_exercise
+
+    for index, entry in enumerate(entries):
+        if not isinstance(entry, dict):
+            _add_issue(issues, "config schema issues", path, f"index {index}", "entry is not an object")
+            continue
+
+        label = _entry_label(entry, index)
+        raw_name = str(entry.get("name") or "").strip()
+        if raw_name:
+            key = raw_name.casefold()
+            name_counter[key] += 1
+            display_names.setdefault(key, raw_name)
+        else:
+            _add_issue(issues, "missing names", path, label, "missing or empty name")
+
+        tags_value = entry.get("tags")
+        if requires_tags_phases_late and (
+            not isinstance(tags_value, list)
+            or not tags_value
+            or any(not isinstance(tag, str) or not tag.strip() for tag in tags_value)
+        ):
+            _add_issue(issues, "missing tags", path, label, "missing, empty, non-list, or non-string tags")
+        tags = _tags_for_entry(entry)
+        all_tags.update(tags)
+        for tag in tags:
+            if tag not in tag_vocab:
+                _add_issue(issues, "tags not in tag_vocabulary", path, label, tag)
+
+        phases = entry.get("phases")
+        if requires_tags_phases_late and (not isinstance(phases, list) or not phases):
+            _add_issue(issues, "missing phases", path, label, "missing, empty, or non-list phases")
+
+        if requires_tags_phases_late and not _has_late_windows(entry):
+            _add_issue(
+                issues,
+                "missing/empty late_windows",
+                path,
+                label,
+                "not late-fight eligible until explicit late_windows are supplied",
+            )
+
+        missing_cost = _missing_fields(entry, cost_fields)
+        if missing_cost:
+            _add_issue(issues, "missing cost fields", path, label, ", ".join(missing_cost))
+
+        if requires_rpe and _number(entry.get("rpe")) is None and _number(entry.get("rpe_max")) is None:
+            _add_issue(issues, "missing rpe/rpe_max", path, label, "missing numeric rpe or rpe_max")
+
+        if requires_governance:
+            missing_governance = _missing_fields(entry, LATE_GOVERNANCE_FIELDS)
+            if missing_governance:
+                _add_issue(
+                    issues,
+                    "missing stress_class/cost_class/support_only/meaningful_stress",
+                    path,
+                    label,
+                    ", ".join(missing_governance),
+                )
+
+        if requires_tags_phases_late and _high_intensity_late_safe(entry, tags):
+            _add_issue(
+                issues,
+                "high intensity marked late-safe",
+                path,
+                label,
+                "late_windows present alongside high-intensity system, tags, costs, or RPE",
+                severity="warning",
+            )
+
+        if requires_conditioning_system:
+            system_issue = _system_issue(entry.get("system"))
+            if system_issue:
+                group_type, detail = system_issue
+                group = "alias-only conditioning system" if group_type == "alias" else "unknown conditioning system"
+                _add_issue(issues, group, path, label, detail, severity="warning" if group_type == "alias" else None)
+
+    for key, count in sorted(name_counter.items(), key=lambda item: display_names[item[0]].lower()):
+        if count > 1:
+            _add_issue(
+                issues,
+                "duplicate names",
+                path,
+                display_names[key],
+                f"{count} entries share this name",
+                severity="warning",
+            )
+
+    has_errors = any(issue.severity == "error" for issue in issues)
+    return not has_errors, len(entries), all_tags, issues
+
+
+def _print_issue_report(grouped: dict[str, list[BankIssue]], *, emit=print) -> None:
+    emit("=" * 40)
+    emit("BANK AUDIT REPORT")
+    emit("=" * 40)
+    for group in AUDIT_GROUP_ORDER:
+        issues = grouped.get(group, [])
+        emit(f"\n{group}: {len(issues)}")
+        for issue in issues[:25]:
+            emit(f"  - {issue.file} :: {issue.entry} :: {issue.detail}")
+        if len(issues) > 25:
+            emit(f"  ... {len(issues) - 25} more")
+    extra_groups = sorted(set(grouped) - set(AUDIT_GROUP_ORDER))
+    for group in extra_groups:
+        issues = grouped[group]
+        emit(f"\n{group}: {len(issues)}")
+        for issue in issues[:25]:
+            emit(f"  - {issue.file} :: {issue.entry} :: {issue.detail}")
+
+
+def run_validation(mode: str = "audit", data_dir: Path = DATA_DIR, *, emit=print) -> int:
+    if mode not in VALIDATION_MODES:
+        raise ValueError(f"Unknown validation mode '{mode}'. Expected one of {sorted(VALIDATION_MODES)}.")
+
+    emit(f"Discovering validation targets in {data_dir}...")
+    targets = discover_validation_targets(data_dir)
+    emit(f"Found {len(targets)} targets to inspect.\n")
+    if not targets:
+        emit("No validation targets found.")
         return 0
-    
-    # Load tag vocabulary
+
     try:
-        tag_vocab = load_tag_vocabulary()
-    except Exception as e:
-        print(f"❌ ERROR loading tag vocabulary: {e}")
+        tag_vocab = load_tag_vocabulary(data_dir, emit=emit)
+    except Exception as exc:
+        emit(f"ERROR loading tag vocabulary: {exc}")
         return 1
-    
-    # Load injury rules
-    try:
-        injury_rules = load_injury_rules()
-    except Exception as e:
-        print(f"❌ ERROR loading INJURY_RULES: {e}")
-        return 1
-    
-    # Validate all banks
-    all_success = True
+
     total_entries = 0
-    all_tags_seen = set()
-    
-    for bank_path in banks:
+    all_issues: list[BankIssue] = []
+    all_tags_seen: set[str] = set()
+
+    for target in targets:
+        emit("=" * 40)
+        emit(f"Inspecting: {target.name}")
+        emit("=" * 40)
         try:
-            success, entry_count, bank_tags = validate_bank(bank_path, tag_vocab, injury_rules)
-            all_success = all_success and success
+            if target.name in CONFIG_TARGETS:
+                issues = validate_config_target(target)
+                all_issues.extend(issues)
+                emit(f"Config target inspected with {len(issues)} issue(s).\n")
+                continue
+            success, entry_count, tags_seen, issues = validate_bank(target, tag_vocab)
             total_entries += entry_count
-            all_tags_seen.update(bank_tags)
-        except Exception as e:
-            print(f"❌ ERROR validating {bank_path.name}: {e}\n")
-            all_success = False
-    
-    # Build comprehensive data structures for diagnostics
-    all_ban_tags = set()
-    all_bank_tags = all_tags_seen
-    valid_tags = tag_vocab
-    REGION_BAN_TAGS = {}
-    had_errors = not all_success
-    
-    for region, rules in injury_rules.items():
-        ban_tags = rules.get("ban_tags", [])
-        if ban_tags:
-            REGION_BAN_TAGS[region] = ban_tags
-            all_ban_tags.update(ban_tags)
-    
-    # Build tag_to_regions map: for each tag in REGION_BAN_TAGS, show which regions reference it
-    tag_to_regions = defaultdict(list)
-    for region, ban_tags in REGION_BAN_TAGS.items():
-        for tag in ban_tags:
-            tag_to_regions[tag].append(region)
-    
-    # Enhanced diagnostics section
-    print("=" * 40)
-    print("Ban tags diagnostics:")
-    print("=" * 40)
-    
-    # A) Ban tags missing from tag_vocabulary
-    missing_from_vocab = []
-    for ban_tag in sorted(all_ban_tags):
-        if ban_tag not in valid_tags:
-            regions = tag_to_regions.get(ban_tag, [])
-            missing_from_vocab.append((ban_tag, regions))
-    
-    if missing_from_vocab:
-        print("\nBan tags missing from tag_vocabulary:")
-        for ban_tag, regions in missing_from_vocab:
-            print(f"  - {ban_tag} (regions: {', '.join(regions)})")
-    
-    # B) Ban tags unused in any bank
-    unused_in_banks = []
-    for ban_tag in sorted(all_ban_tags):
-        if ban_tag not in all_bank_tags:
-            regions = tag_to_regions.get(ban_tag, [])
-            unused_in_banks.append((ban_tag, regions))
-    
-    if unused_in_banks:
-        print("\nBan tags unused in any bank:")
-        for ban_tag, regions in unused_in_banks:
-            print(f"  - {ban_tag} (regions: {', '.join(regions)})")
-    
-    if not missing_from_vocab and not unused_in_banks:
-        print("  ✓ All ban_tags are present in tag vocabulary and used in banks")
-    
-    print()
-    
-    # Print summary
-    print("=" * 40)
-    print("VALIDATION SUMMARY")
-    print("=" * 40)
-    print(f"Total banks validated: {len(banks)}")
-    print(f"Total entries validated: {total_entries}")
-    
-    if had_errors:
-        print("❌ Some validations failed")
-        return 1
-    else:
-        print("✓ All validations passed")
+            all_tags_seen.update(tags_seen)
+            all_issues.extend(issues)
+            status = "passed" if success else "issues found"
+            emit(f"Entries inspected: {entry_count}; {status}; issues={len(issues)}\n")
+        except Exception as exc:
+            all_issues.append(
+                BankIssue(
+                    group="config schema issues",
+                    file=target.name,
+                    entry=target.name,
+                    detail=str(exc),
+                    severity="error",
+                )
+            )
+            emit(f"ERROR inspecting {target.name}: {exc}\n")
+
+    grouped: dict[str, list[BankIssue]] = defaultdict(list)
+    for issue in all_issues:
+        grouped[issue.group].append(issue)
+    _print_issue_report(grouped, emit=emit)
+
+    error_count = sum(1 for issue in all_issues if issue.severity == "error")
+    warning_count = sum(1 for issue in all_issues if issue.severity == "warning")
+    info_count = sum(1 for issue in all_issues if issue.severity == "info")
+
+    emit("\n" + "=" * 40)
+    emit("VALIDATION SUMMARY")
+    emit("=" * 40)
+    emit(f"Mode: {mode}")
+    emit(f"Total targets inspected: {len(targets)}")
+    emit(f"Total entries inspected: {total_entries}")
+    emit(f"Unique tags seen: {len(all_tags_seen)}")
+    emit(f"Issues: errors={error_count} warnings={warning_count} info={info_count}")
+
+    if mode == "audit":
+        emit("Audit mode completed successfully; issues are reported for follow-up.")
         return 0
+    if error_count:
+        emit(f"{mode} mode failed on required-field issues.")
+        return 1
+    emit(f"{mode} mode passed.")
+    return 0
+
+
+def build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--mode",
+        choices=sorted(VALIDATION_MODES),
+        default="audit",
+        help="audit reports issues with exit 0; strict/runtime fail on required-field issues",
+    )
+    parser.add_argument(
+        "--data-dir",
+        type=Path,
+        default=DATA_DIR,
+        help="directory containing bank JSON files",
+    )
+    return parser
+
+
+def main(argv: list[str] | None = None) -> int:
+    configure_utf8_output()
+    args = build_parser().parse_args(argv)
+    return run_validation(args.mode, args.data_dir)
 
 
 if __name__ == "__main__":

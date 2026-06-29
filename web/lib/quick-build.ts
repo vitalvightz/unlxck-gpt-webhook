@@ -8,7 +8,7 @@ import {
   WEAK_AREA_OPTIONS,
   retainKnownOptionValues,
 } from "@/lib/intake-options";
-import { applyNoScheduledFightSnapshot, emptyPlanRequest } from "@/lib/onboarding";
+import { applyNoScheduledFightSnapshot, canonicalizePerformanceFocus, emptyPlanRequest } from "@/lib/onboarding";
 import {
   buildDaysOutContext,
   computeDaysUntilFight,
@@ -123,7 +123,9 @@ export type QuickBuildValidationErrors = Partial<Record<keyof QuickBuildInput | 
 
 export function sanitizeQuickBuildFocusByDaysOut(input: QuickBuildInput, now?: Date): Pick<QuickBuildInput, "key_goals" | "weak_areas"> {
   const daysUntilFight = input.no_scheduled_fight ? null : computeDaysUntilFight(input.fight_date, now);
-  const daysOutCtx = buildDaysOutContext(daysUntilFight);
+  const daysOutCtx = buildDaysOutContext(daysUntilFight, {
+    hasHardSparring: input.hard_sparring_days.length > 0,
+  });
   return {
     key_goals: filterAvailablePerformanceFocusValues(daysOutCtx, "key_goals", input.key_goals),
     weak_areas: filterAvailablePerformanceFocusValues(daysOutCtx, "weak_areas", input.weak_areas),
@@ -249,5 +251,5 @@ export function quickBuildToPlanRequest(input: QuickBuildInput): PlanRequest {
     mindset_challenges: "",
     notes: "",
   };
-  return applyNoScheduledFightSnapshot(plan, input.no_scheduled_fight);
+  return canonicalizePerformanceFocus(applyNoScheduledFightSnapshot(plan, input.no_scheduled_fight));
 }

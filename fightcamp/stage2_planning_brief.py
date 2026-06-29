@@ -95,6 +95,25 @@ PHASE_SELECTION_GUARDRAILS = {
     },
 }
 
+_SPEED_SHARPNESS_TOKENS = {
+    "speed",
+    "reactive",
+    "reaction",
+    "acceleration",
+    "speed_reaction",
+}
+
+_FOOTWORK_QUALITY_TOKENS = {
+    "footwork",
+    "lateral_movement",
+    "lateral movement",
+    "ringcraft",
+    "angles",
+    "pivot",
+    "stance",
+    "stance_reset",
+    "angle_exit",
+}
 
 PLANNING_DECISION_HIERARCHY = [
     {
@@ -155,6 +174,8 @@ def _compress_short_camp_priorities(athlete_model: dict) -> dict:
 
     weakness_tokens = _normalize_limiter_tokens(clean_list(athlete_model.get("weaknesses", [])))
     goal_tokens = _normalize_limiter_tokens(clean_list(athlete_model.get("key_goals", [])))
+    primary_goal = athlete_model.get("primary_goal", "")
+    primary_goal_tokens = _normalize_limiter_tokens([primary_goal] if primary_goal else [])
     readiness_flags = set(clean_list(athlete_model.get("readiness_flags", [])))
     short_window = isinstance(timeline_days, int) and timeline_days <= 7
     ultra_short_window = isinstance(timeline_days, int) and timeline_days <= 5
@@ -182,19 +203,43 @@ def _compress_short_camp_priorities(athlete_model: dict) -> dict:
         bucket.append(_priority_bucket(label, kind))
         used_labels.add(label)
 
-    immediate_performance_limiter = (
-        weakness_tokens & {"footwork", "coordination", "coordination_proprioception", "proprioception", "balance", "timing", "rhythm", "boxing"}
-        or goal_tokens & {"skill_refinement", "striking"}
-    )
-    if immediate_performance_limiter:
+    speed_goal_signal = bool(goal_tokens & _SPEED_SHARPNESS_TOKENS)
+    speed_weakness_signal = bool(weakness_tokens & _SPEED_SHARPNESS_TOKENS)
+    footwork_goal_signal = bool(goal_tokens & _FOOTWORK_QUALITY_TOKENS)
+    footwork_weakness_signal = bool(weakness_tokens & _FOOTWORK_QUALITY_TOKENS)
+
+    if speed_goal_signal or speed_weakness_signal:
+        speed_bucket = primary if (speed_goal_signal or primary_goal_tokens & _SPEED_SHARPNESS_TOKENS) else embedded
         add_unique(
-            primary,
-            "footwork / technical sharpness",
-            "technical_sharpness",
-            "Collapse footwork, timing, boxing quality, and skill refinement into one practical fight-week target.",
+            speed_bucket,
+            "speed / reaction sharpness",
+            "speed_reaction_sharpness",
+            "Use a short full-rest alactic speed dose for neural speed and reaction, not conditioning volume.",
         )
 
-    if goal_tokens & {"power", "speed", "explosive_power"} or weakness_tokens & {"sharpness", "speed", "speed_reaction", "reaction", "cns_fatigue"}:
+    if footwork_goal_signal or footwork_weakness_signal:
+        footwork_bucket = primary if (footwork_goal_signal or primary_goal_tokens & _FOOTWORK_QUALITY_TOKENS) else embedded
+        add_unique(
+            footwork_bucket,
+            "footwork / ring-movement quality",
+            "footwork_ring_movement_quality",
+            "Use named footwork, stance reset, pivot, angle-exit, and ring-movement work without treating it as pure speed.",
+        )
+
+    technical_sharpness_signal = (
+        weakness_tokens & {"coordination", "coordination_proprioception", "proprioception", "balance", "timing", "rhythm", "boxing"}
+        or goal_tokens & {"skill_refinement", "striking"}
+    )
+
+    if technical_sharpness_signal:
+        add_unique(
+            primary,
+            "technical sharpness",
+            "technical_sharpness",
+            "Collapse timing, rhythm, boxing quality, and skill refinement into one practical fight-week target.",
+        )
+
+    if goal_tokens & {"power", "explosive_power"} or weakness_tokens & {"sharpness", "cns_fatigue"}:
         add_unique(
             primary,
             "power expression",
@@ -466,9 +511,11 @@ _LIMITER_PROFILES = {
         "label": "coordination",
         "organising_principle": "timing, rhythm, body control, and transfer under fatigue",
         "drill_emphasis": [
-            "timing and rhythm before fatigue",
-            "body control and transfer quality",
-            "simple drills repeated under controlled fatigue",
+            "short full-rest alactic speed dose",
+            "reaction and acceleration sharpness without conditioning volume",
+            "high-quality speed and sharpness work",
+            "low-soreness neural priming",
+            "fatigue work only when it does not flatten quality",
         ],
         "protect_first": "timing quality, rhythm, and body control before extra fatigue work",
         "cut_first": "fatigue-heavy glycolytic work and attractive explosive extras",
@@ -520,6 +567,8 @@ _LIMITER_PROFILES = {
         "label": "sharpness under fatigue",
         "organising_principle": "freshness protection, quality preservation, and clear cut-first hierarchy",
         "drill_emphasis": [
+            "short full-rest alactic speed dose",
+            "footwork sharpness without conditioning volume",
             "high-quality speed and sharpness work",
             "low-soreness neural priming",
             "fatigue work only when it does not flatten quality",
@@ -538,6 +587,7 @@ _LIMITER_PROFILES = {
         "label": "boxing quality under load",
         "organising_principle": "boxing quality under load with S&C staying secondary to sport output",
         "drill_emphasis": [
+            "footwork, stance reset, pivot, and angle-exit quality",
             "boxing transfer and quality under fatigue",
             "sport-load interaction before accessory work",
             "fight-pace support only when boxing stays crisp",
@@ -589,6 +639,10 @@ def _primary_limiter_key(athlete_model: dict, restrictions: list[dict]) -> str:
         _priority_bucket_labels(compressed.get("primary_targets", []))
         + _priority_bucket_labels(compressed.get("maintenance_targets", []))
     ).lower()
+    if "speed / reaction sharpness" in compressed_labels:
+        return "sharpness_under_fatigue"
+    if "footwork / ring-movement quality" in compressed_labels:
+        return "boxing_quality_under_load"
     if "technical sharpness" in compressed_labels or "footwork" in compressed_labels:
         return "boxing_quality_under_load"
     if "power expression" in compressed_labels:
@@ -656,7 +710,7 @@ def _primary_limiter_key(athlete_model: dict, restrictions: list[dict]) -> str:
         return "aerobic_repeatability"
     if weakness_tokens & {"sharpness", "speed_reaction", "cns_fatigue", "speed", "reaction"}:
         return "sharpness_under_fatigue"
-    if weakness_tokens & {"boxing", "striking", "skill_refinement"}:
+    if weakness_tokens & {"footwork", "boxing", "striking", "skill_refinement"}:
         return "boxing_quality_under_load"
     if weakness_tokens & {"shoulder", "shoulders", "knee", "knees", "neck", "mobility", "stiffness"}:
         return "tissue_state"

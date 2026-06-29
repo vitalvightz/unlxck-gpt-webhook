@@ -38,6 +38,7 @@ from .stage2_payload_late_fight import (  # noqa: F401  (re-exported for tests/b
     _resolve_late_fight_phase,
     _uses_late_fight_stage2_payload,
 )
+from .gap_fill_inserts import apply_gap_fill_inserts
 from .conditioning import athlete_facing_system_label
 from .fight_day_override import apply_fight_day_override_to_weekly_role_map
 from .role_labels import stamp_weekly_role_map_labels
@@ -221,24 +222,51 @@ def _compress_short_camp_priorities(athlete_model: dict) -> dict:
         bucket.append(stage2_planning_brief_module._priority_bucket(label, kind))
         used_labels.add(label)
 
-    immediate_performance_limiter = (
-        weakness_tokens & {"footwork", "coordination", "coordination_proprioception", "proprioception", "balance", "timing", "rhythm", "boxing"}
-        or goal_tokens & {"skill_refinement", "striking"}
+    speed_signal = bool(
+        weakness_tokens & {"speed", "reactive", "reaction", "acceleration", "speed_reaction"}
+        or goal_tokens & {"speed", "reactive", "reaction", "acceleration", "speed_reaction"}
     )
-    if immediate_performance_limiter:
+
+    if speed_signal:
         add_unique(
             primary,
-            "footwork / technical sharpness",
-            "technical_sharpness",
-            "Collapse footwork, timing, boxing quality, and skill refinement into one practical fight-week target.",
+            "speed / reaction sharpness",
+            "speed_reaction_sharpness",
+            "Use a short full-rest alactic speed dose for neural speed and reaction, not conditioning volume.",
         )
 
-    if goal_tokens & {"power", "speed", "explosive_power"} or weakness_tokens & {"sharpness", "speed", "speed_reaction", "reaction", "cns_fatigue"}:
+    footwork_signal = bool(
+        weakness_tokens & {"footwork", "lateral_movement", "ringcraft", "angles", "pivot", "stance", "stance_reset", "angle_exit"}
+        or goal_tokens & {"footwork", "lateral_movement", "ringcraft", "angles", "pivot", "stance", "stance_reset", "angle_exit"}
+    )
+
+    if footwork_signal:
+        add_unique(
+            primary,
+            "footwork / ring-movement quality",
+            "footwork_ring_movement_quality",
+            "Use named footwork, stance reset, pivot, angle-exit, and ring-movement work without treating it as pure speed.",
+        )
+
+    technical_sharpness_signal = (
+        weakness_tokens & {"coordination", "coordination_proprioception", "proprioception", "balance", "timing", "rhythm", "boxing"}
+        or goal_tokens & {"skill_refinement", "striking"}
+    )
+
+    if technical_sharpness_signal:
+        add_unique(
+            primary,
+            "technical sharpness",
+            "technical_sharpness",
+            "Collapse timing, rhythm, boxing quality, and skill refinement into one practical fight-week target.",
+        )
+
+    if goal_tokens & {"power", "explosive_power"} or weakness_tokens & {"sharpness", "cns_fatigue"}:
         add_unique(
             primary,
             "power expression",
             "power_expression",
-            "Keep neural speed and power output as one sharpness-oriented target.",
+            "Keep neural power output as one sharpness-oriented target.",
         )
 
     if readiness_flags & {"fight_week", "high_fatigue", "active_weight_cut", "aggressive_weight_cut"} or athlete_model.get("injuries"):
@@ -455,6 +483,10 @@ def _primary_limiter_key(athlete_model: dict, restrictions: list[dict]) -> str:
         _priority_bucket_labels(compressed.get("primary_targets", []))
         + _priority_bucket_labels(compressed.get("maintenance_targets", []))
     ).lower()
+    if "speed / reaction sharpness" in compressed_labels:
+        return "sharpness_under_fatigue"
+    if "footwork / ring-movement quality" in compressed_labels:
+        return "boxing_quality_under_load"
     if "technical sharpness" in compressed_labels or "footwork" in compressed_labels:
         return "boxing_quality_under_load"
     if "power expression" in compressed_labels:
@@ -522,7 +554,7 @@ def _primary_limiter_key(athlete_model: dict, restrictions: list[dict]) -> str:
         return "aerobic_repeatability"
     if weakness_tokens & {"sharpness", "speed_reaction", "cns_fatigue", "speed", "reaction"}:
         return "sharpness_under_fatigue"
-    if weakness_tokens & {"boxing", "striking", "skill_refinement"}:
+    if weakness_tokens & {"footwork", "boxing", "striking", "skill_refinement"}:
         return "boxing_quality_under_load"
     if weakness_tokens & {"shoulder", "shoulders", "knee", "knees", "neck", "mobility", "stiffness"}:
         return "tissue_state"
@@ -2980,13 +3012,37 @@ def _apply_boxing_crowded_week_post_processing(
 
         policy_state = _boxing_crowded_week_policy_state(week_entry, athlete_model)
         crowded_week_active = bool(policy_state["active"])
-        if crowded_week_active:
+        existing_compression = week_entry.get("intentional_compression")
+        already_compressed = (
+            isinstance(existing_compression, dict)
+            and existing_compression.get("policy") == "boxing_crowded_week"
+        )
+
+        # stage2_role_map now owns boxing crowded-week compression, hard-sparring
+        # locks, unused-day upgrades, and recovery-flush preservation. Do not
+        # compress the same week twice here, or low-load support roles such as
+        # converted_recovery_flush_day can be dropped after the role map already
+        # kept them correctly. Keep this pass as governance decoration only when
+        # the role map has already compressed the week.
+        if crowded_week_active and not already_compressed:
             session_roles, suppressed_roles = _apply_boxing_crowded_week_compression(
                 week_entry,
                 session_roles,
                 suppressed_roles,
                 athlete_model,
             )
+
+            # Compression creates intentionally_unused_days. Re-run the role-map
+            # unused-day upgrade so active recovery/cut pressure can become a
+            # concrete converted_recovery_flush_day instead of staying as an
+            # invisible unused-day note.
+            session_roles = stage2_role_map_module._upgrade_unused_days_to_low_load_support(
+                week_entry,
+                session_roles,
+                athlete_model,
+                hard_sparring_plan=week_entry.get("hard_sparring_plan"),
+            )
+
             week_entry["session_roles"] = session_roles
             week_entry["suppressed_roles"] = suppressed_roles
 
@@ -3110,12 +3166,39 @@ def build_planning_brief(
         )
         weekly_role_map = apply_fight_day_override_to_weekly_role_map(weekly_role_map, athlete_model)
         weekly_role_map = stamp_weekly_role_map_labels(weekly_role_map)
-        session_sequence = _build_late_fight_session_sequence(days_until_fight, athlete_model)
+        base_late_fight_plan_spec = _build_late_fight_plan_spec(
+            days_until_fight,
+            athlete_model,
+        )
+
+        session_sequence = apply_gap_fill_inserts(
+            [
+                role
+                for role in (
+                    base_late_fight_plan_spec.get("visible_session_sequence")
+                    or _build_late_fight_session_sequence(days_until_fight, athlete_model)
+                )
+                if _is_app_owned_visible_role(role.get("role_key"))
+            ],
+            athlete_model,
+        )
+
         late_fight_plan_spec = _with_late_fight_allowed_exercises(
-            spec=_build_late_fight_plan_spec(days_until_fight, athlete_model),
+            spec={
+                **base_late_fight_plan_spec,
+                "visible_session_sequence": session_sequence,
+                "visible_session_cap": len(session_sequence),
+                "max_active_roles": len(session_sequence),
+                "visible_session_roles": [
+                    role.get("role_key")
+                    for role in session_sequence
+                    if isinstance(role, dict)
+                ],
+            },
             candidate_pools=candidate_pools,
             days_until_fight=days_until_fight,
         )
+
         return {
             "schema_version": "planning_brief.v1",
             "generator_mode": "deterministic_late_fight_planner_plus_ai_finalizer",
@@ -3779,11 +3862,41 @@ def build_stage2_payload(
 
     if _uses_late_fight_stage2_payload(days_until_fight):
         days_out_payload = _days_out_payload_block(days_until_fight, athlete_model)
+
+        base_late_fight_plan_spec = _build_late_fight_plan_spec(
+            days_until_fight,
+            athlete_model,
+        )
+
+        visible_session_sequence = apply_gap_fill_inserts(
+            [
+                role
+                for role in (
+                    base_late_fight_plan_spec.get("visible_session_sequence")
+                    or base_late_fight_plan_spec.get("session_sequence")
+                    or []
+                )
+                if _is_app_owned_visible_role(role.get("role_key"))
+            ],
+            athlete_model,
+        )
+
         late_fight_plan_spec = _with_late_fight_allowed_exercises(
-            spec=_build_late_fight_plan_spec(days_until_fight, athlete_model),
+            spec={
+                **base_late_fight_plan_spec,
+                "visible_session_sequence": visible_session_sequence,
+                "visible_session_cap": len(visible_session_sequence),
+                "max_active_roles": len(visible_session_sequence),
+                "visible_session_roles": [
+                    role.get("role_key")
+                    for role in visible_session_sequence
+                    if isinstance(role, dict)
+                ],
+            },
             candidate_pools=candidate_pools,
             days_until_fight=days_until_fight,
         )
+
         return {
             "schema_version": "stage2_payload.v1",
             "generator_mode": "restriction_aware_candidate_generator_late_fight",
@@ -3792,14 +3905,7 @@ def build_stage2_payload(
             "effective_stage2_mode": days_out_payload.get("payload_mode"),
             "days_out_payload": days_out_payload,
             "late_fight_plan_spec": late_fight_plan_spec,
-            # ``late_fight_session_sequence`` is what the athlete actually
-            # does, so drop coach-owned hard_sparring placeholders/context
-            # entries kept in the full ``session_sequence`` for tracking.
-            "late_fight_session_sequence": [
-                role
-                for role in (late_fight_plan_spec.get("session_sequence") or [])
-                if _is_app_owned_visible_role(role.get("role_key"))
-            ],
+            "late_fight_session_sequence": visible_session_sequence,
             "rendering_rules": days_out_payload.get("rendering_rules", {}),
             "late_fight_permissions": days_out_payload.get("late_fight_permissions", {}),
             "athlete_model": athlete_model,
@@ -3981,6 +4087,7 @@ Non-negotiable output contract:
 5. Every app-owned training day must clearly show:
    - why the session exists today
    - exact drill/exercise, sets/reps/duration, rest, and intensity/RPE
+   - for D-7 and tighter, never raise a selected drill's RPE or volume; if a selected drill has RPE/rounds/work_sec fields, use those caps
    - the purpose behind the work
    - progression/regression or stop rule
    - injury/rehab insert when relevant
@@ -3992,11 +4099,11 @@ Non-negotiable output contract:
 10. Do not expose scaffold labels such as "Anchor —", "role_key", "taper_micro_support", "candidate pool", "validator", or "planning brief".
 11. Return only the athlete-facing final plan.
 
-Mini example:
+Mini example (do not copy the volume/intensity when rendering D-7 or tighter; selected drill caps override it):
 D-5 (Tuesday) — Fight-speed primer
 Why: sharpen punch speed without adding fatigue.
 - Movement prep: 5 min shoulder swings, band pull-aparts, easy shadowboxing.
-- Explosive Boxing Burst Intervals — 6 x 6-10 sec all-out bursts; full recovery 75-120 sec.
+- Explosive Boxing Burst Intervals — 3-4 x 6 sec fast relaxed bursts; RPE 6; full recovery 90-120 sec.
 - Coach call: Stop when speed drops. This sharpens output without soreness.
 
 Preferred longer-camp week header:

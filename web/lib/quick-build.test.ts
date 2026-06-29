@@ -245,6 +245,60 @@ test("sanitizeQuickBuildFocusByDaysOut removes gas_tank when fight date changes 
   assert.deepEqual(d1.weak_areas, ["mobility"]);
 });
 
+test("sanitizeQuickBuildFocusByDaysOut removes strength when hard sparring is added at D-20", () => {
+  const input = buildValidInput();
+  input.no_scheduled_fight = false;
+  input.fight_date = "2026-06-13";
+  input.hard_sparring_days = ["Monday"];
+  input.key_goals = ["strength", "mobility"];
+  input.weak_areas = ["strength", "mobility"];
+
+  const sanitized = sanitizeQuickBuildFocusByDaysOut(input, new Date("2026-05-24T00:00:00Z"));
+
+  assert.deepEqual(sanitized.key_goals, ["mobility"]);
+  assert.deepEqual(sanitized.weak_areas, ["mobility"]);
+});
+
+test("sanitizeQuickBuildFocusByDaysOut keeps strength key goals for no scheduled fight with hard sparring", () => {
+  const input = buildValidInput();
+  input.no_scheduled_fight = true;
+  input.fight_date = "";
+  input.hard_sparring_days = ["Monday"];
+  input.key_goals = ["strength", "mobility"];
+  input.weak_areas = ["mobility"];
+
+  const sanitized = sanitizeQuickBuildFocusByDaysOut(input, new Date("2026-05-24T00:00:00Z"));
+
+  assert.deepEqual(sanitized.key_goals, ["strength", "mobility"]);
+});
+
+test("sanitizeQuickBuildFocusByDaysOut keeps strength weak areas for no scheduled fight with hard sparring", () => {
+  const input = buildValidInput();
+  input.no_scheduled_fight = true;
+  input.fight_date = "";
+  input.hard_sparring_days = ["Monday"];
+  input.key_goals = ["mobility"];
+  input.weak_areas = ["strength", "mobility"];
+
+  const sanitized = sanitizeQuickBuildFocusByDaysOut(input, new Date("2026-05-24T00:00:00Z"));
+
+  assert.deepEqual(sanitized.weak_areas, ["strength", "mobility"]);
+});
+
+test("sanitizeQuickBuildFocusByDaysOut does not auto-readd strength when hard sparring is removed", () => {
+  const input = buildValidInput();
+  input.no_scheduled_fight = false;
+  input.fight_date = "2026-06-13";
+  input.hard_sparring_days = [];
+  input.key_goals = ["mobility"];
+  input.weak_areas = ["mobility"];
+
+  const sanitized = sanitizeQuickBuildFocusByDaysOut(input, new Date("2026-05-24T00:00:00Z"));
+
+  assert.deepEqual(sanitized.key_goals, ["mobility"]);
+  assert.deepEqual(sanitized.weak_areas, ["mobility"]);
+});
+
 test("validateQuickBuildInput blocks generation when focus cap is exceeded", () => {
   const input = buildValidInput();
   input.no_scheduled_fight = false;

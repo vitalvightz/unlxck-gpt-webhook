@@ -57,6 +57,9 @@ import type {
 
 const titleize = formatPlanLabel;
 
+const LIGHT_TECHNICAL_NOTE =
+  "Light technical combat tag — no hard sparring here. Low-noise app work can stay on this day if prescribed.";
+
 function blockCountLabel(count: number): string {
   return `${count} block${count === 1 ? "" : "s"}`;
 }
@@ -256,7 +259,6 @@ export function SessionCard({
   const duration = formatMeasured(session.planned_duration);
   const date = cleanText(day?.date);
   const countdown = cleanText(day?.countdown_label);
-  const dayType = cleanText(day?.day_type);
   const warning = showDayContext ? cleanText(card?.primary_warning) : null;
   const nutrition = showDayContext ? cleanText(card?.nutrition_summary) : null;
   const weightCut = showDayContext ? cleanText(card?.weight_cut_warning) : null;
@@ -284,7 +286,6 @@ export function SessionCard({
           {objective ? <p className="sp-session-objective">{objective}</p> : null}
         </div>
         <div className="sp-session-meta">
-          {dayType ? <span className="sp-tag">{titleize(dayType)}</span> : null}
           {sessionType ? <span className="sp-tag">{titleize(sessionType)}</span> : null}
           {duration ? <span className="sp-tag">{duration}</span> : null}
         </div>
@@ -367,7 +368,6 @@ export function TodayCard({ day }: { day: StructuredDay }) {
 export function SessionlessDayCard({ day }: { day: StructuredDay }) {
   const date = cleanText(day.date);
   const countdown = cleanText(day.countdown_label);
-  const dayType = cleanText(day.day_type);
   const card = day.today_card;
   const warning = cleanText(card?.primary_warning);
   const nutrition = cleanText(card?.nutrition_summary);
@@ -388,11 +388,12 @@ export function SessionlessDayCard({ day }: { day: StructuredDay }) {
           <h4 className="sp-session-title">{title}</h4>
         </div>
         <div className="sp-session-meta">
-          {dayType ? <span className="sp-tag">{titleize(dayType)}</span> : null}
           {tag ? <span className="sp-tag sp-accent">{tag}</span> : null}
         </div>
       </header>
-      {coachLed ? (
+      {kind === "light_combat" ? (
+        <p className="sp-today-note">{LIGHT_TECHNICAL_NOTE}</p>
+      ) : coachLed ? (
         <p className="sp-today-note">No app S&amp;C today — train with your coach and keep freshness priority.</p>
       ) : null}
       {warning ? <p className="sp-warning">{warning}</p> : null}
@@ -401,6 +402,24 @@ export function SessionlessDayCard({ day }: { day: StructuredDay }) {
       <MindsetAnchorCard anchor={card?.mindset_anchor} />
       {isRest ? <p className="sp-muted">Rest day.</p> : null}
     </article>
+  );
+}
+
+function LightTechnicalDayContext({
+  title,
+  tag,
+}: {
+  title: string;
+  tag: string | null;
+}) {
+  return (
+    <div className="cm-light-technical">
+      <div className="cm-light-technical-head">
+        {tag ? <span className="sp-tag sp-accent">{tag}</span> : null}
+        <p className="sp-today-headline">{title}</p>
+      </div>
+      <p className="sp-today-note">{LIGHT_TECHNICAL_NOTE}</p>
+    </div>
   );
 }
 
@@ -463,7 +482,6 @@ export function CampDayCard({
   const date = cleanText(day.date);
   const weekday = weekdayLabel(date);
   const countdown = cleanText(day.countdown_label);
-  const dayType = cleanText(day.day_type);
   const card = day.today_card;
   const warning = cleanText(card?.primary_warning);
   const nutrition = cleanText(card?.nutrition_summary);
@@ -475,8 +493,14 @@ export function CampDayCard({
     (session) => getMindsetLines(session.mindset_anchor).length > 0,
   );
   const dayMindset = sessionsHaveMindset ? null : card?.mindset_anchor;
+  const sessionlessDay = classifySessionlessDay(day);
+  const lightTechnicalContext = sessionlessDay.kind === "light_combat";
   const hasDayContext = Boolean(
-    warning || nutrition || weightCut || getMindsetLines(dayMindset).length > 0,
+    warning ||
+      nutrition ||
+      weightCut ||
+      lightTechnicalContext ||
+      getMindsetLines(dayMindset).length > 0,
   );
   const completion = dayCompletion(day);
   const sessionCount = sessions.length;
@@ -505,7 +529,6 @@ export function CampDayCard({
 
         <span className="cm-day-meta">
           {isCurrent ? <span className="sp-tag sp-accent">{currentLabel}</span> : null}
-          {dayType ? <span className="sp-tag">{titleize(dayType)}</span> : null}
           {sessionCount > 0 ? (
             <span className="sp-tag">
               {sessionCount} session{sessionCount === 1 ? "" : "s"}
@@ -518,6 +541,9 @@ export function CampDayCard({
       <div className="sp-week-body">
         {sessions.length > 0 && hasDayContext ? (
           <div className="cm-day-context">
+            {lightTechnicalContext ? (
+              <LightTechnicalDayContext title={sessionlessDay.title} tag={sessionlessDay.tag} />
+            ) : null}
             {warning ? <p className="sp-warning">{warning}</p> : null}
             {nutrition ? <p className="sp-today-note">{nutrition}</p> : null}
             {weightCut ? <p className="sp-warning">{weightCut}</p> : null}

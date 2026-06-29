@@ -17,11 +17,12 @@ def test_plans_imports_active_plan_helpers_and_calls_set_active_endpoint():
 
 def test_plan_manager_renders_active_and_set_active_states():
     source = _read("web/app/plans/page.tsx")
+    helper = _read("web/lib/plan-active.ts")
     assert "ACTIVE" in source
     assert "Set active" in source
     assert "Cannot be active" in source
-    assert "function canSetActive" in source
-    assert 'status === "ready" || status === "publishable_with_flags"' in source
+    assert "function canSetActivePlan" in helper
+    assert 'normalized === "ready" || normalized === "publishable_with_flags"' in helper
 
 
 def test_today_view_full_plan_uses_active_plan_detail_route():
@@ -45,3 +46,13 @@ def test_plan_alias_falls_back_to_plans_when_active_plan_missing():
     assert 'router.replace("/plans")' in source
     assert "if (active) router.replace(`/plans/${plan.plan_id}`)" in source
     assert "let active = true" in source
+
+
+def test_archived_plan_action_does_not_claim_to_duplicate():
+    plans_page = _read("web/app/plans/page.tsx")
+    plan_viewer = _read("web/components/plan-viewer.tsx")
+
+    assert "Duplicate as New Plan" not in plans_page
+    assert "Duplicate as New Plan" not in plan_viewer
+    assert "Create New Plan" in plans_page
+    assert "Create New Plan" in plan_viewer

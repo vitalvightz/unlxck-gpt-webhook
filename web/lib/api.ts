@@ -35,6 +35,7 @@ import type {
   TodaySessionCompletionResponse,
   UsernameChangeRequest,
 } from "@/lib/types";
+import type { ActivePlanOverlapAction } from "@/lib/plan-active";
 
 const EXPLICIT_API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") ?? null;
 const LOCAL_API_BASE_URL = "http://127.0.0.1:8000";
@@ -346,7 +347,21 @@ async function executeRequest(path: string, init?: ApiRequestInit): Promise<Exec
       const bodyRequestId =
         "request_id" in parsedBody ? (parsedBody as { request_id?: unknown }).request_id : null;
       const rawCode = "code" in parsedBody ? (parsedBody as { code?: unknown }).code : null;
-      const errorCode = typeof rawCode === "string" && rawCode ? rawCode : undefined;
+      let errorCode = typeof rawCode === "string" && rawCode ? rawCode : undefined;
+
+      if (detail && typeof detail === "object" && !Array.isArray(detail)) {
+        const detailBody = detail as { code?: unknown; message?: unknown };
+        const detailCode = typeof detailBody.code === "string" && detailBody.code ? detailBody.code : undefined;
+        const detailMessage = typeof detailBody.message === "string" ? detailBody.message : null;
+        errorCode = errorCode ?? detailCode;
+        if (detailMessage) {
+          throw new ApiError(
+            bodyRequestId ? `${detailMessage} (request id: ${String(bodyRequestId)})` : detailMessage,
+            response.status,
+            errorCode,
+          );
+        }
+      }
 
       if (typeof detail === "string") {
         throw new ApiError(
@@ -504,8 +519,8 @@ export function saveOnboardingDraft(
     ProfileUpdateRequest,
     "onboarding_draft" | "full_name" | "technical_style" | "tactical_style" | "stance" | "professional_status" | "record" | "athlete_timezone"
   >,
-): Promise<{ ok: boolean; updated_at: string }> {
-  return readJson<{ ok: boolean; updated_at: string }>("/api/onboarding/draft", {
+): Promise<MeResponse> {
+  return readJson<MeResponse>("/api/onboarding/draft", {
     method: "PATCH",
     token,
     body: JSON.stringify(payload),
@@ -588,9 +603,18 @@ export function getActivePlan(token: string): Promise<PlanSummary> {
   return withTransientRetries(() => readJson<PlanSummary>("/api/plans/active", { token }));
 }
 
-export function setActivePlan(token: string, planId: string): Promise<PlanSummary> {
+export function setActivePlan(
+  token: string,
+  planId: string,
+  options?: { overlapAction?: ActivePlanOverlapAction },
+): Promise<PlanSummary> {
+  const overlapAction = options?.overlapAction;
   return withTransientRetries(() =>
-    readJson<PlanSummary>(`/api/plans/${encodeURIComponent(planId)}/set-active`, { method: "POST", token }),
+    readJson<PlanSummary>(`/api/plans/${encodeURIComponent(planId)}/set-active`, {
+      method: "POST",
+      token,
+      body: overlapAction ? JSON.stringify({ overlap_action: overlapAction }) : undefined,
+    }),
   );
 }
 
@@ -788,6 +812,19 @@ export function listAdminActiveGenerationJobs(
       `/api/admin/generation-jobs/active?limit=${limit}`,
       { token },
     ),
+  );
+}
+
+export function cancelAdminGenerationJob(
+  token: string,
+  jobId: string,
+): Promise<GenerationJobResponse> {
+  return readJson<GenerationJobResponse>(
+    `/api/admin/generation-jobs/${encodeURIComponent(jobId)}`,
+    {
+      method: "DELETE",
+      token,
+    },
   );
 }
 

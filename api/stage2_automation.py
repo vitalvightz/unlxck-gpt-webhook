@@ -41,6 +41,35 @@ _DEFAULT_OPENAI_MAX_RETRIES = 0
 _DEFAULT_MAX_OUTPUT_TOKENS = 0
 
 
+def _stage2_report_blocks_release(validator_report: Any) -> bool:
+    """Whether the validator report contains issues that must hold release."""
+
+    if not isinstance(validator_report, dict):
+        return True
+
+    errors = validator_report.get("errors") or []
+    blocking_warnings = validator_report.get("blocking_warnings") or []
+    warnings = validator_report.get("warnings") or []
+    if (
+        not isinstance(errors, list)
+        or not isinstance(blocking_warnings, list)
+        or not isinstance(warnings, list)
+    ):
+        return True
+
+    if errors:
+        return True
+    if publish_blocking_review_findings(validator_report):
+        return True
+    if any(
+        isinstance(warning, dict)
+        and is_hard_stage2_blocker(str(warning.get("code") or ""))
+        for warning in [*blocking_warnings, *(warnings if isinstance(warnings, list) else [])]
+    ):
+        return True
+    return False
+
+
 def _stage2_hold_is_card_rescuable(validator_report: Any) -> bool:
     """Whether a would-be hold could be rescued by a clean structured card.
 
@@ -743,6 +772,20 @@ class OpenAIStage2Automator:
                 app_status=_APP_STATUS_READY,
                 stage2_cost=first_pass_cost,
             )
+        elif not _stage2_report_blocks_release(first_review["validator_report"]):
+            logger.info(
+                "[stage2] first_pass marked non-pass but no release blockers were found; releasing raw plan"
+            )
+            result = _approved_result(
+                stage1_result,
+                draft_plan_text=draft_plan_text,
+                final_plan_text=first_pass_text,
+                validator_report=first_review["validator_report"],
+                attempt_count=1,
+                stage2_status=_STAGE2_PASS,
+                app_status=_APP_STATUS_READY,
+                stage2_cost=first_pass_cost,
+            )
         elif _structured_plan_enabled() and _stage2_hold_is_card_rescuable(
             first_review["validator_report"]
         ):
@@ -793,20 +836,17 @@ class OpenAIStage2Automator:
             log_context=log_context,
         )
 
-        # Card-first publish gate: the structured card is the athlete-facing
-        # artifact, so a plan may only stay athlete-displayable when it carries a
-        # clean schema-valid card. This subsumes the old "rescue_pending" rollback
-        # — a clean PASS that fails to produce a card is held just like a soft
-        # hold that fails its rescue. Only enforced when structured plans are
-        # enabled; with the flag off no card can ever exist and the raw plan_text
-        # flow is the intended fallback, so the markdown-publish behaviour stands.
+        # Structured-card conversion is best-effort. It may hold a plan that
+        # still has release blockers, but a clean validator report falls back to
+        # the raw Stage 2 plan instead of creating admin review work.
         if (
             _structured_plan_enabled()
             and is_athlete_displayable_plan_status(result.get("status"))
             and not has_clean_structured_card(result)
+            and _stage2_report_blocks_release(result.get("stage2_validator_report"))
         ):
             logger.warning(
-                "[stage2] no clean structured card; holding for review (card-first gate)"
+                "[stage2] no clean structured card and release blockers remain; holding for review"
             )
             report = result.get("stage2_validator_report")
             structured_debug = report.get("structured_plan") if isinstance(report, dict) else None

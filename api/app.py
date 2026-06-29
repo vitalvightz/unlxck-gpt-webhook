@@ -47,6 +47,7 @@ from .generation_runtime import (
     default_planner as runtime_default_planner,
     is_in_process_generation_enabled,
     schedule_generation_job_if_needed,
+    utc_now_iso,
 )
 from .stage2_automation import (
     Stage2Automator,
@@ -711,8 +712,6 @@ def create_app(
         is_admin = is_effective_admin_profile(profile, store)
         if not is_admin and str(plan_row["athlete_id"]) != profile.athlete_id:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="not allowed")
-        if not is_admin and _is_archived_plan(plan_row):
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
         return plan_row
 
     @app.get("/", include_in_schema=False)
@@ -902,6 +901,42 @@ def create_app(
             _admin_generation_job_diagnostic(job, stale_after_seconds=stale_after_seconds)
             for job in store.list_admin_active_generation_jobs(limit=limit)
         ]
+
+    @app.delete("/api/admin/generation-jobs/{job_id}", response_model=GenerationJobResponse)
+    def cancel_admin_generation_job(
+        job_id: str,
+        _: ProfileRecord = Depends(require_admin),
+        store: AppStore = Depends(get_store),
+        active_tasks: set[str] = Depends(get_active_generation_tasks),
+    ) -> GenerationJobResponse:
+        try:
+            uuid.UUID(job_id)
+        except (ValueError, TypeError, AttributeError):
+            if not str(job_id or "").startswith("job_"):
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="generation job not found")
+
+        job = store.get_generation_job(job_id)
+        if not job:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="generation job not found")
+
+        job_status = str(job.get("status") or "").strip().lower()
+        if job_status not in {"queued", "running"}:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Only queued or running generation jobs can be cancelled.",
+            )
+
+        now_iso = utc_now_iso()
+        updated = store.update_generation_job(
+            job_id,
+            status="failed",
+            error="Generation cancelled by admin.",
+            completed_at=now_iso,
+            failed_at=now_iso,
+            heartbeat_at=now_iso,
+        )
+        active_tasks.discard(job_id)
+        return _job_response(updated, store=store, viewer_role="admin")
 
     @app.post("/api/admin/plans/{plan_id}/manual-stage2", response_model=PlanDetail)
     async def submit_manual_stage2(

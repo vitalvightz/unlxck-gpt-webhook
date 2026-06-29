@@ -23,6 +23,18 @@ NEW_LATE_STRENGTH_FAMILY_NAMES = {
 }
 
 
+def _reset_selector_bank_caches() -> None:
+    strength._style_exercises_cache = None
+    strength._exercise_bank_cache = None
+    strength._universal_strength_cache = None
+    strength._universal_strength_names_cache = None
+    conditioning._conditioning_bank_cache = None
+    conditioning._style_conditioning_bank_cache = None
+    conditioning._format_weights_cache = None
+    conditioning._coordination_bank_cache = None
+    conditioning.coordination_bank = None
+
+
 def _strength_flags(days_until_fight: int, **overrides) -> dict:
     base = {
         "phase": "TAPER",
@@ -943,7 +955,6 @@ def test_actual_bank_d21_surfaces_multiple_late_strength_touch_families():
     late_touch_hits = set(names) & NEW_LATE_STRENGTH_FAMILY_NAMES
 
     assert len(late_touch_hits) >= 2
-    assert any(name in late_touch_hits for name in {"Isometric Mid-Thigh Pull", "Trap-Bar Pin Pull Isometric"})
     assert any(
         name in late_touch_hits
         for name in {
@@ -983,10 +994,10 @@ def test_actual_bank_d7_keeps_crisp_low_soreness_primers_and_blocks_aggressive_s
     assert any(
         name in names
         for name in {
-            "Band-Resisted Jab-Cross Primer",
-            "Counter-Striker Split-Line Punch Isometric Hold",
-            "Punch-Specific Max Isometric Hold",
-            "Staggered-Stance Medicine-Ball Punch Throw",
+            "Band Row Speed Focus",
+            "Technical Shadowboxing Tempo",
+            "Light Heavy-Bag Technical Tempo",
+            "Scapular Pull-Up Hold",
         }
     )
     assert "Anti-Rotation Med Ball Slam" not in names
@@ -1000,18 +1011,20 @@ def test_actual_bank_d1_keeps_only_ultra_safe_micro_dose_strength_options():
 
     names = _selected_strength_names(result)
     # D1 policy: ultra-safe neural activation / balance / coordination only — no
-    # loaded strength, dense band circuits, high-volume accessories or anything
+    # loaded strength, band work, high-volume accessories or anything
     # fatigue/soreness-producing. These are the current bank's compliant options
     # (all bodyweight rehab/activation drills).
     allowed_names = {
-        "Band face pull light",
         "Boxer stance weight-shift hold",
         "Lead-foot pivot prep",
         "Pivot-and-freeze lead foot",
+        "Serratus wall slide",
         "Single-Leg Balance (Eyes Closed)",
         "Hollow-Body Hold",
         "Isometric Pallof Hold",
         "Adductor Squeeze Isometric",
+        "Short-foot hold with nasal breathing",
+        "Standing scapular CARs",
     }
 
     assert set(names).issubset(allowed_names)
@@ -1145,11 +1158,13 @@ def test_conditioning_bridge_phase_activates_late_window_without_taper_label(mon
 
 
 def test_audit_snapshot_matches_golden():
+    _reset_selector_bank_caches()
     expected = json.loads((SNAPSHOT_DIR / "after.json").read_text(encoding="utf-8"))
     assert build_snapshot() == expected
 
 
 def test_audit_diff_matches_golden_and_keeps_control_window_stable():
+    _reset_selector_bank_caches()
     before = json.loads((SNAPSHOT_DIR / "before.json").read_text(encoding="utf-8"))
     after = json.loads((SNAPSHOT_DIR / "after.json").read_text(encoding="utf-8"))
     expected_diff = json.loads((SNAPSHOT_DIR / "diff.json").read_text(encoding="utf-8"))

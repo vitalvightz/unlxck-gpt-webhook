@@ -333,6 +333,39 @@ test("renders a coach-led / sparring day with no app blocks as its own card", ()
   assert.equal(countOccurrences(html, "Rest day."), 1);
 });
 
+test("renders light technical context alongside app sessions in the same day card", () => {
+  const plan = {
+    schema_version: "1.0",
+    plan_metadata: { title: "Fight Camp", sport: "boxing", plan_type: "fight_camp" },
+    weeks: [
+      {
+        week_id: "wk-1",
+        week_index: 1,
+        phase_label: "SPP",
+        days: [
+          {
+            date: "2026-06-20",
+            countdown_label: "D-16",
+            day_type: "moderate",
+            today_card: { headline: "Light technical combat" },
+            sessions: [
+              { session_id: "s1", session_type: "strength", title: "Lower strength", blocks: [] },
+            ],
+          },
+        ],
+      },
+    ],
+  } satisfies StructuredPlan;
+
+  const html = renderToStaticMarkup(<StructuredPlanRenderer plan={plan} />);
+
+  assert.equal(html.includes("Light technical combat"), true);
+  assert.equal(html.includes("Lower strength"), true);
+  assert.equal(html.includes("Low-noise app work can stay on this day if prescribed."), true);
+  assert.equal(html.includes("sp-day-card-light_combat"), false);
+  assert.ok(html.indexOf("Light technical combat") < html.indexOf("Lower strength"));
+});
+
 test("marks the current day and surfaces the week focus", () => {
   const plan = {
     schema_version: "1.0",
@@ -496,6 +529,89 @@ test("does not leak raw enum tokens for day type or session type", () => {
   // that decision (it surfaces on Today), so it must not appear in the map at all.
   assert.equal(html.includes("train_as_planned"), false);
   assert.equal(html.includes("Train as planned"), false);
+});
+
+test("does not render day intensity tags on session cards", () => {
+  const plan = {
+    schema_version: "1.0",
+    plan_metadata: { title: "Fight Camp", sport: "boxing", plan_type: "fight_camp" },
+    weeks: [
+      {
+        week_id: "wk-1",
+        week_index: 1,
+        phase_label: "TAPER",
+        days: [
+          {
+            date: "2026-06-26",
+            day_type: "high",
+            countdown_label: "D-6",
+            sessions: [
+              {
+                session_id: "s1",
+                session_type: "mixed",
+                title: "Fight-Speed Primer",
+                blocks: [],
+              },
+            ],
+          },
+        ],
+      },
+    ],
+  } satisfies StructuredPlan;
+
+  const html = renderToStaticMarkup(<StructuredPlanRenderer plan={plan} today={new Date(2026, 5, 26)} />);
+
+  assert.equal(html.includes(">High</span>"), false);
+  assert.equal(html.includes("Mixed session"), true);
+});
+
+test("hides weight-cut symptom warnings unless risk is above moderate", () => {
+  const basePlan = {
+    schema_version: "1.0",
+    plan_metadata: { title: "Fight Camp", sport: "boxing", plan_type: "fight_camp" },
+    red_flag_rules: [
+      {
+        rule_id: "rf-weight",
+        severity: "red",
+        display_text:
+          "If weight-cut symptoms worsen (lightheadedness), stop non-essential activity and escalate to coach/medical staff.",
+      },
+    ],
+    plan_notes: [
+      {
+        category: "weight_cut",
+        label: "Weight cut",
+        text: "If weight-cut symptoms worsen, stop non-essential activity and escalate to coach/medical staff.",
+      },
+    ],
+    weeks: [{ week_id: "wk-1", week_index: 1, phase_label: "TAPER", days: [] }],
+  } satisfies StructuredPlan;
+
+  const moderate = renderToStaticMarkup(
+    <StructuredPlanRenderer
+      plan={{
+        ...basePlan,
+        deterministic_support: {
+          nutrition: { by_phase: { TAPER: { weight_cut: { active: true, risk_band: "moderate" } } } },
+        },
+      }}
+    />,
+  );
+  assert.equal(moderate.includes("weight-cut symptoms worsen"), false);
+  assert.equal(moderate.includes("lightheadedness"), false);
+
+  const high = renderToStaticMarkup(
+    <StructuredPlanRenderer
+      plan={{
+        ...basePlan,
+        deterministic_support: {
+          nutrition: { by_phase: { TAPER: { weight_cut: { active: true, risk_band: "high" } } } },
+        },
+      }}
+    />,
+  );
+  assert.equal(high.includes("weight-cut symptoms worsen"), true);
+  assert.equal(countOccurrences(high, "stop non-essential activity"), 1);
 });
 
 test("a session-less rest day does not render an awkward '0 sessions' tag", () => {

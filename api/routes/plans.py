@@ -3,19 +3,24 @@ from __future__ import annotations
 from typing import Any
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
+from fastapi import APIRouter, Body, Depends, HTTPException, Query, Response, status
+from pydantic import BaseModel
 
 from api.models import PlanDetail, PlanRenameRequest, PlanSummary, ProfileRecord, WeeklySchedule
 from api.plan_mappers import (
     _is_archived_plan,
+    _is_triage_blocked_plan,
     _lookup_plan_source,
     _map_plan_detail,
     _map_plan_summary,
     _map_weekly_schedule,
-    _visible_plans_for_athlete,
 )
 from api.store import AppStore, is_effective_admin_profile
 from api.services.active_plan import resolve_active_plan, set_active_plan
+
+
+class PlanActivationRequest(BaseModel):
+    overlap_action: str | None = None
 
 
 def build_plans_router(*, require_profile, require_plan_row, get_store) -> APIRouter:
@@ -64,7 +69,7 @@ def build_plans_router(*, require_profile, require_plan_row, get_store) -> APIRo
     ) -> list[PlanSummary]:
         rows = store.list_user_plans(profile.athlete_id)
         if not is_effective_admin_profile(profile, store):
-            rows = _visible_plans_for_athlete(rows)
+            rows = [row for row in rows if not _is_triage_blocked_plan(row)]
         return [_map_plan_summary(row) for row in rows]
 
     @router.get("/api/plans/{plan_id}", response_model=PlanDetail)
@@ -83,13 +88,18 @@ def build_plans_router(*, require_profile, require_plan_row, get_store) -> APIRo
     @router.get("/api/plans/{plan_id}/weekly-schedule", response_model=WeeklySchedule)
     def get_plan_weekly_schedule(
         week_index: int = Query(0, ge=0),
+        profile: ProfileRecord = Depends(require_profile),
+        store: AppStore = Depends(get_store),
         plan_row: dict[str, Any] = Depends(require_plan_row),
     ) -> WeeklySchedule:
+        if not is_effective_admin_profile(profile, store) and _is_archived_plan(plan_row):
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="weekly schedule not found")
         return _map_weekly_schedule(plan_row, week_index=week_index)
 
     @router.post("/api/plans/{plan_id}/set-active", response_model=PlanSummary)
     def set_active_user_plan(
         plan_id: str,
+        activation: PlanActivationRequest | None = Body(default=None),
         profile: ProfileRecord = Depends(require_profile),
         store: AppStore = Depends(get_store),
     ) -> PlanSummary:
@@ -97,7 +107,12 @@ def build_plans_router(*, require_profile, require_plan_row, get_store) -> APIRo
             uuid.UUID(plan_id)
         except (ValueError, AttributeError):
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
-        plan_row = set_active_plan(store, profile.athlete_id, plan_id)
+        plan_row = set_active_plan(
+            store,
+            profile.athlete_id,
+            plan_id,
+            overlap_action=activation.overlap_action if activation else None,
+        )
         return _map_plan_summary(plan_row)
 
     @router.patch("/api/plans/{plan_id}", response_model=PlanDetail)

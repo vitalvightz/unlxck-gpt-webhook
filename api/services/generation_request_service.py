@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 from collections.abc import Awaitable, Callable
 from typing import Any
 
@@ -19,6 +20,7 @@ from api.generation_job_helpers import (
     daily_generation_cap_window,
 )
 from api.errors import client_request_id_payload_mismatch_error, generation_already_in_flight_error
+from api.environment import is_production_environment
 from api.models import GenerationJobResponse, PlanRequest, ProfileRecord
 from api.performance_focus import validate_performance_focus_selections
 from api.plan_mappers import _ALLOWED_PLAN_SOURCES
@@ -27,6 +29,23 @@ from api.store import AppStore, is_effective_admin_profile, is_startup_stale_gen
 
 Planner = Callable[[dict[str, Any]], dict[str, Any]]
 ScheduleGenerationJob = Callable[..., Awaitable[dict[str, Any]]]
+logger = logging.getLogger(__name__)
+
+
+def _generation_request_debug_summary(request_body: PlanRequest) -> dict[str, Any]:
+    return {
+        "key_goals": request_body.key_goals,
+        "primary_goal": request_body.primary_goal or "",
+        "weak_areas": request_body.weak_areas,
+        "primary_weak_area": request_body.primary_weak_area or "",
+        "fatigue_level": request_body.fatigue_level or "",
+        "professional_status": request_body.athlete.professional_status or "",
+        "equipment_access": request_body.equipment_access,
+        "fight_date": request_body.fight_date,
+        "no_scheduled_fight": bool(request_body.no_scheduled_fight),
+        "technical_style": request_body.athlete.technical_style,
+        "tactical_style": request_body.athlete.tactical_style,
+    }
 
 
 async def generate_plan_for_current_user(
@@ -64,6 +83,13 @@ async def generate_plan_for_current_user(
     )
     request_payload = request_body.model_dump(mode="json")
     payload_hash = _stable_payload_hash(request_payload)
+    if not is_production_environment():
+        logger.info(
+            "[generation] request:payload_summary client_request_id=%s payload_hash=%s summary=%s",
+            client_request_id,
+            payload_hash,
+            _generation_request_debug_summary(request_body),
+        )
     is_admin = is_effective_admin_profile(profile, store)
     viewer_role = "admin" if is_admin else "athlete"
     existing_job = await asyncio.to_thread(

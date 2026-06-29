@@ -415,6 +415,14 @@ def build_stage2_outputs(
     blocks: PlanBlocksBundle,
     rendered: RenderedPlanBundle,
 ) -> tuple[dict, dict, str]:
+    stage1_selection_summary = {
+        "strength_names": blocks.strength_names,
+        "conditioning_names": blocks.conditioning_names,
+        "strength_reason_log": blocks.strength_reason_log,
+        "conditioning_reason_log": blocks.conditioning_reason_log,
+        "current_phase": blocks.current_phase,
+    }
+
     stage2_payload = build_stage2_payload(
         training_context=context.training_context,
         mapped_format=context.mapped_format,
@@ -428,6 +436,9 @@ def build_stage2_outputs(
         conditioning_blocks=blocks.conditioning_blocks,
         rehab_blocks=blocks.rehab_blocks,
     )
+
+    if isinstance(stage2_payload, dict):
+        stage2_payload["stage1_selection_summary"] = stage1_selection_summary
     active_phases = [phase for phase in PHASES if context.phase_active(phase)]
     computed_support = build_computed_support(
         flags=context.training_context.to_flags(),
@@ -443,6 +454,9 @@ def build_stage2_outputs(
         plan_input=context.plan_input,
         computed_support=computed_support,
     )
+
+    if isinstance(planning_brief, dict):
+        planning_brief["stage1_selection_summary"] = stage1_selection_summary
     # Deterministic injury / weight-cut lead summary. The validator scans the
     # first plan lines for this context, so render it right after the title.
     lead_summary = render_lead_summary(planning_brief)
