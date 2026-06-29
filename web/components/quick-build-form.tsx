@@ -7,6 +7,7 @@ import { useEffect, useMemo, useState, useTransition } from "react";
 import { RequireAuth } from "@/components/auth-guard";
 import { useAppSession } from "@/components/auth-provider";
 import { CustomSelect } from "@/components/custom-select";
+import { WhyTooltip } from "@/components/why-tooltip";
 import { saveOnboardingDraft } from "@/lib/api";
 import { writePendingGenerationPayload } from "@/lib/generation-pending-payload";
 import { markGenerationIntent } from "@/lib/generation-intent";
@@ -177,10 +178,17 @@ function ChipMultiSelect({
                 onChange={() => onToggle(option.value)}
               />
               <span className="checkbox-card-copy">
-                <span className="checkbox-card-title">{option.label}</span>
-                {disabled && reason ? (
-                  <span className="checkbox-card-tag">{reason}</span>
-                ) : null}
+                <span className="checkbox-card-title-row">
+                  <span className="checkbox-card-title">{option.label}</span>
+                  {disabled && reason ? (
+                    <WhyTooltip
+                      title="Unavailable"
+                      body={reason}
+                      triggerLabel="?"
+                      ariaLabel={`Why ${option.label} is unavailable`}
+                    />
+                  ) : null}
+                </span>
               </span>
             </label>
           );

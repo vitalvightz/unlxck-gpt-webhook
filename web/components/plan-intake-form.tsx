@@ -42,6 +42,7 @@ import {
 } from "@/lib/guided-injury";
 import { GuidedInjuryCard } from "@/components/guided-injury-card";
 import { SafetyNote } from "@/components/safety-note";
+import { WhyTooltip } from "@/components/why-tooltip";
 import { INJURY_INTAKE_SAFETY } from "@/lib/safety-copy";
 import { LevelSlider, type LevelValue } from "@/components/rating-controls";
 import { applyNoScheduledFightSnapshot, canonicalizePerformanceFocus, emptyPlanRequest, hydratePlanRequest, mergePlanRequestDraft } from "@/lib/onboarding";
@@ -711,11 +712,17 @@ function CheckboxGroup({
             >
               <input type="checkbox" checked={checked} disabled={disabled} onChange={() => onToggle(option.value)} />
               <span className="checkbox-card-copy">
-                <span className="checkbox-card-title">{option.label}</span>
-                {daysOutDisabledReason ? <span className="checkbox-card-tag">{daysOutDisabledReason}</span> : null}
-                {!daysOutDisabledReason && capDisabled ? (
-                  <span className="checkbox-card-tag">{capDisabledReason || "Focus cap reached."}</span>
-                ) : null}
+                <span className="checkbox-card-title-row">
+                  <span className="checkbox-card-title">{option.label}</span>
+                  {labelTitle ? (
+                    <WhyTooltip
+                      title="Unavailable"
+                      body={labelTitle}
+                      triggerLabel="?"
+                      ariaLabel={`Why ${option.label} is unavailable`}
+                    />
+                  ) : null}
+                </span>
               </span>
             </label>
           );
