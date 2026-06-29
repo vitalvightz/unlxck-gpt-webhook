@@ -2381,6 +2381,10 @@ def generate_conditioning_block(flags):
             )
         )
 
+    # Precompute each declared style's bucket tags once so per-style distribution
+    # can test a scored drill's tags against the style it belongs to.
+    style_bucket_tags_map = {st: _style_bucket_tags(st) for st in style_names}
+
     def _load_and_score_style_conditioning_bank() -> None:
             nonlocal restriction_candidates, restriction_blocked
             for drill in style_conditioning_bank:
