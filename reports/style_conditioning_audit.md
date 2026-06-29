@@ -12,7 +12,8 @@ This report is diagnostic only. It does not rewrite, delete, rename, or redose b
 ### Camp Actions
 
 - redose: 205
-- keep: 123
+| name | system | phases | rpe | intensity | lactate_load | movement_cost | impact_cost | late_windows | overstyled_name_flag | aggressive_notes_flag | dose_risk_flag | late_fight_risk_flag | camp_action | late_fight_action | manual_notes | quarantine_reason_codes |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 - delete_or_rebuild: 38
 - rename_and_redose: 5
 - rename: 1
