@@ -171,13 +171,15 @@ def _normalized_value(value: Any) -> str:
 
 
 def _contains_term(text: str, terms: tuple[str, ...]) -> bool:
+    normalized_text = text.replace('-', ' ').replace('_', ' ')
     if terms not in _PATTERN_CACHE:
-        union_pattern = "|".join(re.escape(term.casefold()) for term in terms)
+        normalized_terms = [term.replace('-', ' ').replace('_', ' ').casefold() for term in terms]
+        union_pattern = '|'.join(re.escape(term) for term in normalized_terms)
         _PATTERN_CACHE[terms] = re.compile(
-            r"(?<![a-z0-9])(" + union_pattern + r")(?![a-z0-9])",
+            r'(?<![a-z0-9])(' + union_pattern + r')(?![a-z0-9])',
             re.IGNORECASE,
         )
-    return bool(_PATTERN_CACHE[terms].search(text))
+    return bool(_PATTERN_CACHE[terms].search(normalized_text))
 
 
 def _joined_note_text(entry: dict[str, Any]) -> str:
