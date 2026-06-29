@@ -232,7 +232,140 @@ def test_runtime_fallback_missing_rpe_and_cost_metadata_blocks_late_selection():
 
     assert result["blocked"] is True
     assert "late_block_missing_cost_metadata" in result["block_codes"]
+    assert "late_penalty_missing_rpe" in result["penalty_codes"]
+
+
+def test_missing_governance_metadata_does_not_hard_block_d21_low_risk_support():
+    item = _safe_conditioning(
+        system="skill",
+        tags=["tactical", "cue_card"],
+        rpe=3,
+        stress_class="",
+        cost_class="",
+        support_only=None,
+        meaningful_stress=None,
+    )
+
+    result = conditioning._evaluate_conditioning_late_window(
+        item,
+        system="aerobic",
+        window=D21_TO_D14,
+        bridge_rules={},
+        source="runtime_fallback",
+    )
+
+    assert result["blocked"] is False
+    assert result["severity"] == "penalty"
+    assert "late_penalty_missing_governance_metadata" in result["penalty_codes"]
+
+
+def test_missing_governance_metadata_cannot_satisfy_strength_maintenance():
+    safety = is_late_fight_metadata_safe(
+        _safe_strength(
+            tags=["strength", "maximal_strength_maintenance"],
+            stress_class="",
+            cost_class="",
+            support_only=None,
+            meaningful_stress=None,
+        ),
+        "exercise_bank.json",
+        D21_TO_D14,
+    )
+
+    assert safety["severity"] == "blocked"
+    assert "late_block_support_only_anchor_fulfillment" in safety["block_codes"]
+
+
+def test_missing_governance_metadata_cannot_satisfy_conditioning_anchor():
+    safety = is_late_fight_metadata_safe(
+        _safe_conditioning(
+            stress_class="anchor",
+            cost_class="",
+            support_only=None,
+            meaningful_stress=None,
+        ),
+        "conditioning_bank.json",
+        D21_TO_D14,
+    )
+
+    assert safety["severity"] == "blocked"
+    assert "late_block_support_only_anchor_fulfillment" in safety["block_codes"]
+
+
+def test_missing_cost_metadata_penalizes_d21_low_risk_support_without_blocking():
+    item = _safe_conditioning(
+        system="skill",
+        tags=["breathing", "reset"],
+        rpe=3,
+        impact_cost="",
+        movement_cost="",
+        lactate_load="",
+    )
+
+    result = conditioning._evaluate_conditioning_late_window(
+        item,
+        system="aerobic",
+        window=D21_TO_D14,
+        bridge_rules={},
+        source="runtime_fallback",
+    )
+
+    assert result["blocked"] is False
+    assert result["severity"] == "penalty"
+    assert "late_penalty_missing_cost_metadata" in result["penalty_codes"]
+
+
+def test_missing_cost_metadata_blocks_physical_work_d7_onward():
+    item = _safe_conditioning(
+        tags=["conditioning", "ballistic"],
+        impact_cost="",
+        movement_cost="",
+        lactate_load="",
+        rpe=4,
+    )
+
+    result = conditioning._evaluate_conditioning_late_window(
+        item,
+        system="aerobic",
+        window=D7,
+        bridge_rules={},
+        source="runtime_fallback",
+    )
+
+    assert result["blocked"] is True
+    assert "late_block_missing_cost_metadata" in result["block_codes"]
+
+
+def test_missing_rpe_blocks_fight_pace_glycolytic_d13_onward():
+    item = _safe_conditioning(system="glycolytic", tags=["glycolytic"], load="fight-pace rhythm")
+    item.pop("rpe")
+
+    result = conditioning._evaluate_conditioning_late_window(
+        item,
+        system="glycolytic",
+        window=D13_TO_D8,
+        bridge_rules={"glycolytic_touch_max": 1},
+        source="runtime_fallback",
+    )
+
+    assert result["blocked"] is True
     assert "late_block_missing_rpe" in result["block_codes"]
+
+
+def test_missing_rpe_does_not_block_tactical_breathing_support():
+    item = _safe_conditioning(system="skill", tags=["breathing", "visualization", "tactical"])
+    item.pop("rpe")
+
+    result = conditioning._evaluate_conditioning_late_window(
+        item,
+        system="aerobic",
+        window=D7,
+        bridge_rules={},
+        source="runtime_fallback",
+    )
+
+    assert result["blocked"] is False
+    assert "late_penalty_missing_rpe" in result["penalty_codes"]
 
 
 def test_runtime_fallback_unknown_system_blocks_late_selection():
@@ -339,6 +472,29 @@ def test_runtime_fallback_d1_blocks_forbidden_conditioning_modality():
     assert "late_block_d1_forbidden_modality" in result["block_codes"]
 
 
+def test_runtime_fallback_d1_blocks_all_forbidden_modality_signals():
+    variants = [
+        _safe_conditioning(equipment=["bands"]),
+        _safe_conditioning(equipment=["medicine_ball"]),
+        _safe_conditioning(equipment=["dumbbell"]),
+        _safe_conditioning(method="isometric"),
+        _safe_conditioning(tags=["conditioning", "ballistic"]),
+        _safe_conditioning(tags=["conditioning", "max_intent"]),
+        _safe_conditioning(rpe=8),
+    ]
+
+    for item in variants:
+        safety = is_late_fight_metadata_safe(
+            item,
+            "runtime_fallback",
+            D1,
+            source_kind="conditioning",
+        )
+
+        assert safety["severity"] == "blocked"
+        assert "late_block_d1_forbidden_modality" in safety["block_codes"]
+
+
 def test_runtime_fallback_complete_safe_metadata_can_still_be_selected():
     fallback = conditioning._bridge_glycolytic_touch_fallback()
 
@@ -353,9 +509,74 @@ def test_runtime_fallback_complete_safe_metadata_can_still_be_selected():
     assert result["blocked"] is False
 
 
+def test_conditioning_reservoir_reports_blocked_and_penalized_metadata_entries(monkeypatch):
+    penalized = validate_training_item(
+        {
+            "name": "Tactical Cue Reset",
+            "tags": ["tactical", "cue_card"],
+            "phases": ["TAPER"],
+            "system": "skill",
+            "late_windows": [D21_TO_D14],
+            "rpe": 3,
+            "equipment": [],
+            "required_equipment": [],
+        },
+        source="conditioning_bank.json",
+        require_system=True,
+        mode="runtime",
+    )
+    blocked = validate_training_item(
+        {
+            "name": "Physical Drill Missing Window",
+            "tags": ["conditioning"],
+            "phases": ["TAPER"],
+            "system": "aerobic",
+            "rpe": 5,
+            "impact_cost": "low",
+            "movement_cost": "low",
+            "lactate_load": "low",
+            "equipment": [],
+            "required_equipment": [],
+        },
+        source="conditioning_bank.json",
+        require_system=True,
+        mode="runtime",
+    )
+    monkeypatch.setattr(conditioning, "get_conditioning_bank", lambda: [penalized, blocked])
+    monkeypatch.setattr(conditioning, "get_style_conditioning_bank", lambda: [])
+
+    *_prefix, candidate_reservoir = conditioning.generate_conditioning_block(
+        {
+            "phase": "TAPER",
+            "fatigue": "low",
+            "style_technical": ["boxing"],
+            "style_tactical": ["out-boxer"],
+            "sport": "boxing",
+            "key_goals": ["conditioning"],
+            "weaknesses": ["sharpness"],
+            "injuries": [],
+            "restrictions": [],
+            "equipment": ["bodyweight"],
+            "training_frequency": 4,
+            "days_available": 4,
+            "days_until_fight": 18,
+            "time_to_fight_days": 18,
+        }
+    )
+
+    diagnostics = candidate_reservoir["__late_window__"]
+    blocked_by_name = {entry["name"]: entry for entry in diagnostics["blocked"]}
+    penalized_by_name = {entry["name"]: entry for entry in diagnostics["penalized"]}
+
+    assert "Physical Drill Missing Window" in blocked_by_name
+    assert "late_block_missing_late_windows" in blocked_by_name["Physical Drill Missing Window"]["reason_codes"]
+    assert "Tactical Cue Reset" in penalized_by_name
+    assert "late_penalty_missing_cost_metadata" in penalized_by_name["Tactical Cue Reset"]["penalty_codes"]
+
+
 def test_runtime_primer_only_cannot_satisfy_strength_maintenance():
     safety = is_late_fight_metadata_safe(
-        _safe_strength(tags=["strength", "neural_primer", "late_strength_touch"], primer_only=True),
+        _safe_strength(tags=["strength", "neural_primer", "maximal_strength_maintenance"], primer_only=True),
         "exercise_bank.json",
         D21_TO_D14,
     )
