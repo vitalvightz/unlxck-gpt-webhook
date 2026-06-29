@@ -3,7 +3,10 @@ import re
 from typing import Any, Literal
 
 from .phases import PHASE_VALUES
-from .style_conditioning_quarantine import style_conditioning_quarantine_reason_codes
+from .style_conditioning_quarantine import (
+    is_style_conditioning_source,
+    style_conditioning_quarantine_reason_codes,
+)
 
 ValidationMode = Literal["audit", "strict", "runtime"]
 SourceKind = Literal["strength", "conditioning", "generic"]
@@ -691,7 +694,7 @@ def is_late_fight_metadata_safe(
 
     style_quarantine_codes = (
         style_conditioning_quarantine_reason_codes(item, source=source)
-        if _source_filename(source) in {"style_conditioning_bank", "style_conditioning_bank.json"}
+        if is_style_conditioning_source(source)
         else []
     )
     if style_quarantine_codes:
