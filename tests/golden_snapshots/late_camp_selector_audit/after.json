@@ -3980,7 +3980,7 @@
     "conditioning": {
       "winners": [
         {
-          "name": "Fight-Day Readiness Cue Reset",
+          "name": "Final Readiness Cue Reset",
           "score": 1.7525,
           "reason_codes": [
             "late_support_fallback",

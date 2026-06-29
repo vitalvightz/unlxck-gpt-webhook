@@ -481,6 +481,12 @@ def test_band_resisted_sprint_starts_are_spp_only_across_conditioning_banks():
         assert "TAPER" not in item.get("phases", [])
 
 
+def test_late_support_fallback_uses_window_appropriate_names():
+    assert conditioning._late_support_fallback(D1)["name"] == "Final Readiness Cue Reset"
+    assert conditioning._late_support_fallback(D21_TO_D14)["name"] == "Late-Camp Readiness Cue Reset"
+    assert conditioning._late_support_fallback(D7)["name"] == "Late-Camp Readiness Cue Reset"
+
+
 def test_boxing_jump_reset_is_not_taper_metadata_and_d6_prefers_low_impact_bursts():
     data = json.loads(Path("data/conditioning_bank.json").read_text(encoding="utf-8"))
     by_name = {item["name"]: item for item in data}

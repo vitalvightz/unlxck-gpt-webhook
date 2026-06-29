@@ -187,6 +187,41 @@ def test_band_row_speed_focus_does_not_satisfy_strength_maintenance_when_real_ca
     assert result["why_log"][0]["name"] == "Metadata Tagged Pull Strength Hold"
 
 
+def test_style_specific_technical_primer_does_not_satisfy_strength_maintenance(monkeypatch):
+    technical_primer = _primer_touch("Style-Specific Technical Primer")
+    technical_primer.update(
+        {
+            "_schema_source": "style_specific_exercises.json",
+            "category": "striking",
+            "method": "power",
+            "movement_cost": "low",
+            "stress_class": "support",
+            "cost_class": "low",
+            "support_only": True,
+            "meaningful_stress": False,
+            "real_strength_maintenance": False,
+        }
+    )
+    technical_primer["tags"].append("counter_striker")
+    maintenance = _maintenance_touch("Style-Agnostic Strength Maintenance")
+    _patch_minimal_strength_runtime(
+        monkeypatch,
+        [maintenance],
+        {
+            technical_primer["tags"][0]: 20.0,
+            maintenance["tags"][0]: 7.5,
+        },
+    )
+    monkeypatch.setattr(strength, "get_style_exercises", lambda: [technical_primer])
+
+    result = strength.generate_strength_block(
+        flags=_flags(days_until_fight=13, key_goals=["strength"], style_tactical=["counter_striker"])
+    )
+
+    assert result["why_log"][0]["name"] == "Style-Agnostic Strength Maintenance"
+    assert "early_taper_strength_maintenance_selected" in result["why_log"][0]["reasons"]["reason_codes"]
+
+
 def test_early_taper_strength_maintenance_does_not_force_unsafe_candidate(monkeypatch):
     primer = _primer_touch("Safe Primer")
     unsafe_maintenance = _maintenance_touch(

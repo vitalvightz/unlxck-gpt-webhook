@@ -1486,9 +1486,10 @@ def _bridge_glycolytic_touch_fallback() -> dict:
 def _late_support_fallback(window: str | None) -> dict:
     """App-owned support insert for late windows where physical conditioning is unsafe."""
     late_windows = [window] if window else ["d1"]
+    name = "Final Readiness Cue Reset" if window == D1 else "Late-Camp Readiness Cue Reset"
     return {
         "system": "recovery",
-        "name": "Fight-Day Readiness Cue Reset",
+        "name": name,
         "load": "RPE 2-3 easy breathing, visualization, and tactical cue review",
         "rest": "As needed",
         "timing": "6-8 min",
