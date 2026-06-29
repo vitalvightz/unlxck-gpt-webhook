@@ -293,6 +293,60 @@ _LATE_FIGHT_NEURAL_POWER_SIGNALS = (
     "power",
 )
 
+# Descriptive sub-labels that annotate an already-selected exercise/session
+# (e.g. "Purpose: ...", "Stop/regress: ...", "Progression/regression: ...").
+# These lines explain or qualify the surrounding prescription; they are not a
+# new exercise selection and must not be treated as one even when they mention
+# dose tokens (e.g. "3 x 6") or exercise keywords (e.g. "punch", "carry").
+_LATE_FIGHT_ANNOTATION_LABEL = re.compile(
+    r"^\s*(?:"
+    r"purpose|why|goal|aim|intent|objective|rationale|focus|"
+    r"output|result|outcome|"
+    r"notes?|coach(?:ing)?\s+(?:note|cue)s?|cues?|"
+    r"stop(?:\s*[/\-]\s*regress(?:ion)?)?|stop\s+rule|"
+    r"regress(?:ion)?|"
+    r"progress(?:ion)?(?:\s*[/\-]\s*regress(?:ion)?)?|"
+    r"setup|set[\s-]?up|tempo|load(?:ing)?|dose|dosage|rest|format|"
+    r"equipment|target|scaling|adjust(?:ment)?|modif(?:y|ication)"
+    r")\s*[:\-–—]",
+    re.IGNORECASE,
+)
+
+# Non-physical countdown tasks (film study, tactical review, cue cards). These
+# are mental/tactical work, not exercise selections, but often carry a duration
+# (e.g. "Watch 8-12 min") that would otherwise read as a dose.
+_LATE_FIGHT_NON_EXERCISE_TASK = re.compile(
+    r"\b(?:"
+    r"re-?watch|watch|film\s+(?:study|review|clips?)|video\s+review|"
+    r"cue\s+card|tactical\s+cue|game\s*plan|"
+    r"take\s+notes|journal(?:ing)?|visuali[sz]e|mental\s+rehearsal"
+    r")\b",
+    re.IGNORECASE,
+)
+
+# Warm-up / movement-prep / activation lines. Brief band activation, mobility
+# swings, and movement prep inside a countdown session are not the day's
+# exercise selection and are allowed (band-based prep stays allowed except on
+# D-1, where all band work is blocked).
+_LATE_FIGHT_WARMUP_PREP = re.compile(
+    r"\b(?:warm[\s-]?up|movement\s+prep|mobility\s+prep|cool[\s-]?down|activation)\b",
+    re.IGNORECASE,
+)
+
+
+def _late_fight_line_is_annotation_or_task(line: str) -> bool:
+    """True for descriptive annotation labels and non-exercise tactical tasks."""
+    stripped = (line or "").strip()
+    if not stripped:
+        return False
+    if _LATE_FIGHT_ANNOTATION_LABEL.match(stripped):
+        return True
+    return bool(_LATE_FIGHT_NON_EXERCISE_TASK.search(stripped))
+
+
+def _late_fight_line_is_warmup_prep(line: str) -> bool:
+    return bool(_LATE_FIGHT_WARMUP_PREP.search(line or ""))
+
 
 
 
@@ -2140,8 +2194,15 @@ def _late_fight_countdown_banded_lockout_warnings(
             )
             if not has_band_token:
                 continue
-            if day != 1 and any(phrase_in_text(line, phrase) for phrase in _LATE_FIGHT_BAND_REHAB_ALLOW_PHRASES):
-                continue
+            if day != 1:
+                if any(phrase_in_text(line, phrase) for phrase in _LATE_FIGHT_BAND_REHAB_ALLOW_PHRASES):
+                    continue
+                # Brief band activation inside warm-up/movement prep, and band
+                # mentions inside descriptive annotations (e.g. a regression
+                # note), are not the day's prescribed band work. Only D-1 blocks
+                # all band work outright.
+                if _late_fight_line_is_warmup_prep(line) or _late_fight_line_is_annotation_or_task(line):
+                    continue
             warnings.append(
                 {
                     "code": "late_fight_countdown_blocked_drill",
@@ -2204,6 +2265,13 @@ def _late_fight_line_is_exercise_like(line: str) -> bool:
     if _line_is_instruction_only(line):
         return False
     if _COUNTDOWN_LABEL_LINE.match(line.strip()):
+        return False
+    # Descriptive annotations (Purpose/Stop/Progression/regression/...), warm-up
+    # and movement-prep lines, and non-exercise tactical tasks (film study, cue
+    # cards) are not exercise selections even when they carry dose tokens.
+    if _late_fight_line_is_annotation_or_task(line):
+        return False
+    if _late_fight_line_is_warmup_prep(line):
         return False
     lowered = line.lower()
     if re.search(r"\b\d+\s*(?:x|sets?|reps?|sec|seconds?|min|minutes?|rounds?|bursts?)\b", lowered):
