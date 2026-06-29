@@ -12,7 +12,7 @@ from .training_context import (
     allocate_sessions,
     calculate_exercise_numbers,
 )
-from .bank_schema import validate_training_item
+from .bank_schema import is_late_fight_metadata_safe, validate_training_item
 from .tagging import normalize_item_tags, normalize_tag, normalize_tags
 from .tag_maps import GOAL_TAG_MAP, STYLE_TAG_MAP
 # Refactored: Import centralized constants from config
@@ -730,15 +730,38 @@ def _evaluate_strength_late_window(
     window: str | None,
     days_until_fight=None,
     cut_bucket: str = "none",
+    source: str = "exercise_bank.json",
 ) -> dict:
     if not is_active_late_selector_window(window):
         return {
             "blocked": False,
+            "severity": "safe",
             "block_codes": [],
             "reason_codes": [],
+            "penalty_codes": [],
             "adjustment": 0.0,
             "ambiguous_gap": None,
         }
+    metadata_safety = None
+    metadata_penalty_codes: list[str] = []
+    metadata_adjustment = 0.0
+    if exercise.get("_schema_source") or exercise.get("_schema_issues") or exercise.get("_schema_safety"):
+        metadata_source = str(exercise.get("_schema_source") or source)
+        metadata_safety = is_late_fight_metadata_safe(exercise, metadata_source, window)
+        if metadata_safety.get("severity") == "blocked":
+            return {
+                "blocked": True,
+                "severity": "blocked",
+                "block_codes": metadata_safety["block_codes"],
+                "reason_codes": metadata_safety["reason_codes"],
+                "penalty_codes": metadata_safety.get("penalty_codes", []),
+                "adjustment": -1.0,
+                "ambiguous_gap": None,
+                "unsafe_metadata": metadata_safety["unsafe_metadata"],
+            }
+        metadata_penalty_codes = list(metadata_safety.get("penalty_codes", []))
+        if metadata_penalty_codes:
+            metadata_adjustment = max(-0.75, -0.35 * len(metadata_penalty_codes))
 
     penalties, blocks, profile = _strength_contextual_risk_patterns(exercise)
     tags = profile["tags"]
@@ -771,8 +794,9 @@ def _evaluate_strength_late_window(
     explicit_late_metadata = bool(late_windows or phase_role or subfamily or explicit_late_touch)
     safe_tags = sorted(tags & LATE_STRENGTH_SAFE_TAGS)
     severity = _strength_late_window_severity(window)
-    reason_codes: list[str] = []
-    adjustment = 0.0
+    reason_codes: list[str] = list(metadata_penalty_codes)
+    penalty_codes: list[str] = list(metadata_penalty_codes)
+    adjustment = metadata_adjustment
     exact_days_until_fight = coerce_days_until_fight(days_until_fight)
     cut_multiplier = LATE_STRENGTH_CUT_BUCKET_MULTIPLIER.get(cut_bucket, 0.0)
     high_cut_window = window in {D13_TO_D8, D7, D6_TO_D5, D4_TO_D2, D1} and cut_bucket in LATE_STRENGTH_HIGH_CUT_BUCKETS
@@ -996,8 +1020,10 @@ def _evaluate_strength_late_window(
 
     return {
         "blocked": bool(block_codes),
+        "severity": "blocked" if block_codes else "penalty" if penalty_codes else "safe",
         "block_codes": block_codes,
-        "reason_codes": reason_codes,
+        "reason_codes": list(dict.fromkeys(reason_codes)),
+        "penalty_codes": list(dict.fromkeys(penalty_codes)),
         "adjustment": round(adjustment, 4),
         "ambiguous_gap": ambiguous_gap,
     }
@@ -1310,7 +1336,7 @@ def get_exercise_bank() -> list[dict]:
             (DATA_DIR / "exercise_bank.json").read_text(encoding="utf-8")
         )
         for item in _exercise_bank_cache:
-            validate_training_item(item, source="exercise_bank.json", require_phases=True)
+            validate_training_item(item, source="exercise_bank.json", require_phases=True, mode="runtime")
             normalize_item_tags(item)
     return _exercise_bank_cache
 
@@ -1327,7 +1353,7 @@ def get_universal_strength() -> list[dict]:
             _universal_strength_cache = []
         else:
             for item in _universal_strength_cache:
-                validate_training_item(item, source="universal_gpp_strength.json", require_phases=True)
+                validate_training_item(item, source="universal_gpp_strength.json", require_phases=True, mode="runtime")
                 normalize_item_tags(item)
     return _universal_strength_cache
 
@@ -1711,6 +1737,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
     restriction_warning_counts: dict[str, int] = defaultdict(int)
     restriction_blocked_items: list[dict] = []
     late_window_blocked: list[dict] = []
+    late_window_penalized: list[dict] = []
     late_window_ambiguous: dict[str, dict] = {}
     post_score_late_eval_cache: dict[str, dict] = {}
 
@@ -1722,6 +1749,17 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
                 "name": exercise.get("name", "<unnamed>"),
                 "score": round(float(score), 4),
                 "reason_codes": list(reason_codes),
+            }
+        )
+
+    def _record_late_penalty(exercise: dict, score: float, penalty_codes: list[str]) -> None:
+        if not active_late_window or not penalty_codes:
+            return
+        late_window_penalized.append(
+            {
+                "name": exercise.get("name", "<unnamed>"),
+                "score": round(float(score), 4),
+                "penalty_codes": list(penalty_codes),
             }
         )
 
@@ -1762,6 +1800,8 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
             _record_ambiguous_gap(late_eval.get("ambiguous_gap"))
             if late_eval["blocked"]:
                 _record_late_block(exercise, fallback_score, late_eval["block_codes"])
+            elif late_eval.get("penalty_codes"):
+                _record_late_penalty(exercise, fallback_score, late_eval["penalty_codes"])
         return post_score_late_eval_cache[cache_key]
 
     def _late_safe_marker_profile(
@@ -1810,6 +1850,9 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
         if late_eval.get("reason_codes"):
             existing_codes = [str(code) for code in merged.get("reason_codes", []) if str(code).strip()]
             merged["reason_codes"] = list(dict.fromkeys(existing_codes + list(late_eval["reason_codes"])))
+        if late_eval.get("penalty_codes"):
+            existing_penalties = [str(code) for code in merged.get("penalty_codes", []) if str(code).strip()]
+            merged["penalty_codes"] = list(dict.fromkeys(existing_penalties + list(late_eval["penalty_codes"])))
         if active_late_window:
             merged.setdefault("late_window_adjustment", late_eval.get("adjustment", 0.0))
         merged.setdefault("quality_class", profile.get("quality_class"))
@@ -1984,11 +2027,17 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
         if late_eval["blocked"]:
             _record_late_block(ex, score, late_eval["block_codes"])
             continue
+        if late_eval.get("penalty_codes"):
+            _record_late_penalty(ex, score, late_eval["penalty_codes"])
         if late_eval["adjustment"]:
             score += late_eval["adjustment"]
         if late_eval["reason_codes"]:
             breakdown["reason_codes"] = list(
                 dict.fromkeys(list(breakdown.get("reason_codes", [])) + list(late_eval["reason_codes"]))
+            )
+        if late_eval.get("penalty_codes"):
+            breakdown["penalty_codes"] = list(
+                dict.fromkeys(list(breakdown.get("penalty_codes", [])) + list(late_eval["penalty_codes"]))
             )
         breakdown["late_window_adjustment"] = late_eval["adjustment"]
         breakdown["final_score"] = round(score, 4)
@@ -2096,6 +2145,8 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
             if late_eval["blocked"]:
                 _record_late_block(ex, 0.0, late_eval["block_codes"])
                 continue
+            if late_eval.get("penalty_codes"):
+                _record_late_penalty(ex, 0.0, late_eval["penalty_codes"])
             fallback_exercises.append(ex)
             if len(fallback_exercises) >= target_exercises - len(weighted_exercises):
                 break
@@ -2731,11 +2782,17 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
         if late_eval["blocked"]:
             _record_late_block(ex, style_score, late_eval["block_codes"])
             continue
+        if late_eval.get("penalty_codes"):
+            _record_late_penalty(ex, style_score, late_eval["penalty_codes"])
         if late_eval["adjustment"]:
             style_score += late_eval["adjustment"]
         if late_eval["reason_codes"]:
             style_reasons["reason_codes"] = list(
                 dict.fromkeys(list(style_reasons.get("reason_codes", [])) + list(late_eval["reason_codes"]))
+            )
+        if late_eval.get("penalty_codes"):
+            style_reasons["penalty_codes"] = list(
+                dict.fromkeys(list(style_reasons.get("penalty_codes", [])) + list(late_eval["penalty_codes"]))
             )
         style_reasons["late_window_adjustment"] = late_eval["adjustment"]
         style_reasons["final_score"] = round(style_score, 4)
@@ -3077,10 +3134,21 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
         ): entry
         for entry in late_window_blocked
     }
+    deduped_late_penalties = {
+        (
+            entry.get("name", ""),
+            tuple(entry.get("penalty_codes", [])),
+        ): entry
+        for entry in late_window_penalized
+    }
     candidate_reservoir["__late_window__"] = {
         "window": late_window,
         "blocked": sorted(
             deduped_late_blocks.values(),
+            key=lambda entry: (entry.get("name", ""), entry.get("score", 0.0)),
+        ),
+        "penalized": sorted(
+            deduped_late_penalties.values(),
             key=lambda entry: (entry.get("name", ""), entry.get("score", 0.0)),
         ),
         "ambiguous_tag_gaps": [

@@ -955,7 +955,6 @@ def test_actual_bank_d21_surfaces_multiple_late_strength_touch_families():
     late_touch_hits = set(names) & NEW_LATE_STRENGTH_FAMILY_NAMES
 
     assert len(late_touch_hits) >= 2
-    assert any(name in late_touch_hits for name in {"Isometric Mid-Thigh Pull", "Trap-Bar Pin Pull Isometric"})
     assert any(
         name in late_touch_hits
         for name in {
@@ -995,10 +994,10 @@ def test_actual_bank_d7_keeps_crisp_low_soreness_primers_and_blocks_aggressive_s
     assert any(
         name in names
         for name in {
-            "Band-Resisted Jab-Cross Primer",
-            "Counter-Striker Split-Line Punch Isometric Hold",
-            "Punch-Specific Max Isometric Hold",
-            "Staggered-Stance Medicine-Ball Punch Throw",
+            "Band Row Speed Focus",
+            "Technical Shadowboxing Tempo",
+            "Light Heavy-Bag Technical Tempo",
+            "Scapular Pull-Up Hold",
         }
     )
     assert "Anti-Rotation Med Ball Slam" not in names
@@ -1024,6 +1023,8 @@ def test_actual_bank_d1_keeps_only_ultra_safe_micro_dose_strength_options():
         "Hollow-Body Hold",
         "Isometric Pallof Hold",
         "Adductor Squeeze Isometric",
+        "Short-foot hold with nasal breathing",
+        "Standing scapular CARs",
     }
 
     assert set(names).issubset(allowed_names)

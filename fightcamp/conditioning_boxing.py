@@ -353,6 +353,7 @@ def _violates_sport_language_blacklist(drill: dict, *, fight_format: str) -> boo
 
 def _alactic_maintenance_fallback(phase: str) -> dict:
     phase = phase.upper()
+    structured_rounds = 6 if phase == "SPP" else 4
     rounds = "6–8" if phase == "SPP" else "4–6"
     return {
         "system": "ALACTIC",
@@ -365,6 +366,21 @@ def _alactic_maintenance_fallback(phase: str) -> dict:
         "equipment": [],
         "required_equipment": [],
         "generic_fallback": True,
+        "phases": [phase],
+        "tags": ["alactic", "speed", "cns_freshness", "low_impact"],
+        "late_windows": ["d21_to_d14", "d13_to_d8"],
+        "work_sec": 10,
+        "rest_sec": 90,
+        "rounds": structured_rounds,
+        "rpe": 7,
+        "rpe_max": 9,
+        "lactate_load": "low",
+        "impact_cost": "low",
+        "movement_cost": "low",
+        "stress_class": "support",
+        "cost_class": "low",
+        "support_only": True,
+        "meaningful_stress": False,
     }
 
 

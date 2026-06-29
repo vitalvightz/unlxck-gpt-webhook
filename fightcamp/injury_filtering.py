@@ -983,7 +983,7 @@ def injury_match_details(
     _INJURY_MATCH_DETAILS_CACHE[cache_key] = copy.deepcopy(reasons)
     return reasons
 
-def _load_style_specific_exercises() -> list[dict]:
+def _load_style_specific_exercises(*, mode: str = "runtime") -> list[dict]:
     paths = [
         DATA_DIR / "style_specific_exercises.json",
         DATA_DIR / "style_specific_exercises",
@@ -1004,7 +1004,7 @@ def _load_style_specific_exercises() -> list[dict]:
                 f"Check {path}."
             )
         for item in items:
-            validate_training_item(item, source=str(path), require_phases=True)
+            validate_training_item(item, source=str(path), require_phases=True, mode=mode)
             normalize_item_tags(item)
         return items
     logger.warning(
@@ -1014,36 +1014,36 @@ def _load_style_specific_exercises() -> list[dict]:
     return []
 
 
-def _load_bank_items(filename: str) -> list[dict]:
+def _load_bank_items(filename: str, *, mode: str = "runtime") -> list[dict]:
     items = json.loads((DATA_DIR / filename).read_text(encoding="utf-8"))
     for item in items:
-        validate_training_item(item, source=filename, require_phases=True)
+        validate_training_item(item, source=filename, require_phases=True, mode=mode)
         normalize_item_tags(item)
     return items
 
 
-def collect_banks() -> dict[str, list[dict]]:
+def collect_banks(*, mode: str = "runtime") -> dict[str, list[dict]]:
     banks: dict[str, list[dict]] = {}
-    banks["exercise_bank"] = _load_bank_items("exercise_bank.json")
-    banks["conditioning_bank"] = _load_bank_items("conditioning_bank.json")
-    banks["style_conditioning_bank"] = _load_bank_items("style_conditioning_bank.json")
-    banks["universal_gpp_strength"] = _load_bank_items("universal_gpp_strength.json")
-    banks["universal_gpp_conditioning"] = _load_bank_items("universal_gpp_conditioning.json")
-    banks["style_taper_conditioning"] = _load_bank_items("style_taper_conditioning.json")
-    banks["style_specific_exercises"] = _load_style_specific_exercises()
+    banks["exercise_bank"] = _load_bank_items("exercise_bank.json", mode=mode)
+    banks["conditioning_bank"] = _load_bank_items("conditioning_bank.json", mode=mode)
+    banks["style_conditioning_bank"] = _load_bank_items("style_conditioning_bank.json", mode=mode)
+    banks["universal_gpp_strength"] = _load_bank_items("universal_gpp_strength.json", mode=mode)
+    banks["universal_gpp_conditioning"] = _load_bank_items("universal_gpp_conditioning.json", mode=mode)
+    banks["style_taper_conditioning"] = _load_bank_items("style_taper_conditioning.json", mode=mode)
+    banks["style_specific_exercises"] = _load_style_specific_exercises(mode=mode)
 
     coord_data = json.loads((DATA_DIR / "coordination_bank.json").read_text(encoding="utf-8"))
     coordination_bank: list[dict] = []
     if isinstance(coord_data, list):
         for item in coord_data:
-            validate_training_item(item, source="coordination_bank.json", require_phases=True)
+            validate_training_item(item, source="coordination_bank.json", require_phases=True, mode=mode)
             normalize_item_tags(item)
             coordination_bank.append(item)
     elif isinstance(coord_data, dict):
         for val in coord_data.values():
             if isinstance(val, list):
                 for item in val:
-                    validate_training_item(item, source="coordination_bank.json", require_phases=True)
+                    validate_training_item(item, source="coordination_bank.json", require_phases=True, mode=mode)
                     normalize_item_tags(item)
                     coordination_bank.append(item)
     banks["coordination_bank"] = coordination_bank

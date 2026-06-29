@@ -15,7 +15,7 @@ from .training_context import (
     normalize_equipment_list,
     calculate_exercise_numbers,
 )
-from .bank_schema import KNOWN_SYSTEMS, SYSTEM_ALIASES, validate_training_item
+from .bank_schema import KNOWN_SYSTEMS, SYSTEM_ALIASES, is_late_fight_metadata_safe, validate_training_item
 from .injury_filtering import injury_match_details, _log_exclusion, _log_replacement
 from .injury_guard import Decision, choose_injury_replacement, injury_decision, make_guarded_decision_factory
 from .restriction_filtering import evaluate_restriction_impact
@@ -686,15 +686,44 @@ def _evaluate_conditioning_late_window(
     system: str,
     window: str | None,
     bridge_rules: dict | None,
+    source: str = "conditioning_bank.json",
 ) -> dict:
     if not is_active_late_selector_window(window):
         return {
             "blocked": False,
+            "severity": "safe",
             "block_codes": [],
             "reason_codes": [],
+            "penalty_codes": [],
             "adjustment": 0.0,
             "ambiguous_gap": None,
         }
+    metadata_safety = None
+    metadata_penalty_codes: list[str] = []
+    metadata_adjustment = 0.0
+    if source == "runtime_fallback" or drill.get("_schema_source") or drill.get("_schema_issues") or drill.get("_schema_safety"):
+        metadata_source = str(drill.get("_schema_source") or source)
+        metadata_source_kind = "conditioning" if metadata_source == "runtime_fallback" else None
+        metadata_safety = is_late_fight_metadata_safe(
+            drill,
+            metadata_source,
+            window,
+            source_kind=metadata_source_kind,
+        )
+        if metadata_safety.get("severity") == "blocked":
+            return {
+                "blocked": True,
+                "severity": "blocked",
+                "block_codes": metadata_safety["block_codes"],
+                "reason_codes": metadata_safety["reason_codes"],
+                "penalty_codes": metadata_safety.get("penalty_codes", []),
+                "adjustment": -1.0,
+                "ambiguous_gap": None,
+                "unsafe_metadata": metadata_safety["unsafe_metadata"],
+            }
+        metadata_penalty_codes = list(metadata_safety.get("penalty_codes", []))
+        if metadata_penalty_codes:
+            metadata_adjustment = max(-0.75, -0.35 * len(metadata_penalty_codes))
 
     tags = set(normalize_tags(drill.get("tags", [])))
     equipment = set(normalize_equipment_list(drill.get("equipment", [])))
@@ -703,8 +732,10 @@ def _evaluate_conditioning_late_window(
         if phases and "TAPER" not in phases:
             return {
                 "blocked": True,
+                "severity": "blocked",
                 "block_codes": ["late_conditioning_block_not_taper_phased"],
                 "reason_codes": ["late_conditioning_penalty_not_taper_phased"],
+                "penalty_codes": [],
                 "adjustment": -1.0,
                 "ambiguous_gap": None,
             }
@@ -738,7 +769,9 @@ def _evaluate_conditioning_late_window(
     )
 
     reason_codes: list[str] = []
-    adjustment = 0.0
+    penalty_codes: list[str] = list(metadata_penalty_codes)
+    adjustment = metadata_adjustment
+    reason_codes.extend(metadata_penalty_codes)
     late_band_lockout_window = window in {D7, D6_TO_D5, D4_TO_D2, D1}
     rehab_mobility_band_ok = bool(
         tags
@@ -833,8 +866,10 @@ def _evaluate_conditioning_late_window(
 
     return {
         "blocked": bool(block_codes),
+        "severity": "blocked" if block_codes else "penalty" if penalty_codes else "safe",
         "block_codes": sorted(set(block_codes)),
-        "reason_codes": reason_codes,
+        "reason_codes": list(dict.fromkeys(reason_codes)),
+        "penalty_codes": list(dict.fromkeys(penalty_codes)),
         "adjustment": round(adjustment, 4),
         "ambiguous_gap": ambiguous_gap,
     }
@@ -893,6 +928,7 @@ def _sanitize_conditioning_bank(bank, *, source: str):
                 source=source,
                 require_phases=True,
                 require_system=placement == "conditioning",
+                mode="runtime",
             )
             normalize_item_tags(item)
             if placement != "conditioning":
@@ -929,13 +965,13 @@ def _load_bank(path: Path, *, source: str, enforce_conditioning_systems: bool = 
         return _sanitize_conditioning_bank(bank, source=source)
     if isinstance(bank, list):
         for item in bank:
-            validate_training_item(item, source=source, require_phases=True)
+            validate_training_item(item, source=source, require_phases=True, mode="runtime")
             normalize_item_tags(item)
         return bank
     for items in bank.values():
         if isinstance(items, list):
             for item in items:
-                validate_training_item(item, source=source, require_phases=True)
+                validate_training_item(item, source=source, require_phases=True, mode="runtime")
                 normalize_item_tags(item)
     return bank
 
@@ -1437,9 +1473,43 @@ def _bridge_glycolytic_touch_fallback() -> dict:
         "rest_sec": 120,
         "rounds": 2,
         "rpe": 6,
+        "rpe_max": 6,
         "lactate_load": "low",
         "impact_cost": "low",
         "movement_cost": "low",
+        "stress_class": "support",
+        "cost_class": "low",
+        "support_only": True,
+        "meaningful_stress": False,
+    }
+
+def _late_support_fallback(window: str | None) -> dict:
+    """App-owned support insert for late windows where physical conditioning is unsafe."""
+    late_windows = [window] if window else ["d1"]
+    name = "Final Readiness Cue Reset" if window == D1 else "Late-Camp Readiness Cue Reset"
+    return {
+        "system": "recovery",
+        "name": name,
+        "load": "RPE 2-3 easy breathing, visualization, and tactical cue review",
+        "rest": "As needed",
+        "timing": "6-8 min",
+        "purpose": "Keep the athlete settled, clear, and ready without adding physical fatigue.",
+        "red_flags": "Stop if the athlete becomes more anxious, dizzy, or distracted.",
+        "equipment": [],
+        "required_equipment": [],
+        "generic_fallback": True,
+        "phases": ["TAPER"],
+        "tags": ["breathing", "visualization", "tactical", "readiness_check", "recovery"],
+        "late_windows": late_windows,
+        "rpe": 2,
+        "rpe_max": 3,
+        "lactate_load": "low",
+        "impact_cost": "low",
+        "movement_cost": "low",
+        "stress_class": "support",
+        "cost_class": "low",
+        "support_only": True,
+        "meaningful_stress": False,
     }
 
 def _late_fight_dosage_caps(days_until_fight: int) -> str:
@@ -1877,14 +1947,15 @@ def generate_conditioning_block(flags):
             _structured_profile_cache[key] = _conditioning_structured_profile(drill, system=system)
         return _structured_profile_cache[key]
 
-    def _cached_late_eval(drill: dict, system: str) -> dict:
-        key = (_drill_cache_key(drill), str(system or ""))
+    def _cached_late_eval(drill: dict, system: str, source: str = "conditioning_bank.json") -> dict:
+        key = (_drill_cache_key(drill), str(system or ""), source)
         if key not in _late_eval_cache:
             _late_eval_cache[key] = _evaluate_conditioning_late_window(
                 drill,
                 system=system,
                 window=late_window,
                 bridge_rules=bridge_rules,
+                source=source,
             )
         return _late_eval_cache[key]
 
@@ -2018,6 +2089,7 @@ def generate_conditioning_block(flags):
     restriction_warning_counts: dict[str, int] = defaultdict(int)
     restriction_blocked_items: list[dict] = []
     late_window_blocked: list[dict] = []
+    late_window_penalized: list[dict] = []
     late_window_ambiguous: dict[str, dict] = {}
 
     def _record_late_block(drill: dict, score: float, reason_codes: list[str]) -> None:
@@ -2028,6 +2100,17 @@ def generate_conditioning_block(flags):
                 "name": drill.get("name", "<unnamed>"),
                 "score": round(float(score), 4),
                 "reason_codes": list(reason_codes),
+            }
+        )
+
+    def _record_late_penalty(drill: dict, score: float, penalty_codes: list[str]) -> None:
+        if not active_late_window or not penalty_codes:
+            return
+        late_window_penalized.append(
+            {
+                "name": drill.get("name", "<unnamed>"),
+                "score": round(float(score), 4),
+                "penalty_codes": list(penalty_codes),
             }
         )
 
@@ -2206,11 +2289,13 @@ def generate_conditioning_block(flags):
                 if not ignore_restrictions and restriction_penalty:
                     total_score += restriction_penalty
                     penalty += restriction_penalty
-                late_eval = _cached_late_eval(d, system)
+                late_eval = _cached_late_eval(d, system, "conditioning_bank.json")
                 _record_ambiguous_gap(late_eval.get("ambiguous_gap"))
                 if late_eval["blocked"]:
                     _record_late_block(d, total_score, late_eval["block_codes"])
                     continue
+                if late_eval.get("penalty_codes"):
+                    _record_late_penalty(d, total_score, late_eval["penalty_codes"])
                 if late_eval["adjustment"]:
                     total_score += late_eval["adjustment"]
                 if (
@@ -2236,6 +2321,7 @@ def generate_conditioning_block(flags):
                     "clarification_tag_hits": clarification_hits,
                     "clarification_bonus": round(clarification_bonus, 4),
                     "reason_codes": list(late_eval["reason_codes"]),
+                    "penalty_codes": list(late_eval.get("penalty_codes", [])),
                     "late_window_adjustment": late_eval["adjustment"],
                     "final_score": round(total_score, 4),
                 }
@@ -2417,11 +2503,13 @@ def generate_conditioning_block(flags):
                 if not ignore_restrictions and restriction_penalty:
                     score += restriction_penalty
                     penalty += restriction_penalty
-                late_eval = _cached_late_eval(d, system)
+                late_eval = _cached_late_eval(d, system, "style_conditioning_bank.json")
                 _record_ambiguous_gap(late_eval.get("ambiguous_gap"))
                 if late_eval["blocked"]:
                     _record_late_block(d, score, late_eval["block_codes"])
                     continue
+                if late_eval.get("penalty_codes"):
+                    _record_late_penalty(d, score, late_eval["penalty_codes"])
                 if late_eval["adjustment"]:
                     score += late_eval["adjustment"]
                 if (
@@ -2446,6 +2534,7 @@ def generate_conditioning_block(flags):
                     "clarification_tag_hits": clarification_hits,
                     "clarification_bonus": round(clarification_bonus, 4),
                     "reason_codes": list(late_eval["reason_codes"]),
+                    "penalty_codes": list(late_eval.get("penalty_codes", [])),
                     "late_window_adjustment": late_eval["adjustment"],
                     "final_score": round(score, 4),
                 }
@@ -2770,18 +2859,29 @@ def generate_conditioning_block(flags):
                 return False
 
         if enforce_late_window:
-            late_eval = _cached_late_eval(drill, system)
+            source_file = {
+                "coordination": "coordination_bank.json",
+                "skill_refinement": "style_conditioning_bank.json",
+                "style_taper": "style_taper_conditioning.json",
+                "universal_gpp": "universal_gpp_conditioning.json",
+                "runtime_fallback": "runtime_fallback",
+            }.get(source, "conditioning_bank.json")
+            late_eval = _cached_late_eval(drill, system, source_file)
             _record_ambiguous_gap(late_eval.get("ambiguous_gap"))
 
             if late_eval["blocked"]:
                 _record_late_block(drill, 0.0, late_eval["block_codes"])
                 return False
+            if late_eval.get("penalty_codes"):
+                _record_late_penalty(drill, 0.0, late_eval["penalty_codes"])
 
             if reasons is not None:
                 reasons = {
                     **reasons,
                     "reason_codes": list(reasons.get("reason_codes", []))
                     + list(late_eval["reason_codes"]),
+                    "penalty_codes": list(reasons.get("penalty_codes", []))
+                    + list(late_eval.get("penalty_codes", [])),
                     "late_window_adjustment": late_eval["adjustment"],
                     "final_score": round(
                         float(reasons.get("final_score", 0) or 0)
@@ -3514,10 +3614,12 @@ def generate_conditioning_block(flags):
             and bridge_allows_glycolytic_touch
         ):
             fallback = _bridge_glycolytic_touch_fallback()
-            late_eval = _cached_late_eval(fallback, "glycolytic")
+            late_eval = _cached_late_eval(fallback, "glycolytic", "runtime_fallback")
             decision = _cached_injury_decision(fallback)
 
             if not late_eval["blocked"] and decision.action != "exclude":
+                if late_eval.get("penalty_codes"):
+                    _record_late_penalty(fallback, 0.0, late_eval["penalty_codes"])
                 grouped_drills["glycolytic"] = [fallback]
                 selected_drill_names.append(fallback["name"])
                 reason_lookup[fallback["name"]] = {
@@ -3530,6 +3632,7 @@ def generate_conditioning_block(flags):
                     "penalties": 0,
                     "reason_codes": ["bridge_glycolytic_touch_fallback"]
                     + list(late_eval["reason_codes"]),
+                    "penalty_codes": list(late_eval.get("penalty_codes", [])),
                     "late_window_adjustment": late_eval["adjustment"],
                     "final_score": round(float(late_eval["adjustment"] or 0), 4),
                 }
@@ -3545,10 +3648,12 @@ def generate_conditioning_block(flags):
             and not _suppress_alactic_maintenance(fatigue=fatigue, injuries=injuries)
         ):
             fallback = _alactic_maintenance_fallback(phase)
-            late_eval = _cached_late_eval(fallback, "alactic")
+            late_eval = _cached_late_eval(fallback, "alactic", "runtime_fallback")
             decision = _cached_injury_decision(fallback)
 
             if not late_eval["blocked"] and decision.action != "exclude":
+                if late_eval.get("penalty_codes"):
+                    _record_late_penalty(fallback, 0.0, late_eval["penalty_codes"])
                 grouped_drills["alactic"] = [fallback]
                 selected_drill_names.append(fallback["name"])
                 reason_lookup[fallback["name"]] = {
@@ -3561,6 +3666,7 @@ def generate_conditioning_block(flags):
                     "penalties": 0,
                     "reason_codes": ["alactic_maintenance_fallback"]
                     + list(late_eval["reason_codes"]),
+                    "penalty_codes": list(late_eval.get("penalty_codes", [])),
                     "late_window_adjustment": late_eval["adjustment"],
                     "final_score": round(float(late_eval["adjustment"] or 0), 4),
                 }
@@ -3568,6 +3674,38 @@ def generate_conditioning_block(flags):
                 _record_late_block(fallback, 0.0, late_eval["block_codes"])
             else:
                 _log_exclusion(f"conditioning:{phase.upper()}:alactic_maintenance_fallback", fallback, decision)
+
+        if (
+            phase.upper() == "TAPER"
+            and active_late_window
+            and not any(grouped_drills.get(system_name) for system_name in ("aerobic", "glycolytic", "alactic"))
+        ):
+            fallback = _late_support_fallback(late_window)
+            late_eval = _cached_late_eval(fallback, "aerobic", "runtime_fallback")
+            decision = _cached_injury_decision(fallback)
+
+            if not late_eval["blocked"] and decision.action != "exclude":
+                if late_eval.get("penalty_codes"):
+                    _record_late_penalty(fallback, 0.0, late_eval["penalty_codes"])
+                grouped_drills["aerobic"] = [fallback]
+                selected_drill_names.append(fallback["name"])
+                reason_lookup[fallback["name"]] = {
+                    "goal_hits": 0,
+                    "weakness_hits": 0,
+                    "style_hits": 0,
+                    "phase_hits": 1,
+                    "load_adjustments": 0,
+                    "equipment_boost": 0,
+                    "penalties": 0,
+                    "reason_codes": ["late_support_fallback"] + list(late_eval["reason_codes"]),
+                    "penalty_codes": list(late_eval.get("penalty_codes", [])),
+                    "late_window_adjustment": late_eval["adjustment"],
+                    "final_score": round(float(late_eval["adjustment"] or 0), 4),
+                }
+            elif late_eval["blocked"]:
+                _record_late_block(fallback, 0.0, late_eval["block_codes"])
+            else:
+                _log_exclusion(f"conditioning:{phase.upper()}:late_support_fallback", fallback, decision)
     _run_conditioning_poststep("energy_system_fallbacks", _insert_energy_system_fallbacks)
     _run_conditioning_poststep("speed_dose_trace", _record_speed_dose_trace)
     resolved_sessions = _resolve_conditioning_sessions(
@@ -3677,10 +3815,21 @@ def generate_conditioning_block(flags):
         ): entry
         for entry in late_window_blocked
     }
+    deduped_late_penalties = {
+        (
+            entry.get("name", ""),
+            tuple(entry.get("penalty_codes", [])),
+        ): entry
+        for entry in late_window_penalized
+    }
     candidate_reservoir["__late_window__"] = {
         "window": late_window,
         "blocked": sorted(
             deduped_late_blocks.values(),
+            key=lambda entry: (entry.get("name", ""), entry.get("score", 0.0)),
+        ),
+        "penalized": sorted(
+            deduped_late_penalties.values(),
             key=lambda entry: (entry.get("name", ""), entry.get("score", 0.0)),
         ),
         "ambiguous_tag_gaps": [
