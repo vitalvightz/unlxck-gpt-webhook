@@ -321,7 +321,10 @@ def _equipment_tokens(item: dict) -> set[str]:
         if isinstance(value, (list, tuple, set)):
             values.extend(value)
         elif value:
-            values.extend(str(value).replace("/", " ").replace(",", " ").split())
+            for part in re.split(r"[/,;]+", str(value)):
+                part_stripped = part.strip()
+                if part_stripped:
+                    values.append(part_stripped)
     return set(_clean_list(values))
 
 
