@@ -4087,6 +4087,7 @@ Non-negotiable output contract:
 5. Every app-owned training day must clearly show:
    - why the session exists today
    - exact drill/exercise, sets/reps/duration, rest, and intensity/RPE
+   - for D-7 and tighter, never raise a selected drill's RPE or volume; if a selected drill has RPE/rounds/work_sec fields, use those caps
    - the purpose behind the work
    - progression/regression or stop rule
    - injury/rehab insert when relevant
@@ -4098,11 +4099,11 @@ Non-negotiable output contract:
 10. Do not expose scaffold labels such as "Anchor —", "role_key", "taper_micro_support", "candidate pool", "validator", or "planning brief".
 11. Return only the athlete-facing final plan.
 
-Mini example:
+Mini example (do not copy the volume/intensity when rendering D-7 or tighter; selected drill caps override it):
 D-5 (Tuesday) — Fight-speed primer
 Why: sharpen punch speed without adding fatigue.
 - Movement prep: 5 min shoulder swings, band pull-aparts, easy shadowboxing.
-- Explosive Boxing Burst Intervals — 6 x 6-10 sec all-out bursts; full recovery 75-120 sec.
+- Explosive Boxing Burst Intervals — 3-4 x 6 sec fast relaxed bursts; RPE 6; full recovery 90-120 sec.
 - Coach call: Stop when speed drops. This sharpens output without soreness.
 
 Preferred longer-camp week header:
