@@ -2607,7 +2607,7 @@ def generate_conditioning_block(flags):
                 if d.get("name"):
                     style_conditioning_scored_names.add(d["name"])
                 for st in style_names:
-                    if _style_bucket_tags(st).intersection(tags):
+                    if style_bucket_tags_map[st].intersection(tags):
                         style_drills_by_style[st][system].append((d, score, reasons))
 
     _run_conditioning_poststep("style_bank_score", _load_and_score_style_conditioning_bank)
