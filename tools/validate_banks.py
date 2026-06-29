@@ -340,7 +340,7 @@ def validate_config_target(path: Path) -> list[BankIssue]:
             vocab_items = data["data"]
         else:
             vocab_items = None
-        if vocab_items is None or any(not isinstance(tag, str) or not tag.strip() for tag in vocab_items):
+        if vocab_items is None or not vocab_items or any(not isinstance(tag, str) or not tag.strip() for tag in vocab_items):
             _add_issue(issues, "config schema issues", path, path.name, "expected a non-empty list of tag strings")
     elif path.name == "injury_exclusion_map.json":
         if not isinstance(data, dict):
