@@ -7,6 +7,7 @@ import { useEffect, useMemo, useState, useTransition } from "react";
 import { RequireAuth } from "@/components/auth-guard";
 import { useAppSession } from "@/components/auth-provider";
 import { CustomSelect } from "@/components/custom-select";
+import { WhyTooltip } from "@/components/why-tooltip";
 import { saveOnboardingDraft } from "@/lib/api";
 import { writePendingGenerationPayload } from "@/lib/generation-pending-payload";
 import { markGenerationIntent } from "@/lib/generation-intent";
@@ -164,25 +165,32 @@ function ChipMultiSelect({
           const disabled = valueDisabled || capDisabled;
           const reason = valueDisabled ? optionDisabledReason ?? disabledValueReason : capDisabled ? capDisabledReason : undefined;
           return (
-            <label
+            <div
               key={option.value}
               className={`checkbox-card ${checked ? "checkbox-card-checked" : ""} ${disabled ? "checkbox-card-disabled" : ""}`.trim()}
               aria-disabled={disabled}
               title={disabled ? reason : undefined}
             >
-              <input
-                type="checkbox"
-                checked={checked}
-                disabled={disabled}
-                onChange={() => onToggle(option.value)}
-              />
-              <span className="checkbox-card-copy">
-                <span className="checkbox-card-title">{option.label}</span>
-                {disabled && reason ? (
-                  <span className="checkbox-card-tag">{reason}</span>
-                ) : null}
-              </span>
-            </label>
+              <label className="checkbox-card-label">
+                <input
+                  type="checkbox"
+                  checked={checked}
+                  disabled={disabled}
+                  onChange={() => onToggle(option.value)}
+                />
+                <span className="checkbox-card-copy">
+                  <span className="checkbox-card-title">{option.label}</span>
+                </span>
+              </label>
+              {disabled && reason ? (
+                <WhyTooltip
+                  title="Unavailable"
+                  body={reason}
+                  triggerLabel="?"
+                  ariaLabel={`Why ${option.label} is unavailable`}
+                />
+              ) : null}
+            </div>
           );
         })}
       </div>
