@@ -45,8 +45,9 @@
         "Band-Resisted Jab-Cross Primer",
         "Band Row Speed Focus",
         "Staggered-Stance Medicine-Ball Punch Throw",
-        "Counter-Striker Split-Line Punch Isometric Hold",
+        "Seated Medicine-Ball Punch Throw",
         "Mobility Reset Flow",
+        "Dead-bug breathing",
         "Eye-head dissociation drill",
         "Four-way manual neck isometric",
         "Lateral step-and-stick boxer reset",
@@ -56,15 +57,15 @@
         "Open-book reset",
         "90/90 hip switches",
         "Adductor rock-back",
-        "Boxer stance weight-shift hold",
-        "Dead-bug breathing"
+        "Boxer stance weight-shift hold"
       ],
       "added_winners": [
         "Band-Resisted Jab-Cross Primer",
         "Band Row Speed Focus",
         "Staggered-Stance Medicine-Ball Punch Throw",
-        "Counter-Striker Split-Line Punch Isometric Hold",
+        "Seated Medicine-Ball Punch Throw",
         "Mobility Reset Flow",
+        "Dead-bug breathing",
         "Eye-head dissociation drill",
         "Four-way manual neck isometric",
         "Lateral step-and-stick boxer reset",
@@ -74,8 +75,7 @@
         "Open-book reset",
         "90/90 hip switches",
         "Adductor rock-back",
-        "Boxer stance weight-shift hold",
-        "Dead-bug breathing"
+        "Boxer stance weight-shift hold"
       ],
       "removed_winners": [
         "Band-Resisted Push Press",
@@ -95,6 +95,7 @@
         "Cluster Set Trap Bar Deadlift",
         "Copenhagen Side Plank",
         "Cossack Squat (Dynamic)",
+        "Counter-Striker Split-Line Punch Isometric Hold",
         "Cross-Step Lunge",
         "Drop-Step Lateral Bound",
         "Dynamic Plank-to-Punch",
@@ -113,6 +114,7 @@
         "Medicine-Ball Chest Toss",
         "Overcoming Split-Squat Isometric",
         "Overhead Slam (Rotational)",
+        "Pallof Press",
         "Pivot-and-Strike (Rotation Focus)",
         "Plyometric Shadow Boxing",
         "Punch-Specific Max Isometric Hold",
@@ -197,8 +199,9 @@
         "Staggered-Stance Medicine-Ball Punch Throw",
         "Band-Resisted Jab-Cross Primer",
         "Band Row Speed Focus",
-        "Counter-Striker Split-Line Punch Isometric Hold",
+        "Seated Medicine-Ball Punch Throw",
         "Mobility Reset Flow",
+        "Dead-bug breathing",
         "Lateral step-and-stick boxer reset",
         "Lead-foot pivot prep",
         "Lead-leg single-leg stance with guard",
@@ -208,15 +211,15 @@
         "Pivot-and-freeze rear foot",
         "90/90 hip switches",
         "Adductor rock-back",
-        "Boxer stance weight-shift hold",
-        "Dead-bug breathing"
+        "Boxer stance weight-shift hold"
       ],
       "added_winners": [
         "Staggered-Stance Medicine-Ball Punch Throw",
         "Band-Resisted Jab-Cross Primer",
         "Band Row Speed Focus",
-        "Counter-Striker Split-Line Punch Isometric Hold",
+        "Seated Medicine-Ball Punch Throw",
         "Mobility Reset Flow",
+        "Dead-bug breathing",
         "Lateral step-and-stick boxer reset",
         "Lead-foot pivot prep",
         "Lead-leg single-leg stance with guard",
@@ -226,8 +229,7 @@
         "Pivot-and-freeze rear foot",
         "90/90 hip switches",
         "Adductor rock-back",
-        "Boxer stance weight-shift hold",
-        "Dead-bug breathing"
+        "Boxer stance weight-shift hold"
       ],
       "removed_winners": [
         "Band-Resisted Push Press",
@@ -247,6 +249,7 @@
         "Cluster Set Trap Bar Deadlift",
         "Copenhagen Side Plank",
         "Cossack Squat (Dynamic)",
+        "Counter-Striker Split-Line Punch Isometric Hold",
         "Cross-Step Lunge",
         "Drop-Step Lateral Bound",
         "Dynamic Plank-to-Punch",
@@ -267,6 +270,7 @@
         "Medicine-Ball Chest Toss",
         "Overcoming Split-Squat Isometric",
         "Overhead Slam (Rotational)",
+        "Pallof Press",
         "Pivot-and-Strike (Rotation Focus)",
         "Plyometric Shadow Boxing",
         "Punch-Specific Max Isometric Hold",
@@ -335,19 +339,19 @@
         "Band Face Pull"
       ],
       "after_winners": [
-        "Counter-Striker Split-Line Punch Isometric Hold",
         "Band Row Speed Focus",
         "Technical Shadowboxing Tempo",
         "Scapular Pull-Up Hold",
         "Light Heavy-Bag Technical Tempo",
+        "Banded Lateral Walk",
         "Controlled Bird-Dog"
       ],
       "added_winners": [
-        "Counter-Striker Split-Line Punch Isometric Hold",
         "Band Row Speed Focus",
         "Technical Shadowboxing Tempo",
         "Scapular Pull-Up Hold",
         "Light Heavy-Bag Technical Tempo",
+        "Banded Lateral Walk",
         "Controlled Bird-Dog"
       ],
       "removed_winners": [
@@ -361,6 +365,7 @@
         "Band-Resisted Jab-Cross Primer",
         "Band-Resisted Punch",
         "Band-Resisted Straight Punch",
+        "Counter-Striker Split-Line Punch Isometric Hold",
         "Deadbug (Band-Resisted)",
         "Eye-head dissociation drill",
         "Four-way manual neck isometric",
@@ -463,19 +468,19 @@
         "Band Face Pull"
       ],
       "after_winners": [
-        "Counter-Striker Split-Line Punch Isometric Hold",
         "Band Row Speed Focus",
         "Technical Shadowboxing Tempo",
         "Scapular Pull-Up Hold",
         "Light Heavy-Bag Technical Tempo",
+        "Banded Lateral Walk",
         "Controlled Bird-Dog"
       ],
       "added_winners": [
-        "Counter-Striker Split-Line Punch Isometric Hold",
         "Band Row Speed Focus",
         "Technical Shadowboxing Tempo",
         "Scapular Pull-Up Hold",
         "Light Heavy-Bag Technical Tempo",
+        "Banded Lateral Walk",
         "Controlled Bird-Dog"
       ],
       "removed_winners": [
@@ -489,6 +494,7 @@
         "Band-Resisted Jab-Cross Primer",
         "Band-Resisted Punch",
         "Band-Resisted Straight Punch",
+        "Counter-Striker Split-Line Punch Isometric Hold",
         "Deadbug (Band-Resisted)",
         "Eye-head dissociation drill",
         "Four-way manual neck isometric",
@@ -595,16 +601,16 @@
         "Band Row Speed Focus",
         "Technical Shadowboxing Tempo",
         "Light Heavy-Bag Technical Tempo",
-        "Counter-Striker Split-Line Punch Isometric Hold",
-        "Controlled Bird-Dog"
+        "Controlled Bird-Dog",
+        "Diaphragmatic Breathing Drills"
       ],
       "added_winners": [
         "Staggered-Stance Medicine-Ball Punch Throw",
         "Band Row Speed Focus",
         "Technical Shadowboxing Tempo",
         "Light Heavy-Bag Technical Tempo",
-        "Counter-Striker Split-Line Punch Isometric Hold",
-        "Controlled Bird-Dog"
+        "Controlled Bird-Dog",
+        "Diaphragmatic Breathing Drills"
       ],
       "removed_winners": [
         "Band-Resisted Push Press",
@@ -619,6 +625,7 @@
         "Band-Resisted Punch",
         "Band-Resisted Straight Punch",
         "Chin tuck nod",
+        "Counter-Striker Split-Line Punch Isometric Hold",
         "Deadbug (Band-Resisted)",
         "Eye-head dissociation drill",
         "Four-way manual neck isometric",
@@ -831,7 +838,6 @@
         "Easy Assault Bike",
         "Easy Bike",
         "Easy Continuous Swimming",
-        "Explosive Boxing Burst Intervals",
         "Explosive Boxing Burst Intervals",
         "Foam Rolling Mobility Circuit",
         "Lateral Exit to Re-Enter",

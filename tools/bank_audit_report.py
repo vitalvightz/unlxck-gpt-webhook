@@ -51,10 +51,9 @@ def audit_bank(name: str, items: list[dict], tag_vocab: set[str]) -> dict:
         tags = normalize_tags(item.get("tags", []))
         if not tags:
             counts["missing_tags"] += 1
-        if tag_vocab:
-            for tag in tags:
-                if tag not in tag_vocab:
-                    unknown_tags[tag] += 1
+        for tag in tags:
+            if tag not in tag_vocab:
+                unknown_tags[tag] += 1
 
         phases = item.get("phases")
         if phases is None or (isinstance(phases, list) and not phases):
@@ -79,7 +78,7 @@ def audit_bank(name: str, items: list[dict], tag_vocab: set[str]) -> dict:
 
 def main() -> None:
     tag_vocab = load_tag_vocabulary()
-    banks = collect_banks(mode="audit")
+    banks = collect_banks(mode="runtime")
     summary_counts = defaultdict(int)
 
     print("🏦 Bank Audit Report")

@@ -194,6 +194,17 @@ def parse_bank_schema(data: Any) -> tuple[list[dict], str]:
     raise ValueError("Unrecognized bank schema structure. Expected list or object with list values.")
 
 
+def _rehab_drill_entries(entries: list[Any]) -> list[Any]:
+    """Extract drills from rehab grouping records without treating groups as drills."""
+    rehab_entries: list[Any] = []
+    for entry in entries:
+        if isinstance(entry, dict) and isinstance(entry.get("drills"), list):
+            rehab_entries.extend(entry["drills"])
+        else:
+            rehab_entries.append(entry)
+    return rehab_entries
+
+
 def duplicate_name_counts(entries: list[dict]) -> dict[str, int]:
     counts: Counter[str] = Counter()
     display_names: dict[str, str] = {}
@@ -345,6 +356,9 @@ def validate_bank(path: Path, tag_vocab: set[str]) -> tuple[bool, int, set[str],
     all_tags: set[str] = set()
     data = _load_json(path)
     entries, _schema_desc = parse_bank_schema(data)
+    bank_name = path.name.lower()
+    if bank_name == "rehab_bank.json":
+        entries = _rehab_drill_entries(entries)
 
     if path.name in OLD_VALIDATOR_SKIPPED:
         _add_issue(
@@ -358,11 +372,17 @@ def validate_bank(path: Path, tag_vocab: set[str]) -> tuple[bool, int, set[str],
 
     name_counter: Counter[str] = Counter()
     display_names: dict[str, str] = {}
-    bank_name = path.name.lower()
-    cost_fields = CONDITIONING_COST_FIELDS if bank_name in CONDITIONING_BANK_NAMES else EXERCISE_COST_FIELDS
-    requires_conditioning_system = bank_name in CONDITIONING_BANK_NAMES
-    requires_rpe = bank_name in CONDITIONING_BANK_NAMES
-    requires_governance = bank_name in CONDITIONING_BANK_NAMES or bank_name in EXERCISE_BANK_NAMES
+    is_conditioning = bank_name in CONDITIONING_BANK_NAMES
+    is_exercise = bank_name in EXERCISE_BANK_NAMES
+    requires_tags_phases_late = is_conditioning or is_exercise
+    cost_fields: tuple[str, ...] = ()
+    if is_conditioning:
+        cost_fields = CONDITIONING_COST_FIELDS
+    elif is_exercise:
+        cost_fields = EXERCISE_COST_FIELDS
+    requires_conditioning_system = is_conditioning
+    requires_rpe = is_conditioning
+    requires_governance = is_conditioning or is_exercise
 
     for index, entry in enumerate(entries):
         if not isinstance(entry, dict):
@@ -379,19 +399,19 @@ def validate_bank(path: Path, tag_vocab: set[str]) -> tuple[bool, int, set[str],
             _add_issue(issues, "missing names", path, label, "missing or empty name")
 
         tags_value = entry.get("tags")
-        if not isinstance(tags_value, list) or not tags_value:
+        if requires_tags_phases_late and (not isinstance(tags_value, list) or not tags_value):
             _add_issue(issues, "missing tags", path, label, "missing, empty, or non-list tags")
         tags = _tags_for_entry(entry)
         all_tags.update(tags)
         for tag in tags:
-            if tag_vocab and tag not in tag_vocab:
+            if tag not in tag_vocab:
                 _add_issue(issues, "tags not in tag_vocabulary", path, label, tag)
 
         phases = entry.get("phases")
-        if not isinstance(phases, list) or not phases:
+        if requires_tags_phases_late and (not isinstance(phases, list) or not phases):
             _add_issue(issues, "missing phases", path, label, "missing, empty, or non-list phases")
 
-        if not _has_late_windows(entry):
+        if requires_tags_phases_late and not _has_late_windows(entry):
             _add_issue(
                 issues,
                 "missing/empty late_windows",
@@ -418,7 +438,7 @@ def validate_bank(path: Path, tag_vocab: set[str]) -> tuple[bool, int, set[str],
                     ", ".join(missing_governance),
                 )
 
-        if _high_intensity_late_safe(entry, tags):
+        if requires_tags_phases_late and _high_intensity_late_safe(entry, tags):
             _add_issue(
                 issues,
                 "high intensity marked late-safe",

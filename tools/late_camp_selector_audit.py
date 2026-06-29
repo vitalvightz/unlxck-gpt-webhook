@@ -97,6 +97,18 @@ def _blocked_summary(entries: list[dict]) -> list[dict]:
     ]
 
 
+def _unique_names(entries: list[dict]) -> list[str | None]:
+    names: list[str | None] = []
+    seen: set[str | None] = set()
+    for entry in entries:
+        name = entry.get("name")
+        if name in seen:
+            continue
+        seen.add(name)
+        names.append(name)
+    return names
+
+
 def _combined_ambiguous_gaps(
     strength_diag: dict,
     conditioning_diag: dict,
@@ -162,10 +174,10 @@ def build_diff(before: dict, after: dict) -> dict:
         for selector in ("strength", "conditioning"):
             before_selector = before_window.get(selector, {})
             after_selector = after_window.get(selector, {})
-            before_winners = [entry.get("name") for entry in before_selector.get("winners", [])]
-            after_winners = [entry.get("name") for entry in after_selector.get("winners", [])]
-            before_blocked = [entry.get("name") for entry in before_selector.get("blocked", [])]
-            after_blocked = [entry.get("name") for entry in after_selector.get("blocked", [])]
+            before_winners = _unique_names(before_selector.get("winners", []))
+            after_winners = _unique_names(after_selector.get("winners", []))
+            before_blocked = _unique_names(before_selector.get("blocked", []))
+            after_blocked = _unique_names(after_selector.get("blocked", []))
             diff[window][selector] = {
                 "before_winners": before_winners,
                 "after_winners": after_winners,

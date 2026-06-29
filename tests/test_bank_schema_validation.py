@@ -105,6 +105,53 @@ def test_validate_training_item_backfills_conditioning_bank_schema_defaults():
     assert item["lactate_load"] == ""
 
 
+def test_validate_training_item_classifies_loaded_bank_source_names_by_family():
+    strength_item = bank_schema.validate_training_item(
+        {"name": "Style Lift", "tags": ["strength"], "phases": ["SPP"]},
+        source="style_specific_exercises.json",
+        mode="audit",
+    )
+    conditioning_item = bank_schema.validate_training_item(
+        {"name": "Footwork Reset", "tags": ["coordination"], "phases": ["TAPER"], "system": "aerobic"},
+        source="footwork_conditioning_bank.json",
+        mode="audit",
+    )
+
+    assert strength_item["cns_load"] == ""
+    assert strength_item["soreness_risk"] == ""
+    assert conditioning_item["rpe"] is None
+    assert conditioning_item["lactate_load"] == ""
+
+
+def test_required_equipment_contributes_to_late_modality_gate():
+    item = {
+        "name": "Loaded Reset",
+        "tags": ["conditioning"],
+        "phases": ["TAPER"],
+        "late_windows": [bank_schema.D1],
+        "system": "aerobic",
+        "impact_cost": "low",
+        "movement_cost": "low",
+        "lactate_load": "low",
+        "rpe": 4,
+        "stress_class": "support",
+        "cost_class": "low",
+        "support_only": True,
+        "meaningful_stress": False,
+        "required_equipment": ["dumbbell"],
+    }
+
+    safety = bank_schema.is_late_fight_metadata_safe(
+        item,
+        "runtime_fallback",
+        bank_schema.D1,
+        source_kind="conditioning",
+    )
+
+    assert safety["severity"] == "blocked"
+    assert "late_block_d1_forbidden_modality" in safety["block_codes"]
+
+
 def test_validate_training_item_runtime_exposes_missing_late_window_state():
     item = bank_schema.validate_training_item(
         {"name": "Easy Bike", "tags": ["aerobic"], "phases": ["TAPER"], "system": "aerobic"},

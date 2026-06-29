@@ -122,6 +122,59 @@ def test_validator_strict_fails_on_required_field_issues(tmp_path: Path):
     assert exit_code == 1
 
 
+def test_validator_extracts_rehab_drills_without_training_metadata_requirements(tmp_path: Path):
+    _write_json(
+        tmp_path / "rehab_bank.json",
+        [{"location": "ankle", "type": "sprain", "drills": [{"name": "Band Circles"}]}],
+    )
+
+    success, entry_count, _tags_seen, issues = validate_banks.validate_bank(
+        tmp_path / "rehab_bank.json",
+        set(),
+    )
+    issue_groups = {issue.group for issue in issues}
+
+    assert success is True
+    assert entry_count == 1
+    assert "missing names" not in issue_groups
+    assert "missing tags" not in issue_groups
+    assert "missing phases" not in issue_groups
+    assert "missing/empty late_windows" not in issue_groups
+    assert "missing cost fields" not in issue_groups
+
+
+def test_validator_empty_tag_vocabulary_flags_all_seen_tags(tmp_path: Path):
+    _write_json(
+        tmp_path / "exercise_bank.json",
+        [
+            {
+                "name": "Primer Push",
+                "tags": ["speed"],
+                "phases": ["TAPER"],
+                "late_windows": ["d6_to_d5"],
+                "impact_cost": "low",
+                "movement_cost": "low",
+                "cns_load": "low",
+                "eccentric_cost": "low",
+                "landing_cost": "low",
+                "soreness_risk": "low",
+                "stress_class": "support",
+                "cost_class": "low",
+                "support_only": True,
+                "meaningful_stress": False,
+            }
+        ],
+    )
+
+    success, _entry_count, _tags_seen, issues = validate_banks.validate_bank(
+        tmp_path / "exercise_bank.json",
+        set(),
+    )
+
+    assert success is False
+    assert any(issue.group == "tags not in tag_vocabulary" and issue.detail == "speed" for issue in issues)
+
+
 def test_runtime_missing_late_windows_blocks_late_fight_selection():
     item = validate_training_item(
         {"name": "Easy Bike", "tags": ["aerobic"], "phases": ["TAPER"], "system": "aerobic"},
@@ -477,6 +530,7 @@ def test_runtime_fallback_d1_blocks_all_forbidden_modality_signals():
         _safe_conditioning(equipment=["bands"]),
         _safe_conditioning(equipment=["medicine_ball"]),
         _safe_conditioning(equipment=["dumbbell"]),
+        _safe_conditioning(equipment=[], required_equipment=["dumbbell"]),
         _safe_conditioning(method="isometric"),
         _safe_conditioning(tags=["conditioning", "ballistic"]),
         _safe_conditioning(tags=["conditioning", "max_intent"]),

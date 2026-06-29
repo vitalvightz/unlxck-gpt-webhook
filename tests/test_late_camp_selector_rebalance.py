@@ -994,10 +994,10 @@ def test_actual_bank_d7_keeps_crisp_low_soreness_primers_and_blocks_aggressive_s
     assert any(
         name in names
         for name in {
-            "Band-Resisted Jab-Cross Primer",
-            "Counter-Striker Split-Line Punch Isometric Hold",
-            "Punch-Specific Max Isometric Hold",
-            "Staggered-Stance Medicine-Ball Punch Throw",
+            "Band Row Speed Focus",
+            "Technical Shadowboxing Tempo",
+            "Light Heavy-Bag Technical Tempo",
+            "Scapular Pull-Up Hold",
         }
     )
     assert "Anti-Rotation Med Ball Slam" not in names

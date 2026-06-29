@@ -101,16 +101,16 @@
           ]
         },
         {
-          "name": "Counter-Striker Split-Line Punch Isometric Hold",
-          "score": 6.9875,
+          "name": "Seated Medicine-Ball Punch Throw",
+          "score": 4.405,
           "reason_codes": [
-            "priority_secondary_goal_match:maximal_strength_maintenance",
-            "priority_secondary_goal_match:skill_refinement",
-            "late_strength_boost_window_fit",
+            "late_penalty_missing_governance_metadata",
+            "late_strength_penalty_outside_window",
             "late_strength_boost_explicit_late_touch",
             "late_strength_boost_low_eccentric",
             "late_strength_boost_low_impact",
             "late_strength_boost_cns_freshness",
+            "late_strength_boost_ballistic_low_volume",
             "late_strength_boost_sport_specific",
             "late_strength_boost_low_soreness",
             "late_strength_boost_neural_primer",
@@ -132,6 +132,21 @@
             "late_strength_boost_low_soreness",
             "late_strength_boost_rehab_friendly",
             "late_strength_boost_freshness"
+          ]
+        },
+        {
+          "name": "Dead-bug breathing",
+          "score": 0.9325,
+          "reason_codes": [
+            "late_penalty_missing_governance_metadata",
+            "late_strength_boost_window_fit",
+            "late_strength_boost_cut_survivable",
+            "late_strength_boost_explicit_late_touch",
+            "late_strength_boost_low_eccentric",
+            "late_strength_boost_low_impact",
+            "late_strength_boost_cns_freshness",
+            "late_strength_boost_low_soreness",
+            "late_strength_boost_rehab_friendly"
           ]
         },
         {
@@ -283,21 +298,6 @@
             "late_strength_boost_low_soreness",
             "late_strength_boost_rehab_friendly"
           ]
-        },
-        {
-          "name": "Dead-bug breathing",
-          "score": 0.9325,
-          "reason_codes": [
-            "late_penalty_missing_governance_metadata",
-            "late_strength_boost_window_fit",
-            "late_strength_boost_cut_survivable",
-            "late_strength_boost_explicit_late_touch",
-            "late_strength_boost_low_eccentric",
-            "late_strength_boost_low_impact",
-            "late_strength_boost_cns_freshness",
-            "late_strength_boost_low_soreness",
-            "late_strength_boost_rehab_friendly"
-          ]
         }
       ],
       "blocked": [
@@ -376,6 +376,14 @@
           "score": 1.25,
           "reason_codes": [
             "late_block_missing_late_windows"
+          ]
+        },
+        {
+          "name": "Counter-Striker Split-Line Punch Isometric Hold",
+          "score": 2.9,
+          "reason_codes": [
+            "late_block_primer_only_strength_fulfillment",
+            "late_block_support_only_anchor_fulfillment"
           ]
         },
         {
@@ -501,6 +509,13 @@
         {
           "name": "Overhead Slam (Rotational)",
           "score": -0.25,
+          "reason_codes": [
+            "late_block_missing_late_windows"
+          ]
+        },
+        {
+          "name": "Pallof Press",
+          "score": 2.45,
           "reason_codes": [
             "late_block_missing_late_windows"
           ]
@@ -900,16 +915,16 @@
           ]
         },
         {
-          "name": "Counter-Striker Split-Line Punch Isometric Hold",
-          "score": 7.05,
+          "name": "Seated Medicine-Ball Punch Throw",
+          "score": 6.2,
           "reason_codes": [
-            "priority_secondary_goal_match:maximal_strength_maintenance",
-            "priority_secondary_goal_match:skill_refinement",
+            "late_penalty_missing_governance_metadata",
             "late_strength_boost_window_fit",
             "late_strength_boost_explicit_late_touch",
             "late_strength_boost_low_eccentric",
             "late_strength_boost_low_impact",
             "late_strength_boost_cns_freshness",
+            "late_strength_boost_ballistic_low_volume",
             "late_strength_boost_sport_specific",
             "late_strength_boost_low_soreness",
             "late_strength_boost_neural_primer",
@@ -931,6 +946,21 @@
             "late_strength_boost_low_soreness",
             "late_strength_boost_rehab_friendly",
             "late_strength_boost_freshness"
+          ]
+        },
+        {
+          "name": "Dead-bug breathing",
+          "score": 0.97,
+          "reason_codes": [
+            "late_penalty_missing_governance_metadata",
+            "late_strength_boost_window_fit",
+            "late_strength_boost_cut_survivable",
+            "late_strength_boost_explicit_late_touch",
+            "late_strength_boost_low_eccentric",
+            "late_strength_boost_low_impact",
+            "late_strength_boost_cns_freshness",
+            "late_strength_boost_low_soreness",
+            "late_strength_boost_rehab_friendly"
           ]
         },
         {
@@ -1082,21 +1112,6 @@
             "late_strength_boost_low_soreness",
             "late_strength_boost_rehab_friendly"
           ]
-        },
-        {
-          "name": "Dead-bug breathing",
-          "score": 0.97,
-          "reason_codes": [
-            "late_penalty_missing_governance_metadata",
-            "late_strength_boost_window_fit",
-            "late_strength_boost_cut_survivable",
-            "late_strength_boost_explicit_late_touch",
-            "late_strength_boost_low_eccentric",
-            "late_strength_boost_low_impact",
-            "late_strength_boost_cns_freshness",
-            "late_strength_boost_low_soreness",
-            "late_strength_boost_rehab_friendly"
-          ]
         }
       ],
       "blocked": [
@@ -1178,6 +1193,14 @@
           "score": 1.25,
           "reason_codes": [
             "late_block_missing_late_windows"
+          ]
+        },
+        {
+          "name": "Counter-Striker Split-Line Punch Isometric Hold",
+          "score": 2.9,
+          "reason_codes": [
+            "late_block_primer_only_strength_fulfillment",
+            "late_block_support_only_anchor_fulfillment"
           ]
         },
         {
@@ -1318,6 +1341,13 @@
         {
           "name": "Overhead Slam (Rotational)",
           "score": -0.25,
+          "reason_codes": [
+            "late_block_missing_late_windows"
+          ]
+        },
+        {
+          "name": "Pallof Press",
+          "score": 2.45,
           "reason_codes": [
             "late_block_missing_late_windows"
           ]
@@ -1583,24 +1613,6 @@
     "strength": {
       "winners": [
         {
-          "name": "Counter-Striker Split-Line Punch Isometric Hold",
-          "score": 9.75,
-          "reason_codes": [
-            "priority_secondary_goal_match:maximal_strength_maintenance",
-            "priority_secondary_goal_match:skill_refinement",
-            "late_strength_boost_window_fit",
-            "late_strength_boost_explicit_late_touch",
-            "late_strength_boost_low_eccentric",
-            "late_strength_boost_low_impact",
-            "late_strength_boost_cns_freshness",
-            "late_strength_boost_sport_specific",
-            "late_strength_boost_low_soreness",
-            "late_strength_boost_neural_primer",
-            "late_strength_boost_speed",
-            "late_strength_boost_freshness"
-          ]
-        },
-        {
           "name": "Band Row Speed Focus",
           "score": 9.05,
           "reason_codes": [
@@ -1673,6 +1685,21 @@
           ]
         },
         {
+          "name": "Banded Lateral Walk",
+          "score": 2.0,
+          "reason_codes": [
+            "late_penalty_missing_governance_metadata",
+            "late_strength_boost_window_fit",
+            "late_strength_boost_cut_survivable",
+            "late_strength_boost_low_eccentric",
+            "late_strength_boost_low_impact",
+            "late_strength_boost_cns_freshness",
+            "late_strength_boost_low_soreness",
+            "late_strength_boost_rehab_friendly",
+            "late_strength_boost_freshness"
+          ]
+        },
+        {
           "name": "Controlled Bird-Dog",
           "score": 2.15,
           "reason_codes": [
@@ -1715,6 +1742,14 @@
           "score": 1.15,
           "reason_codes": [
             "late_strength_block_band_work_lockout"
+          ]
+        },
+        {
+          "name": "Counter-Striker Split-Line Punch Isometric Hold",
+          "score": 5.55,
+          "reason_codes": [
+            "late_block_primer_only_strength_fulfillment",
+            "late_block_support_only_anchor_fulfillment"
           ]
         },
         {
@@ -2168,24 +2203,6 @@
     "strength": {
       "winners": [
         {
-          "name": "Counter-Striker Split-Line Punch Isometric Hold",
-          "score": 9.7875,
-          "reason_codes": [
-            "priority_secondary_goal_match:maximal_strength_maintenance",
-            "priority_secondary_goal_match:skill_refinement",
-            "late_strength_boost_window_fit",
-            "late_strength_boost_explicit_late_touch",
-            "late_strength_boost_low_eccentric",
-            "late_strength_boost_low_impact",
-            "late_strength_boost_cns_freshness",
-            "late_strength_boost_sport_specific",
-            "late_strength_boost_low_soreness",
-            "late_strength_boost_neural_primer",
-            "late_strength_boost_speed",
-            "late_strength_boost_freshness"
-          ]
-        },
-        {
           "name": "Band Row Speed Focus",
           "score": 9.0875,
           "reason_codes": [
@@ -2258,6 +2275,21 @@
           ]
         },
         {
+          "name": "Banded Lateral Walk",
+          "score": 2.0225,
+          "reason_codes": [
+            "late_penalty_missing_governance_metadata",
+            "late_strength_boost_window_fit",
+            "late_strength_boost_cut_survivable",
+            "late_strength_boost_low_eccentric",
+            "late_strength_boost_low_impact",
+            "late_strength_boost_cns_freshness",
+            "late_strength_boost_low_soreness",
+            "late_strength_boost_rehab_friendly",
+            "late_strength_boost_freshness"
+          ]
+        },
+        {
           "name": "Controlled Bird-Dog",
           "score": 2.1725,
           "reason_codes": [
@@ -2300,6 +2332,14 @@
           "score": 1.15,
           "reason_codes": [
             "late_strength_block_band_work_lockout"
+          ]
+        },
+        {
+          "name": "Counter-Striker Split-Line Punch Isometric Hold",
+          "score": 5.55,
+          "reason_codes": [
+            "late_block_primer_only_strength_fulfillment",
+            "late_block_support_only_anchor_fulfillment"
           ]
         },
         {
@@ -2830,25 +2870,22 @@
           ]
         },
         {
-          "name": "Counter-Striker Split-Line Punch Isometric Hold",
-          "score": 9.8125,
+          "name": "Controlled Bird-Dog",
+          "score": 2.1875,
           "reason_codes": [
-            "priority_secondary_goal_match:maximal_strength_maintenance",
-            "priority_secondary_goal_match:skill_refinement",
+            "late_penalty_missing_governance_metadata",
             "late_strength_boost_window_fit",
-            "late_strength_boost_explicit_late_touch",
+            "late_strength_boost_cut_survivable",
             "late_strength_boost_low_eccentric",
             "late_strength_boost_low_impact",
             "late_strength_boost_cns_freshness",
-            "late_strength_boost_sport_specific",
             "late_strength_boost_low_soreness",
-            "late_strength_boost_neural_primer",
-            "late_strength_boost_speed",
+            "late_strength_boost_rehab_friendly",
             "late_strength_boost_freshness"
           ]
         },
         {
-          "name": "Controlled Bird-Dog",
+          "name": "Diaphragmatic Breathing Drills",
           "score": 2.1875,
           "reason_codes": [
             "late_penalty_missing_governance_metadata",
@@ -2908,6 +2945,14 @@
           "reason_codes": [
             "late_strength_block_no_d4_to_d1",
             "late_strength_block_window_mismatch"
+          ]
+        },
+        {
+          "name": "Counter-Striker Split-Line Punch Isometric Hold",
+          "score": 5.55,
+          "reason_codes": [
+            "late_block_primer_only_strength_fulfillment",
+            "late_block_support_only_anchor_fulfillment"
           ]
         },
         {
@@ -3656,7 +3701,9 @@
           "name": "Counter-Striker Split-Line Punch Isometric Hold",
           "score": 5.55,
           "reason_codes": [
-            "late_block_d1_forbidden_modality"
+            "late_block_d1_forbidden_modality",
+            "late_block_primer_only_strength_fulfillment",
+            "late_block_support_only_anchor_fulfillment"
           ]
         },
         {

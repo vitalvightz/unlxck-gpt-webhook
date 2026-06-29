@@ -170,9 +170,14 @@ def _source_filename(source: str) -> str:
 
 def _source_kind(source: str) -> str:
     filename = _source_filename(source)
-    if filename in STRENGTH_BANK_SOURCES:
+    source_key = filename.removesuffix(".json")
+    if filename in STRENGTH_BANK_SOURCES or "exercise" in source_key or "strength" in source_key:
         return "strength"
-    if filename in CONDITIONING_BANK_SOURCES:
+    if (
+        filename in CONDITIONING_BANK_SOURCES
+        or "conditioning" in source_key
+        or "coordination" in source_key
+    ):
         return "conditioning"
     return "generic"
 
@@ -311,7 +316,7 @@ def _system_state(item: dict) -> dict[str, Any]:
 
 def _equipment_tokens(item: dict) -> set[str]:
     values: list[Any] = []
-    for field in ("equipment", "equipment_required", "equipment_needed"):
+    for field in ("equipment", "required_equipment", "equipment_required", "equipment_needed"):
         value = item.get(field)
         if isinstance(value, (list, tuple, set)):
             values.extend(value)
