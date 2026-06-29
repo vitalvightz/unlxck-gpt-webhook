@@ -175,6 +175,9 @@ def _grouped_rows(rows: list[dict[str, Any]]) -> dict[str, list[dict[str, Any]]]
             row for row in rows if row["late_fight_action"] == "late_conditioning_candidate"
         ],
         "Manual Review": [row for row in rows if row["camp_action"] == "manual_review"],
+        "Suspicious ATP-PCr Classification": [
+            row for row in rows if "questionable_atp_pcr_classification" in (row.get("quarantine_reason_codes") or [])
+        ],
     }
 
 

@@ -1,0 +1,351 @@
+[
+  {
+    "name": "Pavement Pounder",
+    "equipment": [
+      "sledgehammer",
+      "tire"
+    ],
+    "phases": [
+      "SPP"
+    ],
+    "system": "ATP-PCr",
+    "modality": "rotational annihilation",
+    "duration": "10 L/R hammer strikes → 5 tire flips → x5 rounds",
+    "intensity": "max",
+    "tags": [
+      "brawler",
+      "boxing",
+      "mech_trunk_rotation",
+      "mech_ballistic",
+      "mech_systemic_fatigue",
+      "mech_upper_press"
+    ],
+    "notes": "Transfers to hook power and mauling stamina (Max power)",
+    "equipment_note": "12lb hammer, 500lb tire",
+    "rpe": 9,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_systemic_fatigue",
+      "mech_trunk_rotation",
+      "mech_upper_press"
+    ],
+    "archived_reason": "Near-duplicate of 'Hammer & Tire Jump Complex' (same sledgehammer+tire pairing); modality 'rotational annihilation' is fake-hard wording and the entry also failed the questionable ATP-PCr classification check (x5 rounds, RPE 9/max, no explicit rest field).",
+    "archived_date": "2026-06-29"
+  },
+  {
+    "name": "Last Call Circuit",
+    "equipment": [
+      "bodyweight"
+    ],
+    "phases": [
+      "SPP"
+    ],
+    "system": "glycolytic",
+    "modality": "prison rules",
+    "duration": "10 burpees → 10 sprawls → 10 jumping knees → x5 rounds",
+    "intensity": "high",
+    "tags": [
+      "brawler",
+      "boxing",
+      "mech_systemic_fatigue",
+      "mech_upper_press",
+      "mech_trunk_stability",
+      "mech_landing_impact",
+      "mech_lower_lunge",
+      "mech_reactive"
+    ],
+    "notes": "Pure desperation conditioning for championship rounds (Survival mode)",
+    "equipment_note": "Concrete floor recommended",
+    "rpe": 9,
+    "impact_cost": "high",
+    "lactate_load": "high",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_landing_impact",
+      "mech_lower_lunge",
+      "mech_reactive",
+      "mech_systemic_fatigue",
+      "mech_trunk_stability",
+      "mech_upper_press"
+    ],
+    "archived_reason": "Vague/cartoonish 'prison rules' modality and 'desperation conditioning' framing; duplicates the existing burpee/sprawl/jumping-knee finisher pattern already in the bank.",
+    "archived_date": "2026-06-29"
+  },
+  {
+    "name": "Hammer & Tire Power Complex",
+    "equipment": [
+      "sledgehammer",
+      "tire"
+    ],
+    "phases": [
+      "SPP"
+    ],
+    "system": "ATP-PCr",
+    "modality": "rotational power",
+    "duration": "20 alternating hammer strikes → 5 tire jumps → x5 rounds",
+    "intensity": "max",
+    "tags": [
+      "brawler",
+      "boxing",
+      "mech_ballistic",
+      "mech_upper_press",
+      "mech_trunk_rotation",
+      "mech_cns_high",
+      "mech_landing_impact",
+      "mech_reactive",
+      "mech_systemic_fatigue"
+    ],
+    "notes": "Rotational power meets vertical explosion (Max-effort alactic set)",
+    "equipment_note": "10lb hammer, 24\" tire",
+    "rpe": 9,
+    "impact_cost": "high",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_cns_high",
+      "mech_landing_impact",
+      "mech_reactive",
+      "mech_systemic_fatigue",
+      "mech_trunk_rotation",
+      "mech_upper_press"
+    ],
+    "archived_reason": "Near-exact duplicate of 'Hammer & Tire Jump Complex' (identical equipment and movement pair: hammer strikes into tire jumps); also failed the questionable ATP-PCr classification check (x5 rounds, RPE 9/max, no explicit rest field). Originally renamed from 'Smashmouth Shovel Hook' in the prior cleanup batch; on closer review the underlying concept is redundant rather than distinct, so it is archived instead of kept under a cleaned name.",
+    "archived_date": "2026-06-29"
+  },
+  {
+    "name": "Meat Locker",
+    "equipment": [
+      "bodyweight",
+      "sandbag"
+    ],
+    "phases": [
+      "SPP"
+    ],
+    "system": "glycolytic",
+    "modality": "clinch hell",
+    "duration": "30s sandbag carry → 10 knees → 5 sprawls → x5 rounds",
+    "intensity": "max",
+    "tags": [
+      "brawler",
+      "boxing",
+      "mech_grip_intensive",
+      "mech_trunk_stability",
+      "mech_systemic_fatigue",
+      "mech_ballistic",
+      "mech_grip_support",
+      "mech_lower_lunge",
+      "mech_upper_press"
+    ],
+    "notes": "Pure infighting conditioning (90% effort)",
+    "equipment_note": "100lb sandbag for pros",
+    "work_sec": 30,
+    "rpe": 9,
+    "impact_cost": "low",
+    "lactate_load": "high",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_grip_intensive",
+      "mech_grip_support",
+      "mech_lower_lunge",
+      "mech_systemic_fatigue",
+      "mech_trunk_stability",
+      "mech_upper_press"
+    ],
+    "archived_reason": "'Clinch hell' modality is gimmick wording; duplicates 'Sandbag Carry & Knee Complex' movement pattern with no distinct stimulus.",
+    "archived_date": "2026-06-29"
+  },
+  {
+    "name": "Gutter Fight Finisher",
+    "equipment": [
+      "sandbag",
+      "sled"
+    ],
+    "phases": [
+      "SPP"
+    ],
+    "system": "glycolytic",
+    "modality": "last-man-standing",
+    "duration": "20m sled drag → 5 bag slams → x5 rounds",
+    "intensity": "max",
+    "tags": [
+      "brawler",
+      "mma",
+      "mech_ballistic",
+      "mech_upper_press",
+      "mech_trunk_rotation",
+      "mech_cns_high",
+      "mech_lower_hip_hinge",
+      "mech_systemic_fatigue",
+      "mech_trunk_stability"
+    ],
+    "notes": "Drags mimic pulling opponent into guard, slams for GNP (Near-vomit)",
+    "equipment_note": "Bodyweight sled, 70lb bag",
+    "rpe": 9,
+    "impact_cost": "low",
+    "lactate_load": "high",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_cns_high",
+      "mech_lower_hip_hinge",
+      "mech_systemic_fatigue",
+      "mech_trunk_rotation",
+      "mech_trunk_stability",
+      "mech_upper_press"
+    ],
+    "archived_reason": "'Last-man-standing' modality plus '(Near-vomit)' notes are movie-violence wording; duplicates the existing sled-push+slam pattern.",
+    "archived_date": "2026-06-29"
+  },
+  {
+    "name": "Backfist Brawler",
+    "equipment": [
+      "bands",
+      "dumbbells"
+    ],
+    "phases": [
+      "SPP"
+    ],
+    "system": "ATP-PCr",
+    "modality": "wild striking",
+    "duration": "20 band-resisted spins → 10 DB backfists → x5 rounds",
+    "intensity": "max",
+    "tags": [
+      "brawler",
+      "mma",
+      "mech_upper_press",
+      "mech_systemic_fatigue",
+      "mech_ballistic",
+      "mech_grip_support"
+    ],
+    "notes": "Trains loopy strikes from broken clinch (Max chaos)",
+    "equipment_note": "Heavy bands, 10lb DBs",
+    "rpe": 9,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_grip_support",
+      "mech_systemic_fatigue",
+      "mech_upper_press"
+    ],
+    "archived_reason": "Non-standard 'wild striking' modality with 'Max chaos' notes describing loopy/uncontrolled technique; also failed the questionable ATP-PCr classification check. Concept is cartoonish and not clearly distinct from existing striking-under-fatigue work.",
+    "archived_date": "2026-06-29"
+  },
+  {
+    "name": "Last Man Standing",
+    "equipment": [
+      "kettlebell",
+      "sandbag"
+    ],
+    "phases": [
+      "SPP"
+    ],
+    "system": "glycolytic",
+    "modality": "survival conditioning",
+    "duration": "30s bag carry → 10 KB snatches → x5 rounds",
+    "intensity": "max",
+    "tags": [
+      "brawler",
+      "mma",
+      "mech_systemic_fatigue",
+      "mech_trunk_stability",
+      "mech_ballistic",
+      "mech_upper_press"
+    ],
+    "notes": "For when the fight goes longer than expected (95% effort)",
+    "equipment_note": "100lb sandbag, 24kg KB",
+    "work_sec": 30,
+    "rpe": 9,
+    "impact_cost": "low",
+    "lactate_load": "high",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_systemic_fatigue",
+      "mech_trunk_stability",
+      "mech_upper_press"
+    ],
+    "archived_reason": "'Survival conditioning' modality and 'fight goes longer than expected' framing duplicate the existing sandbag-carry + kettlebell-snatch combo with no added stimulus.",
+    "archived_date": "2026-06-29"
+  },
+  {
+    "name": "Trench Warfare",
+    "equipment": [
+      "bands",
+      "sled"
+    ],
+    "phases": [
+      "SPP"
+    ],
+    "system": "glycolytic",
+    "modality": "suffering",
+    "duration": "20m sled push → 10 band-resisted punches, 5 rounds",
+    "intensity": "max",
+    "tags": [
+      "pressure_fighter",
+      "kickboxing",
+      "mma",
+      "mech_trunk_stability",
+      "mech_ballistic",
+      "mech_lower_hip_hinge",
+      "mech_systemic_fatigue",
+      "mech_upper_press"
+    ],
+    "notes": "Pushes = cage pressure, bands = fatigued strikes. (Near-vomit)",
+    "equipment_note": "Bodyweight sled load",
+    "rpe": 9,
+    "impact_cost": "low",
+    "lactate_load": "high",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_lower_hip_hinge",
+      "mech_systemic_fatigue",
+      "mech_trunk_stability",
+      "mech_upper_press"
+    ],
+    "archived_reason": "'Suffering' modality and '(Near-vomit)' notes are gimmick/violent wording; duplicates the 'Sled Push & Punch Combo' pattern already in the bank.",
+    "archived_date": "2026-06-29"
+  },
+  {
+    "name": "Pressure Cooker Deluxe",
+    "equipment": [
+      "bands",
+      "kettlebell",
+      "sandbag"
+    ],
+    "phases": [
+      "SPP"
+    ],
+    "system": "glycolytic",
+    "modality": "hell circuit",
+    "duration": "30s sandbag carry → 10 KB swings → 10 band-resisted knees, 5 rounds",
+    "intensity": "high",
+    "tags": [
+      "pressure_fighter",
+      "kickboxing",
+      "mma",
+      "mech_systemic_fatigue",
+      "mech_upper_press"
+    ],
+    "notes": "Ultimate infighting gut check. (No breaks)",
+    "equipment_note": "50lb sandbag, 24kg KB, heavy bands",
+    "work_sec": 30,
+    "rpe": 9,
+    "impact_cost": "low",
+    "lactate_load": "high",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_systemic_fatigue",
+      "mech_upper_press"
+    ],
+    "archived_reason": "'Hell circuit' modality and 'Ultimate infighting gut check' / '(No breaks)' notes are fake-hard hype wording; duplicates an existing triple equipment combo with no unique stimulus.",
+    "archived_date": "2026-06-29"
+  }
+]
