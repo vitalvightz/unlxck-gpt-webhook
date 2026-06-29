@@ -332,6 +332,10 @@ class TodayCard(BaseModel):
     primary_warning: str | None = None
     nutrition_summary: str | None = None
     weight_cut_warning: str | None = None
+    # Coach-owned contact (declared / downgraded sparring) that coexists with the
+    # day's app sessions. Rendered as a context line above the session cards so a
+    # sparring day that also carries a low-load app touch shows both, not one.
+    coach_led_contact: str | None = None
     mindset_anchor: MindsetAnchor
 
 

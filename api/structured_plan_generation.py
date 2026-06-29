@@ -622,6 +622,13 @@ def _normalize_today_card(value: Any) -> dict[str, Any]:
     out["headline"] = _coerce_str(out.get("headline"))
     out["readiness_status"] = _enum(out.get("readiness_status"), _READINESS_VALUES, "train_as_planned")
     out["mindset_anchor"] = _normalize_mindset(out.get("mindset_anchor"))
+    # Coach-owned contact that coexists with the day's app sessions — keep only a
+    # non-empty string so the renderer never shows a blank contact block.
+    contact = _coerce_str(out.get("coach_led_contact")).strip()
+    if contact:
+        out["coach_led_contact"] = contact
+    else:
+        out.pop("coach_led_contact", None)
     return out
 
 
@@ -1484,6 +1491,17 @@ The JSON object MUST conform to the StructuredTrainingPlan schema:
   today_card.headline naming what it is (e.g. "Coach-led boxing", "Hard
   sparring", "Technical only") so the day renders as its own card. Do NOT invent
   S&C blocks for these days and do NOT drop the day.
+- A coach-led / sparring / technical day can ALSO carry a low-load app session on
+  the SAME day (e.g. the plan lists "Coach-led boxing — technical only" AND a
+  short app touch such as a tactical cue card, mobility reset, or freshness
+  primer). When that happens the two COEXIST — never drop one for the other:
+  emit the app S&C work as normal entries in "sessions" (with its blocks), AND
+  set today_card.coach_led_contact to the coach-owned label (e.g. "Coach-led
+  boxing — technical only"). Put the coach-owned label in coach_led_contact, NOT
+  in headline, so the app session keeps its own title; the renderer shows the
+  coach-owned contact as a context line above the app session. The "no app S&C
+  today" wording only applies when there is genuinely no app work — if an app
+  session is listed for the day, keep it.
 - daily_check_ins are OPTIONAL and must be either fully valid or omitted. Emit a
   check-in entry ONLY when the plan actually states a dated self-report; each
   entry MUST then carry "date", a "morning" object with all of "sleep_quality"
@@ -1580,7 +1598,7 @@ EXACT ROOT SKELETON (match this shape; fill values from the plan, keep all keys)
       "days": [
         {{
           "date": "YYYY-MM-DD", "day_type": "high", "countdown_label": "D-15", "phase_label": "SPP",
-          "today_card": {{"headline": "...", "readiness_status": "train_as_planned", "mindset_anchor": {{"intent": "...", "focus_cue": "...", "reset_cue": "...", "confidence_anchor": "...", "context": "..."}}}},
+          "today_card": {{"headline": "...", "readiness_status": "train_as_planned", "coach_led_contact": "<omit unless a coach-owned sparring/contact day ALSO carries an app session; then the coach-owned label, e.g. 'Coach-led boxing — technical only'>", "mindset_anchor": {{"intent": "...", "focus_cue": "...", "reset_cue": "...", "confidence_anchor": "...", "context": "..."}}}},
           "sessions": [
             {{
               "session_id": "ses-1", "session_type": "strength_power", "title": "...", "objective": "...",

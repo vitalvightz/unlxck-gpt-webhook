@@ -527,6 +527,28 @@ def test_day_type_mid_rpe_reads_moderate():
     assert _normalize_day(day)["day_type"] == "moderate"
 
 
+def test_normalize_keeps_coach_led_contact_alongside_app_session():
+    # A coach-owned sparring day that also carries an app session must keep both:
+    # the app session in sessions, and the coach-owned label in coach_led_contact.
+    day = _day(
+        "moderate",
+        [_session("skill", [{"block_type": "skill", "display_name": "Cue card"}])],
+        countdown_label="D-11",
+    )
+    day["today_card"]["coach_led_contact"] = "Coach-led boxing — technical only"
+    out = _normalize_day(day)
+    assert out["today_card"]["coach_led_contact"] == "Coach-led boxing — technical only"
+    assert out["sessions"], "app session must not be dropped"
+
+
+def test_normalize_drops_blank_coach_led_contact():
+    # An empty/whitespace contact must not survive as a blank context block.
+    day = _day("moderate", [], countdown_label="D-11")
+    day["today_card"]["coach_led_contact"] = "   "
+    out = _normalize_day(day)
+    assert "coach_led_contact" not in out["today_card"]
+
+
 def test_day_type_hardest_block_sets_the_day():
     day = _day(
         "low",
