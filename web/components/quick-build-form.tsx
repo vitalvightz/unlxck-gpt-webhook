@@ -165,32 +165,32 @@ function ChipMultiSelect({
           const disabled = valueDisabled || capDisabled;
           const reason = valueDisabled ? optionDisabledReason ?? disabledValueReason : capDisabled ? capDisabledReason : undefined;
           return (
-            <label
+            <div
               key={option.value}
               className={`checkbox-card ${checked ? "checkbox-card-checked" : ""} ${disabled ? "checkbox-card-disabled" : ""}`.trim()}
               aria-disabled={disabled}
               title={disabled ? reason : undefined}
             >
-              <input
-                type="checkbox"
-                checked={checked}
-                disabled={disabled}
-                onChange={() => onToggle(option.value)}
-              />
-              <span className="checkbox-card-copy">
-                <span className="checkbox-card-title-row">
+              <label className="checkbox-card-label">
+                <input
+                  type="checkbox"
+                  checked={checked}
+                  disabled={disabled}
+                  onChange={() => onToggle(option.value)}
+                />
+                <span className="checkbox-card-copy">
                   <span className="checkbox-card-title">{option.label}</span>
-                  {disabled && reason ? (
-                    <WhyTooltip
-                      title="Unavailable"
-                      body={reason}
-                      triggerLabel="?"
-                      ariaLabel={`Why ${option.label} is unavailable`}
-                    />
-                  ) : null}
                 </span>
-              </span>
-            </label>
+              </label>
+              {disabled && reason ? (
+                <WhyTooltip
+                  title="Unavailable"
+                  body={reason}
+                  triggerLabel="?"
+                  ariaLabel={`Why ${option.label} is unavailable`}
+                />
+              ) : null}
+            </div>
           );
         })}
       </div>

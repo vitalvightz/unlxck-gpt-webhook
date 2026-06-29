@@ -2736,6 +2736,14 @@ select:focus-visible {
   flex-shrink: 0;
 }
 
+.checkbox-card-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  cursor: inherit;
+}
+
 .checkbox-card-disabled input {
   cursor: not-allowed;
 }
@@ -2751,19 +2759,11 @@ select:focus-visible {
   overflow-wrap: anywhere;
 }
 
-.checkbox-card-title-row {
-  display: inline-flex;
-  align-items: center;
-  gap: 2px;
-  min-width: 0;
-}
-
-.checkbox-card-title-row .why-tooltip {
-  margin-inline-start: 4px;
+.checkbox-card .why-tooltip {
   flex-shrink: 0;
 }
 
-.checkbox-card-title-row .why-tooltip-trigger {
+.checkbox-card .why-tooltip-trigger {
   min-width: 16px;
   height: 16px;
   padding: 0;
