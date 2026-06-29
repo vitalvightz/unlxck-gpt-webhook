@@ -350,7 +350,8 @@ def _has_dense_glycolytic_profile(item: dict, *, normalized_system: str) -> bool
     rest_sec = _number_or_none(item.get("rest_sec"))
     rounds = _number_or_none(item.get("rounds"))
     total_minutes = _number_or_none(item.get("total_minutes"))
-    rpe = _number_or_none(item.get("rpe")) or _number_or_none(item.get("rpe_max"))
+    rpe_values = [value for value in (_number_or_none(item.get("rpe")), _number_or_none(item.get("rpe_max"))) if value is not None]
+    rpe = max(rpe_values, default=None)
     lactate_load = _clean_string(item.get("lactate_load"))
     tags = set(_clean_list(item.get("tags")))
     text = _text_blob(item)
