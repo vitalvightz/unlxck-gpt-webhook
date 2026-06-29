@@ -739,6 +739,16 @@ def _evaluate_strength_late_window(
             "adjustment": 0.0,
             "ambiguous_gap": None,
         }
+    schema_safety = exercise.get("_schema_safety") or {}
+    schema_issues = set(exercise.get("_schema_issues") or [])
+    if schema_safety.get("late_fight_eligible") is False or "missing_late_windows" in schema_issues:
+        return {
+            "blocked": True,
+            "block_codes": ["late_strength_block_missing_late_windows"],
+            "reason_codes": ["late_strength_penalty_missing_late_windows"],
+            "adjustment": -1.0,
+            "ambiguous_gap": None,
+        }
 
     penalties, blocks, profile = _strength_contextual_risk_patterns(exercise)
     tags = profile["tags"]

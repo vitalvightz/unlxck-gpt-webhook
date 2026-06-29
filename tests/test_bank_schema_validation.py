@@ -26,20 +26,38 @@ def test_validate_training_item_rejects_missing_name_and_logs_once(monkeypatch: 
     assert "Missing required 'name'" in warnings[0]
 
 
-def test_validate_training_item_defaults_tags_and_phases_and_deduplicates_warnings(monkeypatch: pytest.MonkeyPatch):
+def test_validate_training_item_runtime_marks_missing_tags_and_phases_without_defaulting(monkeypatch: pytest.MonkeyPatch):
     warnings: list[str] = []
     monkeypatch.setattr(bank_schema.logger, "warning", warnings.append)
 
     item = bank_schema.validate_training_item({"name": "Band Circuit"}, source="unit")
     repeated = bank_schema.validate_training_item({"name": "Band Circuit"}, source="unit")
 
+    assert "tags" not in item
+    assert "phases" not in item
+    assert "tags" not in repeated
+    assert "phases" not in repeated
+    assert item["_schema_issues"] == ["missing_tags", "missing_phases"]
+    assert item["_schema_safety"]["late_fight_eligible"] is False
+    assert len(warnings) == 2
+    assert "Missing or invalid 'tags'" in warnings[0]
+    assert "Missing or invalid 'phases'" in warnings[1]
+
+
+def test_validate_training_item_audit_keeps_legacy_defaults_for_report_only_mode():
+    item = bank_schema.validate_training_item({"name": "Band Circuit"}, source="unit", mode="audit")
+
     assert item["tags"] == []
     assert item["phases"] == bank_schema.DEFAULT_PHASES
-    assert repeated["tags"] == []
-    assert repeated["phases"] == bank_schema.DEFAULT_PHASES
-    assert len(warnings) == 2
-    assert "defaulting to []." in warnings[0]
-    assert "defaulting to" in warnings[1]
+
+
+def test_validate_training_item_strict_rejects_missing_phases():
+    with pytest.raises(ValueError, match="Missing or invalid 'phases'"):
+        bank_schema.validate_training_item(
+            {"name": "Band Circuit", "tags": []},
+            source="unit",
+            mode="strict",
+        )
 
 
 def test_validate_training_item_requires_system_when_requested(monkeypatch: pytest.MonkeyPatch):
@@ -60,6 +78,7 @@ def test_validate_training_item_backfills_exercise_bank_schema_defaults():
     item = bank_schema.validate_training_item(
         {"name": "Tempo Goblet Squat", "tags": ["strength"], "phases": ["GPP"]},
         source="exercise_bank.json",
+        mode="audit",
     )
 
     assert item["late_windows"] == []
@@ -73,6 +92,7 @@ def test_validate_training_item_backfills_conditioning_bank_schema_defaults():
     item = bank_schema.validate_training_item(
         {"name": "Easy Bike", "tags": ["aerobic"], "phases": ["TAPER"], "system": "aerobic"},
         source="conditioning_bank.json",
+        mode="audit",
     )
 
     assert item["late_windows"] == []
@@ -82,3 +102,14 @@ def test_validate_training_item_backfills_conditioning_bank_schema_defaults():
     assert item["total_minutes"] is None
     assert item["rpe"] is None
     assert item["lactate_load"] == ""
+
+
+def test_validate_training_item_runtime_exposes_missing_late_window_state():
+    item = bank_schema.validate_training_item(
+        {"name": "Easy Bike", "tags": ["aerobic"], "phases": ["TAPER"], "system": "aerobic"},
+        source="conditioning_bank.json",
+    )
+
+    assert "late_windows" not in item
+    assert "missing_late_windows" in item["_schema_issues"]
+    assert item["_schema_safety"]["late_fight_eligible"] is False

@@ -695,6 +695,16 @@ def _evaluate_conditioning_late_window(
             "adjustment": 0.0,
             "ambiguous_gap": None,
         }
+    schema_safety = drill.get("_schema_safety") or {}
+    schema_issues = set(drill.get("_schema_issues") or [])
+    if schema_safety.get("late_fight_eligible") is False or "missing_late_windows" in schema_issues:
+        return {
+            "blocked": True,
+            "block_codes": ["late_conditioning_block_missing_late_windows"],
+            "reason_codes": ["late_conditioning_penalty_missing_late_windows"],
+            "adjustment": -1.0,
+            "ambiguous_gap": None,
+        }
 
     tags = set(normalize_tags(drill.get("tags", [])))
     equipment = set(normalize_equipment_list(drill.get("equipment", [])))
