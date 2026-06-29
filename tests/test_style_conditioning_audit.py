@@ -1,11 +1,75 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
 
 import pytest
 
 from fightcamp.bank_schema import D21_TO_D14, is_late_fight_metadata_safe
 from tools import audit_style_conditioning_bank as audit
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+STYLE_CONDITIONING_BANK_PATH = REPO_ROOT / "data" / "style_conditioning_bank.json"
+
+# Batch 1 manual cleanup: names as they exist in the bank today, post-cleanup.
+BATCH_1_CLEANED_NAMES = [
+    "Sandbag Carry & Sprawl Complex",
+    "Sled Push & Punch Combo",
+    "Hammer & Tire Power Complex",
+    "Backward Lunge & Swing Complex",
+    "Sprint, Burpee & Shadowbox Finisher",
+    "Sled Push & KB Swing Complex",
+    "Sandbag Carry & Knee Complex",
+    "Med Ball Slam & Wall Drive Complex",
+    "Hammer & Tire Jump Complex",
+    "DB Uppercut & Med Ball Slam Complex",
+    "Hammer Strike & Sprawl Jump Complex",
+    "Sprint, Sprawl & Knee Conditioning Complex",
+    "Clinch Hold & Knee Complex",
+    "Max Knee & Sprawl Complex",
+    "Wall Pressure & Elbow Complex",
+    "Sled Push & Knee Complex",
+    "Clinch & Sprawl Reaction Complex",
+    "Neck Harness Isometric Complex",
+    "Band-Resisted Knee Complex",
+    "Band-Resisted Whizzer & Sprawl Complex",
+    "Band-Resisted Shoulder Roll & Counter Complex",
+    "Roll-Under Counter Complex",
+    "Intercept & Counter Mitts",
+    "Frame & Counter Knee Complex",
+    "Band-Resisted Jab Endurance Complex",
+    "Max-Speed Bag & Slide Complex",
+    "Band-Resisted Low Kick Power Complex",
+    "Band-Resisted Calf Kick Complex",
+    "Clinch Knee Endurance Complex",
+    "Strongman Clinch & Sprawl Complex",
+    "Rotational Power & Med Ball Complex",
+    "Battle Rope & DB Punch Complex",
+    "Trap Bar Loaded Carry Complex",
+    "Battle Rope & Bag Combo",
+    "Trap Bar Carry & Uppercut Complex",
+    "KB Swing & Marching Knee Complex",
+    "Ezekiel Finishing Drill",
+    "Ground-and-Pound Bursts",
+    "Infighting Jump & Push-Up Complex",
+    "Ropes Pressure Hook & Uppercut Complex",
+    "Outdoor Tire Flip & Burpee Complex",
+    "Weighted Plank & Stand-Up Complex",
+    "Stance Switch & Kick Complex",
+    "Calf Slicer Pressure Drill",
+]
+
+
+def _load_style_conditioning_bank() -> list[dict]:
+    return json.loads(STYLE_CONDITIONING_BANK_PATH.read_text(encoding="utf-8"))
+
+
+def _batch_1_entries() -> list[dict]:
+    bank = _load_style_conditioning_bank()
+    by_name = {entry["name"]: entry for entry in bank}
+    missing = [name for name in BATCH_1_CLEANED_NAMES if name not in by_name]
+    assert not missing, f"Batch 1 cleaned entries missing from bank: {missing}"
+    return [by_name[name] for name in BATCH_1_CLEANED_NAMES]
 
 
 def _style_entry(**overrides):
@@ -194,3 +258,51 @@ def test_quarantined_style_entry_cannot_pass_late_fight_eligibility():
     assert safety["severity"] == "blocked"
     assert "late_block_style_conditioning_quarantine" in safety["block_codes"]
     assert "late_block_style_conditioning_high_rpe" in safety["block_codes"]
+
+
+def test_batch_1_cleaned_entries_are_no_longer_overstyled_or_aggressive():
+    for entry in _batch_1_entries():
+        row = audit.style_conditioning_audit_row(entry)
+        assert row["overstyled_name_flag"] is False, entry["name"]
+        assert row["aggressive_notes_flag"] is False, entry["name"]
+        assert "violent_wording" not in row["quarantine_reason_codes"], entry["name"]
+
+
+def test_batch_1_cleaned_entries_preserve_appropriate_camp_action():
+    for entry in _batch_1_entries():
+        row = audit.style_conditioning_audit_row(entry)
+        # Wording is clean now, so these should no longer sit in the
+        # delete_or_rebuild / rename / rename_and_redose cleanup queues.
+        assert row["camp_action"] in {"keep", "redose"}, (entry["name"], row["camp_action"])
+
+
+def test_batch_1_hard_camp_work_is_not_automatically_late_eligible():
+    for entry in _batch_1_entries():
+        row = audit.style_conditioning_audit_row(entry)
+        assert row["late_fight_action"] in {"late_blocked", "not_late_eligible"}, (
+            entry["name"],
+            row["late_fight_action"],
+        )
+
+
+def test_batch_1_entries_approved_late_satisfy_low_risk_metadata():
+    low_risk_actions = {"late_support_candidate", "late_technical_candidate", "late_conditioning_candidate"}
+    for entry in _batch_1_entries():
+        row = audit.style_conditioning_audit_row(entry)
+        if row["late_fight_action"] not in low_risk_actions:
+            continue
+        max_rpe = 4 if row["late_fight_action"] == "late_support_candidate" else 6
+        assert row["rpe"] <= max_rpe, entry["name"]
+        assert row["lactate_load"] == "low", entry["name"]
+        assert row["movement_cost"] == "low", entry["name"]
+        assert row["impact_cost"] == "low", entry["name"]
+
+
+def test_batch_1_entries_preserve_phases_and_system():
+    """Cleanup should only touch wording/dose fields, not the underlying GPP/SPP intent."""
+    bank = _load_style_conditioning_bank()
+    by_name = {entry["name"]: entry for entry in bank}
+    for name in BATCH_1_CLEANED_NAMES:
+        entry = by_name[name]
+        assert entry.get("phases"), name
+        assert entry.get("system"), name
