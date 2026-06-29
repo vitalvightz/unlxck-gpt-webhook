@@ -3135,7 +3135,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
     strength_output = _run_real_poststep("format_strength_block", lambda: format_strength_block(phase, fatigue, base_exercises))
     def _build_capped_candidate_reservoir():
         capped_weighted = weighted_exercises[:500]
-        reservoir_source_count = max(scored_candidate_count, len(exercise_bank))
+        reservoir_source_count = len(weighted_exercises)
         if reservoir_source_count > 500:
             log_fail_safe_degrade(module="strength", phase=phase, reason="candidate_reservoir_capped", target=reservoir_source_count, actual=500)
         return _build_strength_candidate_reservoir(capped_weighted)
