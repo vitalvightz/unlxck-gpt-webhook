@@ -2820,7 +2820,7 @@ def generate_conditioning_block(flags):
             "glycolytic",
         }
     )
-    style_specific_relevant = bool(target_style_tags)
+    style_specific_relevant = bool(style_names or tech_style_tags or style_tags)
     if (
         phase.upper() == "GPP"
         and num_conditioning_sessions > 0
