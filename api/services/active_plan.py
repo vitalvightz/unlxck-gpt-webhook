@@ -155,11 +155,13 @@ def _collect_planning_brief_dates(row: dict[str, Any]) -> list[date]:
     for week in weeks:
         if not isinstance(week, Mapping):
             continue
-        for day in week.get("calendar_days") or []:
-            if isinstance(day, Mapping):
-                parsed = _parse_date(day.get("calendar_date"))
-                if parsed:
-                    dates.append(parsed)
+        calendar_days = week.get("calendar_days")
+        if isinstance(calendar_days, list):
+            for day in calendar_days:
+                if isinstance(day, Mapping):
+                    parsed = _parse_date(day.get("calendar_date"))
+                    if parsed:
+                        dates.append(parsed)
     return dates
 
 
