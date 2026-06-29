@@ -12,10 +12,11 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 STYLE_CONDITIONING_BANK_PATH = REPO_ROOT / "data" / "style_conditioning_bank.json"
 
 # Batch 1 manual cleanup: names as they exist in the bank today, post-cleanup.
+# "Hammer & Tire Power Complex" was archived in batch 2 as a near-duplicate of
+# "Hammer & Tire Jump Complex", so it is intentionally absent from this list.
 BATCH_1_CLEANED_NAMES = [
     "Sandbag Carry & Sprawl Complex",
     "Sled Push & Punch Combo",
-    "Hammer & Tire Power Complex",
     "Backward Lunge & Swing Complex",
     "Sprint, Burpee & Shadowbox Finisher",
     "Sled Push & KB Swing Complex",
@@ -59,9 +60,38 @@ BATCH_1_CLEANED_NAMES = [
     "Calf Slicer Pressure Drill",
 ]
 
+STYLE_CONDITIONING_ARCHIVE_PATH = REPO_ROOT / "data" / "style_conditioning_bank_archive.json"
+
+# Batch 2: archived (deleted from the active bank) as duplicates or
+# fake-hard/cartoonish content surfaced once modality text was scanned.
+BATCH_2_ARCHIVED_NAMES = [
+    "Pavement Pounder",
+    "Last Call Circuit",
+    "Meat Locker",
+    "Gutter Fight Finisher",
+    "Backfist Brawler",
+    "Last Man Standing",
+    "Trench Warfare",
+    "Pressure Cooker Deluxe",
+    "Hammer & Tire Power Complex",
+]
+
+# Batch 2: renamed/rebuilt in place after modality scanning surfaced gimmick
+# wording ("neck torture", "footwork torture", "annihilation") not caught by
+# the original name-only/notes-only batch-1 pass.
+BATCH_2_RENAMED_NAMES = [
+    "Neck Bridge & Plate Rotation Complex",
+    "Backward Sled Drag & Slip Complex",
+    "Ax Kick Precision Drill",
+]
+
 
 def _load_style_conditioning_bank() -> list[dict]:
     return json.loads(STYLE_CONDITIONING_BANK_PATH.read_text(encoding="utf-8"))
+
+
+def _load_style_conditioning_archive() -> list[dict]:
+    return json.loads(STYLE_CONDITIONING_ARCHIVE_PATH.read_text(encoding="utf-8"))
 
 
 def _batch_1_entries() -> list[dict]:
@@ -306,3 +336,104 @@ def test_batch_1_entries_preserve_phases_and_system():
         entry = by_name[name]
         assert entry.get("phases"), name
         assert entry.get("system"), name
+
+
+@pytest.mark.parametrize(
+    ("modality", "expected_codes"),
+    [
+        ("prison rules", {"overstyled_name", "aggressive_notes", "violent_wording"}),
+        ("neck torture", {"overstyled_name", "aggressive_notes", "violent_wording"}),
+        ("clinch hell", {"overstyled_name", "aggressive_notes", "violent_wording"}),
+        ("rotational annihilation", {"aggressive_notes", "violent_wording"}),
+    ],
+)
+def test_modality_scanning_flags_gimmick_terms(modality, expected_codes):
+    row = audit.style_conditioning_audit_row(_style_entry(modality=modality))
+
+    assert expected_codes.issubset(set(row["quarantine_reason_codes"])), (modality, row["quarantine_reason_codes"])
+    assert row["camp_action"] == "delete_or_rebuild", (modality, row["camp_action"])
+    assert row["late_fight_action"] == "late_blocked", (modality, row["late_fight_action"])
+
+
+def test_batch_2_archived_entries_are_removed_from_active_bank():
+    bank = _load_style_conditioning_bank()
+    active_names = {entry["name"] for entry in bank}
+    still_active = active_names & set(BATCH_2_ARCHIVED_NAMES)
+    assert not still_active, f"Archived entries still present in active bank: {sorted(still_active)}"
+
+
+def test_batch_2_archived_entries_are_present_in_archive_file():
+    archive = _load_style_conditioning_archive()
+    archived_by_name = {entry["name"]: entry for entry in archive}
+    missing = [name for name in BATCH_2_ARCHIVED_NAMES if name not in archived_by_name]
+    assert not missing, f"Archived entries missing from archive file: {missing}"
+    for name in BATCH_2_ARCHIVED_NAMES:
+        entry = archived_by_name[name]
+        assert entry.get("archived_reason"), name
+        assert entry.get("archived_date"), name
+
+
+def test_batch_2_renamed_entries_are_clean():
+    bank = _load_style_conditioning_bank()
+    by_name = {entry["name"]: entry for entry in bank}
+    missing = [name for name in BATCH_2_RENAMED_NAMES if name not in by_name]
+    assert not missing, f"Batch 2 renamed entries missing from bank: {missing}"
+    for name in BATCH_2_RENAMED_NAMES:
+        row = audit.style_conditioning_audit_row(by_name[name])
+        assert row["overstyled_name_flag"] is False, name
+        assert row["aggressive_notes_flag"] is False, name
+        assert "violent_wording" not in row["quarantine_reason_codes"], name
+
+
+def test_batch_2_renamed_entries_are_not_late_eligible():
+    bank = _load_style_conditioning_bank()
+    by_name = {entry["name"]: entry for entry in bank}
+    for name in BATCH_2_RENAMED_NAMES:
+        row = audit.style_conditioning_audit_row(by_name[name])
+        assert row["late_fight_action"] in {"late_blocked", "not_late_eligible"}, (name, row["late_fight_action"])
+
+
+def test_batch_2_system_fix_keeps_hard_gpp_work_blocked_from_late_fight():
+    bank = _load_style_conditioning_bank()
+    by_name = {entry["name"]: entry for entry in bank}
+    entry = by_name["Hammer Strike & Sprawl Jump Complex"]
+    assert entry["system"] == "glycolytic"
+    row = audit.style_conditioning_audit_row(entry)
+    assert row["late_fight_action"] in {"late_blocked", "not_late_eligible"}
+
+
+def test_questionable_atp_pcr_classification_is_flagged_without_rest_proof():
+    row = audit.style_conditioning_audit_row(
+        _style_entry(
+            system="ATP-PCr",
+            duration="10 hammer strikes -> 5 tire jumps -> x5 rounds",
+            rpe=9,
+            intensity="max",
+        )
+    )
+
+    assert "questionable_atp_pcr_classification" in row["quarantine_reason_codes"]
+
+
+def test_questionable_atp_pcr_classification_is_not_flagged_with_explicit_rest():
+    row = audit.style_conditioning_audit_row(
+        _style_entry(
+            system="ATP-PCr",
+            duration="10 hammer strikes -> 5 tire jumps -> x5 rounds",
+            rest_sec=90,
+            rpe=9,
+            intensity="max",
+        )
+    )
+
+    assert "questionable_atp_pcr_classification" not in row["quarantine_reason_codes"]
+
+
+def test_no_entries_were_newly_approved_for_late_fight_in_batch_2():
+    bank = _load_style_conditioning_bank()
+    newly_touched_names = set(BATCH_2_RENAMED_NAMES) | {"Hammer Strike & Sprawl Jump Complex"}
+    by_name = {entry["name"]: entry for entry in bank}
+    late_eligible_actions = {"late_support_candidate", "late_technical_candidate", "late_conditioning_candidate"}
+    for name in newly_touched_names:
+        row = audit.style_conditioning_audit_row(by_name[name])
+        assert row["late_fight_action"] not in late_eligible_actions, (name, row["late_fight_action"])
