@@ -1627,6 +1627,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
     phase = flags.get("phase", "GPP").upper()
     seed = flags.get("random_seed")
     rng = random.Random(seed) if seed is not None else None
+    score_rng = rng if flags.get("score_jitter", True) is not False else None
     injuries = flags.get("injuries", [])
     restrictions = flags.get("restrictions")
     ignore_restrictions = bool(flags.get("ignore_restrictions", False))
@@ -1773,6 +1774,9 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
             return
         late_window_ambiguous[name] = ambiguous_gap
 
+    def _should_record_pre_skip_late_block(reason_codes: list[str]) -> bool:
+        return any(str(code).startswith("late_strength_block") for code in reason_codes)
+
     def _late_eval_cache_key(exercise: dict) -> str:
         name = str(exercise.get("name") or "").strip()
         return name if name else f"anon:{id(exercise)}"
@@ -1917,8 +1921,8 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
         )
         _record_ambiguous_gap(pre_skip_late_eval.get("ambiguous_gap"))
         if is_banned_exercise(ex.get("name", ""), tags, fight_format, details):
-            if pre_skip_late_eval["blocked"]:
-                _record_late_block(ex, 0.0, pre_skip_late_eval["block_codes"])
+            if pre_skip_late_eval["blocked"] and _should_record_pre_skip_late_block(pre_skip_late_eval["block_codes"]):
+                _record_late_block(ex, -1.0, pre_skip_late_eval["block_codes"])
             continue
         ex_equipment = normalize_equipment_list(ex.get("equipment", []))
         if legacy_taper_gate:
@@ -1927,8 +1931,8 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
             if not any(t in taper_allowed for t in tags_lower):
                 continue
         if phase not in ex.get("phases", []):
-            if pre_skip_late_eval["blocked"]:
-                _record_late_block(ex, 0.0, pre_skip_late_eval["block_codes"])
+            if pre_skip_late_eval["blocked"] and _should_record_pre_skip_late_block(pre_skip_late_eval["block_codes"]):
+                _record_late_block(ex, -1.0, pre_skip_late_eval["block_codes"])
             continue
         if phase in {"SPP", "TAPER"} and _is_over_100_percent_isometric(ex):
             continue
@@ -1989,7 +1993,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
             priority_profile=priority_profile,
             must_have_bonus_multiplier=must_have_bonus_multiplier,
             derived_clarification_tags=derived_clarification_tags,
-            rng=rng,
+            rng=score_rng,
         )
         if score == -999:
             continue
@@ -2759,7 +2763,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
             priority_profile=priority_profile,
             must_have_bonus_multiplier=must_have_bonus_multiplier,
             derived_clarification_tags=derived_clarification_tags,
-            rng=rng,
+            rng=score_rng,
         )
         if style_score == -999:
             continue

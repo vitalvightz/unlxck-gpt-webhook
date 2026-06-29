@@ -302,6 +302,8 @@ def _admin_rejected_result(plan_row: dict[str, Any]) -> dict[str, Any]:
 
 def _admin_archived_result(plan_row: dict[str, Any]) -> dict[str, Any]:
     archived_text = str(plan_row.get("final_plan_text") or plan_row.get("draft_plan_text") or plan_row.get("plan_text") or "").strip()
+    validator_report = dict(plan_row.get("stage2_validator_report") or {})
+    validator_report["admin_hidden_from_athlete"] = True
     return {
         "status": "archived",
         "plan_text": "",
@@ -309,7 +311,7 @@ def _admin_archived_result(plan_row: dict[str, Any]) -> dict[str, Any]:
         "final_plan_text": archived_text,
         "pdf_url": None,
         "stage2_retry_text": str(plan_row.get("stage2_retry_text") or ""),
-        "stage2_validator_report": plan_row.get("stage2_validator_report") or {},
+        "stage2_validator_report": validator_report,
         "stage2_status": "admin_archived",
         "stage2_attempt_count": int(plan_row.get("stage2_attempt_count") or 0),
     }

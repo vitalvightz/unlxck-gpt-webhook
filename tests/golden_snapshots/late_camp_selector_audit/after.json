@@ -135,112 +135,7 @@
           ]
         },
         {
-          "name": "Dead-bug breathing",
-          "score": 0.9325,
-          "reason_codes": [
-            "late_penalty_missing_governance_metadata",
-            "late_strength_boost_window_fit",
-            "late_strength_boost_cut_survivable",
-            "late_strength_boost_explicit_late_touch",
-            "late_strength_boost_low_eccentric",
-            "late_strength_boost_low_impact",
-            "late_strength_boost_cns_freshness",
-            "late_strength_boost_low_soreness",
-            "late_strength_boost_rehab_friendly"
-          ]
-        },
-        {
-          "name": "Eye-head dissociation drill",
-          "score": 0.9325,
-          "reason_codes": [
-            "late_penalty_missing_governance_metadata",
-            "late_strength_boost_window_fit",
-            "late_strength_boost_cut_survivable",
-            "late_strength_boost_explicit_late_touch",
-            "late_strength_boost_low_eccentric",
-            "late_strength_boost_low_impact",
-            "late_strength_boost_cns_freshness",
-            "late_strength_boost_low_soreness",
-            "late_strength_boost_rehab_friendly"
-          ]
-        },
-        {
-          "name": "Four-way manual neck isometric",
-          "score": 0.9325,
-          "reason_codes": [
-            "late_penalty_missing_governance_metadata",
-            "late_strength_boost_window_fit",
-            "late_strength_boost_cut_survivable",
-            "late_strength_boost_explicit_late_touch",
-            "late_strength_boost_low_eccentric",
-            "late_strength_boost_low_impact",
-            "late_strength_boost_cns_freshness",
-            "late_strength_boost_low_soreness",
-            "late_strength_boost_rehab_friendly"
-          ]
-        },
-        {
-          "name": "Lateral step-and-stick boxer reset",
-          "score": 0.9325,
-          "reason_codes": [
-            "late_penalty_missing_governance_metadata",
-            "late_strength_boost_window_fit",
-            "late_strength_boost_cut_survivable",
-            "late_strength_boost_explicit_late_touch",
-            "late_strength_boost_low_eccentric",
-            "late_strength_boost_low_impact",
-            "late_strength_boost_cns_freshness",
-            "late_strength_boost_low_soreness",
-            "late_strength_boost_rehab_friendly"
-          ]
-        },
-        {
-          "name": "Lead-foot pivot prep",
-          "score": 0.9325,
-          "reason_codes": [
-            "late_penalty_missing_governance_metadata",
-            "late_strength_boost_window_fit",
-            "late_strength_boost_cut_survivable",
-            "late_strength_boost_explicit_late_touch",
-            "late_strength_boost_low_eccentric",
-            "late_strength_boost_low_impact",
-            "late_strength_boost_cns_freshness",
-            "late_strength_boost_low_soreness",
-            "late_strength_boost_rehab_friendly"
-          ]
-        },
-        {
-          "name": "Lead-leg single-leg stance with guard",
-          "score": 0.9325,
-          "reason_codes": [
-            "late_penalty_missing_governance_metadata",
-            "late_strength_boost_window_fit",
-            "late_strength_boost_cut_survivable",
-            "late_strength_boost_explicit_late_touch",
-            "late_strength_boost_low_eccentric",
-            "late_strength_boost_low_impact",
-            "late_strength_boost_cns_freshness",
-            "late_strength_boost_low_soreness",
-            "late_strength_boost_rehab_friendly"
-          ]
-        },
-        {
-          "name": "Line step-and-stick forward/back",
-          "score": 0.9325,
-          "reason_codes": [
-            "late_penalty_missing_governance_metadata",
-            "late_strength_boost_window_fit",
-            "late_strength_boost_cut_survivable",
-            "late_strength_boost_explicit_late_touch",
-            "late_strength_boost_low_eccentric",
-            "late_strength_boost_low_impact",
-            "late_strength_boost_cns_freshness",
-            "late_strength_boost_low_soreness",
-            "late_strength_boost_rehab_friendly"
-          ]
-        },
-        {
-          "name": "Open-book reset",
+          "name": "Boxer stance weight-shift hold",
           "score": 0.9325,
           "reason_codes": [
             "late_penalty_missing_governance_metadata",
@@ -271,21 +166,6 @@
         },
         {
           "name": "Adductor rock-back",
-          "score": 0.9325,
-          "reason_codes": [
-            "late_penalty_missing_governance_metadata",
-            "late_strength_boost_window_fit",
-            "late_strength_boost_cut_survivable",
-            "late_strength_boost_explicit_late_touch",
-            "late_strength_boost_low_eccentric",
-            "late_strength_boost_low_impact",
-            "late_strength_boost_cns_freshness",
-            "late_strength_boost_low_soreness",
-            "late_strength_boost_rehab_friendly"
-          ]
-        },
-        {
-          "name": "Boxer stance weight-shift hold",
           "score": 0.9325,
           "reason_codes": [
             "late_penalty_missing_governance_metadata",
@@ -677,23 +557,23 @@
           ]
         },
         {
-          "name": "Bridge Tempo Touch: 2-3 x 90 sec Technical Tempo",
-          "score": 0.9875,
-          "reason_codes": [
-            "bridge_glycolytic_touch_fallback",
-            "late_conditioning_boost_freshness",
-            "late_conditioning_penalty_fight_pace_leak",
-            "late_conditioning_boost_structured_freshness",
-            "late_conditioning_boost_window_fit"
-          ]
-        },
-        {
           "name": "Band-Resisted Straight Punch Release",
           "score": 1.5325,
           "reason_codes": [
             "taper_plyometric_guarantee",
             "late_penalty_missing_governance_metadata",
             "late_conditioning_boost_alactic_sharpness",
+            "late_conditioning_boost_structured_freshness",
+            "late_conditioning_boost_window_fit"
+          ]
+        },
+        {
+          "name": "Bridge Tempo Touch: 2-3 x 90 sec Technical Tempo",
+          "score": 0.9875,
+          "reason_codes": [
+            "bridge_glycolytic_touch_fallback",
+            "late_conditioning_boost_freshness",
+            "late_conditioning_penalty_fight_pace_leak",
             "late_conditioning_boost_structured_freshness",
             "late_conditioning_boost_window_fit"
           ]
@@ -949,112 +829,7 @@
           ]
         },
         {
-          "name": "Dead-bug breathing",
-          "score": 0.97,
-          "reason_codes": [
-            "late_penalty_missing_governance_metadata",
-            "late_strength_boost_window_fit",
-            "late_strength_boost_cut_survivable",
-            "late_strength_boost_explicit_late_touch",
-            "late_strength_boost_low_eccentric",
-            "late_strength_boost_low_impact",
-            "late_strength_boost_cns_freshness",
-            "late_strength_boost_low_soreness",
-            "late_strength_boost_rehab_friendly"
-          ]
-        },
-        {
-          "name": "Lateral step-and-stick boxer reset",
-          "score": 0.97,
-          "reason_codes": [
-            "late_penalty_missing_governance_metadata",
-            "late_strength_boost_window_fit",
-            "late_strength_boost_cut_survivable",
-            "late_strength_boost_explicit_late_touch",
-            "late_strength_boost_low_eccentric",
-            "late_strength_boost_low_impact",
-            "late_strength_boost_cns_freshness",
-            "late_strength_boost_low_soreness",
-            "late_strength_boost_rehab_friendly"
-          ]
-        },
-        {
-          "name": "Lead-foot pivot prep",
-          "score": 0.97,
-          "reason_codes": [
-            "late_penalty_missing_governance_metadata",
-            "late_strength_boost_window_fit",
-            "late_strength_boost_cut_survivable",
-            "late_strength_boost_explicit_late_touch",
-            "late_strength_boost_low_eccentric",
-            "late_strength_boost_low_impact",
-            "late_strength_boost_cns_freshness",
-            "late_strength_boost_low_soreness",
-            "late_strength_boost_rehab_friendly"
-          ]
-        },
-        {
-          "name": "Lead-leg single-leg stance with guard",
-          "score": 0.97,
-          "reason_codes": [
-            "late_penalty_missing_governance_metadata",
-            "late_strength_boost_window_fit",
-            "late_strength_boost_cut_survivable",
-            "late_strength_boost_explicit_late_touch",
-            "late_strength_boost_low_eccentric",
-            "late_strength_boost_low_impact",
-            "late_strength_boost_cns_freshness",
-            "late_strength_boost_low_soreness",
-            "late_strength_boost_rehab_friendly"
-          ]
-        },
-        {
-          "name": "Line step-and-stick forward/back",
-          "score": 0.97,
-          "reason_codes": [
-            "late_penalty_missing_governance_metadata",
-            "late_strength_boost_window_fit",
-            "late_strength_boost_cut_survivable",
-            "late_strength_boost_explicit_late_touch",
-            "late_strength_boost_low_eccentric",
-            "late_strength_boost_low_impact",
-            "late_strength_boost_cns_freshness",
-            "late_strength_boost_low_soreness",
-            "late_strength_boost_rehab_friendly"
-          ]
-        },
-        {
-          "name": "Open-book reset",
-          "score": 0.97,
-          "reason_codes": [
-            "late_penalty_missing_governance_metadata",
-            "late_strength_boost_window_fit",
-            "late_strength_boost_cut_survivable",
-            "late_strength_boost_explicit_late_touch",
-            "late_strength_boost_low_eccentric",
-            "late_strength_boost_low_impact",
-            "late_strength_boost_cns_freshness",
-            "late_strength_boost_low_soreness",
-            "late_strength_boost_rehab_friendly"
-          ]
-        },
-        {
-          "name": "Pivot-and-freeze lead foot",
-          "score": 0.97,
-          "reason_codes": [
-            "late_penalty_missing_governance_metadata",
-            "late_strength_boost_window_fit",
-            "late_strength_boost_cut_survivable",
-            "late_strength_boost_explicit_late_touch",
-            "late_strength_boost_low_eccentric",
-            "late_strength_boost_low_impact",
-            "late_strength_boost_cns_freshness",
-            "late_strength_boost_low_soreness",
-            "late_strength_boost_rehab_friendly"
-          ]
-        },
-        {
-          "name": "Pivot-and-freeze rear foot",
+          "name": "Boxer stance weight-shift hold",
           "score": 0.97,
           "reason_codes": [
             "late_penalty_missing_governance_metadata",
@@ -1085,21 +860,6 @@
         },
         {
           "name": "Adductor rock-back",
-          "score": 0.97,
-          "reason_codes": [
-            "late_penalty_missing_governance_metadata",
-            "late_strength_boost_window_fit",
-            "late_strength_boost_cut_survivable",
-            "late_strength_boost_explicit_late_touch",
-            "late_strength_boost_low_eccentric",
-            "late_strength_boost_low_impact",
-            "late_strength_boost_cns_freshness",
-            "late_strength_boost_low_soreness",
-            "late_strength_boost_rehab_friendly"
-          ]
-        },
-        {
-          "name": "Boxer stance weight-shift hold",
           "score": 0.97,
           "reason_codes": [
             "late_penalty_missing_governance_metadata",
@@ -1745,6 +1505,13 @@
           ]
         },
         {
+          "name": "Bent-knee soleus pulse at wall",
+          "score": -1.0,
+          "reason_codes": [
+            "late_strength_block_window_mismatch"
+          ]
+        },
+        {
           "name": "Counter-Striker Split-Line Punch Isometric Hold",
           "score": 5.55,
           "reason_codes": [
@@ -1772,6 +1539,13 @@
           "score": -1.0,
           "reason_codes": [
             "late_strength_block_familiarity_required_late",
+            "late_strength_block_window_mismatch"
+          ]
+        },
+        {
+          "name": "Half-Kneeling Medicine-Ball Punch Throw",
+          "score": -1.0,
+          "reason_codes": [
             "late_strength_block_window_mismatch"
           ]
         },
@@ -2335,6 +2109,13 @@
           ]
         },
         {
+          "name": "Bent-knee soleus pulse at wall",
+          "score": -1.0,
+          "reason_codes": [
+            "late_strength_block_window_mismatch"
+          ]
+        },
+        {
           "name": "Counter-Striker Split-Line Punch Isometric Hold",
           "score": 5.55,
           "reason_codes": [
@@ -2362,6 +2143,13 @@
           "score": -1.0,
           "reason_codes": [
             "late_strength_block_familiarity_required_late",
+            "late_strength_block_window_mismatch"
+          ]
+        },
+        {
+          "name": "Half-Kneeling Medicine-Ball Punch Throw",
+          "score": -1.0,
+          "reason_codes": [
             "late_strength_block_window_mismatch"
           ]
         },
@@ -2940,6 +2728,14 @@
           ]
         },
         {
+          "name": "Bent-knee soleus pulse at wall",
+          "score": -1.0,
+          "reason_codes": [
+            "late_strength_block_no_d4_to_d1",
+            "late_strength_block_window_mismatch"
+          ]
+        },
+        {
           "name": "Chin tuck nod",
           "score": -1.0,
           "reason_codes": [
@@ -2976,6 +2772,21 @@
           "score": -1.0,
           "reason_codes": [
             "late_strength_block_familiarity_required_late",
+            "late_strength_block_no_d4_to_d1",
+            "late_strength_block_window_mismatch"
+          ]
+        },
+        {
+          "name": "Half-Kneeling Medicine-Ball Punch Throw",
+          "score": -1.0,
+          "reason_codes": [
+            "late_strength_block_window_mismatch"
+          ]
+        },
+        {
+          "name": "Half-kneeling Pallof isometric",
+          "score": -1.0,
+          "reason_codes": [
             "late_strength_block_no_d4_to_d1",
             "late_strength_block_window_mismatch"
           ]
@@ -3683,6 +3494,22 @@
           ]
         },
         {
+          "name": "Bent-knee soleus pulse at wall",
+          "score": -1.0,
+          "reason_codes": [
+            "late_strength_block_d1_requires_d1_tags",
+            "late_strength_block_window_mismatch"
+          ]
+        },
+        {
+          "name": "Bird Dog Hold",
+          "score": -1.0,
+          "reason_codes": [
+            "late_strength_block_d1_requires_d1_tags",
+            "late_strength_block_window_mismatch"
+          ]
+        },
+        {
           "name": "Chin tuck nod",
           "score": -1.0,
           "reason_codes": [
@@ -3746,6 +3573,14 @@
           ]
         },
         {
+          "name": "Half-kneeling hip flexor with glute set",
+          "score": -1.0,
+          "reason_codes": [
+            "late_strength_block_d1_requires_d1_tags",
+            "late_strength_block_window_mismatch"
+          ]
+        },
+        {
           "name": "Hollow-Body Hold",
           "score": 0.1,
           "reason_codes": [
@@ -3759,6 +3594,14 @@
             "late_block_d1_forbidden_modality",
             "late_block_primer_only_strength_fulfillment",
             "late_block_support_only_anchor_fulfillment"
+          ]
+        },
+        {
+          "name": "Knee-to-wall dorsiflexion pulse",
+          "score": -1.0,
+          "reason_codes": [
+            "late_strength_block_d1_requires_d1_tags",
+            "late_strength_block_window_mismatch"
           ]
         },
         {
@@ -3917,6 +3760,14 @@
             "late_strength_block_d1_requires_d1_tags",
             "late_strength_block_familiarity_required_late",
             "late_strength_block_no_d7_to_d1",
+            "late_strength_block_window_mismatch"
+          ]
+        },
+        {
+          "name": "Tall-kneeling thoracic rotation reach",
+          "score": -1.0,
+          "reason_codes": [
+            "late_strength_block_d1_requires_d1_tags",
             "late_strength_block_window_mismatch"
           ]
         },

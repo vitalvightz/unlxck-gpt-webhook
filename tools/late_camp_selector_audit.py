@@ -48,6 +48,7 @@ AUDIT_FLAGS = {
     "training_frequency": 5,
     "days_available": 5,
     "random_seed": 7,
+    "score_jitter": False,
 }
 
 LATE_STRENGTH_AUDIT_OVERRIDES = {

@@ -30,6 +30,7 @@ import {
   redFlagView,
   selectBlockMetric,
   shouldShowRest,
+  weekLabel,
 } from "@/lib/structured-plan";
 import {
   dayCompletion,
@@ -486,22 +487,9 @@ export function CampDayCard({
   const warning = cleanText(card?.primary_warning);
   const nutrition = cleanText(card?.nutrition_summary);
   const weightCut = cleanText(card?.weight_cut_warning);
-  // Day-level mindset is surfaced once here, in the grouped day context, rather
-  // than repeated inside every session. It only shows when no session carries its
-  // own mindset, so a session-specific anchor still wins when present.
-  const sessionsHaveMindset = sessions.some(
-    (session) => getMindsetLines(session.mindset_anchor).length > 0,
-  );
-  const dayMindset = sessionsHaveMindset ? null : card?.mindset_anchor;
   const sessionlessDay = classifySessionlessDay(day);
   const lightTechnicalContext = sessionlessDay.kind === "light_combat";
-  const hasDayContext = Boolean(
-    warning ||
-      nutrition ||
-      weightCut ||
-      lightTechnicalContext ||
-      getMindsetLines(dayMindset).length > 0,
-  );
+  const hasDayContext = Boolean(warning || nutrition || weightCut || lightTechnicalContext);
   const completion = dayCompletion(day);
   const sessionCount = sessions.length;
 
@@ -547,7 +535,6 @@ export function CampDayCard({
             {warning ? <p className="sp-warning">{warning}</p> : null}
             {nutrition ? <p className="sp-today-note">{nutrition}</p> : null}
             {weightCut ? <p className="sp-warning">{weightCut}</p> : null}
-            <MindsetAnchorCard anchor={dayMindset} />
           </div>
         ) : null}
 
@@ -953,17 +940,10 @@ function WeekStrip({
   );
 }
 
-/** The selected week's countdown/dates, load proxy and completion. The phase is
- *  intentionally not repeated here: it is already visible in the week pill. The
- *  week goal renders once, as the descriptive subtitle under the short "Week N"
- *  heading. */
+/** The selected week's countdown/dates, load proxy and completion.
+ *  The week goal is already shown in the heading via weekLabel, and the phase is
+ *  already visible in the week pill, so this overview avoids repeating it. */
 function WeekOverview({ week }: { week: StructuredWeek }) {
-  // Keep the main heading short ("Week N"); the AI-written goal is a descriptive
-  // subtitle below, not the title, so it wraps in full instead of being truncated
-  // to a dangling "…".
-  const weekIndex = typeof week.week_index === "number" ? week.week_index : null;
-  const weekTitle = weekIndex != null ? `Week ${weekIndex}` : "Week";
-  const weekGoal = cleanText(week.week_goal);
   const load = weekLoadProxy(week);
   const completion = weekCompletion(week);
   const sessionSummary = weekSessionSummary(week);
@@ -1003,9 +983,8 @@ function WeekOverview({ week }: { week: StructuredWeek }) {
   return (
     <section className="sp-card cm-week-overview">
       <div className="cm-week-overview-head">
-        <p className="sp-eyebrow">This week</p>
-        <h4 className="sp-redflags-title">{weekTitle}</h4>
-        {weekGoal ? <p className="cm-week-goal">{weekGoal}</p> : null}
+        <p className="sp-eyebrow">Week overview</p>
+        <h4 className="sp-redflags-title">{weekLabel(week)}</h4>
       </div>
 
       {rows.length > 0 ? (

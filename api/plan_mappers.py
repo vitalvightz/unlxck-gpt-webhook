@@ -235,6 +235,13 @@ def _is_archived_plan(row: dict[str, Any] | None) -> bool:
     return str(row.get("status") or "").strip().lower() == "archived"
 
 
+def _is_admin_hidden_archived_plan(row: dict[str, Any] | None) -> bool:
+    if not _is_archived_plan(row):
+        return False
+    report = row.get("stage2_validator_report") if isinstance(row, dict) else {}
+    return isinstance(report, dict) and bool(report.get("admin_hidden_from_athlete"))
+
+
 def _is_triage_blocked_plan(row: dict[str, Any] | None) -> bool:
     if not isinstance(row, dict):
         return False
@@ -378,6 +385,8 @@ def _map_plan_detail(
     parsing_metadata = row.get("parsing_metadata") or fallback_parsing_metadata or {}
     display_plan_text = str(row.get("plan_text") or "")
     is_legacy_review_required = str(row.get("status") or "").strip().lower() == "review_required"
+    if not display_plan_text and _is_archived_plan(row) and not include_admin:
+        display_plan_text = str(row.get("final_plan_text") or "")
     if (
         not display_plan_text
         and is_legacy_review_required
