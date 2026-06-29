@@ -202,7 +202,7 @@ def _joined_note_text(entry: dict[str, Any]) -> str:
     return " ".join(values)
 
 
-_ROUNDS_PATTERN = re.compile(r"x\s*\d+\s*(?:rounds?|sets?)?\b|\b\d+\s*rounds?\b|\b\d+\s*x\s*\d+\b", re.IGNORECASE)
+_ROUNDS_PATTERN = re.compile(r"x\s*\d+\s*(?:rounds?|sets?)?\b|\b\d+\s*(?:rounds?|sets?)\b|\b\d+\s*x\s*\d+\b", re.IGNORECASE)
 SUSPICIOUS_ATP_PCR_RAW_SYSTEMS = {"atp-pcr", "atp_pcr", "anaerobic_alactic"}
 ALACTIC_REST_PROOF_FIELDS = ("rest_sec", "rest", "timing")
 
