@@ -240,10 +240,12 @@ def _has_support_focus(entry: dict[str, Any]) -> bool:
 
 
 def _has_technical_focus(entry: dict[str, Any]) -> bool:
-    tags = " ".join(str(tag).lower() for tag in entry.get("tags") or [])
+    raw_tags = entry.get('tags')
+    tags_list = raw_tags if isinstance(raw_tags, (list, tuple, set)) else []
+    tags = ' '.join(str(tag).lower() for tag in tags_list)
     text = _joined_note_text(entry).lower()
-    name = str(entry.get("name") or "").lower()
-    combined = f"{tags} {text} {name}"
+    name = str(entry.get('name') or '').lower()
+    combined = f'{tags} {text} {name}'
     return any(term in combined for term in ("technical", "rhythm", "skill", "cue", "precision", "flow"))
 
 
