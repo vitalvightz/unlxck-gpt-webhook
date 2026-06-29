@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 
 import {
   classifySessionlessDay,
+  getCoachLedContactView,
   cleanText,
   formatBlockLoad,
   formatMacroRange,
@@ -290,6 +291,28 @@ test("classifies coach-led / sparring / technical days from the headline", () =>
   assert.equal(sparring.title, "Hard sparring");
   assert.equal(sparring.tag, "Sparring");
   assert.equal(sparring.coachLed, true);
+});
+
+test("reads coach-led contact that coexists with app sessions", () => {
+  // No coach_led_contact field -> null (a plain session day shows no contact).
+  assert.equal(getCoachLedContactView({ today_card: { headline: "Lower strength" } }), null);
+  assert.equal(getCoachLedContactView(null), null);
+  assert.equal(getCoachLedContactView({ today_card: {} }), null);
+
+  // The dedicated field drives the contact view independently of the day headline
+  // (which a session day uses for its own session title).
+  const spar = getCoachLedContactView({
+    today_card: { headline: "Lower strength", coach_led_contact: "Coach-led sparring" },
+  });
+  assert.equal(spar?.kind, "sparring");
+  assert.equal(spar?.title, "Coach-led sparring");
+  assert.equal(spar?.tag, "Sparring");
+
+  const technical = getCoachLedContactView({
+    today_card: { coach_led_contact: "Coach-led boxing — technical only" },
+  });
+  assert.equal(technical?.kind, "technical");
+  assert.equal(technical?.tag, "Technical");
 });
 
 test("classifies a headline-less or rest day as a true rest day", () => {

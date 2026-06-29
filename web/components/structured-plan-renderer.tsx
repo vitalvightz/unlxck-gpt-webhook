@@ -11,6 +11,7 @@ import {
   getBlocks,
   getCoachingCues,
   getActiveNotesExcludingRedFlags,
+  getCoachLedContactView,
   getDays,
   getDisplayableRedFlags,
   getFallbackSafetyNotes,
@@ -60,6 +61,9 @@ const titleize = formatPlanLabel;
 
 const LIGHT_TECHNICAL_NOTE =
   "Light technical combat tag — no hard sparring here. Low-noise app work can stay on this day if prescribed.";
+
+const COACH_LED_CONTACT_NOTE =
+  "Coach-owned contact today — done with your coach alongside the app work below. Keep freshness the priority.";
 
 function blockCountLabel(count: number): string {
   return `${count} block${count === 1 ? "" : "s"}`;
@@ -424,6 +428,29 @@ function LightTechnicalDayContext({
   );
 }
 
+/**
+ * Coach-owned contact (declared / downgraded sparring) shown above the day's app
+ * sessions so the two coexist in one card instead of the sparring day silently
+ * disappearing behind the low-RPE app work scheduled on the same day.
+ */
+function CoachLedDayContext({
+  title,
+  tag,
+}: {
+  title: string;
+  tag: string | null;
+}) {
+  return (
+    <div className="cm-light-technical cm-coach-led-contact">
+      <div className="cm-light-technical-head">
+        {tag ? <span className="sp-tag sp-accent">{tag}</span> : null}
+        <p className="sp-today-headline">{title}</p>
+      </div>
+      <p className="sp-today-note">{COACH_LED_CONTACT_NOTE}</p>
+    </div>
+  );
+}
+
 /** Short weekday name from an ISO date string ("2026-06-19" -> "Fri"), or null. */
 function weekdayLabel(date: string | null): string | null {
   if (!date) {
@@ -489,7 +516,13 @@ export function CampDayCard({
   const weightCut = cleanText(card?.weight_cut_warning);
   const sessionlessDay = classifySessionlessDay(day);
   const lightTechnicalContext = sessionlessDay.kind === "light_combat";
-  const hasDayContext = Boolean(warning || nutrition || weightCut || lightTechnicalContext);
+  // Coach-owned contact (declared / downgraded sparring) that coexists with the
+  // day's app sessions — surfaced above them so the sparring day never vanishes
+  // behind the low-RPE app work scheduled on the same day.
+  const coachLedContact = getCoachLedContactView(day);
+  const hasDayContext = Boolean(
+    warning || nutrition || weightCut || lightTechnicalContext || coachLedContact,
+  );
   const completion = dayCompletion(day);
   const sessionCount = sessions.length;
 
@@ -531,6 +564,9 @@ export function CampDayCard({
           <div className="cm-day-context">
             {lightTechnicalContext ? (
               <LightTechnicalDayContext title={sessionlessDay.title} tag={sessionlessDay.tag} />
+            ) : null}
+            {coachLedContact ? (
+              <CoachLedDayContext title={coachLedContact.title} tag={coachLedContact.tag} />
             ) : null}
             {warning ? <p className="sp-warning">{warning}</p> : null}
             {nutrition ? <p className="sp-today-note">{nutrition}</p> : null}

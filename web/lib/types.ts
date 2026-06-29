@@ -364,6 +364,13 @@ export type StructuredTodayCard = {
   nutrition_summary?: string | null;
   weight_cut_warning?: string | null;
   mindset_anchor?: MindsetAnchor | null;
+  /**
+   * Coach-owned contact (declared / downgraded sparring) that coexists with the
+   * day's app sessions. Set deterministically when a contact day also carries app
+   * work; the renderer surfaces it as a coach-led context block above the
+   * session cards so the sparring day never disappears behind the app session.
+   */
+  coach_led_contact?: string | null;
 };
 
 export type StructuredDay = {

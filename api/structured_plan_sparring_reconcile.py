@@ -18,14 +18,19 @@ reconciles the converted plan against the deterministic schedule:
 
 * a sessionless day that the schedule marks as contact work but whose headline
   would *not* classify as coach-led is stamped with a canonical coach-led
-  headline, and
+  headline,
 * a declared contact day the converter dropped entirely is inserted into the
-  matching week as a sessionless coach-led card.
+  matching week as a sessionless coach-led card, and
+* a contact day that *also* carries real app work (a low-RPE app session and
+  coach-owned contact legitimately coexist on the same day) has the coach-owned
+  contact surfaced on a dedicated ``today_card.coach_led_contact`` field so it
+  renders as a context block above the session cards.
 
-Real app sessions are never overwritten — a day the converter gave actual S&C
-work is left alone (it already renders as a session card). The function mutates
-the plan dict in place and returns a list of human-readable change notes for
-admin/debug telemetry. It never raises: a malformed brief or plan is a no-op.
+Real app session headlines and blocks are never overwritten — a day the
+converter gave actual S&C work keeps its session cards; the coach-owned contact
+is added alongside, never in place of, that work. The function mutates the plan
+dict in place and returns a list of human-readable change notes for admin/debug
+telemetry. It never raises: a malformed brief or plan is a no-op.
 """
 from __future__ import annotations
 
@@ -340,10 +345,6 @@ def _reconcile(structured_plan: Any, planning_brief: Any) -> list[str]:
                 contact = contact_by_dday[dday]
             if contact is None:
                 continue
-            # A day the converter gave real app work already renders as a session
-            # card — never hide that behind a coach-led note.
-            if day.get("sessions"):
-                continue
             card = day.get("today_card")
             if not isinstance(card, dict):
                 card = {
@@ -352,6 +353,24 @@ def _reconcile(structured_plan: Any, planning_brief: Any) -> list[str]:
                 }
                 day["today_card"] = card
             current = str(card.get("headline") or "").strip()
+            # A day the converter gave real app work renders as session cards, but
+            # the coach-owned contact (a declared / downgraded sparring day) must
+            # still show on that day — a low-RPE app session and coach-owned contact
+            # legitimately coexist. Rather than overwrite the app headline (which the
+            # session card falls back to for its own title), surface the contact as a
+            # coexisting coach-led note on a dedicated field; the renderer shows it as
+            # a context block above the session cards.
+            if day.get("sessions"):
+                if str(card.get("coach_led_contact") or "").strip():
+                    continue
+                if current and _already_coach_led(current):
+                    continue
+                card["coach_led_contact"] = contact.headline
+                notes.append(
+                    f"surfaced coach-led contact alongside sessions on "
+                    f"{date or f'D-{dday}'} ({contact.headline!r})"
+                )
+                continue
             if current and _already_coach_led(current):
                 continue
             card["headline"] = contact.headline
