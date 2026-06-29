@@ -423,9 +423,13 @@ def style_conditioning_quarantine_reason_codes(
     if not _has_dose_metadata(entry):
         add("missing_dose_metadata")
 
-    if _contains_term(f"{entry.get('name') or ''} {entry.get('modality') or ''}", OVERSTYLED_NAME_TERMS):
+    name = entry.get("name")
+    modality = entry.get("modality")
+    notes = _joined_note_text(entry)
+
+    if _contains_term(" ".join(filter(None, (name, modality))), OVERSTYLED_NAME_TERMS):
         add("overstyled_name")
-    if _contains_term(f"{entry.get('name') or ''} {_joined_note_text(entry)}", DESTRUCTIVE_WORDING_TERMS):
+    if _contains_term(" ".join(filter(None, (name, notes))), DESTRUCTIVE_WORDING_TERMS):
         add("violent_wording")
     if _contains_term(_joined_note_text(entry), AGGRESSIVE_TEXT_TERMS):
         add("aggressive_notes")
