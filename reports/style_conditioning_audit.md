@@ -397,7 +397,7 @@ Entries: 123
 | Overhook Uppercut Drill | aerobic | SPP | 5 | low | low | low | low |  | False | False | False | True | keep | not_late_eligible |  | missing_late_windows |
 | Corner Mauling Circuit | aerobic | SPP | 4 | low | low | low | low |  | False | False | False | True | keep | not_late_eligible |  | missing_late_windows |
 | Slip-Clinch Reaction | aerobic | SPP | 5 | low | low | low | low |  | False | False | False | True | keep | not_late_eligible |  | missing_late_windows |
-| Reaction Jab Matrix | cognitive | SPP, TAPER | 7 | moderate | moderate | moderate | low |  | False | False | False | True | keep | not_late_eligible |  | missing_late_windows |
+## Grouped Review Queues
 | Clinch Auditory Triggers | cognitive | SPP, TAPER | 4 | zone 2 | low | low | low |  | False | False | False | True | keep | not_late_eligible |  | missing_late_windows |
 | Wrestling Chess | cognitive | SPP, TAPER | 4 | zone 2 | low | low | low |  | False | False | False | True | keep | not_late_eligible |  | missing_late_windows |
 | Kick Pattern Recall | cognitive | SPP, TAPER | 5 | low | moderate | moderate | low |  | False | False | False | True | keep | not_late_eligible |  | missing_late_windows |
