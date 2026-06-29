@@ -682,7 +682,7 @@ def is_late_fight_metadata_safe(
         or _has_dense_glycolytic_profile(item, normalized_system=system_state["normalized"])
     )
 
-    if unsafe_metadata & {"missing_name", "missing_tags", "missing_phases"}:
+    if unsafe_metadata & {"missing_tags", "missing_phases"}:
         _append_code(block_codes, "late_block_missing_metadata")
     if "missing_late_windows" in unsafe_metadata:
         _append_code(block_codes, "late_block_missing_late_windows")
