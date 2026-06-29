@@ -137,7 +137,7 @@ class TrainingContext:
 
 def allocate_sessions(training_frequency: int, phase: str = "GPP") -> dict:
     """Return weekly session counts based on frequency and phase."""
-    freq = max(1, min(int(training_frequency) + 1, 6))
+    freq = max(1, min(int(training_frequency), 6))
     phase = phase.upper()
 
     plan = {
@@ -159,17 +159,17 @@ def allocate_sessions(training_frequency: int, phase: str = "GPP") -> dict:
         4: {
             "GPP": {"strength": 2, "conditioning": 1, "recovery": 1},
             "SPP": {"strength": 1, "conditioning": 2, "recovery": 1},
-            "TAPER": {"strength": 1, "conditioning": 2, "recovery": 1},
+            "TAPER": {"strength": 1, "conditioning": 1, "recovery": 2},
         },
         5: {
             "GPP": {"strength": 2, "conditioning": 2, "recovery": 1},
             "SPP": {"strength": 2, "conditioning": 2, "recovery": 1},
-            "TAPER": {"strength": 1, "conditioning": 3, "recovery": 1},
+            "TAPER": {"strength": 1, "conditioning": 2, "recovery": 2},
         },
         6: {
             "GPP": {"strength": 2, "conditioning": 3, "recovery": 1},
             "SPP": {"strength": 2, "conditioning": 3, "recovery": 1},
-            "TAPER": {"strength": 1, "conditioning": 4, "recovery": 1},
+            "TAPER": {"strength": 1, "conditioning": 2, "recovery": 3},
         },
     }
 

@@ -1258,8 +1258,10 @@ def score_exercise(
         score += rehab_penalty
     reasons["penalties"] = rehab_penalty
 
-    reasons["randomness"] = 0.0
-    reasons["deterministic_scoring"] = True
+    jitter = rng.uniform(-NEAR_EQUAL_SCORE_BAND, NEAR_EQUAL_SCORE_BAND) if rng is not None else 0.0
+    score += jitter
+    reasons["randomness"] = round(jitter, 4)
+    reasons["deterministic_scoring"] = rng is None
     reasons["final_score"] = round(score, 4)
 
     return round(score, 4), reasons
@@ -1907,7 +1909,16 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
                 ex.get("notes", ""),
             ]
         )
+        pre_skip_late_eval = _evaluate_strength_late_window(
+            ex,
+            window=late_window,
+            days_until_fight=days_until_fight,
+            cut_bucket=cut_bucket,
+        )
+        _record_ambiguous_gap(pre_skip_late_eval.get("ambiguous_gap"))
         if is_banned_exercise(ex.get("name", ""), tags, fight_format, details):
+            if pre_skip_late_eval["blocked"]:
+                _record_late_block(ex, 0.0, pre_skip_late_eval["block_codes"])
             continue
         ex_equipment = normalize_equipment_list(ex.get("equipment", []))
         if legacy_taper_gate:
@@ -1916,6 +1927,8 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
             if not any(t in taper_allowed for t in tags_lower):
                 continue
         if phase not in ex.get("phases", []):
+            if pre_skip_late_eval["blocked"]:
+                _record_late_block(ex, 0.0, pre_skip_late_eval["block_codes"])
             continue
         if phase in {"SPP", "TAPER"} and _is_over_100_percent_isometric(ex):
             continue
@@ -2017,13 +2030,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
             score += restriction_penalty
             breakdown["penalties"] = round(breakdown.get("penalties", 0.0) + restriction_penalty, 2)
             breakdown["restriction_hits"] = len(matched_restrictions)
-        late_eval = _evaluate_strength_late_window(
-            ex,
-            window=late_window,
-            days_until_fight=days_until_fight,
-            cut_bucket=cut_bucket,
-        )
-        _record_ambiguous_gap(late_eval.get("ambiguous_gap"))
+        late_eval = pre_skip_late_eval
         if late_eval["blocked"]:
             _record_late_block(ex, score, late_eval["block_codes"])
             continue
@@ -2070,6 +2077,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
         }
         for ex, score, breakdown in weighted_exercises
     ]
+    scored_candidate_count = len(weighted_candidates)
     # Keep score-driven ordering primary while only allowing local fatigue-cost
     # reordering inside leader-anchored near-equal groups.
     weighted_exercises = [
@@ -3123,8 +3131,9 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
     strength_output = _run_real_poststep("format_strength_block", lambda: format_strength_block(phase, fatigue, base_exercises))
     def _build_capped_candidate_reservoir():
         capped_weighted = weighted_exercises[:500]
-        if len(weighted_exercises) > len(capped_weighted):
-            log_fail_safe_degrade(module="strength", phase=phase, reason="candidate_reservoir_capped", target=len(weighted_exercises), actual=len(capped_weighted))
+        reservoir_source_count = max(scored_candidate_count, len(exercise_bank))
+        if reservoir_source_count > 500:
+            log_fail_safe_degrade(module="strength", phase=phase, reason="candidate_reservoir_capped", target=reservoir_source_count, actual=500)
         return _build_strength_candidate_reservoir(capped_weighted)
     candidate_reservoir = _run_real_poststep("candidate_reservoir_build", _build_capped_candidate_reservoir)
     deduped_late_blocks = {

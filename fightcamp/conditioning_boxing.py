@@ -366,7 +366,7 @@ def _alactic_maintenance_fallback(phase: str) -> dict:
         "equipment": [],
         "required_equipment": [],
         "generic_fallback": True,
-        "phases": [phase],
+        "phases": [phase, "TAPER"] if phase == "SPP" else [phase],
         "tags": ["alactic", "speed", "cns_freshness", "low_impact"],
         "late_windows": ["d21_to_d14", "d13_to_d8"],
         "work_sec": 10,

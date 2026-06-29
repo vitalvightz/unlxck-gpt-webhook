@@ -42,6 +42,95 @@ def _insert_lead_summary(plan_text: str, lead_summary: str) -> str:
     return f"{title}\n\n{lead_summary}\n\n{rest}".rstrip()
 
 
+def _render_late_fight_stage1_countdown(planning_brief: dict) -> str | None:
+    spec = planning_brief.get("late_fight_plan_spec") if isinstance(planning_brief, dict) else None
+    if not isinstance(spec, dict):
+        return None
+    sequence = (
+        planning_brief.get("late_fight_session_sequence")
+        or planning_brief.get("session_sequence")
+        or planning_brief.get("countdown_sessions")
+        or spec.get("visible_session_sequence")
+        or spec.get("session_sequence")
+    )
+    if not isinstance(sequence, list) or not sequence:
+        return None
+
+    weekday_order = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
+    day_to_weekday = {}
+    countdown_weekday_map = spec.get("countdown_weekday_map")
+    if isinstance(countdown_weekday_map, dict):
+        day_to_weekday = {
+            str(label).strip().upper(): str(weekday).strip().lower()
+            for label, weekday in countdown_weekday_map.items()
+            if str(label).strip() and str(weekday).strip()
+        }
+
+    def _next_weekday(weekday: str) -> str:
+        normalized = weekday.strip().lower()
+        if normalized not in weekday_order:
+            return ""
+        return weekday_order[(weekday_order.index(normalized) + 1) % len(weekday_order)]
+
+    def _safe_cue_line(label: str) -> str:
+        try:
+            day = int(str(label).split("-", 1)[1])
+        except (IndexError, ValueError):
+            day = 0
+        if day in {5, 6}:
+            cue = "reactive shuffle repeats and explosive boxing burst intervals"
+        else:
+            cue = "mobility reset flow, breathing reset, and technical shadowboxing tempo"
+        return f"- Keep this as the selected low-risk countdown slot: {cue} only."
+
+    lines = ["# LATE-FIGHT COUNTDOWN", "", "## Countdown Sessions", ""]
+    rendered_labels: set[str] = set()
+    for role in sequence:
+        if not isinstance(role, dict):
+            continue
+        if role.get("render_mandatory") is False:
+            continue
+        label = str(role.get("scheduled_countdown_label") or role.get("countdown_label") or "").strip()
+        if not label or label in rendered_labels:
+            continue
+        rendered_labels.add(label)
+        weekday = str(
+            role.get("real_weekday")
+            or role.get("countdown_weekday")
+            or role.get("scheduled_day_hint")
+            or day_to_weekday.get(label.upper())
+            or ""
+        ).strip()
+        display_label = f"{label} ({weekday.title()})" if weekday else label
+        if label == "D-0":
+            lines.extend([f"### {display_label} - Fight Day Protocol", FIGHT_DAY_PROTOCOL_TEXT, ""])
+            continue
+        title = str(role.get("athlete_facing_label") or role.get("role_key") or "Countdown session").strip()
+        lines.extend(
+            [
+                f"### {display_label} - {title}",
+                _safe_cue_line(label),
+                "",
+            ]
+        )
+
+    if "D-0" not in rendered_labels:
+        latest_weekday = ""
+        latest_day = 99
+        for label in rendered_labels:
+            try:
+                day = int(label.split("-", 1)[1])
+            except (IndexError, ValueError):
+                continue
+            weekday = day_to_weekday.get(label.upper())
+            if weekday and day < latest_day:
+                latest_day = day
+                latest_weekday = weekday
+        fight_weekday = _next_weekday(latest_weekday) or "saturday"
+        lines.extend([f"### D-0 ({fight_weekday.title()}) - Fight Day Protocol", FIGHT_DAY_PROTOCOL_TEXT, ""])
+    return "\n".join(lines).strip()
+
+
 def _resolve_fight_weekday(context: PlanRuntimeContext) -> str | None:
     """Prefer the actual fight_date over runtime-clock weekday arithmetic.
 
@@ -457,6 +546,9 @@ def build_stage2_outputs(
 
     if isinstance(planning_brief, dict):
         planning_brief["stage1_selection_summary"] = stage1_selection_summary
+        late_fight_stage1_text = _render_late_fight_stage1_countdown(planning_brief)
+        if late_fight_stage1_text:
+            rendered.fight_plan_text = late_fight_stage1_text
     # Deterministic injury / weight-cut lead summary. The validator scans the
     # first plan lines for this context, so render it right after the title.
     lead_summary = render_lead_summary(planning_brief)

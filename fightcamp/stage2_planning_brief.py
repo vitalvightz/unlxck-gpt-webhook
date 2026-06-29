@@ -207,17 +207,38 @@ def _compress_short_camp_priorities(athlete_model: dict) -> dict:
     speed_weakness_signal = bool(weakness_tokens & _SPEED_SHARPNESS_TOKENS)
     footwork_goal_signal = bool(goal_tokens & _FOOTWORK_QUALITY_TOKENS)
     footwork_weakness_signal = bool(weakness_tokens & _FOOTWORK_QUALITY_TOKENS)
+    speed_signal = speed_goal_signal or speed_weakness_signal
+    footwork_signal = footwork_goal_signal or footwork_weakness_signal
+    technical_sharpness_signal = (
+        weakness_tokens & {"coordination", "coordination_proprioception", "proprioception", "balance", "timing", "rhythm", "boxing"}
+        or goal_tokens & {"skill_refinement", "striking"}
+    )
 
-    if speed_goal_signal or speed_weakness_signal:
+    if speed_signal and footwork_signal:
         speed_bucket = primary if (speed_goal_signal or primary_goal_tokens & _SPEED_SHARPNESS_TOKENS) else embedded
         add_unique(
             speed_bucket,
-            "speed / reaction sharpness",
+            "speed / footwork sharpness",
+            "speed_footwork_sharpness",
+            "Use one short full-rest alactic speed dose that also reinforces footwork quality.",
+        )
+    elif speed_signal:
+        speed_bucket = primary if (speed_goal_signal or primary_goal_tokens & _SPEED_SHARPNESS_TOKENS) else embedded
+        add_unique(
+            speed_bucket,
+            "speed / footwork sharpness",
             "speed_reaction_sharpness",
             "Use a short full-rest alactic speed dose for neural speed and reaction, not conditioning volume.",
         )
-
-    if footwork_goal_signal or footwork_weakness_signal:
+    elif footwork_signal and technical_sharpness_signal:
+        footwork_bucket = primary if (footwork_goal_signal or primary_goal_tokens & _FOOTWORK_QUALITY_TOKENS) else embedded
+        add_unique(
+            footwork_bucket,
+            "footwork / technical sharpness",
+            "footwork_technical_sharpness",
+            "Collapse footwork, timing, boxing quality, and skill refinement into one practical fight-week target.",
+        )
+    elif footwork_signal:
         footwork_bucket = primary if (footwork_goal_signal or primary_goal_tokens & _FOOTWORK_QUALITY_TOKENS) else embedded
         add_unique(
             footwork_bucket,
@@ -226,12 +247,7 @@ def _compress_short_camp_priorities(athlete_model: dict) -> dict:
             "Use named footwork, stance reset, pivot, angle-exit, and ring-movement work without treating it as pure speed.",
         )
 
-    technical_sharpness_signal = (
-        weakness_tokens & {"coordination", "coordination_proprioception", "proprioception", "balance", "timing", "rhythm", "boxing"}
-        or goal_tokens & {"skill_refinement", "striking"}
-    )
-
-    if technical_sharpness_signal:
+    if technical_sharpness_signal and not footwork_signal:
         add_unique(
             primary,
             "technical sharpness",
