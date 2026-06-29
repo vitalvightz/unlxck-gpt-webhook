@@ -171,6 +171,9 @@ def _grouped_rows(rows: list[dict[str, Any]]) -> dict[str, list[dict[str, Any]]]
         "Potential Late Technical Candidates": [
             row for row in rows if row["late_fight_action"] == "late_technical_candidate"
         ],
+        "Potential Late Conditioning Candidates": [
+            row for row in rows if row["late_fight_action"] == "late_conditioning_candidate"
+        ],
         "Manual Review": [row for row in rows if row["camp_action"] == "manual_review"],
     }
 
