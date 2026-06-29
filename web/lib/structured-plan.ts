@@ -251,7 +251,8 @@ function splitWeekByCalendarWeek(week: StructuredWeek): StructuredWeek[] {
       .filter((value): value is string => value !== null);
     return {
       ...week,
-      week_id: `${cleanText(week.week_id) || "week"}-cw${index + 1}`,
+      week_id: `${cleanText(week.week_id) || "week"}-${group.monday}-cw${index + 1}`,
+
       days: group.days,
       start_date: dates[0] ?? week.start_date,
       end_date: dates[dates.length - 1] ?? week.end_date,
