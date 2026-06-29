@@ -1,5 +1,9 @@
 from __future__ import annotations
 
+import json
+
+import pytest
+
 from fightcamp.bank_schema import D21_TO_D14, is_late_fight_metadata_safe
 from tools import audit_style_conditioning_bank as audit
 
@@ -38,6 +42,14 @@ def test_high_or_max_intensity_style_entry_is_flagged():
     assert "high_intensity" in row["quarantine_reason_codes"]
 
 
+def test_very_high_intensity_normalizes_spaces_and_hyphens():
+    spaced = audit.style_conditioning_audit_row(_style_entry(intensity="very high"))
+    hyphenated = audit.style_conditioning_audit_row(_style_entry(intensity="very-high"))
+
+    assert "high_intensity" in spaced["quarantine_reason_codes"]
+    assert "high_intensity" in hyphenated["quarantine_reason_codes"]
+
+
 def test_aggressive_movie_style_notes_are_flagged():
     row = audit.style_conditioning_audit_row(
         _style_entry(notes="Make this feel like a movie scene: no mercy, destroy the round.")
@@ -64,6 +76,32 @@ def test_report_includes_recommended_action():
 
     assert "recommended_action" in report
     assert "redose" in report
+
+
+def test_overstyled_name_only_recommends_rename():
+    row = audit.style_conditioning_audit_row(_style_entry(name="Warrior Reset"))
+
+    assert row["recommended_action"] == "rename"
+
+
+def test_overstyled_name_with_dose_risk_recommends_redose_before_rename():
+    row = audit.style_conditioning_audit_row(_style_entry(name="Warrior Reset", rpe=9))
+
+    assert row["recommended_action"] == "redose"
+
+
+def test_empty_tuple_dose_metadata_is_missing():
+    row = audit.style_conditioning_audit_row(_style_entry(duration=()))
+
+    assert "missing_dose_metadata" in row["quarantine_reason_codes"]
+
+
+def test_load_entries_rejects_malformed_entries(tmp_path):
+    path = tmp_path / "style_conditioning_bank.json"
+    path.write_text(json.dumps([_style_entry(), "not an object"]), encoding="utf-8")
+
+    with pytest.raises(ValueError, match="malformed indexes: 1"):
+        audit._load_entries(path)
 
 
 def test_quarantined_style_entry_cannot_pass_late_fight_eligibility():

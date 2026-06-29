@@ -27,7 +27,12 @@ def _load_entries(path: Path) -> list[dict[str, Any]]:
     data = json.loads(path.read_text(encoding="utf-8"))
     if not isinstance(data, list):
         raise ValueError(f"Expected {path} to contain a JSON list.")
-    return [entry for entry in data if isinstance(entry, dict)]
+    malformed_indexes = [index for index, entry in enumerate(data) if not isinstance(entry, dict)]
+    if malformed_indexes:
+        indexes = ", ".join(str(index) for index in malformed_indexes[:20])
+        extra = "" if len(malformed_indexes) <= 20 else f", and {len(malformed_indexes) - 20} more"
+        raise ValueError(f"Expected every {path} entry to be an object; malformed indexes: {indexes}{extra}.")
+    return data
 
 
 def _display_value(value: Any) -> str:
