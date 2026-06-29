@@ -2091,6 +2091,22 @@ def generate_conditioning_block(flags):
     late_window_blocked: list[dict] = []
     late_window_penalized: list[dict] = []
     late_window_ambiguous: dict[str, dict] = {}
+    style_conditioning_diagnostics: dict[str, object] = {
+        "total_style_bank_entries_loaded": len(style_conditioning_bank),
+        "entries_passing_phase": 0,
+        "entries_passing_target_style_match": 0,
+        "entries_blocked_by_sport_language_ban": 0,
+        "entries_blocked_by_equipment": 0,
+        "entries_blocked_by_alactic_structure": 0,
+        "entries_blocked_by_injury_restrictions": 0,
+        "entries_blocked_by_late_window": 0,
+        "entries_scored": 0,
+        "entries_selected": 0,
+        "style_target": 0,
+        "style_remaining_before_selection": 0,
+        "final_selected_style_conditioning_names": [],
+    }
+    style_conditioning_scored_names: set[str] = set()
 
     def _record_late_block(drill: dict, score: float, reason_codes: list[str]) -> None:
         if not active_late_window:
@@ -2336,7 +2352,35 @@ def generate_conditioning_block(flags):
     _run_conditioning_poststep("base_bank_score", _load_and_score_base_conditioning_bank)
 
     # ---- Style specific conditioning ----
-    target_style_tags = set(style_names + tech_style_tags)
+    target_style_tags = set(
+        normalize_tags(
+            [
+                *style_names,
+                *tech_style_tags,
+                *fight_format_tags,
+                selection_format,
+                *style_tags,
+            ]
+        )
+    )
+    style_conditioning_diagnostics["target_style_tags"] = sorted(target_style_tags)
+
+    def _style_bucket_tags(style_name: str) -> set[str]:
+        raw_name = str(style_name or "").strip()
+        if not raw_name:
+            return set()
+        spaced_name = raw_name.replace("_", " ")
+        return set(
+            normalize_tags(
+                [
+                    raw_name,
+                    spaced_name,
+                    *STYLE_TAG_MAP.get(raw_name, []),
+                    *STYLE_TAG_MAP.get(spaced_name, []),
+                ]
+            )
+        )
+
     def _load_and_score_style_conditioning_bank() -> None:
             nonlocal restriction_candidates, restriction_blocked
             for drill in style_conditioning_bank:
@@ -2367,6 +2411,8 @@ def generate_conditioning_block(flags):
                         d.get("equipment_note", ""),
                     ]
                 )
+                if phase.upper() in d.get("phases", []):
+                    style_conditioning_diagnostics["entries_passing_phase"] += 1
                 if is_banned_drill(
                     d.get("name", ""),
                     tags,
@@ -2375,11 +2421,15 @@ def generate_conditioning_block(flags):
                     style_names,
                     tech_style_tags,
                 ):
+                    style_conditioning_diagnostics["entries_blocked_by_sport_language_ban"] += 1
                     continue
                 if _violates_sport_language_blacklist(d, fight_format=selection_format):
+                    style_conditioning_diagnostics["entries_blocked_by_sport_language_ban"] += 1
                     continue
-                if not target_style_tags.intersection(tags):
+                matched_style_tokens = target_style_tags.intersection(tags)
+                if not matched_style_tokens:
                     continue
+                style_conditioning_diagnostics["entries_passing_target_style_match"] += 1
                 if phase.upper() not in d.get("phases", []):
                     continue
 
@@ -2389,12 +2439,14 @@ def generate_conditioning_block(flags):
                     and {"overhead", "rotational", "heavy_load"}.issubset(tags)
                     and not (shoulder_focus and fatigue == "low")
                 ):
+                    style_conditioning_diagnostics["entries_blocked_by_late_window"] += 1
                     continue
 
                 system = _cached_system(d, "style_conditioning_bank.json")
                 if system is None:
                     continue
                 if system == "alactic" and not _alactic_structure_ok(d):
+                    style_conditioning_diagnostics["entries_blocked_by_alactic_structure"] += 1
                     continue
 
                 # Apply same fatigue/CNS suppression rules
@@ -2407,6 +2459,7 @@ def generate_conditioning_block(flags):
                         and any(t in weak_tags or t in goal_tags for t in tags)
                     )
                 ):
+                    style_conditioning_diagnostics["entries_blocked_by_late_window"] += 1
                     continue
                 if (
                     phase.upper() == "TAPER"
@@ -2414,9 +2467,11 @@ def generate_conditioning_block(flags):
                     and any(t in TAPER_AVOID_TAGS for t in tags)
                     and not any(t in goal_tags or t in weak_tags for t in tags)
                 ):
+                    style_conditioning_diagnostics["entries_blocked_by_late_window"] += 1
                     continue
                 drill_equipment = _cached_equipment(d)
                 if drill_equipment and not set(drill_equipment).issubset(equipment_access_set):
+                    style_conditioning_diagnostics["entries_blocked_by_equipment"] += 1
                     continue
                 equip_bonus = 0.5 if drill_equipment else 0.0
 
@@ -2430,6 +2485,7 @@ def generate_conditioning_block(flags):
                 restriction_penalty = restriction_result.get("penalty", 0.0)
                 matched_restrictions = restriction_result.get("matched", [])
                 if not ignore_restrictions and not restriction_result.get("allowed", True):
+                    style_conditioning_diagnostics["entries_blocked_by_injury_restrictions"] += 1
                     restriction_blocked += 1
                     for match in matched_restrictions:
                         restriction_reason_counts[match.get("restriction", "generic_constraint")] += 1
@@ -2506,6 +2562,7 @@ def generate_conditioning_block(flags):
                 late_eval = _cached_late_eval(d, system, "style_conditioning_bank.json")
                 _record_ambiguous_gap(late_eval.get("ambiguous_gap"))
                 if late_eval["blocked"]:
+                    style_conditioning_diagnostics["entries_blocked_by_late_window"] += 1
                     _record_late_block(d, score, late_eval["block_codes"])
                     continue
                 if late_eval.get("penalty_codes"):
@@ -2518,6 +2575,7 @@ def generate_conditioning_block(flags):
                     and days_until_fight <= 7
                     and d.get("name") not in TAPER_CONDITIONING_SAFE_NAMES
                 ):
+                    style_conditioning_diagnostics["entries_blocked_by_late_window"] += 1
                     _record_late_block(d, score, ["late_taper_safe_whitelist"])
                     continue
                 reasons = {
@@ -2545,8 +2603,11 @@ def generate_conditioning_block(flags):
                     reasons["reason_codes"].append(f"preferred_exercise_name_match:+{PREFERRED_EXERCISE_NAME_BOOST:.1f}")
 
                 style_system_drills[system].append((d, score, reasons))
+                style_conditioning_diagnostics["entries_scored"] += 1
+                if d.get("name"):
+                    style_conditioning_scored_names.add(d["name"])
                 for st in style_names:
-                    if st in tags:
+                    if _style_bucket_tags(st).intersection(tags):
                         style_drills_by_style[st][system].append((d, score, reasons))
 
     _run_conditioning_poststep("style_bank_score", _load_and_score_style_conditioning_bank)
@@ -2743,8 +2804,45 @@ def generate_conditioning_block(flags):
                 return drill, reasons
         return None, None
 
+    style_candidate_count = sum(len(v) for v in style_system_drills.values())
     style_target = round(total_drills * STYLE_CONDITIONING_RATIO.get(phase.upper(), 0))
-    style_remaining = min(style_target, sum(len(v) for v in style_system_drills.values()))
+    normalized_focus_tokens = _normalize_focus_tokens([*goal_list, *weak_list, *goal_tags, *weak_tags])
+    conditioning_focus_requested = bool(
+        normalized_focus_tokens
+        & {
+            "conditioning",
+            "endurance",
+            "gas tank",
+            "gas_tank",
+            "work capacity",
+            "work_capacity",
+            "aerobic",
+            "glycolytic",
+        }
+    )
+    style_specific_relevant = bool(target_style_tags)
+    if (
+        phase.upper() == "GPP"
+        and num_conditioning_sessions > 0
+        and style_candidate_count > 0
+        and total_drills > 0
+        and (conditioning_focus_requested or style_specific_relevant)
+    ):
+        style_target = max(style_target, 1)
+    elif (
+        phase.upper() == "SPP"
+        and num_conditioning_sessions > 0
+        and style_candidate_count > 0
+        and total_drills > 0
+    ):
+        style_target = max(style_target, min(2, total_drills))
+    elif phase.upper() == "TAPER":
+        style_target = 0
+
+    style_remaining = min(style_target, style_candidate_count)
+    style_remaining_before_selection = style_remaining
+    style_conditioning_diagnostics["style_target"] = style_target
+    style_conditioning_diagnostics["style_remaining_before_selection"] = style_remaining_before_selection
     general_remaining = visible_drill_cap - style_remaining
 
     allow_glycolytic = False
@@ -3419,6 +3517,8 @@ def generate_conditioning_block(flags):
     grouped_drills = _run_conditioning_poststep("grouped_drills_build", _build_grouped_drills)
 
     def _record_injury_exclusion(drill: dict, decision: Decision) -> None:
+        if drill.get("name") in style_conditioning_scored_names:
+            style_conditioning_diagnostics["entries_blocked_by_injury_restrictions"] += 1
         reason = decision.reason if isinstance(decision.reason, dict) else {}
         excluded_by_injury.append({
             "name": drill.get("name", "<unnamed>"),
@@ -3716,6 +3816,14 @@ def generate_conditioning_block(flags):
     )
     grouped_drills = _resolved_grouped_drills(resolved_sessions)
     selected_drill_names = _resolved_conditioning_names(resolved_sessions)
+    final_style_conditioning_names = [
+        d.get("name")
+        for drills in grouped_drills.values()
+        for d in drills
+        if d.get("name") in style_conditioning_scored_names
+    ]
+    style_conditioning_diagnostics["entries_selected"] = len(final_style_conditioning_names)
+    style_conditioning_diagnostics["final_selected_style_conditioning_names"] = final_style_conditioning_names
 
     def _build_missing_systems() -> list[str]:
         missing = [
@@ -3842,6 +3950,7 @@ def generate_conditioning_block(flags):
             "reason_codes": list(bridge_rules.get("reason_codes", [])),
         } if bridge_rules else {},
     }
+    candidate_reservoir["__style_conditioning__"] = style_conditioning_diagnostics.copy()
 
     return output_lines, selected_drill_names, why_log, grouped_drills, missing_systems, candidate_reservoir
 # Map for tactical styles
