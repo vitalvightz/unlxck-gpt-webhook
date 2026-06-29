@@ -4,41 +4,42 @@ This report is diagnostic only. It does not rewrite, delete, rename, or redose b
 
 ## Summary
 
-- Entries audited: 372
-- Late-fight risk flagged: 372
+- Entries audited: 363
+- Late-fight risk flagged: 363
 
 ## Summary Counts
 
 ### Camp Actions
 
-- redose: 248
+- redose: 239
 - keep: 124
 
 ### Late-Fight Actions
 
-- late_blocked: 257
+- late_blocked: 248
 - not_late_eligible: 115
 
 ### Quarantine Reason Codes
 
-- missing_late_windows: 372
-- high_rpe: 234
-- high_intensity: 232
-- high_movement_cost: 161
-- high_lactate_load: 157
-- high_impact_cost: 53
+- missing_late_windows: 363
+- high_rpe: 225
+- high_intensity: 223
+- high_movement_cost: 155
+- high_lactate_load: 151
+- high_impact_cost: 51
+- questionable_atp_pcr_classification: 37
 
 ### Systems
 
-- glycolytic: 157
-- ATP-PCr: 114
+- glycolytic: 152
+- ATP-PCr: 110
 - aerobic: 88
 - cognitive: 10
 - recovery: 3
 
 ### Phases
 
-- SPP: 229
+- SPP: 220
 - GPP: 147
 - TAPER: 10
 
@@ -54,26 +55,22 @@ Entries: 0
 
 ### Redose Candidates
 
-Entries: 248
+Entries: 239
 
 | name | system | phases | rpe | intensity | lactate_load | movement_cost | impact_cost | late_windows | overstyled_name_flag | aggressive_notes_flag | dose_risk_flag | late_fight_risk_flag | camp_action | late_fight_action | manual_notes | quarantine_reason_codes |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | Concrete Hands Circuit | glycolytic | SPP | 9 | max | high | high | high |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, high_impact_cost, missing_late_windows |
-| Pavement Pounder | ATP-PCr | SPP | 9 | max | low | low | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows |
 | Sandbag Carry & Sprawl Complex | glycolytic | GPP, SPP | 8 | high | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
-| Ding-Dong Roundhouse | ATP-PCr | SPP | 9 | high | low | low | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows |
+| Ding-Dong Roundhouse | ATP-PCr | SPP | 9 | high | low | low | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows, questionable_atp_pcr_classification |
 | Infighting Jump & Push-Up Complex | glycolytic | GPP | 8 | high | high | high | high |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, high_impact_cost, missing_late_windows |
-| Brick Fist Protocol | ATP-PCr | SPP | 9 | max | low | low | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows |
+| Brick Fist Protocol | ATP-PCr | SPP | 9 | max | low | low | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows, questionable_atp_pcr_classification |
 | Sled Push & Punch Combo | glycolytic | SPP | 8 | high | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
-| Last Call Circuit | glycolytic | SPP | 9 | high | high | high | high |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, high_impact_cost, missing_late_windows |
 | Ropes Pressure Hook & Uppercut Complex | glycolytic | SPP | 8 | high | high | high | high |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, high_impact_cost, missing_late_windows |
-| Blackout Blitz | ATP-PCr | SPP | 9 | max | low | low | high |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_impact_cost, missing_late_windows |
-| Hammer & Tire Power Complex | ATP-PCr | SPP | 9 | max | low | low | high |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_impact_cost, missing_late_windows |
+| Blackout Blitz | ATP-PCr | SPP | 9 | max | low | low | high |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_impact_cost, missing_late_windows, questionable_atp_pcr_classification |
 | Backward Lunge & Swing Complex | glycolytic | GPP | 7 | moderate | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_lactate_load, high_movement_cost, missing_late_windows |
-| Meat Locker | glycolytic | SPP | 9 | max | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
 | Sprint, Burpee & Shadowbox Finisher | glycolytic | SPP | 8 | high | high | high | high |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, high_impact_cost, missing_late_windows |
-| Dive Bar Duelist | ATP-PCr | SPP | 9 | max | low | low | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows |
-| Liver Hunter | ATP-PCr | SPP | 9 | max | low | low | moderate |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows |
+| Dive Bar Duelist | ATP-PCr | SPP | 9 | max | low | low | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows, questionable_atp_pcr_classification |
+| Liver Hunter | ATP-PCr | SPP | 9 | max | low | low | moderate |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows, questionable_atp_pcr_classification |
 | Alleyway Ambush | glycolytic | SPP | 9 | max | high | high | high |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, high_impact_cost, missing_late_windows |
 | Bouncer's Revenge | glycolytic | SPP | 9 | max | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
 | Rooftop Rumble | glycolytic | SPP | 9 | max | high | high | high |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, high_impact_cost, missing_late_windows |
@@ -82,21 +79,18 @@ Entries: 248
 | Sled Push & KB Swing Complex | glycolytic | SPP | 8 | high | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
 | Ditch Digger | glycolytic | GPP | 9 | max | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
 | Sandbag Carry & Knee Complex | glycolytic | SPP | 8 | high | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
-| Piledriver Circuit | ATP-PCr | GPP | 9 | high | low | low | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows |
+| Piledriver Circuit | ATP-PCr | GPP | 9 | high | low | low | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows, questionable_atp_pcr_classification |
 | Concrete Clinch | glycolytic | SPP | 9 | high | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
 | Junkyard Judo | glycolytic | SPP | 9 | max | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
 | Weighted Plank & Stand-Up Complex | glycolytic | GPP | 8 | high | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
-| Barroom Brawl | ATP-PCr | SPP | 9 | max | low | low | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows |
+| Barroom Brawl | ATP-PCr | SPP | 9 | max | low | low | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows, questionable_atp_pcr_classification |
 | Med Ball Slam & Wall Drive Complex | glycolytic | SPP | 8 | high | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
-| Gutter Fight Finisher | glycolytic | SPP | 9 | max | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
 | Hammer & Tire Jump Complex | glycolytic | GPP | 8 | high | high | high | high |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, high_impact_cost, missing_late_windows |
-| Backfist Brawler | ATP-PCr | SPP | 9 | max | low | low | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows |
 | Alleyway Sprawl | glycolytic | SPP | 9 | max | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
 | Dogfight Drill | glycolytic | SPP | 9 | high | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
 | Headbutt Conditioning | aerobic | GPP | 7 | moderate | moderate | high | low |  | False | False | True | True | redose | late_blocked |  | high_movement_cost, missing_late_windows |
 | DB Uppercut & Med Ball Slam Complex | glycolytic | SPP | 8 | high | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
-| Hammer Strike & Sprawl Jump Complex | ATP-PCr | SPP | 9 | max | low | low | high |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_impact_cost, missing_late_windows |
-| Last Man Standing | glycolytic | SPP | 9 | max | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
+| Hammer Strike & Sprawl Jump Complex | glycolytic | SPP | 9 | max | low | low | high |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_impact_cost, missing_late_windows |
 | Sprint, Sprawl & Knee Conditioning Complex | glycolytic | SPP | 8 | high | high | high | high |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, high_impact_cost, missing_late_windows |
 | Clinch Hold & Knee Complex | glycolytic | SPP | 8 | high | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
 | Dirty Boxing Marathon | glycolytic | SPP | 9 | high | high | high | high |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, high_impact_cost, missing_late_windows |
@@ -112,7 +106,7 @@ Entries: 248
 | Smesh Prep Circuit | glycolytic | SPP | 9 | max | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
 | Dutch Clinch Drill | glycolytic | SPP | 9 | max | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
 | Sled Push & Knee Complex | glycolytic | SPP | 8 | high | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
-| Plumb Power Rotations | ATP-PCr | SPP | 9 | max | low | low | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows |
+| Plumb Power Rotations | ATP-PCr | SPP | 9 | max | low | low | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows, questionable_atp_pcr_classification |
 | Clinch & Sprawl Reaction Complex | glycolytic | SPP | 8 | high | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
 | Neck Harness Isometric Complex | aerobic | GPP | 7 | moderate | moderate | high | low |  | False | False | True | True | redose | late_blocked |  | high_movement_cost, missing_late_windows |
 | Band-Resisted Knee Complex | glycolytic | SPP | 8 | high | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
@@ -121,7 +115,7 @@ Entries: 248
 | Collar Tie Counter | glycolytic | SPP | 9 | high | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
 | Clinch Gas Tank | glycolytic | SPP | 9 | high | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
 | Band-Resisted Whizzer & Sprawl Complex | glycolytic | SPP | 8 | high | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
-| Clinch Finisher | ATP-PCr | SPP | 9 | max | low | low | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows |
+| Clinch Finisher | ATP-PCr | SPP | 9 | max | low | low | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows, questionable_atp_pcr_classification |
 | Pull Counter Matrix | ATP-PCr | SPP | 9 | max | low | low | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows |
 | Check Hook Crucible | glycolytic | SPP | 9 | high | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
 | Slip & Rip Protocol | ATP-PCr | SPP | 9 | max | low | low | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows |
@@ -135,41 +129,41 @@ Entries: 248
 | Slipping Symphony | glycolytic | SPP | 9 | high | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
 | Intercept & Counter Mitts | ATP-PCr | SPP | 9 | high | low | low | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows |
 | Counter Knee Matrix | glycolytic | SPP | 9 | high | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
-| Rolling Thunder | ATP-PCr | SPP | 9 | max | low | low | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows |
+| Rolling Thunder | ATP-PCr | SPP | 9 | max | low | low | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows, questionable_atp_pcr_classification |
 | Frame & Counter Knee Complex | glycolytic | SPP | 8 | high | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
 | Check Hook Matrix | glycolytic | SPP | 9 | max | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
-| Counter Uppercut Drill | ATP-PCr | SPP | 9 | max | low | low | high |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_impact_cost, missing_late_windows |
+| Counter Uppercut Drill | ATP-PCr | SPP | 9 | max | low | low | high |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_impact_cost, missing_late_windows, questionable_atp_pcr_classification |
 | Matrix Shuffle | aerobic | SPP | 9 | high | moderate | low | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows |
 | Phantom Step | glycolytic | SPP | 9 | high | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
-| Sniper’s Retreat | ATP-PCr | SPP | 9 | high | low | low | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows |
+| Sniper’s Retreat | ATP-PCr | SPP | 9 | high | low | low | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows, questionable_atp_pcr_classification |
 | Ring Generalship | glycolytic | SPP | 9 | high | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
-| Telescope Drill | ATP-PCr | SPP | 9 | max | low | low | high |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_impact_cost, missing_late_windows |
+| Telescope Drill | ATP-PCr | SPP | 9 | max | low | low | high |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_impact_cost, missing_late_windows, questionable_atp_pcr_classification |
 | Flicker’s Gauntlet | glycolytic | SPP | 9 | high | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
 | Outfighter’s Crucible | glycolytic | SPP | 9 | high | high | high | high |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, high_impact_cost, missing_late_windows |
-| Pendulum Step | ATP-PCr | SPP | 9 | max | low | low | high |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_impact_cost, missing_late_windows |
+| Pendulum Step | ATP-PCr | SPP | 9 | max | low | low | high |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_impact_cost, missing_late_windows, questionable_atp_pcr_classification |
 | Band-Resisted Jab Endurance Complex | glycolytic | SPP | 8 | high | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
-| Sniper’s Delight | ATP-PCr | SPP | 9 | max | low | low | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows |
+| Sniper’s Delight | ATP-PCr | SPP | 9 | max | low | low | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows, questionable_atp_pcr_classification |
 | Teep & Retreat | glycolytic | SPP | 9 | high | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
 | Flicker’s Endurance | glycolytic | SPP | 9 | high | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
 | Matador Drill | glycolytic | SPP | 9 | high | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
 | Range Master | glycolytic | SPP | 9 | high | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
 | Max-Speed Bag & Slide Complex | glycolytic | SPP | 8 | high | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
 | Band-Resisted Low Kick Power Complex | glycolytic | SPP | 8 | high | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
-| Head Hunter Protocol | ATP-PCr | SPP | 9 | max | low | low | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows |
+| Head Hunter Protocol | ATP-PCr | SPP | 9 | max | low | low | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows, questionable_atp_pcr_classification |
 | Teep Matrix | glycolytic | SPP | 9 | high | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
 | Dutch Destroyer | glycolytic | SPP | 9 | high | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
 | Question Mark Kick Drill | ATP-PCr | SPP | 7 | moderate | low | low | high |  | False | False | True | True | redose | late_blocked |  | high_impact_cost, missing_late_windows |
 | Elbow-Kick Synergy | glycolytic | SPP | 9 | high | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
 | Band-Resisted Calf Kick Complex | glycolytic | SPP | 8 | high | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
-| Spinning Back Kick | ATP-PCr | SPP | 9 | high | low | low | high |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_impact_cost, missing_late_windows |
+| Spinning Back Kick | ATP-PCr | SPP | 9 | high | low | low | high |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_impact_cost, missing_late_windows, questionable_atp_pcr_classification |
 | Switch Kick Storm | glycolytic | SPP | 9 | high | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
 | Body Kick Barrage | glycolytic | SPP | 9 | max | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
 | Step-Through Knee | glycolytic | SPP | 9 | high | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
-| Flying Knee Drill | ATP-PCr | SPP | 9 | max | low | low | high |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_impact_cost, missing_late_windows |
+| Flying Knee Drill | ATP-PCr | SPP | 9 | max | low | low | high |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_impact_cost, missing_late_windows, questionable_atp_pcr_classification |
 | Scoop Kick Counter | glycolytic | SPP | 9 | high | high | high | high |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, high_impact_cost, missing_late_windows |
 | Clinch Knee Endurance Complex | glycolytic | SPP | 8 | high | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
 | Stance Switch & Kick Complex | glycolytic | SPP | 8 | high | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
-| Jumping Roundhouse | ATP-PCr | SPP | 9 | max | low | low | high |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_impact_cost, missing_late_windows |
+| Jumping Roundhouse | ATP-PCr | SPP | 9 | max | low | low | high |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_impact_cost, missing_late_windows, questionable_atp_pcr_classification |
 | Side Kick Sniper | glycolytic | SPP | 9 | max | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
 | Low-High Deception | glycolytic | SPP | 9 | high | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
 | Teep-to-Knee | glycolytic | SPP | 9 | high | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
@@ -189,60 +183,58 @@ Entries: 248
 | Sledgehammer Showdown | ATP-PCr | SPP | 9 | max | low | low | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows |
 | Battle Rope & Bag Combo | glycolytic | SPP | 8 | high | high | high | high |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, high_impact_cost, missing_late_windows |
 | Trap Bar Tackle | glycolytic | SPP | 8 | zone 2 | high | high | high |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_lactate_load, high_movement_cost, high_impact_cost, missing_late_windows |
-| Tire Slam & Jam | ATP-PCr | SPP | 9 | max | low | low | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows |
+| Tire Slam & Jam | ATP-PCr | SPP | 9 | max | low | low | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows, questionable_atp_pcr_classification |
 | Clinch Grinder | glycolytic | SPP | 9 | max | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
-| Dirty Boxer’s Feast | ATP-PCr | SPP | 9 | max | low | low | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows |
+| Dirty Boxer’s Feast | ATP-PCr | SPP | 9 | max | low | low | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows, questionable_atp_pcr_classification |
 | Trap Bar Carry & Uppercut Complex | glycolytic | GPP | 8 | high | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
 | KB Swing & Marching Knee Complex | glycolytic | SPP | 8 | high | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
 | Wall & Maul | glycolytic | SPP | 9 | max | high | high | high |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, high_impact_cost, missing_late_windows |
-| Tire Dominator | ATP-PCr | SPP | 9 | max | low | low | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows |
+| Tire Dominator | ATP-PCr | SPP | 9 | max | low | low | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows, questionable_atp_pcr_classification |
 | Chain Gang | glycolytic | SPP | 9 | high | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
 | Knee Harvest | glycolytic | SPP | 9 | max | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
 | Pitbull Protocol | glycolytic | SPP | 9 | high | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
-| Crowbar Clinch | ATP-PCr | SPP | 9 | high | low | low | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows |
+| Crowbar Clinch | ATP-PCr | SPP | 9 | high | low | low | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows, questionable_atp_pcr_classification |
 | Smother Squad | glycolytic | SPP | 9 | high | high | high | high |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, high_impact_cost, missing_late_windows |
-| Trench Warfare | glycolytic | SPP | 9 | max | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
 | Dump Truck | ATP-PCr | SPP | 7 | moderate | low | low | high |  | False | False | True | True | redose | late_blocked |  | high_impact_cost, missing_late_windows |
 | Muay Dump | glycolytic | SPP | 9 | max | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
 | Octopus Guard | glycolytic | SPP | 9 | high | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
 | Brick Wall | glycolytic | GPP | 9 | high | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
-| Chain Reactor | ATP-PCr | SPP | 9 | high | low | low | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows |
+| Chain Reactor | ATP-PCr | SPP | 9 | high | low | low | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows, questionable_atp_pcr_classification |
 | Grim Reaper | glycolytic | SPP | 9 | max | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
-| Pressure Cooker Deluxe | glycolytic | SPP | 9 | high | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
 | Takedown to Backtake Scramble | ATP-PCr | SPP | 9 | max | low | low | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows |
 | Sprawl to Spin Drill | glycolytic | SPP | 9 | max | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
 | Cage Wrestle Chaos | glycolytic | SPP | 9 | high | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
-| Turtle to Guard Scramble | ATP-PCr | SPP | 9 | high | low | low | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows |
+| Turtle to Guard Scramble | ATP-PCr | SPP | 9 | high | low | low | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows, questionable_atp_pcr_classification |
 | Shot to Granby Roll | glycolytic | SPP | 9 | high | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
-| Stand-Up Sprint | ATP-PCr | SPP | 9 | max | low | low | high |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_impact_cost, missing_late_windows |
+| Stand-Up Sprint | ATP-PCr | SPP | 9 | max | low | low | high |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_impact_cost, missing_late_windows, questionable_atp_pcr_classification |
 | Submission to Sweep Chain | glycolytic | SPP | 9 | high | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
 | Clinch to Takedown Scramble | glycolytic | SPP | 9 | max | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
 | Strike to Takedown Scramble | glycolytic | SPP | 9 | high | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
-| Arm Drag to Backtake | ATP-PCr | SPP | 9 | high | low | low | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows |
+| Arm Drag to Backtake | ATP-PCr | SPP | 9 | high | low | low | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows, questionable_atp_pcr_classification |
 | Front Headlock Escapes | glycolytic | SPP | 9 | max | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
 | Cage to Center Scramble | glycolytic | SPP | 9 | high | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
-| Rolling Backtake Drill | ATP-PCr | SPP | 9 | high | low | low | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows |
+| Rolling Backtake Drill | ATP-PCr | SPP | 9 | high | low | low | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows, questionable_atp_pcr_classification |
 | Strike to Submission Chain | glycolytic | SPP | 9 | high | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
-| Granby to Single Leg | ATP-PCr | SPP | 9 | high | low | low | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows |
+| Granby to Single Leg | ATP-PCr | SPP | 9 | high | low | low | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows, questionable_atp_pcr_classification |
 | Clinch to Spin Drill | glycolytic | SPP | 9 | high | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
-| Guard Recovery Sprint | ATP-PCr | SPP | 9 | max | low | low | high |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_impact_cost, missing_late_windows |
+| Guard Recovery Sprint | ATP-PCr | SPP | 9 | max | low | low | high |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_impact_cost, missing_late_windows, questionable_atp_pcr_classification |
 | Standing Backtake Drill | glycolytic | SPP | 9 | high | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
 | Mat Shark | glycolytic | SPP | 9 | high | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
-| Stranglehold | ATP-PCr | SPP | 9 | max | low | low | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows |
+| Stranglehold | ATP-PCr | SPP | 9 | max | low | low | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows, questionable_atp_pcr_classification |
 | Limb Collector | glycolytic | SPP | 9 | high | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
-| Heel Hook Highway | ATP-PCr | SPP | 9 | max | low | low | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows |
+| Heel Hook Highway | ATP-PCr | SPP | 9 | max | low | low | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows, questionable_atp_pcr_classification |
 | Guillotine Gauntlet | glycolytic | SPP | 9 | high | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
 | D’Arce Depth Charge | glycolytic | SPP | 9 | high | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
-| Kneebar Khaos | ATP-PCr | SPP | 9 | high | low | low | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows |
+| Kneebar Khaos | ATP-PCr | SPP | 9 | high | low | low | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows, questionable_atp_pcr_classification |
 | North-South Chokehold | glycolytic | SPP | 9 | high | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
-| Peruvian Necktie Drill | ATP-PCr | SPP | 9 | high | low | low | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows |
-| Buggy Choke Crucible | ATP-PCr | SPP | 9 | high | low | low | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows |
+| Peruvian Necktie Drill | ATP-PCr | SPP | 9 | high | low | low | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows, questionable_atp_pcr_classification |
+| Buggy Choke Crucible | ATP-PCr | SPP | 9 | high | low | low | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows, questionable_atp_pcr_classification |
 | Electric Chair Sweep | glycolytic | SPP | 9 | high | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
 | Loop Choke Loop | glycolytic | SPP | 9 | high | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
 | Ezekiel Finishing Drill | glycolytic | SPP | 8 | high | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
-| Anaconda Ambush | ATP-PCr | SPP | 9 | high | low | low | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows |
+| Anaconda Ambush | ATP-PCr | SPP | 9 | high | low | low | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows, questionable_atp_pcr_classification |
 | Crucifix Collector | glycolytic | SPP | 9 | high | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
-| Toe Hold Torment | ATP-PCr | SPP | 9 | high | low | low | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows |
+| Toe Hold Torment | ATP-PCr | SPP | 9 | high | low | low | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows, questionable_atp_pcr_classification |
 | Clinch Knee Storm Intervals | glycolytic | GPP | 9 | high | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
 | Forward-Blast Heavy Bag Intervals | glycolytic | GPP | 9 | max | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
 | Wall-Wrestler Pummel Rounds | glycolytic | GPP | 9 | high | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
@@ -317,9 +309,9 @@ Entries: 124
 
 | name | system | phases | rpe | intensity | lactate_load | movement_cost | impact_cost | late_windows | overstyled_name_flag | aggressive_notes_flag | dose_risk_flag | late_fight_risk_flag | camp_action | late_fight_action | manual_notes | quarantine_reason_codes |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Iron Chin Builder | aerobic | GPP | 7 | moderate | moderate | low | low |  | False | False | False | True | keep | not_late_eligible |  | missing_late_windows |
+| Neck Bridge & Plate Rotation Complex | aerobic | GPP | 7 | moderate | moderate | low | low |  | False | False | False | True | keep | not_late_eligible |  | missing_late_windows |
 | Junkyard Dog | aerobic | GPP | 7 | moderate | moderate | low | low |  | False | False | False | True | keep | not_late_eligible |  | missing_late_windows |
-| Cement Shoes | aerobic | GPP | 7 | moderate | moderate | low | low |  | False | False | False | True | keep | not_late_eligible |  | missing_late_windows |
+| Backward Sled Drag & Slip Complex | aerobic | GPP | 7 | moderate | moderate | low | low |  | False | False | False | True | keep | not_late_eligible |  | missing_late_windows |
 | Knuckle Dragger | aerobic | GPP | 4 | zone 2 | low | low | low |  | False | False | False | True | keep | not_late_eligible |  | missing_late_windows |
 | Counter Sniper Drill | ATP-PCr | SPP | 7 | moderate | low | low | low |  | False | False | False | True | keep | not_late_eligible |  | missing_late_windows |
 | Counter Kick Matrix | ATP-PCr | SPP | 7 | moderate | low | low | low |  | False | False | False | True | keep | not_late_eligible |  | missing_late_windows |
@@ -329,7 +321,7 @@ Entries: 124
 | Sniper’s Load | ATP-PCr | GPP | 4 | zone 2 | low | low | low |  | False | False | False | True | keep | not_late_eligible |  | missing_late_windows |
 | Elusive Rhythms | aerobic | SPP | 7 | moderate | moderate | low | low |  | False | False | False | True | keep | not_late_eligible |  | missing_late_windows |
 | Sniper’s Grip | aerobic | GPP | 7 | moderate | moderate | low | low |  | False | False | False | True | keep | not_late_eligible |  | missing_late_windows |
-| Ax Kick Annihilation | ATP-PCr | SPP | 7 | moderate | low | low | low |  | False | False | False | True | keep | not_late_eligible |  | missing_late_windows |
+| Ax Kick Precision Drill | ATP-PCr | SPP | 7 | moderate | low | low | low |  | False | False | False | True | keep | not_late_eligible |  | missing_late_windows |
 | Cartwheel Kick | ATP-PCr | SPP | 7 | moderate | low | low | low |  | False | False | False | True | keep | not_late_eligible |  | missing_late_windows |
 | Hammer Kick | ATP-PCr | SPP | 7 | moderate | low | low | low |  | False | False | False | True | keep | not_late_eligible |  | missing_late_windows |
 | Crescent Kick Precision | ATP-PCr | SPP | 7 | moderate | low | low | low |  | False | False | False | True | keep | not_late_eligible |  | missing_late_windows |
@@ -458,29 +450,69 @@ Entries: 0
 
 Entries: 0
 
+### Suspicious ATP-PCr Classification
+
+Entries: 37
+
+| name | system | phases | rpe | intensity | lactate_load | movement_cost | impact_cost | late_windows | overstyled_name_flag | aggressive_notes_flag | dose_risk_flag | late_fight_risk_flag | camp_action | late_fight_action | manual_notes | quarantine_reason_codes |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Ding-Dong Roundhouse | ATP-PCr | SPP | 9 | high | low | low | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows, questionable_atp_pcr_classification |
+| Brick Fist Protocol | ATP-PCr | SPP | 9 | max | low | low | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows, questionable_atp_pcr_classification |
+| Blackout Blitz | ATP-PCr | SPP | 9 | max | low | low | high |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_impact_cost, missing_late_windows, questionable_atp_pcr_classification |
+| Dive Bar Duelist | ATP-PCr | SPP | 9 | max | low | low | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows, questionable_atp_pcr_classification |
+| Liver Hunter | ATP-PCr | SPP | 9 | max | low | low | moderate |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows, questionable_atp_pcr_classification |
+| Piledriver Circuit | ATP-PCr | GPP | 9 | high | low | low | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows, questionable_atp_pcr_classification |
+| Barroom Brawl | ATP-PCr | SPP | 9 | max | low | low | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows, questionable_atp_pcr_classification |
+| Plumb Power Rotations | ATP-PCr | SPP | 9 | max | low | low | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows, questionable_atp_pcr_classification |
+| Clinch Finisher | ATP-PCr | SPP | 9 | max | low | low | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows, questionable_atp_pcr_classification |
+| Rolling Thunder | ATP-PCr | SPP | 9 | max | low | low | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows, questionable_atp_pcr_classification |
+| Counter Uppercut Drill | ATP-PCr | SPP | 9 | max | low | low | high |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_impact_cost, missing_late_windows, questionable_atp_pcr_classification |
+| Sniper’s Retreat | ATP-PCr | SPP | 9 | high | low | low | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows, questionable_atp_pcr_classification |
+| Telescope Drill | ATP-PCr | SPP | 9 | max | low | low | high |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_impact_cost, missing_late_windows, questionable_atp_pcr_classification |
+| Pendulum Step | ATP-PCr | SPP | 9 | max | low | low | high |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_impact_cost, missing_late_windows, questionable_atp_pcr_classification |
+| Sniper’s Delight | ATP-PCr | SPP | 9 | max | low | low | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows, questionable_atp_pcr_classification |
+| Head Hunter Protocol | ATP-PCr | SPP | 9 | max | low | low | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows, questionable_atp_pcr_classification |
+| Spinning Back Kick | ATP-PCr | SPP | 9 | high | low | low | high |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_impact_cost, missing_late_windows, questionable_atp_pcr_classification |
+| Flying Knee Drill | ATP-PCr | SPP | 9 | max | low | low | high |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_impact_cost, missing_late_windows, questionable_atp_pcr_classification |
+| Jumping Roundhouse | ATP-PCr | SPP | 9 | max | low | low | high |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_impact_cost, missing_late_windows, questionable_atp_pcr_classification |
+| Tire Slam & Jam | ATP-PCr | SPP | 9 | max | low | low | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows, questionable_atp_pcr_classification |
+| Dirty Boxer’s Feast | ATP-PCr | SPP | 9 | max | low | low | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows, questionable_atp_pcr_classification |
+| Tire Dominator | ATP-PCr | SPP | 9 | max | low | low | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows, questionable_atp_pcr_classification |
+| Crowbar Clinch | ATP-PCr | SPP | 9 | high | low | low | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows, questionable_atp_pcr_classification |
+| Chain Reactor | ATP-PCr | SPP | 9 | high | low | low | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows, questionable_atp_pcr_classification |
+| Turtle to Guard Scramble | ATP-PCr | SPP | 9 | high | low | low | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows, questionable_atp_pcr_classification |
+| Stand-Up Sprint | ATP-PCr | SPP | 9 | max | low | low | high |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_impact_cost, missing_late_windows, questionable_atp_pcr_classification |
+| Arm Drag to Backtake | ATP-PCr | SPP | 9 | high | low | low | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows, questionable_atp_pcr_classification |
+| Rolling Backtake Drill | ATP-PCr | SPP | 9 | high | low | low | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows, questionable_atp_pcr_classification |
+| Granby to Single Leg | ATP-PCr | SPP | 9 | high | low | low | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows, questionable_atp_pcr_classification |
+| Guard Recovery Sprint | ATP-PCr | SPP | 9 | max | low | low | high |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_impact_cost, missing_late_windows, questionable_atp_pcr_classification |
+| Stranglehold | ATP-PCr | SPP | 9 | max | low | low | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows, questionable_atp_pcr_classification |
+| Heel Hook Highway | ATP-PCr | SPP | 9 | max | low | low | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows, questionable_atp_pcr_classification |
+| Kneebar Khaos | ATP-PCr | SPP | 9 | high | low | low | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows, questionable_atp_pcr_classification |
+| Peruvian Necktie Drill | ATP-PCr | SPP | 9 | high | low | low | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows, questionable_atp_pcr_classification |
+| Buggy Choke Crucible | ATP-PCr | SPP | 9 | high | low | low | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows, questionable_atp_pcr_classification |
+| Anaconda Ambush | ATP-PCr | SPP | 9 | high | low | low | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows, questionable_atp_pcr_classification |
+| Toe Hold Torment | ATP-PCr | SPP | 9 | high | low | low | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows, questionable_atp_pcr_classification |
+
 ## All Entries
 
 | name | system | phases | rpe | intensity | lactate_load | movement_cost | impact_cost | late_windows | overstyled_name_flag | aggressive_notes_flag | dose_risk_flag | late_fight_risk_flag | camp_action | late_fight_action | manual_notes | quarantine_reason_codes |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | Concrete Hands Circuit | glycolytic | SPP | 9 | max | high | high | high |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, high_impact_cost, missing_late_windows |
-| Pavement Pounder | ATP-PCr | SPP | 9 | max | low | low | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows |
 | Sandbag Carry & Sprawl Complex | glycolytic | GPP, SPP | 8 | high | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
-| Ding-Dong Roundhouse | ATP-PCr | SPP | 9 | high | low | low | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows |
+| Ding-Dong Roundhouse | ATP-PCr | SPP | 9 | high | low | low | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows, questionable_atp_pcr_classification |
 | Infighting Jump & Push-Up Complex | glycolytic | GPP | 8 | high | high | high | high |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, high_impact_cost, missing_late_windows |
-| Brick Fist Protocol | ATP-PCr | SPP | 9 | max | low | low | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows |
+| Brick Fist Protocol | ATP-PCr | SPP | 9 | max | low | low | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows, questionable_atp_pcr_classification |
 | Sled Push & Punch Combo | glycolytic | SPP | 8 | high | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
-| Last Call Circuit | glycolytic | SPP | 9 | high | high | high | high |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, high_impact_cost, missing_late_windows |
-| Iron Chin Builder | aerobic | GPP | 7 | moderate | moderate | low | low |  | False | False | False | True | keep | not_late_eligible |  | missing_late_windows |
+| Neck Bridge & Plate Rotation Complex | aerobic | GPP | 7 | moderate | moderate | low | low |  | False | False | False | True | keep | not_late_eligible |  | missing_late_windows |
 | Ropes Pressure Hook & Uppercut Complex | glycolytic | SPP | 8 | high | high | high | high |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, high_impact_cost, missing_late_windows |
-| Blackout Blitz | ATP-PCr | SPP | 9 | max | low | low | high |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_impact_cost, missing_late_windows |
-| Hammer & Tire Power Complex | ATP-PCr | SPP | 9 | max | low | low | high |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_impact_cost, missing_late_windows |
+| Blackout Blitz | ATP-PCr | SPP | 9 | max | low | low | high |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_impact_cost, missing_late_windows, questionable_atp_pcr_classification |
 | Backward Lunge & Swing Complex | glycolytic | GPP | 7 | moderate | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_lactate_load, high_movement_cost, missing_late_windows |
-| Meat Locker | glycolytic | SPP | 9 | max | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
 | Junkyard Dog | aerobic | GPP | 7 | moderate | moderate | low | low |  | False | False | False | True | keep | not_late_eligible |  | missing_late_windows |
 | Sprint, Burpee & Shadowbox Finisher | glycolytic | SPP | 8 | high | high | high | high |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, high_impact_cost, missing_late_windows |
-| Dive Bar Duelist | ATP-PCr | SPP | 9 | max | low | low | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows |
-| Cement Shoes | aerobic | GPP | 7 | moderate | moderate | low | low |  | False | False | False | True | keep | not_late_eligible |  | missing_late_windows |
-| Liver Hunter | ATP-PCr | SPP | 9 | max | low | low | moderate |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows |
+| Dive Bar Duelist | ATP-PCr | SPP | 9 | max | low | low | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows, questionable_atp_pcr_classification |
+| Backward Sled Drag & Slip Complex | aerobic | GPP | 7 | moderate | moderate | low | low |  | False | False | False | True | keep | not_late_eligible |  | missing_late_windows |
+| Liver Hunter | ATP-PCr | SPP | 9 | max | low | low | moderate |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows, questionable_atp_pcr_classification |
 | Alleyway Ambush | glycolytic | SPP | 9 | max | high | high | high |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, high_impact_cost, missing_late_windows |
 | Knuckle Dragger | aerobic | GPP | 4 | zone 2 | low | low | low |  | False | False | False | True | keep | not_late_eligible |  | missing_late_windows |
 | Bouncer's Revenge | glycolytic | SPP | 9 | max | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
@@ -490,21 +522,18 @@ Entries: 0
 | Sled Push & KB Swing Complex | glycolytic | SPP | 8 | high | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
 | Ditch Digger | glycolytic | GPP | 9 | max | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
 | Sandbag Carry & Knee Complex | glycolytic | SPP | 8 | high | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
-| Piledriver Circuit | ATP-PCr | GPP | 9 | high | low | low | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows |
+| Piledriver Circuit | ATP-PCr | GPP | 9 | high | low | low | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows, questionable_atp_pcr_classification |
 | Concrete Clinch | glycolytic | SPP | 9 | high | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
 | Junkyard Judo | glycolytic | SPP | 9 | max | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
 | Weighted Plank & Stand-Up Complex | glycolytic | GPP | 8 | high | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
-| Barroom Brawl | ATP-PCr | SPP | 9 | max | low | low | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows |
+| Barroom Brawl | ATP-PCr | SPP | 9 | max | low | low | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows, questionable_atp_pcr_classification |
 | Med Ball Slam & Wall Drive Complex | glycolytic | SPP | 8 | high | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
-| Gutter Fight Finisher | glycolytic | SPP | 9 | max | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
 | Hammer & Tire Jump Complex | glycolytic | GPP | 8 | high | high | high | high |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, high_impact_cost, missing_late_windows |
-| Backfist Brawler | ATP-PCr | SPP | 9 | max | low | low | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows |
 | Alleyway Sprawl | glycolytic | SPP | 9 | max | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
 | Dogfight Drill | glycolytic | SPP | 9 | high | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
 | Headbutt Conditioning | aerobic | GPP | 7 | moderate | moderate | high | low |  | False | False | True | True | redose | late_blocked |  | high_movement_cost, missing_late_windows |
 | DB Uppercut & Med Ball Slam Complex | glycolytic | SPP | 8 | high | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
-| Hammer Strike & Sprawl Jump Complex | ATP-PCr | SPP | 9 | max | low | low | high |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_impact_cost, missing_late_windows |
-| Last Man Standing | glycolytic | SPP | 9 | max | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
+| Hammer Strike & Sprawl Jump Complex | glycolytic | SPP | 9 | max | low | low | high |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_impact_cost, missing_late_windows |
 | Sprint, Sprawl & Knee Conditioning Complex | glycolytic | SPP | 8 | high | high | high | high |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, high_impact_cost, missing_late_windows |
 | Clinch Hold & Knee Complex | glycolytic | SPP | 8 | high | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
 | Dirty Boxing Marathon | glycolytic | SPP | 9 | high | high | high | high |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, high_impact_cost, missing_late_windows |
@@ -520,7 +549,7 @@ Entries: 0
 | Smesh Prep Circuit | glycolytic | SPP | 9 | max | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
 | Dutch Clinch Drill | glycolytic | SPP | 9 | max | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
 | Sled Push & Knee Complex | glycolytic | SPP | 8 | high | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
-| Plumb Power Rotations | ATP-PCr | SPP | 9 | max | low | low | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows |
+| Plumb Power Rotations | ATP-PCr | SPP | 9 | max | low | low | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows, questionable_atp_pcr_classification |
 | Clinch & Sprawl Reaction Complex | glycolytic | SPP | 8 | high | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
 | Neck Harness Isometric Complex | aerobic | GPP | 7 | moderate | moderate | high | low |  | False | False | True | True | redose | late_blocked |  | high_movement_cost, missing_late_windows |
 | Band-Resisted Knee Complex | glycolytic | SPP | 8 | high | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
@@ -529,7 +558,7 @@ Entries: 0
 | Collar Tie Counter | glycolytic | SPP | 9 | high | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
 | Clinch Gas Tank | glycolytic | SPP | 9 | high | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
 | Band-Resisted Whizzer & Sprawl Complex | glycolytic | SPP | 8 | high | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
-| Clinch Finisher | ATP-PCr | SPP | 9 | max | low | low | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows |
+| Clinch Finisher | ATP-PCr | SPP | 9 | max | low | low | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows, questionable_atp_pcr_classification |
 | Pull Counter Matrix | ATP-PCr | SPP | 9 | max | low | low | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows |
 | Check Hook Crucible | glycolytic | SPP | 9 | high | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
 | Slip & Rip Protocol | ATP-PCr | SPP | 9 | max | low | low | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows |
@@ -545,22 +574,22 @@ Entries: 0
 | Slipping Symphony | glycolytic | SPP | 9 | high | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
 | Intercept & Counter Mitts | ATP-PCr | SPP | 9 | high | low | low | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows |
 | Counter Knee Matrix | glycolytic | SPP | 9 | high | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
-| Rolling Thunder | ATP-PCr | SPP | 9 | max | low | low | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows |
+| Rolling Thunder | ATP-PCr | SPP | 9 | max | low | low | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows, questionable_atp_pcr_classification |
 | Frame & Counter Knee Complex | glycolytic | SPP | 8 | high | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
 | Sniper's Timing | ATP-PCr | SPP | 7 | moderate | low | low | low |  | False | False | False | True | keep | not_late_eligible |  | missing_late_windows |
 | Check Hook Matrix | glycolytic | SPP | 9 | max | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
-| Counter Uppercut Drill | ATP-PCr | SPP | 9 | max | low | low | high |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_impact_cost, missing_late_windows |
+| Counter Uppercut Drill | ATP-PCr | SPP | 9 | max | low | low | high |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_impact_cost, missing_late_windows, questionable_atp_pcr_classification |
 | Matrix Shuffle | aerobic | SPP | 9 | high | moderate | low | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows |
 | Phantom Step | glycolytic | SPP | 9 | high | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
-| Sniper’s Retreat | ATP-PCr | SPP | 9 | high | low | low | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows |
+| Sniper’s Retreat | ATP-PCr | SPP | 9 | high | low | low | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows, questionable_atp_pcr_classification |
 | Ring Generalship | glycolytic | SPP | 9 | high | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
-| Telescope Drill | ATP-PCr | SPP | 9 | max | low | low | high |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_impact_cost, missing_late_windows |
+| Telescope Drill | ATP-PCr | SPP | 9 | max | low | low | high |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_impact_cost, missing_late_windows, questionable_atp_pcr_classification |
 | Flicker’s Gauntlet | glycolytic | SPP | 9 | high | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
 | Outfighter’s Crucible | glycolytic | SPP | 9 | high | high | high | high |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, high_impact_cost, missing_late_windows |
 | Ghost Protocol | glycolytic | SPP | 4 | zone 2 | high | high | low |  | False | False | False | True | keep | late_blocked |  | high_lactate_load, high_movement_cost, missing_late_windows |
-| Pendulum Step | ATP-PCr | SPP | 9 | max | low | low | high |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_impact_cost, missing_late_windows |
+| Pendulum Step | ATP-PCr | SPP | 9 | max | low | low | high |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_impact_cost, missing_late_windows, questionable_atp_pcr_classification |
 | Band-Resisted Jab Endurance Complex | glycolytic | SPP | 8 | high | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
-| Sniper’s Delight | ATP-PCr | SPP | 9 | max | low | low | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows |
+| Sniper’s Delight | ATP-PCr | SPP | 9 | max | low | low | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows, questionable_atp_pcr_classification |
 | Octagon Geometry | aerobic | SPP | 7 | moderate | moderate | low | low |  | False | False | False | True | keep | not_late_eligible |  | missing_late_windows |
 | Teep & Retreat | glycolytic | SPP | 9 | high | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
 | Flicker’s Endurance | glycolytic | SPP | 9 | high | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
@@ -571,24 +600,24 @@ Entries: 0
 | Max-Speed Bag & Slide Complex | glycolytic | SPP | 8 | high | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
 | Sniper’s Grip | aerobic | GPP | 7 | moderate | moderate | low | low |  | False | False | False | True | keep | not_late_eligible |  | missing_late_windows |
 | Band-Resisted Low Kick Power Complex | glycolytic | SPP | 8 | high | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
-| Head Hunter Protocol | ATP-PCr | SPP | 9 | max | low | low | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows |
+| Head Hunter Protocol | ATP-PCr | SPP | 9 | max | low | low | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows, questionable_atp_pcr_classification |
 | Teep Matrix | glycolytic | SPP | 9 | high | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
 | Dutch Destroyer | glycolytic | SPP | 9 | high | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
 | Question Mark Kick Drill | ATP-PCr | SPP | 7 | moderate | low | low | high |  | False | False | True | True | redose | late_blocked |  | high_impact_cost, missing_late_windows |
 | Elbow-Kick Synergy | glycolytic | SPP | 9 | high | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
 | Band-Resisted Calf Kick Complex | glycolytic | SPP | 8 | high | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
-| Spinning Back Kick | ATP-PCr | SPP | 9 | high | low | low | high |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_impact_cost, missing_late_windows |
+| Spinning Back Kick | ATP-PCr | SPP | 9 | high | low | low | high |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_impact_cost, missing_late_windows, questionable_atp_pcr_classification |
 | Switch Kick Storm | glycolytic | SPP | 9 | high | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
-| Ax Kick Annihilation | ATP-PCr | SPP | 7 | moderate | low | low | low |  | False | False | False | True | keep | not_late_eligible |  | missing_late_windows |
+| Ax Kick Precision Drill | ATP-PCr | SPP | 7 | moderate | low | low | low |  | False | False | False | True | keep | not_late_eligible |  | missing_late_windows |
 | Body Kick Barrage | glycolytic | SPP | 9 | max | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
 | Step-Through Knee | glycolytic | SPP | 9 | high | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
-| Flying Knee Drill | ATP-PCr | SPP | 9 | max | low | low | high |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_impact_cost, missing_late_windows |
+| Flying Knee Drill | ATP-PCr | SPP | 9 | max | low | low | high |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_impact_cost, missing_late_windows, questionable_atp_pcr_classification |
 | Scoop Kick Counter | glycolytic | SPP | 9 | high | high | high | high |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, high_impact_cost, missing_late_windows |
 | Cartwheel Kick | ATP-PCr | SPP | 7 | moderate | low | low | low |  | False | False | False | True | keep | not_late_eligible |  | missing_late_windows |
 | Clinch Knee Endurance Complex | glycolytic | SPP | 8 | high | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
 | Stance Switch & Kick Complex | glycolytic | SPP | 8 | high | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
 | Hammer Kick | ATP-PCr | SPP | 7 | moderate | low | low | low |  | False | False | False | True | keep | not_late_eligible |  | missing_late_windows |
-| Jumping Roundhouse | ATP-PCr | SPP | 9 | max | low | low | high |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_impact_cost, missing_late_windows |
+| Jumping Roundhouse | ATP-PCr | SPP | 9 | max | low | low | high |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_impact_cost, missing_late_windows, questionable_atp_pcr_classification |
 | Side Kick Sniper | glycolytic | SPP | 9 | max | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
 | Crescent Kick Precision | ATP-PCr | SPP | 7 | moderate | low | low | low |  | False | False | False | True | keep | not_late_eligible |  | missing_late_windows |
 | Low-High Deception | glycolytic | SPP | 9 | high | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
@@ -613,69 +642,67 @@ Entries: 0
 | Battle Rope & Bag Combo | glycolytic | SPP | 8 | high | high | high | high |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, high_impact_cost, missing_late_windows |
 | Trap Bar Tackle | glycolytic | SPP | 8 | zone 2 | high | high | high |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_lactate_load, high_movement_cost, high_impact_cost, missing_late_windows |
 | Barbell Bully | aerobic | GPP | 6 | zone 2 | low | low | low |  | False | False | False | True | keep | not_late_eligible |  | missing_late_windows |
-| Tire Slam & Jam | ATP-PCr | SPP | 9 | max | low | low | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows |
+| Tire Slam & Jam | ATP-PCr | SPP | 9 | max | low | low | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows, questionable_atp_pcr_classification |
 | Sled Push Punishment | glycolytic | SPP | 7 | moderate | high | high | low |  | False | False | False | True | keep | late_blocked |  | high_lactate_load, high_movement_cost, missing_late_windows |
 | Clinch Grinder | glycolytic | SPP | 9 | max | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
 | Cage Bully | glycolytic | SPP | 7 | moderate | high | high | low |  | False | False | False | True | keep | late_blocked |  | high_lactate_load, high_movement_cost, missing_late_windows |
-| Dirty Boxer’s Feast | ATP-PCr | SPP | 9 | max | low | low | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows |
+| Dirty Boxer’s Feast | ATP-PCr | SPP | 9 | max | low | low | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows, questionable_atp_pcr_classification |
 | Trap Bar Carry & Uppercut Complex | glycolytic | GPP | 8 | high | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
 | KB Swing & Marching Knee Complex | glycolytic | SPP | 8 | high | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
 | Wall & Maul | glycolytic | SPP | 9 | max | high | high | high |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, high_impact_cost, missing_late_windows |
-| Tire Dominator | ATP-PCr | SPP | 9 | max | low | low | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows |
+| Tire Dominator | ATP-PCr | SPP | 9 | max | low | low | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows, questionable_atp_pcr_classification |
 | Chain Gang | glycolytic | SPP | 9 | high | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
 | Knee Harvest | glycolytic | SPP | 9 | max | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
 | Pitbull Protocol | glycolytic | SPP | 9 | high | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
-| Crowbar Clinch | ATP-PCr | SPP | 9 | high | low | low | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows |
+| Crowbar Clinch | ATP-PCr | SPP | 9 | high | low | low | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows, questionable_atp_pcr_classification |
 | Smother Squad | glycolytic | SPP | 9 | high | high | high | high |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, high_impact_cost, missing_late_windows |
-| Trench Warfare | glycolytic | SPP | 9 | max | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
 | Dump Truck | ATP-PCr | SPP | 7 | moderate | low | low | high |  | False | False | True | True | redose | late_blocked |  | high_impact_cost, missing_late_windows |
 | Muay Dump | glycolytic | SPP | 9 | max | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
 | Octopus Guard | glycolytic | SPP | 9 | high | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
 | Brick Wall | glycolytic | GPP | 9 | high | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
-| Chain Reactor | ATP-PCr | SPP | 9 | high | low | low | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows |
+| Chain Reactor | ATP-PCr | SPP | 9 | high | low | low | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows, questionable_atp_pcr_classification |
 | Grim Reaper | glycolytic | SPP | 9 | max | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
-| Pressure Cooker Deluxe | glycolytic | SPP | 9 | high | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
 | Takedown to Backtake Scramble | ATP-PCr | SPP | 9 | max | low | low | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows |
 | Sprawl to Spin Drill | glycolytic | SPP | 9 | max | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
 | Cage Wrestle Chaos | glycolytic | SPP | 9 | high | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
-| Turtle to Guard Scramble | ATP-PCr | SPP | 9 | high | low | low | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows |
+| Turtle to Guard Scramble | ATP-PCr | SPP | 9 | high | low | low | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows, questionable_atp_pcr_classification |
 | Shot to Granby Roll | glycolytic | SPP | 9 | high | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
-| Stand-Up Sprint | ATP-PCr | SPP | 9 | max | low | low | high |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_impact_cost, missing_late_windows |
+| Stand-Up Sprint | ATP-PCr | SPP | 9 | max | low | low | high |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_impact_cost, missing_late_windows, questionable_atp_pcr_classification |
 | Submission to Sweep Chain | glycolytic | SPP | 9 | high | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
 | Clinch to Takedown Scramble | glycolytic | SPP | 9 | max | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
 | Guard Pass to Backtake | ATP-PCr | SPP | 7 | moderate | low | low | low |  | False | False | False | True | keep | not_late_eligible |  | missing_late_windows |
 | Strike to Takedown Scramble | glycolytic | SPP | 9 | high | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
-| Arm Drag to Backtake | ATP-PCr | SPP | 9 | high | low | low | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows |
+| Arm Drag to Backtake | ATP-PCr | SPP | 9 | high | low | low | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows, questionable_atp_pcr_classification |
 | Front Headlock Escapes | glycolytic | SPP | 9 | max | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
 | Cage to Center Scramble | glycolytic | SPP | 9 | high | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
-| Rolling Backtake Drill | ATP-PCr | SPP | 9 | high | low | low | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows |
+| Rolling Backtake Drill | ATP-PCr | SPP | 9 | high | low | low | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows, questionable_atp_pcr_classification |
 | Strike to Submission Chain | glycolytic | SPP | 9 | high | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
-| Granby to Single Leg | ATP-PCr | SPP | 9 | high | low | low | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows |
+| Granby to Single Leg | ATP-PCr | SPP | 9 | high | low | low | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows, questionable_atp_pcr_classification |
 | Flying Sub Scramble | glycolytic | SPP | 7 | moderate | high | high | low |  | False | False | False | True | keep | late_blocked |  | high_lactate_load, high_movement_cost, missing_late_windows |
 | Clinch to Spin Drill | glycolytic | SPP | 9 | high | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
-| Guard Recovery Sprint | ATP-PCr | SPP | 9 | max | low | low | high |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_impact_cost, missing_late_windows |
+| Guard Recovery Sprint | ATP-PCr | SPP | 9 | max | low | low | high |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_impact_cost, missing_late_windows, questionable_atp_pcr_classification |
 | Standing Backtake Drill | glycolytic | SPP | 9 | high | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
 | Mat Shark | glycolytic | SPP | 9 | high | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
-| Stranglehold | ATP-PCr | SPP | 9 | max | low | low | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows |
+| Stranglehold | ATP-PCr | SPP | 9 | max | low | low | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows, questionable_atp_pcr_classification |
 | Limb Collector | glycolytic | SPP | 9 | high | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
-| Heel Hook Highway | ATP-PCr | SPP | 9 | max | low | low | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows |
+| Heel Hook Highway | ATP-PCr | SPP | 9 | max | low | low | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows, questionable_atp_pcr_classification |
 | Guillotine Gauntlet | glycolytic | SPP | 9 | high | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
 | Twister Protocol | glycolytic | SPP | 7 | moderate | high | high | low |  | False | False | False | True | keep | late_blocked |  | high_lactate_load, high_movement_cost, missing_late_windows |
 | D’Arce Depth Charge | glycolytic | SPP | 9 | high | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
 | Calf Slicer Pressure Drill | ATP-PCr | SPP | 7 | moderate | low | low | low |  | False | False | False | True | keep | not_late_eligible |  | missing_late_windows |
-| Kneebar Khaos | ATP-PCr | SPP | 9 | high | low | low | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows |
+| Kneebar Khaos | ATP-PCr | SPP | 9 | high | low | low | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows, questionable_atp_pcr_classification |
 | North-South Chokehold | glycolytic | SPP | 9 | high | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
-| Peruvian Necktie Drill | ATP-PCr | SPP | 9 | high | low | low | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows |
+| Peruvian Necktie Drill | ATP-PCr | SPP | 9 | high | low | low | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows, questionable_atp_pcr_classification |
 | Gogoplata Grinder | glycolytic | SPP | 7 | moderate | high | high | low |  | False | False | False | True | keep | late_blocked |  | high_lactate_load, high_movement_cost, missing_late_windows |
-| Buggy Choke Crucible | ATP-PCr | SPP | 9 | high | low | low | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows |
+| Buggy Choke Crucible | ATP-PCr | SPP | 9 | high | low | low | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows, questionable_atp_pcr_classification |
 | Electric Chair Sweep | glycolytic | SPP | 9 | high | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
 | Bicep Slicer Drill | ATP-PCr | SPP | 7 | moderate | low | low | low |  | False | False | False | True | keep | not_late_eligible |  | missing_late_windows |
 | Loop Choke Loop | glycolytic | SPP | 9 | high | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
 | Inverted Triangle Matrix | ATP-PCr | SPP | 7 | moderate | low | low | low |  | False | False | False | True | keep | not_late_eligible |  | missing_late_windows |
 | Ezekiel Finishing Drill | glycolytic | SPP | 8 | high | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
-| Anaconda Ambush | ATP-PCr | SPP | 9 | high | low | low | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows |
+| Anaconda Ambush | ATP-PCr | SPP | 9 | high | low | low | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows, questionable_atp_pcr_classification |
 | Crucifix Collector | glycolytic | SPP | 9 | high | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |
-| Toe Hold Torment | ATP-PCr | SPP | 9 | high | low | low | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows |
+| Toe Hold Torment | ATP-PCr | SPP | 9 | high | low | low | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, missing_late_windows, questionable_atp_pcr_classification |
 | Mir Lock Madness | glycolytic | SPP | 7 | moderate | high | high | low |  | False | False | False | True | keep | late_blocked |  | high_lactate_load, high_movement_cost, missing_late_windows |
 | Japanese Necktie Drill | ATP-PCr | SPP | 7 | moderate | low | low | low |  | False | False | False | True | keep | not_late_eligible |  | missing_late_windows |
 | Clinch Knee Storm Intervals | glycolytic | GPP | 9 | high | high | high | low |  | False | False | True | True | redose | late_blocked |  | high_rpe, high_intensity, high_lactate_load, high_movement_cost, missing_late_windows |

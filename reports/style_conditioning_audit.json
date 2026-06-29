@@ -1,32 +1,33 @@
 {
   "summary": {
-    "entries_audited": 372,
-    "late_fight_risk_flagged": 372,
+    "entries_audited": 363,
+    "late_fight_risk_flagged": 363,
     "camp_action_counts": {
-      "redose": 248,
+      "redose": 239,
       "keep": 124
     },
     "late_fight_action_counts": {
-      "late_blocked": 257,
+      "late_blocked": 248,
       "not_late_eligible": 115
     },
     "quarantine_reason_code_counts": {
-      "missing_late_windows": 372,
-      "high_rpe": 234,
-      "high_intensity": 232,
-      "high_movement_cost": 161,
-      "high_lactate_load": 157,
-      "high_impact_cost": 53
+      "missing_late_windows": 363,
+      "high_rpe": 225,
+      "high_intensity": 223,
+      "high_movement_cost": 155,
+      "high_lactate_load": 151,
+      "high_impact_cost": 51,
+      "questionable_atp_pcr_classification": 37
     },
     "system_counts": {
-      "glycolytic": 157,
-      "ATP-PCr": 114,
+      "glycolytic": 152,
+      "ATP-PCr": 110,
       "aerobic": 88,
       "cognitive": 10,
       "recovery": 3
     },
     "phase_counts": {
-      "SPP": 229,
+      "SPP": 220,
       "GPP": 147,
       "TAPER": 10
     }
@@ -56,31 +57,6 @@
         "high_lactate_load",
         "high_movement_cost",
         "high_impact_cost",
-        "missing_late_windows"
-      ],
-      "manual_notes": ""
-    },
-    {
-      "name": "Pavement Pounder",
-      "system": "ATP-PCr",
-      "phases": [
-        "SPP"
-      ],
-      "rpe": 9,
-      "intensity": "max",
-      "lactate_load": "low",
-      "movement_cost": "low",
-      "impact_cost": "low",
-      "late_windows": [],
-      "overstyled_name_flag": false,
-      "aggressive_notes_flag": false,
-      "dose_risk_flag": true,
-      "late_fight_risk_flag": true,
-      "camp_action": "redose",
-      "late_fight_action": "late_blocked",
-      "quarantine_reason_codes": [
-        "high_rpe",
-        "high_intensity",
         "missing_late_windows"
       ],
       "manual_notes": ""
@@ -134,7 +110,8 @@
       "quarantine_reason_codes": [
         "high_rpe",
         "high_intensity",
-        "missing_late_windows"
+        "missing_late_windows",
+        "questionable_atp_pcr_classification"
       ],
       "manual_notes": ""
     },
@@ -187,7 +164,8 @@
       "quarantine_reason_codes": [
         "high_rpe",
         "high_intensity",
-        "missing_late_windows"
+        "missing_late_windows",
+        "questionable_atp_pcr_classification"
       ],
       "manual_notes": ""
     },
@@ -219,35 +197,7 @@
       "manual_notes": ""
     },
     {
-      "name": "Last Call Circuit",
-      "system": "glycolytic",
-      "phases": [
-        "SPP"
-      ],
-      "rpe": 9,
-      "intensity": "high",
-      "lactate_load": "high",
-      "movement_cost": "high",
-      "impact_cost": "high",
-      "late_windows": [],
-      "overstyled_name_flag": false,
-      "aggressive_notes_flag": false,
-      "dose_risk_flag": true,
-      "late_fight_risk_flag": true,
-      "camp_action": "redose",
-      "late_fight_action": "late_blocked",
-      "quarantine_reason_codes": [
-        "high_rpe",
-        "high_intensity",
-        "high_lactate_load",
-        "high_movement_cost",
-        "high_impact_cost",
-        "missing_late_windows"
-      ],
-      "manual_notes": ""
-    },
-    {
-      "name": "Iron Chin Builder",
+      "name": "Neck Bridge & Plate Rotation Complex",
       "system": "aerobic",
       "phases": [
         "GPP"
@@ -319,33 +269,8 @@
         "high_rpe",
         "high_intensity",
         "high_impact_cost",
-        "missing_late_windows"
-      ],
-      "manual_notes": ""
-    },
-    {
-      "name": "Hammer & Tire Power Complex",
-      "system": "ATP-PCr",
-      "phases": [
-        "SPP"
-      ],
-      "rpe": 9,
-      "intensity": "max",
-      "lactate_load": "low",
-      "movement_cost": "low",
-      "impact_cost": "high",
-      "late_windows": [],
-      "overstyled_name_flag": false,
-      "aggressive_notes_flag": false,
-      "dose_risk_flag": true,
-      "late_fight_risk_flag": true,
-      "camp_action": "redose",
-      "late_fight_action": "late_blocked",
-      "quarantine_reason_codes": [
-        "high_rpe",
-        "high_intensity",
-        "high_impact_cost",
-        "missing_late_windows"
+        "missing_late_windows",
+        "questionable_atp_pcr_classification"
       ],
       "manual_notes": ""
     },
@@ -368,33 +293,6 @@
       "camp_action": "redose",
       "late_fight_action": "late_blocked",
       "quarantine_reason_codes": [
-        "high_lactate_load",
-        "high_movement_cost",
-        "missing_late_windows"
-      ],
-      "manual_notes": ""
-    },
-    {
-      "name": "Meat Locker",
-      "system": "glycolytic",
-      "phases": [
-        "SPP"
-      ],
-      "rpe": 9,
-      "intensity": "max",
-      "lactate_load": "high",
-      "movement_cost": "high",
-      "impact_cost": "low",
-      "late_windows": [],
-      "overstyled_name_flag": false,
-      "aggressive_notes_flag": false,
-      "dose_risk_flag": true,
-      "late_fight_risk_flag": true,
-      "camp_action": "redose",
-      "late_fight_action": "late_blocked",
-      "quarantine_reason_codes": [
-        "high_rpe",
-        "high_intensity",
         "high_lactate_load",
         "high_movement_cost",
         "missing_late_windows"
@@ -473,12 +371,13 @@
       "quarantine_reason_codes": [
         "high_rpe",
         "high_intensity",
-        "missing_late_windows"
+        "missing_late_windows",
+        "questionable_atp_pcr_classification"
       ],
       "manual_notes": ""
     },
     {
-      "name": "Cement Shoes",
+      "name": "Backward Sled Drag & Slip Complex",
       "system": "aerobic",
       "phases": [
         "GPP"
@@ -521,7 +420,8 @@
       "quarantine_reason_codes": [
         "high_rpe",
         "high_intensity",
-        "missing_late_windows"
+        "missing_late_windows",
+        "questionable_atp_pcr_classification"
       ],
       "manual_notes": ""
     },
@@ -784,7 +684,8 @@
       "quarantine_reason_codes": [
         "high_rpe",
         "high_intensity",
-        "missing_late_windows"
+        "missing_late_windows",
+        "questionable_atp_pcr_classification"
       ],
       "manual_notes": ""
     },
@@ -890,7 +791,8 @@
       "quarantine_reason_codes": [
         "high_rpe",
         "high_intensity",
-        "missing_late_windows"
+        "missing_late_windows",
+        "questionable_atp_pcr_classification"
       ],
       "manual_notes": ""
     },
@@ -902,33 +804,6 @@
       ],
       "rpe": 8,
       "intensity": "high",
-      "lactate_load": "high",
-      "movement_cost": "high",
-      "impact_cost": "low",
-      "late_windows": [],
-      "overstyled_name_flag": false,
-      "aggressive_notes_flag": false,
-      "dose_risk_flag": true,
-      "late_fight_risk_flag": true,
-      "camp_action": "redose",
-      "late_fight_action": "late_blocked",
-      "quarantine_reason_codes": [
-        "high_rpe",
-        "high_intensity",
-        "high_lactate_load",
-        "high_movement_cost",
-        "missing_late_windows"
-      ],
-      "manual_notes": ""
-    },
-    {
-      "name": "Gutter Fight Finisher",
-      "system": "glycolytic",
-      "phases": [
-        "SPP"
-      ],
-      "rpe": 9,
-      "intensity": "max",
       "lactate_load": "high",
       "movement_cost": "high",
       "impact_cost": "low",
@@ -972,31 +847,6 @@
         "high_lactate_load",
         "high_movement_cost",
         "high_impact_cost",
-        "missing_late_windows"
-      ],
-      "manual_notes": ""
-    },
-    {
-      "name": "Backfist Brawler",
-      "system": "ATP-PCr",
-      "phases": [
-        "SPP"
-      ],
-      "rpe": 9,
-      "intensity": "max",
-      "lactate_load": "low",
-      "movement_cost": "low",
-      "impact_cost": "low",
-      "late_windows": [],
-      "overstyled_name_flag": false,
-      "aggressive_notes_flag": false,
-      "dose_risk_flag": true,
-      "late_fight_risk_flag": true,
-      "camp_action": "redose",
-      "late_fight_action": "late_blocked",
-      "quarantine_reason_codes": [
-        "high_rpe",
-        "high_intensity",
         "missing_late_windows"
       ],
       "manual_notes": ""
@@ -1108,7 +958,7 @@
     },
     {
       "name": "Hammer Strike & Sprawl Jump Complex",
-      "system": "ATP-PCr",
+      "system": "glycolytic",
       "phases": [
         "SPP"
       ],
@@ -1128,33 +978,6 @@
         "high_rpe",
         "high_intensity",
         "high_impact_cost",
-        "missing_late_windows"
-      ],
-      "manual_notes": ""
-    },
-    {
-      "name": "Last Man Standing",
-      "system": "glycolytic",
-      "phases": [
-        "SPP"
-      ],
-      "rpe": 9,
-      "intensity": "max",
-      "lactate_load": "high",
-      "movement_cost": "high",
-      "impact_cost": "low",
-      "late_windows": [],
-      "overstyled_name_flag": false,
-      "aggressive_notes_flag": false,
-      "dose_risk_flag": true,
-      "late_fight_risk_flag": true,
-      "camp_action": "redose",
-      "late_fight_action": "late_blocked",
-      "quarantine_reason_codes": [
-        "high_rpe",
-        "high_intensity",
-        "high_lactate_load",
-        "high_movement_cost",
         "missing_late_windows"
       ],
       "manual_notes": ""
@@ -1586,7 +1409,8 @@
       "quarantine_reason_codes": [
         "high_rpe",
         "high_intensity",
-        "missing_late_windows"
+        "missing_late_windows",
+        "questionable_atp_pcr_classification"
       ],
       "manual_notes": ""
     },
@@ -1824,7 +1648,8 @@
       "quarantine_reason_codes": [
         "high_rpe",
         "high_intensity",
-        "missing_late_windows"
+        "missing_late_windows",
+        "questionable_atp_pcr_classification"
       ],
       "manual_notes": ""
     },
@@ -2239,7 +2064,8 @@
       "quarantine_reason_codes": [
         "high_rpe",
         "high_intensity",
-        "missing_late_windows"
+        "missing_late_windows",
+        "questionable_atp_pcr_classification"
       ],
       "manual_notes": ""
     },
@@ -2342,7 +2168,8 @@
         "high_rpe",
         "high_intensity",
         "high_impact_cost",
-        "missing_late_windows"
+        "missing_late_windows",
+        "questionable_atp_pcr_classification"
       ],
       "manual_notes": ""
     },
@@ -2419,7 +2246,8 @@
       "quarantine_reason_codes": [
         "high_rpe",
         "high_intensity",
-        "missing_late_windows"
+        "missing_late_windows",
+        "questionable_atp_pcr_classification"
       ],
       "manual_notes": ""
     },
@@ -2472,7 +2300,8 @@
         "high_rpe",
         "high_intensity",
         "high_impact_cost",
-        "missing_late_windows"
+        "missing_late_windows",
+        "questionable_atp_pcr_classification"
       ],
       "manual_notes": ""
     },
@@ -2578,7 +2407,8 @@
         "high_rpe",
         "high_intensity",
         "high_impact_cost",
-        "missing_late_windows"
+        "missing_late_windows",
+        "questionable_atp_pcr_classification"
       ],
       "manual_notes": ""
     },
@@ -2630,7 +2460,8 @@
       "quarantine_reason_codes": [
         "high_rpe",
         "high_intensity",
-        "missing_late_windows"
+        "missing_late_windows",
+        "questionable_atp_pcr_classification"
       ],
       "manual_notes": ""
     },
@@ -2909,7 +2740,8 @@
       "quarantine_reason_codes": [
         "high_rpe",
         "high_intensity",
-        "missing_late_windows"
+        "missing_late_windows",
+        "questionable_atp_pcr_classification"
       ],
       "manual_notes": ""
     },
@@ -3067,7 +2899,8 @@
         "high_rpe",
         "high_intensity",
         "high_impact_cost",
-        "missing_late_windows"
+        "missing_late_windows",
+        "questionable_atp_pcr_classification"
       ],
       "manual_notes": ""
     },
@@ -3099,7 +2932,7 @@
       "manual_notes": ""
     },
     {
-      "name": "Ax Kick Annihilation",
+      "name": "Ax Kick Precision Drill",
       "system": "ATP-PCr",
       "phases": [
         "SPP"
@@ -3197,7 +3030,8 @@
         "high_rpe",
         "high_intensity",
         "high_impact_cost",
-        "missing_late_windows"
+        "missing_late_windows",
+        "questionable_atp_pcr_classification"
       ],
       "manual_notes": ""
     },
@@ -3351,7 +3185,8 @@
         "high_rpe",
         "high_intensity",
         "high_impact_cost",
-        "missing_late_windows"
+        "missing_late_windows",
+        "questionable_atp_pcr_classification"
       ],
       "manual_notes": ""
     },
@@ -4007,7 +3842,8 @@
       "quarantine_reason_codes": [
         "high_rpe",
         "high_intensity",
-        "missing_late_windows"
+        "missing_late_windows",
+        "questionable_atp_pcr_classification"
       ],
       "manual_notes": ""
     },
@@ -4109,7 +3945,8 @@
       "quarantine_reason_codes": [
         "high_rpe",
         "high_intensity",
-        "missing_late_windows"
+        "missing_late_windows",
+        "questionable_atp_pcr_classification"
       ],
       "manual_notes": ""
     },
@@ -4216,7 +4053,8 @@
       "quarantine_reason_codes": [
         "high_rpe",
         "high_intensity",
-        "missing_late_windows"
+        "missing_late_windows",
+        "questionable_atp_pcr_classification"
       ],
       "manual_notes": ""
     },
@@ -4322,7 +4160,8 @@
       "quarantine_reason_codes": [
         "high_rpe",
         "high_intensity",
-        "missing_late_windows"
+        "missing_late_windows",
+        "questionable_atp_pcr_classification"
       ],
       "manual_notes": ""
     },
@@ -4350,33 +4189,6 @@
         "high_lactate_load",
         "high_movement_cost",
         "high_impact_cost",
-        "missing_late_windows"
-      ],
-      "manual_notes": ""
-    },
-    {
-      "name": "Trench Warfare",
-      "system": "glycolytic",
-      "phases": [
-        "SPP"
-      ],
-      "rpe": 9,
-      "intensity": "max",
-      "lactate_load": "high",
-      "movement_cost": "high",
-      "impact_cost": "low",
-      "late_windows": [],
-      "overstyled_name_flag": false,
-      "aggressive_notes_flag": false,
-      "dose_risk_flag": true,
-      "late_fight_risk_flag": true,
-      "camp_action": "redose",
-      "late_fight_action": "late_blocked",
-      "quarantine_reason_codes": [
-        "high_rpe",
-        "high_intensity",
-        "high_lactate_load",
-        "high_movement_cost",
         "missing_late_windows"
       ],
       "manual_notes": ""
@@ -4507,7 +4319,8 @@
       "quarantine_reason_codes": [
         "high_rpe",
         "high_intensity",
-        "missing_late_windows"
+        "missing_late_windows",
+        "questionable_atp_pcr_classification"
       ],
       "manual_notes": ""
     },
@@ -4519,33 +4332,6 @@
       ],
       "rpe": 9,
       "intensity": "max",
-      "lactate_load": "high",
-      "movement_cost": "high",
-      "impact_cost": "low",
-      "late_windows": [],
-      "overstyled_name_flag": false,
-      "aggressive_notes_flag": false,
-      "dose_risk_flag": true,
-      "late_fight_risk_flag": true,
-      "camp_action": "redose",
-      "late_fight_action": "late_blocked",
-      "quarantine_reason_codes": [
-        "high_rpe",
-        "high_intensity",
-        "high_lactate_load",
-        "high_movement_cost",
-        "missing_late_windows"
-      ],
-      "manual_notes": ""
-    },
-    {
-      "name": "Pressure Cooker Deluxe",
-      "system": "glycolytic",
-      "phases": [
-        "SPP"
-      ],
-      "rpe": 9,
-      "intensity": "high",
       "lactate_load": "high",
       "movement_cost": "high",
       "impact_cost": "low",
@@ -4665,7 +4451,8 @@
       "quarantine_reason_codes": [
         "high_rpe",
         "high_intensity",
-        "missing_late_windows"
+        "missing_late_windows",
+        "questionable_atp_pcr_classification"
       ],
       "manual_notes": ""
     },
@@ -4718,7 +4505,8 @@
         "high_rpe",
         "high_intensity",
         "high_impact_cost",
-        "missing_late_windows"
+        "missing_late_windows",
+        "questionable_atp_pcr_classification"
       ],
       "manual_notes": ""
     },
@@ -4847,7 +4635,8 @@
       "quarantine_reason_codes": [
         "high_rpe",
         "high_intensity",
-        "missing_late_windows"
+        "missing_late_windows",
+        "questionable_atp_pcr_classification"
       ],
       "manual_notes": ""
     },
@@ -4926,7 +4715,8 @@
       "quarantine_reason_codes": [
         "high_rpe",
         "high_intensity",
-        "missing_late_windows"
+        "missing_late_windows",
+        "questionable_atp_pcr_classification"
       ],
       "manual_notes": ""
     },
@@ -4978,7 +4768,8 @@
       "quarantine_reason_codes": [
         "high_rpe",
         "high_intensity",
-        "missing_late_windows"
+        "missing_late_windows",
+        "questionable_atp_pcr_classification"
       ],
       "manual_notes": ""
     },
@@ -5056,7 +4847,8 @@
         "high_rpe",
         "high_intensity",
         "high_impact_cost",
-        "missing_late_windows"
+        "missing_late_windows",
+        "questionable_atp_pcr_classification"
       ],
       "manual_notes": ""
     },
@@ -5135,7 +4927,8 @@
       "quarantine_reason_codes": [
         "high_rpe",
         "high_intensity",
-        "missing_late_windows"
+        "missing_late_windows",
+        "questionable_atp_pcr_classification"
       ],
       "manual_notes": ""
     },
@@ -5187,7 +4980,8 @@
       "quarantine_reason_codes": [
         "high_rpe",
         "high_intensity",
-        "missing_late_windows"
+        "missing_late_windows",
+        "questionable_atp_pcr_classification"
       ],
       "manual_notes": ""
     },
@@ -5314,7 +5108,8 @@
       "quarantine_reason_codes": [
         "high_rpe",
         "high_intensity",
-        "missing_late_windows"
+        "missing_late_windows",
+        "questionable_atp_pcr_classification"
       ],
       "manual_notes": ""
     },
@@ -5366,7 +5161,8 @@
       "quarantine_reason_codes": [
         "high_rpe",
         "high_intensity",
-        "missing_late_windows"
+        "missing_late_windows",
+        "questionable_atp_pcr_classification"
       ],
       "manual_notes": ""
     },
@@ -5416,7 +5212,8 @@
       "quarantine_reason_codes": [
         "high_rpe",
         "high_intensity",
-        "missing_late_windows"
+        "missing_late_windows",
+        "questionable_atp_pcr_classification"
       ],
       "manual_notes": ""
     },
@@ -5568,7 +5365,8 @@
       "quarantine_reason_codes": [
         "high_rpe",
         "high_intensity",
-        "missing_late_windows"
+        "missing_late_windows",
+        "questionable_atp_pcr_classification"
       ],
       "manual_notes": ""
     },
@@ -5620,7 +5418,8 @@
       "quarantine_reason_codes": [
         "high_rpe",
         "high_intensity",
-        "missing_late_windows"
+        "missing_late_windows",
+        "questionable_atp_pcr_classification"
       ],
       "manual_notes": ""
     },

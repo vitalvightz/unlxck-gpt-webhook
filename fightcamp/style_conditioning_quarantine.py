@@ -43,6 +43,7 @@ NOTE_FIELDS = (
     "duration",
     "prescription",
     "equipment_note",
+    "modality",
 )
 
 OVERSTYLED_NAME_TERMS = (
@@ -71,6 +72,7 @@ OVERSTYLED_NAME_TERMS = (
 )
 AGGRESSIVE_TEXT_TERMS = (
     "all-out war",
+    "annihilation",
     "annihilator",
     "bloodbath",
     "break them",
@@ -86,7 +88,9 @@ AGGRESSIVE_TEXT_TERMS = (
     "hell",
     "kill",
     "kill mode",
+    "last man standing",
     "mauler",
+    "max chaos",
     "meat grinder",
     "movie scene",
     "no mercy",
@@ -99,9 +103,11 @@ AGGRESSIVE_TEXT_TERMS = (
     "street fight",
     "torture",
     "violent",
+    "vomit",
     "war",
 )
 DESTRUCTIVE_WORDING_TERMS = (
+    "annihilation",
     "annihilator",
     "bloodbath",
     "butcher",
@@ -116,7 +122,9 @@ DESTRUCTIVE_WORDING_TERMS = (
     "hell",
     "kill",
     "kill mode",
+    "last man standing",
     "mauler",
+    "max chaos",
     "meat grinder",
     "no mercy",
     "obliterate",
@@ -125,6 +133,7 @@ DESTRUCTIVE_WORDING_TERMS = (
     "stomper",
     "torture",
     "violent",
+    "vomit",
     "war",
 )
 
@@ -191,6 +200,33 @@ def _joined_note_text(entry: dict[str, Any]) -> str:
         elif _has_value(value):
             values.append(str(value))
     return " ".join(values)
+
+
+_ROUNDS_PATTERN = re.compile(r"x\s*\d+\s*(?:rounds?|sets?)?\b|\b\d+\s*rounds?\b|\b\d+\s*x\s*\d+\b", re.IGNORECASE)
+SUSPICIOUS_ATP_PCR_RAW_SYSTEMS = {"atp-pcr", "atp_pcr", "anaerobic_alactic"}
+ALACTIC_REST_PROOF_FIELDS = ("rest_sec", "rest", "timing")
+
+
+def _has_explicit_rest_structure(entry: dict[str, Any]) -> bool:
+    return any(_has_value(entry.get(field)) for field in ALACTIC_REST_PROOF_FIELDS)
+
+
+def _is_suspicious_atp_pcr_classification(entry: dict[str, Any]) -> bool:
+    raw_system = str(entry.get("system") or "").strip().lower()
+    if raw_system not in SUSPICIOUS_ATP_PCR_RAW_SYSTEMS:
+        return False
+    if not _ROUNDS_PATTERN.search(str(entry.get("duration") or "")):
+        return False
+    effective_rpe = max(
+        [value for value in (_number(entry.get("rpe")), _number(entry.get("rpe_max"))) if value is not None],
+        default=None,
+    )
+    high_rpe_or_max = (effective_rpe is not None and effective_rpe >= 9) or _normalized_value(
+        entry.get("intensity")
+    ) in {"max", "maximum"}
+    if not high_rpe_or_max:
+        return False
+    return not _has_explicit_rest_structure(entry)
 
 
 def _has_dose_metadata(entry: dict[str, Any]) -> bool:
@@ -387,12 +423,14 @@ def style_conditioning_quarantine_reason_codes(
     if not _has_dose_metadata(entry):
         add("missing_dose_metadata")
 
-    if _contains_term(str(entry.get("name") or ""), OVERSTYLED_NAME_TERMS):
+    if _contains_term(f"{entry.get('name') or ''} {entry.get('modality') or ''}", OVERSTYLED_NAME_TERMS):
         add("overstyled_name")
     if _contains_term(f"{entry.get('name') or ''} {_joined_note_text(entry)}", DESTRUCTIVE_WORDING_TERMS):
         add("violent_wording")
     if _contains_term(_joined_note_text(entry), AGGRESSIVE_TEXT_TERMS):
         add("aggressive_notes")
+    if _is_suspicious_atp_pcr_classification(entry):
+        add("questionable_atp_pcr_classification")
 
     return reason_codes
 
