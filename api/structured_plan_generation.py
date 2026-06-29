@@ -1598,7 +1598,7 @@ EXACT ROOT SKELETON (match this shape; fill values from the plan, keep all keys)
       "days": [
         {{
           "date": "YYYY-MM-DD", "day_type": "high", "countdown_label": "D-15", "phase_label": "SPP",
-          "today_card": {{"headline": "...", "readiness_status": "train_as_planned", "coach_led_contact": "<omit unless a coach-owned sparring/contact day ALSO carries an app session; then the coach-owned label, e.g. 'Coach-led boxing — technical only'>", "mindset_anchor": {{"intent": "...", "focus_cue": "...", "reset_cue": "...", "confidence_anchor": "...", "context": "..."}}}},
+          "today_card": {{"headline": "...", "readiness_status": "train_as_planned", "coach_led_contact": "", "mindset_anchor": {{"intent": "...", "focus_cue": "...", "reset_cue": "...", "confidence_anchor": "...", "context": "..."}}}},
           "sessions": [
             {{
               "session_id": "ses-1", "session_type": "strength_power", "title": "...", "objective": "...",
