@@ -300,14 +300,14 @@ _LATE_FIGHT_NEURAL_POWER_SIGNALS = (
 # dose tokens (e.g. "3 x 6") or exercise keywords (e.g. "punch", "carry").
 _LATE_FIGHT_ANNOTATION_LABEL = re.compile(
     r"^\s*(?:"
-    r"purpose|why|goal|aim|intent|objective|rationale|focus|"
-    r"output|result|outcome|"
+    r"purpose|why|goals?|aims?|intent|objectives?|rationale|focus|"
+    r"outputs?|results?|outcomes?|"
     r"notes?|coach(?:ing)?\s+(?:note|cue)s?|cues?|"
-    r"stop(?:\s*[/\-]\s*regress(?:ion)?)?|stop\s+rule|"
-    r"regress(?:ion)?|"
-    r"progress(?:ion)?(?:\s*[/\-]\s*regress(?:ion)?)?|"
+    r"stop(?:\s*[\/\-]\s*regress(?:ion)s?)?|stop\s+rule|"
+    r"regress(?:ion)s?|"
+    r"progress(?:ion)s?(?:\s*[\/\-]\s*regress(?:ion)s?)?|"
     r"setup|set[\s-]?up|tempo|load(?:ing)?|dose|dosage|rest|format|"
-    r"equipment|target|scaling|adjust(?:ment)?|modif(?:y|ication)"
+    r"equipment|targets?|scaling|adjust(?:ment)s?|modif(?:y|ication)s?"
     r")\s*[:\-–—]",
     re.IGNORECASE,
 )
