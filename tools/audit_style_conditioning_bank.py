@@ -205,11 +205,15 @@ def render_markdown_report(rows: list[dict[str, Any]]) -> str:
     return "\n".join(lines)
 
 
+def render_json_report(rows: list[dict[str, Any]]) -> str:
+    payload = {"summary": summarize_audit_rows(rows), "rows": rows}
+    return json.dumps(payload, indent=2) + "\n"
+
+
 def write_report(rows: list[dict[str, Any]], output_path: Path, *, output_format: str) -> None:
     output_path.parent.mkdir(parents=True, exist_ok=True)
     if output_format == "json":
-        payload = {"summary": summarize_audit_rows(rows), "rows": rows}
-        output_path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+        output_path.write_text(render_json_report(rows), encoding="utf-8")
     else:
         output_path.write_text(render_markdown_report(rows), encoding="utf-8")
 

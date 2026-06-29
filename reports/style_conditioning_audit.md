@@ -12,8 +12,7 @@ This report is diagnostic only. It does not rewrite, delete, rename, or redose b
 ### Camp Actions
 
 - redose: 205
-| name | system | phases | rpe | intensity | lactate_load | movement_cost | impact_cost | late_windows | overstyled_name_flag | aggressive_notes_flag | dose_risk_flag | late_fight_risk_flag | camp_action | late_fight_action | manual_notes | quarantine_reason_codes |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+- keep: 123
 - delete_or_rebuild: 38
 - rename_and_redose: 5
 - rename: 1
@@ -398,7 +397,7 @@ Entries: 123
 | Overhook Uppercut Drill | aerobic | SPP | 5 | low | low | low | low |  | False | False | False | True | keep | not_late_eligible |  | missing_late_windows |
 | Corner Mauling Circuit | aerobic | SPP | 4 | low | low | low | low |  | False | False | False | True | keep | not_late_eligible |  | missing_late_windows |
 | Slip-Clinch Reaction | aerobic | SPP | 5 | low | low | low | low |  | False | False | False | True | keep | not_late_eligible |  | missing_late_windows |
-## Grouped Review Queues
+| Reaction Jab Matrix | cognitive | SPP, TAPER | 7 | moderate | moderate | moderate | low |  | False | False | False | True | keep | not_late_eligible |  | missing_late_windows |
 | Clinch Auditory Triggers | cognitive | SPP, TAPER | 4 | zone 2 | low | low | low |  | False | False | False | True | keep | not_late_eligible |  | missing_late_windows |
 | Wrestling Chess | cognitive | SPP, TAPER | 4 | zone 2 | low | low | low |  | False | False | False | True | keep | not_late_eligible |  | missing_late_windows |
 | Kick Pattern Recall | cognitive | SPP, TAPER | 5 | low | moderate | moderate | low |  | False | False | False | True | keep | not_late_eligible |  | missing_late_windows |

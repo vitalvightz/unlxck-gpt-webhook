@@ -70,6 +70,11 @@ def test_missing_late_windows_is_flagged():
 
     row = audit.style_conditioning_audit_row(entry)
 
+    assert "missing_late_windows" in row["quarantine_reason_codes"]
+    assert row["camp_action"] == "keep"
+    assert row["late_fight_action"] == "not_late_eligible"
+
+
 def test_report_includes_action_summaries():
     rows = audit.audit_style_conditioning_entries([_style_entry(rpe=9)])
 
@@ -88,21 +93,6 @@ def test_report_includes_action_summaries():
     assert payload["summary"]["late_fight_action_counts"]["late_blocked"] == 1
     assert payload["rows"][0]["camp_action"] == "redose"
     assert payload["rows"][0]["late_fight_action"] == "late_blocked"
-    assert "missing_late_windows" in row["quarantine_reason_codes"]
-    assert row["camp_action"] == "keep"
-    assert row["late_fight_action"] == "not_late_eligible"
-
-
-def test_report_includes_action_summaries():
-    rows = audit.audit_style_conditioning_entries([_style_entry(rpe=9)])
-    report = audit.render_markdown_report(rows)
-
-    assert "camp_action" in report
-    assert "late_fight_action" in report
-    assert "### Camp Actions" in report
-    assert "### Late-Fight Actions" in report
-    assert "redose" in report
-    assert "late_blocked" in report
 
 
 def test_overstyled_name_only_recommends_rename():
