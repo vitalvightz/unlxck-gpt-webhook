@@ -85,6 +85,13 @@ test("keeps strength available at D-21 with hard sparring", () => {
   assert.equal(getPerformanceFocusOptionAvailability(ctx, "weak_areas", "strength").available, true);
 });
 
+test("keeps strength available without a fight date when hard sparring is selected", () => {
+  const ctx = buildDaysOutContext(null, { hasHardSparring: true });
+
+  assert.equal(getPerformanceFocusOptionAvailability(ctx, "key_goals", "strength").available, true);
+  assert.equal(getPerformanceFocusOptionAvailability(ctx, "weak_areas", "strength").available, true);
+});
+
 test("blocks strength at D-20 with hard sparring and uses the hard-sparring reason", () => {
   const ctx = buildDaysOutContext(20, { hasHardSparring: true });
 

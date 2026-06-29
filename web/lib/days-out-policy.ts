@@ -96,7 +96,12 @@ export function getPerformanceFocusOptionAvailability(
   }
 
   const normalizedValue = value.trim().toLowerCase();
-  if (normalizedValue === "strength" && ctx.hasHardSparring && ctx.daysOut <= 20) {
+  if (
+    normalizedValue === "strength" &&
+    ctx.hasHardSparring &&
+    ctx.daysOut !== null &&
+    ctx.daysOut <= 20
+  ) {
     return {
       available: false,
       reason: HARD_SPARRING_STRENGTH_BLOCK_REASON,

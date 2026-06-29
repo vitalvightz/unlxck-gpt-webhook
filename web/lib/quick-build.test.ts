@@ -259,6 +259,32 @@ test("sanitizeQuickBuildFocusByDaysOut removes strength when hard sparring is ad
   assert.deepEqual(sanitized.weak_areas, ["mobility"]);
 });
 
+test("sanitizeQuickBuildFocusByDaysOut keeps strength key goals for no scheduled fight with hard sparring", () => {
+  const input = buildValidInput();
+  input.no_scheduled_fight = true;
+  input.fight_date = "";
+  input.hard_sparring_days = ["Monday"];
+  input.key_goals = ["strength", "mobility"];
+  input.weak_areas = ["mobility"];
+
+  const sanitized = sanitizeQuickBuildFocusByDaysOut(input, new Date("2026-05-24T00:00:00Z"));
+
+  assert.deepEqual(sanitized.key_goals, ["strength", "mobility"]);
+});
+
+test("sanitizeQuickBuildFocusByDaysOut keeps strength weak areas for no scheduled fight with hard sparring", () => {
+  const input = buildValidInput();
+  input.no_scheduled_fight = true;
+  input.fight_date = "";
+  input.hard_sparring_days = ["Monday"];
+  input.key_goals = ["mobility"];
+  input.weak_areas = ["strength", "mobility"];
+
+  const sanitized = sanitizeQuickBuildFocusByDaysOut(input, new Date("2026-05-24T00:00:00Z"));
+
+  assert.deepEqual(sanitized.weak_areas, ["strength", "mobility"]);
+});
+
 test("sanitizeQuickBuildFocusByDaysOut does not auto-readd strength when hard sparring is removed", () => {
   const input = buildValidInput();
   input.no_scheduled_fight = false;
