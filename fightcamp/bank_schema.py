@@ -325,6 +325,7 @@ def _equipment_tokens(item: dict) -> set[str]:
                 part_stripped = part.strip()
                 if part_stripped:
                     values.append(part_stripped)
+                    values.extend(part_stripped.split())
     return set(_clean_list(values))
 
 
