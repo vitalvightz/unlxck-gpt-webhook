@@ -357,13 +357,14 @@ def _reconcile(structured_plan: Any, planning_brief: Any) -> list[str]:
             # the coach-owned contact (a declared / downgraded sparring day) must
             # still show on that day — a low-RPE app session and coach-owned contact
             # legitimately coexist. Rather than overwrite the app headline (which the
-            # session card falls back to for its own title), surface the contact as a
-            # coexisting coach-led note on a dedicated field; the renderer shows it as
-            # a context block above the session cards.
+            # session card falls back to for its own title), surface the contact on a
+            # dedicated field; the renderer shows it as a context block above the
+            # session cards. The contact block is driven solely by coach_led_contact
+            # (never the day headline, which session.title can shadow), so it must be
+            # populated whenever it is absent — even if the headline already reads
+            # coach-led — or the coexisting contact stays hidden.
             if day.get("sessions"):
                 if str(card.get("coach_led_contact") or "").strip():
-                    continue
-                if current and _already_coach_led(current):
                     continue
                 card["coach_led_contact"] = contact.headline
                 notes.append(

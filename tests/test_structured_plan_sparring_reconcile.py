@@ -222,9 +222,10 @@ def test_does_not_double_surface_coach_led_contact():
     assert notes == []
 
 
-def test_skips_coach_led_contact_when_app_headline_already_coach_led():
-    # If the converter already labelled the session day coach-led, don't duplicate
-    # the signal on the contact field.
+def test_surfaces_coach_led_contact_even_when_app_headline_already_coach_led():
+    # The contact block renders only from coach_led_contact, and session.title can
+    # shadow the day headline, so a coach-led-looking headline is NOT enough to keep
+    # the contact visible. Populate coach_led_contact regardless.
     real_session = [{"title": "Coach-led boxing", "blocks": []}]
     plan = _structured_plan(
         [_day("D-31", headline="Coach-led boxing session", sessions=real_session)]
@@ -232,8 +233,12 @@ def test_skips_coach_led_contact_when_app_headline_already_coach_led():
     notes = reconcile_coach_led_sparring_days(plan, _planning_brief(_hard_thursday()))
 
     day = plan["weeks"][0]["days"][0]
-    assert "coach_led_contact" not in day["today_card"]
-    assert notes == []
+    # App headline and session are untouched...
+    assert day["today_card"]["headline"] == "Coach-led boxing session"
+    assert day["sessions"] == real_session
+    # ...and the coach-owned contact is still surfaced so it cannot be hidden.
+    assert day["today_card"]["coach_led_contact"] == "Coach-led sparring"
+    assert any("surfaced coach-led contact" in note for note in notes)
 
 
 def test_leaves_already_coach_led_headline_alone():
