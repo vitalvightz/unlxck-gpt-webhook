@@ -3,6 +3,7 @@ import re
 from typing import Any, Literal
 
 from .phases import PHASE_VALUES
+from .style_conditioning_quarantine import style_conditioning_quarantine_reason_codes
 
 ValidationMode = Literal["audit", "strict", "runtime"]
 SourceKind = Literal["strength", "conditioning", "generic"]
@@ -687,6 +688,13 @@ def is_late_fight_metadata_safe(
         _append_code(block_codes, "late_block_missing_metadata")
     if "missing_late_windows" in unsafe_metadata:
         _append_code(block_codes, "late_block_missing_late_windows")
+
+    style_quarantine_codes = style_conditioning_quarantine_reason_codes(item, source=source)
+    if style_quarantine_codes:
+        _append_code(block_codes, "late_block_style_conditioning_quarantine")
+        for code in style_quarantine_codes:
+            unsafe_metadata.add(f"style_conditioning_{code}")
+            _append_code(block_codes, f"late_block_style_conditioning_{code}")
 
     missing_cost = unsafe_metadata & COST_METADATA_ISSUES
     missing_governance = unsafe_metadata & GOVERNANCE_METADATA_ISSUES
