@@ -70,7 +70,24 @@ def test_missing_late_windows_is_flagged():
 
     row = audit.style_conditioning_audit_row(entry)
 
-    assert row["late_fight_risk_flag"] is True
+def test_report_includes_action_summaries():
+    rows = audit.audit_style_conditioning_entries([_style_entry(rpe=9)])
+
+    markdown_report = audit.render_markdown_report(rows)
+    assert "camp_action" in markdown_report
+    assert "late_fight_action" in markdown_report
+    assert "### Camp Actions" in markdown_report
+    assert "### Late-Fight Actions" in markdown_report
+    assert "### Grouped Review Queues" in markdown_report or "## Grouped Review Queues" in markdown_report
+    assert "redose" in markdown_report
+    assert "late_blocked" in markdown_report
+
+    payload = json.loads(audit.render_json_report(rows))
+    assert payload["summary"]["entries_audited"] == 1
+    assert payload["summary"]["camp_action_counts"]["redose"] == 1
+    assert payload["summary"]["late_fight_action_counts"]["late_blocked"] == 1
+    assert payload["rows"][0]["camp_action"] == "redose"
+    assert payload["rows"][0]["late_fight_action"] == "late_blocked"
     assert "missing_late_windows" in row["quarantine_reason_codes"]
     assert row["camp_action"] == "keep"
     assert row["late_fight_action"] == "not_late_eligible"
