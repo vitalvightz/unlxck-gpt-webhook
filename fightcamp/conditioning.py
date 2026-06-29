@@ -699,7 +699,13 @@ def _evaluate_conditioning_late_window(
     metadata_safety = None
     if source == "runtime_fallback" or drill.get("_schema_source") or drill.get("_schema_issues") or drill.get("_schema_safety"):
         metadata_source = str(drill.get("_schema_source") or source)
-        metadata_safety = is_late_fight_metadata_safe(drill, metadata_source, window)
+        metadata_source_kind = "conditioning" if metadata_source == "runtime_fallback" else None
+        metadata_safety = is_late_fight_metadata_safe(
+            drill,
+            metadata_source,
+            window,
+            source_kind=metadata_source_kind,
+        )
         if not metadata_safety["safe"]:
             return {
                 "blocked": True,
@@ -1452,9 +1458,14 @@ def _bridge_glycolytic_touch_fallback() -> dict:
         "rest_sec": 120,
         "rounds": 2,
         "rpe": 6,
+        "rpe_max": 6,
         "lactate_load": "low",
         "impact_cost": "low",
         "movement_cost": "low",
+        "stress_class": "support",
+        "cost_class": "low",
+        "support_only": True,
+        "meaningful_stress": False,
     }
 
 def _late_fight_dosage_caps(days_until_fight: int) -> str:

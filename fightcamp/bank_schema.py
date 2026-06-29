@@ -5,6 +5,7 @@ from typing import Any, Literal
 from .phases import PHASE_VALUES
 
 ValidationMode = Literal["audit", "strict", "runtime"]
+SourceKind = Literal["strength", "conditioning", "generic"]
 
 SYSTEM_ALIASES = {
     "atp-pcr": "alactic",
@@ -161,6 +162,15 @@ def _source_kind(source: str) -> str:
     return "generic"
 
 
+def _resolve_source_kind(source: str, source_kind: str | None = None) -> SourceKind:
+    if source_kind is not None:
+        normalized = str(source_kind).strip().lower()
+        if normalized not in {"strength", "conditioning", "generic"}:
+            raise ValueError(f"Unknown late-fight metadata source_kind: {source_kind!r}")
+        return normalized  # type: ignore[return-value]
+    return _source_kind(source)  # type: ignore[return-value]
+
+
 def _schema_defaults_for_source(source: str) -> dict[str, Any]:
     kind = _source_kind(source)
     if kind == "strength":
@@ -249,8 +259,8 @@ def _late_window_for(value: Any) -> str | None:
     return None
 
 
-def _metadata_missing_issues(item: dict, *, source: str) -> list[str]:
-    kind = _source_kind(source)
+def _metadata_missing_issues(item: dict, *, source: str, source_kind: str | None = None) -> list[str]:
+    kind = _resolve_source_kind(source, source_kind)
     if kind == "generic":
         return []
 
@@ -342,7 +352,8 @@ def _has_dense_glycolytic_profile(item: dict, *, normalized_system: str) -> bool
     return bool(normalized_system == "glycolytic" and (structured_density or text_density or "glycolytic" in tags))
 
 
-def _has_d1_forbidden_modality(item: dict, *, source: str) -> bool:
+def _has_d1_forbidden_modality(item: dict, *, source: str, source_kind: str | None = None) -> bool:
+    kind = _resolve_source_kind(source, source_kind)
     tags = set(_clean_list(item.get("tags")))
     equipment = _equipment_tokens(item)
     text = _text_blob(item)
@@ -354,7 +365,7 @@ def _has_d1_forbidden_modality(item: dict, *, source: str) -> bool:
     ballistic = bool(tags & BALLISTIC_TAGS) or any(term in text for term in ("ballistic", "explosive", "jump", "throw", "slam"))
     max_intent = "max_intent" in tags or "max intent" in text or "max-intent" in text
     high_rpe = (_number_or_none(item.get("rpe")) or _number_or_none(item.get("rpe_max")) or 0) >= 8
-    loaded_strength = _source_kind(source) == "strength" and loaded
+    loaded_strength = kind == "strength" and loaded
     return any((bands, med_ball, loaded_strength, isometric, ballistic, max_intent, high_rpe))
 
 
@@ -368,8 +379,8 @@ def _has_final_day_policy(item: dict) -> bool:
     )
 
 
-def _primer_only_fulfillment_block(item: dict, *, source: str) -> bool:
-    if _source_kind(source) != "strength":
+def _primer_only_fulfillment_block(item: dict, *, source: str, source_kind: str | None = None) -> bool:
+    if _resolve_source_kind(source, source_kind) != "strength":
         return False
     tags = set(_clean_list(item.get("tags")))
     has_primer_signal = _boolean_true(item.get("primer_only")) or bool(tags & PRIMER_ONLY_TAGS)
@@ -381,14 +392,15 @@ def _primer_only_fulfillment_block(item: dict, *, source: str) -> bool:
     return not _boolean_true(item.get("real_strength_maintenance"))
 
 
-def _support_only_fulfillment_block(item: dict, *, source: str) -> bool:
+def _support_only_fulfillment_block(item: dict, *, source: str, source_kind: str | None = None) -> bool:
+    kind = _resolve_source_kind(source, source_kind)
     tags = set(_clean_list(item.get("tags")))
-    claims_strength = _source_kind(source) == "strength" and (
+    claims_strength = kind == "strength" and (
         bool(tags & STRENGTH_FULFILLMENT_TAGS)
         or any(_boolean_true(item.get(field)) for field in STRENGTH_FULFILLMENT_TAGS)
     )
     stress_class = _normalize_token(item.get("stress_class"))
-    claims_conditioning_anchor = _source_kind(source) == "conditioning" and stress_class in {
+    claims_conditioning_anchor = kind == "conditioning" and stress_class in {
         "meaningful_stress",
         "anchor",
         "primary",
@@ -407,12 +419,15 @@ def is_late_fight_metadata_safe(
     item: dict,
     source: str,
     countdown_offset_or_window: Any,
+    *,
+    source_kind: str | None = None,
 ) -> dict[str, Any]:
     """Return late-fight metadata safety state for selectors and runtime loaders."""
+    kind = _resolve_source_kind(source, source_kind)
     window = _late_window_for(countdown_offset_or_window)
     existing_issues = set(item.get(_SCHEMA_ISSUES_KEY) or [])
     unsafe_metadata = set(existing_issues)
-    unsafe_metadata.update(_metadata_missing_issues(item, source=source))
+    unsafe_metadata.update(_metadata_missing_issues(item, source=source, source_kind=kind))
 
     block_codes: list[str] = []
     reason_codes: list[str] = []
@@ -452,7 +467,6 @@ def is_late_fight_metadata_safe(
     if unsafe_metadata and not block_codes:
         _append_code(block_codes, "late_block_missing_metadata")
 
-    kind = _source_kind(source)
     system_state = _system_state(item)
     if kind == "conditioning":
         if not system_state["is_known"]:
@@ -498,12 +512,16 @@ def is_late_fight_metadata_safe(
     ):
         _append_code(block_codes, "late_block_high_lactate")
 
-    if window == D1 and _has_d1_forbidden_modality(item, source=source) and not _has_final_day_policy(item):
+    if (
+        window == D1
+        and _has_d1_forbidden_modality(item, source=source, source_kind=kind)
+        and not _has_final_day_policy(item)
+    ):
         _append_code(block_codes, "late_block_d1_forbidden_modality")
 
-    if _primer_only_fulfillment_block(item, source=source):
+    if _primer_only_fulfillment_block(item, source=source, source_kind=kind):
         _append_code(block_codes, "late_block_primer_only_strength_fulfillment")
-    if _support_only_fulfillment_block(item, source=source):
+    if _support_only_fulfillment_block(item, source=source, source_kind=kind):
         _append_code(block_codes, "late_block_support_only_anchor_fulfillment")
 
     reason_codes = list(block_codes)

@@ -5,7 +5,7 @@ from pathlib import Path
 
 from fightcamp import conditioning
 from fightcamp.bank_schema import is_late_fight_metadata_safe, validate_training_item
-from fightcamp.late_selector_windows import D1, D6_TO_D5, D7, D13_TO_D8, D21_TO_D14
+from fightcamp.late_selector_windows import D1, D4_TO_D2, D6_TO_D5, D7, D13_TO_D8, D21_TO_D14
 from tools import validate_banks
 
 
@@ -194,6 +194,60 @@ def test_runtime_missing_cost_metadata_blocks_late_fight_selection():
     assert "late_block_missing_cost_metadata" in safety["block_codes"]
 
 
+def test_runtime_fallback_missing_late_windows_blocks_all_late_windows():
+    item = _safe_conditioning(late_windows=[])
+
+    for window in (D21_TO_D14, D13_TO_D8, D7, D6_TO_D5, D4_TO_D2, D1):
+        result = conditioning._evaluate_conditioning_late_window(
+            item,
+            system="aerobic",
+            window=window,
+            bridge_rules={},
+            source="runtime_fallback",
+        )
+
+        assert result["blocked"] is True
+        assert "late_block_missing_late_windows" in result["block_codes"]
+
+
+def test_runtime_fallback_missing_rpe_and_cost_metadata_blocks_late_selection():
+    item = _safe_conditioning(
+        impact_cost="",
+        movement_cost="",
+        lactate_load="",
+        stress_class="",
+        cost_class="",
+        support_only=None,
+        meaningful_stress=None,
+    )
+    item.pop("rpe")
+
+    result = conditioning._evaluate_conditioning_late_window(
+        item,
+        system="aerobic",
+        window=D21_TO_D14,
+        bridge_rules={},
+        source="runtime_fallback",
+    )
+
+    assert result["blocked"] is True
+    assert "late_block_missing_cost_metadata" in result["block_codes"]
+    assert "late_block_missing_rpe" in result["block_codes"]
+
+
+def test_runtime_fallback_unknown_system_blocks_late_selection():
+    result = conditioning._evaluate_conditioning_late_window(
+        _safe_conditioning(system="mystery"),
+        system="mystery",
+        window=D21_TO_D14,
+        bridge_rules={},
+        source="runtime_fallback",
+    )
+
+    assert result["blocked"] is True
+    assert "late_block_unknown_system" in result["block_codes"]
+
+
 def test_runtime_unknown_conditioning_system_blocks_late_fight_selection():
     safety = is_late_fight_metadata_safe(
         _safe_conditioning(system="mystery"),
@@ -216,6 +270,19 @@ def test_support_alias_system_does_not_become_meaningful_stress_by_default():
     assert "late_block_alias_system_without_meaningful_stress" in safety["block_codes"]
 
 
+def test_runtime_fallback_support_alias_cannot_claim_meaningful_stress():
+    result = conditioning._evaluate_conditioning_late_window(
+        _safe_conditioning(system="skill", support_only=False, stress_class="meaningful_stress"),
+        system="skill",
+        window=D21_TO_D14,
+        bridge_rules={},
+        source="runtime_fallback",
+    )
+
+    assert result["blocked"] is True
+    assert "late_block_alias_system_without_meaningful_stress" in result["block_codes"]
+
+
 def test_runtime_high_intensity_gates_use_countdown_windows():
     assert "late_block_high_rpe" in is_late_fight_metadata_safe(
         _safe_conditioning(rpe=8),
@@ -234,6 +301,20 @@ def test_runtime_high_intensity_gates_use_countdown_windows():
     )["block_codes"]
 
 
+def test_runtime_fallback_high_lactate_blocks_d13_onward():
+    for window in (D13_TO_D8, D7, D6_TO_D5, D4_TO_D2, D1):
+        result = conditioning._evaluate_conditioning_late_window(
+            _safe_conditioning(lactate_load="high"),
+            system="glycolytic",
+            window=window,
+            bridge_rules={"glycolytic_touch_max": 1},
+            source="runtime_fallback",
+        )
+
+        assert result["blocked"] is True
+        assert "late_block_high_lactate" in result["block_codes"]
+
+
 def test_runtime_d1_blocks_forbidden_modalities_without_final_day_policy():
     safety = is_late_fight_metadata_safe(
         _safe_strength(equipment=["bands"], tags=["strength", "ballistic"]),
@@ -243,6 +324,33 @@ def test_runtime_d1_blocks_forbidden_modalities_without_final_day_policy():
 
     assert safety["safe"] is False
     assert "late_block_d1_forbidden_modality" in safety["block_codes"]
+
+
+def test_runtime_fallback_d1_blocks_forbidden_conditioning_modality():
+    result = conditioning._evaluate_conditioning_late_window(
+        _safe_conditioning(equipment=["bands"]),
+        system="aerobic",
+        window=D1,
+        bridge_rules={},
+        source="runtime_fallback",
+    )
+
+    assert result["blocked"] is True
+    assert "late_block_d1_forbidden_modality" in result["block_codes"]
+
+
+def test_runtime_fallback_complete_safe_metadata_can_still_be_selected():
+    fallback = conditioning._bridge_glycolytic_touch_fallback()
+
+    result = conditioning._evaluate_conditioning_late_window(
+        fallback,
+        system="glycolytic",
+        window=D21_TO_D14,
+        bridge_rules={"glycolytic_touch_max": 1},
+        source="runtime_fallback",
+    )
+
+    assert result["blocked"] is False
 
 
 def test_runtime_primer_only_cannot_satisfy_strength_maintenance():
