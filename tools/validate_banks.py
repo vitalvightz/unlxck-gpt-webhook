@@ -188,7 +188,7 @@ def parse_bank_schema(data: Any) -> tuple[list[dict], str]:
         for value in data.values():
             if isinstance(value, list):
                 list_keys += 1
-                flattened.extend(item for item in value if isinstance(item, dict))
+                flattened.extend(value)
         if list_keys:
             return flattened, f"object with {list_keys} list groups containing {len(flattened)} entries"
     raise ValueError("Unrecognized bank schema structure. Expected list or object with list values.")
