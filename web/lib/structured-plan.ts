@@ -174,8 +174,8 @@ function calendarWeekMonday(dateStr: string | null): string | null {
 
 /** Whole days between two local ISO date strings, or null if either is unusable. */
 function daySpan(startIso: string, endIso: string): number | null {
-  const start = new Date(`${startIso}T00:00:00`);
-  const end = new Date(`${endIso}T00:00:00`);
+  const start = new Date(`${startIso.slice(0, 10)}T00:00:00`);
+  const end = new Date(`${endIso.slice(0, 10)}T00:00:00`);
   if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
     return null;
   }
