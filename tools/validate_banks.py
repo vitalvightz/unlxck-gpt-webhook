@@ -399,8 +399,12 @@ def validate_bank(path: Path, tag_vocab: set[str]) -> tuple[bool, int, set[str],
             _add_issue(issues, "missing names", path, label, "missing or empty name")
 
         tags_value = entry.get("tags")
-        if requires_tags_phases_late and (not isinstance(tags_value, list) or not tags_value):
-            _add_issue(issues, "missing tags", path, label, "missing, empty, or non-list tags")
+        if requires_tags_phases_late and (
+            not isinstance(tags_value, list)
+            or not tags_value
+            or any(not isinstance(tag, str) or not tag.strip() for tag in tags_value)
+        ):
+            _add_issue(issues, "missing tags", path, label, "missing, empty, non-list, or non-string tags")
         tags = _tags_for_entry(entry)
         all_tags.update(tags)
         for tag in tags:
