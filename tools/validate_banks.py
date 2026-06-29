@@ -332,7 +332,15 @@ def validate_config_target(path: Path) -> list[BankIssue]:
             severity="info",
         )
     if path.name == "tag_vocabulary.json":
-        if not isinstance(data, list) or any(not isinstance(tag, str) or not tag.strip() for tag in data):
+        if isinstance(data, list):
+            vocab_items = data
+        elif isinstance(data, dict) and isinstance(data.get("items"), list):
+            vocab_items = data["items"]
+        elif isinstance(data, dict) and isinstance(data.get("data"), list):
+            vocab_items = data["data"]
+        else:
+            vocab_items = None
+        if vocab_items is None or any(not isinstance(tag, str) or not tag.strip() for tag in vocab_items):
             _add_issue(issues, "config schema issues", path, path.name, "expected a non-empty list of tag strings")
     elif path.name == "injury_exclusion_map.json":
         if not isinstance(data, dict):
