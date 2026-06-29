@@ -2538,7 +2538,7 @@ export function PlanViewer({
           ) : null}
           {archivedPreview && viewerRole === "athlete" ? (
             <Link href="/onboarding" className="ghost-button">
-              Duplicate as New Plan
+              Create New Plan
             </Link>
           ) : null}
           {canManagePlan && !archivedPreview ? (

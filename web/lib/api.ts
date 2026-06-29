@@ -347,7 +347,21 @@ async function executeRequest(path: string, init?: ApiRequestInit): Promise<Exec
       const bodyRequestId =
         "request_id" in parsedBody ? (parsedBody as { request_id?: unknown }).request_id : null;
       const rawCode = "code" in parsedBody ? (parsedBody as { code?: unknown }).code : null;
-      const errorCode = typeof rawCode === "string" && rawCode ? rawCode : undefined;
+      let errorCode = typeof rawCode === "string" && rawCode ? rawCode : undefined;
+
+      if (detail && typeof detail === "object" && !Array.isArray(detail)) {
+        const detailBody = detail as { code?: unknown; message?: unknown };
+        const detailCode = typeof detailBody.code === "string" && detailBody.code ? detailBody.code : undefined;
+        const detailMessage = typeof detailBody.message === "string" ? detailBody.message : null;
+        errorCode = errorCode ?? detailCode;
+        if (detailMessage) {
+          throw new ApiError(
+            bodyRequestId ? `${detailMessage} (request id: ${String(bodyRequestId)})` : detailMessage,
+            response.status,
+            errorCode,
+          );
+        }
+      }
 
       if (typeof detail === "string") {
         throw new ApiError(

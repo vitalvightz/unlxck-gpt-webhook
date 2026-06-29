@@ -451,7 +451,7 @@ function PlanCard({
             </Link>
             {archived ? (
               <Link href="/onboarding" className="ghost-button">
-                Duplicate as New Plan
+                Create New Plan
               </Link>
             ) : null}
             {!archived && !active && eligibleForActive ? (

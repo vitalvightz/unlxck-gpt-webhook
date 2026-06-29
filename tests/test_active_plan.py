@@ -1,7 +1,13 @@
 import pytest
 from fastapi import HTTPException
 
-from api.services.active_plan import ACTIVE_PLAN_OVERLAP_CONFLICT_MESSAGE, resolve_active_plan, set_active_plan
+from api.services.active_plan import (
+    ACTIVE_PLAN_OVERLAP_CONFLICT_CODE,
+    ACTIVE_PLAN_OVERLAP_CONFLICT_MESSAGE,
+    ACTIVE_PLAN_REPLACE_FAILED_MESSAGE,
+    resolve_active_plan,
+    set_active_plan,
+)
 from api.services.today_service import build_today_command_view
 
 
@@ -10,6 +16,8 @@ class Store:
         self.plans = plans
         self.active = active
         self.set_to = None
+        self.set_calls = []
+        self.fail_archive = False
 
     def list_user_plans(self, athlete_id):
         return [p for p in self.plans if p.get("athlete_id") == athlete_id]
@@ -21,10 +29,13 @@ class Store:
         return self.active
 
     def set_active_plan_id(self, athlete_id, plan_id):
+        self.set_calls.append(plan_id)
         self.set_to = plan_id
         self.active = plan_id
 
     def archive_plan_for_athlete(self, plan_id, athlete_id):
+        if self.fail_archive:
+            raise HTTPException(status_code=503, detail="archive failed")
         row = self.get_plan_for_athlete(plan_id, athlete_id)
         if row is None:
             raise AssertionError("plan not found")
@@ -120,7 +131,10 @@ def test_set_active_blocks_overlapping_current_active_plan_without_choice():
         set_active_plan(store, "ath", "draft")
 
     assert exc.value.status_code == 409
-    assert exc.value.detail == ACTIVE_PLAN_OVERLAP_CONFLICT_MESSAGE
+    assert exc.value.detail == {
+        "code": ACTIVE_PLAN_OVERLAP_CONFLICT_CODE,
+        "message": ACTIVE_PLAN_OVERLAP_CONFLICT_MESSAGE,
+    }
     assert store.active == "active"
 
 
@@ -152,7 +166,7 @@ def test_set_active_pause_choice_switches_active_pointer_without_archiving_curre
     assert current["status"] == "ready"
 
 
-def test_set_active_replace_choice_archives_current_plan_before_switching():
+def test_set_active_replace_choice_sets_new_active_then_archives_current_plan():
     current = ranged_plan("active", start="2026-06-12", end="2026-07-12")
     store = Store(
         [
@@ -164,7 +178,29 @@ def test_set_active_replace_choice_archives_current_plan_before_switching():
 
     assert set_active_plan(store, "ath", "draft", overlap_action="replace")["id"] == "draft"
     assert store.active == "draft"
+    assert store.set_calls == ["draft"]
     assert current["status"] == "archived"
+
+
+def test_set_active_replace_choice_rolls_back_if_archive_fails():
+    current = ranged_plan("active", start="2026-06-12", end="2026-07-12")
+    store = Store(
+        [
+            current,
+            ranged_plan("draft", start="2026-06-20", end="2026-07-20"),
+        ],
+        active="active",
+    )
+    store.fail_archive = True
+
+    with pytest.raises(HTTPException) as exc:
+        set_active_plan(store, "ath", "draft", overlap_action="replace")
+
+    assert exc.value.status_code == 503
+    assert exc.value.detail == ACTIVE_PLAN_REPLACE_FAILED_MESSAGE
+    assert store.active == "active"
+    assert store.set_calls == ["draft", "active"]
+    assert current["status"] == "ready"
 
 
 def test_set_active_rejects_unknown_overlap_action():

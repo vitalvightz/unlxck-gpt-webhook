@@ -540,7 +540,10 @@ def test_set_active_endpoint_blocks_overlapping_active_plan_until_user_chooses()
         headers={"Authorization": "Bearer athlete-token"},
     )
     assert blocked.status_code == 409
-    assert blocked.json()["detail"].startswith("This overlaps with your current active plan")
+    assert blocked.json()["detail"] == {
+        "code": "active_plan_overlap",
+        "message": "This overlaps with your current active plan. Do you want to replace the current plan, pause it, or choose a new start date?",
+    }
     assert store.get_active_plan_id("athlete-1") == current["id"]
 
     paused = client.post(

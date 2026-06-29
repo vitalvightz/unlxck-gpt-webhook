@@ -33,6 +33,8 @@ ACTIVE_PLAN_OVERLAP_ACTIONS = {"pause", "replace"}
 ACTIVE_PLAN_OVERLAP_CONFLICT_MESSAGE = (
     "This overlaps with your current active plan. Do you want to replace the current plan, pause it, or choose a new start date?"
 )
+ACTIVE_PLAN_OVERLAP_CONFLICT_CODE = "active_plan_overlap"
+ACTIVE_PLAN_REPLACE_FAILED_MESSAGE = "Unable to replace the current active plan. The original active plan was restored."
 NEVER_ACTIVE_PLAN_STATUSES = {
     "generated",
     "review_required",
@@ -258,7 +260,13 @@ def set_active_plan(
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="invalid overlap action")
     overlapping_active = _active_plan_overlap(store, athlete_id, plan)
     if overlapping_active and normalized_action is None:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=ACTIVE_PLAN_OVERLAP_CONFLICT_MESSAGE)
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={
+                "code": ACTIVE_PLAN_OVERLAP_CONFLICT_CODE,
+                "message": ACTIVE_PLAN_OVERLAP_CONFLICT_MESSAGE,
+            },
+        )
     setter = getattr(store, "set_active_plan_id", None)
     if not callable(setter):
         raise HTTPException(status_code=status.HTTP_501_NOT_IMPLEMENTED, detail="explicit active plan storage is unavailable")
@@ -266,6 +274,21 @@ def set_active_plan(
         archiver = getattr(store, "archive_plan_for_athlete", None)
         if not callable(archiver):
             raise HTTPException(status_code=status.HTTP_501_NOT_IMPLEMENTED, detail="plan replacement is unavailable")
-        archiver(str(overlapping_active.get("id") or ""), athlete_id)
+        current_plan_id = str(overlapping_active.get("id") or "")
+        setter(athlete_id, plan_id)
+        try:
+            archiver(current_plan_id, athlete_id)
+        except Exception as exc:
+            setter(athlete_id, current_plan_id)
+            if isinstance(exc, HTTPException):
+                raise HTTPException(
+                    status_code=exc.status_code,
+                    detail=ACTIVE_PLAN_REPLACE_FAILED_MESSAGE,
+                ) from exc
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=ACTIVE_PLAN_REPLACE_FAILED_MESSAGE,
+            ) from exc
+        return plan
     setter(athlete_id, plan_id)
     return plan
