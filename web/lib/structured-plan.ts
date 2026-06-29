@@ -698,14 +698,6 @@ const SESSIONLESS_DAY_TAGS: Record<SessionlessDayKind, string | null> = {
   rest: null,
 };
 
-/**
- * Deterministically resolve how a day with no app sessions should render.
- *
- * Coach-led/sparring/technical days get their own card titled from the day
- * headline so a mostly-coach-led camp does not collapse into a wall of
- * "Rest day.". A headline-less rest/recovery day (or an otherwise empty day)
- * is the only case that renders as a rest day.
- */
 /** The day kind for a coach-led/contact headline (scheduled when none matches). */
 function coachLedKindFromHeadline(headline: string): SessionlessDayKind {
   if (LIGHT_COMBAT_RE.test(headline)) {
@@ -723,6 +715,14 @@ function coachLedKindFromHeadline(headline: string): SessionlessDayKind {
   return "scheduled";
 }
 
+/**
+ * Deterministically resolve how a day with no app sessions should render.
+ *
+ * Coach-led/sparring/technical days get their own card titled from the day
+ * headline so a mostly-coach-led camp does not collapse into a wall of
+ * "Rest day.". A headline-less rest/recovery day (or an otherwise empty day)
+ * is the only case that renders as a rest day.
+ */
 export function classifySessionlessDay(
   day: StructuredDay | null | undefined,
 ): SessionlessDayView {
