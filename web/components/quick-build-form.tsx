@@ -165,23 +165,21 @@ function ChipMultiSelect({
           const disabled = valueDisabled || capDisabled;
           const reason = valueDisabled ? optionDisabledReason ?? disabledValueReason : capDisabled ? capDisabledReason : undefined;
           return (
-            <div
+            <label
               key={option.value}
               className={`checkbox-card ${checked ? "checkbox-card-checked" : ""} ${disabled ? "checkbox-card-disabled" : ""}`.trim()}
               aria-disabled={disabled}
               title={disabled ? reason : undefined}
             >
-              <label className="checkbox-card-label">
-                <input
-                  type="checkbox"
-                  checked={checked}
-                  disabled={disabled}
-                  onChange={() => onToggle(option.value)}
-                />
-                <span className="checkbox-card-copy">
-                  <span className="checkbox-card-title">{option.label}</span>
-                </span>
-              </label>
+              <input
+                type="checkbox"
+                checked={checked}
+                disabled={disabled}
+                onChange={() => onToggle(option.value)}
+              />
+              <span className="checkbox-card-copy">
+                <span className="checkbox-card-title">{option.label}</span>
+              </span>
               {disabled && reason ? (
                 <WhyTooltip
                   title="Unavailable"
@@ -190,7 +188,7 @@ function ChipMultiSelect({
                   ariaLabel={`Why ${option.label} is unavailable`}
                 />
               ) : null}
-            </div>
+            </label>
           );
         })}
       </div>
