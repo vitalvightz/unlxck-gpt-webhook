@@ -2381,6 +2381,8 @@ def generate_conditioning_block(flags):
             )
         )
 
+    style_bucket_tags_map = {style_name: _style_bucket_tags(style_name) for style_name in style_names}
+
     def _load_and_score_style_conditioning_bank() -> None:
             nonlocal restriction_candidates, restriction_blocked
             for drill in style_conditioning_bank:
