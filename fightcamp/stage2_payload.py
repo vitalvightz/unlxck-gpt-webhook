@@ -238,7 +238,7 @@ def _compress_short_camp_priorities(athlete_model: dict) -> dict:
     if speed_signal and footwork_signal:
         add_unique(
             primary,
-            "speed / footwork sharpness",
+            "speed / reaction sharpness",
             "speed_footwork_sharpness",
             "Use one short full-rest alactic speed dose that also reinforces footwork quality.",
         )
