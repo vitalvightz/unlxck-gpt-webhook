@@ -2034,10 +2034,11 @@ def _late_fight_rendering_rules(days_until_fight: Any) -> dict:
             "framing": "compressed_week",
             "rules": [
                 "Sharpness-week framing. D-N first, weekday second.",
+                "D-7 primers must stay submaximal: use selected drill RPE when present; otherwise cap at RPE 6-7, 3-4 x 6 sec, full rest.",
                 "5 blocks per session max. No effective hard sparring — all declared hard sparring converts to technical/rhythm only.",
             ],
             "preferred_terms": ["sharpness week", "power touch", "neural touch", "technical rhythm", "freshness session", "mobility / reset"],
-            "forbidden_terms": ["primary strength", "secondary strength", "anchor day", "conditioning block", "development block"],
+            "forbidden_terms": ["primary strength", "secondary strength", "anchor day", "conditioning block", "development block", "all-out bursts", "RPE 8"],
         }
     if mode == "late_fight_transition_payload":
         return {
@@ -4173,6 +4174,7 @@ def _handoff_mode_instructions(payload_mode: str) -> str:
             "SHARPNESS WEEK (D-7)\n"
             "5 blocks per session max. Stress cap: 2 meaningful exposures total.\n"
             "Neural/power: 1 max. Fight-rhythm: 1 max. No effective hard sparring; all declared hard sparring converts to technical/rhythm only.\n"
+            "Primer intensity cap: use selected drill RPE when present; otherwise cap at RPE 6-7, 3-4 x 6 sec, full rest. No all-out language.\n"
             "Optional taper_micro_support: one optional add-on line only, 3-5 min max.\n"
             "No development language, no multi-stressor stacking.\n\n"
             + _CONTRACT
