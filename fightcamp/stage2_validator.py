@@ -329,7 +329,7 @@ _LATE_FIGHT_NON_EXERCISE_TASK = re.compile(
 # exercise selection and are allowed (band-based prep stays allowed except on
 # D-1, where all band work is blocked).
 _LATE_FIGHT_WARMUP_PREP = re.compile(
-    r"\b(?:warm[\s-]?up|movement\s+prep|mobility\s+prep|cool[\s-]?down|activation)\b",
+    r"\b(?:warm[\s-]?ups?|movement\s+preps?|mobility\s+preps?|cool[\s-]?downs?|activations?)\b",
     re.IGNORECASE,
 )
 
