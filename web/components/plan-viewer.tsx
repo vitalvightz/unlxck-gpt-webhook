@@ -19,7 +19,13 @@ import {
   setActivePlan,
   submitManualStage2,
 } from "@/lib/api";
-import { canSetActivePlan } from "@/lib/plan-active";
+import {
+  ACTIVE_PLAN_OVERLAP_MESSAGE,
+  type ActivePlanOverlapAction,
+  canSetActivePlan,
+  isActivePlanOverlapError,
+  isArchivedPlan,
+} from "@/lib/plan-active";
 import { clearCompletedGenerationForDeletedPlan } from "@/lib/completed-generation";
 import { PremiumLoadingScreen } from "@/components/premium-loading-screen";
 import { QuickBuildRefinementBanner } from "@/components/quick-build-refinement-banner";
@@ -1693,6 +1699,7 @@ export function PlanViewer({
   const canUseAdminOutputs = canUseAdminPlanControls(viewerRole, Boolean(plan.admin_outputs));
   const isViewerAdmin = isAdminRole(viewerRole);
   const canManagePlan = viewerRole === "admin" || viewerRole === "athlete";
+  const archivedPreview = isArchivedPlan(plan.status);
   // Only surface an advisory that carries a real injury-risk band; the rest just
   // restate load tweaks the plan already applied, so they are suppressed.
   const primaryAdvisory = selectInjuryRiskAdvisory(plan.advisories);
@@ -1840,6 +1847,7 @@ export function PlanViewer({
   const [nextSessionFocusDate, setNextSessionFocusDate] = useState<Date | undefined>(undefined);
   const [setActivePending, setSetActivePending] = useState(false);
   const [setActiveError, setSetActiveError] = useState<string | null>(null);
+  const [showActiveConflict, setShowActiveConflict] = useState(false);
   const [planActionPending, setPlanActionPending] = useState<
     "rename" | "archive" | "permanent-delete" | null
   >(null);
@@ -2212,7 +2220,7 @@ export function PlanViewer({
     }
   }
 
-  async function handleSetActive() {
+  async function handleSetActive(overlapAction?: ActivePlanOverlapAction) {
     if (!accessToken) {
       setSetActiveError("Session expired. Sign in again.");
       return;
@@ -2224,13 +2232,23 @@ export function PlanViewer({
     setSetActivePending(true);
     setSetActiveError(null);
     try {
-      const active = await setActivePlan(accessToken, plan.plan_id);
+      const active = await setActivePlan(accessToken, plan.plan_id, { overlapAction });
       setActivePlanId(active.plan_id);
+      setShowActiveConflict(false);
     } catch (error) {
+      if (!overlapAction && isActivePlanOverlapError(error)) {
+        setShowActiveConflict(true);
+        return;
+      }
       setSetActiveError(error instanceof Error ? error.message : "Unable to set this plan active.");
     } finally {
       setSetActivePending(false);
     }
+  }
+
+  function handleStartAfterCurrentPlan() {
+    setShowActiveConflict(false);
+    router.push("/onboarding");
   }
 
   async function handleArchivePlan() {
@@ -2493,9 +2511,9 @@ export function PlanViewer({
           </div>
         </div>
 
-        {(plan.status || "").trim().toLowerCase() === "archived" ? (
+        {archivedPreview ? (
           <div className="quick-build-refine-banner cm-archived-banner" role="status">
-            This plan is archived — view only. Restore it from plan history to set it active again.
+            This plan is archived history. Preview only; it does not affect Today, calendar, streaks, or notifications.
           </div>
         ) : null}
 
@@ -2512,13 +2530,18 @@ export function PlanViewer({
             <button
               type="button"
               className="cta"
-              onClick={handleSetActive}
+              onClick={() => void handleSetActive()}
               disabled={setActivePending}
             >
               {setActivePending ? "Setting active..." : "Set active"}
             </button>
           ) : null}
-          {canManagePlan ? (
+          {archivedPreview && viewerRole === "athlete" ? (
+            <Link href="/onboarding" className="ghost-button">
+              Create New Plan
+            </Link>
+          ) : null}
+          {canManagePlan && !archivedPreview ? (
             <>
               <button
                 type="button"
@@ -2556,6 +2579,49 @@ export function PlanViewer({
         </div>
         {planActionMessage ? <div className="success-banner">{planActionMessage}</div> : null}
         {planActionError ? <div className="error-banner">{planActionError}</div> : null}
+        {showActiveConflict ? (
+          <div className="support-panel support-panel-alert">
+            <div className="form-section-header">
+              <p className="kicker">Active plan conflict</p>
+              <h3>Choose how to activate this plan</h3>
+            </div>
+            <p className="muted">{ACTIVE_PLAN_OVERLAP_MESSAGE}</p>
+            <div className="plan-summary-actions">
+              <button
+                type="button"
+                className="secondary-button"
+                onClick={() => void handleSetActive("replace")}
+                disabled={setActivePending}
+              >
+                Replace current plan
+              </button>
+              <button
+                type="button"
+                className="secondary-button"
+                onClick={() => void handleSetActive("pause")}
+                disabled={setActivePending}
+              >
+                Pause current plan
+              </button>
+              <button
+                type="button"
+                className="ghost-button"
+                onClick={handleStartAfterCurrentPlan}
+                disabled={setActivePending}
+              >
+                Start after current plan ends
+              </button>
+              <button
+                type="button"
+                className="ghost-button"
+                onClick={() => setShowActiveConflict(false)}
+                disabled={setActivePending}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        ) : null}
         {setActiveError ? <div className="error-banner">{setActiveError}</div> : null}
       </section>
 
